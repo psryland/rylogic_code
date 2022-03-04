@@ -153,6 +153,7 @@ Wordle:
 	- thing
 	- curly
 	- bionk
+	- amend
 	
 duolingo:
 	- lvl 1.Routine1

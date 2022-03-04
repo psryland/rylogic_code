@@ -120,6 +120,18 @@ namespace Rylogic.TextAligner
 			set => m_options.AlignStyle = value;
 		}
 
+		/// <summary>A pattern for ignoring lines during alignment</summary>
+		public AlignPattern LineIgnorePattern
+		{
+			get => m_options.LineIgnorePattern;
+			set
+			{
+				if (LineIgnorePattern == value) return;
+				m_options.LineIgnorePattern = value;
+				NotifyPropertyChanged(nameof(LineIgnorePattern));
+			}
+		}
+		
 		/// <summary>Show help information</summary>
 		public Command ShowHelp { get; }
 		private void ShowHelpInternal()

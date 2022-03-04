@@ -2,26 +2,25 @@
 # Make a copy of this file in the same directory and call it 'UserVars.py'
 # Then update the values to those appropriate for your PC
 # For any paths that don't apply, set to 'None'
-import os
-
-# Import a python module from a specific path
-def ImportModule(name, custom_name=None, search_paths=None):
-	import sys, imp
-	f,p,d = imp.find_module(name, search_paths)
-	mod = imp.load_module(custom_name or name, f, p, d)
-	f.close()
-	return mod
+import os, importlib
 
 # Join the given arguments into a normalised path, check that it exists
 def Path(*args, check_exists:bool = True, normalise:bool = True):
 	if not args or None in args: return None
 	path = os.path.join(*args)
 	if normalise:
-		path = path.replace('"','')
-		path = path if os.path.isabs(path) else os.path.abspath(path)
+		path = path.replace('"','').replace('/',"\\")
+		path = os.path.abspath(path)
 	if check_exists and not os.path.exists(path):
 		raise FileNotFoundError(f"Path {path} does not exist")
 	return path
+
+# Import a module from the given filepath
+def Import(name:str, path:str):
+	spec = importlib.util.spec_from_file_location(name, path)
+	mod = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(mod)
+	return mod
 
 # Version History:
 #  1 - initial version
@@ -62,11 +61,15 @@ vs_envvars = Path(vs_dir, "Common7\\Tools\\VsDevCmd.bat")
 msbuild = Path(vs_dir, "MSBuild\\Current\\Bin\\MSBuild.exe")
 
 # The build system version. VS2013 == v120, VS2012 = v110, etc
-platform_toolset = "v142"
+platform_toolset = "v143"
 
 # Power shell
 # e.g. pwsh = Path("C:\\Program Files\\PowerShell\\7\\pwsh.exe")
 pwsh = Path("<POWERSHELL_PATH>")
+
+# git path
+# e.g. git = Path("C:\\Program Files\\Git\\bin\\git.exe")
+git = Path("<GIT_PATH>")
 
 # Assembly sign tool
 signtool = Path(winsdk, "bin", winsdkvers, "x64\\signtool.exe")

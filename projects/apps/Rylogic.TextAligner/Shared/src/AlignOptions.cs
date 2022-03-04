@@ -32,6 +32,9 @@ namespace Rylogic.TextAligner
 		/// <summary>The method to use for aligning</summary>
 		public EAlignCharacters AlignStyle { get; set; }
 
+		/// <summary>Pattern for lines that should be ignored when aligning</summary>
+		public AlignPattern LineIgnorePattern { get; set; } = new AlignPattern();
+
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()
 		{
@@ -89,6 +92,7 @@ namespace Rylogic.TextAligner
 				new AlignPattern(EPattern.RegularExpression, @"(?<=\s)[_a-zA-z][_a-zA-Z0-9]*_", 0, 1, "Matches class members that end with '_'")));
 
 			AlignStyle = EAlignCharacters.Spaces;
+			LineIgnorePattern = new AlignPattern();
 		}
 
 		/// <summary>Load settings from AppData</summary>

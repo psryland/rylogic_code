@@ -1,7 +1,7 @@
 {
 	"name": "rylogic-textaligner-vscode",
 	"displayName": "Rylogic TextAligner for VSCode",
-	"version": "1.11.1",
+	"version": "1.11.3",
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"keywords": [
@@ -64,6 +64,11 @@
 						"Mixed"
 					],
 					"default": "Spaces"
+				},
+				"textaligner.ignoreLinePattern": {
+					"type": "string",
+					"description": "Lines that match this pattern are ignored when aligning\nExamples:\n  ^\\s*$ - Skip blank lines\n  ^\\s*// - Skips lines that start with a comment\n  (^\\s*$)|(^\\s*//) - Skips blanks lines and lines starting with comments",
+					"default": ""
 				},
 				"textaligner.groups": {
 					"type": "array",

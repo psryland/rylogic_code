@@ -43,7 +43,7 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)pre_build.py $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>py $(ProjectDir)run_tests.py $(TargetPath)</Command>
@@ -60,7 +60,7 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)pre_build.py $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>py $(ProjectDir)run_tests.py $(TargetPath)</Command>
@@ -78,7 +78,7 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)pre_build.py $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>py $(ProjectDir)run_tests.py $(TargetPath)</Command>
@@ -95,7 +95,7 @@
       <AdditionalLibraryDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)pre_build.py $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>py $(ProjectDir)run_tests.py $(TargetPath)</Command>

@@ -303,7 +303,6 @@ class RylogicAssembly(Managed):
 	def __init__(self, proj_name:str, frameworks:List[str], workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, proj_name, frameworks, workspace, platforms, configs)
 		self.proj_dir = os.path.join(workspace, "projects\\rylogic", self.proj_name)
-		self.sign_assemblies = False
 		return
 
 	def Build(self):
@@ -314,7 +313,7 @@ class RylogicAssembly(Managed):
 	def Deploy(self):
 		proj = os.path.join(self.proj_dir, f"{self.proj_name}.csproj")
 		output_dir = os.path.join(self.proj_dir, "bin", "Release")
-		if self.sign_assemblies:
+		if self.requires_signing:
 			for fw in self.frameworks:
 				SignAssembly(os.path.join(output_dir, fw, f"{self.proj_name}.dll"))
 			self.nupkg = Tools.NugetPackage(proj)
@@ -653,7 +652,7 @@ class RylogicTextAligner(Managed):
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
 		for target in self.targets:
-			MSBuild(f"{self.proj_name}.{target}", self.rylogic_sln, [f"VSExtensions\\{self.proj_name}\\{self.proj_name}.{target}"], self.platforms, self.configs)
+			MSBuild(f"{self.proj_name}.{target}", self.rylogic_sln, [f"Apps\\{self.proj_name}\\{self.proj_name}.{target}"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):

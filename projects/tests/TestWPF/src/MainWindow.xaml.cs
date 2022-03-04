@@ -133,7 +133,7 @@ namespace TestWPF
 			});
 			ShowProgressUI = Command.Create(this, () =>
 			{
-				var dlg = new ProgressUI(this, "Test Progress", "Testicles", System.Drawing.SystemIcons.Exclamation.ToBitmapSource(), CancellationToken.None, (u, _, p) =>
+				var dlg = new ProgressUI(this, "Test Progress", "Testicles", System.Drawing.SystemIcons.Exclamation.ToBitmapSource(), (u, _, p) =>
 				{
 					for (int i = 0, iend = 100; !u.CancelPending && i != iend; ++i)
 					{
