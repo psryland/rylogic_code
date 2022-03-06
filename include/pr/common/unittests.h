@@ -22,9 +22,7 @@ namespace pr::unittests
 // to have unit tests available and executed. In the specific unittests project you
 // need to add an include of the file containing the unit test, so that it gets included
 // in the build.
-
 #pragma once
-
 #include <memory>
 #include <iostream>
 #include <string>
@@ -39,11 +37,17 @@ namespace pr::unittests
 #include <locale>
 
 // Optionally use Microsoft's C++ unit test framework
-#define USE_MS_UNITTESTS 1
+#define USE_MS_UNITTESTS 1 // Set this to 0 when compiling as an executable
 #if USE_MS_UNITTESTS
+	#pragma message ("Using MS Unitest Framework")
 	#include <SDKDDKVer.h>
 	#include "CppUnitTest.h"
 	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
+#else
+	#pragma message ("Using Rylogic Unitest Framework")
+	#define TEST_CLASS(testname) class testname
+	#define TEST_METHOD(testmethod) void unused()
+	#define ONLY_USED_AT_NAMESPACE_SCOPE namespace ___CUT___ {extern int YOU_CAN_ONLY_DEFINE_TEST_CLASS_AT_NAMESPACE_SCOPE;}
 #endif
 
 // Cannot include pr lib headers here because they are the headers
@@ -75,99 +79,10 @@ namespace pr::unittests
 
 	// Config string constant
 	#ifdef NDEBUG
-	constexpr wchar_t const Config[] = L"release";
+	constexpr wchar_t const* Config = L"release";
 	#else
-	constexpr wchar_t const Config[] = L"debug";
+	constexpr wchar_t const* Config = L"debug";
 	#endif
-
-	// A pointer to the stream that output is written to
-	inline std::ostream*& outstream()
-	{
-		static std::ostream* s_ostream = &std::cout;
-		return s_ostream;
-	}
-	inline std::ostream& out()
-	{
-		return *outstream();
-	}
-
-	// A directory for temporary files needed by unit tests. Note: automatically cleaned
-	inline std::filesystem::path create_temp_dir(wchar_t const* testname)
-	{
-		using namespace std::filesystem;
-		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
-	}
-
-	// All registered tests
-	inline std::vector<UnitTestItem>& Tests()
-	{
-		static std::vector<UnitTestItem> s_tests;
-		return s_tests;
-	}
-
-	// A counter used for the number of tests performed
-	inline int& TestCount()
-	{
-		static int s_test_count = 0;
-		return s_test_count;
-	}
-
-	// Append a unit test to the Tests() collection
-	inline bool AddTest(UnitTestItem const& test)
-	{
-		pr::unittests::Tests().push_back(test);
-		return true;
-	}
-
-	// Run all of the registered unit tests
-	inline int RunAllTests(bool wordy)
-	{
-		using namespace std::chrono;
-		try
-		{
-			out() << " **** Begin Unit Tests **** " << std::endl;
-			std::sort(std::begin(Tests()), std::end(Tests()));
-
-			// Run the tests
-			int passed = 0, failed = 0;
-			auto T0 = high_resolution_clock::now();
-			for (auto i = std::begin(Tests()), iend = std::end(Tests()); i != iend; ++i)
-			{
-				UnitTestItem const& test = *i;
-				TestCount() = 0;
-				try
-				{
-					if (wordy) out() << test.m_name << std::string(40 - strlen(test.m_name), '.').c_str();
-
-					auto t0 = high_resolution_clock::now();
-					test.m_func();
-					auto t1 = high_resolution_clock::now();
-
-					if (wordy) out() << "success. (" << TestCount() << " tests in " << duration_cast<microseconds>(t1-t0).count() << "ms)" << std::endl;
-					++passed;
-				}
-				catch (std::exception const& e)
-				{
-					out() << test.m_name << " failed:" << std::endl << e.what() << std::endl;
-					++failed;
-				}
-			}
-			auto T1 = high_resolution_clock::now();
-
-			// Print the results
-			if (failed == 0)
-				out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count()*0.001f << "ms) ****" << std::endl;
-			else
-				out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
-
-			return failed == 0 ? 0 : -1;
-		}
-		catch (...)
-		{
-			out() << "UnitTests could not complete due to an unhandled exception" << std::endl;
-			return -1;
-		}
-	}
 
 	// helpers
 	namespace impl
@@ -228,6 +143,145 @@ namespace pr::unittests
 		}
 	}
 
+	// Test Framework functions
+	struct TestFramework
+	{
+		// A counter used for the number of tests performed
+		inline static int TestCount = 0;
+
+		// All registered tests
+		inline static std::vector<UnitTestItem> Tests;
+
+		// A pointer to the stream that output is written to
+		inline static std::ostream* ostream = &std::cout;
+		inline static std::ostream& out() { return *ostream; }
+
+		// A directory for temporary files needed by unit tests. Note: automatically cleaned
+		inline static std::filesystem::path CreateTempDir(wchar_t const* testname)
+		{
+			using namespace std::filesystem;
+			return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
+		}
+
+		// Append a unit test to the Tests() collection
+		inline static bool AddTest(UnitTestItem const& test)
+		{
+			Tests.push_back(test);
+			return true;
+		}
+
+		// Unit test check functions
+		static void Fail(wchar_t const* msg, char const* file, int line)
+		{
+			using namespace impl;
+
+			++TestCount;
+			#if USE_MS_UNITTESTS
+			Assert::Fail(msg);
+			#endif
+			std::wstringstream ss; ss << file << "(" << line << "): " << msg;
+			throw std::runtime_error(Narrow(ss.str()).c_str());
+		}
+
+		// Assert that a unit test result is true
+		static void IsTrue(bool result, wchar_t const* expr, char const* file, int line)
+		{
+			using namespace impl;
+
+			++TestCount;
+			#if USE_MS_UNITTESTS
+			Assert::IsTrue(result, expr);
+			#endif
+			if (result) return;
+			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' failed";
+			throw std::runtime_error(Narrow(ss.str()).c_str());
+		}
+
+		// Check that 'func' throws a 'TExcept' exception
+		template <typename TExcept, typename Func>
+		static void Throws(Func func, wchar_t const* expr, char const* file, int line)
+		{
+			using namespace impl;
+
+			++TestCount;
+			#if USE_MS_UNITTESTS
+			Assert::ExpectException<TExcept>(func, expr);
+			#endif
+
+			bool threw = false;
+			bool threw_expected = false;
+			try
+			{
+				func();
+			}
+			catch (TExcept const&)
+			{
+				threw = true;
+				threw_expected = true;
+			}
+			catch (...)
+			{
+				threw = true;
+			}
+			if (threw_expected)
+				return;
+
+			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
+				? "threw an exception of an unexpected type"
+				: "didn't throw when it was expected to");
+			throw std::runtime_error(Narrow(ss.str()).c_str());
+		}
+	};
+
+	// Run all of the registered unit tests
+	inline int RunAllTests(bool wordy)
+	{
+		using namespace std::chrono;
+		try
+		{
+			TestFramework::out() << " **** Begin Unit Tests **** " << std::endl;
+			std::sort(std::begin(TestFramework::Tests), std::end(TestFramework::Tests));
+
+			// Run the tests
+			int passed = 0, failed = 0;
+			auto T0 = high_resolution_clock::now();
+			for (auto const& test : TestFramework::Tests)
+			{
+				TestFramework::TestCount = 0;
+				try
+				{
+					if (wordy) TestFramework::out() << test.m_name << std::string(40 - strlen(test.m_name), '.').c_str();
+
+					auto t0 = high_resolution_clock::now();
+					test.m_func();
+					auto t1 = high_resolution_clock::now();
+
+					if (wordy) TestFramework::out() << "success. (" << TestFramework::TestCount << " tests in " << duration_cast<microseconds>(t1-t0).count() << "ms)" << std::endl;
+					++passed;
+				}
+				catch (std::exception const& e)
+				{
+					TestFramework::out() << test.m_name << " failed:" << std::endl << e.what() << std::endl;
+					++failed;
+				}
+			}
+			auto T1 = high_resolution_clock::now();
+
+			// Print the results
+			if (failed == 0)
+				TestFramework::out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count()*0.001f << "ms) ****" << std::endl;
+			else
+				TestFramework::out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
+
+			return failed == 0 ? 0 : -1;
+		}
+		catch (...)
+		{
+			TestFramework::out() << "UnitTests could not complete due to an unhandled exception" << std::endl;
+			return -1;
+		}
+	}
+
 	// Unit test Equal functions
 	template <typename T, typename U> inline bool UTEqual(T const& lhs, U const& rhs)
 	{
@@ -275,118 +329,41 @@ namespace pr::unittests
 	{
 		return wcscmp(lhs, rhs) == 0;
 	}
-
-	// Unit test check functions
-	inline void Fail(char const* msg, char const* file, int line)
-	{
-		++TestCount();
-		std::wstringstream ss; ss << file << "(" << line << "): " << msg;
-		throw std::exception(impl::Narrow(ss.str()).c_str());
-	}
-	template <typename T, typename U> inline void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
-	{
-		using namespace impl;
-
-		++TestCount();
-		if (UTEqual(result, expected)) return;
-		std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << "'";
-		throw std::exception(impl::Narrow(ss.str()).c_str());
-	}
-	template <typename T> inline void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
-	{
-		using namespace impl;
-
-		++TestCount();
-		T diff = expected - result;
-		if (-tol < diff && diff < tol) return;
-		std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << " ±" << tol << "'";
-		throw std::exception(impl::Narrow(ss.str()).c_str());
-	}
-	template <typename TExcept, typename Func> inline void Throws(Func func, char const* expr, char const* file, int line)
-	{
-		using namespace impl;
-
-		++TestCount();
-		bool threw = false;
-		bool threw_expected = false;
-		try
-		{
-			func();
-		}
-		catch (TExcept const&)
-		{
-			threw = true;
-			threw_expected = true;
-		}
-		catch (...)
-		{
-			threw = true;
-		}
-		if (threw_expected) return;
-		std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
-			? "threw an exception of an unexpected type"
-			: "didn't throw when it was expected to");
-		throw std::exception(impl::Narrow(ss.str()).c_str());
-	}
 }
+	
+// This macro creates a class using the unit test name, followed by a method that is the body of the test case
+#define PRUnitTest(testname)\
+	TEST_CLASS(testname)\
+	{\
+	public:\
+		TEST_METHOD(UnitTest) { func(); }\
+		static void func()\
+		{\
+			std::filesystem::remove_all(temp_dir);\
+			std::filesystem::create_directories(temp_dir);\
+			test<void>();\
+		}\
+		inline static std::filesystem::path const temp_dir = pr::unittests::TestFramework::CreateTempDir(L#testname);\
+		template <typename T> static void test();\
+	};\
+	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, testname::func));\
+	template <typename T> void testname::test()
+
+#define PR_FAIL(msg)\
+	pr::unittests::TestFramework::Fail(msg, __FILE__, __LINE__)
+
+#define PR_CHECK(expr, ...)\
+	pr::unittests::TestFramework::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr, __FILE__, __LINE__)
+
+#define PR_THROWS(func, what)\
+	pr::unittests::TestFramework::Throws<what>(func, L#func, __FILE__, __LINE__)
+
+#define PR_UNITTEST_OUT\
+	pr::unittests::TestFramework::out()
 
 #if USE_MS_UNITTESTS
-	
-	// This macro creates a class using the unit test name, followed by a method that is the body of the test case
-	#define PRUnitTest(testname)\
-		TEST_CLASS(testname)\
-		{\
-		public:\
-			TEST_METHOD(UnitTest) { func(); }\
-			static void func()\
-			{\
-				std::filesystem::remove_all(temp_dir);\
-				std::filesystem::create_directories(temp_dir);\
-				test<void>();\
-			}\
-			inline static std::filesystem::path const temp_dir = pr::unittests::create_temp_dir(L#testname);\
-			template <typename T> static void test();\
-		};\
-		static bool s_unittest_##testname = pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, testname::func));\
-		template <typename T> void testname::test()
-
-	#define PR_FAIL(msg)\
-		Assert::Fail(msg)
-
-	#define PR_CHECK(expr, ...)\
-		Assert::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr)
-
-	#define PR_THROWS(func, what)\
-		Assert::ExpectException<what>(func, L#func)
-
 	#define PRTestClass(testname)\
-		ONLY_USED_AT_NAMESPACE_SCOPE struct testname : public ::Microsoft::VisualStudio::CppUnitTestFramework::TestClass<testname>
+		ONLY_USED_AT_NAMESPACE_SCOPE class testname : public ::Microsoft::VisualStudio::CppUnitTestFramework::TestClass<testname>
 	#define PRTestMethod(testname)\
 		TEST_METHOD(testname)
-
-#else
-
-	// If this is giving an error like "int return type assumed" and PRUnitTest is
-	// not defined, it means you haven't included the header containing the tests in unittests.cpp.
-	// 's_unittest_testname' is a static bool, that when constructed, causes the test item to be added to the collection of tests
-	// 'func' is a template to that forward declarations are not necessary
-	#define PRUnitTest(testname)\
-		struct unittest_##testname { template <typename T> static void func(); };\
-		static bool s_unittest_##testname = pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_##testname::func<void>));\
-		template <typename T> void unittest_##testname::func()
-
-	#define PR_FAIL(msg)\
-		pr::unittests::Fail(msg, __FILE__, __LINE__)
-
-	#define PR_CHECK(expr, expected_result)\
-		pr::unittests::Check((expr), (expected_result), #expr, __FILE__, __LINE__)
-
-	#define PR_THROWS(func, what)\
-		pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
-
-	#define PRTestClass(testname)\
-		namespace testname
-	#define PRTestMethod(testname)\
-		PRUnitTest(testname)
-
 #endif

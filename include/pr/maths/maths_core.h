@@ -250,6 +250,110 @@ namespace pr
 		return Max(Max(x, y), std::forward<A>(a)...);
 	}
 
+	// Min/Max element (i.e. nearest to -inf/+inf)
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElement(T v)
+	{
+		return v;
+	}
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElement(T v)
+	{
+		return v;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElement(T const& v)
+	{
+		auto min = MinElement(v[0]);
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i) min = Min(min, MinElement(v[i]));
+		return min;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElement(T const& v)
+	{
+		auto max = MaxElement(v[0]);
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i) max = Max(max, MaxElement(v[i]));
+		return max;
+	}
+	template <typename T> inline T MinElement(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
+		auto min = MinElement(a[0]);
+		int i = 1, iend = static_cast<int>(a.size());
+		for (; i != iend; ++i) min = Min(min, MinElement(a[i]));
+		return min;
+	}
+	template <typename T> inline T MaxElement(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
+		auto max = MaxElement(a[0]);
+		int i = 1, iend = static_cast<int>(a.size());
+		for (; i != iend; ++i) max = Max(max, MaxElement(a[i]));
+		return max;
+	}
+
+	// Min/Max absolute element (i.e. nearest to 0/+inf) (needed when T is a large array)
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElementAbs(T v)
+	{
+		return Abs(v);
+	}
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElementAbs(T v)
+	{
+		return Abs(v);
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElementAbs(T const& v)
+	{
+		auto min = MinElementAbs(v[0]);
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i) min = Min(min, MinElementAbs(v[i]));
+		return min;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElementAbs(T const& v)
+	{
+		auto max = MaxElementAbs(v[0]);
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i) max = Max(max, MaxElementAbs(v[i]));
+		return max;
+	}
+	template <typename T> inline T MinElementAbs(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
+		auto min = MinElementAbs(a[0]);
+		int i = 1, iend = static_cast<int>(a.size());
+		for (; i != iend; ++i) min = Min(min, MinElementAbs(a[i]));
+		return min;
+	}
+	template <typename T> inline T MaxElementAbs(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
+		auto max = MaxElementAbs(a[0]);
+		int i = 1, iend = static_cast<int>(a.size());
+		for (; i != iend; ++i) max = Max(max, MaxElementAbs(a[i]));
+		return max;
+	}
+
+	// Smallest/Largest element index. Returns the index of the first min/max element if elements are equal.
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr int MinElementIndex(T const& v)
+	{
+		auto idx = 0;
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i)
+		{
+			if (v[i] >= v[idx]) continue;
+			idx = i;
+		}
+		return idx;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr int MaxElementIndex(T const& v)
+	{
+		auto idx = 0;
+		int i = 1, iend = maths::is_vec<T>::dim;
+		for (; i != iend; ++i)
+		{
+			if (v[i] <= v[idx]) continue;
+			idx = i;
+		}
+		return idx;
+	}
+
 	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
 
 	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if a is in the range (b-tol,b+tol)
@@ -879,110 +983,6 @@ namespace pr
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsNormal(T const& v)
 	{
 		return FEql(LengthSq(v), 1.0f);
-	}
-
-	// Min/Max element (i.e. nearest to -inf/+inf)
-	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElement(T v)
-	{
-		return v;
-	}
-	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElement(T v)
-	{
-		return v;
-	}
-	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElement(T const& v)
-	{
-		auto min = MinElement(v[0]);
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i) min = Min(min, MinElement(v[i]));
-		return min;
-	}
-	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElement(T const& v)
-	{
-		auto max = MaxElement(v[0]);
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i) max = Max(max, MaxElement(v[i]));
-		return max;
-	}
-	template <typename T> inline T MinElement(std::span<T> const& a)
-	{
-		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
-		auto min = MinElement(a[0]);
-		int i = 1, iend = static_cast<int>(a.size());
-		for (; i != iend; ++i) min = Min(min, MinElement(a[i]));
-		return min;
-	}
-	template <typename T> inline T MaxElement(std::span<T> const& a)
-	{
-		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
-		auto max = MaxElement(a[0]);
-		int i = 1, iend = static_cast<int>(a.size());
-		for (; i != iend; ++i) max = Max(max, MaxElement(a[i]));
-		return max;
-	}
-
-	// Min/Max absolute element (i.e. nearest to 0/+inf) (needed when T is a large array)
-	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElementAbs(T v)
-	{
-		return Abs(v);
-	}
-	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElementAbs(T v)
-	{
-		return Abs(v);
-	}
-	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElementAbs(T const& v)
-	{
-		auto min = MinElementAbs(v[0]);
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i) min = Min(min, MinElementAbs(v[i]));
-		return min;
-	}
-	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElementAbs(T const& v)
-	{
-		auto max = MaxElementAbs(v[0]);
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i) max = Max(max, MaxElementAbs(v[i]));
-		return max;
-	}
-	template <typename T> inline T MinElementAbs(std::span<T> const& a)
-	{
-		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
-		auto min = MinElementAbs(a[0]);
-		int i = 1, iend = static_cast<int>(a.size());
-		for (; i != iend; ++i) min = Min(min, MinElementAbs(a[i]));
-		return min;
-	}
-	template <typename T> inline T MaxElementAbs(std::span<T> const& a)
-	{
-		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
-		auto max = MaxElementAbs(a[0]);
-		int i = 1, iend = static_cast<int>(a.size());
-		for (; i != iend; ++i) max = Max(max, MaxElementAbs(a[i]));
-		return max;
-	}
-
-	// Smallest/Largest element index. Returns the index of the first min/max element if elements are equal.
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr int MinElementIndex(T const& v)
-	{
-		auto idx = 0;
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i)
-		{
-			if (v[i] >= v[idx]) continue;
-			idx = i;
-		}
-		return idx;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr int MaxElementIndex(T const& v)
-	{
-		auto idx = 0;
-		int i = 1, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i)
-		{
-			if (v[i] <= v[idx]) continue;
-			idx = i;
-		}
-		return idx;
 	}
 
 	// Sum the elements in a vector

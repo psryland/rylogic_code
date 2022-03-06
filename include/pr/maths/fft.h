@@ -2,112 +2,299 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
+/* 
+ * Free FFT and convolution (C++)
+ * 
+ * Copyright (c) 2021 Project Nayuki. (MIT License)
+ * https://www.nayuki.io/page/free-small-fft-in-multiple-languages
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ * - The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ * - The Software is provided "as is", without warranty of any kind, express or
+ *   implied, including but not limited to the warranties of merchantability,
+ *   fitness for a particular purpose and noninfringement. In no event shall the
+ *   authors or copyright holders be liable for any claim, damages or other
+ *   liability, whether in an action of contract, tort or otherwise, arising from,
+ *   out of or in connection with the Software or the use or other dealings in the
+ *   Software.
+ */
 #pragma once
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 
-// TODO:
-//  This was mostly working, but looks half changed. Fix
-// https://www.nayuki.io/page/free-small-fft-in-multiple-languages/fftcomplex.cpp
-// https://www.nayuki.io/page/free-small-fft-in-multiple-languages/fftrealpair.cpp
-//  Make use of 'ComplexArray' for performance
-//  Fix DFTBluestein
-//  Fix Convolve
-//  Add unit tests for DFT/Convolve
+namespace pr::maths::fft
+{
+	// Implementation
+	namespace impl
+	{
+		// Forwards
+		template <typename Real> void DFTRadix2(Real* real, Real* imag, size_t pow2_length);
+		template <typename Real> void DFTBluestein(Real* real, Real* imag, size_t length);
+		template <typename Real> void Convolve(Real* xr, Real* xi, Real* yr, Real* yi, Real* outr, Real* outi, size_t pow2_length);
+
+		 // Computes the discrete Fourier transform (DFT) of the given complex vector in-place.
+		 // The vector can have any length. (real and imag have the same length).
+		template <typename Real>
+		void DFT(Real* real, Real* imag, size_t length)
+		{
+			if (length == 0)
+				return;
+
+			if (IsPowerOfTwo(length))
+				DFTRadix2(real, imag, length);
+			else
+				DFTBluestein(real, imag, length);
+		}
+
+		// Computes the DFT of the given complex vector in place.
+		// The vector length must be a power of 2. Uses the 'Cooley-Tukey' decimation-in-time radix-2 algorithm.
+		template <typename Real>
+		void DFTRadix2(Real* real, Real* imag, size_t pow2_length)
+		{
+			auto length = pow2_length;
+			if (!IsPowerOfTwo(length))
+				throw std::runtime_error("Length is not a power of 2");
+
+			// Compute levels = floor(log2(n))
+			int levels = 0;
+			for (auto i = length; i > 1; i >>= 1)
+				++levels;
+
+			// Bit-reversed addressing permutation
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				auto j = ReverseBits64(i, levels);
+				if (j > i)
+				{
+					std::swap(real[i], real[j]);
+					std::swap(imag[i], imag[j]);
+				}
+			}
+
+			// 'Cooley-Tukey' decimation-in-time radix-2 FFT
+			for (auto size = 2ULL; size <= pow2_length; size *= 2)
+			{
+				auto halfsize = size / 2;
+				auto tablestep = length / size;
+				for (auto i = 0ULL; i < length; i += size)
+				{
+					for (auto j = i, k = 0ULL; j < i + halfsize; ++j, k += tablestep)
+					{
+						auto l = j + halfsize;
+						auto cos_k = Cos(maths::tau * k / length);
+						auto sin_k = Sin(maths::tau * k / length);
+						auto re =  real[l] * cos_k + imag[l] * sin_k;
+						auto im = -real[l] * sin_k + imag[l] * cos_k;
+
+						real[l] = real[j] - re;
+						imag[l] = imag[j] - im;
+						real[j] += re;
+						imag[j] += im;
+					}
+				}
+
+				// Prevent overflow in 'size *= 2'
+				if (size == length)
+					break;
+			}
+		}
+
+		// Computes DFT of the given complex vector in place.
+		// The vector can have any length. This requires the convolution function, which in turn requires
+		// the radix-2 FFT function. Uses 'Bluestein's chirp z-transform algorithm.
+		template <typename Real>
+		void DFTBluestein(Real* real, Real* imag, size_t length)
+		{
+			// Find a power-of-2 convolution length m such that m >= length * 2 + 1
+			size_t m = 1ULL;
+			for (; m / 2 <= length; m *= 2)
+			{
+				if (m > limits<size_t>::max() / 2)
+					throw std::length_error("Vector too large");
+			}
+
+			std::vector<Real> areal(m), aimag(m);
+			std::vector<Real> breal(m+1), bimag(m+1);
+			std::vector<Real> creal(m), cimag(m);
+
+			// Temporary vectors and preprocessing
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				// An accurate version of: angle = pi * i * i / length;
+				auto angle = maths::tau_by_2 * ((i * i) % (length * 2)) / length;
+				auto cos_i = Cos(angle);
+				auto sin_i = Sin(angle);
+
+				areal[i] =  real[i] * cos_i + imag[i] * sin_i;
+				aimag[i] = -real[i] * sin_i + imag[i] * cos_i;
+				breal[i] = breal[m - i] = cos_i;
+				bimag[i] = bimag[m - i] = sin_i;
+			}
+
+			// Convolution
+			Convolve(&areal[0], &aimag[0], &breal[0], &bimag[0], &creal[0], &cimag[0], m);
+
+			// Post-processing
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				// An accurate version of: angle = pi * i * i / length;
+				auto angle = maths::tau_by_2 * ((i * i) % (length * 2)) / length;
+				auto cos_i = Cos(angle);
+				auto sin_i = Sin(angle);
+
+				real[i] =  creal[i] * cos_i + cimag[i] * sin_i;
+				imag[i] = -creal[i] * sin_i + cimag[i] * cos_i;
+			}
+		}
+
+		// Computes the circular convolution of the given complex vectors. Each vector's length must be the same and a power of 2.
+		template <typename Real>
+		void Convolve(Real* xr, Real* xi, Real* yr, Real* yi, Real* outr, Real* outi, size_t length)
+		{
+			// DFT 'x' and 'y'
+			DFT(xr, xi, length);
+			DFT(yr, yi, length);
+
+			// Compute the product in 'out'
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				outr[i] = xr[i] * yr[i] - xi[i] * yi[i];
+				outi[i] = xi[i] * yr[i] + xr[i] * yi[i];
+			}
+
+			// Inverse DFT of product
+			DFT(outi, outr, length);
+
+			// Scaling (because DFT omits it)
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				outr[i] /= length;
+				outi[i] /= length;
+			}
+		}
+
+		// Naive DFT implementation, used for testing. O(N²)
+		template <typename Real>
+		void DFTNaive(Real const* real, Real const* imag, Real* outr, Real* outi, size_t length, bool inverse)
+		{	
+			auto coef = Bool2SignI(inverse) * maths::tau / length;
+
+			// For each output element
+			for (auto k = 0ULL; k != length; ++k)
+			{
+				auto sumr = 0.0;
+				auto sumi = 0.0;
+
+				// For each input element
+				for (int t = 0; t != length; ++t)
+				{
+					auto angle = coef * (static_cast<long long>(t) * k % length);
+					sumr += real[t] * Cos(angle) - imag[t] * Sin(angle);
+					sumi += real[t] * Sin(angle) + imag[t] * Cos(angle);
+				}
+				
+				outr[k] = static_cast<Real>(sumr);
+				outi[k] = static_cast<Real>(sumi);
+			}
+		}
+
+		// Naive Convolve implementation, used for testing. O(N²)
+		template <typename Real>
+		void ConvolveNaive(Real const* xr, Real const* xi, Real const* yr, Real const* yi, Real* outr, Real* outi, size_t length)
+		{
+			for (auto i = 0ULL; i != length; ++i)
+			{
+				for (auto j = 0ULL; j != length; ++j)
+				{
+					auto k = (i + j) % length;
+					outr[k] += xr[i] * yr[j] - xi[i] * yi[j];
+					outi[k] += xr[i] * yi[j] + xi[i] * yr[j];
+				}
+			}
+		}
+	}
+
+	 // Computes the discrete Fourier transform (DFT) of the given complex vector.
+	 // The vector can have any length. (real and imag have the same length).
+	template <typename Real>
+	void DiscreteFourierTransform(Real const* inputr, Real const* inputi, Real* outr, Real* outi, size_t length)
+	{
+		if (inputr != outr) memcpy(outr, inputr, length * sizeof(Real));
+		if (inputi != outi) memcpy(outi, inputi, length * sizeof(Real));
+		impl::DFT(outr, outi, length);
+	}
+
+	 // Computes the discrete Fourier transform (DFT) of the given signal.
+	 // Returns the magnitudes of the transformed result. The vector can have any length.
+	template <typename Real>
+	std::vector<Real> DiscreteFourierTransform(Real const* inputr, size_t length)
+	{
+		std::vector<Real> outr(length), outi(length);
+		memcpy(outr.data(), inputr, length * sizeof(Real));
+		impl::DFT(outr.data(), outi.data(), length);
+		
+		// Convert the complex values to magnitudes
+		for (auto i = 0ULL; i != length; ++i)
+			outr[i] = sqrt(norm(std::complex<double>(outr[i], outi[i])));
+
+		return std::move(outr);
+	}
+
+	// Computes the inverse discrete Fourier transform (iDFT) of the given complex vector in-place.
+	// The vector can have any length.
+	template <typename Real>
+	void InverseDiscreteFourierTransform(Real const* inputr, Real const* inputi, Real* outr, Real* outi, size_t length)
+	{
+		if (inputr != outr) memcpy(outr, inputr, length * sizeof(Real));
+		if (inputi != outi) memcpy(outi, inputi, length * sizeof(Real));
+
+		// Scale to get the true inverse
+		for (auto i = 0ULL; i != length; ++i)
+		{
+			outr[i] /= length;
+			outi[i] /= length;
+		}
+
+		impl::DFT(outi, outr, length);
+	}
+	template <typename Real>
+	std::vector<Real> InverseDiscreteFourierTransform(Real const* inputr, size_t length)
+	{
+		std::vector<Real> outr(length);
+		memcpy(outr, inputr, length);
+		impl::DFT(std::vector<Real>(length).data(), outr.data(), length);
+		return std::move(outr);
+	}
+
+	// Convert a frequency domain value to a fractional buffer index.
+	// The returned value may not be in the range [0, buffer_size/2).
+	// Callers should check this before using the returned value as an index.
+	template <typename Real>
+	inline Real FIndexAt(Real freq, Real sampling_frequency, size_t buffer_size)
+	{
+		// Convert the frequency into a buffer index
+		return freq * buffer_size / sampling_frequency;
+	}
+
+	// Convert a fractional buffer index to a frequency domain value.
+	// The fractional buffer index 'fidx' does not need to be within the range [0, buffer_size/2).
+	template <typename Real>
+	inline Real FreqAt(Real fidx, Real sampling_frequency, size_t buffer_size)
+	{
+		return sampling_frequency * fidx / buffer_size;
+	}
+}
 
 namespace pr
 {
 	#if 0
-	// A stratified array of complex numbers
-	template <typename Real> struct ComplexArray
-	{
-		using complex = std::complex<Real>;
-		using ContR = std::vector<Real>;
-
-		ContR m_real;
-		ContR m_imag;
-
-		ComplexArray()
-			:m_real()
-			,m_imag()
-		{}
-		ComplexArray(Real const* real, int length)
-			:m_real(real, real + length)
-			,m_imag(length)
-		{}
-		ComplexArray(Real const* real, Real const* imag, int length)
-			:m_real(real, real + length)
-			,m_imag(imag, imag + length)
-		{}
-		ComplexArray(complex const* rhs, int length)
-			:m_real(length)
-			,m_imag(length)
-		{
-			for (int i = 0; i != length; ++i)
-			{
-				m_real[i] = rhs[i].real();
-				m_imag[i] = rhs[i].imag();
-			}
-		}
-
-		// The length of the array
-		size_t size() const
-		{
-			return m_real.size();
-		}
-
-		// Resize the array
-		void resize(int size)
-		{
-			m_real.resize(size);
-			m_imag.resize(size);
-		}
-
-		// A proxy object for assignment by complex number
-		struct NumProxy
-		{
-			Real* m_real;
-			Real* m_imag;
-
-			NumProxy(Real* real, Real* imag)
-				:m_real(real)
-				,m_imag(imag)
-			{}
-			NumProxy& operator =(std::complex<Real> c)
-			{
-				*m_real = c.real();
-				*m_imag = c.imag();
-			}
-			operator std::complex<Real>() const
-			{
-				return std::complex(*m_real, *m_imag);
-			}
-		};
-		NumProxy operator[](int i) const
-		{
-			return NumProxy(&m_real[i], &m_imag[i]);
-		}
-	};
-
-	namespace dft
-	{
-		// Convert a frequency domain value to a fractional buffer index. Returns -1 for out of range frequencies.
-		template <typename Real> inline Real FIndexAt(Real freq, Real sampling_frequency, int buffer_size)
-		{
-			// Convert the frequency into a buffer index
-			auto fidx = Real(freq * buffer_size / sampling_frequency);
-			return fidx >= 0 && fidx < Real(buffer_size / 2) ? fidx : Real(-1);
-		}
-
-		// Convert a fractional buffer index to a frequency domain value.
-		// Returns -1 if 'fidx' is outside the range [0, buffer_size/2)
-		template <typename Real> inline Real FreqAt(Real fidx, Real sampling_frequency, int buffer_size)
-	{
-		if (fidx < 0 || fidx >= buffer_size/2) return Real(-1);
-		return Real(sampling_frequency * fidx / buffer_size);
-	}
-	}
 
 	// Sliding window Discrete Fourier Transform (DFT)
 	template <typename Real> struct SlidingDFT
@@ -273,204 +460,6 @@ namespace pr
 		}
 	};
 
-	// Naive DFT implementation, used for testing. O(N²)
-	template <typename Real> void DFTNaive(Real const* in, std::complex<Real>* out, int N)
-	{
-		for (int i = 0; i != N; ++i)
-		{
-			out[i] = 0.0;
-			for (int j = 0; j != N; ++j)
-			{
-				auto a = -maths::tau * i * j / double(N);
-				out[i] += in[j] * complex<Real>(cos(a), sin(a));
-			}
-		}
-	}
-
-	// Computes the discrete Fourier transform (DFT) of the given complex vector in place.
-	// The vector can have any length, although powers of 2 are faster to compute.
-	template <typename Real> void DFT(std::complex<Real>* signal, int length)
-	{
-		if (length == 0)
-			return;
-
-		if (IsPowerOfTwo(length))
-			DFTRadix2(signal, length);
-		else
-			DFTBluestein(signal, length);
-	}
-
-	// Computes the inverse discrete Fourier transform (IDFT) of the given complex vector in place.
-	// The vector can have any length although powers of 2 are faster to compute.
-	// This transform does not perform scaling, so the inverse is not a true inverse.
-	template <typename Real> void iDFT(std::complex<Real>* signal, int length)
-	{
-		// Swap real and imaginary components
-		for (int i = 0; i != length; ++i)
-		{
-			auto re = signal[i].real();
-			signal[i].real(signal[i].imag());
-			signal[i].imag(re);
-		}
-
-		// "inverse" DFT
-		DFT(signal, length);
-	}
-
-	// Computes the DFT of the given complex vector in place.
-	// The vector length must be a power of 2. Uses the 'Cooley-Tukey' decimation-in-time radix-2 algorithm.
-	template <typename Real> void DFTRadix2(std::complex<Real>* signal, int pow2_length)
-	{
-		int length = pow2_length;
-		if (!IsPowerOfTwo(length))
-			throw std::exception("Length is not a power of 2");
-
-		// Compute levels = floor(log2(n))
-		int levels = 0;
-		for (auto i = length; i > 1; i >>= 1)
-			++levels;
-
-		// Pre-compute trig values
-		std::vector<std::complex<Real>> coeff(length/2);
-		for (int i = 0; i != length / 2; ++i)
-		{
-			auto a = maths::tau * i / length;
-			coeff[i] = std::complex<Real>(Real(cos(a)), -Real(sin(a)));
-		}
-
-		// Bit-reversed addressing permutation
-		for (auto i = 0; i != length; ++i)
-		{
-			auto j = int(ReverseBits32(i, levels));
-			if (j > i)
-				std::swap(signal[i], signal[j]);
-		}
-
-		// 'Cooley-Tukey' decimation-in-time radix-2 FFT
-		for (auto size = 2; size <= length; size *= 2)
-		{
-			auto halfsize = size / 2;
-			auto tablestep = length / size;
-			for (auto i = 0; i < length; i += size)
-			{
-				for (auto j = i, k = 0; j < i + halfsize; j++, k += tablestep)
-				{
-					auto tmp = signal[j + halfsize] * coeff[k];
-					signal[j + halfsize] = signal[j] - tmp;
-					signal[j] += tmp;
-				}
-			}
-			if (size == length)  // Prevent overflow in 'size *= 2'
-				break;
-		}
-	}
-	template <typename Real> std::vector<std::complex<Real>> DFTRadix2(Real const* signal, int length)
-	{
-		std::vector<std::complex<Real>> buf(length);
-		for (int i = 0; i != length; ++i) buf[i] = std::complex<Real>(signal[i], 0);
-		DFTRadix2(buf.data(), length);
-		return std::move(buf);
-	}
-
-	// Computes the discrete Fourier transform (DFT) of the given complex vector in place.
-	// The vector can have any length. This requires the convolution function, which in turn requires the radix-2 FFT function.
-	// Uses 'Bluestein's chirp z-transform algorithm.
-	template <typename Real> void DFTBluestein(std::complex<Real>* signal, int length)
-	{
-		using complex = std::complex<Real>;
-		using BufferC = std::vector<complex>;
-
-		// Find a power-of-2 convolution length m such that m >= length * 2 + 1
-		size_t m;
-		{
-			size_t target;
-			size_t const n_max = 0xFFFFFFFFUL;
-			if (length > (n_max - 1) / 2)
-				throw std::exception("Vector too large");
-
-			target = length * 2 + 1;
-			for (m = 1; m < target; m *= 2)
-				if (n_max / 2 < m)
-					throw std::exception("Vector too large");
-		}
-
-		// Pre-compute trig values
-		std::vector<Real> cos_table(length);
-		std::vector<Real> sin_table(length);
-		for (size_t i = 0; i < length; i++)
-		{
-			// An accurate version of: auto temp = M_PI * i * i / length;
-			auto temp = maths::tau_by_2 * size_t((uint64(i) * i % (uint64(length) * 2)) / length);
-			cos_table[i] = Real(cos(temp));
-			sin_table[i] = Real(sin(temp));
-		}
-
-		// Temporary vectors and preprocessing
-		BufferC a(m);
-		for (auto i = 0; i != length; ++i)
-			a[i] = signal[i] * complex(cos_table[i], -sin_table[i]);
-		
-		BufferC b(m);
-		b[0] = complex(cos_table[0], sin_table[0]);
-		for (auto i = 1; i != length; ++i)
-			b[i] = b[m-i] = complex(cos_table[i], sin_table[i]);
-
-		// Convolution
-		std::vector<Real> creal(m);
-		std::vector<Real> cimag(m);
-		Convolve(areal, aimag, breal, bimag, creal, cimag);
-
-		// Post-processing
-		for (size_t i = 0; i < length; i++)
-		{
-			real[i] =  creal[i] * cos_table[i] + cimag[i] * sin_table[i];
-			imag[i] = -creal[i] * sin_table[i] + cimag[i] * cos_table[i];
-		}
-	}
-
-	// Computes the circular convolution of the given real vectors. Each vector's length must be the same (length).
-	template <typename Real> void Convolve(Real const* x, Real const* y, Real* out, int length)
-	{
-		// Create buffers of complex numbers and set the real parts to the given parameters
-		std::vector<std::complex<Real>> X(length), Y(length), Out(length);
-		for (int i = 0; i != length; ++i)
-		{
-			X.real(x[i]);
-			Y.real(y[i]);
-		}
-		
-		Convolve(X.data(), Y.data(), Out.data(), length);
-	}
-
-	// Computes the circular convolution of the given complex vectors. Each vector's length must be the same.
-	template <typename Real> void Convolve(std::complex<Real> const* x, std::complex<Real> const* y, std::complex<Real>* out, int length)
-	{
-
-		size_t n = xreal.size();
-		std::vector<Real> xr(xreal);
-		std::vector<Real> xi(ximag);
-		std::vector<Real> yr(yreal);
-		std::vector<Real> yi(yimag);
-
-		DiscreteFourierTransform(xr, xi);
-		DiscreteFourierTransform(yr, yi);
-
-		for (size_t i = 0; i < n; i++)
-		{
-			auto temp = xr[i] * yr[i] - xi[i] * yi[i];
-			xi[i] = xi[i] * yr[i] + xr[i] * yi[i];
-			xr[i] = temp;
-		}
-
-		InverseDiscreteFourierTransform(xr, xi);
-
-		// Scaling (because this FFT implementation omits it)
-		for (size_t i = 0; i < n; i++)
-		{
-			outreal[i] = xr[i] / n;
-			outimag[i] = xi[i] / n;
-		}
-	}
 	#endif
 }
 
@@ -478,290 +467,212 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(DiscreteFourierTransformTests)
+	PRUnitTest(FourierTransformTests)
 	{
-		#if 0
-		using BufferR = std::vector<double>;
-		using BufferC = std::vector<std::complex<double>>;
+		using namespace fft;
 
-		double const freq0 =   2.0; // hz
-		double const freq1 =  10.0; // hz
-		double const freq2 =  37.0; // hz
-		double const freq3 =  60.0; // hz
-		double const freq4 = 200.0; // hz
-		double const SampFreq = 1000.0;
-
-		// Create a sinusoidal signal
-		BufferR signal(8192);
-		for (int i = 0, iend = int(signal.size()); i != iend; ++i)
+		struct L
 		{
-			signal[i] =
-				sin(maths::tau * freq0 * i / SampFreq) +
-				sin(maths::tau * freq1 * i / SampFreq) +
-				sin(maths::tau * freq2 * i / SampFreq) +
-				sin(maths::tau * freq3 * i / SampFreq) +
-				sin(maths::tau * freq4 * i / SampFreq);
-		}
+			// Generate a vector of random real values
+			static std::vector<double> RandomReals(size_t n)
+			{
+				std::vector<double> result;
+				std::uniform_real_distribution<double> dist(-1.0, 1.0);
+				for (auto i = 0ULL; i != n; ++i) result.push_back(dist(g_rng()));
+				return std::move(result);
+			}
 
-		// Naive DFT
-		#if 0 // disabled, cause slow
+			// Returns the Log10 RMS error between 'x' and 'y'
+			static double Log10RMSError(double const* xr, double const* xi, double const* yr, double const* yi, size_t length)
+			{
+				auto err = std::pow(10, -99 * 2);
+				for (auto i = 0ULL; i != length; ++i)
+				{
+					auto real = xr[i] - yr[i];
+					auto imag = xi[i] - yi[i];
+					err += real * real + imag * imag;
+				}
+				length += size_t(length == 0);
+				return std::log10(std::sqrt(err / length));
+			}
+
+			// Test run a FFT
+			static void TestFFT(size_t n, double& err0, double& err1)
+			{
+				auto inputr = RandomReals(n);
+				auto inputi = RandomReals(n);
+	
+				vector<double> expectr(n), expecti(n);
+				impl::DFTNaive(inputr.data(), inputi.data(), expectr.data(), expecti.data(), n, false);
+	
+				vector<double> actualr(n), actuali(n);
+				DiscreteFourierTransform(inputr.data(), inputi.data(), actualr.data(), actuali.data(), n);
+				err0 = Log10RMSError(expectr.data(), expecti.data(), actualr.data(), actuali.data(), n);
+	
+				InverseDiscreteFourierTransform(actualr.data(), actuali.data(), actualr.data(), actuali.data(), n);
+				err1 = Log10RMSError(inputr.data(), inputi.data(), actualr.data(), actuali.data(), n);
+			}
+
+			// Test run a convolution
+			static void TestConvolution(size_t n, double& err)
+			{
+				auto input0r = RandomReals(n);
+				auto input0i = RandomReals(n);
+				auto input1r = RandomReals(n);
+				auto input1i = RandomReals(n);
+	
+				std::vector<double> expectr(n), expecti(n);
+				impl::ConvolveNaive(input0r.data(), input0i.data(), input1r.data(), input1i.data(), expectr.data(), expecti.data(), n);
+	
+				std::vector<double> actualr(n), actuali(n);
+				impl::Convolve(input0r.data(), input0i.data(), input1r.data(), input1i.data(), actualr.data(), actuali.data(), n);
+				err = Log10RMSError(expectr.data(), expecti.data(), actualr.data(), actuali.data(), n);
+			}
+		};
+
+		// Test DFT and iDFT
 		{
-			BufferC naive(signal.size());
-			DFTNaive(signal.data(), naive.data(), int(signal.size()));
+			double max_err0 = -99.0, max_err1 = -99.0; //db
 
-			{// Output the frequency response
-				std::string s_out;
-				for (int i = 0, iend = int(naive.size() / 2); i != iend; ++i)
+			// Test power-of-2 size FFTs
+			for (int i = 0; i != 13; ++i)
+			{
+				double err0, err1;
+				L::TestFFT(1ULL << i, err0, err1);
+				max_err0 = std::max(max_err0, err0);
+				max_err1 = std::max(max_err1, err1);
+			}
+
+			// Test small size FFTs
+			for (auto i = 0ULL; i != 30ULL; ++i)
+			{
+				double err0, err1;
+				L::TestFFT(i, err0, err1);
+				max_err0 = std::max(max_err0, err0);
+				max_err1 = std::max(max_err1, err1);
+			}
+
+			// Test diverse size FFTs
+			for (auto i = 0ULL, prev = 0ULL; i != 100ULL; ++i)
+			{
+				auto n = static_cast<size_t>(std::lround(std::pow(1500.0, i / 100.0)));
+				if (n > prev)
 				{
-					auto x = dft::FreqAt(double(i), SampFreq, naive.size());
-					auto y = Length(naive[i]);
-					s_out.append(pr::FmtS("%f, %f\n", x, y));
+					double err0, err1;
+					L::TestFFT(n, err0, err1);
+					max_err0 = std::max(max_err0, err0);
+					max_err1 = std::max(max_err1, err1);
+					prev = n;
 				}
-				pr::BufferToFile(s_out, "\\dump\\frequencies0.csv");
 			}
-		}
-		#endif
-		{// Standard DFT
-			auto freq = DFTRadix2(signal.data(), int(signal.size()));
 
-			{// Output the frequency response
-				std::string s_out;
-				for (int i = 0, iend = int(freq.size()/2); i != iend; ++i)
+			PR_CHECK(max_err0 < -10, true);
+			PR_CHECK(max_err1 < -10, true);
+		}
+		// Test Convolution
+		{
+			double max_err = -99.0; // db
+
+			// Test power-of-2 size convolutions
+			for (auto i = 0; i != 13; ++i)
+			{
+				double err;
+				L::TestConvolution(1ULL << i, err);
+				max_err = std::max(max_err, err);
+			}
+	
+			// Test diverse size convolutions
+			for (auto i = 0ULL, prev = 0ULL; i != 100ULL; ++i)
+			{
+				auto n = static_cast<size_t>(std::lround(std::pow(1500.0, i / 100.0)));
+				if (n > prev)
 				{
-					auto x = dft::FreqAt(double(i), SampFreq, int(freq.size()));
-					auto y = Length(freq[i]);
-					s_out.append(pr::FmtS("%f, %f\n", x, y));
+					double err;
+					L::TestConvolution(n, err);
+					max_err = std::max(max_err, err);
 				}
-				pr::filesys::BufferToFile(s_out, "\\dump\\frequencies1.csv");
 			}
+
+			PR_CHECK(max_err < -10, true);
 		}
-		{// Sliding Window DFT
+		// Other
+		#if 1
+		{
+			constexpr double freq0 = 2.0; // hz
+			constexpr double freq1 = 10.0; // hz
+			constexpr double freq2 = 37.0; // hz
+			constexpr double freq3 = 60.0; // hz
+			constexpr double freq4 = 200.0; // hz
+			constexpr double SampFreq = 1000.0;
 
-			// Add the signal to the DFT
-			int const window_size = 512;
-			SlidingDFT<double> dft(window_size, SampFreq);
-			for (int i = 0, iend = window_size; i != iend; ++i)
-				dft.Add(signal[i]);
-
-			{// Output the frequency response
-				std::string s_out;
-				auto freq_range = dft.FreqRange();
-				for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
-					s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
-				pr::filesys::BufferToFile(s_out, "\\dump\\frequencies2.csv");
+			// Create a sinusoidal signal
+			std::vector<double> signal(8192);
+			for (auto i = 0ULL, iend = signal.size(); i != iend; ++i)
+			{
+				signal[i] =
+					Sin(maths::tau * freq0 * i / SampFreq) +
+					Sin(maths::tau * freq1 * i / SampFreq) +
+					Sin(maths::tau * freq2 * i / SampFreq) +
+					Sin(maths::tau * freq3 * i / SampFreq) +
+					Sin(maths::tau * freq4 * i / SampFreq);
 			}
+
+			{// Standard DFT
+				auto frequencies = DiscreteFourierTransform(signal.data(), signal.size());
+
+				// Output the frequencies
+				#if 1
+				{
+					std::string s_out;
+					for (auto i = 0ULL, length = frequencies.size(); i != length/2; ++i)
+					{
+						auto x = FreqAt(1.0 * i, SampFreq, length);
+						auto y = frequencies[i];
+						s_out.append(pr::FmtS("%f, %f\n", x, y));
+					}
+					pr::filesys::BufferToFile(s_out, "\\dump\\frequencies1.csv");
+				}
+				#endif
+			}
+
+			#if 0 // disabled, cause slow
+			{// Naive DFT
+				std::vector<double> imag(length);
+				std::vector<double> outr(length);
+				std::vector<double> outi(length);
+				impl::DFTNaive(signal.data(), imag.data(), outr.data(), outi.data(), length, false);
+
+				{// Output the frequency response
+					std::string s_out;
+					for (auto i = 0ULL; i != length / 2; ++i)
+					{
+						auto x = FreqAt(static_cast<double>(i), SampFreq, length);
+						auto y = Sqrt(norm(std::complex<double>(outr[i], outi[i]));
+						s_out.append(pr::FmtS("%f, %f\n", x, y));
+					}
+					pr::BufferToFile(s_out, "\\dump\\frequencies0.csv");
+				}
+			}
+			#endif
+			#if 0
+			{// Sliding Window DFT
+				// Add the signal to the DFT
+				int const window_size = 512;
+				SlidingDFT<double> dft(window_size, SampFreq);
+				for (int i = 0, iend = window_size; i != iend; ++i)
+					dft.Add(signal[i]);
+
+				{// Output the frequency response
+					std::string s_out;
+					auto freq_range = dft.FreqRange();
+					for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
+						s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
+					pr::filesys::BufferToFile(s_out, "\\dump\\frequencies2.csv");
+				}
+			}
+			#endif
 		}
 		#endif
 	}
 }
-#endif
-
-
-#if 0
-
-
-// Computes the discrete Fourier transform (DFT) of the given complex vector, storing the result back into the vector.
-// The vector can have any length. This requires the convolution function, which in turn requires the radix-2 FFT function.
-// Uses 'Bluestein's chirp z-transform algorithm.
-template <typename TCont, typename Real = TCont::value_type> void DiscreteFourierTransformBluestein(TCont& real, TCont& imag)
-{
-	if (real.size() != imag.size())
-		throw std::exception("Mismatched lengths");
-
-	// Find a power-of-2 convolution length m such that m >= n * 2 + 1
-	size_t n = real.size();
-	size_t m;
-	{
-		size_t target;
-		size_t const n_max = 0xFFFFFFFFUL;
-		if (n > (n_max - 1) / 2)
-			throw std::exception("Vector too large");
-
-		target = n * 2 + 1;
-		for (m = 1; m < target; m *= 2)
-			if (n_max / 2 < m)
-				throw std::exception("Vector too large");
-	}
-
-	// Pre-compute trig values
-	std::vector<Real> cos_table(n);
-	std::vector<Real> sin_table(n);
-	for (size_t i = 0; i < n; i++)
-	{
-		// An accurate version of: auto temp = M_PI * i * i / n;
-		auto temp = maths::tau_by_2 * size_t(((unsigned long long)i * i % ((unsigned long long)n * 2)) / n);
-		cos_table[i] = Real(cos(temp));
-		sin_table[i] = Real(sin(temp));
-	}
-
-	// Temporary vectors and preprocessing
-	std::vector<Real> areal(m);
-	std::vector<Real> aimag(m);
-	for (size_t i = 0; i < n; i++)
-	{
-		areal[i] =  real[i] * cos_table[i] + imag[i] * sin_table[i];
-		aimag[i] = -real[i] * sin_table[i] + imag[i] * cos_table[i];
-	}
-	std::vector<Real> breal(m);
-	std::vector<Real> bimag(m);
-	breal[0] = cos_table[0];
-	bimag[0] = sin_table[0];
-	for (size_t i = 1; i < n; i++)
-	{
-		breal[i] = breal[m - i] = cos_table[i];
-		bimag[i] = bimag[m - i] = sin_table[i];
-	}
-
-	// Convolution
-	std::vector<Real> creal(m);
-	std::vector<Real> cimag(m);
-	Convolve(areal, aimag, breal, bimag, creal, cimag);
-
-	// Post-processing
-	for (size_t i = 0; i < n; i++)
-	{
-		real[i] =  creal[i] * cos_table[i] + cimag[i] * sin_table[i];
-		imag[i] = -creal[i] * sin_table[i] + cimag[i] * cos_table[i];
-	}
-}
-
-
-#endif
-
-
-
-#if 0
-struct Tests
-{
-	using Cont = std::vector<double>;
-	std::default_random_engine m_rng;
-	double m_max_log_error;
-
-	Tests()
-		:m_rng()
-		,m_max_log_error(-maths::float_inf)
-	{
-		// Test powers of 2
-		for (int i = 0; i != 11; ++i)
-			TestDFT(1U << i);
-
-		// Test small non-powers of 2
-		for (int i = 0; i != 30; ++i)
-			TestDFT(i);
-	
-		// Test power-of-2 size convolutions
-		for (int i = 0; i != 11; ++i)
-			TestConvolution(1U << i);
-	
-		// Test small non-powers of 2 convolutions
-		for (int i = 0; i != 30; ++i)
-			TestConvolution(i);
-	
-		//cout << endl;
-		//cout << "Max log err = " << std::setprecision(3) << m_max_log_error << endl;
-		//cout << "Test " << (m_max_log_error < -10 ? "passed" : "failed") << endl;
-		PR_CHECK(m_max_log_error < -10, true);
-	}
-
-	// Test run a DFT
-	void TestDFT(size_t n)
-	{
-		Cont inputreal(n); Fill(inputreal);
-		Cont inputimag(n); Fill(inputimag);
-
-		Cont refoutreal(n);
-		Cont refoutimag(n);
-		NaiveDFT(inputreal, inputimag, refoutreal, refoutimag, false);
-	
-		Cont actualoutreal(inputreal);
-		Cont actualoutimag(inputimag);
-		DiscreteFourierTransform(actualoutreal, actualoutimag);
-
-		auto log_error = Log10RmsErr(refoutreal, refoutimag, actualoutreal, actualoutimag);
-		cout
-			<< "fftsize=" << std::setw(4) << std::setfill(' ') << n << "  "
-			<< "logerr=" << std::setw(5) << std::setprecision(3) << std::setiosflags(std::ios::showpoint) << log_error << endl;
-		//PR_CHECK(log_error < -10, true);
-	}
-
-	// Test run a Convolution
-	void TestConvolution(size_t n)
-	{
-		Cont input0real(n); Fill(input0real);
-		Cont input0imag(n); Fill(input0imag);
-		Cont input1real(n); Fill(input1real);
-		Cont input1imag(n); Fill(input1imag);
-
-		Cont refoutreal(n);
-		Cont refoutimag(n);
-		NaiveConvolve(input0real, input0imag, input1real, input1imag, refoutreal, refoutimag);
-	
-		Cont actualoutreal(n);
-		Cont actualoutimag(n);
-		Convolve(input0real, input0imag, input1real, input1imag, actualoutreal, actualoutimag);
-
-		auto log_error = Log10RmsErr(refoutreal, refoutimag, actualoutreal, actualoutimag);
-		cout
-			<< "convsize=" << std::setw(4) << std::setfill(' ') << n << "  "
-			<< "logerr=" << std::setw(5) << std::setprecision(3) << std::setiosflags(std::ios::showpoint) << log_error << endl;
-		//PR_CHECK(log_error < -10, true);
-	}
-
-	// Fill a buffer with real's
-	void Fill(Cont& vec)
-	{
-		std::uniform_real_distribution<double> dist(-1.0, 1.0);
-		for (auto& v : vec)
-			v = dist(m_rng);
-	}
-
-	// Return the Log10 of the RMS error between two arrays of complex values
-	double Log10RmsErr(Cont const& xreal, Cont const& ximag, Cont const& yreal, Cont const& yimag)
-	{
-		int n = xreal.size();
-		double err = 0;
-		for (int i = 0; i < n; i++)
-			err += (xreal[i] - yreal[i]) * (xreal[i] - yreal[i]) + (ximag[i] - yimag[i]) * (ximag[i] - yimag[i]);
-	
-		err /= n > 0 ? n : 1;
-		err = sqrt(err);  // Now this is a root mean square (RMS) error
-		err = err > 0 ? log10(err) : -99.0;
-		m_max_log_error = std::max(err, m_max_log_error);
-		return err;
-	}
-
-	// Naive reference implementations
-	void NaiveDFT(Cont const& inreal, Cont const& inimag, Cont& outreal, Cont& outimag, bool inverse)
-	{
-		int n = inreal.size();
-		double coef = (inverse ? 1 : -1) * maths::tau;
-		for (int k = 0; k < n; k++) {  // For each output element
-			double sumreal = 0;
-			double sumimag = 0;
-			for (int t = 0; t < n; t++) {  // For each input element
-				double angle = coef * ((long long)t * k % n) / n;
-				sumreal += inreal[t]*cos(angle) - inimag[t]*sin(angle);
-				sumimag += inreal[t]*sin(angle) + inimag[t]*cos(angle);
-			}
-			outreal[k] = sumreal;
-			outimag[k] = sumimag;
-		}
-	}
-	void NaiveConvolve(Cont const& xreal, Cont const& ximag, Cont const& yreal, Cont const& yimag, Cont& outreal, Cont& outimag) 
-	{
-		int n = xreal.size();
-		for (int i = 0; i < n; i++) {
-			double sumreal = 0;
-			double sumimag = 0;
-			for (int j = 0; j < n; j++) {
-				int k = (i - j + n) % n;
-				sumreal += xreal[k] * yreal[j] - ximag[k] * yimag[j];
-				sumimag += xreal[k] * yimag[j] + ximag[k] * yreal[j];
-			}
-			outreal[i] = sumreal;
-			outimag[i] = sumimag;
-		}
-	}
-};
-Tests test;
 #endif

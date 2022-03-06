@@ -242,13 +242,3 @@ namespace pr
 
 	#pragma endregion
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::maths
-{
-	PRUnitTest(IVector4Tests)
-	{
-	}
-}
-#endif

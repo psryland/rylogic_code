@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -1159,7 +1159,7 @@ namespace pr::physics
 			PR_CHECK(FEql(a0, v8m{0, 0, 0, F/mass, 0, 0}), true);
 
 			// Apply a force at the top
-			// a = F/m, α = F.d/I
+			// a = F/m, A = F.d/I
 			auto r = v4{0, 0.5f*L, 0, 0};
 			auto f1 = Shift(f0, -r);
 			auto a1 = Ic¯ * f1;
@@ -1170,8 +1170,8 @@ namespace pr::physics
 			auto f2 = Shift(f0, -r);
 			auto a2 = Ic¯ * f2;
 			auto a = (1.0f/mass)*f0.lin;
-			auto α = Ic¯.To3x3() * Cross(r, f0.lin);
-			PR_CHECK(FEql(a2, v8m{α, a}), true);
+			auto A = Ic¯.To3x3() * Cross(r, f0.lin);
+			PR_CHECK(FEql(a2, v8m{A, a}), true);
 		}
 		{ // Kinetic energy: 0.5 * Dot(v, h) = 0.5 * v.I.v
 

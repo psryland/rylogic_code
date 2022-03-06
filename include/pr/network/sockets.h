@@ -368,6 +368,7 @@ namespace pr::network
 		{
 			StopConnections();
 
+			// If this fails with WSAEACCESS, it's probably because the firewall is blocking it
 			m_listen_port     = listen_port;
 			m_max_connections = max_connections;
 			m_listen_socket   = CreateListenSocket(m_listen_port);

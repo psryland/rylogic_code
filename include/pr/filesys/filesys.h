@@ -1,4 +1,4 @@
-﻿//**********************************************
+//**********************************************
 // File path/File system operations
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************
@@ -576,7 +576,7 @@ namespace pr::filesys
 			}
 			catch (filesystem_error const& ex)
 			{
-				unittests::out() << ex.what();
+				PR_UNITTEST_OUT << ex.what();
 				throw;
 			}
 		}

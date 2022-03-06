@@ -321,6 +321,7 @@ namespace pr::network
 		{
 			volatile bool connected = false;
 
+			// If this fails with WSAEACCESS, it's probably because the firewall is blocking unittest.exe/.dll
 			TcpServer svr(wsa);
 			svr.AllowConnections(TestPort, [&](SOCKET, sockaddr_in const*)
 			{

@@ -69,6 +69,10 @@ def OnException(ex,enter_to_close=False, pause_time_seconds=0):
 def Path(*args, check_exists:bool = True, normalise:bool = True):
 	return UserVars.Path(*args, check_exists=check_exists, normalise=normalise)
 
+# Import a module with a given name from a file location
+def Import(name:str, path:str):
+	return UserVars.Import(name, path)
+
 # Check that the UserVars file is the correct version
 def AssertVersion(version):
 	if version > UserVars.version:
