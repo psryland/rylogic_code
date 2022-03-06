@@ -81,19 +81,19 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsFormsIntegration" />
-	<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj">
-		<Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
-		<Name>Rylogic.Core</Name>
-	</ProjectReference>
-	<ProjectReference Include="..\..\..\rylogic\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
-		<Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
-		<Name>Rylogic.Core.Windows</Name>
-	</ProjectReference>
-	<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
-		<Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
-		<Name>Rylogic.Gui.WPF</Name>
-	</ProjectReference>
-    </ItemGroup>
+    <ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\rylogic\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
+      <Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
+      <Name>Rylogic.Gui.WPF</Name>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup>
     <Content Include="..\Shared\icon.png">
       <Link>icon.png</Link>

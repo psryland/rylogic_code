@@ -634,3 +634,268 @@ namespace pr
 	}
 }
 
+#if PR_UNITTESTS
+#include <random>
+#include "pr/common/unittests.h"
+#include "pr/maths/rand_vector.h"
+#include "pr/maths/maths.h"
+namespace pr::maths
+{
+	PRUnitTest(FrustumTests)
+	{
+		std::default_random_engine rng(5);
+		auto DumpFrustum = [](Frustum const& f, m4x4 const& f2w)
+		{
+			(void)f,f2w;
+			//ldr::Builder b;
+			//b.Frustum("f", 0xFF00FF00).frustum(f).o2w(f2w);
+			//b.Write("P:\\dump\\frustum.ldr");
+			//auto c = GetCorners(f);
+			//
+			//std::string s;
+			//ldr::Triangle(s, "left", 0xFFFFFFFF, v4Origin, c.x, c.y);
+			//ldr::Triangle(s, "top", 0xFFFFFFFF, v4Origin, c.y, c.z);
+			//ldr::Triangle(s, "right", 0xFFFFFFFF, v4Origin, c.z, c.w);
+			//ldr::Triangle(s, "bottom", 0xFFFFFFFF, v4Origin, c.w, c.x);
+			//ldr::Plane(s, "left", 0xFFFFFFFF, f.plane(Frustum::EPlane::XPos), v4Origin, zfar);
+			//ldr::Plane(s, "right", 0xFFFFFFFF, f.plane(Frustum::EPlane::XNeg), v4Origin, zfar);
+			//ldr::Plane(s, "bottom", 0xFFFFFFFF, f.plane(Frustum::EPlane::YPos), v4Origin, zfar);
+			//ldr::Plane(s, "top", 0xFFFFFFFF, f.plane(Frustum::EPlane::YNeg), v4Origin, zfar);
+			//ldr::Write(s, "P:\\dump\\frustum.ldr");
+		};
+
+		{// Projection round trip
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
+			auto p = f.projection(2.0f, 10.0f);
+			auto F = Frustum::MakeFromProjection(p);
+			auto P = F.projection(2.0f, 10.0f);
+
+			PR_CHECK(FEql(F, f), true);
+			PR_CHECK(FEql(P, p), true);
+		}
+		{ // FA Frustum
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
+			
+			// zdist
+			f.zfar(5.0f);
+			PR_CHECK(f.zfar(), 5.0f);
+			f.zfar(10.0f);
+			PR_CHECK(f.zfar(), 10.0f);
+
+			// aspect = tan(fovX/2) / tan(fovY/2)
+			PR_CHECK(FEql(f.aspect(), 1.75f), true);
+
+			// fov
+			PR_CHECK(FEql(f.fovY(), maths::tau_by_8f), true);
+			PR_CHECK(FEql(f.fovX(), 2 * ATan(f.aspect() * Tan(f.fovY()/2))), true);
+
+			// width/height
+			auto wh = f.area(1.0f);
+			PR_CHECK(FEql(wh.x, 2 * Tan(f.fovX() / 2)), true);
+			PR_CHECK(FEql(wh.y, 2 * Tan(f.fovY() / 2)), true);
+
+			f.zfar(2.0f);
+
+			// IsWithin
+			// In front/behind test
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+
+			// zfar test
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+
+			// Random points
+			PR_CHECK(IsWithin(f, v4{+0.4f, -0.2f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{-0.3f, +0.4f, -0.8f, 1}, 0.0f), false);
+
+			// Radius test
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.07f), true);
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.06f), false);
+
+			// GetCorners
+			auto corners = Corners(f, 1.0f);
+			PR_CHECK(FEql(corners.x, v4(-0.724874f, -0.414214f, -1.0f, 1)), true);
+			PR_CHECK(FEql(corners.y, v4(-0.724874f, +0.414214f, -1.0f, 1)), true);
+			PR_CHECK(FEql(corners.z, v4(+0.724874f, +0.414214f, -1.0f, 1)), true);
+			PR_CHECK(FEql(corners.w, v4(+0.724874f, -0.414214f, -1.0f, 1)), true);
+		}
+		{ // WH Frustum
+			auto f = Frustum::MakeWH(v2(16.0f, 9.0f), 10.0f, 20.0f);
+			
+			// zdist
+			PR_CHECK(f.zfar(), 20.0f);
+
+			// aspect = tan(fovX/2) / tan(fovY/2)
+			PR_CHECK(FEql(f.aspect(), 16.0f/9.0f), true);
+
+			// fov
+			PR_CHECK(FEql(f.fovX(), 2 * ATan(8.0f / 10.0f)), true);
+			PR_CHECK(FEql(f.fovY(), 2 * ATan(4.5f / 10.0f)), true);
+
+			// width/height
+			auto wh = f.area(1.0f);
+			PR_CHECK(FEql(wh.x, 1.6f), true);
+			PR_CHECK(FEql(wh.y, 0.9f), true);
+
+			f.zfar(2.0f);
+
+			// IsWithin
+			// In front/behind test
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+			
+			// zfar test
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+			
+			// Random points
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.2f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.0f), false);
+			
+			// Radius test
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.23f), true);
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.20f), true); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
+			
+			// GetCorners
+			auto corners = Corners(f, 2.0f);
+			PR_CHECK(FEql(corners.x, v4(-1.6f, -0.9f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.y, v4(-1.6f, +0.9f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.z, v4(+1.6f, +0.9f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.w, v4(+1.6f, -0.9f, -2.0f, 1)), true);
+		}
+		{// Ortho frustum
+			auto f = Frustum::MakeOrtho(v2(1.6f, 0.9f));
+
+			// zdist
+			PR_CHECK(FEql(f.zfar(), maths::float_inf), true);
+
+			// aspect = tan(fovX/2) / tan(fovY/2)
+			PR_CHECK(FEql(f.aspect(), 1.6f/0.9f), true);
+
+			// fov
+			PR_CHECK(FEql(f.fovX(), 0.0f), true);
+			PR_CHECK(FEql(f.fovY(), 0.0f), true);
+
+			// width/height
+			auto wh = f.area(1.0f);
+			PR_CHECK(FEql(wh.x, 1.6f), true);
+			PR_CHECK(FEql(wh.y, 0.9f), true);
+
+			// IsWithin
+			// In front/behind test
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
+			
+			// zfar test
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
+			
+			// Random points
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.44f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.46f, -0.8f, 1}, 0.0f), false);
+			
+			// Radius test
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.06f), true);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.04f), false);
+
+			// GetCorners
+			auto corners = Corners(f, 2.0f);
+			PR_CHECK(FEql(corners.x, v4(-0.8f, -0.45f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.y, v4(-0.8f, +0.45f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.z, v4(+0.8f, +0.45f, -2.0f, 1)), true);
+			PR_CHECK(FEql(corners.w, v4(+0.8f, -0.45f, -2.0f, 1)), true);
+		}
+		{// Grow with points
+			std::vector<v4> pts;
+			for (int i = 0; i != 50; ++i)
+				pts.push_back(Random3(rng, 0.0f, 2.0f, 1.0f));
+
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+
+			for (auto& pt : pts)
+			{
+				Grow(f, f2w, nf, pt, 0.0f);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& pt : pts)
+			//		b.Sphere("s", 0xFFFF0000).r(0.05).pos(pt);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& pt : pts)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * pt, 0.001f, nf);
+				PR_CHECK(within, true);
+			}
+		}
+		{// Grow with bboxes
+			std::vector<BBox> bboxes;
+			for (int i = 0; i != 50; ++i)
+			{
+				BBox bb(
+					Random3(rng, i * 0.05f, i * 0.1f, 1.0f),
+					Abs(Random3(rng, 0.3f, 0.5f, 0.0f)));
+				bboxes.push_back(bb);
+			}
+
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+			for (auto& bb : bboxes)
+			{
+				Grow(f, f2w, nf, bb);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& bb : bboxes)
+			//		b.Box("s", 0xFFFF0000).bbox(bb);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& bb : bboxes)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * bb, nf);
+				PR_CHECK(within, true);
+			}
+		}
+		{// Grow with spheres
+			std::vector<BSphere> spheres;
+			for (int i = 0; i != 50; ++i)
+			{
+				BSphere bs(
+					Random3(rng, i * 0.05f, i * 0.2f, 1.0f),
+					Random1(rng, 0.3f, 0.5f));
+				spheres.push_back(bs);
+			}
+
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+			for (auto& bs : spheres)
+			{
+				Grow(f, f2w, nf, bs);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& bs : spheres)
+			//		b.Sphere("s", 0xFFFF0000).bsphere(bs);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& bs : spheres)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * bs, nf);
+				PR_CHECK(within, true);
+			}
+		}
+	}
+}
+#endif
+

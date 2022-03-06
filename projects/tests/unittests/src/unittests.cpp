@@ -74,3 +74,8 @@ extern "C"
 		return pr::unittests::RunAllTests(wordy != 0);
 	}
 }
+int main(int argc, char* argv[])
+{
+	auto wordy = argc > 1 && strcmp(argv[1], "-verbose") == 0;
+	return pr::unittests::RunAllTests(wordy);
+}

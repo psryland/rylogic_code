@@ -4,24 +4,27 @@
 # Execute unit tests
 # Use:
 #   run_tests $(TargetPath)
-import sys, os, re, ctypes
+import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../script")))
-import Rylogic as Tools
-import UserVars
+import Rylogic, UserVars
+
+# Set this to false to disable running tests on compiling
+RunTests = True
+#RunTests = False
 
 try:
-	Tools.AssertVersion(1)
 	sys.argv = sys.argv if len(sys.argv) >= 2 else ["", "P:\\pr\\obj\\v142\\unittests\\x64\\Debug\\unittests.dll"] 
 
-	# Set this to false to disable running tests on compiling
-	RunTests = True
-	#RunTests = False
+	target_path = Rylogic.Path(sys.argv[1])
+	target_extn = os.path.splitext(target_path)[1].lower()
 
-	test_dll_path = os.path.abspath(sys.argv[1])
-	if RunTests and os.path.exists(test_dll_path):
+	# If the target is an exe, just run it
+	if RunTests and target_extn == ".exe":
+		Rylogic.Exec([target_path])
 
-		vstest = os.path.join(UserVars.vs_dir, "Common7", "IDE", "Extensions", "TestPlatform", "vstest.console.exe")
-		Tools.Exec([vstest, test_dll_path, "--logger:console;verbosity=minimal", "--nologo"])
+	elif RunTests and target_extn == ".dll":
+		vstest = Rylogic.Path(UserVars.vs_dir, "Common7\\IDE\\Extensions\\TestPlatform\\vstest.console.exe")
+		Rylogic.Exec([vstest, target_path, "--logger:console;verbosity=minimal", "--nologo"])
 
 	else:
 		print("   **** Unit tests not run ****   ")

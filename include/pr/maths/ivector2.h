@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
@@ -179,13 +178,3 @@ namespace pr
 
 	#pragma endregion
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::maths
-{
-	PRUnitTest(IVector2Tests)
-	{
-	}
-}
-#endif
