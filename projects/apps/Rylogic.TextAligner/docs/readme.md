@@ -1,4 +1,6 @@
-# Rylogic Text Aligner
+﻿# Rylogic Text Aligner
+
+_This version is for Visual Studio 2022 and future versions. For Visual Studio 2019 and earlier, use this version [Rylogic.TextAligner for Visual Studio 2019](https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner)_
 
 _Rylogic Text Aligner is now also available for [Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=Rylogic.rylogic-textaligner-vscode)_!
 
@@ -137,6 +139,12 @@ Bugs should be reported to support@rylogic.co.nz
 
 * *v1.11.3 - 2022-03-16*
   * Added _Ignore Line Pattern_
+
+* *v1.11.2 - 2022-01-30*
+  * Bug fix
+
+* *v1.11.1 - 2022-01-27*
+  * Updated to support Visual Studio 2022
 
 * *v1.10.0 - 2020-05-29*
   * Synchronised code with the Visual Studio Code implementation

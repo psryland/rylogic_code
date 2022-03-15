@@ -1,12 +1,16 @@
 # Change Log
 
-## [1.11.1] - 2022-03-05
+$$ [1.11.3] - 2022-03-16
+
+### Changed
 
 - Added 'Ignore Line Pattern' option
 - Bug Fix. The user setting for 'alignCharacters' was not being read correctly
 - Synchronised with VS release
 
 ## [1.10.6] - 2021-09-13
+
+### Changed
 
 - Rebuild with updated packages. No other changes.
 - Updated readme.md
