@@ -112,6 +112,14 @@ Each _Alignment Pattern_ has an _Offset_ and a _Minimum Width_. The offset contr
 
 In settings, search for 'TextAligner' and look for 'Groups', then edit the JSON data representation of the alignment groups and patterns. It's a good idea to use an online Regex testing tool to design and test your regular expressions (for example: [regexr.com](https://regexr.com/)). Note however that VSCode uses ES2018 regular expressions with support for negative lookbehind and other features, but many online testers do not.
 
+#### Ignore Line Pattern
+
+The ignore line pattern can be used to make certain lines invisible to the aligning algorithm. This can be useful for aligning definitions that are separated by blank lines and comments.
+
+For example, if the _Ignore Line Pattern_ is set to the regular expression pattern ```(^\s*$)|(^\s*//)``` the aligner will ignore all blank lines and lines starting with a single line comment (C++ in this example)
+
+![ignored_lines.gif](https://raw.githubusercontent.com/psryland/rylogic_code/master/typescript/projects/Rylogic.TextAligner/images/ignored_lines.gif "ignored lines example")
+
 #### Support & Donate
 
 If you like Rylogic Text Aligner and would like to say thanks, a donation would be greatly appreciated.

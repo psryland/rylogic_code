@@ -67,15 +67,15 @@ a== b
 enum AlignWithGaps
 {
 	// This line is ignored
-	One = 1,
+	One    = 1,
 	TwoTwo = 22,
-	// This line is also ignored
-	Three = 3,
-	Four = 44444,
-	// And this one = ignored.
-	Five = 55,
 
-	Six = 6,
-	// Aligning stops before here
-	Seven = 7
+	// This line is also ignored
+	Three  = 3,
+	Fours  = 44444,
+
+	// And this one, even with a '=' in it
+	Fives  = 55,
+
+	Six    = 6,
 }
