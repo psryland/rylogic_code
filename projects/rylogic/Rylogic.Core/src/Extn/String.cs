@@ -57,8 +57,16 @@ namespace Rylogic.Extn
 			// function in for loops more convenient;
 			int i = start_index;
 			if (i < 0 || i >= str.Length) return str.Length;
-			for (; i != str.Length && !pred(str[i]); ++i) {}
+			for (; i != str.Length && !pred(str[i]); ++i) { }
 			return i;
+		}
+
+		/// <summary>Return the first word upto a delimiter from this string</summary>
+		public static string FirstWord(this string str) => FirstWord(str, WhiteSpaceChars);
+		public static string FirstWord(this string str, char[] delim)
+		{
+			var idx = str.IndexOfAny(delim);
+			return idx != -1 ? str.Substring(0, idx) : str;
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>

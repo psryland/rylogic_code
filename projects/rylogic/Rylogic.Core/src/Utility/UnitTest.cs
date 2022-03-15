@@ -104,6 +104,11 @@ namespace Rylogic.UnitTests
 							if (test_setup != null)
 								test_setup.Invoke(inst, null);
 
+							// Exception Here?
+							//  - Look at 'fixture' to see the text name.
+							//  - Put a break point on the first line of that test.
+							//  - Turn on first chance exceptions.
+
 							// Run the test
 							test.Invoke(inst, null);
 
@@ -113,7 +118,7 @@ namespace Rylogic.UnitTests
 
 							++pass_count;
 						}
-						catch (Exception ex)
+						catch (Exception ex) when (!Debugger.IsAttached) // Don't catch while debugging
 						{
 							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
 							outp.WriteLine();
@@ -164,7 +169,7 @@ namespace Rylogic.UnitTests
 				}
 				return failed == 0;
 			}
-			catch (Exception ex)
+			catch (Exception ex) when (!Debugger.IsAttached) // Don't catch while debugging
 			{
 				Console.WriteLine($"Unit Testing:  Unhandled exception running unit tests: {ex.Message}");
 				return false;

@@ -20,7 +20,6 @@
 	</metadata>
 	<files>
 		<file src="bin\release\netstandard2.0\Rylogic.Core.dll" target="lib\netstandard2.0\Rylogic.Core.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.Core.dll" target="lib\netcoreapp3.1\Rylogic.Core.dll" />
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

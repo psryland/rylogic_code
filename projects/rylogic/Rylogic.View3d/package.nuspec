@@ -22,11 +22,11 @@
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
-		<file src="..\..\lib\x64\release\view3d.dll" target="build\x64\view3d.dll" />
-		<file src="..\..\lib\x86\release\view3d.dll" target="build\x86\view3d.dll" />
-		<file src="Rylogic.View3d.targets" target="build\Rylogic.View3d.targets" />
+		<file src="bin\release\net6.0-windows\Rylogic.View3d.dll" target="lib\net6.0-windows\Rylogic.View3d.dll" />
 		<file src="bin\release\net472\Rylogic.View3d.dll" target="lib\net472\Rylogic.View3d.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.View3d.dll" target="lib\netcoreapp3.1\Rylogic.View3d.dll" />
+		<file src="Rylogic.View3d.targets" target="build\Rylogic.View3d.targets" />
+		<file src="..\..\..\lib\x64\release\view3d.dll" target="build\x64\view3d.dll" />
+		<file src="..\..\..\lib\x86\release\view3d.dll" target="build\x86\view3d.dll" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

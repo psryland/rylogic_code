@@ -21,8 +21,8 @@
 		</dependencies>
 	</metadata>
 	<files>
+		<file src="bin\release\net6.0-windows\Rylogic.Gui.WPF.dll" target="lib\net6.0-windows\Rylogic.Gui.WPF.dll" />
 		<file src="bin\release\net472\Rylogic.Gui.WPF.dll" target="lib\net472\Rylogic.Gui.WPF.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.Gui.WPF.dll" target="lib\netcoreapp3.1\Rylogic.Gui.WPF.dll" />
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

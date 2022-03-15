@@ -468,12 +468,40 @@ namespace Rylogic.Gui.WPF
 		public static void SetColumnVisibilitySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibilitySupportProperty, value);
 		private static void ColumnVisibilitySupport_Changed(DependencyObject obj)
 		{
-			if (obj is not DataGrid data_grid)
+			if (obj is not DataGrid grid)
 				return;
 
-			data_grid.MouseRightButtonUp -= ColumnVisibility;
+			grid.MouseRightButtonUp -= ColumnVisibility;
 			if (GetColumnVisibilitySupport(obj))
-				data_grid.MouseRightButtonUp += ColumnVisibility;
+				grid.MouseRightButtonUp += ColumnVisibility;
+		}
+
+		/// <summary>Display a context menu for showing/hiding columns in the grid. Attach to 'MouseRightButtonUp'</summary>
+		public static void ColumnVisibility(object? sender, MouseButtonEventArgs args)
+		{
+			// Unfortunately, binding like this 'MouseRightButtonUp="{Binding DataGrid_.ColumnVisibility}"'
+			// doesn't work. You'd need to provide an instance method that forwards to this call, so you
+			// might as well just sign up the event handler in the constructor:
+			//  m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
+			if (sender is not DataGrid grid ||
+				args.OriginalSource is not DependencyObject hit ||
+				args.ChangedButton != MouseButton.Right ||
+				args.RightButton != MouseButtonState.Released)
+				return;
+
+			// Right mouse on a column header displays a context menu for hiding/showing columns
+			var hit_header = Gui_.FindVisualParent<DataGridColumnHeader>(hit, root: grid) != null;
+			if (!hit_header)
+			{
+				// The 'filler' header is not clickable (IsHitTestVisible is false)
+				var filler = Gui_.FindVisualChild<DataGridColumnHeader>(grid, x => x.Name == "PART_FillerColumnHeader");
+				hit_header = filler?.RenderArea().Contains(args.GetPosition(filler)) ?? false;
+			}
+			if (hit_header)
+			{
+				grid.ColumnVisibilityCMenu();
+				args.Handled = true;
+			}
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
@@ -509,35 +537,6 @@ namespace Rylogic.Gui.WPF
 				if (hdr is Image img)
 					return new Image { Source = img.Source, MaxHeight = 18 };
 				return "<no heading>";
-			}
-		}
-
-		/// <summary>Display a context menu for showing/hiding columns in the grid. Attach to 'MouseRightButtonUp'</summary>
-		public static void ColumnVisibility(object sender, MouseButtonEventArgs args)
-		{
-			// Unfortunately, binding like this 'MouseRightButtonUp="{Binding DataGrid_.ColumnVisibility}"'
-			// doesn't work. You'd need to provide an instance method that forwards to this call, so you
-			// might as well just sign up the event handler in the constructor:
-			//  m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
-			if (args.ChangedButton != MouseButton.Right || args.RightButton != MouseButtonState.Released)
-				return;
-
-			// If this throws, check you've actually signed up to a DataGrid (i.e. not a Grid)
-			var grid = (DataGrid)sender;
-			var hit = (DependencyObject)args.OriginalSource;
-
-			// Right mouse on a column header displays a context menu for hiding/showing columns
-			var hit_header = Gui_.FindVisualParent<DataGridColumnHeader>(hit, root: grid) != null;
-			if (!hit_header)
-			{
-				// The 'filler' header is not clickable (IsHitTestVisible is false)
-				var filler = Gui_.FindVisualChild<DataGridColumnHeader>(grid, x => x.Name == "PART_FillerColumnHeader");
-				hit_header = filler?.RenderArea().Contains(args.GetPosition(filler)) ?? false;
-			}
-			if (hit_header)
-			{
-				grid.ColumnVisibilityCMenu();
-				args.Handled = true;
 			}
 		}
 

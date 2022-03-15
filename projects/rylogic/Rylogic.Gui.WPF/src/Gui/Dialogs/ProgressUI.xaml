@@ -4,7 +4,6 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignHeight="200"
@@ -62,9 +61,10 @@
 				<TextBlock
 					Grid.Column="1"
 					Text="{Binding Description}"
-                    Visibility="{Binding Description, Converter={conv:NullToCollapsed}}"
+                    Visibility="{Binding Description, Converter={conv:NullToHidden}}"
 					VerticalAlignment="Center"
 					TextWrapping="Wrap"
+					MinWidth="200"
 					Margin="4,8,8,8"
 					/>
 			</Grid>

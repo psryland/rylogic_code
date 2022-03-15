@@ -789,9 +789,10 @@ def NugetPackage(proj:str):
 
 	# Notes:
 	#  - Assembly signing, packaging, and publishing are all separate steps.
+	proj_dir = os.path.split(proj)[0]
 
 	# No nuspec = no publish
-	nuspec = os.path.join(os.path.split(proj)[0], "package.nuspec")
+	nuspec = os.path.join(proj_dir, "package.nuspec")
 	if not os.path.exists(nuspec):
 		raise RuntimeError(f"'nuspec' file missing. Expected '{nuspec}'")
 
@@ -803,6 +804,12 @@ def NugetPackage(proj:str):
 	# Compare it to the versions in the project file
 	if vers0 != vers1 or vers0 != vers2:
 		raise Exception(f"Version number mismatch between project file ({proj}) and nuspec file ({nuspec})")
+
+	# Check all the output files exist
+	for m in ExtractMany(nuspec, r'<file\s+src="(?P<target>.*?)"'):
+		target = Path(proj_dir, m.group("target"), check_exists=False)
+		if os.path.exists(target): continue
+		raise Exception(f"NuSpec target {target} does not exist")
 
 	# Build the Nuget package directly in the lib\packages folder
 	Exec([UserVars.nuget, "pack", nuspec, "-OutputDirectory", os.path.join(UserVars.root, "lib", "packages")])

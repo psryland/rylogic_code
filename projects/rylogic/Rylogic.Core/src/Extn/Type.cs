@@ -24,7 +24,12 @@ namespace Rylogic.Extn
 		public static object New(this Type ty)
 		{
 			if (!ty.IsClass)
-				return Activator.CreateInstance(ty) ?? throw new Exception($"Default constructor for {ty.Name} not found"); ;
+			{
+				if (Nullable.GetUnderlyingType(ty) != null)
+					return null!;
+
+				return Activator.CreateInstance(ty) ?? throw new Exception($"Default constructor for {ty.Name} not found");
+			}
 
 			var cons = ty.GetConstructor(Array.Empty<Type>()) ?? throw new Exception($"Default constructor for {ty.Name} not found");
 			return cons.Invoke(null);
@@ -197,6 +202,12 @@ namespace Rylogic.Extn
 			return type != null && type != typeof(object) && type.BaseType != null
 				? AllEvents(type.BaseType, flags).Concat(type.GetEvents(flags|BindingFlags.DeclaredOnly))
 				: Enumerable.Empty<EventInfo>();
+		}
+
+		/// <summary>Find the backing field for an auto property</summary>
+		public static FieldInfo? BackingField(this PropertyInfo prop)
+		{
+			return prop.DeclaringType.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
 		}
 
 		/// <summary>Find all types derived from this type</summary>
