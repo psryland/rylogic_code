@@ -12,9 +12,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\sqlite3.def">
-      <Filter>src</Filter>
-    </None>
     <None Include="deploy.py" />
   </ItemGroup>
   <ItemGroup>

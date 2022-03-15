@@ -21,8 +21,7 @@
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
 		<file src="bin\release\net472\Rylogic.Gui.WinForms.dll" target="lib\net472\Rylogic.Gui.WinForms.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.Gui.WinForms.dll" target="lib\netcoreapp3.1\Rylogic.Gui.WinForms.dll" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

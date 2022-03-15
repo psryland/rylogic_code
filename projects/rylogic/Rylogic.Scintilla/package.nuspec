@@ -22,11 +22,11 @@
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
-		<file src="..\..\lib\x64\release\scintilla.dll" target="build\x64\scintilla.dll" />
-		<file src="..\..\lib\x86\release\scintilla.dll" target="build\x86\scintilla.dll" />
-		<file src="Rylogic.Scintilla.targets" target="build\Rylogic.Scintilla.targets" />
+		<file src="bin\release\net6.0-windows\Rylogic.Scintilla.dll" target="lib\net6.0-windows\Rylogic.Scintilla.dll" />
 		<file src="bin\release\net472\Rylogic.Scintilla.dll" target="lib\net472\Rylogic.Scintilla.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.Scintilla.dll" target="lib\netcoreapp3.1\Rylogic.Scintilla.dll" />
+		<file src="Rylogic.Scintilla.targets" target="build\Rylogic.Scintilla.targets" />
+		<file src="..\..\..\lib\x64\release\scintilla.dll" target="build\x64\scintilla.dll" />
+		<file src="..\..\..\lib\x86\release\scintilla.dll" target="build\x86\scintilla.dll" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

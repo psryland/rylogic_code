@@ -61,6 +61,18 @@ namespace Rylogic.Extn
 			return New(col_count, row_count, (c,r) => init);
 		}
 
+		/// <summary>Return a slice of this array</summary>
+		public static Span<T> Slice<T>(this T[] arr, int start)
+		{
+			return Slice(arr, start, arr.Length - start);
+		}
+		public static Span<T> Slice<T>(this T[] arr, int start, int count)
+		{
+			if (start >= arr.Length) throw new IndexOutOfRangeException($"'start' ({start}) is out of range [0,{arr.Length})");
+			if (start + count > arr.Length) throw new IndexOutOfRangeException($"'start + count' ({start+count}) is out of range [0,{arr.Length}]");
+			return new Span<T>(arr, start, count);
+		}
+
 		/// <summary>Reset the array to default</summary>
 		public static void Clear<T>(this T[] arr)
 		{

@@ -20,8 +20,8 @@
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="..\..\include\pr\license.txt" target="license.txt" />
+		<file src="bin\release\net6.0-windows\Rylogic.Core.Windows.dll" target="lib\net6.0-windows\Rylogic.Core.Windows.dll" />
 		<file src="bin\release\net472\Rylogic.Core.Windows.dll" target="lib\net472\Rylogic.Core.Windows.dll" />
-		<file src="bin\release\netcoreapp3.1\Rylogic.Core.Windows.dll" target="lib\netcoreapp3.1\Rylogic.Core.Windows.dll" />
+		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
 	</files>
 </package>

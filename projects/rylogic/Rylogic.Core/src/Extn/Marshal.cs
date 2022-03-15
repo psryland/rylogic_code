@@ -149,9 +149,12 @@ namespace Rylogic.Common
 			return func;
 		}
 
-		/// <summary>Convert unmanaged memory to a UTF8 string</summary>
+		/// <summary>Interpret an (unmanaged) utf8 string pointer to a C# string</summary>
 		public static string PtrToStringUTF8(IntPtr ptr, int length)
 		{
+			if (ptr == IntPtr.Zero)
+				return null!;
+
 			#if NETCOREAPP3_1_OR_GREATER
 			return Marshal.PtrToStringUTF8(ptr, length);
 			#else
@@ -159,6 +162,22 @@ namespace Rylogic.Common
 			Marshal.Copy(ptr, bytes, 0, length);
 			return Encoding.UTF8.GetString(bytes);
 			#endif
+		}
+		public static string PtrToStringUTF8(IntPtr ptr)
+		{
+			if (ptr == IntPtr.Zero)
+				return null!;
+
+			// Read up to the null character
+			int len = 0;  for (; Marshal.ReadByte(ptr, len) != 0; ++len) { }
+			return PtrToStringUTF8(ptr, len);
+		}
+
+		/// <summary>Inverse of PtrToStringUTF8</summary>
+		public static PinnedObject<byte[]> StringToPtrUTF8(string str)
+		{
+			var bytes = Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(str));
+			return Pin(bytes, GCHandleType.Pinned);
 		}
 
 		/// <summary>Pin an object. No copy made. 'type' Pinned only works if 'obj' contains primitive/blittable data</summary>
