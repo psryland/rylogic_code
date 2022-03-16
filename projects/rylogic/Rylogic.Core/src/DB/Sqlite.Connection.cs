@@ -55,9 +55,9 @@ namespace Rylogic.Db
 						{
 							Handle.Close();
 							if (Handle.CloseResult == EResult.Busy)
-								throw new SqliteException(Handle.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
+								throw new SqliteException(Handle.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.", string.Empty);
 							if (Handle.CloseResult != EResult.OK)
-								throw new SqliteException(Handle.CloseResult, "Failed to close database connection");
+								throw new SqliteException(Handle.CloseResult, "Failed to close database connection", string.Empty);
 						}
 						Util.Dispose(m_handle!);
 					}
@@ -73,20 +73,20 @@ namespace Rylogic.Db
 			///<summary>The Id of the thread that created this DB handle.</summary>
 			public int OwnerThreadId { get; }
 
-			/// <summary>Debugging label for the connection</summary>
-			public string Label { get; set; }
-
-			/// <summary>The string used to connect to the database</summary>
+			/// <summary>Connection string</summary>
 			public string ConnectionString
 			{
 				get => m_connection_string;
 				set
 				{
-					if (IsOpen) throw new SqliteException(EResult.Misuse, "Cannot change the connection string on an open DB connection");
+					if (IsOpen) throw new SqliteException(EResult.Misuse, "Can't change the connection string while the connection is open", string.Empty);
 					m_connection_string = value;
 				}
 			}
 			private string m_connection_string = string.Empty;
+
+			/// <summary>Debugging label for the connection</summary>
+			public string Label { get; set; }
 
 			/// <summary>The name of the database this connection is too</summary>
 			public string Database { get; private set; } = string.Empty;
@@ -94,76 +94,92 @@ namespace Rylogic.Db
 			/// <summary>Open the connection to the DB</summary>
 			public Connection Open()
 			{
-				Close();
+				return Open(ConnectionString);
+			}
+			public Connection Open(string connection_string)
+			{
+				ConnectionString = connection_string;
 
 				// Parse the connection string
-				var options = ConnectionString.Split(';')
-					.Select(pair => pair.Split('='))
-					.ToDictionary(x => x[0].ToLower().Trim(), x => x[1].Trim());
+				var options = new Dictionary<string, string>();
+				foreach (var kv in connection_string.Split(';'))
+				{
+					var idx = kv.IndexOf('=');
+					if (idx == -1) throw new SqliteException(EResult.Misuse, $"Connection string is invalid near '{kv}'", string.Empty);
+					options.Add(
+						kv.Substring(0, idx).ToLowerInvariant().Trim(),
+						kv.Substring(idx + 1).Trim());
+				}
 
 				// Create the dll version
 				if (options.TryGetValue("version", out var version_string))
 				{
-					var version = int.TryParse(version_string, out var v) ? v : throw new SqliteException(EResult.Error, $"Invalid value for 'Version': {version_string}");
+					var version = int.TryParse(version_string, out var v) ? v : throw new SqliteException(EResult.Error, $"Invalid value for 'Version': {version_string}", string.Empty);
 					var lib_version = NativeAPI.LibVersionNumber(); // Version encoded as Mmmmppp, M = Major, mmm = minor, ppp = point
 					if (version * 1_000_000 > lib_version)
-						throw new SqliteException(EResult.Error, $"SQL library version is {NativeAPI.LibVersion()}. Version >= {version}.0.0 was requested");
+						throw new SqliteException(EResult.Error, $"SQL library version is {NativeAPI.LibVersion()}. Version >= {version}.0.0 was requested", string.Empty);
 				}
 
 				// Set the connection flags
-				Flags = EOpenFlags.None;
+				var flags = EOpenFlags.None;
 				if (options.TryGetValue("mode", out var mode))
 				{
 					switch (mode.ToLower())
 					{
-						case "readwritecreate": Flags |= EOpenFlags.ReadWrite | EOpenFlags.Create; break;
-						case "readwrite": Flags |= EOpenFlags.ReadWrite; break;
-						case "readonly": Flags |= EOpenFlags.ReadOnly; break;
-						case "memory": Flags |= EOpenFlags.ReadWrite | EOpenFlags.Create; break;
-						default: throw new SqliteException(EResult.Error, $"Mode {mode} is not supported.");
+						case "readonly": flags |= EOpenFlags.ReadOnly; break;
+						case "readwrite": flags |= EOpenFlags.ReadWrite; break;
+						case "readwritecreate": flags |= EOpenFlags.ReadWrite | EOpenFlags.Create; break;
+						case "memory": flags |= EOpenFlags.ReadWrite | EOpenFlags.Create | EOpenFlags.Memory; break;
+						case "default": flags |= EOpenFlags.ReadWrite | EOpenFlags.Create; break;
+						default: throw new SqliteException(EResult.Error, $"Mode {mode} is not supported.", string.Empty);
 					}
 				}
 				else
 				{
-					Flags |= EOpenFlags.ReadWrite | EOpenFlags.Create;
+					flags |= EOpenFlags.ReadWrite | EOpenFlags.Create;
 				}
 				if (options.TryGetValue("cache", out var cache))
 				{
 					switch (cache.ToLower())
 					{
-						case "default": Flags |= EOpenFlags.None; break;
-						case "private": Flags |= EOpenFlags.PrivateCache; break;
-						case "shared": Flags |= EOpenFlags.SharedCache; break;
-						default: throw new SqliteException(EResult.Error, $"Cache mode {cache} is not supported.");
+						case "default": flags |= EOpenFlags.None; break;
+						case "private": flags |= EOpenFlags.PrivateCache; break;
+						case "shared": flags |= EOpenFlags.SharedCache; break;
+						default: throw new SqliteException(EResult.Error, $"Cache mode {cache} is not supported.", string.Empty);
 					}
 				}
 				else
 				{
-					Flags |= EOpenFlags.None;
+					flags |= EOpenFlags.None;
 				}
 				if (options.TryGetValue("threadsafe", out var threadsafe))
 				{
 					// 'threadsafe' means threadsafe *per connection*, so NoMutex = one thread per connection, FullMutex = N threads per connection.
 					switch (threadsafe.ToLower())
 					{
-						case "off": Flags |= EOpenFlags.NoMutex; break;
-						case "on": Flags |= EOpenFlags.FullMutex; break;
-						default: throw new SqliteException(EResult.Error, $"ThreadSafe option {threadsafe} is not supported.");
+						case "off": flags |= EOpenFlags.NoMutex; break;
+						case "on": flags |= EOpenFlags.FullMutex; break;
+						default: throw new SqliteException(EResult.Error, $"ThreadSafe option {threadsafe} is not supported.", string.Empty);
 					}
 				}
 				else if (NativeAPI.CompiledThreadingMode != EConfigOption.SingleThread)
 				{
-					Flags |= EOpenFlags.FullMutex;
+					flags |= EOpenFlags.FullMutex;
 				}
 
 				// Open the connection
-				if (options.TryGetValue("data source", out var db_source))
-					Handle = NativeAPI.Open(db_source, Flags);
-				else
-					throw new SqliteException(EResult.Error, $"No 'Data Source' provided in connection string");
+				if (!options.TryGetValue("data source", out var db_source))
+					throw new SqliteException(EResult.Error, $"No 'Data Source' provided in connection string", string.Empty);
 
-				// Record the database name/file
-				Database = db_source;
+				// Handle URI data sources
+				if (db_source.StartsWith("file:"))
+					flags |= EOpenFlags.URI;
+
+				// Allow extended error codes
+				flags |= EOpenFlags.ExResCode;
+
+				// Open the connection
+				Open(db_source, flags);
 
 				// Set other DB settings
 				if (options.TryGetValue("synchronous", out var sync))
@@ -177,6 +193,16 @@ namespace Rylogic.Db
 				if (options.TryGetValue("recursive triggers", out var recursive_triggers) ||
 					options.TryGetValue("recursive_triggers", out recursive_triggers))
 					Cmd($"PRAGMA recursive_triggers = {(recursive_triggers.ToUpper() == "TRUE" ? "1" : "0")}").Execute();
+
+				return this; // Fluent
+			}
+			public Connection Open(string db_source, EOpenFlags flags)
+			{
+				Close();
+
+				Handle = NativeAPI.Open(db_source, flags);
+				Database = db_source;
+				Flags = flags;
 
 				return this; // Fluent
 			}
@@ -250,7 +276,7 @@ namespace Rylogic.Db
 				// If ConfigOption.Serialized is used, it's open session for any threads
 				if (OwnerThreadId == Thread.CurrentThread.ManagedThreadId) return true;
 				if (Flags.HasFlag(EOpenFlags.FullMutex)) return true;
-				throw new SqliteException(EResult.Misuse, $"Cross-thread use of Sqlite.\n{new StackTrace()}");
+				throw new SqliteException(EResult.Misuse, $"Cross-thread use of Sqlite.\n{new StackTrace()}", string.Empty);
 			}
 
 			#region IDbConnection
@@ -299,7 +325,7 @@ namespace Rylogic.Db
 					foreach (var list in m_cache.Values)
 					{
 						if (list.InUse != 0)
-							throw new SqliteException(EResult.Misuse, $"There are still prepared statements in use");
+							throw new SqliteException(EResult.Misuse, $"There are still prepared statements in use", string.Empty);
 
 						Util.DisposeRange(list.Stmts);
 					}

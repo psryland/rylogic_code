@@ -43,7 +43,7 @@ namespace Rylogic.Db
 			public void Commit()
 			{
 				if (m_completed)
-					throw new SqliteException(EResult.Misuse, "Transaction already completed");
+					throw new SqliteException(EResult.Misuse, "Transaction already completed", string.Empty);
 
 				Connection.Cmd("commit").Execute();
 				m_completed = true;
@@ -53,7 +53,7 @@ namespace Rylogic.Db
 			public void Rollback()
 			{
 				if (m_completed)
-					throw new SqliteException(EResult.Misuse, "Transaction already completed");
+					throw new SqliteException(EResult.Misuse, "Transaction already completed", string.Empty);
 
 				Connection.Cmd("rollback").Execute();
 				m_completed = true;

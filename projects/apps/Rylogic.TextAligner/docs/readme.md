@@ -123,7 +123,7 @@ To edit and test a pattern, select the pencil icon to display the pattern editor
 
 The ignore line pattern can be used to make certain lines invisible to the aligning algorithm. This can be useful for aligning definitions that are separated by blank lines and comments.
 
-For example, if the _Ignore Line Pattern_ is set to the regular expression pattern ```(^\s*$)|(^\s*//)``` the aligner will ignore all blank lines and lines starting with a single line comment (C++ in this example)
+For example, if the _Ignore Line Pattern_ is set to the regular expression pattern ```(^\s*$)|(^\s*//)``` the aligner will ignore all blank lines and lines starting with a single line comment.
 
 ![ignored_lines.gif](https://raw.githubusercontent.com/psryland/rylogic_code/master/projects/apps/Rylogic.TextAligner/docs/ignored_lines.gif "ignored lines example")
 

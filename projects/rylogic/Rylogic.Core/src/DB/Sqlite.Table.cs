@@ -171,7 +171,7 @@ namespace Rylogic.Db
 					Name = name;
 					Type = ty;
 					Constraints = constraints.ToLowerInvariant();
-					ColumnType = Enum.TryParse(Constraints.FirstWord(), true, out EDataType ct) ? ct : throw new SqliteException(EResult.Error, $"Unknown column data type");
+					ColumnType = Enum.TryParse(Constraints.FirstWord(), true, out EDataType ct) ? ct : throw new Exception($"Unknown column data type");
 					PrimaryKey = Constraints.Contains("primary key");
 					AutoIncrement = Constraints.Contains("autoincrement");
 					NotNull = Constraints.Contains("not null");
