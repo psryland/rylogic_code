@@ -8,9 +8,9 @@ namespace Rylogic.Db
 	public class SqliteException : Exception
 	{
 		public SqliteException()
-			:this(Sqlite.EResult.Error, string.Empty)
+			:this(Sqlite.EResult.Error, string.Empty, string.Empty)
 		{}
-		public SqliteException(Sqlite.EResult res, string message, string? sql_error_msg = null, Exception? inner_exception = null)
+		public SqliteException(Sqlite.EResult res, string message, string sql_error_msg, Exception? inner_exception = null)
 			: base(message, inner_exception)
 		{
 			Result = res;

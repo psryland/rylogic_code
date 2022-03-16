@@ -28,10 +28,13 @@ namespace Rylogic.Db
 			/// <summary>The command that created the statements</summary>
 			private Command Cmd { get; }
 
+			/// <summary>The last error message</summary>
+			private string ErrorMsg => Cmd.Connection.ErrorMsg;
+
 			/// <summary>The statement handle</summary>
 			private sqlite3_stmt Stmt
 			{
-				get => Cmd.Stmt ?? throw new SqliteException(EResult.Misuse, "To statement to execute");
+				get => Cmd.Stmt ?? throw new ArgumentNullException(nameof(Stmt), "To statement to execute");
 				set => Cmd.Stmt = value;
 			}
 
@@ -57,7 +60,7 @@ namespace Rylogic.Db
 				for (; ; )
 				{
 					var res = NativeAPI.Step(Stmt);
-					switch (res)
+					switch (res.BasicCode())
 					{
 						case EResult.Row:
 						{
@@ -89,11 +92,22 @@ namespace Rylogic.Db
 							// One way around this problem is to check the extended error code returned by an sqlite3_step() call. If there is a blocking
 							// connection, then the extended error code is set to SQLITE_LOCKED_SHAREDCACHE. Otherwise, in the special "DROP TABLE/INDEX"
 							// case, the extended error code is just SQLITE_LOCKED.
-							throw new SqliteException(res, NativeAPI.ErrorMsg(Stmt));
+							if (res != EResult.Locked_SharedCache)
+								throw new SqliteException(res, "Database locked", ErrorMsg);
+
+							// Wait for the DB to unlock
+							using var mre = new ManualResetEvent(false);
+							void WaitForUnlock(IntPtr argv, int argc) => mre.Set();
+							var rc = NativeAPI.UnlockNotify(Cmd.Connection.Handle, WaitForUnlock, IntPtr.Zero);
+							if (rc != EResult.OK && rc.BasicCode() != EResult.Locked)
+								throw new SqliteException(rc, $"Failed to register callback in UnlockNotify", ErrorMsg);
+
+							mre.WaitOne();
+							break;
 						}
 						default:
 						{
-							throw new SqliteException(res, NativeAPI.ErrorMsg(Stmt));
+							throw new SqliteException(res, string.Empty, ErrorMsg);
 						}
 					}
 				}
@@ -128,7 +142,7 @@ namespace Rylogic.Db
 			/// <summary>Return the index of the column with the given name</summary>
 			public int ColumnIndex(string column)
 			{
-				return FindColumnIndex(column) ?? throw new SqliteException(EResult.NotFound, $"No column named {column} in result");
+				return FindColumnIndex(column) ?? throw new SqliteException(EResult.NotFound, $"No column named {column} in result", string.Empty);
 			}
 
 			/// <summary>Look for a column with the given name. Returns null if not found</summary>

@@ -189,13 +189,13 @@ namespace Rylogic.Db
 			ERROR_MISSING_COLLSEQ = 257,
 
 			///<summary>The SQLITE_BUSY_RECOVERY error code is an extended error code for SQLITE_BUSY that indicates that an operation could not continue because another process is busy recovering a WAL mode database file following a crash.The SQLITE_BUSY_RECOVERY error code only occurs on WAL mode databases.</summary>
-			BUSY_RECOVERY = 261,
+			Busy_Recovery = 261,
 
 			///<summary>The SQLITE_LOCKED_SHAREDCACHE result code indicates that access to an SQLite data record is blocked by another database connection that is using the same record in shared cache mode.When two or more database connections share the same cache and one of the connections is in the middle of modifying a record in that cache, then other connections are blocked from accessing that data while the modifications are on-going in order to prevent the readers from seeing a corrupt or partially completed change.</summary>
-			LOCKED_SHAREDCACHE = 262,
+			Locked_SharedCache = 262,
 
 			///<summary>The SQLITE_READONLY_RECOVERY error code is an extended error code for SQLITE_READONLY.The SQLITE_READONLY_RECOVERY error code indicates that a WAL mode database cannot be opened because the database file needs to be recovered and recovery requires write access but only read access is available.</summary>
-			READONLY_RECOVERY = 264,
+			Readonly_Recovery = 264,
 
 			///<summary>The SQLITE_IOERR_READ error code is an extended error code for SQLITE_IOERR indicating an I/O error in the VFS layer while trying to read from a file on disk.This error might result from a hardware malfunction or because a filesystem came unmounted while the file was open.</summary>
 			IOERR_READ = 266,
@@ -444,23 +444,66 @@ namespace Rylogic.Db
 		}
 
 		/// <summary>Flags passed to the sqlite3_open_v2 function</summary>
-		[Flags] public enum EOpenFlags
+		[Flags]
+		public enum EOpenFlags
 		{
-			None      = 0,
-			ReadOnly  = 1 << 0,
-			ReadWrite = 1 << 1,
-			Create    = 1 << 2,
+			None = 0,
 
-			NoMutex   = 1 << 15,
+			/// <summary>The database is opened in read-only mode. If the database does not already exist, an error is returned.</summary>
+			ReadOnly = 1 << 0,
+
+			/// <summary>The database is opened for reading and writing if possible, or reading only if the file is write protected by the operating system. In either case the database must already exist, otherwise an error is returned.</summary>
+			ReadWrite = 1 << 1,
+
+			/// <summary>The database is created if it does not already exist. This is the behavior that is always used for sqlite3_open() and sqlite3_open16().</summary>
+			Create = 1 << 2,
+
+			/// <summary></summary>
+			DeleteOnClose = 1 << 3,
+			Exclusive = 1 << 4,
+			AutoProxy = 1 << 5,
+
+			/// <summary>The filename can be interpreted as a URI if this flag is set.</summary>
+			URI = 1 << 6,
+
+			/// <summary>The database will be opened as an in-memory database. The database is named by the "filename" argument for the purposes of cache-sharing, if shared cache mode is enabled, but the "filename" is otherwise ignored.</summary>
+			Memory = 1 << 7,
+
+			/// <summary></summary>
+			MainDB = 1 << 8,
+			TempDB = 1 << 9,
+			TransientDB = 1 << 10,
+			MainJournal = 1 << 11,
+			TempJournal = 1 << 12,
+			SubJournal = 1 << 13,
+			SuperJournal = 1 << 14,
+
+			/// <summary>The new database connection will use the "multi-thread" threading mode. This means that separate threads are allowed to use SQLite at the same time, as long as each thread is using a different database connection.</summary>
+			NoMutex = 1 << 15,
+
+			/// <summary>The new database connection will use the "serialized" threading mode. This means the multiple threads can safely attempt to use the same database connection at the same time. (Mutexes will block any actual concurrency, but in this mode there is no harm in trying.)</summary>
 			FullMutex = 1 << 16,
-			
-			SharedCache  = 1 << 17,
+
+			/// <summary>The database is opened shared cache enabled, overriding the default shared cache setting provided by sqlite3_enable_shared_cache().</summary>
+			SharedCache = 1 << 17,
+
+			/// <summary>The database is opened shared cache disabled, overriding the default shared cache setting provided by sqlite3_enable_shared_cache().</summary>
 			PrivateCache = 1 << 18,
 
-			ProtectionComplete                             = 1 << 20,
-			ProtectionCompleteUnlessOpen                   = 2 << 20,
+			/// <summary></summary>
+			WAL = 1 << 19,
+
+			/// <summary></summary>
+			ProtectionComplete = 1 << 20,
+			ProtectionCompleteUnlessOpen = 2 << 20,
 			ProtectionCompleteUntilFirstUserAuthentication = 3 << 20,
-			ProtectionNone                                 = 4 << 20
+			ProtectionNone = 4 << 20,
+
+			/// <summary>The database filename is not allowed to be a symbolic link</summary>
+			NoFollow = 1 << 24,
+
+			/// <summary>The database connection comes up in "extended result code mode". In other words, the database behaves has if sqlite3_extended_result_codes(db,1) where called on the database connection as soon as the connection is created. In addition to setting the extended result code mode, this flag also causes sqlite3_open_v2() to return an extended result code.</summary>
+			ExResCode = 1 << 25,
 		}
 
 		/// <summary>Sqlite limit categories</summary>
@@ -627,13 +670,19 @@ namespace Rylogic.Db
 		#endregion
 		#region Global Methods
 
+		/// <summary>Convert from an extended error code to a basic error code</summary>
+		public static EResult BasicCode(this EResult result)
+		{
+			return (EResult)((int)result & 0xFF);
+		}
+
 		/// <summary>
 		/// Sets a global configuration option for sqlite.
 		/// Must be called prior to initialisation or after shutdown of sqlite.
 		/// Initialisation happens implicitly when Open is called.</summary>
-		public static void Configure(EConfigOption option, params object[] args)
+		public static EResult Configure(EConfigOption option, params object[] args)
 		{
-			NativeAPI.Config(option, args);
+			return NativeAPI.Config(option, args);
 		}
 
 		/// <summary>Convert an SQL data type to a basic type</summary>
@@ -646,7 +695,7 @@ namespace Rylogic.Db
 				EDataType.Real => typeof(double),
 				EDataType.Blob => typeof(byte[]),
 				EDataType.Null => typeof(DBNull),
-				_ => throw new SqliteException(EResult.Error, $"Unknown SQL data type: {dt}"),
+				_ => throw new Exception($"Unknown SQL data type: {dt}"),
 			};
 		}
 
@@ -666,7 +715,7 @@ namespace Rylogic.Db
 				EDataType.Real => 0.0,
 				EDataType.Blob => new byte[0],
 				EDataType.Null => null!,
-				_ => throw new SqliteException(EResult.Error, $"Unknown SQL data type: {dt}"),
+				_ => throw new Exception($"Unknown SQL data type: {dt}"),
 			};
 		}
 
@@ -701,7 +750,7 @@ namespace Rylogic.Db
 		public static int ParameterIndex(this sqlite3_stmt stmt, string name)
 		{
 			var idx = NativeAPI.BindParameterIndex(stmt, name); // 1-based
-			if (idx == 0) throw new SqliteException(EResult.Error, $"No parameter named {name} was found.\nSql: {NativeAPI.SqlString(stmt)}");
+			if (idx == 0) throw new SqliteException(EResult.Error, $"No parameter named {name} was found.\nSql: {NativeAPI.SqlString(stmt)}", string.Empty);
 			return idx - 1;
 		}
 
@@ -709,7 +758,7 @@ namespace Rylogic.Db
 		public static string ParameterName(this sqlite3_stmt stmt, int idx)
 		{
 			return NativeAPI.BindParameterName(stmt, idx + 1) // 1-based
-				?? throw new SqliteException(EResult.Error, $"No parameter at index {idx}.\nSql: {NativeAPI.SqlString(stmt)}");
+				?? throw new SqliteException(EResult.Error, $"No parameter at index {idx}.\nSql: {NativeAPI.SqlString(stmt)}", string.Empty);
 		}
 
 		#endregion
@@ -863,7 +912,7 @@ namespace Rylogic.Db
 							EDataType.Integer => NativeAPI.ColumnInt64(stmt, i),
 							EDataType.Real => NativeAPI.ColumnDouble(stmt, i),
 							EDataType.Blob => NativeAPI.ColumnBlob(stmt, i),
-							_ => throw new SqliteException(EResult.Error, $"Unknown SQL data type"),
+							_ => throw new Exception($"Unknown SQL data type"),
 						};
 					});
 				Register(typeof(string), EDataType.Text,
@@ -1072,14 +1121,15 @@ namespace Rylogic.Db
 							EDataType.Text => DateTime.Parse(NativeAPI.ColumnText(stmt, i)),
 							EDataType.Integer => new DateTime(NativeAPI.ColumnInt64(stmt, i), DateTimeKind.Unspecified),
 							EDataType.Null => throw new NullReferenceException($"Can't convert 'Null' to DateTime"),
-							_ => throw new SqliteException(EResult.Error, $"Column data type can't be converted to DateTime"),
+							_ => throw new Exception($"Column data type can't be converted to DateTime"),
 						};
 					});
 				Register(typeof(DateTimeOffset), EDataType.Integer,
 					(stmt, i, obj) =>
 					{
 						var dto = (DateTimeOffset)obj;
-						if (dto.Offset != TimeSpan.Zero) throw new SqliteException(EResult.Error, "Only UTC DateTimeOffset values can be stored");
+						if (dto.Offset != TimeSpan.Zero)
+							throw new Exception("Only UTC DateTimeOffset values can be stored");
 						NativeAPI.BindInt64(stmt, i, dto.Ticks);
 					},
 					(stmt, i) =>
@@ -1089,7 +1139,7 @@ namespace Rylogic.Db
 							EDataType.Text => DateTimeOffset.Parse(NativeAPI.ColumnText(stmt, i)),
 							EDataType.Integer => new DateTimeOffset(NativeAPI.ColumnInt64(stmt, i), TimeSpan.Zero),
 							EDataType.Null => throw new NullReferenceException($"Can't convert 'Null' to DateTimeOffset"),
-							_ => throw new SqliteException(EResult.Error, $"Column data type can't be converted to DateTimeOffset"),
+							_ => throw new Exception($"Column data type can't be converted to DateTimeOffset"),
 						};
 					});
 				Register(typeof(TimeSpan), EDataType.Integer,
@@ -1105,7 +1155,7 @@ namespace Rylogic.Db
 							EDataType.Text => TimeSpan.Parse(NativeAPI.ColumnText(stmt, i)),
 							EDataType.Integer => new TimeSpan(NativeAPI.ColumnInt64(stmt, i)),
 							EDataType.Null => throw new NullReferenceException($"Can't convert 'Null' to TimeSpan"),
-							_ => throw new SqliteException(EResult.Error, $"Column data type can't be converted to TimeSpan"),
+							_ => throw new Exception($"Column data type can't be converted to TimeSpan"),
 						};
 					});
 				Register(typeof(Colour32), EDataType.Integer,
@@ -1143,7 +1193,7 @@ namespace Rylogic.Db
 				{
 					ty = BaseType(ty);
 					if (!m_map.TryGetValue(ty, out var mapping))
-						throw new SqliteException(EResult.NotFound,
+						throw new KeyNotFoundException(
 							$"Type '{ty.Name}' does not have a column type for binding to a DB column. " +
 							$"Callers should register custom bindings in this map.");
 					
@@ -1185,7 +1235,7 @@ namespace Rylogic.Db
 					{
 						// Return if null
 						if (NativeAPI.ColumnType(stmt, idx) == EDataType.Null)
-							return is_nullable ? null! : throw new SqliteException(EResult.Error, $"Column contains null for non-nullable type {ty.Name}");
+							return is_nullable ? null! : throw new SqliteException(EResult.Error, $"Column contains null for non-nullable type {ty.Name}", string.Empty);
 
 						// Read the value (as the underlying type)
 						var obj = mapping.Read(stmt, idx);
@@ -1225,7 +1275,7 @@ namespace Rylogic.UnitTests
 		// Use an in-memory DB for normal unit tests, use an actual file when debugging
 		private static string DBFilepath = Path.Combine(UnitTest.ResourcePath, "test.db");
 		private static string ConnectionString =
-			$"Data Source=file:SharedMemDb?mode=memory&cache=shared;Version=3;Journal Mode=Memory;ThreadSafe=OFF;Synchronous=OFF;Foreign Keys=ON";
+			$"Data Source=file:SharedMem.db?mode=memory&cache=shared;Version=3;Journal Mode=Memory;ThreadSafe=OFF;Synchronous=OFF;Foreign Keys=ON";
 			//$"Data Source={DBFilepath};Version=3;Journal Mode=Memory;ThreadSafe=OFF;Synchronous=OFF;Foreign Keys=ON";
 			//$"Data Source={Sqlite3.DBInMemory};Version=3;Journal Mode=Memory;ThreadSafe=OFF;Synchronous=OFF;Foreign Keys=ON";
 

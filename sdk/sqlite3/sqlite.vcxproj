@@ -81,7 +81,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;SQLITE_USE_URI;SQLITE_ENABLE_UNLOCK_NOTIFY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ImportLibrary>$(OutDir)$(TargetName).imp</ImportLibrary>
@@ -97,7 +97,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;SQLITE_USE_URI;SQLITE_ENABLE_UNLOCK_NOTIFY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ImportLibrary>$(OutDir)$(TargetName).imp</ImportLibrary>
@@ -115,7 +115,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;SQLITE_USE_URI;SQLITE_ENABLE_UNLOCK_NOTIFY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -135,7 +135,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;SQLITE_USE_URI;SQLITE_ENABLE_UNLOCK_NOTIFY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

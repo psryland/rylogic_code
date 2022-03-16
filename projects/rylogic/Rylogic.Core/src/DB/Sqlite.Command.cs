@@ -57,13 +57,16 @@ namespace Rylogic.Db
 							// Close instead
 							m_stmt.Close(); // After 'sqlite3_finalize()', it is illegal to use 'm_stmt'.
 							if (m_stmt.CloseResult != EResult.OK)
-								throw new SqliteException(m_stmt.CloseResult, Connection.ErrorMsg);
+								throw new SqliteException(m_stmt.CloseResult, string.Empty, ErrorMsg);
 						}
 					}
 					m_stmt = value;
 				}
 			}
 			private sqlite3_stmt? m_stmt = null;
+
+			/// <summary>Last error message</summary>
+			private string ErrorMsg => Connection.ErrorMsg;
 
 			/// <summary>The parameter bindings</summary>
 			public ParameterCollection Parameters { get; }
@@ -113,7 +116,7 @@ namespace Rylogic.Db
 				set
 				{
 					if (value != null && !ReferenceEquals(Connection, value.Connection))
-						throw new SqliteException(EResult.Misuse, "This Transaction belongs to a diffent DB connection");
+						throw new SqliteException(EResult.Misuse, "This Transaction belongs to a diffent DB connection", string.Empty);
 					
 					m_transaction = value;
 				}
@@ -156,7 +159,7 @@ namespace Rylogic.Db
 				// to allow them to be queried, changed, updated, returned from IDbCommand, etc up until that point.
 				// The SQL should be prepared as soon as the SQL is known (and the command is in the cache).
 				if (Stmt == null)
-					throw new SqliteException(EResult.Misuse, $"Statement has not been prepared");
+					throw new SqliteException(EResult.Misuse, $"Statement has not been prepared", ErrorMsg);
 
 				// Bind parameters to each statement
 				NativeAPI.Reset(Stmt);
@@ -164,7 +167,7 @@ namespace Rylogic.Db
 				// Bind the parameters. Parameter binding starts at 1.
 				for (int p = 0, pend = NativeAPI.BindParameterCount(Stmt); p != pend; ++p)
 				{
-					var pname = NativeAPI.BindParameterName(Stmt, p + 1) ?? throw new SqliteException(EResult.Error, $"No parameter at index {p}.\nSql: {NativeAPI.SqlString(Stmt)}");
+					var pname = NativeAPI.BindParameterName(Stmt, p + 1) ?? throw new SqliteException(EResult.Error, $"No parameter at index {p}.\nSql: {NativeAPI.SqlString(Stmt)}", ErrorMsg);
 					var parameter = Parameters[pname];
 					parameter.Bind(Stmt, p + 1, parameter.Value!);
 				}
@@ -199,16 +202,16 @@ namespace Rylogic.Db
 
 				// Step to the first result
 				if (!reader.Read())
-					throw new SqliteException(EResult.Error, "Scalar query returned no results");
+					throw new SqliteException(EResult.Error, "Scalar query returned no results", string.Empty);
 				if (reader.ColumnCount != 1)
-					throw new SqliteException(EResult.Error, "Scalar query returned multiple values");
+					throw new SqliteException(EResult.Error, "Scalar query returned multiple values", string.Empty);
 
 				// Read the value
 				var value = reader.Get<Value>(0);
 
 				// Try to step to the next result, to check there's only one
 				if (reader.Read())
-					throw new SqliteException(EResult.Error, "Scalar query returned more than one result");
+					throw new SqliteException(EResult.Error, "Scalar query returned more than one result", string.Empty);
 
 				return value;
 			}

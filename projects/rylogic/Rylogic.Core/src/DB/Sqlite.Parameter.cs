@@ -144,13 +144,13 @@ namespace Rylogic.Db
 				get
 				{
 					var idx = IndexOf(name);
-					if (idx == -1) throw new SqliteException(EResult.Error, $"No parameter with name {name} found");
+					if (idx == -1) throw new SqliteException(EResult.Error, $"No parameter with name {name} found", string.Empty);
 					return m_parameters[idx];
 				}
 				set
 				{
 					var idx = IndexOf(name);
-					if (idx == -1) throw new SqliteException(EResult.Error, $"No parameter with name {name} found");
+					if (idx == -1) throw new SqliteException(EResult.Error, $"No parameter with name {name} found", string.Empty);
 					m_parameters[idx] = value;
 				}
 			}

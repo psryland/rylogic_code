@@ -106,7 +106,7 @@ namespace Rylogic.Db
 					throw new Exception(msg);
 
 					#else
-					throw new SqliteException(EResult.Misuse, "Sqlite handle released from a different thread to the one it was created on");
+					throw new SqliteException(EResult.Misuse, "Sqlite handle released from a different thread to the one it was created on", string.Empty);
 					#endif
 				}
 
@@ -246,7 +246,7 @@ namespace Rylogic.Db
 					case EConfigOption.Serialized:
 					{
 						if (sqlite3_threadsafe() == 0 && option != EConfigOption.SingleThread)
-							throw new SqliteException(EResult.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used");
+							throw new SqliteException(EResult.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used", string.Empty);
 
 						ThreadingMode = option;
 						return sqlite3_config(ThreadingMode, __arglist());
@@ -292,7 +292,7 @@ namespace Rylogic.Db
 			{
 				var r = sqlite3_busy_timeout(db.Handle, milliseconds);
 				if (r == EResult.OK) return;
-				throw new SqliteException(r, "Failed to set the busy timeout to " + milliseconds + "ms");
+				throw new SqliteException(r, $"Failed to set the busy timeout to {milliseconds}ms", ErrorMsg(db));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_busy_timeout", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_busy_timeout(IntPtr db, int milliseconds);
@@ -308,21 +308,24 @@ namespace Rylogic.Db
 			{
 				// Because the library has no mutexes
 				if (CompiledThreadingMode == EConfigOption.SingleThread && (flags.HasFlag(EOpenFlags.FullMutex) || flags.HasFlag(EOpenFlags.NoMutex)))
-					throw new SqliteException(EResult.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used");
+					throw new SqliteException(EResult.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used", string.Empty);
 
 				// Because the cache is shared between connections and not protected
 				if (flags.HasFlag(EOpenFlags.SharedCache) && ThreadingMode == EConfigOption.MultiThread)
-					throw new SqliteException(EResult.Misuse, "Shared cache can't be used threading mode 'MultiThreaded'");
+					throw new SqliteException(EResult.Misuse, "Shared cache can't be used threading mode 'MultiThreaded'", string.Empty);
+
+				// Convert the filepath to UTF8
+				var filepath_utf8 = StrToUTF8(filepath);
 
 				// Open the connection
-				var res = sqlite3_open_v2(filepath, out var db, (int)flags, IntPtr.Zero);
+				var res = sqlite3_open_v2(filepath_utf8, out var db, (int)flags, IntPtr.Zero);
 				if (res != EResult.OK)
-					throw new SqliteException(res, $"Failed to open database connection to file {filepath}");
+					throw new SqliteException(res, $"Failed to open database connection to file {filepath}", string.Empty);
 
 				return new NativeSqlite3Handle(db, true);
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_open_v2", CallingConvention = CallingConvention.Cdecl)]
-			private static extern EResult sqlite3_open_v2([MarshalAs(UnmanagedType.LPStr)] string filepath, out IntPtr db, int flags, IntPtr zvfs);
+			private static extern EResult sqlite3_open_v2(byte[] filepath_utf8, out IntPtr db, int flags, IntPtr zvfs);
 
 			/// <summary>Close a database connection</summary>
 			public static EResult Close(sqlite3 db)
@@ -338,7 +341,9 @@ namespace Rylogic.Db
 				int offset = 0;
 				var sql_utf8 = Encoding.Convert(Encoding.Unicode, Encoding.UTF8, Encoding.Unicode.GetBytes(sql));
 				var stmt = Prepare(db, sql_utf8, ref offset);
-				if (offset != sql_utf8.Length) throw new SqliteException(EResult.Misuse, $"Prepared multi-statement command when only a single state was expected.");
+				if (offset != sql_utf8.Length)
+					throw new SqliteException(EResult.Misuse, $"Prepared multi-statement command when only a single state was expected.", string.Empty);
+
 				return stmt;
 			}
 			public static sqlite3_stmt Prepare(sqlite3 db, byte[] sql_utf8, ref int offset)
@@ -347,16 +352,43 @@ namespace Rylogic.Db
 				using var ptr = Marshal_.Pin(sql_utf8, GCHandleType.Pinned);
 
 				// Prepare the next statement
-				var res = sqlite3_prepare_v2(db.Handle, ptr.Pointer + offset, sql_utf8.Length - offset, out var stmt, out var tail);
-				if (res != EResult.OK)
+				for (; ; )
 				{
-					var err = ErrorMsg(db);
-					var sql = Encoding.UTF8.GetString(sql_utf8, offset, sql_utf8.Length - offset);
-					var msg = $"Error preparing statement '{sql}'\n{err}";
-					throw new SqliteException(res, msg, err);
+					var res = sqlite3_prepare_v2(db.Handle, ptr.Pointer + offset, sql_utf8.Length - offset, out var stmt, out var tail);
+					switch (res.BasicCode())
+					{
+						case EResult.OK:
+						{
+							offset = (int)(tail.ToInt64() - ptr.Pointer.ToInt64());
+							return new NativeSqlite3StmtHandle(stmt, true);
+						}
+						case EResult.Busy:
+						{
+							Thread.Yield();
+							break;
+						}
+						case EResult.Locked:
+						{
+							if (res != EResult.Locked_SharedCache)
+								throw new SqliteException(res, "Database locked", ErrorMsg(db));
+
+							// Wait for the DB to unlock
+							using var mre = new ManualResetEvent(false);
+							void WaitForUnlock(IntPtr argv, int argc) => mre.Set();
+							var rc = UnlockNotify(db, WaitForUnlock, IntPtr.Zero);
+							if (rc != EResult.OK && rc.BasicCode() != EResult.Locked)
+								throw new SqliteException(rc, $"Failed to register callback in UnlockNotify", ErrorMsg(db));
+
+							mre.WaitOne();
+							break;
+						}
+						default:
+						{
+							var sql = Encoding.UTF8.GetString(sql_utf8, offset, sql_utf8.Length - offset);
+							throw new SqliteException(res, $"Error preparing statement '{sql}'", ErrorMsg(db));
+						}
+					}
 				}
-				offset = (int)(tail.ToInt64() - ptr.Pointer.ToInt64());
-				return new NativeSqlite3StmtHandle(stmt, true);
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_prepare_v2", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_prepare_v2(IntPtr db, IntPtr sql_utf8, int num_bytes, out IntPtr stmt, out IntPtr pzTail);
@@ -573,7 +605,7 @@ namespace Rylogic.Db
 				ptr = sqlite3_column_blob(stmt.Handle, index); // have to call this first
 				len = sqlite3_column_bytes(stmt.Handle, index);
 				if (len < 0 || len > max)
-					throw new SqliteException(EResult.Corrupt, "Blob data size exceeds database maximum size limit");
+					throw new SqliteException(EResult.Corrupt, "Blob data size exceeds database maximum size limit", string.Empty);
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_column_blob", CallingConvention = CallingConvention.Cdecl)]
 			private static extern IntPtr sqlite3_column_blob(IntPtr stmt, int index);
@@ -614,7 +646,8 @@ namespace Rylogic.Db
 			public static void BindNull(sqlite3_stmt stmt, int index)
 			{
 				var r = sqlite3_bind_null(stmt.Handle, index);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind null failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind null failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_null", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_bind_null(IntPtr stmt, int index);
@@ -623,7 +656,8 @@ namespace Rylogic.Db
 			public static void BindInt32(sqlite3_stmt stmt, int index, int val)
 			{
 				var r = sqlite3_bind_int(stmt.Handle, index, val);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind int failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind int failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_int", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_bind_int(IntPtr stmt, int index, int val);
@@ -632,7 +666,8 @@ namespace Rylogic.Db
 			public static void BindInt64(sqlite3_stmt stmt, int index, long val)
 			{
 				var r = sqlite3_bind_int64(stmt.Handle, index, val);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind int64 failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind int64 failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_int64", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_bind_int64(IntPtr stmt, int index, long val);
@@ -641,7 +676,8 @@ namespace Rylogic.Db
 			public static void BindDouble(sqlite3_stmt stmt, int index, double val)
 			{
 				var r = sqlite3_bind_double(stmt.Handle, index, val);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind double failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind double failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_double", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_bind_double(IntPtr stmt, int index, double val);
@@ -650,7 +686,8 @@ namespace Rylogic.Db
 			public static void BindText(sqlite3_stmt stmt, int index, string val)
 			{
 				var r = sqlite3_bind_text16(stmt.Handle, index, val, -1, TransientData);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind string failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind string failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_text16", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 			private static extern EResult sqlite3_bind_text16(IntPtr stmt, int index, string val, int n, IntPtr destructor_cb);
@@ -659,7 +696,8 @@ namespace Rylogic.Db
 			public static void BindBlob(sqlite3_stmt stmt, int index, byte[] val, int length)
 			{
 				var r = sqlite3_bind_blob(stmt.Handle, index, val, length, TransientData);
-				if (r != EResult.OK) throw new SqliteException(r, "Bind blob failed");
+				if (r != EResult.OK)
+					throw new SqliteException(r, "Bind blob failed", ErrorMsg(stmt));
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_bind_blob", CallingConvention = CallingConvention.Cdecl)]
 			private static extern EResult sqlite3_bind_blob(IntPtr stmt, int index, byte[] val, int n, IntPtr destructor_cb);
@@ -672,8 +710,8 @@ namespace Rylogic.Db
 			[DllImport(Dll, EntryPoint = "sqlite3_update_hook", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
 			private static extern IntPtr sqlite3_update_hook(IntPtr db, UpdateHookCB cb, IntPtr ctx);
 
-			/// <summary></summary>
-			public static void UnlockNotify(sqlite3 db, UnlockCB cb, IntPtr ctx)
+			/// <summary>Register a callback for when a db is unlocked</summary>
+			public static EResult UnlockNotify(sqlite3 db, UnlockCB cb, IntPtr ctx)
 			{
 				// When running in shared-cache mode, a database operation may fail with an SQLITE_LOCKED error if the required
 				// locks on the shared-cache or individual tables within the shared-cache cannot be obtained.
@@ -685,10 +723,10 @@ namespace Rylogic.Db
 				// If SQLITE_LOCKED was returned, then the system is deadlocked. In this case this function needs to return
 				// SQLITE_LOCKED to the caller so that the current transaction can be rolled back.
 				// Otherwise, block until the unlock-notify callback is invoked, then return SQLITE_OK.
-				sqlite3_unlock_notify(db.Handle, cb, ctx);
+				return sqlite3_unlock_notify(db.Handle, cb, ctx);
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_unlock_notify", CallingConvention = CallingConvention.Cdecl)]
-			private static extern int sqlite3_unlock_notify(IntPtr db, UnlockCB cb, IntPtr ctx);
+			private static extern EResult sqlite3_unlock_notify(IntPtr db, UnlockCB cb, IntPtr ctx);
 
 			/// <summary></summary>
 			private static readonly IntPtr TransientData = new IntPtr(-1);

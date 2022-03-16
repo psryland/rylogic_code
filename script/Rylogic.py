@@ -713,6 +713,9 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 				# Import the assembly and run Program.Main
 				sys.path.append(target_dir)
 				ass = clr.AddReference(assembly_name)
+				sys.path.pop()
+
+				# Run the Program.Main() function
 				prog = ass.GetType(f"{assembly_name}.Program")
 				meth = prog.GetMethod("Main") if prog is not None else None
 				res = meth.Invoke(None, None) if meth is not None else None
