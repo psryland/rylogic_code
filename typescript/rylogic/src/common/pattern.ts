@@ -235,7 +235,9 @@ export class Pattern implements IPattern
 		}
 		catch (ex)
 		{
-			return this._validation_exception = ex;
+			let err : Error;
+			if (ex instanceof Error) err = ex; else err = Error(String(ex));
+			return this._validation_exception = err;
 		}
 	}
 	private _validation_exception: Error|null;
