@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Enum Extensions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -11,9 +11,56 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Rylogic.Attrib;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Extn
 {
+	public static class Enum_
+	{
+		/// <summary>Enumerate the set flags in this enum</summary>
+		public static IEnumerable<T> EnumFlags<T>(this T e) where T : Enum
+		{
+			if (!typeof(T).IsEnum || !typeof(T).HasAttribute<FlagsAttribute>())
+				throw new ArgumentException("This is only valid on 'Flags' enums");
+			
+			foreach (var mask in Bit.EnumBitMasks(Util.ConvertTo<ulong>(e)))
+				yield return (T)Enum.ToObject(typeof(T), mask);
+		}
+
+		/// <summary>Convert the enum value to a string containing spaces</summary>
+		public static string ToPrettyString(this Enum e)
+		{
+			return e.ToStringFast().Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.DontChange, Str_.ESeparate.Add, " ");
+		}
+
+		/// <summary>A faster overload of ToString</summary>
+		public static string ToStringFast(this Enum e)
+		{
+			var ty = typeof(Enum<>).MakeGenericType(e.GetType());
+			var str = (string?)ty.InvokeMember(nameof(e.ToString), BindingFlags.InvokeMethod, null, null, new object[] { e }) ?? string.Empty;
+			return str;
+		}
+
+		/// <summary>Return the index of this enum value within the enum (for non-sequential enums)
+		/// Use: (MyEnum)Enum.GetValues(typeof(MyEnum)).GetValue(i) for the reverse of this method</summary>
+		public static int ToIndex(this Enum e)
+		{
+			int i = 0;
+			foreach (var v in Enum.GetValues(e.GetType()))
+			{
+				if (v != null && e.GetHashCode() == v.GetHashCode()) return i;
+				++i;
+			}
+			return -1;
+		}
+
+		/// <summary>Test for this enum value within the set of provided arguments</summary>
+		public static bool Within(this Enum e, params Enum[] args)
+		{
+			return args.Contains(e);
+		}
+	}
 	public static class Enum<T>
 		where T : struct, IConvertible
 	{
@@ -442,42 +489,6 @@ namespace Rylogic.Extn
 			return m_impl_or(a,b);
 		}
 		private static Func<T,T,T>? m_impl_or;
-	}
-
-	public static class Enum_
-	{
-		/// <summary>Convert the enum value to a string containing spaces</summary>
-		public static string ToPrettyString(this Enum e)
-		{
-			return e.ToStringFast().Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.DontChange, Str_.ESeparate.Add, " ");
-		}
-
-		/// <summary>A faster overload of ToString</summary>
-		public static string ToStringFast(this Enum e)
-		{
-			var ty  = typeof(Enum<>).MakeGenericType(e.GetType());
-			var str = (string?)ty.InvokeMember(nameof(e.ToString), BindingFlags.InvokeMethod, null, null, new object[] { e }) ?? string.Empty;
-			return str;
-		}
-
-		/// <summary>Return the index of this enum value within the enum (for non-sequential enums)
-		/// Use: (MyEnum)Enum.GetValues(typeof(MyEnum)).GetValue(i) for the reverse of this method</summary>
-		public static int ToIndex(this Enum e)
-		{
-			int i = 0;
-			foreach (var v in Enum.GetValues(e.GetType()))
-			{
-				if (v != null && e.GetHashCode() == v.GetHashCode()) return i;
-				++i;
-			}
-			return -1;
-		}
-
-		/// <summary>Test for this enum value within the set of provided arguments</summary>
-		public static bool Within(this Enum e, params Enum[] args)
-		{
-			return args.Contains(e);
-		}
 	}
 }
 

@@ -231,7 +231,7 @@ namespace Rylogic.Gui.WPF
 		public Exception? Error { get; private set; }
 
 		/// <summary>Show the progress dialog after 'delay_ms' if the task is not yet complete</summary>
-		public bool? ShowDialog(int delay_ms)
+		public bool? ShowDialog(int delay_ms, bool rethrow = true)
 		{
 			// Show the dialog after the delay (unless done already)
 			if (delay_ms != 0 && Done.WaitOne(delay_ms))
@@ -241,7 +241,10 @@ namespace Rylogic.Gui.WPF
 
 			// If an error was raised in the background thread, rethrow it
 			if (Error != null)
-				throw Error;
+			{
+				Result = null;
+				if (rethrow) throw Error;
+			}
 
 			return Result;
 		}
