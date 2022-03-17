@@ -2,6 +2,7 @@ const path = require('path')
 
 module.exports =
 {
+	mode: "production",
 	entry: {
 		rylogic: path.resolve(__dirname, "src/rylogic.ts"),
 	},
@@ -11,19 +12,20 @@ module.exports =
 		filename: "[name].bundle.js",
 		sourceMapFilename: "[name].bundle.js.map",
 		libraryTarget: "umd",
-		devtoolLineToLine: true,
 		pathinfo: true
-	},
-	module: {
-		loaders: [{
-			loader: "ts-loader",
-			exclude: /(bin|node_modules|obj|unittests)/,
-			options: { transpileOnly: false }
-		}]
 	},
 	resolve: {
 		extensions: [".ts"],
 	},
-	//devtool:"source-map",
+	module: {
+		rules: [{
+			use:[{
+				loader: "ts-loader",
+				options: {
+					transpileOnly: false
+				},
+			}]
+		}]
+	},
 	plugins: []
 }

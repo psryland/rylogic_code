@@ -1,11 +1,11 @@
 module.exports = 
 {
+	mode: "development",
 	entry:{
 		test: "./src/test.ts",
 	},
 	output:{
 		filename: "./dist/[name].bundle.js",
-		devtoolLineToLine: true,
 		sourceMapFilename: "./dist/[name].bundle.js.map",
 		pathinfo: true
 	},
@@ -13,12 +13,12 @@ module.exports =
 		extensions: [".ts"]
 	},
 	module:{
-		loaders: [
-			{
-				exclude: /(node_modules|dist)/,
+		rules: [{
+			use: [{
 				loader: "ts-loader",
-			}
-		]
+				options:{}
+			}]
+		}]
 	},
 	devtool:"source-map",
 }
