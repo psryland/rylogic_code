@@ -2,8 +2,10 @@ Immediate ToDo:
 	
 Work
   Change Review Board:
-    - Text Zero Ref Data
-	- Remove product key
+    - Text Zero Ref Data - Raise ticket - talk about it with china team
+	- Remove product key - Raise ticket - Fill in phase 1 - Documentation change
+	- Zero Ref Tool - fill in phase 2 form - Ask pete if he is updating the 1550108 procedure
+	- REX-9855 - bug fix in follow joystick
 	
   Nick Catchup Meeting Notes:
     - Talk to Geoff about whether to use FirmwareLoader in production before or after setup in China
@@ -156,5 +158,5 @@ Wordle:
 	- amend
 	
 duolingo:
-	- lvl 1.Routine1
+	- lvl 1.Payment (not done)
 	

@@ -105,18 +105,37 @@ namespace Rylogic.Gui.WPF.Converters
 				{
 					if (Colour32.TryParse(m0.Groups[1].Value) is Colour32 target &&
 						double_.TryParse(m0.Groups[2].Value) is double frac)
+						colour = Colour32.LerpNoAlpha(colour, target, frac);
+				}
+				if (Regex.Match(op, @"lerpA:\s*([0-9a-fA-F]{8})\s+(\d\.?\d*)") is Match m1 && m1.Success)
+				{
+					if (Colour32.TryParse(m1.Groups[1].Value) is Colour32 target &&
+						double_.TryParse(m1.Groups[2].Value) is double frac)
 						colour = Colour32.Lerp(colour, target, frac);
 				}
 				// lerp:ColourName frac
-				else if (Regex.Match(op, @"lerp:\s*(.*?)\s+(\d\.?\d*)") is Match m1 && m1.Success)
+				else if (Regex.Match(op, @"lerp:\s*(.*?)\s+(\d\.?\d*)") is Match m2 && m2.Success)
 				{
-					if (Colour32.TryParse(m1.Groups[1].Value) is Colour32 target0 &&
-						double_.TryParse(m1.Groups[2].Value) is double frac0)
+					if (Colour32.TryParse(m2.Groups[1].Value) is Colour32 target0 &&
+						double_.TryParse(m2.Groups[2].Value) is double frac0)
+					{
+						colour = Colour32.LerpNoAlpha(colour, target0, frac0);
+					}
+					else if (Application.Current.TryFindResource(m2.Groups[1].Value) is SolidColorBrush target1 &&
+						double_.TryParse(m2.Groups[2].Value) is double frac1)
+					{
+						colour = Colour32.LerpNoAlpha(colour, target1.Color.ToColour32(), frac1);
+					}
+				}
+				else if (Regex.Match(op, @"lerpA:\s*(.*?)\s+(\d\.?\d*)") is Match m3 && m3.Success)
+				{
+					if (Colour32.TryParse(m3.Groups[1].Value) is Colour32 target0 &&
+						double_.TryParse(m3.Groups[2].Value) is double frac0)
 					{
 						colour = Colour32.Lerp(colour, target0, frac0);
 					}
-					else if (Application.Current.TryFindResource(m1.Groups[1].Value) is SolidColorBrush target1 &&
-						double_.TryParse(m1.Groups[2].Value) is double frac1)
+					else if (Application.Current.TryFindResource(m3.Groups[1].Value) is SolidColorBrush target1 &&
+						double_.TryParse(m3.Groups[2].Value) is double frac1)
 					{
 						colour = Colour32.Lerp(colour, target1.Color.ToColour32(), frac1);
 					}

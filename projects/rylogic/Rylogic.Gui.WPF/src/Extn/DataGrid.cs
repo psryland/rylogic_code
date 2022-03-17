@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -75,6 +76,12 @@ namespace Rylogic.Gui.WPF
 			return (DataGridCell?)m_mi_TryGetCell.Invoke(row, new object[] { index });
 		}
 		private static MethodInfo? m_mi_TryGetCell;
+
+		/// <summary>Return cell info for this cell</summary>
+		public static DataGridCellInfo Info(this DataGridCell cell)
+		{
+			return new DataGridCellInfo(cell);
+		}
 
 		/// <summary>Returns the cell that contains 'dp' (or null)</summary>
 		public static DataGridCell? FindCell(DependencyObject dp)
@@ -185,6 +192,17 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		public static void SetCellValue(DataGrid grid, Address addr, object? value) => SetCellValue(grid, addr.RowIndex, addr.ColIndex, value);
+
+		/// <summary>Return the value of this cell</summary>
+		public static object? GetCellValue(this DataGridCell cell)
+		{
+			var item = cell.Info().Item;
+			var content = cell.Column.GetCellContent(item);
+			if (content is FrameworkElement fe && content.DataContext is DataRowView view)
+				return view.Row.ItemArray[0];
+			
+			return content;
+		}
 
 		/// <summary>Parse a string representation of a DataGridLength</summary>
 		public static DataGridLength ParseDataGridLength(string length)
