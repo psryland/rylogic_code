@@ -2,22 +2,14 @@ Immediate ToDo:
 	
 Work
   Change Review Board:
+	- Remove product key - Fill in phase 1 - Documentation change
     - Text Zero Ref Data - Raise ticket - talk about it with china team
-	- Remove product key - Raise ticket - Fill in phase 1 - Documentation change
 	- Zero Ref Tool - fill in phase 2 form - Ask pete if he is updating the 1550108 procedure
-	- REX-9855 - bug fix in follow joystick
 	
-  Nick Catchup Meeting Notes:
-    - Talk to Geoff about whether to use FirmwareLoader in production before or after setup in China
-
   Software Transfer meeting:
-	DONE - Battery pack API
-	DONE - Change charge limits
-	- Finish RexTerm
-	- Graveyard the RCT
+	Create a video about making movement maps
   
   Misc:
-    - Create change request for actdata.cfg change
     - Change embedded script to use ram method of removing ROP
     - Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
