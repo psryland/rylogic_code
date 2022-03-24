@@ -4,6 +4,7 @@
 		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
 		<RootNamespace>Rylogic.Scintilla</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<PublishTrimmed>true</PublishTrimmed>

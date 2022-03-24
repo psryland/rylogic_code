@@ -20,7 +20,7 @@ namespace EDTradeAdvisor.UI
 	{
 		public MainWindow()
 		{
-			StatusStack.ValueChanged += HandleStatusMsgChanged;
+			StatusStack.Instance.PropertyChanged += HandleStatusMsgChanged;
 			Settings.Instance.SettingChange += HandleSettingChange;
 
 			// Setup UI
@@ -76,7 +76,7 @@ namespace EDTradeAdvisor.UI
 				Dispatcher.BeginInvoke(new Action(Close));
 			}
 			Settings.Instance.SettingChange -= HandleSettingChange;
-			StatusStack.ValueChanged -= HandleStatusMsgChanged;
+			StatusStack.Instance.PropertyChanged -= HandleStatusMsgChanged;
 			base.OnClosing(e);
 		}
 		protected override void OnClosed(EventArgs e)
@@ -178,7 +178,7 @@ namespace EDTradeAdvisor.UI
 		}
 
 		/// <summary>Current app status</summary>
-		public string StatusMsg => StatusStack.Message;
+		public string StatusMsg => StatusStack.Instance.Top.Message;
 
 		/// <summary>The found trade routes</summary>
 		public ICollectionView TradeRoutes { get; }

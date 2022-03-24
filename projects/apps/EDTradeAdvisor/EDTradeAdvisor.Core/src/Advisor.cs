@@ -99,12 +99,12 @@ namespace EDTradeAdvisor
 					m_thread_stop.Cancel();
 					m_thread_run.Join();
 					Util.Dispose(ref m_thread_stop);
-					StatusStack.DefaultStatusMessage = "Advisor Inactive";
+					StatusStack.Instance.Default.Message = "Advisor Inactive";
 				}
 				m_thread_run = value ? new Thread(new ParameterizedThreadStart(RunThreadEntryPoint)) : null;
 				if (m_thread_run != null)
 				{
-					StatusStack.DefaultStatusMessage = "Idle";
+					StatusStack.Instance.Default.Message = "Idle";
 					m_settings_snapshot = new Settings(Settings.Instance);
 					m_thread_stop = CancellationTokenSource.CreateLinkedTokenSource(Shutdown.Token);
 					m_thread_run.Start(m_thread_stop.Token);
@@ -327,7 +327,7 @@ namespace EDTradeAdvisor
 
 				// A queue of systems to consider
 				var queue = new Queue<StarSystem>();
-				using (var msg = StatusStack.NewStatusMessage("Finding Trade Routes..."))
+				using (var msg = StatusStack.Instance.Push("Finding Trade Routes..."))
 				{
 					var candidates = Src.Search(origin_system.Position, settings.MaxTradeRouteDistance.Value).ToList();
 					KDTree_.Build(candidates, 3);

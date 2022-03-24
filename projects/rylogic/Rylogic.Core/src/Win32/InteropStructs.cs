@@ -368,5 +368,16 @@ namespace Rylogic.Interop.Win32
 			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClassName;
 			public IntPtr hIconSm;
 		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+		public struct MONITORINFOEX
+		{
+			private const int CCHDEVICENAME = 32;
+			public DWORD cbSize; // = sizeof(MONITORINFOEX)
+			public RECT rcMonitor;
+			public RECT rcWork;
+			public DWORD dwFlags;
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCHDEVICENAME)] public string szDevice;
+		}
 	}
 }

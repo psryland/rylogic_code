@@ -20,6 +20,16 @@ namespace Rylogic.Extn
 			return t?.GetType() ?? typeof(T);
 		}
 
+		/// <summary>Return the type code of this type</summary>
+		public static TypeCode TypeCode(this Type ty)
+		{
+			return Type.GetTypeCode(ty);
+		}
+		public static TypeCode TypeCode<T>(this T _)
+		{
+			return TypeCode(typeof(T));
+		}
+
 		/// <summary>Call the constructor of this type to create a new instance. Use Util'T.New if the type is known at compile time</summary>
 		public static object New(this Type ty)
 		{

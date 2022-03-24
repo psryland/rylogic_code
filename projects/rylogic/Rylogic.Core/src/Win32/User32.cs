@@ -284,6 +284,16 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")]
 		public static extern int GetMessageTime();
 
+		/// <summary>Return info about the given monitor handle</summary>
+		public static MONITORINFOEX GetMonitorInfo(IntPtr hMonitor)
+		{
+			var info = new MONITORINFOEX { cbSize = (uint)Marshal.SizeOf<MONITORINFOEX>() };
+			return GetMonitorInfoW_(hMonitor, ref info) ? info : throw new Win32Exception("Monitor info not available");
+		}
+		[DllImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
+		private static extern bool GetMonitorInfoW_(IntPtr hMonitor, ref MONITORINFOEX info);
+
+		/// <summary></summary>
 		[DllImport("user32.dll", ExactSpelling = true)]
 		public static extern IntPtr GetNextDlgTabItem(IntPtr hDlg, IntPtr hCtl, [MarshalAs(UnmanagedType.Bool)] bool bPrevious);
 
@@ -377,13 +387,18 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")]
 		public static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
-		/// <summary></summary>
+		/// <summary>Return the monitor that contains the given point</summary>
 		public static IntPtr MonitorFromPoint(int x, int y, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint(new POINT { X = x, Y = y }, flags);
 		public static IntPtr MonitorFromPoint(POINT pt, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint_(pt, (int)flags);
 		[DllImport("user32", EntryPoint = "MonitorFromPoint")]
 		private static extern IntPtr MonitorFromPoint_(POINT pt, int flags);
 
-		/// <summary></summary>
+		/// <summary>Return the monitor that contains the given rectangle</summary>
+		public static IntPtr MonitorFromRect(RECT rc, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromRect_(rc, (int)flags);
+		[DllImport("user32", EntryPoint = "MonitorFromRect")]
+		private static extern IntPtr MonitorFromRect_(RECT rc, int flags);
+
+		/// <summary>Return the monitor that contains the given window handle</summary>
 		public static IntPtr MonitorFromWindow(IntPtr hwnd, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromWindow_(hwnd, (int)flags);
 		[DllImport("user32", EntryPoint = "MonitorFromWindow")]
 		private static extern IntPtr MonitorFromWindow_(IntPtr hwnd, int flags);

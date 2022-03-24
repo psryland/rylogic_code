@@ -26,7 +26,7 @@ namespace EDTradeAdvisor
 		public void BuildSystemMap(IEnumerable<StarSystem> stars)
 		{
 			Log.Write(ELogLevel.Info, $"Building systems map");
-			using (StatusStack.NewStatusMessage($"Updating star map..."))
+			using (StatusStack.Instance.Push($"Updating star map..."))
 			{
 				m_tree.Clear();
 				m_tree.AddRange(stars.Select(x => new StarSystemRef(x)));

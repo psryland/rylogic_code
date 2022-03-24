@@ -110,7 +110,7 @@ namespace TestWPF
 		}
 		private bool m_flip_labels;
 
-		/// <summary>Custom cmenu option</summary>
+		/// <summary>Custom CMenu option</summary>
 		public Command ShowBoobs { get; }
 		private void ShowBoobsInternal()
 		{

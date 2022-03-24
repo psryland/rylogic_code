@@ -294,6 +294,49 @@ namespace pr::maths
 			PR_CHECK(Max(arr0, arr1, arr2, arr3) == v4(+2,+2,+3,+4), true);
 			PR_CHECK(Clamp(arr0, arr2, arr3) == v4(+1,+0,+2,+0), true);
 		}
+		{// Wrap
+			// [0, 3)
+			PR_CHECK(Wrap(-1, 0, 3) == 2, true);
+			PR_CHECK(Wrap(+0, 0, 3) == 0, true);
+			PR_CHECK(Wrap(+1, 0, 3) == 1, true);
+			PR_CHECK(Wrap(+2, 0, 3) == 2, true);
+			PR_CHECK(Wrap(+3, 0, 3) == 0, true);
+			PR_CHECK(Wrap(+4, 0, 3) == 1, true);
+
+			// [-2,+2]
+			PR_CHECK(Wrap(-3, -2, +3) == +2, true);
+			PR_CHECK(Wrap(-2, -2, +3) == -2, true);
+			PR_CHECK(Wrap(-1, -2, +3) == -1, true);
+			PR_CHECK(Wrap(+0, -2, +3) == 0, true);
+			PR_CHECK(Wrap(+1, -2, +3) == +1, true);
+			PR_CHECK(Wrap(+2, -2, +3) == +2, true);
+			PR_CHECK(Wrap(+3, -2, +3) == -2, true);
+
+			// [+2,+5)
+			PR_CHECK(Wrap(+1, +2, +5) == 4, true);
+			PR_CHECK(Wrap(+2, +2, +5) == 2, true);
+			PR_CHECK(Wrap(+3, +2, +5) == 3, true);
+			PR_CHECK(Wrap(+4, +2, +5) == 4, true);
+			PR_CHECK(Wrap(+5, +2, +5) == 2, true);
+			PR_CHECK(Wrap(+6, +2, +5) == 3, true);
+
+			// [0,1)
+			PR_CHECK(Wrap(-3, 0, 1) == 0, true);
+			PR_CHECK(Wrap(-2, 0, 1) == 0, true);
+			PR_CHECK(Wrap(-1, 0, 1) == 0, true);
+			PR_CHECK(Wrap(+0, 0, 1) == 0, true);
+			PR_CHECK(Wrap(+1, 0, 1) == 0, true);
+			PR_CHECK(Wrap(+2, 0, 1) == 0, true);
+			PR_CHECK(Wrap(+3, 0, 1) == 0, true);
+
+			// [-1,0)
+			PR_CHECK(Wrap(-3, -1, 0) == -1, true);
+			PR_CHECK(Wrap(-2, -1, 0) == -1, true);
+			PR_CHECK(Wrap(-1, -1, 0) == -1, true);
+			PR_CHECK(Wrap(+0, -1, 0) == -1, true);
+			PR_CHECK(Wrap(+1, -1, 0) == -1, true);
+			PR_CHECK(Wrap(+2, -1, 0) == -1, true);
+		}
 		{// Operators
 			auto arr0 = v4(+1,-2,+3,-4);
 			auto arr1 = v4(-1,+2,-3,+4);

@@ -23,13 +23,27 @@ namespace Rylogic.Gui.WPF
 		//    and a flat collection ('FlatList') for binding to the grid.
 		//  - The 'FlatList' is an IList of objects (not Nodes) so that other columns in the
 		//    grid can bind directly to the objects.
-		//  - For any object visibile in the grid, there is a Node object that wraps it and
+		//  - For any object visible in the grid, there is a Node object that wraps it and
 		//    provides methods for accessing the children and parent of the object.
 		//  - The 'TreeSource' can use INotifyCollectionChanged with Reset/Add/Remove/Replace
 		//    but indices will be ignored because they are meaningless in a tree structure.
 		//  - A 1:1 map from 'object' to 'Node' is used. This means each 'object' must be unique.
 		//    You may need to override the Equals/GetHashCode for your 'object' type.
-
+		// Usage:
+		//   <gui:TreeGrid
+		//        AutoGenerateColumns= "False"
+		//        CanUserSortColumns= "False"
+		//        TreeSource= "{Binding DataView}"
+		//        >
+		//        <DataGrid.Columns>
+		//            <gui:TreeGridColumn
+		//                Header = "Name"
+		//                Binding= "{Binding Name, Mode=TwoWay}"
+		//                Children= "{Binding Child}"
+		//                Image= "{Binding Image}"
+		//                IndentSize= "20"
+		//                />
+		
 		public TreeGrid()
 		{
 			List = new FlatList(this);
@@ -526,8 +540,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var node = new Node(item, parent, child_index, owner);
 				var tcol = owner.TreeColumn;
-				var is_readonly = owner.IsReadOnly || tcol.IsReadOnly;
-				if (tcol.Binding is Binding name) node.SetBinding(TextProperty, Binding_.Clone(name, source: node.DataItem, mode: CoerceMode(name.Mode)));
+				if (tcol.Binding is Binding text) node.SetBinding(TextProperty, Binding_.Clone(text, source: node.DataItem, mode: CoerceMode(text.Mode)));
 				if (tcol.Image is Binding image) node.SetBinding(ImageProperty, Binding_.Clone(image, source: node.DataItem, mode: CoerceMode(image.Mode)));
 				if (tcol.Children is Binding children) node.SetBinding(ChildrenProperty, Binding_.Clone(children, source: node.DataItem, mode: BindingMode.OneWay));
 				return node;
@@ -535,7 +548,9 @@ namespace Rylogic.Gui.WPF
 				// Helpers
 				BindingMode CoerceMode(BindingMode mode)
 				{
-					if (mode == BindingMode.Default) return is_readonly ? BindingMode.OneWay : BindingMode.TwoWay;
+					var is_readonly = owner.IsReadOnly || tcol.IsReadOnly;
+					if (mode == BindingMode.Default)
+						return is_readonly ? BindingMode.OneWay : BindingMode.TwoWay;
 					if (is_readonly && (mode == BindingMode.TwoWay || mode == BindingMode.OneWayToSource))
 						throw new InvalidOperationException("A TwoWay or OneWayToSource binding cannot work on a read-only property");
 					return mode;

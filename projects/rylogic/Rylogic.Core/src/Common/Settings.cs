@@ -274,7 +274,8 @@ namespace Rylogic.Common
 						var pi = typeof(T).GetProperty(prop_name, BindingFlags.Instance | BindingFlags.Public);
 
 						// Ignore XML values that are no longer properties of 'T'
-						if (pi == null) continue;
+						if (pi == null)
+							continue;
 
 						var val = setting.As(pi.PropertyType);
 						SetParentIfNesting(val);
@@ -473,12 +474,10 @@ namespace Rylogic.Common
 					notif.CollectionChanged += WeakRef.MakeWeak(HandleSettingCollectionChanged, h => notif.CollectionChanged -= h);
 					void HandleSettingCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 					{
-						if (e.OldItems != null)
-							foreach (var set in e.OldItems.OfType<ISettingsSet>())
-								set.Parent = null;
-						if (e.NewItems != null)
-							foreach (var set in e.NewItems.OfType<ISettingsSet>())
-								set.Parent = this;
+						foreach (var set in e.OldItems<ISettingsSet>())
+							set.Parent = null;
+						foreach (var set in e.NewItems<ISettingsSet>())
+							set.Parent = this;
 					}
 				}
 			}
@@ -825,7 +824,9 @@ namespace Rylogic.Common
 					var pi = ty.GetProperty(prop_name, BindingFlags.Instance|BindingFlags.Public);
 
 					// Ignore XML values that are no longer properties of 'T'
-					if (pi == null) continue;
+					if (pi == null)
+						continue;
+
 					m_data[prop_name] = n.As(pi.PropertyType);
 				}
 

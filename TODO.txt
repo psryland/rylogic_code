@@ -2,12 +2,12 @@ Immediate ToDo:
 	
 Work
   Change Review Board:
-	- Remove product key - Fill in phase 1 - Documentation change
+	- Remove product key - Documentation change
     - Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Zero Ref Tool - fill in phase 2 form - Ask pete if he is updating the 1550108 procedure
 	
   Software Transfer meeting:
-	Create a video about making movement maps
+	- EtherCat, Can, CanOpen,
   
   Misc:
     - Change embedded script to use ram method of removing ROP
@@ -18,15 +18,18 @@ Work
 		- Back hip limits in released data are smaller than in .xml data
   
   Embedded:
-    - Look at expanding the AC project to include real code
+    - Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
+    - Make sure EnableHV works in R&D mode with tilt sensing on.
+	- Look at expanding the AC project to include real code
 	
   MovementEditor:
-    - Support editing
 	- Optimise the dynamic linking in the map view
+	- Validation needs to check all recovery stance ids are in stance list
+	- Implement Delete
+	
 	
   RexTerminal:
-	- Implement the session log viewer
-	- Implement the battery log viewer
+    - System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
 	
   UIv4:
@@ -42,10 +45,7 @@ Work
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
 
-  Log Viewer:
-    - System for creating graphs of data in session logs
-  
-  RexLink:
+    RexLink:
     - Create a RexLink service and convert applications to use the service (solves the problem of multiple apps wanting to connect to the same Rex).
 	
 Rylogic:
@@ -148,6 +148,7 @@ Wordle:
 	- curly
 	- bionk
 	- amend
+	- scowl
 	
 duolingo:
 	- lvl 1.Payment (not done)

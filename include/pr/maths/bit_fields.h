@@ -163,7 +163,9 @@ namespace pr
 	// Returns true if 'n' is a exact power of two
 	template <typename T> constexpr bool IsPowerOfTwo(T n)
 	{
-		return ((n - 1) & n) == 0;
+		// Zero is not a power of two because 2^n means "1 doubled n times". There is no number of times you can double 1 to get zero.
+		// Incidentally, this is why '2^0 == 1', "1 doubled no times" is still 1.
+		return ((n - 1) & n) == 0 && n != 0;
 	}
 
 	// Return the next highest power of two greater than 'n'

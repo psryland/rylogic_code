@@ -211,9 +211,17 @@ namespace Rylogic.Maths
 			if (!IsPowerOfTwo(n)) throw new ArgumentException("BitIndex only works for powers of two");
 			return HighBitIndex(n);
 		}
+		public static int Index(long n)
+		{
+			return Index(unchecked((ulong)n));
+		}
 
 		/// <summary>Returns a bit mask containing only the lowest bit of 'n'</summary>
 		public static ulong LowBit(ulong n)
+		{
+			return unchecked(n - ((n - 1) & n));
+		}
+		public static long LowBit(long n)
 		{
 			return unchecked(n - ((n - 1) & n));
 		}
@@ -234,11 +242,19 @@ namespace Rylogic.Maths
 			shift = (n &                0x2UL) != 0 ? 1 << 0 : 0;              pos |= shift;
 			return pos;
 		}
+		public static int HighBitIndex(long n)
+		{
+			return HighBitIndex(unchecked((ulong)n));
+		}
 
 		/// <summary>
 		/// Returns the bit position of the lowest bit.
 		/// Note: returns 0 for n==1 and n==0</summary>
 		public static int LowBitIndex(ulong n)
+		{
+			return HighBitIndex(LowBit(n));
+		}
+		public static int LowBitIndex(long n)
 		{
 			return HighBitIndex(LowBit(n));
 		}
@@ -248,11 +264,21 @@ namespace Rylogic.Maths
 		{
 			return 1UL << HighBitIndex(n);
 		}
+		public static long HighBit(long n)
+		{
+			return 1L << HighBitIndex(n);
+		}
 
 		/// <summary>Returns true if 'n' is a exact power of two</summary>
 		public static bool IsPowerOfTwo(ulong n)
 		{
-			return ((n - 1) & n) == 0;
+			// Zero is not a power of two because 2^n means "1 doubled n times". There is no number of times you can double 1 to get zero.
+			// Incidentally, this is why '2^0 == 1', "1 doubled no times" is still 1.
+			return ((n - 1) & n) == 0 && n != 0;
+		}
+		public static bool IsPowerOfTwo(long n)
+		{
+			return ((n - 1) & n) == 0 && n != 0;
 		}
 
 		/// <summary>Count the bits set in 'value'</summary>

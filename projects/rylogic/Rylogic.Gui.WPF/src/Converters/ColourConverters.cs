@@ -105,13 +105,13 @@ namespace Rylogic.Gui.WPF.Converters
 				{
 					if (Colour32.TryParse(m0.Groups[1].Value) is Colour32 target &&
 						double_.TryParse(m0.Groups[2].Value) is double frac)
-						colour = Colour32.LerpNoAlpha(colour, target, frac);
+						colour = Colour32.LerpRGB(colour, target, frac);
 				}
 				if (Regex.Match(op, @"lerpA:\s*([0-9a-fA-F]{8})\s+(\d\.?\d*)") is Match m1 && m1.Success)
 				{
 					if (Colour32.TryParse(m1.Groups[1].Value) is Colour32 target &&
 						double_.TryParse(m1.Groups[2].Value) is double frac)
-						colour = Colour32.Lerp(colour, target, frac);
+						colour = Colour32.LerpA(colour, target, frac);
 				}
 				// lerp:ColourName frac
 				else if (Regex.Match(op, @"lerp:\s*(.*?)\s+(\d\.?\d*)") is Match m2 && m2.Success)
@@ -119,12 +119,12 @@ namespace Rylogic.Gui.WPF.Converters
 					if (Colour32.TryParse(m2.Groups[1].Value) is Colour32 target0 &&
 						double_.TryParse(m2.Groups[2].Value) is double frac0)
 					{
-						colour = Colour32.LerpNoAlpha(colour, target0, frac0);
+						colour = Colour32.LerpRGB(colour, target0, frac0);
 					}
 					else if (Application.Current.TryFindResource(m2.Groups[1].Value) is SolidColorBrush target1 &&
 						double_.TryParse(m2.Groups[2].Value) is double frac1)
 					{
-						colour = Colour32.LerpNoAlpha(colour, target1.Color.ToColour32(), frac1);
+						colour = Colour32.LerpRGB(colour, target1.Color.ToColour32(), frac1);
 					}
 				}
 				else if (Regex.Match(op, @"lerpA:\s*(.*?)\s+(\d\.?\d*)") is Match m3 && m3.Success)
@@ -132,28 +132,28 @@ namespace Rylogic.Gui.WPF.Converters
 					if (Colour32.TryParse(m3.Groups[1].Value) is Colour32 target0 &&
 						double_.TryParse(m3.Groups[2].Value) is double frac0)
 					{
-						colour = Colour32.Lerp(colour, target0, frac0);
+						colour = Colour32.LerpA(colour, target0, frac0);
 					}
 					else if (Application.Current.TryFindResource(m3.Groups[1].Value) is SolidColorBrush target1 &&
 						double_.TryParse(m3.Groups[2].Value) is double frac1)
 					{
-						colour = Colour32.Lerp(colour, target1.Color.ToColour32(), frac1);
+						colour = Colour32.LerpA(colour, target1.Color.ToColour32(), frac1);
 					}
 				}
 			}
 			return new SolidColorBrush(colour.ToMediaColor());
 		}
-		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
-			if (!(value is SolidColorBrush b))
+			if (value is not SolidColorBrush b)
 				return null;
-			if (targetType.Equals(typeof(Color)))
+			if (target_type.Equals(typeof(Color)))
 				return b.Color;
-			if (targetType.Equals(typeof(Colour32)))
+			if (target_type.Equals(typeof(Colour32)))
 				return b.Color.ToColour32();
-			if (targetType.Equals(typeof(UInt32)))
+			if (target_type.Equals(typeof(uint)))
 				return b.Color.ToArgbU();
-			if (targetType.Equals(typeof(Int32)))
+			if (target_type.Equals(typeof(int)))
 				return b.Color.ToArgb();
 			return null;
 		}

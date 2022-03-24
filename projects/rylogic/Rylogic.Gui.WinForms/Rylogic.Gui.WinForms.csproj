@@ -5,6 +5,7 @@
 		<TargetFrameworks>net472</TargetFrameworks>
 		<RootNamespace>Rylogic.Gui.WinForms</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<PublishTrimmed>true</PublishTrimmed>

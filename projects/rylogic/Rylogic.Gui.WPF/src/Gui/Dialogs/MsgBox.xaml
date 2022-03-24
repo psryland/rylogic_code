@@ -30,9 +30,7 @@
 			<BitmapImage x:Key ="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
 		</ResourceDictionary>
 	</Window.Resources>
-	<DockPanel
-		LastChildFill="True"
-		>
+	<DockPanel LastChildFill="True">
 
 		<!-- Buttons -->
 		<Grid
@@ -295,6 +293,8 @@
 				>
 				<TextBox
 					BorderThickness="0"
+					VerticalScrollBarVisibility="Auto"
+					HorizontalScrollBarVisibility="Disabled"
 					AcceptsReturn="True"
 					VerticalAlignment="Top"
 					Height="Auto"

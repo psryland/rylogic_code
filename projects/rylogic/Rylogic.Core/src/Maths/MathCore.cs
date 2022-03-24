@@ -262,12 +262,19 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Wrap 'x' to range [mn, mx)</summary>
-		public static long Wrap(long x, long min, long max)
+		public static int Wrap(int x, int mn, int mx)
 		{
 			// Given the range [mn, mx) and 'x' somewhere on the number line
 			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
-			Debug.Assert(min <= max);
-			return (x < min ? max : min) + (x - min) % (max - min);
+			var range = mx - mn;
+			return mn + (((x - mn) % range) + range) % range;
+		}
+		public static long Wrap(long x, long mn, long mx)
+		{
+			// Given the range [mn, mx) and 'x' somewhere on the number line
+			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+			var range = mx - mn;
+			return mn + (((x - mn) % range) + range) % range;
 		}
 		//public static T Wrap<T>(T x, T min, T max) where T : IComparable<T>
 		//{
@@ -758,6 +765,51 @@ namespace Rylogic.UnitTests
 	[TestFixture]
 	public class TestMathsScalar
 	{
+		[Test]
+		public void TestWrap()
+		{
+			// [0, 3)
+			Assert.Equal(2, Math_.Wrap(-1, 0, 3));
+			Assert.Equal(0, Math_.Wrap(+0, 0, 3));
+			Assert.Equal(1, Math_.Wrap(+1, 0, 3));
+			Assert.Equal(2, Math_.Wrap(+2, 0, 3));
+			Assert.Equal(0, Math_.Wrap(+3, 0, 3));
+			Assert.Equal(1, Math_.Wrap(+4, 0, 3));
+
+			// [-2,+2]
+			Assert.Equal(+2, Math_.Wrap(-3, -2, +3));
+			Assert.Equal(-2, Math_.Wrap(-2, -2, +3));
+			Assert.Equal(-1, Math_.Wrap(-1, -2, +3));
+			Assert.Equal( 0, Math_.Wrap(+0, -2, +3));
+			Assert.Equal(+1, Math_.Wrap(+1, -2, +3));
+			Assert.Equal(+2, Math_.Wrap(+2, -2, +3));
+			Assert.Equal(-2, Math_.Wrap(+3, -2, +3));
+
+			// [+2,+5)
+			Assert.Equal(4, Math_.Wrap(+1, +2, +5));
+			Assert.Equal(2, Math_.Wrap(+2, +2, +5));
+			Assert.Equal(3, Math_.Wrap(+3, +2, +5));
+			Assert.Equal(4, Math_.Wrap(+4, +2, +5));
+			Assert.Equal(2, Math_.Wrap(+5, +2, +5));
+			Assert.Equal(3, Math_.Wrap(+6, +2, +5));
+
+			// [0,1)
+			Assert.Equal(0, Math_.Wrap(-3, 0, 1));
+			Assert.Equal(0, Math_.Wrap(-2, 0, 1));
+			Assert.Equal(0, Math_.Wrap(-1, 0, 1));
+			Assert.Equal(0, Math_.Wrap(+0, 0, 1));
+			Assert.Equal(0, Math_.Wrap(+1, 0, 1));
+			Assert.Equal(0, Math_.Wrap(+2, 0, 1));
+			Assert.Equal(0, Math_.Wrap(+3, 0, 1));
+
+			// [-1,0)
+			Assert.Equal(-1, Math_.Wrap(-3, -1, 0));
+			Assert.Equal(-1, Math_.Wrap(-2, -1, 0));
+			Assert.Equal(-1, Math_.Wrap(-1, -1, 0));
+			Assert.Equal(-1, Math_.Wrap(+0, -1, 0));
+			Assert.Equal(-1, Math_.Wrap(+1, -1, 0));
+			Assert.Equal(-1, Math_.Wrap(+2, -1, 0));
+		}
 		[Test]
 		public void TestAverage()
 		{

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Globalization;
 using System.Linq;
@@ -11,6 +11,7 @@ using System.Windows.Media;
 using Rylogic.Attrib;
 using Rylogic.Extn;
 using Rylogic.Gfx;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
@@ -18,6 +19,7 @@ namespace Rylogic.Gui.WPF.Converters
 	// Notes:
 	//  - [Flags] enum => use 'HasFlag' in BoolConverters
 
+	/// <summary></summary>
 	public class EnumToDesc : MarkupExtension, IValueConverter
 	{
 		// Notes:
@@ -39,6 +41,8 @@ namespace Rylogic.Gui.WPF.Converters
 			return this;
 		}
 	}
+
+	/// <summary></summary>
 	public class EnumValues : MarkupExtension, IValueConverter
 	{
 		// Use:
@@ -212,6 +216,170 @@ namespace Rylogic.Gui.WPF.Converters
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			return this;
+		}
+	}
+
+	/// <summary></summary>
+	public class EnumFlags : MarkupExtension, IValueConverter
+	{
+		// Use:
+		//    <ListBox
+		//        ItemsSource = "{Binding MyEnumFlagsProp, Converter={conv:EnumFlags}}"  - This returns a collection of the single bit flags
+		//        >
+		//        <ListBox.Resources>
+		//            <gui:DataContextRef x:Key="ListCtx" Ctx="{Binding .}"/> - This captures the ListBox DataContext
+		//        </ListBox.Resources>
+		//        <ListBox.ItemTemplate>
+		//            <DataTemplate>
+		//                <CheckBox
+		//                    Content = "{Binding .}"  - This binds the check box content to the list item (i.e. a single bit value)
+		//                    IsChecked="{conv:EnumFlagSet BitField={Binding Source={StaticResource ListCtx}, Path=Ctx.MyEnumFlagsProp, Mode=TwoWay}, Bits={Binding .}}"
+		//                         ^- This binds the list item to a converter that sets/clears the bit in 'MyEnumFlagsProp' 
+		//                    />
+		//            </DataTemplate>
+		//        </ListBox.ItemTemplate>
+		//    </ListBox>
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value?.GetType() is not Type ty)
+				throw new ArgumentNullException();
+			if (!ty.IsEnum || !ty.HasAttribute<FlagsAttribute>())
+				throw new ArgumentException("Expected a flags enum property");
+
+			// Convert the flags into a list of the single bit values
+			return Enum.GetValues(value.GetType())
+				.ConvertTo<long>()
+				.Where(x => Bit.IsPowerOfTwo(x))
+				.ConvertTo(ty);
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+	[ContentProperty(nameof(Binding))]
+	public class EnumFlagSet : MarkupExtension ,IMultiValueConverter
+	{
+		/// <summary>The binding to the property that will have bits set/cleared</summary>
+		public Binding BitField { get; set; } = null!;
+
+		/// <summary>The binding to the bit value</summary>
+		public Binding Bits { get; set; } = null!;
+
+		public override object ProvideValue(IServiceProvider service_provider)
+		{
+			var mb = new MultiBinding { Mode = BindingMode.TwoWay };
+			mb.Bindings.Add(BitField);
+			mb.Bindings.Add(Bits);
+			mb.Converter = this;
+			return mb.ProvideValue(service_provider);
+		}
+		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (values.Length != 2)
+				return false;
+			if (values[0] == DependencyProperty.UnsetValue ||
+				values[1] == DependencyProperty.UnsetValue)
+				return false;
+
+			m_lhs = Util.ConvertTo<long>(values[0]); // bitfield
+			m_rhs = Util.ConvertTo<long>(values[1]); // bits
+			var set = Bit.AllSet(m_lhs, m_rhs);
+			return set;
+		}
+		public object[] ConvertBack(object value, Type[] target_types, object parameter, CultureInfo culture)
+		{
+			var set = (bool)value;
+			var val = new object[2]
+			{
+				Util.ConvertTo(Bit.SetBits(m_lhs, m_rhs, set), target_types[0])!, // bitfield
+				Util.ConvertTo(m_rhs, target_types[1])!, // bits
+			};
+			return val;
+		}
+		private long m_lhs;
+		private long m_rhs;
+	}
+
+
+	[ContentProperty(nameof(Binding))]
+	public class BindingEx : MarkupExtension
+	{
+		// Notes:
+		//  - This helper wraps a multi binding into an object that looks like a normal binding but with a bindable parameter.
+		// Use:
+		//   <Setter Property="Visibility">
+		//     <Setter.Value>
+		//       <conv:BindingEx
+		//           Binding = "{Binding Tag, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type UserControl}"
+		//           Converter="{StaticResource AccessLevelToVisibilityConverter}"
+		//           ConverterParameterBinding="{Binding RelativeSource={RelativeSource Mode=Self}, Path=Tag}"
+		//           />
+		//   	</Setter.Value>
+		//   </Setter>
+		public BindingEx()
+		{ }
+		public BindingEx(string path)
+		{
+			Binding = new Binding(path);
+		}
+		public BindingEx(Binding binding)
+		{
+			Binding = binding;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			// Create the internal 'MultiBinding' and add 'Binding' and 'ConverterParameter' to it
+			var multi_binding = new MultiBinding();
+			
+			// Add the main binding
+			Binding.Mode = Mode;
+			multi_binding.Bindings.Add(Binding);
+
+			// Add the converter parameter
+			if (ConverterParameter != null)
+			{
+				ConverterParameter.Mode = BindingMode.OneWay;
+				multi_binding.Bindings.Add(ConverterParameter);
+			}
+
+			var adapter = new MultiValueConverterAdapter
+			{
+				Converter = Converter
+			};
+			multi_binding.Converter = adapter;
+			return multi_binding.ProvideValue(serviceProvider);
+		}
+		public Binding Binding { get; set; } = null!;
+		public BindingMode Mode { get; set; } = BindingMode.Default;
+		public IValueConverter Converter { get; set; } = null!;
+		public Binding ConverterParameter { get; set; } = null!;
+
+
+		[ContentProperty(nameof(Converter))]
+		private class MultiValueConverterAdapter : IMultiValueConverter
+		{
+			public IValueConverter Converter { get; set; } = null!;
+
+			private object m_last_parameter = null!;
+
+			public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+			{
+				if (Converter == null) return values[0]; // Required for VS design-time
+				if (values.Length > 1) m_last_parameter = values[1];
+				return Converter.Convert(values[0], targetType, m_last_parameter, culture);
+			}
+
+			public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+			{
+				if (Converter == null) return new object[] { value }; // Required for VS design-time
+
+				return new object[] { Converter.ConvertBack(value, targetTypes[0], m_last_parameter, culture) };
+			}
 		}
 	}
 }

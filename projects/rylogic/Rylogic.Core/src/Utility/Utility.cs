@@ -260,9 +260,7 @@ namespace Rylogic.Utility
 		/// <summary>Swap two values</summary>
 		public static void Swap<T>(ref T lhs, ref T rhs)
 		{
-			T tmp = lhs;
-			lhs = rhs;
-			rhs = tmp;
+			(rhs, lhs) = (lhs, rhs);
 		}
 
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
@@ -280,7 +278,9 @@ namespace Rylogic.Utility
 			// 'value' is null? If T is not a value type return default(T)
 			if (value == null)
 			{
-				if (result_type.IsValueType || !is_nullable) throw new ArgumentNullException($"Cannot convert null to type {result_type}");
+				// Note: IsClass != !IsValueType. Nullables are still value types
+				if (!result_type.IsClass && !is_nullable)
+					throw new ArgumentNullException($"Cannot convert null to type {result_type}");
 				return null;
 			}
 
@@ -298,10 +298,11 @@ namespace Rylogic.Utility
 					return Enum.Parse(root_type, (string)value, ignore_case);
 
 				// Convert from integral type
-				if (new[]{typeof(SByte), typeof(Int16), typeof(Int32), typeof(Int64), typeof(Byte), typeof(UInt16), typeof(UInt32), typeof(UInt64), typeof(String)}.Contains(value_type))
-					if (Enum.IsDefined(result_type, value))
-						return Enum.ToObject(root_type, value);
-
+				var enum_ty = Enum.GetUnderlyingType(root_type);
+				value = value_type != enum_ty ? Convert.ChangeType(value, enum_ty) : value;
+				if (Enum.IsDefined(result_type, value))
+					return Enum.ToObject(root_type, value);
+				
 				throw new Exception($"Cannot convert {value}(of type {value_type.Name}) to type {result_type.Name}");
 			}
 

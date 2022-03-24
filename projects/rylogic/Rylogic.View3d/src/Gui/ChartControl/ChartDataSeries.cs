@@ -778,37 +778,6 @@ namespace Rylogic.Gui.WPF
 			#endregion
 		}
 
-		// Notes:
-		//  - See https://chartio.com/learn/charts/how-to-choose-colors-data-visualization
-
-		/// <summary>Plot colour generator - Qualitative data - Colours that are all distinct representing categorical data (e.g. countries, genders, etc)</summary>
-		public static Colour32 GenColour_Qualitative(int i)
-		{
-			
-			return m_palette_qualitative[i % m_palette_qualitative.Length];
-		}
-		private static readonly Colour32[] m_palette_qualitative =
-		{
-			// See 'art/jpg/palette-qualitative.jpg'
-			0xFF0B84A5, 0xFFF6C85F, 0xFF6F4E7C, 0xFF9DD866, 0xFFCA472F, 0xFFFFA056, 0xFF8DDDD0,
-			0xFFB35EDB, 0xFF53DB8E, 0xFF41C1DB, 0xFF8C90DB, 0xFFDB7FAE, 0xFFDBB132, 0xFF76DB69,
-		};
-
-		/// <summary>Plot colour generator - Qualitative data</summary>
-		public static Colour32 GenColour_HighContrast(int i)
-		{
-			return m_palette_high_contrast[i % m_palette_high_contrast.Length];
-		}
-		private static readonly Colour32[] m_palette_high_contrast =
-		{
-			Colour32.Black     ,
-			Colour32.Blue      , Colour32.Red         , Colour32.Green      ,
-			Colour32.DarkBlue  , Colour32.DarkRed     , Colour32.DarkGreen  ,
-			Colour32.Purple    , Colour32.Turquoise   , Colour32.Magenta    ,
-			Colour32.Orange    , Colour32.Yellow      ,
-			Colour32.LightBlue , Colour32.LightSalmon , Colour32.LightGreen ,
-		};
-
 		/// <summary>Rendering options for this data series</summary>
 		public class OptionsData : SettingsSet<OptionsData>
 		{

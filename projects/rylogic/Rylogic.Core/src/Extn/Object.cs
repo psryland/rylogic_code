@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Text;
-using Rylogic.Utility;
 
 namespace Rylogic.Extn
 {
@@ -51,14 +47,53 @@ namespace Rylogic.Extn
 			finally { m_dump.Length = 0; }
 		}
 		[ThreadStatic] private static StringBuilder? m_dump;
+
+		/// <summary>Invoke a method on 'obj' if it has it. Returns true if found and invoked</summary>
+		public static void TryInvoke(this object obj, string name, params object[] args) => TryInvoke(obj, name, BindingFlags.Instance | BindingFlags.Public, args);
+		public static bool TryInvoke(this object obj, string name, BindingFlags binding_flags, params object[] args)
+		{
+			var ty = obj.GetType();
+			if (ty.GetMethod(name, binding_flags) is MethodInfo mi)
+			{
+				mi.Invoke(obj, args);
+				return true;
+			}
+			return false;
+		}
+
+		/// <summary>Invoke a property or parameterless method on 'obj' if it has it. Returns true if found and invoked</summary>
+		public static (bool, T) TryInvoke<T>(this object obj, string name) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.Public);
+		public static (bool, T) TryInvoke<T>(this object obj, string name, BindingFlags binding_flags)
+		{
+			var ty = obj.GetType();
+			if (ty.GetProperty(name, binding_flags) is PropertyInfo pi)
+			{
+				return (true, (T)pi.GetGetMethod().Invoke(obj, null));
+			}
+			if (ty.GetMethod(name, binding_flags) is MethodInfo mi)
+			{
+				return (true, (T)mi.Invoke(obj, null));
+			}
+			return (false, default!);
+		}
+
+		/// <summary>Invoke a method that returns a value if it has it. Returns true if found and invoked</summary>
+		public static (bool, T) TryInvoke<T>(this object obj, string name, params object[] args) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.Public, args);
+		public static (bool, T) TryInvoke<T>(this object obj, string name, BindingFlags binding_flags, params object[] args)
+		{
+			var ty = obj.GetType();
+			if (ty.GetMethod(name, binding_flags) is MethodInfo mi)
+			{
+				return (true, (T)mi.Invoke(obj, null));
+			}
+			return (false, default!);
+		}
 	}
 }
 
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using Extn;
-
 	[TestFixture] public class TestObjectExtns
 	{
 		//public class Cloner

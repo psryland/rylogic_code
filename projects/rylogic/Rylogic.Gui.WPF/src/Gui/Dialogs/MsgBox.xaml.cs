@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Extn;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -118,6 +119,32 @@ namespace Rylogic.Gui.WPF
 			Cancel = Command.Create(this, CancelInternal);
 
 			DataContext = this;
+			Loaded += delegate
+			{
+				// Todo...
+				// Set the initial window size
+				//var sz = DesiredSize;
+				//var target = Math_.Clamp(TargetAspect, MinAspect, MaxAspect);
+				//var nearest = Math.Max(MaxAspect - target, target - MinAspect);
+				//for (int attempts = 3; attempts-- != 0;)
+				//{
+				//	var aspect = sz.Width / sz.Height;
+				//	var scale = aspect / TargetAspect;
+					
+				//	Measure(scale > 1.0
+				//		? new Size(sz.Width / scale, double.PositiveInfinity)
+				//		: new Size(double.PositiveInfinity, sz.Height * scale));
+
+				//	var nue_sz = DesiredSize;
+				//	var diff = Math.Abs((nue_sz.Width / nue_sz.Height) - target);
+				//	if (diff >= nearest)
+				//		break;
+
+				//	nearest = diff;
+				//	sz = nue_sz;
+				//}
+				//DesiredSize = sz;
+			};
 		}
 		protected override void OnClosed(EventArgs e)
 		{
@@ -126,24 +153,11 @@ namespace Rylogic.Gui.WPF
 
 			base.OnClosed(e);
 		}
-		protected override Size MeasureOverride(Size availableSize)
+		protected override Size MeasureOverride(Size available_size)
 		{
-			const double MinAspect = 0.5;
-			const double MaxAspect = 5.0;
-			const double TargetAspect = (MinAspect + MaxAspect) * 0.5;
-
-			var sz = base.MeasureOverride(availableSize);
-			for (int attempts = 3; attempts-- != 0; )
-			{
-				var aspect = sz.Width / sz.Height;
-				if (aspect >= MinAspect && aspect < MaxAspect)
-					break;
-
-				// Change the size to a more desirable aspect ratio
-				var scale = aspect / TargetAspect;
-				if (scale > 1.0) sz = base.MeasureOverride(new Size(sz.Width / scale, double.PositiveInfinity));
-				if (scale < 1.0) sz = base.MeasureOverride(new Size(double.PositiveInfinity, sz.Height * scale));
-			}
+			// 'availableSize' is the size of the window's child area.
+			// Changing the returned value does not change the size of the window.
+			var sz = base.MeasureOverride(available_size);
 			return sz;
 		}
 
@@ -182,6 +196,11 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty AlwaysProperty = Gui_.DPRegister<MsgBox>(nameof(Always), Boxed.False, Gui_.EDPFlags.TwoWay);
 
+		/// <summary>Bounds on the size of the dialog</summary>
+		public double MinAspect { get; set; } = 0.5;
+		public double MaxAspect { get; set; } = 5.0;
+		public double TargetAspect { get; set; } = 2.75;
+
 		/// <summary>Button text - Allows localisation</summary>
 		public string? OkText { get; set; }        = "OK";
 		public string? CancelText { get; set; }    = "Cancel";
@@ -198,7 +217,7 @@ namespace Rylogic.Gui.WPF
 		public StackPanel ButtonPanel => m_btn_panel;
 
 		/// <summary>Access the panel that contains the message</summary>
-		public Grid ContentPanel => m_content;
+		public Panel ContentPanel => m_content;
 
 		/// <summary>The default button</summary>
 		public EButtons DefaultButton
@@ -213,7 +232,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private EButtons m_default_button;
 
-		/// <summary>Make the "always" checkbox vislble</summary>
+		/// <summary>Make the "always" checkbox visible</summary>
 		public bool ShowAlwaysCheckbox
 		{
 			get => m_show_always_checkbox;

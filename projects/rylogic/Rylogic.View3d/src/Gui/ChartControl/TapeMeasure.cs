@@ -24,8 +24,8 @@ namespace Rylogic.Gui.WPF
 				Chart.ShowCrossHair = true;
 
 				// A slightly darker or lighter shade of the background colour
-				var stroke = Chart.Options.BackgroundColour.Lerp(Chart.Options.BackgroundColour.InvertBW(), 0.3);
-				var bkgd = Chart.Options.BackgroundColour.Lerp(Chart.Options.BackgroundColour.InvertBW(), 0.1);
+				var stroke = Chart.Options.BackgroundColour.LerpRGB(Chart.Options.BackgroundColour.InvertBW(), 0.3);
+				var bkgd = Chart.Options.BackgroundColour.LerpRGB(Chart.Options.BackgroundColour.InvertBW(), 0.1);
 				var fill = bkgd.Alpha(0.5);
 				Area = new Rectangle
 				{

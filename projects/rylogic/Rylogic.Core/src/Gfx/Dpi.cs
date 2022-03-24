@@ -23,7 +23,7 @@ namespace Rylogic.Gfx
 		public static int DpiForWindow(IntPtr hwnd)
 		{
 			// Notes:
-			//  - This should be the first method to use with fallback to nearest monitor
+			//  - This should be the first method to use with fall-back to nearest monitor
 			// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdpiforwindow
 			var h = Win32.LoadLibrary("user32.dll");
 			var ptr = Win32.GetProcAddress(h, "GetDpiForWindow"); // Windows 10 1607

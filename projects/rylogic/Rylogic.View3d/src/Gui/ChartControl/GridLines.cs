@@ -139,7 +139,7 @@ namespace Rylogic.Gui.WPF
 
 				// Choose a suitable grid colour
 				var colour = m_axis.Chart.Scene.BackgroundColour;
-				colour = colour.Lerp(colour.InvertBW(), 0.15);
+				colour = colour.LerpRGB(colour.InvertBW(), 0.15);
 
 				// Grid verts
 				if (m_axis.AxisType == EAxis.XAxis)

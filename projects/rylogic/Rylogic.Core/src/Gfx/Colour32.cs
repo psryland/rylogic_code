@@ -86,12 +86,12 @@ namespace Rylogic.Gfx
 			return (byte)Math.Min(0xff, Math.Max(0, i));
 		}
 
-		/// <summary>Linearly interpolate two colours</summary>
-		public Colour32 Lerp(Colour32 rhs, double t)
+		/// <summary>Linearly interpolate two colours (with alpha)</summary>
+		public Colour32 LerpA(Colour32 rhs, double t)
 		{
-			return Lerp(this, rhs, t);
+			return LerpA(this, rhs, t);
 		}
-		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, double t)
+		public static Colour32 LerpA(Colour32 lhs, Colour32 rhs, double t)
 		{
 			return new Colour32(
 				(byte)(lhs.A * (1f - t) + rhs.A * t),
@@ -99,7 +99,7 @@ namespace Rylogic.Gfx
 				(byte)(lhs.G * (1f - t) + rhs.G * t),
 				(byte)(lhs.B * (1f - t) + rhs.B * t));
 		}
-		public static Colour32 Lerp(double t, params (Colour32, double)[] p)
+		public static Colour32 LerpA(double t, params (Colour32, double)[] p)
 		{
 			// e.g. Colour32.Lerp(i/9.0, new[] { (Colour32.White, 0.2), (Colour32.Yellow, 0.5), (Colour32.Red, 1.0) });
 			if (p.Length == 0)
@@ -109,15 +109,15 @@ namespace Rylogic.Gfx
 			for (; idx != p.Length && t > p[idx].Item2; ++idx) { }
 			if (idx == 0) return p[0].Item1;
 			if (idx == p.Length) return p[p.Length - 1].Item1;
-			return Lerp(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
+			return LerpA(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
 		}
 
 		/// <summary>Linearly interpolate the non-alpha channels of two colours (lhs.A is used)</summary>
-		public Colour32 LerpNoAlpha(Colour32 rhs, double t)
+		public Colour32 LerpRGB(Colour32 rhs, double t)
 		{
-			return LerpNoAlpha(this, rhs, t);
+			return LerpRGB(this, rhs, t);
 		}
-		public static Colour32 LerpNoAlpha(Colour32 lhs, Colour32 rhs, double t)
+		public static Colour32 LerpRGB(Colour32 lhs, Colour32 rhs, double t)
 		{
 			return new Colour32(
 				lhs.A,
@@ -125,7 +125,7 @@ namespace Rylogic.Gfx
 				(byte)(lhs.G*(1f - t) + rhs.G*t),
 				(byte)(lhs.B*(1f - t) + rhs.B*t));
 		}
-		public static Colour32 LerpNoAlpha(double t, params (Colour32, double)[] p)
+		public static Colour32 LerpRGB(double t, params (Colour32, double)[] p)
 		{
 			// e.g. Colour32.Lerp(i/9.0, new[] { (Colour32.White, 0.2), (Colour32.Yellow, 0.5), (Colour32.Red, 1.0) });
 			if (p.Length == 0)
@@ -135,19 +135,19 @@ namespace Rylogic.Gfx
 			for (; idx != p.Length && t > p[idx].Item2; ++idx) { }
 			if (idx == 0) return p[0].Item1;
 			if (idx == p.Length) return p[p.Length - 1].Item1;
-			return LerpNoAlpha(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
+			return LerpRGB(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
 		}
 
 		/// <summary>Lerp this colour toward black by 't'</summary>
 		public Colour32 Darken(double t, bool alpha_too = false)
 		{
-			return alpha_too ? Lerp(Black, t) : LerpNoAlpha(Black, t);
+			return alpha_too ? LerpA(Black, t) : LerpRGB(Black, t);
 		}
 
 		/// <summary>Lerp this colour toward white by 't'</summary>
 		public Colour32 Lighten(double t, bool alpha_too = false)
 		{
-			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
+			return alpha_too ? LerpA(White, t) : LerpRGB(White, t);
 		}
 
 		/// <summary>Invert the colour e.g. White -> Black</summary>
@@ -409,12 +409,58 @@ namespace Rylogic.Gfx
 		public static Colour32 DeepPink => Color.DeepPink;
 		public static Colour32 DodgerBlue => Color.DodgerBlue;
 		public static Colour32 Firebrick => Color.Firebrick;
+		#endregion
 
-		/// <summary>Colour sequence for issuing changing colours to things</summary>
-		public static Colour32 NextColour() => m_next_colour[m_next_colour_index++ % m_next_colour.Length];
-		private static uint[] m_next_colour = new[] { 0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF, 0xFF00FFFF, 0xFF8080FF, 0xFF80FF80, 0xFFFF8080 };
-		private static int m_next_colour_index;
+		#region Palettes
+		public static class Palette
+		{
+			/// <summary>Plot colour generator - Qualitative data - Colours that are all distinct representing categorical data (e.g. countries, genders, etc)</summary>
+			public static class Qualitative
+			{
+				// Notes:
+				//  - See https://chartio.com/learn/charts/how-to-choose-colors-data-visualization
 
+				public static int Index = 0;
+				public static Colour32 Next() => Next(Index++);
+				public static Colour32 Next(int i) => m_palette[i % m_palette.Length];
+				private static readonly Colour32[] m_palette =
+				{
+					// See 'art/jpg/palette-qualitative.jpg'
+					0xFF0B84A5, 0xFFF6C85F, 0xFF6F4E7C, 0xFF9DD866, 0xFFCA472F, 0xFFFFA056, 0xFF8DDDD0,
+					0xFFB35EDB, 0xFF53DB8E, 0xFF41C1DB, 0xFF8C90DB, 0xFFDB7FAE, 0xFFDBB132, 0xFF76DB69,
+				};
+			}
+
+			/// <summary>Plot colour generator - High contrast</summary>
+			public static class HighContrast
+			{
+				public static int Index = 0;
+				public static Colour32 Next() => Next(Index++);
+				public static Colour32 Next(int i) => m_palette[i % m_palette.Length];
+				private static readonly Colour32[] m_palette =
+				{
+					Colour32.Black     ,
+					Colour32.Blue      , Colour32.Red         , Colour32.Green      ,
+					Colour32.DarkBlue  , Colour32.DarkRed     , Colour32.DarkGreen  ,
+					Colour32.Purple    , Colour32.Turquoise   , Colour32.Magenta    ,
+					Colour32.Orange    , Colour32.Yellow      ,
+					Colour32.LightBlue , Colour32.LightSalmon , Colour32.LightGreen ,
+				};
+			}
+
+			/// <summary>Plot colour generator - Basic</summary>
+			public static class Basic
+			{
+				public static int Index = 0;
+				public static Colour32 Next() => Next(Index++);
+				public static Colour32 Next(int i) => m_palette[i % m_palette.Length];
+				private static readonly Colour32[] m_palette =
+				{
+					0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF,
+					0xFF00FFFF, 0xFF8080FF, 0xFF80FF80, 0xFFFF8080,
+				};
+			}
+		}
 		#endregion
 	}
 }
