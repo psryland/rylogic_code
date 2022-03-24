@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
@@ -14,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Db;
+using Rylogic.Extn;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -235,7 +237,7 @@ namespace EDTradeAdvisor.DataProviders
 		/// <summary>Populate the cache database</summary>
 		public async Task BuildCache(bool force_rebuild)
 		{
-			using (StatusStack.NewStatusMessage("Building Cache Database..."))
+			using (StatusStack.Instance.Push("Building Cache Database..."))
 			{
 				// Ensure the latest dump files have been downloaded
 				var output_dir = Settings.Instance.DataPath;
@@ -312,7 +314,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void BuildSystemsTable(string systems_populated_jsonl)
 		{
 			Log.Write(ELogLevel.Info, $"Building star systems table");
-			using (var msg = StatusStack.NewStatusMessage($"Building Systems Table: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Building Systems Table: {0:P2}"))
 			{
 				m_cache_star_systems.Flush();
 				Map.Invalidate();
@@ -336,14 +338,14 @@ namespace EDTradeAdvisor.DataProviders
 						$") values (\n" +
 						$"  @id, @edsm_id, @name, @x, @y, @z, @need_permit, @updated_at\n" +
 						$")\n";
-					cmd.Parameters.Add("@id", R<StarSystem>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@name", R<StarSystem>.Type(x => x.Name).DbType());
-					cmd.Parameters.Add("@x", R<StarSystem>.Type(x => x.X).DbType());
-					cmd.Parameters.Add("@y", R<StarSystem>.Type(x => x.Y).DbType());
-					cmd.Parameters.Add("@z", R<StarSystem>.Type(x => x.Z).DbType());
-					cmd.Parameters.Add("@need_permit", R<StarSystem>.Type(x => x.NeedPermit).DbType());
-					cmd.Parameters.Add("@updated_at", R<StarSystem>.Type(x => x.UpdatedAt).DbType());
-					cmd.Parameters.Add("@edsm_id", R<StarSystem>.Type(x => x.EdsmID).DbType());
+					cmd.Parameters.Add("@id", ToDbType(R<StarSystem>.Type(x => x.ID)));
+					cmd.Parameters.Add("@name", ToDbType(R<StarSystem>.Type(x => x.Name)));
+					cmd.Parameters.Add("@x", ToDbType(R<StarSystem>.Type(x => x.X)));
+					cmd.Parameters.Add("@y", ToDbType(R<StarSystem>.Type(x => x.Y)));
+					cmd.Parameters.Add("@z", ToDbType(R<StarSystem>.Type(x => x.Z)));
+					cmd.Parameters.Add("@need_permit", ToDbType(R<StarSystem>.Type(x => x.NeedPermit)));
+					cmd.Parameters.Add("@updated_at", ToDbType(R<StarSystem>.Type(x => x.UpdatedAt)));
+					cmd.Parameters.Add("@edsm_id", ToDbType(R<StarSystem>.Type(x => x.EdsmID)));
 					cmd.Transaction = transaction;
 
 					// Parse each object
@@ -385,7 +387,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void BuildStationsTable(string stations_jsonl)
 		{
 			Log.Write(ELogLevel.Info, $"Building stations table");
-			using (var msg = StatusStack.NewStatusMessage($"Building Stations Table: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Building Stations Table: {0:P2}"))
 			{
 				m_cache_stations.Flush();
 
@@ -409,15 +411,15 @@ namespace EDTradeAdvisor.DataProviders
 						$") values (\n" +
 						$"  @id, @name, @system_id, @type, @distance, @facilities, @max_pad_size, @planetary, @updated_at\n" +
 						$")\n";
-					cmd.Parameters.Add("@id", R<Station>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@name", R<Station>.Type(x => x.Name).DbType());
-					cmd.Parameters.Add("@system_id", R<Station>.Type(x => x.SystemID).DbType());
-					cmd.Parameters.Add("@type", R<Station>.Type(x => x.Type).DbType());
-					cmd.Parameters.Add("@distance", R<Station>.Type(x => x.Distance).DbType());
-					cmd.Parameters.Add("@facilities", R<Station>.Type(x => x.Facilities).DbType());
-					cmd.Parameters.Add("@max_pad_size", R<Station>.Type(x => x.MaxPadSize).DbType());
-					cmd.Parameters.Add("@planetary", R<Station>.Type(x => x.Planetary).DbType());
-					cmd.Parameters.Add("@updated_at", R<Station>.Type(x => x.UpdatedAt).DbType());
+					cmd.Parameters.Add("@id", ToDbType(R<Station>.Type(x => x.ID)));
+					cmd.Parameters.Add("@name", ToDbType(R<Station>.Type(x => x.Name)));
+					cmd.Parameters.Add("@system_id", ToDbType(R<Station>.Type(x => x.SystemID)));
+					cmd.Parameters.Add("@type", ToDbType(R<Station>.Type(x => x.Type)));
+					cmd.Parameters.Add("@distance", ToDbType(R<Station>.Type(x => x.Distance)));
+					cmd.Parameters.Add("@facilities", ToDbType(R<Station>.Type(x => x.Facilities)));
+					cmd.Parameters.Add("@max_pad_size", ToDbType(R<Station>.Type(x => x.MaxPadSize)));
+					cmd.Parameters.Add("@planetary", ToDbType(R<Station>.Type(x => x.Planetary)));
+					cmd.Parameters.Add("@updated_at", ToDbType(R<Station>.Type(x => x.UpdatedAt)));
 					cmd.Transaction = transaction;
 
 					var last_progress_update = 0.0;
@@ -489,7 +491,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void BuildCommodityCategortiesTable(string commodities_json)
 		{
 			Log.Write(ELogLevel.Info, $"Building commodity categories tables");
-			using (var msg = StatusStack.NewStatusMessage($"Building Commodity Categories Tables: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Building Commodity Categories Tables: {0:P2}"))
 			{
 				m_cache_market.Flush();
 
@@ -506,8 +508,8 @@ namespace EDTradeAdvisor.DataProviders
 						$") values (\n" +
 						$"  @id, @name\n" +
 						$")\n";
-					cmd.Parameters.Add("@id", R<CommodityCategory>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@name", R<CommodityCategory>.Type(x => x.Name).DbType());
+					cmd.Parameters.Add("@id",   ToDbType(R<CommodityCategory>.Type(x => x.ID)));
+					cmd.Parameters.Add("@name", ToDbType(R<CommodityCategory>.Type(x => x.Name)));
 					cmd.Transaction = transaction;
 
 					var last_progress_update = 0.0;
@@ -547,7 +549,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void BuildCommoditiesTable(string commodities_json)
 		{
 			Log.Write(ELogLevel.Info, $"Building commodities tables");
-			using (var msg = StatusStack.NewStatusMessage($"Building Commodities Tables: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Building Commodities Tables: {0:P2}"))
 			{
 				m_cache_market.Flush();
 
@@ -575,19 +577,19 @@ namespace EDTradeAdvisor.DataProviders
 						$") values (\n" +
 						$"  @id, @name, @category_id, @is_rare, @min_buy_price, @max_buy_price, @min_sell_price, @max_sell_price, @average_price, @buy_price_lower_average, @sell_price_upper_average, @is_non_marketable, @ed_id\n" +
 						$")\n";
-					cmd.Parameters.Add("@id", R<Commodity>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@name", R<Commodity>.Type(x => x.Name).DbType());
-					cmd.Parameters.Add("@category_id", R<Commodity>.Type(x => x.CategoryID).DbType());
-					cmd.Parameters.Add("@is_rare", R<Commodity>.Type(x => x.IsRare).DbType());
-					cmd.Parameters.Add("@min_buy_price", R<Commodity>.Type(x => x.MinBuyPrice).DbType());
-					cmd.Parameters.Add("@max_buy_price", R<Commodity>.Type(x => x.MaxBuyPrice).DbType());
-					cmd.Parameters.Add("@min_sell_price", R<Commodity>.Type(x => x.MinSellPrice).DbType());
-					cmd.Parameters.Add("@max_sell_price", R<Commodity>.Type(x => x.MaxSellPrice).DbType());
-					cmd.Parameters.Add("@average_price", R<Commodity>.Type(x => x.AveragePrice).DbType());
-					cmd.Parameters.Add("@buy_price_lower_average", R<Commodity>.Type(x => x.BuyPriceLowerAverage).DbType());
-					cmd.Parameters.Add("@sell_price_upper_average", R<Commodity>.Type(x => x.SellPriceUpperAverage).DbType());
-					cmd.Parameters.Add("@is_non_marketable", R<Commodity>.Type(x => x.IsNonMarketable).DbType());
-					cmd.Parameters.Add("@ed_id", R<Commodity>.Type(x => x.EDID).DbType());
+					cmd.Parameters.Add("@id",                      ToDbType(R<Commodity>.Type(x => x.ID)));
+					cmd.Parameters.Add("@name",                    ToDbType(R<Commodity>.Type(x => x.Name)));
+					cmd.Parameters.Add("@category_id",             ToDbType(R<Commodity>.Type(x => x.CategoryID)));
+					cmd.Parameters.Add("@is_rare",                 ToDbType(R<Commodity>.Type(x => x.IsRare)));
+					cmd.Parameters.Add("@min_buy_price",           ToDbType(R<Commodity>.Type(x => x.MinBuyPrice)));
+					cmd.Parameters.Add("@max_buy_price",           ToDbType(R<Commodity>.Type(x => x.MaxBuyPrice)));
+					cmd.Parameters.Add("@min_sell_price",          ToDbType(R<Commodity>.Type(x => x.MinSellPrice)));
+					cmd.Parameters.Add("@max_sell_price",          ToDbType(R<Commodity>.Type(x => x.MaxSellPrice)));
+					cmd.Parameters.Add("@average_price",           ToDbType(R<Commodity>.Type(x => x.AveragePrice)));
+					cmd.Parameters.Add("@buy_price_lower_average", ToDbType(R<Commodity>.Type(x => x.BuyPriceLowerAverage)));
+					cmd.Parameters.Add("@sell_price_upper_average",ToDbType(R<Commodity>.Type(x => x.SellPriceUpperAverage)));
+					cmd.Parameters.Add("@is_non_marketable",       ToDbType(R<Commodity>.Type(x => x.IsNonMarketable)));
+					cmd.Parameters.Add("@ed_id",                   ToDbType(R<Commodity>.Type(x => x.EDID)));
 					cmd.Transaction = transaction;
 
 					var last_progress_update = 0.0;
@@ -634,7 +636,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void BuildListingsTable(string listings_csv)
 		{
 			Log.Write(ELogLevel.Info, $"Building listings table");
-			using (var msg = StatusStack.NewStatusMessage($"Building Listings Table: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Building Listings Table: {0:P2}"))
 			{
 				m_cache_market.Flush();
 
@@ -658,16 +660,16 @@ namespace EDTradeAdvisor.DataProviders
 						$") values (\n" +
 						$"  @id, @station_id, @commodity_id, @supply, @supply_bracket, @buy_price, @sell_price, @demand, @demand_bracket, @updated_at\n" +
 						$")\n";
-					cmd.Parameters.Add("@id", R<Listing>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@station_id", R<Listing>.Type(x => x.StationID).DbType());
-					cmd.Parameters.Add("@commodity_id", R<Listing>.Type(x => x.CommodityID).DbType());
-					cmd.Parameters.Add("@supply", R<Listing>.Type(x => x.Supply).DbType());
-					cmd.Parameters.Add("@supply_bracket", R<Listing>.Type(x => x.SupplyBracket).DbType());
-					cmd.Parameters.Add("@buy_price", R<Listing>.Type(x => x.BuyPrice).DbType());
-					cmd.Parameters.Add("@sell_price", R<Listing>.Type(x => x.SellPrice).DbType());
-					cmd.Parameters.Add("@demand", R<Listing>.Type(x => x.Demand).DbType());
-					cmd.Parameters.Add("@demand_bracket", R<Listing>.Type(x => x.DemandBracket).DbType());
-					cmd.Parameters.Add("@updated_at", R<Listing>.Type(x => x.UpdatedAt).DbType());
+					cmd.Parameters.Add("@id",            ToDbType(R<Listing>.Type(x => x.ID)));
+					cmd.Parameters.Add("@station_id",    ToDbType(R<Listing>.Type(x => x.StationID)));
+					cmd.Parameters.Add("@commodity_id",  ToDbType(R<Listing>.Type(x => x.CommodityID)));
+					cmd.Parameters.Add("@supply",        ToDbType(R<Listing>.Type(x => x.Supply)));
+					cmd.Parameters.Add("@supply_bracket",ToDbType(R<Listing>.Type(x => x.SupplyBracket)));
+					cmd.Parameters.Add("@buy_price",     ToDbType(R<Listing>.Type(x => x.BuyPrice)));
+					cmd.Parameters.Add("@sell_price",    ToDbType(R<Listing>.Type(x => x.SellPrice)));
+					cmd.Parameters.Add("@demand",        ToDbType(R<Listing>.Type(x => x.Demand)));
+					cmd.Parameters.Add("@demand_bracket",ToDbType(R<Listing>.Type(x => x.DemandBracket)));
+					cmd.Parameters.Add("@updated_at",    ToDbType(R<Listing>.Type(x => x.UpdatedAt)));
 					cmd.Transaction = transaction;
 
 					long ParseInt64(string s) => s.Length != 0 ? long.Parse(s) : 0L;
@@ -702,7 +704,7 @@ namespace EDTradeAdvisor.DataProviders
 		private void MergeListings(string live_listings_csv)
 		{
 			Log.Write(ELogLevel.Info, $"Merging live listings");
-			using (var msg = StatusStack.NewStatusMessage($"Merging Live Listings Data: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Merging Live Listings Data: {0:P2}"))
 			{
 				m_cache_market.Flush();
 
@@ -727,16 +729,16 @@ namespace EDTradeAdvisor.DataProviders
 						$"  @id, @station_id, @commodity_id, @supply, @supply_bracket, @buy_price, @sell_price, @demand, @demand_bracket, @updated_at\n" +
 						$"where (select 1 from {Table.Stations   } where [{nameof(Station.ID)  }] = @station_id)\n" +
 						$"  and (select 1 from {Table.Commodities} where [{nameof(Commodity.ID)}] = @commodity_id)\n";
-					cmd.Parameters.Add("@id", R<Listing>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@station_id", R<Listing>.Type(x => x.StationID).DbType());
-					cmd.Parameters.Add("@commodity_id", R<Listing>.Type(x => x.CommodityID).DbType());
-					cmd.Parameters.Add("@supply", R<Listing>.Type(x => x.Supply).DbType());
-					cmd.Parameters.Add("@supply_bracket", R<Listing>.Type(x => x.SupplyBracket).DbType());
-					cmd.Parameters.Add("@buy_price", R<Listing>.Type(x => x.BuyPrice).DbType());
-					cmd.Parameters.Add("@sell_price", R<Listing>.Type(x => x.SellPrice).DbType());
-					cmd.Parameters.Add("@demand", R<Listing>.Type(x => x.Demand).DbType());
-					cmd.Parameters.Add("@demand_bracket", R<Listing>.Type(x => x.DemandBracket).DbType());
-					cmd.Parameters.Add("@updated_at", R<Listing>.Type(x => x.UpdatedAt).DbType());
+					cmd.Parameters.Add("@id",            ToDbType(R<Listing>.Type(x => x.ID)));
+					cmd.Parameters.Add("@station_id",    ToDbType(R<Listing>.Type(x => x.StationID)));
+					cmd.Parameters.Add("@commodity_id",  ToDbType(R<Listing>.Type(x => x.CommodityID)));
+					cmd.Parameters.Add("@supply",        ToDbType(R<Listing>.Type(x => x.Supply)));
+					cmd.Parameters.Add("@supply_bracket",ToDbType(R<Listing>.Type(x => x.SupplyBracket)));
+					cmd.Parameters.Add("@buy_price",     ToDbType(R<Listing>.Type(x => x.BuyPrice)));
+					cmd.Parameters.Add("@sell_price",    ToDbType(R<Listing>.Type(x => x.SellPrice)));
+					cmd.Parameters.Add("@demand",        ToDbType(R<Listing>.Type(x => x.Demand)));
+					cmd.Parameters.Add("@demand_bracket",ToDbType(R<Listing>.Type(x => x.DemandBracket)));
+					cmd.Parameters.Add("@updated_at",    ToDbType(R<Listing>.Type(x => x.UpdatedAt)));
 					cmd.Transaction = transaction;
 
 					long ParseInt64(string s) => s.Length != 0 ? long.Parse(s) : 0L;
@@ -777,7 +779,7 @@ namespace EDTradeAdvisor.DataProviders
 		/// <summary>Merge market data for a station (produced by the ED journal file)</summary>
 		public async Task MergeMarketUpdate(string market_json)
 		{
-			using (var msg = StatusStack.NewStatusMessage($"Merging Market Update: {0:P2}"))
+			using (var msg = StatusStack.Instance.Push($"Merging Market Update: {0:P2}"))
 			{
 				try
 				{
@@ -845,6 +847,33 @@ namespace EDTradeAdvisor.DataProviders
 					Log.Write(ELogLevel.Error, ex, $"Parsing market data failed: '{market_json}'");
 				}
 			}
+		}
+
+		/// <summary>Convert built in type to DB types</summary>
+		private DbType ToDbType(Type type)
+		{
+			return type.TypeCode() switch
+			{
+				TypeCode.DBNull => DbType.Object,
+				TypeCode.Boolean => DbType.Boolean,
+				TypeCode.Char => DbType.Int16,
+				TypeCode.SByte => DbType.SByte,
+				TypeCode.Byte => DbType.Byte,
+				TypeCode.Int16 => DbType.Int16,
+				TypeCode.UInt16 => DbType.UInt16,
+				TypeCode.Int32 => DbType.Int32,
+				TypeCode.UInt32 => DbType.UInt32,
+				TypeCode.Int64 => DbType.Int64,
+				TypeCode.UInt64 => DbType.UInt64,
+				TypeCode.Single => DbType.Single,
+				TypeCode.Double => DbType.Double,
+				TypeCode.Decimal => DbType.Decimal,
+				TypeCode.DateTime => DbType.DateTime,
+				TypeCode.String => DbType.String,
+				TypeCode.Object => DbType.Object,
+				TypeCode.Empty => throw new NotSupportedException(),
+				_ => throw new NotSupportedException("Unknown type"),
+			};
 		}
 
 		/// <summary>Initialise the DB tables</summary>

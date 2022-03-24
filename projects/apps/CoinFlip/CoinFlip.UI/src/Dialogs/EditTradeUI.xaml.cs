@@ -462,8 +462,8 @@ namespace CoinFlip.UI.Dialogs
 
 		/// <summary>The colour associated with the trade type</summary>
 		public Colour32 TradeTypeBgColour =>
-			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour.Lerp(Colour32.White,0.9f) :
-			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour.Lerp(Colour32.White,0.9f) :
+			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour.LerpRGB(Colour32.White,0.9f) :
+			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour.LerpRGB(Colour32.White,0.9f) :
 			throw new Exception($"Unknown trade type: {TradeType}");
 
 		/// <summary>The amount held for the existing trade</summary>
