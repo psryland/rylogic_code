@@ -559,7 +559,8 @@ namespace pr
 	{
 		// Given the range [mn, mx) and 'x' somewhere on the number line
 		// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
-		return (x < mn ? mx : mn) + (x - mn) % (mx - mn);
+		auto range = mx - mn;
+		return mn + (((x - mn) % range) + range) % range;
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)

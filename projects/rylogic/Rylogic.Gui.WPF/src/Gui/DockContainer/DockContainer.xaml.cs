@@ -154,6 +154,9 @@ namespace Rylogic.Gui.WPF
 		internal IEnumerable<DockControl> AllContentInternal => m_all_content;
 		private readonly HashSet<DockControl> m_all_content;
 
+		/// <summary>Return the instances of 'TContent' contained in the dock container</summary>
+		public IEnumerable<TContent> FindContent<TContent>() => AllContent.OfType<TContent>();
+
 		/// <summary>Return the dock pane at the given dock site or null if the site does not contain a dock pane</summary>
 		public DockPane? GetPane(params EDockSite[] location)
 		{

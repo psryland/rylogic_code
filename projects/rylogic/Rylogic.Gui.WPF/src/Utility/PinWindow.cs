@@ -66,10 +66,16 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				// Note: this represents the requested state, not the actual state.
-				// Actual pinned'ness depends on whether there is a PinTarget and PinOffset.
+				// Actual "pinned-ness" depends on whether there is a PinTarget and PinOffset.
 				// For this reason, there is no if (m_pinned == value) return check.
 				m_pinned = value;
 				PinOffset = null;
+
+				// Set or Restore the startup location based on 'Pinned'
+				if (PinWindow != null)
+					PinWindow.WindowStartupLocation = Pinned ? WindowStartupLocation.Manual : m_pin_window_startloc;
+
+				// Check/Uncheck the menu option
 				UpdatePinMenuCheckState();
 			}
 		}
@@ -103,10 +109,17 @@ namespace Rylogic.Gui.WPF
 
 					// Remove the menu item from the system menu
 					PinOptionInSysMenu(false);
+
+					m_pin_window.WindowStartupLocation = m_pin_window_startloc;
+					m_pin_window_handle = IntPtr.Zero;
 				}
 				m_pin_window = value;
 				if (m_pin_window != null)
 				{
+					m_pin_window_handle = new WindowInteropHelper(m_pin_window).EnsureHandle();
+					m_pin_window_startloc = m_pin_window.WindowStartupLocation;
+					m_pin_window.WindowStartupLocation = Pinned ? WindowStartupLocation.Manual : m_pin_window_startloc;
+
 					// Add a menu item to the system menu
 					PinOptionInSysMenu(true);
 
@@ -152,6 +165,8 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private Window m_pin_window;
+		private IntPtr m_pin_window_handle;
+		private WindowStartupLocation m_pin_window_startloc;
 
 		/// <summary>The window to position relative to (defaults to the Owner of PinWindow)</summary>
 		public Window? PinTarget
@@ -164,10 +179,12 @@ namespace Rylogic.Gui.WPF
 				{
 					m_pin_target.LocationChanged -= HandleMoved;
 					m_pin_target.SizeChanged -= HandleMoved;
+					m_pin_target_handle = IntPtr.Zero;
 				}
 				m_pin_target = value;
 				if (m_pin_target != null)
 				{
+					m_pin_target_handle = new WindowInteropHelper(m_pin_target).EnsureHandle();
 					m_pin_target.SizeChanged += HandleMoved;
 					m_pin_target.LocationChanged += HandleMoved;
 				}
@@ -184,6 +201,7 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private Window? m_pin_target;
+		private IntPtr m_pin_target_handle;
 
 		/// <summary>The offset from the PinTarget to the desired location of the PinWindow</summary>
 		public Vector? PinOffset
@@ -198,9 +216,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private Vector? m_pin_offset;
-
-		/// <summary>The window handle of the pinned window</summary>
-		private IntPtr PinWindowHandle { get; set; }
 
 		/// <summary>True if actually pinned</summary>
 		private bool ActuallyPinned => Pinned && PinTarget != null && PinOffset != null;
@@ -287,7 +302,14 @@ namespace Rylogic.Gui.WPF
 			{
 				// Keep the window on-screen (if not being dragged by the user)
 				if (!PinWindow.IsActive)
+				{
+					if (PinTarget?.WindowState == WindowState.Maximized)
+					{
+						var mon = Win32.MonitorFromWindow(m_pin_target_handle);
+						pt = Gui_.OnMonitor(mon, pt, PinWindow.RenderSize);
+					}
 					pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
+				}
 
 				using var s = Scope.Create(() => UpdatingLocation = true, () => UpdatingLocation = false);
 				PinWindow.SetLocation(pt);
@@ -300,16 +322,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Add or remove the 'Pin Window' menu option in the system menu</summary>
 		private void PinOptionInSysMenu(bool add)
 		{
-			var wih = new WindowInteropHelper(m_pin_window);
 			if (add)
 			{
 				// Get the win32 HWND for 'PinWindow'
-				PinWindowHandle = wih.EnsureHandle();
-				if (PinWindowHandle == IntPtr.Zero)
+				if (m_pin_window_handle == IntPtr.Zero)
 					throw new Exception("The pinned window does not yet have a window handle");
 
 				// Get the system menu handle for the window
-				var sys_menu_handle = Win32.GetSystemMenu(PinWindowHandle, false);
+				var sys_menu_handle = Win32.GetSystemMenu(m_pin_window_handle, false);
 				
 				// Insert the 'Pin Window' option
 				Win32.InsertMenu(sys_menu_handle, 5, Win32.MF_BYPOSITION | Win32.MF_SEPARATOR, 0, string.Empty);
@@ -319,19 +339,17 @@ namespace Rylogic.Gui.WPF
 				UpdatePinMenuCheckState();
 
 				// Install a handler for the system menu item
-				var src = HwndSource.FromHwnd(PinWindowHandle);
+				var src = HwndSource.FromHwnd(m_pin_window_handle);
 				src.AddHook(HandlePinMenuOption);
 			}
 			else
 			{
 				// Remove the handler for the system menu item
-				var src = HwndSource.FromHwnd(PinWindowHandle);
+				var src = HwndSource.FromHwnd(m_pin_window_handle);
 				src.RemoveHook(HandlePinMenuOption);
 
 				// Reset the system menu for the window
-				Win32.GetSystemMenu(PinWindowHandle, true);
-
-				PinWindowHandle = IntPtr.Zero;
+				Win32.GetSystemMenu(m_pin_window_handle, true);
 			}
 
 			// Handler
@@ -349,7 +367,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Update the check mark next to the Pin Window menu option</summary>
 		private void UpdatePinMenuCheckState()
 		{
-			var sys_menu_handle = Win32.GetSystemMenu(PinWindowHandle, false);
+			if (m_pin_window_handle == IntPtr.Zero) return;
+			var sys_menu_handle = Win32.GetSystemMenu(m_pin_window_handle, false);
 			Win32.CheckMenuItem(sys_menu_handle, MenuCmd_Pinned, Win32.MF_BYCOMMAND | (ActuallyPinned ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
 		}
 

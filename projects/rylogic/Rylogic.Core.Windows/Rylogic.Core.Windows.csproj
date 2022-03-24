@@ -5,6 +5,7 @@
 		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
 		<RootNamespace>Rylogic.Core.Windows</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<LangVersion>latest</LangVersion>

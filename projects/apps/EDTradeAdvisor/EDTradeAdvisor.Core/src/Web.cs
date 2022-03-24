@@ -73,7 +73,7 @@ namespace EDTradeAdvisor
 		{
 			var filename = Path_.FileName(file_url);
 			var output_path = Path_.CombinePath(Path_.CreateDirs(output_dir), filename);
-			using (StatusStack.NewStatusMessage($"Downloading '{filename}'..."))
+			using (StatusStack.Instance.Push($"Downloading '{filename}'..."))
 			{
 				try
 				{

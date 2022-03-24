@@ -492,7 +492,7 @@ namespace Rylogic.Extn
 				{
 					var ty_args = type.GetGenericArguments();
 					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
-					var mi_add = type.GetMethod(nameof(Dictionary<int,int>.Add))!;
+					var mi_add = type.GetMethod(nameof(Dictionary<int, int>.Add))!;
 
 					var dic = type.New();
 					foreach (var kv_elem in elem.Elements())
@@ -567,13 +567,14 @@ namespace Rylogic.Extn
 			/// If 'type' is 'object' then the type is inferred from the node.
 			/// 'factory' is used to construct instances of type, unless type is
 			/// an array, in which case factory is used to construct the array elements</summary>
-			public object? Convert(XElement elem, Type type, Func<Type,object>? factory_)
+			public object? Convert(XElement elem, Type type, Func<Type,object>? factory)
 			{
 				// XElement values are strings already
 				if (type == typeof(string))
 					return elem.Value;
 
-				var factory = factory_ ?? Type_.New;
+				// Get a creation function, even if a factory function isn't supplied
+				var create = factory ?? Type_.New;
 
 				// If 'type' is nullable then returning the underlying type will
 				// automatically convert to the nullable type
@@ -620,9 +621,9 @@ namespace Rylogic.Extn
 					}
 					if (type.IsClass || is_nullable) // includes typeof(object)
 					{
-						return !elem.IsEmpty ? factory(type) : null;
+						return !elem.IsEmpty ? create(type) : null;
 					}
-					return factory(type);
+					return create(type);
 				}
 
 				// If 'type' is an enum, use the enum parse
@@ -644,7 +645,7 @@ namespace Rylogic.Extn
 
 					// Note: the 'factory' must handle both the array type and the element types
 					for (int i = 0; i != children.Count; ++i)
-						array.SetValue(children[i].As(ty_elem, factory), i);
+						array.SetValue(children[i].As(ty_elem, create), i);
 
 					return array;
 				}
@@ -669,7 +670,7 @@ namespace Rylogic.Extn
 					if (dca != null) { func = this[type] = AsDataContract; break; }
 
 					// If a factory method has been supplied, rely on that
-					if (factory_ != null) { func = this[type] = AsFromFactory; break; }
+					if (factory != null) { func = this[type] = AsFromFactory; break; }
 
 					// Notes
 					//  - If it appears a type is in the map but TryGetValue returns false, it is probably
@@ -680,7 +681,7 @@ namespace Rylogic.Extn
 						$"No binding for converting XElement to type: {lookup_type.Name}\n" +
 						$"As-Bindings: [{Count}] {string.Join(",", m_bind.Keys.Select(x => x.Name))}");
 				}
-				return func(elem, type, factory);
+				return func(elem, type, create);
 			}
 
 			/// <summary>An 'As' method that expects 'type' to have a constructor taking a single XElement argument</summary>
@@ -767,21 +768,31 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
-		public static object? ToObject(this XElement elem, Func<Type,object>? factory = null)
+		public static object? ToObject(this XElement elem)
 		{
-			// Passing a factory function to handle any of the types 'elem' might be
-			// can work, but the factory function won't be available further down the
-			// hierarchy and so is of limited use. A better way is to add custom handlers
-			// to the 'AsMap'.
-			if (elem == null) throw new ArgumentNullException("XML element is null. Key not found?");
-			return AsMap.Convert(elem, typeof(object), factory);
+			return elem != null
+				? AsMap.Convert(elem, typeof(object), factory: null)
+				: throw new ArgumentNullException("XML element is null. Key not found?");
 		}
 
 		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
-		public static object? ToObject(this XElement elem, object optional_default, Func<Type,object>? factory = null)
+		public static object? ToObject(this XElement elem, Func<Type,object> factory)
 		{
-			if (elem == null) return optional_default;
-			return ToObject(elem, factory);
+			// Passing a factory function to handle any of the types 'elem' might be can work,
+			// but the factory function won't be available further down the hierarchy and so is
+			// of limited use. A better way is to add custom handlers to the 'AsMap'.
+			return elem != null
+				? AsMap.Convert(elem, typeof(object), factory)
+				: throw new ArgumentNullException("XML element is null. Key not found?");
+		}
+
+		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes, or 'def' if the element is null</summary>
+		public static object? ToObject(this XElement? elem, object? def)
+		{
+			// Note: it is illogical to supply a default and a factory function
+			return elem != null
+				? AsMap.Convert(elem, typeof(object), factory: null)
+				: def;
 		}
 
 		/// <summary>
@@ -791,17 +802,27 @@ namespace Rylogic.Extn
 		/// E.g:<para\>
 		///  val = node.Element("val").As(typeof(int)) <para\>
 		///  val = node.Element("val").As(typeof(int), default_val) <para\></summary>
-		public static object? As(this XElement? elem, Type type, Func<Type,object>? factory = null)
+		public static object? As(this XElement? elem, Type type)
 		{
-			if (elem == null) throw new ArgumentNullException("XML element is null. Key not found?");
-			return AsMap.Convert(elem, type, factory);
+			return elem != null
+				? AsMap.Convert(elem, type, factory:null)
+				: throw new ArgumentNullException("XML element is null. Key not found?");
 		}
-		public static object? As(this XElement? elem, Type type, object? def, Func<Type,object>? factory = null)
+		public static object? As(this XElement? elem, Type type, Func<Type,object> factory)
 		{
-			if (elem == null)
-				return def != null ? Util.ConvertTo(def, type) : type.DefaultInstance();
-
-			return As(elem, type, factory);
+			factory = factory ?? throw new ArgumentNullException(nameof(factory), $"Factory function is null. If you indended to use the 'or default' overload, use a named parameter");
+			return elem != null
+				? AsMap.Convert(elem, type, factory)
+				: factory(type);
+		}
+		public static object? As(this XElement? elem, Type type, object? def)
+		{
+			// Notes:
+			//  - Don't use 'def == null' to mean no default given, sometimes null is the default.
+			//  - It is illogical to supply a default and a factory function.
+			return elem != null
+				? AsMap.Convert(elem, type, factory:null)
+				: Util.ConvertTo(def, type);
 		}
 
 		/// <summary>
@@ -811,43 +832,42 @@ namespace Rylogic.Extn
 		/// E.g:<para\>
 		///  val = node.Element("val").As&lt;int&gt;() <para\>
 		///  val = node.Element("val").As&lt;int&gt;(default_val) <para\></summary>
-		public static T As<T>(this XElement? elem, object? def = null, Func<Type,object>? factory = null)
-		{
-			return (T)As(elem, typeof(T), def, factory)!;
-		}
+		public static T As<T>(this XElement? elem) => (T)As(elem, typeof(T))!;
+		public static T As<T>(this XElement? elem, Func<Type, object> factory) => (T)As(elem, typeof(T), factory)!;
+		public static T As<T>(this XElement? elem, object? def) => (T)As(elem, typeof(T), def:def)!;
 
-		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
-		public static void As<T>(this XElement parent, IList<T> list, string elem_name, T optional_default, Func<T,T,bool>? is_duplicate = null, Func<Type,object>? factory = null)
+		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'conv' and optionally overwriting duplicates.</summary>
+		private static void AsList<T>(XElement elem, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool>? is_duplicate)
 		{
-			AsList<T>(parent, list, elem_name, e => e.As<T>(optional_default, factory), is_duplicate);
-		}
-
-		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
-		public static void As<T>(this XElement parent, IList<T> list, string elem_name, Func<T,T,bool>? is_duplicate = null, Func<Type,object>? factory = null)
-		{
-			AsList<T>(parent, list, elem_name, e => e.As<T>(factory), is_duplicate);
-		}
-		private static void AsList<T>(XElement parent, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool>? is_duplicate)
-		{
-			if (parent == null) throw new ArgumentNullException("XML element is null. Key not found?");
-
-			var count = 0;
-			foreach (var e in parent.Elements(elem_name))
+			elem = elem ?? throw new ArgumentNullException("XML element is null. Key not found?");
+			foreach (var (e,idx) in elem.Elements(elem_name).WithIndex())
 			{
+				var index = idx;
 				var item = conv(e);
-				var index = count;
+				
+				// Check for duplicates of already added items
 				if (is_duplicate != null)
 				{
-					for (int i = 0; i != list.Count; ++i)
-						if (is_duplicate(list[i], item)) { index = i; break; }
+					var dup_idx = list.IndexOf(x => is_duplicate(x, item));
+					index = dup_idx != -1 ? dup_idx : index;
 				}
+
+				// Add or replace 'item' into the list
 				if (index != list.Count)
 					list[index] = item;
 				else
 					list.Add(item);
-				++count;
 			}
 		}
+
+		/// <summary>Read all elements with name 'elem_name' into 'list' and optionally overwriting duplicates.</summary>
+		public static void As<T>(this XElement elem, IList<T> list, string elem_name, Func<T, T, bool>? is_duplicate = null) => AsList<T>(elem, list, elem_name, e => e.As<T>(), is_duplicate);
+
+		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
+		public static void As<T>(this XElement elem, IList<T> list, string elem_name, Func<Type, object> factory, Func<T, T, bool>? is_duplicate = null) => AsList(elem, list, elem_name, e => e.As<T>(factory), is_duplicate);
+
+		// When would 'def' ever be used? We iterate over the children of 'elem', can't get null elements doing that.
+		//public static void As<T>(this XElement elem, IList<T> list, string elem_name, T def, Func<T, T, bool>? is_duplicate = null) => AsList(elem, list, elem_name, e => e.As<T>(def), is_duplicate);
 
 		#endregion
 

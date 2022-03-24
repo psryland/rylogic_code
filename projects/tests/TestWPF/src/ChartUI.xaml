@@ -20,7 +20,7 @@
 	-->
 	<Window.Resources>
 		<ResourceDictionary>
-			<ContextMenu x:Key="MyChartCMenu">
+			<ContextMenu x:Key="MyChartCMenu" x:Name="TestCustomChartCMenu">
 				<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 				<MenuItem
 					Header="Boobs"

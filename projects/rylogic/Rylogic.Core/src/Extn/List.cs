@@ -22,9 +22,15 @@ namespace Rylogic.Extn
 		//   - Implement for IList<T> and specialise for the non-generic concrete classes.
 		//     Generic versions are by far the most common.
 		//   - 'Deconstruct' for IList<T> has to have the 'rest' parameter because overloads without it are ambiguous
-		//     Deconstructing assignment from an IList will always need the ignore token. e.g. var (a, b, _) = MyList;
+		//     De-constructing assignment from an IList will always need the ignore token. e.g. var (a, b, _) = MyList;
 
-		/// <summary>Deconstructing assignment</summary>
+		/// <summary>Returns this list wrapped in a proxy that has the IList interface (if not already an IList)</summary>
+		public static IList AsList<T>(this IList<T> list)
+		{
+			return list is IList ilist ? ilist : new ListProxy<T>(list);
+		}
+
+		/// <summary>De-constructing assignment</summary>
 		public static void Deconstruct<T>(this IList<T> list, out T arg0, out IList<T> rest)
 		{
 			arg0 = list.Count > 0 ? list[0] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection is empty");
@@ -677,10 +683,9 @@ namespace Rylogic.Extn
 
 		/// <summary>
 		/// Binary search using for an element using only a predicate function.
-		/// Returns the index of the element if found or the 2s-complement of the first
-		/// element larger than the one searched for.
-		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal
-		/// 'insert_position' should be true to always return positive indices (i.e. when searching to find insert position)</summary>
+		/// Returns the index of the element if found or the 2s-complement of the first element larger than the one searched for.
+		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal.<para/>
+		/// 'find_insert_position' should be true to always return positive indices (i.e. when searching to find insert position)</summary>
 		public static int BinarySearch<T>(this IList<T> list, Func<T,int> cmp, bool find_insert_position = false)
 		{
 			var idx = ~0;

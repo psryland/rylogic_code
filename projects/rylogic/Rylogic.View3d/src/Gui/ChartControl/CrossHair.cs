@@ -18,7 +18,7 @@ namespace Rylogic.Gui.WPF
 			{
 				Chart = chart;
 
-				var line_colour = Chart.Scene.BackgroundColour.Lerp(Chart.Scene.BackgroundColour.InvertBW(), 0.5);
+				var line_colour = Chart.Scene.BackgroundColour.LerpRGB(Chart.Scene.BackgroundColour.InvertBW(), 0.5);
 				var bkgd_colour = Chart.Scene.BackgroundColour.InvertBW(0xFF333333, 0xFFCCCCCC);
 				var text_colour = Chart.Scene.BackgroundColour;
 

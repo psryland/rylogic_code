@@ -104,6 +104,7 @@
 					x:Name="m_chart_panel"
 					/>
 				<Canvas
+					IsHitTestVisible="False"
 					UseLayoutRounding="True"
 					Background="Transparent"
 					x:Name="m_chart_overlay"

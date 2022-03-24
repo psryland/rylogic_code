@@ -5,6 +5,7 @@
 		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
 		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>

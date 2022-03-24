@@ -62,7 +62,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>A File.Exists() that doesn't throw if invalid path characters are used. Handles 'filepath' being null</summary>
-		public static bool FileExists(string filepath)
+		public static bool FileExists(string? filepath)
 		{
 			// Using 'FileInfo' because it checks security permissions as well
 			try { return filepath.HasValue() && new FileInfo(filepath).Exists; }

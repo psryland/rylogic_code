@@ -64,6 +64,10 @@ namespace Rylogic.Extn
 		{
 			return source.Cast<object>().Select(x => Util.ConvertTo<TResult>(x));
 		}
+		public static IEnumerable ConvertTo(this IEnumerable source, Type ty)
+		{
+			return source.Cast<object>().Select(x => Util.ConvertTo(x, ty));
+		}
 
 		/// <summary>Convert the collection into a hash set</summary>
 		public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source)

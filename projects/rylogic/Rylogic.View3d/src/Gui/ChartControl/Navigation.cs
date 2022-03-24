@@ -34,7 +34,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable mouse navigation</summary>
 		public bool DefaultMouseControl
 		{
-			get { return m_default_mouse_control; }
+			get => m_default_mouse_control;
 			set
 			{
 				if (m_default_mouse_control == value) return;
@@ -47,7 +47,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable keyboard shortcuts for navigation</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get { return m_default_keyshortcuts; }
+			get => m_default_keyshortcuts;
 			set
 			{
 				if (m_default_keyshortcuts == value) return;
@@ -87,12 +87,12 @@ namespace Rylogic.Gui.WPF
 			{
 				switch (args.ChangedButton)
 				{
-				default: return;
-				case MouseButton.Left:   MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultLButton(this); break;
-				case MouseButton.Middle: MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultMButton(this); break;
-				case MouseButton.Right:  MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultRButton(this); break;
-				case MouseButton.XButton1: UndoNavigation(); break;
-				case MouseButton.XButton2: RedoNavigation(); break;
+					case MouseButton.Left: MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultLButton(this); break;
+					case MouseButton.Middle: MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultMButton(this); break;
+					case MouseButton.Right: MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultRButton(this); break;
+					case MouseButton.XButton1: UndoNavigation(); break;
+					case MouseButton.XButton2: RedoNavigation(); break;
+					default: return;
 				}
 			}
 

@@ -6,6 +6,7 @@
 		<RootNamespace>Rylogic</RootNamespace>
 		<StartupObject></StartupObject>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>

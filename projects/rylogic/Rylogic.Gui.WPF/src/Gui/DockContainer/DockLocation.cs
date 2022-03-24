@@ -22,8 +22,8 @@ namespace Rylogic.Gui.WPF
 			{
 				Address = node.Element(XmlTag.Address).As<string>().Split(',').Select(x => Enum<EDockSite>.Parse(x)).ToArray();
 				Index = node.Element(XmlTag.Index).As<int>(int.MaxValue);
-				AutoHide = node.Element(XmlTag.AutoHide).As<EDockSite?>(null);
-				FloatingWindowId = node.Element(XmlTag.FloatingWindow).As<int?>(null);
+				AutoHide = node.Element(XmlTag.AutoHide).As<EDockSite?>(def: null);
+				FloatingWindowId = node.Element(XmlTag.FloatingWindow).As<int?>(def: null);
 			}
 			public XElement ToXml(XElement node)
 			{

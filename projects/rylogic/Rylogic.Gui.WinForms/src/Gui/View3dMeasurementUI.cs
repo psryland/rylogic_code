@@ -683,7 +683,7 @@ namespace Rylogic.Gui.WinForms
 			case View3d.ESnapType.Edge:
 				return SpotColour;
 			case View3d.ESnapType.Face:
-				return SpotColour.Lerp(0xFF000000, 0.4f);
+				return SpotColour.LerpA(0xFF000000, 0.4f);
 			}
 		}
 

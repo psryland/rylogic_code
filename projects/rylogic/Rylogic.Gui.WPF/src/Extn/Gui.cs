@@ -14,6 +14,8 @@ using Microsoft.Win32;
 using Rylogic.Core.Windows;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
+using Rylogic.Interop.Win32;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -230,6 +232,27 @@ namespace Rylogic.Gui.WPF
 		public static Point OnScreen(Point location, Size size)
 		{
 			return OnScreen(new Rect(location, size)).Location;
+		}
+
+		/// <summary>Move a screen-space rectangle so that it is within the area of a monitor</summary>
+		public static Rect OnMonitor(IntPtr monitor, Rect rect)
+		{
+			// Use Win32.MonitorFromXYZ to get 'monitor'
+			var mon = Win32.GetMonitorInfo(monitor);
+			var scn = new Rect(
+				mon.rcWork.left, mon.rcWork.top,
+				mon.rcWork.width, mon.rcWork.height);
+
+			var r = rect;
+			if (rect.Right > scn.Right) r.X = scn.Right - rect.Width;
+			if (rect.Bottom > scn.Bottom) r.Y = scn.Bottom - rect.Height;
+			if (r.Left < scn.Left) r.X = scn.Left;
+			if (r.Top < scn.Top) r.Y = scn.Top;
+			return r;
+		}
+		public static Point OnMonitor(IntPtr monitor, Point location, Size size)
+		{
+			return OnMonitor(monitor, new Rect(location, size)).Location;
 		}
 
 		/// <summary>Fluent Add function</summary>
@@ -507,6 +530,19 @@ namespace Rylogic.Gui.WPF
 		{
 			ui.Typeface(tf);
 			ui.FontSize = size;
+		}
+
+		/// <summary>Return an RAII object for scoped mouse capture</summary>
+		public static IDisposable CaptureMouseScope(this UIElement ui)
+		{
+			return Scope.Create(
+				() => ui.CaptureMouse(),
+				_ =>
+				{
+					if (Util.IsGCFinalizerThread) throw new Exception("Mouse capture shouldn't be cleaned up by the GC");
+					if (!ui.IsMouseCaptured) return;
+					ui.ReleaseMouseCapture();
+				});
 		}
 
 		/// <summary>Convert a point from 'src' space to 'dst' space. Consider using 'TransformToAncestor/Descendant'</summary>

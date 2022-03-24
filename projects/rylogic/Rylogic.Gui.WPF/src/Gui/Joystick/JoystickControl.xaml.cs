@@ -400,9 +400,11 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return the sector under 'client_pt' (where 'client_pt' is in client space)</summary>
 		private int? SectorFromClientPoint(Point client_pt)
 		{
+			// The joystick graphic is a square within the client area of the control.
+			var sz = Math.Min(ActualWidth, ActualHeight) * 0.5;
 			var unit_pt = new Point(
-				2 * (client_pt.X / ActualWidth) - 1,
-				1 - 2 * (client_pt.Y / ActualHeight));
+				(client_pt.X - 0.5 * ActualWidth) / sz,
+				(0.5 * ActualHeight - client_pt.Y) / sz);
 			return SectorFromUnitPoint(unit_pt);
 		}
 
@@ -441,7 +443,7 @@ namespace Rylogic.Gui.WPF
 				return;
 
 			// Determine the selected sector from 'pt'
-			var pt = Mouse.GetPosition(this);
+			var pt = e.GetPosition(this);
 			if (SectorFromClientPoint(pt) is int sector)
 			{
 				Selected ^= SectorToBitmask(sector);

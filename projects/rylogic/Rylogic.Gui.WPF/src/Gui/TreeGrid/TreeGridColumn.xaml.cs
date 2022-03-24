@@ -10,6 +10,10 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class TreeGridColumn : DataGridTemplateColumn
 	{
+		// Notes:
+		//  - 'Binding', 'Image', and 'Children' are not dependency properties. When
+		//    are set to a binding we want the instance of the binding, not what they are bound to.
+
 		public TreeGridColumn()
 		{
 			InitializeComponent();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -18,77 +19,144 @@ namespace Rylogic.Utility
 		Colour32 Colour { get; set; }
 	}
 
-	public class StatusMessageStack<TContext>
+	public class StatusMessageStack<TContext> :INotifyPropertyChanged
 	{
 		// Notes:
-		//  - Thread safe, singleton status message stack
-		//  - 'TContext' is used to allow multiple global instances
-		//  - Status messages are editable to avoid excessive pop/push patterns.
+		//  - Thread safe.
+		//  - Use as a singleton or an instance. 'TContext' is used to allow multiple global instances.
+		//  - Status messages are editable to avoid excessive pop/push.
 		//
 		// Usage:
-		//  Create your own specialisations like this:
+		//  Create your own specialisation like this:
 		//   public class MyStatusStack : StatusMessageStack<MyStatusStack> {}
 		// 
-		//  Observer 'MyStatusStack.ValueChanged' to update the status.
 		//  Then use the factory method to create disposable status message instances
-		//   var msg = MyStatusStack.NewStatusMessage("Hello");
+		//   var msg = MyStatusStack.Instance.Push("Hello", Colour.Red);
+
+		public StatusMessageStack()
+		{
+			ThreadId = Thread.CurrentThread.ManagedThreadId;
+			SyncCtx = SynchronizationContext.Current ?? new SynchronizationContext();
+			Default = Push("Idle", Colour32.Black, ttl: null);
+			m_instance = this;
+		}
+
+		/// <summary>Singleton access</summary>
+		public static StatusMessageStack<TContext> Instance => m_instance ??= new StatusMessageStack<TContext>();
+		public static StatusMessageStack<TContext> m_instance = null!;
 
 		/// <summary>A stack of messages</summary>
-		private static List<IStatusMessage> MessageStack { get; } = new List<IStatusMessage>();
+		private List<IStatusMessage> MessageStack { get; } = new List<IStatusMessage>();
 
 		/// <summary>Sync context used to implement time-to-live messages</summary>
-		private static SynchronizationContext SyncCtx = new SynchronizationContext();
+		private SynchronizationContext SyncCtx { get; }
+		private int ThreadId { get; }
 
-		/// <summary>The default string to return when the stack is empty</summary>
-		public static string DefaultStatusMessage { get; set; } = "Idle";
+		/// <summary>The default status message</summary>
+		public IStatusMessage Default { get; }
 
-		/// <summary>The default colour of a status message</summary>
-		public static Colour32 DefaultStatusColour { get; set; } = Colour32.Black;
+		/// <summary>The current top level status message</summary>
+		public IStatusMessage Top
+		{
+			get
+			{
+				lock (MessageStack)
+					return MessageStack.Back();
+			}
+		}
 
 		/// <summary>The current top-of-the-stack status message</summary>
-		public static string Message
-		{
-			get
-			{
-				lock (MessageStack)
-					return MessageStack.LastOrDefault()?.Message ?? DefaultStatusMessage;
-			}
-		}
+		public string Message => Top.Message;
 
 		/// <summary>The current top-of-the-stack status message colour</summary>
-		public static Colour32 Colour
+		public Colour32 Colour => Top.Colour;
+
+		/// <summary>Factory for producing status message instances</summary>
+		public IStatusMessage Push(string? message = null, Colour32? colour = null, TimeSpan? ttl = null)
 		{
-			get
+			var sm = new StatusMessage(this, message, colour, ttl);
+			lock (MessageStack)
 			{
-				lock (MessageStack)
-					return MessageStack.LastOrDefault()?.Colour ?? DefaultStatusColour;
+				MessageStack.Add(sm);
+			}
+			RunOnMainThread(() =>
+			{
+				NotifyPropertyChanged(nameof(Message));
+				NotifyPropertyChanged(nameof(Colour));
+			});
+			return sm;
+		}
+
+		/// <summary>Pop the current status message from the stack</summary>
+		public IStatusMessage? Pop()
+		{
+			var sm = (IStatusMessage?)null;
+			lock (MessageStack)
+			{
+				// Don't allow the default message to be popped
+				if (MessageStack.Count == 1) return null;
+				sm = MessageStack.PopBack();
+			}
+			RunOnMainThread(() =>
+			{
+				NotifyPropertyChanged(nameof(Message));
+				NotifyPropertyChanged(nameof(Colour));
+			});
+			return sm;
+		}
+
+		/// <summary>Remove a status message from somewhere in the stack</summary>
+		public void Remove(IStatusMessage sm)
+		{
+			if (sm == Default)
+				throw new Exception("The default status message cannot be removed");
+
+			var was_top = false;
+			lock (MessageStack)
+			{
+				var idx = MessageStack.IndexOf(sm);
+				if (idx != -1) MessageStack.RemoveAt(idx);
+				was_top = idx == MessageStack.Count;
+			}
+			if (was_top)
+			{
+				RunOnMainThread(() =>
+				{
+					NotifyPropertyChanged(nameof(Message));
+					NotifyPropertyChanged(nameof(Colour));
+				});
 			}
 		}
 
-		/// <summary>Raised when 'Value' changes. Careful, raised on the thread that changes the top status message</summary>
-		public static event EventHandler? ValueChanged;
-
-		/// <summary>Factory for producing status message instances</summary>
-		public static IStatusMessage NewStatusMessage(string? message = null, Colour32? colour = null, TimeSpan? ttl = null)
+		/// <summary></summary>
+		internal void RunOnMainThread(Action action)
 		{
-			return new StatusMessage(message, colour, ttl);
+			if (Thread.CurrentThread.ManagedThreadId != ThreadId)
+				SyncCtx.Post(_ => action(), null);
+			else
+				action();
+		}
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		internal void NotifyPropertyChanged(string prop_name)
+		{
+			if (Thread.CurrentThread.ManagedThreadId != ThreadId)
+				throw new Exception("Only notify from the main thread");
+
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>Status message instance</summary>
 		[DebuggerDisplay("{Message,nq}")]
 		private sealed class StatusMessage : IStatusMessage
 		{
-			public StatusMessage(string? message, Colour32? colour, TimeSpan? ttl)
+			private readonly StatusMessageStack<TContext> m_owner;
+			public StatusMessage(StatusMessageStack<TContext> owner, string? message, Colour32? colour, TimeSpan? ttl)
 			{
+				m_owner = owner;
 				m_sb = new StringBuilder(message ?? string.Empty);
-				m_colour = colour ?? DefaultStatusColour;
-
-				// Add the status message to the stack
-				lock (MessageStack)
-					MessageStack.Add(this);
-
-				// Notify of new status
-				ValueChanged?.Invoke(this, EventArgs.Empty);
+				m_colour = colour ?? owner.Default.Colour;
 
 				// If the status expires after a time, set a timer to remove it
 				if (ttl != null)
@@ -104,17 +172,7 @@ namespace Rylogic.Utility
 			}
 			public void Dispose()
 			{
-				bool notify;
-				lock (MessageStack)
-				{
-					if (MessageStack.Count == 0) return;
-					notify = MessageStack.LastOrDefault() == this;
-					MessageStack.Remove(this);
-				}
-				if (notify)
-				{
-					ValueChanged?.Invoke(this, EventArgs.Empty);
-				}
+				m_owner.Remove(this);
 			}
 
 			/// <summary>The status message</summary>
@@ -123,16 +181,13 @@ namespace Rylogic.Utility
 				get => m_sb.ToString();
 				set
 				{
-					bool notify;
-					lock (MessageStack)
+					if (Message == value) return;
+					m_owner.RunOnMainThread(() =>
 					{
-						notify = MessageStack.LastOrDefault() == this;
 						m_sb.Assign(value);
-					}
-					if (notify)
-					{
-						ValueChanged?.Invoke(this, EventArgs.Empty);
-					}
+						if (m_owner.Top != this) return;
+						m_owner.NotifyPropertyChanged(nameof(StatusMessageStack<TContext>.Message));
+					});
 				}
 			}
 			private readonly StringBuilder m_sb;
@@ -143,16 +198,13 @@ namespace Rylogic.Utility
 				get => m_colour;
 				set
 				{
-					bool notify;
-					lock (MessageStack)
+					if (Colour == value) return;
+					m_owner.RunOnMainThread(() =>
 					{
-						notify = MessageStack.LastOrDefault() == this;
 						m_colour = value;
-					}
-					if (notify)
-					{
-						ValueChanged?.Invoke(this, EventArgs.Empty);
-					}
+						if (m_owner.Top != this) return;
+						m_owner.NotifyPropertyChanged(nameof(StatusMessageStack<TContext>.Colour));
+					});
 				}
 			}
 			private Colour32 m_colour;
@@ -171,27 +223,29 @@ namespace Rylogic.UnitTests
 	[TestFixture]
 	public class TestStatusMessageStack
 	{
+		/// <summary>MyStatusStack instance</summary>
 		public class MyStatusStack : StatusMessageStack<MyStatusStack>
 		{ }
 
 		[Test]
 		public void DefaultUse()
 		{
-			using (var msg1 = MyStatusStack.NewStatusMessage("Status 1"))
+			var status = MyStatusStack.Instance;
+			using (var msg1 = status.Push("Status 1"))
 			{
-				using (var msg2 = MyStatusStack.NewStatusMessage("Status 2"))
+				using (var msg2 = status.Push("Status 2"))
 				{
-					using (var msg3 = MyStatusStack.NewStatusMessage("Status 3"))
+					using (var msg3 = status.Push("Status 3"))
 					{
-						Assert.Equal("Status 3", MyStatusStack.Message);
+						Assert.Equal("Status 3", status.Message);
 						msg2.Message = "Changed Status 2";
-						Assert.Equal("Status 3", MyStatusStack.Message);
+						Assert.Equal("Status 3", status.Message);
 					}
-					Assert.Equal("Changed Status 2", MyStatusStack.Message);
+					Assert.Equal("Changed Status 2", status.Message);
 				}
-				Assert.Equal("Status 1", MyStatusStack.Message);
+				Assert.Equal("Status 1", status.Message);
 			}
-			Assert.Equal("Idle", MyStatusStack.Message);
+			Assert.Equal("Idle", status.Message);
 		}
 	}
 }
