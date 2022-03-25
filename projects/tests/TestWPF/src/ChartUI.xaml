@@ -125,7 +125,11 @@
 				</Path>
 			</view3d:ChartControl.OverlayContentChartSpace>
 			<view3d:ChartControl.Legend>
-				<view3d:ChartLegend/>
+				<view3d:ChartLegend
+					HorizontalAlignment="Right"
+					VerticalAlignment="Bottom"
+					Floating="true"
+					/>
 			</view3d:ChartControl.Legend>
 		</view3d:ChartControl>
 

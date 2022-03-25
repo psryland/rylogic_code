@@ -12,7 +12,6 @@ namespace TestWPF
 	public partial class ChartUI : Window, IChartCMenuContext, IView3dCMenuContext, INotifyPropertyChanged
 	{
 		private ChartDataSeries m_series;
-		private ChartDataLegend m_legend;
 		private View3d.Object m_obj0;
 
 		public ChartUI()
@@ -65,9 +64,6 @@ namespace TestWPF
 					lk.Add(new ChartDataSeries.Pt(0.01 * i, Math.Sin(0.01 * i * Math_.Tau)));
 			}
 
-			m_legend = new ChartDataLegend();
-			m_chart.Elements.Add(m_legend);
-
 			MyLegendItems = new ListCollectionView(new[] { m_series });
 
 			ShowBoobs = Command.Create(this, ShowBoobsInternal);
@@ -75,7 +71,6 @@ namespace TestWPF
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			Util.Dispose(ref m_legend!);
 			Util.Dispose(ref m_series!);
 			Util.Dispose(ref m_obj0!);
 			Gui_.DisposeChildren(this, EventArgs.Empty);

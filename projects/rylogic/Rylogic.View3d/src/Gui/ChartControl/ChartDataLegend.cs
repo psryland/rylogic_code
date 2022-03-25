@@ -14,7 +14,7 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>A Legend element for a collection of ChartDataSeries</summary>
-	public class ChartDataLegend : ChartControl.Element
+	[Obsolete] public class ChartDataLegend : ChartControl.Element
 	{
 		// Notes:
 		//  - This is deprecated, prefer 'ChartLegend'.

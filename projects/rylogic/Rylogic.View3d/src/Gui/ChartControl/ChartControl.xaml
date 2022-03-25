@@ -99,12 +99,13 @@
 			>
 			<Grid>
 				<local:ChartPanel
+					ContextMenu="{Binding SceneCMenu}"
 					UseLayoutRounding="True"
 					Stretch="Fill"
 					x:Name="m_chart_panel"
 					/>
 				<Canvas
-					IsHitTestVisible="False"
+					ContextMenu="{Binding SceneCMenu}"
 					UseLayoutRounding="True"
 					Background="Transparent"
 					x:Name="m_chart_overlay"

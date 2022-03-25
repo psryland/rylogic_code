@@ -369,22 +369,40 @@ namespace Rylogic.Gui.WPF
 
 			switch (Options.AreaSelectMode)
 			{
-			default: throw new Exception($"Unknown area selection mode: {Options.AreaSelectMode}");
-			case EAreaSelectMode.Disabled: return false;
-			case EAreaSelectMode.SelectElements: return true;
-			case EAreaSelectMode.Zoom: return true;
-			case EAreaSelectMode.ZoomIfNoSelection: return Selected.Count == 0;
+				case EAreaSelectMode.Disabled: return false;
+				case EAreaSelectMode.SelectElements: return true;
+				case EAreaSelectMode.Zoom: return true;
+				case EAreaSelectMode.ZoomIfNoSelection: return Selected.Count == 0;
+				default: throw new Exception($"Unknown area selection mode: {Options.AreaSelectMode}");
 			}
 		}
 
 		/// <summary>Adjust the X/Y axis of the chart to view the given volume</summary>
 		public void PositionChart(BBox chart_bbox)
 		{
-			// Ensure the selection area is >= 1 pixel for width/height
-			var chart_1px = SceneToChart(new Rect(new Size(1,1)));
-			XAxis.Set(chart_bbox.MinX, Math.Max(chart_bbox.MaxX, chart_bbox.MinX + chart_1px.SizeX));
-			YAxis.Set(chart_bbox.MinY, Math.Max(chart_bbox.MaxY, chart_bbox.MinY + chart_1px.SizeY));
+			// Ensure the range is positive definite
+			var rng_x = new RangeF(chart_bbox.MinX, chart_bbox.MaxX);
+			var rng_y = new RangeF(chart_bbox.MinY, chart_bbox.MaxY);
+			if (rng_x.Size < float.Epsilon) // float because chart_bbox is floats
+			{
+				rng_x.beg = chart_bbox.Centre.x * 0.99999;
+				rng_x.end = chart_bbox.Centre.x * 1.00001;
+			}
+			if (rng_y.Size < float.Epsilon) // float because chart_bbox is floats
+			{
+				rng_y.beg = chart_bbox.Centre.y * 0.99999;
+				rng_y.end = chart_bbox.Centre.y * 1.00001;
+			}
+
+			XAxis.Set(rng_x.beg, rng_x.end);
+			YAxis.Set(rng_y.beg, rng_y.end);
 			SetCameraFromRange();
+
+			//// Ensure the axis range is >= 1 pixel for width/height
+			//var chart_1px = SceneToChart(new Rect(new Size(1,1)));
+			//XAxis.Set(chart_bbox.MinX, Math.Max(chart_bbox.MaxX, chart_bbox.MinX + chart_1px.SizeX));
+			//YAxis.Set(chart_bbox.MinY, Math.Max(chart_bbox.MaxY, chart_bbox.MinY + chart_1px.SizeY));
+			//SetCameraFromRange();
 		}
 
 		/// <summary>Shifts the X and Y range of the chart so that chart space position 'chart_point' is at client space position 'client_point'</summary>
