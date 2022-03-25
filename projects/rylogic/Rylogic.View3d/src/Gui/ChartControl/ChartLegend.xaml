@@ -16,47 +16,66 @@
 		<ResourceDictionary>
 			<BitmapImage x:Key="plus" UriSource="/Rylogic.View3d;component/res/plus.png" />
 			<BitmapImage x:Key="plus_gray" UriSource="/Rylogic.View3d;component/res/plus_gray.png" />
+			<BitmapImage x:Key="minus_gray" UriSource="/Rylogic.View3d;component/res/minus_gray.png" />
 			<BitmapImage x:Key="power_blue" UriSource="/Rylogic.View3d;component/res/power_blue.png" />
 			<BitmapImage x:Key="power_gray" UriSource="/Rylogic.View3d;component/res/power_gray.png" />
 		</ResourceDictionary>
 	</UserControl.Resources>
-	<StackPanel
-		Orientation="Vertical"
+	<Grid
 		d:DataContext="{d:DesignInstance Type=UserControl, IsDesignTimeCreatable=True}"
 		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
 		Background="{Binding Expanded, Converter={conv:BoolSelect}, ConverterParameter='#CEEE|Transparent'}"
-		HorizontalAlignment="Left"
 		>
-
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		
+		<!-- Title bar -->
+		<StackPanel
+			Grid.Row="0"
+			Background="{x:Static SystemColors.ActiveCaptionBrush}"
+			MouseDown="HandleDrag"
+			MouseUp="HandleDrag"
+			/>
+		
 		<!-- Expand button (Top left) -->
 		<ToggleButton
+			Grid.Row="0"
 			IsChecked="{Binding Expanded}"
 			HorizontalAlignment="{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
+			VerticalAlignment="{Binding VerticalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
 			Background="Transparent"
-			VerticalAlignment="Top"
 			IsThreeState="False"
 			BorderThickness="0"
 			MaxWidth="12"
 			x:Name="m_btn"
 			>
-			<Image
-				Source="{StaticResource plus_gray}"
-				RenderOptions.BitmapScalingMode="Fant"
-				/>
+			<Grid>
+				<Image
+					Source="{StaticResource plus_gray}"
+					RenderOptions.BitmapScalingMode="Fant"
+					Visibility="{Binding Expanded, Converter={conv:BoolToCollapsed}}"
+					/>
+				<Image
+					Source="{StaticResource minus_gray}"
+					RenderOptions.BitmapScalingMode="Fant"
+					Visibility="{Binding Expanded, Converter={conv:BoolToVisible}}"
+					/>
+			</Grid>
 		</ToggleButton>
 
 		<!-- Legend Items List-->
 		<DataGrid
+			Grid.Row="1"
 			ItemsSource="{Binding ItemsSource}"
 			SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
 			Visibility="{Binding Expanded, Converter={conv:BoolToVisible}}"
 			HeadersVisibility="{Binding CanUsersReorderItems, Converter={conv:BoolSelect}, ConverterParameter='Row|None'}"
-			gui:DataGrid_.ReorderRowsWithDragDrop="True"
-			gui:DataGrid_.RowsReordered="HandleReordered"
+			HorizontalAlignment="{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
+			VerticalAlignment="{Binding VerticalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
 			AutoGenerateColumns="False"
 			GridLinesVisibility="None"
-			HorizontalAlignment="Left"
-			VerticalAlignment="Top"
 			Background="Transparent"
 			BorderThickness="0"
 			>
@@ -141,6 +160,6 @@
 				</DataGridTemplateColumn>
 			</DataGrid.Columns>
 		</DataGrid>
-	</StackPanel>
+	</Grid>
 </UserControl>
 	

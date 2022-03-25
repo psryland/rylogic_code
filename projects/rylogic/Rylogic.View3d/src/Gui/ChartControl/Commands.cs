@@ -79,12 +79,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Accessors for setting the context menus in XAML</summary>
 		public ContextMenu SceneCMenu
 		{
-			get => Scene.ContextMenu;
+			get => m_cmenu ?? new ContextMenu();
 			set
 			{
+				if (m_cmenu == value) return;
+		
+				m_cmenu = value;
+				if (m_cmenu != null && m_cmenu.Name == "ChartCMenu")
+					m_cmenu.DataContext = Scene;
+
+				// Set the cmenu on both the scene and the overlay.
+				// The overlay may be hidden at times but the context menu should still work
 				Scene.ContextMenu = value;
-				if (Scene.ContextMenu != null && Scene.ContextMenu.Name == "ChartCMenu")
-					Scene.ContextMenu.DataContext = Scene;
+				Overlay.ContextMenu = value;
 			}
 		}
 		public ContextMenu XAxisCMenu
@@ -107,6 +114,7 @@ namespace Rylogic.Gui.WPF
 					YAxisPanel.ContextMenu.DataContext = YAxisPanel;
 			}
 		}
+		private ContextMenu? m_cmenu;
 
 		/// <inheritdoc/>
 		public bool OriginPointVisible
@@ -233,21 +241,26 @@ namespace Rylogic.Gui.WPF
 				if (m_show_value_at_pointer == value) return;
 				if (m_show_value_at_pointer)
 				{
-					m_chart_panel.MouseMove -= HandleMouseMove;
+					Scene.MouseMove -= HandleMouseMove;
+					Overlay.MouseMove -= HandleMouseMove;
 					m_popup_show_value.IsOpen = false;
 				}
 				m_show_value_at_pointer = value;
 				if (m_show_value_at_pointer)
 				{
 					m_popup_show_value.IsOpen = true;
-					m_chart_panel.MouseMove += HandleMouseMove;
+					Overlay.MouseMove += HandleMouseMove;
+					Scene.MouseMove += HandleMouseMove;
 				}
 				NotifyPropertyChanged(nameof(ShowValueAtPointer));
 
 				// Handlers
-				void HandleMouseMove(object sender, MouseEventArgs e)
+				void HandleMouseMove(object? sender, MouseEventArgs e)
 				{
-					var pos = e.GetPosition(m_chart_panel);
+					if (sender is not FrameworkElement fe)
+						return;
+
+					var pos = e.GetPosition(fe);
 					m_popup_show_value.HorizontalOffset = pos.X + 10;
 					m_popup_show_value.VerticalOffset = pos.Y + 20;
 				}

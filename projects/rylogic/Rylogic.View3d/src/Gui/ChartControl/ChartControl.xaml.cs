@@ -28,7 +28,7 @@ namespace Rylogic.Gui.WPF
 		//   is the point on the camera focus plane where a line from the world origin, along
 		//   c2w.z intersects the camera focus plane. The Camera is at (w2c.pos.x, w2c.pos.y, FocusDist)
 		//   in chart space.
-		// - Naming convension:
+		// - Naming convention:
 		//     client_point = a Point relative to this control,
 		//     scene_point = a v2 relative to 'Scene' (ChartPanel)
 		//     world_point = a v4 in world space
@@ -426,10 +426,15 @@ namespace Rylogic.Gui.WPF
 				m_legend = value;
 				if (m_legend != null)
 				{
+					Overlay.Children.Add(m_legend);
+
 					// If the legend is 'ChartLegend' (i.e. not some custom thing),
 					// then default the ItemsSource to the chart elements.
-					if (m_legend is ChartLegend legend) legend.ItemsSource ??= Elements;
-					Overlay.Children.Add(m_legend);
+					if (m_legend is ChartLegend legend)
+					{
+						legend.ItemsSource ??= Elements;
+						legend.PositionBasedOnAlignment();
+					}
 				}
 			}
 		}
