@@ -980,18 +980,23 @@ namespace Rylogic.Gfx
 			public bool IsHit => m_obj != IntPtr.Zero;
 		}
 
-		/// <summary>The viewport volume in render target space (i.e. screen coords, not normalised)</summary>
+		/// <summary>The viewport volume in render target space (i.e. not normalised)</summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Viewport
 		{
+			// Notes:
+			//  - The viewport is in "render target" space, so if the render target is a
+			//    different size to the target window, 'Width/Height' do not equal the window size.
 			public float X;
 			public float Y;
 			public float Width;
 			public float Height;
 			public float DepthMin;
 			public float DepthMax;
+			public int ScreenW;
+			public int ScreenH;
 
-			public Viewport(float x, float y, float w, float h, float min = 0f, float max = 1f)
+			public Viewport(float x, float y, float w, float h, int sw, int sh, float min, float max)
 			{
 				X = x;
 				Y = y;
@@ -999,6 +1004,8 @@ namespace Rylogic.Gfx
 				Height = h;
 				DepthMin = min;
 				DepthMax = max;
+				ScreenW = sw;
+				ScreenH = sh;
 			}
 			public float Aspect => Width / Height;
 			public Size ToSize() => new Size((int)Math.Round(Width), (int)Math.Round(Height));

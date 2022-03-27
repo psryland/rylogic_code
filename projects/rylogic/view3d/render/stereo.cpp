@@ -9,7 +9,7 @@
 namespace pr::rdr
 {
 	Stereo::Stereo(ID3D11Device* device, Viewport const& viewport, DXGI_FORMAT target_format, bool swap_eyes, float eye_separation)
-		:m_nv_magic(NvStereoImageHeader::make(viewport.WidthUI(), viewport.HeightUI(), BitsPerPixel(target_format), swap_eyes))
+		:m_nv_magic(NvStereoImageHeader::make(static_cast<size_t>(viewport.Width), static_cast<size_t>(viewport.Height), BitsPerPixel(target_format), swap_eyes))
 		,m_mark()
 		,m_rt_tex()
 		,m_rtv()
@@ -32,7 +32,7 @@ namespace pr::rdr
 		pr::Throw(device->CreateTexture2D(&nvdesc, &tex_data, &m_mark.m_ptr));
 
 		// Create a render target with dimensions width*2, height+1
-		Texture2DDesc rtdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, target_format);
+		Texture2DDesc rtdesc(UINT(viewport.Width * 2), UINT(viewport.Height + 1), 1, target_format);
 		rtdesc.BindFlags = D3D11_BIND_RENDER_TARGET;
 		pr::Throw(device->CreateTexture2D(&rtdesc, nullptr, &m_rt_tex.m_ptr));
 
@@ -41,7 +41,7 @@ namespace pr::rdr
 		pr::Throw(device->CreateRenderTargetView(m_rt_tex.m_ptr, &rtvdesc, &m_rtv.m_ptr));
 
 		// Create a depth stencil buffer to fit this rt
-		Texture2DDesc dsdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, DXGI_FORMAT_D24_UNORM_S8_UINT);
+		Texture2DDesc dsdesc(UINT(viewport.Width * 2), UINT(viewport.Height + 1), 1, DXGI_FORMAT_D24_UNORM_S8_UINT);
 		dsdesc.SampleDesc = MultiSamp(1,0);
 		dsdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
 		pr::Throw(device->CreateTexture2D(&dsdesc, nullptr, &m_ds_tex.m_ptr));

@@ -71,8 +71,10 @@ namespace pr::rdr
 			// Check the instance transform is valid
 			auto& o2w = GetO2W(inst);
 			auto flags = GetFlags(inst);
-			PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
-			PR_ASSERT(PR_DBG_RDR, AllSet(flags, EInstFlag::NonAffine) || IsAffine(o2w), "Invalid instance transform");
+			if (!IsFinite(o2w))
+				throw std::runtime_error("Invalid instance transform");
+			if (!AllSet(flags, EInstFlag::NonAffine) && !IsAffine(o2w))
+				throw std::runtime_error("Invalid instance transform");
 		}
 		#endif
 

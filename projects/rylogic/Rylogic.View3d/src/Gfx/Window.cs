@@ -559,6 +559,7 @@ namespace Rylogic.Gfx
 				set
 				{
 					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid viewport size");
+					Util.BreakIf(value.ScreenW == 0 || value.ScreenH == 0, "Invalid viewport size");
 					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid viewport size");
 					View3D_SetViewport(Handle, value);
 				}

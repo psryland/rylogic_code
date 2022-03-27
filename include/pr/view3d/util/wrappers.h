@@ -575,42 +575,52 @@ namespace pr::rdr
 		//     x,y          = 0,0 (not -0.5f,-0.5f)
 		//     width,height = 800,600 (not 1.0f,1.0f)
 		//     depth is normalised from 0.0f -> 1.0f
-		//  - Viewports are measured in real pixels not logical pixels. i.e. if the
-		//    DPI is not 96.0 then the viewport does not line up with client space
-		//    coordinates.
-		Viewport(float width, float height)
-			:D3D11_VIEWPORT()
-		{
-			Set(0.0f, 0.0f, width, height);
-		}
-		Viewport(UINT width, UINT height)
-			:D3D11_VIEWPORT()
-		{
-			Set(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
-		}
-		Viewport(float x, float y, float width, float height)
-			:D3D11_VIEWPORT()
-		{
-			Set(x, y, width, height);
-		}
-		Viewport(float x, float y, float width, float height, float min_depth, float max_depth)
-			:D3D11_VIEWPORT()
-		{
-			Set(x, y, width, height, min_depth, max_depth);
-		}
-		Viewport(pr::iv2 const& area)
-			:D3D11_VIEWPORT()
-		{
-			Set(0.0f, 0.0f, float(area.x), float(area.y));
-		}
-		Viewport(IRect const& rect)
-			:D3D11_VIEWPORT()
-		{
-			auto r = FRect(rect);
-			Set(r.X(), r.Y(), r.SizeX(), r.SizeY());
-		}
+		//  - Viewports are measured in render target pixels not DIP or window pixels.
+		//    i.e.  generally, the viewport is not in client space coordinates.
+		//  - ScreenW/H should be in DIP
 
-		Viewport& Set(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f)
+		int ScreenW; // The screen width (in DIP) that the render target will be mapped to.
+		int ScreenH; // The screen height (in DIP) that the render target will be mapped to.
+
+		Viewport()
+			:Viewport(0.0f, 0.0f, 16.0f, 16.0f, 16, 16, 0.0f, 1.0f)
+		{}
+		Viewport(pr::iv2 const& area)
+			:Viewport(0.0f, 0.0f, float(area.x), float(area.y), area.x, area.y, 0.0f, 1.0f)
+		{}
+		Viewport(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
+			:D3D11_VIEWPORT()
+		{
+			Set(x, y, width, height, screen_w, screen_h, min_depth, max_depth);
+		}
+		//Viewport(float width, float height)
+		//	:D3D11_VIEWPORT()
+		//{
+		//	Set(0.0f, 0.0f, width, height);
+		//}
+		//Viewport(UINT width, UINT height)
+		//	:D3D11_VIEWPORT()
+		//{
+		//	Set(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+		//}
+		//Viewport(float x, float y, float width, float height)
+		//	:D3D11_VIEWPORT()
+		//{
+		//	Set(x, y, width, height);
+		//}
+		//Viewport(float x, float y, float width, float height, float min_depth, float max_depth)
+		//	:D3D11_VIEWPORT()
+		//{
+		//	Set(x, y, width, height, (int)width, (int)height, min_depth, max_depth);
+		//}
+		//Viewport(IRect const& rect)
+		//	:D3D11_VIEWPORT()
+		//{
+		//	auto r = FRect(rect);
+		//	Set(r.X(), r.Y(), r.SizeX(), r.SizeY());
+		//}
+
+		Viewport& Set(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
 		{
 			PR_ASSERT(PR_DBG_RDR, x >= D3D11_VIEWPORT_BOUNDS_MIN && x <= D3D11_VIEWPORT_BOUNDS_MAX, "X value out of range");
 			PR_ASSERT(PR_DBG_RDR, y >= D3D11_VIEWPORT_BOUNDS_MIN && y <= D3D11_VIEWPORT_BOUNDS_MAX, "Y value out of range");
@@ -621,6 +631,8 @@ namespace pr::rdr
 			PR_ASSERT(PR_DBG_RDR, min_depth >= 0.0f && min_depth <= 1.0f, "Min depth value out of range");
 			PR_ASSERT(PR_DBG_RDR, max_depth >= 0.0f && max_depth <= 1.0f, "Max depth value out of range");
 			PR_ASSERT(PR_DBG_RDR, min_depth <= max_depth, "Min and max depth values invalid");
+			PR_ASSERT(PR_DBG_RDR, screen_w >= 0, "Screen Width value invalid");
+			PR_ASSERT(PR_DBG_RDR, screen_h >= 0, "Screen Height value invalid");
 
 			TopLeftX = x;
 			TopLeftY = y;
@@ -628,20 +640,16 @@ namespace pr::rdr
 			Height   = height;
 			MinDepth = min_depth;
 			MaxDepth = max_depth;
+			ScreenW  = screen_w;
+			ScreenH  = screen_h;
 			return *this;
 		}
-
-		// The Width/Height of the viewport *in real pixels* (i.e. not DPI scaled)
-		size_t WidthUI() const
+		Viewport& Set(float x, float y, float width, float height)
 		{
-			return static_cast<size_t>(Width);
-		}
-		size_t HeightUI() const
-		{
-			return static_cast<size_t>(Height);
+			return Set(x, y, width, height, (int)width, (int)height, 0.0f, 1.0f);
 		}
 
-		// The viewport rectangle, *in real pixels* (i.e. not DPI scaled)
+		// The viewport rectangle, in render target pixels
 		FRect AsFRect() const
 		{
 			return FRect(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height);
@@ -656,14 +664,14 @@ namespace pr::rdr
 		}
 
 		// Convert a screen space point to normalised screen space
-		// 'ss_point' must be in real pixels, not logical pixels (DIP).
+		// 'ss_point' must be in screen pixels, not logical pixels (DIP).
 		v2 SSPointToNSSPoint(v2 const& ss_point) const
 		{
-			return NormalisePoint(AsIRect(), ss_point, 1.0f, -1.0f);
+			return NormalisePoint(IRect(0, 0, ScreenW, ScreenH), ss_point, 1.0f, -1.0f);
 		}
 		v2 NSSPointToSSPoint(v2 const& nss_point) const
 		{
-			return ScalePoint(AsIRect(), nss_point, 1.0f, -1.0f);
+			return ScalePoint(IRect(0, 0, ScreenW, ScreenH), nss_point, 1.0f, -1.0f);
 		}
 	};
 }

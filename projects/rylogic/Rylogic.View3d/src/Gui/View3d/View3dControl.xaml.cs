@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -76,7 +77,6 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void Dispose(bool _)
 		{
-			++m_resize_issue;
 			Disposing?.Invoke(this, EventArgs.Empty);
 			Source = null;
 			D3DImage = null!;
@@ -85,31 +85,36 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
-			m_resized = true;
 			base.OnRenderSizeChanged(size_info);
-			D3DImage.Invalidate();
+			m_resized = true;
+			Invalidate();
+		}
+		protected override Size MeasureOverride(Size constraint)
+		{
+			// Set the desired size to be an exact multiple of pixels (accounting for DPI)
+			var win = PresentationSource.FromVisual(this)?.CompositionTarget as HwndTarget;
+			var dpi_scaleX = win?.TransformToDevice.M11 ?? 1.0;
+			var dpi_scaleY = win?.TransformToDevice.M22 ?? 1.0;
 
-			// Invalidate after the last resize
-			if (!m_resize_invalidate_pending)
-			{
-				m_resize_invalidate_pending = true;
-				var resize_issue = ++m_resize_issue;
-				Dispatcher_.BeginInvokeDelayed(FinalInvalidate, TimeSpan.FromMilliseconds(1), DispatcherPriority.Background);
-				void FinalInvalidate()
-				{
-					m_resize_invalidate_pending = false;
-					if (resize_issue != m_resize_issue) return;
-					Invalidate();
-				}
-			}
+			// Scale up to pixels, round, then scale back to DIP
+			var sz = base.MeasureOverride(constraint);
+			sz = new Size(
+				Math.Floor(sz.Width * dpi_scaleX) / dpi_scaleX,
+				Math.Floor(sz.Height * dpi_scaleY) / dpi_scaleY);
+
+			return sz;
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			Keyboard.Focus(this);
 			base.OnMouseDown(e);
 		}
-		private bool m_resize_invalidate_pending;
-		private int m_resize_issue;
+		protected override void OnRender(DrawingContext dc)
+		{
+			// The control is rendering, update the source
+			Render();
+			base.OnRender(dc);
+		}
 		private bool m_resized;
 
 		/// <summary>View3d context reference</summary>
@@ -207,7 +212,7 @@ namespace Rylogic.Gui.WPF
 				{
 					if (m_render_pending) return;
 					m_render_pending = true;
-					Dispatcher.BeginInvoke(new Action(Render));
+					InvalidateVisual();
 				}
 			}
 		}
@@ -266,7 +271,10 @@ namespace Rylogic.Gui.WPF
 		private D3D11Image m_d3d_image = null!;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
-		public void Invalidate() => Window?.Invalidate();
+		public void Invalidate()
+		{
+			Window?.Invalidate();
+		}
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
@@ -380,6 +388,21 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
+		/// <summary>The ratio of the back buffer resolution to the window resolution</summary>
+		public double ResolutionScale
+		{
+			get => m_resolution_scale;
+			set
+			{
+				if (m_resolution_scale == value) return;
+				m_resolution_scale = value;
+				m_resized = true;
+				Invalidate();
+				NotifyPropertyChanged(nameof(ResolutionScale));
+			}
+		}
+		private double m_resolution_scale = 1.0;
+
 		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseButtonEventArgs e)
 		{
@@ -450,7 +473,12 @@ namespace Rylogic.Gui.WPF
 				return;
 
 			// Set the viewport to match the render target size
-			Window.Viewport = new View3d.Viewport(0, 0, RenderTarget.Info.m_width, RenderTarget.Info.m_height);
+			Window.Viewport = new View3d.Viewport(0, 0,
+				RenderTarget.Info.m_width,
+				RenderTarget.Info.m_height,
+				(int)Math.Floor(RenderSize.Width != 0 ? RenderSize.Width : RenderTarget.Info.m_width),
+				(int)Math.Floor(RenderSize.Height != 0 ? RenderSize.Height : RenderTarget.Info.m_height),
+				0f, 1f);
 
 			// Notify of a new render target. Don't directly subscribe to
 			// D3DImage.RenderTargetChanged because that will leak references.
@@ -468,9 +496,9 @@ namespace Rylogic.Gui.WPF
 			using var render_pending = Scope.Create(null, () => m_render_pending = false);
 
 			// Ignore renders until we have a non-zero size, and the D3DImage has a render target
-			if (ActualWidth == 0 || ActualHeight == 0 || D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
+			if (RenderSize == Size.Empty || D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 			{
-				// 'Validate' the window so that future Invalidate() calls to trigger the call back.
+				// 'Validate' the window so that future Invalidate() calls trigger the call back.
 				Window?.Validate();
 				return;
 			}
@@ -478,7 +506,7 @@ namespace Rylogic.Gui.WPF
 			// If the size has changed, update the back buffer
 			if (m_resized)
 			{
-				D3DImage.SetRenderTargetSize(this);
+				D3DImage.SetRenderTargetSize(this, scale: ResolutionScale);
 				m_resized = false;
 			}
 
@@ -493,11 +521,13 @@ namespace Rylogic.Gui.WPF
 			// Render the scene into the render target texture
 			Window.RestoreRT();
 			Window.Render();
-			Window.Present();
 
-			// Notify that the D3DImage has changed
-			D3DImage.Invalidate();
+			// Update the "front buffer" in the D3DImage
+			D3DImage.Flip();
 			//D3DImage.Save("P:\\dump\\d3dimage.png");
+
+			// Finish all gfx card operations
+			Window.Present();
 		}
 		private bool m_render_pending;
 

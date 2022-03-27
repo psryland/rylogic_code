@@ -238,6 +238,7 @@ namespace pr::rdr
 	void Scene::Render()
 	{
 		Renderer::Lock lock(rdr());
+		auto dc = lock.ImmediateDC();
 
 		// Don't call 'm_wnd->RestoreRT();' here because we might be rendering to
 		// an off-screen texture. However, if the app contains multiple windows
@@ -248,14 +249,14 @@ namespace pr::rdr
 			// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or RTV will be null
 			D3DPtr<ID3D11RenderTargetView> rtv;
 			D3DPtr<ID3D11DepthStencilView> dsv;
-			lock.ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-			PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
-			PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
+			dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+			if (rtv == nullptr) throw std::runtime_error("Render target is null."); // Ensure RestoreRT has been called
+			if (dsv == nullptr) throw std::runtime_error("Depth buffer is null."); // Ensure RestoreRT has been called
 		}
 		#endif
 
 		// Invoke each render step in order
-		StateStack ss(lock.ImmediateDC(), *this);
+		StateStack ss(dc, *this);
 		for (auto& rs : m_render_steps)
 			rs->Execute(ss);
 	}

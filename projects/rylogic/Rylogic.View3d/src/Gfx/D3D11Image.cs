@@ -175,20 +175,20 @@ namespace Rylogic.Gfx
 				TryCreateRenderTarget();
 		}
 
-		/// <summary>Invalidate the entire surface</summary>
-		public void Invalidate() => Invalidate(new Int32Rect(0, 0, m_pixel_width, m_pixel_height));
-		public void Invalidate(Int32Rect area)
+		/// <summary>Copy from the Render Target to the Front Buffer</summary>
+		public void Flip()
 		{
 			if (FrontBuffer == null || RenderTarget == null)
 				return;
 
-			// See the Docs for 'AddDirtyRect'. This is how to tell the D3DImage
-			// that the texture content has changed.
 			using (LockScope())
 			{
+				// Downscale from the render target to the front buffer
 				View3d.Texture.ResolveAA(FrontBuffer, RenderTarget);
-				View3d.Flush();
-				base.AddDirtyRect(area);
+				
+				// Tell the 'ImageSource' what parts of the image are new (i.e. all of it)
+				// See the Docs for 'AddDirtyRect'. This is how to tell the D3DImage that the texture content has changed.
+				AddDirtyRect(new Int32Rect(0, 0, m_pixel_width, m_pixel_height));
 			}
 		}
 

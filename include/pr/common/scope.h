@@ -6,7 +6,10 @@
 //  auto s = pr::CreateScope(
 //     [&]{ m_flag = true; },
 //     [&]{ m_flag = false; });
-
+//
+//  This also seems to work in >= C++14
+//  auto MyScope() { return CreateScope([]..., []...); }
+//
 #pragma once
 
 namespace pr

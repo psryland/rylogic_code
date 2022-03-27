@@ -406,7 +406,7 @@ namespace pr::rdr
 			dc->ClearRenderTargetView(caster.m_rtv.m_ptr, reset);
 
 			// Viewport = the whole smap
-			Viewport vp(s_cast<UINT>(m_smap_size), s_cast<UINT>(m_smap_size));
+			Viewport vp(iv2(m_smap_size, m_smap_size));
 			dc->RSSetViewports(1, &vp);
 
 			// Set the frame constants

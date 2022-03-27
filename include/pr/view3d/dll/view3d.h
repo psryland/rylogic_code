@@ -560,6 +560,8 @@ extern "C"
 		float m_height;
 		float m_min_depth;
 		float m_max_depth;
+		int m_screen_w;
+		int m_screen_h;
 	};
 	struct View3DIncludes
 	{
