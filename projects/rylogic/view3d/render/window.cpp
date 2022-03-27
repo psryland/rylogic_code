@@ -55,11 +55,13 @@ namespace pr::rdr
 		,m_multisamp(!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : MultiSamp()) // Disable multi-sampling if debug is enabled
 		,m_swap_chain_flags(settings.m_swap_chain_flags)
 		,m_vsync(settings.m_vsync)
+		,m_swap_chain_dbg()
 		,m_swap_chain()
 		,m_main_rtv()
 		,m_main_srv()
 		,m_main_dsv()
 		,m_d2d_dc()
+		,m_query()
 		,m_main_rt()
 		,m_idle(false)
 		,m_name(settings.m_name)
@@ -90,6 +92,12 @@ namespace pr::rdr
 			Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
 			Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
 			Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+
+			// Create a query interface for querying the GPU events related to this scene
+			D3D11_QUERY_DESC query_desc;
+			query_desc.Query = D3D11_QUERY_EVENT;
+			query_desc.MiscFlags = static_cast<D3D11_QUERY_MISC_FLAG>(0);
+			Throw(device->CreateQuery(&query_desc, &m_query.m_ptr));
 
 			// Creating a device with hwnd == nullptr is allowed if you only want to render to 
 			// off-screen render targets. If there's no window handle, don't create a swap chain
@@ -406,8 +414,7 @@ namespace pr::rdr
 	void Window::RestoreFullViewport()
 	{
 		Renderer::Lock lock(*m_rdr);
-		auto sz = BackBufferSize();
-		Viewport vp(float(sz.x), float(sz.y));
+		Viewport vp(BackBufferSize());
 		lock.ImmediateDC()->RSSetViewports(1, &vp);
 	}
 
@@ -660,7 +667,21 @@ namespace pr::rdr
 		m_rdr->BackBufferSizeChanged(*this, BackBufferSizeChangedEventArgs(m_dbg_area = BackBufferSize(), true));
 	}
 
-	// Flip the scene to the display
+	// Signal the start and end of a frame.
+	void Window::FrameBeg()
+	{
+		Renderer::Lock lock(rdr());
+		auto dc = lock.ImmediateDC();
+		dc->Begin(m_query.get());
+	}
+	void Window::FrameEnd()
+	{
+		Renderer::Lock lock(rdr());
+		auto dc = lock.ImmediateDC();
+		dc->End(m_query.get());
+	}
+
+	// Flip the rendered scenes to the display
 	void Window::Present()
 	{
 		// Be careful that you never have the message-pump thread wait on the render thread.
@@ -689,10 +710,23 @@ namespace pr::rdr
 		if (m_swap_chain == nullptr)
 		{
 			Renderer::Lock lock(*m_rdr);
-			lock.ImmediateDC()->Flush();
+			auto dc = lock.ImmediateDC();
+
+			// Flush is asynchronous so it may return before the frame has been rendered.
+			// Call flush, then block until the GPU has finished processing all the commands.
+			dc->Flush();
+			for (;; std::this_thread::yield())
+			{
+				BOOL complete;
+				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
+				if (res == S_OK) break;
+				if (res == S_FALSE) continue;
+				Throw(res);
+			}
 			return;
 		}
 
+		// Render to the display
 		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
 		switch (res)
 		{

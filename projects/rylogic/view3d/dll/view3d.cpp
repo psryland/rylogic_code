@@ -1121,12 +1121,16 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
+
 		auto ss_point = To<v2>(ss_pos);
 		auto nss_point = window->SSPointToNSSPoint(ss_point);
-		auto op = static_cast<pr::camera::ENavOp>(nav_op);
+		if (nss_point.x < -1.0 || nss_point.x > +1.0 ||
+			nss_point.y < -1.0 || nss_point.y > +1.0)
+			throw std::runtime_error("Window viewport has not been set correctly. The ScreenW/H values should match the window size (not the viewport size)");
 
 		auto refresh = false;
 		auto gizmo_in_use = false;
+		auto op = static_cast<pr::camera::ENavOp>(nav_op);
 
 		// Check any gizmos in the scene for interaction with the mouse
 		for (auto& giz : window->m_gizmos)

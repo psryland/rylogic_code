@@ -4396,6 +4396,14 @@ namespace pr::ldr
 				return range;
 			}
 		};
+		struct Cache
+		{
+			BBox m_range; // The last size of the rendered equation
+
+			Cache()
+				:m_range(BBox::Reset())
+			{}
+		};
 
 		eval::Expression m_eq;
 		eval::ArgSet m_args;
@@ -4486,10 +4494,6 @@ namespace pr::ldr
 			// Apply any constants
 			m_eq.m_args.add(m_args);
 
-			// Store the expression in the object user data
-			obj->m_user_data.get<eval::Expression>() = m_eq;
-			obj->m_user_data.get<Extras>() = m_extras;
-
 			// Update the model before each render so the range depends on the visible area at the focus point
 			obj->OnAddToScene += UpdateModel;
 
@@ -4497,10 +4501,10 @@ namespace pr::ldr
 			int vcount, icount, dim = m_eq.m_args.unassigned_count();
 			switch (dim)
 			{
-			case 1: vcount = icount = m_resolution; break;
-			case 2: vcount = m_resolution; icount = 2 * m_resolution; break;
-			case 3: vcount = icount = m_resolution; break;
-			default: throw std::runtime_error(Fmt("Unsupported equation dimension: %d", dim));
+				case 1: vcount = icount = m_resolution; break;
+				case 2: vcount = m_resolution; icount = 2 * m_resolution; break;
+				case 3: vcount = icount = m_resolution; break;
+				default: throw std::runtime_error(Fmt("Unsupported equation dimension: %d", dim));
 			}
 
 			// Create buffers for a dynamic model
@@ -4511,6 +4515,11 @@ namespace pr::ldr
 			// Create the model
 			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(settings);
 			obj->m_model->m_name = obj->TypeAndName();
+
+			// Store the expression in the object user data
+			obj->m_user_data.get<eval::Expression>() = m_eq;
+			obj->m_user_data.get<Extras>() = m_extras;
+			obj->m_user_data.get<Cache>() = Cache{};
 		}
 
 		// Generate the model based on the visible range
@@ -4522,7 +4531,7 @@ namespace pr::ldr
 			//  - This code attempts to give the effect of an infinite function or surface by creating graphics
 			//    within the view frustum as the camera moves. It evaluates the equation within a cube centred
 			//    on the focus point.
-			//  - no backface culling
+			//  - no back-face culling
 			//  - only update the model when the camera moves by ? distance.
 			//  - functions can have infinities and divide by zero
 			//  - set the bbox to match the view volume so that auto range doesn't zoom out to infinity
@@ -4530,6 +4539,7 @@ namespace pr::ldr
 			auto& model = *ob.m_model.get();
 			auto& equation = ob.m_user_data.get<eval::Expression>();
 			auto& extras = ob.m_user_data.get<Extras>();
+			auto& cache = ob.m_user_data.get<Cache>();
 			auto init = model.m_nuggets.empty();
 
 			// Find the range to plot the equation over
@@ -4540,26 +4550,41 @@ namespace pr::ldr
 			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
 			range = extras.clamp_range(range);
 
-			// Functions can have infinities and divide by zeros. Set the bbox
-			// to match the view volume so that auto-range doesn't zoom out to infinity.
-			model.m_bbox.reset();
-			model.m_bbox = BBox::Unit();
-
-			// Update the model by evaluating the equation
-			switch (equation.m_args.unassigned_count())
+			// Only update the model if necessary
+			if (init || !IsWithin(cache.m_range, range))
 			{
-			case 1: // Line plot
-				LinePlot(model, range, equation, extras, init);
-				break;
-			case 2: // Surface plot
-				SurfacePlot(model, range, equation, extras, init);
-				break;
-			case 3:
-				CloudPlot(model, range, equation, extras, init);
-				break;
-			default:
-				assert(false && "Unsupported equation dimension");
-				break;
+				// Functions can have infinities and divide by zeros. Set the bbox
+				// to match the view volume so that auto-range doesn't zoom out to infinity.
+				model.m_bbox.reset();
+				model.m_bbox = BBox::Unit();
+
+				// Update the model by evaluating the equation
+				switch (equation.m_args.unassigned_count())
+				{
+					case 1: // Line plot
+					{
+						LinePlot(model, range, equation, extras, init);
+						break;
+					}
+					case 2: // Surface plot
+					{
+						SurfacePlot(model, range, equation, extras, init);
+						break;
+					}
+					case 3:
+					{
+						CloudPlot(model, range, equation, extras, init);
+						break;
+					}
+					default:
+					{
+						assert(false && "Unsupported equation dimension");
+						break;
+					}
+				}
+
+				// Save the range last rendered
+				cache.m_range = range;
 			}
 
 			// Update object colour, visibility, etc
@@ -4946,8 +4971,12 @@ namespace pr::ldr
 					{
 						auto c2w = scene.m_view.CameraToWorld();
 						auto w2c = scene.m_view.WorldToCamera();
-						auto w = float(scene.m_viewport.Width);
-						auto h = float(scene.m_viewport.Height);
+						auto w = 1.0f * scene.m_viewport.ScreenW;
+						auto h = 1.0f * scene.m_viewport.ScreenH;
+						#if PR_DBG
+						if (w < 1.0f || h < 1.0f)
+							throw std::runtime_error("Invalid viewport size");
+						#endif
 
 						// Create a camera with an aspect ratio that matches the viewport
 						auto& m_camera = static_cast<Camera const&>(scene.m_view);
@@ -4996,9 +5025,13 @@ namespace pr::ldr
 						// The 'ob.m_i2w' is a normalised screen space position
 						// (-1,-1,-0) is the lower left corner on the near plane,
 						// (+1,+1,-1) is the upper right corner on the far plane.
-						auto w = 1.0f * scene.m_viewport.Width;
-						auto h = 1.0f * scene.m_viewport.Height;
+						auto w = 1.0f * scene.m_viewport.ScreenW;
+						auto h = 1.0f * scene.m_viewport.ScreenH;
 						auto c2w = scene.m_view.CameraToWorld();
+						#if PR_DBG
+						if (w < 1.0f || h < 1.0f)
+							throw std::runtime_error("Invalid viewport size");
+						#endif
 
 						// Scale the object from physical pixels to normalised screen space
 						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4Origin);

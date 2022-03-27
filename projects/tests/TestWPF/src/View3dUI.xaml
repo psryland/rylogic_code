@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
 	Title="view3d_ui" Height="415" Width="543"
+	UseLayoutRounding="True"
 	>
 	<Window.Resources>
 		<ResourceDictionary>

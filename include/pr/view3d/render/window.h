@@ -47,6 +47,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11ShaderResourceView> m_main_srv;         // Shader resource view of the render target
 		D3DPtr<ID3D11DepthStencilView>   m_main_dsv;         // Depth buffer
 		D3DPtr<ID2D1DeviceContext>       m_d2d_dc;           // The device context for D2D
+		D3DPtr<ID3D11Query>              m_query;            // The interface for querying the GPU
 		Texture2DPtr                     m_main_rt;          // The render target as a texture
 		bool                             m_idle;             // True while the window is occluded
 		string32                         m_name;             // A debugging name for the window
@@ -155,6 +156,17 @@ namespace pr::rdr
 
 		// Release all references to the swap chain to allow it to be created or resized.
 		void RebuildRT(std::function<void(ID3D11Device*)> work);
+
+		// Signal the start and end of a frame.
+		// A frame can be any number of scenes rendered into the back buffer.
+		void FrameBeg();
+		void FrameEnd();
+		auto FrameScope()
+		{
+			return CreateScope(
+			[this] { FrameBeg(); },
+			[this] { FrameEnd(); });
+		}
 
 		// Rendering:
 		//  For each scene to be rendered:

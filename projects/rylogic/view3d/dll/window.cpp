@@ -121,6 +121,8 @@ namespace view3d
 		vp.m_height = scene_vp.Height;
 		vp.m_min_depth = scene_vp.MinDepth;
 		vp.m_max_depth = scene_vp.MaxDepth;
+		vp.m_screen_w = scene_vp.ScreenW;
+		vp.m_screen_h = scene_vp.ScreenH;
 		return vp;
 	}
 	void Window::Viewport(View3DViewport vp)
@@ -132,6 +134,8 @@ namespace view3d
 		scene_vp.Height = vp.m_height;
 		scene_vp.MinDepth = vp.m_min_depth;
 		scene_vp.MaxDepth = vp.m_max_depth;
+		scene_vp.ScreenW = vp.m_screen_w;
+		scene_vp.ScreenH = vp.m_screen_h;
 		NotifySettingsChanged(EView3DSettings::Scene_Viewport);
 	}
 
@@ -269,7 +273,10 @@ namespace view3d
 		m_scene.m_bkgd_colour = m_background_colour;
 
 		// Render the scene
-		m_scene.Render();
+		{
+			auto frame = m_wnd.FrameScope();
+			m_scene.Render();
+		}
 	}
 	void Window::Present()
 	{
@@ -724,7 +731,7 @@ namespace view3d
 
 		switch (command)
 		{
-		case EView3DAnimCommand::Reset:
+			case EView3DAnimCommand::Reset:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
 				assert(IsFinite(time.count()));
@@ -732,17 +739,21 @@ namespace view3d
 				Invalidate();
 				break;
 			}
-		case EView3DAnimCommand::Play:
+			case EView3DAnimCommand::Play:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
-				m_anim_data.m_thread = std::thread([&]
+				auto rate = time.count();
+				auto issue = m_anim_data.m_issue.load();
+				m_anim_data.m_thread = std::thread([this, issue, rate]
 				{
 					// 'time' is the seconds/second step rate
-					auto rate = time.count();
 					auto start = system_clock::now();
-					auto issue = m_anim_data.m_issue.load();
-					for (; issue == m_anim_data.m_issue; std::this_thread::sleep_for(tick_size_s))
+					for (; ; std::this_thread::sleep_for(tick_size_s))
 					{
+						auto iss = m_anim_data.m_issue.load();
+						if (iss != issue)
+							break;
+
 						// Every loop is a tick, and the step size is 'time'. 
 						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed' 
 						auto increment = rate == 0.0 ? system_clock::now() - start : tick_size_s * rate;
@@ -752,27 +763,27 @@ namespace view3d
 						m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
 					}
 				});
-				m_wnd.m_rdr->AddPollCB({ AnimTick, this });
+				m_wnd.m_rdr->AddPollCB({AnimTick, this});
 				break;
 			}
-		case EView3DAnimCommand::Stop:
+			case EView3DAnimCommand::Stop:
 			{
-				m_wnd.m_rdr->RemovePollCB({ AnimTick, this });
+				m_wnd.m_rdr->RemovePollCB({AnimTick, this});
 				++m_anim_data.m_issue;
 				if (m_anim_data.m_thread.joinable())
 					m_anim_data.m_thread.join();
-				
+
 				break;
 			}
-		case EView3DAnimCommand::Step:
+			case EView3DAnimCommand::Step:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
 				m_anim_data.m_clock = m_anim_data.m_clock.load() + time;
 				Invalidate();
 				break;
 			}
-		default:
-			throw std::runtime_error(FmtS("Unknown animation command: %d", command));
+			default:
+				throw std::runtime_error(FmtS("Unknown animation command: %d", command));
 		}
 
 		// Notify of the animation event
@@ -782,15 +793,11 @@ namespace view3d
 	// Convert a screen space point (in DIP) to a normalised screen space point
 	v2 Window::SSPointToNSSPoint(v2 const& ss_point) const
 	{
-		// Convert from DIP to physical pixels
-		auto pss_point = DIPtoPhysical(ss_point, Dpi());
-		return m_scene.m_viewport.SSPointToNSSPoint(pss_point);
+		return m_scene.m_viewport.SSPointToNSSPoint(ss_point);
 	}
 	v2 Window::NSSPointToSSPoint(v2 const& nss_point) const
 	{
-		// Convert from physical pixels back to DIP
-		auto pss_point = m_scene.m_viewport.NSSPointToSSPoint(nss_point);
-		return PhysicaltoDIP(pss_point, Dpi());
+		return m_scene.m_viewport.NSSPointToSSPoint(nss_point);
 	}
 
 	// Invoke the settings changed callback
