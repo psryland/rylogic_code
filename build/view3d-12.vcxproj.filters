@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="pr">
+      <UniqueIdentifier>{a82d68ab-e221-4aa7-b517-3cf2a55b6cbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{00453e94-93b2-4eab-9f6c-15ba1d8ee736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\main">
+      <UniqueIdentifier>{46f549b6-8240-46ba-8c5a-0ade85d4b145}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\utility">
+      <UniqueIdentifier>{797d7894-b0d2-4f27-a30c-0c6f78c44c6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\scene">
+      <UniqueIdentifier>{aa510495-67b8-4fe1-bf0c-7214e4b69a55}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\view3d.ixx">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\settings.ixx">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.ixx">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\config.ixx">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\wrappers.ixx">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.ixx">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.ixx">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\eventargs.ixx">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.ixx">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
