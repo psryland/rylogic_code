@@ -49,7 +49,7 @@ namespace Rylogic.Extn
 		[ThreadStatic] private static StringBuilder? m_dump;
 
 		/// <summary>Invoke a method on 'obj' if it has it. Returns true if found and invoked</summary>
-		public static void TryInvoke(this object obj, string name, params object[] args) => TryInvoke(obj, name, BindingFlags.Instance | BindingFlags.Public, args);
+		public static bool TryInvoke(this object obj, string name, params object[] args) => TryInvoke(obj, name, BindingFlags.Instance | BindingFlags.NonPublic, args);
 		public static bool TryInvoke(this object obj, string name, BindingFlags binding_flags, params object[] args)
 		{
 			var ty = obj.GetType();
@@ -62,7 +62,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Invoke a property or parameterless method on 'obj' if it has it. Returns true if found and invoked</summary>
-		public static (bool, T) TryInvoke<T>(this object obj, string name) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.Public);
+		public static (bool, T) TryInvoke<T>(this object obj, string name) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.NonPublic);
 		public static (bool, T) TryInvoke<T>(this object obj, string name, BindingFlags binding_flags)
 		{
 			var ty = obj.GetType();
@@ -78,7 +78,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Invoke a method that returns a value if it has it. Returns true if found and invoked</summary>
-		public static (bool, T) TryInvoke<T>(this object obj, string name, params object[] args) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.Public, args);
+		public static (bool, T) TryInvoke<T>(this object obj, string name, params object[] args) => TryInvoke<T>(obj, name, BindingFlags.Instance | BindingFlags.NonPublic, args);
 		public static (bool, T) TryInvoke<T>(this object obj, string name, BindingFlags binding_flags, params object[] args)
 		{
 			var ty = obj.GetType();

@@ -10,6 +10,7 @@
 #define VIEW3D_API __declspec(dllimport)
 #endif
 
+#include <cstdint>
 #include <windows.h>
 #include <guiddef.h>
 #include <d3d11.h>
