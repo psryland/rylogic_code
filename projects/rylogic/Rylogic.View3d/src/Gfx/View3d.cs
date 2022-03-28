@@ -996,6 +996,9 @@ namespace Rylogic.Gfx
 			public int ScreenW;
 			public int ScreenH;
 
+			public Viewport(float x, float y, float w, float h)
+				: this(x, y, w, h, (int)w, (int)h, 0f, 1f)
+			{ }
 			public Viewport(float x, float y, float w, float h, int sw, int sh, float min, float max)
 			{
 				X = x;

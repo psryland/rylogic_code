@@ -353,7 +353,11 @@ namespace pr
 		friend constexpr Colour32 operator / (Colour32 lhs, float s)
 		{
 			assert("divide by zero" && s != 0);
-			return lhs * 1.0f / s;
+			return Colour32(
+				lhs.r / s,
+				lhs.g / s,
+				lhs.b / s,
+				lhs.a / s);
 		}
 		friend constexpr Colour32 operator % (Colour32 lhs, int s)
 		{

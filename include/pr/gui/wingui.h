@@ -438,7 +438,7 @@ namespace pr
 		inline void Throw(HRESULT result, std::string message)
 		{
 			if (SUCCEEDED(result)) return;
-			throw std::exception(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
+			throw std::runtime_error(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
 		}
 		inline void Throw(BOOL result, std::string message)
 		{
@@ -449,7 +449,7 @@ namespace pr
 		inline void Throw(gdi::Status result, std::string message)
 		{
 			if (result == gdi::Status::Ok) return;
-			throw std::exception(message.c_str());
+			throw std::runtime_error(message.c_str());
 		}
 
 		// Initialise common controls (makes them look modern). Must be called before creating any controls
@@ -586,7 +586,7 @@ namespace pr
 			auto data = hres != nullptr ? ::LockResource(::LoadResource(inst, hres)) : nullptr;
 			auto size = hres != nullptr ? ::SizeofResource(inst, hres) : 0;
 			if (!data || !size)
-				throw std::exception("Bitmap resource not found");
+				throw std::runtime_error("Bitmap resource not found");
 
 			// Create a GDI+ bitmap from the resource
 			return CComPtr<IStream>(SHCreateMemStream(static_cast<BYTE const*>(data), size));
@@ -744,7 +744,7 @@ namespace pr
 					// then the top edge of the resulting rectangle is 'rhs.bottom'.
 					if (rhs.top    <= lhs.top)    return Rect(lhs.left, rhs.bottom, lhs.right, lhs.bottom);
 					if (rhs.bottom >= lhs.bottom) return Rect(lhs.left, lhs.top, lhs.right, rhs.top);
-					throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
+					throw std::runtime_error("The result of subtracting rectangle 'rhs' does not result in a rectangle");
 				}
 
 				// If 'rhs' spans 'lhs' vertically
@@ -752,10 +752,10 @@ namespace pr
 				{
 					if (rhs.left  <= lhs.left)  return Rect(rhs.right, lhs.top, lhs.right, lhs.bottom);
 					if (rhs.right >= lhs.right) return Rect(lhs.left, lhs.top, rhs.left, lhs.bottom);
-					throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
+					throw std::runtime_error("The result of subtracting rectangle 'rhs' does not result in a rectangle");
 				}
 
-				throw std::exception("The result of subtracting rectangle 'rhs' does not result in a rectangle");
+				throw std::runtime_error("The result of subtracting rectangle 'rhs' does not result in a rectangle");
 			}
 			Rect NormalizeRect() const
 			{
@@ -2624,8 +2624,8 @@ namespace pr
 				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 				{
 					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo().Bounds();
-					if (id == -1) throw std::exception("Auto size not supported for dialog templates");
-					throw std::exception("DlgTemplate can only be positioned related to the screen or owner window");
+					if (id == -1) throw std::runtime_error("Auto size not supported for dialog templates");
+					throw std::runtime_error("DlgTemplate can only be positioned related to the screen or owner window");
 				});
 
 				// If 'style' includes DS_SETFONT then windows expects the header to be followed by
@@ -2696,7 +2696,7 @@ namespace pr
 			// Returns the dialog item by index
 			DLGITEMTEMPLATE const& item(size_t idx) const
 			{
-				if (idx >= m_item_base.size()) throw std::exception("Dialog template item index out of range");
+				if (idx >= m_item_base.size()) throw std::runtime_error("Dialog template item index out of range");
 				return *reinterpret_cast<DLGITEMTEMPLATE const*>(&m_mem[m_item_base[idx]]);
 			}
 
@@ -2738,7 +2738,7 @@ namespace pr
 					else if (id == -1)
 					{
 						// Get the size of this control based on it's content
-						throw std::exception("Auto size not supported for dialog templates");
+						throw std::runtime_error("Auto size not supported for dialog templates");
 					}
 					else
 					{
@@ -2753,7 +2753,7 @@ namespace pr
 							// generates the memory layout when the template is needed.
 							return Rect(itm.x, itm.y, itm.x + itm.cx, itm.y + itm.cy);
 						}
-						throw std::exception("Sibling control not found");
+						throw std::runtime_error("Sibling control not found");
 					}
 				});
 
@@ -3543,7 +3543,7 @@ namespace pr
 				// Set w,h based on docking to the parent
 				switch (p.m_dock)
 				{
-				default: throw std::exception("Unknown dock style");
+				default: throw std::runtime_error("Unknown dock style");
 				case EDock::None: break;
 				case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
 				case EDock::Top:    p.m_w = Fill; break;
@@ -4096,7 +4096,7 @@ namespace pr
 					auto child_rect = child->ParentRect().Adjust(child->cp().m_margin);
 					switch (child->cp().m_dock)
 					{
-					default: throw std::exception("Unknown dock style");
+					default: throw std::runtime_error("Unknown dock style");
 					case EDock::Fill:   return Rect();
 					case EDock::Left:   rect.left   += child_rect.width(); break;
 					case EDock::Right:  rect.right  -= child_rect.width(); break;
@@ -5382,7 +5382,7 @@ namespace pr
 					p = m_parent.ctrl() != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
 					switch (cp().m_dock)
 					{
-					default: throw std::exception("Unknown dock style");
+					default: throw std::runtime_error("Unknown dock style");
 					case EDock::Fill:   c = p; break;
 					case EDock::Top:    c = Rect(p.left      , p.top        , p.right    , p.top + h); break;
 					case EDock::Bottom: c = Rect(p.left      , p.bottom - h , p.right    , p.bottom ); break;
@@ -5446,7 +5446,7 @@ namespace pr
 								return Rect(x, y, x+w, y+h);
 							}
 						}
-						throw std::exception("Sibling control not found");
+						throw std::runtime_error("Sibling control not found");
 					}
 				});
 			}
@@ -6607,14 +6607,14 @@ namespace pr
 
 				errno = 0;
 				auto val = ::wcstoll(text.c_str(), nullptr, cp<Params<>>().m_radix);
-				if (errno == ERANGE) throw std::exception("Value is out of range");
-				if (errno != 0) throw std::exception("Value is not a number");
+				if (errno == ERANGE) throw std::runtime_error("Value is out of range");
+				if (errno != 0) throw std::runtime_error("Value is not a number");
 				return val;
 			}
 			void Value(long long value)
 			{
 				wchar_t buf[128] = {};
-				if (::_i64tow_s(value, buf, _countof(buf), cp<Params<>>().m_radix) != 0) throw std::exception("Failed to convert number to text");
+				if (::_i64tow_s(value, buf, _countof(buf), cp<Params<>>().m_radix) != 0) throw std::runtime_error("Failed to convert number to text");
 				if (cp<Params<>>().m_lower_case) _wcslwr(buf); else _wcsupr(buf);
 				Text(buf);
 			}

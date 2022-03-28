@@ -612,29 +612,32 @@ namespace Rylogic.Gui.WPF
 		private static void AutoScrollToCurrent_Changed(DependencyObject obj)
 		{
 			var enabled = GetAutoScrollToCurrent(obj);
-			if (!(obj is DataGrid data_grid)) return;
+			if (obj is not DataGrid data_grid)
+				return;
 
 			// This doesn't work using DataGrid's CurrentItem. For some reason only
 			// grids with focus generate the CurrentCellChanged event. Using the underlying
 			// ItemsSource avoids this problem.
-			
+
 			// The ItemsSource may not be assigned yet. Get the ItemSource property so we can see when its value changes.
 			if (DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(DataGrid)) is not DependencyPropertyDescriptor items_source_dp)
 				return;
 
-			object pending = false;
+			// Flag to batch multiple current changed events
+			object scroll_pending = false;
 
 			// Wait for changes to the item source
 			items_source_dp.RemoveValueChanged(data_grid, HandleItemsSourceChanged);
 			items_source_dp.AddValueChanged(data_grid, HandleItemsSourceChanged);
+			
+			// Handlers
 			void HandleItemsSourceChanged(object? sender, EventArgs e)
 			{
 				if (sender is not DataGrid data_grid) return;
 				if (data_grid.ItemsSource is ICollectionView cv)
 				{
-					// The old items source will still have the handler subscribed.
-					// but it wlll remove itself as soon as it doesn't match the data
-					// grid's item source.
+					// The old items source will still have the handler subscribed but it will
+					// remove itself as soon as it doesn't match the data grid's item source.
 					cv.CurrentChanged -= HandleCurrentChanged;
 					cv.CurrentChanged += HandleCurrentChanged;
 				}
@@ -647,12 +650,14 @@ namespace Rylogic.Gui.WPF
 					cv.CurrentChanged -= HandleCurrentChanged;
 					return;
 				}
+				if (scroll_pending is bool sp && sp)
+					return;
 
 				// Invoke the scroll on the message queue
-				if ((bool)pending) return; else pending = true;
+				scroll_pending = true;
 				data_grid.Dispatcher.BeginInvoke(new Action(() =>
 				{
-					pending = false;
+					scroll_pending = false;
 					if (cv.CurrentItem != null)
 						data_grid.ScrollIntoView(cv.CurrentItem);
 				}));

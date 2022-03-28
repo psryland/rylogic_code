@@ -144,7 +144,7 @@ namespace pr::rdr
 			return m_dummy_hwnd;
 		}
 
-		// Return the current desktop DPI (Fallback if window DPI not available)
+		// Return the current desktop DPI (Fall back if window DPI not available)
 		v2 SystemDpi() const
 		{
 			// Notes:
@@ -172,15 +172,15 @@ namespace pr::rdr
 		}
 
 		// Raised when a window resizes it's back buffer.
-		// This is provided on the renderer so that other managers can receive notification
-		// without having to sign up to ever window that gets created.
+		// This is provided on the renderer so that other managers can receive
+		// notification without having to sign up to every window that gets created.
 		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
 
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
 		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
 		// 'policy' can be a bitwise OR of both deferred and async
-		// WARNING: be careful with shutdown. Although functions are called on the main thread, than can still be called after
+		// WARNING: be careful with shutdown. Although functions are called on the main thread, they can still be called after
 		// referenced data has been destructed.
 		template <typename Func, typename... Args>
 		void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)

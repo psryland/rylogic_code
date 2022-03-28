@@ -4,8 +4,9 @@
 //*****************************************************************************************
 #pragma once
 
+#include <string>
+#include <stdexcept>
 #include <windows.h>
-#include <exception>
 
 namespace pr
 {
@@ -56,7 +57,7 @@ namespace pr
 				snprintf(msg, _countof(msg) - e, "\t%d - %d\n", *lptr++, *rptr++);
 
 			OutputDebugStringA(msg);
-			throw std::exception(msg);
+			throw std::runtime_error(msg);
 		}
 	}
 }

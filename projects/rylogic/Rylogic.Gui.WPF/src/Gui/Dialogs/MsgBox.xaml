@@ -22,7 +22,6 @@
 			<BitmapImage x:Key ="check_accept" UriSource="/Rylogic.Gui.WPF;component/res/check_accept.png"/>
 			<BitmapImage x:Key ="check_reject" UriSource="/Rylogic.Gui.WPF;component/res/check_reject.png"/>
 			<BitmapImage x:Key ="check_abort" UriSource="/Rylogic.Gui.WPF;component/res/check_reject_gray.png"/>
-			<BitmapImage x:Key ="check_no" UriSource="/Rylogic.Gui.WPF;component/res/check_no.png"/>
 			<BitmapImage x:Key ="rotate" UriSource="/Rylogic.Gui.WPF;component/res/green_rotate.png"/>
 			<BitmapImage x:Key ="green_right" UriSource="/Rylogic.Gui.WPF;component/res/green_right.png"/>
 			<BitmapImage x:Key ="exchange" UriSource="/Rylogic.Gui.WPF;component/res/exchange.png"/>
@@ -231,7 +230,7 @@
 					<Button.Content>
 						<StackPanel Orientation="Horizontal">
 							<Image
-								Source="{StaticResource check_no}"
+								Source="{StaticResource check_abort}"
 								/>
 							<TextBlock
 								Text="{Binding NoText, FallbackValue='No'}"

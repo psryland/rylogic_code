@@ -14,6 +14,7 @@
 
 import sys, os, subprocess, datetime, re, shutil
 from importlib import machinery as Import
+from tabnanny import check
 from typing import List
 from enum import Enum
 import Rylogic as Tools
@@ -76,7 +77,7 @@ def CleanObj(dir:str, platforms:List[str]=None, configs:List[str]=None):
 		configs = configs if configs else ["Release", "Debug"]
 		for p in platforms:
 			for c in configs:
-				d = os.path.join(dir, p, c)
+				d = Tools.Path(dir, p, c, check_exists=False)
 				if not os.path.exists(d): continue
 				CleanDir(d)
 	return
@@ -84,11 +85,11 @@ def CleanObj(dir:str, platforms:List[str]=None, configs:List[str]=None):
 # Clean the 'bin' and 'obj' directory of a dot net project
 def CleanDotNet(proj_dir:str, platforms:List[str], configs:List[str]):
 	if not platforms and not configs:
-		CleanDir(os.path.join(proj_dir, "obj"))
-		CleanDir(os.path.join(proj_dir, "bin"))
+		CleanDir(Tools.Path(proj_dir, "obj", check_exists=False))
+		CleanDir(Tools.Path(proj_dir, "bin", check_exists=False))
 	else:
-		CleanDir(os.path.join(proj_dir, "obj"))
-		CleanDir(os.path.join(proj_dir, "bin"))
+		CleanDir(Tools.Path(proj_dir, "obj", check_exists=False))
+		CleanDir(Tools.Path(proj_dir, "bin", check_exists=False))
 		#todo
 	return
 
@@ -112,12 +113,12 @@ def DeployLib(target_name:str, obj_dir:str, platforms:List[str], configs:List[st
 			]
 
 			# Get the destination directory: /pr/lib/p/c/target_name.extn
-			dst_dir = os.path.join(UserVars.root, "lib", p, c)
+			dst_dir = Tools.Path(UserVars.root, "lib", p, c, check_exists=False)
 
 			# Copy the target files to the destination directories
 			for filepath in filter(os.path.exists, target_files):
 				_,file = os.path.split(filepath)
-				Tools.Copy(filepath, os.path.join(dst_dir, file))
+				Tools.Copy(filepath, Tools.Path(dst_dir, file))
 	return
 
 # Restore nuget packages
@@ -184,23 +185,23 @@ class Native(Common):
 	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Common.__init__(self, workspace)
 		self.proj_name = proj_name
-		#self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
+		#self.proj_dir = Tools.Path(workspace, "projects", self.proj_name)
 		self.platforms = platforms if platforms else ["x64", "x86"]
 		self.configs = configs if configs else ["Release", "Debug"]
-		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
-		self.obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
+		self.rylogic_sln = Tools.Path(workspace, "build/rylogic.sln")
+		self.obj_dir = Tools.Path(workspace, "obj", UserVars.platform_toolset)
 		return
 
 	def Clean(self):
-		CleanObj(os.path.join(self.obj_dir, self.proj_name), self.platforms, self.configs)
+		CleanObj(Tools.Path(self.obj_dir, self.proj_name), self.platforms, self.configs)
 		return
 
 # Native SDK dll (base)
 class NativeSDKDll(Native):
 	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, proj_name, workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "sdk", self.proj_name)
-		self.obj_dir = os.path.join(self.proj_dir, "obj", UserVars.platform_toolset)
+		self.proj_dir = Tools.Path(workspace, "sdk", self.proj_name)
+		self.obj_dir = Tools.Path(self.proj_dir, "obj", UserVars.platform_toolset)
 		return
 
 	def Build(self):
@@ -227,8 +228,8 @@ class Audio(Native):
 		return
 
 	def Clean(self):
-		CleanObj(os.path.join(self.obj_dir, "audio"), self.platforms, self.configs)
-		CleanObj(os.path.join(self.obj_dir, "audio.dll"), self.platforms, self.configs)
+		CleanObj(Tools.Path(self.obj_dir, "audio", check_exists=False), self.platforms, self.configs)
+		CleanObj(Tools.Path(self.obj_dir, "audio.dll", check_exists=False), self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -245,12 +246,12 @@ class Audio(Native):
 class View3d(Native):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "view3d", workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, f"projects\\rylogic\\{self.proj_name}")
+		self.proj_dir = Tools.Path(workspace, f"projects\\rylogic\\{self.proj_name}")
 		return
 
 	def Clean(self):
-		CleanObj(os.path.join(self.obj_dir, "view3d"), self.platforms, self.configs)
-		CleanObj(os.path.join(self.obj_dir, "view3d.dll"), self.platforms, self.configs)
+		CleanObj(Tools.Path(self.obj_dir, "view3d", check_exists=False), self.platforms, self.configs)
+		CleanObj(Tools.Path(self.obj_dir, "view3d.dll", check_exists=False), self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -267,6 +268,7 @@ class View3d(Native):
 class P3d(Native):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "p3d", workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects/tools", self.proj_name)
 		return
 
 	def Build(self):
@@ -275,10 +277,10 @@ class P3d(Native):
 
 	def Deploy(self):
 		if not "Release" in self.configs or not "x64" in self.platforms: return
-		deploy_dir = os.path.join(self.workspace, "bin", "P3d")
-		target = os.path.join(self.obj_dir, self.proj_name, "x64", "Release", "p3d.exe")
+		target = Tools.Path(self.proj_dir, "obj/x64/Release/p3d.exe")
+		deploy_dir = Tools.Path(self.workspace, "bin/P3d", check_exists=False)
 		CleanDir(deploy_dir)
-		Tools.Copy(target, os.path.join(deploy_dir,""))
+		Tools.Copy(target, Tools.Path(deploy_dir,""))
 		return
 
 # .NET assembly (base)
@@ -289,8 +291,8 @@ class Managed(Common):
 		self.frameworks = frameworks
 		self.platforms = platforms if platforms else ["Any CPU"]
 		self.configs = configs if configs else ["Release", "Debug"]
-		#self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
-		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+		#self.proj_dir = Tools.Path(workspace, "projects", self.proj_name)
+		self.rylogic_sln = Tools.Path(workspace, "build/rylogic.sln")
 		self.requires_signing = True
 		return
 
@@ -302,7 +304,7 @@ class Managed(Common):
 class RylogicAssembly(Managed):
 	def __init__(self, proj_name:str, frameworks:List[str], workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, proj_name, frameworks, workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\rylogic", self.proj_name)
+		self.proj_dir = Tools.Path(workspace, "projects\\rylogic", self.proj_name)
 		return
 
 	def Build(self):
@@ -311,11 +313,11 @@ class RylogicAssembly(Managed):
 		return
 
 	def Deploy(self):
-		proj = os.path.join(self.proj_dir, f"{self.proj_name}.csproj")
-		output_dir = os.path.join(self.proj_dir, "bin", "Release")
+		proj = Tools.Path(self.proj_dir, f"{self.proj_name}.csproj")
+		output_dir = Tools.Path(self.proj_dir, "bin", "Release")
 		if self.requires_signing:
 			for fw in self.frameworks:
-				SignAssembly(os.path.join(output_dir, fw, f"{self.proj_name}.dll"))
+				SignAssembly(Tools.Path(output_dir, fw, f"{self.proj_name}.dll"))
 			self.nupkg = Tools.NugetPackage(proj)
 		return
 
@@ -339,7 +341,7 @@ class RylogicCoreWindows(RylogicAssembly):
 # Rylogic.Net .NET assembly
 class RylogicNet(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Net", ["net472", "net6.0-windows"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Net", ["netstandard2.0"], workspace, platforms, configs)
 		return
 
 # Rylogic.Scintilla .NET assembly
@@ -351,13 +353,13 @@ class RylogicScintilla(RylogicAssembly):
 # Rylogic.View3d .NET assembly
 class RylogicView3d(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "net6-windows"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WinForms .NET assembly
 class RylogicGuiWinForms(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472", "net6.0-windows"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WPF .NET assembly
@@ -370,7 +372,7 @@ class RylogicGuiWPF(RylogicAssembly):
 class Csex(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Csex", ["net6.0-windows"], workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\tools", self.proj_name)
+		self.proj_dir = Tools.Path(workspace, "projects\\tools", self.proj_name)
 		self.requires_signing = False
 		return
 
@@ -380,29 +382,29 @@ class Csex(Managed):
 		return
 
 	def Deploy(self):
-		version = Tools.Extract(os.path.join(self.proj_dir, "Csex.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(self.proj_dir, "Csex.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying Csex Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "Csex")
+		self.bin_dir = Tools.Path(UserVars.root, "bin", "Csex", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
-		Tools.Copy(os.path.join(target_dir, "Csex.exe"                  ), self.bin_dir)
-		Tools.Copy(os.path.join(target_dir, "Csex.dll"                  ), self.bin_dir)
-		Tools.Copy(os.path.join(target_dir, "Csex.runtimeconfig.json"   ), self.bin_dir)
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), self.bin_dir)
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), self.bin_dir)
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), self.bin_dir)
+		target_dir = Tools.Path(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "Csex.exe"                  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Csex.dll"                  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Csex.runtimeconfig.json"   ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"          ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"       ), self.bin_dir)
 		return
 
 # LDraw
 class LDraw(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "LDraw", ["net6-windows"], workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\apps", "LDraw", self.proj_name)
+		Managed.__init__(self, "LDraw", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects/apps/LDraw", self.proj_name)
 		self.platforms = ["x64"]
 		return
 
@@ -413,29 +415,31 @@ class LDraw(Managed):
 
 	def Deploy(self):
 		# Check versions
-		version = Tools.Extract(os.path.join(self.proj_dir, "LDraw.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(self.proj_dir, "LDraw.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying LDraw Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "LDraw")
+		self.bin_dir = Tools.Path(UserVars.root, "bin/LDraw", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
-		Tools.Copy(os.path.join(target_dir, "LDraw.exe"                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.View3d.dll"        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "ICSharpCode.AvalonEdit.dll"), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "lib"                       ), os.path.join(self.bin_dir, "lib"))
+		target_dir = Tools.Path(self.proj_dir, "bin/Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "LDraw.exe"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "LDraw.dll"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "LDraw.runtimeconfig.json"  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"          ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"       ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.View3d.dll"        ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "ICSharpCode.AvalonEdit.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "lib"                       ), Tools.Path(self.bin_dir, "lib", check_exists=False))
 
 		# Build the installer
 		print("Building installer...\n")
-		self.installer_wxs = os.path.join(self.proj_dir, "installer", "installer.wxs")
+		self.installer_wxs = Tools.Path(self.proj_dir, "installer", "installer.wxs")
 		self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
-			os.path.join(self.bin_dir, ".."),
+			Tools.Path(self.bin_dir, ".."),
 			[
 				["binaries", "INSTALLFOLDER", ".", False,
 					r"LDraw\..*\.dll",
@@ -450,14 +454,14 @@ class LDraw(Managed):
 	def Publish(self):
 		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing to web site...")
-		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
+		Tools.Copy(self.msi, Tools.Path(UserVars.wwwroot, "files/ldraw", check_exists=False))
 		return
 
 # RylogViewer
 class RyLogViewer(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "RyLogViewer", ["net6-windows"], workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
+		Managed.__init__(self, "RyLogViewer", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
 		self.platforms = ["x64"]
 		return
 
@@ -468,26 +472,28 @@ class RyLogViewer(Managed):
 
 	def Deploy(self):
 		# Check versions
-		version = Tools.Extract(os.path.join(self.proj_dir, "RyLogViewer2.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(self.proj_dir, "RyLogViewer.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying RyLogViewer Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "RyLogViewer")
+		self.bin_dir = Tools.Path(UserVars.root, "bin", "RyLogViewer", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
-		Tools.Copy(os.path.join(target_dir, "RyLogViewer.UI.exe"        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), os.path.join(self.bin_dir, ""))
+		target_dir = Tools.Path(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "RyLogViewer.UI.exe"               ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "RyLogViewer.UI.dll"               ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "RyLogViewer.UI.runtimeconfig.json"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"         ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"              ), self.bin_dir)
 
 		# Build the installer
 		#print("Building installer...\n")
-		#self.installer_wxs = os.path.join(self.proj_dir, "installer", "installer.wxs")
+		#self.installer_wxs = Tools.Path(self.proj_dir, "installer", "installer.wxs")
 		#self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
-		#	os.path.join(self.bin_dir, ".."),
+		#	Tools.Path(self.bin_dir, ".."),
 		#	[
 		#		["binaries", "INSTALLFOLDER", ".", False,
 		#			r"LDraw\..*\.dll",
@@ -502,21 +508,21 @@ class RyLogViewer(Managed):
 	def Publish(self):
 		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing to web site...")
-		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "rylogviewer", ""))
+		Tools.Copy(self.msi, Tools.Path(UserVars.wwwroot, "files/rylogviewer", check_exists=False))
 		return
 
 # Solar Hot Water
 class SolarHotWater(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "SolarHotWater", ["netcoreapp3.1"], workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
+		Managed.__init__(self, "SolarHotWater", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
 		self.platforms = ["x64"]
 		return
 
 	def Clean(self):
-		CleanDotNet(os.path.join(self.proj_dir, "SolarHotWater.Common"), self.platforms, self.configs)
-		CleanDotNet(os.path.join(self.proj_dir, "FroniusMonitor.Service"), self.platforms, self.configs)
-		CleanDotNet(os.path.join(self.proj_dir, "SolarHotWater.UI"), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "SolarHotWater.Common", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "FroniusMonitor.Service", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "SolarHotWater.UI", check_exists=False), self.platforms, self.configs)
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
@@ -531,72 +537,72 @@ class SolarHotWater(Managed):
 		return
 
 	def DeployService(self):
-		proj_dir = os.path.join(self.proj_dir, "FroniusMonitor.Service")
+		proj_dir = Tools.Path(self.proj_dir, "FroniusMonitor.Service")
 
 		# Check versions
-		version = Tools.Extract(os.path.join(proj_dir, "FroniusMonitor.Service.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(proj_dir, "FroniusMonitor.Service.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying FroniusMonitor.Service Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater", "Fronius")
+		self.bin_dir = Tools.Path(UserVars.root, "bin", "SolarHotWater", "Fronius", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(proj_dir, "bin", "Release", self.frameworks[0])
-		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.exe"                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.dll"                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "SolarHotWater.Common.dll"                   ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"                           ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"                   ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "System.Data.SQLite.dll"                     ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "System.ServiceProcess.ServiceController.dll"), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Newtonsoft.Json.dll"                        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Dapper.dll"                                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Microsoft.*.dll"                            ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.deps.json"           ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.runtimeconfig.json"  ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "appsettings.json"                           ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "runtimes"                                   ), os.path.join(self.bin_dir, "runtimes"))
+		target_dir = Tools.Path(proj_dir, "bin/Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "FroniusMonitor.Service.exe"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "FroniusMonitor.Service.dll"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "SolarHotWater.Common.dll"                   ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"                           ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"                   ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "System.Data.SQLite.dll"                     ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "System.ServiceProcess.ServiceController.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Newtonsoft.Json.dll"                        ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Dapper.dll"                                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Microsoft.*.dll"                            ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "FroniusMonitor.Service.deps.json"           ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "FroniusMonitor.Service.runtimeconfig.json"  ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "appsettings.json"                           ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "runtimes"                                   ), Tools.Path(self.bin_dir, "runtimes", check_exists=False))
 
 	def DeployUI(self):
-		proj_dir = os.path.join(self.proj_dir, "SolarHotWater.UI")
+		proj_dir = Tools.Path(self.proj_dir, "SolarHotWater.UI")
 
 		# Check versions
-		version = Tools.Extract(os.path.join(proj_dir, "SolarHotWater.UI.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(proj_dir, "SolarHotWater.UI.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying SolarHotWater.UI Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater", "UI")
+		self.bin_dir = Tools.Path(UserVars.root, "bin", "SolarHotWater", "UI", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(proj_dir, "bin", "Release", self.frameworks[0])
-		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.exe"                       ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.dll"                       ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"                           ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"                   ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"                        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.Net.dll"                            ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Rylogic.View3d.dll"                         ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "System.Data.SQLite.dll"                     ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.dll"                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.CSharp.dll"          ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.CSharp.Scripting.dll"), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.Scripting.dll"       ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.deps.json"                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.runtimeconfig.json"        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Dapper.dll"                                 ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "Newtonsoft.Json.dll"                        ), os.path.join(self.bin_dir, ""))
-		Tools.Copy(os.path.join(target_dir, "runtimes"                                   ), os.path.join(self.bin_dir, "runtimes"))
-		Tools.Copy(os.path.join(target_dir, "lib"                                        ), os.path.join(self.bin_dir, "lib"))
+		target_dir = Tools.Path(proj_dir, "bin/Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "SolarHotWater.UI.exe"                       ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "SolarHotWater.UI.dll"                       ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"                           ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"                   ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"                        ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Net.dll"                            ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.View3d.dll"                         ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "System.Data.SQLite.dll"                     ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Microsoft.CodeAnalysis.dll"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Microsoft.CodeAnalysis.CSharp.dll"          ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Microsoft.CodeAnalysis.CSharp.Scripting.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Microsoft.CodeAnalysis.Scripting.dll"       ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "SolarHotWater.UI.deps.json"                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "SolarHotWater.UI.runtimeconfig.json"        ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Dapper.dll"                                 ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Newtonsoft.Json.dll"                        ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "runtimes"                                   ), Tools.Path(self.bin_dir, "runtimes", check_exists=False))
+		Tools.Copy(Tools.Path(target_dir, "lib"                                        ), Tools.Path(self.bin_dir, "lib", check_exists=False))
 
 		# Build the installer
 		#print("Building installer...\n")
-		#self.installer_wxs = os.path.join(self.proj_dir, "installer", "installer.wxs")
+		#self.installer_wxs = Tools.Path(self.proj_dir, "installer", "installer.wxs")
 		#self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
-		#	os.path.join(self.bin_dir, ".."),
+		#	Tools.Path(self.bin_dir, ".."),
 		#	[
 		#		["binaries", "INSTALLFOLDER", ".", False,
 		#			r"LDraw\..*\.dll",
@@ -611,7 +617,7 @@ class SolarHotWater(Managed):
 	def Publish(self):
 	#	if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 	#	print("\nPublishing to web site...")
-	#	Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
+	#	Tools.Copy(self.msi, Tools.Path(UserVars.wwwroot, "files/ldraw", check_exists=False))
 		return
 
 # Fishomatic
@@ -619,11 +625,11 @@ class Fishomatic(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Fishomatic", ["netcoreapp3.1"], workspace, platforms, configs)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
 		return
 
 	def Clean(self):
-		CleanDotNet(os.path.join(self.proj_dir, "Fishomatic"), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "Fishomatic", check_exists=False), self.platforms, self.configs)
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
@@ -634,16 +640,13 @@ class Fishomatic(Managed):
 		return
 
 	def Publish(self):
-	#	if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
-	#	print("\nPublishing to web site...")
-	#	Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
 		return
 
 # Rylogic.TextAligner
 class RylogicTextAligner(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Rylogic.TextAligner", ["net472"], workspace, platforms, configs)
-		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
 		self.vsix_ids = ["DF402917-6013-40CA-A4C6-E1640DA86B90", "26C3C30A-6050-4CBF-860E-6C5590AF95EF"]
 		self.signing_algos = ["sha1", "sha256"]
 		self.targets = ['2019', '2022']
@@ -912,5 +915,6 @@ if __name__ == "__main__":
 	#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']
 	#sys.argv=['build.py', '-projects', 'LDraw', '-deploy']
 	#sys.argv=['build.py', '-projects', 'Csex', '-deploy']
+	#sys.argv=['build.py', '-projects', 'P3d', '-deploy']
 	#print(f"Command Line: {str(sys.argv)}")
 	Main(sys.argv)
