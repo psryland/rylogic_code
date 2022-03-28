@@ -1,0 +1,110 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Globals -->
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
+    <RootNamespace>View3d</RootNamespace>
+    <ProjectName>view3d-12</ProjectName>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <!-- Configurations -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Property Sheets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="props\$(Configuration).$(Platform).lib.props" />
+  <Import Project="props\fxc_build_rule.props" />
+  <!-- Build options -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions />
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions />
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions />
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions />
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>
+      </AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <!-- Files -->
+  <ItemGroup>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\config.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\settings.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\view3d.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\eventargs.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\wrappers.ixx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\forward.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
