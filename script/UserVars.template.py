@@ -6,13 +6,21 @@ import os, importlib
 
 # Join the given arguments into a normalised path, check that it exists
 def Path(*args, check_exists:bool = True, normalise:bool = True):
-	if not args or None in args: return None
+	if not args or None in args:
+		return None
+
 	path = os.path.join(*args)
+	
+	# Normalise the path
 	if normalise:
 		path = path.replace('"','').replace('/',"\\")
 		path = os.path.abspath(path)
+
+	# Paths with wildcards don't exist
+	check_exists &= any([x in path for x in ['*','?']]) == False
 	if check_exists and not os.path.exists(path):
 		raise FileNotFoundError(f"Path {path} does not exist")
+
 	return path
 
 # Import a module from the given filepath
