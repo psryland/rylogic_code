@@ -90,5 +90,5 @@ code_sign_cert_thumbprint = "28baca87f692ca5b46e8f98091c843d1b886dcda"
 code_sign_cert_pw = None # Leave as none, set once per script run
 
 # Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)
-nuget = Path(root, "tools\\nuget\\nuget.exe")
+nuget = Path(root, "<NUGET_PATH>")
 nuget_api_key = "<NUGET_API_KEY>"
