@@ -256,7 +256,7 @@ namespace Rylogic.TextAligner
 			for (var i = align.LineNumber + dir; line_range.ContainsInclusive(i); i += dir)
 			{
 				// If the line matches the IgnoreLinePattern, skip to the next line
-				if (m_ignore_line.IsValid)
+				if (m_ignore_line.IsValid && m_ignore_line.Expr.Length != 0)
 				{
 					// Read the line from the document
 					var line = m_snapshot.GetLineFromLineNumber(i);
