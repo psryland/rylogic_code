@@ -45,7 +45,7 @@ namespace pr::rdr
 		Decoder         = D3D11_BIND_DECODER,
 		VideoEncoder    = D3D11_BIND_VIDEO_ENCODER,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class ECPUAccess :std::underlying_type_t<D3D11_CPU_ACCESS_FLAG>
 	{
@@ -53,7 +53,7 @@ namespace pr::rdr
 		Write = D3D11_CPU_ACCESS_WRITE,
 		Read  = D3D11_CPU_ACCESS_READ,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EResMisc :std::underlying_type_t<D3D11_RESOURCE_MISC_FLAG>
 	{
@@ -76,7 +76,7 @@ namespace pr::rdr
 		Tiled                        = D3D11_RESOURCE_MISC_TILED,
 		//HWProtected                  = D3D11_RESOURCE_MISC_HW_PROTECTED, // requires WinSDK 10
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	#pragma endregion
 

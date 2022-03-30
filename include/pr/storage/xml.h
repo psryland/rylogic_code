@@ -34,7 +34,7 @@ namespace pr
 			ByteOrderMark      = 1 << XmlWriterProperty_ByteOrderMark,
 			OmitXmlDeclaration = 1 << XmlWriterProperty_OmitXmlDeclaration,
 			ConformanceLevel   = 1 << XmlWriterProperty_ConformanceLevel,
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 
 		// Forward declarations

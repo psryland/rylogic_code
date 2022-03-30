@@ -115,7 +115,7 @@ namespace pr::str
 		Int = 1 << 0,
 		FP  = 1 << 1,
 		Any = Int|FP,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Buffer characters for a number (real or int) from 'src'

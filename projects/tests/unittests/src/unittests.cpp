@@ -22,6 +22,7 @@ namespace pr::unittests::your::namespace
 #include "src/unittests.h" // all tests
 //#include "pr/common/hash.h"
 //#include "pr/common/guid.h"
+//#include "pr/common/flags_enum.h"
 //#include "pr/common/allocator.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"

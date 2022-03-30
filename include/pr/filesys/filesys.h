@@ -765,7 +765,7 @@ namespace pr::filesys
 		WriteAccess = 1 << 4,
 		ReadAccess = 1 << 5,
 		ExecAccess = 1 << 6,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class Access
 	{

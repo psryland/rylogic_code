@@ -183,7 +183,10 @@ namespace pr
 		}
 
 		// Pointer de-reference
-		T* operator -> () const { return m_ptr; }
+		T* operator -> () const
+		{
+			return m_ptr;
+		}
 
 		// The current reference count
 		long RefCount() const

@@ -17,7 +17,7 @@ namespace pr::rdr
 			None                  = 0,
 			WarnedNoRenderNuggets = 1 << 0,
 			NormalsVisible        = 1 << 1,
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 
 		ModelBufferPtr    m_model_buffer; // The buffer that contains this model's vertex and index data
