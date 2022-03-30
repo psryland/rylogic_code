@@ -475,7 +475,7 @@ namespace pr::script
 		{
 			None = 0,
 			BufferLocally = 1 << 0,
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 
 	protected:

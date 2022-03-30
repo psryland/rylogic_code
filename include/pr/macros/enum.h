@@ -11,9 +11,7 @@
 //  PR_DEFINE_ENUM3(TestEnum1, PR_ENUM)
 //  #undef PR_ENUM
 //*/
-
 #pragma once
-
 #include <exception>
 #include <string>
 #include <string_view>
@@ -22,7 +20,11 @@
 #include <iostream>
 #include <sstream>
 
-#pragma region Enum field expansions
+
+// Trait for reflected enums
+template <typename T> struct pr_reflected_enum : std::false_type {};
+
+#pragma region Enum Field Expansions
 #define PR_ENUM_NULL(x)
 #define PR_ENUM_EXPAND(x) x
 
@@ -65,8 +67,8 @@
 #define PR_ENUM_FIELDS3(id, str, val) E::id,
 #pragma endregion
 
-// Enum generator
-#pragma region Enum Generator
+// Reflected Enum generator
+#pragma region Reflected Enum Generator
 #define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags, base_type)\
 enum class enum_name base_type\
 {\
@@ -88,7 +90,7 @@ struct enum_name##_\
 	static constexpr wchar_t const* NameW() { return Name<wchar_t>(); }\
 \
 	/* The number of values in the enum */\
-	static int const NumberOf = 0\
+	static constexpr int NumberOf = 0\
 		enum_vals1(PR_ENUM_COUNT1)\
 		enum_vals2(PR_ENUM_COUNT2)\
 		enum_vals3(PR_ENUM_COUNT3);\
@@ -271,10 +273,9 @@ template <typename Char> inline std::basic_istream<Char>& operator >> (std::basi
 	e = enum_name##_::Parse(s.c_str());\
 	return stream;\
 }\
-\
 /* reflected enum type trait functions*/\
-template <> struct pr_is_reflected_enum<enum_name> { static constexpr bool value = true; };\
-template <> struct pr_get_enum_metadata<enum_name> { using type = enum_name##_; };\
+template <> struct pr_reflected_enum<enum_name> :std::true_type { using type = enum_name##_; };\
+/* end of enum macro */
 
 // Declares an enum where values are implicit, 'enum_vals' should be a macro with one parameter; id
 #define PR_DEFINE_ENUM1(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
@@ -287,21 +288,14 @@ template <> struct pr_get_enum_metadata<enum_name> { using type = enum_name##_; 
 // Declares an enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
 #define PR_DEFINE_ENUM3(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, )
 #define PR_DEFINE_ENUM3_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
-
 #pragma endregion
 
-// Metadata
-template <typename T> struct pr_is_reflected_enum { static constexpr bool value = false; };
-template <typename T> struct pr_get_enum_metadata {};
-
+// Traits
 namespace pr
 {
-	// Enabler for reflected enums
-	template <typename T> constexpr bool is_reflected_enum_v = pr_is_reflected_enum<T>::value;
-	template <typename T> using enable_if_reflected_enum = typename std::enable_if_t<is_reflected_enum_v<T>>;
-
-	// Common interface for accessing meta data for an enum
-	template <typename T> using Enum = typename pr_get_enum_metadata<T>::type;
+	template <typename T> constexpr bool is_reflected_enum_v = pr_reflected_enum<T>::value;
+	template <typename T> concept ReflectedEnum = is_reflected_enum_v<T>;
+	template <ReflectedEnum T> using Enum = typename pr_reflected_enum<T>::type;
 }
 
 #if PR_UNITTESTS
@@ -346,7 +340,7 @@ namespace pr::common
 			x(A, = 1 << 0)\
 			x(B, = 1 << 1)\
 			x(C, = 1 << 2)\
-			x(_bitwise_operators_allowed, )
+			x(_flags_enum, )
 		PR_DEFINE_ENUM2(TestEnum4, PR_ENUM);
 		#undef PR_ENUM
 
@@ -354,7 +348,7 @@ namespace pr::common
 			x(A, "a", = 1 << 0)\
 			x(B, "b", = 1 << 1)\
 			x(C, "c", = 1 << 2 | B)\
-			x(_bitwise_operators_allowed,"",)
+			x(_flags_enum,"",)
 		PR_DEFINE_ENUM3(TestEnum5, PR_ENUM);
 		#undef PR_ENUM
 	}

@@ -1,4 +1,4 @@
-//**********************************************************************************
+﻿//**********************************************************************************
 // Pointer to a reference counted object
 //  Copyright (c) Rylogic Ltd 2011
 //**********************************************************************************
@@ -183,7 +183,10 @@ namespace pr
 		}
 
 		// Pointer de-reference
-		T* operator -> () const { return m_ptr; }
+		T* operator -> () const
+		{
+			return m_ptr;
+		}
 
 		// The current reference count
 		long RefCount() const

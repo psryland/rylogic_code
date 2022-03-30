@@ -1,4 +1,4 @@
-//**********************************
+ï»¿//**********************************
 // Extract
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -115,7 +115,7 @@ namespace pr::str
 		Int = 1 << 0,
 		FP  = 1 << 1,
 		Any = Int|FP,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Buffer characters for a number (real or int) from 'src'
@@ -525,7 +525,7 @@ namespace pr::str
 
 	// Extract an integral number from 'src' (basically 'strtol')
 	// Expects 'src' to point to a string of the following form:
-	// [delim] [{+|–}][0[{x|X|b|B}]][digits]
+	// [delim] [{+|ï¿½}][0[{x|X|b|B}]][digits]
 	// The first character that does not fit this form stops the scan.
 	// If 'radix' is between 2 and 36, then it is used as the base of the number.
 	// If 'radix' is 0, the initial characters of the string are used to determine the base.

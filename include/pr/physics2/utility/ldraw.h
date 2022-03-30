@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "pr/physics2/forward.h"
 #include "pr/collision/ldraw.h"
 #include "pr/physics2/rigid_body/rigid_body.h"
@@ -18,7 +18,7 @@ namespace pr::ldr
 		Torque  = 1 << 7,
 		Default = Origin,
 		All     = ~0,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, ERigidBodyFlags flags = ERigidBodyFlags::Default, m4x4 const* o2w = nullptr, float scale = 0.1f)
 	{

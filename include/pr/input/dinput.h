@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Direct Input
 //  Copyright (c) Rylogic Ltd 2010
 //******************************************
@@ -52,7 +52,7 @@ namespace pr::dinput
 		IncludeAliases = DIEDFL_INCLUDEALIASES,
 		IncludeHidden = DIEDFL_INCLUDEHIDDEN,
 		IncludePhantoms = DIEDFL_INCLUDEPHANTOMS,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EEnumObjectsFlags
 	{
@@ -111,7 +111,7 @@ namespace pr::dinput
 		// Controls identified by a Human Interface Device(HID) usage alias. This flag applies only to HID-compliant USB devices.
 		Alias = DIDFT_ALIAS,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EReadDataFlags
 	{

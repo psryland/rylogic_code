@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Camera
 //  Copyright (c) Rylogic Ltd 2009
 //******************************************
@@ -22,7 +22,7 @@ namespace pr::camera
 		Translate = 1 << 0,
 		Rotate    = 1 << 1,
 		Zoom      = 1 << 2,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Navigation keys
@@ -97,7 +97,7 @@ namespace pr::camera
 		CameraRelative = 1 << 7,
 		Translation    = TransX | TransY | TransZ,
 		Rotation       = RotX | RotY | RotZ,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Convert an MK_ value into the default navigation operation

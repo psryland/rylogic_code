@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -50,7 +50,7 @@ namespace pr::rdr
 			MIPMAP      = 0x00020000, // DDSD_MIPMAPCOUNT
 			LINEARSIZE  = 0x00080000, // DDSD_LINEARSIZE
 			VOLUME      = 0x00800000, // DDSD_DEPTH
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 		enum class EPixelFormatFlags
 		{
@@ -62,14 +62,14 @@ namespace pr::rdr
 			RGBA        = 0x00000041, // DDPF_RGB | DDPF_ALPHAPIXELS
 			LUMINANCE   = 0x00020000, // DDPF_LUMINANCE
 			LUMINANCEA  = 0x00020001, // DDPF_LUMINANCE | DDPF_ALPHAPIXELS
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 		enum class ECaps
 		{
 			CUBEMAP = 0x00000008, // DDSCAPS_COMPLEX
 			TEXTURE = 0x00001000, // DDSCAPS_TEXTURE
 			MIPMAP  = 0x00400008, // DDSCAPS_COMPLEX | DDSCAPS_MIPMAP
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 		enum class ECaps2
 		{
@@ -82,7 +82,7 @@ namespace pr::rdr
 			CUBEMAP_NEGATIVEZ = 0x00008200, // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEZ
 			CUBEMAP_ALLFACES = CUBEMAP_POSITIVEX | CUBEMAP_NEGATIVEX | CUBEMAP_POSITIVEY | CUBEMAP_NEGATIVEY | CUBEMAP_POSITIVEZ | CUBEMAP_NEGATIVEZ,
 			VOLUME = 0x00200000, // DDSCAPS2_VOLUME
-			_bitwise_operators_allowed,
+			_flags_enum,
 		};
 
 		struct PixelFormat

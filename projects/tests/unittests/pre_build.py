@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Generate a header file that includes all
@@ -37,6 +37,7 @@ try:
 		"pr/terrain/",
 		"pr/collision/todo/",
 		"pr/collision/builder/",
+		"pr/view3d-12/",
 		]
 
 	# generate a file that includes all headers
