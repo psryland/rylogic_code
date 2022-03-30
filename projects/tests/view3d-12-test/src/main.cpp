@@ -2,8 +2,7 @@
 #include <windows.h>
 #include "pr/gui/wingui.h"
 #include "pr/win32/windows_com.h"
-
-import View3d;
+#include "pr/view3d-12/view3d.h"
 
 using namespace pr::gui;
 using namespace pr::rdr12;
@@ -16,6 +15,7 @@ struct Main :Form
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
 	Renderer m_rdr;
+	Window m_wnd;
 
 	Main(HINSTANCE hinstance)
 		:Form(Params<>()
@@ -25,22 +25,22 @@ struct Main :Form
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
-		,m_rdr(RdrSettings(hinstance))
+		,m_rdr(RSettings(hinstance))
+		,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
+	{}
+	static RdrSettings RSettings(HINSTANCE hinstance)
 	{
-		CreateHandle();
+		return RdrSettings(hinstance)
+			.DebugLayer()
+			.DefaultAdapter();
 	}
-	static Settings RdrSettings(HINSTANCE hinstance)
+	static WndSettings WSettings(HWND hwnd, RdrSettings const& rdr_settings)
 	{
-		SystemConfig sys;
-		auto& adapter = sys.m_adapters[0];
-		auto& output = adapter.m_outputs[0];
-
-		Settings settings(hinstance);
-		settings.m_adapter = adapter.m_adapter;
-		settings.m_output = output.m_output;
-		settings.m_display_mode = output.FindClosestMatchingMode(DisplayMode(800,600));
-		return settings;
+		return WndSettings(hwnd, true, rdr_settings)
+			.DefaultOutput()
+			.Size(800,600);
 	}
+	
 };
 
 // Entry point
@@ -53,8 +53,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		Main main(hInstance);
 		main.Show();
 
-		MessageLoop loop;
+		SimMessageLoop loop;
 		loop.AddMessageFilter(main);
+		loop.AddLoop([&main](auto) { main.m_wnd.TestRender(); }, 30, true);
 		return loop.Run();
 	}
 	catch (std::exception const& ex)

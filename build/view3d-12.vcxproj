@@ -40,7 +40,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
@@ -54,7 +54,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
@@ -68,7 +68,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
@@ -82,7 +82,7 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic\view3d-12;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
@@ -93,18 +93,32 @@
   </ItemDefinitionGroup>
   <!-- Files -->
   <ItemGroup>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\config.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\settings.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\view3d.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\eventargs.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\wrappers.ixx" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene_camera.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\forward.h" />
+    <ClInclude Include="..\include\pr\view3d-12\forward.h" />
+    <ClInclude Include="..\include\pr\view3d-12\instance\instance.h" />
+    <ClInclude Include="..\include\pr\view3d-12\main\config.h" />
+    <ClInclude Include="..\include\pr\view3d-12\main\renderer.h" />
+    <ClInclude Include="..\include\pr\view3d-12\main\settings.h" />
+    <ClInclude Include="..\include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="..\include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="..\include\pr\view3d-12\render\drawlist_element.h" />
+    <ClInclude Include="..\include\pr\view3d-12\render\render_step.h" />
+    <ClInclude Include="..\include\pr\view3d-12\render\sortkey.h" />
+    <ClInclude Include="..\include\pr\view3d-12\scene\scene.h" />
+    <ClInclude Include="..\include\pr\view3d-12\scene\scene_camera.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\features.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h" />
+    <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

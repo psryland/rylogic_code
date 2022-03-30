@@ -139,6 +139,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mergebin", "..\projects\tools\mergebin\mergebin.vcxproj", "{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "..\projects\tests\unittests\unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C08B476-AF59-47F4-8122-2E068D55066E} = {8C08B476-AF59-47F4-8122-2E068D55066E}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gui", "..\projects\tests\gui\gui.vcxproj", "{87A78A7C-5B8D-4816-ABB2-CCEB41214529}"
 EndProject
@@ -155,6 +158,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12", "view3d-12.vcxproj", "{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12-test", "..\projects\tests\view3d-12-test\view3d-12-test.vcxproj", "{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12.dll", "view3d-12.dll.vcxproj", "{FB13BA51-F847-4804-90A8-61AB789F4061}"
 EndProject
