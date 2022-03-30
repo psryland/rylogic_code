@@ -97,7 +97,9 @@
 #include "pr/script/reader.h"
 #include "pr/ldraw/ldr_helper.h"
 
+#ifndef PR_DBG_RDR
 #define PR_DBG_RDR PR_DBG
+#endif
 
 // Set this in the project settings, not here
 #ifndef PR_RDR_RUNTIME_SHADERS
