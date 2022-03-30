@@ -14,7 +14,6 @@
 
 import sys, os, subprocess, datetime, re, shutil
 from importlib import machinery as Import
-from tabnanny import check
 from typing import List
 from enum import Enum
 import Rylogic as Tools
@@ -114,11 +113,12 @@ def DeployLib(target_name:str, obj_dir:str, platforms:List[str], configs:List[st
 
 			# Get the destination directory: /pr/lib/p/c/target_name.extn
 			dst_dir = Tools.Path(UserVars.root, "lib", p, c, check_exists=False)
+			os.makedirs(dst_dir, exist_ok=True)
 
 			# Copy the target files to the destination directories
 			for filepath in filter(os.path.exists, target_files):
 				_,file = os.path.split(filepath)
-				Tools.Copy(filepath, Tools.Path(dst_dir, file))
+				Tools.Copy(filepath, Tools.Path(dst_dir, file, check_exists=False))
 	return
 
 # Restore nuget packages

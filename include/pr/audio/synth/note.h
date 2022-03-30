@@ -45,7 +45,7 @@ namespace pr::audio
 		O8 = 8 << NoteBits,
 		O9 = 9 << NoteBits,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Tone names

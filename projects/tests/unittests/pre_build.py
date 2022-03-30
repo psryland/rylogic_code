@@ -37,6 +37,7 @@ try:
 		"pr/terrain/",
 		"pr/collision/todo/",
 		"pr/collision/builder/",
+		"pr/view3d-12/",
 		]
 
 	# generate a file that includes all headers

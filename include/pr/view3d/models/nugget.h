@@ -66,7 +66,7 @@ namespace pr::rdr
 		// Excluded from shadow map render steps
 		ShadowCastExclude = 1 << 3,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Nugget data. Common base for NuggetProps and Nugget
