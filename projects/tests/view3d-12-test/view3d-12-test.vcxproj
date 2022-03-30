@@ -68,9 +68,8 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\build\view3d-12.vcxproj">
-      <Project>{0a6cc9e3-76d2-4f4e-a193-1a816d24a555}</Project>
-    </ProjectReference>
+    <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
   </ItemGroup>
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

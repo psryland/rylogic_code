@@ -16,39 +16,90 @@
     <Filter Include="src\scene">
       <UniqueIdentifier>{aa510495-67b8-4fe1-bf0c-7214e4b69a55}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\render">
+      <UniqueIdentifier>{ac597ff1-2e33-460a-bbac-80053ef2b9b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\instance">
+      <UniqueIdentifier>{deef241b-8ae3-46a3-b080-6a21d843cb83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\model">
+      <UniqueIdentifier>{049df04a-922a-4b44-99d6-e97309b76b61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\view3d.ixx">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp">
       <Filter>src\main</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\settings.ixx">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.cpp">
       <Filter>src\main</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.ixx">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\config.ixx">
-      <Filter>src\main</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\wrappers.ixx">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.ixx">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.cpp">
       <Filter>src\scene</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.ixx">
-      <Filter>src\main</Filter>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene_camera.cpp">
+      <Filter>src\scene</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\eventargs.ixx">
-      <Filter>src\utility</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.ixx">
-      <Filter>src\utility</Filter>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp">
+      <Filter>src\render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\forward.h">
+    <ClInclude Include="..\include\pr\view3d-12\main\config.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\forward.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\utility.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\features.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\main\settings.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\main\renderer.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\view3d.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\main\window.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\scene\scene.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\scene\scene_camera.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\render\render_step.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\instance\instance.h">
+      <Filter>src\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\render\sortkey.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\render\drawlist_element.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\model\nugget.h">
+      <Filter>src\model</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

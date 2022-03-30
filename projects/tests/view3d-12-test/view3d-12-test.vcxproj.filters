@@ -1,14 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="..\..\..\include\pr\view3d-12\forward.h">
-      <Filter>pr\view3d-12</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\view3d-12\renderer.h">
-      <Filter>pr\view3d-12</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="src">
       <UniqueIdentifier>{2358a741-c67b-417e-87eb-cb39933f5375}</UniqueIdentifier>
     </Filter>
@@ -18,10 +10,21 @@
     <Filter Include="pr\view3d-12">
       <UniqueIdentifier>{f316f652-7aad-4bc4-8933-598866fc5134}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{3bb34c24-2632-4e3b-93b5-a86007b8566a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h">
+      <Filter>pr\view3d-12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
