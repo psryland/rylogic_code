@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -44,9 +44,9 @@ namespace pr::rdr
 		PostAlpha,             // First group after the alpha groups
 		Max = 127,             // The maximum sort group value
 
-		_arithmetic_operators_allowed,
+		_arith_enum,
 	};
-	static_assert(has_arithops_allowed_v<ESortGroup>);
+	static_assert(is_arith_enum_v<ESortGroup>);
 
 	// The sort key type (wraps a uint32)
 	struct SortKey

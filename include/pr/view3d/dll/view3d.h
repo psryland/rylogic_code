@@ -97,7 +97,7 @@ extern "C"
 		Colr    = 1 << 1, // Diffuse base colour
 		Norm    = 1 << 2, // Object space 3D normal
 		Tex0    = 1 << 3, // Diffuse texture
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EView3DTopo :int
 	{
@@ -128,7 +128,7 @@ extern "C"
 		// Excluded from shadow map render steps
 		ShadowCastExclude = 1 << 3,
 
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EView3DShaderVS :int
 	{
@@ -222,7 +222,7 @@ extern "C"
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EView3DGizmoState :int // ELdrGizmoEvent 
 	{
@@ -243,7 +243,7 @@ extern "C"
 		Translate = 1 << 0,
 		Rotate    = 1 << 1,
 		Zoom      = 1 << 2,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EView3DColourOp :int // pr::ldr::EColourOp
 	{
@@ -304,7 +304,7 @@ extern "C"
 		ShadowCastExclude = 1 << 12,
 
 		// Bitwise operators supported
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 	enum class EView3DSortGroup :int
 	{
@@ -320,7 +320,7 @@ extern "C"
 		Max = 127,             // The maximum sort group value
 	
 		// Arithmetic operators supported
-		_arithmetic_operators_allowed,
+		_arith_enum,
 	};
 	enum class EView3DSceneBounds :int
 	{
@@ -346,7 +346,7 @@ extern "C"
 		Faces = 1 << 0,
 		Edges = 1 << 1,
 		Verts = 1 << 2,
-		_bitwise_operators_allowed = 0x7FFFFFF,
+		_flags_enum = 0x7FFFFFF,
 	};
 	enum class EView3DSnapType :int
 	{
@@ -394,7 +394,7 @@ extern "C"
 		Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
 		Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
 
-		_bitwise_operators_allowed = 0x7FFFFFF,
+		_flags_enum = 0x7FFFFFF,
 	};
 
 	struct View3DV2

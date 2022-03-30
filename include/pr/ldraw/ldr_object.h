@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -217,7 +217,7 @@ namespace pr::ldr
 		Near    = 1 << 5,
 		Far     = 1 << 6,
 		Ortho   = 1 << 7,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Simple animation styles
@@ -244,7 +244,7 @@ namespace pr::ldr
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Flags for extra behaviour of an object
@@ -286,7 +286,7 @@ namespace pr::ldr
 		ShadowCastExclude = 1 << 12,
 
 		// Bitwise operators
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Colour blend operations

@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry properties
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
@@ -35,9 +35,9 @@ namespace pr::geometry
 		Tex0    = 1 << 3, // Diffuse texture
 		All     = Vert | Colr | Norm | Tex0,
 
-		_bitwise_operators_allowed = 0x7FFFFFFF,
+		_flags_enum = 0x7FFFFFFF,
 	};
-	static_assert(has_bitops_allowed_v<EGeom>);
+	static_assert(is_flags_enum_v<EGeom>);
 
 	// ETopo
 	enum class ETopo

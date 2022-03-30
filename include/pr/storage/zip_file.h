@@ -4044,9 +4044,8 @@ namespace pr::storage
 		auto FileToBytes = [](std::filesystem::path const& filepath)
 		{
 			// Open the file and read it into memory
-			std::basic_ifstream<uint8_t> ifile(filepath);
-			std::basic_stringstream<uint8_t> file_bytes;
-			file_bytes << ifile.rdbuf();
+			std::basic_ifstream<uint8_t> ifile(filepath, std::ios::binary);
+			std::basic_stringstream<uint8_t> file_bytes; file_bytes << ifile.rdbuf();
 			return std::move(file_bytes.str());
 		};
 		auto MatchToFile = [=](auto& bytes, std::filesystem::path const& filepath)

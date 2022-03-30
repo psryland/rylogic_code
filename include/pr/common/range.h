@@ -21,38 +21,38 @@ namespace pr
 		T m_end; // One past the last in the range
 
 		// The default empty range
-		static Range Zero()
+		static constexpr Range Zero()
 		{
 			return Range(0,0);
 		}
 
 		// An invalid range. Used as an initialiser when finding a bounding range
-		static Range Reset()
+		static constexpr Range Reset()
 		{
 			return Range{std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()};
 		}
 
 		// A range containing the maximum interval
-		static Range Max()
+		static constexpr Range Max()
 		{
 			return Range{std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max()};
 		}
 
 		// Construct a range
-		Range() = default;
-		Range(T beg, T end)
+		constexpr Range() = default;
+		constexpr Range(T beg, T end)
 			:m_beg(beg)
 			,m_end(end)
 		{}
 
 		// True if this is an empty range
-		bool empty() const
+		constexpr bool empty() const
 		{
 			return m_beg == m_end;
 		}
 
 		// begin/end range support
-		T begin() const
+		constexpr T begin() const
 		{
 			return m_beg;
 		}
@@ -60,7 +60,7 @@ namespace pr
 		{
 			return m_beg;
 		}
-		T end() const
+		constexpr T end() const
 		{
 			return m_end;
 		}
@@ -70,7 +70,7 @@ namespace pr
 		}
 
 		// The number of elements in or length of the range
-		auto size() const -> decltype(m_end - m_beg)
+		constexpr auto size() const -> decltype(m_end - m_beg)
 		{
 			return m_end - m_beg;
 		}

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -23,7 +23,7 @@ namespace pr::rdr
 		DestBlendAlpha         = 1 << 7,
 		BlendOpAlpha           = 1 << 8,
 		RenderTargetWriteMask  = 1 << 9,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Depth state flags
@@ -39,7 +39,7 @@ namespace pr::rdr
 		StencilDepthFailOp = 1 << 7,
 		StencilPassOp      = 1 << 8,
 		StencilFailOp      = 1 << 9,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Raster state flags
@@ -55,7 +55,7 @@ namespace pr::rdr
 		DepthBias = 1 << 7,
 		DepthBias_clamp = 1 << 8,
 		SlopeScaledDepthBias = 1 << 9,
-		_bitwise_operators_allowed,
+		_flags_enum,
 	};
 
 	// Wraps a DX state description and provides a bitmask of changed values
@@ -77,7 +77,7 @@ namespace pr::rdr
 		// The bit indices in 'm_mask[1..2]' for 'awesome' are not used and should never be set.
 		// This way 'm_mask' indicates which members, including those in arrays, have been changed.
 		using FieldEnum = TFieldEnum;
-		static_assert(has_bitops_allowed_v<FieldEnum>);
+		static_assert(is_flags_enum_v<FieldEnum>);
 
 		// The DX State block
 		TStateDesc m_state;
