@@ -74,6 +74,9 @@ namespace Rylogic.Gui.WPF
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
 			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
+
+			// Don't show empty context menus
+			ContextMenuOpening += (s, a) => a.Handled = ContextMenu == null || ContextMenu.Items.Count == 0;
 		}
 
 		/// <summary>Accessors for setting the context menus in XAML</summary>

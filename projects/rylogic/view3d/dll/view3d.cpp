@@ -1124,9 +1124,10 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 
 		auto ss_point = To<v2>(ss_pos);
 		auto nss_point = window->SSPointToNSSPoint(ss_point);
-		if (nss_point.x < -1.0 || nss_point.x > +1.0 ||
-			nss_point.y < -1.0 || nss_point.y > +1.0)
-			throw std::runtime_error("Window viewport has not been set correctly. The ScreenW/H values should match the window size (not the viewport size)");
+		
+		// This is true-ish. 'ss_pos' is allowed to be outside the window area which breaks this check
+		//if (nss_point.x < -1.0 || nss_point.x > +1.0 || nss_point.y < -1.0 || nss_point.y > +1.0)
+		//	throw std::runtime_error("Window viewport has not been set correctly. The ScreenW/H values should match the window size (not the viewport size)");
 
 		auto refresh = false;
 		auto gizmo_in_use = false;
