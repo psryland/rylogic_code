@@ -62,7 +62,9 @@ namespace Rylogic.Gui.WPF
 					ContextMenu.DataContext = this;
 
 				InitCommands();
-				DataContext = this;
+				
+				// Don't set 'DataContext = this'. Context should be whatever the containing
+				// control's context is. E.g. ChartPanel.DataContext = ChartControl.DataContext
 			}
 			catch
 			{

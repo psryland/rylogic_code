@@ -1,7 +1,7 @@
 {
 	"name": "rylogic-textaligner-vscode",
 	"displayName": "Rylogic TextAligner for VSCode",
-	"version": "1.11.3",
+	"version": "1.11.4",
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"keywords": [
@@ -12,14 +12,14 @@
 		"Text",
 		"Vertical"
 	],
-	"license": "MIT",
+	"license": "/LICENSE.txt",
 	"main": "./out/extension.js",
 	"icon": "images/icon.png",
 	"repository": {
 		"url": "https://github.com/psryland/rylogic_code/tree/master/typescript/projects/Rylogic.TextAligner"
 	},
 	"engines": {
-		"vscode": "^1.35.0"
+		"vscode": "^1.65.0"
 	},
 	"categories": [
 		"Other"
@@ -297,10 +297,10 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": ":",
+									"pattern": "(?<!:):(?!:)",
 									"offset": 0,
 									"minimum_width": 1,
-									"comment": "Colon characters"
+									"comment": "Single colon characters"
 								}
 							]
 						},
@@ -321,7 +321,7 @@
 									"comment": "Matches class members that begin with '_' and are not at the start of a line"
 								},
 								{
-									"pattern": "(?<=\\s)[_a-zA-z][_a-zA-Z0-9]*_",
+									"pattern": "(?<=\\s)[_a-zA-z][_a-zA-Z0-9]*_(?![_a-zA-Z0-9])",
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Matches class members that end with '_'"
@@ -342,9 +342,9 @@
 		"watch": "tsc -watch -p ./"
 	},
 	"devDependencies": {
-		"@types/node": "^17.0.21",
+		"@types/node": "^17.0.23",
 		"@types/vscode": "^1.65.0",
-		"eslint": "^8.11.0",
-		"typescript": "^4.6.2"
+		"eslint": "^8.12.0",
+		"typescript": "^4.6.3"
 	}
 }

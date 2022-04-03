@@ -15,8 +15,8 @@ using Rylogic.Common;
 [assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: AssemblyVersion("1.11.3")]
-[assembly: AssemblyFileVersion("1.11.3")]
+[assembly: AssemblyVersion("1.11.4")]
+[assembly: AssemblyFileVersion("1.11.4")]
 
 namespace Rylogic.TextAligner
 {
@@ -39,7 +39,7 @@ namespace Rylogic.TextAligner
 	/// </remarks>
 	[Guid(PackageGuidString)]
 	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                   // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.11.3", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.11.4", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                    // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                           // This attribute is needed to let the shell know that this package exposes an options page.
 	[ProvideBindingPath]                                                                                        // Include the local directory when resolving dependent assemblies

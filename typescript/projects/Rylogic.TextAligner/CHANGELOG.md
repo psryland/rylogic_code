@@ -1,5 +1,12 @@
 # Change Log
 
+$$ [1.11.4] - 2022-03-30
+
+### Changed
+
+- Bug Fix. The pattern for matching member variables that end in '_' was incorrectly matching substrings
+- Changed the default 'Colon' matching pattern to only match single colons, not '::'.
+
 $$ [1.11.3] - 2022-03-16
 
 ### Changed
