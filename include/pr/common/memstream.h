@@ -1,4 +1,4 @@
-//**********************************************************************************
+﻿//**********************************************************************************
 // Resource
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************************************************
@@ -277,18 +277,18 @@ namespace pr
 	template<typename Elem = uint8_t>
 	struct mem_istream :public std::basic_istream<Elem>
 	{
-		using char_type = typename mem_istream::char_type;
-		using base_type = std::basic_istream<char_type>;
+		using base_t = typename std::basic_istream<Elem>;
+		using char_type = typename base_t::char_type;
 
 		view_streambuf<Elem> buf;
 		mem_istream(void const* data, std::size_t size)
-			:base_type(&buf)
+			:base_t(&buf)
 			,buf(data, size)
 		{}
 
 		mem_istream& read(char_type* src, std::streamsize count)
 		{
-			auto& base = *static_cast<base_type*>(this);
+			auto& base = *static_cast<base_t*>(this);
 			base.read(reinterpret_cast<char_type*>(src), count);
 			return *this;
 		}
@@ -306,7 +306,7 @@ namespace pr
 		Container& data;
 
 		mem_ostream(Container& data)
-			:std::basic_ostream<char_type>(&buf)
+			:base_t(&buf)
 			,buf(nullptr, write, This())
 			,data(data)
 		{}
