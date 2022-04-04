@@ -18,5 +18,12 @@ namespace pr::rdr12
 			,m_done(done)
 		{}
 	};
+
+	// Event args for resolving a filepath
+	struct ResolvePathArgs
+	{
+		std::filesystem::path filepath;
+		bool handled;
+	};
 }
 

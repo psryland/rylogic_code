@@ -50,7 +50,8 @@ namespace pr
 	// 'T' should have methods 'AddRef' and 'Release'
 	// Not the same as std::shared_ptr<> because it assumes
 	// the pointed-to object has AddRef()/Release() methods
-	template <typename T> struct RefPtr
+	template <typename T>
+	struct RefPtr
 	{
 		mutable T* m_ptr;
 
@@ -256,7 +257,6 @@ namespace pr
 		friend bool operator == (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr == nullptr; }
 		friend bool operator != (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr != nullptr; }
 	};
-	static_assert(sizeof(RefPtr<void>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
 
 	// Implementation
 	namespace impl
@@ -281,8 +281,11 @@ namespace pr
 	{
 		virtual ~IRefCounted() {}
 		virtual long AddRef() const = 0;
-		virtual long Release() const = 0;
+		virtual void Release() const = 0;
 	};
+
+	// Check RefPtr size
+	static_assert(sizeof(RefPtr<IRefCounted>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
 
 	// Return the current ref count for a ref pointer
 	template <typename T> inline long PtrRefCount(T* ptr)

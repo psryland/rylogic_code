@@ -12,16 +12,18 @@ namespace pr::rdr12
 	struct alignas(16) Scene
 	{
 		// Notes:
-		//  - A scene is a view into the 3D world. Typically most applications only have one scene.
-		//    Examples of multiple scenes are: the rear vision mirror in a car, map view, etc.
-		//    A scene contains an ordered collection of render steps.
+		//  - A scene is a view into the 3D world, containing a camera and collection of instances.
+		//  - A scene contains an ordered collection of render steps. Each render step has it's own drawlist.
+		//  - Multiple scenes can contribute to the content of a window.
+		//    e.g.
+		//      A window could have separate scenes for; world geometry, player graphics, HUD, rear view mirror, etc
+		//      Typically, most applications only have one scene.
 	
 		// Fixed container of render steps. Doesn't really need to be fixed,
 		// but non-fixed means we need the pr::rdr::Allocator to construct it.
-		// Conceptually, 'InstCont' should be an unordered_set, but using an array
-		// is way faster, due to the lack of allocations. This means RemoveInstance
-		// is O(n) however.
-		using RenderStepCont = pr::vector<RenderStepPtr, 16, true>;
+		// Conceptually, 'InstCont' should be an unordered_set, but using an array is way
+		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
+		using RenderStepCont = pr::vector<RenderStep*, 16, true>;
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
 		//using RayCastStepPtr = std::unique_ptr<RayCastStep>;
 
@@ -41,6 +43,7 @@ namespace pr::rdr12
 		AutoSub        m_eh_resize;     // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::ForwardRender}, SceneCamera const& cam = SceneCamera{});
+		~Scene();
 
 		// Renderer access
 		Renderer& rdr() const;

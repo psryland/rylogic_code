@@ -16,6 +16,7 @@ struct Main :Form
 
 	Renderer m_rdr;
 	Window m_wnd;
+	Scene m_scn;
 
 	Main(HINSTANCE hinstance)
 		:Form(Params<>()
@@ -27,7 +28,12 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		,m_rdr(RSettings(hinstance))
 		,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
-	{}
+		,m_scn(m_wnd)
+	{
+		//// Create a test model
+		//auto vb = ResourceDesc::VBuf<Vert>(3);
+		//auto ib = ResourceDesc::IBuf<uint16_t>(3);
+	}
 	static RdrSettings RSettings(HINSTANCE hinstance)
 	{
 		return RdrSettings(hinstance)
@@ -40,7 +46,6 @@ struct Main :Form
 			.DefaultOutput()
 			.Size(800,600);
 	}
-	
 };
 
 // Entry point

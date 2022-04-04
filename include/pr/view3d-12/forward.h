@@ -35,6 +35,8 @@
 //#include "pr/macros/repeat.h"
 //#include "pr/macros/enum.h"
 //#include "pr/macros/align.h"
+//#include "pr/common/log.h"
+//#include "pr/common/crc.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/build_options.h"
@@ -45,15 +47,13 @@
 #include "pr/common/cast.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/refcount.h"
-//#include "pr/common/log.h"
 #include "pr/common/refptr.h"
 #include "pr/common/d3dptr.h"
-//#include "pr/common/crc.h"
 #include "pr/common/alloca.h"
 #include "pr/common/allocator.h"
 #include "pr/common/range.h"
 #include "pr/common/hash.h"
-//#include "pr/common/to.h"
+#include "pr/common/to.h"
 #include "pr/common/scope.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/user_data.h"
@@ -91,7 +91,7 @@
 //#include "pr/geometry/model_file.h"
 //#include "pr/geometry/utility.h"
 #include "pr/threads/synchronise.h"
-//#include "pr/gui/gdiplus.h"
+#include "pr/gui/gdiplus.h"
 //#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 //#include "pr/win32/stackdump.h"
@@ -115,6 +115,7 @@ namespace pr::rdr12
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
 	using Handle = pr::win32::Handle;
+	template <typename T> using RefPtr = pr::RefPtr<T>;
 	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
@@ -156,19 +157,20 @@ namespace pr::rdr12
 	struct DSLighting;
 	struct ShadowMap;
 	struct RayCast;
-	using RenderStepPtr = std::unique_ptr<RenderStep>;
 
+	// Resources
+	struct ResourceManager;
+	struct TexDesc;
+	struct SamDesc;
+	
 	// Models
-	class  ModelManager;
-	struct ModelBuffer;
+	struct ModelDesc;
 	struct Model;
-	struct NuggetProps;
 	struct Nugget;
-	struct MdlSettings;
-	struct ModelTreeNode;
-	using ModelBufferPtr = pr::RefPtr<ModelBuffer>;
-	using ModelPtr = pr::RefPtr<Model>;
+	struct NuggetData;
+	using ModelPtr = RefPtr<Model>;
 	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
+	    struct ModelTreeNode;
 
 	// Instances
 	struct BaseInstance;
@@ -181,28 +183,23 @@ namespace pr::rdr12
 	struct ShaderSet0;
 	struct ShaderSet1;
 	struct ShaderMap;
-	using ShaderPtr = pr::RefPtr<Shader>;
+	using ShaderPtr = RefPtr<Shader>;
 
 	// Textures
-	class  TextureManager;
 	struct TextureDesc;
-	struct Texture1DDesc;
-	struct Texture2DDesc;
-	struct Texture3DDesc;
 	struct TextureBase;
 	struct Texture2D;
-	struct TextureCube;
-	struct Image;
-	struct AllocPres;
-	struct ProjectedTexture;
-	using Texture2DPtr = pr::RefPtr<Texture2D>;
-	using TextureCubePtr = pr::RefPtr<TextureCube>;
+	using Texture2DPtr = RefPtr<Texture2D>;
+	    struct TextureCube;
+	    struct AllocPres;
+	    struct ProjectedTexture;
+	    using TextureCubePtr = RefPtr<TextureCube>;
 
 	// Video
 	//struct Video;
 	//struct AllocPres;
-	//typedef pr::RefPtr<Video> VideoPtr;
-	//typedef pr::RefPtr<AllocPres> AllocPresPtr;
+	//typedef RefPtr<Video> VideoPtr;
+	//typedef RefPtr<AllocPres> AllocPresPtr;
 
 	// Lighting
 	struct Light;
@@ -210,12 +207,17 @@ namespace pr::rdr12
 	// Utility
 	struct Lock;
 	struct MLock;
+	struct Image;
 	class BlendStateManager;
 	class DepthStateManager;
 	class RasterStateManager;
+	
+	// Event args
+	struct ResolvePathArgs;
 	struct BackBufferSizeChangedEventArgs;
+
+	// Callbacks
 	using InvokeFunc = void (__stdcall *)(void* ctx);
-	using ResolvePathArgs = struct { std::filesystem::path filepath; bool handled; };
 
 	// EResult
 	#define PR_ENUM(x)\
@@ -319,3 +321,22 @@ namespace pr::rdr12
 
 // Enum flags
 template <> struct is_flags_enum<DXGI_SWAP_CHAIN_FLAG> :std::true_type {};
+
+// Conversion
+namespace pr
+{
+	template <> struct Convert<D3D12_RANGE, rdr12::Range>
+	{
+		static D3D12_RANGE To(rdr12::Range const& r)
+		{
+			return reinterpret_cast<D3D12_RANGE const&>(r);
+		}
+	};
+	template <> struct Convert<rdr12::Range, D3D12_RANGE>
+	{
+		static rdr12::Range To(D3D12_RANGE const& r)
+		{
+			return reinterpret_cast<rdr12::Range const&>(r);
+		}
+	};
+}

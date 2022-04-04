@@ -51,28 +51,28 @@ namespace pr::rdr12
 	struct SortKey
 	{
 		using value_type = unsigned int;
-		static int const Bits = sizeof(value_type) * 8;
+		static constexpr int Bits = sizeof(value_type) * 8;
 
 		// GGGGGGGA SSSSSSSS SSTTTTTT TTTTTTTT
-		static int const TextureIdBits = 14U;
-		static int const ShaderIdBits  = 10U;
-		static int const AlphaBits     = 1U ;
-		static int const SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
+		static constexpr int TextureIdBits = 14U;
+		static constexpr int ShaderIdBits  = 10U;
+		static constexpr int AlphaBits     = 1U ;
+		static constexpr int SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
 		static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sort key is not large enough");
 
-		static int const TextureIdOfs  = 0;
-		static int const ShaderIdOfs   = 0 + TextureIdBits;
-		static int const AlphaOfs      = 0 + TextureIdBits + ShaderIdBits;
-		static int const SortGroupOfs  = 0 + TextureIdBits + ShaderIdBits + AlphaBits;
+		static constexpr int TextureIdOfs  = 0;
+		static constexpr int ShaderIdOfs   = 0 + TextureIdBits;
+		static constexpr int AlphaOfs      = 0 + TextureIdBits + ShaderIdBits;
+		static constexpr int SortGroupOfs  = 0 + TextureIdBits + ShaderIdBits + AlphaBits;
 
-		static value_type const TextureIdMask = (~value_type() >> (Bits - TextureIdBits)) << TextureIdOfs;
-		static value_type const ShaderIdMask  = (~value_type() >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
-		static value_type const AlphaMask     = (~value_type() >> (Bits - AlphaBits    )) << AlphaOfs    ;
-		static value_type const SortGroupMask = (~value_type() >> (Bits - SortGroupBits)) << SortGroupOfs;
+		static constexpr value_type TextureIdMask = (~value_type() >> (Bits - TextureIdBits)) << TextureIdOfs;
+		static constexpr value_type ShaderIdMask  = (~value_type() >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
+		static constexpr value_type AlphaMask     = (~value_type() >> (Bits - AlphaBits    )) << AlphaOfs    ;
+		static constexpr value_type SortGroupMask = (~value_type() >> (Bits - SortGroupBits)) << SortGroupOfs;
 
-		static value_type const MaxTextureId  = 1U << TextureIdBits;
-		static value_type const MaxShaderId   = 1U << ShaderIdBits ;
-		static value_type const MaxSortGroups = 1U << SortGroupBits;
+		static constexpr value_type MaxTextureId  = 1U << TextureIdBits;
+		static constexpr value_type MaxShaderId   = 1U << ShaderIdBits ;
+		static constexpr value_type MaxSortGroups = 1U << SortGroupBits;
 		static_assert(int(ESortGroup::Max) - int(ESortGroup::Min) < MaxSortGroups, "Not enough bits to represent the sort groups");
 
 		value_type m_value;

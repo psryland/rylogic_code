@@ -1,156 +1,167 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<!-- Globals -->
-	<PropertyGroup Label="Globals">
-		<ProjectGuid>{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}</ProjectGuid>
-		<Keyword>Win32Proj</Keyword>
-		<RootNamespace>physics2</RootNamespace>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-		<ProjectName>physics2</ProjectName>
-	</PropertyGroup>
-
-	<!-- Configuration -->
-	<PropertyGroup Label="Configuration">
-		<ConfigurationType>Application</ConfigurationType>
-		<PlatformToolset>v143</PlatformToolset>
-	</PropertyGroup>
-	<ItemGroup Label="ProjectConfigurations">
-		<ProjectConfiguration Include="Debug|Win32">
-			<Configuration>Debug</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|Win32">
-			<Configuration>Release</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Debug|x64">
-			<Configuration>Debug</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|x64">
-			<Configuration>Release</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-	</ItemGroup>
-
-	<!-- Property Sheets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="props\$(Configuration).$(Platform).app.props" />
-
-	<!-- Build Options -->
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-		<ClCompile>
-			<AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-		<PostBuildEvent>
-			<Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-		</PostBuildEvent>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<ClCompile>
-			<AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-		<PostBuildEvent>
-			<Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-		</PostBuildEvent>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<ClCompile>
-			<AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-		<PostBuildEvent>
-			<Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-		</PostBuildEvent>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<ClCompile>
-			<AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-		<PostBuildEvent>
-			<Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-		</PostBuildEvent>
-	</ItemDefinitionGroup>
-
-	<!-- Source -->
-	<ItemGroup>
-		<ClCompile Include="..\projects\rylogic\physics2\src\main.cpp" />
-		<ClInclude Include="..\include\pr\collision\collision.h" />
-		<ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
-		<ClInclude Include="..\include\pr\collision\col_box_vs_line.h" />
-		<ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h" />
-		<ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h" />
-		<ClInclude Include="..\include\pr\collision\ldraw.h" />
-		<ClInclude Include="..\include\pr\collision\penetration.h" />
-		<ClInclude Include="..\include\pr\collision\ray.h" />
-		<ClInclude Include="..\include\pr\collision\ray_cast.h" />
-		<ClInclude Include="..\include\pr\collision\ray_cast_result.h" />
-		<ClInclude Include="..\include\pr\collision\shape.h" />
-		<ClInclude Include="..\include\pr\collision\shapes.h" />
-		<ClInclude Include="..\include\pr\collision\shape_array.h" />
-		<ClInclude Include="..\include\pr\collision\shape_box.h" />
-		<ClInclude Include="..\include\pr\collision\shape_line.h" />
-		<ClInclude Include="..\include\pr\collision\shape_polytope.h" />
-		<ClInclude Include="..\include\pr\collision\shape_sphere.h" />
-		<ClInclude Include="..\include\pr\collision\shape_triangle.h" />
-		<ClInclude Include="..\include\pr\collision\support.h" />
-		<ClInclude Include="..\include\pr\gui\view3d_panel.h" />
-		<ClInclude Include="..\include\pr\gui\wingui.h" />
-		<ClInclude Include="..\include\pr\ldraw\ldr_helper.h" />
-		<ClInclude Include="..\include\pr\ldraw\ldr_object.h" />
-		<ClInclude Include="..\include\pr\maths\maths.h" />
-		<ClInclude Include="..\include\pr\maths\matrix3x4.h" />
-		<ClInclude Include="..\include\pr\maths\matrix4x4.h" />
-		<ClInclude Include="..\include\pr\maths\matrix6x8.h" />
-		<ClInclude Include="..\include\pr\maths\spatial.h" />
-		<ClInclude Include="..\include\pr\maths\vector2.h" />
-		<ClInclude Include="..\include\pr\maths\vector3.h" />
-		<ClInclude Include="..\include\pr\maths\vector4.h" />
-		<ClInclude Include="..\include\pr\physics2\broadphase\brute.h" />
-		<ClInclude Include="..\include\pr\physics2\constants.h" />
-		<ClInclude Include="..\include\pr\physics2\forward.h" />
-		<ClInclude Include="..\include\pr\physics2\integrator\contact.h" />
-		<ClInclude Include="..\include\pr\physics2\integrator\impulse.h" />
-		<ClInclude Include="..\include\pr\physics2\integrator\integrator.h" />
-		<ClInclude Include="..\include\pr\physics2\integrator\jacobian.h" />
-		<ClInclude Include="..\include\pr\physics2\integrator\engine.h" />
-		<ClInclude Include="..\include\pr\physics2\material\material.h" />
-		<ClInclude Include="..\include\pr\physics2\material\material_map.h" />
-		<ClInclude Include="..\include\pr\physics2\physics.h" />
-		<ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h" />
-		<ClInclude Include="..\include\pr\physics2\shape\inertia.h" />
-		<ClInclude Include="..\include\pr\physics2\shape\inertia_builder.h" />
-		<ClInclude Include="..\include\pr\physics2\shape\mass.h" />
-		<ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
-		<ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
-		<ClInclude Include="..\include\pr\physics2\utility\ldraw.h" />
-		<ClInclude Include="..\include\pr\physics2\utility\misc.h" />
-		<ClInclude Include="..\include\pr\view3d\view3d.h" />
-		<ClInclude Include="..\projects\rylogic\physics2\src\body.h" />
-		<ClInclude Include="..\projects\rylogic\physics2\src\forward.h" />
-		<None Include="..\projects\rylogic\physics2/post_build.py" />
-		<Natvis Include="..\miscellaneous\VisualStudio\pr_visualisers.natvis" />
-	</ItemGroup>
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- Globals -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>physics2</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>physics2</ProjectName>
+  </PropertyGroup>
+  <!-- Configuration -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Property Sheets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="props\$(Configuration).$(Platform).app.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <!-- Build Options -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>view3d.imp;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>py $(ProjectDir)..\projects\rylogic\physics2\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <!-- Source -->
+  <ItemGroup>
+    <ClCompile Include="..\projects\rylogic\physics2\src\main.cpp" />
+    <ClInclude Include="..\include\pr\collision\collision.h" />
+    <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\col_box_vs_line.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\ldraw.h" />
+    <ClInclude Include="..\include\pr\collision\penetration.h" />
+    <ClInclude Include="..\include\pr\collision\ray.h" />
+    <ClInclude Include="..\include\pr\collision\ray_cast.h" />
+    <ClInclude Include="..\include\pr\collision\ray_cast_result.h" />
+    <ClInclude Include="..\include\pr\collision\shape.h" />
+    <ClInclude Include="..\include\pr\collision\shapes.h" />
+    <ClInclude Include="..\include\pr\collision\shape_array.h" />
+    <ClInclude Include="..\include\pr\collision\shape_box.h" />
+    <ClInclude Include="..\include\pr\collision\shape_line.h" />
+    <ClInclude Include="..\include\pr\collision\shape_polytope.h" />
+    <ClInclude Include="..\include\pr\collision\shape_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\shape_triangle.h" />
+    <ClInclude Include="..\include\pr\collision\support.h" />
+    <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
+    <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_object.h" />
+    <ClInclude Include="..\include\pr\maths\maths.h" />
+    <ClInclude Include="..\include\pr\maths\matrix3x4.h" />
+    <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
+    <ClInclude Include="..\include\pr\maths\matrix6x8.h" />
+    <ClInclude Include="..\include\pr\maths\spatial.h" />
+    <ClInclude Include="..\include\pr\maths\vector2.h" />
+    <ClInclude Include="..\include\pr\maths\vector3.h" />
+    <ClInclude Include="..\include\pr\maths\vector4.h" />
+    <ClInclude Include="..\include\pr\physics2\broadphase\brute.h" />
+    <ClInclude Include="..\include\pr\physics2\constants.h" />
+    <ClInclude Include="..\include\pr\physics2\forward.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\contact.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\impulse.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\integrator.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\jacobian.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\engine.h" />
+    <ClInclude Include="..\include\pr\physics2\material\material.h" />
+    <ClInclude Include="..\include\pr\physics2\material\material_map.h" />
+    <ClInclude Include="..\include\pr\physics2\physics.h" />
+    <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\inertia.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\inertia_builder.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\mass.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\include\pr\physics2\utility\ldraw.h" />
+    <ClInclude Include="..\include\pr\physics2\utility\misc.h" />
+    <ClInclude Include="..\include\pr\view3d\view3d.h" />
+    <ClInclude Include="..\projects\rylogic\physics2\src\body.h" />
+    <ClInclude Include="..\projects\rylogic\physics2\src\forward.h" />
+    <None Include="..\projects\rylogic\physics2/post_build.py" />
+    <Natvis Include="..\miscellaneous\VisualStudio\pr_visualisers.natvis" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
