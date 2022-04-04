@@ -513,7 +513,8 @@ namespace pr
 		Colour(Colour32 c32, float alpha)
 			:Colour(c32.r / 255.0f, c32.g / 255.0f, c32.b / 255.0f, alpha)
 		{}
-		template <typename T, typename = enable_if_col<T>> Colour(T const& v)
+		template <typename T, typename = enable_if_col<T>>
+		Colour(T const& v)
 			: Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
@@ -523,6 +524,14 @@ namespace pr
 			assert(maths::is_aligned(this));
 		}
 		#endif
+		constexpr Colour(uint32_t argb)
+			:Colour()
+		{
+			a = ((argb >> 24) & 0xFF) / 255.0f;
+			r = ((argb >> 16) & 0xFF) / 255.0f;
+			g = ((argb >>  8) & 0xFF) / 255.0f;
+			b = ((argb >>  0) & 0xFF) / 255.0f;
+		}
 
 		// Array access
 		float const& operator [] (int i) const

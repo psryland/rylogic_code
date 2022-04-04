@@ -32,12 +32,9 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	Tools.AssertVersion(1)
 	Tools.AssertLatestWinSDK()
-	Tools.AssertPath(UserVars.root, "UserVars.root")
-	Tools.AssertPath(UserVars.winsdk, "UserVars.winsdk")
-	
+
 	# Get the full path to fxc.exe
 	fxc = Tools.Path(UserVars.winsdk, "bin", UserVars.winsdkvers, "x64", "fxc.exe")
-	Tools.AssertPath(fxc)
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
 	if dbg:
@@ -45,16 +42,22 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	# Show the command line options
 	if trace:
-		print(f"pp:{str(pp)}  obj:{str(obj)}  debug:{str(dbg)}")
+		print(f"trace:{str(trace)} debug:{str(dbg)} obj:{str(obj)} pp:{str(pp)}")
 
 	# Find the source and output directories
-	_,fname = os.path.split(fullpath)
+	fullpath = Tools.Path(fullpath)
+	fdir,fname = os.path.split(fullpath)
 	ftitle,extn  = os.path.splitext(fname)
-	if trace: print("File: " + ftitle + extn)
+	if trace: print(f"File: {fdir}\{ftitle}{extn}")
 
-	outdir = os.path.join(UserVars.root, "projects\\rylogic\\view3d\\shaders\\hlsl\\compiled", config)
-	os.makedirs(outdir, exist_ok=True)
+	# Determine the output directory
+	outdir = fdir
+	while not outdir.endswith("hlsl"):
+		outdir,x = os.path.split(outdir)
+		if x == '': raise RuntimeError(f"Shader file {fullpath} is not within an 'hlsl' directory")
+	outdir = os.path.join(outdir, "compiled", config)
 	if trace: print("Output directory: " + outdir)
+	os.makedirs(outdir, exist_ok=True)
 
 	# Careful with shader versions, if you bump up from 4_0 you'll need to change the
 	# minimum feature level in view3d.
@@ -153,9 +156,8 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 # Run as standalone script
 if __name__ == "__main__":
 	try:
-		#sys.argv = [
-		#	"R:\\software\\SDK\\rylogic\\script\\BuildShader.py",
-		#	"R:\\software\\SDK\\rylogic\\projects\\renderer11\\shaders\\hlsl\\screenspace\\point_sprites.hlsl",
+		#sys.argv = ["",
+		#	"P:\\pr2\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\screenspace\\point_sprites.hlsl",
 		#	"x86", "debug", "dbg"]
 
 		trace = False

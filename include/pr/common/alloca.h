@@ -75,14 +75,14 @@ namespace pr
 
 
 // Allocate stack memory for an array of any type (constructors and destructors called)
-// Use: MyType* ptr = PR_ALLOCA(ptr, MyType, 4);
+// Use: auto ptr = PR_ALLOCA(ptr, MyType, 4);
 #define PR_ALLOCA(pointer, type, count)\
-	0;\
-	pr::AllocAScope<type> alloca_scope_##_pointer(pointer, (count), _alloca((count)*sizeof(type)))
+	static_cast<type*>(nullptr);\
+	pr::AllocAScope<type> alloca_scope_##pointer(pointer, (count), _alloca((count)*sizeof(type)))
 
 
 // Allocate stack or heap memory for an array of any type (constructors and destructors called)
-// Use: MyType* ptr = PR_MALLOCA(ptr, MyType, 4);
+// Use: auto ptr = PR_MALLOCA(ptr, MyType, 4);
 #define PR_MALLOCA(pointer, type, count)\
-	0;\
-	pr::MAllocAScope<type> malloca_scope_##_pointer(pointer, (count), _malloca((count)*sizeof(type)))
+	static_cast<type*>(nullptr);\
+	pr::MAllocAScope<type> malloca_scope_##pointer(pointer, (count), _malloca((count)*sizeof(type)))

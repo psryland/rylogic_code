@@ -35,6 +35,7 @@
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/features.h"

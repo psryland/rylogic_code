@@ -5,11 +5,18 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/utility/gpu_sync.h"
 
 namespace pr::rdr12
 {
 	struct Window
 	{
+		// Notes:
+		//  - A window wraps a HWND and contains a SwapChain.
+		//  - A window can contain multiple Scenes, each scene contains a command list.
+		//  - Scene command lists are executed in the order of the scenes within the window.
+		//  - A window where HWND = nullptr, is used for rendering to off-screen render targets only.
+
 		Renderer*                          m_rdr;              // The owning renderer
 		HWND                               m_hwnd;             // The window handle this window is bound to
 		DXGI_FORMAT                        m_db_format;        // The format of the depth buffer
@@ -19,7 +26,7 @@ namespace pr::rdr12
 		D3DPtr<IDXGISwapChain3>            m_swap_chain;       // The swap chain bound to the window handle
 		D3DPtr<ID3D12DescriptorHeap>       m_rtv_heap;         // 
 		D3DPtr<ID3D12Resource>             m_main_rt[3];       // Render targets from the swap chain
-		D3DPtr<ID3D12CommandAllocator>     m_cmd_alloc;        // Command list allocator
+		D3DPtr<ID3D12CommandAllocator>     m_cmd_alloc;        // Command list allocator //todo there should be one of these for each bb
 		D3DPtr<ID3D12GraphicsCommandList>  m_cmd_list;         // Main command list for this window
 		D3DPtr<ID3D12PipelineState>        m_pipeline_state;   // 
 		//D3DPtr<ID3D12ShaderResourceView> m_main_srv;         // Shader resource view of the render target
@@ -27,9 +34,7 @@ namespace pr::rdr12
 		D3DPtr<ID2D1DeviceContext>         m_d2d_dc;           // The device context for D2D
 		//D3DPtr<ID3D12Query>              m_query;            // The interface for querying the GPU
 		//Texture2DPtr                     m_main_rt;          // The render target as a texture
-		D3DPtr<ID3D12Fence>                m_fence;
-		uint64_t                           m_issue;            // The issue number for the last queued command list
-		Handle                             m_event_fence;
+		GpuSync                            m_gpu_sync;         // 
 		int                                m_bb_count;         // The number of back buffers in the swap chain
 		int                                m_bb_index;         // The current back buffer to draw to
 		UINT                               m_vsync;            // Present SyncInterval value
@@ -42,9 +47,8 @@ namespace pr::rdr12
 
 		// Access the renderer manager classes
 		Renderer& rdr() const;
-		ModelManager& mdl_mgr() const;
+		ResourceManager& res_mgr() const;
 		ShaderManager& shdr_mgr() const;
-		TextureManager& tex_mgr() const;
 		BlendStateManager& bs_mgr() const;
 		DepthStateManager& ds_mgr() const;
 		RasterStateManager& rs_mgr() const;

@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/settings.h"
+#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/utility/features.h"
 #include "pr/view3d-12/utility/eventargs.h"
 
@@ -21,44 +22,62 @@ namespace pr::rdr12
 		using TaskQueue = std::vector<std::future<void>>;
 		using PollCBList = std::vector<pr::StaticCB<void>>;
 
-		DWORD                      m_main_thread_id;
-		RdrSettings                m_settings;
-		FeatureSupport             m_features;
-		D3DPtr<ID3D12Device1>      m_d3d_device;
-		D3DPtr<ID3D12CommandQueue> m_cmd_queue;
-		D3DPtr<ID2D1Factory1>      m_d2dfactory;
-		D3DPtr<IDWriteFactory>     m_dwrite;
-		D3DPtr<ID2D1Device>        m_d2d_device;
-		std::recursive_mutex       m_d3d_mutex;
-		std::mutex                 m_mutex_task_queue;
-		TaskQueue                  m_task_queue;
-		bool                       m_last_task;
-		PollCBList                 m_poll_callbacks;
-		HWND                       m_dummy_hwnd;
-		std::atomic_int            m_id32_src;
+		// Renderer state
+		struct RdrState
+		{
+			// This is needed so that the Dx12 device is created before the managers are constructed.
+			RdrSettings                m_settings;
+			FeatureSupport             m_features;
+			D3DPtr<ID3D12Device1>      m_d3d_device;
+			D3DPtr<ID3D12CommandQueue> m_cmd_queue;
+			D3DPtr<ID2D1Factory1>      m_d2dfactory;
+			D3DPtr<IDWriteFactory>     m_dwrite;
+			D3DPtr<ID2D1Device>        m_d2d_device;
+			DWORD                      m_main_thread_id;
+
+			RdrState(RdrSettings const& settings);
+			~RdrState();
+		};
+
+		// Members
+		RdrState             m_state;
+		std::recursive_mutex m_d3d_mutex;
+		std::mutex           m_mutex_task_queue;
+		TaskQueue            m_task_queue;
+		bool                 m_last_task;
+		PollCBList           m_poll_callbacks;
+		HWND                 m_dummy_hwnd;
+		std::atomic_int      m_id32_src;
 
 		// These manager classes form part of the public interface of the renderer
 		// Declared last so that events are fully constructed first.
 		// Note: model manager is declared last so that it is destructed first
+		ResourceManager m_res_mgr;
 		//BlendStateManager m_bs_mgr;
 		//DepthStateManager m_ds_mgr;
 		//RasterStateManager m_rs_mgr;
-		//TextureManager m_tex_mgr;
 		//ShaderManager m_shdr_mgr;
 		//ModelManager m_mdl_mgr;
 
 	public:
 
 		explicit Renderer(RdrSettings const& settings);
+		Renderer(Renderer const&) = delete;
+		Renderer& operator=(Renderer const&) = delete;
 		~Renderer();
 
 		// Access the renderer manager classes
-		ModelManager& mdl_mgr() const;
-		ShaderManager& shdr_mgr() const;
-		TextureManager& tex_mgr() const;
-		BlendStateManager& bs_mgr() const;
-		DepthStateManager& ds_mgr() const;
-		RasterStateManager& rs_mgr() const;
+		Renderer& rdr();
+		ResourceManager const& res_mgr() const;
+		ShaderManager const& shdr_mgr() const;
+		BlendStateManager const& bs_mgr() const;
+		DepthStateManager const& ds_mgr() const;
+		RasterStateManager const& rs_mgr() const;
+		ResourceManager& res_mgr();
+		ShaderManager& shdr_mgr();
+		BlendStateManager& bs_mgr();
+		DepthStateManager& ds_mgr();
+		RasterStateManager& rs_mgr();
 
 		// Read access to the initialisation settings
 		RdrSettings const& Settings() const;
@@ -71,6 +90,9 @@ namespace pr::rdr12
 
 		// Return the current desktop DPI (Fall back if window DPI not available)
 		v2 SystemDpi() const;
+
+		// Return info about the available video memory
+		DXGI_QUERY_VIDEO_MEMORY_INFO GPUMemoryInfo() const;
 
 		// Generate a unique Id on each call
 		int NewId32();
@@ -133,13 +155,13 @@ namespace pr::rdr12
 		// Synchronise access to D3D/D2D interfaces
 		class Lock
 		{
-			Renderer& m_rdr;
+			Renderer::RdrState& m_rdr;
 			std::lock_guard<std::recursive_mutex> m_lock;
 
 		public:
 
 			Lock(Renderer& rdr)
-				:m_rdr(rdr)
+				:m_rdr(rdr.m_state)
 				,m_lock(rdr.m_d3d_mutex)
 			{}
 
@@ -178,10 +200,21 @@ namespace pr::rdr12
 			{
 				return m_rdr.m_settings.m_adapter.ptr.get();
 			}
+
+			// Append command lists to the cmd queue
+			void ExecuteCommands(ID3D12CommandList* cmds)
+			{
+				ExecuteCommands({cmds});
+			}
+			void ExecuteCommands(std::initializer_list<ID3D12CommandList*> cmd_lists)
+			{
+				CmdQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
+			}
 		};
 
 		// For when I'm searching for the d3d device on this object
 		enum { D3DDevice_IsAccessedViaTheRendererLock };
+		bool AssertMainThread() const;
 	};
 }
 

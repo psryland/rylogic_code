@@ -132,9 +132,9 @@ namespace pr::rdr12
 	}
 	Window::~Window()
 	{
+		m_gpu_sync.Release();
+
 		// Release COM pointers
-		m_event_fence.close();
-		m_fence = nullptr;
 		m_pipeline_state = nullptr;
 		m_cmd_list = nullptr;
 		m_cmd_alloc = nullptr;
@@ -178,17 +178,13 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
-	ModelManager& Window::mdl_mgr() const
+	ResourceManager& Window::res_mgr() const
 	{
-		return rdr().mdl_mgr();
+		return rdr().res_mgr();
 	}
 	ShaderManager& Window::shdr_mgr() const
 	{
 		return rdr().shdr_mgr();
-	}
-	TextureManager& Window::tex_mgr() const
-	{
-		return rdr().tex_mgr();
 	}
 	BlendStateManager& Window::bs_mgr() const
 	{
@@ -299,16 +295,7 @@ namespace pr::rdr12
 		Throw(m_cmd_list->Close()); // Initially we need to close the command list during initialization as it is created in a recording state.
 
 		// Create a fence for GPU synchronization.
-		// The fence as a signalling mechanism to notify when the GPU is completely done rendering the command list that we submitted via the command queue.
-		// GPU and CPU synchronization is completely up to us to handle in DirectX 12, so fences become a very necessary tool.
-		Throw(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence.m_ptr));
-
-		// Create an event object for the fence.
-		m_event_fence = CreateEventExW(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		Throw(m_event_fence != nullptr, "Creating an event for the thread fence failed");
-		//auto m_fence_value = 1; // Initialize the starting fence value. 
-
-
+		m_gpu_sync.Init(device);
 
 		//// Get the back buffer so we can copy its properties
 		//D3DPtr<ID3D11Texture2D> back_buffer;
@@ -425,8 +412,8 @@ namespace pr::rdr12
 		// In the fourth step we set the clear color and clear the render target using that color and submit that to the command list.
 
 		// Then set the color to clear the window to.
-		float bgra[4] = {0.8f, 0.2f, 0.3f, 1.0f};
-		m_cmd_list->ClearRenderTargetView(rtv_handle, bgra, 0, nullptr);
+		float rgba[4] = {1.0f, 1.0f, 0.0f, 1.0f};
+		m_cmd_list->ClearRenderTargetView(rtv_handle, rgba, 0, nullptr);
 	
 		// And finally we then set the state of the back buffer to transition into a presenting state and store that in the command list.
 
@@ -451,23 +438,15 @@ namespace pr::rdr12
 		// For this tutorial we just wait infinitely until it's done this single command list.
 		// However you can get optimisations by doing other processing while waiting for the GPU to finish.
 
-		// Signal and increment the fence value.
-		Throw(lock.CmdQueue()->Signal(m_fence.get(), ++m_issue));
-
-		// Wait until the GPU is done rendering.
-		if (m_fence->GetCompletedValue() < m_issue)
-		{
-			Throw(m_fence->SetEventOnCompletion(m_issue, m_event_fence));
-			WaitForSingleObject(m_event_fence, INFINITE);
-		}
+		// Add a sync point, and wait
+		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
+		m_gpu_sync.Wait();
 
 		// For the next frame swap to the other back buffer using the alternating index.
 
 		// Alternate the back buffer index back and forth between 0 and 1 each frame.
-		m_bb_index = (m_bb_count + 1) % m_bb_count;
+		m_bb_index = (m_bb_index + 1) % m_bb_count;
 	}
-
-
 
 	// Returns the size of the current render target
 	iv2 Window::RenderTargetSize() const

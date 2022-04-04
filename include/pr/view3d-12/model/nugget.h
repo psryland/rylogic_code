@@ -5,11 +5,11 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 //#include "pr/view3d/render/state_block.h"
-#include "pr/view3d/render/sortkey.h"
+#include "pr/view3d-12/render/sortkey.h"
 //#include "pr/view3d/render/drawlist_element.h"
 //#include "pr/view3d/shaders/shader_set.h"
 //#include "pr/view3d/models/model_buffer.h"
-//#include "pr/view3d/textures/texture_2d.h"
+#include "pr/view3d-12/texture/texture_2d.h"
 //#include "pr/view3d/textures/texture_cube.h"
 
 namespace pr::rdr12
@@ -49,6 +49,7 @@ namespace pr::rdr12
 	//    ModelPtr's that could mean models contain nuggets which contain references to them-
 	//    selves, meaning the reference count will not automatically clean up the model.
 
+	// Flags for nuggets
 	enum class ENuggetFlag :int
 	{
 		None = 0,
@@ -65,44 +66,36 @@ namespace pr::rdr12
 		// Excluded from shadow map render steps
 		ShadowCastExclude = 1 << 3,
 
+		// Can overlap with other nuggets.
+		// Set this flag to true if you want to add a nugget that overlaps the range
+		// of an existing nugget. For simple models, overlapping nugget ranges is
+		// usually an error, but in advanced cases it isn't.
+		RangesCanOverlap = 1 << 4,
+
 		_flags_enum,
 	};
-#if 0 // todo
+
 	// Nugget data. Common base for NuggetProps and Nugget
 	struct NuggetData
 	{
 		ETopo          m_topo;                  // The primitive topology for this nugget
 		EGeom          m_geom;                  // The valid geometry components within this range
-		ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
+		//ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
 		Texture2DPtr   m_tex_diffuse;           // Diffuse texture
 		Colour32       m_tint;                  // Per-nugget tint
-		BSBlock        m_bsb;                   // Rendering states
-		DSBlock        m_dsb;                   // Rendering states
-		RSBlock        m_rsb;                   // Rendering states
+		//BSBlock        m_bsb;                   // Rendering states
+		//DSBlock        m_dsb;                   // Rendering states
+		//RSBlock        m_rsb;                   // Rendering states
 		SortKey        m_sort_key;              // A base sort key for this nugget
 		float          m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
 		ENuggetFlag    m_nflags;                // Flags for boolean properties of the nugget
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
-		// When copied to the nugget collection for the model they are converted to model buffer relative ranges.
 		// If the ranges are zero length, they are assume to mean the entire model
 		Range m_vrange;
 		Range m_irange;
 
 		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
-	};
-
-	// Nugget construction data
-	struct NuggetProps :NuggetData
-	{
-		// Set this flag to true if you want to add a nugget that overlaps the range
-		// of an existing nugget. This is used when rendering a model using multiple
-		// passes, but for simple models, it's usually an error if the nugget ranges
-		// overlap, but in advanced cases it isn't.
-		bool m_range_overlaps;
-
-		NuggetProps(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
-		explicit NuggetProps(NuggetData const& data);
 	};
 
 	// A nugget is a sub range within a model buffer containing any data needed to render
@@ -112,23 +105,35 @@ namespace pr::rdr12
 	struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>, NuggetData
 	{
 		static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
-
-		ModelBuffer* m_model_buffer;  // The vertex and index buffers.
-		size_t       m_prim_count;    // The number of primitives in this nugget
-		Model*       m_owner;         // The model that this nugget belongs to (for debugging mainly)
-		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget
-		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
+		
+		Model*       m_model;         // The model that owns this nugget.
+		size_t       m_prim_count;    // The number of primitives in this nugget.
+		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget.
 		EFillMode    m_fill_mode;     // Fill mode for this nugget
 		ECullMode    m_cull_mode;     // Cull mode for this nugget
+		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
 		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
 
-		Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner);
+		Nugget(NuggetData const& ndata, Model* model);
 		~Nugget();
 
 		// Renderer access
 		Renderer& rdr() const;
-		ModelManager& mdl_mgr() const;
+		ResourceManager& res_mgr() const;
 
+		// True if this nugget requires alpha blending
+		bool RequiresAlpha() const;
+		void UpdateAlphaStates();
+
+		// Get/Set the fill mode for this nugget
+		EFillMode FillMode() const;
+		void FillMode(EFillMode fill_mode);
+
+		// Get/Set the cull mode for this nugget
+		ECullMode CullMode() const;
+		void CullMode(ECullMode fill_mode);
+
+#if 0 // todo
 		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 		SortKey SortKey(ERenderStep rstep) const;
 
@@ -165,21 +170,7 @@ namespace pr::rdr12
 				nug.AddToDrawlist(drawlist, inst, sko, id);
 			}
 		}
-
-		// True if this nugget requires alpha blending
-		bool RequiresAlpha() const;
-		void UpdateAlphaStates();
-
-		// Get/Set the fill mode for this nugget
-		EFillMode FillMode() const;
-		void FillMode(EFillMode fill_mode);
-
-		// Get/Set the cull mode for this nugget
-		ECullMode CullMode() const;
-		void CullMode(ECullMode fill_mode);
-
-		// Delete this nugget, removing it from the owning model
-		void Delete();
+	#endif
 
 		// Delete any dependent nuggets based on 'pred'
 		template <typename Pred>
@@ -189,6 +180,9 @@ namespace pr::rdr12
 			for (;!nuggets.empty();)
 				nuggets.front().Delete();
 		}
+
+		// Delete this nugget, removing it from the owning model
+		void Delete();
 
 	private:
 
@@ -200,5 +194,4 @@ namespace pr::rdr12
 		// True if this nugget should be rendered
 		bool Visible() const;
 	};
-	#endif
 }

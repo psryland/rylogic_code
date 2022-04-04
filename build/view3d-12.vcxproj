@@ -37,67 +37,44 @@
   <!-- Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
-    <Lib>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
-    <Lib>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
-    <Lib>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions />
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
-    <Lib>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
-    </Lib>
   </ItemDefinitionGroup>
   <!-- Files -->
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\window.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\model\model.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\model\nugget.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_manager.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene_camera.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_2d.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_base.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp" />
   </ItemGroup>
@@ -108,17 +85,62 @@
     <ClInclude Include="..\include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="..\include\pr\view3d-12\model\model.h" />
+    <ClInclude Include="..\include\pr\view3d-12\model\model_manager.h" />
+    <ClInclude Include="..\include\pr\view3d-12\model\model_desc.h" />
     <ClInclude Include="..\include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="..\include\pr\view3d-12\model\vertex_layout.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\drawlist_element.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\render_step.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\sortkey.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\image.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\stock_resources.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene_camera.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_2d.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_base.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_desc.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\features.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\gpu_sync.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\map_scope.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\screen_space_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\functions.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\geometry.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\vector.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\gbuffer.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\lighting\phong_lighting.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\shadow\shadow_cast.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\env_map.hlsli" />
+    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\diagnostic_cbuf.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\dslighting.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\gbuffer.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\shadow\shadow_map.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward_radial_fade.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\ray_cast.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\point_sprites.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\show_normals.hlsl" />
+  </ItemGroup>
+  <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

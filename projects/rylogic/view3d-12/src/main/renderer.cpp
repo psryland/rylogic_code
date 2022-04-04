@@ -4,6 +4,8 @@
 //*********************************************
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/config.h"
+#include "pr/view3d-12/texture/texture_base.h"
+#include "pr/view3d-12/texture/texture_2d.h"
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -40,23 +42,16 @@ namespace pr::rdr12
 		return DefWindowProcW(hwnd, message, wparam, lparam);
 	}
 
-	// Constructor
-	Renderer::Renderer(RdrSettings const& settings)
-		:m_main_thread_id(GetCurrentThreadId())
-		,m_settings(settings)
+	// Create Dx interface pointers
+	Renderer::RdrState::RdrState(RdrSettings const& settings)
+		:m_settings(settings)
 		,m_features()
 		,m_d3d_device()
 		,m_cmd_queue()
 		,m_d2dfactory()
 		,m_dwrite()
 		,m_d2d_device()
-		,m_d3d_mutex()
-		,m_mutex_task_queue()
-		,m_task_queue()
-		,m_last_task()
-		,m_poll_callbacks()
-		,m_dummy_hwnd()
-		,m_id32_src()
+		,m_main_thread_id(GetCurrentThreadId())
 	{
 		try
 		{
@@ -130,13 +125,73 @@ namespace pr::rdr12
 				// Create a D2D device
 				Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
 			}
+		}
+		catch (...)
+		{
+			this->~RdrState();
+			throw;
+		}
+	}
+	Renderer::RdrState::~RdrState()
+	{
+		// Release COM pointers
+		m_d2dfactory = nullptr;
+		m_dwrite = nullptr;
 
+		// Do reference count checking
+		if (m_d2d_device != nullptr)
+		{
+			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d2d_device.RefCount());
+			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the d2d device");
+			m_d2d_device = nullptr;
+		}
+		if (m_cmd_queue != nullptr)
+		{
+			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_cmd_queue.RefCount());
+			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the command queue");
+			//m_cmd_queue->OMSetRenderTargets(0, 0, 0);
+			m_cmd_queue = nullptr;
+		}
+		if (m_d3d_device != nullptr)
+		{
+			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
+			{
+				//// Note: this will report that the D3D device is still live
+				//D3DPtr<ID3D12Debug> dbg;
+				//Throw(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
+				//Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+			}
+			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d3d_device.RefCount());
+			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the dx device");
+			m_d3d_device = nullptr;
+		}
+	}
+
+	// Constructor
+	Renderer::Renderer(RdrSettings const& settings)
+		:m_state(settings)
+		,m_d3d_mutex()
+		,m_mutex_task_queue()
+		,m_task_queue()
+		,m_last_task()
+		,m_poll_callbacks()
+		,m_dummy_hwnd()
+		,m_id32_src()
+		//BlendStateManager m_bs_mgr;
+		//DepthStateManager m_ds_mgr;
+		//RasterStateManager m_rs_mgr;
+		,m_res_mgr(rdr())
+		//ShaderManager m_shdr_mgr;
+		//ModelManager m_mdl_mgr;
+	{
+		try
+		{
 			// Register a window class for the dummy window
 			WNDCLASSEXW wc = {sizeof(WNDCLASSEXW)};
 			wc.style         = 0;
 			wc.cbClsExtra    = 0;
 			wc.cbWndExtra    = 0;
-			wc.hInstance     = m_settings.m_instance;
+			wc.hInstance     = m_state.m_settings.m_instance;
 			wc.hIcon         = nullptr;
 			wc.hIconSm       = nullptr;
 			wc.hCursor       = nullptr;
@@ -170,83 +225,69 @@ namespace pr::rdr12
 		}
 
 		// Un-register the dummy window class
-		::UnregisterClassW(BeginInvokeWndClassName, m_settings.m_instance);
-
-		// Release COM pointers
-		m_d2dfactory = nullptr;
-		m_dwrite = nullptr;
-
-		// Do reference count checking
-		if (m_d2d_device != nullptr)
-		{
-			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d2d_device.RefCount());
-			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the d2d device");
-			m_d2d_device = nullptr;
-		}
-		if (m_cmd_queue != nullptr)
-		{
-			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_cmd_queue.RefCount());
-			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the command queue");
-		//	m_cmd_queue->OMSetRenderTargets(0, 0, 0);
-			m_cmd_queue = nullptr;
-		}
-		if (m_d3d_device != nullptr)
-		{
-			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
-			{
-				//// Note: this will report that the D3D device is still live
-				//D3DPtr<ID3D12Debug> dbg;
-				//Throw(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
-				//Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
-			}
-			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d3d_device.RefCount());
-			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the dx device");
-			m_d3d_device = nullptr;
-		}
+		::UnregisterClassW(BeginInvokeWndClassName, m_state.m_settings.m_instance);
 	}
 
 	// Access the renderer manager classes
-	ModelManager& Renderer::mdl_mgr() const
+	Renderer& Renderer::rdr()
 	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_mdl_mgr;
+		return *this;
 	}
-	ShaderManager& Renderer::shdr_mgr() const
+	ResourceManager const& Renderer::res_mgr() const
+	{
+		return m_res_mgr;
+	}
+	ShaderManager const& Renderer::shdr_mgr() const
 	{
 		throw std::runtime_error("not implemented");
 		//return m_rdr->m_shdr_mgr;
 	}
-	TextureManager& Renderer::tex_mgr() const
-	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_tex_mgr;
-	}
-	BlendStateManager& Renderer::bs_mgr() const
+	BlendStateManager const& Renderer::bs_mgr() const
 	{
 		throw std::runtime_error("not implemented");
 		//return m_rdr->m_bs_mgr;
 	}
-	DepthStateManager& Renderer::ds_mgr() const
+	DepthStateManager const& Renderer::ds_mgr() const
 	{
 		throw std::runtime_error("not implemented");
 		//return m_rdr->m_ds_mgr;
 	}
-	RasterStateManager& Renderer::rs_mgr() const
+	RasterStateManager const& Renderer::rs_mgr() const
 	{
 		throw std::runtime_error("not implemented");
 		//return m_rdr->m_rs_mgr;
+	}
+	ResourceManager& Renderer::res_mgr()
+	{
+		return const_cast<ResourceManager&>(std::as_const(*this).res_mgr());
+	}
+	ShaderManager& Renderer::shdr_mgr()
+	{
+		return const_cast<ShaderManager&>(std::as_const(*this).shdr_mgr());
+	}
+	BlendStateManager& Renderer::bs_mgr()
+	{
+		return const_cast<BlendStateManager&>(std::as_const(*this).bs_mgr());
+	}
+	DepthStateManager& Renderer::ds_mgr()
+	{
+		return const_cast<DepthStateManager&>(std::as_const(*this).ds_mgr());
+	}
+	RasterStateManager& Renderer::rs_mgr()
+	{
+		return const_cast<RasterStateManager&>(std::as_const(*this).rs_mgr());
 	}
 
 	// Read access to the initialisation settings
 	RdrSettings const& Renderer::Settings() const
 	{
-		return m_settings;
+		return m_state.m_settings;
 	}
 
 	// Device supported features
 	FeatureSupport const& Renderer::Features() const
 	{
-		return m_features;
+		return m_state.m_features;
 	}
 
 	// Return the associated HWND. Note: this is not associated with any particular window. 'Window' objects have an hwnd.
@@ -270,6 +311,17 @@ namespace pr::rdr12
 		return v2(dpi, dpi);
 	}
 
+	// Return info about the available video memory
+	DXGI_QUERY_VIDEO_MEMORY_INFO Renderer::GPUMemoryInfo() const
+	{
+		D3DPtr<IDXGIAdapter3> adapter;
+		Throw(m_state.m_settings.m_adapter.ptr->QueryInterface<IDXGIAdapter3>(&adapter.m_ptr));
+
+		DXGI_QUERY_VIDEO_MEMORY_INFO info = {};
+		Throw(adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info));
+		return info;
+	}
+
 	// Generate a unique Id on each call
 	int Renderer::NewId32()
 	{
@@ -279,9 +331,8 @@ namespace pr::rdr12
 	// Execute any pending tasks in the task queue
 	void Renderer::RunTasks()
 	{
-		if (GetCurrentThreadId() != m_main_thread_id)
-			throw std::runtime_error("RunTasks must be called from the main thread");
-
+		AssertMainThread();
+		
 		TaskQueue tasks;
 		{
 			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
@@ -304,9 +355,8 @@ namespace pr::rdr12
 	// Call this during shutdown to flush the task queue and prevent any further tasks from being added.
 	void Renderer::LastTask()
 	{
-		if (GetCurrentThreadId() != m_main_thread_id)
-			throw std::runtime_error("LastTask must be called from the main thread");
-
+		AssertMainThread();
+		
 		// Idempotent
 		if (m_last_task)
 			return;
@@ -323,17 +373,13 @@ namespace pr::rdr12
 	// Add/Remove a callback function that will be polled as fast as the windows message queue will allow
 	void Renderer::AddPollCB(pr::StaticCB<void> cb)
 	{
-		if (GetCurrentThreadId() != m_main_thread_id)
-			throw std::runtime_error("RunTasks must be called from the main thread");
-
+		AssertMainThread();
 		m_poll_callbacks.push_back(cb);
 		Poll();
 	}
 	void Renderer::RemovePollCB(pr::StaticCB<void> cb)
 	{
-		if (GetCurrentThreadId() != m_main_thread_id)
-			throw std::runtime_error("RunTasks must be called from the main thread");
-
+		AssertMainThread();
 		erase_stable(m_poll_callbacks, cb);
 	}
 	
@@ -348,5 +394,11 @@ namespace pr::rdr12
 			::SetTimer(m_dummy_hwnd, UINT_PTR(this), 0, nullptr);
 	}
 
+	// Check the current thread is the main thread
+	bool Renderer::AssertMainThread() const
+	{
+		if (GetCurrentThreadId() == m_state.m_main_thread_id) return true;
+		throw std::runtime_error("RunTasks must be called from the main thread");
+	}
 }
 

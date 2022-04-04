@@ -46,6 +46,10 @@ namespace pr::rdr12
 		// Sign up for back buffer resize events
 		m_eh_resize = wnd.m_rdr->BackBufferSizeChanged += std::bind(&Scene::HandleBackBufferSizeChanged, this, _1, _2);
 	}
+	Scene::~Scene()
+	{
+		SetRenderSteps({});
+	}
 
 	// Access the renderer
 	Renderer& Scene::rdr() const
@@ -60,8 +64,11 @@ namespace pr::rdr12
 	// Set the render steps to use for rendering the scene
 	void Scene::SetRenderSteps(std::initializer_list<ERenderStep> rsteps)
 	{
-		(void)rsteps;
+		// Can't use unique_ptr with #including 'render_step' in the header
+		for (auto& rs : m_render_steps) delete rs;
 		m_render_steps.clear();
+
+		(void)rsteps;
 		//for (auto rs : rsteps)
 		//{
 		//	//switch (rs)
