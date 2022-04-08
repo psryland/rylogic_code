@@ -25,15 +25,19 @@ namespace pr
 		using state_t = State;
 
 		state_t m_state;
-		doit_t m_doit;
 		undo_t m_undo;
 		bool m_dont;
 
+		Scope(state_t const& state, undo_t undo)
+			:m_state(state)
+			,m_undo(undo)
+			,m_dont(false)
+		{
+		}
 		Scope(doit_t doit, undo_t undo)
 			:m_state(doit())
-			, m_doit(doit)
-			, m_undo(undo)
-			, m_dont(false)
+			,m_undo(undo)
+			,m_dont(false)
 		{
 		}
 		~Scope()
@@ -43,7 +47,6 @@ namespace pr
 		}
 		Scope(Scope&& rhs)
 			:m_state(std::move(rhs.m_state))
-			, m_doit(std::move(rhs.m_doit))
 			, m_undo(std::move(rhs.m_undo))
 			, m_dont(rhs.m_dont)
 		{
@@ -53,7 +56,6 @@ namespace pr
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_state, rhs.m_state);
-			std::swap(m_doit, rhs.m_doit);
 			std::swap(m_undo, rhs.m_undo);
 			std::swap(m_dont, rhs.m_dont);
 			return *this;
@@ -68,14 +70,16 @@ namespace pr
 		using doit_t = std::function<void()>;
 		using undo_t = std::function<void()>;
 
-		doit_t m_doit;
 		undo_t m_undo;
 		bool m_dont;
 
+		explicit Scope(undo_t undo)
+			:m_undo(undo)
+			,m_dont(false)
+		{}
 		Scope(doit_t doit, undo_t undo)
-			:m_doit(doit)
-			, m_undo(undo)
-			, m_dont(false)
+			:m_undo(undo)
+			,m_dont(false)
 		{
 			doit();
 		}
@@ -85,16 +89,14 @@ namespace pr
 			m_undo();
 		}
 		Scope(Scope&& rhs)
-			:m_doit(std::move(rhs.m_doit))
-			, m_undo(std::move(rhs.m_undo))
-			, m_dont(rhs.m_dont)
+			:m_undo(std::move(rhs.m_undo))
+			,m_dont(rhs.m_dont)
 		{
 			rhs.m_dont = true;
 		}
 		Scope& operator = (Scope&& rhs)
 		{
 			if (this == &rhs) return *this;
-			std::swap(m_doit, rhs.m_doit);
 			std::swap(m_undo, rhs.m_undo);
 			std::swap(m_dont, rhs.m_dont);
 			return *this;

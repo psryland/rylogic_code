@@ -28,7 +28,7 @@ namespace pr::rdr12
 			// This is needed so that the Dx12 device is created before the managers are constructed.
 			RdrSettings                m_settings;
 			FeatureSupport             m_features;
-			D3DPtr<ID3D12Device1>      m_d3d_device;
+			D3DPtr<ID3D12Device4>      m_d3d_device;
 			D3DPtr<ID3D12CommandQueue> m_cmd_queue;
 			D3DPtr<ID2D1Factory1>      m_d2dfactory;
 			D3DPtr<IDWriteFactory>     m_dwrite;
@@ -53,11 +53,6 @@ namespace pr::rdr12
 		// Declared last so that events are fully constructed first.
 		// Note: model manager is declared last so that it is destructed first
 		ResourceManager m_res_mgr;
-		//BlendStateManager m_bs_mgr;
-		//DepthStateManager m_ds_mgr;
-		//RasterStateManager m_rs_mgr;
-		//ShaderManager m_shdr_mgr;
-		//ModelManager m_mdl_mgr;
 
 	public:
 
@@ -69,15 +64,7 @@ namespace pr::rdr12
 		// Access the renderer manager classes
 		Renderer& rdr();
 		ResourceManager const& res_mgr() const;
-		ShaderManager const& shdr_mgr() const;
-		BlendStateManager const& bs_mgr() const;
-		DepthStateManager const& ds_mgr() const;
-		RasterStateManager const& rs_mgr() const;
 		ResourceManager& res_mgr();
-		ShaderManager& shdr_mgr();
-		BlendStateManager& bs_mgr();
-		DepthStateManager& ds_mgr();
-		RasterStateManager& rs_mgr();
 
 		// Read access to the initialisation settings
 		RdrSettings const& Settings() const;
@@ -166,7 +153,7 @@ namespace pr::rdr12
 			{}
 
 			// Return the D3D device
-			ID3D12Device1* D3DDevice() const
+			ID3D12Device4* D3DDevice() const
 			{
 				return m_rdr.m_d3d_device.get();
 			}

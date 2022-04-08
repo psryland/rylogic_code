@@ -13,8 +13,13 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/utility/map_scope.h"
+#include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
+
+//todo
+// - the resource manager needs to have a deque of descriptors (one for each D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES)
+//   textures should have views (ie. descriptors) created for each view they support.
+// - samplers are an independent resource to textures
 
 namespace pr::rdr12
 {
@@ -38,13 +43,13 @@ namespace pr::rdr12
 		// Create a command allocator and list for use by the resource manager, since it is independent of any windows or scenes.
 		Throw(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_cmd_alloc.m_ptr));
 		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc.get(), nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
-		Throw(m_cmd_list->Close());
 		m_cmd_list->SetName(L"ResourceManager");
 		m_gpu_sync.Init(device);
 
 		// Create stock resources
 		CreateStockTextures();
 		CreateStockModels();
+		FlushToGpu();
 
 		// Close and execute the resource managers setup commands
 		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
@@ -70,14 +75,32 @@ namespace pr::rdr12
 	}
 	ResourceManager::~ResourceManager()
 	{
+		for (auto& tex : m_stock_textures)
+			tex = nullptr;
+		for (auto& mdl : m_stock_models)
+			mdl = nullptr;
+
 		m_gpu_sync.Release();
-		
 	}
 
 	// Renderer access
 	Renderer& ResourceManager::rdr()
 	{
 		return m_rdr;
+	}
+
+	// Start/Stop creating resources
+	void ResourceManager::FlushToGpu()
+	{
+		// Close the command list
+		Throw(m_cmd_list->Close());
+
+		// Execute the command list
+		Renderer::Lock lock(rdr());
+		lock.ExecuteCommands(m_cmd_list.get());
+
+		// Prepare the command list
+		Throw(m_cmd_list->Reset(m_cmd_alloc.get(), nullptr));
 	}
 
 	// Create a model.
@@ -87,8 +110,6 @@ namespace pr::rdr12
 			throw std::runtime_error("Attempt to create 0-length model vertex buffer");
 		if (mdesc.m_ib.ElemCount == 0)
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
-		if (mdesc.m_ib.Format != DXGI_FORMAT_R16_UINT && mdesc.m_ib.Format != DXGI_FORMAT_R32_UINT)
-			throw std::runtime_error(Fmt("Index buffer format %d is not supported", mdesc.m_ib.Format));
 
 		Renderer::Lock lock(m_rdr);
 		auto device = lock.D3DDevice();
@@ -104,7 +125,7 @@ namespace pr::rdr12
 				nullptr,
 				__uuidof(ID3D12Resource),
 				(void**)&vb.m_ptr));
-			Throw(vb->SetName(FmtS(L"%s:VB:%d", mdesc.m_name.c_str(), mdesc.m_vb.ElemCount)));
+			Throw(vb->SetName(FmtS(L"%S:VB:%d", mdesc.m_name.c_str(), mdesc.m_vb.ElemCount)));
 		
 			// Initialise the vertex data
 			if (mdesc.m_vb.Data != nullptr)
@@ -134,7 +155,7 @@ namespace pr::rdr12
 				nullptr,
 				__uuidof(ID3D12Resource),
 				(void**)&ib.m_ptr));
-			Throw(ib->SetName(FmtS(L"%s:IB:%d", mdesc.m_name.c_str(), mdesc.m_ib.ElemCount)));
+			Throw(ib->SetName(FmtS(L"%S:IB:%d", mdesc.m_name.c_str(), mdesc.m_ib.ElemCount)));
 
 			// Initialise the index data
 			if (mdesc.m_ib.Data != nullptr)
@@ -153,12 +174,8 @@ namespace pr::rdr12
 			m_cmd_list->ResourceBarrier(1, &barrier);
 		}
 
-		// Execute the command list
-		Throw(m_cmd_list->Close());
-		lock.ExecuteCommands(m_cmd_list.get());
-
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.ElemCount, mdesc.m_ib.ElemCount, vb.get(), ib.get()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.ElemCount, mdesc.m_ib.ElemCount, mdesc.m_vb.Stride(), mdesc.m_ib.Stride(), vb.get(), ib.get(), mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}
@@ -174,9 +191,6 @@ namespace pr::rdr12
 		Renderer::Lock lock(rdr());
 		auto device = lock.D3DDevice();
 
-		// Prepare the command list
-		Throw(m_cmd_list->Reset(m_cmd_alloc.get(), nullptr));
-
 		// Create the texture
 		D3DPtr<ID3D12Resource> tex;
 		{
@@ -186,7 +200,7 @@ namespace pr::rdr12
 				D3D12_HEAP_FLAG_NONE,           // no flags
 				&tdesc.m_tdesc,                 // the description of the texture
 				D3D12_RESOURCE_STATE_COPY_DEST, // the texture will be copied from the upload heap to here, so it starts out as copy dest state
-				&tdesc.m_clear_value,           // used for render targets and depth/stencil buffers
+				tdesc.m_clear_value.has_value() ? &tdesc.m_clear_value.value() : nullptr, // used for render targets and depth/stencil buffers
 				__uuidof(ID3D12Resource),
 				(void**)&tex.m_ptr));
 			Throw(tex->SetName(tdesc.m_name.c_str()));
@@ -207,10 +221,6 @@ namespace pr::rdr12
 			auto barrier = ResourceBarrier::Transition(tex.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			m_cmd_list->ResourceBarrier(1, &barrier);
 		}
-
-		// Execute the command list
-		Throw(m_cmd_list->Close());
-		lock.ExecuteCommands(m_cmd_list.get());
 
 		// todo
 		(void)tdesc.m_sdesc;
@@ -236,9 +246,21 @@ namespace pr::rdr12
 	}
 
 	// Return a stock texture
-	Texture2DPtr ResourceManager::FindTexture(EStockTexture stock) const
+	Texture2DPtr ResourceManager::FindTexture(EStockTexture id) const
 	{
-		return m_stock_textures[s_cast<int>(stock)];
+		if (s_cast<size_t>(id) > _countof(m_stock_textures))
+			throw std::runtime_error(FmtS("Stock texture %s does not exist", Enum<EStockTexture>::ToStringA(id)));
+
+		return m_stock_textures[s_cast<int>(id)];
+	}
+
+	// Return a pointer to a stock model
+	ModelPtr ResourceManager::FindModel(EStockModel id) const
+	{
+		if (s_cast<size_t>(id) > _countof(m_stock_models))
+			throw std::runtime_error(FmtS("Stock model %s does not exist", Enum<EStockModel>::ToStringA(id)));
+
+		return m_stock_models[s_cast<int>(id)];
 	}
 
 	// Create the basic textures that exist from startup
@@ -396,9 +418,7 @@ namespace pr::rdr12
 	void ResourceManager::CreateStockModels()
 	{
 		{// Basis/focus point model
-			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays
-			constexpr Vert verts[6] =
-			{
+			constexpr Vert verts[] = {
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
 				{v4( 1.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFF00FF00, v4Zero, v2Zero},
@@ -406,13 +426,15 @@ namespace pr::rdr12
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
 				{v4( 0.0f,  0.0f,  1.0f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
 			};
-			uint16_t const idxs[] =
-			{
+			constexpr uint16_t idxs[] = {
 				0, 1, 2, 3, 4, 5,
 			};
-			BBox const bbox(v4(0.5f, 0.5f, 0.5f, 1.0f), v4(1,1,1,0));
+			constexpr BBox bbox = {
+				v4(0.5f, 0.5f, 0.5f, 1.0f),
+				v4(1, 1, 1, 0)
+			};
 
-			ModelDesc mdesc(verts, idxs, bbox, L"basis");
+			ModelDesc mdesc(verts, idxs, bbox, "basis");
 			auto ptr = CreateModel(mdesc);
 
 			NuggetData nug(ETopo::LineList, EGeom::Vert|EGeom::Colr);
@@ -421,102 +443,105 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::Basis)] = ptr;
 		}
-		#if 0 // todo
 		{// Unit quad in Z = 0 plane
-			Vert const verts[4] =
-			{
-				{v4(-0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.9999f)},
-				{v4( 0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.9999f)},
-				{v4( 0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.0000f)},
-				{v4(-0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.0000f)},
+			constexpr Vert verts[] = {
+				{v4(-0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.9999f)},
+				{v4( 0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.9999f,0.9999f)},
+				{v4( 0.5f, 0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.9999f,0.0000f)},
+				{v4(-0.5f, 0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.0000f)},
 			};
-			uint16_t const idxs[] =
-			{
+			constexpr uint16_t idxs[] = {
 				0, 1, 2, 0, 2, 3
 			};
-			BBox const bbox(v4Origin, v4(1,1,0,0));
+			constexpr BBox bbox = {
+				v4Origin,
+				v4(1, 1, 0, 0)
+			};
 
-			MdlSettings s(verts, idxs, bbox, "unit quad");
-			m_unit_quad = CreateModel(s);
+			ModelDesc mdesc(verts, idxs, bbox, "unit quad");
+			auto ptr = CreateModel(mdesc);
 
-			NuggetProps n(ETopo::TriList, Vert::GeomMask);
-			m_unit_quad->CreateNugget(n);
+			NuggetData nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
+			ptr->CreateNugget(nug);
+
+			m_stock_models[s_cast<int>(EStockModel::UnitQuad)] = ptr;
 		}
 		{// Bounding box cube
-			Vert const verts[] =
-			{
-				{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+			constexpr Vert verts[] = {
+				{v4(-0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(-0.5f, -0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
 			};
-			uint16_t const idxs[] =
-			{
+			constexpr uint16_t idxs[] = {
 				0, 1, 1, 2, 2, 3, 3, 0,
 				4, 5, 5, 6, 6, 7, 7, 4,
 				0, 4, 1, 5, 2, 6, 3, 7,
 			};
-			BBox const bbox(v4Origin, v4(1,1,1,0));
+			constexpr BBox bbox = {
+				v4Origin,
+				v4(1, 1, 1, 0)
+			};
 
-			MdlSettings s(verts, idxs, bbox, "bbox cube");
-			m_bbox_model = CreateModel(s);
+			ModelDesc mdesc(verts, idxs, bbox, "bbox cube");
+			auto ptr = CreateModel(mdesc);
 
-			NuggetProps n(ETopo::LineList, EGeom::Vert|EGeom::Colr);
-			n.m_nflags = SetBits(n.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-			m_bbox_model->CreateNugget(n);
+			NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
+			nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
+			ptr->CreateNugget(nug);
+
+			m_stock_models[s_cast<int>(EStockModel::BBoxModel)] = ptr;
 		}
 		{// Selection box
 			// Create the selection box model
 			constexpr float sz = 1.0f;
 			constexpr float dd = 0.8f;
-			Vert const verts[] =
-			{
-				{v4(-sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+			constexpr Vert verts[] = {
+				{v4(-sz, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-dd, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(dd, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(dd, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(-sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-dd, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(-sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-dd, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(dd, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(dd, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 
-				{v4(-sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-dd, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
 			};
-			uint16_t const idxs[] =
-			{
+			constexpr uint16_t idxs[] = {
 				0,  1,  0,  2,  0,  3,
 				4,  5,  4,  6,  4,  7,
 				8,  9,  8, 10,  8, 11,
@@ -526,16 +551,20 @@ namespace pr::rdr12
 				24, 25, 24, 26, 24, 27,
 				28, 29, 28, 30, 28, 31,
 			};
-			BBox const bbox(v4Origin, v4(1,1,1,0));
+			constexpr BBox bbox = {
+				v4Origin,
+				v4(1, 1, 1, 0)
+			};
 
-			MdlSettings s(verts, idxs, bbox, "selection box");
-			m_selection_box = CreateModel(s);
+			ModelDesc mdesc(verts, idxs, bbox, "selection box");
+			auto ptr = CreateModel(mdesc);
 
-			NuggetProps n(ETopo::LineList, EGeom::Vert);
-			n.m_nflags = SetBits(n.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-			m_selection_box->CreateNugget(n);
+			NuggetData nug(ETopo::LineList, EGeom::Vert);
+			nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
+			ptr->CreateNugget(nug);
+
+			m_stock_models[s_cast<int>(EStockModel::SelectionBox)] = ptr;
 		}
-		#endif
 	}
 
 	// Return a staging buffer that is at least 'size' big

@@ -8,13 +8,17 @@
 
 namespace pr::rdr12
 {
-	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, ID3D12Resource* vb, ID3D12Resource* ib)
+	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, char const* name)
 		:m_mgr(&mgr)
 		,m_vcount(vcount)
 		,m_icount(icount)
-		,m_nuggets()
+		,m_vstride(vstride)
+		,m_istride(istride)
 		,m_vb(vb, true)
 		,m_ib(ib, true)
+		,m_nuggets()
+		,m_name(name)
+		,m_dbg_flags(EDbgFlags::None)
 	{}
 	Model::~Model()
 	{
@@ -39,8 +43,8 @@ namespace pr::rdr12
 		NuggetData ndata(nugget_data);
 
 		#if PR_DBG_RDR
-		if (ndata.m_vrange.empty() == ndata.m_irange.empty())
-			throw std::runtime_error("Illogical combination of I-Range and V-Range");
+		if (ndata.m_vrange.empty() != ndata.m_irange.empty())
+			throw std::runtime_error(FmtS("Illogical combination of I-Range and V-Range for nugget (%s)", m_name.c_str()));
 		#endif
 
 		// Empty ranges are assumed to mean the entire model
@@ -52,13 +56,13 @@ namespace pr::rdr12
 		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 		#if PR_DBG_RDR
 		if (!IsWithin(Range(0, m_vcount), ndata.m_vrange))
-			throw std::runtime_error("V-Range exceeds the size of this model");
+			throw std::runtime_error(FmtS("V-Range exceeds the size of this model  (%s)", m_name.c_str()));
 		if (!IsWithin(Range(0, m_icount), ndata.m_irange))
-			throw std::runtime_error("I-Range exceeds the size of this model");
+			throw std::runtime_error(FmtS("I-Range exceeds the size of this model (%s)", m_name.c_str()));
 		if (!AllSet(ndata.m_nflags, ENuggetFlag::RangesCanOverlap))
 			for (auto& nug : m_nuggets)
 				if (Intersects(ndata.m_irange, nug.m_irange))
-					throw std::runtime_error("A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
 		#endif
 
 		// Defend against crashes in release...
@@ -74,6 +78,31 @@ namespace pr::rdr12
 	{
 		for (;!m_nuggets.empty();)
 			res_mgr().Delete(&m_nuggets.front());
+	}
+
+	// Return the vertex buffer view
+	D3D12_VERTEX_BUFFER_VIEW const& Model::VBufView() const
+	{
+		static D3D12_VERTEX_BUFFER_VIEW vb_view;
+		return vb_view = D3D12_VERTEX_BUFFER_VIEW
+		{
+			.BufferLocation = m_vb->GetGPUVirtualAddress(),
+			.SizeInBytes = s_cast<UINT>(m_vcount * m_vstride),
+			.StrideInBytes = s_cast<UINT>(m_vstride),
+		};
+	}
+	D3D12_INDEX_BUFFER_VIEW const& Model::IBufView() const
+	{
+		static D3D12_INDEX_BUFFER_VIEW ib_view;
+		return ib_view = D3D12_INDEX_BUFFER_VIEW
+		{
+			.BufferLocation = m_vb->GetGPUVirtualAddress(),
+			.SizeInBytes = s_cast<UINT>(m_icount * m_istride),
+			.Format =
+				m_istride == sizeof(uint32_t) ? DXGI_FORMAT_R32_UINT : 
+				m_istride == sizeof(uint16_t) ? DXGI_FORMAT_R16_UINT :
+				throw std::runtime_error("Unsupported index buffer format"),
+		};
 	}
 
 	// Ref-counting clean up function

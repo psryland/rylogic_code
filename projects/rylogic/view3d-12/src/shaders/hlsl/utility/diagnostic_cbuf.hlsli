@@ -9,7 +9,7 @@
 
 #include "../types.hlsli"
 
-cbuffer CBufFrame :reg(b0)
+cbuffer CBufFrame :reg(b0,0)
 {
 	Camera m_cam;
 	float4 m_colour;

@@ -73,15 +73,18 @@ namespace pr::rdr12
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
 				D3DPtr<ID3D12Debug> dbg;
+				D3DPtr<ID3D12Debug1> dbg1;
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
-				dbg->EnableDebugLayer();
+				Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
+				dbg1->EnableDebugLayer();
+				dbg1->SetEnableGPUBasedValidation(true);
 			}
 
 			// Create the d3d device
 			Throw(D3D12CreateDevice(
 				m_settings.m_adapter.ptr.get(),
 				m_settings.m_feature_level,
-				__uuidof(ID3D12Device1),
+				__uuidof(ID3D12Device4),
 				(void**)&m_d3d_device.m_ptr));
 
 			// Read the supported features
@@ -177,12 +180,7 @@ namespace pr::rdr12
 		,m_poll_callbacks()
 		,m_dummy_hwnd()
 		,m_id32_src()
-		//BlendStateManager m_bs_mgr;
-		//DepthStateManager m_ds_mgr;
-		//RasterStateManager m_rs_mgr;
 		,m_res_mgr(rdr())
-		//ShaderManager m_shdr_mgr;
-		//ModelManager m_mdl_mgr;
 	{
 		try
 		{
@@ -237,45 +235,9 @@ namespace pr::rdr12
 	{
 		return m_res_mgr;
 	}
-	ShaderManager const& Renderer::shdr_mgr() const
-	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_shdr_mgr;
-	}
-	BlendStateManager const& Renderer::bs_mgr() const
-	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_bs_mgr;
-	}
-	DepthStateManager const& Renderer::ds_mgr() const
-	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_ds_mgr;
-	}
-	RasterStateManager const& Renderer::rs_mgr() const
-	{
-		throw std::runtime_error("not implemented");
-		//return m_rdr->m_rs_mgr;
-	}
 	ResourceManager& Renderer::res_mgr()
 	{
 		return const_cast<ResourceManager&>(std::as_const(*this).res_mgr());
-	}
-	ShaderManager& Renderer::shdr_mgr()
-	{
-		return const_cast<ShaderManager&>(std::as_const(*this).shdr_mgr());
-	}
-	BlendStateManager& Renderer::bs_mgr()
-	{
-		return const_cast<BlendStateManager&>(std::as_const(*this).bs_mgr());
-	}
-	DepthStateManager& Renderer::ds_mgr()
-	{
-		return const_cast<DepthStateManager&>(std::as_const(*this).ds_mgr());
-	}
-	RasterStateManager& Renderer::rs_mgr()
-	{
-		return const_cast<RasterStateManager&>(std::as_const(*this).rs_mgr());
 	}
 
 	// Read access to the initialisation settings

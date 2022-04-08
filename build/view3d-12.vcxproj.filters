@@ -64,6 +64,9 @@
     <Filter Include="src\texture">
       <UniqueIdentifier>{7029f1f3-21a3-4092-8f81-a4ef26487871}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\lighting">
+      <UniqueIdentifier>{19470125-330c-4491-b8e2-e8f0b77a8454}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp">
@@ -101,6 +104,18 @@
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\model\nugget.cpp">
       <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\lighting\light.cpp">
+      <Filter>src\lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_forward.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\state_stack.cpp">
+      <Filter>src\render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -155,9 +170,6 @@
     <ClInclude Include="..\include\pr\view3d-12\model\nugget.h">
       <Filter>src\model</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d-12\model\model_manager.h">
-      <Filter>src\model</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h">
       <Filter>src\resource</Filter>
     </ClInclude>
@@ -170,7 +182,7 @@
     <ClInclude Include="..\include\pr\view3d-12\resource\image.h">
       <Filter>src\resource</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d-12\utility\map_scope.h">
+    <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h">
       <Filter>src\utility</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\gpu_sync.h">
@@ -193,6 +205,30 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_desc.h">
       <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\lighting\light.h">
+      <Filter>src\lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\stock_shaders.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_forward.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\render\back_buffer.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_registers.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\state_stack.h">
+      <Filter>src\render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -229,9 +265,6 @@
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_strip.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </CustomBuild>
-    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\cbuf.hlsli">
-      <Filter>src\shaders\hlsl</Filter>
-    </None>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\env_map.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>

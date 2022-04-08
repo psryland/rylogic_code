@@ -2,7 +2,7 @@ import sys, os, re, signal
 import Rylogic as Tools
 import UserVars
 
-sys.argv = ["", "S:\\physics\\sdk\\pinocchio\\lib\\pinocchio.lib"]
+#sys.argv = ["", "S:\\physics\\sdk\\pinocchio\\lib\\pinocchio.lib"]
 try:
 	dumpbin = Tools.Path(UserVars.vs_dir, "VC\\Tools\\MSVC", UserVars.vc_vers, "bin\\Hostx86\\x64\\dumpbin.exe")
 	options = ["/SUMMARY"]
