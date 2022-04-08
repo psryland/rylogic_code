@@ -823,6 +823,10 @@ namespace pr
 			{
 				return To(static_cast<Colour>(c));
 			}
+			static D3DCOLORVALUE To(uint32_t c)
+			{
+				return To(static_cast<Colour>(Colour32(c)));
+			}
 		};
 		#endif
 	}

@@ -397,7 +397,7 @@ namespace pr::rdr
 		for (auto& caster : m_caster)
 		{
 			// Bind the smap as the render target
-			auto bind_smap = CreateScope(
+			auto bind_smap = Scope<void>(
 				[=] { BindRT(&caster); },
 				[=] { BindRT(nullptr); });
 

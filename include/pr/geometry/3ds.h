@@ -543,7 +543,7 @@ namespace pr::geometry::max_3ds
 		// Restore the src position on return because typically we read the file in two
 		// passes. It's convenient to allow the caller to use the same source.
 		auto start = Src<TSrc>::TellPos(src);
-		auto reset_stream = CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+		auto reset_stream = Scope<void>([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
 
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);
@@ -577,7 +577,7 @@ namespace pr::geometry::max_3ds
 
 		// Restore the src position on return
 		auto start = Src<TSrc>::TellPos(src);
-		auto reset_stream = CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+		auto reset_stream = Scope<void>([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
 
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);

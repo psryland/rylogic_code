@@ -20,10 +20,6 @@
 #include <iostream>
 #include <sstream>
 
-
-// Trait for reflected enums
-template <typename T> struct pr_reflected_enum : std::false_type {};
-
 #pragma region Enum Field Expansions
 #define PR_ENUM_NULL(x)
 #define PR_ENUM_EXPAND(x) x
@@ -78,6 +74,7 @@ enum class enum_name base_type\
 };\
 struct enum_name##_\
 {\
+	using reflected_enum_t = enum_name;\
 	using underlying_type_t = std::underlying_type_t<enum_name>;\
 \
 	/* The name of the enum as a string */\
@@ -273,9 +270,12 @@ template <typename Char> inline std::basic_istream<Char>& operator >> (std::basi
 	e = enum_name##_::Parse(s.c_str());\
 	return stream;\
 }\
-/* reflected enum type trait functions*/\
-template <> struct pr_reflected_enum<enum_name> :std::true_type { using type = enum_name##_; };\
+/* Forward declare a function that returns the meta data type for 'enum_name'*/\
+enum_name##_ pr_reflected_enum_metadata(enum_name);\
 /* end of enum macro */
+
+// Meta data type accessor - generic case
+void pr_reflected_enum_metadata(...);
 
 // Declares an enum where values are implicit, 'enum_vals' should be a macro with one parameter; id
 #define PR_DEFINE_ENUM1(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
@@ -293,9 +293,9 @@ template <> struct pr_reflected_enum<enum_name> :std::true_type { using type = e
 // Traits
 namespace pr
 {
-	template <typename T> constexpr bool is_reflected_enum_v = pr_reflected_enum<T>::value;
+	template <typename T> constexpr bool is_reflected_enum_v = !std::is_same_v<void, decltype(pr_reflected_enum_metadata(std::declval<T>()))>;
 	template <typename T> concept ReflectedEnum = is_reflected_enum_v<T>;
-	template <ReflectedEnum T> using Enum = typename pr_reflected_enum<T>::type;
+	template <ReflectedEnum T> using Enum = decltype(pr_reflected_enum_metadata(std::declval<T>()));
 }
 
 #if PR_UNITTESTS

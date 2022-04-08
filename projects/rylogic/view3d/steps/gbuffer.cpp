@@ -173,7 +173,7 @@ namespace pr::rdr
 		SortIfNeeded();
 
 		// Bind the g-buffer to the OM
-		auto bind_gbuffer = pr::CreateScope(
+		auto bind_gbuffer = Scope<void>(
 			[this]{ BindRT(true); },
 			[this]{ BindRT(false); });
 
