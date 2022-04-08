@@ -184,32 +184,6 @@ namespace pr::rdr12
 		for (auto& nug : m_nuggets)
 			nug.CullMode(m_cull_mode);
 	}
-	#if 0 // todo
-	// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
-	SortKey Nugget::SortKey(ERenderStep rstep) const
-	{
-		auto sk = m_sort_key;
-
-		// Set the texture id part of the key if not set already
-		if ((sk & SortKey::TextureIdMask) == 0 && m_tex_diffuse != nullptr)
-			sk |= (m_tex_diffuse->m_sort_id << SortKey::TextureIdOfs) & SortKey::TextureIdMask;
-
-		// Set the shader id part of the key if not set already
-		if ((sk & SortKey::ShaderIdMask) == 0)
-		{
-			auto shdr_id = 0;
-			for (auto& shdr : m_smap[rstep].Enumerate())
-			{
-				if (shdr == nullptr) continue;
-				shdr_id = shdr_id*13 ^ shdr->m_sort_id; // hash the sort ids together
-			}
-			sk |= (shdr_id << SortKey::ShaderIdOfs) & SortKey::ShaderIdMask;
-		}
-
-		return sk;
-	}
-
-	#endif
 
 	// True if this nugget should be rendered
 	bool Nugget::Visible() const

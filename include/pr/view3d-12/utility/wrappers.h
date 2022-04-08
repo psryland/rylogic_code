@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/resource/image.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/shaders/shader_registers.h"
 
 namespace pr::rdr12
 {
@@ -89,17 +90,20 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - Viewports represent an area on the backbuffer, *not* the target HWND.
-		//  - Viewports are in render target space
+		//  - Viewports are in render target space.
 		//    e.g.
 		//     x,y          = 0,0 (not -0.5f,-0.5f)
 		//     width,height = 800,600 (not 1.0f,1.0f)
 		//     depth is normalised from 0.0f -> 1.0f
 		//  - Viewports are measured in render target pixels not DIP or window pixels.
-		//    i.e.  generally, the viewport is not in client space coordinates.
+		//    i.e. generally, the viewport is not in client space coordinates.
 		//  - ScreenW/H should be in DIP
+		//  - Dx12 requires scissor rectangles for all viewports so they're combined here
+		using ScissorRects = pr::vector<RECT, 4, false>;
 
 		int ScreenW; // The screen width (in DIP) that the render target will be mapped to.
 		int ScreenH; // The screen height (in DIP) that the render target will be mapped to.
+		ScissorRects m_clip;
 
 		Viewport()
 			:Viewport(0.0f, 0.0f, 16.0f, 16.0f, 16, 16, 0.0f, 1.0f)
@@ -109,8 +113,17 @@ namespace pr::rdr12
 		{}
 		Viewport(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
 			:D3D12_VIEWPORT()
+			,ScreenW()
+			,ScreenH()
+			,m_clip()
 		{
 			Set(x, y, width, height, screen_w, screen_h, min_depth, max_depth);
+		}
+
+		// Set the viewport area and clip rectangle
+		Viewport& Set(float x, float y, float width, float height)
+		{
+			return Set(x, y, width, height, (int)width, (int)height, 0.0f, 1.0f);
 		}
 		Viewport& Set(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
 		{
@@ -136,11 +149,26 @@ namespace pr::rdr12
 			MaxDepth = max_depth;
 			ScreenW  = screen_w;
 			ScreenH  = screen_h;
+			Clip(static_cast<int>(TopLeftX), static_cast<int>(TopLeftY), static_cast<int>(Width), static_cast<int>(Height));
 			return *this;
 		}
-		Viewport& Set(float x, float y, float width, float height)
+
+		// Reset the clip rectangle collection
+		Viewport& ClearClips()
 		{
-			return Set(x, y, width, height, (int)width, (int)height, 0.0f, 1.0f);
+			m_clip.resize(0);
+			return *this;
+		}
+
+		// Add a clip rectangle
+		Viewport& Clip(int x, int y, int width, int height)
+		{
+			return Clip(RECT{x, y, x+width, y+height});
+		}
+		Viewport& Clip(RECT const& rect)
+		{
+			m_clip.push_back(rect);
+			return *this;
 		}
 
 		// The viewport rectangle, in render target pixels
@@ -305,7 +333,7 @@ namespace pr::rdr12
 		size_t      ElemCount; // The number of elements in this buffer (verts, indices, whatever)
 
 		BufferDesc() = default;
-		BufferDesc(size_t count, int element_size_in_bytes, void const* data, uint64_t alignment, EUsage usage, DXGI_FORMAT format)
+		BufferDesc(size_t count, int element_size_in_bytes, void const* data, uint64_t alignment, EUsage usage)
 			:D3D12_RESOURCE_DESC()
 			,Data(data)
 			,ElemCount(count)
@@ -316,28 +344,35 @@ namespace pr::rdr12
 			Height           = 1;
 			DepthOrArraySize = 1;
 			MipLevels        = 1;
-			Format           = format;
+			Format           = DXGI_FORMAT_UNKNOWN;
 			SampleDesc       = MultiSamp{};
-			Layout           = D3D12_TEXTURE_LAYOUT::D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 			Flags            = s_cast<D3D12_RESOURCE_FLAGS>(usage);
+		}
+		int Stride() const
+		{
+			PR_ASSERT(PR_DBG_RDR, (Width % ElemCount) == 0, "Size is not a multiple of the stride");
+			return s_cast<int>(Width / ElemCount);
 		}
 
 		// Constructors
-		static BufferDesc Buffer(uint64_t size, void const* data, EUsage usage = EUsage::None, DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN)
+		static BufferDesc Buffer(size_t size, void const* data, EUsage usage = EUsage::None)
 		{
-			return BufferDesc(size, 1, data, 0ULL, usage, format);
+			return BufferDesc(size, 1, data, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, usage);
+		}
+		static BufferDesc CBuf(size_t size)
+		{
+			// Size of resource heap must be 64K for single-textures and constant buffers
+			size = PadTo<size_t>(size, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+			return BufferDesc(1, s_cast<int>(size), nullptr, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, EUsage::None);
 		}
 		template <typename Elem> static BufferDesc VBuf(size_t count, Elem const* data, EUsage usage = EUsage::None)
 		{
-			return BufferDesc(count, s_cast<int>(sizeof(Elem)), data, std::alignment_of_v<Elem>, usage, DXGI_FORMAT_UNKNOWN);
+			return BufferDesc(count, s_cast<int>(sizeof(Elem)), data, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, usage);
 		}
 		template <typename Elem> static BufferDesc IBuf(size_t count, Elem const* data, EUsage usage = EUsage::None)
 		{
-			return BufferDesc(count, s_cast<int>(sizeof(Elem)), data, std::alignment_of_v<Elem>, usage, dx_format_v<Elem>);
-		}
-		static BufferDesc IBuf(size_t count, void const* data, DXGI_FORMAT format, EUsage usage = EUsage::None)
-		{
-			return BufferDesc(count, BytesPerPixel(format), data, 0, usage, format);
+			return BufferDesc(count, s_cast<int>(sizeof(Elem)), data, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, usage);
 		}
 
 		// Return the contained data as sub-resource data
@@ -348,52 +383,6 @@ namespace pr::rdr12
 			d.RowPitch = Width;
 			d.SlicePitch = Width;
 			return d;
-		}
-	};
-
-	// Texture sampler description
-	struct SamDesc :D3D12_SAMPLER_DESC
-	{
-		static SamDesc PointClamp()       { return SamDesc(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_POINT); }
-		static SamDesc PointWrap()        { return SamDesc(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_POINT); }
-		static SamDesc LinearClamp()      { return SamDesc(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR); }
-		static SamDesc LinearWrap()       { return SamDesc(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_LINEAR); }
-		static SamDesc AnisotropicClamp() { return SamDesc(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_ANISOTROPIC); }
-			
-		SamDesc()
-			:SamDesc(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
-		{}
-		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
-			:SamDesc(addr, addr, addr, filter)
-		{}
-		SamDesc(
-			D3D12_TEXTURE_ADDRESS_MODE addrU,
-			D3D12_TEXTURE_ADDRESS_MODE addrV,
-			D3D12_TEXTURE_ADDRESS_MODE addrW,
-			D3D12_FILTER filter)
-			:D3D12_SAMPLER_DESC()
-		{
-			InitDefaults();
-			Filter         = filter;
-			AddressU       = addrU;
-			AddressV       = addrV;
-			AddressW       = addrW;
-		}
-		void InitDefaults()
-		{
-			Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			MipLODBias     = 0.0f;
-			MaxAnisotropy  = 1;
-			ComparisonFunc = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
-			BorderColor[0] = 0.0f;
-			BorderColor[1] = 0.0f;
-			BorderColor[2] = 0.0f;
-			BorderColor[3] = 0.0f;
-			MinLOD         = 0.0f;
-			MaxLOD         = D3D12_FLOAT32_MAX;
 		}
 	};
 
@@ -435,41 +424,146 @@ namespace pr::rdr12
 		}
 	};
 
-	//
-	struct TextureCopyLocation :D3D12_TEXTURE_COPY_LOCATION
-	{ 
-		TextureCopyLocation() = default;
-		explicit TextureCopyLocation(D3D12_TEXTURE_COPY_LOCATION const& rhs)
-			:D3D12_TEXTURE_COPY_LOCATION(rhs)
+	// Blend state description
+	struct BlendStateDesc :D3D12_RENDER_TARGET_BLEND_DESC
+	{
+		BlendStateDesc()
+			:D3D12_RENDER_TARGET_BLEND_DESC()
+		{
+			BlendEnable = FALSE;
+			LogicOpEnable = FALSE;
+			SrcBlend = D3D12_BLEND_ONE;
+			DestBlend = D3D12_BLEND_ZERO;
+			BlendOp = D3D12_BLEND_OP_ADD;
+			SrcBlendAlpha = D3D12_BLEND_ONE;
+			DestBlendAlpha = D3D12_BLEND_ZERO;
+			BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			LogicOp = D3D12_LOGIC_OP_NOOP;
+			RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		}
+	};
+
+	// Raster state description
+	struct RasterStateDesc :D3D12_RASTERIZER_DESC
+	{
+		RasterStateDesc()
+			:D3D12_RASTERIZER_DESC()
+		{
+			FillMode = D3D12_FILL_MODE_SOLID;
+			CullMode = D3D12_CULL_MODE_BACK;
+			FrontCounterClockwise = TRUE;
+			DepthBias = 0;
+			DepthBiasClamp = 0.0f;
+			SlopeScaledDepthBias = 0.0f;
+			DepthClipEnable = TRUE;
+			MultisampleEnable = FALSE;
+			AntialiasedLineEnable = FALSE;
+			ForcedSampleCount = 0U;
+			ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		}
+	};
+
+	// Depth state description
+	struct DepthStateDesc :D3D12_DEPTH_STENCIL_DESC
+	{
+		DepthStateDesc()
+			:D3D12_DEPTH_STENCIL_DESC()
+		{
+			DepthEnable = TRUE;
+			DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+			DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+			StencilEnable = FALSE;
+			StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+			StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+			FrontFace = {
+				.StencilFailOp = D3D12_STENCIL_OP_KEEP,
+				.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+				.StencilPassOp = D3D12_STENCIL_OP_KEEP,
+				.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS,
+			};
+			BackFace = {
+				.StencilFailOp = D3D12_STENCIL_OP_KEEP,
+				.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+				.StencilPassOp = D3D12_STENCIL_OP_KEEP,
+				.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS,
+			};
+		}
+	};
+
+	// Stream output description
+	struct StreamOutputDesc :D3D12_STREAM_OUTPUT_DESC
+	{
+		StreamOutputDesc()
+			:D3D12_STREAM_OUTPUT_DESC()
+		{
+			pSODeclaration = nullptr;
+			NumEntries = 0U;
+			pBufferStrides = nullptr;
+			NumStrides = 0U;
+			RasterizedStream = 0U;
+		}
+	};
+
+	// Texture sampler description
+	struct SamDesc :D3D12_SAMPLER_DESC
+	{
+		SamDesc()
+			:SamDesc(D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
 		{}
-		TextureCopyLocation(ID3D12Resource* pRes)
+		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
+			:SamDesc(addr, addr, addr, filter)
+		{}
+		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter)
+			:D3D12_SAMPLER_DESC()
 		{
-			pResource = pRes;
-			Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			PlacedFootprint = {};
+			Filter         = filter;
+			AddressU       = addrU;
+			AddressV       = addrV;
+			AddressW       = addrW;
+			MipLODBias     = 0.0f;
+			MaxAnisotropy  = 1;
+			ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+			BorderColor[0] = 0.0f;
+			BorderColor[1] = 0.0f;
+			BorderColor[2] = 0.0f;
+			BorderColor[3] = 0.0f;
+			MinLOD         = 0.0f;
+			MaxLOD         = D3D12_FLOAT32_MAX;
 		}
-		TextureCopyLocation(ID3D12Resource* pRes, D3D12_PLACED_SUBRESOURCE_FOOTPRINT const& Footprint)
+
+		// Standard samplers
+		static SamDesc const& PointClamp()       { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }
+		static SamDesc const& PointWrap()        { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }
+		static SamDesc const& LinearClamp()      { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR); return sam; }
+		static SamDesc const& LinearWrap()       { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_LINEAR); return sam; }
+		static SamDesc const& AnisotropicClamp() { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_ANISOTROPIC); return sam; }
+	};
+
+	// Static sampler description
+	struct SamDescStatic :D3D12_STATIC_SAMPLER_DESC
+	{
+		SamDescStatic(ESamReg shader_register, int register_space, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
+			:SamDescStatic(shader_register, register_space, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
+		{}
+		SamDescStatic(ESamReg shader_register, int register_space, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
+			:SamDescStatic(shader_register, register_space, addr, addr, addr, filter, vis)
+		{}
+		SamDescStatic(ESamReg shader_register, int register_space, D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
+			:D3D12_STATIC_SAMPLER_DESC()
 		{
-			pResource = pRes;
-			Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-			PlacedFootprint = Footprint;
-		}
-		TextureCopyLocation(ID3D12Resource* pRes, uint32_t Sub)
-		{
-			pResource = pRes;
-			Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			SubresourceIndex = Sub;
+			Filter           = filter;
+			AddressU         = addrU;
+			AddressV         = addrV;
+			AddressW         = addrW;
+			MipLODBias       = 0.0f;
+			MaxAnisotropy    = 1;
+			ComparisonFunc   = D3D12_COMPARISON_FUNC_ALWAYS;
+			BorderColor      = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+			MinLOD           = 0.0f;
+			MaxLOD           = D3D12_FLOAT32_MAX;
+			ShaderRegister   = s_cast<UINT>(shader_register);
+			RegisterSpace    = s_cast<UINT>(register_space);
+			ShaderVisibility = vis;
 		}
 	};
 }
-
-//namespace pr
-//{
-//	template <typename TFrom> struct Convert<D3D12_SUBRESOURCE_DATA, TFrom>
-//	{
-//		static D3D12_SUBRESOURCE_DATA To(rdr12::BufferDesc const& r)
-//		{
-//			return reinterpret_cast<D3D12_RANGE const&>(r);
-//		}
-//	};
-//}

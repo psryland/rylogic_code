@@ -11,7 +11,7 @@
 // 'CBufFrame' is a cbuffer managed by a scene.
 // It contains values constant for the whole frame.
 // It is defined for every shader because most will probably need it
-cbuffer CBufFrame :reg(b0)
+cbuffer CBufFrame :reg(b0,0)
 {
 	// Camera transform
 	Camera m_cam;
@@ -30,7 +30,7 @@ cbuffer CBufFrame :reg(b0)
 };
 
 // Constants per render nugget.
-cbuffer CBufNugget :reg(b1)
+cbuffer CBufNugget :reg(b1,0)
 {
 	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
 
@@ -60,7 +60,7 @@ cbuffer CBufNugget :reg(b1)
 };
 
 // Constants used for radial fading.
-cbuffer CBufFade :reg(b2)
+cbuffer CBufFade :reg(b2,0)
 {
 	// The centre of the fade region. Set to (0,0,0,0) to use the camera position
 	float4 m_fade_centre;

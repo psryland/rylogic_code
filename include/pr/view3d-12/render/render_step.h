@@ -8,16 +8,12 @@
 
 namespace pr::rdr12
 {
-	template <typename T>
-	concept IsRenderStep = std::is_base_of_v<RenderStep, T>;
-	//// EnableIf for RenderStep derived types
-	//template <typename T> using enable_if_render_step = typename std::enable_if<std::is_base_of<RenderStep,T>::value>::type;
-
 	// Base class for render steps
 	struct RenderStep
 	{
 		// Draw list element container
-		using drawlist_t = pr::vector<DrawListElement, 1024, false, pr::rdr12::Allocator<DrawListElement>>;
+		using drawlist_t = pr::vector<DrawListElement, 1024, false, Allocator<DrawListElement>>;
+		using dl_mutex_t = std::recursive_mutex;
 
 		// A lock context for the drawlist
 		struct Lock :threads::Synchronise<RenderStep, std::recursive_mutex>
@@ -25,30 +21,44 @@ namespace pr::rdr12
 			Lock(RenderStep const& rs)
 				:base(rs, rs.m_mutex)
 			{}
-
-			drawlist_t const& drawlist() const { return get().m_drawlist; }
-			drawlist_t&       drawlist()       { return get().m_drawlist; }
+			drawlist_t const& drawlist() const
+			{
+				return get().m_drawlist;
+			}
+			drawlist_t& drawlist()
+			{
+				return get().m_drawlist;
+			}
 		};
 
-		Scene*                       m_scene;            // The scene this render step is owned by
-		ShaderManager*               m_shdr_mgr;         // Convenience pointer to the shader manager
-		drawlist_t                   m_drawlist;         // The drawlist for this render step. Access via 'Lock'
-		bool                         m_sort_needed;      // True when the list needs sorting
-		//BSBlock                      m_bsb;              // Blend states
-		//RSBlock                      m_rsb;              // Raster states
-		//DSBlock                      m_dsb;              // Depth buffer states
-		AutoSub                      m_evt_model_delete; // Event subscription for model deleted notification
-		std::recursive_mutex mutable m_mutex;            // Sync access to the drawlist
+		Scene*                      m_scene;            // The scene this render step is owned by
+		drawlist_t                  m_drawlist;         // The drawlist for this render step. Access via 'Lock'
+		bool                        m_sort_needed;      // True when the list needs sorting
+		D3DPtr<ID3D12RootSignature> m_shader_sig;       // Signature for shaders used by this render step
+		D3DPtr<ID3D12PipelineState> m_pso;              // Pipeline state object for this render step
+		AutoSub                     m_evt_model_delete; // Event subscription for model deleted notification
+		dl_mutex_t mutable          m_mutex;            // Sync access to the drawlist
 
 		explicit RenderStep(Scene& scene);
 		virtual ~RenderStep() {}
 		RenderStep(RenderStep const&) = delete;
 		RenderStep& operator = (RenderStep const&) = delete;
 
+		// Renderer access
+		Renderer& rdr() const;
+		Window& wnd() const;
+		Scene& scn() const;
+
 		// The type of render step this is
 		virtual ERenderStep GetId() const = 0;
-		template <typename RStep> requires IsRenderStep<RStep> RStep const& as() const { return *static_cast<RStep const*>(this); }
-		template <typename RStep> requires IsRenderStep<RStep> RStep        as()       { return *static_cast<RStep*>(this); }
+		template <RenderStepType RStep> RStep const& as() const
+		{
+			return *static_cast<RStep const*>(this);
+		}
+		template <RenderStepType RStep> RStep as()
+		{
+			return *static_cast<RStep*>(this);
+		}
 
 		// Update the provided shader set appropriate for this render step
 		virtual void ConfigShaders(ShaderSet1& ss, ETopo topo) const = 0;
@@ -79,19 +89,19 @@ namespace pr::rdr12
 		void RemoveInstances(BaseInstance const** inst, std::size_t count);
 
 		// Perform the render step
-		void Execute(StateStack& ss);
+		void Execute(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list);
 
 	protected:
 
-		// Add model nuggets to the draw list for this render step
+		// Add model nuggets to the draw list for this render step.
 		// The nuggets contain model specific data (such as diffuse texture) as well as
 		// a collection of shader instances (each containing shader specific data such
 		// as projection texture, line width, etc). This method needs to ensure the
 		// nugget's shader collection contains the appropriate shaders.
-		virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) = 0;
+		virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) = 0;
 
 		// Derived render steps perform their action
-		virtual void ExecuteInternal(StateStack& ss) = 0;
+		virtual void ExecuteInternal(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list) = 0;
 
 	private:
 

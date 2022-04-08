@@ -4,7 +4,7 @@
 //*********************************************
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/utility/map_scope.h"
+#include "pr/view3d-12/utility/map_resource.h"
 
 namespace pr::rdr12
 {
@@ -303,7 +303,7 @@ namespace pr::rdr12
 
 		// Copy the 'data' into the staging buffer
 		{
-			MapScope lock(staging, 0, sdesc.Width);
+			MapResource lock(staging, 0, 1);
 			for (auto i = 0; i != subN; ++i)
 			{
 				D3D12_MEMCPY_DEST dst =
@@ -325,12 +325,20 @@ namespace pr::rdr12
 		{
 			for (auto i = 0; i != subN; ++i)
 			{
-				TextureCopyLocation dst(destination, i + sub0);
-				TextureCopyLocation src(staging, layouts[i]);
+				D3D12_TEXTURE_COPY_LOCATION dst =
+				{
+					.pResource = destination,
+					.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+					.SubresourceIndex = s_cast<UINT>(i + sub0),
+				};
+				D3D12_TEXTURE_COPY_LOCATION src =
+				{
+					.pResource = staging,
+					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+					.PlacedFootprint = layouts[i],
+				};
 				cmds->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 			}
 		}
 	}
-
 }
-

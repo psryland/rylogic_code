@@ -29,23 +29,4 @@ namespace pr::rdr12
 		x(EnvMapProjection,)
 	PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
 	#undef PR_ENUM
-
-	#define PR_ENUM(x) \
-		x(Invalid         , = InvalidId)\
-		x(FwdShaderVS     ,)\
-		x(FwdShaderPS     ,)\
-		x(FwdRadialFadePS ,)\
-		x(GBufferVS       ,)\
-		x(GBufferPS       ,)\
-		x(DSLightingVS    ,)\
-		x(DSLightingPS    ,)\
-		x(ShadowMapVS     ,)\
-		x(ShadowMapPS     ,)\
-		x(PointSpritesGS  ,)\
-		x(ThickLineListGS ,)\
-		x(ThickLineStripGS,)\
-		x(ArrowHeadGS     ,)\
-		x(ShowNormalsGS   ,)
-	PR_DEFINE_ENUM2_BASE(EStockShader, PR_ENUM, RdrId);
-	#undef PR_ENUM
 }

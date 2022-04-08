@@ -10,20 +10,20 @@
 #include "../types.hlsli"
 
 // Camera to world transform
-cbuffer CBufCamera :reg(b0)
+cbuffer CBufCamera :reg(b0,0)
 {
 	Camera m_cam;
 	float4 m_frustum[4]; // View frustum corners in camera space
 };
 
 // Global lighting
-cbuffer CBufLighting :reg(b1)
+cbuffer CBufLighting :reg(b1,0)
 {
 	Light m_light;
 };
 
 // Per-nugget constants
-cbuffer CBufNugget :reg(b2)
+cbuffer CBufNugget :reg(b2,0)
 {
 	// Note: A duplicate of this struct is in 'forward_cbuf.hlsli'
 

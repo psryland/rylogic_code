@@ -78,17 +78,17 @@ namespace pr::rdr12
 	// Nugget data. Common base for NuggetProps and Nugget
 	struct NuggetData
 	{
-		ETopo          m_topo;                  // The primitive topology for this nugget
-		EGeom          m_geom;                  // The valid geometry components within this range
-		//ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
-		Texture2DPtr   m_tex_diffuse;           // Diffuse texture
-		Colour32       m_tint;                  // Per-nugget tint
-		//BSBlock        m_bsb;                   // Rendering states
-		//DSBlock        m_dsb;                   // Rendering states
-		//RSBlock        m_rsb;                   // Rendering states
-		SortKey        m_sort_key;              // A base sort key for this nugget
-		float          m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
-		ENuggetFlag    m_nflags;                // Flags for boolean properties of the nugget
+		ETopo                       m_topo;                  // The primitive topology for this nugget
+		EGeom                       m_geom;                  // The valid geometry components within this range
+		//ShaderMap                 m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
+		Texture2DPtr                m_tex_diffuse;           // Diffuse texture
+		Colour32                    m_tint;                  // Per-nugget tint
+		//BSBlock                   m_bsb;                   // Rendering states
+		//DSBlock                   m_dsb;                   // Rendering states
+		//RSBlock                   m_rsb;                   // Rendering states
+		SortKey                     m_sort_key;              // A base sort key for this nugget
+		float                       m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
+		ENuggetFlag                 m_nflags;                // Flags for boolean properties of the nugget
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 		// If the ranges are zero length, they are assume to mean the entire model
@@ -133,44 +133,8 @@ namespace pr::rdr12
 		ECullMode CullMode() const;
 		void CullMode(ECullMode fill_mode);
 
-#if 0 // todo
-		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
-		SortKey SortKey(ERenderStep rstep) const;
-
-		// Add this nugget and any dependent nuggets to a drawlist
-		template <typename TDrawList>
-		void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id) const
-		{
-			// Ignore if flagged as not visible
-			// If not visible for other reasons, don't render but add child nuggets.
-			if (AllSet(m_nflags, ENuggetFlag::Hidden))
-				return;
-
-			if (Visible())
-			{
-				// Validate before adding to the draw list
-				assert(m_model_buffer->m_ib.m_format == DXGI_FORMAT_R16_UINT || m_model_buffer->m_ib.m_format == DXGI_FORMAT_R32_UINT);
-
-				// Create the sort key for this nugget
-				auto sk = SortKey(id);
-				if (sko) sk = sko->Combine(sk);
-
-				DrawListElement dle;
-				dle.m_instance = &inst;
-				dle.m_nugget = this;
-				dle.m_sort_key = sk;
-				drawlist.push_back(dle);
-			}
-
-			// Recursively add dependent nuggets
-			for (auto& nug : m_nuggets)
-			{
-				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.m_id == AlphaNuggetId && m_fill_mode == EFillMode::Points) continue;
-				nug.AddToDrawlist(drawlist, inst, sko, id);
-			}
-		}
-	#endif
+		// True if this nugget should be rendered
+		bool Visible() const;
 
 		// Delete any dependent nuggets based on 'pred'
 		template <typename Pred>
@@ -190,8 +154,5 @@ namespace pr::rdr12
 		// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
 		// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
 		void Alpha(bool enable);
-
-		// True if this nugget should be rendered
-		bool Visible() const;
 	};
 }
