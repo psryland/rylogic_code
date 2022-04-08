@@ -60,6 +60,7 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/static_callback.h"
 //#include "pr/container/span.h"
+#include "pr/container/ring.h"
 #include "pr/container/chain.h"
 #include "pr/container/vector.h"
 //#include "pr/container/deque.h"
@@ -95,7 +96,7 @@
 //#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 //#include "pr/win32/stackdump.h"
-//#include "pr/script/reader.h"
+#include "pr/script/reader.h"
 //#include "pr/ldraw/ldr_helper.h"
 
 #ifndef PR_DBG_RDR
@@ -115,6 +116,7 @@ namespace pr::rdr12
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
 	using Handle = pr::win32::Handle;
+	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using RefPtr = pr::RefPtr<T>;
 	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
@@ -135,28 +137,29 @@ namespace pr::rdr12
 	using EGeom = pr::geometry::EGeom;
 	using ETopo = pr::geometry::ETopo;
 
-	// Render
+	// Renderer
 	struct Renderer;
 	struct Window;
 	struct Scene;
-	struct SceneView;
+	struct SceneCamera;
 	struct RdrSettings;
 	struct WndSettings;
 
 	// Rendering
-	struct SortKey;
-	struct DrawListElement;
-	struct BSBlock;
-	struct DSBlock;
-	struct RSBlock;
-	struct StateStack;
-	struct DeviceState;
 	struct RenderStep;
-	struct ForwardRender;
-	struct GBuffer;
-	struct DSLighting;
-	struct ShadowMap;
-	struct RayCast;
+	struct RenderForward;
+	struct DrawListElement;
+	struct BackBuffer;
+	struct SortKey;
+	    //struct BSBlock;
+	    //struct DSBlock;
+	    //struct RSBlock;
+	    struct StateStack;
+	    //struct DeviceState;
+	    //struct GBuffer;
+	    //struct DSLighting;
+	    struct ShadowMap;
+	    //struct RayCast;
 
 	// Resources
 	struct ResourceManager;
@@ -177,13 +180,12 @@ namespace pr::rdr12
 
 	// Shaders
 	struct Vert;
-	class  ShaderManager;
-	struct ShaderDesc;
-	struct Shader;
-	struct ShaderSet0;
-	struct ShaderSet1;
-	struct ShaderMap;
-	using ShaderPtr = RefPtr<Shader>;
+	    struct ShaderDesc;
+	    struct Shader;
+	    struct ShaderSet0;
+	    struct ShaderSet1;
+	    struct ShaderMap;
+	    using ShaderPtr = RefPtr<Shader>;
 
 	// Textures
 	struct TextureDesc;
@@ -208,9 +210,6 @@ namespace pr::rdr12
 	struct Lock;
 	struct MLock;
 	struct Image;
-	class BlendStateManager;
-	class DepthStateManager;
-	class RasterStateManager;
 	
 	// Event args
 	struct ResolvePathArgs;
@@ -229,12 +228,12 @@ namespace pr::rdr12
 	// Render steps
 	#undef PR_ENUM
 		#define PR_ENUM(x)\
-		x(Invalid       , = InvalidId)\
-		x(ForwardRender ,)\
-		x(GBuffer       ,)\
-		x(DSLighting    ,)\
-		x(ShadowMap     ,)\
-		x(RayCast       ,)
+		x(Invalid        , = InvalidId)\
+		x(RenderForward  ,)\
+		x(GBuffer        ,)\
+		x(DSLighting     ,)\
+		x(ShadowMap      ,)\
+		x(RayCast        ,)
 	PR_DEFINE_ENUM2(ERenderStep, PR_ENUM);
 	#undef PR_ENUM
 
@@ -317,6 +316,15 @@ namespace pr::rdr12
 		x(Cylindrical)
 	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
 	#undef PR_ENUM
+
+	
+	// Concepts
+	template <typename T>
+	concept RenderStepType = requires
+	{
+		std::is_base_of_v<RenderStep, T>;
+		std::is_same_v<decltype(T::Id), ERenderStep>;
+	};
 }
 
 // Enum flags

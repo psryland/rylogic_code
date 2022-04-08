@@ -3,28 +3,26 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 // Shader for forward rendering face data
-
 #ifndef PR_RDR_SHADER_FORWARD_HLSLI
 #define PR_RDR_SHADER_FORWARD_HLSLI
 
-#include "../types.hlsli"
 #include "forward_cbuf.hlsli"
 
 // Texture2D /w sampler
-Texture2D<float4> m_texture0; //:register(t0);
-SamplerState      m_sampler0; //:register(s0);
+Texture2D<float4> m_texture0 :reg(t0, 0);
+SamplerState      m_sampler0 :reg(s0, 0);
 
 // Environment map
-TextureCube<float4> m_envmap_texture; //:register(t1);
-SamplerState        m_envmap_sampler; //:register(s1);
+TextureCube<float4> m_envmap_texture :reg(t1, 0);
+SamplerState        m_envmap_sampler :reg(s1, 0);
 
 // Shadow map
-Texture2D<float2> m_smap_texture[MaxShadowMaps]; //:register(t2);
-SamplerComparisonState m_smap_sampler; //:register(s2);
+Texture2D<float2> m_smap_texture[MaxShadowMaps] :reg(t2, 0);
+SamplerComparisonState m_smap_sampler           :reg(s2, 0);
 
 // Projected textures
-Texture2D<float4> m_proj_texture[MaxProjectedTextures]; //:register(t3);
-SamplerState      m_proj_sampler[MaxProjectedTextures]; //:register(s3);
+Texture2D<float4> m_proj_texture[MaxProjectedTextures] :reg(t3, 0);
+SamplerState      m_proj_sampler[MaxProjectedTextures] :reg(s3, 0);
 
 #include "../lighting/phong_lighting.hlsli"
 #include "../shadow/shadow_cast.hlsli"
@@ -116,4 +114,5 @@ PSOut PSDefault(PSIn In)
 
 	return Out;
 }
+
 #endif

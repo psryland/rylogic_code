@@ -5,6 +5,7 @@
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/main/settings.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/scene/scene.h"
 
 namespace pr::rdr12
 {
@@ -15,31 +16,24 @@ namespace pr::rdr12
 		,m_db_format(settings.m_depth_format)
 		,m_multisamp()//!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : MultiSamp()) // Disable multi-sampling if debug is enabled
 		,m_swap_chain_flags(settings.m_swap_chain_flags)
-		,m_vsync(settings.m_vsync)
 		,m_swap_chain_dbg()
 		,m_swap_chain()
-		,m_main_rt()
-		,m_cmd_alloc()
-		,m_cmd_list()
-		//,m_main_srv()
-		//,m_main_dsv()
+		,m_rtv_heap()
 		,m_d2d_dc()
-		//,m_query()
-		//,m_main_rt()
-		,m_bb_count(settings.m_buffer_count)
-		,m_bb_index(0)
+		,m_bb(settings.m_buffer_count)
+		,m_gpu_sync()
+		,m_vsync(settings.m_vsync)
 		,m_idle(false)
 		,m_name(settings.m_name)
+		//,m_main_srv()
+		//,m_main_dsv()
+		//,m_query()
+		//,m_main_rt()
 		//,m_dbg_area()
 	{
 		try
 		{
-			Renderer::Lock lock(rdr);
-			auto device = lock.D3DDevice();
-
 			// Validate settings
-			if (settings.m_buffer_count > _countof(m_main_rt))
-				Throw(false, "Unsupported swap chain length");
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_options, ERdrOptions::BGRASupport))
 				Throw(false, "D3D device has not been created with GDI compatibility");
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
@@ -50,6 +44,12 @@ namespace pr::rdr12
 			// https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
 			// https://www.mvps.org/directx/articles/using_w-buffers.htm
 		
+			Renderer::Lock lock(rdr);
+			auto device = lock.D3DDevice();
+
+			// Initialise the sync helper
+			m_gpu_sync.Init(device);
+
 			// Check feature support
 			m_multisamp.Validate(device, settings.m_mode.Format);
 			m_multisamp.Validate(device, settings.m_depth_format);
@@ -57,37 +57,32 @@ namespace pr::rdr12
 			// Get the factory that was used to create 'rdr.m_device'
 			D3DPtr<IDXGIFactory4> factory;
 			Throw(lock.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
-		
-			// Create a query interface for querying the GPU events related to this scene
-			//D3D12_QUERY_DESC query_desc;
-			//query_desc.Query = D3D12_QUERY_EVENT;
-			//query_desc.MiscFlags = static_cast<D3D12_QUERY_MISC_FLAG>(0);
-			//Throw(device->CreateQuery(&query_desc, &m_query.m_ptr));
-		
+
 			// Creating a window with hwnd == nullptr is allowed if you only want to render to 
 			// off-screen render targets. If there's no window handle, don't create a swap chain
 			if (settings.m_hwnd != nullptr)
 			{
-				// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
-				// render using GDI on a swap chain or a surface. This will allow the application
-				// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-				DXGI_SWAP_CHAIN_DESC1 desc0 = {};
-				desc0.Width = settings.m_mode.Width;
-				desc0.Height = settings.m_mode.Height;
-				desc0.Format = settings.m_mode.Format;
-				desc0.Stereo = false; // interesting....
-				desc0.SampleDesc = m_multisamp;
-				desc0.BufferUsage = settings.m_usage;
-				desc0.BufferCount = settings.m_buffer_count;
-				desc0.Scaling = settings.m_scaling;
-				desc0.SwapEffect = settings.m_swap_effect;
-				desc0.AlphaMode = settings.m_alpha_mode;
-				desc0.Flags = settings.m_swap_chain_flags;
-				DXGI_SWAP_CHAIN_FULLSCREEN_DESC desc1 = {};
-				desc1.Windowed = settings.m_windowed;
-				desc1.RefreshRate = settings.m_mode.RefreshRate;
-				desc1.Scaling = settings.m_mode.Scaling;
-				desc1.ScanlineOrdering = settings.m_mode.ScanlineOrdering;
+				DXGI_SWAP_CHAIN_DESC1 desc0 =
+				{
+					.Width = settings.m_mode.Width,
+					.Height = settings.m_mode.Height,
+					.Format = settings.m_mode.Format,
+					.Stereo = false, // interesting...
+					.SampleDesc = m_multisamp,
+					.BufferUsage = settings.m_usage,
+					.BufferCount = settings.m_buffer_count,
+					.Scaling = settings.m_scaling,
+					.SwapEffect = settings.m_swap_effect,
+					.AlphaMode = settings.m_alpha_mode,
+					.Flags = s_cast<UINT>(settings.m_swap_chain_flags),
+				};
+				DXGI_SWAP_CHAIN_FULLSCREEN_DESC desc1 =
+				{
+					.RefreshRate = settings.m_mode.RefreshRate,
+					.ScanlineOrdering = settings.m_mode.ScanlineOrdering,
+					.Scaling = settings.m_mode.Scaling,
+					.Windowed = settings.m_windowed,
+				};
 
 				D3DPtr<IDXGISwapChain1> swap_chain;
 				Throw(factory->CreateSwapChainForHwnd(lock.CmdQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
@@ -97,6 +92,10 @@ namespace pr::rdr12
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 				Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 			}
+			else
+			{
+				// todo
+			}
 		
 			// If D2D is enabled, Connect D2D to the same render target as D3D
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
@@ -105,23 +104,25 @@ namespace pr::rdr12
 				Throw(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 			}
 		
-			// In device debug mode, create a dummy swap chain so that the graphics debugging
-			// sees 'Present' calls allowing it to capture frames.
+			// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
 			if (AllSet(rdr.Settings().m_options, ERdrOptions::DeviceDebug))
 			{
-				//DXGI_SWAP_CHAIN_DESC sd = {};
-				//sd.BufferCount  = 1;
-				//sd.BufferDesc   = DisplayMode(16,16);
-				//sd.SampleDesc   = MultiSamp();
-				//sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				//sd.OutputWindow = rdr.DummyHwnd();
-				//sd.Windowed     = TRUE;
-				//sd.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-				//sd.Flags        = s_cast<DXGI_SWAP_CHAIN_FLAG>(0);
-				//Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
-				//PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain_dbg.get(), FmtS("swap chain dbg")));
+				#if 0 // todo
+				DXGI_SWAP_CHAIN_DESC sd = {};
+				sd.BufferCount  = 1;
+				sd.BufferDesc   = DisplayMode(16,16);
+				sd.SampleDesc   = MultiSamp();
+				sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				sd.OutputWindow = rdr.DummyHwnd();
+				sd.Windowed     = TRUE;
+				sd.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+				sd.Flags        = s_cast<DXGI_SWAP_CHAIN_FLAG>(0);
+				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain_dbg.get(), FmtS("swap chain dbg")));
+				#endif
 			}
-		
+
+			// Initialise the render targets
 			InitRT();
 		}
 		catch (...)
@@ -132,15 +133,9 @@ namespace pr::rdr12
 	}
 	Window::~Window()
 	{
-		m_gpu_sync.Release();
-
 		// Release COM pointers
-		m_pipeline_state = nullptr;
-		m_cmd_list = nullptr;
-		m_cmd_alloc = nullptr;
 		m_rtv_heap = nullptr;
-		for (auto& rt : m_main_rt)
-			rt = nullptr;
+		m_bb.resize(0);
 
 		// Destroy the D2D device context
 		if (m_d2d_dc != nullptr)
@@ -181,22 +176,6 @@ namespace pr::rdr12
 	ResourceManager& Window::res_mgr() const
 	{
 		return rdr().res_mgr();
-	}
-	ShaderManager& Window::shdr_mgr() const
-	{
-		return rdr().shdr_mgr();
-	}
-	BlendStateManager& Window::bs_mgr() const
-	{
-		return rdr().bs_mgr();
-	}
-	DepthStateManager& Window::ds_mgr() const
-	{
-		return rdr().ds_mgr();
-	}
-	RasterStateManager& Window::rs_mgr() const
-	{
-		return rdr().rs_mgr();
 	}
 
 	// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
@@ -247,56 +226,57 @@ namespace pr::rdr12
 	// Create a render target from the swap-chain
 	void Window::InitRT()
 	{
-		// If the renderer has been created without a window handle, there will be no swap chain.
-		// In this case the caller will be setting up a render target to an off-screen buffer.
-		if (m_swap_chain == nullptr)
-			return;
-
 		Renderer::Lock lock(*m_rdr);
 		auto device = lock.D3DDevice();
 	
-		// Create the render target view heap for the back buffers.
-		D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {};
-		rtv_heap_desc.NumDescriptors = m_bb_count;
-		rtv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		// Create a descriptor heap for the back buffers (so we can create render target views).
+		D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
+			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			.NumDescriptors = s_cast<UINT>(m_bb.size()),
+			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		};
 		Throw(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
 	
 		// Get a handle to the starting memory location in the render target view heap to identify
-		// where the render target views will be located for the two back buffers.
+		// where the render target views will be located for the back buffers.
 		// Get the size of the memory location for the render target view descriptors.
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		auto rtv_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		// Create render target views for all back buffers
-		for (int i = 0; i != m_bb_count; ++i)
+		// todo
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = D3D12_CPU_DESCRIPTOR_HANDLE{};
+		auto dsv_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+		// Create the back buffer objects for each back buffer
+		for (int i = 0; i != s_cast<int>(m_bb.size()); ++i)
 		{
-			// Get a pointer to the first back buffer from the swap chain.
-			Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&m_main_rt[i].m_ptr));
+			auto& bb = m_bb[i];
+			bb.m_wnd = this;
+			bb.m_bb_index = i;
+			bb.m_issue = m_gpu_sync.m_issue;
+			
+			// Save the pointers to the descriptors
+			bb.m_rtv = rtv_handle;
+			bb.m_rtv.ptr += i * rtv_size;
+			bb.m_dsv = dsv_handle;
+			bb.m_dsv.ptr += i * dsv_size;
 
-			// Create a render target view for the back buffer.
-			device->CreateRenderTargetView(m_main_rt[i].get(), nullptr, rtv_handle);
-
-			// Increment the view handle to the next descriptor location in the render target view heap.
-			rtv_handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			// Create a render target view for the back buffer resource.
+			if (m_swap_chain != nullptr)
+			{
+				// Get a pointer to the back buffer from the swap chain.
+				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+				device->CreateRenderTargetView(bb.m_render_target.get(), nullptr, rtv_handle);
+			}
+			else
+			{
+				// If the renderer has been created without a window handle, there will be no swap chain.
+				// In this case the caller will be setting up a render target to an off-screen buffer.
+				// todo - off-screen rendering should create it's on back buffer which will need an rtv
+			}
 		}
 
-		// Get the index of the current back buffer to draw to
-		m_bb_index = m_swap_chain->GetCurrentBackBufferIndex();
-
-		// Create a command allocator.
-		Throw(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_cmd_alloc.m_ptr));
-
-		// Create a basic command list for the window.
-		// Command lists are one of key the components to understand in DirectX 12. Basically you fill the command list with all your rendering commands each frame and
-		// then send it into the command queue to execute the command list. And when you get more advanced you will create multiple command lists and execute them in
-		// parallel to get more efficiency in rendering. However that is where it gets tricky as you need to manage resources like you would in any multi-threaded program
-		// and ensure the execution order and dependencies between threads is safely handled.
-		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc.get(), nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
-		Throw(m_cmd_list->Close()); // Initially we need to close the command list during initialization as it is created in a recording state.
-
-		// Create a fence for GPU synchronization.
-		m_gpu_sync.Init(device);
-
+		#if 0 // todo
 		//// Get the back buffer so we can copy its properties
 		//D3DPtr<ID3D11Texture2D> back_buffer;
 		//Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
@@ -339,7 +319,8 @@ namespace pr::rdr12
 		//dsv_desc.ViewDimension      = bbdesc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS;
 		//dsv_desc.Texture2D.MipSlice = 0;
 		//Throw(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
-		
+		#endif
+
 		// Re-link the D2D device context to the back buffer
 		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 		{
@@ -361,8 +342,8 @@ namespace pr::rdr12
 			m_d2d_dc->SetTarget(d2d_render_target.get());
 		}
 		
-		//// Bind the main render target and depth buffer to the OM
-		//RestoreRT();
+		// Bind the main render target and depth buffer to the OM
+		RestoreRT();
 	}
 
 	// Binds the main render target and depth buffer to the OM
@@ -370,8 +351,240 @@ namespace pr::rdr12
 	{
 		//SetRT(m_main_rtv.get(), m_main_dsv.get(), false);
 	}
+	
+	// The current back buffer index
+	int Window::BBIndex() const
+	{
+		return m_swap_chain != nullptr ? m_swap_chain->GetCurrentBackBufferIndex() : 0;
+	}
+	int Window::BBCount() const
+	{
+		return s_cast<int>(m_bb.size());
+	}
 
-	//
+	// Returns the size of the current render target
+	iv2 Window::RenderTargetSize() const
+	{
+		auto rt = m_bb[BBIndex()].m_render_target.get();
+		auto desc = rt->GetDesc();
+		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
+	}
+
+	// Render a scene
+	void Window::Render(Scene& scene)
+	{
+		// Get the current back buffer
+		auto& bb = m_bb[BBIndex()];
+
+		// Ensure it's ready to be rendered to
+		bb.Sync();
+
+		// Start the scene rendering
+		// If this is done in a background thread, 'scene.Render' will return immediately returning the not-yet-closed
+		// command list that it is rendering to. This allows the window to submit the command lists in the same order
+		// that the caller called 'Render' in.
+		auto cmd_list = scene.Render(bb);
+		m_cmd_lists.push_back(cmd_list);
+	}
+
+	// Wait for all renders to finish, then present
+	void Window::Present()
+	{
+		// Be careful that you never have the message-pump thread wait on the render thread.
+		// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
+		// the render thread to wait on the message-pump thread. When a mode change occurs,
+		// this scenario is possible if Present1 calls ::SetWindowPos() or ::SetWindowStyle()
+		// and either of these methods call ::SendMessage(). In this scenario, if the message-pump
+		// thread has a critical section guarding it or if the render thread is blocked, then the
+		// two threads will deadlock.
+
+		// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
+		// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
+		// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
+		// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
+		// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
+		// the swap chain unable to relinquish full-screen mode.
+		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
+		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
+
+		// todo - Wait until all rendering worker threads have completed 
+		{}
+
+		Renderer::Lock lock(rdr());
+
+		// Submit the command lists to the GPU
+		lock.CmdQueue()->ExecuteCommandLists(s_cast<UINT>(m_cmd_lists.size()), m_cmd_lists.data());
+
+		// Present with the debug swap chain so that graphics debugging detects a frame
+		if (m_swap_chain_dbg != nullptr)
+			m_swap_chain_dbg->Present(m_vsync, 0);
+
+		// If there is no swap chain, then we must be rendering to an off-screen texture.
+		// In that case, flush to the graphics card
+		if (m_swap_chain == nullptr)
+		{
+			#if 0 // todo
+			Renderer::Lock lock(*m_rdr);
+			auto dc = lock.ImmediateDC();
+
+			// Flush is asynchronous so it may return before the frame has been rendered.
+			// Call flush, then block until the GPU has finished processing all the commands.
+			dc->Flush();
+			for (;; std::this_thread::yield())
+			{
+				BOOL complete;
+				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
+				if (res == S_OK) break;
+				if (res == S_FALSE) continue;
+				Throw(res);
+			}
+			#endif
+			return;
+		}
+
+		// Get the current back buffer (before calling present)
+		auto& bb = m_bb[BBIndex()];
+
+		// Render to the display
+		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
+		switch (res)
+		{
+			case S_OK:
+			{
+				m_idle = false;
+				break;
+			}
+			case DXGI_STATUS_OCCLUDED:
+			{
+				// This happens when the window is not visible on-screen, the app should go into idle mode
+				m_idle = true;
+				break;
+			}
+			case DXGI_ERROR_DEVICE_RESET:
+			{
+				// The device failed due to a badly formed command. This is a run-time issue;
+				// The application should destroy and recreate the device.
+				throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+			}
+			case DXGI_ERROR_DEVICE_REMOVED:
+			{
+				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
+				// We'll just throw so the app can shutdown/reset/whatever
+				throw Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown result from SwapChain::Present");
+			}
+		}
+
+		// Then we setup the fence to synchronize and let us know when the GPU is complete rendering.
+		// For this tutorial we just wait infinitely until it's done this single command list.
+		// However you can get optimisations by doing other processing while waiting for the GPU to finish.
+
+		// Add a sync point for this backbuffer
+		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
+		bb.m_issue = m_gpu_sync.m_issue;
+	}
+}
+
+	#if 0 // todo
+	// Flip the rendered scenes to the display
+	void Window::Present()
+	{
+		// Be careful that you never have the message-pump thread wait on the render thread.
+		// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
+		// the render thread to wait on the message-pump thread. When a mode change occurs,
+		// this scenario is possible if Present1 calls ::SetWindowPos() or ::SetWindowStyle()
+		// and either of these methods call ::SendMessage(). In this scenario, if the message-pump
+		// thread has a critical section guarding it or if the render thread is blocked, then the
+		// two threads will deadlock.
+
+		// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
+		// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
+		// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
+		// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
+		// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
+		// the swap chain unable to relinquish full-screen mode.
+		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
+		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
+
+		// Flip the back buffer after presenting
+		auto do_flip = Scope([] {}, [this]
+		{
+			// Flip n-buffered items
+			m_main_rt.flip();
+			m_cmd_alloc.flip();
+				
+			// Reset (re-use) the memory associated with the next available command allocator.
+			Throw(m_cmd_alloc[0]->Reset());
+		});
+
+		// Present with the debug swap chain so that graphics debugging detects a frame
+		if (m_swap_chain_dbg != nullptr)
+			m_swap_chain_dbg->Present(m_vsync, 0);
+
+		// If there is no swap chain, then we must be rendering to an off-screen texture.
+		// In that case, flush to the graphics card
+		if (m_swap_chain == nullptr)
+		{
+			#if 0 // todo
+			Renderer::Lock lock(*m_rdr);
+			auto dc = lock.ImmediateDC();
+
+			// Flush is asynchronous so it may return before the frame has been rendered.
+			// Call flush, then block until the GPU has finished processing all the commands.
+			dc->Flush();
+			for (;; std::this_thread::yield())
+			{
+				BOOL complete;
+				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
+				if (res == S_OK) break;
+				if (res == S_FALSE) continue;
+				Throw(res);
+			}
+			#endif
+			return;
+		}
+
+		// Render to the display
+		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
+		switch (res)
+		{
+			case S_OK:
+			{
+				m_idle = false;
+				break;
+			}
+			case DXGI_STATUS_OCCLUDED:
+			{
+				// This happens when the window is not visible on-screen, the app should go into idle mode
+				m_idle = true;
+				break;
+			}
+			case DXGI_ERROR_DEVICE_RESET:
+			{
+				// The device failed due to a badly formed command. This is a run-time issue;
+				// The application should destroy and recreate the device.
+				throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+			}
+			case DXGI_ERROR_DEVICE_REMOVED:
+			{
+				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
+				// We'll just throw so the app can shutdown/reset/whatever
+				Renderer::Lock lock(*m_rdr);
+				throw Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown result from SwapChain::Present");
+			}
+		}
+	}
+	#endif
+
+
+	#if 0 // unused
 	void Window::TestRender()
 	{
 		Renderer::Lock lock(*m_rdr);
@@ -447,13 +660,4 @@ namespace pr::rdr12
 		// Alternate the back buffer index back and forth between 0 and 1 each frame.
 		m_bb_index = (m_bb_index + 1) % m_bb_count;
 	}
-
-	// Returns the size of the current render target
-	iv2 Window::RenderTargetSize() const
-	{
-		auto rt = m_main_rt[m_bb_index].get();
-		auto desc = rt->GetDesc();
-		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
-	}
-}
-
+	#endif

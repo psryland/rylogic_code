@@ -17,7 +17,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 //#include "pr/view3d/models/model.h"
-#include "pr/view3d/render/sortkey.h"
+#include "pr/view3d-12/render/sortkey.h"
 //#include "pr/view3d/render/state_block.h"
 
 namespace pr::rdr12
@@ -44,6 +44,7 @@ namespace pr::rdr12
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
 	};
+	static_assert(sizeof(EInstComp) == 1, "Padding of Instance types relies on this");
 
 	// Instance flags
 	enum class EInstFlag :uint32_t
@@ -276,28 +277,36 @@ namespace pr::rdr12
 	#define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
 
 	// Notes:
-	// No inheritance in this type. It relies on POD behaviour
-	// Be careful with alignment of members, esp. m4x4's
+	//  - Be careful with alignment of members, esp. m4x4's
+	//  - Instance lifetimes are controlled by the caller. The renderer only uses pointers.
+	//  - Standard is layout is required though for accessing members.
 	#define PR_RDR_DEFINE_INSTANCE(name, fields)\
-		struct name\
+	struct name\
+	{\
+		static constexpr int CompCount = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
+		pr::rdr12::BaseInstance m_base;\
+		pr::rdr12::EInstComp m_cpt[CompCount + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + CompCount, 16U)];\
+		fields(PR_RDR_INST_MEMBERS)\
+		\
+		name()\
+			:m_base()\
+			,m_cpt()\
+			fields(PR_RDR_INST_INITIALISERS)\
 		{\
-			static constexpr int CompCount = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
-			pr::rdr12::BaseInstance m_base;\
-			pr::rdr12::EInstComp m_cpt[CompCount + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + CompCount, 16U)];\
-			fields(PR_RDR_INST_MEMBERS)\
-			\
-			name()\
-				:m_base()\
-				,m_cpt()\
-				fields(PR_RDR_INST_INITIALISERS)\
-			{\
-				using namespace pr::rdr12;\
-				static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
-				int i = 0;\
-				m_base.m_cpt_count = CompCount;\
-				fields(PR_RDR_INST_INIT_COMPONENTS)\
-			}\
-		};
+			using namespace pr::rdr12;\
+			static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
+			int i = 0;\
+			m_base.m_cpt_count = CompCount;\
+			fields(PR_RDR_INST_INIT_COMPONENTS)\
+		}\
+	};\
+	static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");
 
-	static_assert(sizeof(EInstComp) == 1, "Padding of Instance types relies on this");
+	// Concept for instance types
+	template <typename T>
+	concept InstanceType = requires(T t)
+	{
+		{ std::is_same_v<decltype(t.m_base), BaseInstance> };                    // must have a member called 'm_base'
+		{ static_cast<void const*>(&t.m_base) == static_cast<void const*>(&t) }; // it must be the first member
+	};
 }

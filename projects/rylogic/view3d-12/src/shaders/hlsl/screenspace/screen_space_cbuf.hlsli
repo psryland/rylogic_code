@@ -8,7 +8,7 @@
 #include "../types.hlsli"
 
 // Constants used for screen space shading.
-cbuffer CBufFrame :reg(b0)
+cbuffer CBufFrame :reg(b0,0)
 {
 	Camera m_cam;
 	float2 m_screen_dim; // x = screen width, y = screen height, 

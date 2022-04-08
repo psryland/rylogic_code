@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/render/back_buffer.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 
@@ -12,35 +13,32 @@ namespace pr::rdr12
 	struct Window
 	{
 		// Notes:
-		//  - A window wraps a HWND and contains a SwapChain.
-		//  - A window can contain multiple Scenes, each scene contains a command list.
-		//  - Scene command lists are executed in the order of the scenes within the window.
+		//  - A window wraps an HWND and contains a SwapChain.
+		//  - The stuff visible in a window is governed by one or more scenes.
 		//  - A window where HWND = nullptr, is used for rendering to off-screen render targets only.
+		//  - Each command allocator can only be recording one command list at a time. So parallel command list
+		//    building requires multiple command allocators.
+		//  - Command allocators can only be reset when they are not used by the GPU any more.
 
-		Renderer*                          m_rdr;              // The owning renderer
-		HWND                               m_hwnd;             // The window handle this window is bound to
-		DXGI_FORMAT                        m_db_format;        // The format of the depth buffer
-		MultiSamp                          m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
-		DXGI_SWAP_CHAIN_FLAG               m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
-		D3DPtr<IDXGISwapChain>             m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
-		D3DPtr<IDXGISwapChain3>            m_swap_chain;       // The swap chain bound to the window handle
-		D3DPtr<ID3D12DescriptorHeap>       m_rtv_heap;         // 
-		D3DPtr<ID3D12Resource>             m_main_rt[3];       // Render targets from the swap chain
-		D3DPtr<ID3D12CommandAllocator>     m_cmd_alloc;        // Command list allocator //todo there should be one of these for each bb
-		D3DPtr<ID3D12GraphicsCommandList>  m_cmd_list;         // Main command list for this window
-		D3DPtr<ID3D12PipelineState>        m_pipeline_state;   // 
-		//D3DPtr<ID3D12ShaderResourceView> m_main_srv;         // Shader resource view of the render target
-		//D3DPtr<ID3D12DepthStencilView>   m_main_dsv;         // Depth buffer
-		D3DPtr<ID2D1DeviceContext>         m_d2d_dc;           // The device context for D2D
-		//D3DPtr<ID3D12Query>              m_query;            // The interface for querying the GPU
-		//Texture2DPtr                     m_main_rt;          // The render target as a texture
-		GpuSync                            m_gpu_sync;         // 
-		int                                m_bb_count;         // The number of back buffers in the swap chain
-		int                                m_bb_index;         // The current back buffer to draw to
-		UINT                               m_vsync;            // Present SyncInterval value
-		bool                               m_idle;             // True while the window is occluded
-		string32                           m_name;             // A debugging name for the window
-		//iv2                              m_dbg_area;         // The size of the render target last set (for debugging only)
+		using BackBuffers = pr::vector<BackBuffer, 4, false>;
+		using CmdLists = pr::vector<ID3D12CommandList*, 4, false>;
+
+		Renderer*                    m_rdr;              // The owning renderer
+		HWND                         m_hwnd;             // The window handle this window is bound to
+		DXGI_FORMAT                  m_db_format;        // The format of the depth buffer
+		MultiSamp                    m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
+		DXGI_SWAP_CHAIN_FLAG         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
+		D3DPtr<IDXGISwapChain>       m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
+		D3DPtr<IDXGISwapChain3>      m_swap_chain;       // The swap chain bound to the window handle
+		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the BB
+		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
+		BackBuffers                  m_bb;               // Back buffer render targets from the swap chain.
+		GpuSync                      m_gpu_sync;         // Serialises rendering to this BB;
+		CmdLists                     m_cmd_lists;        // Command list to be executed in present
+		UINT                         m_vsync;            // Present SyncInterval value
+		bool                         m_idle;             // True while the window is occluded
+		string32                     m_name;             // A debugging name for the window
+		//iv2                        m_dbg_area;         // The size of the render target last set (for debugging only)
 
 		Window(Renderer& rdr, WndSettings const& settings);
 		~Window();
@@ -48,10 +46,6 @@ namespace pr::rdr12
 		// Access the renderer manager classes
 		Renderer& rdr() const;
 		ResourceManager& res_mgr() const;
-		ShaderManager& shdr_mgr() const;
-		BlendStateManager& bs_mgr() const;
-		DepthStateManager& ds_mgr() const;
-		RasterStateManager& rs_mgr() const;
 
 		// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 		v2 Dpi() const;
@@ -62,7 +56,19 @@ namespace pr::rdr12
 		// Binds the render target and depth buffer to the OM
 		void RestoreRT();
 
-		void TestRender();
+		// The current back buffer index
+		int BBIndex() const;
+		int BBCount() const;
+
+		// Returns the size of the current render target
+		iv2 RenderTargetSize() const;
+
+		// Render a scene
+		void Render(Scene& scene);
+		void Present();
+	};
+}
+
 		#if 0 // todo
 		// Binds the given render target and depth buffer views to the OM
 		void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv, bool is_new_main_rt);
@@ -88,8 +94,7 @@ namespace pr::rdr12
 		// The display mode of the main render target
 		DXGI_FORMAT DisplayFormat() const;
 		#endif
-		// Returns the size of the current render target
-		iv2 RenderTargetSize() const;
+
 		#if 0 // todo
 		// Get/Set the size of the swap chain back buffer.
 		// Passing iv2.Zero will cause the RT to get its size from the associated window
@@ -111,7 +116,7 @@ namespace pr::rdr12
 		void FrameEnd();
 		auto FrameScope()
 		{
-			return CreateScope(
+			return Scope(
 			[this] { FrameBeg(); },
 			[this] { FrameEnd(); });
 		}
@@ -141,6 +146,3 @@ namespace pr::rdr12
 		//   buffer but this only works for D3DSWAPEFFECT_COPY.
 		void Present();
 		#endif
-	};
-}
-

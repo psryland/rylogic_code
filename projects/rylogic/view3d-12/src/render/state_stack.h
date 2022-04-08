@@ -7,9 +7,7 @@
 
 namespace pr::rdr12
 {
-	struct ModelManager
+	struct StateStack
 	{
-		// Notes:
-		//  - Manages allocation of vertex and index buffers ?? these are just resources?
 	};
 }

@@ -21,7 +21,7 @@ namespace pr::rdr12
 	struct Vert
 	{
 		// This allows code templated on vertex type to ask what geometry components are supported
-		// In many cases, an model will have nuggets with a subset of these geom flags.
+		// In many cases, a model will have nuggets with a subset of these geom flags.
 		static constexpr EGeom GeomMask = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
 
 		v4     m_vert;
