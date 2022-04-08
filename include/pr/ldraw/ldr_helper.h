@@ -25,7 +25,7 @@
 namespace pr::ldr
 {
 	using TStr = std::string;
-	using Scope = pr::Scope<std::function<void()>,std::function<void()>>;
+	using Scope = pr::Scope<void>;
 
 	#pragma region Append
 	struct Str
@@ -212,9 +212,9 @@ namespace pr::ldr
 	inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
 	{
 		assert(keyword[0] == '\0' || keyword[0] == '*');
-		std::function<void()> doit = [&] { Append(str, keyword, "{"); };
-		std::function<void()> undo = [&] { Append(str, "}\n"); };
-		return CreateScope(doit, undo);
+		return Scope(
+			[&] { Append(str, keyword, "{"); },
+			[&] { Append(str, "}\n"); });
 	}
 	inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
 	{
@@ -226,9 +226,9 @@ namespace pr::ldr
 	}
 	inline Scope Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, O2W const& o2w = m4x4Identity)
 	{
-		std::function<void()> doit = [&]{ GroupStart(str, name, colour); };
-		std::function<void()> undo = [&]{ GroupEnd(str, o2w); };
-		return CreateScope(doit, undo);
+		return Scope(
+			[&]{ GroupStart(str, name, colour); },
+			[&]{ GroupEnd(str, o2w); });
 	}
 	inline TStr& FrameStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
 	{
@@ -240,9 +240,9 @@ namespace pr::ldr
 	}
 	inline Scope Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, O2W const& o2w = m4x4Identity)
 	{
-		std::function<void()> doit = [&]{ FrameStart(str, name, colour); };
-		std::function<void()> undo = [&]{ FrameEnd(str, o2w); };
-		return CreateScope(doit, undo);
+		return Scope(
+			[&]{ FrameStart(str, name, colour); },
+			[&]{ FrameEnd(str, o2w); });
 	}
 	inline TStr& NestStart(TStr& str)
 	{
@@ -256,9 +256,9 @@ namespace pr::ldr
 	}
 	inline Scope Nest(TStr& str)
 	{
-		std::function<void()> doit = [&]{ NestStart(str); };
-		std::function<void()> undo = [&]{ NestEnd(str); };
-		return CreateScope(doit, undo);
+		return Scope(
+			[&]{ NestStart(str); },
+			[&]{ NestEnd(str); });
 	}
 	inline TStr& Nest(TStr& str, TStr const& content)
 	{

@@ -237,7 +237,7 @@ namespace pr::script
 						// If this is not the first consecutive string, delete the quotes between them
 						if (!first)
 						{
-							src.Buffer().erase(size_t(beg) - 1, 2);
+							src.Buffer().erase(static_cast<size_t>(beg) - 1, 2);
 							end -= 2;
 						}
 
@@ -247,7 +247,7 @@ namespace pr::script
 							break;
 
 						// Erase the whitespace between the strings
-						src.Buffer().erase(end, size_t(beg) - end);
+						src.Buffer().erase(end, static_cast<size_t>(beg) - end);
 						beg = end;
 					}
 					emit = end;

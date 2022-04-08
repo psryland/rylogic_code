@@ -75,7 +75,7 @@ namespace pr::rdr
 			#else
 			// Support old windows by dynamically looking for the new DPI functions
 			// and falling back to the GDI functions if not available.
-			auto user32 = CreateStateScope(
+			auto user32 = Scope<HMODULE>(
 				[=] { return ::LoadLibraryW(L"user32.dll"); }, 
 				[=](HMODULE m) {::FreeLibrary(m); });
 
@@ -163,7 +163,7 @@ namespace pr::rdr
 		void FrameEnd();
 		auto FrameScope()
 		{
-			return CreateScope(
+			return Scope<void>(
 			[this] { FrameBeg(); },
 			[this] { FrameEnd(); });
 		}

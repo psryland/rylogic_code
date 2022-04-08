@@ -110,7 +110,7 @@ namespace pr::rdr
 	// Perform the render step
 	void RenderStep::Execute(StateStack& ss)
 	{
-		PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
+		PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
 			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
 			[&]{ ss.m_dbg->EndEvent(); }));
 

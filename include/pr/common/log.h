@@ -32,152 +32,151 @@
 #include "pr/threads/concurrent_queue.h"
 #include "pr/threads/name_thread.h"
 
+namespace pr::log
+{
+	#if PR_LOGGING
+	#define PR_LOG(logger, level, message)          do { logger.Write(pr::log::ELevel::level,         (message), __FILE__, __LINE__); } while (0)
+	#define PR_LOGE(logger, level, except, message) do { logger.Write(pr::log::ELevel::level, except, (message), __FILE__, __LINE__); } while (0)
+	#else
+	#define PR_LOG(logger, level, message)          do {} while (0)
+	#define PR_LOGE(logger, level, except, message) do { (void)(except); } while (0)
+	#endif
+
+	// Log levels
+	#define PR_ENUM(x)\
+		x(Debug)\
+		x(Info)\
+		x(Warn)\
+		x(Error)
+	PR_DEFINE_ENUM1(ELevel, PR_ENUM);
+	#undef PR_ENUM
+
+	// Timer
+	using RTC = std::chrono::high_resolution_clock;
+
+	// An individual log event
+	struct Event
+	{
+		using string = std::wstring;
+		using path = std::filesystem::path;
+
+		ELevel        m_level;
+		RTC::duration m_timestamp;
+		string        m_context;
+		string        m_msg;
+		path          m_file;
+		size_t        m_line;
+		int           m_occurrences;
+
+		Event()
+			:m_level(ELevel::Error)
+			,m_timestamp()
+			,m_context()
+			,m_msg()
+			,m_file()
+			,m_line()
+			,m_occurrences()
+		{}
+		Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, std::wstring_view msg, path const& file, size_t line)
+			:m_level(level)
+			,m_timestamp(RTC::now() - tzero)
+			,m_context(ctx)
+			,m_msg(msg)
+			,m_file(file)
+			,m_line(line)
+			,m_occurrences(1)
+		{}
+		Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, string&& msg, path const& file, size_t line)
+			:m_level(level)
+			,m_timestamp(RTC::now() - tzero)
+			,m_context(ctx)
+			,m_msg(std::move(msg))
+			,m_file(file)
+			,m_line(line)
+			,m_occurrences(1)
+		{}
+		static bool Same(Event const& lhs, Event const& rhs)
+		{
+			return
+				lhs.m_level == rhs.m_level &&
+				lhs.m_context == rhs.m_context &&
+				lhs.m_file == rhs.m_file &&
+				lhs.m_line == rhs.m_line &&
+				lhs.m_msg == rhs.m_msg;
+		}
+	};
+
+	// Producer/Consumer queue for log events
+	using LogQueue = pr::threads::ConcurrentQueue<log::Event>;
+
+	// Helper object for writing log output to a 'stdout'
+	struct ToStdout
+	{
+		void operator ()(Event const& ev)
+		{
+			wchar_t const* delim = L"";
+			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
+			if (!ev.m_file.empty()) { std::wcout << ev.m_file;                delim = L" "; }
+			if (ev.m_line != -1)    { std::wcout << "(" << ev.m_line << "):"; delim = L" "; }
+			auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
+			auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
+			auto s = FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
+			std::wcout << s;
+		}
+	};
+
+	// Helper object for writing log output to a file
+	struct ToFile
+	{
+		std::filesystem::path m_filepath;
+		std::shared_ptr<std::wofstream> m_outf;
+
+		ToFile(std::filesystem::path const& filepath, std::ios_base::openmode mode = std::ios_base::out)
+			:m_filepath(filepath)
+			,m_outf(std::make_shared<std::wofstream>(filepath, mode))
+		{}
+		void operator ()(Event const& ev)
+		{
+			auto& fp = *m_outf;
+			fp.seekp(0, std::ios_base::end);
+
+			wchar_t const* delim = L"";
+			if (!ev.m_file.empty()) { fp << ev.m_file.c_str(); delim = L" "; }
+			if (ev.m_line != -1)    { fp << FmtS(L"(%d):", ev.m_line); delim = L" "; }
+			auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
+			auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
+			fp << FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
+			fp.flush();
+		}
+	};
+
+	// Helper object for writing log output to a file, synchronised by named mutex
+	struct ToFileIPC :ToFile
+	{
+		HANDLE m_ipc_mutex;
+
+		explicit ToFileIPC(std::filesystem::path const& filepath, wchar_t const* mutex_name, std::ios_base::openmode mode = std::ios_base::out)
+			:ToFile(filepath, mode)
+			,m_ipc_mutex(CreateMutexW(nullptr, FALSE, mutex_name))
+		{}
+		void operator ()(Event const& ev)
+		{
+			// Lock the mutex before writing to the file
+			if (::WaitForSingleObject(m_ipc_mutex, INFINITE) == WAIT_OBJECT_0) try
+			{
+				ToFile::operator()(ev);
+				::ReleaseMutex(m_ipc_mutex);
+			}
+			catch (...)
+			{
+				::ReleaseMutex(m_ipc_mutex);
+				throw;
+			}
+		}
+	};
+}
 namespace pr
 {
-	namespace log
-	{
-		#if PR_LOGGING
-		#define PR_LOG(logger, level, message)          do { logger.Write(pr::log::ELevel::level,         (message), __FILE__, __LINE__); } while (0)
-		#define PR_LOGE(logger, level, except, message) do { logger.Write(pr::log::ELevel::level, except, (message), __FILE__, __LINE__); } while (0)
-		#else
-		#define PR_LOG(logger, level, message)          do {} while (0)
-		#define PR_LOGE(logger, level, except, message) do { (void)(except); } while (0)
-		#endif
-
-		// Log levels
-		#define PR_ENUM(x)\
-			x(Debug)\
-			x(Info)\
-			x(Warn)\
-			x(Error)
-		PR_DEFINE_ENUM1(ELevel, PR_ENUM);
-		#undef PR_ENUM
-
-		// Timer
-		using RTC = std::chrono::high_resolution_clock;
-
-		// An individual log event
-		struct Event
-		{
-			using string = std::wstring;
-			using path = std::filesystem::path;
-
-			ELevel        m_level;
-			RTC::duration m_timestamp;
-			string        m_context;
-			string        m_msg;
-			path          m_file;
-			size_t        m_line;
-			int           m_occurrences;
-
-			Event()
-				:m_level(ELevel::Error)
-				,m_timestamp()
-				,m_context()
-				,m_msg()
-				,m_file()
-				,m_line()
-				,m_occurrences()
-			{}
-			Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, std::wstring_view msg, path const& file, size_t line)
-				:m_level(level)
-				,m_timestamp(RTC::now() - tzero)
-				,m_context(ctx)
-				,m_msg(msg)
-				,m_file(file)
-				,m_line(line)
-				,m_occurrences(1)
-			{}
-			Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, string&& msg, path const& file, size_t line)
-				:m_level(level)
-				,m_timestamp(RTC::now() - tzero)
-				,m_context(ctx)
-				,m_msg(std::move(msg))
-				,m_file(file)
-				,m_line(line)
-				,m_occurrences(1)
-			{}
-			static bool Same(Event const& lhs, Event const& rhs)
-			{
-				return
-					lhs.m_level == rhs.m_level &&
-					lhs.m_context == rhs.m_context &&
-					lhs.m_file == rhs.m_file &&
-					lhs.m_line == rhs.m_line &&
-					lhs.m_msg == rhs.m_msg;
-			}
-		};
-
-		// Producer/Consumer queue for log events
-		using LogQueue = pr::threads::ConcurrentQueue<log::Event>;
-
-		// Helper object for writing log output to a 'stdout'
-		struct ToStdout
-		{
-			void operator ()(Event const& ev)
-			{
-				wchar_t const* delim = L"";
-				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { std::wcout << ev.m_file;                delim = L" "; }
-				if (ev.m_line != -1)    { std::wcout << "(" << ev.m_line << "):"; delim = L" "; }
-				auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
-				auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
-				auto s = FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
-				std::wcout << s;
-			}
-		};
-
-		// Helper object for writing log output to a file
-		struct ToFile
-		{
-			std::filesystem::path m_filepath;
-			std::shared_ptr<std::wofstream> m_outf;
-
-			ToFile(std::filesystem::path const& filepath, std::ios_base::openmode mode = std::ios_base::out)
-				:m_filepath(filepath)
-				,m_outf(std::make_shared<std::wofstream>(filepath, mode))
-			{}
-			void operator ()(Event const& ev)
-			{
-				auto& fp = *m_outf;
-				fp.seekp(0, std::ios_base::end);
-
-				wchar_t const* delim = L"";
-				if (!ev.m_file.empty()) { fp << ev.m_file.c_str(); delim = L" "; }
-				if (ev.m_line != -1)    { fp << FmtS(L"(%d):", ev.m_line); delim = L" "; }
-				auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
-				auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
-				fp << FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
-				fp.flush();
-			}
-		};
-
-		// Helper object for writing log output to a file, synchronised by named mutex
-		struct ToFileIPC :ToFile
-		{
-			HANDLE m_ipc_mutex;
-
-			explicit ToFileIPC(std::filesystem::path const& filepath, wchar_t const* mutex_name, std::ios_base::openmode mode = std::ios_base::out)
-				:ToFile(filepath, mode)
-				,m_ipc_mutex(CreateMutexW(nullptr, FALSE, mutex_name))
-			{}
-			void operator ()(Event const& ev)
-			{
-				// Lock the mutex before writing to the file
-				if (::WaitForSingleObject(m_ipc_mutex, INFINITE) == WAIT_OBJECT_0) try
-				{
-					ToFile::operator()(ev);
-					::ReleaseMutex(m_ipc_mutex);
-				}
-				catch (...)
-				{
-					::ReleaseMutex(m_ipc_mutex);
-					throw;
-				}
-			}
-		};
-	}
-
 	// Provides logging support
 	struct Logger
 	{

@@ -5088,7 +5088,7 @@ namespace pr::ldr
 		auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
 
 		// Push a font onto the font stack, so that fonts are scoped to object declarations
-		auto font_scope = CreateScope(
+		auto font_scope = Scope(
 			[&]{ p.m_font.push_back(p.m_font.back()); },
 			[&]{ p.m_font.pop_back(); });
 
@@ -5242,7 +5242,7 @@ namespace pr::ldr
 	{
 		// Give initial and final progress updates
 		auto start_loc = reader.Location();
-		auto exit = pr::CreateScope(
+		auto exit = Scope(
 			[&]
 			{
 				// Give an initial progress update
