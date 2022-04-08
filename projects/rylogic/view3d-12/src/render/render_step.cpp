@@ -5,6 +5,8 @@
 #include "pr/view3d-12/render/render_step.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/main/window.h"
+#include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/render/drawlist_element.h"
 
@@ -12,14 +14,24 @@ namespace pr::rdr12
 {
 	RenderStep::RenderStep(Scene& scene)
 		: m_scene(&scene)
-		, m_shdr_mgr(&scene.wnd().shdr_mgr())
 		, m_drawlist()
 		, m_sort_needed(true)
-		//, m_bsb()
-		//, m_rsb()
-		//, m_dsb()
 		//, m_evt_model_delete(scene.wnd().mdl_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
 	{}
+
+	// Access the renderer
+	Renderer& RenderStep::rdr() const
+	{
+		return wnd().rdr();
+	}
+	Window& RenderStep::wnd() const
+	{
+		return scn().wnd();
+	}
+	Scene& RenderStep::scn() const
+	{
+		return *m_scene;
+	}
 
 	// Reset/Populate the drawlist
 	void RenderStep::ClearDrawlist()
@@ -50,10 +62,10 @@ namespace pr::rdr12
 	// that the instance is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 	void RenderStep::AddInstance(BaseInstance const& inst)
 	{
-		#if 0 // todo
 		// Get the model associated with the instance
-		ModelPtr const& model = GetModel(inst);
-		PR_ASSERT(PR_DBG_RDR, model != nullptr, "Null model pointer");
+		auto const& model = GetModel(inst);
+		if (model == nullptr)
+			throw std::runtime_error("Null model pointer");
 
 		// Get the nuggets for this render step
 		auto& nuggets = model->m_nuggets;
@@ -63,7 +75,7 @@ namespace pr::rdr12
 		{
 			if (nuggets.empty() && !AllSet(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets))
 			{
-				PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
+				PR_INFO(PR_DBG_RDR, FmtS("This model (%s) has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
 				model->m_dbg_flags = SetBits(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets, true);
 			}
 
@@ -77,9 +89,12 @@ namespace pr::rdr12
 		}
 		#endif
 
-		// Add to the derived objects drawlist
-		AddNuggets(inst, nuggets);
-		#endif
+		// Add the model nuggets to the drawlist
+		Lock lock(*this);
+		AddNuggets(inst, nuggets, lock.drawlist());
+
+		// Flag the drawlist as changed
+		m_sort_needed = true;
 	}
 
 	// Remove an instance from the scene
@@ -108,10 +123,10 @@ namespace pr::rdr12
 	}
 
 	// Perform the render step
-	void RenderStep::Execute(StateStack& ss)
+	void RenderStep::Execute(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list)
 	{
 		#if 0 // todo
-		PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
+		PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
 			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
 			[&]{ ss.m_dbg->EndEvent(); }));
 
@@ -119,16 +134,16 @@ namespace pr::rdr12
 		// are flushed before the render steps try to clear back buffers, etc
 		StateStack::RSFrame frame(ss, *this);
 		ss.Commit();
-
-		ExecuteInternal(ss);
 		#endif
+
+		ExecuteInternal(bb, cmd_list);
 	}
 
 	// Notification of a model being destroyed
 	void RenderStep::OnModelDeleted(Model& model, EmptyArgs const&) const
 	{
-		#if 0 // todo
 		(void)model;
+		#if 0 // todo
 		#if PR_DBG_RDR
 
 		// Check the model is not current in a drawlist

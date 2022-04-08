@@ -217,29 +217,43 @@ namespace pr::rdr12
 	}
 
 	// Compile time type to 'DXGI_FORMAT' conversion
-	template <typename Type> struct dx_format { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
-	template <> struct dx_format<uint8_t >    { static const DXGI_FORMAT value = DXGI_FORMAT_R8_UINT;            static const int size = sizeof(uint8_t ); };
-	template <> struct dx_format<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16_t); };
-	template <> struct dx_format<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32_t); };
-	template <> struct dx_format<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
-	template <> struct dx_format<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
-	template <> struct dx_format<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
-	template <> struct dx_format<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
-	template <> struct dx_format<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
-	template <typename Type> static constexpr DXGI_FORMAT dx_format_v = dx_format<Type>::value;
-	static_assert(dx_format_v<uint32_t> == DXGI_FORMAT_R32_UINT);
+	using dxgi = struct { DXGI_FORMAT format; int size; };
+	template <typename T> constexpr dxgi dx_format_v =
+		std::is_same_v<uint8_t , T> ? dxgi{DXGI_FORMAT_R8_UINT           , (int)sizeof(uint8_t )} :
+		std::is_same_v<uint16_t, T> ? dxgi{DXGI_FORMAT_R16_UINT          , (int)sizeof(uint16_t)} :
+		std::is_same_v<uint32_t, T> ? dxgi{DXGI_FORMAT_R32_UINT          , (int)sizeof(uint32_t)} :
+		std::is_same_v<v2      , T> ? dxgi{DXGI_FORMAT_R32G32_FLOAT      , (int)sizeof(v2      )} :
+		std::is_same_v<v3      , T> ? dxgi{DXGI_FORMAT_R32G32B32_FLOAT   , (int)sizeof(v3      )} :
+		std::is_same_v<v4      , T> ? dxgi{DXGI_FORMAT_R32G32B32A32_FLOAT, (int)sizeof(v4      )} :
+		std::is_same_v<Colour  , T> ? dxgi{DXGI_FORMAT_R32G32B32A32_FLOAT, (int)sizeof(Colour  )} :
+		std::is_same_v<Colour32, T> ? dxgi{DXGI_FORMAT_B8G8R8A8_UNORM    , (int)sizeof(Colour32)} :
+		dxgi{DXGI_FORMAT_UNKNOWN, (int)sizeof(char)};
+		static_assert(dx_format_v<uint32_t>.format == DXGI_FORMAT_R32_UINT);
+		static_assert(dx_format_v<uint16_t>.format == DXGI_FORMAT_R16_UINT);
 
-	// Compile 'DXGI_FORMAT' to pixel type conversion
-	template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
-	template <> struct type_for<DXGI_FORMAT_R8_UINT           >{ using type = uint8_t;  };
-	template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
-	template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
-	template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };
-	template <> struct type_for<DXGI_FORMAT_R32G32B32_FLOAT   >{ using type = v3;       };
-	template <> struct type_for<DXGI_FORMAT_R32G32B32A32_FLOAT>{ using type = Colour;   };
-	template <> struct type_for<DXGI_FORMAT_R8G8B8A8_UNORM    >{ using type = Colour32; };
-	template <DXGI_FORMAT Fmt> using type_for_t = typename type_for<Fmt>::type;
-	static_assert(std::is_same_v<type_for_t<DXGI_FORMAT_R32G32B32A32_FLOAT>, Colour>) ;
+	//// Compile time type to 'DXGI_FORMAT' conversion
+	//template <typename Type> struct dx_format { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
+	//template <> struct dx_format<uint8_t >    { static const DXGI_FORMAT value = DXGI_FORMAT_R8_UINT;            static const int size = sizeof(uint8_t ); };
+	//template <> struct dx_format<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16_t); };
+	//template <> struct dx_format<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32_t); };
+	//template <> struct dx_format<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
+	//template <> struct dx_format<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
+	//template <> struct dx_format<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
+	//template <> struct dx_format<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
+	//template <> struct dx_format<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
+	//template <typename Type> static constexpr DXGI_FORMAT dx_format_v = dx_format<Type>::value;
+
+	//// Compile 'DXGI_FORMAT' to pixel type conversion
+	//template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
+	//template <> struct type_for<DXGI_FORMAT_R8_UINT           >{ using type = uint8_t;  };
+	//template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
+	//template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
+	//template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };
+	//template <> struct type_for<DXGI_FORMAT_R32G32B32_FLOAT   >{ using type = v3;       };
+	//template <> struct type_for<DXGI_FORMAT_R32G32B32A32_FLOAT>{ using type = Colour;   };
+	//template <> struct type_for<DXGI_FORMAT_R8G8B8A8_UNORM    >{ using type = Colour32; };
+	//template <DXGI_FORMAT Fmt> using type_for_t = typename type_for<Fmt>::type;
+	//static_assert(std::is_same_v<type_for_t<DXGI_FORMAT_R32G32B32A32_FLOAT>, Colour>) ;
 
 	//// Shader type to enum map
 	//template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
@@ -321,3 +335,28 @@ namespace pr::rdr12
 		int sub0, int subN);                  // Sub resource range [sub0, sub0 + subN)
 }
 
+// Conversion
+namespace pr
+{
+	template <> struct Convert<D3D12_PRIMITIVE_TOPOLOGY, rdr12::ETopo>
+	{
+		static D3D12_PRIMITIVE_TOPOLOGY To(rdr12::ETopo v)
+		{
+			switch (v)
+			{
+				case rdr12::ETopo::None         : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				case rdr12::ETopo::Invalid      : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				case rdr12::ETopo::PointList    : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+				case rdr12::ETopo::LineList     : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+				case rdr12::ETopo::LineStrip    : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+				case rdr12::ETopo::TriList      : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+				case rdr12::ETopo::TriStrip     : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+				case rdr12::ETopo::LineListAdj  : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+				case rdr12::ETopo::LineStripAdj : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ;
+				case rdr12::ETopo::TriListAdj   : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
+				case rdr12::ETopo::TriStripAdj  : return D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ;
+				default: throw std::runtime_error("Topology type not supported");
+			}
+		}
+	};
+}

@@ -11,7 +11,7 @@ namespace pr::rdr12
 	{
 		D3DPtr<ID3D12Fence> m_fence; // For signalling completed execution of commands.
 		Handle              m_event; // The event that is signalled by Dx12 when a command list is complete
-		uint64_t            m_issue; // The issue number of the last queued job
+		uint64_t            m_issue; // The issue number of the last queued job.
 
 		GpuSync()
 			:m_fence()
@@ -62,23 +62,32 @@ namespace pr::rdr12
 			m_fence = nullptr;
 		}
 
-		// Add a synchronisation point to 'queue'
-		void AddSyncPoint(ID3D12CommandQueue* queue)
+		// Add a synchronisation point to 'queue'. Returns the issue number to wait for
+		uint64_t AddSyncPoint(ID3D12CommandQueue* queue)
 		{
 			Throw(queue->Signal(m_fence.get(), ++m_issue));
+			return m_issue;
 		}
 
-		// Wait till the last sync point is reached
-		void Wait()
+		// Wait until the given sync point value is reached
+		void Wait(uint64_t issue)
 		{
-			for (;m_fence->GetCompletedValue() != m_issue;)
+			// Wait until the fence reports a completed issue number >= 'issue'
+			for (;m_fence->GetCompletedValue() < issue;)
 			{
 				if (m_fence->GetCompletedValue() > m_issue)
 					throw std::runtime_error("GPU has signalled an issue number higher than the latest");
 
+				// Wait for the must
 				Throw(m_fence->SetEventOnCompletion(m_issue, m_event));
 				WaitForSingleObject(m_event, INFINITE);
 			}
+		}
+		
+		// Wait till the last sync point is reached
+		void Wait()
+		{
+			Wait(m_issue);
 		}
 	};
 }

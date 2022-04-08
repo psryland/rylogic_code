@@ -15,7 +15,7 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - Maintains resource heaps and allocation of resources (i.e. vertex buffers, index buffers, textures, etc)
-
+		//  - Use 'GetPrivateData(WKPDID_D3DDebugObjectNameW,..)' to get names of resources.
 	private:
 
 		using DxResPointers = struct { ID3D12Resource* res; };//ID3D11ShaderResourceView* srv;
@@ -24,17 +24,17 @@ namespace pr::rdr12
 		using DxResLookup        = Lookup<RdrId, DxResPointers>;
 		using AllocationsTracker = AllocationsTracker<void>;
 
-		AllocationsTracker                m_mem_tracker;      // Resource allocation tracker
-		Renderer&                         m_rdr;              // The owning renderer instance
-		D3DPtr<ID3D12CommandAllocator>    m_cmd_alloc;        // Command list allocator for resource manager operations
-		D3DPtr<ID3D12GraphicsCommandList> m_cmd_list;         // Command list for resource manager operations.
-		GpuSync                           m_gpu_sync;         // Sync with GPU
-		DxResLookup                       m_lookup_dxres;     // A map from hash of resource URI to existing Dx12 resource pointers.
-		TextureLookup                     m_lookup_tex;       // A map from texture id to existing texture instances.
-		pr::vector<DxStageBuffer>         m_staging_buffers;  // A pool of staging buffers
-		pr::GdiPlus                       m_gdiplus;          // Context scope for GDI
-		AutoSub                           m_eh_resize;        // Event handler subscription for the RT resize event
-		int                               m_gdi_dc_ref_count; // Used to detect outstanding DC references
+		AllocationsTracker                m_mem_tracker;        // Resource allocation tracker
+		Renderer&                         m_rdr;                // The owning renderer instance
+		D3DPtr<ID3D12CommandAllocator>    m_cmd_alloc;          // Command list allocator for resource manager operations
+		D3DPtr<ID3D12GraphicsCommandList> m_cmd_list;           // Command list for resource manager operations.
+		GpuSync                           m_gpu_sync;           // Sync with GPU
+		DxResLookup                       m_lookup_dxres;       // A map from hash of resource URI to existing Dx12 resource pointers.
+		TextureLookup                     m_lookup_tex;         // A map from texture id to existing texture instances.
+		pr::vector<DxStageBuffer>         m_staging_buffers;    // A pool of staging buffers
+		pr::GdiPlus                       m_gdiplus;            // Context scope for GDI
+		AutoSub                           m_eh_resize;          // Event handler subscription for the RT resize event
+		int                               m_gdi_dc_ref_count;   // Used to detect outstanding DC references
 
 		// Stock models
 		ModelPtr m_stock_models[EStockModel_::NumberOf];
@@ -55,6 +55,9 @@ namespace pr::rdr12
 		// An event that is called when a texture filepath cannot be resolved.
 		EventHandler<ResourceManager&, ResolvePathArgs&, true> ResolveFilepath;
 
+		// Flush creation commands to the GPU
+		void FlushToGpu();
+
 		// Create a model.
 		ModelPtr CreateModel(ModelDesc const& mdesc);
 
@@ -71,7 +74,12 @@ namespace pr::rdr12
 			auto tex = GetOrDefault(m_lookup_tex, id, (TextureBase*)nullptr);
 			return pr::RefPtr<TextureType>(static_cast<TextureType*>(tex), true);
 		}
+		
+		// Return a pointer to a stock texture
 		Texture2DPtr FindTexture(EStockTexture stock) const;
+
+		// Return a pointer to a stock model
+		ModelPtr FindModel(EStockModel model) const;
 
 		//// Convenience method for cached textures
 		//template <typename TextureType, typename Factory, typename = std::enable_if_t<std::is_base_of_v<TextureBase, TextureType>>>

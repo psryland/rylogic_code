@@ -133,44 +133,8 @@ namespace pr::rdr12
 		ECullMode CullMode() const;
 		void CullMode(ECullMode fill_mode);
 
-#if 0 // todo
-		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
-		SortKey SortKey(ERenderStep rstep) const;
-
-		// Add this nugget and any dependent nuggets to a drawlist
-		template <typename TDrawList>
-		void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id) const
-		{
-			// Ignore if flagged as not visible
-			// If not visible for other reasons, don't render but add child nuggets.
-			if (AllSet(m_nflags, ENuggetFlag::Hidden))
-				return;
-
-			if (Visible())
-			{
-				// Validate before adding to the draw list
-				assert(m_model_buffer->m_ib.m_format == DXGI_FORMAT_R16_UINT || m_model_buffer->m_ib.m_format == DXGI_FORMAT_R32_UINT);
-
-				// Create the sort key for this nugget
-				auto sk = SortKey(id);
-				if (sko) sk = sko->Combine(sk);
-
-				DrawListElement dle;
-				dle.m_instance = &inst;
-				dle.m_nugget = this;
-				dle.m_sort_key = sk;
-				drawlist.push_back(dle);
-			}
-
-			// Recursively add dependent nuggets
-			for (auto& nug : m_nuggets)
-			{
-				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.m_id == AlphaNuggetId && m_fill_mode == EFillMode::Points) continue;
-				nug.AddToDrawlist(drawlist, inst, sko, id);
-			}
-		}
-	#endif
+		// True if this nugget should be rendered
+		bool Visible() const;
 
 		// Delete any dependent nuggets based on 'pred'
 		template <typename Pred>
@@ -190,8 +154,5 @@ namespace pr::rdr12
 		// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
 		// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
 		void Alpha(bool enable);
-
-		// True if this nugget should be rendered
-		bool Visible() const;
 	};
 }

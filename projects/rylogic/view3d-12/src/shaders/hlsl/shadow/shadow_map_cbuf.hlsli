@@ -9,7 +9,7 @@
 #include "../types.hlsli"
 
 // Camera to world transform and view frustum
-cbuffer CBufFrame :reg(b0)
+cbuffer CBufFrame :reg(b0,0)
 {
 	// Not using 'Shadow' from types because the shadow map generation
 	// shaders operate on one shadow map at a time. The main render can
@@ -19,7 +19,7 @@ cbuffer CBufFrame :reg(b0)
 };
 
 // Per nugget constants
-cbuffer CBufNugget :reg(b1)
+cbuffer CBufNugget :reg(b1,0)
 {
 	// x = Model flags:
 	//   1 << 0 = has normals
