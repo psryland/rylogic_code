@@ -36,7 +36,7 @@ namespace pr::rdr12
 		//    the proper refresh rate. If we don't do this and just set the refresh rate to a default value which may
 		//    not exist on all computers then DirectX will respond by performing a buffer copy instead of a buffer flip
 		//    which will degrade performance and give us annoying errors in the debug output.
-		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, you’ll want to create the Render
+		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, youï¿½ll want to create the Render
 		//    Target using an sRGB format. The new flip modes, however, do not allow you to create a swap chain back buffer
 		//    using an sRGB format. In this case, you create one using the non-sRGB format (i.e. DXGI_SWAP_CHAIN_DESC1.Format
 		//    = DXGI_FORMAT_B8G8R8A8_UNORM) and use sRGB for the Render Target View (i.e. D3D12_RENDER_TARGET_VIEW_DESC.Format
