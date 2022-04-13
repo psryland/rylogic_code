@@ -4,8 +4,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Xml.Linq;
+using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -14,26 +16,56 @@ namespace Rylogic.TextAligner
 {
 	[ClassInterface(ClassInterfaceType.AutoDual)]
 	[Guid("C0392BF9-56C7-4D4E-9669-5C4B2B38366C")]
-	internal sealed class AlignOptions :UIElementDialogPage
+	internal sealed class AlignOptions :UIElementDialogPage, INotifyPropertyChanged
 	{
 		public AlignOptions()
 			:base()
 		{
 			Groups = new ObservableCollection<AlignGroup>();
 			ResetSettings();
+
+			// Record the file modified timestamp
+			SettingsWatcher = new FileSystemWatcher(Path_.Directory(SettingsFilepath), Path_.FileName(SettingsFilepath)) { EnableRaisingEvents = true };
+			SettingsWatcher.Changed += HandleChanged;
+			async void HandleChanged(object? sender, FileSystemEventArgs e)
+			{
+				await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(CancellationToken.None);
+				LoadSettingsFromStorage();
+			};
 		}
 
 		/// <summary>The location on disk of where the settings are saved</summary>
 		public string SettingsFilepath => Util.ResolveAppDataPath("Rylogic", "VSExtension", "align_patterns.xml"); // Don't change this, it will cause users patterns to reset
+		private FileSystemWatcher? SettingsWatcher;
 
 		/// <summary>The groups of alignment patterns</summary>
 		public ObservableCollection<AlignGroup> Groups { get; }
 
 		/// <summary>The method to use for aligning</summary>
-		public EAlignCharacters AlignStyle { get; set; }
+		public EAlignCharacters AlignStyle
+		{
+			get => m_align_style;
+			set
+			{
+				if (AlignStyle == value) return;
+				m_align_style = value;
+				NotifyPropertyChanged(nameof(AlignStyle));
+			}
+		}
+		private EAlignCharacters m_align_style = EAlignCharacters.Spaces;
 
 		/// <summary>Pattern for lines that should be ignored when aligning</summary>
-		public AlignPattern LineIgnorePattern { get; set; } = new AlignPattern();
+		public AlignPattern LineIgnorePattern
+		{
+			get => m_line_ignore_pattern;
+			set
+			{
+				if (LineIgnorePattern == value) return;
+				m_line_ignore_pattern = value;
+				NotifyPropertyChanged(nameof(LineIgnorePattern));
+			}
+		}
+		private AlignPattern m_line_ignore_pattern = new AlignPattern();
 
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()
@@ -117,6 +149,7 @@ namespace Rylogic.TextAligner
 
 				// Load other settings
 				AlignStyle = root.Element(nameof(AlignStyle)).As<EAlignCharacters>(EAlignCharacters.Spaces);
+				LineIgnorePattern = new AlignPattern(EPattern.RegularExpression, root.Element(nameof(LineIgnorePattern)).As<string>(string.Empty));
 			}
 			catch { } // Don't allow anything to throw from here, otherwise VS locks up... :-/
 		}
@@ -136,6 +169,7 @@ namespace Rylogic.TextAligner
 				var root = new XElement("root");
 				root.Add2(nameof(Groups), nameof(AlignGroup), Groups, false);
 				root.Add2(nameof(AlignStyle), AlignStyle, false);
+				root.Add2(nameof(LineIgnorePattern), LineIgnorePattern.Expr, false);
 				root.Save(SettingsFilepath);
 			}
 			catch { } // Don't allow anything to throw from here, otherwise VS locks up... :-/
@@ -162,5 +196,9 @@ namespace Rylogic.TextAligner
 		{
 			return new AlignOptionsUI(this);
 		}
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }
