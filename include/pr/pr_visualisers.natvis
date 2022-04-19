@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://docs.microsoft.com/en-us/visualstudio/debugger/create-custom-views-of-native-objects?view=vs-2017
+
+Use:
+	1) Add the natvis file to the project
+	2) Drop a symlink to this file in:
+	    C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\Packages\Debugger\Visualizers
+	 
+The Natvis framework is not used for visualizations when:
+
+ Mixed mode debugging a desktop application (i.e. an app that is not a Windows Store app)
+  and the Managed C++ Compatibility Mode option is checked in the Debugging/General
+  page of the Visual Studio Options dialog box.
+
+ Edit and Continue (Visual C++) is enabled in the Debugging/Edit and Continue page of
+  the Visual Studio Options dialog box.
+
+ The program is built with Edit and Continue enabled
+  i.e. Debug Information Format, use Program Database (/Zi)
+  
+ Options->Debugging->General-> "Show raw structure of objects in variables windows"
+  
+Diagnosing Natvis errors:
+	Under Tools > Options (or Debug > Options) > Debugging > Output Window,
+	set Natvis diagnostic messages (C++ only) to Error, Warning, or Verbose,
+	and then select OK.
+old:
+  Natvis diagnostics helps you to troubleshoot issues when writing new visualizations.
+  When the Visual Studio debugger encounters errors in a visualization entry, such as
+  xml schema errors, or expressions that fail to parse, it simply ignores the errors
+  and either displays the type in its raw form or picks another suitable visualization.
+  To understand why a certain visualization entry is ignored and to see what the
+  underlying errors are, you can turn on visualization diagnostics by setting the
+  following registry value:
+  [HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger]
+  "EnableNatvisDiagnostics"=dword:00000001
+-->
+<AutoVisualizer
+	xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"
+	>
+
+	<!-- std library -->
+	<Type Name="pr::optional&lt;*&gt;">
+		<DisplayString Condition="m_value == 0">empty</DisplayString>
+		<DisplayString>{*m_value}</DisplayString>
+	</Type>
+
+	<!-- Containers -->
+	<Type Name="pr::vector&lt;*,*,*,*&gt;">
+		<AlternativeType Name="pr::vector&lt;*,*,*&gt;" />
+		<AlternativeType Name="pr::vector&lt;*,*&gt;" />
+		<AlternativeType Name="pr::vector&lt;*&gt;" />
+		<DisplayString Condition="m_count == 0">empty</DisplayString>
+		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
+		<Expand>
+			<Item Name="[count]">m_count</Item>
+			<Item Name="[capacity]">m_capacity</Item>
+			<ArrayItems>
+				<Size>m_count</Size>
+				<ValuePointer>m_ptr</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="pr::deque&lt;*,*,*&gt;">
+		<AlternativeType Name="pr::deque&lt;*,*&gt;" />
+		<AlternativeType Name="pr::deque&lt;*&gt;" />
+		<DisplayString Condition="m_last == m_first">[{m_last - m_first}] empty</DisplayString>
+		<DisplayString Condition="m_last != m_first">[{m_last - m_first}] {m_map.m_ptrs[m_map.m_first + m_first/CountPerBlock] + (m_first%CountPerBlock)} ... </DisplayString>   
+		<Expand>
+			<Item Name="[count]">m_last - m_first</Item>
+			<IndexListItems>
+				<Size>m_last - m_first</Size>
+				<ValueNode>m_map.m_ptrs[m_map.m_first + (m_first+$i) / CountPerBlock][(m_first + $i) % CountPerBlock]</ValueNode>
+			</IndexListItems>
+			<Item Name="[blocks]">m_map</Item>
+		</Expand>
+	</Type>
+	<Type Name="pr::impl::deque::BlockPtrMap&lt;*,*,*&gt;">
+		<DisplayString>[{m_last - m_first}] {m_blocks[m_first]}</DisplayString>
+		<Expand>
+			<Item Name="[first]">m_first</Item>
+			<Item Name="[last]">m_last</Item>
+			<Item Name="[capacity]">m_capacity</Item>
+			<IndexListItems>
+				<Size>m_capacity</Size>
+				<ValueNode>m_blocks[$i]</ValueNode>
+			</IndexListItems>
+		</Expand>
+	</Type>
+	<Type Name="pr::impl::deque::iter&lt;*,*,*,*,*,*&gt;">
+		<DisplayString>{m_idx} {*m_map}</DisplayString>
+	</Type>
+	<Type Name="std::span&lt;*&gt;">
+		<DisplayString Condition="m_count == 0">empty</DisplayString>
+		<DisplayString>[{m_count}] {m_arr}</DisplayString>
+		<Expand>
+			<Item Name="[count]">m_count</Item>
+			<ArrayItems>
+				<Size>m_count</Size>
+				<ValuePointer>m_arr</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="pr::ByteData&lt;*&gt;">
+		<DisplayString Condition="m_size == 0">empty</DisplayString>
+		<DisplayString>[{m_size}] {m_ptr}</DisplayString>
+		<Expand>
+			<Item Name="[count]">m_size</Item>
+			<Item Name="[capacity]">m_capacity</Item>
+			<ArrayItems>
+				<Size>m_size</Size>
+				<ValuePointer>m_ptr</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	
+	<!-- Expression Evaluator -->
+	<Type Name="pr::eval::Val">
+		<DisplayString Condition="m_ty == 0">unassigned</DisplayString>
+		<DisplayString Condition="m_ty == 1">{m_ll}</DisplayString>
+		<DisplayString Condition="m_ty == 2">{m_db}</DisplayString>
+		<DisplayString Condition="m_ty == 3">{m_i4}</DisplayString>
+		<DisplayString Condition="m_ty == 4">{m_v4}</DisplayString>
+		<DisplayString>invalid</DisplayString>
+	</Type>
+
+	<!-- Chain -->
+	<Type Name="pr::chain::head&lt;*,*&gt;" Inheritable="false">
+		<DisplayString Condition="m_next == this">empty</DisplayString>
+		<DisplayString>first={*m_next->m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>*m_next->m_obj</ExpandedItem>
+			<Item Name="[next]">m_next->m_next,na</Item>
+		</Expand>
+	</Type>
+	<Type Name="pr::chain::link&lt;*,*&gt;" Inheritable="false">
+		<DisplayString Condition="m_obj == 0">head</DisplayString>
+		<DisplayString>{*m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>*m_obj</ExpandedItem>
+			<Item Name="[next]">m_next,na</Item>
+		</Expand>
+	</Type>
+
+	<!-- Maths -->
+	<Type Name="pr::Vec2&lt;*&gt;">
+		<DisplayString>{x,g} {y,g}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v2"></DisplayString> 
+		-->
+	</Type>
+	<Type Name="pr::Vec3&lt;*&gt;">
+		<DisplayString>{x,g} {y,g} {z,g}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v3"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Vec4&lt;*&gt;">
+		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v4"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Vec8&lt;*&gt;">
+		<DisplayString>{ang} {lin}</DisplayString>
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v8"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::IVec2&lt;*&gt;">
+		<DisplayString>{x,g} {y,g}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_iv2"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::IVec4&lt;*&gt;">
+		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_iv4"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Mat2x2&lt;*&gt;">
+		<DisplayString>{x} {y}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m2x2"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Mat3x4&lt;*,*&gt;">
+		<DisplayString>[{x.xyz}] [{y.xyz}] [{z.xyz}]</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m3x4"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Mat4x4&lt;*,*&gt;">
+		<DisplayString>[{x}] [{y}] [{z}] [{w}]</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="P:\pr\obj\v142\prautoexp\x86\Debug\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Mat6x8&lt;*,*&gt;">
+		<DisplayString>{m00} {m10} {m01} {m11}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m6x8"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::Matrix&lt;*&gt;">
+		<DisplayString>{m_cols}x{m_rows} {m_data,36}</DisplayString>
+	</Type>
+	<Type Name="pr::Quat">
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_Quaternion"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::LargeInt">
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_LargeInt"></DisplayString>
+		-->
+	</Type>
+	<Type Name="pr::BoundingBox">
+		<DisplayString>radius={m_radius.x} {m_radius.y} {m_radius.z} {m_radius.w} centre={m_centre.x} {m_centre.y} {m_centre.z} {m_centre.w}</DisplayString>
+	</Type>
+	<Type Name="pr::BoundingSphere">
+		<DisplayString>radius={m_radius} centre={m_centre}</DisplayString>
+	</Type>
+	<Type Name="pr::Plane">
+		<DisplayString>{m_dx} {m_dy} {m_dz} {m_dist}</DisplayString>
+	</Type>
+	<Type Name="pr::Line3">
+		<DisplayString>Pt:{m_point} Dir:{m_line}</DisplayString>
+	</Type>
+	<Type Name="pr::Rectangle&lt;*&gt;">
+		<DisplayString>{m_min.x} {m_min.y} {m_max.x} {m_max.y}</DisplayString>
+	</Type>
+	<Type Name="pr::Spline">
+		<DisplayString>{m_geometry}</DisplayString>
+	</Type>
+	<Type Name="pr::Frustum">
+		<DisplayString>{m_Tplanes}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_Tplanes</ExpandedItem>
+		</Expand>
+	</Type>
+	<Type Name="pr::Rand">
+		<DisplayString>{m_value}</DisplayString>
+	</Type>
+
+	<!-- RefPtr -->
+	<Type Name="pr::RefPtr&lt;*&gt;">
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+	<Type Name="D3DPtr&lt;*&gt;">
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+
+	<!-- Repeater -->
+	<Type Name="pr::Repeater&lt;*,*,*&gt;">
+		<DisplayString>{m_item} (curr:{m_curr} next:{m_next}) ({(float)m_r/(m_output-1)})</DisplayString>
+	</Type>
+
+	<!-- pr::string -->
+	<Type Name="pr::string&lt;char,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,s}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+	<Type Name="pr::string&lt;wchar_t,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,su}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+
+	<!-- Geometry -->
+	<Type Name="pr::Colour32">
+		<DisplayString>{argb,Xb}</DisplayString>
+	</Type>
+	<Type Name="pr::geometry::p3d::ChunkHeader">
+		<DisplayString>[{m_id}] Len={m_length}</DisplayString>
+	</Type>
+	<Type Name="pr::geometry::p3d::ChunkIndex">
+		<DisplayString>[{m_id}] Len={m_length} Sub={m_chunks._Mylast - m_chunks._Myfirst}</DisplayString>
+	</Type>
+	<Type Name="pr::geometry::max_3ds::ChunkHeader">
+		<DisplayString>[{(pr::geometry::max_3ds::EChunkId::Enum_)id}] Len={len}</DisplayString>
+	</Type>
+
+	<!-- Renderer11 -->
+	<Type Name="pr::rdr::ShaderBase">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::Model">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::Texture2D">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::NuggetProps">
+		<DisplayString>{m_topo} {m_geom} {m_shader} {m_tex_diffuse}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::Nugget">
+		<DisplayString>{m_owner} {m_topo} {m_geom} count:{m_prim_count}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::DrawListElement">
+		<DisplayString>{m_nugget->m_owner} {m_shader}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::StateBlock&lt;*,*,*&gt;">
+		<DisplayString>{m_mask}</DisplayString>
+	</Type>
+
+	<!-- Line Drawer -->
+	<Type Name="pr::ldr::LdrObject">
+		<DisplayString>{m_type} {m_name} {m_colour}</DisplayString>
+	</Type>
+
+	<!-- Console -->
+	<Type Name="pr::console::Coord">
+		<DisplayString>{X},{Y}</DisplayString>
+	</Type>
+	<Type Name="pr::console::Colours">
+		<DisplayString>{m_fore.value}|{m_back.value}</DisplayString>
+	</Type>
+
+	<!-- Elements -->
+	<Type Name="ele::Element">
+		<DisplayString>{m_name->m_fullname}</DisplayString>
+	</Type>
+	
+	<!-- Misc -->
+	<Type Name="pr::quad_tree::Coord">
+		<DisplayString>Lvl:{m_level} {m_x}x{m_y}</DisplayString>
+	</Type>
+
+	<!-- WinGui -->
+	<Type Name="pr::gui::Control">
+		<DisplayString>{m_cp->m_name} id:{m_cp->m_id} hwnd:{m_hwnd}</DisplayString>
+	</Type>
+	<Type Name="pr::gui::Form&lt;*&gt;">
+		<DisplayString Condition="!m_cp->m_name.empty()">{m_cp->m_name} id:{m_cp->m_id} hwnd:{m_hwnd}</DisplayString>
+		<DisplayString>id:{m_cp->m_id} hwnd:{m_hwnd}</DisplayString>
+	</Type>
+
+	<!-- Script -->
+	<Type Name="pr::script::Buffer&lt;*&gt;">
+		<DisplayString Condition="m_buf.m_first == m_buf.m_last">{*m_src}</DisplayString>
+		<DisplayString>[{m_buf}]{*m_src}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Buf&lt;*,*,*&gt;">
+		<DisplayString>{m_ch,bstr}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Preprocessor&lt;*,*,*,*&gt;">
+		<DisplayString Condition="m_dbg_buf->m_first == m_dbg_buf->m_last">{m_dbg_src.wptr}</DisplayString>
+		<DisplayString>[{*m_dbg_buf}]{m_dbg_src.wptr}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Macro&lt;*&gt;">
+		<DisplayString>{m_tag}={m_expansion}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Token">
+		<DisplayString Condition="m_type == pr::script::EToken::Invalid">Invalid</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::EndOfStream">End Of Stream</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Identifier">Identifier {m_svalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Keyword">Keyword {m_keyword}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Symbol">Symbol {m_symbol.value}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant &amp;&amp; m_constant == pr::script::EConstant::Integral">Constant {m_ivalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant &amp;&amp; m_constant == pr::script::EConstant::FloatingPoint">Constant {m_fvalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant">Constant {m_svalue}</DisplayString>
+		<DisplayString>{m_type}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Location">
+		<DisplayString>{m_stream_name}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
+	</Type>
+</AutoVisualizer>
