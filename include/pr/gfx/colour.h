@@ -1,4 +1,4 @@
-//*******************************************************************************************
+﻿//*******************************************************************************************
 // Colour32
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
@@ -756,13 +756,13 @@ namespace pr
 		template <typename Str, typename Char = typename Str::value_type>
 		struct ColourToString
 		{
-			static Str To(Colour32 c)
+			static Str To_(Colour32 c)
 			{
 				return pr::To<Str>(c.argb, 16);
 			}
-			static Str To(Colour const& c)
+			static Str To_(Colour const& c)
 			{
-				return To(static_cast<Colour32>(c));
+				return To_(static_cast<Colour32>(c));
 			}
 		};
 
@@ -770,13 +770,13 @@ namespace pr
 		struct ToColour32
 		{
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Colour32 To(Str const& s, Char const** end = nullptr)
+			static Colour32 To_(Str const& s, Char const** end = nullptr)
 			{
 				auto ptr = string_traits<Str>::ptr(s);
 				auto argb = pr::To<unsigned int>(ptr, 16, end); // pr:: needed
 				return Colour32(argb);
 			}
-			static Colour32 To(Colour const& c)
+			static Colour32 To_(Colour const& c)
 			{
 				return c.argb();
 			}
@@ -786,7 +786,7 @@ namespace pr
 		struct ToColour
 		{
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Colour To(Str const& s, Char const** end = nullptr)
+			static Colour To_(Str const& s, Char const** end = nullptr)
 			{
 				Char* e;
 				auto r = pr::To<float>(s, &e);
@@ -796,7 +796,7 @@ namespace pr
 				if (end) *end = e;
 				return Colour(r,g,b,a);
 			}
-			static Colour To(Colour32 c)
+			static Colour To_(Colour32 c)
 			{
 				return static_cast<Colour>(c);
 			}
@@ -806,13 +806,13 @@ namespace pr
 		#ifdef D3DCOLORVALUE_DEFINED
 		struct ToD3DCOLORVALUE
 		{
-			static D3DCOLORVALUE To(Colour const& c)
+			static D3DCOLORVALUE To_(Colour const& c)
 			{
 				return D3DCOLORVALUE{c.r, c.g, c.b, c.a};
 			}
-			static D3DCOLORVALUE To(Colour32 c)
+			static D3DCOLORVALUE To_(Colour32 c)
 			{
-				return To(static_cast<Colour>(c));
+				return To_(static_cast<Colour>(c));
 			}
 		};
 		#endif
