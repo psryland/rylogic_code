@@ -271,33 +271,33 @@ namespace pr::rdr12
 	//  #undef PR_RDR_INST
 
 	// Macro instance generator functions
-	#define PR_RDR_INST_INITIALISERS(ty,nm,em)      ,nm()
-	#define PR_RDR_INST_MEMBER_COUNT(ty,nm,em)      + 1
-	#define PR_RDR_INST_MEMBERS(ty,nm,em)           ty nm;
-	#define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
+	#define PR_RDR12_INST_INITIALISERS(ty,nm,em)      ,nm()
+	#define PR_RDR12_INST_MEMBER_COUNT(ty,nm,em)      + 1
+	#define PR_RDR12_INST_MEMBERS(ty,nm,em)           ty nm;
+	#define PR_RDR12_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
 
 	// Notes:
 	//  - Be careful with alignment of members, esp. m4x4's
 	//  - Instance lifetimes are controlled by the caller. The renderer only uses pointers.
 	//  - Standard is layout is required though for accessing members.
-	#define PR_RDR_DEFINE_INSTANCE(name, fields)\
+	#define PR_RDR12_DEFINE_INSTANCE(name, fields)\
 	struct name\
 	{\
-		static constexpr int CompCount = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
+		static constexpr int CompCount = 0 fields(PR_RDR12_INST_MEMBER_COUNT);\
 		pr::rdr12::BaseInstance m_base;\
 		pr::rdr12::EInstComp m_cpt[CompCount + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + CompCount, 16U)];\
-		fields(PR_RDR_INST_MEMBERS)\
+		fields(PR_RDR12_INST_MEMBERS)\
 		\
 		name()\
 			:m_base()\
 			,m_cpt()\
-			fields(PR_RDR_INST_INITIALISERS)\
+			fields(PR_RDR12_INST_INITIALISERS)\
 		{\
 			using namespace pr::rdr12;\
 			static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
 			int i = 0;\
 			m_base.m_cpt_count = CompCount;\
-			fields(PR_RDR_INST_INIT_COMPONENTS)\
+			fields(PR_RDR12_INST_INIT_COMPONENTS)\
 		}\
 	};\
 	static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");

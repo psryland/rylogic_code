@@ -114,8 +114,26 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\state_stack.cpp">
-      <Filter>src\render</Filter>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\object_pools.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\diagnostics.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_point_sprites.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_forward.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_show_normals.cpp">
+      <Filter>src\shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -227,8 +245,26 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_registers.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\state_stack.h">
-      <Filter>src\render</Filter>
+    <ClInclude Include="..\include\pr\view3d-12\utility\object_pools.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\diagnostics.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_point_sprites.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_forward.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_show_normals.h">
+      <Filter>src\shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

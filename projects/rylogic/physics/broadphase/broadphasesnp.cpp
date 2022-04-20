@@ -91,7 +91,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities
 	// during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 
@@ -143,7 +143,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void
 
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 
@@ -183,7 +183,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, Ray const& ray, void* contex
 
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 

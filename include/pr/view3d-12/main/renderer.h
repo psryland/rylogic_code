@@ -28,7 +28,7 @@ namespace pr::rdr12
 			// This is needed so that the Dx12 device is created before the managers are constructed.
 			RdrSettings                m_settings;
 			FeatureSupport             m_features;
-			D3DPtr<ID3D12Device4>      m_d3d_device;
+			D3DPtr<ID3D12Device>       m_d3d_device;
 			D3DPtr<ID3D12CommandQueue> m_cmd_queue;
 			D3DPtr<ID2D1Factory1>      m_d2dfactory;
 			D3DPtr<IDWriteFactory>     m_dwrite;
@@ -153,9 +153,15 @@ namespace pr::rdr12
 			{}
 
 			// Return the D3D device
-			ID3D12Device4* D3DDevice() const
+			ID3D12Device* D3DDevice() const
 			{
 				return m_rdr.m_d3d_device.get();
+			}
+			D3DPtr<ID3D12Device4> D3DDevice4() const
+			{
+				D3DPtr<ID3D12Device4> device4;
+				Throw(D3DDevice()->QueryInterface<ID3D12Device4>(&device4.m_ptr));
+				return device4;
 			}
 
 			// Return the main command queue

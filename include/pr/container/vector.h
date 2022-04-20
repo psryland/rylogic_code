@@ -228,11 +228,11 @@ namespace pr
 
 	// Not intended to be a complete replacement, just a 90% substitute
 	// Allocator = the type to do the allocation/deallocation. *Can be a pointer to an std::allocator like object*
-	template <typename Type, int LocalCount=16, bool Fixed=false, typename Allocator=aligned_alloc<Type>>
+	template <typename Type, int LocalCount=16, bool Fixed=false, int Alignment = alignof(Type), typename Allocator=aligned_alloc<Type>>
 	class vector
 	{
 	public:
-		using type            = vector<Type, LocalCount, Fixed, Allocator>;
+		using type            = vector<Type, LocalCount, Fixed, Alignment, Allocator>;
 		using allocator_type  = Allocator;
 		using alloc_traits    = std::allocator_traits<std::remove_pointer_t<allocator_type>>;
 		using const_iterator  = pr::impl::vector::citer<Type>;
@@ -245,7 +245,7 @@ namespace pr
 
 		static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
 		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
-		static constexpr int  type_alignment_v   = std::alignment_of_v<Type>;
+		static constexpr int  type_alignment_v   = Alignment;
 		static constexpr int  local_size_v       = LocalCount;
 
 		struct traits
@@ -381,8 +381,8 @@ namespace pr
 		size_type m_count;                 // The number of used elements in the array
 		allocator_type m_alloc;            // The memory allocator
 
-		// Any combination of type, local count, fixed, and allocator is a friend
-		template <class T, int L, bool F, class A> friend class vector;
+		// Any combination of type, local count, fixed, alignment, and allocator is a friend
+		template <class T, int L, bool F, int A, class C> friend class vector;
 
 		// return true if 'ptr' points with the current container
 		bool inside(const_pointer ptr) const
@@ -517,7 +517,7 @@ namespace pr
 		}
 
 		// copy construct from any pr::vector type
-		template <int L, bool F, class A> vector(vector<Type,L,F,A> const& right)
+		template <int L, bool F, int A, class C> vector(vector<Type,L,F,A,C> const& right)
 			:vector(right.m_alloc)
 		{
 			impl_assign(right);
@@ -545,7 +545,7 @@ namespace pr
 		}
 
 		// move construct from similar vector
-		template <int L, bool F, class A> vector(vector<Type,L,F,A>&& right) noexcept
+		template <int L, bool F, int A, class C> vector(vector<Type,L,F,A,C>&& right) noexcept
 			:vector(right.m_alloc)
 		{
 			impl_assign(std::forward< vector<Type,L,F,A> >(right));
@@ -701,6 +701,10 @@ namespace pr
 		{
 			return m_count;
 		}
+		int64_t ssize() const
+		{
+			return static_cast<int64_t>(m_count);
+		}
 
 		// return the available length within allocation
 		size_type capacity() const
@@ -804,7 +808,7 @@ namespace pr
 		}
 
 		// assign right from any pr::vector<Type,...>
-		template <int L,bool F,typename A> vector& operator = (vector<Type,L,F,A> const& right)
+		template <int L, bool F, int A, class C> vector& operator = (vector<Type,L,F,A,C> const& right)
 		{
 			impl_assign(right);
 			return *this;
@@ -836,7 +840,7 @@ namespace pr
 		}
 
 		// move right from any pr::vector<>
-		template <int L,bool F,typename A> vector& operator = (vector<Type,L,F,A>&& right) noexcept
+		template <int L, bool F, int A, class C> vector& operator = (vector<Type,L,F,A,C>&& right) noexcept
 		{
 			impl_assign(std::forward< vector<Type,L,F,A> >(right));
 			return *this;
@@ -1076,7 +1080,7 @@ namespace pr
 		}
 
 		// Assign right of any pr::vector<>
-		template <int L,bool F,typename A> void impl_assign(vector<Type,L,F,A> const& right)
+		template <int L,bool F,int A,class C> void impl_assign(vector<Type,L,F,A,C> const& right)
 		{
 			// Notes:
 			//  - copying does not copy right.capacity() (same as std::vector)
@@ -1108,7 +1112,7 @@ namespace pr
 		}
 
 		// Assign by moving right
-		template <int L,bool F,typename A> void impl_assign(vector<Type,L,F,A>&& right) noexcept
+		template <int L,bool F,int A,class C> void impl_assign(vector<Type,L,F,A,C>&& right) noexcept
 		{
 			// Notes:
 			// - moving *does* move right.capacity() (same as std::vector)
@@ -1170,7 +1174,9 @@ namespace pr
 		// This allows cast to std::vector<> among others. 
 		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the 
 		// default alignment causes a compiler error because of std::vector.resize(). 
-		template <typename ArrayType, typename = std::enable_if_t<std::is_same_v<typename ArrayType::value_type, value_type>>>
+		template <typename ArrayType>
+			requires std::is_same_v<typename ArrayType::value_type, value_type>
+			//&& std::is_constructible_v<ArrayType, std::decay_t<decltype(begin())>, std::decay_t<decltype(end())>>
 		operator ArrayType() const
 		{
 			return ArrayType(begin(), end());
@@ -1185,8 +1191,8 @@ namespace pr
 		}
 
 		// Operators
-		template <typename T, int L, bool F, typename A>
-		friend bool operator == (vector const& lhs, vector<T, L, F, A> const& rhs)
+		template <typename T, int L, bool F, int A, class C>
+		friend bool operator == (vector const& lhs, vector<T, L, F, A, C> const& rhs)
 		{
 			if (lhs.size() != rhs.size()) return false;
 			auto lptr = std::begin(lhs);
@@ -1196,8 +1202,8 @@ namespace pr
 
 			return true;
 		}
-		template <typename T, int L, bool F, typename A> 
-		friend bool operator != (vector const& lhs, vector<T, L, F, A> const& rhs)
+		template <typename T, int L, bool F, int A, class C> 
+		friend bool operator != (vector const& lhs, vector<T, L, F, A, C> const& rhs)
 		{
 			return !(lhs == rhs);
 		}

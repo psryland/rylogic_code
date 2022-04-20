@@ -23,8 +23,10 @@ namespace pr::rdr12
 		,m_d2d_dc()
 		,m_cmd_alloc_pool()
 		,m_cmd_list_pool()
+		,m_pipe_state_pool()
 		,m_bb(settings.m_buffer_count)
 		,m_gpu_sync()
+		,m_frame_number()
 		,m_vsync(settings.m_vsync)
 		,m_idle(false)
 		,m_name(settings.m_name)
@@ -154,6 +156,7 @@ namespace pr::rdr12
 		// Release COM pointers
 		m_rtv_heap = nullptr;
 		m_dsv_heap = nullptr;
+		m_pipe_state_pool.resize(0);
 		m_cmd_alloc_pool.resize(0);
 		m_cmd_list_pool.resize(0);
 		m_bb.resize(0);
@@ -254,7 +257,13 @@ namespace pr::rdr12
 		return s_cast<int>(m_bb.size());
 	}
 
-	// The most recent sync point sent to the GPU
+	// The number of times 'RenderFrame' has been called
+	int64_t Window::FrameNumber() const
+	{
+		return m_frame_number;
+	}
+
+	// The most recent sync point sent to the GPU (*not* equal to frame number)
 	uint64_t Window::LatestSyncPoint() const
 	{
 		return m_gpu_sync.m_issue;
@@ -300,7 +309,7 @@ namespace pr::rdr12
 		}
 
 		// Resize the depth stencil
-		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc() : TexDesc::Tex2D(Image{size.x, size.y, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil);
+		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc() : TexDesc::Tex2D(Image{size.x, size.y, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
 		auto clear_value = D3D12_CLEAR_VALUE {.Format = DXGI_FORMAT_D32_FLOAT, .DepthStencil = {.Depth = 1.0f, .Stencil=0}, };
 		m_depth_stencil = nullptr;
 		Throw(device->CreateCommittedResource(
@@ -404,11 +413,21 @@ namespace pr::rdr12
 		if (m_cmd_list_pool.empty())
 		{
 			Renderer::Lock lock(rdr());
-			auto device = lock.D3DDevice();
+			//auto device4 = lock.D3DDevice4();
 
-			// Create a command list for internal use by the window
 			D3DPtr<ID3D12GraphicsCommandList> cmd_list;
-			Throw(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&cmd_list.m_ptr));
+			//if (device4 != nullptr)
+			//{
+			//	// Create a command list for internal use by the window
+			//	Throw(device4->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&cmd_list.m_ptr));
+			//}
+			//else
+			{
+				auto cmd_alloc = CmdAlloc();
+				auto device = lock.D3DDevice();
+				Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&cmd_list.m_ptr));
+				Throw(cmd_list->Close());
+			}
 			Throw(cmd_list->SetName(L"Window:CmdListPool:CmdList"));
 			m_cmd_list_pool.push_back(CmdListSyncPair{cmd_list});
 		}
@@ -417,6 +436,46 @@ namespace pr::rdr12
 		auto cl = m_cmd_list_pool.back();
 		m_cmd_list_pool.pop_back();
 		return CmdListScope(m_cmd_list_pool, cl);
+	}
+
+	// Return a pipeline state instance for the given description
+	ID3D12PipelineState* Window::PipeState(PipeStateDesc const& desc)
+	{
+		// Hash the pipeline state
+		auto hash = pr::hash::HashBytes(&desc, &desc + 1);
+		
+		// See if a pipeline state object already exists
+		auto iter = pr::find_if(m_pipe_state_pool, [=](auto& pso) { return pso.hash == hash; });
+		if (iter == std::end(m_pipe_state_pool))
+		{
+			// If it doesn't exists, create it now
+			Renderer::Lock lock(rdr());
+			auto device = lock.D3DDevice();
+
+			// Create the pipeline state instance
+			D3DPtr<ID3D12PipelineState> pso;
+			Throw(device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso.m_ptr));
+			iter = m_pipe_state_pool.insert(iter, PipeStatePair{pso, 0, hash});
+
+			// Delete any states that haven't been used for a while
+			constexpr size_t MaxFrameAge = 30;
+			constexpr size_t DrainPoolCount = 100;
+			auto pool_size = m_pipe_state_pool.size();
+			if (pool_size > DrainPoolCount)
+			{
+				auto frame_number = FrameNumber();
+				erase_if_unstable(m_pipe_state_pool, [=](auto& item) { return frame_number - item.frame_number > MaxFrameAge; });
+				
+				#if PR_DBG_RDR
+				if (m_pipe_state_pool.size() == pool_size)
+					throw std::runtime_error("Too many unique pipeline states");
+				#endif
+			}
+		}
+
+		auto& pso = *iter;
+		pso.frame_number = FrameNumber();
+		return pso.ptr.get();
 	}
 
 	// Render a frame
@@ -433,6 +492,7 @@ namespace pr::rdr12
 			m_d2d_dc->SetTarget(bb.m_d2d_target.get());
 
 		// Start a frame
+		++m_frame_number;
 		return Window::Frame(bb);
 	}
 

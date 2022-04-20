@@ -31,6 +31,7 @@ namespace pr::rdr12
 		,m_gpu_sync()
 		,m_lookup_dxres()
 		,m_lookup_tex()
+		,m_staging_buffers()
 		,m_gdiplus()
 		,m_eh_resize()
 		,m_gdi_dc_ref_count()
@@ -417,6 +418,7 @@ namespace pr::rdr12
 	// Create stock models
 	void ResourceManager::CreateStockModels()
 	{
+		if (false)
 		{// Basis/focus point model
 			constexpr Vert verts[] = {
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
@@ -443,6 +445,7 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::Basis)] = ptr;
 		}
+		if (false)
 		{// Unit quad in Z = 0 plane
 			constexpr Vert verts[] = {
 				{v4(-0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.9999f)},
@@ -466,6 +469,7 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::UnitQuad)] = ptr;
 		}
+		if (true)
 		{// Bounding box cube
 			constexpr Vert verts[] = {
 				{v4(-0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
@@ -496,6 +500,7 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::BBoxModel)] = ptr;
 		}
+		if (false)
 		{// Selection box
 			// Create the selection box model
 			constexpr float sz = 1.0f;
@@ -584,8 +589,8 @@ namespace pr::rdr12
 				__uuidof(ID3D12Resource),
 				(void**)&staging.buf.m_ptr));
 
-			staging.buf->SetName(FmtS(L"Staging-%llu", size));
-			staging.size = size;
+			staging.buf->SetName(FmtS(L"Staging-%llu", bdesc.Width));
+			staging.size = bdesc.Width;
 
 			iter = m_staging_buffers.insert(iter, staging);
 		}
@@ -645,4 +650,14 @@ namespace pr::rdr12
 		m_lookup_tex.erase(iter);
 	}
 
+	// Return a shader to the allocator
+	void ResourceManager::Delete(Shader* shader)
+	{
+		if (shader == nullptr)
+			return;
+
+		Renderer::Lock lock(rdr());
+		assert(m_mem_tracker.remove(shader));
+		rdr12::Delete<Shader>(shader);
+	}
 }

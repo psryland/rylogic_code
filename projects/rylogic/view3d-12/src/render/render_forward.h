@@ -5,7 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/render_step.h"
-//#include "pr/view3d-12/shaders/shader_set.h"
+#include "pr/view3d-12/shaders/shader_forward.h"
 
 namespace pr::rdr12
 {
@@ -15,16 +15,12 @@ namespace pr::rdr12
 
 	private:
 
-		D3DPtr<ID3D12Resource> m_cbuf_frame;  // Per-frame constant buffer
-		D3DPtr<ID3D12Resource> m_cbuf_nugget; // Per-nugget constant buffer
-		//ShaderPtr            m_vs;          // The VS for forward rendering
-		//ShaderPtr            m_ps;          // The PS for forward rendering
+		// The forward renderer shader
+		shaders::Forward m_shader;
 
 	public:
 
 		explicit RenderForward(Scene& scene);
-		RenderForward(RenderForward const&) = delete;
-		RenderForward& operator = (RenderForward const&) = delete;
 
 	private:
 
@@ -39,8 +35,5 @@ namespace pr::rdr12
 
 		// Update the provided shader set appropriate for this render step
 		void ConfigShaders(ShaderSet1& ss, ETopo topo) const override;
-
-		// Call draw for a nugget
-		void DrawNugget(ID3D12GraphicsCommandList* cmd_list, Nugget const& nugget);//, StateStack& ss);
 	};
 }

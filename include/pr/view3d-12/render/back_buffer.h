@@ -4,56 +4,10 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/utility/object_pools.h"
 
 namespace pr::rdr12
 {
-	// A pair of allocator and sync issue number
-	struct CmdAllocSyncPair
-	{
-		D3DPtr<ID3D12CommandAllocator> alloc; // The allocator
-		uint64_t issue; // The sync point after which 'alloc' can be reused.
-	};
-	struct CmdListSyncPair
-	{
-		D3DPtr<ID3D12GraphicsCommandList> list; // The command list
-	};
-
-	using CmdListPool = pr::vector<CmdListSyncPair, 4, false>;
-	using CmdAllocPool = pr::vector<CmdAllocSyncPair, 4, false>;
-
-	// Cmd allocator wrapper that returns to the pool when out of scope.
-	struct CmdAllocScope
-	{
-		CmdAllocPool& m_pool;
-		CmdAllocSyncPair m_ca;
-		Window* m_wnd;
-
-		CmdAllocScope(CmdAllocPool& pool, CmdAllocSyncPair cmd_alloc, Window* wnd);
-		CmdAllocScope(CmdAllocScope&&) = default;
-		CmdAllocScope(CmdAllocScope const&) = delete;
-		CmdAllocScope& operator= (CmdAllocScope&&) = default;
-		CmdAllocScope& operator= (CmdAllocScope const&) = delete;
-		~CmdAllocScope();
-		ID3D12CommandAllocator* operator->() { return m_ca.alloc.get(); }
-		operator ID3D12CommandAllocator*() { return m_ca.alloc.get(); }
-	};
-
-	// Cmd list wrapper that returns to the pool when out of scope
-	struct CmdListScope
-	{
-		CmdListPool& m_pool;
-		CmdListSyncPair m_cl;
-
-		CmdListScope(CmdListPool& pool, CmdListSyncPair cmd_list);
-		CmdListScope(CmdListScope&&) = default;
-		CmdListScope(CmdListScope const&) = delete;
-		CmdListScope& operator= (CmdListScope&&) = default;
-		CmdListScope& operator= (CmdListScope const&) = delete;
-		~CmdListScope();
-		ID3D12GraphicsCommandList* operator->() { return m_cl.list.get(); }
-		operator ID3D12GraphicsCommandList*() { return m_cl.list.get(); }
-	};
-
 	// Data associated with a back buffer
 	struct BackBuffer
 	{

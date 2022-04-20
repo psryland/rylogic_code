@@ -236,6 +236,14 @@ namespace pr::hash
 		return h;
 	}
 
+	// Hash a range of bytes
+	inline HashValue32 HashBytes(void const* first, void const* llast, uint32_t h = FNV_offset_basis32)
+	{
+		auto bptr = reinterpret_cast<unsigned char const*>(first);
+		for (; bptr != llast; ++bptr) h = HashCT(*bptr, h);
+		return h;
+	}
+	
 	// Hash a range of elements
 	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::enable_if_pod32<Ty>> inline HashValue32 Hash(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
 	{

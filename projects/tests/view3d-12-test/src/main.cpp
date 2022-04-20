@@ -20,7 +20,7 @@ struct Main :Form
 	#define PR_RDR_INST(x)\
 		x(m4x4, m_i2w, EInstComp::I2WTransform)\
 		x(ModelPtr, m_model, EInstComp::ModelPtr)
-	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
+	PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST)
 	#undef PR_RDR_INST
 
 	Renderer m_rdr;
@@ -40,7 +40,8 @@ struct Main :Form
 		,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
 		,m_scn(m_wnd)
 	{
-		m_scn.m_bkgd_colour = Colour32Yellow;
+		m_scn.m_bkgd_colour = Colour32(0xFF1e3e1e);
+		m_scn.m_cam.LookAt(v4{0, 0, -10, 1}, v4::Origin(), v4::YAxis());
 		m_inst.m_model = m_rdr.res_mgr().FindModel(EStockModel::BBoxModel);
 		m_inst.m_i2w = m4x4::Identity();
 		m_scn.AddInstance(m_inst);

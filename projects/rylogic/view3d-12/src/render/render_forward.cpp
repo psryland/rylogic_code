@@ -12,20 +12,18 @@
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
+#include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "view3d-12/src/utility/pipe_states.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12
 {
-	// include generated header files
-	#include PR_RDR_SHADER_COMPILED_DIR(forward_vs.h)
-	#include PR_RDR_SHADER_COMPILED_DIR(forward_ps.h)
-	//todo #include PR_RDR_SHADER_COMPILED_DIR(forward_radial_fade_ps.h)
-
 	using namespace hlsl::fwd;
 
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(scene)
+		, m_shader(scene.rdr().res_mgr(), scene.wnd().BBCount())
 	{
 		Renderer::Lock lock(scene.rdr());
 		auto device = lock.D3DDevice();
@@ -146,13 +144,13 @@ namespace pr::rdr12
 		Throw(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&m_shader_sig.m_ptr));
 
 		// Create the default PSO
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psodesc = {
+		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
 			.pRootSignature = m_shader_sig.get(),
-			.VS = { .pShaderBytecode = &forward_vs[0], .BytecodeLength = sizeof(forward_vs), },
-			.PS = { .pShaderBytecode = &forward_ps[0], .BytecodeLength = sizeof(forward_ps), },
-			.DS = { .pShaderBytecode = nullptr, .BytecodeLength = 0U, },
-			.HS = { .pShaderBytecode = nullptr, .BytecodeLength = 0U, },
-			.GS = { .pShaderBytecode = nullptr, .BytecodeLength = 0U, },
+			.VS = m_shader.Code.VS,
+			.PS = m_shader.Code.PS,
+			.DS = m_shader.Code.DS,
+			.HS = m_shader.Code.HS,
+			.GS = m_shader.Code.GS,
 			.StreamOutput = StreamOutputDesc{},
 			.BlendState = {
 				.AlphaToCoverageEnable = FALSE,
@@ -180,7 +178,7 @@ namespace pr::rdr12
 				.NumElements = _countof(Vert::Layout()),
 			},
 			.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,//hack D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1U,
 			.RTVFormats = {
 				DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -201,33 +199,6 @@ namespace pr::rdr12
 			},
 			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
 		};
-		Throw(device->CreateGraphicsPipelineState(&psodesc, __uuidof(ID3D12PipelineState), (void**)&m_pso.m_ptr));
-
-		// Create a descriptor heaps for the constant buffers. One for each BB so we can write to one while the other is in flight.
-		{//CBufFrame
-			auto desc = BufferDesc::CBuf(wnd().BBCount() * cbuf_size_aligned_v<CBufFrame>);
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Upload(),
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				__uuidof(ID3D12Resource),
-				(void**)&m_cbuf_frame.m_ptr));
-			Throw(m_cbuf_frame->SetName(L"RenderForward:CBufFrame"));
-		}
-		{//CBufNugget
-			auto desc = BufferDesc::CBuf(wnd().BBCount() * cbuf_size_aligned_v<CBufNugget>);
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Upload(),
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				__uuidof(ID3D12Resource),
-				(void**)&m_cbuf_nugget.m_ptr));
-			Throw(m_cbuf_frame->SetName(L"RenderForward:CBufNugget"));
-		}
 	}
 
 	// Add model nuggets to the draw list for this render step.
@@ -309,31 +280,38 @@ namespace pr::rdr12
 		cmd_list->OMSetRenderTargets(1, &bb.m_rtv, false, &bb.m_dsv);
 
 		// Clear the render target to the background colour
-		if (m_scene->m_bkgd_colour != ColourZero)
+		if (scn().m_bkgd_colour != ColourZero)
 		{
-			cmd_list->ClearRenderTargetView(bb.m_rtv, m_scene->m_bkgd_colour.arr, 0, nullptr);
+			cmd_list->ClearRenderTargetView(bb.m_rtv, scn().m_bkgd_colour.arr, 0, nullptr);
 			cmd_list->ClearDepthStencilView(bb.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0U, 0, nullptr);
 		}
 
 		// Set the viewport
-		auto const& vp = m_scene->m_viewport;
+		auto const& vp = scn().m_viewport;
 		cmd_list->RSSetViewports(1, &vp);
 		cmd_list->RSSetScissorRects(s_cast<UINT>(vp.m_clip.size()), vp.m_clip.data());
 
 		#if 0 // todo
 		// Check if shadows are enabled
-		auto smap_rstep = m_scene->FindRStep<ShadowMap>();
+		auto smap_rstep = scn().FindRStep<ShadowMap>();
 		StateStack::SmapFrame smap_frame(ss, smap_rstep);
 		#endif
 
 		// Set the frame constants
 		CBufFrame cb0 = {};
-		SetViewConstants(m_scene->m_cam, cb0.m_cam);
-		//todo SetLightingConstants(m_scene->m_global_light, m_scene->m_cam, cb0.m_global_light);
-		//todo SetShadowMapConstants(smap_rstep, cb0.m_shadow);
-		//todo SetEnvMapConstants(m_scene->m_global_envmap.get(), cb0.m_env_map);
-		WriteConstants(cb0, m_cbuf_frame.get(), bb.m_bb_index);
-		cmd_list->SetGraphicsRootConstantBufferView(0, m_cbuf_frame->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufFrame>);
+		SetViewConstants(cb0.m_cam, scn().m_cam);
+		SetLightingConstants(cb0.m_global_light, scn().m_global_light, scn().m_cam);
+		//todo SetShadowMapConstants(cb0.m_shadow, smap_rstep);
+		//todo SetEnvMapConstants(cb0.m_env_map, scn().m_global_envmap.get());
+		{
+			// Copy 'cb0' to 'm_shader.m_cbuf_frame[bb_index]'
+			MapResource map(m_shader.m_cbuf_frame.get(), 0U, cbuf_size_aligned_v<CBufFrame>);
+			map.at<CBufFrame>(bb.m_bb_index * cbuf_size_aligned_v<CBufFrame>) = cb0;
+		}
+		// Bind the constants to the pipeline
+		auto address = m_shader.m_cbuf_frame->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufFrame>;
+		cmd_list->SetGraphicsRootConstantBufferView(CBufFrame::shader_register, address);
+		
 
 		// Draw each element in the draw list
 		Lock lock(*this);
@@ -344,85 +322,88 @@ namespace pr::rdr12
 			// Tips:
 			//  - To uniquely identify an instance in a shader for debugging, set the Instance Id (cb1.m_flags.w)
 			//    Then in the shader, use: if (m_flags.w == 1234) ...
-
-			//todo StateStack::DleFrame frame(ss, dle);
 			auto const& nugget = *dle.m_nugget;
+			auto desc = m_default_pipe_state;
 
 			// Set pipeline state
-			cmd_list->SetPipelineState(m_pso.get());
+			desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(nugget.m_topo);
 			cmd_list->IASetPrimitiveTopology(To<D3D12_PRIMITIVE_TOPOLOGY>(nugget.m_topo));
-			cmd_list->IASetVertexBuffers(0U, 1U, &nugget.m_model->VBufView());
-			cmd_list->IASetIndexBuffer(&nugget.m_model->IBufView());
+			cmd_list->IASetVertexBuffers(0U, 1U, &nugget.m_model->m_vb_view);
+			cmd_list->IASetIndexBuffer(&nugget.m_model->m_ib_view);
+			// todo apply nugget BS,RS,DS
 
 			// Set the per-nugget constants
 			CBufNugget cb1 = {};
-			SetModelFlags(*dle.m_instance, nugget, *m_scene, cb1);
-			SetTxfm(*dle.m_instance, m_scene->m_cam, cb1);
-			SetTint(*dle.m_instance, nugget, cb1);
-			SetEnvMap(*dle.m_instance, nugget, cb1);
-			SetTexDiffuse(nugget, cb1);
-			WriteConstants(cb1, m_cbuf_nugget.get(), bb.m_bb_index);
-			cmd_list->SetGraphicsRootConstantBufferView(1, m_cbuf_nugget->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufNugget>);
-
-			// Draw the nugget
-			DrawNugget(cmd_list, nugget);//, ss);
-		}
-	}
-
-	// Call draw for a nugget
-	void RenderForward::DrawNugget(ID3D12GraphicsCommandList* cmd_list, Nugget const& nugget)//todo, StateStack& ss)
-	{
-		// Render solid or wireframe nuggets
-		if (nugget.m_fill_mode == EFillMode::Default ||
-			nugget.m_fill_mode == EFillMode::Solid ||
-			nugget.m_fill_mode == EFillMode::Wireframe ||
-			nugget.m_fill_mode == EFillMode::SolidWire)
-		{
-			//todo ss.Commit();
-			if (nugget.m_irange.empty())
+			SetModelFlags(cb1, *dle.m_instance, nugget, scn());
+			SetTxfm(cb1, *dle.m_instance, scn().m_cam);
+			SetTint(cb1, *dle.m_instance, nugget);
+			SetEnvMap(cb1, *dle.m_instance, nugget);
+			SetTexDiffuse(cb1, nugget);
 			{
+				// Copy 'cb1' to 'm_shader.m_cbuf_nugget[bb_index]'
+				MapResource map(m_shader.m_cbuf_nugget.get(), 0U, cbuf_size_aligned_v<CBufNugget>);
+				map.at<CBufNugget>(bb.m_bb_index * cbuf_size_aligned_v<CBufNugget>) = cb1;
+			}
+			// Bind the constants to the pipeline
+			auto address = m_shader.m_cbuf_nugget->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufNugget>;
+			cmd_list->SetGraphicsRootConstantBufferView(CBufNugget::shader_register, address);
+
+			// Draw the nugget **** 
+
+			// Render solid or wireframe nuggets
+			if (nugget.m_fill_mode == EFillMode::Default ||
+				nugget.m_fill_mode == EFillMode::Solid ||
+				nugget.m_fill_mode == EFillMode::Wireframe ||
+				nugget.m_fill_mode == EFillMode::SolidWire)
+			{
+				cmd_list->SetPipelineState(wnd().PipeState(desc));
+				if (nugget.m_irange.empty())
+				{
+					cmd_list->DrawInstanced(
+						s_cast<UINT>(nugget.m_vrange.size()), 1U,
+						s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
+				}
+				else
+				{
+					cmd_list->DrawIndexedInstanced(
+						s_cast<UINT>(nugget.m_irange.size()), 1U,
+						s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
+				}
+			}
+
+			// Render wire frame over solid for 'SolidWire' mode
+			if (!nugget.m_irange.empty() && 
+				nugget.m_fill_mode == EFillMode::SolidWire && (
+				nugget.m_topo == ETopo::TriList ||
+				nugget.m_topo == ETopo::TriListAdj ||
+				nugget.m_topo == ETopo::TriStrip ||
+				nugget.m_topo == ETopo::TriStripAdj))
+			{
+				auto fill_mode = desc.RasterizerState.FillMode;
+				desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+				desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+				cmd_list->SetPipelineState(wnd().PipeState(desc));
+
+				cmd_list->DrawIndexedInstanced(
+					s_cast<UINT>(nugget.m_irange.size()), 1U,
+					s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
+
+				desc.RasterizerState.FillMode = fill_mode;
+				//ps.Clear(EPipeState::BlendEnable0);
+			}
+
+			// Render points for 'Points' mode
+			if (nugget.m_fill_mode == EFillMode::Points)
+			{
+				desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList);
+				desc.GS = scn().m_diag.m_gs_fillmode_points->Code.GS;
+				scn().m_diag.m_gs_fillmode_points->Setup();
+				cmd_list->SetPipelineState(wnd().PipeState(desc));
+
 				cmd_list->DrawInstanced(
 					s_cast<UINT>(nugget.m_vrange.size()), 1U,
 					s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
 			}
-			else
-			{
-				cmd_list->DrawIndexedInstanced(
-					s_cast<UINT>(nugget.m_irange.size()), 1U,
-					s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
-			}
-		}
-
-		// Render wire frame over solid for 'SolidWire' mode
-		if (!nugget.m_irange.empty() && 
-			nugget.m_fill_mode == EFillMode::SolidWire && (
-			nugget.m_topo == ETopo::TriList ||
-			nugget.m_topo == ETopo::TriListAdj ||
-			nugget.m_topo == ETopo::TriStrip ||
-			nugget.m_topo == ETopo::TriStripAdj))
-		{
-			//todo m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-			//todo m_bsb.Set(EBS::BlendEnable, FALSE, 0);
-			//todo 
-			//todo ss.Commit();
-			cmd_list->DrawIndexedInstanced(
-				s_cast<UINT>(nugget.m_irange.size()), 1U,
-				s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
-
-			//todo m_rsb.Clear(ERS::FillMode);
-			//todo m_bsb.Clear(EBS::BlendEnable, 0);
-		}
-
-		// Render points for 'Points' mode
-		if (nugget.m_fill_mode == EFillMode::Points)
-		{
-			//todo ss.m_pending.m_topo = ETopo::PointList;
-			//todo ss.m_pending.m_shdrs.m_gs = m_scene->m_diag.m_gs_fillmode_points.get();
-			//todo ss.Commit();
-			cmd_list->DrawInstanced(
-				s_cast<UINT>(nugget.m_vrange.size()), 1U,
-				s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
 		}
 	}
-
 }

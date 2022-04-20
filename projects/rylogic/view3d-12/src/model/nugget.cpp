@@ -10,24 +10,19 @@
 
 namespace pr::rdr12
 {
-	NuggetData::NuggetData(ETopo topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
+	NuggetData::NuggetData(ETopo topo, EGeom geom, Range vrange, Range irange)
 		:m_topo(topo)
 		,m_geom(geom)
-		//,m_smap(smap ? *smap : ShaderMap())
+		,m_shaders()
+		,m_pipe_state()
 		,m_tex_diffuse()
 		,m_tint(Colour32White)
-		//,m_bsb()
-		//,m_dsb()
-		//,m_rsb()
 		,m_sort_key(ESortGroup::Default)
 		,m_relative_reflectivity(1)
 		,m_nflags(ENuggetFlag::None)
 		,m_vrange(vrange)
 		,m_irange(irange)
-	{
-		//todo
-		(void)smap;
-	}
+	{}
 
 	Nugget::Nugget(NuggetData const& ndata, Model* model)
 		:NuggetData(ndata)

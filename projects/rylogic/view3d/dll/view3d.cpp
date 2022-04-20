@@ -3360,12 +3360,12 @@ static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ));
 static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ));
 static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ));
 
-static_assert(int(EView3DTopo::Invalid   ) == int(pr::rdr::ETopo::Invalid   ));
-static_assert(int(EView3DTopo::PointList ) == int(pr::rdr::ETopo::PointList ));
-static_assert(int(EView3DTopo::LineList  ) == int(pr::rdr::ETopo::LineList  ));
-static_assert(int(EView3DTopo::LineStrip ) == int(pr::rdr::ETopo::LineStrip ));
-static_assert(int(EView3DTopo::TriList   ) == int(pr::rdr::ETopo::TriList   ));
-static_assert(int(EView3DTopo::TriStrip  ) == int(pr::rdr::ETopo::TriStrip  ));
+//static_assert(int(EView3DTopo::Invalid   ) == int(pr::rdr::ETopo::Invalid   ));
+//static_assert(int(EView3DTopo::PointList ) == int(pr::rdr::ETopo::PointList ));
+//static_assert(int(EView3DTopo::LineList  ) == int(pr::rdr::ETopo::LineList  ));
+//static_assert(int(EView3DTopo::LineStrip ) == int(pr::rdr::ETopo::LineStrip ));
+//static_assert(int(EView3DTopo::TriList   ) == int(pr::rdr::ETopo::TriList   ));
+//static_assert(int(EView3DTopo::TriStrip  ) == int(pr::rdr::ETopo::TriStrip  ));
 
 static_assert(int(EView3DNuggetFlag::None            ) == int(pr::rdr::ENuggetFlag::None            ));
 static_assert(int(EView3DNuggetFlag::Hidden          ) == int(pr::rdr::ENuggetFlag::Hidden          ));
@@ -3408,13 +3408,6 @@ static_assert(int(EView3DCameraLockMask::RotZ          ) == int(pr::camera::ELoc
 static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELockMask::Zoom          ));
 static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative));
 static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ));
-
-static_assert(int(EView3DTopo::Invalid  ) == int(pr::rdr::ETopo::Invalid  ));
-static_assert(int(EView3DTopo::PointList) == int(pr::rdr::ETopo::PointList));
-static_assert(int(EView3DTopo::LineList ) == int(pr::rdr::ETopo::LineList ));
-static_assert(int(EView3DTopo::LineStrip) == int(pr::rdr::ETopo::LineStrip));
-static_assert(int(EView3DTopo::TriList  ) == int(pr::rdr::ETopo::TriList  ));
-static_assert(int(EView3DTopo::TriStrip ) == int(pr::rdr::ETopo::TriStrip ));
 
 static_assert(int(EView3DFillMode::Default  ) == int(pr::rdr::EFillMode::Default  ));
 static_assert(int(EView3DFillMode::SolidWire) == int(pr::rdr::EFillMode::SolidWire));

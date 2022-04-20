@@ -59,7 +59,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 	PR_DECLARE_PROFILE(PR_PROFILE_BROADPHASE, phBroadphaseBrute);
 	PR_PROFILE_SCOPE(PR_PROFILE_BROADPHASE, phBroadphaseBrute);
 	PR_ASSERT(PR_DBG_PHYSICS, !m_enumerating, "Pair enumeration is not reentrant");
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 
@@ -82,7 +82,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 // Enumerate all overlaps with 'entity'
 void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* context)
 {
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 
@@ -101,7 +101,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* c
 // Enumerate all overlaps with 'ray'
 void BPBruteForce::EnumPairs(EnumPairsFunc func, Ray const& ray, void* context)
 {
-	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::Scope<void>(
 		[&] { m_enumerating = true; },
 		[&] { m_enumerating = false; }));
 

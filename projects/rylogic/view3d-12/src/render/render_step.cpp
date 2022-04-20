@@ -4,10 +4,12 @@
 //*********************************************
 #include "pr/view3d-12/render/render_step.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/instance/instance.h"
+#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/render/drawlist_element.h"
 
 namespace pr::rdr12
@@ -16,10 +18,10 @@ namespace pr::rdr12
 		: m_scene(&scene)
 		, m_drawlist()
 		, m_sort_needed(true)
-		,m_shader_sig()
-		,m_pso()
-		//, m_evt_model_delete(scene.wnd().mdl_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
-		,m_mutex()
+		, m_shader_sig()
+		, m_default_pipe_state()
+		, m_evt_model_delete(wnd().res_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
+		, m_mutex()
 	{}
 
 	// Access the renderer

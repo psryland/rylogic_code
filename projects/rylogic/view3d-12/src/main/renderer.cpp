@@ -77,14 +77,14 @@ namespace pr::rdr12
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
 				Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
 				dbg1->EnableDebugLayer();
-				dbg1->SetEnableGPUBasedValidation(true);
+				//dbg1->SetEnableGPUBasedValidation(true);
 			}
 
 			// Create the d3d device
 			Throw(D3D12CreateDevice(
 				m_settings.m_adapter.ptr.get(),
 				m_settings.m_feature_level,
-				__uuidof(ID3D12Device4),
+				__uuidof(ID3D12Device),
 				(void**)&m_d3d_device.m_ptr));
 
 			// Read the supported features

@@ -42,34 +42,4 @@ namespace pr::rdr12
 	{
 		return m_wnd->LatestSyncPoint();
 	}
-
-	// Command allocator scope
-	CmdAllocScope::CmdAllocScope(CmdAllocPool& pool, CmdAllocSyncPair cmd_alloc, Window* wnd)
-		:m_pool(pool)
-		,m_ca(cmd_alloc)
-		,m_wnd(wnd)
-	{}
-	CmdAllocScope::~CmdAllocScope()
-	{
-		// std::move creates 'dead' instances
-		if (m_ca.alloc == nullptr) return;
-
-		// This allocator can't be used again while the GPU might still be rendering command lists it created.
-		m_ca.issue = m_wnd->LatestSyncPoint() + 1;
-		m_pool.push_back(m_ca);
-	}
-
-	// Command list scope
-	CmdListScope::CmdListScope(CmdListPool& pool, CmdListSyncPair cmd_list)
-		:m_pool(pool)
-		,m_cl(cmd_list)
-	{}
-	CmdListScope::~CmdListScope()
-	{
-		// std::move creates 'dead' instances
-		if (m_cl.list == nullptr) return;
-
-		// This list can be used again immediately
-		m_pool.push_back(m_cl);
-	}
 }

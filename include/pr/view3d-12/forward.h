@@ -150,16 +150,8 @@ namespace pr::rdr12
 	struct RenderForward;
 	struct DrawListElement;
 	struct BackBuffer;
+	struct PipeState;
 	struct SortKey;
-	    //struct BSBlock;
-	    //struct DSBlock;
-	    //struct RSBlock;
-	    struct StateStack;
-	    //struct DeviceState;
-	    //struct GBuffer;
-	    //struct DSLighting;
-	    struct ShadowMap;
-	    //struct RayCast;
 
 	// Resources
 	struct ResourceManager;
@@ -180,12 +172,19 @@ namespace pr::rdr12
 
 	// Shaders
 	struct Vert;
-	    struct ShaderDesc;
-	    struct Shader;
-	    struct ShaderSet0;
-	    struct ShaderSet1;
-	    struct ShaderMap;
-	    using ShaderPtr = RefPtr<Shader>;
+	struct Shader;
+	namespace shaders
+	{
+		struct Forward;
+		struct PointSpriteGS;
+		struct ShowNormalsGS;
+	}
+		    struct ShaderDesc;
+		    struct ShaderSet0;
+		    struct ShaderSet1;
+		    struct ShaderMap;
+		    struct ShadowMap;
+	using ShaderPtr = RefPtr<Shader>;
 
 	// Textures
 	struct TextureDesc;

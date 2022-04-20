@@ -17,7 +17,7 @@ namespace pr::rdr12
 		RenderTarget = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
 		DepthStencil = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
 		UnorderedAccess = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-		NotShaderResource = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE,
+		DenyShaderResource = D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE,
 		CrossAdapter = D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER,
 		SimultaneousAccess = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS,
 		VideoDecodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY,
@@ -358,6 +358,7 @@ namespace pr::rdr12
 		// Constructors
 		static BufferDesc Buffer(size_t size, void const* data, EUsage usage = EUsage::None)
 		{
+			size = PadTo<size_t>(size, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			return BufferDesc(size, 1, data, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, usage);
 		}
 		static BufferDesc CBuf(size_t size)
@@ -565,5 +566,27 @@ namespace pr::rdr12
 			RegisterSpace    = s_cast<UINT>(register_space);
 			ShaderVisibility = vis;
 		}
+	};
+
+	// Pipe state description
+	struct PipeStateDesc :D3D12_GRAPHICS_PIPELINE_STATE_DESC
+	{
+		PipeStateDesc()
+			:D3D12_GRAPHICS_PIPELINE_STATE_DESC()
+		{}
+		PipeStateDesc(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& rhs)
+			:D3D12_GRAPHICS_PIPELINE_STATE_DESC(rhs)
+		{}
+	};
+
+	// Compiled shader byte code
+	struct ByteCode :D3D12_SHADER_BYTECODE
+	{
+		ByteCode()
+			:D3D12_SHADER_BYTECODE()
+		{}
+		template <int Size> ByteCode(BYTE const (&code)[Size])
+			: D3D12_SHADER_BYTECODE(&code[0], Size)
+		{}
 	};
 }
