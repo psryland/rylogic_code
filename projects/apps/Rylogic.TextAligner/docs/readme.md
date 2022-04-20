@@ -127,6 +127,15 @@ For example, if the _Ignore Line Pattern_ is set to the regular expression patte
 
 ![ignored_lines.gif](https://raw.githubusercontent.com/psryland/rylogic_code/master/projects/apps/Rylogic.TextAligner/docs/ignored_lines.gif "ignored lines example")
 
+#### More Example Alignment Patterns
+
+* Single Line C Macros
+
+```regex
+(?<=#define\s+[_A-Za-z][_A-Za-z0-9]*\(.*\)\s+)(\b.*)
+(?<=#define\s+[_A-Za-z][_A-Za-z0-9]*\s+)(\b.*)
+```
+  
 #### Support & Donate
 
 If you like Rylogic Text Aligner and would like to say thanks, a donation would be greatly appreciated.
@@ -136,7 +145,14 @@ If you like Rylogic Text Aligner and would like to say thanks, a donation would 
 Bugs should be reported to support@rylogic.co.nz
 
 #### Version History
-
+* *v1.11.5 - 2022-04-14*
+  * Bug Fix. Settings synchronised across multiple running instances of Visual Studio (including different versions)
+  * Bug Fix. Line ignore pattern was not being preserved in settings.
+  
+* *v1.11.4 - 2022-03-30*
+  * Bug Fix. The pattern for matching member variables that end in '_' was incorrectly matching substrings.
+  * Changed the default 'Colon' matching pattern to only match single colons, not '::'.
+  
 * *v1.11.3 - 2022-03-16*
   * Added _Ignore Line Pattern_
 

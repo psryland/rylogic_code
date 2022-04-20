@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -21,49 +21,49 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			template <typename T> static Str To(Vec2<T> const& x)
+			template <typename T> static Str To_(Vec2<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g"), x.x, x.y);
 			}
-			template <typename T> static Str To(Vec3<T> const& x)
+			template <typename T> static Str To_(Vec3<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g"), x.x, x.y, x.z);
 			}
-			template <typename T> static Str To(Vec4<T> const& x)
+			template <typename T> static Str To_(Vec4<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g %g"), x.x, x.y, x.z, x.w);
 			}
-			template <typename T> static Str To(Vec8<T> const& x)
+			template <typename T> static Str To_(Vec8<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g %g  %g %g %g %g"), x.ang.x, x.ang.y, x.ang.z, x.ang.w, x.lin.x, x.lin.y, x.lin.z, x.lin.w);
 			}
-			template <typename T> static Str To(IVec2<T> const& x)
+			template <typename T> static Str To_(IVec2<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%d %d"), x.x, x.y);
 			}
-			template <typename T> static Str To(IVec4<T> const& x)
+			template <typename T> static Str To_(IVec4<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d %d"), x.x, x.y, x.z, x.w);
 			}
-			template <typename A, typename B> static Str To(Mat2x2<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat2x2<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
-				return To(m.x)+_+To(m.y);
+				return To_(m.x)+_+To_(m.y);
 			}
-			template <typename A, typename B> static Str To(Mat3x4<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat3x4<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
-				return To(m.x.xyz)+_+To(m.y.xyz)+_+To(m.z.xyz);
+				return To_(m.x.xyz)+_+To_(m.y.xyz)+_+To_(m.z.xyz);
 			}
-			template <typename A, typename B> static Str To(Mat4x4<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat4x4<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
-				return To(m.x)+_+To(m.y)+_+To(m.z)+_+To(m.w);
+				return To_(m.x)+_+To_(m.y)+_+To_(m.z)+_+To_(m.w);
 			}
-			template <typename A, typename B> static Str To(Mat6x8<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat6x8<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
-				return To(m[0])+_+To(m[1])+_+To(m[2])+_+To(m[3])+_+To(m[4])+_+To(m[5]);
+				return To_(m[0])+_+To_(m[1])+_+To_(m[2])+_+To_(m[3])+_+To_(m[4])+_+To_(m[5]);
 			}
 		};
 
@@ -72,7 +72,7 @@ namespace pr
 		{
 			// String to v2
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static v2 To(Str const& s, Char const** end = nullptr)
+			static v2 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<float>(s, &e);
@@ -83,7 +83,7 @@ namespace pr
 
 			// POINT to v2
 			#ifdef _WINDEF_
-			static v2 To(POINT const& x)
+			static v2 To_(POINT const& x)
 			{
 				return v2(float(x.x), float(x.y));
 			}
@@ -93,7 +93,7 @@ namespace pr
 		{
 			// String to v3
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static v3 To(Str const& s, Char const** end = nullptr)
+			static v3 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<float>(s, &e);
@@ -107,7 +107,7 @@ namespace pr
 		{
 			// String to v4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static v4 To(Str const& s, Char const** end = nullptr)
+			static v4 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<float>(s, &e);
@@ -118,7 +118,7 @@ namespace pr
 				return v4(x,y,z,w);
 			}
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static v4 To(Str const& s, float w, Char const** end = nullptr)
+			static v4 To_(Str const& s, float w, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<float>(s, &e);
@@ -132,7 +132,7 @@ namespace pr
 		{
 			// String to v8
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static v8 To(Str const& s, Char const** end = nullptr)
+			static v8 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto angx = pr::To<float>(s, &e);
@@ -151,7 +151,7 @@ namespace pr
 		{
 			// String to iv2
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static iv2 To(Str const& s, int radix = 10, Char const** end = nullptr)
+			static iv2 To_(Str const& s, int radix = 10, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<int>(s, radix, &e);
@@ -161,28 +161,28 @@ namespace pr
 			}
 
 			// v2 to iv2
-			static iv2 To(v2 const& v)
+			static iv2 To_(v2 const& v)
 			{
 				return iv2(int(v.x), int(v.y));
 			}
 
 			// IRect to iv2
-			static iv2 To(IRect const& x)
+			static iv2 To_(IRect const& x)
 			{
 				return iv2(x.SizeX(), x.SizeY());
 			}
 
 			// Win32 primitive types to iv2
 			#ifdef _WINDEF_
-			static iv2 To(POINT const& x)
+			static iv2 To_(POINT const& x)
 			{
 				return iv2(x.x, x.y);
 			}
-			static iv2 To(RECT const& x)
+			static iv2 To_(RECT const& x)
 			{
 				return iv2(x.right - x.left, x.bottom - x.top);
 			}
-			static iv2 To(SIZE const& x)
+			static iv2 To_(SIZE const& x)
 			{
 				return iv2(x.cx, x.cy);
 			}
@@ -190,11 +190,11 @@ namespace pr
 
 			// GDI+ types to iv2
 			#ifdef _GDIPLUS_H
-			static iv2 To(Gdiplus::Rect const& x)
+			static iv2 To_(Gdiplus::Rect const& x)
 			{
 				return iv2(x.Width, x.Height);
 			}
-			static iv2 To(Gdiplus::RectF const& x)
+			static iv2 To_(Gdiplus::RectF const& x)
 			{
 				return iv2(int(x.Width), int(x.Height));
 			}
@@ -204,7 +204,7 @@ namespace pr
 		{
 			// String to iv4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static iv4 To(Str const& s, int radix = 10, Char const** end = nullptr)
+			static iv4 To_(Str const& s, int radix = 10, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<int>(s, radix, &e);
@@ -219,7 +219,7 @@ namespace pr
 		{
 			// String to m2x2
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static m2x2 To(Str const& s, Char const** end = nullptr)
+			static m2x2 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<v2>(s, &e);
@@ -232,7 +232,7 @@ namespace pr
 		{
 			// String to m3x4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static m3x4 To(Str const& s, Char const** end = nullptr)
+			static m3x4 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<v4>(s, &e);
@@ -246,7 +246,7 @@ namespace pr
 		{
 			// String to m4x4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static m4x4 To(Str const& s, Char const** end = nullptr)
+			static m4x4 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<v4>(s, &e);
@@ -261,7 +261,7 @@ namespace pr
 		{
 			// String to m6x8
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static m6x8 To(Str const& s, Char const** end = nullptr)
+			static m6x8 To_(Str const& s, Char const** end = nullptr)
 			{
 				Char const* e;
 				auto x = pr::To<v8>(s, &e);
@@ -278,21 +278,21 @@ namespace pr
 		// Whatever to IRect conversion
 		struct ToIRect
 		{
-			static IRect To(iv2 const& x)
+			static IRect To_(iv2 const& x)
 			{
 				return IRect(0, 0, x.x, x.y);
 			}
-			static IRect To(FRect const& x)
+			static IRect To_(FRect const& x)
 			{
 				return IRect(static_cast<int>(x.m_min.x), static_cast<int>(x.m_min.y), static_cast<int>(x.m_max.x), static_cast<int>(x.m_max.y));
 			}
 
 			#ifdef _WINDEF_
-			static IRect To(RECT const& x)
+			static IRect To_(RECT const& x)
 			{
 				return IRect(x.left, x.top, x.right, x.bottom);
 			}
-			static IRect To(SIZE const& x)
+			static IRect To_(SIZE const& x)
 			{
 				return IRect(0, 0, x.cx, x.cy);
 			}
@@ -302,21 +302,21 @@ namespace pr
 		// Whatever to FRect conversion
 		struct ToFRect
 		{
-			static FRect To(v2 const& x)
+			static FRect To_(v2 const& x)
 			{
 				return FRect(0, 0, x.x, x.y);
 			}
-			static FRect To(IRect const& x)
+			static FRect To_(IRect const& x)
 			{
 				return FRect(static_cast<float>(x.m_min.x), static_cast<float>(x.m_min.y), static_cast<float>(x.m_max.x), static_cast<float>(x.m_max.y));
 			}
 
 			#ifdef _WINDEF_
-			static FRect To(RECT const& x)
+			static FRect To_(RECT const& x)
 			{
 				return FRect(static_cast<float>(x.left), static_cast<float>(x.top), static_cast<float>(x.right), static_cast<float>(x.bottom));
 			}
-			static FRect To(SIZE const& x)
+			static FRect To_(SIZE const& x)
 			{
 				return FRect(0, 0, static_cast<float>(x.cx), static_cast<float>(x.cy));
 			}
@@ -327,15 +327,15 @@ namespace pr
 		// Whatever to SIZE conversion
 		struct ToSIZE
 		{
-			static SIZE To(IRect const& x)
+			static SIZE To_(IRect const& x)
 			{
 				return SIZE{x.SizeX(), x.SizeY()};
 			}
-			static SIZE To(FRect const& x)
+			static SIZE To_(FRect const& x)
 			{
 				return SIZE{ static_cast<int>(x.SizeX()), static_cast<int>(x.SizeY()) };
 			}
-			static SIZE To(RECT const& x)
+			static SIZE To_(RECT const& x)
 			{
 				return SIZE{x.right - x.left, x.bottom - x.top};
 			}
@@ -344,15 +344,15 @@ namespace pr
 		// Whatever to RECT conversion
 		struct ToRECT
 		{
-			static RECT To(IRect const& x)
+			static RECT To_(IRect const& x)
 			{
 				return RECT{x.m_min.x, x.m_min.y, x.m_max.x, x.m_max.y};
 			}
-			static RECT To(FRect const& x)
+			static RECT To_(FRect const& x)
 			{
 				return RECT{ static_cast<int>(x.m_min.x), static_cast<int>(x.m_min.y), static_cast<int>(x.m_max.x), static_cast<int>(x.m_max.y) };
 			}
-			static RECT To(SIZE const& x)
+			static RECT To_(SIZE const& x)
 			{
 				return RECT{0, 0, x.cx, x.cy};
 			}

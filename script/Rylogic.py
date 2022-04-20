@@ -141,25 +141,35 @@ def ChgExtn(filepath:str, extn:str):
 	dir_fname,_ = os.path.splitext(filepath)
 	return dir_fname + extn
 
-# Enumerate recursively through a directory
-# 'filter' can be a regex: e.g. EnumFiles(dir, filter=r".*(?<!include)\.htm$", flags=re.IGNORECASE):
-def EnumFiles(root, filter:str=None, flags=0):
+# Enumerate recursively through a directory returning the filepaths.
+# 'filter' is a regex that selects the paths to be returned.
+def EnumFiles(root, filter:re=None):
 	for dirname, _, filenames in os.walk(root):
-		# Return the files
-		# We could remove entries from 'dirnames' to
-		# prevent recursion into those folders...
+		# We could remove entries from 'dirnames' to prevent recursion into those folders...
 		for filename in filenames:
-			if filter and not re.match(filter, filename, flags): continue
+			if filter and not filter.match(filename): continue
 			yield os.path.join(dirname, filename)
 
-# Enumerate recursively through a directory
-def EnumDirs(root, filter:str=None, flags=0):
+# Enumerate recursively through a directory returning the directory names
+# 'filter' is a regex that selects the paths to be returned.
+def EnumDirs(root, filter:re=None):
 	for dirname, dirnames, _ in os.walk(root):
-		# Return the directories
 		for dir in dirnames:
-			if filter and not re.match(filter, dir, flags): continue
+			if filter and not filter.match(dir): continue
 			yield os.path.join(dirname, dir)
-			
+
+# Enumerate recursively through a directory returning files and directory names
+# 'filter' is a regex that selects the paths to be returned.
+# Returns a pair: (path, is_directory)
+def EnumPaths(root, dir_filter:re=None, file_filter:re=None):
+	for dirname, dirnames, filenames in os.walk(root):
+		for dir in dirnames:
+			if dir_filter and not dir_filter.match(dir): continue
+			yield (os.path.join(dirname, dir), True)
+		for filename in filenames:
+			if file_filter and not file_filter.match(filename): continue
+			yield (os.path.join(dirname, filename), False)
+
 # Read the contents of a file into a buffer
 def ReadFile(path, mode='rb', encoding="utf-8"):
 	with open(path, mode, encoding=encoding) as f:
@@ -922,6 +932,13 @@ def WriteXml(root:xml.Element, filepath:str, formatted=True):
 			f.write(minidom.parseString(xml.tostring(root)).toprettyxml())
 		else:
 			f.write(xml.tostring(root))
+
+# Return XML as a string with decent formatting.
+def FormatXml(root:xml.Element, formatted=True):
+	if formatted:
+		return minidom.parseString(xml.tostring(root)).toprettyxml()
+	else:
+		return xml.tostring(root)
 
 # Enums for StrTxfm
 class ECapitalise(enum.Enum):

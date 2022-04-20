@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 // ToString functions
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
@@ -27,107 +27,107 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			static Str& To(Str& from)
+			static Str& To_(Str& from)
 			{
 				return from;
 			}
-			static Str To(bool from)
+			static Str To_(bool from)
 			{
 				return from
 					? PR_STRLITERAL(Char, "true")
 					: PR_STRLITERAL(Char, "false");
 			}
-			static Str To(char from)
+			static Str To_(char from)
 			{
 				Str str;
 				string_traits<Str>::resize(str, 1);
 				str[0] = from;
 				return str;
 			}
-			static Str To(long long from, int radix)
+			static Str To_(long long from, int radix)
 			{
 				Char buf[128];
 				return char_traits<Char>::itostr(from, buf, _countof(buf), radix);
 			}
-			static Str To(unsigned long long from, int radix)
+			static Str To_(unsigned long long from, int radix)
 			{
 				Char buf[128];
 				return char_traits<Char>::uitostr(from, buf, _countof(buf), radix);
 			}
-			static Str To(long long from)
+			static Str To_(long long from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(long from, int radix)
+			static Str To_(long from, int radix)
 			{
-				return To(static_cast<long long>(from), radix);
+				return To_(static_cast<long long>(from), radix);
 			}
-			static Str To(long from)
+			static Str To_(long from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(int from, int radix)
+			static Str To_(int from, int radix)
 			{
-				return To(static_cast<long long>(from), radix);
+				return To_(static_cast<long long>(from), radix);
 			}
-			static Str To(int from)
+			static Str To_(int from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(short from, int radix)
+			static Str To_(short from, int radix)
 			{
-				return To(static_cast<long long>(from), radix);
+				return To_(static_cast<long long>(from), radix);
 			}
-			static Str To(short from)
+			static Str To_(short from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(unsigned long long from)
+			static Str To_(unsigned long long from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(unsigned long from, int radix)
+			static Str To_(unsigned long from, int radix)
 			{
-				return To(static_cast<unsigned long long>(from), radix);
+				return To_(static_cast<unsigned long long>(from), radix);
 			}
-			static Str To(unsigned long from)
+			static Str To_(unsigned long from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(unsigned int from, int radix)
+			static Str To_(unsigned int from, int radix)
 			{
-				return To(static_cast<unsigned long long>(from), radix);
+				return To_(static_cast<unsigned long long>(from), radix);
 			}
-			static Str To(unsigned int from)
+			static Str To_(unsigned int from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(unsigned short from, int radix)
+			static Str To_(unsigned short from, int radix)
 			{
-				return To(static_cast<unsigned long long>(from), radix);
+				return To_(static_cast<unsigned long long>(from), radix);
 			}
-			static Str To(unsigned short from)
+			static Str To_(unsigned short from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(unsigned char from, int radix)
+			static Str To_(unsigned char from, int radix)
 			{ 
-				return To(static_cast<unsigned long long>(from), radix);
+				return To_(static_cast<unsigned long long>(from), radix);
 			}
-			static Str To(unsigned char from)
+			static Str To_(unsigned char from)
 			{
-				return To(from, 10);
+				return To_(from, 10);
 			}
-			static Str To(double from)
+			static Str To_(double from)
 			{
 				Char buf[128];
 				return char_traits<Char>::dtostr(from, buf, _countof(buf));
 			}
-			static Str To(float from)
+			static Str To_(float from)
 			{
-				return To(static_cast<double>(from));
+				return To_(static_cast<double>(from));
 			}
-			static Str To(long double from)
+			static Str To_(long double from)
 			{
 				// careful with long double, it's non-standard
 				std::basic_stringstream<Char> ss;
@@ -137,7 +137,7 @@ namespace pr
 			
 			// Convert/Narrow/Widen string types
 			template <typename Str2, typename = std::enable_if_t<is_string_v<Str2>>>
-			static Str To(Str2 const& s)
+			static Str To_(Str2 const& s)
 			{
 				// Notes:
 				//  - Remember type deduction doesn't work for string views
@@ -174,7 +174,7 @@ namespace pr
 		{
 			// Convert from strings to integral types
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Ty To(Str const& s, int radix = 10, Char const** end = nullptr)
+			static Ty To_(Str const& s, int radix = 10, Char const** end = nullptr)
 			{
 				auto ptr = string_traits<Str>::ptr(s);
 				errno = 0;
@@ -196,7 +196,7 @@ namespace pr
 		{
 			// String to floating point
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Ty To(Str const& s, Char const** end = nullptr)
+			static Ty To_(Str const& s, Char const** end = nullptr)
 			{
 				auto ptr = string_traits<Str>::ptr(s);
 				errno = 0;

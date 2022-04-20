@@ -160,14 +160,14 @@ namespace pr
 {
 	template <> struct Convert<View3DV2, gui::Point>
 	{
-		static View3DV2 To(gui::Point const& v)
+		static View3DV2 To_(gui::Point const& v)
 		{
 			return View3DV2{float(v.x), float(v.y)};
 		}
 	};
 	template <> struct Convert<gui::Point, View3DV2>
 	{
-		static gui::Point To(View3DV2 const& v)
+		static gui::Point To_(View3DV2 const& v)
 		{
 			return gui::Point(long(v.x), long(v.y));
 		}

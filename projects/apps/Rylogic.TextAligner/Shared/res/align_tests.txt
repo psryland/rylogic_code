@@ -5,10 +5,10 @@
 enum Values
 {
 	One = 0x1001,
-	Two = 0x1002,  
-	Three = 0x104,  
-	Four = 0x1008,			
-	Five = 0x1010,    
+	Two = 0x1002,
+	Three = 0x104,
+	Four = 0x1008,
+	Five = 0x1010,
 	Six = 0x1020,
 	Seven = 0x1040,
 }
@@ -79,3 +79,9 @@ enum AlignWithGaps
 
 	Six = 6,
 }
+
+// Multiple patterns - prioritisation
+
+int m_member == value; // comment
+float member_ != value_too; // comment
+byte _member < val1; // comment
