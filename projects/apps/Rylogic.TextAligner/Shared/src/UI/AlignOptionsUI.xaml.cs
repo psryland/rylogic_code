@@ -33,6 +33,9 @@ namespace Rylogic.TextAligner
 			MovePatternUp   = Command.Create(this, MovePatternUpInternal, MovePatternUpAvailable);
 			MovePatternDown = Command.Create(this, MovePatternDownInternal, MovePatternDownAvailable);
 
+			m_options.PropertyChanged -= HandlePropertyChanged;
+			m_options.PropertyChanged += HandlePropertyChanged;
+
 			DialogKeyPending += HandleKey;
 			m_root.DataContext = this;
 
@@ -40,10 +43,14 @@ namespace Rylogic.TextAligner
 			{
 				args.Handled = true;
 			}
+			void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				NotifyPropertyChanged(e.PropertyName);
+			}
 		}
 
 		/// <summary></summary>
-		private event RoutedEventHandler DialogKeyPending
+		private event RoutedEventHandler? DialogKeyPending
 		{
 			add { AddHandler(UIElementDialogPage.DialogKeyPendingEvent, value); }
 			remove { RemoveHandler(UIElementDialogPage.DialogKeyPendingEvent, value); }
@@ -124,12 +131,7 @@ namespace Rylogic.TextAligner
 		public AlignPattern LineIgnorePattern
 		{
 			get => m_options.LineIgnorePattern;
-			set
-			{
-				if (LineIgnorePattern == value) return;
-				m_options.LineIgnorePattern = value;
-				NotifyPropertyChanged(nameof(LineIgnorePattern));
-			}
+			set => m_options.LineIgnorePattern = value;
 		}
 		
 		/// <summary>Show help information</summary>

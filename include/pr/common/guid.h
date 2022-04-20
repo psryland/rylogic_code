@@ -137,7 +137,7 @@ namespace pr
 		struct GuidToString
 		{
 			using Char = typename string_traits<Str>::value_type;
-			static Str To(GUID const& guid)
+			static Str To_(GUID const& guid)
 			{
 				if constexpr (std::is_same_v<Char, char>)
 				{
@@ -158,7 +158,7 @@ namespace pr
 		struct StringToGuid
 		{
 			template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
-			static GUID To(Str const& s)
+			static GUID To_(Str const& s)
 			{
 				using Char = typename string_traits<Str>::value_type;
 
