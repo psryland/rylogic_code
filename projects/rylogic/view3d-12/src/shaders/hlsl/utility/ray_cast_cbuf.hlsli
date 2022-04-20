@@ -28,7 +28,7 @@ struct Intercept
 };
 
 // Per-frame constants
-cbuffer FrameCBuf :reg(b0)
+cbuffer FrameCBuf :reg(b0, 0)
 {
 	Ray m_rays[MaxRays];
 
@@ -46,7 +46,7 @@ cbuffer FrameCBuf :reg(b0)
 };
 
 // Per-nugget constants
-cbuffer NuggetCBuf :reg(b1)
+cbuffer NuggetCBuf :reg(b1, 0)
 {
 	// Object transform
 	row_major float4x4 m_o2w;

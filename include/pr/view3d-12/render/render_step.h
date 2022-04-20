@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/drawlist_element.h"
+#include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
 {
@@ -12,7 +13,7 @@ namespace pr::rdr12
 	struct RenderStep
 	{
 		// Draw list element container
-		using drawlist_t = pr::vector<DrawListElement, 1024, false, Allocator<DrawListElement>>;
+		using drawlist_t = pr::vector<DrawListElement, 1024, false, alignof(DrawListElement), Allocator<DrawListElement>>;
 		using dl_mutex_t = std::recursive_mutex;
 
 		// A lock context for the drawlist
@@ -31,18 +32,20 @@ namespace pr::rdr12
 			}
 		};
 
-		Scene*                      m_scene;            // The scene this render step is owned by
-		drawlist_t                  m_drawlist;         // The drawlist for this render step. Access via 'Lock'
-		bool                        m_sort_needed;      // True when the list needs sorting
-		D3DPtr<ID3D12RootSignature> m_shader_sig;       // Signature for shaders used by this render step
-		D3DPtr<ID3D12PipelineState> m_pso;              // Pipeline state object for this render step
-		AutoSub                     m_evt_model_delete; // Event subscription for model deleted notification
-		dl_mutex_t mutable          m_mutex;            // Sync access to the drawlist
+		Scene*                      m_scene;              // The scene this render step is owned by
+		drawlist_t                  m_drawlist;           // The drawlist for this render step. Access via 'Lock'
+		bool                        m_sort_needed;        // True when the list needs sorting
+		D3DPtr<ID3D12RootSignature> m_shader_sig;         // Signature for shaders used by this render step
+		PipeStateDesc               m_default_pipe_state; // Default settings for the pipeline state
+		AutoSub                     m_evt_model_delete;   // Event subscription for model deleted notification
+		dl_mutex_t mutable          m_mutex;              // Sync access to the drawlist
 
 		explicit RenderStep(Scene& scene);
-		virtual ~RenderStep() {}
+		RenderStep(RenderStep&&) = default;
 		RenderStep(RenderStep const&) = delete;
+		RenderStep& operator = (RenderStep&&) = default;
 		RenderStep& operator = (RenderStep const&) = delete;
+		virtual ~RenderStep() {}
 
 		// Renderer access
 		Renderer& rdr() const;

@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/back_buffer.h"
+#include "pr/view3d-12/utility/object_pools.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 
@@ -37,7 +38,9 @@ namespace pr::rdr12
 		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
 		CmdAllocPool                 m_cmd_alloc_pool;   // The pool of command allocators
 		CmdListPool                  m_cmd_list_pool;    // A pool of command lists
+		PipeStatePool                m_pipe_state_pool;  // Pool of Pipeline state objects
 		BackBuffers                  m_bb;               // Back buffer render targets from the swap chain.
+		int64_t                      m_frame_number;     // The number of times 'RenderFrame' has been called.
 		GpuSync                      m_gpu_sync;         // Serialises rendering to this BB;
 		UINT                         m_vsync;            // Present SyncInterval value
 		bool                         m_idle;             // True while the window is occluded
@@ -58,6 +61,9 @@ namespace pr::rdr12
 		int BBIndex() const;
 		int BBCount() const;
 
+		// The number of times 'RenderFrame' has been called
+		int64_t FrameNumber() const;
+
 		// The most recent sync point sent to the GPU
 		uint64_t LatestSyncPoint() const;
 
@@ -70,6 +76,9 @@ namespace pr::rdr12
 
 		// Get a command list that returns to the pool when out of scope
 		CmdListScope CmdList();
+
+		// Return a pipeline state instance for the given description and additional states
+		ID3D12PipelineState* PipeState(PipeStateDesc const& desc);
 
 		// Render a frame
 		struct Frame

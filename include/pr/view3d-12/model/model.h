@@ -17,16 +17,18 @@ namespace pr::rdr12
 			_flags_enum,
 		};
 
-		ResourceManager*       m_mgr;       // The manager that created this model
-		size_t                 m_vcount;    // The count of elements in the V-buffer
-		size_t                 m_icount;    // The count of elements in the I-buffer
-		int                    m_vstride;   // The size (in bytes) of a single V-element
-		int                    m_istride;   // The size (in bytes) of a single I-element
-		D3DPtr<ID3D12Resource> m_vb;        // The vertex buffer
-		D3DPtr<ID3D12Resource> m_ib;        // The index buffer
-		TNuggetChain           m_nuggets;   // The nuggets for this model
-		string32               m_name;      // A human readable name for the model
-		mutable EDbgFlags      m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
+		ResourceManager*         m_mgr;       // The manager that created this model
+		size_t                   m_vcount;    // The count of elements in the V-buffer
+		size_t                   m_icount;    // The count of elements in the I-buffer
+		int                      m_vstride;   // The size (in bytes) of a single V-element
+		int                      m_istride;   // The size (in bytes) of a single I-element
+		D3DPtr<ID3D12Resource>   m_vb;        // The vertex buffer
+		D3DPtr<ID3D12Resource>   m_ib;        // The index buffer
+		D3D12_VERTEX_BUFFER_VIEW m_vb_view;   // Buffer views for shader binding
+		D3D12_INDEX_BUFFER_VIEW  m_ib_view;   // Buffer views for shader binding
+		TNuggetChain             m_nuggets;   // The nuggets for this model
+		string32                 m_name;      // A human readable name for the model
+		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
 		Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, char const* name);
 		Model(Model const&) = delete;
@@ -51,10 +53,6 @@ namespace pr::rdr12
 		// divided into. Nuggets are the contiguous sub groups
 		// of the model geometry that use the same data.
 		void DeleteNuggets();
-
-		// Return the V/I buffer view
-		D3D12_VERTEX_BUFFER_VIEW const& VBufView() const;
-		D3D12_INDEX_BUFFER_VIEW  const& IBufView() const;
 
 		// Ref-counting clean up function
 		static void RefCountZero(RefCounted<Model>* doomed);

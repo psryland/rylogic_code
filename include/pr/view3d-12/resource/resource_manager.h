@@ -16,6 +16,8 @@ namespace pr::rdr12
 		// Notes:
 		//  - Maintains resource heaps and allocation of resources (i.e. vertex buffers, index buffers, textures, etc)
 		//  - Use 'GetPrivateData(WKPDID_D3DDebugObjectNameW,..)' to get names of resources.
+		//  - The resource manager is used by all windows.
+
 	private:
 
 		using DxResPointers = struct { ID3D12Resource* res; };//ID3D11ShaderResourceView* srv;
@@ -52,9 +54,6 @@ namespace pr::rdr12
 		// Renderer access
 		Renderer& rdr();
 
-		// An event that is called when a texture filepath cannot be resolved.
-		EventHandler<ResourceManager&, ResolvePathArgs&, true> ResolveFilepath;
-
 		// Flush creation commands to the GPU
 		void FlushToGpu();
 
@@ -66,6 +65,15 @@ namespace pr::rdr12
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model);
+
+		// Create shader
+		template <typename TShader> requires (std::is_base_of_v<Shader, TShader>)
+		RefPtr<TShader> CreateShader(int bb_count)
+		{
+			RefPtr<TShader> shdr(rdr12::New<TShader>(*this, bb_count), true);
+			assert(m_mem_tracker.add(shdr.get()));
+			return shdr;
+		}
 
 		// Return a pointer to an existing texture
 		template <typename TextureType, typename = std::enable_if_t<std::is_base_of_v<TextureBase, TextureType>>>
@@ -81,13 +89,8 @@ namespace pr::rdr12
 		// Return a pointer to a stock model
 		ModelPtr FindModel(EStockModel model) const;
 
-		//// Convenience method for cached textures
-		//template <typename TextureType, typename Factory, typename = std::enable_if_t<std::is_base_of_v<TextureBase, TextureType>>>
-		//RefPtr<TextureType> GetTexture(RdrId id, Factory factory)
-		//{
-		//	auto tex = FindTexture<TextureType>(id);
-		//	return tex != nullptr ? tex : factory();
-		//}
+		// An event that is called when a texture filepath cannot be resolved.
+		EventHandler<ResourceManager&, ResolvePathArgs&, true> ResolveFilepath;
 
 		// Raised when a model is deleted
 		EventHandler<Model&, EmptyArgs const&, true> ModelDeleted;
@@ -97,6 +100,7 @@ namespace pr::rdr12
 		friend struct Model;
 		friend struct Nugget;
 		friend struct TextureBase;
+		friend struct Shader;
 		
 		// Create the basic textures that exist from startup
 		void CreateStockTextures();
@@ -110,7 +114,8 @@ namespace pr::rdr12
 		// Delete objects created by the resource manager.
 		// The objects themselves call this when their last reference is dropped.
 		void Delete(Model* model);
-		void Delete(TextureBase* tex);
 		void Delete(Nugget* nugget);
+		void Delete(TextureBase* tex);
+		void Delete(Shader* shader);
 	};
 }

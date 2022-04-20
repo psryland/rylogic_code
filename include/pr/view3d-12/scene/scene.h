@@ -6,6 +6,9 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/instance/instance.h"
+#include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/utility/object_pools.h"
+#include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
@@ -34,21 +37,21 @@ namespace pr::rdr12
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
 		//using RayCastStepPtr = std::unique_ptr<RayCastStep>;
 		
-		Window*                           m_wnd;            // The controlling window
-		SceneCamera                       m_cam;            // Represents the camera properties used to project onto the screen
-		Viewport                          m_viewport;       // Represents the rectangular area on the back buffer that this scene covers
-		InstCont                          m_instances;      // Instances added to this scene for rendering.
-		RenderStepCont                    m_render_steps;   // The stages of rendering the scene
-		D3DPtr<ID3D12GraphicsCommandList> m_cmd_list;       // The command list used by this scene
-		Colour                            m_bkgd_colour;    // The background colour for the scene. Set to ColourZero to disable clear bb
+		Window*        m_wnd;          // The controlling window
+		SceneCamera    m_cam;          // Represents the camera properties used to project onto the screen
+		Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
+		InstCont       m_instances;    // Instances added to this scene for rendering.
+		RenderStepCont m_render_steps; // The stages of rendering the scene
+		CmdListScope   m_cmd_list;     // The command list used by this scene
+		Colour         m_bkgd_colour;  // The background colour for the scene. Set to ColourZero to disable clear bb
 		//RayCastStepPtr                  m_ht_immediate;  // A ray cast render step for performing immediate hit tests
-		//Light                           m_global_light;  // The global light settings
+		Light          m_global_light; // The global light settings
 		//TextureCubePtr                  m_global_envmap; // A global environment map
 		//DSBlock                         m_dsb;           // Scene-wide depth states
 		//RSBlock                         m_rsb;           // Scene-wide render states
 		//BSBlock                         m_bsb;           // Scene-wide blend states
-		//DiagState                       m_diag;          // Diagnostic variables
-		AutoSub                           m_eh_resize;     // RT resize event handler subscription
+		DiagState      m_diag;         // Diagnostic variables
+		AutoSub        m_eh_resize;    // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::RenderForward}, SceneCamera const& cam = SceneCamera{});
 		~Scene();

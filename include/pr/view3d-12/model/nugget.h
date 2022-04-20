@@ -8,8 +8,10 @@
 #include "pr/view3d-12/render/sortkey.h"
 //#include "pr/view3d/render/drawlist_element.h"
 //#include "pr/view3d/shaders/shader_set.h"
+#include "pr/view3d-12/shaders/shader.h"
 //#include "pr/view3d/models/model_buffer.h"
 #include "pr/view3d-12/texture/texture_2d.h"
+#include "view3d-12/src/utility/pipe_states.h"
 //#include "pr/view3d/textures/texture_cube.h"
 
 namespace pr::rdr12
@@ -78,24 +80,29 @@ namespace pr::rdr12
 	// Nugget data. Common base for NuggetProps and Nugget
 	struct NuggetData
 	{
-		ETopo                       m_topo;                  // The primitive topology for this nugget
-		EGeom                       m_geom;                  // The valid geometry components within this range
-		//ShaderMap                 m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
-		Texture2DPtr                m_tex_diffuse;           // Diffuse texture
-		Colour32                    m_tint;                  // Per-nugget tint
-		//BSBlock                   m_bsb;                   // Rendering states
-		//DSBlock                   m_dsb;                   // Rendering states
-		//RSBlock                   m_rsb;                   // Rendering states
-		SortKey                     m_sort_key;              // A base sort key for this nugget
-		float                       m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
-		ENuggetFlag                 m_nflags;                // Flags for boolean properties of the nugget
+		using shader_t = struct
+		{
+			ERenderStep m_rdr_step; // The render step that the shader applies to
+			ShaderPtr   m_shader;   // The override shader
+		};
+		using shaders_t = pr::vector<shader_t, 4, false>;
+
+		ETopo           m_topo;                  // The primitive topology for this nugget
+		EGeom           m_geom;                  // The valid geometry components within this range
+		shaders_t       m_shaders;               // Override shaders
+		PipeState       m_pipe_state;            // Pipe state
+		Texture2DPtr    m_tex_diffuse;           // Diffuse texture
+		Colour32        m_tint;                  // Per-nugget tint
+		SortKey         m_sort_key;              // A base sort key for this nugget
+		float           m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
+		ENuggetFlag     m_nflags;                // Flags for boolean properties of the nugget
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 		// If the ranges are zero length, they are assume to mean the entire model
-		Range m_vrange;
-		Range m_irange;
+		Range           m_vrange;
+		Range           m_irange;
 
-		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, Range vrange = Range(), Range irange = Range());
 	};
 
 	// A nugget is a sub range within a model buffer containing any data needed to render

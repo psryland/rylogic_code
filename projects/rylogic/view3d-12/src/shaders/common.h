@@ -84,8 +84,8 @@ namespace pr::rdr12
 	template <typename T> constexpr size_t cbuf_size_aligned_v = PadTo<size_t>(sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 	// Set the CBuffer model constants flags
-	template <typename TCBuf>
-	void SetModelFlags(BaseInstance const& inst, NuggetData const& nug, Scene const& scene, TCBuf& cb)
+	template <typename TCBuf> requires(requires(TCBuf x) { x.m_flags; })
+	void SetModelFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, Scene const& scene)
 	{
 		auto model_flags = 0;
 		{
@@ -135,7 +135,8 @@ namespace pr::rdr12
 	}
 
 	// Set the transform properties of a constants buffer
-	template <typename TCBuf> void SetTxfm(BaseInstance const& inst, SceneCamera const& view, TCBuf& cb)
+	template <typename TCBuf> requires(requires(TCBuf x) { x.m_o2s; x.m_o2w; x.m_n2w; })
+	void SetTxfm(TCBuf& cb, BaseInstance const& inst, SceneCamera const& view)
 	{
 		pr::m4x4 o2w = GetO2W(inst);
 		pr::m4x4 w2c = pr::InvertFast(view.CameraToWorld());
@@ -152,7 +153,8 @@ namespace pr::rdr12
 	}
 
 	// Set the tint properties of a constants buffer
-	template <typename TCBuf> void SetTint(BaseInstance const& inst, NuggetData const& nug, TCBuf& cb)
+	template <typename TCBuf> requires(requires(TCBuf x) { x.m_tint; })
+	void SetTint(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
 	{
 		auto col = inst.find<Colour32>(EInstComp::TintColour32);
 		auto c = Colour((col ? *col : pr::Colour32White) * nug.m_tint);
@@ -160,7 +162,8 @@ namespace pr::rdr12
 	}
 
 	// Set the texture properties of a constants buffer
-	template <typename TCBuf> void SetTexDiffuse(NuggetData const& nug, TCBuf& cb)
+	template <typename TCBuf> requires (requires(TCBuf x) { x.m_tex2surf0; })
+	void SetTexDiffuse(TCBuf& cb, NuggetData const& nug)
 	{
 		cb.m_tex2surf0 = nug.m_tex_diffuse != nullptr
 			? nug.m_tex_diffuse->m_t2s
@@ -168,7 +171,8 @@ namespace pr::rdr12
 	}
 
 	// Set the environment map properties of a constants buffer
-	template <typename TCBuf> void SetEnvMap(BaseInstance const& inst, NuggetData const& nug, TCBuf& cb)
+	template <typename TCBuf> requires (requires(TCBuf x) { x.m_env_reflectivity; })
+	void SetEnvMap(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
 	{
 		auto reflectivity = inst.find<float>(EInstComp::EnvMapReflectivity);
 		cb.m_env_reflectivity = reflectivity != nullptr
@@ -177,7 +181,7 @@ namespace pr::rdr12
 	}
 
 	// Set the scene view constants
-	inline void SetViewConstants(SceneCamera const& view, hlsl::Camera& cb)
+	inline void SetViewConstants(hlsl::Camera& cb, SceneCamera const& view)
 	{
 		cb.m_c2w = view.CameraToWorld();
 		cb.m_c2s = view.CameraToScreen();
@@ -186,7 +190,7 @@ namespace pr::rdr12
 	}
 
 	// Set the lighting constants
-	inline void SetLightingConstants(Light const& light, SceneCamera const& view, hlsl::Light& cb)
+	inline void SetLightingConstants(hlsl::Light& cb, Light const& light, SceneCamera const& view)
 	{
 		// If the global light is camera relative, adjust the position and direction appropriately
 		auto pos = light.m_cam_relative ? view.CameraToWorld() * light.m_position : light.m_position;
@@ -202,7 +206,7 @@ namespace pr::rdr12
 	}
 
 	// Set the shadow map constants
-	inline void SetShadowMapConstants(ShadowMap const* smap_step, hlsl::Shadow& cb)
+	inline void SetShadowMapConstants(hlsl::Shadow& cb, ShadowMap const* smap_step)
 	{
 		(void)smap_step, cb;
 		throw std::runtime_error("not implemented");
@@ -225,7 +229,7 @@ namespace pr::rdr12
 	}
 
 	// Set the env-map to world orientation
-	inline void SetEnvMapConstants(TextureCube* env_map, hlsl::EnvMap& cb)
+	inline void SetEnvMapConstants(hlsl::EnvMap& cb, TextureCube* env_map)
 	{
 		(void)env_map, cb;
 		throw std::runtime_error("not implemented");
@@ -235,18 +239,18 @@ namespace pr::rdr12
 		#endif
 	}
 
-	// Lock and write 'cb' into 'cbuf'.
-	template <typename TCBuf>// requires {TCBuf::shader_register; TCBuf::register_space;}
-	void WriteConstants(TCBuf const& cb, ID3D12Resource* cbuf, int bb_index)
-	{
-		constexpr auto cb_size = cbuf_size_aligned_v<TCBuf>;
+	//// Lock and write 'cb' into 'cbuf'.
+	//template <typename TCBuf> requires ( TCBuf::shader_register, TCBuf::register_space )
+	//void WriteConstants(TCBuf const& cb, ID3D12Resource* cbuf, int bb_index)
+	//{
+	//	constexpr auto cb_size = cbuf_size_aligned_v<TCBuf>;
 
-		// Copy 'cb' to 'cbuf[bb_index]'
-		MapResource map(cbuf, 0U, cb_size);
-		map.at<TCBuf>(bb_index * cb_size) = cb;
+	//	// Copy 'cb' to 'cbuf[bb_index]'
+	//	MapResource map(cbuf, 0U, cb_size);
+	//	map.at<TCBuf>(bb_index * cb_size) = cb;
 
-		// Do this at the caller
-		// Bind the constants to the pipeline
-		//cmd_list->SetGraphicsRootConstantBufferView(TCBuf::shader_register, cbuf->GetGPUVirtualAddress() + bb_index * cb_size);
-	}
+	//	// Do this at the caller
+	//	// Bind the constants to the pipeline
+	//	//cmd_list->SetGraphicsRootConstantBufferView(TCBuf::shader_register, cbuf->GetGPUVirtualAddress() + bb_index * cb_size);
+	//}
 }

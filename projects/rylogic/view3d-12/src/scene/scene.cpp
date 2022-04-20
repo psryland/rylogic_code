@@ -8,7 +8,7 @@
 #include "pr/view3d-12/render/render_step.h"
 #include "pr/view3d-12/utility/eventargs.h"
 #include "view3d-12/src/render/render_forward.h"
-#include "view3d-12/src/render/state_stack.h"
+//#include "view3d-12/src/render/state_stack.h"
 //#include "pr/view3d/instances/instance.h"
 //#include "pr/view3d/steps/gbuffer.h"
 //#include "pr/view3d/steps/dslighting.h"
@@ -24,22 +24,22 @@ namespace pr::rdr12
 		, m_viewport(wnd.BackBufferSize())
 		, m_instances()
 		, m_render_steps()
-		, m_cmd_list()
+		, m_cmd_list(wnd.CmdList())
 		, m_bkgd_colour(Colour32Black)
 		//, m_ht_immediate()
-		//, m_global_light()
+		, m_global_light()
 		//, m_global_envmap()
 		//, m_dsb()
 		//, m_rsb()
 		//, m_bsb()
-		//, m_diag(wnd.rdr())
+		, m_diag(*this)
 		, m_eh_resize()
 	{
-		Renderer::Lock lock(rdr());
-		auto device = lock.D3DDevice();
+		//Renderer::Lock lock(rdr());
+		//auto device = lock.D3DDevice();
 
 		// Create the command list used by this scene to render
-		Throw(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
+		//Throw(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
 		Throw(m_cmd_list->SetName(L"Scene:CmdList"));
 
 		// Set the render steps for the scene
@@ -197,7 +197,7 @@ namespace pr::rdr12
 
 			// Invoke each render step in order
 			for (auto& rs : m_render_steps)
-				rs->Execute(bb, m_cmd_list.get());
+				rs->Execute(bb, m_cmd_list);
 
 			// Close the command list now that we've finished rendering this scene
 			Throw(m_cmd_list->Close());
@@ -205,7 +205,7 @@ namespace pr::rdr12
 
 		// Return the command list to the caller who will batch up calls to execute.
 		// When multi-threading, we can return this before we're finished
-		return m_cmd_list.get();
+		return m_cmd_list;
 	}
 
 	// Resize the viewport on back buffer resize

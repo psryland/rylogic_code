@@ -10,16 +10,30 @@ namespace pr::rdr12
 {
 	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, char const* name)
 		:m_mgr(&mgr)
-		,m_vcount(vcount)
-		,m_icount(icount)
-		,m_vstride(vstride)
-		,m_istride(istride)
-		,m_vb(vb, true)
-		,m_ib(ib, true)
-		,m_nuggets()
-		,m_name(name)
-		,m_dbg_flags(EDbgFlags::None)
-	{}
+		, m_vcount(vcount)
+		, m_icount(icount)
+		, m_vstride(vstride)
+		, m_istride(istride)
+		, m_vb(vb, true)
+		, m_ib(ib, true)
+		, m_vb_view({
+			.BufferLocation = m_vb->GetGPUVirtualAddress(),
+			.SizeInBytes = s_cast<UINT>(m_vcount * m_vstride),
+			.StrideInBytes = s_cast<UINT>(m_vstride),
+		})
+		, m_ib_view({
+			.BufferLocation = m_ib->GetGPUVirtualAddress(),
+			.SizeInBytes = s_cast<UINT>(m_icount * m_istride),
+			.Format =
+				m_istride == sizeof(uint32_t) ? DXGI_FORMAT_R32_UINT :
+				m_istride == sizeof(uint16_t) ? DXGI_FORMAT_R16_UINT :
+				throw std::runtime_error("Unsupported index buffer format"),
+		})
+		, m_nuggets()
+		, m_name(name)
+		, m_dbg_flags(EDbgFlags::None)
+	{
+	}
 	Model::~Model()
 	{
 		DeleteNuggets();
@@ -78,31 +92,6 @@ namespace pr::rdr12
 	{
 		for (;!m_nuggets.empty();)
 			res_mgr().Delete(&m_nuggets.front());
-	}
-
-	// Return the vertex buffer view
-	D3D12_VERTEX_BUFFER_VIEW const& Model::VBufView() const
-	{
-		static D3D12_VERTEX_BUFFER_VIEW vb_view;
-		return vb_view = D3D12_VERTEX_BUFFER_VIEW
-		{
-			.BufferLocation = m_vb->GetGPUVirtualAddress(),
-			.SizeInBytes = s_cast<UINT>(m_vcount * m_vstride),
-			.StrideInBytes = s_cast<UINT>(m_vstride),
-		};
-	}
-	D3D12_INDEX_BUFFER_VIEW const& Model::IBufView() const
-	{
-		static D3D12_INDEX_BUFFER_VIEW ib_view;
-		return ib_view = D3D12_INDEX_BUFFER_VIEW
-		{
-			.BufferLocation = m_vb->GetGPUVirtualAddress(),
-			.SizeInBytes = s_cast<UINT>(m_icount * m_istride),
-			.Format =
-				m_istride == sizeof(uint32_t) ? DXGI_FORMAT_R32_UINT : 
-				m_istride == sizeof(uint16_t) ? DXGI_FORMAT_R16_UINT :
-				throw std::runtime_error("Unsupported index buffer format"),
-		};
 	}
 
 	// Ref-counting clean up function

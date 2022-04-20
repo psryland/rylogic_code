@@ -310,7 +310,7 @@ namespace pr::rdr12
 				{
 					lock.data() + layouts[i].Offset,
 					layouts[i].Footprint.RowPitch,
-					size_t(layouts[i].Footprint.RowPitch) * row_counts[i],
+					s_cast<size_t>(layouts[i].Footprint.RowPitch) * row_counts[i],
 				};
 				MemcpySubresource(dst, images[i], strides[i], row_counts[i], layouts[i].Footprint.Depth);
 			}
