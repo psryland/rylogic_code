@@ -22,17 +22,21 @@ namespace pr::rdr12
 {
 	constexpr RdrId ShowNormalsId = hash::HashCT("ShowNormals");
 
-	DiagState::DiagState(Scene& scn)
-		:m_normal_lengths(0.1f)
+	DiagState::DiagState(Window& wnd)
+		:m_wnd(&wnd)
+		,m_normal_lengths(0.1f)
 		,m_normal_colour(Colour32Purple)
 		,m_bboxes_visible(false)
 		,m_gs_fillmode_points()
 	{
-		auto& wnd = scn.wnd();
-		auto shdr = wnd.res_mgr().CreateShader<shaders::PointSpriteGS>(wnd.BBCount());
+		auto shdr = wnd.res_mgr().CreateShader<shaders::PointSpriteGS>(wnd.m_gsync);
 		shdr->m_size = v2(5.0f, 5.0f);
 		shdr->m_depth = false;
 		m_gs_fillmode_points = shdr;
+	}
+	Window& DiagState::wnd() const
+	{
+		return *m_wnd;
 	}
 
 	// Enable/Disable normals on 'model'
@@ -48,9 +52,10 @@ namespace pr::rdr12
 		// If showing normals, add a dependent nugget for each nugget that has valid vertex normals
 		if (show)
 		{
+			#if 0 //todo
 			// Get or create an instance of the ShowNormals shader
 			auto& mgr = model->rdr().res_mgr();
-			auto shdr = mgr.CreateShader<shaders::ShowNormalsGS>(1);
+			auto shdr = mgr.CreateShader<shaders::ShowNormalsGS>(wnd().m_gsync);
 
 			// Add a dependent nugget for each existing nugget that has vertex normals
 			for (auto& nug : model->m_nuggets)
@@ -67,6 +72,7 @@ namespace pr::rdr12
 				dep.m_id = ShowNormalsId;
 				nug.m_nuggets.push_back(dep);
 			}
+			#endif
 		}
 
 		// Set a bit in the dbg flags

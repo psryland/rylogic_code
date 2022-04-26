@@ -1020,6 +1020,9 @@
     <ClInclude Include="..\..\..\include\pr\collision\unit_tests.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\maths\ivector3.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

@@ -12,12 +12,14 @@ namespace pr::rdr12
 	// Per-Scene data for diagnostics
 	struct DiagState
 	{
+		Window*   m_wnd;
 		float     m_normal_lengths;     // The length of vertex normals
 		Colour32  m_normal_colour;      // The colour of vertex normals
 		bool      m_bboxes_visible;     // True if we should draw object bounding boxes
 		ShaderPtr m_gs_fillmode_points; // The GS for point fill mode
 
-		DiagState(Scene& scn);
+		explicit DiagState(Window& wnd);
+		Window& wnd() const;
 	};
 
 	// Enable/Disable normals on 'model'. Set length to 0 to disable

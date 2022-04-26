@@ -3,6 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
+#if _HAS_CXX20
+#include <span>
+#else
 #include <type_traits>
 #include <initializer_list>
 #include <array>
@@ -117,3 +120,5 @@ namespace std
 		return span<T>(arr, count);
 	}
 }
+
+#endif

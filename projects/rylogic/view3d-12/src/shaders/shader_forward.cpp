@@ -3,14 +3,12 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/shaders/shader_forward.h"
-#include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/main/window.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12::shaders
 {
-	Forward::Forward(ResourceManager& mgr, int bb_count)
-		:Shader(mgr, ShaderCode
+	Forward::Forward(ResourceManager& mgr, GpuSync& gsync)
+		:Shader(mgr, gsync, 1024ULL*1024ULL, ShaderCode
 		{
 			.VS = shader_code::forward_vs,
 			.PS = shader_code::forward_ps,
@@ -19,40 +17,16 @@ namespace pr::rdr12::shaders
 			.DS = shader_code::none,
 			.HS = shader_code::none,
 		})
-		,m_cbuf_frame()
-		,m_cbuf_nugget()
+	{}
+
+	// Add shader constants to an upload buffer
+	D3D12_GPU_VIRTUAL_ADDRESS Forward::Set(fwd::CBufFrame const& cbuf, bool might_reuse)
 	{
-		Renderer::Lock lock(mgr.rdr());
-		auto device = lock.D3DDevice();
-
-		// Create resources for the constant buffers.
-		// One for each BB so we can write to one while the other is in flight.
-		auto desc0 = BufferDesc::CBuf(bb_count * cbuf_size_aligned_v<hlsl::fwd::CBufFrame>);
-		Throw(device->CreateCommittedResource(
-			&HeapProps::Upload(),
-			D3D12_HEAP_FLAG_NONE,
-			&desc0,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			__uuidof(ID3D12Resource),
-			(void**)&m_cbuf_frame.m_ptr));
-		Throw(m_cbuf_frame->SetName(L"Forward:CBufFrame"));
-
-		auto desc1 = BufferDesc::CBuf(bb_count * cbuf_size_aligned_v<hlsl::fwd::CBufNugget>);
-		Throw(device->CreateCommittedResource(
-			&HeapProps::Upload(),
-			D3D12_HEAP_FLAG_NONE,
-			&desc1,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			__uuidof(ID3D12Resource),
-			(void**)&m_cbuf_nugget.m_ptr));
-		Throw(m_cbuf_frame->SetName(L"Forward:CBufNugget"));
+		return m_cbuf.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, might_reuse);
 	}
-
-	// Perform any setup of the shader state
-	void Forward::Setup()
+	D3D12_GPU_VIRTUAL_ADDRESS Forward::Set(fwd::CBufNugget const& cbuf, bool might_reuse)
 	{
+		return m_cbuf.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, might_reuse);
 	}
 }
 

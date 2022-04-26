@@ -47,7 +47,9 @@ namespace pr::rdr12
 		:m_settings(settings)
 		,m_features()
 		,m_d3d_device()
-		,m_cmd_queue()
+		,m_gfx_queue()
+		,m_com_queue()
+		,m_cpy_queue()
 		,m_d2dfactory()
 		,m_dwrite()
 		,m_d2d_device()
@@ -73,30 +75,38 @@ namespace pr::rdr12
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
 				D3DPtr<ID3D12Debug> dbg;
-				D3DPtr<ID3D12Debug1> dbg1;
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
-				Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
-				dbg1->EnableDebugLayer();
+				dbg->EnableDebugLayer();
+				//D3DPtr<ID3D12Debug1> dbg1;
+				//Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
 				//dbg1->SetEnableGPUBasedValidation(true);
 			}
 
 			// Create the d3d device
+			D3DPtr<ID3D12Device> device;
 			Throw(D3D12CreateDevice(
 				m_settings.m_adapter.ptr.get(),
 				m_settings.m_feature_level,
 				__uuidof(ID3D12Device),
-				(void**)&m_d3d_device.m_ptr));
+				(void**)&device.m_ptr));
+			Throw(device->QueryInterface<ID3D12Device4>(&m_d3d_device.m_ptr));
 
 			// Read the supported features
 			m_features.Read(m_d3d_device.get());
 
-			// Create the main command queue
-			D3D12_COMMAND_QUEUE_DESC cmd_queue = {};
+			// Create the command queues
+			D3D12_COMMAND_QUEUE_DESC cmd_queue = {
+				.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+				.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+				.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+				.NodeMask = 0,
+			};
 			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-			cmd_queue.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			cmd_queue.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			cmd_queue.NodeMask = 0;
-			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_cmd_queue));
+			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_gfx_queue.m_ptr));
+			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_com_queue.m_ptr));
+			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_cpy_queue.m_ptr));
 
 			// Check dlls,DX features,etc required to run the renderer are available.
 			// Check the given settings are valid for the current adaptor.
@@ -104,10 +114,9 @@ namespace pr::rdr12
 				throw std::runtime_error("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
 			
 			// Check feature support
-			FeatureSupport features(m_d3d_device.get());
-			if (features.ShaderModel.HighestShaderModel < D3D_SHADER_MODEL_5_1)
+			if (m_features.ShaderModel.HighestShaderModel < D3D_SHADER_MODEL_5_1)
 				throw std::runtime_error("DirectX device does not support Compute Shaders 4x");
-			if (features.Options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+			if (m_features.Options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
 				PR_ASSERT(PR_DBG_RDR, true, "Sweet!");
 
 			// Create the direct2d factory
@@ -138,6 +147,9 @@ namespace pr::rdr12
 	Renderer::RdrState::~RdrState()
 	{
 		// Release COM pointers
+		m_cpy_queue = nullptr;
+		m_com_queue = nullptr;
+		m_gfx_queue = nullptr;
 		m_d2dfactory = nullptr;
 		m_dwrite = nullptr;
 
@@ -147,13 +159,6 @@ namespace pr::rdr12
 			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d2d_device.RefCount());
 			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the d2d device");
 			m_d2d_device = nullptr;
-		}
-		if (m_cmd_queue != nullptr)
-		{
-			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_cmd_queue.RefCount());
-			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the command queue");
-			//m_cmd_queue->OMSetRenderTargets(0, 0, 0);
-			m_cmd_queue = nullptr;
 		}
 		if (m_d3d_device != nullptr)
 		{

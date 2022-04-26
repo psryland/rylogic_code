@@ -9,32 +9,34 @@
 
 namespace pr::rdr12
 {
+	constexpr int HeapCapacitySrv = 256;
+	constexpr int HeapCapacitySamp = 16;
+
 	// Constructor
 	Window::Window(Renderer& rdr, WndSettings const& settings)
 		:m_rdr(&rdr)
 		,m_hwnd(settings.m_hwnd)
 		,m_db_format(settings.m_depth_format)
-		,m_multisamp()//!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : MultiSamp()) // Disable multi-sampling if debug is enabled
+		,m_multisamp()
 		,m_swap_chain_flags(settings.m_swap_chain_flags)
 		,m_swap_chain_dbg()
 		,m_swap_chain()
 		,m_depth_stencil()
 		,m_rtv_heap()
+		,m_dsv_heap()
 		,m_d2d_dc()
-		,m_cmd_alloc_pool()
-		,m_cmd_list_pool()
-		,m_pipe_state_pool()
+		,m_gsync(rdr.D3DDevice())
 		,m_bb(settings.m_buffer_count)
-		,m_gpu_sync()
+		,m_cmd_alloc_pool(m_gsync)
+		,m_cmd_list_pool(m_gsync)
+		,m_cmd_lists()
+		,m_heap_srv(HeapCapacitySrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, &m_gsync)
+		,m_heap_samp(HeapCapacitySamp, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, &m_gsync)
+		,m_diag(*this)
 		,m_frame_number()
 		,m_vsync(settings.m_vsync)
 		,m_idle(false)
 		,m_name(settings.m_name)
-		//,m_main_srv()
-		//,m_main_dsv()
-		//,m_query()
-		//,m_main_rt()
-		//,m_dbg_area()
 	{
 		try
 		{
@@ -49,11 +51,7 @@ namespace pr::rdr12
 			// https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
 			// https://www.mvps.org/directx/articles/using_w-buffers.htm
 		
-			Renderer::Lock lock(rdr);
-			auto device = lock.D3DDevice();
-
-			// Initialise the sync helper
-			m_gpu_sync.Init(device);
+			auto device = rdr.D3DDevice();
 
 			// Check feature support
 			m_multisamp.Validate(device, settings.m_mode.Format);
@@ -61,7 +59,7 @@ namespace pr::rdr12
 		
 			// Get the factory that was used to create 'rdr.m_device'
 			D3DPtr<IDXGIFactory4> factory;
-			Throw(lock.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
+			Throw(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
 
 			// Create the swap chain, if there is a HWND. (Depth Stencil created into BackBufferSize)
 			if (settings.m_hwnd != nullptr)
@@ -88,7 +86,7 @@ namespace pr::rdr12
 
 				// Create the swap chain
 				D3DPtr<IDXGISwapChain1> swap_chain;
-				Throw(factory->CreateSwapChainForHwnd(lock.CmdQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
+				Throw(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
 				Throw(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), FmtS("swap chain")));
 		
@@ -101,7 +99,7 @@ namespace pr::rdr12
 				// todo
 			}
 
-			// Create a descriptor heap for the back buffer render targets.
+			// Create a CPU descriptor heap for the back buffer render targets.
 			D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 				.NumDescriptors = s_cast<UINT>(m_bb.size()),
@@ -109,7 +107,7 @@ namespace pr::rdr12
 			};
 			Throw(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
 
-			// Create a descriptor heap for the depth stencil
+			// Create a CPU descriptor heap for the depth stencil
 			D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 				.NumDescriptors = 1,
@@ -120,6 +118,8 @@ namespace pr::rdr12
 			// If D2D is enabled, create a device context for this window
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 			{
+				Renderer::Lock lock(rdr);
+
 				// Create a D2D device context
 				Throw(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 			}
@@ -156,10 +156,9 @@ namespace pr::rdr12
 		// Release COM pointers
 		m_rtv_heap = nullptr;
 		m_dsv_heap = nullptr;
-		m_pipe_state_pool.resize(0);
-		m_cmd_alloc_pool.resize(0);
-		m_cmd_list_pool.resize(0);
+		m_depth_stencil = nullptr;
 		m_bb.resize(0);
+		m_gsync.Release();
 
 		// Destroy the D2D device context
 		if (m_d2d_dc != nullptr)
@@ -263,12 +262,6 @@ namespace pr::rdr12
 		return m_frame_number;
 	}
 
-	// The most recent sync point sent to the GPU (*not* equal to frame number)
-	uint64_t Window::LatestSyncPoint() const
-	{
-		return m_gpu_sync.m_issue;
-	}
-
 	// Get/Set the size of the back buffer render target
 	iv2 Window::BackBufferSize() const
 	{
@@ -281,16 +274,16 @@ namespace pr::rdr12
 		if (size.x <= 0 || size.y <= 0)
 			throw std::runtime_error("Back buffer size must be greater than zero");
 
-		Renderer::Lock lock(rdr());
-		auto device = lock.D3DDevice();
+		auto queue = rdr().GfxQueue();
+		auto device = rdr().D3DDevice();
 
 		// No-op if not a resize
 		if (!force && BackBufferSize() == size)
 			return;
 
 		// Flush any GPU commands that are still in flight
-		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
-		m_gpu_sync.Wait();
+		m_gsync.AddSyncPoint(queue);
+		m_gsync.Wait();
 
 		// Release references to swap chain resources
 		for (auto& bb : m_bb)
@@ -308,9 +301,17 @@ namespace pr::rdr12
 			Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
 		}
 
+		// Default to the description of the current depth buffer if it exists
+		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc()
+			: TexDesc::Tex2D(Image{16, 16, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
+		dsdesc.Width = size.x;
+		dsdesc.Height = size.y;
+		auto clear_value = D3D12_CLEAR_VALUE {
+			.Format = DXGI_FORMAT_D32_FLOAT,
+			.DepthStencil = {.Depth = 1.0f, .Stencil=0},
+		};
+
 		// Resize the depth stencil
-		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc() : TexDesc::Tex2D(Image{size.x, size.y, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
-		auto clear_value = D3D12_CLEAR_VALUE {.Format = DXGI_FORMAT_D32_FLOAT, .DepthStencil = {.Depth = 1.0f, .Stencil=0}, };
 		m_depth_stencil = nullptr;
 		Throw(device->CreateCommittedResource(
 			&HeapProps::Default(),
@@ -336,13 +337,13 @@ namespace pr::rdr12
 			auto& bb = m_bb[i];
 			bb.m_wnd = this;
 			bb.m_bb_index = i;
-			bb.m_bb_sync = m_gpu_sync.m_issue;
+			bb.m_sync_point = m_gsync.CompletedSyncPoint();
 			
 			// Save the pointers to the descriptors
 			bb.m_rtv = rtv_handle;
-			bb.m_rtv.ptr += i * rtv_size; // one rtv for each back buffer
+			bb.m_rtv.ptr += i * rtv_size; // one RTV for each back buffer
 			bb.m_dsv = dsv_handle;
-			bb.m_dsv.ptr += 0 * dsv_size; // there is only one dsv
+			bb.m_dsv.ptr += 0 * dsv_size; // there is only one DSV
 
 			// Create RTVs for the back buffer resources.
 			if (m_swap_chain != nullptr)
@@ -380,112 +381,14 @@ namespace pr::rdr12
 		}
 	}
 
-	// Get an allocator that isn't currently in use.
-	CmdAllocScope Window::CmdAlloc()
-	{
-		// Move the available allocators to the back of the pool.
-		auto latest_issue = LatestSyncPoint();
-		std::partition(std::begin(m_cmd_alloc_pool), std::end(m_cmd_alloc_pool), [=](auto ca) { return ca.issue > latest_issue; });
-
-		// Create a new allocator if there isn't one available
-		if (m_cmd_alloc_pool.empty() || m_cmd_alloc_pool.back().issue > latest_issue)
-		{
-			Renderer::Lock lock(rdr());
-			auto device = lock.D3DDevice();
-
-			// Create a command allocator
-			D3DPtr<ID3D12CommandAllocator> cmd_alloc;
-			Throw(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&cmd_alloc.m_ptr));
-			Throw(cmd_alloc->SetName(L"Window:CmdAllocPool:CmdAlloc"));
-			m_cmd_alloc_pool.push_back(CmdAllocSyncPair{cmd_alloc, LatestSyncPoint()});
-		}
-
-		// Hand out an allocator to the caller, it will come back automatically.
-		auto ca = m_cmd_alloc_pool.back();
-		m_cmd_alloc_pool.pop_back();
-		PR_ASSERT(PR_DBG_RDR, ca.issue <= LatestSyncPoint(), "This allocator is still in use");
-		return CmdAllocScope(m_cmd_alloc_pool, ca, this);
-	}
-
-	// Get a command list that returns to the pool when out of scope
-	CmdListScope Window::CmdList()
-	{
-		if (m_cmd_list_pool.empty())
-		{
-			Renderer::Lock lock(rdr());
-			//auto device4 = lock.D3DDevice4();
-
-			D3DPtr<ID3D12GraphicsCommandList> cmd_list;
-			//if (device4 != nullptr)
-			//{
-			//	// Create a command list for internal use by the window
-			//	Throw(device4->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&cmd_list.m_ptr));
-			//}
-			//else
-			{
-				auto cmd_alloc = CmdAlloc();
-				auto device = lock.D3DDevice();
-				Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&cmd_list.m_ptr));
-				Throw(cmd_list->Close());
-			}
-			Throw(cmd_list->SetName(L"Window:CmdListPool:CmdList"));
-			m_cmd_list_pool.push_back(CmdListSyncPair{cmd_list});
-		}
-
-		// Get a command list from the pool
-		auto cl = m_cmd_list_pool.back();
-		m_cmd_list_pool.pop_back();
-		return CmdListScope(m_cmd_list_pool, cl);
-	}
-
-	// Return a pipeline state instance for the given description
-	ID3D12PipelineState* Window::PipeState(PipeStateDesc const& desc)
-	{
-		// Hash the pipeline state
-		auto hash = pr::hash::HashBytes(&desc, &desc + 1);
-		
-		// See if a pipeline state object already exists
-		auto iter = pr::find_if(m_pipe_state_pool, [=](auto& pso) { return pso.hash == hash; });
-		if (iter == std::end(m_pipe_state_pool))
-		{
-			// If it doesn't exists, create it now
-			Renderer::Lock lock(rdr());
-			auto device = lock.D3DDevice();
-
-			// Create the pipeline state instance
-			D3DPtr<ID3D12PipelineState> pso;
-			Throw(device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso.m_ptr));
-			iter = m_pipe_state_pool.insert(iter, PipeStatePair{pso, 0, hash});
-
-			// Delete any states that haven't been used for a while
-			constexpr size_t MaxFrameAge = 30;
-			constexpr size_t DrainPoolCount = 100;
-			auto pool_size = m_pipe_state_pool.size();
-			if (pool_size > DrainPoolCount)
-			{
-				auto frame_number = FrameNumber();
-				erase_if_unstable(m_pipe_state_pool, [=](auto& item) { return frame_number - item.frame_number > MaxFrameAge; });
-				
-				#if PR_DBG_RDR
-				if (m_pipe_state_pool.size() == pool_size)
-					throw std::runtime_error("Too many unique pipeline states");
-				#endif
-			}
-		}
-
-		auto& pso = *iter;
-		pso.frame_number = FrameNumber();
-		return pso.ptr.get();
-	}
-
 	// Render a frame
 	Window::Frame Window::RenderFrame()
 	{
 		// Get the current back buffer
 		auto& bb = m_bb[BBIndex()];
 
-		// Ensure the back buffer is ready to be rendered to
-		bb.Sync();
+		// Ensure the back buffer is available for rendering
+		m_gsync.Wait(bb.m_sync_point);
 
 		// Bind D2D to the current render target
 		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
@@ -493,22 +396,33 @@ namespace pr::rdr12
 
 		// Start a frame
 		++m_frame_number;
-		return Window::Frame(bb);
+		m_cmd_lists.resize(0);
+		return Frame(bb, m_cmd_lists);
 	}
 
 	// Construct a frame render instance
-	Window::Frame::Frame(BackBuffer& bb)
+	Window::Frame::Frame(BackBuffer& bb, CmdLists& cmd_lists)
 		:m_bb(bb)
-		,m_cmd_lists()
-		,m_cmd_alloc(bb.CmdAlloc())
-		,m_cmd_list0(bb.CmdList())
-		,m_cmd_list1(bb.CmdList())
-		,m_closed()
+		,m_cmd_lists(cmd_lists)
 	{
-		Throw(m_cmd_alloc->Reset());
+		m_cmd_lists.push_back(nullptr); // Make a slot for the first barrier
+	}
 
-		// Get the window's internal cmd list
-		Throw(m_cmd_list0->Reset(m_cmd_alloc, nullptr));
+	// Render a scene
+	void Window::Frame::Render(Scene& scene)
+	{
+		// Start the scene rendering - If this is done in a background thread, 'scene.Render' will return immediately
+		// returning the not-yet-closed command list that it is rendering to. This allows the window to submit the
+		// command lists in the same order that the caller called 'Render' in.
+		// Remember: One allocator per thread, per list, per frame.
+		auto cmd_list = scene.Render(m_bb);
+		m_cmd_lists.push_back(cmd_list);
+	}
+
+	// Present the frame
+	void Window::Frame::Present()
+	{
+		auto cmd_alloc = m_bb.wnd().m_cmd_alloc_pool.Get();
 
 		// Add a resource barrier for switching the back buffer to the render target state
 		D3D12_RESOURCE_BARRIER barrier0 = {
@@ -521,35 +435,11 @@ namespace pr::rdr12
 				.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET,
 			},
 		};
-		m_cmd_list0->ResourceBarrier(1, &barrier0);
-
-		// Add the last command
-		Throw(m_cmd_list0->Close());
-		m_cmd_lists.push_back(m_cmd_list0);
-	}
-
-	// Render a scene
-	void Window::Frame::Render(Scene& scene)
-	{
-		if (m_closed)
-			throw std::runtime_error("Frame is closed");
-
-		// Start the scene rendering
-		// If this is done in a background thread, 'scene.Render' will return immediately returning the not-yet-closed
-		// command list that it is rendering to. This allows the window to submit the command lists in the same order
-		// that the caller called 'Render' in.
-		auto cmd_list = scene.Render(m_bb);
-		m_cmd_lists.push_back(cmd_list);
-	}
-
-	// Present the frame
-	void Window::Frame::Close()
-	{
-		if (m_closed) return;
-		m_closed = true;
-
-		// Get the window's internal cmd list
-		Throw(m_cmd_list1->Reset(m_cmd_alloc, nullptr));
+		auto cmd_list0 = m_bb.wnd().m_cmd_list_pool.Get();
+		Throw(cmd_list0->Reset(cmd_alloc, nullptr));
+		cmd_list0->ResourceBarrier(1, &barrier0);
+		Throw(cmd_list0->Close());
+		m_cmd_lists[0] = cmd_list0;
 
 		// Transition the back buffer to the presenting state.
 		D3D12_RESOURCE_BARRIER barrier1 = {
@@ -562,18 +452,28 @@ namespace pr::rdr12
 				.StateAfter = D3D12_RESOURCE_STATE_PRESENT,
 			},
 		};
-		m_cmd_list1->ResourceBarrier(1, &barrier1);
-
-		// Add the last command
-		Throw(m_cmd_list1->Close());
-		m_cmd_lists.push_back(m_cmd_list1);
+		auto cmd_list1 = m_bb.wnd().m_cmd_list_pool.Get();
+		Throw(cmd_list1->Reset(cmd_alloc, nullptr));
+		cmd_list1->ResourceBarrier(1, &barrier1);
+		Throw(cmd_list1->Close());
+		m_cmd_lists.push_back(cmd_list1);
 
 		// todo - Wait until all rendering worker threads have completed 
 		{}
+
+		// Submit the command lists to the GPU
+		auto queue = m_bb.rdr().GfxQueue();
+		queue->ExecuteCommandLists(s_cast<UINT>(m_cmd_lists.size()), m_cmd_lists.data());
+
+		// Flip the swap chain
+		m_bb.wnd().Flip();
+
+		// Set the next sync point for this backbuffer
+		m_bb.m_sync_point = m_bb.wnd().m_gsync.AddSyncPoint(queue);
 	}
 
-	// Flip the 'frame' to the screen
-	void Window::Present(Frame& frame)
+	// Move to the next back buffer
+	void Window::Flip()
 	{
 		// Be careful that you never have the message-pump thread wait on the render thread.
 		// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
@@ -591,13 +491,6 @@ namespace pr::rdr12
 		// the swap chain unable to relinquish full-screen mode.
 		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
 		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
-
-		// Close the frame
-		frame.Close();
-
-		// Submit the command lists to the GPU
-		Renderer::Lock lock(rdr());
-		lock.CmdQueue()->ExecuteCommandLists(s_cast<UINT>(frame.m_cmd_lists.size()), frame.m_cmd_lists.data());
 
 		// Present with the debug swap chain so that graphics debugging detects a frame
 		if (m_swap_chain_dbg != nullptr)
@@ -651,21 +544,13 @@ namespace pr::rdr12
 			{
 				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 				// We'll just throw so the app can shutdown/reset/whatever
-				throw Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				throw Exception<HRESULT>(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 			}
 			default:
 			{
 				throw std::runtime_error("Unknown result from SwapChain::Present");
 			}
 		}
-
-		// Then we setup the fence to synchronize and let us know when the GPU is complete rendering.
-		// For this tutorial we just wait infinitely until it's done this single command list.
-		// However you can get optimisations by doing other processing while waiting for the GPU to finish.
-
-		// Add a sync point for this backbuffer
-		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
-		frame.m_bb.m_bb_sync = m_gpu_sync.m_issue;
 	}
 }
 
@@ -833,8 +718,8 @@ namespace pr::rdr12
 		// However you can get optimisations by doing other processing while waiting for the GPU to finish.
 
 		// Add a sync point, and wait
-		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
-		m_gpu_sync.Wait();
+		m_gsync_sync.AddSyncPoint(lock.CmdQueue());
+		m_gsync_sync.Wait();
 
 		// For the next frame swap to the other back buffer using the alternating index.
 

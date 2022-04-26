@@ -1309,17 +1309,32 @@ namespace pr
 	}
 
 	// Returns the number to add to pad 'size' up to 'alignment'
-	template <typename T, typename = maths::enable_if_intg<T>> constexpr T Pad(T size, T alignment)
+	template <typename T> requires (std::is_integral_v<T>)
+	constexpr T Pad(T size, int alignment)
 	{
 		assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
-		return ~(size - 1) & (alignment - 1);
-		//return (alignment - (size % alignment)) % alignment;
+		return static_cast<T>(~(size - 1) & (alignment - 1));
 	}
 
 	// Returns 'size' increased to a multiple of 'alignment'
-	template <typename T, typename = maths::enable_if_intg<T>> constexpr T PadTo(T size, T alignment)
+	template <typename T> requires (std::is_integral_v<T>)
+	constexpr T PadTo(T size, int alignment)
 	{
 		return size + Pad<T>(size, alignment);
+	}
+
+	// Return 'ptr' aligned to 'alignment'
+	template <typename T>
+	constexpr T const* AlignTo(T const* ptr, int alignment)
+	{
+		auto ofs = reinterpret_cast<uint8_t const*>(ptr) - reinterpret_cast<uint8_t const*>(0);
+		return reinterpret_cast<T*>(PadTo(ofs, alignment));
+	}
+	template <typename T>
+	constexpr T* AlignTo(T* ptr, int alignment)
+	{
+		auto ofs = reinterpret_cast<uint8_t const*>(ptr) - reinterpret_cast<uint8_t const*>(0);
+		return reinterpret_cast<T*>(PadTo(ofs, alignment));
 	}
 
 	// Function object for generating an arithmetic sequence

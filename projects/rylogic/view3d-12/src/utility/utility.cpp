@@ -101,12 +101,14 @@ namespace pr::rdr12
 	}
 
 	// Returns the expected row pitch for a given image width and format
-	iv2 Pitch(iv2 size, DXGI_FORMAT fmt)
+	iv3 Pitch(iv3 size, DXGI_FORMAT fmt)
 	{
 		// x = row pitch = number of bytes per row
 		// y = slice pitch = number of bytes per 2D image.
+		// z = block pitch = number of bytes per 3D image.
 		auto width = size.x;
 		auto height = size.y;
+		auto depth = size.z;
 
 		auto bc = false;
 		auto packed = false;
@@ -172,7 +174,11 @@ namespace pr::rdr12
 			row_bytes = (width * bpp + 7) / 8; // round up to nearest byte
 			num_rows = height;
 		}
-		return iv2(row_bytes, row_bytes * num_rows);
+		return iv3(row_bytes, row_bytes * num_rows, row_bytes * num_rows * depth);
+	}
+	iv2 Pitch(iv2 size, DXGI_FORMAT fmt)
+	{
+		return Pitch(iv3(size.x, size.y, 1), fmt).xy;
 	}
 	iv2 Pitch(D3D12_RESOURCE_DESC const& desc)
 	{
@@ -180,15 +186,15 @@ namespace pr::rdr12
 	}
 
 	// Returns the number of expected mip levels for a given width x height texture
-	size_t MipCount(size_t w, size_t h)
+	int MipCount(int w, int h)
 	{
-		size_t count, largest = std::max(w, h);
+		int count, largest = std::max(w, h);
 		for (count = 1; largest >>= 1; ++count) {}
 		return count;
 	}
-	size_t MipCount(iv2 size)
+	int MipCount(iv2 size)
 	{
-		return MipCount(s_cast<size_t>(size.x), s_cast<size_t>(size.y));
+		return MipCount(size.x, size.y);
 	}
 
 	// Returns the dimensions of a mip level 'levels' lower than the given size
@@ -260,6 +266,75 @@ namespace pr::rdr12
 		NameResource<IDXGIObject>(res, name);
 	}
 
+	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"
+	void ParseEmbeddedResourceUri(std::wstring const& uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name)
+	{
+		if (uri.empty() || uri[0] != '@')
+			throw std::runtime_error("Not an embedded resource URI");
+
+		hmodule = nullptr;
+		res_type.resize(0);
+		res_name.resize(0);
+
+		auto div0 = uri.c_str();
+		auto div1 = *div0 != 0 ? str::FindChar(div0 + 1, ':') : div0;
+		auto div2 = *div1 != 0 ? str::FindChar(div1 + 1, ':') : div1;
+		if (*div2 == 0)
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) invalid. Expected format \"@<hmodule|module_name>:<res_type>:<res_name>\"", uri.c_str()));
+		
+		// Read the HMODULE handle from a string name or 
+		auto HModule = [=](wchar_t const* s, wchar_t const* e)
+		{
+			wstring32 name(s, e);
+			if (name.empty())
+				return HMODULE();
+
+			if (auto h = GetModuleHandleW(name.c_str()); h != nullptr)
+				return h;
+
+			auto end = (wchar_t*)nullptr;
+			auto address = std::wcstoll(s, &end, 16);
+			if (auto h = reinterpret_cast<HMODULE>((uint8_t*)nullptr + (end == e ? address : 0)); h != nullptr)
+				return h;
+
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. HMODULE could not be determined", uri.c_str()));
+		};
+
+		res_name.append(div2 + 1);
+		res_type.append(div1 + 1, div2);
+		hmodule = HModule(div0 + 1, div1);
+
+		// Both name and type are required
+		if (res_name.empty() || res_type.empty())
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. Resource name and type could not be determined", uri.c_str()));
+	}
+
+	// Return an ordered list of filepaths based on 'pattern'
+	vector<std::filesystem::path> PatternToPaths(std::filesystem::path const& dir, char8_t const* pattern)
+	{
+		using namespace std::filesystem;
+
+		vector<path> paths;
+
+		// Assume the pattern is in the filename only
+		auto pat = std::regex(char_ptr(pattern), std::regex::flag_type::icase);
+		for (auto& entry : directory_iterator(dir))
+		{
+			if (!std::regex_match(entry.path().filename().string(), pat)) continue;
+			paths.push_back(entry.path());
+		}
+
+		// Sort the paths lexically
+		pr::sort(paths);
+		return std::move(paths);
+	}
+
+
+
+
+
+
+	#if 0 // in reosurce manager now
 	// Copy a resource by rows
 	void MemcpySubresource(D3D12_MEMCPY_DEST const& dest, D3D12_SUBRESOURCE_DATA const& src, size_t RowSizeInBytes, int NumRows, int NumSlices)
 	{
@@ -283,6 +358,7 @@ namespace pr::rdr12
 		if (subN == 0)
 			return;
 
+		// Check buffer types
 		auto sdesc = staging->GetDesc();
 		auto ddesc = destination->GetDesc();
 		if (sdesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
@@ -295,11 +371,11 @@ namespace pr::rdr12
 		Throw(cmds->GetDevice(__uuidof(ID3D12Device), (void**)(&device.m_ptr)));
 
 		// Get the sizes for copying
-		auto strides     = PR_MALLOCA(strides, UINT64, subN);
-		auto row_counts  = PR_MALLOCA(row_counts, UINT, subN);
-		auto total_sizes = PR_MALLOCA(total_sizes, UINT64, subN);
-		auto layouts     = PR_MALLOCA(layouts, D3D12_PLACED_SUBRESOURCE_FOOTPRINT, subN);
-		device->GetCopyableFootprints(&ddesc, sub0, subN, 0ULL, &layouts[0], &row_counts[0], &strides[0], &total_sizes[0]);
+		UINT64 total_size;
+		auto strides     = PR_ALLOCA(strides, UINT64, subN);
+		auto row_counts  = PR_ALLOCA(row_counts, UINT, subN);
+		auto footprints  = PR_ALLOCA(footprints, D3D12_PLACED_SUBRESOURCE_FOOTPRINT, subN);
+		device->GetCopyableFootprints(&ddesc, sub0, subN, 0ULL, &footprints[0], &row_counts[0], &strides[0], &total_size);
 
 		// Copy the 'data' into the staging buffer
 		{
@@ -308,18 +384,18 @@ namespace pr::rdr12
 			{
 				D3D12_MEMCPY_DEST dst =
 				{
-					lock.data() + layouts[i].Offset,
-					layouts[i].Footprint.RowPitch,
-					s_cast<size_t>(layouts[i].Footprint.RowPitch) * row_counts[i],
+					lock.data() + footprints[i].Offset,
+					footprints[i].Footprint.RowPitch,
+					s_cast<size_t>(footprints[i].Footprint.RowPitch) * row_counts[i],
 				};
-				MemcpySubresource(dst, images[i], strides[i], row_counts[i], layouts[i].Footprint.Depth);
+				MemcpySubresource(dst, images[i], strides[i], row_counts[i], footprints[i].Footprint.Depth);
 			}
 		}
 
 		// Add the command to copy the staging resource to the destination
 		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
-			cmds->CopyBufferRegion(destination, 0, staging, layouts[0].Offset, layouts[0].Footprint.Width);
+			cmds->CopyBufferRegion(destination, 0, staging, footprints[0].Offset, footprints[0].Footprint.Width);
 		}
 		else
 		{
@@ -335,10 +411,11 @@ namespace pr::rdr12
 				{
 					.pResource = staging,
 					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-					.PlacedFootprint = layouts[i],
+					.PlacedFootprint = footprints[i],
 				};
 				cmds->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 			}
 		}
 	}
+	#endif
 }

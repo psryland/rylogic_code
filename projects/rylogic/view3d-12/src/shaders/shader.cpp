@@ -76,9 +76,10 @@ namespace pr::rdr12
 		ByteCode const ray_cast_face_gs(compiled::ray_cast_face_gs);
 	}
 
-	Shader::Shader(ResourceManager& mgr, ShaderCode code)
+	Shader::Shader(ResourceManager& mgr, GpuSync& gsync, int64_t blk_size, ShaderCode code)
 		:RefCounted<Shader>()
 		,m_mgr(&mgr)
+		,m_cbuf(gsync, blk_size)
 		,Code(code)
 	{}
 	

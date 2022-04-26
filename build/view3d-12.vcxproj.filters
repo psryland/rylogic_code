@@ -114,9 +114,6 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\object_pools.cpp">
-      <Filter>src\utility</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
@@ -134,6 +131,21 @@
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_show_normals.cpp">
       <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_state.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\descriptor_store.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_cube.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_dds.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_wic.cpp">
+      <Filter>src\texture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -245,9 +257,6 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_registers.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d-12\utility\object_pools.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
@@ -257,14 +266,47 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_point_sprites.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_forward.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_show_normals.h">
       <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_alloc.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\descriptor_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\conversion.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_cube.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_loader.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\pipe_states.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\descriptor.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_descriptor_heap.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_upload_buffer.h">
+      <Filter>src\resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

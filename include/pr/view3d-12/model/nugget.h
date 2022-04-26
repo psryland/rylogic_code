@@ -11,7 +11,7 @@
 #include "pr/view3d-12/shaders/shader.h"
 //#include "pr/view3d/models/model_buffer.h"
 #include "pr/view3d-12/texture/texture_2d.h"
-#include "view3d-12/src/utility/pipe_states.h"
+#include "pr/view3d-12/utility/pipe_states.h"
 //#include "pr/view3d/textures/texture_cube.h"
 
 namespace pr::rdr12

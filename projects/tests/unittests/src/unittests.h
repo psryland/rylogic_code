@@ -200,6 +200,7 @@
 #include "pr\maths\half.h"
 #include "pr\maths\interpolate.h"
 #include "pr\maths\ivector2.h"
+#include "pr\maths\ivector3.h"
 #include "pr\maths\ivector4.h"
 #include "pr\maths\large_int.h"
 #include "pr\maths\limits.h"

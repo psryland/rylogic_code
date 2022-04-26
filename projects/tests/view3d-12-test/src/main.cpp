@@ -19,14 +19,16 @@ struct Main :Form
 	// Declare an instance type
 	#define PR_RDR_INST(x)\
 		x(m4x4, m_i2w, EInstComp::I2WTransform)\
-		x(ModelPtr, m_model, EInstComp::ModelPtr)
+		x(ModelPtr, m_model, EInstComp::ModelPtr)\
+		x(Colour32, m_tint, EInstComp::TintColour32)
 	PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST)
 	#undef PR_RDR_INST
 
 	Renderer m_rdr;
 	Window m_wnd;
 	Scene m_scn;
-	Instance m_inst;
+	Instance m_inst0;
+	Instance m_inst1;
 
 	Main(HINSTANCE hinstance)
 		:Form(Params<>()
@@ -39,12 +41,36 @@ struct Main :Form
 		,m_rdr(RSettings(hinstance))
 		,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
 		,m_scn(m_wnd)
+		,m_inst0()
+		,m_inst1()
 	{
-		m_scn.m_bkgd_colour = Colour32(0xFF1e3e1e);
-		m_scn.m_cam.LookAt(v4{0, 0, -10, 1}, v4::Origin(), v4::YAxis());
-		m_inst.m_model = m_rdr.res_mgr().FindModel(EStockModel::BBoxModel);
-		m_inst.m_i2w = m4x4::Identity();
-		m_scn.AddInstance(m_inst);
+		m_scn.m_bkgd_colour = Colour32(0xFF908080);
+		m_scn.m_cam.LookAt(v4{0, 0, +3, 1}, v4::Origin(), v4::YAxis());
+
+		m_inst0.m_model = m_rdr.res_mgr().FindModel(EStockModel::UnitQuad);
+		
+		auto tex = m_rdr.res_mgr().FindTexture(EStockTexture::Checker);
+		for (Nugget& nug : m_inst0.m_model->m_nuggets)
+			nug.m_tex_diffuse = tex;
+
+		m_inst1.m_model = m_rdr.res_mgr().FindModel(EStockModel::BBoxModel);
+		m_inst1.m_i2w = m4x4::Identity();
+		m_inst1.m_tint = Colour32White;
+		m_scn.AddInstance(m_inst1);
+
+		m_inst0.m_i2w = m4x4::Identity();
+		m_inst0.m_tint = Colour32Green;
+		m_scn.AddInstance(m_inst0);
+	}
+	void OnWindowPosChange(WindowPosEventArgs const& args) override
+	{
+		Form::OnWindowPosChange(args);
+		if (!args.m_before)
+		{
+			iv2 sz(args.m_wp->cx, args.m_wp->cy);
+			m_wnd.BackBufferSize(sz, false);
+			m_scn.m_viewport.Set(sz);
+		}
 	}
 	static RdrSettings RSettings(HINSTANCE hinstance)
 	{
@@ -61,22 +87,26 @@ struct Main :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 {
 	pr::InitCom com;
 
 	try
 	{
-		Main main(hInstance);
+		Main main(hinstance);
 		main.Show();
 
+		float time = 0.0f;
 		SimMessageLoop loop;
 		loop.AddMessageFilter(main);
-		loop.AddLoop(30, true, [&main](auto)
+		loop.AddLoop(10, true, [&main, &time](auto dt)
 		{
+			time += dt * 0.001f;
+			main.m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+			main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 			auto frame = main.m_wnd.RenderFrame();
 			frame.Render(main.m_scn);
-			main.m_wnd.Present(frame);
+			frame.Present();
 		});
 		return loop.Run();
 	}

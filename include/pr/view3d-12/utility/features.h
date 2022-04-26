@@ -9,6 +9,8 @@ namespace pr::rdr12
 {
 	struct FeatureSupport
 	{
+		ID3D12Device* m_device;
+		D3D_FEATURE_LEVEL                                                     MaxFeatureLevel;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS                                      Options;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS1                                     Options1;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS2                                     Options2;
@@ -19,7 +21,6 @@ namespace pr::rdr12
 		D3D12_FEATURE_DATA_D3D12_OPTIONS7                                     Options7;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS8                                     Options8;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS9                                     Options9;
-		D3D_FEATURE_LEVEL                                                     MaxFeatureLevel;
 		D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT                        GPUVASupport;
 		D3D12_FEATURE_DATA_SHADER_MODEL                                       ShaderModel;
 		std::vector<D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT>    ProtectedResourceSessionSupport;
@@ -40,5 +41,6 @@ namespace pr::rdr12
 		FeatureSupport();
 		FeatureSupport(ID3D12Device* device);
 		void Read(ID3D12Device* device);
+		D3D12_FEATURE_DATA_FORMAT_SUPPORT Format(DXGI_FORMAT format) const;
 	};
 }

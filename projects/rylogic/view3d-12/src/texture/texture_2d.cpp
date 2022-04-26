@@ -7,11 +7,9 @@
 
 namespace pr::rdr12
 {
-	Texture2D::Texture2D(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, bool has_alpha)
-		:TextureBase(mgr, id, res, uri)
-		,m_t2s()
-		,m_sort_id()
+	Texture2D::Texture2D(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, bool has_alpha, char const* name)
+		:TextureBase(mgr, id, res, uri, name)
+		,m_t2s(m4x4::Identity())
 		,m_has_alpha(has_alpha)
-	{
-	}
+	{}
 }

@@ -127,35 +127,35 @@ namespace pr
 		}
 		friend IVec2<T> pr_vectorcall operator &  (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x & rhs.x, lhs.y & rhs.y};
+			return IVec2<T>{lhs.x & rhs.x, lhs.y & rhs.y};
 		}
 		friend IVec2<T> pr_vectorcall operator ^  (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x ^ rhs.x, lhs.y ^ rhs.y};
+			return IVec2<T>{lhs.x ^ rhs.x, lhs.y ^ rhs.y};
 		}
 		friend IVec2<T> pr_vectorcall operator << (iv2_cref<T> lhs, int rhs)
 		{
-			return IVec4<T>{lhs.x << rhs, lhs.y << rhs};
+			return IVec2<T>{lhs.x << rhs, lhs.y << rhs};
 		}
 		friend IVec2<T> pr_vectorcall operator << (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x << rhs.x, lhs.y << rhs.y};
+			return IVec2<T>{lhs.x << rhs.x, lhs.y << rhs.y};
 		}
 		friend IVec2<T> pr_vectorcall operator >> (iv2_cref<T> lhs, int rhs)
 		{
-			return IVec4<T>{lhs.x >> rhs, lhs.y >> rhs};
+			return IVec2<T>{lhs.x >> rhs, lhs.y >> rhs};
 		}
 		friend IVec2<T> pr_vectorcall operator >> (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x >> rhs.x, lhs.y >> rhs.y};
+			return IVec2<T>{lhs.x >> rhs.x, lhs.y >> rhs.y};
 		}
 		friend IVec2<T> pr_vectorcall operator || (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x || rhs.x, lhs.y || rhs.y};
+			return IVec2<T>{lhs.x || rhs.x, lhs.y || rhs.y};
 		}
 		friend IVec2<T> pr_vectorcall operator && (iv2_cref<T> lhs, iv2_cref<T> rhs)
 		{
-			return IVec4<T>{lhs.x && rhs.x, lhs.y && rhs.y};
+			return IVec2<T>{lhs.x && rhs.x, lhs.y && rhs.y};
 		}
 		#pragma endregion
 

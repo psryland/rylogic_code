@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/resource/gpu_upload_buffer.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
@@ -66,15 +67,13 @@ namespace pr::rdr12
 		//  - Shader instances should be lightweight, we may want multiple instances with
 		//    different parameters... should the parameters be separate then?
 		ResourceManager* m_mgr;
+		GpuUploadBuffer m_cbuf;
 
-		Shader(ResourceManager& mgr, ShaderCode code);
+		Shader(ResourceManager& mgr, GpuSync& gsync, int64_t blk_size, ShaderCode code);
 		virtual ~Shader() {}
 
 		// The compiled byte code for the shader stages
 		ShaderCode Code;
-
-		// Perform any setup of the shader state
-		virtual void Setup() = 0;
 
 		// Ref counting clean up
 		static void RefCountZero(RefCounted<Shader>* doomed);

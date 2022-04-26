@@ -190,11 +190,11 @@ namespace pr::rdr12
 	struct TextureDesc;
 	struct TextureBase;
 	struct Texture2D;
+	struct TextureCube;
 	using Texture2DPtr = RefPtr<Texture2D>;
-	    struct TextureCube;
+	using TextureCubePtr = RefPtr<TextureCube>;
 	    struct AllocPres;
 	    struct ProjectedTexture;
-	    using TextureCubePtr = RefPtr<TextureCube>;
 
 	// Video
 	//struct Video;
@@ -209,6 +209,8 @@ namespace pr::rdr12
 	struct Lock;
 	struct MLock;
 	struct Image;
+	struct ImageWithData;
+	struct FeatureSupport;
 	
 	// Event args
 	struct ResolvePathArgs;
@@ -328,22 +330,3 @@ namespace pr::rdr12
 
 // Enum flags
 template <> struct is_flags_enum<DXGI_SWAP_CHAIN_FLAG> :std::true_type {};
-
-// Conversion
-namespace pr
-{
-	template <> struct Convert<D3D12_RANGE, rdr12::Range>
-	{
-		static D3D12_RANGE To(rdr12::Range const& r)
-		{
-			return reinterpret_cast<D3D12_RANGE const&>(r);
-		}
-	};
-	template <> struct Convert<rdr12::Range, D3D12_RANGE>
-	{
-		static rdr12::Range To(D3D12_RANGE const& r)
-		{
-			return reinterpret_cast<rdr12::Range const&>(r);
-		}
-	};
-}

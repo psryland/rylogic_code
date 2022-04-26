@@ -7,9 +7,8 @@
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
-#include "pr/view3d-12/utility/object_pools.h"
-#include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/utility/cmd_list.h"
 
 namespace pr::rdr12
 {
@@ -33,25 +32,25 @@ namespace pr::rdr12
 		// but non-fixed means we need the pr::rdr::Allocator to construct it.
 		// Conceptually, 'InstCont' should be an unordered_set, but using an array is way
 		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
+		using GfxCmdList = D3DPtr<ID3D12GraphicsCommandList>;
 		using RenderStepCont = pr::vector<RenderStep*, 16, true>;
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
 		//using RayCastStepPtr = std::unique_ptr<RayCastStep>;
 		
-		Window*        m_wnd;          // The controlling window
-		SceneCamera    m_cam;          // Represents the camera properties used to project onto the screen
-		Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
-		InstCont       m_instances;    // Instances added to this scene for rendering.
-		RenderStepCont m_render_steps; // The stages of rendering the scene
-		CmdListScope   m_cmd_list;     // The command list used by this scene
-		Colour         m_bkgd_colour;  // The background colour for the scene. Set to ColourZero to disable clear bb
-		//RayCastStepPtr                  m_ht_immediate;  // A ray cast render step for performing immediate hit tests
-		Light          m_global_light; // The global light settings
-		//TextureCubePtr                  m_global_envmap; // A global environment map
-		//DSBlock                         m_dsb;           // Scene-wide depth states
-		//RSBlock                         m_rsb;           // Scene-wide render states
-		//BSBlock                         m_bsb;           // Scene-wide blend states
-		DiagState      m_diag;         // Diagnostic variables
-		AutoSub        m_eh_resize;    // RT resize event handler subscription
+		Window*          m_wnd;          // The controlling window
+		SceneCamera      m_cam;          // Represents the camera properties used to project onto the screen
+		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want)
+		InstCont         m_instances;    // Instances added to this scene for rendering.
+		RenderStepCont   m_render_steps; // The stages of rendering the scene
+		GfxCmdList       m_cmd_list;     // The command list used by this scene
+		Colour           m_bkgd_colour;  // The background colour for the scene. Set to ColourZero to disable clear bb
+		//RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
+		Light            m_global_light;  // The global light settings
+		TextureCubePtr   m_global_envmap; // A global environment map
+		//DSBlock        m_dsb;           // Scene-wide depth states
+		//RSBlock        m_rsb;           // Scene-wide render states
+		//BSBlock        m_bsb;           // Scene-wide blend states
+		AutoSub          m_eh_resize;    // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::RenderForward}, SceneCamera const& cam = SceneCamera{});
 		~Scene();
@@ -59,6 +58,7 @@ namespace pr::rdr12
 		// Renderer access
 		Renderer& rdr() const;
 		Window& wnd() const;
+		ID3D12Device* d3d_device() const;
 
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame
@@ -83,10 +83,14 @@ namespace pr::rdr12
 			RemoveInstance(inst.m_base);
 		}
 
-		// Get/Set the scene camera (i.e. the camera to screen projection or 'View' matrix in dx speak)
-		SceneCamera const& Camera() const;
-		void Camera(SceneCamera const& cam);
-		void Camera(pr::Camera const& cam);
+		//// Get/Set the viewport
+		//Viewport const& Viewport() const;
+		//void Viewport(rdr12::Viewport const& vp);
+
+		//// Get/Set the scene camera (i.e. the camera to screen projection or 'View' matrix in dx speak)
+		//SceneCamera const& Camera() const;
+		//void Camera(SceneCamera const& cam);
+		//void Camera(pr::Camera const& cam);
 
 		// Raised just before the drawlist is sorted. Handlers should add/remove
 		// instances from the scene, or add/remove render steps as required.

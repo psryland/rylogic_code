@@ -5,9 +5,10 @@
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/resource/image.h"
 #include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/render/sortkey.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/texture/texture_cube.h"
+#include "pr/view3d-12/texture/texture_loader.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/nugget.h"
@@ -16,45 +17,37 @@
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
 
-//todo
-// - the resource manager needs to have a deque of descriptors (one for each D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES)
-//   textures should have views (ie. descriptors) created for each view they support.
-// - samplers are an independent resource to textures
-
 namespace pr::rdr12
 {
 	ResourceManager::ResourceManager(Renderer& rdr)
 		:m_mem_tracker()
 		,m_rdr(rdr)
-		,m_cmd_alloc()
+		,m_gsync(rdr.D3DDevice())
+		,m_cmd_alloc_pool(m_gsync)
+		,m_cmd_alloc(m_cmd_alloc_pool.Get())
 		,m_cmd_list()
-		,m_gpu_sync()
-		,m_lookup_dxres()
+		,m_lookup_res()
 		,m_lookup_tex()
-		,m_staging_buffers()
+		,m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
+		,m_descriptor_store(rdr.D3DDevice())
 		,m_gdiplus()
 		,m_eh_resize()
 		,m_gdi_dc_ref_count()
 		,m_stock_models()
 		,m_stock_textures()
 	{
-		Renderer::Lock lock(m_rdr);
-		auto device = lock.D3DDevice();
+		auto device = m_rdr.D3DDevice();
 
-		// Create a command allocator and list for use by the resource manager, since it is independent of any windows or scenes.
-		Throw(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&m_cmd_alloc.m_ptr));
-		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc.get(), nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
+		// Create an open command list for use by the resource manager, since it is independent of any windows or scenes.
+		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
 		m_cmd_list->SetName(L"ResourceManager");
-		m_gpu_sync.Init(device);
 
 		// Create stock resources
 		CreateStockTextures();
 		CreateStockModels();
-		FlushToGpu();
 
-		// Close and execute the resource managers setup commands
-		m_gpu_sync.AddSyncPoint(lock.CmdQueue());
-		m_gpu_sync.Wait();
+		// Wait till stock resources are created
+		FlushToGpu(true);
 
 		#if 0 // todo
 		// Create default samplers to use in shaders that expect a
@@ -80,28 +73,41 @@ namespace pr::rdr12
 			tex = nullptr;
 		for (auto& mdl : m_stock_models)
 			mdl = nullptr;
-
-		m_gpu_sync.Release();
 	}
 
 	// Renderer access
-	Renderer& ResourceManager::rdr()
+	Renderer& ResourceManager::rdr() const
 	{
 		return m_rdr;
 	}
 
-	// Start/Stop creating resources
-	void ResourceManager::FlushToGpu()
+	// Ensure stock Start/Stop creating resources
+	uint64_t ResourceManager::FlushToGpu(bool block)
 	{
 		// Close the command list
 		Throw(m_cmd_list->Close());
 
 		// Execute the command list
-		Renderer::Lock lock(rdr());
-		lock.ExecuteCommands(m_cmd_list.get());
+		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_cmd_list.get())};
+		rdr().GfxQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
 
-		// Prepare the command list
-		Throw(m_cmd_list->Reset(m_cmd_alloc.get(), nullptr));
+		// Add a sync point
+		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
+		m_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
+
+		// Reset the command list
+		m_cmd_alloc = m_cmd_alloc_pool.Get();
+		Throw(m_cmd_list->Reset(m_cmd_alloc, nullptr));
+
+		// Wait till done?
+		if (block)
+			Wait(sync_point);
+
+		return sync_point;
+	}
+	void ResourceManager::Wait(uint64_t sync_point) const
+	{
+		m_gsync.Wait(sync_point);
 	}
 
 	// Create a model.
@@ -112,8 +118,7 @@ namespace pr::rdr12
 		if (mdesc.m_ib.ElemCount == 0)
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
-		Renderer::Lock lock(m_rdr);
-		auto device = lock.D3DDevice();
+		auto device = rdr().D3DDevice();
 
 		// Create a vertex buffer
 		D3DPtr<ID3D12Resource> vb;
@@ -130,15 +135,7 @@ namespace pr::rdr12
 		
 			// Initialise the vertex data
 			if (mdesc.m_vb.Data != nullptr)
-			{
-				// Get the size required for an upload heap
-				UINT64 total_bytes;
-				device->GetCopyableFootprints(&mdesc.m_vb, 0U, 1U, 0ULL, nullptr, nullptr, nullptr, &total_bytes);
-
-				// Store the vertex data in the staging buffer (upload heap)
-				auto staging = GetStagingBuffer(device, total_bytes);
-				UpdateSubresource(m_cmd_list.get(), vb.get(), staging.buf.get(), mdesc.m_vb, 0);
-			}
+				UpdateSubresource(vb.get(), mdesc.m_vb, 0, alignof(Vert));
 
 			// Transition the vertex buffer to a pixel shader resource
 			auto barrier = ResourceBarrier::Transition(vb.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -160,15 +157,7 @@ namespace pr::rdr12
 
 			// Initialise the index data
 			if (mdesc.m_ib.Data != nullptr)
-			{
-				// Get the size required for an upload heap
-				UINT64 total_bytes;
-				device->GetCopyableFootprints(&mdesc.m_vb, 0U, 1U, 0ULL, nullptr, nullptr, nullptr, &total_bytes);
-
-				// Store the vertex data in the staging buffer (upload heap)
-				auto staging = GetStagingBuffer(device, total_bytes);
-				UpdateSubresource(m_cmd_list.get(), ib.get(), staging.buf.get(), mdesc.m_ib, 0);
-			}
+				UpdateSubresource(ib.get(), mdesc.m_ib, 0, alignof(uint32_t));
 
 			// Transition the vertex buffer to a pixel shader resource
 			auto barrier = ResourceBarrier::Transition(ib.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -182,53 +171,199 @@ namespace pr::rdr12
 	}
 
 	// Create a new texture instance.
-	Texture2DPtr ResourceManager::CreateTexture2D(TextureDesc const& tdesc)
+	Texture2DPtr ResourceManager::CreateTexture2D(TextureDesc const& desc)
 	{
-		// Check whether 'id' already exists, if so, throw.
-		if (tdesc.m_id != AutoId && m_lookup_tex.find(tdesc.m_id) != end(m_lookup_tex))
-			throw std::runtime_error(FmtS("Texture Id '%d' is already in use", tdesc.m_id));
+		// Check whether 'id' already exists, if so, throw. Users should use FindTexture first.
+		if (desc.m_id != AutoId && m_lookup_tex.find(desc.m_id) != end(m_lookup_tex))
+			throw std::runtime_error(FmtS("Texture Id '%d' is already in use", desc.m_id));
+		if (desc.m_tdesc.DepthOrArraySize != 1)
+			throw std::runtime_error("Expected a 2D texture");
 
-		// Texture 'id' doesn't exist, so create it
-		Renderer::Lock lock(rdr());
-		auto device = lock.D3DDevice();
+		// Create the texture resource
+		D3DPtr<ID3D12Resource> tex = CreateResource(desc);
 
-		// Create the texture
-		D3DPtr<ID3D12Resource> tex;
+		// todo - See if a sampler resource should be created as well, or is it the same as the static ones?
+		(void)desc.m_sdesc;
+
+		// Allocate a new texture instance
+		Texture2DPtr inst(rdr12::New<Texture2D>(*this, desc.m_id, tex.get(), 0, desc.m_has_alpha, desc.m_name.c_str()), true);
+		assert(m_mem_tracker.add(inst.get()));
+
+		auto device = rdr().D3DDevice();
+
+		// Create views for the texture
+		if (!AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
 		{
-			// Create a GPU visible resource that will hold the created texture.
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Default(),          // a default heap
-				D3D12_HEAP_FLAG_NONE,           // no flags
-				&tdesc.m_tdesc,                 // the description of the texture
-				D3D12_RESOURCE_STATE_COPY_DEST, // the texture will be copied from the upload heap to here, so it starts out as copy dest state
-				tdesc.m_clear_value.has_value() ? &tdesc.m_clear_value.value() : nullptr, // used for render targets and depth/stencil buffers
-				__uuidof(ID3D12Resource),
-				(void**)&tex.m_ptr));
-			Throw(tex->SetName(tdesc.m_name.c_str()));
+			// Check the texture format is supported
+			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
+			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE))
+				throw std::runtime_error("Texture format is not supported as a shader resource view");
 
-			// If initialisation data is provided
-			if (tdesc.m_tdesc.Data != nullptr)
-			{
-				// Get the size required for an upload heap
-				UINT64 total_bytes;
-				device->GetCopyableFootprints(&tdesc.m_tdesc, 0U, 1U, 0ULL, nullptr, nullptr, nullptr, &total_bytes);
+			// Create the SRV
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
+				.Format = desc.m_tdesc.Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = {
+					.MostDetailedMip = 0,
+					.MipLevels = s_cast<UINT>(-1),
+					.PlaneSlice = 0,
+					.ResourceMinLODClamp = 0.f,
+				},
+			};
+			inst->m_srv = m_descriptor_store.Create(tex.get(), srv_desc);
+		}
+		if (AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
+		{
+			// Check the texture format is supported
+			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
+			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) ||
+				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) ||
+				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE))
+				throw std::runtime_error("Texture format is not supported as a unordered access view");
 
-				// Store the image data in the staging texture (upload heap)
-				auto staging = GetStagingBuffer(device, total_bytes);
-				UpdateSubresource(m_cmd_list.get(), tex.get(), staging.buf.get(), tdesc.m_tdesc, 0);
-			}
+			// Create the UAV
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {
+				.Format = desc.m_tdesc.Format,
+				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+				.Texture2D = {
+					.MipSlice = 0,
+					.PlaneSlice = 0,
+				},
+			};
+			inst->m_uav = m_descriptor_store.Create(tex.get(), uav_desc);
+		}
+		if (AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET))
+		{
+			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
+			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
+				throw std::runtime_error("Texture format is not supported as a render target view");
 
-			// Transition the texture default heap to a pixel shader resource
-			auto barrier = ResourceBarrier::Transition(tex.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			m_cmd_list->ResourceBarrier(1, &barrier);
+			// Create the RTV
+			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
+				.Format = desc.m_tdesc.Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+				.Texture2D = {
+					.MipSlice = 0,
+					.PlaneSlice = 0,
+				},
+			};
+			inst->m_rtv = m_descriptor_store.Create(tex.get(), rtv_desc);
 		}
 
-		// todo
-		(void)tdesc.m_sdesc;
+		// Add a pointer (not a reference) to the texture instance to the lookup table.
+		// The caller owns the texture, when released it will be removed from this lookup.
+		AddLookup(m_lookup_tex, inst->m_id, inst.get());
+		return inst;
+	}
+	TextureCubePtr ResourceManager::CreateTextureCube(RdrId id, std::filesystem::path const& resource_path, char const* name)
+	{
+		// Notes:
+		//  - A cube map is an array of 6 2D textures.
+		//  - DDS image files contain all six faces in the single file. Other image types need to be loaded separately.
+		//  - 'resource_path' should contain '??' where the first '?' is the sign (+,-) and the second '?' is the axis (x,y,z)
 
-		// Allocate a new texture instance and DX texture resource
-		//SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(rdr12::New<Texture2D>(*this, tdesc.m_id, tex.get(), 0, tdesc.m_has_alpha), true);
+		// Check whether 'id' already exists, if so, throw.
+		if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
+		if (resource_path.empty())
+			throw std::runtime_error("Resource path must be given");
+
+		// Create the texture resource
+		TextureDesc desc;
+		D3DPtr<ID3D12Resource> res;
+
+		// Create a texture from embedded resources
+		if (resource_path.c_str()[0] == '@')
+		{
+			auto uri = resource_path.wstring();
+
+			desc.m_uri = MakeId(uri.c_str());
+			desc.m_name = name ? name : To<string32>(str::FindLastOf(uri.c_str(), L":"));
+
+			// Look for an existing Dx12 resource corresponding to the uri
+			auto iter = m_lookup_res.find(desc.m_uri);
+			if (iter == end(m_lookup_res))
+			{
+				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
+				HMODULE hmodule; wstring32 res_type, res_name;
+				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
+
+				pr::vector<std::span<uint8_t const>> source_images;
+
+				// Read each face of the cube
+				auto idx = res_name.find(L"??");
+				if (idx == std::wstring::npos)
+					throw std::runtime_error("Cube map texture URI pattern should contain '??'");
+
+				for (auto face : { L"+x", L"-x", L"+y", L"-y", L"+z", L"-z" })
+				{
+					res_name[idx + 0] = face[0];
+					res_name[idx + 1] = face[1];
+					auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
+					source_images.push_back(std::span{ emb.m_data, emb.m_len });
+				}
+
+				// Create the texture data
+				auto [images, tdesc] = LoadImageData(source_images, 1, true, 0, &rdr().Features());
+				desc.m_tdesc = tdesc;
+				desc.m_tdesc.Data = images;
+
+				// Create the texture
+				res = CreateResource(desc);
+
+				// Record the uri for reuse
+				AddLookup(m_lookup_res, desc.m_uri, res.get());
+				iter = m_lookup_res.find(desc.m_uri);
+			}
+			res = D3DPtr<ID3D12Resource>(iter->second, true);
+		}
+
+		// Otherwise, create from file on disk
+		else
+		{
+			using namespace std::filesystem;
+			auto filepath = resource_path.lexically_normal();
+
+			// Generate an id from the filepath
+			desc.m_uri = MakeId(filepath.c_str());
+			desc.m_name = name ? name : To<string32>(filepath.filename().c_str());
+
+			// Look for an existing DX texture corresponding to the filepath
+			auto iter = m_lookup_res.find(desc.m_uri);
+			if (iter == end(m_lookup_res))
+			{
+				// If the texture filepath doesn't exist, use the resolve event
+				if (!exists(filepath))
+				{
+					auto args = ResolvePathArgs{filepath, false};
+					ResolveFilepath(*this, args);
+					if (!args.handled || !exists(args.filepath))
+						return nullptr;
+
+					filepath = std::move(args.filepath);
+				}
+
+				// Load the texture from disk
+				auto [images, tdesc] = LoadImageData(filepath, 1, true, 0, &rdr().Features());
+				desc.m_tdesc = tdesc;
+				desc.m_tdesc.Data = images;
+
+				// Create the texture
+				res = CreateResource(desc);
+
+				// Record the uri for reuse
+				AddLookup(m_lookup_res, desc.m_uri, res.get());
+				iter = m_lookup_res.find(desc.m_uri);
+			}
+			res = D3DPtr<ID3D12Resource>(iter->second, true);
+		}
+
+		// Allocate a new texture instance
+		TextureCubePtr inst(rdr12::New<TextureCube>(*this, desc.m_id, res.get(), desc.m_uri, desc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add a pointer (not a reference) to the texture instance to the lookup table.
@@ -270,19 +405,19 @@ namespace pr::rdr12
 		{// EStockTexture::Black
 			uint32_t const data[] = {0};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, L"#black");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#black");
 			m_stock_textures[s_cast<int>(EStockTexture::Black)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::White:
 			uint32_t const data[] = {0xFFFFFFFF};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::White), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, L"#white");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::White), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#white");
 			m_stock_textures[s_cast<int>(EStockTexture::White)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Gray:
 			uint32_t const data[] = {0xFF808080};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Gray), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, L"#gray");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Gray), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#gray");
 			m_stock_textures[s_cast<int>(EStockTexture::Gray)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker:
@@ -303,7 +438,7 @@ namespace pr::rdr12
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker), TexDesc::Tex2D(src, 0), sam, false, L"#checker");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker2:
@@ -324,7 +459,7 @@ namespace pr::rdr12
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker2), TexDesc::Tex2D(src, 0), sam, false, L"#checker2");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker2), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker2");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker2)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker3:
@@ -345,7 +480,7 @@ namespace pr::rdr12
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker3), TexDesc::Tex2D(src, 0), sam, false, L"#checker3");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker3), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker3");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker3)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteSpot:
@@ -364,7 +499,7 @@ namespace pr::rdr12
 			}
 
 			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteSpot), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, L"#whitespot");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteSpot), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, 0, "#whitespot");
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteSpot)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteTriangle:
@@ -404,13 +539,13 @@ namespace pr::rdr12
 			}
 
 			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteTriangle), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, L"#whitetriangle");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteTriangle), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, 0, "#whitetriangle");
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteTriangle)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::EnvMapProjection:
 			uint32_t const data[] = {0};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), false, L"#envmapproj");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), false, 0, "#envmapproj");
 			m_stock_textures[s_cast<int>(EStockTexture::EnvMapProjection)] = CreateTexture2D(tdesc);
 		}
 	}
@@ -418,7 +553,6 @@ namespace pr::rdr12
 	// Create stock models
 	void ResourceManager::CreateStockModels()
 	{
-		if (false)
 		{// Basis/focus point model
 			constexpr Vert verts[] = {
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
@@ -445,7 +579,6 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::Basis)] = ptr;
 		}
-		if (false)
 		{// Unit quad in Z = 0 plane
 			constexpr Vert verts[] = {
 				{v4(-0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.9999f)},
@@ -469,7 +602,6 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::UnitQuad)] = ptr;
 		}
-		if (true)
 		{// Bounding box cube
 			constexpr Vert verts[] = {
 				{v4(-0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
@@ -500,7 +632,6 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::BBoxModel)] = ptr;
 		}
-		if (false)
 		{// Selection box
 			// Create the selection box model
 			constexpr float sz = 1.0f;
@@ -572,31 +703,123 @@ namespace pr::rdr12
 		}
 	}
 
-	// Return a staging buffer that is at least 'size' big
-	ResourceManager::DxStageBuffer& ResourceManager::GetStagingBuffer(ID3D12Device* device, uint64_t size)
+	// Create and initialise a resource
+	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(TextureDesc const& desc)
 	{
-		auto iter = pr::lower_bound(m_staging_buffers, size, [](auto& lhs, auto& rhs) { return lhs.size < rhs; });
-		if (iter == std::end(m_staging_buffers) || iter->size < size)
-		{
-			ResourceManager::DxStageBuffer staging = {};
-			auto bdesc = BufferDesc::Buffer(size, nullptr);
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Upload(),              // upload heap
-				D3D12_HEAP_FLAG_NONE,              // no flags
-				&bdesc,                            // resource description for a buffer (storing the image data in this heap just to copy to the default heap)
-				D3D12_RESOURCE_STATE_GENERIC_READ, // we will copy the contents from this heap to the default heap above
-				nullptr,                           // must be null for buffers
-				__uuidof(ID3D12Resource),
-				(void**)&staging.buf.m_ptr));
+		D3DPtr<ID3D12Resource> res;
+		auto device = rdr().D3DDevice();
 
-			staging.buf->SetName(FmtS(L"Staging-%llu", bdesc.Width));
-			staging.size = bdesc.Width;
+		// Create a GPU visible resource that will hold the created texture.
+		Throw(device->CreateCommittedResource(
+			&HeapProps::Default(),                                                  // a default heap
+			D3D12_HEAP_FLAG_NONE,                                                   // no flags
+			&desc.m_tdesc,                                                          // the description of the texture
+			D3D12_RESOURCE_STATE_COPY_DEST,                                         // the texture will be copied from the upload heap to here, so it starts out as copy dest state
+			desc.m_clear_value.has_value() ? &desc.m_clear_value.value() : nullptr, // used for render targets and depth/stencil buffers
+			__uuidof(ID3D12Resource),
+			(void**)&res.m_ptr));
+		Throw(res->SetName(FmtS(L"%S", desc.m_name.c_str())));
 
-			iter = m_staging_buffers.insert(iter, staging);
-		}
-		return *iter;
+		// If initialisation data is provided, initialise using an UploadBuffer
+		if (!desc.m_tdesc.Data.empty())
+			UpdateSubresource(res.get(), desc.m_tdesc.Data, 0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
+		// Transition the texture to a pixel shader resource
+		auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_cmd_list->ResourceBarrier(1, &barrier);
+
+		return res;
 	}
-	
+
+	// Update the data in 'dest' (sub resource range: [sub0,sub0+images.size())) using a staging buffer
+	void ResourceManager::UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment)
+	{
+		// Notes:
+		//  - 'images' here is an array of any resource initialisation data (i.e. could be verts, indices, texture, etc)
+		//  - 'sub0' is the first sub resource in 'dest' to update
+		//  - Constant buffers must be aligned to D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
+		//  - Texture buffers must be aligned to D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
+		//  - D3D12_TEXTURE_DATA_PITCH_ALIGNMENT(256) is the minimum row pitch for a texture
+		if (images.empty())
+			return;
+
+		auto device = rdr().D3DDevice();
+		int subN = s_cast<int>(images.size());
+
+		// Check buffer types. Normal buffers don't have multiple subresources.
+		auto ddesc = dest->GetDesc();
+		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && (sub0 != 0 || subN != 1))
+			throw std::runtime_error("Destination resource is a buffer, but sub-resource range is given");
+
+		// Get the size and footprints for copying 'subN' subresources.
+		uint64_t total_size;
+		auto row_count = PR_ALLOCA(row_count, UINT, subN);
+		auto row_size  = PR_ALLOCA(row_size, UINT64, subN);
+		auto layout    = PR_ALLOCA(layout, D3D12_PLACED_SUBRESOURCE_FOOTPRINT, subN);
+		device->GetCopyableFootprints(&ddesc, sub0, subN, 0ULL, &layout[0], &row_count[0], &row_size[0], &total_size);
+
+		// Get a staging buffer big enough for all of the subresources
+		auto staging = m_upload_buffer.Alloc(total_size, alignment);
+
+		// Copy data from 'images' into the staging buffer
+		for (auto i = 0; i != subN; ++i)
+		{
+			auto const& image = images[i];               // The initialisation data
+			auto const& footprint = layout[i].Footprint; // The dimension and row stride for 'dest'
+
+			if (s_cast<int>(footprint.Depth) != image.m_dim.z)
+				throw std::runtime_error("Image size mismatch (slice count)");
+			if (s_cast<int>(row_count[i]) != image.m_dim.y)
+				throw std::runtime_error("Image size mismatch (row count)");
+			if (s_cast<int>(row_size[i]) != image.m_pitch.x)
+				throw std::runtime_error("Image size mismatch (row size)");
+
+			// 'GetCopyableFootprints' returns values relative to 0 for a staging resource, but 'staging' is a
+			// sub-allocation within a staging resource, so we need to adjust the Offset values.
+			layout[i].Offset += staging.m_ofs;
+
+			// Copy each slice
+			for (auto z = 0; z != image.m_dim.z; ++z)
+			{
+				auto src_slice = image.Slice(z);
+				auto dst_slice = staging.m_mem + layout[i].Offset + footprint.RowPitch * row_count[i] * z;
+
+				// Copy each row of the image
+				for (auto y = 0; y != image.m_dim.y; ++y)
+					memcpy(dst_slice + footprint.RowPitch * y, src_slice.bptr + image.m_pitch.x * y, image.m_pitch.x);
+			}
+		}
+
+		// Add the command to copy from the staging resource to the destination resource
+		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			m_cmd_list->CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
+		}
+		else
+		{
+			for (auto i = 0; i != subN; ++i)
+			{
+				D3D12_TEXTURE_COPY_LOCATION dst =
+				{
+					.pResource = dest,
+					.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+					.SubresourceIndex = s_cast<UINT>(sub0 + i),
+				};
+				D3D12_TEXTURE_COPY_LOCATION src =
+				{
+					.pResource = staging.m_buf,
+					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+					.PlacedFootprint = layout[i],
+				};
+				m_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+			}
+		}
+	}
+	void ResourceManager::UpdateSubresource(ID3D12Resource* dest, Image const& image, int sub0, int alignment)
+	{
+		UpdateSubresource(dest, {&image, 1}, sub0, alignment);
+	}
+
 	// Return a model to the allocator
 	void ResourceManager::Delete(Model* model)
 	{
@@ -630,6 +853,14 @@ namespace pr::rdr12
 
 		Renderer::Lock lock(rdr());
 
+		// Release any views
+		if (tex->m_srv)
+			m_descriptor_store.Release(tex->m_srv);
+		if (tex->m_uav)
+			m_descriptor_store.Release(tex->m_uav);
+		if (tex->m_rtv)
+			m_descriptor_store.Release(tex->m_rtv);
+
 		// Find 'tex' in the map of RdrIds to texture instances
 		// We'll remove this, but first use it as a non-const reference
 		auto iter = m_lookup_tex.find(tex->m_id);
@@ -639,9 +870,9 @@ namespace pr::rdr12
 		// then check whether it is in the 'fname' lookup table and remove it if it is.
 		if (tex->m_uri != 0 && tex->m_res.RefCount() == 1)
 		{
-			auto jter = m_lookup_dxres.find(tex->m_uri);
-			if (jter != end(m_lookup_dxres))
-				m_lookup_dxres.erase(jter);
+			auto jter = m_lookup_res.find(tex->m_uri);
+			if (jter != end(m_lookup_res))
+				m_lookup_res.erase(jter);
 		}
 
 		// Delete the texture and remove the entry from the RdrId lookup map
@@ -661,3 +892,201 @@ namespace pr::rdr12
 		rdr12::Delete<Shader>(shader);
 	}
 }
+
+
+// Generating mip maps... 
+#if 0
+//_mip-mapTextures is an array containing texture objects that need mip-maps to be generated. It needs a texture resource with mip-maps in D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE state.
+//Textures are expected to be POT and in a format supporting unordered access, as well as the D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS set during creation.
+//_device is the ID3D12Device
+//GetNewCommandList() is supposed to return a new command list in recording state
+//SubmitCommandList(commandList) is supposed to submit the command list to the command queue
+//_mip-mapComputeShader is an ID3DBlob of the compiled mip-map compute shader
+void D3D12Renderer::Createmip-maps()
+{
+	//Union used for shader constants
+	struct DWParam
+	{
+		DWParam(FLOAT f) : Float(f) {}
+		DWParam(UINT u) : Uint(u) {}
+
+		void operator= (FLOAT f) { Float = f; }
+		void operator= (UINT u) { Uint = u; }
+
+		union
+		{
+			FLOAT Float;
+			UINT Uint;
+		};
+	};
+
+	//Calculate heap size
+	uint32 requiredHeapSize = 0;
+	_mip-mapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
+		if(texture->mip-maps > 1)
+			requiredHeapSize += texture->mip-maps - 1;
+	});
+
+	//No heap size, means that there was either no texture or none that requires any mip-maps
+	if(requiredHeapSize == 0)
+	{
+		_mip-mapTextures->RemoveAllObjects();
+		return;
+	}
+
+	//The compute shader expects 2 floats, the source texture and the destination texture
+	CD3DX12_DESCRIPTOR_RANGE srvCbvRanges[2];
+	CD3DX12_ROOT_PARAMETER rootParameters[3];
+	srvCbvRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0);
+	srvCbvRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0);
+	rootParameters[0].InitAsConstants(2, 0);
+	rootParameters[1].InitAsDescriptorTable(1, &srvCbvRanges[0]);
+	rootParameters[2].InitAsDescriptorTable(1, &srvCbvRanges[1]);
+
+	//Static sampler used to get the linearly interpolated color for the mip-maps
+	D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+	samplerDesc.ShaderRegister = 0;
+	samplerDesc.RegisterSpace = 0;
+	samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	//Create the root signature for the mip-map compute shader from the parameters and sampler above
+	ID3DBlob *signature;
+	ID3DBlob *error;
+	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+	rootSignatureDesc.Init(_countof(rootParameters), rootParameters, 1, &samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+	ID3D12RootSignature *mip-mapRootSignature;
+	_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&mip-mapRootSignature));
+
+	//Create the descriptor heap with layout: source texture - destination texture
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = 2*requiredHeapSize;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ID3D12DescriptorHeap *descriptorHeap;
+	_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorHeap));
+	UINT descriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	//Create pipeline state object for the compute shader using the root signature.
+	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.pRootSignature = mip-mapRootSignature;
+	psoDesc.CS = { reinterpret_cast<UINT8*>(_mip-mapComputeShader->GetBufferPointer()), _mip-mapComputeShader->GetBufferSize() };
+	ID3D12PipelineState *psomip-maps;
+	_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&psomip-maps));
+
+
+	//Prepare the shader resource view description for the source texture
+	D3D12_SHADER_RESOURCE_VIEW_DESC srcTextureSRVDesc = {};
+	srcTextureSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srcTextureSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+
+	//Prepare the unordered access view description for the destination texture
+	D3D12_UNORDERED_ACCESS_VIEW_DESC destTextureUAVDesc = {};
+	destTextureUAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+	//Get a new empty command list in recording state
+	ID3D12GraphicsCommandList *commandList = GetNewCommandList();
+
+	//Set root signature, pso and descriptor heap
+	commandList->SetComputeRootSignature(mip-mapRootSignature);
+	commandList->SetPipelineState(psomip-maps);
+	commandList->SetDescriptorHeaps(1, &descriptorHeap);
+
+	//CPU handle for the first descriptor on the descriptor heap, used to fill the heap
+	CD3DX12_CPU_DESCRIPTOR_HANDLE currentCPUHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart(), 0, descriptorSize);
+
+	//GPU handle for the first descriptor on the descriptor heap, used to initialize the descriptor tables
+	CD3DX12_GPU_DESCRIPTOR_HANDLE currentGPUHandle(descriptorHeap->GetGPUDescriptorHandleForHeapStart(), 0, descriptorSize);
+
+	_mip-mapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
+		//Skip textures without mip-maps
+		if(texture->mip-maps <= 1)
+			return;
+
+		//Transition from pixel shader resource to unordered access
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->_resource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+		//Loop through the mip-maps copying from the bigger mip-map to the smaller one with downsampling in a compute shader
+		for(uint32_t TopMip = 0; TopMip < texture->mip-maps-1; TopMip++)
+		{
+			//Get mip-map dimensions
+			uint32_t dstWidth = std::max(texture->width >> (TopMip+1), 1);
+			uint32_t dstHeight = std::max(texture->height >> (TopMip+1), 1);
+
+			//Create shader resource view for the source texture in the descriptor heap
+			srcTextureSRVDesc.Format = texture->_format;
+			srcTextureSRVDesc.Texture2D.MipLevels = 1;
+			srcTextureSRVDesc.Texture2D.MostDetailedMip = TopMip;
+			_device->CreateShaderResourceView(texture->_resource, &srcTextureSRVDesc, currentCPUHandle);
+			currentCPUHandle.Offset(1, descriptorSize);
+
+			//Create unordered access view for the destination texture in the descriptor heap
+			destTextureUAVDesc.Format = texture->_format;
+			destTextureUAVDesc.Texture2D.MipSlice = TopMip+1;
+			_device->CreateUnorderedAccessView(texture->_resource, nullptr, &destTextureUAVDesc, currentCPUHandle);
+			currentCPUHandle.Offset(1, descriptorSize);
+
+			//Pass the destination texture pixel size to the shader as constants
+			commandList->SetComputeRoot32BitConstant(0, DWParam(1.0f/dstWidth).Uint, 0);
+			commandList->SetComputeRoot32BitConstant(0, DWParam(1.0f/dstHeight).Uint, 1);
+			
+			//Pass the source and destination texture views to the shader via descriptor tables
+			commandList->SetComputeRootDescriptorTable(1, currentGPUHandle);
+			currentGPUHandle.Offset(1, descriptorSize);
+			commandList->SetComputeRootDescriptorTable(2, currentGPUHandle);
+			currentGPUHandle.Offset(1, descriptorSize);
+
+			//Dispatch the compute shader with one thread per 8x8 pixels
+			commandList->Dispatch(std::max(dstWidth / 8, 1u), std::max(dstHeight / 8, 1u), 1);
+
+			//Wait for all accesses to the destination texture UAV to be finished before generating the next mip-map, as it will be the source texture for the next mip-map
+			commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(texture->_resource));
+		}
+
+		//When done with the texture, transition it's state back to be a pixel shader resource
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+	});
+
+	//Close and submit the command list
+	commandList->Close();
+	SubmitCommandList(commandList);
+
+	_mip-mapTextures->RemoveAllObjects();
+}
+
+// Shader
+{
+Texture2D<float4> SrcTexture : register(t0);
+RWTexture2D<float4> DstTexture : register(u0);
+SamplerState BilinearClamp : register(s0);
+
+cbuffer CB : register(b0)
+{
+	float2 TexelSize;	// 1.0 / destination dimension
+}
+
+[numthreads( 8, 8, 1 )]
+void Generatemip-maps(uint3 DTid : SV_DispatchThreadID)
+{
+	//DTid is the thread ID * the values from numthreads above and in this case correspond to the pixels location in number of pixels.
+	//As a result texcoords (in 0-1 range) will point at the center between the 4 pixels used for the mip-map.
+	float2 texcoords = TexelSize * (DTid.xy + 0.5);
+
+	//The samplers linear interpolation will mix the four pixel values to the new pixels color
+	float4 color = SrcTexture.SampleLevel(BilinearClamp, texcoords, 0);
+
+	//Write the final color into the destination texture.
+	DstTexture[DTid.xy] = color;
+}
+}
+#endif

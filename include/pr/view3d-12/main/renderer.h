@@ -28,8 +28,10 @@ namespace pr::rdr12
 			// This is needed so that the Dx12 device is created before the managers are constructed.
 			RdrSettings                m_settings;
 			FeatureSupport             m_features;
-			D3DPtr<ID3D12Device>       m_d3d_device;
-			D3DPtr<ID3D12CommandQueue> m_cmd_queue;
+			D3DPtr<ID3D12Device4>      m_d3d_device;
+			D3DPtr<ID3D12CommandQueue> m_gfx_queue;
+			D3DPtr<ID3D12CommandQueue> m_com_queue;
+			D3DPtr<ID3D12CommandQueue> m_cpy_queue;
 			D3DPtr<ID2D1Factory1>      m_d2dfactory;
 			D3DPtr<IDWriteFactory>     m_dwrite;
 			D3DPtr<ID2D1Device>        m_d2d_device;
@@ -60,6 +62,40 @@ namespace pr::rdr12
 		Renderer(Renderer const&) = delete;
 		Renderer& operator=(Renderer const&) = delete;
 		~Renderer();
+
+		// Access the adapter that the device was created on
+		IDXGIAdapter* Adapter() const
+		{
+			return m_state.m_settings.m_adapter.ptr.get();
+		}
+
+		// Access the device
+		ID3D12Device4* D3DDevice() const
+		{
+			// The D3D device is free-threaded in DX12, no need to synchronise access to it.
+			return m_state.m_d3d_device.get();
+		}
+
+		// Return the graphics command queue
+		ID3D12CommandQueue* GfxQueue() const
+		{
+			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
+			return m_state.m_gfx_queue.get();
+		}
+
+		// Return the compute command queue
+		ID3D12CommandQueue* ComQueue() const
+		{
+			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
+			return m_state.m_com_queue.get();
+		}
+
+		// Return the copy command queue
+		ID3D12CommandQueue* CpyQueue() const
+		{
+			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
+			return m_state.m_cpy_queue.get();
+		}
 
 		// Access the renderer manager classes
 		Renderer& rdr();
@@ -140,7 +176,7 @@ namespace pr::rdr12
 		void Poll();
 
 		// Synchronise access to D3D/D2D interfaces
-		class Lock
+		class Lock // I think D3DDevice and queues are thread safe now....
 		{
 			Renderer::RdrState& m_rdr;
 			std::lock_guard<std::recursive_mutex> m_lock;
@@ -151,24 +187,6 @@ namespace pr::rdr12
 				:m_rdr(rdr.m_state)
 				,m_lock(rdr.m_d3d_mutex)
 			{}
-
-			// Return the D3D device
-			ID3D12Device* D3DDevice() const
-			{
-				return m_rdr.m_d3d_device.get();
-			}
-			D3DPtr<ID3D12Device4> D3DDevice4() const
-			{
-				D3DPtr<ID3D12Device4> device4;
-				Throw(D3DDevice()->QueryInterface<ID3D12Device4>(&device4.m_ptr));
-				return device4;
-			}
-
-			// Return the main command queue
-			ID3D12CommandQueue* CmdQueue() const
-			{
-				return m_rdr.m_cmd_queue.get();
-			}
 
 			// Return the D2D device
 			ID2D1Device* D2DDevice() const
@@ -186,22 +204,6 @@ namespace pr::rdr12
 			IDWriteFactory* DWrite() const
 			{
 				return m_rdr.m_dwrite.get();
-			}
-
-			// Return the adapter that the device was created on
-			IDXGIAdapter* Adapter() const
-			{
-				return m_rdr.m_settings.m_adapter.ptr.get();
-			}
-
-			// Append command lists to the cmd queue
-			void ExecuteCommands(ID3D12CommandList* cmds)
-			{
-				ExecuteCommands({cmds});
-			}
-			void ExecuteCommands(std::initializer_list<ID3D12CommandList*> cmd_lists)
-			{
-				CmdQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
 			}
 		};
 
