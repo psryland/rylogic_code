@@ -11,137 +11,70 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/vertex_layout.h"
-#include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/shaders/shader.h"
+#include "pr/view3d-12/shaders/shader_forward.h"
+#include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "view3d-12/src/utility/pipe_states.h"
+#include "pr/view3d-12/utility/pipe_states.h"
 #include "view3d-12/src/shaders/common.h"
+#include "view3d-12/src/utility/root_signature.h"
 
 namespace pr::rdr12
 {
-	using namespace hlsl::fwd;
+	using namespace shaders::fwd;
+
+	enum class ERootParam
+	{
+		CBufFrame,
+		CBufNugget,
+		CBufFade,
+		DiffTexture,
+		EnvMap,
+		SMap,
+		ProjTex,
+	};
+	enum class ESampParam
+	{
+		DiffTexture,
+		EnvMap,
+		SMap,
+		ProjTex,
+	};
 
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(scene)
-		, m_shader(scene.rdr().res_mgr(), scene.wnd().BBCount())
+		, m_pipe_state_pool(scene.wnd())
+		, m_shader(scene.rdr().res_mgr(), scene.wnd().m_gsync)
 	{
-		Renderer::Lock lock(scene.rdr());
-		auto device = lock.D3DDevice();
+		auto device = scene.rdr().D3DDevice();
 
 		// Create the root signature
-		D3DPtr<ID3DBlob> signature, error;
-		D3D12_DESCRIPTOR_RANGE1 diffuse_tex_desc[] = {
-			{// t0,0
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				.NumDescriptors = 1U,
-				.BaseShaderRegister = s_cast<UINT>(ETexReg::t0),
-				.RegisterSpace = 0U,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
-			},
-		};
-		D3D12_DESCRIPTOR_RANGE1 envmap_tex_desc[] = {
-			{// t1,0
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				.NumDescriptors = 1U,
-				.BaseShaderRegister = s_cast<UINT>(ETexReg::t1),
-				.RegisterSpace = 0U,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
-			},
-		};
-		D3D12_DESCRIPTOR_RANGE1 smap_tex_desc[] = {
-			{// t2,MaxShadowMaps
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				.NumDescriptors = hlsl::MaxShadowMaps,
-				.BaseShaderRegister = s_cast<UINT>(ETexReg::t2),
-				.RegisterSpace = 0U,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
-			},
-		};
-		D3D12_DESCRIPTOR_RANGE1 proj_tex_desc[] = {
-			{// t3,MaxProjectedTextures
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				.NumDescriptors = hlsl::MaxProjectedTextures,
-				.BaseShaderRegister = s_cast<UINT>(ETexReg::t3),
-				.RegisterSpace = 0U,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
-			},
-		};
-		D3D12_ROOT_PARAMETER1 params[] = {
-			{// Constant buffer for per-frame data
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
-				.Descriptor = {.ShaderRegister = CBufFrame::shader_register, .RegisterSpace = CBufFrame::register_space },
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// Constant buffer for per-nugget data
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
-				.Descriptor = {.ShaderRegister = CBufNugget::shader_register, .RegisterSpace = CBufNugget::register_space },
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// Constant buffer for fade data
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
-				.Descriptor = {.ShaderRegister = CBufFade::shader_register, .RegisterSpace = CBufFade::register_space },
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// Diffuse texture
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				.DescriptorTable = {
-					.NumDescriptorRanges = _countof(diffuse_tex_desc),
-					.pDescriptorRanges = &diffuse_tex_desc[0],
-				},
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// EnvMap texture
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				.DescriptorTable = {
-					.NumDescriptorRanges = _countof(envmap_tex_desc),
-					.pDescriptorRanges = &envmap_tex_desc[0],
-				},
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// SMap textures
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				.DescriptorTable = {
-					.NumDescriptorRanges = _countof(smap_tex_desc),
-					.pDescriptorRanges = &smap_tex_desc[0],
-				},
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			},
-			{// Projected textures
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				.DescriptorTable = {
-					.NumDescriptorRanges = _countof(proj_tex_desc),
-					.pDescriptorRanges = &proj_tex_desc[0],
-				},
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			}
-		};
-		D3D12_STATIC_SAMPLER_DESC samplers[] = {
-			SamDescStatic(ESamReg::s0, 0), // Diffuse texture sampler
-			SamDescStatic(ESamReg::s1, 0), // Env map sampler
-			SamDescStatic(ESamReg::s2, 0), // Shadow map sampler
-			SamDescStatic(ESamReg::s3, 0), // Projected texture sampler
-		};
-		D3D12_VERSIONED_ROOT_SIGNATURE_DESC rs_desc = {
-			.Version = D3D_ROOT_SIGNATURE_VERSION_1_1,
-			.Desc_1_1 = {
-				.NumParameters = _countof(params),
-				.pParameters = &params[0],
-				.NumStaticSamplers = _countof(samplers),
-				.pStaticSamplers = &samplers[0],
-				.Flags =
-					D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-					//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-					//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_NONE,
-			},
-		};
-		Throw(D3D12SerializeVersionedRootSignature(&rs_desc, &signature.m_ptr, &error.m_ptr));
-		Throw(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&m_shader_sig.m_ptr));
+		RootSig<ERootParam, ESampParam> root_sig;
+		root_sig.Flags =
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+		root_sig.CBuf<CBufFrame>(ERootParam::CBufFrame, ECBufReg::b0);
+		root_sig.CBuf<CBufNugget>(ERootParam::CBufNugget, ECBufReg::b1);
+		root_sig.CBuf<CBufFade>(ERootParam::CBufFade, ECBufReg::b2);
+		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0);
+		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1);
+		root_sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
+		root_sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
+
+		root_sig.Samp(ESampParam::DiffTexture, SamDescStatic(ESamReg::s0));
+		root_sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
+		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2));
+		root_sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
+
+		m_shader_sig = root_sig.Create(device);
 
 		// Create the default PSO
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
@@ -152,31 +85,11 @@ namespace pr::rdr12
 			.HS = m_shader.Code.HS,
 			.GS = m_shader.Code.GS,
 			.StreamOutput = StreamOutputDesc{},
-			.BlendState = {
-				.AlphaToCoverageEnable = FALSE,
-				.IndependentBlendEnable = FALSE,
-				.RenderTarget = {
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-					BlendStateDesc{},
-				}
-			},
-			.SampleMask = 0U,
-			.RasterizerState = {
-				RasterStateDesc{},
-			},
-			.DepthStencilState = {
-				DepthStateDesc{}
-			},
-			.InputLayout = {
-				.pInputElementDescs = &Vert::Layout()[0],
-				.NumElements = _countof(Vert::Layout()),
-			},
+			.BlendState = BlendStateDesc{},
+			.SampleMask = UINT_MAX,
+			.RasterizerState = RasterStateDesc{},
+			.DepthStencilState = DepthStateDesc{},
+			.InputLayout = Vert::LayoutDesc(),
 			.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1U,
@@ -226,7 +139,7 @@ namespace pr::rdr12
 
 				// Set the texture id part of the key if not set already
 				if (!AnySet(sk, SortKey::TextureIdMask) && nug.m_tex_diffuse != nullptr)
-					sk = SetBits(sk, SortKey::TextureIdMask, nug.m_tex_diffuse->m_sort_id << SortKey::TextureIdOfs);
+					sk = SetBits(sk, SortKey::TextureIdMask, nug.m_tex_diffuse->SortId() << SortKey::TextureIdOfs);
 
 				// Set the shader id part of the key if not set already
 				if (!AnySet(sk, SortKey::ShaderIdMask))
@@ -276,8 +189,12 @@ namespace pr::rdr12
 		// Set the pipeline for this render step
 		cmd_list->SetGraphicsRootSignature(m_shader_sig.get());
 
+		// Bind the descriptor heaps
+		auto des_heaps = {wnd().m_heap_srv.get(), wnd().m_heap_samp.get()};
+		cmd_list->SetDescriptorHeaps(s_cast<UINT>(des_heaps.size()), des_heaps.begin());
+
 		// Get the back buffer view handle and set the back buffer as the render target.
-		cmd_list->OMSetRenderTargets(1, &bb.m_rtv, false, &bb.m_dsv);
+		cmd_list->OMSetRenderTargets(1, &bb.m_rtv, FALSE, &bb.m_dsv);
 
 		// Clear the render target to the background colour
 		if (scn().m_bkgd_colour != ColourZero)
@@ -303,15 +220,10 @@ namespace pr::rdr12
 		SetLightingConstants(cb0.m_global_light, scn().m_global_light, scn().m_cam);
 		//todo SetShadowMapConstants(cb0.m_shadow, smap_rstep);
 		//todo SetEnvMapConstants(cb0.m_env_map, scn().m_global_envmap.get());
-		{
-			// Copy 'cb0' to 'm_shader.m_cbuf_frame[bb_index]'
-			MapResource map(m_shader.m_cbuf_frame.get(), 0U, cbuf_size_aligned_v<CBufFrame>);
-			map.at<CBufFrame>(bb.m_bb_index * cbuf_size_aligned_v<CBufFrame>) = cb0;
-		}
-		// Bind the constants to the pipeline
-		auto address = m_shader.m_cbuf_frame->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufFrame>;
-		cmd_list->SetGraphicsRootConstantBufferView(CBufFrame::shader_register, address);
-		
+		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, m_shader.Set(cb0, false));
+
+		//if (scn().m_global_envmap != nullptr)
+		//	cmd_list->SetGraphicsRootDescriptorTable(((UINT)ERootParam::EnvMap, );
 
 		// Draw each element in the draw list
 		Lock lock(*this);
@@ -339,71 +251,80 @@ namespace pr::rdr12
 			SetTint(cb1, *dle.m_instance, nugget);
 			SetEnvMap(cb1, *dle.m_instance, nugget);
 			SetTexDiffuse(cb1, nugget);
-			{
-				// Copy 'cb1' to 'm_shader.m_cbuf_nugget[bb_index]'
-				MapResource map(m_shader.m_cbuf_nugget.get(), 0U, cbuf_size_aligned_v<CBufNugget>);
-				map.at<CBufNugget>(bb.m_bb_index * cbuf_size_aligned_v<CBufNugget>) = cb1;
-			}
-			// Bind the constants to the pipeline
-			auto address = m_shader.m_cbuf_nugget->GetGPUVirtualAddress() + bb.m_bb_index * cbuf_size_aligned_v<CBufNugget>;
-			cmd_list->SetGraphicsRootConstantBufferView(CBufNugget::shader_register, address);
+			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, m_shader.Set(cb1, false));
+
+			// Bind textures to the pipeline
+			auto tex = nugget.m_tex_diffuse != nullptr
+				? nugget.m_tex_diffuse
+				: rdr().res_mgr().FindTexture(EStockTexture::White);
+
+			auto handle = wnd().m_heap_srv.Add(tex->m_srv);
+			cmd_list->SetGraphicsRootDescriptorTable((UINT)ERootParam::DiffTexture, handle);
 
 			// Draw the nugget **** 
+			DrawNugget(nugget, desc, cmd_list);
+		}
+	}
 
-			// Render solid or wireframe nuggets
-			if (nugget.m_fill_mode == EFillMode::Default ||
-				nugget.m_fill_mode == EFillMode::Solid ||
-				nugget.m_fill_mode == EFillMode::Wireframe ||
-				nugget.m_fill_mode == EFillMode::SolidWire)
+	// Draw a single nugget
+	void RenderForward::DrawNugget(Nugget const& nugget, PipeStateDesc& desc, ID3D12GraphicsCommandList* cmd_list)
+	{
+		// Render solid or wireframe nuggets
+		if (nugget.m_fill_mode == EFillMode::Default ||
+			nugget.m_fill_mode == EFillMode::Solid ||
+			nugget.m_fill_mode == EFillMode::Wireframe ||
+			nugget.m_fill_mode == EFillMode::SolidWire)
+		{
+			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
+			if (nugget.m_irange.empty())
 			{
-				cmd_list->SetPipelineState(wnd().PipeState(desc));
-				if (nugget.m_irange.empty())
-				{
-					cmd_list->DrawInstanced(
-						s_cast<UINT>(nugget.m_vrange.size()), 1U,
-						s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
-				}
-				else
-				{
-					cmd_list->DrawIndexedInstanced(
-						s_cast<UINT>(nugget.m_irange.size()), 1U,
-						s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
-				}
-			}
-
-			// Render wire frame over solid for 'SolidWire' mode
-			if (!nugget.m_irange.empty() && 
-				nugget.m_fill_mode == EFillMode::SolidWire && (
-				nugget.m_topo == ETopo::TriList ||
-				nugget.m_topo == ETopo::TriListAdj ||
-				nugget.m_topo == ETopo::TriStrip ||
-				nugget.m_topo == ETopo::TriStripAdj))
-			{
-				auto fill_mode = desc.RasterizerState.FillMode;
-				desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-				desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
-				cmd_list->SetPipelineState(wnd().PipeState(desc));
-
-				cmd_list->DrawIndexedInstanced(
-					s_cast<UINT>(nugget.m_irange.size()), 1U,
-					s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
-
-				desc.RasterizerState.FillMode = fill_mode;
-				//ps.Clear(EPipeState::BlendEnable0);
-			}
-
-			// Render points for 'Points' mode
-			if (nugget.m_fill_mode == EFillMode::Points)
-			{
-				desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList);
-				desc.GS = scn().m_diag.m_gs_fillmode_points->Code.GS;
-				scn().m_diag.m_gs_fillmode_points->Setup();
-				cmd_list->SetPipelineState(wnd().PipeState(desc));
-
 				cmd_list->DrawInstanced(
 					s_cast<UINT>(nugget.m_vrange.size()), 1U,
 					s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
 			}
+			else
+			{
+				cmd_list->DrawIndexedInstanced(
+					s_cast<UINT>(nugget.m_irange.size()), 1U,
+					s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
+			}
+		}
+
+		// Render wire frame over solid for 'SolidWire' mode
+		if (!nugget.m_irange.empty() &&
+			nugget.m_fill_mode == EFillMode::SolidWire && (
+			nugget.m_topo == ETopo::TriList ||
+			nugget.m_topo == ETopo::TriListAdj ||
+			nugget.m_topo == ETopo::TriStrip ||
+			nugget.m_topo == ETopo::TriStripAdj))
+		{
+			// Change the pipe state to wireframe
+			auto fill_mode = desc.RasterizerState.FillMode;
+			desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+			desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
+
+			cmd_list->DrawIndexedInstanced(
+				s_cast<UINT>(nugget.m_irange.size()), 1U,
+				s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
+
+			// Restore it
+			desc.RasterizerState.FillMode = fill_mode;
+			//ps.Clear(EPipeState::BlendEnable0);
+		}
+
+		// Render points for 'Points' mode
+		if (nugget.m_fill_mode == EFillMode::Points)
+		{
+			// Change the pipe state to point list
+			desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList);
+			desc.GS = wnd().m_diag.m_gs_fillmode_points->Code.GS;
+			//todo scn().m_diag.m_gs_fillmode_points->Setup();
+			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
+
+			cmd_list->DrawInstanced(
+				s_cast<UINT>(nugget.m_vrange.size()), 1U,
+				s_cast<UINT>(nugget.m_vrange.m_beg), 0U);
 		}
 	}
 }

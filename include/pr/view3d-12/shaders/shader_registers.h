@@ -36,7 +36,7 @@ namespace pr::rdr12
 	// Base class to define a shader register type and value
 	template <typename TShaderReg, TShaderReg rn, UINT sp> struct ShaderReg
 	{
-		inline static const TShaderReg shader_register = rn;
-		inline static const UINT register_space = sp;
+		inline static constexpr TShaderReg shader_register = rn;
+		inline static constexpr UINT register_space = sp;
 	};
 }

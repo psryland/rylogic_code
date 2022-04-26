@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <type_traits>
+#include <span>
 #include <cassert>
 #include "pr/common/allocator.h"
 
@@ -1188,6 +1189,16 @@ namespace pr
 		operator std::initializer_list<Type const>() const
 		{
 			return std::initializer_list<Type const>(data(), data() + size());
+		}
+
+		// Implicit conversion to span.
+		operator std::span<Type const>() const
+		{
+			return std::span<Type const>(data(), size());
+		}
+		operator std::span<Type>()
+		{
+			return std::span<Type>(data(), size());
 		}
 
 		// Operators

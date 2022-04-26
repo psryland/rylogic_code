@@ -1000,7 +1000,7 @@ namespace pr::geometry::p3d
 	// Write bytes to 'out' to pad 'hdr' to a uint32_t boundary
 	template <typename TOut> uint32_t PadToU32(TOut& out, uint32_t chunk_size)
 	{
-		return Write(out, "\0\0\0\0", Pad<uint32_t>(chunk_size, sizeof(uint32_t)));
+		return Write(out, "\0\0\0\0", Pad<uint32_t>(chunk_size, s_cast<int>(sizeof(uint32_t))));
 	}
 
 	// Write an array of type 'TIn' and an array of type 'TAs'

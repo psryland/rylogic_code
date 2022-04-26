@@ -24,6 +24,7 @@
 #include "pr/maths/matrix6x8.h"
 #include "pr/maths/matrix.h"
 #include "pr/maths/ivector2.h"
+#include "pr/maths/ivector3.h"
 #include "pr/maths/ivector4.h"
 #include "pr/maths/bbox.h"
 #include "pr/maths/bsphere.h"

@@ -4,7 +4,9 @@
 //*********************************************
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/descriptor_store.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/render/sortkey.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
@@ -23,16 +25,23 @@ namespace pr::rdr12
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri)
+	TextureBase::TextureBase(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, char const* name)
 		:RefCounted<TextureBase>()
 		,m_mgr(&mgr)
 		,m_res(res, true)
-		//,m_srv(srv, true)
-		//,m_samp(samp, true)
+		,m_srv()
+		,m_uav()
+		,m_rtv()
 		,m_id(id == AutoId ? MakeId(this) : id)
 		,m_uri(uri)
-		//,m_name(name ? name : "")
+		,m_name(name ? name : "")
+		//,m_srv(srv, true)
+		//,m_samp(samp, true)
 	{
+	}
+	TextureBase::~TextureBase()
+	{
+		OnDestruction(*this, EmptyArgs());
 	}
 	//TextureBase::TextureBase(ResourceManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, char const* name)
 	//	:TextureBase(mgr, id, static_cast<ID3D12Resource*>(nullptr), src_id, name)
@@ -55,6 +64,12 @@ namespace pr::rdr12
 	//TextureBase::TextureBase(ResourceManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name)
 	//	:TextureBase(mgr, id, SharedHandleFromSharedResource(shared_resource), src_id, name)
 	//{}
+	
+	// A sort key component for this texture
+	SortKeyId TextureBase::SortId() const
+	{
+		return m_id % SortKey::MaxTextureId;
+	}
 
 	// Ref counting clean up function
 	void TextureBase::RefCountZero(RefCounted<TextureBase>* doomed)

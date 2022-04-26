@@ -8,15 +8,19 @@
 
 namespace pr::rdr12::shaders
 {
+	namespace ss
+	{
+		struct CBufFrame;
+	}
+
 	struct PointSpriteGS :Shader
 	{
-		D3DPtr<ID3D12Resource> m_cbuf;
 		v2 m_size;
 		bool m_depth;
 
-		explicit PointSpriteGS(ResourceManager& mgr, int bb_count);
+		PointSpriteGS(ResourceManager& mgr, GpuSync& gsync);
 
-		// Perform any setup of the shader state
-		void Setup() override;
+		// Add shader constants to an upload buffer
+		D3D12_GPU_VIRTUAL_ADDRESS Set(ss::CBufFrame const& cbuf, bool might_reuse);
 	};
 }

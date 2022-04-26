@@ -5,9 +5,12 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/back_buffer.h"
-#include "pr/view3d-12/utility/object_pools.h"
+#include "pr/view3d-12/resource/gpu_descriptor_heap.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/utility/gpu_sync.h"
+#include "pr/view3d-12/utility/cmd_alloc.h"
+#include "pr/view3d-12/utility/cmd_list.h"
+#include "pr/view3d-12/utility/pipe_state.h"
+#include "pr/view3d-12/utility/diagnostics.h"
 
 namespace pr::rdr12
 {
@@ -17,7 +20,6 @@ namespace pr::rdr12
 		//  - A window wraps an HWND and contains a SwapChain.
 		//  - The stuff visible in a window is governed by one or more scenes.
 		//  - A window where HWND = nullptr, is used for rendering to off-screen render targets only.
-		//  - Each command allocator can only be recording one command list at a time.
 		//    So parallel command list building requires multiple command allocators.
 		//  - Command allocators can only be reset when they are not used by the GPU any more.
 		//  - The swap chain does not have a depth stencil resource, it's managed by the window.
@@ -36,16 +38,18 @@ namespace pr::rdr12
 		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the swapchain
 		D3DPtr<ID3D12DescriptorHeap> m_dsv_heap;         // Depth stencil view descriptor for the swapchain
 		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
-		CmdAllocPool                 m_cmd_alloc_pool;   // The pool of command allocators
-		CmdListPool                  m_cmd_list_pool;    // A pool of command lists
-		PipeStatePool                m_pipe_state_pool;  // Pool of Pipeline state objects
+		GpuSync                      m_gsync;            // GPU fence for frames
 		BackBuffers                  m_bb;               // Back buffer render targets from the swap chain.
+		GfxCmdAllocPool              m_cmd_alloc_pool;   // A pool of command allocators
+		GfxCmdListPool               m_cmd_list_pool;    // A pool of command lists
+		CmdLists                     m_cmd_lists;        // Command lists (in order) to be executed
+		GpuDescriptorHeap            m_heap_srv;         // Shader visible heap for SRV
+		GpuDescriptorHeap            m_heap_samp;        // Shader visible heap for Samplers
+		DiagState                    m_diag;             // Diagnostic variables
 		int64_t                      m_frame_number;     // The number of times 'RenderFrame' has been called.
-		GpuSync                      m_gpu_sync;         // Serialises rendering to this BB;
 		UINT                         m_vsync;            // Present SyncInterval value
 		bool                         m_idle;             // True while the window is occluded
 		string32                     m_name;             // A debugging name for the window
-		//iv2                        m_dbg_area;         // The size of the render target last set (for debugging only)
 
 		Window(Renderer& rdr, WndSettings const& settings);
 		~Window();
@@ -64,42 +68,29 @@ namespace pr::rdr12
 		// The number of times 'RenderFrame' has been called
 		int64_t FrameNumber() const;
 
-		// The most recent sync point sent to the GPU
-		uint64_t LatestSyncPoint() const;
-
 		// Get/Set the size of the back buffer render target
 		iv2 BackBufferSize() const;
 		void BackBufferSize(iv2 size, bool force);
 
-		// Get an allocator that isn't currently in use.
-		CmdAllocScope CmdAlloc();
-
-		// Get a command list that returns to the pool when out of scope
-		CmdListScope CmdList();
-
-		// Return a pipeline state instance for the given description and additional states
-		ID3D12PipelineState* PipeState(PipeStateDesc const& desc);
-
 		// Render a frame
 		struct Frame
 		{
-			BackBuffer& m_bb;
-			CmdLists m_cmd_lists;
-			CmdAllocScope m_cmd_alloc;
-			CmdListScope m_cmd_list0;
-			CmdListScope m_cmd_list1;
-			bool m_closed;
+			BackBuffer& m_bb;     // The BackBuffer frame to render to
+			CmdLists& m_cmd_lists; // Command lists (in order) to be executed
 
-			explicit Frame(BackBuffer& bb);
-			Frame(Frame&& rhs) = default;
+			Frame(BackBuffer& bb, CmdLists& cmd_lists);
+			Frame(Frame&&) = default;
 			Frame(Frame const&) = delete;
-			Frame& operator =(Frame&& rhs) = default;
+			Frame& operator =(Frame&&) = default;
 			Frame& operator =(Frame const&) = delete;
 			void Render(Scene& scene);
-			void Close();
+			void Present();
 		};
 		Frame RenderFrame();
-		void Present(Frame& frame);
+		
+		// Flip buffers in the swap chain.
+		// Users shouldn't call this, it's done by Frame::Present().
+		void Flip();
 	};
 }
 

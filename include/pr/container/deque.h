@@ -951,6 +951,11 @@ namespace pr
 		}
 
 		// insert element at end
+		void push_back(value_type&& value)
+		{
+			// insert by moving into element at end, provide strong guarantee
+			emplace_back(std::move(value));
+		}
 		void push_back(value_type const& val)
 		{
 			auto block = m_map[m_last];
@@ -969,6 +974,11 @@ namespace pr
 		}
 
 		// insert element at beginning
+		void push_front(value_type&& value)
+		{
+			// insert by moving into element at front, provide strong guarantee
+			emplace_front(std::move(value));
+		}
 		void push_front(value_type const& val)
 		{
 			auto block = m_map[m_first - 1];

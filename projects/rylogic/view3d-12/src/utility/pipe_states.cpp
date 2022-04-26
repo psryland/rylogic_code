@@ -2,7 +2,7 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "view3d-12/src/utility/pipe_states.h"
+#include "pr/view3d-12/utility/pipe_states.h"
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/model/nugget.h"

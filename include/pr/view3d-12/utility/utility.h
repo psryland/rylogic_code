@@ -282,13 +282,14 @@ namespace pr::rdr12
 	// Returns the number of indices implied by a primitive count and geometry topology
 	size_t IndexCount(size_t pcount, ETopo topo);
 
-	// Returns the expected row and slice pitch for a given image width*height and format
+	// Returns the expected row, slice, and block pitch for a given image width*height*depth and format
+	iv3 Pitch(iv3 size, DXGI_FORMAT fmt);
 	iv2 Pitch(iv2 size, DXGI_FORMAT fmt);
 	iv2 Pitch(D3D12_RESOURCE_DESC const& tdesc);
 
 	// Returns the number of expected mip levels for a given width x height texture
-	size_t MipCount(size_t w, size_t h);
-	size_t MipCount(iv2 size);
+	int MipCount(int w, int h);
+	int MipCount(iv2 size);
 
 	// Returns the dimensions of a mip level 'levels' below the given texture size
 	iv2 MipDimensions(iv2 size, size_t levels);
@@ -317,22 +318,11 @@ namespace pr::rdr12
 	void NameResource(ID3D12Object* res, char const* name);
 	void NameResource(IDXGIObject* res, char const* name);
 
-	// Copy a resource by rows
-	void MemcpySubresource(D3D12_MEMCPY_DEST const& dest, D3D12_SUBRESOURCE_DATA const& src, size_t RowSizeInBytes, int NumRows, int NumSlices);
+	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"
+	void ParseEmbeddedResourceUri(std::wstring const& uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name);
 
-	// Copy data to an upload resource, then add commands to copy it to a gpu resource.
-	void UpdateSubresource(
-		ID3D12GraphicsCommandList* cmds, // The command list to execute the update
-		ID3D12Resource* destination,     // The resource that receives the data
-		ID3D12Resource* staging,         // The upload heap resource for transferring the data
-		D3D12_SUBRESOURCE_DATA image,    // The source data
-		int sub0);                       // The sub resource index
-	void UpdateSubresource(
-		ID3D12GraphicsCommandList* cmds,      // The command list to execute the update
-		ID3D12Resource* destination,          // The resource that receives the data
-		ID3D12Resource* staging,              // The upload heap resource for transferring the data
-		D3D12_SUBRESOURCE_DATA const* images, // The source data (one for each 'sub')
-		int sub0, int subN);                  // Sub resource range [sub0, sub0 + subN)
+	// Return an ordered list of filepaths based on 'pattern'
+	vector<std::filesystem::path> PatternToPaths(std::filesystem::path const& dir, char8_t const* pattern);
 }
 
 // Conversion
@@ -340,7 +330,7 @@ namespace pr
 {
 	template <> struct Convert<D3D12_PRIMITIVE_TOPOLOGY, rdr12::ETopo>
 	{
-		static D3D12_PRIMITIVE_TOPOLOGY To(rdr12::ETopo v)
+		static D3D12_PRIMITIVE_TOPOLOGY To_(rdr12::ETopo v)
 		{
 			switch (v)
 			{
@@ -361,7 +351,7 @@ namespace pr
 	};
 	template <> struct Convert<D3D12_PRIMITIVE_TOPOLOGY_TYPE, rdr12::ETopo>
 	{
-		static D3D12_PRIMITIVE_TOPOLOGY_TYPE To(rdr12::ETopo v)
+		static D3D12_PRIMITIVE_TOPOLOGY_TYPE To_(rdr12::ETopo v)
 		{
 			switch (v)
 			{

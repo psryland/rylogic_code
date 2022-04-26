@@ -3,17 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/shaders/shader_show_normals.h"
-#include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/main/window.h"
-#include "pr/view3d-12/utility/wrappers.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12::shaders
 {
 	// Byte code data
 
-	ShowNormalsGS::ShowNormalsGS(ResourceManager& mgr, int bb_count)
-		:Shader(mgr, ShaderCode
+	ShowNormalsGS::ShowNormalsGS(ResourceManager& mgr, GpuSync& gsync)
+		:Shader(mgr, gsync, 128 * 1024ULL, ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,
@@ -22,26 +19,11 @@ namespace pr::rdr12::shaders
 			.DS = shader_code::none,
 			.HS = shader_code::none,
 		})
-		,m_cbuf()
-	{	
-		Renderer::Lock lock(mgr.rdr());
-		auto device = lock.D3DDevice();
-		
-		auto desc = BufferDesc::CBuf(bb_count * cbuf_size_aligned_v<hlsl::ss::CBufFrame>);
-		Throw(device->CreateCommittedResource(
-			&HeapProps::Upload(),
-			D3D12_HEAP_FLAG_NONE,
-			&desc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			__uuidof(ID3D12Resource),
-			(void**)&m_cbuf.m_ptr));
-		Throw(m_cbuf->SetName(L"ShowNormalsGS:CBuf"));
-	}
+	{}
 
-	// Perform any setup of the shader state
-	void ShowNormalsGS::Setup()
+	// Add shader constants to an upload buffer
+	D3D12_GPU_VIRTUAL_ADDRESS ShowNormalsGS::Set(ss::CBufFrame const& cbuf, bool might_reuse)
 	{
-		// todo
+		return m_cbuf.Add(cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, might_reuse);
 	}
 }

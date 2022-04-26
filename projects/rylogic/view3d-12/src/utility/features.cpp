@@ -7,7 +7,9 @@
 namespace pr::rdr12
 {
 	FeatureSupport::FeatureSupport()
-		:Options()
+		: m_device()
+		, MaxFeatureLevel()
+		, Options()
 		, Options1()
 		, Options2()
 		, Options3()
@@ -17,7 +19,6 @@ namespace pr::rdr12
 		, Options7()
 		, Options8()
 		, Options9()
-		, MaxFeatureLevel()
 		, GPUVASupport()
 		, ShaderModel()
 		, ProtectedResourceSessionSupport()
@@ -42,6 +43,8 @@ namespace pr::rdr12
 	}
 	void FeatureSupport::Read(ID3D12Device* device)
 	{
+		m_device = device;
+
 		// Initialize static feature support data structures
 		if (Failed(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &Options, sizeof(Options))))
 		{
@@ -230,5 +233,11 @@ namespace pr::rdr12
 			MaxFeatureLevel = Succeeded(hr) ? FeatureLevel.MaxSupportedFeatureLevel : static_cast<D3D_FEATURE_LEVEL>(0);
 			if (hr != DXGI_ERROR_UNSUPPORTED) Throw(hr);
 		}
+	}
+	D3D12_FEATURE_DATA_FORMAT_SUPPORT FeatureSupport::Format(DXGI_FORMAT format) const
+	{
+		D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {format};
+		Throw(m_device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+		return support;
 	}
 }

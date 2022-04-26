@@ -73,6 +73,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_forward.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\descriptor_store.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_manager.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene_camera.cpp" />
@@ -82,9 +83,12 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_show_normals.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_2d.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_base.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_cube.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_dds.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_wic.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\diagnostics.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\object_pools.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_state.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp" />
   </ItemGroup>
@@ -104,6 +108,10 @@
     <ClInclude Include="..\include\pr\view3d-12\render\drawlist_element.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\render_step.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\sortkey.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_upload_buffer.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\descriptor.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\descriptor_store.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\image.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\stock_resources.h" />
@@ -117,21 +125,27 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\stock_shaders.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_2d.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_base.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_cube.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_desc.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\texture_loader.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_alloc.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\conversion.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\diagnostics.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\features.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\gpu_sync.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
-    <ClInclude Include="..\include\pr\view3d-12\utility\object_pools.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\pipe_states.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_forward.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsli" />

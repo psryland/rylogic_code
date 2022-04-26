@@ -43,7 +43,7 @@ namespace pr::rdr12
 	void RegisterRuntimeShader(RdrId id, char const* cso_filepath);
 	#endif
 
-	namespace hlsl
+	namespace shaders
 	{
 		#include "view3d-12/src/shaders/hlsl/types.hlsli"
 
@@ -91,7 +91,7 @@ namespace pr::rdr12
 		{
 			// Has normals
 			if (pr::AllSet(nug.m_geom, EGeom::Norm))
-				model_flags |= hlsl::ModelFlags_HasNormals;
+				model_flags |= shaders::ModelFlags_HasNormals;
 		}
 
 		auto texture_flags = 0;
@@ -99,11 +99,11 @@ namespace pr::rdr12
 			// Has diffuse texture
 			if (pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr)
 			{
-				texture_flags |= hlsl::TextureFlags_HasDiffuse;
+				texture_flags |= shaders::TextureFlags_HasDiffuse;
 
 				// Texture by projection from the environment map
 				if (nug.m_tex_diffuse->m_uri == RdrId(EStockTexture::EnvMapProjection))
-					texture_flags |= hlsl::TextureFlags_ProjectFromEnvMap;
+					texture_flags |= shaders::TextureFlags_ProjectFromEnvMap;
 			}
 
 			(void)scene;
@@ -114,7 +114,7 @@ namespace pr::rdr12
 				AllSet(nug.m_geom, EGeom::Norm)                                       && // The model contains normals
 				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity)) != nullptr && // The instance has a reflectivity value
 				*reflec * nug.m_relative_reflectivity != 0)                              // and the reflectivity isn't zero
-				texture_flags |= hlsl::TextureFlags_IsReflective;
+				texture_flags |= shaders::TextureFlags_IsReflective;
 			#endif
 		}
 
@@ -122,7 +122,7 @@ namespace pr::rdr12
 		{
 			// Has alpha pixels
 			if (nug.m_sort_key.Group() > ESortGroup::PreAlpha)
-				alpha_flags |= hlsl::AlphaFlags_HasAlpha;
+				alpha_flags |= shaders::AlphaFlags_HasAlpha;
 		}
 
 		auto inst_id = 0;
@@ -181,7 +181,7 @@ namespace pr::rdr12
 	}
 
 	// Set the scene view constants
-	inline void SetViewConstants(hlsl::Camera& cb, SceneCamera const& view)
+	inline void SetViewConstants(shaders::Camera& cb, SceneCamera const& view)
 	{
 		cb.m_c2w = view.CameraToWorld();
 		cb.m_c2s = view.CameraToScreen();
@@ -190,7 +190,7 @@ namespace pr::rdr12
 	}
 
 	// Set the lighting constants
-	inline void SetLightingConstants(hlsl::Light& cb, Light const& light, SceneCamera const& view)
+	inline void SetLightingConstants(shaders::Light& cb, Light const& light, SceneCamera const& view)
 	{
 		// If the global light is camera relative, adjust the position and direction appropriately
 		auto pos = light.m_cam_relative ? view.CameraToWorld() * light.m_position : light.m_position;
@@ -206,7 +206,7 @@ namespace pr::rdr12
 	}
 
 	// Set the shadow map constants
-	inline void SetShadowMapConstants(hlsl::Shadow& cb, ShadowMap const* smap_step)
+	inline void SetShadowMapConstants(shaders::Shadow& cb, ShadowMap const* smap_step)
 	{
 		(void)smap_step, cb;
 		throw std::runtime_error("not implemented");
@@ -218,7 +218,7 @@ namespace pr::rdr12
 		int i = 0;
 		for (auto& caster : smap_step->m_caster)
 		{
-			if (i == hlsl::MaxShadowMaps) break;
+			if (i == shaders::MaxShadowMaps) break;
 			cb.m_info.x = i + 1;
 			cb.m_info.y = smap_step->m_smap_size;
 			cb.m_w2l[i] = caster.m_params.m_w2ls;
@@ -229,7 +229,7 @@ namespace pr::rdr12
 	}
 
 	// Set the env-map to world orientation
-	inline void SetEnvMapConstants(hlsl::EnvMap& cb, TextureCube* env_map)
+	inline void SetEnvMapConstants(shaders::EnvMap& cb, TextureCube* env_map)
 	{
 		(void)env_map, cb;
 		throw std::runtime_error("not implemented");
@@ -238,19 +238,4 @@ namespace pr::rdr12
 		cb.m_w2env = InvertFast(env_map->m_cube2w);
 		#endif
 	}
-
-	//// Lock and write 'cb' into 'cbuf'.
-	//template <typename TCBuf> requires ( TCBuf::shader_register, TCBuf::register_space )
-	//void WriteConstants(TCBuf const& cb, ID3D12Resource* cbuf, int bb_index)
-	//{
-	//	constexpr auto cb_size = cbuf_size_aligned_v<TCBuf>;
-
-	//	// Copy 'cb' to 'cbuf[bb_index]'
-	//	MapResource map(cbuf, 0U, cb_size);
-	//	map.at<TCBuf>(bb_index * cb_size) = cb;
-
-	//	// Do this at the caller
-	//	// Bind the constants to the pipeline
-	//	//cmd_list->SetGraphicsRootConstantBufferView(TCBuf::shader_register, cbuf->GetGPUVirtualAddress() + bb_index * cb_size);
-	//}
 }

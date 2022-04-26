@@ -295,6 +295,7 @@
     <ClInclude Include="..\..\..\include\pr\maths\fibonacci_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\maths\forward.h" />
     <ClInclude Include="..\..\..\include\pr\maths\half.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\ivector3.h" />
     <ClInclude Include="..\..\..\include\pr\maths\limits.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix6x8.h" />

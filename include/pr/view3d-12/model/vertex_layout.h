@@ -42,6 +42,13 @@ namespace pr::rdr12
 			};
 			return s_desc;
 		}
+		static D3D12_INPUT_LAYOUT_DESC LayoutDesc()
+		{
+			return D3D12_INPUT_LAYOUT_DESC {
+				.pInputElementDescs = &Layout()[0],
+				.NumElements = _countof(Layout()),
+			};
+		}
 	};
 
 	inline v4 const& GetP(Vert const& vert)

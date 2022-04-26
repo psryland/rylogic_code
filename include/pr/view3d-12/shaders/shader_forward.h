@@ -8,14 +8,19 @@
 
 namespace pr::rdr12::shaders
 {
+	namespace fwd
+	{
+		struct CBufFrame;
+		struct CBufNugget;
+		struct CBufFade;
+	}
+
 	struct Forward :Shader
 	{
-		D3DPtr<ID3D12Resource> m_cbuf_frame;  // Per-frame constant buffer
-		D3DPtr<ID3D12Resource> m_cbuf_nugget; // Per-nugget constant buffer
+		Forward(ResourceManager& mgr, GpuSync& gsync);
 
-		Forward(ResourceManager& mgr, int bb_count);
-
-		// Perform any setup of the shader state
-		void Setup() override;
+		// Add shader constants to an upload buffer
+		D3D12_GPU_VIRTUAL_ADDRESS Set(fwd::CBufFrame const& cbuf, bool might_reuse);
+		D3D12_GPU_VIRTUAL_ADDRESS Set(fwd::CBufNugget const& cbuf, bool might_reuse);
 	};
 }

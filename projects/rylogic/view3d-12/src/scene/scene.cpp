@@ -6,6 +6,7 @@
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/render/render_step.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/eventargs.h"
 #include "view3d-12/src/render/render_forward.h"
 //#include "view3d-12/src/render/state_stack.h"
@@ -24,22 +25,20 @@ namespace pr::rdr12
 		, m_viewport(wnd.BackBufferSize())
 		, m_instances()
 		, m_render_steps()
-		, m_cmd_list(wnd.CmdList())
+		, m_cmd_list()
 		, m_bkgd_colour(Colour32Black)
 		//, m_ht_immediate()
 		, m_global_light()
-		//, m_global_envmap()
+		, m_global_envmap()
 		//, m_dsb()
 		//, m_rsb()
 		//, m_bsb()
-		, m_diag(*this)
 		, m_eh_resize()
 	{
-		//Renderer::Lock lock(rdr());
-		//auto device = lock.D3DDevice();
+		auto device = rdr().D3DDevice();
 
 		// Create the command list used by this scene to render
-		//Throw(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
+		Throw(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
 		Throw(m_cmd_list->SetName(L"Scene:CmdList"));
 
 		// Set the render steps for the scene
@@ -59,6 +58,7 @@ namespace pr::rdr12
 	Scene::~Scene()
 	{
 		SetRenderSteps({});
+		m_cmd_list = nullptr;
 	}
 
 	// Access the renderer
@@ -69,6 +69,10 @@ namespace pr::rdr12
 	Window& Scene::wnd() const
 	{
 		return *m_wnd;
+	}
+	ID3D12Device* Scene::d3d_device() const
+	{
+		return rdr().D3DDevice();
 	}
 
 	// Reset the drawlist for each render step
@@ -103,19 +107,29 @@ namespace pr::rdr12
 			rs->RemoveInstance(inst);
 	}
 
-	// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
-	SceneCamera const& Scene::Camera() const
-	{
-		return m_cam;
-	}
-	void Scene::Camera(SceneCamera const& cam)
-	{
-		m_cam = cam;
-	}
-	void Scene::Camera(pr::Camera const& cam)
-	{
-		Camera(SceneCamera(cam));
-	}
+	//// Get/Set the viewport
+	//Viewport const& Scene::Viewport() const
+	//{
+	//	return m_viewport;
+	//}
+	//void Scene::Viewport(rdr12::Viewport const& vp)
+	//{
+	//	m_viewport = vp;
+	//}
+
+	//// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
+	//SceneCamera const& Scene::Camera() const
+	//{
+	//	return m_cam;
+	//}
+	//void Scene::Camera(SceneCamera const& cam)
+	//{
+	//	m_cam = cam;
+	//}
+	//void Scene::Camera(pr::Camera const& cam)
+	//{
+	//	Camera(SceneCamera(cam));
+	//}
 
 	// Set the render steps to use for rendering the scene
 	void Scene::SetRenderSteps(std::initializer_list<ERenderStep> rsteps)
@@ -188,16 +202,14 @@ namespace pr::rdr12
 		#endif
 
 		// Reset the command list to use an allocator for this frame
-		auto cmd_alloc = bb.CmdAlloc();
+		auto cmd_alloc = wnd().m_cmd_alloc_pool.Get();
 		Throw(m_cmd_list->Reset(cmd_alloc, nullptr));
 
-		//todo: run this in a background thread
+		//todo: run this in a background thread - the thread will need to create and own the cmd_alloc until list->Close is called.
 		{
-			Renderer::Lock lock(rdr());
-
 			// Invoke each render step in order
 			for (auto& rs : m_render_steps)
-				rs->Execute(bb, m_cmd_list);
+				rs->Execute(bb, m_cmd_list.get());
 
 			// Close the command list now that we've finished rendering this scene
 			Throw(m_cmd_list->Close());
@@ -205,7 +217,7 @@ namespace pr::rdr12
 
 		// Return the command list to the caller who will batch up calls to execute.
 		// When multi-threading, we can return this before we're finished
-		return m_cmd_list;
+		return m_cmd_list.get();
 	}
 
 	// Resize the viewport on back buffer resize
