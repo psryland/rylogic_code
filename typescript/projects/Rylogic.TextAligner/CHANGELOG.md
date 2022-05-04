@@ -1,13 +1,19 @@
 # Change Log
 
-$$ [1.11.4] - 2022-03-30
+## [1.11.6] - 2022-05-05
+
+### Changed
+
+- Changed the behaviour of unaligning. Previously, unalign would apply patterns in reverse priority order so that unaligning was the mirror of aligning. However, I think this behaviour is unintuitive, because it seems like the priority order is not being used. Now, unaligning uses the same priority as aligning, so patterns next to the caret will unalign first, as would be expected.
+
+## [1.11.4] - 2022-03-30
 
 ### Changed
 
 - Bug Fix. The pattern for matching member variables that end in '_' was incorrectly matching substrings
 - Changed the default 'Colon' matching pattern to only match single colons, not '::'.
 
-$$ [1.11.3] - 2022-03-16
+## [1.11.3] - 2022-03-16
 
 ### Changed
 

@@ -44,12 +44,12 @@ namespace Rylogic.TextAligner
 			{
 				switch (action)
 				{
-				case EAction.Align:
-					DoAligning(edits);
-					break;
-				case EAction.Unalign:
-					DoUnaligning(edits);
-					break;
+					case EAction.Align:
+						DoAligning(edits);
+						break;
+					case EAction.Unalign:
+						DoUnaligning(edits);
+						break;
 				}
 			}
 			else if (m_action == EAction.Unalign)
@@ -142,12 +142,7 @@ namespace Rylogic.TextAligner
 			var boundaries = FindAlignBoundariesOnLine(selection.CaretLineNumber, grps);
 
 			// Sort the boundaries by pattern priority, then by distance from the caret
-			var ordered = m_action switch
-				{
-					EAction.Align => boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.CurrentCharIndex),
-					EAction.Unalign => boundaries.OrderByDescending(x => x.GrpIndex).ThenBy(x => x.CurrentCharIndex),
-					_ => throw new Exception($"Unknown alignment action: {m_action}"),
-				};
+			var ordered = boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.CurrentCharIndex).ToList();
 
 			// Find the first boundary that can be aligned
 			var edits = new List<Token>();
@@ -173,6 +168,7 @@ namespace Rylogic.TextAligner
 				if (edits.Count == 0)
 					continue;
 
+				// Add the line that the caret is on
 				edits.Insert(0, align);
 
 				var pos = FindAlignColumn(edits, 0);
@@ -181,8 +177,8 @@ namespace Rylogic.TextAligner
 
 				switch (m_action)
 				{
-				// For aligning we want the highest priority group that is not already aligned.
-				case EAction.Align:
+					// For aligning we want the highest priority group that is not already aligned.
+					case EAction.Align:
 					{
 						// If there are edits but they are all already aligned at the
 						// correct column, then move on to the next candidate.
@@ -195,8 +191,8 @@ namespace Rylogic.TextAligner
 						break;
 					}
 
-				// For unaligning we want the lowest priority group that is not currently 'unaligned'.
-				case EAction.Unalign:
+					// For unaligning we want the lowest priority group that is not currently 'unaligned'.
+					case EAction.Unalign:
 					{
 						// If there are edits but they are all already the leading space distance
 						// from their minimum column, then they are all 'unaligned', move on to the next candidate.
