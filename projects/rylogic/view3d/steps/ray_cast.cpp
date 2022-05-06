@@ -222,8 +222,8 @@ namespace pr::rdr
 		// There will be duplicates in the buffer because of shared verts/edges in the models.
 		// Sort the results by distance and skip duplicates.
 		rdr::Lock lock(dc, stage.get(), 0, sizeof(Intercept), EMap::Read, EMapFlags::None);
-		auto intercepts = std::make_span(lock.ptr<Intercept>(), MaxIntercepts);
-		intercepts.m_count = index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; });
+		std::span<Intercept> intercepts(lock.ptr<Intercept>(), MaxIntercepts);
+		intercepts = intercepts.subspan(0, index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; }));
 
 		// Returns the squared distance from the ray
 		auto DistSqFromRay = [](HitTestRay const& ray, Intercept const& intercept)

@@ -181,6 +181,7 @@
     <ClInclude Include="..\..\..\include\pr\common\si_units.h" />
     <ClInclude Include="..\..\..\include\pr\common\static_callback.h" />
     <ClInclude Include="..\..\..\include\pr\common\stop_watch.h" />
+    <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h" />
     <ClInclude Include="..\..\..\include\pr\common\to.h" />
     <ClInclude Include="..\..\..\include\pr\common\repeater.h" />
     <ClInclude Include="..\..\..\include\pr\common\tstring.h" />
@@ -295,6 +296,7 @@
     <ClInclude Include="..\..\..\include\pr\maths\fibonacci_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\maths\forward.h" />
     <ClInclude Include="..\..\..\include\pr\maths\half.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\ivector3.h" />
     <ClInclude Include="..\..\..\include\pr\maths\limits.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix6x8.h" />

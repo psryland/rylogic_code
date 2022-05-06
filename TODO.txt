@@ -58,6 +58,7 @@ Work:
 	- Create a RexLink service and convert applications to use the service (solves the problem of multiple   apps wanting to connect to the same Rex).
 
 Rylogic:
+  - Rewrite the maths library to remove duplication of v2,v3,v4,iv2,iv3,iv4, plus support floats and doubles. Create Matrix<S,Rows,Cols,Dynamic> and typedef v2,v3,etc from that.
   - Rewrite ClipX
   - pr::hash::Hash is too complicated, use less name overloading. ie. HashBytes, HashString, HashArray, etc
 

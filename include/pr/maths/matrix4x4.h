@@ -289,7 +289,7 @@ namespace pr
 		friend constexpr v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
 
 		// Basic constants
-		static constexpr Mat4x4 Zero() { return Mat4x4{0, 0, 0, 0}; }
+		static constexpr Mat4x4 Zero() { return Mat4x4{v4::Zero(), v4::Zero(), v4::Zero(), v4::Zero()}; }
 		static constexpr Mat4x4 Identity() { return Mat4x4{v4{1, 0, 0, 0}, v4{0, 1, 0, 0}, v4{0, 0, 1, 0}, v4{0, 0, 0, 1}}; }
 
 		// Create a translation matrix

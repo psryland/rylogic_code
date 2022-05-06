@@ -9,7 +9,7 @@ namespace pr::rdr
 {
 	struct ModelTreeNode
 	{
-		// Tranforms from this model to its parent
+		// Transform from this model to its parent
 		m4x4 m_o2p;
 
 		// The renderer model for this node in the model tree

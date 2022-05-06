@@ -40,8 +40,8 @@ template <typename T> struct pr_reflected_enum : std::false_type {};
 #define PR_ENUM_TOSTRING2(id, val)      case E::id: return #id;
 #define PR_ENUM_TOSTRING3(id, str, val) case E::id: return str;
 
-#define PR_ENUM_TOWSTRING1(id)           case E::id: return L#id;
-#define PR_ENUM_TOWSTRING2(id, val)      case E::id: return L#id;
+#define PR_ENUM_TOWSTRING1(id)           case E::id: return L""#id;
+#define PR_ENUM_TOWSTRING2(id, val)      case E::id: return L""#id;
 #define PR_ENUM_TOWSTRING3(id, str, val) case E::id: return L##str;
 
 #define PR_ENUM_STRCMP1(id)            if (name == #id)                                    { e = E::id; return true; }
@@ -51,12 +51,12 @@ template <typename T> struct pr_reflected_enum : std::false_type {};
 #define PR_ENUM_STRCMPI2(id, val)      if (ieql<char>(name, #id))                          { e = E::id; return true; }
 #define PR_ENUM_STRCMPI3(id, str, val) if (ieql<char>(name, #id) || ieql<char>(name, str)) { e = E::id; return true; }
 
-#define PR_ENUM_WSTRCMP1(id)            if (name == L#id)                                             { e = E::id; return true; }
-#define PR_ENUM_WSTRCMP2(id, val)       if (name == L#id)                                             { e = E::id; return true; }
-#define PR_ENUM_WSTRCMP3(id, str, val)  if (name == L#id || name == L##str)                           { e = E::id; return true; }
-#define PR_ENUM_WSTRCMPI1(id)           if (ieql<wchar_t>(name, L#id))                                { e = E::id; return true; }
-#define PR_ENUM_WSTRCMPI2(id, val)      if (ieql<wchar_t>(name, L#id))                                { e = E::id; return true; }
-#define PR_ENUM_WSTRCMPI3(id, str, val) if (ieql<wchar_t>(name, L#id) || ieql<wchar_t>(name, L##str)) { e = E::id; return true; }
+#define PR_ENUM_WSTRCMP1(id)            if (name == L""#id)                                             { e = E::id; return true; }
+#define PR_ENUM_WSTRCMP2(id, val)       if (name == L""#id)                                             { e = E::id; return true; }
+#define PR_ENUM_WSTRCMP3(id, str, val)  if (name == L""#id || name == L##str)                           { e = E::id; return true; }
+#define PR_ENUM_WSTRCMPI1(id)           if (ieql<wchar_t>(name, L""#id))                                { e = E::id; return true; }
+#define PR_ENUM_WSTRCMPI2(id, val)      if (ieql<wchar_t>(name, L""#id))                                { e = E::id; return true; }
+#define PR_ENUM_WSTRCMPI3(id, str, val) if (ieql<wchar_t>(name, L""#id) || ieql<wchar_t>(name, L##str)) { e = E::id; return true; }
 
 #define PR_ENUM_TOTRUE1(id)           case E::id: return true;
 #define PR_ENUM_TOTRUE2(id, val)      case E::id: return true;
@@ -84,7 +84,7 @@ struct enum_name##_\
 	template <typename Char> static constexpr Char const* Name()\
 	{\
 		if constexpr (std::is_same_v<Char,char   >) return #enum_name;\
-		if constexpr (std::is_same_v<Char,wchar_t>) return L#enum_name;\
+		if constexpr (std::is_same_v<Char,wchar_t>) return L""#enum_name;\
 	}\
 	static constexpr char const*    NameA() { return Name<char>(); }\
 	static constexpr wchar_t const* NameW() { return Name<wchar_t>(); }\

@@ -70,6 +70,12 @@ namespace pr
 		// Whatever to vector/matrix conversion
 		struct ToV2
 		{
+			// iv2 to v2
+			static v2 To_(iv2 const& v)
+			{
+				return v2(static_cast<float>(v.x), static_cast<float>(v.y));
+			}
+
 			// String to v2
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
 			static v2 To_(Str const& s, Char const** end = nullptr)
@@ -85,12 +91,18 @@ namespace pr
 			#ifdef _WINDEF_
 			static v2 To_(POINT const& x)
 			{
-				return v2(float(x.x), float(x.y));
+				return v2(static_cast<float>(x.x), static_cast<float>(x.y));
 			}
 			#endif
 		};
 		struct ToV3
 		{
+			// iv3 to v3
+			static v3 To_(iv3 const& v)
+			{
+				return v3(static_cast<float>(v.x), static_cast<float>(v.y), static_cast<float>(v.z));
+			}
+
 			// String to v3
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
 			static v3 To_(Str const& s, Char const** end = nullptr)
@@ -105,6 +117,12 @@ namespace pr
 		};
 		struct ToV4
 		{
+			// iv4 to v4
+			static v4 To_(iv4 const& v)
+			{
+				return v4(static_cast<float>(v.x), static_cast<float>(v.y), static_cast<float>(v.z), static_cast<float>(v.w));
+			}
+
 			// String to v4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
 			static v4 To_(Str const& s, Char const** end = nullptr)

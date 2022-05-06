@@ -393,7 +393,7 @@ namespace pr::rdr
 						tdepth = d;
 					}
 
-					data.pSysMem = bits_beg;
+					data.pSysMem = &*bits_beg;
 					data.SysMemPitch = static_cast<UINT>(pitch.x);
 					data.SysMemSlicePitch = static_cast<UINT>(pitch.y);
 				}
@@ -757,7 +757,7 @@ namespace pr::rdr
 
 		std::unique_ptr<uint8_t[]> dds_data;
 		dds::Header* header = nullptr;
-		std::span<uint8_t const> bits = {nullptr, 0};
+		std::span<uint8_t const> bits;
 
 		LoadTextureDataFromFile(filepath, dds_data, header, bits);
 		CreateTextureFromDDS(d3d_device, *header, bits, mips, is_cube_map, tdesc, res, srv, max_dimension);
