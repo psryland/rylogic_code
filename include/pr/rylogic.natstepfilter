@@ -18,7 +18,7 @@
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>s_cast&lt;.*,.*,.*&gt;</Name>
+		<Name>pr::s_cast&lt;.*&gt;</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 

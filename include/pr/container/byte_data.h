@@ -399,10 +399,18 @@ namespace pr
 			return &at_byte_ofs<Type>(byte_ofs);
 		}
 
-		// Facade access
-		template <typename Type> std::span<Type const> span() const
+		// Façade access
+		template <typename Type> std::span<Type> span() const
 		{
-			return std::span<Type const>(begin<Type>(), size<Type>());
+			return std::span<Type>(data<Type>(), size<Type>());
+		}
+		template <typename Type> std::span<Type> span()
+		{
+			return std::span<Type>(data<Type>(), size<Type>());
+		}
+		template <typename Type> std::span<Type> cspan()
+		{
+			return std::as_const(*this).span();
 		}
 
 		// Streaming access
@@ -414,6 +422,12 @@ namespace pr
 			auto& r = at_byte_ofs<Type>(ofs);
 			ofs += sizeof(Type);
 			return r;
+		}
+
+		// implicit conversions
+		template <typename Type> operator std::span<Type const>() const
+		{
+			return span<Type>();
 		}
 
 	private:

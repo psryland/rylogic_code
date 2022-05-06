@@ -14,6 +14,8 @@
 namespace pr
 {
 	// Notes:
+	//  - EventHandler is for notification where the context pointer is the thing doing the notifying.
+	//  - MultiCast is for callbacks where the context pointer is subscriber provided.
 	//  - EventHandler requires all handlers to have a signature: Handler(Thing& sender, EventArgs const& args);
 	//  - Unlike C# however, EventArgs can be anything and doesn't have to be const.
 
@@ -313,7 +315,6 @@ namespace pr
 		using AutoSub = multicast::AutoSub;
 		using Sub = multicast::Sub;
 		using Id = multicast::Id;
-		
 
 		template <class Lambda, class... Ts>
 		static constexpr auto test_sfinae(Lambda lambda, Ts&&...) -> decltype(lambda(std::declval<Ts>()...), bool{}) { return true; }

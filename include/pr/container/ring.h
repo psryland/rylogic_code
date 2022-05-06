@@ -4,6 +4,7 @@
 //******************************************
 #pragma once
 #include <cassert>
+#include "pr/maths/maths.h"
 
 namespace pr
 {

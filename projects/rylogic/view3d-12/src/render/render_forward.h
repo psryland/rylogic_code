@@ -12,8 +12,6 @@ namespace pr::rdr12
 {
 	struct RenderForward :RenderStep
 	{
-		static ERenderStep const Id = ERenderStep::RenderForward;
-
 	private:
 
 		PipeStatePool m_pipe_state_pool;  // Pool of pipeline state objects
@@ -22,6 +20,7 @@ namespace pr::rdr12
 	public:
 
 		explicit RenderForward(Scene& scene);
+		static ERenderStep const Id = ERenderStep::RenderForward;
 
 	private:
 
