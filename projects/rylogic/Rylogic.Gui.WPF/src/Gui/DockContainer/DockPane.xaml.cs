@@ -291,12 +291,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// (allowing the globally active content notification to be sent if this is the active pane)
 					var parent_branch = ParentBranch ?? throw new Exception("DockPanes should be children of branches");
 					parent_branch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.ActiveContent, pane: this, dockcontrol: value));
+
+					// Update properties that depend on the visible content
+					NotifyPropertyChanged(nameof(CaptionText));
+					NotifyPropertyChanged(nameof(AllowClose));
 				}
 
 				// Handlers
 				void HandleVisibleContentPropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
-					if (!(sender is DockControl dc))
+					if (sender is not DockControl dc)
 						return;
 
 					switch (e.PropertyName)
@@ -362,6 +366,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>True if the pin button is visible</summary>
 		public bool PinVisible => DockSite != EDockSite.Centre || !(TreeHost is DockContainer);
+
+		/// <summary>True if the pane can be closed</summary>
+		public bool AllowClose => VisibleContent?.AllowClose ?? true;
 
 		/// <summary>Get/Set the content in the pane floating</summary>
 		public bool IsFloating

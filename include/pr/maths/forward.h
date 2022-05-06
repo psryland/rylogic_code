@@ -138,6 +138,7 @@ namespace pr
 	template <typename T = void> using v4_cref = Vec4<T> const&;
 	template <typename T = void> using v8_cref = Vec8<T> const&;
 	template <typename T = void> using iv2_cref = IVec2<T> const&;
+	template <typename T = void> using iv3_cref = IVec3<T> const&;
 	template <typename T = void> using iv4_cref = IVec4<T> const&;
 	template <typename T = void> using half4_cref = Half4<T> const&;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const&;

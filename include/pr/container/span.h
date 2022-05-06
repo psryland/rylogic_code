@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Array view
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -14,7 +14,7 @@
 // std::span - Until C++20 is supported
 namespace std
 {
-	template <class T> class span
+	template <class T, size_t Extent = size_t(-1)> class span
 	{
 		// Notes:
 		//  - Remember 'T' can be const.

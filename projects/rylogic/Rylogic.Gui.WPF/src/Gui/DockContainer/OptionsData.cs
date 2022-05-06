@@ -9,6 +9,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public OptionsData()
 		{
 			AllowUserDocking = true;
+			AllowUserCloseTabs = true;
 			TabStripLocation = Dock.Bottom;
 			DoubleClickTitleBarToDock = true;
 			DoubleClickTabsToFloat = true;
@@ -22,6 +23,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			get => get<bool>(nameof(AllowUserDocking));
 			set => set(nameof(AllowUserDocking), value);
+		}
+
+		/// <summary>Get/Set whether the user can close tabs</summary>
+		public bool AllowUserCloseTabs
+		{
+			get => get<bool>(nameof(AllowUserCloseTabs));
+			set => set(nameof(AllowUserCloseTabs), value);
 		}
 
 		/// <summary>The default location for tab strips</summary>

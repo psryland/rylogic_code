@@ -77,6 +77,7 @@ Alt+?
 	250  · ¹ ³ ² ■   
 
 UTF-8 CODES:
+    box drawing: │ = Alt+179
 	box drawing: ┐ = 2495
 	box drawing: └ = 2496
 	box drawing: ┴ = 2497

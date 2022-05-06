@@ -1,37 +1,43 @@
 Immediate ToDo:
-	
-Work
+
+Work:
   Change Review Board:
 	- Remove product key - Documentation change
-    - Text Zero Ref Data - Raise ticket - talk about it with china team
-	- Zero Ref Tool - fill in phase 2 form - Ask pete if he is updating the 1550108 procedure
-	
-  Software Transfer meeting:
-	- EtherCat, Can, CanOpen,
-  
+	- Text Zero Ref Data - Raise ticket - talk about it with china team
+	- Zero Ref Tool - fill in phase 2 form - awaiting signatures - then can be released and people notified.
+	- Release the RexTerminal
+	- rxsfault.log ticket
+	- Add a requirement/test case that REX faults when the log SD card is full
+
   Misc:
-    - Change embedded script to use ram method of removing ROP
-    - Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
+	- Change embedded script to use ram method of removing ROP
+	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
-	    - Fix the default zero ref values and min/max extension in the actuator ref data
+		- Fix the default zero ref values and min/max extension in the actuator ref data
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
   
   Embedded:
-    - Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
-    - Make sure EnableHV works in R&D mode with tilt sensing on.
+	- Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
+	- Make sure EnableHV works in R&D mode with tilt sensing on.
 	- Look at expanding the AC project to include real code
-	
+
   MovementEditor:
 	- Optimise the dynamic linking in the map view
 	- Validation needs to check all recovery stance ids are in stance list
 	
   RexTerminal:
-    - System for creating graphs of data in session logs
+	- Create Firmware Versions tab - move 'update rtc' to the new tab
+	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
+	- Support simple serial connections in Terminal
+	
+  FirmwareLoader:
+	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
+	- Add support for programming the Battery controller board.
 	
   UIv4:
-    - Make Tunes an exported resource
+	- Make Tunes an exported resource
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
 	
@@ -39,18 +45,40 @@ Work
     - Test the ZR process on a left-right see-saw to see what effect that has on the results.
  	
   VRex:
-    - Work out why the zero ref position is so different for VRex compared to REX
+	- log doesn't work if logs folder is missing
+	- Work out why the zero ref position is so different for VRex compared to REX
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
-
-    RexLink:
-    - Create a RexLink service and convert applications to use the service (solves the problem of multiple apps wanting to connect to the same Rex).
 	
-Rylogic:
-  - Rewrite ClipX
+  Physics:
+	- Move step functionality from Emulation into Environment
+	- Have the environment step the emulation and the physics
 
+  RexLink:
+	- Create a RexLink service and convert applications to use the service (solves the problem of multiple   apps wanting to connect to the same Rex).
+
+Rylogic:
+  - Rewrite the maths library to remove duplication of v2,v3,v4,iv2,iv3,iv4, plus support floats and doubles. Create Matrix<S,Rows,Cols,Dynamic> and typedef v2,v3,etc from that.
+  - Rewrite ClipX
+  - pr::hash::Hash is too complicated, use less name overloading. ie. HashBytes, HashString, HashArray, etc
+
+  View3d-12:
+	- Make nugget m_shaders a smarter object that handles replacing shaders for the same step. E.g.  nug.m_shaders += {ERenderStep::RenderForward, shdr};
+	- Getting the model generater working 
+	- Implementing LdrObject into the view3d-12 lib
+	- Implementing the view3d dll API
+    - Getting view3d-12 test working with the Dll instead of the lib
+	- Environment mapping
+	- Shadow mapping
+	- Diagnositic modes, show normals, points, etc.
+	- Don't use dll/window and main/window... it's confusing
+	- Remove locks on D3DDevice
+	- Setup a D2DLock to access D2D interfaces (if needed)
+	
   LDraw:
-    - Drag and drop of non-ldr files is clunky
+	- Support dae files
+	- Support urdf files
+	- Drag and drop of non-ldr files is clunky
 	- Camera type-in
 	- Support LinkCamera
 	- Drag and drop on Scene should not open the file, DnD on Script should. Handle large ldr files.
@@ -74,9 +102,7 @@ Rylogic:
 	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
 
   View3d:
-	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is
-	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
-	  pass the parametric value through)
+	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to pass the parametric value through)
 
   Physics:
 	- debug the ClosestPoint_LineSegmentToBBox
@@ -148,6 +174,10 @@ Wordle:
 	- amend
 	- scowl
 	
+Nerdle:
+98-75=23
+7*8+4=60
+
 duolingo:
-	- lvl 1.Payment (not done)
+	- lvl 1.Market (not done)
 	

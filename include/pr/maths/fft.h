@@ -68,7 +68,7 @@ namespace pr::maths::fft
 				++levels;
 
 			// Bit-reversed addressing permutation
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				auto j = ReverseBits64(i, levels);
 				if (j > i)
@@ -125,7 +125,7 @@ namespace pr::maths::fft
 			std::vector<Real> creal(m), cimag(m);
 
 			// Temporary vectors and preprocessing
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				// An accurate version of: angle = pi * i * i / length;
 				auto angle = maths::tau_by_2 * ((i * i) % (length * 2)) / length;
@@ -142,7 +142,7 @@ namespace pr::maths::fft
 			Convolve(&areal[0], &aimag[0], &breal[0], &bimag[0], &creal[0], &cimag[0], m);
 
 			// Post-processing
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				// An accurate version of: angle = pi * i * i / length;
 				auto angle = maths::tau_by_2 * ((i * i) % (length * 2)) / length;
@@ -163,7 +163,7 @@ namespace pr::maths::fft
 			DFT(yr, yi, length);
 
 			// Compute the product in 'out'
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				outr[i] = xr[i] * yr[i] - xi[i] * yi[i];
 				outi[i] = xi[i] * yr[i] + xr[i] * yi[i];
@@ -173,7 +173,7 @@ namespace pr::maths::fft
 			DFT(outi, outr, length);
 
 			// Scaling (because DFT omits it)
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				outr[i] /= length;
 				outi[i] /= length;
@@ -193,7 +193,7 @@ namespace pr::maths::fft
 				auto sumi = 0.0;
 
 				// For each input element
-				for (int t = 0; t != length; ++t)
+				for (int t = 0; t != s_cast<int>(length); ++t)
 				{
 					auto angle = coef * (static_cast<long long>(t) * k % length);
 					sumr += real[t] * Cos(angle) - imag[t] * Sin(angle);
@@ -209,7 +209,7 @@ namespace pr::maths::fft
 		template <typename Real>
 		void ConvolveNaive(Real const* xr, Real const* xi, Real const* yr, Real const* yi, Real* outr, Real* outi, size_t length)
 		{
-			for (auto i = 0ULL; i != length; ++i)
+			for (auto i = 0; i != s_cast<int>(length); ++i)
 			{
 				for (auto j = 0ULL; j != length; ++j)
 				{
@@ -241,7 +241,7 @@ namespace pr::maths::fft
 		impl::DFT(outr.data(), outi.data(), length);
 		
 		// Convert the complex values to magnitudes
-		for (auto i = 0ULL; i != length; ++i)
+		for (auto i = 0; i != s_cast<int>(length); ++i)
 			outr[i] = sqrt(norm(std::complex<double>(outr[i], outi[i])));
 
 		return std::move(outr);
@@ -256,7 +256,7 @@ namespace pr::maths::fft
 		if (inputi != outi) memcpy(outi, inputi, length * sizeof(Real));
 
 		// Scale to get the true inverse
-		for (auto i = 0ULL; i != length; ++i)
+		for (auto i = 0; i != s_cast<int>(length); ++i)
 		{
 			outr[i] /= length;
 			outi[i] /= length;
@@ -474,30 +474,30 @@ namespace pr::maths
 		struct L
 		{
 			// Generate a vector of random real values
-			static std::vector<double> RandomReals(size_t n)
+			static std::vector<double> RandomReals(int n)
 			{
 				std::vector<double> result;
 				std::uniform_real_distribution<double> dist(-1.0, 1.0);
-				for (auto i = 0ULL; i != n; ++i) result.push_back(dist(g_rng()));
+				for (auto i = 0; i != n; ++i) result.push_back(dist(g_rng()));
 				return std::move(result);
 			}
 
 			// Returns the Log10 RMS error between 'x' and 'y'
-			static double Log10RMSError(double const* xr, double const* xi, double const* yr, double const* yi, size_t length)
+			static double Log10RMSError(double const* xr, double const* xi, double const* yr, double const* yi, int length)
 			{
 				auto err = std::pow(10, -99 * 2);
-				for (auto i = 0ULL; i != length; ++i)
+				for (auto i = 0; i != length; ++i)
 				{
 					auto real = xr[i] - yr[i];
 					auto imag = xi[i] - yi[i];
 					err += real * real + imag * imag;
 				}
-				length += size_t(length == 0);
+				length += (length == 0);
 				return std::log10(std::sqrt(err / length));
 			}
 
 			// Test run a FFT
-			static void TestFFT(size_t n, double& err0, double& err1)
+			static void TestFFT(int n, double& err0, double& err1)
 			{
 				auto inputr = RandomReals(n);
 				auto inputi = RandomReals(n);
@@ -514,7 +514,7 @@ namespace pr::maths
 			}
 
 			// Test run a convolution
-			static void TestConvolution(size_t n, double& err)
+			static void TestConvolution(int n, double& err)
 			{
 				auto input0r = RandomReals(n);
 				auto input0i = RandomReals(n);
@@ -538,13 +538,13 @@ namespace pr::maths
 			for (int i = 0; i != 13; ++i)
 			{
 				double err0, err1;
-				L::TestFFT(1ULL << i, err0, err1);
+				L::TestFFT(1 << i, err0, err1);
 				max_err0 = std::max(max_err0, err0);
 				max_err1 = std::max(max_err1, err1);
 			}
 
 			// Test small size FFTs
-			for (auto i = 0ULL; i != 30ULL; ++i)
+			for (auto i = 0; i != 30; ++i)
 			{
 				double err0, err1;
 				L::TestFFT(i, err0, err1);
@@ -553,9 +553,9 @@ namespace pr::maths
 			}
 
 			// Test diverse size FFTs
-			for (auto i = 0ULL, prev = 0ULL; i != 100ULL; ++i)
+			for (auto i = 0, prev = 0; i != 100; ++i)
 			{
-				auto n = static_cast<size_t>(std::lround(std::pow(1500.0, i / 100.0)));
+				auto n = static_cast<int>(std::lround(std::pow(1500.0, i / 100.0)));
 				if (n > prev)
 				{
 					double err0, err1;
@@ -582,9 +582,9 @@ namespace pr::maths
 			}
 	
 			// Test diverse size convolutions
-			for (auto i = 0ULL, prev = 0ULL; i != 100ULL; ++i)
+			for (auto i = 0, prev = 0; i != 100; ++i)
 			{
-				auto n = static_cast<size_t>(std::lround(std::pow(1500.0, i / 100.0)));
+				auto n = static_cast<int>(std::lround(std::pow(1500.0, i / 100.0)));
 				if (n > prev)
 				{
 					double err;
@@ -607,7 +607,7 @@ namespace pr::maths
 
 			// Create a sinusoidal signal
 			std::vector<double> signal(8192);
-			for (auto i = 0ULL, iend = signal.size(); i != iend; ++i)
+			for (auto i = 0, iend = s_cast<int>(signal.size()); i != iend; ++i)
 			{
 				signal[i] =
 					Sin(maths::tau * freq0 * i / SampFreq) +
@@ -624,7 +624,7 @@ namespace pr::maths
 				#if 1
 				{
 					std::string s_out;
-					for (auto i = 0ULL, length = frequencies.size(); i != length/2; ++i)
+					for (auto i = 0, length = s_cast<int>(frequencies.size()); i != length/2; ++i)
 					{
 						auto x = FreqAt(1.0 * i, SampFreq, length);
 						auto y = frequencies[i];
@@ -644,7 +644,7 @@ namespace pr::maths
 
 				{// Output the frequency response
 					std::string s_out;
-					for (auto i = 0ULL; i != length / 2; ++i)
+					for (auto i = 0; i != s_cast<int>(length) / 2; ++i)
 					{
 						auto x = FreqAt(static_cast<double>(i), SampFreq, length);
 						auto y = Sqrt(norm(std::complex<double>(outr[i], outi[i]));

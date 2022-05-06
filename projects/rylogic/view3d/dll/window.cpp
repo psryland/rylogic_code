@@ -68,6 +68,11 @@ namespace view3d
 		,m_bbox_scene(BBox::Reset())
 		,m_main_thread_id(std::this_thread::get_id())
 		,ReportError()
+		,OnSettingsChanged()
+		,OnInvalidated()
+		,OnRendering()
+		,OnSceneChanged()
+		,OnAnimationEvent()
 	{
 		try
 		{
@@ -605,7 +610,7 @@ namespace view3d
 	BBox Window::SceneBounds(EView3DSceneBounds bounds, int except_count, GUID const* except)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		auto except_arr = std::make_span(except, except_count);
+		std::span<GUID const> except_arr(except, except_count);
 		auto pred = [](LdrObject const& ob){ return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
 
 		pr::BBox bbox;
@@ -1025,7 +1030,7 @@ namespace view3d
 	{
 		// Set up the ray cast
 		pr::vector<HitTestRay> ray_casts;
-		for (auto& ray : std::make_span(rays, ray_count))
+		for (auto& ray : std::span<View3DHitTestRay const>(rays, ray_count))
 		{
 			HitTestRay r = {};
 			r.m_ws_origin = To<v4>(ray.m_ws_origin);
@@ -1036,7 +1041,7 @@ namespace view3d
 		// Initialise the results
 		View3DHitTestResult invalid = {};
 		invalid.m_distance = maths::float_max;
-		for (auto& r : std::make_span(hits, ray_count))
+		for (auto& r : std::span<View3DHitTestResult>(hits, ray_count))
 			r = invalid;
 
 		// Do the ray casts into the scene and save the results
