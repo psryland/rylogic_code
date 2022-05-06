@@ -70,7 +70,7 @@ namespace pr::rdr12
 	{
 		return *m_wnd;
 	}
-	ID3D12Device* Scene::d3d_device() const
+	ID3D12Device* Scene::D3DDevice() const
 	{
 		return rdr().D3DDevice();
 	}
@@ -156,7 +156,7 @@ namespace pr::rdr12
 	RenderStep const* Scene::FindRStep(ERenderStep id) const
 	{
 		for (auto& rs : m_render_steps)
-			if (rs->GetId() == id)
+			if (rs->Id == id)
 				return rs;
 
 		return nullptr;

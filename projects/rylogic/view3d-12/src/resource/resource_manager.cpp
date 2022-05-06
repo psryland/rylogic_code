@@ -69,16 +69,18 @@ namespace pr::rdr12
 	}
 	ResourceManager::~ResourceManager()
 	{
-		for (auto& tex : m_stock_textures)
-			tex = nullptr;
-		for (auto& mdl : m_stock_models)
-			mdl = nullptr;
+		m_stock_textures.resize(0);
+		m_stock_models.resize(0);
 	}
 
 	// Renderer access
 	Renderer& ResourceManager::rdr() const
 	{
 		return m_rdr;
+	}
+	ID3D12Device* ResourceManager::D3DDevice() const
+	{
+		return rdr().D3DDevice();
 	}
 
 	// Ensure stock Start/Stop creating resources
@@ -110,62 +112,82 @@ namespace pr::rdr12
 		m_gsync.Wait(sync_point);
 	}
 
+	// Create and initialise a resource
+	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(ResDesc const& desc)
+	{
+		D3DPtr<ID3D12Resource> res;
+		auto device = rdr().D3DDevice();
+
+		// Create a GPU visible resource that will hold the created texture.
+		Throw(device->CreateCommittedResource(
+			&desc.HeapProps, desc.HeapFlags, &desc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			desc.ClearValue ? &*desc.ClearValue : nullptr,
+			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
+
+		// If initialisation data is provided, initialise using an UploadBuffer
+		if (!desc.Data.empty())
+			UpdateSubresource(res.get(), desc.Data, 0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
+		// Transition the resource to a pixel shader resource
+		auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_cmd_list->ResourceBarrier(1, &barrier);
+
+		return res;
+	}
+
 	// Create a model.
 	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc)
 	{
-		if (mdesc.m_vb.ElemCount == 0)
+		if (mdesc.m_vb.Width == 0)
 			throw std::runtime_error("Attempt to create 0-length model vertex buffer");
-		if (mdesc.m_ib.ElemCount == 0)
+		if (mdesc.m_ib.Width == 0)
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
-		auto device = rdr().D3DDevice();
+		// Create a V/I buffers
+		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb);
+		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib);
+		//{
+		//	Throw(device->CreateCommittedResource(
+		//		&HeapProps::Default(),
+		//		D3D12_HEAP_FLAG_NONE,
+		//		&mdesc.m_vb,
+		//		D3D12_RESOURCE_STATE_COPY_DEST,
+		//		nullptr,
+		//		__uuidof(ID3D12Resource),
+		//		(void**)&vb.m_ptr));
+		//
+		//	// Initialise the vertex data
+		//	if (mdesc.m_vb.Data != nullptr)
+		//		UpdateSubresource(vb.get(), mdesc.m_vb, 0, alignof(Vert));
 
-		// Create a vertex buffer
-		D3DPtr<ID3D12Resource> vb;
-		{
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Default(),
-				D3D12_HEAP_FLAG_NONE,
-				&mdesc.m_vb,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				__uuidof(ID3D12Resource),
-				(void**)&vb.m_ptr));
-			Throw(vb->SetName(FmtS(L"%S:VB:%d", mdesc.m_name.c_str(), mdesc.m_vb.ElemCount)));
-		
-			// Initialise the vertex data
-			if (mdesc.m_vb.Data != nullptr)
-				UpdateSubresource(vb.get(), mdesc.m_vb, 0, alignof(Vert));
-
-			// Transition the vertex buffer to a pixel shader resource
-			auto barrier = ResourceBarrier::Transition(vb.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			m_cmd_list->ResourceBarrier(1, &barrier);
-		}
+		//	// Transition the vertex buffer to a pixel shader resource
+		//	auto barrier = ResourceBarrier::Transition(vb.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//	m_cmd_list->ResourceBarrier(1, &barrier);
+		//}
 
 		// Create an index buffer
-		D3DPtr<ID3D12Resource> ib;
-		{
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Default(),
-				D3D12_HEAP_FLAG_NONE,
-				&mdesc.m_ib,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				__uuidof(ID3D12Resource),
-				(void**)&ib.m_ptr));
-			Throw(ib->SetName(FmtS(L"%S:IB:%d", mdesc.m_name.c_str(), mdesc.m_ib.ElemCount)));
+		//{
+		//	Throw(device->CreateCommittedResource(
+		//		&HeapProps::Default(),
+		//		D3D12_HEAP_FLAG_NONE,
+		//		&mdesc.m_ib,
+		//		D3D12_RESOURCE_STATE_COPY_DEST,
+		//		nullptr,
+		//		__uuidof(ID3D12Resource),
+		//		(void**)&ib.m_ptr));
 
-			// Initialise the index data
-			if (mdesc.m_ib.Data != nullptr)
-				UpdateSubresource(ib.get(), mdesc.m_ib, 0, alignof(uint32_t));
+		//	// Initialise the index data
+		//	if (mdesc.m_ib.Data != nullptr)
+		//		UpdateSubresource(ib.get(), mdesc.m_ib, 0, alignof(uint32_t));
 
-			// Transition the vertex buffer to a pixel shader resource
-			auto barrier = ResourceBarrier::Transition(ib.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			m_cmd_list->ResourceBarrier(1, &barrier);
-		}
+		//	// Transition the vertex buffer to a pixel shader resource
+		//	auto barrier = ResourceBarrier::Transition(ib.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//	m_cmd_list->ResourceBarrier(1, &barrier);
+		//}
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.ElemCount, mdesc.m_ib.ElemCount, mdesc.m_vb.Stride(), mdesc.m_ib.Stride(), vb.get(), ib.get(), mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.Width, mdesc.m_ib.Width, mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}
@@ -179,110 +201,76 @@ namespace pr::rdr12
 		if (desc.m_tdesc.DepthOrArraySize != 1)
 			throw std::runtime_error("Expected a 2D texture");
 
-		// Create the texture resource
-		D3DPtr<ID3D12Resource> tex = CreateResource(desc);
+		D3DPtr<ID3D12Resource> res;
 
-		// todo - See if a sampler resource should be created as well, or is it the same as the static ones?
-		(void)desc.m_sdesc;
+		// If a uri is given, see if the Dx resource already exists
+		if (desc.m_uri != 0)
+		{
+			auto iter = m_lookup_res.find(desc.m_uri);
+			if (iter == end(m_lookup_res))
+			{
+				// If not, create the resource and add it to the lookup
+				res = CreateResource(desc.m_tdesc);
+
+				// Record the uri for reuse
+				AddLookup(m_lookup_res, desc.m_uri, res.get());
+				iter = m_lookup_res.find(desc.m_uri);
+			}
+			res = D3DPtr<ID3D12Resource>(iter->second, true);
+		}
+
+		// Otherwise, just create the texture
+		else
+		{
+			res = CreateResource(desc.m_tdesc);
+		}
 
 		// Allocate a new texture instance
-		Texture2DPtr inst(rdr12::New<Texture2D>(*this, desc.m_id, tex.get(), 0, desc.m_has_alpha, desc.m_name.c_str()), true);
+		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
 		assert(m_mem_tracker.add(inst.get()));
 
-		auto device = rdr().D3DDevice();
-
-		// Create views for the texture
-		if (!AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
-		{
-			// Check the texture format is supported
-			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
-			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE))
-				throw std::runtime_error("Texture format is not supported as a shader resource view");
-
-			// Create the SRV
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
-				.Format = desc.m_tdesc.Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = {
-					.MostDetailedMip = 0,
-					.MipLevels = s_cast<UINT>(-1),
-					.PlaneSlice = 0,
-					.ResourceMinLODClamp = 0.f,
-				},
-			};
-			inst->m_srv = m_descriptor_store.Create(tex.get(), srv_desc);
-		}
-		if (AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
-		{
-			// Check the texture format is supported
-			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
-			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) ||
-				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) ||
-				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE))
-				throw std::runtime_error("Texture format is not supported as a unordered access view");
-
-			// Create the UAV
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {
-				.Format = desc.m_tdesc.Format,
-				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
-				.Texture2D = {
-					.MipSlice = 0,
-					.PlaneSlice = 0,
-				},
-			};
-			inst->m_uav = m_descriptor_store.Create(tex.get(), uav_desc);
-		}
-		if (AllSet(desc.m_tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET))
-		{
-			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {desc.m_tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
-			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
-				throw std::runtime_error("Texture format is not supported as a render target view");
-
-			// Create the RTV
-			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
-				.Format = desc.m_tdesc.Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = {
-					.MipSlice = 0,
-					.PlaneSlice = 0,
-				},
-			};
-			inst->m_rtv = m_descriptor_store.Create(tex.get(), rtv_desc);
-		}
-
-		// Add a pointer (not a reference) to the texture instance to the lookup table.
+		// Add the texture instance pointer (not ref counted) to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
 		return inst;
 	}
-	TextureCubePtr ResourceManager::CreateTextureCube(RdrId id, std::filesystem::path const& resource_path, char const* name)
+	Texture2DPtr ResourceManager::CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
-		// Notes:
-		//  - A cube map is an array of 6 2D textures.
-		//  - DDS image files contain all six faces in the single file. Other image types need to be loaded separately.
-		//  - 'resource_path' should contain '??' where the first '?' is the sign (+,-) and the second '?' is the axis (x,y,z)
-
 		// Check whether 'id' already exists, if so, throw.
-		if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
-			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
+		if (desc_.m_id != AutoId && m_lookup_tex.find(desc_.m_id) != end(m_lookup_tex))
+			throw std::runtime_error(pr::FmtS("Texture Id '%d' already exists, use FindTexture", desc_.m_id));
 		if (resource_path.empty())
-			throw std::runtime_error("Resource path must be given");
+			throw std::runtime_error("A resource path must be given");
 
 		// Create the texture resource
-		TextureDesc desc;
 		D3DPtr<ID3D12Resource> res;
+		TextureDesc desc = desc_;
 
-		// Create a texture from embedded resources
-		if (resource_path.c_str()[0] == '@')
+		// Accept stock texture strings: #black, #white, #checker, etc
+		// This is handy for model files that contain string paths for textures.
+		// The code that loads these models doesn't need to handle strings such as '#white' as a special case
+		if (*resource_path.c_str() == '#')
+		{
+			auto stock = Enum<EStockTexture>::TryParse(resource_path.c_str() + 1, false);
+			if (!stock)
+				throw std::runtime_error(Fmt("Unknown stock texture name: %s", resource_path.string().c_str() + 1));
+
+			// Return a clone of the stock texture
+			auto stock_tex = FindTexture(*stock);
+			if (stock_tex == nullptr)
+				throw std::runtime_error(Fmt("Stock texture '%s' not found", resource_path.string().c_str() + 1));
+
+			return stock_tex;
+		}
+
+		// Create a texture from embedded resource
+		if (*resource_path.c_str() == '@')
 		{
 			auto uri = resource_path.wstring();
 
 			desc.m_uri = MakeId(uri.c_str());
-			desc.m_name = name ? name : To<string32>(str::FindLastOf(uri.c_str(), L":"));
+			if (desc.m_name.empty())
+				desc.m_name = To<string32>(str::FindLastOf(uri.c_str(), L":"));
 
 			// Look for an existing Dx12 resource corresponding to the uri
 			auto iter = m_lookup_res.find(desc.m_uri);
@@ -292,6 +280,110 @@ namespace pr::rdr12
 				HMODULE hmodule; wstring32 res_type, res_name;
 				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
 
+				// Get the embedded resource
+				auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
+				auto data = std::span{ emb.m_data, emb.m_len };
+
+				// Create the texture data
+				auto [images, tdesc] = LoadImageData(data, 1, false, 0, &rdr().Features());
+				desc.m_tdesc = tdesc;
+				desc.m_tdesc.Data = images;
+
+				// Create the texture
+				res = CreateResource(desc.m_tdesc);
+
+				// Record the uri for reuse
+				AddLookup(m_lookup_res, desc.m_uri, res.get());
+				iter = m_lookup_res.find(desc.m_uri);
+			}
+			res = D3DPtr<ID3D12Resource>(iter->second, true);
+		}
+
+		// Otherwise, create from a file on disk
+		else
+		{
+			using namespace std::filesystem;
+			auto filepath = resource_path.lexically_normal();
+
+			// Generate an id from the filepath
+			desc.m_uri = MakeId(filepath.c_str());
+			if (desc.m_name.empty())
+				desc.m_name = To<string32>(filepath.filename().c_str());
+
+			// Look for an existing DX texture corresponding to the filepath
+			auto iter = m_lookup_res.find(desc.m_uri);
+			if (iter == end(m_lookup_res))
+			{
+				// If the texture filepath doesn't exist, use the resolve event
+				if (!exists(filepath))
+				{
+					auto args = ResolvePathArgs{filepath, false};
+					ResolveFilepath(*this, args);
+					if (!args.handled || !exists(args.filepath))
+						throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", filepath.string().c_str()));
+
+					filepath = std::move(args.filepath);
+				}
+
+				// Load the texture from disk
+				auto [images, tdesc] = LoadImageData(filepath, 1, true, 0, &rdr().Features());
+				desc.m_tdesc = tdesc;
+				desc.m_tdesc.Data = images;
+
+				// Create the texture
+				res = CreateResource(desc.m_tdesc);
+
+				// Record the uri for reuse
+				AddLookup(m_lookup_res, desc.m_uri, res.get());
+				iter = m_lookup_res.find(desc.m_uri);
+			}
+			res = D3DPtr<ID3D12Resource>(iter->second, true);
+		}
+	
+		// Allocate a new texture instance
+		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
+		assert(m_mem_tracker.add(inst.get()));
+
+		// Add a pointer (not ref counted) to the texture instance to the lookup table.
+		// The caller owns the texture, when released it will be removed from this lookup.
+		AddLookup(m_lookup_tex, inst->m_id, inst.get());
+		return inst;
+}
+	TextureCubePtr ResourceManager::CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc_)
+	{
+		// Notes:
+		//  - A cube map is an array of 6 2D textures.
+		//  - DDS image files contain all six faces in the single file. Other image types need to be loaded separately.
+		//  - 'resource_path' should contain '??' where the first '?' is the sign (+,-) and the second '?' is the axis (x,y,z)
+
+		// Check whether 'id' already exists, if so, throw.
+		if (desc_.m_id != AutoId && m_lookup_tex.find(desc_.m_id) != end(m_lookup_tex))
+			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", desc_.m_id));
+		if (resource_path.empty())
+			throw std::runtime_error("Resource path must be given");
+
+		// Create the texture resource
+		D3DPtr<ID3D12Resource> res;
+		TextureDesc desc = desc_;
+
+		// Create a texture from embedded resources
+		if (resource_path.c_str()[0] == '@')
+		{
+			auto uri = resource_path.wstring();
+
+			desc.m_uri = MakeId(uri.c_str());
+			if (desc.m_name.empty())
+				desc.m_name = To<string32>(str::FindLastOf(uri.c_str(), L":"));
+
+			// Look for an existing Dx12 resource corresponding to the uri
+			auto iter = m_lookup_res.find(desc.m_uri);
+			if (iter == end(m_lookup_res))
+			{
+				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
+				HMODULE hmodule; wstring32 res_type, res_name;
+				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
+
+				// The faces of the cube
 				pr::vector<std::span<uint8_t const>> source_images;
 
 				// Read each face of the cube
@@ -313,7 +405,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc);
+				res = CreateResource(desc.m_tdesc);
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -322,7 +414,7 @@ namespace pr::rdr12
 			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
-		// Otherwise, create from file on disk
+		// Otherwise, create from a file on disk
 		else
 		{
 			using namespace std::filesystem;
@@ -330,7 +422,8 @@ namespace pr::rdr12
 
 			// Generate an id from the filepath
 			desc.m_uri = MakeId(filepath.c_str());
-			desc.m_name = name ? name : To<string32>(filepath.filename().c_str());
+			if (desc.m_name.empty())
+				desc.m_name = To<string32>(filepath.filename().c_str());
 
 			// Look for an existing DX texture corresponding to the filepath
 			auto iter = m_lookup_res.find(desc.m_uri);
@@ -342,7 +435,7 @@ namespace pr::rdr12
 					auto args = ResolvePathArgs{filepath, false};
 					ResolveFilepath(*this, args);
 					if (!args.handled || !exists(args.filepath))
-						return nullptr;
+						throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", filepath.string().c_str()));
 
 					filepath = std::move(args.filepath);
 				}
@@ -353,7 +446,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc);
+				res = CreateResource(desc.m_tdesc);
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -363,10 +456,10 @@ namespace pr::rdr12
 		}
 
 		// Allocate a new texture instance
-		TextureCubePtr inst(rdr12::New<TextureCube>(*this, desc.m_id, res.get(), desc.m_uri, desc.m_name.c_str()), true);
+		TextureCubePtr inst(rdr12::New<TextureCube>(*this, res.get(), desc), true);
 		assert(m_mem_tracker.add(inst.get()));
 
-		// Add a pointer (not a reference) to the texture instance to the lookup table.
+		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
 		return inst;
@@ -384,7 +477,7 @@ namespace pr::rdr12
 	// Return a stock texture
 	Texture2DPtr ResourceManager::FindTexture(EStockTexture id) const
 	{
-		if (s_cast<size_t>(id) > _countof(m_stock_textures))
+		if (s_cast<size_t>(id) > m_stock_textures.size())
 			throw std::runtime_error(FmtS("Stock texture %s does not exist", Enum<EStockTexture>::ToStringA(id)));
 
 		return m_stock_textures[s_cast<int>(id)];
@@ -393,7 +486,7 @@ namespace pr::rdr12
 	// Return a pointer to a stock model
 	ModelPtr ResourceManager::FindModel(EStockModel id) const
 	{
-		if (s_cast<size_t>(id) > _countof(m_stock_models))
+		if (s_cast<size_t>(id) > m_stock_models.size())
 			throw std::runtime_error(FmtS("Stock model %s does not exist", Enum<EStockModel>::ToStringA(id)));
 
 		return m_stock_models[s_cast<int>(id)];
@@ -402,22 +495,23 @@ namespace pr::rdr12
 	// Create the basic textures that exist from startup
 	void ResourceManager::CreateStockTextures()
 	{
+		m_stock_textures.resize(EStockTexture_::NumberOf);
 		{// EStockTexture::Black
 			uint32_t const data[] = {0};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#black");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), ResDesc::Tex2D(src, 1), false, 0, "#black");
 			m_stock_textures[s_cast<int>(EStockTexture::Black)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::White:
 			uint32_t const data[] = {0xFFFFFFFF};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::White), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#white");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::White), ResDesc::Tex2D(src, 1), false, 0, "#white");
 			m_stock_textures[s_cast<int>(EStockTexture::White)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Gray:
 			uint32_t const data[] = {0xFF808080};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Gray), TexDesc::Tex2D(src, 1), SamDesc::LinearClamp(), false, 0, "#gray");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Gray), ResDesc::Tex2D(src, 1), false, 0, "#gray");
 			m_stock_textures[s_cast<int>(EStockTexture::Gray)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker:
@@ -437,8 +531,8 @@ namespace pr::rdr12
 				#undef O
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker");
+			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker), ResDesc::Tex2D(src, 0), false, 0, "#checker");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker2:
@@ -458,8 +552,8 @@ namespace pr::rdr12
 				#undef O
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker2), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker2");
+			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker2), ResDesc::Tex2D(src, 0), false, 0, "#checker2");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker2)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::Checker3:
@@ -479,8 +573,8 @@ namespace pr::rdr12
 				#undef O
 			};
 			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker3), TexDesc::Tex2D(src, 0), sam, false, 0, "#checker3");
+			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker3), ResDesc::Tex2D(src, 0), false, 0, "#checker3");
 			m_stock_textures[s_cast<int>(EStockTexture::Checker3)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteSpot:
@@ -499,7 +593,7 @@ namespace pr::rdr12
 			}
 
 			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteSpot), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, 0, "#whitespot");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteSpot), ResDesc::Tex2D(src, 0), true, 0, "#whitespot");
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteSpot)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteTriangle:
@@ -539,13 +633,13 @@ namespace pr::rdr12
 			}
 
 			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteTriangle), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), true, 0, "#whitetriangle");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteTriangle), ResDesc::Tex2D(src, 0), true, 0, "#whitetriangle");
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteTriangle)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::EnvMapProjection:
 			uint32_t const data[] = {0};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), TexDesc::Tex2D(src, 0), SamDesc::LinearClamp(), false, 0, "#envmapproj");
+			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), ResDesc::Tex2D(src, 0), false, 0, "#envmapproj");
 			m_stock_textures[s_cast<int>(EStockTexture::EnvMapProjection)] = CreateTexture2D(tdesc);
 		}
 	}
@@ -553,6 +647,7 @@ namespace pr::rdr12
 	// Create stock models
 	void ResourceManager::CreateStockModels()
 	{
+		m_stock_models.resize(EStockModel_::NumberOf);
 		{// Basis/focus point model
 			constexpr Vert verts[] = {
 				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
@@ -701,34 +796,6 @@ namespace pr::rdr12
 
 			m_stock_models[s_cast<int>(EStockModel::SelectionBox)] = ptr;
 		}
-	}
-
-	// Create and initialise a resource
-	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(TextureDesc const& desc)
-	{
-		D3DPtr<ID3D12Resource> res;
-		auto device = rdr().D3DDevice();
-
-		// Create a GPU visible resource that will hold the created texture.
-		Throw(device->CreateCommittedResource(
-			&HeapProps::Default(),                                                  // a default heap
-			D3D12_HEAP_FLAG_NONE,                                                   // no flags
-			&desc.m_tdesc,                                                          // the description of the texture
-			D3D12_RESOURCE_STATE_COPY_DEST,                                         // the texture will be copied from the upload heap to here, so it starts out as copy dest state
-			desc.m_clear_value.has_value() ? &desc.m_clear_value.value() : nullptr, // used for render targets and depth/stencil buffers
-			__uuidof(ID3D12Resource),
-			(void**)&res.m_ptr));
-		Throw(res->SetName(FmtS(L"%S", desc.m_name.c_str())));
-
-		// If initialisation data is provided, initialise using an UploadBuffer
-		if (!desc.m_tdesc.Data.empty())
-			UpdateSubresource(res.get(), desc.m_tdesc.Data, 0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-
-		// Transition the texture to a pixel shader resource
-		auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		m_cmd_list->ResourceBarrier(1, &barrier);
-
-		return res;
 	}
 
 	// Update the data in 'dest' (sub resource range: [sub0,sub0+images.size())) using a staging buffer
@@ -881,16 +948,16 @@ namespace pr::rdr12
 		m_lookup_tex.erase(iter);
 	}
 
-	// Return a shader to the allocator
-	void ResourceManager::Delete(Shader* shader)
-	{
-		if (shader == nullptr)
-			return;
+	//// Return a shader to the allocator
+	//void ResourceManager::Delete(Shader* shader)
+	//{
+	//	if (shader == nullptr)
+	//		return;
 
-		Renderer::Lock lock(rdr());
-		assert(m_mem_tracker.remove(shader));
-		rdr12::Delete<Shader>(shader);
-	}
+	//	Renderer::Lock lock(rdr());
+	//	assert(m_mem_tracker.remove(shader));
+	//	rdr12::Delete<Shader>(shader);
+	//}
 }
 
 

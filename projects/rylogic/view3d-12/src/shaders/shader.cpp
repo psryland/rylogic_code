@@ -9,6 +9,32 @@
 
 namespace pr::rdr12
 {
+	Shader::Shader()
+		:RefCounted<Shader>()
+		,Code()
+		,Signature()
+	{}
+
+	// Config the shader
+	void Shader::Setup(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*)
+	{
+		// If 'dle' == nullptr, derived shaders should configure for the frame
+		// If 'dle' != nullptr, derived shaders should configure per drawlist element
+	}
+
+	// Ref counting clean up function
+	void Shader::RefCountZero(RefCounted<Shader>* doomed)
+	{
+		auto shdr = static_cast<Shader*>(doomed);
+		shdr->Delete();
+	}
+	void Shader::Delete()
+	{
+		rdr12::Delete<Shader>(this);
+		//m_mgr->Delete(this);
+	}
+
+	// Compiled shader byte code
 	namespace shader_code
 	{
 		// Not a shader
@@ -74,23 +100,5 @@ namespace pr::rdr12
 		ByteCode const ray_cast_vert_gs(compiled::ray_cast_vert_gs);
 		ByteCode const ray_cast_edge_gs(compiled::ray_cast_edge_gs);
 		ByteCode const ray_cast_face_gs(compiled::ray_cast_face_gs);
-	}
-
-	Shader::Shader(ResourceManager& mgr, GpuSync& gsync, int64_t blk_size, ShaderCode code)
-		:RefCounted<Shader>()
-		,m_mgr(&mgr)
-		,m_cbuf(gsync, blk_size)
-		,Code(code)
-	{}
-	
-	// Ref counting clean up function
-	void Shader::RefCountZero(RefCounted<Shader>* doomed)
-	{
-		auto shdr = static_cast<Shader*>(doomed);
-		shdr->Delete();
-	}
-	void Shader::Delete()
-	{
-		m_mgr->Delete(this);
 	}
 }

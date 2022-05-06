@@ -10,10 +10,10 @@ namespace pr::rdr12
 {
 	struct ModelDesc
 	{
-		BufferDesc m_vb;      // The vertex buffer description and initialisation data
-		BufferDesc m_ib;      // The index buffer description and initialisation data
-		BBox       m_bbox;    // Model space bounding box
-		string32   m_name;    // Debugging name for the model
+		ResDesc  m_vb;      // The vertex buffer description and initialisation data
+		ResDesc  m_ib;      // The index buffer description and initialisation data
+		BBox     m_bbox;    // Model space bounding box
+		string32 m_name;    // Debugging name for the model
 
 		ModelDesc()
 			:m_vb()
@@ -23,18 +23,27 @@ namespace pr::rdr12
 		{}
 
 		// Construct using a set number of verts and indices
-		ModelDesc(BufferDesc const& vb, BufferDesc const& ib, BBox const& bbox = BBox::Reset(), char const* name = "")
+		ModelDesc(ResDesc const& vb, ResDesc const& ib, BBox const& bbox = BBox::Reset(), char const* name = "")
 			:m_vb(vb)
 			,m_ib(ib)
 			,m_bbox(bbox)
 			,m_name(name)
 		{}
 
-		// Construct the model buffer with typical defaults
-		template <typename Vert, size_t VSize, typename Indx, size_t ISize>
-		ModelDesc(Vert const (&vert)[VSize], Indx const (&idxs)[ISize], BBox const& bbox = BBox::Reset(), char const* name = "")
-			:m_vb(BufferDesc::VBuf<Vert>(VSize, &vert[0]))
-			,m_ib(BufferDesc::IBuf<Indx>(ISize, &idxs[0]))
+		// Construct the model buffer from spans of verts and indices
+		template <typename TVert, typename TIndx>
+		ModelDesc(std::span<TVert const> vert, std::span<TIndx const> idxs, BBox const& bbox = BBox::Reset(), char const* name = "")
+			:m_vb(ResDesc::Buf<TVert>(vert.size(), vert.data()))
+			,m_ib(ResDesc::Buf<TIndx>(idxs.size(), idxs.data()))
+			,m_bbox(bbox)
+			,m_name(name)
+		{}
+
+		// Construct the model buffer from static arrays of verts and indices
+		template <typename TVert, typename TIndx, size_t VSize, size_t ISize>
+		ModelDesc(TVert const (&vert)[VSize], TIndx const (&idxs)[ISize], BBox const& bbox = BBox::Reset(), char const* name = "")
+			:m_vb(ResDesc::Buf<TVert>(VSize, &vert[0]))
+			,m_ib(ResDesc::Buf<TIndx>(ISize, &idxs[0]))
 			,m_bbox(bbox)
 			,m_name(name)
 		{}

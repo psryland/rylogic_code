@@ -2,10 +2,9 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-
-#include "screen_space_cbuf.hlsli"
 #include "../types.hlsli"
 #include "../common/vector.hlsli"
+#include "../forward/forward_cbuf.hlsli"
 
 // Converts line geometry into tristrip
 #ifdef PR_RDR_GSHADER_thick_line_strip

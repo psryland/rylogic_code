@@ -188,6 +188,13 @@ namespace pr::rdr12
 				,m_lock(rdr.m_d3d_mutex)
 			{}
 
+			// Access the device
+			ID3D12Device4* D3DDevice() const
+			{
+				// The D3D device is free-threaded in DX12, no need to synchronise access to it.
+				return m_rdr.m_d3d_device.get();
+			}
+
 			// Return the D2D device
 			ID2D1Device* D2DDevice() const
 			{

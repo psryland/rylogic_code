@@ -14,7 +14,7 @@ namespace pr::rdr12
 		:m_topo(topo)
 		,m_geom(geom)
 		,m_shaders()
-		,m_pipe_state()
+		,m_pso()
 		,m_tex_diffuse()
 		,m_tint(Colour32White)
 		,m_sort_key(ESortGroup::Default)

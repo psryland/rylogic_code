@@ -4,8 +4,10 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
@@ -54,6 +56,8 @@ namespace pr::rdr12
 			static_assert((sizeof(CBufFrame) % 16) == 0);
 			static_assert((sizeof(CBufNugget) % 16) == 0);
 			static_assert((sizeof(CBufFade) % 16) == 0);
+			static_assert((sizeof(CBufScreenSpace) % 16) == 0);
+			static_assert((sizeof(CBufDiag) % 16) == 0);
 		}
 		namespace ds
 		{
@@ -62,21 +66,11 @@ namespace pr::rdr12
 			static_assert((sizeof(CBufLighting) % 16) == 0);
 			static_assert((sizeof(CBufNugget) % 16) == 0);
 		}
-		namespace ss
-		{
-			#include "view3d-12/src/shaders/hlsl/screenspace/screen_space_cbuf.hlsli"
-			static_assert((sizeof(CBufFrame) % 16) == 0);
-		}
 		namespace smap
 		{
 			#include "view3d-12/src/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
 			static_assert((sizeof(CBufFrame) % 16) == 0);
 			static_assert((sizeof(CBufNugget) % 16) == 0);
-		}
-		namespace diag
-		{
-			#include "view3d-12/src/shaders/hlsl/utility/diagnostic_cbuf.hlsli"
-			static_assert((sizeof(CBufFrame) % 16) == 0);
 		}
 	}
 	
@@ -178,6 +172,17 @@ namespace pr::rdr12
 		cb.m_env_reflectivity = reflectivity != nullptr
 			? *reflectivity * nug.m_relative_reflectivity
 			: 0.0f;
+	}
+
+	// Set screen space, per instance constants
+	template <typename TCBuf> requires (requires(TCBuf x) { x.m_screen_dim; x.m_size; x.m_depth; })
+	void SetScreenSpace(TCBuf& cb, BaseInstance const& inst, Scene const& scene, v2 size, bool depth)
+	{
+		auto sz = inst.find<v2>(EInstComp::SSSize);
+		auto rt_size = scene.wnd().BackBufferSize();
+		cb.m_screen_dim = To<v2>(rt_size);
+		cb.m_size = sz ? *sz : size;
+		cb.m_depth = depth;
 	}
 
 	// Set the scene view constants

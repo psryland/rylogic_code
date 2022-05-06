@@ -19,7 +19,6 @@ namespace pr::rdr12
 		
 		// Cube map to world transform
 		m4x4 m_cube2w;
-
-		TextureCube(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, char const* name);
+		TextureCube(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
 	};
 }

@@ -35,7 +35,6 @@ namespace pr::rdr12
 		{}
 
 		// Add a constant buffer parameter
-		template <typename TCBuf>
 		void CBuf(EParam index, ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
 		{
 			get(index) = D3D12_ROOT_PARAMETER1 {

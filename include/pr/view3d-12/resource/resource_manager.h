@@ -21,13 +21,16 @@ namespace pr::rdr12
 		//  - When resources are created, the commands are added to the internal command list. Callers need to 
 		//  - Maintains resource heaps and allocation of resources (i.e. vertex buffers, index buffers, textures, etc)
 		//  - Use 'GetPrivateData(WKPDID_D3DDebugObjectNameW,..)' to get names of resources.
-
+		//  - In Dx12, samplers are separate from textures. Callers should create and store them separately.
+		//  - Compiler complaints about Model not being defined here means you have forgotten to include model.h in some cpp.
 	private:
 
 		using GfxCmdList = D3DPtr<ID3D12GraphicsCommandList>;
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;
 		using DxResLookup        = Lookup<RdrId, ID3D12Resource*>;
 		using AllocationsTracker = AllocationsTracker<void>;
+		using ModelCont          = pr::vector<ModelPtr>;
+		using TextureCont        = pr::vector<Texture2DPtr>;
 
 		AllocationsTracker m_mem_tracker;      // Resource allocation tracker
 		Renderer&          m_rdr;              // The owning renderer instance
@@ -42,12 +45,8 @@ namespace pr::rdr12
 		pr::GdiPlus        m_gdiplus;          // Context scope for GDI
 		AutoSub            m_eh_resize;        // Event handler subscription for the RT resize event
 		int                m_gdi_dc_ref_count; // Used to detect outstanding DC references
-
-		// Stock models
-		ModelPtr           m_stock_models[EStockModel_::NumberOf];
-
-		// Stock textures
-		Texture2DPtr       m_stock_textures[EStockTexture_::NumberOf];
+		ModelCont          m_stock_models;     // Stock models
+		TextureCont        m_stock_textures;   // Stock textures
 
 	public:
 
@@ -58,6 +57,7 @@ namespace pr::rdr12
 
 		// Renderer access
 		Renderer& rdr() const;
+		ID3D12Device* D3DDevice() const;
 
 		// Flush creation commands to the GPU. Returns the sync point for when they've been executed
 		uint64_t FlushToGpu(bool block);
@@ -68,28 +68,28 @@ namespace pr::rdr12
 
 		// Create a new texture instance.
 		Texture2DPtr CreateTexture2D(TextureDesc const& desc);
-		TextureCubePtr CreateTextureCube(RdrId id, std::filesystem::path const& resource_path, char const* name);
+		Texture2DPtr CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc);
+		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model);
 
-		// Create shader
-		template <typename TShader> requires (std::is_base_of_v<Shader, TShader>)
-		RefPtr<TShader> CreateShader(GpuSync& gsync)
-		{
-			RefPtr<TShader> shdr(rdr12::New<TShader>(*this, gsync), true);
-			assert(m_mem_tracker.add(shdr.get()));
-			return shdr;
-		}
-
 		// Return a pointer to an existing texture
-		template <typename TextureType, typename = std::enable_if_t<std::is_base_of_v<TextureBase, TextureType>>>
+		template <typename TextureType> requires (std::is_base_of_v<TextureBase, TextureType>)
 		RefPtr<TextureType> FindTexture(RdrId id) const
 		{
 			auto tex = GetOrDefault(m_lookup_tex, id, (TextureBase*)nullptr);
-			return pr::RefPtr<TextureType>(static_cast<TextureType*>(tex), true);
+			return RefPtr<TextureType>(static_cast<TextureType*>(tex), true);
 		}
-		
+
+		// Convenience method for cached textures
+		template <typename TextureType> requires(std::is_base_of_v<TextureBase, TextureType>)
+		RefPtr<TextureType> FindTexture(RdrId id, std::function<RefPtr<TextureType>()> factory)
+		{
+			auto tex = FindTexture<TextureType>(id);
+			return tex != nullptr ? tex : factory();
+		}
+
 		// Return a pointer to a stock texture
 		Texture2DPtr FindTexture(EStockTexture stock) const;
 
@@ -116,7 +116,7 @@ namespace pr::rdr12
 		void CreateStockModels();
 
 		// Create and initialise a resource
-		D3DPtr<ID3D12Resource> CreateResource(TextureDesc const& desc);
+		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc);
 
 		// Update the data in 'dest' using a staging buffer
 		void UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment);
@@ -127,6 +127,5 @@ namespace pr::rdr12
 		void Delete(Model* model);
 		void Delete(Nugget* nugget);
 		void Delete(TextureBase* tex);
-		void Delete(Shader* shader);
 	};
 }

@@ -10,17 +10,31 @@ namespace pr::rdr12::shaders
 {
 	namespace fwd
 	{
-		struct CBufFrame;
-		struct CBufNugget;
-		struct CBufFade;
+		enum class ERootParam
+		{
+			CBufFrame = 0,
+			CBufNugget,
+			CBufFade,
+			CBufScreenSpace,
+			CBufDiag = CBufScreenSpace,
+			DiffTexture,
+			EnvMap,
+			SMap,
+			ProjTex,
+		};
+
+		enum class ESampParam
+		{
+			DiffTexture,
+			EnvMap,
+			SMap,
+			ProjTex,
+		};
 	}
 
 	struct Forward :Shader
 	{
-		Forward(ResourceManager& mgr, GpuSync& gsync);
-
-		// Add shader constants to an upload buffer
-		D3D12_GPU_VIRTUAL_ADDRESS Set(fwd::CBufFrame const& cbuf, bool might_reuse);
-		D3D12_GPU_VIRTUAL_ADDRESS Set(fwd::CBufNugget const& cbuf, bool might_reuse);
+		explicit Forward(ID3D12Device* device);
+		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle) override;
 	};
 }

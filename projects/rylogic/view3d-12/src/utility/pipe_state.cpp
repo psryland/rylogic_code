@@ -16,12 +16,10 @@ namespace pr::rdr12
 	// Return a pipeline state instance for the given description
 	ID3D12PipelineState* PipeStatePool::Get(PipeStateDesc const& desc)
 	{
-		// Hash the pipeline state
-		auto hash = pr::hash::HashBytes(&desc, &desc + 1);
 		auto frame_number = m_wnd->FrameNumber();
 
 		// See if a pipeline state object already exists
-		auto iter = pr::find_if(m_pool, [=](auto& pso) { return pso.m_hash == hash; });
+		auto iter = pr::find_if(m_pool, [=](auto& pso) { return pso.m_hash == desc.m_hash; });
 		if (iter == m_pool.end())
 		{
 			// If it doesn't exists, create it now
@@ -44,7 +42,7 @@ namespace pr::rdr12
 			// Create the pipeline state instance
 			D3DPtr<ID3D12PipelineState> pso;
 			Throw(device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso.m_ptr));
-			iter = m_pool.insert(iter, PipeStateObject(pso, frame_number, hash));
+			iter = m_pool.insert(iter, PipeStateObject(pso, frame_number, desc.m_hash));
 		}
 
 		auto& pso = *iter;

@@ -13,7 +13,6 @@
 //  - Use 'Rylo-Shadows'
 // Order Independent Alpha
 //  - Try that thing you read about weighted alpha by screen depth
-
 #pragma once
 
 // To use runtime shaders:

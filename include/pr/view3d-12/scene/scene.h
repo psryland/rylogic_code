@@ -47,10 +47,8 @@ namespace pr::rdr12
 		//RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
-		//DSBlock        m_dsb;           // Scene-wide depth states
-		//RSBlock        m_rsb;           // Scene-wide render states
-		//BSBlock        m_bsb;           // Scene-wide blend states
-		AutoSub          m_eh_resize;    // RT resize event handler subscription
+		PipeStates       m_pso;           // Scene-wide pipe state overrides
+		AutoSub          m_eh_resize;     // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::RenderForward}, SceneCamera const& cam = SceneCamera{});
 		~Scene();
@@ -58,7 +56,7 @@ namespace pr::rdr12
 		// Renderer access
 		Renderer& rdr() const;
 		Window& wnd() const;
-		ID3D12Device* d3d_device() const;
+		ID3D12Device* D3DDevice() const;
 
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame

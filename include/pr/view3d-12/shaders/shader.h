@@ -20,6 +20,46 @@ namespace pr::rdr12
 		ByteCode HS;
 	};
 
+	// A shader base class
+	struct Shader :RefCounted<Shader>
+	{
+		// Notes:
+		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc apply to all stages now. 
+		//  - A shader without a Signature is an 'overlay' shader, intended to replace parts of a full shader. Overlay shaders
+		//    must use constant buffers that don't conflict with the base shader, and the base shader must have a signature that
+		//    handles all possible overlays.
+		//  - A shader does not contain a reference to a render step or window (i.e. without a GpuSync).
+		//    When the shader is needed, it is "realised" in a given pool that is owned by the window/render step, etc.
+		//  - The size of a shader depends on the shader type, so this type must be allocated.
+		//  - The shader contains the shader specific parameters.
+		//  - The realised shader is reused by the window/render step.
+		//  - All shaders can share one GpuUploadBuffer
+		ShaderCode Code;                       // Byte code for the shader parts
+		D3DPtr<ID3D12RootSignature> Signature; // Signature for shader, null if an overlay
+		
+		Shader();
+		virtual ~Shader() {}
+
+		// Config the shader.
+		// This method may be called with:
+		//  'dle == null' => Setup constants for the frame
+		//  'dle != null' => Setup constants per nugget
+		virtual void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle);
+
+		// Create a shader
+		template <typename TShader, typename... Args> requires (std::is_base_of_v<Shader, TShader>)
+		static RefPtr<TShader> Create(Args... args)
+		{
+			RefPtr<TShader> shdr(rdr12::New<TShader>(std::forward<Args>(args)...), true);
+			return shdr;
+		}
+
+		// Ref counting clean up
+		static void RefCountZero(RefCounted<Shader>* doomed);
+		protected: virtual void Delete();
+	};
+
+
 	// Statically declared shader byte code
 	namespace shader_code
 	{
@@ -54,29 +94,4 @@ namespace pr::rdr12
 		extern ByteCode const ray_cast_edge_gs;
 		extern ByteCode const ray_cast_face_gs;
 	}
-
-	// Shader base class
-	struct Shader :RefCounted<Shader>
-	{
-		// Notes:
-		//  - Base class for all shaders.
-		//  - Shaders are allocated types because they can be different sizes.
-		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc
-		//    apply to all stages now. If a shader only has a GS, it can be applied on top of another
-		//    shader. I.e. Shaders can be layered.
-		//  - Shader instances should be lightweight, we may want multiple instances with
-		//    different parameters... should the parameters be separate then?
-		ResourceManager* m_mgr;
-		GpuUploadBuffer m_cbuf;
-
-		Shader(ResourceManager& mgr, GpuSync& gsync, int64_t blk_size, ShaderCode code);
-		virtual ~Shader() {}
-
-		// The compiled byte code for the shader stages
-		ShaderCode Code;
-
-		// Ref counting clean up
-		static void RefCountZero(RefCounted<Shader>* doomed);
-		protected: virtual void Delete();
-	};
 }

@@ -11,7 +11,7 @@
 #include "pr/view3d-12/shaders/shader.h"
 //#include "pr/view3d/models/model_buffer.h"
 #include "pr/view3d-12/texture/texture_2d.h"
-#include "pr/view3d-12/utility/pipe_states.h"
+#include "pr/view3d-12/utility/pipe_state.h"
 //#include "pr/view3d/textures/texture_cube.h"
 
 namespace pr::rdr12
@@ -82,16 +82,17 @@ namespace pr::rdr12
 	{
 		using shader_t = struct
 		{
-			ERenderStep m_rdr_step; // The render step that the shader applies to
-			ShaderPtr   m_shader;   // The override shader
+			ERenderStep m_rdr_step; // The render step that the shader applies to.
+			ShaderPtr   m_shader;   // The override shader description.
 		};
 		using shaders_t = pr::vector<shader_t, 4, false>;
 
 		ETopo           m_topo;                  // The primitive topology for this nugget
 		EGeom           m_geom;                  // The valid geometry components within this range
 		shaders_t       m_shaders;               // Override shaders
-		PipeState       m_pipe_state;            // Pipe state
+		PipeStates      m_pso;                   // A collection of modifications to the pipeline state object description
 		Texture2DPtr    m_tex_diffuse;           // Diffuse texture
+		//todo SamplerPtr    m_samp_diffuse;          // The sampler to use with the diffuse texture
 		Colour32        m_tint;                  // Per-nugget tint
 		SortKey         m_sort_key;              // A base sort key for this nugget
 		float           m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)

@@ -14,12 +14,14 @@
 
 namespace pr::rdr12
 {
-	RenderStep::RenderStep(Scene& scene)
-		: m_scene(&scene)
+	RenderStep::RenderStep(ERenderStep id, Scene& scene)
+		: Id(id)
+		, m_scene(&scene)
 		, m_drawlist()
 		, m_sort_needed(true)
-		, m_shader_sig()
+		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
 		, m_default_pipe_state()
+		, m_pipe_state_pool(wnd())
 		, m_evt_model_delete(wnd().res_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
 		, m_mutex()
 	{}

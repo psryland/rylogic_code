@@ -15,70 +15,18 @@
 #include "pr/view3d-12/shaders/shader_forward.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/utility/pipe_states.h"
+#include "pr/view3d-12/utility/pipe_state.h"
 #include "view3d-12/src/shaders/common.h"
-#include "view3d-12/src/utility/root_signature.h"
 
 namespace pr::rdr12
 {
-	using namespace shaders::fwd;
-
-	enum class ERootParam
-	{
-		CBufFrame,
-		CBufNugget,
-		CBufFade,
-		DiffTexture,
-		EnvMap,
-		SMap,
-		ProjTex,
-	};
-	enum class ESampParam
-	{
-		DiffTexture,
-		EnvMap,
-		SMap,
-		ProjTex,
-	};
-
 	RenderForward::RenderForward(Scene& scene)
-		: RenderStep(scene)
-		, m_pipe_state_pool(scene.wnd())
-		, m_shader(scene.rdr().res_mgr(), scene.wnd().m_gsync)
+		: RenderStep(ERenderStep::RenderForward, scene)
+		, m_shader(scene.D3DDevice())
 	{
-		auto device = scene.rdr().D3DDevice();
-
-		// Create the root signature
-		RootSig<ERootParam, ESampParam> root_sig;
-		root_sig.Flags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_NONE;
-
-		root_sig.CBuf<CBufFrame>(ERootParam::CBufFrame, ECBufReg::b0);
-		root_sig.CBuf<CBufNugget>(ERootParam::CBufNugget, ECBufReg::b1);
-		root_sig.CBuf<CBufFade>(ERootParam::CBufFade, ECBufReg::b2);
-		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0);
-		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1);
-		root_sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
-		root_sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
-
-		root_sig.Samp(ESampParam::DiffTexture, SamDescStatic(ESamReg::s0));
-		root_sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
-		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2));
-		root_sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
-
-		m_shader_sig = root_sig.Create(device);
-
-		// Create the default PSO
+		// Create the default PSO description
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-			.pRootSignature = m_shader_sig.get(),
+			.pRootSignature = m_shader.Signature.get(),
 			.VS = m_shader.Code.VS,
 			.PS = m_shader.Code.PS,
 			.DS = m_shader.Code.DS,
@@ -156,8 +104,7 @@ namespace pr::rdr12
 				}
 
 				// Add an element to the drawlist
-				DrawListElement dle =
-				{
+				DrawListElement dle = {
 					.m_sort_key = sk,
 					.m_nugget = &nug,
 					.m_instance = &inst,
@@ -169,16 +116,6 @@ namespace pr::rdr12
 			AddNuggets(inst, nug.m_nuggets, drawlist);
 		}
 	}
-	
-	// Update the provided shader set appropriate for this render step
-	void RenderForward::ConfigShaders(ShaderSet1& ss, ETopo) const
-	{
-		(void)ss;
-		#if 0 //todo
-		if (ss.m_vs == nullptr) ss.m_vs = m_vs.get();
-		if (ss.m_ps == nullptr) ss.m_ps = m_ps.get();
-		#endif
-	}
 
 	// Perform the render step
 	void RenderForward::ExecuteInternal(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list)
@@ -187,7 +124,7 @@ namespace pr::rdr12
 		SortIfNeeded();
 
 		// Set the pipeline for this render step
-		cmd_list->SetGraphicsRootSignature(m_shader_sig.get());
+		cmd_list->SetGraphicsRootSignature(m_shader.Signature.get());
 
 		// Bind the descriptor heaps
 		auto des_heaps = {wnd().m_heap_srv.get(), wnd().m_heap_samp.get()};
@@ -214,13 +151,8 @@ namespace pr::rdr12
 		StateStack::SmapFrame smap_frame(ss, smap_rstep);
 		#endif
 
-		// Set the frame constants
-		CBufFrame cb0 = {};
-		SetViewConstants(cb0.m_cam, scn().m_cam);
-		SetLightingConstants(cb0.m_global_light, scn().m_global_light, scn().m_cam);
-		//todo SetShadowMapConstants(cb0.m_shadow, smap_rstep);
-		//todo SetEnvMapConstants(cb0.m_env_map, scn().m_global_envmap.get());
-		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, m_shader.Set(cb0, false));
+		// Setup for the frame
+		m_shader.Setup(cmd_list, m_cbuf_upload, scn(), nullptr);
 
 		//if (scn().m_global_envmap != nullptr)
 		//	cmd_list->SetGraphicsRootDescriptorTable(((UINT)ERootParam::EnvMap, );
@@ -242,16 +174,9 @@ namespace pr::rdr12
 			cmd_list->IASetPrimitiveTopology(To<D3D12_PRIMITIVE_TOPOLOGY>(nugget.m_topo));
 			cmd_list->IASetVertexBuffers(0U, 1U, &nugget.m_model->m_vb_view);
 			cmd_list->IASetIndexBuffer(&nugget.m_model->m_ib_view);
-			// todo apply nugget BS,RS,DS
 
-			// Set the per-nugget constants
-			CBufNugget cb1 = {};
-			SetModelFlags(cb1, *dle.m_instance, nugget, scn());
-			SetTxfm(cb1, *dle.m_instance, scn().m_cam);
-			SetTint(cb1, *dle.m_instance, nugget);
-			SetEnvMap(cb1, *dle.m_instance, nugget);
-			SetTexDiffuse(cb1, nugget);
-			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, m_shader.Set(cb1, false));
+			// Setup for the nugget
+			m_shader.Setup(cmd_list, m_cbuf_upload, scn(), &dle);
 
 			// Bind textures to the pipeline
 			auto tex = nugget.m_tex_diffuse != nullptr
@@ -259,7 +184,38 @@ namespace pr::rdr12
 				: rdr().res_mgr().FindTexture(EStockTexture::White);
 
 			auto handle = wnd().m_heap_srv.Add(tex->m_srv);
-			cmd_list->SetGraphicsRootDescriptorTable((UINT)ERootParam::DiffTexture, handle);
+			cmd_list->SetGraphicsRootDescriptorTable((UINT)shaders::fwd::ERootParam::DiffTexture, handle);
+
+			// Apply scene pipe state overrides
+			for (auto& ps : scn().m_pso)
+				desc.Apply(ps);
+
+			// Apply nugget pipe state overrides
+			for (auto& ps : nugget.m_pso)
+				desc.Apply(ps);
+
+			// Apply instance pipe state overrides
+			for (auto& ps : GetPipeStates(*dle.m_instance))
+				desc.Apply(ps);
+
+			// Apply nugget shader overrides
+			for (auto& shdr : nugget.m_shaders)
+			{
+				// Ignore shader overrides for other render steps
+				if (shdr.m_rdr_step != Id) continue;
+				auto& shader = *shdr.m_shader.get();
+
+				// Setup the shader parameters
+				shader.Setup(cmd_list, m_cbuf_upload, scn(), &dle);
+
+				// Update the pipe state with the shader byte code
+				if (shader.Signature) desc.Apply(PSO<EPipeState::RootSignature>(shader.Signature.get()));
+				if (shader.Code.VS) desc.Apply(PSO<EPipeState::VS>(shader.Code.VS));
+				if (shader.Code.PS) desc.Apply(PSO<EPipeState::PS>(shader.Code.PS));
+				if (shader.Code.DS) desc.Apply(PSO<EPipeState::DS>(shader.Code.DS));
+				if (shader.Code.HS) desc.Apply(PSO<EPipeState::HS>(shader.Code.HS));
+				if (shader.Code.GS) desc.Apply(PSO<EPipeState::GS>(shader.Code.GS));
+			}
 
 			// Draw the nugget **** 
 			DrawNugget(nugget, desc, cmd_list);

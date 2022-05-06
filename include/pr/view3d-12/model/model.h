@@ -27,10 +27,11 @@ namespace pr::rdr12
 		D3D12_VERTEX_BUFFER_VIEW m_vb_view;   // Buffer views for shader binding
 		D3D12_INDEX_BUFFER_VIEW  m_ib_view;   // Buffer views for shader binding
 		TNuggetChain             m_nuggets;   // The nuggets for this model
+		BBox                     m_bbox;      // A bounding box for the model. Set by the client
 		string32                 m_name;      // A human readable name for the model
 		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
-		Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, char const* name);
+		Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
 		Model(Model const&) = delete;
 		Model& operator =(Model const&) = delete;
 		~Model();

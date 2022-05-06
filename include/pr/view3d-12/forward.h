@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <mutex>
 #include <future>
+#include <cwctype>
 
 #include <intrin.h>
 #include <malloc.h>
@@ -33,10 +34,10 @@
 //#include "pr/macros/link.h"
 //#include "pr/macros/count_of.h"
 //#include "pr/macros/repeat.h"
-//#include "pr/macros/enum.h"
 //#include "pr/macros/align.h"
 //#include "pr/common/log.h"
 //#include "pr/common/crc.h"
+#include "pr/macros/enum.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/build_options.h"
@@ -59,44 +60,47 @@
 #include "pr/common/user_data.h"
 #include "pr/common/event_handler.h"
 #include "pr/common/static_callback.h"
-//#include "pr/container/span.h"
+#include "pr/common/bstr_t.h"
 #include "pr/container/ring.h"
 #include "pr/container/chain.h"
 #include "pr/container/vector.h"
-//#include "pr/container/deque.h"
+#include "pr/container/deque.h"
 #include "pr/container/byte_data.h"
 #include "pr/camera/camera.h"
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
-//#include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
+//#include "pr/filesys/filesys.h"
+#include "pr/filesys/filewatch.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
-//#include "pr/geometry/distance.h"
-//#include "pr/geometry/index_buffer.h"
-//#include "pr/geometry/models_point.h"
-//#include "pr/geometry/models_line.h"
-//#include "pr/geometry/models_quad.h"
-//#include "pr/geometry/models_shape2d.h"
-//#include "pr/geometry/models_box.h"
-//#include "pr/geometry/models_sphere.h"
-//#include "pr/geometry/models_cylinder.h"
-//#include "pr/geometry/models_extrude.h"
-//#include "pr/geometry/models_mesh.h"
-//#include "pr/geometry/models_skybox.h"
-//#include "pr/geometry/p3d.h"
-//#include "pr/geometry/3ds.h"
-//#include "pr/geometry/triangle.h"
-//#include "pr/geometry/model_file.h"
-//#include "pr/geometry/utility.h"
+#include "pr/geometry/distance.h"
+#include "pr/geometry/intersect.h"
+#include "pr/geometry/index_buffer.h"
+#include "pr/geometry/models_point.h"
+#include "pr/geometry/models_line.h"
+#include "pr/geometry/models_quad.h"
+#include "pr/geometry/models_shape2d.h"
+#include "pr/geometry/models_box.h"
+#include "pr/geometry/models_sphere.h"
+#include "pr/geometry/models_cylinder.h"
+#include "pr/geometry/models_extrude.h"
+#include "pr/geometry/models_mesh.h"
+#include "pr/geometry/models_skybox.h"
+#include "pr/geometry/p3d.h"
+#include "pr/geometry/3ds.h"
+#include "pr/geometry/triangle.h"
+#include "pr/geometry/model_file.h"
+#include "pr/geometry/utility.h"
 #include "pr/threads/synchronise.h"
 #include "pr/gui/gdiplus.h"
 //#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 //#include "pr/win32/stackdump.h"
 #include "pr/script/reader.h"
+#include "pr/script/embedded_lua.h"
 //#include "pr/ldraw/ldr_helper.h"
 
 #ifndef PR_DBG_RDR
@@ -155,37 +159,9 @@ namespace pr::rdr12
 
 	// Resources
 	struct ResourceManager;
-	struct TexDesc;
-	struct SamDesc;
+	struct ResDesc;
+	    struct SamDesc;
 	
-	// Models
-	struct ModelDesc;
-	struct Model;
-	struct Nugget;
-	struct NuggetData;
-	using ModelPtr = RefPtr<Model>;
-	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
-	    struct ModelTreeNode;
-
-	// Instances
-	struct BaseInstance;
-
-	// Shaders
-	struct Vert;
-	struct Shader;
-	namespace shaders
-	{
-		struct Forward;
-		struct PointSpriteGS;
-		struct ShowNormalsGS;
-	}
-		    struct ShaderDesc;
-		    struct ShaderSet0;
-		    struct ShaderSet1;
-		    struct ShaderMap;
-		    struct ShadowMap;
-	using ShaderPtr = RefPtr<Shader>;
-
 	// Textures
 	struct TextureDesc;
 	struct TextureBase;
@@ -201,6 +177,38 @@ namespace pr::rdr12
 	//struct AllocPres;
 	//typedef RefPtr<Video> VideoPtr;
 	//typedef RefPtr<AllocPres> AllocPresPtr;
+	
+	// Models
+	struct ModelDesc;
+	struct Model;
+	struct Nugget;
+	struct NuggetData;
+	struct ModelTreeNode;
+	struct MeshCreationData;
+	using ModelPtr = RefPtr<Model>;
+	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
+
+	// Instances
+	struct BaseInstance;
+
+	// Shaders
+	struct Vert;
+	struct Shader;
+	namespace shaders
+	{
+		struct Forward;
+		struct PointSpriteGS;
+		struct ShowNormalsGS;
+		struct ThickLineStripGS;
+		struct ThickLineListGS;
+	}
+	using ShaderPtr = RefPtr<Shader>;
+		    //struct ShaderDesc;
+		    //struct ShaderSet0;
+		    //struct ShaderSet1;
+		    //struct ShaderMap;
+		    struct ShadowMap;
+
 
 	// Lighting
 	struct Light;
@@ -212,6 +220,21 @@ namespace pr::rdr12
 	struct ImageWithData;
 	struct FeatureSupport;
 	
+	// Dll
+	struct Context;
+	struct V3dWindow;
+	struct LdrObject;
+	struct LdrGizmo;
+	struct ParseResult;
+	struct ObjectAttributes;
+	struct ScriptSources;
+	enum class ECamField :int;
+	enum class ELdrGizmoMode :int;
+	using LdrObjectPtr = RefPtr<LdrObject>;
+	using LdrGizmoPtr = RefPtr<LdrGizmo>;
+	using ObjectCont = pr::vector<LdrObjectPtr, 8>;
+	using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
+
 	// Event args
 	struct ResolvePathArgs;
 	struct BackBufferSizeChangedEventArgs;

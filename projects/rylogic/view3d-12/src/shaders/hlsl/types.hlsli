@@ -2,7 +2,6 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
-
 #ifndef PR_RDR_SHADER_TYPES_HLSLI
 #define PR_RDR_SHADER_TYPES_HLSLI
 
@@ -55,6 +54,8 @@ static const int AlphaFlags_HasAlpha             = (1 << 0);
 	using float4   = pr::v4;
 	using float3   = pr::v3;
 	using float2   = pr::v2;
+	using int2     = pr::iv2;
+	using int3     = pr::iv3;
 	using int4     = pr::iv4;
 	using voidp    = void const*;
 

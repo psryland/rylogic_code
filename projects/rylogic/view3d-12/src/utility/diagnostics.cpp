@@ -27,13 +27,8 @@ namespace pr::rdr12
 		,m_normal_lengths(0.1f)
 		,m_normal_colour(Colour32Purple)
 		,m_bboxes_visible(false)
-		,m_gs_fillmode_points()
-	{
-		auto shdr = wnd.res_mgr().CreateShader<shaders::PointSpriteGS>(wnd.m_gsync);
-		shdr->m_size = v2(5.0f, 5.0f);
-		shdr->m_depth = false;
-		m_gs_fillmode_points = shdr;
-	}
+		,m_gs_fillmode_points(Shader::Create<shaders::PointSpriteGS>(v2(5.0f, 5.0f), false))
+	{}
 	Window& DiagState::wnd() const
 	{
 		return *m_wnd;
@@ -52,10 +47,8 @@ namespace pr::rdr12
 		// If showing normals, add a dependent nugget for each nugget that has valid vertex normals
 		if (show)
 		{
-			#if 0 //todo
 			// Get or create an instance of the ShowNormals shader
-			auto& mgr = model->rdr().res_mgr();
-			auto shdr = mgr.CreateShader<shaders::ShowNormalsGS>(wnd().m_gsync);
+			auto shdr = Shader::Create<shaders::ShowNormalsGS>();
 
 			// Add a dependent nugget for each existing nugget that has vertex normals
 			for (auto& nug : model->m_nuggets)
@@ -65,14 +58,13 @@ namespace pr::rdr12
 
 				// Create a dependent nugget that draws the normals
 				auto& dep = *model->res_mgr().CreateNugget(nug, model);
-				//dep.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+				dep.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 				dep.m_topo = ETopo::PointList;
 				dep.m_geom = EGeom::Vert | EGeom::Colr;
 				dep.m_irange = RangeZero;
 				dep.m_id = ShowNormalsId;
 				nug.m_nuggets.push_back(dep);
 			}
-			#endif
 		}
 
 		// Set a bit in the dbg flags
