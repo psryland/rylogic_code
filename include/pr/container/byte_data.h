@@ -2,9 +2,7 @@
 // byte_data
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
-
 #pragma once
-
 #include <cstdint>
 #include <vector>
 #include <initializer_list>
@@ -204,7 +202,7 @@ namespace pr
 			// Insert from a sub range
 			if (inside(data))
 			{
-				// The subrange may span the insertion point
+				// The sub range may span the insertion point
 				auto b = byte_ptr(data) - begin(); // The offset to the start of the sub range
 				auto n = std::clamp<ptrdiff_t>(ofs - b, 0, size); // The number of bytes before the insertion point
 
@@ -399,10 +397,18 @@ namespace pr
 			return &at_byte_ofs<Type>(byte_ofs);
 		}
 
-		// Facade access
+		// Façade access
 		template <typename Type> std::span<Type const> span() const
 		{
-			return std::span<Type const>(begin<Type>(), size<Type>());
+			return std::span<Type const>(data<Type>(), size<Type>());
+		}
+		template <typename Type> std::span<Type> span()
+		{
+			return std::span<Type>(data<Type>(), size<Type>());
+		}
+		template <typename Type> std::span<Type const> cspan()
+		{
+			return std::as_const(*this).span();
 		}
 
 		// Streaming access
@@ -414,6 +420,12 @@ namespace pr
 			auto& r = at_byte_ofs<Type>(ofs);
 			ofs += sizeof(Type);
 			return r;
+		}
+
+		// implicit conversions
+		template <typename Type> operator std::span<Type const>() const
+		{
+			return span<Type const>();
 		}
 
 	private:
@@ -493,7 +505,7 @@ namespace pr
 		}
 	};
 
-	// An iterator for moving over bytes interpreting as other types
+	// An pointer for moving over bytes interpreted as other types
 	struct byte_data_cptr
 	{
 		uint8_t const* m_beg;

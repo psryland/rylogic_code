@@ -100,6 +100,7 @@ namespace pr
 	template <typename T> struct Vec4;
 	template <typename T> struct Vec8;
 	template <typename T> struct IVec2;
+	template <typename T> struct IVec3;
 	template <typename T> struct IVec4;
 	template <typename T> struct Half4;
 	template <typename A, typename B> struct Mat2x2;
@@ -121,6 +122,7 @@ namespace pr
 	template <typename T = void> using v4_cref = Vec4<T> const;
 	template <typename T = void> using v8_cref = Vec8<T> const;
 	template <typename T = void> using iv2_cref = IVec2<T> const;
+	template <typename T = void> using iv3_cref = IVec3<T> const;
 	template <typename T = void> using iv4_cref = IVec4<T> const;
 	template <typename T = void> using half4_cref = Half4<T> const;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const;
@@ -136,6 +138,7 @@ namespace pr
 	template <typename T = void> using v4_cref = Vec4<T> const&;
 	template <typename T = void> using v8_cref = Vec8<T> const&;
 	template <typename T = void> using iv2_cref = IVec2<T> const&;
+	template <typename T = void> using iv3_cref = IVec3<T> const&;
 	template <typename T = void> using iv4_cref = IVec4<T> const&;
 	template <typename T = void> using half4_cref = Half4<T> const&;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const&;
@@ -257,6 +260,12 @@ namespace pr
 			using cp_type = int;
 			static int const dim = 2;
 		};
+		template <typename T> struct is_vec<IVec3<T>> :std::true_type
+		{
+			using elem_type = int;
+			using cp_type = int;
+			static int const dim = 3;
+		};
 		template <typename T> struct is_vec<IVec4<T>> :std::true_type
 		{
 			using elem_type = int;
@@ -307,6 +316,7 @@ namespace pr
 	using m6x8 = Mat6x8<void,void>;
 	using quat = Quat<void,void>;
 	using iv2 = IVec2<void>;
+	using iv3 = IVec3<void>;
 	using iv4 = IVec4<void>;
 	using half4 = Half4<void>;
 

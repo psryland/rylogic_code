@@ -18,24 +18,28 @@ namespace pr
 		//      void MyFunc(StaticCB<void, int> cb) {...}
 		//      MyFunc({func, this});
 
-		using func = Ret (__stdcall *)(void*, Args...);
+		using func = Ret(__stdcall*)(void*, Args...);
 
 		func m_cb;
 		void* m_ctx;
 
 		StaticCB()
 			:StaticCB(nullptr)
-		{}
+		{
+		}
 		StaticCB(nullptr_t)
 			:StaticCB(nullptr, nullptr)
-		{}
+		{
+		}
 		StaticCB(func cb)
 			:StaticCB(cb, nullptr)
-		{}
+		{
+		}
 		StaticCB(func cb, void* ctx)
 			:m_cb(cb)
-			,m_ctx(ctx)
-		{}
+			, m_ctx(ctx)
+		{
+		}
 		StaticCB(StaticCB& rhs) = default;
 		StaticCB(StaticCB const& rhs) = default;
 		StaticCB& operator=(StaticCB&& rhs) = default;
