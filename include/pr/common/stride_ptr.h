@@ -5,12 +5,18 @@
 // An iterator that steps in 'stride' increments
 #pragma once
 #include <type_traits>
+#include <span>
 
 namespace pr
 {
-	template <typename Type, int Stride>
+	template <typename Type>
 	struct stride_ptr
 	{
+		// Notes:
+		//  - Don't make stride a template parameter, because often the type definition will be
+		//    stride_ptr<X const, sizeof(SomeType)>. This requires 'SomeType' to be fully defined making
+		//    stride_ptr harder to use in a header.
+
 		using voidptr_t = std::conditional_t<std::is_const_v<Type>, void const*, void*>;
 		using byteptr_t = std::conditional_t<std::is_const_v<Type>, unsigned char const*, unsigned char*>;
 		using value_type = std::conditional_t<std::is_same_v<Type, void>, unsigned char, Type>;
@@ -26,12 +32,17 @@ namespace pr
 			pointer type;
 		};
 
+		// Pointer and stride
 		stride_t m_ptr;
+		int m_stride;
+
 		stride_ptr()
-		{
-		}
-		stride_ptr(voidptr_t ptr)
+			:m_ptr()
+			,m_stride()
+		{}
+		stride_ptr(voidptr_t ptr, int stride)
 			:m_ptr(ptr)
+			,m_stride(stride)
 		{}
 		pointer operator ->() const
 		{
@@ -43,41 +54,50 @@ namespace pr
 		}
 		stride_ptr& operator ++()
 		{
-			m_ptr.bptr += Stride;
+			m_ptr.bptr += m_stride;
 			return *this;
 		}
 		stride_ptr& operator --()
 		{
-			m_ptr.bptr -= Stride;
+			m_ptr.bptr -= m_stride;
 			return *this;
 		}
 		stride_ptr operator ++(int)
 		{
 			stride_ptr i(*this);
-			m_ptr.bptr += Stride;
+			m_ptr.bptr += m_stride;
 			return i;
 		}
 		stride_ptr operator --(int)
 		{
 			stride_ptr i(*this);
-			m_ptr.bptr -= Stride;
+			m_ptr.bptr -= m_stride;
 			return i;
 		}
 		reference operator[](difference_type i) const
 		{
-			return *stride_t(m_ptr.bptr + i * Stride).type;
+			return *stride_t(m_ptr.bptr + i * m_stride).type;
 		}
 
-		operator stride_ptr<Type const, Stride>() const
+		// Implicit conversion to const
+		operator stride_ptr<Type const>() const
 		{
-			return stride_ptr<Type const, Stride>(m_ptr.vptr, 0);
+			return stride_ptr<Type const>(m_ptr.vptr, m_stride);
+		}
+
+		// Implicit conversion to normal pointer
+		operator pointer () const
+		{
+			return m_ptr.type;
+		}
+
+		// Explicit conversion to bool
+		explicit operator bool() const
+		{
+			return m_ptr.vptr != nullptr;
 		}
 
 		// Comparison operators
-		//friend std::strong_ordering operator <=>(stride_ptr lhs, stride_ptr rhs)
-		//{
-		//	return lhs.m_ptr.vptr <=> rhs.m_ptr.vptr;
-		//}
 		friend bool operator == (stride_ptr lhs, stride_ptr rhs)
 		{
 			return lhs.m_ptr.vptr == rhs.m_ptr.vptr;
@@ -103,30 +123,66 @@ namespace pr
 			return lhs.m_ptr.vptr >= rhs.m_ptr.vptr;
 		}
 
+		// Arithmetic
 		friend stride_ptr& operator += (stride_ptr& lhs, difference_type rhs)
 		{
-			lhs.m_ptr.bptr += rhs * Stride;
+			lhs.m_ptr.bptr += rhs * lhs.m_stride;
 			return lhs;
 		}
 		friend stride_ptr& operator -= (stride_ptr& lhs, difference_type rhs)
 		{
-			lhs.m_ptr.bptr -= rhs * Stride;
+			lhs.m_ptr.bptr -= rhs * lhs.m_stride;
 			return lhs;
 		}
 		friend stride_ptr operator + (stride_ptr lhs, difference_type rhs)
 		{
-			return stride_ptr(lhs.m_ptr.bptr + rhs * Stride);
+			auto ptr = lhs;
+			return ptr += rhs;
 		}
 		friend stride_ptr operator - (stride_ptr lhs, difference_type rhs)
 		{
-			return stride_ptr(lhs.m_ptr.bptr - rhs * Stride);
+			auto ptr = lhs;
+			return ptr -= rhs;
 		}
 		friend difference_type operator - (stride_ptr lhs, stride_ptr rhs)
 		{
-			return (lhs.m_ptr.bptr - rhs.m_ptr.bptr) / Stride;
+			if (lhs.m_stride != rhs.m_stride)
+				throw std::runtime_error("Stride pointers have different stride values");
+
+			return (lhs.m_ptr.bptr - rhs.m_ptr.bptr) / lhs.m_stride;
 		}
 	};
-	static_assert(sizeof(stride_ptr<void, 16>) == sizeof(void*));
+
+	// A range given by stride pointers
+	template <typename Type>
+	struct stride_range
+	{
+		using stride_ptr_t = stride_ptr<Type>;
+		using pointer = typename stride_ptr_t::pointer;
+
+		stride_ptr_t m_beg;
+		stride_ptr_t m_end;
+
+		template <typename T>
+		stride_range(std::span<T> span, size_t ofs)
+			: m_beg(reinterpret_cast<stride_ptr_t::byteptr_t>(span.data()) + ofs, sizeof(T))
+			, m_end(m_beg + span.size())
+		{}
+		template <typename T, int S>
+		stride_range(T (&arr)[S], size_t ofs)
+			: m_beg(reinterpret_cast<stride_ptr_t::byteptr_t>(&arr[0]) + ofs, sizeof(T))
+			, m_end(m_beg + S)
+		{}
+
+		stride_ptr_t begin() const
+		{
+			return m_beg;
+		}
+		stride_ptr_t end() const
+		{
+			return m_end;
+		}
+	};
 }
 
 #if PR_UNITTESTS
@@ -156,13 +212,11 @@ namespace pr::common
 		using namespace stride_ptr_tests;
 		Thing arr[300];
 
-		auto ptr = stride_ptr<byte_t const, sizeof(Thing)>(&arr[0].m_byte);
-		auto end = ptr + _countof(arr);
-
 		byte_t i = 0;
-		for (auto x = ptr; x != end; ++x)
+		auto range = stride_range<byte_t>(arr, offsetof(Thing, m_byte));
+		for (auto x : range)
 		{
-			PR_CHECK(*x == i, true);
+			PR_CHECK(x == i, true);
 			++i;
 		}
 	}
