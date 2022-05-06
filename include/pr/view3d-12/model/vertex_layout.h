@@ -50,6 +50,7 @@ namespace pr::rdr12
 			};
 		}
 	};
+	static_assert(std::is_trivially_copyable_v<Vert> && std::is_trivially_default_constructible_v<Vert>);
 
 	inline v4 const& GetP(Vert const& vert)
 	{

@@ -16,7 +16,7 @@ namespace pr::rdr12
 		//  - row pitch is the number of bytes per row of the image.
 		//  - slice pitch is the number of bytes per 2D plane (i.e. normally the image size in bytes,
 		//    but if the image is an array, then this is the size of one image in the array)
-		//  - block pitch is the number of bytes for the 
+		//  - block pitch is the number of bytes for the image
 		union data_t
 		{
 			void const* vptr;
@@ -62,6 +62,23 @@ namespace pr::rdr12
 			, m_data{.vptr = pixels}
 			, m_format(fmt)
 		{}
+
+		// Construct a 1D buffer
+		Image(void const* data, int64_t count, int element_size_in_bytes)
+			: m_dim(s_cast<int>(count), 1, 1)
+			, m_pitch(s_cast<int>(count * element_size_in_bytes))
+			, m_data{.vptr = data}
+			, m_format(DXGI_FORMAT_UNKNOWN)
+		{
+			if (s_cast<int64_t>(count) * s_cast<int64_t>(element_size_in_bytes) > limits<int>::max())
+				throw std::overflow_error("Initialisation data too large");
+		}
+
+		// Element size in bytes
+		int ElemStride() const
+		{
+			return m_pitch.x / m_dim.x;
+		}
 
 		// The image size in bytes
 		int SizeInBytes() const
@@ -130,6 +147,12 @@ namespace pr::rdr12
 			,m_bits(data)
 		{}
 
+		// Construct a 1D buffer
+		ImageWithData(std::shared_ptr<uint8_t[]> data, int count, int element_size_in_bytes)
+			:Image(data.get(), count, element_size_in_bytes)
+			, m_bits(data)
+		{}
+	
 		// Copy/Assign from Image
 		ImageWithData(Image const& rhs)
 			:ImageWithData(rhs.m_dim.x, rhs.m_dim.y, rhs.m_dim.z, std::shared_ptr<uint8_t[]>(new uint8_t[rhs.SizeInBytes()]), rhs.m_format)

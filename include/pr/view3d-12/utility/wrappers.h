@@ -218,10 +218,6 @@ namespace pr::rdr12
 	struct HeapProps :D3D12_HEAP_PROPERTIES
 	{
 		HeapProps() = default;
-		HeapProps(D3D12_HEAP_PROPERTIES const& rhs)
-			:D3D12_HEAP_PROPERTIES(rhs)
-		{}
-		
 		explicit HeapProps(D3D12_HEAP_TYPE heap_type, uint32_t creation_node_mask = 1, uint32_t visible_node_mask = 1)
 			:HeapProps()
 		{
@@ -231,15 +227,25 @@ namespace pr::rdr12
 			CreationNodeMask = creation_node_mask;
 			VisibleNodeMask = visible_node_mask;
 		}
+		HeapProps(D3D12_HEAP_PROPERTIES const& rhs)
+			:D3D12_HEAP_PROPERTIES(rhs)
+		{}
+		
+		// Can the CPU read/write this heap?
+		bool IsCPUReadable() const
+		{
+			return Type == D3D12_HEAP_TYPE_READBACK || (Type == D3D12_HEAP_TYPE_CUSTOM && CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK);
+		}
+		bool IsCPUWriteable() const
+		{
+			return Type == D3D12_HEAP_TYPE_UPLOAD || (Type == D3D12_HEAP_TYPE_CUSTOM && CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE);
+		}
 		bool IsCPUAccessible() const
 		{
-			return
-				Type == D3D12_HEAP_TYPE_UPLOAD ||
-				Type == D3D12_HEAP_TYPE_READBACK ||
-				(Type == D3D12_HEAP_TYPE_CUSTOM && (
-					CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE ||
-					CPUPageProperty == D3D12_CPU_PAGE_PROPERTY_WRITE_BACK));
+			return IsCPUWriteable() && IsCPUReadable();
 		}
+
+		// Common heap properties
 		static HeapProps const& Default()
 		{
 			static HeapProps props(D3D12_HEAP_TYPE_DEFAULT);
@@ -252,15 +258,30 @@ namespace pr::rdr12
 		}
 	};
 
-	// Texture resource description
-	struct TexDesc :D3D12_RESOURCE_DESC
+	// A resource description
+	struct ResDesc :D3D12_RESOURCE_DESC
 	{
-		pr::vector<Image> Data; // The initialisation data for the texture (or texture array)
+		int ElemStride;             // Element stride
+		pr::vector<Image> Data;     // The initialisation data for the buffer, texture, or texture array
+		HeapProps HeapProps;        // The heap to create this buffer in
+		D3D12_HEAP_FLAGS HeapFlags; // Properties
+		std::optional<D3D12_CLEAR_VALUE> ClearValue;
 
-		TexDesc() = default;
-		TexDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, uint16_t mips, uint64_t alignment, EUsage flags, MultiSamp multisamp)
-			:D3D12_RESOURCE_DESC()
-			,Data()
+		ResDesc()
+			: D3D12_RESOURCE_DESC()
+			, ElemStride()
+			, Data()
+			, HeapProps(HeapProps::Default())
+			, HeapFlags(D3D12_HEAP_FLAG_NONE)
+			, ClearValue()
+		{}
+		ResDesc(D3D12_RESOURCE_DESC const& rhs)
+			: ResDesc()
+		{
+			*static_cast<D3D12_RESOURCE_DESC*>(this) = rhs;
+		}
+		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride, uint16_t mips, uint64_t alignment, EUsage flags, D3D12_TEXTURE_LAYOUT layout, MultiSamp multisamp)
+			:ResDesc()
 		{
 			Dimension        = dimension;
 			Alignment        = alignment;
@@ -270,165 +291,71 @@ namespace pr::rdr12
 			MipLevels        = mips;
 			Format           = format;
 			SampleDesc       = multisamp;
-			Layout           = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			Layout           = layout;
 			Flags            = s_cast<D3D12_RESOURCE_FLAGS>(flags);
+			ElemStride       = element_stride;
 		}
-		TexDesc& operator = (D3D12_RESOURCE_DESC const& rhs)
+		ResDesc& operator = (D3D12_RESOURCE_DESC const& rhs)
 		{
+			if (&rhs == this) return *this;
 			*static_cast<D3D12_RESOURCE_DESC*>(this) = rhs;
 			return *this;
 		}
 		
-		// Constructors
-		static TexDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		// Texture resource descriptions
+		static ResDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None, MultiSamp multisamp = MultiSamp{})
 		{
-			TexDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, mips, 0ULL, flags, MultiSamp{});
+			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format), mips, 0ULL, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN, multisamp);
 			desc.Data.push_back(data);
 			return desc;
 		}
-		static TexDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None, MultiSamp multisamp = MultiSamp{})
+		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None, MultiSamp multisamp = MultiSamp{})
 		{
-			TexDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, mips, 0ULL, flags, multisamp);
+			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format), mips, 0ULL, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN, multisamp);
 			desc.Data.push_back(data);
 			return desc;
 		}
-		static TexDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None, MultiSamp multisamp = MultiSamp{})
 		{
-			TexDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), mips, 0ULL, flags, MultiSamp{});
+			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format), mips, 0ULL, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN, multisamp);
 			desc.Data.push_back(data);
 			return desc;
+		}
+
+		// Buffer resource descriptions
+		static ResDesc Buf(int64_t count, int element_stride, void const* data, int alignment = 0, EUsage usage = EUsage::None)
+		{
+			// Width is in bytes for buffer type resources
+			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count * element_stride), 1, 1, element_stride, 1, alignment, usage, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, MultiSamp{});
+			desc.Data.push_back(Image(data, count, element_stride));
+			desc.ElemStride = element_stride;
+			return desc;
+		}
+		template <typename Elem> static ResDesc Buf(int64_t count, Elem const* data, int alignment = 0, EUsage usage = EUsage::None)
+		{
+			return Buf(count, sizeof(Elem), data, alignment, usage);
+		}
+		static ResDesc CBuf(int size)
+		{
+			// Size of resource heap must be 64K for single-textures and constant buffers
+			return Buf(1, PadTo<int>(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), nullptr);
 		}
 
 		//// Return the contained data as sub-resource data
 		//operator Image() const
 		//{
-		//	return Image(s_cast<int>(Width), s_cast<int>(Height), s_cast<int>(DepthOrArraySize), Data, Format);
+		//	return Image(s_cast<int>(Width), Data);
 		//}
 
 		//// Return the contained data as sub-resource data
 		//operator D3D12_SUBRESOURCE_DATA() const
 		//{
-		//	D3D12_SUBRESOURCE_DATA d = {};
-		//	d.pData = Data;
-		//	d.RowPitch = RowPitch;
-		//	d.SlicePitch = RowPitch * Height;
-		//	return d;
+		//	return D3D12_SUBRESOURCE_DATA {
+		//		.pData = Data,
+		//		.RowPitch = s_cast<LONG_PTR>(Width),
+		//		.SlicePitch = s_cast<LONG_PTR>(Width),
+		//	};
 		//}
-
-		//// Depth
-		//uint16_t Depth() const
-		//{
-		//	return Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1;
-		//}
-		//uint16_t ArraySize() const
-		//{
-		//	return Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE3D ? DepthOrArraySize : 1;
-		//}
-		//UINT8 PlaneCount(ID3D12Device* device) const
-		//{
-		//	D3D12_FEATURE_DATA_FORMAT_INFO info = {Format, 0};
-		//	return Succeeded(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &info, sizeof(info))) ? info.PlaneCount : 0;
-		//}
-		//uint32_t Subresources(ID3D12Device* device) const
-		//{
-		//	return MipLevels * ArraySize() * PlaneCount(device);
-		//}
-		//uint32_t CalcSubresource(uint32_t MipSlice, uint32_t ArraySlice, uint32_t PlaneSlice)
-		//{
-		//	return MipSlice + ArraySlice * MipLevels + PlaneSlice * MipLevels * ArraySize();
-		//}
-		//friend bool operator == (ResourceDesc const& lhs, ResourceDesc const& rhs)
-		//{
-		//	return
-		//		lhs.Dimension          == rhs.Dimension &&
-		//		lhs.Alignment          == rhs.Alignment &&
-		//		lhs.Width              == rhs.Width &&
-		//		lhs.Height             == rhs.Height &&
-		//		lhs.DepthOrArraySize   == rhs.DepthOrArraySize &&
-		//		lhs.MipLevels          == rhs.MipLevels &&
-		//		lhs.Format             == rhs.Format &&
-		//		lhs.SampleDesc.Count   == rhs.SampleDesc.Count &&
-		//		lhs.SampleDesc.Quality == rhs.SampleDesc.Quality &&
-		//		lhs.Layout             == rhs.Layout &&
-		//		lhs.Flags              == rhs.Flags;
-		//}
-		//friend bool operator != (ResourceDesc const& lhs, ResourceDesc const& rhs)
-		//{
-		//	return !(lhs == rhs);
-		//}
-	};
-
-	// Buffer description
-	struct BufferDesc :D3D12_RESOURCE_DESC
-	{
-		// Notes:
-		//  - Constant buffers must be aligned to D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
-		//  - Texture buffers must be aligned to D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT
-		//  - V/I buffers can be aligned however
-
-		void const* Data;      // Width is the size of the data in bytes
-		int64_t     ElemCount; // The number of elements in this buffer (verts, indices, whatever)
-
-		BufferDesc() = default;
-		BufferDesc(int64_t count, int64_t element_size_in_bytes, void const* data, int alignment, EUsage usage)
-			:D3D12_RESOURCE_DESC()
-			,Data(data)
-			,ElemCount(count)
-		{
-			Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
-			Alignment        = s_cast<uint64_t>(alignment);
-			Width            = s_cast<uint64_t>(element_size_in_bytes * count);
-			Height           = 1;
-			DepthOrArraySize = 1;
-			MipLevels        = 1;
-			Format           = DXGI_FORMAT_UNKNOWN;
-			SampleDesc       = MultiSamp{};
-			Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-			Flags            = s_cast<D3D12_RESOURCE_FLAGS>(usage);
-		}
-
-		// Return the element stride (i.e. bytes per element)
-		int Stride() const
-		{
-			PR_ASSERT(PR_DBG_RDR, (Width % ElemCount) == 0, "Size is not a multiple of the stride");
-			return s_cast<int>(Width / ElemCount);
-		}
-
-		// Constructors
-		static BufferDesc Buffer(int64_t size, void const* data, int alignment = 0, EUsage usage = EUsage::None)
-		{
-			return BufferDesc(size, 1, data, alignment, usage);
-		}
-		static BufferDesc CBuf(int64_t size)
-		{
-			// Size of resource heap must be 64K for single-textures and constant buffers
-			size = PadTo<int64_t>(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			return BufferDesc(1, size, nullptr, 0, EUsage::None);
-		}
-		template <typename Elem> static BufferDesc VBuf(int64_t count, Elem const* data, int alignment = 0, EUsage usage = EUsage::None)
-		{
-			return BufferDesc(count, sizeof(Elem), data, alignment, usage);
-		}
-		template <typename Elem> static BufferDesc IBuf(int64_t count, Elem const* data, int alignment = 0, EUsage usage = EUsage::None)
-		{
-			return BufferDesc(count, sizeof(Elem), data, alignment, usage);
-		}
-
-		// Return the contained data as sub-resource data
-		operator Image() const
-		{
-			return Image(s_cast<int>(Width), Data);
-		}
-
-		// Return the contained data as sub-resource data
-		operator D3D12_SUBRESOURCE_DATA() const
-		{
-			return D3D12_SUBRESOURCE_DATA {
-				.pData = Data,
-				.RowPitch = s_cast<LONG_PTR>(Width),
-				.SlicePitch = s_cast<LONG_PTR>(Width),
-			};
-		}
 	};
 
 	// Resource barrier
@@ -631,17 +558,6 @@ namespace pr::rdr12
 		}
 	};
 
-	// Pipe state description
-	struct PipeStateDesc :D3D12_GRAPHICS_PIPELINE_STATE_DESC
-	{
-		PipeStateDesc()
-			:D3D12_GRAPHICS_PIPELINE_STATE_DESC()
-		{}
-		PipeStateDesc(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& rhs)
-			:D3D12_GRAPHICS_PIPELINE_STATE_DESC(rhs)
-		{}
-	};
-
 	// Compiled shader byte code
 	struct ByteCode :D3D12_SHADER_BYTECODE
 	{
@@ -651,5 +567,9 @@ namespace pr::rdr12
 		template <int Size> ByteCode(BYTE const (&code)[Size])
 			: D3D12_SHADER_BYTECODE(&code[0], Size)
 		{}
+		explicit operator bool() const
+		{
+			return pShaderBytecode == nullptr;
+		}
 	};
 }

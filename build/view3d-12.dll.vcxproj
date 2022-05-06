@@ -37,37 +37,37 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic\view3d-12;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;$(ProjectDir)..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic\view3d-12;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;$(ProjectDir)..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic\view3d-12;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;$(ProjectDir)..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic\view3d-12;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;$(ProjectDir)..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -76,19 +76,21 @@
   </ItemDefinitionGroup>
   <!-- Files -->
   <ItemGroup>
-    <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\dll\forward.h" />
+    <ClInclude Include="..\include\pr\view3d-12\view3d-dll.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\dll\context.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\dll\dll_forward.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\dll\v3d_window.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\context.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\dll.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\v3d_window.cpp" />
+  </ItemGroup>
+  <!-- Dependencies -->
   <ItemGroup>
     <ProjectReference Include="view3d-12.vcxproj">
       <Project>{0a6cc9e3-76d2-4f4e-a193-1a816d24a555}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\context.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\dll.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\forward.ixx" />
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\dll\window.ixx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

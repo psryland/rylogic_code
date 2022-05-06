@@ -18,7 +18,7 @@
 #include "pr/view3d-12/forward.h"
 //#include "pr/view3d/models/model.h"
 #include "pr/view3d-12/render/sortkey.h"
-//#include "pr/view3d/render/state_block.h"
+#include "pr/view3d-12/utility/pipe_state.h"
 
 namespace pr::rdr12
 {
@@ -35,9 +35,7 @@ namespace pr::rdr12
 		C2STransformPtr,     // pr::m4x4*
 		C2STransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
 		SortkeyOverride,     // pr::rdr::SKOverride
-		BSBlock,             // pr::rdr::BSBlock
-		DSBlock,             // pr::rdr::DSBlock
-		RSBlock,             // pr::rdr::RSBlock
+		PipeStates,          // pr::rdr::PipeStates
 		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
 		EnvMapReflectivity,  // float
@@ -76,9 +74,7 @@ namespace pr::rdr12
 			case EInstComp::C2STransformPtr:     return sizeof(m4x4*);
 			case EInstComp::C2STransformFuncPtr: return sizeof(m4x4 const& (*)(void* context));
 			case EInstComp::SortkeyOverride:     return sizeof(SKOverride);
-			//case EInstComp::BSBlock:             return sizeof(BSBlock);
-			//case EInstComp::DSBlock:             return sizeof(DSBlock);
-			//case EInstComp::RSBlock:             return sizeof(RSBlock);
+			case EInstComp::PipeStates:          return sizeof(PipeStates);
 			case EInstComp::Flags:               return sizeof(EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(Colour32);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
@@ -250,6 +246,14 @@ namespace pr::rdr12
 	{
 		auto puid = inst.find<int>(EInstComp::UniqueId);
 		return puid ? *puid : 0;
+	}
+
+	// Return any pipe state overrides in the instance
+	inline PipeStates const& GetPipeStates(BaseInstance const& inst)
+	{
+		static PipeStates const NoPipeStates;
+		auto pps = inst.find<PipeStates>(EInstComp::PipeStates);
+		return pps ? *pps : NoPipeStates;
 	}
 
 	// Cast from a 'BaseInstance' pointer to an instance type

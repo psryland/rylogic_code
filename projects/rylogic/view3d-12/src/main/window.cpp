@@ -266,6 +266,9 @@ namespace pr::rdr12
 	iv2 Window::BackBufferSize() const
 	{
 		auto rt = m_bb[BBIndex()].m_render_target.get();
+		if (rt == nullptr)
+			return iv2::Zero();
+
 		auto desc = rt->GetDesc();
 		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
 	}
@@ -302,8 +305,7 @@ namespace pr::rdr12
 		}
 
 		// Default to the description of the current depth buffer if it exists
-		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc()
-			: TexDesc::Tex2D(Image{16, 16, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
+		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc() : ResDesc::Tex2D(Image{16, 16, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
 		dsdesc.Width = size.x;
 		dsdesc.Height = size.y;
 		auto clear_value = D3D12_CLEAR_VALUE {
@@ -314,13 +316,9 @@ namespace pr::rdr12
 		// Resize the depth stencil
 		m_depth_stencil = nullptr;
 		Throw(device->CreateCommittedResource(
-			&HeapProps::Default(),
-			D3D12_HEAP_FLAG_NONE,
-			&dsdesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clear_value,
-			__uuidof(ID3D12Resource),
-			(void**)&m_depth_stencil.m_ptr));
+			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, &clear_value,
+			__uuidof(ID3D12Resource), (void**)&m_depth_stencil.m_ptr));
 		Throw(m_depth_stencil->SetName(L"DepthStencil"));
 
 		// Get the pointer and item size of the RTV descriptor heap.

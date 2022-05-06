@@ -2,9 +2,8 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-
-#include "screen_space_cbuf.hlsli"
 #include "../types.hlsli"
+#include "../forward/forward_cbuf.hlsli"
 
 // Converts point geometry into arrow heads
 // Uses ss_vert for centre position, and ws_norm as the arrow forward direction

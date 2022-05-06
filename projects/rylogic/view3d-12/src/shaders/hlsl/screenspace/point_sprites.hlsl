@@ -2,9 +2,8 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-
-#include "screen_space_cbuf.hlsli"
 #include "../types.hlsli"
+#include "../forward/forward_cbuf.hlsli"
 
 // Converts point geometry into billboard quads
 #ifdef PR_RDR_GSHADER_point_sprites

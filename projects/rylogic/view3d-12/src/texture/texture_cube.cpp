@@ -7,8 +7,8 @@
 
 namespace pr::rdr12
 {
-	TextureCube::TextureCube(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, char const* name)
-		:TextureBase(mgr, id, res, uri, name)
+	TextureCube::TextureCube(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+		:TextureBase(mgr, res, desc)
 		,m_cube2w(m4x4::Identity())
 	{}
 }

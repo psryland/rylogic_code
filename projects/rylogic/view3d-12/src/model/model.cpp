@@ -8,7 +8,7 @@
 
 namespace pr::rdr12
 {
-	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, char const* name)
+	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
 		:m_mgr(&mgr)
 		, m_vcount(vcount)
 		, m_icount(icount)
@@ -30,9 +30,12 @@ namespace pr::rdr12
 				throw std::runtime_error("Unsupported index buffer format"),
 		})
 		, m_nuggets()
+		, m_bbox(bbox)
 		, m_name(name)
 		, m_dbg_flags(EDbgFlags::None)
 	{
+		Throw(m_vb->SetName(FmtS(L"%S:VB:%d", name, vcount)));
+		Throw(m_ib->SetName(FmtS(L"%S:IB:%d", name, icount)));
 	}
 	Model::~Model()
 	{

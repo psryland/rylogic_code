@@ -67,6 +67,36 @@
     <Filter Include="src\lighting">
       <UniqueIdentifier>{19470125-330c-4491-b8e2-e8f0b77a8454}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\camera">
+      <UniqueIdentifier>{e25b9b5f-9711-45ba-96a9-b5542833427b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{0e3429e8-2a3e-40f0-9ab2-ae6e549326e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{f60423e8-d31e-4df5-a605-4b1a5d9548b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{3084a8ff-324f-442a-a0c7-30871fbea386}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\lua">
+      <UniqueIdentifier>{70902902-6d58-45fd-a4ee-625b91c76211}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\script">
+      <UniqueIdentifier>{f6499307-516f-40ce-bf6b-11d34fdeb5d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\str">
+      <UniqueIdentifier>{ebe5bc70-cba6-4a04-becf-f57696d62c79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\win32">
+      <UniqueIdentifier>{11766335-6fa3-4771-a150-646adc041a6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{5112c3e1-8e59-46da-8491-12e35d7509ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ldraw">
+      <UniqueIdentifier>{a9fc0979-5796-4338-a9f7-f09416328e59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp">
@@ -114,9 +144,6 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_states.cpp">
-      <Filter>src\utility</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
@@ -146,6 +173,24 @@
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_wic.cpp">
       <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\model\model_generator.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_thick_line.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_arrow_head.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_sources.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp">
+      <Filter>src\ldraw</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -296,9 +341,6 @@
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_loader.h">
       <Filter>src\texture</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d-12\utility\pipe_states.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\resource\descriptor.h">
       <Filter>src\resource</Filter>
     </ClInclude>
@@ -307,6 +349,141 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\resource\gpu_upload_buffer.h">
       <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\lua\lua.h">
+      <Filter>pr\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\embedded.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\embedded_lua.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\fail_policy.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\filter.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\forward.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\includes.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\location.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\macros.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\preprocessor.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script_core.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\token.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\tokeniser.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\camera\camera.h">
+      <Filter>pr\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\win32\win32.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\extract.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\common.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\index_buffer.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_box.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_cylinder.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_extrude.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_line.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_mesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_point.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_quad.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_shape2d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_skybox.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_sphere.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\model_file.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\stl.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\chain.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_object.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\model\model_generator.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\model\model_tree.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_thick_line.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_arrow_head.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_sources.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h">
+      <Filter>src\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -317,9 +494,6 @@
       <Filter>src\shaders\hlsl\deferred</Filter>
     </CustomBuild>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsl">
-      <Filter>src\shaders\hlsl\forward</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <Filter>src\shaders\hlsl\forward</Filter>
     </CustomBuild>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\deferred\gbuffer.hlsl">
@@ -345,9 +519,6 @@
     </CustomBuild>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\env_map.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
-    </None>
-    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward.hlsli">
-      <Filter>src\shaders\hlsl\forward</Filter>
     </None>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\forward\forward_cbuf.hlsli">
       <Filter>src\shaders\hlsl\forward</Filter>
@@ -381,12 +552,6 @@
     </None>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\vector.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
-    </None>
-    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\screen_space_cbuf.hlsli">
-      <Filter>src\shaders\hlsl\screenspace</Filter>
-    </None>
-    <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\diagnostic_cbuf.hlsli">
-      <Filter>src\shaders\hlsl\utility</Filter>
     </None>
   </ItemGroup>
 </Project>

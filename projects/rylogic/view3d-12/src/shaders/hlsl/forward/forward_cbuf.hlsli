@@ -8,9 +8,7 @@
 #define PR_RDR_SHADER_FORWARD_CBUF_HLSL
 #include "../types.hlsli"
 
-// 'CBufFrame' is a cbuffer managed by a scene.
-// It contains values constant for the whole frame.
-// It is defined for every shader because most will probably need it
+// Constants per frame.
 cbuffer CBufFrame :reg(b0,0)
 {
 	// Camera transform
@@ -72,6 +70,23 @@ cbuffer CBufFade :reg(b2,0)
 	// 0 = Spherical fade
 	// 1 = Cylindrical fade
 	int m_fade_type;
+};
+
+// Constants used for screen space geometry shaders.
+cbuffer CBufScreenSpace :reg(b3,0)
+{
+	float2 m_screen_dim; // x = screen width, y = screen height, 
+	float2 m_size;       // x = width in pixels, y = height in pixels
+	bool   m_depth;      // True if depth scaling should be used
+	int    m_ss_pad[3];  // Padding for alignment
+};
+
+// Constants used for diagnostic shaders
+cbuffer CBufDiag :reg(b3,0) //can b3 be reused?
+{
+	float4 m_colour;
+	float  m_length;
+	int    m_diag_pad[3];
 };
 
 #endif

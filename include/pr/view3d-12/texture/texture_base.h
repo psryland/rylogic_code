@@ -4,7 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/resource/descriptor_store.h"
+#include "pr/view3d-12/resource/descriptor.h"
 
 namespace pr::rdr12
 {
@@ -27,26 +27,14 @@ namespace pr::rdr12
 		RdrId                  m_uri;  // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
 		string32               m_name; // Human readable id for the texture
 
-		//D3DPtr<ID3D11SamplerState>       m_samp;      // The sampler state to use with this texture
-
-		TextureBase(ResourceManager& mgr, RdrId id, ID3D12Resource* res, RdrId uri, char const* name);
-		//TextureBase(ResourceManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, char const* name);
-		//TextureBase(ResourceManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name);
+		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
 		virtual ~TextureBase();
 
 		// A sort key component for this texture
 		SortKeyId SortId() const;
 
-		//// Get/Set the description of the current sampler state pointed to by 'm_samp'
-		//// Setting a new sampler description, re-creates the sampler state
-		//SamplerDesc SamDesc() const;
-		//void SamDesc(SamplerDesc const& desc);
-
-		//// Set the filtering and address mode for this texture
-		//void SetFilterAndAddrMode(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
-
-		//// Return the shared handle associated with this texture
-		//HANDLE SharedHandle() const;
+		// Return the shared handle associated with this texture
+		HANDLE SharedHandle() const;
 
 		// Delegates to call when the texture is destructed
 		// WARNING: Don't add lambdas that capture a ref counted pointer to the texture

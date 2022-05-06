@@ -59,10 +59,10 @@ namespace pr::rdr12
 		}
 
 		// Enable the debug layer
-		RdrSettings& DebugLayer()
+		RdrSettings& DebugLayer(bool enable)
 		{
 			if (m_adapter.ptr != nullptr) Throw(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
-			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, true);
+			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
 			return *this;
 		}
 	};

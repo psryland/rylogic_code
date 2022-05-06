@@ -5,7 +5,8 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/drawlist_element.h"
-#include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/shaders/shader.h"
+#include "pr/view3d-12/utility/pipe_state.h"
 
 namespace pr::rdr12
 {
@@ -32,15 +33,17 @@ namespace pr::rdr12
 			}
 		};
 
+		ERenderStep const Id;
 		Scene*                      m_scene;              // The scene this render step is owned by
 		drawlist_t                  m_drawlist;           // The drawlist for this render step. Access via 'Lock'
 		bool                        m_sort_needed;        // True when the list needs sorting
-		D3DPtr<ID3D12RootSignature> m_shader_sig;         // Signature for shaders used by this render step
+		GpuUploadBuffer             m_cbuf_upload;        // Shared upload buffer for shaders to used to upload parameters
 		PipeStateDesc               m_default_pipe_state; // Default settings for the pipeline state
+		PipeStatePool               m_pipe_state_pool;    // Pool of pipeline state objects
 		AutoSub                     m_evt_model_delete;   // Event subscription for model deleted notification
 		dl_mutex_t mutable          m_mutex;              // Sync access to the drawlist
 
-		explicit RenderStep(Scene& scene);
+		RenderStep(ERenderStep id, Scene& scene);
 		RenderStep(RenderStep&&) = default;
 		RenderStep(RenderStep const&) = delete;
 		RenderStep& operator = (RenderStep&&) = default;
@@ -53,7 +56,6 @@ namespace pr::rdr12
 		Scene& scn() const;
 
 		// The type of render step this is
-		virtual ERenderStep GetId() const = 0;
 		template <RenderStepType RStep> RStep const& as() const
 		{
 			return *static_cast<RStep const*>(this);
@@ -62,9 +64,6 @@ namespace pr::rdr12
 		{
 			return *static_cast<RStep*>(this);
 		}
-
-		// Update the provided shader set appropriate for this render step
-		virtual void ConfigShaders(ShaderSet1& ss, ETopo topo) const = 0;
 
 		// Reset the drawlist
 		virtual void ClearDrawlist();

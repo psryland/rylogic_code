@@ -45,7 +45,7 @@ namespace pr::rdr12
 				, m_size(0)
 				, m_sync_point(sync_point)
 			{
-				auto desc = BufferDesc::Buffer(size, nullptr, alignment);
+				auto desc = ResDesc::Buf(size, 1, nullptr, alignment);
 				Throw(device->CreateCommittedResource(
 					&HeapProps::Upload(),
 					D3D12_HEAP_FLAG_NONE,
