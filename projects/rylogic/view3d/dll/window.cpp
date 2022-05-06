@@ -68,6 +68,11 @@ namespace view3d
 		,m_bbox_scene(BBox::Reset())
 		,m_main_thread_id(std::this_thread::get_id())
 		,ReportError()
+		,OnSettingsChanged()
+		,OnInvalidated()
+		,OnRendering()
+		,OnSceneChanged()
+		,OnAnimationEvent()
 	{
 		try
 		{

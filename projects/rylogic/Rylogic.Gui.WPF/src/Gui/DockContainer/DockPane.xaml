@@ -112,6 +112,7 @@
 		<Button
 			Grid.Column="2"
 			BorderThickness="0"
+			Visibility="{Binding AllowClose, Converter={conv:BoolToVisible}}"
 			Content="{StaticResource DockClose}"
 			Command="{Binding ClosePane}"
 			Background="Transparent"

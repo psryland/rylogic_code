@@ -193,7 +193,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if the dockable can be 'closed'</summary>
 		public bool AllowClose
 		{
-			get => m_allow_close;
+			get => m_allow_close && (DockContainer?.Options.AllowUserCloseTabs ?? true);
 			set
 			{
 				if (m_allow_close == value) return;
@@ -280,7 +280,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set the dock site within the branch that contains 'DockPane'</summary>
 		public EDockSite DockSite
 		{
-			get { return DockPane?.DockSite ?? EDockSite.Centre; }
+			get => DockPane?.DockSite ?? EDockSite.Centre;
 			set
 			{
 				if (DockSite == value) return;
