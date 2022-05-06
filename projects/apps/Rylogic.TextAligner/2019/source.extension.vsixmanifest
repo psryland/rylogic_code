@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="1.11.5" Language="en-US" Publisher="Rylogic" />
+        <Identity Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="1.11.6" Language="en-US" Publisher="Rylogic" />
         <DisplayName>Rylogic TextAligner 2019</DisplayName>
         <Description xml:space="preserve">Text aligning extension for Visual Studio (2019 and below) by Rylogic</Description>
         <MoreInfo>https://www.rylogic.co.nz</MoreInfo>

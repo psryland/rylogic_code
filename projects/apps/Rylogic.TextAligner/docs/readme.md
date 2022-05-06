@@ -145,6 +145,9 @@ If you like Rylogic Text Aligner and would like to say thanks, a donation would 
 Bugs should be reported to support@rylogic.co.nz
 
 #### Version History
+* *v1.11.6 - 2022-05-05*
+  * Changed the behaviour of unaligning. Previously, unalign would apply patterns in reverse priority order so that unaligning was the mirror of aligning. However, I think this behaviour is unintuitive, because it seems like the priority order is not being used. Now, unaligning uses the same priority as aligning, so patterns next to the caret will unalign first, as would be expected.
+
 * *v1.11.5 - 2022-04-14*
   * Bug Fix. Settings synchronised across multiple running instances of Visual Studio (including different versions)
   * Bug Fix. Line ignore pattern was not being preserved in settings.

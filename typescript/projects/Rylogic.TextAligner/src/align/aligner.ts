@@ -162,10 +162,7 @@ export class Aligner
 
 		// Sort the boundaries by pattern priority, then by distance from column 0
 		let ordered = [...boundaries]
-		ordered =
-			action == EAction.Align   ? ordered.sort((l,r) => l.grp_index !== r.grp_index ? l.grp_index - r.grp_index : l.CurrentCharIndex - r.CurrentCharIndex) :
-			action == EAction.Unalign ? ordered.sort((l,r) => l.grp_index !== r.grp_index ? r.grp_index - l.grp_index : l.CurrentCharIndex - r.CurrentCharIndex) :
-			[];
+		ordered = ordered.sort((l,r) => l.grp_index !== r.grp_index ? l.grp_index - r.grp_index : l.CurrentCharIndex - r.CurrentCharIndex);
 
 		// Find the first boundary that can be aligned
 		let edits:Token[] = [];

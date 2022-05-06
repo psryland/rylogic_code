@@ -181,6 +181,7 @@
     <ClInclude Include="..\..\..\include\pr\common\si_units.h" />
     <ClInclude Include="..\..\..\include\pr\common\static_callback.h" />
     <ClInclude Include="..\..\..\include\pr\common\stop_watch.h" />
+    <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h" />
     <ClInclude Include="..\..\..\include\pr\common\to.h" />
     <ClInclude Include="..\..\..\include\pr\common\repeater.h" />
     <ClInclude Include="..\..\..\include\pr\common\tstring.h" />

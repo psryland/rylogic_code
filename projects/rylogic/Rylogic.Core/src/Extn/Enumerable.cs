@@ -168,6 +168,14 @@ namespace Rylogic.Extn
 			return source.IsOrdered(order, comparer);
 		}
 
+		/// <summary>Select items with an index</summary>
+		public static IEnumerable<TOutput> SelectWithIndex<TOutput, TSource>(this IEnumerable<TSource> source, Func<TSource, int, TOutput> selector)
+		{
+			int i = 0;
+			foreach (var item in source)
+				yield return selector(item, i++);
+		}
+
 		/// <summary>Enumerate this range in reverse. Note: Same as "IEnumerable.Reverse". "IList.Reverse" however, does an in-place reverse</summary>
 		public static IEnumerable<TSource> Reversed<TSource>(this IEnumerable<TSource> source)
 		{

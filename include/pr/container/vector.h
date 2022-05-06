@@ -1631,7 +1631,7 @@ namespace pr::container
 					for (int i = 0; i != 4; ++i)
 						PR_CHECK(arr1[i].val, arr0[i].val);
 				}
-			}{
+			}/*{ // Use std::span
 				Check chk;
 				{
 					Array0 arr0(4U, 1);
@@ -1651,7 +1651,7 @@ namespace pr::container
 					for (int i = 0; i != 4; ++i)
 						PR_CHECK(vec0[i].val, arr0[i].val);
 				}
-			}
+			}*/
 		}
 		{//Mem
 			{

@@ -100,6 +100,7 @@
 #include "pr\common\si_units.h"
 #include "pr\common\static_callback.h"
 #include "pr\common\stop_watch.h"
+#include "pr\common\stride_ptr.h"
 #include "pr\common\to.h"
 #include "pr\common\tstring.h"
 #include "pr\common\unittests.h"
