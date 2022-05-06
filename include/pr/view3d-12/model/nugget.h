@@ -22,7 +22,7 @@ namespace pr::rdr12
 	//     these data might as well be in the nuggets to prevent duplication in each shader.
 	//    Usability requires that we can add a model (i.e. a collection of nuggets) to any/all render steps automatically.
 	//    Normally, render steps have a shader they want to use but sometimes we need to override the shader a render step uses.
-	//    We don't want to have to resolve the shaders per frame
+	//    We don't want to have to resolve the shaders per frame.
 	//
 	//  - Render Steps:
 	//    Nuggets may be referenced in the drawlists of several render steps. i.e. each render step has

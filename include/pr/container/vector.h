@@ -1171,16 +1171,18 @@ namespace pr
 			}
 		}
 
-		// Implicit conversion to a type that can be constructed from begin/end iterators 
-		// This allows cast to std::vector<> among others. 
-		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the 
-		// default alignment causes a compiler error because of std::vector.resize(). 
-		template <typename ArrayType>
-			requires std::is_same_v<typename ArrayType::value_type, value_type>
-			//&& std::is_constructible_v<ArrayType, std::decay_t<decltype(begin())>, std::decay_t<decltype(end())>>
-		operator ArrayType() const
+		// Explicit conversion to span
+		std::span<Type const> span() const
 		{
-			return ArrayType(begin(), end());
+			return std::span<Type const>(data(), size());
+		}
+		std::span<Type> span()
+		{
+			return std::span<Type>(data(), size());
+		}
+		std::span<Type const> cspan()
+		{
+			return std::as_const(*this).span();
 		}
 
 		// Implicit conversion to initialiser list.
@@ -1194,12 +1196,24 @@ namespace pr
 		// Implicit conversion to span.
 		operator std::span<Type const>() const
 		{
-			return std::span<Type const>(data(), size());
+			return span();
 		}
 		operator std::span<Type>()
 		{
-			return std::span<Type>(data(), size());
+			return span();
 		}
+
+		//// Implicit conversion to a type that can be constructed from begin/end iterators 
+		//// This allows cast to std::vector<> among others. 
+		//// Note: converting to a std::vector<> when 'Type' has an alignment greater than the 
+		//// default alignment causes a compiler error because of std::vector.resize(). 
+		//template <typename ArrayType>
+		//	requires std::is_same_v<typename ArrayType::value_type, value_type>
+		//	//&& std::is_constructible_v<ArrayType, std::decay_t<decltype(begin())>, std::decay_t<decltype(end())>>
+		//operator ArrayType() const
+		//{
+		//	return ArrayType(begin(), end());
+		//}
 
 		// Operators
 		template <typename T, int L, bool F, int A, class C>

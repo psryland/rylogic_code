@@ -4,7 +4,6 @@
 //******************************************
 // Use to cast any pointer to a uint8_t pointer
 #pragma once
-
 #include <cstdint>
 #include <cassert>
 #include <stdexcept>

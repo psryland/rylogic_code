@@ -65,6 +65,23 @@ namespace pr
 	static_assert(container_traits<std::unordered_set<int>>::associative == true, "");
 	#pragma endregion
 
+	// Signed size of an array
+	template <typename T, int S> requires (S <= 0x7FFFFFFF)
+	constexpr int icountof(T const (&)[S])
+	{
+		return S;
+	}
+	template <typename T, int64_t S> requires (S >= 0x80000000LL && S <= 0x7FFFFFFFFFFFFFFFLL)
+	constexpr int64_t icountof(T const (&)[S])
+	{
+		return S;
+	}
+	template <typename T>
+	constexpr int64_t icountof(std::span<T> s)
+	{
+		return static_cast<int64_t>(s.size());
+	}
+
 	// Return the length of a container or array
 	template <typename TCont> size_t length(TCont const& cont)
 	{

@@ -69,7 +69,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 		["cs", "/Tcs_5_0", r"^#ifdef PR_RDR_CSHADER_(?P<name>.*)$"],
 	]
 
-	# Scan the file looking for each shader type
+	# Scan the file looking for instances of each shader type (there can be more than one)
 	for shdr,profile,patn in keys:
 		
 		# For each matching instance, build the shader
@@ -164,7 +164,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 if __name__ == "__main__":
 	try:
 		#sys.argv = ["",
-		#	"P:\\pr2\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\screenspace\\point_sprites.hlsl",
+		#	"P:\\pr2\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\forward\\forward.hlsl",
 		#	"x86", "debug", "dbg"]
 
 		trace = False
