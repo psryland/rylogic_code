@@ -635,10 +635,7 @@ namespace pr
 }
 
 #if PR_UNITTESTS
-#include <random>
 #include "pr/common/unittests.h"
-#include "pr/maths/rand_vector.h"
-#include "pr/maths/maths.h"
 namespace pr::maths
 {
 	PRUnitTest(FrustumTests)
@@ -676,7 +673,7 @@ namespace pr::maths
 		{ // FA Frustum
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
 			
-			// zdist
+			// ZDist
 			f.zfar(5.0f);
 			PR_CHECK(f.zfar(), 5.0f);
 			f.zfar(10.0f);
@@ -685,7 +682,7 @@ namespace pr::maths
 			// aspect = tan(fovX/2) / tan(fovY/2)
 			PR_CHECK(FEql(f.aspect(), 1.75f), true);
 
-			// fov
+			// FOV
 			PR_CHECK(FEql(f.fovY(), maths::tau_by_8f), true);
 			PR_CHECK(FEql(f.fovX(), 2 * ATan(f.aspect() * Tan(f.fovY()/2))), true);
 
@@ -701,7 +698,7 @@ namespace pr::maths
 			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
 			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
 
-			// zfar test
+			// ZFar test
 			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
 			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
 
@@ -723,13 +720,13 @@ namespace pr::maths
 		{ // WH Frustum
 			auto f = Frustum::MakeWH(v2(16.0f, 9.0f), 10.0f, 20.0f);
 			
-			// zdist
+			// ZDist
 			PR_CHECK(f.zfar(), 20.0f);
 
 			// aspect = tan(fovX/2) / tan(fovY/2)
 			PR_CHECK(FEql(f.aspect(), 16.0f/9.0f), true);
 
-			// fov
+			// FOV
 			PR_CHECK(FEql(f.fovX(), 2 * ATan(8.0f / 10.0f)), true);
 			PR_CHECK(FEql(f.fovY(), 2 * ATan(4.5f / 10.0f)), true);
 
@@ -745,7 +742,7 @@ namespace pr::maths
 			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
 			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
 			
-			// zfar test
+			// ZFar test
 			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
 			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
 			
@@ -809,7 +806,7 @@ namespace pr::maths
 		{// Grow with points
 			std::vector<v4> pts;
 			for (int i = 0; i != 50; ++i)
-				pts.push_back(Random3(rng, 0.0f, 2.0f, 1.0f));
+				pts.push_back(v4::Random(rng, 0.0f, 2.0f, 1.0f));
 
 			auto nf = v2Zero;
 			auto f2w = m4x4Identity;
@@ -838,13 +835,13 @@ namespace pr::maths
 			for (int i = 0; i != 50; ++i)
 			{
 				BBox bb(
-					Random3(rng, i * 0.05f, i * 0.1f, 1.0f),
-					Abs(Random3(rng, 0.3f, 0.5f, 0.0f)));
+					v4::Random(rng, i * 0.05f, i * 0.1f, 1.0f),
+					Abs(v4::Random(rng, 0.3f, 0.5f, 0.0f)));
 				bboxes.push_back(bb);
 			}
 
-			auto nf = v2Zero;
-			auto f2w = m4x4Identity;
+			auto nf = v2::Zero();
+			auto f2w = m4x4::Identity();
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
 			PR_CHECK(f.zfar() == 0.0f, true);
 			for (auto& bb : bboxes)
@@ -869,13 +866,13 @@ namespace pr::maths
 			for (int i = 0; i != 50; ++i)
 			{
 				BSphere bs(
-					Random3(rng, i * 0.05f, i * 0.2f, 1.0f),
-					Random1(rng, 0.3f, 0.5f));
+					v4::Random(rng, i * 0.05f, i * 0.2f, 1.0f),
+					Random(rng, 0.3f, 0.5f));
 				spheres.push_back(bs);
 			}
 
-			auto nf = v2Zero;
-			auto f2w = m4x4Identity;
+			auto nf = v2::Zero();
+			auto f2w = m4x4::Identity();
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
 			PR_CHECK(f.zfar() == 0.0f, true);
 			for (auto& bs : spheres)

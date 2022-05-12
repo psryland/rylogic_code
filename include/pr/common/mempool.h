@@ -57,7 +57,7 @@ namespace pr
 	class MemPool
 	{
 	public:
-		MemPool(uint estimated_size = 1);
+		MemPool(uint32_t estimated_size = 1);
 		MemPool(const MemPool<T>& copy);
 		~MemPool();
 		MemPool<T>& operator = (const MemPool<T>& copy) { this->~MemPool(); return *new (this) MemPool<T>(copy); }
@@ -68,10 +68,10 @@ namespace pr
 		void ReleaseMemory();
 		void ForceReleaseMemory();
 
-		uint GetNumberOfObjectsPerBlock() const			{ return m_objects_per_block; }
-		uint GetNumberOfFreeObjects() const				{ return m_free_objects; }
-		uint GetNumberOfAllocatedObjects() const		{ return m_allocated_objects; }
-		void SetNumberOfObjectsPerBlock(uint number)	{ m_objects_per_block = number; }
+		uint32_t GetNumberOfObjectsPerBlock() const			{ return m_objects_per_block; }
+		uint32_t GetNumberOfFreeObjects() const				{ return m_free_objects; }
+		uint32_t GetNumberOfAllocatedObjects() const		{ return m_allocated_objects; }
+		void SetNumberOfObjectsPerBlock(uint32_t number)	{ m_objects_per_block = number; }
 
 		bool AllObjectsReturned() const				{ return m_allocated_objects == m_free_objects; }
 
@@ -94,11 +94,11 @@ namespace pr
 
 		struct Block
 		{
-			Block(uint number_of_objects) : m_number_of_objects(number_of_objects), m_next(0), m_prev(0)
-			{	m_memory = new uint8[m_number_of_objects * sizeof(T)]; }
+			Block(uint32_t number_of_objects) : m_number_of_objects(number_of_objects), m_next(0), m_prev(0)
+			{	m_memory = new uint8_t[m_number_of_objects * sizeof(T)]; }
 			~Block() { delete [] m_memory; }
-			uint8*	m_memory;
-			uint	m_number_of_objects;
+			uint8_t*	m_memory;
+			uint32_t	m_number_of_objects;
 			Block*	m_next;
 			Block*	m_prev;
 		};
@@ -118,10 +118,10 @@ namespace pr
 	private:
 		Block*	m_block_list;
 		T*		m_object_list;
-		uint	m_objects_per_block;
-		uint	m_allocated_objects;
-		uint	m_free_objects;
-		uint	m_block_ptr;
+		uint32_t	m_objects_per_block;
+		uint32_t	m_allocated_objects;
+		uint32_t	m_free_objects;
+		uint32_t	m_block_ptr;
 	};
 
 	//***********************************************************************//
@@ -129,7 +129,7 @@ namespace pr
 	//*****
 	// Constructor
 	template <typename T>
-	MemPool<T>::MemPool(uint estimated_size)
+	MemPool<T>::MemPool(uint32_t estimated_size)
 	:m_block_list(0)
 	,m_object_list(0)
 	,m_objects_per_block((estimated_size) ? (estimated_size) : (1))

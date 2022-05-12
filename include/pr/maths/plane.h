@@ -11,7 +11,7 @@
 namespace pr
 {
 	// Planes are stored as: [dx dy dz -dist]
-	using Plane = Vec4<struct PlaneType>;
+	using Plane = Vec4f<struct PlaneType>;
 
 	// Define the dot product for planes
 	inline float Dot(Plane const& plane, v4 const& rhs)

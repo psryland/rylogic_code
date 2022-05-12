@@ -34,7 +34,7 @@ namespace pr
 		{
 			enum { MaxContacts = 10 };
 			Contact m_contact[MaxContacts];	// The points of contact
-			uint m_num_contacts;			// The number of contacts in 'm_contact'
+			uint32_t m_num_contacts;			// The number of contacts in 'm_contact'
 			bool m_flip;					// True if contacts should be flipped before adding them to the manifold
 
 		public:
@@ -66,20 +66,20 @@ namespace pr
 			v4 ContactCentre() const
 			{
 				v4 pos = v4Zero;
-				for( uint i = 0; i != m_num_contacts; ++i ) pos += m_contact[i].m_pointA;
+				for( uint32_t i = 0; i != m_num_contacts; ++i ) pos += m_contact[i].m_pointA;
 				pos /= float(m_num_contacts);
 				pos.w = 1.0f;
 				return pos;
 			}
-			uint Size() const
+			uint32_t Size() const
 			{
 				return m_num_contacts;
 			}
-			Contact const& operator[](uint i) const
+			Contact const& operator[](uint32_t i) const
 			{
 				return m_contact[i];
 			}
-			Contact& operator[](uint i)
+			Contact& operator[](uint32_t i)
 			{
 				return m_contact[i];
 			}

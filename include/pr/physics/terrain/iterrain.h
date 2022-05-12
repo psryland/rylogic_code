@@ -21,7 +21,7 @@ namespace pr
 	{
 		namespace terrain
 		{
-			// An volume to test for interestion with the terrain
+			// An volume to test for intersection with the terrain
 			struct Sample
 			{
 				pr::v4      m_point;            // A point in world space
@@ -35,7 +35,7 @@ namespace pr
 				std::size_t m_sample_index;     // The index of the sample
 				pr::v4      m_terrain_point;    // The point on the terrain surface
 				pr::v4      m_normal;           // The normal of the terrain surface
-				pr::uint    m_material_id;      // The material id of the terrain surface
+				uint32_t    m_material_id;      // The material id of the terrain surface
 			};
 			
 			//// A helper object for containing a number of results
@@ -175,7 +175,7 @@ namespace pr
 //          //v4        m_normal;               // The terrain normal at the intersection
 //          //float m_depth;                // The depth that 'm_position' is below the terrain. -ve = above, +ve = below
 //          //float m_fraction;             // The fraction of 'm_direction' at the point of collision. 0.0f = immediate (first) collision, 1.0 = last collision
-//          //uint  m_material_index;       // The material that the terrain is made out of
+//          //uint32_t  m_material_index;       // The material that the terrain is made out of
 //      };
 //
 //      void TerrainCollisionBox        (const Primitive& prim, const m4x4& obj2w, Contact& contact);

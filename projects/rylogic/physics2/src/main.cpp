@@ -65,7 +65,7 @@ struct MainUI :Form
 			body.ZeroForces();
 			body.ZeroMomentum();
 			
-			auto o2w = Random4x4(rng, v4Origin, 5.0f);
+			auto o2w = m4x4::Random(rng, v4::Origin(), 5.0f);
 			//o2w.pos.xyz += o2w.pos.xyz;
 			body.O2W(o2w);
 		}

@@ -1605,7 +1605,7 @@ namespace pr::sqlite
 	{
 		typedef unsigned char byte;
 		typedef unsigned short ushort;
-		typedef unsigned int uint;
+		typedef unsigned int uint32_t;
 		typedef unsigned __int64 uint64;
 		typedef std::vector<byte> buffer;
 
@@ -1641,7 +1641,7 @@ namespace pr::sqlite
 				short        m_short;
 				ushort       m_ushort;
 				int          m_int;
-				uint         m_uint;
+				uint32_t         m_uint;
 				__int64      m_int64;
 				uint64       m_uint64;
 				float        m_float;

@@ -193,7 +193,7 @@ namespace pr::eval
 			:Val(static_cast<double>(f))
 		{
 		}
-		Val(iv4_cref<> vec) noexcept
+		Val(v4i_cref<> vec) noexcept
 			:m_i4(vec)
 			,m_ty(EType::Intg4)
 			,pad()
@@ -203,7 +203,7 @@ namespace pr::eval
 			,m_ty(EType::Real4)
 			,pad()
 		{}
-		Val& operator = (iv4_cref<> v) noexcept
+		Val& operator = (v4i_cref<> v) noexcept
 		{
 			m_i4 = v;
 			m_ty = EType::Intg4;
@@ -275,20 +275,20 @@ namespace pr::eval
 			if (m_ty == EType::Real4) throw std::runtime_error("Cannot demote vec4 to double");
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
-		iv4 i4() const
+		v4i i4() const
 		{
 			if (m_ty == EType::Intg4) return m_i4;
-			if (m_ty == EType::Real4) return pr::iv4(m_v4);
-			if (m_ty == EType::Intg) return pr::iv4(static_cast<int>(m_ll));
-			if (m_ty == EType::Real) return pr::v4(static_cast<float>(m_db));
+			if (m_ty == EType::Real4) return To<v4i>(m_v4);
+			if (m_ty == EType::Intg) return v4i(static_cast<int>(m_ll));
+			if (m_ty == EType::Real) return v4i(static_cast<int>(m_db));
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
-		v4 v4() const
+		v4f v4() const
 		{
 			if (m_ty == EType::Real4) return m_v4;
-			if (m_ty == EType::Intg4) return static_cast<pr::v4>(m_i4);
-			if (m_ty == EType::Intg) return pr::v4(static_cast<float>(m_ll));
-			if (m_ty == EType::Real) return pr::v4(static_cast<float>(m_db));
+			if (m_ty == EType::Intg4) return To<v4f>(m_i4);
+			if (m_ty == EType::Intg) return v4f(static_cast<float>(m_ll));
+			if (m_ty == EType::Real) return v4f(static_cast<float>(m_db));
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
 
@@ -825,31 +825,31 @@ namespace pr::eval
 				auto tok = m_op.read<ETok>(i);
 				switch (tok)
 				{
-				case ETok::None:
+					case ETok::None:
 					{
 						break;
 					}
-				case ETok::Identifier:
+					case ETok::Identifier:
 					{
 						auto hash = m_op.read<IdentHash>(i);
 						stack.push_back(args(hash));
 						break;
 					}
-				case ETok::Value:
+					case ETok::Value:
 					{
 						// Deserialise a 'Val' instance
 						auto ty = m_op.read<Val::EType>(i);
 						switch (ty)
 						{
-						case Val::EType::Intg: stack.push_back(m_op.read<long long>(i)); break;
-						case Val::EType::Real: stack.push_back(m_op.read<double>(i)); break;
-						case Val::EType::Intg4: stack.push_back(m_op.read<v4>(i)); break;
-						case Val::EType::Real4: stack.push_back(m_op.read<iv4>(i)); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(m_op.read<long long>(i)); break;
+							case Val::EType::Real: stack.push_back(m_op.read<double>(i)); break;
+							case Val::EType::Intg4: stack.push_back(m_op.read<v4>(i)); break;
+							case Val::EType::Real4: stack.push_back(m_op.read<iv4>(i)); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Add:
+					case ETok::Add:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for add expression");
 						auto b = stack.back(); stack.pop_back();
@@ -857,7 +857,7 @@ namespace pr::eval
 						stack.push_back(a + b);
 						break;
 					}
-				case ETok::Sub:
+					case ETok::Sub:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for subtract expression");
 						auto b = stack.back(); stack.pop_back();
@@ -865,7 +865,7 @@ namespace pr::eval
 						stack.push_back(a - b);
 						break;
 					}
-				case ETok::Mul:
+					case ETok::Mul:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for multiply expression");
 						auto b = stack.back(); stack.pop_back();
@@ -873,7 +873,7 @@ namespace pr::eval
 						stack.push_back(a * b);
 						break;
 					}
-				case ETok::Div:
+					case ETok::Div:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for divide expression");
 						auto b = stack.back(); stack.pop_back();
@@ -881,7 +881,7 @@ namespace pr::eval
 						stack.push_back(a / b);
 						break;
 					}
-				case ETok::Mod:
+					case ETok::Mod:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for modulus expression");
 						auto b = stack.back(); stack.pop_back();
@@ -889,35 +889,35 @@ namespace pr::eval
 						stack.push_back(a % b);
 						break;
 					}
-				case ETok::UnaryPlus:
+					case ETok::UnaryPlus:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for unary plus expression");
 						auto x = stack.back(); stack.pop_back();
 						stack.push_back(+x);
 						break;
 					}
-				case ETok::UnaryMinus:
+					case ETok::UnaryMinus:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for unary minus expression");
 						auto x = stack.back(); stack.pop_back();
 						stack.push_back(-x);
 						break;
 					}
-				case ETok::Comp:
+					case ETok::Comp:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for twos complement expression");
 						auto x = stack.back(); stack.pop_back();
 						stack.push_back(~x);
 						break;
 					}
-				case ETok::Not:
+					case ETok::Not:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for boolean NOT expression");
 						auto x = stack.back(); stack.pop_back();
 						stack.push_back(!x);
 						break;
 					}
-				case ETok::LogOR:
+					case ETok::LogOR:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for logical OR expression");
 						auto b = stack.back(); stack.pop_back();
@@ -925,7 +925,7 @@ namespace pr::eval
 						stack.push_back(a || b);
 						break;
 					}
-				case ETok::LogAND:
+					case ETok::LogAND:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for logical AND expression");
 						auto b = stack.back(); stack.pop_back();
@@ -933,7 +933,7 @@ namespace pr::eval
 						stack.push_back(a && b);
 						break;
 					}
-				case ETok::LogEql:
+					case ETok::LogEql:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for equals expression");
 						auto b = stack.back(); stack.pop_back();
@@ -941,7 +941,7 @@ namespace pr::eval
 						stack.push_back(a == b);
 						break;
 					}
-				case ETok::LogNEql:
+					case ETok::LogNEql:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for not equal expression");
 						auto b = stack.back(); stack.pop_back();
@@ -949,7 +949,7 @@ namespace pr::eval
 						stack.push_back(a != b);
 						break;
 					}
-				case ETok::LogLT:
+					case ETok::LogLT:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for less than expression");
 						auto b = stack.back(); stack.pop_back();
@@ -957,7 +957,7 @@ namespace pr::eval
 						stack.push_back(a < b);
 						break;
 					}
-				case ETok::LogLTEql:
+					case ETok::LogLTEql:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for less than or equal expression");
 						auto b = stack.back(); stack.pop_back();
@@ -965,7 +965,7 @@ namespace pr::eval
 						stack.push_back(a <= b);
 						break;
 					}
-				case ETok::LogGT:
+					case ETok::LogGT:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for greater than expression");
 						auto b = stack.back(); stack.pop_back();
@@ -973,7 +973,7 @@ namespace pr::eval
 						stack.push_back(a > b);
 						break;
 					}
-				case ETok::LogGTEql:
+					case ETok::LogGTEql:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for greater than or equal expression");
 						auto b = stack.back(); stack.pop_back();
@@ -981,7 +981,7 @@ namespace pr::eval
 						stack.push_back(a >= b);
 						break;
 					}
-				case ETok::BitOR:
+					case ETok::BitOR:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for bitwise OR expression");
 						auto b = stack.back(); stack.pop_back();
@@ -989,7 +989,7 @@ namespace pr::eval
 						stack.push_back(a | b);
 						break;
 					}
-				case ETok::BitAND:
+					case ETok::BitAND:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for bitwise AND expression");
 						auto b = stack.back(); stack.pop_back();
@@ -997,7 +997,7 @@ namespace pr::eval
 						stack.push_back(a & b);
 						break;
 					}
-				case ETok::BitXOR:
+					case ETok::BitXOR:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for bitwise XOR expression");
 						auto b = stack.back(); stack.pop_back();
@@ -1005,7 +1005,7 @@ namespace pr::eval
 						stack.push_back(a ^ b);
 						break;
 					}
-				case ETok::LeftShift:
+					case ETok::LeftShift:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for bitwise left shift expression");
 						auto b = stack.back(); stack.pop_back();
@@ -1013,7 +1013,7 @@ namespace pr::eval
 						stack.push_back(a << b);
 						break;
 					}
-				case ETok::RightShift:
+					case ETok::RightShift:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for bitwise left shift expression");
 						auto b = stack.back(); stack.pop_back();
@@ -1021,79 +1021,79 @@ namespace pr::eval
 						stack.push_back(a >> b);
 						break;
 					}
-				case ETok::Ceil:
+					case ETok::Ceil:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for ceil() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Ceil(x.db())); break;
-						case Val::EType::Real: stack.push_back(Ceil(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Ceil(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Ceil(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Ceil(x.db())); break;
+							case Val::EType::Real: stack.push_back(Ceil(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Ceil(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Ceil(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Floor:
+					case ETok::Floor:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for floor() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Floor(x.db())); break;
-						case Val::EType::Real: stack.push_back(Floor(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Floor(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Floor(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Floor(x.db())); break;
+							case Val::EType::Real: stack.push_back(Floor(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Floor(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Floor(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Round:
+					case ETok::Round:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for round() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Round(x.db())); break;
-						case Val::EType::Real: stack.push_back(Round(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Round(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Round(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Round(x.db())); break;
+							case Val::EType::Real: stack.push_back(Round(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Round(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Round(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Min:
+					case ETok::Min:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for min() expression");
 						auto b = stack.back(); stack.pop_back();
 						auto a = stack.back(); stack.pop_back();
 						switch (Val::common_type(a.m_ty, b.m_ty))
 						{
-						case Val::EType::Intg: stack.push_back(Min(a.ll(), b.ll())); break;
-						case Val::EType::Real: stack.push_back(Min(a.db(), b.db())); break;
-						case Val::EType::Intg4: stack.push_back(Min(a.i4(), b.i4())); break;
-						case Val::EType::Real4: stack.push_back(Min(a.v4(), b.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Min(a.ll(), b.ll())); break;
+							case Val::EType::Real: stack.push_back(Min(a.db(), b.db())); break;
+							case Val::EType::Intg4: stack.push_back(Min(a.i4(), b.i4())); break;
+							case Val::EType::Real4: stack.push_back(Min(a.v4(), b.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Max:
+					case ETok::Max:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for max() expression");
 						auto b = stack.back(); stack.pop_back();
 						auto a = stack.back(); stack.pop_back();
 						switch (Val::common_type(a.m_ty, b.m_ty))
 						{
-						case Val::EType::Intg: stack.push_back(Max(a.ll(), b.ll())); break;
-						case Val::EType::Real: stack.push_back(Max(a.db(), b.db())); break;
-						case Val::EType::Intg4: stack.push_back(Max(a.i4(), b.i4())); break;
-						case Val::EType::Real4: stack.push_back(Max(a.v4(), b.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Max(a.ll(), b.ll())); break;
+							case Val::EType::Real: stack.push_back(Max(a.db(), b.db())); break;
+							case Val::EType::Intg4: stack.push_back(Max(a.i4(), b.i4())); break;
+							case Val::EType::Real4: stack.push_back(Max(a.v4(), b.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Clamp:
+					case ETok::Clamp:
 					{
 						if (stack.size() < 3) throw std::runtime_error("Insufficient arguments for clamp() expression");
 						auto mx = stack.back(); stack.pop_back();
@@ -1101,270 +1101,270 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (Val::common_type(x.m_ty, Val::common_type(mn.m_ty, mx.m_ty)))
 						{
-						case Val::EType::Intg: stack.push_back(Clamp(x.ll(), mn.ll(), mx.ll())); break;
-						case Val::EType::Real: stack.push_back(Clamp(x.db(), mn.db(), mx.db())); break;
-						case Val::EType::Intg4: stack.push_back(Clamp(x.i4(), mn.i4(), mx.i4())); break;
-						case Val::EType::Real4: stack.push_back(Clamp(x.v4(), mn.v4(), mx.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Clamp(x.ll(), mn.ll(), mx.ll())); break;
+							case Val::EType::Real: stack.push_back(Clamp(x.db(), mn.db(), mx.db())); break;
+							case Val::EType::Intg4: stack.push_back(Clamp(x.i4(), mn.i4(), mx.i4())); break;
+							case Val::EType::Real4: stack.push_back(Clamp(x.v4(), mn.v4(), mx.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Abs:
+					case ETok::Abs:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for abs() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Abs(x.ll())); break;
-						case Val::EType::Real: stack.push_back(Abs(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Abs(x.i4())); break;
-						case Val::EType::Real4: stack.push_back(Abs(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Abs(x.ll())); break;
+							case Val::EType::Real: stack.push_back(Abs(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Abs(x.i4())); break;
+							case Val::EType::Real4: stack.push_back(Abs(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Sin:
+					case ETok::Sin:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for sin() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Sin(x.db())); break;
-						case Val::EType::Real: stack.push_back(Sin(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Sin(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Sin(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Sin(x.db())); break;
+							case Val::EType::Real: stack.push_back(Sin(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Sin(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Sin(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Cos:
+					case ETok::Cos:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for cos() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Cos(x.db())); break;
-						case Val::EType::Real: stack.push_back(Cos(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Cos(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Cos(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Cos(x.db())); break;
+							case Val::EType::Real: stack.push_back(Cos(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Cos(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Cos(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Tan:
+					case ETok::Tan:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for tan() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Tan(x.db())); break;
-						case Val::EType::Real: stack.push_back(Tan(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Tan(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Tan(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Tan(x.db())); break;
+							case Val::EType::Real: stack.push_back(Tan(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Tan(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Tan(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::ASin:
+					case ETok::ASin:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for asin() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(ASin(x.db())); break;
-						case Val::EType::Real: stack.push_back(ASin(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(ASin(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(ASin(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(ASin(x.db())); break;
+							case Val::EType::Real: stack.push_back(ASin(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(ASin(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(ASin(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::ACos:
+					case ETok::ACos:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for acos() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(ACos(x.db())); break;
-						case Val::EType::Real: stack.push_back(ACos(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(ACos(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(ACos(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(ACos(x.db())); break;
+							case Val::EType::Real: stack.push_back(ACos(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(ACos(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(ACos(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::ATan:
+					case ETok::ATan:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for atan() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(ATan(x.db())); break;
-						case Val::EType::Real: stack.push_back(ATan(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(ATan(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(ATan(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(ATan(x.db())); break;
+							case Val::EType::Real: stack.push_back(ATan(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(ATan(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(ATan(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::ATan2:
+					case ETok::ATan2:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for atan2() expression");
 						auto x = stack.back(); stack.pop_back();
 						auto y = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(ATan2(y.db(), x.db())); break;
-						case Val::EType::Real: stack.push_back(ATan2(y.db(), x.db())); break;
-						case Val::EType::Intg4: stack.push_back(ATan2(y.v4(), x.v4())); break;
-						case Val::EType::Real4: stack.push_back(ATan2(y.v4(), x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(ATan2(y.db(), x.db())); break;
+							case Val::EType::Real: stack.push_back(ATan2(y.db(), x.db())); break;
+							case Val::EType::Intg4: stack.push_back(ATan2(y.v4(), x.v4())); break;
+							case Val::EType::Real4: stack.push_back(ATan2(y.v4(), x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::SinH:
+					case ETok::SinH:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for sinh() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Sinh(x.db())); break;
-						case Val::EType::Real: stack.push_back(Sinh(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Sinh(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Sinh(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Sinh(x.db())); break;
+							case Val::EType::Real: stack.push_back(Sinh(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Sinh(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Sinh(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::CosH:
+					case ETok::CosH:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for cosh() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Cosh(x.db())); break;
-						case Val::EType::Real: stack.push_back(Cosh(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Cosh(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Cosh(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Cosh(x.db())); break;
+							case Val::EType::Real: stack.push_back(Cosh(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Cosh(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Cosh(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::TanH:
+					case ETok::TanH:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for tanh() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Tanh(x.db())); break;
-						case Val::EType::Real: stack.push_back(Tanh(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Tanh(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Tanh(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Tanh(x.db())); break;
+							case Val::EType::Real: stack.push_back(Tanh(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Tanh(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Tanh(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Exp:
+					case ETok::Exp:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for exp() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Exp(x.db())); break;
-						case Val::EType::Real: stack.push_back(Exp(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Exp(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Exp(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Exp(x.db())); break;
+							case Val::EType::Real: stack.push_back(Exp(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Exp(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Exp(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Log:
+					case ETok::Log:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for log() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Log(x.db())); break;
-						case Val::EType::Real: stack.push_back(Log(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Log(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Log(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Log(x.db())); break;
+							case Val::EType::Real: stack.push_back(Log(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Log(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Log(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Log10:
+					case ETok::Log10:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for log10() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Log10(x.db())); break;
-						case Val::EType::Real: stack.push_back(Log10(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Log10(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(Log10(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Log10(x.db())); break;
+							case Val::EType::Real: stack.push_back(Log10(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Log10(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(Log10(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Pow:
+					case ETok::Pow:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for pow() expression");
 						auto y = stack.back(); stack.pop_back();
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Pow(x.db(), y.db())); break;
-						case Val::EType::Real: stack.push_back(Pow(x.db(), y.db())); break;
-						case Val::EType::Intg4: stack.push_back(Pow(x.v4(), y.v4())); break;
-						case Val::EType::Real4: stack.push_back(Pow(x.v4(), y.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Pow(x.db(), y.db())); break;
+							case Val::EType::Real: stack.push_back(Pow(x.db(), y.db())); break;
+							case Val::EType::Intg4: stack.push_back(Pow(x.v4(), y.v4())); break;
+							case Val::EType::Real4: stack.push_back(Pow(x.v4(), y.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Sqr:
+					case ETok::Sqr:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for sqr() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Sqr(x.ll())); break;
-						case Val::EType::Real: stack.push_back(Sqr(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(Sqr(x.i4())); break;
-						case Val::EType::Real4: stack.push_back(Sqr(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Sqr(x.ll())); break;
+							case Val::EType::Real: stack.push_back(Sqr(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(Sqr(x.i4())); break;
+							case Val::EType::Real4: stack.push_back(Sqr(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Sqrt:
+					case ETok::Sqrt:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for sqrt() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Sqrt(x.db())); break;
-						case Val::EType::Real: stack.push_back(Sqrt(x.db())); break;
-						case Val::EType::Intg4: stack.push_back(CompSqrt(x.v4())); break;
-						case Val::EType::Real4: stack.push_back(CompSqrt(x.v4())); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Sqrt(x.db())); break;
+							case Val::EType::Real: stack.push_back(Sqrt(x.db())); break;
+							case Val::EType::Intg4: stack.push_back(CompSqrt(x.v4())); break;
+							case Val::EType::Real4: stack.push_back(CompSqrt(x.v4())); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Len2:
+					case ETok::Len2:
 					{
 						if (stack.size() < 2) throw std::runtime_error("Insufficient arguments for len2() expression");
 						auto y = stack.back(); stack.pop_back();
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Len(x.db(), y.db())); break;
-						case Val::EType::Real: stack.push_back(Len(x.db(), y.db())); break;
-						case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), [](auto x, auto y) { return Len(x, y); })); break;
-						case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), [](auto x, auto y) { return Len(x, y); })); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Len(x.db(), y.db())); break;
+							case Val::EType::Real: stack.push_back(Len(x.db(), y.db())); break;
+							case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), [](auto x, auto y) { return Len(x, y); })); break;
+							case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), [](auto x, auto y) { return Len(x, y); })); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Len3:
+					case ETok::Len3:
 					{
 						if (stack.size() < 3) throw std::runtime_error("Insufficient arguments for len3() expression");
 						auto z = stack.back(); stack.pop_back();
@@ -1372,15 +1372,15 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Len(x.db(), y.db(), z.db())); break;
-						case Val::EType::Real: stack.push_back(Len(x.db(), y.db(), z.db())); break;
-						case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), [](auto x, auto y, auto z) { return Len(x, y, z); })); break;
-						case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), [](auto x, auto y, auto z) { return Len(x, y, z); })); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Len(x.db(), y.db(), z.db())); break;
+							case Val::EType::Real: stack.push_back(Len(x.db(), y.db(), z.db())); break;
+							case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), [](auto x, auto y, auto z) { return Len(x, y, z); })); break;
+							case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), [](auto x, auto y, auto z) { return Len(x, y, z); })); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Len4:
+					case ETok::Len4:
 					{
 						if (stack.size() < 4) throw std::runtime_error("Insufficient arguments for len4() expression");
 						auto w = stack.back(); stack.pop_back();
@@ -1389,43 +1389,43 @@ namespace pr::eval
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(Len(x.db(), y.db(), z.db(), w.db())); break;
-						case Val::EType::Real: stack.push_back(Len(x.db(), y.db(), z.db(), w.db())); break;
-						case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), w.v4(), [](auto x, auto y, auto z, auto w) { return Len(x, y, z, w); })); break;
-						case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), w.v4(), [](auto x, auto y, auto z, auto w) { return Len(x, y, z, w); })); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(Len(x.db(), y.db(), z.db(), w.db())); break;
+							case Val::EType::Real: stack.push_back(Len(x.db(), y.db(), z.db(), w.db())); break;
+							case Val::EType::Intg4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), w.v4(), [](auto x, auto y, auto z, auto w) { return Len(x, y, z, w); })); break;
+							case Val::EType::Real4: stack.push_back(CompOp(x.v4(), y.v4(), z.v4(), w.v4(), [](auto x, auto y, auto z, auto w) { return Len(x, y, z, w); })); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Deg:
+					case ETok::Deg:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for deg() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(x.db() * maths::E60_by_tau); break;
-						case Val::EType::Real: stack.push_back(x.db() * maths::E60_by_tau); break;
-						case Val::EType::Intg4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
-						case Val::EType::Real4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(x.db() * maths::E60_by_tau); break;
+							case Val::EType::Real: stack.push_back(x.db() * maths::E60_by_tau); break;
+							case Val::EType::Intg4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
+							case Val::EType::Real4: stack.push_back(x.v4() * maths::E60_by_tauf); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::Rad:
+					case ETok::Rad:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for rad() expression");
 						auto x = stack.back(); stack.pop_back();
 						switch (x.m_ty)
 						{
-						case Val::EType::Intg: stack.push_back(x.db() * maths::tau_by_360); break;
-						case Val::EType::Real: stack.push_back(x.db() * maths::tau_by_360); break;
-						case Val::EType::Intg4: stack.push_back(x.v4() * maths::tau_by_360f); break;
-						case Val::EType::Real4: stack.push_back(x.v4() * maths::tau_by_360f); break;
-						default: throw std::runtime_error("Unknown value type");
+							case Val::EType::Intg: stack.push_back(x.db() * maths::tau_by_360); break;
+							case Val::EType::Real: stack.push_back(x.db() * maths::tau_by_360); break;
+							case Val::EType::Intg4: stack.push_back(x.v4() * maths::tau_by_360f); break;
+							case Val::EType::Real4: stack.push_back(x.v4() * maths::tau_by_360f); break;
+							default: throw std::runtime_error("Unknown value type");
 						}
 						break;
 					}
-				case ETok::If:
+					case ETok::If:
 					{
 						if (stack.size() < 1) throw std::runtime_error("Insufficient arguments for if expression");
 						auto boolean = stack.back(); stack.pop_back();
@@ -1441,13 +1441,13 @@ namespace pr::eval
 						}
 						break;
 					}
-				case ETok::Else:
+					case ETok::Else:
 					{
 						auto jmp = m_op.read<int>(i);
 						i += jmp;
 						break;
 					}
-				default:
+					default:
 					{
 						throw std::runtime_error("Unknown expression token");
 					}
@@ -2249,9 +2249,9 @@ namespace pr::common
 				PR_CHECK(expr(iv4(0,0,0,0), iv4(0,0,0,0)), Val(iv4(1)));
 				PR_CHECK(expr(iv4(1,2,3,4), iv4(1,2,3,4)), Val(iv4(1)));
 				PR_CHECK(expr(iv4(1,2,3,4), iv4(4,3,2,1)), Val(iv4(0)));
-				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(1)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(1)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(0)));
+				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(1.f)));
+				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(1.f)));
+				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(0.f)));
 			}
 			{ // logical Not Equal
 				auto expr = Compile("x != y");
@@ -2263,9 +2263,9 @@ namespace pr::common
 				PR_CHECK(expr(iv4(0,0,0,0), iv4(0,0,0,0)), Val(iv4(0)));
 				PR_CHECK(expr(iv4(1,2,3,4), iv4(1,2,3,4)), Val(iv4(0)));
 				PR_CHECK(expr(iv4(1,2,3,4), iv4(4,3,2,1)), Val(iv4(1)));
-				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(0)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(0)));
-				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(1)));
+				PR_CHECK(expr(v4(0,0,0,0), v4(0,0,0,0)), Val(v4(0.f)));
+				PR_CHECK(expr(v4(1,2,3,4), v4(1,2,3,4)), Val(v4(0.f)));
+				PR_CHECK(expr(v4(1,2,3,4), v4(4,3,2,1)), Val(v4(1.f)));
 			}
 			{ // logical less than
 				auto expr = Compile("x < y");

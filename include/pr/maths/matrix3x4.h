@@ -3,115 +3,85 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
+#include "pr/maths/vector3.h"
+#include "pr/maths/quaternion.h"
 #include "pr/maths/axis_id.h"
 
 namespace pr
 {
-	template <typename A, typename B> 
-	struct alignas(16) Mat3x4
+	template <typename A, typename B>
+	struct alignas(16) Mat3x4f
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union {
-		struct { Vec4<void> x, y, z; };
-		struct { Vec4<void> arr[3]; };
+		struct { Vec4f<void> x, y, z; };
+		struct { Vec4f<void> arr[3]; };
 		};
 		#pragma warning(pop)
 
 		// Construct
-		Mat3x4() = default;
-		constexpr Mat3x4(v3_cref<> x_, v3_cref<> y_, v3_cref<> z_)
+		Mat3x4f() = default;
+		constexpr explicit Mat3x4f(float x_)
+			:x(x_)
+			,y(x_)
+			,z(x_)
+		{}
+		constexpr Mat3x4f(v3_cref<> x_, v3_cref<> y_, v3_cref<> z_)
 			:x(x_, 0)
 			,y(y_, 0)
 			,z(z_, 0)
 		{
 			//assert(maths::is_aligned(this));
 		}
-		constexpr Mat3x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_)
+		constexpr Mat3x4f(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{
 			//assert(maths::is_aligned(this));
 		}
-		constexpr explicit Mat3x4(float x_)
-			:x(x_)
-			,y(x_)
-			,z(x_)
-		{
-			//assert(maths::is_aligned(this));
-		}
-		explicit Mat3x4(Quat<A,B> const& q)
-		{
-			assert("'quat' is a zero quaternion" && (q != Quat<A, B>{}));
-			auto s = 2.0f / LengthSq(q);
-
-			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
-			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
-			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
-			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
-			x = Vec4<void>{1.0f - (yy + zz), xy + wz, xz - wy, 0};
-			y = Vec4<void>{xy - wz, 1.0f - (xx + zz), yz + wx, 0};
-			z = Vec4<void>{xz + wy, yz - wx, 1.0f - (xx + yy), 0};
-		}
-		template <typename V3, typename = maths::enable_if_v3<V3>>
-		constexpr explicit Mat3x4(V3 const& v)
-			:Mat3x4(x_as<Vec4<void>>(v), y_as<Vec4<void>>(v), z_as<Vec4<void>>(v))
+		constexpr explicit Mat3x4f(float const* v) // 12 floats
+			:Mat3x4f(Vec4f<void>(&v[0]), Vec4f<void>(&v[4]), Vec4f<void>(&v[8]))
 		{}
-		template <typename CP, typename = maths::enable_if_vec_cp<CP>>
-		constexpr explicit Mat3x4(CP const* v)
-			:Mat3x4(x_as<Vec4<void>>(v), y_as<Vec4<void>>(v), z_as<Vec4<void>>(v))
+		template <maths::Matrix3 M> constexpr explicit Mat3x4f(M const& m)
+			:Mat3x4f(maths::comp<0>(m), maths::comp<1>(m), maths::comp<2>(m))
 		{}
-		template <typename V3, typename = maths::enable_if_v3<V3>>
-		Mat3x4& operator = (V3 const& rhs)
-		{
-			x = x_as<Vec4<void>>(rhs);
-			y = y_as<Vec4<void>>(rhs);
-			z = z_as<Vec4<void>>(rhs);
-			return *this;
-		}
 
 		// Reinterpret as a different matrix type
-		template <typename U, typename V> explicit operator Mat3x4<U, V> const&() const
+		template <typename U, typename V> explicit operator Mat3x4f<U, V> const&() const
 		{
-			return reinterpret_cast<Mat3x4<U, V> const&>(*this);
+			return reinterpret_cast<Mat3x4f<U, V> const&>(*this);
 		}
-		template <typename U, typename V> explicit operator Mat3x4<U, V>&()
+		template <typename U, typename V> explicit operator Mat3x4f<U, V>&()
 		{
-			return reinterpret_cast<Mat3x4<U, V>&>(*this);
+			return reinterpret_cast<Mat3x4f<U, V>&>(*this);
 		}
 
 		// Array access
-		Vec4<void> const& operator [](int i) const
+		Vec4f<void> const& operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		Vec4<void>& operator [](int i)
+		Vec4f<void>& operator [](int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
-		}
-
-		// Convert to a 4x4 matrix with zero translation
-		Mat4x4<A,B> m4x4() const
-		{
-			return Mat4x4<A, B>{*this, {0, 0, 0, 1}};
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
-		Vec4<void> col(int i) const
+		Vec4f<void> col(int i) const
 		{
 			return arr[i];
 		}
-		Vec4<void> row(int i) const
+		Vec4f<void> row(int i) const
 		{
-			return Vec4<void>{x[i], y[i], z[i], 0};
+			return Vec4f<void>{x[i], y[i], z[i], 0};
 		}
 		void col(int i, v4_cref<> col)
 		{
@@ -124,168 +94,72 @@ namespace pr
 			z[i] = row.z;
 		}
 
-		// Create a 4x4 matrix with this matrix as the rotation part
-		Mat4x4<A,B> w0() const
-		{
-			return Mat4x4<A, B>(*this, v4{0, 0, 0, 1});
-		}
-		Mat4x4<A,B> w1(v4_cref<> pos) const
-		{
-			assert("'pos' must be a position vector" && pos.w == 1);
-			return Mat4x4<A,B>{*this, pos};
-		}
-
-		#pragma region Operators
-		friend constexpr Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> mat)
-		{
-			return mat;
-		}
-		friend constexpr Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> mat)
-		{
-			return Mat3x4<A,B>{-mat.x, -mat.y, -mat.z};
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator * (float lhs, m3_cref<A,B> rhs)
-		{
-			return rhs * lhs;
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator * (m3_cref<A,B> lhs, float rhs)
-		{
-			return Mat3x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator / (m3_cref<A,B> lhs, float rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			return Mat3x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator % (m3_cref<A,B> lhs, float rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			return Mat3x4<A,B>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs};
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
-		{
-			return Mat3x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-		}
-		friend Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
-		{
-			return Mat3x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-		}
-		friend Vec4<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v4_cref<A> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			auto x = _mm_load_ps(lhs.x.arr);
-			auto y = _mm_load_ps(lhs.y.arr);
-			auto z = _mm_load_ps(lhs.z.arr);
-
-			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
-			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
-			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
-
-			auto ans = _mm_add_ps(
-				_mm_add_ps(
-					_mm_mul_ps(brod1, x),
-					_mm_mul_ps(brod2, y)),
-				_mm_add_ps(
-					_mm_mul_ps(brod3, z),
-					_mm_set_ps(rhs.w, 0, 0, 0))
-			);
-		
-			return Vec4<B>{ans};
-			#else
-			auto lhsT = Transpose(lhs);
-			return Vec4<B>{Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w};
-			#endif
-		}
-		friend Vec3<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v3_cref<A> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			auto x = _mm_load_ps(lhs.x.arr);
-			auto y = _mm_load_ps(lhs.y.arr);
-			auto z = _mm_load_ps(lhs.z.arr);
-
-			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
-			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
-			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
-
-			auto ans = _mm_add_ps(
-				_mm_add_ps(
-					_mm_mul_ps(brod1, x),
-					_mm_mul_ps(brod2, y)),
-				_mm_mul_ps(brod3, z));
-		
-			return Vec3<B>{ans.m128_f32[0], ans.m128_f32[1], ans.m128_f32[2]};
-			#else
-			auto lhsT = Transpose3x3(lhs);
-			return Vec3<B>{Dot3(lhsT.x.xyz, rhs), Dot3(lhsT.y.xyz, rhs), Dot3(lhsT.z.xyz, rhs)};
-			#endif
-		}
-		template <typename C> friend Mat3x4<A,C> pr_vectorcall operator * (m3_cref<B,C> lhs, m3_cref<A,B> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			auto ans = Mat3x4<A,C>{};
-			auto x = _mm_load_ps(lhs.x.arr);
-			auto y = _mm_load_ps(lhs.y.arr);
-			auto z = _mm_load_ps(lhs.z.arr);
-			for (int i = 0; i != 3; ++i)
-			{
-				auto brod1 = _mm_set_ps(0, rhs.arr[i].x, rhs.arr[i].x, rhs.arr[i].x);
-				auto brod2 = _mm_set_ps(0, rhs.arr[i].y, rhs.arr[i].y, rhs.arr[i].y);
-				auto brod3 = _mm_set_ps(0, rhs.arr[i].z, rhs.arr[i].z, rhs.arr[i].z);
-				auto row = _mm_add_ps(
-					_mm_add_ps(
-						_mm_mul_ps(brod1, x),
-						_mm_mul_ps(brod2, y)),
-					_mm_mul_ps(brod3, z));
-
-				_mm_store_ps(ans.arr[i].arr, row);
-			}
-			return ans;
-			#else
-			auto ans = Mat3x4<A,C>{};
-			auto lhsT = Transpose(lhs);
-			ans.x = Vec4<void>{Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0};
-			ans.y = Vec4<void>{Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0};
-			ans.z = Vec4<void>{Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0};
-			return ans;
-			#endif
-		}
-		#pragma endregion
-
-		// Define component accessors for pointer types
-		friend constexpr v4_cref<> pr_vectorcall x_cp(m3_cref<A,B> v) { return v.x; }
-		friend constexpr v4_cref<> pr_vectorcall y_cp(m3_cref<A,B> v) { return v.y; }
-		friend constexpr v4_cref<> pr_vectorcall z_cp(m3_cref<A,B> v) { return v.z; }
-		friend constexpr v4_cref<> pr_vectorcall w_cp(m3_cref<A,B>)   { return v4{0, 0, 0, 1}; }
+		//// Create a 4x4 matrix with this matrix as the rotation part
+		//Mat4x4<A,B> w0() const
+		//{
+		//	return Mat4x4<A, B>(*this, v4{0, 0, 0, 1});
+		//}
+		//Mat4x4<A,B> w1(v4_cref<> pos) const
+		//{
+		//	assert("'pos' must be a position vector" && pos.w == 1);
+		//	return Mat4x4<A,B>{*this, pos};
+		//}
+		//// Convert to a 4x4 matrix with zero translation
+		//Mat4x4<A,B> m4x4() const
+		//{
+		//	return Mat4x4<A, B>{*this, {0, 0, 0, 1}};
+		//}
 
 		// Basic constants
-		static constexpr Mat3x4 Zero() { return Mat3x4{}; }
-		static constexpr Mat3x4 Identity() { return Mat3x4{v4{1, 0, 0, 0}, v4{0, 1, 0, 0}, v4{0, 0, 1, 0}}; }
+		static constexpr Mat3x4f Zero()
+		{
+			return Mat3x4f{v4::Zero(), v4::Zero(), v4::Zero()};
+		}
+		static constexpr Mat3x4f Identity()
+		{
+			return Mat3x4f{v4::XAxis(), v4::YAxis(), v4::ZAxis()};
+		}
+
+		// Construct a rotation matrix from a quaternion
+		static Mat3x4f Rotation(Quatf<A,B> const& q)
+		{
+			assert("'quat' is a zero quaternion" && (q != quat{}));
+			auto s = 2.0f / LengthSq(q);
+
+			Mat3x4f<A,B> m;
+			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
+			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
+			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
+			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
+			m.x = Vec4f<void>{1.0f - (yy + zz), xy + wz, xz - wy, 0};
+			m.y = Vec4f<void>{xy - wz, 1.0f - (xx + zz), yz + wx, 0};
+			m.z = Vec4f<void>{xz + wy, yz - wx, 1.0f - (xx + yy), 0};
+			return m;
+		}
 
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-		static Mat3x4 Rotation(float pitch, float yaw, float roll)
+		static Mat3x4f Rotation(float pitch, float yaw, float roll)
 		{
 			#if PR_MATHS_USE_DIRECTMATH
 			auto m = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-			return Mat3x4(m.r[0], m.r[1], m.r[2]);
+			return Mat3x4f(m.r[0], m.r[1], m.r[2]);
 			#else
 			float cos_p = Cos(pitch), sin_p = Sin(pitch);
 			float cos_y = Cos(yaw  ), sin_y = Sin(yaw  );
 			float cos_r = Cos(roll ), sin_r = Sin(roll );
-			return Mat3x4{
-				Vec4<void>( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
-				Vec4<void>(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
-				Vec4<void>( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f)};
+			return Mat3x4f{
+				Vec4f<void>( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
+				Vec4f<void>(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
+				Vec4f<void>( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f)};
 			#endif
 		}
 
 		// Create from an axis, angle
-		static Mat3x4 pr_vectorcall Rotation(v4_cref<> axis_norm, v4_cref<> axis_sine_angle, float cos_angle)
+		static Mat3x4f pr_vectorcall Rotation(v4_cref<> axis_norm, v4_cref<> axis_sine_angle, float cos_angle)
 		{
 			assert("'axis_norm' should be normalised" && IsNormal(axis_norm));
 
-			auto m = Mat3x4{};
+			auto m = Mat3x4f{};
 			auto trace_vec = axis_norm * (1.0f - cos_angle);
 
 			m.x.x = trace_vec.x * axis_norm.x + cos_angle;
@@ -310,23 +184,23 @@ namespace pr
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat3x4 pr_vectorcall Rotation(v4_cref<> axis_norm, float angle)
+		static Mat3x4f pr_vectorcall Rotation(v4_cref<> axis_norm, float angle)
 		{
 			return Rotation(axis_norm, axis_norm * pr::Sin(angle), pr::Cos(angle));
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat3x4 pr_vectorcall Rotation(v4_cref<> angular_displacement)
+		static Mat3x4f pr_vectorcall Rotation(v4_cref<> angular_displacement)
 		{
 			assert("'angular_displacement' should be a scaled direction vector" && angular_displacement.w == 0);
 			auto len = Length(angular_displacement);
 			return len > maths::tinyf
-				? Mat3x4::Rotation(angular_displacement / len, len)
-				: Mat3x4(v4{1, 0, 0, 0}, v4{0, 1, 0, 0}, v4{0, 0, 1, 0});
+				? Mat3x4f::Rotation(angular_displacement / len, len)
+				: Mat3x4f(v4{1, 0, 0, 0}, v4{0, 1, 0, 0}, v4{0, 0, 1, 0});
 		}
 
 		// Create a transform representing the rotation from one vector to another. (Vectors do not need to be normalised)
-		static Mat3x4 pr_vectorcall Rotation(v4_cref<> from, v4_cref<> to)
+		static Mat3x4f pr_vectorcall Rotation(v4_cref<> from, v4_cref<> to)
 		{
 			assert(!FEql(from, v4{}));
 			assert(!FEql(to  , v4{}));
@@ -342,29 +216,29 @@ namespace pr
 		}
 
 		// Create a transform from one basis axis to another. Remember AxisId can be cast to v4
-		static Mat3x4 Rotation(AxisId from_axis, AxisId to_axis)
+		static Mat3x4f Rotation(AxisId from_axis, AxisId to_axis)
 		{
 			// 'o2f' = the rotation from Z to 'from_axis'
 			// 'o2t' = the rotation from Z to 'to_axis'
 			// 'f2t' = o2t * Invert(o2f)
-			Mat3x4 o2f, o2t;
+			Mat3x4f o2f, o2t;
 			switch (from_axis)
 			{
-			case -1: o2f = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
-			case +1: o2f = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break;
-			case -2: o2f = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
-			case +2: o2f = Mat3x4::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
-			case -3: o2f = Mat3x4::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
+			case -1: o2f = Mat3x4f::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
+			case +1: o2f = Mat3x4f::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break;
+			case -2: o2f = Mat3x4f::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case +2: o2f = Mat3x4f::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case -3: o2f = Mat3x4f::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
 			case +3: o2f = Identity(); break;
 			default: assert(false && "axis_id must one of +/-1, +/-2, +/-3"); o2f = Identity(); break;
 			}
 			switch (to_axis)
 			{
-			case -1: o2t = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-			case +1: o2t = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
-			case -2: o2t = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
-			case +2: o2t = Mat3x4::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
-			case -3: o2t = Mat3x4::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
+			case -1: o2t = Mat3x4f::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+			case +1: o2t = Mat3x4f::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
+			case -2: o2t = Mat3x4f::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case +2: o2t = Mat3x4f::Rotation(-float(maths::tau_by_4), 0.0f, 0.0f); break;
+			case -3: o2t = Mat3x4f::Rotation(0.0f, +float(maths::tau_by_2), 0.0f); break;
 			case +3: o2t = Identity(); break;
 			default: assert(false && "axis_id must one of +/-1, +/-2, +/-3"); o2t = Identity(); break;
 			}
@@ -372,15 +246,15 @@ namespace pr
 		}
 
 		// Create a scale matrix
-		static Mat3x4 Scale(float scale)
+		static Mat3x4f Scale(float scale)
 		{
-			Mat3x4 mat = {};
+			Mat3x4f mat = {};
 			mat.x.x = mat.y.y = mat.z.z = scale;
 			return mat;
 		}
-		static Mat3x4 Scale(float sx, float sy, float sz)
+		static Mat3x4f Scale(float sx, float sy, float sz)
 		{
-			Mat3x4 mat = {};
+			Mat3x4f mat = {};
 			mat.x.x = sx;
 			mat.y.y = sy;
 			mat.z.z = sz;
@@ -388,20 +262,161 @@ namespace pr
 		}
 
 		// Create a shear matrix
-		static Mat3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
+		static Mat3x4f Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
 		{
-			Mat3x4 mat = {};
+			Mat3x4f mat = {};
 			mat.x = v4(1.0f, sxy, sxz, 0.0f);
 			mat.y = v4(syx, 1.0f, syz, 0.0f);
 			mat.z = v4(szx, szy, 1.0f, 0.0f);
 			return mat;
 		}
-	};
-	static_assert(maths::is_mat3<Mat3x4<void,void>>::value, "");
-	static_assert(std::is_trivially_copyable_v<Mat3x4<void,void>>, "Should be a pod type");
-	static_assert(std::alignment_of_v<Mat3x4<void,void>> == 16, "Should be 16 byte aligned");
 
-	#pragma region Functions
+		// Create a 3x4 matrix containing random values on the interval [min_value, max_value)
+		template <typename Rng = std::default_random_engine> static Mat3x4f Random(Rng& rng, float min_value, float max_value)
+		{
+			std::uniform_real_distribution<float> dist(min_value, max_value);
+			Mat3x4f m = {};
+			m.x = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+			m.y = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+			m.z = v4(dist(rng), dist(rng), dist(rng), dist(rng));
+			return m;
+		}
+
+		// Create a random 3D rotation matrix
+		template <typename Rng = std::default_random_engine> static Mat3x4f Random(Rng& rng, v4_cref<> axis, float min_angle, float max_angle)
+		{
+			std::uniform_real_distribution<float> dist(min_angle, max_angle);
+			return Rotation(axis, dist(rng));
+		}
+
+		// Create a random 3D rotation matrix
+		template <typename Rng = std::default_random_engine> static Mat3x4f Random(Rng& rng)
+		{
+			return Random(rng, v4::RandomN(rng, 0), 0.0f, maths::tauf);
+		}
+
+		#pragma region Operators
+		friend constexpr Mat3x4f<A,B> pr_vectorcall operator + (m3_cref<A,B> mat)
+		{
+			return mat;
+		}
+		friend constexpr Mat3x4f<A,B> pr_vectorcall operator - (m3_cref<A,B> mat)
+		{
+			return Mat3x4f<A,B>{-mat.x, -mat.y, -mat.z};
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator * (float lhs, m3_cref<A,B> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator * (m3_cref<A,B> lhs, float rhs)
+		{
+			return Mat3x4f<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator / (m3_cref<A,B> lhs, float rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return Mat3x4f<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator % (m3_cref<A,B> lhs, float rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return Mat3x4f<A,B>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs};
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator + (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat3x4f<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+		}
+		friend Mat3x4f<A,B> pr_vectorcall operator - (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat3x4f<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+		}
+		friend Vec4f<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v4_cref<A> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+
+			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+			auto ans = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_add_ps(
+					_mm_mul_ps(brod3, z),
+					_mm_set_ps(rhs.w, 0, 0, 0))
+			);
+		
+			return Vec4f<B>{ans};
+			#else
+			auto lhsT = Transpose(lhs);
+			return Vec4f<B>{Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w};
+			#endif
+		}
+		friend Vec3f<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v3_cref<A> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+
+			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+			auto ans = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_mul_ps(brod3, z));
+		
+			return Vec3f<B>{ans.m128_f32[0], ans.m128_f32[1], ans.m128_f32[2]};
+			#else
+			auto lhsT = Transpose3x3(lhs);
+			return Vec3f<B>{Dot3(lhsT.x.xyz, rhs), Dot3(lhsT.y.xyz, rhs), Dot3(lhsT.z.xyz, rhs)};
+			#endif
+		}
+		template <typename C> friend Mat3x4f<A,C> pr_vectorcall operator * (m3_cref<B,C> lhs, m3_cref<A,B> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto ans = Mat3x4f<A,C>{};
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+			for (int i = 0; i != 3; ++i)
+			{
+				auto brod1 = _mm_set_ps(0, rhs.arr[i].x, rhs.arr[i].x, rhs.arr[i].x);
+				auto brod2 = _mm_set_ps(0, rhs.arr[i].y, rhs.arr[i].y, rhs.arr[i].y);
+				auto brod3 = _mm_set_ps(0, rhs.arr[i].z, rhs.arr[i].z, rhs.arr[i].z);
+				auto row = _mm_add_ps(
+					_mm_add_ps(
+						_mm_mul_ps(brod1, x),
+						_mm_mul_ps(brod2, y)),
+					_mm_mul_ps(brod3, z));
+
+				_mm_store_ps(ans.arr[i].arr, row);
+			}
+			return ans;
+			#else
+			auto ans = Mat3x4f<A,C>{};
+			auto lhsT = Transpose(lhs);
+			ans.x = Vec4f<void>{Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0};
+			ans.y = Vec4f<void>{Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0};
+			ans.z = Vec4f<void>{Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0};
+			return ans;
+			#endif
+		}
+		#pragma endregion
+	};
+	static_assert(sizeof(Mat3x4f<void,void>) == 3*16);
+	static_assert(maths::Matrix3<Mat3x4f<void,void>>);
+	static_assert(std::is_trivially_copyable_v<Mat3x4f<void,void>>, "Should be a pod type");
+	static_assert(std::alignment_of_v<Mat3x4f<void,void>> == 16, "Should be 16 byte aligned");
 
 	// Return the determinant of 'mat'
 	template <typename A, typename B> inline float pr_vectorcall Determinant(m3_cref<A,B> mat)
@@ -416,30 +431,30 @@ namespace pr
 	}
 
 	// Return the kernel of 'mat'
-	template <typename A, typename B> inline Vec4<void> pr_vectorcall Kernel(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Vec4f<void> pr_vectorcall Kernel(m3_cref<A,B> mat)
 	{
-		return Vec4<void>{mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0};
+		return Vec4f<void>{mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0};
 	}
 
 	// Return the diagonal elements of 'mat'
-	template <typename A, typename B> inline Vec4<void> pr_vectorcall Diagonal(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Vec4f<void> pr_vectorcall Diagonal(m3_cref<A,B> mat)
 	{
-		return Vec4<void>{mat.x.x, mat.y.y, mat.z.z, 0};
+		return Vec4f<void>{mat.x.x, mat.y.y, mat.z.z, 0};
 	}
 
 	// Create a cross product matrix for 'vec'.
-	template <typename A> inline Mat3x4<A,A> pr_vectorcall CPM(v4_cref<A> vec)
+	template <typename A> inline Mat3x4f<A,A> pr_vectorcall CPM(v4_cref<A> vec)
 	{
 		// This matrix can be used to calculate the cross product with
 		// another vector: e.g. Cross3(v1, v2) == CPM(v1) * v2
-		return Mat3x4<A,A>{
-			Vec4<void>(     0,  vec.z, -vec.y, 0),
-			Vec4<void>(-vec.z,      0,  vec.x, 0),
-			Vec4<void>( vec.y, -vec.x,      0, 0)};
+		return Mat3x4f<A,A>{
+			Vec4f<void>(     0,  vec.z, -vec.y, 0),
+			Vec4f<void>(-vec.z,      0,  vec.x, 0),
+			Vec4f<void>( vec.y, -vec.x,      0, 0)};
 	}
 
 	// Return the transpose of 'mat'
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Transpose(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall Transpose(m3_cref<A,B> mat)
 	{
 		auto m = mat;
 		std::swap(m.x.y, m.y.x);
@@ -483,18 +498,18 @@ namespace pr
 	}
 
 	// Invert the orthonormal matrix 'mat'
-	template <typename A, typename B> inline Mat3x4<B,A> pr_vectorcall InvertFast(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Mat3x4f<B,A> pr_vectorcall InvertFast(m3_cref<A,B> mat)
 	{
 		assert("Matrix is not orthonormal" && IsOrthonormal(mat));
-		return static_cast<Mat3x4<B,A>>(Transpose(mat));
+		return static_cast<Mat3x4f<B,A>>(Transpose(mat));
 	}
 
 	// Invert the 3x3 matrix 'mat'
-	template <typename A, typename B> inline Mat3x4<B,A> pr_vectorcall Invert(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Mat3x4f<B,A> pr_vectorcall Invert(m3_cref<A,B> mat)
 	{
 		assert("Matrix has no inverse" && IsInvertible(mat));
 		auto det = Determinant(mat);
-		Mat3x4<B,A> tmp = {};
+		Mat3x4f<B,A> tmp = {};
 		tmp.x = Cross3(mat.y, mat.z) / det;
 		tmp.y = Cross3(mat.z, mat.x) / det;
 		tmp.z = Cross3(mat.x, mat.y) / det;
@@ -503,10 +518,10 @@ namespace pr
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
 	// Using 'Denman-Beavers' square root iteration. Should converge quadratically
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Sqrt(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall Sqrt(m3_cref<A,B> mat)
 	{
 		auto a = mat;                     // Converges to mat^0.5
-		auto b = Mat3x4<A,B>::Identity(); // Converges to mat^-0.5
+		auto b = Mat3x4f<A,B>::Identity(); // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
 		{
 			auto a_next = 0.5f * (a + Invert(b));
@@ -518,7 +533,7 @@ namespace pr
 	}
 
 	// Orthonormalises the rotation component of 'mat'
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Orthonorm(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall Orthonorm(m3_cref<A,B> mat)
 	{
 		auto m = mat;
 		m.x = Normalise(m.x);
@@ -528,12 +543,12 @@ namespace pr
 	}
 
 	// Return the axis and angle of a rotation matrix
-	template <typename A, typename B> inline void pr_vectorcall GetAxisAngle(m3_cref<A,B> mat, Vec4<void>& axis, float& angle)
+	template <typename A, typename B> inline void pr_vectorcall GetAxisAngle(m3_cref<A,B> mat, Vec4f<void>& axis, float& angle)
 	{
 		assert("Matrix is not a pure rotation matrix" && IsOrthonormal(mat));
 
 		angle = ACos(0.5f * (Trace(mat) - 1.0f));
-		axis = 1000.0f * Kernel(Mat3x4<A,B>::Identity() - mat);
+		axis = 1000.0f * Kernel(Mat3x4f<A,B>::Identity() - mat);
 		if (axis == v4{})
 		{
 			axis = v4{1, 0, 0, 0};
@@ -559,7 +574,7 @@ namespace pr
 	}
 
 	// Return the Euler angles for a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
-	template <typename A, typename B> inline Vec4<void> pr_vectorcall GetEulerAngles(m3_cref<A,B> mat)
+	template <typename A, typename B> inline Vec4f<void> pr_vectorcall GetEulerAngles(m3_cref<A,B> mat)
 	{
 		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");(void)mat;
 		#if 0
@@ -621,11 +636,11 @@ namespace pr
 	}
 
 	// Diagonalise a 3x3 matrix. From numerical recipes
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Diagonalise3x3(m3_cref<A,B> mat_, Mat3x4<A,B>& eigen_vectors, Vec4<void>& eigen_values)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall Diagonalise3x3(m3_cref<A,B> mat_, Mat3x4f<A,B>& eigen_vectors, Vec4f<void>& eigen_values)
 	{
 		struct L
 		{
-			static void Rotate(Mat3x4<A,B>& mat, int i, int j, int k, int l, float s, float tau)
+			static void Rotate(Mat3x4f<A,B>& mat, int i, int j, int k, int l, float s, float tau)
 			{
 				auto temp = mat[j][i];
 				auto h    = mat[l][k];
@@ -635,14 +650,14 @@ namespace pr
 		};
 
 		// Initialise the Eigen values and b to be the diagonal elements of 'mat'
-		Vec4<void> b;
+		Vec4f<void> b;
 		eigen_values.x = b.x = mat_.x.x;
 		eigen_values.y = b.y = mat_.y.y;
 		eigen_values.z = b.z = mat_.z.z;
 		eigen_values.w = b.w = 0.0f;
-		eigen_vectors = Mat3x4<A,B>::Identity();
+		eigen_vectors = Mat3x4f<A,B>::Identity();
 
-		Mat3x4<A,B> mat = mat_;
+		Mat3x4f<A,B> mat = mat_;
 		float sum;
 		float const diagonal_eps = 1.0e-4f;
 		do
@@ -700,14 +715,14 @@ namespace pr
 	// Construct a rotation matrix that transforms 'from' onto the z axis
 	// Other points can then be projected onto the XY plane by rotating by this
 	// matrix and then setting the z value to zero
-	template <typename A> inline Mat3x4<A,A> RotationToZAxis(v4_cref<A> from)
+	template <typename A> inline Mat3x4f<A,A> RotationToZAxis(v4_cref<A> from)
 	{
 		auto r = Sqr(from.x) + Sqr(from.y);
 		auto d = Sqrt(r);
-		Mat3x4<A,A> mat = {};
+		Mat3x4f<A,A> mat = {};
 		if (FEql(d, 0.0f))
 		{
-			mat = Mat3x4<A,A>::Identity(); // Create an identity transform or a 180 degree rotation
+			mat = Mat3x4f<A,A>::Identity(); // Create an identity transform or a 180 degree rotation
 			mat.x.x = from.z;              // about Y depending on the sign of 'from.z'
 			mat.z.z = from.z;
 		}
@@ -724,13 +739,13 @@ namespace pr
 	// n == 0 : x  y  z
 	// n == 1 : z  x  y
 	// n == 2 : y  z  x
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall PermuteRotation(m3_cref<A,B> mat, int n)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall PermuteRotation(m3_cref<A,B> mat, int n)
 	{
 		switch (n%3)
 		{
 		default:return mat;
-		case 1: return Mat3x4<A,B>{mat.z, mat.x, mat.y};
-		case 2: return Mat3x4<A,B>{mat.y, mat.z, mat.x};
+		case 1: return Mat3x4f<A,B>{mat.z, mat.x, mat.y};
+		case 2: return Mat3x4f<A,B>{mat.y, mat.z, mat.x};
 		}
 	}
 
@@ -738,14 +753,14 @@ namespace pr
 	// 'dir' is the direction to align the axis 'axis_id' to. (Doesn't need to be normalised)
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be chosen.
-	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id, v4_cref<> up_)
+	template <typename A = void, typename B = void> inline Mat3x4f<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id, v4_cref<> up_)
 	{
 		assert("'dir' cannot be a zero vector" && dir != v4{});
 
 		// Get the preferred up direction (handling parallel cases)
 		auto up = Perpendicular(dir, up_);
 
-		Mat3x4<A,B> ori = {};
+		Mat3x4f<A,B> ori = {};
 		ori.z = Normalise(Sign(float(axis_id)) * dir);
 		ori.x = Normalise(Cross3(up, ori.z));
 		ori.y = Cross3(ori.z, ori.x);
@@ -753,40 +768,139 @@ namespace pr
 		// Permute the column vectors so +Z becomes 'axis'
 		return PermuteRotation(ori, abs(axis_id));
 	}
-	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id)
+	template <typename A = void, typename B = void> inline Mat3x4f<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id)
 	{
 		return OriFromDir(dir, axis_id, Perpendicular(dir));
 	}
 
 	// Make a scaled orientation matrix from a direction vector
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up)
+	template <typename A = void, typename B = void> inline Mat3x4f<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up)
 	{
 		auto len = Length(dir);
-		return len > pr::maths::tinyf ? OriFromDir(dir, axis, up) * Mat3x4<A,B>::Scale(len) : m3x4::Zero();
+		return len > pr::maths::tinyf ? OriFromDir(dir, axis, up) * Mat3x4f<A,B>::Scale(len) : m3x4::Zero();
 	}
-	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis)
+	template <typename A = void, typename B = void> inline Mat3x4f<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis)
 	{
 		return ScaledOriFromDir(dir, axis, Perpendicular(dir));
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
-	template <typename A, typename B> inline Vec4<void> pr_vectorcall RotationVectorApprox(m3_cref<A,B> from, m3_cref<A,B> to)
+	template <typename A, typename B> inline Vec4f<void> pr_vectorcall RotationVectorApprox(m3_cref<A,B> from, m3_cref<A,B> to)
 	{
 		assert("This only works for orthonormal matrices" && IsOrthonormal(from) && IsOrthonormal(to));
 		
 		auto cpm_x_i2wR = to - from;
 		auto w2iR = Transpose(from);
 		auto cpm = cpm_x_i2wR * w2iR;
-		return Vec4<void>{cpm.y.z, cpm.z.x, cpm.x.y, 0};
+		return Vec4f<void>{cpm.y.z, cpm.z.x, cpm.x.y, 0};
 	}
 
 	// Spherically interpolate between two rotations
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Slerp(m3_cref<A,B> lhs, m3_cref<A,B> rhs, float frac)
+	template <typename A, typename B> inline Mat3x4f<A,B> pr_vectorcall Slerp(m3_cref<A,B> lhs, m3_cref<A,B> rhs, float frac)
 	{
 		if (frac == 0.0f) return lhs;
 		if (frac == 1.0f) return rhs;
-		return Mat3x4<A,B>{Slerp(Quat<A,B>(lhs), Quat<A,B>(rhs), frac)};
+		return Mat3x4f<A,B>{Slerp(Quat<A,B>(lhs), Quat<A,B>(rhs), frac)};
 	}
-	#pragma endregion
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::maths
+{
+	PRUnitTest(Matrix3x3Tests)
+	{
+		std::default_random_engine rng;
+		{// Multiply scalar
+			auto m1 = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto m2 = 2.0f;
+			auto m3 = m3x4{v4{2,4,6,8}, v4{2,2,2,2}, v4{8,6,4,2}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
+		{// Multiply vector4
+			auto m = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto v = v4{-3,4,2,-2};
+			auto R = v4{9,4,-1,-2};
+			auto r = m * v;
+			PR_CHECK(FEql(r, R), true);
+		}
+		{// Multiply vector3
+			auto m = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto v = v3{-3,4,2};
+			auto R = v3{9,4,-1};
+			auto r = m * v;
+			PR_CHECK(FEql(r, R), true);
+		}
+		{// Multiply matrix
+			auto m1 = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto m2 = m3x4{v4{1,1,1,1}, v4{2,2,2,2}, v4{-2,-2,-2,-2}};
+			auto m3 = m3x4{v4{6,6,6,0}, v4{12,12,12,0}, v4{-12,-12,-12,0}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
+		{//OriFromDir
+			using namespace pr;
+			v4 dir(0,1,0,0);
+			{
+				auto ori = OriFromDir(dir, AxisId::PosZ, v4::ZAxis());
+				PR_CHECK(dir == +ori.z, true);
+				PR_CHECK(IsOrthonormal(ori), true);
+			}
+			{
+				auto ori = OriFromDir(dir, AxisId::NegX);
+				PR_CHECK(dir == -ori.x, true);
+				PR_CHECK(IsOrthonormal(ori), true);
+			}
+			{
+				auto scale = 0.125f;
+				auto sdir = scale * dir;
+				auto ori = ScaledOriFromDir(sdir, AxisId::PosY);
+				PR_CHECK(sdir == +ori.y, true);
+				PR_CHECK(IsOrthonormal((1/scale) * ori), true);
+			}
+		}
+		{// Inverse
+			{
+				auto m = m3x4::Random(rng, v4::RandomN(rng, 0), -maths::tauf, +maths::tauf);
+				auto inv_m0 = InvertFast(m);
+				auto inv_m1 = Invert(m);
+				PR_CHECK(FEql(inv_m0, inv_m1), true);
+			}{
+				auto m = m3x4::Random(rng, -5.0f, +5.0f);
+				auto inv_m = Invert(m);
+				auto I0 = inv_m * m;
+				auto I1 = m * inv_m;
+
+				PR_CHECK(FEql(I0, m3x4::Identity()), true);
+				PR_CHECK(FEql(I1, m3x4::Identity()), true);
+			}{
+				auto m = m3x4(
+					v4(0.25f, 0.5f, 1.0f, 0.0f),
+					v4(0.49f, 0.7f, 1.0f, 0.0f),
+					v4(1.0f, 1.0f, 1.0f, 0.0f));
+				auto INV_M = m3x4(
+					v4(10.0f, -16.666667f, 6.66667f, 0.0f),
+					v4(-17.0f, 25.0f, -8.0f, 0.0f),
+					v4(7.0f, -8.333333f, 2.333333f, 0.0f));
+
+				auto inv_m = Invert(m);
+				PR_CHECK(FEqlRelative(inv_m, INV_M, 0.0001f), true);
+			}
+		}
+		{// CPM
+			{
+				auto v = v4(2.0f, -1.0f, 4.0f, 0.0f);
+				auto m = CPM(v);
+
+				auto a0 = v4::Random(rng, v4::Zero(), 5.0f, 0);
+				auto A0 = m * a0;
+				auto A1 = Cross(v, a0);
+
+				PR_CHECK(FEql(A0, A1), true);
+			}
+		}
+	}
+}
+#endif

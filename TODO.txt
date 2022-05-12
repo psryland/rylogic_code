@@ -1,13 +1,20 @@
 Immediate ToDo:
 
 Work:
+  ZR release:
+	- Convert to the new ECN process...
+	  Start with REX-9036
+	  Talk to Nick to about it...
+	- Need training record for Pete/Ben on ZR process.
+
   Change Review Board:
+	- REX-9601 - Release the RexTerminal
 	- Remove product key - Documentation change
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Zero Ref Tool - fill in phase 2 form - awaiting signatures - then can be released and people notified.
-	- Release the RexTerminal
 	- rxsfault.log ticket
 	- Add a requirement/test case that REX faults when the log SD card is full
+	- What ALM do Hydrix use? Can we use it too?
 
   Misc:
 	- Change embedded script to use ram method of removing ROP
@@ -27,6 +34,9 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 	
   RexTerminal:
+	- Refresh the 'REX System Clock Offset' field after 'Update RTC' is clicked.
+	- Support non MC console connections.
+	- Terminal capture cmenu option needs to change to "stop capturing", and file type needed in save dialog
 	- Create Firmware Versions tab - move 'update rtc' to the new tab
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX

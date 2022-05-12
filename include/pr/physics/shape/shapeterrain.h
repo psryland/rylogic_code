@@ -20,8 +20,8 @@ namespace pr
 			ITerrain*	m_terrain;
 
 			enum { EShapeType = EShape_Terrain };
-			static ShapeTerrain	make(ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint flags) { ShapeTerrain t; t.set(terrain, shape_to_model, material_id, flags); return t; }
-			ShapeTerrain&		set (ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static ShapeTerrain	make(ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { ShapeTerrain t; t.set(terrain, shape_to_model, material_id, flags); return t; }
+			ShapeTerrain&		set (ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const	{ return m_base; }
 			operator Shape& ()				{ return m_base; }
 		};

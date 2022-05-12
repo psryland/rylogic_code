@@ -14,16 +14,16 @@ void pr::ph::ParallelAxisTranslateInertia(m3x4& inertia, pr::v4 const& offset, f
 	if (translate_type == ParallelAxisTranslate::TowardCoM)
 		mass = -mass;
 	
-	for (uint i = 0; i != 3; ++i)
+	for (uint32_t i = 0; i != 3; ++i)
 	{
-		for (uint j = i; j != 3; ++j)
+		for (uint32_t j = i; j != 3; ++j)
 		{
 			// For the diagonal elements I = Io + md^2 (away from CoM), Io = I - md^2 (toward CoM)
 			// 'd' is the perpendicular component of 'offset'
 			if (i == j)
 			{
-				uint i1 = (i + 1) % 3;
-				uint i2 = (i + 2) % 3;
+				uint32_t i1 = (i + 1) % 3;
+				uint32_t i2 = (i + 2) % 3;
 				inertia[i][i] += mass * (offset[i1]*offset[i1] + offset[i2]*offset[i2]);
 			}
 			

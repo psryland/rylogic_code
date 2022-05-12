@@ -51,7 +51,7 @@ inline int R(int x)
 {
 	return x;
 }
-inline int64 R(int64 x)
+inline int64_t R(int64_t x)
 {
 	return x;
 }
@@ -149,7 +149,7 @@ extern "C"
 	ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 	{
 		ReentryGuard guard;
-		int64 vec[4];
+		int64_t vec[4];
 		if (FAILED(pHelper->Read(vec))) return E_FAIL;
 		
 		auto len3 = Len(double(vec[0]), double(vec[1]), double(vec[2]));
@@ -353,7 +353,7 @@ extern "C"
 	ADDIN_API HRESULT WINAPI AddIn_MD5(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 	{
 		ReentryGuard guard;
-		uint8 md5[16];
+		uint8_t md5[16];
 		if (FAILED(pHelper->Read(md5))) return E_FAIL;
 		_snprintf(pResult, max,
 			"%0.2x%0.2x%0.2x%0.2x-"

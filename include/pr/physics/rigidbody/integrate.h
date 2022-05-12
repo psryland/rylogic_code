@@ -27,7 +27,7 @@ namespace pr
 		//	const BBox&	BBoxWS() const						{ return m_ws_bbox; }
 		//	float				Mass() const						{ return m_rigid_body->m_mass; }
 		//	const m4x4&			InvMassTensorWS() const				{ return m_ws_inv_inertia_tensor; }
-		//	uint				CollisionGroup() const				{ return m_collision_group; }
+		//	uint32_t				CollisionGroup() const				{ return m_collision_group; }
 		//	std::size_t			NumPrimitives() const				{ return m_rigid_body->m_num_primitives; }
 		//	const Model&		GetModel() const					{ return *m_rigid_body; }
 		//	const Primitive*	prim_begin() const					{ return m_rigid_body->prim_begin(); }
@@ -39,7 +39,7 @@ namespace pr
 		//	float				GetEnergy(const v4& gravity) const;
 
 		//	// Set methods
-		//	void SetCollisionGroup(uint group)						{ m_collision_group = group; }
+		//	void SetCollisionGroup(uint32_t group)						{ m_collision_group = group; }
 		//	void SetRigidBody(Rigidbody* rigid_body)				{ m_rigid_body = rigid_body; }
 		//	void SetObjectToWorld(m4x4* object_to_world)			{ m_object_to_world = object_to_world; }
 		//	void SetVelocity(const v4& velocity)					{ m_velocity = velocity; }
@@ -54,7 +54,7 @@ namespace pr
 
 		//private:
 		//	Rigidbody*	m_rigid_body;				// The collision shape and mass properties
-		//	uint		m_collision_group;			// The collision group that this instance belongs to
+		//	uint32_t		m_collision_group;			// The collision group that this instance belongs to
 		//	broadphase::Entity m_bp_entity;			// Allow these objects to be added to the broadphase
 
 		//	// State variables

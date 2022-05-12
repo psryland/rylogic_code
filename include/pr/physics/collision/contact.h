@@ -19,8 +19,8 @@ namespace pr
 			v4						m_pointB;			// The world space contact point on objectB (see note)
 			v4						m_normal;			// The contact normal in world space (from objectB to objectA, or the direction objectA needs to move to stop penetration, or pointing away from objectB)
 			float					m_depth;			// The depth of penetration. > 0.0f indicates contact
-			uint					m_material_idA;		// The material id for pointA
-			uint					m_material_idB;		// The material id for pointB
+			uint32_t				m_material_idA;		// The material id for pointA
+			uint32_t				m_material_idB;		// The material id for pointB
 
 			Contact() : m_depth(-maths::float_max)	{}
 			void FlipResults()

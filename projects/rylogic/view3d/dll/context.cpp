@@ -191,7 +191,7 @@ namespace view3d
 	}
 
 	// Create an object from geometry
-	LdrObject* Context::ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, pr::uint16 const* indices, View3DNugget const* nuggets, pr::Guid const& context_id)
+	LdrObject* Context::ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, uint16_t const* indices, View3DNugget const* nuggets, pr::Guid const& context_id)
 	{
 		using namespace pr::script;
 		auto geom = EGeom::None;

@@ -38,7 +38,7 @@ namespace pr::rdr
 				{v4(2.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t1,t0)},
 				{v4(3.01f, 0, 0, 0), ColourWhite, v4Zero, v2(t0,t0)},
 			};
-			uint16 idxs[] =
+			uint16_t idxs[] =
 			{
 				0, 1, 2, 0, 2, 3
 			};

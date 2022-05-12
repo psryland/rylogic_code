@@ -462,7 +462,7 @@ namespace pr::ldr
 	}
 	inline TStr& CoordFrame(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis, float scale = 1.0f)
 	{
-		return CoordFrame(str,name,colour,basis.m4x4(),scale);
+		return CoordFrame(str,name,colour,m4x4(basis, v4::Origin()),scale);
 	}
 	inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float point_radius = 0)
 	{
@@ -675,7 +675,7 @@ namespace pr::ldr
 			}
 			Derived& ori(m3x4 const& rot)
 			{
-				return o2w(rot.m4x4());
+				return o2w(m4x4(rot, v4::Origin()));
 			}
 			Derived& scale(float s)
 			{

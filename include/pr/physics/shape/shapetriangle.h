@@ -19,8 +19,8 @@ namespace pr
 			m4x4	m_v;	// <x,y,z> = verts of the triangle, w = normal. Cross3(w, y-x) should point toward the interior of the triangle
 
 			enum { EShapeType = EShape_Triangle };
-			static ShapeTriangle	make(v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint flags) { ShapeTriangle s; s.set(a, b, c, shape_to_model, material_id, flags); return s; }
-			ShapeTriangle&			set (v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static ShapeTriangle	make(v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { ShapeTriangle s; s.set(a, b, c, shape_to_model, material_id, flags); return s; }
+			ShapeTriangle&			set (v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const	{ return m_base; }
 			operator Shape& ()				{ return m_base; }
 		};

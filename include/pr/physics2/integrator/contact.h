@@ -3,9 +3,9 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include "pr/physics2/forward.h"
 #include "pr/physics2/rigid_body/rigid_body.h"
+#include "pr/physics2/material/material.h"
 #include "pr/physics2/utility/ldraw.h"
 
 namespace pr::physics
@@ -21,7 +21,7 @@ namespace pr::physics
 		m4x4 m_b2a;
 
 		// The relative velocity of objB in objA space (measured at objA 0,0,0)
-		v8m m_velocity;
+		v8motion m_velocity;
 
 		// The collision point adjusted by the collision time
 		v4 m_point_at_t;

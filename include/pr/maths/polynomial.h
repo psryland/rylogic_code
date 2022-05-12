@@ -581,10 +581,10 @@ namespace pr::maths
 
 	//// A polynomial of maximum order 'N'
 	//// c0 + c1.x + c2.x^2 + c3.x^3 + ... + cN.x^N
-	//template <uint N>
+	//template <uint32_t N>
 	//struct Polynomial
 	//{
-	//	uint	m_degree;		// The number of coefficients in use is m_degree + 1
+	//	uint32_t	m_degree;		// The number of coefficients in use is m_degree + 1
 	//	float	m_coefs[N+1];
 
 	//	//.TOLERANCE=1e-6;
@@ -593,23 +593,23 @@ namespace pr::maths
 	//	:m_degree(0)
 	//	,m_coefs()
 	//	{}
-	//	Polynomial(float const* coefs, uint num_coefs)
+	//	Polynomial(float const* coefs, uint32_t num_coefs)
 	//	{
 	//		Set(coefs, num_coefs);
 	//	}
-	//	void Set(float const* coefs, uint num_coefs)
+	//	void Set(float const* coefs, uint32_t num_coefs)
 	//	{
 	//		assert(num_coefs <= N && "This object cannot represent a polynomial of this order");
 	//		m_degree = num_coefs - 1;
 	//		float* in = m_coefs + m_degree;
 	//		float const* out = coefs;
 	//		while( num_coefs-- ) { *in-- = *out++; }
-	//		//for( uint i = m_degree; i >= 0; --i ) this.coefs.push(coefs[i]);
+	//		//for( uint32_t i = m_degree; i >= 0; --i ) this.coefs.push(coefs[i]);
 	//	}
 	//	float Eval(float x) const
 	//	{
 	//		float result = 0.0f;
-	//		for( uint i = N-1; i >= 0; --i )
+	//		for( uint32_t i = N-1; i >= 0; --i )
 	//			result = result*x + m_coefs[i];
 	//		return result;
 	//	}
@@ -626,7 +626,7 @@ namespace pr::maths
 	//	}
 	//	void DivideScalar(float scalar)
 	//	{
-	//		for( uint i = 0; i != N; ++i )
+	//		for( uint32_t i = 0; i != N; ++i )
 	//			m_coefs[i] /= scalar;
 	//	}
 	//	void Simplify()
@@ -706,7 +706,7 @@ namespace pr::maths
 	//		return result;
 	//	}
 
-	//	uint Degree() const
+	//	uint32_t Degree() const
 	//	{
 	//		return N-1;
 	//	}

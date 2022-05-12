@@ -144,11 +144,11 @@ namespace pr
 
 			// If a half plane exists there should be at least 2 vectors that lie on it
 			// and all other vectors have a positive dot product with the cross of those 2
-			bool FindHalfPlaneBruteForce(v4 const* r, uint r_size, bool should_exist)
+			bool FindHalfPlaneBruteForce(v4 const* r, uint32_t r_size, bool should_exist)
 			{
-				for (uint j = 0; j != r_size; ++j)
+				for (uint32_t j = 0; j != r_size; ++j)
 				{
-					for (uint i = 0; i != r_size; ++i)
+					for (uint32_t i = 0; i != r_size; ++i)
 					{
 						if (i == j) continue;
 						v4 half_space_normal = Cross3(r[i], r[j]);
@@ -156,7 +156,7 @@ namespace pr
 						{
 							half_space_normal = Normalise(half_space_normal);
 							bool all_positive = true;
-							for (uint k = 0; k != r_size; ++k)
+							for (uint32_t k = 0; k != r_size; ++k)
 							{
 								if ((should_exist && Dot3(half_space_normal, r[k]) < -maths::tinyf) ||
 									(!should_exist && Dot3(half_space_normal, r[k]) < maths::tinyf))
@@ -174,11 +174,11 @@ namespace pr
 				}
 				return false;
 			}
-			bool VerifyHalfSpace(v4 const* r, uint r_size, v4 const& half_space_normal)
+			bool VerifyHalfSpace(v4 const* r, uint32_t r_size, v4 const& half_space_normal)
 			{
 				r; half_space_normal;
 				PR_ASSERT(PR_DBG_PHYSICS, !FEql(half_space_normal,pr::v4Zero), "");
-				for( uint i = 0; i != r_size; ++i )
+				for( uint32_t i = 0; i != r_size; ++i )
 				{
 					PR_ASSERT(PR_DBG_PHYSICS, Dot3(half_space_normal, r[i]) > -0.01f, "");
 				}

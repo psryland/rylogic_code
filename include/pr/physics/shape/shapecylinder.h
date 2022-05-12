@@ -20,8 +20,8 @@ namespace pr
 			float	m_height;	// Actually half height (y axis currently)
 
 			enum { EShapeType = EShape_Cylinder };
-			static ShapeCylinder	make(float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint flags) { ShapeCylinder s; s.set(radius, height, shape_to_model, material_id, flags); return s; }
-			ShapeCylinder&			set (float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static ShapeCylinder	make(float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { ShapeCylinder s; s.set(radius, height, shape_to_model, material_id, flags); return s; }
+			ShapeCylinder&			set (float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const	{ return m_base; }
 			operator Shape& ()				{ return m_base; }
 		};

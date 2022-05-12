@@ -6,10 +6,10 @@
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
 #include "pr/geometry/point.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/closest_point.h"
-#include "pr/maths/rand_vector.h"
 #include "pr/ldraw/ldr_helper.h"
 namespace pr::geometry
 {
@@ -50,9 +50,9 @@ namespace pr::geometry
 			std::default_random_engine rng;
 			for (int i = 0; i != 100; ++i)
 			{
-				auto bbox = BBox{Random3(rng, v4Origin, 3.0f, 1.0f), Random3(rng, v4(0), v4(3), 0.0f)};
-				auto s = Random3(rng, v4Origin, 10.0f, 1.0f);
-				auto e = Random3(rng, v4Origin, 10.0f, 1.0f);
+				auto bbox = BBox{v4::Random(rng, v4Origin, 3.0f, 1), v4::Random(rng, v4(0.f), v4(3.f), 0)};
+				auto s = v4::Random(rng, v4Origin, 10.0f, 1);
+				auto e = v4::Random(rng, v4Origin, 10.0f, 1);
 
 				v4 pt0, pt1;
 				auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, pt0, pt1);

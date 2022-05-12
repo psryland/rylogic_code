@@ -3787,15 +3787,15 @@ namespace pr::ldr
 	template <> struct ObjectCreator<ELdrObject::Chart> :IObjectCreator
 	{
 		// Notes:
-		//  - 'm_data' may be a fully populated NxM table, or a jaggered array.
-		//  - If jaggered, then 'm_index' will be non-empty and 'm_dim' will be the bounding dimensions of the table.
-		//  - If non-jaggered, then 'm_index' will be empty, and 'm_dim' represents the dimensions of the table.
+		//  - 'm_data' may be a fully populated NxM table, or a jagged array.
+		//  - If jagged, then 'm_index' will be non-empty and 'm_dim' will be the bounding dimensions of the table.
+		//  - If non-jagged, then 'm_index' will be empty, and 'm_dim' represents the dimensions of the table.
 
 		using Index = std::vector<int>;         // The index for accessing rows in the data table
 		using Table = std::vector<double>;      // The source data loaded into memory
 
 		Table m_data;        // A 2D table of data (row major, i.e. rows are contiguous)
-		Index m_index;       // The offset into 'm_data' for the start if each row (if jaggered) else empty.
+		Index m_index;       // The offset into 'm_data' for the start if each row (if jagged) else empty.
 		iv2   m_dim;         // Table dimensions or bounds of the table dimensions.
 
 		ObjectCreator(ParseParams& p)
@@ -3839,14 +3839,14 @@ namespace pr::ldr
 				if (row_count == 0)
 					continue;
 
-				// Assume the table is non-jaggered until we find a different number of items in a row
-				if (!m_index.empty()) // Table is jaggered already
+				// Assume the table is non-jagged until we find a different number of items in a row
+				if (!m_index.empty()) // Table is jagged already
 				{
 					m_index.push_back(m_index.back() + row_count);
 					m_dim.x = max(m_dim.x, row_count);
 					m_dim.y++;
 				}
-				else if (m_dim.x == row_count) // Table is not jaggered (yet), row length is the same
+				else if (m_dim.x == row_count) // Table is not jagged (yet), row length is the same
 				{
 					m_dim.y++;
 				}
@@ -3855,7 +3855,7 @@ namespace pr::ldr
 					m_dim.x = row_count;
 					m_dim.y = 1;
 				}
-				else // Row length has changed, convert to jaggered
+				else // Row length has changed, convert to jagged
 				{
 					m_index.reserve(m_dim.y + 1);
 
@@ -3870,7 +3870,7 @@ namespace pr::ldr
 				}
 			}
 			
-			// If this is jaggered data, then 'm_index' should have 'm_dim.y + 1' items
+			// If this is jagged data, then 'm_index' should have 'm_dim.y + 1' items
 			// with the last value == to the number of elements in the data table.
 			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
 			assert(m_index.empty() || m_index.back() == (int)m_data.size());
@@ -4035,11 +4035,11 @@ namespace pr::ldr
 			// 'iter' still points to valid data
 			in_range |= true;
 
-			// Not jaggered
+			// Not jagged
 			if (m_chart->m_index.empty())
 				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
 
-			// If 'm_data' is a jaggered array, get the number of values on the current row
+			// If 'm_data' is a jagged array, get the number of values on the current row
 			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
 			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
 		}
@@ -4117,7 +4117,7 @@ namespace pr::ldr
 				if (!in_range)
 					break;
 
-				// Evaluate the i'th data point
+				// Evaluate the ith data point
 				auto x = m_xaxis(args);
 				auto y = m_yaxis(args);
 				verts.push_back(v4{static_cast<float>(x.db()), static_cast<float>(y.db()), 0, 1});
@@ -5329,7 +5329,7 @@ namespace pr::ldr
 
 		// Create buffers for a dynamic model
 		VBufferDesc vbs(vcount, sizeof(Vert), EUsage::Dynamic, ECPUAccess::Write);
-		IBufferDesc ibs(icount, dx_format_v<uint16>, EUsage::Dynamic, ECPUAccess::Write);
+		IBufferDesc ibs(icount, dx_format_v<uint16_t>, EUsage::Dynamic, ECPUAccess::Write);
 		MdlSettings settings(vbs, ibs);
 
 		// Create the model
@@ -5895,7 +5895,7 @@ namespace pr::ldr
 		}, name);
 		return col;
 	}
-	void LdrObject::Colour(Colour32 colour, uint mask, char const* name, EColourOp op, float op_value)
+	void LdrObject::Colour(Colour32 colour, uint32_t mask, char const* name, EColourOp op, float op_value)
 	{
 		Apply([=](LdrObject* o)
 		{

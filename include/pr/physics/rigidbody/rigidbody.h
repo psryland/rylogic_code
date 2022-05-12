@@ -50,7 +50,7 @@ namespace pr
 			v4              m_force;                    //
 			v4              m_torque;                   //
 			void*           m_user_data;                //
-			uint            m_flags;                    // Bitwise OR of ERBFlags
+			uint32_t        m_flags;                    // Bitwise OR of ERBFlags
 			const char*     m_name;
 
 			RigidbodySettings()
@@ -111,7 +111,7 @@ namespace pr
 			float           AngularKineticEnergy() const            { return 0.5f * Dot3(AngVelocity(), AngMomentum()); }       // 0.5wIw
 			bool            SleepState() const                      { return m_sleeping; }
 			bool            HasMicroVelocity() const                { return m_motion_type == EMotion_Static || (LengthSq(Momentum()) < m_micro_mom_sq && LengthSq(AngMomentum()) < m_micro_mom_sq); }
-			void            RestingContacts(v4* contacts, uint& count) const;
+			void            RestingContacts(v4* contacts, uint32_t& count) const;
 
 			// Write Access Functions ******************************
 			void            SetObjectToWorld(m4x4 const& o2w);
@@ -183,7 +183,7 @@ namespace pr
 			// Miscellaneous
 			void*           m_user_data;                // User data
 			unsigned int    m_flags;                    // Flags
-			uint8           m_constraint_set;           // An id for the constraint set this object belongs to
+			uint8_t         m_constraint_set;           // An id for the constraint set this object belongs to
 
 			// Debugging
 			char            m_name[64];                 // A name for the physics object

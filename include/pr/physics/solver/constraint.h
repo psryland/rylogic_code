@@ -83,17 +83,17 @@ namespace pr
 			float m_resting_contact_speed;
 
 			// A count of the number of constraints in this block
-			uint16 m_num_constraints;
+			uint16_t m_num_constraints;
 
 			// The constraint set that this constraint belongs to
-			uint8 m_constraint_set;
-			uint8 pad;
+			uint8_t m_constraint_set;
+			uint8_t pad;
 
 			// Debugging
 			Constraint* m_constraints;
 
 			// Return access to the constraints in this block
-			Constraint& operator [](uint i) { return reinterpret_cast<Constraint*>(this + 1)[i]; }
+			Constraint& operator [](uint32_t i) { return reinterpret_cast<Constraint*>(this + 1)[i]; }
 		};
 	}
 }

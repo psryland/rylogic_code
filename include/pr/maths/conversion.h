@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
@@ -21,46 +20,50 @@ namespace pr
 		{
 			using Char = typename string_traits<Str>::value_type;
 
-			template <typename T> static Str To_(Vec2<T> const& x)
+			template <typename T> static Str To_(Vec2f<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g"), x.x, x.y);
 			}
-			template <typename T> static Str To_(Vec3<T> const& x)
+			template <typename T> static Str To_(Vec3f<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g"), x.x, x.y, x.z);
 			}
-			template <typename T> static Str To_(Vec4<T> const& x)
+			template <typename T> static Str To_(Vec4f<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g %g"), x.x, x.y, x.z, x.w);
 			}
-			template <typename T> static Str To_(Vec8<T> const& x)
+			template <typename T> static Str To_(Vec8f<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%g %g %g %g  %g %g %g %g"), x.ang.x, x.ang.y, x.ang.z, x.ang.w, x.lin.x, x.lin.y, x.lin.z, x.lin.w);
 			}
-			template <typename T> static Str To_(IVec2<T> const& x)
+			template <typename T> static Str To_(Vec2i<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%d %d"), x.x, x.y);
 			}
-			template <typename T> static Str To_(IVec4<T> const& x)
+			template <typename T> static Str To_(Vec3i<T> const& x)
+			{
+				return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d"), x.x, x.y, x.z);
+			}
+			template <typename T> static Str To_(Vec4i<T> const& x)
 			{
 				return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d %d"), x.x, x.y, x.z, x.w);
 			}
-			template <typename A, typename B> static Str To_(Mat2x2<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat2x2f<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
 				return To_(m.x)+_+To_(m.y);
 			}
-			template <typename A, typename B> static Str To_(Mat3x4<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat3x4f<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
 				return To_(m.x.xyz)+_+To_(m.y.xyz)+_+To_(m.z.xyz);
 			}
-			template <typename A, typename B> static Str To_(Mat4x4<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat4x4f<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
 				return To_(m.x)+_+To_(m.y)+_+To_(m.z)+_+To_(m.w);
 			}
-			template <typename A, typename B> static Str To_(Mat6x8<A,B> const& m)
+			template <typename A, typename B> static Str To_(Mat6x8f<A,B> const& m)
 			{
 				Char const _[] = {' ','\0'};
 				return To_(m[0])+_+To_(m[1])+_+To_(m[2])+_+To_(m[3])+_+To_(m[4])+_+To_(m[5]);
@@ -68,7 +71,7 @@ namespace pr
 		};
 
 		// Whatever to vector/matrix conversion
-		struct ToV2
+		struct ToV2f
 		{
 			// iv2 to v2
 			static v2 To_(iv2 const& v)
@@ -95,7 +98,7 @@ namespace pr
 			}
 			#endif
 		};
-		struct ToV3
+		struct ToV3f
 		{
 			// iv3 to v3
 			static v3 To_(iv3 const& v)
@@ -115,7 +118,7 @@ namespace pr
 				return v3(x,y,z);
 			}
 		};
-		struct ToV4
+		struct ToV4f
 		{
 			// iv4 to v4
 			static v4 To_(iv4 const& v)
@@ -146,7 +149,7 @@ namespace pr
 				return v4(x,y,z,w);
 			}
 		};
-		struct ToV8
+		struct ToV8f
 		{
 			// String to v8
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
@@ -165,7 +168,7 @@ namespace pr
 				return v8(angx, angy, angz, angw, linx, liny, linz, linw);
 			}
 		};
-		struct ToIV2
+		struct ToV2i
 		{
 			// String to iv2
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
@@ -218,7 +221,21 @@ namespace pr
 			}
 			#endif
 		};
-		struct ToIV4
+		struct ToV3i
+		{
+			// String to iv4
+			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+			static iv3 To_(Str const& s, int radix = 10, Char const** end = nullptr)
+			{
+				Char const* e;
+				auto x = pr::To<int>(s, radix, &e);
+				auto y = pr::To<int>(e, radix, &e);
+				auto z = pr::To<int>(e, radix, &e);
+				if (end) *end = e;
+				return iv3{x,y,z};
+			}
+		};
+		struct ToV4i
 		{
 			// String to iv4
 			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
@@ -231,6 +248,17 @@ namespace pr
 				auto w = pr::To<int>(e, radix, &e);
 				if (end) *end = e;
 				return iv4{x,y,z,w};
+			}
+
+			// Vec4f to Vec4i
+			template <typename T>
+			static Vec4i<T> To_(v4_cref<T> v)
+			{
+				return Vec4i<T> {
+					static_cast<int>(v.x),
+					static_cast<int>(v.y),
+					static_cast<int>(v.z),
+					static_cast<int>(v.w)};
 			}
 		};
 		struct ToM2X2
@@ -379,40 +407,43 @@ namespace pr
 	}
 
 	// Vector/Matrix to std::basic_string
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec2<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec3<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec4<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec8<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, IVec2<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, IVec4<T>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat2x2<A,B>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat3x4<A,B>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat4x4<A,B>> :convert::VMToString<std::basic_string<Char>> {};
-	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat6x8<A,B>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec2f<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec3f<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec4f<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec8f<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec2i<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec3i<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename T>                struct Convert<std::basic_string<Char>, Vec4i<T>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat2x2f<A,B>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat3x4f<A,B>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat4x4f<A,B>> :convert::VMToString<std::basic_string<Char>> {};
+	template <typename Char, typename A, typename B>    struct Convert<std::basic_string<Char>, Mat6x8f<A,B>> :convert::VMToString<std::basic_string<Char>> {};
 
 	// Vector/Matrix to pr::string
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec2<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec3<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec4<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec8<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    IVec2<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    IVec4<T>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat2x2<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat3x4<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat4x4<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
-	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat6x8<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec2f<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec3f<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec4f<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec8f<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec2i<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec3i<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename T> struct Convert<pr::string<Char,L,F>,    Vec4i<T>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat2x2f<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat3x4f<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat4x4f<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
+	template <typename Char, int L, bool F, typename A, typename B> struct Convert<pr::string<Char,L,F>, Mat6x8f<A,B>> :convert::VMToString<pr::string<Char,L,F>> {};
 
 	// Whatever to vector/matrix
-	template <typename T, typename TFrom> struct Convert<Vec2<T>  , TFrom> :convert::ToV2 {};
-	template <typename T, typename TFrom> struct Convert<Vec3<T>  , TFrom> :convert::ToV3 {};
-	template <typename T, typename TFrom> struct Convert<Vec4<T>  , TFrom> :convert::ToV4 {};
-	template <typename T, typename TFrom> struct Convert<Vec8<T>  , TFrom> :convert::ToV8 {};
-	template <typename T, typename TFrom> struct Convert<IVec2<T> , TFrom> :convert::ToIV2 {};
-	template <typename T, typename TFrom> struct Convert<IVec4<T> , TFrom> :convert::ToIV4 {};
-	template <typename A, typename B, typename TFrom> struct Convert<Mat2x2<A,B> , TFrom> :convert::ToM2X2 {};
-	template <typename A, typename B, typename TFrom> struct Convert<Mat3x4<A,B> , TFrom> :convert::ToM3X4 {};
-	template <typename A, typename B, typename TFrom> struct Convert<Mat4x4<A,B> , TFrom> :convert::ToM4X4 {};
-	template <typename A, typename B, typename TFrom> struct Convert<Mat6x8<A,B> , TFrom> :convert::ToM6X8 {};
+	template <typename T, typename TFrom> struct Convert<Vec2f<T>  , TFrom> :convert::ToV2f {};
+	template <typename T, typename TFrom> struct Convert<Vec3f<T>  , TFrom> :convert::ToV3f {};
+	template <typename T, typename TFrom> struct Convert<Vec4f<T>  , TFrom> :convert::ToV4f {};
+	template <typename T, typename TFrom> struct Convert<Vec8f<T>  , TFrom> :convert::ToV8f {};
+	template <typename T, typename TFrom> struct Convert<Vec2i<T> , TFrom> :convert::ToV2i {};
+	template <typename T, typename TFrom> struct Convert<Vec3i<T> , TFrom> :convert::ToV3i {};
+	template <typename T, typename TFrom> struct Convert<Vec4i<T> , TFrom> :convert::ToV4i {};
+	template <typename A, typename B, typename TFrom> struct Convert<Mat2x2f<A,B> , TFrom> :convert::ToM2X2 {};
+	template <typename A, typename B, typename TFrom> struct Convert<Mat3x4f<A,B> , TFrom> :convert::ToM3X4 {};
+	template <typename A, typename B, typename TFrom> struct Convert<Mat4x4f<A,B> , TFrom> :convert::ToM4X4 {};
+	template <typename A, typename B, typename TFrom> struct Convert<Mat6x8f<A,B> , TFrom> :convert::ToM6X8 {};
 
 	// Whatever to IRect
 	template <typename TFrom> struct Convert<IRect, TFrom> :convert::ToIRect {};
@@ -430,56 +461,61 @@ namespace pr
 
 	// Write a vector to a stream
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec2<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec2f<T> const& vec)
 	{
 		return out << vec.x << " " << vec.y;
 	}
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec3<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec3f<T> const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z;
 	}
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec4<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec4f<T> const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
 	}
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec8<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec8f<T> const& vec)
 	{
 		return out << vec.ang << " " << vec.lin;
 	}
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, IVec2<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec2i<T> const& vec)
 	{
 		return out << vec.x << " " << vec.y;
 	}
 	template <typename Char, typename T>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, IVec4<T> const& vec)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec3i<T> const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z;
+	}
+	template <typename Char, typename T>
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Vec4i<T> const& vec)
 	{
 		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
 	}
 	template <typename Char, typename A, typename B>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat2x2<A,B> const& mat)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat2x2f<A,B> const& mat)
 	{
 		return out << mat.x << " " << mat.y;
 	}
 	template <typename Char, typename A, typename B>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat3x4<A,B> const& mat)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat3x4f<A,B> const& mat)
 	{
 		auto m = mat;
 		auto sep = " ";
 		return out << m.x << sep << m.y << sep << m.z;
 	}
 	template <typename Char, typename A, typename B>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat4x4<A,B> const& mat)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat4x4f<A,B> const& mat)
 	{
 		auto m = mat;
 		auto sep = " ";
 		return out << m.x << sep << m.y << sep << m.z << sep << m.w;
 	}
 	template <typename Char, typename A, typename B>
-	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat6x8<A,B> const& mat)
+	inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, Mat6x8f<A,B> const& mat)
 	{
 		auto m = mat;
 		auto sep = " ";

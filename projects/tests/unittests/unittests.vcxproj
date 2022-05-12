@@ -296,7 +296,7 @@
     <ClInclude Include="..\..\..\include\pr\maths\fibonacci_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\maths\forward.h" />
     <ClInclude Include="..\..\..\include\pr\maths\half.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\ivector3.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\vector3i.h" />
     <ClInclude Include="..\..\..\include\pr\maths\limits.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix.h" />
     <ClInclude Include="..\..\..\include\pr\maths\matrix6x8.h" />
@@ -304,8 +304,8 @@
     <ClInclude Include="..\..\..\include\pr\maths\rectangle.h" />
     <ClInclude Include="..\..\..\include\pr\maths\frustum.h" />
     <ClInclude Include="..\..\..\include\pr\maths\interpolate.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\ivector2.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\ivector4.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\vector2i.h" />
+    <ClInclude Include="..\..\..\include\pr\maths\vector4i.h" />
     <ClInclude Include="..\..\..\include\pr\maths\large_int.h" />
     <ClInclude Include="..\..\..\include\pr\maths\line3.h" />
     <ClInclude Include="..\..\..\include\pr\maths\maths.h" />
@@ -323,11 +323,9 @@
     <ClInclude Include="..\..\..\include\pr\maths\spatial.h" />
     <ClInclude Include="..\..\..\include\pr\maths\spline.h" />
     <ClInclude Include="..\..\..\include\pr\maths\stat.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\unit_tests.h" />
     <ClInclude Include="..\..\..\include\pr\maths\vector2.h" />
     <ClInclude Include="..\..\..\include\pr\maths\vector3.h" />
     <ClInclude Include="..\..\..\include\pr\maths\vector4.h" />
-    <ClInclude Include="..\..\..\include\pr\maths\rand_vector.h" />
     <ClInclude Include="..\..\..\include\pr\maths\vector8.h" />
     <ClInclude Include="..\..\..\include\pr\meta\abs.h" />
     <ClInclude Include="..\..\..\include\pr\meta\and.h" />

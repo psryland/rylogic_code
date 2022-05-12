@@ -92,7 +92,7 @@ Rigidbody::~Rigidbody()
 
 // Return the current resting contact points.
 // 'contacts' should point to at least 3 v4's
-void Rigidbody::RestingContacts(v4* contacts, uint& count) const
+void Rigidbody::RestingContacts(v4* contacts, uint32_t& count) const
 {
 	for (count = 0; count != m_support.m_num_supports; ++count)
 		contacts[count] = m_support.m_leg[count].m_point + m_object_to_world.pos;

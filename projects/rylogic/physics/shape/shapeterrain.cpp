@@ -11,7 +11,7 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct a shape array
-ShapeTerrain& ShapeTerrain::set(ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeTerrain& ShapeTerrain::set(ITerrain* terrain, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Terrain, sizeof(ShapeTerrain), shape_to_model, material_id, flags);
 	m_terrain = terrain;
