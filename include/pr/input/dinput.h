@@ -483,7 +483,7 @@ namespace pr::dinput
 					assert(data.dwOfs < 256);
 
 					// Copy into the key state buffer
-					m_key_state[data.dwOfs] = static_cast<uint8>(data.dwData);
+					m_key_state[data.dwOfs] = static_cast<uint8_t>(data.dwData);
 					if (events)
 					{
 						events->m_key = data.dwOfs;

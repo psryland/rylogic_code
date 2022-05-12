@@ -467,18 +467,18 @@ namespace pr
 		// write the appropriate Serialise or SerialiseArray function in the code where they need it.
 		inline void Serialise		(const char&		c,					ByteCont& data) { impl::SerialisePod<char>			(c, data); }
 		inline void Serialise		(const bool&		b,					ByteCont& data) { impl::SerialisePod<bool>			(b, data); }
-		inline void Serialise		(const uint&		i,					ByteCont& data) { impl::SerialisePod<uint>			(i, data); }
+		inline void Serialise		(const uint32_t&	i,					ByteCont& data) { impl::SerialisePod<uint32_t>		(i, data); }
 		inline void Serialise		(const std::size_t&	s,					ByteCont& data) { impl::SerialisePod<std::size_t>	(s, data); }
 		inline void Serialise		(const float&		f,					ByteCont& data) { impl::SerialisePod<float>			(f, data); }
 		inline void Serialise		(const v4&			v,					ByteCont& data) { impl::SerialisePod<v4>				(v, data); }
 		inline void Serialise		(const m4x4&		m,					ByteCont& data) { impl::SerialisePod<m4x4>			(m, data); }
 		inline void Serialise		(const BBox& bbox,				ByteCont& data) { impl::SerialisePod<BBox>	(bbox, data); }
-		inline void SerialiseArray	(const char*		pc,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<char>			(pc,	count, data); }
-		inline void SerialiseArray	(const uint8*		pui8, std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint8>		(pui8,	count, data); }
-		inline void SerialiseArray	(const uint*		pui,  std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint>			(pui,	count, data); }
+		inline void SerialiseArray	(const char*		pc,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<char>		(pc,	count, data); }
+		inline void SerialiseArray	(const uint8*		pui8, std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint8_t>		(pui8,	count, data); }
+		inline void SerialiseArray	(const uint32_t*	pui,  std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint32_t>	(pui,	count, data); }
 		inline void SerialiseArray	(const float*		pf,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<float>		(pf,	count, data); }
 		inline void SerialiseArray	(const v4*			pv,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<v4>			(pv,	count, data); }
-		inline void SerialiseArray	(const m4x4*		pm,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<m4x4>			(pm,	count, data); }
+		inline void SerialiseArray	(const m4x4*		pm,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<m4x4>		(pm,	count, data); }
 		inline void SerialiseArray	(const BBox* pbbox,std::size_t count, ByteCont& data) { impl::SerialisePodArray<BBox>	(pbbox, count, data); }
 		// Stl serialise functions. If you get a compile error in these
 		// functions you probably need to implement your own Serialise
@@ -551,15 +551,15 @@ namespace pr
 		// write the appropriate DeSerialise or DeSerialiseArray function in the code where they need it.
 		inline void DeSerialise		(char&			c,							const void*& data)	{ impl::DeSerialisePod<char>			(c, data); }
 		inline void DeSerialise		(bool&			b,							const void*& data)	{ impl::DeSerialisePod<bool>			(b, data); }
-		inline void DeSerialise		(uint&			i,							const void*& data)	{ impl::DeSerialisePod<uint>			(i, data); }
+		inline void DeSerialise		(uint32_t&		i,							const void*& data)	{ impl::DeSerialisePod<uint32_t>		(i, data); }
 		inline void DeSerialise		(std::size_t&	s,							const void*& data)	{ impl::DeSerialisePod<std::size_t>		(s, data); }
 		inline void DeSerialise		(float&			f,							const void*& data)	{ impl::DeSerialisePod<float>			(f, data); }
 		inline void DeSerialise		(v4&			v,							const void*& data)	{ impl::DeSerialisePod<v4>				(v, data); }
 		inline void DeSerialise		(m4x4&			m,							const void*& data)	{ impl::DeSerialisePod<m4x4>			(m, data); }
 		inline void DeSerialise		(BBox&	bbox,						const void*& data)	{ impl::DeSerialisePod<BBox>		(bbox, data); }
 		inline void DeSerialiseArray(char*			pc,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<char>		(pc,	count, data); }
-		inline void DeSerialiseArray(uint8*			pui8,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint8>		(pui8,	count, data); }
-		inline void DeSerialiseArray(uint*			pui,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint>		(pui,	count, data); }
+		inline void DeSerialiseArray(uint8_t*		pui8,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint8_t>	(pui8,	count, data); }
+		inline void DeSerialiseArray(uint32_t*		pui,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint32_t>	(pui,	count, data); }
 		inline void DeSerialiseArray(float*			pf,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<float>		(pf,	count, data); }
 		inline void DeSerialiseArray(v4*			pv,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<v4>			(pv,	count, data); }
 		inline void DeSerialiseArray(m4x4*			pm,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<m4x4>		(pm,	count, data); }

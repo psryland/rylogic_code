@@ -80,7 +80,7 @@ namespace pr
 		if (phase_span < 0) phase_span += maths::tau;
 
 		// Get the Fibonacci sphere index range to search
-		auto ZtoI = [=](double z) { return (int)Lerp(0.0, N, Frac(-1.0, z, +1.0)); };
+		auto ZtoI = [=](double z) { return (int)Lerp<double>(0.0, N, Frac(-1.0, z, +1.0)); };
 		auto i0 = ZtoI(std::max(-1.0, dir.z - dz));
 		auto i1 = ZtoI(std::min(+1.0, dir.z + dz));
 
@@ -134,7 +134,7 @@ namespace pr::maths
 			auto max_i = -1;
 			for (int i = 0; i != N; ++i)
 			{
-				auto pt = Random3N(rng, 0.0f);
+				auto pt = v4::RandomN(rng, 0.0f);
 				auto idx = FibonacciSphericalMapping(pt, N);
 				auto fpt = FibonacciSphericalMapping(idx, N);
 				auto dist = Length(fpt - pt);

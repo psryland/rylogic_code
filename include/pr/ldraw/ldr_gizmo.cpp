@@ -212,7 +212,7 @@ namespace pr::ldr
 		};
 		#pragma endregion
 		#pragma region Indices
-		static uint16 const idxs[] =
+		static uint16_t const idxs[] =
 		{
 			29,  63,  31,  63,  29,  64,  15,  31,  17,  31,  15,  29,  39,  42,  38,  42,  39,  43,  14,  12,  16,  12,  14,  10,  1,  8,  6,  8,  1,  4,  0,  4,
 			1,  4,  0,  3,  21,  24,  25,  24,  21,  20,  6,  12,  10,  12,  6,  8,  36,  33,  32,  33,  36,  37,  108,  102,  106,  102,  108,  104,  98,  101,  100,  101,
@@ -393,7 +393,7 @@ namespace pr::ldr
 		};
 		#pragma endregion
 		#pragma region Indices
-		static uint16 const idxs[] =
+		static uint16_t const idxs[] =
 		{
 			19,  51,  17,  51,  19,  57,  11,  33,  9,  33,  11,  35,  5,  31,  29,  31,  5,  7,  4,  29,  28,  29,  4,  5,  15,  39,  13,  39,  15,  45,  17,  45,
 			15,  45,  17,  51,  9,  31,  7,  31,  9,  33,  13,  35,  11,  35,  13,  39,  52,  20,  18,  20,  52,  58,  24,  66,  26,  66,  24,  64,  62,  24,  22,  24,
@@ -616,7 +616,7 @@ namespace pr::ldr
 		};
 		#pragma endregion
 		#pragma region Indices
-		static uint16 const idxs[] =
+		static uint16_t const idxs[] =
 		{
 			38,  63,  40,  63,  38,  64,  22,  40,  24,  40,  22,  38,  21,  17,  23,  17,  21,  15,  1,  11,  9,  11,  1,  4,  0,  4,  1,  4,  0,  3,  9,  17,
 			15,  17,  9,  11,  51,  48,  47,  48,  51,  52,  103,  95,  101,  95,  103,  97,  83,  88,  84,  88,  83,  87,  89,  92,  91,  92,  89,  90,  89,  86,  90,  86,
@@ -650,7 +650,7 @@ namespace pr::ldr
 		char const* name;
 		std::size_t vcount, icount;
 		pr::rdr::Vert const* vdata;
-		uint16 const* idata;
+		uint16_t const* idata;
 		BBox const* bbox;
 	}
 	GizmoModelData[3] = 

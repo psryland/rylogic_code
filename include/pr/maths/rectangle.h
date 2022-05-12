@@ -8,7 +8,7 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector2.h"
-#include "pr/maths/ivector2.h"
+#include "pr/maths/vector2i.h"
 
 namespace pr
 {
@@ -69,18 +69,18 @@ namespace pr
 		// Get/Set the width of the rectangle. 'anchor' : -1 = anchor the left, 0 = anchor centre, 1 = anchor right
 		elem_type SizeX() const
 		{
-			return x_cp(m_max) - x_cp(m_min);
+			return maths::comp<0>(m_max) - maths::comp<0>(m_min);
 		}
 		void SizeX(elem_type sz, int anchor)
 		{
 			switch (anchor)
 			{
-			case -1:
+				case -1:
 				{
 					m_max = Vec2(x_cp(m_min) + sz, y_cp(m_max));
 					break;
 				}
-			case  0:
+				case  0:
 				{
 					auto w0 = sz / 2;
 					auto w1 = sz - w0;
@@ -89,7 +89,7 @@ namespace pr
 					m_max = Vec2(c + w1, y_cp(m_max));
 					break;
 				}
-			case +1:
+				case +1:
 				{
 					m_min = Vec2(x_cp(m_max) - sz, y_cp(m_min));
 					break;
@@ -100,18 +100,18 @@ namespace pr
 		// Get/Set the height of the rectangle. 'anchor' : -1 = anchor the top, 0 = anchor centre, 1 = anchor bottom
 		elem_type SizeY() const
 		{
-			return y_cp(m_max) - y_cp(m_min);
+			return maths::comp<1>(m_max) - maths::comp<1>(m_min);
 		}
 		void SizeY(elem_type sz, int anchor)
 		{
 			switch (anchor)
 			{
-			case -1:
+				case -1:
 				{
 					m_max = Vec2(x_cp(m_max), y_cp(m_min) + sz);
 					break;
 				}
-			case  0:
+				case  0:
 				{
 					auto h0 = sz / 2;
 					auto h1 = sz - h0;
@@ -120,7 +120,7 @@ namespace pr
 					m_max = Vec2(x_cp(m_max), c + h1);
 					break;
 				}
-			case +1:
+				case +1:
 				{
 					m_min = Vec2(x_cp(m_min), y_cp(m_max) - sz);
 					break;
@@ -131,25 +131,25 @@ namespace pr
 		// The left edge position (x value)
 		elem_type Left() const
 		{
-			return x_cp(m_min);
+			return maths::comp<0>(m_min);
 		}
 
 		// The top edge position (y value)
 		elem_type Top() const
 		{
-			return y_cp(m_min);
+			return maths::comp<1>(m_min);
 		}
 
 		// The right edge position (x value)
 		elem_type Right() const
 		{
-			return x_cp(m_max);
+			return maths::comp<0>(m_max);
 		}
 
 		// The bottom edge position (y value)
 		elem_type Bottom() const
 		{
-			return y_cp(m_max);
+			return maths::comp<1>(m_max);
 		}
 
 		// The centre position of the rectangle
@@ -244,14 +244,16 @@ namespace pr
 	template <typename V, typename E = Rectangle<V>::elem_type> Rectangle<V> Shifted(Rectangle<V> const& rect, E dx, E dy)
 	{
 		return Rectangle<V>(
-			x_cp(rect.m_min) + dx, y_cp(rect.m_min) + dy,
-			x_cp(rect.m_max) + dx, y_cp(rect.m_max) + dy);
+			maths::comp<0>(rect.m_min) + dx, maths::comp<1>(rect.m_min) + dy,
+			maths::comp<0>(rect.m_max) + dx, maths::comp<1>(rect.m_max) + dy);
 	}
 
 	// Returns 'rect' inflated by the given values. Positive values increase the rect size, negative values decrease it
 	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V> Inflated(Rectangle<V> const& rect, E dxmin, E dymin, E dxmax, E dymax)
 	{
-		return Rectangle<V,E>(x_cp(rect.m_min) - dxmin, y_cp(rect.m_min) - dymin, x_cp(rect.m_max) + dxmax, y_cp(rect.m_max) + dymax);
+		return Rectangle<V,E>(
+			maths::comp<0>(rect.m_min) - dxmin, maths::comp<1>(rect.m_min) - dymin,
+			maths::comp<0>(rect.m_max) + dxmax, maths::comp<1>(rect.m_max) + dymax);
 	}
 	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V> Inflated(Rectangle<V> const& rect, E dx, E dy)
 	{
@@ -308,16 +310,16 @@ namespace pr
 	template <typename V> inline bool IsWithin(Rectangle<V> const& rect, V const& point)
 	{
 		return
-			x_cp(point) >= x_cp(rect.m_min) && x_cp(point) < x_cp(rect.m_max) &&
-			y_cp(point) >= y_cp(rect.m_min) && y_cp(point) < y_cp(rect.m_max);
+			maths::comp<0>(point) >= maths::comp<0>(rect.m_min) && maths::comp<0>(point) < maths::comp<0>(rect.m_max) &&
+			maths::comp<1>(point) >= maths::comp<1>(rect.m_min) && maths::comp<1>(point) < maths::comp<1>(rect.m_max);
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
 	template <typename V> inline bool IsIntersection(Rectangle<V> const& lhs, Rectangle<V> const& rhs)
 	{
 		return
-			!(x_cp(lhs.m_max) < x_cp(rhs.m_min) || x_cp(lhs.m_min) > x_cp(rhs.m_max) ||
-			  y_cp(lhs.m_max) < y_cp(rhs.m_min) || y_cp(lhs.m_min) > y_cp(rhs.m_max));
+			!(maths::comp<0>(lhs.m_max) < maths::comp<0>(rhs.m_min) || maths::comp<0>(lhs.m_min) > maths::comp<0>(rhs.m_max) ||
+			  maths::comp<1>(lhs.m_max) < maths::comp<1>(rhs.m_min) || maths::comp<1>(lhs.m_min) > maths::comp<1>(rhs.m_max));
 	}
 
 	// Return 'point' scaled by the transform that maps 'rect' to the square (bottom left:-1,-1)->(top right:1,1) 
@@ -327,8 +329,8 @@ namespace pr
 	template <typename V> inline v2 NormalisePoint(Rectangle<V> const& rect, v2 const& point, float xsign, float ysign)
 	{
 		return v2(
-			xsign * (2.0f * (point.x - x_cp(rect.m_min)) / rect.SizeX() - 1.0f),
-			ysign * (2.0f * (point.y - y_cp(rect.m_min)) / rect.SizeY() - 1.0f));
+			xsign * (2.0f * (point.x - maths::comp<0>(rect.m_min)) / rect.SizeX() - 1.0f),
+			ysign * (2.0f * (point.y - maths::comp<1>(rect.m_min)) / rect.SizeY() - 1.0f));
 	}
 
 	// Scales a normalised 'point' by the transform that maps the square (bottom left:-1,-1)->(top right:1,1) to 'rect'
@@ -338,8 +340,8 @@ namespace pr
 	template <typename V> inline v2 ScalePoint(Rectangle<V> const& rect, v2 const& point, float xsign, float ysign)
 	{
 		return v2(
-			x_cp(rect.m_min) + rect.SizeX() * (1.0f + xsign*point.x) / 2.0f,
-			y_cp(rect.m_min) + rect.SizeY() * (1.0f + ysign*point.y) / 2.0f);
+			maths::comp<0>(rect.m_min) + rect.SizeX() * (1.0f + xsign*point.x) / 2.0f,
+			maths::comp<1>(rect.m_min) + rect.SizeY() * (1.0f + ysign*point.y) / 2.0f);
 	}
 
 	#pragma endregion

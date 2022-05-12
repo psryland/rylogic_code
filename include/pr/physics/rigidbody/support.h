@@ -33,7 +33,7 @@ namespace pr
 		{
 			support::Leg	m_on_me;			// The head of a chain of objects resting on 'me'
 			support::Leg	m_leg[3];			// Up to three objects that we are resting on.
-			uint			m_num_supports;		// The number of objects we're resting on.
+			uint32_t		m_num_supports;		// The number of objects we're resting on.
 			mutable int		m_active;			// A down counter used to detect streams of micro collisions
 			bool			m_supported;		// True if we think the object is supported
 

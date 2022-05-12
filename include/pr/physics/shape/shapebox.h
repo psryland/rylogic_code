@@ -19,8 +19,8 @@ namespace pr
 			v4		m_radius;
 
 			enum { EShapeType = EShape_Box };
-			static ShapeBox	make(v4 const& dim, m4x4 const& shape_to_model, MaterialId material_id, uint flags) { ShapeBox s; s.set(dim, shape_to_model, material_id, flags); return s; }
-			ShapeBox&		set (v4 const& dim, m4x4 const& shape_to_model, MaterialId material_id, uint flags);
+			static ShapeBox	make(v4 const& dim, m4x4 const& shape_to_model, MaterialId material_id, uint32_t flags) { ShapeBox s; s.set(dim, shape_to_model, material_id, flags); return s; }
+			ShapeBox&		set (v4 const& dim, m4x4 const& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const	{ return m_base; }
 			operator Shape& ()				{ return m_base; }
 		};

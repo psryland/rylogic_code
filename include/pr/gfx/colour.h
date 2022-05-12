@@ -482,7 +482,7 @@ namespace pr
 		{
 			struct { float r, g, b, a; };
 			struct { v4 rgba; };
-			struct { v3 rgb; float a; };
+			struct { v3 rgb; };
 			struct { float arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;

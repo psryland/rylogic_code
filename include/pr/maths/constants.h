@@ -76,41 +76,41 @@ namespace pr
 	template <typename Type> using limits = std::numeric_limits<Type>;
 	namespace maths
 	{
-		constexpr char    char_min     = limits<char>::min();
-		constexpr char    char_max     = limits<char>::max();
-		constexpr uint8   uint8_min    = limits<uint8>::min();
-		constexpr uint8   uint8_max    = limits<uint8>::max();
-		constexpr short   short_min    = limits<short>::min();
-		constexpr short   short_max    = limits<short>::max();
-		constexpr uint16  uint16_min   = limits<uint16>::min();
-		constexpr uint16  uint16_max   = limits<uint16>::max();
-		constexpr int     int_min      = limits<int>::min();
-		constexpr int     int_max      = limits<int>::max();
-		constexpr uint    uint_min     = limits<uint>::min();
-		constexpr uint    uint_max     = limits<uint>::max();
-		constexpr int64   int64_min    = limits<int64>::min();
-		constexpr int64   int64_max    = limits<int64>::max();
-		constexpr uint64  uint64_min   = limits<uint64>::min();
-		constexpr uint64  uint64_max   = limits<uint64>::max();
-		constexpr float   float_lowest = limits<float>::lowest();
-		constexpr float   float_min    = limits<float>::min();
-		constexpr float   float_max    = limits<float>::max();
-		constexpr float   float_eps    = limits<float>::epsilon();
-		constexpr double  double_min   = limits<double>::min();
-		constexpr double  double_max   = limits<double>::max();
-		constexpr double  double_eps   = limits<double>::epsilon();
-		constexpr float   float_inf    = limits<float>::infinity();
-		constexpr double  double_inf   = limits<double>::infinity();
-		constexpr float   float_nan    = limits<float>::quiet_NaN();
-		constexpr double  double_nan   = limits<double>::quiet_NaN();
+		constexpr int8_t   int8_min     = limits<int8_t>::min();
+		constexpr int8_t   int8_max     = limits<int8_t>::max();
+		constexpr uint8_t  uint8_min    = limits<uint8_t>::min();
+		constexpr uint8_t  uint8_max    = limits<uint8_t>::max();
+		constexpr int16_t  int16_min    = limits<int16_t>::min();
+		constexpr int16_t  int16_max    = limits<int16_t>::max();
+		constexpr uint16_t uint16_min   = limits<uint16_t>::min();
+		constexpr uint16_t uint16_max   = limits<uint16_t>::max();
+		constexpr int32_t  int32_min    = limits<int32_t>::min();
+		constexpr int32_t  int32_max    = limits<int32_t>::max();
+		constexpr uint32_t uint32_min   = limits<uint32_t>::min();
+		constexpr uint32_t uint32_max   = limits<uint32_t>::max();
+		constexpr int64_t  int64_min    = limits<int64_t>::min();
+		constexpr int64_t  int64_max    = limits<int64_t>::max();
+		constexpr uint64_t uint64_min   = limits<uint64_t>::min();
+		constexpr uint64_t uint64_max   = limits<uint64_t>::max();
+		constexpr float    float_lowest = limits<float>::lowest();
+		constexpr float    float_min    = limits<float>::min();
+		constexpr float    float_max    = limits<float>::max();
+		constexpr float    float_eps    = limits<float>::epsilon();
+		constexpr double   double_min   = limits<double>::min();
+		constexpr double   double_max   = limits<double>::max();
+		constexpr double   double_eps   = limits<double>::epsilon();
+		constexpr float    float_inf    = limits<float>::infinity();
+		constexpr double   double_inf   = limits<double>::infinity();
+		constexpr float    float_nan    = limits<float>::quiet_NaN();
+		constexpr double   double_nan   = limits<double>::quiet_NaN();
 
 		// The maximum integer value that can be exactly represented by a float,double
-		constexpr int max_int_in_float    = 16777216;           // 2^24
-		constexpr int64 max_int_in_double = 9007199254740994LL; // 2^53
-		static_assert(int(float(max_int_in_float    )) == max_int_in_float    , "");
-		static_assert(int(float(max_int_in_float + 1)) != max_int_in_float + 1, "");
-		static_assert(int64(double(max_int_in_double    )) == max_int_in_double    , "");
-		static_assert(int64(double(max_int_in_double + 1)) != max_int_in_double + 1, "");
+		constexpr int32_t max_int_in_float  = 16777216;           // 2^24
+		constexpr int64_t max_int_in_double = 9007199254740994LL; // 2^53
+		static_assert(static_cast<int32_t>(static_cast<float >(max_int_in_float     )) == max_int_in_float    );
+		static_assert(static_cast<int32_t>(static_cast<float >(max_int_in_float  + 1)) != max_int_in_float + 1);
+		static_assert(static_cast<int64_t>(static_cast<double>(max_int_in_double    )) == max_int_in_double    );
+		static_assert(static_cast<int64_t>(static_cast<double>(max_int_in_double + 1)) != max_int_in_double + 1);
 	}
 }
 

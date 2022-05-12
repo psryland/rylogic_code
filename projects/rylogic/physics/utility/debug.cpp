@@ -27,7 +27,7 @@ bool pr::IsFinite(ph::Material const& mat)
 #if PR_DBG_PHYSICS
 #include "pr/common/console.h"
 void pr::ph::DebugOutput(const char* str)                   { pr::cons().Write(str); }
-void pr::ph::DebugOutput(int cx, int cy, const char* str)   { pr::cons().Write(pr::uint16(cx), pr::uint16(cy), str); }
+void pr::ph::DebugOutput(int cx, int cy, const char* str)   { pr::cons().Write(uint16_t(cx), uint16_t(cy), str); }
 struct InitConsole { InitConsole() { pr::ph::DebugOutput("Console Active\n"); } } g_init_cons;
 #endif
 

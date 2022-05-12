@@ -115,13 +115,13 @@ namespace pr
 		struct RayVsWorldResult;
 
 		// Material
-		typedef uint MaterialId;
+		typedef uint32_t MaterialId;
 		struct Material;
 
 		// Terrain
 		struct ITerrain;
 
-		// Broadphase
+		// Broad phase
 		struct BPPair;
 		struct BPEntity;
 		class  IBroadphase;

@@ -30,14 +30,14 @@ namespace pr
 {
 	namespace hull
 	{
-		inline void SetFace(ShapePolyFace& face, uint a, uint b, uint c)
+		inline void SetFace(ShapePolyFace& face, uint32_t a, uint32_t b, uint32_t c)
 		{
-			face.m_index[0] = s_cast<uint8>(a);
-			face.m_index[1] = s_cast<uint8>(b);
-			face.m_index[2] = s_cast<uint8>(c);
+			face.m_index[0] = s_cast<uint8_t>(a);
+			face.m_index[1] = s_cast<uint8_t>(b);
+			face.m_index[2] = s_cast<uint8_t>(c);
 			face.pad = 0;
 		}
-		inline void GetFace(ShapePolyFace const& face, uint& a, uint& b, uint& c)
+		inline void GetFace(ShapePolyFace const& face, uint32_t& a, uint32_t& b, uint32_t& c)
 		{
 			a = face.m_index[0];
 			b = face.m_index[1];
@@ -115,7 +115,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 						 ,ShapePolytopeNbrsEx const* neighbours	,std::size_t total_nbr_count
 						 ,m4x4 const&	shape_to_model
 						 ,MaterialId	material_id
-						 ,uint			flags)
+						 ,uint32_t			flags)
 {
 	helper.m_data.resize(
 		sizeof(ShapePolytope) +
@@ -128,7 +128,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 	poly.set(vert_count, face_count, helper.m_data.size(), shape_to_model, material_id, flags);
 
 	// Add the verts
-	uint8* ptr = &helper.m_data[sizeof(ShapePolytope)];
+	uint8_t* ptr = &helper.m_data[sizeof(ShapePolytope)];
 	memcpy(ptr, verts, vert_count*sizeof(v4));
 	ptr += vert_count*sizeof(v4);
 
@@ -138,10 +138,10 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 
 	// Add the neighbour headers
 	ShapePolyNbrs*& nbrhdr = reinterpret_cast<ShapePolyNbrs*&>(ptr);
-	uint16 byte_offset = static_cast<uint16>(vert_count*sizeof(ShapePolyNbrs));
+	uint16_t byte_offset = static_cast<uint16_t>(vert_count*sizeof(ShapePolyNbrs));
 	for( std::size_t i = 0; i != vert_count; ++i )
 	{
-		nbrhdr->m_count = static_cast<uint16>(neighbours[i].m_nbr.size());
+		nbrhdr->m_count = static_cast<uint16_t>(neighbours[i].m_nbr.size());
 		nbrhdr->m_first = byte_offset;
 		byte_offset -= sizeof(ShapePolyNbrs);
 		byte_offset += nbrhdr->m_count*sizeof(PolyIdx);
@@ -195,7 +195,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 }
 
 // Use an array of verts to create a polytope.
-ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, m4x4 const& shape_to_model, MaterialId material_id, uint flags)
+ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, m4x4 const& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, num_verts >= 4, "");
 	PR_ASSERT(1, false, "Step through me");
@@ -203,9 +203,9 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	std::size_t vert_count, face_count;
 
 	// Generate faces by taking the convex hull of the verts
-	pr::vector<uint>			vindex(num_verts);
+	pr::vector<uint32_t>			vindex(num_verts);
 	pr::vector<ShapePolyFace>	faces(2 * (num_verts - 2));
-	std::generate(vindex.begin(), vindex.end(), pr::ArithmeticSequence<uint>(0,1));
+	std::generate(vindex.begin(), vindex.end(), pr::ArithmeticSequence<uint32_t>(0,1));
 	ConvexHull(verts, &vindex[0], &vindex[0] + vindex.size(), &faces[0], &faces[0] + faces.size(), vert_count, face_count);
 	vindex.resize(vert_count);
 	faces .resize(face_count);
@@ -215,7 +215,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	// Copy the verts
 	pr::vector<v4> verts_copy(vert_count);
 	pr::vector<v4>::iterator v_out = verts_copy.begin();
-	for( pr::vector<uint>::const_iterator i = vindex.begin(), i_end = vindex.end(); i != i_end; ++i, ++v_out )
+	for( pr::vector<uint32_t>::const_iterator i = vindex.begin(), i_end = vindex.end(); i != i_end; ++i, ++v_out )
 	{
 		*v_out = verts[*i];
 	}
@@ -237,7 +237,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 }
 
 // Use an array of verts and faces to create a polytope. Verts and faces must be convex
-ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, ShapePolyFace const* faces, std::size_t num_faces, m4x4 const& shape_to_model, MaterialId material_id, uint flags)
+ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, ShapePolyFace const* faces, std::size_t num_faces, m4x4 const& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, num_verts >= 4, "");
 

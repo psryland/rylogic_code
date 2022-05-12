@@ -106,7 +106,7 @@ namespace pr::script
 					// otherwise, it's an identifier token.
 					else
 					{
-						m_tok = Token(EToken::Identifier, src.ReadN(len), s_cast<int64>(hash));
+						m_tok = Token(EToken::Identifier, src.ReadN(len), s_cast<int64_t>(hash));
 					}
 					break;
 				}

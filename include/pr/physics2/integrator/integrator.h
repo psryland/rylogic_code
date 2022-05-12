@@ -11,7 +11,7 @@ namespace pr::physics
 {
 	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'
 	template <typename = void>
-	float KineticEnergyChange(v8f force, v8f momentum0, InertiaInv const& inertia_inv, float time_s)
+	float KineticEnergyChange(v8force force, v8force momentum0, InertiaInv const& inertia_inv, float time_s)
 	{
 		// Kinetic energy change:
 		//    0.5 * (v1*I*v1 - v0*I*v0)
@@ -112,7 +112,7 @@ namespace pr::physics
 	PRUnitTest(IntegratorTests)
 	{
 		auto mass = 5.0f;
-		auto force = v8f{1,1,1, 1,1,-1};
+		auto force = v8force{1,1,1, 1,1,-1};
 
 		// Set up a rigid body at rest
 		auto rb = RigidBody{};
