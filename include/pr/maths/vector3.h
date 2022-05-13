@@ -10,211 +10,244 @@
 
 namespace pr
 {
-	template <typename T>
-	struct Vec3f
+	template <typename Scalar, typename T>
+	struct Vec3
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { float x, y, z; };
-			struct { Vec2f<T> xy; };
-			struct { float arr[3]; };
+			struct { Scalar x, y, z; };
+			struct { Vec2<Scalar, T> xy; };
+			struct { Scalar arr[3]; };
 		};
 		#pragma warning(pop)
 
+		using Vec3_cref = Vec3_cref<Scalar, T>;
+
 		// Construct
-		Vec3f() = default;
-		constexpr explicit Vec3f(float x_)
+		Vec3() = default;
+		constexpr explicit Vec3(Scalar x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
 		{}
-		constexpr Vec3f(float x_, float y_, float z_)
+		constexpr Vec3(Scalar x_, Scalar y_, Scalar z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{}
-		constexpr explicit Vec3f(float const* v)
-			:Vec3f(v[0], v[1], v[2])
+		constexpr explicit Vec3(Scalar const* v)
+			:Vec3(v[0], v[1], v[2])
 		{}
-		template <maths::Vector3 V> constexpr explicit Vec3f(V const& v)
-			:Vec3f(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v))
+		template <maths::Vector3 V> constexpr explicit Vec3(V const& v)
+			:Vec3(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v))
 		{}
-		template <maths::Vector2 V> constexpr Vec3f(V const& v, float z_)
-			:Vec3f(maths::comp<0>(v), maths::comp<1>(v), z_)
+		template <maths::Vector2 V> constexpr Vec3(V const& v, Scalar z_)
+			:Vec3(maths::comp<0>(v), maths::comp<1>(v), z_)
 		{}
 
 		// Reinterpret as a different vector type
-		template <typename U> explicit operator Vec3f<U> const& () const
+		template <typename U> explicit operator Vec3<Scalar, U> const& () const
 		{
-			return reinterpret_cast<Vec3f<U> const&>(*this);
+			return reinterpret_cast<Vec3<Scalar, U> const&>(*this);
 		}
-		template <typename U> explicit operator Vec3f<U>&()
+		template <typename U> explicit operator Vec3<Scalar, U>&()
 		{
-			return reinterpret_cast<Vec3f<U>&>(*this);
+			return reinterpret_cast<Vec3<Scalar, U>&>(*this);
+		}
+		operator Vec3<Scalar, void> const& () const
+		{
+			return reinterpret_cast<Vec3<Scalar, void> const&>(*this);
+		}
+		operator Vec3<Scalar, void>& ()
+		{
+			return reinterpret_cast<Vec3<Scalar, void>&>(*this);
 		}
 
 		// Array access
-		float const& operator [] (int i) const
+		Scalar const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		float& operator [] (int i)
+		Scalar& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create other vector types
-		Vec4f<T> w0() const;
-		Vec4f<T> w1() const;
-		Vec2f<T> vec2(int i0, int i1) const
+		Vec4<Scalar, T> w0() const;
+		Vec4<Scalar, T> w1() const;
+		Vec2<Scalar, T> vec2(int i0, int i1) const
 		{
-			return Vec2f<T>(arr[i0], arr[i1]);
+			return Vec2<Scalar, T>(arr[i0], arr[i1]);
 		}
 
 		// Basic constants
-		static constexpr Vec3f Zero()   { return Vec3f{0,0,0}; }
-		static constexpr Vec3f XAxis()  { return Vec3f{1,0,0}; }
-		static constexpr Vec3f YAxis()  { return Vec3f{0,1,0}; }
-		static constexpr Vec3f ZAxis()  { return Vec3f{0,0,1}; }
+		static constexpr Vec3 Zero()    { return Vec3(Scalar(0), Scalar(0), Scalar(0)); }
+		static constexpr Vec3 XAxis()   { return Vec3(Scalar(1), Scalar(0), Scalar(0)); }
+		static constexpr Vec3 YAxis()   { return Vec3(Scalar(0), Scalar(1), Scalar(0)); }
+		static constexpr Vec3 ZAxis()   { return Vec3(Scalar(0), Scalar(0), Scalar(1)); }
+		static constexpr Vec3 One()     { return Vec3(Scalar(1), Scalar(1), Scalar(1)); }
+		static constexpr Vec3 TinyF()   { return Vec3(tiny<Scalar>, tiny<Scalar>, tiny<Scalar>); }
+		static constexpr Vec3 Min()     { return Vec3(limits<Scalar>::min(), limits<Scalar>::min(), limits<Scalar>::min()); }
+		static constexpr Vec3 Max()     { return Vec3(limits<Scalar>::max(), limits<Scalar>::max(), limits<Scalar>::max()); }
+		static constexpr Vec3 Lowest()  { return Vec3(limits<Scalar>::lowest(), limits<Scalar>::lowest(), limits<Scalar>::lowest()); }
+		static constexpr Vec3 Epsilon() { return Vec3(limits<Scalar>::epsilon(), limits<Scalar>::epsilon(), limits<Scalar>::epsilon()); }
 
 		// Construct normalised
-		static Vec3f Normal(float x, float y, float z)
+		static Vec3 Normal(Scalar x, Scalar y, Scalar z) requires std::is_floating_point_v<Scalar>
 		{
-			return Normalise(Vec3f(x,y,z));
+			return Normalise(Vec3(x, y, z));
 		}
 
-		// Construct random
-		template <typename Rng = std::default_random_engine> static Vec3f RandomN(Rng& rng)
+		// Create a random vector with unit length
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec3 pr_vectorcall RandomN(Rng& rng)
 		{
-			// Create a random vector with unit length
-			std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+			std::uniform_real_distribution<Scalar> dist(Scalar(-1), Scalar(1));
 			for (;;)
 			{
 				auto x = dist(rng);
 				auto y = dist(rng);
 				auto z = dist(rng);
-				auto v = Vec3f(x, y, z);
+				auto v = Vec3(x, y, z);
 				auto len = LengthSq(v);
-				if (len > 0.01f && len <= 1.0f)
+				if (len > Scalar(0.01) && len <= Scalar(1))
 					return v / Sqrt(len);
 			}
 		}
-		template <typename Rng = std::default_random_engine> static Vec3f Random(Rng& rng, v3_cref<> vmin, v3_cref<> vmax)
+
+		// Create a random vector with components on interval ['vmin', 'vmax']
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec3 pr_vectorcall Random(Rng& rng, Vec3_cref vmin, Vec3_cref vmax)
 		{
-			// Create a random vector with components on interval ['vmin', 'vmax']
-			std::uniform_real_distribution<float> dist_x(vmin.x, vmax.x);
-			std::uniform_real_distribution<float> dist_y(vmin.y, vmax.y);
-			std::uniform_real_distribution<float> dist_z(vmin.z, vmax.z);
-			return Vec3f(dist_x(rng), dist_y(rng), dist_z(rng));
+			std::uniform_real_distribution<Scalar> dist_x(vmin.x, vmax.x);
+			std::uniform_real_distribution<Scalar> dist_y(vmin.y, vmax.y);
+			std::uniform_real_distribution<Scalar> dist_z(vmin.z, vmax.z);
+			return Vec3(dist_x(rng), dist_y(rng), dist_z(rng));
 		}
-		template <typename Rng = std::default_random_engine> static Vec3f Random(Rng& rng, float min_length, float max_length)
+
+		// Create a random vector with length on interval [min_length, max_length]
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec3 pr_vectorcall Random(Rng& rng, Scalar min_length, Scalar max_length)
 		{
-			// Create a random vector with length on interval [min_length, max_length]
-			std::uniform_real_distribution<float> dist(min_length, max_length);
+			std::uniform_real_distribution<Scalar> dist(min_length, max_length);
 			return dist(rng) * RandomN(rng);
 		}
-		template <typename Rng = std::default_random_engine> static Vec3f Random(Rng& rng, v3_cref<> centre, float radius)
+
+		// Create a random vector centred on 'centre' with radius 'radius'
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec3 pr_vectorcall Random(Rng& rng, Vec3_cref centre, Scalar radius)
 		{
-			// Create a random vector centred on 'centre' with radius 'radius'
-			return Random(rng, 0.0f, radius) + centre;
+			return Random(rng, Scalar(0), radius) + centre;
 		}
 
 		#pragma region Operators
-		friend constexpr Vec3f operator + (v3_cref<T> vec)
+		friend constexpr Vec3 operator + (Vec3_cref vec)
 		{
 			return vec;
 		}
-		friend constexpr Vec3f operator - (v3_cref<T> vec)
+		friend constexpr Vec3 operator - (Vec3_cref vec)
 		{
-			return Vec3f(-vec.x, -vec.y, -vec.z);
+			return Vec3(-vec.x, -vec.y, -vec.z);
 		}
-		friend Vec3f operator * (float lhs, v3_cref<T> rhs)
+		friend Vec3 operator * (Scalar lhs, Vec3_cref rhs)
 		{
 			return rhs * lhs;
 		}
-		friend Vec3f operator * (v3_cref<T> lhs, float rhs)
+		friend Vec3 operator * (Vec3_cref lhs, Scalar rhs)
 		{
-			return Vec3f{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
+			return Vec3(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
 		}
-		friend Vec3f operator / (v3_cref<T> lhs, float rhs)
+		friend Vec3 operator / (Vec3_cref lhs, Scalar rhs)
 		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			return Vec3f{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
+			// Don't check for divide by zero by default. For Scalars +inf/-inf are valid results
+			return Vec3(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
 		}
-		friend Vec3f operator % (v3_cref<T> lhs, float rhs)
+		friend Vec3 operator % (Vec3_cref lhs, Scalar rhs)
 		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			return Vec3f{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs)};
+			// Don't check for divide by zero by default. For Scalars +inf/-inf are valid results
+			if constexpr (std::floating_point<Scalar>)
+				return Vec3(Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs));
+			else
+				return Vec3(lhs.x % rhs, lhs.y % rhs, lhs.z % rhs);
 		}
-		friend Vec3f operator + (v3_cref<T> lhs, v3_cref<T> rhs)
+		friend Vec3 operator + (Vec3_cref lhs, Vec3_cref rhs)
 		{
-			return Vec3f{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+			return Vec3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 		}
-		friend Vec3f operator - (v3_cref<T> lhs, v3_cref<T> rhs)
+		friend Vec3 operator - (Vec3_cref lhs, Vec3_cref rhs)
 		{
-			return Vec3f{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+			return Vec3(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
 		}
-		friend Vec3f operator * (v3_cref<T> lhs, v3_cref<T> rhs)
+		friend Vec3 operator * (Vec3_cref lhs, Vec3_cref rhs)
 		{
-			return Vec3f{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
+			return Vec3(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
 		}
-		friend Vec3f operator / (v3_cref<T> lhs, v3_cref<T> rhs)
+		friend Vec3 operator / (Vec3_cref lhs, Vec3_cref rhs)
 		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && !Any3(rhs, IsZero<float>));
-			return Vec3f{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
+			// Don't check for divide by zero by default. For Scalars +inf/-inf are valid results
+			return Vec3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 		}
-		friend Vec3f operator % (v3_cref<T> lhs, v3_cref<T> rhs)
+		friend Vec3 operator % (Vec3_cref lhs, Vec3_cref rhs)
 		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && !Any3(rhs, IsZero<float>));
-			return Vec3f{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z)};
+			// Don't check for divide by zero by default. For Scalars +inf/-inf are valid results
+			if constexpr (std::floating_point<Scalar>)
+				return Vec3(Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z));
+			else
+				return Vec3(lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z);
 		}
 		#pragma endregion
 	};
-	static_assert(sizeof(Vec3f<void>) == 12);
-	static_assert(maths::Vector3<Vec3f<void>>);
-	static_assert(std::is_trivially_copyable_v<Vec3f<void>>, "v3 must be a pod type");
+	#define PR_VEC3_CHECKS(scalar)\
+	static_assert(sizeof(Vec3<scalar, void>) == 3 * sizeof(scalar), "Vector<"#scalar"> has the wrong size");\
+	static_assert(maths::Vector3<Vec3<scalar, void>>, "Vector<"#scalar"> is not a Vector3");\
+	static_assert(std::is_trivially_copyable_v<Vec3<scalar, void>>, "Must be a pod type");
+	PR_VEC3_CHECKS(float);
+	PR_VEC3_CHECKS(double);
+	PR_VEC3_CHECKS(int32_t);
+	PR_VEC3_CHECKS(int64_t);
+	#undef PR_VEC3_CHECKS
 
 	// Dot product: a . b
-	template <typename T> constexpr float Dot(v3_cref<T> a, v3_cref<T> b)
+	template <typename Scalar, typename T> constexpr Scalar pr_vectorcall Dot(Vec3_cref<Scalar, T> lhs, Vec3_cref<Scalar, T> rhs)
 	{
-		return a.x * b.x + a.y * b.y + a.z * b.z;
+		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 	}
 
 	// Cross product: a x b
-	template <typename T> constexpr Vec3f<T> Cross(v3_cref<T> a, v3_cref<T> b)
+	template <typename Scalar, typename T> constexpr Vec3<Scalar, T> pr_vectorcall Cross(Vec3_cref<Scalar, T> lhs, Vec3_cref<Scalar, T> rhs)
 	{
-		return Vec3f<T>{a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x};
+		return Vec3<Scalar, T>{lhs.y*rhs.z - lhs.z*rhs.y, lhs.z*rhs.x - lhs.x*rhs.z, lhs.x*rhs.y - lhs.y*rhs.x};
 	}
 
 	// Triple product: a . b x c
-	template <typename T> constexpr float Triple(v3_cref<T> a, v3_cref<T> b, v3_cref<T> c)
+	template <typename Scalar, typename T> constexpr Scalar pr_vectorcall Triple(Vec3_cref<Scalar, T> a, Vec3_cref<Scalar, T> b, Vec3_cref<Scalar, T> c)
 	{
-		return Dot3(a, Cross3(b, c));
+		return Dot(a, Cross3(b, c));
 	}
 
 	// Returns a vector with the values permuted 'n' times. 0=xyz, 1=yzx, 2=zxy, etc
-	template <typename T> constexpr Vec3f<T> Permute(v3_cref<T> v, int n)
+	template <typename Scalar, typename T> constexpr Vec3<Scalar, T> pr_vectorcall Permute(Vec3_cref<Scalar, T> v, int n)
 	{
 		switch (n % 3)
 		{
-			case 1:  return Vec3f<T>{v.y, v.z, v.x};
-			case 2:  return Vec3f<T>{v.z, v.x, v.y};
+			case 1:  return Vec3<Scalar, T>{v.y, v.z, v.x};
+			case 2:  return Vec3<Scalar, T>{v.z, v.x, v.y};
 			default: return v;
 		}
 	}
 
 	// Returns a 3-bit bitmask of the octant the vector is in. 0=(-x,-y,-z), 1=(+x,-y,-z), 2=(-x,+y,-z), 3=(+x,+y,-z), 4=(-x,-y+z), 5=(+x,-y,+z), 6=(-x,+y,+z), 7=(+x,+y,+z)
-	template <typename T> constexpr uint32_t Octant(v3_cref<T> v)
+	template <typename Scalar, typename T> constexpr uint32_t Octant(Vec3_cref<Scalar, T> v)
 	{
-		return (v.x >= 0.0f) | ((v.y >= 0.0f) << 1) | ((v.z >= 0.0f) << 2);
+		return
+			((v.x >= Scalar(0)) << 0) |
+			((v.y >= Scalar(0)) << 1) |
+			((v.z >= Scalar(0)) << 2);
 	}
 
 }
@@ -223,30 +256,38 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Vector3Tests)
+	PRUnitTest(Vector3Tests, float, double, int32_t, int64_t)
 	{
+		using Scalar = T;
+		using vec3_t = Vec3<Scalar, void>;
+
 		{// Create
-			auto V0 = v3(1,1,1);
-			PR_CHECK(V0.x == 1.0f, true);
-			PR_CHECK(V0.y == 1.0f, true);
-			PR_CHECK(V0.z == 1.0f, true);
+			auto V0 = vec3_t(Scalar(1));
+			PR_CHECK(V0.x == Scalar(1), true);
+			PR_CHECK(V0.y == Scalar(1), true);
+			PR_CHECK(V0.z == Scalar(1), true);
 
-			auto V1 = v3(1, 2, 3);
-			PR_CHECK(V1.x == 1.0f, true);
-			PR_CHECK(V1.y == 2.0f, true);
+			auto V1 = vec3_t(Scalar(1), Scalar(2), Scalar(3));
+			PR_CHECK(V1.x == Scalar(1), true);
+			PR_CHECK(V1.y == Scalar(2), true);
 
-			auto V2 = v3({3, 4, 5});
-			PR_CHECK(V2.x == 3.0f, true);
-			PR_CHECK(V2.y == 4.0f, true);
-			PR_CHECK(V2.z == 5.0f, true);
+			auto V2 = vec3_t({Scalar(3), Scalar(4), Scalar(5)});
+			PR_CHECK(V2.x == Scalar(3), true);
+			PR_CHECK(V2.y == Scalar(4), true);
+			PR_CHECK(V2.z == Scalar(5), true);
 
-			v3 V3 = {4, 5, 6};
-			PR_CHECK(V3[0] == 4.0f, true);
-			PR_CHECK(V3[1] == 5.0f, true);
-			PR_CHECK(V3[2] == 6.0f, true);
+			vec3_t V3 = {Scalar(4), Scalar(5), Scalar(6)};
+			PR_CHECK(V3[0] == Scalar(4), true);
+			PR_CHECK(V3[1] == Scalar(5), true);
+			PR_CHECK(V3[2] == Scalar(6), true);
 
-			auto V4 = v3::Normal(3, 4, 5);
-			PR_CHECK(FEql(V4, v3(0.42426406871192f, 0.56568542494923f, 0.70710678118654f)), true);
-		}	}
+			if constexpr (std::floating_point<Scalar>)
+			{
+				auto V4 = vec3_t::Normal(Scalar(3), Scalar(4), Scalar(5));
+				auto V4_expected = vec3_t(Scalar(0.42426406871192), Scalar(0.56568542494923), Scalar(0.70710678118654));
+				PR_CHECK(FEql(V4, V4_expected), true);
+			}
+		}
+	}
 }
 #endif

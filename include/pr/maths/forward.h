@@ -13,6 +13,8 @@
 #include <array>
 #include <limits>
 #include <intrin.h>
+#include <immintrin.h>
+#include <emmintrin.h>
 #include <cmath>
 #include <cstdlib>
 #include <cstdint>
@@ -34,27 +36,28 @@ static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisati
 #endif
 
 // Select DirectXMath if already included, otherwise, don't
-#ifndef PR_MATHS_USE_DIRECTMATH
-#  if defined(DIRECTX_MATH_VERSION)
-#    define PR_MATHS_USE_DIRECTMATH 1
-#  else
-#    define PR_MATHS_USE_DIRECTMATH 0
-#  endif
-#endif
+#define PR_MATHS_USE_DIRECTMATH -- DX Math not supported --
+//#ifndef PR_MATHS_USE_DIRECTMATH
+//#  if defined(DIRECTX_MATH_VERSION)
+//#    define PR_MATHS_USE_DIRECTMATH 1
+//#  else
+//#    define PR_MATHS_USE_DIRECTMATH 0
+//#  endif
+//#endif
 
-// Include 'DirectXMath.h'
-#if PR_MATHS_USE_DIRECTMATH
-#  include <directxmath.h>
-#  if !PR_MATHS_USE_INTRINSICS
-#     error "Intrinsics are required if using DirectX maths functions"
-#  endif
-#else
-namespace DirectX
-{
-	// Forward declare DX types
-	struct XMMATRIX;
-}
-#endif
+//// Include 'DirectXMath.h'
+//#if PR_MATHS_USE_DIRECTMATH
+//#  include <directxmath.h>
+//#  if !PR_MATHS_USE_INTRINSICS
+//#     error "Intrinsics are required if using DirectX maths functions"
+//#  endif
+//#else
+//namespace DirectX
+//{
+//	// Forward declare DX types
+//	struct XMMATRIX;
+//}
+//#endif
 
 // Use 'vectorcall' if intrinsics are enabled
 #if PR_MATHS_USE_INTRINSICS
@@ -83,16 +86,25 @@ namespace DirectX
 
 namespace pr
 {
-	using half_t = unsigned short;
+	template <typename Scalar, typename T> struct Vec2;
+	template <typename T> using Vec2f = Vec2<float, T>;
+	template <typename T> using Vec2d = Vec2<float, T>;
+	template <typename T> using Vec2i = Vec2<int32_t, T>;
+	template <typename T> using Vec2l = Vec2<int64_t, T>;
 
-	template <typename T> struct Vec2f;
-	template <typename T> struct Vec3f;
-	template <typename T> struct Vec4f;
+	template <typename Scalar, typename T> struct Vec3;
+	template <typename T> using Vec3f = Vec3<float, T>;
+	template <typename T> using Vec3d = Vec3<float, T>;
+	template <typename T> using Vec3i = Vec3<int32_t, T>;
+	template <typename T> using Vec3l = Vec3<int64_t, T>;
+
+	template <typename Scalar, typename T> struct Vec4;
+	template <typename T> using Vec4f = Vec4<float, T>;
+	template <typename T> using Vec4d = Vec4<float, T>;
+	template <typename T> using Vec4i = Vec4<int32_t, T>;
+	template <typename T> using Vec4l = Vec4<int64_t, T>;
+
 	template <typename T> struct Vec8f;
-	template <typename T> struct Vec4d;
-	template <typename T> struct Vec2i;
-	template <typename T> struct Vec3i;
-	template <typename T> struct Vec4i;
 	template <typename T> struct Half4;
 	template <typename A, typename B> struct Mat2x2f;
 	template <typename A, typename B> struct Mat3x4f;
@@ -106,29 +118,7 @@ namespace pr
 	struct Line3;
 	struct ISize;
 	struct Frustum;
-
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	#define cref const
-	#else
-	#define cref const&
-	#endif
-	template <typename T = void> using v2_cref = Vec2f<T> cref;
-	template <typename T = void> using v3_cref = Vec3f<T> cref;
-	template <typename T = void> using v4_cref = Vec4f<T> cref;
-	template <typename T = void> using v8_cref = Vec8f<T> cref;
-	template <typename T = void> using v4d_cref = Vec4d<T> cref;
-	template <typename T = void> using v2i_cref = Vec2i<T> cref;
-	template <typename T = void> using v3i_cref = Vec3i<T> cref;
-	template <typename T = void> using v4i_cref = Vec4i<T> cref;
-	template <typename T = void> using half4_cref = Half4<T> cref;
-	template <typename A = void, typename B = void> using m2_cref = Mat2x2f<A, B> cref;
-	template <typename A = void, typename B = void> using m3_cref = Mat3x4f<A, B> cref;
-	template <typename A = void, typename B = void> using m4_cref = Mat4x4f<A, B> cref;
-	template <typename A = void, typename B = void> using m6_cref = Mat6x8f<A, B> const&;
-	template <typename A = void, typename B = void> using quat_cref = Quatf<A,B> cref;
-	using BBox_cref = BBox cref;
-	using BSphere_cref = BSphere cref;
-	#undef cref
+	using half_t = unsigned short;
 	
 	namespace maths
 	{
@@ -189,22 +179,22 @@ namespace pr
 			using comp_type = T;
 			static int const dim = N;
 		};
-		template <typename T> struct is_vec<Vec2f<T>> :std::true_type
+		template <typename Scalar, typename T> struct is_vec<Vec2<Scalar, T>> :std::true_type
 		{
-			using elem_type = float;
-			using comp_type = float;
+			using elem_type = Scalar;
+			using comp_type = Scalar;
 			static int const dim = 2;
 		};
-		template <typename T> struct is_vec<Vec3f<T>> :std::true_type
+		template <typename Scalar, typename T> struct is_vec<Vec3<Scalar, T>> :std::true_type
 		{
-			using elem_type = float;
-			using comp_type = float;
+			using elem_type = Scalar;
+			using comp_type = Scalar;
 			static int const dim = 3;
 		};
-		template <typename T> struct is_vec<Vec4f<T>> :std::true_type
+		template <typename Scalar, typename T> struct is_vec<Vec4<Scalar, T>> :std::true_type
 		{
-			using elem_type = float;
-			using comp_type = float;
+			using elem_type = Scalar;
+			using comp_type = Scalar;
 			static int const dim = 4;
 		};
 		template <typename T> struct is_vec<Vec8f<T>> :std::true_type
@@ -212,18 +202,6 @@ namespace pr
 			using elem_type = float;
 			using comp_type = float;
 			static int const dim = 8;
-		};
-		template <typename T> struct is_vec<Vec2i<T>> :std::true_type
-		{
-			using elem_type = int;
-			using comp_type = int;
-			static int const dim = 2;
-		};
-		template <typename T> struct is_vec<Vec3i<T>> :std::true_type
-		{
-			using elem_type = int;
-			using comp_type = int;
-			static int const dim = 3;
 		};
 		template <typename T> struct is_vec<Vec4i<T>> :std::true_type
 		{
@@ -288,34 +266,64 @@ namespace pr
 		}
 	}
 
-	// Common vector types
-	using v2f = Vec2f<void>;
-	using v3f = Vec3f<void>;
-	using v4f = Vec4f<void>;
-	using v8f = Vec8f<void>;
-	using quatf = Quatf<void,void>;
-	using m2x2f = Mat2x2f<void,void>;
-	using m3x4f = Mat3x4f<void,void>;
-	using m4x4f = Mat4x4f<void,void>;
-	using m6x8f = Mat6x8f<void,void>;
-	using v2i = Vec2i<void>;
-	using v3i = Vec3i<void>;
-	using v4i = Vec4i<void>;
+	//// Common vector types
+	//using v2f = Vec2f<void>;
+	//using v3f = Vec3f<void>;
+	//using v4f = Vec4f<void>;
+	//using v8f = Vec8f<void>;
+	//using quatf = Quatf<void,void>;
+	//using m2x2f = Mat2x2f<void,void>;
+	//using m3x4f = Mat3x4f<void,void>;
+	//using m4x4f = Mat4x4f<void,void>;
+	//using m6x8f = Mat6x8f<void,void>;
+	//using v2i = Vec2i<void>;
+	//using v3i = Vec3i<void>;
+	//using v4i = Vec4i<void>;
 	using half4 = Half4<void>;
 
+	// Constant reference types
+	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
+	#define pr_cref const
+	#else
+	#define pr_cref const&
+	#endif
+	template <typename Scalar, typename T> using Vec2_cref = Vec2<Scalar, T> pr_cref;
+	template <typename Scalar, typename T> using Vec3_cref = Vec3<Scalar, T> pr_cref;
+	template <typename Scalar, typename T> using Vec4_cref = Vec4<Scalar, T> pr_cref;
+
+	template <typename T = void> using v8_cref = Vec8f<T> pr_cref;
+	template <typename T = void> using half4_cref = Half4<T> pr_cref;
+	template <typename A = void, typename B = void> using m2_cref = Mat2x2f<A, B> pr_cref;
+	template <typename A = void, typename B = void> using m3_cref = Mat3x4f<A, B> pr_cref;
+	template <typename A = void, typename B = void> using m4_cref = Mat4x4f<A, B> pr_cref;
+	template <typename A = void, typename B = void> using m6_cref = Mat6x8f<A, B> const&;
+	template <typename A = void, typename B = void> using quat_cref = Quatf<A,B> pr_cref;
+	using BBox_cref = BBox pr_cref;
+	using BSphere_cref = BSphere pr_cref;
+	#undef pr_cref
+
+	template <typename T> using v2f_cref = Vec2_cref<float, T>;
+	template <typename T> using v2d_cref = Vec2_cref<double, T>;
+	template <typename T> using v2i_cref = Vec2_cref<int32_t, T>;
+	template <typename T> using v2l_cref = Vec2_cref<int64_t, T>;
+
 	// Old names
-	using v2 = v2f;
-	using v3 = v3f;
-	using v4 = v4f;
-	using v8 = v8f;
-	using quat = quatf;
-	using m2x2 = m2x2f;
-	using m3x4 = m3x4f;
-	using m4x4 = m4x4f;
-	using m6x8 = m6x8f;
-	using iv2 = v2i;
-	using iv3 = v3i;
-	using iv4 = v4i;
+	using v2 = Vec2<float, void>;
+	using v3 = Vec3<float, void>;
+	using v4 = Vec4<float, void>;
+	using v8 = Vec8f<void>;
+	using quat = Quatf<void,void>;
+	using m2x2 = Mat2x2f<void,void>;
+	using m3x4 = Mat3x4f<void,void>;
+	using m4x4 = Mat4x4f<void,void>;
+	using m6x8 = Mat6x8f<void,void>;
+	using iv2 = Vec2<int, void>;
+	using iv3 = Vec3i<void>;
+	using iv4 = Vec4i<void>;
+	template <typename T = void> using v2_cref = Vec2_cref<float, T>;
+	template <typename T = void> using v3_cref = Vec3_cref<float, T>;
+	template <typename T = void> using v4_cref = Vec4_cref<float, T>;
+	template <typename T = void> using iv4_cref = Vec4_cref<int, T>;
 
 	// Helper trait for 'underlying_type' that works for non-enums as well
 	template <typename T, bool = std::is_enum_v<T>> struct underlying_type : std::underlying_type<T> {};
@@ -326,11 +334,11 @@ namespace pr
 	struct MathsBuildOptions
 	{
 		int PrMathsUseIntrinsics;
-		int PrMathsDirectMath;
+		//int PrMathsDirectMath;
 
 		MathsBuildOptions()
 			:PrMathsUseIntrinsics(PR_MATHS_USE_INTRINSICS)
-			,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
+			//,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
 		{}
 	};
 }
