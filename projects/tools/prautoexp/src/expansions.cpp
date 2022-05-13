@@ -383,7 +383,7 @@ extern "C"
 		quat q;
 		if (FAILED(pHelper->Read(q))) return E_FAIL;
 
-		m3x4 mat(q);
+		auto mat = m3x4::Rotation(q);
 		_snprintf(pResult, max,
 			"{%+g %+g %+g} \n"
 			"{%+g %+g %+g} \n"

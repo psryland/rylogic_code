@@ -34,13 +34,13 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 	
   RexTerminal:
-	- Refresh the 'REX System Clock Offset' field after 'Update RTC' is clicked.
 	- Support non MC console connections.
 	- Terminal capture cmenu option needs to change to "stop capturing", and file type needed in save dialog
 	- Create Firmware Versions tab - move 'update rtc' to the new tab
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
 	- Support simple serial connections in Terminal
+	- Crash when filtering the battery log view
 	
   FirmwareLoader:
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
