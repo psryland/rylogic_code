@@ -514,6 +514,8 @@ namespace pr
 	}
 	template <maths::VectorX T> constexpr bool FEql(T const& a, T const& b)
 	{
+		if constexpr (std::is_integral_v<maths::vec_comp_t<T>>)
+			return a == b;
 		if constexpr (std::is_same_v<maths::vec_comp_t<T>, float>)
 			return FEqlRelative(a, b, maths::tinyf);
 		if constexpr (std::is_same_v<maths::vec_comp_t<T>, double>)
@@ -1144,10 +1146,11 @@ namespace pr
 	}
 
 	// Return the cosine of the angle between two vectors
-	template <maths::VectorX T> inline float CosAngle(T const& lhs, T const& rhs)
+	template <maths::VectorX T> inline maths::vec_comp_t<T> CosAngle(T const& lhs, T const& rhs)
 	{
 		assert("CosAngle undefined for zero vectors" && lhs != T{} && rhs != T{});
-		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -1.0f, 1.0f);
+		auto const one = maths::vec_comp_t<T>{1};
+		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -one, +one);
 	}
 
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
@@ -1157,7 +1160,7 @@ namespace pr
 	}
 
 	// Return the angle between two vectors
-	template <maths::VectorX T> inline float Angle(T const& lhs, T const& rhs)
+	template <maths::VectorX T> inline maths::vec_comp_t<T> Angle(T const& lhs, T const& rhs)
 	{
 		return ACos(CosAngle(lhs, rhs));
 	}
@@ -1774,16 +1777,14 @@ namespace pr::maths
 			PR_CHECK(Clamp(12, 0, 10) == 10, true);
 		}
 		{// Wrap
-			// [0, 3)
-			PR_CHECK(Wrap(-1, 0, 3) == 2, true);
+			PR_CHECK(Wrap(-1, 0, 3) == 2, true); // [0, 3)
 			PR_CHECK(Wrap(+0, 0, 3) == 0, true);
 			PR_CHECK(Wrap(+1, 0, 3) == 1, true);
 			PR_CHECK(Wrap(+2, 0, 3) == 2, true);
 			PR_CHECK(Wrap(+3, 0, 3) == 0, true);
 			PR_CHECK(Wrap(+4, 0, 3) == 1, true);
 
-			// [-2,+2]
-			PR_CHECK(Wrap(-3, -2, +3) == +2, true);
+			PR_CHECK(Wrap(-3, -2, +3) == +2, true); // [-2,+2]
 			PR_CHECK(Wrap(-2, -2, +3) == -2, true);
 			PR_CHECK(Wrap(-1, -2, +3) == -1, true);
 			PR_CHECK(Wrap(+0, -2, +3) == 0, true);
@@ -1791,16 +1792,14 @@ namespace pr::maths
 			PR_CHECK(Wrap(+2, -2, +3) == +2, true);
 			PR_CHECK(Wrap(+3, -2, +3) == -2, true);
 
-			// [+2,+5)
-			PR_CHECK(Wrap(+1, +2, +5) == 4, true);
+			PR_CHECK(Wrap(+1, +2, +5) == 4, true); // [+2,+5)
 			PR_CHECK(Wrap(+2, +2, +5) == 2, true);
 			PR_CHECK(Wrap(+3, +2, +5) == 3, true);
 			PR_CHECK(Wrap(+4, +2, +5) == 4, true);
 			PR_CHECK(Wrap(+5, +2, +5) == 2, true);
 			PR_CHECK(Wrap(+6, +2, +5) == 3, true);
 
-			// [0,1)
-			PR_CHECK(Wrap(-3, 0, 1) == 0, true);
+			PR_CHECK(Wrap(-3, 0, 1) == 0, true); // [0,1)
 			PR_CHECK(Wrap(-2, 0, 1) == 0, true);
 			PR_CHECK(Wrap(-1, 0, 1) == 0, true);
 			PR_CHECK(Wrap(+0, 0, 1) == 0, true);
@@ -1808,8 +1807,7 @@ namespace pr::maths
 			PR_CHECK(Wrap(+2, 0, 1) == 0, true);
 			PR_CHECK(Wrap(+3, 0, 1) == 0, true);
 
-			// [-1,0)
-			PR_CHECK(Wrap(-3, -1, 0) == -1, true);
+			PR_CHECK(Wrap(-3, -1, 0) == -1, true); // [-1,0)
 			PR_CHECK(Wrap(-2, -1, 0) == -1, true);
 			PR_CHECK(Wrap(-1, -1, 0) == -1, true);
 			PR_CHECK(Wrap(+0, -1, 0) == -1, true);
@@ -1887,6 +1885,11 @@ namespace pr::maths
 			v4 d = a2b * b;
 			PR_CHECK(FEql(c.xyz, d.xyz), true);
 			#endif
+		}
+		{// CosAngle
+			PR_CHECK(FEql(CosAngle(1.0, 1.0, maths::root2) - Cos(DegreesToRadians(90.0)), 0), true);
+			PR_CHECK(FEql(Angle(1.0, 1.0, maths::root2), DegreesToRadians(90.0)), true);
+			PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), maths::root2f), true);
 		}
 		{// Fraction
 			PR_CHECK(FEql(Frac<float>(-5, 2, 5), 7.0f / 10.0f), true);

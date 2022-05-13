@@ -10,9 +10,6 @@
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/vector8.h"
-#include "pr/maths/vector2i.h"
-#include "pr/maths/vector3i.h"
-#include "pr/maths/vector4i.h"
 #include "pr/maths/matrix2x2.h"
 #include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
@@ -21,6 +18,8 @@
 
 namespace pr
 {
+	// Deprecated - Use VecN::Zero() ...
+
 	constexpr v2 v2Zero    = v2{0.0f, 0.0f};
 	constexpr v2 v2Half    = v2{0.5f, 0.5f};
 	constexpr v2 v2One     = v2{1.0f, 1.0f};

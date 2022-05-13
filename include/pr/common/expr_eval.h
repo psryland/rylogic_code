@@ -166,8 +166,8 @@ namespace pr::eval
 		{
 			long long m_ll;
 			double m_db;
-			v4 m_v4;
-			iv4 m_i4;
+			pr::v4 m_v4;
+			pr::iv4 m_i4;
 		};
 		EType m_ty;
 		uint8_t pad[12];
@@ -193,7 +193,7 @@ namespace pr::eval
 			:Val(static_cast<double>(f))
 		{
 		}
-		Val(v4i_cref<> vec) noexcept
+		Val(iv4_cref<> vec) noexcept
 			:m_i4(vec)
 			,m_ty(EType::Intg4)
 			,pad()
@@ -203,7 +203,7 @@ namespace pr::eval
 			,m_ty(EType::Real4)
 			,pad()
 		{}
-		Val& operator = (v4i_cref<> v) noexcept
+		Val& operator = (iv4_cref<> v) noexcept
 		{
 			m_i4 = v;
 			m_ty = EType::Intg4;
@@ -275,20 +275,20 @@ namespace pr::eval
 			if (m_ty == EType::Real4) throw std::runtime_error("Cannot demote vec4 to double");
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
-		v4i i4() const
+		pr::iv4 i4() const
 		{
 			if (m_ty == EType::Intg4) return m_i4;
-			if (m_ty == EType::Real4) return To<v4i>(m_v4);
-			if (m_ty == EType::Intg) return v4i(static_cast<int>(m_ll));
-			if (m_ty == EType::Real) return v4i(static_cast<int>(m_db));
+			if (m_ty == EType::Real4) return To<pr::iv4>(m_v4);
+			if (m_ty == EType::Intg) return pr::iv4(static_cast<int>(m_ll));
+			if (m_ty == EType::Real) return pr::iv4(static_cast<int>(m_db));
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
-		v4f v4() const
+		pr::v4 v4() const
 		{
 			if (m_ty == EType::Real4) return m_v4;
-			if (m_ty == EType::Intg4) return To<v4f>(m_i4);
-			if (m_ty == EType::Intg) return v4f(static_cast<float>(m_ll));
-			if (m_ty == EType::Real) return v4f(static_cast<float>(m_db));
+			if (m_ty == EType::Intg4) return To<pr::v4>(m_i4);
+			if (m_ty == EType::Intg) return pr::v4(static_cast<float>(m_ll));
+			if (m_ty == EType::Real) return pr::v4(static_cast<float>(m_db));
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
 

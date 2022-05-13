@@ -11,64 +11,93 @@
 
 namespace pr
 {
-	template <typename T>
-	struct alignas(16) Vec4f
+	template <typename Scalar, typename T>
+	struct Vec4
 	{
+		enum
+		{
+			IntrinsicF = PR_MATHS_USE_INTRINSICS && std::is_same_v<Scalar, float>,
+			IntrinsicD = PR_MATHS_USE_INTRINSICS && std::is_same_v<Scalar, double>,
+			IntrinsicI = PR_MATHS_USE_INTRINSICS && std::is_same_v<Scalar, int32_t>,
+			IntrinsicL = PR_MATHS_USE_INTRINSICS && std::is_same_v<Scalar, int64_t>,
+			NoIntrinsic = PR_MATHS_USE_INTRINSICS == 0,
+		};
+		#if PR_MATHS_USE_INTRINSICS
+		using intrinsic_t =
+			std::conditional_t<IntrinsicF, __m128,
+			std::conditional_t<IntrinsicD, __m256d,
+			std::conditional_t<IntrinsicI, __m128i,
+			std::conditional_t<IntrinsicL, __m256i,
+			void>>>>;
+		#else
+		using intrinsic_t = void;
+		#endif
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { float x, y, z, w; };
-			struct { Vec2f<T> xy, zw; };
-			struct { Vec3f<T> xyz; };
-			struct { float arr[4]; };
+			struct { Scalar x, y, z, w; };
+			struct { Vec2<Scalar, T> xy, zw; };
+			struct { Vec3<Scalar, T> xyz; };
+			struct { Scalar arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
-			__m128 vec;
-			#elif PR_MATHS_USE_DIRECTMATH
-			DirectX::XMVECTOR vec;
+			intrinsic_t vec;
+			#else
 			#endif
+			std::aligned_storage_t<4*sizeof(Scalar), 4*sizeof(Scalar)> aligner;
 		};
 		#pragma warning(pop)
 
+		using Vec4_cref = Vec4_cref<Scalar, T>;
+
 		// Construct
-		Vec4f() = default;
-		constexpr explicit Vec4f(float x_)
+		Vec4() = default;
+		constexpr explicit Vec4(Scalar x_)
 			:x(x_)
-			,y(x_)
-			,z(x_)
-			,w(x_)
-		{}
-		constexpr Vec4f(float x_, float y_, float z_, float w_)
+			, y(x_)
+			, z(x_)
+			, w(x_)
+		{
+		}
+		constexpr Vec4(Scalar x_, Scalar y_, Scalar z_, Scalar w_)
 			:x(x_)
-			,y(y_)
-			,z(z_)
-			,w(w_)
-		{}
-		constexpr explicit Vec4f(float const* v)
-			:Vec4f(v[0], v[1], v[2], v[3])
-		{}
-		constexpr explicit Vec4f(float const* v, float w_)
-			:Vec4f(v[0], v[1], v[2], w_)
-		{}
-		template <maths::Vector4 V> explicit Vec4f(V const& v)
-			:Vec4f(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), maths::comp<3>(v))
-		{}
-		template <maths::Vector3 V> Vec4f(V const& v, float w_)
-			:Vec4f(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), w_)
-		{}
-		template <maths::Vector2 V> Vec4f(V const& v, float z_, float w_)
-			:Vec4f(maths::comp<0>(v), maths::comp<1>(v), z_, w_)
-		{}
-		template <maths::Vector2 V> Vec4f(V const& xy, V const& zw)
-			:Vec4f(maths::comp<0>(xy), maths::comp<1>(xy), maths::comp<0>(zw), maths::comp<1>(zw))
-		{}
+			, y(y_)
+			, z(z_)
+			, w(w_)
+		{
+		}
+		constexpr explicit Vec4(Scalar const* v)
+			:Vec4(v[0], v[1], v[2], v[3])
+		{
+		}
+		constexpr explicit Vec4(Scalar const* v, Scalar w_)
+			:Vec4(v[0], v[1], v[2], w_)
+		{
+		}
+		template <maths::Vector4 V> explicit Vec4(V const& v)
+			:Vec4(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), maths::comp<3>(v))
+		{
+		}
+		template <maths::Vector3 V> Vec4(V const& v, Scalar w_)
+			: Vec4(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), w_)
+		{
+		}
+		template <maths::Vector2 V> Vec4(V const& v, Scalar z_, Scalar w_)
+			: Vec4(maths::comp<0>(v), maths::comp<1>(v), z_, w_)
+		{
+		}
+		template <maths::Vector2 V> Vec4(V const& xy, V const& zw)
+			: Vec4(maths::comp<0>(xy), maths::comp<1>(xy), maths::comp<0>(zw), maths::comp<1>(zw))
+		{
+		}
 		#if PR_MATHS_USE_INTRINSICS
-		Vec4f(__m128 v)
-			:vec(v)
+		Vec4(intrinsic_t v)
+			: vec(v)
 		{
 			assert(maths::is_aligned(this));
 		}
-		Vec4f& operator =(__m128 v)
+		Vec4& operator =(intrinsic_t v)
 		{
 			assert(maths::is_aligned(this));
 			vec = v;
@@ -77,266 +106,414 @@ namespace pr
 		#endif
 
 		// Reinterpret as a different vector type
-		template <typename U> explicit operator Vec4f<U> const&() const
+		template <typename U> explicit operator Vec4<Scalar, U> const& () const
 		{
-			return reinterpret_cast<Vec4f<U> const&>(*this);
+			return reinterpret_cast<Vec4<Scalar, U> const&>(*this);
 		}
-		template <typename U> explicit operator Vec4f<U>&()
+		template <typename U> explicit operator Vec4<Scalar, U>& ()
 		{
-			return reinterpret_cast<Vec4f<U>&>(*this);
+			return reinterpret_cast<Vec4<Scalar, U>&>(*this);
+		}
+		operator Vec4<Scalar, void> const& () const
+		{
+			return reinterpret_cast<Vec4<Scalar, void> const&>(*this);
+		}
+		operator Vec4<Scalar, void>& ()
+		{
+			return reinterpret_cast<Vec4<Scalar, void>&>(*this);
 		}
 
 		// Array access
-		float const& operator [] (int i) const
+		Scalar const& operator [] (int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		float& operator [] (int i)
+		Scalar& operator [] (int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Create other vector types
-		Vec4f w0() const
+		Vec4 w0() const
 		{
-			Vec4f r(x,y,z,0.f); // LValue because of alignment
+			Vec4 r(x, y, z, Scalar(0)); // LValue because of alignment
 			return r;
 		}
-		Vec4f w1() const
+		Vec4 w1() const
 		{
-			Vec4f r(x,y,z,1.f); // LValue because of alignment
+			Vec4 r(x, y, z, Scalar(1)); // LValue because of alignment
 			return r;
 		}
-		Vec2f<T> vec2(int i0, int i1) const
+		Vec2<Scalar, T> vec2(int i0, int i1) const
 		{
-			return Vec2f<T>{arr[i0], arr[i1]};
+			return Vec2<Scalar, T>{arr[i0], arr[i1]};
 		}
-		Vec3f<T> vec3(int i0, int i1, int i2) const
+		Vec3<Scalar, T> vec3(int i0, int i1, int i2) const
 		{
-			return Vec3f<T>{arr[i0], arr[i1], arr[i2]};
+			return Vec3<Scalar, T>{arr[i0], arr[i1], arr[i2]};
 		}
-		Vec4i<T> vec4i() const;
 
 		// Basic constants
-		static constexpr Vec4f Zero()   { return Vec4f{0,0,0,0}; }
-		static constexpr Vec4f XAxis()  { return Vec4f{1,0,0,0}; }
-		static constexpr Vec4f YAxis()  { return Vec4f{0,1,0,0}; }
-		static constexpr Vec4f ZAxis()  { return Vec4f{0,0,1,0}; }
-		static constexpr Vec4f WAxis()  { return Vec4f{0,0,0,1}; }
-		static constexpr Vec4f Origin() { return Vec4f{0,0,0,1}; }
+		static constexpr Vec4 Zero() { return Vec4(Scalar(0), Scalar(0), Scalar(0), Scalar(0)); }
+		static constexpr Vec4 XAxis() { return Vec4(Scalar(1), Scalar(0), Scalar(0), Scalar(0)); }
+		static constexpr Vec4 YAxis() { return Vec4(Scalar(0), Scalar(1), Scalar(0), Scalar(0)); }
+		static constexpr Vec4 ZAxis() { return Vec4(Scalar(0), Scalar(0), Scalar(1), Scalar(0)); }
+		static constexpr Vec4 WAxis() { return Vec4(Scalar(0), Scalar(0), Scalar(0), Scalar(1)); }
+		static constexpr Vec4 Origin() { return Vec4(Scalar(0), Scalar(0), Scalar(0), Scalar(1)); }
+		static constexpr Vec4 One() { return Vec4(Scalar(1), Scalar(1), Scalar(1), Scalar(1)); }
+		static constexpr Vec4 TinyF() { return Vec4(maths::tiny<Scalar>, maths::tiny<Scalar>, maths::tiny<Scalar>, maths::tiny<Scalar>); }
+		static constexpr Vec4 Min() { return Vec4(limits<Scalar>::min(), limits<Scalar>::min(), limits<Scalar>::min(), limits<Scalar>::min()); }
+		static constexpr Vec4 Max() { return Vec4(limits<Scalar>::max(), limits<Scalar>::max(), limits<Scalar>::max(), limits<Scalar>::max()); }
+		static constexpr Vec4 Lowest() { return Vec4(limits<Scalar>::lowest(), limits<Scalar>::lowest(), limits<Scalar>::lowest(), limits<Scalar>::lowest()); }
+		static constexpr Vec4 Epsilon() { return Vec4(limits<Scalar>::epsilon(), limits<Scalar>::epsilon(), limits<Scalar>::epsilon(), limits<Scalar>::epsilon()); }
 
 		// Construct normalised
-		static Vec4f Normal(float x, float y, float z, float w)
+		static Vec4 Normal(Scalar x, Scalar y, Scalar z, Scalar w) requires std::is_floating_point_v<Scalar>
 		{
-			return Normalise(Vec4f{x, y, z, w});
+			return Normalise(Vec4(x, y, z, w));
 		}
 
 		// Create a 4-vector containing random values, normalised to unit length
-		template <typename Rng = std::default_random_engine> static Vec4f RandomN(Rng& rng)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall RandomN(Rng& rng)
 		{
-			std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+			std::uniform_real_distribution<Scalar> dist(Scalar(-1), Scalar(1));
 			for (;;)
 			{
 				auto x = dist(rng);
 				auto y = dist(rng);
 				auto z = dist(rng);
 				auto w = dist(rng);
-				auto v = Vec4f(x, y, z, w);
+				auto v = Vec4(x, y, z, w);
 				auto len = LengthSq(v);
-				if (len >= 0.01f && len <= 1.0f)
-					return v /= Sqrt(len);
+				if (len > Scalar(0.01) && len <= Scalar(1))
+					return v / Sqrt(len);
 			}
 		}
-		
+
 		// Create a vector containing a random normalised 3-vector and 'w_'
-		template <typename Rng = std::default_random_engine> static Vec4f RandomN(Rng& rng, float w_)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall RandomN(Rng& rng, Scalar w_)
 		{
-			return v4(v3::RandomN(rng), w_);
+			return Vec4(Vec3<Scalar, T>::RandomN(rng), w_);
 		}
 
 		// Create a random 4-vector with components on interval '[vmin, vmax]'
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, v4_cref<> vmin, v4_cref<> vmax)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Vec4_cref vmin, Vec4_cref vmax)
 		{
-			std::uniform_real_distribution<float> dist_x(vmin.x, vmax.x);
-			std::uniform_real_distribution<float> dist_y(vmin.y, vmax.y);
-			std::uniform_real_distribution<float> dist_z(vmin.z, vmax.z);
-			std::uniform_real_distribution<float> dist_w(vmin.w, vmax.w);
-			return Vec4f(dist_x(rng), dist_y(rng), dist_z(rng), dist_w(rng));
+			std::uniform_real_distribution<Scalar> dist_x(vmin.x, vmax.x);
+			std::uniform_real_distribution<Scalar> dist_y(vmin.y, vmax.y);
+			std::uniform_real_distribution<Scalar> dist_z(vmin.z, vmax.z);
+			std::uniform_real_distribution<Scalar> dist_w(vmin.w, vmax.w);
+			return Vec4(dist_x(rng), dist_y(rng), dist_z(rng), dist_w(rng));
 		}
 
 		// Create a random vector with xyz components on interval '[vmin, vmax]' and 'w_'
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, v4_cref<> vmin, v4_cref<> vmax, float w_)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Vec4_cref vmin, Vec4_cref vmax, Scalar w_)
 		{
-			return v4(v3::Random(rng, vmin.xyz, vmax.xyz), w_);
+			return Vec4(Vec3<Scalar, T>::Random(rng, vmin.xyz, vmax.xyz), w_);
 		}
 
 		// Create a random 4-vector with length on interval [min_length, max_length]
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, float min_length, float max_length)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Scalar min_length, Scalar max_length)
 		{
-			std::uniform_real_distribution<float> dist(min_length, max_length);
+			std::uniform_real_distribution<Scalar> dist(min_length, max_length);
 			return dist(rng) * RandomN(rng);
 		}
 
 		// Create a vector with xyz of random length on interval [min_length, max_length], and 'w_'
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, float min_length, float max_length, float w_)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Scalar min_length, Scalar max_length, Scalar w_)
 		{
-			return v4(v3::Random(rng, min_length, max_length), w_);
+			return Vec4(Vec3<Scalar, T>::Random(rng, min_length, max_length), w_);
 		}
 
 		// Create a random 4-vector with components on the interval [centre - radius, centre + radius].
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, v4_cref<> centre, float radius)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Vec4_cref centre, Scalar radius)
 		{
 			return Random(rng, 0, radius) + centre;
 		}
 
 		// Create a vector with xyz randomly within the sphere [centre,radius], and 'w_'
-		template <typename Rng = std::default_random_engine> static Vec4f Random(Rng& rng, v4_cref<> centre, float radius, float w_)
+		template <typename Rng = std::default_random_engine> requires std::is_floating_point_v<Scalar>
+		static Vec4 pr_vectorcall Random(Rng& rng, Vec4_cref centre, Scalar radius, Scalar w_)
 		{
-			return v4(v3::Random(rng, centre.xyz, radius), w_);
+			return Vec4(Vec3<Scalar, T>::Random(rng, centre.xyz, radius), w_);
 		}
-		
+
 		#pragma region Operators
-		friend constexpr Vec4f pr_vectorcall operator + (v4_cref<T> vec)
+		friend constexpr Vec4 pr_vectorcall operator + (Vec4_cref vec)
 		{
 			return vec;
 		}
-		friend constexpr Vec4f pr_vectorcall operator - (v4_cref<T> vec)
+		friend constexpr Vec4 pr_vectorcall operator - (Vec4_cref vec)
 		{
 			//#if PR_MATHS_USE_INTRINSICS
-			//return Vec4f{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
+			//return Vec4{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
 			//#else
-			return Vec4f{-vec.x, -vec.y, -vec.z, -vec.w};
+			return Vec4{-vec.x, -vec.y, -vec.z, -vec.w};
 			//#endif
 		}
-		friend Vec4f pr_vectorcall operator * (float lhs, v4_cref<T> rhs)
+		friend Vec4 pr_vectorcall operator * (Scalar lhs, Vec4_cref rhs)
 		{
 			return rhs * lhs;
 		}
-		friend Vec4f pr_vectorcall operator * (v4_cref<T> lhs, float rhs)
+		friend Vec4 pr_vectorcall operator * (Vec4_cref lhs, Scalar rhs)
 		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_mul_ps(lhs.vec, _mm_set_ps1(rhs))};
-			#else
-			return Vec4f{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
-			#endif
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_mul_ps(lhs.vec, _mm_set_ps1(rhs))};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_mul_pd(lhs.vec, _mm256_set_pd1(rhs))};
+			}
+			else
+			{
+				return Vec4{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
+			}
 		}
-		friend Vec4f pr_vectorcall operator / (v4_cref<T> lhs, float rhs)
-		{
-			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
-			#else
-			return Vec4f{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
-			#endif
-		}
-		friend Vec4f pr_vectorcall operator % (v4_cref<T> lhs, float rhs)
+		friend Vec4 pr_vectorcall operator / (Vec4_cref lhs, Scalar rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && rhs != 0);
-			return Vec4f{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_div_ps(lhs.vec, _mm256_set_ps1(rhs))};
+			}
+			else
+			{
+				return Vec4{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+			}
 		}
-		friend Vec4f pr_vectorcall operator / (float lhs, v4_cref<T> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_div_ps(_mm_set_ps1(lhs), rhs.vec)};
-			#else
-			return Vec4f{lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w};
-			#endif
-		}
-		friend Vec4f pr_vectorcall operator % (float lhs, v4_cref<T> rhs)
-		{
-			return Vec4f{Fmod(lhs, rhs.x), Fmod(lhs, rhs.y), Fmod(lhs, rhs.z), Fmod(lhs, rhs.w)};
-		}
-		friend Vec4f pr_vectorcall operator + (v4_cref<T> lhs, v4_cref<T> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_add_ps(lhs.vec, rhs.vec)};
-			#else
-			return Vec4f{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
-			#endif
-		}
-		friend Vec4f pr_vectorcall operator - (v4_cref<T> lhs, v4_cref<T> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_sub_ps(lhs.vec, rhs.vec)};
-			#else
-			return Vec4f{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
-			#endif
-		}
-		friend Vec4f pr_vectorcall operator * (v4_cref<T> lhs, v4_cref<T> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_mul_ps(lhs.vec, rhs.vec)};
-			#else
-			return Vec4f{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
-			#endif
-		}
-		friend Vec4f pr_vectorcall operator / (v4_cref<T> lhs, v4_cref<T> rhs)
+		friend Vec4 pr_vectorcall operator % (Vec4_cref lhs, Scalar rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4f{_mm_div_ps(lhs.vec, rhs.vec)};
-			#else
-			return Vec4f{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
-			#endif
+			if constexpr (std::floating_point<Scalar>)
+			{
+				return Vec4{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
+			}
+			else
+			{
+				return Vec4{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs};
+			}
 		}
-		friend Vec4f pr_vectorcall operator % (v4_cref<T> lhs, v4_cref<T> rhs)
+		friend Vec4 pr_vectorcall operator / (Scalar lhs, Vec4_cref rhs)
+		{
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_div_ps(_mm_set_ps1(lhs), rhs.vec)};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_div_pd(_mm_set_pd1(lhs), rhs.vec)};
+			}
+			else
+			{
+				return Vec4{lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w};
+			}
+		}
+		friend Vec4 pr_vectorcall operator % (Scalar lhs, Vec4_cref rhs)
+		{
+			if constexpr (std::floating_point<Scalar>)
+			{
+				return Vec4{Fmod(lhs, rhs.x), Fmod(lhs, rhs.y), Fmod(lhs, rhs.z), Fmod(lhs, rhs.w)};
+			}
+			else
+			{
+				return Vec4{lhs % rhs.x, lhs % rhs.y, lhs % rhs.z, lhs % rhs.w};
+			}
+		}
+		friend Vec4 pr_vectorcall operator + (Vec4_cref lhs, Vec4_cref rhs)
+		{
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_add_ps(lhs.vec, rhs.vec)};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_add_pd(lhs.vec, rhs.vec)};
+			}
+			else
+			{
+				return Vec4{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
+			}
+		}
+		friend Vec4 pr_vectorcall operator - (Vec4_cref lhs, Vec4_cref rhs)
+		{
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_sub_ps(lhs.vec, rhs.vec)};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_sub_pd(lhs.vec, rhs.vec)};
+			}
+			else
+			{
+				return Vec4{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
+			}
+		}
+		friend Vec4 pr_vectorcall operator * (Vec4_cref lhs, Vec4_cref rhs)
+		{
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_mul_ps(lhs.vec, rhs.vec)};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_mul_pd(lhs.vec, rhs.vec)};
+			}
+			else
+			{
+				return Vec4{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
+			}
+		}
+		friend Vec4 pr_vectorcall operator / (Vec4_cref lhs, Vec4_cref rhs)
 		{
 			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
-			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
-			return Vec4f{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
+			if constexpr (IntrinsicF)
+			{
+				return Vec4{_mm_div_ps(lhs.vec, rhs.vec)};
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return Vec4{_mm256_div_pd(lhs.vec, rhs.vec)};
+			}
+			else
+			{
+				return Vec4{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
+			}
 		}
-		friend bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
+		friend Vec4 pr_vectorcall operator % (Vec4_cref lhs, Vec4_cref rhs)
 		{
-			#if PR_MATHS_USE_INTRINSICS
-			return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
-			#else
-			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
-			#endif
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			if constexpr (std::floating_point<Scalar>)
+			{
+				return Vec4{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
+			}
+			else
+			{
+				return Vec4{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
+			}
 		}
-		friend bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
+		friend bool pr_vectorcall operator == (Vec4_cref lhs, Vec4_cref rhs)
+		{
+			if constexpr (IntrinsicF)
+			{
+				return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
+			}
+			else if constexpr (IntrinsicD)
+			{
+				return _mm256_movemask_pd(_mm256_cmpeq_pd(lhs.vec, rhs.vec)) == 0xF;
+			}
+			else
+			{
+				return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+			}
+		}
+		friend bool pr_vectorcall operator != (Vec4_cref lhs, Vec4_cref rhs)
 		{
 			return !(lhs == rhs);
 		}
+		friend Vec4 pr_vectorcall operator ~ (Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{~rhs.x, ~rhs.y, ~rhs.z, ~rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator ! (Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{!rhs.x, !rhs.y, !rhs.z, !rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator | (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x | rhs.x, lhs.y | rhs.y, lhs.z | rhs.z, lhs.w | rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator & (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x & rhs.x, lhs.y & rhs.y, lhs.z & rhs.z, lhs.w & rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator ^ (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x ^ rhs.x, lhs.y ^ rhs.y, lhs.z ^ rhs.z, lhs.w ^ rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator << (Vec4_cref lhs, int rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x << rhs, lhs.y << rhs, lhs.z << rhs, lhs.w << rhs};
+		}
+		friend Vec4 pr_vectorcall operator << (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x << rhs.x, lhs.y << rhs.y, lhs.z << rhs.z, lhs.w << rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator >> (Vec4_cref lhs, int rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x >> rhs, lhs.y >> rhs, lhs.z >> rhs, lhs.w >> rhs};
+		}
+		friend Vec4 pr_vectorcall operator >> (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x >> rhs.x, lhs.y >> rhs.y, lhs.z >> rhs.z, lhs.w >> rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator || (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x || rhs.x, lhs.y || rhs.y, lhs.z || rhs.z, lhs.w || rhs.w};
+		}
+		friend Vec4 pr_vectorcall operator && (Vec4_cref lhs, Vec4_cref rhs) requires std::integral<Scalar>
+		{
+			return Vec4{lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z, lhs.w && rhs.w};
+		}
+
 		#pragma endregion
 	};
-	static_assert(sizeof(Vec4f<void>) == 16);
-	static_assert(maths::Vector4<Vec4f<void>>);
-	static_assert(std::is_trivially_copyable_v<Vec4f<void>>, "Vec4f must be a pod type");
-	static_assert(std::alignment_of_v<Vec4f<void>> == 16, "Vec4f should have 16 byte alignment");
+	#define PR_VEC4_CHECKS(scalar)\
+	static_assert(sizeof(Vec4<scalar, void>) == 4 * sizeof(scalar), "Vector<"#scalar"> has the wrong size");\
+	static_assert(maths::Vector4<Vec4<scalar, void>>, "Vector<"#scalar" is not a Vector4");\
+	static_assert(std::is_trivially_copyable_v<Vec4<scalar, void>>, "Must be a pod type");\
+	static_assert(std::alignment_of_v<Vec4<scalar, void>> == 4 * sizeof(scalar), "Vector<"#scalar" is not aligned correctly");
+	PR_VEC4_CHECKS(float);
+	PR_VEC4_CHECKS(double);
+	PR_VEC4_CHECKS(int32_t);
+	PR_VEC4_CHECKS(int64_t);
+	#undef PR_VEC4_CHECKS
 
-	// Implementation from Vec3f
-	template <typename T> Vec4f<T> Vec3f<T>::w0() const
+	// Implementation from Vec3
+	template <typename Scalar, typename T> Vec4<Scalar, T> Vec3<Scalar, T>::w0() const
 	{
-		return Vec4f<T>(x, y, z, 0);
+		return Vec4<Scalar, T>(x, y, z, Scalar(0));
 	}
-	template <typename T> Vec4f<T> Vec3f<T>::w1() const
+	template <typename Scalar, typename T> Vec4<Scalar, T> Vec3<Scalar, T>::w1() const
 	{
-		return Vec4f<T>(x, y, z, 1);
+		return Vec4<Scalar, T>(x, y, z, Scalar(1));
 	}
 
 	// V4 FEql
-	template <typename T> inline bool pr_vectorcall FEqlAbsolute(v4_cref<T> a, v4_cref<T> b, float tol)
+	template <typename Scalar, typename T> inline bool pr_vectorcall FEqlAbsolute(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b, Scalar tol)
 	{
 		// abs(a - b) < tol
-		#if PR_MATHS_USE_INTRINSICS
-		auto d = _mm_sub_ps(a.vec, b.vec);                 // d = a - b;
-		auto abs_d = _mm_andnot_ps(_mm_set_ps1(-0.0f), d); // d = abs(a - b);
-		auto r = _mm_cmplt_ps(abs_d, _mm_set_ps1(tol));    // r = abs(d) < tol
-		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
-		#else
-		return
-			FEqlAbsolute(lhs.x, rhs.x, tol) &&
-			FEqlAbsolute(lhs.y, rhs.y, tol) &&
-			FEqlAbsolute(lhs.z, rhs.z, tol) &&
-			FEqlAbsolute(lhs.w, rhs.w, tol);
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			auto d = _mm_sub_ps(a.vec, b.vec);                 // d = a - b;
+			auto abs_d = _mm_andnot_ps(_mm_set_ps1(-0.0f), d); // d = abs(a - b);
+			auto r = _mm_cmplt_ps(abs_d, _mm_set_ps1(tol));    // r = abs(d) < tol
+			return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
+		}
+		else
+		{
+			return
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol) &&
+				FEqlAbsolute(a.z, b.z, tol) &&
+				FEqlAbsolute(a.w, b.w, tol);
+		}
 	}
-	template <typename T> inline bool pr_vectorcall FEqlRelative(v4_cref<T> a, v4_cref<T> b, float tol)
+	template <typename Scalar, typename T> inline bool pr_vectorcall FEqlRelative(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b, Scalar tol)
 	{
 		// Handles tests against zero where relative error is meaningless
 		// Tests with 'b == 0' are the most common so do them first
@@ -349,159 +526,184 @@ namespace pr
 		auto abs_max_element = Max(MaxComponentAbs(a), MaxComponentAbs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
-	template <typename T> inline bool pr_vectorcall FEql(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline bool pr_vectorcall FEql(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
-		return FEqlRelative(a, b, maths::tinyf);
+		return FEqlRelative(a, b, maths::tiny<Scalar>);
 	}
 
 	// Abs
-	template <typename T> inline Vec4f<T> pr_vectorcall Abs(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Abs(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_andnot_ps(_mm_set_ps1(-0.0f), v.vec);
-		#else
-		return Vec4f<T>{Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w)};
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_andnot_ps(_mm_set_ps1(-0.0f), v.vec);
+		}
+		else
+		{
+			return Vec4<Scalar, T>{Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w)};
+		}
 	}
 
 	// V4 length squared
-	template <typename T> inline float pr_vectorcall LengthSq(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall LengthSq(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_dp_ps(v.vec, v.vec, 0xF1).m128_f32[0];
-		#else
-		return Len4Sq(v.x, v.y, v.z, v.w);
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_dp_ps(v.vec, v.vec, 0xF1).m128_f32[0];
+		}
+		else
+		{
+			return LenSq(v.x, v.y, v.z, v.w);
+		}
 	}
 
 	// Largest/Smallest element
-	template <typename T> inline float pr_vectorcall MinElement(v4_cref<T> const& v)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall MinComponent(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		// min([x y z w], [y x w z]) = [x<y?x:y y<x?y:x z<w?z:w w<z?w:z] = [a a b b]
-		// min([a a b b], [b b a a]) = [m m m m]
-		auto abcd = v.vec;
-		auto aabb = _mm_min_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
-		auto mmmm = _mm_min_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
-		return mmmm.m128_f32[0];
-		#else
-		return MinElement4<Vec4f<T>, float>(v);
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			// min([x y z w], [y x w z]) = [x<y?x:y y<x?y:x z<w?z:w w<z?w:z] = [a a b b]
+			// min([a a b b], [b b a a]) = [m m m m]
+			auto abcd = v.vec;
+			auto aabb = _mm_min_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
+			auto mmmm = _mm_min_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
+			return mmmm.m128_f32[0];
+		}
+		else
+		{
+			return MinComponent<Vec4<Scalar, T>>(v);
+		}
 	}
-	template <typename T> inline float pr_vectorcall MaxElement(v4_cref<T> const& v)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall MaxElement(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		// max([x y z w], [y x w z]) = [x>y?x:y y>x?y:x z>w?z:w w>z?w:z] = [a a b b]
-		// max([a a b b], [b b a a]) = [m m m m]
-		auto abcd = v.vec;
-		auto aabb = _mm_max_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
-		auto mmmm = _mm_max_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
-		return mmmm.m128_f32[0];
-		#else
-		return MaxElement4<Vec4f<T>, float>(v);
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			// max([x y z w], [y x w z]) = [x>y?x:y y>x?y:x z>w?z:w w>z?w:z] = [a a b b]
+			// max([a a b b], [b b a a]) = [m m m m]
+			auto abcd = v.vec;
+			auto aabb = _mm_max_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
+			auto mmmm = _mm_max_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
+			return mmmm.m128_f32[0];
+		}
+		else
+		{
+			return MaxComponent<Vec4<Scalar, T>>(v);
+		}
 	}
 
 	// Normalise all components of 'v'
-	template <typename T> inline Vec4f<T> pr_vectorcall Normalise(v4_cref<T> v)
+	template <typename Scalar, typename T> requires std::floating_point<Scalar>
+	inline Vec4<Scalar, T> pr_vectorcall Normalise(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_DIRECTMATH
-		return Vec4f<T>{DirectX::XMVector4Normalize(v.vec)};
-		#elif PR_MATHS_USE_INTRINSICS
-		return Vec4f<T>{_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF)))};
-		#else
-		return v / Length(v);
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF)));
+		}
+		else
+		{
+			return v / Length(v);
+		}
 	}
 
 	// Square: v * v
-	template <typename T> inline Vec4f<T> pr_vectorcall Sqr(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Sqr(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4f<T>{_mm_mul_ps(v.vec, v.vec)};
-		#else
-		return Vec4f<T>{Sqr(v.x), Sqr(v.y), Sqr(v.z), Sqr(v.w)};
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_mul_ps(v.vec, v.vec);
+		}
+		else
+		{
+			return Vec4<Scalar, T>{Sqr(v.x), Sqr(v.y), Sqr(v.z), Sqr(v.w)};
+		}
 	}
 
 	// Dot product: a . b
-	template <typename T> inline float pr_vectorcall Dot3(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall Dot3(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto r = _mm_dp_ps(a.vec, b.vec, 0x71);
-		return r.m128_f32[0];
-		#else
-		return a.x * b.x + a.y * b.y + a.z * b.z;
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			auto r = _mm_dp_ps(a.vec, b.vec, 0x71);
+			return r.m128_f32[0];
+		}
+		else
+		{
+			return a.x * b.x + a.y * b.y + a.z * b.z;
+		}
 	}
-	template <typename T> inline float pr_vectorcall Dot4(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall Dot4(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_dp_ps(a.vec, b.vec, 0xF1).m128_f32[0];
-		#else
-		return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_dp_ps(a.vec, b.vec, 0xF1).m128_f32[0];
+		}
+		else
+		{
+			return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+		}
 	}
-	template <typename T> inline float pr_vectorcall Dot(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall Dot(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
 		return Dot4(a,b);
 	}
 
 	// Cross product: a x b
-	template <typename T> inline Vec4f<T> pr_vectorcall Cross3(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Cross3(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4f<T>{
-			_mm_sub_ps(
-			_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 1, 0, 2))), 
-			_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 0, 2, 1))))};
-		#else
-		return Vec4f<T>{a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x, 0};
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			return _mm_sub_ps(
+				_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 1, 0, 2))),
+				_mm_mul_ps(_mm_shuffle_ps(a.vec, a.vec, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b.vec, b.vec, _MM_SHUFFLE(3, 0, 2, 1))));
+		}
+		else
+		{
+			return Vec4<Scalar, T>{a.y* b.z - a.z * b.y, a.z* b.x - a.x * b.z, a.x* b.y - a.y * b.x, 0};
+		}
 	}
-	template <typename T> inline Vec4f<T> pr_vectorcall Cross(v4_cref<T> a, v4_cref<T> b)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Cross(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b)
 	{
 		return Cross3(a,b);
 	}
 
 	// Triple product: a . b x c
-	template <typename T> inline float pr_vectorcall Triple(v4_cref<T> a, v4_cref<T> b, v4_cref<T> c)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall Triple(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b, Vec4_cref<Scalar, T> c)
 	{
 		return Dot3(a, Cross3(b, c));
 	}
 
 	// Returns true if 'a' and 'b' parallel
-	template <typename T> inline bool pr_vectorcall Parallel(v4_cref<T> v0, v4_cref<T> v1, float tol = maths::tinyf)
+	template <typename Scalar, typename T> inline bool pr_vectorcall Parallel(Vec4_cref<Scalar, T> v0, Vec4_cref<Scalar, T> v1, Scalar tol = maths::tiny<Scalar>)
 	{
 		// '<=' to allow for 'tol' == 0.0
 		return LengthSq(Cross3(v0, v1)) <= Sqr(tol);
 	}
 
 	// Returns a vector guaranteed not parallel to 'v'
-	template <typename T> inline v4 pr_vectorcall CreateNotParallelTo(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall CreateNotParallelTo(Vec4_cref<Scalar, T> v)
 	{
 		bool x_aligned = Abs(v.x) > Abs(v.y) && Abs(v.x) > Abs(v.z);
-		return Vec4f<T>{static_cast<float>(!x_aligned), 0.0f, static_cast<float>(x_aligned), v.w};
+		return Vec4<Scalar, T>{static_cast<Scalar>(!x_aligned), Scalar(0), static_cast<Scalar>(x_aligned), v.w};
 	}
 
 	// Returns a vector perpendicular to 'v' with the same length of 'v'
-	template <typename T> inline Vec4f<T> pr_vectorcall Perpendicular(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Perpendicular(Vec4_cref<Scalar, T> v)
 	{
-		assert("Cannot make a perpendicular to a zero vector" && v != v4{});
+		assert("Cannot make a perpendicular to a zero vector" && (v != Vec4<Scalar, T>::Zero()));
 		auto vec = Cross3(v, CreateNotParallelTo(v));
 		vec *= Sqrt(LengthSq(v) / LengthSq(vec));
 		return vec;
 	}
 
 	// Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular.
-	// The length of the returned vector will be 'Length(vec)' or 'Length(previous)' (typically they'd be the same)
-	// Either 'vec' or 'previous' can be zero, but not both.
-	template <typename T> inline Vec4f<T> pr_vectorcall Perpendicular(v4_cref<T> vec, v4_cref<T> previous)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Perpendicular(Vec4_cref<Scalar, T> vec, Vec4_cref<Scalar, T> previous)
 	{
-		if (vec == v4{})
+		// The length of the returned vector will be 'Length(vec)' or 'Length(previous)' (typically they'd be the same)
+		// Either 'vec' or 'previous' can be zero, but not both.
+		if (vec == Vec4<Scalar, T>::Zero())
 		{
 			// Both 'vec' and 'previous' cannot be zero
-			assert("Cannot make a perpendicular to a zero vector" && previous != v4{});
+			assert("Cannot make a perpendicular to a zero vector" && (previous != Vec4<Scalar, T>::Zero()));
 			return previous;
 		}
 		if (Parallel(vec, previous)) // includes 'previous' == zero
@@ -521,50 +723,53 @@ namespace pr
 	}
 
 	// Returns a vector with the 'xyz' values permuted 'n' times. '0=xyzw, 1=yzxw, 2=zxyw'
-	template <typename T> inline Vec4f<T> pr_vectorcall Permute3(v4_cref<T> v, int n)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Permute3(Vec4_cref<Scalar, T> v, int n)
 	{
-		switch (n%3)
+		switch (n % 3)
 		{
-		default: return v;
-		case 1:  return Vec4f<T>{v.y, v.z, v.x, v.w};
-		case 2:  return Vec4f<T>{v.z, v.x, v.y, v.w};
+			case 1:  return Vec4<Scalar, T>{v.y, v.z, v.x, v.w};
+			case 2:  return Vec4<Scalar, T>{v.z, v.x, v.y, v.w};
+			default: return v;
 		}
 	}
 
 	// Returns a vector with the values permuted 'n' times. '0=xyzw, 1=yzwx, 2=zwxy, 3=wxyz'
-	template <typename T> inline Vec4f<T> pr_vectorcall Permute4(v4_cref<T> v, int n)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall Permute4(Vec4_cref<Scalar, T> v, int n)
 	{
-		switch (n%4)
+		switch (n % 4)
 		{
-		default: return v;
-		case 1:  return Vec4f<T>{v.y, v.z, v.w, v.x};
-		case 2:  return Vec4f<T>{v.z, v.w, v.x, v.y};
-		case 3:  return Vec4f<T>{v.w, v.x, v.y, v.z};
+			case 1:  return Vec4<Scalar, T>{v.y, v.z, v.w, v.x};
+			case 2:  return Vec4<Scalar, T>{v.z, v.w, v.x, v.y};
+			case 3:  return Vec4<Scalar, T>{v.w, v.x, v.y, v.z};
+			default: return v;
 		}
 	}
 
 	// Returns a 3-bit bitmask of the octant the vector is in. 0=(-x,-y,-z), 1=(+x,-y,-z), 2=(-x,+y,-z), 3=(+x,+y,-z), 4=(-x,-y+z), 5=(+x,-y,+z), 6=(-x,+y,+z), 7=(+x,+y,+z)
-	template <typename T> inline uint32_t pr_vectorcall Octant(v4_cref<T> v)
+	template <typename Scalar, typename T> inline uint32_t pr_vectorcall Octant(Vec4_cref<Scalar, T> v)
 	{
 		return Octant(v.xyz);
 	}
 
 	// Return the component sum
-	template <typename T> inline float pr_vectorcall ComponentSum(v4_cref<T> v)
+	template <typename Scalar, typename T> inline Scalar pr_vectorcall ComponentSum(Vec4_cref<Scalar, T> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto sum = v.vec;
-		sum = _mm_hadd_ps(sum, sum);
-		sum = _mm_hadd_ps(sum, sum);
-		float s; _mm_store_ss(&s, sum);
-		return s;
-		#else
-		return v.x + v.y + v.z + v.w;
-		#endif
+		if constexpr (Vec4<Scalar, T>::IntrinsicF)
+		{
+			auto sum = v.vec;
+			sum = _mm_hadd_ps(sum, sum);
+			sum = _mm_hadd_ps(sum, sum);
+			Scalar s; _mm_store_ss(&s, sum);
+			return s;
+		}
+		else
+		{
+			return v.x + v.y + v.z + v.w;
+		}
 	}
 
 	// Returns the most extreme point in the direction of 'separating_axis'
-	template <typename T> inline Vec4f<T> pr_vectorcall SupportPoint(v4_cref<T> pt, v4_cref<> separating_axis)
+	template <typename Scalar, typename T> inline Vec4<Scalar, T> pr_vectorcall SupportPoint(Vec4_cref<Scalar, T> pt, Vec4_cref<Scalar, T> separating_axis)
 	{
 		// This overload allows other generic functions to work
 		(void)separating_axis;
@@ -576,21 +781,13 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(Vector4Tests)
+	PRUnitTest(Vector4Tests, float, double, int32_t, int64_t)
 	{
-		#if PR_MATHS_USE_DIRECTMATH
-		{
-			v4 V0 = v4(1,2,3,4);
-			DirectX::XMVECTORF32 VX0;
-			VX0.v = V0.vec;
-			PR_CHECK(V0.x, VX0.f[0]);
-			PR_CHECK(V0.y, VX0.f[1]);
-			PR_CHECK(V0.z, VX0.f[2]);
-			PR_CHECK(V0.w, VX0.f[3]);
-		}
-		#endif
+		using Scalar = T;
+		using vec4_t = Vec4<Scalar, void>;
+
 		{// Operators
-			auto a = v4{1, 2, 3, 4};
+			auto a = vec4_t{1, 2, 3, 4};
 			auto b = v4{-4, -3, -2, -1};
 
 			PR_CHECK(a + b, v4{-3, -1, +1, +3});
@@ -620,8 +817,8 @@ namespace pr::maths
 		}
 		{// Largest/Smallest element
 			auto v1 = v4{1,-2,-3,4};
-			PR_CHECK(MinElement(v1) == -3, true);
-			PR_CHECK(MaxElement(v1) == +4, true);
+			PR_CHECK(MinComponent(v1) == -3, true);
+			PR_CHECK(MaxComponent(v1) == +4, true);
 			PR_CHECK(MinElementIndex(v1) == 2, true);
 			PR_CHECK(MaxElementIndex(v1) == 3, true);
 		}
@@ -632,21 +829,21 @@ namespace pr::maths
 			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
 			a.x = a.y = 1.0e-5f;
 			b.x = b.y = 1.1e-5f;
-			PR_CHECK(FEql(MinElement(a), -1.0f), true);
-			PR_CHECK(FEql(MinElement(b), -1.0f), true);
-			PR_CHECK(FEql(MaxElement(a), +0.5f), true);
-			PR_CHECK(FEql(MaxElement(b), +0.5f), true);
+			PR_CHECK(FEql(MinComponent(a), -1.0f), true);
+			PR_CHECK(FEql(MinComponent(b), -1.0f), true);
+			PR_CHECK(FEql(MaxComponent(a), +0.5f), true);
+			PR_CHECK(FEql(MaxComponent(b), +0.5f), true);
 			PR_CHECK(FEql(a,b), true);
 			
 			a.z = a.w = 1.0e-5f;
 			b.z = b.w = 1.1e-5f;
-			PR_CHECK(FEql(MaxElement(a), 1.0e-5f), true);
-			PR_CHECK(FEql(MaxElement(b), 1.1e-5f), true);
+			PR_CHECK(FEql(MaxComponent(a), 1.0e-5f), true);
+			PR_CHECK(FEql(MaxComponent(b), 1.1e-5f), true);
 			PR_CHECK(FEql(a,b), false);
 		}
 		{// FEql
 			v4 a(1,1,-1,-1);
-			auto t2 = maths::tinyf * 2.0f;
+			auto t2 = maths::tiny<float> * 2.0f;
 			PR_CHECK(FEql(a, v4(1   ,1,-1,-1)), true);
 			PR_CHECK(FEql(a, v4(1+t2,1,-1,-1)), false);
 			PR_CHECK(FEql(v4(1e-20f,0,0,1).xyz, v3::Zero()), true);
