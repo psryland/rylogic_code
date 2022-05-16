@@ -99,7 +99,7 @@ namespace pr
 		}
 		template <typename TStr> void phContactManifold(char const* name, unsigned int colour, ph::ContactManifold const& manifold, TStr& str)
 		{
-			//for( uint i = 0; i != manifold.Size(); ++i )
+			//for( uint32_t i = 0; i != manifold.Size(); ++i )
 			//	phContact(name, colour, manifold[i], str);
 		}
 		template <typename TStr> void PhSupport(ph::Support const& support, TStr& str)
@@ -109,7 +109,7 @@ namespace pr
 			//PhRigidbody("Supported", "FF800000", rb, str);
 			//
 			//// Output the legs
-			//for( uint i = 0; i != support.m_num_supports; ++i )
+			//for( uint32_t i = 0; i != support.m_num_supports; ++i )
 			//{
 			//	GroupStart("Leg", str);
 			//	support::Leg const& leg = support.m_leg[i];

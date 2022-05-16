@@ -29,7 +29,7 @@ namespace pr::rdr
 		base::Setup(dc, state);
 		hlsl::diag::CBufFrame cb = {};
 		SetViewConstants(state.m_rstep->m_scene->m_view, cb.m_cam);
-		cb.m_colour = state.m_rstep->m_scene->m_diag.m_normal_colour;
+		cb.m_colour = Colour(state.m_rstep->m_scene->m_diag.m_normal_colour).rgba;
 		cb.m_length = state.m_rstep->m_scene->m_diag.m_normal_lengths;
 		WriteConstants(dc, m_cbuf.get(), cb, EShaderType::GS);
 	}

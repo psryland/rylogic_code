@@ -25,9 +25,10 @@ def Preprocess(src_filepath:str, out_filepath:str=None):
 	# Ensure environment variables for cl.exe are set up
 	Tools.SetupVcEnvironment()
 
-	# project_dir = r'R:\software\PC\RexSerialConnection'
+	# Include directories
 	includes = [
-		#'/I"'+project_dir+'"',
+		Tools.Path(UserVars.root, "include").replace("\\","/"),
+		Tools.Path(UserVars.vs_dir, "VC\\Auxiliary\\VS\\UnitTest\\include").replace("\\","/"),
 		#'/I"'+project_dir+'\\src\\emulation"',
 		#'/I"'+project_dir+'\\..\\stm32_proxy\\products\\master_controller_v2\\source"',
 		#'/I"'+project_dir+'\\..\\stm32_proxy"',
@@ -50,7 +51,7 @@ def Preprocess(src_filepath:str, out_filepath:str=None):
 		'_DEBUG',
 		'_CRT_SECURE_NO_WARNINGS',
 		'NOMINMAX',
-		#'PR_UNITTESTS'
+		'PR_UNITTESTS'
 		#'DEF_STM32_PRODUCT=2',
 		#'PACK=',
 		]
@@ -65,9 +66,9 @@ def Preprocess(src_filepath:str, out_filepath:str=None):
 
 	print("Preprocessing...")
 	Tools.Exec(
-		[UserVars.vs_compiler64] + 
+		[Tools.Path(UserVars.vs_dir, "VC\\Tools\\MSVC", UserVars.vc_vers, "bin\\HostX64\\x64\\cl.exe")] + 
 		[x for x in flags] + 
-		[f'/I"{x}"' for x in includes] +
+		[f'/I{x}' for x in includes] +
 		[f'/D{x}' for x in defines] +
 		[f'/Fi{out_filepath}', src_filepath],
 		show_arguments=trace)
@@ -78,14 +79,14 @@ def Preprocess(src_filepath:str, out_filepath:str=None):
 	cex = Tools.Path(UserVars.root, "bin\\cex\\cex.exe")
 	Tools.Exec([cex, "-newlines", "-f", out_filepath, '-limit', '0', '1'], show_arguments=trace)
 	print("Showing output...")
-	Tools.Exec([UserVars.devenv, "/Edit", out_filepath], expected_return_code=0xffffffff)
+	Tools.Exec([UserVars.vs_devenv, "/Edit", out_filepath], expected_return_code=0xffffffff)
 
 	return
 
 # Entry Point
 if __name__ == "__main__":
 	try:
-		sys.argv = ["", "P:\\pr\\include\\pr\\storage\\zip_file.h"]
+		sys.argv = ["", "P:\\pr\\include\\pr\\common\\flags_enum.h"]
 
 		# Read the source file and output file
 		filepath = sys.argv[1] if len(sys.argv) > 1 else input("Input filepath: ")

@@ -21,18 +21,18 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(float(maths::tau_by_8), 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, float(maths::tau_by_8), 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, float(maths::tau_by_8), v4(0.2f, 0.3f, 0.1f, 1.0f)),
-			m4x4::Transform(0, 0, -3*float(maths::tau_by_8), v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(maths::tau_by_8f, 0, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, maths::tau_by_8f, 0, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, 0, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(0, 0, -3*maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.5f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.5f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
 
 			std::string s;
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
@@ -57,15 +57,15 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(float(maths::tau_by_8), float(maths::tau_by_8), float(maths::tau_by_8), v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.3f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.3f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.3f);
 
 			std::string s;
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
@@ -90,15 +90,15 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(float(maths::tau_by_8), float(maths::tau_by_8), float(maths::tau_by_8), v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.5f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.5f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
 
 			std::string s;
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
@@ -123,15 +123,15 @@ namespace pr::collision
 		};
 		m4x4 r2w_[] =
 		{
-			m4x4::Transform(float(maths::tau_by_8), float(maths::tau_by_8), float(maths::tau_by_8), v4(0.2f, 0.3f, 0.1f, 1.0f)),
+			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
 		};
 
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
 			Contact c;
-			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.5f);
-			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.5f);
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
 
 			std::string s;
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);

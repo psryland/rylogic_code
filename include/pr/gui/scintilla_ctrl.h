@@ -59,7 +59,7 @@ namespace pr::gui
 
 	private:
 
-		using uint = unsigned int;
+		using uint32_t = unsigned int;
 		SciFnDirect m_snd;
 		mutable sptr_t m_ptr;
 		bool m_auto_indent;
@@ -76,17 +76,17 @@ namespace pr::gui
 		{}
 
 		// Helper function for calling the direct function and returned the result as 'TRet'
-		template <typename TRet, typename WP, typename LP> TRet Cmd(uint msg, WP wparam, LP lparam) const
+		template <typename TRet, typename WP, typename LP> TRet Cmd(uint32_t msg, WP wparam, LP lparam) const
 		{
 			auto res = m_snd(m_ptr, msg, (uptr_t)wparam, (sptr_t)lparam);
 			return TRet(res);
 		}
-		template <typename TRet, typename WP> TRet Cmd(uint msg, WP wparam) const
+		template <typename TRet, typename WP> TRet Cmd(uint32_t msg, WP wparam) const
 		{
 			auto res = m_snd(m_ptr, msg, (uptr_t)wparam, sptr_t());
 			return TRet(res);
 		}
-		template <typename TRet> TRet Cmd(uint msg) const
+		template <typename TRet> TRet Cmd(uint32_t msg) const
 		{
 			auto res = m_snd(m_ptr, msg, uptr_t(), sptr_t());
 			return TRet(res);
@@ -375,70 +375,70 @@ namespace pr::gui
 		}
 
 		#pragma region Text
-		void ClearAll          ()                                         { return Cmd<void>(SCI_CLEARALL, 0, 0L); }
-		void ClearDocumentStyle()                                         { return Cmd<void>(SCI_CLEARDOCUMENTSTYLE, 0, 0L); }
-		int  GetText           (char * text, int length) const            { return Cmd<int >(SCI_GETTEXT, length, text); }
-		void SetText           (const char * text)                        { return Cmd<void>(SCI_SETTEXT, 0, text); }
-		char GetCharAt         (uint pos) const                           { return Cmd<char>(SCI_GETCHARAT, pos, 0L) & 0xFF; }
-		int  GetLine           (int line, char * text) const              { return Cmd<int >(SCI_GETLINE, line, text); }
-		int  GetLineCount      () const                                   { return Cmd<int >(SCI_GETLINECOUNT, 0, 0L); }
-		int  GetTextRange      (Sci_TextRange & tr) const                 { return Cmd<int >(SCI_GETTEXTRANGE, 0, &tr); }
-		void AppendText        (const char * text, int length)            { return Cmd<void>(SCI_APPENDTEXT, length, text); }
-		void InsertText        (uint pos, const char * text)              { return Cmd<void>(SCI_INSERTTEXT, pos, text); }
-		void ReplaceSel        (const char * text)                        { return Cmd<void>(SCI_REPLACESEL, 0, text); }
-		void AddText           (const char * text, int length)            { return Cmd<void>(SCI_ADDTEXT, length, text); }
-		void AddStyledText     (const char * text, int length)            { return Cmd<void>(SCI_ADDSTYLEDTEXT, length, text); }
-		int  GetStyleAt        (uint pos) const                           { return Cmd<int >(SCI_GETSTYLEAT, pos, 0L); }
-		int  GetStyledText     (Sci_TextRange & tr) const                 { return Cmd<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
-		int  GetStyledText     (char * text, long first, long last) const { TxtRng tr(text, first, last); return Cmd<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
-		int  TargetAsUTF8      (char * text)                              { return Cmd<int >(SCI_TARGETASUTF8, 0, text); }
-		int  EncodedFromUTF8   (const char * utf8, char * encoded)        { return Cmd<int >(SCI_ENCODEDFROMUTF8, ( WPARAM)utf8, (LPARAM )encoded); }
-		void SetLengthForEncode(int bytes)                                { return Cmd<void>(SCI_SETLENGTHFORENCODE, bytes, 0L); }
+		void ClearAll()                                            { return Cmd <void >(SCI_CLEARALL, 0, 0L); }
+		void ClearDocumentStyle()                                  { return Cmd <void >(SCI_CLEARDOCUMENTSTYLE, 0, 0L); }
+		int GetText(char * text, int length) const                 { return Cmd <int >(SCI_GETTEXT, length, text); }
+		void SetText(const char * text)                            { return Cmd <void >(SCI_SETTEXT, 0, text); }
+		char GetCharAt(uint32_t pos) const                         { return Cmd <char >(SCI_GETCHARAT, pos, 0L) & 0xFF; }
+		int GetLine(int line, char * text) const                   { return Cmd <int >(SCI_GETLINE, line, text); }
+		int GetLineCount() const                                   { return Cmd <int >(SCI_GETLINECOUNT, 0, 0L); }
+		int GetTextRange(Sci_TextRange & tr) const                 { return Cmd <int >(SCI_GETTEXTRANGE, 0, &tr); }
+		void AppendText(const char * text, int length)             { return Cmd <void >(SCI_APPENDTEXT, length, text); }
+		void InsertText(uint32_t pos, const char * text)           { return Cmd <void >(SCI_INSERTTEXT, pos, text); }
+		void ReplaceSel(const char * text)                         { return Cmd <void >(SCI_REPLACESEL, 0, text); }
+		void AddText(const char * text, int length)                { return Cmd <void >(SCI_ADDTEXT, length, text); }
+		void AddStyledText(const char * text, int length)          { return Cmd <void >(SCI_ADDSTYLEDTEXT, length, text); }
+		int GetStyleAt(uint32_t pos) const                         { return Cmd <int >(SCI_GETSTYLEAT, pos, 0L); }
+		int GetStyledText(Sci_TextRange & tr) const                { return Cmd <int >(SCI_GETSTYLEDTEXT, 0, &tr); }
+		int GetStyledText(char * text, long first, long last) const{ TxtRng tr(text, first, last); return Cmd <int >(SCI_GETSTYLEDTEXT, 0, &tr); }
+		int TargetAsUTF8(char * text)                              { return Cmd <int >(SCI_TARGETASUTF8, 0, text); }
+		int EncodedFromUTF8(const char * utf8, char * encoded)     { return Cmd <int >(SCI_ENCODEDFROMUTF8, ( WPARAM)utf8, (LPARAM )encoded); }
+		void SetLengthForEncode(int bytes)                         { return Cmd <void >(SCI_SETLENGTHFORENCODE, bytes, 0L); }
 		#pragma endregion
 
 		#pragma region Selection/Navigation
-		void SelectAll                ()                                  { return Cmd<void>(SCI_SELECTALL, 0, 0L); }
-		int  SelectionMode            () const                            { return Cmd<int >(SCI_GETSELECTIONMODE, 0, 0L); }
-		void SelectionMode            (int mode)                          { return Cmd<void>(SCI_SETSELECTIONMODE, mode, 0L); }
-		uint CurrentPos               () const                            { return Cmd<uint>(SCI_GETCURRENTPOS, 0, 0L); }
-		void CurrentPos               (uint position)                     { return Cmd<void>(SCI_SETCURRENTPOS, position, 0L); }
-		uint SelectionStart           () const                            { return Cmd<uint>(SCI_GETSELECTIONSTART, 0, 0L); }
-		void SelectionStart           (uint pos)                          { return Cmd<void>(SCI_SETSELECTIONSTART, pos, 0L); }
-		uint SelectionEnd             () const                            { return Cmd<uint>(SCI_GETSELECTIONEND, 0, 0L); }
-		void SelectionEnd             (uint pos)                          { return Cmd<void>(SCI_SETSELECTIONEND, pos, 0L); }
-		void SetSel                   (int start, int end)                { return Cmd<void>(SCI_SETSEL, start, end); }
-		int  GetSelText               (char * text) const                 { return Cmd<int >(SCI_GETSELTEXT, 0, text); }
-		int  GetCurLine               (char * text, int length) const     { return Cmd<int >(SCI_GETCURLINE, length, text); }
-		uint GetLineSelStartPosition  (int line) const                    { return Cmd<uint>(SCI_GETLINESELSTARTPOSITION, line, 0L); }
-		uint GetLineSelEndPosition    (int line) const                    { return Cmd<uint>(SCI_GETLINESELENDPOSITION, line, 0L); }
-		int  GetFirstVisibleLine      () const                            { return Cmd<int >(SCI_GETFIRSTVISIBLELINE, 0, 0L); }
-		int  LinesOnScreen            () const                            { return Cmd<int >(SCI_LINESONSCREEN, 0, 0L); }
-		bool GetModify                () const                            { return Cmd<int >(SCI_GETMODIFY, 0, 0L) != 0; }
-		void GotoPos                  (uint pos)                          { return Cmd<void>(SCI_GOTOPOS, pos, 0L); }
-		void GotoLine                 (int line)                          { return Cmd<void>(SCI_GOTOLINE, line, 0L); }
-		uint Anchor                   () const                            { return Cmd<uint>(SCI_GETANCHOR, 0, 0L); }
-		void Anchor                   (uint anchor)                       { return Cmd<void>(SCI_SETANCHOR, anchor, 0L); }
-		int  LineFromPosition         (uint pos) const                    { return Cmd<int >(SCI_LINEFROMPOSITION, pos, 0L); }
-		uint PositionFromLine         (int line) const                    { return Cmd<uint>(SCI_POSITIONFROMLINE, line, 0L); }
-		int  GetLineEndPosition       (int line) const                    { return Cmd<int >(SCI_GETLINEENDPOSITION, line, 0L); }
-		int  LineLength               (int line) const                    { return Cmd<int >(SCI_LINELENGTH, line, 0L); }
-		int  GetColumn                (uint pos) const                    { return Cmd<int >(SCI_GETCOLUMN, pos, 0L); }
-		int  FindColumn               (int line, int column) const        { return Cmd<int >(SCI_FINDCOLUMN, line, column); }
-		uint PositionFromPoint        (int x, int y) const                { return Cmd<uint>(SCI_POSITIONFROMPOINT, x, y); }
-		uint PositionFromPointClose   (int x, int y) const                { return Cmd<uint>(SCI_POSITIONFROMPOINTCLOSE, x, y); }
-		int  PointXFromPosition       (uint pos) const                    { return Cmd<int >(SCI_POINTXFROMPOSITION, 0, pos); }
-		int  PointYFromPosition       (uint pos) const                    { return Cmd<int >(SCI_POINTYFROMPOSITION, 0, pos); }
-		void HideSelection            (bool normal)                       { return Cmd<void>(SCI_HIDESELECTION, normal, 0L); }
-		bool SelectionIsRectangle     () const                            { return Cmd<int >(SCI_SELECTIONISRECTANGLE, 0, 0L) != 0; }
-		void MoveCaretInsideView      ()                                  { return Cmd<void>(SCI_MOVECARETINSIDEVIEW, 0, 0L); }
-		int  WordStartPosition        (uint pos, bool onlyWordCharacters) { return Cmd<int >(SCI_WORDSTARTPOSITION, pos, onlyWordCharacters); }
-		int  WordEndPosition          (uint pos, bool onlyWordCharacters) { return Cmd<int >(SCI_WORDENDPOSITION, pos,  onlyWordCharacters ); }
-		uint PositionBefore           (uint pos) const                    { return Cmd<uint>(SCI_POSITIONBEFORE, pos, 0L); }
-		uint PositionAfter            (uint pos) const                    { return Cmd<uint>(SCI_POSITIONAFTER, pos, 0L); }
-		int  TextWidth                (int style, const char * text)      { return Cmd<int >(SCI_TEXTWIDTH, style, text); }
-		int  TextHeight               (int line) const                    { return Cmd<int >(SCI_TEXTHEIGHT, line, 0L); }
-		void ChooseCaretX             () const                            { return Cmd<void>(SCI_CHOOSECARETX, 0, 0L); }
-		
+		void SelectAll()                                            { return Cmd <void >(SCI_SELECTALL, 0, 0L); }
+		int SelectionMode() const                                   { return Cmd <int >(SCI_GETSELECTIONMODE, 0, 0L); }
+		void SelectionMode(int mode)                                { return Cmd <void >(SCI_SETSELECTIONMODE, mode, 0L); }
+		uint32_t CurrentPos() const                                 { return Cmd <uint32_t >(SCI_GETCURRENTPOS, 0, 0L); }
+		void CurrentPos(uint32_t position)                          { return Cmd <void >(SCI_SETCURRENTPOS, position, 0L); }
+		uint32_t SelectionStart() const                             { return Cmd <uint32_t >(SCI_GETSELECTIONSTART, 0, 0L); }
+		void SelectionStart(uint32_t pos)                           { return Cmd <void >(SCI_SETSELECTIONSTART, pos, 0L); }
+		uint32_t SelectionEnd() const                               { return Cmd <uint32_t >(SCI_GETSELECTIONEND, 0, 0L); }
+		void SelectionEnd(uint32_t pos)                             { return Cmd <void >(SCI_SETSELECTIONEND, pos, 0L); }
+		void SetSel(int start, int end)                             { return Cmd <void >(SCI_SETSEL, start, end); }
+		int GetSelText(char * text) const                           { return Cmd <int >(SCI_GETSELTEXT, 0, text); }
+		int GetCurLine(char * text, int length) const               { return Cmd <int >(SCI_GETCURLINE, length, text); }
+		uint32_t GetLineSelStartPosition(int line) const            { return Cmd <uint32_t >(SCI_GETLINESELSTARTPOSITION, line, 0L); }
+		uint32_t GetLineSelEndPosition(int line) const              { return Cmd <uint32_t >(SCI_GETLINESELENDPOSITION, line, 0L); }
+		int GetFirstVisibleLine() const                             { return Cmd <int >(SCI_GETFIRSTVISIBLELINE, 0, 0L); }
+		int LinesOnScreen() const                                   { return Cmd <int >(SCI_LINESONSCREEN, 0, 0L); }
+		bool GetModify() const                                      { return Cmd <int >(SCI_GETMODIFY, 0, 0L) != 0; }
+		void GotoPos(uint32_t pos)                                  { return Cmd <void >(SCI_GOTOPOS, pos, 0L); }
+		void GotoLine(int line)                                     { return Cmd <void >(SCI_GOTOLINE, line, 0L); }
+		uint32_t Anchor() const                                     { return Cmd <uint32_t >(SCI_GETANCHOR, 0, 0L); }
+		void Anchor(uint32_t anchor)                                { return Cmd <void >(SCI_SETANCHOR, anchor, 0L); }
+		int LineFromPosition(uint32_t pos) const                    { return Cmd <int >(SCI_LINEFROMPOSITION, pos, 0L); }
+		uint32_t PositionFromLine(int line) const                   { return Cmd <uint32_t >(SCI_POSITIONFROMLINE, line, 0L); }
+		int GetLineEndPosition(int line) const                      { return Cmd <int >(SCI_GETLINEENDPOSITION, line, 0L); }
+		int LineLength(int line) const                              { return Cmd <int >(SCI_LINELENGTH, line, 0L); }
+		int GetColumn(uint32_t pos) const                           { return Cmd <int >(SCI_GETCOLUMN, pos, 0L); }
+		int FindColumn(int line, int column) const                  { return Cmd <int >(SCI_FINDCOLUMN, line, column); }
+		uint32_t PositionFromPoint(int x, int y) const              { return Cmd <uint32_t >(SCI_POSITIONFROMPOINT, x, y); }
+		uint32_t PositionFromPointClose(int x, int y) const         { return Cmd <uint32_t >(SCI_POSITIONFROMPOINTCLOSE, x, y); }
+		int PointXFromPosition(uint32_t pos) const                  { return Cmd <int >(SCI_POINTXFROMPOSITION, 0, pos); }
+		int PointYFromPosition(uint32_t pos) const                  { return Cmd <int >(SCI_POINTYFROMPOSITION, 0, pos); }
+		void HideSelection(bool normal)                             { return Cmd <void >(SCI_HIDESELECTION, normal, 0L); }
+		bool SelectionIsRectangle() const                           { return Cmd <int >(SCI_SELECTIONISRECTANGLE, 0, 0L) != 0; }
+		void MoveCaretInsideView()                                  { return Cmd <void >(SCI_MOVECARETINSIDEVIEW, 0, 0L); }
+		int WordStartPosition(uint32_t pos, bool onlyWordCharacters){ return Cmd <int >(SCI_WORDSTARTPOSITION, pos, onlyWordCharacters); }
+		int WordEndPosition(uint32_t pos, bool onlyWordCharacters)  { return Cmd <int >(SCI_WORDENDPOSITION, pos, onlyWordCharacters); }
+		uint32_t PositionBefore(uint32_t pos) const                 { return Cmd <uint32_t >(SCI_POSITIONBEFORE, pos, 0L); }
+		uint32_t PositionAfter(uint32_t pos) const                  { return Cmd <uint32_t >(SCI_POSITIONAFTER, pos, 0L); }
+		int TextWidth(int style, const char * text)                 { return Cmd <int >(SCI_TEXTWIDTH, style, text); }
+		int TextHeight(int line) const                              { return Cmd <int >(SCI_TEXTHEIGHT, line, 0L); }
+		void ChooseCaretX() const                                   { return Cmd <void >(SCI_CHOOSECARETX, 0, 0L); }
+
 		// Enable or disable multiple selection. When multiple selection is disabled, it is not
 		// possible to select multiple ranges by holding down the Ctrl key while dragging with the mouse.
 		bool MultipleSelection() const       { return Cmd<int >(SCI_GETMULTIPLESELECTION, 0, 0L) != 0; }
@@ -476,7 +476,7 @@ namespace pr::gui
 		void Paste                 ()                              { return Cmd<void>(SCI_PASTE, 0, 0L); }
 		bool CanPaste              () const                        { return Cmd<int >(SCI_CANPASTE, 0, 0L) != 0; }
 		void Clear                 ()                              { return Cmd<void>(SCI_CLEAR, 0, 0L); }
-		void CopyRange             (uint first, uint last)         { return Cmd<void>(SCI_COPYRANGE, first, last); }
+		void CopyRange             (uint32_t first, uint32_t last) { return Cmd<void>(SCI_COPYRANGE, first, last); }
 		void CopyText              (const char * text, int length) { return Cmd<void>(SCI_COPYTEXT, length, text); }
 		void SetPasteConvertEndings(bool convert)                  { return Cmd<void>(SCI_SETPASTECONVERTENDINGS, convert, 0L); }
 		bool GetPasteConvertEndings() const                        { return Cmd<int >(SCI_GETPASTECONVERTENDINGS, 0, 0L) != 0; }
@@ -495,36 +495,36 @@ namespace pr::gui
 		#pragma endregion
 
 		#pragma region Find/Search/Replace
-		uint Find               (int flags, Sci_TextToFind & ttf) const { return Cmd<uint>(SCI_FINDTEXT, flags, &ttf); }
-		void SearchAnchor       ()                                      { return Cmd<void>(SCI_SEARCHANCHOR, 0, 0L); }
-		int  SearchNext         (int flags, const char * text) const    { return Cmd<int >(SCI_SEARCHNEXT, flags, text); }
-		int  SearchPrev         (int flags, const char * text) const    { return Cmd<int >(SCI_SEARCHPREV, flags, text); }
-		uint GetTargetStart     () const                                { return Cmd<uint>(SCI_GETTARGETSTART, 0, 0L); }
-		void SetTargetStart     (uint pos)                              { return Cmd<void>(SCI_SETTARGETSTART, pos, 0L); }
-		uint GetTargetEnd       () const                                { return Cmd<uint>(SCI_GETTARGETEND, 0, 0L); }
-		void SetTargetEnd       (uint pos)                              { return Cmd<void>(SCI_SETTARGETEND, pos, 0L); }
-		void TargetFromSelection()                                      { return Cmd<void>(SCI_TARGETFROMSELECTION, 0, 0L); }
-		int  GetSearchFlags     () const                                { return Cmd<int >(SCI_GETSEARCHFLAGS, 0, 0L); }
-		void SetSearchFlags     (int flags)                             { return Cmd<void>(SCI_SETSEARCHFLAGS, flags, 0L); }
-		int  SearchInTarget     (const char * text, int length)         { return Cmd<int >(SCI_SEARCHINTARGET, length, text); }
-		int  ReplaceTarget      (const char * text, int length)         { return Cmd<int >(SCI_REPLACETARGET, length, text); }
-		int  ReplaceTargetRE    (const char * text, int length)         { return Cmd<int >(SCI_REPLACETARGETRE, length, text); }
+		uint32_t Find               (int flags, Sci_TextToFind & ttf) const { return Cmd<uint32_t>(SCI_FINDTEXT, flags, &ttf); }
+		void SearchAnchor       ()                                          { return Cmd<void>(SCI_SEARCHANCHOR, 0, 0L); }
+		int  SearchNext         (int flags, const char * text) const        { return Cmd<int >(SCI_SEARCHNEXT, flags, text); }
+		int  SearchPrev         (int flags, const char * text) const        { return Cmd<int >(SCI_SEARCHPREV, flags, text); }
+		uint32_t GetTargetStart     () const                                { return Cmd<uint32_t>(SCI_GETTARGETSTART, 0, 0L); }
+		void SetTargetStart     (uint32_t pos)                              { return Cmd<void>(SCI_SETTARGETSTART, pos, 0L); }
+		uint32_t GetTargetEnd       () const                                { return Cmd<uint32_t>(SCI_GETTARGETEND, 0, 0L); }
+		void SetTargetEnd       (uint32_t pos)                              { return Cmd<void>(SCI_SETTARGETEND, pos, 0L); }
+		void TargetFromSelection()                                          { return Cmd<void>(SCI_TARGETFROMSELECTION, 0, 0L); }
+		int  GetSearchFlags     () const                                    { return Cmd<int >(SCI_GETSEARCHFLAGS, 0, 0L); }
+		void SetSearchFlags     (int flags)                                 { return Cmd<void>(SCI_SETSEARCHFLAGS, flags, 0L); }
+		int  SearchInTarget     (const char * text, int length)             { return Cmd<int >(SCI_SEARCHINTARGET, length, text); }
+		int  ReplaceTarget      (const char * text, int length)             { return Cmd<int >(SCI_REPLACETARGET, length, text); }
+		int  ReplaceTargetRE    (const char * text, int length)             { return Cmd<int >(SCI_REPLACETARGETRE, length, text); }
 		#pragma endregion
 
 		#pragma region Scrolling
-		void LineScroll(int columns, int lines)                   { return Cmd<void>(SCI_LINESCROLL, columns, lines); }
-		void ScrollToLine(int line)                               { return LineScroll( 0, line - LineFromPosition(CurrentPos())); }
-		void ScrollCaret()                                        { return Cmd<void>(SCI_SCROLLCARET, 0, 0L); }
-		bool GetHScrollBar() const                                { return Cmd<int >(SCI_GETHSCROLLBAR, 0, 0L) != 0; }
-		void SetHScrollBar(bool show)                             { return Cmd<void>(SCI_SETHSCROLLBAR, show, 0L); }
-		bool GetVScrollBar() const                                { return Cmd<int >(SCI_GETVSCROLLBAR, 0, 0L) != 0; }
-		void SetVScrollBar(bool show)                             { return Cmd<void>(SCI_SETVSCROLLBAR, show, 0L); }
-		int  GetXOffset() const                                   { return Cmd<int >(SCI_GETXOFFSET, 0, 0L); }
-		void SetXOffset(int offset)                               { return Cmd<void>(SCI_SETXOFFSET, offset, 0L); }
-		int  GetScrollWidth() const                               { return Cmd<int >(SCI_GETSCROLLWIDTH, 0, 0L); }
-		void SetScrollWidth(int pixelWidth)                       { return Cmd<void>(SCI_SETSCROLLWIDTH, pixelWidth, 0L); }
-		bool GetEndAtLastLine() const                             { return Cmd<int >(SCI_GETENDATLASTLINE, 0, 0L) != 0; }
-		void SetEndAtLastLine(bool endAtLastLine)                 { return Cmd<void>(SCI_SETENDATLASTLINE, endAtLastLine, 0L); }
+		void LineScroll(int columns, int lines)   { return Cmd<void>(SCI_LINESCROLL, columns, lines); }
+		void ScrollToLine(int line)               { return LineScroll( 0, line - LineFromPosition(CurrentPos())); }
+		void ScrollCaret()                        { return Cmd<void>(SCI_SCROLLCARET, 0, 0L); }
+		bool GetHScrollBar() const                { return Cmd<int >(SCI_GETHSCROLLBAR, 0, 0L) != 0; }
+		void SetHScrollBar(bool show)             { return Cmd<void>(SCI_SETHSCROLLBAR, show, 0L); }
+		bool GetVScrollBar() const                { return Cmd<int >(SCI_GETVSCROLLBAR, 0, 0L) != 0; }
+		void SetVScrollBar(bool show)             { return Cmd<void>(SCI_SETVSCROLLBAR, show, 0L); }
+		int  GetXOffset() const                   { return Cmd<int >(SCI_GETXOFFSET, 0, 0L); }
+		void SetXOffset(int offset)               { return Cmd<void>(SCI_SETXOFFSET, offset, 0L); }
+		int  GetScrollWidth() const               { return Cmd<int >(SCI_GETSCROLLWIDTH, 0, 0L); }
+		void SetScrollWidth(int pixelWidth)       { return Cmd<void>(SCI_SETSCROLLWIDTH, pixelWidth, 0L); }
+		bool GetEndAtLastLine() const             { return Cmd<int >(SCI_GETENDATLASTLINE, 0, 0L) != 0; }
+		void SetEndAtLastLine(bool endAtLastLine) { return Cmd<void>(SCI_SETENDATLASTLINE, endAtLastLine, 0L); }
 		#pragma endregion
 
 		#pragma region Whitespace
@@ -567,8 +567,8 @@ namespace pr::gui
 		void StyleSetVisible     (int style, bool visible)                { return Cmd<void>(SCI_STYLESETVISIBLE, style, visible); }
 		void StyleSetChangeable  (int style, bool changeable)             { return Cmd<void>(SCI_STYLESETCHANGEABLE, style, changeable); }
 		void StyleSetHotSpot     (int style, bool hotspot)                { return Cmd<void>(SCI_STYLESETHOTSPOT, style, hotspot); }
-		uint GetEndStyled        () const                                 { return Cmd<uint>(SCI_GETENDSTYLED, 0, 0L); }
-		void StartStyling        (uint pos, int mask)                     { return Cmd<void>(SCI_STARTSTYLING, pos, mask); }
+		uint32_t GetEndStyled        () const                             { return Cmd<uint32_t>(SCI_GETENDSTYLED, 0, 0L); }
+		void StartStyling        (uint32_t pos, int mask)                 { return Cmd<void>(SCI_STARTSTYLING, pos, mask); }
 		void SetStyling          (int length, int style)                  { return Cmd<void>(SCI_SETSTYLING, length, style); }
 		void SetStylingEx        (int length, const char * styles)        { return Cmd<void>(SCI_SETSTYLINGEX, length, styles); }
 		int  GetLineState        (int line) const                         { return Cmd<int >(SCI_GETLINESTATE, line, 0L); }
@@ -629,9 +629,9 @@ namespace pr::gui
 		#pragma endregion
 
 		#pragma region Brace Highlighting
-		void BraceHighlight(uint pos1, uint pos2) { return Cmd<void>(SCI_BRACEHIGHLIGHT, pos1, pos2); }
-		void BraceBadLight (uint pos)             { return Cmd<void>(SCI_BRACEBADLIGHT, pos, 0L); }
-		uint BraceMatch    (uint pos)             { return Cmd<uint>(SCI_BRACEMATCH, pos, 0L); }
+		void BraceHighlight(uint32_t pos1, uint32_t pos2) { return Cmd<void>(SCI_BRACEHIGHLIGHT, pos1, pos2); }
+		void BraceBadLight (uint32_t pos)             { return Cmd<void>(SCI_BRACEBADLIGHT, pos, 0L); }
+		uint32_t BraceMatch    (uint32_t pos)             { return Cmd<uint32_t>(SCI_BRACEMATCH, pos, 0L); }
 		#pragma endregion
 
 		#pragma region Tabs
@@ -647,7 +647,7 @@ namespace pr::gui
 		void BackSpaceUnIndents(bool bsUnIndents)         { return Cmd<void>(SCI_SETBACKSPACEUNINDENTS, bsUnIndents, 0L); }
 		int  LineIndentation   (int line) const           { return Cmd<int >(SCI_GETLINEINDENTATION, line, 0L); }
 		void LineIndentation   (int line, int indentSize) { return Cmd<void>(SCI_SETLINEINDENTATION, line, indentSize); }
-		uint LineIndentPosition(int line) const           { return Cmd<uint>(SCI_GETLINEINDENTPOSITION, line, 0L); }
+		uint32_t LineIndentPosition(int line) const       { return Cmd<uint32_t>(SCI_GETLINEINDENTPOSITION, line, 0L); }
 		bool IndentationGuides () const                   { return Cmd<int >(SCI_GETINDENTATIONGUIDES, 0, 0L) != 0; }
 		void IndentationGuides (bool show)                { return Cmd<void>(SCI_SETINDENTATIONGUIDES, show, 0L); }
 		int  HighlightGuide    () const                   { return Cmd<int >(SCI_GETHIGHLIGHTGUIDE, 0, 0L); }
@@ -678,35 +678,35 @@ namespace pr::gui
 		#pragma endregion
 	
 		#pragma region Autocomplete
-		void AutoCShow             (int lenEntered, const char * itemList) { return Cmd<void>(SCI_AUTOCSHOW, lenEntered, itemList); }
-		void AutoCCancel           ()                                      { return Cmd<void>(SCI_AUTOCCANCEL, 0, 0L); }
-		bool AutoCActive           () const                                { return Cmd<int >(SCI_AUTOCACTIVE, 0, 0L) != 0; }
-		uint AutoCPosStart         () const                                { return Cmd<uint>(SCI_AUTOCPOSSTART, 0, 0L); }
-		void AutoCComplete         ()                                      { return Cmd<void>(SCI_AUTOCCOMPLETE, 0, 0L); }
-		void AutoCStops            (const char * characterSet)             { return Cmd<void>(SCI_AUTOCSTOPS, 0, characterSet); }
-		int  AutoCGetSeparator     () const                                { return Cmd<int >(SCI_AUTOCGETSEPARATOR, 0, 0L); }
-		void AutoCSetSeparator     (int separatorCharacter)                { return Cmd<void>(SCI_AUTOCSETSEPARATOR, separatorCharacter, 0L); }
-		void AutoCSelect           (const char * text)                     { return Cmd<void>(SCI_AUTOCSELECT, 0, text); }
-		int  AutoCGetCurrent       () const                                { return Cmd<int >(SCI_AUTOCGETCURRENT, 0, 0L); }
-		bool AutoCGetCancelAtStart () const                                { return Cmd<int >(SCI_AUTOCGETCANCELATSTART, 0, 0L) != 0; }
-		void AutoCSetCancelAtStart (bool cancel)                           { return Cmd<void>(SCI_AUTOCSETCANCELATSTART, cancel, 0L); }
-		void AutoCSetFillUps       (const char * characterSet)             { return Cmd<void>(SCI_AUTOCSETFILLUPS, 0, characterSet); }
-		bool AutoCGetChooseSingle  () const                                { return Cmd<int >(SCI_AUTOCGETCHOOSESINGLE, 0, 0L) != 0; }
-		void AutoCSetChooseSingle  (bool chooseSingle)                     { return Cmd<void>(SCI_AUTOCSETCHOOSESINGLE, chooseSingle, 0L); }
-		bool AutoCGetIgnoreCase    () const                                { return Cmd<int >(SCI_AUTOCGETIGNORECASE, 0, 0L) != 0; }
-		void AutoCSetIgnoreCase    (bool ignoreCase)                       { return Cmd<void>(SCI_AUTOCSETIGNORECASE, ignoreCase, 0L); }
-		bool AutoCGetAutoHide      () const                                { return Cmd<int >(SCI_AUTOCGETAUTOHIDE, 0, 0L) != 0; }
-		void AutoCSetAutoHide      (bool autoHide)                         { return Cmd<void>(SCI_AUTOCSETAUTOHIDE, autoHide, 0L); }
-		bool AutoCGetDropRestOfWord() const                                { return Cmd<int >(SCI_AUTOCGETDROPRESTOFWORD, 0, 0L) != 0; }
-		void AutoCSetDropRestOfWord(bool dropRestOfWord)                   { return Cmd<void>(SCI_AUTOCSETDROPRESTOFWORD, dropRestOfWord, 0L); }
-		void RegisterImage         (int type, const char * xpmData)        { return Cmd<void>(SCI_REGISTERIMAGE, type, xpmData); }
-		void ClearRegisteredImages ()                                      { return Cmd<void>(SCI_CLEARREGISTEREDIMAGES, 0, 0L); }
-		int  AutoCGetTypeSeparator () const                                { return Cmd<int >(SCI_AUTOCGETTYPESEPARATOR, 0, 0L); }
-		void AutoCSetTypeSeparator (int separatorCharacter)                { return Cmd<void>(SCI_AUTOCSETTYPESEPARATOR, separatorCharacter,  0L); }
-		int  AutoCGetMaxWidth      () const                                { return Cmd<int >(SCI_AUTOCGETMAXWIDTH, 0, 0L); }
-		void AutoCSetMaxWidth      (int characterCount)                    { return Cmd<void>(SCI_AUTOCSETMAXWIDTH, characterCount, 0L); }
-		int  AutoCGetMaxHeight     () const                                { return Cmd<int >(SCI_AUTOCGETMAXHEIGHT, 0, 0L); }
-		void AutoCSetMaxHeight     (int rowCount)                          { return Cmd<void>(SCI_AUTOCSETMAXHEIGHT, rowCount, 0L); }
+		void AutoCShow(int lenEntered, const char * itemList) { return Cmd <void >(SCI_AUTOCSHOW, lenEntered, itemList); }
+		void AutoCCancel()                                    { return Cmd <void >(SCI_AUTOCCANCEL, 0, 0L); }
+		bool AutoCActive() const                              { return Cmd <int >(SCI_AUTOCACTIVE, 0, 0L) != 0; }
+		uint32_t AutoCPosStart() const                        { return Cmd <uint32_t >(SCI_AUTOCPOSSTART, 0, 0L); }
+		void AutoCComplete()                                  { return Cmd <void >(SCI_AUTOCCOMPLETE, 0, 0L); }
+		void AutoCStops(const char * characterSet)            { return Cmd <void >(SCI_AUTOCSTOPS, 0, characterSet); }
+		int  AutoCGetSeparator() const                        { return Cmd <int >(SCI_AUTOCGETSEPARATOR, 0, 0L); }
+		void AutoCSetSeparator(int separatorCharacter)        { return Cmd <void >(SCI_AUTOCSETSEPARATOR, separatorCharacter, 0L); }
+		void AutoCSelect(const char * text)                   { return Cmd <void >(SCI_AUTOCSELECT, 0, text); }
+		int  AutoCGetCurrent() const                          { return Cmd <int >(SCI_AUTOCGETCURRENT, 0, 0L); }
+		bool AutoCGetCancelAtStart() const                    { return Cmd <int >(SCI_AUTOCGETCANCELATSTART, 0, 0L) != 0; }
+		void AutoCSetCancelAtStart(bool cancel)               { return Cmd <void >(SCI_AUTOCSETCANCELATSTART, cancel, 0L); }
+		void AutoCSetFillUps(const char * characterSet)       { return Cmd <void >(SCI_AUTOCSETFILLUPS, 0, characterSet); }
+		bool AutoCGetChooseSingle() const                     { return Cmd <int >(SCI_AUTOCGETCHOOSESINGLE, 0, 0L) != 0; }
+		void AutoCSetChooseSingle(bool chooseSingle)          { return Cmd <void >(SCI_AUTOCSETCHOOSESINGLE, chooseSingle, 0L); }
+		bool AutoCGetIgnoreCase() const                       { return Cmd <int >(SCI_AUTOCGETIGNORECASE, 0, 0L) != 0; }
+		void AutoCSetIgnoreCase(bool ignoreCase)              { return Cmd <void >(SCI_AUTOCSETIGNORECASE, ignoreCase, 0L); }
+		bool AutoCGetAutoHide() const                         { return Cmd <int >(SCI_AUTOCGETAUTOHIDE, 0, 0L) != 0; }
+		void AutoCSetAutoHide(bool autoHide)                  { return Cmd <void >(SCI_AUTOCSETAUTOHIDE, autoHide, 0L); }
+		bool AutoCGetDropRestOfWord() const                   { return Cmd <int >(SCI_AUTOCGETDROPRESTOFWORD, 0, 0L) != 0; }
+		void AutoCSetDropRestOfWord(bool dropRestOfWord)      { return Cmd <void >(SCI_AUTOCSETDROPRESTOFWORD, dropRestOfWord, 0L); }
+		void RegisterImage(int type, const char * xpmData)    { return Cmd <void >(SCI_REGISTERIMAGE, type, xpmData); }
+		void ClearRegisteredImages()                          { return Cmd <void >(SCI_CLEARREGISTEREDIMAGES, 0, 0L); }
+		int  AutoCGetTypeSeparator() const                    { return Cmd <int >(SCI_AUTOCGETTYPESEPARATOR, 0, 0L); }
+		void AutoCSetTypeSeparator(int separatorCharacter)    { return Cmd <void >(SCI_AUTOCSETTYPESEPARATOR, separatorCharacter,  0L); }
+		int  AutoCGetMaxWidth() const                         { return Cmd <int >(SCI_AUTOCGETMAXWIDTH, 0, 0L); }
+		void AutoCSetMaxWidth(int characterCount)             { return Cmd <void >(SCI_AUTOCSETMAXWIDTH, characterCount, 0L); }
+		int  AutoCGetMaxHeight() const                        { return Cmd <int >(SCI_AUTOCGETMAXHEIGHT, 0, 0L); }
+		void AutoCSetMaxHeight(int rowCount)                  { return Cmd <void >(SCI_AUTOCSETMAXHEIGHT, rowCount, 0L); }
 		#pragma endregion
 
 		#pragma region User Lists
@@ -714,100 +714,100 @@ namespace pr::gui
 		#pragma endregion
 
 		#pragma region Call tips
-		void CallTipShow      (uint pos, const char * definition) { return Cmd<void>(SCI_CALLTIPSHOW, pos, definition); }
-		void CallTipCancel    ()                                  { return Cmd<void>(SCI_CALLTIPCANCEL, 0, 0L); }
-		bool CallTipActive    ()                                  { return Cmd<int >(SCI_CALLTIPACTIVE, 0, 0L) != 0; }
-		uint CallTipPosStart  () const                            { return Cmd<uint>(SCI_CALLTIPPOSSTART, 0, 0L); }
-		void CallTipSetHlt    (int start, int end)                { return Cmd<void>(SCI_CALLTIPSETHLT, start, end); }
-		void CallTipSetBack   (COLORREF back)                     { return Cmd<void>(SCI_CALLTIPSETBACK, back, 0L); }
-		void CallTipSetFore   (COLORREF fore)                     { return Cmd<void>(SCI_CALLTIPSETFORE, fore, 0L); }
-		void CallTipSetForeHlt(COLORREF fore)                     { return Cmd<void>(SCI_CALLTIPSETFOREHLT, fore, 0L); }
+		void CallTipShow(uint32_t pos, const char * definition) { return Cmd <void>(SCI_CALLTIPSHOW, pos, definition); }
+		void CallTipCancel()                                    { return Cmd <void>(SCI_CALLTIPCANCEL, 0, 0L); }
+		bool CallTipActive()                                    { return Cmd <int >(SCI_CALLTIPACTIVE, 0, 0L) != 0; }
+		uint32_t CallTipPosStart() const                        { return Cmd <uint32_t>(SCI_CALLTIPPOSSTART, 0, 0L); }
+		void CallTipSetHlt(int start, int end)                  { return Cmd <void>(SCI_CALLTIPSETHLT, start, end); }
+		void CallTipSetBack(COLORREF back)                      { return Cmd <void>(SCI_CALLTIPSETBACK, back, 0L); }
+		void CallTipSetFore(COLORREF fore)                      { return Cmd <void>(SCI_CALLTIPSETFORE, fore, 0L); }
+		void CallTipSetForeHlt(COLORREF fore)                   { return Cmd <void>(SCI_CALLTIPSETFOREHLT, fore, 0L); }
 		#pragma endregion
 
 		#pragma region Keyboard Commands
-		void LineDown               () { return Cmd<void>(SCI_LINEDOWN, 0, 0L); }
-		void LineDownExtend         () { return Cmd<void>(SCI_LINEDOWNEXTEND, 0, 0L); }
-		void LineUp                 () { return Cmd<void>(SCI_LINEUP, 0, 0L); }
-		void LineUpExtend           () { return Cmd<void>(SCI_LINEUPEXTEND, 0, 0L); }
-		void LineDownRectExtend     () { return Cmd<void>(SCI_LINEDOWNRECTEXTEND, 0, 0L); }
-		void LineUpRectExtend       () { return Cmd<void>(SCI_LINEUPRECTEXTEND, 0, 0L); }
-		void LineScrollDown         () { return Cmd<void>(SCI_LINESCROLLDOWN, 0, 0L); }
-		void LineScrollUp           () { return Cmd<void>(SCI_LINESCROLLUP, 0, 0L); }
-		void ParaDown               () { return Cmd<void>(SCI_PARADOWN, 0, 0L); }
-		void ParaDownExtend         () { return Cmd<void>(SCI_PARADOWNEXTEND, 0, 0L); }
-		void ParaUp                 () { return Cmd<void>(SCI_PARAUP, 0, 0L); }
-		void ParaUpExtend           () { return Cmd<void>(SCI_PARAUPEXTEND, 0, 0L); }
-		void CharLeft               () { return Cmd<void>(SCI_CHARLEFT, 0, 0L); }
-		void CharLeftExtend         () { return Cmd<void>(SCI_CHARLEFTEXTEND, 0, 0L); }
-		void CharRight              () { return Cmd<void>(SCI_CHARRIGHT, 0, 0L); }
-		void CharRightExtend        () { return Cmd<void>(SCI_CHARRIGHTEXTEND, 0, 0L); }
-		void CharLeftRectExtend     () { return Cmd<void>(SCI_CHARLEFTRECTEXTEND, 0, 0L); }
-		void CharRightRectExtend    () { return Cmd<void>(SCI_CHARRIGHTRECTEXTEND, 0, 0L); }
-		void WordLeft               () { return Cmd<void>(SCI_WORDLEFT, 0, 0L); }
-		void WordLeftExtend         () { return Cmd<void>(SCI_WORDLEFTEXTEND, 0, 0L); }
-		void WordRight              () { return Cmd<void>(SCI_WORDRIGHT, 0, 0L); }
-		void WordRightExtend        () { return Cmd<void>(SCI_WORDRIGHTEXTEND, 0, 0L); }
-		void WordLeftEnd            () { return Cmd<void>(SCI_WORDLEFTEND, 0, 0L); }
-		void WordLeftEndExtend      () { return Cmd<void>(SCI_WORDLEFTENDEXTEND, 0, 0L); }
-		void WordRightEnd           () { return Cmd<void>(SCI_WORDRIGHTEND, 0, 0L); }
-		void WordRightEndExtend     () { return Cmd<void>(SCI_WORDRIGHTENDEXTEND, 0, 0L); }
-		void WordPartLeft           () { return Cmd<void>(SCI_WORDPARTLEFT, 0, 0L); }
-		void WordPartLeftExtend     () { return Cmd<void>(SCI_WORDPARTLEFTEXTEND, 0, 0L); }
-		void WordPartRight          () { return Cmd<void>(SCI_WORDPARTRIGHT, 0, 0L); }
-		void WordPartRightExtend    () { return Cmd<void>(SCI_WORDPARTRIGHTEXTEND, 0, 0L); }
-		void Home                   () { return Cmd<void>(SCI_HOME, 0, 0L); }
-		void HomeExtend             () { return Cmd<void>(SCI_HOMEEXTEND, 0, 0L); }
-		void HomeRectExtend         () { return Cmd<void>(SCI_HOMERECTEXTEND, 0, 0L); }
-		void HomeDisplay            () { return Cmd<void>(SCI_HOMEDISPLAY, 0, 0L); }
-		void HomeDisplayExtend      () { return Cmd<void>(SCI_HOMEDISPLAYEXTEND, 0, 0L); }
-		void HomeWrap               () { return Cmd<void>(SCI_HOMEWRAP, 0, 0L); }
-		void HomeWrapExtend         () { return Cmd<void>(SCI_HOMEWRAPEXTEND, 0, 0L); }
-		void VCHome                 () { return Cmd<void>(SCI_VCHOME, 0, 0L); }
-		void VCHomeExtend           () { return Cmd<void>(SCI_VCHOMEEXTEND, 0, 0L); }
-		void VCHomeRectExtend       () { return Cmd<void>(SCI_VCHOMERECTEXTEND, 0, 0L); }
-		void VCHomeWrap             () { return Cmd<void>(SCI_VCHOMEWRAP, 0, 0L); }
-		void VCHomeWrapExtend       () { return Cmd<void>(SCI_VCHOMEWRAPEXTEND, 0, 0L); }
-		void LineEnd                () { return Cmd<void>(SCI_LINEEND, 0, 0L); }
-		void LineEndExtend          () { return Cmd<void>(SCI_LINEENDEXTEND, 0, 0L); }
-		void LineEndRectExtend      () { return Cmd<void>(SCI_LINEENDRECTEXTEND, 0, 0L); }
-		void LineEndDisplay         () { return Cmd<void>(SCI_LINEENDDISPLAY, 0, 0L); }
-		void LineEndDisplayExtend   () { return Cmd<void>(SCI_LINEENDDISPLAYEXTEND, 0, 0L); }
-		void LineEndWrap            () { return Cmd<void>(SCI_LINEENDWRAP, 0, 0L); }
-		void LineEndWrapExtend      () { return Cmd<void>(SCI_LINEENDWRAPEXTEND, 0, 0L); }
-		void DocumentStart          () { return Cmd<void>(SCI_DOCUMENTSTART, 0, 0L); }
-		void DocumentStartExtend    () { return Cmd<void>(SCI_DOCUMENTSTARTEXTEND, 0, 0L); }
-		void DocumentEnd            () { return Cmd<void>(SCI_DOCUMENTEND, 0, 0L); }
-		void DocumentEndExtend      () { return Cmd<void>(SCI_DOCUMENTENDEXTEND, 0, 0L); }
-		void PageUp                 () { return Cmd<void>(SCI_PAGEUP, 0, 0L); }
-		void PageUpExtend           () { return Cmd<void>(SCI_PAGEUPEXTEND, 0, 0L); }
-		void PageUpRectExtend       () { return Cmd<void>(SCI_PAGEUPRECTEXTEND, 0, 0L); }
-		void PageDown               () { return Cmd<void>(SCI_PAGEDOWN, 0, 0L); }
-		void PageDownExtend         () { return Cmd<void>(SCI_PAGEDOWNEXTEND, 0, 0L); }
-		void PageDownRectExtend     () { return Cmd<void>(SCI_PAGEDOWNRECTEXTEND, 0, 0L); }
-		void StutteredPageUp        () { return Cmd<void>(SCI_STUTTEREDPAGEUP, 0, 0L); }
-		void StutteredPageUpExtend  () { return Cmd<void>(SCI_STUTTEREDPAGEUPEXTEND, 0, 0L); }
-		void StutteredPageDown      () { return Cmd<void>(SCI_STUTTEREDPAGEDOWN, 0, 0L); }
+		void LineDown()                { return Cmd<void>(SCI_LINEDOWN, 0, 0L); }
+		void LineDownExtend()          { return Cmd<void>(SCI_LINEDOWNEXTEND, 0, 0L); }
+		void LineUp()                  { return Cmd<void>(SCI_LINEUP, 0, 0L); }
+		void LineUpExtend()            { return Cmd<void>(SCI_LINEUPEXTEND, 0, 0L); }
+		void LineDownRectExtend()      { return Cmd<void>(SCI_LINEDOWNRECTEXTEND, 0, 0L); }
+		void LineUpRectExtend()        { return Cmd<void>(SCI_LINEUPRECTEXTEND, 0, 0L); }
+		void LineScrollDown()          { return Cmd<void>(SCI_LINESCROLLDOWN, 0, 0L); }
+		void LineScrollUp()            { return Cmd<void>(SCI_LINESCROLLUP, 0, 0L); }
+		void ParaDown()                { return Cmd<void>(SCI_PARADOWN, 0, 0L); }
+		void ParaDownExtend()          { return Cmd<void>(SCI_PARADOWNEXTEND, 0, 0L); }
+		void ParaUp()                  { return Cmd<void>(SCI_PARAUP, 0, 0L); }
+		void ParaUpExtend()            { return Cmd<void>(SCI_PARAUPEXTEND, 0, 0L); }
+		void CharLeft()                { return Cmd<void>(SCI_CHARLEFT, 0, 0L); }
+		void CharLeftExtend()          { return Cmd<void>(SCI_CHARLEFTEXTEND, 0, 0L); }
+		void CharRight()               { return Cmd<void>(SCI_CHARRIGHT, 0, 0L); }
+		void CharRightExtend()         { return Cmd<void>(SCI_CHARRIGHTEXTEND, 0, 0L); }
+		void CharLeftRectExtend()      { return Cmd<void>(SCI_CHARLEFTRECTEXTEND, 0, 0L); }
+		void CharRightRectExtend()     { return Cmd<void>(SCI_CHARRIGHTRECTEXTEND, 0, 0L); }
+		void WordLeft()                { return Cmd<void>(SCI_WORDLEFT, 0, 0L); }
+		void WordLeftExtend()          { return Cmd<void>(SCI_WORDLEFTEXTEND, 0, 0L); }
+		void WordRight()               { return Cmd<void>(SCI_WORDRIGHT, 0, 0L); }
+		void WordRightExtend()         { return Cmd<void>(SCI_WORDRIGHTEXTEND, 0, 0L); }
+		void WordLeftEnd()             { return Cmd<void>(SCI_WORDLEFTEND, 0, 0L); }
+		void WordLeftEndExtend()       { return Cmd<void>(SCI_WORDLEFTENDEXTEND, 0, 0L); }
+		void WordRightEnd()            { return Cmd<void>(SCI_WORDRIGHTEND, 0, 0L); }
+		void WordRightEndExtend()      { return Cmd<void>(SCI_WORDRIGHTENDEXTEND, 0, 0L); }
+		void WordPartLeft()            { return Cmd<void>(SCI_WORDPARTLEFT, 0, 0L); }
+		void WordPartLeftExtend()      { return Cmd<void>(SCI_WORDPARTLEFTEXTEND, 0, 0L); }
+		void WordPartRight()           { return Cmd<void>(SCI_WORDPARTRIGHT, 0, 0L); }
+		void WordPartRightExtend()     { return Cmd<void>(SCI_WORDPARTRIGHTEXTEND, 0, 0L); }
+		void Home()                    { return Cmd<void>(SCI_HOME, 0, 0L); }
+		void HomeExtend()              { return Cmd<void>(SCI_HOMEEXTEND, 0, 0L); }
+		void HomeRectExtend()          { return Cmd<void>(SCI_HOMERECTEXTEND, 0, 0L); }
+		void HomeDisplay()             { return Cmd<void>(SCI_HOMEDISPLAY, 0, 0L); }
+		void HomeDisplayExtend()       { return Cmd<void>(SCI_HOMEDISPLAYEXTEND, 0, 0L); }
+		void HomeWrap()                { return Cmd<void>(SCI_HOMEWRAP, 0, 0L); }
+		void HomeWrapExtend()          { return Cmd<void>(SCI_HOMEWRAPEXTEND, 0, 0L); }
+		void VCHome()                  { return Cmd<void>(SCI_VCHOME, 0, 0L); }
+		void VCHomeExtend()            { return Cmd<void>(SCI_VCHOMEEXTEND, 0, 0L); }
+		void VCHomeRectExtend()        { return Cmd<void>(SCI_VCHOMERECTEXTEND, 0, 0L); }
+		void VCHomeWrap()              { return Cmd<void>(SCI_VCHOMEWRAP, 0, 0L); }
+		void VCHomeWrapExtend()        { return Cmd<void>(SCI_VCHOMEWRAPEXTEND, 0, 0L); }
+		void LineEnd()                 { return Cmd<void>(SCI_LINEEND, 0, 0L); }
+		void LineEndExtend()           { return Cmd<void>(SCI_LINEENDEXTEND, 0, 0L); }
+		void LineEndRectExtend()       { return Cmd<void>(SCI_LINEENDRECTEXTEND, 0, 0L); }
+		void LineEndDisplay()          { return Cmd<void>(SCI_LINEENDDISPLAY, 0, 0L); }
+		void LineEndDisplayExtend()    { return Cmd<void>(SCI_LINEENDDISPLAYEXTEND, 0, 0L); }
+		void LineEndWrap()             { return Cmd<void>(SCI_LINEENDWRAP, 0, 0L); }
+		void LineEndWrapExtend()       { return Cmd<void>(SCI_LINEENDWRAPEXTEND, 0, 0L); }
+		void DocumentStart()           { return Cmd<void>(SCI_DOCUMENTSTART, 0, 0L); }
+		void DocumentStartExtend()     { return Cmd<void>(SCI_DOCUMENTSTARTEXTEND, 0, 0L); }
+		void DocumentEnd()             { return Cmd<void>(SCI_DOCUMENTEND, 0, 0L); }
+		void DocumentEndExtend()       { return Cmd<void>(SCI_DOCUMENTENDEXTEND, 0, 0L); }
+		void PageUp()                  { return Cmd<void>(SCI_PAGEUP, 0, 0L); }
+		void PageUpExtend()            { return Cmd<void>(SCI_PAGEUPEXTEND, 0, 0L); }
+		void PageUpRectExtend()        { return Cmd<void>(SCI_PAGEUPRECTEXTEND, 0, 0L); }
+		void PageDown()                { return Cmd<void>(SCI_PAGEDOWN, 0, 0L); }
+		void PageDownExtend()          { return Cmd<void>(SCI_PAGEDOWNEXTEND, 0, 0L); }
+		void PageDownRectExtend()      { return Cmd<void>(SCI_PAGEDOWNRECTEXTEND, 0, 0L); }
+		void StutteredPageUp()         { return Cmd<void>(SCI_STUTTEREDPAGEUP, 0, 0L); }
+		void StutteredPageUpExtend()   { return Cmd<void>(SCI_STUTTEREDPAGEUPEXTEND, 0, 0L); }
+		void StutteredPageDown()       { return Cmd<void>(SCI_STUTTEREDPAGEDOWN, 0, 0L); }
 		void StutteredPageDownExtend() { return Cmd<void>(SCI_STUTTEREDPAGEDOWNEXTEND, 0, 0L); }
-		void DeleteBack             () { return Cmd<void>(SCI_DELETEBACK, 0, 0L); }
-		void DeleteBackNotLine      () { return Cmd<void>(SCI_DELETEBACKNOTLINE, 0, 0L); }
-		void DelWordLeft            () { return Cmd<void>(SCI_DELWORDLEFT, 0, 0L); }
-		void DelWordRight           () { return Cmd<void>(SCI_DELWORDRIGHT, 0, 0L); }
-		void DelLineLeft            () { return Cmd<void>(SCI_DELLINELEFT, 0, 0L); }
-		void DelLineRight           () { return Cmd<void>(SCI_DELLINERIGHT, 0, 0L); }
-		void LineDelete             () { return Cmd<void>(SCI_LINEDELETE, 0, 0L); }
-		void LineCut                () { return Cmd<void>(SCI_LINECUT, 0, 0L); }
-		void LineCopy               () { return Cmd<void>(SCI_LINECOPY, 0, 0L); }
-		void LineTranspose          () { return Cmd<void>(SCI_LINETRANSPOSE, 0, 0L); }
-		void LineDuplicate          () { return Cmd<void>(SCI_LINEDUPLICATE, 0, 0L); }
-		void LowerCase              () { return Cmd<void>(SCI_LOWERCASE, 0, 0L); }
-		void UpperCase              () { return Cmd<void>(SCI_UPPERCASE, 0, 0L); }
-		void Cancel                 () { return Cmd<void>(SCI_CANCEL, 0, 0L); }
-		void EditToggleOvertype     () { return Cmd<void>(SCI_EDITTOGGLEOVERTYPE, 0, 0L); }
-		void NewLine                () { return Cmd<void>(SCI_NEWLINE, 0, 0L); }
-		void FormFeed               () { return Cmd<void>(SCI_FORMFEED, 0, 0L); }
-		void Tab                    () { return Cmd<void>(SCI_TAB, 0, 0L); }
-		void BackTab                () { return Cmd<void>(SCI_BACKTAB, 0, 0L); }
-		void SelectionDuplicate     () { return Cmd<void>(SCI_SELECTIONDUPLICATE, 0, 0L); }
+		void DeleteBack()              { return Cmd<void>(SCI_DELETEBACK, 0, 0L); }
+		void DeleteBackNotLine()       { return Cmd<void>(SCI_DELETEBACKNOTLINE, 0, 0L); }
+		void DelWordLeft()             { return Cmd<void>(SCI_DELWORDLEFT, 0, 0L); }
+		void DelWordRight()            { return Cmd<void>(SCI_DELWORDRIGHT, 0, 0L); }
+		void DelLineLeft()             { return Cmd<void>(SCI_DELLINELEFT, 0, 0L); }
+		void DelLineRight()            { return Cmd<void>(SCI_DELLINERIGHT, 0, 0L); }
+		void LineDelete()              { return Cmd<void>(SCI_LINEDELETE, 0, 0L); }
+		void LineCut()                 { return Cmd<void>(SCI_LINECUT, 0, 0L); }
+		void LineCopy()                { return Cmd<void>(SCI_LINECOPY, 0, 0L); }
+		void LineTranspose()           { return Cmd<void>(SCI_LINETRANSPOSE, 0, 0L); }
+		void LineDuplicate()           { return Cmd<void>(SCI_LINEDUPLICATE, 0, 0L); }
+		void LowerCase()               { return Cmd<void>(SCI_LOWERCASE, 0, 0L); }
+		void UpperCase()               { return Cmd<void>(SCI_UPPERCASE, 0, 0L); }
+		void Cancel()                  { return Cmd<void>(SCI_CANCEL, 0, 0L); }
+		void EditToggleOvertype()      { return Cmd<void>(SCI_EDITTOGGLEOVERTYPE, 0, 0L); }
+		void NewLine()                 { return Cmd<void>(SCI_NEWLINE, 0, 0L); }
+		void FormFeed()                { return Cmd<void>(SCI_FORMFEED, 0, 0L); }
+		void Tab()                     { return Cmd<void>(SCI_TAB, 0, 0L); }
+		void BackTab()                 { return Cmd<void>(SCI_BACKTAB, 0, 0L); }
+		void SelectionDuplicate()      { return Cmd<void>(SCI_SELECTIONDUPLICATE, 0, 0L); }
 		#pragma endregion
 
 		#pragma region Key Bindings
@@ -828,7 +828,7 @@ namespace pr::gui
 		#pragma endregion
 
 		#pragma region Printing
-		uint FormatRange          (bool draw, Sci_RangeToFormat& fr) { return Cmd<uint>(SCI_FORMATRANGE, draw, &fr); }
+		uint32_t FormatRange          (bool draw, Sci_RangeToFormat& fr) { return Cmd<uint32_t>(SCI_FORMATRANGE, draw, &fr); }
 		int  GetPrintMagnification() const                        { return Cmd<int >(SCI_GETPRINTMAGNIFICATION, 0, 0L); }
 		void SetPrintMagnification(int magnification)             { return Cmd<void>(SCI_SETPRINTMAGNIFICATION, magnification, 0L); }
 		int  GetPrintColourMode   () const                        { return Cmd<int >(SCI_GETPRINTCOLOURMODE, 0, 0L); }
@@ -902,7 +902,7 @@ namespace pr::gui
 		void Lexer              (int lexer)                             { return Cmd<void>(SCI_SETLEXER, lexer, 0L); }
 		void LexerLanguage      (const char * language)                 { return Cmd<void>(SCI_SETLEXERLANGUAGE, 0, language); }
 		void LoadLexerLibrary   (const char * path)                     { return Cmd<void>(SCI_LOADLEXERLIBRARY, 0, path); }
-		void Colourise          (uint start, uint end)                  { return Cmd<void>(SCI_COLOURISE, start, end); }
+		void Colourise          (uint32_t start, uint32_t end)                  { return Cmd<void>(SCI_COLOURISE, start, end); }
 		int  Property           (const char * key, char * buf) const    { return Cmd<int >(SCI_GETPROPERTY, key, buf ); }
 		void Property           (const char * key, const char * value)  { return Cmd<void>(SCI_SETPROPERTY, key, value); }
 		int  GetPropertyExpanded(const char * key, char * buf) const    { return Cmd<int >(SCI_GETPROPERTYEXPANDED, key, buf); }

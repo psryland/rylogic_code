@@ -11,10 +11,10 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct a shape array
-ShapeArray& ShapeArray::set(std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeArray& ShapeArray::set(std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Array, size_in_bytes, shape_to_model, material_id, flags);
-	m_num_shapes = static_cast<uint>(num_shapes);
+	m_num_shapes = static_cast<uint32_t>(num_shapes);
 	CalcBBox(*this, m_base.m_bbox);
 	return *this;
 }

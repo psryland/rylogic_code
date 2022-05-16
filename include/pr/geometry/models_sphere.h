@@ -149,7 +149,7 @@ namespace pr::geometry
 
 			// Add the vertices
 			float ang1 = 0.0f, ang2 = dAng * 0.5f;
-			for (uint w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
+			for (uint32_t w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
 			{
 				auto norm_a = v4(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
 				auto norm_b = v4(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);

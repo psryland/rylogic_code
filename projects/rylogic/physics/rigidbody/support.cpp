@@ -15,10 +15,10 @@ using namespace pr;
 using namespace pr::ph;
 using namespace pr::ph::support;
 
-// Return the rigidbody that contains 'support'
+// Return the rigid body that contains 'support'
 inline Rigidbody& GetRB(Support& support)
 {
-	Rigidbody& rb = *reinterpret_cast<Rigidbody*>(reinterpret_cast<uint8*>(&support) - offsetof(Rigidbody, m_support));
+	Rigidbody& rb = *reinterpret_cast<Rigidbody*>(reinterpret_cast<uint8_t*>(&support) - offsetof(Rigidbody, m_support));
 	PR_ASSERT(PR_DBG_PHYSICS, &rb.m_support == &support, "");
 	return rb; 
 }
@@ -31,7 +31,7 @@ inline Support& GetSupport(Leg& leg)
 	return support;
 }
 
-// Return the rigidbody for a support
+// Return the rigid body for a support
 Rigidbody const& pr::ph::GetRBFromSupport(Support const& support)	{ return GetRB(const_cast<Support&>(support)); }
 Rigidbody&		 pr::ph::GetRBFromSupport(Support&		 support)	{ return GetRB(support); }
 
@@ -87,7 +87,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 	PR_DECLARE_PROFILE(PR_PROFILE_SLEEPING, phSleepAddSupport);
 	PR_PROFILE_SCOPE(PR_PROFILE_SLEEPING, phSleepAddSupport);
 
-	// Get the rigidbody that owns this support
+	// Get the rigid body that owns this support
 	Rigidbody& rb = GetRB(*this);
 	PR_ASSERT(PR_DBG_PHYSICS, &rb != &on_obj, "Objects cannot support themselves");
 	PR_ASSERT(PR_DBG_PHYSICS, !FEql(gravity,pr::v4Zero), "This object has no gravity and therefore can't come to rest");
@@ -108,7 +108,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 		return;
 
 	// Test if this is a repeat of a support we've already seen
-	uint pt = 0;
+	uint32_t pt = 0;
 	for( ; pt != m_num_supports; ++pt )
 	{
 		if( !FEqlRelative(m_leg[pt].m_point, radius2d, thres) ) continue;
@@ -184,7 +184,7 @@ void pr::ph::LookForSupports(Contact const& contact, Rigidbody& objectA, Rigidbo
 
 	// Hmm, look at this,... not sure it's valid
 	if( objectA.m_motion_type == EMotion_Dynamic &&
-		// The radius (CoM to collision point) dot'd with the gravity vector should be positive
+		// The radius (CoM to collision point) dotted with the gravity vector should be positive
 		Dot3(gravity_at_A, contact.m_pointA - objectA.Position()) > 0.0f &&
 		// And the collision normal should oppose the gravity vector
 		Dot3(gravity_at_A, contact.m_normal) < 0.0f )
@@ -194,7 +194,7 @@ void pr::ph::LookForSupports(Contact const& contact, Rigidbody& objectA, Rigidbo
 	}
 
 	if( objectB.m_motion_type == EMotion_Dynamic &&
-		// The radius (CoM to collision point) dot'd with the gravity vector should be positive
+		// The radius (CoM to collision point) dotted with the gravity vector should be positive
 		Dot3(gravity_at_B, contact.m_pointB - objectB.Position()) > 0.0f &&
 		// And the collision normal should oppose the gravity vector
 		Dot3(gravity_at_B, contact.m_normal) > 0.0f )

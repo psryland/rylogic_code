@@ -3,14 +3,12 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-#include <random>
 #include "pr/container/vector.h"
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/bbox.h"
-#include "pr/maths/rand_vector.h"
 
 namespace pr
 {

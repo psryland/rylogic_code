@@ -67,12 +67,12 @@ namespace pr
 	}
 
 	// Reverse the order of bits in 'v'
-	constexpr uint8 ReverseBits8(uint8 v)
+	constexpr uint8_t ReverseBits8(uint8_t v)
 	{
 		//if constexpr(sizeof(void*) == 8)
-			return static_cast<uint8>(((v * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32);
+			return static_cast<uint8_t>(((v * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32);
 		//else
-		//	return static_cast<uint8>(((v * 0x0802LU & 0x22110LU) | (n * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
+		//	return static_cast<uint8_t>(((v * 0x0802LU & 0x22110LU) | (n * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16);
 	}
 
 	// Reverse the order of bits in 'v'
@@ -111,11 +111,11 @@ namespace pr
 	}
 
 	// Returns a bit mask containing only the lowest bit of 'n'
-	template <typename T, typename = maths::enable_if_intg<T>> constexpr T LowBit(T n)
+	template <std::integral T> constexpr T LowBit(T n)
 	{
 		return n - ((n - 1) & n);
 	}
-	template <typename T, typename = maths::enable_if_enum<T>> constexpr T LowBit(T n, int = 0)
+	template <typename T> requires std::is_enum_v<T> constexpr T LowBit(T n, int = 0)
 	{
 		auto x = static_cast<std::underlying_type_t<T>>(n);
 		return static_cast<T>(LowBit(x));
@@ -154,7 +154,7 @@ namespace pr
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
-	template <typename T, typename = maths::enable_if_intg<T>> constexpr T HighBit(T n)
+	template <std::integral T> constexpr T HighBit(T n)
 	{
 		// Must be a faster way?
 		return T(1) << HighBitIndex(n);
@@ -169,7 +169,7 @@ namespace pr
 	}
 
 	// Return the next highest power of two greater than 'n'
-	template <typename T, typename = maths::enable_if_intg<T>> constexpr T PowerOfTwoGreaterThan(T n)
+	template <std::integral T> constexpr T PowerOfTwoGreaterThan(T n)
 	{
 		n--;
 		n |= n >> 1;
@@ -383,8 +383,8 @@ namespace pr::maths
 			PR_CHECK(PowerOfTwoGreaterThan(uint16_t(0x9a)), uint16_t(0x100));
 		}
 		{
-			auto a = uint8(0b10110101);
-			auto b = uint8(0b10101101);
+			auto a = uint8_t(0b10110101);
+			auto b = uint8_t(0b10101101);
 			auto c = ReverseBits8(a);
 			PR_CHECK(b, c);
 		}

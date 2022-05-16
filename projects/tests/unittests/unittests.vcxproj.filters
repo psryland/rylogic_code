@@ -276,12 +276,6 @@
     <ClInclude Include="..\..\..\include\pr\macros\join.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\ivector4.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\ivector2.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\gui\grid_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -735,9 +729,6 @@
     <ClInclude Include="..\..\..\include\pr\maths\perlin_noise.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\rand_vector.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\maths\large_int.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -1005,9 +996,6 @@
     <ClInclude Include="..\..\..\include\pr\meta\dep_constants.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\unit_tests.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\str\unit_tests.h">
       <Filter>pr\str</Filter>
     </ClInclude>
@@ -1022,9 +1010,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\ivector3.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

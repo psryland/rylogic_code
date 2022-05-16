@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
@@ -941,8 +940,6 @@ namespace pr
 		}
 	};
 
-	#pragma region Functions
-
 	// Return the transpose of matrix 'm'
 	template <typename Real> inline Matrix<Real> Transpose(Matrix<Real> const& m)
 	{
@@ -1132,6 +1129,222 @@ namespace pr
 		}
 	}
 	#endif
-
-	#pragma endregion
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::maths
+{
+	PRUnitTest(MatrixTests)
+	{
+		using namespace pr;
+		std::default_random_engine rng(1);
+
+		{// LU decomposition
+			auto m = MatrixLU<double>(4, 4, 
+			{
+				  1.0, +2.0,  3.0, +1.0,
+				  4.0, -5.0,  6.0, +5.0,
+				  7.0, +8.0,  9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			});
+			auto res = Matrix<double>(4, 4,
+			{
+				3.0, 0.66666666666667, 0.33333333333333, 0.33333333333333,
+				6.0, -9.0, -0.33333333333333, -0.22222222222222,
+				9.0, 2.0, -11.333333333333, -0.3921568627451,
+				12.0, 3.0, -3.0, -14.509803921569,
+			});
+			PR_CHECK(FEql(m.lu, res), true);
+		}
+		{// Invert
+			auto m = Matrix<double>(4, 4, { 1, 2, 3, 1, 4, -5, 6, 5, 7, 8, 9, -9, -10, 11, 12, 0 });
+			auto inv = Invert(m);
+			auto INV = Matrix<double>(4, 4,
+			{
+				+0.258783783783783810, -0.018918918918918920, +0.018243243243243241, -0.068918918918918923,
+				+0.414864864864864790, -0.124324324324324320, -0.022972972972972971, -0.024324324324324322,
+				-0.164639639639639650, +0.098198198198198194, +0.036261261261261266, +0.048198198198198199,
+				+0.405405405405405430, -0.027027027027027029, -0.081081081081081086, -0.027027027027027025,
+			});
+			PR_CHECK(FEql(inv, INV), true);
+		}
+		{// Invert
+			auto M = m4x4(
+				v4(1.0f, +2.0f, 3.0f, +1.0f),
+				v4(4.0f, -5.0f, 6.0f, +5.0f),
+				v4(7.0f, +8.0f, 9.0f, -9.0f),
+				v4(-10.0f, 11.0f, 12.0f, +0.0f)
+			);
+			auto INV = Invert(M);
+			auto m = Matrix<double>(4, 4,
+			{
+				1.0, +2.0, 3.0, +1.0,
+				4.0, -5.0, 6.0, +5.0,
+				7.0, +8.0, 9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			});
+			auto inv = Invert(m);
+
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(inv, INV), true);
+		}
+		{// Invert transposed
+			auto M = Transpose4x4(m4x4(
+				v4(1.0f, +2.0f, 3.0f, +1.0f),
+				v4(4.0f, -5.0f, 6.0f, +5.0f),
+				v4(7.0f, +8.0f, 9.0f, -9.0f),
+				v4(-10.0f, 11.0f, 12.0f, +0.0f)
+			));
+			auto INV = Invert(M);
+			auto m = Matrix<double>(4, 4,
+			{
+				1.0, +2.0, 3.0, +1.0,
+				4.0, -5.0, 6.0, +5.0,
+				7.0, +8.0, 9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			}, true);
+			auto inv = Invert(m);
+
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(inv, INV), true);
+		}
+		{// Compare with m4x4
+			auto M = m4x4::Random(rng, v4::Origin());
+			Matrix<float> m(M);
+
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(m(0, 3), M.x.w), true);
+			PR_CHECK(FEql(m(3, 0), M.w.x), true);
+			PR_CHECK(FEql(m(2, 2), M.z.z), true);
+
+			PR_CHECK(IsInvertible(m) == IsInvertible(M), true);
+
+			auto m1 = Invert(m);
+			auto M1 = Invert(M);
+			PR_CHECK(FEql(m1, M1), true);
+
+			auto m2 = Transpose(m);
+			auto M2 = Transpose4x4(M);
+			PR_CHECK(FEql(m2, M2), true);
+		}
+		{// Multiply
+			double data0[] = {1, 2, 3, 4, 0.1, 0.2, 0.3, 0.4, -4, -3, -2, -1};
+			double data1[] = {1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4};
+			double rdata[] = {30, 30, 30, 30, 30, 3, 3, 3, 3, 3, -20, -20, -20, -20, -20};
+			auto a2b = Matrix<double>(3, 4, data0);
+			auto b2c = Matrix<double>(4, 5, data1);
+			auto A2C = Matrix<double>(3, 5, rdata);
+			auto a2c = b2c * a2b;
+			PR_CHECK(FEql(a2c, A2C), true);
+		}
+		{// Multiply
+			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
+			
+			auto V0 = v4::Random(rng, -5, +5);
+			auto M0 = m4x4::Random(rng, -5, +5);
+			auto M1 = m4x4::Random(rng, -5, +5);
+
+			auto v0 = Matrix<float>(V0);
+			auto m0 = Matrix<float>(M0);
+			auto m1 = Matrix<float>(M1);
+
+			PR_CHECK(FEql(v0, V0), true);
+			PR_CHECK(FEql(m0, M0), true);
+			PR_CHECK(FEql(m1, M1), true);
+
+			auto V2 = M0 * V0;
+			auto v2 = m0 * v0;
+			PR_CHECK(FEql(v2, V2), true);
+
+			auto M2 = M0 * M1;
+			auto m2 = m0 * m1;
+			PR_CHECK(FEql(m2, M2), true);
+		}
+		{// Multiply round trip
+			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
+			const int SZ = 100;
+			Matrix<float> m(SZ, SZ);
+			for (int k = 0; k != 10; ++k)
+			{
+				for (int r = 0; r != m.vecs(); ++r)
+					for (int c = 0; c != m.cmps(); ++c)
+						m(r, c) = dist(rng);
+
+				if (IsInvertible(m))
+				{
+					auto m_inv = Invert(m);
+
+					auto i0 = Matrix<float>::Identity(SZ, SZ);
+					auto i1 = m * m_inv;
+					auto i2 = m_inv * m;
+
+					PR_CHECK(FEqlRelative(i0, i1, 0.0001f), true);
+					PR_CHECK(FEqlRelative(i0, i2, 0.0001f), true);
+
+					break;
+				}
+			}
+		}
+		{// Transpose
+			const int vecs = 4, cmps = 3;
+			auto m = Matrix<double>::Random(rng, vecs, cmps, -5.0, 5.0);
+			auto t = Transpose(m);
+
+			PR_CHECK(m.vecs(), vecs);
+			PR_CHECK(m.cmps(), cmps);
+			PR_CHECK(t.vecs(), cmps);
+			PR_CHECK(t.cmps(), vecs);
+
+			for (int r = 0; r != vecs; ++r)
+				for (int c = 0; c != cmps; ++c)
+					PR_CHECK(m(r, c) == t(c, r), true);
+		}
+		{// Resizing
+			auto M = Matrix<double>::Random(rng, 4, 3, -5.0, 5.0);
+			auto m = M;
+			auto t = Transpose(M);
+
+			// Resizing a normal matrix adds more vectors, and preserves data
+			PR_CHECK(m.vecs(), 4);
+			PR_CHECK(m.cmps(), 3);
+			m.resize(5);
+			PR_CHECK(m.vecs(), 5);
+			PR_CHECK(m.cmps(), 3);
+			for (int r = 0; r != m.vecs(); ++r)
+			{
+				for (int c = 0; c != m.cmps(); ++c)
+				{
+					if (r < 4 && c < 3)
+						PR_CHECK(m(r, c) == M(r, c), true);
+					else
+						PR_CHECK(m(r, c) == 0, true);
+				}
+			}
+
+			// Resizing a transposed matrix adds more transposed vectors, and preserves data 
+			PR_CHECK(t.vecs(), 3);
+			PR_CHECK(t.cmps(), 4);
+			t.resize(5);
+			PR_CHECK(t.vecs(), 5);
+			PR_CHECK(t.cmps(), 4);
+			for (int r = 0; r != t.vecs(); ++r)
+			{
+				for (int c = 0; c != t.cmps(); ++c)
+				{
+					if (r < 3 && c < 4)
+						PR_CHECK(t(r, c) == M(c, r), true);
+					else
+						PR_CHECK(t(r, c) == 0, true);
+				}
+			}
+		}
+		{// Dot Product
+			auto a = Matrix<float>(1, 3, {1.0, 2.0, 3.0});
+			auto b = Matrix<float>(1, 3, {3.0, 2.0, 1.0});
+			auto r = Dot(a, b);
+			PR_CHECK(FEql(r, 10.0f), true);
+		}
+	}
+}
+#endif

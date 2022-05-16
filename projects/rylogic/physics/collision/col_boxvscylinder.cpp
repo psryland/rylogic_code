@@ -57,7 +57,7 @@ namespace pr
 			};
 
 			// Check penetration of cylinder into a face of the box
-			bool TestBoxAxes(Overlap& data, uint i)
+			bool TestBoxAxes(Overlap& data, uint32_t i)
 			{
 				v4 sep_axis = data.m_a2w[i];
 				float depth = Dot3(sep_axis, data.m_diff);
@@ -90,8 +90,8 @@ namespace pr
 				// Otherwise find a common point on the contacting faces
 				else
 				{
-					uint j = (i + 1) % 3;
-					uint k = (i + 2) % 3;
+					uint32_t j = (i + 1) % 3;
+					uint32_t k = (i + 2) % 3;
 					v4 box_point = data.m_box_pos + sep_axis * data.m_box.m_radius[i];
 
 					// Check the centre point of the box for being within 
@@ -189,15 +189,15 @@ namespace pr
 			}
 
 			// Test the edges of the box against the wall of the cylinder
-			bool TestCylWall(Overlap& data, uint i)
+			bool TestCylWall(Overlap& data, uint32_t i)
 			{
 				v4 sep_axis = Cross3(data.m_a2w[i], data.m_cyl_axis);
 				if (FEql(sep_axis, v4Zero)) sep_axis = data.m_diff - Dot3(data.m_diff, data.m_cyl_axis) * data.m_cyl_axis;
 				if (FEql(sep_axis, v4Zero)) return true;
 				sep_axis = Normalise(sep_axis);
 
-				uint j = (i+1)%3;
-				uint k = (i+2)%3;
+				uint32_t j = (i+1)%3;
+				uint32_t k = (i+2)%3;
 
 				float depth = Dot3(sep_axis, data.m_diff);
 				if( depth < 0.0f )	sep_axis = -sep_axis;
@@ -258,10 +258,10 @@ namespace pr
 			}
 
 			// Test the edges of the box against the rims of the cylinder.
-			bool TestCylRim(Overlap& data, uint i)
+			bool TestCylRim(Overlap& data, uint32_t i)
 			{
-				uint j = (i+1)%3;
-				uint k = (i+2)%3;
+				uint32_t j = (i+1)%3;
+				uint32_t k = (i+2)%3;
 
 				v4 sep_axis = data.m_diff;
 				v4 cyl_axis = data.m_cyl_axis;
@@ -296,7 +296,7 @@ namespace pr
 				
 				// If the box edge is parallel to the main axis of the cylinder then this edge
 				// cannot penetrate the rim of the cylinder.
-				if (FEql(d_len_sq, 0))
+				if (FEql(d_len_sq, 0.f))
 					return true;
 
 				v4 nearest = p0 - (Dot3(d, p0 - cyl_point) / d_len_sq) * d;
@@ -356,7 +356,7 @@ namespace pr
 			bool Collide(Overlap& data)
 			{
 				// Test the principle axes of the box as separating axes
-				for( uint i = 0; i != 3; ++i )
+				for( uint32_t i = 0; i != 3; ++i )
 				{
 					if( !TestBoxAxes(data, i) )
 						return false;
@@ -367,14 +367,14 @@ namespace pr
 					return false;
 
 				// Test the cross products of the axes of the box with the main axis of the cylinder
-				for( uint i = 0; i != 3; ++i )
+				for( uint32_t i = 0; i != 3; ++i )
 				{
 					if( !TestCylWall(data, i) )
 						return false;
 				}
 
 				// Test the cross products of the axes of the box with the tangents to the rim of the cylinder
-				for( uint i = 0; i != 3; ++i )
+				for( uint32_t i = 0; i != 3; ++i )
 				{
 					if( !TestCylRim(data, i) )
 						return false;

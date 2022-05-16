@@ -13,7 +13,7 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct the shape
-ShapeCylinder& ShapeCylinder::set(float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeCylinder& ShapeCylinder::set(float radius, float height, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Cylinder, sizeof(ShapeCylinder), shape_to_model, material_id, flags);
 	m_radius = radius;

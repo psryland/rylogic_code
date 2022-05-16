@@ -24,7 +24,7 @@
 namespace pr::rdr
 {
 	// Instance component types
-	enum class EInstComp :pr::uint8
+	enum class EInstComp :uint8_t
 	{
 		None,                // invalid entry (used for padding)
 		ModelPtr,            // pr::rdr::ModelPtr
@@ -79,7 +79,7 @@ namespace pr::rdr
 			case EInstComp::Flags:               return sizeof(pr::rdr::EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(pr::Colour32);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
-			case EInstComp::UniqueId:            return sizeof(pr::int32);
+			case EInstComp::UniqueId:            return sizeof(int32_t);
 			case EInstComp::SSSize:              return sizeof(pr::v2);
 			default: throw std::runtime_error("Unknown instance component type");
 		}

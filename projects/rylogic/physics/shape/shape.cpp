@@ -13,7 +13,7 @@ using namespace pr::ph;
 // General shape functions *******************************************************
 
 // Constructor
-Shape& Shape::set(EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+Shape& Shape::set(EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_shape_to_model	= shape_to_model;
 	m_type				= type;

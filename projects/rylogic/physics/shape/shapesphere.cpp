@@ -13,7 +13,7 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct a shape sphere
-ShapeSphere& ShapeSphere::set(float radius, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeSphere& ShapeSphere::set(float radius, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Sphere, sizeof(ShapeSphere), shape_to_model, material_id, flags);
 	m_radius = radius;
