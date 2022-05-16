@@ -26,8 +26,8 @@ namespace pr
 			//Shape[m_num_shapes]
 
 			enum { EShapeType = EShape_Array };
-			static ShapeArray make(std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint flags) { ShapeArray a; a.set(num_shapes, size_in_bytes, shape_to_model, material_id, flags); return a; }
-			ShapeArray&       set (std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static ShapeArray make(std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { ShapeArray a; a.set(num_shapes, size_in_bytes, shape_to_model, material_id, flags); return a; }
+			ShapeArray&       set (std::size_t num_shapes, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const { return m_base; }
 			operator Shape&()             { return m_base; }
 

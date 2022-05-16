@@ -1981,7 +1981,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock(EView3DStockTexture t
 
 // Create a texture from data in memory.
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
-// of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
+// of the size appropriate for the given format. e.g. pr::uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
 VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options)
 {

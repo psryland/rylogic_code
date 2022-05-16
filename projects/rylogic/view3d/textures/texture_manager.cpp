@@ -648,7 +648,7 @@ namespace pr::rdr
 			case EStockTexture::WhiteSpot:
 			{
 				const int sz = 256;
-				std::vector<uint> data;
+				std::vector<uint32_t> data;
 				data.resize(sz * sz);
 				auto radius = sz / 2.0f;
 				for (int j = 0; j != sz; ++j)
@@ -671,7 +671,7 @@ namespace pr::rdr
 			case EStockTexture::WhiteTriangle:
 			{
 				const int sz = 64, hsz = sz / 2;
-				std::vector<uint> data;
+				std::vector<uint32_t> data;
 				data.resize(sz * sz);
 
 				// Equilateral triangle, 'pointing' up.

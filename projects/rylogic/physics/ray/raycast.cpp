@@ -437,7 +437,7 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 	}
 
 	// Clip the line segment against each face of the polytope
-	for( ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f )
+	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
 		ShapePolyFace const& face = *f;
 
@@ -446,15 +446,12 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 		auto c = shape.vertex(face.m_index[2]);
 		auto plane = plane::make(a, c, b);	// Outward facing plane
 		float t_min = result.m_t0;
-		if( !Intersect_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1) )
+		if (!Intersect_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1))
 			return false;
-		
+
 		// Record the plane normal of the last plane to clip the line
-		if( result.m_t0 > t_min )
-		{
-			result.m_normal = -plane;
-			result.m_normal.w = 0.0f;
-		}
+		if (result.m_t0 > t_min)
+			result.m_normal = -static_cast<v4>(plane.w0());
 	}
 	return true;
 }

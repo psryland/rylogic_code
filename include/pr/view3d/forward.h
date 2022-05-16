@@ -110,7 +110,7 @@ namespace pr::rdr
 {
 	using byte = unsigned char;
 	using RdrId = std::uintptr_t;
-	using SortKeyId = pr::uint16;
+	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
 	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
@@ -213,7 +213,7 @@ namespace pr::rdr
 		x(Success       ,= 0         )\
 		x(Failed        ,= 0x80000000)\
 		x(InvalidValue  ,)
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
 	#undef PR_ENUM
 
 	// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx

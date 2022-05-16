@@ -197,7 +197,7 @@ namespace pr::app
 		}
 
 		// Handle system menu keys
-		virtual void OnSysKeyDown(uint vk_key, UINT repeats, UINT flags)
+		virtual void OnSysKeyDown(uint32_t vk_key, UINT repeats, UINT flags)
 		{
 			(void)repeats,flags;
 

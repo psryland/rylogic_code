@@ -436,10 +436,10 @@ namespace pr::common
 			PR_CHECK(IsWithin(r4, 4.0f), true);
 		}
 		{ // Implicit conversion
-			Range<uint16> r0(0, 65535);
-			Range<uint> r1;
+			Range<uint16_t> r0(0, 65535);
+			Range<uint32_t> r1;
 			r1 = r0;
-			PR_CHECK(r1 == Range<uint>(0, 65535), true);
+			PR_CHECK(r1 == Range<uint32_t>(0, 65535), true);
 		}
 	}
 }

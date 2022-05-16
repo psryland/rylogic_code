@@ -54,7 +54,7 @@ namespace pr::app
 				{{ 0.0f,  0.0f, -0.1f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, v4Zero, v2Zero},
 				{{ 0.0f,  0.0f,  1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, v4Zero, v2Zero},
 			};
-			pr::uint16 const indices[] =
+			uint16_t const indices[] =
 			{
 				0, 1, 2, 3, 4, 5
 			};

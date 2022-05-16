@@ -316,9 +316,9 @@ namespace pr
 		auto c       = Dot3(line0, sep);
 
 		// Check if either or both segments are degenerate
-		if (FEql(len_sq0,0) && FEql(len_sq1,0)) { t0 = 0.0f; t1 = 0.0f; return; }
-		if (FEql(len_sq0,0))                    { t0 = 0.0f; t1 = Clamp(+f / len_sq1, 0.0f, 1.0f); return; }
-		if (FEql(len_sq1,0))                    { t1 = 0.0f; t0 = Clamp(-c / len_sq0, 0.0f, 1.0f); return; }
+		if (FEql(len_sq0,0.f) && FEql(len_sq1,0.f)) { t0 = 0.0f; t1 = 0.0f; return; }
+		if (FEql(len_sq0,0.f))                      { t0 = 0.0f; t1 = Clamp(+f / len_sq1, 0.0f, 1.0f); return; }
+		if (FEql(len_sq1,0.f))                      { t1 = 0.0f; t0 = Clamp(-c / len_sq0, 0.0f, 1.0f); return; }
 
 		// The general non-degenerate case starts here
 		auto b = Dot3(line0, line1);
@@ -383,7 +383,7 @@ namespace pr
 		auto s0_on_line1 = Dot3(separation, line1);
 
 		// Check if the segment is degenerate
-		if (FEql(line0_length_sq, 0))
+		if (FEql(line0_length_sq, 0.f))
 		{
 			t0 = 0.0f;
 			t1 = s0_on_line1 / line1_length_sq; // t0 = 0 => t1 = (b*t0 + f) / line1_length_sq = f / line1_length_sq

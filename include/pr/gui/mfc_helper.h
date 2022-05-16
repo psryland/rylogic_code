@@ -54,7 +54,7 @@ namespace pr
 			const char* start = name_string;
 			const char* end	  = strstr(start, ",");
 
-			uint sm = 0, num_submenus = GetMenuItemCount(menu);
+			uint32_t sm = 0, num_submenus = GetMenuItemCount(menu);
 			while( sm < num_submenus )
 			{
 				// Get the name of the sub menu	

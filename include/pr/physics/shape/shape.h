@@ -61,16 +61,16 @@ namespace pr
 			std::size_t m_size;
 
 			// The physics material that this shape is made out of
-			uint m_material_id;
+			uint32_t m_material_id;
 
 			// Flags for the shape. Bitwise OR of EShapeFlags
-			uint m_flags;
+			uint32_t m_flags;
 
 			// A bounding box for the shape (and its children if it's a composite shape)
 			BBox m_bbox;
 
-			static Shape make(EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint flags) { Shape s; s.set(type, size, shape_to_model, material_id, flags); return s; }
-			Shape&		 set (EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static Shape make(EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { Shape s; s.set(type, size, shape_to_model, material_id, flags); return s; }
+			Shape&		 set (EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 		};
 
 		// Mass properties for an object

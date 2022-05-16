@@ -10,8 +10,6 @@
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/vector8.h"
-#include "pr/maths/ivector2.h"
-#include "pr/maths/ivector4.h"
 #include "pr/maths/matrix2x2.h"
 #include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
@@ -20,6 +18,8 @@
 
 namespace pr
 {
+	// Deprecated - Use VecN::Zero() ...
+
 	constexpr v2 v2Zero    = v2{0.0f, 0.0f};
 	constexpr v2 v2Half    = v2{0.5f, 0.5f};
 	constexpr v2 v2One     = v2{1.0f, 1.0f};
@@ -90,17 +90,26 @@ namespace pr
 
 	constexpr iv2 iv2Zero    = iv2{0, 0};
 	constexpr iv2 iv2One     = iv2{1, 1};
-	constexpr iv2 iv2Min     = iv2{+maths::int_min, +maths::int_min};
-	constexpr iv2 iv2Max     = iv2{+maths::int_max, +maths::int_max};
-	constexpr iv2 iv2Lowest  = iv2{-maths::int_max, -maths::int_max};
+	constexpr iv2 iv2Min     = iv2{+maths::int32_min, +maths::int32_min};
+	constexpr iv2 iv2Max     = iv2{+maths::int32_max, +maths::int32_max};
+	constexpr iv2 iv2Lowest  = iv2{-maths::int32_max, -maths::int32_max};
 	constexpr iv2 iv2XAxis   = iv2{1, 0};
 	constexpr iv2 iv2YAxis   = iv2{0, 1};
 
+	constexpr iv3 iv3Zero    = iv3{0, 0, 0};
+	constexpr iv3 iv3One     = iv3{1, 1, 1};
+	constexpr iv3 iv3Min     = iv3{+maths::int32_min, +maths::int32_min, +maths::int32_min};
+	constexpr iv3 iv3Max     = iv3{+maths::int32_max, +maths::int32_max, +maths::int32_max};
+	constexpr iv3 iv3Lowest  = iv3{-maths::int32_max, -maths::int32_max, -maths::int32_max};
+	constexpr iv3 iv3XAxis   = iv3{1, 0, 0};
+	constexpr iv3 iv3YAxis   = iv3{0, 1, 0};
+	constexpr iv3 iv3ZAxis   = iv3{0, 0, 1};
+
 	constexpr iv4 iv4Zero   = iv4{0, 0, 0, 0};
 	constexpr iv4 iv4One    = iv4{1, 1, 1, 1};
-	constexpr iv4 iv4Min    = iv4{+maths::int_min, +maths::int_min, +maths::int_min, +maths::int_min};
-	constexpr iv4 iv4Max    = iv4{+maths::int_max, +maths::int_max, +maths::int_max, +maths::int_max};
-	constexpr iv4 iv4Lowest = iv4{-maths::int_max, -maths::int_max, -maths::int_max, -maths::int_max};
+	constexpr iv4 iv4Min    = iv4{+maths::int32_min, +maths::int32_min, +maths::int32_min, +maths::int32_min};
+	constexpr iv4 iv4Max    = iv4{+maths::int32_max, +maths::int32_max, +maths::int32_max, +maths::int32_max};
+	constexpr iv4 iv4Lowest = iv4{-maths::int32_max, -maths::int32_max, -maths::int32_max, -maths::int32_max};
 	constexpr iv4 iv4XAxis  = iv4{1, 0, 0, 0};
 	constexpr iv4 iv4YAxis  = iv4{0, 1, 0, 0};
 	constexpr iv4 iv4ZAxis  = iv4{0, 0, 1, 0};

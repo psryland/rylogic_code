@@ -33,12 +33,12 @@ namespace pr::physics
 		v4 m_os_com;
 
 		// World space spatial momentum, measured at the model origin (not CoM)
-		v8f m_ws_momentum;
+		v8force m_ws_momentum;
 
 		// The external forces and torques applied to this body (in world space), measured at the model origin (not CoM).
 		// This value is an accumulator and is reset to zero after each physics step so forces that should
 		// be constant need to be applied each frame.
-		v8f m_ws_force;
+		v8force m_ws_force;
 
 		// Inertia, measured at the model origin (not CoM). Currently this is just simple 3x3 inertia. Articulated bodies will need 6x6 inertia.
 		InertiaInv m_os_inertia_inv;
@@ -214,21 +214,21 @@ namespace pr::physics
 		}
 
 		// Get/Set the velocity
-		v8m VelocityWS() const
+		v8motion VelocityWS() const
 		{
 			auto ws_velocity = InertiaInvWS() * MomentumWS();
 			return ws_velocity;
 		}
-		v8m VelocityOS() const
+		v8motion VelocityOS() const
 		{
 			return W2O().rot * VelocityWS();
 		}
-		void VelocityWS(v8m const& ws_velocity)
+		void VelocityWS(v8motion const& ws_velocity)
 		{
 			auto ws_momentum = InertiaWS() * ws_velocity;
 			MomentumWS(ws_momentum);
 		}
-		void VelocityOS(v8m const& os_velocity)
+		void VelocityOS(v8motion const& os_velocity)
 		{
 			auto ws_velocity = O2W().rot * os_velocity;
 			VelocityWS(ws_velocity);
@@ -236,7 +236,7 @@ namespace pr::physics
 		void VelocityWS(v4_cref<> ws_ang, v4_cref<> ws_lin, v4_cref<> ws_at = v4{})
 		{
 			// 'ws_ang' and 'ws_lin' are model origin relative
-			auto spatial_velocity = v8m{ws_ang, ws_lin};
+			auto spatial_velocity = v8motion{ws_ang, ws_lin};
 			spatial_velocity = Shift(spatial_velocity, CentreOfMassWS() - ws_at);
 			VelocityWS(spatial_velocity);
 		}
@@ -249,19 +249,19 @@ namespace pr::physics
 		}
 
 		// Get/Set the momentum of the rigid body
-		v8f MomentumWS() const
+		v8force MomentumWS() const
 		{
 			return m_ws_momentum;
 		}
-		v8f MomentumOS() const
+		v8force MomentumOS() const
 		{
 			return W2O().rot * MomentumWS();
 		}
-		void MomentumWS(v8f const& ws_momentum)
+		void MomentumWS(v8force const& ws_momentum)
 		{
 			m_ws_momentum = ws_momentum;
 		}
-		void MomentumOS(v8f const& os_momentum)
+		void MomentumOS(v8force const& os_momentum)
 		{
 			auto ws_momentum = O2W().rot * os_momentum;
 			MomentumWS(ws_momentum);
@@ -270,19 +270,19 @@ namespace pr::physics
 		// Reset the state of the body
 		void ZeroForces()
 		{
-			m_ws_force = v8f{};
+			m_ws_force = v8force{};
 		}
 		void ZeroMomentum()
 		{
-			m_ws_momentum = v8f{};
+			m_ws_momentum = v8force{};
 		}
 
 		// Get/Set the current forces applied to this body.
-		v8f ForceWS() const
+		v8force ForceWS() const
 		{
 			return m_ws_force;
 		}
-		v8f ForceOS() const
+		v8force ForceOS() const
 		{
 			return W2O().rot * ForceWS();
 		}
@@ -291,11 +291,11 @@ namespace pr::physics
 		void ApplyForceWS(v4_cref<> ws_force, v4_cref<> ws_torque, v4_cref<> ws_at = v4Zero)
 		{
 			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
-			auto spatial_force = v8f{ws_torque, ws_force};
+			auto spatial_force = v8force{ws_torque, ws_force};
 			spatial_force = Shift(spatial_force, CentreOfMassWS() - ws_at);
 			ApplyForceWS(spatial_force);
 		}
-		void ApplyForceWS(v8f const& ws_force)
+		void ApplyForceWS(v8force const& ws_force)
 		{
 			m_ws_force += ws_force;
 		}
@@ -310,7 +310,7 @@ namespace pr::physics
 			auto ws_at     = o2w * os_at;
 			ApplyForceWS(ws_force, ws_torque, ws_at);
 		}
-		void ApplyForceOS(v8f const& os_force)
+		void ApplyForceOS(v8force const& os_force)
 		{
 			auto ws_force = O2W().rot * os_force;
 			ApplyForceWS(ws_force);
@@ -372,8 +372,8 @@ namespace pr::physics
 			// Check force applied
 			auto ws_force = rb.ForceWS();
 			auto os_force = rb.ForceOS();
-			PR_CHECK(FEql(ws_force, v8f{0,0,0, 1,0,0}), true);
-			PR_CHECK(FEql(os_force, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(ws_force, v8force{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8force{0,0,0, 1,0,0}), true);
 
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);
@@ -381,21 +381,21 @@ namespace pr::physics
 			// Check position
 			// Distance travelled: S = So + Vot + 0.5At²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
 			auto o2w = rb.O2W();
-			PR_CHECK(FEql(o2w.rot, m3x4Identity), true);
+			PR_CHECK(FEql(o2w.rot, m3x4::Identity()), true);
 			PR_CHECK(FEql(o2w.pos, v4{0.5f / mass,0,0,1}), true);
 
 			// Check the momentum
 			auto ws_mom = rb.MomentumWS();
 			auto os_mom = rb.MomentumOS();
-			PR_CHECK(FEql(ws_mom, v8f{0,0,0, 1,0,0}), true);
-			PR_CHECK(FEql(os_mom, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(ws_mom, v8force{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_mom, v8force{0,0,0, 1,0,0}), true);
 
 			// Check the velocity
 			// Velocity: V = Vo + At; Vo = 0, t = 1, A = F/m, F = 1  =>  V = 1/mass
 			auto ws_vel = rb.VelocityWS();
 			auto os_vel = rb.VelocityOS();
-			PR_CHECK(FEql(ws_vel, v8m{0,0,0, 1/mass,0,0}), true);
-			PR_CHECK(FEql(os_vel, v8m{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(ws_vel, v8motion{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(os_vel, v8motion{0,0,0, 1/mass,0,0}), true);
 		}
 		{// Simple case with rotation
 			auto rb = RigidBody{};
@@ -407,8 +407,8 @@ namespace pr::physics
 			// Check force applied
 			auto ws_force = rb.ForceWS();
 			auto os_force = rb.ForceOS();
-			PR_CHECK(FEql(ws_force, v8f{0,0,2, 1,0,0}), true);
-			PR_CHECK(FEql(os_force, v8f{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(ws_force, v8force{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8force{0,0,2, 1,0,0}), true);
 
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);
@@ -426,7 +426,7 @@ namespace pr::physics
 			// Check the momentum
 			auto ws_mom = rb.MomentumWS();
 			auto os_mom = rb.MomentumOS();
-			auto WS_MOM = v8f{0,0,2, 1,0,0};
+			auto WS_MOM = v8force{0,0,2, 1,0,0};
 			auto OS_MOM = invrot * WS_MOM;
 			PR_CHECK(FEql(ws_mom, WS_MOM), true);
 			PR_CHECK(FEql(os_mom, OS_MOM), true);
@@ -436,7 +436,7 @@ namespace pr::physics
 			// Rotation: W = Wo + At; Wo = 0, t = 1, A = I^T, T = 2  =>  W = I^(0,0,2)
 			auto ws_vel = rb.VelocityWS();
 			auto os_vel = rb.VelocityOS();
-			auto WS_VEL = v8m{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
+			auto WS_VEL = v8motion{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
 			auto OS_VEL = invrot * WS_VEL;
 			PR_CHECK(FEql(ws_vel, WS_VEL), true);
 			PR_CHECK(FEql(os_vel, OS_VEL), true);
@@ -454,8 +454,8 @@ namespace pr::physics
 			// Spatial force measured at the model origin
 			auto ws_force = rb.ForceWS();
 			auto os_force = rb.ForceOS();
-			PR_CHECK(FEql(ws_force, v8f{0,0,0, 1,0,0}), true);
-			PR_CHECK(FEql(os_force, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(ws_force, v8force{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8force{0,0,0, 1,0,0}), true);
 
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);
@@ -468,14 +468,14 @@ namespace pr::physics
 			// Check the momentum
 			auto ws_mom = rb.MomentumWS();
 			auto os_mom = rb.MomentumOS();
-			PR_CHECK(FEql(ws_mom, v8f{0,0,0, 1,0,0}), true);
-			PR_CHECK(FEql(os_mom, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(ws_mom, v8force{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_mom, v8force{0,0,0, 1,0,0}), true);
 
 			// Check the velocity
 			auto ws_vel = rb.VelocityWS();
 			auto os_vel = rb.VelocityOS();
-			PR_CHECK(FEql(ws_vel, v8m{0,0,0, 1/mass,0,0}), true);
-			PR_CHECK(FEql(os_vel, v8m{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(ws_vel, v8motion{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(os_vel, v8motion{0,0,0, 1/mass,0,0}), true);
 		}
 		{// Off-centre CoM with rotation
 			auto rb = RigidBody{};
@@ -489,8 +489,8 @@ namespace pr::physics
 			// Spatial force measured at the model origin
 			auto ws_force = rb.ForceWS();
 			auto os_force = rb.ForceOS();
-			PR_CHECK(FEql(ws_force, v8f{0,0,2, 1,0,0}), true);
-			PR_CHECK(FEql(os_force, v8f{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(ws_force, v8force{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8force{0,0,2, 1,0,0}), true);
 
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);
@@ -506,7 +506,7 @@ namespace pr::physics
 			// Check the momentum
 			auto ws_mom = rb.MomentumWS();
 			auto os_mom = rb.MomentumOS();
-			auto WS_MOM = v8f{0,0,2, 1,0,0};
+			auto WS_MOM = v8force{0,0,2, 1,0,0};
 			auto OS_MOM = invrot * WS_MOM;
 			PR_CHECK(FEql(ws_mom, WS_MOM), true);
 			PR_CHECK(FEql(os_mom, OS_MOM), true);
@@ -514,7 +514,7 @@ namespace pr::physics
 			// Check the velocity
 			auto ws_vel = rb.VelocityWS();
 			auto os_vel = rb.VelocityOS();
-			auto WS_VEL = v8m{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
+			auto WS_VEL = v8motion{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
 			auto OS_VEL = invrot * WS_VEL;
 			PR_CHECK(FEql(ws_vel, WS_VEL), true);
 			PR_CHECK(FEql(os_vel, OS_VEL), true);
@@ -532,8 +532,8 @@ namespace pr::physics
 			// Spatial force measured at the model origin
 			auto ws_force = rb.ForceWS();
 			auto os_force = rb.ForceOS();
-			PR_CHECK(FEql(ws_force, v8f{0,-1,-1, 1,-1,0}), true);
-			PR_CHECK(FEql(os_force, v8f{0,-1,-1, 1,-1,0}), true);
+			PR_CHECK(FEql(ws_force, v8force{0,-1,-1, 1,-1,0}), true);
+			PR_CHECK(FEql(os_force, v8force{0,-1,-1, 1,-1,0}), true);
 
 			// Expected position - the inertia changes with orientation
 			// so predicting the orientation after the step is hard...
@@ -556,7 +556,7 @@ namespace pr::physics
 			auto rb = RigidBody{};
 			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
 			
-			auto vel = v8m{0,0,1, 0,1,0};
+			auto vel = v8motion{0,0,1, 0,1,0};
 			rb.VelocityWS(vel);
 
 			auto o2w0 = rb.O2W();
@@ -581,8 +581,8 @@ namespace pr::physics
 			// KE should be the same no matter what frame it's measured in
 			auto rb = RigidBody{};
 			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
-			rb.MomentumWS(v8f{0,0,1, 0,1,0});
-			rb.O2W(Random4x4(rng, v4Origin, 5.0f));
+			rb.MomentumWS(v8force{0,0,1, 0,1,0});
+			rb.O2W(m4x4::Random(rng, v4::Origin(), 5.0f));
 
 			auto ws_ke = 0.5f * Dot(rb.VelocityWS(), rb.MomentumWS());
 			auto os_ke = 0.5f * Dot(rb.VelocityOS(), rb.MomentumOS());

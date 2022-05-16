@@ -62,7 +62,7 @@ namespace view3d
 		pr::ldr::LdrObject* ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes);
 
 		// Create an object from geometry
-		pr::ldr::LdrObject* ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, pr::uint16 const* indices, View3DNugget const* nuggets, pr::Guid const& context_id);
+		pr::ldr::LdrObject* ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, uint16_t const* indices, View3DNugget const* nuggets, pr::Guid const& context_id);
 
 		// Reload file sources
 		void ReloadScriptSources();

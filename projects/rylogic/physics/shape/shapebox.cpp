@@ -13,7 +13,7 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct a shape box
-ShapeBox& ShapeBox::set(const v4& dim, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeBox& ShapeBox::set(const v4& dim, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Box, sizeof(ShapeBox), shape_to_model, material_id, flags);
 	m_radius = dim / 2.0f;

@@ -13,7 +13,7 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct a shape triangle
-ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint flags)
+ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, a.w == 0.0f && b.w == 0.0f && c.w == 0.0f, "");
 	m_base.set(EShape_Triangle, sizeof(ShapeTriangle), shape_to_model, material_id, flags);

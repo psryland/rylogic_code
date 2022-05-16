@@ -69,7 +69,7 @@ namespace pr::app
 		x(StartupFailed     ,             )\
 		x(SettingsNotFound  ,             )\
 		x(SettingsOutOfDate ,             )
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
 	#undef PR_ENUM
 
 	using Renderer = pr::rdr::Renderer;

@@ -13,7 +13,7 @@ namespace pr
 {
 	namespace ph
 	{
-		typedef uint8 PolyIdx;
+		typedef uint8_t PolyIdx;
 
 		struct ShapePolyFace
 		{
@@ -22,8 +22,8 @@ namespace pr
 		};
 		struct ShapePolyNbrs
 		{
-			uint16 m_first;		// Byte offset to the first neighbour
-			uint16 m_count;		// Number of neighbours
+			uint16_t m_first;		// Byte offset to the first neighbour
+			uint16_t m_count;		// Number of neighbours
 
 			PolyIdx const* begin() const              { return reinterpret_cast<PolyIdx const*>(this) + m_first; }
 			PolyIdx*       begin()                    { return reinterpret_cast<PolyIdx*      >(this) + m_first; }
@@ -37,8 +37,8 @@ namespace pr
 		struct ShapePolytope
 		{
 			Shape	m_base;
-			uint	m_vert_count;
-			uint	m_face_count;
+			uint32_t	m_vert_count;
+			uint32_t	m_face_count;
 			//v4			m_vert[m_vert_count];
 			//ShapePolyFace m_face[m_face_count];
 			//ShapePolyNbrs m_nbrs[m_vert_count];
@@ -69,8 +69,8 @@ namespace pr
 			ShapePolyNbrs const&	nbr(std::size_t idx) const			{ return nbr_begin()[idx]; }
 			ShapePolyNbrs&			nbr(std::size_t idx)				{ return nbr_begin()[idx]; }
 
-			static ShapePolytope	make(std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint flags) { ShapePolytope p; p.set(vert_count, face_count, size_in_bytes, shape_to_model, material_id, flags); return p; }
-			ShapePolytope&			set (std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint flags);
+			static ShapePolytope	make(std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags) { ShapePolytope p; p.set(vert_count, face_count, size_in_bytes, shape_to_model, material_id, flags); return p; }
+			ShapePolytope&			set (std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, const m4x4& shape_to_model, MaterialId material_id, uint32_t flags);
 			operator Shape const&() const	{ return m_base; }
 			operator Shape& ()				{ return m_base; }
 		};
@@ -87,12 +87,12 @@ namespace pr
 		MassProperties& CalcMassProperties	(ShapePolytope const& shape, float density, MassProperties& mp);
 		v4				SupportVertex		(ShapePolytope const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);
 		void			GetAxis				(ShapePolytope const& shape, v4& direction, std::size_t hint_vertex_id, std::size_t& vert_id0, std::size_t& vert_id1, bool major);
-		uint			VertCount			(ShapePolytope const& shape);
-		uint			EdgeCount			(ShapePolytope const& shape);
-		uint			FaceCount			(ShapePolytope const& shape);
+		uint32_t			VertCount			(ShapePolytope const& shape);
+		uint32_t			EdgeCount			(ShapePolytope const& shape);
+		uint32_t			FaceCount			(ShapePolytope const& shape);
 		void			GenerateVerts		(ShapePolytope const& shape, v4* verts, v4* verts_end);
 		void			GenerateEdges		(ShapePolytope const& shape, v4* edges, v4* edges_end);
-		void			GenerateFaces		(ShapePolytope const& shape, uint* faces, uint* faces_end);
+		void			GenerateFaces		(ShapePolytope const& shape, uint32_t* faces, uint32_t* faces_end);
 		void			StripFaces			(ShapePolytope& shape);
 		bool			Validate			(ShapePolytope const& shape, bool check_com);
 	}

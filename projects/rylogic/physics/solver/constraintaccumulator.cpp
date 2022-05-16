@@ -60,8 +60,8 @@ void ConstraintAccumulator::SetBufferSize(std::size_t constraint_buffer_size_in_
 	if( constraint_buffer_size_in_bytes > 0 )
 	{
 		m_num_sets = 0;
-		uint estimated_num_pairs = static_cast<uint>(1 + constraint_buffer_size_in_bytes / (sizeof(ConstraintBlock) + sizeof(Constraint)));
-		m_buffer	= static_cast<uint8*>			(m_Allocate(constraint_buffer_size_in_bytes, std::alignment_of<ConstraintBlock>::value));
+		uint32_t estimated_num_pairs = static_cast<uint32_t>(1 + constraint_buffer_size_in_bytes / (sizeof(ConstraintBlock) + sizeof(Constraint)));
+		m_buffer	= static_cast<uint8_t*>			(m_Allocate(constraint_buffer_size_in_bytes, std::alignment_of<ConstraintBlock>::value));
 		m_pairs		= static_cast<ConstraintBlock**>(m_Allocate(estimated_num_pairs * sizeof(ConstraintBlock*), std::alignment_of<ConstraintBlock*>::value));
 		m_buffer_end = m_buffer + constraint_buffer_size_in_bytes;
 		m_buffer_ptr = m_buffer;
@@ -77,9 +77,9 @@ void ConstraintAccumulator::BeginFrame(float elapsed_seconds)
 }
 
 // Allocates a constraint block from the buffer to be filled in. Handles constraint sets.
-ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigidbody& rbB, uint num_constraints)
+ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigidbody& rbB, uint32_t num_constraints)
 {
-	uint bytes_needed = sizeof(ConstraintBlock) + num_constraints * sizeof(Constraint);
+	uint32_t bytes_needed = sizeof(ConstraintBlock) + num_constraints * sizeof(Constraint);
 
 	// If the constraint buffer is full, solve now.
 	// We'll end up with overlap errors because of this but it's better than
@@ -95,8 +95,8 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 	// Record a pointer to this pair
 	m_pairs[m_num_pairs++] = &pair;
 
-	// See if either of the rigidbodies already belong to a constraint set
-	uint8 set_id = pr::Min(m_map[rbA.m_constraint_set], m_map[rbB.m_constraint_set]);
+	// See if either of the rigid bodies already belong to a constraint set
+	uint8_t set_id = pr::Min(m_map[rbA.m_constraint_set], m_map[rbB.m_constraint_set]);
 	if( set_id == NoConstraintSet )
 	{
 		// If there are too many constraint sets then solve the sets we have
@@ -118,7 +118,7 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 	// Initialise the pair
 	pair.m_objA = &rbA;
 	pair.m_objB = &rbB;
-	pair.m_num_constraints = s_cast<uint16>(num_constraints);
+	pair.m_num_constraints = s_cast<uint16_t>(num_constraints);
 	//pair.m_constraint_set = NoConstraintSet;
 	pair.pad = 0;
 	PR_EXPAND(PR_DBG_PHYSICS, pair.m_constraints = &pair[0]);
@@ -126,7 +126,7 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 }
 
 // Sets the material properties to use for the collision
-void ConstraintAccumulator::SetMaterialProperties(Constraint& cons, uint mat_idA, uint mat_idB) const
+void ConstraintAccumulator::SetMaterialProperties(Constraint& cons, uint32_t mat_idA, uint32_t mat_idB) const
 {
 	ph::Material const& materialA = ph::GetMaterial(mat_idA);
 	ph::Material const& materialB = ph::GetMaterial(mat_idB);
@@ -195,7 +195,7 @@ void ConstraintAccumulator::AddContact(Rigidbody& rbA, Rigidbody& rbB, ContactMa
 	//	pair.m_objB->SetAngMomentum(v4Zero);
 
 	// Fill out the constraints for the pair
-	for( uint i = 0, j = 0; i != manifold.Size(); ++i )
+	for( uint32_t i = 0, j = 0; i != manifold.Size(); ++i )
 	{
 		Contact const& contact	= manifold[i];
 		Constraint& cons		= pair[j++];
@@ -234,12 +234,12 @@ void ConstraintAccumulator::AddContact(Rigidbody& rbA, Rigidbody& rbB, ContactMa
 // Predicate for sorting ConstraintBlocks, sorts by set id first, then grav potential.
 struct Pred_PairPtr
 {
-	uint8 const* m_map;
-	Pred_PairPtr(uint8 const* map) : m_map(map) {}
+	uint8_t const* m_map;
+	Pred_PairPtr(uint8_t const* map) : m_map(map) {}
 	bool operator()(ConstraintBlock const* lhs, ConstraintBlock const* rhs) const
 	{
-		uint8 const& Lset = m_map[lhs->m_constraint_set];
-		uint8 const& Rset = m_map[rhs->m_constraint_set];
+		uint8_t const& Rset = m_map[rhs->m_constraint_set];
+		uint8_t const& Lset = m_map[lhs->m_constraint_set];
 		if( Lset != Rset ) return Lset < Rset;
 		return lhs->m_grav_potential < rhs->m_grav_potential;
 	}
@@ -401,14 +401,14 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 	PR_EXPAND(PR_DBG_COLLISION, std::string str);
 
 	// Calculate the desired relative velocities.
-	uint solve = CalculateDesiredVelocities(pair, shock_propagation);
+	uint32_t solve = CalculateDesiredVelocities(pair, shock_propagation);
 	if( solve == pair.m_num_constraints )
 		return; // Nothing needs solving
 
 	// Adjust the mass matrices for shock propagation
 	if( shock_propagation )
 	{
-		for( uint c = 0; c != pair.m_num_constraints; ++c )
+		for( uint32_t c = 0; c != pair.m_num_constraints; ++c )
 		{
 			Constraint& cons = pair[c];
 			if( cons.m_shock_propagation_mask != 3 )
@@ -445,8 +445,8 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 		// Find the next constraint to solve
 		static float error_tolerance_sq = 0.00001f;
 		float max_error_sq = error_tolerance_sq;
-		uint  next_to_solve = pair.m_num_constraints;
-		for (uint c = 0; c != pair.m_num_constraints; ++c)
+		uint32_t  next_to_solve = pair.m_num_constraints;
+		for (uint32_t c = 0; c != pair.m_num_constraints; ++c)
 		{
 			// Can skip the constraint we've just solved because its error will be zero.
 			if (c == solve)
@@ -471,16 +471,16 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 // Find the isolated desired relative velocities for each constraint.
 // Returns the index of the constraint that is most violated or 'num_constraints'
 // if all constraints are satisfied.
-uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bool shock_propagation) const
+uint32_t ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bool shock_propagation) const
 {
 	PR_EXPAND(PR_DBG_COLLISION, std::string str);
 
-	uint first_to_solve = pair.m_num_constraints;
+	uint32_t first_to_solve = pair.m_num_constraints;
 	float max_error_sq = maths::tinyf;
 
 	// Calculate the desired final relative velocities for each constraint
 	// before we start applying impulses
-	for( uint c = 0; c != pair.m_num_constraints; ++c )
+	for( uint32_t c = 0; c != pair.m_num_constraints; ++c )
 	{
 		Constraint& cons = pair[c];
 

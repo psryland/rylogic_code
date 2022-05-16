@@ -952,7 +952,7 @@ namespace pr::script
 					Vector3(centre, 1.0f);
 					Real(radius);
 					SectionEnd();
-					p2w = Random4x4(g_rng(), centre, radius) * p2w;
+					p2w = m4x4::Random(g_rng(), centre, radius) * p2w;
 					continue;
 				}
 				if (kw == RandPos)
@@ -963,13 +963,12 @@ namespace pr::script
 					Vector3(centre, 1.0f);
 					Real(radius);
 					SectionEnd();
-					p2w = m4x4::Translation(Random3(g_rng(), centre, radius, 1.0f)) * p2w;
+					p2w = m4x4::Translation(v4::Random(g_rng(), centre, radius, 1)) * p2w;
 					continue;
 				}
 				if (kw == RandOri)
 				{
-					m4x4 m = m4x4Identity;
-					m.rot = Random3x4(g_rng());
+					auto m = m4x4(m3x4::Random(g_rng()), v4::Origin());
 					p2w = m * p2w;
 					continue;
 				}

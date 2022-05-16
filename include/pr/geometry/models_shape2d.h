@@ -98,7 +98,7 @@ namespace pr::geometry
 		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Tex coords
-		auto tr0 = FEql(radius1,0) ? 0.0f : radius0 / radius1;
+		auto tr0 = FEql(radius1, 0.f) ? 0.0f : radius0 / radius1;
 		auto tr1 = 1.0f;
 
 		// Set Verts

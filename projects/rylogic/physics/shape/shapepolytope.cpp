@@ -15,11 +15,11 @@ using namespace pr;
 using namespace pr::ph;
 
 // Construct the shape
-ShapePolytope& ShapePolytope::set(std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, m4x4 const& shape_to_model, MaterialId material_id, uint flags)
+ShapePolytope& ShapePolytope::set(std::size_t vert_count, std::size_t face_count, std::size_t size_in_bytes, m4x4 const& shape_to_model, MaterialId material_id, uint32_t flags)
 {
 	m_base.set(EShape_Polytope, size_in_bytes, shape_to_model, material_id, flags);
-	m_vert_count = static_cast<uint>(vert_count);
-	m_face_count = static_cast<uint>(face_count);
+	m_vert_count = static_cast<uint32_t>(vert_count);
+	m_face_count = static_cast<uint32_t>(face_count);
 	CalcBBox(*this, m_base.m_bbox);
 	return *this;
 }
@@ -178,7 +178,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 	{
 		nearest_vertex = support_vertex;
 		ShapePolyNbrs const& nbrhdr = shape.nbr(sup_vert_id);
-		for( uint8 const *n = nbrhdr.begin() + !use_first_nbr, *n_end = nbrhdr.end(); n != n_end; ++n )
+		for( uint8_t const *n = nbrhdr.begin() + !use_first_nbr, *n_end = nbrhdr.end(); n != n_end; ++n )
 		{
 			// There are two possible ways we can do this, either by moving to the
 			// first neighbour that is more extreme or by testing all neighbours.
@@ -259,7 +259,7 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 
 		// Look for a neighbour with a longer span
 		ShapePolyNbrs const& nbr = shape.nbr(vert_id0);
-		for( uint8 const *n = nbr.begin() + 1, *n_end = nbr.end(); n < n_end; ++n )
+		for( uint8_t const *n = nbr.begin() + 1, *n_end = nbr.end(); n < n_end; ++n )
 		{
 			v4 const* v1 = &shape.vertex(*n);
 			v4 const* v2 = &shape.vertex(*shape.nbr(*n).begin());
@@ -279,24 +279,24 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 }
 
 // Return the number of vertices in a polytope
-uint pr::ph::VertCount(ShapePolytope const& shape)
+uint32_t pr::ph::VertCount(ShapePolytope const& shape)
 {
 	return shape.m_vert_count;
 }
 
 // Return the number of edges in a polytope
-uint pr::ph::EdgeCount(ShapePolytope const& shape)
+uint32_t pr::ph::EdgeCount(ShapePolytope const& shape)
 {
 	// The number of edges in the polytope is the number of
 	// neighbours minus the artificial neighbours over 2.
-	uint nbr_count = 0;
+	uint32_t nbr_count = 0;
 	for( ShapePolyNbrs const* n = shape.nbr_begin(), *n_end = shape.nbr_end(); n != n_end; ++n )
 		nbr_count += n->m_count;
 	return (nbr_count - shape.m_vert_count) / 2;
 }
 
 // Return the number of faces in a polytope
-uint pr::ph::FaceCount(ShapePolytope const& shape)
+uint32_t pr::ph::FaceCount(ShapePolytope const& shape)
 {
 	// Use Euler's formula: F - E + V = 2. => F = 2 + E - V
 	return 2 + EdgeCount(shape) - shape.m_vert_count;
@@ -306,7 +306,7 @@ uint pr::ph::FaceCount(ShapePolytope const& shape)
 // a length equal to the value returned from 'VertCount'
 void pr::ph::GenerateVerts(ShapePolytope const& shape, v4* verts, v4* verts_end)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, uint(verts_end - verts) >= VertCount(shape), "Vert buffer too small"); (void)verts_end;
+	PR_ASSERT(PR_DBG_PHYSICS, uint32_t(verts_end - verts) >= VertCount(shape), "Vert buffer too small"); (void)verts_end;
 	memcpy(verts, shape.vert_begin(), sizeof(v4) * shape.m_vert_count);
 }
 
@@ -314,10 +314,10 @@ void pr::ph::GenerateVerts(ShapePolytope const& shape, v4* verts, v4* verts_end)
 // point to a buffer of 2*the number of edges returned from 'EdgeCount'
 void pr::ph::GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, uint(edges_end - edges) >= 2 * EdgeCount(shape), "Edge buffer too small");
+	PR_ASSERT(PR_DBG_PHYSICS, uint32_t(edges_end - edges) >= 2 * EdgeCount(shape), "Edge buffer too small");
 
-	uint vert_index = 0;
-	uint nbr_index = 1;
+	uint32_t vert_index = 0;
+	uint32_t nbr_index = 1;
 
 	ShapePolyNbrs const* nbrs = &shape.nbr(vert_index);
 	while( vert_index < shape.m_vert_count && edges + 2 <= edges_end )
@@ -346,21 +346,21 @@ void pr::ph::GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
 
 namespace
 {
-	struct Edge	{ uint m_i0, m_i1; };
+	struct Edge	{ uint32_t m_i0, m_i1; };
 	inline bool operator == (Edge const& lhs, Edge const& rhs) { return (lhs.m_i0 == rhs.m_i0 && lhs.m_i1 == rhs.m_i1) || (lhs.m_i0 == rhs.m_i1 && lhs.m_i1 == rhs.m_i0); }
 }//namespace polytope
 
 // Generate faces for a polytope from the verts and their neighbours.
-void pr::ph::GenerateFaces(ShapePolytope const& shape, uint* faces, uint* faces_end)
+void pr::ph::GenerateFaces(ShapePolytope const& shape, uint32_t* faces, uint32_t* faces_end)
 {
 	// Helper object to fill the remaining faces with degenerates.
 	// Since the verts of the polytope may not all be on the convex hull we may
 	// generate less faces than 'faces_end - faces'
 	struct FillRemaining
 	{
-		uint *&m_faces, *m_faces_end;
+		uint32_t *&m_faces, *m_faces_end;
 		FillRemaining& operator = (FillRemaining const&) {return *this;}// no copying
-		FillRemaining(uint*& faces, uint* faces_end) : m_faces(faces), m_faces_end(faces_end)
+		FillRemaining(uint32_t*& faces, uint32_t* faces_end) : m_faces(faces), m_faces_end(faces_end)
 		{
 			if( m_faces != m_faces_end )
 				*m_faces = 0;
@@ -373,28 +373,28 @@ void pr::ph::GenerateFaces(ShapePolytope const& shape, uint* faces, uint* faces_
 	} fill_remaining(faces, faces_end);
 
 	// Record the start address
-	uint* faces_start = faces;
+	uint32_t* faces_start = faces;
 
-	// Create the starting faces and handle cases for polys with less than 3 verts
-	for( uint i = 0; i != 3; ++i )
+	// Create the starting faces and handle cases for polygons with less than 3 verts
+	for( uint32_t i = 0; i != 3; ++i )
 	{
 		if( faces == faces_end || i == shape.m_vert_count ) return;
 		*faces++ = i;
 	}
-	for( uint i = 3; i-- != 0; )
+	for( uint32_t i = 3; i-- != 0; )
 	{
 		if( faces == faces_end ) return;
 		*faces++ = i;
 	}
 
-	uint const edge_stack_size = 50;
+	uint32_t const edge_stack_size = 50;
 	pr::Stack<Edge, edge_stack_size> edges;
 
 	// Generate the convex hull
-	for( uint i = 3; i != shape.m_vert_count; ++i )
+	for( uint32_t i = 3; i != shape.m_vert_count; ++i )
 	{
 		v4 const& v = shape.vertex(i);
-		for( uint* f = faces_start, *f_end = faces; f != f_end; f += 3 )
+		for( uint32_t* f = faces_start, *f_end = faces; f != f_end; f += 3 )
 		{
 			v4 const& a = shape.vertex(*(f + 0));
 			v4 const& b = shape.vertex(*(f + 1));
@@ -405,7 +405,7 @@ void pr::ph::GenerateFaces(ShapePolytope const& shape, uint* faces, uint* faces_
 			{
 				// Add the edges of this face to the edge stack (remove duplicates)
 				Edge ed = {*(f + 2), *(f + 0)};
-				for( uint j = 0; j != 3; ++j, ed.m_i0 = ed.m_i1, ed.m_i1 = *(f + j) )
+				for( uint32_t j = 0; j != 3; ++j, ed.m_i0 = ed.m_i1, ed.m_i1 = *(f + j) )
 				{
 					// Look for this edge in the stack
 					Edge* e = edges.begin();
@@ -447,9 +447,9 @@ void pr::ph::StripFaces(ShapePolytope& shape)
 	if( shape.m_face_count == 0 )
 		return;
 
-	uint8* base = reinterpret_cast<uint8*>(&shape);
-	uint8* src  = reinterpret_cast<uint8*>(&shape.nbr(0));
-	uint8* dst  = reinterpret_cast<uint8*>( shape.face_begin());
+	uint8_t* base = reinterpret_cast<uint8_t*>(&shape);
+	uint8_t* src  = reinterpret_cast<uint8_t*>(&shape.nbr(0));
+	uint8_t* dst  = reinterpret_cast<uint8_t*>( shape.face_begin());
 	std::size_t size = shape.m_base.m_size;
 
 	std::size_t bytes_to_move = size - (src - base);
@@ -466,13 +466,13 @@ bool pr::ph::Validate(ShapePolytope const& shape, bool check_com)
 {
 	shape;check_com;
 	#if PR_DBG_PHYSICS
-	uint num_real_nbrs = 0;
-	for( uint i = 0; i != shape.m_vert_count; ++i )
+	uint32_t num_real_nbrs = 0;
+	for( uint32_t i = 0; i != shape.m_vert_count; ++i )
 	{
 		// Check the neighbours of each vertex.
 		ShapePolyNbrs const& nbrs = shape.nbr(i);
 
-		// All polytope verts should have an artifical neighbour plus >0 real neighbours
+		// All polytope verts should have an artificial neighbour plus >0 real neighbours
 		PR_ASSERT(PR_DBG_PHYSICS, nbrs.m_count > 1, "");
 
 		// Count the number of real neighbours in the polytope
@@ -494,7 +494,7 @@ bool pr::ph::Validate(ShapePolytope const& shape, bool check_com)
 			{	found = *k == i; }
 			PR_ASSERT(PR_DBG_PHYSICS, found, "");
 
-			// Check that all neighbours (apart from the artifical neighbour) are unique
+			// Check that all neighbours (apart from the artificial neighbour) are unique
 			if( j != nbrs.begin() )
 			{
 				for( PolyIdx const* k = j + 1; k != nbrs.end(); ++k )
