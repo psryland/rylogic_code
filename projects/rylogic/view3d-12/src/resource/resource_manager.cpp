@@ -607,7 +607,7 @@ namespace pr::rdr12
 			constexpr auto dx = maths::root3_by_2f / 2.0f;
 			constexpr auto dy = 0.75f;
 			constexpr auto s = 1.0f / sz;
-			std::vector<uint> data(sz * sz);
+			std::vector<uint32_t> data(sz * sz);
 			for (int j = 0; j * 4 <= sz * 3; ++j)
 			{
 				auto y = j * s; // [0, 0.75]

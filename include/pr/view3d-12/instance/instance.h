@@ -81,7 +81,7 @@ namespace pr::rdr12
 			case EInstComp::Flags:               return sizeof(EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(Colour32);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
-			case EInstComp::UniqueId:            return sizeof(int32);
+			case EInstComp::UniqueId:            return sizeof(int32_t);
 			case EInstComp::SSSize:              return sizeof(v2);
 			case EInstComp::Float1:              return sizeof(float);
 			case EInstComp::Float2:              return sizeof(v2);
