@@ -55,7 +55,7 @@ namespace LDraw
 				throw new IOException($"The user data directory ('{UserDataDir}') is readonly.");
 
 			// If a settings path has not been given, use the defaults
-			SettingsPath ??= Path_.CombinePath(UserDataDir, "settings2.xml");
+			SettingsPath ??= Path_.CombinePath(UserDataDir, "settings.xml");
 		}
 
 		/// <summary>The filepath to a file given on the command line</summary>

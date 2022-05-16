@@ -331,23 +331,29 @@ namespace pr::unittests
 		return wcscmp(lhs, rhs) == 0;
 	}
 }
-	
+
 // This macro creates a class using the unit test name, followed by a method that is the body of the test case
-#define PRUnitTest(testname)\
+#define PRUnitTest(testname, ...)\
 	TEST_CLASS(testname)\
 	{\
 	public:\
+		inline static std::filesystem::path const temp_dir = pr::unittests::TestFramework::CreateTempDir(L#testname);\
 		TEST_METHOD(UnitTest) { func(); }\
 		static void func()\
 		{\
 			std::filesystem::remove_all(temp_dir);\
 			std::filesystem::create_directories(temp_dir);\
-			test<void>();\
+			tests<##__VA_ARGS__>();\
 		}\
-		inline static std::filesystem::path const temp_dir = pr::unittests::TestFramework::CreateTempDir(L#testname);\
+		template <typename T = void, typename... Args> static void tests()\
+		{\
+			test<T>();\
+			if constexpr (sizeof...(Args) > 0)\
+				tests<Args...>();\
+		}\
 		template <typename T> static void test();\
 	};\
-	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, testname::func));\
+	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, &testname::func));\
 	template <typename T> void testname::test()
 
 #define PR_FAIL(msg)\

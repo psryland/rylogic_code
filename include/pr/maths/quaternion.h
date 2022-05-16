@@ -98,18 +98,13 @@ namespace pr
 		// Create a quaternion from Euler angles. Order is roll, pitch, yaw
 		Quatf(float pitch, float yaw, float roll)
 		{
-			#if PR_MATHS_USE_DIRECTMATH
-			vec = DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll);
-			#else
-			// nicked from 'XMQuaternionRotationRollPitchYaw'
-			float cos_p = pr::Cos(pitch * 0.5f), sin_p = pr::Sin(pitch * 0.5f);
-			float cos_y = pr::Cos(yaw   * 0.5f), sin_y = pr::Sin(yaw   * 0.5f);
-			float cos_r = pr::Cos(roll  * 0.5f), sin_r = pr::Sin(roll  * 0.5f);
+			float cos_p = Cos(pitch * 0.5f), sin_p = Sin(pitch * 0.5f);
+			float cos_y = Cos(yaw   * 0.5f), sin_y = Sin(yaw   * 0.5f);
+			float cos_r = Cos(roll  * 0.5f), sin_r = Sin(roll  * 0.5f);
 			x = sin_p * cos_y * cos_r + cos_p * sin_y * sin_r;
 			y = cos_p * sin_y * cos_r - sin_p * cos_y * sin_r;
 			z = cos_p * cos_y * sin_r - sin_p * sin_y * cos_r;
 			w = cos_p * cos_y * cos_r + sin_p * sin_y * sin_r;
-			#endif
 		}
 
 		// Create a quaternion from a rotation matrix
@@ -152,11 +147,7 @@ namespace pr
 
 		// Create a quaternion from a rotation matrix
 		explicit Quatf(m4_cref<A,B> m)
-			#if PR_MATHS_USE_DIRECTMATH
-			:vec(DirectX::XMQuaternionRotationMatrix(m))
-			#else
 			:Quatf(m.rot)
-			#endif
 		{}
 
 		// Construct a quaternion from two vectors representing start and end orientations
@@ -467,17 +458,6 @@ namespace pr::maths
 	{
 		std::default_random_engine rng(1U);
 
-		{ // Create
-			#if PR_MATHS_USE_INTRINSICS && PR_MATHS_USE_DIRECTMATH
-			auto p = DegreesToRadians(43.0f);
-			auto y = DegreesToRadians(10.0f);
-			auto r = DegreesToRadians(-245.0f);
-
-			auto q0 = quat(p, y, r);
-			quat q1(DirectX::XMQuaternionRotationRollPitchYaw(p, y, r));
-			PR_CHECK(FEql(q0, q1), true);
-			#endif
-		}
 		{ // Create from m3x4
 			std::uniform_real_distribution<float> rng_angle(-maths::tauf, +maths::tauf);
 			for (int i = 0; i != 100; ++i)

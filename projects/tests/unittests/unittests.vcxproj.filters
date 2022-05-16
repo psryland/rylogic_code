@@ -276,12 +276,6 @@
     <ClInclude Include="..\..\..\include\pr\macros\join.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector4i.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector2i.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\gui\grid_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -1016,9 +1010,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector3i.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

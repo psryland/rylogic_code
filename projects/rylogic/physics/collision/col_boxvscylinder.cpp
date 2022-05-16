@@ -296,7 +296,7 @@ namespace pr
 				
 				// If the box edge is parallel to the main axis of the cylinder then this edge
 				// cannot penetrate the rim of the cylinder.
-				if (FEql(d_len_sq, 0))
+				if (FEql(d_len_sq, 0.f))
 					return true;
 
 				v4 nearest = p0 - (Dot3(d, p0 - cyl_point) / d_len_sq) * d;
