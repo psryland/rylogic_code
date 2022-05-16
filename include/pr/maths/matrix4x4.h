@@ -779,8 +779,8 @@ namespace pr::maths
 			
 			m1.x.x = m1.y.y = 1.0e-5f;
 			m2.x.x = m2.y.y = 1.1e-5f;
-			PR_CHECK(FEql(MaxComponent(m1), 1), true);
-			PR_CHECK(FEql(MaxComponent(m2), 1), true);
+			PR_CHECK(FEql(MaxComponent(m1), 1.f), true);
+			PR_CHECK(FEql(MaxComponent(m2), 1.f), true);
 			PR_CHECK(FEql(m1,m2), true);
 			
 			m1.z.z = m1.w.w = 1.0e-5f;

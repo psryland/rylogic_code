@@ -148,7 +148,7 @@ namespace pr::collision
 		volume *= 4.0f;
 
 		// If the polytope is degenerate, use the weighted average vertex positions
-		if (FEql(volume, 0))
+		if (FEql(volume, 0.f))
 		{
 			com = v4Zero;
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) com += *v;

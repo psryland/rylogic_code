@@ -310,19 +310,19 @@ namespace pr::physics
 
 			// Check 'mass * 1'
 			auto m = inertia.m11.x.x;
-			if (!FEql(inertia.m11.y.y - m, 0) ||
-				!FEql(inertia.m11.z.z - m, 0))
+			if (!FEql(inertia.m11.y.y - m, 0.f) ||
+				!FEql(inertia.m11.z.z - m, 0.f))
 				return assert(false),false;
 
 			// Check 'mass * cx'
 			auto mcx = inertia.m01;
-			if (!FEql(Trace(mcx), 0) ||
+			if (!FEql(Trace(mcx), 0.f) ||
 				!IsAntiSymmetric(mcx))
 				return assert(false),false;
 
 			// Check 'mass * cxT'
 			auto mcxT = inertia.m10;
-			if (!FEql(Trace(mcxT), 0) ||
+			if (!FEql(Trace(mcxT), 0.f) ||
 				!IsAntiSymmetric(mcxT))
 				return assert(false),false;
 
@@ -629,13 +629,13 @@ namespace pr::physics
 
 			// Check 'Ic¯ * cxT'
 			auto cxT = Invert(Ic¯) * inertia_inv.m01;
-			if (!FEql(Trace(cxT), 0) ||
+			if (!FEql(Trace(cxT), 0.f) ||
 				!IsAntiSymmetric(cxT))
 				return assert(false),false;
 
 			// Check 'cx * Ic¯'
 			auto cx = inertia_inv.m10 * Invert(Ic¯);
-			if (!FEql(Trace(cx), 0) ||
+			if (!FEql(Trace(cx), 0.f) ||
 				!IsAntiSymmetric(cx))
 				return assert(false),false;
 
@@ -645,8 +645,8 @@ namespace pr::physics
 
 			// Check '1/m'
 			auto im = inertia_inv.m11 + cx * Ic¯ * cx;
-			if (!FEql(im.y.y - im.x.x, 0) ||
-				!FEql(im.z.z - im.x.x, 0))
+			if (!FEql(im.y.y - im.x.x, 0.f) ||
+				!FEql(im.z.z - im.x.x, 0.f))
 				return assert(false),false;
 
 			return true;

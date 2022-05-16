@@ -86,8 +86,10 @@ namespace pr
 }
 namespace pr::maths
 {
-	// "Tiny"
+	// "Tiny" - not defined for integral types.
 	template <typename T> constexpr T tiny;
+	template <> constexpr double tiny<double const> = constants<double>::tiny;
+	template <> constexpr float tiny<float const> = constants<float>::tiny;
 	template <> constexpr double tiny<double> = constants<double>::tiny;
 	template <> constexpr float tiny<float> = constants<float>::tiny;
 

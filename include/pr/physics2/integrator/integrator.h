@@ -120,7 +120,7 @@ namespace pr::physics
 
 		// Initial KE should be zero
 		auto ke0 = rb.KineticEnergy();
-		PR_CHECK(FEql(ke0, 0), true);
+		PR_CHECK(FEql(ke0, 0.f), true);
 		
 		// Get it moving by applying forces/torques
 		auto dke = KineticEnergyChange(force, rb.MomentumWS(), rb.InertiaInvWS(), 1.0f);
@@ -163,7 +163,7 @@ namespace pr::physics
 		PR_CHECK(FEql(ke0, ke4), true);
 
 		// KE back to zero
-		PR_CHECK(FEql(ke0, 0), true);
+		PR_CHECK(FEql(ke0, 0.f), true);
 	}
 }
 #endif

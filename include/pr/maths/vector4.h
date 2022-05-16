@@ -272,7 +272,7 @@ namespace pr
 			}
 			else if constexpr (IntrinsicD)
 			{
-				return Vec4{_mm256_mul_pd(lhs.vec, _mm256_set_pd1(rhs))};
+				return Vec4{_mm256_mul_pd(lhs.vec, _mm256_set1_pd(rhs))};
 			}
 			else
 			{
@@ -288,7 +288,7 @@ namespace pr
 			}
 			else if constexpr (IntrinsicD)
 			{
-				return Vec4{_mm256_div_ps(lhs.vec, _mm256_set_ps1(rhs))};
+				return Vec4{_mm256_div_pd(lhs.vec, _mm256_set1_pd(rhs))};
 			}
 			else
 			{
@@ -315,7 +315,7 @@ namespace pr
 			}
 			else if constexpr (IntrinsicD)
 			{
-				return Vec4{_mm256_div_pd(_mm_set_pd1(lhs), rhs.vec)};
+				return Vec4{_mm256_div_pd(_mm256_set1_pd(lhs), rhs.vec)};
 			}
 			else
 			{
@@ -414,7 +414,7 @@ namespace pr
 			}
 			else if constexpr (IntrinsicD)
 			{
-				return _mm256_movemask_pd(_mm256_cmpeq_pd(lhs.vec, rhs.vec)) == 0xF;
+				return _mm256_movemask_pd(_mm256_cmp_pd(lhs.vec, rhs.vec, _CMP_EQ_OQ)) == 0xF;
 			}
 			else
 			{
@@ -469,19 +469,20 @@ namespace pr
 		{
 			return Vec4{lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z, lhs.w && rhs.w};
 		}
-
 		#pragma endregion
 	};
 	#define PR_VEC4_CHECKS(scalar)\
-	static_assert(sizeof(Vec4<scalar, void>) == 4 * sizeof(scalar), "Vector<"#scalar"> has the wrong size");\
+	static_assert(sizeof(Vec4<scalar, void>) == 4 * sizeof(scalar), "Vec4<"#scalar"> has the wrong size");\
 	static_assert(maths::Vector4<Vec4<scalar, void>>, "Vector<"#scalar" is not a Vector4");\
 	static_assert(std::is_trivially_copyable_v<Vec4<scalar, void>>, "Must be a pod type");\
-	static_assert(std::alignment_of_v<Vec4<scalar, void>> == 4 * sizeof(scalar), "Vector<"#scalar" is not aligned correctly");
+	static_assert(std::alignment_of_v<Vec4<scalar, void>> == 4 * sizeof(scalar), "Vec4<"#scalar"> is not aligned correctly");
 	PR_VEC4_CHECKS(float);
 	PR_VEC4_CHECKS(double);
 	PR_VEC4_CHECKS(int32_t);
 	PR_VEC4_CHECKS(int64_t);
 	#undef PR_VEC4_CHECKS
+	
+	//template <int S> class C; C<alignof(Vec4<double,void>)> c;
 
 	// Implementation from Vec3
 	template <typename Scalar, typename T> Vec4<Scalar, T> Vec3<Scalar, T>::w0() const
@@ -496,6 +497,8 @@ namespace pr
 	// V4 FEql
 	template <typename Scalar, typename T> inline bool pr_vectorcall FEqlAbsolute(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b, Scalar tol)
 	{
+		static_assert(std::floating_point<Scalar>, "FEql is only defined for floating point vectors");
+
 		// abs(a - b) < tol
 		if constexpr (Vec4<Scalar, T>::IntrinsicF)
 		{
@@ -515,10 +518,12 @@ namespace pr
 	}
 	template <typename Scalar, typename T> inline bool pr_vectorcall FEqlRelative(Vec4_cref<Scalar, T> a, Vec4_cref<Scalar, T> b, Scalar tol)
 	{
+		static_assert(std::floating_point<Scalar>, "FEql is only defined for floating point vectors");
+
 		// Handles tests against zero where relative error is meaningless
 		// Tests with 'b == 0' are the most common so do them first
-		if (b == v4{}) return MaxComponentAbs(a) < tol;
-		if (a == v4{}) return MaxComponentAbs(b) < tol;
+		if (b == Vec4<Scalar, T>{}) return MaxComponentAbs(a) < tol;
+		if (a == Vec4<Scalar, T>{}) return MaxComponentAbs(b) < tol;
 
 		// Handle infinities and exact values
 		if (a == b) return true;
@@ -713,7 +718,7 @@ namespace pr
 		}
 
 		// If 'previous' is still perpendicular, reuse it
-		if (FEql(Dot3(vec, previous), 0))
+		if (FEql(Dot3(vec, previous), 0.f))
 		{
 			return previous;
 		}
@@ -785,191 +790,219 @@ namespace pr::maths
 	{
 		using Scalar = T;
 		using vec4_t = Vec4<Scalar, void>;
+		using vec3_t = Vec3<Scalar, void>;
+		using len_t = decltype(Sqrt(Scalar{}));
 
 		{// Operators
-			auto a = vec4_t{1, 2, 3, 4};
-			auto b = v4{-4, -3, -2, -1};
+			auto a = vec4_t{10, 20, 30, 40};
+			auto b = vec4_t{-40, -30, -20, -10};
 
-			PR_CHECK(a + b, v4{-3, -1, +1, +3});
-			PR_CHECK(a - b, v4{+5, +5, +5, +5});
-			PR_CHECK(3 * a, v4{+3, +6, +9, +12});
-			PR_CHECK(a % 2, v4{+1, +0, +1, +0});
-			PR_CHECK(a/2.0f, v4{1.0f/2.0f, 2.0f/2.0f, 3.0f/2.0f, 4.0f/2.0f});
-			PR_CHECK(1.0f/a, v4{1.0f/1.0f, 1.0f/2.0f, 1.0f/3.0f, 1.0f/4.0f});
+			PR_CHECK(a + b, vec4_t{-30, -10, +10, +30});
+			PR_CHECK(a - b, vec4_t{+50, +50, +50, +50});
+			PR_CHECK(a * 3, vec4_t{+30, +60, +90, +120});
+			PR_CHECK(3 * a, vec4_t{+30, +60, +90, +120});
+			PR_CHECK(a / 2, vec4_t{5, 10, 15, 20});
+			PR_CHECK(a % 20, vec4_t{+10, +0, +10, +0});
+			PR_CHECK(120 / a, vec4_t{12, 6, 4, 3});
 
-			auto arr0 = v4(+1, -2, +3, -4);
-			auto arr1 = v4(-1, +2, -3, +4);
+			auto arr0 = vec4_t(+1, -2, +3, -4);
+			auto arr1 = vec4_t(-1, +2, -3, +4);
 			PR_CHECK((arr0 == arr1) == !(arr0 != arr1), true);
 			PR_CHECK((arr0 != arr1) == !(arr0 == arr1), true);
 			PR_CHECK((arr0 < arr1) == !(arr0 >= arr1), true);
 			PR_CHECK((arr0 > arr1) == !(arr0 <= arr1), true);
 			PR_CHECK((arr0 <= arr1) == !(arr0 > arr1), true);
 			PR_CHECK((arr0 >= arr1) == !(arr0 < arr1), true);
-
-			auto arr2 = v4(+3, +4, +5, +6);
-			auto arr3 = v4(+1, +2, +3, +4);
-			PR_CHECK(FEql(arr2 + arr3, v4(4, 6, 8, 10)), true);
-			PR_CHECK(FEql(arr2 - arr3, v4(2, 2, 2, 2)), true);
-			PR_CHECK(FEql(arr2 * 2.0f, v4(6, 8, 10, 12)), true);
-			PR_CHECK(FEql(2.0f * arr2, v4(6, 8, 10, 12)), true);
-			PR_CHECK(FEql(arr2 / 2.0f, v4(1.5f, 2, 2.5f, 3)), true);
-			PR_CHECK(FEql(arr2 % 3.0f, v4(0, 1, 2, 0)), true);
 		}
 		{// Largest/Smallest element
-			auto v1 = v4{1,-2,-3,4};
-			PR_CHECK(MinComponent(v1) == -3, true);
-			PR_CHECK(MaxComponent(v1) == +4, true);
+			auto v1 = vec4_t{1,-2,-3,4};
+			PR_CHECK(MinComponent(v1) == Scalar(-3), true);
+			PR_CHECK(MaxComponent(v1) == Scalar(+4), true);
 			PR_CHECK(MinElementIndex(v1) == 2, true);
 			PR_CHECK(MaxElementIndex(v1) == 3, true);
 		}
 		{// FEql
-			auto a = v4{0, 0, -1, 0.5f};
-			auto b = v4{0, 0, -1, 0.5f};
-			
 			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
-			a.x = a.y = 1.0e-5f;
-			b.x = b.y = 1.1e-5f;
-			PR_CHECK(FEql(MinComponent(a), -1.0f), true);
-			PR_CHECK(FEql(MinComponent(b), -1.0f), true);
-			PR_CHECK(FEql(MaxComponent(a), +0.5f), true);
-			PR_CHECK(FEql(MaxComponent(b), +0.5f), true);
-			PR_CHECK(FEql(a,b), true);
-			
-			a.z = a.w = 1.0e-5f;
-			b.z = b.w = 1.1e-5f;
-			PR_CHECK(FEql(MaxComponent(a), 1.0e-5f), true);
-			PR_CHECK(FEql(MaxComponent(b), 1.1e-5f), true);
-			PR_CHECK(FEql(a,b), false);
-		}
-		{// FEql
-			v4 a(1,1,-1,-1);
-			auto t2 = maths::tiny<float> * 2.0f;
-			PR_CHECK(FEql(a, v4(1   ,1,-1,-1)), true);
-			PR_CHECK(FEql(a, v4(1+t2,1,-1,-1)), false);
-			PR_CHECK(FEql(v4(1e-20f,0,0,1).xyz, v3::Zero()), true);
-			PR_CHECK(FEql(v4(1e-20f,0,0,1e-19f), v4::Zero()), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				auto a = vec4_t{Scalar(-2),0,0,0};
+				auto b = vec4_t{Scalar(-2),0,0,maths::tiny<Scalar>};
+				PR_CHECK(FEql(MinComponent(a), Scalar(-2)), true);
+				PR_CHECK(FEql(MinComponent(b), Scalar(-2)), true);
+				PR_CHECK(FEql(MaxComponent(a), Scalar(0)), true);
+				PR_CHECK(FEql(MaxComponent(b), maths::tiny<Scalar>), true);
+				PR_CHECK(FEql(a, b), true);
+			}
+
+			// Not equal if the relative difference is less than tiny compared to the maximum element in the matrix.
+			if constexpr (std::floating_point<Scalar>)
+			{
+				auto a = vec4_t{Scalar(-0.5), 0, 0, 0};
+				auto b = vec4_t{Scalar(-0.5), 0, 0, maths::tiny<Scalar>};
+				PR_CHECK(FEql(MinComponent(a), Scalar(-0.5)), true);
+				PR_CHECK(FEql(MinComponent(b), Scalar(-0.5)), true);
+				PR_CHECK(FEql(MaxComponent(a), Scalar(0)), true);
+				PR_CHECK(FEql(MaxComponent(b), maths::tiny<Scalar>), true);
+				PR_CHECK(FEql(a, b), false);
+			}
+			if constexpr (std::floating_point<Scalar>)
+			{
+				vec4_t a(1, 1, -1, -1);
+				auto t2 = Scalar(maths::tiny<Scalar> *2);
+				auto ht = Scalar(maths::tiny<Scalar> *0.5);
+				PR_CHECK(FEql(a, vec4_t(1, 1, -1, -1)), true);
+				PR_CHECK(FEql(a, vec4_t(1 + t2, 1, -1, -1)), false);
+				PR_CHECK(FEql(vec4_t(ht, 0, 0, 1).xyz, vec3_t::Zero()), true);
+				PR_CHECK(FEql(vec4_t(ht, 0, 0, ht), vec4_t::Zero()), true);
+			}
 		}
 		{// Abs
-			v4 arr0 = {+1, -2, +3, -4};
-			v4 arr1 = {-1, +2, -3, +4};
-			v4 arr2 = {+1, +2, +3, +4};
+			vec4_t arr0 = {+1, -2, +3, -4};
+			vec4_t arr1 = {-1, +2, -3, +4};
+			vec4_t arr2 = {+1, +2, +3, +4};
 			PR_CHECK(Abs(arr0) == Abs(arr1), true);
 			PR_CHECK(Abs(arr0) == Abs(arr2), true);
 			PR_CHECK(Abs(arr1) == Abs(arr2), true);
 		}
 		{// Finite
-			volatile auto f0 = 0.0f;
-			
-			v4 arr0(0.0f, 1.0f, 10.0f, 1.0f);
-			v4 arr1(0.0f, 1.0f, 1.0f / f0, 0.0f / f0);
-			PR_CHECK(IsFinite(arr0), true);
-			PR_CHECK(!IsFinite(arr1), true);
-			PR_CHECK(!All(arr0, [](float x) { return x < 5.0f; }), true);
-			PR_CHECK(Any(arr0, [](float x) { return x < 5.0f; }), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				volatile auto f0 = Scalar(0);
+				vec4_t arr0(0, 1, 10, 1);
+				vec4_t arr1(0, 1, 1 / f0, 0 / f0);
+				PR_CHECK(IsFinite(arr0), true);
+				PR_CHECK(!IsFinite(arr1), true);
+				PR_CHECK(!All(arr0, [](Scalar x) { return x < Scalar(5.0); }), true);
+				PR_CHECK(Any(arr0, [](Scalar x) { return x < Scalar(5.0); }), true);
+			}
 		}
 		{// Min/Max/Clamp
-			v4 a(3,-1,2,-4);
-			v4 b = {-2,-1,4,2};
-			PR_CHECK(Max(a,b), v4(3,-1,4,2));
-			PR_CHECK(Min(a,b), v4(-2,-1,2,-4));
+			vec4_t a(3,-1,2,-4);
+			vec4_t b = {-2,-1,4,2};
+			PR_CHECK(Max(a,b), vec4_t(3,-1,4,2));
+			PR_CHECK(Min(a,b), vec4_t(-2,-1,2,-4));
 
-			auto arr0 = v4(+1, -2, +3, -4);
-			auto arr1 = v4(-1, +2, -3, +4);
-			auto arr2 = v4(+0, +0, +0, +0);
-			auto arr3 = v4(+2, +2, +2, +2);
-			PR_CHECK(Min(arr0, arr1, arr2, arr3) == v4(-1, -2, -3, -4), true);
-			PR_CHECK(Max(arr0, arr1, arr2, arr3) == v4(+2, +2, +3, +4), true);
-			PR_CHECK(Clamp(arr0, arr2, arr3) == v4(+1, +0, +2, +0), true);
+			auto arr0 = vec4_t(+1, -2, +3, -4);
+			auto arr1 = vec4_t(-1, +2, -3, +4);
+			auto arr2 = vec4_t(+0, +0, +0, +0);
+			auto arr3 = vec4_t(+2, +2, +2, +2);
+			PR_CHECK(Min(arr0, arr1, arr2, arr3) == vec4_t(-1, -2, -3, -4), true);
+			PR_CHECK(Max(arr0, arr1, arr2, arr3) == vec4_t(+2, +2, +3, +4), true);
+			PR_CHECK(Clamp(arr0, arr2, arr3) == vec4_t(+1, +0, +2, +0), true);
 		}
 		{// Min/Max component
-			v4 a(3,-1,2,-4);
-			PR_CHECK(MinComponent(a), -4.0f);
-			PR_CHECK(MaxComponent(a), 3.0f);
+			vec4_t a(3,-1,2,-4);
+			PR_CHECK(MinComponent(a), Scalar(-4));
+			PR_CHECK(MaxComponent(a), Scalar(+3));
 		}
 		{// Truncate
-			v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
-			v4 arr1 = {+1.0f, -1.0f, +2.0f, -2.0f};
-			v4 arr2 = {+1.0f, -1.0f, +3.0f, -3.0f};
-			v4 arr3 = {+0.1f, -0.2f, +0.8f, -0.9f};
-
-			PR_CHECK(Trunc(1.9f) == 1.0f, true);
-			PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
-			PR_CHECK(Trunc(arr0, ETruncType::TowardZero) == arr1, true);
-			PR_CHECK(Trunc(arr0, ETruncType::ToNearest) == arr2, true);
-			PR_CHECK(FEql(Frac(arr0), arr3), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				vec4_t arr0 = {Scalar(+1.1), Scalar(-1.2), Scalar(+2.8), Scalar(-2.9)};
+				vec4_t arr1 = {Scalar(+1.0), Scalar(-1.0), Scalar(+2.0), Scalar(-2.0)};
+				vec4_t arr2 = {Scalar(+1.0), Scalar(-1.0), Scalar(+3.0), Scalar(-3.0)};
+				vec4_t arr3 = {Scalar(+0.1), Scalar(-0.2), Scalar(+0.8), Scalar(-0.9)};
+				PR_CHECK(Trunc(arr0, ETruncType::TowardZero) == arr1, true);
+				PR_CHECK(Trunc(arr0, ETruncType::ToNearest) == arr2, true);
+				PR_CHECK(FEql(Frac(arr0), arr3), true);
+			}
 		}
 		{// Length
-			v4 a(3,-1,2,-4);
-			PR_CHECK(LengthSq(a), a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w);
-			PR_CHECK(Length(a), sqrt(LengthSq(a)));
+			vec4_t a(3,-1,2,-4);
+			PR_CHECK(LengthSq(a), Scalar(a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w));
+			PR_CHECK(Length(a), len_t(Sqrt(LengthSq(a))));
 
-			auto b = v4(3, 4, 5, 6);
-			PR_CHECK(FEql(Length(b.xy), 5.0f), true);
-			PR_CHECK(FEql(Length(b.xyz), 7.0710678f), true);
-			PR_CHECK(FEql(Length(b), 9.2736185f), true);
+			auto b = vec4_t(3, 4, 5, 6);
+			PR_CHECK(FEql(Length(b.xy), len_t(5.0)), true);
+			PR_CHECK(FEql(Length(b.xyz), len_t(10.0/maths::root2)), true);
+			PR_CHECK(FEql(Length(b), len_t(9.273618495495704)), true);
 		}
 		{// Normalise
-			v4 a(3,-1,2,-4);
-			v4 b = Normalise(a.w0());
-			v4 c = Normalise(a);
-			PR_CHECK(Length(b), 1.0f);
-			PR_CHECK(Length(c), 1.0f);
-			PR_CHECK(IsNormal(a), false);
-			PR_CHECK(IsNormal(b), true);
-			PR_CHECK(IsNormal(c), true);
-		
-			auto arr0 = v4(1, 2, 3, 4);
-			PR_CHECK(FEql(Normalise(v4::Zero(), arr0), arr0), true);
-			PR_CHECK(FEql(Normalise(arr0), v4(0.1825742f, 0.3651484f, 0.5477226f, 0.7302967f)), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				vec4_t a(3, -1, 2, -4);
+				vec4_t b = Normalise(a.w0());
+				vec4_t c = Normalise(a);
+				PR_CHECK(FEql(Length(b), len_t(1.0)), true);
+				PR_CHECK(FEql(Length(c), len_t(1.0)), true);
+				PR_CHECK(IsNormal(a), false);
+				PR_CHECK(IsNormal(b), true);
+				PR_CHECK(IsNormal(c), true);
+
+				auto arr0 = vec4_t(1, 2, 3, 4);
+				auto len0 = Sqrt(Scalar(1*1 + 2*2 + 3*3 + 4*4));
+				PR_CHECK(FEql(Normalise(vec4_t::Zero(), arr0), arr0), true);
+				PR_CHECK(FEql(Normalise(arr0), arr0/len0), true);
+			}
 		}
-		{
-			v4 a = {-2,  4,  2,  6};
-			v4 b = { 3, -5,  2, -4};
-			PR_CHECK(Dot4(a,b), -46);
-			PR_CHECK(Dot3(a,b), -22);
+		{// Dot
+			vec4_t a = {-2,  4,  2,  6};
+			vec4_t b = { 3, -5,  2, -4};
+			PR_CHECK(Dot4(a,b), Scalar(-46));
+			PR_CHECK(Dot3(a,b), Scalar(-22));
 		}
 		{ // ComponentSum
-			v4 a = {1, 2, 3, 4};
-			PR_CHECK(ComponentSum(a), 1+2+3+4);
+			vec4_t a = {1, 2, 3, 4};
+			PR_CHECK(ComponentSum(a), Scalar(1+2+3+4));
 		}
 		{ // Alignment
 			char c0;
-			v4 const pt0[] =
+			vec4_t const pt0[] =
 			{
-				v4(1,2,3,4),
-				v4(5,6,7,8),
+				{1, 2, 3, 4},
+				{5, 6, 7, 8},
 			};
 			char c1;
-			v4 const pt1[] =
+			vec4_t const pt1[] =
 			{
-				v4(1,2,3,4),
-				v4(5,6,7,8),
+				{1, 2, 3, 4},
+				{5, 6, 7, 8},
 			};
 			(void)c0,c1;
 			PR_CHECK(maths::is_aligned(&pt0[0]), true);
 			PR_CHECK(maths::is_aligned(&pt1[0]), true);
 		}
 		{// Linear interpolate
-			v4 arr0(1, 10, 100, 1000);
-			v4 arr1(2, 20, 200, 2000);
-			PR_CHECK(FEql(Lerp(arr0, arr1, 0.7f), v4(1.7f, 17, 170, 1700)), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				vec4_t arr0(1, 10, 100, 1000);
+				vec4_t arr1(2, 20, 200, 2000);
+				auto lerp = Lerp(arr0, arr1, Scalar(0.7));
+				auto expected = vec4_t(Scalar(1.7), 17, 170, 1700);
+				PR_CHECK(FEql(lerp, expected), true);
+			}
 		}
 		{// Spherical linear interpolate
-			PR_CHECK(FEql(Slerp(v4::XAxis(), 2.0f * v4::YAxis(), 0.5f), 1.5f * v4::Normal(0.5f, 0.5f, 0, 0)), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				auto a0 = vec4_t::XAxis();
+				auto a1 = Scalar(2) * vec4_t::YAxis();
+				auto slerp = Slerp(a0, a1, Scalar(0.5));
+				auto expected = Scalar(1.5) * vec4_t::Normal(Scalar(0.5), Scalar(0.5), 0, 0);
+				PR_CHECK(FEql(slerp, expected), true);
+			}
 		}
 		{// Quantise
-			v4 arr0(1.0f / 3.0f, 0.0f, 2.0f, float(maths::tau));
-			PR_CHECK(FEql(Quantise(arr0, 1024), v4(0.333f, 0.0f, 2.0f, 6.28222f)), true);
+			if constexpr (std::floating_point<Scalar>)
+			{
+				vec4_t arr0(Scalar(1.0 / 3.0), 0, Scalar(2.0), constants<Scalar>::tau);
+				auto quantised = Quantise(arr0, 1024);
+				auto expected = vec4_t(Scalar(0.3330078125), 0, Scalar(2), Scalar(6.2822265625000000));
+				PR_CHECK(FEql(quantised, expected), true);
+			}
 		}
 		{// Random
-			auto radius = 10;
-			auto centre = v4{1,1,1,1};
-			auto prev = v4{};
-			for (int i = 0; i != 100; ++i)
+			if constexpr (std::floating_point<Scalar>)
 			{
-				auto v = v4::Random(g_rng(), centre, 10);
-				PR_CHECK(v != prev, true);
-				PR_CHECK(Length(v - centre) < radius, true);
+				auto radius = 10;
+				auto centre = vec4_t{1, 1, 1, 1};
+				auto prev = vec4_t{};
+				for (int i = 0; i != 100; ++i)
+				{
+					auto v = vec4_t::Random(g_rng(), centre, Scalar(10));
+					PR_CHECK(v != prev, true);
+					PR_CHECK(Length(v - centre) < radius, true);
+				}
 			}
 		}
 	}

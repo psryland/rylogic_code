@@ -456,16 +456,13 @@ namespace Rylogic.Gui.WPF
 
 			if (start)
 			{
-				var dlg = new SaveFileDialog
-				{
-					Title = "Capture to File",
-				};
+				var dlg = new VT100CaptureToFileOptions(Settings);
 				if (dlg.ShowDialog(this) != true)
 					return;
 
 				try
 				{
-					Buffer.CaptureToFile(dlg.FileName, false);// todo: dlg.CaptureAllData);
+					Buffer.CaptureToFile(dlg.FileName, dlg.BinaryCapture);
 				}
 				catch (Exception ex)
 				{
@@ -476,6 +473,7 @@ namespace Rylogic.Gui.WPF
 			{
 				Buffer.CaptureToFileEnd();
 			}
+			NotifyPropertyChanged(nameof(CapturingToFile));
 		}
 
 		/// <summary>True if capturing to file is currently enabled</summary>
