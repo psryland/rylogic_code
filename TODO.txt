@@ -23,7 +23,7 @@ Work:
 		- Fix the default zero ref values and min/max extension in the actuator ref data
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
-  
+
   Embedded:
 	- Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
 	- Make sure EnableHV works in R&D mode with tilt sensing on.
@@ -32,34 +32,30 @@ Work:
   MovementEditor:
 	- Optimise the dynamic linking in the map view
 	- Validation needs to check all recovery stance ids are in stance list
-	
+
   RexTerminal:
-	- Support non MC console connections.
-	- Terminal capture cmenu option needs to change to "stop capturing", and file type needed in save dialog
-	- Create Firmware Versions tab - move 'update rtc' to the new tab
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
-	- Support simple serial connections in Terminal
 	- Crash when filtering the battery log view
-	
+
   FirmwareLoader:
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
 	- Add support for programming the Battery controller board.
-	
+
   UIv4:
 	- Make Tunes an exported resource
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
-	
+
   ZeroRef:
     - Test the ZR process on a left-right see-saw to see what effect that has on the results.
- 	
+
   VRex:
 	- log doesn't work if logs folder is missing
 	- Work out why the zero ref position is so different for VRex compared to REX
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
-	
+
   Physics:
 	- Move step functionality from Emulation into Environment
 	- Have the environment step the emulation and the physics

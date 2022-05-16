@@ -135,12 +135,12 @@ namespace LDraw
 					if (e.Before) return;
 					switch (e.Key)
 					{
-					case nameof(SettingsData.CheckForChangesPollPeriodS):
+						case nameof(SettingsData.CheckForChangesPollPeriodS):
 						{
 							FileWatchTimer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
 							break;
 						}
-					case nameof(SettingsData.EmbeddedCSharpBoilerPlate):
+						case nameof(SettingsData.EmbeddedCSharpBoilerPlate):
 						{
 							View3d.EmbeddedCSharpBoilerPlate = Settings.EmbeddedCSharpBoilerPlate;
 							break;

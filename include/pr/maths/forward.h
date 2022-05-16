@@ -35,30 +35,6 @@ static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisati
 #define PR_MATHS_USE_INTRINSICS 1
 #endif
 
-// Select DirectXMath if already included, otherwise, don't
-#define PR_MATHS_USE_DIRECTMATH -- DX Math not supported --
-//#ifndef PR_MATHS_USE_DIRECTMATH
-//#  if defined(DIRECTX_MATH_VERSION)
-//#    define PR_MATHS_USE_DIRECTMATH 1
-//#  else
-//#    define PR_MATHS_USE_DIRECTMATH 0
-//#  endif
-//#endif
-
-//// Include 'DirectXMath.h'
-//#if PR_MATHS_USE_DIRECTMATH
-//#  include <directxmath.h>
-//#  if !PR_MATHS_USE_INTRINSICS
-//#     error "Intrinsics are required if using DirectX maths functions"
-//#  endif
-//#else
-//namespace DirectX
-//{
-//	// Forward declare DX types
-//	struct XMMATRIX;
-//}
-//#endif
-
 // Use 'vectorcall' if intrinsics are enabled
 #if PR_MATHS_USE_INTRINSICS
 #  define pr_vectorcall __vectorcall
@@ -122,8 +98,13 @@ namespace pr
 	
 	namespace maths
 	{
-		// The 'is_vec' traits means, "Can be converted to a N component vector"
-		// If true, 'x_cp', 'y_cp', 'z_cp', 'w_cp' is expected to be defined for that type.
+		// Scaler types
+		template <typename T>
+		concept Arithmetic =
+			std::is_floating_point_v<T> ||
+			std::is_integral_v<T>;
+
+		// The 'is_vec' trait means, "Can be converted to a N component vector"
 		// Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
 		template <typename T> struct is_vec :std::false_type
 		{
@@ -139,22 +120,28 @@ namespace pr
 		template <typename T> using vec_elem_t = typename is_vec<T>::elem_type;
 		template <typename T> using vec_comp_t = typename is_vec<T>::comp_type;
 
-		// Scaler types
-		template <typename T>
-		concept Arithmetic =
-			std::is_floating_point_v<T> ||
-			std::is_integral_v<T>;
-
 		// Concepts of vector types
 		template <typename V> concept VectorX = is_vec<V>::dim >= 1;
 		template <typename V> concept Vector2 = is_vec<V>::dim >= 2;
 		template <typename V> concept Vector3 = is_vec<V>::dim >= 3;
 		template <typename V> concept Vector4 = is_vec<V>::dim >= 4;
+		template <typename V> concept VectorFP = VectorX<V> && std::floating_point<vec_comp_t<V>>;
+		template <typename V> concept VectorIg = VectorX<V> && std::integral<vec_comp_t<V>>;
 
+		// Concepts of matrix types
 		template <typename M> concept MatrixX = is_vec<M>::dim >= 1 && VectorX<vec_elem_t<M>>;
 		template <typename M> concept Matrix2 = is_vec<M>::dim >= 2 && VectorX<vec_elem_t<M>>;
 		template <typename M> concept Matrix3 = is_vec<M>::dim >= 3 && VectorX<vec_elem_t<M>>;
 		template <typename M> concept Matrix4 = is_vec<M>::dim >= 4 && VectorX<vec_elem_t<M>>;
+		template <typename M> concept MatrixFP = MatrixX<M> && std::floating_point<vec_comp_t<M>>;
+		template <typename M> concept MatrixIg = MatrixX<M> && std::integral<vec_comp_t<M>>;
+
+		// Length type. I.e. what Sqrt(T) returns
+		template <typename T> using length_t = 
+			std::conditional_t<std::is_floating_point_v<T>, T,
+			std::conditional_t<sizeof(T) <= 4, float,
+			std::conditional_t<sizeof(T) <= 8, double,
+			long double>>>;
 
 		// Test alignment of 't'
 		template <typename T, int A> inline bool is_aligned(T const* t)
@@ -266,21 +253,6 @@ namespace pr
 		}
 	}
 
-	//// Common vector types
-	//using v2f = Vec2f<void>;
-	//using v3f = Vec3f<void>;
-	//using v4f = Vec4f<void>;
-	//using v8f = Vec8f<void>;
-	//using quatf = Quatf<void,void>;
-	//using m2x2f = Mat2x2f<void,void>;
-	//using m3x4f = Mat3x4f<void,void>;
-	//using m4x4f = Mat4x4f<void,void>;
-	//using m6x8f = Mat6x8f<void,void>;
-	//using v2i = Vec2i<void>;
-	//using v3i = Vec3i<void>;
-	//using v4i = Vec4i<void>;
-	using half4 = Half4<void>;
-
 	// Constant reference types
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	#define pr_cref const
@@ -320,6 +292,7 @@ namespace pr
 	using iv2 = Vec2<int, void>;
 	using iv3 = Vec3i<void>;
 	using iv4 = Vec4i<void>;
+	using half4 = Half4<void>;
 	template <typename T = void> using v2_cref = Vec2_cref<float, T>;
 	template <typename T = void> using v3_cref = Vec3_cref<float, T>;
 	template <typename T = void> using v4_cref = Vec4_cref<float, T>;

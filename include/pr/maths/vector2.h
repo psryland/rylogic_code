@@ -280,21 +280,27 @@ namespace pr::maths
 		{// Operators
 			auto V0 = vec2_t(Scalar(10), Scalar(8));
 			auto V1 = vec2_t(Scalar(2), Scalar(12));
+			auto eql = [](auto lhs, auto rhs)
+			{
+				if constexpr(std::floating_point<Scalar>)
+					return FEql(lhs, rhs);
+				else
+					return lhs == rhs;
+			};
+			PR_CHECK(eql(V0 + V1, vec2_t(Scalar(+12), Scalar(+20))), true);
+			PR_CHECK(eql(V0 - V1, vec2_t(Scalar(+8), Scalar(-4))), true);
+			PR_CHECK(eql(V0 * V1, vec2_t(Scalar(+20), Scalar(+96))), true);
+			PR_CHECK(eql(V0 / V1, vec2_t(Scalar(+5), Scalar(8) / Scalar(12))), true);
+			PR_CHECK(eql(V0 % V1, vec2_t(Scalar(+0), Scalar(8))), true);
 
-			PR_CHECK(FEql(V0 + V1, vec2_t(Scalar(+12), Scalar(+20))), true);
-			PR_CHECK(FEql(V0 - V1, vec2_t(Scalar(+8), Scalar(-4))), true);
-			PR_CHECK(FEql(V0 * V1, vec2_t(Scalar(+20), Scalar(+96))), true);
-			PR_CHECK(FEql(V0 / V1, vec2_t(Scalar(+5), Scalar(8) / Scalar(12))), true);
-			PR_CHECK(FEql(V0 % V1, vec2_t(Scalar(+0), Scalar(8))), true);
+			PR_CHECK(eql(V0 * Scalar(3), vec2_t(Scalar(30), Scalar(24))), true);
+			PR_CHECK(eql(V0 / Scalar(2), vec2_t(Scalar(5), Scalar(4))), true);
+			PR_CHECK(eql(V0 % Scalar(2), vec2_t(Scalar(0), Scalar(0))), true);
 
-			PR_CHECK(FEql(V0 * Scalar(3), vec2_t(Scalar(30), Scalar(24))), true);
-			PR_CHECK(FEql(V0 / Scalar(2), vec2_t(Scalar(5), Scalar(4))), true);
-			PR_CHECK(FEql(V0 % Scalar(2), vec2_t(Scalar(0), Scalar(0))), true);
+			PR_CHECK(eql(Scalar(3) * V0, vec2_t(Scalar(30), Scalar(24))), true);
 
-			PR_CHECK(FEql(Scalar(3) * V0, vec2_t(Scalar(30), Scalar(24))), true);
-
-			PR_CHECK(FEql(+V0, vec2_t(Scalar(+10), Scalar(+8))), true);
-			PR_CHECK(FEql(-V0, vec2_t(Scalar(-10), Scalar(-8))), true);
+			PR_CHECK(eql(+V0, vec2_t(Scalar(+10), Scalar(+8))), true);
+			PR_CHECK(eql(-V0, vec2_t(Scalar(-10), Scalar(-8))), true);
 
 			PR_CHECK(V0 == vec2_t(Scalar(10), Scalar(8)), true);
 			PR_CHECK(V0 != vec2_t(Scalar(2), Scalar(1)), true);
@@ -310,10 +316,10 @@ namespace pr::maths
 			auto V1 = vec2_t(Scalar(-1), Scalar(-2));
 			auto V2 = vec2_t(Scalar(+2), Scalar(+4));
 
-			PR_CHECK(FEql(Min(V0, V1, V2), vec2_t(Scalar(-1), Scalar(-2))), true);
-			PR_CHECK(FEql(Max(V0, V1, V2), vec2_t(Scalar(+2), Scalar(+4))), true);
-			PR_CHECK(FEql(Clamp(V0, V1, V2), vec2_t(Scalar(1), Scalar(2))), true);
-			PR_CHECK(FEql(Clamp(V0, Scalar(0), Scalar(1)), vec2_t(Scalar(1), Scalar(1))), true);
+			PR_CHECK(Min(V0, V1, V2) == vec2_t(Scalar(-1), Scalar(-2)), true);
+			PR_CHECK(Max(V0, V1, V2) == vec2_t(Scalar(+2), Scalar(+4)), true);
+			PR_CHECK(Clamp(V0, V1, V2) == vec2_t(Scalar(1), Scalar(2)), true);
+			PR_CHECK(Clamp(V0, Scalar(0), Scalar(1)) == vec2_t(Scalar(1), Scalar(1)), true);
 		}
 		{// Normalise
 			if constexpr (std::floating_point<Scalar>)
@@ -330,7 +336,7 @@ namespace pr::maths
 			{
 				vec2_t arr0(Scalar(1), Scalar(0));
 				vec2_t arr1(Scalar(0), Scalar(1));
-				PR_CHECK(FEql(CosAngle(arr0, arr1) - Cos(DegreesToRadians(Scalar(90))), 0), true);
+				PR_CHECK(FEql(CosAngle(arr0, arr1) - Cos(DegreesToRadians(Scalar(90))), Scalar(0)), true);
 				PR_CHECK(FEql(Angle(arr0, arr1), DegreesToRadians(Scalar(90))), true);
 			}
 		}

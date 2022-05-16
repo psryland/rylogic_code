@@ -305,7 +305,7 @@ namespace pr
 			for (int i = 0; i != 4; ++i)
 			{
 				// If the line is not parallel to the far plane
-				if (!FEql(interval[i], 0))
+				if (!FEql(interval[i], 0.f))
 				{
 					if (d1[i] > d0[i]) t0 = Max(t0, -d0[i] / interval[i]);
 					else               t1 = Min(t1, -d0[i] / interval[i]);

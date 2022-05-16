@@ -1,0 +1,62 @@
+﻿<Window
+	x:Class="Rylogic.Gui.WPF.VT100CaptureToFileOptions"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Capture To File"
+	ResizeMode="CanResizeWithGrip"
+	WindowStartupLocation="CenterOwner"
+	Height="150"
+	Width="300"
+	>
+	<Grid
+		Margin="8"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+		</Grid.RowDefinitions>
+		
+		<!-- Filepath -->
+		<gui:BrowsePathUI
+			Grid.Row="0"
+			PathType="SaveFile"
+			SelectedPath="{Binding FileName}"
+			x:Name="m_browse_path"
+			/>
+		
+		<!-- Capture non text data -->
+		<CheckBox
+			Grid.Row="1"
+			IsChecked="{Binding BinaryCapture}"
+			Content="Binary data capture"
+			/>
+		
+		<!-- Ok/Cancel -->
+		<StackPanel
+			Grid.Row="10"
+			Orientation="Horizontal"
+			HorizontalAlignment="Right"
+			>
+			<Button
+				Content="Start"
+				Command="{Binding Accept}"
+				Padding="4"
+				Margin="6"
+				MinWidth="80"
+				/>
+			<Button
+				Content="Cancel"
+				Command="{Binding Cancel}"
+				Padding="4"
+				Margin="6"
+				MinWidth="80"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>
