@@ -63,7 +63,7 @@ namespace pr::rdr12
 			return std::move(LoadWIC(images, mips, max_dimension, features));
 		}
 	}
-	inline LoadedImageResult LoadImageData(std::span<uint8 const> data, int mips = 0, bool is_cube_map = false, int max_dimension = 0, FeatureSupport const* features = nullptr)
+	inline LoadedImageResult LoadImageData(std::span<uint8_t const> data, int mips = 0, bool is_cube_map = false, int max_dimension = 0, FeatureSupport const* features = nullptr)
 	{
 		return std::move(LoadImageData(std::span{&data, 1}, mips, is_cube_map, max_dimension, features));
 	}

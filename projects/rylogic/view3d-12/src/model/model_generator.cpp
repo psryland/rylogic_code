@@ -926,7 +926,7 @@ namespace pr::rdr12
 					NuggetData nugget(topo, geom, vrange, irange);
 					nugget.m_tex_diffuse = mat.TexDiffuse(rdr);
 					nugget.m_tint = mat.Tint();
-					nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::TintHasAlpha, !FEql(nugget.m_tint.a, 1.0f));
+					nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::TintHasAlpha, nugget.m_tint.a != 0xff);
 					cache.m_ncont.push_back(nugget);
 				};
 				auto matlookup = [&](std::string const& name)

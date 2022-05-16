@@ -5902,40 +5902,40 @@ namespace pr::rdr12
 		}, name);
 		return col;
 	}
-	void LdrObject::Colour(Colour32 colour, uint mask, char const* name, EColourOp op, float op_value)
+	void LdrObject::Colour(Colour32 colour, uint32_t mask, char const* name, EColourOp op, float op_value)
 	{
 		Apply([=](LdrObject* o)
-		{
-			switch (op)
 			{
-			case EColourOp::Overwrite:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
-				break;
-			case EColourOp::Add:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
-				break;
-			case EColourOp::Subtract:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour - colour).argb);
-				break;
-			case EColourOp::Multiply:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour * colour).argb);
-				break;
-			case EColourOp::Lerp:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, Lerp(o->m_base_colour, colour, op_value).argb);
-				break;
-			}
-			if (o->m_model == nullptr)
+				switch (op)
+				{
+					case EColourOp::Overwrite:
+						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
+						break;
+					case EColourOp::Add:
+						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
+						break;
+					case EColourOp::Subtract:
+						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour - colour).argb);
+						break;
+					case EColourOp::Multiply:
+						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour * colour).argb);
+						break;
+					case EColourOp::Lerp:
+						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, Lerp(o->m_base_colour, colour, op_value).argb);
+						break;
+				}
+				if (o->m_model == nullptr)
+					return true;
+
+				auto tint_has_alpha = HasAlpha(o->m_colour);
+				for (auto& nug : o->m_model->m_nuggets)
+				{
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
+					nug.UpdateAlphaStates();
+				}
+
 				return true;
-
-			auto tint_has_alpha = HasAlpha(o->m_colour);
-			for (auto& nug : o->m_model->m_nuggets)
-			{
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-				nug.UpdateAlphaStates();
-			}
-
-			return true;
-		}, name);
+			}, name);
 	}
 
 	// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)

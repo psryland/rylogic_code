@@ -249,7 +249,7 @@ namespace pr::rdr12
 		x(Success       ,= 0         )\
 		x(Failed        ,= 0x80000000)\
 		x(InvalidValue  ,)
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
 	
 	// Render steps
 	#undef PR_ENUM
