@@ -58,6 +58,8 @@ struct Main :Form
 		//,m_inst0()
 		//,m_inst1()
 	{
+		View3D_WindowAddObject(m_win3d, m_obj0);
+
 		//m_scn.m_bkgd_colour = Colour32(0xFF908080);
 		//m_scn.m_cam.LookAt(v4{0, 0, +3, 1}, v4::Origin(), v4::YAxis());
 
@@ -109,13 +111,14 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		loop.AddMessageFilter(main);
 		loop.AddLoop(10, true, [&main, &time](auto dt)
 		{
-				(void)dt;
-			//time += dt * 0.001f;
+			time += dt * 0.001f;
 			//main.m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 			//main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+			
 			//auto frame = main.m_wnd.RenderFrame();
 			//frame.Render(main.m_scn);
 			//frame.Present();
+			View3D_WindowRender(main.m_win3d);
 		});
 		return loop.Run();
 	}

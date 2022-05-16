@@ -178,8 +178,8 @@ namespace pr::rdr12
 		// Load the ldr script
 		LoadScript(ldr_script, file, enc, &id, include_handler, nullptr);
 
-		// Return the first object. expecting 'ldr_script' to define one object only.
-		// It doesn't matter if more are defined however, they're just created as part of the context
+		// Return the first object, expecting 'ldr_script' to define one object only.
+		// It doesn't matter if more are defined however, they're just created as part of the context.
 		iter = srcs.find(id);
 		return iter != std::end(srcs) && iter->second.m_objects.size() > count
 			? iter->second.m_objects[count].get()
