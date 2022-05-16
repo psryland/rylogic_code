@@ -25,8 +25,6 @@ namespace pr
 			struct { Vec4f<void> arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec[4];
-			#elif PR_MATHS_USE_DIRECTMATH
-			DirectX::XMVECTOR vec[4];
 			#endif
 		};
 		#pragma warning(pop)
@@ -77,34 +75,6 @@ namespace pr
 		template <typename U, typename V> explicit operator Mat4x4f<U, V>&()
 		{
 			return reinterpret_cast<Mat4x4f<U, V>&>(*this);
-		}
-
-		// Construct from DirectX::XMMATRIX (if defined)
-		template <typename M, typename = std::enable_if_t<std::is_same_v<M, DirectX::XMMATRIX>>> Mat4x4f(M const& mat, int = 0)
-		{
-			static_assert(dependant<M, PR_MATHS_USE_DIRECTMATH>, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
-			vec[0] = mat.r[0];
-			vec[1] = mat.r[1];
-			vec[2] = mat.r[2];
-			vec[3] = mat.r[3];
-		}
-		template <typename M, typename = std::enable_if_t<std::is_same_v<M, DirectX::XMMATRIX>>> Mat4x4f(M const& mat, v4_cref<> pos_, int = 0)
-		{
-			static_assert(dependant<M, PR_MATHS_USE_DIRECTMATH>, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
-			vec[0] = mat.r[0];
-			vec[1] = mat.r[1];
-			vec[2] = mat.r[2];
-			vec[3] = pos_.vec;
-		}
-
-		// Convert this matrix to a DirectX XMMATRIX (if defined)
-		template <typename M = DirectX::XMMATRIX, typename = std::enable_if_t<std::is_same_v<M, DirectX::XMMATRIX>>> operator DirectX::XMMATRIX const&() const
-		{
-			return *reinterpret_cast<DirectX::XMMATRIX const*>(&vec[0]);
-		}
-		template <typename M = DirectX::XMMATRIX, typename = std::enable_if_t<std::is_same_v<M, DirectX::XMMATRIX>>> operator DirectX::XMMATRIX&()
-		{
-			return *reinterpret_cast<DirectX::XMMATRIX*>(&vec[0]);
 		}
 
 		// Array access
@@ -183,11 +153,7 @@ namespace pr
 		static Mat4x4f Transform(v4_cref<> axis, float angle, v4_cref<> pos)
 		{
 			assert("'axis' should be normalised" && IsNormal(axis));
-			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4f(DirectX::XMMatrixRotationNormal(axis.vec, angle), pos);
-			#else
 			return Mat4x4f(Mat3x4f<A,B>::Rotation(axis, angle), pos);
-			#endif
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
@@ -200,11 +166,7 @@ namespace pr
 		static Mat4x4f Transform(Quatf<A,B> const& q, v4_cref<> pos)
 		{
 			assert("'q' should be a normalised quaternion" && IsNormal(q));
-			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4f(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
-			#else
 			return Mat4x4f(Mat3x4f<A,B>::Rotation(q), pos);
-			#endif
 		}
 
 		// Create a transform representing the rotation from one vector to another.
@@ -240,7 +202,7 @@ namespace pr
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
 			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4{});
-			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, 0));
+			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, 0.f));
 			auto mat = Mat4x4f{};
 			mat.z = Normalise(eye - at);
 			mat.x = Normalise(Cross3(up, mat.z));
@@ -399,9 +361,7 @@ namespace pr
 		}
 		friend Vec4f<B> pr_vectorcall operator * (m4_cref<A,B> a2b, v4_cref<A> v)
 		{
-			#if PR_MATHS_USE_DIRECTMATH
-			return Vec4f<B>{DirectX::XMVector4Transform(v.vec, a2b)};
-			#elif PR_MATHS_USE_INTRINSICS
+			#if PR_MATHS_USE_INTRINSICS
 			auto x = _mm_load_ps(a2b.x.arr);
 			auto y = _mm_load_ps(a2b.y.arr);
 			auto z = _mm_load_ps(a2b.z.arr);
@@ -439,9 +399,7 @@ namespace pr
 			//       [a2c]       [  b2c  ]       [a2b]
 			//       [1x3]   =   [  2x3  ]   *   [1x2]
 			//       [   ]       [       ]       [   ]
-			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4f<A,C>{DirectX::XMMatrixMultiply(a2b, b2c)};
-			#elif PR_MATHS_USE_INTRINSICS
+			#if PR_MATHS_USE_INTRINSICS
 			auto ans = Mat4x4f<A,C>{};
 			auto x = _mm_load_ps(b2c.x.arr);
 			auto y = _mm_load_ps(b2c.y.arr);
@@ -512,9 +470,6 @@ namespace pr
 	// Return the 4x4 determinant of the arbitrary transform 'mat'
 	template <typename A, typename B> inline float pr_vectorcall Determinant4(m4_cref<A,B> mat)
 	{
-		#if PR_MATHS_USE_DIRECTMATH
-		return Vec4f<void>{DirectX::XMMatrixDeterminant(mat)}.x;
-		#else
 		auto c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
 		auto c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
 		auto c3 = (mat.z.y * mat.w.z) - (mat.z.z * mat.w.y);
@@ -526,7 +481,6 @@ namespace pr
 			mat.x.y * (mat.y.x*c1 - mat.y.z*c4 + mat.y.w*c5) +
 			mat.x.z * (mat.y.x*c2 - mat.y.y*c4 + mat.y.w*c6) -
 			mat.x.w * (mat.y.x*c3 - mat.y.y*c5 + mat.y.z*c6);
-		#endif
 	}
 
 	// Returns the sum of the first 3 diagonal elements of 'mat'
@@ -568,9 +522,7 @@ namespace pr
 	// Return the 4x4 transpose of 'mat'
 	template <typename A, typename B> inline Mat4x4f<A,B> pr_vectorcall Transpose4x4(m4_cref<A,B> mat)
 	{
-		#if PR_MATHS_USE_DIRECTMATH && 0
-		return Mat4x4f<A,B>{DirectX::XMMatrixTranspose(mat.vec)};
-		#elif PR_MATHS_USE_INTRINSICS
+		#if PR_MATHS_USE_INTRINSICS
 		auto m = mat;
 		_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
 		return m;
@@ -626,12 +578,7 @@ namespace pr
 	// Return the inverse of 'mat'
 	template <typename A, typename B> inline Mat4x4f<B,A> pr_vectorcall Invert(m4_cref<A,B> mat)
 	{
-		#if PR_MATHS_USE_DIRECTMATH
-		Vec4f<void> det;
-		Mat4x4f<B,A> m{DirectX::XMMatrixInverse(&det.vec, mat)};
-		assert("Matrix has no inverse" && det.x != 0);
-		return m;
-		#elif 1 // This was lifted from MESA implementation of the GLU library
+		#if 1 // This was lifted from MESA implementation of the GLU library
 		Mat4x4f<B,A> inv;
 		inv.x = Vec4f<void>{
 			+mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z,
@@ -832,8 +779,8 @@ namespace pr::maths
 			
 			m1.x.x = m1.y.y = 1.0e-5f;
 			m2.x.x = m2.y.y = 1.1e-5f;
-			PR_CHECK(FEql(MaxComponent(m1), 1), true);
-			PR_CHECK(FEql(MaxComponent(m2), 1), true);
+			PR_CHECK(FEql(MaxComponent(m1), 1.f), true);
+			PR_CHECK(FEql(MaxComponent(m2), 1.f), true);
 			PR_CHECK(FEql(m1,m2), true);
 			
 			m1.z.z = m1.w.w = 1.0e-5f;
@@ -909,12 +856,6 @@ namespace pr::maths
 			m4x4 b2a = Invert(a2b);
 			m4x4 a2a = b2a * a2b;
 			PR_CHECK(FEql(m4x4::Identity(), a2a), true);
-			{
-				#if PR_MATHS_USE_DIRECTMATH
-				auto dx_b2a = m4x4(DirectX::XMMatrixInverse(nullptr, a2b));
-				PR_CHECK(FEql(b2a, dx_b2a), true);
-				#endif
-			}
 
 			m4x4 b2a_fast = InvertFast(a2b);
 			PR_CHECK(FEql(b2a_fast, b2a), true);

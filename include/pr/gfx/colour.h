@@ -438,13 +438,13 @@ namespace pr
 	}
 
 	// Linearly interpolate between colours
-	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, float frac)
+	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, double frac)
 	{
 		return Colour32(
-			int(lhs.r * (1.0f - frac) + rhs.r * frac),
-			int(lhs.g * (1.0f - frac) + rhs.g * frac),
-			int(lhs.b * (1.0f - frac) + rhs.b * frac),
-			int(lhs.a * (1.0f - frac) + rhs.a * frac));
+			int(lhs.r * (1.0 - frac) + rhs.r * frac),
+			int(lhs.g * (1.0 - frac) + rhs.g * frac),
+			int(lhs.b * (1.0 - frac) + rhs.b * frac),
+			int(lhs.a * (1.0 - frac) + rhs.a * frac));
 	}
 
 	// Convert this colour to it's associated gray-scale value

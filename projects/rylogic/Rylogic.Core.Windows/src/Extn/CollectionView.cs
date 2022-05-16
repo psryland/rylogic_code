@@ -27,7 +27,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Access the current item (or null)</summary>
-		public static T CurrentAs<T>(this ICollectionView collection) where T:class
+		public static T CurrentAs<T>(this ICollectionView collection)
 		{
 			return (T)collection.CurrentItem;
 		}

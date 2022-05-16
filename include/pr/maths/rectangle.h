@@ -8,7 +8,6 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector2.h"
-#include "pr/maths/vector2i.h"
 
 namespace pr
 {

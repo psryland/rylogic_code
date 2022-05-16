@@ -98,7 +98,7 @@ namespace pr::physics
 		}
 
 		// If the polytope is degenerate, use the weighted average vertex positions
-		if (pr::FEql(volume, 0))
+		if (pr::FEql(volume, 0.f))
 		{
 			auto centre = v4Zero;
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) centre += *v;

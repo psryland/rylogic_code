@@ -39,6 +39,7 @@ namespace Rylogic.Common
 				NewLineSend = ENewLineMode.CR;
 				UnicodeText = false;
 				HexOutput = false;
+				CaptureFilepathHistory = string.Empty;
 			}
 
 			/// <summary>True if input characters should be echoed into the screen buffer</summary>
@@ -95,6 +96,13 @@ namespace Rylogic.Common
 			{
 				get => get<bool>(nameof(HexOutput));
 				set => set(nameof(HexOutput), value);
+			}
+
+			/// <summary>The filepaths used for "Capture to File"</summary>
+			public string CaptureFilepathHistory
+			{
+				get => get<string>(nameof(CaptureFilepathHistory));
+				set => set(nameof(CaptureFilepathHistory), value);
 			}
 
 			/// <summary>Type converter for displaying in a property grid</summary>

@@ -33,7 +33,7 @@ void pr::ph::SphereVsTriangle(Shape const& sphere, m4x4 const& a2w, Shape const&
 	if( dist < sphere_shape.m_radius )
 	{
 		Contact contact;
-		contact.m_normal		= b2w * (FEql(dist,0) ? ((dist>=0.0f)*2.0f-1.0f) * triangle_shape.m_v.w : (sep / dist));
+		contact.m_normal		= b2w * (FEql(dist, 0.f) ? ((dist>=0.0f)*2.0f-1.0f) * triangle_shape.m_v.w : (sep / dist));
 		contact.m_pointA		= a2w.pos - contact.m_normal * sphere_shape.m_radius;
 		contact.m_pointB		= b2w * closest_point;
 		contact.m_material_idA	= sphere_shape.m_base.m_material_id;

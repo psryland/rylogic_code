@@ -860,7 +860,7 @@
 		Name="VT100MenuItem_DoPaste" />
 	<MenuItem x:Key="VT100MenuItem_DoCaptureToFile"
 		x:Shared="False"
-		Header="Capture To File"
+		Header="{Binding CapturingToFile, Converter={conv:BoolSelect}, ConverterParameter='Stop Capturing|Capture To File'}"
 		StaysOpenOnClick="False"
 		Command="{Binding DoCaptureToFile}"
 		IsChecked="{Binding CapturingToFile, Mode=OneWay}"

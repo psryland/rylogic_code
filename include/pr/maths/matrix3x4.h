@@ -140,10 +140,6 @@ namespace pr
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
 		static Mat3x4f Rotation(float pitch, float yaw, float roll)
 		{
-			#if PR_MATHS_USE_DIRECTMATH
-			auto m = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-			return Mat3x4f(m.r[0], m.r[1], m.r[2]);
-			#else
 			float cos_p = Cos(pitch), sin_p = Sin(pitch);
 			float cos_y = Cos(yaw  ), sin_y = Sin(yaw  );
 			float cos_r = Cos(roll ), sin_r = Sin(roll );
@@ -151,7 +147,6 @@ namespace pr
 				Vec4f<void>( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f),
 				Vec4f<void>(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f),
 				Vec4f<void>( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f)};
-			#endif
 		}
 
 		// Create from an axis, angle

@@ -166,8 +166,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The centre pane of the root level tree</summary>
 		public DockPane RootPane => Root.DockPane(EDockSite.Centre);
 
-		/// <summary>Returns the dock sizes at a given level in the tree. This can be used to change panel sizes.
-		/// 'location' should point to a branch otherwise an exception is thrown. location.Length == 0 returns the root level sizes</summary>
+		/// <summary>Returns a reference to the dock sizes at a given level in the tree. 'location' should point to a branch otherwise an exception is thrown. location.Length == 0 returns the root level sizes</summary>
 		public DockSizeData DockSizeAt(params EDockSite[] location)
 		{
 			return Root.DockSizeAt(location);

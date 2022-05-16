@@ -166,37 +166,16 @@ namespace pr
 	}
 
 	// Absolute value
-	constexpr float Abs(float x)
+	template <std::floating_point T> constexpr T Abs(T x)
 	{
 		return x >= 0 ? x : -x;
 	}
-	constexpr double Abs(double x)
+	template <std::integral T> constexpr T Abs(T x)
 	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr int Abs(int x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr long Abs(long x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr long long Abs(long long x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr unsigned int Abs(unsigned int x)
-	{
-		return x;
-	}
-	constexpr unsigned long Abs(unsigned long x)
-	{
-		return x;
-	}
-	constexpr unsigned long long Abs(unsigned long long x)
-	{
-		return x;
+		if constexpr (std::signed_integral<T>)
+			return x >= 0 ? x : -x;
+		else
+			return x;
 	}
 	template <maths::VectorX T> constexpr T Abs(T const& v)
 	{
@@ -442,18 +421,18 @@ namespace pr
 		assert(tol >= 0 || !(tol == tol)); // NaN is not an error, comparisons with NaN are defined to always be false
 		return Abs(a - b) < tol;
 	}
-	template <maths::VectorX T> constexpr bool FEqlAbsolute(T const& a, T const& b, maths::vec_comp_t<T> tol)
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && FEqlAbsolute(a[i], b[i], tol); ++i) {}
-		return i == iend;
-	}
 	template <std::floating_point T> inline bool FEqlAbsolute(std::span<T> a, std::span<T> b, std::decay_t<T> tol)
 	{
 		if (a.size() != b.size())
 			return false;
 
 		int i = 0, iend = int(a.size());
+		for (; i != iend && FEqlAbsolute(a[i], b[i], tol); ++i) {}
+		return i == iend;
+	}
+	template <maths::VectorFP T> constexpr bool FEqlAbsolute(T const& a, T const& b, maths::vec_comp_t<T> tol)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
 		for (; i != iend && FEqlAbsolute(a[i], b[i], tol); ++i) {}
 		return i == iend;
 	}
@@ -482,15 +461,6 @@ namespace pr
 		auto abs_max_element = Max(Abs(a), Abs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
-	template <maths::VectorX T> constexpr bool FEqlRelative(T const& a, T const& b, maths::vec_comp_t<T> tol)
-	{
-		auto max_a = MaxComponentAbs(a);
-		auto max_b = MaxComponentAbs(b);
-		if (max_b == 0) return max_a < tol;
-		if (max_a == 0) return max_b < tol;
-		auto abs_max_element = Max(max_a, max_b);
-		return FEqlAbsolute(a, b, tol * abs_max_element);
-	}
 	template <std::floating_point T> inline bool FEqlRelative(std::span<T> a, std::span<T> b, std::decay_t<T> tol)
 	{
 		if (a.size() != b.size()) return false;
@@ -501,30 +471,30 @@ namespace pr
 		auto abs_max_element = Max(max_a, max_b);
 		return FEqlAbsolute<T>(a, b, tol * abs_max_element);
 	}
+	template <maths::VectorFP T> constexpr bool FEqlRelative(T const& a, T const& b, maths::vec_comp_t<T> tol)
+	{
+		auto max_a = MaxComponentAbs(a);
+		auto max_b = MaxComponentAbs(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute(a, b, tol * abs_max_element);
+	}
 
-	// FEqlRelative using 'tinyf'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
-	constexpr bool FEql(float a, float b)
+	// FEqlRelative using 'tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
+	template <std::floating_point T> constexpr bool FEql(T a, T b)
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
-		return FEqlRelative(a, b, maths::tinyf);
-	}
-	constexpr bool FEql(double a, double b)
-	{
-		return FEqlRelative(a, b, maths::tinyd);
-	}
-	template <maths::VectorX T> constexpr bool FEql(T const& a, T const& b)
-	{
-		if constexpr (std::is_same_v<maths::vec_comp_t<T>, float>)
-			return FEqlRelative(a, b, maths::tinyf);
-		if constexpr (std::is_same_v<maths::vec_comp_t<T>, double>)
-			return FEqlRelative(a, b, maths::tinyd);
+		return FEqlRelative(a, b, maths::tiny<T>);
 	}
 	template <std::floating_point T> inline bool FEql(std::span<T> a, std::span<T> b)
 	{
-		if constexpr (std::is_same_v<std::decay_t<T>, float>)
-			return FEqlRelative(a, b, maths::tinyf);
-		if constexpr (std::is_same_v<std::decay_t<T>, double>)
-			return FEqlRelative(a, b, maths::tinyd);
+		return FEqlRelative(a, b, maths::tiny<T>);
+	}
+	template <maths::VectorFP T> constexpr bool FEql(T const& a, T const& b)
+	{
+		static_assert(std::is_floating_point_v<maths::vec_comp_t<T>>, "FEql should not be called on integral vectors");
+		return FEqlRelative(a, b, maths::tiny<maths::vec_comp_t<T>>);
 	}
 
 	// NaN test
@@ -684,6 +654,7 @@ namespace pr
 	}
 	template <maths::VectorX T> constexpr T Trunc(T const& v, ETruncType ty = ETruncType::TowardZero)
 	{
+		static_assert(std::is_floating_point_v<maths::vec_comp_t<T>>, "Truncate should not be called on integral vectors");
 		return CompOp(v, [=](auto x) { return Trunc(x, ty); });
 	}
 
@@ -1100,17 +1071,18 @@ namespace pr
 	}
 
 	// Linearly interpolate from 'lhs' to 'rhs'
-	template <std::floating_point T> inline T Lerp(T lhs, T rhs, T frac)
+	template <maths::Arithmetic T> inline T Lerp(T lhs, T rhs, double frac)
 	{
-		return lhs + frac * (rhs - lhs);
+		return static_cast<T>(lhs + frac * (rhs - lhs));
 	}
-	template <maths::VectorX T> inline T Lerp(T const& lhs, T const& rhs, maths::vec_elem_t<T> frac)
+	template <maths::VectorFP T> inline T Lerp(T const& lhs, T const& rhs, maths::vec_comp_t<T> frac)
 	{
+		// Don't implement this for integral vector types, callers can just cast from FP to intg.
 		return lhs + frac * (rhs - lhs);
 	}
 
 	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
-	template <maths::VectorX T> inline T Slerp(T const& a, T const& b, maths::vec_elem_t<T> frac)
+	template <maths::VectorFP T> inline T Slerp(T const& a, T const& b, maths::vec_comp_t<T> frac)
 	{
 		assert("Cannot spherically interpolate to/from the zero vector" && a != T{} && b != T{});
 
@@ -1124,6 +1096,8 @@ namespace pr
 	// Quantise a value to a power of two. 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc
 	template <std::floating_point F, std::integral I> inline F Quantise(F x, I scale)
 	{
+		// The purpose of 'Quantise' is to round 'x' to the nearest representable floating number using
+		// 'N' mantissa bits where '1 << N' == 'scale.
 		return static_cast<I>(x * scale) / static_cast<F>(scale);
 	}
 	template <maths::VectorX T, std::integral I> inline T Quantise(T const& x, I scale)
@@ -1139,15 +1113,16 @@ namespace pr
 	// Return the cosine of the angle of the triangle apex opposite 'opp'
 	template <std::floating_point T> inline T CosAngle(T adj0, T adj1, T opp)
 	{
-		assert("Angle undefined an when adjacent length is zero" && !FEql(adj0,0) && !FEql(adj1,0));
+		assert("Angle undefined an when adjacent length is zero" && !FEql(adj0, T{}) && !FEql(adj1, T{}));
 		return Clamp<T>((adj0*adj0 + adj1*adj1 - opp*opp) / (2 * adj0 * adj1), -1, 1);
 	}
 
 	// Return the cosine of the angle between two vectors
-	template <maths::VectorX T> inline float CosAngle(T const& lhs, T const& rhs)
+	template <maths::VectorX T> inline maths::vec_comp_t<T> CosAngle(T const& lhs, T const& rhs)
 	{
 		assert("CosAngle undefined for zero vectors" && lhs != T{} && rhs != T{});
-		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -1.0f, 1.0f);
+		auto const one = maths::vec_comp_t<T>{1};
+		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -one, +one);
 	}
 
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
@@ -1157,7 +1132,7 @@ namespace pr
 	}
 
 	// Return the angle between two vectors
-	template <maths::VectorX T> inline float Angle(T const& lhs, T const& rhs)
+	template <maths::VectorX T> inline maths::vec_comp_t<T> Angle(T const& lhs, T const& rhs)
 	{
 		return ACos(CosAngle(lhs, rhs));
 	}
@@ -1774,16 +1749,14 @@ namespace pr::maths
 			PR_CHECK(Clamp(12, 0, 10) == 10, true);
 		}
 		{// Wrap
-			// [0, 3)
-			PR_CHECK(Wrap(-1, 0, 3) == 2, true);
+			PR_CHECK(Wrap(-1, 0, 3) == 2, true); // [0, 3)
 			PR_CHECK(Wrap(+0, 0, 3) == 0, true);
 			PR_CHECK(Wrap(+1, 0, 3) == 1, true);
 			PR_CHECK(Wrap(+2, 0, 3) == 2, true);
 			PR_CHECK(Wrap(+3, 0, 3) == 0, true);
 			PR_CHECK(Wrap(+4, 0, 3) == 1, true);
 
-			// [-2,+2]
-			PR_CHECK(Wrap(-3, -2, +3) == +2, true);
+			PR_CHECK(Wrap(-3, -2, +3) == +2, true); // [-2,+2]
 			PR_CHECK(Wrap(-2, -2, +3) == -2, true);
 			PR_CHECK(Wrap(-1, -2, +3) == -1, true);
 			PR_CHECK(Wrap(+0, -2, +3) == 0, true);
@@ -1791,16 +1764,14 @@ namespace pr::maths
 			PR_CHECK(Wrap(+2, -2, +3) == +2, true);
 			PR_CHECK(Wrap(+3, -2, +3) == -2, true);
 
-			// [+2,+5)
-			PR_CHECK(Wrap(+1, +2, +5) == 4, true);
+			PR_CHECK(Wrap(+1, +2, +5) == 4, true); // [+2,+5)
 			PR_CHECK(Wrap(+2, +2, +5) == 2, true);
 			PR_CHECK(Wrap(+3, +2, +5) == 3, true);
 			PR_CHECK(Wrap(+4, +2, +5) == 4, true);
 			PR_CHECK(Wrap(+5, +2, +5) == 2, true);
 			PR_CHECK(Wrap(+6, +2, +5) == 3, true);
 
-			// [0,1)
-			PR_CHECK(Wrap(-3, 0, 1) == 0, true);
+			PR_CHECK(Wrap(-3, 0, 1) == 0, true); // [0,1)
 			PR_CHECK(Wrap(-2, 0, 1) == 0, true);
 			PR_CHECK(Wrap(-1, 0, 1) == 0, true);
 			PR_CHECK(Wrap(+0, 0, 1) == 0, true);
@@ -1808,8 +1779,7 @@ namespace pr::maths
 			PR_CHECK(Wrap(+2, 0, 1) == 0, true);
 			PR_CHECK(Wrap(+3, 0, 1) == 0, true);
 
-			// [-1,0)
-			PR_CHECK(Wrap(-3, -1, 0) == -1, true);
+			PR_CHECK(Wrap(-3, -1, 0) == -1, true); // [-1,0)
 			PR_CHECK(Wrap(-2, -1, 0) == -1, true);
 			PR_CHECK(Wrap(-1, -1, 0) == -1, true);
 			PR_CHECK(Wrap(+0, -1, 0) == -1, true);
@@ -1864,6 +1834,11 @@ namespace pr::maths
 			PR_CHECK(MaxElementIndex(arr8) == 1, true);
 			PR_CHECK(MaxElementIndex(arr9) == 0, true);
 		}
+		{// Trunc
+			PR_CHECK(Trunc(1.9f) == 1.0f, true);
+			PR_CHECK(Trunc(1.9f, ETruncType::ToNearest) == 2.0f, true);
+			PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
+		}
 		{// Dot
 			#if 0 // move
 			v3 arr0(1, 2, 3);
@@ -1887,6 +1862,11 @@ namespace pr::maths
 			v4 d = a2b * b;
 			PR_CHECK(FEql(c.xyz, d.xyz), true);
 			#endif
+		}
+		{// CosAngle
+			PR_CHECK(FEql(CosAngle(1.0, 1.0, maths::root2) - Cos(DegreesToRadians(90.0)), 0.0), true);
+			PR_CHECK(FEql(Angle(1.0, 1.0, maths::root2), DegreesToRadians(90.0)), true);
+			PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), maths::root2f), true);
 		}
 		{// Fraction
 			PR_CHECK(FEql(Frac<float>(-5, 2, 5), 7.0f / 10.0f), true);

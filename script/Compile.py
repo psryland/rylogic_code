@@ -81,7 +81,7 @@ PrIncludes = [
 	Tools.AssertPath(UserVars.root + "\\include"),
 	Tools.AssertPath(UserVars.root + "\\sdk"),
 	Tools.AssertPath(UserVars.root + "\\sdk\\sqlite3\\include"),
-	Tools.AssertPath(UserVars.root + "\\sdk\\lua\\lua\\src"),
+	Tools.AssertPath(UserVars.root + "\\sdk\\lua\\src"),
 	Tools.AssertPath(UserVars.root + "\\sdk\\lua"),
 	]
 PrLibPaths = [

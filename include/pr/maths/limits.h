@@ -9,8 +9,6 @@
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/vector8.h"
-#include "pr/maths/vector2i.h"
-#include "pr/maths/vector4i.h"
 #include "pr/maths/matrix2x2.h"
 #include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
@@ -18,14 +16,14 @@
 
 namespace std
 {
-	template <typename T>
-	class numeric_limits<pr::Vec2f<T>>
+	template <typename Scalar, typename T>
+	class numeric_limits<pr::Vec2<Scalar, T>>
 	{
 	public:
-		static pr::Vec2f<T> min() throw()     { return pr::v2Min; }
-		static pr::Vec2f<T> max() throw()     { return pr::v2Max; }
-		static pr::Vec2f<T> lowest() throw()  { return pr::v2Lowest; }
-		static pr::Vec2f<T> epsilon() throw() { return pr::v2Epsilon; }
+		static pr::Vec2<Scalar, T> min() throw()     { return pr::Vec2<Scalar, T>::Min(); }
+		static pr::Vec2<Scalar, T> max() throw()     { return pr::Vec2<Scalar, T>::Max(); }
+		static pr::Vec2<Scalar, T> lowest() throw()  { return pr::Vec2<Scalar, T>::Lowest(); }
+		static pr::Vec2<Scalar, T> epsilon() throw() { return pr::Vec2<Scalar, T>::Epsilon(); }
 
 		static const bool is_specialized = true;
 		static const bool is_signed = true;
@@ -39,14 +37,14 @@ namespace std
 		static const int radix = 10;
 	};
 
-	template <typename T>
-	class numeric_limits<pr::Vec3f<T>>
+	template <typename Scalar, typename T>
+	class numeric_limits<pr::Vec3<Scalar, T>>
 	{
 	public:
-		static pr::Vec3f<T> min() throw()     { return pr::v3Min; }
-		static pr::Vec3f<T> max() throw()     { return pr::v3Max; }
-		static pr::Vec3f<T> lowest() throw()  { return pr::v3Lowest; }
-		static pr::Vec3f<T> epsilon() throw() { return pr::v3Epsilon; }
+		static pr::Vec3<Scalar, T> min() throw()     { return pr::Vec3<Scalar, T>:: Min(); }
+		static pr::Vec3<Scalar, T> max() throw()     { return pr::Vec3<Scalar, T>:: Max(); }
+		static pr::Vec3<Scalar, T> lowest() throw()  { return pr::Vec3<Scalar, T>:: Lowest(); }
+		static pr::Vec3<Scalar, T> epsilon() throw() { return pr::Vec3<Scalar, T>:: Epsilon(); }
 
 		static const bool is_specialized = true;
 		static const bool is_signed = true;

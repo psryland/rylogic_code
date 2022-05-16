@@ -51,7 +51,7 @@ namespace pr
 		auto da = a1 - a0;
 		auto db = b1 - b0;
 		auto denom = Cross(da, db);
-		if (!FEql(denom, 0)) // not parallel
+		if (!FEql(denom, 0.f)) // not parallel
 		{
 			ta = Cross(ab, db) / denom;
 			tb = Cross(ab, da) / denom;
@@ -59,16 +59,16 @@ namespace pr
 		}
 
 		auto numer = Cross(ab, da);
-		if (!FEql(numer, 0)) // not colinear
+		if (!FEql(numer, 0.f)) // not colinear
 			return false;
 			
 		auto dd = Dot(da, db);
 		auto da_sq = Dot(da, da);
 		auto db_sq = Dot(db, db);
-		if (FEql(dd, 0)) // one or both of 'a' and 'b' are points
+		if (FEql(dd, 0.f)) // one or both of 'a' and 'b' are points
 		{
-			ta = FEql(da_sq, 0) ? 0 : Dot(b0 - a0, da) / da_sq;
-			tb = FEql(db_sq, 0) ? 0 : Dot(a0 - b0, db) / db_sq;
+			ta = FEql(da_sq, 0.f) ? 0 : Dot(b0 - a0, da) / da_sq;
+			tb = FEql(db_sq, 0.f) ? 0 : Dot(a0 - b0, db) / db_sq;
 		}
 		else if (dd > 0) // 'da' and 'db' in the same direction
 		{
@@ -305,7 +305,7 @@ namespace pr
 		// intersection point r, r = u*a + v*b + w*c. Note: If the line lies
 		// in the plane of the triangle then 'sum' will be zero
 		float sum = bary.x + bary.y + bary.z;
-		if (FEql(sum,0))
+		if (FEql(sum, 0.f))
 			return false;
 
 		float denom = 1.0f / sum;
