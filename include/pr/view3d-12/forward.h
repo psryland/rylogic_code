@@ -120,6 +120,8 @@ namespace pr::rdr12
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
 	using Handle = pr::win32::Handle;
+	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
+	using time_point_t = std::chrono::system_clock::time_point;
 	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using RefPtr = pr::RefPtr<T>;
 	template <typename T> using RefCounted = pr::RefCount<T>;

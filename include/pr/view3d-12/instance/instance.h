@@ -41,6 +41,9 @@ namespace pr::rdr12
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
+		Float1,              // float - for general use
+		Float2,              // pr::v2 - for general use
+		Float4,              // pr::v4 - for general use
 	};
 	static_assert(sizeof(EInstComp) == 1, "Padding of Instance types relies on this");
 
@@ -80,6 +83,9 @@ namespace pr::rdr12
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
 			case EInstComp::UniqueId:            return sizeof(int32);
 			case EInstComp::SSSize:              return sizeof(v2);
+			case EInstComp::Float1:              return sizeof(float);
+			case EInstComp::Float2:              return sizeof(v2);
+			case EInstComp::Float4:              return sizeof(v4);
 			default: throw std::runtime_error("Unknown instance component type");
 		}
 	}

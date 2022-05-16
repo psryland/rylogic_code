@@ -12,6 +12,15 @@ namespace pr::view3d
 }
 namespace pr::rdr12
 {
+	enum class EStockObject
+	{
+		None = 0,
+		FocusPoint = 1 << 0,
+		OriginPoint = 1 << 1,
+		SelectionBox = 1 << 2,
+		_flags_enum,
+	};
+
 	using ObjectSet = std::unordered_set<view3d::Object>;
 	using GizmoSet  = std::unordered_set<view3d::Gizmo>;
 	using GuidSet   = std::unordered_set<Guid>;

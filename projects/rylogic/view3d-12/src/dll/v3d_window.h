@@ -14,6 +14,13 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - Combines a renderer Window with a collection of LdrObjects
+		using AnimData = struct AnimData
+		{
+			std::thread  m_thread;
+			std::atomic_int m_issue;
+			std::atomic<seconds_t> m_clock;
+			AnimData() :m_thread() ,m_issue() ,m_clock() {}
+		};
 
 		// Renderer window/scene
 		Context* m_dll;   // The dll context
@@ -37,18 +44,23 @@ namespace pr::rdr12
 			x(m4x4     ,m_c2s   ,EInstComp::C2STransform)\
 			x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)\
-			x(Colour32 ,m_tint  ,EInstComp::TintColour32)
+			x(Colour32 ,m_tint  ,EInstComp::TintColour32)\
+			x(float    ,m_size  ,EInstComp::Float1)
 		PR_RDR12_DEFINE_INSTANCE(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
 		#undef PR_RDR_INST
-		PointInstance m_focus_point;   // Focus point graphics
-		PointInstance m_origin_point;  // Origin point graphics
-		Instance      m_bbox_model;    // Bounding box graphics
-		Instance      m_selection_box; // Selection box graphics
+		PointInstance m_focus_point;     // Focus point graphics
+		PointInstance m_origin_point;    // Origin point graphics
+		Instance      m_bbox_model;      // Bounding box graphics
+		Instance      m_selection_box;   // Selection box graphics
+		EStockObject  m_visible_objects; // Visible stock objects
 
 		// Misc
+		AnimData         m_anim_data;      // Animation time in seconds
 		mutable pr::BBox m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
+		PipeStates       m_global_pso;     // Global pipe state overrides
 		std::thread::id  m_main_thread_id; // The thread that created this window
-
+		bool             m_invalidated;    // True after Invalidate has been called but before Render has been called
+		
 		V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts);
 		V3dWindow(V3dWindow&&) = default;
 		V3dWindow(V3dWindow const&) = delete;
@@ -82,8 +94,25 @@ namespace pr::rdr12
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
 
+		// Render this window into whatever render target is currently set
+		void Render();
+		void Present();
+
+		// Call InvalidateRect on the HWND associated with this window
+		void InvalidateRect(RECT const* rect, bool erase = false);
+		void Invalidate(bool erase = false);
+
+		// Clear the invalidated state for the window
+		void Validate();
+
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
+
+		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
+		void SetSelectionBox(BBox const& bbox, m3x4 const& ori = m3x4::Identity());
+
+		// Position the selection box to include the selected objects
+		void SelectionBoxFitToSelected();
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockObjects();

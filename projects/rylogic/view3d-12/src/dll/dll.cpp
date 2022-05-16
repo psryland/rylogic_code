@@ -150,7 +150,7 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 }
 
 // Add an object to a window
-VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::view3d::Object object)
+VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::Object object)
 {
 	try
 	{
@@ -161,6 +161,57 @@ VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::
 		window->Add(object);
 	}
 	CatchAndReport(View3D_WindowAddObject, window,);
+}
+
+// Render the window
+VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Render();
+	}
+	CatchAndReport(View3D_WindowRender, window,);
+}
+
+// Call InvalidateRect on the HWND associated with 'window'
+VIEW3D_API void __stdcall View3D_WindowInvalidate(view3d::Window window, BOOL erase)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		window->Invalidate(erase != 0);
+	}
+	CatchAndReport(View3D_Invalidate, window, );
+}
+
+// Call InvalidateRect on the HWND associated with 'window'
+VIEW3D_API void __stdcall View3D_WindowInvalidateRect(view3d::Window window, RECT const* rect, BOOL erase)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		window->InvalidateRect(rect, erase != 0);
+	}
+	CatchAndReport(View3D_InvalidateRect, window,);
+}
+
+// Register a callback for when the window is invalidated.
+// This can be used to render in response to invalidation, rather than rendering on a polling cycle.
+VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view3d::InvalidatedCB invalidated_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		if (add)
+			window->OnInvalidated += StaticCallBack(invalidated_cb, ctx);
+		else
+			window->OnInvalidated -= StaticCallBack(invalidated_cb, ctx);
+	}
+	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }
 
 
