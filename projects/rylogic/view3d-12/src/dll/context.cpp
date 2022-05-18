@@ -7,6 +7,10 @@
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
+#include "pr/script/embedded_lua.h"
+
+// Include 'embedded_lua.h" in here so that additional include directories
+// are not needed for anyone including "pr/view3d-12/forward.h"
 
 namespace pr::rdr12
 {

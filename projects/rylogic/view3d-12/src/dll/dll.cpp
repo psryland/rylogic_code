@@ -14,6 +14,9 @@
 //  stack of error handlers.
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/utility/conversion.h"
+#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldr_gizmo.h"
 #include "view3d-12/src/dll/dll_forward.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
@@ -76,7 +79,7 @@ VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_e
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
+		error_cb(FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
 		return nullptr;
 	}
 	catch (...)
@@ -149,6 +152,40 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
 
+// Get/Set the window settings (as ldr script string)
+VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		return window->Settings();
+	}
+	CatchAndReport(View3D_WindowSettingsGet, window, L"");
+}
+VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, wchar_t const* settings)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		window->Settings(settings);
+	}
+	CatchAndReport(View3D_WindowSettingsSet, window,);
+}
+
+// Set a notification handler for when a window setting changes
+VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		if (add)
+			window->OnSettingsChanged += StaticCallBack(settings_changed_cb, ctx);
+		else
+			window->OnSettingsChanged -= StaticCallBack(settings_changed_cb, ctx);
+	}
+	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
+}
+
 // Add an object to a window
 VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::Object object)
 {
@@ -214,6 +251,167 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }
 
+// Get/Set the window background colour
+VIEW3D_API unsigned int __stdcall View3D_WindowBackgroundColourGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->BackgroundColour().argb;
+	}
+	CatchAndReport(View3D_WindowBackgroundColourGet, window, 0);
+}
+VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window, unsigned int argb)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BackgroundColour(Colour32(argb));
+	}
+	CatchAndReport(View3D_WindowBackgroundColourSet, window,);
+}
+
+// Camera *********************************
+
+// Position the camera and focus distance
+VIEW3D_API void __stdcall View3D_CameraPositionSet(view3d::Window window, view3d::Vec4 position, view3d::Vec4 lookat, view3d::Vec4 up)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.LookAt(To<v4>(position), To<v4>(lookat), To<v4>(up), true);
+	}
+	CatchAndReport(View3D_CameraPositionSet, window,);
+}
+
+
+// Get/Set the current camera to world transform
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Mat4x4>(window->m_scene.m_cam.CameraToWorld());
+	}
+	CatchAndReport(View3D_CameraToWorldGet, window, Mat4x4{});
+}
+VIEW3D_API void __stdcall View3D_CameraToWorldSet(view3d::Window window, view3d::Mat4x4 const& c2w)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.CameraToWorld(To<m4x4>(c2w));
+	}
+	CatchAndReport(View3D_CameraToWorldSet, window,);
+}
+
+// General mouse navigation
+// 'ss_pos' is the mouse pointer position in 'window's screen space
+// 'nav_op' is the navigation type
+// 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
+// void OnMouseDown(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, TRUE); }
+// void OnMouseMove(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, FALSE); } if 'nav_op' is None, this will have no effect
+// void OnMouseUp  (UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, 0, TRUE); }
+// BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_MouseNavigateZ(win, 0, 0, zDelta / 120.0f); return TRUE; }
+VIEW3D_API BOOL __stdcall View3D_MouseNavigate(view3d::Window window, view3d::Vec2 ss_pos, view3d::ENavOp nav_op, BOOL nav_start_or_end)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->MouseNavigate(To<v2>(ss_pos), static_cast<camera::ENavOp>(nav_op), nav_start_or_end != 0);
+	}
+	CatchAndReport(View3D_MouseNavigate, window, FALSE);
+}
+VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(view3d::Window window, view3d::Vec2 ss_pos, float delta, BOOL along_ray)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->MouseNavigateZ(To<v2>(ss_pos), delta, along_ray != 0);
+	}
+	CatchAndReport(View3D_MouseNavigate, window, FALSE);
+}
+
+// Convert a point between 'window' screen space and normalised screen space
+VIEW3D_API view3d::Vec2 __stdcall View3D_SSPointToNSSPoint(view3d::Window window, view3d::Vec2 screen)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->m_scene.m_viewport.SSPointToNSSPoint(To<v2>(screen)));
+	}
+	CatchAndReport(View3D_SSPointToNSSPoint, window, view3d::Vec2{});
+}
+VIEW3D_API view3d::Vec2 __stdcall View3D_NSSPointToSSPoint(view3d::Window window, view3d::Vec2 nss_point)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->m_scene.m_viewport.NSSPointToSSPoint(To<v2>(nss_point)));
+	}
+	CatchAndReport(View3D_NSSPointToSSPoint, window, view3d::Vec2{});
+}
+
+// Convert a point between world space and normalised screen space.
+// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+// The z component should be the world space distance from the camera
+VIEW3D_API view3d::Vec4 __stdcall View3D_NSSPointToWSPoint(view3d::Window window, view3d::Vec4 screen)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec4>(window->m_scene.m_cam.NSSPointToWSPoint(To<v4>(screen)));
+	}
+	CatchAndReport(View3D_NSSPointToWSPoint, window, view3d::Vec4());
+}
+VIEW3D_API view3d::Vec4 __stdcall View3D_WSPointToNSSPoint(view3d::Window window, view3d::Vec4 world)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec4>(window->m_scene.m_cam.WSPointToNSSPoint(To<v4>(world)));
+	}
+	CatchAndReport(View3D_WSPointToNSSPoint, window, view3d::Vec4{});
+}
+
+// Return a point and direction in world space corresponding to a normalised screen space point.
+// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+// The z component should be the world space distance from the camera
+VIEW3D_API void __stdcall View3D_NSSPointToWSRay(view3d::Window window, view3d::Vec4 screen, view3d::Vec4& ws_point, view3d::Vec4& ws_direction)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto [pt, dir] = window->m_scene.m_cam.NSSPointToWSRay(To<v4>(screen));
+		ws_point = To<view3d::Vec4>(pt);
+		ws_direction = To<view3d::Vec4>(dir);
+	}
+	CatchAndReport(View3D_NSSPointToWSRay, window,);
+}
 
 // Lights *********************************
 
@@ -248,3 +446,32 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
 
+// Get/Set the object to world transform for this object or the first child object that matches 'name'.
+// Note, setting the o2w for a child object positions the object in world space rather than parent space
+// (internally the appropriate O2P transform is calculated to put the object at the given O2W location)
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_ObjectO2WGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return To<view3d::Mat4x4>(object->O2W(name));
+	}
+	CatchAndReport(View3D_ObjectO2WGet, , To<view3d::Mat4x4>(m4x4::Identity()));
+}
+VIEW3D_API void __stdcall View3D_ObjectO2WSet(view3d::Object object, view3d::Mat4x4 const& o2w, char const* name)
+{
+	try
+	{
+		if (object == nullptr) throw std::runtime_error("Object is null");
+		
+		auto o2w_ = To<m4x4>(o2w);
+		if (!IsAffine(o2w_))
+			throw std::runtime_error("invalid object to world transform");
+
+		DllLockGuard;
+		object->O2W(o2w_, name);
+	}
+	CatchAndReport(View3D_ObjectO2WSet, ,);
+}

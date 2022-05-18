@@ -392,6 +392,9 @@ namespace pr::rdr12
 		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 			m_d2d_dc->SetTarget(bb.m_d2d_target.get());
 
+		// Flush any pending resource commands to the GPU
+		rdr().res_mgr().FlushToGpu(false);
+
 		// Start a frame
 		++m_frame_number;
 		m_cmd_lists.resize(0);
@@ -413,6 +416,7 @@ namespace pr::rdr12
 		// returning the not-yet-closed command list that it is rendering to. This allows the window to submit the
 		// command lists in the same order that the caller called 'Render' in.
 		// Remember: One allocator per thread, per list, per frame.
+
 		auto cmd_list = scene.Render(m_bb);
 		m_cmd_lists.push_back(cmd_list);
 	}

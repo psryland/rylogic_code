@@ -263,7 +263,7 @@ namespace pr
 		{
 			return Colour32((argb & 0xFF000000) | (argb ^ 0xFFFFFFFF));
 		}
-		constexpr operator uint32_t() const
+		constexpr explicit operator uint32_t() const
 		{
 			return argb;
 		}

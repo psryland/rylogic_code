@@ -2865,7 +2865,7 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, m_tex.Material());
+			obj->m_model = ModelGenerator::Box(p.m_rdr, m_dim, m4x4::Identity(), Colour32White, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -4513,8 +4513,8 @@ namespace pr::rdr12
 
 			// Create buffers for a dynamic model
 			ModelDesc mdesc(
-				ResDesc::Buf<Vert>(vcount, nullptr),
-				ResDesc::Buf<uint32_t>(icount, nullptr),
+				ResDesc::VBuf<Vert>(vcount, nullptr),
+				ResDesc::IBuf<uint32_t>(icount, nullptr),
 				BBox::Reset(), obj->TypeAndName().c_str());
 
 			// Create the model
@@ -5338,8 +5338,8 @@ namespace pr::rdr12
 
 		// Create buffers for a dynamic model
 		ModelDesc settings(
-			ResDesc::Buf<Vert>(vcount, nullptr),
-			ResDesc::Buf<uint16_t>(icount, nullptr),
+			ResDesc::VBuf<Vert>(vcount, nullptr),
+			ResDesc::IBuf<uint16_t>(icount, nullptr),
 			BBox::Reset(), obj->TypeAndName().c_str());
 		settings.m_vb.HeapProps = HeapProps::Upload();
 		settings.m_ib.HeapProps = HeapProps::Upload();

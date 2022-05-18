@@ -45,15 +45,11 @@ namespace pr::rdr12
 				, m_size(0)
 				, m_sync_point(sync_point)
 			{
-				auto desc = ResDesc::Buf(size, 1, nullptr, alignment);
+				auto desc = ResDesc::Buf(size, 1, nullptr, alignment, D3D12_RESOURCE_STATE_GENERIC_READ);
 				Throw(device->CreateCommittedResource(
-					&HeapProps::Upload(),
-					D3D12_HEAP_FLAG_NONE,
-					&desc,
-					D3D12_RESOURCE_STATE_GENERIC_READ,
-					nullptr,
-					__uuidof(ID3D12Resource),
-					(void**)&m_res.m_ptr));
+					&HeapProps::Upload(), D3D12_HEAP_FLAG_NONE,
+					&desc, desc.FinalState, nullptr,
+					__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
 				Throw(m_res->SetName(L"GpuUploadBuffer:Block"));
 
 				// Upload buffers can live mapped

@@ -710,8 +710,8 @@ namespace pr::rdr12
 
 		// Create the model
 		ModelDesc mdesc(
-			ResDesc::Buf<Vert>(data.vcount, data.vdata),
-			ResDesc::Buf<uint16_t>(data.icount, data.idata),
+			ResDesc::VBuf<Vert>(data.vcount, data.vdata),
+			ResDesc::IBuf<uint16_t>(data.icount, data.idata),
 			*data.bbox, data.name);
 		m_gfx.m_model = rdr().res_mgr().CreateModel(mdesc);
 

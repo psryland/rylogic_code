@@ -4,6 +4,16 @@
 //*********************************************
 #pragma once
 
+#ifndef PR_DBG_RDR
+#define PR_DBG_RDR PR_DBG
+#endif
+
+// Set this in the project settings, not here
+#ifndef PR_RDR_RUNTIME_SHADERS
+#define PR_RDR_RUNTIME_SHADERS 0
+#endif
+
+
 #include <vector>
 #include <string>
 #include <list>
@@ -100,17 +110,7 @@
 #include "pr/win32/win32.h"
 //#include "pr/win32/stackdump.h"
 #include "pr/script/reader.h"
-#include "pr/script/embedded_lua.h"
 //#include "pr/ldraw/ldr_helper.h"
-
-#ifndef PR_DBG_RDR
-#define PR_DBG_RDR PR_DBG
-#endif
-
-// Set this in the project settings, not here
-#ifndef PR_RDR_RUNTIME_SHADERS
-#define PR_RDR_RUNTIME_SHADERS 0
-#endif
 
 namespace pr::rdr12
 {
