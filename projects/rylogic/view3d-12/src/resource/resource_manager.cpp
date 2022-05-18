@@ -35,6 +35,7 @@ namespace pr::rdr12
 		,m_gdi_dc_ref_count()
 		,m_stock_models()
 		,m_stock_textures()
+		,m_flush_required()
 	{
 		auto device = m_rdr.D3DDevice();
 
@@ -86,12 +87,16 @@ namespace pr::rdr12
 	// Ensure stock Start/Stop creating resources
 	uint64_t ResourceManager::FlushToGpu(bool block)
 	{
+		if (!m_flush_required)
+			return m_gsync.LastAddedSyncPoint();
+
 		// Close the command list
 		Throw(m_cmd_list->Close());
 
 		// Execute the command list
 		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_cmd_list.get())};
 		rdr().GfxQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
+		m_flush_required = false;
 
 		// Add a sync point
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
@@ -117,21 +122,29 @@ namespace pr::rdr12
 	{
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
+		auto has_init_data = !desc.Data.empty();
 
-		// Create a GPU visible resource that will hold the created texture.
+		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
+		D3D12_RESOURCE_DESC rd = desc;
+		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+			rd.Width *= desc.ElemStride;
+
+		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &desc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
+			&desc.HeapProps, desc.HeapFlags, &rd,
+			has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 
 		// If initialisation data is provided, initialise using an UploadBuffer
-		if (!desc.Data.empty())
-			UpdateSubresource(res.get(), desc.Data, 0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-
-		// Transition the resource to a pixel shader resource
-		auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		m_cmd_list->ResourceBarrier(1, &barrier);
+		if (has_init_data)
+		{
+			// Copy, then transition the resource to the final state
+			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
+			auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, desc.FinalState);
+			m_cmd_list->ResourceBarrier(1, &barrier);
+			m_flush_required = true;
+		}
 
 		return res;
 	}
@@ -147,44 +160,6 @@ namespace pr::rdr12
 		// Create a V/I buffers
 		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb);
 		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib);
-		//{
-		//	Throw(device->CreateCommittedResource(
-		//		&HeapProps::Default(),
-		//		D3D12_HEAP_FLAG_NONE,
-		//		&mdesc.m_vb,
-		//		D3D12_RESOURCE_STATE_COPY_DEST,
-		//		nullptr,
-		//		__uuidof(ID3D12Resource),
-		//		(void**)&vb.m_ptr));
-		//
-		//	// Initialise the vertex data
-		//	if (mdesc.m_vb.Data != nullptr)
-		//		UpdateSubresource(vb.get(), mdesc.m_vb, 0, alignof(Vert));
-
-		//	// Transition the vertex buffer to a pixel shader resource
-		//	auto barrier = ResourceBarrier::Transition(vb.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		//	m_cmd_list->ResourceBarrier(1, &barrier);
-		//}
-
-		// Create an index buffer
-		//{
-		//	Throw(device->CreateCommittedResource(
-		//		&HeapProps::Default(),
-		//		D3D12_HEAP_FLAG_NONE,
-		//		&mdesc.m_ib,
-		//		D3D12_RESOURCE_STATE_COPY_DEST,
-		//		nullptr,
-		//		__uuidof(ID3D12Resource),
-		//		(void**)&ib.m_ptr));
-
-		//	// Initialise the index data
-		//	if (mdesc.m_ib.Data != nullptr)
-		//		UpdateSubresource(ib.get(), mdesc.m_ib, 0, alignof(uint32_t));
-
-		//	// Transition the vertex buffer to a pixel shader resource
-		//	auto barrier = ResourceBarrier::Transition(ib.get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		//	m_cmd_list->ResourceBarrier(1, &barrier);
-		//}
 
 		// Create the model
 		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.Width, mdesc.m_ib.Width, mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
@@ -588,7 +563,7 @@ namespace pr::rdr12
 					auto c = Colour32White;
 					auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
 					c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-					data[size_t(j * sz + i)] = c;
+					data[size_t(j * sz + i)] = c.argb;
 				}
 			}
 
@@ -627,8 +602,8 @@ namespace pr::rdr12
 					auto c = Colour32White;
 					c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
 
-					data[size_t(j * sz + hsz - i)] = c;
-					data[size_t(j * sz + hsz + i)] = c;
+					data[size_t(j * sz + hsz - i)] = c.argb;
+					data[size_t(j * sz + hsz + i)] = c.argb;
 				}
 			}
 
@@ -861,6 +836,7 @@ namespace pr::rdr12
 		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
 			m_cmd_list->CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
+			m_flush_required = true;
 		}
 		else
 		{
@@ -879,6 +855,7 @@ namespace pr::rdr12
 					.PlacedFootprint = layout[i],
 				};
 				m_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+				m_flush_required = true;
 			}
 		}
 	}

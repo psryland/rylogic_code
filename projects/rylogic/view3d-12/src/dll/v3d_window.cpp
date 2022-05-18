@@ -102,6 +102,42 @@ namespace pr::rdr12
 		return rdr().res_mgr();
 	}
 
+	// Get/Set the settings
+	wchar_t const* V3dWindow::Settings() const
+	{
+		std::wstringstream out;
+		out << "*Light {\n" << m_scene.m_global_light.Settings() << "}\n";
+		m_settings = out.str();
+		return m_settings.c_str();
+	}
+	void V3dWindow::Settings(wchar_t const* settings)
+	{
+		using namespace pr::script;
+		using namespace pr::str;
+
+		// Parse the settings
+		StringSrc src(settings);
+		Reader reader(src);
+		for (string_t kw; reader.NextKeywordS(kw);)
+		{
+			if (EqualI(kw, "SceneSettings"))
+			{
+				pr::string<> desc;
+				reader.Section(desc, false);
+				//window->m_obj_cont_ui.Settings(desc.c_str());
+				continue;
+			}
+			if (EqualI(kw, "Light"))
+			{
+				std::wstring desc;
+				reader.Section(desc, false);
+				m_scene.m_global_light.Settings(desc);
+				OnSettingsChanged(this, view3d::ESettings::Lighting_All);
+				continue;
+			}
+		}
+	}
+
 	// Add/Remove an object to this window
 	void V3dWindow::Add(LdrObject* object)
 	{
@@ -296,6 +332,86 @@ namespace pr::rdr12
 	void V3dWindow::Validate()
 	{
 		m_invalidated = false;
+	}
+
+	// General mouse navigation
+	// 'ss_pos' is the mouse pointer position in 'window's screen space
+	// 'nav_op' is the navigation type (typically Rotate=LButton, Translate=RButton)
+	// 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
+	// void OnMouseDown(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, TRUE); }
+	// void OnMouseMove(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, FALSE); } if 'nav_op' is None, this will have no effect
+	// void OnMouseUp  (UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, 0, TRUE); }
+	// BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_MouseNavigateZ(win, 0, 0, zDelta / 120.0f); return TRUE; }
+	bool V3dWindow::MouseNavigate(v2 ss_point, camera::ENavOp nav_op, bool nav_start_or_end)
+	{
+		auto nss_point = m_scene.m_viewport.SSPointToNSSPoint(ss_point);
+		
+		// This is true-ish. 'ss_pos' is allowed to be outside the window area which breaks this check
+		//if (nss_point.x < -1.0 || nss_point.x > +1.0 || nss_point.y < -1.0 || nss_point.y > +1.0)
+		//	throw std::runtime_error("Window viewport has not been set correctly. The ScreenW/H values should match the window size (not the viewport size)");
+
+		auto refresh = false;
+		auto gizmo_in_use = false;
+
+		// Check any gizmos in the scene for interaction with the mouse
+		for (auto& giz : m_gizmos)
+		{
+			refresh |= giz->MouseControl(m_scene.m_cam, nss_point, nav_op, nav_start_or_end);
+			gizmo_in_use |= giz->m_manipulating;
+			if (gizmo_in_use)
+				break;
+		}
+
+		// If no gizmos are using the mouse, use standard mouse control
+		if (!gizmo_in_use)
+		{
+			if (m_scene.m_cam.MouseControl(nss_point, nav_op, nav_start_or_end))
+				refresh |= true;
+		}
+
+		return refresh;
+	}
+	bool V3dWindow::MouseNavigateZ(v2 ss_point, float delta, bool along_ray)
+	{
+		auto nss_point = m_scene.m_viewport.SSPointToNSSPoint(ss_point);
+
+		auto refresh = false;
+		auto gizmo_in_use = false;
+
+		// Check any gizmos in the scene for interaction with the mouse
+		#if 0 // todo, gizmo mouse wheel behaviour
+		for (auto& giz : m_gizmos)
+		{
+			refresh |= giz->MouseControlZ(m_scene.m_cam, nss_point, dist);
+			gizmo_in_use |= giz->m_manipulating;
+			if (gizmo_in_use)
+				break;
+		}
+		#endif
+
+		// If no gizmos are using the mouse, use standard mouse control
+		if (!gizmo_in_use)
+		{
+			if (m_scene.m_cam.MouseControlZ(nss_point, delta, along_ray))
+				refresh |= true;
+		}
+
+		return refresh;
+	}
+
+	// Get/Set the window background colour
+	Colour32 V3dWindow::BackgroundColour() const
+	{
+		return m_scene.m_bkgd_colour;
+	}
+	void V3dWindow::BackgroundColour(Colour32 colour)
+	{
+		if (BackgroundColour() == colour)
+			return;
+
+		m_scene.m_bkgd_colour = colour;
+		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
+		Invalidate();
 	}
 
 	// Called when objects are added/removed from this window

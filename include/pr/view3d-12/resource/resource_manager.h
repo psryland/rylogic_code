@@ -47,6 +47,7 @@ namespace pr::rdr12
 		int                m_gdi_dc_ref_count; // Used to detect outstanding DC references
 		ModelCont          m_stock_models;     // Stock models
 		TextureCont        m_stock_textures;   // Stock textures
+		bool               m_flush_required;   // True if commands have been added to the command list and need sending to the GPU
 
 	public:
 

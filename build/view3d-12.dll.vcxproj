@@ -41,7 +41,7 @@
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -51,7 +51,7 @@
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -61,7 +61,7 @@
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -71,7 +71,7 @@
       <AdditionalOptions>/Zm200 /bigobj</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d-12.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-12-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <!-- Files -->

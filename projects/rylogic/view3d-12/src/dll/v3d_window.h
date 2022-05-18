@@ -55,11 +55,12 @@ namespace pr::rdr12
 		EStockObject  m_visible_objects; // Visible stock objects
 
 		// Misc
-		AnimData         m_anim_data;      // Animation time in seconds
-		mutable pr::BBox m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
-		PipeStates       m_global_pso;     // Global pipe state overrides
-		std::thread::id  m_main_thread_id; // The thread that created this window
-		bool             m_invalidated;    // True after Invalidate has been called but before Render has been called
+		mutable std::wstring m_settings;       // Window settings
+		AnimData             m_anim_data;      // Animation time in seconds
+		mutable pr::BBox     m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
+		PipeStates           m_global_pso;     // Global pipe state overrides
+		std::thread::id      m_main_thread_id; // The thread that created this window
+		bool                 m_invalidated;    // True after Invalidate has been called but before Render has been called
 		
 		V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts);
 		V3dWindow(V3dWindow&&) = default;
@@ -90,6 +91,10 @@ namespace pr::rdr12
 		// Animation event
 		MultiCast<AnimationCB> OnAnimationEvent;
 
+		// Get/Set the settings
+		wchar_t const* Settings() const;
+		void Settings(wchar_t const* settings);
+
 		// Add/Remove an object to this window
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
@@ -104,6 +109,21 @@ namespace pr::rdr12
 
 		// Clear the invalidated state for the window
 		void Validate();
+
+		// General mouse navigation
+		// 'ss_pos' is the mouse pointer position in 'window's screen space
+		// 'nav_op' is the navigation type
+		// 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
+		// void OnMouseDown(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, TRUE); }
+		// void OnMouseMove(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, FALSE); } if 'nav_op' is None, this will have no effect
+		// void OnMouseUp  (UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, 0, TRUE); }
+		// BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_MouseNavigateZ(win, 0, 0, zDelta / 120.0f); return TRUE; }
+		bool MouseNavigate(v2 ss_point, camera::ENavOp nav_op, bool nav_start_or_end);
+		bool MouseNavigateZ(v2 ss_point, float delta, bool along_ray);
+
+		// Get/Set the window background colour
+		Colour32 BackgroundColour() const;
+		void BackgroundColour(Colour32 colour);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);

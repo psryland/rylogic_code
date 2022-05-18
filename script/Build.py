@@ -101,6 +101,13 @@ def MSBuild(name:str, sln:str, projects:List[str], platforms:List[str], configs:
 
 # Deploy lib and/or dll files to the '/pr/lib' folder
 def DeployLib(target_name:str, obj_dir:str, platforms:List[str], configs:List[str]):
+	# Notes:
+	#  - Watch out for pdb files overwriting projects with the same name.
+	#  - The MSBuild system creates the '$(TargetName).pdb' file even if the project file sets the pdb name to something else.
+	#  - Debugging will only load '$(TargetName).pdb' so trying to use '$(TargetName)$(TargetExt).pdb' doesn't work (sadly).
+	#  - The only option is to use separate names for lib and dll projects :(
+	#  - Use <project>-static.lib.
+	#  - Don't make $(TargetName) == $(ProjectName), just set the name explicitly.
 	for p in platforms:
 		for c in configs:
 			target_dir = Tools.Path(obj_dir, p, c)

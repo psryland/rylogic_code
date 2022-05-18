@@ -6,6 +6,7 @@
 
 //#include "pr/view3d-12/view3d.h"
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/utility/conversion.h"
 
 using namespace pr;
 using namespace pr::gui;
@@ -58,10 +59,11 @@ struct Main :Form
 		//,m_inst0()
 		//,m_inst1()
 	{
-		View3D_WindowAddObject(m_win3d, m_obj0);
-
+		// Set up the scene
 		//m_scn.m_bkgd_colour = Colour32(0xFF908080);
+		View3D_WindowBackgroundColourSet(m_win3d, 0xFF908080);
 		//m_scn.m_cam.LookAt(v4{0, 0, +3, 1}, v4::Origin(), v4::YAxis());
+		View3D_CameraPositionSet(m_win3d, {0, 0, +7, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 
 		//m_inst0.m_model = m_rdr.res_mgr().FindModel(EStockModel::UnitQuad);
 		//
@@ -73,6 +75,7 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
+		View3D_WindowAddObject(m_win3d, m_obj0);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
@@ -94,6 +97,43 @@ struct Main :Form
 			//m_scn.m_viewport.Set(sz);
 		}
 	}
+	void OnMouseButton(MouseEventArgs& args) override
+	{
+		Form::OnMouseButton(args);
+		if (!args.m_handled)
+		{
+			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};
+			auto nav_op =
+				args.m_button == EMouseKey::Left ? view3d::ENavOp::Rotate :
+				args.m_button == EMouseKey::Right ? view3d::ENavOp::Translate :
+				view3d::ENavOp::None;
+
+			View3D_MouseNavigate(m_win3d, pt, nav_op, TRUE);
+		}
+	}
+	void OnMouseMove(MouseEventArgs& args) override
+	{
+		Form::OnMouseMove(args);
+		if (!args.m_handled)
+		{
+			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};
+			auto nav_op =
+				args.m_button == EMouseKey::Left ? view3d::ENavOp::Rotate :
+				args.m_button == EMouseKey::Right ? view3d::ENavOp::Translate :
+				view3d::ENavOp::None;
+
+			View3D_MouseNavigate(m_win3d, pt, nav_op, FALSE);
+		}
+	}
+	void OnMouseWheel(MouseWheelArgs& args) override
+	{
+		Form::OnMouseWheel(args);
+		if (!args.m_handled)
+		{
+			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};
+			View3D_MouseNavigateZ(m_win3d, pt, args.m_delta, TRUE);
+		}
+	}
 };
 
 // Entry point
@@ -112,9 +152,14 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		loop.AddLoop(10, true, [&main, &time](auto dt)
 		{
 			time += dt * 0.001f;
+			auto i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+			View3D_ObjectO2WSet(main.m_obj0, To<view3d::Mat4x4>(i2w), nullptr);
 			//main.m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 			//main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
-			
+		
+			auto c2w = View3D_CameraToWorldGet(main.m_win3d);
+			SetWindowTextA(main, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z));
+
 			//auto frame = main.m_wnd.RenderFrame();
 			//frame.Render(main.m_scn);
 			//frame.Present();

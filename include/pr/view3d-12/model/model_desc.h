@@ -33,8 +33,8 @@ namespace pr::rdr12
 		// Construct the model buffer from spans of verts and indices
 		template <typename TVert, typename TIndx>
 		ModelDesc(std::span<TVert const> vert, std::span<TIndx const> idxs, BBox const& bbox = BBox::Reset(), char const* name = "")
-			:m_vb(ResDesc::Buf<TVert>(vert.size(), vert.data()))
-			,m_ib(ResDesc::Buf<TIndx>(idxs.size(), idxs.data()))
+			:m_vb(ResDesc::VBuf<TVert>(vert.size(), vert.data()))
+			,m_ib(ResDesc::IBuf<TIndx>(idxs.size(), idxs.data()))
 			,m_bbox(bbox)
 			,m_name(name)
 		{}
@@ -42,8 +42,8 @@ namespace pr::rdr12
 		// Construct the model buffer from static arrays of verts and indices
 		template <typename TVert, typename TIndx, size_t VSize, size_t ISize>
 		ModelDesc(TVert const (&vert)[VSize], TIndx const (&idxs)[ISize], BBox const& bbox = BBox::Reset(), char const* name = "")
-			:m_vb(ResDesc::Buf<TVert>(VSize, &vert[0]))
-			,m_ib(ResDesc::Buf<TIndx>(ISize, &idxs[0]))
+			:m_vb(ResDesc::VBuf<TVert>(VSize, &vert[0]))
+			,m_ib(ResDesc::IBuf<TIndx>(ISize, &idxs[0]))
 			,m_bbox(bbox)
 			,m_name(name)
 		{}

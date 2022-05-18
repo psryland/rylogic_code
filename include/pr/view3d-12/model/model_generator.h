@@ -427,8 +427,8 @@ namespace pr::rdr12
 
 			// Create the model
 			ModelDesc mdesc(
-				ResDesc::Buf<VType>(cache.VCount(), cache.m_vcont.data()),
-				ResDesc::Buf(cache.ICount(), cache.m_icont.stride(), cache.m_icont.data()),
+				ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont.data()),
+				ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont.data()),
 				cache.m_bbox, cache.m_name.c_str());
 			auto model = rdr.res_mgr().CreateModel(mdesc);
 
