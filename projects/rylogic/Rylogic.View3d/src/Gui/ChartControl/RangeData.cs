@@ -321,7 +321,11 @@ namespace Rylogic.Gui.WPF
 
 					m_min = Math_.Clamp(min, RangeLimits.Beg, RangeLimits.End);
 					m_max = Math_.Clamp(max, RangeLimits.Beg, RangeLimits.End);
-					if (m_max - m_min < Math_.TinyD) m_max = m_min + Math_.TinyD;
+					if (m_max - m_min < Math_.TinyD)
+					{
+						m_max += Math_.TinyD;
+						m_min -= Math_.TinyD;
+					}
 
 					if (zoomed || scroll) OnMoved();
 					if (zoomed) OnZoomed();
