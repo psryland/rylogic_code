@@ -133,14 +133,14 @@ namespace pr
 			//    to revert the transaction causes problems when copies exist.
 			//  - An option is to have the caller provide an instance of this struct in the MouseControl
 			//    methods, but that creates a problem for interop.
-			//  - The simplist option is to just make this a member of the Camera object.
+			//  - The simplest option is to just make this a member of the Camera object.
 
-			m4x4    m_c2w0;        // The starting position during a mouse movement
-			float   m_fovY0;       // The starting FOV during a mouse movement
-			float   m_focus_dist0; // The starting focus distance during a mouse movement
-			v2      m_Tref;        // Movement start reference point for translation
-			v2      m_Rref;        // Movement start reference point for rotation
-			v2      m_Zref;        // Movement start reference point for zoom
+			m4x4   m_c2w0;        // The starting position during a mouse movement
+			double m_fovY0;       // The starting FOV during a mouse movement
+			double m_focus_dist0; // The starting focus distance during a mouse movement
+			v2     m_Tref;        // Movement start reference point for translation
+			v2     m_Rref;        // Movement start reference point for rotation
+			v2     m_Zref;        // Movement start reference point for zoom
 
 			NavState()
 				: m_c2w0()
@@ -177,13 +177,13 @@ namespace pr
 		m4x4           m_c2w;               // Camera to world transform
 		NavState       m_nav;               // Navigation initial state data
 		v4             m_align;             // The direction to align 'up' to, or v4Zero
-		float          m_default_fovY;      // The default field of view
-		float          m_fovY;              // Field of view in the Y direction
-		float          m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
-		float          m_aspect;            // Aspect ratio = width/height
-		float          m_near;              // The near plane as a multiple of the focus distance
-		float          m_far;               // The near plane as a multiple of the focus distance
-		float          m_accuracy_scale;    // Scale factor for high accuracy control
+		double         m_default_fovY;      // The default field of view
+		double         m_fovY;              // Field of view in the Y direction
+		double         m_focus_dist;        // Distance from the c2w position to the focus, down the z axis
+		double         m_aspect;            // Aspect ratio = width/height
+		double         m_near;              // The near plane as a multiple of the focus distance
+		double         m_far;               // The near plane as a multiple of the focus distance
+		double         m_accuracy_scale;    // Scale factor for high accuracy control
 		int            m_accuracy_mode;     // The last accuracy mode: 0 = normal, 1 = accurate, 2 = super accurate
 		ELockMask      m_lock_mask;         // Locks on the allowed motion
 		NavKeyBindings m_key;               // Key bindings
@@ -191,17 +191,17 @@ namespace pr
 		bool           m_moved;             // Dirty flag for when the camera moves
 
 		Camera()
-			:Camera(m4x4Identity)
+			:Camera(m4x4::Identity())
 		{}
-		Camera(m4x4 const& c2w, float fovY = maths::tau_by_8, float aspect = 1.0f, float focus_dist = 1.0f)
-			:Camera(c2w, fovY, aspect, focus_dist, false, 0.01f, 100.0f)
+		Camera(m4x4 const& c2w, double fovY = maths::tau_by_8, double aspect = 1.0, double focus_dist = 1.0)
+			:Camera(c2w, fovY, aspect, focus_dist, false, 0.01, 100.0)
 		{}
-		Camera(v4_cref<> eye, v4_cref<> pt, v4_cref<> up, float fovY = maths::tau_by_8, float aspect = 1.0f)
-			:Camera(m4x4Identity, fovY, aspect)
+		Camera(v4_cref<> eye, v4_cref<> pt, v4_cref<> up, double fovY = maths::tau_by_8, double aspect = 1.0)
+			:Camera(m4x4::Identity(), fovY, aspect)
 		{
 			LookAt(eye, pt, up, true);
 		}
-		Camera(m4x4 const& c2w, float fovY, float aspect, float focus_dist, bool orthographic, float near_, float far_)
+		Camera(m4x4 const& c2w, double fovY, double aspect, double focus_dist, bool orthographic, double near_, double far_)
 			:m_c2w(c2w)
 			,m_nav()
 			,m_align(v4Zero)
@@ -211,7 +211,7 @@ namespace pr
 			,m_aspect(aspect)
 			,m_near(near_)
 			,m_far(far_)
-			,m_accuracy_scale(0.1f)
+			,m_accuracy_scale(0.1)
 			,m_accuracy_mode()
 			,m_lock_mask()
 			,m_key()
@@ -240,18 +240,18 @@ namespace pr
 		}
 
 		// Return a projection transform
-		m4x4 CameraToScreen(float near_clip, float far_clip, float aspect, float fovY, float focus_dist) const
+		m4x4 CameraToScreen(double near_clip, double far_clip, double aspect, double fovY, double focus_dist) const
 		{
-			auto height = 2.0f * focus_dist * tan(fovY * 0.5f);
+			auto height = 2.0 * focus_dist * std::tan(fovY * 0.5);
 			return m_orthographic
-				? m4x4::ProjectionOrthographic(height*aspect, height, near_clip, far_clip, true)
-				: m4x4::ProjectionPerspectiveFOV(fovY, aspect, near_clip, far_clip, true);
+				? m4x4::ProjectionOrthographic(s_cast<float>(height*aspect), s_cast<float>(height), s_cast<float>(near_clip), s_cast<float>(far_clip), true)
+				: m4x4::ProjectionPerspectiveFOV(s_cast<float>(fovY), s_cast<float>(aspect), s_cast<float>(near_clip), s_cast<float>(far_clip), true);
 		}
-		m4x4 CameraToScreen(float near_clip, float far_clip) const
+		m4x4 CameraToScreen(double near_clip, double far_clip) const
 		{
 			return CameraToScreen(near_clip, far_clip, m_aspect, m_fovY, m_focus_dist);
 		}
-		m4x4 CameraToScreen(float aspect, float fovY, float focus_dist) const
+		m4x4 CameraToScreen(double aspect, double fovY, double focus_dist) const
 		{
 			return CameraToScreen(Near(false), Far(false), aspect, fovY, focus_dist);
 		}
@@ -265,15 +265,15 @@ namespace pr
 		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 		v4 NSSPointToWSPoint(v4 const& nss_point) const
 		{
-			float half_height = m_focus_dist * Tan(m_fovY * 0.5f);
+			auto half_height = m_focus_dist * std::tan(m_fovY * 0.5);
 
 			// Calculate the point in camera space
 			v4 point;
-			point.x = nss_point.x * m_aspect * half_height;
-			point.y = nss_point.y * half_height;
+			point.x = s_cast<float>(nss_point.x * m_aspect * half_height);
+			point.y = s_cast<float>(nss_point.y * half_height);
 			if (!m_orthographic)
 			{
-				float sz = nss_point.z / m_focus_dist;
+				auto sz = s_cast<float>(nss_point.z / m_focus_dist);
 				point.x *= sz;
 				point.y *= sz;
 			}
@@ -286,17 +286,17 @@ namespace pr
 		// The returned 'z' component will be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 		v4 WSPointToNSSPoint(v4 const& ws_point) const
 		{
-			float half_height = m_focus_dist * Tan(m_fovY * 0.5f);
+			auto half_height = m_focus_dist * std::tan(m_fovY * 0.5);
 
 			// Get the point in camera space and project into normalised screen space
 			v4 cam = InvertFast(m_c2w) * ws_point;
 
 			v4 point;
-			point.x = cam.x / (m_aspect * half_height);
-			point.y = cam.y / (half_height);
+			point.x = s_cast<float>(cam.x / (m_aspect * half_height));
+			point.y = s_cast<float>(cam.y / (half_height));
 			if (!m_orthographic)
 			{
-				float sz = -m_focus_dist / cam.z;
+				auto sz = s_cast<float>(-m_focus_dist / cam.z);
 				point.x *= sz;
 				point.y *= sz;
 			}
@@ -314,9 +314,9 @@ namespace pr
 			auto pt = NSSPointToWSPoint(nss_point);
 			if (Orthographic())
 			{
-				auto hheight = m_focus_dist * tan(m_fovY * 0.5f);
+				auto hheight = m_focus_dist * std::tan(m_fovY * 0.5);
 				auto hwidth = m_aspect * hheight;
-				ws_point = m_c2w.pos + (nss_point.x * hwidth * m_c2w.x) + (nss_point.y * hheight * m_c2w.y);
+				ws_point = m_c2w.pos + (s_cast<float>(nss_point.x * hwidth) * m_c2w.x) + (s_cast<float>(nss_point.y * hheight) * m_c2w.y);
 				ws_direction = -m_c2w.z;
 			}
 			else
@@ -347,40 +347,40 @@ namespace pr
 		// Get/Set the distances to the near and far clip planes
 		v2 ClipPlanes(bool focus_relative)
 		{
-			return v2(Near(focus_relative), Far(focus_relative));
+			return v2(s_cast<float>(Near(focus_relative)), s_cast<float>(Far(focus_relative)));
 		}
-		void ClipPlanes(float near_, float far_, bool focus_relative)
+		void ClipPlanes(double near_, double far_, bool focus_relative)
 		{
 			Near(near_, focus_relative);
 			Far(far_, focus_relative);
 		}
 
 		// Get/Set the near clip plane
-		float Near(bool focus_relative) const
+		double Near(bool focus_relative) const
 		{
 			return (focus_relative ? 1 : m_focus_dist) * m_near;
 		}
-		void Near(float value, bool focus_relative)
+		void Near(double value, bool focus_relative)
 		{
-			m_near = value / (focus_relative ? 1.0f : m_focus_dist);
+			m_near = value / (focus_relative ? 1.0 : m_focus_dist);
 		}
 
 		// Get/Set the far clip plane (in world space)
-		float Far(bool focus_relative) const
+		double Far(bool focus_relative) const
 		{
 			return (focus_relative ? 1 : m_focus_dist) * m_far;
 		}
-		void Far(float value, bool focus_relative)
+		void Far(double value, bool focus_relative)
 		{
-			m_far = value / (focus_relative ? 1.0f : m_focus_dist);
+			m_far = value / (focus_relative ? 1.0 : m_focus_dist);
 		}
 
 		// Get/Set the aspect ratio
-		float Aspect() const
+		double Aspect() const
 		{
 			return m_aspect;
 		}
-		void Aspect(float aspect_w_by_h)
+		void Aspect(double aspect_w_by_h)
 		{
 			if (aspect_w_by_h <= 0 || !IsFinite(aspect_w_by_h))
 				throw std::runtime_error("Aspect ratio value is invalid");
@@ -390,53 +390,61 @@ namespace pr
 		}
 
 		// Get/Set the horizontal field of view (in radians).
-		float FovX() const
+		double FovX() const
 		{
-			return 2.0f * ATan(Tan(m_fovY * 0.5f) * m_aspect);
+			auto fovX = 2.0 * std::atan(std::tan(m_fovY * 0.5) * m_aspect);
+			if (fovX <= 0.0 || fovX >= maths::tau_by_2 || !IsFinite(fovX))
+				throw std::runtime_error("FovX must be > 0 and < tau/2");
+			return fovX;
 		}
-		void FovX(float fovX)
+		void FovX(double fovX)
 		{
-			FovY(2.0f * ATan(Tan(fovX * 0.5f) / m_aspect));
+			if (fovX <= 0.0 || fovX >= maths::tau_by_2 || !IsFinite(fovX))
+				throw std::runtime_error("FovX must be > 0 and < tau/2");
+			FovY(2.0 * std::atan(std::tan(fovX * 0.5) / m_aspect));
 		}
 
 		// Get/Set the vertical field of view (in radians). FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
-		float FovY() const
+		double FovY() const
 		{
 			return m_fovY;
 		}
-		void FovY(float fovY)
+		void FovY(double fovY)
 		{
-			if (fovY <= 0.0f || fovY >= maths::tau_by_2 || !IsFinite(fovY))
+			if (fovY <= 0.0 || fovY >= maths::tau_by_2 || !IsFinite(fovY))
 				throw std::runtime_error("FovY value is invalid");
 			
-			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
+			fovY = Clamp(fovY, maths::tinyd, maths::tau_by_2);
 			m_moved |= fovY != m_fovY;
 			m_fovY = fovY;
 		}
 
 		// Set both X and Y axis field of view. Implies aspect ratio
-		void Fov(float fovX, float fovY)
+		void Fov(double fovX, double fovY)
 		{
-			if (fovX <= 0.0f || fovX >= maths::tau_by_2 || !IsFinite(fovX))
+			if (fovX <= 0.0 || fovX >= maths::tau_by_2 || !IsFinite(fovX))
 				throw std::runtime_error("FovX value is invalid");
-			if (fovY <= 0.0f || fovY >= maths::tau_by_2 || !IsFinite(fovY))
+			if (fovY <= 0.0 || fovY >= maths::tau_by_2 || !IsFinite(fovY))
 				throw std::runtime_error("FovY value is invalid");
 
-			fovX = Clamp(fovX, maths::tinyf, maths::tau_by_2f);
-			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
-			auto aspect = Tan(fovX/2) / Tan(fovY/2);
+			fovX = Clamp(fovX, maths::tinyd, maths::tau_by_2);
+			fovY = Clamp(fovY, maths::tinyd, maths::tau_by_2);
+			auto aspect = std::tan(fovX/2) / std::tan(fovY/2);
 			Aspect(aspect);
 			FovY(fovY);
 		}
 
 		// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
-		void BalanceFov(float fov)
+		void BalanceFov(double fov)
 		{
+			if (fov <= 0.0 || fov >= maths::tau_by_2 || !IsFinite(fov))
+				throw std::runtime_error("FOV value is invalid");
+			
 			// Measure the current focus distance and view size at that distance
 			auto d = FocusDist();
 			auto pt = FocusPoint();
 			auto wh = ViewArea(d);
-			auto size = (wh.x + wh.y) * 0.5f;
+			auto size = (wh.x + wh.y) * 0.5;
 
 			// The focus distance at 'fov' with a view size of 'size' is:
 			//'   d2 = (0.5 * size) / tan(0.5 * fov);
@@ -451,8 +459,8 @@ namespace pr
 			//'   fovY = 2 * atan(tan(0.5 * fov) * wh.y / size);
 
 			// Calculate the actual Y FOV at 'd2'
-			auto d2 = (0.5f * size) / Tan(0.5f * fov);
-			auto fovY = 2.0f * ATan((0.5f * wh.y) / d2);
+			auto d2 = (0.5 * size) / std::tan(0.5 * fov);
+			auto fovY = 2.0 * std::atan((0.5 * wh.y) / d2);
 
 			FovY(fovY);
 			FocusDist(d2);
@@ -493,22 +501,22 @@ namespace pr
 		}
 
 		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
-		v2 ViewArea(float dist) const
+		v2 ViewArea(double dist) const
 		{
 			dist = m_orthographic ? m_focus_dist : dist;
-			auto h = 2.0f * Tan(m_fovY * 0.5f);
-			return v2(dist * h * m_aspect, dist * h);
+			auto h = 2.0 * std::tan(m_fovY * 0.5);
+			return v2(s_cast<float>(dist * h * m_aspect), s_cast<float>(dist * h));
 		}
 
 		// Return the view frustum for this camera.
-		Frustum ViewFrustum(float zfar) const
+		Frustum ViewFrustum(double zfar) const
 		{
 			// Note: the frustum is stored with the apex (i.e. camera position) on the +Z axis at 'zfar'
 			// and the far plane at (0,0,0). However, the 'Intersect_LineToFrustum' function allows for this
 			// meaning clipping can be done in camera space assuming the frustum apex is at (0,0,0)
 			return Orthographic()
 				? Frustum::MakeOrtho(ViewArea(m_focus_dist))
-				: Frustum::MakeFA(m_fovY, m_aspect, zfar);
+				: Frustum::MakeFA(s_cast<float>(m_fovY), s_cast<float>(m_aspect), s_cast<float>(zfar));
 		}
 		Frustum ViewFrustum() const
 		{
@@ -518,7 +526,7 @@ namespace pr
 		// Get/Set the world space position of the focus point, maintaining the current camera orientation
 		v4 FocusPoint() const
 		{
-			return m_c2w.pos - m_c2w.z * m_focus_dist;
+			return m_c2w.pos - s_cast<float>(m_focus_dist) * m_c2w.z;
 		}
 		void FocusPoint(v4 const& position)
 		{
@@ -527,39 +535,40 @@ namespace pr
 		}
 
 		// Get/Set the distance to the focus point
-		float FocusDist() const
+		double FocusDist() const
 		{
 			return m_focus_dist;
 		}
-		void FocusDist(float dist)
+		void FocusDist(double dist)
 		{
-			assert("'dist' should not be negative" && IsFinite(dist) && dist >= 0.0f);
+			assert("'dist' should not be negative" && IsFinite(dist) && dist >= 0.0);
 			dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 			m_moved |= dist != m_focus_dist;
 			m_focus_dist = dist;
 		}
 
 		// Return the maximum allowed distance for 'FocusDist'
-		float FocusDistMax() const
+		double FocusDistMax() const
 		{
 			// Clamp so that Near*Far is finite
 			// N*F == (m_near * dist) * (m_far * dist) < float_max
 			//     == m_near * m_far * dist^2 < float_max
 			// => dist < sqrt(float_max) / (m_near * m_far)
 			assert(m_near * m_far > 0);
-			float const sqrt_float_max = 1.84467435239537E+19f;
-			return sqrt_float_max / (m_near * m_far);
+			double const sqrt_real_max = 1.84467435239537E+19;
+			return sqrt_real_max / (m_near * m_far);
 		}
 
 		// Return the minimum allowed value for 'FocusDist'
-		float FocusDistMin() const
+		double FocusDistMin() const
 		{
 			// Clamp so that N - F is non-zero
 			// Abs(N - F) == Abs((m_near * dist) - (m_far * dist)) > float_min
 			//       == dist * Abs(m_near - m_far) > float_min
 			//       == dist > float_min / Abs(m_near - m_far);
 			assert(m_near < m_far);
-			return maths::float_min / Min(Abs(m_near - m_far), 1.0f);
+			double const real_min = limits<double>::min();
+			return real_min / Min(Abs(m_near - m_far), 1.0);
 		}
 
 		// Modify the camera position based on mouse movement.
@@ -589,28 +598,28 @@ namespace pr
 				if (KeyDown(m_key[ENavKey::TranslateZ]))
 				{
 					// Move in a fraction of the focus distance
-					float delta = zoom ? (point.y - m_nav.m_Zref.y) : (point.y - m_nav.m_Tref.y);
-					Translate(0, 0, delta * 10.0f, false);
+					auto delta = zoom ? (point.y - m_nav.m_Zref.y) : (point.y - m_nav.m_Tref.y);
+					Translate(0, 0, delta * 10.0, false);
 				}
 				else
 				{
 					// Zoom the field of view
-					float zm = zoom ? (m_nav.m_Zref.y - point.y) : (m_nav.m_Tref.y - point.y);
+					auto zm = zoom ? (m_nav.m_Zref.y - point.y) : (m_nav.m_Tref.y - point.y);
 					Zoom(zm, false);
 				}
 			}
 			if (translate && !rotate)
 			{
-				float dx = (m_nav.m_Tref.x - point.x) * m_focus_dist * Tan(m_fovY * 0.5f) * m_aspect;
-				float dy = (m_nav.m_Tref.y - point.y) * m_focus_dist * Tan(m_fovY * 0.5f);
-				Translate(dx, dy, 0.0f, false);
+				auto dx = (m_nav.m_Tref.x - point.x) * m_focus_dist * std::tan(m_fovY * 0.5) * m_aspect;
+				auto dy = (m_nav.m_Tref.y - point.y) * m_focus_dist * std::tan(m_fovY * 0.5);
+				Translate(dx, dy, 0.0, false);
 			}
 			if (rotate && !translate)
 			{
 				// If in the roll zone. 'm_Rref' is a point in normalised space[-1, +1] x [-1, +1].
 				// So the roll zone is a radial distance from the centre of the screen
 				if (Length(m_nav.m_Rref) < 0.80f)
-					Rotate((point.y - m_nav.m_Rref.y) * float(maths::tau_by_4), (m_nav.m_Rref.x - point.x) * float(maths::tau_by_4), 0.0f, false);
+					Rotate((point.y - m_nav.m_Rref.y) * maths::tau_by_4f, (m_nav.m_Rref.x - point.x) * maths::tau_by_4f, 0.0f, false);
 				else
 					Rotate(0.0f, 0.0f, ATan2(m_nav.m_Rref.y, m_nav.m_Rref.x) - ATan2(point.y, point.x), false);
 			}
@@ -621,30 +630,30 @@ namespace pr
 		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 		// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click = 10% of the focus distance)
 		// Returns true if the camera has moved
-		bool MouseControlZ(v2 const& point, float delta, bool along_ray, bool commit = true)
+		bool MouseControlZ(v2 const& point, double delta, bool along_ray, bool commit = true)
 		{
 			// Ignore if Z motion is locked
 			if (AllSet(m_lock_mask, ELockMask::TransZ))
 				return false;
 
-			auto dist = delta / 120.0f;
-			if (KeyDown(m_key[ENavKey::Accurate])) dist *= 0.1f;
-			if (KeyDown(m_key[ENavKey::SuperAccurate])) dist *= 0.1f;
+			auto dist = delta / 120.0;
+			if (KeyDown(m_key[ENavKey::Accurate])) dist *= 0.1;
+			if (KeyDown(m_key[ENavKey::SuperAccurate])) dist *= 0.1;
 
 			// Scale by the focus distance
-			dist *= m_nav.m_focus_dist0 * 0.1f;
+			dist *= m_nav.m_focus_dist0 * 0.1;
 
 			// Get the ray in camera space to move the camera along
-			auto ray_cs = -v4ZAxis;
+			auto ray_cs = -v4::ZAxis();
 			if (along_ray)
 			{
 				// Move along a ray cast from the camera position to the
 				// mouse point projected onto the focus plane.
-				auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
+				auto pt  = NSSPointToWSPoint(v4(point, s_cast<float>(FocusDist()), 0.0f));
 				auto ray_ws = pt - CameraToWorld().pos;
-				ray_cs = Normalise(WorldToCamera() * ray_ws, -v4ZAxis);
+				ray_cs = Normalise(WorldToCamera() * ray_ws, -v4::ZAxis());
 			}
-			ray_cs *= dist;
+			ray_cs *= s_cast<float>(dist);
 
 			// If the 'TranslateZ' key is down move the focus point too.
 			// Otherwise move the camera toward or away from the focus point.
@@ -676,7 +685,7 @@ namespace pr
 
 		// Translate by a camera relative amount
 		// Returns true if the camera has moved (for consistency with MouseControl)
-		bool Translate(float dx, float dy, float dz, bool commit = true)
+		bool Translate(double dx, double dy, double dz, bool commit = true)
 		{
 			if (m_lock_mask != ELockMask::None && AllSet(m_lock_mask, ELockMask::CameraRelative))
 			{
@@ -698,12 +707,12 @@ namespace pr
 			}
 
 			// Move in a fraction of the focus distance
-			dz = -m_nav.m_focus_dist0 * dz * 0.1f;
+			dz = -m_nav.m_focus_dist0 * dz * 0.1;
 			if (!KeyDown(m_key[ENavKey::TranslateZ]))
 				m_focus_dist = Clamp(m_nav.m_focus_dist0 + dz, FocusDistMin(), FocusDistMax());
 
 			// Translate
-			auto pos = m_nav.m_c2w0.pos + m_nav.m_c2w0.rot * v4(dx, dy, dz, 0.0f);
+			auto pos = m_nav.m_c2w0.pos + m_nav.m_c2w0.rot * v4(s_cast<float>(dx), s_cast<float>(dy), s_cast<float>(dz), 0.0f);
 
 			// Apply non-camera relative locking
 			if (m_lock_mask != ELockMask::None && !AllSet(m_lock_mask, ELockMask::CameraRelative))
@@ -727,13 +736,13 @@ namespace pr
 
 		// Rotate the camera by Euler angles about the focus point
 		// Returns true if the camera has moved (for consistency with MouseControl)
-		bool Rotate(float pitch, float yaw, float roll, bool commit = true)
+		bool Rotate(double pitch, double yaw, double roll, bool commit = true)
 		{
 			if (m_lock_mask != ELockMask::None)
 			{
-				if (AllSet(m_lock_mask, ELockMask::RotX)) pitch	= 0.0f;
-				if (AllSet(m_lock_mask, ELockMask::RotY)) yaw	= 0.0f;
-				if (AllSet(m_lock_mask, ELockMask::RotZ)) roll	= 0.0f;
+				if (AllSet(m_lock_mask, ELockMask::RotX)) pitch	= 0.0;
+				if (AllSet(m_lock_mask, ELockMask::RotY)) yaw	= 0.0;
+				if (AllSet(m_lock_mask, ELockMask::RotZ)) roll	= 0.0;
 			}
 			if (KeyDown(m_key[ENavKey::Accurate]))
 			{
@@ -752,10 +761,10 @@ namespace pr
 			v4 old_focus = FocusPoint();
 
 			// Rotate the camera matrix
-			m_c2w = m_nav.m_c2w0 * m4x4::Transform(pitch, yaw, roll, v4Origin);
+			m_c2w = m_nav.m_c2w0 * m4x4::Transform(s_cast<float>(pitch), s_cast<float>(yaw), s_cast<float>(roll), v4::Origin());
 
 			// Position the camera so that the focus is still in the same position
-			m_c2w.pos = old_focus + m_c2w.z * m_focus_dist;
+			m_c2w.pos = old_focus + s_cast<float>(m_focus_dist) * m_c2w.z;
 
 			// If an align axis is given, align up to it
 			if (LengthSq(m_align) > maths::tinyf)
@@ -774,7 +783,7 @@ namespace pr
 
 		// Zoom the field of view. 'zoom' should be in the range (-1, 1) where negative numbers zoom in, positive out
 		// Returns true if the camera has moved (for consistency with MouseControl)
-		bool Zoom(float zoom, bool commit = true)
+		bool Zoom(double zoom, bool commit = true)
 		{
 			if (m_lock_mask != ELockMask::None)
 			{
@@ -787,8 +796,8 @@ namespace pr
 					zoom *= m_accuracy_scale;
 			}
 
-			m_fovY = (1.0f + zoom) * m_nav.m_fovY0;
-			m_fovY = Clamp(m_fovY, maths::tinyf, maths::tau_by_2f - maths::tinyf);
+			m_fovY = (1.0 + zoom) * m_nav.m_fovY0;
+			m_fovY = Clamp(m_fovY, maths::tinyd, maths::tau_by_2 - maths::tinyd);
 
 			// Set the base values
 			if (commit)
@@ -799,7 +808,7 @@ namespace pr
 		}
 
 		// Return the current zoom scaling factor
-		float Zoom() const
+		double Zoom() const
 		{
 			return m_default_fovY / m_fovY;
 		}
@@ -828,14 +837,14 @@ namespace pr
 		void LookAt(v4 const& position, v4 const& lookat, v4 const& up, bool commit = true)
 		{
 			m_c2w = m4x4::LookAt(position, lookat, up);
-			m_focus_dist = Clamp(Length(lookat - position), FocusDistMin(), FocusDistMax());
+			m_focus_dist = Clamp<double>(Length(lookat - position), FocusDistMin(), FocusDistMax());
 
 			// Set the base values
 			if (commit) Commit();
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(BBox const& bbox, v4 const& forward, v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
+		void View(BBox const& bbox, v4 const& forward, v4 const& up, double focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
 			if (!bbox.valid())
 				throw std::runtime_error("Camera: Cannot view an invalid bounding box");
@@ -876,8 +885,8 @@ namespace pr
 				if (aspect < maths::float_eps || !IsFinite(aspect))
 				{
 					// Handle degeneracy
-					const float min_aspect = maths::tinyf;
-					const float max_aspect = 1 / maths::tinyf;
+					const auto min_aspect = maths::tinyf;
+					const auto max_aspect = 1 / maths::tinyf;
 					if      (width  > maths::float_eps) height = width / max_aspect;
 					else if (height > maths::float_eps) width = min_aspect / height;
 					else { width = 1; height = 1; }
@@ -890,19 +899,19 @@ namespace pr
 				// equal to the average of 'width' and 'height' using the default FOV.
 				if (focus_dist != 0)
 				{
-					FovY(2.0f * ATan(0.5f * height / focus_dist));
+					FovY(2.0 * std::atan(0.5 * height / focus_dist));
 				}
 				else
 				{
-					auto size = (width + height) / 2.0f;
-					focus_dist = (0.5f * size) / Tan(0.5f * m_default_fovY);
+					auto size = (width + height) / 2.0;
+					focus_dist = (0.5 * size) / std::tan(0.5 * m_default_fovY);
 
 					// Allow for the depth of the bbox. Assume the W/H of the bbox are at the nearest
 					// face of the bbox to the camera. Unless, the bbox.radius.z is greater than the 
 					// default focus distance. In that case, just use the bbox.radius.z. The FoV will
 					// cover the centre of the bbox
-					auto d = 1.1f * sizez > focus_dist ? focus_dist : focus_dist - sizez;
-					FovY(2.0f * ATan(0.5f * height / d));
+					auto d = 1.1 * sizez > focus_dist ? focus_dist : focus_dist - sizez;
+					FovY(2.0 * std::atan(0.5 * height / d));
 				}
 			}
 			else
@@ -913,23 +922,23 @@ namespace pr
 				// Choose the focus distance if not given
 				if (focus_dist == 0 || focus_dist < sizez)
 				{
-					auto d = size / (Tan(0.5f * FovY()) * m_aspect);
+					auto d = size / (std::tan(0.5 * FovY()) * m_aspect);
 					focus_dist = sizez + d;
 				}
 				// Otherwise, set the FOV
 				else
 				{
 					auto d = focus_dist - sizez;
-					FovY(2.0f * ATan(size * m_aspect / d));
+					FovY(2.0 * std::atan(size * m_aspect / d));
 				}
 			}
 
 			// the distance from camera to bbox_centre is 'dist + sizez'
-			LookAt(bbox_centre - forward * focus_dist, bbox_centre, up, update_base);
+			LookAt(bbox_centre - s_cast<float>(focus_dist) * forward, bbox_centre, up, update_base);
 		}
 
 		// Set the camera fields of view so that a rectangle with dimensions 'width'/'height' exactly fits the view at 'dist'.
-		void View(float width, float height, float focus_dist = 0)
+		void View(float width, float height, double focus_dist = 0)
 		{
 			PR_ASSERT(PR_DBG, width > 0 && height > 0 && focus_dist >= 0, "");
 
@@ -939,13 +948,13 @@ namespace pr
 			// If 'focus_dist' is given, choose FOV so that the view exactly fits
 			if (focus_dist != 0)
 			{
-				FovY(2.0f * ATan(0.5f * height / focus_dist));
+				FovY(2.0 * std::atan(0.5 * height / focus_dist));
 				FocusDist(focus_dist);
 			}
 			// Otherwise, choose a focus distance that preserves FOV
 			else
 			{
-				FocusDist(0.5f * height / Tan(0.5f * FovY()));
+				FocusDist(0.5 * height / std::tan(0.5 * FovY()));
 			}
 		}
 
@@ -960,7 +969,7 @@ namespace pr
 
 			// Rotate the camera transform and reposition to look at the focus point
 			m_c2w     = m_c2w * m4x4::Transform(axis, angle_rad, v4Origin);
-			m_c2w.pos = old_focus + m_focus_dist * m_c2w.z;
+			m_c2w.pos = old_focus + s_cast<float>(m_focus_dist) * m_c2w.z;
 			m_c2w     = Orthonorm(m_c2w);
 
 			// Set the base values

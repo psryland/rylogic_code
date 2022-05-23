@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -267,7 +269,8 @@ namespace Rylogic.Gui.WPF
 					DrawTickLabels = true;
 					TickLength = 5;
 					MinTickSize = 30;
-					LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
+					LabelTransform = Transform.Identity;
+					LabelTransformOrigin = new Point();
 					AxisThickness = 2f;
 					PixelsPerTick = 30.0;
 					ShowGridLines = true;
@@ -337,12 +340,19 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>Offset transform from default label position</summary>
-				public Matrix LabelTransform
+				public Transform LabelTransform
 				{
-					get => get<Matrix>(nameof(LabelTransform));
+					get => get<Transform>(nameof(LabelTransform));
 					set => set(nameof(LabelTransform), value);
 				}
 
+				/// <summary>Offset transform from default label position</summary>
+				public Point LabelTransformOrigin
+				{
+					get => get<Point>(nameof(LabelTransformOrigin));
+					set => set(nameof(LabelTransformOrigin), value);
+				}
+				
 				/// <summary>The thickness of the axis line</summary>
 				public double AxisThickness
 				{

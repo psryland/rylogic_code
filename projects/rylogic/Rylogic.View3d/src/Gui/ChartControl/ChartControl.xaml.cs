@@ -1111,6 +1111,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Find the default range, then reset to the default range</summary>
 		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All, EAxis axes = EAxis.Both, double inflate = 1.0)
 		{
+			// Notes:
+			//  - AutoRange only considers graphics added to the scene.
+			//  - ChartDataSeries' use a caching system and only add pieces of the series data that are witihn the visible X range.
+			//    AutoRange should not show the full data series range because it is probably too big (that's why it's cached). You
+			//    will need to manually set the range when using on-demand graphics like ChartDataSeries plots.
+
 			// Allow the auto range to be handled by event
 			var args = new AutoRangeEventArgs(who, axes);
 			OnAutoRanging(args);
@@ -1199,7 +1205,8 @@ namespace Rylogic.Gui.WPF
 
 			// Move the camera in the camera Z axis direction so that the width at the focus dist
 			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
-			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(Scene.Camera.FovX / 2.0)));
+			var fovX = Math_.Clamp(Scene.Camera.FovX, Math_.TinyF, Math_.TauBy2F - Math_.TinyF);
+			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(fovX / 2.0)));
 			c2w.pos = focus.w1 + Scene.Camera.FocusDist * c2w.z;
 
 			Scene.Camera.O2W = c2w;
