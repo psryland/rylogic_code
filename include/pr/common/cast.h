@@ -87,8 +87,17 @@ namespace pr
 		assert(std::abs(x) != std::numeric_limits<U>::infinity() && "Can't convert '+/-inf' to an integral type");
 		return static_cast<T>(x);
 	}
-	template <std::floating_point T, std::floating_point U> constexpr T s_cast(U x)
+	template <std::floating_point T, bool RuntimeCheck = false, std::floating_point U> constexpr T s_cast(U x)
 	{
+		if constexpr (RuntimeCheck)
+		{
+			if (x < std::numeric_limits<T>::lowest() || x > std::numeric_limits<T>::max())
+				throw std::runtime_error("Cast loses data");
+		}
+		else
+		{
+			assert("Cast loses data" && x >= std::numeric_limits<T>::lowest() && x <= std::numeric_limits<T>::max());
+		}
 		return static_cast<T>(x);
 	}
 }

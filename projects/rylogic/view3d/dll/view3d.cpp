@@ -796,7 +796,7 @@ VIEW3D_API float __stdcall View3D_CameraFocusDistanceGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.FocusDist();
+		return s_cast<float>(window->m_camera.FocusDist());
 	}
 	CatchAndReport(View3D_CameraFocusDistanceGet, window, 0.0f);
 }
@@ -860,7 +860,7 @@ VIEW3D_API float __stdcall View3D_CameraAspectGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.Aspect();
+		return s_cast<float>(window->m_camera.Aspect());
 	}
 	CatchAndReport(View3D_CameraAspectGet, window, 1.0f);
 }
@@ -885,7 +885,7 @@ VIEW3D_API float __stdcall View3D_CameraFovXGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.FovX();
+		return s_cast<float>(window->m_camera.FovX());
 	}
 	CatchAndReport(View3D_CameraFovXGet, window, 0.0f);
 }
@@ -910,7 +910,7 @@ VIEW3D_API float __stdcall View3D_CameraFovYGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.FovY();
+		return s_cast<float>(window->m_camera.FovY());
 	}
 	CatchAndReport(View3D_CameraFovYGet, window, 0.0f);
 }
@@ -1053,7 +1053,7 @@ VIEW3D_API float __stdcall View3D_CameraZoomGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.Zoom();
+		return s_cast<float>(window->m_camera.Zoom());
 	}
 	CatchAndReport(View3D_CameraZoomGet, window, 1.0f);
 }
@@ -1981,7 +1981,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock(EView3DStockTexture t
 
 // Create a texture from data in memory.
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
-// of the size appropriate for the given format. e.g. pr::uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
+// of the size appropriate for the given format. e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
 VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options)
 {

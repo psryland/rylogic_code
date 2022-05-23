@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Interop;
 using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 
 namespace Rylogic.Extn
 {
@@ -10,6 +11,9 @@ namespace Rylogic.Extn
 		/// <summary>Set the render target size of this D3D11Image from the given visual</summary>
 		public static void SetRenderTargetSize(this D3D11Image d3d_image, FrameworkElement element, double scale = 1)
 		{
+			// Ensure the Window that contains 'element' is also the owner of 'd3d_image'
+			d3d_image.WindowOwner = Window.GetWindow(element).Hwnd();
+
 			// Set the screen render target size, accounting for DPI
 			var win = PresentationSource.FromVisual(element)?.CompositionTarget as HwndTarget;
 			var dpi_scaleX = win?.TransformToDevice.M11 ?? 1.0;
