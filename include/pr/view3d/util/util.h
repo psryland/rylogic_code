@@ -324,7 +324,7 @@ namespace pr
 {
 	template <> struct Convert<D3D11_PRIMITIVE_TOPOLOGY, rdr::ETopo>
 	{
-		static D3D11_PRIMITIVE_TOPOLOGY To(rdr::ETopo v)
+		static D3D11_PRIMITIVE_TOPOLOGY To_(rdr::ETopo v)
 		{
 			switch (v)
 			{

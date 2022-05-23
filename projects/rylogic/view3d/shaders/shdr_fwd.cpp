@@ -51,7 +51,7 @@ namespace pr::rdr
 		
 		hlsl::fwd::CBufFade cb = {};
 		cb.m_fade_centre = m_fade_centre;
-		cb.m_fade_radius = (m_focus_relative ? state.m_rstep->m_scene->m_view.FocusDist() : 1) * m_fade_radius;
+		cb.m_fade_radius = (m_focus_relative ? s_cast<float>(state.m_rstep->m_scene->m_view.FocusDist()) : 1) * m_fade_radius;
 		cb.m_fade_type = int(m_fade_type);
 		WriteConstants(dc, m_cbuf.get(), cb, EShaderType::PS);
 	}
