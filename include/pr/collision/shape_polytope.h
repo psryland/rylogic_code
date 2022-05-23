@@ -365,7 +365,7 @@ namespace pr::collision
 		// On scope exit, fill the remaining space in 'faces' with degenerates.
 		// Since the verts of the polytope may not all be on the convex hull we may
 		// generate less faces than 'faces_end - faces'
-		auto s = CreateScope(
+		auto s = Scope<void>(
 			[&]{ if (faces != faces_end) *faces = 0; },
 			[&]{ face_count = int(faces - faces_start); while (faces != faces_end) *faces++ = 0; });
 

@@ -18,7 +18,7 @@ namespace pr::script
 		using namespace pr::str;
 
 		std::filesystem::path const script_utf = L"script_utf.txt";
-		auto cleanup = pr::CreateScope([]{}, [&]{ std::filesystem::remove(script_utf); });
+		auto cleanup = pr::Scope<void>([]{}, [&]{ std::filesystem::remove(script_utf); });
 
 		{// Simple buffering
 			char const str[] = "123abc";
@@ -569,7 +569,7 @@ namespace pr::script
 
 		char data[] = "Included";
 		auto script_include = temp_dir / L"script_include.txt";
-		auto cleanup = CreateScope([] {}, [=] { std::filesystem::remove(script_include); });
+		auto cleanup = Scope<void>([]{}, [=] { std::filesystem::remove(script_include); });
 
 		{// Create the file
 			std::ofstream fout(script_include);

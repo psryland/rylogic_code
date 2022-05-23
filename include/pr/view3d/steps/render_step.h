@@ -19,7 +19,7 @@ namespace pr::rdr
 	struct RenderStep
 	{
 		// Draw list element container
-		using TDrawList = pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>>;
+		using TDrawList = pr::vector<DrawListElement, 1024, false, alignof(DrawListElement), pr::rdr::Allocator<DrawListElement>>;
 
 		// A lock context for the drawlist
 		struct Lock :threads::Synchronise<RenderStep, std::recursive_mutex>

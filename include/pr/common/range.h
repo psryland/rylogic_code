@@ -8,14 +8,21 @@
 
 namespace pr
 {
+	template <typename T> concept Rangeable = requires(T x)
+	{
+		{ x + (x - x) / 2 };
+		{ x < x || x > x || x <= x || x >= x || x == x || x != x };
+	};
+
 	// A range representation  (intended for numeric types only, might partially work for iterators)
 	// Assume integral by default (so that iterators etc work)
-	template <typename T = int, bool Integral = !std::is_floating_point<T>::value> struct Range
+	template <Rangeable T = int>
+	struct Range
 	{
-		struct traits
-		{
-			static bool const is_integral = Integral;
-		};
+		using value_type = T;
+		using difference_type = decltype(std::declval<T>() - std::declval<T>());
+		static bool const is_integral = std::is_integral_v<difference_type>;
+		inline static difference_type const integral_one = is_integral * difference_type{1};
 
 		T m_beg; // The first in the range
 		T m_end; // One past the last in the range
@@ -23,7 +30,7 @@ namespace pr
 		// The default empty range
 		static constexpr Range Zero()
 		{
-			return Range(0,0);
+			return Range(T{}, T{});
 		}
 
 		// An invalid range. Used as an initialiser when finding a bounding range
@@ -70,33 +77,44 @@ namespace pr
 		}
 
 		// The number of elements in or length of the range
-		constexpr auto size() const -> decltype(m_end - m_beg)
+		constexpr difference_type size() const
 		{
 			return m_end - m_beg;
 		}
 
 		// Set the range
-		void set(T const& begin, T const& end)
+		constexpr void set(T begin, T end)
 		{
 			m_beg = begin;
 			m_end = end;
 		}
 
 		// Set the number of elements in or length of the range
-		template <typename U> void resize(U size)
+		constexpr void resize(difference_type size)
 		{
-			m_end = static_cast<T>(m_beg + size);
+			m_end = m_beg + size;
 		}
 
-		// Move the range
-		template <typename U> void shift(U offset)
-		{
-			m_beg = static_cast<T>(m_beg + offset);
-			m_end = static_cast<T>(m_end + offset);
-		}
+		// These are ambiguous, do they return a copy or modify themselves?
+		// use the global functions
+		//// Move the range
+		//template <typename U> constexpr Range shift(U offset)
+		//{
+		//	m_beg = static_cast<T>(m_beg + offset);
+		//	m_end = static_cast<T>(m_end + offset);
+		//	return *this;
+		//}
+
+		//// Move the range
+		//template <typename U> constexpr Range scale(U numer, U denom)
+		//{
+		//	m_beg = static_cast<T>((m_beg * numer) / denum);
+		//	m_end = static_cast<T>((m_end * numer) / denum);
+		//	return *this;
+		//}
 
 		// Return the midpoint of the range
-		T mid() const
+		constexpr T mid() const
 		{
 			return m_beg + (m_end - m_beg)/2;
 		}
@@ -104,22 +122,22 @@ namespace pr
 		// Returns the last value to be considered within the range
 		T last() const
 		{
-			assert(size() >= 0 && "range is invalid");
-			assert(!traits::is_integral || !empty() && "range is empty");
-			return static_cast<T>(m_end - traits::is_integral);
+			assert(m_beg <= m_end && "range is invalid");
+			assert(!is_integral || !empty() && "range is empty");
+			return static_cast<T>(m_end - integral_one);
 		}
 
 		// True if 'value' is within this range
-		template <typename U> bool contains(U rhs) const
+		template <Rangeable U> bool contains(U rhs) const
 		{
 			assert(size() >= 0 && "range is invalid");
-			return traits::is_integral
+			return is_integral
 				? rhs >= m_beg && rhs < m_end
 				: rhs >= m_beg && rhs <= m_end;
 		}
 
 		// True if 'rhs' is entirely within this range
-		template <typename U> bool contains(Range<U> rhs) const
+		template <Rangeable U> bool contains(Range<U> rhs) const
 		{
 			assert(size() >= 0 && "range is invalid");
 			assert(rhs.size() >= 0 && "range is invalid");
@@ -127,25 +145,27 @@ namespace pr
 		}
 
 		// Returns true if this range and 'rhs' overlap
-		template <typename U> bool intersects(Range<U> rhs) const
+		template <Rangeable U> bool intersects(Range<U> rhs) const
 		{
 			assert(size() >= 0 && "range is invalid");
 			assert(rhs.size() >= 0 && "rhs range is invalid");
 			return m_beg < rhs.m_end && rhs.m_beg < m_end;
 		}
 
-		// Grows the range to include 'rhs'
-		template <typename U> U grow(U rhs)
+		// Grows the range to include 'rhs' and passes 'rhs' through.
+		template <Rangeable U> U grow(U rhs)
 		{
+			// Returning 'rhs' allows inline range measuring. e.g.  auto x = range_of_x.grow(get_x())
 			if (rhs <  m_beg) { m_beg = static_cast<T>(rhs); }
-			if (rhs >= m_end) { m_end = static_cast<T>(rhs + traits::is_integral); }
+			if (rhs >= m_end) { m_end = static_cast<T>(rhs + integral_one); }
 			return rhs;
 		}
 
-		// Grows the range to include 'rhs'
-		template <typename U> Range<U> grow(Range<U> rhs)
+		// Grows the range to include 'rhs' and passes 'rhs' through.
+		template <Rangeable U> Range<U> grow(Range<U> rhs)
 		{
-			// Don't treat !rhs.valid() as an error, it's the only way to grow an empty range
+			// Returning 'rhs' allows inline range measuring. e.g.  auto x = range_of_x.grow(get_x())
+			// Don't treat !rhs.valid() as an error, it's the only way to grow with a no-op range
 			if (rhs.size() < 0) return rhs;
 			if (rhs.m_beg <  m_beg) { m_beg = rhs.m_beg; }
 			if (rhs.m_end >= m_end) { m_end = rhs.m_end; }
@@ -153,7 +173,7 @@ namespace pr
 		}
 
 		// Implicit conversion to a Range<U> if T is convertible to U
-		template <typename U, typename = typename std::enable_if<std::is_convertible<T,U>::value>::type>
+		template <Rangeable U, typename = std::enable_if_t<std::is_convertible_v<T,U>>>
 		operator Range<U>()
 		{
 			return Range<U>(m_beg, m_end);
@@ -161,61 +181,35 @@ namespace pr
 	};
 
 	// Operators
-	template <typename T, typename U> inline bool operator == (Range<T> const& lhs, Range<U> const& rhs)
+	template <Rangeable T, Rangeable U> bool operator == (Range<T> const& lhs, Range<U> const& rhs)
 	{
 		return lhs.m_beg == rhs.m_beg && lhs.m_end == rhs.m_end;
 	}
-	template <typename T, typename U> inline bool operator != (Range<T> const& lhs, Range<U> const& rhs)
+	template <Rangeable T, Rangeable U>  bool operator != (Range<T> const& lhs, Range<U> const& rhs)
 	{
 		return !(lhs == rhs);
 	}
 
 	// Returns true if 'rhs' is with 'range'
-	template <typename T, typename U> inline bool IsWithin(Range<T> const& range, U rhs)
+	template <Rangeable T, Rangeable U> inline [[nodiscard]] bool IsWithin(Range<T> const& range, U rhs)
 	{
 		return range.contains(rhs);
 	}
 
 	// Returns true if 'sub_range' is entirely within 'range'
-	template <typename T, typename U> inline bool IsWithin(Range<T> const& range, Range<U> const& sub_range)
+	template <Rangeable T, Rangeable U> inline [[nodiscard]] bool IsWithin(Range<T> const& range, Range<U> const& sub_range)
 	{
 		return range.contains(sub_range);
 	}
 
 	// Returns true if the ranges 'lhs' and 'rhs' overlap
-	template <typename T, typename U> inline bool Intersects(Range<T> const& lhs, Range<U> const& rhs)
+	template <Rangeable T, Rangeable U> inline [[nodiscard]] bool Intersects(Range<T> const& lhs, Range<U> const& rhs)
 	{
 		return lhs.intersects(rhs);
 	}
 
-	// Expand 'range' if necessary to include 'rhs'
-	template <typename T, typename U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, U rhs)
-	{
-		auto r = range;
-		r.grow(rhs);
-		return r;
-	}
-	template <typename T, typename U> inline U Grow(Range<T>& range, U rhs)
-	{
-		return range.grow(rhs);
-	}
-
-	// Expand 'range' to include 'rhs' if necessary
-	template <typename T, typename U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, Range<U> const& rhs)
-	{
-		auto r = range;
-		r.grow(rhs);
-		return r;
-	}
-	template <typename T, typename U> inline Range<U> const& Grow(Range<T>& range, Range<U> const& rhs)
-	{
-		return range.grow(rhs);
-	}
-
-	// Returns the intersection of 'lhs' with 'rhs'
-	// If there is no intersection, returns [b,b) or [e,e) (from the lhs range).
-	// Note: this means Intersect(a,b) != Intersect(b,a)
-	template <typename T, typename U> [[nodiscard]] Range<T> Intersect(Range<T> const& lhs, Range<U> const& rhs)
+	// Returns the intersection of 'lhs' with 'rhs'. If there is no intersection, returns [b,b) or [e,e) (from the lhs range). Note: this means Intersect(a,b) != Intersect(b,a)
+	template <Rangeable T, Rangeable U> [[nodiscard]] Range<T> Intersect(Range<T> const& lhs, Range<U> const& rhs)
 	{
 		assert(lhs.size() >= 0 && "lhs range is invalid");
 		assert(rhs.size() >= 0 && "rhs range is invalid");
@@ -224,10 +218,54 @@ namespace pr
 		return Range<T>::make(std::max(lhs.m_beg, rhs.m_beg), std::min(lhs.m_end, rhs.m_end));
 	}
 
-	// Clamp 'value' to within 'range'
-	template <typename T, typename U> inline T Clamp(T value, Range<U> const& range)
+	// Expand 'range' if necessary to include 'rhs'
+	template <Rangeable T, Rangeable U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, U rhs)
 	{
-		return pr::Clamp<T>(value, range.m_beg, range.m_end - Range<U>::traits::is_integral);
+		auto r = range;
+		r.grow(rhs);
+		return r;
+	}
+
+	// Expand 'range' to include 'rhs' if necessary
+	template <Rangeable T, Rangeable U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, Range<U> const& rhs)
+	{
+		auto r = range;
+		r.grow(rhs);
+		return r;
+	}
+
+	// Expand 'range' if necessary to include 'rhs'. Returns 'rhs'
+	template <Rangeable T, Rangeable U> inline U Grow(Range<T>& range, U rhs)
+	{
+		return range.grow(rhs);
+	}
+
+	// Expand 'range' if necessary to include 'rhs'. Returns 'rhs'
+	template <Rangeable T, Rangeable U> inline Range<U> const& Grow(Range<T>& range, Range<U> const& rhs)
+	{
+		return range.grow(rhs);
+	}
+
+	// Clamp 'value' to within 'range'
+	template <Rangeable T, Rangeable U> [[nodiscard]] inline T Clamp(T value, Range<U> const& range)
+	{
+		return pr::Clamp<T>(value, range.m_beg, range.m_end - Range<U>::integral_one);
+	}
+
+	// Move the range
+	template <Rangeable T, Rangeable U> [[nodiscard]] constexpr Range<T> Shift(Range<T> range, U offset)
+	{
+		return Range<T>(
+			static_cast<T>(range.m_beg + offset),
+			static_cast<T>(range.m_end + offset));
+	}
+
+	// Scale the range
+	template <Rangeable T, Rangeable U> [[nodiscard]] constexpr Range<T> Scale(Range<T> range, U numer, U denom)
+	{
+		return Range<T>(
+			static_cast<T>((range.m_beg * numer) / denom),
+			static_cast<T>((range.m_end * numer) / denom));
 	}
 }
 
@@ -237,8 +275,13 @@ namespace pr::common
 {
 	PRUnitTest(RangeTests)
 	{
+		static_assert(Range<int>::is_integral == true);
+		static_assert(Range<float>::is_integral == false);
+		static_assert(Range<char*>::is_integral == true);
+		static_assert(Range<pr::v4>::is_integral == false);
+
 		{
-			typedef pr::Range<int> IRange;
+			using IRange = pr::Range<int>;
 			IRange r0(0,5);
 			IRange r1(5,10);
 			IRange r2(3,7);
@@ -271,13 +314,13 @@ namespace pr::common
 			PR_CHECK(Intersects(r1, r0), false);
 			PR_CHECK(Intersects(r0, r1), false);
 
-			r0.shift(3);
-			r1.shift(-2);
+			r0 = Shift(r0, +3);
+			r1 = Shift(r1, -2);
 			PR_CHECK(r0 == r1, true);
 
 			PR_CHECK(r3.mid() == r2.mid(), true);
 
-			r0.shift(-3);
+			r0 = Shift(r0, -3);
 			r0.resize(3);
 			PR_CHECK(r0.size(), 3);
 
@@ -289,8 +332,8 @@ namespace pr::common
 			PR_CHECK(IsWithin(r4, 4), true);
 		}
 		{//IterRange
-			typedef std::vector<int> Vec;
-			typedef pr::Range<Vec::const_iterator> IRange;
+			using Vec = std::vector<int>;
+			using IRange = pr::Range<Vec::const_iterator>;
 			Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
 
 			IRange r0(vec.begin(),vec.begin()+5);
@@ -324,13 +367,13 @@ namespace pr::common
 			PR_CHECK(Intersects(r1, r0), false );
 			PR_CHECK(Intersects(r0, r1), false );
 
-			r0.shift(3);
-			r1.shift(-2);
+			r0 = Shift(r0, +3);
+			r1 = Shift(r1, -2);
 			PR_CHECK(r0 == r1, true);
 
 			PR_CHECK(r3.mid() == r2.mid(), true);
 
-			r0.shift(-3);
+			r0 = Shift(r0, -3);
 			r0.resize(3);
 			PR_CHECK(r0.size(), 3);
 
@@ -375,13 +418,13 @@ namespace pr::common
 			PR_CHECK(Intersects(r1, r0), false);
 			PR_CHECK(Intersects(r0, r1), false);
 
-			r0.shift(3.0f);
-			r1.shift(-2.0f);
+			r0 = Shift(r0, +3.0f);
+			r1 = Shift(r1, -2.0f);
 			PR_CHECK(r0 == r1, true);
 
 			PR_CHECK(r3.mid() == r2.mid(), true);
 
-			r0.shift(-3.0f);
+			r0 = Shift(r0, -3.0f);
 			r0.resize(3.0f);
 			PR_CHECK(r0.size(), 3.0f);
 

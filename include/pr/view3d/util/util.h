@@ -318,3 +318,29 @@ namespace pr::rdr
 		#endif
 	}
 }
+
+// Conversion
+namespace pr
+{
+	template <> struct Convert<D3D11_PRIMITIVE_TOPOLOGY, rdr::ETopo>
+	{
+		static D3D11_PRIMITIVE_TOPOLOGY To_(rdr::ETopo v)
+		{
+			switch (v)
+			{
+				case rdr::ETopo::None         : return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				case rdr::ETopo::Invalid      : return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				case rdr::ETopo::PointList    : return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+				case rdr::ETopo::LineList     : return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+				case rdr::ETopo::LineStrip    : return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+				case rdr::ETopo::TriList      : return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+				case rdr::ETopo::TriStrip     : return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+				case rdr::ETopo::LineListAdj  : return D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+				case rdr::ETopo::LineStripAdj : return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ;
+				case rdr::ETopo::TriListAdj   : return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ;
+				case rdr::ETopo::TriStripAdj  : return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ;
+				default: throw std::runtime_error("Topology type not supported");
+			}
+		}
+	};
+}
