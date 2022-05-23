@@ -47,12 +47,12 @@ namespace pr::audio
 			file_data_format = WAVE_le;
 
 			// Format chunk
-			fmt_chunk_id   = FMT_le;                        //0x666d7420;  // "fmt " in big endian
-			fmt_chunk_size = 16;                            // 16 for PCM
-			audioFormat    = 1;                             // 1 for PCM
-			numChannels    = s_cast<WORD>(channels);        // 1 for mono, 2 for stereo
-			bitsPerSample  = s_cast<WORD>(bits_per_sample); // number of bits (8 for 8 bits, etc...)
-			sampleRate     = s_cast<DWORD>(sample_rate);    // 8000, 22050, 44100, etc...
+			fmt_chunk_id   = FMT_le;                          //0x666d7420;  // "fmt " in big endian
+			fmt_chunk_size = 16;                              // 16 for PCM
+			audioFormat    = 1;                               // 1 for PCM
+			numChannels    = s_cast<WORD>(channels);          // 1 for mono, 2 for stereo
+			bitsPerSample  = s_cast<WORD>(bits_per_sample);   // number of bits (8 for 8 bits, etc...)
+			sampleRate     = s_cast<DWORD>((int)sample_rate); // 8000, 22050, 44100, etc...
 			byteRate       = sampleRate * numChannels * bitsPerSample / 8;
 			blockAlign     = numChannels * bitsPerSample / 8;
 

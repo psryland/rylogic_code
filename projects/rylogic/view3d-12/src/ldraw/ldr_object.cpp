@@ -5006,7 +5006,7 @@ namespace pr::rdr12
 						auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
 						auto sz_x = (viewarea_v.x / w) * sz_z;
 						auto sz_y = (viewarea_v.y / h) * sz_z;
-						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(sz_x, sz_y, 1.0f, v4Origin);
+						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(s_cast<float>(sz_x), s_cast<float>(sz_y), 1.0f, v4::Origin());
 						ob.m_c2s = v_camera.CameraToScreen();
 					};
 					break;

@@ -867,7 +867,7 @@ namespace pr::ldr
 						p.m_reader.IntS(m_align.value, 10);
 						if (AxisId::IsValid(m_align))
 						{
-							m_o2w = m4x4::Transform(m_main_axis, m_align, v4Origin);
+							m_o2w = m4x4::Transform(m_main_axis, m_align, v4::Origin());
 							return true;
 						}
 
@@ -1106,8 +1106,8 @@ namespace pr::ldr
 				// Create the brushes
 				D3DPtr<ID2D1SolidColorBrush> fr_brush;
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
-				auto fr = pr::To<D3DCOLORVALUE>(0xFFFFFFFF);
-				auto bk = pr::To<D3DCOLORVALUE>(0x00000000);
+				auto fr = pr::To<D3DCOLORVALUE>(Colour32(0xFFFFFFFF));
+				auto bk = pr::To<D3DCOLORVALUE>(Colour32(0x00000000));
 				pr::Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
 				pr::Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
 
@@ -2185,9 +2185,9 @@ namespace pr::ldr
 			pr::m4x4 basis;
 			p.m_reader.Matrix3x3(basis.rot);
 
-			pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
+			pr::v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
+			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+			uint16_t     idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
 			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
@@ -2235,9 +2235,9 @@ namespace pr::ldr
 			,m_scale()
 			,m_rh(true)
 		{
-			pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
+			pr::v4       pts[] = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
+			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+			uint16_t     idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
 			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
@@ -4997,7 +4997,7 @@ namespace pr::ldr
 						auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
 						auto sz_x = (viewarea_v.x / w) * sz_z;
 						auto sz_y = (viewarea_v.y / h) * sz_z;
-						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(sz_x, sz_y, 1.0f, v4Origin);
+						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(s_cast<float>(sz_x), s_cast<float>(sz_y), 1.0f, v4::Origin());
 						ob.m_c2s = v_camera.CameraToScreen();
 					};
 					break;
@@ -5034,7 +5034,7 @@ namespace pr::ldr
 						#endif
 
 						// Scale the object from physical pixels to normalised screen space
-						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4Origin);
+						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4::Origin());
 
 						// Reverse 'pos.z' so positive values can be used
 						ob.m_i2w.pos.x *= 0.5f * ViewPortSize;
@@ -5706,8 +5706,8 @@ namespace pr::ldr
 
 					// Scale the object to normalised screen space
 					auto scale = w >= h
-						? m4x4::Scale(0.5f * ViewPortSize * (w/h), 0.5f * ViewPortSize, 1, v4Origin)
-						: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h/w), 1, v4Origin);
+						? m4x4::Scale(0.5f * ViewPortSize * (w/h), 0.5f * ViewPortSize, 1, v4::Origin())
+						: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h/w), 1, v4::Origin());
 
 					// Scale the X,Y position so that positions are still in normalised screen space
 					ob.m_i2w.pos.x *= w >= h ? (w/h) : 1.0f;
