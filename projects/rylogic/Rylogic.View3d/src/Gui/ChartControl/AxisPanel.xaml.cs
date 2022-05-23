@@ -158,7 +158,13 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					// Add space for tick labels
 					if (Options.DrawTickLabels)
 					{
-						var measure = new TextBlock { Text = Options.TickTextTemplate, TextWrapping = TextWrapping.Wrap };
+						var measure = new TextBlock
+						{
+							Text = Options.TickTextTemplate,
+							TextWrapping = TextWrapping.Wrap,
+							RenderTransform = Options.LabelTransform,
+							RenderTransformOrigin = Options.LabelTransformOrigin,
+						};
 						measure.Typeface(Typeface, FontSize);
 						measure.Measure(Size_.Infinity);
 						m_axis_size +=
@@ -251,7 +257,15 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(y + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
+							var tb = new TextBlock
+							{
+								Name = $"{Prefix}_TickLabel",
+								Text = s,
+								Foreground = bsh,
+								RenderTransform = Options.LabelTransform,
+								RenderTransformOrigin = Options.LabelTransformOrigin,
+							};
+							var lbl = Children.Add2(tb);
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width - Options.TickLength);
@@ -280,7 +294,15 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(x + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
+							var tb = new TextBlock
+							{
+								Name = $"{Prefix}_TickLabel",
+								Text = s,
+								Foreground = bsh,
+								RenderTransform = Options.LabelTransform,
+								RenderTransformOrigin = Options.LabelTransformOrigin,
+							};
+							var lbl = Children.Add2(tb);
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
@@ -309,7 +331,15 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(y + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
+							var tb = new TextBlock
+							{
+								Name = $"{Prefix}_TickLabel",
+								Text = s,
+								Foreground = bsh,
+								RenderTransform = Options.LabelTransform,
+								RenderTransformOrigin = Options.LabelTransformOrigin,
+							};
+							var lbl = Children.Add2(tb);
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X + Options.TickLength + 1);
@@ -338,7 +368,15 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(x + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
+							var tb = new TextBlock
+							{
+								Name = $"{Prefix}_TickLabel",
+								Text = s,
+								Foreground = bsh,
+								RenderTransform = Options.LabelTransform,
+								RenderTransformOrigin = Options.LabelTransformOrigin,
+							};
+							var lbl = Children.Add2(tb);
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);

@@ -42,12 +42,13 @@ namespace pr
 		return static_cast<T*>(t);
 	}
 
-	// Static cast for integral types with optional runtime checking.
+	// Static "scalar cast" with runtime overflow checking.
+	// 'RuntimeCheck' means an exception is thrown on lost data, otherwise it's just an assert.
 	// Use:
 	//  int16_t s = -1302;
-	//  uint8_t b = s_cast<uint8_t>(s); <- gives an assert because -1302 cannot be stored in a uint8_t
-	//  uint8_t b = s_cast<uint8_t,true>(s); <- throws an exception because -1302 cannot be stored in a uint8_t
-	template <typename T, bool RuntimeCheck = false, typename U> constexpr T s_cast(U x)
+	//  auto b = s_cast<uint8_t>(s); <- gives an assert because -1302 cannot be stored in a uint8_t
+	//  auto b = s_cast<uint8_t,true>(s); <- throws an exception because -1302 cannot be stored in a uint8_t
+	template <std::integral T, bool RuntimeCheck = false, std::integral U> constexpr T s_cast(U x)
 	{
 		if constexpr (RuntimeCheck)
 		{
@@ -60,4 +61,44 @@ namespace pr
 		}
 		return static_cast<T>(x);
 	}
+	template <typename T, bool RuntimeCheck = false, typename U> constexpr T s_cast(U x) requires std::is_enum_v<T> && std::is_enum_v<U>
+	{
+		using ut0 = std::underlying_type_t<T>;
+		using ut1 = std::underlying_type_t<U>;
+		return static_cast<T>(s_cast<ut0, RuntimeCheck, ut1>(static_cast<ut1>(x)));
+	}
+	template <std::integral T, bool RuntimeCheck = false, typename U> constexpr T s_cast(U x) requires std::is_enum_v<U>
+	{
+		using ut = std::underlying_type_t<U>;
+		return s_cast<T, RuntimeCheck, ut>(static_cast<ut>(x));
+	}
+	template <typename T, bool RuntimeCheck = false, std::integral U> constexpr T s_cast(U x) requires std::is_enum_v<T>
+	{
+		using ut = std::underlying_type_t<T>;
+		return static_cast<T>(s_cast<ut, RuntimeCheck, U>(x));
+	}
+	template <std::floating_point T, std::integral U> constexpr T s_cast(U x)
+	{
+		return static_cast<T>(x);
+	}
+	template <std::integral T, std::floating_point U> constexpr T s_cast(U x)
+	{
+		assert(x == x && "Can't convert NaN to an integral type");
+		assert(std::abs(x) != std::numeric_limits<U>::infinity() && "Can't convert '+/-inf' to an integral type");
+		return static_cast<T>(x);
+	}
+	template <std::floating_point T, bool RuntimeCheck = false, std::floating_point U> constexpr T s_cast(U x)
+	{
+		if constexpr (RuntimeCheck)
+		{
+			if (x < std::numeric_limits<T>::lowest() || x > std::numeric_limits<T>::max())
+				throw std::runtime_error("Cast loses data");
+		}
+		else
+		{
+			assert("Cast loses data" && x >= std::numeric_limits<T>::lowest() && x <= std::numeric_limits<T>::max());
+		}
+		return static_cast<T>(x);
+	}
 }
+

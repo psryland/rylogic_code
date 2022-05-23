@@ -668,11 +668,12 @@ namespace pr::script
 		// Get/Set the read position in the file
 		int64_t Position() const
 		{
-			return s_cast<int64_t>(const_cast<std::ifstream&>(m_file).tellg());
+			std::streamoff ofs = const_cast<std::ifstream&>(m_file).tellg();
+			return s_cast<int64_t>(ofs);
 		}
 		int64_t Position(int64_t pos)
 		{
-			m_file.seekg(s_cast<std::streampos>(pos));
+			m_file.seekg(s_cast<std::streamoff>(pos), std::ios::beg);
 			return Position();
 		}
 

@@ -8,14 +8,24 @@ Work:
 	- Need training record for Pete/Ben on ZR process.
 
   Change Review Board:
+	- PaulS's temperature theshold change
 	- REX-9601 - Release the RexTerminal
 	- Remove product key - Documentation change
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
-	- Zero Ref Tool - fill in phase 2 form - awaiting signatures - then can be released and people notified.
-	- rxsfault.log ticket
+	- rxsfault.log ticket - Run the test case
 	- Add a requirement/test case that REX faults when the log SD card is full
 	- What ALM do Hydrix use? Can we use it too?
 
+  BootLoader Upload:
+	- Play with COMM Port to figure out if upload will work from PC.
+
+  Temperature Limit Change:
+	- Ask Pei for the temperature levels report
+	- Find out where the temperature sensors are
+	- Find data for component max temperatures, max temperature for the motor
+	- Thermistor accuracy
+	- Make a report to justify the change
+	
   Misc:
 	- Change embedded script to use ram method of removing ROP
 	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
@@ -34,9 +44,9 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 
   RexTerminal:
+	- Crash when filtering the battery log view
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
-	- Crash when filtering the battery log view
 
   FirmwareLoader:
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
@@ -48,7 +58,7 @@ Work:
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
 
   ZeroRef:
-    - Test the ZR process on a left-right see-saw to see what effect that has on the results.
+	- Test the ZR process on a left-right see-saw to see what effect that has on the results.
 
   VRex:
 	- log doesn't work if logs folder is missing
@@ -64,7 +74,7 @@ Work:
 	- Create a RexLink service and convert applications to use the service (solves the problem of multiple   apps wanting to connect to the same Rex).
 
 Rylogic:
-  - Rewrite the maths library to remove duplication of v2,v3,v4,iv2,iv3,iv4, plus support floats and doubles. Create Matrix<S,Rows,Cols,Dynamic> and typedef v2,v3,etc from that.
+  - Finish unifying vector/matrix types on Scalar
   - Rewrite ClipX
   - pr::hash::Hash is too complicated, use less name overloading. ie. HashBytes, HashString, HashArray, etc
 
@@ -80,7 +90,8 @@ Rylogic:
 	- Don't use dll/window and main/window... it's confusing
 	- Remove locks on D3DDevice
 	- Setup a D2DLock to access D2D interfaces (if needed)
-	
+	- Make pr::Camera use doubles for FOV, Aspect, Near, Far, etc
+
   LDraw:
 	- Support dae files
 	- Support urdf files
@@ -96,14 +107,14 @@ Rylogic:
 	- Support sub models in object manager
 	- Rendering bug in demo scene (looks like a depth state is not being set each frame. Ribbon rendering through rabbit, but not after toggling visibility. Rabbit is occluding other alphas)
 	- Allow #include of temporary scripts
-	
+
   P3D:
 	- Finish exporter for Blender
 	- Export REX models in new format
 	- Export Plane model
 	- Get p3d support working with new format
 	- Support .obj files
-		
+
   DockContainer:
 	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
 
@@ -140,7 +151,7 @@ Rylogic:
 		- Log view isn't updating when window doesn't have focus
 		- Support minimise to tray
 		- Better back testing playback controls: sub step count, playback speed, pause with space bar
-	
+
   EDTradeAdvisor:
 	- Settings UI
 	- History of origins 
@@ -150,7 +161,7 @@ Rylogic:
   WinGUI:
 	- OpenFolderUI
 	- Fix MsgBox icon not having a transparent background
-		
+
   Misc:
     - Reimplement HashCT functions as iterative now that C++20 is supported
 	- Reimplement FFT code
@@ -165,7 +176,7 @@ YouTube speed:
    vid.playbackRate=3.0;
 
    L3tMe1n!
-	
+
 Wordle:
 	- audio
 	- stern
@@ -179,7 +190,7 @@ Wordle:
 	- bionk
 	- amend
 	- scowl
-	
+
 Nerdle:
 98-75=23
 7*8+4=60
