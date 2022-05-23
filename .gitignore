@@ -7,6 +7,7 @@ syntax: glob
 *.exe
 *.pp
 *.i
+*.log
 *.db
 *.pidb
 *.ipch
@@ -23,10 +24,6 @@ syntax: glob
 *.pyc
 *.algo
 *.blend1
-*ReSharper*
-dlang/*
-renderer11/shaders/hlsl/compiled/*
-ResEdit.layout
 dump/
 obj/
 bin/
@@ -35,7 +32,6 @@ dist/
 built/
 Debug/
 Release/
-__pycache__/*
 .vs/
 .vscode/
 .hg/
@@ -43,30 +39,39 @@ __pycache__/*
 .svn/
 .metadata/
 .nuget/
+__pycache__/
 node_modules/
 packages/
 TestResults/
 media/
 thirdparty/
-tools/Compressonator/
-tools/ResEdit/ResEdit.xml
-projects/vs2012/pr_applog.log
-projects/RyLogViewer/Resources/*.html
-projects/RyLogViewer/docs/*.html
-javascript/lib/
-javascript/*/dist/
-symbol_cache/*
-script/UserVars.py
-$RECYCLE.BIN*
+symbol_cache/
+
+**/hlsl/compiled/*
+**/RyLogViewer/Resources/*.html
+**/RyLogViewer/docs/*.html
+**/Rylobot/net/Data/*
+**/Rylobot/net/Model/*
+
 tools/wix/*
 !tools/wix/_get_wix.py
 tools/HxD/HxD.ini
 tools/GrepWin/grepwin.ini
-*.log
-res/*.html
-RylogicRB.sln
-build/*.ldr
-*/Rylobot/net/Data/*
-*/Rylobot/net/Model/*
-*Sample*
+
+javascript/lib/
+javascript/*/dist/
 typescript/**/out/*
+
+script/UserVars.py
+RylogicRB.sln
+
+#usused   res/*.html
+#usused   build/*.ldr
+#usused   *Sample*
+#usused   *ReSharper*
+#usused   dlang/*
+#usused   ResEdit.layout
+#usused   tools/Compressonator/
+#usused   tools/ResEdit/ResEdit.xml
+#usused   projects/vs2012/pr_applog.log
+#usused   $RECYCLE.BIN*

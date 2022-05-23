@@ -1285,9 +1285,9 @@ VIEW3D_API BOOL __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DL
 		light.m_position       = To<View3DV4>(window->m_light.m_position);
 		light.m_direction      = To<View3DV4>(window->m_light.m_direction);
 		light.m_type           = static_cast<EView3DLight>(window->m_light.m_type);
-		light.m_ambient        = window->m_light.m_ambient;
-		light.m_diffuse        = window->m_light.m_diffuse;
-		light.m_specular       = window->m_light.m_specular;
+		light.m_ambient        = To<View3DColour>(window->m_light.m_ambient);
+		light.m_diffuse        = To<View3DColour>(window->m_light.m_diffuse);
+		light.m_specular       = To<View3DColour>(window->m_light.m_specular);
 		light.m_specular_power = window->m_light.m_specular_power;
 		light.m_inner_angle    = window->m_light.m_inner_angle;
 		light.m_outer_angle    = window->m_light.m_outer_angle;
@@ -1834,7 +1834,7 @@ VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BO
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		return object->Colour(base_colour != 0, name);
+		return To<View3DColour>(object->Colour(base_colour != 0, name));
 	}
 	CatchAndReport(View3D_ObjectGetColour, ,View3DColour(0xFFFFFFFF));
 }
@@ -2945,7 +2945,7 @@ VIEW3D_API View3DColour __stdcall View3D_DiagNormalsColourGet(View3DWindow windo
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->NormalsColour();
+		return To<View3DColour>(window->NormalsColour());
 	}
 	CatchAndReport(View3D_DiagNormalsColourGet, window, FALSE);
 }
@@ -3360,12 +3360,12 @@ static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ));
 static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ));
 static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ));
 
-static_assert(int(EView3DTopo::Invalid   ) == int(pr::rdr::ETopo::Invalid   ));
-static_assert(int(EView3DTopo::PointList ) == int(pr::rdr::ETopo::PointList ));
-static_assert(int(EView3DTopo::LineList  ) == int(pr::rdr::ETopo::LineList  ));
-static_assert(int(EView3DTopo::LineStrip ) == int(pr::rdr::ETopo::LineStrip ));
-static_assert(int(EView3DTopo::TriList   ) == int(pr::rdr::ETopo::TriList   ));
-static_assert(int(EView3DTopo::TriStrip  ) == int(pr::rdr::ETopo::TriStrip  ));
+//static_assert(int(EView3DTopo::Invalid   ) == int(pr::rdr::ETopo::Invalid   ));
+//static_assert(int(EView3DTopo::PointList ) == int(pr::rdr::ETopo::PointList ));
+//static_assert(int(EView3DTopo::LineList  ) == int(pr::rdr::ETopo::LineList  ));
+//static_assert(int(EView3DTopo::LineStrip ) == int(pr::rdr::ETopo::LineStrip ));
+//static_assert(int(EView3DTopo::TriList   ) == int(pr::rdr::ETopo::TriList   ));
+//static_assert(int(EView3DTopo::TriStrip  ) == int(pr::rdr::ETopo::TriStrip  ));
 
 static_assert(int(EView3DNuggetFlag::None            ) == int(pr::rdr::ENuggetFlag::None            ));
 static_assert(int(EView3DNuggetFlag::Hidden          ) == int(pr::rdr::ENuggetFlag::Hidden          ));
@@ -3408,13 +3408,6 @@ static_assert(int(EView3DCameraLockMask::RotZ          ) == int(pr::camera::ELoc
 static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELockMask::Zoom          ));
 static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative));
 static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ));
-
-static_assert(int(EView3DTopo::Invalid  ) == int(pr::rdr::ETopo::Invalid  ));
-static_assert(int(EView3DTopo::PointList) == int(pr::rdr::ETopo::PointList));
-static_assert(int(EView3DTopo::LineList ) == int(pr::rdr::ETopo::LineList ));
-static_assert(int(EView3DTopo::LineStrip) == int(pr::rdr::ETopo::LineStrip));
-static_assert(int(EView3DTopo::TriList  ) == int(pr::rdr::ETopo::TriList  ));
-static_assert(int(EView3DTopo::TriStrip ) == int(pr::rdr::ETopo::TriStrip ));
 
 static_assert(int(EView3DFillMode::Default  ) == int(pr::rdr::EFillMode::Default  ));
 static_assert(int(EView3DFillMode::SolidWire) == int(pr::rdr::EFillMode::SolidWire));

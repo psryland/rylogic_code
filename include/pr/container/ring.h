@@ -1,8 +1,7 @@
 //******************************************
-// A very simple stack class
+// Ring Buffer
 //  Copyright (c) Rylogic Ltd 2007
 //******************************************
-
 #pragma once
 #include <cassert>
 #include "pr/maths/maths.h"
@@ -14,25 +13,38 @@ namespace pr
 	template <typename TIter> struct Ring
 	{
 		TIter m_first;
-		std::ptrdiff_t m_count;
+		int m_count;
 		int m_offset;
 
+		Ring() = default;
 		Ring(TIter first, TIter last, int offset = 0)
 			:m_first(first)
-			,m_count(last - first)
+			,m_count(static_cast<int>(last - first))
 			,m_offset(offset)
 		{}
 
 		// Negative indices access from the end and loop backwards through the container
-		auto operator[](int i) -> decltype(*m_first)
-		{
-			auto j = i >= 0 ? (i % m_count) : ((m_count-1) - (~i % m_count));
-			return *(m_first + j);
-		}
 		auto operator[](int i) const -> decltype(*m_first)
 		{
-			auto j = i >= 0 ? (i % m_count) : ((m_count-1) - (~i % m_count));
+			auto j = Wrap(i + m_offset, 0, m_count);
 			return *(m_first + j);
+		}
+		auto operator[](int i) -> decltype(*m_first)
+		{
+			auto j = Wrap(i + m_offset, 0, m_count);
+			return *(m_first + j);
+		}
+
+		// Set the offset to an absolute position
+		void offset(int ofs)
+		{
+			m_offset = Wrap(ofs, 0, m_count);
+		}
+
+		// Shift the position of '0' in the ring. So, shift(1) means what was (*this)[1] is now (*this)[0]. Doesn't move the range within the buffer.
+		void shift(int by)
+		{
+			m_offset = Wrap(m_offset + by, 0, m_count);
 		}
 	};
 
@@ -42,3 +54,50 @@ namespace pr
 		return Ring<Iter>(first, last, offset);
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::container
+{
+	PRUnitTest(RingTests)
+	{
+		int buf[5] = {};
+		auto rbuf = MakeRing(&buf[1], &buf[1] + 3);
+
+		rbuf[0] = 1; PR_CHECK(buf[1], 1);
+		rbuf[1] = 2; PR_CHECK(buf[2], 2);
+		rbuf[2] = 3; PR_CHECK(buf[3], 3);
+		rbuf[3] = 4; PR_CHECK(buf[1], 4);
+		rbuf[4] = 5; PR_CHECK(buf[2], 5);
+		PR_CHECK(buf[0], 0);
+		PR_CHECK(buf[4], 0);
+
+		rbuf[-0] = -1; PR_CHECK(buf[1], -1);
+		rbuf[-1] = -2; PR_CHECK(buf[3], -2);
+		rbuf[-2] = -3; PR_CHECK(buf[2], -3);
+		rbuf[-3] = -4; PR_CHECK(buf[1], -4);
+		rbuf[-4] = -5; PR_CHECK(buf[3], -5);
+		PR_CHECK(buf[0], 0);
+		PR_CHECK(buf[4], 0);
+
+		rbuf.shift(4);
+		rbuf[0] = 1; PR_CHECK(buf[2], 1);
+		rbuf[1] = 2; PR_CHECK(buf[3], 2);
+		rbuf[2] = 3; PR_CHECK(buf[1], 3);
+		rbuf[3] = 4; PR_CHECK(buf[2], 4);
+		rbuf[4] = 5; PR_CHECK(buf[3], 5);
+		PR_CHECK(buf[0], 0);
+		PR_CHECK(buf[4], 0);
+
+		rbuf.offset(0);
+		rbuf.shift(-4);
+		rbuf[-0] = -1; PR_CHECK(buf[3], -1);
+		rbuf[-1] = -2; PR_CHECK(buf[2], -2);
+		rbuf[-2] = -3; PR_CHECK(buf[1], -3);
+		rbuf[-3] = -4; PR_CHECK(buf[3], -4);
+		rbuf[-4] = -5; PR_CHECK(buf[2], -5);
+		PR_CHECK(buf[0], 0);
+		PR_CHECK(buf[4], 0);
+	}
+}
+#endif

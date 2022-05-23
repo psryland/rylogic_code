@@ -41,13 +41,13 @@ namespace pr::rdr
 	bool Model::MapVerts(Lock& lock, EMap map_type, EMapFlags flags, Range vrange)
 	{
 		if (vrange == RangeZero) vrange  = m_vrange;
-		else vrange.shift((int)m_vrange.m_beg);
+		else vrange = Shift(vrange, (int)m_vrange.m_beg);
 		return m_model_buffer->MapVerts(lock, map_type, flags, vrange);
 	}
 	bool Model::MapIndices(Lock& lock, EMap map_type, EMapFlags flags, Range irange)
 	{
 		if (irange == RangeZero) irange  = m_irange;
-		else irange.shift((int)m_irange.m_beg);
+		else irange = Shift(irange, (int)m_irange.m_beg);
 		return m_model_buffer->MapIndices(lock, map_type, flags, irange);
 	}
 
@@ -61,9 +61,9 @@ namespace pr::rdr
 
 		// Empty ranges are assumed to mean the entire model
 		if (ndata.m_vrange.empty()) ndata.m_vrange = m_vrange;
-		else                        ndata.m_vrange.shift((int)m_vrange.m_beg);
+		else                        ndata.m_vrange = Shift(ndata.m_vrange, (int)m_vrange.m_beg);
 		if (ndata.m_irange.empty()) ndata.m_irange = m_irange;
-		else                        ndata.m_irange.shift((int)m_irange.m_beg);
+		else                        ndata.m_irange = Shift(ndata.m_irange, (int)m_irange.m_beg);
 		PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, ndata.m_vrange), "This range exceeds the size of this model"); 
 		PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, ndata.m_irange), "This range exceeds the size of this model");
 

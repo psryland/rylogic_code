@@ -658,7 +658,7 @@ namespace pr::rdr
 						auto c = Colour32White;
 						auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
 						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-						data[size_t(j * sz + i)] = c;
+						data[size_t(j * sz + i)] = c.argb;
 					}
 				}
 
@@ -675,11 +675,11 @@ namespace pr::rdr
 				data.resize(sz * sz);
 
 				// Equilateral triangle, 'pointing' up.
-				// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
-				//               \         /
-				//                \       /
-				//                 \     / 
 				//                   0,0
+				//                 /     \
+				//                /       \
+				//               /         \
+				// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
 
 				const float dx = maths::root3_by_2f / 2.0f;
 				const float dy = 0.75f;
@@ -704,8 +704,8 @@ namespace pr::rdr
 						auto c = Colour32White;
 						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
 
-						data[size_t(j * sz + hsz - i)] = c;
-						data[size_t(j * sz + hsz + i)] = c;
+						data[size_t(j * sz + hsz - i)] = c.argb;
+						data[size_t(j * sz + hsz + i)] = c.argb;
 					}
 				}
 

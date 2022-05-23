@@ -753,7 +753,7 @@ namespace pr::script
 	inline bool BufferIdentifier(Src& src, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
-		auto x = AtExit([&]{ if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&] { if (len) *len = i; });
 		if (!str::IsIdentifier(src[i], true)) return false;
 		for (++i; str::IsIdentifier(src[i], false); ++i) {}
 		return true;
@@ -765,7 +765,7 @@ namespace pr::script
 	inline bool BufferLiteral(Src& src, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
-		auto x = AtExit([&]{ if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&]{ if (len) *len = i; });
 
 		// Don't call this unless 'src' is pointing at a literal string
 		auto quote = src[i];
@@ -791,7 +791,7 @@ namespace pr::script
 		//    the only option.
 
 		auto i = start;
-		auto x = AtExit([&] { if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&] { if (len) *len = i; });
 
 		// Convert a character to it's numerical value
 		static auto digit = [](int ch)
@@ -928,7 +928,7 @@ namespace pr::script
 	inline bool BufferLine(Src& src, bool include_newline, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
-		auto x = AtExit([&]{ if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&]{ if (len) *len = i; });
 
 		if (src[i] == '\0') return false;
 		for (; src[i] != '\0' && src[i] != '\n'; ++i) {}
@@ -941,7 +941,7 @@ namespace pr::script
 	inline bool BufferTo(Src& src, string_view_t end, bool include_end, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
-		auto x = AtExit([&]{ if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&]{ if (len) *len = i; });
 
 		for (; src[i] != '\0' && !src.Match(end, i); ++i) {}
 		if (src[i] != '\0') { if (include_end) i += s_cast<int>(end.size()); else src.Buffer().erase(i, end.size()); }
@@ -955,7 +955,7 @@ namespace pr::script
 	inline bool BufferWhile(Src& src, AdvFunc adv, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
-		auto x = AtExit([&]{ if (len) *len = i; });
+		auto x = Scope<void>([]{}, [&]{ if (len) *len = i; });
 		
 		for (auto inc = 0; src[i] != '\0' && (inc = adv(src, i)) != 0; i += inc) {}
 		if (src[i] == '\0') i = static_cast<int>(std::min<int64_t>(src.Limit(), static_cast<int64_t>(src.Buffer().size()))); // Occurs if 'start' > 'src.Limit' or EOS

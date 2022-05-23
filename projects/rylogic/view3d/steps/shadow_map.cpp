@@ -138,7 +138,7 @@ namespace pr::rdr
 
 			// Grow the bounds to include the camera near plane
 			auto ws_bounds_cam = ws_bounds;
-			Grow(ws_bounds_cam, c2w.pos - cam_zn * c2w.z);
+			Grow(ws_bounds_cam, c2w.pos - s_cast<float>(cam_zn) * c2w.z);
 
 			// Create a LSP to world transform. This is the space that the skew projection is in.
 			// The projection clip planes are parallel to the light direction. The origin of LSP
@@ -146,7 +146,7 @@ namespace pr::rdr
 			auto lsp_z = Perpendicular(l2w.z, -c2w.z);
 			auto lsp_rot = m3x4::Rotation(-v4ZAxis, lsp_z);
 			auto lsp_dz = Dot(Abs(lsp_z), ws_bounds_cam.Radius());
-			auto lsp_origin = ws_bounds_cam.Centre() - lsp_z * (lsp_zn + lsp_dz);
+			auto lsp_origin = ws_bounds_cam.Centre() - s_cast<float>(lsp_zn + lsp_dz) * lsp_z;
 			auto lsp2w = m4x4{lsp_rot, lsp_origin};
 			auto w2lsp = InvertFast(lsp2w);
 
@@ -157,7 +157,7 @@ namespace pr::rdr
 			// The amount of perspective warp is controlled by offseting both zn and zf by a fixed amount.
 			// When the light is at 90 deg to the camera, the optimal zn value is: cam_zn + sqrt(cam_zn * cam_zf)
 			auto sz = Max(lsp_bounds_cam.SizeX(), lsp_bounds_cam.SizeY());
-			auto lsp = m4x4::ProjectionPerspective(sz, sz, lsp_zn, lsp_zn + 2.0f*lsp_dz, true);
+			auto lsp = m4x4::ProjectionPerspective(sz, sz, s_cast<float>(lsp_zn), s_cast<float>(lsp_zn + 2.0f*lsp_dz), true);
 
 			// Rotate, scale, and shift the unit cube so that it is viewed from the light.
 			auto ls_bounds = MulNonAffine(lsp, lsp_bounds_cam);
@@ -397,7 +397,7 @@ namespace pr::rdr
 		for (auto& caster : m_caster)
 		{
 			// Bind the smap as the render target
-			auto bind_smap = CreateScope(
+			auto bind_smap = Scope<void>(
 				[=] { BindRT(&caster); },
 				[=] { BindRT(nullptr); });
 

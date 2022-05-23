@@ -3,8 +3,8 @@ import Rylogic as Tools
 import UserVars
 
 try:
+	handles = Tools.Path(UserVars.root, "tools\\handle.exe")
 	while True:
-		handles = os.path.join(UserVars.root, "tools", "handle.exe")
 		r,outp = Tools.Run([handles] + sys.argv[1:])
 		print(outp)
 		
@@ -15,24 +15,19 @@ try:
 				m = re.search(r"pid:\s*(\d+)", line)
 				if m: pids.append(m.group(1))
 
+		# Menu options
 		r = input(
-			"\n1) Rescan "   + ("(default)" if found else "") +
-			"\n2) Kill all " + (f"({','.join(pids)})" if found else "") + 
-			"\n3) Quit "     + ("(default)" if not found else "") +
-			"\n> ")
-		
-		if r == "1":
+			f"1) Quit {'(default)' if not found else ''}\n" +
+			f"2) Rescan {'(default)' if found else ''}\n" +
+			f"3) Kill all: {','.join(pids)}\n" + 
+			f"> ")
+		if r == "1" or (r == "" and not found):
+			break
+		if r == "2" or (r == "" and found):
 			continue
-		if r == "2":
+		if r == "3":
 			for id in pids:
 				os.kill(int(id), signal.SIGINT)
-		if r == "3":
-			break
-		if r == "":
-			if found:
-				continue
-			else:
-				break
 
 except Exception as ex:
 	Tools.OnException(ex)

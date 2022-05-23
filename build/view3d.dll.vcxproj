@@ -46,7 +46,7 @@
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -57,7 +57,7 @@
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -68,7 +68,7 @@
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -79,7 +79,7 @@
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d-static.lib;lua.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <!-- Files -->

@@ -3,10 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
 #pragma once
-
 #include <cassert>
 #include <type_traits>
-#include <d3dcommon.h>
 #include "pr/common/cast.h"
 #include "pr/common/range.h"
 #include "pr/common/fmt.h"
@@ -42,17 +40,18 @@ namespace pr::geometry
 	// ETopo
 	enum class ETopo
 	{
-		None         = 0,
-		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
-		PointList    = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-		LineList     = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-		LineStrip    = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
-		TriList      = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-		TriStrip     = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-		LineListAdj  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
-		LineStripAdj = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-		TriListAdj   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+		// Note: don't assume these are the same as directX. Dx11/Dx12 have different values
+		None = 0,
+		Invalid,
+		PointList,
+		LineList,
+		LineStrip,
+		TriList,
+		TriStrip,
+		LineListAdj,
+		LineStripAdj,
+		TriListAdj,
+		TriStripAdj,
 	};
 
 	// EPrimGroup

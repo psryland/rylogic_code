@@ -93,7 +93,7 @@ namespace pr::rdr
 
 		// Tell the IA what sort of primitives to expect
 		if (current.m_topo != pending.m_topo || force)
-			m_dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)pending.m_topo);
+			m_dc->IASetPrimitiveTopology(To<D3D11_PRIMITIVE_TOPOLOGY>(pending.m_topo));
 	}
 
 	// Set up render states

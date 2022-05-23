@@ -12,13 +12,13 @@
 
 namespace pr::rdr
 {
-	// Check enumerations agree with dx11
-	static_assert(int(ETopo::Invalid  ) == int(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    ), "ETopo::Invalid   value out of sync with dx11");
-	static_assert(int(ETopo::PointList) == int(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    ), "ETopo::PointList value out of sync with dx11");
-	static_assert(int(ETopo::LineList ) == int(D3D11_PRIMITIVE_TOPOLOGY_LINELIST     ), "ETopo::LineList  value out of sync with dx11");
-	static_assert(int(ETopo::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "ETopo::LineStrip value out of sync with dx11");
-	static_assert(int(ETopo::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "ETopo::TriList   value out of sync with dx11");
-	static_assert(int(ETopo::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "ETopo::TriStrip  value out of sync with dx11");
+	//// Check enumerations agree with dx11
+	//static_assert(int(ETopo::Invalid  ) == int(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    ), "ETopo::Invalid   value out of sync with dx11");
+	//static_assert(int(ETopo::PointList) == int(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    ), "ETopo::PointList value out of sync with dx11");
+	//static_assert(int(ETopo::LineList ) == int(D3D11_PRIMITIVE_TOPOLOGY_LINELIST     ), "ETopo::LineList  value out of sync with dx11");
+	//static_assert(int(ETopo::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "ETopo::LineStrip value out of sync with dx11");
+	//static_assert(int(ETopo::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "ETopo::TriList   value out of sync with dx11");
+	//static_assert(int(ETopo::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "ETopo::TriStrip  value out of sync with dx11");
 
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)

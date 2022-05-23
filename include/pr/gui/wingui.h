@@ -2324,7 +2324,7 @@ namespace pr
 			{}
 
 			// Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate
-			void AddLoop(step_func_t step, int step_rate_ms, bool variable)
+			void AddLoop(int step_rate_ms, bool variable, step_func_t step)
 			{
 				m_loop.emplace_back(step, step_rate_ms, variable);
 			}

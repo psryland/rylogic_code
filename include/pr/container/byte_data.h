@@ -468,6 +468,8 @@ namespace pr
 		// Grow/Shrink the allocation size of the container
 		void set_capacity(size_t capacity)
 		{
+			static_assert(((Alignment - 1) & Alignment) == 0, "Alignment should be a power of two");
+			
 			// Round up to the alignment size.
 			// Setting the capacity smaller than the size, truncates the data.
 			auto new_capacity = pad(capacity);

@@ -163,7 +163,7 @@ namespace pr::geometry::stl
 	void Read(TSrc& src, Options opts, TModelOut out)
 	{
 		// Restore the src position on return
-		auto reset_stream = CreateStateScope(
+		auto reset_stream = Scope<u64>(
 			[&]{ return Src<TSrc>::TellPos(src); },
 			[&](u64 start){ Src<TSrc>::SeekAbs(src, start); }
 		);

@@ -1,0 +1,92 @@
+//***********************************************
+// Renderer
+//  Copyright © Rylogic Ltd 2014
+//***********************************************
+// Constant buffer definitions for forward shaders.
+// This file is included from C++ source as well
+#ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
+#define PR_RDR_SHADER_FORWARD_CBUF_HLSL
+#include "../types.hlsli"
+
+// Constants per frame.
+cbuffer CBufFrame :reg(b0,0)
+{
+	// Camera transform
+	Camera m_cam;
+	
+	// Global lighting
+	Light m_global_light;
+
+	// EnvMap
+	EnvMap m_env_map;
+
+	// Shadows
+	Shadow m_shadow;
+
+	// Projected textures
+	ProjTexture m_proj_tex;
+};
+
+// Constants per render nugget.
+cbuffer CBufNugget :reg(b1,0)
+{
+	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
+
+	// x = Model flags:
+	//   1 << 0 = has normals
+	// y = Texture flags:
+	//   1 << 0 = has diffuse texture
+	//   1 << 1 = use env map
+	// z = Alpha flags:
+	//   1 << 0 = has alpha
+	// w = Instance Id
+	int4 m_flags;
+
+	// Object transform
+	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_o2w; // object to world
+	row_major float4x4 m_n2w; // normal to world
+
+	// Texture2D
+	row_major float4x4 m_tex2surf0; // texture to surface transform
+
+	// Tinting
+	float4 m_tint; // object tint colour
+
+	// EnvMap
+	float m_env_reflectivity; // Reflectivity of the environment map
+};
+
+// Constants used for radial fading.
+cbuffer CBufFade :reg(b2,0)
+{
+	// The centre of the fade region. Set to (0,0,0,0) to use the camera position
+	float4 m_fade_centre;
+	
+	// x = Fade starting radius
+	// y = Fade ending radius
+	float2 m_fade_radius;
+
+	// 0 = Spherical fade
+	// 1 = Cylindrical fade
+	int m_fade_type;
+};
+
+// Constants used for screen space geometry shaders.
+cbuffer CBufScreenSpace :reg(b3,0)
+{
+	float2 m_screen_dim; // x = screen width, y = screen height, 
+	float2 m_size;       // x = width in pixels, y = height in pixels
+	bool   m_depth;      // True if depth scaling should be used
+	int    m_ss_pad[3];  // Padding for alignment
+};
+
+// Constants used for diagnostic shaders
+cbuffer CBufDiag :reg(b3,0) //can b3 be reused?
+{
+	float4 m_colour;
+	float  m_length;
+	int    m_diag_pad[3];
+};
+
+#endif

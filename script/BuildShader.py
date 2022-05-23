@@ -32,12 +32,10 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	Tools.AssertVersion(1)
 	Tools.AssertLatestWinSDK()
-	Tools.AssertPath(UserVars.root, "UserVars.root")
-	Tools.AssertPath(UserVars.winsdk, "UserVars.winsdk")
-	
-	# Get the full path to fxc.exe
-	fxc = Tools.Path(UserVars.winsdk, "bin", UserVars.winsdkvers, "x64", "fxc.exe")
-	Tools.AssertPath(fxc)
+
+	# Get the full path to the compiler
+	compiler = Tools.Path(UserVars.winsdk, "bin", UserVars.winsdkvers, "x64", "fxc.exe") # old compiler < SM 6
+	#compiler = Tools.Path(UserVars.winsdk, "bin", UserVars.winsdkvers, "x64", "dxc.exe") # new compiler >= SM 6
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
 	if dbg:
@@ -45,16 +43,22 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	# Show the command line options
 	if trace:
-		print(f"pp:{str(pp)}  obj:{str(obj)}  debug:{str(dbg)}")
+		print(f"trace:{str(trace)} debug:{str(dbg)} obj:{str(obj)} pp:{str(pp)}")
 
 	# Find the source and output directories
-	_,fname = os.path.split(fullpath)
+	fullpath = Tools.Path(fullpath)
+	fdir,fname = os.path.split(fullpath)
 	ftitle,extn  = os.path.splitext(fname)
-	if trace: print("File: " + ftitle + extn)
+	if trace: print(f"File: {fdir}\{ftitle}{extn}")
 
-	outdir = os.path.join(UserVars.root, "projects\\rylogic\\view3d\\shaders\\hlsl\\compiled", config)
-	os.makedirs(outdir, exist_ok=True)
+	# Determine the output directory
+	outdir = fdir
+	while not outdir.endswith("hlsl"):
+		outdir,x = os.path.split(outdir)
+		if x == '': raise RuntimeError(f"Shader file {fullpath} is not within an 'hlsl' directory")
+	outdir = os.path.join(outdir, "compiled", config)
 	if trace: print("Output directory: " + outdir)
+	os.makedirs(outdir, exist_ok=True)
 
 	# Careful with shader versions, if you bump up from 4_0 you'll need to change the
 	# minimum feature level in view3d.
@@ -63,7 +67,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 		["ps", "/Tps_4_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
 		["gs", "/Tgs_4_0", r"^#ifdef PR_RDR_GSHADER_(?P<name>.*)$"],
 		["cs", "/Tcs_5_0", r"^#ifdef PR_RDR_CSHADER_(?P<name>.*)$"],
-		]
+	]
 
 	# Scan the file looking for instances of each shader type (there can be more than one)
 	for shdr,profile,patn in keys:
@@ -81,6 +85,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			tempdir = os.path.join(tempfile.gettempdir(), platform, config)
 			filepath_h = os.path.join(tempdir, shdr_name + ".h")
 			filepath_cso = os.path.join(tempdir, shdr_name + ".cso")
+			filepath_pdb = os.path.join(tempdir, shdr_name + ".pdb")
 
 			# Delete any potentially left over temporary output
 			os.makedirs(tempdir, exist_ok=True)
@@ -101,8 +106,8 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			includes = []#"/I" + srcdir + "\\.."]
 
 			# Set defines
-			selected = "PR_RDR_"+shdr.upper()+"HADER_"+shdr_name[:-3]
-			defines = ["/DSHADER_BUILD", "/D"+selected]
+			selected = f"PR_RDR_{shdr.upper()}HADER_{shdr_name[:-3]}"
+			defines = ["/DSHADER_BUILD", f"/D{selected}"]
 
 			# Set other command line options
 			options = ["/nologo", "/Gis", "/Ges", "/WX", "/Zpc"]
@@ -110,12 +115,12 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			# Debug build options
 			# For some reason, the /Zi option causes the output to be different each time it's built using fxc
 			if dbg:
-				options += ["/Gfp", "/Od", "/Zi"]
+				options += ["/Gfp", "/Od", "/Zi", f"/Fd{filepath_pdb}"]
 
 			if not pp:
 				# Build the shader using fxc
 				if trace: print("Running fxc.exe...")
-				success,output = Tools.Run([fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
+				success,output = Tools.Run([compiler, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
 				if not success:
 					print("Compiling: " + fullpath)
 					print(output)
@@ -126,16 +131,21 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 				out_filepath_h   = os.path.join(outdir, shdr_name + ".h")
 				out_filepath_cso = os.path.join(outdir, shdr_name + ".cso")
+				out_filepath_pdb = os.path.join(outdir, shdr_name + ".pdb")
 
 				# Create the .built file, so that VS's custom build tool can check for it's existence to determine when a build is needed
-				with open(os.path.join(outdir, ftitle + ".built"), "w"): pass
-				Tools.Copy(filepath_h, out_filepath_h)
+				with open(os.path.join(outdir, f"{ftitle}.built"), "w"): pass
+				
+				# Copy to target directory
+				if os.path.exists(filepath_h):
+					Tools.Copy(filepath_h, out_filepath_h)
+					os.remove(filepath_h)
 				if os.path.exists(filepath_cso):
 					Tools.Copy(filepath_cso, out_filepath_cso)
-
-				# Delete temporary output
-				if os.path.exists(filepath_h):   os.remove(filepath_h)
-				if os.path.exists(filepath_cso): os.remove(filepath_cso)
+					os.remove(filepath_cso)
+				if os.path.exists(filepath_pdb):
+					Tools.Copy(filepath_pdb, out_filepath_pdb)
+					os.remove(filepath_pdb)
 
 			else: # Generate preprocessed output
 
@@ -144,7 +154,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				if os.path.exists(filepath_pp): os.remove(filepath_pp)
 
 				# Pre process and clean
-				Tools.Exec([fxc, fullpath, "/P"+filepath_pp] + includes + defines + options)
+				Tools.Exec([compiler, fullpath, "/P"+filepath_pp] + includes + defines + options)
 				Tools.Exec([os.path.join(UserVars.root, "bin", "textformatter.exe"), "-f", filepath_pp, "-newlines", "0", "1"])
 				if UserVars.textedit:
 					Tools.Exec([UserVars.textedit, filepath_pp])
@@ -171,6 +181,7 @@ if __name__ == "__main__":
 		obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
 		trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
 		dbg   = True if "dbg"   in [arg.lower() for arg in sys.argv] else False
+		dbg |= config == "debug"
 
 		# Build it
 		BuildShader(fullpath, platform, config, pp=pp, obj=obj, trace=trace, dbg=dbg)
