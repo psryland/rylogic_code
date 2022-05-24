@@ -76,13 +76,13 @@ namespace pr::rdr12
 
 		union {
 		EPipeState m_id;  // Identifies the offset and size of the field in the PSO description.
-		field_t m_field;
+		field_t m_field;  // Ofs/Size into the PSO description
 		};
 		state_t m_value;  // The data that replaces the PSO description field
 
 		PipeState() = default;
 		PipeState(EPipeState ps, state_t value)
-			:m_id(ps)
+			: m_id(ps)
 			, m_value(value)
 		{}
 
@@ -133,6 +133,17 @@ namespace pr::rdr12
 		{
 			Clear<PS>();
 			m_states.push_back(PipeState(PS, {byte_ptr(&data), byte_ptr(&data + 1)}));
+		}
+
+		// See if the given pipe state is in the set of overrides
+		template <EPipeState PS> pipe_state_field_t<PS> const* Find() const
+		{
+			for (auto& state : m_states)
+			{
+				if (state.m_id != PS) continue;
+				return type_ptr<pipe_state_field_t<PS>>(state.m_value.data());
+			}
+			return nullptr;
 		}
 	};
 

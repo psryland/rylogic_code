@@ -59,6 +59,9 @@ namespace pr::rdr12
 		template <typename Char>
 		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
+		// Delete a single object
+		void DeleteObject(LdrObject* object);
+
 		// Create an embedded code handler for the given language
 		std::unique_ptr<IEmbeddedCode> CreateHandler(wchar_t const* lang);
 	};

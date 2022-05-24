@@ -12,5 +12,5 @@ config    = sys.argv[3]              if len(sys.argv) > 3 else "Debug"
 if platform.lower() == "win32": platform = "x86"
 
 # Copy dependencies to 'targetdir'
-Tools.Copy(Tools.Path(UserVars.root, f"lib\\{platform}\\{config}\\view3d-12.dll") , targetdir, only_if_modified=True)
-Tools.Copy(Tools.Path(UserVars.root, f"lib\\{platform}\\{config}\\view3d-12.pdb") , targetdir, only_if_modified=True)
+Tools.Copy(Tools.Path(UserVars.root, f"lib\\{platform}\\{config}\\view3d-12.dll", check_exists=False) , targetdir, only_if_modified=True)
+Tools.Copy(Tools.Path(UserVars.root, f"lib\\{platform}\\{config}\\view3d-12.pdb", check_exists=False) , targetdir, only_if_modified=True, ignore_non_existing=True)
