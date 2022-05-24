@@ -49,18 +49,18 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Return the grid that owns this column</summary>
-		public static DataGrid Grid(this DataGridColumn col)
+		public static DataGrid? Grid(this DataGridColumn col)
 		{
 			m_pi_column_owner ??= typeof(DataGridColumn).GetProperty("DataGridOwner", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("DataGridOwner property not found");
-			return (DataGrid?)m_pi_column_owner.GetValue(col, null) ?? throw new Exception("DataGrid not found");
+			return (DataGrid?)m_pi_column_owner.GetValue(col, null);
 		}
 		private static PropertyInfo? m_pi_column_owner;
 
 		/// <summary>Return the grid that owns this cell info</summary>
-		public static DataGrid Grid(this DataGridCellInfo ci)
+		public static DataGrid? Grid(this DataGridCellInfo ci)
 		{
 			m_pi_cellinfo_owner ??= typeof(DataGridCellInfo).GetProperty("Owner", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Owner property not found");
-			return (DataGrid?)m_pi_cellinfo_owner.GetValue(ci, null) ?? throw new Exception("DataGrid not found");
+			return (DataGrid?)m_pi_cellinfo_owner.GetValue(ci, null);
 		}
 		private static PropertyInfo? m_pi_cellinfo_owner;
 
@@ -96,8 +96,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public static DataGridRow GetRow(this DataGridCellInfo ci)
 		{
-			var grid = ci.Column.Grid();
-			return grid.ItemContainerGenerator.ContainerFromItem(ci.Item) is DataGridRow row ? row : throw new Exception("Cell info does not correspond to a row in the grid");
+			return ci.Column.Grid()?.ItemContainerGenerator.ContainerFromItem(ci.Item) is DataGridRow row ? row : throw new Exception("Cell info does not correspond to a row in the grid");
 		}
 
 		/// <summary>Get the grid row from a cell info</summary>
@@ -955,6 +954,16 @@ namespace Rylogic.Gui.WPF
 				uie.RemoveHandler(RowsReorderedEvent, handler);
 		}
 
+		#endregion
+
+		#region Column Name
+		private const int ColumnName = 0;
+		public static readonly DependencyProperty ColumnNameProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnName), string.Empty, Gui_.EDPFlags.None);
+		public static string GetColumnName(DependencyObject obj) => (string)obj.GetValue(ColumnNameProperty);
+		public static void SetColumnName(DependencyObject obj, string value) => obj.SetValue(ColumnNameProperty, value);
+		private static void ColumnName_Changed(DependencyObject obj)
+		{
+		}
 		#endregion
 	}
 }

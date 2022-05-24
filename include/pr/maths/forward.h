@@ -1,9 +1,8 @@
-//*********************************************
+﻿//*********************************************
 // Maths Library
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-
 #include <concepts>
 #include <type_traits>
 #include <iterator>
@@ -62,31 +61,64 @@ static_assert(_MSC_VER >= 1900, "VS v140 is required due to a value initialisati
 
 namespace pr
 {
-	template <typename Scalar, typename T> struct Vec2;
+	// Support component types for vectors
+	template <typename T> concept Scalar =
+		std::is_floating_point_v<T> ||
+		std::is_integral_v<T>;
+
+	template <Scalar S, typename T> struct Vec2;
 	template <typename T> using Vec2f = Vec2<float, T>;
-	template <typename T> using Vec2d = Vec2<float, T>;
+	template <typename T> using Vec2d = Vec2<double, T>;
 	template <typename T> using Vec2i = Vec2<int32_t, T>;
 	template <typename T> using Vec2l = Vec2<int64_t, T>;
 
-	template <typename Scalar, typename T> struct Vec3;
+	template <Scalar S, typename T> struct Vec3;
 	template <typename T> using Vec3f = Vec3<float, T>;
-	template <typename T> using Vec3d = Vec3<float, T>;
+	template <typename T> using Vec3d = Vec3<double, T>;
 	template <typename T> using Vec3i = Vec3<int32_t, T>;
 	template <typename T> using Vec3l = Vec3<int64_t, T>;
 
-	template <typename Scalar, typename T> struct Vec4;
+	template <Scalar S, typename T> struct Vec4;
 	template <typename T> using Vec4f = Vec4<float, T>;
-	template <typename T> using Vec4d = Vec4<float, T>;
+	template <typename T> using Vec4d = Vec4<double, T>;
 	template <typename T> using Vec4i = Vec4<int32_t, T>;
 	template <typename T> using Vec4l = Vec4<int64_t, T>;
 
-	template <typename T> struct Vec8f;
+	template <Scalar S, typename T> struct Vec8;
+	template <typename T> using Vec8f = Vec8<float, T>;
+	template <typename T> using Vec8d = Vec8<double, T>;
+	template <typename T> using Vec8i = Vec8<int32_t, T>;
+	template <typename T> using Vec8l = Vec8<int64_t, T>;
+
+	template <Scalar S, typename A, typename B> struct Mat2x2;
+	template <typename A, typename B> using Mat2x2f = Mat2x2<float, A, B>;
+	template <typename A, typename B> using Mat2x2d = Mat2x2<double, A, B>;
+	template <typename A, typename B> using Mat2x2i = Mat2x2<int32_t, A, B>;
+	template <typename A, typename B> using Mat2x2l = Mat2x2<int64_t, A, B>;
+
+	template <Scalar S, typename A, typename B> struct Mat3x4;
+	template <typename A, typename B> using Mat3x4f = Mat3x4<float, A, B>;
+	template <typename A, typename B> using Mat3x4d = Mat3x4<double, A, B>;
+	template <typename A, typename B> using Mat3x4i = Mat3x4<int32_t, A, B>;
+	template <typename A, typename B> using Mat3x4l = Mat3x4<int64_t, A, B>;
+
+	template <Scalar S, typename A, typename B> struct Mat4x4;
+	template <typename A, typename B> using Mat4x4f = Mat4x4<float, A, B>;
+	template <typename A, typename B> using Mat4x4d = Mat4x4<double, A, B>;
+	template <typename A, typename B> using Mat4x4i = Mat4x4<int32_t, A, B>;
+	template <typename A, typename B> using Mat4x4l = Mat4x4<int64_t, A, B>;
+
+	template <Scalar S, typename A, typename B> struct Mat6x8;
+	template <typename A, typename B> using Mat6x8f = Mat6x8<float, A, B>;
+	template <typename A, typename B> using Mat6x8d = Mat6x8<double, A, B>;
+	template <typename A, typename B> using Mat6x8i = Mat6x8<int32_t, A, B>;
+	template <typename A, typename B> using Mat6x8l = Mat6x8<int64_t, A, B>;
+
+	template <Scalar S, typename A, typename B> struct Quat;
+	template <typename A, typename B> using Quatf = Quat<float, A, B>;
+	template <typename A, typename B> using Quatd = Quat<double, A, B>;
+
 	template <typename T> struct Half4;
-	template <typename A, typename B> struct Mat2x2f;
-	template <typename A, typename B> struct Mat3x4f;
-	template <typename A, typename B> struct Mat4x4f;
-	template <typename A, typename B> struct Mat6x8f;
-	template <typename A, typename B> struct Quatf;
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -98,12 +130,6 @@ namespace pr
 	
 	namespace maths
 	{
-		// Scaler types
-		template <typename T>
-		concept Arithmetic =
-			std::is_floating_point_v<T> ||
-			std::is_integral_v<T>;
-
 		// The 'is_vec' trait means, "Can be converted to a N component vector"
 		// Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
 		template <typename T> struct is_vec :std::false_type
@@ -154,76 +180,70 @@ namespace pr
 		}
 
 		#pragma region Traits
-		template <Arithmetic T, int N> struct is_vec<T[N]>
+		template <Scalar S, int N> struct is_vec<S[N]>
 		{
-			using elem_type = T;
-			using comp_type = T;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = N;
 		};
-		template <Arithmetic T, int N> struct is_vec<std::array<T,N>>
+		template <Scalar S, int N> struct is_vec<std::array<S,N>>
 		{
-			using elem_type = T;
-			using comp_type = T;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = N;
 		};
-		template <typename Scalar, typename T> struct is_vec<Vec2<Scalar, T>> :std::true_type
+		template <Scalar S, typename T> struct is_vec<Vec2<S,T>> :std::true_type
 		{
-			using elem_type = Scalar;
-			using comp_type = Scalar;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = 2;
 		};
-		template <typename Scalar, typename T> struct is_vec<Vec3<Scalar, T>> :std::true_type
+		template <Scalar S, typename T> struct is_vec<Vec3<S,T>> :std::true_type
 		{
-			using elem_type = Scalar;
-			using comp_type = Scalar;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = 3;
 		};
-		template <typename Scalar, typename T> struct is_vec<Vec4<Scalar, T>> :std::true_type
+		template <Scalar S, typename T> struct is_vec<Vec4<S,T>> :std::true_type
 		{
-			using elem_type = Scalar;
-			using comp_type = Scalar;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = 4;
 		};
-		template <typename T> struct is_vec<Vec8f<T>> :std::true_type
+		template <Scalar S, typename T> struct is_vec<Vec8<S,T>> :std::true_type
 		{
-			using elem_type = float;
-			using comp_type = float;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = 8;
 		};
-		template <typename T> struct is_vec<Vec4i<T>> :std::true_type
+		template <Scalar S, typename A, typename B> struct is_vec<Mat2x2<S,A,B>> :std::true_type
 		{
-			using elem_type = int;
-			using comp_type = int;
-			static int const dim = 4;
-		};
-		template <typename A, typename B> struct is_vec<Mat2x2f<A,B>> :std::true_type
-		{
-			using elem_type = Vec2f<void>;
-			using comp_type = float;
+			using elem_type = Vec2<S, void>;
+			using comp_type = S;
 			static int const dim = 2;
 		};
-		template <typename A, typename B> struct is_vec<Mat3x4f<A,B>> :std::true_type
+		template <Scalar S, typename A, typename B> struct is_vec<Mat3x4<S,A,B>> :std::true_type
 		{
-			using elem_type = Vec4f<void>;
-			using comp_type = float;
+			using elem_type = Vec4<S, void>;
+			using comp_type = S;
 			static int const dim = 3;
 		};
-		template <typename A, typename B> struct is_vec<Mat4x4f<A,B>> :std::true_type
+		template <Scalar S, typename A, typename B> struct is_vec<Mat4x4<S,A,B>> :std::true_type
 		{
-			using elem_type = Vec4f<void>;
-			using comp_type = float;
+			using elem_type = Vec4<S, void>;
+			using comp_type = S;
 			static int const dim = 4;
 		};
-		template <typename A, typename B> struct is_vec<Mat6x8f<A,B>> :std::true_type
+		template <Scalar S, typename A, typename B> struct is_vec<Mat6x8<S,A,B>> :std::true_type
 		{
-			using elem_type = Vec8f<void>;
-			using comp_type = float;
+			using elem_type = Vec8<S, void>;
+			using comp_type = S;
 			static int const dim = 6;
 		};
-		template <typename A, typename B> struct is_vec<Quatf<A,B>> :std::true_type
+		template <Scalar S, typename A, typename B> struct is_vec<Quat<S,A,B>> :std::true_type
 		{
-			using elem_type = float;
-			using comp_type = float;
+			using elem_type = S;
+			using comp_type = S;
 			static int const dim = 4;
 		};
 
@@ -259,17 +279,16 @@ namespace pr
 	#else
 	#define pr_cref const&
 	#endif
-	template <typename Scalar, typename T> using Vec2_cref = Vec2<Scalar, T> pr_cref;
-	template <typename Scalar, typename T> using Vec3_cref = Vec3<Scalar, T> pr_cref;
-	template <typename Scalar, typename T> using Vec4_cref = Vec4<Scalar, T> pr_cref;
-
-	template <typename T = void> using v8_cref = Vec8f<T> pr_cref;
+	template <Scalar S, typename T> using Vec2_cref = Vec2<S,T> pr_cref;
+	template <Scalar S, typename T> using Vec3_cref = Vec3<S,T> pr_cref;
+	template <Scalar S, typename T> using Vec4_cref = Vec4<S,T> pr_cref;
+	template <Scalar S, typename T> using Vec8_cref = Vec8<S,T> pr_cref;
+	template <Scalar S, typename A, typename B> using Mat2x2_cref = Mat2x2<S, A, B> pr_cref;
+	template <Scalar S, typename A, typename B> using Mat3x4_cref = Mat3x4<S, A, B> pr_cref;
+	template <Scalar S, typename A, typename B> using Mat4x4_cref = Mat4x4<S, A, B> pr_cref;
+	template <Scalar S, typename A, typename B> using Mat6x8_cref = Mat6x8<S, A, B> const&;
+	template <Scalar S, typename A, typename B> using Quat_cref = Quat<S,A,B> pr_cref;
 	template <typename T = void> using half4_cref = Half4<T> pr_cref;
-	template <typename A = void, typename B = void> using m2_cref = Mat2x2f<A, B> pr_cref;
-	template <typename A = void, typename B = void> using m3_cref = Mat3x4f<A, B> pr_cref;
-	template <typename A = void, typename B = void> using m4_cref = Mat4x4f<A, B> pr_cref;
-	template <typename A = void, typename B = void> using m6_cref = Mat6x8f<A, B> const&;
-	template <typename A = void, typename B = void> using quat_cref = Quatf<A,B> pr_cref;
 	using BBox_cref = BBox pr_cref;
 	using BSphere_cref = BSphere pr_cref;
 	#undef pr_cref
@@ -283,10 +302,10 @@ namespace pr
 	using v2 = Vec2<float, void>;
 	using v3 = Vec3<float, void>;
 	using v4 = Vec4<float, void>;
-	using v8 = Vec8f<void>;
-	using quat = Quatf<void,void>;
-	using m2x2 = Mat2x2f<void,void>;
-	using m3x4 = Mat3x4f<void,void>;
+	using v8 = Vec8<float, void>;
+	using quat = Quat<float, void, void>;
+	using m2x2 = Mat2x2<float, void, void>;
+	using m3x4 = Mat3x4<float, void, void>;
 	using m4x4 = Mat4x4f<void,void>;
 	using m6x8 = Mat6x8f<void,void>;
 	using iv2 = Vec2<int, void>;
@@ -296,7 +315,12 @@ namespace pr
 	template <typename T = void> using v2_cref = Vec2_cref<float, T>;
 	template <typename T = void> using v3_cref = Vec3_cref<float, T>;
 	template <typename T = void> using v4_cref = Vec4_cref<float, T>;
+	template <typename T = void> using v8_cref = Vec8_cref<float, T>;
 	template <typename T = void> using iv4_cref = Vec4_cref<int, T>;
+	template <typename A = void, typename B = void> using quat_cref = Quat_cref<float, A, B>;
+	template <typename A = void, typename B = void> using m3_cref = Mat3x4_cref<float, A, B>;
+	template <typename A = void, typename B = void> using m4_cref = Mat4x4_cref<float, A, B>;
+	template <typename A = void, typename B = void> using m6_cref = Mat6x8_cref<float, A, B>;
 
 	// Helper trait for 'underlying_type' that works for non-enums as well
 	template <typename T, bool = std::is_enum_v<T>> struct underlying_type : std::underlying_type<T> {};

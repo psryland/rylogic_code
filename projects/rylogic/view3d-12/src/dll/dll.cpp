@@ -301,7 +301,7 @@ VIEW3D_API view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(view3d::Window windo
 		DllLockGuard;
 		return To<view3d::Mat4x4>(window->m_scene.m_cam.CameraToWorld());
 	}
-	CatchAndReport(View3D_CameraToWorldGet, window, Mat4x4{});
+	CatchAndReport(View3D_CameraToWorldGet, window, view3d::Mat4x4{});
 }
 VIEW3D_API void __stdcall View3D_CameraToWorldSet(view3d::Window window, view3d::Mat4x4 const& c2w)
 {

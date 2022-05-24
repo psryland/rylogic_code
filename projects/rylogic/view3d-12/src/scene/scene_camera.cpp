@@ -16,8 +16,8 @@ namespace pr::rdr12
 	}
 	SceneCamera::SceneCamera(pr::Camera const& cam)
 		:Camera(cam)
-		,m_shadow_zfar(3.0f * cam.FocusDist())
-		,m_shadow_max_caster_dist(4.0f * cam.FocusDist())
+		,m_shadow_zfar(s_cast<float>(3.0 * cam.FocusDist()))
+		,m_shadow_max_caster_dist(s_cast<float>(4.0 * cam.FocusDist()))
 	{}
 	SceneCamera::SceneCamera(m4x4 const& c2w, float fovY, float aspect, float focus_dist, bool orthographic, float near_, float far_)
 		:pr::Camera(c2w, fovY, aspect, focus_dist, orthographic, near_, far_)
@@ -33,7 +33,7 @@ namespace pr::rdr12
 		auto lc2w = m4x4::LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
 		auto rc2w = m4x4::LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
 
-		eye[(int)EEye::Left ] = SceneCamera(lc2w, m_fovY, m_aspect, Length(lc2w.pos - focus_point), m_orthographic);
-		eye[(int)EEye::Right] = SceneCamera(rc2w, m_fovY, m_aspect, Length(rc2w.pos - focus_point), m_orthographic);
+		eye[(int)EEye::Left ] = SceneCamera(lc2w, s_cast<float>(m_fovY), s_cast<float>(m_aspect), Length(lc2w.pos - focus_point), m_orthographic);
+		eye[(int)EEye::Right] = SceneCamera(rc2w, s_cast<float>(m_fovY), s_cast<float>(m_aspect), Length(rc2w.pos - focus_point), m_orthographic);
 	}
 }
