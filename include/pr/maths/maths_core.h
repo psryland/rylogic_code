@@ -1,4 +1,4 @@
-//*****************************************************************************
+ï»¿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -181,26 +181,26 @@ namespace pr
 	{
 		return CompOp(v, [](auto x){ return Abs(x); });
 	}
-	template <maths::Arithmetic T, int N> constexpr std::array<std::decay_t<T>, N> Abs(T const(&v)[N])
+	template <Scalar S, int N> constexpr std::array<std::decay_t<S>, N> Abs(S const(&v)[N])
 	{
-		std::array<std::decay_t<T>, N> r = {};
+		std::array<std::decay_t<S>, N> r = {};
 		for (int i = 0, iend = N; i != iend; ++i)
 			r[i] = Abs(v[i]);
 		return r;
 	}
 
 	// Min/Max/Clamp
-	template <maths::Arithmetic T> T Min(T x, T y)
+	template <typename T> T Min(T x, T y) requires (requires (T a, T b) { a < b; } && !maths::VectorX<T>)
 	{
-		return (x > y) ? y : x;
+		return (x < y) ? x : y;
 	}
-	template <maths::Arithmetic T> constexpr T Max(T x, T y)
+	template <typename T> constexpr T Max(T x, T y) requires (requires (T a, T b) { a < b; } && !maths::VectorX<T>)
 	{
-		return (x > y) ? x : y;
+		return (x < y) ? y : x;
 	}
-	template <maths::Arithmetic T> constexpr T Clamp(T x, T mn, T mx)
+	template <typename T> constexpr T Clamp(T x, T mn, T mx) requires (requires (T a, T b) { a < b; } && !maths::VectorX<T>)
 	{
-		assert("[min,max] must be a positive range" && mn <= mx);
+		assert("[min,max] must be a positive range" && !(mx < mn));
 		return (mx < x) ? mx : (x < mn) ? mn : x;
 	}
 	template <maths::VectorX T> constexpr T Min(T const& x, T const& y)
@@ -493,8 +493,26 @@ namespace pr
 	}
 	template <maths::VectorFP T> constexpr bool FEql(T const& a, T const& b)
 	{
-		static_assert(std::is_floating_point_v<maths::vec_comp_t<T>>, "FEql should not be called on integral vectors");
 		return FEqlRelative(a, b, maths::tiny<maths::vec_comp_t<T>>);
+	}
+
+	// Define FEql for integral types to make vector overloads simpler
+	template <std::integral T> constexpr bool FEql(T a, T b)
+	{
+		return a == b;
+	}
+	template <std::integral T> inline bool FEql(std::span<T> a, std::span<T> b)
+	{
+		if (a.size() != b.size()) return false;
+		size_t i = 0, iend = a.size();
+		for (; i != iend && a[i] == b[i]; ++i) {}
+		return i == iend;
+	}
+	template <maths::VectorIg T> constexpr bool FEql(T const& a, T const& b)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && a[i] == b[i]; ++i) {}
+		return i == iend;
 	}
 
 	// NaN test
@@ -558,19 +576,19 @@ namespace pr
 	}
 
 	// Ceil/Floor/Round/Fmod
-	template <maths::Arithmetic T> inline T Ceil(T x)
+	template <Scalar S> inline S Ceil(S x)
 	{
-		return static_cast<T>(std::ceil(x));
+		return static_cast<S>(std::ceil(x));
 	}
-	template <maths::Arithmetic T> inline T Floor(T x)
+	template <Scalar S> inline S Floor(S x)
 	{
-		return static_cast<T>(std::floor(x));
+		return static_cast<S>(std::floor(x));
 	}
-	template <maths::Arithmetic T> inline T Round(T x)
+	template <Scalar S> inline S Round(S x)
 	{
-		return static_cast<T>(std::round(x));
+		return static_cast<S>(std::round(x));
 	}
-	template <maths::Arithmetic T> inline T Fmod(T x, T y)
+	template <Scalar S> inline S Fmod(S x, S y)
 	{
 		return std::fmod(x, y);
 	}
@@ -595,7 +613,7 @@ namespace pr
 	}
 
 	// Wrap 'x' to range [mn, mx)
-	template <maths::Arithmetic T> constexpr T Wrap(T x, T mn, T mx)
+	template <Scalar S> constexpr S Wrap(S x, S mn, S mx)
 	{
 		// Given the range ['mn', 'mx') and 'x' somewhere on the number line.
 		// Return 'x' wrapped into the range, allowing for 'x' < 'mn'.
@@ -614,12 +632,12 @@ namespace pr
 	}
 
 	// Sign, returns +1 if x >= 0 otherwise -1. If 'zero_is_positive' is false, then 0 in gives 0 out.
-	template <maths::Arithmetic T> constexpr T Sign(T x, bool zero_is_positive = true)
+	template <Scalar S> constexpr S Sign(S x, bool zero_is_positive = true)
 	{
-		if constexpr (std::is_unsigned_v<T>)
-			return x > 0 ? +1 : static_cast<T>(zero_is_positive);
+		if constexpr (std::is_unsigned_v<S>)
+			return x > 0 ? +S(1) : static_cast<S>(zero_is_positive);
 		else
-			return x > 0 ? +1 : x < 0 ? -1 : static_cast<T>(zero_is_positive);
+			return x > 0 ? +S(1) : x < 0 ? -S(1) : static_cast<S>(zero_is_positive);
 	}
 	template <maths::VectorX T> constexpr T Sign(T const& v, bool zero_is_positive = true)
 	{
@@ -627,71 +645,57 @@ namespace pr
 	}
 
 	// Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 'def'
-	template <typename T> constexpr T Div(T a, T b, T def = T())
+	template <typename T> requires (requires (T x) { x / x; x != x; })
+	constexpr T Div(T a, T b, T def = T())
 	{
 		return b != T() ? a / b : def;
 	}
 
 	// Truncate value
 	enum class ETruncType { TowardZero, ToNearest };
-	constexpr float Trunc(float x, ETruncType ty = ETruncType::TowardZero)
+	template <std::floating_point S> constexpr S Trunc(S x, ETruncType ty = ETruncType::TowardZero)
 	{
 		switch (ty)
 		{
-			case ETruncType::ToNearest:  return static_cast<float>(static_cast<int>(x + Sign(x) * 0.5f));
-			case ETruncType::TowardZero: return static_cast<float>(static_cast<int>(x));
+			case ETruncType::ToNearest:  return static_cast<S>(static_cast<long long>(x + Sign(x) * S(0.5)));
+			case ETruncType::TowardZero: return static_cast<S>(static_cast<long long>(x));
 			default: assert("Unknown truncation type" && false); return x;
 		}
 	}
-	constexpr double Trunc(double x, ETruncType ty = ETruncType::TowardZero)
+	template <maths::VectorFP T> constexpr T Trunc(T const& v, ETruncType ty = ETruncType::TowardZero)
 	{
-		switch (ty)
-		{
-			case ETruncType::ToNearest:  return static_cast<double>(static_cast<long long>(x + Sign(x) * 0.5));
-			case ETruncType::TowardZero: return static_cast<double>(static_cast<long long>(x));
-			default: assert("Unknown truncation type" && false); return x;
-		}
-	}
-	template <maths::VectorX T> constexpr T Trunc(T const& v, ETruncType ty = ETruncType::TowardZero)
-	{
-		static_assert(std::is_floating_point_v<maths::vec_comp_t<T>>, "Truncate should not be called on integral vectors");
 		return CompOp(v, [=](auto x) { return Trunc(x, ty); });
 	}
 
 	// Fractional part
-	inline float Frac(float x)
+	template <std::floating_point S> inline S Frac(S x)
 	{
-		float n;
+		S n;
 		return std::modf(x, &n);
 	}
-	inline double Frac(double x)
-	{
-		double n;
-		return std::modf(x, &n);
-	}
-	template <maths::VectorX T> inline T Frac(T const& v)
+	template <maths::VectorFP T> inline T Frac(T const& v)
 	{
 		return CompOp(v, [](auto x) { return Frac(x); });
 	}
 
 	// Square a value
-	template <maths::Arithmetic T> constexpr T Sqr(T x)
+	template <Scalar S> constexpr S Sqr(S x)
 	{
-		if constexpr (std::is_same_v<T, int8_t>)
+		if constexpr (std::is_same_v<S, int8_t>)
 			assert("Overflow" && Abs(x) <= 0xB);
-		if constexpr (std::is_same_v<T, uint8_t>)
+		if constexpr (std::is_same_v<S, uint8_t>)
 			assert("Overflow" && Abs(x) <= 0xF);
-		if constexpr (std::is_same_v<T, int16_t>)
+		if constexpr (std::is_same_v<S, int16_t>)
 			assert("Overflow" && Abs(x) <= 0xB5);
-		if constexpr (std::is_same_v<T, uint16_t>)
+		if constexpr (std::is_same_v<S, uint16_t>)
 			assert("Overflow" && Abs(x) <= 0xFF);
-		if constexpr (std::is_same_v<T, int32_t> || std::is_same_v<T, long>)
-			assert("Overflow" && Abs(x) <= 0xB504L);
-		if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, unsigned long>)
-			assert("Overflow" && Abs(x) <= 0xFFFFUL);
-		if constexpr (std::is_same_v<T, int64_t>)
+		if constexpr (std::is_same_v<S, int32_t> || std::is_same_v<S, long>)
+			assert("Overflow" && Abs(x) <= 0xB504);
+		if constexpr (std::is_same_v<S, uint32_t> || std::is_same_v<S, unsigned long>)
+			assert("Overflow" && Abs(x) <= 0xFFFFU);
+		if constexpr (std::is_same_v<S, int64_t>)
 			assert("Overflow" && Abs(x) <= 0xB504F333LL);
-		if constexpr (std::is_same_v<T, uint64_t>)
+		if constexpr (std::is_same_v<S, uint64_t>)
 			assert("Overflow" && Abs(x) <= 0xFFFFFFFFULL);
 
 		return x * x;
@@ -702,22 +706,25 @@ namespace pr
 	}
 
 	// Cube a value
-	constexpr float Cube(float x)
+	template <Scalar S> constexpr S Cube(S x)
 	{
-		return x * x * x;
-	}
-	constexpr double Cube(double x)
-	{
-		return x * x * x;
-	}
-	constexpr long Cube(long x)
-	{
-		assert("Overflow" && Abs(x) <= 1625L);
-		return x * x * x;
-	}
-	constexpr long long Cube(long long x)
-	{
-		assert("Overflow" && Abs(x) <= 2642245LL);
+		if constexpr (std::is_same_v<S, int8_t>)
+			assert("Overflow" && Abs(x) <= 0x5);
+		if constexpr (std::is_same_v<S, uint8_t>)
+			assert("Overflow" && Abs(x) <= 0x6);
+		if constexpr (std::is_same_v<S, int16_t>)
+			assert("Overflow" && Abs(x) <= 0x1F);
+		if constexpr (std::is_same_v<S, uint16_t>)
+			assert("Overflow" && Abs(x) <= 0x28);
+		if constexpr (std::is_same_v<S, int32_t> || std::is_same_v<S, long>)
+			assert("Overflow" && Abs(x) <= 0x50A);
+		if constexpr (std::is_same_v<S, uint32_t> || std::is_same_v<S, unsigned long>)
+			assert("Overflow" && Abs(x) <= 0x659U);
+		if constexpr (std::is_same_v<S, int64_t>)
+			assert("Overflow" && Abs(x) <= 0x1FFFFFLL);
+		if constexpr (std::is_same_v<S, uint64_t>)
+			assert("Overflow" && Abs(x) <= 0x285145ULL);
+
 		return x * x * x;
 	}
 	template <maths::VectorX T> constexpr T Cube(T const& v)
@@ -726,27 +733,14 @@ namespace pr
 	}
 
 	// Square root
-	inline float Sqrt(float x)
+	template <Scalar S> auto Sqrt(S x) -> decltype(std::sqrt(x))
 	{
-		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
+		if constexpr (std::floating_point<S>)
+			assert("Sqrt of undefined value" && IsFinite(x));
+		if constexpr (std::is_signed_v<S>)
+			assert("Sqrt of negative value" && x >= S(0));
+
 		return std::sqrt(x);
-	}
-	inline double Sqrt(double x)
-	{
-		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
-		return std::sqrt(x);
-	}
-	inline float Sqrt(int x)
-	{
-		return Sqrt(static_cast<float>(x));
-	}
-	inline float Sqrt(long x)
-	{
-		return Sqrt(static_cast<float>(x));
-	}
-	inline double Sqrt(long long x)
-	{
-		return Sqrt(static_cast<double>(x));
 	}
 	template <maths::VectorX T> inline T Sqrt(T const&)
 	{
@@ -781,9 +775,9 @@ namespace pr
 	}
 
 	// Signed Sqr
-	template <maths::Arithmetic T> constexpr T SignedSqr(T x)
+	template <Scalar S> constexpr S SignedSqr(S x)
 	{
-		return x >= T() ? Sqr(x) : -Sqr(x);
+		return x >= S() ? Sqr(x) : -Sqr(x);
 	}
 	template <maths::VectorX T> constexpr T SignedSqr(T const& v)
 	{
@@ -791,9 +785,9 @@ namespace pr
 	}
 
 	// Signed Sqrt
-	template <maths::Arithmetic T> inline T SignedSqrt(T x)
+	template <Scalar S> inline auto SignedSqrt(S x) -> decltype(Sqrt(x))
 	{
-		return x >= 0 ? Sqrt(x) : -Sqrt(-x);
+		return x >= S(0) ? Sqrt(x) : -Sqrt(-x);
 	}
 	template <maths::VectorX T> inline T CompSignedSqrt(T const& v)
 	{
@@ -817,48 +811,49 @@ namespace pr
 	}
 
 	// Trig functions
-	template <maths::Arithmetic T> inline T Sin(T x)
+	template <Scalar S> inline S Sin(S x)
 	{
 		return std::sin(x);
 	}
-	template <maths::Arithmetic T> inline T Cos(T x)
+	template <Scalar S> inline S Cos(S x)
 	{
 		return std::cos(x);
 	}
-	template <maths::Arithmetic T> inline T Tan(T x)
+	template <Scalar S> inline S Tan(S x)
 	{
 		return std::tan(x);
 	}
-	template <maths::Arithmetic T> inline T ASin(T x)
+	template <Scalar S> inline S ASin(S x)
 	{
 		return std::asin(x);
 	}
-	template <maths::Arithmetic T> inline T ACos(T x)
+	template <Scalar S> inline S ACos(S x)
 	{
 		return std::acos(x);
 	}
-	template <maths::Arithmetic T> inline T ATan(T x)
+	template <Scalar S> inline S ATan(S x)
 	{
 		return std::atan(x);
 	}
-	template <maths::Arithmetic T> inline T ATan2(T y, T x)
+	template <Scalar S> inline S ATan2(S y, S x)
 	{
 		return std::atan2(y, x);
 	}
-	template <maths::Arithmetic T> inline T ATan2Positive(T y, T x)
+	template <Scalar S> inline S ATan2Positive(S y, S x)
 	{
 		auto a = std::atan2(y, x);
-		return static_cast<T>(a < 0 ? a + maths::tau : a);
+		if (a < S(0)) a += constants<S>::tau;
+		return a;
 	}
-	template <maths::Arithmetic T> inline T Sinh(T x)
+	template <Scalar S> inline S Sinh(S x)
 	{
 		return std::sinh(x);
 	}
-	template <maths::Arithmetic T> inline T Cosh(T x)
+	template <Scalar S> inline S Cosh(S x)
 	{
 		return std::cosh(x);
 	}
-	template <maths::Arithmetic T> inline T Tanh(T x)
+	template <Scalar S> inline S Tanh(S x)
 	{
 		return std::tanh(x);
 	}
@@ -912,21 +907,21 @@ namespace pr
 	{
 		return 1 << n;
 	}
-	template <maths::Arithmetic T> inline T Pow(T x, T y)
+	template <Scalar S> inline S Pow(S x, S y)
 	{
-		return static_cast<T>(std::pow(x, y));
+		return s_cast<S>(std::pow(x, y));
 	}
-	template <maths::Arithmetic T> inline T Exp(T x)
+	template <Scalar S> inline S Exp(S x)
 	{
-		return static_cast<T>(std::exp(x));
+		return s_cast<S>(std::exp(x));
 	}
-	template <maths::Arithmetic T> inline T Log10(T x)
+	template <Scalar S> inline S Log10(S x)
 	{
-		return static_cast<T>(std::log10(x));
+		return s_cast<S>(std::log10(x));
 	}
-	template <maths::Arithmetic T> inline T Log(T x)
+	template <Scalar S> inline S Log(S x)
 	{
-		return static_cast<T>(std::log(x));
+		return s_cast<S>(std::log(x));
 	}
 	template <maths::VectorX T> inline T Pow(T const& x, T const& y)
 	{
@@ -946,27 +941,27 @@ namespace pr
 	}
 
 	// Lengths
-	template <maths::Arithmetic T> constexpr T LenSq(T x, T y)
+	template <Scalar S> constexpr S LenSq(S x, S y)
 	{
 		return Sqr(x) + Sqr(y);
 	}
-	template <maths::Arithmetic T> constexpr T LenSq(T x, T y, T z)
+	template <Scalar S> constexpr S LenSq(S x, S y, S z)
 	{
 		return Sqr(x) + Sqr(y) + Sqr(z);
 	}
-	template <maths::Arithmetic T> constexpr T LenSq(T x, T y, T z, T w)
+	template <Scalar S> constexpr S LenSq(S x, S y, S z, S w)
 	{
 		return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w);
 	}
-	template <maths::Arithmetic T> inline auto Len(T x, T y) -> decltype(Sqrt(T()))
+	template <Scalar S> inline auto Len(S x, S y) -> decltype(Sqrt(x))
 	{
 		return Sqrt(LenSq(x, y));
 	}
-	template <maths::Arithmetic T> inline auto Len(T x, T y, T z) -> decltype(Sqrt(T()))
+	template <Scalar S> inline auto Len(S x, S y, S z) -> decltype(Sqrt(x))
 	{
 		return Sqrt(LenSq(x, y, z));
 	}
-	template <maths::Arithmetic T> inline auto Len(T x, T y, T z, T w) -> decltype(Sqrt(T()))
+	template <Scalar S> inline auto Len(S x, S y, S z, S w) -> decltype(Sqrt(x))
 	{
 		return Sqrt(LenSq(x, y, z, w));
 	}
@@ -998,11 +993,11 @@ namespace pr
 	// Normalise - 2,3,4 variants scale all elements in the vector (consistent with DirectX)
 	// These are generic functions. Normalise is specialised for intrinsics.
 	// Note, due to FP rounding, normalising non-zero vectors can create zero vectors
-	template <maths::VectorX T> inline T Normalise(T const& v)
+	template <maths::VectorFP T> inline T Normalise(T const& v)
 	{
 		return v / Length(v);
 	}
-	template <maths::VectorX T> inline T Normalise(T const& v, T const& def)
+	template <maths::VectorFP T> inline T Normalise(T const& v, T const& def)
 	{
 		if (All(v, [](auto x) { return x == maths::vec_elem_t<T>{}; })) return def;
 		return Normalise(v);
@@ -1058,7 +1053,7 @@ namespace pr
 	}
 	
 	// Return the normalised fraction that 'x' is, in the range ['min', 'max']
-	template <std::floating_point T> inline T Frac(T min, T x, T max)
+	template <std::floating_point S> inline S Frac(S min, S x, S max)
 	{
 		assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
 		return (x - min) / (max - min);
@@ -1071,9 +1066,9 @@ namespace pr
 	}
 
 	// Linearly interpolate from 'lhs' to 'rhs'
-	template <maths::Arithmetic T> inline T Lerp(T lhs, T rhs, double frac)
+	template <Scalar S> inline S Lerp(S lhs, S rhs, double frac)
 	{
-		return static_cast<T>(lhs + frac * (rhs - lhs));
+		return s_cast<S>(lhs + frac * (rhs - lhs));
 	}
 	template <maths::VectorFP T> inline T Lerp(T const& lhs, T const& rhs, maths::vec_comp_t<T> frac)
 	{
@@ -1150,7 +1145,7 @@ namespace pr
 		return lo <= hi ? static_cast<T>(0) : static_cast<T>(1);
 	}
 
-	// Returns the 'Hermite' interpolation (3t² - 2t³) between 'lo' and 'hi' for t=[0,1]
+	// Returns the 'Hermite' interpolation (3tï¿½ - 2tï¿½) between 'lo' and 'hi' for t=[0,1]
 	template <std::floating_point T> inline T SmoothStep(T lo, T hi, T t)
 	{
 		if (lo == hi) return lo;
@@ -1737,9 +1732,9 @@ namespace pr::maths
 			PR_CHECK(LenSq(3, 4) == 25, true);
 			PR_CHECK(LenSq(3, 4, 5) == 50, true);
 			PR_CHECK(LenSq(3, 4, 5, 6) == 86, true);
-			PR_CHECK(FEql(Len(3, 4), 5.0f), true);
-			PR_CHECK(FEql(Len(3, 4, 5), 7.0710678f), true);
-			PR_CHECK(FEql(Len(3, 4, 5, 6), 9.2736185f), true);
+			PR_CHECK(FEql(Len<float>(3, 4), 5.0f), true);
+			PR_CHECK(FEql(Len<float>(3, 4, 5), 7.0710678f), true);
+			PR_CHECK(FEql(Len<float>(3, 4, 5, 6), 9.2736185f), true);
 		}
 		{// Min/Max/Clamp
 			PR_CHECK(Min(1, 2, -3, 4, -5) == -5, true);
