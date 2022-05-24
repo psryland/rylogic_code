@@ -10,73 +10,8 @@
 
 namespace pr
 {
-	template <typename T>
-	struct Half4
-	{
-		#pragma warning(push)
-		#pragma warning(disable:4201) // nameless struct
-		union
-		{
-			struct { half_t x, y, z, w; };
-			struct { half_t arr[4]; };
-			uint64_t ull;
-		};
-		#pragma warning(pop)
-
-		// Construct
-		Half4() = default;
-		Half4(half_t x_, half_t y_, half_t z_, half_t w_)
-			:x(x_)
-			,y(y_)
-			,z(z_)
-			,w(w_)
-		{}
-		explicit Half4(half_t x_)
-			:x(x_)
-			,y(x_)
-			,z(x_)
-			,w(x_)
-		{}
-		explicit Half4(uint64_t v)
-			:ull(v)
-		{}
-		explicit Half4(half_t const* v)
-			:Half4(v[0], v[1], v[2], v[3])
-		{}
-
-		// Array access
-		int const& operator [] (int i) const
-		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
-			return arr[i];
-		}
-		int& operator [] (int i)
-		{
-			assert("index out of range" && i >= 0 && i < _countof(arr));
-			return arr[i];
-		}
-
-		// Create other vector types
-		Half4 w0() const
-		{
-			Half4 r(x,y,z,0);
-			return r;
-		}
-		Half4 w1() const
-		{
-			Half4 r(x,y,z,1);
-			return r;
-		}
-
-		// Component accessors
-		friend constexpr half_t pr_vectorcall x_cp(Half4<T> v) { return v.x; }
-		friend constexpr half_t pr_vectorcall y_cp(Half4<T> v) { return v.y; }
-		friend constexpr half_t pr_vectorcall z_cp(Half4<T> v) { return v.z; }
-		friend constexpr half_t pr_vectorcall w_cp(Half4<T> v) { return v.w; }
-	};
-	static_assert(std::is_trivially_copyable_v<Half4<void>>, "half4 must be a pod type");
-
-	#pragma region Functions
+	using half_t = unsigned short;
+	using half4 = Vec4<half_t, void>;
 
 	// Convert between 32-bit float (1s7e24m) and 16-bit float (1s5e10m) at compile time
 	constexpr half_t F32toF16CT(float f32)
@@ -90,8 +25,8 @@ namespace pr
 		//  - Supports signed zero, denormals-as-zero (DAZ), flush-to-zero (FTZ),
 		//    clamp-to-max
 		//  - Does not support infinities or NaN
-		//  - Few, partially pipelinable, non-branching instructions,
-		//  - Core opreations ~10 clock cycles on modern x86-64
+		//  - Few, partially pipeline-able, non-branching instructions,
+		//  - Core operations ~10 clock cycles on modern x86-64
 		using aliaser = union { float f; unsigned int u; };
 		auto x = aliaser{f32};
 		auto t1 = static_cast<uint32_t>(x.u & 0x7fffffff);        // Non-sign bits
@@ -116,8 +51,8 @@ namespace pr
 		// Fast half-precision to single-precision floating point conversion
 		//  - Supports signed zero and denormals-as-zero (DAZ)
 		//  - Does not support infinities or NaN
-		//  - Few, partially pipelinable, non-branching instructions,
-		//  - Core opreations ~6 clock cycles on modern x86-64
+		//  - Few, partially pipeline-able, non-branching instructions,
+		//  - Core operations ~6 clock cycles on modern x86-64
 		using aliaser = union { unsigned int u; float f; };
 		auto t1 = static_cast<uint32_t>(f16 & 0x7fff);      // Non-sign bits
 		auto t2 = static_cast<uint32_t>(f16 & 0x8000);      // Sign bit
@@ -156,28 +91,32 @@ namespace pr
 	}
 
 	// Return the vector converted to half size floats
-	inline half4 pr_vectorcall F32toF16(v4_cref<> v)
+	inline half4 pr_vectorcall F32toF16(Vec4_cref<float, void> v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto f16 = _mm_cvtps_ph(v.vec, _MM_FROUND_TO_NEAREST_INT); //|_MM_FROUND_NO_EXC - emits a warning
-		auto res = half4{f16.m128i_u64[0]};
-		return res;
-		#else
-		return half4{F32toF16(v.x), F32toF16(v.y), F32toF16(v.z), F32toF16(v.w)};
-		#endif
-
+		if constexpr (Vec4<float, void>::IntrinsicF)
+		{
+			auto f16 = _mm_cvtps_ph(v.vec, _MM_FROUND_TO_NEAREST_INT); //|_MM_FROUND_NO_EXC - emits a warning
+			return half4{f16.m128i_u16[0], f16.m128i_u16[1], f16.m128i_u16[2], f16.m128i_u16[3]};
+		}
+		else
+		{
+			return half4{F32toF16(v.x), F32toF16(v.y), F32toF16(v.z), F32toF16(v.w)};
+		}
 	}
 
 	// Return the vector as 32-bit floats
-	inline v4 pr_vectorcall F16toF32(half4 v)
+	inline Vec4<float, void> pr_vectorcall F16toF32(half4 v)
 	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto f16 = _mm_set_epi16(0, 0, 0, 0, v.w, v.z, v.y, v.x);
-		auto res = v4{_mm_cvtph_ps(f16)};
-		return res;
-		#else
-		return v4{F16toF32(v.x), F16toF32(v.y), F16toF32(v.z), F16toF32(v.w)};
-		#endif
+		if constexpr (Vec4<float, void>::IntrinsicF)
+		{
+			auto f16 = _mm_set_epi16(0, 0, 0, 0, v.w, v.z, v.y, v.x);
+			auto res = Vec4<float,void>{_mm_cvtph_ps(f16)};
+			return res;
+		}
+		else
+		{
+			return Vec4<float,void>{F16toF32(v.x), F16toF32(v.y), F16toF32(v.z), F16toF32(v.w)};
+		}
 	}
 
 	// float literal to half_t
@@ -185,8 +124,6 @@ namespace pr
 	{
 		return F32toF16CT(static_cast<float>(x));
 	}
-
-	#pragma endregion
 }
 
 #if PR_UNITTESTS

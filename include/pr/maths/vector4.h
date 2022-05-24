@@ -22,16 +22,13 @@ namespace pr
 			IntrinsicL = PR_MATHS_USE_INTRINSICS && std::is_same_v<S, int64_t>,
 			NoIntrinsic = PR_MATHS_USE_INTRINSICS == 0,
 		};
-		#if PR_MATHS_USE_INTRINSICS
 		using intrinsic_t =
 			std::conditional_t<IntrinsicF, __m128,
 			std::conditional_t<IntrinsicD, __m256d,
 			std::conditional_t<IntrinsicI, __m128i,
 			std::conditional_t<IntrinsicL, __m256i,
-			void>>>>;
-		#else
-		using intrinsic_t = void;
-		#endif
+			std::aligned_storage_t<4*sizeof(S), 4*sizeof(S)>
+			>>>>;
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -41,10 +38,7 @@ namespace pr
 			struct { Vec2<S, T> xy, zw; };
 			struct { Vec3<S, T> xyz; };
 			struct { S arr[4]; };
-			#if PR_MATHS_USE_INTRINSICS
 			intrinsic_t vec;
-			#endif
-			std::aligned_storage_t<4*sizeof(S), 4*sizeof(S)> aligner;
 		};
 		#pragma warning(pop)
 
@@ -872,8 +866,8 @@ namespace pr::maths
 				vec4_t arr1(0, 1, 1 / f0, 0 / f0);
 				PR_CHECK(IsFinite(arr0), true);
 				PR_CHECK(!IsFinite(arr1), true);
-				PR_CHECK(!All(arr0, [](S x) { return x < S(5.0); }), true);
-				PR_CHECK(Any(arr0, [](S x) { return x < S(5.0); }), true);
+				PR_CHECK(!All(arr0, [](S x) { return x < S(5); }), true);
+				PR_CHECK(Any(arr0, [](S x) { return x < S(5); }), true);
 			}
 		}
 		{// Min/Max/Clamp
