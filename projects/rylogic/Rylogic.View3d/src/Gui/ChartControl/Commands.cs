@@ -76,7 +76,11 @@ namespace Rylogic.Gui.WPF
 			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
 
 			// Don't show empty context menus
-			ContextMenuOpening += (s, a) => a.Handled = ContextMenu == null || ContextMenu.Items.Count == 0;
+			ContextMenuOpening += (s, a) =>
+			{
+				if (a.OriginalSource is not FrameworkElement dp || dp.ContextMenu == null) return;
+				a.Handled = dp.ContextMenu.Items.Count == 0;
+			};
 		}
 
 		/// <summary>Accessors for setting the context menus in XAML</summary>

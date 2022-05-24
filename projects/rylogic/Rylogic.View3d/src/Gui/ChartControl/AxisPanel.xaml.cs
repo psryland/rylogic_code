@@ -114,25 +114,25 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			{
 				switch (e.PropertyName)
 				{
-				case nameof(ChartControl.OptionsData.Axis.Side):
-					AxisSize = 0;
-					UpdateGraphics();
-					break;
-				case nameof(ChartControl.OptionsData.Axis.AxisColour):
-				case nameof(ChartControl.OptionsData.Axis.AxisThickness):
-					UpdateGraphics();
-					break;
-				case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
-				case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
-					AxisSize = 0;
-					NotifyPropertyChanged(nameof(AxisSize));
-					UpdateGraphics();
-					break;
-				case nameof(ChartControl.OptionsData.Axis.TickTextTemplate):
-					AxisSize = 0;
-					NotifyPropertyChanged(nameof(AxisSize));
-					UpdateGraphics();
-					break;
+					case nameof(ChartControl.OptionsData.Axis.Side):
+						AxisSize = 0;
+						UpdateGraphics();
+						break;
+					case nameof(ChartControl.OptionsData.Axis.AxisColour):
+					case nameof(ChartControl.OptionsData.Axis.AxisThickness):
+						UpdateGraphics();
+						break;
+					case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
+					case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
+						AxisSize = 0;
+						NotifyPropertyChanged(nameof(AxisSize));
+						UpdateGraphics();
+						break;
+					case nameof(ChartControl.OptionsData.Axis.TickTextTemplate):
+						AxisSize = 0;
+						NotifyPropertyChanged(nameof(AxisSize));
+						UpdateGraphics();
+						break;
 				}
 			}
 		}
