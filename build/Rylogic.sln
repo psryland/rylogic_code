@@ -117,6 +117,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AceInspaders", "AceInspaders", "{985120B3-B860-4D5B-A260-0DFBB6B78726}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AceInspaders", "..\projects\apps\AceInspaders\AceInspaders.vcxproj", "{6FA8C1C9-4F4B-4165-A0D8-2B837C64EF06}"
+	ProjectSection(ProjectDependencies) = postProject
+		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MeasureSchmitt", "..\projects\apps\MeasureSchmitt\MeasureSchmitt\MeasureSchmitt.csproj", "{FE64C2D8-469B-43E6-B24B-9310465AC3D2}"
 EndProject

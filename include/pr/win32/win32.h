@@ -19,8 +19,8 @@
 //    #define _WIN32_WINNT_WINTHRESHOLD 0x0A00 // Windows 10
 //    #define _WIN32_WINNT_WIN10        0x0A00 // Windows 10
 #pragma once
-
 #include <string>
+#include <filesystem>
 #include <sdkddkver.h>
 #include <windows.h>
 #include <knownfolders.h>

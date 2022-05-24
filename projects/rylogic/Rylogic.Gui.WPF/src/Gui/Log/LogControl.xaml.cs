@@ -111,6 +111,7 @@ namespace Rylogic.Gui.WPF
 			CopySelectedMessagesToClipboard = Command.Create(this, CopySelectedMessagesToClipboardInternal);
 
 			// Don't set DataContext, it must be inherited
+			UpdateColumnVisibility();
 		}
 		public void Dispose()
 		{
@@ -564,8 +565,10 @@ namespace Rylogic.Gui.WPF
 				m_view.HeadersVisibility = DataGridHeadersVisibility.None;
 				m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 				foreach (var column in m_view.Columns)
-					column.Visibility = (string)column.Header != ColumnNames.Text ? Visibility.Visible : Visibility.Collapsed;
-				
+				{
+					var name = DataGrid_.GetColumnName(column);
+					column.Visibility = name != ColumnNames.Text ? Visibility.Visible : Visibility.Collapsed;
+				}
 				return;
 			}
 
@@ -577,9 +580,11 @@ namespace Rylogic.Gui.WPF
 			m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 			foreach (var column in m_view.Columns)
 			{
+				var name = DataGrid_.GetColumnName(column);
+
 				Visibility state;
-				state = shown.Contains((string)column.Header) ? Visibility.Visible : Visibility.Collapsed;
-				state = !hidden.Contains((string)column.Header) ? state : Visibility.Collapsed;
+				state = shown.Contains(name) ? Visibility.Visible : Visibility.Collapsed;
+				state = !hidden.Contains(name) ? state : Visibility.Collapsed;
 				column.Visibility = state;
 			}
 

@@ -86,12 +86,15 @@ namespace pr
 }
 namespace pr::maths
 {
-	// "Tiny" - not defined for integral types.
-	template <typename T> constexpr T tiny;
-	template <> constexpr double tiny<double const> = constants<double>::tiny;
-	template <> constexpr float tiny<float const> = constants<float>::tiny;
-	template <> constexpr double tiny<double> = constants<double>::tiny;
-	template <> constexpr float tiny<float> = constants<float>::tiny;
+	template <typename T> constexpr std::decay_t<T> tiny;
+	template <> constexpr double  tiny<double const>  = constants<double>::tiny;
+	template <> constexpr float   tiny<float const>   = constants<float>::tiny;
+	template <> constexpr int64_t tiny<int64_t const> = 0LL;
+	template <> constexpr int32_t tiny<int32_t const> = 0;
+	template <> constexpr double  tiny<double>        = constants<double>::tiny;
+	template <> constexpr float   tiny<float>         = constants<float>::tiny;
+	template <> constexpr int64_t tiny<int64_t>       = 0LL;
+	template <> constexpr int32_t tiny<int32_t>       = 0;
 
 	constexpr double tinyd = constants<double>::tiny;
 	constexpr double tiny_sqd = constants<double>::tiny_sq;

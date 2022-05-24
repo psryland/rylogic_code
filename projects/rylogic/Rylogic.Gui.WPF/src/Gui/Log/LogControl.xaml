@@ -4,7 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:my="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignWidth="800"
@@ -16,6 +16,17 @@
 			<BitmapImage x:Key="check_reject" UriSource="/Rylogic.Gui.WPF;component/res/check_reject.png"/>
 			<BitmapImage x:Key="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
 			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
+
+			<!-- Locale strings -->
+			<gui:LocaleString x:Key="Log_Tag" Key="Log_Tag" Fallback="Tag"/>
+			<gui:LocaleString x:Key="Log_Level" Key="Log_Level" Fallback="Level"/>
+			<gui:LocaleString x:Key="Log_Timestamp" Key="Log_Timestamp" Fallback="Timestamp"/>
+			<gui:LocaleString x:Key="Log_Elapsed" Key="Log_Elapsed" Fallback="Elapsed"/>
+			<gui:LocaleString x:Key="Log_Message" Key="Log_Message" Fallback="Message"/>
+			<gui:LocaleString x:Key="Log_Filepath" Key="Log_Filepath" Fallback="File"/>
+			<gui:LocaleString x:Key="Log_LineNumber" Key="Log_LineNumber" Fallback="Line"/>
+			<gui:LocaleString x:Key="Log_Occurrences" Key="Log_Occurrences" Fallback="Occurrences"/>
+			<gui:LocaleString x:Key="Log_Text" Key="Log_Text" Fallback="Text"/>
 
 			<!-- Default context menu -->
 			<MenuItem
@@ -108,8 +119,8 @@
 		</ResourceDictionary>
 	</UserControl.Resources>
 	<Grid
-		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:LogControl}}"
-		d:DataContext="{d:DesignInstance Type=my:LogControl, IsDesignTimeCreatable=True}"
+		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=gui:LogControl}}"
+		d:DataContext="{d:DesignInstance Type=gui:LogControl, IsDesignTimeCreatable=True}"
 		>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -215,7 +226,7 @@
 		
 		<!-- Log View -->
 		<DataGrid
-			Name="m_view"
+			x:Name="m_view"
 			Grid.Row="1"
 			AutoGenerateColumns="False"
 			HeadersVisibility="Column"
@@ -223,7 +234,7 @@
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
 			ContextMenu="{StaticResource LogControlCMenu}"
-			my:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
+			gui:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
 			PreviewMouseDown="HandleMouseDown"
 			MouseDoubleClick="HandleMouseDoubleClick"
 			CanUserResizeColumns="True"
@@ -232,31 +243,36 @@
 			>
 			<DataGrid.Columns>
 				<DataGridTextColumn
-					Header="Tag"
-					Binding="{Binding Tag}"
+					gui:DataGrid_.ColumnName ="Tag"
+					Header="{StaticResource Log_Tag}"
 					ElementStyle="{StaticResource LogEntryStyle}"
+					Binding="{Binding Tag}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
-					Header="Level"
+					gui:DataGrid_.ColumnName ="Level"
+					Header="{StaticResource Log_Level}"
 					Binding="{Binding Level}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
-					Header="Timestamp"
+					gui:DataGrid_.ColumnName ="Timestamp"
+					Header="{StaticResource Log_Timestamp}"
 					Binding="{Binding TimestampFormatted}"
 					ElementStyle="{StaticResource LogEntryStyleRight}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
-					Header="Elapsed"
+					gui:DataGrid_.ColumnName ="Elapsed"
+					Header="{StaticResource Log_Elapsed}"
 					Binding="{Binding ElapsedFormatted}"
 					ElementStyle="{StaticResource LogEntryStyleRight}"
 					Width="1*"
 					/>
 				<DataGridTemplateColumn
-					Header="Message"
+					gui:DataGrid_.ColumnName ="Message"
+					Header="{StaticResource Log_Message}"
 					Width="5*"
 					>
 					<DataGridTemplateColumn.CellTemplate>
@@ -269,25 +285,29 @@
 					</DataGridTemplateColumn.CellTemplate>
 				</DataGridTemplateColumn>
 				<DataGridTextColumn
-					Header="File"
+					gui:DataGrid_.ColumnName ="File"
+					Header="{StaticResource Log_Filepath}"
 					Binding="{Binding File}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="2*"
 					/>
 				<DataGridTextColumn
-					Header="Line"
+					gui:DataGrid_.ColumnName ="Line"
+					Header="{StaticResource Log_LineNumber}"
 					Binding="{Binding Line}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="0.5*"
 					/>
 				<DataGridTextColumn
-					Header="Occurrences"
+					gui:DataGrid_.ColumnName ="Occurrences"
+					Header="{StaticResource Log_Occurrences}"
 					Binding="{Binding Occurrences}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="0.3*"
 					/>
 				<DataGridTemplateColumn
-					Header="Text"
+					gui:DataGrid_.ColumnName ="Text"
+					Header="{StaticResource Log_Text}"
 					Visibility="Collapsed"
 					Width="1*"
 					>

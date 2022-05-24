@@ -4,7 +4,7 @@ using System.Windows.Data;
 
 namespace Rylogic.Gui.WPF
 {
-	/// <summary>Extend DataGridTemplateColumn to alloow binding</summary>
+	/// <summary>Extend DataGridTemplateColumn to allow binding</summary>
 	public class DataGridBoundTemplateColumn : DataGridTemplateColumn
 	{
 		// A DataGrid template column that forwards it's Binding to each Cell.

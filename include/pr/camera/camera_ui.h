@@ -99,7 +99,7 @@ namespace pr
 			void Populate()
 			{
 				auto StrV = [](v4 const& v) { return FmtS(L"%3.3f %3.3f %3.3f",v.x,v.y,v.z); };
-				auto StrF = [](float f)         { return FmtS(L"%3.3f", f); };
+				auto StrF = [](double f)     { return FmtS(L"%3.3f", f); };
 
 				m_tb_position.Text(StrV(m_cam.CameraToWorld().pos));
 				m_tb_lookat  .Text(StrV(m_cam.FocusPoint()));
