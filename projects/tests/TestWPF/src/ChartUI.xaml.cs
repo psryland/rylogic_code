@@ -109,7 +109,7 @@ namespace TestWPF
 		public Command ShowBoobs { get; }
 		private void ShowBoobsInternal()
 		{
-			MsgBox.Show(this, "Boobs!!");
+			MsgBox.Show(this, "Wahoo!!");
 		}
 
 		/// <summary></summary>

@@ -1203,10 +1203,15 @@ namespace Rylogic.Gui.WPF
 				c2w.y * (float)YAxis.Centre +
 				c2w.z * Math_.Dot(Scene.Camera.FocusPoint - v4.Origin, c2w.z);
 
-			// Move the camera in the camera Z axis direction so that the width at the focus dist
-			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
-			var fovX = Math_.Clamp(Scene.Camera.FovX, Math_.TinyF, Math_.TauBy2F - Math_.TinyF);
-			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(fovX / 2.0)));
+			// Move the camera in the camera Z axis direction so that the width/height at the
+			// focus distance matches the XAxis/YAxis range. Use the Fov that is closest to 90deg
+			//   Tan(FovX/2) = (XAxis.Span/2)/d  or  Tan(FovY/2) = (YAxis.Span/2)/d
+			var use_xaxis = Math_.Abs(Scene.Camera.FovX - Math_.TauBy4F) < Math_.Abs(Scene.Camera.FovY - Math_.TauBy4F);
+			var span = use_xaxis ? XAxis.Span : YAxis.Span;
+			var fov = use_xaxis ? Scene.Camera.FovX : Scene.Camera.FovY;
+			fov = Math_.Clamp(fov, float.Epsilon, Math_.TauBy2F - float.Epsilon);
+			Scene.Camera.FocusDist = (float)(span / (2.0 * Math.Tan(fov / 2.0)));
+
 			c2w.pos = focus.w1 + Scene.Camera.FocusDist * c2w.z;
 
 			Scene.Camera.O2W = c2w;

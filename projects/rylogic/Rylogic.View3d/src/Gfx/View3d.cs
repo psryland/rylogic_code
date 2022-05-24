@@ -56,16 +56,16 @@ namespace Rylogic.Gfx
 		}
 		public enum ETopo :uint
 		{
-			Invalid = 0,  // D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
-			PointList = 1,  // D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
-			LineList = 2,  // D3D11_PRIMITIVE_TOPOLOGY_LINELIST
-			LineStrip = 3,  // D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
-			TriList = 4,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-			TriStrip = 5,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
-			LineListAdj = 10, // D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
-			LineStripAdj = 11, // D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-			TriListAdj = 12, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-			TriStripAdj = 13, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+			Undefined = 0,
+			PointList,
+			LineList,
+			LineStrip,
+			TriList,
+			TriStrip,
+			LineListAdj,
+			LineStripAdj,
+			TriListAdj,
+			TriStripAdj,
 		}
 		[Flags] public enum ENuggetFlag :uint
 		{

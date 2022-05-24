@@ -819,11 +819,7 @@ namespace pr::rdr12
 					irange.m_end = irange.m_beg + nug.icount();
 
 					// The basic nugget
-					NuggetData nugget(
-						static_cast<ETopo>(nug.m_topo),
-						static_cast<EGeom>(nug.m_geom),
-						vrange,
-						irange);
+					NuggetData nugget(nug.m_topo, nug.m_geom, vrange, irange);
 
 					// Resolve the material
 					for (auto& m : m_mats)
