@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <memory>
 #include <thread>
+#include <span>
 #include <array>
 #include <limits>
 #include <intrin.h>
@@ -20,7 +21,6 @@
 #include <complex>
 #include <cassert>
 #include <random>
-#include "pr/container/span.h"
 #include "pr/meta/dep_constants.h"
 
 // Libraries built to use DirectXMath should be fine when linked in projects
@@ -118,7 +118,6 @@ namespace pr
 	template <typename A, typename B> using Quatf = Quat<float, A, B>;
 	template <typename A, typename B> using Quatd = Quat<double, A, B>;
 
-	template <typename T> struct Half4;
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -126,8 +125,7 @@ namespace pr
 	struct Line3;
 	struct ISize;
 	struct Frustum;
-	using half_t = unsigned short;
-	
+
 	namespace maths
 	{
 		// The 'is_vec' trait means, "Can be converted to a N component vector"
@@ -161,23 +159,6 @@ namespace pr
 		template <typename M> concept Matrix4 = is_vec<M>::dim >= 4 && VectorX<vec_elem_t<M>>;
 		template <typename M> concept MatrixFP = MatrixX<M> && std::floating_point<vec_comp_t<M>>;
 		template <typename M> concept MatrixIg = MatrixX<M> && std::integral<vec_comp_t<M>>;
-
-		// Length type. I.e. what Sqrt(T) returns
-		template <typename T> using length_t = 
-			std::conditional_t<std::is_floating_point_v<T>, T,
-			std::conditional_t<sizeof(T) <= 4, float,
-			std::conditional_t<sizeof(T) <= 8, double,
-			long double>>>;
-
-		// Test alignment of 't'
-		template <typename T, int A> inline bool is_aligned(T const* t)
-		{
-			return (reinterpret_cast<char const*>(t) - static_cast<char const*>(nullptr)) % A == 0;
-		}
-		template <typename T> inline bool is_aligned(T const* t)
-		{
-			return is_aligned<T, std::alignment_of<T>::value>(t);
-		}
 
 		#pragma region Traits
 		template <Scalar S, int N> struct is_vec<S[N]>
@@ -256,6 +237,16 @@ namespace pr
 		static_assert(Vector2<int[2]>);
 		#pragma endregion
 
+		// Test alignment of 't'
+		template <typename T, int A> inline bool is_aligned(T const* t)
+		{
+			return (reinterpret_cast<char const*>(t) - static_cast<char const*>(nullptr)) % A == 0;
+		}
+		template <typename T> inline bool is_aligned(T const* t)
+		{
+			return is_aligned<T, std::alignment_of<T>::value>(t);
+		}
+
 		// Component accessor with default for out-of-bounds
 		template <int idx, maths::VectorX V> constexpr maths::vec_elem_t<V> comp(V const& v)
 		{
@@ -288,15 +279,9 @@ namespace pr
 	template <Scalar S, typename A, typename B> using Mat4x4_cref = Mat4x4<S, A, B> pr_cref;
 	template <Scalar S, typename A, typename B> using Mat6x8_cref = Mat6x8<S, A, B> const&;
 	template <Scalar S, typename A, typename B> using Quat_cref = Quat<S,A,B> pr_cref;
-	template <typename T = void> using half4_cref = Half4<T> pr_cref;
 	using BBox_cref = BBox pr_cref;
 	using BSphere_cref = BSphere pr_cref;
 	#undef pr_cref
-
-	template <typename T> using v2f_cref = Vec2_cref<float, T>;
-	template <typename T> using v2d_cref = Vec2_cref<double, T>;
-	template <typename T> using v2i_cref = Vec2_cref<int32_t, T>;
-	template <typename T> using v2l_cref = Vec2_cref<int64_t, T>;
 
 	// Old names
 	using v2 = Vec2<float, void>;
@@ -311,11 +296,11 @@ namespace pr
 	using iv2 = Vec2<int, void>;
 	using iv3 = Vec3i<void>;
 	using iv4 = Vec4i<void>;
-	using half4 = Half4<void>;
 	template <typename T = void> using v2_cref = Vec2_cref<float, T>;
 	template <typename T = void> using v3_cref = Vec3_cref<float, T>;
 	template <typename T = void> using v4_cref = Vec4_cref<float, T>;
 	template <typename T = void> using v8_cref = Vec8_cref<float, T>;
+	template <typename T = void> using iv2_cref = Vec2_cref<int, T>;
 	template <typename T = void> using iv4_cref = Vec4_cref<int, T>;
 	template <typename A = void, typename B = void> using quat_cref = Quat_cref<float, A, B>;
 	template <typename A = void, typename B = void> using m3_cref = Mat3x4_cref<float, A, B>;
@@ -331,11 +316,9 @@ namespace pr
 	struct MathsBuildOptions
 	{
 		int PrMathsUseIntrinsics;
-		//int PrMathsDirectMath;
 
 		MathsBuildOptions()
 			:PrMathsUseIntrinsics(PR_MATHS_USE_INTRINSICS)
-			//,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
 		{}
 	};
 }
