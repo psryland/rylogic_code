@@ -944,11 +944,7 @@ namespace pr::maths
 				auto a0 = vec4_t::Random(rng, vec4_t::Zero(), S(5), S(0));
 				auto A0 = m * a0;
 				auto A1 = Cross(v, a0);
-
-				if constexpr (std::floating_point<S>)
-					PR_CHECK(FEql(A0, A1), true);
-				else
-					PR_CHECK(A0 == A1, true);
+				PR_CHECK(FEql(A0, A1), true);
 			}
 		}
 	}
