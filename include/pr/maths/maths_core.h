@@ -1690,13 +1690,6 @@ namespace pr::maths
 			PR_CHECK(!IsFinite(11, 10), true);
 
 			#if 0 // move
-			m4x4 arr2(arr0, arr0, arr0, arr0);
-			m4x4 arr3(arr1, arr1, arr1, arr1);
-			PR_CHECK(IsFinite(arr2), true);
-			PR_CHECK(!IsFinite(arr3), true);
-			PR_CHECK(!All(arr2, [](float x) { return x < 5.0f; }), true);
-			PR_CHECK(Any(arr2, [](float x) { return x < 5.0f; }), true);
-
 			iv2 arr4(10, 1);
 			PR_CHECK(IsFinite(arr4), true);
 			PR_CHECK(!All(arr4, [](int x) { return x < 5; }), true);
@@ -1845,17 +1838,6 @@ namespace pr::maths
 			PR_CHECK(FEql(Dot(arr0, arr1), 20), true);
 			PR_CHECK(Dot(arr2, arr3) == 11, true);
 			PR_CHECK(Dot(arr4, arr5) == 20, true);
-			#endif
-		}
-		{// Cross product matrix
-			#if 0 // move
-			v4 a = {-2,  4,  2,  6};
-			v4 b = { 3, -5,  2, -4};
-			auto a2b = CPM(a, v4::Origin());
-
-			v4 c = Cross3(a,b);
-			v4 d = a2b * b;
-			PR_CHECK(FEql(c.xyz, d.xyz), true);
 			#endif
 		}
 		{// CosAngle
