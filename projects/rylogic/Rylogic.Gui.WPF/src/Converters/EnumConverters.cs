@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Globalization;
 using System.Linq;
@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Xaml;
 using Rylogic.Attrib;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -164,7 +165,14 @@ namespace Rylogic.Gui.WPF.Converters
 					// 'TryFindResource' only searches upwards through the parents, so really we need a pointer to the
 					// FrameworkElement that the converter is being used on. So far, I don't know how to get that reference,
 					// so instead, just search all the UserControls. A better solution is needed ...
-					var res = Application.Current.TryFindResource(val); // Search App.xaml resources first.
+
+					if (m_host != null && m_host.TryFindResource(val) is object res0) //does this work??
+					{
+						return res0;
+					}
+
+					// Search App.xaml resources first.
+					var res = Application.Current.TryFindResource(val);
 					if (res == null)
 					{
 						foreach (var win in Application.Current.Windows.Cast<Window>())
@@ -188,8 +196,16 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
+			//if (serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget target &&
+			//	target.TargetObject is FrameworkElement host)
+			//	m_host = host;
+			if (serviceProvider.GetService(typeof(IRootObjectProvider)) is IRootObjectProvider target &&
+				target.RootObject is FrameworkElement host)
+				m_host = host;
+
 			return this;
 		}
+		private FrameworkElement? m_host;
 	}
 
 	/// <summary>Convert between int values in enum values</summary>

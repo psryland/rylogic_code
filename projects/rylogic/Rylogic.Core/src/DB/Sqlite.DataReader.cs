@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Rylogic.Extn;
 
 namespace Rylogic.Db
 {
@@ -12,6 +14,11 @@ namespace Rylogic.Db
 		[DebuggerDisplay("{Desc,nq}")]
 		public sealed class DataReader : IDataReader, IDisposable
 		{
+			// Notes:
+			//  - Reading results:
+			//    A query can contain multiple statements, each statement returns a 'Result', the set of results is the 'ResultSet'
+			//    Use 'Read()' to iterate over the rows in a single Result, and 'NextResult()' to skip to the next result in the set.
+
 			internal DataReader(Command cmd)
 			{
 				Cmd = cmd;
@@ -48,7 +55,7 @@ namespace Rylogic.Db
 			/// <summary>The accumulated number of rows affected</summary>
 			public int RecordsAffected { get; private set; }
 
-			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available</summary>
+			/// <summary>Iterate to the next row in the result. Returns true if there are more rows available (see Notes)</summary>
 			public bool Read()
 			{
 				Debug.Assert(AssertCorrectThread());
@@ -113,7 +120,7 @@ namespace Rylogic.Db
 				}
 			}
 
-			/// <summary>Advance to the next result</summary>
+			/// <summary>Advance to the next result (see Notes)</summary>
 			public bool NextResult()
 			{
 				// Advance to the next statement
@@ -127,17 +134,20 @@ namespace Rylogic.Db
 				// Reset the step count
 				StepCount = 0;
 				StepInc = 1;
+
+				// Invalidate cached data
+				m_column_info = null!;
 				return true;
 			}
 
 			/// <summary>The number of columns in the result</summary>
-			public int ColumnCount => NativeAPI.ColumnCount(Stmt);
+			public int ColumnCount => ColumnInfo.Length;
 
 			/// <summary>The native data type of the column</summary>
-			public EDataType ColumnType(int i) => NativeAPI.ColumnType(Stmt, i);
+			public EDataType ColumnType(int i) => ColumnInfo[i].Type;
 
 			/// <inheritdoc/>
-			public string ColumnName(int i) => NativeAPI.ColumnName(Stmt, i);
+			public string ColumnName(int i) => ColumnInfo[i].Name;
 
 			/// <summary>Return the index of the column with the given name</summary>
 			public int ColumnIndex(string column)
@@ -148,13 +158,33 @@ namespace Rylogic.Db
 			/// <summary>Look for a column with the given name. Returns null if not found</summary>
 			public int? FindColumnIndex(string name)
 			{
-				for (int i = 0, iend = NativeAPI.ColumnCount(Stmt); i != iend; ++i)
-				{
-					if (ColumnName(i) != name) continue;
-					return i;
-				}
-				return null;
+				var idx = ColumnInfo.IndexOf(x => x.Name == name);
+				return idx >= 0 ? idx : null;
 			}
+
+			/// <summary>Cached column info (for performance)</summary>
+			private ColumnInfoData[] ColumnInfo
+			{
+				get
+				{
+					if (m_column_info == null)
+					{
+						var count = NativeAPI.ColumnCount(Stmt);
+						var column_info = new List<ColumnInfoData>(count);
+						for (int i = 0, iend = count; i != iend; ++i)
+						{
+							column_info.Add(new ColumnInfoData
+							{
+								Name = NativeAPI.ColumnName(Stmt, i),
+								Type = NativeAPI.ColumnType(Stmt, i),
+							});
+						}
+						m_column_info = column_info.ToArray();
+					}
+					return m_column_info;
+				}
+			}
+			private ColumnInfoData[]? m_column_info;
 
 			/// <summary>Read the value of column 'i'</summary>
 			public object Get(Type ty, int i) => BindMap.Read(ty)(Stmt, i);
@@ -198,6 +228,13 @@ namespace Rylogic.Db
 
 			/// <summary>Debugging description</summary>
 			public string Desc => $"ResultSet={ResultSet} Step={StepCount} ColumnCount={ColumnCount}";
+
+			/// <summary>Cached result columns</summary>
+			private class ColumnInfoData
+			{
+				public string Name = string.Empty;
+				public EDataType Type;
+			}
 
 			#region IDataReader
 			int IDataRecord.FieldCount => ColumnCount;

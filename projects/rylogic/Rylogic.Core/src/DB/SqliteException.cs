@@ -11,7 +11,7 @@ namespace Rylogic.Db
 			:this(Sqlite.EResult.Error, string.Empty, string.Empty)
 		{}
 		public SqliteException(Sqlite.EResult res, string message, string sql_error_msg, Exception? inner_exception = null)
-			: base(message, inner_exception)
+			: base($"{message}\n{sql_error_msg}", inner_exception)
 		{
 			Result = res;
 			SqlErrMsg = sql_error_msg ?? string.Empty;
