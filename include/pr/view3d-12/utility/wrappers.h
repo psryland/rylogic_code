@@ -553,7 +553,7 @@ namespace pr::rdr12
 	struct SamDescStatic :D3D12_STATIC_SAMPLER_DESC
 	{
 		SamDescStatic(ESamReg shader_register, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
+			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
 		{}
 		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
 			:SamDescStatic(shader_register, addr, addr, addr, filter, vis)

@@ -254,7 +254,8 @@ namespace pr::rdr12
 
 		std::string_view res_name(name);
 		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
-
+		#else
+		(void)res,name;
 		#endif
 	}
 	void NameResource(ID3D12Object* res, char const* name)

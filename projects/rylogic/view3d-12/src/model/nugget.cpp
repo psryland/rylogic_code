@@ -29,8 +29,6 @@ namespace pr::rdr12
 		,m_model(model)
 		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
 		,m_nuggets()
-		,m_fill_mode(EFillMode::Default)
-		,m_cull_mode(ECullMode::Default)
 		,m_alpha_enabled()
 		,m_id()
 	{
@@ -86,6 +84,7 @@ namespace pr::rdr12
 		m_dsb.Clear(EDS::DepthWriteMask);
 		m_rsb.Clear(ERS::CullMode);
 		#endif
+
 		// Restore the fill and cull modes
 		FillMode(FillMode());
 		CullMode(CullMode());
@@ -127,23 +126,15 @@ namespace pr::rdr12
 	// Get/Set the fill mode for this nugget
 	EFillMode Nugget::FillMode() const
 	{
-		return m_fill_mode;
+		auto fill_mode = m_pso.Find<EPipeState::FillMode>();
+		return fill_mode ? s_cast<EFillMode>(*fill_mode) : EFillMode::Default;
 	}
 	void Nugget::FillMode(EFillMode fill_mode)
 	{
-		if (m_fill_mode == fill_mode) return;
-		m_fill_mode = fill_mode;
-		#if 0 // todo
-		switch (m_fill_mode)
-		{
-		case EFillMode::Default:
-		case EFillMode::Solid:     m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EFillMode::Wireframe: m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EFillMode::SolidWire: m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EFillMode::Points:    m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		default: throw std::runtime_error(Fmt("Unknown fill mode: %d", fill_mode));
-		}
-		#endif
+		if (FillMode() == fill_mode) return;
+		m_pso.Clear<EPipeState::FillMode>();
+		if (fill_mode != EFillMode::Default)
+			m_pso.Set<EPipeState::FillMode>(s_cast<D3D12_FILL_MODE>(fill_mode));
 
 		// Apply recursively
 		for (auto& nug : m_nuggets)
@@ -153,40 +144,32 @@ namespace pr::rdr12
 	// Get/Set the cull mode for this nugget
 	ECullMode Nugget::CullMode() const
 	{
-		return m_cull_mode;
+		auto cull_mode = m_pso.Find<EPipeState::CullMode>();
+		return cull_mode ? s_cast<ECullMode>(*cull_mode) : ECullMode::Default;
 	}
 	void Nugget::CullMode(ECullMode cull_mode)
 	{
-		if (m_cull_mode == cull_mode) return;
-		m_cull_mode = cull_mode;
-
-		#if 0 // todo
 		// Alpha rendering nuggets already have the cull mode set.
-		if (!m_alpha_enabled && m_id != AlphaNuggetId)
-		{
-			switch (m_cull_mode)
-			{
-			case ECullMode::Default:
-			case ECullMode::None:  m_rsb.Set(ERS::CullMode, D3D11_CULL_NONE); break;
-			case ECullMode::Back:  m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK); break;
-			case ECullMode::Front: m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT); break;
-			default: throw std::runtime_error(Fmt("Unknown cull mode: %d", cull_mode));
-			}
-		}
-		#endif
+		if (m_alpha_enabled || m_id == AlphaNuggetId)
+			return;
+
+		if (CullMode() == cull_mode) return;
+		m_pso.Clear<EPipeState::CullMode>();
+		if (cull_mode != ECullMode::Default)
+			m_pso.Set<EPipeState::CullMode>(s_cast<D3D12_CULL_MODE>(cull_mode));
 
 		// Apply recursively
 		for (auto& nug : m_nuggets)
-			nug.CullMode(m_cull_mode);
+			nug.CullMode(cull_mode);
 	}
 
 	// True if this nugget should be rendered
 	bool Nugget::Visible() const
 	{
-		#if 0 // todo
-		// If the object cull mode does not match the render state cull mode then skip.
+		// If the object cull mode does not match the pipe state cull mode then skip.
 		// This makes back/front face culling work with Alpha nuggets because render state
 		// culling mode has priority over the nugget cull mode.
+		#if 0 // todo - need a better way, rather than storing cull mode twice in the nugget. Maybe pass in the cull mode for the alpha pass
 		if (CullMode() != ECullMode::None &&
 			CullMode() != ECullMode::Default &&
 			CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))

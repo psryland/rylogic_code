@@ -74,7 +74,7 @@ namespace pr::rdr12
 				continue;
 
 			// Don't add alpha back faces when using 'Points' fill mode
-			if (nug.m_id == Nugget::AlphaNuggetId && nug.m_fill_mode == EFillMode::Points)
+			if (nug.m_id == Nugget::AlphaNuggetId && nug.FillMode() == EFillMode::Points)
 				continue;
 
 			// If not visible for other reasons, don't render but add child nuggets.
@@ -226,10 +226,11 @@ namespace pr::rdr12
 	void RenderForward::DrawNugget(Nugget const& nugget, PipeStateDesc& desc, ID3D12GraphicsCommandList* cmd_list)
 	{
 		// Render solid or wireframe nuggets
-		if (nugget.m_fill_mode == EFillMode::Default ||
-			nugget.m_fill_mode == EFillMode::Solid ||
-			nugget.m_fill_mode == EFillMode::Wireframe ||
-			nugget.m_fill_mode == EFillMode::SolidWire)
+		auto fill_mode = nugget.FillMode();
+		if (fill_mode == EFillMode::Default ||
+			fill_mode == EFillMode::Solid ||
+			fill_mode == EFillMode::Wireframe ||
+			fill_mode == EFillMode::SolidWire)
 		{
 			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
 			if (nugget.m_irange.empty())
@@ -247,15 +248,14 @@ namespace pr::rdr12
 		}
 
 		// Render wire frame over solid for 'SolidWire' mode
-		if (!nugget.m_irange.empty() &&
-			nugget.m_fill_mode == EFillMode::SolidWire && (
+		if (!nugget.m_irange.empty() && fill_mode == EFillMode::SolidWire && (
 			nugget.m_topo == ETopo::TriList ||
 			nugget.m_topo == ETopo::TriListAdj ||
 			nugget.m_topo == ETopo::TriStrip ||
 			nugget.m_topo == ETopo::TriStripAdj))
 		{
 			// Change the pipe state to wireframe
-			auto fill_mode = desc.RasterizerState.FillMode;
+			auto prev_fill_mode = desc.RasterizerState.FillMode;
 			desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 			desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
 			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
@@ -265,12 +265,12 @@ namespace pr::rdr12
 				s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
 
 			// Restore it
-			desc.RasterizerState.FillMode = fill_mode;
+			desc.RasterizerState.FillMode = prev_fill_mode;
 			//ps.Clear(EPipeState::BlendEnable0);
 		}
 
 		// Render points for 'Points' mode
-		if (nugget.m_fill_mode == EFillMode::Points)
+		if (fill_mode == EFillMode::Points)
 		{
 			// Change the pipe state to point list
 			desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList);

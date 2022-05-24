@@ -800,6 +800,9 @@ extern "C"
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);
 
+	// Delete an object, freeing its resources
+	VIEW3D_API void __stdcall View3D_ObjectDelete(pr::view3d::Object object);
+
 	// Get/Set the object's o2w transform
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2WGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2WSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2w, char const* name);
@@ -813,7 +816,6 @@ extern "C"
 	VIEW3D_API void              __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void              __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API GUID              __stdcall View3D_ObjectContextIdGet       (View3DObject object);
-	VIEW3D_API void              __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetRoot            (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetParent          (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetChildByName     (View3DObject object, char const* name);

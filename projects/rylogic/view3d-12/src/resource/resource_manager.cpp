@@ -472,7 +472,7 @@ namespace pr::rdr12
 	{
 		m_stock_textures.resize(EStockTexture_::NumberOf);
 		{// EStockTexture::Black
-			uint32_t const data[] = {0};
+			uint32_t const data[] = {0xFF000000};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), ResDesc::Tex2D(src, 1), false, 0, "#black");
 			m_stock_textures[s_cast<int>(EStockTexture::Black)] = CreateTexture2D(tdesc);
@@ -572,16 +572,17 @@ namespace pr::rdr12
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteSpot)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteTriangle:
+			constexpr int sz = 64, hsz = sz / 2;
+			constexpr auto dx = maths::root3_by_2f / 2.0f;
+			constexpr auto dy = 0.75f;
+			constexpr auto s = 1.0f / sz;
+
 			// Equilateral triangle, 'pointing' up.
 			// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
 			//               \         /
 			//                \       /
 			//                 \     / 
 			//                   0,0
-			constexpr int sz = 64, hsz = sz / 2;
-			constexpr auto dx = maths::root3_by_2f / 2.0f;
-			constexpr auto dy = 0.75f;
-			constexpr auto s = 1.0f / sz;
 			std::vector<uint32_t> data(sz * sz);
 			for (int j = 0; j * 4 <= sz * 3; ++j)
 			{

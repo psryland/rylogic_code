@@ -117,8 +117,6 @@ namespace pr::rdr12
 		Model*       m_model;         // The model that owns this nugget.
 		size_t       m_prim_count;    // The number of primitives in this nugget.
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget.
-		EFillMode    m_fill_mode;     // Fill mode for this nugget
-		ECullMode    m_cull_mode;     // Cull mode for this nugget
 		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
 		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
 

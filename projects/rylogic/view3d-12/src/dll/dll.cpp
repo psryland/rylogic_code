@@ -446,6 +446,20 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
 
+// Delete an object, freeing its resources
+VIEW3D_API void __stdcall View3D_ObjectDelete(view3d::Object object)
+{
+	try
+	{
+		// Delete is idempotent
+		if (!object) return;
+		
+		DllLockGuard;
+		Dll().DeleteObject(object);
+	}
+	CatchAndReport(View3D_ObjectDelete, ,);
+}
+
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
 // Note, setting the o2w for a child object positions the object in world space rather than parent space
 // (internally the appropriate O2P transform is calculated to put the object at the given O2W location)

@@ -102,6 +102,7 @@ namespace pr::rdr12
 
 			// Return the GPU handle for the start of the block of descriptors
 			m_head = Wrap(m_head + count, 0, m_size);
+			m_lookup[key] = dest_gpu;
 			return dest_gpu;
 		}
 		D3D12_GPU_DESCRIPTOR_HANDLE Add(Descriptor const& descriptor)

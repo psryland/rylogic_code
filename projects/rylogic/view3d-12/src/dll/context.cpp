@@ -192,6 +192,17 @@ namespace pr::rdr12
 	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
+	// Delete a single object
+	void Context::DeleteObject(LdrObject* object)
+	{
+		// Remove the object from any windows it's in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+		
+		// Delete the object from the object container
+		m_sources.Remove(object);
+	}
+
 	// Create an embedded code handler for the given language
 	std::unique_ptr<Context::IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
 	{
