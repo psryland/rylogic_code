@@ -138,6 +138,55 @@ namespace pr::rdr12
 		}
 	}
 
+	// Get/Set the back buffer size
+	iv2 V3dWindow::BackBufferSize() const
+	{
+		return m_wnd.BackBufferSize();
+	}
+	void V3dWindow::BackBufferSize(iv2 sz)
+	{
+		if (sz.x < 0) sz.x = 0;
+		if (sz.y < 0) sz.y = 0;
+
+		// Before resize, the old aspect is: Aspect0 = scale * Width0 / Height0
+		// After resize, the new aspect is: Aspect1 = scale * Width1 / Height1
+
+		// Save the current camera aspect ratio
+		auto old_size = m_wnd.BackBufferSize();
+		auto old_aspect = m_scene.m_cam.Aspect();
+		auto scale = old_aspect * old_size.y / float(old_size.x);
+
+		// Resize the render target
+		m_wnd.BackBufferSize(sz, false);
+
+		// Adjust the camera aspect ratio to preserve it
+		auto new_size = m_wnd.BackBufferSize();
+		auto new_aspect = (new_size.x == 0 || new_size.y == 0) ? 1.0f : new_size.x / float(new_size.y);
+		auto aspect = scale * new_aspect;
+		m_scene.m_cam.Aspect(aspect);
+	}
+
+	// Get/Set the scene viewport
+	view3d::Viewport V3dWindow::Viewport() const
+	{
+		auto& vp = m_scene.m_viewport;
+		return view3d::Viewport {
+			.m_x         = vp.TopLeftX,
+			.m_y         = vp.TopLeftY,
+			.m_width     = vp.Width,
+			.m_height    = vp.Height,
+			.m_min_depth = vp.MinDepth,
+			.m_max_depth = vp.MaxDepth,
+			.m_screen_w  = vp.ScreenW,
+			.m_screen_h  = vp.ScreenH,
+		};
+	}
+	void V3dWindow::Viewport(view3d::Viewport const& vp)
+	{
+		m_scene.m_viewport.Set(vp.m_x, vp.m_y, vp.m_width, vp.m_height, vp.m_screen_w, vp.m_screen_h, vp.m_min_depth, vp.m_max_depth);
+		OnSettingsChanged(this, view3d::ESettings::Scene_Viewport);
+	}
+
 	// Add/Remove an object to this window
 	void V3dWindow::Add(LdrObject* object)
 	{

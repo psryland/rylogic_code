@@ -237,6 +237,7 @@
     <ClInclude Include="..\..\..\include\pr\geometry\utility.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\volume.h" />
     <ClInclude Include="..\..\..\include\pr\gfx\colour.h" />
+    <ClInclude Include="..\..\..\include\pr\gfx\dpi.h" />
     <ClInclude Include="..\..\..\include\pr\gfx\onebit.h" />
     <ClInclude Include="..\..\..\include\pr\gui\atlgdix.h" />
     <ClInclude Include="..\..\..\include\pr\gui\colour_ctrl.h" />

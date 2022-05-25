@@ -95,9 +95,22 @@ struct Main :Form
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
 		Form::OnWindowPosChange(args);
-		if (!args.m_before)
+		if (!args.m_before && args.IsResize())
 		{
-			iv2 sz(args.m_wp->cx, args.m_wp->cy);
+			auto dpi = GetDpiForWindow(*this);
+			auto w = s_cast<int>(args.m_wp->cx * dpi / 96.0);
+			auto h = s_cast<int>(args.m_wp->cy * dpi / 96.0);
+			View3D_WindowBackBufferSizeSet(m_win3d, w, h);
+			View3D_WindowViewportSet(m_win3d, view3d::Viewport{
+				.m_x = 0,
+				.m_y = 0,
+				.m_width = 1.f * w,
+				.m_height = 1.f * h,
+				.m_min_depth = 0,
+				.m_max_depth = 1,
+				.m_screen_w = args.m_wp->cx,
+				.m_screen_h = args.m_wp->cy,
+				});
 			//m_wnd.BackBufferSize(sz, false);
 			//m_scn.m_viewport.Set(sz);
 		}

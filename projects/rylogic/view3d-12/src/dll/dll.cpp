@@ -172,6 +172,58 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, wchar_
 	CatchAndReport(View3D_WindowSettingsSet, window,);
 }
 
+// Get/Set the dimensions of the render target
+// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window, int& width, int& height)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto area = window->BackBufferSize();
+		width = area.x;
+		height = area.y;
+		return TRUE;
+	}
+	CatchAndReport(View3D_WindowBackBufferSizeGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, int width, int height)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BackBufferSize(iv2{width, height});
+	}
+	CatchAndReport(View3D_WindowBackBufferSizeSet, window,);
+}
+
+// Get/Set the window viewport
+VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Viewport();
+	}
+	CatchAndReport(View3D_WindowViewportGet, window, view3d::Viewport{});
+}
+VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Viewport(vp);
+	}
+	CatchAndReport(View3D_WindowViewportSet, window,);
+}
+
 // Set a notification handler for when a window setting changes
 VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add)
 {
