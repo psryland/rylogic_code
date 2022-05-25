@@ -536,18 +536,18 @@ namespace pr
 			// How the hit point was snapped (if at all)
 			EView3DSnapType m_snap_type;
 		};
-		struct View3DViewport
-		{
-			float m_x;
-			float m_y;
-			float m_width;
-			float m_height;
-			float m_min_depth;
-			float m_max_depth;
-			int m_screen_w;
-			int m_screen_h;
-		};
 		#endif
+		struct Viewport
+		{
+			float m_x;         // (x,y,x+width,y+width) is in backbuffer pixels, *NOT* window DIP.
+			float m_y;         // Typically the backbuffer is the same size as the true screen pixels
+			float m_width;     // Typically the BB width
+			float m_height;    // Typically the BB height
+			float m_min_depth; // Typically 0.0f
+			float m_max_depth; // Typically 1.0f
+			int m_screen_w;    // The screen width in DIP
+			int m_screen_h;    // The screen height in DIP
+		};
 		struct Includes
 		{
 			wchar_t const* m_include_paths; // A comma or semicolon separated list of search directories
@@ -657,6 +657,15 @@ extern "C"
 	VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, wchar_t const* settings);
 
+	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
+	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+	VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window, int& width, int& height);
+	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, int width, int height);
+
+	// Get/Set the window viewport (and clipping area)
+	VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp);
+
 	// Set a notification handler for when a window setting changes
 	VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(pr::view3d::Window window, pr::view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
 
@@ -708,10 +717,6 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_Validate               (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer, BOOL is_new_main_rt);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet      (View3DWindow window, int& width, int& height);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet      (View3DWindow window, int width, int height);
-	VIEW3D_API View3DViewport  __stdcall View3D_Viewport               (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_SetViewport            (View3DWindow window, View3DViewport vp);
 	VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet            (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_FillModeSet            (View3DWindow window, EView3DFillMode mode);
 	VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet            (View3DWindow window);
