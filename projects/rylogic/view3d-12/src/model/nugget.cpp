@@ -10,6 +10,7 @@
 
 namespace pr::rdr12
 {
+	// NuggetData ctor
 	NuggetData::NuggetData(ETopo topo, EGeom geom, Range vrange, Range irange)
 		:m_topo(topo)
 		,m_geom(geom)
@@ -24,14 +25,17 @@ namespace pr::rdr12
 		,m_irange(irange)
 	{}
 
-	Nugget::Nugget(NuggetData const& ndata, Model* model)
+	// Nugget ctor
+	Nugget::Nugget(NuggetData const& ndata, Model* model, RdrId id)
 		:NuggetData(ndata)
 		,m_model(model)
 		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
 		,m_nuggets()
-		,m_alpha_enabled()
-		,m_id()
+		,m_id(id)
 	{
+		// Fixed the initial pipe state overrides
+		m_pso.m_fixed = m_pso.count();
+
 		// Enable alpha if the geometry or the diffuse texture map contains alpha
 		Alpha(RequiresAlpha());
 	}
@@ -55,9 +59,7 @@ namespace pr::rdr12
 	// True if this nugget requires alpha blending
 	bool Nugget::RequiresAlpha() const
 	{
-		return
-			AnySet(m_nflags, ENuggetFlag::GeometryHasAlpha | ENuggetFlag::TintHasAlpha) ||
-			(m_tex_diffuse != nullptr ? m_tex_diffuse->m_has_alpha : false);
+		return AnySet(m_nflags, ENuggetFlag::GeometryHasAlpha | ENuggetFlag::TintHasAlpha | ENuggetFlag::TexDiffuseHasAlpha);
 	}
 
 	// Set the alpha state based on the current has_alpha flags
@@ -69,57 +71,51 @@ namespace pr::rdr12
 	// Enable/Disable alpha for this nugget
 	void Nugget::Alpha(bool enable)
 	{
-		if (m_alpha_enabled == enable) return;
-		m_alpha_enabled = enable;
-		#if 0 // todo
+		// Can't set alpha on alpha nuggets
+		if (m_id == AlphaNuggetId)
+			return;
+		
+		// See if alpha is already enabled
+		auto alpha_enabled = m_sort_key.Group() == ESortGroup::AlphaBack || m_sort_key.Group() == ESortGroup::AlphaFront;
+		if (alpha_enabled == enable)
+			return;
+
 		// Clear the alpha blending states 
 		m_sort_key.Group(ESortGroup::Default);
-		m_bsb.Clear(EBS::BlendEnable, 0);
-		m_bsb.Clear(EBS::BlendOp, 0);
-		m_bsb.Clear(EBS::SrcBlend, 0);
-		m_bsb.Clear(EBS::DestBlend, 0);
-		m_bsb.Clear(EBS::BlendOpAlpha, 0);
-		m_bsb.Clear(EBS::SrcBlendAlpha, 0);
-		m_bsb.Clear(EBS::DestBlendAlpha, 0);
-		m_dsb.Clear(EDS::DepthWriteMask);
-		m_rsb.Clear(ERS::CullMode);
-		#endif
-
-		// Restore the fill and cull modes
-		FillMode(FillMode());
-		CullMode(CullMode());
+		m_pso.Clear<EPipeState::BlendState0>();
+		m_pso.Clear<EPipeState::DepthWriteMask>();
+		m_pso.Clear<EPipeState::CullMode>();
 
 		// Find and delete the dependent alpha nugget
 		DeleteDependent([](auto& nug) { return nug.m_id == AlphaNuggetId; });
 
 		if (enable)
 		{
-			#if 0 // todo
 			// Set this nugget to do the front faces
 			m_sort_key.Group(ESortGroup::AlphaFront);
-			m_bsb.Set(EBS::BlendEnable, TRUE, 0);
-			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_ADD, 0);
-			m_bsb.Set(EBS::SrcBlend, D3D11_BLEND_SRC_ALPHA, 0);
-			m_bsb.Set(EBS::DestBlend, D3D11_BLEND_INV_SRC_ALPHA, 0);
-			m_bsb.Set(EBS::BlendOpAlpha, D3D11_BLEND_OP_MAX, 0);
-			m_bsb.Set(EBS::SrcBlendAlpha, D3D11_BLEND_SRC_ALPHA, 0);
-			m_bsb.Set(EBS::DestBlendAlpha, D3D11_BLEND_DEST_ALPHA, 0);
-			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
-			m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
-			m_cull_mode = ECullMode::Back;
+			m_pso.Set<EPipeState::BlendState0>({ // D3D12_RENDER_TARGET_BLEND_DESC 
+				.BlendEnable = TRUE,
+				.LogicOpEnable = FALSE,
+				.SrcBlend = D3D12_BLEND_SRC_ALPHA,
+				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA,
+				.BlendOp = D3D12_BLEND_OP_ADD,
+				.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA,
+				.DestBlendAlpha = D3D12_BLEND_DEST_ALPHA,
+				.BlendOpAlpha = D3D12_BLEND_OP_MAX,
+				.LogicOp = D3D12_LOGIC_OP_CLEAR,
+				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+			});
+			m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
+			m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
 
 			// Create a dependent nugget to do the back faces
-			if (m_owner != nullptr)
+			if (m_model != nullptr)
 			{
-				auto& nug = *mdl_mgr().CreateNugget(*this, m_model_buffer, nullptr);
+				auto& nug = *m_model->res_mgr().CreateNugget(*this, m_model, AlphaNuggetId);
 				nug.m_sort_key.Group(ESortGroup::AlphaBack);
-				nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
-				nug.m_cull_mode = ECullMode::Front;
-				nug.m_owner = m_owner;
-				nug.m_id = AlphaNuggetId;
+				nug.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT);
 				m_nuggets.push_back(nug);
 			}
-			#endif
 		}
 	}
 
@@ -131,7 +127,9 @@ namespace pr::rdr12
 	}
 	void Nugget::FillMode(EFillMode fill_mode)
 	{
-		if (FillMode() == fill_mode) return;
+		if (FillMode() == fill_mode)
+			return;
+
 		m_pso.Clear<EPipeState::FillMode>();
 		if (fill_mode != EFillMode::Default)
 			m_pso.Set<EPipeState::FillMode>(s_cast<D3D12_FILL_MODE>(fill_mode));
@@ -150,10 +148,12 @@ namespace pr::rdr12
 	void Nugget::CullMode(ECullMode cull_mode)
 	{
 		// Alpha rendering nuggets already have the cull mode set.
-		if (m_alpha_enabled || m_id == AlphaNuggetId)
+		if (m_id == AlphaNuggetId)
 			return;
 
-		if (CullMode() == cull_mode) return;
+		if (CullMode() == cull_mode)
+			return;
+
 		m_pso.Clear<EPipeState::CullMode>();
 		if (cull_mode != ECullMode::Default)
 			m_pso.Set<EPipeState::CullMode>(s_cast<D3D12_CULL_MODE>(cull_mode));

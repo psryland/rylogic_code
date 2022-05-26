@@ -23,9 +23,9 @@ namespace pr::rdr12
 		x(CullMode              , RasterizerState.CullMode              )\
 		x(DepthEnable           , DepthStencilState.DepthEnable         )\
 		x(DepthWriteMask        , DepthStencilState.DepthWriteMask      )\
-		x(DepthFunc             , DepthStencilState.DepthFunc           )
+		x(DepthFunc             , DepthStencilState.DepthFunc           )\
+		x(BlendState0           , BlendState.RenderTarget[0]            )\
 		//x(StreamOutput          , StreamOutput                          )\
-		//x(BlendState            , BlendState                            )\
 		//x(BlendEnable0          , BlendState.RenderTarget[0].BlendEnable)\
 		//x(BlendEnable1          , BlendState.RenderTarget[1].BlendEnable)\
 		//x(BlendEnable2          , BlendState.RenderTarget[2].BlendEnable)\
@@ -52,8 +52,9 @@ namespace pr::rdr12
 	enum class EPipeState :uint32_t
 	{
 		// Encode the byte offset and size into the enum value
-		#define PR_RDR_PIPE_STATE_FIELD(name, member)\
-		name = (((0xFFFF & offsetof(D3D12_GRAPHICS_PIPELINE_STATE_DESC, member)) << 16) | ((0xFFFF & sizeof(std::declval<D3D12_GRAPHICS_PIPELINE_STATE_DESC>().member)))),
+		#define PR_RDR_PIPE_STATE_FIELD(name, member) name = \
+			(((0xFFFF & offsetof(D3D12_GRAPHICS_PIPELINE_STATE_DESC, member)) << 16) | \
+			 ((0xFFFF & sizeof(std::declval<D3D12_GRAPHICS_PIPELINE_STATE_DESC>().member)))),
 		PR_RDR_PIPE_STATE_FIELDS(PR_RDR_PIPE_STATE_FIELD)
 		#undef PR_RDR_PIPE_STATE_FIELD
 	};
@@ -61,7 +62,7 @@ namespace pr::rdr12
 	// Convert 'EPipeState' to the corresponding type
 	template <EPipeState pls> struct pipe_state_field { using type = void; };
 	#define PR_RDR_PIPE_STATE_FIELD(name, member)\
-	template <> struct pipe_state_field<EPipeState::name> { using type = decltype(std::declval<D3D12_GRAPHICS_PIPELINE_STATE_DESC>().member); };
+	template <> struct pipe_state_field<EPipeState::name> { using type = std::decay_t<decltype(std::declval<D3D12_GRAPHICS_PIPELINE_STATE_DESC>().member)>; };
 	PR_RDR_PIPE_STATE_FIELDS(PR_RDR_PIPE_STATE_FIELD)
 	#undef PR_RDR_PIPE_STATE_FIELD
 	template <EPipeState PS> using pipe_state_field_t = typename pipe_state_field<PS>::type;
@@ -71,7 +72,7 @@ namespace pr::rdr12
 	// Represents a change to the pipeline state description
 	struct PipeState
 	{
-		using field_t = struct { uint16_t ofs, size; };
+		using field_t = struct { uint16_t size, ofs; };
 		using state_t = pr::vector<uint8_t, 16>;
 
 		union {
@@ -111,6 +112,18 @@ namespace pr::rdr12
 	struct PipeStates
 	{
 		pr::vector<PipeState, 4> m_states;
+		int m_fixed; // The first modifiable state. Below this index cannot be cleared/set.
+
+		PipeStates()
+			:m_states()
+			, m_fixed()
+		{}
+
+		// The number of overrides
+		int count() const
+		{
+			return s_cast<int>(m_states.size());
+		}
 
 		// Iteration access
 		PipeState const* begin() const
@@ -125,7 +138,7 @@ namespace pr::rdr12
 		// Remove a pipe state override
 		template <EPipeState PS> void Clear()
 		{
-			pr::erase_if(m_states, [=](auto& ps) { return ps.m_id == PS; });
+			pr::erase_if(m_states, [&](auto& ps) { return &ps - begin() >= m_fixed && ps.m_id == PS; });
 		}
 
 		// Set the pipeline state PS to 'data'
@@ -138,8 +151,9 @@ namespace pr::rdr12
 		// See if the given pipe state is in the set of overrides
 		template <EPipeState PS> pipe_state_field_t<PS> const* Find() const
 		{
-			for (auto& state : m_states)
+			for (auto iter = end(); iter-- != begin();)
 			{
+				auto& state = *iter;
 				if (state.m_id != PS) continue;
 				return type_ptr<pipe_state_field_t<PS>>(state.m_value.data());
 			}

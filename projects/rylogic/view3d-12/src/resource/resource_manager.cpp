@@ -441,10 +441,10 @@ namespace pr::rdr12
 	}
 
 	// Create a new nugget
-	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model)
+	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
 	{
 		Renderer::Lock lock(rdr());
-		auto ptr = rdr12::New<Nugget>(ndata, model);
+		auto ptr = rdr12::New<Nugget>(ndata, model, id);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
 	}

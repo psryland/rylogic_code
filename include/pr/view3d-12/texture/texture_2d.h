@@ -17,8 +17,8 @@ namespace pr::rdr12
 		//   - Each time CreateTexture is called, a new texture instance is allocated.
 		//     However, the resources associated with the texture may be shared with other textures.
 
-		m4x4 m_t2s;       // Texture to surface transform
-		bool m_has_alpha; // True if the texture contains alpha pixels
+		m4x4 m_t2s; // Texture to surface transform
+
 		Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
 
 		// Get/Release the DC (prefer the Gfx class for RAII)

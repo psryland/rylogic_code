@@ -200,7 +200,7 @@ VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, 
 	CatchAndReport(View3D_WindowBackBufferSizeSet, window,);
 }
 
-// Get/Set the window viewport
+// Get/Set the window viewport (and clipping area)
 VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window)
 {
 	try
