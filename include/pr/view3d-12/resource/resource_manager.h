@@ -73,7 +73,7 @@ namespace pr::rdr12
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
 
 		// Create a new nugget
-		Nugget* CreateNugget(NuggetData const& ndata, Model* model);
+		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);
 
 		// Return a pointer to an existing texture
 		template <typename TextureType> requires (std::is_base_of_v<TextureBase, TextureType>)

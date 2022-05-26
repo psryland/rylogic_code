@@ -13,7 +13,6 @@ namespace pr::rdr12
 	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
 		:TextureBase(mgr, res, desc)
 		,m_t2s(m4x4::Identity())
-		,m_has_alpha(desc.m_has_alpha)
 	{}
 
 	// Get the GDI DC from the surface

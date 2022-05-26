@@ -53,7 +53,7 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
-		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva FF00FF00 { 1 2 3 }", false, nullptr, nullptr))
+		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva 8000FF00 { 1 2 3 }", false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
 		//,m_rdr(RSettings(hinstance))
 		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))

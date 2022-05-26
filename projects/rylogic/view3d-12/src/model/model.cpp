@@ -55,7 +55,7 @@ namespace pr::rdr12
 	// Create a nugget from a range within this model
 	// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 	// Remember you might need to delete render nuggets first
-	void Model::CreateNugget(NuggetData const& nugget_data)
+	void Model::CreateNugget(NuggetData const& nugget_data, RdrId id)
 	{
 		NuggetData ndata(nugget_data);
 
@@ -85,7 +85,7 @@ namespace pr::rdr12
 		// Defend against crashes in release...
 		if (!ndata.m_irange.empty())
 		{
-			auto nug = res_mgr().CreateNugget(ndata, this);
+			auto nug = res_mgr().CreateNugget(ndata, this, id);
 			m_nuggets.push_back(*nug);
 		}
 	}
