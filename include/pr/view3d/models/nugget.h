@@ -90,7 +90,7 @@ namespace pr::rdr
 		Range m_vrange;
 		Range m_irange;
 
-		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		NuggetData(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
 	};
 
 	// Nugget construction data
@@ -102,7 +102,7 @@ namespace pr::rdr
 		// overlap, but in advanced cases it isn't.
 		bool m_range_overlaps;
 
-		NuggetProps(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		NuggetProps(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
 		explicit NuggetProps(NuggetData const& data);
 	};
 

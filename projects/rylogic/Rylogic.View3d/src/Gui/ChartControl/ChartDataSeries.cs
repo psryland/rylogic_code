@@ -372,7 +372,7 @@ namespace Rylogic.Gui.WPF
 			m_ibuf.Resize(6 * n);
 			m_nbuf.Resize(1);
 
-			// If there are mutliple bar plots on the chart, share the space with the others. Found the index of this bar chart, and the total number of bar charts
+			// If there are multiple bar plots on the chart, share the space with the others. Found the index of this bar chart, and the total number of bar charts
 			var bars = Chart?.Elements.OfType<ChartDataSeries>().Where(x => x.Options.PlotType == EPlotType.Bar && x.Visible) ?? Enumerable.Empty<ChartDataSeries>();
 			var total = Math.Max(bars.Count(), 1);
 			var index = Math.Max(bars.IndexOf(this), 0);

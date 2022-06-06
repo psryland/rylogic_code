@@ -1,38 +1,27 @@
 Immediate ToDo:
 
 Work:
-  ZR release:
-	- Convert to the new ECN process...
-	  Start with REX-9036
-	  Talk to Nick to about it...
-	- Need training record for Pete/Ben on ZR process.
-
   Change Review Board:
-	- PaulS's temperature theshold change
-	- REX-9601 - Release the RexTerminal
-	- Remove product key - Documentation change
+	ECN - REX-10019
+		- changes implemented
+		- Waiting on verification/validation
+	ECN - REX-9601 - REX Terminal - Pete needs this for training purposes
+		- Chase Aneela about releasing user manual
+	ECN - REX-9930 - rxsfault.log ticket
+		- Test case passed - should be ready for phase 2 sign off.
+	ECN - ZR release:
+		- Write Requirements for the ZRT 
+		- Need evidence of testing
+		- Sign off phase 2
+	ECN - Remove product key
+		- Needs starting (phase 1)
+		- Documentation changes
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
-	- rxsfault.log ticket - Run the test case
 	- Add a requirement/test case that REX faults when the log SD card is full
 	- What ALM do Hydrix use? Can we use it too?
 
-  BootLoader Upload:
-	- Play with COMM Port to figure out if upload will work from PC.
-
-  Temperature Limit Change:
-	- Ask Pei for the temperature levels report
-	- Find out where the temperature sensors are
-	- Find data for component max temperatures, max temperature for the motor
-	- Thermistor accuracy
-	- Make a report to justify the change
-	
   Misc:
-	- Change embedded script to use ram method of removing ROP
 	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
-	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
-		- Fix the default zero ref values and min/max extension in the actuator ref data
-		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
-		- Back hip limits in released data are smaller than in .xml data
 
   Embedded:
 	- Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
@@ -44,7 +33,6 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 
   RexTerminal:
-	- Crash when filtering the battery log view
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
 
@@ -61,7 +49,6 @@ Work:
 	- Test the ZR process on a left-right see-saw to see what effect that has on the results.
 
   VRex:
-	- log doesn't work if logs folder is missing
 	- Work out why the zero ref position is so different for VRex compared to REX
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
@@ -71,26 +58,20 @@ Work:
 	- Have the environment step the emulation and the physics
 
   RexLink:
-	- Create a RexLink service and convert applications to use the service (solves the problem of multiple   apps wanting to connect to the same Rex).
+	- Create a RexLink service and convert applications to use the service (solves the problem of multiple apps wanting to connect to the same Rex).
 
 Rylogic:
-  - Finish unifying vector/matrix types on Scalar
-  - Rewrite ClipX
-  - pr::hash::Hash is too complicated, use less name overloading. ie. HashBytes, HashString, HashArray, etc
 
   View3d-12:
 	- Make nugget m_shaders a smarter object that handles replacing shaders for the same step. E.g.  nug.m_shaders += {ERenderStep::RenderForward, shdr};
-	- Getting the model generater working 
 	- Implementing LdrObject into the view3d-12 lib
 	- Implementing the view3d dll API
     - Getting view3d-12 test working with the Dll instead of the lib
 	- Environment mapping
 	- Shadow mapping
 	- Diagnositic modes, show normals, points, etc.
-	- Don't use dll/window and main/window... it's confusing
 	- Remove locks on D3DDevice
 	- Setup a D2DLock to access D2D interfaces (if needed)
-	- Make pr::Camera use doubles for FOV, Aspect, Near, Far, etc
 
   LDraw:
 	- Support dae files
@@ -163,7 +144,9 @@ Rylogic:
 	- Fix MsgBox icon not having a transparent background
 
   Misc:
-    - Reimplement HashCT functions as iterative now that C++20 is supported
+	- Rewrite ClipX
+	- pr::hash::Hash is too complicated, use less name overloading. ie. HashBytes, HashString, HashArray, etc
+	- Reimplement HashCT functions as iterative now that C++20 is supported
 	- Reimplement FFT code
 	- Sort out pdbs for native libraries
 	- Create a 'Dispatcher' in C++ using a HWND_MESSAGE window (see pr::Renderer)
@@ -171,6 +154,9 @@ Rylogic:
 	- Better handling of native Settings
 	- Change ToolForm to have resizable but not NC border
 
+PIX:
+  P:\pr2\projects\tests\view3d-12-test\obj\x64\Debug\view3d-12-test.exe
+  
 YouTube speed:
    vid = document.getElementsByClassName("video-stream html5-main-video")[0];
    vid.playbackRate=3.0;

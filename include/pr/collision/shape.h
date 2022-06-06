@@ -2,8 +2,6 @@
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
-#pragma once
-
 // A Shape is the basic type used for narrow phase collision.
 // It may be a single shape or a collection of child shapes.
 // In collision detection, collision pairs that are returned from the broad
@@ -17,7 +15,7 @@
 //	 detection which uses the relative positions of the centres as a starting point for
 //	 finding the overlap between objects.
 // * Shapes for rigid bodies should be in centre of mass frame
-
+#pragma once
 #include <type_traits>
 #include <cassert>
 #include "pr/maths/maths.h"
@@ -79,7 +77,7 @@ namespace pr::collision
 	// Physics material
 	using MaterialId = unsigned int;
 
-	// Shape base. All shapes must have this as their first member
+	// Shape base. All shapes must have this as their first member.
 	struct Shape
 	{
 		enum class EFlags
@@ -108,7 +106,7 @@ namespace pr::collision
 		size_t m_size;
 
 		Shape() = default;
-		Shape(EShape type, size_t size, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, EFlags flags = EFlags::None)
+		Shape(EShape type, size_t size, m4_cref<> shape_to_model = m4x4::Identity(), MaterialId material_id = 0, EFlags flags = EFlags::None)
 			:m_s2p(shape_to_model)
 			,m_bbox(BBox::Reset())
 			,m_type(type)
@@ -118,60 +116,60 @@ namespace pr::collision
 		{}
 	};
 
-	// Traits
+	// Traits/Concepts
 	template <typename T> struct is_shape :std::false_type {};
 	template <> struct is_shape<Shape> :std::true_type
 	{
-		static EShape const shape_type = EShape::NoShape;
-		static bool const composite = false;
+		static constexpr EShape shape_type = EShape::NoShape;
+		static constexpr bool composite = false;
 	};
 	#define PR_COLLISION_SHAPE_TRAITS(name, comp)\
 	template <> struct is_shape<Shape##name> :std::true_type\
 	{\
 		static constexpr EShape shape_type = EShape::name;\
-		static bool const composite = comp;\
+		static constexpr bool composite = comp;\
 	};
 	PR_COLLISION_SHAPES(PR_COLLISION_SHAPE_TRAITS)
 	#undef PR_COLLISION_SHAPE_TRAITS
 	template <typename T> constexpr bool is_shape_v = is_shape<T>::value;
-	template <typename T> using enable_if_shape = std::enable_if_t<is_shape_v<T>>;
-	template <typename T> using enable_if_composite_shape = std::enable_if_t<is_shape<T>::composite>;
+	template <typename T> concept ShapeType = is_shape_v<T>;
+	template <typename T> concept CompositeShapeType = is_shape_v<T> && is_shape<T>::composite;
 	static_assert(is_shape_v<ShapeSphere>);
 
 	// Shape cast helpers
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const& shape_cast(Shape const& shape)
+	template <ShapeType TShape> inline TShape const& shape_cast(Shape const& shape)
 	{
 		assert("Invalid shape cast" && shape.m_type == is_shape<TShape>::shape_type);
 		return reinterpret_cast<TShape const&>(shape);
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const* shape_cast(Shape const* shape)
+	template <ShapeType TShape> inline TShape const* shape_cast(Shape const* shape)
 	{
 		assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<TShape>::shape_type));
 		return reinterpret_cast<TShape const*>(shape);
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape& shape_cast(Shape& shape)
+	template <ShapeType TShape> inline TShape& shape_cast(Shape& shape)
 	{
 		assert("Invalid shape cast" && shape.m_type == is_shape<TShape>::shape_type);
 		return reinterpret_cast<TShape&>(shape);
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape* shape_cast(Shape* shape)
+	template <ShapeType TShape> inline TShape* shape_cast(Shape* shape)
 	{
 		assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<TShape>::shape_type));
 		return reinterpret_cast<TShape*>(shape);
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline Shape const& shape_cast(TShape const& shape)
+	template <ShapeType TShape> inline Shape const& shape_cast(TShape const& shape)
 	{
 		return shape.m_base;
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline Shape const* shape_cast(TShape const* shape)
+	template <ShapeType TShape> inline Shape const* shape_cast(TShape const* shape)
 	{
 		return shape ? &shape->m_base : nullptr;
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline Shape& shape_cast(TShape& shape)
+	template <ShapeType TShape> inline Shape& shape_cast(TShape& shape)
 	{
 		return shape.m_base;
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline Shape* shape_cast(TShape* shape)
+	template <ShapeType TShape> inline Shape* shape_cast(TShape* shape)
 	{
 		return shape ? &shape->m_base : nullptr;
 	}
@@ -198,8 +196,8 @@ namespace pr::collision
 		Shape const* m_shape;
 		ShapeCRef(Shape const* shape) :m_shape(shape) {}
 		ShapeCRef(Shape const& shape) :m_shape(&shape) {}
-		template <typename TShape, typename = enable_if_shape<TShape>> ShapeCRef(TShape const& shape) :m_shape(&shape.m_base) {}
-		template <typename TShape, typename = enable_if_shape<TShape>> ShapeCRef(TShape const* shape) :m_shape(shape.m_base) {}
+		template <ShapeType TShape> ShapeCRef(TShape const& shape) :m_shape(&shape.m_base) {}
+		template <ShapeType TShape> ShapeCRef(TShape const* shape) :m_shape(shape.m_base) {}
 		Shape const* operator ->() const { return m_shape; }
 		Shape const& operator *() const { return *m_shape; }
 		operator Shape const*() const { return m_shape; }
@@ -208,11 +206,11 @@ namespace pr::collision
 
 	// Increment a shape pointer
 	// for (Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s)) {}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const* next(TShape const* p)
+	template <ShapeType TShape> inline TShape const* next(TShape const* p)
 	{
 		return reinterpret_cast<TShape const*>(byte_ptr(p) + p->m_base.m_size);
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>> inline TShape* next(TShape* p)
+	template <ShapeType TShape> inline TShape* next(TShape* p)
 	{
 		return reinterpret_cast<TShape*>(byte_ptr(p) + p->m_base.m_size);
 	}

@@ -99,18 +99,18 @@ extern "C"
 		Tex0    = 1 << 3, // Diffuse texture
 		_flags_enum,
 	};
-	enum class EView3DTopo :int
+	enum class EView3DTopo :int // pr::geometry::ETopo
 	{
-		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
-		PointList    = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-		LineList     = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-		LineStrip    = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
-		TriList      = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-		TriStrip     = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-		LineListAdj  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
-		LineStripAdj = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-		TriListAdj   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+		Undefined = 0,
+		PointList,
+		LineList,
+		LineStrip,
+		TriList,
+		TriStrip,
+		LineListAdj,
+		LineStripAdj,
+		TriListAdj,
+		TriStripAdj,
 	};
 	enum class EView3DNuggetFlag :int
 	{
