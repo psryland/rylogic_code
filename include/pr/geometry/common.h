@@ -41,8 +41,7 @@ namespace pr::geometry
 	enum class ETopo
 	{
 		// Note: don't assume these are the same as directX. Dx11/Dx12 have different values
-		None = 0,
-		Invalid,
+		Undefined = 0,
 		PointList,
 		LineList,
 		LineStrip,

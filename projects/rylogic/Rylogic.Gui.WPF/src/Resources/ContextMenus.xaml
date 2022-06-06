@@ -580,7 +580,7 @@
 	<MenuItem x:Key="ChartMenuItem_MouseCentredZoom" x:Shared="False"
 		Header="Mouse Centred Zoom"
 		StaysOpenOnClick="False"
-		IsCheckable="{Binding MouseCentredZoom}"
+		IsChecked="{Binding MouseCentredZoom}"
 		Command="{Binding ToggleMouseCentredZoom}"
 		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_MouseCentredZoom"

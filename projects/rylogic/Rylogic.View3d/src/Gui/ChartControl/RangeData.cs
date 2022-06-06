@@ -88,7 +88,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The aspect ratio of the axes</summary>
 			public double Aspect
 			{
-				get { return XAxis.Span / YAxis.Span; }
+				get => XAxis.Span / YAxis.Span;
 				set
 				{
 					if (Aspect == value) return;
@@ -369,9 +369,8 @@ namespace Rylogic.Gui.WPF
 				public void GridLines(out double min, out double max, out double step)
 				{
 					var axis_length =
-						AxisType == EAxis.XAxis ? Chart.Scene.ActualWidth :
-						AxisType == EAxis.YAxis ? Chart.Scene.ActualHeight : 0.0;
-
+						AxisType == EAxis.XAxis ? Chart.XAxisPanel.ActualWidth :
+						AxisType == EAxis.YAxis ? Chart.YAxisPanel.ActualHeight : 0.0;
 					var max_ticks = axis_length / Options.PixelsPerTick;
 
 					// Choose a step size that is a 'nice' size and that maximises the number of steps up to 'max_ticks'

@@ -321,6 +321,32 @@ namespace Rylogic.Extn
 		{
 			return Util.ToHexString(arr, start, count, sep, line_sep, width);
 		}
+
+		/// <summary>Convert a string of 2-hex digit character pairs to an array of bytes</summary>
+		public static byte[] ParseBytes(string hex, string sep = "")
+		{
+			// Strip the separator characters from the string
+			hex = sep.Length != 0 ? hex.Strip(sep.ToCharArray()) : hex;
+			if (hex.Length % 2 == 1)
+				throw new Exception("Hex string should contain two characters per byte");
+
+			// Convert the string to bytes
+			var arr = new byte[hex.Length >> 1];
+			for (int i = 0; i != arr.Length; ++i)
+			{
+				// For upper case A-F letters: val - (val < 58 ? 48 : 55);
+				// For lower case a-f letters: val - (val < 58 ? 48 : 87);
+				// Or the two combined, but a bit slower:
+				int n0 = ToNibble(hex[(i << 1) + 0]) << 4;
+				int n1 = ToNibble(hex[(i << 1) + 1]) << 0;
+				arr[i] = (byte)(n0 | n1);
+			}
+
+			// For upper case A-F letters: val - (val < 58 ? 48 : 55);
+			// For lower case a-f letters: val - (val < 58 ? 48 : 87);
+			int ToNibble(int ch) => ch - (ch < 58 ? 48 : ch < 97 ? 55 : 87);
+			return arr;
+		}
 	}
 
 	/// <summary>A sub range within an array</summary>

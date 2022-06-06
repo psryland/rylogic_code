@@ -651,7 +651,13 @@ namespace pr
 				// mouse point projected onto the focus plane.
 				auto pt  = NSSPointToWSPoint(v4(point, s_cast<float>(FocusDist()), 0.0f));
 				auto ray_ws = pt - CameraToWorld().pos;
-				ray_cs = Normalise(WorldToCamera() * ray_ws, -v4::ZAxis());
+				ray_cs = WorldToCamera() * ray_ws;
+
+				// Normalise the ray to ray.z == 1, so that the camera will move the same distance forward as in the '!along_ray' case
+				if (!FEql(ray_cs.z, 0.f))
+					ray_cs /= Abs(ray_cs.z);
+				else
+					ray_cs = -v4::ZAxis();
 			}
 			ray_cs *= s_cast<float>(dist);
 
