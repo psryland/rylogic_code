@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -215,12 +216,32 @@ namespace Rylogic.Gui.WPF
 				child.Dispose();
 		}
 
+		/// <summary>Return the virtual screen rectangle (in DIP)</summary>
+		public static Rect VirtualScreenRect()
+		{
+			return new Rect(
+				SystemParameters.VirtualScreenLeft,
+				SystemParameters.VirtualScreenTop,
+				SystemParameters.VirtualScreenWidth,
+				SystemParameters.VirtualScreenHeight);
+		}
+
+		/// <summary>Return the monitor rectangle (in DIP)</summary>
+		public static Rect MonitorRect(IntPtr monitor)
+		{
+			var mon = Win32.GetMonitorInfo(monitor);
+			var dip = 96.0 / Dpi.DpiForMonitor(monitor);
+			return new Rect(
+				mon.rcWork.left * dip,
+				mon.rcWork.top * dip,
+				mon.rcWork.width * dip,
+				mon.rcWork.height * dip);
+		}
+
 		/// <summary>Move a screen-space rectangle so that it is within the virtual screen</summary>
 		public static Rect OnScreen(Rect rect)
 		{
-			var scn = new Rect(
-				SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop,
-				SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+			var scn = VirtualScreenRect();
 
 			var r = rect;
 			if (rect.Right > scn.Right) r.X = scn.Right - rect.Width;
@@ -237,11 +258,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Move a screen-space rectangle so that it is within the area of a monitor</summary>
 		public static Rect OnMonitor(IntPtr monitor, Rect rect)
 		{
-			// Use Win32.MonitorFromXYZ to get 'monitor'
-			var mon = Win32.GetMonitorInfo(monitor);
-			var scn = new Rect(
-				mon.rcWork.left, mon.rcWork.top,
-				mon.rcWork.width, mon.rcWork.height);
+			var scn = MonitorRect(monitor);
 
 			var r = rect;
 			if (rect.Right > scn.Right) r.X = scn.Right - rect.Width;

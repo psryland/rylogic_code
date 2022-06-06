@@ -14,7 +14,7 @@ namespace pr::collision
 		v4    m_radius;
 
 		ShapeBox() = default;
-		ShapeBox(v4_cref<> dim, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+		ShapeBox(v4_cref<> dim, m4_cref<> shape_to_model = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 			:m_base(EShape::Box, sizeof(ShapeBox), shape_to_model, material_id, flags)
 			,m_radius(dim * 0.5f)
 		{
@@ -44,7 +44,7 @@ namespace pr::collision
 			return &m_base;
 		}
 	};
-	static_assert(is_shape<ShapeBox>::value, "");
+	static_assert(is_shape_v<ShapeBox>);
 
 	// Return the bounding box for a box shape
 	inline BBox CalcBBox(ShapeBox const& shape)
@@ -55,7 +55,7 @@ namespace pr::collision
 	// Shift the centre of a box shape
 	inline void ShiftCentre(ShapeBox&, v4 const& shift)
 	{
-		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
+		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4::Zero()));
 		(void)shift; 
 	}
 
@@ -84,7 +84,7 @@ namespace pr::collision
 			if (point[i] > shape.m_radius[i])
 			{
 				distance += Sqr(point[i] - shape.m_radius[i]);
-				closest[i] = shape.m_radius[i];
+				closest[i] = +shape.m_radius[i];
 			}
 			else if (point[i] < -shape.m_radius[i])
 			{
