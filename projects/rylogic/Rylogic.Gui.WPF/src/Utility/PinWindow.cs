@@ -73,7 +73,10 @@ namespace Rylogic.Gui.WPF
 
 				// Set or Restore the startup location based on 'Pinned'
 				if (PinWindow != null)
+				{
 					PinWindow.WindowStartupLocation = Pinned ? WindowStartupLocation.Manual : m_pin_window_startloc;
+					if (Pinned) UpdateLocation();
+				}
 
 				// Check/Uncheck the menu option
 				UpdatePinMenuCheckState();
@@ -102,7 +105,7 @@ namespace Rylogic.Gui.WPF
 				if (m_pin_window == value) return;
 				if (m_pin_window != null)
 				{
-					m_pin_window.Loaded -= HandleLoaded;
+					m_pin_window.LayoutUpdated -= HandleLayoutUpdated;
 					m_pin_window.LocationChanged -= HandleMoved;
 					m_pin_window.SizeChanged -= HandleMoved;
 					m_pin_window.Closed -= HandleClosed;
@@ -126,35 +129,35 @@ namespace Rylogic.Gui.WPF
 					m_pin_window.Closed += HandleClosed;
 					m_pin_window.SizeChanged += HandleMoved;
 					m_pin_window.LocationChanged += HandleMoved;
-					m_pin_window.Loaded += HandleLoaded;
+					m_pin_window.LayoutUpdated += HandleLayoutUpdated;
 				}
 
 				// Handlers
-				void HandleLoaded(object? sender, EventArgs e)
+				void HandleLayoutUpdated(object? sender, EventArgs e)
 				{
 					if (double.IsNaN(PinWindow.ActualWidth) || double.IsNaN(PinWindow.ActualHeight))
 						return;
 
 					// On first load, set the initial position based on the pin location
-					PinOffset = PinSite switch
+					PinOffset ??= PinSite switch
 					{
-						EPin.TopLeft      => new Vector(-PinWindow.ActualWidth, 0),
-						EPin.TopCentre    => new Vector(-PinWindow.ActualWidth / 2, 0),
-						EPin.TopRight     => new Vector(0, 0),
-						EPin.BottomLeft   => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight),
+						EPin.TopLeft => new Vector(-PinWindow.ActualWidth, 0),
+						EPin.TopCentre => new Vector(-PinWindow.ActualWidth / 2, 0),
+						EPin.TopRight => new Vector(0, 0),
+						EPin.BottomLeft => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight),
 						EPin.BottomCentre => new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight),
-						EPin.BottomRight  => new Vector(0, -PinWindow.ActualHeight),
-						EPin.CentreLeft   => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight / 2),
-						EPin.Centre       => new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2),
-						EPin.CentreRight  => new Vector(0, -PinWindow.ActualHeight / 2),
-						_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
+						EPin.BottomRight => new Vector(0, -PinWindow.ActualHeight),
+						EPin.CentreLeft => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight / 2),
+						EPin.Centre => new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2),
+						EPin.CentreRight => new Vector(0, -PinWindow.ActualHeight / 2),
+						_ => throw new Exception($"Unknown pin location '{PinSite}'"),
 					};
 				}
 				void HandleMoved(object? sender, EventArgs e)
 				{
 					// When the location of the controlled window changes, record the offset from
 					// the target window, but only if it's not us setting the controlled window's location.
-					if (!UpdatingLocation)
+					if (!UpdatingLocation && PinWindow.IsLoaded)
 						PinOffset = MeasureOffset();
 				}
 				void HandleClosed(object? sender, EventArgs e)
@@ -223,9 +226,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Measure the offset from the target window</summary>
 		private Vector? MeasureOffset()
 		{
-			// Target or controlled is not visible
-			if (PinWindow == null || PinWindow.Visibility != Visibility.Visible ||
-				PinTarget == null || PinTarget.Visibility != Visibility.Visible)
+			// Don't measure the offset until the window is loaded and in it's initial position
+			if (PinWindow == null || !PinWindow.IsLoaded)
+				return null;
+
+			// The offset is unknown if the target window is not visible
+			if (PinTarget == null || PinTarget.Visibility != Visibility.Visible)
 				return null;
 
 			// Target does not have measurement data yet
@@ -256,9 +262,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return the location for the PinWindow based on the current PinTarget position and PinOffset</summary>
 		private Point? Location()
 		{
-			// The location is unknown if either window is not visible
-			if (PinWindow == null || PinWindow.Visibility != Visibility.Visible ||
-				PinTarget == null || PinTarget.Visibility != Visibility.Visible)
+			// The location is unknown if the target window is not visible
+			if (PinTarget == null || PinTarget.Visibility != Visibility.Visible)
 				return null;
 
 			// If there is no pin offset, then the location is unknown
@@ -267,8 +272,11 @@ namespace Rylogic.Gui.WPF
 				return null;
 
 			// Calculate the position
-			var rect = new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight);
 			var pin_offset = PinOffset.Value;
+			var rect = PinTarget.WindowState != WindowState.Maximized || (PinWindow?.IsActive ?? true)
+				? new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight)
+				: Gui_.MonitorRect(Win32.MonitorFromWindow(m_pin_target_handle));
+
 			var pt = PinSite switch
 			{
 				EPin.TopLeft      => new Point(rect.Left                    , rect.Top) + pin_offset,
@@ -282,6 +290,18 @@ namespace Rylogic.Gui.WPF
 				EPin.CentreRight  => new Point(rect.Right                   , (rect.Top + rect.Bottom) / 2) + pin_offset,
 				_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
 			};
+
+			// Keep the window on-screen (if not being dragged by the user)
+			if (PinWindow?.IsActive == false)// || PinWindow?.IsLoaded == false)
+			{
+				if (PinTarget.WindowState == WindowState.Maximized)
+				{
+					var mon = Win32.MonitorFromWindow(m_pin_target_handle);
+					pt = Gui_.OnMonitor(mon, pt, PinWindow.RenderSize);
+				}
+				pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
+			}
+
 			return pt;
 		}
 
@@ -300,17 +320,6 @@ namespace Rylogic.Gui.WPF
 			m_location_update_pending = false;
 			if (Location() is Point pt)
 			{
-				// Keep the window on-screen (if not being dragged by the user)
-				if (!PinWindow.IsActive)
-				{
-					if (PinTarget?.WindowState == WindowState.Maximized)
-					{
-						var mon = Win32.MonitorFromWindow(m_pin_target_handle);
-						pt = Gui_.OnMonitor(mon, pt, PinWindow.RenderSize);
-					}
-					pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
-				}
-
 				using var s = Scope.Create(() => UpdatingLocation = true, () => UpdatingLocation = false);
 				PinWindow.SetLocation(pt);
 			}
@@ -374,5 +383,5 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The command id for the Pin menu item</summary>
 		private const int MenuCmd_Pinned = 1000;
-	};
+	}
 }
