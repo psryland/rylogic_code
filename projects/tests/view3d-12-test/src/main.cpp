@@ -80,6 +80,8 @@ struct Main :Form
 		View3D_WindowAddObject(m_win3d, m_obj0);
 		View3D_WindowAddObject(m_win3d, m_obj1);
 
+		View3D_DemoSceneCreate(m_win3d);
+
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
 		//m_scn.AddInstance(m_inst0);

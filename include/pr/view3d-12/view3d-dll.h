@@ -912,8 +912,15 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet     (View3DWindow window, View3DColour colour);
 	VIEW3D_API View3DV2     __stdcall View3D_DiagFillModePointsSizeGet(View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_DiagFillModePointsSizeSet(View3DWindow window, View3DV2 size);
+	#endif
 
-	// Miscellaneous
+	// Miscellaneous **************************
+
+	// Create/Delete the demo scene in the given window
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
+
+	#if 0
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
 	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (View3DWindow window);
@@ -928,8 +935,6 @@ extern "C"
 	VIEW3D_API void       __stdcall View3D_SelectionBoxVisibleSet   (View3DWindow window, BOOL visible);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxPosition     (View3DWindow window, View3DBBox const& bbox, View3DM4x4 const& o2w);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxFitToSelected(View3DWindow window);
-	VIEW3D_API GUID       __stdcall View3D_DemoSceneCreate          (View3DWindow window);
-	VIEW3D_API void       __stdcall View3D_DemoSceneDelete          ();
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
 	VIEW3D_API BSTR       __stdcall View3D_AutoCompleteTemplatesBStr();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);

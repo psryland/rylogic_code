@@ -541,3 +541,42 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(view3d::Object object, view3d::Mat
 	}
 	CatchAndReport(View3D_ObjectO2WSet, ,);
 }
+
+// Miscellaneous **************************
+
+// Create/Delete the demo scene in the given window
+VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// Get the string of all ldr objects
+		auto scene = rdr12::CreateDemoScene();
+
+		DllLockGuard;
+
+		// Add the demo objects to the sources
+		Dll().LoadScript(std::string_view(scene), false, EEncoding::utf8, &Context::GuidDemoSceneObjects, script::Includes(), [=](Guid const& id, bool before)
+		{
+			if (before)
+				window->Remove(&id, 1, 0);
+			else
+				window->Add(&id, 1, 0);
+		});
+
+		// Position the camera to look at the scene
+		//todo View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);
+		return Context::GuidDemoSceneObjects;
+	}
+	CatchAndReport(View3D_DemoSceneCreate, window, Context::GuidDemoSceneObjects);
+}
+VIEW3D_API void __stdcall View3D_DemoSceneDelete()
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
+	}
+	CatchAndReport(View3D_DemoSceneDelete,,);
+}

@@ -7,6 +7,7 @@
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 
+#pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -50,8 +51,9 @@ namespace pr::rdr12
 		,m_gfx_queue()
 		,m_com_queue()
 		,m_cpy_queue()
+		,m_dx11_device()
+		,m_dx11_dc()
 		,m_d2dfactory()
-		,m_dwrite()
 		,m_d2d_device()
 		,m_main_thread_id(GetCurrentThreadId())
 	{
@@ -77,6 +79,7 @@ namespace pr::rdr12
 				D3DPtr<ID3D12Debug> dbg;
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
 				dbg->EnableDebugLayer();
+
 				//D3DPtr<ID3D12Debug1> dbg1;
 				//Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
 				//dbg1->SetEnableGPUBasedValidation(true);
@@ -90,6 +93,16 @@ namespace pr::rdr12
 				__uuidof(ID3D12Device),
 				(void**)&device.m_ptr));
 			Throw(device->QueryInterface<ID3D12Device4>(&m_d3d_device.m_ptr));
+
+			// More debugging now the device exists
+			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
+			{
+				D3DPtr<ID3D12InfoQueue> info;
+				Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
+				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
+				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+			}
 
 			// Read the supported features
 			m_features.Read(m_d3d_device.get());
@@ -119,24 +132,22 @@ namespace pr::rdr12
 			if (m_features.Options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
 				PR_ASSERT(PR_DBG_RDR, true, "Sweet!");
 
+			// Create the D3D11-on-12 device so that D2D can draw on Dx12 resources
+			D3DPtr<ID3D11Device> dx11_device;
+			IUnknown* gfx_queue = m_gfx_queue.get();
+			UINT dx11_device_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug) ? D3D11_CREATE_DEVICE_DEBUG : 0);
+			Throw(D3D11On12CreateDevice(m_d3d_device.get(), dx11_device_flags, nullptr, 0, &gfx_queue, 1, 0, &dx11_device.m_ptr, &m_dx11_dc.m_ptr, nullptr));
+			Throw(dx11_device->QueryInterface<ID3D11On12Device>(&m_dx11_device.m_ptr));
+
 			// Create the direct2d factory
-			D2D1_FACTORY_OPTIONS d2dfactory_options;
+			D2D1_FACTORY_OPTIONS d2dfactory_options = {};
 			d2dfactory_options.debugLevel = AllSet(m_settings.m_options, ERdrOptions::D2D1_DebugInfo) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
-			Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+			Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
 
-			// Create the direct write factory
-			Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_dwrite.m_ptr));
-
-			// Creating a D2D device for drawing 2D to the back buffer requires BGRA support
-			if (AllSet(m_settings.m_options, ERdrOptions::BGRASupport))
-			{
-				// Get the DXGI Device from the d3d device
-				D3DPtr<IDXGIDevice> dxgi_device;
-				Throw(m_d3d_device->QueryInterface(&dxgi_device.m_ptr));
-			
-				// Create a D2D device
-				Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
-			}
+			// Create a D2D device
+			D3DPtr<IDXGIDevice> dxgi_device;
+			Throw(m_dx11_device->QueryInterface<IDXGIDevice>(&dxgi_device.m_ptr));
+			Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
 		}
 		catch (...)
 		{
@@ -151,7 +162,8 @@ namespace pr::rdr12
 		m_com_queue = nullptr;
 		m_gfx_queue = nullptr;
 		m_d2dfactory = nullptr;
-		m_dwrite = nullptr;
+		m_dx11_dc = nullptr;
+		m_dx11_device = nullptr;
 
 		// Do reference count checking
 		if (m_d2d_device != nullptr)

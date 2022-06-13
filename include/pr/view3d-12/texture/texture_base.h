@@ -43,6 +43,9 @@ namespace pr::rdr12
 		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
 		virtual ~TextureBase();
 
+		// Access the renderer
+		Renderer& rdr() const;
+
 		// A sort key component for this texture
 		SortKeyId SortId() const;
 

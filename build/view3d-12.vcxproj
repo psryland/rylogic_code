@@ -64,6 +64,8 @@
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_demo_scene.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_templates.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_sources.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\lighting\light.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp" />

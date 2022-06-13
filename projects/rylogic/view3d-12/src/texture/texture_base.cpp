@@ -110,6 +110,12 @@ namespace pr::rdr12
 		OnDestruction(*this, EmptyArgs());
 	}
 
+	// Access the renderer
+	Renderer& TextureBase::rdr() const
+	{
+		return m_mgr->rdr();
+	}
+
 	// Return the shared handle associated with this texture
 	HANDLE TextureBase::SharedHandle() const
 	{

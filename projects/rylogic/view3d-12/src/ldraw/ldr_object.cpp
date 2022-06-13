@@ -981,6 +981,35 @@ namespace pr::rdr12
 					}
 				}
 			}
+			template <typename TDrawOnIt>
+			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
+			{
+				// Create a texture large enough to contain the text, and render the text into it
+				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
+				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
+				TextureDesc desc(id, tdesc, false, 0, name);
+				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
+
+				#if 0 //todo
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+
+				// Create the brushes
+				D3DPtr<ID2D1SolidColorBrush> fr_brush;
+				D3DPtr<ID2D1SolidColorBrush> bk_brush;
+				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
+				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
+				Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+
+				// Draw the spot
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				draw(dc, fr_brush.get(), bk_brush.get());
+				pr::Throw(dc->EndDraw());
+				#endif
+				return tex;
+			}
 			Texture2DPtr PointStyleTexture(ParseParams& p)
 			{
 				EStyle style = m_style;
@@ -1000,7 +1029,7 @@ namespace pr::rdr12
 							{
 								auto w0 = sz.x * 0.5f;
 								auto h0 = sz.y * 0.5f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto dc, auto fr, auto) { dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
+								return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
 							});
 					}
 					case EStyle::Triangle:
@@ -1008,10 +1037,9 @@ namespace pr::rdr12
 						auto id = pr::hash::Hash("PointStyleTriangle", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
-								Renderer::Lock lk(p.m_rdr);
 								D3DPtr<ID2D1PathGeometry> geom;
 								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
 								pr::Throw(geom->Open(&sink.m_ptr));
 
 								auto w0 = 1.0f * sz.x;
@@ -1024,7 +1052,7 @@ namespace pr::rdr12
 								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 								pr::Throw(sink->Close());
 
-								return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+								return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 							});
 					}
 					case EStyle::Star:
@@ -1032,10 +1060,9 @@ namespace pr::rdr12
 						auto id = pr::hash::Hash("PointStyleStar", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
-								Renderer::Lock lk(p.m_rdr);
 								D3DPtr<ID2D1PathGeometry> geom;
 								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
 								pr::Throw(geom->Open(&sink.m_ptr));
 
 								auto w0 = 1.0f * sz.x;
@@ -1052,7 +1079,7 @@ namespace pr::rdr12
 								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
 								pr::Throw(sink->Close());
 
-								return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+								return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 							});
 					}
 					case EStyle::Annulus:
@@ -1064,7 +1091,7 @@ namespace pr::rdr12
 								auto h0 = sz.y * 0.5f;
 								auto w1 = sz.x * 0.4f;
 								auto h1 = sz.y * 0.4f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto dc, auto fr, auto bk)
+								return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
 									{
 										dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
 										dc->FillEllipse({{w0, h0}, w0, h0}, fr);
@@ -1075,33 +1102,6 @@ namespace pr::rdr12
 					default: throw std::exception("Unknown point style");
 
 				}
-			}
-			template <typename TDrawOnIt>
-			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
-			{
-				// Create a texture large enough to contain the text, and render the text into it
-				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
-				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
-				TextureDesc desc(id, tdesc, false, 0, name);
-				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
-
-				// Get a D2D device context to draw on
-				auto dc = tex->GetD2DeviceContext();
-
-				// Create the brushes
-				D3DPtr<ID2D1SolidColorBrush> fr_brush;
-				D3DPtr<ID2D1SolidColorBrush> bk_brush;
-				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
-				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
-
-				// Draw the spot
-				dc->BeginDraw();
-				dc->Clear(&bk);
-				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Throw(dc->EndDraw());
-				return tex;
 			}
 		};
 

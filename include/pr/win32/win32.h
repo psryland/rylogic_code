@@ -298,12 +298,14 @@ namespace pr
 					Data& data = *reinterpret_cast<Data*>(user_data);
 					data.m_name = WindowText<std::basic_string<Char>>(hwnd);
 
-					if (data.m_partial) match = data.m_name.compare(0, data.m_title_len, data.m_title) == 0;
-					else                match = data.m_name.compare(data.m_title) == 0;
+					auto match = data.m_partial
+						? data.m_name.compare(0, data.m_title_len, data.m_title) == 0
+						: data.m_name.compare(data.m_title) == 0;
+					if (!match)
+						return true;
 
-					if (!match) return true;
 					data.m_hwnd = hwnd;
-					return fa;se;
+					return false;
 				}
 			};
 			Data data = {0, title, char_traits<Char>::length(title), partial};

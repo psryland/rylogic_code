@@ -26,16 +26,17 @@ namespace pr::rdr12
 		struct RdrState
 		{
 			// This is needed so that the Dx12 device is created before the managers are constructed.
-			RdrSettings                m_settings;
-			FeatureSupport             m_features;
-			D3DPtr<ID3D12Device4>      m_d3d_device;
-			D3DPtr<ID3D12CommandQueue> m_gfx_queue;
-			D3DPtr<ID3D12CommandQueue> m_com_queue;
-			D3DPtr<ID3D12CommandQueue> m_cpy_queue;
-			D3DPtr<ID2D1Factory1>      m_d2dfactory;
-			D3DPtr<IDWriteFactory>     m_dwrite;
-			D3DPtr<ID2D1Device>        m_d2d_device;
-			DWORD                      m_main_thread_id;
+			RdrSettings                  m_settings;
+			FeatureSupport               m_features;
+			D3DPtr<ID3D12Device4>        m_d3d_device;
+			D3DPtr<ID3D12CommandQueue>   m_gfx_queue;
+			D3DPtr<ID3D12CommandQueue>   m_com_queue;
+			D3DPtr<ID3D12CommandQueue>   m_cpy_queue;
+			D3DPtr<ID3D11On12Device>     m_dx11_device;
+			D3DPtr<ID3D11DeviceContext>  m_dx11_dc;
+			D3DPtr<ID2D1Factory2>        m_d2dfactory;
+			D3DPtr<ID2D1Device>          m_d2d_device;
+			DWORD                        m_main_thread_id;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -95,6 +96,30 @@ namespace pr::rdr12
 		{
 			// The D3D command queue is free-threaded in DX12, no need to synchronise access to it.
 			return m_state.m_cpy_queue.get();
+		}
+
+		// Return the Dx11 device
+		ID3D11On12Device* Dx11Device() const
+		{
+			return m_state.m_dx11_device.get();
+		}
+
+		// Return the Dx11 device context
+		ID3D11DeviceContext* Dx11DeviceContext() const
+		{
+			return m_state.m_dx11_dc.get();
+		}
+
+		// Return the direct2d factory
+		ID2D1Factory* D2DFactory() const
+		{
+			return m_state.m_d2dfactory.get();
+		}
+
+		// Return the d2d device
+		ID2D1Device* D2DDevice() const
+		{
+			return m_state.m_d2d_device.get();
 		}
 
 		// Access the renderer manager classes
@@ -174,45 +199,6 @@ namespace pr::rdr12
 
 		// Call all registered poll event callbacks
 		void Poll();
-
-		// Synchronise access to D3D/D2D interfaces
-		class Lock // I think D3DDevice and queues are thread safe now....
-		{
-			Renderer::RdrState& m_rdr;
-			std::lock_guard<std::recursive_mutex> m_lock;
-
-		public:
-
-			Lock(Renderer& rdr)
-				:m_rdr(rdr.m_state)
-				,m_lock(rdr.m_d3d_mutex)
-			{}
-
-			// Access the device
-			ID3D12Device4* D3DDevice() const
-			{
-				// The D3D device is free-threaded in DX12, no need to synchronise access to it.
-				return m_rdr.m_d3d_device.get();
-			}
-
-			// Return the D2D device
-			ID2D1Device* D2DDevice() const
-			{
-				return m_rdr.m_d2d_device.get();
-			}
-
-			// Return the direct2d factory
-			ID2D1Factory* D2DFactory() const
-			{
-				return m_rdr.m_d2dfactory.get();
-			}
-
-			// Return the direct write factory
-			IDWriteFactory* DWrite() const
-			{
-				return m_rdr.m_dwrite.get();
-			}
-		};
 
 		// For when I'm searching for the d3d device on this object
 		enum { D3DDevice_IsAccessedViaTheRendererLock };

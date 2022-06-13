@@ -215,6 +215,132 @@ namespace pr::rdr12
 			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
 	}
 
+	// Add/Remove all objects to this window with the given context ids (or not with)
+	void V3dWindow::Add(GUID const* context_ids, int include_count, int exclude_count)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+
+		pr::vector<Guid> new_guids;
+		auto old_count = m_objects.size();
+		for (auto& src_iter : m_dll->m_sources.Sources())
+		{
+			auto& src = src_iter.second;
+			if (!IncludeFilter(src.m_context_id, context_ids, include_count, exclude_count))
+				continue;
+
+			// Add objects from this source
+			new_guids.push_back(src.m_context_id);
+			for (auto& obj : src.m_objects)
+				m_objects.insert(obj.get());
+
+			// Apply camera settings from this source
+			if (src.m_cam_fields != ECamField::None)
+			{
+				auto& cam = src.m_cam;
+				auto changed = view3d::ESettings::Camera;
+				if (AllSet(src.m_cam_fields, ECamField::C2W))
+				{
+					m_scene.m_cam.CameraToWorld(cam.CameraToWorld());
+					changed |= view3d::ESettings::Camera_Position;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Focus))
+				{
+					m_scene.m_cam.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
+					changed |= view3d::ESettings::Camera_Position;
+					changed |= view3d::ESettings::Camera_FocusDist;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Align))
+				{
+					m_scene.m_cam.Align(cam.m_align);
+					changed |= view3d::ESettings::Camera_AlignAxis;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Aspect))
+				{
+					m_scene.m_cam.Aspect(cam.Aspect());
+					changed |= view3d::ESettings::Camera_Aspect;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::FovY))
+				{
+					m_scene.m_cam.FovY(cam.FovY());
+					changed |= view3d::ESettings::Camera_Fov;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Near))
+				{
+					m_scene.m_cam.Near(cam.Near(true), true);
+					changed |= view3d::ESettings::Camera_ClipPlanes;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Far))
+				{
+					m_scene.m_cam.Far(cam.Far(true), true);
+					changed |= view3d::ESettings::Camera_ClipPlanes;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Ortho))
+				{
+					m_scene.m_cam.Orthographic(cam.Orthographic());
+					changed |= view3d::ESettings::Camera_Orthographic;
+				}
+
+				// Notify if the camera was changed
+				if (changed != view3d::ESettings::Camera)
+					OnSettingsChanged(this, changed);
+			}
+		}
+		if (m_objects.size() != old_count)
+		{
+			m_guids.insert(std::begin(new_guids), std::end(new_guids));
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids.data(), int(new_guids.size()), nullptr);
+		}
+	}
+	void V3dWindow::Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+
+		// Create a set of ids to remove
+		GuidSet removed;
+		for (auto& id : m_guids)
+		{
+			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			removed.insert(id);
+		}
+
+		if (!removed.empty())
+		{
+			// Remove objects in the 'remove' set
+			auto old_count = m_objects.size();
+			pr::erase_if(m_objects, [&](auto* obj){ return removed.count(obj->m_context_id); });
+
+			// Remove context ids
+			if (!keep_context_ids)
+			{
+				for (auto& id : removed)
+					m_guids.erase(id);
+			}
+
+			// Notify if changed
+			if (m_objects.size() != old_count)
+			{
+				pr::vector<Guid> guids(std::begin(removed), std::end(removed));
+				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids.data(), int(guids.size()), nullptr);
+			}
+		}
+	}
+
+	// Remove all objects from this scene
+	void V3dWindow::RemoveAllObjects()
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+
+		// Make a copy of the guids
+		pr::vector<GUID> context_ids(std::begin(m_guids), std::end(m_guids));
+
+		// Remove the objects and guids
+		m_objects.clear();
+		m_guids.clear();
+
+		// Notify that the scene has changed
+		ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, context_ids.data(), int(context_ids.size()), nullptr);
+	}
+
 	// Render this window into whatever render target is currently set
 	void V3dWindow::Render()
 	{
