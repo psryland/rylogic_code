@@ -62,6 +62,12 @@ namespace pr::rdr12
 		// Delete a single object
 		void DeleteObject(LdrObject* object);
 
+		// Delete all objects
+		void DeleteAllObjects();
+
+		// Delete all objects with matching ids
+		void DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count);
+
 		// Create an embedded code handler for the given language
 		std::unique_ptr<IEmbeddedCode> CreateHandler(wchar_t const* lang);
 	};

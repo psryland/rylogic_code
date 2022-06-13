@@ -26,15 +26,31 @@ namespace pr::rdr12
 		HDC GetDC(bool discard);
 		void ReleaseDC();
 
-		// Get the DXGI surface within this texture
-		D3DPtr<IDXGISurface> GetSurface();
-
+		#if 0
 		// Get a d2d render target for the DXGI surface within this texture.
 		// 'wnd' is optional, used to get the DPI scaling for the window that the render target is used in.
 		D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget(Window const* wnd = nullptr);
+		#endif
 
-		// Get a D2D device context for the DXGI surface within this texture
-		D3DPtr<ID2D1DeviceContext> GetD2DeviceContext();
+		// A D2D1 wrapper around a Dx12 resource for 2D drawing.
+		struct D2D1Context
+		{
+			ID3D11On12Device* m_dx11;
+			D3DPtr<ID3D11Resource> m_res;
+			D3DPtr<ID2D1DeviceContext> m_dc;
+
+			D2D1Context(ID3D11On12Device* dx11, ID2D1Device* dx2, ID3D12Resource* res);
+			D2D1Context(D2D1Context&&) = default;
+			D2D1Context(D2D1Context const&) = delete;
+			D2D1Context& operator=(D2D1Context&&) = default;
+			D2D1Context& operator=(D2D1Context const&) = delete;
+			~D2D1Context();
+
+			ID2D1DeviceContext* operator ->() const { return m_dc.get(); }
+		};
+
+		// Get a D2D device context for drawing on this texture
+		D2D1Context GetD2DeviceContext();
 
 		// Unique identifiers for data attached to the private data of this texture
 		static GUID const Surface0Pointer;

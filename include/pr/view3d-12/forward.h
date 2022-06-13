@@ -37,6 +37,7 @@
 #include <dxgi.h>
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
+#include <d3d11on12.h>
 #include <dxgi1_4.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>

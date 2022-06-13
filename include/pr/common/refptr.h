@@ -9,9 +9,7 @@
 //  [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\9.0\NativeDE\StepOver]
 //  "pr::RefPtr"="pr\\:\\:RefPtr.*\\:\\:.*=NoStepInto"
 // Inheritors use the IncRef/DecRef methods, so that stack tracing works
-
 #pragma once
-
 #include <cassert>
 #include <type_traits>
 #include "pr/common/refcount.h"

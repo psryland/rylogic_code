@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <malloc.h>
 #include <cassert>
+#include <mutex>
 
 #define PR_DBG_MEMORY_ALLOC_CALLSTACKS 0
 #if PR_DBG_MEMORY_ALLOC_CALLSTACKS
@@ -124,9 +125,11 @@ namespace pr
 		};
 		using allocation_container_t = std::unordered_set<Allocation, Allocation, Allocation>;
 		allocation_container_t m_live;
+		std::mutex m_lock;
 
 		AllocationsTracker()
 			:m_live()
+			,m_lock()
 		{}
 		~AllocationsTracker()
 		{
@@ -138,16 +141,19 @@ namespace pr
 		// Returning bool so these can be used in asserts
 		bool add(T* ptr)
 		{
+			std::lock_guard<std::mutex> lock(m_lock);
+
 			Allocation al(ptr);
 			#if PR_DBG_MEMORY_ALLOC_CALLSTACKS
 			DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(FmtS("%S(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
 			#endif
-
 			m_live.insert(al);
 			return true;
 		}
 		bool remove(T* ptr)
 		{
+			std::lock_guard<std::mutex> lock(m_lock);
+
 			auto iter = m_live.find(ptr);
 			assert("'ptr' is not a tracked allocation" && iter != std::end(m_live));
 			m_live.erase(iter);

@@ -443,7 +443,6 @@ namespace pr::rdr12
 	// Create a new nugget
 	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
 	{
-		Renderer::Lock lock(rdr());
 		auto ptr = rdr12::New<Nugget>(ndata, model, id);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
@@ -874,7 +873,6 @@ namespace pr::rdr12
 		// Notify model deleted
 		ModelDeleted(*model);
 
-		Renderer::Lock lock(rdr());
 		assert(m_mem_tracker.remove(model));
 		rdr12::Delete<Model>(model);
 	}
@@ -885,7 +883,6 @@ namespace pr::rdr12
 		if (nugget == nullptr)
 			return;
 
-		Renderer::Lock lock(rdr());
 		assert(m_mem_tracker.remove(nugget));
 		rdr12::Delete<Nugget>(nugget);
 	}
@@ -895,8 +892,6 @@ namespace pr::rdr12
 	{
 		if (tex == nullptr)
 			return;
-
-		Renderer::Lock lock(rdr());
 
 		// Release any views
 		if (tex->m_srv)
