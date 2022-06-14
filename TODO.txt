@@ -6,7 +6,8 @@ Work:
 		- changes implemented
 		- Waiting on verification/validation
 	ECN - REX-9601 - REX Terminal - Pete needs this for training purposes
-		- Chase Aneela about releasing user manual
+		- Chase Aneela about releasing user manual - Asked Krish for document number
+		- Ask Etienne to test last three test cases
 	ECN - REX-9930 - rxsfault.log ticket
 		- Test case passed - should be ready for phase 2 sign off.
 	ECN - ZR release:

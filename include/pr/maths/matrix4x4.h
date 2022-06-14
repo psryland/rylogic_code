@@ -174,7 +174,7 @@ namespace pr
 			return Mat4x4(Mat3x4<S,A,B>::Rotation(q), pos);
 		}
 
-		// Create a transform representing the rotation from one vector to another.
+		// Create a transform representing the rotation from one vector to another. (Vectors do not need to be normalised)
 		static Mat4x4 Transform(Vec4_cref<S,void> from, Vec4_cref<S,void> to, Vec4_cref<S,void> pos)
 		{
 			return Mat4x4(Mat3x4<S,A,B>::Rotation(from, to), pos);

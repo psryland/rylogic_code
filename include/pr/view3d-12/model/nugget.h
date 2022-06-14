@@ -103,7 +103,7 @@ namespace pr::rdr12
 		Range           m_vrange;
 		Range           m_irange;
 
-		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, Range vrange = Range(), Range irange = Range());
+		NuggetData(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid, Range vrange = Range(), Range irange = Range());
 	};
 
 	// A nugget is a sub range within a model buffer containing any data needed to render
