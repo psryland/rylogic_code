@@ -151,11 +151,20 @@ namespace pr::rdr
 			//  - Window's have their own version of this function which detects the DPI
 			//    of the monitor they're on, and fall's back to the system DPI.
 			//  - Don't cache the DPI value because it can change at any time.
-			#if (WINVER >= 0x0605)
-			auto dpi = (float)GetDpiForSystem();
-			#else
+			auto user32 = Scope<HMODULE>(
+				[=] { return ::LoadLibraryW(L"user32.dll"); }, 
+				[=](HMODULE m) {::FreeLibrary(m); });
+
+			// Look for the new windows functions for DPI
+			auto GetDpiForSystemFunc = reinterpret_cast<UINT(far __stdcall*)()>(GetProcAddress(user32.m_state, "GetDpiForSystem"));
+			if (GetDpiForSystemFunc != nullptr)
+			{
+				auto dpi = (float)GetDpiForSystemFunc();
+				return v2(dpi, dpi);
+			}
+
+			// Fallback
 			auto dpi = (float)96.0f;
-			#endif
 			return v2(dpi, dpi);
 		}
 

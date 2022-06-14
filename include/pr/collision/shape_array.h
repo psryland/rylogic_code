@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -20,14 +20,28 @@ namespace pr::collision
 		// ShapeSphere s1;
 		// ...
 
-		ShapeArray() = default;
-		ShapeArray(size_t num_shapes, size_t size_in_bytes, m4_cref<> shape_to_model = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
-			:m_base(EShape::Array, size_in_bytes, shape_to_model, material_id, flags)
-			,m_num_shapes(num_shapes)
+		explicit ShapeArray(m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			:m_base(EShape::Array, sizeof(ShapeArray), shape_to_parent, material_id, flags)
+			,m_num_shapes()
 		{
 			// Careful: We can't be sure of what follows this object in memory.
 			// The shapes that belong to this array may not be there yet.
-			// Differ calculating the bounding box to the caller.
+			// Differ calculating the bounding box to the caller (i.e. Caller should call 'Complete')
+		}
+		void Complete(size_t num_shapes)
+		{
+			// Determine the size of the array
+			auto ptr = begin();
+			for (auto i = num_shapes; i-- != 0; ptr = next(ptr)) {}
+
+			// Calculate the bounding box
+			auto bb = BBox::Reset();
+			for (Shape const* i = begin(), *i_end = end(); i != i_end; i = next(i))
+				Grow(bb, i->m_s2p * i->m_bbox);
+
+			m_num_shapes = num_shapes;
+			m_base.m_size = sizeof(ShapeArray) + byte_ptr(ptr) - byte_ptr(begin());
+			m_base.m_bbox = CalcBBox(*this);
 		}
 
 		operator Shape const&() const
@@ -56,12 +70,13 @@ namespace pr::collision
 	static_assert(is_shape_v<ShapeArray>);
 
 	// Calculate the bounding box for the shape.
-	inline BBox CalcBBox(ShapeArray const& shape)
+	template <typename>
+	BBox pr_vectorcall CalcBBox(ShapeArray const& shape)
 	{
 		auto bb = BBox::Reset();
 		for (Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = next(i))
 			Grow(bb, CalcBBox(*i));
 
-		return shape.m_base.m_s2p * bb;
+		return bb;
 	}
 }

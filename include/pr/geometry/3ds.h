@@ -635,12 +635,27 @@ namespace pr::geometry::max_3ds
 				,m_new_index(new_index)
 			{}
 		};
-		struct Verts :std::deque<Vert, pr::aligned_alloc<Vert>>
+		struct Verts
 		{
+			std::deque<Vert, pr::aligned_alloc<Vert>> m_data;
+
+			auto begin() const
+			{
+				return m_data.begin();
+			}
+			auto end() const
+			{
+				return m_data.end();
+			}
+			void push_back(Vert&& vert)
+			{
+				m_data.emplace_back(std::move(vert));
+			}
+
 			// Returns the new index for the vert in 'cont'
 			uint16_t add(uint16_t idx, v4 const& norm, Colour const& col, uint32_t sg)
 			{
-				auto& vert = at(idx);
+				auto& vert = m_data.at(idx);
 
 				// If the smoothing group intersects, accumulate 'norm'
 				// and return the vertex index of this vert
@@ -657,9 +672,9 @@ namespace pr::geometry::max_3ds
 					return add(vert.m_next->m_new_index, norm, col, sg);
 
 				// Otherwise, create a new Vert and add it to the linked list
-				auto new_index = s_cast<uint16_t>(size());
-				emplace_back(vert.m_orig_index, new_index, norm, col, sg);
-				vert.m_next = &back();
+				auto new_index = s_cast<uint16_t>(m_data.size());
+				m_data.emplace_back(vert.m_orig_index, new_index, norm, col, sg);
+				vert.m_next = &m_data.back();
 				return new_index;
 			}
 		};
@@ -667,7 +682,7 @@ namespace pr::geometry::max_3ds
 
 		// Initialise 'verts'
 		for (uint16_t i = 0, iend = s_cast<uint16_t>(obj.m_mesh.m_vert.size()); i != iend; ++i)
-			verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
+			verts.push_back(Vert(i, i, v4Zero, ColourWhite, 0));
 
 		// Loop over material groups, each material group is a nugget
 		auto vrange = Range<size_t>::Zero();

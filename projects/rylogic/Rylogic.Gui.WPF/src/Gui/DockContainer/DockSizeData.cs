@@ -102,11 +102,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				switch (ds)
 				{
-				case EDockSite.Left: Left = value; break;
-				case EDockSite.Right: Right = value; break;
-				case EDockSite.Top: Top = value; break;
-				case EDockSite.Bottom: Bottom = value; break;
-				default: throw new Exception($"Cannot set the size for site {ds}");
+					case EDockSite.Left: Left = value; break;
+					case EDockSite.Right: Right = value; break;
+					case EDockSite.Top: Top = value; break;
+					case EDockSite.Bottom: Bottom = value; break;
+					default: throw new Exception($"Cannot set the size for site {ds}");
 				}
 			}
 		}
@@ -177,12 +177,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Assign a fractional value for the dock site size
 			switch (location)
 			{
-			default: throw new Exception($"No size value for dock zone {location}");
-			case EDockSite.Centre: break;
-			case EDockSite.Left: Left = NewSize(value, Left, rect.Width); break;
-			case EDockSite.Top: Top = NewSize(value, Top, rect.Height); break;
-			case EDockSite.Right: Right = NewSize(value, Right, rect.Width); break;
-			case EDockSite.Bottom: Bottom = NewSize(value, Bottom, rect.Height); break;
+				case EDockSite.Centre: break;
+				case EDockSite.Left: Left = NewSize(value, Left, rect.Width); break;
+				case EDockSite.Top: Top = NewSize(value, Top, rect.Height); break;
+				case EDockSite.Right: Right = NewSize(value, Right, rect.Width); break;
+				case EDockSite.Bottom: Bottom = NewSize(value, Bottom, rect.Height); break;
+				default: throw new Exception($"No size value for dock zone {location}");
 			}
 			double NewSize(double value, double old_size, double max)
 			{

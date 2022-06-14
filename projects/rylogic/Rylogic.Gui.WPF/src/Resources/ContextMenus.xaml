@@ -178,7 +178,8 @@
 					>
 					<Image
 						Source="{StaticResource accept}"
-						RenderOptions.BitmapScalingMode="HighQuality"
+						RenderOptions.BitmapScalingMode="Fant"
+						MaxHeight="22"
 						/>
 				</Button>
 				<Button
@@ -188,7 +189,8 @@
 					>
 					<Image
 						Source="{StaticResource plus}"
-						RenderOptions.BitmapScalingMode="HighQuality"
+						RenderOptions.BitmapScalingMode="Fant"
+						MaxHeight="22"
 						/>
 				</Button>
 				<Button
@@ -199,7 +201,8 @@
 					>
 					<Image
 						Source="{StaticResource minus}"
-						RenderOptions.BitmapScalingMode="HighQuality"
+						RenderOptions.BitmapScalingMode="Fant"
+						MaxHeight="22"
 						/>
 				</Button>
 			</StackPanel>
@@ -234,6 +237,8 @@
 				Background="{Binding BackgroundColour, Converter={conv:ColourToBrush}}"
 				BorderBrush="Black"
 				BorderThickness="1"
+				Height="22"
+				Width="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -325,7 +330,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource light_bulb}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -339,7 +345,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource animation}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -435,7 +442,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource tape_measure}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -449,7 +457,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource objects}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -596,7 +605,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource chain}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
@@ -764,7 +774,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource objects}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 		<StaticResource ResourceKey="DiagramMenuItem_ScatterContinuous"/>
@@ -795,7 +806,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource exchange}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 		<StaticResource ResourceKey="DiagramMenuItem_RelinkContinuous"/>
@@ -830,7 +842,8 @@
 		<MenuItem.Icon>
 			<Image
 				Source="{StaticResource connector}"
-				RenderOptions.BitmapScalingMode="HighQuality"
+				RenderOptions.BitmapScalingMode="Fant"
+				MaxHeight="22"
 				/>
 		</MenuItem.Icon>
 		<StaticResource ResourceKey="DiagramMenuItem_ConnectorEdgeStyle"/>

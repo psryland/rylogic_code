@@ -10,6 +10,7 @@
 #include <cstring>
 #include <fstream>
 #include <algorithm>
+#include <type_traits>
 #include <cassert>
 
 namespace pr::onebit
@@ -297,7 +298,7 @@ namespace pr::onebit
 		using BmpR = std::decay_t<BitmapR>;
 		using Word = typename BmpL::Word;
 		constexpr int WordSize = sizeof(Word) * 8;
-		static_assert(std::is_same_v<BmpL::Word, BmpR::Word>, "Bitmaps must have the same Word size");
+		static_assert(std::is_same_v<typename BmpL::Word, typename BmpR::Word>, "Bitmaps must have the same Word size");
 
 		// Clip 'rhs' to the bounds of 'lhs'
 		ClippedQuad clip;

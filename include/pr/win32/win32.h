@@ -163,14 +163,16 @@ namespace pr
 		inline Handle FileOpen(std::filesystem::path const& filepath, DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwCreationDisposition, DWORD dwAttributes = FILE_ATTRIBUTE_NORMAL, DWORD dwFlags = 0)
 		{
 			// Note: don't throw on errors in this function. Leave that to the caller
-			#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
-			CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {sizeof(CREATEFILE2_EXTENDED_PARAMETERS)};
-			CreateExParams.dwFileAttributes = dwAttributes;
-			CreateExParams.dwFileFlags = dwFlags;
-			auto h = CreateFile2(filepath.c_str(), dwDesiredAccess, dwShareMode, dwCreationDisposition, &CreateExParams);
-			#else
+			
+			// Use LoadLibrary if you want to use CreateFile2 as it doesn't exist on Win7
+			//#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+			//CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {sizeof(CREATEFILE2_EXTENDED_PARAMETERS)};
+			//CreateExParams.dwFileAttributes = dwAttributes;
+			//CreateExParams.dwFileFlags = dwFlags;
+			//auto h = CreateFile2(filepath.c_str(), dwDesiredAccess, dwShareMode, dwCreationDisposition, &CreateExParams);
+			//#else
 			auto h = CreateFileW(filepath.c_str(), dwDesiredAccess, dwShareMode, nullptr, dwCreationDisposition, dwAttributes | dwFlags, nullptr);
-			#endif
+			//#endif
 			return Handle(h);
 		}
 
@@ -298,12 +300,14 @@ namespace pr
 					Data& data = *reinterpret_cast<Data*>(user_data);
 					data.m_name = WindowText<std::basic_string<Char>>(hwnd);
 
-					if (data.m_partial) match = data.m_name.compare(0, data.m_title_len, data.m_title) == 0;
-					else                match = data.m_name.compare(data.m_title) == 0;
+					auto match = data.m_partial
+						? data.m_name.compare(0, data.m_title_len, data.m_title) == 0
+						: data.m_name.compare(data.m_title) == 0;
+					if (!match)
+						return true;
 
-					if (!match) return true;
 					data.m_hwnd = hwnd;
-					return fa;se;
+					return false;
 				}
 			};
 			Data data = {0, title, char_traits<Char>::length(title), partial};

@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -42,11 +42,6 @@ namespace pr::collision
 		x(Polytope, false)\
 		x(Array   , true )
 
-	// Forward declare shape types
-	#define PR_COLLISION_SHAPE_FORWARD(name, comp) struct Shape##name;
-	PR_COLLISION_SHAPES(PR_COLLISION_SHAPE_FORWARD)
-	#undef PR_COLLISION_SHAPE_FORWARD
-
 	// Shape type enum
 	enum class EShape :int
 	{
@@ -71,9 +66,6 @@ namespace pr::collision
 		}
 	}
 
-	// Other forwards
-	struct Ray;
-
 	// Physics material
 	using MaterialId = unsigned int;
 
@@ -90,7 +82,7 @@ namespace pr::collision
 		// Transform from shape space to parent shape space (or physics model space for root objects)
 		m4x4 m_s2p;
 
-		// A bounding box for the shape (and its children if it's a composite shape)
+		// A bounding box for the shape (and its children) (in shape space).
 		BBox m_bbox;
 
 		// The type of shape this is. One of EShape
@@ -105,9 +97,8 @@ namespace pr::collision
 		// The size in bytes of this shape and its data
 		size_t m_size;
 
-		Shape() = default;
-		Shape(EShape type, size_t size, m4_cref<> shape_to_model = m4x4::Identity(), MaterialId material_id = 0, EFlags flags = EFlags::None)
-			:m_s2p(shape_to_model)
+		Shape(EShape type, size_t size, m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, EFlags flags = EFlags::None)
+			:m_s2p(shape_to_parent)
 			,m_bbox(BBox::Reset())
 			,m_type(type)
 			,m_material_id(material_id)
@@ -115,6 +106,25 @@ namespace pr::collision
 			,m_size(size)
 		{}
 	};
+
+	// Forward declare standard shape functions
+	template <typename = void> BBox pr_vectorcall CalcBBox(Shape const& shape);
+	template <typename = void> void pr_vectorcall ShiftCentre(Shape&, v4_cref<> shift);
+	template <typename = void> v4   pr_vectorcall SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id);
+	template <typename = void> void pr_vectorcall ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest);
+
+	// Forward declare shape types and standard functions
+	#define PR_COLLISION_SHAPE_FORWARD(name, comp)\
+	struct Shape##name;\
+	template <typename = void> BBox pr_vectorcall CalcBox(Shape##name const& shape);\
+	template <typename = void> void pr_vectorcall ShiftCentre(Shape##name&, v4_cref<> shift);\
+	template <typename = void> v4   pr_vectorcall SupportVertex(Shape##name const&, v4_cref<> direction, int, int&);\
+	template <typename = void> void pr_vectorcall ClosestPoint(Shape##name const& shape, v4_cref<> point, float& distance, v4& closest);
+	PR_COLLISION_SHAPES(PR_COLLISION_SHAPE_FORWARD)
+	#undef PR_COLLISION_SHAPE_FORWARD
+
+	// Other forwards
+	struct Ray;
 
 	// Traits/Concepts
 	template <typename T> struct is_shape :std::false_type {};
@@ -131,10 +141,10 @@ namespace pr::collision
 	};
 	PR_COLLISION_SHAPES(PR_COLLISION_SHAPE_TRAITS)
 	#undef PR_COLLISION_SHAPE_TRAITS
-	template <typename T> constexpr bool is_shape_v = is_shape<T>::value;
+	template <typename T> constexpr bool is_shape_v = is_shape<T>::value && std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 	template <typename T> concept ShapeType = is_shape_v<T>;
 	template <typename T> concept CompositeShapeType = is_shape_v<T> && is_shape<T>::composite;
-	static_assert(is_shape_v<ShapeSphere>);
+	static_assert(is_shape_v<Shape>);
 
 	// Shape cast helpers
 	template <ShapeType TShape> inline TShape const& shape_cast(Shape const& shape)
@@ -189,10 +199,12 @@ namespace pr::collision
 	{
 		return shape;
 	}
-		
+
+	#if 0
 	// A constant reference to a shape
 	struct ShapeCRef
 	{
+		// This is used in the Rigid body to point to a collision shape
 		Shape const* m_shape;
 		ShapeCRef(Shape const* shape) :m_shape(shape) {}
 		ShapeCRef(Shape const& shape) :m_shape(&shape) {}
@@ -203,9 +215,9 @@ namespace pr::collision
 		operator Shape const*() const { return m_shape; }
 		operator Shape const&() const { return *m_shape; }
 	};
+	#endif
 
-	// Increment a shape pointer
-	// for (Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s)) {}
+	// Increment a shape pointer: for (Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s)) {}
 	template <ShapeType TShape> inline TShape const* next(TShape const* p)
 	{
 		return reinterpret_cast<TShape const*>(byte_ptr(p) + p->m_base.m_size);
@@ -222,12 +234,6 @@ namespace pr::collision
 	{
 		return reinterpret_cast<Shape*>(byte_ptr(p) + p->m_size);
 	}
-
-	// Forward declare standard shape functions
-	template <typename = void> BBox CalcBBox(Shape const& shape);
-	template <typename = void> void ShiftCentre(Shape&, v4 const& shift);
-	template <typename = void> v4   SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id);
-	template <typename = void> void ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest);
 }
 namespace pr
 {
