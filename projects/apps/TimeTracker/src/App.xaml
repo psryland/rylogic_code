@@ -1,0 +1,13 @@
+﻿<Application
+	x:Class="TimeTracker.App"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	ShutdownMode="OnMainWindowClose"
+	>
+	<Application.Resources>
+		<BitmapImage x:Key="clear" UriSource="/TimeTracker;component/res/check_reject.png" />
+		<BitmapImage x:Key="clock" UriSource="/TimeTracker;component/res/clock.png" />
+		<BitmapImage x:Key="expand" UriSource="/TimeTracker;component/res/bottom.png" />
+		<BitmapImage x:Key="options" UriSource="/TimeTracker;component/res/options.png" />
+	</Application.Resources>
+</Application>

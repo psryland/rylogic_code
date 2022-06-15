@@ -74,6 +74,30 @@ namespace Rylogic.Interop.Win32
 			DEFAULT_TO_NEAREST = 0x00000002,
 		}
 
+		/// <summary></summary>
+		[Flags]
+		public enum EFlashWindowFlags :uint
+		{
+			/// <summary>Stop flashing. The system restores the window to its original state.</summary>
+			FLASHW_STOP = 0,
+
+			/// <summary>Flash the window caption.</summary>
+			FLASHW_CAPTION = 1,
+
+			/// <summary>Flash the taskbar button.</summary>
+			FLASHW_TRAY = 2,
+
+			/// <summary>Flash both the window caption and taskbar button. This is equivalent to setting the FLASHW_CAPTION | FLASHW_TRAY flags.</summary>
+			FLASHW_ALL = 3,
+
+			/// <summary>Flash continuously, until the FLASHW_STOP flag is set.</summary>
+			FLASHW_TIMER = 4,
+
+			/// <summary>Flash continuously until the window comes to the foreground.</summary>
+			FLASHW_TIMERNOFG = 12,
+		}
+
+		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct DEV_BROADCAST_HDR
 		{
@@ -107,6 +131,7 @@ namespace Rylogic.Interop.Win32
 			}
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = NameLen)] private char[] name_;
 		}
+
 
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		public delegate IntPtr WNDPROC(HWND hwnd, int code, IntPtr wparam, IntPtr lparam);
@@ -194,6 +219,22 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("user32.dll")]
 		public static extern int EnumWindows(EnumWindowsProc ewp, int lParam);
+
+		/// <summary>Flash an application window</summary>
+		public static bool FlashWindow(HWND hwnd, EFlashWindowFlags flags, uint count = uint.MaxValue, uint flash_rate = 0)
+		{
+			var info = new FLASHWINFO
+			{
+				cbSize = (uint)Marshal.SizeOf<FLASHWINFO>(),
+				hwnd = hwnd,
+				dwFlags = (uint)flags,
+				uCount = count,
+				dwTimeout = flash_rate,
+			};
+			return FlashWindowEx_(ref info);
+		}
+		[DllImport("user32.dll", EntryPoint = "FlashWindowEx")]
+		private static extern bool FlashWindowEx_(ref FLASHWINFO pwfi);
 
 		[DllImport("user32.dll")]
 		public static extern HWND GetAncestor(HWND hwnd, uint flags);
