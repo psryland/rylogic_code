@@ -580,10 +580,10 @@ namespace Rylogic.Gui.WPF.TextEditor
 		}
 
 		/// <inheritdoc/>
-		Line? RedBlack_.IAccessors<Line>.Child(int side, Line? elem)
+		Line RedBlack_.IAccessors<Line>.Child(int side, Line? elem)
 		{
-			if (elem == null) return null;
-			return side < 0 ? elem.m_lhs : elem.m_rhs;
+			if (elem == null) return null!;
+			return side < 0 ? elem.m_lhs! : elem.m_rhs!;
 		}
 
 		/// <inheritdoc/>
