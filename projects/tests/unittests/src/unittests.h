@@ -46,7 +46,6 @@
 #include "pr\collision\shape_sphere.h"
 #include "pr\collision\shape_triangle.h"
 #include "pr\collision\support.h"
-#include "pr\collision\unit_tests.h"
 #include "pr\common\algorithm.h"
 #include "pr\common\alloca.h"
 #include "pr\common\allocator.h"

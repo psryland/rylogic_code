@@ -116,7 +116,7 @@ namespace pr::collision
 	// Forward declare shape types and standard functions
 	#define PR_COLLISION_SHAPE_FORWARD(name, comp)\
 	struct Shape##name;\
-	template <typename = void> BBox pr_vectorcall CalcBox(Shape##name const& shape);\
+	template <typename = void> BBox pr_vectorcall CalcBBox(Shape##name const& shape);\
 	template <typename = void> void pr_vectorcall ShiftCentre(Shape##name&, v4_cref<> shift);\
 	template <typename = void> v4   pr_vectorcall SupportVertex(Shape##name const&, v4_cref<> direction, int, int&);\
 	template <typename = void> void pr_vectorcall ClosestPoint(Shape##name const& shape, v4_cref<> point, float& distance, v4& closest);
@@ -146,7 +146,7 @@ namespace pr::collision
 	template <typename T> concept CompositeShapeType = is_shape_v<T> && is_shape<T>::composite;
 	static_assert(is_shape_v<Shape>);
 
-	// Shape cast helpers
+	// Cast 'Shape' to a specific Shape type
 	template <ShapeType TShape> inline TShape const& shape_cast(Shape const& shape)
 	{
 		assert("Invalid shape cast" && shape.m_type == is_shape<TShape>::shape_type);
@@ -167,6 +167,8 @@ namespace pr::collision
 		assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<TShape>::shape_type));
 		return reinterpret_cast<TShape*>(shape);
 	}
+
+	// Cast a Shape type to 'Shape'
 	template <ShapeType TShape> inline Shape const& shape_cast(TShape const& shape)
 	{
 		return shape.m_base;
@@ -183,6 +185,7 @@ namespace pr::collision
 	{
 		return shape ? &shape->m_base : nullptr;
 	}
+
 	inline Shape const& shape_cast(Shape const& shape)
 	{
 		return shape;
