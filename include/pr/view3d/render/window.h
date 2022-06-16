@@ -68,11 +68,6 @@ namespace pr::rdr
 		// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 		v2 Dpi() const
 		{
-			// Don't cache the DPI value. It can change at any point.
-			#if WINVER >= 0x0605
-			auto dpi = m_hwnd != nullptr ? (float)::GetDpiForWindow(m_hwnd) : (float)::GetDpiForSystem();
-			return v2(dpi, dpi);
-			#else
 			// Support old windows by dynamically looking for the new DPI functions
 			// and falling back to the GDI functions if not available.
 			auto user32 = Scope<HMODULE>(
@@ -81,33 +76,24 @@ namespace pr::rdr
 
 			// Look for the new windows functions for DPI
 			auto GetDpiForWindowFunc = reinterpret_cast<UINT(far __stdcall*)(HWND)>(GetProcAddress(user32.m_state, "GetDpiForWindow"));
-			auto GetDpiForSystemFunc = reinterpret_cast<UINT(far __stdcall*)()>(GetProcAddress(user32.m_state, "GetDpiForSystem"));
-
 			if (m_hwnd != nullptr && GetDpiForWindowFunc != nullptr)
 			{
 				auto dpi = (float)GetDpiForWindowFunc(m_hwnd);
 				return v2(dpi, dpi);
 			}
+
+			// Fallback to the system DPI function
+			auto GetDpiForSystemFunc = reinterpret_cast<UINT(far __stdcall*)()>(GetProcAddress(user32.m_state, "GetDpiForSystem"));
 			if (GetDpiForSystemFunc != nullptr)
 			{
 				auto dpi = (float)GetDpiForSystemFunc();
 				return v2(dpi, dpi);
 			}
 
+			// Fallback to GDI+
 			gdi::Graphics g(m_hwnd);
 			auto dpi = v2(g.GetDpiX(), g.GetDpiY());
 			return dpi;
-			//auto desktop_dc = CreateStateScope(
-			//	[&] { return g.GetHDC(); },
-			//	[&](HDC dc) { g.ReleaseHDC(dc); });
-			//
-			//auto logical_screen_height  = GetDeviceCaps(desktop_dc.m_state, VERTRES);
-			//auto physical_screen_height = GetDeviceCaps(desktop_dc.m_state, DESKTOPVERTRES); 
-			//if (logical_screen_height  != 0 && physical_screen_height != 0)
-			//	dpi = physical_screen_height * 96.0f / logical_screen_height;
-			//else
-			//	dpi = 96.0f;
-			#endif
 		}
 
 		// Create the render target and depth buffer

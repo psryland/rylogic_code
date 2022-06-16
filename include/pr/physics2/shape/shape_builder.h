@@ -10,12 +10,14 @@
 
 namespace pr::physics
 {
-	// An object for building collision shapes
-	// Note: the shape builder is part of the physics library, not the collision library
-	// because it's main job is to determine the inertia properties of the shape, which
-	// depends on physics materials, inertia matrices, etc.
 	struct ShapeBuilder
 	{
+		// Notes:
+		//  - An object for building collision shapes.
+		//  - The shape builder is part of the physics library, not the collision library
+		//    because it's main job is to determine the inertia properties of the shape, which
+		//    depends on physics materials, inertia matrices, etc.
+
 		// Settings for the shape builder
 		struct Settings
 		{
@@ -79,7 +81,7 @@ namespace pr::physics
 		}
 
 		// Add shapes to the current model.
-		template <typename TShape, typename = enable_if_shape<TShape>> void AddShape(TShape const& shape)
+		template <ShapeType TShape> void AddShape(TShape const& shape)
 		{
 			// Create a new primitive to contain the shape
 			auto prim = std::make_unique<Prim>();
@@ -97,7 +99,7 @@ namespace pr::physics
 
 			// Validate the primitive
 			if (prim->m_mp.m_mass < m_settings.m_min_volume * density)
-				throw std::exception("Shape volume is too small");
+				throw std::runtime_error("Shape volume is too small");
 			if (prim->m_mp.m_mass < m_settings.m_min_mass)
 				prim->m_mp.m_mass = m_settings.m_min_mass;
 
@@ -107,7 +109,7 @@ namespace pr::physics
 
 		// Serialise the shape data.
 		// It should be possible to insert the shape returned from here into a larger shape.
-		// The highest level shape in a composite shape should have a shape_to_model transform of identity.
+		// The highest level shape in a composite shape should have a shape_to_parent transform of identity.
 		// Shape flags only apply to composite shape types
 		Shape* BuildShape(ByteData<16>& model_data, MassProperties& mp, v4& model_to_CoMframe, EShape container = EShape::Array, Shape::EFlags shape_flags = Shape::EFlags::None)
 		{
@@ -150,8 +152,11 @@ namespace pr::physics
 
 					// Update the array shape header
 					auto& arr = model_data.at_byte_ofs<ShapeArray>(base);
-					arr = ShapeArray(model.m_prim_list.size(), model_data.size() - base, m4x4Identity, 0, shape_flags);
-					arr.m_base.m_bbox = model.m_bbox;
+					arr.Complete(model.m_prim_list.size());
+					arr.m_base.m_flags = shape_flags;
+					//auto& arr = model_data.at_byte_ofs<ShapeArray>(base);
+					//arr = ShapeArray(model.m_prim_list.size(), model_data.size() - base, m4x4Identity, 0, shape_flags);
+					//arr.m_base.m_bbox = model.m_bbox;
 
 					// Return the shape
 					return &arr.m_base;

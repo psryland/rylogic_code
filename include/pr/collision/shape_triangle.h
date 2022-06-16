@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -13,9 +13,8 @@ namespace pr::collision
 		Shape m_base;
 		m4x4  m_v; // <x,y,z> = verts of the triangle, w = normal. Cross3(w, y-x) should point toward the interior of the triangle
 
-		ShapeTriangle() = default;
-		ShapeTriangle(v4_cref<> a, v4_cref<> b, v4_cref<> c, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
-			:m_base(EShape::Triangle, sizeof(ShapeTriangle), shape_to_model, material_id, flags)
+		explicit ShapeTriangle(v4_cref<> a, v4_cref<> b, v4_cref<> c, m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			:m_base(EShape::Triangle, sizeof(ShapeTriangle), shape_to_parent, material_id, flags)
 			,m_v(a, b, c, Normalise(Cross3(b-a,c-b)))
 		{
 			assert(a.w == 0.0f && b.w == 0.0f && c.w == 0.0f);
@@ -38,20 +37,22 @@ namespace pr::collision
 			return &m_base;
 		}
 	};
-	static_assert(is_shape<ShapeTriangle>::value, "");
+	static_assert(is_shape_v<ShapeTriangle>);
 
-	// Return the bounding box for a sphere shape
-	inline BBox CalcBBox(ShapeTriangle const& shape)
+	// Return the bounding box for a triangle shape
+	template <typename>
+	BBox pr_vectorcall CalcBBox(ShapeTriangle const& shape)
 	{
-		auto bbox = BBox::Reset();
-		Grow(bbox, shape.m_v.x);
-		Grow(bbox, shape.m_v.y);
-		Grow(bbox, shape.m_v.z);
-		return shape.m_base.m_s2p * bbox;
+		auto bb = BBox::Reset();
+		Grow(bb, shape.m_v.x);
+		Grow(bb, shape.m_v.y);
+		Grow(bb, shape.m_v.z);
+		return bb;
 	}
 
 	// Shift the centre of a triangle
-	inline void ShiftCentre(ShapeTriangle& shape, v4 const& shift)
+	template <typename>
+	void pr_vectorcall ShiftCentre(ShapeTriangle& shape, v4 const& shift)
 	{
 		assert(shift.w == 0.0f);
 		if (FEql(shift, v4Zero)) return;
@@ -62,7 +63,8 @@ namespace pr::collision
 	}
 
 	// Return a support vertex for a triangle
-	inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, int, int& sup_vert_id)
+	template <typename>
+	v4 pr_vectorcall SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, int, int& sup_vert_id)
 	{
 		auto d = v4{
 			Dot3(direction, shape.m_v.x),
@@ -75,7 +77,8 @@ namespace pr::collision
 	}
 
 	// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
-	inline void ClosestPoint(ShapeTriangle const& shape, v4_cref<> point, float& distance, v4& closest)
+	template <typename>
+	void pr_vectorcall ClosestPoint(ShapeTriangle const& shape, v4_cref<> point, float& distance, v4& closest)
 	{
 		closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
 		distance = Length(point - closest);

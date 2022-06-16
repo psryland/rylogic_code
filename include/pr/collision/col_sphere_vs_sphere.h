@@ -14,7 +14,7 @@ namespace pr::collision
 {
 	// Test for collision between two spheres
 	template <typename Penetration>
-	void SphereVsSphere(Shape const& lhs_, m4_cref<> l2w_, Shape const& rhs_, m4_cref<> r2w_, Penetration& pen)
+	void pr_vectorcall SphereVsSphere(Shape const& lhs_, m4_cref<> l2w_, Shape const& rhs_, m4_cref<> r2w_, Penetration& pen)
 	{
 		auto& lhs = shape_cast<ShapeSphere>(lhs_);
 		auto& rhs = shape_cast<ShapeSphere>(rhs_);
@@ -29,7 +29,7 @@ namespace pr::collision
 	}
 
 	// Returns true if 'lhs' intersects 'rhs'
-	inline bool SphereVsSphere(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w)
+	inline bool pr_vectorcall SphereVsSphere(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w)
 	{
 		TestPenetration p;
 		SphereVsSphere(lhs, l2w, rhs, r2w, p);
@@ -37,7 +37,7 @@ namespace pr::collision
 	}
 
 	// Returns true if 'lhs' and 'rhs' are intersecting.
-	inline bool SphereVsSphere(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& contact)
+	inline bool pr_vectorcall SphereVsSphere(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& contact)
 	{
 		ContactPenetration p;
 		SphereVsSphere(lhs, l2w, rhs, r2w, p);
@@ -59,3 +59,45 @@ namespace pr::collision
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/ldraw/ldr_helper.h"
+#include "pr/collision/ldraw.h"
+
+namespace pr::collision
+{
+	PRUnitTest(CollisionSphereVsSphere)
+	{
+		auto lhs = ShapeSphere{0.3f};
+		auto rhs = ShapeSphere{0.4f};
+		m4x4 l2w_[] =
+		{
+			m4x4Identity,
+		};
+		m4x4 r2w_[] =
+		{
+			m4x4::Transform(maths::tau_by_8f, maths::tau_by_8f, maths::tau_by_8f, v4(0.2f, 0.3f, 0.1f, 1.0f)),
+		};
+
+		std::default_random_engine rng;
+		for (int i = 0; i != 20; ++i)
+		{
+			Contact c;
+			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : m4x4::Random(rng, v4::Origin(), 0.5f);
+
+			std::string s;
+			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
+			ldr::Shape(s, "rhs", 0x3000FF00, rhs, r2w);
+			//ldr::Write(s, L"collision_unittests.ldr");
+			if (SphereVsSphere(lhs, l2w, rhs, r2w, c))
+			{
+				ldr::LineD(s, "sep_axis", Colour32Yellow, c.m_point, c.m_axis);
+				ldr::Box(s, "pt0", Colour32Yellow, 0.01f, c.m_point - 0.5f*c.m_depth*c.m_axis);
+				ldr::Box(s, "pt1", Colour32Yellow, 0.01f, c.m_point + 0.5f*c.m_depth*c.m_axis);
+			}
+			//ldr::Write(s, L"collision_unittests.ldr");
+		}
+	}
+}
+#endif

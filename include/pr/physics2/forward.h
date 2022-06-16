@@ -3,11 +3,9 @@
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
 #pragma once
-
 #include <array>
 #include <type_traits>
 #include <algorithm>
-
 #include "pr/common/to.h"
 #include "pr/common/cast.h"
 #include "pr/common/flags_enum.h"

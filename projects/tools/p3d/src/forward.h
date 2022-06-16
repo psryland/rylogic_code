@@ -14,6 +14,7 @@
 
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
+#include "pr/common/cast.h"
 #include "pr/common/hash.h"
 #include "pr/common/hresult.h"
 #include "pr/common/command_line.h"

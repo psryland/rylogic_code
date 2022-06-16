@@ -8,6 +8,7 @@ using System.Net.Cache;
 using System.Text;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Rylogic.Extn;
+using Rylogic.PolyFill;
 using Rylogic.Utility;
 
 namespace Rylogic.Container
@@ -150,7 +151,7 @@ namespace Rylogic.Container
 			}
 
 			// Return the root, ensuring it's black
-			ops.Child(0, default, root);
+			ops.Child(0, default!, root);
 			ops.Colour(root, EColour.Black);
 			return root;
 		}
@@ -232,7 +233,7 @@ namespace Rylogic.Container
 				if (repl_side == Left) repl_parent = replacement;       // if 'repl_parent' is 'subst', 'replacement' is now 'repl_parent'
 
 				// Put 'subst' where 'replacement' was
-				ops.Child(Right, subst, default);         // 'subst' is the right-most of the left sub-tree so childR is null
+				ops.Child(Right, subst, default!);         // 'subst' is the right-most of the left sub-tree so childR is null
 				ops.Child(Left, subst, repl_childL);      // attach 'replacement's left sub-tree to 'subst'
 				ops.Child(repl_side, repl_parent, subst); // attach 'subst' as a child of 'repl_parent'
 
@@ -266,7 +267,7 @@ namespace Rylogic.Container
 
 			// In all cases we replace 'node' with its child, but the
 			// colour fix-up depends on the colours of 'node' and 'child'.
-			ops.Child(node_side, stack.Top, child);
+			ops.Child(node_side, stack.Top, child!);
 			if (stack.Count == 0)
 			{
 				// If 'node' was the root, then 'child' becomes the root.
@@ -283,7 +284,7 @@ namespace Rylogic.Container
 			{
 				// If the child is red, then the number of black nodes
 				// can be preserved by promoting the red child to black.
-				if (ops.Colour(child) == EColour.Red)
+				if (ops.Colour(child!) == EColour.Red)
 				{
 					ops.Colour(child!, EColour.Black);
 				}
@@ -408,7 +409,7 @@ namespace Rylogic.Container
 			}
 
 			// Return the root, ensuring it's black
-			ops.Child(0, default, root);
+			ops.Child(0, default!, root);
 			ops.Colour(root, EColour.Black);
 			return root;
 		}
@@ -542,7 +543,7 @@ namespace Rylogic.Container
 		private class Stack<T>
 		{
 			private readonly List<T> m_list = new List<T>();
-			[MaybeNull] public T Top  => m_list.Count != 0 ? m_list[m_list.Count + ~0] : default;
+			[MaybeNull] public T Top  => m_list.Count != 0 ? m_list[m_list.Count + ~0] : default!;
 			public int Count          => m_list.Count;
 			public T Bottom           => m_list[0];
 			public T Pop()            => m_list.PopBack();
@@ -601,10 +602,10 @@ namespace Rylogic.UnitTests
 			}
 
 			/// <inheritdoc/>
-			Sorta? RedBlack_.IAccessors<Sorta>.Child(int side, Sorta? elem)
+			Sorta RedBlack_.IAccessors<Sorta>.Child(int side, Sorta? elem)
 			{
-				if (elem == null) return null;
-				return side < 0 ? elem.m_left : elem.m_right;
+				if (elem == null) return null!;
+				return side < 0 ? elem.m_left! : elem.m_right!;
 			}
 			void RedBlack_.IAccessors<Sorta>.Child(int side, Sorta? elem, Sorta? child)
 			{
