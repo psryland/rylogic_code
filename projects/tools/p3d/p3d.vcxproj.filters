@@ -18,18 +18,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\geometry\3ds.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\p3d.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\stl.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\obj.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="src\commands\remove_degenerates.h">
       <Filter>src\commands</Filter>
     </ClInclude>
@@ -44,6 +32,21 @@
     </ClInclude>
     <ClInclude Include="src\commands\model_io.h">
       <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\obj.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\stl.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

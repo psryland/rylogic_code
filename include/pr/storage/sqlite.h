@@ -74,11 +74,11 @@ namespace pr::sqlite
 	#define PR_SQLITE_TABLE(type_name, table_constraints)\
 	static pr::sqlite::TableMetaData<type_name> const& Sqlite_TableMetaData()\
 	{\
-		using namespace pr::sqlite;\
-		struct MetaData :TableMetaData<type_name>\
+		struct MetaData :pr::sqlite::TableMetaData<type_name>\
 		{\
+			using base_t = typename pr::sqlite::TableMetaData<type_name>;\
 			MetaData()\
-				:TableMetaData<type_name>(#type_name, table_constraints)\
+				:base_t(#type_name, table_constraints)\
 			{
 				// Columns that perform type converting on read/write to the record type
 				#define PR_SQLITE_COL_AS_CUST(column_name, adapter, datatype, constraints)\
@@ -109,7 +109,7 @@ namespace pr::sqlite
 				PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
 
 				#define PR_SQLITE_TABLE_END()\
-				Validate();\
+				base_t::Validate();\
 			}\
 		};\
 		static MetaData meta;\
@@ -538,8 +538,8 @@ namespace pr::sqlite
 	}
 	template <typename Cont> inline void bind_blobcont(sqlite3_stmt* stmt, int idx, Cont const& value)
 	{
-		static_assert(std::is_trivially_copyable_v<Cont::value_type>, "Cont must contain POD elements");
-		static_assert(std::is_same_v<Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
+		static_assert(std::is_trivially_copyable_v<typename Cont::value_type>, "Cont must contain POD elements");
+		static_assert(std::is_same_v<typename Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
 
 		auto first = std::begin(value), last  = std::end(value);
 		size_t length = (last - first) * sizeof(*first);
@@ -644,8 +644,8 @@ namespace pr::sqlite
 	}
 	template <typename Cont> inline                       Cont& read_blobcont(sqlite3_stmt* stmt, int col, Cont& value)
 	{
-		static_assert(std::is_trivially_copyable_v<Cont::value_type>, "Blobs must be POD");
-		static_assert(std::is_same_v<Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
+		static_assert(std::is_trivially_copyable_v<typename Cont::value_type>, "Blobs must be POD");
+		static_assert(std::is_same_v<typename Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
 
 		// Sqlite returns null if this column is null
 		auto ptr = static_cast<Cont::value_type const*>(sqlite3_column_blob(stmt, col)); // have to call this first
@@ -1641,7 +1641,7 @@ namespace pr::sqlite
 				short        m_short;
 				ushort       m_ushort;
 				int          m_int;
-				uint32_t         m_uint;
+				uint32_t     m_uint;
 				__int64      m_int64;
 				uint64       m_uint64;
 				float        m_float;

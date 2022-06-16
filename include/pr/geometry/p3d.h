@@ -281,10 +281,10 @@ namespace pr::geometry::p3d
 			return m_cont.data() + m_cont.size();
 		}
 	};
-	struct VBase { static constexpr v4 Default = v4Origin; };
+	struct VBase { static constexpr v4 Default = v4::Origin(); };
 	struct CBase { static constexpr Colour32 Default = Colour32White; };
-	struct NBase { static constexpr v4 Default = v4Zero; };
-	struct TBase { static constexpr v2 Default = v2Zero; };
+	struct NBase { static constexpr v4 Default = v4::Zero(); };
+	struct TBase { static constexpr v2 Default = v2::Zero(); };
 	using VCont = Cont<v4, VBase>;
 	using CCont = Cont<Colour32, CBase>;
 	using NCont = Cont<v4, NBase>;

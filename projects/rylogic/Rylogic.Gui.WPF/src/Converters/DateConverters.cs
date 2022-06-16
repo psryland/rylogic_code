@@ -53,7 +53,9 @@ namespace Rylogic.Gui.WPF.Converters
 		{
 			if (value is DateTimeOffset dto)
 			{
-				return dto.ToString("yyyy-MM-dd HH:mm:ss");
+				return parameter is string s
+					? dto.ToString(s)
+					: dto.ToString("yyyy-MM-dd HH:mm:ss");
 			}
 			if (value is double db)
 			{
@@ -91,6 +93,47 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
+			if (targetType == typeof(DateTimeOffset))
+			{
+				if (value is string s)
+				{
+					return parameter is string fmt
+						? DateTimeOffset.ParseExact(s, fmt, null)
+						: DateTimeOffset.Parse(s);
+				}
+				if (value is long ticks)
+				{
+					return new DateTimeOffset(ticks, TimeSpan.Zero);
+				}
+			}
+			if (targetType == typeof(TimeSpan))
+			{
+				if (value is double d && parameter is string fmt)
+				{
+					return fmt switch
+					{
+						"d" => TimeSpan.FromDays(d),
+						"days" => TimeSpan.FromDays(d),
+						"h" => TimeSpan.FromHours(d),
+						"hrs" => TimeSpan.FromHours(d),
+						"hours" => TimeSpan.FromHours(d),
+						"m" => TimeSpan.FromMinutes(d),
+						"min" => TimeSpan.FromMinutes(d),
+						"minutes" => TimeSpan.FromMinutes(d),
+						"s" => TimeSpan.FromSeconds(d),
+						"sec" => TimeSpan.FromSeconds(d),
+						"seconds" => TimeSpan.FromSeconds(d),
+						"ms" => TimeSpan.FromMilliseconds(d),
+						"msec" => TimeSpan.FromMilliseconds(d),
+						"milliseconds" => TimeSpan.FromMilliseconds(d),
+						_ => throw new Exception($"Unknown time unit given for parameter: {fmt}"),
+					};
+				}
+				if (value is string s && TimeSpan_.TryParseExpr(s) is TimeSpan ts)
+				{
+					return ts;
+				}
+			}
 			throw new NotImplementedException();
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)

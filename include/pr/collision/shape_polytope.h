@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -29,8 +29,8 @@ namespace pr::collision
 			unsigned short m_first; // Byte offset to the first neighbour
 			unsigned short m_count; // Number of neighbours
 
-			Idx const* begin() const      { return reinterpret_cast<Idx const*>(this) + m_first; }
-			Idx*       begin()            { return reinterpret_cast<Idx*      >(this) + m_first; }
+			Idx const* begin() const      { return type_ptr<Idx>(byte_ptr(this) + m_first); }
+			Idx*       begin()            { return type_ptr<Idx>(byte_ptr(this) + m_first); }
 			Idx const* end() const        { return begin() + m_count; }
 			Idx*       end()              { return begin() + m_count; }
 			Idx const& nbr(int idx) const { return begin()[idx]; }
@@ -43,47 +43,66 @@ namespace pr::collision
 		// v4   m_vert[m_vert_count]
 		// Face m_face[m_face_count]
 		// Nbrs m_nbrs[m_vert_count]
-		// Idx  m_nbr[...]
+		// Idx  m_nbr[sum(m_nbrs[i].m_count)]
 
-		ShapePolytope() = default;
-		ShapePolytope(int vert_count, int face_count, size_t size_in_bytes, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
-			:m_base(EShape::Polytope, size_in_bytes, shape_to_model, material_id, flags)
-			,m_vert_count(vert_count)
-			,m_face_count(face_count)
+		explicit ShapePolytope(m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			:m_base(EShape::Polytope, sizeof(ShapePolytope), shape_to_parent, material_id, flags)
+			,m_vert_count()
+			,m_face_count()
 		{
 			// Careful: We can't be sure of what follows this object in memory.
 			// The polytope data that belongs to this array may not be there yet.
 			// Differ calculating the bounding box to the caller
 		}
+		void Complete(int vert_count, int face_count)
+		{
+			m_vert_count = vert_count;
+			m_face_count = face_count;
+
+			// Determine the size of the neighbour array
+			auto nbr_count = 0;
+			for (Nbrs const *n = nbrs_beg(), *n_end = nbrs_end(); n != n_end; ++n)
+				nbr_count += n->m_count;
+
+			m_base.m_size = sizeof(ShapePolytope) +
+				sizeof(v4) * m_vert_count +
+				sizeof(Face) * m_face_count +
+				sizeof(Nbrs) * m_vert_count +
+				sizeof(Idx) * nbr_count;
+		
+			// Find the bounding box
+			m_base.m_bbox = CalcBBox(*this);
+		}
 
 		// Vertex accessors
-		v4 const* vert_beg() const              { return reinterpret_cast<v4 const*>(this + 1); }
-		v4*       vert_beg()                    { return reinterpret_cast<v4*      >(this + 1); }
+		v4 const* vert_beg() const              { return type_ptr<v4>(this + 1); }
+		v4*       vert_beg()                    { return type_ptr<v4>(this + 1); }
 		v4 const* vert_end() const              { return vert_beg() + m_vert_count; }
 		v4*       vert_end()                    { return vert_beg() + m_vert_count; }
 		v4 const& vertex(std::size_t idx) const { return vert_beg()[idx]; }
 		v4&       vertex(std::size_t idx)       { return vert_beg()[idx]; }
 
 		// Face accessors
-		Face const* face_beg() const    { return reinterpret_cast<Face const*>(vert_end()); }
-		Face*       face_beg()          { return reinterpret_cast<Face*      >(vert_end()); }
+		Face const* face_beg() const    { return type_ptr<Face>(vert_end()); }
+		Face*       face_beg()          { return type_ptr<Face>(vert_end()); }
 		Face const* face_end() const    { return face_beg() + m_face_count; }
 		Face*       face_end()          { return face_beg() + m_face_count; }
 		Face const& face(int idx) const { return face_beg()[idx]; }
 		Face&       face(int idx)       { return face_beg()[idx]; }
 
-		// Neighbour accessors
-		Nbrs const* nbr_beg() const    { return reinterpret_cast<Nbrs const*>(face_end()); }
-		Nbrs*       nbr_beg()          { return reinterpret_cast<Nbrs*      >(face_end()); }
-		Nbrs const* nbr_end() const    { return nbr_beg() + m_vert_count; }
-		Nbrs*       nbr_end()          { return nbr_beg() + m_vert_count; }
-		Nbrs const& nbr(int idx) const { return nbr_beg()[idx]; }
-		Nbrs&       nbr(int idx)       { return nbr_beg()[idx]; }
+		// Neighbours accessors
+		Nbrs const* nbrs_beg() const    { return type_ptr<Nbrs>(face_end()); }
+		Nbrs*       nbrs_beg()          { return type_ptr<Nbrs>(face_end()); }
+		Nbrs const* nbrs_end() const    { return nbrs_beg() + m_vert_count; }
+		Nbrs*       nbrs_end()          { return nbrs_beg() + m_vert_count; }
+		Nbrs const& nbrs(int idx) const { return nbrs_beg()[idx]; }
+		Nbrs&       nbrs(int idx)       { return nbrs_beg()[idx]; }
 
-		// Opposite vertex
-		v4 const& opp_vertex(int idx) const { return vert_beg()[*nbr(idx).begin()]; }
-		v4&       opp_vertex(int idx)       { return vert_beg()[*nbr(idx).begin()]; }
+		// Opposite side vertex
+		v4 const& opp_vertex(int idx) const { return vert_beg()[*nbrs(idx).begin()]; }
+		v4&       opp_vertex(int idx)       { return vert_beg()[*nbrs(idx).begin()]; }
 
+		// Conversion
 		operator Shape const&() const
 		{
 			return m_base;
@@ -101,22 +120,25 @@ namespace pr::collision
 			return &m_base;
 		}
 	};
-	static_assert(is_shape<ShapePolytope>::value, "");
+	static_assert(is_shape_v<ShapePolytope>);
 	using PolyIdx       = ShapePolytope::Idx;
 	using ShapePolyFace = ShapePolytope::Face;
 	using ShapePolyNbrs = ShapePolytope::Nbrs;
 
 	// Return the bounding box for a polytope
-	inline BBox CalcBBox(ShapePolytope const& shape)
+	template <typename>
+	BBox pr_vectorcall CalcBBox(ShapePolytope const& shape)
 	{
-		auto bbox = BBox::Reset();
+		auto bb = BBox::Reset();
 		for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v)
-			Grow(bbox, *v);
-		return shape.m_base.m_s2p * bbox;
+			Grow(bb, *v);
+
+		return bb;
 	}
 
 	// Return the volume of the polytope
-	inline float CalcVolume(ShapePolytope const& shape)
+	template <typename = void>
+	float CalcVolume(ShapePolytope const& shape)
 	{
 		auto volume = 0.0f;
 		for (ShapePolyFace const *f = shape.face_beg(), *f_end = shape.face_end(); f != f_end; ++f)
@@ -130,7 +152,8 @@ namespace pr::collision
 	}
 
 	// Return the centre of mass position of the polytope
-	inline v4 CalcCentreOfMass(ShapePolytope const& shape)
+	template <typename = void>
+	v4 CalcCentreOfMass(ShapePolytope const& shape)
 	{
 		assert("Centre of mass is undefined for an empty polytope" && shape.m_vert_count != 0 && shape.m_face_count != 0);
 
@@ -161,7 +184,8 @@ namespace pr::collision
 	// Shift the verts of the polytope so they are centred on a new position.
 	// 'shift' should be in 'shape' space. NOTE: This invalidates the inertia matrix.
 	// You will need to translate the inertia matrix by the same shift.
-	inline void ShiftCentre(ShapePolytope& shape, v4 const& shift)
+	template <typename>
+	void pr_vectorcall ShiftCentre(ShapePolytope& shape, v4_cref<> shift)
 	{
 		assert(shift.w == 0.0f);
 		for (v4 *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) *v -= shift;
@@ -169,7 +193,8 @@ namespace pr::collision
 	}
 
 	// Return a support vertex for a polytope
-	inline v4 SupportVertex(ShapePolytope const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
+	template <typename>
+	v4 pr_vectorcall SupportVertex(ShapePolytope const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
 	{
 		assert("Invalid hint vertex index" && hint_vert_id >= 0 && hint_vert_id < shape.m_vert_count);
 		assert("Direction is too short" && Length(direction) > maths::tinyf);
@@ -192,7 +217,7 @@ namespace pr::collision
 		do
 		{
 			nearest_vertex = support_vertex;
-			auto& nbrhdr = shape.nbr(sup_vert_id);
+			auto& nbrhdr = shape.nbrs(sup_vert_id);
 			for (PolyIdx const *n = nbrhdr.begin() + skip_first_nbr, *nend = nbrhdr.end(); n != nend; ++n)
 			{
 				// There are two possible ways we can do this, either by moving to the
@@ -252,7 +277,8 @@ namespace pr::collision
 	// Returns the longest/shortest axis of a polytope in 'direction' (in polytope space)
 	// Searching starts at 'hint_vert_id'. The spanning vertices are 'vert_id0' and 'vert_id1'
 	// 'major' is true for the longest axis, false for the shortest axis
-	inline void GetAxis(ShapePolytope const& shape, v4& direction, int hint_vert_id, int& vert_id0, int& vert_id1, bool major)
+	template <typename>
+	void GetAxis(ShapePolytope const& shape, v4& direction, int hint_vert_id, int& vert_id0, int& vert_id1, bool major)
 	{
 		assert(hint_vert_id  >= 0 && hint_vert_id < shape.m_vert_count);
 
@@ -260,7 +286,7 @@ namespace pr::collision
 
 		vert_id0 = hint_vert_id;
 		auto V1 = &shape.vertex(vert_id0);
-		auto V2 = &shape.vertex(*shape.nbr(vert_id0).begin());	// The first neighbour is always the most distant
+		auto V2 = &shape.vertex(*shape.nbrs(vert_id0).begin());	// The first neighbour is always the most distant
 
 		direction = *V1 - *V2;
 		auto span_lensq = LengthSq(direction);
@@ -269,11 +295,11 @@ namespace pr::collision
 			hint_vert_id = vert_id0;
 
 			// Look for a neighbour with a longer span
-			auto& nbr = shape.nbr(vert_id0);
+			auto& nbr = shape.nbrs(vert_id0);
 			for (PolyIdx const *n = nbr.begin() + 1, *nend = nbr.end(); n < nend; ++n)
 			{
 				auto v1 = &shape.vertex(*n);
-				auto v2 = &shape.vertex(*shape.nbr(*n).begin());
+				auto v2 = &shape.vertex(*shape.nbrs(*n).begin());
 				auto span = *v1 - *v2;
 				auto len_sq = LengthSq(span);
 				if ((len_sq > span_lensq + eps) == major)
@@ -286,29 +312,32 @@ namespace pr::collision
 			}
 		}
 		while (hint_vert_id != vert_id0);
-		vert_id1 = *shape.nbr(vert_id0).begin();
+		vert_id1 = *shape.nbrs(vert_id0).begin();
 	}
 
 	// Return the number of vertices in a polytope
-	inline int VertCount(ShapePolytope const& shape)
+	template <typename = void>
+	int VertCount(ShapePolytope const& shape)
 	{
 		return shape.m_vert_count;
 	}
 
 	// Return the number of edges in a polytope
-	inline int EdgeCount(ShapePolytope const& shape)
+	template <typename = void>
+	int EdgeCount(ShapePolytope const& shape)
 	{
 		// The number of edges in the polytope is the number of
 		// neighbours minus the artificial neighbours over 2.
 		auto nbr_count = 0;
-		for (ShapePolyNbrs const* n = shape.nbr_beg(), *nend = shape.nbr_end(); n != nend; ++n)
+		for (ShapePolyNbrs const* n = shape.nbrs_beg(), *nend = shape.nbrs_end(); n != nend; ++n)
 			nbr_count += n->m_count;
 
 		return (nbr_count - shape.m_vert_count) / 2;
 	}
 
 	// Return the number of faces in a polytope
-	inline int FaceCount(ShapePolytope const& shape)
+	template <typename = void>
+	int FaceCount(ShapePolytope const& shape)
 	{
 		// Use Euler's formula: F - E + V = 2. => F = 2 + E - V
 		return 2 + EdgeCount(shape) - VertCount(shape);
@@ -316,7 +345,8 @@ namespace pr::collision
 
 	// Generate the verts of a polytope. 'verts' should point to a buffer of v4's with
 	// a length equal to the value returned from 'VertCount'
-	inline void GenerateVerts(ShapePolytope const& shape, v4* verts, v4* verts_end)
+	template <typename = void>
+	void GenerateVerts(ShapePolytope const& shape, v4* verts, v4* verts_end)
 	{
 		assert("buffer too small" && int(verts_end - verts) >= shape.m_vert_count); (void)verts_end;
 		memcpy(verts, shape.vert_beg(), sizeof(v4) * VertCount(shape));
@@ -324,14 +354,15 @@ namespace pr::collision
 
 	// Generate the edges of a polytope from the verts and their neighbours. 'edges' should
 	// point to a buffer of 2*the number of edges returned from 'EdgeCount'
-	inline void GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
+	template <typename = void>
+	void GenerateEdges(ShapePolytope const& shape, v4* edges, v4* edges_end)
 	{
 		assert("buffer too small" && int(edges_end - edges) >= 2 * EdgeCount(shape));
 
 		int const first_neighbour = 1; // Skip the artificial neighbour
 		auto vert_index = 0;
 		auto nbr_index = first_neighbour; 
-		auto nbrs = &shape.nbr(vert_index);
+		auto nbrs = &shape.nbrs(vert_index);
 		while (vert_index < shape.m_vert_count && edges + 2 <= edges_end)
 		{
 			*edges++ = shape.vertex(vert_index);
@@ -348,7 +379,7 @@ namespace pr::collision
 					if (++vert_index == shape.m_vert_count)
 						break;
 
-					nbrs = &shape.nbr(vert_index);
+					nbrs = &shape.nbrs(vert_index);
 					nbr_index = first_neighbour;
 				}
 			}
@@ -357,7 +388,8 @@ namespace pr::collision
 	}
 
 	// Generate faces for a polytope from the verts and their neighbours.
-	inline void GenerateFaces(ShapePolytope const& shape, int* faces, int* faces_end, int& face_count)
+	template <typename = void>
+	void GenerateFaces(ShapePolytope const& shape, int* faces, int* faces_end, int& face_count)
 	{
 		// Record the start address
 		auto faces_start = faces;
@@ -454,13 +486,14 @@ namespace pr::collision
 	}
 
 	// Remove the face data from a polytope
-	inline void StripFaces(ShapePolytope& shape)
+	template <typename = void>
+	void StripFaces(ShapePolytope& shape)
 	{
 		if (shape.m_face_count == 0)
 			return;
 
 		auto base = reinterpret_cast<char*>(&shape);
-		auto src  = reinterpret_cast<char*>(&shape.nbr(0));
+		auto src  = reinterpret_cast<char*>(&shape.nbrs(0));
 		auto dst  = reinterpret_cast<char*>(shape.face_beg());
 		auto size = shape.m_base.m_size;
 		auto bytes_to_move = size - (src - base);
@@ -473,13 +506,14 @@ namespace pr::collision
 	}
 
 	// Validate a polytope
-	inline bool Validate(ShapePolytope const& shape, bool check_com, char const** err_msg = nullptr)
+	template <typename = void>
+	bool Validate(ShapePolytope const& shape, bool check_com, char const** err_msg = nullptr)
 	{
 		auto num_real_nbrs = 0;
 		for (auto i = 0; i != shape.m_vert_count; ++i)
 		{
 			// Check the neighbours of each vertex.
-			auto& nbrs = shape.nbr(i);
+			auto& nbrs = shape.nbrs(i);
 
 			// All polytope verts should have an artificial neighbour plus >0 real neighbours
 			if (nbrs.m_count <= 1)
@@ -509,7 +543,7 @@ namespace pr::collision
 				}
 
 				// Check that there is a neighbour in both directions between 'i' and 'j'
-				auto& nbr_nbrs = shape.nbr(*j);
+				auto& nbr_nbrs = shape.nbrs(*j);
 				auto found = j == nbrs.begin(); // artificial neighbours don't point back
 				for (auto k = nbr_nbrs.begin(); k != nbr_nbrs.end() && !found; ++k)
 				{

@@ -52,10 +52,11 @@
 
 	<!-- Source -->
 	<ItemGroup>
-		<ClInclude Include="..\include\pr\geometry\3ds.h" />
-		<ClInclude Include="..\include\pr\geometry\obj.h" />
-		<ClInclude Include="..\include\pr\geometry\p3d.h" />
-		<ClInclude Include="..\include\pr\geometry\stl.h" />
+		<ClInclude Include="..\..\..\include\pr\geometry\3ds.h" />
+		<ClInclude Include="..\..\..\include\pr\geometry\obj.h" />
+		<ClInclude Include="..\..\..\include\pr\geometry\p3d.h" />
+		<ClInclude Include="..\..\..\include\pr\geometry\stl.h" />
+		<ClInclude Include="..\..\..\include\pr\geometry\utility.h" />
 		<ClCompile Include="src\main.cpp">
 			<PrecompiledHeader>Create</PrecompiledHeader>
 		</ClCompile>

@@ -362,22 +362,22 @@ namespace pr::rdr
 				auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 				geometry::GenerateNormals(
 					irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
-					[&](IType idx)
+					[&](int idx)
 					{
 						return GetP(cache.m_vcont[idx]);
 					},
-					[&](IType idx, IType orig, v4 const& norm)
+					[&](int idx, int orig, v4 const& norm)
 					{
 						assert(idx <= cache.m_vcont.size());
 						if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
 						//if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
 						SetN(cache.m_vcont[idx], norm);
 					},
-					[&](IType i0, IType i1, IType i2)
+					[&](int i0, int i1, int i2)
 					{
-						*ibuf++ = i0;
-						*ibuf++ = i1;
-						*ibuf++ = i2;
+						*ibuf++ = s_cast<IType>(i0);
+						*ibuf++ = s_cast<IType>(i1);
+						*ibuf++ = s_cast<IType>(i2);
 					});
 			}
 		};

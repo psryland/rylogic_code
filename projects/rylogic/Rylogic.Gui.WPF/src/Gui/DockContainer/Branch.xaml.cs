@@ -370,10 +370,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>True if the tree contains no content</summary>
-		public bool Empty
-		{
-			get { return !AllContent.Any(); }
-		}
+		public bool Empty => !AllContent.Any();
 
 		/// <summary>Enumerates the branches in this sub-tree (breadth first, order = order of EDockSite)</summary>
 		private IEnumerable<Branch> AllBranches

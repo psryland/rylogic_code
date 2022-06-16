@@ -25,7 +25,7 @@ namespace pr::collision
 
 	// Calculate the bounding box for a shape (in parent space, i.e. includes m_s2p)
 	template <typename>
-	BBox CalcBBox(Shape const& shape)
+	BBox pr_vectorcall CalcBBox(Shape const& shape)
 	{
 		switch (shape.m_type)
 		{
@@ -38,7 +38,7 @@ namespace pr::collision
 
 	// Shift the centre a shape. Updates 'shape.m_shape_to_model' and 'shift'
 	template <typename>
-	void ShiftCentre(Shape& shape, v4 const& shift)
+	void pr_vectorcall ShiftCentre(Shape& shape, v4_cref<> shift)
 	{
 		switch (shape.m_type)
 		{
@@ -51,7 +51,7 @@ namespace pr::collision
 
 	// Returns the support vertex for 'shape' in 'direction'. 'direction' is in shape space
 	template <typename>
-	v4 SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
+	v4 pr_vectorcall SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
 	{
 		switch (shape.m_type)
 		{
@@ -64,7 +64,7 @@ namespace pr::collision
 
 	// Returns the closest point on 'shape' to 'point'. 'shape' and 'point' are in the same space
 	template <typename>
-	void ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest)
+	void pr_vectorcall ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest)
 	{
 		switch (shape.m_type)
 		{

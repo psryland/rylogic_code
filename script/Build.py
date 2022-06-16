@@ -42,6 +42,7 @@ class EProjects(Enum):
 	LDraw = "LDraw"
 	RyLogViewer = "RyLogViewer"
 	SolarHotWater = "SolarHotWater"
+	TimeTracker = "TimeTracker"
 	RylogicTextAligner = "Rylogic.TextAligner"
 	Fishomatic = "Fishomatic"
 	AllNative = "AllNative"
@@ -627,6 +628,38 @@ class SolarHotWater(Managed):
 	#	Tools.Copy(self.msi, Tools.Path(UserVars.wwwroot, "files/ldraw", check_exists=False))
 		return
 
+# Time Tracker
+class TimeTracker(Managed):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		Managed.__init__(self, "TimeTracker", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
+		self.platforms = ["x64"]
+		return
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild("TimeTracker", self.rylogic_sln, ["Apps\\TimeTracker\\TimeTracker"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		version = Tools.Extract(Tools.Path(self.proj_dir, "TimeTracker.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying TimeTracker Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = Tools.Path(UserVars.root, "bin", "TimeTracker", check_exists=False)
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = Tools.Path(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "TimeTracker.exe"               ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "TimeTracker.dll"               ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "TimeTracker.runtimeconfig.json"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"              ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"      ), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"           ), self.bin_dir)
+		return
+
 # Fishomatic
 class Fishomatic(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
@@ -754,6 +787,7 @@ class AllManaged(Group):
 			Csex         (workspace, platforms, configs),
 			LDraw        (workspace, platforms, configs),
 			SolarHotWater(workspace, platforms, configs),
+			TimeTracker  (workspace, platforms, configs),
 		]
 		return
 
@@ -773,6 +807,7 @@ class All(Group):
 			RyLogViewer  (workspace, platforms, configs),
 			Fishomatic   (workspace, platforms, configs),
 			SolarHotWater(workspace, platforms, configs),
+			TimeTracker  (workspace, platforms, configs),
 		]
 		return
 
