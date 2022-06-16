@@ -1005,9 +1005,6 @@
     <ClInclude Include="..\..\..\include\pr\script\unit_tests.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\unit_tests.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h">
       <Filter>pr\common</Filter>
     </ClInclude>

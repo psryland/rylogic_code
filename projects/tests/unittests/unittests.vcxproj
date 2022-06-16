@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
@@ -130,7 +130,6 @@
     <ClInclude Include="..\..\..\include\pr\collision\col_sphere_vs_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\collision\shape_triangle.h" />
     <ClInclude Include="..\..\..\include\pr\collision\support.h" />
-    <ClInclude Include="..\..\..\include\pr\collision\unit_tests.h" />
     <ClInclude Include="..\..\..\include\pr\common\algorithm.h" />
     <ClInclude Include="..\..\..\include\pr\common\alloca.h" />
     <ClInclude Include="..\..\..\include\pr\common\allocator.h" />
