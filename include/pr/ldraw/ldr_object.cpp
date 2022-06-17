@@ -718,7 +718,7 @@ namespace pr::ldr
 	// Get/Create an instance of the point sprites shader
 	ShaderPtr PointSpriteShader(Renderer& rdr, v2 point_size, bool depth)
 	{
-		auto id = pr::hash::Hash("PointSprites", point_size, depth);
+		auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
 		auto shdr = rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 		shdr->m_size = point_size;
 		shdr->m_depth = depth;
@@ -728,7 +728,7 @@ namespace pr::ldr
 	// Get or create an instance of the thick line shader for line strip geometry
 	ShaderPtr ThickLineShaderLS(Renderer& rdr, float line_width)
 	{
-		auto id = pr::hash::Hash("ThickLineStrip", line_width);
+		auto id = pr::hash::HashArgs("ThickLineStrip", line_width);
 		auto shdr = rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
 		shdr->m_width = line_width;
 		return shdr;
@@ -737,7 +737,7 @@ namespace pr::ldr
 	// Get or create an instance of the thick line shader for line list geometry
 	ShaderPtr ThickLineShaderLL(Renderer& rdr, float line_width)
 	{
-		auto id = pr::hash::Hash("ThickLineList", line_width);
+		auto id = pr::hash::HashArgs("ThickLineList", line_width);
 		auto shdr = rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 		shdr->m_width = line_width;
 		return shdr;
@@ -746,7 +746,7 @@ namespace pr::ldr
 	// Get or create an instance of the arrow head shader
 	ShaderPtr ArrowHeadShader(Renderer& rdr, float line_width)
 	{
-		auto id = pr::hash::Hash("ArrowHead", line_width);
+		auto id = pr::hash::HashArgs("ArrowHead", line_width);
 		auto shdr = rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
 		shdr->m_size = line_width;
 		return shdr;
@@ -1012,7 +1012,7 @@ namespace pr::ldr
 					}
 				case EStyle::Circle:
 					{
-						auto id = pr::hash::Hash("PointStyleCircle", sz);
+						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
 						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
 						{
 							auto w0 = sz.x * 0.5f;
@@ -1022,7 +1022,7 @@ namespace pr::ldr
 					}
 				case EStyle::Triangle:
 					{
-						auto id = pr::hash::Hash("PointStyleTriangle", sz);
+						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
 						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
 						{
 							Renderer::Lock lk(p.m_rdr);
@@ -1046,7 +1046,7 @@ namespace pr::ldr
 					}
 				case EStyle::Star:
 					{
-						auto id = pr::hash::Hash("PointStyleStar", sz);
+						auto id = pr::hash::HashArgs("PointStyleStar", sz);
 						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
 						{
 							Renderer::Lock lk(p.m_rdr);
@@ -1074,7 +1074,7 @@ namespace pr::ldr
 					}
 				case EStyle::Annulus:
 					{
-						auto id = pr::hash::Hash("PointStyleAnnulus", sz);
+						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
 						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
 						{
 							auto w0 = sz.x * 0.5f;

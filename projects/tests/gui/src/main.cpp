@@ -294,3 +294,16 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		return -1;
 	}
 }
+
+
+//hack/workaround for missing function
+extern "C"
+{
+	namespace Gdiplus
+	{
+		GpStatus GdipGetMetafileHeaderFromWmf(HMETAFILE, GDIPCONST WmfPlaceableFileHeader*, MetafileHeader*)
+		{
+			return GpStatus::Ok;
+		}
+	}
+}

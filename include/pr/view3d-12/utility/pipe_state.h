@@ -19,6 +19,7 @@ namespace pr::rdr12
 		x(DS                    , DS                                    )\
 		x(HS                    , HS                                    )\
 		x(GS                    , GS                                    )\
+		x(TopologyType          , PrimitiveTopologyType                 )\
 		x(FillMode              , RasterizerState.FillMode              )\
 		x(CullMode              , RasterizerState.CullMode              )\
 		x(DepthEnable           , DepthStencilState.DepthEnable         )\
@@ -88,6 +89,10 @@ namespace pr::rdr12
 		{}
 
 		// Returns a pointer into 'desc' for this pipe state field
+		void const* ptr(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& desc) const
+		{
+			return byte_ptr(&desc) + m_field.ofs;
+		}
 		void* ptr(D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc) const
 		{
 			return byte_ptr(&desc) + m_field.ofs;
@@ -162,17 +167,18 @@ namespace pr::rdr12
 	};
 
 	// Pipe state object description
-	struct PipeStateDesc :D3D12_GRAPHICS_PIPELINE_STATE_DESC
+	struct PipeStateDesc
 	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC m_desc;
 		int m_hash;
 
 		PipeStateDesc()
-			:D3D12_GRAPHICS_PIPELINE_STATE_DESC()
-			,m_hash(hash::Hash(*static_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC const*>(this)))
+			:m_desc()
+			,m_hash(hash::HashBytes(&m_desc, &m_desc + 1))
 		{}
 		PipeStateDesc(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& rhs)
-			:D3D12_GRAPHICS_PIPELINE_STATE_DESC(rhs)
-			,m_hash(hash::Hash(*static_cast<D3D12_GRAPHICS_PIPELINE_STATE_DESC const*>(this)))
+			:m_desc(rhs)
+			,m_hash(hash::HashBytes(&m_desc, &m_desc + 1))
 		{}
 
 		// Apply changes to the pipeline state description
@@ -182,7 +188,20 @@ namespace pr::rdr12
 			m_hash = hash::HashBytes(&ps, &ps + 1, m_hash);
 
 			// Set the value of a pipeline state description field
-			memcpy(ps.ptr(*this), ps.value(), ps.size());
+			memcpy(ps.ptr(m_desc), ps.value(), ps.size());
+		}
+
+		// Return the current value of a pipeline state member
+		template <EPipeState PS> pipe_state_field_t<PS> const& Get() const
+		{
+			PipeState ps;
+			return *static_cast<pipe_state_field_t<PS> const*>(ps.ptr(m_desc));
+		}
+
+		// Convert to a pointer for passing to functions
+		operator D3D12_GRAPHICS_PIPELINE_STATE_DESC const* () const
+		{
+			return &m_desc;
 		}
 	};
 

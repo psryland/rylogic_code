@@ -170,7 +170,7 @@ namespace pr::rdr12
 			auto desc = m_default_pipe_state;
 
 			// Set pipeline state
-			desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(nugget.m_topo);
+			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(nugget.m_topo)));
 			cmd_list->IASetPrimitiveTopology(To<D3D12_PRIMITIVE_TOPOLOGY>(nugget.m_topo));
 			cmd_list->IASetVertexBuffers(0U, 1U, &nugget.m_model->m_vb_view);
 			cmd_list->IASetIndexBuffer(&nugget.m_model->m_ib_view);
@@ -255,9 +255,9 @@ namespace pr::rdr12
 			nugget.m_topo == ETopo::TriStripAdj))
 		{
 			// Change the pipe state to wireframe
-			auto prev_fill_mode = desc.RasterizerState.FillMode;
-			desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-			desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+			auto prev_fill_mode = desc.Get<EPipeState::FillMode>();
+			desc.Apply(PSO<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME));
+			desc.Apply(PSO<EPipeState::BlendState0>({FALSE}));
 			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
 
 			cmd_list->DrawIndexedInstanced(
@@ -265,7 +265,7 @@ namespace pr::rdr12
 				s_cast<UINT>(nugget.m_irange.m_beg), 0, 0U);
 
 			// Restore it
-			desc.RasterizerState.FillMode = prev_fill_mode;
+			desc.Apply(PSO<EPipeState::FillMode>(prev_fill_mode));
 			//ps.Clear(EPipeState::BlendEnable0);
 		}
 
@@ -273,8 +273,8 @@ namespace pr::rdr12
 		if (fill_mode == EFillMode::Points)
 		{
 			// Change the pipe state to point list
-			desc.PrimitiveTopologyType = To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList);
-			desc.GS = wnd().m_diag.m_gs_fillmode_points->Code.GS;
+			desc.Apply(PSO<EPipeState::TopologyType>(To<D3D12_PRIMITIVE_TOPOLOGY_TYPE>(ETopo::PointList)));
+			desc.Apply(PSO<EPipeState::GS>(wnd().m_diag.m_gs_fillmode_points->Code.GS));
 			//todo scn().m_diag.m_gs_fillmode_points->Setup();
 			cmd_list->SetPipelineState(m_pipe_state_pool.Get(desc));
 

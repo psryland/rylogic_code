@@ -105,7 +105,7 @@ namespace pr::rdr12
 
 			// Get the write range
 			auto desc = res->GetDesc();
-			auto write_range = Range(0, desc.Width * desc.Height * desc.DepthOrArraySize);
+			auto write_range = Range(0, s_cast<size_t>(desc.Width * desc.Height * desc.DepthOrArraySize));
 
 			// Do not wait means the caller expects the map to potentially not to work
 			void* data;

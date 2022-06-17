@@ -38,7 +38,7 @@ namespace pr::unittests
 #include <locale>
 
 // Optionally use Microsoft's C++ unit test framework
-#define USE_MS_UNITTESTS 1 // Set this to 0 when compiling as an executable
+#define USE_MS_UNITTESTS 0 // Set this to 0 when compiling as an executable
 #if USE_MS_UNITTESTS
 	#pragma message ("Using MS Unitest Framework")
 	#include <SDKDDKVer.h>

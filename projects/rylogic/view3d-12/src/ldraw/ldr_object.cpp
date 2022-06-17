@@ -990,6 +990,7 @@ namespace pr::rdr12
 				TextureDesc desc(id, tdesc, false, 0, name);
 				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
 
+				(void)draw;
 				#if 0 //todo
 				// Get a D2D device context to draw on
 				auto dc = tex->GetD2DeviceContext();
@@ -1024,7 +1025,7 @@ namespace pr::rdr12
 					}
 					case EStyle::Circle:
 					{
-						auto id = pr::hash::Hash("PointStyleCircle", sz);
+						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
 								auto w0 = sz.x * 0.5f;
@@ -1034,7 +1035,7 @@ namespace pr::rdr12
 					}
 					case EStyle::Triangle:
 					{
-						auto id = pr::hash::Hash("PointStyleTriangle", sz);
+						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
 								D3DPtr<ID2D1PathGeometry> geom;
@@ -1057,7 +1058,7 @@ namespace pr::rdr12
 					}
 					case EStyle::Star:
 					{
-						auto id = pr::hash::Hash("PointStyleStar", sz);
+						auto id = pr::hash::HashArgs("PointStyleStar", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
 								D3DPtr<ID2D1PathGeometry> geom;
@@ -1084,7 +1085,7 @@ namespace pr::rdr12
 					}
 					case EStyle::Annulus:
 					{
-						auto id = pr::hash::Hash("PointStyleAnnulus", sz);
+						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
 						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
 							{
 								auto w0 = sz.x * 0.5f;
@@ -1099,8 +1100,10 @@ namespace pr::rdr12
 									});
 							});
 					}
-					default: throw std::exception("Unknown point style");
-
+					default:
+					{
+						throw std::runtime_error("Unknown point style");
+					}
 				}
 			}
 		};
