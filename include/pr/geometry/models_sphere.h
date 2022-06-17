@@ -241,13 +241,13 @@ namespace pr::geometry
 		if (layers < 2) layers = 2;
 
 		// Verts
-		for (std::size_t w = 0; w <= wedges; ++w)
+		for (int w = 0; w <= wedges; ++w)
 		{
 			auto norm = v4ZAxis;
 			auto uv   = v2(float(w + 0.5f) / wedges, 0.0f);
 			vout((radius * norm).w1(), colour, norm, uv);
 
-			for (std::size_t l = 1; l < layers; ++l)
+			for (int l = 1; l < layers; ++l)
 			{
 				auto a = float(maths::tauf * w / wedges);
 				auto b = float(maths::tau_by_2f * l / layers);
@@ -263,13 +263,13 @@ namespace pr::geometry
 
 		// Faces
 		std::size_t ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
-		for (std::size_t w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
+		for (int w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
 		{
 			iout(ilayer + 0);
 			iout(ilayer + 1);
 			iout(ilayer + 1 + verts_per_wedge);
 			++ilayer;
-			for (std::size_t l = 1; l != layers - 1; ++l)
+			for (int l = 1; l != layers - 1; ++l)
 			{
 				iout(ilayer + 0);
 				iout(ilayer + 1);

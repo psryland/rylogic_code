@@ -105,6 +105,17 @@ namespace Rylogic.Gui.WPF
 				return new Typeface(family, style, weight, stretch);
 			};
 
+			Xml_.ToMap[typeof(MatrixTransform)] = (obj, node) =>
+			{
+				var x = (MatrixTransform)obj;
+				node.SetValue(x.ToString(CultureInfo.InvariantCulture));
+				return node;
+			};
+			Xml_.AsMap[typeof(MatrixTransform)] = (elem, type, ctor) =>
+			{
+				return MatrixTransform.Parse(elem.Value);
+			};
+
 			return cfg;
 		}
 	}

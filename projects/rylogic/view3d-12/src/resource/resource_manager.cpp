@@ -162,7 +162,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib);
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.Width, mdesc.m_ib.Width, mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<size_t>(mdesc.m_vb.Width), s_cast<size_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}

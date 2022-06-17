@@ -298,9 +298,10 @@ namespace pr::rdr12
 			"	*o2w {*pos{-10 1.5 -5}}\n"
 			"}\n"
 			"\n"
-
+		#if 0
+		#endif
+		#if 0
 			// Text
-				#if 0
 			"// Text objects are textured quads that contain GDI text.\n"
 			"// There is support for screen space, billboard, and full 3D text objects.\n"
 			"\n"
@@ -469,6 +470,7 @@ namespace pr::rdr12
 			"	*o2w{*pos{-15 0 -10}}\n"
 			"}\n"
 			"\n"
+	#if 0
 			"// A list of line segments given point and direction\n"
 			"*LineD directions\n"
 			"{\n"
@@ -1107,6 +1109,7 @@ namespace pr::rdr12
 			"//	*BakeTransform {*pos{0 0 0}} // Optional. Bake a transform into the model (independent of *o2w)\n"
 			"//}\n"
 			"\n"
+		#endif
 		#if 0
 			"*Equation equation\n"
 			"{\n"

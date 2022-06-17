@@ -277,7 +277,7 @@ namespace pr::rdr12
 
 		// Callback function for 'Parse'
 		struct L {
-		static bool AddFileProgressCB(void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete)
+		static bool __stdcall AddFileProgressCB(void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete)
 		{
 			auto& ss = *static_cast<ScriptSources*>(ctx);
 			ScriptSources::AddFileProgressEventArgs args(context_id, out, loc, complete);
@@ -296,7 +296,7 @@ namespace pr::rdr12
 			{
 				StringSrc src(script, StringSrc::EFlags::None, enc);
 				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				Parse(rdr(), reader, out, context, StaticCallBack(L::AddFileProgressCB, this));
+				Parse(rdr(), reader, out, context, StaticCallBack(&L::AddFileProgressCB, this));
 			}
 			else if (
 				str::EqualI(extn.c_str(), ".p3d") ||
@@ -304,17 +304,17 @@ namespace pr::rdr12
 				str::EqualI(extn.c_str(), ".3ds"))
 			{
 				// P3D = My custom binary model file format
-				// STL = "Stereolithography" model files (binary and text)
+				// STL = "StereoLithography" model files (binary and text)
 				StringSrc src(FmtS(L"*Model {\"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
 				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				Parse(*m_rdr, reader, out, context, StaticCallBack(L::AddFileProgressCB, this));
+				Parse(*m_rdr, reader, out, context, StaticCallBack(&L::AddFileProgressCB, this));
 			}
 			else if (str::EqualI(extn.c_str(), ".csv"))
 			{
 				// CSV data, create a chart to graph the data
 				StringSrc src(FmtS(L"*Chart {3 #include \"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
 				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				Parse(*m_rdr, reader, out, context, StaticCallBack(L::AddFileProgressCB, this));
+				Parse(*m_rdr, reader, out, context, StaticCallBack(&L::AddFileProgressCB, this));
 			}
 			else if (str::EqualI(extn.c_str(), ".lua"))
 			{
@@ -329,7 +329,7 @@ namespace pr::rdr12
 				// Parse the ldr script file
 				FileSrc src(filepath, 0, enc);
 				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				Parse(*m_rdr, reader, out, context, StaticCallBack(L::AddFileProgressCB, this));
+				Parse(*m_rdr, reader, out, context, StaticCallBack(&L::AddFileProgressCB, this));
 			}
 		}
 		catch (ScriptException const& ex)

@@ -38,7 +38,7 @@ struct Main :Form
 	//Instance m_inst1;
 
 	// Error handler
-	static void ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+	static void __stdcall ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
 	{
 		std::wcout << filepath << "(" << line << "): " << msg << std::endl;
 	}
@@ -77,8 +77,8 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
-		View3D_WindowAddObject(m_win3d, m_obj0);
-		View3D_WindowAddObject(m_win3d, m_obj1);
+		//View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj1);
 
 		View3D_DemoSceneCreate(m_win3d);
 
