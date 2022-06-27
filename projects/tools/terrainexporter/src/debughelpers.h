@@ -1,6 +1,6 @@
 //*******************************************************************************
 // Terrain Exporter
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************
 // This header should only be included in cpp files otherwise you'll end up with
 // circular include problems.
