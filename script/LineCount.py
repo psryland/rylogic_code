@@ -10,9 +10,9 @@ try:
 	Tools.AssertVersion(1)
 
 	dirs = [
-		#"P:\\projects",
-		#"P:\\include",
-		"S:\\software",
+		"P:\\pr\\projects",
+		"P:\\pr\\include",
+		#"S:\\software",
 		#"S:\\software\\PC",
 		#"S:\\software\\shared",
 		#"S:\\software\\STM32",
@@ -54,24 +54,23 @@ try:
 				continue
 			fname,extn = os.path.splitext(fpath)
 			if extn in extns:
+				line_index = 0
 				try:
-					with open(fpath, encoding='utf8') as f:
-						for i,line in enumerate(f):
+					enc = Tools.GuessEncoding(fpath)
+					with open(fpath, encoding=enc) as f:
+						for line_index,line in enumerate(f):
 							semi_count += line.count(';')
 							line_count += 1
 
-					print(str(i) + " - " + fpath)
+					print(str(line_index) + " - " + fpath)
 				except Exception as ex:
-					bad_files.append(fpath)
-					print(str(ex))
-					print(fpath)
-					print(i)
+					bad_files.append(f"{fpath}({line_index}) - {str(ex)}")
 
 	print("\n")
 	print("Total Line Count: " + str(line_count))
 	print("Total Semi Colon Count: " + str(semi_count))
 	if len(bad_files) != 0:
-		print("Bad Files:" + "\n\t".join(bad_files))
+		print("Bad Files:\n\t" + "\n\t".join(bad_files))
 	Tools.OnSuccess()
 	
 except Exception as ex:

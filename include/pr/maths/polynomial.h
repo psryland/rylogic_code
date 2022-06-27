@@ -81,7 +81,7 @@ namespace pr::maths
 			return A;
 		}
 
-		// Evaluate d²F(x)/dx at 'x'
+		// Evaluate dÂ²F(x)/dx at 'x'
 		double ddF(double x) const
 		{
 			(void)x;
@@ -112,7 +112,7 @@ namespace pr::maths
 		}
 	};
 
-	//' F(x) = Ax² + Bx + C
+	//' F(x) = AxÂ² + Bx + C
 	struct Quadratic
 	{
 		double A;
@@ -137,17 +137,17 @@ namespace pr::maths
 			return 2*A*x + B;
 		}
 
-		// Evaluate d²F(x)/dx at 'x'
+		// Evaluate dÂ²F(x)/dx at 'x'
 		double ddF(double x) const
 		{
 			(void)x;
 			return 2*A;
 		}
 
-		// Returns a quadratic approximation of a curve defined by evaluating F(x), dF(x)/dx, and d²F(x)/dx at 'x'
+		// Returns a quadratic approximation of a curve defined by evaluating F(x), dF(x)/dx, and dÂ²F(x)/dx at 'x'
 		static Quadratic FromDerivatives(double x, double y, double dy, double ddy)
 		{
-			//' y  = Ax² + Bx + C
+			//' y  = AxÂ² + Bx + C
 			//' y' = 2Ax + B
 			//' y" = 2A
 
@@ -157,7 +157,7 @@ namespace pr::maths
 			//' 2Ax + B = dy
 			auto B = dy - 2*A*x;
 
-			//' Ax² + Bx + C = y
+			//' AxÂ² + Bx + C = y
 			auto C = y - (A*x - B)*x;
 
 			return Quadratic(A,B,C);
@@ -170,9 +170,9 @@ namespace pr::maths
 			//' Ab.x2 + Bb.x + C = a.y
 			//' Ac.x2 + Bc.x + C = a.y
 			//' => Ax = y
-			//' A = |a.x² a.x 1| x = |A| y = |a.y|
-			//'     |b.x² b.x 1|     |B|     |b.y|
-			//'     |c.x² c.x 1|     |C|     |c.y|
+			//' A = |a.xÂ² a.x 1| x = |A| y = |a.y|
+			//'     |b.xÂ² b.x 1|     |B|     |b.y|
+			//'     |c.xÂ² c.x 1|     |C|     |c.y|
 			auto M = Transpose(m3x4(
 				v4(a.x*a.x, a.x, 1, 0),
 				v4(b.x*b.x, b.x, 1, 0),
@@ -207,7 +207,7 @@ namespace pr::maths
 		}
 	};
 
-	//' F(x) = Ax³ + Bx² + Cx + D
+	//' F(x) = AxÂ³ + BxÂ² + Cx + D
 	struct Cubic
 	{
 		double A;
@@ -234,7 +234,7 @@ namespace pr::maths
 			return (3*A*x + 2*B)*x + C;
 		}
 
-		// Evaluate d²F(x)/dx at 'x'
+		// Evaluate dÂ²F(x)/dx at 'x'
 		double ddF(double x) const
 		{
 			return 6*A*x + 2*B;
@@ -243,14 +243,14 @@ namespace pr::maths
 		// Create a cubic from 4 points
 		static Cubic FromPoints(v2 a, v2 b, v2 c, v2 d)
 		{
-			//' Aa.x³ + Ba.x² + Ca.x + D = a.y
-			//' Ab.x³ + Bb.x² + Cb.x + D = a.y
-			//' Ac.x³ + Bc.x² + Cc.x + D = a.y
-			//' Ad.x³ + Bd.x² + Cd.x + D = a.y
+			//' Aa.xÂ³ + Ba.xÂ² + Ca.x + D = a.y
+			//' Ab.xÂ³ + Bb.xÂ² + Cb.x + D = a.y
+			//' Ac.xÂ³ + Bc.xÂ² + Cc.x + D = a.y
+			//' Ad.xÂ³ + Bd.xÂ² + Cd.x + D = a.y
 			//' => Ax = y
-			//' A = |a.x² a.x 1| x = |A| y = |a.y|
-			//'     |b.x² b.x 1|     |B|     |b.y|
-			//'     |c.x² c.x 1|     |C|     |c.y|
+			//' A = |a.xÂ² a.x 1| x = |A| y = |a.y|
+			//'     |b.xÂ² b.x 1|     |B|     |b.y|
+			//'     |c.xÂ² c.x 1|     |C|     |c.y|
 			auto M = Transpose4x4(m4x4(
 				v4(a.x*a.x*a.x, a.x*a.x, a.x, 1),
 				v4(b.x*b.x*b.x, b.x*b.x, b.x, 1),
@@ -264,7 +264,7 @@ namespace pr::maths
 		}
 	};
 
-	//' F(x) = Ax^4 + Bx³ + Cx² + Dx + E
+	//' F(x) = Ax^4 + BxÂ³ + CxÂ² + Dx + E
 	struct Quartic
 	{
 		double A;
@@ -293,7 +293,7 @@ namespace pr::maths
 			return ((4*A*x + 3*B)*x + 2*C)*x + D;
 		}
 
-		// Evaluate d²F(x)/dx at 'x'
+		// Evaluate dÂ²F(x)/dx at 'x'
 		double ddF(double x) const
 		{
 			return (12*A*x + 6*B)*x + 2*C;
@@ -455,13 +455,13 @@ namespace pr::maths
 	}
 	inline Roots StationaryPoints(Cubic const& p)
 	{
-		// dF(x) = 3Ax² + 2Bx + C
+		// dF(x) = 3AxÂ² + 2Bx + C
 		// dF(x) == 0 at the roots of dF(x)
 		return FindRoots(Quadratic(3*p.A, 2*p.B, p.C));
 	}
 	inline Roots StationaryPoints(Quartic const& p)
 	{
-		// dF(x) = 4Ax³ + 3Bx² + 2Cx + D
+		// dF(x) = 4AxÂ³ + 3BxÂ² + 2Cx + D
 		// dF(x) == 0 at the roots of dF(x)
 		return FindRoots(Cubic(4*p.A, 3*p.B, 2*p.C, 1*p.D));
 	}

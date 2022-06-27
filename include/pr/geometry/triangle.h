@@ -1,4 +1,4 @@
-//********************************
+ï»¿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -41,9 +41,9 @@ namespace pr::geometry
 	{
 		// Angle at a vertex:
 		// Cos(C) = a.b / |a|b|
-		// Use: Cos(2C) = 2Cos²C - 1
-		// Cos(2C) = 2Cos²(C) - 1 = 2*(a.b² / a²b²) - 1
-		// C = 0.5 * ACos(2*(a.b² / a²b²) - 1)
+		// Use: Cos(2C) = 2CosÂ²C - 1
+		// Cos(2C) = 2CosÂ²(C) - 1 = 2*(a.bÂ² / aÂ²bÂ²) - 1
+		// C = 0.5 * ACos(2*(a.bÂ² / aÂ²bÂ²) - 1)
 
 		// Choose edges so that 'a' is opposite v0, and angle 'A' is the angle at v0
 		auto a = v2 - v1;

@@ -23,7 +23,7 @@
 //// Given point p, return point q on (or in) OBB b, closest to p
 //void ClosestPtPointOBB(Point p, OBB b, Point &q)
 //{
-//    Vector d = p – b.c;
+//    Vector d = p - b.c;
 //    // Start result at center of box; make steps from there
 //    q = b.c;
 //    // For each OBB axis...
@@ -32,8 +32,8 @@
 //        // along the axis of d from the box center
 //        float dist = Dot(d, b.u[i]);
 //        // If distance farther than the box extents, clamp to the box
-//        if (dist > b.e[i]) dist = b.e[i];
-//        if (dist < –b.e[i]) dist = –b.e[i];
+//        if (dist > +b.e[i]) dist = +b.e[i];
+//        if (dist < -b.e[i]) dist = -b.e[i];
 //        // Step that distance along the axis to get world coordinate
 //        q += dist * b.u[i];
 //    }
@@ -46,7 +46,7 @@
 //{
 //    Point closest;
 //    ClosestPtPointOBB(p, b, closest);
-//    float sqDist = Dot(closest – p, closest – p);
+//    float sqDist = Dot(closest - p, closest - p);
 //    return sqDist;
 //}
 //
@@ -55,16 +55,16 @@
 //// Computes the square distance between point p and OBB b
 //float SqDistPointOBB(Point p, OBB b)
 //{
-//    Vector v = p – b.c;
+//    Vector v = p - b.c;
 //    float sqDist = 0.0f;
 //    for (int i = 0; i < 3; i++) {
 //        // Project vector from box center to p on each axis, getting the distance
 //        // of p along that axis, and count any excess distance outside box extents
 //        float d = Dot(v, b.u[i]), excess = 0.0f;
-//        if (d < –b.e[i])
+//        if (d < -b.e[i])
 //            excess = d + b.e[i];
 //        else if (d > b.e[i])
-//            excess = d – b.e[i];
+//            excess = d - b.e[i];
 //        sqDist += excess * excess;
 //    }
 //    return sqDist;
@@ -83,7 +83,7 @@
 //// Given point p, return point q on (or in) Rect r, closest to p
 //void ClosestPtPointRect(Point p, Rect r, Point &q)
 //{
-//    Vector d = p – r.c;
+//    Vector d = p - r.c;
 //    // Start result at center of rect; make steps from there
 //    q = r.c;
 //    // For each rect axis...
@@ -92,8 +92,8 @@
 //        // along the axis of d from the rect center
 //        float dist = Dot(d, r.u[i]);
 //        // If distance farther than the rect extents, clamp to the rect
-//        if (dist > r.e[i]) dist = r.e[i];
-//        if (dist < –r.e[i]) dist = –r.e[i];
+//        if (dist > +r.e[i]) dist = +r.e[i];
+//        if (dist < -r.e[i]) dist = -r.e[i];
 //        // Step that distance along the axis to get world coordinate
 //        q += dist * r.u[i];
 //    }
@@ -104,19 +104,19 @@
 //// Return point q on (or in) rect (specified by a, b, and c), closest to given point p
 //void ClosestPtPointRect(Point p, Point a, Point b, Point c, Point &q)
 //{
-//    Vector ab = b – a; // vector across rect
-//    Vector ac = c – a; // vector down rect
-//    Vector d = p – a;
+//    Vector ab = b - a; // vector across rect
+//    Vector ac = c - a; // vector down rect
+//    Vector d = p - a;
 //    // Start result at top-left corner of rect; make steps from there
 //    q = a;
-//    // Clamp p’ (projection of p to plane of r) to rectangle in the across direction
+//    // Clamp p* (projection of p to plane of r) to rectangle in the across direction
 //    float dist = Dot(d, ab);
 //    float maxdist = Dot(ab, ab);
 //    if (dist >= maxdist)
 //        q += ab;
 //    else if (dist > 0.0f)
 //        q += (dist / maxdist) * ab;
-//    // Clamp p’ (projection of p to plane of r) to rectangle in the down direction
+//    // Clamp p* (projection of p to plane of r) to rectangle in the down direction
 //    dist = Dot(d, ac);
 //    maxdist = Dot(ac, ac);
 //    if (dist >= maxdist)
@@ -132,8 +132,8 @@
 //// Test if point p and d lie on opposite sides of plane through abc
 //int PointOutsideOfPlane(Point p, Point a, Point b, Point c, Point d)
 //{
-//    float signp = Dot(p – a, Cross(b – a, c – a)); // [AP AB AC]
-//    float signd = Dot(d – a, Cross(b – a, c – a)); // [AD AB AC]
+//    float signp = Dot(p - a, Cross(b - a, c - a)); // [AP AB AC]
+//    float signd = Dot(d - a, Cross(b - a, c - a)); // [AD AB AC]
 //    // Points on opposite sides if expression signs are opposite
 //    return signp * signd < 0.0f;
 //}
@@ -226,7 +226,7 @@
 //        ...
 //    }
 //    // ab and ac are parallel too, so edges must be on a line. Ignore testing
-//    // the axis for this combination of edges as it won’t be a separating axis.
+//    // the axis for this combination of edges as it won't be a separating axis.
 //    // (Alternatively, test if edges overlap on this line, in which case the
 //    // objects are overlapping.)
 //    ...
@@ -272,7 +272,7 @@
 //              b.e[1]*Abs(Dot(p.n, b.u[1])) +
 //              b.e[2]*Abs(Dot(p.n, b.u[2]));
 //    // Compute distance of box center from plane
-//    float s = Dot(p.n, b.c) – p.d;
+//    float s = Dot(p.n, b.c) - p.d;
 //    // Intersection occurs when distance s falls within [-r,+r] interval
 //    return Abs(s) <= r;
 //}
@@ -358,7 +358,7 @@
 //int TestSpherePolygon(Sphere s, Polygon p)
 //{
 //    // Compute normal for the plane of the polygon
-//    Vector n = Normalize(Cross(p.v[1] – p.v[0], p.v[2] – p.v[0]));
+//    Vector n = Normalize(Cross(p.v[1] - p.v[0], p.v[2] - p.v[0]));
 //    // Compute the plane equation for p
 //    Plane m; m.n = n; m.d = -Dot(n, p.v[0]);
 //    // No intersection if sphere not intersecting plane of polygon
@@ -368,7 +368,7 @@
 //        float t;
 //        Point q;
 //        // Test if edge (p.v[j], p.v[i]) intersects s
-//        if (IntersectRaySphere(p.v[j], p.v[i] – p.v[j], s, t, q) && t <= 1.0f)
+//        if (IntersectRaySphere(p.v[j], p.v[i] - p.v[j], s, t, q) && t <= 1.0f)
 //            return 1;
 //    }
 //    // Test if the orthogonal projection q of the sphere center onto m is inside p
@@ -384,22 +384,22 @@
 //
 //    // Compute box center and extents (if not already given in that format)
 //    Vector c = (b.min + b.max) * 0.5f;
-//    float e0 = (b.max.x – b.min.x) * 0.5f;
-//    float e1 = (b.max.y – b.min.y) * 0.5f;
-//    float e2 = (b.max.z – b.min.z) * 0.5f;
+//    float e0 = (b.max.x - b.min.x) * 0.5f;
+//    float e1 = (b.max.y - b.min.y) * 0.5f;
+//    float e2 = (b.max.z - b.min.z) * 0.5f;
 //
 //    // Translate triangle as conceptually moving AABB to origin
-//    v0 = v0 – c;
-//    v1 = v1 – c;
-//    v2 = v2 – c;
+//    v0 = v0 - c;
+//    v1 = v1 - c;
+//    v2 = v2 - c;
 //
 //    // Compute edge vectors for triangle
-//    Vector f0 = v1 – v0,  f1 = v2 – v1, f2 = v0 – v2;
+//    Vector f0 = v1 - v0,  f1 = v2 - v1, f2 = v0 - v2;
 //
 //    // Test axes a00..a22 (category 3)
 //    // Test axis a00
-//    p0 = v0.z*v1.y – v0.y*v1.z;
-//    p2 = v2.z*(v1.y – v0.y) – v2.z*(v1.z – v0.z);
+//    p0 = v0.z*v1.y - v0.y*v1.z;
+//    p2 = v2.z*(v1.y - v0.y) - v2.z*(v1.z - v0.z);
 //    r = e1 * Abs(f0.z) + e2 * Abs(f0.y);
 //    if (Max(-Max(p0, p2), Min(p0, p2)) > r) return 0; // Axis is a separating axis
 //
@@ -447,7 +447,7 @@
 //                          float &t, Point &q)
 //{
 //    Plane p;
-//    p.n = Cross(e – d, f – d);
+//    p.n = Cross(e - d, f - d);
 //    p.d = Dot(p.n, d);
 //    return IntersectSegmentPlane(a, b, p, t, q);
 //}
@@ -458,16 +458,16 @@
 //// returns t value of intersection and intersection point q
 //int IntersectRaySphere(Point p, Vector d, Sphere s, float &t, Point &q)
 //{
-//    Vector m = p – s.c;
+//    Vector m = p - s.c;
 //    float b = Dot(m, d);
-//    float c = Dot(m, m) – s.r * s.r;
-//    // Exit if r’s origin outside s (c > 0)and r pointing away from s (b > 0)
+//    float c = Dot(m, m) - s.r * s.r;
+//    // Exit if r-s origin outside s (c > 0)and r pointing away from s (b > 0)
 //    if (c > 0.0f && b > 0.0f) return 0;
-//    float discr = b*b – c;
+//    float discr = b*b - c;
 //    // A negative discriminant corresponds to ray missing sphere
 //    if (discr < 0.0f) return 0;
 //    // Ray now found to intersect sphere, compute smallest t value of intersection
-//    t = -b – Sqrt(discr);
+//    t = -b - Sqrt(discr);
 //    // If t is negative, ray started inside sphere so clamp t to zero
 //    if (t < 0.0f) t = 0.0f;
 //    q = p + t * d;
@@ -479,14 +479,14 @@
 //// Test if ray r = p + td intersects sphere s
 //int TestRaySphere(Point p, Vector d, Sphere s)
 //{
-//    Vector m = p – s.c;
-//    float c = Dot(m, m) – s.r * s.r;
+//    Vector m = p - s.c;
+//    float c = Dot(m, m) - s.r * s.r;
 //    // If there is definitely at least one real root, there must be an intersection
 //    if (c <= 0.0f) return 1;
 //    float b = Dot(m, d);
 //    // Early exit if ray origin outside sphere and ray pointing away from sphere
 //    if (b > 0.0f) return 0;
-//    float disc = b*b – c;
+//    float disc = b*b - c;
 //    // A negative discriminant corresponds to ray missing sphere
 //    if (disc < 0.0f) return 0;
 //    // Now ray must hit sphere
@@ -500,7 +500,7 @@
 //
 //--------------------------------------------------------------------------------
 //
-//    Vector e = b.max – b.min;
+//    Vector e = b.max - b.min;
 //    Vector d = p1 - p0;
 //    Point m = p0 + p1 - b.min - b.max;
 //
@@ -528,18 +528,18 @@
 //--------------------------------------------------------------------------------
 //
 //Vector m = Cross(pq, p);
-//u = Dot(pq, Cross(c, b)) + Dot(m, c – b);
-//v = Dot(pq, Cross(a, c)) + Dot(m, a – c);
-//w = Dot(pq, Cross(b, a)) + Dot(m, b – a);
+//u = Dot(pq, Cross(c, b)) + Dot(m, c - b);
+//v = Dot(pq, Cross(a, c)) + Dot(m, a - c);
+//w = Dot(pq, Cross(b, a)) + Dot(m, b - a);
 //
 //--------------------------------------------------------------------------------
 //
 //Vector m = Cross(pq, p);
-//float s = Dot(m, c – b);
-//float t = Dot(m, a – c);
+//float s = Dot(m, c - b);
+//float t = Dot(m, a - c);
 //u = Dot(pq, Cross(c, b)) + s;
 //v = Dot(pq, Cross(a, c)) + t;
-//w = Dot(pq, Cross(b, a)) – s - t;
+//w = Dot(pq, Cross(b, a)) - s - t;
 //
 //=== Section 5.3.5: =============================================================
 //
@@ -601,26 +601,26 @@
 //                             float &u, float &v, float &w, float &t, Point &s)
 //{
 //    // Compute distance of p to triangle plane. Exit if p lies behind plane
-//    float distp = Dot(p, tri.p.n) – tri.p.d;
+//    float distp = Dot(p, tri.p.n) - tri.p.d;
 //    if (distp < 0.0f) return 0;
 //
 //    // Compute distance of q to triangle plane. Exit if q lies in front of plane
-//    float distq = Dot(q, tri.p.n) – tri.p.d;
+//    float distq = Dot(q, tri.p.n) - tri.p.d;
 //    if (distq >= 0.0f) return 0;
 //
 //    // Compute t value and point s of intersection with triangle plane
-//    float denom = distp – distq;
+//    float denom = distp - distq;
 //    t = distp / denom;
-//    s = p + t * (q – p);
+//    s = p + t * (q - p);
 //
 //    // Compute the barycentric coordinate u; exit if outside 0..1 range
-//    u = Dot(s, tri.edgePlaneBC.n) – tri.edgePlaneBC.d;
+//    u = Dot(s, tri.edgePlaneBC.n) - tri.edgePlaneBC.d;
 //    if (u < 0.0f || u > 1.0f) return 0;
 //    // Compute the barycentric coordinate v; exit if negative
-//    v = Dot(s, tri.edgePlaneCA.n) – tri.edgePlaneCA.d;
+//    v = Dot(s, tri.edgePlaneCA.n) - tri.edgePlaneCA.d;
 //    if (v < 0.0f) return 0;
 //    // Compute the barycentric coordinate w; exit if negative
-//    w = 1.0f – u – v;
+//    w = 1.0f - u - v;
 //    if (w < 0.0f) return 0;
 //
 //    // Segment intersects tri at distance t in position s (s = u*A + v*B + w*C)
@@ -630,59 +630,59 @@
 //--------------------------------------------------------------------------------
 //
 //Triangle tri;
-//Vector n = Cross(b – a, c – a);
+//Vector n = Cross(b - a, c - a);
 //tri.p = Plane(n, a);
-//tri.edgePlaneBC = Plane(Cross(n, c – b), b);
-//tri.edgePlaneCA = Plane(Cross(n, a – c), c);
+//tri.edgePlaneBC = Plane(Cross(n, c - b), b);
+//tri.edgePlaneCA = Plane(Cross(n, a - c), c);
 //
 //--------------------------------------------------------------------------------
 //
-//tri.edgePlaneBC *= 1.0f / (Dot(a, tri.edgePlaneBC.n) – tri.edgePlaneBC.d);
-//tri.edgePlaneCA *= 1.0f / (Dot(b, tri.edgePlaneCA.n) – tri.edgePlaneCA.d);
+//tri.edgePlaneBC *= 1.0f / (Dot(a, tri.edgePlaneBC.n) - tri.edgePlaneBC.d);
+//tri.edgePlaneCA *= 1.0f / (Dot(b, tri.edgePlaneCA.n) - tri.edgePlaneCA.d);
 //
 //=== Section 5.3.7: =============================================================
 //
 //// Intersect segment S(t)=sa+t(sb-sa), 0<=t<=1 against cylinder specified by p, q and r
 //int IntersectSegmentCylinder(Point sa, Point sb, Point p, Point q, float r, float &t)
 //{
-//    Vector d = q – p, m = sa – p, n = sb – sa;
+//    Vector d = q - p, m = sa - p, n = sb - sa;
 //    float md = Dot(m, d);
 //    float nd = Dot(n, d);
 //    float dd = Dot(d, d);
 //    // Test if segment fully outside either endcap of cylinder
-//    if (md < 0.0f && md + nd < 0.0f) return 0; // Segment outside ‘p’ side of cylinder
-//    if (md > dd && md + nd > dd) return 0;     // Segment outside ‘q’ side of cylinder
+//    if (md < 0.0f && md + nd < 0.0f) return 0; // Segment outside -p- side of cylinder
+//    if (md > dd && md + nd > dd) return 0;     // Segment outside -q- side of cylinder
 //    float nn = Dot(n, n);
 //    float mn = Dot(m, n);
-//    float a = dd * nn – nd * nd;
-//    float k = Dot(m, m) – r * r;
-//    float c = dd * k – md * md;
+//    float a = dd * nn - nd * nd;
+//    float k = Dot(m, m) - r * r;
+//    float c = dd * k - md * md;
 //    if (Abs(a) < EPSILON) {
 //        // Segment runs parallel to cylinder axis
-//        if (c > 0.0f) return 0; // ‘a’ and thus the segment lie outside cylinder
+//        if (c > 0.0f) return 0; // -a- and thus the segment lie outside cylinder
 //        // Now known that segment intersects cylinder; figure out how it intersects
-//        if (md < 0.0f) t = -mn / nn; // Intersect segment against ‘p’ endcap
-//        else if (md > dd) t = (nd - mn) / nn; // Intersect segment against ‘q’ endcap
-//        else t = 0.0f; // ‘a’ lies inside cylinder
+//        if (md < 0.0f) t = -mn / nn; // Intersect segment against -p- endcap
+//        else if (md > dd) t = (nd - mn) / nn; // Intersect segment against -q- endcap
+//        else t = 0.0f; // -a- lies inside cylinder
 //        return 1;
 //    }
-//    float b = dd * mn – nd * md;
-//    float discr = b * b – a * c;
+//    float b = dd * mn - nd * md;
+//    float discr = b * b - a * c;
 //    if (discr < 0.0f) return 0; // No real roots; no intersection
-//    t = (-b – Sqrt(discr)) / a;
+//    t = (-b - Sqrt(discr)) / a;
 //    if (t < 0.0f || t > 1.0f) return 0; // Intersection lies outside segment
 //    if (md + t * nd < 0.0f) {
-//        // Intersection outside cylinder on ‘p’ side
+//        // Intersection outside cylinder on -p- side
 //        if (nd <= 0.0f) return 0; // Segment pointing away from endcap
 //        t = -md / nd;
 //        // Keep intersection if Dot(S(t) - p, S(t) - p) <= r^2
 //        return k + 2 * t * (mn + t * nn) <= 0.0f;
 //    } else if (md + t * nd > dd) {
-//        // Intersection outside cylinder on ‘q’ side
+//        // Intersection outside cylinder on -q- side
 //        if (nd >= 0.0f) return 0; // Segment pointing away from endcap
-//        t = (dd – md) / nd;
+//        t = (dd - md) / nd;
 //        // Keep intersection if Dot(S(t) - q, S(t) - q) <= r^2
-//        return k + dd – 2 * md + t * (2 * (mn – nd) + t * nn) <= 0.0f;
+//        return k + dd - 2 * md + t * (2 * (mn - nd) + t * nn) <= 0.0f;
 //    }
 //    // Segment intersects cylinder between the end-caps; t is correct
 //    return 1;
@@ -697,9 +697,9 @@
 //                               float &tfirst, float &tlast)
 //{
 //    // Compute direction vector for the segment
-//    Vector d = b – a;
+//    Vector d = b - a;
 //    // Set initial interval to being the whole segment. For a ray, tlast should be
-//    // set to +FLT_MAX. For a line, additionally tfirst should be set to –FLT_MAX
+//    // set to +FLT_MAX. For a line, additionally tfirst should be set to -FLT_MAX
 //    tfirst = 0.0f;
 //    tlast = 1.0f;
 //    // Intersect segment against each plane
@@ -708,7 +708,7 @@
 //        float dist = p[i].d - Dot(p[i].n, a);
 //        // Test if segment runs parallel to the plane
 //        if (denom == 0.0f) {
-//            // If so, return “no intersection” if segment lies outside plane
+//            // If so, return -no intersection- if segment lies outside plane
 //            if (dist > 0.0f) return 0;
 //        } else {
 //            // Compute parameterized t value for intersection with current plane
@@ -720,7 +720,7 @@
 //                // When exiting halfspace, update tlast if t is smaller
 //                if (t < tlast) tlast = t;
 //            }
-//            // Exit with “no intersection” if intersection becomes empty
+//            // Exit with -no intersection- if intersection becomes empty
 //            if (tfirst > tlast) return 0;
 //        }
 //    }
@@ -761,10 +761,10 @@
 //    float bc = Dot(b, c);
 //    float cc = Dot(c, c);
 //    // Make sure plane normals for pab and pbc point in the same direction
-//    if (bc * ac – cc * ab < 0.0f) return 0;
+//    if (bc * ac - cc * ab < 0.0f) return 0;
 //    // Make sure plane normals for pab and pca point in the same direction
 //    float bb = Dot(b, b);
-//    if (ab * bc – ac * bb < 0.0f) return 0;
+//    if (ab * bc - ac * bb < 0.0f) return 0;
 //    // Otherwise P must be in (or on) the triangle
 //    return 1;
 //}
@@ -774,7 +774,7 @@
 //// Compute the 2D pseudo cross product Dot(Perp(u), v)
 //float Cross2D(Vector2D u, Vector2D v)
 //{
-//    return u.y * v.x – u.x * v.y;
+//    return u.y * v.x - u.x * v.y;
 //}
 //
 //--------------------------------------------------------------------------------
@@ -783,11 +783,11 @@
 //int PointInTriangle(Point2D p, Point2D a, Point2D b, Point2D c)
 //{
 //    // If P to the right of AB then outside triangle
-//    if (Cross2D(p – a, b – a) < 0.0f) return 0;
+//    if (Cross2D(p - a, b - a) < 0.0f) return 0;
 //    // If P to the right of BC then outside triangle
-//    if (Cross2D(p – b, c – b) < 0.0f) return 0;
+//    if (Cross2D(p - b, c - b) < 0.0f) return 0;
 //    // If P to the right of CA then outside triangle
-//    if (Cross2D(p – c, a – c) < 0.0f) return 0;
+//    if (Cross2D(p - c, a - c) < 0.0f) return 0;
 //    // Otherwise P must be in (or on) the triangle
 //    return 1;
 //}
@@ -797,11 +797,11 @@
 //// Test if 2D point P lies inside 2D triangle ABC
 //int PointInTriangle2D(Point2D p, Point2D a, Point2D b, Point2D c)
 //{
-//    float pab = Cross2D(p – a, b – a);
-//    float pbc = Cross2D(p – b, c – b);
+//    float pab = Cross2D(p - a, b - a);
+//    float pbc = Cross2D(p - b, c - b);
 //    // If P left of one of AB and BC and right of the other, not inside triangle
 //    if (!SameSign(pab, pbc)) return 0;
-//    float pca = Cross2D(p – c, a – c);
+//    float pca = Cross2D(p - c, a - c);
 //    // If P left of one of AB and CA and right of the other, not inside triangle
 //    if (!SameSign(pab, pca)) return 0;
 //    // P left or right of all edges, so must be in (or on) the triangle
@@ -817,7 +817,7 @@
 //    d = Cross(p1.n, p2.n);
 //
 //    // If d is zero, the planes are parallel (and separated)
-//    // or coincident, so they’re not considered intersecting
+//    // or coincident, so they're not considered intersecting
 //    if (Dot(d, d) < EPSILON) return 0;
 //
 //    float d11 = Dot(p1.n, p1.n);
@@ -841,7 +841,7 @@
 //    d = Cross(p1.n, p2.n);
 //
 //    // If d is (near) zero, the planes are parallel (and separated)
-//    // or coincident, so they’re not considered intersecting
+//    // or coincident, so they're not considered intersecting
 //    float denom = Dot(d, d);
 //    if (denom < EPSILON) return 0;
 //
@@ -879,7 +879,7 @@
 //    Vector u = Cross(p2.n, p3.n);
 //    float denom = Dot(p1.n, u);
 //    if (Abs(denom) < EPSILON) return 0; // Planes do not intersect in a point
-//    p = (p1.d * u + Cross(p1.n, p3.d * p2.n – p2.d * p3.n)) / denom;
+//    p = (p1.d * u + Cross(p1.n, p3.d * p2.n - p2.d * p3.n)) / denom;
 //    return 1;
 //}
 //
@@ -893,7 +893,7 @@
 //    Sphere b;
 //    float mid = (t0 + t1) * 0.5f;
 //    b.c = s0.c + d * mid;
-//    b.r = (mid – t0) * Length(d) + s0.r;
+//    b.r = (mid - t0) * Length(d) + s0.r;
 //    // If bounding sphere not overlapping s1, then no collision in this interval
 //    if (!TestSphereSphere(b, s1)) return 0;
 //
@@ -930,7 +930,7 @@
 //
 //    // Cannot rule collision out: recurse for more accurate testing. To terminate the
 //    // recursion, collision is assumed when time interval becomes sufficiently small
-//    if (endTime – startTime < INTERVAL_EPSILON) {
+//    if (endTime - startTime < INTERVAL_EPSILON) {
 //        hitTime = startTime;
 //        return 1;
 //    }
@@ -966,7 +966,7 @@
 //            // Use +r in computations if sphere in front of plane, else -r
 //            float r = dist > 0.0f ? s.r : -s.r;
 //            t = (r - dist) / denom;
-//            q = s.c + t * v – r * p.n;
+//            q = s.c + t * v - r * p.n;
 //            return 1;
 //        }
 //    }
@@ -995,7 +995,7 @@
 //    Vector s = s1.c - s0.c;      // Vector between sphere centers
 //    Vector v = v1 - v0;          // Relative motion of s1 with respect to stationary s0
 //    float r = s1.r + s0.r;       // Sum of sphere radii
-//    float c = Dot(s, s) – r * r;
+//    float c = Dot(s, s) - r * r;
 //    if (c < 0.0f) {
 //        // Spheres initially overlapping so exit directly
 //        t = 0.0f;
@@ -1005,10 +1005,10 @@
 //    if (a < EPSILON) return 0; // Spheres not moving relative each other
 //    float b = Dot(v, s);
 //    if (b >= 0.0f) return 0;   // Spheres not moving towards each other
-//    float d = b * b – a * c;
+//    float d = b * b - a * c;
 //    if (d < 0.0f) return 0;    // No real-valued root, spheres do not intersect
 //
-//    t = (-b – Sqrt(d)) / a;
+//    t = (-b - Sqrt(d)) / a;
 //    return 1;
 //}
 //
@@ -1019,7 +1019,7 @@
 //    // Expand sphere s1 by the radius of s0
 //    s1.r += s0.r;
 //    // Subtract movement of s1 from both s0 and s1, making s1 stationary
-//    Vector v = v0 – v1;
+//    Vector v = v0 - v1;
 //    // Can now test directed segment s = s0.c + tv, v = (v0-v1)/||v0-v1|| against
 //    // the expanded sphere for intersection
 //    Point q;
@@ -1056,7 +1056,7 @@
 //    if (p.z < b.min.z) u |= 4;
 //    if (p.z > b.max.z) v |= 4;
 //
-//    // ‘Or’ all set bits together into a bit mask (note: here u + v == u | v)
+//    // -Or- all set bits together into a bit mask (note: here u + v == u | v)
 //    int m = u + v;
 //
 //    // Define line segment [c, c+d] specified by the sphere movement
@@ -1099,11 +1099,11 @@
 //
 //=== Section 5.5.8: =============================================================
 //
-//// Intersect AABBs ‘a’ and ‘b’ moving with constant velocities va and vb.
+//// Intersect AABBs -a- and -b- moving with constant velocities va and vb.
 //// On intersection, return time of first and last contact in tfirst and tlast
 //int IntersectMovingAABBAABB(AABB a, AABB b, Vector va, Vector vb, float &tfirst, float &tlast)
 //{
-//    // Exit early if ‘a’ and ‘b’ initially overlapping
+//    // Exit early if -a- and -b- initially overlapping
 //    if (TestAABBAABB(a, b)) {
 //        tfirst = tlast = 0.0f;
 //        return 1;

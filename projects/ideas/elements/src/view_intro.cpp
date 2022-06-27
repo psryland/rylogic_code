@@ -1,4 +1,4 @@
-#include "elements/stdafx.h"
+﻿#include "elements/stdafx.h"
 #include "elements/view_intro.h"
 #include "elements/game_instance.h"
 
@@ -64,7 +64,7 @@ namespace ele
 				<< "solar system\n"
 				<< "Estimated time until planetary inhabitability:\n"
 				<< pr::datetime::ToCountdownString(m_inst.m_consts.m_start_time_till_nova, pr::datetime::EMaxUnit::Days)
-				<< "(� " << long(m_inst.m_consts.m_start_time_till_nova_error_margin / seconds_per_day) << " days)\n"
+				<< "(± " << long(m_inst.m_consts.m_start_time_till_nova_error_margin / seconds_per_day) << " days)\n"
 				<< "\n"
 				<< "Agreed course of action: Evacuation of a representitive human population\n"
 				<< "to neighbouring star system\n"

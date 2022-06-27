@@ -1,4 +1,4 @@
-#include "elements/stdafx.h"
+ï»¿#include "elements/stdafx.h"
 #include "elements/view_lab.h"
 #include "elements/view_base.h"
 #include "elements/game_instance.h"
@@ -182,10 +182,10 @@ namespace ele
 					m_pad_detail << pr::FmtS("%-16s: %d\n", "Atomic Number", elem->m_atomic_number);
 					break;
 				case EElemProp::MeltingPoint:
-					m_pad_detail << pr::FmtS("%-16s: %1.0f°C\n", "Melting Point", elem->m_melting_point);
+					m_pad_detail << pr::FmtS("%-16s: %1.0fÂ°C\n", "Melting Point", elem->m_melting_point);
 					break;
 				case EElemProp::BoilingPoint:
-					m_pad_detail << pr::FmtS("%-16s: %1.0f°C\n", "Boiling Point", elem->m_boiling_point);
+					m_pad_detail << pr::FmtS("%-16s: %1.0fÂ°C\n", "Boiling Point", elem->m_boiling_point);
 					break;
 				case EElemProp::ValenceElectrons:
 					m_pad_detail << pr::FmtS("%-16s: %d\n", "Valence Electrons", elem->m_valence_electrons);
@@ -220,16 +220,16 @@ namespace ele
 			}
 
 			// Display the strength of the materials stuck together ness
-			m_pad_detail << pr::FmtS("%-16s: %1.0f°C\n", "Chemical Stability", mat->m_enthalpy);
+			m_pad_detail << pr::FmtS("%-16s: %1.0fÂ°C\n", "Chemical Stability", mat->m_enthalpy);
 
 			// Display measured properties
 			if (pr::AllSet(m_inst.m_lab.m_known_properties, EElemProp::MeltingPoint))
 			{
-				m_pad_detail << pr::FmtS("%-16s: %1.0f°C\n", "Melting Point", mat->m_melting_point);
+				m_pad_detail << pr::FmtS("%-16s: %1.0fÂ°C\n", "Melting Point", mat->m_melting_point);
 			}
 			if (pr::AllSet(m_inst.m_lab.m_known_properties, EElemProp::BoilingPoint))
 			{
-				m_pad_detail << pr::FmtS("%-16s: %1.0f°C\n", "Boiling Point", mat->m_boiling_point);
+				m_pad_detail << pr::FmtS("%-16s: %1.0fÂ°C\n", "Boiling Point", mat->m_boiling_point);
 			}
 
 			// Display properties derived from electronegativity

@@ -185,7 +185,7 @@ namespace ele
 	// Negative values mean no bond will form
 	double BondStrength(Element elem1, Element elem2, GameConstants const& consts)
 	{
-		// The electro-static force between two charged objects is F = k*Q*q/r²
+		// The electro-static force between two charged objects is F = k*Q*q/rÂ²
 		// Assume elem1 and elem2 are separated such that their outermost electron shells just touch
 		// The total bond strength is the sum of the electro static forces:
 		//  P1 - P2 (repulsive), E1 - E2 (repulsive), P1 - E2 (attractive), P2 - E1 (attractive)
