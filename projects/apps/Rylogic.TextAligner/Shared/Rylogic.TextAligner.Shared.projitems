@@ -21,6 +21,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)src\Align\Token.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)src\Align\UnalignMenuCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)src\BaseCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Log.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)src\UIElementDialogPage.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)src\UI\AlignOptionsUI.xaml.cs">
       <DependentUpon>AlignOptionsUI.xaml</DependentUpon>

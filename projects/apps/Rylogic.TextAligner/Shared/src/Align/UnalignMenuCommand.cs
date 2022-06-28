@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using Rylogic.Utility;
 
 namespace Rylogic.TextAligner
 {
@@ -15,10 +15,18 @@ namespace Rylogic.TextAligner
 		/// the OleMenuCommandService service and the MenuCommand class.</summary>
 		protected override void Execute()
 		{
-			var view_host = CurrentViewHost;
-			if (view_host == null) return;
-			var options = Package.GetDialogPage<AlignOptions>();
-			new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Unalign);
+			try
+			{
+				var view_host = CurrentViewHost;
+				if (view_host == null) return;
+				var options = Package.GetDialogPage<AlignOptions>();
+				new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Unalign);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Execute UnalignMenuCommand failed");
+				throw;
+			}
 		}
 	}
 }

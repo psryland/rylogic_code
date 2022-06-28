@@ -1,4 +1,7 @@
-﻿namespace Rylogic.TextAligner
+﻿using System;
+using Rylogic.Utility;
+
+namespace Rylogic.TextAligner
 {
 	public sealed class AlignMenuCommand :BaseCommand
 	{
@@ -12,10 +15,18 @@
 		/// the OleMenuCommandService service and the MenuCommand class.</summary>
 		protected override void Execute()
 		{
-			var view_host = CurrentViewHost;
-			if (view_host == null) return;
-			var options = Package.GetDialogPage<AlignOptions>();
-			new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Align);
+			try
+			{
+				var view_host = CurrentViewHost;
+				if (view_host == null) return;
+				var options = Package.GetDialogPage<AlignOptions>();
+				new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Align);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Execute AlignMenuCommand failed");
+				throw;
+			}
 		}
 	}
 }
