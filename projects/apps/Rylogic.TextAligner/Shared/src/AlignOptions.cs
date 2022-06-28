@@ -21,17 +21,25 @@ namespace Rylogic.TextAligner
 		public AlignOptions()
 			:base()
 		{
-			Groups = new ObservableCollection<AlignGroup>();
-			ResetSettings();
-
-			// Record the file modified timestamp
-			SettingsWatcher = new FileSystemWatcher(Path_.Directory(SettingsFilepath), Path_.FileName(SettingsFilepath)) { EnableRaisingEvents = true };
-			SettingsWatcher.Changed += HandleChanged;
-			async void HandleChanged(object? sender, FileSystemEventArgs e)
+			try
 			{
-				await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(CancellationToken.None);
-				LoadSettingsFromStorage();
-			};
+				Groups = new ObservableCollection<AlignGroup>();
+				ResetSettings();
+
+				// Record the file modified timestamp
+				SettingsWatcher = new FileSystemWatcher(Path_.Directory(SettingsFilepath), Path_.FileName(SettingsFilepath)) { EnableRaisingEvents = true };
+				SettingsWatcher.Changed += HandleChanged;
+				async void HandleChanged(object? sender, FileSystemEventArgs e)
+				{
+					await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(CancellationToken.None);
+					LoadSettingsFromStorage();
+				};
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "AlignOptions constructor failed");
+				throw;
+			}
 		}
 
 		/// <summary>The location on disk of where the settings are saved</summary>
@@ -70,64 +78,72 @@ namespace Rylogic.TextAligner
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()
 		{
-			Groups.Clear();
+			try
+			{
+				Groups.Clear();
 
-			Groups.Add(new AlignGroup("Assignments", 1,
-				new AlignPattern(EPattern.RegularExpression, @"(?<![+\-*/%^~&|!=<>])=(?![=<>])", 0, 1, "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"),
-				new AlignPattern(EPattern.RegularExpression, @"(?<![&|])[+\-*/%^~&|]={1}", -1, 2, "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"),
-				new AlignPattern(EPattern.RegularExpression, @"&&=|\|\|=", -2, 3, "Assignments &&= and ||=")));
+				Groups.Add(new AlignGroup("Assignments", 1,
+					new AlignPattern(EPattern.RegularExpression, @"(?<![+\-*/%^~&|!=<>])=(?![=<>])", 0, 1, "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"),
+					new AlignPattern(EPattern.RegularExpression, @"(?<![&|])[+\-*/%^~&|]={1}", -1, 2, "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"),
+					new AlignPattern(EPattern.RegularExpression, @"&&=|\|\|=", -2, 3, "Assignments &&= and ||=")));
 
-			Groups.Add(new AlignGroup("Lambda", 1,
-				new AlignPattern(EPattern.Substring, @"=>")));
+				Groups.Add(new AlignGroup("Lambda", 1,
+					new AlignPattern(EPattern.Substring, @"=>")));
 
-			Groups.Add(new AlignGroup("Comparisons", 1,
-				new AlignPattern(EPattern.Substring, @"==", 0, 2),
-				new AlignPattern(EPattern.Substring, @"!=", 0, 2),
-				new AlignPattern(EPattern.Substring, @"<=", 0, 2),
-				new AlignPattern(EPattern.Substring, @">=", 0, 2),
-				new AlignPattern(EPattern.RegularExpression, @"(?<!=)>(?!=)", 0, 1, "> not preceded or followed by ="),
-				new AlignPattern(EPattern.RegularExpression, @"(?<!=)<(?!=)", 0, 1, "< not preceded or followed by =")));
+				Groups.Add(new AlignGroup("Comparisons", 1,
+					new AlignPattern(EPattern.Substring, @"==", 0, 2),
+					new AlignPattern(EPattern.Substring, @"!=", 0, 2),
+					new AlignPattern(EPattern.Substring, @"<=", 0, 2),
+					new AlignPattern(EPattern.Substring, @">=", 0, 2),
+					new AlignPattern(EPattern.RegularExpression, @"(?<!=)>(?!=)", 0, 1, "> not preceded or followed by ="),
+					new AlignPattern(EPattern.RegularExpression, @"(?<!=)<(?!=)", 0, 1, "< not preceded or followed by =")));
 
-			Groups.Add(new AlignGroup("Boolean operators", 1,
-				new AlignPattern(EPattern.Substring, @"&&"),
-				new AlignPattern(EPattern.Substring, @"||")));
+				Groups.Add(new AlignGroup("Boolean operators", 1,
+					new AlignPattern(EPattern.Substring, @"&&"),
+					new AlignPattern(EPattern.Substring, @"||")));
 
-			Groups.Add(new AlignGroup("Line comments", 1,
-				new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
+				Groups.Add(new AlignGroup("Line comments", 1,
+					new AlignPattern(EPattern.RegularExpression, @"/{2,}", 0, 0, "Two or more '/' characters")));
 
-			Groups.Add(new AlignGroup("Open brackets", 0,
-				new AlignPattern(EPattern.Substring, @"(")));
+				Groups.Add(new AlignGroup("Open brackets", 0,
+					new AlignPattern(EPattern.Substring, @"(")));
 
-			Groups.Add(new AlignGroup("Close brackets", 0,
-				new AlignPattern(EPattern.Substring, @")")));
+				Groups.Add(new AlignGroup("Close brackets", 0,
+					new AlignPattern(EPattern.Substring, @")")));
 
-			Groups.Add(new AlignGroup("Scope start", 0,
-				new AlignPattern(EPattern.Substring, @"{")));
+				Groups.Add(new AlignGroup("Scope start", 0,
+					new AlignPattern(EPattern.Substring, @"{")));
 
-			Groups.Add(new AlignGroup("Scope end", 1,
-				new AlignPattern(EPattern.Substring, @"}")));
+				Groups.Add(new AlignGroup("Scope end", 1,
+					new AlignPattern(EPattern.Substring, @"}")));
 
-			Groups.Add(new AlignGroup("Increment / Decrement", 1,
-				new AlignPattern(EPattern.Substring, @"++"),
-				new AlignPattern(EPattern.Substring, @"--")));
+				Groups.Add(new AlignGroup("Increment / Decrement", 1,
+					new AlignPattern(EPattern.Substring, @"++"),
+					new AlignPattern(EPattern.Substring, @"--")));
 
-			Groups.Add(new AlignGroup("Plus / Minus", 1,
-				new AlignPattern(EPattern.RegularExpression, @"(?<!\+)\+(?!\+)", 0, 1, "Matches '+' but not '++'"),
-				new AlignPattern(EPattern.RegularExpression, @"(?<!\-)\-(?!\-)", 0, 1, "Matches '-' but not '--'")));
+				Groups.Add(new AlignGroup("Plus / Minus", 1,
+					new AlignPattern(EPattern.RegularExpression, @"(?<!\+)\+(?!\+)", 0, 1, "Matches '+' but not '++'"),
+					new AlignPattern(EPattern.RegularExpression, @"(?<!\-)\-(?!\-)", 0, 1, "Matches '-' but not '--'")));
 
-			Groups.Add(new AlignGroup("Comma delimiter", 0,
-				new AlignPattern(EPattern.Substring, @",")));
+				Groups.Add(new AlignGroup("Comma delimiter", 0,
+					new AlignPattern(EPattern.Substring, @",")));
 
-			Groups.Add(new AlignGroup("Single colon delimiter", 0,
-				new AlignPattern(EPattern.RegularExpression, @"(?<!:):(?!:)", 0, 1, "Matches a single ':' character (not '::')")));
+				Groups.Add(new AlignGroup("Single colon delimiter", 0,
+					new AlignPattern(EPattern.RegularExpression, @"(?<!:):(?!:)", 0, 1, "Matches a single ':' character (not '::')")));
 
-			Groups.Add(new AlignGroup("Members", 1,
-				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with 'm_'"),
-				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with '_'"),
-				new AlignPattern(EPattern.RegularExpression, @"(?<=\s)[_a-zA-z][_a-zA-Z0-9]*_(?![_a-zA-Z0-9])", 0, 1, "Matches class members that end with '_'")));
+				Groups.Add(new AlignGroup("Members", 1,
+					new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with 'm_'"),
+					new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with '_'"),
+					new AlignPattern(EPattern.RegularExpression, @"(?<=\s)[_a-zA-z][_a-zA-Z0-9]*_(?![_a-zA-Z0-9])", 0, 1, "Matches class members that end with '_'")));
 
-			AlignStyle = EAlignCharacters.Spaces;
-			LineIgnorePattern = new AlignPattern();
+				AlignStyle = EAlignCharacters.Spaces;
+				LineIgnorePattern = new AlignPattern();
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Error in ResetSettings");
+				throw;
+			}
 		}
 
 		/// <summary>Load settings from AppData</summary>
@@ -151,7 +167,11 @@ namespace Rylogic.TextAligner
 				AlignStyle = root.Element(nameof(AlignStyle)).As<EAlignCharacters>(EAlignCharacters.Spaces);
 				LineIgnorePattern = new AlignPattern(EPattern.RegularExpression, root.Element(nameof(LineIgnorePattern)).As<string>(string.Empty));
 			}
-			catch { } // Don't allow anything to throw from here, otherwise VS locks up... :-/
+			catch (Exception ex)
+			{
+				// Don't allow anything to throw from here, otherwise VS locks up... :-/
+				Log.Write(ELogLevel.Error, ex, "Error in LoadSettingsFromStorage");
+			}
 		}
 
 		/// <summary>Save settings to AppData</summary>
@@ -172,7 +192,11 @@ namespace Rylogic.TextAligner
 				root.Add2(nameof(LineIgnorePattern), LineIgnorePattern.Expr, false);
 				root.Save(SettingsFilepath);
 			}
-			catch { } // Don't allow anything to throw from here, otherwise VS locks up... :-/
+			catch (Exception ex)
+			{
+				// Don't allow anything to throw from here, otherwise VS locks up... :-/
+				Log.Write(ELogLevel.Error, ex, "Error in SaveSettingsToStorage");
+			}
 		}
 
 		/// <summary>Called just before settings are saved</summary>
@@ -181,20 +205,36 @@ namespace Rylogic.TextAligner
 		/// <summary></summary>
 		internal event EventHandler<CancelEventArgs>? Deactivating;
 
-		/// <summary>Save changes when the dialog page loses focus</summary>
+		/// <inheritdoc/>
 		protected override void OnDeactivate(CancelEventArgs e)
 		{
-			Deactivating?.Invoke(this, e);
-			if (e.Cancel) return;
+			try
+			{
+				Deactivating?.Invoke(this, e);
+				if (e.Cancel) return;
 
-			SaveSettingsToStorage();
-			base.OnDeactivate(e);
+				SaveSettingsToStorage();
+				base.OnDeactivate(e);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "AlignOptions.OnDeactivate failed");
+				throw;
+			}
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		protected override UIElement CreateChild()
 		{
-			return new AlignOptionsUI(this);
+			try
+			{
+				return new AlignOptionsUI(this);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "AlignOptions.CreateChild failed");
+				throw;
+			}
 		}
 
 		/// <inheritdoc/>
