@@ -2,6 +2,8 @@
 using System.ComponentModel.Design;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
@@ -112,9 +114,13 @@ namespace Rylogic.TextAligner
 			}
 			catch (Exception ex)
 			{
-				Log.Write(Utility.ELogLevel.Error, ex, "Error during GetService");
+				Log.Write(ELogLevel.Error, ex, "Error during GetService");
 				throw;
 			}
+		}
+		public Task<object> GetServiceAsync<TService>(CancellationToken cancellation_token)
+		{
+			return System.Threading.Tasks.Task.FromResult(GetService<TService>());
 		}
 
 		/// <summary>Return a dialog page</summary>

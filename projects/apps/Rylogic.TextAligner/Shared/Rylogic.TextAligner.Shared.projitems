@@ -49,7 +49,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)icon.png" />
-    <Content Include="$(MSBuildThisFileDirectory)license.txt" />
     <Content Include="$(MSBuildThisFileDirectory)res\aligning_examples.txt" />
     <Content Include="$(MSBuildThisFileDirectory)res\align_tests.txt" />
     <Resource Include="$(MSBuildThisFileDirectory)res\edit_add.png" />

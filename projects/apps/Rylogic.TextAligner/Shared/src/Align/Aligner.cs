@@ -200,7 +200,9 @@ namespace Rylogic.TextAligner
 						if (already_unaligned)
 						{
 							// Determine the range of lines spanned by the highest priority group
-							fallback_line_span = RangeI.From(edits.Select(x => x.LineNumber));
+							var fallback = RangeI.From(edits.Select(x => x.LineNumber));
+							if (fallback.End > fallback.Beg) fallback.End--; // Line range is an inclusive range
+							fallback_line_span = fallback;
 							edits.Clear();
 							continue;
 						}
