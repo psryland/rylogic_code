@@ -1,4 +1,4 @@
-//*****************************************
+ï»¿//*****************************************
 // Sqlite C++ wrapper
 //  Copyright (c) Paul Ryland 2012
 //*****************************************
@@ -2111,7 +2111,7 @@ namespace pr::sqlite
 			auto table = db.Table<Record>();
 
 			int row;
-			std::wstring str = L"€€€€";
+			std::wstring str = L"ï¿½ï¿½ï¿½ï¿½";
 			table.Insert(Record(str), row);
 
 			std::wstring STR = table.GetColumn<std::wstring>(PKs(row), 1);

@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Ldr Gizmo
 //  Copyright (c) Rylogic Ltd 2015
 //***************************************************************************************************
@@ -863,7 +863,7 @@ namespace pr::ldr
 			if (nav_op == lbtn && m_component == EComponent::None)
 			{
 				auto hit = HitTest(camera, nss_point);
-				SetAxisColour(hit, m_col_manip);
+				SetAxisColour(hit, Colour(m_col_manip));
 				if (hit != EComponent::None)
 				{
 					// Send the initial moving event before 'Reference' so that watchers
@@ -883,7 +883,7 @@ namespace pr::ldr
 			{
 				Commit();
 				auto hit = HitTest(camera, nss_point);
-				SetAxisColour(hit, m_col_hover);
+				SetAxisColour(hit, Colour(m_col_hover));
 				m_component = EComponent::None;
 				m_manipulating = false;
 				m_last_hit = hit;
@@ -912,7 +912,7 @@ namespace pr::ldr
 			auto hit = HitTest(camera, nss_point);
 			if (hit != m_last_hit)
 			{
-				SetAxisColour(hit, m_col_hover);
+				SetAxisColour(hit, Colour(m_col_hover));
 				m_last_hit = hit;
 				return true;
 			}

@@ -45,7 +45,7 @@
 		<PackageReference Include="Dapper" Version="2.0.123" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
 		<PackageReference Include="System.Net.Http" Version="4.3.4" />
-		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.115.5" />
+		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.116" />
 		<PackageReference Include="System.Net.WebSockets.Client" Version="4.3.2" />
 		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />

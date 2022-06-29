@@ -1,6 +1,6 @@
 //*******************************************************************************
 // Terrain Exporter
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (C) Rylogic Ltd 2009
 //*******************************************************************************
 #include "stdafx.h"
 #include "terrainexporter/edge.h"

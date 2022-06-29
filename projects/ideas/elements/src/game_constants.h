@@ -24,7 +24,7 @@ namespace ele
 		pr::metres_p_sec_t m_speed_of_light;
 
 		// The constant that scales the gravitational force
-		pr::metres³_p_kilogram_p_sec²_t m_gravitational_constant;
+		pr::metresÂ³_p_kilogram_p_secÂ²_t m_gravitational_constant;
 
 		// The constant that scales the electro static force
 		double m_coulomb_constant;
@@ -60,7 +60,7 @@ namespace ele
 		pr::metres_t m_star_distance;
 
 		// The acceleration due to the star's gravity at the given distance
-		pr::metres_p_sec²_t m_star_gravitational_acceleration;
+		pr::metres_p_secï¿½_t m_star_gravitational_acceleration;
 
 		// The speed required to escape the star
 		pr::metres_p_sec_t m_escape_velocity;
@@ -69,10 +69,10 @@ namespace ele
 		pr::kilograms_t m_average_passenger_weight;
 
 		// The space required by each passenger
-		pr::metres³_t m_average_passenger_personal_space;
+		pr::metresï¿½_t m_average_passenger_personal_space;
 
 		// The space required by each passenger for life support systems etc
-		pr::metres³_t m_average_passenger_required_systems_volume;
+		pr::metresï¿½_t m_average_passenger_required_systems_volume;
 
 		// The ships volume is this much bigger than it's contents
 		double m_ship_volume_scaler;
@@ -81,7 +81,7 @@ namespace ele
 		size_t m_total_man_power;
 
 		// How quickly the ship can be built
-		pr::metres³_p_day_t m_ship_construction_rate;
+		pr::metresï¿½_p_day_t m_ship_construction_rate;
 
 		// The total man days needed to discover the star mass
 		man_days_t m_star_mass_discovery_effort;

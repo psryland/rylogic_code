@@ -568,7 +568,7 @@ namespace view3d
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			for (size_t i = 0; i != new_vcount; ++i, ++vin)
 			{
-				SetPCNT(*vout++, To<v4>(vin->pos), Colour32(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
+				SetPCNT(*vout++, To<v4>(vin->pos), Colour(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
 				Grow(model->m_bbox, To<v4>(vin->pos));
 			}
 			auto iout = mlock.m_ilock.ptr<uint16_t>();

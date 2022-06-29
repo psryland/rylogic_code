@@ -300,7 +300,7 @@ extern "C"
 		float angle;
 		AxisAngle(q, axis, angle);
 		_snprintf(pResult, max,
-			"%+g %+g %+g %+g Ang=%g° Len=%g"
+			"%+g %+g %+g %+g Ang=%gÂ° Len=%g"
 			,R(q.x)
 			,R(q.y)
 			,R(q.z)

@@ -82,7 +82,7 @@ namespace ele
 	// 2 Is X a nonmetal or a metal?
 	//  If X is a nonmetal, then the compound is molecular. For molecular compounds, use numeric prefixes before each
 	//  element's name to specify the number of each element. If there's only one atom of element X, no prefix is
-	//  required before the name of X. Use the suffix –ide after the element name for Y. If X is a metal, then the
+	//  required before the name of X. Use the suffix -ide after the element name for Y. If X is a metal, then the
 	//  compound is ionic; proceed to Step 3.
 	// 3 Is X a metal that has variable charge?
 	//  If X has a variable charge (often, these are group B metals), you must specify its charge within the compound
@@ -90,9 +90,9 @@ namespace ele
 	//  Fe2+ and (III) for Fe3+. Proceed to Step 4.
 	// 4 Is Y a polyatomic ion?
 	//  If Y is a polyatomic ion, use the appropriate name for that ion. Usually, polyatomic anions have an ending
-	//  of –ate or –ite (corresponding to related ions that contain more or less oxygen, respectively). Another common
-	//  ending for polyatomic ions is –ide, as in hydroxide (OH–) and cyanide (CN–). If Y is not a polyatomic ion,
-	//  use the suffix –ide after the name of Y.
+	//  of -ate or -ite (corresponding to related ions that contain more or less oxygen, respectively). Another common
+	//  ending for polyatomic ions is -ide, as in hydroxide (OH-) and cyanide (CN-). If Y is not a polyatomic ion,
+	//  use the suffix -ide after the name of Y.
 	struct ElementName
 	{
 		// Full element name (all lower case)

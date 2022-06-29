@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Graph Control
 //  Copyright (c) Rylogic Ltd 2009
 //***********************************************
@@ -952,7 +952,7 @@ namespace pr::gui
 			if (!m_yaxis.m_label.empty())
 			{
 				gfx.MeasureString(m_yaxis.m_label.c_str() ,int(m_yaxis.m_label.size()) ,&m_yaxis.m_opts.LabelFont ,PointF(), &r);
-				rect.X     += r.Height; // will be rotated by 90�
+				rect.X     += r.Height; // will be rotated by 90°
 				rect.Width -= r.Height;
 			}
 

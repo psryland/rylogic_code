@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "elements/forward.h"
 #include "elements/material.h"
@@ -40,7 +40,7 @@ namespace ele
 		pr::days_t m_construction_time;
 
 		// The volume of space required to house all the passengers, fuel, shields, and computer systems
-		pr::metres�_t m_total_volume;
+		pr::metres³_t m_total_volume;
 
 		// The initial mass of the ship including passengers, fuel, shields, and systems
 		pr::kilograms_t m_total_mass;

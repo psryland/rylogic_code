@@ -72,7 +72,7 @@ namespace pr::collision
 		auto rhs = ShapeSphere{0.4f};
 		m4x4 l2w_[] =
 		{
-			m4x4Identity,
+			m4x4::Identity(),
 		};
 		m4x4 r2w_[] =
 		{

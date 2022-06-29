@@ -88,7 +88,7 @@ namespace ele
 		m_star_gravitational_acceleration = m_gravitational_constant * m_star_mass / pr::Sqr(m_star_distance);
 
 		// Calculate the required escape velocity (speed)
-		// Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m³kg^-1s^-2, M = star mass, r = distance from star
+		// Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m^3kg^-1s^-2, M = star mass, r = distance from star
 		m_escape_velocity = ::sqrt(2.0 * m_gravitational_constant * m_star_mass / m_star_distance);
 
 		// Set up per passenger constants

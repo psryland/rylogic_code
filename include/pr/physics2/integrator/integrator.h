@@ -48,10 +48,10 @@ namespace pr::physics
 		//   x* = cross product for force spatial vectors
 		// So:
 		//   f = I*a + vx*.I.v
-		//   I¯ * f = a + I¯ * (vx*.I.v)
-		//   a = I¯ * f -  I¯ * (vx*.I.v)
+		//   Iinv * f = a + Iinv * (vx*.I.v)
+		//   a = Iinv * f -  Iinv * (vx*.I.v)
 		// where:
-		//   I¯ = inverse inertia
+		//   Iinv = inverse inertia
 
 		#if PR_DBG
 		auto ke_before = rb.KineticEnergy();
@@ -61,7 +61,7 @@ namespace pr::physics
 		// Notes:
 		//  - The WS inertia depends on orientation which changes throughout the step due to the angular velocity of the body.
 		//    Assuming the WS force is constant for the step, then the average momentum for the step is 'h = h0 + 0.5*t*Force'.
-		//    Angular velocity = I¯.h but I depends on orientation, so we need to approximate I at t = 0.5.
+		//    Angular velocity = Iinv.h but I depends on orientation, so we need to approximate I at t = 0.5.
 		//  - WS spatial vectors are all measured at the model origin
 
 		auto ws_force = rb.ForceWS();
