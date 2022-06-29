@@ -9,8 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\sdk\scintil
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics2", "physics2.vcxproj", "{D40BFF46-FB1F-4452-B71C-57DC0AC0180C}"
 	ProjectSection(ProjectDependencies) = postProject
-		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\sdk\sqlite3\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
@@ -130,12 +130,18 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KeySpy", "..\projects\apps\KeySpy\KeySpy.vcxproj", "{88D8BE21-D441-41B5-B9A2-705DFAEC2697}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lost_at_sea", "..\projects\ideas\lost_at_sea\lost_at_sea.vcxproj", "{A96E7D7B-6550-4F4D-A630-80712E25AB13}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0618738D-AEAB-4643-9953-BE49459BCBA1} = {0618738D-AEAB-4643-9953-BE49459BCBA1}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cex", "..\projects\tools\cex\cex.vcxproj", "{039B80B4-7A80-4E8D-8928-AA843B89C7EC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "elevate", "..\projects\tools\elevate\elevate.vcxproj", "{50944CED-7FC2-4B57-95E6-7CE85BADB08E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "prautoexp", "..\projects\tools\prautoexp\prautoexp.vcxproj", "{76D773AE-90AE-4574-A99A-1A9C5B54077A}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8C08B476-AF59-47F4-8122-2E068D55066E} = {8C08B476-AF59-47F4-8122-2E068D55066E}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestWPF", "..\projects\tests\TestWPF\TestWPF.csproj", "{EE5F6A9C-BD1B-4CA4-90DA-C37F1E28DD3E}"
 EndProject
@@ -163,7 +169,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12-test", "..\projects\tests\view3d-12-test\view3d-12-test.vcxproj", "{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
-		{0A6CC9E3-76D2-4F4E-A193-1A816D24A555} = {0A6CC9E3-76D2-4F4E-A193-1A816D24A555}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d-12.dll", "view3d-12.dll.vcxproj", "{FB13BA51-F847-4804-90A8-61AB789F4061}"
@@ -176,7 +181,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Solution", "_Solution", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TimeTracker", "TimeTracker", "{D9E52B30-018A-46EC-8CD9-87C61256BF61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeTracker", "..\projects\apps\TimeTracker\TimeTracker.csproj", "{82994C4D-963D-4C55-89A2-91249F078E93}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TimeTracker", "..\projects\apps\TimeTracker\TimeTracker.csproj", "{82994C4D-963D-4C55-89A2-91249F078E93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

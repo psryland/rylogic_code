@@ -981,101 +981,6 @@ namespace pr::rdr12
 					}
 				}
 			}
-			Texture2DPtr PointStyleTexture(ParseParams& p)
-			{
-				EStyle style = m_style;
-				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
-				switch (style)
-				{
-					case EStyle::Square:
-					{
-						// No texture needed for square style
-						return nullptr;
-					}
-					case EStyle::Circle:
-					{
-						auto id = pr::hash::Hash("PointStyleCircle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								auto w0 = sz.x * 0.5f;
-								auto h0 = sz.y * 0.5f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto dc, auto fr, auto) { dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
-							});
-					}
-					case EStyle::Triangle:
-					{
-						auto id = pr::hash::Hash("PointStyleTriangle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								Renderer::Lock lk(p.m_rdr);
-								D3DPtr<ID2D1PathGeometry> geom;
-								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-								pr::Throw(geom->Open(&sink.m_ptr));
-
-								auto w0 = 1.0f * sz.x;
-								auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
-								auto h1 = 0.5f * (sz.y - h0);
-
-								sink->BeginFigure({w0, h1}, D2D1_FIGURE_BEGIN_FILLED);
-								sink->AddLine({0.0f * w0, h1});
-								sink->AddLine({0.5f * w0, h0 + h1});
-								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-								pr::Throw(sink->Close());
-
-								return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-							});
-					}
-					case EStyle::Star:
-					{
-						auto id = pr::hash::Hash("PointStyleStar", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								Renderer::Lock lk(p.m_rdr);
-								D3DPtr<ID2D1PathGeometry> geom;
-								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-								pr::Throw(geom->Open(&sink.m_ptr));
-
-								auto w0 = 1.0f * sz.x;
-								auto h0 = 1.0f * sz.y;
-
-								sink->BeginFigure({0.5f * w0, 0.0f * h0}, D2D1_FIGURE_BEGIN_FILLED);
-								sink->AddLine({0.4f * w0, 0.4f * h0});
-								sink->AddLine({0.0f * w0, 0.5f * h0});
-								sink->AddLine({0.4f * w0, 0.6f * h0});
-								sink->AddLine({0.5f * w0, 1.0f * h0});
-								sink->AddLine({0.6f * w0, 0.6f * h0});
-								sink->AddLine({1.0f * w0, 0.5f * h0});
-								sink->AddLine({0.6f * w0, 0.4f * h0});
-								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-								pr::Throw(sink->Close());
-
-								return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-							});
-					}
-					case EStyle::Annulus:
-					{
-						auto id = pr::hash::Hash("PointStyleAnnulus", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								auto w0 = sz.x * 0.5f;
-								auto h0 = sz.y * 0.5f;
-								auto w1 = sz.x * 0.4f;
-								auto h1 = sz.y * 0.4f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto dc, auto fr, auto bk)
-									{
-										dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-										dc->FillEllipse({{w0, h0}, w0, h0}, fr);
-										dc->FillEllipse({{w0, h0}, w1, h1}, bk);
-									});
-							});
-					}
-					default: throw std::exception("Unknown point style");
-
-				}
-			}
 			template <typename TDrawOnIt>
 			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
 			{
@@ -1085,6 +990,8 @@ namespace pr::rdr12
 				TextureDesc desc(id, tdesc, false, 0, name);
 				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
 
+				(void)draw;
+				#if 0 //todo
 				// Get a D2D device context to draw on
 				auto dc = tex->GetD2DeviceContext();
 
@@ -1101,7 +1008,103 @@ namespace pr::rdr12
 				dc->Clear(&bk);
 				draw(dc, fr_brush.get(), bk_brush.get());
 				pr::Throw(dc->EndDraw());
+				#endif
 				return tex;
+			}
+			Texture2DPtr PointStyleTexture(ParseParams& p)
+			{
+				EStyle style = m_style;
+				iv2 size = To<iv2>(m_point_size);
+				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
+				switch (style)
+				{
+					case EStyle::Square:
+					{
+						// No texture needed for square style
+						return nullptr;
+					}
+					case EStyle::Circle:
+					{
+						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
+						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+							{
+								auto w0 = sz.x * 0.5f;
+								auto h0 = sz.y * 0.5f;
+								return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
+							});
+					}
+					case EStyle::Triangle:
+					{
+						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
+						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+							{
+								D3DPtr<ID2D1PathGeometry> geom;
+								D3DPtr<ID2D1GeometrySink> sink;
+								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+								pr::Throw(geom->Open(&sink.m_ptr));
+
+								auto w0 = 1.0f * sz.x;
+								auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
+								auto h1 = 0.5f * (sz.y - h0);
+
+								sink->BeginFigure({w0, h1}, D2D1_FIGURE_BEGIN_FILLED);
+								sink->AddLine({0.0f * w0, h1});
+								sink->AddLine({0.5f * w0, h0 + h1});
+								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+								pr::Throw(sink->Close());
+
+								return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							});
+					}
+					case EStyle::Star:
+					{
+						auto id = pr::hash::HashArgs("PointStyleStar", sz);
+						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+							{
+								D3DPtr<ID2D1PathGeometry> geom;
+								D3DPtr<ID2D1GeometrySink> sink;
+								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+								pr::Throw(geom->Open(&sink.m_ptr));
+
+								auto w0 = 1.0f * sz.x;
+								auto h0 = 1.0f * sz.y;
+
+								sink->BeginFigure({0.5f * w0, 0.0f * h0}, D2D1_FIGURE_BEGIN_FILLED);
+								sink->AddLine({0.4f * w0, 0.4f * h0});
+								sink->AddLine({0.0f * w0, 0.5f * h0});
+								sink->AddLine({0.4f * w0, 0.6f * h0});
+								sink->AddLine({0.5f * w0, 1.0f * h0});
+								sink->AddLine({0.6f * w0, 0.6f * h0});
+								sink->AddLine({1.0f * w0, 0.5f * h0});
+								sink->AddLine({0.6f * w0, 0.4f * h0});
+								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+								pr::Throw(sink->Close());
+
+								return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+							});
+					}
+					case EStyle::Annulus:
+					{
+						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
+						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+							{
+								auto w0 = sz.x * 0.5f;
+								auto h0 = sz.y * 0.5f;
+								auto w1 = sz.x * 0.4f;
+								auto h1 = sz.y * 0.4f;
+								return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
+									{
+										dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+										dc->FillEllipse({{w0, h0}, w0, h0}, fr);
+										dc->FillEllipse({{w0, h0}, w1, h1}, bk);
+									});
+							});
+					}
+					default:
+					{
+						throw std::runtime_error("Unknown point style");
+					}
+				}
 			}
 		};
 

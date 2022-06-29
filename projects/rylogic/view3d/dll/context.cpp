@@ -236,7 +236,7 @@ namespace view3d
 							auto radius = reader.Keyword(L"Radius").Vector2S();
 							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : v4Zero;
 							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
-							auto id = pr::hash::Hash("RadialFadePS", centre, radius, type, focus_relative);
+							auto id = pr::hash::HashArgs("RadialFadePS", centre, radius, type, focus_relative);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
 							shdr->m_fade_centre = centre;
 							shdr->m_fade_radius = radius;
@@ -250,45 +250,45 @@ namespace view3d
 				{// GS
 					switch (rstep0.m_gs.shdr)
 					{
-					default: throw std::runtime_error("Unknown geometry shader");
-					case EView3DShaderGS::Standard: break;
-					case EView3DShaderGS::PointSpritesGS:
+						default: throw std::runtime_error("Unknown geometry shader");
+						case EView3DShaderGS::Standard: break;
+						case EView3DShaderGS::PointSpritesGS:
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto point_size = reader.Keyword(L"PointSize").Vector2S();
 							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
-							auto id = pr::hash::Hash("PointSprites", point_size, depth);
+							auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 							shdr->m_size = point_size;
 							shdr->m_depth = depth;
 							rstep1.m_gs = shdr;
 							break;
 						}
-					case EView3DShaderGS::ThickLineListGS:
+						case EView3DShaderGS::ThickLineListGS:
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
-							auto id = pr::hash::Hash("ThickLineList", line_width);
+							auto id = pr::hash::HashArgs("ThickLineList", line_width);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 							shdr->m_width = line_width;
 							rstep1.m_gs = shdr;
 							break;
 						}
-					case EView3DShaderGS::ThickLineStripGS:
+						case EView3DShaderGS::ThickLineStripGS:
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
-							auto id = pr::hash::Hash("ThickLineStrip", line_width);
+							auto id = pr::hash::HashArgs("ThickLineStrip", line_width);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
 							shdr->m_width = line_width;
 							rstep1.m_gs = shdr;
 							break;
 						}
-					case EView3DShaderGS::ArrowHeadGS:
+						case EView3DShaderGS::ArrowHeadGS:
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto size = reader.Keyword(L"Size").RealS<float>();
-							auto id = pr::hash::Hash("ArrowHead", size);
+							auto id = pr::hash::HashArgs("ArrowHead", size);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
 							shdr->m_size = size;
 							rstep1.m_gs = shdr;

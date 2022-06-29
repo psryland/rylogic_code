@@ -95,9 +95,24 @@ namespace pr::rdr12
 		wchar_t const* Settings() const;
 		void Settings(wchar_t const* settings);
 
+		// Get/Set the back buffer size
+		iv2 BackBufferSize() const;
+		void BackBufferSize(iv2 sz);
+
+		// Get/Set the window viewport
+		view3d::Viewport Viewport() const;
+		void Viewport(view3d::Viewport const& vp);
+
 		// Add/Remove an object to this window
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
+
+		// Add/Remove all objects to this window with the given context ids (or not with)
+		void Add(GUID const* context_ids, int include_count, int exclude_count);
+		void Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids = false);
+
+		// Remove all objects from this scene
+		void RemoveAllObjects();
 
 		// Render this window into whatever render target is currently set
 		void Render();

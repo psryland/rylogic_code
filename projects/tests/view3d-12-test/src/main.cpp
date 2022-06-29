@@ -30,6 +30,7 @@ struct Main :Form
 	view3d::DllHandle m_view3d;
 	view3d::Window m_win3d;
 	view3d::Object m_obj0;
+	view3d::Object m_obj1;
 	//Renderer m_rdr;
 	//Window m_wnd;
 	//Scene m_scn;
@@ -37,7 +38,7 @@ struct Main :Form
 	//Instance m_inst1;
 
 	// Error handler
-	static void ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+	static void __stdcall ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
 	{
 		std::wcout << filepath << "(" << line << "): " << msg << std::endl;
 	}
@@ -52,7 +53,8 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
-		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva FF00FF00 { 1 2 3 }", false, nullptr, nullptr))
+		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva 8000FF00 { 1 2 3 }", false, nullptr, nullptr))
+		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
 		//,m_rdr(RSettings(hinstance))
 		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
 		//,m_scn(m_wnd)
@@ -75,7 +77,10 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
-		View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj1);
+
+		View3D_DemoSceneCreate(m_win3d);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
@@ -85,14 +90,29 @@ struct Main :Form
 	~Main()
 	{
 		View3D_WindowDestroy(m_win3d);
+		View3D_ObjectDelete(m_obj0);
+		View3D_ObjectDelete(m_obj1);
 		View3D_Shutdown(m_view3d);
 	}
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
 		Form::OnWindowPosChange(args);
-		if (!args.m_before)
+		if (!args.m_before && args.IsResize())
 		{
-			iv2 sz(args.m_wp->cx, args.m_wp->cy);
+			auto dpi = GetDpiForWindow(*this);
+			auto w = s_cast<int>(args.m_wp->cx * dpi / 96.0);
+			auto h = s_cast<int>(args.m_wp->cy * dpi / 96.0);
+			View3D_WindowBackBufferSizeSet(m_win3d, w, h);
+			View3D_WindowViewportSet(m_win3d, view3d::Viewport{
+				.m_x = 0,
+				.m_y = 0,
+				.m_width = 1.f * w,
+				.m_height = 1.f * h,
+				.m_min_depth = 0,
+				.m_max_depth = 1,
+				.m_screen_w = args.m_wp->cx,
+				.m_screen_h = args.m_wp->cy,
+				});
 			//m_wnd.BackBufferSize(sz, false);
 			//m_scn.m_viewport.Set(sz);
 		}

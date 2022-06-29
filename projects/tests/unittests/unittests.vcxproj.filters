@@ -1008,6 +1008,9 @@
     <ClInclude Include="..\..\..\include\pr\common\stride_ptr.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gfx\dpi.h">
+      <Filter>pr\gfx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
