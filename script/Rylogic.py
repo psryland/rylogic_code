@@ -6,8 +6,6 @@ import zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 from typing import Callable, List
-
-from numpy import append
 import UserVars
 
 # Support symlink on windows

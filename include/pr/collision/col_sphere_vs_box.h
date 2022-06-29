@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-
 #include "pr/maths/maths.h"
 #include "pr/geometry/closest_point.h"
 #include "pr/collision/penetration.h"

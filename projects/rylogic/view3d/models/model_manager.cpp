@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -124,12 +124,12 @@ namespace pr::rdr
 			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays
 			Vert const verts[6] =
 			{
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFFFF0000), v4Zero, v2Zero},
-				{v4( 1.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFFFF0000), v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFF00FF00), v4Zero, v2Zero},
-				{v4( 0.0f,  1.0f,  0.0f, 1.0f), Colour32(0xFF00FF00), v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFF0000FF), v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  1.0f, 1.0f), Colour32(0xFF0000FF), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4Zero, v2Zero},
+				{v4( 1.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4Zero, v2Zero},
+				{v4( 0.0f,  1.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF0000FF), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  1.0f, 1.0f), Colour(0xFF0000FF), v4Zero, v2Zero},
 			};
 			uint16_t const idxs[] =
 			{
@@ -167,14 +167,14 @@ namespace pr::rdr
 		{// Bounding box cube
 			Vert const verts[] =
 			{
-				{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(-0.5f, -0.5f, -0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, -0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, -0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, -0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(-0.5f, -0.5f, +0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, +0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, +0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, +0.5f, 1.0f), ColourBlue, v4Zero, v2Zero},
 			};
 			uint16_t const idxs[] =
 			{
@@ -197,45 +197,45 @@ namespace pr::rdr
 			constexpr float dd = 0.8f;
 			Vert const verts[] =
 			{
-				{v4(-sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-dd, -sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, -dd, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, -sz, -dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, -dd, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(dd, -sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, -sz, -dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(dd, sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, dd, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, sz, -dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(-sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, dd, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-dd, sz, -sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, sz, -dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(-sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-dd, -sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, -dd, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, -sz, dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, -dd, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(dd, -sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, -sz, dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(dd, sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, dd, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(sz, sz, dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 
-				{v4(-sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
-				{v4(-sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, dd, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-dd, sz, sz, 1.0f), ColourWhite, v4Zero, v2Zero},
+				{v4(-sz, sz, dd, 1.0f), ColourWhite, v4Zero, v2Zero},
 			};
 			uint16_t const idxs[] =
 			{
