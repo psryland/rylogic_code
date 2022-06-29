@@ -192,6 +192,12 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_demo_scene.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_templates.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">

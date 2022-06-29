@@ -320,7 +320,7 @@ namespace pr::rdr12
 		{
 			// Width is in bytes for buffer type resources
 			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride, 1, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, data_alignment, final_state, usage, D3D12_TEXTURE_LAYOUT_ROW_MAJOR);
-			desc.Data.push_back(Image(data, count, element_stride));
+			if (data != nullptr) desc.Data.push_back(Image(data, count, element_stride));
 			desc.ElemStride = element_stride;
 			return desc;
 		}
@@ -355,7 +355,7 @@ namespace pr::rdr12
 			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			desc.Data.push_back(data);
+			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
 			return desc;
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
@@ -363,7 +363,7 @@ namespace pr::rdr12
 			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			desc.Data.push_back(data);
+			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
 			return desc;
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
@@ -371,7 +371,7 @@ namespace pr::rdr12
 			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			desc.Data.push_back(data);
+			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
 			return desc;
 		}
 
@@ -553,7 +553,7 @@ namespace pr::rdr12
 	struct SamDescStatic :D3D12_STATIC_SAMPLER_DESC
 	{
 		SamDescStatic(ESamReg shader_register, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
+			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
 		{}
 		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
 			:SamDescStatic(shader_register, addr, addr, addr, filter, vis)

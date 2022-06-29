@@ -172,6 +172,58 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, wchar_
 	CatchAndReport(View3D_WindowSettingsSet, window,);
 }
 
+// Get/Set the dimensions of the render target
+// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window, int& width, int& height)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto area = window->BackBufferSize();
+		width = area.x;
+		height = area.y;
+		return TRUE;
+	}
+	CatchAndReport(View3D_WindowBackBufferSizeGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, int width, int height)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BackBufferSize(iv2{width, height});
+	}
+	CatchAndReport(View3D_WindowBackBufferSizeSet, window,);
+}
+
+// Get/Set the window viewport (and clipping area)
+VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Viewport();
+	}
+	CatchAndReport(View3D_WindowViewportGet, window, view3d::Viewport{});
+}
+VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Viewport(vp);
+	}
+	CatchAndReport(View3D_WindowViewportSet, window,);
+}
+
 // Set a notification handler for when a window setting changes
 VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add)
 {
@@ -446,6 +498,20 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
 
+// Delete an object, freeing its resources
+VIEW3D_API void __stdcall View3D_ObjectDelete(view3d::Object object)
+{
+	try
+	{
+		// Delete is idempotent
+		if (!object) return;
+		
+		DllLockGuard;
+		Dll().DeleteObject(object);
+	}
+	CatchAndReport(View3D_ObjectDelete, ,);
+}
+
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
 // Note, setting the o2w for a child object positions the object in world space rather than parent space
 // (internally the appropriate O2P transform is calculated to put the object at the given O2W location)
@@ -474,4 +540,43 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(view3d::Object object, view3d::Mat
 		object->O2W(o2w_, name);
 	}
 	CatchAndReport(View3D_ObjectO2WSet, ,);
+}
+
+// Miscellaneous **************************
+
+// Create/Delete the demo scene in the given window
+VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// Get the string of all ldr objects
+		auto scene = rdr12::CreateDemoScene();
+
+		DllLockGuard;
+
+		// Add the demo objects to the sources
+		Dll().LoadScript(std::string_view(scene), false, EEncoding::utf8, &Context::GuidDemoSceneObjects, script::Includes(), [=](Guid const& id, bool before)
+		{
+			if (before)
+				window->Remove(&id, 1, 0);
+			else
+				window->Add(&id, 1, 0);
+		});
+
+		// Position the camera to look at the scene
+		//todo View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);
+		return Context::GuidDemoSceneObjects;
+	}
+	CatchAndReport(View3D_DemoSceneCreate, window, Context::GuidDemoSceneObjects);
+}
+VIEW3D_API void __stdcall View3D_DemoSceneDelete()
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
+	}
+	CatchAndReport(View3D_DemoSceneDelete,,);
 }

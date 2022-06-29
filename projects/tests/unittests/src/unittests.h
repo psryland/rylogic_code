@@ -158,6 +158,7 @@
 #include "pr\geometry\utility.h"
 #include "pr\geometry\volume.h"
 #include "pr\gfx\colour.h"
+#include "pr\gfx\dpi.h"
 #include "pr\gfx\onebit.h"
 #include "pr\hardware\comm_port_io.h"
 #include "pr\hardware\cpuinfo.h"

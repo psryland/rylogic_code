@@ -192,6 +192,39 @@ namespace pr::rdr12
 	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
+	// Delete a single object
+	void Context::DeleteObject(LdrObject* object)
+	{
+		// Remove the object from any windows it's in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+		
+		// Delete the object from the object container
+		m_sources.Remove(object);
+	}
+
+	// Delete all objects
+	void Context::DeleteAllObjects()
+	{
+		// Remove the objects from any windows they're in
+		for (auto& wnd : m_wnd_cont)
+			wnd->RemoveAllObjects();
+		
+		// Clear the object container. The unique pointers should delete the objects
+		m_sources.ClearAll();
+	}
+
+	// Delete all objects with matching ids
+	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int include_count, int exclude_count)
+	{
+		// Remove objects from any windows they might be assigned to
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(context_ids, include_count, exclude_count, false);
+
+		// Remove sources that match the given set of context ids to delete
+		m_sources.Remove(context_ids, include_count, exclude_count);
+	}
+
 	// Create an embedded code handler for the given language
 	std::unique_ptr<Context::IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
 	{
@@ -262,6 +295,6 @@ namespace pr::rdr12
 		}
 
 		// No code handler found, unsupported
-		throw std::exception(FmtS("Unsupported embedded code language: %S", lang));
+		throw std::runtime_error(FmtS("Unsupported embedded code language: %S", lang));
 	}
 }

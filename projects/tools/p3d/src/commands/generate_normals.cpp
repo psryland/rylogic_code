@@ -28,10 +28,10 @@ void DoGenNorms(p3d::Mesh& mesh, float smoothing_angle, p3d::Nugget& nug, VIdx* 
 			// Copy the vert at 'orig_idx' to 'new_idx' and set its normal to 'normal'
 			assert(s_cast<size_t>(new_idx) <= mesh.m_vert.size());
 			assert(s_cast<size_t>(new_idx) <= mesh.m_norm.size());
-			if (new_idx == mesh.m_vert.size()) mesh.m_vert.push_back(mesh.m_vert[orig_idx]);
-			if (new_idx == mesh.m_diff.size()) mesh.m_diff.push_back(mesh.m_diff[orig_idx]);
-			if (new_idx == mesh.m_norm.size()) mesh.m_norm.push_back(mesh.m_norm[orig_idx]);
-			if (new_idx == mesh.m_tex0.size()) mesh.m_tex0.push_back(mesh.m_tex0[orig_idx]);
+			if (new_idx == s_cast<int>(mesh.m_vert.size())) mesh.m_vert.push_back(mesh.m_vert[orig_idx]);
+			if (new_idx == s_cast<int>(mesh.m_diff.size())) mesh.m_diff.push_back(mesh.m_diff[orig_idx]);
+			if (new_idx == s_cast<int>(mesh.m_norm.size())) mesh.m_norm.push_back(mesh.m_norm[orig_idx]);
+			if (new_idx == s_cast<int>(mesh.m_tex0.size())) mesh.m_tex0.push_back(mesh.m_tex0[orig_idx]);
 			mesh.m_norm[new_idx] = normal;
 		},
 		[&](int i0, int i1, int i2) // iout()

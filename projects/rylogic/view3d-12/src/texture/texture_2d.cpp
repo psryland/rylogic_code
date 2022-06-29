@@ -13,7 +13,6 @@ namespace pr::rdr12
 	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
 		:TextureBase(mgr, res, desc)
 		,m_t2s(m4x4::Identity())
-		,m_has_alpha(desc.m_has_alpha)
 	{}
 
 	// Get the GDI DC from the surface
@@ -37,14 +36,7 @@ namespace pr::rdr12
 		// Note: the main RT must be restored once all ReleaseDC's have been called
 	}
 
-	// Get the DXGI surface within this texture
-	D3DPtr<IDXGISurface> Texture2D::GetSurface()
-	{
-		D3DPtr<IDXGISurface> surf;
-		pr::Throw(m_res->QueryInterface(&surf.m_ptr));
-		return surf;
-	}
-
+	#if 0
 	// Get a d2d render target for the DXGI surface within this texture
 	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget(Window const* wnd)
 	{
@@ -64,32 +56,53 @@ namespace pr::rdr12
 		return rt;
 	}
 
-	// Get a D2D device context for the DXGI surface within this texture
-	D3DPtr<ID2D1DeviceContext> Texture2D::GetD2DeviceContext()
+	#endif
+	// Get a D2D device context for drawing on this texture
+	Texture2D::D2D1Context Texture2D::GetD2DeviceContext()
 	{
-		auto surf = GetSurface();
-		Renderer::Lock lock(m_mgr->rdr());
-		auto d3d_device = lock.D3DDevice();
-		auto d2d_device = lock.D2DDevice();
+		return D2D1Context(rdr().Dx11Device(), rdr().D2DDevice(), m_res.get());
+	}
 
-		// Get the DXGI Device from the d3d device
-		D3DPtr<IDXGIDevice> dxgi_device;
-		Throw(d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
-
+	// RAII Scope for a wrapped Dx12 resource
+	Texture2D::D2D1Context::D2D1Context(ID3D11On12Device* dx11, ID2D1Device* dx2, ID3D12Resource* res)
+		:m_dx11(dx11)
+		,m_res()
+	{
 		// Create a device context
-		D3DPtr<ID2D1DeviceContext> d2d_dc;
-		Throw(d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &d2d_dc.m_ptr));
+		Throw(dx2->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_dc.m_ptr));
+
+		// Notes:
+		//  - The texture needs: D3D12_HEAP_FLAG_SHARED
+		
+		// Wrap the Dx12 resource
+		D3D11_RESOURCE_FLAGS flags = {
+			.BindFlags = D3D11_BIND_RENDER_TARGET,
+			.MiscFlags = 0,
+			.CPUAccessFlags = 0U,
+			.StructureByteStride = 0U,
+		};
+		Throw(m_dx11->CreateWrappedResource(res, &flags, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, __uuidof(IDXGISurface), (void**)&m_res.m_ptr));
+
+		// Get a DXGI surface from the wrapped resource
+		D3DPtr<IDXGISurface> surf;
+		Throw(m_res->QueryInterface<IDXGISurface>(&surf.m_ptr));
+
+		v2 dpi;
+		m_dc->GetDpi(&dpi.x, &dpi.y);
 
 		// Create a bitmap wrapper for 'surf'
 		D3DPtr<ID2D1Bitmap1> target;
-		auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-		auto dpi = m_mgr->rdr().SystemDpi();
-		bp.dpiX = dpi.x;
-		bp.dpiY = dpi.y;
-		Throw(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));
-			
+		auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpi.x, dpi.y);
+		Throw(m_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));
+
 		// Set the render target
-		d2d_dc->SetTarget(target.get());
-		return d2d_dc;
+		m_dc->SetTarget(target.get());
+	}
+	Texture2D::D2D1Context::~D2D1Context()
+	{
+		ID3D11Resource* arr[] = {m_res.get()};
+		m_dx11->ReleaseWrappedResources(arr, 1U);
+
+		// todo, need to call dx11_dc->Flush() here
 	}
 }

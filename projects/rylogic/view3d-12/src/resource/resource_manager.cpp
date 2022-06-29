@@ -162,7 +162,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib);
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, mdesc.m_vb.Width, mdesc.m_ib.Width, mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<size_t>(mdesc.m_vb.Width), s_cast<size_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}
@@ -441,10 +441,9 @@ namespace pr::rdr12
 	}
 
 	// Create a new nugget
-	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model)
+	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
 	{
-		Renderer::Lock lock(rdr());
-		auto ptr = rdr12::New<Nugget>(ndata, model);
+		auto ptr = rdr12::New<Nugget>(ndata, model, id);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
 	}
@@ -472,7 +471,7 @@ namespace pr::rdr12
 	{
 		m_stock_textures.resize(EStockTexture_::NumberOf);
 		{// EStockTexture::Black
-			uint32_t const data[] = {0};
+			uint32_t const data[] = {0xFF000000};
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), ResDesc::Tex2D(src, 1), false, 0, "#black");
 			m_stock_textures[s_cast<int>(EStockTexture::Black)] = CreateTexture2D(tdesc);
@@ -572,16 +571,17 @@ namespace pr::rdr12
 			m_stock_textures[s_cast<int>(EStockTexture::WhiteSpot)] = CreateTexture2D(tdesc);
 		}
 		{// EStockTexture::WhiteTriangle:
+			constexpr int sz = 64, hsz = sz / 2;
+			constexpr auto dx = maths::root3_by_2f / 2.0f;
+			constexpr auto dy = 0.75f;
+			constexpr auto s = 1.0f / sz;
+
 			// Equilateral triangle, 'pointing' up.
 			// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
 			//               \         /
 			//                \       /
 			//                 \     / 
 			//                   0,0
-			constexpr int sz = 64, hsz = sz / 2;
-			constexpr auto dx = maths::root3_by_2f / 2.0f;
-			constexpr auto dy = 0.75f;
-			constexpr auto s = 1.0f / sz;
 			std::vector<uint32_t> data(sz * sz);
 			for (int j = 0; j * 4 <= sz * 3; ++j)
 			{
@@ -873,7 +873,6 @@ namespace pr::rdr12
 		// Notify model deleted
 		ModelDeleted(*model);
 
-		Renderer::Lock lock(rdr());
 		assert(m_mem_tracker.remove(model));
 		rdr12::Delete<Model>(model);
 	}
@@ -884,7 +883,6 @@ namespace pr::rdr12
 		if (nugget == nullptr)
 			return;
 
-		Renderer::Lock lock(rdr());
 		assert(m_mem_tracker.remove(nugget));
 		rdr12::Delete<Nugget>(nugget);
 	}
@@ -894,8 +892,6 @@ namespace pr::rdr12
 	{
 		if (tex == nullptr)
 			return;
-
-		Renderer::Lock lock(rdr());
 
 		// Release any views
 		if (tex->m_srv)

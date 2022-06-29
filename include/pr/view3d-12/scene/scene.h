@@ -39,7 +39,7 @@ namespace pr::rdr12
 		
 		Window*          m_wnd;          // The controlling window
 		SceneCamera      m_cam;          // Represents the camera properties used to project onto the screen
-		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want)
+		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
 		InstCont         m_instances;    // Instances added to this scene for rendering.
 		RenderStepCont   m_render_steps; // The stages of rendering the scene
 		GfxCmdList       m_cmd_list;     // The command list used by this scene

@@ -536,18 +536,18 @@ namespace pr
 			// How the hit point was snapped (if at all)
 			EView3DSnapType m_snap_type;
 		};
-		struct View3DViewport
-		{
-			float m_x;
-			float m_y;
-			float m_width;
-			float m_height;
-			float m_min_depth;
-			float m_max_depth;
-			int m_screen_w;
-			int m_screen_h;
-		};
 		#endif
+		struct Viewport
+		{
+			float m_x;         // (x,y,x+width,y+width) is in backbuffer pixels, *NOT* window DIP.
+			float m_y;         // Typically the backbuffer is the same size as the true screen pixels
+			float m_width;     // Typically the BB width
+			float m_height;    // Typically the BB height
+			float m_min_depth; // Typically 0.0f
+			float m_max_depth; // Typically 1.0f
+			int m_screen_w;    // The screen width in DIP
+			int m_screen_h;    // The screen height in DIP
+		};
 		struct Includes
 		{
 			wchar_t const* m_include_paths; // A comma or semicolon separated list of search directories
@@ -657,6 +657,15 @@ extern "C"
 	VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, wchar_t const* settings);
 
+	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
+	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+	VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window, int& width, int& height);
+	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, int width, int height);
+
+	// Get/Set the window viewport (and clipping area)
+	VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp);
+
 	// Set a notification handler for when a window setting changes
 	VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(pr::view3d::Window window, pr::view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
 
@@ -708,10 +717,6 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_Validate               (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer, BOOL is_new_main_rt);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet      (View3DWindow window, int& width, int& height);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet      (View3DWindow window, int width, int height);
-	VIEW3D_API View3DViewport  __stdcall View3D_Viewport               (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_SetViewport            (View3DWindow window, View3DViewport vp);
 	VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet            (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_FillModeSet            (View3DWindow window, EView3DFillMode mode);
 	VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet            (View3DWindow window);
@@ -800,6 +805,9 @@ extern "C"
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_script, BOOL file, GUID const* context_id, pr::view3d::Includes const* includes);
 
+	// Delete an object, freeing its resources
+	VIEW3D_API void __stdcall View3D_ObjectDelete(pr::view3d::Object object);
+
 	// Get/Set the object's o2w transform
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2WGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2WSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2w, char const* name);
@@ -813,7 +821,6 @@ extern "C"
 	VIEW3D_API void              __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void              __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API GUID              __stdcall View3D_ObjectContextIdGet       (View3DObject object);
-	VIEW3D_API void              __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetRoot            (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetParent          (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetChildByName     (View3DObject object, char const* name);
@@ -905,8 +912,15 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet     (View3DWindow window, View3DColour colour);
 	VIEW3D_API View3DV2     __stdcall View3D_DiagFillModePointsSizeGet(View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_DiagFillModePointsSizeSet(View3DWindow window, View3DV2 size);
+	#endif
 
-	// Miscellaneous
+	// Miscellaneous **************************
+
+	// Create/Delete the demo scene in the given window
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
+
+	#if 0
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
 	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (View3DWindow window);
@@ -921,8 +935,6 @@ extern "C"
 	VIEW3D_API void       __stdcall View3D_SelectionBoxVisibleSet   (View3DWindow window, BOOL visible);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxPosition     (View3DWindow window, View3DBBox const& bbox, View3DM4x4 const& o2w);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxFitToSelected(View3DWindow window);
-	VIEW3D_API GUID       __stdcall View3D_DemoSceneCreate          (View3DWindow window);
-	VIEW3D_API void       __stdcall View3D_DemoSceneDelete          ();
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
 	VIEW3D_API BSTR       __stdcall View3D_AutoCompleteTemplatesBStr();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);

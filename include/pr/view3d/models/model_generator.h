@@ -368,9 +368,11 @@ namespace pr::rdr
 					},
 					[&](int idx, int orig, v4 const& norm)
 					{
-						assert(idx <= cache.m_vcont.size());
-						if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
-						//if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
+						assert(idx <= s_cast<int>(cache.m_vcont.size()));
+						if (idx == s_cast<int>(cache.m_vcont.size()))
+							cache.m_vcont.push_back(cache.m_vcont[orig]);
+						//if (idx >= cache.m_vcont.size())
+						//	cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
 						SetN(cache.m_vcont[idx], norm);
 					},
 					[&](int i0, int i1, int i2)

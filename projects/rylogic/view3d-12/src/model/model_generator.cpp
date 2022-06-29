@@ -1022,8 +1022,8 @@ namespace pr::rdr12
 		//  In Direct2D, coordinates are measured in units called device-independent pixels (DIPs).
 		//  A DIP is defined as 1/96th of a logical inch. In Direct2D, all drawing operations are
 		//  specified in DIPs and then scaled to the current DPI setting."
-		Renderer::Lock lock(rdr);
-		auto dwrite = lock.DWrite();
+		D3DPtr<IDWriteFactory> dwrite;
+		Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dwrite.m_ptr));
 
 		// Get the default format
 		auto def = formatting_count != 0 && formatting[0].empty() ? formatting[0] : TextFormat();
@@ -1079,43 +1079,45 @@ namespace pr::rdr12
 
 		// Create a texture large enough to contain the text, and render the text into it
 		Image img(static_cast<int>(texture_size.x), static_cast<int>(texture_size.y), nullptr, DXGI_FORMAT_B8G8R8A8_UNORM);
-		auto tdesc = ResDesc::Tex2D(img, 1, EUsage::RenderTarget);
+		auto tdesc = ResDesc::Tex2D(img, 1, EUsage::RenderTarget);// | EUsage::SimultaneousAccess);
+		//tdesc.HeapFlags = D3D12_HEAP_FLAG_SHARED;
 		TextureDesc desc(AutoId, tdesc, has_alpha, 0, "text_quad");
 		auto tex = rdr.res_mgr().CreateTexture2D(desc);
 		
 		//todo SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
 
-		// Get a D2D device context to draw on the texture
-		auto dc = tex->GetD2DeviceContext();
-		auto fr = To<D3DCOLORVALUE>(def.m_font.m_colour);
-		auto bk = To<D3DCOLORVALUE>(layout.m_bk_colour);
+		{// Get a D2D device context to draw on the texture
+			auto dc = tex->GetD2DeviceContext();
+			auto fr = To<D3DCOLORVALUE>(def.m_font.m_colour);
+			auto bk = To<D3DCOLORVALUE>(layout.m_bk_colour);
 
-		// Apply different colours to text ranges
-		for (auto& fmt : fmtting)
-		{
-			if (fmt.empty()) continue;
-			if (fmt.m_font.m_colour != def.m_font.m_colour)
+			// Apply different colours to text ranges
+			for (auto& fmt : fmtting)
 			{
-				D3DPtr<ID2D1SolidColorBrush> brush;
-				Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
-				brush->SetOpacity(fmt.m_font.m_colour.a);
+				if (fmt.empty()) continue;
+				if (fmt.m_font.m_colour != def.m_font.m_colour)
+				{
+					D3DPtr<ID2D1SolidColorBrush> brush;
+					Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+					brush->SetOpacity(fmt.m_font.m_colour.a);
 
-				// Apply the colour
-				text_layout->SetDrawingEffect(brush.get(), fmt.m_range);
+					// Apply the colour
+					text_layout->SetDrawingEffect(brush.get(), fmt.m_range);
+				}
 			}
+
+			// Create the default text colour brush
+			D3DPtr<ID2D1SolidColorBrush> brush;
+			Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
+			brush->SetOpacity(def.m_font.m_colour.a);
+
+			// Draw the string
+			dc->BeginDraw();
+			dc->Clear(&bk);
+			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
+			dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			Throw(dc->EndDraw());
 		}
-
-		// Create the default text colour brush
-		D3DPtr<ID2D1SolidColorBrush> brush;
-		Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
-		brush->SetOpacity(def.m_font.m_colour.a);
-
-		// Draw the string
-		dc->BeginDraw();
-		dc->Clear(&bk);
-		dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
-		dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-		Throw(dc->EndDraw());
 
 		// Create a quad using this texture
 		auto [vcount, icount] = geometry::QuadSize(1);

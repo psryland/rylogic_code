@@ -35,6 +35,7 @@ namespace pr::rdr12
 		,m_rtv()
 		,m_id(desc.m_id == AutoId ? MakeId(this) : desc.m_id)
 		,m_uri(desc.m_uri)
+		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		,m_name(desc.m_name)
 	{
 		auto device = m_mgr->D3DDevice();
@@ -107,6 +108,12 @@ namespace pr::rdr12
 	TextureBase::~TextureBase()
 	{
 		OnDestruction(*this, EmptyArgs());
+	}
+
+	// Access the renderer
+	Renderer& TextureBase::rdr() const
+	{
+		return m_mgr->rdr();
 	}
 
 	// Return the shared handle associated with this texture

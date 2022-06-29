@@ -45,11 +45,6 @@ namespace pr::rdr12
 	//    to the shaders to be used by each render step. Users can set these pointers as needed for specific functionally or
 	//    leave them as null. When a nugget is added to a render step, the render step ensures that there are appropriate
 	//    shaders in the shader map for it to be rendered by that render step. If they're missing it adds them.
-	//
-	//  - ModelBufferPtr:
-	//    Nuggets can only reference the model buffer, not the model, because if they contained
-	//    ModelPtr's that could mean models contain nuggets which contain references to them-
-	//    selves, meaning the reference count will not automatically clean up the model.
 
 	// Flags for nuggets
 	enum class ENuggetFlag :int
@@ -65,14 +60,17 @@ namespace pr::rdr12
 		// Set if the tint colour contains alpha
 		TintHasAlpha = 1 << 2,
 
+		// Set if the diffuse texture contains alpha (and we want alpha blending, not just thresholding)
+		TexDiffuseHasAlpha = 1 << 3,
+
 		// Excluded from shadow map render steps
-		ShadowCastExclude = 1 << 3,
+		ShadowCastExclude = 1 << 4,
 
 		// Can overlap with other nuggets.
 		// Set this flag to true if you want to add a nugget that overlaps the range
 		// of an existing nugget. For simple models, overlapping nugget ranges is
 		// usually an error, but in advanced cases it isn't.
-		RangesCanOverlap = 1 << 4,
+		RangesCanOverlap = 1 << 5,
 
 		_flags_enum,
 	};
@@ -117,12 +115,9 @@ namespace pr::rdr12
 		Model*       m_model;         // The model that owns this nugget.
 		size_t       m_prim_count;    // The number of primitives in this nugget.
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget.
-		EFillMode    m_fill_mode;     // Fill mode for this nugget
-		ECullMode    m_cull_mode;     // Cull mode for this nugget
-		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
 		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
 
-		Nugget(NuggetData const& ndata, Model* model);
+		Nugget(NuggetData const& ndata, Model* model, RdrId id);
 		~Nugget();
 
 		// Renderer access
@@ -159,7 +154,7 @@ namespace pr::rdr12
 	private:
 
 		// Enable/Disable alpha for this nugget.
-		// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
+		// Alpha can be enabled or disabled independent of the geometry colours or diffuse texture colour.
 		// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
 		void Alpha(bool enable);
 	};

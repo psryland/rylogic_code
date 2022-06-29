@@ -151,7 +151,7 @@ namespace pr::rdr12
 	void SetTint(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
 	{
 		auto col = inst.find<Colour32>(EInstComp::TintColour32);
-		auto c = Colour((col ? *col : pr::Colour32White) * nug.m_tint);
+		auto c = Colour((col ? *col : Colour32White) * nug.m_tint);
 		cb.m_tint = c.rgba;
 	}
 
@@ -161,7 +161,7 @@ namespace pr::rdr12
 	{
 		cb.m_tex2surf0 = nug.m_tex_diffuse != nullptr
 			? nug.m_tex_diffuse->m_t2s
-			: pr::m4x4Identity;
+			: m4x4::Identity();
 	}
 
 	// Set the environment map properties of a constants buffer
