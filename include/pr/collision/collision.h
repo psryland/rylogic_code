@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 #pragma once
-
+#include "pr/maths/maths.h"
 #include "pr/container/tri_table.h"
 #include "pr/collision/shapes.h"
 #include "pr/collision/penetration.h"

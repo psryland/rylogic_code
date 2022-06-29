@@ -1,6 +1,6 @@
 //**************************************************
 // Profile Viewer
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**************************************************
 
 #ifndef PR_PROFILE_VIEWER_PROFILE_DATABASE_H

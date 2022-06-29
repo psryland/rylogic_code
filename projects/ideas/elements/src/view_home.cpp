@@ -1,4 +1,4 @@
-#include "elements/stdafx.h"
+﻿#include "elements/stdafx.h"
 #include "elements/view_home.h"
 #include "elements/view_base.h"
 #include "elements/game_instance.h"
@@ -47,7 +47,7 @@ namespace ele
 		pad << EColour::Red       << "       Time till nova: "
 			<< EColour::BrightRed << pr::datetime::ToCountdownString(m_inst.m_world_state.m_time_till_nova, pr::datetime::EMaxUnit::Days) << "\n";
 		pad << EColour::Red       << "  Average Temperature: "
-			<< EColour::BrightRed << pr::FmtS("%1.2f�C", m_inst.m_world_state.m_average_local_temperature);
+			<< EColour::BrightRed << pr::FmtS("%1.2f°C", m_inst.m_world_state.m_average_local_temperature);
 
 		pad.Width(PadRightSideWidth);
 		pad.AutoSize();

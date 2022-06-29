@@ -59,7 +59,7 @@ namespace Rylogic.TextAligner
 		/// tabbing, and character input will be handled within this dialog page.</summary>
 		public static readonly RoutedEvent DialogKeyPendingEvent = EventManager.RegisterRoutedEvent("DialogKeyPending", RoutingStrategy.Bubble, typeof(EventHandler<DialogKeyEventArgs>), typeof(UIElementDialogPage));
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		protected override System.Windows.Forms.IWin32Window Window
 		{

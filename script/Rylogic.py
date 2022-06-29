@@ -6,8 +6,6 @@ import zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 from typing import Callable, List
-
-from numpy import append
 import UserVars
 
 # Support symlink on windows
@@ -527,6 +525,19 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 def TouchFile(fname, times=None):
 	with open(fname, mode='a'):
 		os.utime(fname, times=times)
+
+# Attempt to guess the encoding of a text file
+def GuessEncoding(fpath:str):
+	with open(fpath, mode='rb') as f:
+		bom = f.read(3)
+		if len(bom) >= 3 and bom[0] == 0xEF and bom[1] == 0xBB and bom[2] == 0xBF:
+			return 'utf8'
+		if len(bom) >= 2 and bom[0] == 0xFE and bom[1] == 0xFF:
+			return 'utf16_be'
+		if len(bom) >= 2 and bom[0] == 0xFF and bom[1] == 0xFE:
+			return 'utf16'
+		# If there is no BOM, assume ascii/utf8.. it might be codepage 1252 or something tho...
+		return 'utf8'
 
 # Check the time stamps of a list of filepaths.
 # If any has a time stamp newer than 'touch_file' touch_file gets "touched"

@@ -1,5 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Rylogic.Utility;
 
 namespace Rylogic.TextAligner
 {
@@ -13,12 +15,22 @@ namespace Rylogic.TextAligner
 		/// This function is the callback used to execute a command when the a menu item is clicked.
 		/// See the Initialize method to see how the menu item is associated to this function using
 		/// the OleMenuCommandService service and the MenuCommand class.</summary>
-		protected override void Execute()
+		protected override async Task ExecuteAsync(CancellationToken cancellation_token)
 		{
-			var view_host = CurrentViewHost;
-			if (view_host == null) return;
-			var options = Package.GetDialogPage<AlignOptions>();
-			new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Unalign);
+			try
+			{
+				var view_host = await CurrentViewHostAsync(cancellation_token);
+				if (view_host == null)
+					return;
+
+				var options = Package.GetDialogPage<AlignOptions>();
+				new Aligner(options.Groups, options.AlignStyle, options.LineIgnorePattern, view_host.TextView, EAction.Unalign);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Execute UnalignMenuCommand failed");
+				throw;
+			}
 		}
 	}
 }

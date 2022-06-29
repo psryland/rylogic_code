@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "elements/forward.h"
 #include "elements/element.h"
@@ -39,7 +39,7 @@ namespace ele
 		double m_melting_point;
 		double m_boiling_point;
 
-		pr::kilograms_p_metre³_t m_density;
+		pr::kilograms_p_metreÂ³_t m_density;
 
 		// True if this is a stable material, false otherwise
 		bool m_stable;
@@ -48,7 +48,7 @@ namespace ele
 		//size_t AtomicWeight() const;
 
 		// The density of the material at room temperature
-		pr::kilograms_p_metre³_t Density() const { return 1.0; }
+		pr::kilograms_p_metreÂ³_t Density() const { return 1.0; }
 
 		// True if this material is known to the player
 		bool m_discovered;

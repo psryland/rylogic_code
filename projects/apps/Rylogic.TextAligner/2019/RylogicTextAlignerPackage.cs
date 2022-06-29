@@ -2,9 +2,12 @@
 using System.ComponentModel.Design;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
+using Rylogic.Utility;
 
 [assembly: ComVisible(false)]
 [assembly: AssemblyTitle("Rylogic.TextAligner")]
@@ -48,6 +51,9 @@ namespace Rylogic.TextAligner
 		/// <summary>Rylogic.TextAlignerPackage GUID string.</summary>
 		public const string PackageGuidString = "DF402917-6013-40CA-A4C6-E1640DA86B90";
 
+		/// <summary>Singleton log instance</summary>
+		public Log Log { get; } = new Log();
+
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
 		/// where you can put all the initialization code that rely on services provided by VisualStudio.
@@ -57,40 +63,78 @@ namespace Rylogic.TextAligner
 		/// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
 		protected override void Initialize()
 		{
-			var root = Path_.Directory(Assembly.GetExecutingAssembly().Location);
-			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-			Assembly? CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+			try
 			{
-				var path = Path_.CombinePath(root, new AssemblyName(args.Name).Name + ".dll");
-				if (!Path_.FileExists(path)) return null;
-				return Assembly.LoadFrom(path);
+				Log.Write(ELogLevel.Info, "Initializing");
+
+				var root = Path_.Directory(Assembly.GetExecutingAssembly().Location);
+				AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+				Assembly? CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+				{
+					try
+					{
+						var path = Path_.CombinePath(root, new AssemblyName(args.Name).Name + ".dll");
+						if (!Path_.FileExists(path)) return null;
+						return Assembly.LoadFrom(path);
+					}
+					catch (Exception ex)
+					{
+						Log.Write(ELogLevel.Error, ex, $"CurrentDomain_AssemblyResolve failed to resolve {args.Name}");
+						return null;
+					}
+				}
+
+				// When initialized asynchronously, the current thread may be a background thread at this point.
+				// Do any initialization that requires the UI thread after switching to the UI thread.
+				//await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+				base.Initialize();
+
+				// Add our command handlers for menu
+				if (GetService<IMenuCommandService>() is OleMenuCommandService mcs)
+				{
+					mcs.AddCommand(new AlignMenuCommand(this));
+					mcs.AddCommand(new UnalignMenuCommand(this));
+				}
 			}
-
-			// When initialized asynchronously, the current thread may be a background thread at this point.
-			// Do any initialization that requires the UI thread after switching to the UI thread.
-			//await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-			base.Initialize();
-
-			// Add our command handlers for menu
-			if (GetService<IMenuCommandService>() is OleMenuCommandService mcs)
+			catch (Exception ex)
 			{
-				mcs.AddCommand(new AlignMenuCommand(this));
-				mcs.AddCommand(new UnalignMenuCommand(this));
+				Log.Write(Utility.ELogLevel.Error, ex, "Error during Initialize");
+				throw;
 			}
 		}
 
 		/// <summary>Return the VS service of type 'TService'</summary>
 		public object GetService<TService>()
 		{
-			// Note: the return value of 'GetService' is not always cast-able to 'TService'
-			ThreadHelper.ThrowIfNotOnUIThread();
-			return GetService(typeof(TService));
+			try
+			{
+				// Note: the return value of 'GetService' is not always cast-able to 'TService'
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return GetService(typeof(TService));
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Error during GetService");
+				throw;
+			}
+		}
+		public Task<object> GetServiceAsync<TService>(CancellationToken cancellation_token)
+		{
+			return System.Threading.Tasks.Task.FromResult(GetService<TService>());
 		}
 
 		/// <summary>Return a dialog page</summary>
 		public T GetDialogPage<T>() where T : DialogPage
 		{
-			return (T)GetDialogPage(typeof(T));
+			try
+			{
+				return (T)GetDialogPage(typeof(T));
+			}
+			catch (Exception ex)
+			{
+				Log.Write(Utility.ELogLevel.Error, ex, "Error during GetDialogPage");
+				throw;
+			}
 		}
 	}
 

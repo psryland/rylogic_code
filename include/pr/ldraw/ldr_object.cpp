@@ -1621,7 +1621,7 @@ namespace pr::ldr
 				line_strip = false;
 			}
 
-			// The thick line strip shader uses lineadj which requires an extra first and last vert
+			// The thick line strip shader uses 'lineadj' which requires an extra first and last vert
 			if (line_strip && m_line_width != 0.0f)
 			{
 				m_verts.insert(std::begin(m_verts), m_verts.front());
@@ -1921,7 +1921,7 @@ namespace pr::ldr
 					auto ibeg = m_indices.size();
 					m_indices.reserve(m_indices.size() + raster.size() + (thick ? 2 : 0) + 1);
 
-					// The thick line strip shader uses lineadj which requires an extra first and last vert
+					// The thick line strip shader uses 'lineadj' which requires an extra first and last vert
 					if (thick)
 						m_indices.push_back_fast(vert);
 
@@ -2084,14 +2084,14 @@ namespace pr::ldr
 			// Add the back arrow head geometry (a point)
 			if (m_type & EArrowType::Back)
 			{
-				SetPCN(*v_out++, *v_in, *col, pr::Normalise(*v_in - *(v_in+1)));
+				SetPCN(*v_out++, *v_in, Colour(*col), pr::Normalise(*v_in - *(v_in+1)));
 				*i_out++ = index++;
 			}
 
 			// Add the line strip
 			for (std::size_t i = 0, iend = m_verts.size(); i != iend; ++i)
 			{
-				SetPC(*v_out++, bb(*v_in++), c = cc(*col++));
+				SetPC(*v_out++, bb(*v_in++), Colour(c = cc(*col++)));
 				*i_out++ = index++;
 			}
 			
@@ -2099,7 +2099,7 @@ namespace pr::ldr
 			if (m_type & EArrowType::Fwd)
 			{
 				--v_in;
-				SetPCN(*v_out++, *v_in, c, pr::Normalise(*v_in - *(v_in-1)));
+				SetPCN(*v_out++, *v_in, Colour(c), pr::Normalise(*v_in - *(v_in-1)));
 				*i_out++ = index++;
 			}
 
@@ -4611,7 +4611,7 @@ namespace pr::ldr
 					auto f = Lerp(-1.0f, +1.0f, (1.0f * i) / (count - 1));
 					auto x = range.m_centre.x + f * range.m_radius.x * Pow(Abs(f), extras.m_weight);
 					auto [y,col] = extras.m_axis[1].clamp(static_cast<float>(equation(x).db()));
-					SetPC(*vout, v4(x, y, 0, 1), col);
+					SetPC(*vout, v4(x, y, 0, 1), Colour(col));
 					++vout;
 				}
 			}
@@ -4692,7 +4692,7 @@ namespace pr::ldr
 					auto len_sq = LengthSq(dir);
 					auto pt = range.Centre() + dir * range.Radius() * Pow(len_sq, extras.m_weight * 0.5f);
 					auto [z,col] = extras.m_axis[2].clamp(static_cast<float>(equation(pt.x, pt.y).db()));
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), col, norm(pt.x, pt.y), v2Zero);
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm(pt.x, pt.y), v2Zero);
 				},
 				[&](auto idx)
 				{

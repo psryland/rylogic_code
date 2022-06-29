@@ -1,4 +1,4 @@
-//******************************************************************
+ï»¿//******************************************************************
 // Quad
 //  Copyright (c) Rylogic Ltd 2013
 //******************************************************************
@@ -323,9 +323,9 @@ namespace pr::geometry
 			// let t = 1 - u, where u is the distance back along d0 from v1
 			// x = dot(d0,bi)/|d0| = the length of bi along d0
 			// y = dot(b0,bi)      = the perpendicular distance of bi from d0
-			// let w = x/|d0| = dot(d0,bi)/|d0|² => x = w*|d0|
+			// let w = x/|d0| = dot(d0,bi)/|d0|Â² => x = w*|d0|
 			// x/y = |d0|/Y = similar triangles
-			//   => Y = |d0|*y/x = y/w = |d0|²*dot(b0,bi)/dot(d0,bi)
+			//   => Y = |d0|*y/x = y/w = |d0|Â²*dot(b0,bi)/dot(d0,bi)
 			// for u >= 1; Y <= hwidth
 			//   => y/w <= hwidth
 			//   => y <= hwidth*w

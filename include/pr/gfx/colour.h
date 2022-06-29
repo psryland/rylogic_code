@@ -507,24 +507,24 @@ namespace pr
 		Colour(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
 			:Colour(r_ / 255.0f, g_ / 255.0f, b_ / 255.0f, a_ / 255.0f)
 		{}
-		Colour(Colour32 c32)
+		explicit Colour(Colour32 c32)
 			:Colour(c32.r, c32.g, c32.b, c32.a)
 		{}
-		Colour(Colour32 c32, float alpha)
+		explicit Colour(Colour32 c32, float alpha)
 			:Colour(c32.r / 255.0f, c32.g / 255.0f, c32.b / 255.0f, alpha)
 		{}
 		template <typename T, typename = enable_if_col<T>>
-		Colour(T const& v)
+		explicit Colour(T const& v)
 			: Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
-		Colour(__m128 v)
+		explicit Colour(__m128 v)
 			: vec(v)
 		{
 			assert(maths::is_aligned(this));
 		}
 		#endif
-		constexpr Colour(uint32_t argb)
+		explicit constexpr Colour(uint32_t argb)
 			:Colour()
 		{
 			a = ((argb >> 24) & 0xFF) / 255.0f;
@@ -631,7 +631,7 @@ namespace pr
 		}
 		friend Colour pr_vectorcall operator * (Colour const& lhs, Colour const& rhs)
 		{
-			return Colour32(
+			return Colour(
 				lhs.r * rhs.r,
 				lhs.g * rhs.g,
 				lhs.b * rhs.b,

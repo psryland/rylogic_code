@@ -1,4 +1,4 @@
-#include "elements/stdafx.h"
+ï»¿#include "elements/stdafx.h"
 #include "elements/ship.h"
 
 namespace ele
@@ -36,18 +36,18 @@ namespace ele
 		pr::kilograms_t fuel_mass      = m_fuel_mass;
 		pr::kilograms_t systems_mass   = m_passenger_count * constants.m_average_passenger_required_systems_volume * m_systems.Density();
 		pr::kilograms_t shield_mass    = m_shield_mass;
-		pr::metres³_t passenger_volume = m_passenger_count * constants.m_average_passenger_personal_space;
-		pr::metres³_t fuel_volume      = m_fuel_mass / m_fuel.Density();
-		pr::metres³_t systems_volume   = m_passenger_count * constants.m_average_passenger_required_systems_volume;
-		pr::metres³_t shield_volume    = m_shield_mass / m_shield.Density();
+		pr::metresÂ³_t passenger_volume = m_passenger_count * constants.m_average_passenger_personal_space;
+		pr::metresÂ³_t fuel_volume      = m_fuel_mass / m_fuel.Density();
+		pr::metresÂ³_t systems_volume   = m_passenger_count * constants.m_average_passenger_required_systems_volume;
+		pr::metresÂ³_t shield_volume    = m_shield_mass / m_shield.Density();
 
 		// Find the volume of the ship
-		pr::metres³_t contents_volume = passenger_volume + fuel_volume + systems_volume + shield_volume;
+		pr::metresÂ³_t contents_volume = passenger_volume + fuel_volume + systems_volume + shield_volume;
 		m_total_volume = contents_volume * constants.m_ship_volume_scaler;
 
 		// The radius of the ship if it was a spherical ball
-		// volume = (2 * tau * r³)/3
-		// r = ³root((3*volume)/(2*tau))
+		// volume = (2 * tau * rÂ³)/3
+		// r = cuberoot((3*volume)/(2*tau))
 		pr::metres_t radius = cubert(1.5 * m_total_volume / pr::maths::tau);
 		(void)radius;
 
@@ -73,16 +73,16 @@ namespace ele
 	//	kilograms_t mass_ejected = 1.0 - m_reaction_ratio;
 
 	//	// Calculate the energy produced by reacting 1 unit of this material
-	//	joules_t energy = mass_converted_to_energy * sqr(constants.m_speed_of_light); // E = mc²
+	//	joules_t energy = mass_converted_to_energy * sqr(constants.m_speed_of_light); // E = mcÂ²
 
 	//	// This energy corresponds to a velocity for mass_ejected
-	//	// E = mc²(gamma - 1)
-	//	// v = c * sqrt(1 - 1/(E/mc² + 1)²)
+	//	// E = mcÂ²(gamma - 1)
+	//	// v = c * sqrt(1 - 1/(E/mcÂ² + 1)Â²)
 	//	auto E = energy;
 	//	auto m = mass_ejected;
 	//	auto c = constants.m_speed_of_light;
-	//	auto c² = sqr(c);
-	//	metres_p_sec_t exhaust_speed = c * sqrt(1.0 - 1.0/sqr(E/(m*c²) + 1.0));
+	//	auto cÂ² = sqr(c);
+	//	metres_p_sec_t exhaust_speed = c * sqrt(1.0 - 1.0/sqr(E/(m*cÂ²) + 1.0));
 
 	//	// particles travel this fast
 	//}
