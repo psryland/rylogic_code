@@ -508,7 +508,7 @@ namespace pr::geometry::p3d
 				return FatVert
 				{
 					m_mesh->m_vert[m_idx],
-					m_mesh->m_diff[m_idx],
+					Colour(m_mesh->m_diff[m_idx]),
 					m_mesh->m_norm[m_idx],
 					m_mesh->m_tex0[m_idx]
 				};

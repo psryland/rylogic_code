@@ -116,7 +116,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 	return std::make_unique<p3d::File>(std::move(p3d));
 }
 
-// Populates the p3d data structures from a stl file
+// Populates the p3d data structures from a STL file
 std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 {
 	std::ifstream src(filepath, std::ifstream::binary);
@@ -171,13 +171,13 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 		mesh.m_nugget.emplace_back(std::move(nug));
 
 		// Generate a material
-		p3d::Material mat("default", Colour32White);
+		p3d::Material mat("default", ColourWhite);
 		p3d.m_scene.m_materials.push_back(mat);
 	});
 	return std::make_unique<p3d::File>(std::move(p3d));
 }
 
-// Popultes the p3d data structures from an obj file
+// Populates the p3d data structures from an obj file
 std::unique_ptr<p3d::File> CreateFromOBJ(std::filesystem::path const& filepath)
 {
 	std::ifstream src(filepath);

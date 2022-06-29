@@ -171,7 +171,7 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 
 			// Perform averaging of the vertex fields that are being merged.
 			if (AllSet(geom, EGeom::Colr))
-				diff += mesh.m_diff[s_cast<int>(map[j].orig - v0)];
+				diff += Colour(mesh.m_diff[s_cast<int>(map[j].orig - v0)]);
 			if (AllSet(geom, EGeom::Norm))
 				norm += mesh.m_norm[s_cast<int>(map[j].orig - v0)];
 			if (AllSet(geom, EGeom::Tex0))
@@ -185,7 +185,7 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 		// Perform averaging of the vertex fields that are being merged.
 		if (AllSet(geom, EGeom::Colr))
 		{
-			diff += mesh.m_diff[s_cast<int>(map[i].orig - v0)];
+			diff += Colour(mesh.m_diff[s_cast<int>(map[i].orig - v0)]);
 			diffs.push_back((diff / degen_count).argb());
 		}
 		if (AllSet(geom, EGeom::Norm))

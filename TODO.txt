@@ -4,24 +4,28 @@ Work:
   Change Review Board:
 	ECN - REX-10019
 		- changes implemented
-		- Waiting on verification/validation
-	ECN - REX-9601 - REX Terminal - Pete needs this for training purposes
-		- Chase Aneela about releasing user manual - Asked Krish for document number
-		- Ask Etienne to test last three test cases
+		- Waiting on verification/validation - test cases run now
+	ECN - REX-9601 - REX Terminal
+		- Training record for Pete - need release Individual training record
 	ECN - REX-9930 - rxsfault.log ticket
 		- Test case passed - should be ready for phase 2 sign off.
-	ECN - ZR release:
-		- Write Requirements for the ZRT 
-		- Need evidence of testing
-		- Sign off phase 2
+		- Need to get a new revision of the MC requirements released for the added requirement (REX-9957)
+	ECN - REX-9036 - Zero Reference
+		- Run the test cases
 	ECN - Remove product key
 		- Needs starting (phase 1)
 		- Documentation changes
+	ECN - For bug fix to REX Terminal
+	ECN - REX Firmware Loader
+	ECN - Updated RexNode Sensor transforms for new blocks
+		
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
 	- What ALM do Hydrix use? Can we use it too?
 
   Misc:
+	- Message Xiaochao about updating the firmwares
+	- Document the MC terminal for Xiaochao
 	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 
   Embedded:
@@ -34,10 +38,12 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 
   RexTerminal:
+	- Add Test Sound button to terminal System Info
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
 
   FirmwareLoader:
+    - Firmware Root Directory search crashes if it encounters the System Volume Information directory.
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
 	- Add support for programming the Battery controller board.
 
