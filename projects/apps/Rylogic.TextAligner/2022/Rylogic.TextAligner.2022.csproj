@@ -70,7 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK">
-      <Version>17.0.32112.339</Version>
+      <Version>17.2.32505.173</Version>
     </PackageReference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -99,8 +99,7 @@
       <Link>icon.png</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="..\Shared\license.txt">
-      <Link>license.txt</Link>
+    <Content Include="license.txt">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
   </ItemGroup>
