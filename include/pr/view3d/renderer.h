@@ -26,8 +26,8 @@
 //  - Edit the HLSL files in '\projects\renderer11\shaders\hlsl'
 //  - Run '\script\BuildShader.py <hlsl_filepath> x86 debug dbg' to build the HLSL file (with .cso files)
 //  - Make sure the 'BuildShader.py' script is using the same version of 'fxc.exe' as VS.
-//  - Note: Runtime shaders are hard coded to read from '\projects\renderer\shaders\hlsl\compiled\'
-//  - Put a break point in '\projects\renderer11\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
+//  - Note: Runtime shaders are hard coded to read from '\projects\rylogic\view3d\shaders\hlsl\compiled\'
+//  - Put a break point in '\projects\rylogic\view3d\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
 //  - Tips:
 //      - Use Notepad++ and the NppExec->Execute plugin. Command: "py.exe P:\pr\script\BuildShader.py $(FULL_CURRENT_PATH) x86 debug dbg"  (use x86 or x64 depending on configuration being run)
 //      - Check the Output window for 'Shader <myshader.cso> replaced'

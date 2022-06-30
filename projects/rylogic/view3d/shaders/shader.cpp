@@ -27,12 +27,12 @@ namespace pr::rdr
 	void RegisterRuntimeShader(RdrId id, char const* cso_filepath)
 	{
 		#ifdef NDEBUG
-		char const* compile_shader_dir = R"(P:\pr\projects\view3d\shaders\hlsl\compiled\release)";
+		char const* compile_shader_dir = R"(P:\pr\projects\rylogic\view3d\shaders\hlsl\compiled\release)";
 		#else
-		char const* compile_shader_dir = R"(P:\pr\projects\view3d\shaders\hlsl\compiled\debug)";
+		char const* compile_shader_dir = R"(P:\pr\projects\rylogic\view3d\shaders\hlsl\compiled\debug)";
 		#endif
 
-		g_shader_cso[id] = pr::FmtS("%s\\%s", compile_shader_dir, cso_filepath);
+		g_shader_cso[id] = FmtS("%s\\%s", compile_shader_dir, cso_filepath);
 	}
 	#endif
 
@@ -41,7 +41,7 @@ namespace pr::rdr
 		#if PR_RDR_RUNTIME_SHADERS
 		struct ModCheck
 		{
-			DWORD m_last_check;             // Tick value when the last check for a changed shader was made
+			uint64_t m_last_check;             // Tick value when the last check for a changed shader was made
 			file_time_type m_last_modified; // Support for dynamically loading shaders at runtime
 		};
 		static std::unordered_map<RdrId, ModCheck> s_check;
@@ -49,8 +49,8 @@ namespace pr::rdr
 
 		// Only check every now and again
 		enum { check_frequency_ms = 1000 };
-		if (GetTickCount() - check.m_last_check < check_frequency_ms) return;
-		check.m_last_check = GetTickCount();
+		if (GetTickCount64() - check.m_last_check < check_frequency_ms) return;
+		check.m_last_check = GetTickCount64();
 
 		Renderer::Lock lock(m_mgr->m_rdr);
 		auto device = lock.D3DDevice();
@@ -63,22 +63,23 @@ namespace pr::rdr
 		file_time_type last_mod, newest = check.m_last_modified;
 		if (exists(cso_filepath) && (last_mod = last_write_time(cso_filepath)) > check.m_last_modified)
 		{
-			std::vector<pr::uint8> buf;
-			if (pr::filesys::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())
+			std::vector<uint8_t> buf;
+			if (filesys::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())
 			{
 				D3DPtr<ID3D11DeviceChild> dxshdr;
-				switch (m_shdr_type) {
-				default: PR_ASSERT(PR_DBG_RDR, false, "Unknown shader type"); break;
-				case EShaderType::VS: pr::Throw(device->CreateVertexShader   (&buf[0], buf.size(), 0, (ID3D11VertexShader  **)&dxshdr.m_ptr)); break;
-				case EShaderType::PS: pr::Throw(device->CreatePixelShader    (&buf[0], buf.size(), 0, (ID3D11PixelShader   **)&dxshdr.m_ptr)); break;
-				case EShaderType::GS: pr::Throw(device->CreateGeometryShader (&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&dxshdr.m_ptr)); break;
-				case EShaderType::CS: pr::Throw(device->CreateComputeShader  (&buf[0], buf.size(), 0, (ID3D11ComputeShader **)&dxshdr.m_ptr)); break;
-				case EShaderType::HS: pr::Throw(device->CreateHullShader     (&buf[0], buf.size(), 0, (ID3D11HullShader    **)&dxshdr.m_ptr)); break;
-				case EShaderType::DS: pr::Throw(device->CreateDomainShader   (&buf[0], buf.size(), 0, (ID3D11DomainShader  **)&dxshdr.m_ptr)); break;
+				switch (m_shdr_type)
+				{
+					case EShaderType::VS: Throw(device->CreateVertexShader  (&buf[0], buf.size(), 0, (ID3D11VertexShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::PS: Throw(device->CreatePixelShader   (&buf[0], buf.size(), 0, (ID3D11PixelShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::GS: Throw(device->CreateGeometryShader(&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::CS: Throw(device->CreateComputeShader (&buf[0], buf.size(), 0, (ID3D11ComputeShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::HS: Throw(device->CreateHullShader    (&buf[0], buf.size(), 0, (ID3D11HullShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::DS: Throw(device->CreateDomainShader  (&buf[0], buf.size(), 0, (ID3D11DomainShader**)&dxshdr.m_ptr)); break;
+					default: PR_ASSERT(PR_DBG_RDR, false, "Unknown shader type"); break;
 				}
 				m_dx_shdr = dxshdr;
 				if (last_mod > newest) newest = last_mod;
-				PR_INFO(1, pr::FmtS("Shader %S replaced", cso_filepath.c_str()));
+				PR_INFO(1, FmtS("Shader %S replaced", cso_filepath.c_str()));
 			}
 		}
 
