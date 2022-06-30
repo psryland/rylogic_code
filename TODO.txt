@@ -25,7 +25,6 @@ Work:
 
   Misc:
 	- Message Xiaochao about updating the firmwares
-	- Document the MC terminal for Xiaochao
 	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 
   Embedded:
