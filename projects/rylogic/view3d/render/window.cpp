@@ -670,15 +670,21 @@ namespace pr::rdr
 	// Signal the start and end of a frame.
 	void Window::FrameBeg()
 	{
-		Renderer::Lock lock(rdr());
-		auto dc = lock.ImmediateDC();
-		dc->Begin(m_query.get());
+		if (m_swap_chain == nullptr)
+		{
+			Renderer::Lock lock(rdr());
+			auto dc = lock.ImmediateDC();
+			dc->Begin(m_query.get());
+		}
 	}
 	void Window::FrameEnd()
 	{
-		Renderer::Lock lock(rdr());
-		auto dc = lock.ImmediateDC();
-		dc->End(m_query.get());
+		if (m_swap_chain == nullptr)
+		{
+			Renderer::Lock lock(rdr());
+			auto dc = lock.ImmediateDC();
+			dc->End(m_query.get());
+		}
 	}
 
 	// Flip the rendered scenes to the display
