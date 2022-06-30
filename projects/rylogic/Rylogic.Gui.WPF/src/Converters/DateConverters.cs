@@ -97,9 +97,16 @@ namespace Rylogic.Gui.WPF.Converters
 			{
 				if (value is string s)
 				{
-					return parameter is string fmt
-						? DateTimeOffset.ParseExact(s, fmt, null)
-						: DateTimeOffset.Parse(s);
+					if (parameter is string fmt)
+					{
+						return DateTimeOffset.TryParseExact(s, fmt, null, DateTimeStyles.AssumeLocal|DateTimeStyles.AllowWhiteSpaces, out var dto1)
+							? dto1 : null!;
+					}
+					if (DateTimeOffset.TryParse(s, out var dto2))
+					{
+						return dto2;
+					}
+					return null!;
 				}
 				if (value is long ticks)
 				{
