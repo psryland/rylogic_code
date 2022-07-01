@@ -598,7 +598,8 @@ namespace pr
 	{
 		if constexpr (Vec4<S, T>::IntrinsicF)
 		{
-			return _mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF)));
+			auto r = _mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF)));
+			return r;
 		}
 		else
 		{
