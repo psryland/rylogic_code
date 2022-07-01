@@ -145,9 +145,10 @@ If you like Rylogic Text Aligner and would like to say thanks, a donation would 
 Bugs should be reported to support@rylogic.co.nz
 
 #### Version History
+
 * *v1.11.7 - 2022-06-30*
   * Migrated the VS2022 version of the extension to use AsyncPackage (VS2019 is still based on 'Package' for backward compatibility to VS2013)
-  * Fix for an exception when using 'Unalign' on the last line of a text file.
+  * Fix for an exception when using 'Unalign' on the last line of a file.
   * Added a simple log to capture errors and better exception handling.
 
 * *v1.11.6 - 2022-05-05*
