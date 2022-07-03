@@ -240,9 +240,9 @@ namespace pr::rdr
 			m_params.m_bounds = ls_bounds;
 
 			// Create a projection that encloses the scene bounds. This is basically "c2s"
-			auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
-			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
-			if (zn - zf < maths::tinyf) { zf = zn - 1.0f; }
+			auto zn = Abs(ls_bounds.Centre().z + ls_bounds.Radius().z);
+			auto zf = Abs(ls_bounds.Centre().z - ls_bounds.Radius().z);
+			if (zf - zn < maths::tinyf) zf = zn + 1.0f;
 			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
 			m_params.m_ls2s = ls2s;
 

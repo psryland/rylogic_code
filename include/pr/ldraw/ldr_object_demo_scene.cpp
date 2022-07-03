@@ -420,6 +420,7 @@ namespace pr::ldr
 			"	0 0 0 FFFFFF00  // x y z point positions\n"
 			"\n"
 			"	// Using embedded C# to generate points\n"
+#if 0 // todo
 			"	#embedded(CSharp)\n"
 			"	var rng = new Random();\n"
 			"	for (int i = 0; i != 1000; ++i)\n"
@@ -434,6 +435,7 @@ namespace pr::ldr
 			"		Out.AppendLine(p.ToString3() + \" \" + c.ToString());\n"
 			"	}\n"
 			"	#end\n"
+#endif
 			"\n"
 			"	*Size {5}                  // Optional. Specify a size for the point\n"
 			"	*Style { Circle }          // Optional. One of: Square, Circle, Star, .. Requires 'Width'\n"
