@@ -86,7 +86,7 @@ struct Main :Form
 		View3D_WindowAddObject(m_win3d, m_obj0);
 		View3D_WindowAddObject(m_win3d, m_obj1);
 
-		//View3D_DemoSceneCreate(m_win3d);
+		View3D_DemoSceneCreate(m_win3d);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
@@ -178,7 +178,7 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		loop.AddLoop(10, true, [&main, &time](auto dt)
 		{
 			time += dt * 0.001f;
-			auto i2w0 = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
+			auto i2w0 = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4(0, 2, 0, 1));
 			View3D_ObjectO2WSet(main.m_obj0, To<View3DM4x4>(i2w0), nullptr);
 
 			auto i2w1 = m4x4::Translation(1.0f, 1.0f, 1.0f);
