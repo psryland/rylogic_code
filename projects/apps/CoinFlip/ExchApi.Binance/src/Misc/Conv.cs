@@ -132,6 +132,11 @@ namespace Binance.API
 					item = new ServerRulesData.FilterMaxPosition();
 					break;
 				}
+				case EFilterType.TRAILING_DELTA:
+				{
+					item = new ServerRulesData.FIlterTrailingDelta();
+					break;
+				}
 				default:
 				{
 					throw new Exception($"Unknown filter type: {filter.FilterType}");
