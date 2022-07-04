@@ -134,6 +134,7 @@ namespace Binance.API
 		EXCHANGE_MAX_NUM_ORDERS,
 		EXCHANGE_MAX_NUM_ALGO_ORDERS,
 		MAX_POSITION,
+		TRAILING_DELTA,
 	}
 
 	public enum ERateLimitType

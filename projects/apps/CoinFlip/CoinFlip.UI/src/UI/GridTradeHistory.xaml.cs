@@ -150,7 +150,7 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object? sender, EventArgs e)
 				{
-					History = new ListCollectionView(Array.Empty<OrderCompleted>());
+					History = null!;// new ListCollectionView(new OrdersCompletedCollection());
 
 					var history = Exchanges?.CurrentAs<Exchange>()?.History;
 					if (history != null)

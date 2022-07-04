@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Space Invaders
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -99,20 +99,20 @@ namespace pr::onebit
 	template <typename TWord = uint8_t>
 	struct BitmapR
 	{
-			// Notes:
-			//  - The required memory layout of the bitmap is:
-			//    +--+--+--+--+--+
-			//    |W1|W2|W3|W4|W5|
-			//    +--+--+--+--+--+
-			//    |W6|W7|W8|W9| ...
-			//    +--+--+--+--+
-			//    ...
-			//    where a 'Word' represents a '1 x WordSize' column of pixels (called a 'Block')
-			//  - The LSB of 'W1' is the top/left corner of the image.
-			//  - A BitmapR is readonly, so does not need to contain its data. The 'R' stands for readonly, or reference,.. can't decide
-			//  - A Bitmap contains a local buffer so it can be edited.
-			//  - Drawing/Accessing out-of-bounds is silently ignored.
-			//  - It's too complicated allowing mixed word size bitmaps. Only use bitmaps of the same word size together
+		// Notes:
+		//  - The required memory layout of the bitmap is:
+		//    +--+--+--+--+--+
+		//    |W1|W2|W3|W4|W5|
+		//    +--+--+--+--+--+
+		//    |W6|W7|W8|W9| ...
+		//    +--+--+--+--+
+		//    ...
+		//    where a 'Word' represents a '1 x WordSize' column of pixels (called a 'Block')
+		//  - The LSB of 'W1' is the top/left corner of the image.
+		//  - A BitmapR is readonly, so does not need to contain its data. The 'R' stands for readonly, or reference,.. can't decide
+		//  - A Bitmap contains a local buffer so it can be edited.
+		//  - Drawing/Accessing out-of-bounds is silently ignored.
+		//  - It's too complicated allowing mixed word size bitmaps. Only use bitmaps of the same word size together
 
 		using Word = TWord;
 		static constexpr int WordSize = sizeof(Word) * 8;

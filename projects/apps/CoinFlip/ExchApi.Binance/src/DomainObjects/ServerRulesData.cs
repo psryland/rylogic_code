@@ -270,7 +270,24 @@ namespace Binance.API.DomainObjects
 			/// <summary></summary>
 			[JsonProperty("maxPosition")]
 			public double MaxPosition { get; private set; }
+		}
+		public class FIlterTrailingDelta : Filter
+		{
+			/// <summary></summary>
+			[JsonProperty("minTrailingAboveDelta")]
+			public double MinTrailingAboveDelta { get; private set; }
 
+			/// <summary></summary>
+			[JsonProperty("maxTrailingAboveDelta")]
+			public double MaxTrailingAboveDelta { get; private set; }
+
+			/// <summary></summary>
+			[JsonProperty("minTrailingBelowDelta")]
+			public double MinTrailingBelowDelta { get; private set; }
+
+			/// <summary></summary>
+			[JsonProperty("maxTrailingBelowDelta")]
+			public double MaxTrailingBelowDelta { get; private set; }
 		}
 	}
 }
