@@ -44,7 +44,7 @@ namespace pr
 	//	therefore it's value is always >= 1
 	// Note about LocalCount:
 	//	Default local count is chosen to make sizeof(pr::string<>) == 256
-	template <typename Type=char, int LocalCount=244, bool Fixed=false, typename Allocator=std::allocator<Type> >
+	template <typename Type=char, int LocalCount=244, bool Fixed=false, typename Allocator=std::allocator<Type>>
 	class string
 	{
 	public:
@@ -1667,6 +1667,7 @@ namespace pr
 		using value_type = T;
 		using string_type = string<T,L,F,A>;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
 
 		static value_type const* c_str(string_type const& str) { return str.c_str(); }
 		static value_type const* ptr(string_type const& str)   { return str.data(); }
@@ -1681,6 +1682,7 @@ namespace pr
 		using value_type = T const;
 		using string_type = string<T,L,F,A> const;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
 
 		static value_type* c_str(string_type& str)     { return str.c_str(); }
 		static value_type* ptr(string_type& str)       { return str.data(); }
