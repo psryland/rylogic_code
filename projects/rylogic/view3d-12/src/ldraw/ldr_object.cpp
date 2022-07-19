@@ -4663,31 +4663,19 @@ namespace pr::rdr12
 			//    vcount = ArithmeticSum(0, 6, rings) + 1;
 			//    icount = ArithmeticSum(0, 12, rings) + 2*rings;
 			// ArithmeticSum := (n + 1) * (a0 + an) / 2, where an = (a0 + n * step)
-			//    3r� + 3r + 1-vcount = 0  =>  r = (-3 � sqrt(-3 + 12*vcount)) / 6
-			//    6r� + 8r - icount = 0    =>  r = (-8 � sqrt(64 + 24*icount)) / 12
-			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vcount)) / 6;
-			auto irings = (-8 + sqrt(64 + 24 * model.m_icount)) / 12;
+			//    3r^2 + 3r + 1-vcount = 0  =>  r = (-3 +/- sqrt(-3 + 12*vcount)) / 6
+			//    6r^2 + 8r - icount = 0    =>  r = (-8 +/- sqrt(64 + 24*icount)) / 12
+			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vrange.size())) / 6;
+			auto irings = (-8 + sqrt(64 + 24 * model.m_irange.size())) / 12;
 			auto rings = static_cast<int>(std::min(vrings, irings));
+			auto dx_step = range.SizeX() * 1e-5f;
+			auto dy_step = range.SizeY() * 1e-5f;
 
 			auto [nv, ni] = geometry::HexPatchSize(rings);
-			assert(nv <= s_cast<int>(model.m_vcount));
-			assert(ni <= s_cast<int>(model.m_icount));
+			assert(nv <= (int)model.m_vrange.size());
+			assert(ni <= (int)model.m_irange.size());
 
-			// Evaluate the normal at (x,y)
-			auto norm = [&](float x, float y)
-			{
-				// Smallest non-zero of (x,y)
-				auto d =
-					(x != 0 && y != 0) ? Min(Abs(x), Abs(y)) * 0.00001f :
-					(x != 0 || y != 0) ? Max(Abs(x), Abs(y)) * 0.00001f :
-					maths::tinyf;
-				auto pt = equation(v4(x - d, x + d, x, x), v4(y, y, y - d, y + d)).v4();
-				auto n = Cross(v4(2*d, 0, pt.y - pt.x, 0), v4(0, 2*d, pt.w - pt.z, 0));
-				return Normalise(n, v4Zero);
-			};
-
-			(void)range, equation;
-			#if 0 //todo
+#if 0 //todo
 			MLock mlock(&model, EMap::WriteDiscard);
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			auto iout = mlock.m_ilock.ptr<uint32_t>();
@@ -4698,29 +4686,42 @@ namespace pr::rdr12
 					// so the focus point is centred around (0,0,0), then set the o2w transform
 
 					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to the range.
-					// 'weight' controls the density of points near the range centre.
+					// 'weight' controls the density of points near the range centre since 'len_sq' is on [0,1].
 					auto dir = pos.w0();
 					auto len_sq = LengthSq(dir);
-					auto pt = range.Centre() + dir * range.Radius() * Pow(len_sq, extras.m_weight * 0.5f);
+					auto weight = Lerp(extras.m_weight, 1.0f, len_sq); //Pow(len_sq, extras.m_weight * 0.5f);
+					auto pt = range.Centre() + dir * range.Radius() * weight;
+					
+					// Evaluate the equation at 'pt' to get z = f(x,y) and the colour.
 					auto [z,col] = extras.m_axis[2].clamp(static_cast<float>(equation(pt.x, pt.y).db()));
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm(pt.x, pt.y), v2Zero);
+
+					// Evaluate the normal at 'pt'. Want to choose a 'd' value that is proportional to the density of points at 'pt'
+					auto dx = dx_step * weight;
+					auto dy = dy_step * weight;
+
+					// Evaluate the function at four points around (x,y) to get the height 'h'
+					auto h = equation(v4(pt.x - dx, pt.x + dx, pt.x, pt.x), v4(pt.y, pt.y, pt.y - dy, pt.y + dy)).v4();
+					auto n = Cross(v4(2 * dx, 0, h.y - h.x, 0), v4(0, 2 * dy, h.w - h.z, 0));
+					auto norm = Normalise(n, v4::Zero());
+
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2Zero);
 				},
 				[&](auto idx)
 				{
 					*iout++ = idx;
 				});
-			#endif
+#endif
 
 			// Generate nuggets if initialising
 			if (init)
 			{
 				auto [vcount, icount] = geometry::HexPatchSize(rings);
 
-				NuggetData n = {};
+				NuggetProps n = {};
 				n.m_topo = ETopo::TriStrip;
-				//todo n.m_geom = props.m_geom;
-				n.m_vrange = Range(0, vcount);
-				n.m_irange = Range(0, icount);
+				n.m_geom = props.m_geom;
+				n.m_vrange = rdr::Range(0, vcount);
+				n.m_irange = rdr::Range(0, icount);
 				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.CreateNugget(n);
 			}
