@@ -4665,15 +4665,15 @@ namespace pr::rdr12
 			// ArithmeticSum := (n + 1) * (a0 + an) / 2, where an = (a0 + n * step)
 			//    3r^2 + 3r + 1-vcount = 0  =>  r = (-3 +/- sqrt(-3 + 12*vcount)) / 6
 			//    6r^2 + 8r - icount = 0    =>  r = (-8 +/- sqrt(64 + 24*icount)) / 12
-			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vrange.size())) / 6;
-			auto irings = (-8 + sqrt(64 + 24 * model.m_irange.size())) / 12;
+			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vcount)) / 6;
+			auto irings = (-8 + sqrt(64 + 24 * model.m_icount)) / 12;
 			auto rings = static_cast<int>(std::min(vrings, irings));
 			auto dx_step = range.SizeX() * 1e-5f;
 			auto dy_step = range.SizeY() * 1e-5f;
 
 			auto [nv, ni] = geometry::HexPatchSize(rings);
-			assert(nv <= (int)model.m_vrange.size());
-			assert(ni <= (int)model.m_irange.size());
+			assert(nv <= (int)model.m_vcount);
+			assert(ni <= (int)model.m_icount);
 
 #if 0 //todo
 			MLock mlock(&model, EMap::WriteDiscard);
@@ -4710,21 +4710,22 @@ namespace pr::rdr12
 				{
 					*iout++ = idx;
 				});
-#endif
 
 			// Generate nuggets if initialising
 			if (init)
 			{
 				auto [vcount, icount] = geometry::HexPatchSize(rings);
 
-				NuggetProps n = {};
-				n.m_topo = ETopo::TriStrip;
-				n.m_geom = props.m_geom;
-				n.m_vrange = rdr::Range(0, vcount);
-				n.m_irange = rdr::Range(0, icount);
+				NuggetData n(ETopo::TriStrip, props.m_geom, Range(0, vcount), Range(0, icount));
 				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.CreateNugget(n);
 			}
+#endif
+			(void)init;
+			(void)extras;
+			(void)equation;
+			(void)dx_step;
+			(void)dy_step;
 		}
 		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
