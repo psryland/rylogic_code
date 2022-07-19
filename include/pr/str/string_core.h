@@ -254,6 +254,7 @@ namespace pr
 		using value_type = Char;
 		using string_type = std::basic_string<Char>;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
 
 		static value_type const* c_str(string_type const& str) { return str.c_str(); }
 		static value_type const* ptr(string_type const& str)   { return str.data(); }
@@ -268,6 +269,7 @@ namespace pr
 		using value_type = Char const;
 		using string_type = std::basic_string<Char> const;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
 
 		static value_type* c_str(string_type& str) { return str.c_str(); }
 		static value_type* ptr(string_type& str)   { return str.data(); }
@@ -283,6 +285,7 @@ namespace pr
 		using value_type = Char;
 		using string_type = std::basic_string_view<Char>;
 		static bool const null_terminated = false;
+		static bool const dynamic_size = false;
 
 		static value_type const* c_str(string_type const& str) { static_assert(dependant_false<Char>, "String views cannot provide null terminated strings"); }
 		static value_type const* ptr(string_type const& str)   { return str.data(); }
@@ -297,6 +300,7 @@ namespace pr
 		using value_type = Char const;
 		using string_type = std::basic_string_view<Char> const;
 		static bool const null_terminated = false;
+		static bool const dynamic_size = false;
 
 		static value_type* c_str(string_type& str)     { static_assert(dependant_false<Char>, "String views cannot provide null terminated strings"); }
 		static value_type* ptr(string_type& str)       { return str.data(); }
@@ -312,6 +316,7 @@ namespace pr
 		using value_type = Char;
 		using string_type = Char*;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type const* c_str(string_type const str) { return str; }
 		static value_type* ptr(string_type str)               { return str; }
@@ -325,6 +330,7 @@ namespace pr
 		using value_type = Char const;
 		using string_type = Char const*;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type* c_str(string_type str) { return str; }
 		static value_type* ptr(string_type str)   { return str; }
@@ -346,6 +352,7 @@ namespace pr
 		using value_type = Char;
 		using string_type = Char[Len];
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type const* c_str(string_type const& str) { return str; }
 		static value_type const* ptr(string_type const& str)   { return str; }
@@ -360,6 +367,7 @@ namespace pr
 		using value_type = Char const;
 		using string_type = Char const[Len];
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type* c_str(string_type& str) { return str; }
 		static value_type* ptr(string_type& str)   { return str; }
@@ -376,6 +384,7 @@ namespace pr
 		using value_type = Char;
 		using string_type = std::array<Char, Len>;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type const* c_str(string_type const& str)  { return str.data(); }
 		static value_type const* ptr(string_type const& str)    { return str.data(); }
@@ -391,6 +400,7 @@ namespace pr
 		using value_type = Char const;
 		using string_type = std::array<Char, Len> const;
 		static bool const null_terminated = true;
+		static bool const dynamic_size = false;
 
 		static value_type* c_str(string_type& str) { return str.data(); }
 		static value_type* ptr(string_type& str)   { return str.data(); }
@@ -413,6 +423,11 @@ namespace pr
 	template <typename Char, size_t Len> struct is_string<Char const[Len]> : is_char<Char> {};
 	template <typename Char, size_t Len> struct is_string<Char[Len]> : is_char<Char> {};
 	template <typename Ty> constexpr bool is_string_v = is_string<std::decay_t<Ty>>::value;
+
+	// Concepts
+	template <typename Ty> concept StringType = is_string_v<Ty>;
+	template <typename Ty> concept StringTypeStatic = is_string_v<Ty> && string_traits<Ty>::dynamic_size == false;
+	template <typename Ty> concept StringTypeDynamic = is_string_v<Ty> && string_traits<Ty>::dynamic_size == true;
 
 	// Checks
 	static_assert(std::is_same_v<string_traits<std::wstring>::value_type, wchar_t>);

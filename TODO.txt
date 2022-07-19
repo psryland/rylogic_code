@@ -5,6 +5,7 @@ Work:
 	ECN - REX-10019
 		- changes implemented
 		- Waiting on verification/validation - test cases run now
+		- Once we're commiting to this change, code needs merging into the main line.
 	ECN - REX-9601 - REX Terminal
 		- Training record for Pete - need release Individual training record
 	ECN - REX-9930 - rxsfault.log ticket
@@ -12,16 +13,20 @@ Work:
 		- Need to get a new revision of the MC requirements released for the added requirement (REX-9957)
 	ECN - REX-9036 - Zero Reference
 		- Run the test cases
+		- Must use v1.11.0 with new sensor mounting blocks. It has the updated Sensor transforms.
+	ECN - REX-10108 - Bug fix to REX Terminal
+		- Stage 1 filled out - needs sign off
+		- Stage 2 filled out - testing done - needs sign off
+		- Release of v1.0.7 needed.
+	ECN - REX Firmware Loader
+		- No requirements or test cases... :(
+		- Needs stage 1,2, etc
 	ECN - Remove product key
 		- Needs starting (phase 1)
 		- Documentation changes
-	ECN - For bug fix to REX Terminal
-	ECN - REX Firmware Loader
-	ECN - Updated RexNode Sensor transforms for new blocks
 		
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
-	- What ALM do Hydrix use? Can we use it too?
 
   Misc:
 	- Message Xiaochao about updating the firmwares

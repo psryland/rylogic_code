@@ -170,11 +170,11 @@ namespace pr::ldr
 	}
 	template <Scalar S> inline TStr& Append(TStr& str, Vec3<S,void> const& v)
 	{
-		return Append(AppendSpace(str), v.x," ",v.y," ",v.z);
+		return Append(AppendSpace(str), To<TStr>(v));
 	}
 	template <Scalar S> inline TStr& Append(TStr& str, Vec4<S,void> const& v)
 	{
-		return Append(AppendSpace(str), v.x, " ", v.y, " ", v.z, " ", v.w);
+		return Append(AppendSpace(str), To<TStr>(v));
 	}
 
 	inline TStr& Append(TStr& str, m4x4 const& m)
@@ -1123,7 +1123,7 @@ namespace pr::ldr
 	{
 		std::string str;
 
-		Append(str,"*Box b",Colour32Green,"{",v3(1.0f,2.0f,3.0f),O2W(m4x4Identity),"}");
+		Append(str,"*Box b",Colour32Green,"{",v3(1.0f,2.0f,3.0f),O2W(m4x4::Identity()),"}");
 		PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
 		str.resize(0);
 
@@ -1132,7 +1132,7 @@ namespace pr::ldr
 		str.resize(0);
 
 		Builder L;
-		L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4Identity);
+		L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
 		L.Triangle().name("tri").col(0xFFFF0000).pt(v4(0,0,0,1), v4(1,0,0,1), v4(0,1,0,1));
 		L.ToString(str);
 		PR_CHECK(str, "*Box b ff00ff00 {1 1 1}\n*Triangle tri ffff0000 {0 0 0 1 0 0 0 1 0}\n");

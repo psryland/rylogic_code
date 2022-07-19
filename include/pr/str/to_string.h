@@ -10,6 +10,7 @@
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
+#include <cstdint>
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
@@ -19,221 +20,144 @@
 
 namespace pr
 {
-	namespace convert
+	// Bool
+	template <StringType Str>
+	struct Convert<Str, bool>
 	{
-		// To string
-		template <typename Str>
-		struct ToStringType
+		static Str To_(bool from)
 		{
 			using Char = typename string_traits<Str>::value_type;
+			if constexpr (std::is_same_v<Char, char>)
+				return from ? "true" : "false";
+			if constexpr (std::is_same_v<Char, wchar_t>)
+				return from ? L"true" : L"false";
+		}
+	};
 
-			static Str& To_(Str& from)
+	// Char
+	template <StringType Str>
+	struct Convert<Str, char>
+	{
+		static Str To_(char from)
+		{
+			Str str;
+			string_traits<Str>::resize(str, 1);
+			str[0] = from;
+			return str;
+		}
+	};
+
+	// Integral types
+	template <StringTypeDynamic Str, std::integral Intg>
+	struct Convert<Str, Intg>
+	{
+		static Str To_(Intg from, int radix)
+		{
+			using Char = typename string_traits<Str>::value_type;
+			Char buf[128];
+			if constexpr (std::is_unsigned_v<Intg>)
 			{
-				return from;
-			}
-			static Str To_(bool from)
-			{
-				return from
-					? PR_STRLITERAL(Char, "true")
-					: PR_STRLITERAL(Char, "false");
-			}
-			static Str To_(char from)
-			{
-				Str str;
-				string_traits<Str>::resize(str, 1);
-				str[0] = from;
-				return str;
-			}
-			static Str To_(long long from, int radix)
-			{
-				Char buf[128];
-				return char_traits<Char>::itostr(from, buf, _countof(buf), radix);
-			}
-			static Str To_(unsigned long long from, int radix)
-			{
-				Char buf[128];
 				return char_traits<Char>::uitostr(from, buf, _countof(buf), radix);
 			}
-			static Str To_(long long from)
+			else
 			{
-				return To_(from, 10);
+				return char_traits<Char>::itostr(from, buf, _countof(buf), radix);
 			}
-			static Str To_(long from, int radix)
+		}
+		static Str To_(Intg from)
+		{
+			return To_(from, 10);
+		}
+	};
+	template <std::integral Intg, StringType Str>
+	struct Convert<Intg, Str>
+	{
+		using Char = typename string_traits<Str>::value_type;
+		static Intg To_(Str const& s, int radix = 10, Char const** end = nullptr)
+		{
+			auto ptr = string_traits<Str>::ptr(s);
+			errno = 0;
+
+			if constexpr (std::is_signed_v<Intg> && sizeof(Intg) <= sizeof(long))
+				return CheckErrno(static_cast<Intg>(char_traits<Char>::strtol(ptr, end, radix)));
+			if constexpr (!std::is_signed_v<Intg> && sizeof(Intg) <= sizeof(long))
+				return CheckErrno(static_cast<Intg>(char_traits<Char>::strtoul(ptr, end, radix) & ~Intg()));
+			if constexpr (std::is_signed_v<Intg> && sizeof(Intg) > sizeof(long))
+				return CheckErrno(static_cast<Intg>(char_traits<Char>::strtoll(ptr, end, radix) & ~Intg()));
+			if constexpr (!std::is_signed_v<Intg> && sizeof(Intg) > sizeof(long))
+				return CheckErrno(static_cast<Intg>(char_traits<Char>::strtoui64(ptr, end, radix) & ~Intg()));
+		}
+	};
+
+	// Floating point types
+	template <StringTypeDynamic Str, std::floating_point FP>
+	struct Convert<Str, FP>
+	{
+		static Str To_(FP from)
+		{
+			using Char = typename string_traits<Str>::value_type;
+			Char buf[128];
+
+			if constexpr (!std::is_same_v<FP, long double>)
 			{
-				return To_(static_cast<long long>(from), radix);
-			}
-			static Str To_(long from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(int from, int radix)
-			{
-				return To_(static_cast<long long>(from), radix);
-			}
-			static Str To_(int from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(short from, int radix)
-			{
-				return To_(static_cast<long long>(from), radix);
-			}
-			static Str To_(short from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(unsigned long long from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(unsigned long from, int radix)
-			{
-				return To_(static_cast<unsigned long long>(from), radix);
-			}
-			static Str To_(unsigned long from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(unsigned int from, int radix)
-			{
-				return To_(static_cast<unsigned long long>(from), radix);
-			}
-			static Str To_(unsigned int from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(unsigned short from, int radix)
-			{
-				return To_(static_cast<unsigned long long>(from), radix);
-			}
-			static Str To_(unsigned short from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(unsigned char from, int radix)
-			{ 
-				return To_(static_cast<unsigned long long>(from), radix);
-			}
-			static Str To_(unsigned char from)
-			{
-				return To_(from, 10);
-			}
-			static Str To_(double from)
-			{
-				Char buf[128];
 				return char_traits<Char>::dtostr(from, buf, _countof(buf));
 			}
-			static Str To_(float from)
-			{
-				return To_(static_cast<double>(from));
-			}
-			static Str To_(long double from)
+			else
 			{
 				// careful with long double, it's non-standard
 				std::basic_stringstream<Char> ss;
 				ss << from;
 				return ss.str().c_str();
 			}
-			
-			// Convert/Narrow/Widen string types
-			template <typename Str2, typename = std::enable_if_t<is_string_v<Str2>>>
-			static Str To_(Str2 const& s)
-			{
-				// Notes:
-				//  - Remember type deduction doesn't work for string views
-				//  - If 'Str2' = 'char const* const&', then 'string_traits<Str2>::value_type' would be 'char const'
-
-				using Char2 = std::remove_const_t<typename string_traits<Str2>::value_type>;
-
-				if constexpr (std::is_convertible_v<Str2, Str>)
-				{
-					return s;
-				}
-				else if constexpr (std::is_assignable_v<Str, Str2>)
-				{
-					return s;
-				}
-				else if constexpr (std::is_same_v<Char, char> && std::is_same_v<Char2, wchar_t>)
-				{
-					return Narrow(s);
-				}
-				else if constexpr (std::is_same_v<Char, wchar_t> && std::is_same_v<Char2, char>)
-				{
-					return Widen(s);
-				}
-				else
-				{
-					static_assert(dependant_false<Str2>, "Cannot convert between string types");
-				}
-			}
-		};
-
-		// Integral
-		template <typename Ty>
-		struct ToIntegral
+		}
+	};
+	template <std::floating_point FP, StringType Str>
+	struct Convert<FP, Str>
+	{
+		using Char = typename string_traits<Str>::value_type;
+		static FP To_(Str const& s, Char const** end = nullptr)
 		{
-			// Convert from strings to integral types
-			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Ty To_(Str const& s, int radix = 10, Char const** end = nullptr)
-			{
-				auto ptr = string_traits<Str>::ptr(s);
-				errno = 0;
+			auto ptr = string_traits<Str>::ptr(s);
+			errno = 0;
 
-				if constexpr (std::is_signed_v<Ty> && sizeof(Ty) <= sizeof(long))
-					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtol(ptr, end, radix)));
-				if constexpr (!std::is_signed_v<Ty> && sizeof(Ty) <= sizeof(long))
-					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoul(ptr, end, radix) & ~Ty()));
-				if constexpr (std::is_signed_v<Ty> && sizeof(Ty) > sizeof(long))
-					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoll(ptr, end, radix) & ~Ty()));
-				if constexpr (!std::is_signed_v<Ty> && sizeof(Ty) > sizeof(long))
-					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoui64(ptr, end, radix) & ~Ty()));
-			}
-		};
+			return CheckErrno(static_cast<FP>(char_traits<Char>::strtod(ptr, end)));
+		}
+	};
 
-		// Floating point
-		template <typename Ty>
-		struct ToFloatingPoint
+	// Narrow/Wide
+	template <StringType Str0, StringType Str1>
+	struct Convert<Str0, Str1>
+	{
+		static Str0 To_(Str1 const& s)
 		{
-			// String to floating point
-			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-			static Ty To_(Str const& s, Char const** end = nullptr)
+			// Notes:
+			//  - Remember type deduction doesn't work for string views
+			//  - If 'Str2' = 'char const* const&', then 'string_traits<Str2>::value_type' would be 'char const'
+			using Char0 = std::remove_const_t<typename string_traits<Str0>::value_type>;
+			using Char1 = std::remove_const_t<typename string_traits<Str1>::value_type>;
+
+			if constexpr (std::is_convertible_v<Str1, Str0>)
 			{
-				auto ptr = string_traits<Str>::ptr(s);
-				errno = 0;
-
-				return CheckErrno(static_cast<Ty>(char_traits<Char>::strtod(ptr, end)));
+				return s;
 			}
-		};
-	}
-
-	// From Whatever to std::basic_string
-	template <typename TFrom, typename Char>
-	struct Convert<std::basic_string<Char>, TFrom> :convert::ToStringType<std::basic_string<Char>>
-	{};
-
-	// From Whatever to pr::string
-	template <typename TFrom, typename Char, int L, bool F>
-	struct Convert<pr::string<Char,L,F>, TFrom> :convert::ToStringType<pr::string<Char,L,F>>
-	{};
-
-	// From String types to Integral types
-	template <typename TFrom> struct Convert<char                , TFrom> :convert::ToIntegral<char                > {};
-	template <typename TFrom> struct Convert<wchar_t             , TFrom> :convert::ToIntegral<wchar_t             > {};
-	template <typename TFrom> struct Convert<short               , TFrom> :convert::ToIntegral<short               > {};
-	template <typename TFrom> struct Convert<int                 , TFrom> :convert::ToIntegral<int                 > {};
-	template <typename TFrom> struct Convert<long                , TFrom> :convert::ToIntegral<long                > {};
-	template <typename TFrom> struct Convert<long long           , TFrom> :convert::ToIntegral<long long           > {};
-	template <typename TFrom> struct Convert<unsigned char       , TFrom> :convert::ToIntegral<unsigned char       > {};
-	template <typename TFrom> struct Convert<unsigned short      , TFrom> :convert::ToIntegral<unsigned short      > {};
-	template <typename TFrom> struct Convert<unsigned int        , TFrom> :convert::ToIntegral<unsigned int        > {};
-	template <typename TFrom> struct Convert<unsigned long       , TFrom> :convert::ToIntegral<unsigned long       > {};
-	template <typename TFrom> struct Convert<unsigned long long  , TFrom> :convert::ToIntegral<unsigned long long  > {};
-
-	// From String types to Floating point types
-	template <typename TFrom> struct Convert<float      , TFrom> :convert::ToFloatingPoint<float      > {};
-	template <typename TFrom> struct Convert<double     , TFrom> :convert::ToFloatingPoint<double     > {};
-	template <typename TFrom> struct Convert<long double, TFrom> :convert::ToFloatingPoint<long double> {};
-
+			else if constexpr (std::is_assignable_v<Str0, Str1>)
+			{
+				return s;
+			}
+			else if constexpr (std::is_same_v<Char0, char> && std::is_same_v<Char1, wchar_t>)
+			{
+				return Narrow(s);
+			}
+			else if constexpr (std::is_same_v<Char0, wchar_t> && std::is_same_v<Char1, char>)
+			{
+				return Widen(s);
+			}
+			else
+			{
+				static_assert(dependant_false<Str1>, "Cannot convert between string types");
+			}
+		}
+	};
 }
 
 #if PR_UNITTESTS
