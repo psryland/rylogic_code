@@ -491,8 +491,8 @@ namespace pr
 		static FRect To_(IRect const& x)
 		{
 			return FRect(
-				s_cast<Vec2<float, void>>(x.m_min),
-				s_cast<Vec2<float, void>>(x.m_max));
+				To<Vec2<float, void>>(x.m_min),
+				To<Vec2<float, void>>(x.m_max));
 		}
 
 		#ifdef _WINDEF_

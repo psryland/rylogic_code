@@ -817,10 +817,10 @@ namespace pr::rdr12
 		}
 		{// Unit quad in Z = 0 plane
 			constexpr Vert verts[] = {
-				{v4(-0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.0000f,0.9999f)},
-				{v4( 0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.9999f,0.9999f)},
-				{v4( 0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.9999f,0.0000f)},
-				{v4(-0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.0000f,0.0000f)},
+				{v4(-0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.9999f)},
+				{v4( 0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.9999f)},
+				{v4( 0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.0000f)},
+				{v4(-0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.0000f)},
 			};
 			constexpr uint16_t idxs[] = {
 				0, 1, 2, 0, 2, 3
