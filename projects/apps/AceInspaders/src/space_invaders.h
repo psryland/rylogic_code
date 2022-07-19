@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Space Invaders
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -87,43 +87,43 @@ namespace pr
 		};
 
 		// Screen dimensions
-		constexpr static int ScreenDimX = 128;
-		constexpr static int ScreenDimY = 96;
+		constexpr static int ScreenDimX = 320;
+		constexpr static int ScreenDimY = 240;
 		constexpr static int StartGameDelayMS = 1000; // The length of the pause between the start game sound and starting
 		constexpr static int EndLevelDelayMS = 1000; // The length of the pause between the start game sound and starting
 
 		// Player
-		constexpr static int PlayerMaxSpeed = 1000; // The max speed of the player in pixels/second
-		constexpr static int PlayerYPos = ScreenDimY - 6;
-		constexpr static int BunkerYPos = ScreenDimY - 16;
+		constexpr static int PlayerMaxSpeed = 2500; // The max speed of the player in pixels/second
+		constexpr static int PlayerYPos = ScreenDimY - 15;
+		constexpr static int BunkerYPos = ScreenDimY - 40;
 
 		// Aliens
 		constexpr static int AlienCols = 8;                      // The number of cols of aliens
 		constexpr static int AlienRows = 5;                      // The number of rows of aliens
-		constexpr static int AlienSizeX = 7;                     // The bounds that all alien types fit within
-		constexpr static int AlienSizeY = 5;                     // The bounds that all alien types fit within
-		constexpr static int AlienSpaceX = 5;                    // The number of pixels between cols of aliens
-		constexpr static int AlienSpaceY = 2;                    // The number of pixels between rows of aliens
+		constexpr static int AlienSizeX = 20;                    // The bounds that all alien types fit within
+		constexpr static int AlienSizeY = 14;                    // The bounds that all alien types fit within
+		constexpr static int AlienSpaceX = 12;                   // The number of pixels between cols of aliens
+		constexpr static int AlienSpaceY = 6;                    // The number of pixels between rows of aliens
 		constexpr static int AlienEdgeMargin = ScreenDimY / 10;  // Distance from the edge that the aliens turn around
 		constexpr static int AlienInitialYPos = ScreenDimY / 10; // The initial vertical position of the highest alien
-		constexpr static int AlienFinalYPos = ScreenDimY - 26;   // The high the aliens need to reach
+		constexpr static int AlienFinalYPos = ScreenDimY - 65;   // The high the aliens need to reach
 		constexpr static int AlienInitialStepPeriodMS = 500;     // The time between each advance step at the start
 		constexpr static int AlienFinalStepPeriodMS = 20;        // The minimum time between each advance step
-		constexpr static int AlienAdvanceX = 2;                  // The number of pixels the aliens advance at the
-		constexpr static int AlienAdvanceY = 5;                  // The number of pixels the aliens advance at the
+		constexpr static int AlienAdvanceX = 5;                  // The number of pixels the aliens advance at the
+		constexpr static int AlienAdvanceY = 13;                 // The number of pixels the aliens advance at the
 
 		// Bunkers
-		constexpr static int BunkerCount = 4;   // The number of bunkers
+		constexpr static int BunkerCount = 4; // The number of bunkers
 
 		// Bombs
 		constexpr static int MaxBombs = 3;        // The maximum number of bombs on screen at once
-		constexpr static int BombSpeed = 100;     // The speed of the falling bombs in pixels/second
-		constexpr static int BombPeriodMS = 1000; // The maximum time between bomb drops (in msec)
+		constexpr static int BombSpeed = 250;     // The speed of the falling bombs in pixels/second
+		constexpr static int BombPeriodMS = 1000; // The maximum time between bomb drops (in milliseconds)
 		constexpr static int BombValue = 1;
 
 		// Bullets
 		constexpr static int MaxBullets = 1;    // The maximum number of bullets on screen at once
-		constexpr static int BulletSpeed = 100; // The speed of the bullets in pixels/second
+		constexpr static int BulletSpeed = 420; // The speed of the bullets in pixels/second
 
 		// The types of aliens in each row
 		enum class EAlienType
@@ -150,6 +150,8 @@ namespace pr
 	private:
 
 		using SpriteR = onebit::BitmapR<uint8_t>;
+		using BunkerSprite = onebit::Bitmap<32, 20, uint8_t>;
+
 		template <int DimX, int DimY> using SpriteW = onebit::Bitmap<DimX, DimY, uint8_t>;
 		struct Coord 
 		{
@@ -174,48 +176,166 @@ namespace pr
 		//  RowMajor_1x8, LsbFirst, no flip/rotate
 		static SpriteR sprite_ship()
 		{
-			static uint8_t const data[] = { 0xF0, 0x60, 0x70, 0xF8, 0xFF, 0xF8, 0x70, 0x60, 0xF0, };
-			return SpriteR(data, 9, 8);
+			static uint8_t const data[] =
+			{
+				0x00, 0xC0, 0xF0, 0x00, 0x00, 0x00, 0x80, 0xC0, 0xE0, 0x7F, 0x7F, 0xE0, 0xC0, 0x80, 0x00, 0x00, 0x00, 0xF0, 0xC0, 0x00,
+				0x1F, 0x3F, 0x3F, 0x0F, 0x1E, 0x3F, 0x3F, 0x3F, 0x3E, 0x3F, 0x3F, 0x3E, 0x3F, 0x3F, 0x3F, 0x1E, 0x0F, 0x3F, 0x3F, 0x1F,
+			};
+			return SpriteR(data, 20, 14);
+			//static uint8_t const data[] = { 0xF0, 0x60, 0x70, 0xF8, 0xFF, 0xF8, 0x70, 0x60, 0xF0, };
+			//return SpriteR(data, 9, 8);
 		}
-		static SpriteR sprite_alien1()
+		static SpriteR sprite_alien1(int i)
 		{
-			static uint8_t const data[] = { 0x0E, 0x17, 0x1D, 0x07, 0x1D, 0x17, 0x0E, };
-			return SpriteR(&data[0], 7, 5);
+			static uint8_t const data0[] = {
+				0xE0, 0xF0,
+				0xF8, 0x9C,
+				0x9E, 0xFF,
+				0xFF, 0xFF,
+				0x9E, 0x9C,
+				0xF8, 0xF0,
+				0xE0, 0x0D,
+				0x1F, 0x3F,
+				0x33, 0x21,
+				0x03, 0x03,
+				0x03, 0x21,
+				0x33, 0x3F,
+				0x1F, 0x0D,
+			};
+			static uint8_t const data1[] = {
+				0xE0, 0xF0,
+				0xF8, 0x9C,
+				0x9E, 0xFF,
+				0xFF, 0xFF,
+				0x9E, 0x9C,
+				0xF8, 0xF0,
+				0xE0, 0x19,
+				0x3D, 0x0F,
+				0x17, 0x3B,
+				0x1D, 0x0D,
+				0x1D, 0x3B,
+				0x17, 0x0F,
+				0x3D, 0x19,
+			};
+			return SpriteR((i & 1) ? data1 : data0, 13, 14);
 		}
-		static SpriteR sprite_alien2()
+		static SpriteR sprite_alien2(int i)
 		{
-			static uint8_t const data[] = { 0x0E, 0x1B, 0x0F, 0x1B, 0x0F, 0x1B, 0x0E, };
-			return SpriteR(&data[0], 7, 5);
+			static uint8_t const data0[] = {
+				0x80, 0xC0, 0xF3,
+				0xFB, 0xFC, 0x3C,
+				0x3C, 0xFC, 0xF8,
+				0xF8, 0xF8, 0xF8,
+				0xFC, 0x3C, 0x3C,
+				0xFC, 0xFB, 0xF3,
+				0xC0, 0x80, 0x0F,
+				0x1F, 0x03, 0x1F,
+				0x3F, 0x37, 0x33,
+				0x33, 0x33, 0x03,
+				0x03, 0x33, 0x33,
+				0x33, 0x37, 0x3F,
+				0x1F, 0x03, 0x1F,
+				0x0F, 
+			};
+			static uint8_t const data1[] = {
+				0xFC, 0xF8, 0xC3,
+				0xFB, 0xFC, 0x3C,
+				0x3C, 0xFC, 0xF8,
+				0xF8, 0xF8, 0xF8,
+				0xFC, 0x3C, 0x3C,
+				0xFC, 0xFB, 0xC3,
+				0xF8, 0xFC, 0x21,
+				0x33, 0x33, 0x3F,
+				0x1F, 0x07, 0x03,
+				0x03, 0x03, 0x03,
+				0x03, 0x03, 0x03,
+				0x03, 0x07, 0x1F,
+				0x3F, 0x33, 0x33,
+				0x21, 
+			};
+			return SpriteR((i & 1) ? data1 : data0, 20, 14);
 		}
-		static SpriteR sprite_alien3()
+		static SpriteR sprite_alien3(int i)
 		{
-			static uint8_t const data[] = { 0x17, 0x0E, 0x0A, 0x1F, 0x0A, 0x0E, 0x17, };
-			return SpriteR(&data[0], 7, 5);
-		}
-		static SpriteR sprite_alien4()
-		{
-			static uint8_t const data[] = { 0x07, 0x0A, 0x1D, 0x07, 0x1D, 0x0A, 0x07, };
-			return SpriteR(&data[0], 7, 5);
-		}
-		static SpriteR sprite_alien5()
-		{
-			static uint8_t const data[] = { 0x0A, 0x07, 0x1D, 0x07, 0x1D, 0x07, 0x0A, };
-			return SpriteR(&data[0], 7, 5);
+			static uint8_t const data0[] = {
+				0xF8, 0xFC, 0xFE,
+				0xFE, 0xFE, 0xDE,
+				0xDF, 0xDF, 0xFF,
+				0xFF, 0xFF, 0xFF,
+				0xDF, 0xDF, 0xDE,
+				0xFE, 0xFE, 0xFE,
+				0xFC, 0xF8, 0x00,
+				0x01, 0x19, 0x1D,
+				0x3F, 0x37, 0x23,
+				0x07, 0x05, 0x0D,
+				0x0D, 0x05, 0x07,
+				0x23, 0x37, 0x3F,
+				0x1D, 0x19, 0x01,
+				0x00, 
+			};
+			static uint8_t const data1[] = {
+				0xF8, 0xFC, 0xFE,
+				0xFE, 0xFE, 0xDE,
+				0xDF, 0xDF, 0xFF,
+				0xFF, 0xFF, 0xFF,
+				0xDF, 0xDF, 0xDE,
+				0xFE, 0xFE, 0xFE,
+				0xFC, 0xF8, 0x20,
+				0x31, 0x39, 0x1D,
+				0x0F, 0x07, 0x03,
+				0x07, 0x05, 0x0D,
+				0x0D, 0x05, 0x07,
+				0x03, 0x07, 0x0F,
+				0x1D, 0x39, 0x31,
+				0x20,
+			};
+			return SpriteR((i&1) ? data1 : data0, 20, 14);
 		}
 		static SpriteR sprite_bunker()
 		{
-			static uint8_t const data[] = { 0xFC, 0xFE, 0xFE, 0x7F, 0x7F, 0x7F, 0x7F, 0x7F, 0xFE, 0xFE, 0xFC, };
-			return SpriteR(&data[0], 11, 8);
+			static uint8_t const data[] = {
+				0x00, 0x80, 0xC0, 0xE0,
+				0xF0, 0xF8, 0xFC, 0xFE,
+				0xFE, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFE,
+				0xFE, 0xFC, 0xF8, 0xF0,
+				0xE0, 0xC0, 0x80, 0x00,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0x3F, 0x1F,
+				0x1F, 0x1F, 0x0F, 0x0F,
+				0x0F, 0x0F, 0x1F, 0x1F,
+				0x1F, 0x3F, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0xFF, 0xFF, 0xFF, 0xFF,
+				0x0F, 0x0F, 0x0F, 0x0F,
+				0x0F, 0x0F, 0x0F, 0x0F,
+				0x0F, 0x01, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x01, 0x0F,
+				0x0F, 0x0F, 0x0F, 0x0F,
+				0x0F, 0x0F, 0x0F, 0x0F,
+			};
+			return SpriteR(data, 32, 20);
 		}
 		static SpriteR sprite_bomb()
 		{
-			static uint8_t const data[] = { 0x0D, 0x1E, 0x0D, };
-			return SpriteR(&data[0], 3, 5);
+			static uint8_t const data[] = {
+				0x8F, 0xDC, 0xFB, 0xDC, 0x8F,
+				0x7F, 0xE9, 0xFF, 0xFF, 0x7F,
+			};
+			return SpriteR(data, 5, 16);
 		}
 		static SpriteR sprite_bullet()
 		{
-			static uint8_t const data[] = { 0x07, };
-			return SpriteR(&data[0], 1, 3);
+			static uint8_t const data[] = {
+				0xFF,
+				0xFF,
+			};
+			return SpriteR(data, 2, 8);
 		}
 		static SpriteR sprite_null()
 		{
@@ -223,59 +343,109 @@ namespace pr
 		}
 		static SpriteR sprite_explode1()
 		{
-			static uint8_t const data[] = { 0x08, 0x41, 0x2A, 0x1C, 0x7F, 0x1C, 0x2A, 0x41, 0x08, };
-			return SpriteR(&data[0], 9, 7);
+			static uint8_t const data[] = {
+				0x10, 0x42, 0x24,
+				0x68, 0x71, 0xBC,
+				0xDA, 0xE0, 0xFB,
+				0xE0, 0xDA, 0xBC,
+				0x71, 0x68, 0x24,
+				0x42, 0x10, 0x11,
+				0x85, 0x48, 0x2D,
+				0x1D, 0x7B, 0xB7,
+				0x0F, 0xBF, 0x0F,
+				0xB7, 0x7B, 0x1D,
+				0x2D, 0x48, 0x85,
+				0x11, 0x00, 0x00,
+				0x00, 0x00, 0x01,
+				0x00, 0x00, 0x00,
+				0x01, 0x00, 0x00,
+				0x00, 0x01, 0x00,
+				0x00, 0x00, 0x00,
+			};
+			return SpriteR(data, 17, 17);
 		}
 		static SpriteR sprite_explode2()
 		{
-			static uint8_t const data[] =
-			{
-				0x40, 0x08, 0x40, 0x0A, 0x50, 0x04, 0x19, 0x04, 0x50, 0x0A, 0x40, 0x08, 0x40,
-				0x00, 0x02, 0x00, 0x0A, 0x01, 0x04, 0x13, 0x04, 0x01, 0x0A, 0x00, 0x02, 0x00,
+			static uint8_t const data[] = {
+				0x80, 0x50, 0x94,
+				0xE8, 0x16, 0x6C,
+				0x6A, 0x2C, 0x30,
+				0x1B, 0x30, 0x2C,
+				0x4A, 0x6C, 0x16,
+				0xE8, 0xB4, 0x50,
+				0x80, 0x0A, 0x52,
+				0x68, 0xBA, 0x47,
+				0xAD, 0xB0, 0xA0,
+				0x60, 0xC0, 0x60,
+				0xA0, 0x90, 0xBD,
+				0x47, 0xBA, 0x68,
+				0x52, 0x0A, 0x00,
+				0x00, 0x01, 0x00,
+				0x03, 0x01, 0x02,
+				0x01, 0x00, 0x06,
+				0x00, 0x01, 0x02,
+				0x01, 0x03, 0x00,
+				0x01, 0x00, 0x00,
 			};
-			return SpriteR(&data[0], 13, 13);
+			return SpriteR(data, 19, 19);
 		}
 		static SpriteR sprite_score()
 		{
-			static uint8_t const data[] =
-			{
-				0x12, 0x15, 0x15, 0x09, 0x00,
-				0x0E, 0x11, 0x11, 0x11, 0x00,
-				0x0E, 0x11, 0x11, 0x0E, 0x00,
-				0x1F, 0x05, 0x0D, 0x12, 0x00,
-				0x1F, 0x15, 0x15, 0x11, 0x00,
-				0x0A,
+			static uint8_t const data[] = {
+				0x1C, 0x3E, 0x77, 0x63, 0xE7, 0xCE,
+				0x8C, 0x00, 0xFC, 0xFE, 0x07, 0x03,
+				0x03, 0x07, 0x0E, 0x0C, 0x00, 0xFC,
+				0xFE, 0x07, 0x03, 0x03, 0x07, 0xFE,
+				0xFC, 0x00, 0x00, 0xFE, 0xFF, 0x63,
+				0xE3, 0xF7, 0xBE, 0x1C, 0x00, 0x00,
+				0xFF, 0xFF, 0x63, 0x63, 0x63, 0x03,
+				0x00, 0x00, 0x18, 0x18, 0x03, 0x07,
+				0x0E, 0x0C, 0x0E, 0x07, 0x03, 0x00,
+				0x03, 0x07, 0x0E, 0x0C, 0x0C, 0x0E,
+				0x07, 0x03, 0x00, 0x03, 0x07, 0x0E,
+				0x0C, 0x0C, 0x0E, 0x07, 0x03, 0x00,
+				0x00, 0x0F, 0x0F, 0x00, 0x00, 0x03,
+				0x0F, 0x0E, 0x00, 0x00, 0x0F, 0x0F,
+				0x0C, 0x0C, 0x0C, 0x0C, 0x00, 0x00,
+				0x06, 0x06,
 			};
-			return SpriteR(&data[0], 26, 5);
+			return SpriteR(&data[0], 46, 12);
 		}
 		static SpriteR sprite_hiscore()
 		{
-			static uint8_t const data[] =
-			{
-				0x1F, 0x04,
-				0x04, 0x1F,
-				0x00, 0x11,
-				0x1F, 0x11,
-				0x00, 0x0A,
+			static uint8_t const data[] = {
+				0xFF, 0xFF, 0x60,
+				0x60, 0x60, 0xFF,
+				0xFF, 0x00, 0x03,
+				0x03, 0x03, 0xFF,
+				0xFF, 0x03, 0x03,
+				0x03, 0x00, 0x00,
+				0x18, 0x18, 0x0F,
+				0x0F, 0x00, 0x00,
+				0x00, 0x0F, 0x0F,
+				0x00, 0x0C, 0x0C,
+				0x0C, 0x0F, 0x0F,
+				0x0C, 0x0C, 0x0C,
+				0x00, 0x00, 0x06,
+				0x06, 
 			};
-			return SpriteR(&data[0], 10, 5);
+			return SpriteR(&data[0], 20, 12);
 		}
 		static SpriteR sprite_digit(int n)
 		{
-			static uint8_t const data[] =
-			{
-				0x0E, 0x19, 0x13, 0x0E, 0x00,
-				0x00, 0x12, 0x1F, 0x10, 0x00,
-				0x12, 0x19, 0x15, 0x12, 0x00,
-				0x11, 0x15, 0x15, 0x0A, 0x00,
-				0x07, 0x04, 0x1F, 0x04, 0x00,
-				0x13, 0x15, 0x15, 0x09, 0x00,
-				0x0E, 0x15, 0x15, 0x09, 0x00,
-				0x01, 0x11, 0x0D, 0x03, 0x00,
-				0x0A, 0x15, 0x15, 0x0A, 0x00,
-				0x02, 0x15, 0x15, 0x0E, 0x00,
+			static uint8_t const data[] = {
+				0xFC,0xFE,0x87,0x63,0x17,0xFE,0xFC,0x03,0x07,0x0E,0x0C,0x0E,0x07,0x03, // 0
+				0x18,0x1C,0x0E,0xFF,0xFF,0x00,0x00,0x00,0x0C,0x0C,0x0F,0x0F,0x0C,0x0C, // 1
+				0x0C,0x8E,0xC7,0xE3,0x77,0x3E,0x1C,0x0F,0x0F,0x0D,0x0C,0x0C,0x0C,0x0C, // 2
+				0x06,0x07,0x63,0x63,0xF7,0xFF,0x9E,0x06,0x0E,0x0C,0x0C,0x0E,0x0F,0x07, // 3
+				0x3F,0x7F,0x60,0x60,0xFF,0xFF,0x60,0x00,0x00,0x00,0x00,0x0F,0x0F,0x00, // 4
+				0x3F,0x3F,0x33,0x33,0x73,0xF3,0xE3,0x07,0x0F,0x0C,0x0C,0x0E,0x07,0x03, // 5
+				0xFC,0xFE,0x67,0x63,0x63,0xE7,0xC6,0x07,0x0F,0x0C,0x0C,0x0C,0x0F,0x07, // 6
+				0x03,0x03,0xE3,0xF3,0x3B,0x1F,0x0F,0x00,0x00,0x0F,0x0F,0x00,0x00,0x00, // 7
+				0x9E,0xFF,0x63,0x63,0x63,0xFF,0x9E,0x07,0x0F,0x0C,0x0C,0x0C,0x0F,0x07, // 8
+				0x1C,0x3E,0x77,0x63,0x63,0xFF,0xFE,0x00,0x00,0x00,0x00,0x00,0x0F,0x0F, // 9
 			};
-			return SpriteR(&data[n*5], 5, 5);
+			return SpriteR(&data[n*14], 7, 12);
 		}
 		#pragma endregion
 
@@ -378,7 +548,7 @@ namespace pr
 		struct Bunker :Entity
 		{
 			Coord m_pos;
-			SpriteW<11,8> m_gfx;
+			BunkerSprite m_gfx;
 
 			Bunker()
 				: m_pos()
@@ -392,7 +562,7 @@ namespace pr
 			{
 				return m_gfx;
 			}
-			SpriteW<11,8>& SpriteW()
+			BunkerSprite& SpriteW()
 			{
 				return m_gfx;
 			}
@@ -429,23 +599,27 @@ namespace pr
 				{
 					switch (m_aliens->State(m_row, m_col))
 					{
-					default:
-					case EEntityState::Dead:       return sprite_null();
-					case EEntityState::Exploding1: return sprite_explode1();
-					case EEntityState::Exploding2: return sprite_explode2();
-					case EEntityState::Alive:
+						default:
+						case EEntityState::Dead:       return sprite_null();
+						case EEntityState::Exploding1: return sprite_explode1();
+						case EEntityState::Exploding2: return sprite_explode2();
+						case EEntityState::Alive:
 						{
 							switch (AlienConfig[m_row].Type)
 							{
-							case EAlienType::Private:    return sprite_alien1();
-							case EAlienType::Lieutenant: return sprite_alien2();
-							case EAlienType::Captain:    return sprite_alien3();
-							case EAlienType::Major:      return sprite_alien4();
-							case EAlienType::General:    return sprite_alien5();
-							default: assert(false);      return sprite_null();
+								case EAlienType::Private:    return sprite_alien3(m_aliens->m_step_count);
+								case EAlienType::Lieutenant: return sprite_alien3(m_aliens->m_step_count);
+								case EAlienType::Captain:    return sprite_alien2(m_aliens->m_step_count);
+								case EAlienType::Major:      return sprite_alien2(m_aliens->m_step_count);
+								case EAlienType::General:    return sprite_alien1(m_aliens->m_step_count);
+								default: assert(false);      return sprite_null();
 							}
 						}
 					}
+				}
+				EAlienType Type() const
+				{
+					return AlienConfig[m_row].Type;
 				}
 				int Value() const
 				{
@@ -458,6 +632,7 @@ namespace pr
 			int m_last_step_ms;           // The clock value when the aliens last moved;
 			int m_last_bomb_ms;           // Time since the last bomb was dropped
 			int m_direction;              // The direction the aliens are moving in
+			int m_step_count;
 
 			Aliens()
 				: m_pos(mpx(AlienEdgeMargin), mpx(AlienInitialYPos))
@@ -465,6 +640,7 @@ namespace pr
 				, m_last_step_ms()
 				, m_last_bomb_ms()
 				, m_direction(+1)
+				, m_step_count()
 			{
 				static_assert(AlienRows <= static_cast<int>(sizeof(m_state[0]) * 4), "2-bits per alien means 8 rows max");
 				static_assert(static_cast<int>(EEntityState::Alive) == 3, "2-bits per alien state");
@@ -541,6 +717,8 @@ namespace pr
 				{
 					m_pos.x += mpx(m_direction * AlienAdvanceX);
 				}
+
+				m_step_count++;
 			}
 
 			// True if column 'c' contains an alive alien
@@ -553,7 +731,7 @@ namespace pr
 			// Return the number of columns containing alive aliens
 			int AliveColumnsCount() const
 			{
-				auto count = 0;
+				int count = 0;
 				for (int c = 0; c != AlienCols; ++c)
 					count += IsAliveColumn(c);
 
@@ -563,10 +741,10 @@ namespace pr
 			// Return the n'th column index containing an alive alien
 			int AliveColumn(int n) const
 			{
-				auto alive_count = AliveColumnsCount();
+				int alive_count = AliveColumnsCount();
 				assert(alive_count != 0); // All dead
 
-				auto column = 0;
+				int column = 0;
 				for (n %= alive_count; ; --n, ++column)
 				{
 					for (; !IsAliveColumn(column); ++column) {}
@@ -616,7 +794,7 @@ namespace pr
 					if (m_state[c] == 0) continue;
 					for (int r = 0; r != AlienRows; ++r)
 					{
-						auto state = (m_state[c] >> (2 * r)) & 3;
+						int state = (m_state[c] >> (2 * r)) & 3;
 						if (state == 3 || state == 0) continue;
 						m_state[c] &= ~(0x3 << (2 * r));
 						m_state[c] |= (state - 1) << (2 * r);
@@ -627,7 +805,7 @@ namespace pr
 			// Destroy 'alien'
 			void Kill(Alien const& alien)
 			{
-				auto state = (m_state[alien.m_col] >> (2 * alien.m_row)) & 3;
+				int state = (m_state[alien.m_col] >> (2 * alien.m_row)) & 3;
 				m_state[alien.m_col] &= ~(0x3 << (2 * alien.m_row));
 				m_state[alien.m_col] |= static_cast<StateWord>((state - 1) << (2 * alien.m_row));
 			}
@@ -717,7 +895,6 @@ namespace pr
 
 		// Game state
 		ISystem* m_system;
-		mutable Screen m_screen;
 		Player m_player;
 		Aliens m_aliens;
 		Bunker m_bunkers[BunkerCount];
@@ -737,7 +914,6 @@ namespace pr
 
 		SpaceInvaders(ISystem* sys)
 			: m_system(sys)
-			, m_screen()
 			, m_player()
 			, m_aliens()
 			, m_bunkers()
@@ -823,7 +999,6 @@ namespace pr
 						m_system->PlaySound(ESound::GameOver);
 						ChangeState(EState::GameEnd);
 					}
-
 					break;
 				}
 			case EState::LevelComplete:
@@ -840,17 +1015,17 @@ namespace pr
 			}
 		}
 
-		// Access the display buffer
-		Screen const& Display() const
+		// Draw the display onto the user provided 'screen'.
+		void Render(Screen& screen) const
 		{
 			// Reset the display buffer
-			m_screen.Clear();
+			screen.Clear();
 
 			// Draw the score
 			{
 				int x = 1;
 				auto const& s = sprite_score();
-				m_screen.Draw(s, x, 1);
+				screen.Draw(s, x, 1);
 				x += s.m_dimx + 2;
 
 				char score[16] = {};
@@ -858,14 +1033,14 @@ namespace pr
 				for (char const* p = &score[0]; *p != '\0'; ++p)
 				{
 					auto const& d = sprite_digit(*p - '0');
-					m_screen.Draw(d, x, 1);
-					x += d.m_dimx;
+					screen.Draw(d, x, 1);
+					x += d.m_dimx + 1;
 				}
 			}
 			{
 				int x = ScreenDimX / 2;
 				auto const& s = sprite_hiscore();
-				m_screen.Draw(s, x, 1);
+				screen.Draw(s, x, 1);
 				x += s.m_dimx + 2;
 
 				char score[16] = {};
@@ -873,13 +1048,13 @@ namespace pr
 				for (char const* p = &score[0]; *p != '\0'; ++p)
 				{
 					auto const& d = sprite_digit(*p - '0');
-					m_screen.Draw(d, x, 1);
-					x += d.m_dimx;
+					screen.Draw(d, x, 1);
+					x += d.m_dimx + 1;
 				}
 			}
 
 			// Draw the player
-			Draw(m_player);
+			Draw(screen, m_player);
 
 			// Draw the aliens
 			for (int r = 0; r != AlienRows; ++r)
@@ -887,7 +1062,7 @@ namespace pr
 				for (int c = 0; c != AlienCols; ++c)
 				{
 					auto const& alien = m_aliens.AlienAt(r, c);
-					Draw(alien);
+					Draw(screen, alien);
 				}
 			}
 
@@ -895,7 +1070,7 @@ namespace pr
 			for (int b = 0; b != BunkerCount; ++b)
 			{
 				auto const& bunker = m_bunkers[b];
-				Draw(bunker);
+				Draw(screen, bunker);
 			}
 
 			// Draw any bombs
@@ -903,7 +1078,7 @@ namespace pr
 			{
 				auto const& bomb = m_bombs[b];
 				if (bomb.m_state != EEntityState::Dead)
-					Draw(bomb);
+					Draw(screen, bomb);
 			}
 
 			// Draw the bullet
@@ -911,10 +1086,8 @@ namespace pr
 			{
 				auto const& bullet = m_bullets[b];
 				if (bullet.m_state != EEntityState::Dead)
-					Draw(bullet);
+					Draw(screen, bullet);
 			}
-
-			return m_screen;
 		}
 
 	private:
@@ -935,6 +1108,9 @@ namespace pr
 		// Set up to start a new game
 		void Init()
 		{
+			m_clock_ms = 0;
+			m_timer_start_ms = 0;
+
 			// Initialise the player 
 			m_player = Player();
 
@@ -958,13 +1134,13 @@ namespace pr
 				m_bullets[b].m_state = EEntityState::Dead;
 		}
 
-		// Draw 'obj' into 'm_screen'
-		void Draw(Entity const& obj) const
+		// Draw 'obj' into the user provided 'screen'
+		void Draw(Screen& screen, Entity const& obj) const
 		{
 			auto const& s = obj.Sprite();
 			auto x = px(obj.Position().x) - s.m_dimx / 2;
 			auto y = px(obj.Position().y) - s.m_dimy / 2;
-			m_screen.Draw(s, x, y);
+			screen.Draw(s, x, y);
 		}
 
 		// Advance the player
@@ -1070,7 +1246,7 @@ namespace pr
 					return;
 
 				// Choose which alien to drop the bomb from
-				auto col = m_aliens.AliveColumn(Rand(16));
+				int col = m_aliens.AliveColumn(Rand(16));
 				m_bombs[b] = m_aliens.DropBomb(col);
 				m_aliens.m_last_bomb_ms = m_clock_ms;
 				m_system->PlaySound(ESound::AlienBombDrop);
@@ -1182,23 +1358,23 @@ namespace pr
 				auto& bomb = m_bombs[b];
 				switch (bomb.m_state)
 				{
-				default: continue;
-				case EEntityState::Alive:
+					case EEntityState::Alive:
 					{
 						// The distance travelled
-						auto dist_mpx = elapsed_ms * BombSpeed; // px/src == mpx/msec
+						int dist_mpx = elapsed_ms * BombSpeed; // px/src == mpx/msec
 						bomb.m_pos.y += dist_mpx;
 
 						if (px(bomb.m_pos.y) > ScreenDimY + bomb.Sprite().m_dimy / 2)
 							bomb.m_state = EEntityState::Dead;
 						break;
 					}
-				case EEntityState::Exploding1:
-				case EEntityState::Exploding2:
+					case EEntityState::Exploding1:
+					case EEntityState::Exploding2:
 					{
 						bomb.m_state = static_cast<EEntityState>(static_cast<int>(bomb.m_state) - 1);
 						break;
 					}
+					default: continue;
 				}
 			}
 
@@ -1227,11 +1403,12 @@ namespace pr
 						auto& bunker = m_bunkers[k];
 						if (CollisionTest(bunker, bomb))
 						{
-							// Eat some bunker. Use 'vec.y+1' to increase the penetration of the bomb into the bunker
+							// Eat some bunker. Use 'vec.y + bomb height/2' to increase the penetration of the bomb into the bunker
 							bomb.m_state = EEntityState::Exploding1;
+							bomb.m_pos.y += mpx(bomb.Sprite().m_dimy / 2);
 							m_system->PlaySound(ESound::BunkerDamaged);
 							auto vec = RelativePosition(bunker, bomb);
-							onebit::Combine(bunker.SpriteW(), bomb.Sprite(), vec.x, vec.y + 1, [](auto& lhs, auto const&, int b, int x, auto block, auto)
+							onebit::Combine(bunker.SpriteW(), bomb.Sprite(), vec.x, vec.y, [](auto& lhs, auto const&, int b, int x, auto block, auto)
 							{
 								lhs.Block(b, x) &= ~block;
 								return false;
@@ -1274,12 +1451,6 @@ namespace pr
 		{
 			auto n = static_cast<int>(m_rng & 0xFF);
 			return n * 100 <= percent_chance * 0xFF;
-		}
-
-		// Dump the current display to a text file
-		void DumpToFile() const
-		{
-			Display().DumpToFile("P:\\dump\\space_invaders.txt");
 		}
 	};
 }

@@ -101,7 +101,7 @@ namespace CoinFlip
 		/// <summary>Resolve a full path relative to the bots directory</summary>
 		public static string ResolveBotPath(params string[] rel_path)
 		{
-			return Util.ResolveAppPath(new[] { "bots" }.Concat(rel_path));
+			return Util.ResolveUserDocumentsPath(new[] { "Rylogic", "CoinFlip", "Bots" }.Concat(rel_path));
 		}
 
 		/// <summary>Convert a trade type string to the enumeration value</summary>

@@ -69,6 +69,16 @@ namespace Rylogic.Extn
 			return source.Cast<object>().Select(x => Util.ConvertTo(x, ty));
 		}
 
+		/// <summary>Convert an enumerable to a queue</summary>
+		public static Queue<TSource> ToQueue<TSource>(this IEnumerable<TSource> source)
+		{
+			return new Queue<TSource>(source);
+		}
+		public static Queue<TItem> ToQueue<TSource, TItem>(this IEnumerable<TSource> source, Func<TSource, TItem> selector)
+		{
+			return new Queue<TItem>(source.Select(selector));
+		}
+
 		/// <summary>Convert the collection into a hash set</summary>
 		public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source)
 		{

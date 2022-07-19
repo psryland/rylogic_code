@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -201,7 +201,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Returns the match template as a compiled regular expression</summary>
-		protected Regex Regex
+		public Regex Regex
 		{
 			get
 			{

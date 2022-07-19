@@ -51,7 +51,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -59,7 +59,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -67,7 +67,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -75,7 +75,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>

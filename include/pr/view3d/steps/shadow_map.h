@@ -80,6 +80,7 @@ namespace pr::rdr
 
 		ShadowMap(Scene& scene, Light const& light, int size = 1024, DXGI_FORMAT format = DXGI_FORMAT_R32_FLOAT);
 		ShadowMap(ShadowMap const&) = delete;
+		~ShadowMap();
 		ShadowMap& operator = (ShadowMap const&) = delete;
 
 		// Add a shadow casting light source

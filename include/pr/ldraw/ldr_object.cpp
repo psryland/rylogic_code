@@ -4421,18 +4421,18 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Resolution:
+				case EKeyword::Resolution:
 				{
 					p.m_reader.IntS(m_resolution, 10);
 					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
 					return true;
 				}
-			case EKeyword::Param:
+				case EKeyword::Param:
 				{
 					std::string name;
 					double value;
@@ -4443,22 +4443,23 @@ namespace pr::ldr
 					m_args.add(name, value);
 					return true;
 				}
-			case EKeyword::Weight:
+				case EKeyword::Weight:
 				{
 					p.m_reader.RealS(m_extras.m_weight);
+					m_extras.m_weight = std::clamp(m_extras.m_weight, -1.0f, +1.0f);
 					return true;
 				}
-			case EKeyword::XAxis:
+				case EKeyword::XAxis:
 				{
 					m_extras.m_axis[0] = Extras::Axis::Parse(p.m_reader);
 					return true;
 				}
-			case EKeyword::YAxis:
+				case EKeyword::YAxis:
 				{
 					m_extras.m_axis[1] = Extras::Axis::Parse(p.m_reader);
 					return true;
 				}
-			case EKeyword::ZAxis:
+				case EKeyword::ZAxis:
 				{
 					m_extras.m_axis[2] = Extras::Axis::Parse(p.m_reader);
 					return true;
@@ -4654,28 +4655,17 @@ namespace pr::ldr
 			//    vcount = ArithmeticSum(0, 6, rings) + 1;
 			//    icount = ArithmeticSum(0, 12, rings) + 2*rings;
 			// ArithmeticSum := (n + 1) * (a0 + an) / 2, where an = (a0 + n * step)
-			//    3r� + 3r + 1-vcount = 0  =>  r = (-3 � sqrt(-3 + 12*vcount)) / 6
-			//    6r� + 8r - icount = 0    =>  r = (-8 � sqrt(64 + 24*icount)) / 12
+			//    3r^2 + 3r + 1-vcount = 0  =>  r = (-3 +/- sqrt(-3 + 12*vcount)) / 6
+			//    6r^2 + 8r - icount = 0    =>  r = (-8 +/- sqrt(64 + 24*icount)) / 12
 			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vrange.size())) / 6;
 			auto irings = (-8 + sqrt(64 + 24 * model.m_irange.size())) / 12;
 			auto rings = static_cast<int>(std::min(vrings, irings));
+			auto dx_step = (range.SizeX() / rings) * 1e-5f;
+			auto dy_step = (range.SizeY() / rings) * 1e-5f;
 
 			auto [nv, ni] = geometry::HexPatchSize(rings);
 			assert(nv <= (int)model.m_vrange.size());
 			assert(ni <= (int)model.m_irange.size());
-
-			// Evaluate the normal at (x,y)
-			auto norm = [&](float x, float y)
-			{
-				// Smallest non-zero of (x,y)
-				auto d =
-					(x != 0 && y != 0) ? Min(Abs(x), Abs(y)) * 0.00001f :
-					(x != 0 || y != 0) ? Max(Abs(x), Abs(y)) * 0.00001f :
-					maths::tinyf;
-				auto pt = equation(v4(x - d, x + d, x, x), v4(y, y, y - d, y + d)).v4();
-				auto n = Cross(v4(2*d, 0, pt.y - pt.x, 0), v4(0, 2*d, pt.w - pt.z, 0));
-				return Normalise(n, v4Zero);
-			};
 
 			MLock mlock(&model, EMap::WriteDiscard);
 			auto vout = mlock.m_vlock.ptr<Vert>();
@@ -4687,12 +4677,25 @@ namespace pr::ldr
 					// so the focus point is centred around (0,0,0), then set the o2w transform
 
 					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to the range.
-					// 'weight' controls the density of points near the range centre.
+					// 'weight' controls the density of points near the range centre since 'len_sq' is on [0,1].
 					auto dir = pos.w0();
 					auto len_sq = LengthSq(dir);
-					auto pt = range.Centre() + dir * range.Radius() * Pow(len_sq, extras.m_weight * 0.5f);
+					auto weight = Lerp(extras.m_weight, 1.0f, len_sq);
+					auto pt = range.Centre() + dir * range.Radius() * weight;
+					
+					// Evaluate the equation at 'pt' to get z = f(x,y) and the colour.
 					auto [z,col] = extras.m_axis[2].clamp(static_cast<float>(equation(pt.x, pt.y).db()));
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm(pt.x, pt.y), v2Zero);
+
+					// Evaluate the normal at 'pt'. Want to choose a 'd' value that is proportional to the density of points at 'pt'
+					auto dx = dx_step * weight; // this isn't right, 'd' should be the smallest step that produces an accurate normal...
+					auto dy = dy_step * weight;
+
+					// Evaluate the function at four points around (x,y) to get the height 'h'
+					auto h = equation(v4(pt.x - dx, pt.x + dx, pt.x, pt.x), v4(pt.y, pt.y, pt.y - dy, pt.y + dy)).v4();
+					auto n = Cross(v4(2 * dx, 0, h.y - h.x, 0), v4(0, 2 * dy, h.w - h.z, 0));
+					auto norm = Normalise(n, v4::Zero());
+
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2Zero);
 				},
 				[&](auto idx)
 				{

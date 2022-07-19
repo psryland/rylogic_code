@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Rylogic.Common;
 using Rylogic.Extn;
 
@@ -135,7 +136,7 @@ namespace Rylogic.Plugin
 		public static IEnumerable<PluginFile> Enumerate(string directory, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern)
 		{
 			// Build a list of assemblies to check
-			var filedata = Path_.EnumFileSystem(directory, search, regex_filter, exclude:FileAttributes.Directory).ToList();
+			var filedata = Path_.EnumFileSystem(directory, search, file_filter:new Regex(regex_filter), exclude:FileAttributes.Directory).ToList();
 
 			// Load each assembly and look for types that are flagged with the Plugin attribute
 			foreach (var fd in filedata)

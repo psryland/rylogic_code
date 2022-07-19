@@ -77,13 +77,22 @@ namespace Rylogic.Utility
 			// Find the names of the source files to copy
 			var files = new List<string>();
 			if (src_is_dir)
-				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories).Select(x => x.FullName).ToList();
+			{
+				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories).OfType<FileInfo>().Select(x => x.FullName).ToList();
+			}
 			else if (Path_.FileExists(src))
+			{
 				files = new List<string>() { src };
+			}
 			else if (src.Contains('*') || src.Contains('?'))
-				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories, new Pattern(EPattern.Wildcard, src).RegexString).Select(x => x.FullName).ToList();
+			{
+				var filter = new Pattern(EPattern.Wildcard, src).Regex;
+				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories, file_filter: filter, dir_filter: filter).OfType<FileInfo>().Select(x => x.FullName).ToList();
+			}
 			else if (!ignore_non_existing)
+			{
 				throw new FileNotFoundException($"'{src}' does not exist");
+			}
 
 			// If the 'src' represents multiple files, 'dst' must be a directory
 			if (src_is_dir || files.Count > 1)

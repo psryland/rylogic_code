@@ -34,6 +34,7 @@ namespace ace
 		using base = pr::app::Main<Main, MainUI, UserSettings>;
 		using Texture2DPtr = pr::rdr::Texture2DPtr;
 		using SpaceInvaders = pr::SpaceInvaders;
+		using Screen = pr::SpaceInvaders::Screen;
 		using SoundBank = std::vector<pr::ByteData<4>>;
 		using AudioManager = pr::audio::AudioManager;
 		static wchar_t const* AppName() { return L"AceInspaders"; };
@@ -49,6 +50,7 @@ namespace ace
 		ScreenQuad m_screen_quad;
 		AudioManager m_audio;
 		SoundBank m_sounds;
+		Screen m_display;
 
 		Main(MainUI& ui)
 			: base(pr::app::DefaultSetup(), ui)
@@ -57,6 +59,7 @@ namespace ace
 			, m_screen_quad()
 			, m_audio()
 			, m_sounds()
+			, m_display()
 		{
 			using namespace pr;
 			using namespace pr::rdr;
@@ -112,16 +115,16 @@ namespace ace
 			using namespace pr::rdr;
 
 			// Render the display
-			auto const& display = m_space_invaders.Display();
+			m_space_invaders.Render(m_display);
 			{
 				Lock lock;
 				auto img = m_screen_tex->GetPixels(lock);
-				for (int y = 0; y != display.m_dimy; ++y)
+				for (int y = 0; y != m_display.m_dimy; ++y)
 				{
 					auto px = img.Pixels<uint32_t>(y);
-					for (int x = 0; x != display.m_dimx; ++x)
+					for (int x = 0; x != m_display.m_dimx; ++x)
 					{
-						if (display(x, y))
+						if (m_display(x, y))
 							*px++ = 0xFF000000;
 						else
 							*px++ = 0xFFA0A0A0;
@@ -275,7 +278,7 @@ namespace ace
 	{
 		using base_type = pr::app::MainUI<MainUI, Main, pr::gui::SimMsgLoop>;
 
-		static int const Scale = 8;
+		static int const Scale = 2;
 		static wchar_t const* AppTitle() { return L"Ace Inspaders"; };
 		MainUI(wchar_t const*, int)
 			:base_type(Params()

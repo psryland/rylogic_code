@@ -463,16 +463,17 @@ namespace Rylogic.Common
 
 		/// <summary>
 		/// Gets file system info for all files/directories in a directory that match a specific filter including all sub directories.
-		/// 'regex_filter' is a filter on the filename, not the full path.
+		/// 'file_filter/dir_filter' are filters on the filename only, not the full path.
 		/// Returns 'FileInfo' or 'DirectoryInfo'. 'FileSystemInfo' is just the common base class.</summary>
-		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string? regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool>? progress = null, Func<string, Exception, bool>? error = null)
+		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, Regex? file_filter = null, Regex? dir_filter = null, FileAttributes exclude = FileAttributes.Hidden, int max_depth = int.MaxValue, Func<string, bool>? progress = null, Func<string, Exception, bool>? error = null)
 		{
+			// Notes:
+			//  - This function needs to be recursive in order to trap UnauthorizedAccessExceptions.
+			//    Otherwise, it will throw without reporting all files/directories. Using 'queue' for recursion.
+
 			// Default callbacks
 			progress = progress ?? (s => true);
 			error = error ?? ((s, e) => true);
-
-			// File/Directory name filter
-			var filter = regex_filter != null ? new Regex(regex_filter, regex_options) : null;
 
 			// For drive letters, add a \, 'FileIOPermission' needs it
 			if (path.EndsWith(":"))
@@ -482,50 +483,78 @@ namespace Rylogic.Common
 			if (!DirExists(path))
 				throw new Exception($"Attempting to enumerate an invalid directory path: {path}");
 
-			// If excluding directories, use the enumerate files function
-			var entries = exclude.HasFlag(FileAttributes.Directory)
-				? System.IO.Directory.EnumerateFiles(path, "*", search_flags)
-				: System.IO.Directory.EnumerateFileSystemEntries(path, "*", search_flags);
-
-			foreach (var entry in entries)
+			// Iterative recursion into directories
+			var queue = new[] { path }.ToQueue(x => new { Info = new DirectoryInfo(x), Depth = 0 });
+			for (; queue.Count != 0;)
 			{
-				var attr = FileAttributes.Normal;
-				var exception = (Exception?)null;
+				var dir = queue.Dequeue();
+
+				// If excluding directories, use the enumerate files function
+				IEnumerable<string> entries;
 				try
 				{
-					attr = File.GetAttributes(entry);
+					entries = exclude.HasFlag(FileAttributes.Directory)
+						? System.IO.Directory.EnumerateFiles(dir.Info.FullName, "*", SearchOption.TopDirectoryOnly)
+						: System.IO.Directory.EnumerateFileSystemEntries(dir.Info.FullName, "*", SearchOption.TopDirectoryOnly);
+				}
+				catch (UnauthorizedAccessException)
+				{
+					entries = Enumerable.Empty<string>();
+				}
+				catch (IOException)
+				{
+					entries = Enumerable.Empty<string>();
+				}
 
-					// Report progress on directories
-					if ((attr & FileAttributes.Directory) != 0 && !progress(entry))
-						break;
-
-					// Exclude files/folders by attribute
-					if ((attr & exclude) != 0)
-						continue;
-
-					// Filter if provided
-					if (filter != null)
+				// Yield the files/directories
+				foreach (var entry in entries)
+				{
+					var attr = FileAttributes.Normal;
+					var exception = (Exception?)null;
+					var entry_is_dir = false;
+					try
 					{
-						// Filter on the file/directory name only
-						var m = filter.Match(FileName(entry));
-						if (!m.Success)
+						attr = File.GetAttributes(entry);
+						entry_is_dir = attr.HasFlag(FileAttributes.Directory);
+
+						// Report progress on directories
+						if (entry_is_dir && !progress(entry))
+							break;
+
+						// Exclude files/folders by attribute
+						if ((attr & exclude) != 0)
+							continue;
+
+						// Filter if provided. Filter on the file/directory name only
+						if (entry_is_dir && dir_filter?.Match(FileName(entry)) is Match dm && !dm.Success)
+							continue;
+						if (!entry_is_dir && file_filter?.Match(FileName(entry)) is Match fm && !fm.Success)
 							continue;
 					}
-				}
-				catch (Exception ex) { exception = ex; }
+					catch (Exception ex) { exception = ex; }
 
-				// Report errors, then skip
-				if (exception != null)
-				{
-					if (!error(entry, exception)) break;
-					continue;
+					// Report errors, then skip
+					if (exception != null)
+					{
+						if (!error(entry, exception)) break;
+						continue;
+					}
+
+					// Yield the file/directory path
+					if (entry_is_dir)
+					{
+						var di = new DirectoryInfo(entry);
+						yield return di;
+
+						// Recurse directories
+						if (search_flags.HasFlag(SearchOption.AllDirectories) && dir.Depth < max_depth)
+							queue.Enqueue(new { Info = di, Depth = dir.Depth + 1 });
+					}
+					else
+					{
+						yield return new FileInfo(entry);
+					}
 				}
-				
-				// Yield the file/directory path
-				if ((attr & FileAttributes.Directory) != 0)
-					yield return new DirectoryInfo(entry);
-				else
-					yield return new FileInfo(entry);
 			}
 		}
 
