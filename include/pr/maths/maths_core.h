@@ -999,8 +999,8 @@ namespace pr
 	}
 	template <maths::VectorFP T> inline T Normalise(T const& v, T const& def)
 	{
-		if (All(v, [](auto x) { return x == maths::vec_elem_t<T>{}; })) return def;
-		return Normalise(v);
+		auto r = Normalise(v);
+		return IsFinite(r) ? r : def;
 	}
 	template <maths::VectorX T> inline bool IsNormal(T const& v)
 	{

@@ -170,47 +170,49 @@ namespace pr
 	// Check the 'errno' value, and throw if non-zero
 	template <typename T> inline T const& CheckErrno(T const& r)
 	{
-		switch (errno) {
-		default:           return r;
-		case EPERM:        throw std::exception("Operation not permitted");
-		case ENOENT:       throw std::exception("No such file or directory");
-		case ESRCH:        throw std::exception("No such process");
-		case EINTR:        throw std::exception("Interrupted function");
-		case EIO:          throw std::exception("I/O error");
-		case ENXIO:        throw std::exception("No such device or address");
-		case E2BIG:        throw std::exception("Argument list too long");
-		case ENOEXEC:      throw std::exception("Exec format error");
-		case EBADF:        throw std::exception("Bad file number");
-		case ECHILD:       throw std::exception("No spawned processes");
-		case EAGAIN:       throw std::exception("No more processes or not enough memory or maximum nesting level reached");
-		case ENOMEM:       throw std::exception("Not enough memory");
-		case EACCES:       throw std::exception("Permission denied");
-		case EFAULT:       throw std::exception("Bad address");
-		case EBUSY:        throw std::exception("Device or resource busy");
-		case EEXIST:       throw std::exception("File exists");
-		case EXDEV:        throw std::exception("Cross-device link");
-		case ENODEV:       throw std::exception("No such device");
-		case ENOTDIR:      throw std::exception("Not a directory");
-		case EISDIR:       throw std::exception("Is a directory");
-		case EINVAL:       throw std::exception("Invalid argument");
-		case ENFILE:       throw std::exception("Too many files open in system");
-		case EMFILE:       throw std::exception("Too many open files");
-		case ENOTTY:       throw std::exception("Inappropriate I/O control operation");
-		case EFBIG:        throw std::exception("File too large");
-		case ENOSPC:       throw std::exception("No space left on device");
-		case ESPIPE:       throw std::exception("Invalid seek");
-		case EROFS:        throw std::exception("Read-only file system");
-		case EMLINK:       throw std::exception("Too many links");
-		case EPIPE:        throw std::exception("Broken pipe");
-		case EDOM:         throw std::exception("Maths argument");
-		case ERANGE:       throw std::exception("Result too large (overflow or underflow)");
-		case EDEADLK:      throw std::exception("Resource deadlock would occur");
-		case ENAMETOOLONG: throw std::exception("Filename too long");
-		case ENOLCK:       throw std::exception("No locks available");
-		case ENOSYS:       throw std::exception("Function not supported");
-		case ENOTEMPTY:    throw std::exception("Directory not empty");
-		case EILSEQ:       throw std::exception("Illegal byte sequence");
-		case STRUNCATE:    throw std::exception("String was truncated");
+		auto err = errno;
+		switch (err)
+		{
+			case EPERM:        throw std::runtime_error("Operation not permitted");
+			case ENOENT:       throw std::runtime_error("No such file or directory");
+			case ESRCH:        throw std::runtime_error("No such process");
+			case EINTR:        throw std::runtime_error("Interrupted function");
+			case EIO:          throw std::runtime_error("I/O error");
+			case ENXIO:        throw std::runtime_error("No such device or address");
+			case E2BIG:        throw std::runtime_error("Argument list too long");
+			case ENOEXEC:      throw std::runtime_error("Exec format error");
+			case EBADF:        throw std::runtime_error("Bad file number");
+			case ECHILD:       throw std::runtime_error("No spawned processes");
+			case EAGAIN:       throw std::runtime_error("No more processes or not enough memory or maximum nesting level reached");
+			case ENOMEM:       throw std::runtime_error("Not enough memory");
+			case EACCES:       throw std::runtime_error("Permission denied");
+			case EFAULT:       throw std::runtime_error("Bad address");
+			case EBUSY:        throw std::runtime_error("Device or resource busy");
+			case EEXIST:       throw std::runtime_error("File exists");
+			case EXDEV:        throw std::runtime_error("Cross-device link");
+			case ENODEV:       throw std::runtime_error("No such device");
+			case ENOTDIR:      throw std::runtime_error("Not a directory");
+			case EISDIR:       throw std::runtime_error("Is a directory");
+			case EINVAL:       throw std::runtime_error("Invalid argument");
+			case ENFILE:       throw std::runtime_error("Too many files open in system");
+			case EMFILE:       throw std::runtime_error("Too many open files");
+			case ENOTTY:       throw std::runtime_error("Inappropriate I/O control operation");
+			case EFBIG:        throw std::runtime_error("File too large");
+			case ENOSPC:       throw std::runtime_error("No space left on device");
+			case ESPIPE:       throw std::runtime_error("Invalid seek");
+			case EROFS:        throw std::runtime_error("Read-only file system");
+			case EMLINK:       throw std::runtime_error("Too many links");
+			case EPIPE:        throw std::runtime_error("Broken pipe");
+			case EDOM:         throw std::runtime_error("Maths argument");
+			case ERANGE:       throw std::runtime_error("Result too large (overflow or underflow)");
+			case EDEADLK:      throw std::runtime_error("Resource deadlock would occur");
+			case ENAMETOOLONG: throw std::runtime_error("Filename too long");
+			case ENOLCK:       throw std::runtime_error("No locks available");
+			case ENOSYS:       throw std::runtime_error("Function not supported");
+			case ENOTEMPTY:    throw std::runtime_error("Directory not empty");
+			case EILSEQ:       throw std::runtime_error("Illegal byte sequence");
+			case STRUNCATE:    throw std::runtime_error("String was truncated");
+			default:           return r;
 		}
 	}
 }

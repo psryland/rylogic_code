@@ -168,6 +168,15 @@ namespace pr::ldr
 	{
 		return AppendSpace(str).append(To<TStr>(v));
 	}
+	template <Scalar S> inline TStr& Append(TStr& str, Vec3<S,void> const& v)
+	{
+		return Append(AppendSpace(str), v.x," ",v.y," ",v.z);
+	}
+	template <Scalar S> inline TStr& Append(TStr& str, Vec4<S,void> const& v)
+	{
+		return Append(AppendSpace(str), v.x, " ", v.y, " ", v.z, " ", v.w);
+	}
+
 	inline TStr& Append(TStr& str, m4x4 const& m)
 	{
 		return Append(str, m.x, m.y, m.z, m.w);
@@ -852,16 +861,16 @@ namespace pr::ldr
 			{}
 
 			// Radius
-			LdrSphere& r(float radius)
+			LdrSphere& r(double radius)
 			{
 				return r(radius, radius, radius);
 			}
-			LdrSphere& r(float radius_x, float radius_y, float radius_z)
+			LdrSphere& r(double radius_x, double radius_y, double radius_z)
 			{
-				m_radius = v4{radius_x, radius_y, radius_z, 0};
+				m_radius = Vec4d<void>{radius_x, radius_y, radius_z, 0};
 				return *this;
 			}
-			v4 m_radius;
+			Vec4d<void> m_radius;
 
 			// Create from bounding sphere
 			LdrSphere& bsphere(BSphere_cref bsphere)
@@ -888,17 +897,17 @@ namespace pr::ldr
 			{}
 
 			// Box dimensions
-			LdrBox& dim(float dim)
+			LdrBox& dim(double dim)
 			{
-				m_dim = v4{dim, dim, dim, 0};
+				m_dim = Vec4d<void>{dim, dim, dim, 0};
 				return *this;
 			}
 			LdrBox& dim(v4_cref<> dim)
 			{
-				m_dim = dim;
+				m_dim = Vec4d<void>(dim.x, dim.y, dim.z, 0);
 				return *this;
 			}
-			v4 m_dim;
+			Vec4d<void> m_dim;
 
 			// Create from bounding box
 			LdrBox& bbox(BBox_cref bbox)
@@ -923,18 +932,18 @@ namespace pr::ldr
 			{}
 
 			// Height/Radius
-			LdrCylinder& hr(float height, float radius)
+			LdrCylinder& hr(double height, double radius)
 			{
 				return hr(height, radius, radius);
 			}
-			LdrCylinder& hr(float height, float radius_x, float radius_y)
+			LdrCylinder& hr(double height, double radius_x, double radius_y)
 			{
 				m_height = height;
-				m_radius = v2(radius_x, radius_y);
+				m_radius = Vec2d<void>(radius_x, radius_y);
 				return *this;
 			}
-			float m_height;
-			v2 m_radius;
+			double m_height;
+			Vec2d<void> m_radius;
 
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
@@ -963,42 +972,42 @@ namespace pr::ldr
 			bool m_ortho;
 
 			// Near/Far
-			LdrFrustum& nf(float n, float f)
+			LdrFrustum& nf(double n, double f)
 			{
-				m_nf = v2(n, f);
+				m_nf = Vec2d<void>(n, f);
 				return *this;
 			}
 			LdrFrustum& nf(v2_cref<> nf_)
 			{
 				return nf(nf_.x, nf_.y);
 			}
-			v2 m_nf;
+			Vec2d<void> m_nf;
 
 			// Frustum dimensions
-			LdrFrustum& wh(float w, float h)
+			LdrFrustum& wh(double w, double h)
 			{
-				return wh(v2(w, h));
-			}
-			LdrFrustum& wh(v2_cref<> wh)
-			{
+				m_wh = Vec2d<void>(w, h);
 				m_fovY = 0;
 				m_aspect = 0;
-				m_wh = wh;
 				return *this;
 			}
-			v2 m_wh;
+			LdrFrustum& wh(v2_cref<> sz)
+			{
+				return wh(sz.x, sz.y);
+			}
+			Vec2d<void> m_wh;
 
 			// Frustum angles
-			LdrFrustum& fov(float fovY, float aspect)
+			LdrFrustum& fov(double fovY, double aspect)
 			{
 				m_ortho = false;
-				m_wh = v2Zero;
+				m_wh = Vec2d<void>::Zero();
 				m_fovY = fovY;
 				m_aspect = aspect;
 				return *this;
 			}
-			float m_fovY;
-			float m_aspect;
+			double m_fovY;
+			double m_aspect;
 
 			// From maths frustum
 			LdrFrustum& frustum(pr::Frustum const& f)
@@ -1033,8 +1042,8 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				if (m_ortho)
-					ldr::Append(str, "*Box", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.y - m_nf.x, O2W(v4{0, 0, -0.5f * (m_nf.x + m_nf.y), 1}));
-				else if (m_wh != v2Zero)
+					ldr::Append(str, "*Box", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.y - m_nf.x, O2W(v4{0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1}));
+				else if (m_wh != Vec2d<void>::Zero())
 					ldr::Append(str, "*FrustumWH", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.x, m_nf.y);
 				else
 					ldr::Append(str, "*FrustumFA", m_name, m_colour, "{", RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);

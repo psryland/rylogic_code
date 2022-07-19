@@ -27,7 +27,6 @@ namespace view3d
 		,m_mutex()
 		,ReportError()
 	{
-		PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 		ReportError += global_error_cb;
 
 		// Hook up the sources events

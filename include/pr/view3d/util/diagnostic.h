@@ -43,12 +43,12 @@ namespace pr::rdr
 		rdr::Light m_light;
 
 		// Scale the light graphics
-		LdrLight& scale(float s)
+		LdrLight& scale(double s)
 		{
 			m_scale = s;
 			return *this;
 		}
-		float m_scale;
+		double m_scale;
 
 		/// <inheritdoc/>
 		void ToString(std::string& str) const override

@@ -58,9 +58,14 @@ namespace pr::rdr
 
 			NuggetProps n(ETopo::TriList, EGeom::Vert|EGeom::Tex0);
 			n.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, caster.m_tex.get(), caster.m_srv.get(), SamplerDesc::PointClamp(), false, "smap_tex");
-			n.m_flags = SetBits(n.m_flags, ENuggetFlag::ShadowCastExclude, true);
+			n.m_nflags = SetBits(n.m_nflags, ENuggetFlag::ShadowCastExclude, true);
 			model->CreateNugget(n);
 			return model;
+		}
+		void Destroy(Scene& scene)
+		{
+			scene.RStep<ForwardRender>().RemoveInstance(*this);
+			m_model = nullptr;
 		}
 		void Update(Scene& scene, ShadowMap::ShadowCaster const& caster)
 		{
@@ -201,7 +206,7 @@ namespace pr::rdr
 				b.Box("scene_bounds", 0xFF0000FF).bbox(ws_bounds_cam).wireframe();
 				b.Frustum("camera_view", 0xFF00FFFF).nf(scene.m_view.Near(false), scene.m_view.FocusDist() * 2).fov(scene.m_view.FovY(), scene.m_view.Aspect()).o2w(c2w).wireframe().axis(AxisId::NegZ);
 				b.Frustum("lsp", 0x4000FF00).proj(lsp).o2w(InvertFast(w2lsp));
-				auto& blight = b.Add<LdrLight>("light", 0xFFFFFF00).light(*m_light).scale(scene.m_view.FocusDist() * 0.05f).o2w(l2w);
+				auto& blight = b.Add<LdrLight>("light", 0xFFFFFF00).light(*m_light).scale(scene.m_view.FocusDist() * 0.05).o2w(l2w);
 		//		blight.Box("light_bounds", 0xFFFFFF00).bbox(m_params.m_bounds).wireframe();
 		//		blight.Frustum("light_proj", 0xFFFF00FF).proj(ls2s).wireframe().o2w(l2w);
 				b.Write("P:\\dump\\smap_view.ldr");
@@ -231,13 +236,13 @@ namespace pr::rdr
 			// Get the scene bounds in light space
 			// Inflate the bounds slightly so that the edge of the smap is avoided
 			auto ls_bounds = w2ls * ws_bounds;
-			ls_bounds.m_radius = Max(ls_bounds.m_radius * 1.01f, v4TinyF);
+			ls_bounds.m_radius = Max(ls_bounds.m_radius * 1.01f, v4::TinyF().w0());
 			m_params.m_bounds = ls_bounds;
 
 			// Create a projection that encloses the scene bounds. This is basically "c2s"
-			auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
-			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
-			if (zn - zf < maths::tinyf) { zf = zn - 1.0f; }
+			auto zn = Abs(ls_bounds.Centre().z + ls_bounds.Radius().z);
+			auto zf = Abs(ls_bounds.Centre().z - ls_bounds.Radius().z);
+			if (zf - zn < maths::tinyf) zf = zn + 1.0f;
 			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
 			m_params.m_ls2s = ls2s;
 
@@ -292,6 +297,11 @@ namespace pr::rdr
 		}
 
 		AddLight(light);
+	}
+	ShadowMap::~ShadowMap()
+	{
+		// Debugging
+		PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Destroy(*m_scene));
 	}
 
 	// Add a shadow casting light source
