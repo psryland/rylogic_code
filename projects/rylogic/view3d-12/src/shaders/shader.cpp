@@ -100,5 +100,12 @@ namespace pr::rdr12
 		ByteCode const ray_cast_vert_gs(compiled::ray_cast_vert_gs);
 		ByteCode const ray_cast_edge_gs(compiled::ray_cast_edge_gs);
 		ByteCode const ray_cast_face_gs(compiled::ray_cast_face_gs);
+
+		// MipMap generation
+		namespace compiled
+		{
+			#include PR_RDR_SHADER_COMPILED_DIR(mipmap_generator_cs.h)
+		}
+		ByteCode const mipmap_generator_cs(compiled::mipmap_generator_cs);
 	}
 }

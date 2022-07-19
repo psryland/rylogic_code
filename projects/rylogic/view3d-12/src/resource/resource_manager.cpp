@@ -16,20 +16,31 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "view3d-12/src/utility/root_signature.h"
 
 namespace pr::rdr12
 {
+	constexpr int HeapCapacityView = 12;
+	enum class EMipMapParam { Constants, SrcTexture, DstTexture };
+	enum class EMipMapSamp { Samp0 };
+
 	ResourceManager::ResourceManager(Renderer& rdr)
 		:m_mem_tracker()
 		,m_rdr(rdr)
 		,m_gsync(rdr.D3DDevice())
-		,m_cmd_alloc_pool(m_gsync)
-		,m_cmd_alloc(m_cmd_alloc_pool.Get())
-		,m_cmd_list()
+		,m_gfx_cmd_alloc_pool(m_gsync)
+		,m_gfx_cmd_alloc(m_gfx_cmd_alloc_pool.Get())
+		,m_gfx_cmd_list()
+		//,m_com_cmd_alloc_pool(m_gsync)
+		//,m_com_cmd_alloc(m_com_cmd_alloc_pool.Get())
+		//,m_com_cmd_list()
+		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
 		,m_lookup_tex()
 		,m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
 		,m_descriptor_store(rdr.D3DDevice())
+		,m_mipmap_sig()
+		,m_mipmap_pso()
 		,m_gdiplus()
 		,m_eh_resize()
 		,m_gdi_dc_ref_count()
@@ -40,8 +51,55 @@ namespace pr::rdr12
 		auto device = m_rdr.D3DDevice();
 
 		// Create an open command list for use by the resource manager, since it is independent of any windows or scenes.
-		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
-		m_cmd_list->SetName(L"ResourceManager");
+		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_gfx_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_gfx_cmd_list.m_ptr));
+		//Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_com_cmd_alloc, nullptr, __uuidof(ID3D12CommandList), (void**)&m_com_cmd_list.m_ptr));
+		m_gfx_cmd_list->SetName(L"ResManCmdListGfx");
+		//m_com_cmd_list->SetName(L"ResManCmdListCom");
+
+		// Initialise the mip map generator
+		{
+			// Create a root signature for the MipMap generator compute shader
+			RootSig<EMipMapParam, EMipMapSamp> sig;
+			sig.Flags = {
+				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
+				D3D12_ROOT_SIGNATURE_FLAG_NONE };
+			sig.U32(EMipMapParam::Constants, ECBufReg::b0, 2);
+			sig.Tex(EMipMapParam::SrcTexture, ETexReg::t0);
+			sig.Uav(EMipMapParam::DstTexture, EUAVReg::u0);
+			sig.Samp(EMipMapSamp::Samp0, D3D12_STATIC_SAMPLER_DESC{
+				.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
+				.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.MipLODBias = 0.0f,
+				.MaxAnisotropy = 0,
+				.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
+				.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+				.MinLOD = 0.0f,
+				.MaxLOD = D3D12_FLOAT32_MAX,
+				.ShaderRegister = 0,
+				.RegisterSpace = 0,
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+				});
+			m_mipmap_sig = sig.Create(D3DDevice());
+
+			// Create pipeline state object for the compute shader using the root signature.
+			D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {
+				.pRootSignature = m_mipmap_sig.get(),
+				.CS = shader_code::mipmap_generator_cs,
+				.NodeMask = 0,
+				.CachedPSO = D3D12_CACHED_PIPELINE_STATE{},
+				.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
+			};
+			Throw(D3DDevice()->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&m_mipmap_pso.m_ptr));
+		}
 
 		// Create stock resources
 		CreateStockTextures();
@@ -91,20 +149,20 @@ namespace pr::rdr12
 			return m_gsync.LastAddedSyncPoint();
 
 		// Close the command list
-		Throw(m_cmd_list->Close());
+		Throw(m_gfx_cmd_list->Close());
 
 		// Execute the command list
-		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_cmd_list.get())};
+		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_gfx_cmd_list.get())};
 		rdr().GfxQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
 		m_flush_required = false;
 
 		// Add a sync point
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
-		m_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
+		m_gfx_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
 
 		// Reset the command list
-		m_cmd_alloc = m_cmd_alloc_pool.Get();
-		Throw(m_cmd_list->Reset(m_cmd_alloc, nullptr));
+		m_gfx_cmd_alloc = m_gfx_cmd_alloc_pool.Get();
+		Throw(m_gfx_cmd_list->Reset(m_gfx_cmd_alloc, nullptr));
 
 		// Wait till done?
 		if (block)
@@ -123,26 +181,34 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
 		auto has_init_data = !desc.Data.empty();
+		auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
-		D3D12_RESOURCE_DESC rd = desc;
+		auto rd = static_cast<D3D12_RESOURCE_DESC const&>(desc);
 		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			rd.Width *= desc.ElemStride;
+		if (desc.MipLevels != 1)
+			rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd,
-			has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState,
+			&desc.HeapProps, desc.HeapFlags, &rd, resource_state,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
 		{
-			// Copy, then transition the resource to the final state
+			// Copy the initialisation data into the resource
 			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
-			auto barrier = ResourceBarrier::Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST, desc.FinalState);
-			m_cmd_list->ResourceBarrier(1, &barrier);
+			
+			// Generate mip maps for the texture (if needed)
+			if (desc.MipLevels != 1)
+				GenerateMipMaps(res.get(), desc, resource_state);
+
+			// Transition the resource to the final state
+			auto barrier = ResourceBarrier::Transition(res.get(), resource_state, desc.FinalState);
+			m_gfx_cmd_list->ResourceBarrier(1, &barrier);
 			m_flush_required = true;
 		}
 
@@ -440,6 +506,105 @@ namespace pr::rdr12
 		return inst;
 	}
 
+	// Generate mip maps for a texture
+	void ResourceManager::GenerateMipMaps(ID3D12Resource* texture, ResDesc const& desc, D3D12_RESOURCE_STATES& current_state)
+	{
+		auto dim = iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
+		GenerateMipMaps(texture, desc.Format, dim, 1, MipCount(dim), current_state);
+	}
+	void ResourceManager::GenerateMipMaps(ID3D12Resource* texture, DXGI_FORMAT format, iv2 dim, int mip0, int mip_count, D3D12_RESOURCE_STATES& current_state)
+	{
+		// Mip 0 is the texture itself, we're not generating that
+		if (mip0 <= 0)
+			throw std::runtime_error("Mip0 should be >= 1");
+
+		// Get a new empty command list in recording state
+		auto cmd_list = m_gfx_cmd_list.get();
+		auto heaps = { m_heap_view.get() };
+
+		// Set root signature, PSO, and descriptor heap
+		cmd_list->SetComputeRootSignature(m_mipmap_sig.get());
+		cmd_list->SetPipelineState(m_mipmap_pso.get());
+		cmd_list->SetDescriptorHeaps(s_cast<UINT>(heaps.size()), heaps.begin());
+
+		// Prepare the SRV/UAV view descriptions (changed for each mip).
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
+			.Format = format,
+			.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+			.Texture2D = {
+				.MostDetailedMip = 0,
+				.MipLevels = 1,
+				.PlaneSlice = 0,
+				.ResourceMinLODClamp = 0.f,
+			},
+		};
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {
+			.Format = format,
+			.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
+			.Texture2D = {
+				.MipSlice = 0,
+				.PlaneSlice = 0,
+			},
+		};
+
+
+		//?? Transition all subresources?
+		//?? Only the dst texture is a uav, source should be srv
+
+		// Transition from the current resource state to unordered access
+		auto next_state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		auto barrier0 = ResourceBarrier::Transition(texture, current_state, next_state);
+		cmd_list->ResourceBarrier(1, &barrier0);
+		current_state = next_state;
+
+		// Loop through the mip-maps copying from the bigger mip-map to the smaller one with down-sampling in a compute shader
+		for (auto mip = mip0; mip != mip0 + mip_count; ++mip)
+		{
+			// Get the dimensions at 'mip'
+			auto dst_w = std::max(dim.x >> mip, 1);
+			auto dst_h = std::max(dim.y >> mip, 1);
+
+			// Pass the destination texture pixel size to the shader as constants
+			using F32U32 = union { float f32; uint32_t u32; };
+			cmd_list->SetComputeRoot32BitConstant(s_cast<UINT>(EMipMapParam::Constants), F32U32(1.0f / dst_w).u32, 0);
+			cmd_list->SetComputeRoot32BitConstant(s_cast<UINT>(EMipMapParam::Constants), F32U32(1.0f / dst_h).u32, 1);
+
+			// Create shader resource view for the source texture in the descriptor heap
+			srv_desc.Texture2D.MostDetailedMip = mip - 1;
+			auto srv = m_heap_view.Add(texture, srv_desc);
+
+			//Create unordered access view for the destination texture in the descriptor heap
+			uav_desc.Texture2D.MipSlice = mip;
+			auto uav = m_heap_view.Add(texture, uav_desc);
+
+			//Pass the source and destination texture views to the shader via descriptor tables
+			cmd_list->SetComputeRootDescriptorTable(s_cast<UINT>(EMipMapParam::SrcTexture), srv);
+			cmd_list->SetComputeRootDescriptorTable(s_cast<UINT>(EMipMapParam::DstTexture), uav);
+
+			// Dispatch the compute shader with one thread per 8x8 pixels
+			cmd_list->Dispatch(
+				s_cast<UINT>(std::max(dst_w / 8, 1)),
+				s_cast<UINT>(std::max(dst_h / 8, 1)),
+				1u);
+
+			// Wait for all accesses to the destination texture UAV to be finished before generating
+			// the next mip-map, as it will be the source texture for the next mip-map
+			auto barrier = ResourceBarrier::UAV(texture);
+			cmd_list->ResourceBarrier(1, &barrier);
+		}
+
+		//// When done with the texture, transition it back to the original state
+		//auto barrier1 = ResourceBarrier::Transition(texture, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, current_state);
+		//cmd_list->ResourceBarrier(1, &barrier1);
+
+		//// Close and submit the command list
+		//Throw(cmd_list->Close());
+		//auto cmd_lists = { static_cast<ID3D12CommandList*>(cmd_list) };
+		//rdr().GfxQueue()->ExecuteCommandLists(1, cmd_lists.begin());
+		m_flush_required = true;
+	}
+
 	// Create a new nugget
 	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
 	{
@@ -469,6 +634,7 @@ namespace pr::rdr12
 	// Create the basic textures that exist from startup
 	void ResourceManager::CreateStockTextures()
 	{
+		// Create the stock textures
 		m_stock_textures.resize(EStockTexture_::NumberOf);
 		{// EStockTexture::Black
 			uint32_t const data[] = {0xFF000000};
@@ -625,12 +791,12 @@ namespace pr::rdr12
 		m_stock_models.resize(EStockModel_::NumberOf);
 		{// Basis/focus point model
 			constexpr Vert verts[] = {
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
-				{v4( 1.0f,  0.0f,  0.0f, 1.0f), 0xFFFF0000, v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFF00FF00, v4Zero, v2Zero},
-				{v4( 0.0f,  1.0f,  0.0f, 1.0f), 0xFF00FF00, v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4( 0.0f,  0.0f,  1.0f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
+				{v4( 1.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
+				{v4( 0.0f,  1.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4( 0.0f,  0.0f,  1.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
 			};
 			constexpr uint16_t idxs[] = {
 				0, 1, 2, 3, 4, 5,
@@ -651,10 +817,10 @@ namespace pr::rdr12
 		}
 		{// Unit quad in Z = 0 plane
 			constexpr Vert verts[] = {
-				{v4(-0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.9999f)},
-				{v4( 0.5f,-0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.9999f,0.9999f)},
-				{v4( 0.5f, 0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.9999f,0.0000f)},
-				{v4(-0.5f, 0.5f, 0, 1), 0xFFFFFFFF, v4ZAxis, v2(0.0000f,0.0000f)},
+				{v4(-0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.0000f,0.9999f)},
+				{v4( 0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.9999f,0.9999f)},
+				{v4( 0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.9999f,0.0000f)},
+				{v4(-0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4ZAxis, v2(0.0000f,0.0000f)},
 			};
 			constexpr uint16_t idxs[] = {
 				0, 1, 2, 0, 2, 3
@@ -674,14 +840,14 @@ namespace pr::rdr12
 		}
 		{// Bounding box cube
 			constexpr Vert verts[] = {
-				{v4(-0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, -0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(-0.5f, -0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(+0.5f, -0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(+0.5f, +0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
-				{v4(-0.5f, +0.5f, +0.5f, 1.0f), 0xFF0000FF, v4Zero, v2Zero},
+				{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
 			};
 			constexpr uint16_t idxs[] = {
 				0, 1, 1, 2, 2, 3, 3, 0,
@@ -707,45 +873,45 @@ namespace pr::rdr12
 			constexpr float sz = 1.0f;
 			constexpr float dd = 0.8f;
 			constexpr Vert verts[] = {
-				{v4(-sz, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-dd, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, -dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, -sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(sz, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, -dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(dd, -sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, -sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(sz, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(dd, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(-sz, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, dd, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-dd, sz, -sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, sz, -dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(-sz, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-dd, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, -dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, -sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(sz, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, -dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(dd, -sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, -sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(sz, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(dd, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(sz, sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 
-				{v4(-sz, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, dd, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-dd, sz, sz, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
-				{v4(-sz, sz, dd, 1.0f), 0xFFFFFFFF, v4Zero, v2Zero},
+				{v4(-sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				{v4(-sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
 			};
 			constexpr uint16_t idxs[] = {
 				0,  1,  0,  2,  0,  3,
@@ -835,7 +1001,7 @@ namespace pr::rdr12
 		// Add the command to copy from the staging resource to the destination resource
 		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
-			m_cmd_list->CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
+			m_gfx_cmd_list->CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
 			m_flush_required = true;
 		}
 		else
@@ -854,7 +1020,7 @@ namespace pr::rdr12
 					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
 					.PlacedFootprint = layout[i],
 				};
-				m_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+				m_gfx_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 				m_flush_required = true;
 			}
 		}
@@ -936,12 +1102,12 @@ namespace pr::rdr12
 
 // Generating mip maps... 
 #if 0
-//_mip-mapTextures is an array containing texture objects that need mip-maps to be generated. It needs a texture resource with mip-maps in D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE state.
+//MipMapTextures is an array containing texture objects that need mip-maps to be generated. It needs a texture resource with mip-maps in D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE state.
 //Textures are expected to be POT and in a format supporting unordered access, as well as the D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS set during creation.
 //_device is the ID3D12Device
 //GetNewCommandList() is supposed to return a new command list in recording state
 //SubmitCommandList(commandList) is supposed to submit the command list to the command queue
-//_mip-mapComputeShader is an ID3DBlob of the compiled mip-map compute shader
+//MipMapComputeShader is an ID3DBlob of the compiled mip-map compute shader
 void D3D12Renderer::Createmip-maps()
 {
 	//Union used for shader constants
@@ -962,7 +1128,7 @@ void D3D12Renderer::Createmip-maps()
 
 	//Calculate heap size
 	uint32 requiredHeapSize = 0;
-	_mip-mapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
+	MipMapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
 		if(texture->mip-maps > 1)
 			requiredHeapSize += texture->mip-maps - 1;
 	});
@@ -970,7 +1136,7 @@ void D3D12Renderer::Createmip-maps()
 	//No heap size, means that there was either no texture or none that requires any mip-maps
 	if(requiredHeapSize == 0)
 	{
-		_mip-mapTextures->RemoveAllObjects();
+		MipMapTextures->RemoveAllObjects();
 		return;
 	}
 
@@ -1020,7 +1186,7 @@ void D3D12Renderer::Createmip-maps()
 	//Create pipeline state object for the compute shader using the root signature.
 	D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.pRootSignature = mip-mapRootSignature;
-	psoDesc.CS = { reinterpret_cast<UINT8*>(_mip-mapComputeShader->GetBufferPointer()), _mip-mapComputeShader->GetBufferSize() };
+	psoDesc.CS = { reinterpret_cast<UINT8*>(MipMapComputeShader->GetBufferPointer()), MipMapComputeShader->GetBufferSize() };
 	ID3D12PipelineState *psomip-maps;
 	_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&psomip-maps));
 
@@ -1048,7 +1214,7 @@ void D3D12Renderer::Createmip-maps()
 	//GPU handle for the first descriptor on the descriptor heap, used to initialize the descriptor tables
 	CD3DX12_GPU_DESCRIPTOR_HANDLE currentGPUHandle(descriptorHeap->GetGPUDescriptorHandleForHeapStart(), 0, descriptorSize);
 
-	_mip-mapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
+	MipMapTextures->Enumerate<D3D12Texture>([&](D3D12Texture *texture, size_t index, bool &stop) {
 		//Skip textures without mip-maps
 		if(texture->mip-maps <= 1)
 			return;
@@ -1101,7 +1267,7 @@ void D3D12Renderer::Createmip-maps()
 	commandList->Close();
 	SubmitCommandList(commandList);
 
-	_mip-mapTextures->RemoveAllObjects();
+	MipMapTextures->RemoveAllObjects();
 }
 
 // Shader

@@ -25,10 +25,11 @@ namespace pr::rdr12::shaders
 			.HS = shader_code::none,
 		};
 	}
-	void ArrowHeadGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const&, DrawListElement const*)
+	void ArrowHeadGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const*)
 	{
 		CBufScreenSpace cb = {};
-		cb.m_screen_dim = v2(m_size, m_size);
+		cb.m_size = v2(m_size, m_size);
+		cb.m_screen_dim = To<v2>(scene.wnd().BackBufferSize());
 		cb.m_depth = false;
 		auto gpu_address = cbuf.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufScreenSpace, gpu_address);

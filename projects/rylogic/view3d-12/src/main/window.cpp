@@ -9,7 +9,7 @@
 
 namespace pr::rdr12
 {
-	constexpr int HeapCapacitySrv = 256;
+	constexpr int HeapCapacityView = 256;
 	constexpr int HeapCapacitySamp = 16;
 
 	// Constructor
@@ -30,8 +30,8 @@ namespace pr::rdr12
 		,m_cmd_alloc_pool(m_gsync)
 		,m_cmd_list_pool(m_gsync)
 		,m_cmd_lists()
-		,m_heap_srv(HeapCapacitySrv, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, &m_gsync)
-		,m_heap_samp(HeapCapacitySamp, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, &m_gsync)
+		,m_heap_view(HeapCapacityView, &m_gsync)
+		,m_heap_samp(HeapCapacitySamp, &m_gsync)
 		,m_diag(*this)
 		,m_frame_number()
 		,m_vsync(settings.m_vsync)

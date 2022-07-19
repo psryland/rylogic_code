@@ -93,5 +93,8 @@ namespace pr::rdr12
 		extern ByteCode const ray_cast_vert_gs;
 		extern ByteCode const ray_cast_edge_gs;
 		extern ByteCode const ray_cast_face_gs;
+
+		// MipMap generation
+		extern ByteCode const mipmap_generator_cs;
 	}
 }

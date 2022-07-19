@@ -21,12 +21,25 @@ Work:
 	ECN - REX Firmware Loader
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
-	ECN - Remove product key
+	ECN - Gracefully handle missing SD card files on startup of REX
+		- This would fix: REX-9501, REX-9502, REX-9503, REX-9544
+	ECN - REX-9857 - Remove product key
 		- Needs starting (phase 1)
 		- Documentation changes
+	ECN - REX-10141 - RexLink cross platform
+		- Need to find out how to integrate this change
+		- RexLink requirements doc is out of date.
+		- All RexLink test cases are out of date, will need rewriting.
+		- Merge RexLink-Linux branch into main
 		
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
+
+  RexTerminal:
+	- Add Test Sound button to terminal System Info
+	- Add more translation
+	- System for creating graphs of data in session logs
+	- Push/pull zero ref values from REX
 
   Misc:
 	- Message Xiaochao about updating the firmwares
@@ -41,23 +54,17 @@ Work:
 	- Optimise the dynamic linking in the map view
 	- Validation needs to check all recovery stance ids are in stance list
 
-  RexTerminal:
-	- Add Test Sound button to terminal System Info
-	- System for creating graphs of data in session logs
-	- Push/pull zero ref values from REX
-
   FirmwareLoader:
-    - Firmware Root Directory search crashes if it encounters the System Volume Information directory.
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
 	- Add support for programming the Battery controller board.
 
   UIv4:
 	- Make Tunes an exported resource
 	- Clean up rxs_AREX_...
-	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
 
   ZeroRef:
 	- Test the ZR process on a left-right see-saw to see what effect that has on the results.
+	- Switch from using 'actdata.cfg' to 'zero_ref.ini'
 
   VRex:
 	- Work out why the zero ref position is so different for VRex compared to REX
@@ -65,7 +72,6 @@ Work:
 	- Finish the p3d exporter and get the high-def Rex graphics back
 
   Physics:
-	- Move step functionality from Emulation into Environment
 	- Have the environment step the emulation and the physics
 
   RexLink:
@@ -74,6 +80,8 @@ Work:
 Rylogic:
 
   View3d-12:
+	- Support non-static samplers in the root signature
+	- Add mipmap generation support
 	- Make nugget m_shaders a smarter object that handles replacing shaders for the same step. E.g.  nug.m_shaders += {ERenderStep::RenderForward, shdr};
 	- Implementing LdrObject into the view3d-12 lib
 	- Implementing the view3d dll API

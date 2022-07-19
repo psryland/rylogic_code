@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -22,15 +22,15 @@ namespace pr
 		Rectangle() = default;
 		Rectangle(Vec2 const& min, Vec2 const& max)
 			:m_min(min)
-			, m_max(max)
+			,m_max(max)
 		{}
 		Rectangle(elem_type xmin, elem_type ymin, elem_type xmax, elem_type ymax)
 			:m_min(xmin, ymin)
-			, m_max(xmax, ymax)
+			,m_max(xmax, ymax)
 		{}
 		template <typename V> explicit Rectangle(Rectangle<V> const& rhs)
 			:m_min(Vec2(rhs.m_min))
-			, m_max(Vec2(rhs.m_max))
+			,m_max(Vec2(rhs.m_max))
 		{}
 
 		// Reset this rectangle to an invalid interval

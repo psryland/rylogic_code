@@ -123,11 +123,8 @@ namespace pr::rdr12
 		// Sort the draw list if needed
 		SortIfNeeded();
 
-		// Set the pipeline for this render step
-		cmd_list->SetGraphicsRootSignature(m_shader.Signature.get());
-
 		// Bind the descriptor heaps
-		auto des_heaps = {wnd().m_heap_srv.get(), wnd().m_heap_samp.get()};
+		auto des_heaps = {wnd().m_heap_view.get(), wnd().m_heap_samp.get()};
 		cmd_list->SetDescriptorHeaps(s_cast<UINT>(des_heaps.size()), des_heaps.begin());
 
 		// Get the back buffer view handle and set the back buffer as the render target.
@@ -140,22 +137,26 @@ namespace pr::rdr12
 			cmd_list->ClearDepthStencilView(bb.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0U, 0, nullptr);
 		}
 
-		// Set the viewport
+		// Set the viewport and scissor rect.
 		auto const& vp = scn().m_viewport;
 		cmd_list->RSSetViewports(1, &vp);
 		cmd_list->RSSetScissorRects(s_cast<UINT>(vp.m_clip.size()), vp.m_clip.data());
 
+		// Set the signature for the shader used for this nugget
+		cmd_list->SetGraphicsRootSignature(m_shader.Signature.get());
+
+		// Set shader constants for the frame
+		m_shader.Setup(cmd_list, m_cbuf_upload, scn(), nullptr);
+
+		#if 0 // todo
+		if (scn().m_global_envmap != nullptr)
+			cmd_list->SetGraphicsRootDescriptorTable(((UINT)ERootParam::EnvMap, );
+		#endif
 		#if 0 // todo
 		// Check if shadows are enabled
 		auto smap_rstep = scn().FindRStep<ShadowMap>();
 		StateStack::SmapFrame smap_frame(ss, smap_rstep);
 		#endif
-
-		// Setup for the frame
-		m_shader.Setup(cmd_list, m_cbuf_upload, scn(), nullptr);
-
-		//if (scn().m_global_envmap != nullptr)
-		//	cmd_list->SetGraphicsRootDescriptorTable(((UINT)ERootParam::EnvMap, );
 
 		// Draw each element in the draw list
 		Lock lock(*this);
@@ -175,15 +176,12 @@ namespace pr::rdr12
 			cmd_list->IASetVertexBuffers(0U, 1U, &nugget.m_model->m_vb_view);
 			cmd_list->IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
-			// Setup for the nugget
+			// Set shader constants for the nugget
 			m_shader.Setup(cmd_list, m_cbuf_upload, scn(), &dle);
 
 			// Bind textures to the pipeline
-			auto tex = nugget.m_tex_diffuse != nullptr
-				? nugget.m_tex_diffuse
-				: rdr().res_mgr().FindTexture(EStockTexture::White);
-
-			auto handle = wnd().m_heap_srv.Add(tex->m_srv);
+			auto tex = nugget.m_tex_diffuse != nullptr ? nugget.m_tex_diffuse : rdr().res_mgr().FindTexture(EStockTexture::White);
+			auto handle = wnd().m_heap_view.Add(tex->m_srv);
 			cmd_list->SetGraphicsRootDescriptorTable((UINT)shaders::fwd::ERootParam::DiffTexture, handle);
 
 			// Apply scene pipe state overrides
@@ -202,10 +200,11 @@ namespace pr::rdr12
 			for (auto& shdr : nugget.m_shaders)
 			{
 				// Ignore shader overrides for other render steps
-				if (shdr.m_rdr_step != Id) continue;
-				auto& shader = *shdr.m_shader.get();
+				if (shdr.m_rdr_step != Id)
+					continue;
 
-				// Setup the shader parameters
+				// Set constants for the shader
+				auto& shader = *shdr.m_shader.get();
 				shader.Setup(cmd_list, m_cbuf_upload, scn(), &dle);
 
 				// Update the pipe state with the shader byte code

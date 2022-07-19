@@ -26,6 +26,8 @@ namespace pr::rdr12
 
 		using BackBuffers = pr::vector<BackBuffer, 4, false>;
 		using CmdLists = pr::vector<ID3D12CommandList*, 4, false>;
+		using GpuViewHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
+		using GpuSampHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>;
 
 		Renderer*                    m_rdr;              // The owning renderer
 		HWND                         m_hwnd;             // The window handle this window is bound to
@@ -43,8 +45,8 @@ namespace pr::rdr12
 		GfxCmdAllocPool              m_cmd_alloc_pool;   // A pool of command allocators
 		GfxCmdListPool               m_cmd_list_pool;    // A pool of command lists
 		CmdLists                     m_cmd_lists;        // Command lists (in order) to be executed
-		GpuDescriptorHeap            m_heap_srv;         // Shader visible heap for SRV
-		GpuDescriptorHeap            m_heap_samp;        // Shader visible heap for Samplers
+		GpuViewHeap                  m_heap_view;        // Shader visible heap for CBV/SRV/UAV
+		GpuSampHeap                  m_heap_samp;        // Shader visible heap for Samplers
 		DiagState                    m_diag;             // Diagnostic variables
 		int64_t                      m_frame_number;     // The number of times 'RenderFrame' has been called.
 		UINT                         m_vsync;            // Present SyncInterval value
