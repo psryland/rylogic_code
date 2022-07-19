@@ -17,7 +17,7 @@ namespace EDTradeAdvisor
 	{
 		// Notes:
 		//  - Monitors the journal files in the ED user data directory
-		private const string JournalRegex = @"Journal\..*\.log";
+		private static readonly Regex JournalRegex = new Regex(@"Journal\..*\.log");
 
 		public EDJournalMonitor(CancellationToken shutdown)
 		{
@@ -60,7 +60,7 @@ namespace EDTradeAdvisor
 					var filename = Path_.FileName(filepath);
 
 					// If the changed file is a journal file
-					if (Regex.IsMatch(Path_.FileName(filepath), JournalRegex))
+					if (JournalRegex.IsMatch(Path_.FileName(filepath)))
 					{
 						// The current journal file has changed
 						if (JournalFilepath != null && string.Compare(filepath, JournalFilepath, true) == 0)
