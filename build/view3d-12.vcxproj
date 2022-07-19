@@ -221,6 +221,11 @@
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\show_normals.hlsl" />
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

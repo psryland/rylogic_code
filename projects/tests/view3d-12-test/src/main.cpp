@@ -53,7 +53,16 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
-		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva 8000FF00 { 1 2 3 }", false, nullptr, nullptr))
+		, m_obj0(View3D_ObjectCreateLdrA(
+			"*Plane ground FFFFE8A0\n"
+			"{\n"
+			"	0 0 0\n"
+			"	0 1 0\n"
+			"	40 40\n"
+			"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
+			"}\n"
+			//"*Box first_box_eva 8000FF00 { 1 2 3 }"
+			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
 		//,m_rdr(RSettings(hinstance))
 		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
@@ -77,10 +86,9 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
-		//View3D_WindowAddObject(m_win3d, m_obj0);
+		View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
-
-		View3D_DemoSceneCreate(m_win3d);
+		//View3D_DemoSceneCreate(m_win3d);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;

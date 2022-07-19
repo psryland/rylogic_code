@@ -588,7 +588,7 @@ namespace pr::rdr12
 		{}
 		explicit operator bool() const
 		{
-			return pShaderBytecode == nullptr;
+			return pShaderBytecode != nullptr;
 		}
 	};
 }

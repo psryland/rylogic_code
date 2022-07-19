@@ -7,6 +7,7 @@
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/resource/descriptor_store.h"
 #include "pr/view3d-12/resource/gpu_upload_buffer.h"
+#include "pr/view3d-12/resource/gpu_descriptor_heap.h"
 #include "pr/view3d-12/utility/lookup.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
@@ -25,33 +26,44 @@ namespace pr::rdr12
 		//  - Compiler complaints about Model not being defined here means you have forgotten to include model.h in some cpp.
 	private:
 
-		using GfxCmdList = D3DPtr<ID3D12GraphicsCommandList>;
+		using GfxCmdList         = D3DPtr<ID3D12GraphicsCommandList>;
+		using ComCmdList         = D3DPtr<ID3D12CommandList>;
+		using SignaturePtr       = D3DPtr<ID3D12RootSignature>;
+		using PipelineStatePtr   = D3DPtr<ID3D12PipelineState>;
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;
 		using DxResLookup        = Lookup<RdrId, ID3D12Resource*>;
 		using AllocationsTracker = AllocationsTracker<void>;
+		using GpuViewHeap        = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
 		using ModelCont          = pr::vector<ModelPtr>;
 		using TextureCont        = pr::vector<Texture2DPtr>;
+		using GdiPlus            = pr::GdiPlus;
 
-		AllocationsTracker m_mem_tracker;      // Resource allocation tracker
-		Renderer&          m_rdr;              // The owning renderer instance
-		GpuSync            m_gsync;            // Sync with GPU
-		GfxCmdAllocPool    m_cmd_alloc_pool;   // A pool of command allocators.
-		GfxCmdAlloc        m_cmd_alloc;        // Command list allocator for resource manager operations
-		GfxCmdList         m_cmd_list;         // Command list for resource manager operations.
-		DxResLookup        m_lookup_res;       // A map from hash of resource URI to existing Dx12 resource pointer.
-		TextureLookup      m_lookup_tex;       // A map from texture id to existing texture instances.
-		GpuUploadBuffer    m_upload_buffer;    // Upload memory buffer for initialising resources
-		DescriptorStore    m_descriptor_store; // Manager of resource descriptors
-		pr::GdiPlus        m_gdiplus;          // Context scope for GDI
-		AutoSub            m_eh_resize;        // Event handler subscription for the RT resize event
-		int                m_gdi_dc_ref_count; // Used to detect outstanding DC references
-		ModelCont          m_stock_models;     // Stock models
-		TextureCont        m_stock_textures;   // Stock textures
-		bool               m_flush_required;   // True if commands have been added to the command list and need sending to the GPU
+		AllocationsTracker m_mem_tracker;        // Resource allocation tracker
+		Renderer&          m_rdr;                // The owning renderer instance
+		GpuSync            m_gsync;              // Sync with GPU
+		GfxCmdAllocPool    m_gfx_cmd_alloc_pool; // A pool of command allocators.
+		GfxCmdAlloc        m_gfx_cmd_alloc;      // Command list allocator for resource manager operations
+		GfxCmdList         m_gfx_cmd_list;       // Command list for resource manager operations.
+		//ComCmdAllocPool    m_com_cmd_alloc_pool; // A pool of command allocators.
+		//ComCmdAlloc        m_com_cmd_alloc;      // Command list allocator for resource manager operations
+		//ComCmdList         m_com_cmd_list;       // Command list for resource manager operations.
+		GpuViewHeap        m_heap_view;          // GPU visible descriptor heap for CBV/SRV/UAV
+		DxResLookup        m_lookup_res;         // A map from hash of resource URI to existing Dx12 resource pointer.
+		TextureLookup      m_lookup_tex;         // A map from texture id to existing texture instances.
+		GpuUploadBuffer    m_upload_buffer;      // Upload memory buffer for initialising resources
+		DescriptorStore    m_descriptor_store;   // Manager of resource descriptors
+		SignaturePtr       m_mipmap_sig;         // Root signature for the mip map generator
+		PipelineStatePtr   m_mipmap_pso;         // Pipeline state for the mip map generator
+		GdiPlus            m_gdiplus;            // Context scope for GDI
+		AutoSub            m_eh_resize;          // Event handler subscription for the RT resize event
+		int                m_gdi_dc_ref_count;   // Used to detect outstanding DC references
+		ModelCont          m_stock_models;       // Stock models
+		TextureCont        m_stock_textures;     // Stock textures
+		bool               m_flush_required;     // True if commands have been added to the command list and need sending to the GPU
 
 	public:
 
-		ResourceManager(Renderer& rdr);
+		explicit ResourceManager(Renderer& rdr);
 		ResourceManager(ResourceManager const&) = delete;
 		ResourceManager& operator = (ResourceManager const&) = delete;
 		~ResourceManager();
@@ -71,6 +83,10 @@ namespace pr::rdr12
 		Texture2DPtr CreateTexture2D(TextureDesc const& desc);
 		Texture2DPtr CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc);
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
+
+		// Generate mip maps for a collection of textures
+		void GenerateMipMaps(ID3D12Resource* texture, ResDesc const& desc, D3D12_RESOURCE_STATES& current_state);
+		void GenerateMipMaps(ID3D12Resource* texture, DXGI_FORMAT format, iv2 dim, int mip0, int mip_count, D3D12_RESOURCE_STATES& current_state);
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);

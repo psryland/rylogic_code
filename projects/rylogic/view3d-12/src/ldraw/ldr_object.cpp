@@ -525,7 +525,7 @@ namespace pr::rdr12
 		auto& reader = p.m_reader;
 
 		std::wstring tex_resource;
-		auto t2s = pr::m4x4Identity;
+		auto t2s = m4x4::Identity();
 		bool has_alpha = false;
 		SamDesc sam;
 

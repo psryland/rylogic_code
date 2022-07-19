@@ -32,9 +32,9 @@ namespace pr::rdr12
 	{
 		ResourceManager*       m_mgr;    // The manager that created this texture
 		D3DPtr<ID3D12Resource> m_res;    // The texture resource (possibly shared with other Texture instances)
-		Descriptor             m_srv;    // Shader resource view
-		Descriptor             m_uav;    // Unordered access view
-		Descriptor             m_rtv;    // Render target view(if available)
+		Descriptor             m_srv;    // Shader resource view (if available)
+		Descriptor             m_uav;    // Unordered access view (if available)
+		Descriptor             m_rtv;    // Render target view (if available)
 		RdrId                  m_id;     // Id for this texture in the resource manager
 		RdrId                  m_uri;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
 		ETextureFlag           m_tflags; // Flags for boolean properties of the texture

@@ -49,7 +49,7 @@ This repository contains the Rylogic Ltd code.
 This project is only used on windows. Compiling requires MSBuild and Python 3.
 Follow these steps to build:
 
-- Pulling to a clean directory
+- Pull to a clean directory
 - Create a _/pr/script/UserVars.py_ file based on the _UserVars.template.py_ file in the same directory.
 - Use _/pr/script/Build.py_ to build projects from the command line, or, open _/pr/build/rylogic.sln_ in visual studio.
 

@@ -136,5 +136,7 @@ namespace pr::rdr12
 
 	// Flavours
 	using GfxCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 	using GfxCmdList = CmdList<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComCmdList = CmdList<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 }

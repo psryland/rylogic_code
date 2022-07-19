@@ -1,7 +1,7 @@
-//***********************************************
-// Renderer
-//  Copyright (c) Rylogic Ltd 2010
-//***********************************************
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
 // Shader for forward rendering
 #include "forward_cbuf.hlsli"
 
@@ -90,7 +90,8 @@ PSOut PSDefault(PSIn In)
 		}
 		else
 		{
-			Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
+			float4 texel = m_texture0.Sample(m_sampler0, In.tex0);
+			Out.diff = texel * Out.diff;
 		}
 	}
 
