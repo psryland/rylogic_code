@@ -25,7 +25,7 @@ namespace LDraw
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
 			EmbeddedCSharpBoilerPlate = View3d.EmbeddedCSharpBoilerPlateDefault;
-			SceneState = new ObservableCollection<SceneStateData>();
+			SceneState = new List<SceneStateData>();
 			UILayout = null;
 
 			AutoSaveOnChanges = true;
@@ -107,9 +107,9 @@ namespace LDraw
 		}
 
 		/// <summary>Per Scene settings</summary>
-		public ObservableCollection<SceneStateData> SceneState
+		public List<SceneStateData> SceneState
 		{
-			get => get<ObservableCollection<SceneStateData>>(nameof(SceneState));
+			get => get<List<SceneStateData>>(nameof(SceneState));
 			private set => set(nameof(SceneState), value);
 		}
 
@@ -171,7 +171,7 @@ namespace LDraw
 	public static class SettingsData_
 	{
 		/// <summary>Access the scene state data for a scene by name</summary>
-		public static SceneStateData get(this ObservableCollection<SceneStateData> container, string name)
+		public static SceneStateData get(this IList<SceneStateData> container, string name)
 		{
 			var ssd = container.FirstOrDefault(x => x.Name == name);
 			ssd ??= container.Add2(new SceneStateData { Name = name });
