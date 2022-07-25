@@ -151,12 +151,6 @@ namespace TimeTracker
 						TimePeriods[0].NotifyPropertyChanged(nameof(TimePeriod.Duration));
 					}
 
-					// Notify total time updated
-					if (TimeTotals.Find(x => x.TaskName == CurrentTaskName) is TimeTotal totals)
-					{
-						totals.NotifyPropertyChanged(nameof(TimeTotal.Total));
-					}
-
 					// Remove tasks not created today
 					if (Settings.ResetEachDay)
 					{
