@@ -183,10 +183,10 @@ namespace Rylogic.Maths
 				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
 
 				// Trig:
-				//' cos�(x) = 0.5 * (1 + cos(2x))
+				//' cos^2(x) = 0.5 * (1 + cos(2x))
 				//' w == cos(x/2)
-				//' w� == cos�(x/2) == 0.5 * (1 + cos(x))
-				//' 2w� - 1 == cos(x)
+				//' w^2 == cos^2(x/2) == 0.5 * (1 + cos(x))
+				//' 2w^2 - 1 == cos(x)
 				return Math_.Clamp(2f * Math_.Sqr(w) - 1f, -1f, +1f);
 			}
 		}
@@ -199,9 +199,9 @@ namespace Rylogic.Maths
 				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
 
 				// Trig:
-				//' sin�(x) + cos�(x) == 1
-				//' sin�(x) == 1 - cos�(x)
-				//' sin(x) == sqrt(1 - cos�(x))
+				//' sin^2(x) + cos^2(x) == 1
+				//' sin^2(x) == 1 - cos^2(x)
+				//' sin(x) == sqrt(1 - cos^2(x))
 				return (float)Math.Sqrt(1f - Math_.Sqr(CosAngle));
 			}
 		}
@@ -373,9 +373,9 @@ namespace Rylogic.Maths
 			Debug.Assert(FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
 
 			// Trig:
-			//' sin�(x) + cos�(x) == 1
-			//' s == sqrt(1 - w�) == sqrt(1 - cos�(x/2))
-			//' s� == 1 - cos�(x/2) == sin�(x/2)
+			//' sin^2(x) + cos^2(x) == 1
+			//' s == sqrt(1 - w^2) == sqrt(1 - cos^2(x/2))
+			//' s^2 == 1 - cos^2(x/2) == sin^2(x/2)
 			//' s == sin(x/2)
 			var w = Clamp(q.w, -1f, 1f);           // = cos(x/2)
 			var s = (float)Math.Sqrt(1f - Sqr(w)); // = sin(x/2)

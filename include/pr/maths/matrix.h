@@ -1079,8 +1079,8 @@ namespace pr
 			s = s.Replace("\r\n ", "\r\n");
 
 			// If the data ends in a newline, remove the trailing newline.
-			// Make it easier by first replacing \r\n�s with |�s then
-			// restore the |�s with \r\n�s
+			// Make it easier by first replacing \r\n's with |'s then
+			// restore the |'s with \r\n's
 			s = s.Replace("\r\n", "|");
 			while (s.LastIndexOf("|") == (s.Length - 1))
 				s = s.Substring(0, s.Length - 1);

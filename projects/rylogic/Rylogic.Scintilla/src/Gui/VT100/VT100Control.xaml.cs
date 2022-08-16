@@ -210,6 +210,11 @@ namespace Rylogic.Gui.WPF
 						NotifyPropertyChanged(nameof(NewLineSend));
 						break;
 					}
+					case nameof(Settings.UnicodeText):
+					{
+						NotifyPropertyChanged(nameof(UnicodeText));
+						break;
+					}
 					case nameof(Settings.HexOutput):
 					{
 						NotifyPropertyChanged(nameof(HexOutput));

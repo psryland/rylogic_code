@@ -1,29 +1,35 @@
 Immediate ToDo:
 
 Work:
+		
   Change Review Board:
+	ECN - REX-10067 - Release of REX v2.56
+		- Create a testing plan (V&V)
+	ECN - REX-10165 - Log Hard Fault Exceptions
+		- Phase 1 out for signing
+		- Code implemented in a branch
+		- Need to add a test case and requirement
+	ECN - REX-10141 - Linux port and removal of product key
+		- test cases + test run
+		- Create a "not-a-test" test case for the not-in-remote-control-mode requirement
+	ECN - REX-10108 - Bug fix to REX Terminal
+		- Stage 2 filled out - testing done - needs sign off - rolled back - update to 1.0.8
+		- Run test case 4989 again on both versions
+		- Release of v1.0.8 needed.
 	ECN - REX-10019
-		- changes implemented
 		- Waiting on verification/validation - test cases run now
 		- Once we're commiting to this change, code needs merging into the main line.
-	ECN - REX-9601 - REX Terminal
-		- Training record for Pete - need release Individual training record
-	ECN - REX-9930 - rxsfault.log ticket
-		- Test case passed - should be ready for phase 2 sign off.
-		- Need to get a new revision of the MC requirements released for the added requirement (REX-9957)
+		- When Verification protocol is released, tell Xiaochao where to inspect the code.
 	ECN - REX-9036 - Zero Reference
 		- Run the test cases
 		- Must use v1.11.0 with new sensor mounting blocks. It has the updated Sensor transforms.
-	ECN - REX-10108 - Bug fix to REX Terminal
-		- Stage 1 filled out - needs sign off
-		- Stage 2 filled out - testing done - needs sign off
-		- Release of v1.0.7 needed.
+		- pdf and send REX-0036 phase 2 - done
+	ECN - REX-9930 - rxsfault.log ticket
+		- Phase 2 is signed off. Waiting for next MC release before signing off phase 3
 	ECN - REX Firmware Loader
+		- Not started yet.
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
-	ECN - Remove product key
-		- Needs starting (phase 1)
-		- Documentation changes
 		
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
