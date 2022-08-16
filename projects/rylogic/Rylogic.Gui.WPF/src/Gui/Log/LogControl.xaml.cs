@@ -98,8 +98,8 @@ namespace Rylogic.Gui.WPF
 			EntryDelimiter = Log_.EntryDelimiter;
 
 			// Limit the number of log entries to display
-			MaxLines = 500;
-			MaxFileBytes = 2 * 1024 * 1024;
+			MaxLines = int.MaxValue;
+			MaxFileBytes = 100 * 1024 * 1024;
 			FileBaseOffset = 0;
 
 			// Commands
@@ -429,7 +429,7 @@ namespace Rylogic.Gui.WPF
 			{
 				// Notes:
 				//  - Allow public set so that the observable collection can be provided externally.
-				//  - Log entry collections can be made threadsafe using: 'BindingOperations.EnableCollectionSynchronization(Entries, new object())';
+				//  - Log entry collections can be made thread safe using: 'BindingOperations.EnableCollectionSynchronization(Entries, new object())';
 
 				if (m_log_entries == value) return;
 				if (m_log_entries != null)

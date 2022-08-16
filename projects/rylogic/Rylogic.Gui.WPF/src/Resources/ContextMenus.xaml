@@ -1004,7 +1004,7 @@
 	<MenuItem x:Key="VT100MenuItem_UnicodeText"
 		x:Shared="False"
 		Header="Unicode Text"
-		StaysOpenOnClick="false"
+		StaysOpenOnClick="False"
 		Command="{Binding ToggleUnicodeText}"
 		IsChecked="{Binding UnicodeText, Mode=OneWay}"
 		DataContext="{Binding VT100CMenuContext}"

@@ -1145,7 +1145,7 @@ namespace pr
 		return lo <= hi ? static_cast<T>(0) : static_cast<T>(1);
 	}
 
-	// Returns the 'Hermite' interpolation (3t� - 2t�) between 'lo' and 'hi' for t=[0,1]
+	// Returns the 'Hermite' interpolation (3t^2 - 2t^3) between 'lo' and 'hi' for t=[0,1]
 	template <std::floating_point T> inline T SmoothStep(T lo, T hi, T t)
 	{
 		if (lo == hi) return lo;

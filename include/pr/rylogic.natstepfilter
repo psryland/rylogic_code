@@ -10,11 +10,11 @@
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>RefPtr&lt;.*&gt;::get</Name>
+		<Name>pr::RefPtr&lt;.*&gt;</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>D3DPtr&lt;.*&gt;</Name>
+		<Name>pr::D3DPtr&lt;.*&gt;</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>

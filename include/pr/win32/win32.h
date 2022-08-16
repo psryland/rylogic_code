@@ -332,10 +332,11 @@ namespace pr
 				sizeof(void*) == 4 ? L"x86" :
 				L"";
 
-			#ifdef NDEBUG
-			constexpr wchar_t const* config = L"release";
-			#else
+			// NDEBUG is unreliable. Seems it's not always defined in release
+			#if defined(_DEBUG) || defined(DEBUG)
 			constexpr wchar_t const* config = L"debug";
+			#else
+			constexpr wchar_t const* config = L"release";
 			#endif
 
 			std::wstring searched;
