@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -27,7 +27,7 @@ namespace pr
 			std::conditional_t<IntrinsicD, __m256d,
 			std::conditional_t<IntrinsicI, __m128i,
 			std::conditional_t<IntrinsicL, __m256i,
-			std::aligned_storage_t<4*sizeof(S), 4*sizeof(S)>
+			std::byte[4*sizeof(S)]
 			>>>>;
 
 		#pragma warning(push)

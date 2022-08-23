@@ -36,7 +36,7 @@ namespace pr
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
-		union
+		union alignas(4 * sizeof(S))
 		{
 			struct { S x, y, z, w; };
 			struct { Vec4<S, void> xyzw; };
@@ -45,7 +45,6 @@ namespace pr
 			#if PR_MATHS_USE_INTRINSICS
 			intrinsic_t vec;
 			#endif
-			std::aligned_storage_t<4*sizeof(S), 4*sizeof(S)> aligner;
 		};
 		#pragma warning(pop)
 
