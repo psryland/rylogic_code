@@ -370,7 +370,7 @@ namespace pr
 
 	private:
 
-		using TLocalStore = typename std::aligned_storage_t<sizeof(Type), type_alignment_v>;
+		using TLocalStore = struct alignas(type_alignment_v) { std::byte _[sizeof(Type)]; };
 		static_assert((std::alignment_of_v<TLocalStore> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
 
 		TLocalStore m_local[local_size_v]; // Local cache for small arrays

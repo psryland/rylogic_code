@@ -4,11 +4,8 @@ Work:
 		
   Change Review Board:
 	ECN - REX-10067 - Release of REX v2.56
-		- Create a testing plan (V&V)
 	ECN - REX-10165 - Log Hard Fault Exceptions
-		- Phase 1 out for signing
-		- Code implemented in a branch
-		- Need to add a test case and requirement
+	ECN - REX-10231 - Add Test Sound button to terminal System Info
 	ECN - REX-10141 - Linux port and removal of product key
 		- test cases + test run
 		- Create a "not-a-test" test case for the not-in-remote-control-mode requirement
@@ -30,7 +27,8 @@ Work:
 		- Not started yet.
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
-		
+	
+	- Spreadsheet of NewREX comms protocols
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
 
@@ -48,7 +46,6 @@ Work:
 	- Validation needs to check all recovery stance ids are in stance list
 
   RexTerminal:
-	- Add Test Sound button to terminal System Info
 	- System for creating graphs of data in session logs
 	- Push/pull zero ref values from REX
 
