@@ -3,7 +3,7 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	handles = Tools.Path(UserVars.root, "tools\\handle.exe")
+	handles = Tools.Path(UserVars.root, "tools\\handle\\handle64.exe")
 	while True:
 		r,outp = Tools.Run([handles] + sys.argv[1:])
 		print(outp)
@@ -30,4 +30,4 @@ try:
 				os.kill(int(id), signal.SIGINT)
 
 except Exception as ex:
-	Tools.OnException(ex)
+	Tools.OnException(ex, enter_to_close=True)

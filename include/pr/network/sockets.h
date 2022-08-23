@@ -2,8 +2,8 @@
 // Sockets
 //	Copyright (c) Rylogic 2019
 //*****************************************
-
 #pragma once
+#include <functional>
 #include "pr/network/winsock.h"
 
 namespace pr::network

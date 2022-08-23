@@ -502,7 +502,7 @@ namespace Rylogic.Maths
 		}
 
 		// NOTE: no recursive variance because we would need to buffer the averages as well
-		// so that we could remove (X(k-N) - avr(k-N))� at each iteration
+		// so that we could remove (X(k-N) - avr(k-N))^2 at each iteration
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		public double PopStdDev => Math.Sqrt(PopStdVar);

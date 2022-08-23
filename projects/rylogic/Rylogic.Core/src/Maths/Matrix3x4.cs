@@ -257,23 +257,23 @@ namespace Rylogic.Maths
 			m3x4 o2f, o2t;
 			switch (from)
 			{
-			default: throw new Exception("axis_id must one of �1, �2, �3");
-			case -1: o2f = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
-			case +1: o2f = Rotation(0f, (float)-Math_.TauBy4, 0f); break;
-			case -2: o2f = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
-			case +2: o2f = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
-			case -3: o2f = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
-			case +3: o2f = Identity; break;
+				case -1: o2f = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
+				case +1: o2f = Rotation(0f, (float)-Math_.TauBy4, 0f); break;
+				case -2: o2f = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
+				case +2: o2f = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
+				case -3: o2f = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
+				case +3: o2f = Identity; break;
+				default: throw new Exception("axis_id must one of \uC2B11, \uC2B12, \uC2B13");
 			}
 			switch (to)
 			{
-			default: throw new Exception("axis_id must one of �1, �2, �3");
-			case -1: o2t = Rotation(0f, (float)-Math_.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
-			case +1: o2t = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
-			case -2: o2t = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
-			case +2: o2t = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
-			case -3: o2t = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
-			case +3: o2t = Identity; break;
+				case -1: o2t = Rotation(0f, (float)-Math_.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+				case +1: o2t = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
+				case -2: o2t = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
+				case +2: o2t = Rotation((float)-Math_.TauBy4, 0f, 0f); break;
+				case -3: o2t = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
+				case +3: o2t = Identity; break;
+				default: throw new Exception("axis_id must one of \uC2B11, \uC2B12, \uC2B13");
 			}
 			return o2t * Math_.InvertFast(o2f);
 		}
