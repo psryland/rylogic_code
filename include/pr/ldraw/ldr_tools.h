@@ -140,7 +140,7 @@ namespace pr
 				m_tb_values.Text(FmtS(
 					L"     sep: %f %f %f  (%f) \r\n"
 					L"xy,yz,zx: %f %f %f \r\n"
-					L" ang (°): %f %f %f \r\n"
+					L" ang (\uC2B0): %f %f %f \r\n"
 					,dx ,dy ,dz ,len
 					,dxy ,dyz ,dzx
 					,angx ,angy ,angz));
@@ -275,7 +275,7 @@ namespace pr
 					L"edge0: %f\r\n"
 					L"edge1: %f\r\n"
 					L"edge2: %f\r\n"
-					L"angle: %f°\r\n"
+					L"angle: %f\uC2B0\r\n"
 					,edge0 ,edge1 ,edge2
 					,ang
 					));

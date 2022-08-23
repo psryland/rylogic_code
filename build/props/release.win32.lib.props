@@ -35,7 +35,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/Zm200 /Zc:twoPhase-</AdditionalOptions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>

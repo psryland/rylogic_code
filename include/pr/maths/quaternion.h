@@ -36,7 +36,7 @@ namespace pr
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
-		union
+		union alignas(4 * sizeof(S))
 		{
 			struct { S x, y, z, w; };
 			struct { Vec4<S, void> xyzw; };
@@ -45,7 +45,6 @@ namespace pr
 			#if PR_MATHS_USE_INTRINSICS
 			intrinsic_t vec;
 			#endif
-			std::aligned_storage_t<4*sizeof(S), 4*sizeof(S)> aligner;
 		};
 		#pragma warning(pop)
 
@@ -189,10 +188,10 @@ namespace pr
 			assert("quaternion isn't normalised" && IsNormal(*this));
 
 			// Trig:
-			//' cos�(x) = 0.5 * (1 + cos(2x))
+			//' cos^2(x) = 0.5 * (1 + cos(2x))
 			//' w == cos(x/2)
-			//' w� == cos�(x/2) == 0.5 * (1 + cos(x))
-			//' 2w� - 1 == cos(x)
+			//' w^2 == cos^2(x/2) == 0.5 * (1 + cos(x))
+			//' 2w^2 - 1 == cos(x)
 			return Clamp(S(2.0) * Sqr(w) - S(1.0), S(-1.0), S(+1.0));
 		}
 
@@ -200,9 +199,9 @@ namespace pr
 		S SinAngle() const
 		{
 			// Trig:
-			//' sin�(x) + cos�(x) == 1
-			//' sin�(x) == 1 - cos�(x)
-			//' sin(x) == sqrt(1 - cos�(x))
+			//' sin^2(x) + cos^2(x) == 1
+			//' sin^2(x) == 1 - cos^2(x)
+			//' sin(x) == sqrt(1 - cos^2(x))
 			return Sqrt(S(1.0) - Sqr(CosAngle()));
 		}
 
@@ -333,9 +332,9 @@ namespace pr
 		assert("quaternion isn't normalised" && IsNormal4(q));
 
 		// Trig:
-		//' sin�(x) + cos�(x) == 1
-		//' s == sqrt(1 - w�) == sqrt(1 - cos�(x/2))
-		//' s� == 1 - cos�(x/2) == sin�(x/2)
+		//' sin^2(x) + cos^2(x) == 1
+		//' s == sqrt(1 - w^2) == sqrt(1 - cos^2(x/2))
+		//' s^2 == 1 - cos^2(x/2) == sin^2(x/2)
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, S(-1.0), S(+1.0)); // = cos(x/2)
 		auto s = Sqrt(S(+1.0) - Sqr(w));       // = sin(x/2)
@@ -355,9 +354,9 @@ namespace pr
 		assert("quaternion isn't normalised" && IsNormal(q));
 
 		// Trig:
-		//' sin�(x) + cos�(x) == 1
-		//' s == sqrt(1 - w�) == sqrt(1 - cos�(x/2))
-		//' s� == 1 - cos�(x/2) == sin�(x/2)
+		//' sin^2(x) + cos^2(x) == 1
+		//' s == sqrt(1 - w^2) == sqrt(1 - cos^2(x/2))
+		//' s^2 == 1 - cos^2(x/2) == sin^2(x/2)
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, S(-1.0), S(+1.0));
 		auto s = Sqrt(S(+1.0) - Sqr(w));

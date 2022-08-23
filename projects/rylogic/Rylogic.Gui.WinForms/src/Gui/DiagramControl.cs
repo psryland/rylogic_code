@@ -3866,7 +3866,7 @@ namespace Rylogic.Gui.WinForms
 					var min_sep = MinSeparation(vec, body0, body1);
 					var sep = Math.Max(min_sep, vec.Length);
 
-					// Coulomb force F = kQq/r�, assume all 'charges' are 1
+					// Coulomb force F = kQq/r^2, assume all 'charges' are 1
 					const float charge = 1000f;
 					var coulumb = m_opts.Scatter.CoulombConstant * charge * charge / (sep * sep);
 

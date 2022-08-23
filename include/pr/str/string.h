@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // pr::string<>
 //  Copyright (c) Rylogic Ltd 2008
 //******************************************
@@ -169,7 +169,7 @@ namespace pr
 	private:
 
 		// Use aligned storage so that we don't construct 'Type's in the local array.
-		using TLocalStore = std::aligned_storage_t<sizeof(Type), std::alignment_of_v<Type>>;
+		using TLocalStore = struct alignas(std::alignment_of_v<Type>) { std::byte _[sizeof(Type)]; };
 
 		Type*       m_ptr;                // Pointer to the array of data
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays

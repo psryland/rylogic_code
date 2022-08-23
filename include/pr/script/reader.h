@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -919,7 +919,7 @@ namespace pr::script
 					v4 axis = AxisId(axis_id);
 					if (axis == v4Zero)
 					{
-						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of ±1, ±2, ±3");
+						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
 						break;
 					}
 

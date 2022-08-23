@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -22,11 +22,12 @@ namespace pr::script
 	struct Buf
 	{
 		using value_type = Char;
-		using storage_t = 
+		using storage_t =
 			std::conditional_t<sizeof(value_type) * N <= sizeof(uint32_t), uint32_t,
 			std::conditional_t<sizeof(value_type) * N <= sizeof(uint64_t), uint64_t,
 			std::conditional_t<sizeof(value_type) * N <= sizeof(__m128i), __m128i,
-			std::aligned_storage_t<sizeof(value_type) * N> > > >;
+			std::byte[sizeof(value_type) * N]
+			>>>;
 
 		// Constants
 		static constexpr int Capacity = sizeof(storage_t) / sizeof(value_type);
