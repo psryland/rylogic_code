@@ -8,6 +8,7 @@
 #include "pr/view3d-12/resource/descriptor_store.h"
 #include "pr/view3d-12/resource/gpu_upload_buffer.h"
 #include "pr/view3d-12/resource/gpu_descriptor_heap.h"
+#include "pr/view3d-12/resource/mipmap_generator.h"
 #include "pr/view3d-12/utility/lookup.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
@@ -27,7 +28,6 @@ namespace pr::rdr12
 	private:
 
 		using GfxCmdList         = D3DPtr<ID3D12GraphicsCommandList>;
-		using ComCmdList         = D3DPtr<ID3D12CommandList>;
 		using SignaturePtr       = D3DPtr<ID3D12RootSignature>;
 		using PipelineStatePtr   = D3DPtr<ID3D12PipelineState>;
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;
@@ -44,16 +44,12 @@ namespace pr::rdr12
 		GfxCmdAllocPool    m_gfx_cmd_alloc_pool; // A pool of command allocators.
 		GfxCmdAlloc        m_gfx_cmd_alloc;      // Command list allocator for resource manager operations
 		GfxCmdList         m_gfx_cmd_list;       // Command list for resource manager operations.
-		//ComCmdAllocPool    m_com_cmd_alloc_pool; // A pool of command allocators.
-		//ComCmdAlloc        m_com_cmd_alloc;      // Command list allocator for resource manager operations
-		//ComCmdList         m_com_cmd_list;       // Command list for resource manager operations.
 		GpuViewHeap        m_heap_view;          // GPU visible descriptor heap for CBV/SRV/UAV
 		DxResLookup        m_lookup_res;         // A map from hash of resource URI to existing Dx12 resource pointer.
 		TextureLookup      m_lookup_tex;         // A map from texture id to existing texture instances.
 		GpuUploadBuffer    m_upload_buffer;      // Upload memory buffer for initialising resources
 		DescriptorStore    m_descriptor_store;   // Manager of resource descriptors
-		SignaturePtr       m_mipmap_sig;         // Root signature for the mip map generator
-		PipelineStatePtr   m_mipmap_pso;         // Pipeline state for the mip map generator
+		MipMapGenerator    m_mipmap_gen;         // Utility class for generating mip maps for a texture
 		GdiPlus            m_gdiplus;            // Context scope for GDI
 		AutoSub            m_eh_resize;          // Event handler subscription for the RT resize event
 		int                m_gdi_dc_ref_count;   // Used to detect outstanding DC references
@@ -83,10 +79,6 @@ namespace pr::rdr12
 		Texture2DPtr CreateTexture2D(TextureDesc const& desc);
 		Texture2DPtr CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc);
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
-
-		// Generate mip maps for a collection of textures
-		void GenerateMipMaps(ID3D12Resource* texture, ResDesc const& desc, D3D12_RESOURCE_STATES& current_state);
-		void GenerateMipMaps(ID3D12Resource* texture, DXGI_FORMAT format, iv2 dim, int mip0, int mip_count, D3D12_RESOURCE_STATES& current_state);
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);

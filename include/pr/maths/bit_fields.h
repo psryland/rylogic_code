@@ -8,15 +8,27 @@
 
 namespace pr
 {
+	// Concept for 'BitField'
+	template <typename T> concept BitField =
+		std::is_integral_v<T> ||
+		std::is_enum_v<T> ||
+		requires(T t)
+		{
+			{ t |= t };
+			{ t &= t };
+		};
+
 	// Convert to/from uint64 to uint32[2]
 	constexpr uint64_t MakeLL(uint32_t hi, uint32_t lo)
 	{
 		return (static_cast<uint64_t>(hi) << 32) | lo;
 	}
-	inline void BreakLL(uint64_t ll, uint32_t& hi, uint32_t& lo)
+	constexpr std::tuple<uint32_t, uint32_t> BreakLL(uint64_t ll)
 	{
-		hi = uint32_t((ll >> 32L) & 0xFFFFFFFF);
-		lo = uint32_t((ll       ) & 0xFFFFFFFF);
+		return {
+			static_cast<uint32_t>((ll >> 32L) & 0xFFFFFFFF),
+			static_cast<uint32_t>((ll) & 0xFFFFFFFF),
+		};
 	}
 
 	// Bit manipulation functions
@@ -29,41 +41,43 @@ namespace pr
 		return 1i64 << n;
 	}
 
-	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
-	template <typename T, typename U> 
-	[[nodiscard]] constexpr T SetBits(T value, U mask, bool state)
+	// Sets the masked bits of 'value' to the state 'state'
+	// If 'state' is boolean-true, returns 'value | mask'. If false, returns 'value &~ mask'
+	// If 'state' is integral, then applies 'mask & state' to 'value'
+	template <BitField T, BitField U, typename B>
+	requires (BitField<B> || std::is_same_v<B,bool>)
+	[[nodiscard]] constexpr T SetBits(T value, U mask, B state)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return state
-			? static_cast<T>(static_cast<Int>(value) |  static_cast<Int>(mask))
-			: static_cast<T>(static_cast<Int>(value) & ~static_cast<Int>(mask));
-	}
-
-	// Sets the masked bits of 'value' to the state 'bitfield'
-	template <typename T, typename U>
-	[[nodiscard]] constexpr T SetBits(T value, U mask, U bitfield)
-	{
-		using Int = pr::underlying_type_t<T>;
-		auto result = static_cast<Int>(value);
-		result &= ~static_cast<Int>(mask);            // clear masked bits to zero
-		result |=  static_cast<Int>(mask & bitfield); // set bits from bit field
-		return result;
+		using UT = underlying_type_t<T>;
+		if constexpr (std::is_same_v<B, bool>)
+		{
+			return state
+				? static_cast<T>(static_cast<UT>(value) | static_cast<UT>(mask))
+				: static_cast<T>(static_cast<UT>(value) & ~static_cast<UT>(mask));
+		}
+		else
+		{
+			auto result = static_cast<UT>(value);
+			result &= ~static_cast<UT>(mask);         // clear masked bits to zero
+			result |=  static_cast<UT>(mask & state); // set bits from bit field
+			return result;
+		}
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
 	template <typename T, typename U>
 	[[nodiscard]] constexpr bool AnySet(T value, U mask)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return (static_cast<Int>(value) & static_cast<Int>(mask)) != 0;
+		using UT = pr::underlying_type_t<T>;
+		return (static_cast<UT>(value) & static_cast<UT>(mask)) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
 	template <typename T, typename U>
 	[[nodiscard]] constexpr bool AllSet(T value, U mask)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return (static_cast<Int>(value) & static_cast<Int>(mask)) == static_cast<Int>(mask);
+		using UT = pr::underlying_type_t<T>;
+		return (static_cast<UT>(value) & static_cast<UT>(mask)) == static_cast<UT>(mask);
 	}
 
 	// Reverse the order of bits in 'v'
@@ -312,8 +326,7 @@ namespace pr::maths
 	PRUnitTest(BitFunctionTest)
 	{
 		{
-			uint32_t hi,lo;
-			BreakLL(0x0123456789abcdef, hi, lo);
+			auto [hi,lo] = BreakLL(0x0123456789abcdef);
 			PR_CHECK(hi, 0x01234567U);
 			PR_CHECK(lo, 0x89abcdefU);
 

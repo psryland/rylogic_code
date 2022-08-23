@@ -16,6 +16,8 @@ namespace pr::rdr12
 		DeviceDebug = 1 << 0,
 		BGRASupport = 1 << 2,
 		D2D1_DebugInfo = 1 << 4,
+
+		_flags_enum,
 	};
 
 	/// <summary>Settings for constructing the renderer</summary>

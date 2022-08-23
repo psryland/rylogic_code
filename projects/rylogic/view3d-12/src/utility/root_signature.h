@@ -56,13 +56,14 @@ namespace pr::rdr12
 		}
 
 		// Add a texture descriptor range parameter
-		void Tex(EParam index, ETexReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		void Tex(EParam index, ETexReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1 {
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 				.NumDescriptors = s_cast<UINT>(count),
 				.BaseShaderRegister = s_cast<UINT>(reg),
 				.RegisterSpace = 0U,
+				.Flags = flags,
 				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
 			});
 			get(index) = D3D12_ROOT_PARAMETER1 {
@@ -73,13 +74,14 @@ namespace pr::rdr12
 		}
 
 		// Add a Unordered access view descriptor range parameter
-		void Uav(EParam index, EUAVReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		void Uav(EParam index, EUAVReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
 				.NumDescriptors = s_cast<UINT>(count),
 				.BaseShaderRegister = s_cast<UINT>(reg),
 				.RegisterSpace = 0U,
+				.Flags = flags,
 				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
 			});
 			get(index) = D3D12_ROOT_PARAMETER1{

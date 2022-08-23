@@ -198,6 +198,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_templates.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\mipmap_generator.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -490,6 +493,18 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h">
       <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\mipmap_generator.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\keep_alive.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state.h">
+      <Filter>src\resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
