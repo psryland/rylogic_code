@@ -20,8 +20,6 @@ namespace pr::rdr12
 		//    It's a  bit like the GpuDescriptorHeap, except that it is a container of Upload resource memory.
 		//  - This type is used for uploading constant buffers for shaders, initialising textures, initialising V/I buffers, etc.
 
-		// Todo: this supersedes the UploadBufferPool...
-
 		// A 'page' in the upload buffer
 		struct Block
 		{

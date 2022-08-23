@@ -38,9 +38,19 @@ namespace pr::rdr12
 		D3D12_FEATURE_DATA_D3D12_OPTIONS12                                    Options12;
 		#endif
 
+		struct FormatData :D3D12_FEATURE_DATA_FORMAT_SUPPORT
+		{
+			bool Check(D3D12_FORMAT_SUPPORT1 format) const;
+			bool Check(D3D12_FORMAT_SUPPORT2 format) const;
+			bool CheckSRV() const;
+			bool CheckUAV() const;
+			bool CheckRTV() const;
+			bool CheckDSV() const;
+		};
+
 		FeatureSupport();
 		FeatureSupport(ID3D12Device* device);
 		void Read(ID3D12Device* device);
-		D3D12_FEATURE_DATA_FORMAT_SUPPORT Format(DXGI_FORMAT format) const;
+		FormatData Format(DXGI_FORMAT format) const;
 	};
 }

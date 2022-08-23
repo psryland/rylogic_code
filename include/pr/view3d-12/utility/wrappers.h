@@ -377,43 +377,43 @@ namespace pr::rdr12
 
 	};
 
-	// Resource barrier
-	struct ResourceBarrier : D3D12_RESOURCE_BARRIER
-	{
-		ResourceBarrier() = default;
-		ResourceBarrier(D3D12_RESOURCE_BARRIER const& rhs)
-			:D3D12_RESOURCE_BARRIER(rhs)
-		{}
-		static ResourceBarrier Transition(ID3D12Resource* pResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Flags = flags;
-			barrier.Transition.pResource = pResource;
-			barrier.Transition.StateBefore = stateBefore;
-			barrier.Transition.StateAfter = stateAfter;
-			barrier.Transition.Subresource = subresource;
-			return result;
-		}
-		static ResourceBarrier Aliasing(ID3D12Resource* pResourceBefore, ID3D12Resource* pResourceAfter)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
-			barrier.Aliasing.pResourceBefore = pResourceBefore;
-			barrier.Aliasing.pResourceAfter = pResourceAfter;
-			return result;
-		}
-		static ResourceBarrier UAV(ID3D12Resource* pResource)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-			barrier.UAV.pResource = pResource;
-			return result;
-		}
-	};
+	// Resource barrier - Use BarrierBatch
+	//struct ResourceBarrier : D3D12_RESOURCE_BARRIER
+	//{
+	//	ResourceBarrier() = default;
+	//	ResourceBarrier(D3D12_RESOURCE_BARRIER const& rhs)
+	//		:D3D12_RESOURCE_BARRIER(rhs)
+	//	{}
+	//	static ResourceBarrier Transition(ID3D12Resource* pResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
+	//	{
+	//		ResourceBarrier result = {};
+	//		D3D12_RESOURCE_BARRIER& barrier = result;
+	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	//		barrier.Flags = flags;
+	//		barrier.Transition.pResource = pResource;
+	//		barrier.Transition.StateBefore = stateBefore;
+	//		barrier.Transition.StateAfter = stateAfter;
+	//		barrier.Transition.Subresource = subresource;
+	//		return result;
+	//	}
+	//	static ResourceBarrier Aliasing(ID3D12Resource* pResourceBefore, ID3D12Resource* pResourceAfter)
+	//	{
+	//		ResourceBarrier result = {};
+	//		D3D12_RESOURCE_BARRIER& barrier = result;
+	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+	//		barrier.Aliasing.pResourceBefore = pResourceBefore;
+	//		barrier.Aliasing.pResourceAfter = pResourceAfter;
+	//		return result;
+	//	}
+	//	static ResourceBarrier UAV(ID3D12Resource* pResource)
+	//	{
+	//		ResourceBarrier result = {};
+	//		D3D12_RESOURCE_BARRIER& barrier = result;
+	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	//		barrier.UAV.pResource = pResource;
+	//		return result;
+	//	}
+	//};
 	
 	// Render target blend state description
 	struct RenderTargetBlendDesc :D3D12_RENDER_TARGET_BLEND_DESC

@@ -77,6 +77,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_forward.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\descriptor_store.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\mipmap_generator.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_manager.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\scene\scene_camera.cpp" />
@@ -159,7 +160,9 @@
     <ClInclude Include="..\include\pr\view3d-12\resource\descriptor_store.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\image.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\mipmap_generator.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\stock_resources.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene_camera.h" />
@@ -183,6 +186,7 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\features.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\gpu_sync.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\keep_alive.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
@@ -193,6 +197,7 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_forward.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>

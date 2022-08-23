@@ -7,6 +7,10 @@
 
 namespace pr::rdr12
 {
+	// Turn an r-value into an l-value. Basically 'std::unmove()'
+	template <typename T>
+	inline T& LValue(T&& x) { return x; }
+
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr);
 	template <typename T> ULONG RefCount(RefPtr<T> ptr)
@@ -216,7 +220,7 @@ namespace pr::rdr12
 		return BitsPerPixel(fmt) >> 3;
 	}
 
-	// Compile time type to 'DXGI_FORMAT' conversion
+	// Compile-time type to 'DXGI_FORMAT' conversion
 	using dxgi = struct { DXGI_FORMAT format; int size; };
 	template <typename T> constexpr dxgi dx_format_v =
 		std::is_same_v<uint8_t , T> ? dxgi{DXGI_FORMAT_R8_UINT           , (int)sizeof(uint8_t )} :
@@ -231,48 +235,6 @@ namespace pr::rdr12
 		static_assert(dx_format_v<uint32_t>.format == DXGI_FORMAT_R32_UINT);
 		static_assert(dx_format_v<uint16_t>.format == DXGI_FORMAT_R16_UINT);
 
-	//// Compile time type to 'DXGI_FORMAT' conversion
-	//template <typename Type> struct dx_format { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
-	//template <> struct dx_format<uint8_t >    { static const DXGI_FORMAT value = DXGI_FORMAT_R8_UINT;            static const int size = sizeof(uint8_t ); };
-	//template <> struct dx_format<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16_t); };
-	//template <> struct dx_format<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32_t); };
-	//template <> struct dx_format<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
-	//template <> struct dx_format<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
-	//template <> struct dx_format<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
-	//template <> struct dx_format<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
-	//template <> struct dx_format<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
-	//template <typename Type> static constexpr DXGI_FORMAT dx_format_v = dx_format<Type>::value;
-
-	//// Compile 'DXGI_FORMAT' to pixel type conversion
-	//template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
-	//template <> struct type_for<DXGI_FORMAT_R8_UINT           >{ using type = uint8_t;  };
-	//template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
-	//template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
-	//template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };
-	//template <> struct type_for<DXGI_FORMAT_R32G32B32_FLOAT   >{ using type = v3;       };
-	//template <> struct type_for<DXGI_FORMAT_R32G32B32A32_FLOAT>{ using type = Colour;   };
-	//template <> struct type_for<DXGI_FORMAT_R8G8B8A8_UNORM    >{ using type = Colour32; };
-	//template <DXGI_FORMAT Fmt> using type_for_t = typename type_for<Fmt>::type;
-	//static_assert(std::is_same_v<type_for_t<DXGI_FORMAT_R32G32B32A32_FLOAT>, Colour>) ;
-
-	//// Shader type to enum map
-	//template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
-	//template <> struct ShaderTypeId<ID3D11VertexShader  > { static const EShaderType value = EShaderType::VS; };
-	//template <> struct ShaderTypeId<ID3D11PixelShader   > { static const EShaderType value = EShaderType::PS; };
-	//template <> struct ShaderTypeId<ID3D11GeometryShader> { static const EShaderType value = EShaderType::GS; };
-	//template <> struct ShaderTypeId<ID3D11ComputeShader > { static const EShaderType value = EShaderType::CS; };
-	//template <> struct ShaderTypeId<ID3D11HullShader    > { static const EShaderType value = EShaderType::HS; };
-	//template <> struct ShaderTypeId<ID3D11DomainShader  > { static const EShaderType value = EShaderType::DS; };
-
-	//// Shader enum to dx type map
-	//template <EShaderType ST> struct DxShaderType {};
-	//template <> struct DxShaderType<EShaderType::VS> { typedef ID3D11VertexShader   type; };
-	//template <> struct DxShaderType<EShaderType::PS> { typedef ID3D11PixelShader    type; };
-	//template <> struct DxShaderType<EShaderType::GS> { typedef ID3D11GeometryShader type; };
-	//template <> struct DxShaderType<EShaderType::CS> { typedef ID3D11ComputeShader  type; };
-	//template <> struct DxShaderType<EShaderType::HS> { typedef ID3D11HullShader     type; };
-	//template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
-
 	// The number of supported quality levels for the given format and sample count
 	UINT MultisampleQualityLevels(ID3D12Device* device, DXGI_FORMAT format, UINT sample_count);
 
@@ -281,6 +243,30 @@ namespace pr::rdr12
 
 	// Returns the number of indices implied by a primitive count and geometry topology
 	size_t IndexCount(size_t pcount, ETopo topo);
+	
+	// True if 'fmt' is a compression image format
+	bool IsCompressed(DXGI_FORMAT fmt);
+
+	// True if 'fmt' has an alpha channel
+	bool HasAlphaChannel(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is compatible with UA views
+	bool IsUAVCompatible(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is an SRGB format
+	bool IsSRGB(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is a depth format
+	bool IsDepth(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a typeless format
+	DXGI_FORMAT ToTypeless(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a SRGB format
+	DXGI_FORMAT ToSRGB(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a UAV compatible format
+	DXGI_FORMAT ToUAVCompatable(DXGI_FORMAT fmt);
 
 	// Returns the expected row, slice, and block pitch for a given image width*height*depth and format
 	iv3 Pitch(iv3 size, DXGI_FORMAT fmt);
@@ -314,7 +300,7 @@ namespace pr::rdr12
 		return iter == end(map) ? def : static_cast<Value const&>(iter->second);
 	}
 
-	/// <summary>Set the name on a DX resource (debug only)</summary>
+	// Set the name on a DX resource (debug only)
 	void NameResource(ID3D12Object* res, char const* name);
 	void NameResource(IDXGIObject* res, char const* name);
 

@@ -27,6 +27,8 @@
 #include <filesystem>
 #include <type_traits>
 #include <mutex>
+#include <condition_variable>
+#include <thread>
 #include <future>
 #include <cwctype>
 
@@ -106,6 +108,7 @@
 #include "pr/geometry/model_file.h"
 #include "pr/geometry/utility.h"
 #include "pr/threads/synchronise.h"
+#include "pr/threads/name_thread.h"
 #include "pr/gui/gdiplus.h"
 //#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
@@ -222,6 +225,7 @@ namespace pr::rdr12
 	struct Image;
 	struct ImageWithData;
 	struct FeatureSupport;
+	struct GpuSync;
 	
 	// Dll
 	struct Context;

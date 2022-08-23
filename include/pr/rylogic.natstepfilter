@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <StepFilter xmlns="http://schemas.microsoft.com/vstudio/debugger/natstepfilter/2010">
+
 	<!-- Common -->
 	<Function>
 		<Name>pr::Array.*</Name>
@@ -10,20 +11,19 @@
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>RefPtr&lt;.*&gt;::get</Name>
+		<Name>pr::RefPtr.*</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>D3DPtr&lt;.*&gt;</Name>
+		<Name>pr::D3DPtr.*</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
-		<Name>pr::s_cast&lt;.*&gt;</Name>
+		<Name>pr::s_cast.*</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 
-
-	<!-- Wingui -->
+	<!-- WinGui -->
 	<Function>
 		<Name>pr::gui::Params.*</Name>
 		<Action>NoStepInto</Action>
@@ -33,16 +33,45 @@
 		<Action>NoStepInto</Action>
 	</Function>
 	
+	<!-- Standard library -->
+	<Function>
+		<Name>.*::c_str</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>operator new</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::begin</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::end</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::shared_ptr.*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::numeric_limits.*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
 	<!--<Function><Name>std::.*</Name><Action>NoStepInto</Action></Function>-->
 	<!--<Function><Name>std::vector&lt;.*</Name><Action>NoStepInto</Action></Function>-->
-	<Function><Name>.*::c_str</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>operator new</Name><Action>NoStepInto</Action></Function>
 
 	<!-- Operators as defined in the dinkumware stuff -->
-	<Function><Name>std::.*::operator\*</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>std::.*::operator-&gt;</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>std::.*::operator==</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>std::begin</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>std::end</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>std::shared_ptr.*</Name><Action>NoStepInto</Action></Function>
+	<Function>
+		<Name>std::.*::operator\*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::.*::operator-&gt;</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>std::.*::operator==</Name>
+		<Action>NoStepInto</Action>
+	</Function>
 </StepFilter>
