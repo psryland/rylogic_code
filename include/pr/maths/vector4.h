@@ -32,7 +32,7 @@ namespace pr
 
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
-		union
+		union alignas(4 * sizeof(S))
 		{
 			struct { S x, y, z, w; };
 			struct { Vec2<S, T> xy, zw; };

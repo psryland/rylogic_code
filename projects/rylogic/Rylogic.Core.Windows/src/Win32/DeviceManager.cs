@@ -108,7 +108,7 @@ namespace Rylogic.Interop.Win32
 						var dev_class_handle = GetClassDevs(DevClass.Id, null, IntPtr.Zero, ESetupDiGetClassDevsFlags.Present);
 						foreach (var device in EnumDeviceInfo(dev_class_handle).Select(x => new Device(dev_class_handle, x)))
 						{
-							if (!device.HardwareIds.Contains(DevicePath)) continue;
+							if (!device.HardwareIDs.Contains(DevicePath)) continue;
 							m_device = device;
 							break;
 						}
@@ -147,7 +147,7 @@ namespace Rylogic.Interop.Win32
 			public string DeviceDescription => (string?)RegProp(EDeviceRegistryProperty.DEVICEDESC) ?? string.Empty;
 
 			/// <summary>Device hardware ID</summary>
-			public string[] HardwareIds => (string[]?)RegProp(EDeviceRegistryProperty.HARDWAREID) ?? Array.Empty<string>();
+			public IList<string> HardwareIDs => (IList<string>?)RegProp(EDeviceRegistryProperty.HARDWAREID) ?? Array.Empty<string>();
 
 			/// <summary>Return a registry property</summary>
 			public object? RegProp(EDeviceRegistryProperty prop)
@@ -157,7 +157,7 @@ namespace Rylogic.Interop.Win32
 			}
 			public object? RegProp(string key_name)
 			{
-				using var key = OpenDevRegKey(m_handle, m_did, EScope.Global, 0, EDevKeyKind.Device, RegistryRights.QueryValues);
+				using var key = OpenDevRegKey(m_handle, m_did, EScope.Global, 0, EDevKeyKind.Device, RegistryRights.ReadKey);
 				return key.GetValue(key_name);
 			}
 
