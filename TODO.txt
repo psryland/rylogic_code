@@ -1,43 +1,36 @@
 Immediate ToDo:
 
 Work:
-		
   Change Review Board:
 	ECN - REX-10067 - Release of REX v2.56
 	ECN - REX-10165 - Log Hard Fault Exceptions
 	ECN - REX-10231 - Add Test Sound button to terminal System Info
 	ECN - REX-10141 - Linux port and removal of product key
-		- test cases + test run
-		- Create a "not-a-test" test case for the not-in-remote-control-mode requirement
 	ECN - REX-10108 - Bug fix to REX Terminal
-		- Stage 2 filled out - testing done - needs sign off - rolled back - update to 1.0.8
-		- Run test case 4989 again on both versions
-		- Release of v1.0.8 needed.
 	ECN - REX-10019
-		- Waiting on verification/validation - test cases run now
-		- Once we're commiting to this change, code needs merging into the main line.
-		- When Verification protocol is released, tell Xiaochao where to inspect the code.
 	ECN - REX-9036 - Zero Reference
-		- Run the test cases
-		- Must use v1.11.0 with new sensor mounting blocks. It has the updated Sensor transforms.
-		- pdf and send REX-0036 phase 2 - done
 	ECN - REX-9930 - rxsfault.log ticket
-		- Phase 2 is signed off. Waiting for next MC release before signing off phase 3
 	ECN - REX Firmware Loader
 		- Not started yet.
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
-	
+
+  Exit interview notes:
+
+  HandOver Notes:
+	- Hand over ownership of GitHub admin
+
+  Misc:
 	- Spreadsheet of NewREX comms protocols
+	- Performance review
+	- List of handover topics
+	- Improve MC error codes, shouldn't need to look in code to understand error code.
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
 
-  Misc:
-	- Message Xiaochao about updating the firmwares
-	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
-
   Embedded:
 	- Make the EnableHV UI menu option more robust. If already 'RXS_BP_QueryEStopTestState_Normal', switch on HV immediately. Allow it to be turned off again, without leaving the menus.
+	- Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 	- Make sure EnableHV works in R&D mode with tilt sensing on.
 	- Look at expanding the AC project to include real code
 
@@ -50,7 +43,6 @@ Work:
 	- Push/pull zero ref values from REX
 
   FirmwareLoader:
-    - Firmware Root Directory search crashes if it encounters the System Volume Information directory.
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
 	- Add support for programming the Battery controller board.
 

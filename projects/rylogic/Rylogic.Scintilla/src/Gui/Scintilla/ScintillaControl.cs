@@ -28,26 +28,6 @@ namespace Rylogic.Gui.WPF
 		private static int ScintillaCtrlId = 1;
 		private IntPtr CtrlId = new IntPtr(++ScintillaCtrlId);
 
-		void HACK(string what)
-		{
-#if false
-			var focus = Win32.GetFocus();
-			var who =
-				focus == IntPtr.Zero ? "null" :
-				focus == ParentHwnd ? "LD" :
-				focus == Hwnd ? "SC" :
-				"Other";
-
-			System.Diagnostics.Debug.WriteLine(
-				$"{what}  " +
-				$"Focused={who}  " +
-				$"IsFocused={IsFocused}  " +
-				$"KBWithin={IsKeyboardFocusWithin}  " +
-				$"Element={Keyboard.FocusedElement?.GetType().Name ?? "null"}  " +
-				$"");
-#endif
-		}
-
 		static ScintillaControl()
 		{
 			Sci.LoadDll(throw_if_missing: false);
@@ -85,7 +65,6 @@ namespace Rylogic.Gui.WPF
 			base.OnGotFocus(e);
 
 			// When this 'ScintillaControl' receives focus, forward it on to the native control
-			HACK("LD got focus");
 			FocusHosted();
 		}
 		protected virtual IntPtr WndProcHost(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
@@ -118,7 +97,6 @@ namespace Rylogic.Gui.WPF
 							FocusHosted();
 
 						// Suppress this kill focus message so we keep IsKeyboardFocusWithin
-						HACK("LD kill focus suppressed");
 						handled = true;
 					}
 					break;
@@ -235,7 +213,6 @@ namespace Rylogic.Gui.WPF
 					// host momentarily so that 'IsKeyboardFocusWithin' gets updated.
 					if (!IsKeyboardFocusWithin)
 					{
-						HACK($"Sc {Name} got focus");
 						FocusHosted();
 						handled = true;
 					}
@@ -327,10 +304,8 @@ namespace Rylogic.Gui.WPF
 		}
 		private void FocusHosted()
 		{
-			HACK("Setting focus to Sc");
 			Keyboard.Focus(this);
 			Win32.SetFocus(Hwnd);
-			HACK("Sc Focused");
 		}
 
 		/// <summary>

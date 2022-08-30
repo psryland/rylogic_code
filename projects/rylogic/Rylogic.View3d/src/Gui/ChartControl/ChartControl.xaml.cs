@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Common;
@@ -116,6 +117,7 @@ namespace Rylogic.Gui.WPF
 			// That way the lifetime of the elements is independent of the chart.
 			Elements.Clear();
 
+			BindingOperations.ClearAllBindings(this);
 			ShowHitTestRay = false;
 			MouseOperations = null!;
 			Range = null!;
