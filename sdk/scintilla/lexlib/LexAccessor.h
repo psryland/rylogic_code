@@ -8,13 +8,13 @@
 #ifndef LEXACCESSOR_H
 #define LEXACCESSOR_H
 
-namespace Scintilla {
+namespace Lexilla {
 
-enum EncodingType { enc8bit, encUnicode, encDBCS };
+enum class EncodingType { eightBit, unicode, dbcs };
 
 class LexAccessor {
 private:
-	IDocument *pAccess;
+	Scintilla::IDocument *pAccess;
 	enum {extremePosition=0x7FFFFFFF};
 	/** @a bufferSize is a trade off between time taken to copy the characters
 	 * and retrieval overhead.
@@ -48,10 +48,10 @@ private:
 	}
 
 public:
-	explicit LexAccessor(IDocument *pAccess_) :
+	explicit LexAccessor(Scintilla::IDocument *pAccess_) :
 		pAccess(pAccess_), startPos(extremePosition), endPos(0),
 		codePage(pAccess->CodePage()),
-		encodingType(enc8bit),
+		encodingType(EncodingType::eightBit),
 		lenDoc(pAccess->Length()),
 		validLen(0),
 		startSeg(0), startPosStyling(0),
@@ -61,14 +61,17 @@ public:
 		styleBuf[0] = 0;
 		switch (codePage) {
 		case 65001:
-			encodingType = encUnicode;
+			encodingType = EncodingType::unicode;
 			break;
 		case 932:
 		case 936:
 		case 949:
 		case 950:
 		case 1361:
-			encodingType = encDBCS;
+			encodingType = EncodingType::dbcs;
+			break;
+		default:
+			break;
 		}
 	}
 	char operator[](Sci_Position position) {
@@ -77,7 +80,7 @@ public:
 		}
 		return buf[position - startPos];
 	}
-	IDocument *MultiByteAccess() const {
+	Scintilla::IDocument *MultiByteAccess() const noexcept {
 		return pAccess;
 	}
 	/** Safe version of operator[], returning a defined value for invalid position. */
@@ -92,12 +95,16 @@ public:
 		return buf[position - startPos];
 	}
 	bool IsLeadByte(char ch) const {
-		return pAccess->IsDBCSLeadByte(ch);
+		return
+			(static_cast<unsigned char>(ch) >= 0x80) &&	// non-ASCII
+			(encodingType == EncodingType::dbcs) &&		// IsDBCSLeadByte only for DBCS
+			pAccess->IsDBCSLeadByte(ch);
 	}
-	EncodingType Encoding() const {
+	EncodingType Encoding() const noexcept {
 		return encodingType;
 	}
 	bool Match(Sci_Position pos, const char *s) {
+		assert(s);
 		for (int i=0; *s; i++) {
 			if (*s != SafeGetCharAt(pos+i))
 				return false;
@@ -105,8 +112,29 @@ public:
 		}
 		return true;
 	}
+	bool MatchIgnoreCase(Sci_Position pos, const char *s);
+
+	// Get first len - 1 characters in range [startPos_, endPos_).
+	void GetRange(Sci_PositionU startPos_, Sci_PositionU endPos_, char *s, Sci_PositionU len);
+	void GetRangeLowered(Sci_PositionU startPos_, Sci_PositionU endPos_, char *s, Sci_PositionU len);
+	// Get all characters in range [startPos_, endPos_).
+	std::string GetRange(Sci_PositionU startPos_, Sci_PositionU endPos_);
+	std::string GetRangeLowered(Sci_PositionU startPos_, Sci_PositionU endPos_);
+
 	char StyleAt(Sci_Position position) const {
 		return pAccess->StyleAt(position);
+	}
+	int StyleIndexAt(Sci_Position position) const {
+		return static_cast<unsigned char>(pAccess->StyleAt(position));
+	}
+	// Return style value from buffer when in buffer, else retrieve from document.
+	// This is faster and can avoid calls to Flush() as that may be expensive.
+	int BufferStyleAt(Sci_Position position) const {
+		const Sci_Position index = position - startPosStyling;
+		if (index >= 0 && index < validLen) {
+			return static_cast<unsigned char>(styleBuf[index]);
+		}
+		return static_cast<unsigned char>(pAccess->StyleAt(position));
 	}
 	Sci_Position GetLine(Sci_Position position) const {
 		return pAccess->LineFromPosition(position);

@@ -53,6 +53,7 @@
 
 #define PR_WNDPROCDEBUG 0
 #if PR_WNDPROCDEBUG
+#pragma message("WARNING: **************************** WndProcDebug Enabled.")
 #include "pr/gui/messagemap_dbg.h"
 #endif
 

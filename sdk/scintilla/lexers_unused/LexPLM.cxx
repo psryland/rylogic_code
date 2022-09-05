@@ -1,4 +1,5 @@
 // Copyright (c) 1990-2007, Scientific Toolworks, Inc.
+// @file LexPLM.cxx
 // Author: Jason Haslam
 // The License.txt file describes the conditions under which this software may be distributed.
 
@@ -8,6 +9,9 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
+
+#include <string>
+#include <string_view>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -20,7 +24,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 static void GetRange(Sci_PositionU start,
                      Sci_PositionU end,

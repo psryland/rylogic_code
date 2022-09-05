@@ -36,6 +36,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\sdk;$(ProjectDir)..\..\..\sdk\wtl\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <PostBuildEvent>
       <Command>py $(ProjectDir)post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>

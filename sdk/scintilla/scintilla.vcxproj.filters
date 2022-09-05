@@ -133,11 +133,23 @@
     <ClCompile Include="lexlib\WordList.cxx">
       <Filter>src\lexlib</Filter>
     </ClCompile>
-    <ClCompile Include="src\Catalogue.cxx">
+    <ClCompile Include="src\ChangeHistory.cxx">
       <Filter>src\src</Filter>
     </ClCompile>
-    <ClCompile Include="src\ExternalLexer.cxx">
+    <ClCompile Include="src\CharacterCategoryMap.cxx">
       <Filter>src\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CharacterType.cxx">
+      <Filter>src\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Geometry.cxx">
+      <Filter>src\src</Filter>
+    </ClCompile>
+    <ClCompile Include="lexlib\LexAccessor.cxx">
+      <Filter>src\lexlib</Filter>
+    </ClCompile>
+    <ClCompile Include="lexlib\LexerNoExceptions.cxx">
+      <Filter>src\lexlib</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -346,11 +358,57 @@
     <ClInclude Include="lexlib\WordList.h">
       <Filter>src\lexlib</Filter>
     </ClInclude>
-    <ClInclude Include="src\Catalogue.h">
+    <ClInclude Include="src\ChangeHistory.h">
       <Filter>src\src</Filter>
     </ClInclude>
-    <ClInclude Include="src\ExternalLexer.h">
+    <ClInclude Include="src\CharacterCategoryMap.h">
       <Filter>src\src</Filter>
     </ClInclude>
+    <ClInclude Include="src\CharacterType.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Debugging.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ElapsedPeriod.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Partitioning.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platform.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Position.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SparseVector.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SplitVector.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\LexerNoExceptions.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\OptionSet.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\SparseState.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\StringCopy.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="lexlib\SubStyles.h">
+      <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Geometry.h" />
+    <ClInclude Include="win32\HanjaDic.h" />
+    <ClInclude Include="win32\PlatWin.h" />
+    <ClInclude Include="win32\ScintillaWin.h" />
+    <ClInclude Include="win32\WinTypes.h" />
+    <ClInclude Include="lexlib\CatalogueModules.h" />
+    <ClInclude Include="lexlib\LexAccessor.h" />
   </ItemGroup>
 </Project>

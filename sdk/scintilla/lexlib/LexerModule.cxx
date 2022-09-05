@@ -9,6 +9,7 @@
 #include <cassert>
 
 #include <string>
+#include <string_view>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -22,7 +23,7 @@
 #include "LexerBase.h"
 #include "LexerSimple.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 LexerModule::LexerModule(int language_,
 	LexerFunction fnLexer_,
@@ -30,7 +31,7 @@ LexerModule::LexerModule(int language_,
 	LexerFunction fnFolder_,
 	const char *const wordListDescriptions_[],
 	const LexicalClass *lexClasses_,
-	size_t nClasses_) :
+	size_t nClasses_) noexcept :
 	language(language_),
 	fnLexer(fnLexer_),
 	fnFolder(fnFolder_),
@@ -44,7 +45,7 @@ LexerModule::LexerModule(int language_,
 LexerModule::LexerModule(int language_,
 	LexerFactoryFunction fnFactory_,
 	const char *languageName_,
-	const char * const wordListDescriptions_[]) :
+	const char * const wordListDescriptions_[]) noexcept :
 	language(language_),
 	fnLexer(nullptr),
 	fnFolder(nullptr),
@@ -55,14 +56,11 @@ LexerModule::LexerModule(int language_,
 	languageName(languageName_) {
 }
 
-LexerModule::~LexerModule() {
-}
-
-int LexerModule::GetLanguage() const { 
+int LexerModule::GetLanguage() const noexcept {
 	return language;
 }
 
-int LexerModule::GetNumWordLists() const {
+int LexerModule::GetNumWordLists() const noexcept {
 	if (!wordListDescriptions) {
 		return -1;
 	} else {
@@ -76,7 +74,7 @@ int LexerModule::GetNumWordLists() const {
 	}
 }
 
-const char *LexerModule::GetWordListDescription(int index) const {
+const char *LexerModule::GetWordListDescription(int index) const noexcept {
 	assert(index < GetNumWordLists());
 	if (!wordListDescriptions || (index >= GetNumWordLists())) {
 		return "";
@@ -85,15 +83,15 @@ const char *LexerModule::GetWordListDescription(int index) const {
 	}
 }
 
-const LexicalClass *LexerModule::LexClasses() const {
+const LexicalClass *LexerModule::LexClasses() const noexcept {
 	return lexClasses;
 }
 
-size_t LexerModule::NamedStyles() const {
+size_t LexerModule::NamedStyles() const noexcept {
 	return nClasses;
 }
 
-ILexer4 *LexerModule::Create() const {
+Scintilla::ILexer5 *LexerModule::Create() const {
 	if (fnFactory)
 		return fnFactory();
 	else

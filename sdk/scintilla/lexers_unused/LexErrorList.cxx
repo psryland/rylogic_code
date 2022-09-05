@@ -12,6 +12,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -23,7 +26,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 namespace {
 
@@ -46,6 +49,19 @@ bool IsAlphabetic(int ch) {
 inline bool AtEOL(Accessor &styler, Sci_PositionU i) {
 	return (styler[i] == '\n') ||
 	       ((styler[i] == '\r') && (styler.SafeGetCharAt(i + 1) != '\n'));
+}
+
+bool IsGccExcerpt(const char *s) noexcept {
+	while (*s) {
+		if (s[0] == ' ' && s[1] == '|' && (s[2] == ' ' || s[2] == '+')) {
+			return true;
+		}
+		if (!(s[0] == ' ' || s[0] == '+' || Is0To9(s[0]))) {
+			return false;
+		}
+		s++;
+	}
+	return true;
 }
 
 int RecogniseErrorListLine(const char *lineBuffer, Sci_PositionU lengthLine, Sci_Position &startValue) {
@@ -120,7 +136,7 @@ int RecogniseErrorListLine(const char *lineBuffer, Sci_PositionU lengthLine, Sci
 		// HTML tidy style: line 42 column 1
 		return SCE_ERR_TIDY;
 	} else if (strstart(lineBuffer, "\tat ") &&
-	           strstr(lineBuffer, "(") &&
+	           strchr(lineBuffer, '(') &&
 	           strstr(lineBuffer, ".java:")) {
 		// Java stack back trace
 		return SCE_ERR_JAVA_STACK;
@@ -128,10 +144,20 @@ int RecogniseErrorListLine(const char *lineBuffer, Sci_PositionU lengthLine, Sci
 	           strstart(lineBuffer, "                 from ")) {
 		// GCC showing include path to following error
 		return SCE_ERR_GCC_INCLUDED_FROM;
-	} else if (strstr(lineBuffer, "warning LNK")) {
-		// Microsoft linker warning:
-		// {<object> : } warning LNK9999
+	} else if (strstart(lineBuffer, "NMAKE : fatal error")) {
+		// Microsoft nmake fatal error:
+		// NMAKE : fatal error <code>: <program> : return code <return>
 		return SCE_ERR_MS;
+	} else if (strstr(lineBuffer, "warning LNK") ||
+		strstr(lineBuffer, "error LNK")) {
+		// Microsoft linker warning:
+		// {<object> : } (warning|error) LNK9999
+		return SCE_ERR_MS;
+	} else if (IsGccExcerpt(lineBuffer)) {
+		// GCC code excerpt and pointer to issue
+		//    73 |   GTimeVal last_popdown;
+		//       |            ^~~~~~~~~~~~
+		return SCE_ERR_GCC_EXCERPT;
 	} else {
 		// Look for one of the following formats:
 		// GCC: <filename>:<line>:<message>
@@ -301,17 +327,17 @@ int StyleFromSequence(const char *seq) noexcept {
 }
 
 void ColouriseErrorListLine(
-    char *lineBuffer,
-    Sci_PositionU lengthLine,
+    const std::string &lineBuffer,
     Sci_PositionU endPos,
     Accessor &styler,
 	bool valueSeparate,
 	bool escapeSequences) {
 	Sci_Position startValue = -1;
-	const int style = RecogniseErrorListLine(lineBuffer, lengthLine, startValue);
-	if (escapeSequences && strstr(lineBuffer, CSI)) {
+	const Sci_PositionU lengthLine = lineBuffer.length();
+	const int style = RecogniseErrorListLine(lineBuffer.c_str(), lengthLine, startValue);
+	if (escapeSequences && strstr(lineBuffer.c_str(), CSI)) {
 		const Sci_Position startPos = endPos - lengthLine;
-		const char *linePortion = lineBuffer;
+		const char *linePortion = lineBuffer.c_str();
 		Sci_Position startPortion = startPos;
 		int portionStyle = style;
 		while (const char *startSeq = strstr(linePortion, CSI)) {
@@ -352,10 +378,9 @@ void ColouriseErrorListLine(
 }
 
 void ColouriseErrorListDoc(Sci_PositionU startPos, Sci_Position length, int, WordList *[], Accessor &styler) {
-	char lineBuffer[10000];
+	std::string lineBuffer;
 	styler.StartAt(startPos);
 	styler.StartSegment(startPos);
-	Sci_PositionU linePos = 0;
 
 	// property lexer.errorlist.value.separate
 	//	For lines in the output pane that are matches from Find in Files or GCC-style
@@ -369,17 +394,15 @@ void ColouriseErrorListDoc(Sci_PositionU startPos, Sci_Position length, int, Wor
 	const bool escapeSequences = styler.GetPropertyInt("lexer.errorlist.escape.sequences") != 0;
 
 	for (Sci_PositionU i = startPos; i < startPos + length; i++) {
-		lineBuffer[linePos++] = styler[i];
-		if (AtEOL(styler, i) || (linePos >= sizeof(lineBuffer) - 1)) {
-			// End of line (or of line buffer) met, colourise it
-			lineBuffer[linePos] = '\0';
-			ColouriseErrorListLine(lineBuffer, linePos, i, styler, valueSeparate, escapeSequences);
-			linePos = 0;
+		lineBuffer.push_back(styler[i]);
+		if (AtEOL(styler, i)) {
+			// End of line met, colourise it
+			ColouriseErrorListLine(lineBuffer, i, styler, valueSeparate, escapeSequences);
+			lineBuffer.clear();
 		}
 	}
-	if (linePos > 0) {	// Last line does not have ending characters
-		lineBuffer[linePos] = '\0';
-		ColouriseErrorListLine(lineBuffer, linePos, startPos + length - 1, styler, valueSeparate, escapeSequences);
+	if (!lineBuffer.empty()) {	// Last line does not have ending characters
+		ColouriseErrorListLine(lineBuffer, startPos + length - 1, styler, valueSeparate, escapeSequences);
 	}
 }
 

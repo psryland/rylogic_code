@@ -5,12 +5,18 @@
  ** Written by Paul Ryland
  **/
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <ctype.h>
+#include <cstdlib>
+#include <cassert>
+#include <cstring>
+
+#include <utility>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <iterator>
+#include <functional>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -27,6 +33,7 @@
 #include "pr/script/forward.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 using namespace pr::ldr;
 using namespace pr::script;

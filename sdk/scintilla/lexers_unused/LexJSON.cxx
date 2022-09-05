@@ -14,9 +14,12 @@
 #include <cassert>
 #include <cctype>
 #include <cstdio>
+
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
+#include <functional>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -30,6 +33,7 @@
 #include "DefaultLexer.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 static const char *const JSONWordListDesc[] = {
 	"JSON Keywords",
@@ -201,6 +205,7 @@ class LexerJSON : public DefaultLexer {
 
 	public:
 	LexerJSON() :
+		DefaultLexer("json", SCLEX_JSON),
 		setOperators(CharacterSet::setNone, "[{}]:,"),
 		setURL(CharacterSet::setAlphaNum, "-._~:/?#[]@!$&'()*+,),="),
 		setKeywordJSONLD(CharacterSet::setAlpha, ":@"),
@@ -208,7 +213,7 @@ class LexerJSON : public DefaultLexer {
 	}
 	virtual ~LexerJSON() {}
 	int SCI_METHOD Version() const override {
-		return lvRelease4;
+		return lvRelease5;
 	}
 	void SCI_METHOD Release() override {
 		delete this;
@@ -227,6 +232,9 @@ class LexerJSON : public DefaultLexer {
 			return 0;
 		}
 		return -1;
+	}
+	const char * SCI_METHOD PropertyGet(const char *key) override {
+		return optSetJSON.PropertyGet(key);
 	}
 	Sci_Position SCI_METHOD WordListSet(int n, const char *wl) override {
 		WordList *wordListN = 0;
@@ -252,7 +260,7 @@ class LexerJSON : public DefaultLexer {
 	void *SCI_METHOD PrivateCall(int, void *) override {
 		return 0;
 	}
-	static ILexer4 *LexerFactoryJSON() {
+	static ILexer5 *LexerFactoryJSON() {
 		return new LexerJSON;
 	}
 	const char *SCI_METHOD DescribeWordListSets() override {
@@ -284,7 +292,7 @@ void SCI_METHOD LexerJSON::Lex(Sci_PositionU startPos,
 				}
 				break;
 			case SCE_JSON_LINECOMMENT:
-				if (context.atLineEnd) {
+				if (context.MatchLineEnd()) {
 					context.SetState(SCE_JSON_DEFAULT);
 				}
 				break;
@@ -303,7 +311,7 @@ void SCI_METHOD LexerJSON::Lex(Sci_PositionU startPos,
 				}
 				if (context.ch == '"') {
 					context.SetState(stringStyleBefore);
-					context.ForwardSetState(SCE_C_DEFAULT);
+					context.ForwardSetState(SCE_JSON_DEFAULT);
 				} else if (context.ch == '\\') {
 					if (!escapeSeq.newSequence(context.chNext)) {
 						context.SetState(SCE_JSON_ERROR);
@@ -375,7 +383,7 @@ void SCI_METHOD LexerJSON::Lex(Sci_PositionU startPos,
 				context.SetState(SCE_JSON_DEFAULT);
 				break;
 			case SCE_JSON_ERROR:
-				if (context.atLineEnd) {
+				if (context.MatchLineEnd()) {
 					context.SetState(SCE_JSON_DEFAULT);
 				}
 				break;

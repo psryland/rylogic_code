@@ -15,7 +15,9 @@
 #include <ctype.h>
 
 #include <string>
+#include <string_view>
 #include <map>
+#include <functional>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -30,6 +32,7 @@
 #include "DefaultLexer.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 /* Nested comments require keeping the value of the nesting level for every
    position in the document.  But since scintilla always styles line by line,
@@ -157,6 +160,7 @@ class LexerD : public DefaultLexer {
 	OptionSetD osD;
 public:
 	LexerD(bool caseSensitive_) :
+		DefaultLexer("D", SCLEX_D),
 		caseSensitive(caseSensitive_) {
 	}
 	virtual ~LexerD() {
@@ -165,7 +169,7 @@ public:
 		delete this;
 	}
 	int SCI_METHOD Version() const override {
-		return lvRelease4;
+		return lvRelease5;
 	}
 	const char * SCI_METHOD PropertyNames() override {
 		return osD.PropertyNames();
@@ -177,6 +181,9 @@ public:
 		return osD.DescribeProperty(name);
 	}
 	Sci_Position SCI_METHOD PropertySet(const char *key, const char *val) override;
+	const char * SCI_METHOD PropertyGet(const char *key) override {
+		return osD.PropertyGet(key);
+	}
 	const char * SCI_METHOD DescribeWordListSets() override {
 		return osD.DescribeWordListSets();
 	}
@@ -188,10 +195,10 @@ public:
 		return 0;
 	}
 
-	static ILexer4 *LexerFactoryD() {
+	static ILexer5 *LexerFactoryD() {
 		return new LexerD(true);
 	}
-	static ILexer4 *LexerFactoryDInsensitive() {
+	static ILexer5 *LexerFactoryDInsensitive() {
 		return new LexerD(false);
 	}
 };
