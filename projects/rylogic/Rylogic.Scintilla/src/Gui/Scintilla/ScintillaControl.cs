@@ -69,9 +69,10 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual IntPtr WndProcHost(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
 		{
-			// Host WndProc - This is a wnd proc for the WPF window that owns this hwndhost.
+			// Host WndProc - This is a wnd proc for the WPF window that owns this 'HwndHost'.
 			// Remember this function gets called for each ScintillaControl instance that exists
-
+			// within the owning WPF window.
+			//
 			// Notes:
 			//  - 'hwnd' is the window handle of the parent window of the native scintilla control.
 			//    Scintilla sends notifications to its parent, which is what we're handling here.
@@ -202,9 +203,9 @@ namespace Rylogic.Gui.WPF
 		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
 		{
 			// Native Control WndProc - This is a wnd proc for the native scintilla control
-
+			// This is called before Scintilla's native WndProc
 			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
-			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine("Native: {str}");
+			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine($"Native: {str}");
 			switch (msg)
 			{
 				case Win32.WM_SETFOCUS:
@@ -237,10 +238,10 @@ namespace Rylogic.Gui.WPF
 			if (parent_hwnd.Handle == IntPtr.Zero)
 				throw new Exception("Expected this control to be a child");
 
-			// Reparent the native control to 'parent_hwnd'
+			// Re-parent the native control to 'parent_hwnd'
 			ParentHwnd = parent_hwnd.Handle;
 			if (Win32.SetParent(Hwnd, ParentHwnd) == IntPtr.Zero)
-				throw new Win32Exception(Win32.GetLastError(), "Failed to reparent the native scintilla control");
+				throw new Win32Exception(Win32.GetLastError(), "Failed to re-parent the native scintilla control");
 
 			// Resize to fit the parent
 			var parent_rect = Win32.GetClientRect(ParentHwnd);
@@ -2597,13 +2598,13 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_SETLEXERLANGUAGE, 0, handle.Handle.AddrOfPinnedObject());
 		}
 
-		/// <summary></summary>
-		public void LoadLexerLibrary(string path)
-		{
-			var bytes = Encoding.UTF8.GetBytes(path);
-			using var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_LOADLEXERLIBRARY, 0, handle.Handle.AddrOfPinnedObject());
-		}
+		///// <summary></summary>
+		//public void LoadLexerLibrary(string path)
+		//{
+		//	var bytes = Encoding.UTF8.GetBytes(path);
+		//	using var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+		//	Cmd(Sci.SCI_LOADLEXERLIBRARY, 0, handle.Handle.AddrOfPinnedObject());
+		//}
 
 		/// <summary></summary>
 		public void Colourise(long start, long end)

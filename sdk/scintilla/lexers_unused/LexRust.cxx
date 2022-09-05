@@ -15,7 +15,9 @@
 #include <ctype.h>
 
 #include <string>
+#include <string_view>
 #include <map>
+#include <functional>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -32,6 +34,7 @@
 #include "DefaultLexer.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 static const int NUM_RUST_KEYWORD_LISTS = 7;
 static const int MAX_RUST_IDENT_CHARS = 1023;
@@ -120,13 +123,15 @@ class LexerRust : public DefaultLexer {
 	OptionsRust options;
 	OptionSetRust osRust;
 public:
+	LexerRust() : DefaultLexer("rust", SCLEX_RUST) {
+	}
 	virtual ~LexerRust() {
 	}
 	void SCI_METHOD Release() override {
 		delete this;
 	}
 	int SCI_METHOD Version() const override {
-		return lvRelease4;
+		return lvRelease5;
 	}
 	const char * SCI_METHOD PropertyNames() override {
 		return osRust.PropertyNames();
@@ -138,6 +143,9 @@ public:
 		return osRust.DescribeProperty(name);
 	}
 	Sci_Position SCI_METHOD PropertySet(const char *key, const char *val) override;
+	const char * SCI_METHOD PropertyGet(const char *key) override {
+		return osRust.PropertyGet(key);
+	}
 	const char * SCI_METHOD DescribeWordListSets() override {
 		return osRust.DescribeWordListSets();
 	}
@@ -147,7 +155,7 @@ public:
 	void * SCI_METHOD PrivateCall(int, void *) override {
 		return 0;
 	}
-	static ILexer4 *LexerFactoryRust() {
+	static ILexer5 *LexerFactoryRust() {
 		return new LexerRust();
 	}
 };
@@ -278,6 +286,8 @@ static void ScanNumber(Accessor& styler, Sci_Position& pos) {
 			pos += 2;
 		} else if (c == '6' && n == '4') {
 			pos += 2;
+		} else if (styler.Match(pos, "128")) {
+			pos += 3;
 		} else if (styler.Match(pos, "size")) {
 			pos += 4;
 		} else {
@@ -516,7 +526,7 @@ static void ResumeBlockComment(Accessor &styler, Sci_Position& pos, Sci_Position
 				level++;
 			}
 		}
-		else {
+		else if (pos < max) {
 			pos++;
 		}
 		if (pos >= max) {
@@ -549,12 +559,8 @@ static void ResumeLineComment(Accessor &styler, Sci_Position& pos, Sci_Position 
 		maybe_doc_comment = true;
 	}
 
-	while (pos < max && c != '\n') {
-		if (pos == styler.LineEnd(styler.GetLine(pos)))
-			styler.SetLineState(styler.GetLine(pos), 0);
-		pos++;
-		c = styler.SafeGetCharAt(pos, '\0');
-	}
+	pos = styler.LineEnd(styler.GetLine(pos));
+	styler.SetLineState(styler.GetLine(pos), SCE_RUST_DEFAULT);
 
 	if (state == DocComment || (state == UnknownComment && maybe_doc_comment))
 		styler.ColourTo(pos - 1, SCE_RUST_COMMENTLINEDOC);

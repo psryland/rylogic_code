@@ -15,6 +15,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -26,14 +29,14 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 
 static inline bool IsAWordChar(const int ch) {
 	return (ch < 0x80) && (isalnum(ch) || ch == ':' || ch == '_');
 }
 
-inline bool isMMIXALOperator(char ch) {
+static inline bool isMMIXALOperator(char ch) {
 	if (IsASCII(ch) && isalnum(ch))
 		return false;
 	if (ch == '+' || ch == '-' || ch == '|' || ch == '^' ||
@@ -85,8 +88,6 @@ static void ColouriseMMIXALDoc(Sci_PositionU startPos, Sci_Position length, int 
 		} else if (sc.state == SCE_MMIXAL_NUMBER) {		// NUMBER
 			if (!isdigit(sc.ch)) {
 				if (IsAWordChar(sc.ch)) {
-					char s[100];
-					sc.GetCurrent(s, sizeof(s));
 					sc.ChangeState(SCE_MMIXAL_REF);
 					sc.SetState(SCE_MMIXAL_REF);
 				} else {
@@ -99,12 +100,11 @@ static void ColouriseMMIXALDoc(Sci_PositionU startPos, Sci_Position length, int 
 			}
 		} else if (sc.state == SCE_MMIXAL_REF) {			// REF
 			if (!IsAWordChar(sc.ch) ) {
-				char s[100];
-				sc.GetCurrent(s, sizeof(s));
+				char s0[100];
+				sc.GetCurrent(s0, sizeof(s0));
+				const char *s = s0;
 				if (*s == ':') {	// ignore base prefix for match
-					for (size_t i = 0; i != sizeof(s); ++i) {
-						*(s+i) = *(s+i+1);
-					}
+					++s;
 				}
 				if (special_register.InList(s)) {
 					sc.ChangeState(SCE_MMIXAL_REGISTER);
@@ -154,9 +154,7 @@ static void ColouriseMMIXALDoc(Sci_PositionU startPos, Sci_Position length, int 
 		if (sc.state == SCE_MMIXAL_OPCODE_POST ||		// OPCODE_POST
 			sc.state == SCE_MMIXAL_OPERANDS) {			// OPERANDS
 			if (sc.state == SCE_MMIXAL_OPERANDS && isspace(sc.ch)) {
-				if (!sc.atLineEnd) {
-					sc.SetState(SCE_MMIXAL_COMMENT);
-				}
+				sc.SetState(SCE_MMIXAL_COMMENT);
 			} else if (isdigit(sc.ch)) {
 				sc.SetState(SCE_MMIXAL_NUMBER);
 			} else if (IsAWordChar(sc.ch) || sc.Match('@')) {

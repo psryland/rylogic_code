@@ -18,25 +18,29 @@
 			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
 
 			<!-- Locale strings -->
-			<gui:LocaleString x:Key="Log_Tag" Key="Log_Tag" Fallback="Tag"/>
-			<gui:LocaleString x:Key="Log_Level" Key="Log_Level" Fallback="Level"/>
-			<gui:LocaleString x:Key="Log_Timestamp" Key="Log_Timestamp" Fallback="Timestamp"/>
-			<gui:LocaleString x:Key="Log_Elapsed" Key="Log_Elapsed" Fallback="Elapsed"/>
-			<gui:LocaleString x:Key="Log_Message" Key="Log_Message" Fallback="Message"/>
-			<gui:LocaleString x:Key="Log_Filepath" Key="Log_Filepath" Fallback="File"/>
-			<gui:LocaleString x:Key="Log_LineNumber" Key="Log_LineNumber" Fallback="Line"/>
-			<gui:LocaleString x:Key="Log_Occurrences" Key="Log_Occurrences" Fallback="Occurrences"/>
-			<gui:LocaleString x:Key="Log_Text" Key="Log_Text" Fallback="Text"/>
-
+			<gui:LocaleString x:Key="Str_Tag" Key="Log_Tag" Fallback="Tag"/>
+			<gui:LocaleString x:Key="Str_Level" Key="Log_Level" Fallback="Level"/>
+			<gui:LocaleString x:Key="Str_Timestamp" Key="Log_Timestamp" Fallback="Timestamp"/>
+			<gui:LocaleString x:Key="Str_Elapsed" Key="Log_Elapsed" Fallback="Elapsed"/>
+			<gui:LocaleString x:Key="Str_Message" Key="Log_Message" Fallback="Message"/>
+			<gui:LocaleString x:Key="Str_Filepath" Key="Log_Filepath" Fallback="File"/>
+			<gui:LocaleString x:Key="Str_LineNumber" Key="Log_LineNumber" Fallback="Line"/>
+			<gui:LocaleString x:Key="Str_Occurrences" Key="Log_Occurrences" Fallback="Occurrences"/>
+			<gui:LocaleString x:Key="Str_Text" Key="Log_Text" Fallback="Text"/>
+			<gui:LocaleString x:Key="Str_CopyLogEntries" Key="Log_CopyLogEntries" Fallback="Copy Log Entries"/>
+			<gui:LocaleString x:Key="Str_CopyMessages" Key="Log_CopyMessages" Fallback="Copy Messages"/>
+			<gui:LocaleString x:Key="Str_ElapsedTimeFormat" Key="Log_ElapsedTimeFormat" Fallback="Elapsed Format:"/>
+			<gui:LocaleString x:Key="Str_TimestampFormat" Key="Log_TimestampFormat" Fallback="Timestamp Format:"/>
+			
 			<!-- Default context menu -->
 			<MenuItem
 				x:Key="LogControlCMenu_CopyLogEntries"
-				Header="Copy Log Entries"
+				Header="{Binding Source={StaticResource Str_CopyLogEntries}, Path=Value}"
 				Command="{Binding CopySelectedRowsToClipboard}"
 				/>
 			<MenuItem
 				x:Key="LogControlCMenu_CopyMessages"
-				Header="Copy Messages"
+				Header="{Binding Source={StaticResource Str_CopyMessages}, Path=Value}"
 				Command="{Binding CopySelectedMessagesToClipboard}"
 				/>
 			<MenuItem
@@ -46,7 +50,7 @@
 				<MenuItem.Header>
 					<StackPanel Orientation="Horizontal">
 						<TextBlock
-							Text="Elapsed Format: "
+							Text="{Binding Source={StaticResource Str_ElapsedTimeFormat}, Path=Value}"
 							VerticalAlignment="Center"
 							/>
 						<TextBox
@@ -65,7 +69,7 @@
 				<MenuItem.Header>
 					<StackPanel Orientation="Horizontal">
 						<TextBlock
-							Text="Timestamp Format: "
+							Text="{Binding Source={StaticResource Str_TimestampFormat}, Path=Value}"
 							VerticalAlignment="Center"
 							/>
 						<TextBox
@@ -244,35 +248,35 @@
 			<DataGrid.Columns>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Tag"
-					Header="{StaticResource Log_Tag}"
+					Header="{Binding Source={StaticResource Str_Tag}, Path=Value}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Binding="{Binding Tag}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Level"
-					Header="{StaticResource Log_Level}"
+					Header="{Binding Source={StaticResource Str_Level}, Path=Value}"
 					Binding="{Binding Level}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Timestamp"
-					Header="{StaticResource Log_Timestamp}"
+					Header="{Binding Source={StaticResource Str_Timestamp}, Path=Value}"
 					Binding="{Binding TimestampFormatted}"
 					ElementStyle="{StaticResource LogEntryStyleRight}"
 					Width="1*"
 					/>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Elapsed"
-					Header="{StaticResource Log_Elapsed}"
+					Header="{Binding Source={StaticResource Str_Elapsed}, Path=Value}"
 					Binding="{Binding ElapsedFormatted}"
 					ElementStyle="{StaticResource LogEntryStyleRight}"
 					Width="1*"
 					/>
 				<DataGridTemplateColumn
 					gui:DataGrid_.ColumnName ="Message"
-					Header="{StaticResource Log_Message}"
+					Header="{Binding Source={StaticResource Str_Message}, Path=Value}"
 					Width="5*"
 					>
 					<DataGridTemplateColumn.CellTemplate>
@@ -286,28 +290,28 @@
 				</DataGridTemplateColumn>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="File"
-					Header="{StaticResource Log_Filepath}"
+					Header="{Binding Source={StaticResource Str_Filepath}, Path=Value}"
 					Binding="{Binding File}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="2*"
 					/>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Line"
-					Header="{StaticResource Log_LineNumber}"
+					Header="{Binding Source={StaticResource Str_LineNumber}, Path=Value}"
 					Binding="{Binding Line}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="0.5*"
 					/>
 				<DataGridTextColumn
 					gui:DataGrid_.ColumnName ="Occurrences"
-					Header="{StaticResource Log_Occurrences}"
+					Header="{Binding Source={StaticResource Str_Occurrences}, Path=Value}"
 					Binding="{Binding Occurrences}"
 					ElementStyle="{StaticResource LogEntryStyle}"
 					Width="0.3*"
 					/>
 				<DataGridTemplateColumn
 					gui:DataGrid_.ColumnName ="Text"
-					Header="{StaticResource Log_Text}"
+					Header="{Binding Source={StaticResource Str_Text}, Path=Value}"
 					Visibility="Collapsed"
 					Width="1*"
 					>

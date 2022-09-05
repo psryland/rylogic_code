@@ -1,6 +1,6 @@
 // Scintilla source code edit control
 
-// File: LexTeX.cxx - general context conformant tex coloring scheme
+// @file LexTeX.cxx - general context conformant tex coloring scheme
 // Author: Hans Hagen - PRAGMA ADE - Hasselt NL - www.pragma-ade.com
 // Version: September 28, 2003
 
@@ -23,6 +23,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -34,7 +37,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 // val SCE_TEX_DEFAULT = 0
 // val SCE_TEX_SPECIAL = 1

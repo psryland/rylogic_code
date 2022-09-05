@@ -1,5 +1,5 @@
 // Scintilla source code edit control
-/** @file LexESCRIPT.cxx
+/** @file LexEScript.cxx
  ** Lexer for ESCRIPT
  **/
 // Copyright 2003 by Patrizio Bekerle (patrizio@bekerle.com)
@@ -10,6 +10,9 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
+
+#include <string>
+#include <string_view>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -22,7 +25,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 
 static inline bool IsAWordChar(const int ch) {

@@ -1,5 +1,6 @@
 // Scintilla source code edit control
 // Copyright 1998-2002 by Neil Hodgson <neilh@scintilla.org>
+// @file LexGui4Cli.cxx
 /*
 This is the Lexer for Gui4Cli, included in SciLexer.dll
 - by d. Keletsekis, 2/10/2003
@@ -28,6 +29,9 @@ val SCE_GC_OPERATOR=9
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -39,7 +43,7 @@ val SCE_GC_OPERATOR=9
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 #define debug Platform::DebugPrintf
 
