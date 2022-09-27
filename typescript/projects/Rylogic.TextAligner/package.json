@@ -165,10 +165,10 @@
 									"comment": "2 character comparisons"
 								},
 								{
-									"pattern": "(?<!=)>(?!=)",
+									"pattern": "(?<![=-])>(?!=)",
 									"offset": 0,
 									"minimum_width": 1,
-									"comment": "> not preceded or followed by ="
+									"comment": "> not preceded by =,- or followed by ="
 								},
 								{
 									"pattern": "(?<!=)<(?!=)",

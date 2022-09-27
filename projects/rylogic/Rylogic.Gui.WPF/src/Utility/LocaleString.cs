@@ -105,7 +105,7 @@ namespace Rylogic.Gui.WPF
 		public string? Fallback { get; set;  }
 
 		/// <summary>The localised string value</summary>
-		public string Value => Get(Key, Fallback);
+		public string Value => GetOrDefault(Key, Fallback);
 
 		/// <summary>Conversion to translated string</summary>
 		public static implicit operator string(LocaleString s) => s.Value;
