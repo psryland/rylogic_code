@@ -95,7 +95,7 @@ namespace Rylogic.TextAligner
 					new AlignPattern(EPattern.Substring, @"!=", 0, 2),
 					new AlignPattern(EPattern.Substring, @"<=", 0, 2),
 					new AlignPattern(EPattern.Substring, @">=", 0, 2),
-					new AlignPattern(EPattern.RegularExpression, @"(?<!=)>(?!=)", 0, 1, "> not preceded or followed by ="),
+					new AlignPattern(EPattern.RegularExpression, @"(?<![=-])>(?!=)", 0, 1, "> not preceded by =,- or followed by ="),
 					new AlignPattern(EPattern.RegularExpression, @"(?<!=)<(?!=)", 0, 1, "< not preceded or followed by =")));
 
 				Groups.Add(new AlignGroup("Boolean operators", 1,
