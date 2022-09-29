@@ -62,6 +62,12 @@ javascript/lib/
 javascript/*/dist/
 typescript/**/out/*
 
+android/*/.gradle/
+android/*/build/
+android/*/local.properties
+android/*/.jks
+android/*/.keystore
+
 script/UserVars.py
 RylogicRB.sln
 
