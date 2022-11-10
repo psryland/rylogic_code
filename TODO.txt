@@ -15,15 +15,14 @@ Work:
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
 
-  Exit interview notes:
+Add pr/include/ files to RexLink SDK
+Write a description of the ZR algorithm in 'Documentation'
+Have a session exploring the use of the Session Log Viewer
+Get Xiaochao building the movement editor
 
-  HandOver Notes:
-	- Hand over ownership of GitHub admin
 
   Misc:
 	- Spreadsheet of NewREX comms protocols
-	- Performance review
-	- List of handover topics
 	- Improve MC error codes, shouldn't need to look in code to understand error code.
 	- Text Zero Ref Data - Raise ticket - talk about it with china team
 	- Add a requirement/test case that REX faults when the log SD card is full
@@ -40,7 +39,6 @@ Work:
 
   RexTerminal:
 	- System for creating graphs of data in session logs
-	- Push/pull zero ref values from REX
 
   FirmwareLoader:
 	- Add support for the AS uploader (when its an official device) to allowing programming AS without JTAG
@@ -49,13 +47,11 @@ Work:
   UIv4:
 	- Make Tunes an exported resource
 	- Clean up rxs_AREX_...
-	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
 
   ZeroRef:
 	- Test the ZR process on a left-right see-saw to see what effect that has on the results.
 
   VRex:
-	- Work out why the zero ref position is so different for VRex compared to REX
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
 

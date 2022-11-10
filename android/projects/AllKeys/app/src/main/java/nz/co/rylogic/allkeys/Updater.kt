@@ -1,30 +1,36 @@
 package nz.co.rylogic.allkeys
 
-import android.content.SharedPreferences
 import android.os.Handler
 import java.beans.PropertyChangeSupport
 
 class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 {
+	companion object
+	{
+		const val NOTIFY_CHORD = "chord"
+		const val NOTIFY_BEAT = "beat"
+	}
+
 	private val mHandler: Handler = handler
 	private var mKeys: List<String> = listOf()
 	private var mChords: List<String> = listOf()
 	private var mKeysOrder: MutableList<Int> = mutableListOf()
 	private var mChordsOrder: MutableList<Int> = mutableListOf()
+	private var mBeatsPerBar: Int = 4
+	private var mBarsPerChord: Int = 2
+	private var mBeat: Int = 0
 
 	// Snapshot the settings
-	fun reset(sp: SharedPreferences, period:Double)
+	fun reset(settings: Settings, tempo:Double)
 	{
-		this.period = period
+		this.tempo = tempo
+		this.mBeat = 0
+		this.mBeatsPerBar = settings.beatsPerBar
+		this.mBarsPerChord = settings.barsPerChord
 
 		// Snapshot the settings into lists
-		mKeys = (sp.getStringSet("selected_keys", null) ?: setOf())
-			.map { it.splitIgnoreEmpty(" ", ",") }
-			.flatten()
-		mChords = (sp.getStringSet("selected_chords_std", null) ?: setOf())
-			.union((sp.getString("selected_chords_additional", null) ?: "")
-			.splitIgnoreEmpty(" ", ","))
-			.toList()
+		mKeys = settings.keys
+		mChords = settings.chords
 
 		// Reset the order to empty
 		mKeysOrder = mutableListOf()
@@ -55,11 +61,11 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 		}
 	private var mRunning: Boolean = false
 
-	// The update period in seconds
-	var period: Double
-		get() = mPeriod
-		set(value) { mPeriod = value }
-	private var mPeriod: Double = 0.1
+	// The rate to change chords (in 8x beats/min)
+	var tempo: Double
+		get() = mTempo
+		set(value) { mTempo = value }
+	private var mTempo: Double = 120.0
 
 	// Advance to the next chord
 	fun next(stop:Boolean = true)
@@ -80,10 +86,11 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 		// Update the chord
 		adv(mKeysOrder, mKeys.size)
 		adv(mChordsOrder, mChords.size)
+		mBeat = 0
 
 		// Notify of new values
 		running = !stop
-		notifyUpdated()
+		notifyUpdated(NOTIFY_CHORD)
 	}
 
 	override fun run()
@@ -91,16 +98,23 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 		if (!running)
 			return
 
-		// Advance
-		next(false)
+		// Time for next chord?
+		if (mBeat == mBeatsPerBar * mBarsPerChord)
+			next(false)
+
+		// Notify metronome
+		notifyUpdated(NOTIFY_BEAT,null,mBeat)
+
+		// Beat played
+		++mBeat
 
 		// Schedule the next call
-		val periodMS = (period * 1000L).toLong()
-		mHandler.postDelayed(this, periodMS)
+		var periodS = 60.0 / tempo // seconds / beat
+		mHandler.postDelayed(this, (periodS * 1000).toLong())
 	}
 
-	private fun notifyUpdated()
+	private fun notifyUpdated(prop:String = "", oldValue:Any? = null, newValue:Any? = null)
 	{
-		firePropertyChange("", null, null)
+		firePropertyChange(prop, oldValue, newValue)
 	}
 }

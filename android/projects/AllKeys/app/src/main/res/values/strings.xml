@@ -8,10 +8,18 @@
     <string name="key">-- Key --</string>
     <string name="chord">-- Chord --</string>
     <string name="speed">-- Speed --</string>
+    <string name="general">-- General --</string>
     <string name="choose_keys">Choose Keys</string>
     <string name="next">Next</string>
     <string name="no_key">---</string>
     <string name="no_chord">---</string>
     <string name="choose_chords">Choose Chords</string>
     <string name="additional_chords">Additional Chords</string>
+    <string name="play_root_notes">Play Root Notes</string>
+    <string name="metronome_sound">Metronome Sound</string>
+    <string name="custom_chord_names">Custom Chord Names</string>
+    <string name="add_custom_chords">Add Custom Chords</string>
+    <string name="custom_chords">Custom Chords</string>
+    <string name="tempo">-- Tempo --</string>
+    <string name="no_tempo">---</string>
 </resources>
