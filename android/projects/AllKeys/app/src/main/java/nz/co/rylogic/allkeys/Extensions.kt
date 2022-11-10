@@ -11,9 +11,9 @@ fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String>
 }
 
 // Set the summary for a MultiSelectListPreference
-fun MultiSelectListPreference.setSummaryFrom(values:HashSet<String>?, sep:String)
+fun MultiSelectListPreference.setSummaryFrom(values:HashSet<String>, sep:String)
 {
-	this.summary = (values ?: this.values)
+	this.summary = values
 		.map { this.findIndexOfValue(it) }
 		.filter { it != -1 }
 		.joinToString(sep) { this.entries[it] }

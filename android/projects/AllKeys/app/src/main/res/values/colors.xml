@@ -8,4 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="panel_background">#EEE</color>
+    <color name="metronome_beat1">#CAA</color>
+    <color name="metronome_beat0">#CCC</color>
 </resources>

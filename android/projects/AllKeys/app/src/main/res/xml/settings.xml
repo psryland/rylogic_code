@@ -17,22 +17,34 @@
         android:title="@string/chord"
         >
         <MultiSelectListPreference
-            android:key="selected_chords_std"
-            android:entries="@array/chords"
-            android:entryValues="@array/chords"
+            android:key="selected_chords"
             android:defaultValue="@array/chords_defaults"
             android:title="@string/choose_chords"
             />
         <EditTextPreference
-            android:key="selected_chords_additional"
-            android:defaultValue="dom7 m7 maj7 alt"
+            android:key="custom_chords"
+            android:defaultValue=""
             android:selectAllOnFocus="false"
             android:singleLine="false"
-            android:title="@string/additional_chords"
+            android:title="@string/custom_chord_names"
             app:useSimpleSummaryProvider="true"
             />
      </PreferenceCategory>
-
+    <PreferenceCategory
+        android:title="@string/general"
+        >
+        <SwitchPreference
+            android:key="play_root_note"
+            android:title="@string/play_root_notes"
+            />
+        <SwitchPreference
+            android:key="metronome_sound"
+            android:title="@string/metronome_sound"
+            />
+    </PreferenceCategory>
 </PreferenceScreen>
     <!--
+            android:entries="@array/chords"
+            android:entryValues="@array/chords"
+            android:defaultValue="@array/chords_defaults"
     -->
