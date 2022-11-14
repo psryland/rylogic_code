@@ -73,6 +73,14 @@ def SetupUserVars(workspace:str, name:str, ignore_missing:bool):
 	pwsh1_path = os.path.join(os.environ["SYSTEMROOT"], "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
 	pwsh_path = CheckPath(pwsh7_path if os.path.exists(pwsh7_path) else pwsh1_path, "PowerShell")
 
+	# Pull Nuget if missing
+	getnuget_path = os.path.abspath(os.path.join(workspace, "tools", "nuget", "_get_nuget.py"))
+	subprocess.check_call(["python.exe", getnuget_path])
+	nuget_path0 = os.path.abspath(os.path.join(workspace, "tools", "nuget", "nuget.exe"))
+	nuget_path = CheckPath(
+		nuget_path0 if os.path.exists(nuget_path0) else
+		"", "Nuget command line tool")
+
 	# Escape back slashes in paths
 	def Escape(s:str):
 		return '"' + s.replace('\\', '\\\\') + '"' if s else "None"
@@ -93,6 +101,7 @@ def SetupUserVars(workspace:str, name:str, ignore_missing:bool):
 		if tag == "VC_VERS":               return Escape(vc_vers)
 		if tag == "GIT_PATH":              return Escape(git_path)
 		if tag == "POWERSHELL_PATH":       return Escape(pwsh_path)
+		if tag == "NUGET_PATH":            return Escape(nuget_path)
 		if tag == "NUGET_API_KEY":         return "None"
 		if tag == "CODE_SIGN_CERT_PATH":   return "None"
 		if tag == "ANDROID_SDK_DIRECTORY": return "None"
