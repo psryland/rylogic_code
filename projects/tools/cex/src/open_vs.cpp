@@ -14,6 +14,8 @@
 
 namespace cex
 {
+	template <typename T> using Ptr = pr::RefPtr<T>;
+
 	OpenVS::OpenVS()
 		:m_file()
 		,m_line(0)
@@ -48,7 +50,9 @@ namespace cex
 
 	int OpenVS::Run()
 	{
-		using namespace ATL;
+		volatile bool todo = true;
+		if (todo)
+			throw std::runtime_error("This needs updating... if it's being used..");
 
 		HRESULT result;
 		CLSID clsid;
@@ -57,33 +61,36 @@ namespace cex
 			result = ::CLSIDFromProgID(L"VisualStudio.DTE.8.0", &clsid);
 			if (FAILED(result)) break;
 
-			CComPtr<IUnknown> punk;
-			result = ::GetActiveObject(clsid, NULL, &punk);
+			Ptr<IUnknown> punk;
+			result = ::GetActiveObject(clsid, NULL, &punk.m_ptr);
 			if (FAILED(result)) break;
 
-			CComPtr<EnvDTE::_DTE> DTE;
+			Ptr<EnvDTE::_DTE> DTE;
 			DTE = punk;
 
-			CComPtr<EnvDTE::ItemOperations> item_ops;
-			result = DTE->get_ItemOperations(&item_ops);
+			Ptr<EnvDTE::ItemOperations> item_ops;
+			result = DTE->get_ItemOperations(&item_ops.m_ptr);
 			if (FAILED(result)) break;
 
-			CComBSTR bstrFileName(m_file.c_str());
-			CComBSTR bstrKind(EnvDTE::vsViewKindTextView);
-			CComPtr<EnvDTE::Window> window;
-			result = item_ops->OpenFile(bstrFileName, bstrKind, &window);
+			auto filepath = m_file.wstring();
+			auto view_kind = pr::Widen(EnvDTE::vsViewKindTextView);
+			BSTR bstrFileName = ::SysAllocStringLen(filepath.c_str(), UINT(filepath.size()));
+			BSTR bstrKind = ::SysAllocStringLen(view_kind.c_str(), UINT(view_kind.size()));
+			Ptr<EnvDTE::Window> window;
+			result = item_ops->OpenFile(bstrFileName, bstrKind, &window.m_ptr);
+			if (FAILED(result))
+				break;
+
+			Ptr<EnvDTE::Document> doc;
+			result = DTE->get_ActiveDocument(&doc.m_ptr);
 			if (FAILED(result)) break;
 
-			CComPtr<EnvDTE::Document> doc;
-			result = DTE->get_ActiveDocument(&doc);
+			Ptr<IDispatch> selection_dispatch;
+			result = doc->get_Selection(&selection_dispatch.m_ptr);
 			if (FAILED(result)) break;
 
-			CComPtr<IDispatch> selection_dispatch;
-			result = doc->get_Selection(&selection_dispatch);
-			if (FAILED(result)) break;
-
-			CComPtr<EnvDTE::TextSelection> selection;
-			result = selection_dispatch->QueryInterface(&selection);
+			Ptr<EnvDTE::TextSelection> selection;
+			result = selection_dispatch->QueryInterface(&selection.m_ptr);
 			if (FAILED(result)) break;
 
 			result = selection->GotoLine(m_line, TRUE);

@@ -19,8 +19,6 @@
 #include <windows.h>
 #include <process.h>
 #include <shlobj.h>
-#include <atlbase.h>
-#include <atlcomcli.h>
 #include <fcntl.h>
 #include <io.h>
 #include <shellapi.h>

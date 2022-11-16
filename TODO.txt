@@ -1,6 +1,10 @@
 Immediate ToDo:
 
-Work:
+Microsoft:
+    - Fill in Judy Wheeler's "Baseball Card"
+    - Reply to the Insurance Email
+    
+Rex Bionics:
   Change Review Board:
 	ECN - REX-10067 - Release of REX v2.56
 	ECN - REX-10165 - Log Hard Fault Exceptions
@@ -15,10 +19,10 @@ Work:
 		- No requirements or test cases... :(
 		- Needs stage 1,2, etc
 
-Add pr/include/ files to RexLink SDK
-Write a description of the ZR algorithm in 'Documentation'
-Have a session exploring the use of the Session Log Viewer
-Get Xiaochao building the movement editor
+    Add pr/include/ files to RexLink SDK
+    Write a description of the ZR algorithm in 'Documentation'
+    Have a session exploring the use of the Session Log Viewer
+    Get Xiaochao building the movement editor
 
 
   Misc:
