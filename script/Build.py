@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Notes:
@@ -197,7 +197,8 @@ class Native(Common):
 		self.platforms = platforms if platforms else ["x64", "x86"]
 		self.configs = configs if configs else ["Release", "Debug"]
 		self.rylogic_sln = Tools.Path(workspace, "build/rylogic.sln")
-		self.obj_dir = Tools.Path(workspace, "obj", UserVars.platform_toolset)
+		self.obj_dir = Tools.Path(workspace, "obj", UserVars.platform_toolset, check_exists=False)
+		os.makedirs(self.obj_dir, exist_ok=True)
 		return
 
 	def Clean(self):
@@ -209,7 +210,8 @@ class NativeSDKDll(Native):
 	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, proj_name, workspace, platforms, configs)
 		self.proj_dir = Tools.Path(workspace, "sdk", self.proj_name)
-		self.obj_dir = Tools.Path(self.proj_dir, "obj", UserVars.platform_toolset)
+		self.obj_dir = Tools.Path(self.proj_dir, "obj", UserVars.platform_toolset, check_exists=False)
+		os.makedirs(self.obj_dir, exist_ok=True)
 		return
 
 	def Build(self):

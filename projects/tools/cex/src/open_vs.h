@@ -9,7 +9,7 @@ namespace cex
 {
 	struct OpenVS :ICex
 	{
-		std::string  m_file;   // File to open
+		std::filesystem::path m_file;   // File to open
 		unsigned int m_line;   // Line number to go to
 
 		OpenVS();
