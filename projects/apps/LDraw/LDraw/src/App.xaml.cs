@@ -37,7 +37,7 @@ namespace LDraw
 			{
 				if (Debugger.IsAttached) throw;
 				Log.Write(ELogLevel.Fatal, ex, Util.AppProductName, string.Empty, 0);
-				MsgBox.Show(null, $"Application startup failure: {ex.MessageFull()}", "Solar Hot Water", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+				MsgBox.Show(null, $"Application startup failure: {ex.MessageFull()}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Error);
 				Shutdown();
 			}
 		}
