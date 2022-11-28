@@ -29,6 +29,9 @@ namespace LDraw
 			Scenes = new ObservableCollection<SceneUI>();
 			Scripts = new ObservableCollection<ScriptUI>();
 			Assets = new ObservableCollection<AssetUI>();
+
+			// Ensure the temperary script directory exists
+			Path_.CreateDirs(TempScriptDirectory);
 		}
 		public void Dispose()
 		{
