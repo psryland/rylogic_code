@@ -41,6 +41,7 @@ class EProjects(Enum):
 	Csex = "Csex"
 	LDraw = "LDraw"
 	RyLogViewer = "RyLogViewer"
+	CoinFlip = "CoinFlip"
 	SolarHotWater = "SolarHotWater"
 	TimeTracker = "TimeTracker"
 	RylogicTextAligner = "Rylogic.TextAligner"
@@ -52,7 +53,7 @@ class EProjects(Enum):
 	# Print all available projects
 	@staticmethod
 	def ListProjects():
-		for elem in filter(lambda x: not x.startswith('__'), vars(EProjects)):
+		for elem in filter(lambda x: not x.startswith('_') and x != 'ListProjects', vars(EProjects)):
 			print(elem)
 		return
 
@@ -519,6 +520,74 @@ class RyLogViewer(Managed):
 		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing to web site...")
 		Tools.Copy(self.msi, Tools.Path(UserVars.wwwroot, "files/rylogviewer", check_exists=False))
+		return
+
+# CoinFlip
+class CoinFlip(Managed):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		Managed.__init__(self, "CoinFlip", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects\\apps", self.proj_name)
+		self.platforms = ["x64"]
+		return
+
+	def Clean(self):
+		CleanDotNet(Tools.Path(self.proj_dir, "CoinFlip.Model", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "CoinFlip.UI", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "ExchApi.Common", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "ExchApi.Binance", check_exists=False), self.platforms, self.configs)
+		CleanDotNet(Tools.Path(self.proj_dir, "Bot.Arbitrage", check_exists=False), self.platforms, self.configs)
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\CoinFlip\\ExchApi.Common"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\CoinFlip\\ExchApi.Binance"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\CoinFlip\\CoinFlip.Model"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\CoinFlip\\CoinFlip.UI"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		# Check versions
+		version = Tools.Extract(Tools.Path(self.proj_dir, "CoinFlip.UI\CoinFlip.UI.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying CoinFlip Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = Tools.Path(UserVars.root, "bin/CoinFlip", check_exists=False)
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = Tools.Path(self.proj_dir, "CoinFlip.UI/bin/Release", self.frameworks[0])
+		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.exe"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.runtimeconfig.json"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "CoinFlip.Model.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "ExchApi.Common.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "ExchApi.Binance.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Core.Windows.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Gui.WPF.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.Net.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Rylogic.View3d.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "System.Data.SQLite.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Dapper.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "Newtonsoft.Json.dll"), self.bin_dir)
+		Tools.Copy(Tools.Path(target_dir, "lib"), Tools.Path(self.bin_dir, "lib", check_exists=False))
+
+		# Build the installer
+		if False:
+			print("Building installer...\n")
+			self.installer_wxs = Tools.Path(self.proj_dir, "installer", "installer.wxs")
+			self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
+				Tools.Path(self.bin_dir, ".."),
+				[
+					["binaries", "INSTALLFOLDER", ".", False,
+						r"LDraw\..*\.dll",
+						r"Rylogic\..*\.dll",
+						r"ICSharpCode.AvalonEdit.dll",
+					],
+					["lib_files", "lib", "lib", True],
+				])
+			print(f"{self.msi} created.\n")
 		return
 
 # Solar Hot Water
