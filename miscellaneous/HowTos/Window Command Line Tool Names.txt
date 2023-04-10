@@ -1,5 +1,0 @@
-Control Panel = control.exe
-Device Manager = devmgmt.msc
-Windows 10 Settings = ms-settings:
-Resource Monitor = resmon.exe
-Disk Management = diskmgmt.msc
