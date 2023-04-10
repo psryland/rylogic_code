@@ -1,3 +1,0 @@
-Go to Tools->Extension Manager
-Search for Disable Mouse Wheel Zoom
-Download and install
