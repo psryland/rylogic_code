@@ -266,6 +266,7 @@
 #include "pr\network\bluetooth_ui.h"
 #include "pr\network\email.h"
 #include "pr\network\pipe.h"
+#include "pr\network\pipe2.h"
 #include "pr\network\sockets.h"
 #include "pr\network\tcpip.h"
 #include "pr\network\web_get.h"
