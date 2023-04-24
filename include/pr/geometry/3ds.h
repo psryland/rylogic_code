@@ -8,7 +8,8 @@
 #include <iostream>
 #include <deque>
 #include <memory>
-#include <exception>
+#include <stdexcept>
+#include <cstdint>
 #include <cassert>
 #include "pr/macros/enum.h"
 #include "pr/common/cast.h"
@@ -22,10 +23,10 @@
 // See: http://www.the-labs.com/Blender/3DS-details.html
 namespace pr::geometry::max_3ds
 {
-	typedef unsigned char  u8;  static_assert(sizeof(u8)  == 1, "3DS format specifies char as 1 byte");
-	typedef unsigned short u16; static_assert(sizeof(u16) == 2, "3DS format specifies short as 2 bytes");
-	typedef unsigned int   u32; static_assert(sizeof(u32) == 4, "3DS format specifies long as 4 bytes");
-	typedef unsigned long long u64; static_assert(sizeof(u64) == 8, "3DS format specifies long long as 8 bytes");
+	using u8 = uint8_t;  static_assert(sizeof(u8)  == 1);
+	using u16 = uint16_t; static_assert(sizeof(u16) == 2);
+	using u32 = uint32_t; static_assert(sizeof(u32) == 4);
+	using u64 = uint64_t; static_assert(sizeof(u64) == 8);
 
 	#pragma region Chunk Ids
 	#define PR_ENUM(x)\
@@ -238,7 +239,7 @@ namespace pr::geometry::max_3ds
 		template <typename TOut> static void Read(TSrc& src, TOut* out, size_t count)
 		{
 			if (src.read(char_ptr(out), count * sizeof(TOut))) return;
-			throw std::exception("partial read of input stream");
+			throw std::runtime_error("partial read of input stream");
 		}
 	};
 
@@ -257,7 +258,7 @@ namespace pr::geometry::max_3ds
 		{
 			TOut out;
 			Read(src, &out, 1);
-			return out;
+			return std::move(out);
 		}
 
 		// Generic chunk reading function
@@ -273,7 +274,7 @@ namespace pr::geometry::max_3ds
 
 				// Read the chunk header
 				auto hdr = Read<ChunkHeader>(src);
-				if (hdr.length <= len) len -= hdr.length; else throw std::exception(FmtS("invalid chunk found at offset 0x%X", start));
+				if (hdr.length <= len) len -= hdr.length; else throw std::runtime_error(FmtS("invalid chunk found at offset 0x%X", start));
 				u32 data_len = hdr.length - sizeof(ChunkHeader);
 
 				// Parse the chunk
@@ -295,7 +296,7 @@ namespace pr::geometry::max_3ds
 		//{
 		//	TOut out = Read<TOut>(src);
 		//	if (Src<TSrc>::SeekRel(src, -int(sizeof(TOut)))) return out;
-		//	throw std::exception("seek failed on input stream");
+		//	throw std::runtime_error("seek failed on input stream");
 		//}
 
 		// Search from the current stream position to the next instance of chunk 'id'.
@@ -342,7 +343,7 @@ namespace pr::geometry::max_3ds
 		{
 			auto hdr = Read<ChunkHeader>(src);
 			switch (hdr.id) {
-			default: throw std::exception(FmtS("Unknown chunk id: %4.4x. Expected a colour chunk", hdr.id));
+			default: throw std::runtime_error(FmtS("Unknown chunk id: %4.4x. Expected a colour chunk", hdr.id));
 			case EChunkId::ColorF: //float red, grn, blu;
 			case EChunkId::LinColorF: //float red, grn, blu;
 				{
@@ -434,7 +435,7 @@ namespace pr::geometry::max_3ds
 		{
 			size_t count = Read<u16>(src);
 			auto face_data_size = sizeof(u16) + count * sizeof(Face);
-			if (len >= face_data_size) len -= u32(face_data_size); else throw std::exception("invalid face list data");
+			if (len >= face_data_size) len -= u32(face_data_size); else throw std::runtime_error("invalid face list data");
 
 			// Read the face indices
 			mesh.m_face.resize(count);
@@ -548,7 +549,7 @@ namespace pr::geometry::max_3ds
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);
 		if (main.id != EChunkId::Main)
-			throw std::exception("Source is not a 3ds stream");
+			throw std::runtime_error("Source is not a 3ds stream");
 
 		// Find the M3DEditor sub chunk
 		auto editor = impl::Find(EChunkId::M3DEditor, src, main.length - sizeof(ChunkHeader));
@@ -570,7 +571,7 @@ namespace pr::geometry::max_3ds
 	}
 
 	// Extract the objects from a 3DS stream
-	// 'out_out' should return true to stop searching (i.e. object found)
+	// 'obj_out' should return true to stop searching (i.e. object found)
 	template <typename TSrc, typename TObjOut> void ReadObjects(TSrc& src, TObjOut obj_out)
 	{
 		using namespace pr::geometry::max_3ds;
@@ -582,7 +583,7 @@ namespace pr::geometry::max_3ds
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);
 		if (main.id != EChunkId::Main)
-			throw std::exception("Source is not a 3ds model");
+			throw std::runtime_error("Source is not a 3ds model");
 
 		// Find the M3DEditor sub chunk
 		auto editor = impl::Find(EChunkId::M3DEditor, src, main.length - sizeof(ChunkHeader));
@@ -610,9 +611,9 @@ namespace pr::geometry::max_3ds
 	{
 		// Validate 'obj'
 		if (!obj.m_mesh.m_uv.empty() && obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
-			throw std::exception("invalid 3DS object. Number of UVs != number of verts");
+			throw std::runtime_error("invalid 3DS object. Number of UVs != number of verts");
 		if (obj.m_mesh.m_face.size() != obj.m_mesh.m_smoothing_groups.size())
-			throw std::exception("invalid 3DS object. Number of faces != number of smoothing groups");
+			throw std::runtime_error("invalid 3DS object. Number of faces != number of smoothing groups");
 
 		// Can't just output the verts directly.
 		// In a max model verts can have multiple normals.
