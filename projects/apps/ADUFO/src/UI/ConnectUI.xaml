@@ -20,6 +20,7 @@
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
@@ -62,9 +63,26 @@
 				/>
 		</StackPanel>
 
-		<!-- Access Token -->
+		<!-- Project -->
 		<StackPanel
 			Grid.Row="2"
+			Orientation="Vertical"
+			>
+			<TextBlock
+				Text="Project: "
+				Margin="3"
+				/>
+			<TextBox
+				Text="{Binding Project, UpdateSourceTrigger=PropertyChanged}"
+				VerticalContentAlignment="Center"
+				MinHeight="26"
+				Margin="8,3,16,3"
+				/>
+		</StackPanel>
+
+		<!-- Access Token -->
+		<StackPanel
+			Grid.Row="3"
 			Orientation="Vertical"
 			>
 			<TextBlock
@@ -81,7 +99,7 @@
 		
 		<!-- Buttons -->
 		<StackPanel
-			Grid.Row="4"
+			Grid.Row="5"
 			Orientation="Horizontal"
 			HorizontalAlignment="Right"
 			>

@@ -30,6 +30,20 @@ public partial class ConnectUI : Window, INotifyPropertyChanged
 	}
 	private string m_organization = string.Empty;
 
+	/// <summary>The ADO project</summary>
+	public string Project
+	{
+		get => m_project;
+		set
+		{
+			if (m_project == value) return;
+			m_project = value;
+			NotifyPropertyChanged(nameof(Project));
+			NotifyPropertyChanged(nameof(AdoUrl));
+		}
+	}
+	private string m_project = string.Empty;
+
 	/// <summary>The access token for ADO</summary>
 	public string PersonalAccessToken
 	{
@@ -44,7 +58,7 @@ public partial class ConnectUI : Window, INotifyPropertyChanged
 	private string m_personal_access_token = string.Empty;
 
 	/// <summary>The ADO URL</summary>
-	public string AdoUrl => $"https://dev.azure.com/{Organization}";
+	public string AdoUrl => $"https://dev.azure.com/{Organization}/{Project}";
 
 	/// <summary>Accept action</summary>
 	public Command Accept { get; }
