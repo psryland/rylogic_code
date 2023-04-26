@@ -47,7 +47,7 @@ namespace pr
 	//    need to use std::decay_t when using traits)
 
 	// The largest code point defined in unicode 6.0
-	constexpr int UnicodeMaxValue = 0x10FFFF;
+	inline constexpr int UnicodeMaxValue = 0x10FFFF;
 
 	// A static instance of the locale, because this thing takes ages to construct
 	inline std::locale const& locale()
