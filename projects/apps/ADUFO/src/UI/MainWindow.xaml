@@ -4,12 +4,166 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF" xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="ADUFO"
-	Height="450"
-	Width="800"
+	Height="850"
+	Width="1000"
 	>
-	<Grid>
+	<Window.Resources>
+		<BitmapImage x:Key="connect0" UriSource="/ADUFO;component/res/disconnected.png" />
+		<BitmapImage x:Key="connect1" UriSource="/ADUFO;component/res/connected.png" />
+		<BitmapImage x:Key="scatter0" UriSource="/ADUFO;component/res/scatter0.png" />
+		<BitmapImage x:Key="scatter1" UriSource="/ADUFO;component/res/scatter1.png" />
+		<BitmapImage x:Key="refresh" UriSource="/ADUFO;component/res/refresh.png" />
 
+	</Window.Resources>
+	<!--
+	<Window.InputBindings>
+		<KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewMMapData}"/>
+		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding LoadMMapData}"/>
+		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveMMapData}"/>
+		<KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding SaveAsMMapData}"/>
+		<KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding CloseMMapData}"/>
+	</Window.InputBindings>
+	-->
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Main Menu -->
+		<Menu
+			Grid.Row="0"
+			x:Name="m_menu"
+			Padding="3"
+			>
+			<Menu.ItemsPanel>
+				<ItemsPanelTemplate>
+					<DockPanel HorizontalAlignment="Left"/>
+				</ItemsPanelTemplate>
+			</Menu.ItemsPanel>
+
+			<!-- File Menu -->
+			<MenuItem Header="_File">
+				<MenuItem Header="_Connection..."
+					Command="{Binding ShowConnectionUI}"
+					/>
+				<Separator/>
+				<MenuItem Header="_Options..."
+					Command="{Binding ShowSettingsUI}"
+					/>
+				<Separator/>
+				<gui:RecentFilesMenuItem
+					Header= "_Recent Files"
+					Name="m_recent_files"
+					/>
+				<Separator/>
+				<MenuItem Header="E_xit"
+					Command="{Binding Exit}"
+					/>
+			</MenuItem>
+
+			<!-- Help Menu -->
+			<MenuItem Header="_Help">
+				<MenuItem Header="_About"
+					Command="{Binding ShowAboutUI}"
+					/>
+			</MenuItem>
+		</Menu>
+		
+		<!-- Tool bar -->
+		<ToolBarTray
+			Grid.Row="1"
+			>
+			<!-- Connect -->
+			<ToolBar
+				Height="30"
+				>
+				<!-- Connect Button -->
+				<Button
+					Command="{Binding ToggleConnection}"
+					>
+					<StackPanel
+						Orientation="Horizontal"
+						>
+						<Image
+							Source="{Binding IsConnected, Converter={conv:BoolSelect}, ConverterParameter='connect1|connect0' }"
+							RenderOptions.BitmapScalingMode="Fant"
+							Height="18"
+						/>
+						<TextBlock
+							Text="{Binding IsConnected, Converter={conv:BoolSelect}, ConverterParameter='Connected|Connect'}"
+							Margin="2,0,0,0"
+							/>
+					</StackPanel>
+				</Button>
+
+				<!-- Refresh Button -->
+				<Button
+					Command="{Binding Refresh}">
+					<StackPanel
+						Orientation="Horizontal"
+						>
+						<Image
+							Source="{StaticResource refresh}"
+							RenderOptions.BitmapScalingMode="Fant"
+							Height="18"
+							/>
+						<TextBlock
+							Text="Refresh"
+							Margin="2,0,0,0"
+							/>
+					</StackPanel>
+				</Button>
+			</ToolBar>
+			
+			<!-- Actions -->
+			<ToolBar
+				Height="30"
+				>
+				<Button
+					Command="{Binding ToggleScattering}"
+					>
+					<StackPanel
+						Orientation="Horizontal"
+						>
+						<Image
+							Source="{Binding IsScattering, Converter={conv:BoolSelect}, ConverterParameter='scatter1|scatter0'}"
+							RenderOptions.BitmapScalingMode="Fant"
+							Height="18"
+							/>
+						<TextBlock
+							Text="{Binding IsScattering, Converter={conv:BoolSelect}, ConverterParameter='Scattering|Fixed'}"
+							Margin="2,0,0,0"
+							/>
+					</StackPanel>
+				</Button>
+				<Button
+					Content="TEST"
+					Command="{Binding DoTest}"
+					/>
+			</ToolBar>
+		</ToolBarTray>
+		
+		<!-- Dock Container -->
+		<gui:DockContainer
+			Grid.Row="2"
+			x:Name="m_dc"
+			/>
+
+		<!-- Status Bar -->
+		<StatusBar
+			Grid.Row="3"
+			>
+			<StatusBarItem>
+				<TextBlock
+					Text="{Binding CameraDescription}"
+					/>
+			</StatusBarItem>
+		</StatusBar>
 	</Grid>
 </Window>
