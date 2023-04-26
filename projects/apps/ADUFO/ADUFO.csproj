@@ -40,6 +40,14 @@
 		<ProjectReference Include="..\..\rylogic\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
 
+	<!-- Packages -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="7.0.5" />
+		<PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.205.1" />
+		<PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="16.205.1" />
+		<PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.205.1" />
+	</ItemGroup>
+
 	<!-- Dependencies -->
 	<ItemGroup>
 		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
@@ -60,11 +68,6 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		-->
-	</ItemGroup>
-	<ItemGroup>
-	  <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.205.1" />
-	  <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="16.205.1" />
-	  <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.205.1" />
 	</ItemGroup>
 
 </Project>
