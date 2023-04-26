@@ -17,6 +17,31 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
+#
+# HowTo debug:
+#  - In Blender,
+#     - Delete your addon if you've added it manually
+#     - Set the 'Scripts' path (in preferences, File Paths) to '\Rylogic\art\blender'
+#     - Restart blender
+#     - Enable: 'Import-Export: Rylogic P3D Exporter' in Preferences->Add-ons
+#  - In Github,
+#     - Download zip from https://github.com/alanscodelog/blender-debugger-for-vscode
+#     - Follow the README.md instructions:
+#        - Install: pip install debugpy
+#        - In Blender,
+#           - Preferences->Add-ons->Install, select the zip 'blender-debugger-for-vscode-master.zip'
+#           - Ensure 'Development: Debugger for VS Code' is checked
+#           - Expand it and check 'Location of debugpy (site-packages folder):'. It should be something like:
+#             'C:\Users\paulryland\AppData\Roaming\Python\Python311\site-packages\debugpy' (no trailing \).
+#           - Check Preferences->Interface->Display->Developer Extras is on
+#           - F3(search)->'Debug: Start Debugging' - notice the command window says "Waiting... (on part 5678)"
+#        - In VSCode,
+#           - Open in VSCode the folder 'Rylogic\art\blender\addons\<your addon>'
+#           - In the Debug section, add a configuration for 'Python: Remote Attach' to localhost:5678
+#           - Hit run to connect to the waiting debugger
+#
+#  Your have to reload the addon after each edit
+# 
 
 bl_info = {
 	'name': 'Rylogic P3D Exporter',
@@ -33,6 +58,7 @@ bl_info = {
 
 import os, math, struct, shutil
 import bpy, bmesh, mathutils
+from typing import List
 
 # ExportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -300,7 +326,7 @@ class Mesh():
 			mat = mesh.materials[mat_idx] if mat_idx < len(mesh.materials) else {"name":"null"} # bpy.data.materials[0]
 
 			# Save a nugget for the geometry that uses this material
-			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride, vidx=vidx)
+			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat['name'], stride=stride, vidx=vidx)
 			self.nuggets.append(nugget)
 
 		# Object transform
@@ -864,7 +890,6 @@ class P3D():
 		self.data += struct.pack("<I", value)
 		return hdr.ChunkSize
 
-
 class ExportP3D(Operator, ExportHelper):
 	"""Export a Rylogic model file"""
 
@@ -903,6 +928,8 @@ class ExportP3D(Operator, ExportHelper):
 		if bpy.context != 'OBJECT':
 			bpy.ops.object.mode_set(mode='OBJECT')
 
+		breakpoint()
+
 		# Get the evaluated dependency graph. This ensures all modifiers
 		# etc are applied. The mode for the deps graph is 'VIEWPORT', ideally
 		# 'RENDER' would be better, but that isn't implemented yet.
@@ -924,7 +951,7 @@ class ExportP3D(Operator, ExportHelper):
 		return {'FINISHED'}
 
 	# Copy exported textures to a folder named to match the exported model
-	def CopyTextures(self, texture_filepaths:[str]):
+	def CopyTextures(self, texture_filepaths:List[str]):
 
 		# The directory that the blend file is in
 		model_dir = os.path.dirname(bpy.data.filepath)
