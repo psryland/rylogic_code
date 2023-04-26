@@ -325,8 +325,8 @@ namespace Rylogic.Gfx
 				return View3D_MouseBtnToNavOp(mk);
 			}
 
-			/// <summary></summary>
-			private string Description => $"{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}";
+			/// <summary>The camera status as a description</summary>
+			public string Description => $"{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}";
 
 			#region Equals
 			public static bool operator ==(Camera? lhs, Camera? rhs)
