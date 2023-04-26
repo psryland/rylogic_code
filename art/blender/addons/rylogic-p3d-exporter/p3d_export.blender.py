@@ -1,3 +1,7 @@
+#
+# I THINK THIS MIGHT BE OLD.
+# THE CODE IN __INIT__.PY IS MORE UP TO DATE.
+#
 import bpy
 import struct
 
