@@ -10,6 +10,7 @@ try:
 	#sys.argv=["", "P:\\pr\\projects\\rylogic\\Rylogic.Core\\bin\\Debug\\netstandard2.0\\Rylogic.Core.dll"]
 	#print(str(sys.argv))
 	Tools.UnitTest(sys.argv[1], [], True)
+	pass
 
 except Exception as ex:
 	Tools.OnException(ex)

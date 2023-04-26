@@ -91,7 +91,7 @@ namespace pr
 		static constexpr Vec3 YAxis()   { return Vec3(S(0), S(1), S(0)); }
 		static constexpr Vec3 ZAxis()   { return Vec3(S(0), S(0), S(1)); }
 		static constexpr Vec3 One()     { return Vec3(S(1), S(1), S(1)); }
-		static constexpr Vec3 TinyF()   { return Vec3(tiny<S>, tiny<S>, tiny<S>); }
+		static constexpr Vec3 TinyF()   { return Vec3(maths::tiny<S>, maths::tiny<S>, maths::tiny<S>); }
 		static constexpr Vec3 Min()     { return Vec3(limits<S>::min(), limits<S>::min(), limits<S>::min()); }
 		static constexpr Vec3 Max()     { return Vec3(limits<S>::max(), limits<S>::max(), limits<S>::max()); }
 		static constexpr Vec3 Lowest()  { return Vec3(limits<S>::lowest(), limits<S>::lowest(), limits<S>::lowest()); }

@@ -255,7 +255,7 @@ private:\
 		else if constexpr (std::is_same_v<Char, wchar_t>)\
 			return lhs.size() == rhs.size() && _wcsnicmp(lhs.data(), rhs.data(), lhs.size()) == 0;\
 		else\
-			static_assert(dependant_false<Char>, "Case insensitive compare not defined for this string type");\
+			static_assert(!sizeof(Char*), "Case insensitive compare not defined for this string type");\
 	}\
 };\
 \

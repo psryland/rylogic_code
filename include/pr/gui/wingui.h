@@ -84,7 +84,7 @@ namespace pr
 		// Id's should be in the range [0,0xffff] because they are sometimes
 		// represented by a 'ushort'. Auto size/positioning also packs a int32
 		// with flags and the control id.
-		static int const ID_UNUSED = 0x0000FFFF;
+		inline constexpr int ID_UNUSED = 0x0000FFFF;
 
 		// Addition message ids
 		enum
@@ -2528,30 +2528,30 @@ namespace pr
 		namespace auto_size_position
 		{
 			// The mask for auto positioning control bits
-			static int const AutoPosMask = int(0xFF000000);
+			inline constexpr int AutoPosMask = int(0xFF000000);
 
 			// The mask for auto sizing control bits
-			static int const AutoSizeMask = int(0xF0000000);
+			inline constexpr int AutoSizeMask = int(0xF0000000);
 
 			// Used as a size value, Fill means expand w,h to match parent, Auto means resize to suit content
-			static int const Dflt = int(CW_USEDEFAULT); // 0x80000000
-			static int const Fill = int(0x90000000);
-			static int const Auto = int(0xA0000000);
+			inline constexpr int Dflt = int(CW_USEDEFAULT); // 0x80000000
+			inline constexpr int Fill = int(0x90000000);
+			inline constexpr int Auto = int(0xA0000000);
 
 			// The mask for the control id
-			static int const IdMask = int(0x0000FFFF);
+			inline constexpr int IdMask = int(0x0000FFFF);
 			static_assert((ID_UNUSED & IdMask) == ID_UNUSED, "");
 
 			// The X,Y coord of the control being positioned. Note: 'Dflt' can be used for position as well
-			static int const Left   = int(0x81000000);
-			static int const Right  = int(0x82000000);
-			static int const Centre = int(0x83000000);
+			inline constexpr int Left   = int(0x81000000);
+			inline constexpr int Right  = int(0x82000000);
+			inline constexpr int Centre = int(0x83000000);
 
 			// The X coord of the reference control to align to
-			static int const LeftOf   = int(0x84000000);
-			static int const RightOf  = int(0x88000000);
-			static int const CentreOf = int(0x8C000000);
-			static int const CentreP  = Centre | CentreOf;
+			inline constexpr int LeftOf   = int(0x84000000);
+			inline constexpr int RightOf  = int(0x88000000);
+			inline constexpr int CentreOf = int(0x8C000000);
+			inline constexpr int CentreP  = Centre | CentreOf;
 
 			// True if 'x' contains auto position information (where 'x' is x or y)
 			inline bool IsAutoPos(int x)
@@ -3440,7 +3440,7 @@ namespace pr
 			decltype(std::placeholders::_3) const _3{};
 			decltype(std::placeholders::_4) const _4{};
 
-			static int const ID_UNUSED = pr::gui::ID_UNUSED;
+			static constexpr int ID_UNUSED = pr::gui::ID_UNUSED;
 
 			#pragma region Auto Size Position
 			static auto const AutoPosMask  = auto_size_position::AutoPosMask;

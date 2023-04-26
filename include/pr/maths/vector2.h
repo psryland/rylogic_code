@@ -78,7 +78,7 @@ namespace pr
 		static constexpr Vec2 XAxis()   { return Vec2(S(1),S(0)); }
 		static constexpr Vec2 YAxis()   { return Vec2(S(0),S(1)); }
 		static constexpr Vec2 One()     { return Vec2(S(1), S(1)); }
-		static constexpr Vec2 Tiny()    { return Vec2(tiny<S>, tiny<S>); }
+		static constexpr Vec2 Tiny()    { return Vec2(maths::tiny<S>, maths::tiny<S>); }
 		static constexpr Vec2 Min()     { return Vec2(limits<S>::min(), limits<S>::min()); }
 		static constexpr Vec2 Max()     { return Vec2(limits<S>::max(), limits<S>::max()); }
 		static constexpr Vec2 Lowest()  { return Vec2(limits<S>::lowest(), limits<S>::lowest()); }
