@@ -453,10 +453,8 @@ class LDraw(Managed):
 			Tools.Path(self.bin_dir, ".."),
 			[
 				["binaries", "INSTALLFOLDER", ".", False,
-					r"LDraw\..*\.dll",
-					r"Rylogic\..*\.dll",
-					r"ICSharpCode.AvalonEdit.dll",
-				],
+					r".*\.dll",
+					r"LDraw.runtimeconfig.json"],
 				["lib_files", "lib", "lib", True],
 			])
 		print(f"{self.msi} created.\n")
