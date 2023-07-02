@@ -1011,6 +1011,9 @@
     <ClInclude Include="..\..\..\include\pr\gfx\dpi.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\filesys\fat_filesystem.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

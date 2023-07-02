@@ -206,6 +206,7 @@
     <ClInclude Include="..\..\..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\..\..\include\pr\crypt\sha1.h" />
     <ClInclude Include="..\..\..\include\pr\crypt\sha512.h" />
+    <ClInclude Include="..\..\..\include\pr\filesys\fat_filesystem.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\filesys.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\filewatch.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\file_time.h" />
