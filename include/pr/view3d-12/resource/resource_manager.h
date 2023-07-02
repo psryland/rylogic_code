@@ -12,6 +12,7 @@
 #include "pr/view3d-12/utility/lookup.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
+#include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
@@ -27,7 +28,6 @@ namespace pr::rdr12
 		//  - Compiler complaints about Model not being defined here means you have forgotten to include model.h in some cpp.
 	private:
 
-		using GfxCmdList         = D3DPtr<ID3D12GraphicsCommandList>;
 		using SignaturePtr       = D3DPtr<ID3D12RootSignature>;
 		using PipelineStatePtr   = D3DPtr<ID3D12PipelineState>;
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;

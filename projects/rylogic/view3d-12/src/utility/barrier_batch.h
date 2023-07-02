@@ -67,7 +67,7 @@ namespace pr::rdr12
 						.Transition = {
 							.pResource = resource,
 							.Subresource = sub,
-							.StateBefore = res_state[sub],
+							.StateBefore = def_state,
 							.StateAfter = state,
 						},
 					});
@@ -122,6 +122,8 @@ namespace pr::rdr12
 		void Commit(ID3D12GraphicsCommandList* cmd_list)
 		{
 			// todo.. Could remove redundant barriers here
+			if (m_barriers.empty())
+				return;
 
 			// Send the barriers to the command list
 			cmd_list->ResourceBarrier(s_cast<UINT>(m_barriers.size()), m_barriers.data());

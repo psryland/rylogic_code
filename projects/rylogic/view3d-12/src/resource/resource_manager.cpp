@@ -34,7 +34,7 @@ namespace pr::rdr12
 		,m_lookup_tex()
 		,m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
 		,m_descriptor_store(rdr.D3DDevice())
-		,m_mipmap_gen(rdr, m_gsync)
+		,m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
 		,m_gdiplus()
 		,m_eh_resize()
 		,m_gdi_dc_ref_count()
@@ -137,7 +137,6 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
 		auto has_init_data = !desc.Data.empty();
-		auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
 		D3D12_RESOURCE_DESC rd = desc;
@@ -146,24 +145,32 @@ namespace pr::rdr12
 
 		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd, resource_state,
+			&desc.HeapProps, desc.HeapFlags, &rd, desc.FinalState,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
-		ResState(res.get()).Apply(resource_state);
+		
+		// ???
+		Throw(res->SetPrivateDataInterface(GUID_ResourceTracker, new ResourceTracker));
+		ResourceTracker::Get(res)
+
+		ResState(res.get()).Apply(desc.FinalState);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
 		{
-			BarrierBatch barriers;
-
 			// Copy the initialisation data into the resource
+			//auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
 			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
 			
 			// Generate mip maps for the texture (if needed)
+
+			// 'm_mipmap_gen' should use the same cmd-list as the resource manager, so that mips are generated as 
+			// textures are created. Remember cmd-lists are executed serially.
 			if (desc.MipLevels != 1)
 				m_mipmap_gen.Generate(res.get());
 
 			// Transition the resource to the final state
+			BarrierBatch barriers;
 			barriers.Transition(res.get(), desc.FinalState);
 			barriers.Commit(m_gfx_cmd_list.get());
 			m_flush_required = true;
