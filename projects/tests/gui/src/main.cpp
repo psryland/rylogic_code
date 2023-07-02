@@ -102,8 +102,8 @@ struct Main :Form
 
 		,m_tc          (TabControl::Params<>().name("m_tc").parent(this_).xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
 		,m_split       (Splitter  ::Params<>().name("split").parent(&m_tc))
-		,m_split_l     (&m_split.Pane0, L"Left panel" , IDC_SPLITL)
-		,m_split_r     (&m_split.Pane1, L"Right panel", IDC_SPLITR)
+		,m_split_l     (&m_split.Pane0, L"LEFT panel" , IDC_SPLITL)
+		,m_split_r     (&m_split.Pane1, L"RITE panel", IDC_SPLITR)
 		,m_tab1        (&m_tc, L"hi from tab1", IDC_TAB1)
 		,m_tab2        (&m_tc, L"hi from tab2", IDC_TAB2)
 		,m_scint       (ScintillaCtrl::Params<>().name("m_scint").parent(&m_tc).dock(EDock::Fill).id(IDC_SCINT))

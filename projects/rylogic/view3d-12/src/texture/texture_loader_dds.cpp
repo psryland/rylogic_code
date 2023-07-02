@@ -345,7 +345,7 @@ namespace pr::rdr12
 		}
 
 		// Offset to the start of the file data
-		auto offset = sizeof(uint32_t) + sizeof(dds::Header) + is_DXT10 ? sizeof(dds::HeaderDXT10) : 0;
+		auto offset = sizeof(uint32_t) + sizeof(dds::Header) + (is_DXT10 ? sizeof(dds::HeaderDXT10) : 0);
 		img.bits = std::span<uint8_t const>{ img.data.get() + offset, size - offset };
 
 		// Return the image

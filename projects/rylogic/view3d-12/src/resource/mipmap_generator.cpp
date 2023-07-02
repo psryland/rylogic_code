@@ -16,21 +16,17 @@ namespace pr::rdr12
 	enum class EMipMapParam { Constants, SrcTexture, DstTexture };
 	enum class EMipMapSamp { Samp0 };
 
-	MipMapGenerator::MipMapGenerator(Renderer& rdr, GpuSync& gsync)
+	MipMapGenerator::MipMapGenerator(Renderer& rdr, GpuSync& gsync, GfxCmdList& cmd_list)
 		:m_rdr(rdr)
 		,m_gsync(gsync)
+		,m_cmd_list(cmd_list)
 		,m_keep_alive(m_gsync)
-		,m_cmd_alloc_pool(m_gsync)
-		,m_cmd_alloc(m_cmd_alloc_pool.Get())
-		,m_cmd_list()
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_mipmap_sig()
 		,m_mipmap_pso()
 		,m_flush_required()
 	{
 		auto device = rdr.D3DDevice();
-		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_cmd_list.m_ptr));
-		m_cmd_list->SetName(L"MipMapGenCmdList");
 
 		// Create a root signature for the MipMap generator compute shader
 		RootSig<EMipMapParam, EMipMapSamp> sig;
@@ -102,6 +98,7 @@ namespace pr::rdr12
 		if (support.CheckUAV() && AllSet(desc.Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
 		{
 			GenerateCore(texture, mip_first, mip_count);
+			m_flush_required = true;
 			return;
 		}
 
@@ -109,16 +106,17 @@ namespace pr::rdr12
 		auto device = m_rdr.D3DDevice();
 		auto next_sync_point = m_gsync.LastAddedSyncPoint() + 1;
 
-		// Describe a resource that same as 'texture' but with UAV support.
+		// Describe a resource the same as 'texture' but with UAV support and not RT/DS support.
 		D3D12_RESOURCE_DESC staging_desc = desc;
 		staging_desc.Flags = SetBits(staging_desc.Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, true);
 		staging_desc.Flags = SetBits(staging_desc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, false);
 
 		// Describe a UAV compatible resource that is used to perform mip-mapping.
-		auto uav_desc = staging_desc;  // The flags for the UAV description must match that of the staging description.
+		// The flags for the UAV description must match that of the staging description in order to allow data inheritance between the aliased textures.
+		auto uav_desc = staging_desc;
 		uav_desc.Format = ToUAVCompatable(desc.Format);
 
-		// Create a heap to contain the staging resource, and the UAV compatible resource.
+		// Create a heap to contain the alias of the staging and UAV resource.
 		D3DPtr<ID3D12Heap> heap;
 		auto descs = { staging_desc, uav_desc };
 		auto info = device->GetResourceAllocationInfo(0, s_cast<UINT>(descs.size()), descs.begin());
@@ -138,14 +136,14 @@ namespace pr::rdr12
 		m_keep_alive.Add(heap.get(), next_sync_point);
 
 		// Create a placed resource that matches the description of the original resource.
-		// This resource is used to copy the original texture to the UAV compatible resource.
+		// The original texture is copied to this resource, which is then aliased as a UAV resource.
 		D3DPtr<ID3D12Resource> staging;
 		Throw(device->CreatePlacedResource(heap.get(), 0, &staging_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&staging.m_ptr));
 		ResState(staging.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		NameResource(staging.get(), "MipMapStagingAliasRes");
 		m_keep_alive.Add(staging.get(), next_sync_point);
 
-		// Create a UAV compatible resource in the same heap that is an alias of 'staging'.
+		// Create a UAV resource that is an alias of 'staging'.
 		D3DPtr<ID3D12Resource> uav_resource;
 		Throw(device->CreatePlacedResource(heap.get(), 0, &uav_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&uav_resource.m_ptr));
 		ResState(uav_resource.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
@@ -153,27 +151,29 @@ namespace pr::rdr12
 		m_keep_alive.Add(uav_resource.get(), next_sync_point);
 
 		// Add an aliasing barrier to say that 'staging' is the currently valid resource.
-		// Aliasing barriers indicate a transition between usages of two different resources which have mappings into the same heap.
-		// The application can specify both the before and the after resource. Note that one or both resources can be NULL (indicating that
-		// any tiled resource could cause aliasing).
+		// Aliasing textures must have compatible resource states in order to inherit data.
 		BarrierBatch barriers;
 		barriers.Aliasing(nullptr, staging.get());
 		barriers.Transition(staging.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 		barriers.Transition(texture, D3D12_RESOURCE_STATE_COPY_SOURCE);
 		barriers.Commit(m_cmd_list.get());
 
-		// Copy the original resource to the staging resource. This ensures GPU validation.
+		// Copy the original resource into the staging resource.
 		m_cmd_list->CopyResource(staging.get(), texture);
 
-		// Now switch the heap to the UAV resource alias.
+		// Make the UAV resource active. UAV inherits the data from 'staging'
+		//barriers.Transition(staging.get(), ResState(uav_resource.get()).DefaultState());
 		barriers.Aliasing(staging.get(), uav_resource.get());
 		barriers.Commit(m_cmd_list.get());
 
-		// Generate mips with the UAV compatible resource.
+		// Generate mips in the UAV resource.
 		GenerateCore(uav_resource.get(), mip_first, mip_count);
 
-		// Switch the heap back to the staging alias
+		// Make the 'staging' resource active again. 'Staging' inherits data from 'uav_resource'
+		//barriers.Transition(uav_resource.get(), ResState(staging.get()).DefaultState());
 		barriers.Aliasing(uav_resource.get(), staging.get());
+		barriers.Commit(m_cmd_list.get());
+
 		barriers.Transition(staging.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 		barriers.Transition(texture, D3D12_RESOURCE_STATE_COPY_DEST);
 		barriers.Commit(m_cmd_list.get());

@@ -12,15 +12,26 @@ namespace pr::rdr12
 	private:
 
 		// Notes:
+		//  - Resource states are maintained *per command list*. I.e., each command list tracks
+		//    the state of the resources it operates on.
+		//  - Command lists are serialised when executed but can be created in parallel, so having
+		//    one resource state tracking structure per resource doesn't work.
+		//  - The recommended way to do this is to buffer transitions per resource per command list,
+		//    then before a command list is executed, insert transitions from the global state to the
+		//    first required state of the command list. After the command list is queued, update the global
+		//    state to the final state for the command list.
+		// //
+		// //
+		// 
 		//  - This object is stored in the PrivateData of a resource. It keeps track
 		//    of the resource state for each sub resource (i.e. mip level).
 		//  - The 'm_state' is stored as a value type in the PrivateData because there
 		//    is no convenient way to delete allocated private data when the resource is released.
 		//  - 'm_state[0]' is the state for the 'AllSubresources' special case.
-		//  - 'm_state[1:]' is flat-map of mip-to-state. mip0 == [1], mip1 == [2], etc
+		//  - 'm_state[1:]' is flat-map of mip-to-state.
 		//  - States are encoded as [state:24, subresource:8] since resource states have
 		//    a max value of 0x80_0000, and textures won't have more than 0xFF mips.
-		//  - Only m_state[>0].index() == 0 is a sentinel value indicating the end of the list.
+		//  - The flat-map list length is determined by a sentinel.
 		// 
 		// WARNING: Multiple instances of this object for the same resource will data-race.
 
@@ -33,14 +44,14 @@ namespace pr::rdr12
 			// Encoded as [state:24, subresource:8] 
 			uint32_t m_data;
 
-			// Get/Set the index that 
+			// Get/Set the sub resource index (i.e. mip level). -1 == ALL mips
 			int sub() const
 			{
 				return int(m_data & IndexMask) - 1;
 			}
 			void sub(int s)
 			{
-				assert(s < int(IndexMask));
+				assert(s >= -1 && s < int(IndexMask));
 				auto idx = s_cast<int>((s + 1) & IndexMask);
 				m_data = SetBits(m_data, int(IndexMask), idx);
 				assert(sub() == s);
@@ -59,30 +70,16 @@ namespace pr::rdr12
 			}
 		};
 
-		ID3D12Resource* m_res;
-		MipState m_state[8]; // last value is a sentinel
+		MipState m_state[8];   // last value is a sentinel
 
 	public:
 
-		explicit ResState(ID3D12Resource* res)
-			:m_res(res)
+		ResState()
 		{
-			Read();
-		}
-		explicit ResState(ID3D12Resource const* res)
-			:ResState(const_cast<ID3D12Resource*>(res))
-		{}
-
-		// Read state data from the resource private data
-		void Read()
-		{
-			// Try to read the states from the private data. If that fails, write default values
-			UINT size = sizeof(m_state);
-			if (Failed(m_res->GetPrivateData(Guid_ResourceStates, &size, &m_state)))
-				Apply(D3D12_RESOURCE_STATE_COMMON);
+			Apply(D3D12_RESOURCE_STATE_COMMON);
 		}
 
-		// Return the default state
+		// Return the default (or ALL mips) state
 		D3D12_RESOURCE_STATES DefaultState() const
 		{
 			return m_state[0].state();
@@ -91,7 +88,7 @@ namespace pr::rdr12
 		// True if not all mips have the same (default) state
 		bool HasMipSpecificStates() const
 		{
-			// This means there is at least one mip-specific state.
+			// If 'm_state[1]' is not the sentinel, then there is at least one mip-specific state.
 			return m_state[1].sub() != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		}
 
@@ -110,7 +107,7 @@ namespace pr::rdr12
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && HasMipSpecificStates())
 				throw std::runtime_error("Subresources are not all the same state");
 
-			// Return the state for 'sub'. This might be the default (m_state[0]).
+			// Return the state for 'sub'. This might be the default (i.e. m_state[0].state()).
 			return m_state[idx].state();
 		}
 
@@ -135,7 +132,8 @@ namespace pr::rdr12
 					// If 'state' == the default state, remove 'idx'
 					if (state == DefaultState())
 					{
-						for (auto i = idx; i != _countof(m_state) - 1; ++i)
+						assert(idx >= 0 && idx < _countof(m_state) - 1);
+						for (auto i = idx; i < _countof(m_state) - 1; ++i)
 							m_state[i] = m_state[i+1];
 					}
 					else // Otherwise, update 'idx'
@@ -145,7 +143,7 @@ namespace pr::rdr12
 					}
 				}
 
-				// If 'idx == 0' then there is no mip-speicifc state yet
+				// If 'idx == 0' then there is no mip-speicifc state for 'sub' yet.
 				else
 				{
 					// If 'state' == the default state, no need to add a mip-specific state
@@ -162,9 +160,6 @@ namespace pr::rdr12
 					}
 				}
 			}
-
-			// Write the resource state data
-			Throw(m_res->SetPrivateData(Guid_ResourceStates, sizeof(m_state), &m_state));
 			assert((*this)[sub] == state);
 		}
 
@@ -179,7 +174,7 @@ namespace pr::rdr12
 		friend bool operator == (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
 		{
 			// The default state == 'rhs' and there are no mip-specific states
-			return lhs.m_state[0].state() == rhs && !lhs.HasMipSpecificStates();
+			return lhs.DefaultState() == rhs && !lhs.HasMipSpecificStates();
 		}
 		friend bool operator != (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
 		{
@@ -191,19 +186,18 @@ namespace pr::rdr12
 		// Find the index in 'm_state' for 'sub'
 		int mip_state_index(int sub) const
 		{
-			// 'sub' == -1(ALL) => 'idx' == 0
-			// 'sub' == 0(mip0) => 'idx' == 1
-			// 'sub' == 1(mip1) => 'idx' == 2 etc...
+			// ALL(-1) is the default state at index 0
 			if (sub == int(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES))
 				return 0;
 
+			// Search the mip-specific states
 			for (int i = 1; i != _countof(m_state); ++i)
 			{
 				// Found the state for 'sub'? Return its index
 				if (m_state[i].sub() == sub)
 					return i;
 
-				// Found the sentinel?End of the list? No mip-specific state found, return the index for the default state
+				// Found the sentinel? No mip-specific state found, return the index for the default state
 				if (m_state[i].sub() == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
 					return 0;
 			}

@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
+#include "pr/view3d-12/resource/resource_state.h"
 
 namespace pr::rdr12
 {
@@ -18,20 +19,33 @@ namespace pr::rdr12
 	struct CmdList
 	{
 		// Notes:
-		//  - One list per thread
+		//  - One list per thread.
 		//  - Each allocator can only be recording one command list at a time.
-		//  - Only reset allocator when GPU sync is <= m_issue
-		//  - Hide allocators within the CmdList, so rest of renderer doesn't need to know about them.
-		//  - Can reset a command list immediately after executing it, but it has to use a different allocator
+		//  - Only reset allocator when the GPU has finished with the list (see GpuSync).
+		//  - Can reset a command list immediately after executing it, but it has to use a different allocator.
+		//  - Need to wrap the command list because state (such as Resource States) needs to be buffered per command list.
 		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12CommandList>;
-		using pool_t = typename CmdListPool<ListType>;
 
-		D3DPtr<ICommandList> m_list; // The commands
-		std::thread::id m_thread_id; // The thread id of the last thread to call Reset
-		pool_t* m_pool;              // The pool to return this allocator too
-		
+	private:
+
+		using pool_t = typename CmdListPool<ListType>;
+		using res_states_t = struct
+		{
+			pr::vector<ID3D12Resource*> m_res;
+			pr::vector<ResState> m_state;
+		};
+
+	private:
+
+		D3DPtr<ICommandList> m_list; // The interface for buffering GPU commands.
+		res_states_t m_resources_states;
+		std::thread::id m_thread_id; // The thread id of the thread that called Reset.
+		pool_t* m_pool;              // The pool to return this allocator too. (can be null)
+
+	public:
+
 		CmdList()
-			:m_list()
+			: m_list()
 			, m_thread_id(std::this_thread::get_id())
 			, m_pool()
 		{}
@@ -44,7 +58,8 @@ namespace pr::rdr12
 		CmdList(CmdList const&) = delete;
 		CmdList& operator =(CmdList&& rhs)
 		{
-			// default is member-wise std::move, not swap
+			// 'default' is member-wise std::move, not swap.
+			// We need swap so that replaced values return to the pool.
 			if (&rhs == this) return *this;
 			std::swap(m_list, rhs.m_list);
 			std::swap(m_thread_id, rhs.m_thread_id);
@@ -58,6 +73,14 @@ namespace pr::rdr12
 				m_pool->Return(*this);
 		}
 
+		// Reset the command list to use the given allocator
+		void Reset(GfxCmdAlloc& alloc)
+		{
+			// Create an open command list for use by the resource manager, since it is independent of any windows or scenes.
+			Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_gfx_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_gfx_cmd_list.m_ptr));
+			m_gfx_cmd_list->SetName(L"ResManCmdListGfx");
+
+		}
 		// Set the ID of the thread using this command list
 		void UseThisThread()
 		{
@@ -67,16 +90,24 @@ namespace pr::rdr12
 		// Access the list
 		ICommandList* operator ->() const
 		{
-			if (std::this_thread::get_id() != m_thread_id)
-				throw std::runtime_error("Cross thread use of a command list");
-
+			ThrowOnCrossThreadUse();
 			return m_list.get();
 		}
 
 		// Convert to the list pointer
 		operator ICommandList* () const
 		{
+			ThrowOnCrossThreadUse();
 			return m_list.get();
+		}
+
+	private:
+
+		// Ensure calls are from the thread that owns this command list
+		void ThrowOnCrossThreadUse()
+		{
+			if (std::this_thread::get_id() != m_thread_id)
+				throw std::runtime_error("Cross thread use of a command list");
 		}
 	};
 
@@ -84,8 +115,13 @@ namespace pr::rdr12
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdListPool
 	{
+		// Notes:
+		//  - The pool manages recycling command lists.
+		//  - It basically just reduces allocations.
+
 		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12CommandList>;
 		using pool_t = pr::vector<CmdList<ListType>, 16, false>;
+
 		GpuSync* m_gsync;
 		pool_t m_pool;
 
