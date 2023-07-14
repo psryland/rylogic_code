@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Windows;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 [assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
@@ -20,6 +22,11 @@ public partial class App : Application
 
 		try
 		{
+			Xml_.Config
+				.SupportWPFTypes()
+				.SupportRylogicMathsTypes()
+				.SupportRylogicCommonTypes();
+
 			var settings = new Settings(Settings.DefaultFilepath);
 			Model = new Model(settings);
 			var ui = new MainWindow(settings, Model);

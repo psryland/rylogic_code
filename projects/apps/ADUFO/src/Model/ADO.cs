@@ -16,11 +16,9 @@ namespace ADUFO;
 
 public class AdoInterface: IDisposable, INotifyPropertyChanged
 {
-	public AdoInterface(string organization, string project, string pat, CancellationToken shutdown)
+	public AdoInterface(Settings settings, CancellationToken shutdown)
 	{
-		Organization = organization;
-		Project = project;
-		PersonalAccessToken = pat;
+		Settings = settings;
 		Shutdown = shutdown;
 	}
 	public void Dispose()
@@ -32,17 +30,20 @@ public class AdoInterface: IDisposable, INotifyPropertyChanged
 	/// <summary>App shutdown token</summary>
 	private CancellationToken Shutdown { get; }
 
+	/// <summary>Application settings</summary>
+	private Settings Settings { get; }
+
 	/// <summary>The ADO URL</summary>
-	public Uri AdoUrl => new Uri($"https://dev.azure.com/{Organization}/{Project}");
+	public Uri AdoUrl => new Uri($"https://dev.azure.com/{Organization}");///{Project}");
 
 	/// <summary>The ADO instance to connect to</summary>
 	private string Organization
 	{
-		get => m_organization;
+		get => Settings.Organization;
 		set
 		{
-			if (m_organization == value) return;
-			m_organization = value;
+			if (Organization == value) return;
+			Settings.Organization = value;
 			NotifyPropertyChanged(nameof(Organization));
 			
 			// Force a reconnection
@@ -50,16 +51,15 @@ public class AdoInterface: IDisposable, INotifyPropertyChanged
 			Connection = null!;
 		}
 	}
-	private string m_organization = null!;
 
 	/// <summary>The project to connect to</summary>
 	private string Project
 	{
-		get => m_project;
+		get => Settings.Project;
 		set
 		{
-			if (m_project == value) return;
-			m_project = value;
+			if (Project == value) return;
+			Settings.Project = value;
 			NotifyPropertyChanged(nameof(Project));
 
 			// Force a reconnection
@@ -67,16 +67,15 @@ public class AdoInterface: IDisposable, INotifyPropertyChanged
 			Connection = null!;
 		}
 	}
-	private string m_project = null!;
 
 	/// <summary>Token to access ADO</summary>
 	private string PersonalAccessToken
 	{
-		get => m_pat;
+		get => Settings.PersonalAccessToken;
 		set
 		{
-			if (m_pat == value) return;
-			m_pat = value;
+			if (PersonalAccessToken == value) return;
+			Settings.PersonalAccessToken = value;
 			NotifyPropertyChanged(nameof(PersonalAccessToken));
 
 			// Force a reconnection
@@ -84,7 +83,6 @@ public class AdoInterface: IDisposable, INotifyPropertyChanged
 			Connection = null!;
 		}
 	}
-	private string m_pat = null!;
 
 	/// <summary>Visual Studio Services Connection</summary>
 	private VssConnection Connection
@@ -112,41 +110,48 @@ public class AdoInterface: IDisposable, INotifyPropertyChanged
 	}
 	private WorkItemTrackingHttpClient m_client = null!;
 
-	/// <summary>Return all work items</summary>
-	public async Task<IEnumerable<WorkItem>> WorkStreams()
+	/// <summary>Load Work Items details from Ids</summary>
+	public async Task<IEnumerable<WorkItem>> GetWorkItems(IEnumerable<int> ids, CancellationToken cancel)
 	{
-		var result = await Client.QueryByWiqlAsync(
-			"select * from [WorkItems] where [Work Item Type] = 'Work Stream'"
-			.AsQuery());
-
 		var tasks = new List<Task<List<WorkItem>>>();
-		foreach (var ids in result.WorkItems.Select(x => x.Id).Batch(100))
-			tasks.Add(Client.GetWorkItemsAsync(ids));
+		foreach (var id_batch in ids.Batch(100))
+			tasks.Add(Client.GetWorkItemsAsync(ids, expand:WorkItemExpand.All, cancellationToken:cancel));
 
 		await Task.WhenAll(tasks);
 		return tasks.SelectMany(x => x.Result);
 	}
 
-	public async Task Test()
+	/// <summary>Return all work streams</summary>
+	public async Task<IEnumerable<WorkItem>> WorkStreams(CancellationToken cancel)
 	{
-		var query = new Wiql()
-		{
-			//Query = "Select [State], [Title], [Assigned To] From WorkItems Where [Work Item Type] = 'Task' order by [State] asc, [Changed Date] desc"
-			Query = "Select [Title] From WorkItems Where [Work Item Type] = 'Epic'"
-		};
+		var result = await Client.QueryByWiqlAsync(
+			Settings.QueryWorkStreams.AsQuery(),
+			project: Project,
+			cancellationToken:cancel);
 
-		var result = await Client.QueryByWiqlAsync(query);
+		return await GetWorkItems(result.WorkItems.Select(x => x.Id), cancel);
+	}
+	
+	/// <summary>Return all epics</summary>
+	public async Task<IEnumerable<WorkItem>> Epics(CancellationToken cancel)
+	{
+		var result = await Client.QueryByWiqlAsync(
+			"select [System.Id] from [WorkItems] where [Work Item Type] = 'Epic'".AsQuery(),
+			project: Project,
+			cancellationToken:cancel);
 
-		if (result.WorkItems.Any())
-		{
-			var ids = result.WorkItems.Select(item => item.Id).Take(100).ToArray();
-			var workItems = await Client.GetWorkItemsAsync(ids);
+		return await GetWorkItems(result.WorkItems.Select(x => x.Id), cancel);
+	}
 
-			foreach (var workItem in workItems)
-			{
-				Console.WriteLine("{0} - {1}", workItem.Id, workItem.Fields["System.Title"]);
-			}
-		}
+	/// <summary>Run an arbitrary query</summary>
+	public async Task<WorkItemQueryResult> RunQuery(string sql, CancellationToken cancel)
+	{
+		var query = new Wiql{ Query = sql };
+		var result = await Client.QueryByWiqlAsync(
+			query,
+			project: Project,
+			cancellationToken: cancel);
+		return result;
 	}
 
 	/// <inheritdoc/>

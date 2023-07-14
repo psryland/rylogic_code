@@ -1517,16 +1517,16 @@ namespace pr::rdr
 		{
 			struct Padding { float left, top, right, bottom; };
 
-			v2                         m_dim;
-			v2                         m_anchor;
-			Padding                    m_padding;
-			Colour32                   m_bk_colour;
-			DWRITE_TEXT_ALIGNMENT      m_align_h;
+			v2 m_dim; // The box to constrain the text to
+			v2 m_anchor; // The anchor point for the text
+			Padding m_padding; // Padding around the text
+			Colour32 m_bk_colour; // Background colour for the text
+			DWRITE_TEXT_ALIGNMENT m_align_h;
 			DWRITE_PARAGRAPH_ALIGNMENT m_align_v;
-			DWRITE_WORD_WRAPPING       m_word_wrapping;
+			DWRITE_WORD_WRAPPING m_word_wrapping;
 
 			TextLayout()
-				:m_dim(512,128)
+				:m_dim(maths::float_inf, maths::float_inf)
 				,m_anchor(0,0)
 				,m_padding()
 				,m_bk_colour(0x00000000)
@@ -1555,7 +1555,7 @@ namespace pr::rdr
 			auto dwrite = lock.DWrite();
 
 			// Get the default format
-			auto def = formatting_count != 0 && formatting[0].empty() ? formatting[0] : TextFormat();
+			auto def = formatting_count != 0 && !formatting[0].empty() ? formatting[0] : TextFormat();
 
 			// Determine of the model requires alpha blending.
 			// Consider alpha = 0 as not requiring blending, Alpha clip will be used instead
@@ -1597,14 +1597,30 @@ namespace pr::rdr
 			DWRITE_TEXT_METRICS metrics;
 			Throw(text_layout->GetMetrics(&metrics));
 
-			// The size of the text in device independent pixels, including padding
+			// The size of the text in device independent pixels, including padding.
 			auto dip_size = v2(
 				metrics.widthIncludingTrailingWhitespace + layout.m_padding.left + layout.m_padding.right,
 				metrics.height + layout.m_padding.top + layout.m_padding.bottom);
 
-			// Determine the required texture size
+			// DIP is defined as 1/96th of a logical inch (= 0.2645833 mm/px)
+			// Font size 12pt is 16px high = 4.233mm (1pt = 1/72th of an inch)
+			// Need to choose a texture size with an aspect ratio matching 'dip_size'.
+			// Can choose the quat size arbitrarily so might as well use 1px = 0.264583 mm
+			// so that 12pt is the correct size in virtual space.
+			const float pt_to_px = 96.0f / 72.0f;
+			const float pt_to_m = pt_to_px * 0.0002645833f;
+			const int max_pixels = 1024 * 1024;
+
+			// Determine the required texture size, clamp the size at a memory limit
 			auto text_size = dip_size;
-			auto texture_size = Ceil(text_size) * 2;
+			auto pixel_count = text_size.x * text_size.y * Sqr(pt_to_px);
+			auto texture_size = pixel_count > max_pixels
+				? Ceil(text_size * pt_to_px * sqrtf(max_pixels / float(pixel_count)))
+				: Ceil(text_size * pt_to_px);
+
+			// todo: Should be able to scale the text as needed, font size just affects the resolution.
+			// The upper bound on font size is the height of the texture in pixels. Need to choose size that fits in the texture.
+			// After sorting that, get the Billboard (non-3d) test working.
 
 			// Create a texture large enough to contain the text, and render the text into it
 			SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
@@ -1647,17 +1663,17 @@ namespace pr::rdr
 			// Create a quad using this texture
 			auto [vcount, icount] = geometry::QuadSize(1);
 
-			// Return the size of the quad and the texture
+			// Return the text metrics size and the texture size
 			dim_out = v4(text_size, texture_size);
 
 			// Set the texture coordinates to match the text metrics and the quad size
-			auto t2q = m4x4::Scale(text_size.x/texture_size.x, text_size.y/texture_size.y, 1.0f, v4Origin) * m4x4(v4XAxis, -v4YAxis, v4ZAxis, v4(0, 1, 0, 1));
+			auto t2q = m4x4::Scale(text_size.x / texture_size.x, text_size.y / texture_size.y, 1.0f, v4Origin) * m4x4(v4XAxis, -v4YAxis, v4ZAxis, v4(0, 1, 0, 1));
 
 			// Generate the geometry
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q,
+			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x * pt_to_m, text_size.y * pt_to_m, iv2Zero, Colour32White, t2q,
 				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 

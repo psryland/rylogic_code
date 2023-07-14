@@ -169,6 +169,7 @@ namespace pr::ldr
 			"{\n"
 			"	[*ScreenSpace]\n"
 			"	[*Billboard]\n"
+			"	[*Billboard3D]\n"
 			"	(<text>)\n"
 			"	([*CString {<c_style_string>}])\n"
 			"	([*NewLine])\n"

@@ -16,10 +16,12 @@ namespace ADUFO
 		{
 			Settings = settings;
 			WorkStreams = new Dictionary<int, WorkStream>();
+			Epics = new Dictionary<int, Epic>();
 		}
 		public void Dispose()
 		{
 			Util.DisposeRange(WorkStreams.Values);
+			Util.DisposeRange(Epics.Values);
 		}
 
 		/// <summary>App settings</summary>
@@ -56,7 +58,7 @@ namespace ADUFO
 				}
 				rd.Expect(JsonTokenType.EndObject);
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 			}
 
@@ -149,5 +151,8 @@ namespace ADUFO
 
 		/// <summary>Work Stream items</summary>
 		public Dictionary<int, WorkStream> WorkStreams { get; }
+
+		/// <summary>Work Stream items</summary>
+		public Dictionary<int, Epic> Epics { get; }
 	}
 }

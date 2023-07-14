@@ -1,0 +1,56 @@
+﻿<Window
+	x:Class="ADUFO.AdoQueryUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	WindowStartupLocation="CenterOwner"
+	ResizeMode="CanResizeWithGrip"
+	Title="Query Tester"
+	Height="450"
+	Width="800"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="1*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="4*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<TextBox
+			Grid.Row="0"
+			Text="{Binding QueryString, UpdateSourceTrigger=PropertyChanged}"
+			HorizontalScrollBarVisibility="Auto"
+			VerticalScrollBarVisibility="Auto"
+			PreviewKeyDown="InputQuery_PreviewKeyDown"
+			AcceptsReturn="True"
+			AcceptsTab="True"
+			x:Name="m_input"
+			/>
+		<GridSplitter
+			Grid.Row="1"
+			Height="5"
+			HorizontalAlignment="Stretch"
+			/>
+		<TextBox
+			Grid.Row="2"
+			Text="{Binding QueryResult}"
+			Foreground="{Binding ResultColor, Converter={conv:ColourToBrush}}"
+			HorizontalScrollBarVisibility="Auto"
+			VerticalScrollBarVisibility="Auto"
+			Background="#EEE"
+			IsReadOnly="True"
+			/>
+		<Button
+			Grid.Row="3"
+			Content="Run Query"
+			Command="{Binding RunQuery}"
+			HorizontalAlignment="Right"
+			Margin="12"
+			Padding="8"
+			/>
+	</Grid>
+</Window>
