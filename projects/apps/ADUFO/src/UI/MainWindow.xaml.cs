@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using Rylogic.Gui.WPF;
-using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Utility;
 
 namespace ADUFO;
@@ -16,11 +15,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		Shutdown = new CancellationTokenSource();
 		Settings = settings;
 		Model = model;
-		Diagram = new Diagram();
+		Diagram = new Diagram { };
+		Diagram.Chart.Options = new ChartControl.OptionsData
+		{
+			NavigationMode = ChartControl.ENavMode.Scene3D,
+			Orthographic = false,
+			BackgroundColour = 0xFF272822,
+			AreaSelectRequiresShiftKey = true,
+			AllowSelection = false,
+			AllowElementDragging = false,
+			ShowAxes=false,
+			ShowGridLines=false,
+			LockAspect=1.0,
+		};
 
 		// Commands
-		DoTest = Command.Create(this, DoTestInternal);
+		ShowAdoQueryUI = Command.Create(this, ShowAdoQueryUIInternal);
+		ShowAdoWorkItemUI = Command.Create(this, ShowAdoWorkItemUIInternal);
+		ShowSettingsUI = Command.Create(this, ShowSettingsUIInternal);
 		ShowConnectionUI = Command.Create(this, ShowConnectionUIInternal);
+		ShowSlidersUI = Command.Create(this, ShowSlidersUIInternal);
 		ToggleConnection = Command.Create(this, ToggleConnectionInternal);
 		Refresh = Command.Create(this, RefreshInternal, RefreshAvailable);
 		ToggleScattering = Command.Create(this, ToggleScatteringInternal);
@@ -33,6 +47,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		Loaded += (o,s) =>
 		{
 			ToggleConnectionInternal();
+			RefreshInternal();
 		};
 	}
 	protected override void OnClosing(CancelEventArgs e)
@@ -105,12 +120,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		{
 			if (IsScattering == value) return;
 			Util.Dispose(ref m_scatterer);
-			m_scatterer = value ? new NodeScatterer(Diagram.Chart, (Diagram_.Options)Diagram.Chart.Options) : null;
+			m_scatterer = value ? new Scatterer(Diagram.Chart, Settings.Sliders) : null;
 			NotifyPropertyChanged(nameof(IsScattering));
 			Diagram.Chart.Invalidate();
 		}
 	}
-	private NodeScatterer? m_scatterer;
+	private Scatterer? m_scatterer;
 
 	/// <summary>The camera location</summary>
 	public string CameraDescription => $"Camera: {Diagram.Chart.Camera.Description}";
@@ -119,6 +134,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 	private void InitDockContainer()
 	{
 		m_dc.Options.AlwaysShowTabs = true;
+		m_dc.Options.ShowTitleBars = false;
 	
 		// Add the diagram
 		m_dc.Add(Diagram, EDockSite.Centre);
@@ -136,13 +152,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		m_menu.Items.Insert(m_menu.Items.Count - 1, m_dc.WindowsMenu());
 	}
 
-	/// <summary></summary>
-	public Command DoTest { get; }
-	private async void DoTestInternal()
+	/// <summary>Show the query UI</summary>
+	public Command ShowAdoQueryUI { get; }
+	private void ShowAdoQueryUIInternal()
 	{
-		if (Model.Ado != null)
-			await Model.Ado.WorkStreams();
+		if (Model.Ado is not AdoInterface ado)
+			return;
+
+		if (m_ui_ado_query == null)
+		{
+			m_ui_ado_query = new AdoQueryUI(this, Settings, ado);
+			m_ui_ado_query.Closed += delegate { m_ui_ado_query = null; };
+			m_ui_ado_query.Show();
+		}
+		m_ui_ado_query.Focus();
 	}
+	private AdoQueryUI? m_ui_ado_query;
+
+	/// <summary>Show the query UI</summary>
+	public Command ShowAdoWorkItemUI { get; }
+	private void ShowAdoWorkItemUIInternal()
+	{
+		if (Model.Ado is not AdoInterface ado)
+			return;
+
+		if (m_ui_ado_work_item == null)
+		{
+			m_ui_ado_work_item = new AdoWorkItemUI(this, Settings, ado);
+			m_ui_ado_work_item.Closed += delegate { m_ui_ado_work_item = null; };
+			m_ui_ado_work_item.Show();
+		}
+		m_ui_ado_work_item.Focus();
+	}
+	private AdoWorkItemUI? m_ui_ado_work_item;
 
 	/// <summary></summary>
 	public Command ShowConnectionUI { get; }
@@ -154,10 +196,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 			var dlg = new ConnectUI(this)
 			{
 				Organization = Settings.Organization,
+				Project = Settings.Project,
 				PersonalAccessToken = Settings.PersonalAccessToken,
 			};
 			dlg.ShowDialog();
 			Settings.Organization = dlg.Organization;
+			Settings.Project = dlg.Project;
 			Settings.PersonalAccessToken = dlg.PersonalAccessToken;
 		}
 		catch (Exception ex)
@@ -165,6 +209,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 			MsgBox.Show(this, $"Failed to update connection settings.\r\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Error);
 		}
 	}
+
+	/// <summary></summary>
+	public Command ShowSettingsUI { get; }
+	private void ShowSettingsUIInternal()
+	{
+		// TODO: Show app settings
+	}
+
+	/// <summary>Display the sliders dialog</summary>
+	public Command ShowSlidersUI { get; }
+	private void ShowSlidersUIInternal()
+	{
+		if (m_ui_sliders == null)
+		{
+			m_ui_sliders = new SlidersUI(this, Settings.Sliders);
+			m_ui_sliders.Closed += delegate { m_ui_sliders = null; };
+			m_ui_sliders.Show();
+		}
+		m_ui_sliders.Focus();
+	}
+	private SlidersUI? m_ui_sliders;
 
 	/// <summary>Connect to ADO</summary>
 	public Command ToggleConnection { get; }
@@ -180,7 +245,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 					return;
 				
 				// Connect (if we have connection settings)
-				Model.Ado = new AdoInterface(Settings.Organization, Settings.Project, Settings.PersonalAccessToken, Shutdown.Token);
+				Model.Ado = new AdoInterface(Settings, Shutdown.Token);
 			}
 			else
 			{
@@ -202,11 +267,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 			using var refreshing = Scope.Create(() => m_refreshing = true, () => m_refreshing = false);
 			Refresh.NotifyCanExecuteChanged();
 			await Model.Refresh(Diagram.Chart);
-			Refresh.NotifyCanExecuteChanged();
 		}
 		catch (Exception ex)
 		{
 			MsgBox.Show(this, $"Error while refreshing data.\r\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+		}
+		finally
+		{
+			Refresh.NotifyCanExecuteChanged();
 		}
 	}
 	private bool RefreshAvailable() => !m_refreshing;

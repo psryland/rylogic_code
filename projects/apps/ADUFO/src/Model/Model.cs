@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using ADUFO.DomainObjects;
 using Microsoft.VisualStudio.Services.Common;
@@ -46,13 +47,26 @@ public class Model :IDisposable, INotifyPropertyChanged
 	{
 		if (Ado is not AdoInterface)
 			return;
+		
+		using var cancel = new CancellationTokenSource();
 
-		var ws_items = await Ado.WorkStreams();
-		foreach (var item in ws_items)
+		// Download work streams
+		var workstreams = await Ado.WorkStreams(cancel.Token);
+		foreach (var workstream in workstreams)
 		{
-			if (item.Id == null) continue;
-			var ws = Items.WorkStreams.GetOrAddValue(item.Id.Value, () => new WorkStream(item));
-			ws.Item = item;
+			if (workstream.Id == null) continue;
+			var ws = Items.WorkStreams.GetOrAddValue(workstream.Id.Value, () => new WorkStream(workstream));
+			ws.Item = workstream;
+			ws.Chart = chart;
+		}
+
+		// Download epics
+		var epics = await Ado.Epics(cancel.Token);
+		foreach (var epic in epics)
+		{
+			if (epic.Id == null) continue;
+			var ws = Items.Epics.GetOrAddValue(epic.Id.Value, () => new Epic(epic));
+			ws.Item = epic;
 			ws.Chart = chart;
 		}
 

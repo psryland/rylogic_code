@@ -21,18 +21,6 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 		};
 
 		Chart = m_ui_diagram;
-		Chart.Options = new Diagram_.Options
-		{
-			Orthographic = false,
-			BackgroundColour = 0xFFD9C4AA,
-			AreaSelectRequiresShiftKey = true,
-			AllowSelection = true,
-			AllowElementDragging = true,
-			Relink =
-			{
-				AnchorSharingMode = Node.EAnchorSharing.NoSharing,
-			}
-		};
 		DiagramCMenuContext = new Diagram_.CMenu(Chart);
 
 		DataContext = this;

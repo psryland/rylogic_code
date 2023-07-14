@@ -62,12 +62,6 @@
 		<!-- Space -->
 		<view3d:ChartControl
 			Grid.Row="0"
-			ShowAxes="False"
-			ShowGridLines="False"
-			NavigationMode="Chart2D"
-			AllowSelection="True"
-			AllowElementDragging="True"
-			SceneBackground="#444"
 			SceneCMenu="{StaticResource DiagramCMenu}"
 			x:Name="m_ui_diagram"
 			/>
