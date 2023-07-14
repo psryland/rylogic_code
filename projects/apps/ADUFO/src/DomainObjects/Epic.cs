@@ -10,13 +10,13 @@ using Rylogic.Utility;
 
 namespace ADUFO.DomainObjects;
 
-public class WorkStream : WorkItemElement
+public class Epic :WorkItemElement
 {
-	public WorkStream(WorkItem wi)
+	public Epic(WorkItem wi)
 		:base(Guid.NewGuid(), wi)
 	{
 		var ldr = new LdrBuilder();
-		ldr.Box("workstream", Colour32.Red, 0.5f, 0.5f, 0.5f);
+		ldr.Sphere("epic", Colour32.Orange, 0.5f);
 		Gfx = new View3d.Object(ldr, false, null, null);
 	}
 	protected override void Dispose(bool disposing)
@@ -26,6 +26,7 @@ public class WorkStream : WorkItemElement
 
 	/// <inheritdoc/>
 	public override BBox Bounds => new BBox(O2W.pos, new v4(0.5f, 0.5f, 0.5f,0));
+
 
 	/// <inheritdoc/>
 	protected override void UpdateGfxCore()
