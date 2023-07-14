@@ -33,6 +33,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <BuildStlModules>false</BuildStlModules>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
