@@ -4832,6 +4832,7 @@ namespace pr::ldr
 		enum class EType
 		{
 			Full3D,
+			Billboard3D,
 			Billboard,
 			ScreenSpace,
 		};
@@ -4884,6 +4885,11 @@ namespace pr::ldr
 			case EKeyword::Billboard:
 				{
 					m_type = EType::Billboard;
+					return true;
+				}
+			case EKeyword::Billboard3D:
+				{
+					m_type = EType::Billboard3D;
 					return true;
 				}
 			case EKeyword::BackColour:
@@ -4962,6 +4968,47 @@ namespace pr::ldr
 				{
 					break;
 				}
+				// Position the text quad so that it always faces the camera but scales with distance
+				case EType::Billboard3D:
+				{
+					// Do not include in scene bounds calculations because we're scaling
+					// this model at a point that the bounding box calculation can't see.
+					obj->Flags(ELdrFlags::SceneBoundsExclude, true, "");
+
+					// Update the rendering 'i2w' transform on add-to-scene
+					obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
+						{
+							// The size of the text texture is the text metrics size / 96.0.
+							auto c2w = scene.m_view.CameraToWorld();
+							auto w2c = scene.m_view.WorldToCamera();
+							auto w = 1.0f * scene.m_viewport.ScreenW;
+							auto h = 1.0f * scene.m_viewport.ScreenH;
+							#if PR_DBG
+							if (w < 1.0f || h < 1.0f)
+								throw std::runtime_error("Invalid viewport size");
+							#endif
+
+							// Create a camera with an aspect ratio that matches the viewport
+							auto& m_camera = static_cast<Camera const&>(scene.m_view);
+							auto  v_camera = m_camera; v_camera.Aspect(w / h);
+							auto fd = m_camera.FocusDist();
+
+							// Get the scaling factors from 'm_camera' to 'v_camera'
+							auto viewarea_c = m_camera.ViewArea(fd);
+							auto viewarea_v = v_camera.ViewArea(fd);
+
+							// Scale the X,Y coords in camera space
+							auto pt_cs = w2c * ob.m_i2w.pos;
+							pt_cs.x *= viewarea_v.x / viewarea_c.x;
+							pt_cs.y *= viewarea_v.y / viewarea_c.y;
+							auto pt_ws = c2w * pt_cs;
+
+							// Position facing the camera
+							ob.m_i2w = m4x4(c2w.rot, pt_ws);
+							ob.m_c2s = v_camera.CameraToScreen();
+						};
+					break;
+				}
 				// Position the text quad so that it always faces the camera and has the same size
 				case EType::Billboard:
 				{
@@ -4998,8 +5045,8 @@ namespace pr::ldr
 
 						// Scale the instance so that it covers 'dim' pixels on-screen
 						auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
-						auto sz_x = (viewarea_v.x / w) * sz_z;
-						auto sz_y = (viewarea_v.y / h) * sz_z;
+						auto sz_x = 1.0f;//(viewarea_v.x / w) * sz_z;
+						auto sz_y = 1.0f;//(viewarea_v.y / h) * sz_z;
 						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(s_cast<float>(sz_x), s_cast<float>(sz_y), 1.0f, v4::Origin());
 						ob.m_c2s = v_camera.CameraToScreen();
 					};

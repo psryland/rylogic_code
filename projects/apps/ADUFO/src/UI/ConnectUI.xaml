@@ -10,8 +10,10 @@
 	ResizeMode="CanResizeWithGrip"
 	Background="Beige"
 	FontSize="14"
-	Height="300"
+	MinWidth="500"
+	MinHeight="360"
 	Width="500"
+	Height="360"
 	>
 	<Grid
 		Margin="8"
