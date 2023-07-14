@@ -1688,7 +1688,7 @@ namespace pr
 		static value_type* ptr(string_type& str)       { return str.data(); }
 		static size_t size(string_type const& str)     { return str.size(); }
 		static bool empty(string_type const& str)      { return str.empty(); }
-		static void resize(string_type& str, size_t n) { static_assert(dependant_false<T>, "Immutable string cannot be resized"); }
+		static void resize(string_type& str, size_t n) { static_assert(dependent_false<T>, "Immutable string cannot be resized"); }
 	};
 	static_assert(std::is_same_v<string_traits<string<char>>::value_type, char>);
 	static_assert(std::is_same_v<string_traits<string<wchar_t>>::value_type, wchar_t>);
