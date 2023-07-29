@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using Rylogic.Utility;
 
 namespace Rylogic.Extn
@@ -34,6 +35,20 @@ namespace Rylogic.Extn
 		public static long CopyTo(this Stream src, long count, Stream dst)
 		{
 			return src.CopyTo(count, dst, new byte[4096]);
+		}
+
+		/// <summary>Return an array of bytes read from the stream</summary>
+		public static byte[] ToBytes(this Stream src)
+		{
+			using var ms = new MemoryStream();
+			src.CopyTo(ms);
+			return ms.ToArray();
+		}
+		public async static Task<byte[]> ToBytesAsync(this Stream src)
+		{
+			using var ms = new MemoryStream();
+			await src.CopyToAsync(ms);
+			return ms.ToArray();
 		}
 
 		/// <summary>Fill 'buffer' from the stream, throwing if not enough data is available</summary>
