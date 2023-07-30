@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -20,17 +20,17 @@ static const int TextureFlags_ProjectFromEnvMap  = (1 << 2);
 static const int AlphaFlags_HasAlpha             = (1 << 0);
 
 // Models
-#define HasNormals (m_flags.x & ModelFlags_HasNormals)
-#define HasTex0    (m_flags.y & TextureFlags_HasDiffuse)
-#define HasEnvMap  (m_flags.y & TextureFlags_IsReflective)
-#define EnvMapProj (m_flags.y & TextureFlags_ProjectFromEnvMap)
-#define HasAlpha   (m_flags.z & AlphaFlags_HasAlpha)
+#define HAS_NORMALS  (m_flags.x & ModelFlags_HasNormals)
+#define HAS_TEX0     (m_flags.y & TextureFlags_HasDiffuse)
+#define HAS_ENVMAP   (m_flags.y & TextureFlags_IsReflective)
+#define ENV_MAP_PROJ (m_flags.y & TextureFlags_ProjectFromEnvMap)
+#define HAS_ALPHA    (m_flags.z & AlphaFlags_HasAlpha)
 
 // Light types
-#define AmbientLight(light)     (light.m_info.x == 0)
-#define DirectionalLight(light) (light.m_info.x == 1)
-#define PointLight(light)       (light.m_info.x == 2)
-#define SpotLight(light)        (light.m_info.x == 3)
+#define AMBIENT_LIGHT(light)     (light.m_info.x == 0)
+#define DIRECTIONAL_LIGHT(light) (light.m_info.x == 1)
+#define POINT_LIGHT(light)       (light.m_info.x == 2)
+#define SPOT_LIGHT(light)        (light.m_info.x == 3)
 
 // Shadows
 #define ShadowMapCount(shdw) (shdw.m_info.x)

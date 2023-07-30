@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -72,21 +72,21 @@ PSOut PSDefault(PSIn In)
 	Out.diff = In.diff;
 
 	// Transform
-	if (HasNormals)
+	if (HAS_NORMALS)
 	{
 		// If the normal is (0,0,0), use a vector to the light source
 		In.ws_norm =
 			dot(In.ws_norm, In.ws_norm) != 0 ? normalize(In.ws_norm) :
-			DirectionalLight(m_global_light) ? -m_global_light.m_ws_direction :
-			PointLight(m_global_light)       ? normalize(m_global_light.m_ws_position - In.ws_vert) :
-			SpotLight(m_global_light)        ? normalize(m_global_light.m_ws_position - In.ws_vert) :
+			DIRECTIONAL_LIGHT(m_global_light) ? -m_global_light.m_ws_direction :
+			POINT_LIGHT(m_global_light)       ? normalize(m_global_light.m_ws_position - In.ws_vert) :
+			SPOT_LIGHT(m_global_light)        ? normalize(m_global_light.m_ws_position - In.ws_vert) :
 			float4(0,0,0,0);
 	}
 
 	// Texture2D (with transform)
-	if (HasTex0)
+	if (HAS_TEX0)
 	{
-		if (EnvMapProj)
+		if (ENV_MAP_PROJ)
 		{
 			float3 dir = mul(In.ws_vert, m_tex2surf0).xyz;
 			Out.diff = m_envmap_texture.Sample(m_envmap_sampler, dir);
@@ -98,7 +98,7 @@ PSOut PSDefault(PSIn In)
 	}
 
 	// Env Map
-	if (HasEnvMap && HasNormals)
+	if (HAS_ENVMAP && HAS_NORMALS)
 		Out.diff = EnvironmentMap(m_env_map, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], Out.diff);
 
 	// Shadows
@@ -107,11 +107,11 @@ PSOut PSDefault(PSIn In)
 		light_visible = LightVisibility(m_shadow, In.ws_vert);
 
 	// Lighting
-	if (HasNormals)
+	if (HAS_NORMALS)
 		Out.diff = Illuminate(m_global_light, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], light_visible, Out.diff);
 
 	// If not alpha blending, clip alpha pixels
-	if (!HasAlpha)
+	if (!HAS_ALPHA)
 		clip(Out.diff.a - 0.5);
 
 	return Out;
