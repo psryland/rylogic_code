@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
@@ -52,12 +52,12 @@ float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 
 
 	float  has_norm      = dot(ws_norm, ws_norm); // 1 for normals, 0 for not
 	float4 ws_toeye_norm = normalize(ws_cam - ws_pos);
-	float4 ws_light_dir  = DirectionalLight(light) ? light.m_ws_direction : normalize(ws_pos - light.m_ws_position);
+	float4 ws_light_dir  = DIRECTIONAL_LIGHT(light) ? light.m_ws_direction : normalize(ws_pos - light.m_ws_position);
 
 	float intensity = 0;
-	if      (DirectionalLight(light)) intensity = LightDirectional(light.m_ws_direction ,ws_norm ,unlit_diff.a);
-	else if (PointLight(light))       intensity = LightPoint      (light.m_ws_position  ,ws_norm ,ws_pos ,unlit_diff.a);
-	else if (SpotLight(light))        intensity = LightSpot       (light.m_ws_position  ,light.m_ws_direction ,light.m_spot.x ,light.m_spot.y ,light.m_spot.z ,light.m_spot.w ,ws_norm ,ws_pos ,unlit_diff.a);
+	if      (DIRECTIONAL_LIGHT(light)) intensity = LightDirectional(light.m_ws_direction ,ws_norm ,unlit_diff.a);
+	else if (POINT_LIGHT(light))       intensity = LightPoint      (light.m_ws_position  ,ws_norm ,ws_pos ,unlit_diff.a);
+	else if (SPOT_LIGHT(light))        intensity = LightSpot       (light.m_ws_position  ,light.m_ws_direction ,light.m_spot.x ,light.m_spot.y ,light.m_spot.z ,light.m_spot.w ,ws_norm ,ws_pos ,unlit_diff.a);
 
 	float4 ltdiff = float4(0,0,0,0);
 	ltdiff.rgb += light.m_ambient.rgb;

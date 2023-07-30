@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <set>
 #include <map>
+#include <iterator>
 #include "pr/container/span.h"
 
 namespace pr

@@ -5,8 +5,8 @@
 #pragma once
 #include <format>
 #include "pr/common/to.h"
-#include "pr/common/fmt.h"
 #include "pr/common/cast.h"
+#include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/str/string.h"
@@ -464,8 +464,8 @@ namespace pr
 		static IRect To_(FRect const& x)
 		{
 			return IRect(
-				Vec2<int,void>(s_cast<int>(x.m_min.x), s_cast<int>(x.m_min.y)),
-				Vec2<int,void>(s_cast<int>(x.m_max.x), s_cast<int>(x.m_max.y)));
+				Vec2<int, void>(s_cast<int>(x.m_min.x), s_cast<int>(x.m_min.y)),
+				Vec2<int, void>(s_cast<int>(x.m_max.x), s_cast<int>(x.m_max.y)));
 		}
 
 		#ifdef _WINDEF_

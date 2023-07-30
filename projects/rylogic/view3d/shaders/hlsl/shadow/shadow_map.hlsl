@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -58,11 +58,11 @@ PSOut main(PSIn_ShadowMap In)
 	float4 diff = In.diff;
 
 	// Texture2D (with transform)
-	if (HasTex0)
+	if (HAS_TEX0)
 		diff = m_texture0.Sample(m_sampler0, In.tex0) * diff;
 
 	// If not alpha blending, clip alpha pixels
-	if (!HasAlpha)
+	if (!HAS_ALPHA)
 		clip(diff.a - 0.5);
 
 	Out.shade = In.ws_vert.w;
