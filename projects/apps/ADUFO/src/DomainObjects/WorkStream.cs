@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Rylogic.Gfx;
 using Rylogic.LDraw;
