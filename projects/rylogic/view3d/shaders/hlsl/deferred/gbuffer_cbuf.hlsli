@@ -49,11 +49,4 @@ cbuffer CBufNugget :reg(b2)
 	float4 m_tint; // object tint colour
 };
 
-#if SHADER_BUILD
-
-#define HAS_NORMALS (m_flags.x == 1)
-#define HAS_TEX0    (m_flags.y == 1)
-
-#endif
-
 #endif

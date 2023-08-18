@@ -37,6 +37,7 @@
       <AdditionalOptions>/Zm200</AdditionalOptions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <BuildStlModules>false</BuildStlModules>
       <ConformanceMode>true</ConformanceMode>
       <BuildStlModules>false</BuildStlModules>
     </ClCompile>
