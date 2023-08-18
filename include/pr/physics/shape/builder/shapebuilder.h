@@ -21,6 +21,7 @@
 #include "pr/maths/maths.h"
 #include "pr/physics/types/forward.h"
 #include "pr/physics/material/material.h"
+#include "pr/physics/material/imaterial.h"
 #include "pr/physics/shape/shape.h"
 #include "pr/physics/shape/builder/shapebuilderresult.h"
 

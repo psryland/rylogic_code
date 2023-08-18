@@ -100,9 +100,9 @@ namespace Csex
 			{
 				return
 					from reference in references
-					group reference by reference.ReferencedAssembly.Name
+					group reference by reference.ReferencedAssembly?.Name
 					into referenceGroup
-					where referenceGroup.ToList().Select(reference => reference.ReferencedAssembly.FullName).Distinct().Count() > 1
+					where referenceGroup.ToList().Select(reference => reference.ReferencedAssembly?.FullName).Distinct().Count() > 1
 					select referenceGroup;
 			}
 		}

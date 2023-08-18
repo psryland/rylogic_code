@@ -7,6 +7,7 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/model_desc.h"
+#include "pr/view3d-12/main/renderer.h"
 
 namespace pr::rdr12
 {

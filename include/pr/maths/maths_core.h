@@ -746,7 +746,7 @@ namespace pr
 	{
 		// Sqrt is ill-defined for non-square matrices.
 		// Matrices have an overload that finds the matrix whose product is 'x'.
-		static_assert(std::dependent_false<T>, "Sqrt is not defined for general vector types");
+		static_assert(dependent_false<T>, "Sqrt is not defined for general vector types");
 	}
 	template <maths::VectorX T> inline T CompSqrt(T const& v) // Component Sqrt
 	{

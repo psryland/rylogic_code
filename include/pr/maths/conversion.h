@@ -5,8 +5,8 @@
 #pragma once
 #include <format>
 #include "pr/common/to.h"
-#include "pr/common/fmt.h"
 #include "pr/common/cast.h"
+#include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/str/string.h"
@@ -36,9 +36,9 @@ namespace pr
 			return Vec2<S,T>(s_cast<S>(v.x), s_cast<S>(v.y));
 		}
 
-		// String to Vec2
+		// String to Vec2<floating_point>
 		template <StringType Str>
-		static Vec2<S,T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Vec2<S,T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -50,7 +50,7 @@ namespace pr
 		}
 
 		// String to Vec2<integral>
-		template <StringType Str> requires std::integral<S>
+		template <StringType Str>
 		static Vec2<S,T> To_(Str const& s, int radix = 10, string_traits<Str>::value_type const** end = nullptr) requires std::integral<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
@@ -248,7 +248,7 @@ namespace pr
 
 		// String to Vec8
 		template <StringType Str>
-		static Vec8<S, T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr)
+		static Vec8<S, T> To_(Str const& s, string_traits<Str>::value_type const** end = nullptr) requires std::floating_point<S>
 		{
 			using Char = typename string_traits<Str>::value_type;
 
@@ -464,8 +464,8 @@ namespace pr
 		static IRect To_(FRect const& x)
 		{
 			return IRect(
-				Vec2<int,void>(s_cast<int>(x.m_min.x), s_cast<int>(x.m_min.y)),
-				Vec2<int,void>(s_cast<int>(x.m_max.x), s_cast<int>(x.m_max.y)));
+				Vec2<int, void>(s_cast<int>(x.m_min.x), s_cast<int>(x.m_min.y)),
+				Vec2<int, void>(s_cast<int>(x.m_max.x), s_cast<int>(x.m_max.y)));
 		}
 
 		#ifdef _WINDEF_

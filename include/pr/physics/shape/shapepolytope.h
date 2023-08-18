@@ -17,8 +17,13 @@ namespace pr
 
 		struct ShapePolyFace
 		{
+			using VIndex = PolyIdx;
+
 			PolyIdx m_index[3];
 			PolyIdx pad;
+
+			VIndex vindex(int i) const { return m_index[i]; }
+			VIndex& vindex(int i) { return m_index[i]; }
 		};
 		struct ShapePolyNbrs
 		{

@@ -33,7 +33,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -54,7 +53,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -75,7 +73,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -96,7 +93,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -118,7 +114,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -139,7 +134,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
 		static const int radix = 10;
 	};
 
@@ -159,7 +153,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = false;
-		static const float_denorm_style has_denorm = denorm_absent;
 		static const int radix = 10;
 	};
 
@@ -179,7 +172,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = false;
-		static const float_denorm_style has_denorm = denorm_absent;
 		static const int radix = 10;
 	};
 
@@ -199,7 +191,6 @@ namespace std
 		static const bool has_quiet_NaN = false;
 		static const bool has_signaling_NaN = false;
 		static const bool has_denorm_loss = false;
-		static const float_denorm_style has_denorm = denorm_absent;
 		static const int radix = 10;
 	};
 }

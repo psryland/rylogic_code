@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/view3d/forward.h"
+#include "pr/view3d/render/scene.h"
 #include "pr/view3d/render/scene_view.h"
 #include "pr/view3d/steps/shadow_map.h"
 #include "pr/view3d/lights/light.h"

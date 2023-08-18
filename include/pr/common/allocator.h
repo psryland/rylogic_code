@@ -17,9 +17,9 @@
 #endif
 
 #ifdef NDEBUG
-constexpr int PR_DBG_MEMORY_ALLOC = 0;
+inline constexpr int PR_DBG_MEMORY_ALLOC = 0;
 #else
-constexpr int PR_DBG_MEMORY_ALLOC = 1;
+inline constexpr int PR_DBG_MEMORY_ALLOC = 1;
 #endif 
 
 namespace pr

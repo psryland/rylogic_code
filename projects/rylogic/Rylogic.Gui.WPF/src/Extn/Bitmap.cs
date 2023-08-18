@@ -1,6 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace Rylogic.Gui.WPF
@@ -29,6 +31,17 @@ namespace Rylogic.Gui.WPF
 			bm.Freeze();
 
 			return bm;
+		}
+
+		/// <summary>Reads a given image resource into a GDI image.</summary>
+		public static System.Drawing.Image ToGDIImage(this ImageSource image_source)
+		{
+			if (image_source == null)
+				return null!;
+
+			var uri = new Uri(image_source.ToString());
+			var stream = Application.GetResourceStream(uri)?.Stream ?? throw new ArgumentException($"The supplied image source '{image_source}' could not be resolved.");
+			return new System.Drawing.Bitmap(stream);
 		}
 	}
 }

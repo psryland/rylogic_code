@@ -1072,7 +1072,7 @@ namespace pr::script
 		}
 		template <typename Type> bool Extract(Type& type)
 		{
-			static_assert(dependant_false<Type>, "Extract method not implemented for this type");
+			static_assert(dependent_false<Type>, "Extract method not implemented for this type");
 		}
 		template <typename Type> bool ExtractS(Type& type)
 		{

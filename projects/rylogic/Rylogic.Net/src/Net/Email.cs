@@ -55,9 +55,9 @@ namespace Rylogic.UnitTests
 			var http = new HttpClient();
 
 			// Example uses the SendGrid API key/auth token for the RexBionics RST crash reporting
-			// var api_key = "rE4Bg3AZRrOx7i8BrZgypA";
-			// var auth_string = "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";
-			http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "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");
+			// var api_key = "<your-api-key>";
+			// var auth_string = "SG.<your-api-key>.<some-other-code>-<some-other-code>-<some-other-code>";
+			http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "SG.<your-api-key>.<some-other-code>-<some-other-code>-<some-other-code>");
 
 			// Use 'JsonConvert.SerializeObject(body)'
 			//  or 'System.Web.Extensions.JavaScriptSerializer().Serialize'
