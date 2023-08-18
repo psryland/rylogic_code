@@ -1,4 +1,4 @@
-﻿#if false
+﻿#if NETFRAMEWORK
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
@@ -8,9 +8,10 @@ using System.Reflection;
 using System.Text;
 using Microsoft.CSharp;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 
-namespace Rylogic.Common
+namespace Rylogic.Common.Windows
 {
 	public sealed class RuntimeAssembly :IDisposable
 	{
@@ -22,20 +23,27 @@ namespace Rylogic.Common
 		//  - This class mirrors the Rylogic.Core interface as much as possible
 
 		/// <summary>Compile C# source code into an assembly</summary>
-		public static RuntimeAssembly Compile(string source_code, IEnumerable<string>? include_paths = null, string? ass_name = null)
+		public static RuntimeAssembly Compile(string source_code, IEnumerable<string>? include_paths = null, IEnumerable<string>? defines = null)
 		{
 			var provider = new CSharpCodeProvider(new Dictionary<string, string> { { "CompilerVersion", "v4.0" } });
+			var search_paths = new List<string>(include_paths ?? Array.Empty<string>())
+			{
+				Util.ResolveAppPath(),
+			};
 			var compiler_params = new CompilerParameters()
 			{
 				GenerateInMemory = true,
 				GenerateExecutable = false,
-				CompilerOptions = $@"/lib:""{Util.ResolveAppPath()}""",
+				CompilerOptions = 
+					$"/lib:\"{Util.ResolveAppPath()}\" " +
+					(defines != null ? $"/define:{string.Join(";", defines)}" : ""),
 			};
-			foreach (var ass in References(source_code, include_paths))
-			{
-				compiler_params.ReferencedAssemblies.Add(ass);
-			}
 
+			// Add assembly references
+			foreach (var ass in AssemblyPaths(source_code, search_paths))
+				compiler_params.ReferencedAssemblies.Add(ass);
+
+			// Compile the script into a dynamic assembly
 			var results = provider.CompileAssemblyFromSource(compiler_params, source_code);
 			if (results.Errors.Count != 0)
 				throw new CompileException(results);
@@ -43,60 +51,70 @@ namespace Rylogic.Common
 			// Return the compiled result
 			return new RuntimeAssembly(results.CompiledAssembly);
 
-			/// <summary>Return the reference assemblies from the source code</summary>
-			static IEnumerable<string> References(string source_code, IEnumerable<string>? include_paths = null)
+			// Return the assembly references
+			static IEnumerable<string> AssemblyPaths(string source_code, IEnumerable<string> search_paths)
 			{
-				// Add standard assemblies
-				var mscore_dll = typeof(object).Assembly.Location;
-				yield return mscore_dll;
+				// Get the currently loaded assemblies. We'll use these paths in preference to anything else
+				var loaded_assemblies = AppDomain.CurrentDomain.GetAssemblies()
+					.Where(x => !x.IsDynamic)
+					.ToDictionary(x => x.GetName().Name, x => x.Location);
 
-				// Get the directory for the .net assemblies
-				var libdir = Path.GetDirectoryName(mscore_dll) ?? string.Empty;
+				// Add standard assemblies
+				yield return typeof(object).Assembly.Location;
 
 				// Scan the file for Reference Assembles
-				foreach (var line in source_code.Lines().Select(x => (string)x.Trim(' ', '\t', '\r', '\n')))
+				foreach (var ass in AssemblyReferences(source_code))
+				{
+					var (ass_filetitle, ass_filename) =
+						ass.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+						? (Common.Path_.FileTitle(ass), Common.Path_.FileName(ass))
+						: (Common.Path_.FileName(ass), $"{Common.Path_.FileName(ass)}.dll");
+
+					// Full paths do not need resolving
+					if (Path.IsPathRooted(ass) && Common.Path_.FileExists(ass))
+					{
+						yield return ass;
+						continue;
+					}
+
+					// See if the assembly is already loaded
+					if (loaded_assemblies.TryGetValue(ass_filetitle, out string ass_fullpath))
+					{
+						yield return ass_fullpath;
+						continue;
+					}
+
+					// See if .net can resolve it
+					if (Win32.GetAssemblyPath(ass_filetitle) is string ass_filepath)
+					{
+						yield return ass_filepath;
+						continue;
+					}
+
+					// Search the include paths
+					if (search_paths.Select(x => Path.Combine(x, ass_filename)).FirstOrDefault(Common.Path_.FileExists) is string ass_filepath2)
+					{
+						yield return ass_filepath2;
+						continue;
+					}
+
+					throw new FileNotFoundException($"Failed to resolve referenced assembly: {ass}\nSearch paths:\n{string.Join("\n", search_paths)}");
+				}
+			}
+			static IEnumerable<string> AssemblyReferences(string source_code)
+			{
+				foreach (var line in source_code.Lines().Select(x => (string)x.Trim(' ', ';', '\t', '\r', '\n')))
 				{
 					if (!line.HasValue()) continue;
 					if (!line.StartsWith("//")) break;
 					if (!line.StartsWith("//Assembly:")) continue;
 
 					// Read the assembly name
-					var ass = line.Substring(11).Trim(' ', '\t', '\r', '\n');
+					var ass = line.Substring("//Assembly:".Length).Trim(' ', '\t');
 					if (!ass.HasValue())
 						continue;
 
-					// Full paths do not need resolving
-					if (Path.IsPathRooted(ass) && Path_.FileExists(ass))
-					{
-						yield return ass;
-						continue;
-					}
-
-					var search_paths = (include_paths ?? Array.Empty<string>()).Append(Util.ResolveAppPath());
-
-					// Relative paths should be relative to the executable
-					if (ass.StartsWith("."))
-					{
-						// Look in likely paths
-						var ass_filepath = search_paths.Select(x => Path.Combine(x, ass)).FirstOrDefault(x => Path_.FileExists(x));
-						if (ass_filepath != null)
-						{
-							yield return ass_filepath;
-							continue;
-						}
-					}
-					else
-					{
-						// Look in 'libdir' for a system assembly
-						var ass_filepath = Path.Combine(libdir, ass);
-						if (Path_.FileExists(ass_filepath))
-						{
-							yield return ass_filepath;
-							continue;
-						}
-					}
-
-					throw new FileNotFoundException($"Failed to resolve referenced assembly: {ass}\nSearch paths: {string.Join("\n", search_paths)}");
+					yield return ass;
 				}
 			}
 		}
@@ -140,7 +158,7 @@ namespace Rylogic.Common
 			public Instance(Assembly ass, string type_name, object[]? args)
 			{
 				m_inst = ass.CreateInstance(type_name, false, BindingFlags.Public | BindingFlags.Instance, null, args, null, null) ?? throw new Exception($"No type {type_name} found");
-				m_methods = new Cache<string, MethodInfo>(100);
+				m_methods = new Cache<string, MethodInfo>(100) { ThreadSafe = true };
 			}
 			public void Dispose()
 			{

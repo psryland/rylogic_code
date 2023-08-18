@@ -5,7 +5,10 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/window.h"
+#include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/scene/scene_camera.h"
+#include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
