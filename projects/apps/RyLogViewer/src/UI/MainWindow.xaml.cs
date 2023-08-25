@@ -39,6 +39,8 @@ namespace RyLogViewer
 
 			// Commands
 			OpenSingleLogFile = Command.Create(this, OpenSingleLogFileInternal);
+			LogLaunchedProcess = Command.Create(this, LogLaunchedProcessInternal);
+			LogAttachedProcess = Command.Create(this, LogAttachedProcessInternal);
 			ShowOptionsUI = Command.Create(this, ShowOptionsUIInternal);
 			Shutdown = Command.Create(this, ShutdownInternal);
 
@@ -119,6 +121,18 @@ namespace RyLogViewer
 				Report.ErrorPopup($"Failed to open file {filepath} due to an error.", ex);
 				Main.LogDataSource = null;
 			}
+		}
+
+		/// <summary>Display output from a process</summary>
+		public ICommand LogLaunchedProcess { get; }
+		private void LogLaunchedProcessInternal()
+		{
+		}
+
+		/// <summary>Display output from an attached process</summary>
+		public ICommand LogAttachedProcess { get; }
+		private void LogAttachedProcessInternal()
+		{
 		}
 
 		/// <summary>Open the Option UI</summary>

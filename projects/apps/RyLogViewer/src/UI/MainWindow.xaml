@@ -28,7 +28,8 @@
 			<MenuItem Header="_File">
 				<MenuItem Header="_Open Log File" Command="{Binding OpenSingleLogFile}"/>
 				<MenuItem Header="_Data Sources">
-					<MenuItem Header="_Program Output..."/>
+					<MenuItem Header="_Launch Process..." Command="{Binding LogLaunchedProcess}"/>
+					<MenuItem Header="_Attach to Process..." Command="{Binding LogAttachedProcess}"/>
 					<MenuItem Header="_Serial Port..."/>
 					<MenuItem Header="_Network Connection..."/>
 					<MenuItem Header="Named _Pipe..."/>
