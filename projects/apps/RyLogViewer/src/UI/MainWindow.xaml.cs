@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using Rylogic.Common;
@@ -133,6 +136,33 @@ namespace RyLogViewer
 		public ICommand LogAttachedProcess { get; }
 		private void LogAttachedProcessInternal()
 		{
+			try
+			{
+				var processes = Process.GetProcesses()
+					.OrderBy(x => x.ProcessName)
+					.ToList();
+
+				var list = new ListUI(this)
+				{
+					Title = "Attach to Process",
+					Prompt = "Select the process to attach to:",
+					SelectionMode = SelectionMode.Single,
+					DisplayMember = nameof(Process.ProcessName),
+					MinWidth = 500,
+					Height = 800,
+				};
+				foreach (var p in processes)
+					list.Items.Add(p);
+				if (list.ShowDialog() != true)
+					return;
+
+				Main.LogDataSource = new AttachedProcessSource((Process)list.SelectedItem, Settings);
+			}
+			catch (Exception ex)
+			{
+				Report.ErrorPopup($"Failed to attach to process due to an error.", ex);
+				Main.LogDataSource = null;
+			}
 		}
 
 		/// <summary>Open the Option UI</summary>
