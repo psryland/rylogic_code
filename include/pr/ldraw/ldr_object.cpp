@@ -4957,7 +4957,7 @@ namespace pr::ldr
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator<>::Text(p.m_rdr, m_text, m_fmt.data(), int(m_fmt.size()), m_layout, m_axis.m_align);
+			obj->m_model = ModelGenerator<>::Text(p.m_rdr, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Create the model
@@ -4989,23 +4989,24 @@ namespace pr::ldr
 							#endif
 
 							// Create a camera with an aspect ratio that matches the viewport
-							auto& m_camera = static_cast<Camera const&>(scene.m_view);
-							auto  v_camera = m_camera; v_camera.Aspect(w / h);
-							auto fd = m_camera.FocusDist();
+							// This handles the case where main camera X/Y are not using the same resolution.
+							auto& main_camera = static_cast<Camera const&>(scene.m_view);
+							auto  text_camera = main_camera; text_camera.Aspect(w / h);
+							auto fd = main_camera.FocusDist();
 
-							// Get the scaling factors from 'm_camera' to 'v_camera'
-							auto viewarea_c = m_camera.ViewArea(fd);
-							auto viewarea_v = v_camera.ViewArea(fd);
+							// Get the scaling factors from 'main_camera' to 'text_camera'
+							auto viewarea_camera = main_camera.ViewArea(fd);
+							auto viewarea_txtcam = text_camera.ViewArea(fd);
 
 							// Scale the X,Y coords in camera space
 							auto pt_cs = w2c * ob.m_i2w.pos;
-							pt_cs.x *= viewarea_v.x / viewarea_c.x;
-							pt_cs.y *= viewarea_v.y / viewarea_c.y;
+							pt_cs.x *= viewarea_txtcam.x / viewarea_camera.x;
+							pt_cs.y *= viewarea_txtcam.y / viewarea_camera.y;
 							auto pt_ws = c2w * pt_cs;
 
 							// Position facing the camera
-							ob.m_i2w = m4x4(c2w.rot, pt_ws);
-							ob.m_c2s = v_camera.CameraToScreen();
+							ob.m_i2w = m4x4(c2w.rot, pt_ws) * ob.m_i2w.scale();
+							ob.m_c2s = text_camera.CameraToScreen();
 						};
 					break;
 				}
@@ -5014,13 +5015,24 @@ namespace pr::ldr
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->Flags(ELdrFlags::SceneBoundsExclude, true, "");
+					obj->Flags(
+						ELdrFlags::BBoxExclude |
+						ELdrFlags::SceneBoundsExclude |
+						ELdrFlags::HitTestExclude |
+						ELdrFlags::ShadowCastExclude, true, "");
+
+					// Scale up the view port to reduce floating point precision noise.
+					constexpr int ViewPortSize = 1024;
+
+					// Screen space uses a standard normalised orthographic projection
+					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
 
 					// Update the rendering 'i2w' transform on add-to-scene
 					obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
 					{
-						auto c2w = scene.m_view.CameraToWorld();
-						auto w2c = scene.m_view.WorldToCamera();
+						auto& main_camera = static_cast<Camera const&>(scene.m_view);
+						auto c2w = main_camera.CameraToWorld();
+						auto w2c = main_camera.WorldToCamera();
 						auto w = 1.0f * scene.m_viewport.ScreenW;
 						auto h = 1.0f * scene.m_viewport.ScreenH;
 						#if PR_DBG
@@ -5028,36 +5040,27 @@ namespace pr::ldr
 							throw std::runtime_error("Invalid viewport size");
 						#endif
 
-						// Create a camera with an aspect ratio that matches the viewport
-						auto& m_camera = static_cast<Camera const&>(scene.m_view);
-						auto  v_camera = m_camera; v_camera.Aspect(w / h);
-						auto fd = m_camera.FocusDist();
+						// Convert the world space position into a screen space position
+						auto pt_ss = w2c * ob.m_i2w.pos;
+						auto viewarea = main_camera.ViewArea(abs(pt_ss.z));
+						pt_ss.x *= ViewPortSize / viewarea.x;
+						pt_ss.y *= ViewPortSize / viewarea.y;
+						pt_ss.z = s_cast<float>(main_camera.NormalisedDistance(pt_ss.z));
 
-						// Get the scaling factors from 'm_camera' to 'v_camera'
-						auto viewarea_c = m_camera.ViewArea(fd);
-						auto viewarea_v = v_camera.ViewArea(fd);
+						// The text quad has a scale of 100pt == 1m. For screen space make this 100pt * 96/72 == 133px
+						constexpr float m_to_px = 133.0f;
 
-						// Scale the X,Y coords in camera space
-						auto pt_cs = w2c * ob.m_i2w.pos;
-						pt_cs.x *= viewarea_v.x / viewarea_c.x;
-						pt_cs.y *= viewarea_v.y / viewarea_c.y;
-						auto pt_ws = c2w * pt_cs;
+						// Scale the object from physical pixels to normalised screen space
+						auto scale = m4x4::Scale(m_to_px * ViewPortSize / w, m_to_px * ViewPortSize / h, 1, v4::Origin());
 
-						// Scale the instance so that it covers 'dim' pixels on-screen
-						auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
-						auto sz_x = 1.0f;//(viewarea_v.x / w) * sz_z;
-						auto sz_y = 1.0f;//(viewarea_v.y / h) * sz_z;
-						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(s_cast<float>(sz_x), s_cast<float>(sz_y), 1.0f, v4::Origin());
-						ob.m_c2s = v_camera.CameraToScreen();
+						// Construct the 'i2w' using the screen space position
+						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale();
 					};
 					break;
 				}
 				// Position the text quad in screen space.
 				case EType::ScreenSpace:
 				{
-					// Scale up the view port to reduce floating point precision noise.
-					static constexpr int ViewPortSize = 1024;
-
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
 					obj->Flags(
@@ -5065,6 +5068,9 @@ namespace pr::ldr
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
 						ELdrFlags::ShadowCastExclude, true, "");
+
+					// Scale up the view port to reduce floating point precision noise.
+					constexpr int ViewPortSize = 1024;
 
 					// Screen space uses a standard normalised orthographic projection
 					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -5075,23 +5081,29 @@ namespace pr::ldr
 						// The 'ob.m_i2w' is a normalised screen space position
 						// (-1,-1,-0) is the lower left corner on the near plane,
 						// (+1,+1,-1) is the upper right corner on the far plane.
+						auto& main_camera = static_cast<Camera const&>(scene.m_view);
+						auto c2w = main_camera.CameraToWorld();
 						auto w = 1.0f * scene.m_viewport.ScreenW;
 						auto h = 1.0f * scene.m_viewport.ScreenH;
-						auto c2w = scene.m_view.CameraToWorld();
 						#if PR_DBG
 						if (w < 1.0f || h < 1.0f)
 							throw std::runtime_error("Invalid viewport size");
 						#endif
 
+						// Convert the position givin in the ldr script as 2D screen space
+						// Note: pt_ss.z should already be the normalised distance from the camera
+						auto pt_ss = ob.m_i2w.pos;
+						pt_ss.x *= 0.5f * ViewPortSize;
+						pt_ss.y *= 0.5f * ViewPortSize;
+
+						// The text quad has a scale of 100pt == 1m. For screen space make this 100pt * 96/72 == 133px
+						constexpr float m_to_px = 133.0f;
+
 						// Scale the object from physical pixels to normalised screen space
-						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4::Origin());
+						auto scale = m4x4::Scale(m_to_px * ViewPortSize / w, m_to_px * ViewPortSize / h, 1, v4::Origin());
 
-						// Reverse 'pos.z' so positive values can be used
-						ob.m_i2w.pos.x *= 0.5f * ViewPortSize;
-						ob.m_i2w.pos.y *= 0.5f * ViewPortSize;
-
-						// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
-						ob.m_i2w = c2w * ob.m_i2w * scale;
+						// Convert 'i2w', which is 'i2c' in the ldr script, into an actual 'i2w'
+						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale();
 					};
 					break;
 				}
