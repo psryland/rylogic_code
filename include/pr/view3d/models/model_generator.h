@@ -1539,10 +1539,12 @@ namespace pr::rdr
 		// Create a quad containing text.
 		// 'text' is the complete text to render into the quad.
 		// 'formatting' defines regions in the text to apply formatting to.
-		// 'formatting_count' is the length of the 'formatting' array.
 		// 'layout' is global text layout information.
+		// 'scale' controls the size of the output quad. Scale of 1 => 100pt = 1m
+		// 'axis_id' is the forward direction of the quad
+		// 'dim_out' is 'xy' = size of text in pixels, 'zw' = size of quad in pixels
 		template <typename = void>
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr)
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr)
 		{
 			// Texture sizes are in physical pixels, but D2D operates in DIP so we need to determine
 			// the size in physical pixels on this device that correspond to the returned metrics.
@@ -1555,9 +1557,9 @@ namespace pr::rdr
 			auto dwrite = lock.DWrite();
 
 			// Get the default format
-			auto def = formatting_count != 0 && !formatting[0].empty() ? formatting[0] : TextFormat();
+			auto def = !formatting.empty() && !formatting[0].empty() ? formatting[0] : TextFormat();
 
-			// Determine of the model requires alpha blending.
+			// Determine if the model requires alpha blending.
 			// Consider alpha = 0 as not requiring blending, Alpha clip will be used instead
 			auto has_alpha = HasAlpha(layout.m_bk_colour) || HasAlpha(def.m_font.m_colour);
 
@@ -1573,8 +1575,7 @@ namespace pr::rdr
 			text_layout->SetWordWrapping(layout.m_word_wrapping);
 
 			// Apply the formatting
-			auto fmtting = std::initializer_list<TextFormat>(formatting, formatting + formatting_count);
-			for (auto& fmt : fmtting)
+			for (auto& fmt : formatting)
 			{
 				// A null range can be used to set the default font/style for the whole string
 				if (fmt.empty())
@@ -1604,23 +1605,14 @@ namespace pr::rdr
 
 			// DIP is defined as 1/96th of a logical inch (= 0.2645833 mm/px)
 			// Font size 12pt is 16px high = 4.233mm (1pt = 1/72th of an inch)
-			// Need to choose a texture size with an aspect ratio matching 'dip_size'.
-			// Can choose the quat size arbitrarily so might as well use 1px = 0.264583 mm
-			// so that 12pt is the correct size in virtual space.
-			const float pt_to_px = 96.0f / 72.0f;
-			const float pt_to_m = pt_to_px * 0.0002645833f;
-			const int max_pixels = 1024 * 1024;
+			// Can choose the quat size arbitrarily so defaulting to 1pt = 1cm. 'scale' can be used to adjust this.
+			constexpr float pt_to_px = 96.0f / 72.0f;  // This is used to find the required texture size.
+			const float pt_to_m = 0.00828491f * scale; // This is used to create the quad as a multiple of the text size.
 
-			// Determine the required texture size, clamp the size at a memory limit
+			// Determine the required texture size. This is controlled by the font size only.
+			// DWrite draws in absolute pixels so there is no point in trying to scale the texture.
 			auto text_size = dip_size;
-			auto pixel_count = text_size.x * text_size.y * Sqr(pt_to_px);
-			auto texture_size = pixel_count > max_pixels
-				? Ceil(text_size * pt_to_px * sqrtf(max_pixels / float(pixel_count)))
-				: Ceil(text_size * pt_to_px);
-
-			// todo: Should be able to scale the text as needed, font size just affects the resolution.
-			// The upper bound on font size is the height of the texture in pixels. Need to choose size that fits in the texture.
-			// After sorting that, get the Billboard (non-3d) test working.
+			auto texture_size = Ceil(text_size * pt_to_px);
 
 			// Create a texture large enough to contain the text, and render the text into it
 			SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
@@ -1634,7 +1626,7 @@ namespace pr::rdr
 			auto bk = To<D3DCOLORVALUE>(layout.m_bk_colour);
 
 			// Apply different colours to text ranges
-			for (auto& fmt : fmtting)
+			for (auto& fmt : formatting)
 			{
 				if (fmt.empty()) continue;
 				if (fmt.m_font.m_colour != def.m_font.m_colour)
@@ -1688,19 +1680,19 @@ namespace pr::rdr
 			if (bake != nullptr) opts.m_bake = *bake;
 			return Create(rdr, cache, opts);
 		}
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id)
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id)
 		{
 			v4 dim_out;
-			return Text(rdr, text, formatting, formatting_count, layout, axis_id, dim_out);
+			return Text(rdr, text, formatting, layout, scale, axis_id, dim_out);
 		}
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id, v4& dim_out)
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out)
 		{
-			return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
+			return Text(rdr, text, std::span(&formatting, 1), layout, scale, axis_id, dim_out);
 		}
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id)
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id)
 		{
 			v4 dim_out;
-			return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
+			return Text(rdr, text, std::span(&formatting, 1), layout, scale, axis_id, dim_out);
 		}
 	};
 }

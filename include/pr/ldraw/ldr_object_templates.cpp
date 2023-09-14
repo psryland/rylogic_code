@@ -177,7 +177,6 @@ namespace pr::ldr
 			"	[*Anchor {<nss_x> <nss_y>}]\n"
 			"	[*Padding {<left> <top> <right> <bottom>}]\n"
 			"	[@AxisId]\n"
-			"	[*Dim {<width> <height>}]\n"
 			"	[*Format {Left|CentreH|Right Top|CentreV|Bottom NoWrap|Wrap|WholeWord|Character|EmergencyBreak}]\n"
 			"	$ObjectModifiers\n"
 			"}\n"
