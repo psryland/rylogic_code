@@ -1,0 +1,119 @@
+﻿<Window
+	x:Class="ADUFO.ConnectUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	Title="Connect to Azure DevOps"
+	WindowStartupLocation="CenterOwner"
+	ResizeMode="CanResizeWithGrip"
+	Background="Beige"
+	FontSize="14"
+	MinWidth="500"
+	MinHeight="360"
+	Width="500"
+	Height="360"
+	>
+	<Grid
+		Margin="8"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- ADO URL -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Vertical"
+			Margin="0,0,0,10"
+			>
+			<TextBlock
+				Text="Azure DevOps URL:"
+				Margin="3"
+				/>
+			<TextBox
+				FontSize="14"
+				Text="{Binding AdoUrl, Mode=OneWay}"
+				VerticalContentAlignment="Center"
+				Background="#EEE"
+				IsReadOnly="True"
+				Margin="8,3,16,3"
+				MinHeight="26"
+				/>
+		</StackPanel>
+		
+		<!-- Organization -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Vertical"
+			>
+			<TextBlock
+				Text="Organization: "
+				Margin="3"
+				/>
+			<TextBox
+				Text="{Binding Organization, UpdateSourceTrigger=PropertyChanged}"
+				VerticalContentAlignment="Center"
+				MinHeight="26"
+				Margin="8,3,16,3"
+				/>
+		</StackPanel>
+
+		<!-- Project -->
+		<StackPanel
+			Grid.Row="2"
+			Orientation="Vertical"
+			>
+			<TextBlock
+				Text="Project: "
+				Margin="3"
+				/>
+			<TextBox
+				Text="{Binding Project, UpdateSourceTrigger=PropertyChanged}"
+				VerticalContentAlignment="Center"
+				MinHeight="26"
+				Margin="8,3,16,3"
+				/>
+		</StackPanel>
+
+		<!-- Access Token -->
+		<StackPanel
+			Grid.Row="3"
+			Orientation="Vertical"
+			>
+			<TextBlock
+				Text="Personal Access Token: "
+				Margin="3"
+				/>
+			<TextBox
+				Text="{Binding PersonalAccessToken}"
+				VerticalContentAlignment="Center"
+				MinHeight="26"
+				Margin="8,3,16,3"
+				/>
+		</StackPanel>
+		
+		<!-- Buttons -->
+		<StackPanel
+			Grid.Row="5"
+			Orientation="Horizontal"
+			HorizontalAlignment="Right"
+			>
+			<!-- OK -->
+			<Button
+				Command="{Binding Accept}"
+				IsDefault="True"
+				Content="OK"
+				MinWidth="100"
+				Margin="16"
+				Padding="8"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>
