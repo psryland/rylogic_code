@@ -66,7 +66,7 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 			}
 
 			// Handlers
-			void HandleSelectedChanging(object? sender, ListChgEventArgs<ChartControl.Element> e)
+			static void HandleSelectedChanging(object? sender, ListChgEventArgs<ChartControl.Element> e)
 			{
 				if (e.After && e.ChangeType == ListChg.ItemAdded)
 				{
@@ -80,7 +80,7 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 		}
 	}
 	private ChartControl m_diagram = null!;
-	
+
 	/// <summary>Remove all nodes and connectors from the chart</summary>
 	private void ClearDiagram(bool recycle)
 	{

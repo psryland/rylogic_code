@@ -11,7 +11,7 @@ using Rylogic.Maths;
 
 namespace ADUFO;
 
-public class Scatterer :IDisposable
+public class Scatterer : IDisposable
 {
 	public Scatterer(ChartControl diagram, Sliders sliders)
 	{
@@ -48,8 +48,8 @@ public class Scatterer :IDisposable
 		get
 		{
 			if (Bodies.Count < 2) yield break;
-			for (int i = 0; i != Bodies.Count - 1; ++i)
-				for (int j = i + 1; j != Bodies.Count; ++j)
+			for (var i = 0; i != Bodies.Count - 1; ++i)
+				for (var j = i + 1; j != Bodies.Count; ++j)
 					yield return new Link(Bodies[i], Bodies[j]);
 		}
 	}
@@ -86,9 +86,13 @@ public class Scatterer :IDisposable
 		// Create a dynamics object for each node
 		var nodes = Diagram.Elements.OfType<WorkItemElement>()
 			.Where(x => x.Chart != null)
-			.ToDictionary(x => x, x => new Body(x));
+			.ToDictionary(x => (Node)x, x => new Body(x));
 
-		//// Find the unique set of inter-node connections
+		// Find the unique set of inter-node connections
+		var conns = Diagram.Elements.OfType<DomainObjects.Link>()
+			.Where(x => x.Chart != null && x.Node0 != null && x.Node1 != null)
+			.ToDictionary(x => x, x => new Link(nodes[x.Node0!], nodes[x.Node1!]));
+
 		//var conns = nodes.Values.SelectMany(x => x.Node.Connectors)
 		//	.Where(x => x.Chart != null)                                            // is in the diagram
 		//	.Where(x => !x.Dangling)                                                // both ends connected
@@ -97,7 +101,7 @@ public class Scatterer :IDisposable
 
 		// Cache the nodes and springs
 		Bodies.Assign(nodes.Values);
-		//m_springs.Assign(conns.Select(x => new Link(nodes[x.Node0!], nodes[x.Node1!])));
+		Springs.Assign(conns.Values);
 	}
 	private int m_issue;
 
@@ -161,8 +165,7 @@ public class Scatterer :IDisposable
 			body1.Force += f;
 		}
 
-#if false
-// Determine spring forces
+		// Determine spring forces
 		foreach (var link in Springs)
 		{
 			var body0 = link.Body0;
@@ -176,7 +179,7 @@ public class Scatterer :IDisposable
 			// simulation blowing up, make the force zero when less than 'min_sep' and a constant
 			// when above some maximum separation.
 			var dist = Math_.Clamp(sep.Length - min_sep, -10 * min_sep, 10 * min_sep);
-			var spring = -Sliders.Scatter.SpringConstant * dist;
+			var spring = -Sliders.WorkStream_to_WorkStream_StringConstant * dist;
 
 			// Add the forces to each node
 			var f = spring * Math_.Normalise(sep, v4.Zero);
@@ -184,7 +187,7 @@ public class Scatterer :IDisposable
 			body0.Force -= f;
 			body1.Force += f;
 		}
-#endif
+
 		// Friction forces
 		foreach (var body in Bodies)
 		{
@@ -273,7 +276,7 @@ public class Scatterer :IDisposable
 			}
 		}
 	}
-	
+
 	/// <summary>Wrapper of 'Node'</summary>
 	private class Body
 	{

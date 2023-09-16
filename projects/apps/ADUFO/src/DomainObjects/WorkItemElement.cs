@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Drawing;
-using System.Text.Json;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Rylogic.Gfx;
-using Rylogic.Gui.WPF;
 using Rylogic.Gui.WPF.ChartDiagram;
-using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace ADUFO.DomainObjects;
 
-public abstract class WorkItemElement :ChartControl.Element
+public abstract class WorkItemElement : Node
 {
 	public WorkItemElement(Guid id, WorkItem wi)
-		:base(id, wi.Id.ToString())
+		: base(v4.One, id, wi.Title())
 	{
 		Item = wi;
 	}
@@ -26,13 +22,11 @@ public abstract class WorkItemElement :ChartControl.Element
 		base.Dispose(disposing);
 	}
 
-	///// <summary>The style for all work streams</summary>
-	//public static NodeStyle DefaultStyle { get; } = new NodeStyle
-	//{
-	//	//Fill = new Colour32(0xFFB0B1EU),
-	//	CornerRadius = 0,
-	//	TexelDensity = 4,
-	//};
+	/// <summary>ADO Item Id</summary>
+	public int ItemId => Item.Id ?? -1;
+
+	/// <summary>Item parent</summary>
+	public long? ParentItem => Item.Fields.TryGetValue("System.Parent", out var v) ? (long)v : null;
 
 	/// <summary>The work item source data</summary>
 	public WorkItem Item
@@ -59,6 +53,14 @@ public abstract class WorkItemElement :ChartControl.Element
 		}
 	}
 	private View3d.Object m_gfx = null!;
+
+	///// <summary>The style for all work streams</summary>
+	//public static NodeStyle DefaultStyle { get; } = new NodeStyle
+	//{
+	//	//Fill = new Colour32(0xFFB0B1EU),
+	//	CornerRadius = 0,
+	//	TexelDensity = 4,
+	//};
 
 	///// <summary>Texture surface</summary>
 	//protected Surface Surf
