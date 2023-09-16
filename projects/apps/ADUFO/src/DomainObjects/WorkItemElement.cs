@@ -5,7 +5,7 @@ using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace ADUFO.DomainObjects;
+namespace UFADO.DomainObjects;
 
 public abstract class WorkItemElement : Node
 {

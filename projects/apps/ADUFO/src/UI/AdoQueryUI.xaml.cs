@@ -8,7 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Gui.WPF;
 
-namespace ADUFO;
+namespace UFADO;
 
 public partial class AdoQueryUI : Window, INotifyPropertyChanged
 {

@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 
-namespace ADUFO
+namespace UFADO
 {
     public static class Misc
     {

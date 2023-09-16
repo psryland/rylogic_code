@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ADUFO.DomainObjects;
+using UFADO.DomainObjects;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
@@ -12,7 +12,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using Rylogic.Utility;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class AdoInterface : IDisposable, INotifyPropertyChanged
 {

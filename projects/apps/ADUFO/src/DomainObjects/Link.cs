@@ -3,7 +3,7 @@ using System.Xml.Linq;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF.ChartDiagram;
 
-namespace ADUFO.DomainObjects;
+namespace UFADO.DomainObjects;
 
 public class Link :Connector
 {
