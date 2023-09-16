@@ -39,7 +39,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>A default anchor at the chart origin</summary>
-		public static readonly AnchorPoint Origin = new AnchorPoint(null, v4.Origin, v4.Zero, NoUID);
+		public static readonly AnchorPoint Origin = new(null, v4.Origin, v4.Zero, NoUID);
 
 		/// <summary>Export to XML</summary>
 		public XElement ToXml(XElement node)

@@ -93,10 +93,10 @@ namespace Rylogic.Extn.Windows
 	public static class Size_
 	{
 		/// <summary>Zero size</summary>
-		public static Size Zero => new Size(0, 0);
+		public static Size Zero => new(0, 0);
 
 		/// <summary>Infinite size</summary>
-		public static Size Infinity => new Size(double.PositiveInfinity, double.PositiveInfinity);
+		public static Size Infinity => new(double.PositiveInfinity, double.PositiveInfinity);
 
 		/// <summary>Convert to v2</summary>
 		public static v2 ToV2(this Size s)
@@ -138,7 +138,7 @@ namespace Rylogic.Extn.Windows
 	public static class Rect_
 	{
 		/// <summary>Zero size</summary>
-		public static Rect Zero => new Rect(0, 0, 0, 0);
+		public static Rect Zero => new(0, 0, 0, 0);
 
 		/// <summary>Construct from LTRB</summary>
 		public static Rect FromLTRB(double left, double top, double right, double bottom)
@@ -256,10 +256,10 @@ namespace Rylogic.Extn.Windows
 	public static class Point_
 	{
 		/// <summary>(0,0)</summary>
-		public static Point Zero => new Point();
+		public static Point Zero => new();
 
 		/// <summary>Infinite vector</summary>
-		public static Point Infinity => new Point(double.PositiveInfinity, double.PositiveInfinity);
+		public static Point Infinity => new(double.PositiveInfinity, double.PositiveInfinity);
 
 		/// <summary>Convert to v2</summary>
 		public static v2 ToV2(this Point p)
@@ -297,7 +297,7 @@ namespace Rylogic.Extn.Windows
 	public static class Vector_
 	{
 		/// <summary>Infinite vector</summary>
-		public static Vector Infinity => new Vector(double.PositiveInfinity, double.PositiveInfinity);
+		public static Vector Infinity => new(double.PositiveInfinity, double.PositiveInfinity);
 
 		/// <summary>Convert to v2</summary>
 		public static v2 ToV2(this Vector v)

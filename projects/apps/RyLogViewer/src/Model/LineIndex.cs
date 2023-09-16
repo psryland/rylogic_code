@@ -62,7 +62,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte range of the complete file, last time we checked its length. Begin is always 0</summary>
-		public RangeI FileByteRange => new RangeI(0, m_state.m_fileend);
+		public RangeI FileByteRange => new(0, m_state.m_fileend);
 
 		/// <summary>
 		/// Returns the byte range of the file currently covered by this cache.

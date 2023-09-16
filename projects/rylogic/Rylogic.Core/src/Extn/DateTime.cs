@@ -18,7 +18,7 @@ namespace Rylogic.Extn
 		// Rule of thumb: Don't use 'ToLocalTime' or 'ToUniversalTime', use 'To' instead
 
 		/// <summary>Time start from Unix-land</summary>
-		public static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+		public static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
 		/// <summary>Converts this date time to 'kind'. Note: throws if Kind == Unspecified</summary>
 		public static DateTime To(this DateTime dt, DateTimeKind kind)
@@ -96,7 +96,7 @@ namespace Rylogic.Extn
 	public static class DateTimeOffset_
 	{
 		/// <summary>Time start from Unix-land</summary>
-		public static readonly DateTimeOffset UnixEpoch = new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
+		public static readonly DateTimeOffset UnixEpoch = new(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
 		/// <summary>Return the Date for the current time (in local time) with the TimeOfDay set to 00:00:00</summary>
 		public static DateTimeOffset Today

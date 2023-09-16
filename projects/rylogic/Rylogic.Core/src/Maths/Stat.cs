@@ -370,7 +370,7 @@ namespace Rylogic.Maths
 		public double Mid => (Min + Max) / 2;
 
 		/// <summary>The value range</summary>
-		public RangeF Range => new RangeF(Min, Max);
+		public RangeF Range => new(Min, Max);
 
 		/// <inheritdoc/>
 		public override void Reset()
@@ -846,7 +846,7 @@ namespace Rylogic.Maths
 		public double Mid => (Min + Max) / 2;
 
 		/// <summary>The value range</summary>
-		public RangeF Range => new RangeF(Min, Max);
+		public RangeF Range => new(Min, Max);
 
 		/// <summary>Reset the stats</summary>
 		public override void Reset(int window_size)
@@ -1004,7 +1004,7 @@ namespace Rylogic.Maths
 		public RangeF XRange => Buckets.XRange;
 
 		/// <summary>The range of counts</summary>
-		public RangeF YRange => new RangeF(Buckets.YRange.Beg * Normalisation, Buckets.YRange.End * Normalisation);
+		public RangeF YRange => new(Buckets.YRange.Beg * Normalisation, Buckets.YRange.End * Normalisation);
 
 		/// <summary>The distribution data as an ordered list of buckets</summary>
 		public BucketCollection Buckets { get; }

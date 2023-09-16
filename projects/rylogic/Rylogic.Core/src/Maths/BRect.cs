@@ -22,9 +22,9 @@ namespace Rylogic.Maths
 		public override string ToString()        { return "Centre=" + m_centre.ToString() + " Radius=" + m_radius.ToString(); }
 
 		// Static types
-		private readonly static BRect m_zero  = new BRect(v2.Zero, v2.Zero);
-		private readonly static BRect m_unit  = new BRect(v2.Zero, new v2(0.5f, 0.5f));
-		private readonly static BRect m_reset = new BRect(v2.Zero, new v2(-1, -1));
+		private readonly static BRect m_zero  = new(v2.Zero, v2.Zero);
+		private readonly static BRect m_unit  = new(v2.Zero, new v2(0.5f, 0.5f));
+		private readonly static BRect m_reset = new(v2.Zero, new v2(-1, -1));
 		public static BRect Zero  { get { return m_zero; } }
 		public static BRect Unit  { get { return m_unit; } }
 		public static BRect Reset { get { return m_reset; } }

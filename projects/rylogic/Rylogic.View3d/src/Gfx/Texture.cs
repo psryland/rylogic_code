@@ -132,8 +132,8 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get/Set the private data of this texture by unique Id</summary>
-			public PrivateDataProxy PrivateData => new PrivateDataProxy(this);
-			public PrivateDataPointerProxy PrivateDataPointer => new PrivateDataPointerProxy(this);
+			public PrivateDataProxy PrivateData => new(this);
+			public PrivateDataPointerProxy PrivateDataPointer => new(this);
 
 			/// <summary>Create a texture instance from a stock texture</summary>
 			public static Texture FromStock(EStockTexture tex)
@@ -293,7 +293,7 @@ namespace Rylogic.Gfx
 			public struct UserData
 			{
 				/// <summary>Unique IDs for types of private data attached to textures</summary>
-				public static readonly Guid Surface0Pointer = new Guid("6EE0154E-DEAD-4E2F-869B-E4D15CA29787");
+				public static readonly Guid Surface0Pointer = new("6EE0154E-DEAD-4E2F-869B-E4D15CA29787");
 			}
 
 			#endregion

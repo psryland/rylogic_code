@@ -81,7 +81,7 @@ namespace CoinFlip
 
 		/// <summary>When the trade occurred (in Ticks)</summary>
 		public long Timestamp { get; private set; }
-		public DateTimeOffset TimestampUTC => new DateTimeOffset(Timestamp, TimeSpan.Zero);
+		public DateTimeOffset TimestampUTC => new(Timestamp, TimeSpan.Zero);
 
 		/// <summary>When the order was created</summary>
 		public DateTimeOffset Created { get; }

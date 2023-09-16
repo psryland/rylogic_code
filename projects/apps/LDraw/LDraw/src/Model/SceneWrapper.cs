@@ -12,7 +12,7 @@ namespace LDraw
 		//  - This wrapper is needed because when UIElement objects are used as the items
 		//    of a combo box it treats them as child controls, becoming their parent.
 
-		public static readonly SceneWrapper NullScene = new SceneWrapper(null, null);
+		public static readonly SceneWrapper NullScene = new(null, null);
 		public SceneWrapper(SceneUI? scene, Action<SceneUI, bool>? selected_cb = null)
 		{
 			SceneUI = scene;

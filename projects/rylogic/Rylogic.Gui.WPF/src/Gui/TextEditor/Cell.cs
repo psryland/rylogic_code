@@ -411,7 +411,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		public char[] ToCharArray() => m_text.ToCharArray();
 
 		/// <summary>Empty cell string</summary>
-		public static readonly CellString Empty = new CellString();
+		public static readonly CellString Empty = new();
 
 		#region Equals
 		public static bool operator ==(CellString lhs, CellString rhs) => lhs.Equals(rhs);

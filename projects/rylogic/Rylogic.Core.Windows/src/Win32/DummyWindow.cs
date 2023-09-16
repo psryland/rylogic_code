@@ -15,7 +15,7 @@ namespace Rylogic.Interop.Win32
 		public static readonly IntPtr HInstance = IntPtr.Zero;// Marshal.GetHINSTANCE(typeof(DummyWindow).Module);
 
 		/// <summary>Mapping from HWND to DummyWindow instance</summary>
-		private static Dictionary<IntPtr, DummyWindow> m_wnd = new Dictionary<IntPtr, DummyWindow>();
+		private static Dictionary<IntPtr, DummyWindow> m_wnd = new();
 
 		public DummyWindow(string? diag_name = null)
 		{
@@ -108,7 +108,7 @@ namespace Rylogic.Interop.Win32
 				? wnd.WndProc(hwnd, message, wparam, lparam)
 				: Win32.DefWindowProc(hwnd, message, wparam, lparam);
 		}
-		private static readonly Win32.WNDPROC m_static_wndproc = new Win32.WNDPROC(StaticWndProc);
+		private static readonly Win32.WNDPROC m_static_wndproc = new(StaticWndProc);
 
 		/// <summary></summary>
 		private static int EnsureWndClassRegistered(IntPtr hinstance)

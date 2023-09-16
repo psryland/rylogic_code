@@ -919,7 +919,7 @@ namespace Rylogic.Script
 		public string Description => Src.Description;
 
 		/// <summary>Random number source</summary>
-		private static readonly Random m_rng = new Random((int)(Stopwatch.GetTimestamp() & 0x7FFFFFFF));
+		private static readonly Random m_rng = new((int)(Stopwatch.GetTimestamp() & 0x7FFFFFFF));
 	}
 }
 

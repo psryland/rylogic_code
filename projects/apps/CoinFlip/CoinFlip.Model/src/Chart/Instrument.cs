@@ -402,7 +402,7 @@ namespace CoinFlip
 		private int m_first_cached;
 
 		/// <summary>The candle index range covered by 'm_cache'. Beg = inclusive first cached, End = exclusive last cached</summary>
-		private RangeI CachedIndexRange => new RangeI(m_first_cached, m_first_cached + m_cache.Count);
+		private RangeI CachedIndexRange => new(m_first_cached, m_first_cached + m_cache.Count);
 
 		/// <summary>Invalidate the cached data</summary>
 		public void InvalidateCachedData()

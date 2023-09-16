@@ -425,7 +425,7 @@ namespace Rylogic.Utility
 			public double AvrSelfExclChildTimeMS   { get { return SelfExclChildTimeTicks / (m_ticks_per_ms * m_frames); } }
 
 			/// <summary>Profile blocks that where called within this profile block</summary>
-			public ResultSample Child = new ResultSample();
+			public ResultSample Child = new();
 
 			public ResultData()
 				:base(null,0)
@@ -493,10 +493,10 @@ namespace Rylogic.Utility
 		public class Results
 		{
 			/// <summary>A history of sampled profile data</summary>
-			public readonly ResultHistory m_history = new ResultHistory();
+			public readonly ResultHistory m_history = new();
 
 			/// <summary>The call tree</summary>
-			public ResultSample Data = new ResultSample();
+			public ResultSample Data = new();
 
 			/// <summary>The sample number</summary>
 			public int SampleCount;

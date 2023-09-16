@@ -122,7 +122,7 @@ namespace Rylogic.Extn.Windows
 			var cons = anon_type.GetConstructor(types) ?? throw new Exception($"Anonymous type constructor not found");
 			return cons.Invoke(values);
 		}
-		private static readonly Dictionary<string, Type> m_anon_types = new Dictionary<string, Type>();
+		private static readonly Dictionary<string, Type> m_anon_types = new();
 
 		/// <summary>A property in an anonymous type</summary>
 		private struct AnonTypeProp

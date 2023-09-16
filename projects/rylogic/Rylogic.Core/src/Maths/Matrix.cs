@@ -100,7 +100,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Access this matrix by Vector</summary>
-		public VecProxy Vec => new VecProxy(this);
+		public VecProxy Vec => new(this);
 		public class VecProxy
 		{
 			private Matrix mat;
@@ -127,7 +127,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Access this matrix by rows of components</summary>
-		public CmpProxy Cmp => new CmpProxy(this);
+		public CmpProxy Cmp => new(this);
 		public class CmpProxy
 		{
 			private Matrix mat;

@@ -555,7 +555,7 @@ namespace Rylogic.Gfx
 			public Vertex(v4 vert, uint col) { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm; m_uv = tex; pad = 0; }
 
-			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
+			public override readonly string ToString() { return $"V:<{m_pos}> C:<{m_col:X8}>"; }
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -673,15 +673,15 @@ namespace Rylogic.Gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct ImageInfo
+		public readonly struct ImageInfo
 		{
-			public uint m_width;
-			public uint m_height;
-			public uint m_depth;
-			public uint m_mips;
-			public EFormat m_format; //DXGI_FORMAT
-			public uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
-			public float m_aspect => (float)m_width / m_height;
+			public readonly uint m_width;
+			public readonly uint m_height;
+			public readonly uint m_depth;
+			public readonly uint m_mips;
+			public readonly EFormat m_format; //DXGI_FORMAT
+			public readonly uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
+			public readonly float m_aspect => (float)m_width / m_height;
 		}
 
 		public class TextureOptions
@@ -977,7 +977,7 @@ namespace Rylogic.Gfx
 			public ESnapType m_snap_type;
 
 			/// <summary>True if something was hit</summary>
-			public bool IsHit => m_obj != IntPtr.Zero;
+			public readonly bool IsHit => m_obj != IntPtr.Zero;
 		}
 
 		/// <summary>The viewport volume in render target space (i.e. not normalised)</summary>
@@ -1011,10 +1011,10 @@ namespace Rylogic.Gfx
 				ScreenH = sh;
 			}
 			public float Aspect => Width / Height;
-			public Size ToSize() => new Size((int)Math.Round(Width), (int)Math.Round(Height));
-			public SizeF ToSizeF() => new SizeF(Width, Height);
-			public Rectangle ToRect() => new Rectangle((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
-			public RectangleF ToRectF() => new RectangleF(X, Y, Width, Height);
+			public Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));
+			public SizeF ToSizeF() => new(Width, Height);
+			public Rectangle ToRect() => new((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
+			public RectangleF ToRectF() => new(X, Y, Width, Height);
 		}
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
@@ -1058,24 +1058,24 @@ namespace Rylogic.Gfx
 
 			/// <summary>An array of binary modules that contain resources</summary>
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-			public IntPtr[] m_modules;
-			public int m_module_count;
+			public readonly IntPtr[] m_modules;
+			public readonly int m_module_count;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DSceneChanged
 		{
 			/// <summary>How the scene was changed</summary>
-			public ESceneChanged ChangeType;
+			public readonly ESceneChanged ChangeType;
 
 			/// <summary>The context ids involved in the change</summary>
-			public Guid[] ContextIds => Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count);
-			private IntPtr m_ctx_ids;
-			private int m_count;
+			public readonly Guid[] ContextIds => Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count);
+			private readonly IntPtr m_ctx_ids;
+			private readonly int m_count;
 
 			/// <summary>The object that changed (for single object changes only)</summary>
-			public Object? Object => m_object != IntPtr.Zero ? new Object(m_object) : null;
-			private HObject m_object;
+			public readonly Object? Object => m_object != IntPtr.Zero ? new Object(m_object) : null;
+			private readonly HObject m_object;
 		}
 
 		#endregion
