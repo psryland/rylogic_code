@@ -675,13 +675,13 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public readonly struct ImageInfo
 		{
-			public readonly uint m_width;
-			public readonly uint m_height;
-			public readonly uint m_depth;
-			public readonly uint m_mips;
-			public readonly EFormat m_format; //DXGI_FORMAT
-			public readonly uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
-			public readonly float m_aspect => (float)m_width / m_height;
+			public readonly uint Width;
+			public readonly uint Height;
+			public readonly uint Depth;
+			public readonly uint Mips;
+			public readonly EFormat Format; //DXGI_FORMAT
+			public readonly uint ImageFileFormat;//D3DXIMAGE_FILEFORMAT
+			public readonly float Aspect => (float)Width / Height;
 		}
 
 		public class TextureOptions

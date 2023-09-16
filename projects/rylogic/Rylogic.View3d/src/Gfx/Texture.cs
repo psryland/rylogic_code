@@ -83,7 +83,7 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
 			public Size Size
 			{
-				get { return new Size((int)Info.m_width, (int)Info.m_height); }
+				get { return new Size((int)Info.Width, (int)Info.Height); }
 				set
 				{
 					if (Size == value) return;

@@ -236,7 +236,7 @@ namespace Rylogic.Gfx
 			public Texture RenderTarget => new(View3D_TextureRenderTarget(Handle), owned:false);
 
 			/// <summary>The size of the render target (in pixels)</summary>
-			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
+			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.Width, (int)info.Height) : Size.Empty;
 
 			/// <summary>The DPI of the monitor this window is on</summary>
 			public PointF DpiScale => View3D_WindowDpiScale(Handle).ToPointF();
