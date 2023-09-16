@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using ADUFO.DomainObjects;
+using UFADO.DomainObjects;
 using Rylogic.Common;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class WorkItemDB : IDisposable
 {

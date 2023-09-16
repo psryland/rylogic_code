@@ -4,7 +4,7 @@ using Rylogic.Gfx;
 using Rylogic.LDraw;
 using Rylogic.Maths;
 
-namespace ADUFO.DomainObjects;
+namespace UFADO.DomainObjects;
 
 public class WorkStream : WorkItemElement
 {

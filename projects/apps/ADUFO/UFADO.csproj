@@ -3,8 +3,8 @@
 	<PropertyGroup>
 	<OutputType>WinExe</OutputType>
 	<TargetFramework>net6.0-windows</TargetFramework>
-	<RootNamespace>ADUFO</RootNamespace>
-	<AssemblyName>ADUFO</AssemblyName>
+	<RootNamespace>UFADO</RootNamespace>
+	<AssemblyName>UFADO</AssemblyName>
 	<LangVersion>latest</LangVersion>
 	<Nullable>enable</Nullable>
 	<UseWPF>true</UseWPF>
@@ -14,7 +14,7 @@
 	<PropertyGroup>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
-		<Description>Azure DevOps with flying objects</Description>
+		<Description>Unorganised floating Azure DevOps</Description>
 		<Copyright>Copyright (c) Rylogic 2023</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon.ico</ApplicationIcon>

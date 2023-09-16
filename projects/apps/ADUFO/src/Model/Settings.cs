@@ -1,7 +1,7 @@
 ﻿using System.Xml.Linq;
 using Rylogic.Common;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class Settings : SettingsBase<Settings>
 {

@@ -6,7 +6,7 @@ using System.Windows;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
-namespace ADUFO;
+namespace UFADO;
 
 public partial class MainWindow : Window, INotifyPropertyChanged
 {

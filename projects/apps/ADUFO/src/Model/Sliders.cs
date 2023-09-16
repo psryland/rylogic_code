@@ -1,6 +1,6 @@
 ﻿using Rylogic.Common;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class Sliders : SettingsSet<Sliders>
 {

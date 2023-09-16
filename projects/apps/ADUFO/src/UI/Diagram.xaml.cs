@@ -8,7 +8,7 @@ using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace ADUFO;
+namespace UFADO;
 
 public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPropertyChanged, IDiagramCMenuContext, IChartCMenuContext, IView3dCMenuContext
 {

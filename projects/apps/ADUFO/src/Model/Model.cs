@@ -2,13 +2,13 @@
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using ADUFO.DomainObjects;
+using UFADO.DomainObjects;
 using Microsoft.VisualStudio.Services.Common;
 using Rylogic.Gui.WPF;
 using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Utility;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class Model : IDisposable, INotifyPropertyChanged
 {

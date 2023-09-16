@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using Rylogic.Gui.WPF;
 
-namespace ADUFO;
+namespace UFADO;
 
 public partial class SlidersUI : Window
 {

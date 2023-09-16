@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Threading;
-using ADUFO.DomainObjects;
+using UFADO.DomainObjects;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Maths;
 
-namespace ADUFO;
+namespace UFADO;
 
 public class Scatterer : IDisposable
 {
