@@ -59,10 +59,10 @@ namespace CoinFlip
 		public int Sign => Bullish ? +1 : Bearish ? -1 : 0;
 
 		/// <summary>Return the Open/Close as a range</summary>
-		public RangeF BodyRange => new RangeF(Math.Min(Open, Close), Math.Max(Open, Close));
+		public RangeF BodyRange => new(Math.Min(Open, Close), Math.Max(Open, Close));
 
 		/// <summary>Return the High/Low as a range</summary>
-		public RangeF WickRange => new RangeF(Math.Min(High, Low), Math.Max(High, Low));
+		public RangeF WickRange => new(Math.Min(High, Low), Math.Max(High, Low));
 
 		/// <summary>True if this is a bullish candle</summary>
 		public bool Bullish => Close > Open;
@@ -157,7 +157,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The time stamp of this candle (in UTC)</summary>
-		public DateTimeOffset TimestampUTC => new DateTimeOffset(Timestamp, TimeSpan.Zero);
+		public DateTimeOffset TimestampUTC => new(Timestamp, TimeSpan.Zero);
 
 		/// <summary>The time stamp of this candle (in local time)</summary>
 		public DateTimeOffset TimestampLocal => TimestampUTC.ToLocalTime();

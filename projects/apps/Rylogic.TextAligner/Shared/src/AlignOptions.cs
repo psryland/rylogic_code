@@ -73,7 +73,7 @@ namespace Rylogic.TextAligner
 				NotifyPropertyChanged(nameof(LineIgnorePattern));
 			}
 		}
-		private AlignPattern m_line_ignore_pattern = new AlignPattern();
+		private AlignPattern m_line_ignore_pattern = new();
 
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()

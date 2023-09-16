@@ -72,7 +72,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private View3d.Object m_gfx = null!;
 
 		/// <summary>The position of the mid-point relative to the average of Anc0.LocationWS and Anc1.LocationWS</summary>
-		private v4 CentreOffset;
+		private v4 CentreOffset { get; set; }
 
 		/// <summary>Export to XML</summary>
 		public override XElement ToXml(XElement node)

@@ -26,7 +26,7 @@ namespace Rylogic.Gui.WPF
 		//  - Dispose is handled internally via the Closed event on the owning window.
 
 		private static int ScintillaCtrlId = 1;
-		private IntPtr CtrlId = new IntPtr(++ScintillaCtrlId);
+		private IntPtr CtrlId = new(++ScintillaCtrlId);
 
 		static ScintillaControl()
 		{
@@ -654,7 +654,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The *unnormalised* range of selected text. Note: *not* [SelectionStart,SelectionEnd)</summary>
 		public RangeI Selection
 		{
-			get => new RangeI(Anchor, CurrentPos);
+			get => new(Anchor, CurrentPos);
 			set => SetSel(value.Beg, value.End);
 		}
 
@@ -1480,7 +1480,7 @@ namespace Rylogic.Gui.WPF
 		/// text in the target rather than the first matching text. The target is also set by a successful SCI_SEARCHINTARGET.</summary>
 		public RangeI Target
 		{
-			get => new RangeI(TargetBeg, TargetEnd);
+			get => new(TargetBeg, TargetEnd);
 			set
 			{
 				TargetBeg = value.Beg;
@@ -2576,7 +2576,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public Colour32 EdgeColour
 		{
-			get => new Colour32((uint)(0xFF000000 | Cmd(Sci.SCI_GETEDGECOLOUR)));
+			get => new((uint)(0xFF000000 | Cmd(Sci.SCI_GETEDGECOLOUR)));
 			set => Cmd(Sci.SCI_SETEDGECOLOUR, (int)(value.ARGB & 0x00FFFFFF));
 		}
 

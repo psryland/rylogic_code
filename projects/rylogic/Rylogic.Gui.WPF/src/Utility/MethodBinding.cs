@@ -22,8 +22,8 @@ namespace Rylogic.Gui.WPF
 		//  - Use: <Button Click={gui2:MethodBinding WhateverFunc}>
 
 		private readonly object[] _arguments;
-		private readonly List<DependencyProperty> _argument_properties = new List<DependencyProperty>();
-		private static readonly List<DependencyProperty> StorageProperties = new List<DependencyProperty>();
+		private readonly List<DependencyProperty> _argument_properties = new();
+		private static readonly List<DependencyProperty> StorageProperties = new();
 
 		public MethodBindingExtension(object method) : this(new[] { method }) { }
 		public MethodBindingExtension(object arg0, object arg1) : this(new[] { arg0, arg1 }) { }

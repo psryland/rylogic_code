@@ -405,7 +405,7 @@ namespace Rylogic.Common
 			public string Desc => $"{string.Join("", Key)} = {(HasValue ? Value : "<no value>")}";
 
 			/// <summary>Special case root node</summary>
-			public static readonly Node Root = new Node();
+			public static readonly Node Root = new();
 		}
 
 		#region IDictionary

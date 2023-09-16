@@ -23,7 +23,7 @@ namespace CoinFlip
 		public const string BotFilterRegex = @"Bot\.(?<name>\w+)\.dll";
 
 		/// <summary>The dawn of time (from a crypto point of view)</summary>
-		public static readonly DateTimeOffset CryptoCurrencyEpoch = new DateTimeOffset(2009, 1, 1, 0, 0, 0, 0, TimeSpan.Zero);
+		public static readonly DateTimeOffset CryptoCurrencyEpoch = new(2009, 1, 1, 0, 0, 0, 0, TimeSpan.Zero);
 
 		/// <summary>Get the main thread dispatcher</summary>
 		private static readonly Dispatcher Dispatcher = Dispatcher.CurrentDispatcher;

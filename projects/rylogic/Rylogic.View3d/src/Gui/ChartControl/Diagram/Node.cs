@@ -165,7 +165,7 @@ public abstract class Node :ChartControl.Element, IHasStyle
 	/// <summary>Resize the node if AutoSize is enabled, otherwise no-op</summary>
 	public void PerformAutoSize()
 	{
-	//	base.Size = PreferredSize(SizeMax);
+		//base.Size = PreferredSize(SizeMax);
 	}
 
 	/// <summary>Return the preferred node size given the current text and size limits</summary>
@@ -199,7 +199,7 @@ public abstract class Node :ChartControl.Element, IHasStyle
 			{
 				m_style.PropertyChanged -= HandleStyleChanged;
 			}
-			m_style = value ?? new NodeStyle();
+			m_style = value ?? new();
 			if (m_style != null)
 			{
 				m_style.PropertyChanged += HandleStyleChanged;
@@ -216,7 +216,7 @@ public abstract class Node :ChartControl.Element, IHasStyle
 		}
 	}
 	IStyle IHasStyle.Style => Style;
-	private NodeStyle m_style = new NodeStyle();
+	private NodeStyle m_style = new();
 
 	/// <inheritdoc/>
 	public override BBox Bounds => new(O2W.pos, Size / 2);
@@ -229,16 +229,16 @@ public abstract class Node :ChartControl.Element, IHasStyle
 		var tx = gfx.MeasureString(Text, Style.Font, bnd.Size, TextFormat);
 		return Style.TextAlign switch
 		{
-			ContentAlignment.TopLeft      => new RectangleF(bnd.Left, bnd.Top, tx.Width, tx.Height),
-			ContentAlignment.TopCenter    => new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f, bnd.Top, tx.Width, tx.Height),
-			ContentAlignment.TopRight     => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top, tx.Width, tx.Height),
-			ContentAlignment.MiddleLeft   => new RectangleF(bnd.Left, bnd.Top + (bnd.Height - tx.Height) * 0.5f, tx.Width, tx.Height),
+			ContentAlignment.TopLeft => new RectangleF(bnd.Left, bnd.Top, tx.Width, tx.Height),
+			ContentAlignment.TopCenter => new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f, bnd.Top, tx.Width, tx.Height),
+			ContentAlignment.TopRight => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top, tx.Width, tx.Height),
+			ContentAlignment.MiddleLeft => new RectangleF(bnd.Left, bnd.Top + (bnd.Height - tx.Height) * 0.5f, tx.Width, tx.Height),
 			ContentAlignment.MiddleCenter => new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f, bnd.Top + (bnd.Height - tx.Height) * 0.5f, tx.Width, tx.Height),
-			ContentAlignment.MiddleRight  => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top + (bnd.Height - tx.Height) * 0.5f, tx.Width, tx.Height),
-			ContentAlignment.BottomLeft   => new RectangleF(bnd.Left, bnd.Top + (bnd.Height - tx.Height), tx.Width, tx.Height),
+			ContentAlignment.MiddleRight => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top + (bnd.Height - tx.Height) * 0.5f, tx.Width, tx.Height),
+			ContentAlignment.BottomLeft => new RectangleF(bnd.Left, bnd.Top + (bnd.Height - tx.Height), tx.Width, tx.Height),
 			ContentAlignment.BottomCenter => new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f, bnd.Top + (bnd.Height - tx.Height), tx.Width, tx.Height),
-			ContentAlignment.BottomRight  => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top + (bnd.Height - tx.Height), tx.Width, tx.Height),
-			_                             => throw new ArgumentException("unknown text alignment"),
+			ContentAlignment.BottomRight => new RectangleF(bnd.Left + (bnd.Width - tx.Width), bnd.Top + (bnd.Height - tx.Height), tx.Width, tx.Height),
+			_ => throw new ArgumentException("unknown text alignment"),
 		};
 	}
 

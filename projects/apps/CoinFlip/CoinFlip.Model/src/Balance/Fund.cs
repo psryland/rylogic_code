@@ -19,10 +19,10 @@ namespace CoinFlip
 		// - This is basically a wrapper around a string
 
 		/// <summary>The default fund</summary>
-		public static Fund Main => new Fund("Main");
+		public static Fund Main => new("Main");
 
 		/// <summary>A constant for the "unknown" fund</summary>
-		public static Fund Unknown => new Fund("Unknown");
+		public static Fund Unknown => new("Unknown");
 
 		public Fund(string id)
 		{

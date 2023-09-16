@@ -233,7 +233,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(Handle), owned:false);
+			public Texture RenderTarget => new(View3D_TextureRenderTarget(Handle), owned:false);
 
 			/// <summary>The size of the render target (in pixels)</summary>
 			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
@@ -484,7 +484,7 @@ namespace Rylogic.Gfx
 			/// <summary>The background colour for the window</summary>
 			public Colour32 BackgroundColour
 			{
-				get => new Colour32(View3D_BackgroundColourGet(Handle));
+				get => new(View3D_BackgroundColourGet(Handle));
 				set => View3D_BackgroundColourSet(Handle, value.ARGB);
 			}
 

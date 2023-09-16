@@ -451,7 +451,7 @@ namespace Rylogic.Utility
 			}
 
 			/// <summary>Magic value to signal log shutdown</summary>
-			private static readonly LogEvent ShutdownSentinal = new LogEvent();
+			private static readonly LogEvent ShutdownSentinal = new();
 		}
 
 		/// <summary>An individual log event</summary>

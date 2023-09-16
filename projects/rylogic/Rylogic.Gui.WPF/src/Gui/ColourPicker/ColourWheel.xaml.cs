@@ -463,7 +463,7 @@ namespace Rylogic.Gui.WPF
 			public bool Empty => Width == 0 || Height == 0;
 
 			/// <summary>The area covered disk of the colour wheel</summary>
-			public Rect WheelInner => new Rect(Centre.X - Radius - 0.5, Centre.Y - Radius - 0.5, 2 * Radius + 1, 2 * Radius + 1);
+			public Rect WheelInner => new(Centre.X - Radius - 0.5, Centre.Y - Radius - 0.5, 2 * Radius + 1, 2 * Radius + 1);
 
 			/// <summary>The total width required for the control</summary>
 			public double Width;
