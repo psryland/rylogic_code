@@ -24,9 +24,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 			AreaSelectRequiresShiftKey = true,
 			AllowSelection = false,
 			AllowElementDragging = false,
-			ShowAxes=false,
-			ShowGridLines=false,
-			LockAspect=1.0,
+			ShowAxes = false,
+			ShowGridLines = false,
+			LockAspect = 1.0,
 		};
 
 		// Commands
@@ -44,7 +44,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		InitializeComponent();
 		InitDockContainer();
 		DataContext = this;
-		Loaded += (o,s) =>
+		Loaded += (o, s) =>
 		{
 			ToggleConnectionInternal();
 			RefreshInternal();
@@ -66,7 +66,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
 		base.OnClosed(e);
 	}
-	
+
 	/// <summary>Async app shutdown</summary>
 	private CancellationTokenSource Shutdown { get; }
 
@@ -135,7 +135,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 	{
 		m_dc.Options.AlwaysShowTabs = true;
 		m_dc.Options.ShowTitleBars = false;
-	
+
 		// Add the diagram
 		m_dc.Add(Diagram, EDockSite.Centre);
 		m_dc.ActiveContent = Diagram.DockControl;
@@ -243,7 +243,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 					ShowConnectionUI.Execute();
 				if (Settings.Organization.Length == 0 || Settings.PersonalAccessToken.Length == 0)
 					return;
-				
+
 				// Connect (if we have connection settings)
 				Model.Ado = new AdoInterface(Settings, Shutdown.Token);
 			}

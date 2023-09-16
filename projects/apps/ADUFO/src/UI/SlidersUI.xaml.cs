@@ -5,14 +5,14 @@ namespace ADUFO;
 
 public partial class SlidersUI : Window
 {
-	public SlidersUI(Window owner, Sliders sliders)
-	{
-		InitializeComponent();
-		Owner = owner;
-		PinState = new PinData(this, EPin.Centre);
-		DataContext = sliders;
-	}
+    public SlidersUI(Window owner, Sliders sliders)
+    {
+        InitializeComponent();
+        Owner = owner;
+        PinState = new PinData(this, EPin.Centre);
+        DataContext = sliders;
+    }
 
-	/// <summary>Support pinning this window</summary>
-	private PinData PinState { get; }
+    /// <summary>Support pinning this window</summary>
+    private PinData PinState { get; }
 }
