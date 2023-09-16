@@ -297,7 +297,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			}
 		}
 		IStyle IHasStyle.Style => Style;
-		private ConnectorStyle m_style = new ConnectorStyle();
+		private ConnectorStyle m_style = new();
 
 		/// <inheritdoc/>
 		public override BBox Bounds
