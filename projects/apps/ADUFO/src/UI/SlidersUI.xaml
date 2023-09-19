@@ -1,0 +1,81 @@
+﻿<Window
+	x:Class="UFADO.SlidersUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	Title="Simulation Controls"
+	WindowStartupLocation="CenterOwner"
+	Height="450"
+	Width="400"
+	>
+	<Grid
+		Margin="8"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="auto"/>
+			<RowDefinition Height="auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<!-- Drag -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Drag: "
+				Margin="2"
+				/>
+			<Slider
+				Value="{Binding Drag}"
+				Minimum="0.01"
+				Maximum="1.01"
+				SmallChange="0.01"
+				LargeChange="0.1"
+				Width="100"
+				HorizontalAlignment="Stretch"
+				Margin="2"
+				/>
+			<TextBox
+				Text="{Binding Drag, StringFormat={}{0:N3}}"
+				HorizontalContentAlignment="Center"
+				MinWidth="60"
+				Margin="2"
+				/>
+		</StackPanel>
+
+		<!-- Work Streams -->
+		<GroupBox
+			Grid.Row="1"
+			Header="Work Streams"
+			>
+			<StackPanel
+				Orientation="Horizontal"
+				>
+				<TextBlock
+					Text="WS-WS Coulomb: "
+					Margin="2"
+					/>
+				<Slider
+					Value="{Binding WorkStream_to_WorkStream_CoulombConstant}"
+					Minimum="0.01"
+					Maximum="1.01"
+					SmallChange="0.01"
+					LargeChange="0.1"
+					Width="100"
+					HorizontalAlignment="Stretch"
+					Margin="2"
+					/>
+				<TextBox
+					Text="{Binding WorkStream_to_WorkStream_CoulombConstant, StringFormat={}{0:N3}}"
+					HorizontalContentAlignment="Center"
+					MinWidth="60"
+					Margin="2"
+				/>
+			</StackPanel>
+
+		</GroupBox>
+	</Grid>
+</Window>

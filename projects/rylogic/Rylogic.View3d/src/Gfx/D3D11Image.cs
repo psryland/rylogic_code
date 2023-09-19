@@ -124,7 +124,7 @@ namespace Rylogic.Gfx
 		private int m_pixel_height = 16;
 
 		/// <summary>The DPI scaling when the RenderTarget was last resized</summary>
-		public Point DpiScale => new Point(m_dpi_scaleX, m_dpi_scaleY);
+		public Point DpiScale => new(m_dpi_scaleX, m_dpi_scaleY);
 		private double m_dpi_scaleX;
 		private double m_dpi_scaleY;
 

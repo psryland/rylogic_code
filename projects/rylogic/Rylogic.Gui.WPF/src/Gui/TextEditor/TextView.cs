@@ -53,7 +53,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		public OptionsData Options { get; }
 
 		/// <summary>Paragraph styles</summary>
-		internal ParaStyle ParaStyle => new ParaStyle();
+		internal ParaStyle ParaStyle => new();
 
 		/// <summary>Gets/Sets the document displayed by the text editor.</summary>
 		public TextDocument? Document

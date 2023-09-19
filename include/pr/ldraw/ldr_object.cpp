@@ -815,19 +815,19 @@ namespace pr::ldr
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return false;
-					}
-				case EKeyword::Texture:
+					case EKeyword::Texture:
 					{
 						ParseTexture(p, m_texture);
 						return true;
 					}
-				case EKeyword::Video:
+					case EKeyword::Video:
 					{
 						ParseVideo(p, m_texture);
 						return true;
+					}
+					default:
+					{
+						return false;
 					}
 				}
 			}

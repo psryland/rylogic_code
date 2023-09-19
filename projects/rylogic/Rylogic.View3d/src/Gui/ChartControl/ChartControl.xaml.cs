@@ -1403,7 +1403,7 @@ namespace Rylogic.Gui.WPF
 		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>Chart control graphics context id</summary>
-		public static readonly Guid CtxId = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
+		public static readonly Guid CtxId = new("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
 		#region Self Consistency
 

@@ -57,7 +57,7 @@ namespace CoinFlip
 		#region SqlMapping
 		public class Mapper : SqlMapper.TypeHandler<CoinPair>
 		{
-			public override CoinPair Parse(object value) => new CoinPair((string)value);
+			public override CoinPair Parse(object value) => new((string)value);
 			public override void SetValue(IDbDataParameter parameter, CoinPair value) => parameter.Value = value.Name;
 		}
 		#endregion

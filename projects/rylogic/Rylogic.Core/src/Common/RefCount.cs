@@ -16,8 +16,8 @@ namespace Rylogic.Common
 	[DebuggerDisplay("Count={Count}")]
 	public class RefCount
 	{
-		private RefList m_refs = new RefList();
-		private RefStacks m_stacks = new RefStacks();
+		private RefList m_refs = new();
+		private RefStacks m_stacks = new();
 
 		public RefCount()
 			: this(0)

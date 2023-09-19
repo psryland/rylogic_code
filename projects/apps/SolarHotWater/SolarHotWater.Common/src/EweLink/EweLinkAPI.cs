@@ -574,7 +574,7 @@ namespace EweLink
 			}
 		}
 		private static long m_nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-		private static object m_nonce_lock = new object();
+		private static object m_nonce_lock = new();
 
 		/// <summary></summary>
 		public class Params :Dictionary<string, object> { }

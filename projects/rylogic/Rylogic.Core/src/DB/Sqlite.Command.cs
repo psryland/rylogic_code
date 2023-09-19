@@ -235,7 +235,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Get a DataReader interface to this command</summary>
-			private DataReader Reader() => new DataReader(this);
+			private DataReader Reader() => new(this);
 
 			/// <summary>Helper for resetting/disposing the command</summary>
 			private IDisposable ExecutionScope()

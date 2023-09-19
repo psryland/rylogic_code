@@ -33,7 +33,7 @@ namespace Rylogic.Attrib
 	public static class DescAttr
 	{
 		// Reflecting on attributes is slow => caching
-		private static readonly Cache<string, object> m_str_cache = new Cache<string, object>(1000) { ThreadSafe = true };
+		private static readonly Cache<string, object> m_str_cache = new(1000) { ThreadSafe = true };
 
 		/// <summary>Get the DescAttribute or DescriptionAttribute associated with a member</summary>
 		public static Attribute? Find(MemberInfo? mi)

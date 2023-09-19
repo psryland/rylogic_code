@@ -23,7 +23,6 @@ syntax: glob
 *.DotSettings
 *.pyc
 *.algo
-*.blend1
 dump/
 obj/
 bin/
@@ -46,6 +45,10 @@ TestResults/
 media/
 thirdparty/
 symbol_cache/
+
+# Blender
+*.blend1
+/art/**/exported/
 
 **/hlsl/compiled/*
 **/RyLogViewer/Resources/*.html

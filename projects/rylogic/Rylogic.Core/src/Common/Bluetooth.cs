@@ -503,7 +503,7 @@ namespace Rylogic.Common
 		private struct BLUETOOTH_FIND_RADIO_PARAMS
 		{
 			public int dwSize; // IN  sizeof this structure
-			public static BLUETOOTH_FIND_RADIO_PARAMS New() => new BLUETOOTH_FIND_RADIO_PARAMS
+			public static BLUETOOTH_FIND_RADIO_PARAMS New() => new()
 			{
 				dwSize = Marshal.SizeOf(typeof(BLUETOOTH_FIND_RADIO_PARAMS))
 			};
@@ -521,7 +521,7 @@ namespace Rylogic.Common
 			public byte cTimeoutMultiplier;  //  IN  timeout for the inquiry
 			public IntPtr hRadio;               //  IN  handle to radio to enumerate - NULL == all radios will be searched
 
-			public static BLUETOOTH_DEVICE_SEARCH_PARAMS New() => new BLUETOOTH_DEVICE_SEARCH_PARAMS
+			public static BLUETOOTH_DEVICE_SEARCH_PARAMS New() => new()
 			{
 				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_SEARCH_PARAMS))
 			};
@@ -539,7 +539,7 @@ namespace Rylogic.Common
 			public ushort lmpSubversion; // lmpSubversion, manufacturer specifc.
 			public ushort manufacturer;  // Manufacturer of the radio, BTH_MFG_Xxx value.  For the most up to date list, goto the Bluetooth specification website and get the Bluetooth assigned numbers document.
 
-			public static BLUETOOTH_RADIO_INFO New() => new BLUETOOTH_RADIO_INFO
+			public static BLUETOOTH_RADIO_INFO New() => new()
 			{
 				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_RADIO_INFO)),
 			};
@@ -560,7 +560,7 @@ namespace Rylogic.Common
 			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = BLUETOOTH_MAX_NAME_SIZE)]
 			public string szName; //  Name of the device
 
-			public static BLUETOOTH_DEVICE_INFO New() => new BLUETOOTH_DEVICE_INFO
+			public static BLUETOOTH_DEVICE_INFO New() => new()
 			{
 				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_INFO)),
 			};
@@ -572,7 +572,7 @@ namespace Rylogic.Common
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
 			public byte[] rgBytes; //  easier to format when broken out
 
-			public static BLUETOOTH_ADDRESS New() => new BLUETOOTH_ADDRESS
+			public static BLUETOOTH_ADDRESS New() => new()
 			{
 				rgBytes = new byte[6] 
 			};

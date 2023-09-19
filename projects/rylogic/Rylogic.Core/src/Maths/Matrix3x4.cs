@@ -122,8 +122,8 @@ namespace Rylogic.Maths
 		}
 
 		// Static m3x4 types
-		public static readonly m3x4 Zero = new m3x4(v4.Zero, v4.Zero, v4.Zero);
-		public static readonly m3x4 Identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
+		public static readonly m3x4 Zero = new(v4.Zero, v4.Zero, v4.Zero);
+		public static readonly m3x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis);
 
 		// Operators
 		public override bool Equals(object? o)              { return o is m3x4 m && m == this; }

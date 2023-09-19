@@ -8,7 +8,7 @@ namespace Rylogic.Common
 	public class Mime
 	{
 		/// <summary>A constant for the "*/*" mime string</summary>
-		public static readonly Mime Unknown = new Mime();
+		public static readonly Mime Unknown = new();
 
 		public Mime()
 			: this("*", "*", false)
@@ -80,7 +80,7 @@ namespace Rylogic.Common
 			public const string application = "application";
 
 			/// <summary>A set of the known types</summary>
-			public static readonly HashSet<string> Known = new HashSet<string>(Enumerate());
+			public static readonly HashSet<string> Known = new(Enumerate());
 			private static IEnumerable<string> Enumerate()
 			{
 				foreach (var f in typeof(Types).GetFields().Where(x => x.FieldType == typeof(string)))
@@ -135,7 +135,7 @@ namespace Rylogic.Common
 			public const string zip = "zip";
 
 			/// <summary>A set of the known subtypes</summary>
-			public static readonly HashSet<string> Known = new HashSet<string>(Enumerate());
+			public static readonly HashSet<string> Known = new(Enumerate());
 			private static IEnumerable<string> Enumerate()
 			{
 				foreach (var f in typeof(SubTypes).GetFields().Where(x => x.FieldType == typeof(string)))
@@ -182,7 +182,7 @@ namespace Rylogic.Common
 		#region Mime type extension map
 
 		/// <summary>These are the file extension types supported by magic bullet</summary>
-		private static readonly Dictionary<string, Mime> m_ExtnToMimeTypeMap = new Dictionary<string, Mime>
+		private static readonly Dictionary<string, Mime> m_ExtnToMimeTypeMap = new()
 		{
 			// Text
 			{"csv"  ,new Mime(Types.text, SubTypes.plain ,false)},

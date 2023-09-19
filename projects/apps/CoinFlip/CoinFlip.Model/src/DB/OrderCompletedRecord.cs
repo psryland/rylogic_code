@@ -22,7 +22,7 @@
 
 		/// <summary>The fund the order was associated with</summary>
 		public string FundId { get; } = string.Empty;
-		public Fund Fund => new Fund(FundId);
+		public Fund Fund => new(FundId);
 
 		/// <summary>The direction of the trade</summary>
 		public string TradeType { get; } = string.Empty;

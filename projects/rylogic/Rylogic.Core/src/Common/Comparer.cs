@@ -36,7 +36,7 @@ namespace Rylogic.Common
 		private Cmp(Func<T, T, int> cmp) => m_cmp = cmp ?? Default.m_cmp;
 		
 		/// <summary>Default comparer for 'T'</summary>
-		public static Cmp<T> Default => new Cmp<T>(Comparer<T>.Default.Compare);
+		public static Cmp<T> Default => new(Comparer<T>.Default.Compare);
 
 		/// <summary>Compares 'lhs' to 'rhs' returning -1,0,1</summary>
 		public int Compare(T lhs, T rhs) => m_cmp(lhs, rhs);
@@ -96,7 +96,7 @@ namespace Rylogic.Common
 		private Eql(Func<T, T, bool> eql) => m_eql = eql ?? Default.m_eql;
 
 		/// <summary>Default equality comparer for 'T'</summary>
-		public static Eql<T> Default => new Eql<T>(EqualityComparer<T>.Default.Equals);
+		public static Eql<T> Default => new(EqualityComparer<T>.Default.Equals);
 
 		/// <summary>Equates 'lhs' to 'rhs' returning true,false</summary>
 		public bool Equals(T lhs, T rhs)
