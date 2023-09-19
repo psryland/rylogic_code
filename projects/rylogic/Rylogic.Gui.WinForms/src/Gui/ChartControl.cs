@@ -4310,7 +4310,7 @@ namespace Rylogic.Gui.WinForms
 			private View3d.Object m_area_select;
 			private View3d.Object CreateAreaSelect()
 			{
-				var ldr = Ldr.Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
+				var ldr = new LdrBuilder().Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, v4.Origin).ToString();
 				var obj = new View3d.Object(ldr, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
@@ -4415,8 +4415,8 @@ namespace Rylogic.Gui.WinForms
 			{
 				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = horiz
-					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
-					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
+					? new LdrBuilder().Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
+					: new LdrBuilder().Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
@@ -4437,7 +4437,7 @@ namespace Rylogic.Gui.WinForms
 			private View3d.Object CreateTapeMeasure()
 			{
 				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
-				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
+				var str = new LdrBuilder().Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
