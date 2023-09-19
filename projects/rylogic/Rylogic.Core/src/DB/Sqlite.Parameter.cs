@@ -102,7 +102,7 @@ namespace Rylogic.Db
 		{
 			// Notes:
 			//  - IDataParameterCollection enforces an IList interface, but associative better suited.
-			private readonly List<Parameter> m_parameters = new List<Parameter>();
+			private readonly List<Parameter> m_parameters = new();
 
 			/// <summary>Number of parameters in the collection</summary>
 			int ICollection.Count => m_parameters.Count;

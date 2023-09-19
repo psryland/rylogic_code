@@ -75,7 +75,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public static readonly DependencyProperty FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), 10.0, Gui_.EDPFlags.None);
 
 		/// <summary>Font for tick labels</summary>
-		public Typeface Typeface => new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
+		public Typeface Typeface => new(FontFamily, FontStyle, FontWeight, FontStretch);
 
 		/// <summary>The axis represented by this visual</summary>
 		public ChartControl.RangeData.Axis? Axis

@@ -542,7 +542,7 @@ namespace Rylogic.Container
 		[DebuggerDisplay("{Description,nq}")]
 		private class Stack<T>
 		{
-			private readonly List<T> m_list = new List<T>();
+			private readonly List<T> m_list = new();
 			[MaybeNull] public T Top  => m_list.Count != 0 ? m_list[m_list.Count + ~0] : default!;
 			public int Count          => m_list.Count;
 			public T Bottom           => m_list[0];
@@ -554,7 +554,7 @@ namespace Rylogic.Container
 		private class StackPool<T>
 		{
 			public static StackPool<T> Instance { get; } = new StackPool<T>();
-			private readonly ConcurrentBag<Stack<T>> m_pool = new ConcurrentBag<Stack<T>>();
+			private readonly ConcurrentBag<Stack<T>> m_pool = new();
 			public Scope<Stack<T>> Alloc() => Scope.Create(() => Get(), x => Return(x));
 			private Stack<T> Get() => m_pool.TryTake(out var s) ? s : new Stack<T>();
 			private void Return(Stack<T> s) { s.Clear(); m_pool.Add(s); }

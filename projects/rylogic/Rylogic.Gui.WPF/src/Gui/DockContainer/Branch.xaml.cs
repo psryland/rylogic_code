@@ -451,10 +451,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Return the area that the control should cover when rendered</summary>
-		private Rect DisplayRectangle => new Rect(RenderSize);
+		private Rect DisplayRectangle => new(RenderSize);
 
 		/// <summary>Return the desired size of the control</summary>
-		private Rect DesiredRectangle => new Rect(DesiredSize);
+		private Rect DesiredRectangle => new(DesiredSize);
 
 		/// <summary>Raised whenever a child (pane or branch) is added to or removed from this sub tree</summary>
 		public event EventHandler<TreeChangedEventArgs>? TreeChanged;

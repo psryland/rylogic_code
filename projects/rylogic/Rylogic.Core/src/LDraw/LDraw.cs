@@ -33,8 +33,8 @@ namespace Rylogic.LDraw
 		/// <summary>Append this string to the Ldr.OutFile</summary>
 		public static void LdrOut(this string s, bool app = true)
 		{
-			using (var sw = new StreamWriter(OutFile, app))
-				sw.Write(s);
+			using var sw = new StreamWriter(OutFile, app);
+			sw.Write(s);
 		}
 
 		/// <summary>Write an ldr string to a file</summary>
@@ -142,6 +142,10 @@ namespace Rylogic.LDraw
 		{
 			return solid ? "*Solid" : string.Empty;
 		}
+		public static string Billboard3D(bool billboard = true)
+		{
+			return billboard ? "*Billboard3D" : string.Empty;
+		}
 		public static string Billboard(bool billboard = true)
 		{
 			return billboard ? "*Billboard" : string.Empty;
@@ -227,30 +231,38 @@ namespace Rylogic.LDraw
 		{
 			// Use this switch to convert a type directly into a string. No adorning.
 			// E.g. 'part is Colour32' just inserts "FF00FF00", not "*Colour32{FF00FF00}"
-			if (part is null) { }
-			else if (part is string str) m_sb.Append(str);
-			else if (part is Color col) m_sb.Append(Ldr.Col(col));
-			else if (part is v4 vec4) m_sb.Append(Ldr.Vec3(vec4));
-			else if (part is v2 vec2) m_sb.Append(Ldr.Vec2(vec2));
-			else if (part is m4x4 o2w) m_sb.Append(Ldr.Mat4x4(o2w));
-			else if (part is AxisId axisid) m_sb.Append(Ldr.AxisId(axisid.Id));
-			else if (part is EAxisId axisid2) m_sb.Append(Ldr.AxisId(axisid2));
-			else if (part is IEnumerable)
+			switch (part)
 			{
-				foreach (var x in (IEnumerable)part)
-					Append(" ").Append(x);
-			}
-			else if (part.GetType().IsAnonymousType())
-			{
-				Append("{");
-				foreach (var prop in part.GetType().AllProps(BindingFlags.Public | BindingFlags.Instance))
-					Append($"*{prop.Name} {{", prop.GetValue(part), "}} ");
-				Append("}");
-				return this;
-			}
-			else
-			{
-				m_sb.Append(part.ToString());
+				case null: break;
+				case string str: m_sb.Append(str); break;
+				case Color col: m_sb.Append(Ldr.Col(col)); break;
+				case v4 vec4: m_sb.Append(Ldr.Vec3(vec4)); break;
+				case v2 vec2: m_sb.Append(Ldr.Vec2(vec2)); break;
+				case m4x4 o2w: m_sb.Append(Ldr.Mat4x4(o2w)); break;
+				case AxisId axisid: m_sb.Append(Ldr.AxisId(axisid.Id)); break;
+				case EAxisId axisid2: m_sb.Append(Ldr.AxisId(axisid2)); break;
+				case IEnumerable:
+				{
+					foreach (var x in (IEnumerable)part)
+						Append(" ").Append(x);
+					break;
+				}
+				default:
+				{
+					if (part.GetType().IsAnonymousType())
+					{
+						Append("{");
+						foreach (var prop in part.GetType().AllProps(BindingFlags.Public | BindingFlags.Instance))
+							Append($"*{prop.Name} {{", prop.GetValue(part), "}} ");
+						Append("}");
+						return this;
+					}
+					else
+					{
+						m_sb.Append(part.ToString());
+					}
+					break;
+				}
 			}
 			return this;
 		}
@@ -273,7 +285,7 @@ namespace Rylogic.LDraw
 		}
 		public Scope Group(string name, Colour32 colour)
 		{
-			return Group(name, v4.Origin);
+			return Group(name, colour, v4.Origin);
 		}
 		public Scope Group(string name, v4 position)
 		{
@@ -330,7 +342,7 @@ namespace Rylogic.LDraw
 		}
 		public LdrBuilder Line(string name, Colour32 colour, double width, bool smooth, Func<int, v4?> points)
 		{
-			int idx = 0;
+			var idx = 0;
 			Append("*LineStrip ", name, " ", colour, " {", Ldr.Width(width), Ldr.Smooth(smooth));
 			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
 			Append("}\n");
@@ -356,7 +368,7 @@ namespace Rylogic.LDraw
 		}
 		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, double width, bool smooth, Func<int, v4?> points)
 		{
-			int idx = 0;
+			var idx = 0;
 			Append("*Arrow ", name, " ", colour, " {");
 			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
 			Append(Ldr.Width(width), Ldr.Smooth(smooth), type.ToString(), "}\n");
@@ -612,6 +624,11 @@ namespace Rylogic.LDraw
 			return new LdrTextBuilder(this, name, colour);
 		}
 
+		public LdrBuilder Instance(string name, Colour32 colour, m4x4? o2w = null)
+		{
+			return Append("*Instance ", name, " ", colour, " {", Ldr.Transform(o2w), "}\n");
+		}
+
 		public override string ToString()
 		{
 			return m_sb.ToString();
@@ -654,6 +671,11 @@ namespace Rylogic.LDraw
 		public LdrTextBuilder Font(double size, Colour32 colour)
 		{
 			m_builder.Append("*Font {", Ldr.Size(size), Ldr.Colour(colour), "}");
+			return this;
+		}
+		public LdrTextBuilder Billboard3D()
+		{
+			m_builder.Append(Ldr.Billboard3D(true));
 			return this;
 		}
 		public LdrTextBuilder Billboard()

@@ -42,7 +42,7 @@ namespace Rylogic.Gfx
 		public uint ARGB => m_argb;
 
 		/// <summary>Opaque colour</summary>
-		public Colour32 RGB => new Colour32(m_argb | 0xFF000000);
+		public Colour32 RGB => new(m_argb | 0xFF000000);
 
 		/// <summary>Test if this colour has transparency</summary>
 		public bool HasAlpha => (m_argb & 0xFF000000) != 0xFF000000;
@@ -61,7 +61,7 @@ namespace Rylogic.Gfx
 
 		// Conversion
 		public Color ToColor() => Color.FromArgb(A, R, G, B);
-		public Colour128 ToColour128() => new Colour128(Af, Rf, Gf, Bf);
+		public Colour128 ToColour128() => new(Af, Rf, Gf, Bf);
 		public override string ToString() => $"{A:X2}{R:X2}{G:X2}{B:X2}";
 
 		// Interop
@@ -266,16 +266,16 @@ namespace Rylogic.Gfx
 		#region Constants
 		public static Dictionary<string, Colour32> NamedValues { get; }
 
-		public static Colour32 Zero => new Colour32(0x00, 0x00, 0x00, 0x00);
-		public static Colour32 Black => new Colour32(0xFF, 0x00, 0x00, 0x00);
-		public static Colour32 White => new Colour32(0xFF, 0xFF, 0xFF, 0xFF);
-		public static Colour32 Red => new Colour32(0xFF, 0xFF, 0x00, 0x00);
-		public static Colour32 Green => new Colour32(0xFF, 0x00, 0xFF, 0x00);
-		public static Colour32 Blue => new Colour32(0xFF, 0x00, 0x00, 0xFF);
-		public static Colour32 Yellow => new Colour32(0xFF, 0xFF, 0xFF, 0x00);
-		public static Colour32 Aqua => new Colour32(0xFF, 0x00, 0xFF, 0xFF);
-		public static Colour32 Magenta => new Colour32(0xFF, 0xFF, 0x00, 0xFF);
-		public static Colour32 Gray => new Colour32(0xFF, 0x80, 0x80, 0x80);
+		public static Colour32 Zero => new(0x00, 0x00, 0x00, 0x00);
+		public static Colour32 Black => new(0xFF, 0x00, 0x00, 0x00);
+		public static Colour32 White => new(0xFF, 0xFF, 0xFF, 0xFF);
+		public static Colour32 Red => new(0xFF, 0xFF, 0x00, 0x00);
+		public static Colour32 Green => new(0xFF, 0x00, 0xFF, 0x00);
+		public static Colour32 Blue => new(0xFF, 0x00, 0x00, 0xFF);
+		public static Colour32 Yellow => new(0xFF, 0xFF, 0xFF, 0x00);
+		public static Colour32 Aqua => new(0xFF, 0x00, 0xFF, 0xFF);
+		public static Colour32 Magenta => new(0xFF, 0xFF, 0x00, 0xFF);
+		public static Colour32 Gray => new(0xFF, 0x80, 0x80, 0x80);
 
 		public static Colour32 MediumBlue => Color.MediumBlue;
 		public static Colour32 MediumOrchid => Color.MediumOrchid;

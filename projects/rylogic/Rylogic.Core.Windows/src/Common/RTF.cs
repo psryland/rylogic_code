@@ -247,7 +247,7 @@ namespace Rylogic.Common
 		{
 			/// <summary>The default style</summary>
 			public static TextStyle Default { get { return m_default; } }
-			private static readonly TextStyle m_default = new TextStyle();
+			private static readonly TextStyle m_default = new();
 
 			/// <summary>The index of the font to use. Use rtf.FontIndex(Font.Arial) to get the font index</summary>
 			public int FontIndex { get; set; }
@@ -410,7 +410,7 @@ namespace Rylogic.Common
 		{
 			/// <summary>The default style</summary>
 			public static ParagraphStyle Default { get { return m_default; } }
-			private static readonly ParagraphStyle m_default = new ParagraphStyle();
+			private static readonly ParagraphStyle m_default = new();
 
 			/// <summary>Paragraph alignment. Left, centre, right, or justify. Note: justify is not supported by RichTextBox</summary>
 			public EAlign Alignment { get; set; }
@@ -560,7 +560,7 @@ namespace Rylogic.Common
 		private class Root
 		{
 			/// <summary>Nested content</summary>
-			public readonly List<Content> Content = new List<Content>();
+			public readonly List<Content> Content = new();
 
 			/// <summary>The version of the rtf specification</summary>
 			private int Version { get; set; }
@@ -612,7 +612,7 @@ namespace Rylogic.Common
 		private class FontTable :Content
 		{
 			/// <summary>Fonts in the font table</summary>
-			private readonly List<Font> m_fonts = new List<Font>();
+			private readonly List<Font> m_fonts = new();
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content? parent)
@@ -649,7 +649,7 @@ namespace Rylogic.Common
 		private class ColourTable :Content
 		{
 			/// <summary>The colour description</summary>
-			private readonly List<Color> m_colours = new List<Color>();
+			private readonly List<Color> m_colours = new();
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content? parent)
@@ -696,7 +696,7 @@ namespace Rylogic.Common
 		/// <summary>A collection of TextSpans that form a paragraph</summary>
 		public class Paragraph :Content, IAppendable<Paragraph>
 		{
-			private readonly List<TextSpan> m_spans = new List<TextSpan>();
+			private readonly List<TextSpan> m_spans = new();
 
 			/// <summary>Style that applies to the paragraph</summary>
 			public ParagraphStyle ParaStyle { get; set; }
@@ -796,7 +796,7 @@ namespace Rylogic.Common
 		public class TextSpan :Content ,IAppendable<TextSpan>
 		{
 			/// <summary>A recycled string builder to reduce allocs</summary>
-			private static readonly StringBuilder TmpSB = new StringBuilder();
+			private static readonly StringBuilder TmpSB = new();
 
 			/// <summary>Collects the text for the span</summary>
 			private readonly StringBuilder m_sb;
@@ -1442,7 +1442,7 @@ namespace Rylogic.Common
 		/// <summary>A string builder class with a couple of extra state variables</summary>
 		public class StrBuild
 		{
-			private readonly StringBuilder m_sb = new StringBuilder();
+			private readonly StringBuilder m_sb = new();
 
 			/// <summary>Rtf string data is either control words or content</summary>
 			public enum EType { Control, Content }

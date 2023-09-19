@@ -773,7 +773,7 @@ namespace Rylogic.Db
 		{
 			// Notes:
 			//  - Used to map from SQL result rows to types
-			private readonly Dictionary<Type, MapFunc> m_map = new Dictionary<Type, MapFunc>();
+			private readonly Dictionary<Type, MapFunc> m_map = new();
 
 			/// <summary>Get/Set the constructor that takes a DataReader for 'Item'</summary>
 			public MapFunc this[Type ty]
@@ -876,7 +876,7 @@ namespace Rylogic.Db
 		public static BindMapData BindMap { get; } = new BindMapData();
 		public class BindMapData
 		{
-			private readonly Dictionary<Type, Mapping> m_map = new Dictionary<Type, Mapping>();
+			private readonly Dictionary<Type, Mapping> m_map = new();
 			private struct Mapping
 			{
 				public EDataType ColumnType;

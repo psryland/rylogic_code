@@ -26,7 +26,7 @@ namespace Rylogic.Common
 		/// <summary>Records and restores the state of multicast delegates on an object</summary>
 		public class EventsState<T> :IDisposable
 		{
-			private readonly Dictionary<FieldInfo,Delegate[]> m_events = new Dictionary<FieldInfo,Delegate[]>();
+			private readonly Dictionary<FieldInfo,Delegate[]> m_events = new();
 			private readonly BindingFlags m_binding_flags;
 			private readonly Restore m_restore;
 			private readonly T m_obj;

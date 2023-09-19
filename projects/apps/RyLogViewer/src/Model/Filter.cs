@@ -8,10 +8,10 @@ namespace RyLogViewer
 	public class Filter : Pattern, IFilter, IFeatureTreeItem
 	{
 		/// <summary>A static instance of a 'KeepAll' filter</summary>
-		public static readonly Filter KeepAll = new Filter { Expr = "", Invert = true, IfMatch = EIfMatch.Keep };
+		public static readonly Filter KeepAll = new() { Expr = "", Invert = true, IfMatch = EIfMatch.Keep };
 
 		/// <summary>Returns an instance of a 'RejectAll' filter</summary>
-		public static readonly Filter RejectAll = new Filter { Expr = "", Invert = true, IfMatch = EIfMatch.Reject };
+		public static readonly Filter RejectAll = new() { Expr = "", Invert = true, IfMatch = EIfMatch.Reject };
 
 		public Filter()
 		{
