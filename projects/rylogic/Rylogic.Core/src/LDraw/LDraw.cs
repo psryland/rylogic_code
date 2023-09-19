@@ -624,6 +624,11 @@ namespace Rylogic.LDraw
 			return new LdrTextBuilder(this, name, colour);
 		}
 
+		public LdrBuilder Instance(string name, Colour32 colour, m4x4? o2w = null)
+		{
+			return Append("*Instance ", name, " ", colour, " {", Ldr.Transform(o2w), "}\n");
+		}
+
 		public override string ToString()
 		{
 			return m_sb.ToString();

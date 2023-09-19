@@ -579,7 +579,7 @@ namespace Rylogic.Gfx
 				public ShaderCS m_cs;
 
 				/// <summary>Description</summary>
-				public string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
+				public readonly string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
 			}
 
 			[DebuggerDisplay("Smap"), StructLayout(LayoutKind.Sequential)]
@@ -620,22 +620,22 @@ namespace Rylogic.Gfx
 			public float m_relative_reflectivity;
 
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
-			public void Use(ERenderStep rstep, EShaderVS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderVS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_vs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_vs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderGS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderGS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_gs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_gs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderPS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderPS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_ps.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_ps.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderCS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderCS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_cs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_cs.parms = parms;
@@ -967,8 +967,8 @@ namespace Rylogic.Gfx
 			public v4 m_ws_intercept;
 
 			// The object that was hit (or null)
-			public Object? HitObject => IsHit ? new Object(m_obj) : null;
-			private IntPtr m_obj;
+			public readonly Object? HitObject => IsHit ? new Object(m_obj) : null;
+			private readonly IntPtr m_obj;
 
 			/// <summary>The distance from the ray origin to the hit point</summary>
 			public float m_distance;
@@ -1010,11 +1010,11 @@ namespace Rylogic.Gfx
 				ScreenW = sw;
 				ScreenH = sh;
 			}
-			public float Aspect => Width / Height;
-			public Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));
-			public SizeF ToSizeF() => new(Width, Height);
-			public Rectangle ToRect() => new((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
-			public RectangleF ToRectF() => new(X, Y, Width, Height);
+			public readonly float Aspect => Width / Height;
+			public readonly Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));
+			public readonly SizeF ToSizeF() => new(Width, Height);
+			public readonly Rectangle ToRect() => new((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
+			public readonly RectangleF ToRectF() => new(X, Y, Width, Height);
 		}
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
@@ -1050,7 +1050,7 @@ namespace Rylogic.Gfx
 			/// <summary>A comma or semicolon separated list of search directories</summary>
 			public string? IncludePaths
 			{
-				get => m_include_paths;
+				readonly get => m_include_paths;
 				set => m_include_paths = value;
 			}
 			[MarshalAs(UnmanagedType.LPWStr)]
@@ -1063,7 +1063,7 @@ namespace Rylogic.Gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DSceneChanged
+		public readonly struct View3DSceneChanged
 		{
 			/// <summary>How the scene was changed</summary>
 			public readonly ESceneChanged ChangeType;
