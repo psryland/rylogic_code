@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Threading;
-using UFADO.DomainObjects;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Maths;
+using UFADO.DomainObjects;
+using UFADO.Gfx;
 
 namespace UFADO;
 
-public class Scatterer : IDisposable
+public class Scatterer :IDisposable
 {
 	public Scatterer(ChartControl diagram, Sliders sliders)
 	{
@@ -25,6 +26,7 @@ public class Scatterer : IDisposable
 	public void Dispose()
 	{
 		Active = false;
+		GC.SuppressFinalize(this);
 	}
 
 	/// <summary>The diagram containing the objects to scatter</summary>
@@ -49,8 +51,10 @@ public class Scatterer : IDisposable
 		{
 			if (Bodies.Count < 2) yield break;
 			for (var i = 0; i != Bodies.Count - 1; ++i)
+			{
 				for (var j = i + 1; j != Bodies.Count; ++j)
 					yield return new Link(Bodies[i], Bodies[j]);
+			}
 		}
 	}
 
@@ -61,15 +65,9 @@ public class Scatterer : IDisposable
 		set
 		{
 			if (Active == value) return;
-			if (m_timer != null)
-			{
-				m_timer.Stop();
-			}
+			m_timer?.Stop();
 			m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background, HandleTick, Dispatcher.CurrentDispatcher) : null;
-			if (m_timer != null)
-			{
-				m_timer.Start();
-			}
+			m_timer?.Start();
 			void HandleTick(object? sender, EventArgs e)
 			{
 				Step();
@@ -84,12 +82,12 @@ public class Scatterer : IDisposable
 		m_issue = Diagram.Elements.IssueNumber;
 
 		// Create a dynamics object for each node
-		var nodes = Diagram.Elements.OfType<WorkItemElement>()
+		var nodes = Diagram.Elements.OfType<WorkItemNode>()
 			.Where(x => x.Chart != null)
 			.ToDictionary(x => (Node)x, x => new Body(x));
 
 		// Find the unique set of inter-node connections
-		var conns = Diagram.Elements.OfType<DomainObjects.Link>()
+		var conns = Diagram.Elements.OfType<ParentLink>()
 			.Where(x => x.Chart != null && x.Node0 != null && x.Node1 != null)
 			.ToDictionary(x => x, x => new Link(nodes[x.Node0!], nodes[x.Node1!]));
 

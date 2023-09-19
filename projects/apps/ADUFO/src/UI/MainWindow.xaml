@@ -7,17 +7,17 @@
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
-	Title="ADUFO"
+	Title="UFADO"
 	Height="850"
 	Width="1000"
 	>
 	<Window.Resources>
-		<BitmapImage x:Key="connect0" UriSource="/ADUFO;component/res/disconnected.png" />
-		<BitmapImage x:Key="connect1" UriSource="/ADUFO;component/res/connected.png" />
-		<BitmapImage x:Key="scatter0" UriSource="/ADUFO;component/res/scatter0.png" />
-		<BitmapImage x:Key="scatter1" UriSource="/ADUFO;component/res/scatter1.png" />
-		<BitmapImage x:Key="refresh" UriSource="/ADUFO;component/res/refresh.png" />
-		<BitmapImage x:Key="options" UriSource="/ADUFO;component/res/options.png" />
+		<BitmapImage x:Key="connect0" UriSource="/UFADO;component/res/disconnected.png" />
+		<BitmapImage x:Key="connect1" UriSource="/UFADO;component/res/connected.png" />
+		<BitmapImage x:Key="scatter0" UriSource="/UFADO;component/res/scatter0.png" />
+		<BitmapImage x:Key="scatter1" UriSource="/UFADO;component/res/scatter1.png" />
+		<BitmapImage x:Key="refresh" UriSource="/UFADO;component/res/refresh.png" />
+		<BitmapImage x:Key="options" UriSource="/UFADO;component/res/options.png" />
 
 	</Window.Resources>
 	<!--

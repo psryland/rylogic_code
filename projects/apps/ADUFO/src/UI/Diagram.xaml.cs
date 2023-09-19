@@ -30,6 +30,7 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 		ClearDiagram(recycle: false);
 		Chart = null!;
 		DockControl = null!;
+		GC.SuppressFinalize(this);
 	}
 
 	/// <summary>Provides support for the DockContainer</summary>
@@ -107,6 +108,7 @@ public partial class Diagram : UserControl, IDisposable, IDockable, INotifyPrope
 			MovementConnectors.Clear();
 		}
 #endif
+		NotifyPropertyChanged(nameof(ClearDiagram));
 	}
 
 	/// <inheritdoc/>

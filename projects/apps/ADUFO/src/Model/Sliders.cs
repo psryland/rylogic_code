@@ -2,7 +2,7 @@
 
 namespace UFADO;
 
-public class Sliders : SettingsSet<Sliders>
+public class Sliders :SettingsSet<Sliders>
 {
 	public Sliders()
 	{

@@ -2,6 +2,7 @@
 using System.Windows;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -22,13 +23,18 @@ public partial class App :Application
 
 		try
 		{
+			View3d.LoadDll();
+
 			Xml_.Config
 				.SupportWPFTypes()
 				.SupportRylogicMathsTypes()
 				.SupportRylogicCommonTypes();
 
+			var log = new Logger("UFADO", new LogToDebug());
 			var settings = new Settings(Settings.DefaultFilepath);
-			Model = new Model(settings);
+			
+			Model = new Model(settings, log);
+
 			var ui = new MainWindow(settings, Model);
 			ui.Show();
 		}

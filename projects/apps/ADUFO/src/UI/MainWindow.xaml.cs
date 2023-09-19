@@ -8,9 +8,9 @@ using Rylogic.Utility;
 
 namespace UFADO;
 
-public partial class MainWindow : Window, INotifyPropertyChanged
+public partial class MainWindow :Window, INotifyPropertyChanged
 {
-	public MainWindow(Settings settings, Model model)
+	internal MainWindow(Settings settings, Model model)
 	{
 		Shutdown = new CancellationTokenSource();
 		Settings = settings;
@@ -44,11 +44,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 		InitializeComponent();
 		InitDockContainer();
 		DataContext = this;
-		Loaded += (o, s) =>
-		{
-			ToggleConnectionInternal();
-			RefreshInternal();
-		};
+	}
+	protected override void OnInitialized(EventArgs e)
+	{
+		base.OnInitialized(e);
+
+		// Ensure all items are added to the chart
+		foreach (var item in Model.Items.All)
+			item.Chart = Diagram.Chart;
+		foreach (var link in Model.Items.Links.Values)
+			link.Chart = Diagram.Chart;
 	}
 	protected override void OnClosing(CancelEventArgs e)
 	{

@@ -5,27 +5,77 @@ using System.Threading.Tasks;
 using UFADO.DomainObjects;
 using Microsoft.VisualStudio.Services.Common;
 using Rylogic.Gui.WPF;
-using Rylogic.Gui.WPF.ChartDiagram;
 using Rylogic.Utility;
+using UFADO.Gfx;
+using Rylogic.Gfx;
+using Rylogic.Common;
 
 namespace UFADO;
 
-public class Model : IDisposable, INotifyPropertyChanged
+public sealed class Model :IDisposable, INotifyPropertyChanged
 {
-	public Model(Settings settings)
+	private readonly Settings m_settings;
+	private readonly Logger m_log;
+
+	public Model(Settings settings, Logger log)
 	{
-		Settings = settings;
-		Items = new WorkItemDB(settings);
+		m_settings = settings;
+		m_log = log;
+
+		View3d = View3d.Create();
+		Gfx = new GfxModels();
+		Items = new WorkItemDB();
 		Ado = null!;
+
+		try
+		{
+			// If the DB is on disk, load it
+			if (Path_.FileExists(m_settings.DBFilepath))
+				Items.Load(m_settings.DBFilepath);
+		}
+		catch (Exception e)
+		{
+			m_log.Write(ELogLevel.Error, e.Message, e.StackTrace);
+		}
 	}
 	public void Dispose()
 	{
 		Util.Dispose(Items);
+		Util.Dispose(Gfx);
 		Ado = null!;
+		View3d = null!;
+		GC.SuppressFinalize(this);
 	}
 
-	/// <summary>Application settings</summary>
-	private Settings Settings { get; }
+	/// <summary>The view3d DLL context </summary>
+	public View3d View3d
+	{
+		get => m_view3d;
+		set
+		{
+			if (m_view3d == value) return;
+			if (m_view3d != null)
+			{
+				m_view3d.Error -= ReportError;
+				Util.Dispose(ref m_view3d!);
+			}
+			m_view3d = value;
+			if (m_view3d != null)
+			{
+				m_view3d.Error += ReportError;
+			}
+
+			// Handlers
+			static void ReportError(object? sender, View3d.ErrorEventArgs e)
+			{
+				//Log.Write(ELogLevel.Error, e.Message, e.Filepath, e.FileLine);
+			}
+		}
+	}
+	private View3d m_view3d = null!;
+
+	/// <summary>Shared geometry</summary>
+	private GfxModels Gfx { get; }
 
 	/// <summary>Database of </summary>
 	public WorkItemDB Items { get; }
@@ -36,6 +86,7 @@ public class Model : IDisposable, INotifyPropertyChanged
 		get => m_ado;
 		set
 		{
+			// We don't own the Ado object
 			if (m_ado == value) return;
 			m_ado = value;
 			NotifyPropertyChanged(nameof(Ado));
@@ -46,8 +97,10 @@ public class Model : IDisposable, INotifyPropertyChanged
 	/// <summary>Reload the data from ADO</summary>
 	public async Task Refresh(ChartControl chart)
 	{
-		if (Ado is not AdoInterface)
+		if (Ado is null)
 			return;
+
+		//TODO: remove items that aren't on ADO any more
 
 		using var cancel = new CancellationTokenSource();
 		/*
@@ -87,8 +140,8 @@ public class Model : IDisposable, INotifyPropertyChanged
 		// Download work streams
 		foreach (var workstream in await workstreams)
 		{
-			if (workstream.Id == null) continue;
-			var ws = Items.WorkStreams.GetOrAddValue(workstream.Id.Value, () => new WorkStream(workstream));
+			if (workstream.Id is not int id) continue;
+			var ws = Items.WorkStreams.GetOrAddValue(new(id), () => new WorkStream(new(id), "workstream"));
 			ws.Item = workstream;
 			ws.Chart = chart;
 		}
@@ -96,27 +149,14 @@ public class Model : IDisposable, INotifyPropertyChanged
 		// Download epics
 		foreach (var epic in await epics)
 		{
-			if (epic.Id == null) continue;
-			if (epic.Fields.TryGetValue("System.Parent", out var _) == false) continue;
-			var ws = Items.Epics.GetOrAddValue(epic.Id.Value, () => new Epic(epic));
+			if (epic.Id is not int id) continue;
+			var ws = Items.Epics.GetOrAddValue(new(id), () => new Epic(new(id), "epic", epic.ParentItemId()));
 			ws.Item = epic;
 			ws.Chart = chart;
 		}
 
-		// Create connections
-		foreach (var epic in Items.Epics.Values)
-		{
-			if (epic.ParentItem is not long parent_item_id) continue;
-			if (!Items.WorkStreams.TryGetValue((int)parent_item_id, out var ws)) continue;
-
-			// Create a connection
-			static long MakeKey(int id0, int id1) => ((long)id0 << 32) | (uint)id1;
-			var link = Items.Links.GetOrAddValue(MakeKey(ws.ItemId, epic.ItemId), () => new Link(ws, epic, Connector.EType.Line));
-			link.Chart = chart;
-		}
-
-		//// Persist the layout to storage
-		//Items.Save();
+		// Persist the data to storage
+		Items.Save(m_settings.DBFilepath);
 	}
 
 	/// <inheritdoc/>

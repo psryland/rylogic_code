@@ -4,8 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using UFADO.DomainObjects;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.Common;
@@ -14,7 +12,7 @@ using Rylogic.Utility;
 
 namespace UFADO;
 
-public class AdoInterface : IDisposable, INotifyPropertyChanged
+public sealed class AdoInterface : IDisposable, INotifyPropertyChanged
 {
     public AdoInterface(Settings settings, CancellationToken shutdown)
     {
@@ -25,6 +23,7 @@ public class AdoInterface : IDisposable, INotifyPropertyChanged
     {
         Client = null!;
         Connection = null!;
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>App shutdown token</summary>
@@ -34,7 +33,7 @@ public class AdoInterface : IDisposable, INotifyPropertyChanged
     private Settings Settings { get; }
 
     /// <summary>The ADO URL</summary>
-    public Uri AdoUrl => new Uri($"https://dev.azure.com/{Organization}");///{Project}");
+    public Uri AdoUrl => new($"https://dev.azure.com/{Organization}");///{Project}");
 
                                                                           /// <summary>The ADO instance to connect to</summary>
     private string Organization
@@ -159,7 +158,6 @@ public class AdoInterface : IDisposable, INotifyPropertyChanged
     private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 }
-
 
 #if false // ADO doesn't have a web socket API
 	/// <summary>SignalR connection to ADO</summary>
