@@ -277,8 +277,10 @@ namespace CoinFlip.Bots
 		public static IList<PluginFile> AvailableBots()
 		{
 			// Enumerate the available bots
-			var bot_files = Plugins<IBot>.Enumerate(Misc.ResolveBotPath(), regex_filter: Misc.BotFilterRegex).ToArray();
-			return bot_files;
+			var bot_directory = Misc.ResolveBotPath();
+			return Path_.DirExists(bot_directory)
+				? Plugins<IBot>.Enumerate(bot_directory, regex_filter: Misc.BotFilterRegex).ToArray()
+				: Array.Empty<PluginFile>();
 		}
 
 		/// <inheritdoc />

@@ -35,7 +35,7 @@ namespace EDTradeAdvisor.DomainObjects
 		public long UpdatedAt { get; set; }
 
 		/// <summary></summary>
-		public v4 Position => new v4((float)X, (float)Y, (float)Z, 1f);
+		public v4 Position => new((float)X, (float)Y, (float)Z, 1f);
 
 		/// <summary></summary>
 		public DateTimeOffset LastUpdated => DateTimeOffset.FromUnixTimeSeconds(UpdatedAt);

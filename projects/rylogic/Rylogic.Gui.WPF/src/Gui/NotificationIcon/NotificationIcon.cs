@@ -37,7 +37,7 @@ namespace Rylogic.Gui.WPF
 		// Notes:
 		//  - In your window.Closing handler, set 'Cancel' and hide the window
 
-		private readonly object m_lock = new object();
+		private readonly object m_lock = new();
 
 		public NotificationIcon()
 		{

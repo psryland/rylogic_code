@@ -35,7 +35,7 @@ namespace Binance.API.DomainObjects
 		private string Description => $"{Base}/{Quote}";
 
 		/// <summary>Mapping from Binance 'Symbol' to currency pair</summary>
-		internal static Dictionary<string, CurrencyPair> SymbolToPair = new Dictionary<string, CurrencyPair>();
+		internal static Dictionary<string, CurrencyPair> SymbolToPair = new();
 		public static CurrencyPair Parse(string pair_name)
 		{
 			if (SymbolToPair.TryGetValue(pair_name, out var pair))

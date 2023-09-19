@@ -505,7 +505,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>BBox for the element in chart space</summary>
-			public virtual BBox Bounds => new BBox(O2W.pos, v4.Zero);
+			public virtual BBox Bounds => new(O2W.pos, v4.Zero);
 
 			/// <summary>Get/Set the centre point of the element (in chart space)</summary>
 			public v4 Centre

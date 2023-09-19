@@ -56,7 +56,7 @@ namespace ExchApi.Common
 			}
 		}
 		private static long m_nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
-		private static object m_nonce_lock = new object();
+		private static object m_nonce_lock = new();
 
 		/// <summary>Assert for testing the thread id</summary>
 		public static bool AssertMainThread()

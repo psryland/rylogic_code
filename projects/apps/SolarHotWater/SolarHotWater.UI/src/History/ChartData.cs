@@ -323,6 +323,6 @@ namespace SolarHotWater
 		}
 
 		/// <summary>User data key</summary>
-		private static readonly Guid ConsumerKey = new Guid("EF22CB4E-3F6D-44BD-A1CD-31F920B386DF");
+		private static readonly Guid ConsumerKey = new("EF22CB4E-3F6D-44BD-A1CD-31F920B386DF");
 	}
 }

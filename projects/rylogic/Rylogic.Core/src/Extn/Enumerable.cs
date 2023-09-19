@@ -516,10 +516,11 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Concatenate a single element to the end of the sequence</summary>
-		[Obsolete("Use Append")] public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> source, TSource one_more)
+		public static IEnumerable<TSource> Concat<TSource>(params IEnumerable<TSource>[] sources)
 		{
-			foreach (var s in source) yield return s;
-			yield return one_more;
+			foreach (var source in sources)
+				foreach (var s in source)
+					yield return s;
 		}
 
 		/// <summary>Returns this collection as pairs</summary>

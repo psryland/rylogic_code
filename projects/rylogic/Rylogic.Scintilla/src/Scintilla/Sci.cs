@@ -234,7 +234,7 @@ namespace Rylogic.Scintilla
 			}
 			return name;
 		}
-		private static Dictionary<int, string> m_sci_name = new Dictionary<int,string>();
+		private static Dictionary<int, string> m_sci_name = new();
 
 		#region DLL Loading
 

@@ -99,8 +99,8 @@ namespace Rylogic.Maths
 		}
 
 		// Static m2x2 types
-		private readonly static m2x2 m_zero     = new m2x2(v2.Zero , v2.Zero );
-		private readonly static m2x2 m_identity = new m2x2(v2.XAxis, v2.YAxis);
+		private readonly static m2x2 m_zero     = new(v2.Zero , v2.Zero );
+		private readonly static m2x2 m_identity = new(v2.XAxis, v2.YAxis);
 		public static m2x2 Zero     { get { return m_zero; } }
 		public static m2x2 Identity { get { return m_identity; } }
 

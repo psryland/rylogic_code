@@ -39,7 +39,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary>Gets/Sets Location.</summary>
 		public TextLocation Location
 		{
-			get => new TextLocation(Line, Column);
+			get => new(Line, Column);
 			set
 			{
 				Line = value.LineIndex;

@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		///    and TextLocations.
 
 		/// <summary>Represents no text location (0, 0).</summary>
-		public static readonly TextLocation Invalid = new TextLocation(-1, -1);
+		public static readonly TextLocation Invalid = new(-1, -1);
 
 		/// <summary>Creates a TextLocation instance.</summary>
 		public TextLocation(int line, int column, int? visual_column = null)

@@ -53,7 +53,7 @@ namespace Rylogic.Common
 
 		/// <summary>Synchronise multi-threaded access with locks</summary>
 		public bool SynchroniseWrites { get; set; }
-		private object m_write_sync = new object();
+		private object m_write_sync = new();
 
 		/// <summary>Ensure the prompt is always printed on a new line</summary>
 		public bool AutoNewLine { get; set; }
@@ -330,7 +330,7 @@ namespace Rylogic.Common
 				return true;
 			}
 		}
-		public object m_read_key_lock = new object();
+		public object m_read_key_lock = new();
 
 		/// <summary>Read a line from the console, with auto-complete and history support</summary>
 		public string Read()

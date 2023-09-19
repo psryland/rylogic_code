@@ -233,10 +233,10 @@ namespace Rylogic.Db
 
 			/// <summary>Create a transaction scope</summary>
 			public Transaction BeginTransaction() => BeginTransaction(IsolationLevel.Serializable);
-			public Transaction BeginTransaction(IsolationLevel il) => new Transaction(this, il, null);
+			public Transaction BeginTransaction(IsolationLevel il) => new(this, il, null);
 
 			/// <summary>Return a table helper instance for a table based on 'Record'</summary>
-			public Table<Record> Table<Record>() => new Table<Record>(this);
+			public Table<Record> Table<Record>() => new(this);
 
 			/// <summary>Sets the busy wait timeout period in milliseconds.</summary>
 			public int BusyTimeout

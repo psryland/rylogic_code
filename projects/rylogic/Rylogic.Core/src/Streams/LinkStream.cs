@@ -19,10 +19,10 @@ namespace Rylogic.Streams
 			public Block(int size) { Data = new byte[size]; Size = 0; }
 		}
 		private const int DefaultBlockBufferSize = 4096;
-		private readonly EventWaitHandle m_data_available = new EventWaitHandle(false, EventResetMode.AutoReset);
-		private readonly EventWaitHandle m_data_consumed  = new EventWaitHandle(false, EventResetMode.AutoReset);
-		private readonly List<Block>     m_data           = new List<Block>();  // blocks in use, containing data
-		private readonly Queue<Block>    m_avail          = new Queue<Block>(); // blocks available for recycling
+		private readonly EventWaitHandle m_data_available = new(false, EventResetMode.AutoReset);
+		private readonly EventWaitHandle m_data_consumed  = new(false, EventResetMode.AutoReset);
+		private readonly List<Block>     m_data           = new();  // blocks in use, containing data
+		private readonly Queue<Block>    m_avail          = new(); // blocks available for recycling
 		private int m_capacity;        // The current allocated memory
 		
 		/// <summary>Controls how big each allocation unit is</summary>

@@ -159,7 +159,7 @@ namespace Binance.API
 					m_balance_data = value;
 				}
 			}
-			private BalancesData m_balance_data = new BalancesData();
+			private BalancesData m_balance_data = new();
 
 			/// <summary>Currently active orders on the exchange (per currency pair)</summary>
 			public OrdersStream Orders { get; }

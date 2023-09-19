@@ -305,7 +305,7 @@ namespace Rylogic.Interop.Win32
 			}
 			return name;
 		}
-		private static Dictionary<int, string> m_wm_name = new Dictionary<int, string>();
+		private static Dictionary<int, string> m_wm_name = new();
 		#endregion
 
 		#region WM_NOTIFY codes
@@ -450,10 +450,10 @@ namespace Rylogic.Interop.Win32
 		#endregion
 
 		#region HWND constants HWND_
-		public static readonly HWND HWND_TOP = new HWND(0);
-		public static readonly HWND HWND_BOTTOM = new HWND(1);
-		public static readonly HWND HWND_TOPMOST = new HWND(-1);
-		public static readonly HWND HWND_NOTOPMOST = new HWND(-2);
+		public static readonly HWND HWND_TOP = new(0);
+		public static readonly HWND HWND_BOTTOM = new(1);
+		public static readonly HWND HWND_TOPMOST = new(-1);
+		public static readonly HWND HWND_NOTOPMOST = new(-2);
 		#endregion
 
 		#region NF_,NFR_
@@ -1549,10 +1549,10 @@ namespace Rylogic.Interop.Win32
 		#endregion
 
 		/// <summary>Magic value used for message queue only windows</summary>
-		public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
+		public static readonly IntPtr HWND_MESSAGE = new(-3);
 
 		/// <summary>INVALID_HANDLE_VALUE constant</summary>
-		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+		public static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
 		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true, ELoadLibraryFlags flags = ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)

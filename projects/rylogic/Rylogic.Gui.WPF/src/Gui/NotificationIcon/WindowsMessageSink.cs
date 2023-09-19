@@ -204,6 +204,6 @@ namespace Rylogic.Gui.WPF.NotifyIcon
 		//private bool isDoubleClick;
 
 		/// <summary>Creates a dummy instance. Used at design time.</summary>
-		public static WindowMessageSink CreateEmpty() => new WindowMessageSink();
+		public static WindowMessageSink CreateEmpty() => new();
 	}
 }

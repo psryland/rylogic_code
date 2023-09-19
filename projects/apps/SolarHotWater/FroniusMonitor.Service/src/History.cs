@@ -29,7 +29,7 @@ namespace FroniusMonitor.Service
 		}
 
 		/// <summary>Time Zero</summary>
-		public static readonly DateTimeOffset Epoch = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+		public static readonly DateTimeOffset Epoch = new(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
 		/// <summary>Database access</summary>
 		private SQLiteConnection DB

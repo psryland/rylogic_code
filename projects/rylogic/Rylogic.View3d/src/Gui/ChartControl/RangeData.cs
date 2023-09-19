@@ -273,7 +273,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The min/max limits as a range</summary>
 				public RangeF Range
 				{
-					get => new RangeF(Min, Max);
+					get => new(Min, Max);
 					set
 					{
 						if (Equals(Range, value)) return;

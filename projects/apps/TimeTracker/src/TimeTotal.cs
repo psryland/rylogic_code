@@ -22,7 +22,7 @@ namespace TimeTracker
 		public List<TimePeriod> Periods { get; }
 
 		/// <summary>The total time spend on this task</summary>
-		public TimeSpan Total => new TimeSpan(Periods.Sum(x => x.Duration.Ticks));
+		public TimeSpan Total => new(Periods.Sum(x => x.Duration.Ticks));
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

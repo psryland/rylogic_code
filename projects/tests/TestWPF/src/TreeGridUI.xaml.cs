@@ -78,7 +78,7 @@ namespace TestWPF
 		{
 			GenerateData(m_rng.Next(1, 4));
 		}
-		private Random m_rng = new Random();
+		private Random m_rng = new();
 
 		/// <summary>Dynamically change the data</summary>
 		public ICommand AddItem { get; }
