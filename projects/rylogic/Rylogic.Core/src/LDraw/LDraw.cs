@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -21,6 +22,11 @@ namespace Rylogic.LDraw
 {
 	public static class Ldr
 	{
+		// Notes:
+		//  - The LdrBuilder is the main type for building ldr strings.
+		//  - This type is basically a namespace for converting types to ldr strings. It knows when a
+		//    string is necessary or how to simplify a string for a specific type.
+
 		/// <summary>Filepath for outputting ldr script using 'LdrOut' extension</summary>
 		public static string OutFile = "";
 
@@ -42,8 +48,8 @@ namespace Rylogic.LDraw
 
 				// Lock, then write the file
 				using (Path_.LockFile(filepath))
-					using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
-						f.Write(ldr_str);
+				using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
+					f.Write(ldr_str);
 			}
 			catch (Exception ex)
 			{
@@ -52,6 +58,18 @@ namespace Rylogic.LDraw
 		}
 
 		// Type to string helpers
+		public static string Col(uint col)
+		{
+			return col != 0xFFFFFFFF ? col.ToString("X8") : string.Empty;
+		}
+		public static string Col(Colour32 col)
+		{
+			return col != 0xFFFFFFFF ? col.ARGB.ToString("X8") : string.Empty;
+		}
+		public static string Col(Color col)
+		{
+			return Col(col.ToArgbU());
+		}
 		public static string Vec2(v2 vec)
 		{
 			Debug.Assert(Math_.IsFinite(vec));
@@ -79,12 +97,16 @@ namespace Rylogic.LDraw
 		}
 
 		// Ldr element helpers
+		public static string Colour(Colour32 colour)
+		{
+			return $"*Colour {{{colour.ARGB:X8}}}";
+		}
 		public static string Position(v4 position, bool newline = false)
 		{
 			return
 				position == v4.Zero ? string.Empty :
 				position == v4.Origin ? string.Empty :
-				"*o2w{*pos{" + Vec3(position) + "}}" + (newline?"\n":"");
+				$"*o2w{{*pos{{{Vec3(position)}}}}}{(newline ? "\n" : "")}";
 		}
 		public static string Position(v4? position, bool newline = false)
 		{
@@ -92,10 +114,10 @@ namespace Rylogic.LDraw
 		}
 		public static string Transform(m4x4 o2w, bool newline = false)
 		{
-			return 
+			return
 				o2w == m4x4.Identity ? string.Empty :
 				o2w.rot == m3x4.Identity ? Position(o2w.pos, newline) :
-				"*o2w{*m4x4{" + Mat4x4(o2w) + "}}" + (newline?"\n":"");
+				$"*o2w{{*m4x4{{{Mat4x4(o2w)}}}}}{(newline ? "\n" : "")}";
 		}
 		public static string Transform(m4x4? o2w, bool newline = false)
 		{
@@ -108,19 +130,9 @@ namespace Rylogic.LDraw
 				pos != null ? Position(pos.Value, newline) :
 				string.Empty;
 		}
-		public static string Colour(uint col)
+		public static string Name(string? name)
 		{
-			return
-				col == 0xFFFFFFFF ? string.Empty :
-				col.ToString("X8");
-		}
-		public static string Colour(Color col)
-		{
-			return Colour(col.ToArgbU());
-		}
-		public static string Colour(Colour32 col)
-		{
-			return col.ARGB.ToString("X8");
+			return name != null ? $"*Name {{{name}}}" : string.Empty;
 		}
 		public static string AxisId(AxisId id)
 		{
@@ -130,7 +142,23 @@ namespace Rylogic.LDraw
 		{
 			return solid ? "*Solid" : string.Empty;
 		}
-		public static string Width(float width)
+		public static string Billboard(bool billboard = true)
+		{
+			return billboard ? "*Billboard" : string.Empty;
+		}
+		public static string ScreenSpace(bool screen_space = true)
+		{
+			return screen_space ? "*ScreenSpace" : string.Empty;
+		}
+		public static string Size(double size)
+		{
+			return $"*Size {{{size}}}";
+		}
+		public static string Scale(double scale)
+		{
+			return scale != 1 ? $"*Scale {{{scale}}}" : string.Empty;
+		}
+		public static string Width(double width)
 		{
 			return width != 0 ? $"*Width {{{width}}}" : string.Empty;
 		}
@@ -138,81 +166,29 @@ namespace Rylogic.LDraw
 		{
 			return $"*Facets {{{facets}}}";
 		}
-		public static string CornerRadius(float rad)
+		public static string CornerRadius(double rad)
 		{
-			return $"*CornerRadius {{{rad}}}";
+			return rad != 0 ? $"*CornerRadius {{{rad}}}" : string.Empty;
 		}
 		public static string Smooth(bool smooth)
 		{
 			return smooth ? "*Smooth" : string.Empty;
 		}
-
-		// Ldr single string
-		public static string GroupStart(string name)
+		public static string NoZTest(bool no_ztest)
 		{
-			return $"*Group {name}\n{{\n";
+			return no_ztest ? "*NoZTest" : string.Empty;
 		}
-		public static string GroupStart(string name, Colour32 colour)
+		public static string NoZWrite(bool no_zwrite)
 		{
-			return $"*Group {name} {colour}\n{{\n";
-		}
-		public static string GroupEnd(m4x4? o2w = null, v4? pos = null)
-		{
-			return $"{Transform(o2w, pos, newline:true)}}}\n";
-		}
-		public static string Line(string name, Colour32 colour, v4 start, v4 end, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Line {name} {colour} {{{Vec3(start)} {Vec3(end)} {Transform(o2w, pos)}}}\n";
-		}
-		public static string LineD(string name, Colour32 colour, v4 start, v4 direction, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*LineD {name} {colour} {{{Vec3(start)} {Vec3(direction)} {Transform(o2w, pos)}}}\n";
-		}
-		public static string LineStrip(string name, Colour32 colour, int width, IEnumerable<v4> points, m4x4? o2w = null, v4? pos = null)
-		{
-			var w = Width(width);
-			var pts = points.Select(x => " "+Vec3(x));
-			return $"*LineStrip {name} {colour} {{{w} {pts} {Transform(o2w, pos)}}}";
-		}
-		public static string Ellipse(string name, Colour32 colour, AxisId axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Ellipse {name} {colour} {{{rx} {ry} {AxisId(axis_id)} {Transform(o2w, pos)}}}\n";
-		}
-		public static string Rect(string name, Colour32 colour, AxisId axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Rect {name} {colour} {{{w} {h} {AxisId(axis_id)} {Solid(solid)} {Transform(o2w, pos)}}}\n";
-		}
-		public static string Axis(string name, Colour32 colour, m4x4 basis, float size = 1f)
-		{
-			return $"*Matrix3x3 {name} {colour} {{{Vec3(basis.x)} {Vec3(basis.y)} {Vec3(basis.z)} {Position(basis.pos)}}}\n";
-		}
-		public static string Axis(string name, Colour32 colour, quat basis, v4 pos, float size = 1f)
-		{
-			return Axis(name, colour, new m4x4(basis, pos), size);
-		}
-		public static string Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Box {name} {colour} {{{size} {Transform(o2w, pos)}}}\n";
-		}
-		public static string Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Box {name} {colour} {{{dim.x} {dim.y} {dim.z} {Transform(o2w, pos)}}}\n";
-		}
-		public static string Sphere(string name, Colour32 colour, float radius, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*Sphere {name} {colour} {{{radius} {Transform(o2w, pos)}}}\n";
-		}
-		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, m4x4? o2w = null, v4? pos = null)
-		{
-			return $"*GridWH {name} {colour} {{{dimx} {dimy} {divx} {divy} {Transform(o2w, pos)}}}\n";
+			return no_zwrite ? "*NoZWrite" : string.Empty;
 		}
 
 		// Types
 		public enum EArrowType
 		{
-			Line    = 0,
-			Fwd     = 1 << 0,
-			Back    = 1 << 1,
+			Line = 0,
+			Fwd = 1 << 0,
+			Back = 1 << 1,
 			FwdBack = Fwd | Back,
 		}
 	}
@@ -220,32 +196,17 @@ namespace Rylogic.LDraw
 	/// <summary>Like StringBuilder, but for ldr strings</summary>
 	public class LdrBuilder
 	{
-		private readonly StringBuilder m_sb;
+		// Notes:
+		//  - Fluent style Ldr String builder.
 
-		public LdrBuilder()
-		{
-			m_sb = new StringBuilder();
-		}
-		public LdrBuilder(int capacity)
-		{
-			m_sb = new StringBuilder(capacity);
-		}
-		public LdrBuilder(string value)
-		{
-			m_sb = new StringBuilder(value);
-		}
-		public LdrBuilder(int capacity, int maxCapacity)
-		{
-			m_sb = new StringBuilder(capacity, maxCapacity);
-		}
-		public LdrBuilder(string value, int capacity)
-		{
-			m_sb = new StringBuilder(value, capacity);
-		}
-		public LdrBuilder(string value, int startIndex, int length, int capacity)
-		{
-			m_sb = new StringBuilder(value, startIndex, length, capacity);
-		}
+		private readonly StringBuilder m_sb;
+		public LdrBuilder(StringBuilder sb) => m_sb = sb;
+		public LdrBuilder() : this(new StringBuilder()) { }
+		public LdrBuilder(int capacity) : this(new StringBuilder(capacity)) { }
+		public LdrBuilder(string value) : this(new StringBuilder(value)) { }
+		public LdrBuilder(int capacity, int maxCapacity) : this(new StringBuilder(capacity, maxCapacity)) { }
+		public LdrBuilder(string value, int capacity) : this(new StringBuilder(value, capacity)) { }
+		public LdrBuilder(string value, int startIndex, int length, int capacity) : this(new StringBuilder(value, startIndex, length, capacity)) { }
 
 		public LdrBuilder Clear()
 		{
@@ -257,22 +218,40 @@ namespace Rylogic.LDraw
 			m_sb.Remove(start_index, length);
 			return this;
 		}
+		public LdrBuilder Append(params object[] parts)
+		{
+			foreach (var p in parts) Append(p);
+			return this;
+		}
 		public LdrBuilder Append(object part)
 		{
-			if (part is string str) m_sb.Append(str);
-			else if (part is Color col) m_sb.Append(Ldr.Colour(col));
+			// Use this switch to convert a type directly into a string. No adorning.
+			// E.g. 'part is Colour32' just inserts "FF00FF00", not "*Colour32{FF00FF00}"
+			if (part is null) { }
+			else if (part is string str) m_sb.Append(str);
+			else if (part is Color col) m_sb.Append(Ldr.Col(col));
 			else if (part is v4 vec4) m_sb.Append(Ldr.Vec3(vec4));
 			else if (part is v2 vec2) m_sb.Append(Ldr.Vec2(vec2));
 			else if (part is m4x4 o2w) m_sb.Append(Ldr.Mat4x4(o2w));
 			else if (part is AxisId axisid) m_sb.Append(Ldr.AxisId(axisid.Id));
 			else if (part is EAxisId axisid2) m_sb.Append(Ldr.AxisId(axisid2));
-			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(" ").Append(x ?? string.Empty);
-			else if (part != null) m_sb.Append(part.ToString());
-			return this;
-		}
-		public LdrBuilder Append(params object[] parts)
-		{
-			foreach (var p in parts) Append(p);
+			else if (part is IEnumerable)
+			{
+				foreach (var x in (IEnumerable)part)
+					Append(" ").Append(x);
+			}
+			else if (part.GetType().IsAnonymousType())
+			{
+				Append("{");
+				foreach (var prop in part.GetType().AllProps(BindingFlags.Public | BindingFlags.Instance))
+					Append($"*{prop.Name} {{", prop.GetValue(part), "}} ");
+				Append("}");
+				return this;
+			}
+			else
+			{
+				m_sb.Append(part.ToString());
+			}
 			return this;
 		}
 
@@ -321,7 +300,7 @@ namespace Rylogic.LDraw
 		}
 		public LdrBuilder GroupOpen(string name, Colour32 colour)
 		{
-			return Append("*Group ",name," ",colour," {\n");
+			return Append("*Group ", name, " ", colour, " {\n");
 		}
 		public LdrBuilder GroupClose()
 		{
@@ -329,7 +308,7 @@ namespace Rylogic.LDraw
 		}
 		public LdrBuilder GroupClose(m4x4 transform)
 		{
-			return Append(Ldr.Transform(transform, newline:true), "}\n");
+			return Append(Ldr.Transform(transform, newline: true), "}\n");
 		}
 
 		public LdrBuilder Line(v4 start, v4 end)
@@ -344,12 +323,12 @@ namespace Rylogic.LDraw
 		{
 			return Append("*Line ", name, " ", colour, " {", start, " ", end, "}\n");
 		}
-		public LdrBuilder Line(string name, Colour32 colour, float width, bool smooth, IEnumerable<v4> points)
+		public LdrBuilder Line(string name, Colour32 colour, double width, bool smooth, IEnumerable<v4> points)
 		{
 			if (!points.Any()) return this;
 			return Append("*LineStrip ", name, " ", colour, " {", Ldr.Width(width), Ldr.Smooth(smooth), points.Select(x => Ldr.Vec3(x)), "}\n");
 		}
-		public LdrBuilder Line(string name, Colour32 colour, float width, bool smooth, Func<int, v4?> points)
+		public LdrBuilder Line(string name, Colour32 colour, double width, bool smooth, Func<int, v4?> points)
 		{
 			int idx = 0;
 			Append("*LineStrip ", name, " ", colour, " {", Ldr.Width(width), Ldr.Smooth(smooth));
@@ -361,7 +340,7 @@ namespace Rylogic.LDraw
 		{
 			return LineD(name, colour, start, direction, 0);
 		}
-		public LdrBuilder LineD(string name, Colour32 colour, v4 start, v4 direction, float width)
+		public LdrBuilder LineD(string name, Colour32 colour, v4 start, v4 direction, double width)
 		{
 			return Append("*LineD ", name, " ", colour, " {", Ldr.Width(width), start, " ", direction, "}");
 		}
@@ -370,12 +349,12 @@ namespace Rylogic.LDraw
 		{
 			return Arrow(string.Empty, Colour32.White, Ldr.EArrowType.Fwd, 10f, true, new[] { v4.Origin, v4.XAxis.w1 });
 		}
-		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, float width, bool smooth, IEnumerable<v4> points)
+		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, double width, bool smooth, IEnumerable<v4> points)
 		{
 			if (!points.Any()) return this;
 			return Append("*Arrow ", name, " ", colour, " {", type.ToString(), points.Select(x => Ldr.Vec3(x)), Ldr.Width(width), Ldr.Smooth(smooth), "}\n");
 		}
-		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, float width, bool smooth, Func<int, v4?> points)
+		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, double width, bool smooth, Func<int, v4?> points)
 		{
 			int idx = 0;
 			Append("*Arrow ", name, " ", colour, " {");
@@ -401,11 +380,11 @@ namespace Rylogic.LDraw
 		{
 			return Box(string.Empty, Color.White, o2w, pos);
 		}
-		public LdrBuilder Box(Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(Colour32 colour, double size, m4x4? o2w = null, v4? pos = null)
 		{
 			return Box(string.Empty, colour, size, o2w, pos);
 		}
-		public LdrBuilder Box(Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(Colour32 colour, double sx, double sy, double sz, m4x4? o2w = null, v4? pos = null)
 		{
 			return Box(string.Empty, colour, sx, sy, sz, o2w, pos);
 		}
@@ -413,17 +392,17 @@ namespace Rylogic.LDraw
 		{
 			return Box(name, colour, 1f, o2w, pos);
 		}
-		public LdrBuilder Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(string name, Colour32 colour, double size, m4x4? o2w = null, v4? pos = null)
 		{
-			return Append("*Box ",name," ",colour," {",size," ",Ldr.Transform(o2w, pos),"}\n");
+			return Append("*Box ", name, " ", colour, " {", size, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
-		public LdrBuilder Box(string name, Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(string name, Colour32 colour, double sx, double sy, double sz, m4x4? o2w = null, v4? pos = null)
 		{
-			return Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Transform(o2w, pos),"}\n");
+			return Append("*Box ", name, " ", colour, " {", sx, " ", sy, " ", sz, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
 		public LdrBuilder Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
 		{
-			return Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Transform(o2w,pos),"}\n");
+			return Append("*Box ", name, " ", colour, " {", dim.x, " ", dim.y, " ", dim.z, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
 
 		public LdrBuilder Sphere()
@@ -434,20 +413,20 @@ namespace Rylogic.LDraw
 		{
 			return Sphere(name, colour, 1f);
 		}
-		public LdrBuilder Sphere(string name, Colour32 colour, float radius)
+		public LdrBuilder Sphere(string name, Colour32 colour, double radius)
 		{
 			return Sphere(name, colour, radius, v4.Origin);
 		}
-		public LdrBuilder Sphere(string name, Colour32 colour, float radius, v4 position)
+		public LdrBuilder Sphere(string name, Colour32 colour, double radius, v4 position)
 		{
-			return Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
+			return Append("*Sphere ", name, " ", colour, " {", radius, " ", Ldr.Position(position), "}\n");
 		}
 
-		public LdrBuilder Cylinder(Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Cylinder(Colour32 colour, AxisId axis_id, double height, double radius, m4x4? o2w = null, v4? pos = null)
 		{
 			return Cylinder(string.Empty, colour, axis_id, height, radius, o2w, pos);
 		}
-		public LdrBuilder Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Cylinder(string name, Colour32 colour, AxisId axis_id, double height, double radius, m4x4? o2w = null, v4? pos = null)
 		{
 			return Append("*Cylinder ", name, " ", colour, " {", height, " ", radius, " ", axis_id, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
@@ -460,7 +439,7 @@ namespace Rylogic.LDraw
 		{
 			return Circle(name, colour, axis_id, solid, v4.Origin);
 		}
-		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius)
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, double radius)
 		{
 			return Circle(name, colour, axis_id, solid, radius, v4.Origin);
 		}
@@ -468,7 +447,7 @@ namespace Rylogic.LDraw
 		{
 			return Circle(name, colour, axis_id, solid, 1f, position);
 		}
-		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius, v4 position)
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, double radius, v4 position)
 		{
 			return Append("*Circle ", name, " ", colour, " {", radius, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
@@ -477,11 +456,11 @@ namespace Rylogic.LDraw
 		{
 			return Ellipse(string.Empty, Color.White, 3, true, 1f, 0.5f);
 		}
-		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy)
+		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, double radiusx, double radiusy)
 		{
 			return Ellipse(name, colour, axis_id, solid, radiusx, radiusy, v4.Origin);
 		}
-		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy, v4 position)
+		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, double radiusx, double radiusy, v4 position)
 		{
 			return Append("*Circle ", name, " ", colour, " {", radiusx, " ", radiusy, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
@@ -490,19 +469,19 @@ namespace Rylogic.LDraw
 		{
 			return Pie(string.Empty, Color.White, 3, true, 0f, 45f);
 		}
-		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1)
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, double ang0, double ang1)
 		{
 			return Pie(name, colour, axis_id, solid, ang0, ang1, v4.Origin);
 		}
-		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, v4 position)
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, double ang0, double ang1, v4 position)
 		{
 			return Pie(name, colour, axis_id, solid, ang0, ang1, 0f, 1f, position);
 		}
-		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, v4 position)
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, double ang0, double ang1, double rad0, double rad1, v4 position)
 		{
 			return Pie(name, colour, axis_id, solid, ang0, ang1, rad0, rad1, 1f, 1f, 40, position);
 		}
-		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, double ang0, double ang1, double rad0, double rad1, double sx, double sy, int facets, v4 position)
 		{
 			return Append("*Pie ", name, " ", colour, " {", ang0, " ", ang1, " ", rad0, " ", rad1, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Facets(facets), " *Scale ", sx, " ", sy, " ", Ldr.Position(position), "}\n");
 		}
@@ -511,11 +490,11 @@ namespace Rylogic.LDraw
 		{
 			return Rect(string.Empty, Color.White, 3, 1f, 1f, false, v4.Origin);
 		}
-		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, v4 position)
+		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, double width, double height, bool solid, v4 position)
 		{
 			return Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
-		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, float corner_radius, v4 position)
+		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, double width, double height, bool solid, double corner_radius, v4 position)
 		{
 			return Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.CornerRadius(corner_radius), " ", Ldr.Position(position), "}\n");
 		}
@@ -557,7 +536,7 @@ namespace Rylogic.LDraw
 		{
 			return Append("*Quad ", name, " ", colour, " {", bl, " ", br, " ", tr, " ", tl, " ", Ldr.Position(position), "}\n");
 		}
-		public LdrBuilder Quad(string name, Colour32 colour, AxisId axis_id, float w, float h, v4 position)
+		public LdrBuilder Quad(string name, Colour32 colour, AxisId axis_id, double w, double h, v4 position)
 		{
 			return Rect(name, colour, axis_id, w, h, true, position);
 		}
@@ -582,34 +561,34 @@ namespace Rylogic.LDraw
 		{
 			return Axis(name, colour, basis, 0.1f);
 		}
-		public LdrBuilder Axis(string name, Colour32 colour, m3x4 basis, float scale)
+		public LdrBuilder Axis(string name, Colour32 colour, m3x4 basis, double scale)
 		{
 			return Axis(name, colour, new m4x4(basis, v4.Origin), scale);
 		}
-		public LdrBuilder Axis(string name, Colour32 colour, m4x4 basis, float scale)
+		public LdrBuilder Axis(string name, Colour32 colour, m4x4 basis, double scale)
 		{
 			return Append("*Matrix3x3 ", name, " ", colour, " {", basis.x * scale, " ", basis.y * scale, " ", basis.z * scale, " ", Ldr.Position(basis.pos), "}\n");
 		}
 
 		public LdrBuilder Ribbon()
 		{
-			return Ribbon(string.Empty, Colour32.White, new []{ v4.Origin, v4.XAxis.w1 }, EAxisId.PosZ, 3f, false);
+			return Ribbon(string.Empty, Colour32.White, new[] { v4.Origin, v4.XAxis.w1 }, EAxisId.PosZ, 3f, false);
 		}
-		public LdrBuilder Ribbon(string name, Colour32 colour, IEnumerable<v4> points, AxisId axis_id, float width, bool smooth, m4x4? o2w = null)
+		public LdrBuilder Ribbon(string name, Colour32 colour, IEnumerable<v4> points, AxisId axis_id, double width, bool smooth, m4x4? o2w = null)
 		{
 			return Append("*Ribbon ", name, " ", colour, " {", points, " ", axis_id, Ldr.Width(width), Ldr.Smooth(smooth), Ldr.Transform(o2w), "}\n");
 		}
 
 		public LdrBuilder Mesh(string name, Colour32 colour, IList<v4>? verts, IList<v4>? normals = null, IList<Colour32>? colours = null, IList<v2>? tex = null, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
 		{
-			Append("*Mesh ",name," ",colour," {\n");
-			if (verts   != null) Append("*Verts {"    ).Append(verts  .Select(x => Ldr.Vec3(x)))  .Append("}\n");
-			if (normals != null) Append("*Normals {"  ).Append(normals.Select(x => Ldr.Vec3(x)))  .Append("}\n");
-			if (colours != null) Append("*Colours {"  ).Append(colours.Select(x => Ldr.Colour(x))).Append("}\n");
-			if (tex     != null) Append("*TexCoords {").Append(tex    .Select(x => Ldr.Vec2(x)))  .Append("}\n");
-			if (verts   != null && faces != null) { Debug.Assert(faces.All(i => i >= 0 && i < verts.Count)); Append("*Faces {").Append(faces).Append("}\n"); }
-			if (verts   != null && lines != null) { Debug.Assert(lines.All(i => i >= 0 && i < verts.Count)); Append("*Lines {").Append(lines).Append("}\n"); }
-			if (verts   != null && tetra != null) { Debug.Assert(tetra.All(i => i >= 0 && i < verts.Count)); Append("*Tetra {").Append(tetra).Append("}\n"); }
+			Append("*Mesh ", name, " ", colour, " {\n");
+			if (verts != null) Append("*Verts {").Append(verts.Select(Ldr.Vec3)).Append("}\n");
+			if (normals != null) Append("*Normals {").Append(normals.Select(Ldr.Vec3)).Append("}\n");
+			if (colours != null) Append("*Colours {").Append(colours.Select(Ldr.Col)).Append("}\n");
+			if (tex != null) Append("*TexCoords {").Append(tex.Select(Ldr.Vec2)).Append("}\n");
+			if (verts != null && faces != null) { Debug.Assert(faces.All(i => i >= 0 && i < verts.Count)); Append("*Faces {").Append(faces).Append("}\n"); }
+			if (verts != null && lines != null) { Debug.Assert(lines.All(i => i >= 0 && i < verts.Count)); Append("*Lines {").Append(lines).Append("}\n"); }
+			if (verts != null && tetra != null) { Debug.Assert(tetra.All(i => i >= 0 && i < verts.Count)); Append("*Tetra {").Append(tetra).Append("}\n"); }
 			if (generate_normals) Append("*GenerateNormals\n");
 			if (position != null) Append(Ldr.Position(position.Value));
 			Append("}\n");
@@ -628,6 +607,11 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
+		public LdrTextBuilder Text(string name, Colour32 colour)
+		{
+			return new LdrTextBuilder(this, name, colour);
+		}
+
 		public override string ToString()
 		{
 			return m_sb.ToString();
@@ -638,6 +622,85 @@ namespace Rylogic.LDraw
 		}
 		public static implicit operator string(LdrBuilder ldr) => ldr.ToString();
 	}
+
+	public class LdrTextBuilder
+	{
+		private readonly LdrBuilder m_builder;
+		internal LdrTextBuilder(LdrBuilder builder, string name, Colour32 colour)
+		{
+			m_builder = builder;
+			m_builder.Append("*Text ", name, " ", colour, " {");
+		}
+		public LdrTextBuilder String(string text)
+		{
+			m_builder.Append($"\"{text}\"");
+			return this;
+		}
+		public LdrTextBuilder CString(string cstring)
+		{
+			m_builder.Append($"*CString \"{cstring}\"");
+			return this;
+		}
+		public LdrTextBuilder Bkgd(Colour32 colour)
+		{
+			m_builder.Append("*BackColour {", colour, "}");
+			return this;
+		}
+		public LdrTextBuilder Font(string? font_name, double size, Colour32 colour)
+		{
+			m_builder.Append("*Font {", Ldr.Name(font_name), Ldr.Size(size), Ldr.Colour(colour), "}");
+			return this;
+		}
+		public LdrTextBuilder Font(double size, Colour32 colour)
+		{
+			m_builder.Append("*Font {", Ldr.Size(size), Ldr.Colour(colour), "}");
+			return this;
+		}
+		public LdrTextBuilder Billboard()
+		{
+			m_builder.Append(Ldr.Billboard(true));
+			return this;
+		}
+		public LdrTextBuilder ScreenSpace()
+		{
+			m_builder.Append(Ldr.ScreenSpace(true));
+			return this;
+		}
+		public LdrTextBuilder Dim(v2 dimensions)
+		{
+			m_builder.Append($"*Dim {{{dimensions.x} {dimensions.y}}}");
+			return this;
+		}
+		public LdrTextBuilder AxisId(AxisId axis)
+		{
+			m_builder.Append(Ldr.AxisId(axis));
+			return this;
+		}
+		public LdrTextBuilder Anchor(v2 anchor)
+		{
+			m_builder.Append($"*Anchor {{{anchor.x} {anchor.y}}}");
+			return this;
+		}
+		public LdrTextBuilder Format(string h_align, string v_align, bool wrap)
+		{
+			m_builder.Append($"*Format {{{h_align} {v_align} {(wrap ? "Wrap" : "")}}}");
+			return this;
+		}
+		public LdrTextBuilder NoZTest()
+		{
+			m_builder.Append(Ldr.NoZTest(true));
+			return this;
+		}
+		public LdrTextBuilder Append(params object[] parts)
+		{
+			m_builder.Append(parts);
+			return this;
+		}
+		public LdrBuilder End()
+		{
+			return m_builder.Append("}\n");
+		}
+	}
 }
 
 #if PR_UNITTESTS
@@ -645,20 +708,22 @@ namespace Rylogic.UnitTests
 {
 	using LDraw;
 
-	[TestFixture] public class TestLdr
+	[TestFixture]
+	public class TestLdr
 	{
-		[Test] public void LdrBuilder()
+		[Test]
+		public void LdrBuilder()
 		{
 			var ldr = new LdrBuilder();
 			using (ldr.Group("g"))
 			{
-				ldr.Box("b", Color.FromArgb(0,0xFF,0));
+				ldr.Box("b", Color.FromArgb(0, 0xFF, 0));
 				ldr.Sphere("s", Color.Red);
 			}
 			var expected =
-				"*Group g FFFFFFFF {\n"+
-				"*Box b FF00FF00 {1 }\n"+
-				"*Sphere s FFFF0000 {1 }\n"+
+				"*Group g FFFFFFFF {\n" +
+				"*Box b FF00FF00 {1 }\n" +
+				"*Sphere s FFFF0000 {1 }\n" +
 				"}\n";
 			Assert.Equal(expected, ldr.ToString());
 		}
