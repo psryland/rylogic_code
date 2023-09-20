@@ -203,7 +203,8 @@ class Native(Common):
 		return
 
 	def Clean(self):
-		CleanObj(Tools.Path(self.obj_dir, self.proj_name), self.platforms, self.configs)
+		obj_dir = Tools.Path(self.obj_dir, self.proj_name, check_exists=False)
+		CleanObj(obj_dir, self.platforms, self.configs)
 		return
 
 # Native SDK dll (base)
