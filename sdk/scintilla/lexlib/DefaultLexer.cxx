@@ -9,6 +9,9 @@
 #include <cassert>
 #include <cstring>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -20,12 +23,16 @@
 #include "LexerModule.h"
 #include "DefaultLexer.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 static const char styleSubable[] = { 0 };
 
-DefaultLexer::DefaultLexer(const LexicalClass *lexClasses_, size_t nClasses_) :
-	lexClasses(lexClasses_), nClasses(nClasses_) {
+DefaultLexer::DefaultLexer(const char *languageName_, int language_,
+	const LexicalClass *lexClasses_, size_t nClasses_) :
+	languageName(languageName_),
+	language(language_),
+	lexClasses(lexClasses_),
+	nClasses(nClasses_) {
 }
 
 DefaultLexer::~DefaultLexer() {
@@ -36,7 +43,7 @@ void SCI_METHOD DefaultLexer::Release() {
 }
 
 int SCI_METHOD DefaultLexer::Version() const {
-	return lvRelease4;
+	return Scintilla::lvRelease5;
 }
 
 const char * SCI_METHOD DefaultLexer::PropertyNames() {
@@ -63,7 +70,7 @@ Sci_Position SCI_METHOD DefaultLexer::WordListSet(int, const char *) {
 	return -1;
 }
 
-void SCI_METHOD DefaultLexer::Fold(Sci_PositionU, Sci_Position, int, IDocument *) {
+void SCI_METHOD DefaultLexer::Fold(Sci_PositionU, Sci_Position, int, Scintilla::IDocument *) {
 }
 
 void * SCI_METHOD DefaultLexer::PrivateCall(int, void *) {
@@ -123,3 +130,13 @@ const char * SCI_METHOD DefaultLexer::TagsOfStyle(int style) {
 const char * SCI_METHOD DefaultLexer::DescriptionOfStyle(int style) {
 	return (style < NamedStyles()) ? lexClasses[style].description : "";
 }
+
+// ILexer5 methods
+const char * SCI_METHOD DefaultLexer::GetName() {
+	return languageName;
+}
+
+int SCI_METHOD DefaultLexer::GetIdentifier() {
+	return language;
+}
+

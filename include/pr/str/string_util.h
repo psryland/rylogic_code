@@ -563,6 +563,51 @@ namespace pr::str
 		Resize(str, w);
 		return str;
 	}
+
+	// Returns the minimum edit distance between two strings. Useful for determining how "close" two strings are to each other
+	template <StringType Str0, StringType Str1>
+	int LevenshteinDistance(Str0 const& lhs, Str1 const& rhs)
+	{
+		// Source: https://en.wikipedia.org/wiki/Levenshtein_distance (Iterative with two matrix rows)
+
+		// Degenerate cases
+		if (Empty(lhs)) return static_cast<int>(Size(rhs));
+		if (Empty(rhs)) return static_cast<int>(Size(lhs));
+		if (Equal(lhs, rhs)) return 0;
+
+		// Create two work vectors of integer distances
+		std::vector<int> bufs[2] = {std::vector<int>(Size(rhs) + 1), std::vector<int>(Size(rhs) + 1)};
+
+		// Initialize 'buf0' (the previous row of distances).
+		// This row is A[0][i] = edit distance for an empty 'lhs'.
+		// The distance is just the number of characters to delete from 'rhs'
+		auto& buf0 = bufs[0];
+		for (int i = 0; i != buf0.size(); ++i)
+			buf0[i] = i;
+
+		// Calculate current row distances from the previous row
+		for (int i = 0; i != Size(lhs); ++i)
+		{
+			// Swap buffers on alternate iterations
+			auto& v0 = bufs[(i + 0) & 1];
+			auto& v1 = bufs[(i + 1) & 1];
+
+			// First element of v1 is A[i+1][0] edit distance is delete (i+1) chars from 'lhs' to match empty 'rhs'
+			v1[0] = i + 1;
+
+			// Use formula to fill in the rest of the row
+			for (int j = 0; j != Size(rhs); ++j)
+			{
+				auto ins_cost = v1[j] + 1;
+				auto del_cost = v0[j + 1] + 1;
+				auto sub_cost = lhs[i] == rhs[j] ? (v0[j]) : (v0[j] + 1);
+				v1[j + 1] = std::min({ ins_cost, del_cost, sub_cost });
+			}
+		}
+
+		// After the n'th iteration, the results are in bufs[n & 1]
+		return bufs[Size(lhs) & 1][Size(rhs)];
+	}
 }
 
 #if PR_UNITTESTS
@@ -728,6 +773,13 @@ namespace pr::str
 			std::string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
 			ProcessIndentedNewlines(str);
 			PR_CHECK(str, "\nwords    and\nmore  words\n and more\nwords\n");
+		}
+		{// LevenshteinDistance
+			PR_CHECK(LevenshteinDistance("Book", "Back"), 2);
+			PR_CHECK(LevenshteinDistance("Hippopotamus", "Giraffe"), 10);
+			PR_CHECK(LevenshteinDistance("", "Giraffe"), 7);
+			PR_CHECK(LevenshteinDistance("Hippopotamus", ""), 12);
+			PR_CHECK(LevenshteinDistance("A crazy long string containing all sorts of stuff", "Some other string"), 41);
 		}
 	}
 }

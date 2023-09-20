@@ -897,7 +897,8 @@ namespace Rylogic.Gui.WPF
 			var grid = (DataGrid)sender;
 			if (grid.ItemsSource is ICollectionView view && view.SortDescriptions.Count == 0 && view.Filter == null && view.GroupDescriptions.Count == 0)
 			{
-				if (view.SourceCollection is IList list)
+				// Drag and drop is only supported on mutable lists
+				if (view.SourceCollection is IList list && !list.IsReadOnly)
 				{
 					// Move to before the grab position
 					if (args.DropIndex < args.GrabIndex)

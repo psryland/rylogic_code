@@ -39,10 +39,10 @@ namespace CoinFlip
 		public double ExactTF => Misc.TicksToTimeFrame(ExactTicks, TimeFrame);
 
 		/// <summary>The exact time value as a UTC DateTimeOffset</summary>
-		public DateTimeOffset ExactUTC => new DateTimeOffset(ExactTicks, TimeSpan.Zero);
+		public DateTimeOffset ExactUTC => new(ExactTicks, TimeSpan.Zero);
 
 		/// <summary>The exact time as a time span</summary>
-		public TimeSpan ExactTimeSpan => new TimeSpan(ExactTicks);
+		public TimeSpan ExactTimeSpan => new(ExactTicks);
 
 		/// <summary>The time in ticks rounded down to an integer time frame unit</summary>
 		public long IntgTicks
@@ -58,7 +58,7 @@ namespace CoinFlip
 		public double IntgTF => Misc.TicksToTimeFrame(IntgTicks, TimeFrame);
 
 		/// <summary>The time value rounded down to the nearest integer time frame unit as a UTC DateTimeOffset</summary>
-		public DateTimeOffset IntgUTC => new DateTimeOffset(IntgTicks, TimeSpan.Zero);
+		public DateTimeOffset IntgUTC => new(IntgTicks, TimeSpan.Zero);
 
 		/// <summary>Return this time value in a different time frame</summary>
 		public TimeFrameTime To(ETimeFrame tf)

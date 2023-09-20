@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignHeight="200"
@@ -18,6 +19,9 @@
 	MinWidth="280"
 	MinHeight="110"
 	>
+	<Window.Resources>
+		<local:LocaleString x:Key="Str_Cancel" Key="MsgBox_Cancel" Fallback="Cancel"/>
+	</Window.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="auto"/>
@@ -61,7 +65,7 @@
 				<TextBlock
 					Grid.Column="1"
 					Text="{Binding Description}"
-                    Visibility="{Binding Description, Converter={conv:NullToHidden}}"
+					Visibility="{Binding Description, Converter={conv:NullToHidden}}"
 					VerticalAlignment="Center"
 					TextWrapping="Wrap"
 					MinWidth="200"
@@ -105,7 +109,7 @@
 
 			<Button
 				Grid.Column="1"
-				Content="Cancel"
+				Content="{Binding Source={StaticResource Str_Cancel}, Path=Value}"
 				MinWidth="80"
 				MinHeight="22"
 				Margin="0,8,12,8"

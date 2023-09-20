@@ -47,6 +47,7 @@ Some C++ questions:
 					return false;
 				
 				memcpy(buffer.m_container, old, sizeof(Widget) * old_max_count);
+				free(old);
 			}
 			
 			buffer.m_container[buffer.m_count] = *new_widget;
@@ -54,31 +55,54 @@ Some C++ questions:
 			return true;
 		}
 
-[Answers:
-	Things we were looking for in particular:
-	* Main bug in that code is that the use of malloc and memcpy does not result in the constructor and copy constructor of Widget being called.
-	* If new/delete were used in place of malloc/free then the code would not be exception safe as a fail of new would leave m_max_count incremented but m_container unchanged. (In jargon: the invariant of WidgetBuffer isn't maintained)
-	* The AddToBuffer function is poorly designed in terms of interface. Normal code should not be expected to handle the bool return value on every call. A much better design is to use exceptions and handle memory allocation failure at a higher level in the program.
-	* 'new_widget' should be passed by const reference rather than non-const pointer since passing NULL to the AddToBuffer function would be an error
-	* The WidgetBuffer type is a basic implementation of a resizing array. A better idea would be to use std::vector<Widget> and "not reinvent the wheel" (unless there is a compelling need).
+	[Answers:
+		Things we were looking for in particular:
+		* Memory leak (obvious)
+		* Use of malloc and memcpy does not result in the constructor and copy constructor of Widget being called.
+		* If new/delete were used in place of malloc/free then the code would not be exception safe as a fail of new would leave m_max_count incremented but m_container unchanged. (In jargon: the invariant of WidgetBuffer isn't maintained)
+		* The AddToBuffer function is poorly designed in terms of interface. Normal code should not be expected to handle the bool return value on every call. A much better design is to use exceptions and handle memory allocation failure at a higher level in the program.
+		* 'new_widget' should be passed by const reference rather than non-const pointer since passing NULL to the AddToBuffer function would be an error, and AddToBuffer should not modify 'new_widget'.
+		* The WidgetBuffer type is a basic implementation of a resizing array. A better idea would be to use std::vector<Widget> and "not reinvent the wheel" (unless there is a compelling need).
 
-	Some lesser considerations:
-	* AddToBuffer could be a member of WidgetBuffer, however making it global function allows more flexible use of the function in generic code (i.e. template functions).
-	Consider:
-	  template <class Container, class Type> FillWithDefaults(Container& cont, size_t count)
-	  {
-		for (int i = 0; i != count; ++i)
-			AddToBuffer(cont, Type());
-	  }
+		Some lesser considerations:
+		* AddToBuffer could be a member of WidgetBuffer, however making it global function allows more flexible use of the function in generic code (i.e. template functions).
+		Consider:
+		  template <class Container, class Type> FillWithDefaults(Container& cont, size_t count)
+		  {
+			for (int i = 0; i != count; ++i)
+				AddToBuffer(cont, Type());
+		  }
 
-	  int integers[10];
-	  FillWithDefaults(integers,10);
-	  
-	  WidgetBuffer widgets;
-	  FillWithDefaults(widgets, 10);
-	  
-	  
-]
+		  int integers[10];
+		  FillWithDefaults(integers,10);
+		  
+		  WidgetBuffer widgets;
+		  FillWithDefaults(widgets, 10);
+	]
 
 
-2) what are std::auto_ptr and std::shared_ptr? what are they used for? Why can't std::auto_ptr be used in an stl container?
+2) what are std::auto_ptr and std::shared_ptr? what are they used for?
+	Why can't std::auto_ptr be used in an stl container?
+
+
+Quick Fire Questions:
+
+  Warning level 4 - Good practice or overly pedantic?
+  
+  C++ templates - Unnecessarily complicated leading to bloat, or powerful language device?
+  
+  C macros - powerful language device or minefield of obviscation?
+  
+  const correctness - A key aspect of interface design, or an unnecessary mental burden?
+  
+  auto/var or explicit types?
+  
+  size types - unsigned because < 0 is invalid, or signed because size A - size B is a valid operation that can have a negative result?
+  
+  Static typed or Dynamic typed languages?
+  
+  Tabs or spaces?
+  
+  
+  
+  

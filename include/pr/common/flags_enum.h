@@ -1,4 +1,4 @@
-﻿//******************************************************************************
+//******************************************************************************
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
@@ -11,14 +11,15 @@
 #ifdef __cplusplus // C does not require operators
 #include <type_traits>
 
+	template <typename T> concept HasFlagsEnumField = requires(T t) { std::is_enum_v<T>; T::_flags_enum; };
+	template <typename T> concept HasArithEnumField = requires(T t) { std::is_enum_v<T>; T::_arith_enum; };
+
 	// Traits
 	template <typename T> struct is_flags_enum : std::false_type {};
-	template <typename T> concept HasFlagsEnumField = requires(T t) { T::_flags_enum; };
 	template <HasFlagsEnumField T> struct is_flags_enum<T> :std::true_type {};
 	template <typename T> constexpr bool is_flags_enum_v = is_flags_enum<T>::value;
 
 	template <typename T> struct is_arith_enum :std::false_type {};
-	template <typename T> concept HasArithEnumField = requires(T t) { T::_arith_enum; };
 	template <HasArithEnumField T> struct is_arith_enum<T> :std::true_type {};
 	template <typename T> constexpr bool is_arith_enum_v = is_arith_enum<T>::value;
 

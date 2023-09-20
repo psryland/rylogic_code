@@ -518,7 +518,7 @@ namespace EDTradeAdvisor.UI
 		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Log line pattern</summary>
-		private static readonly Regex LogEntryPatternRegex = new Regex(
+		private static readonly Regex LogEntryPatternRegex = new(
 			@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",
 			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 	}

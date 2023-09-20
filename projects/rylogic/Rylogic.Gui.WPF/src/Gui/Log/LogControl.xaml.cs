@@ -5,7 +5,6 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,9 +20,6 @@ using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gfx;
-using Rylogic.Gui.WPF.DockContainerDetail;
-using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -120,6 +116,7 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void Dispose(bool _)
 		{
+			BindingOperations.ClearAllBindings(this);
 			LogEntries = null!;
 			LogFilepath = null;
 			Highlighting = null!;

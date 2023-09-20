@@ -727,7 +727,7 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 				# Set the runtime to .net6 (or whatever is set int he runtime config)
 				import pythonnet, clr_loader
 				rt_config = Path(target_dir, f"{assembly_name}.runtimeconfig.json", check_exists=False)
-				rt = clr_loader.get_coreclr(rt_config) if os.path.exists(rt_config) else clr_loader.get_netfx()
+				rt = clr_loader.get_coreclr(runtime_config=rt_config) if os.path.exists(rt_config) else clr_loader.get_netfx()
 				pythonnet.set_runtime(rt)
 				import clr
 

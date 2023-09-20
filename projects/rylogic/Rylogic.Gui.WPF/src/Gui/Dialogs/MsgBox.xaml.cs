@@ -202,16 +202,16 @@ namespace Rylogic.Gui.WPF
 		public double TargetAspect { get; set; } = 2.75;
 
 		/// <summary>Button text - Allows localisation</summary>
-		public string? OkText { get; set; }        = "OK";
-		public string? CancelText { get; set; }    = "Cancel";
-		public string? OverwriteText { get; set; } = "Overwrite";
-		public string? DiscardText { get; set; }   = "Discard";
-		public string? AbortText { get; set; }     = "Abort";
-		public string? RetryText { get; set; }     = "Retry";
-		public string? IgnoreText { get; set; }    = "Ignore";
-		public string? YesText { get; set; }       = "Yes";
-		public string? NoText { get; set; }        = "No";
-		public string? ReloadText { get; set; }    = "Reload";
+		public LocaleString OkText { get; set; }        = new LocaleString("MsgBox_OK", "OK");
+		public LocaleString CancelText { get; set; }    = new LocaleString("MsgBox_Cancel", "Cancel");
+		public LocaleString OverwriteText { get; set; } = new LocaleString("MsgBox_Overwrite", "Overwrite");
+		public LocaleString DiscardText { get; set; }   = new LocaleString("MsgBox_Discard", "Discard");
+		public LocaleString AbortText { get; set; }     = new LocaleString("MsgBox_Abort", "Abort");
+		public LocaleString RetryText { get; set; }     = new LocaleString("MsgBox_Retry", "Retry");
+		public LocaleString IgnoreText { get; set; }    = new LocaleString("MsgBox_Ignore", "Ignore");
+		public LocaleString YesText { get; set; }       = new LocaleString("MsgBox_Yes", "Yes");
+		public LocaleString NoText { get; set; }        = new LocaleString("MsgBox_No", "No");
+		public LocaleString ReloadText { get; set; }    = new LocaleString("MsgBox_Reload", "Reload");
 
 		/// <summary>Access to the dialog buttons</summary>
 		public StackPanel ButtonPanel => m_btn_panel;

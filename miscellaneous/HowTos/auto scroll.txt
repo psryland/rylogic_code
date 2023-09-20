@@ -1,7 +1,0 @@
-To get auto scroll to work:
-
-SplitterControl
-    SplitterControl.Panel1 {AutoScroll = true, AutoScrollMinSize = UserControl.MinimumSize}
-        UserControl {Dock = Fill, AutoScroll = false, MinimumSize = <minsize>}
-    SplitterControl.Panel2
-        <whatever>

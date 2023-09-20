@@ -1440,14 +1440,14 @@ namespace CoinFlip.UI
 				Order = order;
 			}
 			public Order Order { get; }
-			public Polygon Icon => new Polygon
+			public Polygon Icon => new()
 			{
 				Stroke = Brushes.Black,
 				Points = Order.TradeType == ETradeType.Q2B
 					? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
 					: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
 			};
-			public TextBlock Label => new TextBlock
+			public TextBlock Label => new()
 			{
 				Text = Order.Description,
 				FontSize = 8.0,
@@ -1484,14 +1484,14 @@ namespace CoinFlip.UI
 				Order = order;
 			}
 			public OrderCompleted Order { get; }
-			public Polygon Icon => new Polygon
+			public Polygon Icon => new()
 			{
 				Stroke = Brushes.Black,
 				Points = Order.TradeType == ETradeType.Q2B
 					? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
 					: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
 			};
-			public TextBlock Label => new TextBlock
+			public TextBlock Label => new()
 			{
 				Text = Order.Description,
 				FontSize = 8.0,
@@ -1536,7 +1536,7 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Proxy chart to represent 'no chart'</summary>
-		private static readonly NullChart None = new NullChart();
+		private static readonly NullChart None = new();
 		private class NullChart :IChartView
 		{
 			public string ChartName => "None";

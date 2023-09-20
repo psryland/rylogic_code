@@ -18,8 +18,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		// This works by displaying an invisible modal window while the drag operation is in process.
 		// The modal window ensures the rest of the UI is disabled for the duration of the drag.
 		// The modal window spawns other non-interactive windows that provide the overlays for the drop targets.
-		private static readonly Vector DraggeeOfs = new Vector(-50, -30);
-		private static readonly Rect DraggeeRect = new Rect(0, 0, 150, 150);
+		private static readonly Vector DraggeeOfs = new(-50, -30);
+		private static readonly Rect DraggeeRect = new(0, 0, 150, 150);
 		private readonly TabButton m_ghost_button;
 		private Point m_ss_start_pt;
 

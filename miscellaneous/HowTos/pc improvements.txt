@@ -1,4 +1,0 @@
-- Reduce the size of the winsxs folder
-  Open a Cmd.exe as administrator.
-  Run: C:\Windows\system32>dism /online /cleanup-image /spsuperseded
- 

@@ -16,7 +16,9 @@
 
 // C++ standard library
 #include <string>
+#include <string_view>
 #include <map>
+#include <functional>
 
 // Scintilla headers
 
@@ -37,6 +39,7 @@
 #include "DefaultLexer.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 namespace {
 // Use an unnamed namespace to protect the functions and classes from name conflicts
@@ -393,14 +396,14 @@ class LexerBaan : public DefaultLexer {
 	OptionsBaan options;
 	OptionSetBaan osBaan;
 public:
-	LexerBaan() {
+	LexerBaan() : DefaultLexer("baan", SCLEX_BAAN) {
 	}
 
 	virtual ~LexerBaan() {
 	}
 
 	int SCI_METHOD Version() const override {
-		return lvRelease4;
+		return lvRelease5;
 	}
 
 	void SCI_METHOD Release() override {
@@ -421,6 +424,10 @@ public:
 
 	Sci_Position SCI_METHOD PropertySet(const char *key, const char *val) override;
 
+	const char * SCI_METHOD PropertyGet(const char *key) override {
+		return osBaan.PropertyGet(key);
+	}
+
 	const char * SCI_METHOD DescribeWordListSets() override {
 		return osBaan.DescribeWordListSets();
 	}
@@ -435,7 +442,7 @@ public:
 		return NULL;
 	}
 
-	static ILexer4 * LexerFactoryBaan() {
+	static ILexer5 * LexerFactoryBaan() {
 		return new LexerBaan();
 	}
 };

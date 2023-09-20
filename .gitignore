@@ -23,7 +23,6 @@ syntax: glob
 *.DotSettings
 *.pyc
 *.algo
-*.blend1
 dump/
 obj/
 bin/
@@ -47,6 +46,10 @@ media/
 thirdparty/
 symbol_cache/
 
+# Blender
+*.blend1
+/art/**/exported/
+
 **/hlsl/compiled/*
 **/RyLogViewer/Resources/*.html
 **/RyLogViewer/docs/*.html
@@ -61,6 +64,12 @@ tools/GrepWin/grepwin.ini
 javascript/lib/
 javascript/*/dist/
 typescript/**/out/*
+
+android/*/.gradle/
+android/*/build/
+android/*/local.properties
+android/*/.jks
+android/*/.keystore
 
 script/UserVars.py
 RylogicRB.sln

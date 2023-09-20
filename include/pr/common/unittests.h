@@ -157,13 +157,6 @@ namespace pr::unittests
 		inline static std::ostream* ostream = &std::cout;
 		inline static std::ostream& out() { return *ostream; }
 
-		// A directory for temporary files needed by unit tests. Note: automatically cleaned
-		inline static std::filesystem::path CreateTempDir(wchar_t const* testname)
-		{
-			using namespace std::filesystem;
-			return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
-		}
-
 		// Append a unit test to the Tests() collection
 		inline static bool AddTest(UnitTestItem const& test)
 		{
@@ -330,6 +323,20 @@ namespace pr::unittests
 	{
 		return wcscmp(lhs, rhs) == 0;
 	}
+
+	// A directory for temporary files needed by unit tests. Note: automatically cleaned
+	inline std::filesystem::path CreateTempDir(wchar_t const* testname)
+	{
+		using namespace std::filesystem;
+		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
+	}
+
+	// Return a path relative to the repo root
+	inline std::filesystem::path RepoPath(wchar_t const* repo_path)
+	{
+		using namespace std::filesystem;
+		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / repo_path);
+	}
 }
 
 // This macro creates a class using the unit test name, followed by a method that is the body of the test case
@@ -337,7 +344,7 @@ namespace pr::unittests
 	TEST_CLASS(testname)\
 	{\
 	public:\
-		inline static std::filesystem::path const temp_dir = pr::unittests::TestFramework::CreateTempDir(L#testname);\
+		inline static std::filesystem::path const temp_dir = pr::unittests::CreateTempDir(L#testname);\
 		TEST_METHOD(UnitTest) { func(); }\
 		static void func()\
 		{\

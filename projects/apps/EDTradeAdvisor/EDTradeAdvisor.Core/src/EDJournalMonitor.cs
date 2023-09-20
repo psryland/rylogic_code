@@ -17,7 +17,7 @@ namespace EDTradeAdvisor
 	{
 		// Notes:
 		//  - Monitors the journal files in the ED user data directory
-		private static readonly Regex JournalRegex = new Regex(@"Journal\..*\.log");
+		private static readonly Regex JournalRegex = new(@"Journal\..*\.log");
 
 		public EDJournalMonitor(CancellationToken shutdown)
 		{

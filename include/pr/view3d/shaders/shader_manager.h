@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -9,6 +9,7 @@
 #include "pr/view3d/shaders/shader_desc.h"
 #include "pr/view3d/util/lookup.h"
 #include "pr/view3d/util/stock_resources.h"
+#include "pr/view3d/util/util.h"
 
 namespace pr::rdr
 {

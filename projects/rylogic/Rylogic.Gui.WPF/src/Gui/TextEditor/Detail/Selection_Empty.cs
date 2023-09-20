@@ -17,10 +17,10 @@ namespace Rylogic.Gui.WPF.TextEditor
 		public override CellString GetText() => CellString.Empty;
 
 		/// <inheritdoc/>
-		public override TextViewPosition BegPosition => new TextViewPosition(TextLocation.Invalid);
+		public override TextViewPosition BegPosition => new(TextLocation.Invalid);
 
 		/// <inheritdoc/>
-		public override TextViewPosition EndPosition => new TextViewPosition(TextLocation.Invalid);
+		public override TextViewPosition EndPosition => new(TextLocation.Invalid);
 
 		/// <inheritdoc/>
 		public override IEnumerable<SelectionSegment> Segments => Array.Empty<SelectionSegment>();

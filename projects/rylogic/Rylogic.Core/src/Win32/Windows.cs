@@ -14,7 +14,7 @@ namespace Rylogic.Interop.Win32
 	// Collection used to enumerate Window Objects
 	public class Windows :IEnumerable, IEnumerator
 	{
-		private readonly ArrayList m_wnds = new ArrayList(); //array of windows
+		private readonly ArrayList m_wnds = new(); //array of windows
 		private readonly bool m_invisible = false;  // filter out invisible windows
 		private readonly bool m_no_title = false; // filter out windows with no title
 		private int m_position = -1; // holds current index of m_wnds, necessary for IEnumerable
@@ -167,6 +167,6 @@ namespace Rylogic.Interop.Win32
 
 		/// <summary>Implicit conversion to/from HWND</summary>
 		public static implicit operator HWND(CWindow wnd) => wnd.Hwnd;
-		public static implicit operator CWindow(HWND hwnd) => new CWindow(hwnd);
+		public static implicit operator CWindow(HWND hwnd) => new(hwnd);
 	}
 }

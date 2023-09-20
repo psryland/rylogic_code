@@ -85,3 +85,8 @@ enum AlignWithGaps
 int m_member == value; // comment
 float member_ != value_too; // comment
 byte _member < val1; // comment
+
+// Don't confuse -> with > in comparisons
+this->thing
+ptr->a > b
+b >= c

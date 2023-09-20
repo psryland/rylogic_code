@@ -32,7 +32,7 @@ namespace EDTradeAdvisor.DomainObjects
 		public long ID;
 
 		/// <summary></summary>
-		public v4 Position => new v4(X, Y, Z, 1f);
+		public v4 Position => new(X, Y, Z, 1f);
 
 		/// <summary>KDTree accessors</summary>
 		StarSystemRef KDTree_.IAccessors<StarSystemRef>.SortAxisSet(StarSystemRef elem, int axis) { elem.Axis = axis; return elem; }

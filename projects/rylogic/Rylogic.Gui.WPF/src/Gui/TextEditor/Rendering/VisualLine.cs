@@ -239,7 +239,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 
 			/// <summary>An empty text span</summary>
 			private static readonly TextSpan<CultureSpecificCharacterBufferRange> EmptyTextSpan =
-				new TextSpan<CultureSpecificCharacterBufferRange>(CharacterBufferRange.Empty.Length,
+				new(CharacterBufferRange.Empty.Length,
 					new CultureSpecificCharacterBufferRange(null, CharacterBufferRange.Empty));
 
 			/// <summary>The length of the text in this source</summary>

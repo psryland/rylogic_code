@@ -20,10 +20,10 @@ namespace pr
 	//  - Unlike C# however, EventArgs can be anything and doesn't have to be const.
 
 	// Map place-holders into pr::
-	constexpr auto _1 = std::placeholders::_1;
-	constexpr auto _2 = std::placeholders::_2;
-	constexpr auto _3 = std::placeholders::_3;
-	constexpr auto _4 = std::placeholders::_4;
+	inline constexpr auto _1 = std::placeholders::_1;
+	inline constexpr auto _2 = std::placeholders::_2;
+	inline constexpr auto _3 = std::placeholders::_3;
+	inline constexpr auto _4 = std::placeholders::_4;
 
 	// Implementation detail for EventHandler
 	namespace multicast

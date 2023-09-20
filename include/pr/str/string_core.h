@@ -47,7 +47,7 @@ namespace pr
 	//    need to use std::decay_t when using traits)
 
 	// The largest code point defined in unicode 6.0
-	constexpr int UnicodeMaxValue = 0x10FFFF;
+	inline constexpr int UnicodeMaxValue = 0x10FFFF;
 
 	// A static instance of the locale, because this thing takes ages to construct
 	inline std::locale const& locale()
@@ -275,7 +275,7 @@ namespace pr
 		static value_type* ptr(string_type& str)   { return str.data(); }
 		static size_t size(string_type& str)       { return str.size(); }
 		static bool empty(string_type& str)        { return str.empty(); }
-		static void resize(string_type&, size_t)   { static_assert(dependant_false<Char>, "Immutable string cannot be resized"); }
+		static void resize(string_type&, size_t)   { static_assert(dependent_false<Char>, "Immutable string cannot be resized"); }
 	};
 
 	// std::basic_string_view
@@ -287,7 +287,7 @@ namespace pr
 		static bool const null_terminated = false;
 		static bool const dynamic_size = false;
 
-		static value_type const* c_str(string_type const& str) { static_assert(dependant_false<Char>, "String views cannot provide null terminated strings"); }
+		static value_type const* c_str(string_type const& str) { static_assert(dependent_false<Char>, "String views cannot provide null terminated strings"); }
 		static value_type const* ptr(string_type const& str)   { return str.data(); }
 		static value_type* ptr(string_type& str)               { return str.data(); }
 		static size_t size(string_type const& str)             { return str.size(); }
@@ -302,11 +302,11 @@ namespace pr
 		static bool const null_terminated = false;
 		static bool const dynamic_size = false;
 
-		static value_type* c_str(string_type& str)     { static_assert(dependant_false<Char>, "String views cannot provide null terminated strings"); }
+		static value_type* c_str(string_type& str)     { static_assert(dependent_false<Char>, "String views cannot provide null terminated strings"); }
 		static value_type* ptr(string_type& str)       { return str.data(); }
 		static size_t size(string_type& str)           { return str.size(); }
 		static bool empty(string_type& str)            { return str.empty(); }
-		static void resize(string_type& str, size_t n) { static_assert(dependant_false<Char>, "Immutable string cannot be resized"); }
+		static void resize(string_type& str, size_t n) { static_assert(dependent_false<Char>, "Immutable string cannot be resized"); }
 	};
 
 	// char*
@@ -336,7 +336,7 @@ namespace pr
 		static value_type* ptr(string_type str)   { return str; }
 		static size_t size(string_type str)       { return char_traits<Char>::length(str); }
 		static bool empty(string_type str)        { return *str == 0; }
-		static void resize(string_type, size_t)   { static_assert(dependant_false<Char>, "Immutable strings cannot be resized"); }
+		static void resize(string_type, size_t)   { static_assert(dependent_false<Char>, "Immutable strings cannot be resized"); }
 	};
 	template <typename Char>
 	struct string_traits<Char* const> :string_traits<Char*>
@@ -373,7 +373,7 @@ namespace pr
 		static value_type* ptr(string_type& str)   { return str; }
 		static size_t size(string_type& str)       { return char_traits<Char>::lengthN(str, Len * sizeof(Char)); }
 		static bool empty(string_type& str)        { return *str == 0; }
-		static void resize(string_type&, size_t)   { static_assert(dependant_false<Char>, "Immutable string cannot be resized"); }
+		static void resize(string_type&, size_t)   { static_assert(dependent_false<Char>, "Immutable string cannot be resized"); }
 	};
 
 	// std::array<char>
@@ -406,7 +406,7 @@ namespace pr
 		static value_type* ptr(string_type& str)   { return str.data(); }
 		static size_t size(string_type& str)       { return char_traits<Char>::length(str.data(), Len); }
 		static bool empty(string_type& str)        { return str[0] == 0; }
-		static void resize(string_type&, size_t)   { static_assert(dependant_false<Char>, "Immutable string cannot be resized"); }
+		static void resize(string_type&, size_t)   { static_assert(dependent_false<Char>, "Immutable string cannot be resized"); }
 	};
 
 	// References to strings

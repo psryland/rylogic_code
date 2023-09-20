@@ -2126,13 +2126,13 @@ namespace Rylogic.Gui.WinForms
 				Cmd(Sci.SCI_SETLEXERLANGUAGE, 0, handle.Handle.AddrOfPinnedObject());
 		}
 
-		/// <summary></summary>
-		public void LoadLexerLibrary(string path)
-		{
-			var bytes = Encoding.UTF8.GetBytes(path);
-			using (var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
-				Cmd(Sci.SCI_LOADLEXERLIBRARY, 0, handle.Handle.AddrOfPinnedObject());
-		}
+		///// <summary></summary>
+		//public void LoadLexerLibrary(string path)
+		//{
+		//	var bytes = Encoding.UTF8.GetBytes(path);
+		//	using (var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
+		//		Cmd(Sci.SCI_LOADLEXERLIBRARY, 0, handle.Handle.AddrOfPinnedObject());
+		//}
 
 		/// <summary></summary>
 		public void Colourise(int start, int end)
