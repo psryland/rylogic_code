@@ -21,7 +21,7 @@ namespace EweLink
 
 		/// <summary>User data</summary>
 		[JsonProperty("user")]
-		public UserData User = new UserData();
+		public UserData User = new();
 		public class UserData
 		{
 			/// <summary></summary>
@@ -56,7 +56,7 @@ namespace EweLink
 
 			/// <summary></summary>
 			[JsonProperty("clientInfo")]
-			public ClientInfoData ClientInfo = new ClientInfoData();
+			public ClientInfoData ClientInfo = new();
 			public class ClientInfoData
 			{
 				public string model = string.Empty;

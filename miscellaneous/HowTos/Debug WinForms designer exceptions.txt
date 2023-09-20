@@ -1,9 +1,0 @@
-1 - In the project that's causing a problem, goto properties->debug
-    Set 'Start external program' to '<path>\devenv.exe' with args '/rootsuffix Exp'
-2 - Start debugging the project
-    This starts a new instance of VS
-3 - Open the project in the new VS instance,
-    'OK' the warning about already being loaded
-4 - You probably need to turn off first-chance exception messages in the output window of the first VS instance
-5 - Do the thing in the second VS instance that causes the error
-6 - It's REALLY slow tho... make a coffee..

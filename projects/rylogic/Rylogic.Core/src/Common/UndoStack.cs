@@ -21,9 +21,9 @@ namespace Rylogic.Common
 		// Notes:
 		//  - The UndoStack is a recursive structure. An Undo group is just a nested UndoStack
 
-		private readonly List<IUndoRedo> m_undos = new List<IUndoRedo>();
-		private readonly List<IUndoRedo> m_redos = new List<IUndoRedo>();
-		private readonly Stack<Batch> m_batches = new Stack<Batch>();
+		private readonly List<IUndoRedo> m_undos = new();
+		private readonly List<IUndoRedo> m_redos = new();
+		private readonly Stack<Batch> m_batches = new();
 
 		public UndoStack()
 		{

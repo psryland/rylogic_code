@@ -23,9 +23,11 @@ Differentiate between labels and variables
 #include <ctype.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <functional>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -41,6 +43,7 @@ Differentiate between labels and variables
 #include "DefaultLexer.h"
 
 using namespace Scintilla;
+using namespace Lexilla;
 
 namespace {
    // Use an unnamed namespace to protect the functions and classes from name conflicts
@@ -136,6 +139,7 @@ class LexerABL : public DefaultLexer {
    OptionSetABL osABL;
 public:
    LexerABL() :
+      DefaultLexer("abl", SCLEX_PROGRESS),
       setWord(CharacterSet::setAlphaNum, "_", 0x80, true),
       setNegationOp(CharacterSet::setNone, "!"),
       setArithmethicOp(CharacterSet::setNone, "+-/*%"),
@@ -148,7 +152,7 @@ public:
       delete this;
    }
    int SCI_METHOD Version() const override {
-      return lvRelease4;
+      return lvRelease5;
    }
    const char * SCI_METHOD PropertyNames() override {
       return osABL.PropertyNames();
@@ -160,6 +164,9 @@ public:
       return osABL.DescribeProperty(name);
    }
    Sci_Position SCI_METHOD PropertySet(const char *key, const char *val) override ;
+   const char * SCI_METHOD PropertyGet(const char *key) override {
+	   return osABL.PropertyGet(key);
+   }
 
    const char * SCI_METHOD DescribeWordListSets() override {
       return osABL.DescribeWordListSets();
@@ -174,7 +181,7 @@ public:
    int SCI_METHOD LineEndTypesSupported() override {
       return SC_LINE_END_TYPE_DEFAULT;
    }
-   static ILexer4 *LexerFactoryABL() {
+   static ILexer5 *LexerFactoryABL() {
       return new LexerABL();
    }
 };

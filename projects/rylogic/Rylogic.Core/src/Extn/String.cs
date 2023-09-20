@@ -409,12 +409,12 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary> Returns the minimum edit distance between two strings. Useful for determining how "close" two strings are to each other</summary>
-		public static int LevenshteinDistance(this string str, string rhs)
+		public static int LevenshteinDistance(this string lhs, string rhs)
 		{
 			// Degenerate cases
-			if (str == rhs) return 0;
-			if (str.Length == 0) return rhs.Length;
-			if (rhs.Length == 0) return str.Length;
+			if (lhs.Length == 0) return rhs.Length;
+			if (rhs.Length == 0) return lhs.Length;
+			if (Equals(lhs, rhs)) return 0;
  
 			// Create two work vectors of integer distances
 			var bufs = new []{new int[rhs.Length+1], new int[rhs.Length+1]};
@@ -426,23 +426,25 @@ namespace Rylogic.Extn
 			// the distance is just the number of characters to delete from t
 			for (int i = 0; i != v0.Length; ++i)
 				v0[i] = i;
- 
+
 			// Calculate v1 (current row distances) from the previous row v0
-			for (int i = 0; i != str.Length; ++i)
+			for (int i = 0; i != lhs.Length; ++i)
 			{
 				// First element of v1 is A[i+1][0] edit distance is delete (i+1) chars from s to match empty t
 				v1[0] = i + 1;
- 
+
 				// Use formula to fill in the rest of the row
 				for (int j = 0; j != rhs.Length; ++j)
 				{
-					var cost = str[i] == rhs[j] ? 0 : 1;
-					v1[j+1] = Math.Min(v1[j] + 1, Math.Min(v0[j+1] + 1, v0[j] + cost));
+					var ins_cost = v1[j] + 1;
+					var del_cost = v0[j + 1] + 1;
+					var sub_cost = lhs[i] == rhs[j] ? (v0[j]) : (v0[j] + 1);
+					v1[j + 1] = Math.Min(ins_cost, Math.Min(del_cost, sub_cost));
 				}
- 
+
 				// Swap buffers
-				v0 = bufs[(i+1)&1];
-				v1 = bufs[(i+0)&1];
+				v0 = bufs[(i + 1) & 1];
+				v1 = bufs[(i + 0) & 1];
 			}
  
 			return v0[rhs.Length];
@@ -675,10 +677,12 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void Levenshtein()
 		{
-			var str1 = "Paul Rulz";
-			var str2 = "Paul Was Here";
-			var d = str1.LevenshteinDistance(str2);
-			Assert.Equal(d, 8);
+			Assert.Equal("Paul Rulz".LevenshteinDistance("Paul Was Here"), 8);
+			Assert.Equal("Book".LevenshteinDistance("Back"), 2);
+			Assert.Equal("Hippopotamus".LevenshteinDistance("Giraffe"), 10);
+			Assert.Equal("".LevenshteinDistance("Giraffe"), 7);
+			Assert.Equal("Hippopotamus".LevenshteinDistance(""), 12);
+			Assert.Equal("A crazy long string containing all sorts of stuff".LevenshteinDistance("Some other string"), 41);
 		}
 		[Test]
 		public void ProcessIndentedNewlines()

@@ -111,14 +111,9 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>ToString()</summary>
-		public override string ToString()
-		{
-			return $"{x} \n{y} \n{z} \n{w} \n";
-		}
-		public string ToString3x4()
-		{
-			return $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n{w.ToString3()} \n";
-		}
+		public override string ToString() => $"{x} \n{y} \n{z} \n{w} \n";
+		public string ToString3x4() => $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n{w.ToString3()} \n";
+		public string ToString4x4() => $"{x.ToString4()} \n{y.ToString4()} \n{z.ToString4()} \n{w.ToString4()} \n";
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
@@ -133,8 +128,8 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Static m4x4 types</summary>
-		public readonly static m4x4 Zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
-		public readonly static m4x4 Identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
+		public readonly static m4x4 Zero = new(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
+		public readonly static m4x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
 
 		// Operators
 		public static m4x4 operator + (m4x4 rhs) { return rhs; }
@@ -176,6 +171,68 @@ namespace Rylogic.Maths
 				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), Math_.Dot(lhs.w, rhs.y)),
 				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), Math_.Dot(lhs.w, rhs.z)),
 				new v4(Math_.Dot(lhs.x, rhs.w), Math_.Dot(lhs.y, rhs.w), Math_.Dot(lhs.z, rhs.w), Math_.Dot(lhs.w, rhs.w)));
+		}
+
+		// Parse
+		public static m4x4 Parse4x4(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse4x4)}:string argument was null");
+			return TryParse4x4(s, out m4x4 result) ? result : throw new FormatException($"{nameof(Parse4x4)}: string argument does not represent a 4x4 matrix");
+		}
+		public static m4x4 Parse3x4(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse3x4)}:string argument was null");
+			return TryParse3x4(s, out m4x4 result) ? result : throw new FormatException($"{nameof(Parse3x4)}: string argument does not represent a 3x4 matrix");
+		}
+		public static bool TryParse4x4(string s, out m4x4 mat, bool row_major = true)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 16, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 16)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = row_major
+				? new m4x4(
+					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
+					new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
+					new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])),
+					new v4(float.Parse(values[12]), float.Parse(values[13]), float.Parse(values[14]), float.Parse(values[15])))
+				: new m4x4(
+					new v4(float.Parse(values[0]), float.Parse(values[4]), float.Parse(values[8]), float.Parse(values[12])),
+					new v4(float.Parse(values[1]), float.Parse(values[5]), float.Parse(values[9]), float.Parse(values[13])),
+					new v4(float.Parse(values[2]), float.Parse(values[6]), float.Parse(values[10]), float.Parse(values[14])),
+					new v4(float.Parse(values[3]), float.Parse(values[7]), float.Parse(values[11]), float.Parse(values[15])));
+			return true;
+		}
+		public static bool TryParse3x4(string s, out m4x4 mat)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 12, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 12)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = new m4x4(
+				new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), 0),
+				new v4(float.Parse(values[3]), float.Parse(values[4]), float.Parse(values[5]), 0),
+				new v4(float.Parse(values[6]), float.Parse(values[7]), float.Parse(values[8]), 0),
+				new v4(float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11]), 1));
+			return true;
 		}
 
 		/// <summary>Create a translation matrix</summary>
@@ -674,9 +731,11 @@ namespace Rylogic.UnitTests
 {
 	using Maths;
 
-	[TestFixture] public class UnitTestM4x4
+	[TestFixture]
+	public class UnitTestM4x4
 	{
-		[Test] public void Basic()
+		[Test]
+		public void Basic()
 		{
 			var rng = new Random(1);
 			var m = m4x4.Random4x4(-5, +5, rng);
@@ -685,20 +744,26 @@ namespace Rylogic.UnitTests
 			Assert.True(m.z.y == m[2][1]);
 			Assert.True(m.w.x == m[3][0]);
 		}
-		[Test] public void Identity()
+
+		[Test]
+		public void Identity()
 		{
 			var m1 = m4x4.Identity;
 			var m2 = m4x4.Identity;
 			var m3 = m1 * m2;
 			Assert.True(Math_.FEql(m3, m4x4.Identity));
 		}
-		[Test] public void Translation()
+
+		[Test]
+		public void Translation()
 		{
 			var m1 = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, new v4(1.0f, 2.0f, 3.0f, 1.0f));
 			var m2 = m4x4.Translation(new v4(1.0f, 2.0f, 3.0f, 1.0f));
 			Assert.True(Math_.FEql(m1, m2));
 		}
-		[Test] public void CreateFrom()
+
+		[Test]
+		public void CreateFrom()
 		{
 			var rnd = new Random(123456789);
 			var V1 = v4.Random3(0.0f, 10.0f, 1.0f, rnd);
@@ -707,13 +772,15 @@ namespace Rylogic.UnitTests
 			Assert.True(Math_.IsOrthonormal(a2b));
 			Assert.True(Math_.IsOrthonormal(b2c));
 
-			var V2  = a2b * V1;
-			var V3  = b2c * V2;
+			var V2 = a2b * V1;
+			var V3 = b2c * V2;
 			var a2c = b2c * a2b;
-			var V4  = a2c * V1;
+			var V4 = a2c * V1;
 			Assert.True(Math_.FEql(V3, V4));
 		}
-		[Test] public void CreateFrom2()
+
+		[Test]
+		public void CreateFrom2()
 		{
 			var m1 = m4x4.Transform(1.0f, 0.5f, 0.7f, v4.Origin);
 			var m2 = new m4x4(new quat(1.0f, 0.5f, 0.7f), v4.Origin);
@@ -722,7 +789,7 @@ namespace Rylogic.UnitTests
 			Assert.True(Math_.FEql(m1, m2));
 
 			var rng = new Random(123456879);
-			var ang = rng.FloatC(0.0f,1.0f);
+			var ang = rng.FloatC(0.0f, 1.0f);
 			var axis = v4.Random3N(0.0f, rng);
 			m1 = m4x4.Transform(axis, ang, v4.Origin);
 			m2 = new m4x4(new quat(axis, ang), v4.Origin);
@@ -730,10 +797,12 @@ namespace Rylogic.UnitTests
 			Assert.True(Math_.IsOrthonormal(m2));
 			Assert.True(Math_.FEql(m1, m2));
 		}
-		[Test] public void CreateFrom3()
+
+		[Test]
+		public void CreateFrom3()
 		{
 			var rng = new Random(123456789);
-			var a2b = m4x4.Transform(v4.Random3N(0.0f, rng), rng.FloatC(0.0f,1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
+			var a2b = m4x4.Transform(v4.Random3N(0.0f, rng), rng.FloatC(0.0f, 1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
 
 			var b2a = Math_.Invert(a2b);
 			var a2a = b2a * a2b;
@@ -742,14 +811,39 @@ namespace Rylogic.UnitTests
 			var b2a_fast = Math_.InvertFast(a2b);
 			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
-		[Test] public void Orthonormalise()
+
+		[Test]
+		public void Orthonormalise()
 		{
 			var a2b = new m4x4();
-			a2b.x = new v4(-2.0f , 3.0f , 1.0f , 0.0f);
-			a2b.y = new v4(4.0f  ,-1.0f , 2.0f , 0.0f);
-			a2b.z = new v4(1.0f  ,-2.0f , 4.0f , 0.0f);
-			a2b.w = new v4(1.0f  , 2.0f , 3.0f , 1.0f);
+			a2b.x = new v4(-2.0f, 3.0f, 1.0f, 0.0f);
+			a2b.y = new v4(4.0f, -1.0f, 2.0f, 0.0f);
+			a2b.z = new v4(1.0f, -2.0f, 4.0f, 0.0f);
+			a2b.w = new v4(1.0f, 2.0f, 3.0f, 1.0f);
 			Assert.True(Math_.IsOrthonormal(Math_.Orthonormalise(a2b)));
+		}
+
+		[Test]
+		public void Parse()
+		{
+			{
+				var mat = new m4x4(
+					new v4(1, 2, 3, 4),
+					new v4(4, 3, 2, 1),
+					new v4(4, 4, 4, 4),
+					new v4(5, 5, 5, 5));
+				var MAT = m4x4.Parse4x4(mat.ToString4x4());
+				Assert.Equals(mat, MAT);
+			}
+			{
+				var mat = new m4x4(
+					new v4(1, 2, 3, 0),
+					new v4(4, 3, 2, 0),
+					new v4(4, 4, 4, 0),
+					new v4(5, 5, 5, 1));
+				var MAT = m4x4.Parse3x4(mat.ToString3x4());
+				Assert.Equals(mat, MAT);
+			}
 		}
 	}
 }

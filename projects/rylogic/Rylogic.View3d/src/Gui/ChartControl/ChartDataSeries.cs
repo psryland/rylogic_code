@@ -60,7 +60,7 @@ namespace Rylogic.Gui.WPF
 		public OptionsData Options { get; set; }
 
 		/// <summary>Gain access to the underlying data</summary>
-		public LockData Lock() => new LockData(this);
+		public LockData Lock() => new(this);
 		private readonly List<Pt> m_data;
 
 		/// <summary>Default identity colour</summary>
@@ -553,11 +553,11 @@ namespace Rylogic.Gui.WPF
 			[FieldOffset(0)] public double x;
 			[FieldOffset(8)] public double y;
 
-			public static implicit operator Pt(v2 pt) => new Pt(pt.x, pt.y);
-			public static implicit operator v2(Pt pt) => new v2((float)pt.x, (float)pt.y);
-			public static implicit operator v4(Pt pt) => new v4((float)pt.x, (float)pt.y, 0f, 1f);
-			public static implicit operator Pt(PointF pt) => new Pt(pt.X, pt.Y);
-			public static implicit operator PointF(Pt pt) => new PointF((float)pt.x, (float)pt.y);
+			public static implicit operator Pt(v2 pt) => new(pt.x, pt.y);
+			public static implicit operator v2(Pt pt) => new((float)pt.x, (float)pt.y);
+			public static implicit operator v4(Pt pt) => new((float)pt.x, (float)pt.y, 0f, 1f);
+			public static implicit operator Pt(PointF pt) => new(pt.X, pt.Y);
+			public static implicit operator PointF(Pt pt) => new((float)pt.x, (float)pt.y);
 
 			/// <summary>Sorting predicate on X</summary>
 			public static IComparer<Pt> CompareX => Cmp<Pt>.From((l, r) => l.x.CompareTo(r.x));

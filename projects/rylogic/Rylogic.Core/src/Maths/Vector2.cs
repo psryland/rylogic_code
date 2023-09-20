@@ -100,13 +100,13 @@ namespace Rylogic.Maths
 		}
 
 		// Static v2 types
-		public readonly static v2 Zero     = new v2(0f, 0f);
-		public readonly static v2 XAxis    = new v2(1f, 0f);
-		public readonly static v2 YAxis    = new v2(0f, 1f);
-		public readonly static v2 One      = new v2(1f, 1f);
-		public readonly static v2 NaN      = new v2(float.NaN, float.NaN);
-		public readonly static v2 MinValue = new v2(float.MinValue, float.MinValue);
-		public readonly static v2 MaxValue = new v2(float.MaxValue, float.MaxValue);
+		public readonly static v2 Zero     = new(0f, 0f);
+		public readonly static v2 XAxis    = new(1f, 0f);
+		public readonly static v2 YAxis    = new(0f, 1f);
+		public readonly static v2 One      = new(1f, 1f);
+		public readonly static v2 NaN      = new(float.NaN, float.NaN);
+		public readonly static v2 MinValue = new(float.MinValue, float.MinValue);
+		public readonly static v2 MaxValue = new(float.MaxValue, float.MaxValue);
 
 		/// <summary>Operators</summary>
 		public static v2 operator + (v2 vec)

@@ -44,6 +44,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETCURRENTPOS = unchecked((int)2008);
 		public const int SCI_GETANCHOR = unchecked((int)2009);
 		public const int SCI_GETSTYLEAT = unchecked((int)2010);
+		public const int SCI_GETSTYLEINDEXAT = unchecked((int)2038);
 		public const int SCI_REDO = unchecked((int)2011);
 		public const int SCI_SETUNDOCOLLECTION = unchecked((int)2012);
 		public const int SCI_SELECTALL = unchecked((int)2013);
@@ -52,6 +53,8 @@ namespace Rylogic.Scintilla
 		public const int SCI_CANREDO = unchecked((int)2016);
 		public const int SCI_MARKERLINEFROMHANDLE = unchecked((int)2017);
 		public const int SCI_MARKERDELETEHANDLE = unchecked((int)2018);
+		public const int SCI_MARKERHANDLEFROMLINE = unchecked((int)2732);
+		public const int SCI_MARKERNUMBERFROMLINE = unchecked((int)2733);
 		public const int SCI_GETUNDOCOLLECTION = unchecked((int)2019);
 		public const int SCWS_INVISIBLE = unchecked((int)0);
 		public const int SCWS_VISIBLEALWAYS = unchecked((int)1);
@@ -89,10 +92,19 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETNEXTTABSTOP = unchecked((int)2677);
 		public const int SC_CP_UTF8 = unchecked((int)65001);
 		public const int SCI_SETCODEPAGE = unchecked((int)2037);
+		public const int SCI_SETFONTLOCALE = unchecked((int)2760);
+		public const int SCI_GETFONTLOCALE = unchecked((int)2761);
 		public const int SC_IME_WINDOWED = unchecked((int)0);
 		public const int SC_IME_INLINE = unchecked((int)1);
 		public const int SCI_GETIMEINTERACTION = unchecked((int)2678);
 		public const int SCI_SETIMEINTERACTION = unchecked((int)2679);
+		public const int SC_ALPHA_TRANSPARENT = unchecked((int)0);
+		public const int SC_ALPHA_OPAQUE = unchecked((int)255);
+		public const int SC_ALPHA_NOALPHA = unchecked((int)256);
+		public const int SC_CURSORNORMAL = unchecked((int)-1);
+		public const int SC_CURSORARROW = unchecked((int)2);
+		public const int SC_CURSORWAIT = unchecked((int)4);
+		public const int SC_CURSORREVERSEARROW = unchecked((int)7);
 		public const int MARKER_MAX = unchecked((int)31);
 		public const int SC_MARK_CIRCLE = unchecked((int)0);
 		public const int SC_MARK_ROUNDRECT = unchecked((int)1);
@@ -127,7 +139,12 @@ namespace Rylogic.Scintilla
 		public const int SC_MARK_RGBAIMAGE = unchecked((int)30);
 		public const int SC_MARK_BOOKMARK = unchecked((int)31);
 		public const int SC_MARK_VERTICALBOOKMARK = unchecked((int)32);
+		public const int SC_MARK_BAR = unchecked((int)33);
 		public const int SC_MARK_CHARACTER = unchecked((int)10000);
+		public const int SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN = unchecked((int)21);
+		public const int SC_MARKNUM_HISTORY_SAVED = unchecked((int)22);
+		public const int SC_MARKNUM_HISTORY_MODIFIED = unchecked((int)23);
+		public const int SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED = unchecked((int)24);
 		public const int SC_MARKNUM_FOLDEREND = unchecked((int)25);
 		public const int SC_MARKNUM_FOLDEROPENMID = unchecked((int)26);
 		public const int SC_MARKNUM_FOLDERMIDTAIL = unchecked((int)27);
@@ -140,6 +157,10 @@ namespace Rylogic.Scintilla
 		public const int SCI_MARKERSETFORE = unchecked((int)2041);
 		public const int SCI_MARKERSETBACK = unchecked((int)2042);
 		public const int SCI_MARKERSETBACKSELECTED = unchecked((int)2292);
+		public const int SCI_MARKERSETFORETRANSLUCENT = unchecked((int)2294);
+		public const int SCI_MARKERSETBACKTRANSLUCENT = unchecked((int)2295);
+		public const int SCI_MARKERSETBACKSELECTEDTRANSLUCENT = unchecked((int)2296);
+		public const int SCI_MARKERSETSTROKEWIDTH = unchecked((int)2297);
 		public const int SCI_MARKERENABLEHIGHLIGHT = unchecked((int)2293);
 		public const int SCI_MARKERADD = unchecked((int)2043);
 		public const int SCI_MARKERDELETE = unchecked((int)2044);
@@ -150,6 +171,8 @@ namespace Rylogic.Scintilla
 		public const int SCI_MARKERDEFINEPIXMAP = unchecked((int)2049);
 		public const int SCI_MARKERADDSET = unchecked((int)2466);
 		public const int SCI_MARKERSETALPHA = unchecked((int)2476);
+		public const int SCI_MARKERGETLAYER = unchecked((int)2734);
+		public const int SCI_MARKERSETLAYER = unchecked((int)2735);
 		public const int SC_MAX_MARGIN = unchecked((int)4);
 		public const int SC_MARGIN_SYMBOL = unchecked((int)0);
 		public const int SC_MARGIN_NUMBER = unchecked((int)1);
@@ -242,12 +265,50 @@ namespace Rylogic.Scintilla
 		public const int SCI_STYLEGETWEIGHT = unchecked((int)2064);
 		public const int SCI_STYLESETCHARACTERSET = unchecked((int)2066);
 		public const int SCI_STYLESETHOTSPOT = unchecked((int)2409);
+		public const int SCI_STYLESETCHECKMONOSPACED = unchecked((int)2254);
+		public const int SCI_STYLEGETCHECKMONOSPACED = unchecked((int)2255);
+		public const int SC_ELEMENT_LIST = unchecked((int)0);
+		public const int SC_ELEMENT_LIST_BACK = unchecked((int)1);
+		public const int SC_ELEMENT_LIST_SELECTED = unchecked((int)2);
+		public const int SC_ELEMENT_LIST_SELECTED_BACK = unchecked((int)3);
+		public const int SC_ELEMENT_SELECTION_TEXT = unchecked((int)10);
+		public const int SC_ELEMENT_SELECTION_BACK = unchecked((int)11);
+		public const int SC_ELEMENT_SELECTION_ADDITIONAL_TEXT = unchecked((int)12);
+		public const int SC_ELEMENT_SELECTION_ADDITIONAL_BACK = unchecked((int)13);
+		public const int SC_ELEMENT_SELECTION_SECONDARY_TEXT = unchecked((int)14);
+		public const int SC_ELEMENT_SELECTION_SECONDARY_BACK = unchecked((int)15);
+		public const int SC_ELEMENT_SELECTION_INACTIVE_TEXT = unchecked((int)16);
+		public const int SC_ELEMENT_SELECTION_INACTIVE_BACK = unchecked((int)17);
+		public const int SC_ELEMENT_CARET = unchecked((int)40);
+		public const int SC_ELEMENT_CARET_ADDITIONAL = unchecked((int)41);
+		public const int SC_ELEMENT_CARET_LINE_BACK = unchecked((int)50);
+		public const int SC_ELEMENT_WHITE_SPACE = unchecked((int)60);
+		public const int SC_ELEMENT_WHITE_SPACE_BACK = unchecked((int)61);
+		public const int SC_ELEMENT_HOT_SPOT_ACTIVE = unchecked((int)70);
+		public const int SC_ELEMENT_HOT_SPOT_ACTIVE_BACK = unchecked((int)71);
+		public const int SC_ELEMENT_FOLD_LINE = unchecked((int)80);
+		public const int SC_ELEMENT_HIDDEN_LINE = unchecked((int)81);
+		public const int SCI_SETELEMENTCOLOUR = unchecked((int)2753);
+		public const int SCI_GETELEMENTCOLOUR = unchecked((int)2754);
+		public const int SCI_RESETELEMENTCOLOUR = unchecked((int)2755);
+		public const int SCI_GETELEMENTISSET = unchecked((int)2756);
+		public const int SCI_GETELEMENTALLOWSTRANSLUCENT = unchecked((int)2757);
+		public const int SCI_GETELEMENTBASECOLOUR = unchecked((int)2758);
 		public const int SCI_SETSELFORE = unchecked((int)2067);
 		public const int SCI_SETSELBACK = unchecked((int)2068);
 		public const int SCI_GETSELALPHA = unchecked((int)2477);
 		public const int SCI_SETSELALPHA = unchecked((int)2478);
 		public const int SCI_GETSELEOLFILLED = unchecked((int)2479);
 		public const int SCI_SETSELEOLFILLED = unchecked((int)2480);
+		public const int SC_LAYER_BASE = unchecked((int)0);
+		public const int SC_LAYER_UNDER_TEXT = unchecked((int)1);
+		public const int SC_LAYER_OVER_TEXT = unchecked((int)2);
+		public const int SCI_GETSELECTIONLAYER = unchecked((int)2762);
+		public const int SCI_SETSELECTIONLAYER = unchecked((int)2763);
+		public const int SCI_GETCARETLINELAYER = unchecked((int)2764);
+		public const int SCI_SETCARETLINELAYER = unchecked((int)2765);
+		public const int SCI_GETCARETLINEHIGHLIGHTSUBLINE = unchecked((int)2773);
+		public const int SCI_SETCARETLINEHIGHLIGHTSUBLINE = unchecked((int)2774);
 		public const int SCI_SETCARETFORE = unchecked((int)2069);
 		public const int SCI_ASSIGNCMDKEY = unchecked((int)2070);
 		public const int SCI_CLEARCMDKEY = unchecked((int)2071);
@@ -284,6 +345,7 @@ namespace Rylogic.Scintilla
 		public const int INDIC_POINTCHARACTER = unchecked((int)19);
 		public const int INDIC_GRADIENT = unchecked((int)20);
 		public const int INDIC_GRADIENTCENTRE = unchecked((int)21);
+		public const int INDIC_POINT_TOP = unchecked((int)22);
 		public const int INDIC_CONTAINER = unchecked((int)8);
 		public const int INDIC_IME = unchecked((int)32);
 		public const int INDIC_IME_MAX = unchecked((int)35);
@@ -291,7 +353,15 @@ namespace Rylogic.Scintilla
 		public const int INDICATOR_CONTAINER = unchecked((int)8);
 		public const int INDICATOR_IME = unchecked((int)32);
 		public const int INDICATOR_IME_MAX = unchecked((int)35);
-		public const int INDICATOR_MAX = unchecked((int)35);
+		public const int INDICATOR_HISTORY_REVERTED_TO_ORIGIN_INSERTION = unchecked((int)36);
+		public const int INDICATOR_HISTORY_REVERTED_TO_ORIGIN_DELETION = unchecked((int)37);
+		public const int INDICATOR_HISTORY_SAVED_INSERTION = unchecked((int)38);
+		public const int INDICATOR_HISTORY_SAVED_DELETION = unchecked((int)39);
+		public const int INDICATOR_HISTORY_MODIFIED_INSERTION = unchecked((int)40);
+		public const int INDICATOR_HISTORY_MODIFIED_DELETION = unchecked((int)41);
+		public const int INDICATOR_HISTORY_REVERTED_TO_MODIFIED_INSERTION = unchecked((int)42);
+		public const int INDICATOR_HISTORY_REVERTED_TO_MODIFIED_DELETION = unchecked((int)43);
+		public const int INDICATOR_MAX = unchecked((int)43);
 		public const int SCI_INDICSETSTYLE = unchecked((int)2080);
 		public const int SCI_INDICGETSTYLE = unchecked((int)2081);
 		public const int SCI_INDICSETFORE = unchecked((int)2082);
@@ -304,9 +374,12 @@ namespace Rylogic.Scintilla
 		public const int SCI_INDICGETHOVERFORE = unchecked((int)2683);
 		public const int SC_INDICVALUEBIT = unchecked((int)0x1000000);
 		public const int SC_INDICVALUEMASK = unchecked((int)0xFFFFFF);
+		public const int SC_INDICFLAG_NONE = unchecked((int)0);
 		public const int SC_INDICFLAG_VALUEFORE = unchecked((int)1);
 		public const int SCI_INDICSETFLAGS = unchecked((int)2684);
 		public const int SCI_INDICGETFLAGS = unchecked((int)2685);
+		public const int SCI_INDICSETSTROKEWIDTH = unchecked((int)2751);
+		public const int SCI_INDICGETSTROKEWIDTH = unchecked((int)2752);
 		public const int SCI_SETWHITESPACEFORE = unchecked((int)2084);
 		public const int SCI_SETWHITESPACEBACK = unchecked((int)2085);
 		public const int SCI_SETWHITESPACESIZE = unchecked((int)2086);
@@ -340,6 +413,10 @@ namespace Rylogic.Scintilla
 		public const int SCI_USERLISTSHOW = unchecked((int)2117);
 		public const int SCI_AUTOCSETAUTOHIDE = unchecked((int)2118);
 		public const int SCI_AUTOCGETAUTOHIDE = unchecked((int)2119);
+		public const int SC_AUTOCOMPLETE_NORMAL = unchecked((int)0);
+		public const int SC_AUTOCOMPLETE_FIXED_SIZE = unchecked((int)1);
+		public const int SCI_AUTOCSETOPTIONS = unchecked((int)2638);
+		public const int SCI_AUTOCGETOPTIONS = unchecked((int)2639);
 		public const int SCI_AUTOCSETDROPRESTOFWORD = unchecked((int)2270);
 		public const int SCI_AUTOCGETDROPRESTOFWORD = unchecked((int)2271);
 		public const int SCI_REGISTERIMAGE = unchecked((int)2405);
@@ -398,10 +475,19 @@ namespace Rylogic.Scintilla
 		public const int SCFIND_POSIX = unchecked((int)0x00400000);
 		public const int SCFIND_CXX11REGEX = unchecked((int)0x00800000);
 		public const int SCI_FINDTEXT = unchecked((int)2150);
+		public const int SCI_FINDTEXTFULL = unchecked((int)2196);
 		public const int SCI_FORMATRANGE = unchecked((int)2151);
+		public const int SCI_FORMATRANGEFULL = unchecked((int)2777);
+		public const int SC_CHANGE_HISTORY_DISABLED = unchecked((int)0);
+		public const int SC_CHANGE_HISTORY_ENABLED = unchecked((int)1);
+		public const int SC_CHANGE_HISTORY_MARKERS = unchecked((int)2);
+		public const int SC_CHANGE_HISTORY_INDICATORS = unchecked((int)4);
+		public const int SCI_SETCHANGEHISTORY = unchecked((int)2780);
+		public const int SCI_GETCHANGEHISTORY = unchecked((int)2781);
 		public const int SCI_GETFIRSTVISIBLELINE = unchecked((int)2152);
 		public const int SCI_GETLINE = unchecked((int)2153);
 		public const int SCI_GETLINECOUNT = unchecked((int)2154);
+		public const int SCI_ALLOCATELINES = unchecked((int)2089);
 		public const int SCI_SETMARGINLEFT = unchecked((int)2155);
 		public const int SCI_GETMARGINLEFT = unchecked((int)2156);
 		public const int SCI_SETMARGINRIGHT = unchecked((int)2157);
@@ -410,7 +496,9 @@ namespace Rylogic.Scintilla
 		public const int SCI_SETSEL = unchecked((int)2160);
 		public const int SCI_GETSELTEXT = unchecked((int)2161);
 		public const int SCI_GETTEXTRANGE = unchecked((int)2162);
+		public const int SCI_GETTEXTRANGEFULL = unchecked((int)2039);
 		public const int SCI_HIDESELECTION = unchecked((int)2163);
+		public const int SCI_GETSELECTIONHIDDEN = unchecked((int)2088);
 		public const int SCI_POINTXFROMPOSITION = unchecked((int)2164);
 		public const int SCI_POINTYFROMPOSITION = unchecked((int)2165);
 		public const int SCI_LINEFROMPOSITION = unchecked((int)2166);
@@ -433,6 +521,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETTEXT = unchecked((int)2182);
 		public const int SCI_GETTEXTLENGTH = unchecked((int)2183);
 		public const int SCI_GETDIRECTFUNCTION = unchecked((int)2184);
+		public const int SCI_GETDIRECTSTATUSFUNCTION = unchecked((int)2772);
 		public const int SCI_GETDIRECTPOINTER = unchecked((int)2185);
 		public const int SCI_SETOVERTYPE = unchecked((int)2186);
 		public const int SCI_GETOVERTYPE = unchecked((int)2187);
@@ -440,8 +529,12 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETCARETWIDTH = unchecked((int)2189);
 		public const int SCI_SETTARGETSTART = unchecked((int)2190);
 		public const int SCI_GETTARGETSTART = unchecked((int)2191);
+		public const int SCI_SETTARGETSTARTVIRTUALSPACE = unchecked((int)2728);
+		public const int SCI_GETTARGETSTARTVIRTUALSPACE = unchecked((int)2729);
 		public const int SCI_SETTARGETEND = unchecked((int)2192);
 		public const int SCI_GETTARGETEND = unchecked((int)2193);
+		public const int SCI_SETTARGETENDVIRTUALSPACE = unchecked((int)2730);
+		public const int SCI_GETTARGETENDVIRTUALSPACE = unchecked((int)2731);
 		public const int SCI_SETTARGETRANGE = unchecked((int)2686);
 		public const int SCI_GETTARGETTEXT = unchecked((int)2687);
 		public const int SCI_TARGETFROMSELECTION = unchecked((int)2287);
@@ -465,6 +558,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_VISIBLEFROMDOCLINE = unchecked((int)2220);
 		public const int SCI_DOCLINEFROMVISIBLE = unchecked((int)2221);
 		public const int SCI_WRAPCOUNT = unchecked((int)2235);
+		public const int SC_FOLDLEVELNONE = unchecked((int)0x0);
 		public const int SC_FOLDLEVELBASE = unchecked((int)0x400);
 		public const int SC_FOLDLEVELWHITEFLAG = unchecked((int)0x1000);
 		public const int SC_FOLDLEVELHEADERFLAG = unchecked((int)0x2000);
@@ -491,16 +585,19 @@ namespace Rylogic.Scintilla
 		public const int SC_FOLDACTION_CONTRACT = unchecked((int)0);
 		public const int SC_FOLDACTION_EXPAND = unchecked((int)1);
 		public const int SC_FOLDACTION_TOGGLE = unchecked((int)2);
+		public const int SC_FOLDACTION_CONTRACT_EVERY_LEVEL = unchecked((int)4);
 		public const int SCI_FOLDLINE = unchecked((int)2237);
 		public const int SCI_FOLDCHILDREN = unchecked((int)2238);
 		public const int SCI_EXPANDCHILDREN = unchecked((int)2239);
 		public const int SCI_FOLDALL = unchecked((int)2662);
 		public const int SCI_ENSUREVISIBLE = unchecked((int)2232);
+		public const int SC_AUTOMATICFOLD_NONE = unchecked((int)0x0000);
 		public const int SC_AUTOMATICFOLD_SHOW = unchecked((int)0x0001);
 		public const int SC_AUTOMATICFOLD_CLICK = unchecked((int)0x0002);
 		public const int SC_AUTOMATICFOLD_CHANGE = unchecked((int)0x0004);
 		public const int SCI_SETAUTOMATICFOLD = unchecked((int)2663);
 		public const int SCI_GETAUTOMATICFOLD = unchecked((int)2664);
+		public const int SC_FOLDFLAG_NONE = unchecked((int)0x0000);
 		public const int SC_FOLDFLAG_LINEBEFORE_EXPANDED = unchecked((int)0x0002);
 		public const int SC_FOLDFLAG_LINEBEFORE_CONTRACTED = unchecked((int)0x0004);
 		public const int SC_FOLDFLAG_LINEAFTER_EXPANDED = unchecked((int)0x0008);
@@ -567,8 +664,8 @@ namespace Rylogic.Scintilla
 		public const int SCI_SETVSCROLLBAR = unchecked((int)2280);
 		public const int SCI_GETVSCROLLBAR = unchecked((int)2281);
 		public const int SCI_APPENDTEXT = unchecked((int)2282);
-		public const int SCI_APPENDSTYLEDTEXT = unchecked((int)2294);
-		public const int SCI_INSERTSTYLEDTEXT = unchecked((int)2295);
+		public const int SCI_APPENDSTYLEDTEXT = unchecked((int)2298);
+		public const int SCI_INSERTSTYLEDTEXT = unchecked((int)2299);
 		public const int SC_PHASES_ONE = unchecked((int)0);
 		public const int SC_PHASES_TWO = unchecked((int)1);
 		public const int SC_PHASES_MULTIPLE = unchecked((int)2);
@@ -661,6 +758,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_BRACEBADLIGHT = unchecked((int)2352);
 		public const int SCI_BRACEBADLIGHTINDICATOR = unchecked((int)2499);
 		public const int SCI_BRACEMATCH = unchecked((int)2353);
+		public const int SCI_BRACEMATCHNEXT = unchecked((int)2369);
 		public const int SCI_GETVIEWEOL = unchecked((int)2355);
 		public const int SCI_SETVIEWEOL = unchecked((int)2356);
 		public const int SCI_GETDOCPOINTER = unchecked((int)2357);
@@ -678,6 +776,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_SETEDGECOLOUR = unchecked((int)2365);
 		public const int SCI_MULTIEDGEADDLINE = unchecked((int)2694);
 		public const int SCI_MULTIEDGECLEARALL = unchecked((int)2695);
+		public const int SCI_GETMULTIEDGECOLUMN = unchecked((int)2749);
 		public const int SCI_SEARCHANCHOR = unchecked((int)2366);
 		public const int SCI_SEARCHNEXT = unchecked((int)2367);
 		public const int SCI_SEARCHPREV = unchecked((int)2368);
@@ -712,10 +811,6 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETMOUSEDOWNCAPTURES = unchecked((int)2385);
 		public const int SCI_SETMOUSEWHEELCAPTURES = unchecked((int)2696);
 		public const int SCI_GETMOUSEWHEELCAPTURES = unchecked((int)2697);
-		public const int SC_CURSORNORMAL = unchecked((int)-1);
-		public const int SC_CURSORARROW = unchecked((int)2);
-		public const int SC_CURSORWAIT = unchecked((int)4);
-		public const int SC_CURSORREVERSEARROW = unchecked((int)7);
 		public const int SCI_SETCURSOR = unchecked((int)2386);
 		public const int SCI_GETCURSOR = unchecked((int)2387);
 		public const int SCI_SETCONTROLCHARSYMBOL = unchecked((int)2388);
@@ -810,18 +905,16 @@ namespace Rylogic.Scintilla
 		public const int SCI_SETLENGTHFORENCODE = unchecked((int)2448);
 		public const int SCI_ENCODEDFROMUTF8 = unchecked((int)2449);
 		public const int SCI_FINDCOLUMN = unchecked((int)2456);
-		public const int SCI_GETCARETSTICKY = unchecked((int)2457);
-		public const int SCI_SETCARETSTICKY = unchecked((int)2458);
 		public const int SC_CARETSTICKY_OFF = unchecked((int)0);
 		public const int SC_CARETSTICKY_ON = unchecked((int)1);
 		public const int SC_CARETSTICKY_WHITESPACE = unchecked((int)2);
+		public const int SCI_GETCARETSTICKY = unchecked((int)2457);
+		public const int SCI_SETCARETSTICKY = unchecked((int)2458);
 		public const int SCI_TOGGLECARETSTICKY = unchecked((int)2459);
 		public const int SCI_SETPASTECONVERTENDINGS = unchecked((int)2467);
 		public const int SCI_GETPASTECONVERTENDINGS = unchecked((int)2468);
+		public const int SCI_REPLACERECTANGULAR = unchecked((int)2771);
 		public const int SCI_SELECTIONDUPLICATE = unchecked((int)2469);
-		public const int SC_ALPHA_TRANSPARENT = unchecked((int)0);
-		public const int SC_ALPHA_OPAQUE = unchecked((int)255);
-		public const int SC_ALPHA_NOALPHA = unchecked((int)256);
 		public const int SCI_SETCARETLINEBACKALPHA = unchecked((int)2470);
 		public const int SCI_GETCARETLINEBACKALPHA = unchecked((int)2471);
 		public const int CARETSTYLE_INVISIBLE = unchecked((int)0);
@@ -829,6 +922,7 @@ namespace Rylogic.Scintilla
 		public const int CARETSTYLE_BLOCK = unchecked((int)2);
 		public const int CARETSTYLE_OVERSTRIKE_BAR = unchecked((int)0);
 		public const int CARETSTYLE_OVERSTRIKE_BLOCK = unchecked((int)0x10);
+		public const int CARETSTYLE_CURSES = unchecked((int)0x20);
 		public const int CARETSTYLE_INS_MASK = unchecked((int)0xF);
 		public const int CARETSTYLE_BLOCK_AFTER = unchecked((int)0x100);
 		public const int SCI_SETCARETSTYLE = unchecked((int)2512);
@@ -845,6 +939,8 @@ namespace Rylogic.Scintilla
 		public const int SCI_INDICATOREND = unchecked((int)2509);
 		public const int SCI_SETPOSITIONCACHE = unchecked((int)2514);
 		public const int SCI_GETPOSITIONCACHE = unchecked((int)2515);
+		public const int SCI_SETLAYOUTTHREADS = unchecked((int)2775);
+		public const int SCI_GETLAYOUTTHREADS = unchecked((int)2776);
 		public const int SCI_COPYALLOWLINE = unchecked((int)2519);
 		public const int SCI_GETCHARACTERPOINTER = unchecked((int)2520);
 		public const int SCI_GETRANGEPOINTER = unchecked((int)2643);
@@ -922,7 +1018,9 @@ namespace Rylogic.Scintilla
 		public const int SCI_GETSELECTIONNANCHORVIRTUALSPACE = unchecked((int)2583);
 		public const int SCI_SETSELECTIONNSTART = unchecked((int)2584);
 		public const int SCI_GETSELECTIONNSTART = unchecked((int)2585);
+		public const int SCI_GETSELECTIONNSTARTVIRTUALSPACE = unchecked((int)2726);
 		public const int SCI_SETSELECTIONNEND = unchecked((int)2586);
+		public const int SCI_GETSELECTIONNENDVIRTUALSPACE = unchecked((int)2727);
 		public const int SCI_GETSELECTIONNEND = unchecked((int)2587);
 		public const int SCI_SETRECTANGULARSELECTIONCARET = unchecked((int)2588);
 		public const int SCI_GETRECTANGULARSELECTIONCARET = unchecked((int)2589);
@@ -986,6 +1084,50 @@ namespace Rylogic.Scintilla
 		public const int SCI_SETREPRESENTATION = unchecked((int)2665);
 		public const int SCI_GETREPRESENTATION = unchecked((int)2666);
 		public const int SCI_CLEARREPRESENTATION = unchecked((int)2667);
+		public const int SCI_CLEARALLREPRESENTATIONS = unchecked((int)2770);
+		public const int SC_REPRESENTATION_PLAIN = unchecked((int)0);
+		public const int SC_REPRESENTATION_BLOB = unchecked((int)1);
+		public const int SC_REPRESENTATION_COLOUR = unchecked((int)0x10);
+		public const int SCI_SETREPRESENTATIONAPPEARANCE = unchecked((int)2766);
+		public const int SCI_GETREPRESENTATIONAPPEARANCE = unchecked((int)2767);
+		public const int SCI_SETREPRESENTATIONCOLOUR = unchecked((int)2768);
+		public const int SCI_GETREPRESENTATIONCOLOUR = unchecked((int)2769);
+		public const int SCI_EOLANNOTATIONSETTEXT = unchecked((int)2740);
+		public const int SCI_EOLANNOTATIONGETTEXT = unchecked((int)2741);
+		public const int SCI_EOLANNOTATIONSETSTYLE = unchecked((int)2742);
+		public const int SCI_EOLANNOTATIONGETSTYLE = unchecked((int)2743);
+		public const int SCI_EOLANNOTATIONCLEARALL = unchecked((int)2744);
+		public const int EOLANNOTATION_HIDDEN = unchecked((int)0x0);
+		public const int EOLANNOTATION_STANDARD = unchecked((int)0x1);
+		public const int EOLANNOTATION_BOXED = unchecked((int)0x2);
+		public const int EOLANNOTATION_STADIUM = unchecked((int)0x100);
+		public const int EOLANNOTATION_FLAT_CIRCLE = unchecked((int)0x101);
+		public const int EOLANNOTATION_ANGLE_CIRCLE = unchecked((int)0x102);
+		public const int EOLANNOTATION_CIRCLE_FLAT = unchecked((int)0x110);
+		public const int EOLANNOTATION_FLATS = unchecked((int)0x111);
+		public const int EOLANNOTATION_ANGLE_FLAT = unchecked((int)0x112);
+		public const int EOLANNOTATION_CIRCLE_ANGLE = unchecked((int)0x120);
+		public const int EOLANNOTATION_FLAT_ANGLE = unchecked((int)0x121);
+		public const int EOLANNOTATION_ANGLES = unchecked((int)0x122);
+		public const int SCI_EOLANNOTATIONSETVISIBLE = unchecked((int)2745);
+		public const int SCI_EOLANNOTATIONGETVISIBLE = unchecked((int)2746);
+		public const int SCI_EOLANNOTATIONSETSTYLEOFFSET = unchecked((int)2747);
+		public const int SCI_EOLANNOTATIONGETSTYLEOFFSET = unchecked((int)2748);
+		public const int SC_SUPPORTS_LINE_DRAWS_FINAL = unchecked((int)0);
+		public const int SC_SUPPORTS_PIXEL_DIVISIONS = unchecked((int)1);
+		public const int SC_SUPPORTS_FRACTIONAL_STROKE_WIDTH = unchecked((int)2);
+		public const int SC_SUPPORTS_TRANSLUCENT_STROKE = unchecked((int)3);
+		public const int SC_SUPPORTS_PIXEL_MODIFICATION = unchecked((int)4);
+		public const int SC_SUPPORTS_THREAD_SAFE_MEASURE_WIDTHS = unchecked((int)5);
+		public const int SCI_SUPPORTSFEATURE = unchecked((int)2750);
+		public const int SC_LINECHARACTERINDEX_NONE = unchecked((int)0);
+		public const int SC_LINECHARACTERINDEX_UTF32 = unchecked((int)1);
+		public const int SC_LINECHARACTERINDEX_UTF16 = unchecked((int)2);
+		public const int SCI_GETLINECHARACTERINDEX = unchecked((int)2710);
+		public const int SCI_ALLOCATELINECHARACTERINDEX = unchecked((int)2711);
+		public const int SCI_RELEASELINECHARACTERINDEX = unchecked((int)2712);
+		public const int SCI_LINEFROMINDEXPOSITION = unchecked((int)2713);
+		public const int SCI_INDEXPOSITIONFROMLINE = unchecked((int)2714);
 		public const int SCI_STARTRECORD = unchecked((int)3001);
 		public const int SCI_STOPRECORD = unchecked((int)3002);
 		public const int SCI_SETLEXER = unchecked((int)4001);
@@ -995,7 +1137,6 @@ namespace Rylogic.Scintilla
 		public const int KEYWORDSET_MAX = unchecked((int)8);
 		public const int SCI_SETKEYWORDS = unchecked((int)4005);
 		public const int SCI_SETLEXERLANGUAGE = unchecked((int)4006);
-		public const int SCI_LOADLEXERLIBRARY = unchecked((int)4007);
 		public const int SCI_GETPROPERTY = unchecked((int)4008);
 		public const int SCI_GETPROPERTYEXPANDED = unchecked((int)4009);
 		public const int SCI_GETPROPERTYINT = unchecked((int)4010);
@@ -1022,6 +1163,7 @@ namespace Rylogic.Scintilla
 		public const int SCI_NAMEOFSTYLE = unchecked((int)4030);
 		public const int SCI_TAGSOFSTYLE = unchecked((int)4031);
 		public const int SCI_DESCRIPTIONOFSTYLE = unchecked((int)4032);
+		public const int SCI_SETILEXER = unchecked((int)4033);
 		public const int SC_MOD_NONE = unchecked((int)0x0);
 		public const int SC_MOD_INSERTTEXT = unchecked((int)0x1);
 		public const int SC_MOD_DELETETEXT = unchecked((int)0x2);
@@ -1045,7 +1187,9 @@ namespace Rylogic.Scintilla
 		public const int SC_MOD_LEXERSTATE = unchecked((int)0x80000);
 		public const int SC_MOD_INSERTCHECK = unchecked((int)0x100000);
 		public const int SC_MOD_CHANGETABSTOPS = unchecked((int)0x200000);
-		public const int SC_MODEVENTMASKALL = unchecked((int)0x3FFFFF);
+		public const int SC_MOD_CHANGEEOLANNOTATION = unchecked((int)0x400000);
+		public const int SC_MODEVENTMASKALL = unchecked((int)0x7FFFFF);
+		public const int SC_UPDATE_NONE = unchecked((int)0x0);
 		public const int SC_UPDATE_CONTENT = unchecked((int)0x1);
 		public const int SC_UPDATE_SELECTION = unchecked((int)0x2);
 		public const int SC_UPDATE_V_SCROLL = unchecked((int)0x4);
@@ -1124,14 +1268,6 @@ namespace Rylogic.Scintilla
 		public const int SC_BIDIRECTIONAL_R2L = unchecked((int)2);
 		public const int SCI_GETBIDIRECTIONAL = unchecked((int)2708);
 		public const int SCI_SETBIDIRECTIONAL = unchecked((int)2709);
-		public const int SC_LINECHARACTERINDEX_NONE = unchecked((int)0);
-		public const int SC_LINECHARACTERINDEX_UTF32 = unchecked((int)1);
-		public const int SC_LINECHARACTERINDEX_UTF16 = unchecked((int)2);
-		public const int SCI_GETLINECHARACTERINDEX = unchecked((int)2710);
-		public const int SCI_ALLOCATELINECHARACTERINDEX = unchecked((int)2711);
-		public const int SCI_RELEASELINECHARACTERINDEX = unchecked((int)2712);
-		public const int SCI_LINEFROMINDEXPOSITION = unchecked((int)2713);
-		public const int SCI_INDEXPOSITIONFROMLINE = unchecked((int)2714);
 		#endregion
 		#region SCI Enumerations
 		public enum EWhiteSpace
@@ -1156,6 +1292,19 @@ namespace Rylogic.Scintilla
 		{
 			Windowed = SC_IME_WINDOWED,
 			Inline = SC_IME_INLINE,
+		}
+		public enum EAlpha
+		{
+			Transparent = SC_ALPHA_TRANSPARENT,
+			Opaque = SC_ALPHA_OPAQUE,
+			Noalpha = SC_ALPHA_NOALPHA,
+		}
+		public enum ECursorShape
+		{
+			Normal = SC_CURSORNORMAL,
+			Arrow = SC_CURSORARROW,
+			Wait = SC_CURSORWAIT,
+			Reversearrow = SC_CURSORREVERSEARROW,
 		}
 		public enum EMarkerSymbol
 		{
@@ -1192,10 +1341,15 @@ namespace Rylogic.Scintilla
 			Rgbaimage = SC_MARK_RGBAIMAGE,
 			Bookmark = SC_MARK_BOOKMARK,
 			Verticalbookmark = SC_MARK_VERTICALBOOKMARK,
+			Bar = SC_MARK_BAR,
 			Character = SC_MARK_CHARACTER,
 		}
 		public enum EMarkerOutline
 		{
+			History_reverted_to_origin = SC_MARKNUM_HISTORY_REVERTED_TO_ORIGIN,
+			History_saved = SC_MARKNUM_HISTORY_SAVED,
+			History_modified = SC_MARKNUM_HISTORY_MODIFIED,
+			History_reverted_to_modified = SC_MARKNUM_HISTORY_REVERTED_TO_MODIFIED,
 			Folderend = SC_MARKNUM_FOLDEREND,
 			Folderopenmid = SC_MARKNUM_FOLDEROPENMID,
 			Foldermidtail = SC_MARKNUM_FOLDERMIDTAIL,
@@ -1265,6 +1419,36 @@ namespace Rylogic.Scintilla
 			Semibold = SC_WEIGHT_SEMIBOLD,
 			Bold = SC_WEIGHT_BOLD,
 		}
+		public enum EElement
+		{
+			List = SC_ELEMENT_LIST,
+			List_back = SC_ELEMENT_LIST_BACK,
+			List_selected = SC_ELEMENT_LIST_SELECTED,
+			List_selected_back = SC_ELEMENT_LIST_SELECTED_BACK,
+			Selection_text = SC_ELEMENT_SELECTION_TEXT,
+			Selection_back = SC_ELEMENT_SELECTION_BACK,
+			Selection_additional_text = SC_ELEMENT_SELECTION_ADDITIONAL_TEXT,
+			Selection_additional_back = SC_ELEMENT_SELECTION_ADDITIONAL_BACK,
+			Selection_secondary_text = SC_ELEMENT_SELECTION_SECONDARY_TEXT,
+			Selection_secondary_back = SC_ELEMENT_SELECTION_SECONDARY_BACK,
+			Selection_inactive_text = SC_ELEMENT_SELECTION_INACTIVE_TEXT,
+			Selection_inactive_back = SC_ELEMENT_SELECTION_INACTIVE_BACK,
+			Caret = SC_ELEMENT_CARET,
+			Caret_additional = SC_ELEMENT_CARET_ADDITIONAL,
+			Caret_line_back = SC_ELEMENT_CARET_LINE_BACK,
+			White_space = SC_ELEMENT_WHITE_SPACE,
+			White_space_back = SC_ELEMENT_WHITE_SPACE_BACK,
+			Hot_spot_active = SC_ELEMENT_HOT_SPOT_ACTIVE,
+			Hot_spot_active_back = SC_ELEMENT_HOT_SPOT_ACTIVE_BACK,
+			Fold_line = SC_ELEMENT_FOLD_LINE,
+			Hidden_line = SC_ELEMENT_HIDDEN_LINE,
+		}
+		public enum ELayer
+		{
+			Base = SC_LAYER_BASE,
+			Under_text = SC_LAYER_UNDER_TEXT,
+			Over_text = SC_LAYER_OVER_TEXT,
+		}
 		public enum EIndicatorStyle
 		{
 			Plain = INDIC_PLAIN,
@@ -1289,6 +1473,7 @@ namespace Rylogic.Scintilla
 			Pointcharacter = INDIC_POINTCHARACTER,
 			Gradient = INDIC_GRADIENT,
 			Gradientcentre = INDIC_GRADIENTCENTRE,
+			Point_top = INDIC_POINT_TOP,
 			Container = INDIC_CONTAINER,
 			Ime = INDIC_IME,
 			Ime_max = INDIC_IME_MAX,
@@ -1299,6 +1484,14 @@ namespace Rylogic.Scintilla
 			Container = INDICATOR_CONTAINER,
 			Ime = INDICATOR_IME,
 			Ime_max = INDICATOR_IME_MAX,
+			History_reverted_to_origin_insertion = INDICATOR_HISTORY_REVERTED_TO_ORIGIN_INSERTION,
+			History_reverted_to_origin_deletion = INDICATOR_HISTORY_REVERTED_TO_ORIGIN_DELETION,
+			History_saved_insertion = INDICATOR_HISTORY_SAVED_INSERTION,
+			History_saved_deletion = INDICATOR_HISTORY_SAVED_DELETION,
+			History_modified_insertion = INDICATOR_HISTORY_MODIFIED_INSERTION,
+			History_modified_deletion = INDICATOR_HISTORY_MODIFIED_DELETION,
+			History_reverted_to_modified_insertion = INDICATOR_HISTORY_REVERTED_TO_MODIFIED_INSERTION,
+			History_reverted_to_modified_deletion = INDICATOR_HISTORY_REVERTED_TO_MODIFIED_DELETION,
 			Max = INDICATOR_MAX,
 		}
 		public enum EIndicValue
@@ -1308,7 +1501,13 @@ namespace Rylogic.Scintilla
 		}
 		public enum EIndicFlag
 		{
+			None = SC_INDICFLAG_NONE,
 			Valuefore = SC_INDICFLAG_VALUEFORE,
+		}
+		public enum EAutoCompleteOption
+		{
+			Normal = SC_AUTOCOMPLETE_NORMAL,
+			Fixed_size = SC_AUTOCOMPLETE_FIXED_SIZE,
 		}
 		public enum EIndentView
 		{
@@ -1336,8 +1535,16 @@ namespace Rylogic.Scintilla
 			Posix = SCFIND_POSIX,
 			Cxx11regex = SCFIND_CXX11REGEX,
 		}
+		public enum EChangeHistoryOption
+		{
+			Disabled = SC_CHANGE_HISTORY_DISABLED,
+			Enabled = SC_CHANGE_HISTORY_ENABLED,
+			Markers = SC_CHANGE_HISTORY_MARKERS,
+			Indicators = SC_CHANGE_HISTORY_INDICATORS,
+		}
 		public enum EFoldLevel
 		{
+			None = SC_FOLDLEVELNONE,
 			Base = SC_FOLDLEVELBASE,
 			Whiteflag = SC_FOLDLEVELWHITEFLAG,
 			Headerflag = SC_FOLDLEVELHEADERFLAG,
@@ -1354,15 +1561,18 @@ namespace Rylogic.Scintilla
 			Contract = SC_FOLDACTION_CONTRACT,
 			Expand = SC_FOLDACTION_EXPAND,
 			Toggle = SC_FOLDACTION_TOGGLE,
+			Contract_every_level = SC_FOLDACTION_CONTRACT_EVERY_LEVEL,
 		}
 		public enum EAutomaticFold
 		{
+			None = SC_AUTOMATICFOLD_NONE,
 			Show = SC_AUTOMATICFOLD_SHOW,
 			Click = SC_AUTOMATICFOLD_CLICK,
 			Change = SC_AUTOMATICFOLD_CHANGE,
 		}
 		public enum EFoldFlag
 		{
+			None = SC_FOLDFLAG_NONE,
 			Linebefore_expanded = SC_FOLDFLAG_LINEBEFORE_EXPANDED,
 			Linebefore_contracted = SC_FOLDFLAG_LINEBEFORE_CONTRACTED,
 			Lineafter_expanded = SC_FOLDFLAG_LINEAFTER_EXPANDED,
@@ -1462,13 +1672,6 @@ namespace Rylogic.Scintilla
 			Warn_start = SC_STATUS_WARN_START,
 			Warn_regex = SC_STATUS_WARN_REGEX,
 		}
-		public enum ECursorShape
-		{
-			Normal = SC_CURSORNORMAL,
-			Arrow = SC_CURSORARROW,
-			Wait = SC_CURSORWAIT,
-			Reversearrow = SC_CURSORREVERSEARROW,
-		}
 		public enum EVisiblePolicy
 		{
 			Slop = VISIBLE_SLOP,
@@ -1510,12 +1713,6 @@ namespace Rylogic.Scintilla
 			On = SC_CARETSTICKY_ON,
 			Whitespace = SC_CARETSTICKY_WHITESPACE,
 		}
-		public enum EAlpha
-		{
-			Transparent = SC_ALPHA_TRANSPARENT,
-			Opaque = SC_ALPHA_OPAQUE,
-			Noalpha = SC_ALPHA_NOALPHA,
-		}
 		public enum ECaretStyle
 		{
 			Invisible = CARETSTYLE_INVISIBLE,
@@ -1523,6 +1720,7 @@ namespace Rylogic.Scintilla
 			Block = CARETSTYLE_BLOCK,
 			Overstrike_bar = CARETSTYLE_OVERSTRIKE_BAR,
 			Overstrike_block = CARETSTYLE_OVERSTRIKE_BLOCK,
+			Curses = CARETSTYLE_CURSES,
 			Ins_mask = CARETSTYLE_INS_MASK,
 			Block_after = CARETSTYLE_BLOCK_AFTER,
 		}
@@ -1562,6 +1760,42 @@ namespace Rylogic.Scintilla
 			Default = SC_LINE_END_TYPE_DEFAULT,
 			Unicode = SC_LINE_END_TYPE_UNICODE,
 		}
+		public enum ERepresentationAppearance
+		{
+			__plain = SC_REPRESENTATION_PLAIN,
+			__blob = SC_REPRESENTATION_BLOB,
+			__colour = SC_REPRESENTATION_COLOUR,
+		}
+		public enum EEOLAnnotationVisible
+		{
+			Hidden = EOLANNOTATION_HIDDEN,
+			Standard = EOLANNOTATION_STANDARD,
+			Boxed = EOLANNOTATION_BOXED,
+			Stadium = EOLANNOTATION_STADIUM,
+			Flat_circle = EOLANNOTATION_FLAT_CIRCLE,
+			Angle_circle = EOLANNOTATION_ANGLE_CIRCLE,
+			Circle_flat = EOLANNOTATION_CIRCLE_FLAT,
+			Flats = EOLANNOTATION_FLATS,
+			Angle_flat = EOLANNOTATION_ANGLE_FLAT,
+			Circle_angle = EOLANNOTATION_CIRCLE_ANGLE,
+			Flat_angle = EOLANNOTATION_FLAT_ANGLE,
+			Angles = EOLANNOTATION_ANGLES,
+		}
+		public enum ESupports
+		{
+			Line_draws_final = SC_SUPPORTS_LINE_DRAWS_FINAL,
+			Pixel_divisions = SC_SUPPORTS_PIXEL_DIVISIONS,
+			Fractional_stroke_width = SC_SUPPORTS_FRACTIONAL_STROKE_WIDTH,
+			Translucent_stroke = SC_SUPPORTS_TRANSLUCENT_STROKE,
+			Pixel_modification = SC_SUPPORTS_PIXEL_MODIFICATION,
+			Thread_safe_measure_widths = SC_SUPPORTS_THREAD_SAFE_MEASURE_WIDTHS,
+		}
+		public enum ELineCharacterIndexType
+		{
+			None = SC_LINECHARACTERINDEX_NONE,
+			Utf32 = SC_LINECHARACTERINDEX_UTF32,
+			Utf16 = SC_LINECHARACTERINDEX_UTF16,
+		}
 		public enum ETypeProperty
 		{
 			Boolean = SC_TYPE_BOOLEAN,
@@ -1573,10 +1807,17 @@ namespace Rylogic.Scintilla
 		}
 		public enum EUpdate
 		{
+			None = SC_UPDATE_NONE,
 			Content = SC_UPDATE_CONTENT,
 			Selection = SC_UPDATE_SELECTION,
 			V_scroll = SC_UPDATE_V_SCROLL,
 			H_scroll = SC_UPDATE_H_SCROLL,
+		}
+		public enum EFocusChange
+		{
+			Change = SCEN_CHANGE,
+			Setfocus = SCEN_SETFOCUS,
+			Killfocus = SCEN_KILLFOCUS,
 		}
 		public enum EKeys
 		{
@@ -1624,150 +1865,11 @@ namespace Rylogic.Scintilla
 			Tentative_input = SC_CHARACTERSOURCE_TENTATIVE_INPUT,
 			Ime_result = SC_CHARACTERSOURCE_IME_RESULT,
 		}
-		public enum ELexer
-		{
-			Container = SCLEX_CONTAINER,
-			Null = SCLEX_NULL,
-			Python = SCLEX_PYTHON,
-			Cpp = SCLEX_CPP,
-			Html = SCLEX_HTML,
-			Xml = SCLEX_XML,
-			Perl = SCLEX_PERL,
-			Sql = SCLEX_SQL,
-			Vb = SCLEX_VB,
-			Properties = SCLEX_PROPERTIES,
-			Errorlist = SCLEX_ERRORLIST,
-			Makefile = SCLEX_MAKEFILE,
-			Batch = SCLEX_BATCH,
-			Xcode = SCLEX_XCODE,
-			Latex = SCLEX_LATEX,
-			Lua = SCLEX_LUA,
-			Diff = SCLEX_DIFF,
-			Conf = SCLEX_CONF,
-			Pascal = SCLEX_PASCAL,
-			Ave = SCLEX_AVE,
-			Ada = SCLEX_ADA,
-			Lisp = SCLEX_LISP,
-			Ruby = SCLEX_RUBY,
-			Eiffel = SCLEX_EIFFEL,
-			Eiffelkw = SCLEX_EIFFELKW,
-			Tcl = SCLEX_TCL,
-			Nncrontab = SCLEX_NNCRONTAB,
-			Bullant = SCLEX_BULLANT,
-			Vbscript = SCLEX_VBSCRIPT,
-			Baan = SCLEX_BAAN,
-			Matlab = SCLEX_MATLAB,
-			Scriptol = SCLEX_SCRIPTOL,
-			Asm = SCLEX_ASM,
-			Cppnocase = SCLEX_CPPNOCASE,
-			Fortran = SCLEX_FORTRAN,
-			F77 = SCLEX_F77,
-			Css = SCLEX_CSS,
-			Pov = SCLEX_POV,
-			Lout = SCLEX_LOUT,
-			Escript = SCLEX_ESCRIPT,
-			Ps = SCLEX_PS,
-			Nsis = SCLEX_NSIS,
-			Mmixal = SCLEX_MMIXAL,
-			Clw = SCLEX_CLW,
-			Clwnocase = SCLEX_CLWNOCASE,
-			Lot = SCLEX_LOT,
-			Yaml = SCLEX_YAML,
-			Tex = SCLEX_TEX,
-			Metapost = SCLEX_METAPOST,
-			Powerbasic = SCLEX_POWERBASIC,
-			Forth = SCLEX_FORTH,
-			Erlang = SCLEX_ERLANG,
-			Octave = SCLEX_OCTAVE,
-			Mssql = SCLEX_MSSQL,
-			Verilog = SCLEX_VERILOG,
-			Kix = SCLEX_KIX,
-			Gui4cli = SCLEX_GUI4CLI,
-			Specman = SCLEX_SPECMAN,
-			Au3 = SCLEX_AU3,
-			Apdl = SCLEX_APDL,
-			Bash = SCLEX_BASH,
-			Asn1 = SCLEX_ASN1,
-			Vhdl = SCLEX_VHDL,
-			Caml = SCLEX_CAML,
-			Blitzbasic = SCLEX_BLITZBASIC,
-			Purebasic = SCLEX_PUREBASIC,
-			Haskell = SCLEX_HASKELL,
-			Phpscript = SCLEX_PHPSCRIPT,
-			Tads3 = SCLEX_TADS3,
-			Rebol = SCLEX_REBOL,
-			Smalltalk = SCLEX_SMALLTALK,
-			Flagship = SCLEX_FLAGSHIP,
-			Csound = SCLEX_CSOUND,
-			Freebasic = SCLEX_FREEBASIC,
-			Innosetup = SCLEX_INNOSETUP,
-			Opal = SCLEX_OPAL,
-			Spice = SCLEX_SPICE,
-			D = SCLEX_D,
-			Cmake = SCLEX_CMAKE,
-			Gap = SCLEX_GAP,
-			Plm = SCLEX_PLM,
-			Progress = SCLEX_PROGRESS,
-			Abaqus = SCLEX_ABAQUS,
-			Asymptote = SCLEX_ASYMPTOTE,
-			R = SCLEX_R,
-			Magik = SCLEX_MAGIK,
-			Powershell = SCLEX_POWERSHELL,
-			Mysql = SCLEX_MYSQL,
-			Po = SCLEX_PO,
-			Tal = SCLEX_TAL,
-			Cobol = SCLEX_COBOL,
-			Tacl = SCLEX_TACL,
-			Sorcus = SCLEX_SORCUS,
-			Powerpro = SCLEX_POWERPRO,
-			Nimrod = SCLEX_NIMROD,
-			Sml = SCLEX_SML,
-			Markdown = SCLEX_MARKDOWN,
-			Txt2tags = SCLEX_TXT2TAGS,
-			A68k = SCLEX_A68K,
-			Modula = SCLEX_MODULA,
-			Coffeescript = SCLEX_COFFEESCRIPT,
-			Tcmd = SCLEX_TCMD,
-			Avs = SCLEX_AVS,
-			Ecl = SCLEX_ECL,
-			Oscript = SCLEX_OSCRIPT,
-			Visualprolog = SCLEX_VISUALPROLOG,
-			Literatehaskell = SCLEX_LITERATEHASKELL,
-			Sttxt = SCLEX_STTXT,
-			Kvirc = SCLEX_KVIRC,
-			Rust = SCLEX_RUST,
-			Dmap = SCLEX_DMAP,
-			As = SCLEX_AS,
-			Dmis = SCLEX_DMIS,
-			Registry = SCLEX_REGISTRY,
-			Bibtex = SCLEX_BIBTEX,
-			Srec = SCLEX_SREC,
-			Ihex = SCLEX_IHEX,
-			Tehex = SCLEX_TEHEX,
-			Json = SCLEX_JSON,
-			Edifact = SCLEX_EDIFACT,
-			Indent = SCLEX_INDENT,
-			Maxima = SCLEX_MAXIMA,
-			Stata = SCLEX_STATA,
-			Sas = SCLEX_SAS,
-			Nim = SCLEX_NIM,
-			Cil = SCLEX_CIL,
-			X12 = SCLEX_X12,
-			Dataflex = SCLEX_DATAFLEX,
-			Ldr = SCLEX_LDR,
-			Automatic = SCLEX_AUTOMATIC,
-		}
 		public enum EBidirectional
 		{
 			Disabled = SC_BIDIRECTIONAL_DISABLED,
 			L2r = SC_BIDIRECTIONAL_L2R,
 			R2l = SC_BIDIRECTIONAL_R2L,
-		}
-		public enum ELineCharacterIndexType
-		{
-			None = SC_LINECHARACTERINDEX_NONE,
-			Utf32 = SC_LINECHARACTERINDEX_UTF32,
-			Utf16 = SC_LINECHARACTERINDEX_UTF16,
 		}
 		#endregion
 		/* --Autogenerated -- end of section automatically generated from Scintilla.iface */

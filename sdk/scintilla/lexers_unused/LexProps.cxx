@@ -12,6 +12,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -23,7 +26,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 static inline bool AtEOL(Accessor &styler, Sci_PositionU i) {
 	return (styler[i] == '\n') ||
@@ -79,10 +82,9 @@ static void ColourisePropsLine(
 }
 
 static void ColourisePropsDoc(Sci_PositionU startPos, Sci_Position length, int, WordList *[], Accessor &styler) {
-	char lineBuffer[1024];
+	std::string lineBuffer;
 	styler.StartAt(startPos);
 	styler.StartSegment(startPos);
-	Sci_PositionU linePos = 0;
 	Sci_PositionU startLine = startPos;
 
 	// property lexer.props.allow.initial.spaces
@@ -92,17 +94,16 @@ static void ColourisePropsDoc(Sci_PositionU startPos, Sci_Position length, int, 
 	const bool allowInitialSpaces = styler.GetPropertyInt("lexer.props.allow.initial.spaces", 1) != 0;
 
 	for (Sci_PositionU i = startPos; i < startPos + length; i++) {
-		lineBuffer[linePos++] = styler[i];
-		if (AtEOL(styler, i) || (linePos >= sizeof(lineBuffer) - 1)) {
+		lineBuffer.push_back(styler[i]);
+		if (AtEOL(styler, i)) {
 			// End of line (or of line buffer) met, colourise it
-			lineBuffer[linePos] = '\0';
-			ColourisePropsLine(lineBuffer, linePos, startLine, i, styler, allowInitialSpaces);
-			linePos = 0;
+			ColourisePropsLine(lineBuffer.c_str(), lineBuffer.length(), startLine, i, styler, allowInitialSpaces);
+			lineBuffer.clear();
 			startLine = i + 1;
 		}
 	}
-	if (linePos > 0) {	// Last line does not have ending characters
-		ColourisePropsLine(lineBuffer, linePos, startLine, startPos + length - 1, styler, allowInitialSpaces);
+	if (lineBuffer.length() > 0) {	// Last line does not have ending characters
+		ColourisePropsLine(lineBuffer.c_str(), lineBuffer.length(), startLine, startPos + length - 1, styler, allowInitialSpaces);
 	}
 }
 
@@ -118,7 +119,7 @@ static void FoldPropsDoc(Sci_PositionU startPos, Sci_Position length, int, WordL
 	char chNext = styler[startPos];
 	int styleNext = styler.StyleAt(startPos);
 	bool headerPoint = false;
-	int lev;
+	int levelPrevious = (lineCurrent > 0) ? styler.LevelAt(lineCurrent - 1) : SC_FOLDLEVELBASE;
 
 	for (Sci_PositionU i = startPos; i < endPos; i++) {
 		const char ch = chNext;
@@ -133,27 +134,19 @@ static void FoldPropsDoc(Sci_PositionU startPos, Sci_Position length, int, WordL
 		}
 
 		if (atEOL) {
-			lev = SC_FOLDLEVELBASE;
-
-			if (lineCurrent > 0) {
-				const int levelPrevious = styler.LevelAt(lineCurrent - 1);
-
-				if (levelPrevious & SC_FOLDLEVELHEADERFLAG) {
-					lev = SC_FOLDLEVELBASE + 1;
-				} else {
-					lev = levelPrevious & SC_FOLDLEVELNUMBERMASK;
-				}
-			}
-
+			int lev = levelPrevious & SC_FOLDLEVELNUMBERMASK;
 			if (headerPoint) {
-				lev = SC_FOLDLEVELBASE;
+				lev = SC_FOLDLEVELBASE | SC_FOLDLEVELHEADERFLAG;
+				if (levelPrevious & SC_FOLDLEVELHEADERFLAG) {
+					// previous section is empty
+					styler.SetLevel(lineCurrent - 1, SC_FOLDLEVELBASE);
+				}
+			} else if (levelPrevious & SC_FOLDLEVELHEADERFLAG) {
+				lev += 1;
 			}
+
 			if (visibleChars == 0 && foldCompact)
 				lev |= SC_FOLDLEVELWHITEFLAG;
-
-			if (headerPoint) {
-				lev |= SC_FOLDLEVELHEADERFLAG;
-			}
 			if (lev != styler.LevelAt(lineCurrent)) {
 				styler.SetLevel(lineCurrent, lev);
 			}
@@ -161,23 +154,18 @@ static void FoldPropsDoc(Sci_PositionU startPos, Sci_Position length, int, WordL
 			lineCurrent++;
 			visibleChars = 0;
 			headerPoint = false;
+			levelPrevious = lev;
 		}
 		if (!isspacechar(ch))
 			visibleChars++;
 	}
 
-	if (lineCurrent > 0) {
-		const int levelPrevious = styler.LevelAt(lineCurrent - 1);
-		if (levelPrevious & SC_FOLDLEVELHEADERFLAG) {
-			lev = SC_FOLDLEVELBASE + 1;
-		} else {
-			lev = levelPrevious & SC_FOLDLEVELNUMBERMASK;
-		}
-	} else {
-		lev = SC_FOLDLEVELBASE;
+	int level = levelPrevious & SC_FOLDLEVELNUMBERMASK;
+	if (levelPrevious & SC_FOLDLEVELHEADERFLAG) {
+		level += 1;
 	}
 	int flagsNext = styler.LevelAt(lineCurrent);
-	styler.SetLevel(lineCurrent, lev | (flagsNext & ~SC_FOLDLEVELNUMBERMASK));
+	styler.SetLevel(lineCurrent, level | (flagsNext & ~SC_FOLDLEVELNUMBERMASK));
 }
 
 static const char *const emptyWordListDesc[] = {

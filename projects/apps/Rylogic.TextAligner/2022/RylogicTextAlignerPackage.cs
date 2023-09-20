@@ -151,6 +151,6 @@ namespace Rylogic.TextAligner
 	{
 		public const string guidRylogicTextAlignerPkgString = "26C3C30A-6050-4CBF-860E-6C5590AF95EF";
 		public const string guidRylogicTextAlignerCmdSetString = "E695E21D-48BB-4B3E-B442-DF64253991A5";
-		public static readonly Guid guidRylogicTextAlignerCmdSet = new Guid(guidRylogicTextAlignerCmdSetString);
+		public static readonly Guid guidRylogicTextAlignerCmdSet = new(guidRylogicTextAlignerCmdSetString);
 	}
 }

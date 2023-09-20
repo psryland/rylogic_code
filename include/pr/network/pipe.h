@@ -122,7 +122,8 @@ namespace pr
 			if (m_handle == nullptr)
 				return false;
 
-			bool res;
+			bool res = false;
+			DWORD xferd;
 
 			// Wait for a connection to the pipe
 			auto ovrlap = OVERLAPPED{};
@@ -135,7 +136,7 @@ namespace pr
 			switch (r)
 			{
 			case WAIT_OBJECT_0:
-				res = ::GetOverlappedResult(m_handle.get(), &ovrlap, nullptr, FALSE) != 0;
+				res = ::GetOverlappedResult(m_handle.get(), &ovrlap, &xferd, FALSE) != 0;
 				break;
 			case WAIT_TIMEOUT:
 				::CancelIo(m_handle.get());
@@ -144,8 +145,9 @@ namespace pr
 				return false;
 			case WAIT_FAILED:
 				pr::Throw(HRESULT_FROM_WIN32(m_last_error), "Named pipe connect failed");
+				break;
 			default:
-				throw std::exception(FmtS("Unknown return code (%d) during Named pipe connect", r));
+				throw std::runtime_error(FmtS("Unknown return code (%d) during Named pipe connect", r));
 			}
 
 			return res;

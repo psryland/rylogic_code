@@ -1072,7 +1072,7 @@ namespace pr::script
 		}
 		template <typename Type> bool Extract(Type& type)
 		{
-			static_assert(dependant_false<Type>, "Extract method not implemented for this type");
+			static_assert(dependent_false<Type>, "Extract method not implemented for this type");
 		}
 		template <typename Type> bool ExtractS(Type& type)
 		{
@@ -1293,7 +1293,8 @@ namespace pr::script
 				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Box.o2w.pos"), true);
 			}
 
-			char const str1[] = "*One { \"💩🍌\" \"💩🍌\" }";
+			auto const u8str1 = u8"*One { \"💩🍌\" \"💩🍌\" }";
+			char const* str1 = reinterpret_cast<char const*>(&u8str1[0]);
 			{
 				StringSrc src(str1); src.Limit(6);
 				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);

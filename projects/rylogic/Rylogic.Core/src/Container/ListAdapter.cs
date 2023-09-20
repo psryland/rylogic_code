@@ -131,7 +131,7 @@ namespace Rylogic.Container
 			// Drop any unused items
 			m_recycler.Clear();
 		}
-		private Dictionary<In, Out> m_recycler = new Dictionary<In, Out>();
+		private Dictionary<In, Out> m_recycler = new();
 
 		/// <summary>Return the source object associated with 'x'</summary>
 		public In Map(Out x) => List.FirstOrDefault(x => Equals(x.Dst, x)).Src;

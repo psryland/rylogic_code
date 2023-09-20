@@ -4,7 +4,6 @@
 //***********************************************
 // A 'wingui' control for scintilla
 #pragma once
-
 #include "scintilla/include/scintilla.h"
 #include "scintilla/include/scilexer.h"
 #include "pr/gui/wingui.h"
@@ -901,8 +900,8 @@ namespace pr::gui
 		int  Lexer              () const                                { return Cmd<int >(SCI_GETLEXER, 0, 0L); }
 		void Lexer              (int lexer)                             { return Cmd<void>(SCI_SETLEXER, lexer, 0L); }
 		void LexerLanguage      (const char * language)                 { return Cmd<void>(SCI_SETLEXERLANGUAGE, 0, language); }
-		void LoadLexerLibrary   (const char * path)                     { return Cmd<void>(SCI_LOADLEXERLIBRARY, 0, path); }
-		void Colourise          (uint32_t start, uint32_t end)                  { return Cmd<void>(SCI_COLOURISE, start, end); }
+		//void LoadLexerLibrary   (const char * path)                     { return Cmd<void>(SCI_LOADLEXERLIBRARY, 0, path); }
+		void Colourise          (uint32_t start, uint32_t end)          { return Cmd<void>(SCI_COLOURISE, start, end); }
 		int  Property           (const char * key, char * buf) const    { return Cmd<int >(SCI_GETPROPERTY, key, buf ); }
 		void Property           (const char * key, const char * value)  { return Cmd<void>(SCI_SETPROPERTY, key, value); }
 		int  GetPropertyExpanded(const char * key, char * buf) const    { return Cmd<int >(SCI_GETPROPERTYEXPANDED, key, buf); }
@@ -941,23 +940,19 @@ namespace pr::gui
 
 	private:
 
-		#pragma region Handlers
 		LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
 		{
 			switch (message)
 			{
-			case WM_CREATE:
-				#pragma region
+				case WM_CREATE:
 				{
 					m_snd = SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0));
-					m_ptr = sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0));
+					m_ptr = sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0));
 					break;
 				}
-				#pragma endregion
 			}
 			return Control::WndProc(message, wparam, lparam);
 		}
-		#pragma endregion
 	};
 }
 

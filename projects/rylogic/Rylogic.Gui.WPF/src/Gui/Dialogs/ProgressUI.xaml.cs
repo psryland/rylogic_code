@@ -315,7 +315,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>User state used to update the progress dialog</summary>
 		public struct UserState
 		{
-			public static UserState Empty = new UserState();
+			public static UserState Empty = new();
 
 			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
 			public double? FractionComplete { get; set; }

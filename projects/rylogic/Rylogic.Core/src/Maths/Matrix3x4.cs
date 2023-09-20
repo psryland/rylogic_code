@@ -30,11 +30,11 @@ namespace Rylogic.Maths
 			this.y = y;
 			this.z = z;
 		}
-		public m3x4(quat quaterion) :this()
+		public m3x4(quat quaternion) :this()
 		{
-			Debug.Assert(!Math_.FEql(quaterion, quat.Zero), "'quaternion' is a zero quaternion");
+			Debug.Assert(!Math_.FEql(quaternion, quat.Zero), "'quaternion' is a zero quaternion");
 
-			var q = quaterion;
+			var q = quaternion;
 			var q_lensq = q.LengthSq;
 			var s = 2.0f / q_lensq;
 
@@ -106,14 +106,9 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			return $"{x} \n{y} \n{z} \n";
-		}
-		public string ToString3x3()
-		{
-			return $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n";
-		}
+		public override string ToString() => $"{x} \n{y} \n{z} \n";
+		public string ToString3x3() => $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n";
+		public string ToString4x3() => $"{x.ToString4()} \n{y.ToString4()} \n{z.ToString4()} \n";
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
@@ -127,8 +122,8 @@ namespace Rylogic.Maths
 		}
 
 		// Static m3x4 types
-		public static readonly m3x4 Zero = new m3x4(v4.Zero, v4.Zero, v4.Zero);
-		public static readonly m3x4 Identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
+		public static readonly m3x4 Zero = new(v4.Zero, v4.Zero, v4.Zero);
+		public static readonly m3x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis);
 
 		// Operators
 		public override bool Equals(object? o)              { return o is m3x4 m && m == this; }
@@ -166,6 +161,65 @@ namespace Rylogic.Maths
 				new v4(Math_.Dot(lhs.x.xyz, rhs.x.xyz), Math_.Dot(lhs.y.xyz, rhs.x.xyz), Math_.Dot(lhs.z.xyz, rhs.x.xyz), 0f),
 				new v4(Math_.Dot(lhs.x.xyz, rhs.y.xyz), Math_.Dot(lhs.y.xyz, rhs.y.xyz), Math_.Dot(lhs.z.xyz, rhs.y.xyz), 0f),
 				new v4(Math_.Dot(lhs.x.xyz, rhs.z.xyz), Math_.Dot(lhs.y.xyz, rhs.z.xyz), Math_.Dot(lhs.z.xyz, rhs.z.xyz), 0f));
+		}
+
+		// Parse
+		public static m3x4 Parse3x3(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse3x3)}:string argument was null");
+			return TryParse3x3(s, out m3x4 result) ? result : throw new FormatException($"{nameof(Parse3x3)}: string argument does not represent a 3x3 matrix");
+		}
+		public static m3x4 Parse4x3(string s)
+		{
+			s = s ?? throw new ArgumentNullException("s", $"{nameof(Parse4x3)}:string argument was null");
+			return TryParse4x3(s, out m3x4 result) ? result : throw new FormatException($"{nameof(Parse4x3)}: string argument does not represent a 3x4 matrix");
+		}
+		public static bool TryParse3x3(string s, out m3x4 mat, bool row_major = true)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 9, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 9)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = row_major
+				? new m3x4(
+					new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), 0),
+					new v4(float.Parse(values[3]), float.Parse(values[4]), float.Parse(values[5]), 0),
+					new v4(float.Parse(values[6]), float.Parse(values[7]), float.Parse(values[8]), 0))
+				: new m3x4(
+					new v4(float.Parse(values[0]), float.Parse(values[3]), float.Parse(values[6]), 0),
+					new v4(float.Parse(values[1]), float.Parse(values[4]), float.Parse(values[7]), 0),
+					new v4(float.Parse(values[2]), float.Parse(values[5]), float.Parse(values[8]), 0));
+			return true;
+		}
+		public static bool TryParse4x3(string s, out m3x4 mat)
+		{
+			if (s == null)
+			{
+				mat = default;
+				return false;
+			}
+
+			var values = s.Split(new char[] { ' ', ',', '\t', '\n' }, 12, StringSplitOptions.RemoveEmptyEntries);
+			if (values.Length != 12)
+			{
+				mat = default;
+				return false;
+			}
+
+			mat = new m3x4(
+				new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3])),
+				new v4(float.Parse(values[4]), float.Parse(values[5]), float.Parse(values[6]), float.Parse(values[7])),
+				new v4(float.Parse(values[8]), float.Parse(values[9]), float.Parse(values[10]), float.Parse(values[11])));
+			return true;
 		}
 
 		/// <summary>
@@ -636,6 +690,27 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void TestQuatConversion()
 		{}
+
+		[Test]
+		public void Parse()
+		{
+			{
+				var mat = new m3x4(
+					new v4(1, 2, 3, 4),
+					new v4(4, 3, 2, 1),
+					new v4(4, 4, 4, 4));
+				var MAT = m3x4.Parse4x3(mat.ToString4x3());
+				Assert.Equals(mat, MAT);
+			}
+			{
+				var mat = new m3x4(
+					new v4(1, 2, 3, 0),
+					new v4(4, 3, 2, 0),
+					new v4(4, 4, 4, 0));
+				var MAT = m3x4.Parse3x3(mat.ToString3x3());
+				Assert.Equals(mat, MAT);
+			}
+		}
 	}
 }
 #endif

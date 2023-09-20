@@ -555,7 +555,7 @@ namespace Rylogic.Gfx
 			public Vertex(v4 vert, uint col) { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm; m_uv = tex; pad = 0; }
 
-			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
+			public override readonly string ToString() { return $"V:<{m_pos}> C:<{m_col:X8}>"; }
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -579,7 +579,7 @@ namespace Rylogic.Gfx
 				public ShaderCS m_cs;
 
 				/// <summary>Description</summary>
-				public string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
+				public readonly string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
 			}
 
 			[DebuggerDisplay("Smap"), StructLayout(LayoutKind.Sequential)]
@@ -620,22 +620,22 @@ namespace Rylogic.Gfx
 			public float m_relative_reflectivity;
 
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
-			public void Use(ERenderStep rstep, EShaderVS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderVS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_vs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_vs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderGS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderGS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_gs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_gs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderPS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderPS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_ps.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_ps.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderCS shdr, string parms)
+			public readonly void Use(ERenderStep rstep, EShaderCS shdr, string parms)
 			{
 				m_shader_map.m_rstep[(int)rstep].m_cs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_cs.parms = parms;
@@ -673,15 +673,15 @@ namespace Rylogic.Gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct ImageInfo
+		public readonly struct ImageInfo
 		{
-			public uint m_width;
-			public uint m_height;
-			public uint m_depth;
-			public uint m_mips;
-			public EFormat m_format; //DXGI_FORMAT
-			public uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
-			public float m_aspect => (float)m_width / m_height;
+			public readonly uint Width;
+			public readonly uint Height;
+			public readonly uint Depth;
+			public readonly uint Mips;
+			public readonly EFormat Format; //DXGI_FORMAT
+			public readonly uint ImageFileFormat;//D3DXIMAGE_FILEFORMAT
+			public readonly float Aspect => (float)Width / Height;
 		}
 
 		public class TextureOptions
@@ -967,8 +967,8 @@ namespace Rylogic.Gfx
 			public v4 m_ws_intercept;
 
 			// The object that was hit (or null)
-			public Object? HitObject => IsHit ? new Object(m_obj) : null;
-			private IntPtr m_obj;
+			public readonly Object? HitObject => IsHit ? new Object(m_obj) : null;
+			private readonly IntPtr m_obj;
 
 			/// <summary>The distance from the ray origin to the hit point</summary>
 			public float m_distance;
@@ -977,7 +977,7 @@ namespace Rylogic.Gfx
 			public ESnapType m_snap_type;
 
 			/// <summary>True if something was hit</summary>
-			public bool IsHit => m_obj != IntPtr.Zero;
+			public readonly bool IsHit => m_obj != IntPtr.Zero;
 		}
 
 		/// <summary>The viewport volume in render target space (i.e. not normalised)</summary>
@@ -1010,11 +1010,11 @@ namespace Rylogic.Gfx
 				ScreenW = sw;
 				ScreenH = sh;
 			}
-			public float Aspect => Width / Height;
-			public Size ToSize() => new Size((int)Math.Round(Width), (int)Math.Round(Height));
-			public SizeF ToSizeF() => new SizeF(Width, Height);
-			public Rectangle ToRect() => new Rectangle((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
-			public RectangleF ToRectF() => new RectangleF(X, Y, Width, Height);
+			public readonly float Aspect => Width / Height;
+			public readonly Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));
+			public readonly SizeF ToSizeF() => new(Width, Height);
+			public readonly Rectangle ToRect() => new((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
+			public readonly RectangleF ToRectF() => new(X, Y, Width, Height);
 		}
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
@@ -1050,7 +1050,7 @@ namespace Rylogic.Gfx
 			/// <summary>A comma or semicolon separated list of search directories</summary>
 			public string? IncludePaths
 			{
-				get => m_include_paths;
+				readonly get => m_include_paths;
 				set => m_include_paths = value;
 			}
 			[MarshalAs(UnmanagedType.LPWStr)]
@@ -1058,24 +1058,24 @@ namespace Rylogic.Gfx
 
 			/// <summary>An array of binary modules that contain resources</summary>
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-			public IntPtr[] m_modules;
-			public int m_module_count;
+			public readonly IntPtr[] m_modules;
+			public readonly int m_module_count;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DSceneChanged
+		public readonly struct View3DSceneChanged
 		{
 			/// <summary>How the scene was changed</summary>
-			public ESceneChanged ChangeType;
+			public readonly ESceneChanged ChangeType;
 
 			/// <summary>The context ids involved in the change</summary>
-			public Guid[] ContextIds => Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count);
-			private IntPtr m_ctx_ids;
-			private int m_count;
+			public readonly Guid[] ContextIds => Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count);
+			private readonly IntPtr m_ctx_ids;
+			private readonly int m_count;
 
 			/// <summary>The object that changed (for single object changes only)</summary>
-			public Object? Object => m_object != IntPtr.Zero ? new Object(m_object) : null;
-			private HObject m_object;
+			public readonly Object? Object => m_object != IntPtr.Zero ? new Object(m_object) : null;
+			private readonly HObject m_object;
 		}
 
 		#endregion
@@ -1678,13 +1678,13 @@ namespace ldr
 		private static extern Guid View3D_ObjectContextIdGet(HObject obj);
 		[DllImport(Dll, CharSet = CharSet.Unicode)]
 		private static extern HObject View3D_ObjectCreateLdr([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern HObject View3D_ObjectCreateP3DFile([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, [MarshalAs(UnmanagedType.LPWStr)] string p3d_filepath, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern HObject View3D_ObjectCreateP3DStream([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int size, IntPtr p3d_data, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern HObject View3D_ObjectCreateEditCB([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
 		[DllImport(Dll)]
 		private static extern HObject View3D_ObjectCreateInstance(HObject obj);
@@ -1698,7 +1698,7 @@ namespace ldr
 		private static extern HObject View3D_ObjectGetRoot(HObject obj);
 		[DllImport(Dll)]
 		private static extern HObject View3D_ObjectGetParent(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern HObject View3D_ObjectGetChildByName(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
 		[DllImport(Dll)]
 		private static extern HObject View3D_ObjectGetChildByIndex(HObject obj, int index);
@@ -1709,58 +1709,58 @@ namespace ldr
 		[DllImport(Dll, CharSet = CharSet.Unicode)]
 		[return: MarshalAs(UnmanagedType.BStr)]
 		private static extern string View3D_ObjectNameGetBStr(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectNameSet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
 		[DllImport(Dll, CharSet = CharSet.Unicode)]
 		[return: MarshalAs(UnmanagedType.BStr)]
 		private static extern string View3D_ObjectTypeGetBStr(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern m4x4 View3D_ObjectO2WGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectO2WSet(HObject obj, ref m4x4 o2w, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern m4x4 View3D_ObjectO2PGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern bool View3D_ObjectVisibilityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectVisibilitySet(HObject obj, bool visible, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern EFlags View3D_ObjectFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectFlagsSet(HObject obj, EFlags flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern ESortGroup View3D_ObjectSortGroupGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectSortGroupSet(HObject obj, ESortGroup group, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern ENuggetFlag View3D_ObjectNuggetFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectNuggetFlagsSet(HObject obj, ENuggetFlag flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern Colour32 View3D_ObjectNuggetTintGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectNuggetTintSet(HObject obj, Colour32 colour, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectColourSet(HObject obj, uint colour, uint mask, [MarshalAs(UnmanagedType.LPStr)] string? name, EColourOp op, float op_value);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern float View3D_ObjectReflectivityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectReflectivitySet(HObject obj, float reflectivity, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern bool View3D_ObjectWireframeGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectWireframeSet(HObject obj, bool wireframe, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern bool View3D_ObjectNormalsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectNormalsSet(HObject obj, bool show, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectResetColour(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
+		[DllImport(Dll, CharSet = CharSet.Ansi)]
 		private static extern void View3D_ObjectSetTexture(HObject obj, HTexture tex, [MarshalAs(UnmanagedType.LPStr)] string? name);
 		[DllImport(Dll)]
 		private static extern BBox View3D_ObjectBBoxMS(HObject obj, bool include_children);

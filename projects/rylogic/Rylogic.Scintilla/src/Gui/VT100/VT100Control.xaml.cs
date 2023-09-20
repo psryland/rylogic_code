@@ -260,7 +260,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Shared-default buffer. This should only be used for initialisation, instances of the VT100Control should set their own Buffer instance</summary>
-		private static readonly VT100.Buffer DefaultBuffer = new VT100.Buffer(new VT100.Settings());
+		private static readonly VT100.Buffer DefaultBuffer = new(new VT100.Settings());
 		public static readonly DependencyProperty BufferProperty = Gui_.DPRegister<VT100Control>(nameof(Buffer), DefaultBuffer, Gui_.EDPFlags.None);
 
 		/// <summary>The terminal context menu</summary>

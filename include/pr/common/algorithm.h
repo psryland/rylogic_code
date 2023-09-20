@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // Algorithm
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <unordered_map>
+#include <iterator>
 #include <set>
 #include <map>
 #include <span>

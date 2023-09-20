@@ -1,5 +1,8 @@
 // Scintilla source code edit control
+// @file LexASY.cxx
 //Author: instanton (email: soft_share<at>126<dot>com)
+// This lexer is for the Asymptote vector graphics language
+// https://en.wikipedia.org/wiki/Asymptote_(vector_graphics_language)
 // The License.txt file describes the conditions under which this software may be distributed.
 
 #include <stdlib.h>
@@ -7,6 +10,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+
+#include <string>
+#include <string_view>
 
 #include "ILexer.h"
 #include "Scintilla.h"
@@ -19,7 +25,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 static void ColouriseAsyDoc(Sci_PositionU startPos, Sci_Position length, int initStyle,
 		WordList *keywordlists[], Accessor &styler) {

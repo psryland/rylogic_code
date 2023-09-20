@@ -148,21 +148,21 @@ namespace Rylogic.Maths
 			return new double[] { p.x, p.y, p.z, p.w };
 		}
 
-		public v4 w0 => new v4(x, y, z, 0);
-		public v4 w1 => new v4(x, y, z, 1);
+		public v4 w0 => new(x, y, z, 0);
+		public v4 w1 => new(x, y, z, 1);
 
 		// Static v4 types
-		public readonly static v4 Zero = new v4(0f, 0f, 0f, 0f);
-		public readonly static v4 XAxis = new v4(1f, 0f, 0f, 0f);
-		public readonly static v4 YAxis = new v4(0f, 1f, 0f, 0f);
-		public readonly static v4 ZAxis = new v4(0f, 0f, 1f, 0f);
-		public readonly static v4 WAxis = new v4(0f, 0f, 0f, 1f);
-		public readonly static v4 Origin = new v4(0f, 0f, 0f, 1f);
-		public readonly static v4 One = new v4(1f, 1f, 1f, 1f);
-		public readonly static v4 NaN = new v4(float.NaN, float.NaN, float.NaN, float.NaN);
-		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
-		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
-		public readonly static v4 TinyF = new v4(Math_.TinyF, Math_.TinyF, Math_.TinyF, Math_.TinyF);
+		public readonly static v4 Zero = new(0f, 0f, 0f, 0f);
+		public readonly static v4 XAxis = new(1f, 0f, 0f, 0f);
+		public readonly static v4 YAxis = new(0f, 1f, 0f, 0f);
+		public readonly static v4 ZAxis = new(0f, 0f, 1f, 0f);
+		public readonly static v4 WAxis = new(0f, 0f, 0f, 1f);
+		public readonly static v4 Origin = new(0f, 0f, 0f, 1f);
+		public readonly static v4 One = new(1f, 1f, 1f, 1f);
+		public readonly static v4 NaN = new(float.NaN, float.NaN, float.NaN, float.NaN);
+		public readonly static v4 MinValue = new(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
+		public readonly static v4 MaxValue = new(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
+		public readonly static v4 TinyF = new(Math_.TinyF, Math_.TinyF, Math_.TinyF, Math_.TinyF);
 
 		/// <summary>Operators</summary>
 		public static v4 operator +(v4 vec)

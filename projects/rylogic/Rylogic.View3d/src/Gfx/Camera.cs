@@ -141,6 +141,13 @@ namespace Rylogic.Gfx
 				View3D_CameraClipPlanesSet(m_window.Handle, near, far, focus_relative);
 			}
 
+			// Get the normalized from the camera relative to the clip planes
+			public float NormalisedDistance(float dist_from_camera)
+			{
+				var (near, far) = ClipPlanes(false);
+				return (dist_from_camera - near) / (far - near);
+			}
+
 			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
 			public v4 FocusPoint
 			{
@@ -325,8 +332,8 @@ namespace Rylogic.Gfx
 				return View3D_MouseBtnToNavOp(mk);
 			}
 
-			/// <summary></summary>
-			private string Description => $"{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}";
+			/// <summary>The camera status as a description</summary>
+			public string Description => $"{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}";
 
 			#region Equals
 			public static bool operator ==(Camera? lhs, Camera? rhs)

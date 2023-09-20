@@ -1,5 +1,5 @@
 // Scintilla source code edit control
-/** @file LexFlagShip.cxx
+/** @file LexFlagship.cxx
  ** Lexer for Harbour and FlagShip.
  ** (Syntactically compatible to other xBase dialects, like Clipper, dBase, Clip, FoxPro etc.)
  **/
@@ -15,6 +15,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -26,7 +29,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 // Extended to accept accented characters
 static inline bool IsAWordChar(int ch)

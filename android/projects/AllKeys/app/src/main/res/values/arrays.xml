@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="key_groups">
+        <item>A, B, C, D, E, F, G</item>
+        <item>A♭, B♭, D♭, E♭, G♭</item>
+        <item>A♯, C♯, D♯, F♯, G♯</item>
+        <item>B♯, C♭, E♯, F♭</item>
+    </string-array>
+    <string-array name="key_groups_defaults">
+        <item>A, B, C, D, E, F, G</item>
+        <item>A♭, B♭, D♭, E♭, G♭</item>
+        <item>A♯, C♯, D♯, F♯, G♯</item>
+    </string-array>
+
+    <string-array name="chords">
+        <item>7</item>
+        <item>Δ7</item>
+        <item>m7</item>
+        <item>ø7</item>
+        <item>ø</item>
+        <item>alt</item>
+        <item>mΔ7</item>
+        <item>+</item>
+        <item>+7</item>
+        <item>sus</item>
+        <item>sus2</item>
+        <item>m6</item>
+    </string-array>
+    <string-array name="chords_defaults">
+        <item>7</item>
+        <item>Δ7</item>
+        <item>m7</item>
+        <item>ø7</item>
+    </string-array>
+
+</resources>

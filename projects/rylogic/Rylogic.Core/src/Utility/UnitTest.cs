@@ -18,6 +18,12 @@ using Rylogic.Utility;
 
 namespace Rylogic.UnitTests
 {
+	// How to debug:
+	//  - Change the OutputType to "WinExe" in the project file
+	//  - Set the DLL as the startup project
+	//  - Put a breakpoint in the test you care about
+	//  - Hit F5.
+		
 	public class UnitTest
 	{
 		#if PR_UNITTESTS

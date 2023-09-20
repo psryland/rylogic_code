@@ -73,7 +73,7 @@ namespace Rylogic.TextAligner
 				NotifyPropertyChanged(nameof(LineIgnorePattern));
 			}
 		}
-		private AlignPattern m_line_ignore_pattern = new AlignPattern();
+		private AlignPattern m_line_ignore_pattern = new();
 
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()
@@ -95,7 +95,7 @@ namespace Rylogic.TextAligner
 					new AlignPattern(EPattern.Substring, @"!=", 0, 2),
 					new AlignPattern(EPattern.Substring, @"<=", 0, 2),
 					new AlignPattern(EPattern.Substring, @">=", 0, 2),
-					new AlignPattern(EPattern.RegularExpression, @"(?<!=)>(?!=)", 0, 1, "> not preceded or followed by ="),
+					new AlignPattern(EPattern.RegularExpression, @"(?<![=-])>(?!=)", 0, 1, "> not preceded by =,- or followed by ="),
 					new AlignPattern(EPattern.RegularExpression, @"(?<!=)<(?!=)", 0, 1, "< not preceded or followed by =")));
 
 				Groups.Add(new AlignGroup("Boolean operators", 1,

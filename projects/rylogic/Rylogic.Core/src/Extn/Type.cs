@@ -180,7 +180,7 @@ namespace Rylogic.Extn
 				//return types.FirstOrDefault();
 			}
 		}
-		private static readonly Cache<string, Type> m_type_resolve_cache = new Cache<string, Type>(100);
+		private static readonly Cache<string, Type> m_type_resolve_cache = new(100);
 
 		/// <summary>Returns all inherited members for a type (including private members)</summary>
 		public static IEnumerable<MemberInfo> AllMembers(this Type type, BindingFlags flags)

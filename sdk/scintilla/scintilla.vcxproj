@@ -66,8 +66,11 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py</Command>
+      <Command>
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexFacer.py
+      </Command>
     </PreBuildEvent>
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
@@ -84,13 +87,17 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
+      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Lib>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py</Command>
+      <Command>
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexFacer.py
+      </Command>
     </PreBuildEvent>
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
@@ -109,8 +116,11 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py</Command>
+      <Command>
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexFacer.py
+      </Command>
     </PreBuildEvent>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -132,8 +142,11 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PreBuildEvent>
-      <Command>py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py</Command>
+      <Command>
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexFacer.py
+      </Command>
     </PreBuildEvent>
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
@@ -147,52 +160,6 @@ py $(ProjectDir)scripts\HFacer.py</Command>
   <!-- Source -->
   <ItemGroup>
     <ResourceCompile Include="win32\ScintRes.rc" />
-    <ClCompile Include="lexers\LexCPP.cxx" />
-    <ClCompile Include="lexers\LexLdr.cxx" />
-    <ClCompile Include="lexlib\Accessor.cxx" />
-    <ClCompile Include="lexlib\CharacterCategory.cxx" />
-    <ClCompile Include="lexlib\CharacterSet.cxx" />
-    <ClCompile Include="lexlib\DefaultLexer.cxx" />
-    <ClCompile Include="lexlib\LexerBase.cxx" />
-    <ClCompile Include="lexlib\LexerModule.cxx" />
-    <ClCompile Include="lexlib\LexerSimple.cxx" />
-    <ClCompile Include="lexlib\PropSetSimple.cxx" />
-    <ClCompile Include="lexlib\StyleContext.cxx" />
-    <ClCompile Include="lexlib\WordList.cxx" />
-    <ClCompile Include="src\AutoComplete.cxx" />
-    <ClCompile Include="src\CallTip.cxx" />
-    <ClCompile Include="src\CaseConvert.cxx" />
-    <ClCompile Include="src\CaseFolder.cxx" />
-    <ClCompile Include="src\Catalogue.cxx" />
-    <ClCompile Include="src\CellBuffer.cxx" />
-    <ClCompile Include="src\CharClassify.cxx" />
-    <ClCompile Include="src\ContractionState.cxx" />
-    <ClCompile Include="src\DBCS.cxx" />
-    <ClCompile Include="src\Decoration.cxx" />
-    <ClCompile Include="src\Document.cxx" />
-    <ClCompile Include="src\EditModel.cxx" />
-    <ClCompile Include="src\Editor.cxx" />
-    <ClCompile Include="src\EditView.cxx" />
-    <ClCompile Include="src\ExternalLexer.cxx" />
-    <ClCompile Include="src\Indicator.cxx" />
-    <ClCompile Include="src\KeyMap.cxx" />
-    <ClCompile Include="src\LineMarker.cxx" />
-    <ClCompile Include="src\MarginView.cxx" />
-    <ClCompile Include="src\PerLine.cxx" />
-    <ClCompile Include="src\PositionCache.cxx" />
-    <ClCompile Include="src\RESearch.cxx" />
-    <ClCompile Include="src\RunStyles.cxx" />
-    <ClCompile Include="src\ScintillaBase.cxx" />
-    <ClCompile Include="src\Selection.cxx" />
-    <ClCompile Include="src\Style.cxx" />
-    <ClCompile Include="src\UniConversion.cxx" />
-    <ClCompile Include="src\UniqueString.cxx" />
-    <ClCompile Include="src\ViewStyle.cxx" />
-    <ClCompile Include="src\XPM.cxx" />
-    <ClCompile Include="win32\HanjaDic.cxx" />
-    <ClCompile Include="win32\PlatWin.cxx" />
-    <ClCompile Include="win32\ScintillaDLL.cxx" />
-    <ClCompile Include="win32\ScintillaWin.cxx" />
     <ClInclude Include="include\ILexer.h" />
     <ClInclude Include="include\ILoader.h" />
     <ClInclude Include="include\Platform.h" />
@@ -200,46 +167,116 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClInclude Include="include\Scintilla.h" />
     <ClInclude Include="include\ScintillaWidget.h" />
     <ClInclude Include="include\Sci_Position.h" />
-    <ClInclude Include="lexlib\Accessor.h" />
-    <ClInclude Include="lexlib\CharacterCategory.h" />
-    <ClInclude Include="lexlib\CharacterSet.h" />
-    <ClInclude Include="lexlib\DefaultLexer.h" />
-    <ClInclude Include="lexlib\LexerBase.h" />
-    <ClInclude Include="lexlib\LexerModule.h" />
-    <ClInclude Include="lexlib\LexerSimple.h" />
-    <ClInclude Include="lexlib\PropSetSimple.h" />
-    <ClInclude Include="lexlib\StyleContext.h" />
-    <ClInclude Include="lexlib\WordList.h" />
+    <ClCompile Include="src\AutoComplete.cxx" />
     <ClInclude Include="src\AutoComplete.h" />
+    <ClCompile Include="src\CallTip.cxx" />
     <ClInclude Include="src\CallTip.h" />
+    <ClCompile Include="src\CaseConvert.cxx" />
     <ClInclude Include="src\CaseConvert.h" />
+    <ClCompile Include="src\CaseFolder.cxx" />
     <ClInclude Include="src\CaseFolder.h" />
-    <ClInclude Include="src\Catalogue.h" />
+    <ClCompile Include="src\CellBuffer.cxx" />
     <ClInclude Include="src\CellBuffer.h" />
+    <ClCompile Include="src\ChangeHistory.cxx" />
+    <ClInclude Include="src\ChangeHistory.h" />
+    <ClCompile Include="src\CharacterCategoryMap.cxx" />
+    <ClInclude Include="src\CharacterCategoryMap.h" />
+    <ClCompile Include="src\CharacterType.cxx" />
+    <ClInclude Include="src\CharacterType.h" />
+    <ClCompile Include="src\CharClassify.cxx" />
     <ClInclude Include="src\CharClassify.h" />
+    <ClCompile Include="src\ContractionState.cxx" />
     <ClInclude Include="src\ContractionState.h" />
+    <ClCompile Include="src\DBCS.cxx" />
     <ClInclude Include="src\DBCS.h" />
+    <ClInclude Include="src\Debugging.h" />
+    <ClCompile Include="src\Decoration.cxx" />
     <ClInclude Include="src\Decoration.h" />
+    <ClCompile Include="src\Document.cxx" />
     <ClInclude Include="src\Document.h" />
+    <ClCompile Include="src\EditModel.cxx" />
     <ClInclude Include="src\EditModel.h" />
+    <ClCompile Include="src\Editor.cxx" />
     <ClInclude Include="src\Editor.h" />
+    <ClCompile Include="src\EditView.cxx" />
     <ClInclude Include="src\EditView.h" />
-    <ClInclude Include="src\ExternalLexer.h" />
+    <ClInclude Include="src\ElapsedPeriod.h" />
+    <ClCompile Include="src\Geometry.cxx" />
+    <ClInclude Include="src\Geometry.h" />
+    <ClCompile Include="src\Indicator.cxx" />
     <ClInclude Include="src\Indicator.h" />
+    <ClCompile Include="src\KeyMap.cxx" />
     <ClInclude Include="src\KeyMap.h" />
+    <ClCompile Include="src\LineMarker.cxx" />
     <ClInclude Include="src\LineMarker.h" />
+    <ClCompile Include="src\MarginView.cxx" />
     <ClInclude Include="src\MarginView.h" />
+    <ClInclude Include="src\Partitioning.h" />
+    <ClCompile Include="src\PerLine.cxx" />
     <ClInclude Include="src\PerLine.h" />
+    <ClInclude Include="src\Platform.h" />
+    <ClInclude Include="src\Position.h" />
+    <ClCompile Include="src\PositionCache.cxx" />
     <ClInclude Include="src\PositionCache.h" />
+    <ClCompile Include="src\RESearch.cxx" />
     <ClInclude Include="src\RESearch.h" />
+    <ClCompile Include="src\RunStyles.cxx" />
     <ClInclude Include="src\RunStyles.h" />
+    <ClCompile Include="src\ScintillaBase.cxx" />
     <ClInclude Include="src\ScintillaBase.h" />
+    <ClCompile Include="src\Selection.cxx" />
     <ClInclude Include="src\Selection.h" />
+    <ClInclude Include="src\SparseVector.h" />
+    <ClInclude Include="src\SplitVector.h" />
+    <ClCompile Include="src\Style.cxx" />
     <ClInclude Include="src\Style.h" />
+    <ClCompile Include="src\UniConversion.cxx" />
     <ClInclude Include="src\UniConversion.h" />
+    <ClCompile Include="src\UniqueString.cxx" />
     <ClInclude Include="src\UniqueString.h" />
+    <ClCompile Include="src\ViewStyle.cxx" />
     <ClInclude Include="src\ViewStyle.h" />
+    <ClCompile Include="src\XPM.cxx" />
     <ClInclude Include="src\XPM.h" />
+    <ClCompile Include="win32\HanjaDic.cxx" />
+    <ClInclude Include="win32\HanjaDic.h" />
+    <ClCompile Include="win32\PlatWin.cxx" />
+    <ClInclude Include="win32\PlatWin.h" />
+    <ClCompile Include="win32\ScintillaDLL.cxx" />
+    <ClCompile Include="win32\ScintillaWin.cxx" />
+    <ClInclude Include="win32\ScintillaWin.h" />
+    <ClInclude Include="win32\WinTypes.h" />
+    <ClCompile Include="lexers\LexCPP.cxx" />
+    <ClCompile Include="lexers\LexLdr.cxx" />
+    <ClCompile Include="lexlib\Accessor.cxx" />
+    <ClInclude Include="lexlib\Accessor.h" />
+    <ClInclude Include="lexlib\CatalogueModules.h" />
+    <ClCompile Include="lexlib\CharacterCategory.cxx" />
+    <ClInclude Include="lexlib\CharacterCategory.h" />
+    <ClCompile Include="lexlib\CharacterSet.cxx" />
+    <ClInclude Include="lexlib\CharacterSet.h" />
+    <ClCompile Include="lexlib\DefaultLexer.cxx" />
+    <ClInclude Include="lexlib\DefaultLexer.h" />
+    <ClCompile Include="lexlib\LexAccessor.cxx" />
+    <ClInclude Include="lexlib\LexAccessor.h" />
+    <ClCompile Include="lexlib\LexerBase.cxx" />
+    <ClInclude Include="lexlib\LexerBase.h" />
+    <ClCompile Include="lexlib\LexerModule.cxx" />
+    <ClInclude Include="lexlib\LexerModule.h" />
+    <ClCompile Include="lexlib\LexerNoExceptions.cxx" />
+    <ClInclude Include="lexlib\LexerNoExceptions.h" />
+    <ClCompile Include="lexlib\LexerSimple.cxx" />
+    <ClInclude Include="lexlib\LexerSimple.h" />
+    <ClInclude Include="lexlib\OptionSet.h" />
+    <ClCompile Include="lexlib\PropSetSimple.cxx" />
+    <ClInclude Include="lexlib\PropSetSimple.h" />
+    <ClInclude Include="lexlib\SparseState.h" />
+    <ClInclude Include="lexlib\StringCopy.h" />
+    <ClCompile Include="lexlib\StyleContext.cxx" />
+    <ClInclude Include="lexlib\StyleContext.h" />
+    <ClInclude Include="lexlib\SubStyles.h" />
+    <ClCompile Include="lexlib\WordList.cxx" />
+    <ClInclude Include="lexlib\WordList.h" />
     <None Include="include\SciLexer.cs" />
     <None Include="include\Scintilla.cs" />
     <None Include="include\Scintilla.iface" />

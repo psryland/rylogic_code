@@ -1,6 +1,6 @@
 // Scintilla source code edit control
 
-// File: LexMetapost.cxx - general context conformant metapost coloring scheme
+// @file LexMetapost.cxx - general context conformant metapost coloring scheme
 // Author: Hans Hagen - PRAGMA ADE - Hasselt NL - www.pragma-ade.com
 // Version: September 28, 2003
 // Modified by instanton: July 10, 2007
@@ -19,6 +19,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -30,7 +33,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 // val SCE_METAPOST_DEFAULT = 0
 // val SCE_METAPOST_SPECIAL = 1
@@ -177,7 +180,8 @@ static void ColouriseMETAPOSTDoc(
 	}
 
 	WordList &keywords  = *keywordlists[0] ;
-	WordList &keywords2 = *keywordlists[extraInterface-1] ;
+	WordList kwEmpty;
+	WordList &keywords2 = (extraInterface > 0) ? *keywordlists[extraInterface - 1] : kwEmpty;
 
 	StyleContext sc(startPos, length, SCE_METAPOST_TEXT, styler) ;
 

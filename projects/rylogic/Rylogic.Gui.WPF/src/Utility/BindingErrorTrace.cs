@@ -89,7 +89,7 @@ namespace Rylogic.Gui.WPF
 			m_listener = null;
 		}
 		private static BindingErrorTraceListener? m_listener;
-		private StringBuilder m_message = new StringBuilder();
+		private StringBuilder m_message = new();
 
 		/// <summary></summary>
 		public override void Write(string? message)

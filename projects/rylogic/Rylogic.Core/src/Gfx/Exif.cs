@@ -417,7 +417,7 @@ namespace Rylogic.Gfx
 		{
 			public const int FieldDataSizeInBytes = 4;
 			public const int SizeInBytes = 12;
-			public readonly static Field Null = new Field();
+			public readonly static Field Null = new();
 
 			public Field()
 				: this(Tag.Invalid, TiffDataType.Undefined, 0, new byte[FieldDataSizeInBytes])
@@ -592,7 +592,7 @@ namespace Rylogic.Gfx
 		/// <summary>Common implementation of Exif data access</summary>
 		private abstract class ExifDataBase<Elem> :IExifData ,IExifDataInternal
 		{
-			protected readonly Dictionary<Tag, Elem> m_ifd = new Dictionary<Tag, Elem>();
+			protected readonly Dictionary<Tag, Elem> m_ifd = new();
 			protected ExifDataBase<Elem>? m_sub_ifd;
 			protected ExifDataBase<Elem>? m_gps_ifd;
 			protected ExifDataBase<Elem>? m_nxt_ifd;

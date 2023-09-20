@@ -12,6 +12,9 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ILexer.h"
 #include "Scintilla.h"
 #include "SciLexer.h"
@@ -23,7 +26,7 @@
 #include "CharacterSet.h"
 #include "LexerModule.h"
 
-using namespace Scintilla;
+using namespace Lexilla;
 
 // Extended to accept accented characters
 static inline bool IsAWordChar(int ch) {
@@ -82,8 +85,6 @@ static void ColourisePowerShellDoc(Sci_PositionU startPos, Sci_Position length, 
 			// This is a single quote string
 			if (sc.ch == '\'') {
 				sc.ForwardSetState(SCE_POWERSHELL_DEFAULT);
-			} else if (sc.ch == '`') {
-				sc.Forward(); // skip next escaped character
 			}
 		} else if (sc.state == SCE_POWERSHELL_HERE_STRING) {
 			// This is a doubles quotes here-string

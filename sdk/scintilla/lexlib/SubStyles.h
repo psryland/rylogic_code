@@ -8,13 +8,14 @@
 #ifndef SUBSTYLES_H
 #define SUBSTYLES_H
 
-namespace Scintilla {
+namespace Lexilla {
 
 class WordClassifier {
 	int baseStyle;
 	int firstStyle;
 	int lenStyles;
-	std::map<std::string, int> wordToStyle;
+	using WordStyleMap = std::map<std::string, int, std::less<>>;
+	WordStyleMap wordToStyle;
 
 public:
 
@@ -27,42 +28,42 @@ public:
 		wordToStyle.clear();
 	}
 
-	int Base() const {
+	int Base() const noexcept {
 		return baseStyle;
 	}
 
-	int Start() const {
+	int Start() const noexcept {
 		return firstStyle;
 	}
 
-	int Last() const {
+	int Last() const noexcept {
 		return firstStyle + lenStyles - 1;
 	}
 
-	int Length() const {
+	int Length() const noexcept {
 		return lenStyles;
 	}
 
-	void Clear() {
+	void Clear() noexcept {
 		firstStyle = 0;
 		lenStyles = 0;
 		wordToStyle.clear();
 	}
 
-	int ValueFor(const std::string &s) const {
-		std::map<std::string, int>::const_iterator it = wordToStyle.find(s);
+	int ValueFor(std::string_view s) const {
+		WordStyleMap::const_iterator it = wordToStyle.find(s);
 		if (it != wordToStyle.end())
 			return it->second;
 		else
 			return -1;
 	}
 
-	bool IncludesStyle(int style) const {
+	bool IncludesStyle(int style) const noexcept {
 		return (style >= firstStyle) && (style < (firstStyle + lenStyles));
 	}
 
-	void RemoveStyle(int style) {
-		std::map<std::string, int>::iterator it = wordToStyle.begin();
+	void RemoveStyle(int style) noexcept {
+		WordStyleMap::iterator it = wordToStyle.begin();
 		while (it != wordToStyle.end()) {
 			if (it->second == style) {
 				it = wordToStyle.erase(it);
@@ -74,6 +75,8 @@ public:
 
 	void SetIdentifiers(int style, const char *identifiers) {
 		RemoveStyle(style);
+		if (!identifiers)
+			return;
 		while (*identifiers) {
 			const char *cpSpace = identifiers;
 			while (*cpSpace && !(*cpSpace == ' ' || *cpSpace == '\t' || *cpSpace == '\r' || *cpSpace == '\n'))
@@ -98,7 +101,7 @@ class SubStyles {
 	int allocated;
 	std::vector<WordClassifier> classifiers;
 
-	int BlockFromBaseStyle(int baseStyle) const {
+	int BlockFromBaseStyle(int baseStyle) const noexcept {
 		for (int b=0; b < classifications; b++) {
 			if (baseStyle == baseStyles[b])
 				return b;
@@ -106,10 +109,10 @@ class SubStyles {
 		return -1;
 	}
 
-	int BlockFromStyle(int style) const {
+	int BlockFromStyle(int style) const noexcept {
 		int b = 0;
-		for (std::vector<WordClassifier>::const_iterator it=classifiers.begin(); it != classifiers.end(); ++it) {
-			if (it->IncludesStyle(style))
+		for (const WordClassifier &wc : classifiers) {
+			if (wc.IncludesStyle(style))
 				return b;
 			b++;
 		}
@@ -145,17 +148,17 @@ public:
 		}
 	}
 
-	int Start(int styleBase) {
+	int Start(int styleBase) noexcept {
 		const int block = BlockFromBaseStyle(styleBase);
 		return (block >= 0) ? classifiers[block].Start() : -1;
 	}
 
-	int Length(int styleBase) {
+	int Length(int styleBase) noexcept {
 		const int block = BlockFromBaseStyle(styleBase);
 		return (block >= 0) ? classifiers[block].Length() : 0;
 	}
 
-	int BaseStyle(int subStyle) const {
+	int BaseStyle(int subStyle) const noexcept {
 		const int block = BlockFromStyle(subStyle);
 		if (block >= 0)
 			return classifiers[block].Base();
@@ -163,24 +166,24 @@ public:
 			return subStyle;
 	}
 
-	int DistanceToSecondaryStyles() const {
+	int DistanceToSecondaryStyles() const noexcept {
 		return secondaryDistance;
 	}
 
-	int FirstAllocated() const {
+	int FirstAllocated() const noexcept {
 		int start = 257;
-		for (std::vector<WordClassifier>::const_iterator it = classifiers.begin(); it != classifiers.end(); ++it) {
-			if (start > it->Start())
-				start = it->Start();
+		for (const WordClassifier &wc : classifiers) {
+			if ((wc.Length() > 0) && (start > wc.Start()))
+				start = wc.Start();
 		}
 		return (start < 256) ? start : -1;
 	}
 
-	int LastAllocated() const {
+	int LastAllocated() const noexcept {
 		int last = -1;
-		for (std::vector<WordClassifier>::const_iterator it = classifiers.begin(); it != classifiers.end(); ++it) {
-			if (last < it->Last())
-				last = it->Last();
+		for (const WordClassifier &wc : classifiers) {
+			if ((wc.Length() > 0) && (last < wc.Last()))
+				last = wc.Last();
 		}
 		return last;
 	}
@@ -191,13 +194,14 @@ public:
 			classifiers[block].SetIdentifiers(style, identifiers);
 	}
 
-	void Free() {
+	void Free() noexcept {
 		allocated = 0;
-		for (std::vector<WordClassifier>::iterator it=classifiers.begin(); it != classifiers.end(); ++it)
-			it->Clear();
+		for (WordClassifier &wc : classifiers) {
+			wc.Clear();
+		}
 	}
 
-	const WordClassifier &Classifier(int baseStyle) const {
+	const WordClassifier &Classifier(int baseStyle) const noexcept {
 		const int block = BlockFromBaseStyle(baseStyle);
 		return classifiers[block >= 0 ? block : 0];
 	}

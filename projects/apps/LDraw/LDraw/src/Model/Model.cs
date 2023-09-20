@@ -29,6 +29,9 @@ namespace LDraw
 			Scenes = new ObservableCollection<SceneUI>();
 			Scripts = new ObservableCollection<ScriptUI>();
 			Assets = new ObservableCollection<AssetUI>();
+
+			// Ensure the temporary script directory exists
+			Path_.CreateDirs(TempScriptDirectory);
 		}
 		public void Dispose()
 		{
@@ -40,7 +43,7 @@ namespace LDraw
 		/// <summary>The main thread synchronisation context</summary>
 		private SynchronizationContext Sync { get; }
 
-		/// <summary>The view3d dll context </summary>
+		/// <summary>The view3d DLL context </summary>
 		public View3d View3d
 		{
 			get => m_view3d;

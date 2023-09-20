@@ -86,7 +86,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <inheritdoc/>
-		public override BBox Bounds => new BBox(O2W.pos, 0.5f * Size);
+		public override BBox Bounds => new(O2W.pos, 0.5f * Size);
 
 		/// <inheritdoc/>
 		public override IEnumerable<AnchorPoint> AnchorPoints()

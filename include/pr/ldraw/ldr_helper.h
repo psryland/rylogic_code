@@ -91,7 +91,7 @@ namespace pr::ldr
 		// Also watch out for the error being a typedef of a common type,
 		// e.g. I've seen 'Type=std::ios_base::openmode' as an error, but really it was
 		// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
-		static_assert(dependant_false<Type>, "no overload for 'Type'");
+		static_assert(dependent_false<Type>, "no overload for 'Type'");
 	}
 	inline TStr& Append(TStr& str, char const* s)
 	{
