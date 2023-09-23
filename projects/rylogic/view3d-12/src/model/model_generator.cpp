@@ -10,6 +10,177 @@
 
 namespace pr::rdr12
 {
+	// Implementation functions
+	namespace Impl
+	{
+		// Bake a transform into 'cache'
+		template <typename VType>
+		static void BakeTransform(ModelGenerator::Cache<VType>& cache, m4x4 const& a2b)
+		{
+			// Apply the 'bake' transform to every vertex
+			cache.m_bbox = a2b * cache.m_bbox;
+			for (auto& v : cache.m_vcont)
+			{
+				v.m_vert = a2b * v.m_vert;
+				v.m_norm = a2b * v.m_norm;
+			}
+
+			// If the transform is left handed, flip the faces
+			if (Determinant3(a2b) < 0)
+			{
+				// Check each nugget for faces
+				for (auto& nug : cache.m_ncont)
+				{
+					switch (nug.m_topo)
+					{
+					case ETopo::TriList:
+					{
+						switch (cache.m_icont.stride())
+						{
+							case sizeof(uint32_t) : FlipTriListFaces<VType, uint32_t>(cache, nug.m_irange); break;
+								case sizeof(uint16_t) : FlipTriListFaces<VType, uint16_t>(cache, nug.m_irange); break;
+								default: throw std::runtime_error("Unsupported index stride");
+						}
+						break;
+					}
+					case ETopo::TriStrip:
+					{
+						switch (cache.m_icont.stride())
+						{
+							case sizeof(uint32_t) : FlipTriStripFaces<VType, uint32_t>(cache, nug.m_irange); break;
+								case sizeof(uint16_t) : FlipTriStripFaces<VType, uint16_t>(cache, nug.m_irange); break;
+								default: throw std::runtime_error("Unsupported index stride");
+						}
+						break;
+					}
+					}
+				}
+			}
+		}
+
+		// Flip the winding order of faces in a triangle list
+		template <typename VType, typename IType>
+		static void FlipTriListFaces(ModelGenerator::Cache<VType>& cache, Range irange)
+		{
+			assert((irange.size() % 3) == 0);
+			auto ibuf = cache.m_icont.data<IType>();
+			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
+				std::swap(ibuf[i + 1], ibuf[i + 2]);
+		}
+
+		// Flip the winding order of faces in a triangle strip
+		template <typename VType, typename IType>
+		static void FlipTriStripFaces(ModelGenerator::Cache<VType>& cache, Range irange)
+		{
+			assert((irange.size() % 2) == 0);
+			auto ibuf = cache.m_icont.data<IType>();
+			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
+				std::swap(ibuf[i + 0], ibuf[i + 1]);
+		}
+
+		// Generate normals for the triangle list given by index range 'irange' in 'cache'
+		template <typename VType, typename IType>
+		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, Range irange, float gen_normals)
+		{
+			auto ibuf = cache.m_icont.data<IType>() + irange.begin();
+			geometry::GenerateNormals(
+				irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
+				[&](IType idx)
+				{
+					return GetP(cache.m_vcont[idx]);
+				},
+				[&](IType idx, IType orig, v4 const& norm)
+				{
+					assert(idx <= cache.m_vcont.size());
+					if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
+					SetN(cache.m_vcont[idx], norm);
+				},
+				[&](IType i0, IType i1, IType i2)
+				{
+					*ibuf++ = i0;
+					*ibuf++ = i1;
+					*ibuf++ = i2;
+				});
+		}
+
+		// Generate normals for the triangle list nuggets in 'cache'
+		template <typename VType>
+		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, float gen_normals)
+		{
+			assert(gen_normals >= 0 && "Smoothing threshold must be a positive number");
+
+			// Check each nugget for faces
+			for (auto& nug : cache.m_ncont)
+			{
+				switch (nug.m_topo)
+				{
+				case ETopo::TriList:
+				{
+					switch (cache.m_icont.stride())
+					{
+						case sizeof(uint32_t): GenerateNormals<VType, uint32_t>(cache, nug.m_irange, gen_normals); break;
+						case sizeof(uint16_t): GenerateNormals<VType, uint16_t>(cache, nug.m_irange, gen_normals); break;
+						default: throw std::runtime_error("Unsupported index stride");
+					}
+					break;
+				}
+				case ETopo::TriStrip:
+				{
+					throw std::exception("Generate normals isn't supported for TriStrip");
+				}
+				}
+			}
+		}
+	}
+
+	// Create a model from 'cache'
+	// 'bake' is a transform to bake into the model
+	// 'gen_normals' generates normals for the model if >= 0f. Value is the threshold for smoothing (in rad)
+	template <typename VType>
+	static ModelPtr Create(Renderer& rdr, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const& opts = ModelGenerator::CreateOptions{})
+	{
+		// Sanity check 'cache'
+		#if PR_DBG_RDR
+		assert(!cache.m_ncont.empty() && "No nuggets given");
+		for (auto& nug : cache.m_ncont)
+		{
+			assert(nug.m_vrange.begin() < cache.VCount() && "Nugget range invalid");
+			assert(nug.m_irange.begin() < cache.ICount() && "Nugget range invalid");
+			assert(nug.m_vrange.end() <= cache.VCount() && "Nugget range invalid");
+			assert(nug.m_irange.end() <= cache.ICount() && "Nugget range invalid");
+		}
+		#endif
+
+		// Bake a transform into the model
+		if (opts.m_bake != nullptr)
+			Impl::BakeTransform(cache, *opts.m_bake);
+
+		// Generate normals
+		if (opts.m_gen_normals != nullptr)
+			Impl::GenerateNormals(cache, *opts.m_gen_normals);
+
+		// Create the model
+		ModelDesc mdesc(
+			ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont.data()),
+			ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont.data()),
+			cache.m_bbox, cache.m_name.c_str());
+		auto model = rdr.res_mgr().CreateModel(mdesc);
+
+		// Create the render nuggets
+		for (auto& nug : cache.m_ncont)
+		{
+			// If the model geom has valid texture data but no texture, use white
+			if (AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse == nullptr)
+				nug.m_tex_diffuse = rdr.res_mgr().FindTexture(EStockTexture::White);
+
+			// Create the nugget
+			model->CreateNugget(nug);
+		}
+
+		// Return the freshly minted model.
+		return model;
+	}
+
 	// Points/Sprites *********************************************************************
 	// Generate a cloud of points from an array of points
 	ModelPtr ModelGenerator::Points(Renderer& rdr, int num_points, v4 const* points, int num_colours, Colour32 const* colours, NuggetData const* mat)
