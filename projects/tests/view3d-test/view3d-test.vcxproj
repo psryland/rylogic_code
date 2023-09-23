@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Globals -->
-  <PropertyGroup Label="Globals">
+  <Import Project="..\..\..\build\props\globals.props" />
+	<PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{E703CEED-E0AA-4857-9799-640C0E09EB29}</ProjectGuid>
     <RootNamespace>View3d</RootNamespace>
     <ProjectName>view3d-test</ProjectName>
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -29,10 +29,12 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\..\build\props\$(Configuration).$(Platform).app.props" />
+  <Import Project="..\..\..\build\props\app.props" />
+
   <!-- Build options -->
   <ItemDefinitionGroup>
     <ClCompile>
@@ -51,6 +53,7 @@
       <Outputs>view3d.dll</Outputs>
     </CustomBuildStep>
   </ItemDefinitionGroup>
+
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
@@ -58,6 +61,7 @@
     <ClInclude Include="..\..\..\include\pr\view3d\dll\view3d.h" />
     <None Include="post_build.py" />
   </ItemGroup>
+
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
