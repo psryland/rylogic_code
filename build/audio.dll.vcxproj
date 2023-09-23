@@ -2,21 +2,16 @@
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Globals -->
+	<Import Project="props\globals.props" />
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{431CCC2C-4566-4C3E-8C12-EA8072E3A527}</ProjectGuid>
 		<ProjectName>audio.dll</ProjectName>
 		<TargetName>audio</TargetName>
 		<RootNamespace>Audio</RootNamespace>
-		<Keyword>Win32Proj</Keyword>
-		<VCProjectVersion>16.0</VCProjectVersion>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	    <ConfigurationType>DynamicLibrary</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->
-	<PropertyGroup Label="Configuration">
-		<ConfigurationType>DynamicLibrary</ConfigurationType>
-		<PlatformToolset>v143</PlatformToolset>
-	</PropertyGroup>
 	<ItemGroup Label="ProjectConfigurations">
 		<ProjectConfiguration Include="Debug|Win32">
 			<Configuration>Debug</Configuration>
@@ -39,39 +34,12 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="props\$(Configuration).$(Platform).dll.props" />
+	<Import Project="props\dll.props" />
 
 	<!-- Build options -->
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+	<ItemDefinitionGroup>
 		<ClCompile>
-			<PreprocessorDefinitions>AUDIO_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<AdditionalDependencies>audio.lib;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<ClCompile>
-			<PreprocessorDefinitions>AUDIO_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<AdditionalDependencies>audio.lib;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<ClCompile>
-			<PreprocessorDefinitions>AUDIO_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-		<Link>
-			<AdditionalDependencies>audio.lib;%(AdditionalDependencies)</AdditionalDependencies>
-		</Link>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<ClCompile>
-			<PreprocessorDefinitions>AUDIO_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<PreprocessorDefinitions>AUDIO_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 		</ClCompile>
 		<Link>
