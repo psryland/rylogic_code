@@ -1,16 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
   <!-- Globals -->
-  <PropertyGroup Label="Globals">
+  <Import Project="props\globals.props" />
+	<PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
     <RootNamespace>View3d</RootNamespace>
     <ProjectName>view3d-12</ProjectName>
     <TargetName>view3d-12-static</TargetName>
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -30,11 +31,13 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="props\$(Configuration).$(Platform).lib.props" />
+  <Import Project="props\lib.props" />
   <Import Project="props\fxc_build_rule.props" />
+
   <!-- Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -60,6 +63,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
+
   <!-- Files -->
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp" />

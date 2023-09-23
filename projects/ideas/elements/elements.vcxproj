@@ -1,17 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
+	<!-- Properties -->
+	<Import Project="..\..\..\build\props\globals.props" />
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{3DD0D661-8EDD-4638-9ABB-A375B1D3A79F}</ProjectGuid>
-		<Keyword>Win32Proj</Keyword>
 		<RootNamespace>elements</RootNamespace>
-	</PropertyGroup>
-	<PropertyGroup Label="Configuration">
 		<ConfigurationType>Application</ConfigurationType>
-		<UseDebugLibraries>true</UseDebugLibraries>
-		<PlatformToolset>v143</PlatformToolset>
-		<CharacterSet>Unicode</CharacterSet>
 	</PropertyGroup>
+	
+	<!-- Configurations -->
 	<ItemGroup Label="ProjectConfigurations">
 		<ProjectConfiguration Include="Debug|Win32">
 			<Configuration>Debug</Configuration>
@@ -31,11 +29,13 @@
 		</ProjectConfiguration>
 	</ItemGroup>
 
+	<!-- Property sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="..\..\..\build\props\$(Configuration).$(Platform).app.props" />
+	<Import Project="..\..\..\build\props\app.props" />
 
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
 		<ClCompile>
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
@@ -44,33 +44,8 @@
 			<SubSystem>Console</SubSystem>
 		</Link>
 	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
-		</ClCompile>
-		<Link>
-			<SubSystem>Console</SubSystem>
-		</Link>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
-		</ClCompile>
-		<Link>
-			<SubSystem>Console</SubSystem>
-		</Link>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
-		</ClCompile>
-		<Link>
-			<SubSystem>Console</SubSystem>
-		</Link>
-	</ItemDefinitionGroup>
+
+	<!-- Files -->
 	<ItemGroup>
 		<ClInclude Include="..\..\..\include\pr\common\console.h" />
 		<ClInclude Include="..\..\..\include\pr\common\datetime.h" />
