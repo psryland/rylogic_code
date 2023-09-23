@@ -154,7 +154,7 @@ namespace pr
 			}
 			else
 			{
-				static_assert(dependant_false<Str1>, "Cannot convert between string types");
+				static_assert(dependent_false<Str1>, "Cannot convert between string types");
 			}
 		}
 	};

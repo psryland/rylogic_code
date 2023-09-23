@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<!-- Globals -->
+	<Import Project="..\..\..\build\props\globals.props" />
 	<PropertyGroup Label="Globals">
-		<VCProjectVersion>16.0</VCProjectVersion>
 		<ProjectGuid>{55743CFA-06D2-43DB-8B86-A03CC46F0847}</ProjectGuid>
 		<RootNamespace>p3d</RootNamespace>
 		<ProjectName>p3d</ProjectName>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+		<ConfigurationType>Application</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configuration -->
-	<PropertyGroup Label="Configuration">
-		<ConfigurationType>Application</ConfigurationType>
-		<PlatformToolset>v143</PlatformToolset>
-	</PropertyGroup>
 	<ItemGroup Label="ProjectConfigurations">
 		<ProjectConfiguration Include="Debug|Win32">
 			<Configuration>Debug</Configuration>
@@ -36,7 +32,7 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="..\..\..\build\props\$(Configuration).$(Platform).app.props" />
+	<Import Project="..\..\..\build\props\app.props" />
 
 	<!-- Build Options -->
 	<ItemDefinitionGroup>

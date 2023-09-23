@@ -102,6 +102,29 @@ namespace pr::rdr12
 				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
 				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
 				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+		
+				//// These are work arounds for issues with integrated graphics chips
+				//DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+				//{
+				//	80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+				//};
+				//DXGI_INFO_QUEUE_FILTER filter = {};
+				//filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+				//filter.DenyList.pIDList = hide;
+				//info->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+
+				//D3D12_MESSAGE_ID hide[] =
+				//{
+				//	D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+				//	D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+				//	// Workarounds for debug layer issues on hybrid-graphics systems
+				//	D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+				//	D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+				//};
+				//D3D12_INFO_QUEUE_FILTER filter = {};
+				//filter.DenyList.NumIDs = _countof(hide);
+				//filter.DenyList.pIDList = hide;
+				//Throw(info->AddStorageFilterEntries(&filter));
 			}
 
 			// Read the supported features

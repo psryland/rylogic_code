@@ -278,7 +278,7 @@ namespace pr
 			// have values that do not match the date described by the other members.
 			auto ticks = _mkgmtime(this);
 			if (ticks == -1)
-				throw std::exception("calender time cannot be represented");
+				throw std::runtime_error("calender time cannot be represented");
 		}
 
 		enum EDaylightSaving { Unknown = -1, NotInEffect = 0, InEffect = 1 };
@@ -327,7 +327,7 @@ namespace pr
 		std::string ToString() const
 		{
 			char buf[256];
-			if (asctime_s(buf, this) == 0) throw ::std::exception();
+			if (asctime_s(buf, this) == 0) throw std::runtime_error("asctime_s failed");
 			std::string s = buf;
 			while (s.rbegin() != s.rend() && *s.rbegin() == '\n') s.resize(s.size() - 1);
 			return pr::str::TrimChars(s, "\n", false, true);
@@ -367,7 +367,7 @@ namespace pr
 		std::string ToString(char const* fmt) const
 		{
 			char buf[256];
-			if (strftime(buf, sizeof(buf), fmt, this) == 0) throw std::exception();
+			if (strftime(buf, sizeof(buf), fmt, this) == 0) throw std::runtime_error("strftime failed");
 			return buf;
 		}
 	};
@@ -375,20 +375,20 @@ namespace pr
 	// Represents a time_point (modelled off the .NET DateTimeOffset class)
 	struct DateTime
 	{
-		typedef std::chrono::system_clock              clock_t;      // The system clock
-		typedef std::chrono::nanoseconds               duration_t;   // In units of nanoseconds
-		typedef std::chrono::time_point<clock_t, days> date_point_t; // In units of days
+		using clock_t = std::chrono::system_clock;                   // The system clock
+		using ticks_t = std::chrono::nanoseconds;                    // In units of nanoseconds
+		using date_point_t = std::chrono::time_point<clock_t, days>; // In units of days
 
-		date_point_t m_date;    // days relative to 1970-1-1 00:00:00
-		duration_t   m_time;    // UTC time (in ns), relative to 'm_date'
-		duration_t   m_offset;  // Offset (in ns) from utc to local time
+		date_point_t m_date; // Days relative to 1970-1-1 00:00:00
+		ticks_t m_time;      // UTC time (in ns), relative to 'm_date'
+		ticks_t m_offset;    // Offset (in ns) from utc to local time
 
 		DateTime()
 			:m_date()
 			,m_time()
 			,m_offset()
 		{}
-		DateTime(date_point_t date, duration_t time, duration_t offset = duration_t::zero())
+		DateTime(date_point_t date, ticks_t time, ticks_t offset = ticks_t::zero())
 			:m_date(date)
 			,m_time(time)
 			,m_offset(offset)
@@ -416,7 +416,7 @@ namespace pr
 		}
 
 		// Local time value
-		duration_t local_time() const { return m_time + m_offset; }
+		ticks_t local_time() const { return m_time + m_offset; }
 
 		// Convert this time to/from a C time_t (throws if out of range)
 		std::time_t to_time_t() const
@@ -440,24 +440,7 @@ namespace pr
 			m_offset = utc_ofs;
 		}
 
-		//// Return a structure describing this datetime as local time
-		//DateTimeStruct local_tm() const
-		//{
-		//	DateTimeStruct();
-		//	t;
-		//	if (localtime_s(&t, &ticks) != 0) throw ::std::exception();
-		//	return t;
-		//}
-
-		//// Return a structure describing this datetime as utc time
-		//DateTimeStruct utc_time() const
-		//{
-		//	DateTimeStruct t;
-		//	errno_t err = gmtime_s(&t, &ticks);
-		//	if (err != 0) throw ::std::exception();
-		//	return t;
-		//}
-
+		// Pretty print the datetime
 		std::string ToString() const
 		{
 			return "ToDo";
@@ -483,31 +466,43 @@ namespace pr
 
 			tm tmp;
 			auto now = time(nullptr);
-			if (gmtime_s(&tmp, &now) != 0) throw std::exception("failed to convert 'now' to UTC");
+			if (gmtime_s(&tmp, &now) != 0) throw std::runtime_error("failed to convert 'now' to UTC");
 			auto utc_ofs = seconds(seconds::rep(std::difftime(now, mktime(&tmp))));
 			return DateTime(now, duration_cast<hours>(utc_ofs));
 		}
 
-		//static DateTime Min() { return DateTime(1900,1,1,0,0,0); }
-		//static DateTime Max() { return DateTime(3000,12,31,23,59,59); }
+		// Implicate conversion to time point
+		operator std::chrono::time_point<clock_t, ticks_t>()
+		{
+			return m_date + m_time;
+		}
+
+		// Time points are equivalent if they represent the same UTC time
+		// The utc offset describes geographical location, not time.
+		friend bool operator == (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date == rhs.m_date && lhs.m_time == rhs.m_time; }
+		friend bool operator != (DateTime const& lhs, DateTime const& rhs) { return !(lhs == rhs); }
+		friend bool operator <  (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date != rhs.m_date ? lhs.m_date < rhs.m_date : lhs.m_time < rhs.m_time; }
+		friend bool operator >  (DateTime const& lhs, DateTime const& rhs) { return rhs < lhs; }
+		friend bool operator <= (DateTime const& lhs, DateTime const& rhs) { return !(lhs > rhs); }
+		friend bool operator >= (DateTime const& lhs, DateTime const& rhs) { return !(lhs < rhs); }
 	};
 
 	// Represents a difference of DateTimes
 	struct TimeSpan
 	{
-		typedef DateTime::clock_t                clock_t;         // The system clock
-		typedef DateTime::duration_t             time_duration_t; // In units of nanoseconds
-		typedef DateTime::date_point_t::duration date_duration_t; // In units of days
+		using clock_t = DateTime::clock_t; // The system clock
+		using ticks_t = DateTime::ticks_t; // In units of nanoseconds
+		using date_duration_t = DateTime::date_point_t::duration; // In units of days
 
 		date_duration_t m_ddate;   // delta date
-		time_duration_t m_dtime;   // delta time
+		ticks_t m_dtime;   // delta time
 		// Note, delta timezone represents a geographical location difference, not a time difference
 
 		TimeSpan()
 			:m_ddate()
 			,m_dtime()
 		{}
-		TimeSpan(date_duration_t ddate, time_duration_t dtime)
+		TimeSpan(date_duration_t ddate, ticks_t dtime)
 			:m_ddate(ddate)
 			,m_dtime(dtime)
 		{}
@@ -515,7 +510,7 @@ namespace pr
 		// Construct from a std::chrono::duration
 		template <typename Rep,typename Period> TimeSpan(std::chrono::duration<Rep,Period> duration)
 			:m_ddate(std::chrono::duration_cast<date_duration_t>(duration))
-			,m_dtime(std::chrono::duration_cast<time_duration_t>(duration - m_ddate))
+			,m_dtime(std::chrono::duration_cast<ticks_t>(duration - m_ddate))
 		{}
 
 		// Converts the timespan into a std::chrono::duration
@@ -524,15 +519,6 @@ namespace pr
 			return std::chrono::duration_cast<Duration>(m_ddate + m_dtime);
 		}
 	};
-
-	// Time points are equivalent if they represent the same UTC time
-	// The utc offset describes geographical location, not time.
-	inline bool operator == (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date == rhs.m_date && lhs.m_time == rhs.m_time; }
-	inline bool operator != (DateTime const& lhs, DateTime const& rhs) { return !(lhs == rhs); }
-	inline bool operator <  (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date != rhs.m_date ? lhs.m_date < rhs.m_date : lhs.m_time < rhs.m_time; }
-	inline bool operator >  (DateTime const& lhs, DateTime const& rhs) { return rhs < lhs; }
-	inline bool operator <= (DateTime const& lhs, DateTime const& rhs) { return !(lhs > rhs); }
-	inline bool operator >= (DateTime const& lhs, DateTime const& rhs) { return !(lhs < rhs); }
 
 	inline TimeSpan operator - (TimeSpan const& rhs)
 	{
@@ -578,11 +564,13 @@ namespace pr::common
 		}
 
 		{// Testing DateTime
+			auto tz_offset = std::chrono::current_zone()->get_info(system_clock::now()).offset;
+
 			auto dt1 = DateTime::NowUTC();
 			auto dt2 = DateTime::Now();
 			auto ofs1 = dt2 - dt1;
 			PR_CHECK(ofs1.To<seconds>().count() == 0, true);
-			PR_CHECK(duration_cast<hours>(dt2.m_offset - dt1.m_offset).count() == 12, true);
+			PR_CHECK(duration_cast<hours>(dt2.m_offset - dt1.m_offset).count() == duration_cast<hours>(tz_offset).count(), true);
 
 			auto dt3 = DateTime(1976,12,29,3,45,0,hours(12));
 			auto dt4 = DateTime(1977,12,8,10,15,0,hours(12));
