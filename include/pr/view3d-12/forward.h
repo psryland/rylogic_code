@@ -37,6 +37,7 @@
 #include <sdkddkver.h>
 #include <windows.h>
 #include <dxgi.h>
+#include <dxgidebug.h>
 #include <d3d12.h>
 #include <d3d12sdklayers.h>
 #include <d3d11on12.h>

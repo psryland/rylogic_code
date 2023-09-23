@@ -20,6 +20,8 @@ void CrossSection(p3d::Mesh& mesh, v4 const& plane)
 // Clip a model using the given plane
 void CrossSection(p3d::File& p3d, v4 const& plane)
 {
-	for (auto& mesh : p3d.m_scene.m_meshes)
-		CrossSection(mesh, plane);
+	(void)p3d, plane;
+	throw std::runtime_error("Not implemented");
+	//for (auto& mesh : p3d.m_scene.m_meshes)
+	//	CrossSection(mesh, plane);
 }
