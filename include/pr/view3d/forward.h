@@ -16,6 +16,7 @@
 #include <functional>
 #include <filesystem>
 #include <type_traits>
+#include <string_view>
 #include <mutex>
 #pragma warning(disable:4355)
 #include <future>

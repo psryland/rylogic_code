@@ -41,7 +41,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The currency pair</summary>
-		public CoinPair CurrencyPair => new CoinPair(Base, Quote);
+		public CoinPair CurrencyPair => new(Base, Quote);
 
 		/// <summary>The name of this pair. Format Base/Quote</summary>
 		public string Name => CurrencyPair.Name;

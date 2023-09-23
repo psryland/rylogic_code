@@ -126,6 +126,28 @@ namespace pr
 			return Mat4x4{rot, xyz};
 		}
 
+		// Return the scale of this matrix
+		Mat4x4 scale() const
+		{
+			return Mat4x4{
+				{Length(x.xyz), 0, 0, 0},
+				{0, Length(y.xyz), 0, 0},
+				{0, 0, Length(z.xyz), 0},
+				{0, 0, 0, 1}
+			};
+		}
+
+		// Return this matrix with the scale removed
+		Mat4x4 unscaled() const
+		{
+			return Mat4x4{
+				Normalise(x),
+				Normalise(y),
+				Normalise(z),
+				w
+			};
+		}
+
 		// Basic constants
 		static constexpr Mat4x4 Zero()
 		{

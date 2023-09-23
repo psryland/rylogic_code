@@ -128,8 +128,8 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Static m4x4 types</summary>
-		public readonly static m4x4 Zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
-		public readonly static m4x4 Identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
+		public readonly static m4x4 Zero = new(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
+		public readonly static m4x4 Identity = new(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
 
 		// Operators
 		public static m4x4 operator + (m4x4 rhs) { return rhs; }

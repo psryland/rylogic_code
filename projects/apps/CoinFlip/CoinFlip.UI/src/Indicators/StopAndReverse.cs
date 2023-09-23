@@ -103,7 +103,7 @@ namespace CoinFlip.UI.Indicators
 			public ETrend Trend { get; }
 
 			/// <summary>The SAR point in chart space</summary>
-			public v4 Point => new v4((float)CandleIndex, (float)Value, 0, 1f);
+			public v4 Point => new((float)CandleIndex, (float)Value, 0, 1f);
 
 			/// <summary>Guess at whether double or long values are used</summary>
 			private string Description => $"{CandleIndex} {Value}";

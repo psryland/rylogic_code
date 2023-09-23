@@ -63,7 +63,7 @@ namespace Rylogic.Interop.Win32
 			public HCURSOR hCursor;
 			public POINT ptScreenPos;
 
-			public static CURSORINFO Default => new CURSORINFO { cbSize = (uint)Marshal.SizeOf(typeof(CURSORINFO)) };
+			public static CURSORINFO Default => new() { cbSize = (uint)Marshal.SizeOf(typeof(CURSORINFO)) };
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -86,7 +86,7 @@ namespace Rylogic.Interop.Win32
 			public int nPos;
 			public int nTrackPos;
 
-			public static SCROLLINFO Default => new SCROLLINFO { cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO)) };
+			public static SCROLLINFO Default => new() { cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO)) };
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

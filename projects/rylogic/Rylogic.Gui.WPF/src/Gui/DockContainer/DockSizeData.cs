@@ -196,7 +196,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 		}
 
-		public static DockSizeData Halves => new DockSizeData(0.5, 0.5, 0.5, 0.5);
-		public static DockSizeData Quarters => new DockSizeData(0.25, 0.25, 0.25, 0.25);
+		public static DockSizeData Halves => new(0.5, 0.5, 0.5, 0.5);
+		public static DockSizeData Quarters => new(0.25, 0.25, 0.25, 0.25);
 	}
 }

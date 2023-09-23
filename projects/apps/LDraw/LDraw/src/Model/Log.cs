@@ -114,7 +114,7 @@ namespace LDraw
 		}
 
 		/// <summary>Output text pattern</summary>
-		public static readonly Regex PatternRegex = new Regex(
+		public static readonly Regex PatternRegex = new(
 			@"^(?<Level>.*?)\|(?<File>.*?)\((?<Line>.*)\)\|(?<Elapsed>.*?)\|(?<Message>.*)",
 			//@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Elapsed>.*?)\|(?<Message>.*)",
 			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);

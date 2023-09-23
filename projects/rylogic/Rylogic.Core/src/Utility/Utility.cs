@@ -855,7 +855,7 @@ namespace Rylogic.Utility
 			return m_mime_type_map.TryGetValue(extn.TrimStart('.'), out var mime) ? mime : "unknown/unknown";
 		}
 		#region Mime type dictionary
-		private static readonly Dictionary<string, string> m_mime_type_map = new Dictionary<string, string>
+		private static readonly Dictionary<string, string> m_mime_type_map = new()
 		{
 			{"ai", "application/postscript"},
 			{"aif", "audio/x-aiff"},

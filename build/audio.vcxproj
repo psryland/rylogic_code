@@ -2,14 +2,12 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Globals -->
-	<PropertyGroup Label="Globals">
+	<Import Project="props\globals.props" />
+	<PropertyGroup>
 		<ProjectName>audio</ProjectName>
-		<RootNamespace>View3D</RootNamespace>
-		<VCProjectVersion>16.0</VCProjectVersion>
+		<RootNamespace>pr::audio</RootNamespace>
 		<ProjectGuid>{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}</ProjectGuid>
-		<PlatformToolset>v143</PlatformToolset>
 		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 	</PropertyGroup>
 
 	<!-- Configurations -->
@@ -35,34 +33,10 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="props\$(Configuration).$(Platform).lib.props" />
+	<Import Project="props\lib.props" />
 
 	<!-- Build options -->
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-		<ClCompile>
-			<PrecompiledHeader>Use</PrecompiledHeader>
-			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-		</ClCompile>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+	<ItemDefinitionGroup>
 		<ClCompile>
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>

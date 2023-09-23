@@ -1,20 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
   <!-- Globals -->
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{363D015B-B545-4623-A5CE-61245C9BF1F8}</ProjectGuid>
+  <Import Project="props\globals.props" />
+	<PropertyGroup>
+  <ProjectGuid>{363D015B-B545-4623-A5CE-61245C9BF1F8}</ProjectGuid>
     <ProjectName>view3d.dll</ProjectName>
     <TargetName>view3d</TargetName>
-    <RootNamespace>View3D</RootNamespace>
-    <Keyword>Win32Proj</Keyword>
-    <VCProjectVersion>16.0</VCProjectVersion>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-  </PropertyGroup>
-  <!-- Configurations -->
-  <PropertyGroup Label="Configuration">
+    <RootNamespace>view3d</RootNamespace>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
+
+  <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -33,12 +30,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="props\$(Configuration).$(Platform).dll.props" />
+  <Import Project="props\dll.props" />
+
   <!-- Build options -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
@@ -49,39 +48,7 @@
       <AdditionalDependencies>view3d-static.lib;lua-static.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>VIEW3D_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>view3d-static.lib;lua-static.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>VIEW3D_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>view3d-static.lib;lua-static.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>VIEW3D_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>view3d-static.lib;lua-static.lib;strmiids.lib;comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
+
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d\dll\view3d.h" />
@@ -96,5 +63,6 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

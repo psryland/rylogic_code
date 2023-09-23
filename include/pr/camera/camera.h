@@ -375,6 +375,12 @@ namespace pr
 			m_far = value / (focus_relative ? 1.0 : m_focus_dist);
 		}
 
+		// Get the normalized from the camera relative to the clip planes
+		double NormalisedDistance(double dist_from_camera) const
+		{
+			return (dist_from_camera - Near(false)) / (Far(false) - Near(false));
+		}
+
 		// Get/Set the aspect ratio
 		double Aspect() const
 		{

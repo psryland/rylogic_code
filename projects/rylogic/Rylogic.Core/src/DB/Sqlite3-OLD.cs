@@ -512,7 +512,7 @@ namespace Rylogic.Db_DELETEME
 			private readonly UpdateHookCB m_update_cb_handle;
 			private GCHandle m_this_handle;
 			#if SQLITE_HANDLES
-			public HashSet<int> m_queries = new HashSet<int>();
+			public HashSet<int> m_queries = new();
 			public int m_query_id = 0;
 			#endif
 
@@ -1413,8 +1413,8 @@ namespace Rylogic.Db_DELETEME
 				/// <summary>The result of a call to 'Translate'</summary>
 				private class TranslateResult
 				{
-					public readonly StringBuilder Text = new StringBuilder();
-					public readonly List<object?> Args = new List<object?>();
+					public readonly StringBuilder Text = new();
+					public readonly List<object?> Args = new();
 				}
 
 				/// <summary>
@@ -2248,7 +2248,7 @@ namespace Rylogic.Db_DELETEME
 
 				return meta;
 			}
-			private static readonly Dictionary<Type, TableMetaData> Meta = new Dictionary<Type, TableMetaData>();
+			private static readonly Dictionary<Type, TableMetaData> Meta = new();
 
 			/// <summary>
 			/// Constructs the meta data for mapping a type to a database table.
@@ -2952,7 +2952,7 @@ namespace Rylogic.Db_DELETEME
 			/// <summary>
 			/// A lookup table from CLR type to binding function.
 			/// Users can add custom types and binding functions to this map if needed</summary>
-			public static readonly Map FunctionMap = new Map();
+			public static readonly Map FunctionMap = new();
 
 			/// <summary>Returns a bind function appropriate for 'type'</summary>
 			public static Func FuncFor(Type type)
@@ -3128,7 +3128,7 @@ namespace Rylogic.Db_DELETEME
 			/// <summary>
 			/// A lookup table from ClrType to reading function.
 			/// Users can add custom types and reading functions to this map if needed</summary>
-			public static readonly Map FunctionMap = new Map();
+			public static readonly Map FunctionMap = new();
 
 			/// <summary>Returns a read function appropriate for 'type'</summary>
 			public static Func FuncFor(Type type)
@@ -3698,7 +3698,7 @@ namespace Rylogic.Db_DELETEME
 
 			#endregion
 
-			private static readonly IntPtr TransientData = new IntPtr(-1);
+			private static readonly IntPtr TransientData = new(-1);
 			private delegate void sqlite3_destructor_type(IntPtr ptr);
 
 			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>

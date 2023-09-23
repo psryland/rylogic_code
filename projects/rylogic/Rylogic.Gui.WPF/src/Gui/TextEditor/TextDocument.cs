@@ -617,7 +617,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 
 		/// <summary>The thread that is allowed to interact with this instance</summary>
 		private Thread m_owner_thread = Thread.CurrentThread;
-		private readonly object m_lock = new object();
+		private readonly object m_lock = new();
 
 		/// <summary>Assert that the current thread is the owner</summary>
 		public bool VerifyAccess()
@@ -657,7 +657,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 				NotifyPropertyChanged(nameof(UndoStack));
 			}
 		}
-		private UndoStack m_undo_stack = new UndoStack();
+		private UndoStack m_undo_stack = new();
 
 		#endregion
 

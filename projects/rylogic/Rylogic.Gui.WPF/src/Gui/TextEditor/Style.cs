@@ -21,7 +21,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 	/// <summary>Base class for text styles</summary>
 	public class TextStyle :TextRunProperties
 	{
-		public static readonly TextStyle Default = new TextStyle();
+		public static readonly TextStyle Default = new();
 		public TextStyle(Typeface? font = null, double? emsize = null, Brush? fore = null, Brush? back = null)
 		{
 			if (font != null) Font = font;
@@ -73,7 +73,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 	/// <summary>Base class for paragraph styles</summary>
 	public class ParaStyle :TextParagraphProperties
 	{
-		public static readonly ParaStyle Default = new ParaStyle();
+		public static readonly ParaStyle Default = new();
 		public ParaStyle(TextWrapping? wrapping = null, TextAlignment? alignment = null, double? tab_size = null)
 		{
 			if (wrapping != null) Wrapping = wrapping.Value;
@@ -118,7 +118,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 	/// <summary>Base class for marker styles</summary>
 	public class MarkerStyle :TextMarkerProperties
 	{
-		public static readonly MarkerStyle Default = new MarkerStyle();
+		public static readonly MarkerStyle Default = new();
 		public MarkerStyle()
 		{
 		}

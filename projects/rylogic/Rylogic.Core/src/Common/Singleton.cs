@@ -10,7 +10,7 @@ namespace Rylogic.Common
 		class SingletonCreator
 		{
 			static SingletonCreator() { }
-			internal static readonly Type m_instance = new Type();
+			internal static readonly Type m_instance = new();
 		}
 		
 		private Singleton() {}

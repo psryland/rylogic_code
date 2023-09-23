@@ -145,7 +145,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The current screen location and size of this window</summary>
 		public Rect Bounds
 		{
-			get => new Rect(Left, Top, Width, Height);
+			get => new(Left, Top, Width, Height);
 			set
 			{
 				Left = value.Left;

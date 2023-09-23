@@ -240,7 +240,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a RectangleF from the X,Y axes of this bounding box</summary>
-		public RectangleF ToRectXY() => new RectangleF(MinX, MinY, SizeX, SizeY);
+		public RectangleF ToRectXY() => new(MinX, MinY, SizeX, SizeY);
 
 		/// <summary></summary>
 		public string Description => $"C={Centre} R={Radius}";

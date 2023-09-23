@@ -109,14 +109,14 @@ namespace Rylogic.Maths
 		}
 
 		// Static v3 types
-		public readonly static v3 Zero = new v3(0f, 0f, 0f);
-		public readonly static v3 Xaxis = new v3(1f, 0f, 0f);
-		public readonly static v3 Yaxis = new v3(0f, 1f, 0f);
-		public readonly static v3 Zaxis = new v3(0f, 0f, 1f);
-		public readonly static v3 One = new v3(1f, 1f, 1f);
-		public readonly static v3 NaN = new v3(float.NaN, float.NaN, float.NaN);
-		public readonly static v3 MinValue = new v3(float.MinValue, float.MinValue, float.MinValue);
-		public readonly static v3 MaxValue = new v3(float.MaxValue, float.MaxValue, float.MaxValue);
+		public readonly static v3 Zero = new(0f, 0f, 0f);
+		public readonly static v3 Xaxis = new(1f, 0f, 0f);
+		public readonly static v3 Yaxis = new(0f, 1f, 0f);
+		public readonly static v3 Zaxis = new(0f, 0f, 1f);
+		public readonly static v3 One = new(1f, 1f, 1f);
+		public readonly static v3 NaN = new(float.NaN, float.NaN, float.NaN);
+		public readonly static v3 MinValue = new(float.MinValue, float.MinValue, float.MinValue);
+		public readonly static v3 MaxValue = new(float.MaxValue, float.MaxValue, float.MaxValue);
 
 		/// <summary>Operators</summary>
 		public static v3 operator +(v3 vec)

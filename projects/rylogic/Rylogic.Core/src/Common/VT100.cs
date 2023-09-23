@@ -278,7 +278,7 @@ namespace Rylogic.Common
 			/// <summary>Get/Set a single character + style for this line</summary>
 			public Char this[int i]
 			{
-				get => new Char(m_line[i], m_styl[i]);
+				get => new(m_line[i], m_styl[i]);
 				set
 				{
 					if (i >= Length) Resize(i + 1, ' ', m_styl.LastOrDefault());
@@ -410,7 +410,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Return access to the buffered user input</summary>
-			public Span<byte> Peek => new Span<byte>(m_buf, 0, m_len);
+			public Span<byte> Peek => new(m_buf, 0, m_len);
 
 			/// <summary>Return a whole line of buffered user input (including the 'NewLineSend' character(s)) or an empty span</summary>
 			public Span<byte> PeekLine
@@ -1311,7 +1311,7 @@ namespace Rylogic.Common
 				}
 				return m_parms;
 			}
-			private static List<int> m_parms = new List<int>(); // Cached to reduce allocations
+			private static List<int> m_parms = new(); // Cached to reduce allocations
 
 			/// <summary>Move the caret to an absolute position</summary>
 			private Point MoveCaret(int x, int y)

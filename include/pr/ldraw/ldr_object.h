@@ -193,6 +193,7 @@ namespace pr::ldr
 		x(NoZTest         ,= HashI("NoZTest"             ))\
 		x(NoZWrite        ,= HashI("NoZWrite"            ))\
 		x(Billboard       ,= HashI("Billboard"           ))\
+		x(Billboard3D     ,= HashI("Billboard3D"         ))\
 		x(Depth           ,= HashI("Depth"               ))\
 		x(LeftHanded      ,= HashI("LeftHanded"          ))\
 		x(CastShadow      ,= HashI("CastShadow"          ))\

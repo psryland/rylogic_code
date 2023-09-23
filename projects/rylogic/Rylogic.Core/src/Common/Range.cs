@@ -31,13 +31,13 @@ namespace Rylogic.Common
 		public long End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeI Zero = new RangeI { Beg = 0, End = 0 };
+		public static readonly RangeI Zero = new() { Beg = 0, End = 0 };
 
 		/// <summary>The default full range</summary>
-		public static readonly RangeI Max = new RangeI { Beg = long.MinValue, End = long.MaxValue };
+		public static readonly RangeI Max = new() { Beg = long.MinValue, End = long.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeI Invalid = new RangeI { Beg = long.MaxValue, End = long.MinValue };
+		public static readonly RangeI Invalid = new() { Beg = long.MaxValue, End = long.MinValue };
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static RangeI FromStartLength(long start, long length)
@@ -324,16 +324,16 @@ namespace Rylogic.Common
 		public double end;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF Zero = new RangeF { Beg = 0.0, End = 0.0 };
+		public static readonly RangeF Zero = new() { Beg = 0.0, End = 0.0 };
 
 		/// <summary>The unit range [0,1]</summary>
-		public static readonly RangeF Unit = new RangeF { Beg = 0.0, End = 1.0 };
+		public static readonly RangeF Unit = new() { Beg = 0.0, End = 1.0 };
 
 		/// <summary>The default full range</summary>
-		public static readonly RangeF Max = new RangeF { Beg = double.MinValue, End = double.MaxValue };
+		public static readonly RangeF Max = new() { Beg = double.MinValue, End = double.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeF Invalid = new RangeF { Beg = double.MaxValue, End = double.MinValue };
+		public static readonly RangeF Invalid = new() { Beg = double.MaxValue, End = double.MinValue };
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static RangeF FromStartLength(double start, double length)
@@ -610,13 +610,13 @@ namespace Rylogic.Common
 		public T End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF<T> Zero = new RangeF<T> { Beg = default, End = default };
+		public static readonly RangeF<T> Zero = new() { Beg = default, End = default };
 
 		/// <summary>The default full range</summary>
-		public static readonly RangeF<T> Max = new RangeF<T> { Beg = Operators<T>.MinValue, End = Operators<T>.MaxValue };
+		public static readonly RangeF<T> Max = new() { Beg = Operators<T>.MinValue, End = Operators<T>.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeF<T> Invalid = new RangeF<T> { Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue };
+		public static readonly RangeF<T> Invalid = new() { Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue };
 		public static RangeF<T> Reset { get { return Invalid; } }
 
 		/// <summary>Create a range from a Start and Length</summary>

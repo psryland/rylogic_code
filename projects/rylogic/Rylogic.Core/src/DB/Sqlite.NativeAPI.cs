@@ -729,7 +729,7 @@ namespace Rylogic.Db
 			private static extern EResult sqlite3_unlock_notify(IntPtr db, UnlockCB cb, IntPtr ctx);
 
 			/// <summary></summary>
-			private static readonly IntPtr TransientData = new IntPtr(-1);
+			private static readonly IntPtr TransientData = new(-1);
 			private delegate void sqlite3_destructor_type(IntPtr ptr);
 
 			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>

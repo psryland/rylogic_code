@@ -24,7 +24,7 @@ namespace SolarHotWater.Common
 		public static string Filepath => Util.ResolveUserDocumentsPath("Rylogic", "SolarHotWater", "Logs", "log.txt");
 
 		/// <summary>How to interpret each log entry</summary>
-		public static Regex? LogEntryPattern => new Regex(@"^(?<File>.*?)\|(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
+		public static Regex? LogEntryPattern => new(@"^(?<File>.*?)\|(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
 			,RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
 		/// <summary>Log a message</summary>

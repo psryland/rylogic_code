@@ -124,7 +124,7 @@ namespace Rylogic.Str
 			public override int Length => m_str.Count;
 			public override char this[int i] => m_str[m_ofs + i];
 			public override IString Substring(int ofs, int length) => new CharArrayProxy(m_str, m_ofs + ofs, length);
-			public override string ToString() => new string(m_str.ToArray(), m_ofs, m_length);
+			public override string ToString() => new(m_str.ToArray(), m_ofs, m_length);
 		}
 	}
 }

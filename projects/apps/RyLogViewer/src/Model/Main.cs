@@ -263,7 +263,7 @@ namespace RyLogViewer
 				m_report.ErrorPopup(sb.ToString());
 			}
 		}
-		private Plugins<ILineFormatter> m_plugin_formatters = new Plugins<ILineFormatter>();
+		private Plugins<ILineFormatter> m_plugin_formatters = new();
 
 		/// <summary>The position in the log to open</summary>
 		private long LogOpenPosition

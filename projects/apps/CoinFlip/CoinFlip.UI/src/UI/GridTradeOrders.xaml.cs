@@ -151,7 +151,7 @@ namespace CoinFlip.UI
 				{
 					Orders = new ListCollectionView(Array.Empty<Exchange>());
 
-					var orders = Exchanges?.CurrentAs<Exchange>().Orders;
+					var orders = Exchanges?.CurrentAs<Exchange>()?.Orders;
 					if (orders != null)
 					{
 						var view = new ListCollectionView(orders);

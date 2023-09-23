@@ -476,10 +476,10 @@ namespace Rylogic.Gui.WPF
 
 			// Set the viewport to match the render target size
 			Window.Viewport = new View3d.Viewport(0, 0,
-				RenderTarget.Info.m_width,
-				RenderTarget.Info.m_height,
-				(int)Math.Floor(RenderSize.Width != 0 ? RenderSize.Width : RenderTarget.Info.m_width),
-				(int)Math.Floor(RenderSize.Height != 0 ? RenderSize.Height : RenderTarget.Info.m_height),
+				RenderTarget.Info.Width,
+				RenderTarget.Info.Height,
+				(int)Math.Floor(RenderSize.Width != 0 ? RenderSize.Width : RenderTarget.Info.Width),
+				(int)Math.Floor(RenderSize.Height != 0 ? RenderSize.Height : RenderTarget.Info.Height),
 				0f, 1f);
 
 			// Notify of a new render target. Don't directly subscribe to

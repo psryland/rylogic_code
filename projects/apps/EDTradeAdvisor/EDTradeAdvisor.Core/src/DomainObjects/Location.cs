@@ -18,7 +18,7 @@ namespace EDTradeAdvisor.DomainObjects
 		public Station Station { get; set; }
 
 		/// <summary></summary>
-		public static implicit operator LocationID(Location loc) => new LocationID(loc.System?.ID, loc.Station?.ID);
+		public static implicit operator LocationID(Location loc) => new(loc.System?.ID, loc.Station?.ID);
 
 		/// <summary></summary>
 		public string Description => $"{System.Name}/{Station.Name}";

@@ -266,11 +266,11 @@ namespace Rylogic.Utility
 		public const int NoUnitsId = 0;
 
 		/// <summary>A map from unit type to string representation</summary>
-		public static BiDictionary<string, int> Types = new BiDictionary<string, int>() { [NoUnitsId] = string.Empty };
+		public static BiDictionary<string, int> Types = new() { [NoUnitsId] = string.Empty };
 		public static int UnitTypeId = NoUnitsId;
 
 		/// <summary>A cache of the result of combining two types</summary>
-		private static ConcurrentDictionary<ulong, int> m_cache_combined_types = new ConcurrentDictionary<ulong, int>();
+		private static ConcurrentDictionary<ulong, int> m_cache_combined_types = new();
 
 		/// <summary>Return the unique id assigned to a unit</summary>
 		public static int UnitId(string unit_name)
