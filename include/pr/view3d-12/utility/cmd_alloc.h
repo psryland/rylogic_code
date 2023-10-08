@@ -79,18 +79,20 @@ namespace pr::rdr12
 		}
 
 		// Access the allocator
-		ID3D12CommandAllocator* operator ->() const
+		ID3D12CommandAllocator* get() const
 		{
 			if (std::this_thread::get_id() != m_thread_id)
 				throw std::runtime_error("Cross thread use of a command allocator");
 
 			return m_alloc.get();
 		}
-
-		// Convert to the allocator pointer
+		ID3D12CommandAllocator* operator ->() const
+		{
+			return get();
+		}
 		operator ID3D12CommandAllocator* () const
 		{
-			return m_alloc.get();
+			return get();
 		}
 	};
 

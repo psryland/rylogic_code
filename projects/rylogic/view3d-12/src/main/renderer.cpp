@@ -101,7 +101,7 @@ namespace pr::rdr12
 				Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
 				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
 				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE));
 		
 				//// These are work arounds for issues with integrated graphics chips
 				//DXGI_INFO_QUEUE_MESSAGE_ID hide[] =

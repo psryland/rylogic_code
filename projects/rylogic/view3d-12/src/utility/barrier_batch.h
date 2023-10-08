@@ -17,6 +17,16 @@ namespace pr::rdr12
 
 		using Barriers = pr::vector<D3D12_RESOURCE_BARRIER>;
 		Barriers m_barriers;
+		GfxCmdList& m_cmd_list;
+
+		BarrierBatch(GfxCmdList& gfx_cmd_list)
+			: m_barriers()
+			, m_cmd_list(gfx_cmd_list)
+		{}
+		BarrierBatch(BarrierBatch&&) = delete;
+		BarrierBatch(BarrierBatch const&) = delete;
+		BarrierBatch& operator =(BarrierBatch&&) = delete;
+		BarrierBatch& operator =(BarrierBatch const&) = delete;
 
 		// Resource usage barrier
 		void Transition(ID3D12Resource* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
@@ -37,11 +47,11 @@ namespace pr::rdr12
 
 			// If all of the sub resources of 'resource' are in the same state, then we can simply transition from that one state to 'state'.
 			// If the sub resources are in different states, we need to transition each back to the default state first.
-			auto res_state = ResState(resource);
+			auto& res_state = m_cmd_list.ResState(resource);
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && res_state != state) // Tests all subresource states for any != 'state'
 			{
 				// Transition all mips to the default, then default to 'state'
-				auto def_state = res_state.DefaultState();
+				auto def_state = res_state.Mip0State();
 				res_state.EnumMipSpecificStates([&](int sub, D3D12_RESOURCE_STATES state_before)
 				{
 					// The ResState type should prevent mip-specific states that are the same as the default state.
@@ -58,7 +68,7 @@ namespace pr::rdr12
 					});
 				});
 
-				// Transition everything to 'state'
+				// Now, transition everything to 'state'
 				if (state != def_state)
 				{
 					m_barriers.push_back(D3D12_RESOURCE_BARRIER {
@@ -89,6 +99,8 @@ namespace pr::rdr12
 					},
 				});
 			}
+
+			// Only record the new states for 'resource' when they've been commited
 		}
 
 		// Aliased memory resource barrier
@@ -119,20 +131,20 @@ namespace pr::rdr12
 		}
 
 		// Send the barriers to the command list
-		void Commit(ID3D12GraphicsCommandList* cmd_list)
+		void Commit()
 		{
 			// todo.. Could remove redundant barriers here
 			if (m_barriers.empty())
 				return;
 
 			// Send the barriers to the command list
-			cmd_list->ResourceBarrier(s_cast<UINT>(m_barriers.size()), m_barriers.data());
+			m_cmd_list->ResourceBarrier(s_cast<UINT>(m_barriers.size()), m_barriers.data());
 
 			// Apply the resource states from the transitions
 			for (auto& barrier : m_barriers)
 			{
 				if (barrier.Type != D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) continue;
-				auto res_state = ResState(barrier.Transition.pResource);
+				auto& res_state = m_cmd_list.ResState(barrier.Transition.pResource);
 				res_state.Apply(barrier.Transition.StateAfter, barrier.Transition.Subresource);
 			}
 

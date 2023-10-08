@@ -12,7 +12,7 @@
 
 namespace pr::rdr12
 {
-	constexpr int HeapCapacityView = 12;
+	constexpr int HeapCapacityView = 256;
 	enum class EMipMapParam { Constants, SrcTexture, DstTexture };
 	enum class EMipMapSamp { Samp0 };
 
@@ -105,6 +105,7 @@ namespace pr::rdr12
 		// Otherwise, we need to generate the mip-maps in a staging resource.
 		auto device = m_rdr.D3DDevice();
 		auto next_sync_point = m_gsync.LastAddedSyncPoint() + 1;
+		auto initial_res_state = m_cmd_list.ResState(texture).Mip0State();
 
 		// Describe a resource the same as 'texture' but with UAV support and not RT/DS support.
 		D3D12_RESOURCE_DESC staging_desc = desc;
@@ -139,24 +140,24 @@ namespace pr::rdr12
 		// The original texture is copied to this resource, which is then aliased as a UAV resource.
 		D3DPtr<ID3D12Resource> staging;
 		Throw(device->CreatePlacedResource(heap.get(), 0, &staging_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&staging.m_ptr));
-		ResState(staging.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		NameResource(staging.get(), "MipMapStagingAliasRes");
+		m_cmd_list.ResState(staging.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		m_keep_alive.Add(staging.get(), next_sync_point);
 
 		// Create a UAV resource that is an alias of 'staging'.
 		D3DPtr<ID3D12Resource> uav_resource;
 		Throw(device->CreatePlacedResource(heap.get(), 0, &uav_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&uav_resource.m_ptr));
-		ResState(uav_resource.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		NameResource(uav_resource.get(), "MipMapStagingUAVRes");
+		m_cmd_list.ResState(uav_resource.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		m_keep_alive.Add(uav_resource.get(), next_sync_point);
 
 		// Add an aliasing barrier to say that 'staging' is the currently valid resource.
 		// Aliasing textures must have compatible resource states in order to inherit data.
-		BarrierBatch barriers;
+		BarrierBatch barriers(m_cmd_list);
 		barriers.Aliasing(nullptr, staging.get());
 		barriers.Transition(staging.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 		barriers.Transition(texture, D3D12_RESOURCE_STATE_COPY_SOURCE);
-		barriers.Commit(m_cmd_list.get());
+		barriers.Commit();
 
 		// Copy the original resource into the staging resource.
 		m_cmd_list->CopyResource(staging.get(), texture);
@@ -164,7 +165,7 @@ namespace pr::rdr12
 		// Make the UAV resource active. UAV inherits the data from 'staging'
 		//barriers.Transition(staging.get(), ResState(uav_resource.get()).DefaultState());
 		barriers.Aliasing(staging.get(), uav_resource.get());
-		barriers.Commit(m_cmd_list.get());
+		barriers.Commit();
 
 		// Generate mips in the UAV resource.
 		GenerateCore(uav_resource.get(), mip_first, mip_count);
@@ -172,18 +173,18 @@ namespace pr::rdr12
 		// Make the 'staging' resource active again. 'Staging' inherits data from 'uav_resource'
 		//barriers.Transition(uav_resource.get(), ResState(staging.get()).DefaultState());
 		barriers.Aliasing(uav_resource.get(), staging.get());
-		barriers.Commit(m_cmd_list.get());
+		barriers.Commit();
 
 		barriers.Transition(staging.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 		barriers.Transition(texture, D3D12_RESOURCE_STATE_COPY_DEST);
-		barriers.Commit(m_cmd_list.get());
+		barriers.Commit();
 
 		// Copy the staging resource back to the original resource.
 		m_cmd_list->CopyResource(texture, staging.get());
 
-		// Transition the texture back to a default state
-		barriers.Transition(texture, D3D12_RESOURCE_STATE_COMMON);
-		barriers.Commit(m_cmd_list.get());
+		// Transition the texture back to the initial state
+		barriers.Transition(texture, initial_res_state);
+		barriers.Commit();
 
 		m_flush_required = true;
 	}
@@ -224,9 +225,9 @@ namespace pr::rdr12
 		};
 
 		// Transition barriers
-		BarrierBatch barriers;
+		BarrierBatch barriers(m_cmd_list);
 		barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		barriers.Commit(m_cmd_list.get());
+		barriers.Commit();
 
 		// Loop through the mip-maps copying from the bigger mip-map to the smaller one with down-sampling in a compute shader
 		for (auto mip = mip_first; mip != mip_first + mip_count; ++mip)
@@ -252,7 +253,7 @@ namespace pr::rdr12
 			m_cmd_list->SetComputeRootDescriptorTable(s_cast<UINT>(EMipMapParam::DstTexture), uav);
 			barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, s_cast<uint32_t>(mip));
 
-			barriers.Commit(m_cmd_list.get());
+			barriers.Commit();
 
 			// Dispatch the compute shader with one thread per 8x8 pixels
 			m_cmd_list->Dispatch(
@@ -264,37 +265,6 @@ namespace pr::rdr12
 			// the next mip-map, as it will be the source texture for the next mip-map
 			barriers.UAV(uav_resource);
 		}
-	}
-
-	// Flush commands to the GPU. Returns the sync point for when they've been executed
-	uint64_t MipMapGenerator::FlushToGpu()
-	{
-		if (!m_flush_required)
-			return m_gsync.LastAddedSyncPoint();
-
-		// Close the command list
-		Throw(m_cmd_list->Close());
-
-		// Execute the command list
-		auto cmd_lists = { static_cast<ID3D12CommandList*>(m_cmd_list.get()) };
-		m_rdr.ComQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
-		m_flush_required = false;
-
-		// Add a sync point
-		auto sync_point = m_gsync.AddSyncPoint(m_rdr.ComQueue());
-		m_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
-
-		// Reset the command list
-		m_cmd_alloc = m_cmd_alloc_pool.Get();
-		Throw(m_cmd_list->Reset(m_cmd_alloc, nullptr));
-
-		return sync_point;
-	}
-
-	// Wait for mip-map commands to complete execution
-	void MipMapGenerator::Wait(uint64_t sync_point) const
-	{
-		m_gsync.Wait(sync_point);
 	}
 }
 

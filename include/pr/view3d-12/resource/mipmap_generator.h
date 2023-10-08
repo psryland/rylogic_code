@@ -20,7 +20,7 @@ namespace pr::rdr12
 
 		Renderer&        m_rdr;            // The owning renderer instance
 		GpuSync&         m_gsync;          // The GPU fence
-		GfxCmdList&      m_cmd_list;       // Command list for resource manager operations.
+		GfxCmdList&      m_cmd_list;       // Command list for mip generator operations.
 		KeepAlive        m_keep_alive;     // Keeps D3D objects alive until the GPU has finished with them
 		GpuViewHeap      m_heap_view;      // GPU visible descriptor heap for CBV/SRV/UAV
 		SignaturePtr     m_mipmap_sig;     // Root signature for the mip map generator
@@ -30,15 +30,14 @@ namespace pr::rdr12
 	public:
 
 		MipMapGenerator(Renderer& rdr, GpuSync& gsync, GfxCmdList& cmd_list);
+		MipMapGenerator(MipMapGenerator&&) = delete;
 		MipMapGenerator(MipMapGenerator const&) = delete;
+		MipMapGenerator& operator = (MipMapGenerator&&) = delete;
 		MipMapGenerator& operator = (MipMapGenerator const&) = delete;
+		~MipMapGenerator() = default;
 
 		// Generate mip maps for a texture
 		void Generate(ID3D12Resource* texture, int mip_first = 1, int mip_count = limits<int>::max());
-
-		// Flush commands to the GPU. Returns the sync point for when they've been executed
-		uint64_t FlushToGpu();
-		void Wait(uint64_t sync_point) const;
 
 	private:
 

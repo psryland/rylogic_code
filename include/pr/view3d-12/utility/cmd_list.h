@@ -10,7 +10,7 @@
 
 namespace pr::rdr12
 {
-	// Forward declare the pool
+	// Forward declaration
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdListPool;
 
@@ -24,23 +24,23 @@ namespace pr::rdr12
 		//  - Only reset allocator when the GPU has finished with the list (see GpuSync).
 		//  - Can reset a command list immediately after executing it, but it has to use a different allocator.
 		//  - Need to wrap the command list because state (such as Resource States) needs to be buffered per command list.
+		//  - Not storing a ref to a cmd_alloc_pool in here, because not all CmdLists are used where there is an allocator pool.
 		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12CommandList>;
 
 	private:
 
+		friend CmdListPool<ListType>;
+		using alloc_t = typename CmdAlloc<ListType>;
 		using pool_t = typename CmdListPool<ListType>;
-		using res_states_t = struct
-		{
-			pr::vector<ID3D12Resource*> m_res;
-			pr::vector<ResState> m_state;
-		};
+		using res_states_t = std::unordered_map<ID3D12Resource const*, ResState>;
 
 	private:
 
-		D3DPtr<ICommandList> m_list; // The interface for buffering GPU commands.
-		res_states_t m_resources_states;
-		std::thread::id m_thread_id; // The thread id of the thread that called Reset.
-		pool_t* m_pool;              // The pool to return this allocator too. (can be null)
+		D3DPtr<ICommandList> m_list;     // The interface for buffering GPU commands.
+		alloc_t* m_cmd_alloc;            // The current allocator in use by this cmd list.
+		res_states_t m_resources_states; // Track the state of each resource as used by this command list
+		std::thread::id m_thread_id;     // The thread id of the thread that called Reset.
+		pool_t* m_pool;                  // The pool to return this list too. (can be null)
 
 	public:
 
@@ -49,11 +49,26 @@ namespace pr::rdr12
 			, m_thread_id(std::this_thread::get_id())
 			, m_pool()
 		{}
-		CmdList(D3DPtr<ICommandList> list, pool_t* pool)
+		CmdList(D3DPtr<ICommandList> list, alloc_t* cmd_alloc, pool_t* pool)
 			: m_list(list)
+			, m_cmd_alloc(cmd_alloc)
 			, m_thread_id(std::this_thread::get_id())
 			, m_pool(pool)
 		{}
+		CmdList(ID3D12Device4* device, pool_t* pool, wchar_t const* name)
+			: CmdList(nullptr, nullptr, pool)
+		{
+			// Create an instance of a cmd list with no allocator assigned yet
+			Throw(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			if (name) Throw(m_list->SetName(name));
+		}
+		CmdList(ID3D12Device* device, alloc_t& cmd_alloc, pool_t* pool, wchar_t const* name)
+			: CmdList(nullptr, &cmd_alloc, pool)
+		{
+			// Create an instance of an open cmd list based on 'cmd_alloc'
+			Throw(device->CreateCommandList(0, ListType, cmd_alloc, nullptr, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			if (name) Throw(m_list->SetName(name));
+		}
 		CmdList(CmdList&&) = default;
 		CmdList(CmdList const&) = delete;
 		CmdList& operator =(CmdList&& rhs)
@@ -62,6 +77,7 @@ namespace pr::rdr12
 			// We need swap so that replaced values return to the pool.
 			if (&rhs == this) return *this;
 			std::swap(m_list, rhs.m_list);
+			std::swap(m_cmd_alloc, rhs.m_cmd_alloc);
 			std::swap(m_thread_id, rhs.m_thread_id);
 			std::swap(m_pool, rhs.m_pool);
 			return *this;
@@ -73,38 +89,37 @@ namespace pr::rdr12
 				m_pool->Return(*this);
 		}
 
-		// Reset the command list to use the given allocator
-		void Reset(GfxCmdAlloc& alloc)
-		{
-			// Create an open command list for use by the resource manager, since it is independent of any windows or scenes.
-			Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_gfx_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_gfx_cmd_list.m_ptr));
-			m_gfx_cmd_list->SetName(L"ResManCmdListGfx");
-
-		}
 		// Set the ID of the thread using this command list
 		void UseThisThread()
 		{
 			m_thread_id = std::this_thread::get_id();
 		}
 
+		// Record the state of the given resource, as used by this command list
+		ResState& ResState(ID3D12Resource const* res)
+		{
+			return m_resources_states[res];
+		}
+
 		// Access the list
-		ICommandList* operator ->() const
+		ICommandList* get() const
 		{
 			ThrowOnCrossThreadUse();
 			return m_list.get();
 		}
-
-		// Convert to the list pointer
+		ICommandList* operator ->() const
+		{
+			return get();
+		}
 		operator ICommandList* () const
 		{
-			ThrowOnCrossThreadUse();
-			return m_list.get();
+			return get();
 		}
 
 	private:
 
 		// Ensure calls are from the thread that owns this command list
-		void ThrowOnCrossThreadUse()
+		void ThrowOnCrossThreadUse() const
 		{
 			if (std::this_thread::get_id() != m_thread_id)
 				throw std::runtime_error("Cross thread use of a command list");
@@ -120,7 +135,8 @@ namespace pr::rdr12
 		//  - It basically just reduces allocations.
 
 		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12CommandList>;
-		using pool_t = pr::vector<CmdList<ListType>, 16, false>;
+		using cmd_list_t = CmdList<ListType>;
+		using pool_t = pr::vector<cmd_list_t, 16, false>;
 
 		GpuSync* m_gsync;
 		pool_t m_pool;
@@ -139,18 +155,11 @@ namespace pr::rdr12
 		}
 
 		// Get a command list that returns to the pool when out of scope
-		CmdList<ListType> Get()
+		cmd_list_t Get()
 		{
 			// Create a new command list if there isn't one available
 			if (m_pool.empty())
-			{
-				// Create a command list for internal use by the window
-				D3DPtr<ICommandList> cmd_list;
-				auto device4 = m_gsync->D3DDevice();
-				Throw(device4->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&cmd_list.m_ptr));
-				Throw(cmd_list->SetName(L"CmdListPool:CmdList"));
-				m_pool.push_back(CmdList<ListType>(cmd_list, nullptr));
-			}
+				m_pool.push_back(cmd_list_t(m_gsync->D3DDevice(), nullptr, L"CmdListPool:CmdList"));
 
 			// Get a command list from the pool
 			auto list = std::move(m_pool.back());
@@ -160,7 +169,7 @@ namespace pr::rdr12
 		}
 
 		// Return the list to the pool
-		void Return(CmdList<ListType>& cmd_list)
+		void Return(cmd_list_t& cmd_list)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_gsync != nullptr, "This pool has already been destructed");
 			PR_ASSERT(PR_DBG_RDR, cmd_list != nullptr, "Don't add null lists to the pool");
