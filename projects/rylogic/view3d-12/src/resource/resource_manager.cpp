@@ -28,7 +28,7 @@ namespace pr::rdr12
 		,m_gsync(rdr.D3DDevice())
 		,m_gfx_cmd_alloc_pool(m_gsync)
 		,m_gfx_cmd_alloc(m_gfx_cmd_alloc_pool.Get())
-		,m_gfx_cmd_list()
+		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc, nullptr, L"ResManCmdListGfx")
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
 		,m_lookup_tex()
@@ -42,12 +42,6 @@ namespace pr::rdr12
 		,m_stock_textures()
 		,m_flush_required()
 	{
-		auto device = m_rdr.D3DDevice();
-
-		// Create an open command list for use by the resource manager, since it is independent of any windows or scenes.
-		Throw(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_gfx_cmd_alloc, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&m_gfx_cmd_list.m_ptr));
-		m_gfx_cmd_list->SetName(L"ResManCmdListGfx");
-
 		// Setup notification of sync points
 		m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
 
@@ -109,9 +103,6 @@ namespace pr::rdr12
 		rdr().GfxQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
 		m_flush_required = false;
 
-		// Execute any pending mip-map generation work
-		m_mipmap_gen.FlushToGpu();
-
 		// Add a sync point
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
 		m_gfx_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
@@ -144,22 +135,26 @@ namespace pr::rdr12
 			rd.Width *= desc.ElemStride;
 
 		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
+		//auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd, desc.FinalState,
+			&desc.HeapProps, desc.HeapFlags, &rd, desc.FinalState, //resource_state,//
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 		
-		// ???
-		Throw(res->SetPrivateDataInterface(GUID_ResourceTracker, new ResourceTracker));
-		ResourceTracker::Get(res)
-
-		ResState(res.get()).Apply(desc.FinalState);
+		// We need to record that the initial state is 'desc.FinalState' then track, on a per-cmd-list
+		// basis, what the state transitions are for this resource, so that at the end of a cmd list we know
+		// what state the resource will be in, and can then transition it to the correct state for the next
+		// cmd list.
+		m_gfx_cmd_list.ResState(res.get()).Apply(desc.FinalState);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
 		{
+			BarrierBatch barriers(m_gfx_cmd_list);
+			barriers.Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+			barriers.Commit();
+
 			// Copy the initialisation data into the resource
-			//auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
 			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
 			
 			// Generate mip maps for the texture (if needed)
@@ -170,9 +165,8 @@ namespace pr::rdr12
 				m_mipmap_gen.Generate(res.get());
 
 			// Transition the resource to the final state
-			BarrierBatch barriers;
 			barriers.Transition(res.get(), desc.FinalState);
-			barriers.Commit(m_gfx_cmd_list.get());
+			barriers.Commit();
 			m_flush_required = true;
 		}
 
@@ -813,6 +807,7 @@ namespace pr::rdr12
 		//  - Constant buffers must be aligned to D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
 		//  - Texture buffers must be aligned to D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
 		//  - D3D12_TEXTURE_DATA_PITCH_ALIGNMENT(256) is the minimum row pitch for a texture
+		//  - 'dest' must be in the 'copy dest' state
 		if (images.empty())
 			return;
 

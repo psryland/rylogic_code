@@ -9,33 +9,25 @@ namespace pr::rdr12
 {
 	struct ResState
 	{
-	private:
-
 		// Notes:
+		//  - This object is used to determine the final state that a resource (or it's mips) is
+		//    in at the end of executing a command list.
 		//  - Resource states are maintained *per command list*. I.e., each command list tracks
-		//    the state of the resources it operates on.
-		//  - Command lists are serialised when executed but can be created in parallel, so having
-		//    one resource state tracking structure per resource doesn't work.
+		//    the state changes of any resources that it operates on.
+		//  - Command lists are serialised when executed but can be created in parallel so having
+		//    one state tracking structure per resource doesn't work.
 		//  - The recommended way to do this is to buffer transitions per resource per command list,
 		//    then before a command list is executed, insert transitions from the global state to the
 		//    first required state of the command list. After the command list is queued, update the global
 		//    state to the final state for the command list.
-		// //
-		// //
-		// 
-		//  - This object is stored in the PrivateData of a resource. It keeps track
-		//    of the resource state for each sub resource (i.e. mip level).
-		//  - The 'm_state' is stored as a value type in the PrivateData because there
-		//    is no convenient way to delete allocated private data when the resource is released.
 		//  - 'm_state[0]' is the state for the 'AllSubresources' special case.
-		//  - 'm_state[1:]' is flat-map of mip-to-state.
-		//  - States are encoded as [state:24, subresource:8] since resource states have
-		//    a max value of 0x80_0000, and textures won't have more than 0xFF mips.
+		//  - 'm_state[1:]' maps mip-to-state. States are encoded as [state:24, subresource:8] since
+		//    resource states have a max value of 0x80_0000, and textures won't have more than 0xFF mips.
 		//  - The flat-map list length is determined by a sentinel.
-		// 
-		// WARNING: Multiple instances of this object for the same resource will data-race.
 
-		inline static GUID const Guid_ResourceStates = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
+	private:
+
+		inline static constexpr GUID Guid_ResourceStates = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
 		inline static constexpr uint32_t StateMask = 0x00FFFFFF;
 		inline static constexpr uint32_t IndexMask = 0x000000FF;
 		inline static constexpr uint32_t IndexBits = 8;
@@ -70,6 +62,8 @@ namespace pr::rdr12
 			}
 		};
 
+		// Records the independent states of up to 8 mips. It shouldn't be necessary to have the mips of a resource
+		// in more than 8 different states. Almost all of the time, all mips will be in the same state (= to mip0).
 		MipState m_state[8];   // last value is a sentinel
 
 	public:
@@ -79,8 +73,8 @@ namespace pr::rdr12
 			Apply(D3D12_RESOURCE_STATE_COMMON);
 		}
 
-		// Return the default (or ALL mips) state
-		D3D12_RESOURCE_STATES DefaultState() const
+		// Return the main mip state
+		D3D12_RESOURCE_STATES Mip0State() const
 		{
 			return m_state[0].state();
 		}
@@ -130,7 +124,7 @@ namespace pr::rdr12
 				if (idx != 0)
 				{
 					// If 'state' == the default state, remove 'idx'
-					if (state == DefaultState())
+					if (state == Mip0State())
 					{
 						assert(idx >= 0 && idx < _countof(m_state) - 1);
 						for (auto i = idx; i < _countof(m_state) - 1; ++i)
@@ -147,7 +141,7 @@ namespace pr::rdr12
 				else
 				{
 					// If 'state' == the default state, no need to add a mip-specific state
-					if (state != DefaultState())
+					if (state != Mip0State())
 					{
 						// Find the next free slot. If 'idx' is the sentinel,
 						// then 'm_state' is full. It might need enlarging.
@@ -164,7 +158,8 @@ namespace pr::rdr12
 		}
 
 		// Return the mip-specific states
-		template <std::invocable<int, D3D12_RESOURCE_STATES> CB> void EnumMipSpecificStates(CB cb) const
+		template <std::invocable<int, D3D12_RESOURCE_STATES> CB>
+		void EnumMipSpecificStates(CB cb) const
 		{
 			for (int i = 1; m_state[i].sub() != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES; ++i)
 				cb(m_state[i].sub(), m_state[i].state());
@@ -174,7 +169,7 @@ namespace pr::rdr12
 		friend bool operator == (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
 		{
 			// The default state == 'rhs' and there are no mip-specific states
-			return lhs.DefaultState() == rhs && !lhs.HasMipSpecificStates();
+			return lhs.Mip0State() == rhs && !lhs.HasMipSpecificStates();
 		}
 		friend bool operator != (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
 		{

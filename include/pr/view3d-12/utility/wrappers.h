@@ -280,6 +280,7 @@ namespace pr::rdr12
 		ResDesc()
 			: D3D12_RESOURCE_DESC()
 			, ElemStride()
+			, DataAlignment()
 			, Data()
 			, HeapProps(HeapProps::Default())
 			, HeapFlags(D3D12_HEAP_FLAG_NONE)
