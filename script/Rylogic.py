@@ -144,16 +144,17 @@ def ChgExtn(filepath:str, extn:str):
 def EnumFiles(root, filter:re=None):
 	for dirname, _, filenames in os.walk(root):
 		# We could remove entries from 'dirnames' to prevent recursion into those folders...
+		if filter: filenames = [f for f in filenames if filter.match(f)]
 		for filename in filenames:
-			if filter and not filter.match(filename): continue
 			yield os.path.join(dirname, filename)
 
 # Enumerate recursively through a directory returning the directory names
 # 'filter' is a regex that selects the paths to be returned.
 def EnumDirs(root, filter:re=None):
 	for dirname, dirnames, _ in os.walk(root):
+		# Remove the dir names that don't match the filter. This prevents recursion into those folders
+		if filter: dirnames = [d for d in dirnames if filter.match(d)]
 		for dir in dirnames:
-			if filter and not filter.match(dir): continue
 			yield os.path.join(dirname, dir)
 
 # Enumerate recursively through a directory returning files and directory names
@@ -161,11 +162,12 @@ def EnumDirs(root, filter:re=None):
 # Returns a pair: (path, is_directory)
 def EnumPaths(root, dir_filter:re=None, file_filter:re=None):
 	for dirname, dirnames, filenames in os.walk(root):
+		# Remove the dir names that don't match the filter. This prevents recursion into those folders
+		if dir_filter: dirnames = [d for d in dirnames if dir_filter.match(d)]
 		for dir in dirnames:
-			if dir_filter and not dir_filter.match(dir): continue
 			yield (os.path.join(dirname, dir), True)
+		if file_filter: filenames = [f for f in filenames if file_filter.match(f)]
 		for filename in filenames:
-			if file_filter and not file_filter.match(filename): continue
 			yield (os.path.join(dirname, filename), False)
 
 # Read the contents of a file into a buffer
