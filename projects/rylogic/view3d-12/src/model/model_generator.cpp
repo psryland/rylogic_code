@@ -10,7 +10,6 @@
 
 namespace pr::rdr12
 {
-
 	// Implementation functions
 	struct Impl
 	{
@@ -79,6 +78,31 @@ namespace pr::rdr12
 				std::swap(ibuf[i + 0], ibuf[i + 1]);
 		}
 
+		// Generate normals for the triangle list given by index range 'irange' in 'cache'
+		template <typename VType, typename IType>
+		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, Range irange, float gen_normals)
+		{
+			auto ibuf = cache.m_icont.data<IType>() + irange.begin();
+			geometry::GenerateNormals(
+				irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
+				[&](IType idx)
+				{
+					return GetP(cache.m_vcont[idx]);
+				},
+				[&](IType idx, IType orig, v4 const& norm)
+				{
+					assert(idx <= cache.m_vcont.size());
+					if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
+					SetN(cache.m_vcont[idx], norm);
+				},
+				[&](IType i0, IType i1, IType i2)
+				{
+					*ibuf++ = i0;
+					*ibuf++ = i1;
+					*ibuf++ = i2;
+				});
+		}
+
 		// Generate normals for the triangle list nuggets in 'cache'
 		template <typename VType>
 		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, float gen_normals)
@@ -94,9 +118,9 @@ namespace pr::rdr12
 				{
 					switch (cache.m_icont.stride())
 					{
-						case sizeof(uint32_t) : GenerateNormals<VType, uint32_t>(cache, nug.m_irange, gen_normals); break;
-							case sizeof(uint16_t) : GenerateNormals<VType, uint16_t>(cache, nug.m_irange, gen_normals); break;
-							default: throw std::runtime_error("Unsupported index stride");
+						case sizeof(uint32_t): GenerateNormals<VType, uint32_t>(cache, nug.m_irange, gen_normals); break;
+						case sizeof(uint16_t): GenerateNormals<VType, uint16_t>(cache, nug.m_irange, gen_normals); break;
+						default: throw std::runtime_error("Unsupported index stride");
 					}
 					break;
 				}
@@ -107,38 +131,13 @@ namespace pr::rdr12
 				}
 			}
 		}
-
-		// Generate normals for the triangle list given by index range 'irange' in 'cache'
-		template <typename VType, typename IType>
-		static void GenerateNormals(ModelGenerator::Cache<VType>& cache, Range irange, float gen_normals)
-		{
-			auto ibuf = cache.m_icont.data<IType>() + irange.begin();
-			geometry::GenerateNormals(
-				irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
-				[&](IType idx)
-				{
-				return GetP(cache.m_vcont[idx]);
-				},
-				[&](IType idx, IType orig, v4 const& norm)
-				{
-				assert(idx <= cache.m_vcont.size());
-				if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
-				SetN(cache.m_vcont[idx], norm);
-				},
-				[&](IType i0, IType i1, IType i2)
-				{
-				*ibuf++ = i0;
-				*ibuf++ = i1;
-				*ibuf++ = i2;
-				});
-		}
-	};
+	}
 
 	// Create a model from 'cache'
 	// 'bake' is a transform to bake into the model
 	// 'gen_normals' generates normals for the model if >= 0f. Value is the threshold for smoothing (in rad)
 	template <typename VType>
-	ModelPtr Create(Renderer& rdr, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const& opts = ModelGenerator::CreateOptions{})
+	static ModelPtr Create(Renderer& rdr, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const& opts = ModelGenerator::CreateOptions{})
 	{
 		// Sanity check 'cache'
 		#if PR_DBG_RDR

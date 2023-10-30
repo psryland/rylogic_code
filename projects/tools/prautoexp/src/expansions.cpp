@@ -15,7 +15,6 @@
 #include "dbg_helper.h"
 #include "reentry_guard.h"
 
-#include "pr/common/datetime.h"
 #include "pr/common/fmt.h"
 #include "pr/common/alloca.h"
 #include "pr/common/cast.h"
@@ -496,14 +495,6 @@ extern "C"
 			}
 		}
 		_snprintf(pResult, max, "%s", s.c_str());
-		return S_OK;
-	}
-	ADDIN_API HRESULT WINAPI AddIn_DateTime(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
-	{
-		ReentryGuard guard;
-		DateTime dt;
-		if (FAILED(pHelper->Read(dt))) return E_FAIL;
-		_snprintf(pResult, max, "%s", dt.ToString().c_str());
 		return S_OK;
 	}
 
