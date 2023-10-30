@@ -131,7 +131,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-	}
+	};
 
 	// Create a model from 'cache'
 	// 'bake' is a transform to bake into the model
