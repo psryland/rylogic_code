@@ -62,9 +62,8 @@ namespace pr::rdr12
 			}
 		};
 
-		// Records the independent states of up to 8 mips. It shouldn't be necessary to have the mips of a resource
-		// in more than 8 different states. Almost all of the time, all mips will be in the same state (= to mip0).
-		MipState m_state[8];   // last value is a sentinel
+		// Records the independent states of up to N mips.
+		MipState m_state[16];   // last value is a sentinel
 
 	public:
 
