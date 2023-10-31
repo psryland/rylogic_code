@@ -59,7 +59,7 @@ struct Main :Form
 			"	0 0 0\n"
 			"	0 1 0\n"
 			"	40 40\n"
-			"	*Texture {\"#checker2\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
+			"	*Texture {\"#checker2\" *Addr{Wrap Wrap} *o2w {*Scale{2 2 1}}}\n"
 			"}\n"
 			//"*Box first_box_eva 8000FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
