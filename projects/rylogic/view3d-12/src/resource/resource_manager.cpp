@@ -135,9 +135,10 @@ namespace pr::rdr12
 			rd.Width *= desc.ElemStride;
 
 		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
-		//auto resource_state = has_init_data ? D3D12_RESOURCE_STATE_COPY_DEST : desc.FinalState;
+		// Create in the COMMON state to prevent a D3D12 warning "Buffers are effectively created in state D3D12_RESOURCE_STATE_COMMON"
+		// COMMON state is implicitly promoted to the first state transition.
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd, desc.FinalState, //resource_state,//
+			&desc.HeapProps, desc.HeapFlags, &rd, D3D12_RESOURCE_STATE_COMMON,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 		
@@ -158,8 +159,7 @@ namespace pr::rdr12
 			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
 			
 			// Generate mip maps for the texture (if needed)
-
-			// 'm_mipmap_gen' should use the same cmd-list as the resource manager, so that mips are generated as 
+			// 'm_mipmap_gen' should use the same cmd-list as the resource manager, so that mips are generated as
 			// textures are created. Remember cmd-lists are executed serially.
 			if (desc.MipLevels != 1)
 				m_mipmap_gen.Generate(res.get());
