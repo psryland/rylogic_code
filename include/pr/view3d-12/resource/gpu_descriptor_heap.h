@@ -14,8 +14,11 @@ namespace pr::rdr12
 	struct GpuDescriptorHeap
 	{
 		// Notes:
-		//  - Have one of these per window, per heap type (SRV, Sampler).
+		//  - This heap is used to pass descriptors to the GPU. Use a DescriptorStore for long
+		//    term storage of the descriptors. This heap type can be bound to a command list,
+		//    and descriptors are copied from the store into here.
 		//  - The heap is treated like a ring buffer, with 'sync points' interleaved.
+		//  - Have one of these per command list, per heap type (SRV, Sampler).
 		//  - A sync point marks a new "frame" of GPU descriptors.
 		//  - The tail of the ring buffer advances as sync points are reached by the GPU.
 

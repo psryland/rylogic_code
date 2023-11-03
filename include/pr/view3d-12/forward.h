@@ -169,6 +169,11 @@ namespace pr::rdr12
 	struct ResDesc;
 	    struct SamDesc;
 	
+	// Samplers
+	struct SamplerDesc;
+	struct Sampler;
+	using SamplerPtr = RefPtr<Sampler>;
+
 	// Textures
 	struct TextureDesc;
 	struct TextureBase;

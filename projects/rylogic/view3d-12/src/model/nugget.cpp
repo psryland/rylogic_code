@@ -5,7 +5,6 @@
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/resource/resource_manager.h"
-#include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
@@ -17,6 +16,7 @@ namespace pr::rdr12
 		,m_shaders()
 		,m_pso()
 		,m_tex_diffuse()
+		,m_sam_diffuse()
 		,m_tint(Colour32White)
 		,m_sort_key(ESortGroup::Default)
 		,m_relative_reflectivity(1)

@@ -24,7 +24,7 @@ namespace pr::rdr12
 	enum ESamReg
 	{
 		// e.g. SamplerState sam[1] :reg(s3)
-		s0 = 0, s1, s2, s3, //...
+		s0 = 0, s1, s2, s3, s4, s5, s6, s7, s8, s9, //...
 	};
 
 	// Unordered access views

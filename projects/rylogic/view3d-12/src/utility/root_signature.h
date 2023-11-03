@@ -91,6 +91,24 @@ namespace pr::rdr12
 			};
 		}
 
+		// Add a sampler descriptor range parameter
+		void Samp(EParam index, ESamReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		{
+			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+				.NumDescriptors = s_cast<UINT>(count),
+				.BaseShaderRegister = s_cast<UINT>(reg),
+				.RegisterSpace = 0U,
+				.Flags = flags,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
+			});
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = {.NumDescriptorRanges =  1U, .pDescriptorRanges = &m_des_range.back()},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
 		// Add a static sampler
 		void Samp(ESamp index, D3D12_STATIC_SAMPLER_DESC const& desc)
 		{

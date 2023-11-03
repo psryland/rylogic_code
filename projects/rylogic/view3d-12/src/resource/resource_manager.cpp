@@ -9,6 +9,8 @@
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/texture/texture_loader.h"
+#include "pr/view3d-12/sampler/sampler_desc.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/nugget.h"
@@ -30,8 +32,10 @@ namespace pr::rdr12
 		,m_gfx_cmd_alloc(m_gfx_cmd_alloc_pool.Get())
 		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc, nullptr, L"ResManCmdListGfx")
 		,m_heap_view(HeapCapacityView, &m_gsync)
+		,m_heap_sampler(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
 		,m_lookup_tex()
+		,m_lookup_sam()
 		,m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
 		,m_descriptor_store(rdr.D3DDevice())
 		,m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
@@ -40,6 +44,7 @@ namespace pr::rdr12
 		,m_gdi_dc_ref_count()
 		,m_stock_models()
 		,m_stock_textures()
+		,m_stock_samplers()
 		,m_flush_required()
 	{
 		// Setup notification of sync points
@@ -47,22 +52,13 @@ namespace pr::rdr12
 
 		// Create stock resources
 		CreateStockTextures();
+		CreateStockSamplers();
 		CreateStockModels();
 
 		// Wait till stock resources are created
 		FlushToGpu(true);
 
 		#if 0 // todo
-		// Create default samplers to use in shaders that expect a
-		// sampler but the model has no texture/sampler bound.
-		{
-			Renderer::Lock lock(rdr);
-			auto sdesc = SamDesc::LinearClamp();
-			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler.m_ptr));
-			sdesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler_comp.m_ptr));
-		}
-
 		// Detect outstanding references to GDI device contexts
 		m_eh_resize = rdr().BackBufferSizeChanged += [this](Window&, BackBufferSizeChangedEventArgs const&)
 		{
@@ -73,6 +69,7 @@ namespace pr::rdr12
 	ResourceManager::~ResourceManager()
 	{
 		m_stock_textures.resize(0);
+		m_stock_samplers.resize(0);
 		m_stock_models.resize(0);
 
 		// Stop polling 'm_gsync'
@@ -464,6 +461,23 @@ namespace pr::rdr12
 		return inst;
 	}
 
+	// Create a new sampler instance.
+	SamplerPtr ResourceManager::CreateSampler(SamplerDesc const& desc)
+	{
+		// Check whether 'id' already exists, if so, throw. Users should use FindTexture first.
+		if (desc.m_id != AutoId && m_lookup_sam.find(desc.m_id) != end(m_lookup_sam))
+			throw std::runtime_error(FmtS("Sampler Id '%d' is already in use", desc.m_id));
+
+		// Allocate a new sampler instance
+		SamplerPtr inst(rdr12::New<Sampler>(*this, desc), true);
+		assert(m_mem_tracker.add(inst.get()));
+
+		// Add the sampler instance pointer (not ref counted) to the lookup table.
+		// The caller owns the sampler, when released it will be removed from this lookup.
+		AddLookup(m_lookup_sam, inst->m_id, inst.get());
+		return inst;
+	}
+
 	// Create a new nugget
 	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
 	{
@@ -479,6 +493,15 @@ namespace pr::rdr12
 			throw std::runtime_error(FmtS("Stock texture %s does not exist", Enum<EStockTexture>::ToStringA(id)));
 
 		return m_stock_textures[s_cast<int>(id)];
+	}
+
+	// Return a pointer to a stock sampler
+	SamplerPtr ResourceManager::FindSampler(EStockSampler id) const
+	{
+		if (s_cast<size_t>(id) > m_stock_samplers.size())
+			throw std::runtime_error(FmtS("Stock sampler %s does not exist", Enum<EStockSampler>::ToStringA(id)));
+
+		return m_stock_samplers[s_cast<int>(id)];
 	}
 
 	// Return a pointer to a stock model
@@ -641,6 +664,37 @@ namespace pr::rdr12
 			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
 			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), ResDesc::Tex2D(src, 0), false, 0, "#envmapproj");
 			m_stock_textures[s_cast<int>(EStockTexture::EnvMapProjection)] = CreateTexture2D(tdesc);
+		}
+	}
+
+	// Create the basic samplers
+	void ResourceManager::CreateStockSamplers()
+	{
+		// Create the stock samplers
+		m_stock_samplers.resize(EStockSampler_::NumberOf);
+		{// EStockSampler::PointClamp
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::PointClamp), SamDesc::PointClamp(), "#pointclamp");
+			m_stock_samplers[s_cast<int>(EStockSampler::PointClamp)] = CreateSampler(sdesc);
+		}
+		{// EStockSampler::PointWrap
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::PointWrap), SamDesc::PointWrap(), "#pointwrap");
+			m_stock_samplers[s_cast<int>(EStockSampler::PointWrap)] = CreateSampler(sdesc);
+		}
+		{// EStockSampler::LinearClamp
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::LinearClamp), SamDesc::LinearClamp(), "#linearclamp");
+			m_stock_samplers[s_cast<int>(EStockSampler::LinearClamp)] = CreateSampler(sdesc);
+		}
+		{// EStockSampler::LinearWrap
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::LinearWrap), SamDesc::LinearWrap(), "#linearwrap");
+			m_stock_samplers[s_cast<int>(EStockSampler::LinearWrap)] = CreateSampler(sdesc);
+		}
+		{// EStockSampler::AnisotropicClamp
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::AnisotropicClamp), SamDesc::AnisotropicClamp(), "#anisotropicclamp");
+			m_stock_samplers[s_cast<int>(EStockSampler::AnisotropicClamp)] = CreateSampler(sdesc);
+		}
+		{// EStockSampler::AnisotropicWrap
+			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::AnisotropicWrap), SamDesc::AnisotropicWrap(), "#anisotropicwrap");
+			m_stock_samplers[s_cast<int>(EStockSampler::AnisotropicWrap)] = CreateSampler(sdesc);
 		}
 	}
 
@@ -945,6 +999,23 @@ namespace pr::rdr12
 		assert(m_mem_tracker.remove(iter->second));
 		rdr12::Delete<TextureBase>(iter->second);
 		m_lookup_tex.erase(iter);
+	}
+
+	// Return a sampler to the allocator.
+	void ResourceManager::Delete(Sampler* sam)
+	{
+		if (sam == nullptr)
+			return;
+
+		// Find 'sam' in the map of RdrIds to sampler instances
+		// We'll remove this, but first use it as a non-const reference
+		auto iter = m_lookup_sam.find(sam->m_id);
+		assert("Sampler not found" && iter != end(m_lookup_sam));
+
+		// Delete the texture and remove the entry from the RdrId lookup map
+		assert(m_mem_tracker.remove(iter->second));
+		rdr12::Delete<Sampler>(iter->second);
+		m_lookup_sam.erase(iter);
 	}
 
 	//// Return a shader to the allocator
