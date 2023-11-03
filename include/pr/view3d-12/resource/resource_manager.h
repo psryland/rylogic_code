@@ -31,11 +31,14 @@ namespace pr::rdr12
 		using SignaturePtr       = D3DPtr<ID3D12RootSignature>;
 		using PipelineStatePtr   = D3DPtr<ID3D12PipelineState>;
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;
+		using SamplerLookup      = Lookup<RdrId, Sampler*>;
 		using DxResLookup        = Lookup<RdrId, ID3D12Resource*>;
 		using AllocationsTracker = AllocationsTracker<void>;
 		using GpuViewHeap        = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
+		using GpuSamplerHeap     = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>;
 		using ModelCont          = pr::vector<ModelPtr>;
 		using TextureCont        = pr::vector<Texture2DPtr>;
+		using SamplerCont        = pr::vector<SamplerPtr>;
 		using GdiPlus            = pr::GdiPlus;
 
 		AllocationsTracker m_mem_tracker;        // Resource allocation tracker
@@ -45,8 +48,10 @@ namespace pr::rdr12
 		GfxCmdAlloc        m_gfx_cmd_alloc;      // Command list allocator for resource manager operations
 		GfxCmdList         m_gfx_cmd_list;       // Command list for resource manager operations.
 		GpuViewHeap        m_heap_view;          // GPU visible descriptor heap for CBV/SRV/UAV
+		GpuSamplerHeap     m_heap_sampler;       // GPU visible descriptor heap for samplers
 		DxResLookup        m_lookup_res;         // A map from hash of resource URI to existing Dx12 resource pointer.
 		TextureLookup      m_lookup_tex;         // A map from texture id to existing texture instances.
+		SamplerLookup      m_lookup_sam;         // A map from sampler id to existing sampler instances.
 		GpuUploadBuffer    m_upload_buffer;      // Upload memory buffer for initialising resources
 		DescriptorStore    m_descriptor_store;   // Manager of resource descriptors
 		MipMapGenerator    m_mipmap_gen;         // Utility class for generating mip maps for a texture
@@ -55,6 +60,7 @@ namespace pr::rdr12
 		int                m_gdi_dc_ref_count;   // Used to detect outstanding DC references
 		ModelCont          m_stock_models;       // Stock models
 		TextureCont        m_stock_textures;     // Stock textures
+		SamplerCont        m_stock_samplers;     // Stock samplers
 		bool               m_flush_required;     // True if commands have been added to the command list and need sending to the GPU
 
 	public:
@@ -80,6 +86,9 @@ namespace pr::rdr12
 		Texture2DPtr CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc);
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
 
+		// Create a new sampler instance
+		SamplerPtr CreateSampler(SamplerDesc const& desc);
+
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);
 
@@ -102,6 +111,9 @@ namespace pr::rdr12
 		// Return a pointer to a stock texture
 		Texture2DPtr FindTexture(EStockTexture stock) const;
 
+		// Return a pointer to a stock sampler
+		SamplerPtr FindSampler(EStockSampler stock) const;
+
 		// Return a pointer to a stock model
 		ModelPtr FindModel(EStockModel model) const;
 
@@ -116,10 +128,14 @@ namespace pr::rdr12
 		friend struct Model;
 		friend struct Nugget;
 		friend struct TextureBase;
+		friend struct Sampler;
 		friend struct Shader;
 		
 		// Create the basic textures that exist from startup
 		void CreateStockTextures();
+
+		// Create the basic samplers
+		void CreateStockSamplers();
 
 		// Create stock models
 		void CreateStockModels();
@@ -136,5 +152,6 @@ namespace pr::rdr12
 		void Delete(Model* model);
 		void Delete(Nugget* nugget);
 		void Delete(TextureBase* tex);
+		void Delete(Sampler* sam);
 	};
 }

@@ -97,6 +97,9 @@
     <Filter Include="src\ldraw">
       <UniqueIdentifier>{a9fc0979-5796-4338-a9f7-f09416328e59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\sampler">
+      <UniqueIdentifier>{e112c7e8-c0d7-484a-96df-7dda775a147a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp">
@@ -200,6 +203,9 @@
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\mipmap_generator.cpp">
       <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\sampler\sampler.cpp">
+      <Filter>src\sampler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -505,6 +511,12 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_state.h">
       <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\sampler\sampler.h">
+      <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\sampler\sampler_desc.h">
+      <Filter>src\sampler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

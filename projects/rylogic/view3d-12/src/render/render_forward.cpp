@@ -14,6 +14,8 @@
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/shaders/shader_forward.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
+#include "pr/view3d-12/texture/texture_base.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "view3d-12/src/shaders/common.h"
@@ -181,8 +183,13 @@ namespace pr::rdr12
 
 			// Bind textures to the pipeline
 			auto tex = nugget.m_tex_diffuse != nullptr ? nugget.m_tex_diffuse : rdr().res_mgr().FindTexture(EStockTexture::White);
-			auto handle = wnd().m_heap_view.Add(tex->m_srv);
-			cmd_list->SetGraphicsRootDescriptorTable((UINT)shaders::fwd::ERootParam::DiffTexture, handle);
+			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
+			cmd_list->SetGraphicsRootDescriptorTable((UINT)shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+
+			// Bind samplers to the pipeline
+			auto sam = nugget.m_sam_diffuse != nullptr ? nugget.m_sam_diffuse : rdr().res_mgr().FindSampler(EStockSampler::AnisotropicWrap);
+			auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
+			cmd_list->SetGraphicsRootDescriptorTable((UINT)shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
 
 			// Apply scene pipe state overrides
 			for (auto& ps : scn().m_pso)

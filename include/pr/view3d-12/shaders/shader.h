@@ -24,7 +24,7 @@ namespace pr::rdr12
 	struct Shader :RefCounted<Shader>
 	{
 		// Notes:
-		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc apply to all stages now. 
+		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc apply to all stages now.
 		//  - A shader without a Signature is an 'overlay' shader, intended to replace parts of a full shader. Overlay shaders
 		//    must use constant buffers that don't conflict with the base shader, and the base shader must have a signature that
 		//    handles all possible overlays.
