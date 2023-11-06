@@ -54,13 +54,25 @@ struct Main :Form
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Plane ground FFFFE8A0\n"
+			"*Arrow arrow\n"
 			"{\n"
-			"	0 0 0\n"
-			"	0 1 0\n"
-			"	40 40\n"
-			"	*Texture {\"#checker2\" *Addr{Wrap Wrap} *o2w {*Scale{2 2 1}}}\n"
+			"	Fwd                          // Type of  arrow. One of Line, Fwd, Back, or FwdBack\n"
+			"	-0.8 +0.2  0.0 FF00FF00      // Corner points forming a line strip of connected lines, followed by optional colour\n"
+			"	 0.3  0.7  0.2 FFFF0000      // Note, colour blends smoothly between each vertex\n"
+			"	-0.3  1.2 -0.2 FFFF0000      // Note, colour blends smoothly between each vertex\n"
+			"	+1.0 +1.7  0.0 FFFFFF00\n"
+			"	*Smooth                      // Optional. Turns the line segments into a smooth spline\n"
+			"	*Width { 10 }                // Optional line width and arrow head size\n"
+			"	*o2w {*pos{-15 1 0}}\n"
 			"}\n"
+
+			//"*Plane ground FFFFE8A0\n"
+			//"{\n"
+			//"	0 0 0\n"
+			//"	0 1 0\n"
+			//"	40 40\n"
+			//"	*Texture {\"#checker2\" *Addr{Wrap Wrap} *o2w {*Scale{2 2 1}}}\n"
+			//"}\n"
 			//"*Box first_box_eva 8000FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))

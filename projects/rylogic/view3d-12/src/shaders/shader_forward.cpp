@@ -21,10 +21,10 @@ namespace pr::rdr12::shaders
 		{
 			.VS = shader_code::forward_vs,
 			.PS = shader_code::forward_ps,
-			.GS = shader_code::none,
-			.CS = shader_code::none,
 			.DS = shader_code::none,
 			.HS = shader_code::none,
+			.GS = shader_code::none,
+			.CS = shader_code::none,
 		};
 		
 		// Create the root signature

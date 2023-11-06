@@ -96,11 +96,11 @@ namespace pr::rdr12
 			m_pso.Set<EPipeState::BlendState0>({ // D3D12_RENDER_TARGET_BLEND_DESC 
 				.BlendEnable = TRUE,
 				.LogicOpEnable = FALSE,
-				.SrcBlend = D3D12_BLEND_SRC_ALPHA,
-				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA,
-				.BlendOp = D3D12_BLEND_OP_ADD,
-				.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA,
-				.DestBlendAlpha = D3D12_BLEND_DEST_ALPHA,
+				.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
+				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
+				.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
+				.SrcBlendAlpha = D3D12_BLEND_ONE,
+				.DestBlendAlpha = D3D12_BLEND_ONE,
 				.BlendOpAlpha = D3D12_BLEND_OP_MAX,
 				.LogicOp = D3D12_LOGIC_OP_CLEAR,
 				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,

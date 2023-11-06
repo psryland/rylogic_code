@@ -2129,13 +2129,13 @@ namespace pr::rdr12
 			auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(m_line_width*2);
 
 			// Create nuggets
-			NuggetData nug;
 			Range vrange(0,0);
 			Range irange(0,0);
 			if (m_type & EArrowType::Back)
 			{
 				vrange = Range(0, 1);
 				irange = Range(0, 1);
+				NuggetData nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
@@ -2147,6 +2147,7 @@ namespace pr::rdr12
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + m_verts.size());
 				irange = Range(irange.m_end, irange.m_end + m_verts.size());
+				NuggetData nug;
 				nug.m_topo = ETopo::LineStrip;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr()});
@@ -2159,6 +2160,7 @@ namespace pr::rdr12
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + 1);
 				irange = Range(irange.m_end, irange.m_end + 1);
+				NuggetData nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
