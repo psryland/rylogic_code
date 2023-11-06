@@ -18,10 +18,10 @@ namespace pr::rdr12::shaders
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,
-			.GS = shader_code::show_normals_gs,
-			.CS = shader_code::none,
 			.DS = shader_code::none,
 			.HS = shader_code::none,
+			.GS = shader_code::show_normals_gs,
+			.CS = shader_code::none,
 		};
 	}
 	void ShowNormalsGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const* dle)

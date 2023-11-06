@@ -12,12 +12,13 @@ namespace pr::rdr12
 	// The compiled byte code for the shader stages
 	struct ShaderCode
 	{
+		// This is the order they appear in the pipeline state description
 		ByteCode VS;
 		ByteCode PS;
-		ByteCode GS;
-		ByteCode CS;
 		ByteCode DS;
 		ByteCode HS;
+		ByteCode GS;
+		ByteCode CS;
 	};
 
 	// A shader base class
