@@ -256,11 +256,14 @@ namespace pr::rdr12
 			if (stock_tex == nullptr)
 				throw std::runtime_error(Fmt("Stock texture '%s' not found", resource_path.string().c_str() + 1));
 
-			return stock_tex;
+			// Clone the stock texture, adding another reference to the D3D resource.
+			// A clone is needed because the t2s in the texture instance may be different.
+			res = stock_tex->m_res;
+			desc.m_tdesc = stock_tex->m_res->GetDesc();
 		}
 
 		// Create a texture from embedded resource
-		if (*resource_path.c_str() == '@')
+		else if (*resource_path.c_str() == '@')
 		{
 			auto uri = resource_path.wstring();
 
@@ -344,7 +347,7 @@ namespace pr::rdr12
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
 		return inst;
-}
+	}
 	TextureCubePtr ResourceManager::CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
 		// Notes:
