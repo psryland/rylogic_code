@@ -111,6 +111,12 @@ namespace pr::rdr12
 		// Return a pointer to a stock texture
 		Texture2DPtr FindTexture(EStockTexture stock) const;
 
+		// Return a pointer to an existing sampler
+		SamplerPtr FindSampler(RdrId id) const;
+
+		// Convenience method for cached samplers
+		SamplerPtr FindOrCreateSampler(SamplerDesc const& desc);
+
 		// Return a pointer to a stock sampler
 		SamplerPtr FindSampler(EStockSampler stock) const;
 
