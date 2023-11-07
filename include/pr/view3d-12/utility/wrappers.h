@@ -542,6 +542,12 @@ namespace pr::rdr12
 			MaxLOD         = D3D12_FLOAT32_MAX;
 		}
 
+		// Hash this description to create an Id that can be used to detect duplicate samplers
+		RdrId Id() const
+		{
+			return s_cast<RdrId>(pr::hash::HashBytes(this, this + 1));
+		}
+
 		// Standard samplers
 		static SamDesc const& PointClamp()       { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }
 		static SamDesc const& PointWrap()        { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }

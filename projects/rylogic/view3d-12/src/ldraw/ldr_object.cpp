@@ -13,6 +13,7 @@
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/texture/texture_desc.h"
+#include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
@@ -520,14 +521,14 @@ namespace pr::rdr12
 	}
 
 	// Parse a texture description. Returns a pointer to the Texture created in the renderer.
-	bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
+	bool ParseTexture(ParseParams& p, Texture2DPtr& tex, SamplerPtr& sam)
 	{
 		auto& reader = p.m_reader;
 
 		std::wstring tex_resource;
 		auto t2s = m4x4::Identity();
 		bool has_alpha = false;
-		SamDesc sam;
+		SamDesc sdesc;
 
 		reader.SectionStart();
 		while (!reader.IsSectionEnd())
@@ -546,8 +547,8 @@ namespace pr::rdr12
 					{
 						char word[20];
 						reader.SectionStart();
-						reader.Identifier(word); sam.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						reader.Identifier(word); sam.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+						reader.Identifier(word); sdesc.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+						reader.Identifier(word); sdesc.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
 						reader.SectionEnd();
 						break;
 					}
@@ -555,7 +556,7 @@ namespace pr::rdr12
 					{
 						char word[20];
 						reader.SectionStart();
-						reader.Identifier(word); sam.Filter = (D3D12_FILTER)Enum<EFilter>::Parse(word, false);
+						reader.Identifier(word); sdesc.Filter = (D3D12_FILTER)Enum<EFilter>::Parse(word, false);
 						reader.SectionEnd();
 						break;
 					}
@@ -591,6 +592,17 @@ namespace pr::rdr12
 			catch (std::exception const& e)
 			{
 				p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
+			}
+
+			// Find/Create the sampler
+			try
+			{
+				SamplerDesc desc(sdesc.Id(), sdesc);
+				sam = p.m_rdr.res_mgr().FindOrCreateSampler(desc);
+			}
+			catch(std::exception const& e)
+			{
+				p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create sampler for texture %s\n%s", tex_resource.c_str(), e.what()));
 			}
 		}
 		return true;
@@ -789,10 +801,12 @@ namespace pr::rdr12
 		struct Textured
 		{
 			Texture2DPtr m_texture;
+			SamplerPtr m_sampler;
 			NuggetData m_local_mat;
 
 			Textured()
 				:m_texture()
+				,m_sampler()
 				,m_local_mat()
 			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw)
@@ -801,7 +815,7 @@ namespace pr::rdr12
 				{
 					case EKeyword::Texture:
 					{
-						ParseTexture(p, m_texture);
+						ParseTexture(p, m_texture, m_sampler);
 						return true;
 					}
 					case EKeyword::Video:
@@ -820,6 +834,7 @@ namespace pr::rdr12
 				// This function is used to pass texture/shader data to the model generator.
 				// Topo and Geom are not used, each model type knows what topo and geom it's using.
 				m_local_mat.m_tex_diffuse = m_texture;
+				m_local_mat.m_sam_diffuse = m_sampler;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);
 				return &m_local_mat;

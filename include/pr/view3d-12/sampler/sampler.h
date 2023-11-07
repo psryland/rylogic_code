@@ -11,13 +11,18 @@ namespace pr::rdr12
 	struct Sampler :RefCounted<Sampler>
 	{
 		// Notes:
+		//  - Sampler follows the same pattern as TextureBase, see texture_base.h for more info.
 
-		ResourceManager*       m_mgr;    // The manager that created this sampler
-		RdrId                  m_id;     // Id for this texture in the resource manager
-		Descriptor             m_samp;   // The sampler descriptor
-		string32               m_name;   // Human readable id for the texture
+		ResourceManager* m_mgr;  // The manager that created this sampler
+		RdrId            m_id;   // Id for this texture in the resource manager
+		Descriptor       m_samp; // The sampler descriptor
+		string32         m_name; // Human readable id for the texture
 
 		Sampler(ResourceManager& mgr, SamplerDesc const& desc);
+		Sampler(Sampler&&) = delete;
+		Sampler(Sampler const&) = delete;
+		Sampler& operator=(Sampler&&) = delete;
+		Sampler& operator=(Sampler const&) = delete;
 		virtual ~Sampler();
 
 		// Access the renderer

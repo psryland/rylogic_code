@@ -464,7 +464,7 @@ namespace pr::rdr12
 	// Create a new sampler instance.
 	SamplerPtr ResourceManager::CreateSampler(SamplerDesc const& desc)
 	{
-		// Check whether 'id' already exists, if so, throw. Users should use FindTexture first.
+		// Check whether 'id' already exists, if so, throw. Users should use FindSampler first.
 		if (desc.m_id != AutoId && m_lookup_sam.find(desc.m_id) != end(m_lookup_sam))
 			throw std::runtime_error(FmtS("Sampler Id '%d' is already in use", desc.m_id));
 
@@ -493,6 +493,20 @@ namespace pr::rdr12
 			throw std::runtime_error(FmtS("Stock texture %s does not exist", Enum<EStockTexture>::ToStringA(id)));
 
 		return m_stock_textures[s_cast<int>(id)];
+	}
+
+	// Return a pointer to an existing sampler
+	SamplerPtr ResourceManager::FindSampler(RdrId id) const
+	{
+		auto sam = GetOrDefault(m_lookup_sam, id, (Sampler*)nullptr);
+		return SamplerPtr(sam, true);
+	}
+
+	// Convenience method for cached samplers
+	SamplerPtr ResourceManager::FindOrCreateSampler(SamplerDesc const& desc)
+	{
+		auto sam = FindSampler(desc.m_sdesc.Id());
+		return sam != nullptr ? sam : CreateSampler(desc);
 	}
 
 	// Return a pointer to a stock sampler
