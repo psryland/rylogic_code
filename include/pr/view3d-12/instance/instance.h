@@ -38,6 +38,7 @@ namespace pr::rdr12
 		PipeStates,          // pr::rdr::PipeStates
 		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
+		DiffTexture,         // An override of the main diffuse texture
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -80,6 +81,7 @@ namespace pr::rdr12
 			case EInstComp::PipeStates:          return sizeof(PipeStates);
 			case EInstComp::Flags:               return sizeof(EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(Colour32);
+			case EInstComp::DiffTexture:         return sizeof(Texture2DPtr);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
 			case EInstComp::UniqueId:            return sizeof(int32_t);
 			case EInstComp::SSSize:              return sizeof(v2);
@@ -311,12 +313,4 @@ namespace pr::rdr12
 		}\
 	};\
 	static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");
-
-	// Concept for instance types
-	template <typename T>
-	concept InstanceType = requires(T t)
-	{
-		{ std::is_same_v<decltype(t.m_base), BaseInstance> };                    // must have a member called 'm_base'
-		{ static_cast<void const*>(&t.m_base) == static_cast<void const*>(&t) }; // it must be the first member
-	};
 }

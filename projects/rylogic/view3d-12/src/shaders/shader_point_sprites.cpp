@@ -19,7 +19,7 @@ namespace pr::rdr12::shaders
 		, m_size(size)
 		, m_depth(depth)
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,

@@ -162,7 +162,7 @@ namespace pr::rdr12
 		barriers.Commit();
 
 		// Copy the original resource into the staging resource.
-		m_cmd_list->CopyResource(staging.get(), texture);
+		m_cmd_list.CopyResource(staging.get(), texture);
 
 		// Make the UAV resource active. UAV inherits the data from 'staging'
 		barriers.Aliasing(staging.get(), uav_resource.get());
@@ -180,7 +180,7 @@ namespace pr::rdr12
 		barriers.Commit();
 
 		// Copy the staging resource back to the original resource.
-		m_cmd_list->CopyResource(texture, staging.get());
+		m_cmd_list.CopyResource(texture, staging.get());
 
 		// Transition the texture back to the initial state
 		barriers.Transition(texture, initial_res_state);
@@ -196,12 +196,12 @@ namespace pr::rdr12
 		auto dim = iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
 
 		// Set root signature and PSO
-		m_cmd_list->SetComputeRootSignature(m_mipmap_sig.get());
-		m_cmd_list->SetPipelineState(m_mipmap_pso.get());
+		m_cmd_list.SetComputeRootSignature(m_mipmap_sig.get());
+		m_cmd_list.SetPipelineState(m_mipmap_pso.get());
 
 		// Set the descriptor heap
 		auto heaps = { m_heap_view.get() };
-		m_cmd_list->SetDescriptorHeaps(s_cast<UINT>(heaps.size()), heaps.begin());
+		m_cmd_list.SetDescriptorHeaps({ heaps.begin(), heaps.size() });
 
 		// Prepare the SRV/UAV view descriptions (changed for each mip).
 		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
@@ -233,28 +233,24 @@ namespace pr::rdr12
 			auto dst_h = std::max(dim.y >> mip, 1);
 
 			// Pass the destination texture pixel size to the shader as constants
-			using F32U32 = union { float f32; uint32_t u32; };
-			m_cmd_list->SetComputeRoot32BitConstant(s_cast<UINT>(EMipMapParam::Constants), F32U32(1.0f / dst_w).u32, 0);
-			m_cmd_list->SetComputeRoot32BitConstant(s_cast<UINT>(EMipMapParam::Constants), F32U32(1.0f / dst_h).u32, 1);
+			m_cmd_list.SetComputeRoot32BitConstant(EMipMapParam::Constants, 1.0f / dst_w, 0);
+			m_cmd_list.SetComputeRoot32BitConstant(EMipMapParam::Constants, 1.0f / dst_h, 1);
 
 			// Create shader resource view for the source texture in the descriptor heap
 			auto srv = m_heap_view.Add(uav_resource, srv_desc);
-			m_cmd_list->SetComputeRootDescriptorTable(s_cast<UINT>(EMipMapParam::SrcTexture), srv);
+			m_cmd_list.SetComputeRootDescriptorTable(EMipMapParam::SrcTexture, srv);
 			barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, s_cast<uint32_t>(mip - 1));
 
 			// Create unordered access view for the destination texture in the descriptor heap
 			uav_desc.Texture2D.MipSlice = mip;
 			auto uav = m_heap_view.Add(uav_resource, uav_desc);
-			m_cmd_list->SetComputeRootDescriptorTable(s_cast<UINT>(EMipMapParam::DstTexture), uav);
+			m_cmd_list.SetComputeRootDescriptorTable(EMipMapParam::DstTexture, uav);
 			barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, s_cast<uint32_t>(mip));
 
 			barriers.Commit();
 
 			// Dispatch the compute shader with one thread per 8x8 pixels
-			m_cmd_list->Dispatch(
-				s_cast<UINT>((dst_w + 7) / 8),
-				s_cast<UINT>((dst_h + 7) / 8),
-				1u);
+			m_cmd_list.Dispatch((dst_w + 7) / 8, (dst_h + 7) / 8, 1);
 
 			// Wait for all accesses to the destination texture UAV to be finished before generating
 			// the next mip-map, as it will be the source texture for the next mip-map

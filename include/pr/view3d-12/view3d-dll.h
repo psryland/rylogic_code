@@ -158,14 +158,14 @@ namespace pr
 			WhiteTriangle,
 			EnvMapProjection,
 		};
-		enum class EView3DLight :int
+		#endif
+		enum class ELight :int
 		{
 			Ambient,
 			Directional,
 			Point,
 			Spot
 		};
-		#endif
 		enum class EAnimCommand : int
 		{
 			Reset, // Reset the the 'time' value
@@ -362,8 +362,14 @@ namespace pr
 			Camera_LockMask     = Camera | 1 << 6,
 			Camera_AlignAxis    = Camera | 1 << 7,
 
-			Lighting     = 1 << 19,
-			Lighting_All = Lighting | 1 << 0,
+			Lighting           = 1 << 19,
+			Lighting_Type      = Lighting | 1 << 0,
+			Lighting_Position  = Lighting | 1 << 1,
+			Lighting_Direction = Lighting | 1 << 2,
+			Lighting_Colour    = Lighting | 1 << 3,
+			Lighting_Range     = Lighting | 1 << 4,
+			Lighting_Shadows   = Lighting | 1 << 5,
+			Lighting_All       = Lighting | Lighting_Type | Lighting_Position | Lighting_Direction | Lighting_Colour | Lighting_Range | Lighting_Shadows,
 
 			Diagnostics                    = 1 << 20,
 			Diagnostics_BBoxesVisible      = Diagnostics | 1 << 0,
@@ -444,23 +450,25 @@ namespace pr
 			DXGI_FORMAT m_format;
 			UINT32      m_image_file_format;//D3DXIMAGE_FILEFORMAT
 		};
-		struct View3DLight
+		#endif
+		struct Light
 		{
-			View3DV4     m_position;
-			View3DV4     m_direction;
-			EView3DLight m_type;
-			View3DColour m_ambient;
-			View3DColour m_diffuse;
-			View3DColour m_specular;
-			float        m_specular_power;
-			float        m_range;
-			float        m_falloff;
-			float        m_inner_angle;
-			float        m_outer_angle;
-			float        m_cast_shadow;
-			BOOL         m_cam_relative;
-			BOOL         m_on;
+			Vec4 m_position;
+			Vec4 m_direction;
+			ELight m_type;
+			Colour m_ambient;
+			Colour m_diffuse;
+			Colour m_specular;
+			float m_specular_power;
+			float m_range;
+			float m_falloff;
+			float m_inner_angle;
+			float m_outer_angle;
+			float m_cast_shadow;
+			BOOL m_cam_relative;
+			BOOL m_on;
 		};
+		#if 0
 		struct View3DTextureOptions
 		{
 			View3DM4x4                 m_t2s;
@@ -787,10 +795,10 @@ extern "C"
 
 	// Lights *********************************
 
+	VIEW3D_API pr::view3d::Light __stdcall View3D_LightPropertiesGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_LightPropertiesSet(pr::view3d::Window window, pr::view3d::Light const& light);
+	VIEW3D_API void __stdcall View3D_LightSource(pr::view3d::Window window, pr::view3d::Vec4 position, pr::view3d::Vec4 direction, BOOL camera_relative);
 	#if 0 // todo
-	VIEW3D_API BOOL        __stdcall View3D_LightPropertiesGet       (View3DWindow window, View3DLight& light);
-	VIEW3D_API void        __stdcall View3D_LightPropertiesSet       (View3DWindow window, View3DLight const& light);
-	VIEW3D_API void        __stdcall View3D_LightSource              (View3DWindow window, View3DV4 position, View3DV4 direction, BOOL camera_relative);
 	VIEW3D_API void        __stdcall View3D_LightShowDialog          (View3DWindow window);
 	#endif
 

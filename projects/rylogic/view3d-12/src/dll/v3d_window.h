@@ -140,6 +140,10 @@ namespace pr::rdr12
 		Colour32 BackgroundColour() const;
 		void BackgroundColour(Colour32 colour);
 
+		// Get/Set the global scene light
+		Light GlobalLight() const;
+		void GlobalLight(Light const& light);
+
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
 

@@ -467,6 +467,82 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(view3d::Window window, view3d::
 
 // Lights *********************************
 
+// Return the configuration of the single light source
+VIEW3D_API pr::view3d::Light __stdcall View3D_LightPropertiesGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto global_light = window->GlobalLight();
+		return view3d::Light {
+			.m_position       = To<view3d::Vec4>(global_light.m_position),
+			.m_direction      = To<view3d::Vec4>(global_light.m_direction),
+			.m_type           = s_cast<view3d::ELight>(global_light.m_type),
+			.m_ambient        = global_light.m_ambient.argb,
+			.m_diffuse        = global_light.m_diffuse.argb,
+			.m_specular       = global_light.m_specular.argb,
+			.m_specular_power = global_light.m_specular_power,
+			.m_range          = global_light.m_range,
+			.m_falloff        = global_light.m_falloff,
+			.m_inner_angle    = global_light.m_inner_angle,
+			.m_outer_angle    = global_light.m_outer_angle,
+			.m_cast_shadow    = global_light.m_cast_shadow,
+			.m_cam_relative   = global_light.m_cam_relative,
+			.m_on             = global_light.m_on,
+		};
+	}
+	CatchAndReport(View3D_LightPropertiesGet, window, {});
+}
+
+// Configure the single light source
+VIEW3D_API void __stdcall View3D_LightPropertiesSet(view3d::Window window, view3d::Light const& light)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		assert(light.m_position.w == 1);
+
+		DllLockGuard;
+		rdr12::Light global_light;
+		global_light.m_position       = To<v4>(light.m_position);
+		global_light.m_direction      = To<v4>(light.m_direction);
+		global_light.m_type           = pr::Enum<pr::rdr12::ELight>::From(light.m_type);
+		global_light.m_ambient        = light.m_ambient;
+		global_light.m_diffuse        = light.m_diffuse;
+		global_light.m_specular       = light.m_specular;
+		global_light.m_specular_power = light.m_specular_power;
+		global_light.m_range          = light.m_range;
+		global_light.m_falloff        = light.m_falloff;
+		global_light.m_inner_angle    = light.m_inner_angle;
+		global_light.m_outer_angle    = light.m_outer_angle;
+		global_light.m_cast_shadow    = light.m_cast_shadow;
+		global_light.m_cam_relative   = light.m_cam_relative != 0;
+		global_light.m_on             = light.m_on != 0;
+		window->GlobalLight(global_light);
+	}
+	CatchAndReport(View3D_LightPropertiesSet, window,);
+}
+
+// Set up a single light source for a window
+VIEW3D_API void __stdcall View3D_LightSource(view3d::Window window, view3d::Vec4 position, view3d::Vec4 direction, BOOL camera_relative)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		assert(position.w == 1);
+
+		DllLockGuard;
+		auto global_light = window->GlobalLight();
+		global_light.m_position = To<v4>(position);
+		global_light.m_direction = To<v4>(direction);
+		global_light.m_cam_relative = camera_relative != 0;
+		window->GlobalLight(global_light);
+	}
+	CatchAndReport(View3D_LightSource, window,);
+}
+
 // Objects ********************************
 
 // Create objects given in an ldr string or file.

@@ -137,9 +137,6 @@ namespace pr::rdr12
 		ECullMode CullMode() const;
 		void CullMode(ECullMode fill_mode);
 
-		// True if this nugget should be rendered
-		bool Visible() const;
-
 		// Delete any dependent nuggets based on 'pred'
 		template <typename Pred>
 		void DeleteDependent(Pred pred)

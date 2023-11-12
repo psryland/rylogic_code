@@ -15,8 +15,9 @@
 namespace pr::rdr12
 {
 	RenderStep::RenderStep(ERenderStep id, Scene& scene)
-		: Id(id)
+		: m_step_id(id)
 		, m_scene(&scene)
+		, m_cmd_list(D3DDevice(), nullptr, ERenderStep_::ToStringW(id))
 		, m_drawlist()
 		, m_sort_needed(true)
 		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
@@ -38,6 +39,14 @@ namespace pr::rdr12
 	Scene& RenderStep::scn() const
 	{
 		return *m_scene;
+	}
+	ResourceManager& RenderStep::res_mgr() const
+	{
+		return rdr().res_mgr();
+	}
+	ID3D12Device4* RenderStep::D3DDevice() const
+	{
+		return rdr().D3DDevice();
 	}
 
 	// Reset/Populate the drawlist
@@ -130,38 +139,34 @@ namespace pr::rdr12
 	}
 
 	// Perform the render step
-	void RenderStep::Execute(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list)
+	ID3D12GraphicsCommandList* RenderStep::Execute(BackBuffer& bb)
 	{
 		#if 0 // todo
 		PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
 			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
 			[&]{ ss.m_dbg->EndEvent(); }));
-
-		// Commit before the start of a render step to ensure changes
-		// are flushed before the render steps try to clear back buffers, etc
-		StateStack::RSFrame frame(ss, *this);
-		ss.Commit();
 		#endif
+		
+		// Reset the command list to use an allocator for this frame
+		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
 
-		ExecuteInternal(bb, cmd_list);
+		// Record the render step in 'm_cmd_list'
+		ExecuteInternal(bb);
+
+		// Close the command list now that we've finished rendering this scene
+		m_cmd_list.Close();
+		return m_cmd_list.get();
 	}
 
 	// Notification of a model being destroyed
 	void RenderStep::OnModelDeleted(Model& model, EmptyArgs const&) const
 	{
-		(void)model;
-		#if 0 // todo
-		#if PR_DBG_RDR
-
 		// Check the model is not current in a drawlist
 		Lock lock(*this);
 		for (auto& dle : lock.drawlist())
 		{
-			if (&model == dle.m_nugget->m_owner)
+			if (&model == dle.m_nugget->m_model)
 				throw std::runtime_error("Model being deleted is still in the drawlist");
 		}
-
-		#endif
-		#endif
 	}
 }

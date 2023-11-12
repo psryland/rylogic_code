@@ -15,7 +15,7 @@ namespace pr::rdr12::shaders
 		:Shader()
 		,m_size(size)
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,

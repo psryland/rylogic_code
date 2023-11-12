@@ -14,7 +14,7 @@ namespace pr::rdr12::shaders
 	ShowNormalsGS::ShowNormalsGS()
 		:Shader()
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,

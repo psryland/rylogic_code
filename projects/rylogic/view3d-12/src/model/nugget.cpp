@@ -162,22 +162,17 @@ namespace pr::rdr12
 		for (auto& nug : m_nuggets)
 			nug.CullMode(cull_mode);
 	}
-
-	// True if this nugget should be rendered
-	bool Nugget::Visible() const
-	{
-		// If the object cull mode does not match the pipe state cull mode then skip.
-		// This makes back/front face culling work with Alpha nuggets because render state
-		// culling mode has priority over the nugget cull mode.
-		#if 0 // todo - need a better way, rather than storing cull mode twice in the nugget. Maybe pass in the cull mode for the alpha pass
-		if (CullMode() != ECullMode::None &&
-			CullMode() != ECullMode::Default &&
-			CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))
-			return false;
-		#endif
-
-		return true;
-	}
+	//bool Nugget::IsCulled(D3D12_CULL_MODE pipe_state_cull_mode) const
+	//{
+	//	// If the object cull mode does not match the pipe state cull mode then skip.
+	//	// This makes back/front face culling work with Alpha nuggets because pipe state
+	//	// culling mode has priority over the nugget cull mode.
+	//	auto cull_mode = CullMode();
+	//	return
+	//		cull_mode != ECullMode::None &&
+	//		cull_mode != ECullMode::Default &&
+	//		cull_mode != s_cast<ECullMode>(pipe_state_cull_mode);
+	//}
 
 	// Delete this nugget, removing it from the owning model
 	void Nugget::Delete()

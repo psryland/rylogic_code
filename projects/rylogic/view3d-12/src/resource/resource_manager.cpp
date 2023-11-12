@@ -29,8 +29,7 @@ namespace pr::rdr12
 		,m_rdr(rdr)
 		,m_gsync(rdr.D3DDevice())
 		,m_gfx_cmd_alloc_pool(m_gsync)
-		,m_gfx_cmd_alloc(m_gfx_cmd_alloc_pool.Get())
-		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc, nullptr, L"ResManCmdListGfx")
+		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, L"ResManCmdListGfx")
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_heap_sampler(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
@@ -93,7 +92,7 @@ namespace pr::rdr12
 			return m_gsync.LastAddedSyncPoint();
 
 		// Close the command list
-		Throw(m_gfx_cmd_list->Close());
+		m_gfx_cmd_list.Close();
 
 		// Execute the command list
 		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_gfx_cmd_list.get())};
@@ -102,11 +101,10 @@ namespace pr::rdr12
 
 		// Add a sync point
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
-		m_gfx_cmd_alloc.m_sync_point = sync_point; // Can't use this allocator until the GPU has completed 'sync_point'
+		m_gfx_cmd_list.SyncPoint(sync_point);
 
 		// Reset the command list
-		m_gfx_cmd_alloc = m_gfx_cmd_alloc_pool.Get();
-		Throw(m_gfx_cmd_list->Reset(m_gfx_cmd_alloc, nullptr));
+		m_gfx_cmd_list.Reset(m_gfx_cmd_alloc_pool.Get());
 
 		// Wait till done?
 		if (block)
@@ -932,7 +930,7 @@ namespace pr::rdr12
 		// Add the command to copy from the staging resource to the destination resource
 		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
-			m_gfx_cmd_list->CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
+			m_gfx_cmd_list.CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
 			m_flush_required = true;
 		}
 		else
@@ -951,7 +949,7 @@ namespace pr::rdr12
 					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
 					.PlacedFootprint = layout[i],
 				};
-				m_gfx_cmd_list->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+				m_gfx_cmd_list.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 				m_flush_required = true;
 			}
 		}

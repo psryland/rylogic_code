@@ -207,6 +207,15 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\sampler\sampler.cpp">
       <Filter>src\sampler</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_smap.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_smap.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\shadow_caster.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -517,6 +526,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\sampler\sampler_desc.h">
       <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_smap.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h">
+      <Filter>src\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
