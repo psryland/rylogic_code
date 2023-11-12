@@ -7,6 +7,7 @@
 #include "pr/view3d-12/render/drawlist_element.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/utility/pipe_state.h"
+#include "pr/view3d-12/utility/cmd_list.h"
 
 namespace pr::rdr12
 {
@@ -33,37 +34,30 @@ namespace pr::rdr12
 			}
 		};
 
-		ERenderStep const Id;
-		Scene*                      m_scene;              // The scene this render step is owned by
-		drawlist_t                  m_drawlist;           // The drawlist for this render step. Access via 'Lock'
-		bool                        m_sort_needed;        // True when the list needs sorting
-		GpuUploadBuffer             m_cbuf_upload;        // Shared upload buffer for shaders to used to upload parameters
-		PipeStateDesc               m_default_pipe_state; // Default settings for the pipeline state
-		PipeStatePool               m_pipe_state_pool;    // Pool of pipeline state objects
-		AutoSub                     m_evt_model_delete;   // Event subscription for model deleted notification
-		dl_mutex_t mutable          m_mutex;              // Sync access to the drawlist
+		ERenderStep const  m_step_id;            // Derived type Id
+		Scene*             m_scene;              // The scene this render step is owned by
+		GfxCmdList         m_cmd_list;           // The command list used by this scene
+		drawlist_t         m_drawlist;           // The drawlist for this render step. Access via 'Lock'
+		bool               m_sort_needed;        // True when the list needs sorting
+		GpuUploadBuffer    m_cbuf_upload;        // Shared upload buffer for shaders to used to upload parameters
+		PipeStateDesc      m_default_pipe_state; // Default settings for the pipeline state
+		PipeStatePool      m_pipe_state_pool;    // Pool of pipeline state objects
+		AutoSub            m_evt_model_delete;   // Event subscription for model deleted notification
+		dl_mutex_t mutable m_mutex;              // Sync access to the drawlist
 
 		RenderStep(ERenderStep id, Scene& scene);
 		RenderStep(RenderStep&&) = default;
 		RenderStep(RenderStep const&) = delete;
 		RenderStep& operator = (RenderStep&&) = default;
 		RenderStep& operator = (RenderStep const&) = delete;
-		virtual ~RenderStep() {}
+		virtual ~RenderStep() = default;
 
 		// Renderer access
 		Renderer& rdr() const;
 		Window& wnd() const;
 		Scene& scn() const;
-
-		// The type of render step this is
-		template <RenderStepType RStep> RStep const& as() const
-		{
-			return *static_cast<RStep const*>(this);
-		}
-		template <RenderStepType RStep> RStep as()
-		{
-			return *static_cast<RStep*>(this);
-		}
+		ResourceManager& res_mgr() const;
+		ID3D12Device4* D3DDevice() const;
 
 		// Reset the drawlist
 		virtual void ClearDrawlist();
@@ -74,15 +68,15 @@ namespace pr::rdr12
 
 		// Add an instance. The instance,model,and nuggets must be resident for the entire time
 		// that it is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-		void AddInstance(BaseInstance const& inst);
-		template <typename Inst> void AddInstance(Inst const& inst)
+		template <InstanceType Inst>
+		void AddInstance(Inst const& inst)
 		{
 			AddInstance(inst.m_base);
 		}
 
 		// Remove an instance from the scene
-		void RemoveInstance(BaseInstance const& inst);
-		template <typename Inst> void RemoveInstance(Inst const& inst)
+		template <InstanceType Inst>
+		void RemoveInstance(Inst const& inst)
 		{
 			RemoveInstance(inst.m_base);
 		}
@@ -91,9 +85,15 @@ namespace pr::rdr12
 		void RemoveInstances(BaseInstance const** inst, std::size_t count);
 
 		// Perform the render step
-		void Execute(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list);
+		ID3D12GraphicsCommandList* Execute(BackBuffer& bb);
 
 	protected:
+
+		friend struct Scene;
+
+		// Add/Remove an instance from the drawlist in this render step
+		void AddInstance(BaseInstance const& inst);
+		void RemoveInstance(BaseInstance const& inst);
 
 		// Add model nuggets to the draw list for this render step.
 		// The nuggets contain model specific data (such as diffuse texture) as well as
@@ -103,7 +103,7 @@ namespace pr::rdr12
 		virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) = 0;
 
 		// Derived render steps perform their action
-		virtual void ExecuteInternal(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list) = 0;
+		virtual void ExecuteInternal(BackBuffer& bb) = 0;
 
 	private:
 

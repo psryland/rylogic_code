@@ -138,7 +138,7 @@ namespace pr::rdr12
 				return;
 
 			// Send the barriers to the command list
-			m_cmd_list->ResourceBarrier(s_cast<UINT>(m_barriers.size()), m_barriers.data());
+			m_cmd_list.ResourceBarrier(m_barriers);
 
 			// Apply the resource states from the transitions
 			for (auto& barrier : m_barriers)

@@ -35,11 +35,14 @@ namespace pr::rdr12
 		//  - The shader contains the shader specific parameters.
 		//  - The realised shader is reused by the window/render step.
 		//  - All shaders can share one GpuUploadBuffer
-		ShaderCode Code;                       // Byte code for the shader parts
-		D3DPtr<ID3D12RootSignature> Signature; // Signature for shader, null if an overlay
+		ShaderCode m_code;                       // Byte code for the shader parts
+		D3DPtr<ID3D12RootSignature> m_signature; // Signature for shader, null if an overlay
 		
 		Shader();
 		virtual ~Shader() {}
+
+		// Sort id for the shader
+		SortKeyId SortId() const;
 
 		// Config the shader.
 		// This method may be called with:
