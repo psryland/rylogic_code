@@ -159,6 +159,7 @@ namespace pr::rdr12
 	// Rendering
 	struct RenderStep;
 	struct RenderForward;
+	struct RenderSmap;
 	struct DrawListElement;
 	struct BackBuffer;
 	struct PipeState;
@@ -213,14 +214,11 @@ namespace pr::rdr12
 		struct ShowNormalsGS;
 		struct ThickLineStripGS;
 		struct ThickLineListGS;
+		struct ShadowMap;
 	}
 	using ShaderPtr = RefPtr<Shader>;
-		    //struct ShaderDesc;
-		    //struct ShaderSet0;
-		    //struct ShaderSet1;
-		    //struct ShaderMap;
-		    struct ShadowMap;
-
+	struct ShadowMap;
+	struct ShadowCaster;
 
 	// Lighting
 	struct Light;
@@ -354,13 +352,20 @@ namespace pr::rdr12
 	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 
-	
-	// Concepts
+	// Instances
 	template <typename T>
-	concept RenderStepType = requires
+	concept InstanceType = requires(T t)
 	{
-		std::is_base_of_v<RenderStep, T>;
-		std::is_same_v<decltype(T::Id), ERenderStep>;
+		{ std::is_same_v<decltype(t.m_base), BaseInstance> };                    // must have a member called 'm_base'
+		{ static_cast<void const*>(&t.m_base) == static_cast<void const*>(&t) }; // it must be the first member
+	};
+	
+	// Render steps
+	template <typename T>
+	concept RenderStepType = requires(T t)
+	{
+		{ std::is_base_of_v<RenderStep, T> };
+		{ std::is_same_v<decltype(T::Id), ERenderStep> };
 	};
 }
 

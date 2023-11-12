@@ -12,6 +12,9 @@ namespace pr::rdr12
 {
 	struct RenderForward :RenderStep
 	{
+		// Compile-time derived type
+		inline static constexpr ERenderStep Id = ERenderStep::RenderForward;
+
 		shaders::Forward m_shader;
 		explicit RenderForward(Scene& scene);
 
@@ -21,9 +24,9 @@ namespace pr::rdr12
 		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
 
 		// Perform the render step
-		void ExecuteInternal(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list) override;
+		void ExecuteInternal(BackBuffer& bb) override;
 
 		// Draw a single nugget
-		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc, ID3D12GraphicsCommandList* cmd_list);
+		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc);
 	};
 }

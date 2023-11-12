@@ -74,6 +74,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\model\nugget.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\back_buffer.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_forward.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_smap.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\descriptor_store.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\mipmap_generator.cpp" />
@@ -86,6 +87,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_forward.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_point_sprites.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_show_normals.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_smap.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_thick_line.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_2d.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_base.cpp" />
@@ -95,6 +97,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\diagnostics.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_state.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\shadow_caster.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +177,7 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_point_sprites.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_registers.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_show_normals.h" />
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_smap.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_thick_line.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\stock_shaders.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_2d.h" />
@@ -192,11 +196,13 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_forward.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h" />

@@ -416,14 +416,12 @@ namespace pr::rdr12
 		// Remember: One allocator per thread, per list, per frame.
 
 		auto cmd_list = scene.Render(m_bb);
-		m_cmd_lists.push_back(cmd_list);
+		m_cmd_lists.insert(m_cmd_lists.end(), cmd_list.begin(), cmd_list.end());
 	}
 
 	// Present the frame
 	void Window::Frame::Present()
 	{
-		auto cmd_alloc = m_bb.wnd().m_cmd_alloc_pool.Get();
-
 		// Add a resource barrier for switching the back buffer to the render target state
 		D3D12_RESOURCE_BARRIER barrier0 = {
 			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -436,9 +434,9 @@ namespace pr::rdr12
 			},
 		};
 		auto cmd_list0 = m_bb.wnd().m_cmd_list_pool.Get();
-		Throw(cmd_list0->Reset(cmd_alloc, nullptr));
-		cmd_list0->ResourceBarrier(1, &barrier0);
-		Throw(cmd_list0->Close());
+		cmd_list0.Reset(m_bb.wnd().m_cmd_alloc_pool.Get());
+		cmd_list0.ResourceBarrier(barrier0);
+		cmd_list0.Close();
 		m_cmd_lists[0] = cmd_list0;
 
 		// Transition the back buffer to the presenting state.
@@ -453,9 +451,9 @@ namespace pr::rdr12
 			},
 		};
 		auto cmd_list1 = m_bb.wnd().m_cmd_list_pool.Get();
-		Throw(cmd_list1->Reset(cmd_alloc, nullptr));
-		cmd_list1->ResourceBarrier(1, &barrier1);
-		Throw(cmd_list1->Close());
+		cmd_list1.Reset(m_bb.wnd().m_cmd_alloc_pool.Get());
+		cmd_list1.ResourceBarrier(barrier1);
+		cmd_list1.Close();
 		m_cmd_lists.push_back(cmd_list1);
 
 		// todo - Wait until all rendering worker threads have completed 

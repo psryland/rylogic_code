@@ -11,15 +11,22 @@ namespace pr::rdr12
 {
 	Shader::Shader()
 		:RefCounted<Shader>()
-		,Code()
-		,Signature()
+		,m_code()
+		,m_signature()
 	{}
-
-	// Config the shader
+	
+	// Sort id for the shader
+	SortKeyId Shader::SortId() const
+	{
+		// Hash all of the ByteCode pointers together for the sort id.
+		return SortKeyId(pr::hash::HashBytes(&m_code, &m_code + 1) % SortKey::MaxShaderId);
+	}
+	// Config the shader.
 	void Shader::Setup(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*)
 	{
-		// If 'dle' == nullptr, derived shaders should configure for the frame
-		// If 'dle' != nullptr, derived shaders should configure per drawlist element
+		// This method may be called with:
+		//  'dle == null' => Setup constants for the frame
+		//  'dle != null' => Setup constants per nugget
 	}
 
 	// Ref counting clean up function
@@ -31,7 +38,6 @@ namespace pr::rdr12
 	void Shader::Delete()
 	{
 		rdr12::Delete<Shader>(this);
-		//m_mgr->Delete(this);
 	}
 
 	// Compiled shader byte code

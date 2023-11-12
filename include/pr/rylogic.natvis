@@ -315,6 +315,12 @@ old:
 	<Type Name="pr::rdr12::ByteCode">
 		<DisplayString>[{BytecodeLength}] {pShaderBytecode}</DisplayString>
 	</Type>
+	<Type Name="pr::rdr12::DrawListElement">
+		<DisplayString>{m_nugget->m_model->m_name.m_ptr} key={m_sort_key.m_value}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Model">
+		<DisplayString>{m_name.m_ptr}</DisplayString>
+	</Type>
 
 	<!-- Line Drawer -->
 	<Type Name="pr::ldr::LdrObject">

@@ -54,26 +54,14 @@ struct Main :Form
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Arrow arrow\n"
-			"{\n"
-			"	Fwd                          // Type of  arrow. One of Line, Fwd, Back, or FwdBack\n"
-			"	-0.8 +0.2  0.0 FF00FF00      // Corner points forming a line strip of connected lines, followed by optional colour\n"
-			"	 0.3  0.7  0.2 FFFF0000      // Note, colour blends smoothly between each vertex\n"
-			"	-0.3  1.2 -0.2 FFFF0000      // Note, colour blends smoothly between each vertex\n"
-			"	+1.0 +1.7  0.0 FFFFFF00\n"
-			"	*Smooth                      // Optional. Turns the line segments into a smooth spline\n"
-			"	*Width { 10 }                // Optional line width and arrow head size\n"
-			"	*o2w {*pos{-15 1 0}}\n"
-			"}\n"
-
 			//"*Plane ground FFFFE8A0\n"
 			//"{\n"
 			//"	0 0 0\n"
 			//"	0 1 0\n"
 			//"	40 40\n"
-			//"	*Texture {\"#checker2\" *Addr{Wrap Wrap} *o2w {*Scale{2 2 1}}}\n"
+			//"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
 			//"}\n"
-			//"*Box first_box_eva 8000FF00 { 1 2 3 }"
+			"*Box first_box_eva 8000FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
 		//,m_rdr(RSettings(hinstance))
@@ -87,6 +75,9 @@ struct Main :Form
 		View3D_WindowBackgroundColourSet(m_win3d, 0xFF908080);
 		//m_scn.m_cam.LookAt(v4{0, 0, +3, 1}, v4::Origin(), v4::YAxis());
 		View3D_CameraPositionSet(m_win3d, {0, 0, +7, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		auto light = View3D_LightPropertiesGet(m_win3d);
+		light.m_cast_shadow = 20.0f;
+		View3D_LightPropertiesSet(m_win3d, light);
 
 		//m_inst0.m_model = m_rdr.res_mgr().FindModel(EStockModel::UnitQuad);
 		//
@@ -98,9 +89,9 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
-		View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
-		//View3D_DemoSceneCreate(m_win3d);
+		View3D_DemoSceneCreate(m_win3d);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;

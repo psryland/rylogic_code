@@ -18,6 +18,7 @@
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "view3d-12/src/render/render_smap.h"
 
 #ifdef NDEBUG
 #define PR_RDR_SHADER_COMPILED_DIR(file) PR_STRINGISE(view3d-12/src/shaders/hlsl/compiled/release/##file)
@@ -84,7 +85,7 @@ namespace pr::rdr12
 
 	// Set the CBuffer model constants flags
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_flags; })
-	void SetModelFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, Scene const& scene)
+	void SetModelFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, bool env_mapped)
 	{
 		auto model_flags = 0;
 		{
@@ -105,16 +106,13 @@ namespace pr::rdr12
 					texture_flags |= shaders::TextureFlags_ProjectFromEnvMap;
 			}
 
-			(void)scene;
-			#if 0 // todo
 			// Is reflective
 			float const* reflec;
-			if (scene.m_global_envmap != nullptr                                      && // There is an env map
-				AllSet(nug.m_geom, EGeom::Norm)                                       && // The model contains normals
+			if (env_mapped &&                                                            // There is an env map
+				AllSet(nug.m_geom, EGeom::Norm) &&                                       // The model contains normals
 				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity)) != nullptr && // The instance has a reflectivity value
 				*reflec * nug.m_relative_reflectivity != 0)                              // and the reflectivity isn't zero
 				texture_flags |= shaders::TextureFlags_IsReflective;
-			#endif
 		}
 
 		auto alpha_flags = 0;
@@ -216,26 +214,25 @@ namespace pr::rdr12
 	}
 
 	// Set the shadow map constants
-	inline void SetShadowMapConstants(shaders::Shadow& cb, ShadowMap const* smap_step)
+	inline void SetShadowMapConstants(shaders::Shadow& cb, RenderSmap const* smap_step)
 	{
-		(void)smap_step, cb;
-		throw std::runtime_error("not implemented");
-		#if 0 // todo
 		// Ignore if there is no shadow map step
-		if (smap_step == nullptr) return;
+		if (smap_step == nullptr)
+			return;
 
 		// Add the shadow maps to the shader params
 		int i = 0;
 		for (auto& caster : smap_step->m_caster)
 		{
-			if (i == shaders::MaxShadowMaps) break;
+			if (i == shaders::MaxShadowMaps)
+				break;
+
 			cb.m_info.x = i + 1;
 			cb.m_info.y = smap_step->m_smap_size;
 			cb.m_w2l[i] = caster.m_params.m_w2ls;
 			cb.m_l2s[i] = caster.m_params.m_ls2s;
 			++i;
 		}
-		#endif
 	}
 
 	// Set the env-map to world orientation

@@ -27,8 +27,10 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 		float4 ss_pos = mul(ls_pos, shadow.m_l2s[i]);
 		float2 uv = 0.5*float2(1.0 + ss_pos.x, 1.0 - ss_pos.y);
 
+		// Sample the SMAP in a patch
 		const float Eps = TINY * 40;
-		const int2 Ofs[9] =
+		const int NumSmapSamples = 9;
+		const int2 Ofs[NumSmapSamples] =
 		{
 			{-1,-1}, {+0,-1}, {+1,-1},
 			{-1,+0}, {+0,+0}, {+1,+0},
@@ -36,7 +38,7 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 		};
 
 		float lit = 0.0;
-		[unroll] for (int s = 0; s != 9; ++s)
+		[unroll] for (int s = 0; s != NumSmapSamples; ++s)
 		{
 			lit += m_smap_texture[i].SampleCmpLevelZero(m_smap_sampler, uv, z + Eps, Ofs[s]);
 		}

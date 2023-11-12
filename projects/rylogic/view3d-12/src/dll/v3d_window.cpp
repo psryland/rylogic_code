@@ -364,8 +364,7 @@ namespace pr::rdr12
 		//cam.m_moved = false;
 
 		// Set the light source
-		//m_scene.m_global_light = m_light;
-		//m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
+		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
 
 		// Position and scale the focus point and origin point
 		if (AnySet(m_visible_objects, EStockObject::FocusPoint | EStockObject::OriginPoint))
@@ -586,6 +585,37 @@ namespace pr::rdr12
 
 		m_scene.m_bkgd_colour = colour;
 		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
+		Invalidate();
+	}
+
+	// Get/Set the global scene light
+	Light V3dWindow::GlobalLight() const
+	{
+		return m_scene.m_global_light;
+	}
+	void V3dWindow::GlobalLight(Light const& light)
+	{
+		if (GlobalLight() == light)
+			return;
+
+		auto settings = view3d::ESettings::Lighting;
+		if (m_scene.m_global_light.m_type != light.m_type) settings |= view3d::ESettings::Lighting_Type;
+		if (m_scene.m_global_light.m_position != light.m_position) settings |= view3d::ESettings::Lighting_Position;
+		if (m_scene.m_global_light.m_direction != light.m_direction) settings |= view3d::ESettings::Lighting_Direction;
+		if (m_scene.m_global_light.m_ambient != light.m_ambient) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_diffuse != light.m_diffuse) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_specular != light.m_specular) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_specular_power != light.m_specular_power) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_range != light.m_range) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_falloff != light.m_falloff) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_inner_angle != light.m_inner_angle) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_outer_angle != light.m_outer_angle) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_cast_shadow != light.m_cast_shadow) settings |= view3d::ESettings::Lighting_Shadows;
+		if (m_scene.m_global_light.m_cam_relative != light.m_cam_relative) settings |= view3d::ESettings::Lighting_Position | view3d::ESettings::Lighting_Direction;
+		if (m_scene.m_global_light.m_on != light.m_on) settings |= view3d::ESettings::Lighting_All;
+
+		m_scene.m_global_light = light;
+		OnSettingsChanged(this, settings);
 		Invalidate();
 	}
 
