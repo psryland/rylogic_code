@@ -45,7 +45,6 @@ namespace pr::rdr12
 		Renderer&          m_rdr;                // The owning renderer instance
 		GpuSync            m_gsync;              // Sync with GPU
 		GfxCmdAllocPool    m_gfx_cmd_alloc_pool; // A pool of command allocators.
-		GfxCmdAlloc        m_gfx_cmd_alloc;      // Command list allocator for resource manager operations
 		GfxCmdList         m_gfx_cmd_list;       // Command list for resource manager operations.
 		GpuViewHeap        m_heap_view;          // GPU visible descriptor heap for CBV/SRV/UAV
 		GpuSamplerHeap     m_heap_sampler;       // GPU visible descriptor heap for samplers

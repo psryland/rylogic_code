@@ -36,6 +36,26 @@ namespace pr::rdr12
 		_flags_enum,
 	};
 
+	// 32bit data union
+	union F32U32
+	{
+		float f32;
+		uint32_t u32;
+
+		F32U32(float f) : f32(f) {}
+		F32U32(uint32_t u) :u32(u) {}
+	};
+
+	// 64bit data union
+	union F64U64
+	{
+		double f64;
+		uint64_t u64;
+
+		F64U64(double f) : f64(f) {}
+		F64U64(uint64_t u) :u64(u) {}
+	};
+
 	// Display mode description
 	struct DisplayMode :DXGI_MODE_DESC
 	{
