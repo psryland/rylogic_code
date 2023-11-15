@@ -26,17 +26,17 @@ namespace pr::rdr12
 		struct RdrState
 		{
 			// This is needed so that the Dx12 device is created before the managers are constructed.
-			RdrSettings                  m_settings;
-			FeatureSupport               m_features;
-			D3DPtr<ID3D12Device4>        m_d3d_device;
-			D3DPtr<ID3D12CommandQueue>   m_gfx_queue;
-			D3DPtr<ID3D12CommandQueue>   m_com_queue;
-			D3DPtr<ID3D12CommandQueue>   m_cpy_queue;
-			D3DPtr<ID3D11On12Device>     m_dx11_device;
-			D3DPtr<ID3D11DeviceContext>  m_dx11_dc;
-			D3DPtr<ID2D1Factory2>        m_d2dfactory;
-			D3DPtr<ID2D1Device>          m_d2d_device;
-			DWORD                        m_main_thread_id;
+			RdrSettings                 m_settings;
+			FeatureSupport              m_features;
+			D3DPtr<ID3D12Device4>       m_d3d_device;
+			D3DPtr<ID3D12CommandQueue>  m_gfx_queue;
+			D3DPtr<ID3D12CommandQueue>  m_com_queue;
+			D3DPtr<ID3D12CommandQueue>  m_cpy_queue;
+			D3DPtr<ID3D11On12Device>    m_dx11_device;
+			D3DPtr<ID3D11DeviceContext> m_dx11_dc;
+			D3DPtr<ID2D1Factory2>       m_d2dfactory;
+			D3DPtr<ID2D1Device>         m_d2d_device;
+			DWORD                       m_main_thread_id;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();

@@ -64,5 +64,6 @@
     </ClCompile>
   </ItemGroup>
 
+  <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

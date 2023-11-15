@@ -118,7 +118,8 @@ namespace pr::rdr12
 			}
 
 			// Recursively add dependent nuggets
-			AddNuggets(inst, nug.m_nuggets, drawlist);
+			if (!nug.m_nuggets.empty())
+				AddNuggets(inst, nug.m_nuggets, drawlist);
 		}
 	}
 

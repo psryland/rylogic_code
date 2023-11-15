@@ -15,11 +15,11 @@ namespace pr::rdr12::shaders
 			CBufFrame = 0,
 			CBufNugget,
 			DiffTexture,
+			DiffTextureSampler,
 		};
 
 		enum class ESampParam
 		{
-			DiffTextureSampler,
 		};
 	}
 

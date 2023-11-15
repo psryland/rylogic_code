@@ -11,6 +11,7 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/render/drawlist_element.h"
+#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -146,6 +147,7 @@ namespace pr::rdr12
 			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
 			[&]{ ss.m_dbg->EndEvent(); }));
 		#endif
+		//PixEvent pix_render_step(m_cmd_list.get(), pr::EColours::Blue, ERenderStep_::ToStringA(m_step_id));
 		
 		// Reset the command list to use an allocator for this frame
 		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
