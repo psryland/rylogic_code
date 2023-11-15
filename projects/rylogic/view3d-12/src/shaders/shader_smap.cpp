@@ -45,9 +45,7 @@ namespace pr::rdr12::shaders
 		root_sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
 		root_sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
 		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0);
-
-		// Add stock static samplers
-		root_sig.Samp(ESampParam::DiffTextureSampler, SamDescStatic(ESamReg::s0, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT));
+		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0);
 
 		m_signature = root_sig.Create(device);
 	}

@@ -17,7 +17,7 @@
 #include "view3d-12/src/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 
-#define PR_DBG_SMAP 0
+#define PR_DBG_SMAP 1
 #if PR_DBG_SMAP
 #pragma message(PR_LINK "WARNING: ************************************************** Shadow Map debugging enabled")
 #include "pr/view3d-12/instance/instance.h"
@@ -29,7 +29,8 @@ namespace pr::rdr12
 		x(m4x4, m_i2w, EInstComp::I2WTransform)\
 		x(m4x4, m_c2s, EInstComp::C2STransform)\
 		x(ModelPtr, m_model, EInstComp::ModelPtr)\
-		x(Texture2DPtr, m_tex_diffuse, EInstComp::DiffTexture)
+		x(Texture2DPtr, m_tex_diffuse, EInstComp::DiffTexture)\
+		x(EInstFlag, m_flags, EInstComp::Flags)
 	PR_RDR12_DEFINE_INSTANCE(DebugQuadInstance, PR_RDR_INST);
 	#undef PR_RDR_INST
 
@@ -45,6 +46,7 @@ namespace pr::rdr12
 			m_c2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -0.01f, 1000.0f, true);
 			m_model = scene.rdr().res_mgr().FindModel(EStockModel::UnitQuad);
 			m_tex_diffuse = {};
+			m_flags = SetBits(m_flags, EInstFlag::ShadowCastExclude, true);
 		}
 
 		// Clean up the debug quad
@@ -61,7 +63,8 @@ namespace pr::rdr12
 			m_tex_diffuse = caster.m_smap;
 
 			// Scale the unit quad and position in the lower left
-			m_i2w = m_scene->m_cam.CameraToWorld() * m4x4::Scale(0.2f, v4{-0.495f, -0.495f, 0, 1});
+			const float scale = 0.3f;
+			m_i2w = m_scene->m_cam.CameraToWorld() * m4x4::Scale(scale, v4{-0.495f + scale/2, -0.495f + scale/2, 0, 1});
 			m_scene->FindRStep<RenderForward>()->AddInstance(*this);
 		}
 	} g_smap_quad;
@@ -89,10 +92,8 @@ namespace pr::rdr12
 			.StreamOutput = StreamOutputDesc{},
 			.BlendState = BlendStateDesc{},
 			.SampleMask = UINT_MAX,
-			.RasterizerState = RasterStateDesc{},
-			.DepthStencilState = D3D12_DEPTH_STENCIL_DESC{
-				.DepthEnable = FALSE
-			},
+			.RasterizerState = RasterStateDesc{}.Set(D3D12_CULL_MODE_BACK),
+			.DepthStencilState = DepthStateDesc{}.Enabled(false),
 			.InputLayout = Vert::LayoutDesc(),
 			.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
@@ -210,7 +211,10 @@ namespace pr::rdr12
 	{
 		// Nothing to render if there are no objects
 		if (m_caster.empty() || !m_bbox_scene.valid() || m_bbox_scene.is_point())
+		{
+			PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Update(m_caster[0]));
 			return;
+		}
 
 		// Sort the draw list if needed
 		SortIfNeeded();
@@ -266,10 +270,18 @@ namespace pr::rdr12
 				// Set shader constants for the nugget
 				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, caster, &dle);
 
-				// Bind textures to the pipeline (shader uses a static sampler)
-				auto tex = nugget.m_tex_diffuse != nullptr ? nugget.m_tex_diffuse : rdr().res_mgr().FindTexture(EStockTexture::White);
+			todo: 'clean up override tex + samp'
+				// Bind textures to the pipeline
+				auto tex = nugget.m_tex_diffuse;
+				if (auto tex_override = dle.m_instance->find<Texture2DPtr>(EInstComp::DiffTexture)) tex = *tex_override;
+				if (tex == nullptr) tex = rdr().res_mgr().FindTexture(EStockTexture::White);
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTexture, srv_descriptor);
+
+				// Bind samplers to the pipeline (can't use static samplers because each mode may use different address modes)
+				auto sam = nugget.m_sam_diffuse != nullptr ? nugget.m_sam_diffuse : rdr().res_mgr().FindSampler(EStockSampler::AnisotropicWrap);
+				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
+				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTextureSampler, sam_descriptor);
 
 				// Apply PSO overrides?
  

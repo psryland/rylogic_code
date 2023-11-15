@@ -44,6 +44,8 @@
 #include <dxgi1_4.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
+#include <pix3.h>
+#include <pix3_win.h>
 
 //#include "pr/macros/link.h"
 //#include "pr/macros/count_of.h"

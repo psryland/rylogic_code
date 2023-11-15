@@ -492,6 +492,11 @@ namespace pr::rdr12
 			ForcedSampleCount = 0U;
 			ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 		}
+		RasterStateDesc& Set(D3D12_CULL_MODE mode)
+		{
+			CullMode = mode;
+			return *this;
+		}
 	};
 
 	// Depth state description
@@ -518,6 +523,11 @@ namespace pr::rdr12
 				.StencilPassOp = D3D12_STENCIL_OP_KEEP,
 				.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS,
 			};
+		}
+		DepthStateDesc& Enabled(bool enabled)
+		{
+			DepthEnable = enabled ? TRUE : FALSE;
+			return *this;
 		}
 	};
 
@@ -580,13 +590,13 @@ namespace pr::rdr12
 	// Static sampler description
 	struct SamDescStatic :D3D12_STATIC_SAMPLER_DESC
 	{
-		SamDescStatic(ESamReg shader_register, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
+		SamDescStatic(ESamReg shader_register)
+			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
 		{}
-		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, addr, addr, addr, filter, vis)
+		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
+			:SamDescStatic(shader_register, addr, addr, addr, filter)
 		{}
-		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
+		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter)
 			:D3D12_STATIC_SAMPLER_DESC()
 		{
 			Filter           = filter;
@@ -601,7 +611,37 @@ namespace pr::rdr12
 			MaxLOD           = D3D12_FLOAT32_MAX;
 			ShaderRegister   = s_cast<UINT>(shader_register);
 			RegisterSpace    = 0U;
+			ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		}
+		SamDescStatic& BorderCol(D3D12_STATIC_BORDER_COLOR colour)
+		{
+			BorderColor = colour;
+			return *this;
+		}
+		SamDescStatic& ShaderVis(D3D12_SHADER_VISIBILITY vis)
+		{
 			ShaderVisibility = vis;
+			return *this;
+		}
+		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addr)
+		{
+			return AddrMode(addr, addr, addr);
+		}
+		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
+		{
+			return AddrMode(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+		}
+		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
+		{
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			return *this;
+		}
+		SamDescStatic& FilterMode(D3D12_FILTER filter)
+		{
+			Filter = filter;
+			return *this;
 		}
 	};
 

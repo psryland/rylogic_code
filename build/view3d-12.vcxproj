@@ -10,6 +10,7 @@
     <TargetName>view3d-12-static</TargetName>
     <ConfigurationType>StaticLibrary</ConfigurationType>
   </PropertyGroup>
+
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -29,21 +30,23 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="props\lib.props" />
   <Import Project="props\fxc_build_rule.props" />
+
   <!-- Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -59,6 +62,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
+
   <!-- Files -->
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp" />
@@ -206,6 +210,7 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h" />
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>
@@ -233,12 +238,11 @@
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\show_normals.hlsl" />
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
+
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="packages\WinPixEventRuntime.targets" />
+
 </Project>
