@@ -336,6 +336,13 @@ namespace pr::rdr12
 			return *this;
 		}
 
+		ResDesc& clear(DXGI_FORMAT format, Colour32 colour)
+		{
+			Colour c(colour);
+			ClearValue = D3D12_CLEAR_VALUE{.Format = format, .Color = {c.a, c.r, c.g, c.b}};
+			return *this;
+		}
+
 		// Generic buffer resource description
 		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment, D3D12_RESOURCE_STATES final_state, EUsage usage = EUsage::None)
 		{
@@ -395,7 +402,6 @@ namespace pr::rdr12
 			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
 			return desc;
 		}
-
 	};
 
 	// Resource barrier - Use BarrierBatch
@@ -445,11 +451,11 @@ namespace pr::rdr12
 			BlendEnable = FALSE;
 			LogicOpEnable = FALSE;
 			SrcBlend = D3D12_BLEND_ONE;
-			DestBlend = D3D12_BLEND_ZERO;
-			BlendOp = D3D12_BLEND_OP_ADD;
+			DestBlend = D3D12_BLEND_ONE;
+			BlendOp = D3D12_BLEND_OP_MAX;
 			SrcBlendAlpha = D3D12_BLEND_ONE;
-			DestBlendAlpha = D3D12_BLEND_ZERO;
-			BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			DestBlendAlpha = D3D12_BLEND_ONE;
+			BlendOpAlpha = D3D12_BLEND_OP_MAX;
 			LogicOp = D3D12_LOGIC_OP_NOOP;
 			RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 		}
@@ -464,14 +470,38 @@ namespace pr::rdr12
 			AlphaToCoverageEnable = FALSE;
 			IndependentBlendEnable = FALSE;
 			RenderTarget[0] = 
-				RenderTarget[1] = 
-				RenderTarget[2] = 
-				RenderTarget[3] = 
-				RenderTarget[4] = 
-				RenderTarget[5] = 
-				RenderTarget[6] = 
-				RenderTarget[7] = RenderTargetBlendDesc{};
+				RenderTarget[1] =
+				RenderTarget[2] =
+				RenderTarget[3] =
+				RenderTarget[4] =
+				RenderTarget[5] =
+				RenderTarget[6] =
+				RenderTarget[7] =
+				RenderTargetBlendDesc{};
 		}
+		BlendStateDesc& enable(int idx, bool on = true)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendEnable = on ? TRUE : FALSE;
+			return *this;
+		}
+		BlendStateDesc& blend(int idx, D3D12_BLEND_OP op, D3D12_BLEND src, D3D12_BLEND dest)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendOp = op;
+			RenderTarget[idx].SrcBlend = src;
+			RenderTarget[idx].DestBlend = dest;
+			return *this;
+		}
+		BlendStateDesc& blend_alpha(int idx, D3D12_BLEND_OP op, D3D12_BLEND src, D3D12_BLEND dest)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendOpAlpha = op;
+			RenderTarget[idx].SrcBlendAlpha = src;
+			RenderTarget[idx].DestBlendAlpha = dest;
+			return *this;
+		}
+
 	};
 
 	// Raster state description
@@ -578,6 +608,41 @@ namespace pr::rdr12
 			return s_cast<RdrId>(pr::hash::HashBytes(this, this + 1));
 		}
 
+		SamDesc& border(Colour32 colour)
+		{
+			Colour c(colour);
+			BorderColor[0] = c.a;
+			BorderColor[1] = c.r;
+			BorderColor[2] = c.g;
+			BorderColor[3] = c.b;
+			return *this;
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE modeUVW)
+		{
+			return addr(modeUVW, modeUVW, modeUVW);
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
+		{
+			return addr(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
+		{
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			return *this;
+		}
+		SamDesc& filter(D3D12_FILTER mode)
+		{
+			Filter = mode;
+			return *this;
+		}
+		SamDesc& compare(D3D12_COMPARISON_FUNC comp)
+		{
+			ComparisonFunc = comp;
+			return *this;
+		}
+
 		// Standard samplers
 		static SamDesc const& PointClamp()       { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }
 		static SamDesc const& PointWrap()        { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_POINT); return sam; }
@@ -613,34 +678,39 @@ namespace pr::rdr12
 			RegisterSpace    = 0U;
 			ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 		}
-		SamDescStatic& BorderCol(D3D12_STATIC_BORDER_COLOR colour)
+		SamDescStatic& border(D3D12_STATIC_BORDER_COLOR colour)
 		{
 			BorderColor = colour;
 			return *this;
 		}
-		SamDescStatic& ShaderVis(D3D12_SHADER_VISIBILITY vis)
+		SamDescStatic& shader_vis(D3D12_SHADER_VISIBILITY vis)
 		{
 			ShaderVisibility = vis;
 			return *this;
 		}
-		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addr)
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE modeUVW)
 		{
-			return AddrMode(addr, addr, addr);
+			return addr(modeUVW, modeUVW, modeUVW);
 		}
-		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
 		{
-			return AddrMode(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+			return addr(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
 		}
-		SamDescStatic& AddrMode(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
 		{
 			AddressU = addrU;
 			AddressV = addrV;
 			AddressW = addrW;
 			return *this;
 		}
-		SamDescStatic& FilterMode(D3D12_FILTER filter)
+		SamDescStatic& filter(D3D12_FILTER mode)
 		{
-			Filter = filter;
+			Filter = mode;
+			return *this;
+		}
+		SamDescStatic& compare(D3D12_COMPARISON_FUNC comp)
+		{
+			ComparisonFunc = comp;
 			return *this;
 		}
 	};

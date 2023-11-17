@@ -71,7 +71,7 @@ namespace pr::rdr12
 
 		// Renderer access
 		Renderer& rdr() const;
-		ResourceManager& res_mgr() const;
+		ResourceManager& res() const;
 
 		// Error event. Can be called in a worker thread context
 		MultiCast<ReportErrorCB> ReportError;

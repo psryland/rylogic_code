@@ -30,6 +30,7 @@ namespace pr::rdr12
 		x(m4x4, m_c2s, EInstComp::C2STransform)\
 		x(ModelPtr, m_model, EInstComp::ModelPtr)\
 		x(Texture2DPtr, m_tex_diffuse, EInstComp::DiffTexture)\
+		x(SamplerPtr, m_sam_diffuse, EInstComp::DiffTextureSampler)\
 		x(EInstFlag, m_flags, EInstComp::Flags)
 	PR_RDR12_DEFINE_INSTANCE(DebugQuadInstance, PR_RDR_INST);
 	#undef PR_RDR_INST
@@ -39,13 +40,14 @@ namespace pr::rdr12
 		Scene* m_scene;
 
 		// Create an instance of a quad to display in the lower left of the screen
-		void Create(Scene& scene)
+		void Create(Scene& scene, ShadowCaster& caster)
 		{
 			m_scene = &scene;
 			m_i2w = m4x4::Identity();
 			m_c2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -0.01f, 1000.0f, true);
-			m_model = scene.rdr().res_mgr().FindModel(EStockModel::UnitQuad);
-			m_tex_diffuse = {};
+			m_model = scene.res().CreateModel(EStockModel::UnitQuad);
+			m_tex_diffuse = caster.m_smap;
+			m_sam_diffuse = scene.res().CreateSampler(EStockSampler::PointClamp);
 			m_flags = SetBits(m_flags, EInstFlag::ShadowCastExclude, true);
 		}
 
@@ -55,13 +57,12 @@ namespace pr::rdr12
 			m_scene->FindRStep<RenderForward>()->RemoveInstance(*this);
 			m_model = nullptr;
 			m_tex_diffuse = nullptr;
+			m_sam_diffuse = nullptr;
 		}
 
 		// Add the debug quad to the render forward step (only)
-		void Update(ShadowCaster& caster)
+		void Update()
 		{
-			m_tex_diffuse = caster.m_smap;
-
 			// Scale the unit quad and position in the lower left
 			const float scale = 0.3f;
 			m_i2w = m_scene->m_cam.CameraToWorld() * m4x4::Scale(scale, v4{-0.495f + scale/2, -0.495f + scale/2, 0, 1});
@@ -75,8 +76,10 @@ namespace pr::rdr12
 {
 	RenderSmap::RenderSmap(Scene& scene, Light const& light, int size, DXGI_FORMAT format)
 		: RenderStep(Id, scene)
-		, m_shader(scene.D3DDevice())
-		, m_caster()
+		, m_shader(scene.d3d())
+		, m_default_tex(res().CreateTexture(EStockTexture::White))
+		, m_default_sam(res().CreateSampler(EStockSampler::LinearClamp))
+		, m_casters()
 		, m_smap_size(size)
 		, m_smap_format(format)
 		, m_bbox_scene(BBox::Reset())
@@ -90,7 +93,7 @@ namespace pr::rdr12
 			.HS = m_shader.m_code.HS,
 			.GS = m_shader.m_code.GS,
 			.StreamOutput = StreamOutputDesc{},
-			.BlendState = BlendStateDesc{},
+			.BlendState = BlendStateDesc{}.enable(0).blend(0, D3D12_BLEND_OP_MAX, D3D12_BLEND_SRC_COLOR, D3D12_BLEND_DEST_COLOR),
 			.SampleMask = UINT_MAX,
 			.RasterizerState = RasterStateDesc{}.Set(D3D12_CULL_MODE_BACK),
 			.DepthStencilState = DepthStateDesc{}.Enabled(false),
@@ -120,7 +123,7 @@ namespace pr::rdr12
 
 		AddLight(light);
 
-		PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Create(scene));
+		PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Create(scene, m_casters[0]));
 	}
 	RenderSmap::~RenderSmap()
 	{
@@ -130,7 +133,7 @@ namespace pr::rdr12
 	// Add a shadow casting light source
 	void RenderSmap::AddLight(Light const& light)
 	{
-		m_caster.push_back(ShadowCaster(*this, light, m_smap_size, m_smap_format));
+		m_casters.push_back(ShadowCaster(*this, light, m_smap_size, m_smap_format));
 	}
 
 	// Add model nuggets to the draw list for this render step
@@ -209,12 +212,11 @@ namespace pr::rdr12
 	// Perform the render step
 	void RenderSmap::ExecuteInternal(BackBuffer&)
 	{
+		PR_EXPAND(PR_DBG_SMAP, auto x = pr::Scope<void>([&] { g_smap_quad.Update(); }));
+
 		// Nothing to render if there are no objects
-		if (m_caster.empty() || !m_bbox_scene.valid() || m_bbox_scene.is_point())
-		{
-			PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Update(m_caster[0]));
+		if (m_casters.empty() || !m_bbox_scene.valid() || m_bbox_scene.is_point())
 			return;
-		}
 
 		// Sort the draw list if needed
 		SortIfNeeded();
@@ -224,7 +226,7 @@ namespace pr::rdr12
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Render the shadow map for each shadow caster. TODO in parallel?
-		for (auto& caster : m_caster)
+		for (auto& caster : m_casters)
 		{
 			auto& smap = *caster.m_smap.get();
 
@@ -270,16 +272,13 @@ namespace pr::rdr12
 				// Set shader constants for the nugget
 				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, caster, &dle);
 
-			todo: 'clean up override tex + samp'
 				// Bind textures to the pipeline
-				auto tex = nugget.m_tex_diffuse;
-				if (auto tex_override = dle.m_instance->find<Texture2DPtr>(EInstComp::DiffTexture)) tex = *tex_override;
-				if (tex == nullptr) tex = rdr().res_mgr().FindTexture(EStockTexture::White);
+				auto tex = FindDiffTexture(*dle.m_instance) << nugget.m_tex_diffuse << m_default_tex;
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTexture, srv_descriptor);
 
 				// Bind samplers to the pipeline (can't use static samplers because each mode may use different address modes)
-				auto sam = nugget.m_sam_diffuse != nullptr ? nugget.m_sam_diffuse : rdr().res_mgr().FindSampler(EStockSampler::AnisotropicWrap);
+				auto sam = FindDiffTextureSampler(*dle.m_instance) << nugget.m_sam_diffuse << m_default_sam;
 				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTextureSampler, sam_descriptor);
 
@@ -293,9 +292,6 @@ namespace pr::rdr12
 			barriers.Transition(smap.m_res.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			barriers.Commit();
 		}
-
-		// Debugging
-		PR_EXPAND(PR_DBG_SMAP, g_smap_quad.Update(m_caster[0]));
 	}
 
 	// Call draw for a nugget

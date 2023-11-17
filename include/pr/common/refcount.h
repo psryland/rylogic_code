@@ -33,27 +33,23 @@ namespace pr
 		RefCount()
 			:m_ref_count(0)
 		{}
-
-		virtual ~RefCount()
-		{}
-
 		RefCount(RefCount&& rhs)
 			:m_ref_count(rhs.m_ref_count)
 		{
 			rhs.m_ref_count = 0;
 		}
-
 		RefCount& operator = (RefCount&& rhs)
 		{
+			if (this == &rhs) return *this;
 			std::swap(m_ref_count, rhs.m_ref_count);
 			return *this;
 		}
+		virtual ~RefCount() = default;
 
 		long AddRef() const
 		{
 			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
 		}
-
 		long Release() const
 		{
 			assert(m_ref_count > 0);
@@ -62,13 +58,14 @@ namespace pr
 			return ref_count;
 		}
 
-		static void RefCountZero(RefCount<Deleter,Shared>* doomed)
+		static void RefCountZero(RefCount* doomed)
 		{
 			delete doomed;
 		}
 
 	private:
-		RefCount(RefCount const&) // Ref counted objects should be copyable
+
+		RefCount(RefCount const&) // Ref counted objects should not be copyable
 			:m_ref_count(0)
 		{
 			// This object has just been constructed, therefore AddRef() has

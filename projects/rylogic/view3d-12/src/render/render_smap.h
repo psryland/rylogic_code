@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #pragma once
-
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/render/render_step.h"
 #include "pr/view3d-12/shaders/shader_smap.h"
@@ -48,21 +47,31 @@ namespace pr::rdr12
 		//    are not isotropic and the shadow will be blocky in some places.
 		//  - The shadow map is not a depth buffer. It's a colour buffer with depth encoded into it.
 
-		// Compile-time derived type
-		inline static constexpr ERenderStep Id = ERenderStep::ShadowMap;
+		using CasterCont = pr::vector<ShadowCaster, 4>;
 
-		using Casters = pr::vector<ShadowCaster, 4>;
-		shaders::ShadowMap m_shader;        // The shader for this render step
-		Casters m_caster;                   // The light sources that cast shadows. This is the list of lights to create shadow maps for.
-		int m_smap_size;                    // Dimensions of the (square) 'smap' textures
-		DXGI_FORMAT m_smap_format;          // The texture format of the smap textures
-		BBox m_bbox_scene;                  // The scene bounds of shadow casters
+	private:
+
+		shaders::ShadowMap m_shader; // The shader for this render step
+		Texture2DPtr m_default_tex;  // Texture to use if a model has no diffuse texture
+		SamplerPtr m_default_sam;    // Sampler to use if a model has no sampler
+		CasterCont m_casters;           // The light sources that cast shadows. This is the list of lights to create shadow maps for.
+		int m_smap_size;             // Dimensions of the (square) 'smap' textures
+		DXGI_FORMAT m_smap_format;   // The texture format of the smap textures
+		BBox m_bbox_scene;           // The scene bounds of shadow casters
+
+	public:
 
 		RenderSmap(Scene& scene, Light const& light, int size = 1024, DXGI_FORMAT format = DXGI_FORMAT_R32_FLOAT);
 		~RenderSmap();
 
+		// Compile-time derived type
+		inline static constexpr ERenderStep Id = ERenderStep::ShadowMap;
+
 		// Add a shadow casting light source
 		void AddLight(Light const& light);
+
+		// The sources of light that cast shadows
+		CasterCont const& Casters() const { return m_casters; }
 
 	private:
 

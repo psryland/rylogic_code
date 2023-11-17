@@ -31,11 +31,6 @@ namespace pr::rdr12::shaders
 		RootSig<ERootParam, ESampParam> root_sig;
 		root_sig.Flags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -54,10 +49,8 @@ namespace pr::rdr12::shaders
 
 		// Add stock static samplers
 		root_sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
-		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2));
+		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
 		root_sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
-		root_sig.Samp(ESampParam::PointClamp, SamDescStatic(ESamReg::s4));
-		root_sig.Samp(ESampParam::LinearWrap, SamDescStatic(ESamReg::s5));
 
 		m_signature = root_sig.Create(device);
 	}
@@ -83,11 +76,11 @@ namespace pr::rdr12::shaders
 			auto& nug = *dle->m_nugget;
 
 			CBufNugget cb1 = {};
-			SetModelFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
+			SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
 			SetTxfm(cb1, inst, scene.m_cam);
 			SetTint(cb1, inst, nug);
 			SetEnvMap(cb1, inst, nug);
-			SetTexDiffuse(cb1, nug);
+			SetTex2Surf(cb1, inst, nug);
 			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 		}

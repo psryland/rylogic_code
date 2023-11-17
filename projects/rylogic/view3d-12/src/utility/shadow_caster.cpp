@@ -18,11 +18,11 @@ namespace pr::rdr12
 		, m_light(&light)
 		, m_scene_cam(&owner.scn().m_cam)
 		, m_smap()
+		, m_size(size)
 	{
-		auto td = ResDesc::Tex2D(Image(size, size, nullptr, format), 1, EUsage::RenderTarget);
-		td.ClearValue = D3D12_CLEAR_VALUE{.Format = format, .Color = {0.0f, 0.0f, 0.0f, 0.0f}};
-		auto desc = TextureDesc(AutoId, td, false, 0U, "Smap");
-		m_smap = owner.res_mgr().CreateTexture2D(desc);
+		auto td = ResDesc::Tex2D(Image(size, size, nullptr, format), 1, EUsage::RenderTarget).clear(format, pr::Colour32Zero);
+		auto desc = TextureDesc(AutoId, td).name("Smap");
+		m_smap = owner.res().CreateTexture2D(desc);
 		owner.m_cmd_list.ResState(m_smap->m_res.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 	}
 

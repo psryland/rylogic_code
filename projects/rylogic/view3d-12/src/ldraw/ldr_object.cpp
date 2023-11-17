@@ -585,8 +585,8 @@ namespace pr::rdr12
 			// Create the texture
 			try
 			{
-				TextureDesc desc(AutoId, ResDesc(), has_alpha, 0, nullptr);
-				tex = p.m_rdr.res_mgr().CreateTexture2D(tex_resource, desc);
+				auto desc = TextureDesc(AutoId, ResDesc()).has_alpha(has_alpha);
+				tex = p.m_rdr.res().CreateTexture2D(tex_resource, desc);
 				tex->m_t2s = t2s;
 			}
 			catch (std::exception const& e)
@@ -597,8 +597,8 @@ namespace pr::rdr12
 			// Find/Create the sampler
 			try
 			{
-				SamplerDesc desc(sdesc.Id(), sdesc);
-				sam = p.m_rdr.res_mgr().FindOrCreateSampler(desc);
+				auto desc = SamplerDesc(sdesc.Id(), sdesc);
+				sam = p.m_rdr.res().CreateSampler(desc);
 			}
 			catch(std::exception const& e)
 			{
@@ -1002,8 +1002,8 @@ namespace pr::rdr12
 				// Create a texture large enough to contain the text, and render the text into it
 				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
 				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
-				TextureDesc desc(id, tdesc, false, 0, name);
-				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
+				auto desc = TextureDesc(id, tdesc).name(name);
+				auto tex = p.m_rdr.res().CreateTexture2D(desc);
 
 				(void)draw;
 				#if 0 //todo
@@ -1041,7 +1041,7 @@ namespace pr::rdr12
 					case EStyle::Circle:
 					{
 						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
 							{
 								auto w0 = sz.x * 0.5f;
 								auto h0 = sz.y * 0.5f;
@@ -1051,7 +1051,7 @@ namespace pr::rdr12
 					case EStyle::Triangle:
 					{
 						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
 							{
 								D3DPtr<ID2D1PathGeometry> geom;
 								D3DPtr<ID2D1GeometrySink> sink;
@@ -1074,7 +1074,7 @@ namespace pr::rdr12
 					case EStyle::Star:
 					{
 						auto id = pr::hash::HashArgs("PointStyleStar", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
 							{
 								D3DPtr<ID2D1PathGeometry> geom;
 								D3DPtr<ID2D1GeometrySink> sink;
@@ -1101,7 +1101,7 @@ namespace pr::rdr12
 					case EStyle::Annulus:
 					{
 						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
 							{
 								auto w0 = sz.x * 0.5f;
 								auto h0 = sz.y * 0.5f;
@@ -2137,7 +2137,7 @@ namespace pr::rdr12
 
 			// Create the model
 			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
-			obj->m_model = p.m_rdr.res_mgr().CreateModel(mdesc);
+			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
 			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
@@ -4237,7 +4237,7 @@ namespace pr::rdr12
 				path(m_filepath.string() + ".textures"),
 				m_filepath.parent_path(),
 			};
-			AutoSub sub = p.m_rdr.res_mgr().ResolveFilepath += [&](auto&, ResolvePathArgs& args)
+			AutoSub sub = p.m_rdr.res().ResolveFilepath += [&](auto&, ResolvePathArgs& args)
 			{
 				// Look in a folder with the same name as the model
 				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
@@ -4538,7 +4538,7 @@ namespace pr::rdr12
 				BBox::Reset(), obj->TypeAndName().c_str());
 
 			// Create the model
-			obj->m_model = p.m_rdr.res_mgr().CreateModel(mdesc);
+			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
 
 			// Store the expression in the object user data
 			obj->m_user_data.get<eval::Expression>() = m_eq;
@@ -5367,7 +5367,7 @@ namespace pr::rdr12
 		settings.m_ib.HeapProps = HeapProps::Upload();
 
 		// Create the model
-		obj->m_model = rdr.res_mgr().CreateModel(settings);
+		obj->m_model = rdr.res().CreateModel(settings);
 
 		// Create dummy nuggets
 		NuggetData nug(ETopo::PointList, EGeom::Vert);
@@ -5603,7 +5603,7 @@ namespace pr::rdr12
 		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 		{
 			// Find the object to world for the bbox
-			m_bbox_instance.m_model = scene.rdr().res_mgr().FindModel(EStockModel::BBoxModel);
+			m_bbox_instance.m_model = scene.res().CreateModel(EStockModel::BBoxModel);
 			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
 			scene.AddInstance(m_bbox_instance);
 		}

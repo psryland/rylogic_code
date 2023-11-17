@@ -44,13 +44,21 @@ namespace pr
 	template <typename T> long PtrRefCount(T*);
 	#endif
 
-	// A ptr wrapper to a reference counting object.
-	// 'T' should have methods 'AddRef' and 'Release'
-	// Not the same as std::shared_ptr<> because it assumes
-	// the pointed-to object has AddRef()/Release() methods
+	// RefCounted concept
+	template <typename T> concept RefCountedType = requires(T t)
+	{
+		t.AddRef();
+		t.Release();
+	};
+
+	// A ptr wrapper to a reference counting object. 'T' should have methods 'AddRef' and 'Release'
+	// Not the same as std::shared_ptr<> because it assumes the pointed-to object has AddRef()/Release() methods
 	template <typename T>
 	struct RefPtr
 	{
+		// Notes:
+		//  - Can't use a concept for 'T' because that means RefPtr can't be defined using forward
+		//    declared types. 
 		mutable T* m_ptr;
 
 		// Default Construct
@@ -237,6 +245,7 @@ namespace pr
 			#if PR_REFPTR_TRACE == 1
 			assert(pr::PtrRefCount(ptr) > 0 && "Pointer reference count is 0");
 			#endif
+
 			ptr->Release();
 		}
 
@@ -259,36 +268,40 @@ namespace pr
 	// Implementation
 	namespace impl
 	{
-		template <typename T> inline long RefCount(T* ptr, decltype(&T::m_ref_count)*)
+		template <RefCountedType T>
+		inline long RefCount(T* ptr, decltype(&T::m_ref_count)*)
 		{
 			return ptr->m_ref_count;
 		}
-		template <typename T> inline long RefCount(T* ptr, ...)
+		template <RefCountedType T>
+		inline long RefCount(T* ptr, ...)
 		{
 			auto count = ptr->AddRef();
 			ptr->Release();
 			return count - 1;
 		}
+
+		// The interface required by RefPtr.
+		// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface
+		// due to template duck-typing, but it can be useful for RefPtr<IRefCounted>
+		// pointers to different typed objects.
+		struct RefPtrStaticCheckType
+		{
+			virtual ~RefPtrStaticCheckType() = default;
+			virtual long AddRef() const = 0;
+			virtual void Release() const = 0;
+		};
+
+		// Check RefPtr size
+		static_assert(sizeof(RefPtr<RefPtrStaticCheckType>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
 	}
 
-	// The interface required by RefPtr.
-	// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface
-	// due to template duck-typing, but it can be useful for RefPtr<IRefCounted>
-	// pointers to different typed objects.
-	struct IRefCounted
-	{
-		virtual ~IRefCounted() {}
-		virtual long AddRef() const = 0;
-		virtual void Release() const = 0;
-	};
-
-	// Check RefPtr size
-	static_assert(sizeof(RefPtr<IRefCounted>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
-
 	// Return the current ref count for a ref pointer
-	template <typename T> inline long PtrRefCount(T* ptr)
+	template <RefCountedType T>
+	inline long PtrRefCount(T* ptr)
 	{
-		if (!ptr) return 0;
+		if (!ptr)
+			return 0;
 
 		// A crash here indicates that 'ptr' has already been released.
 		// If ptr is a D3DPtr, check that two or more D3DPtrs haven't

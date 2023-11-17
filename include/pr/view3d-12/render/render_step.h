@@ -53,11 +53,11 @@ namespace pr::rdr12
 		virtual ~RenderStep() = default;
 
 		// Renderer access
+		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
 		Window& wnd() const;
 		Scene& scn() const;
-		ResourceManager& res_mgr() const;
-		ID3D12Device4* D3DDevice() const;
+		ResourceManager& res() const;
 
 		// Reset the drawlist
 		virtual void ClearDrawlist();

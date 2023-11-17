@@ -92,9 +92,9 @@ struct Main :Form
 		//m_inst1.m_i2w = m4x4::Identity();
 		//m_inst1.m_tint = Colour32White;
 		//m_scn.AddInstance(m_inst1);
-		View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
-		//View3D_DemoSceneCreate(m_win3d);
+		View3D_DemoSceneCreate(m_win3d);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;

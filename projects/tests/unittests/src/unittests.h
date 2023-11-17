@@ -56,6 +56,7 @@
 #include "pr\common\build_options.h"
 #include "pr\common\cast.h"
 #include "pr\common\clipboard.h"
+#include "pr\common\coalesce.h"
 #include "pr\common\command_line.h"
 #include "pr\common\compress.h"
 #include "pr\common\console.h"

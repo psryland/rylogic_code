@@ -64,6 +64,11 @@ namespace pr::rdr12
 		Renderer& operator=(Renderer const&) = delete;
 		~Renderer();
 
+		// Access the renderer manager classes
+		ID3D12Device4* d3d() const;
+		Renderer& rdr();
+		ResourceManager& res();
+
 		// Access the adapter that the device was created on
 		IDXGIAdapter* Adapter() const
 		{
@@ -121,11 +126,6 @@ namespace pr::rdr12
 		{
 			return m_state.m_d2d_device.get();
 		}
-
-		// Access the renderer manager classes
-		Renderer& rdr();
-		ResourceManager const& res_mgr() const;
-		ResourceManager& res_mgr();
 
 		// Read access to the initialisation settings
 		RdrSettings const& Settings() const;

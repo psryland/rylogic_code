@@ -58,7 +58,7 @@ namespace pr::rdr12
 
 		// Access the renderer manager classes
 		Renderer& rdr() const;
-		ResourceManager& res_mgr() const;
+		ResourceManager& res() const;
 
 		// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 		v2 Dpi() const;

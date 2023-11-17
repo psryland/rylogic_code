@@ -57,9 +57,6 @@ namespace pr::rdr12
 		GdiPlus            m_gdiplus;            // Context scope for GDI
 		AutoSub            m_eh_resize;          // Event handler subscription for the RT resize event
 		int                m_gdi_dc_ref_count;   // Used to detect outstanding DC references
-		ModelCont          m_stock_models;       // Stock models
-		TextureCont        m_stock_textures;     // Stock textures
-		SamplerCont        m_stock_samplers;     // Stock samplers
 		bool               m_flush_required;     // True if commands have been added to the command list and need sending to the GPU
 
 	public:
@@ -70,8 +67,8 @@ namespace pr::rdr12
 		~ResourceManager();
 
 		// Renderer access
+		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
-		ID3D12Device* D3DDevice() const;
 
 		// Flush creation commands to the GPU. Returns the sync point for when they've been executed
 		uint64_t FlushToGpu(bool block);
@@ -79,14 +76,18 @@ namespace pr::rdr12
 
 		// Create a model.
 		ModelPtr CreateModel(ModelDesc const& desc);
+		ModelPtr CreateModel(EStockModel id);
 
 		// Create a new texture instance.
 		Texture2DPtr CreateTexture2D(TextureDesc const& desc);
 		Texture2DPtr CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc);
 		TextureCubePtr CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc);
+		Texture2DPtr CreateTexture(EStockTexture id);
 
 		// Create a new sampler instance
 		SamplerPtr CreateSampler(SamplerDesc const& desc);
+		SamplerPtr CreateSampler(EStockSampler id);
+		SamplerPtr FindSampler(RdrId id) const;
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);
@@ -107,21 +108,6 @@ namespace pr::rdr12
 			return tex != nullptr ? tex : factory();
 		}
 
-		// Return a pointer to a stock texture
-		Texture2DPtr FindTexture(EStockTexture stock) const;
-
-		// Return a pointer to an existing sampler
-		SamplerPtr FindSampler(RdrId id) const;
-
-		// Convenience method for cached samplers
-		SamplerPtr FindOrCreateSampler(SamplerDesc const& desc);
-
-		// Return a pointer to a stock sampler
-		SamplerPtr FindSampler(EStockSampler stock) const;
-
-		// Return a pointer to a stock model
-		ModelPtr FindModel(EStockModel model) const;
-
 		// An event that is called when a texture filepath cannot be resolved.
 		EventHandler<ResourceManager&, ResolvePathArgs&, true> ResolveFilepath;
 
@@ -136,15 +122,6 @@ namespace pr::rdr12
 		friend struct Sampler;
 		friend struct Shader;
 		
-		// Create the basic textures that exist from startup
-		void CreateStockTextures();
-
-		// Create the basic samplers
-		void CreateStockSamplers();
-
-		// Create stock models
-		void CreateStockModels();
-
 		// Create and initialise a resource
 		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc);
 

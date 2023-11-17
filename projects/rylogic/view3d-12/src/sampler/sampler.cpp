@@ -20,6 +20,7 @@ namespace pr::rdr12
 	}
 	Sampler::~Sampler()
 	{
+		m_mgr->m_descriptor_store.Release(m_samp);
 		OnDestruction(*this, EmptyArgs());
 	}
 

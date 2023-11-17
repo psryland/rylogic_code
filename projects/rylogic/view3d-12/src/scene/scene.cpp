@@ -50,6 +50,10 @@ namespace pr::rdr12
 	}
 
 	// Access the renderer
+	ID3D12Device4* Scene::d3d() const
+	{
+		return rdr().d3d();
+	}
 	Renderer& Scene::rdr() const
 	{
 		return wnd().rdr();
@@ -58,9 +62,9 @@ namespace pr::rdr12
 	{
 		return *m_wnd;
 	}
-	ID3D12Device4* Scene::D3DDevice() const
+	ResourceManager& Scene::res() const
 	{
-		return rdr().D3DDevice();
+		return rdr().res();
 	}
 
 	// Reset the drawlist for each render step

@@ -97,9 +97,9 @@ namespace pr::rdr12
 	{
 		return m_dll->m_rdr;
 	}
-	ResourceManager& V3dWindow::res_mgr() const
+	ResourceManager& V3dWindow::res() const
 	{
-		return rdr().res_mgr();
+		return rdr().res();
 	}
 
 	// Get/Set the settings
@@ -674,15 +674,15 @@ namespace pr::rdr12
 	void V3dWindow::CreateStockObjects()
 	{
 		// Create the focus point/origin models
-		m_focus_point.m_model = res_mgr().FindModel(EStockModel::Basis);
+		m_focus_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
 		m_focus_point.m_i2w = m4x4Identity;
-		m_origin_point.m_model = res_mgr().FindModel(EStockModel::Basis);
+		m_origin_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
 		m_origin_point.m_i2w = m4x4Identity;
 
 		// Create the selection box model
-		m_selection_box.m_model = res_mgr().FindModel(EStockModel::SelectionBox);
+		m_selection_box.m_model = res().CreateModel(EStockModel::SelectionBox);
 		m_selection_box.m_tint = Colour32White;
 		m_selection_box.m_i2w = m4x4Identity;
 	}

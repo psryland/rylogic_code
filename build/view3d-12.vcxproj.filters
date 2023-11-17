@@ -611,7 +611,4 @@
       <Filter>src\shaders\hlsl\utility</Filter>
     </CustomBuild>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
 </Project>
