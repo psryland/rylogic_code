@@ -42,7 +42,7 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 		{
 			lit += m_smap_texture[i].SampleCmpLevelZero(m_smap_sampler, uv, z + Eps, Ofs[s]);
 		}
-		lit /= 9.0;
+		lit /= NumSmapSamples;
 
 		// 1.0 = near plane, 0.0 = far plane, so the
 		// largest value is closest to the light source

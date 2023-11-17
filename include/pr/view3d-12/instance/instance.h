@@ -18,6 +18,8 @@
 #include "pr/view3d-12/forward.h"
 //#include "pr/view3d/models/model.h"
 #include "pr/view3d-12/render/sortkey.h"
+#include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 
 namespace pr::rdr12
@@ -39,6 +41,7 @@ namespace pr::rdr12
 		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
 		DiffTexture,         // An override of the main diffuse texture
+		DiffTextureSampler,  // An override of the main diffuse texture sampler
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -82,6 +85,7 @@ namespace pr::rdr12
 			case EInstComp::Flags:               return sizeof(EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(Colour32);
 			case EInstComp::DiffTexture:         return sizeof(Texture2DPtr);
+			case EInstComp::DiffTextureSampler:  return sizeof(SamplerPtr);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
 			case EInstComp::UniqueId:            return sizeof(int32_t);
 			case EInstComp::SSSize:              return sizeof(v2);
@@ -262,6 +266,20 @@ namespace pr::rdr12
 		static PipeStates const NoPipeStates;
 		auto pps = inst.find<PipeStates>(EInstComp::PipeStates);
 		return pps ? *pps : NoPipeStates;
+	}
+
+	// Return the texture override in this instance (if exists)
+	inline Texture2DPtr FindDiffTexture(BaseInstance const& inst)
+	{
+		auto const* ptex = inst.find<Texture2DPtr>(EInstComp::DiffTexture);
+		return ptex ? *ptex : nullptr;
+	}
+
+	// Return the sampler override in this isntance (if exists)
+	inline SamplerPtr FindDiffTextureSampler(BaseInstance const& inst)
+	{
+		auto const* psamp = inst.find<SamplerPtr>(EInstComp::DiffTextureSampler);
+		return psamp ? *psamp : nullptr;
 	}
 
 	// Cast from a 'BaseInstance' pointer to an instance type

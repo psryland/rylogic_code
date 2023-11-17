@@ -18,17 +18,21 @@ namespace pr::rdr12
 	RenderStep::RenderStep(ERenderStep id, Scene& scene)
 		: m_step_id(id)
 		, m_scene(&scene)
-		, m_cmd_list(D3DDevice(), nullptr, ERenderStep_::ToStringW(id))
+		, m_cmd_list(d3d(), nullptr, ERenderStep_::ToStringW(id))
 		, m_drawlist()
 		, m_sort_needed(true)
 		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
 		, m_default_pipe_state()
 		, m_pipe_state_pool(wnd())
-		, m_evt_model_delete(wnd().res_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
+		, m_evt_model_delete(res().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
 		, m_mutex()
 	{}
 
 	// Access the renderer
+	ID3D12Device4* RenderStep::d3d() const
+	{
+		return rdr().d3d();
+	}
 	Renderer& RenderStep::rdr() const
 	{
 		return wnd().rdr();
@@ -41,13 +45,9 @@ namespace pr::rdr12
 	{
 		return *m_scene;
 	}
-	ResourceManager& RenderStep::res_mgr() const
+	ResourceManager& RenderStep::res() const
 	{
-		return rdr().res_mgr();
-	}
-	ID3D12Device4* RenderStep::D3DDevice() const
-	{
-		return rdr().D3DDevice();
+		return rdr().res();
 	}
 
 	// Reset/Populate the drawlist

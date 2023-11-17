@@ -62,6 +62,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/fmt.h"
 #include "pr/common/cast.h"
+#include "pr/common/coalesce.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
@@ -130,10 +131,10 @@ namespace pr::rdr12
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
 	template <typename T> using Scope = pr::Scope<T>;
-	template <typename T> using RefPtr = pr::RefPtr<T>;
-	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
+	template <typename T> using RefCounted = pr::RefCount<T>;
+	template <typename T> using RefPtr = pr::RefPtr<T>;
 
 	// Fixed size strings
 	using string32 = pr::string<char, 32>;
@@ -170,7 +171,7 @@ namespace pr::rdr12
 	// Resources
 	struct ResourceManager;
 	struct ResDesc;
-	    struct SamDesc;
+	struct SamDesc;
 	
 	// Samplers
 	struct SamplerDesc;

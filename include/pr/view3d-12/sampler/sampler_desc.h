@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
@@ -17,17 +18,29 @@ namespace pr::rdr12
 		RdrId    m_id;    // The id to assign to the created sampler instance.
 		SamDesc  m_sdesc; // A description of the sampler to be created.
 		string32 m_name;  // Debugging name for the sampler.
-
+		
 		SamplerDesc()
 			:m_id()
 			,m_sdesc()
 			,m_name()
 		{}
 
-		SamplerDesc(RdrId id, SamDesc const& sd, char const* name = "")
+		SamplerDesc(RdrId id, SamDesc const& sd)
 			:m_id(id)
 			,m_sdesc(sd)
-			,m_name(name)
+			,m_name()
 		{}
+
+		SamplerDesc(EStockSampler id, SamDesc const& sd)
+			:m_id(s_cast<RdrId>(id))
+			,m_sdesc(sd)
+			,m_name()
+		{}
+
+		SamplerDesc& name(char const* name)
+		{
+			m_name = name;
+			return *this;
+		}
 	};
 }

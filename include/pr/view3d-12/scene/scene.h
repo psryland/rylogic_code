@@ -52,9 +52,10 @@ namespace pr::rdr12
 		~Scene();
 
 		// Renderer access
+		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
 		Window& wnd() const;
-		ID3D12Device4* D3DDevice() const;
+		ResourceManager& res() const;
 
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame

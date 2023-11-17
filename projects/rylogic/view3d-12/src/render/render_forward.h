@@ -12,11 +12,19 @@ namespace pr::rdr12
 {
 	struct RenderForward :RenderStep
 	{
-		// Compile-time derived type
-		inline static constexpr ERenderStep Id = ERenderStep::RenderForward;
+	private:
 
 		shaders::Forward m_shader;
+		Texture2DPtr m_default_tex;
+		SamplerPtr m_default_sam;
+	
+	public:
+
 		explicit RenderForward(Scene& scene);
+		~RenderForward();
+
+		// Compile-time derived type
+		inline static constexpr ERenderStep Id = ERenderStep::RenderForward;
 
 	private:
 

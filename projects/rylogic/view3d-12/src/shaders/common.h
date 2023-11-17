@@ -85,7 +85,7 @@ namespace pr::rdr12
 
 	// Set the CBuffer model constants flags
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_flags; })
-	void SetModelFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, bool env_mapped)
+	void SetFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, bool env_mapped)
 	{
 		auto model_flags = 0;
 		{
@@ -97,18 +97,18 @@ namespace pr::rdr12
 		auto texture_flags = 0;
 		{
 			// Has diffuse texture
-			if (pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr)
+			if (Texture2DPtr tex; pr::AllSet(nug.m_geom, EGeom::Tex0) && (tex = FindDiffTexture(inst) << nug.m_tex_diffuse) != nullptr)
 			{
 				texture_flags |= shaders::TextureFlags_HasDiffuse;
 
 				// Texture by projection from the environment map
-				if (nug.m_tex_diffuse->m_uri == RdrId(EStockTexture::EnvMapProjection))
+				if (tex->m_uri == RdrId(EStockTexture::EnvMapProjection))
 					texture_flags |= shaders::TextureFlags_ProjectFromEnvMap;
 			}
 
 			// Is reflective
-			float const* reflec;
-			if (env_mapped &&                                                            // There is an env map
+			if (float const* reflec;
+				env_mapped &&                                                            // There is an env map
 				AllSet(nug.m_geom, EGeom::Norm) &&                                       // The model contains normals
 				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity)) != nullptr && // The instance has a reflectivity value
 				*reflec * nug.m_relative_reflectivity != 0)                              // and the reflectivity isn't zero
@@ -160,10 +160,11 @@ namespace pr::rdr12
 
 	// Set the texture properties of a constants buffer
 	template <typename TCBuf> requires (requires(TCBuf x) { x.m_tex2surf0; })
-	void SetTexDiffuse(TCBuf& cb, NuggetData const& nug)
+	void SetTex2Surf(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
 	{
-		cb.m_tex2surf0 = nug.m_tex_diffuse != nullptr
-			? nug.m_tex_diffuse->m_t2s
+		auto tex = FindDiffTexture(inst) << nug.m_tex_diffuse;
+		cb.m_tex2surf0 = tex != nullptr
+			? tex->m_t2s
 			: m4x4::Identity();
 	}
 
@@ -222,13 +223,13 @@ namespace pr::rdr12
 
 		// Add the shadow maps to the shader params
 		int i = 0;
-		for (auto& caster : smap_step->m_caster)
+		for (auto& caster : smap_step->Casters())
 		{
 			if (i == shaders::MaxShadowMaps)
 				break;
 
 			cb.m_info.x = i + 1;
-			cb.m_info.y = smap_step->m_smap_size;
+			cb.m_info.y = caster.m_size;
 			cb.m_w2l[i] = caster.m_params.m_w2ls;
 			cb.m_l2s[i] = caster.m_params.m_ls2s;
 			++i;

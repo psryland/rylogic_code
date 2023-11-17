@@ -194,9 +194,9 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
-	ResourceManager& Window::res_mgr() const
+	ResourceManager& Window::res() const
 	{
-		return rdr().res_mgr();
+		return rdr().res();
 	}
 
 	// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
@@ -391,7 +391,7 @@ namespace pr::rdr12
 			m_d2d_dc->SetTarget(bb.m_d2d_target.get());
 
 		// Flush any pending resource commands to the GPU
-		rdr().res_mgr().FlushToGpu(false);
+		res().FlushToGpu(false);
 
 		// Start a frame
 		++m_frame_number;

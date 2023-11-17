@@ -38,7 +38,7 @@ namespace pr::rdr12
 		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		,m_name(desc.m_name)
 	{
-		auto device = m_mgr->D3DDevice();
+		auto device = m_mgr->d3d();
 		auto tdesc = desc.m_tdesc;
 		Throw(res->SetName(FmtS(L"%S", m_name.c_str())));
 
@@ -107,6 +107,9 @@ namespace pr::rdr12
 	}
 	TextureBase::~TextureBase()
 	{
+		m_mgr->m_descriptor_store.Release(m_srv);
+		m_mgr->m_descriptor_store.Release(m_uav);
+		m_mgr->m_descriptor_store.Release(m_rtv);
 		OnDestruction(*this, EmptyArgs());
 	}
 

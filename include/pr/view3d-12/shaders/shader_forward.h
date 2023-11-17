@@ -29,8 +29,6 @@ namespace pr::rdr12::shaders
 			EnvMap,
 			SMap,
 			ProjTex,
-			PointClamp,
-			LinearWrap,
 		};
 	}
 

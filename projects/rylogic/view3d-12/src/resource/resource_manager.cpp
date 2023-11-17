@@ -41,18 +41,10 @@ namespace pr::rdr12
 		,m_gdiplus()
 		,m_eh_resize()
 		,m_gdi_dc_ref_count()
-		,m_stock_models()
-		,m_stock_textures()
-		,m_stock_samplers()
 		,m_flush_required()
 	{
 		// Setup notification of sync points
 		m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
-
-		// Create stock resources
-		CreateStockTextures();
-		CreateStockSamplers();
-		CreateStockModels();
 
 		// Wait till stock resources are created
 		FlushToGpu(true);
@@ -67,22 +59,18 @@ namespace pr::rdr12
 	}
 	ResourceManager::~ResourceManager()
 	{
-		m_stock_textures.resize(0);
-		m_stock_samplers.resize(0);
-		m_stock_models.resize(0);
-
 		// Stop polling 'm_gsync'
 		m_rdr.RemovePollCB({ &GpuSync::Poll, &m_gsync });
 	}
 
 	// Renderer access
+	ID3D12Device4* ResourceManager::d3d() const
+	{
+		return rdr().d3d();
+	}
 	Renderer& ResourceManager::rdr() const
 	{
 		return m_rdr;
-	}
-	ID3D12Device* ResourceManager::D3DDevice() const
-	{
-		return rdr().D3DDevice();
 	}
 
 	// Flush creation commands to the GPU. Returns the sync point for when they've been executed
@@ -185,6 +173,171 @@ namespace pr::rdr12
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}
+	ModelPtr ResourceManager::CreateModel(EStockModel id)
+	{
+		switch (id)
+		{
+			case EStockModel::Basis:
+			{
+				// Basis/focus point model
+				constexpr Vert verts[] = {
+					{v4(0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
+					{v4(1.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
+					{v4(0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
+					{v4(0.0f,  1.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
+					{v4(0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(0.0f,  0.0f,  1.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				};
+				constexpr uint16_t idxs[] = {
+					0, 1, 2, 3, 4, 5,
+				};
+				constexpr BBox bbox = {
+					v4(0.5f, 0.5f, 0.5f, 1.0f),
+					v4(1, 1, 1, 0)
+				};
+
+				ModelDesc mdesc(verts, idxs, bbox, "basis");
+				auto ptr = CreateModel(mdesc);
+
+				NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
+				ptr->CreateNugget(nug);
+
+				return ptr;
+			}
+			case EStockModel::UnitQuad:
+			{
+				// Unit quad in Z = 0 plane
+				constexpr Vert verts[] = {
+					{v4(-0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.9999f)},
+					{v4(0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.9999f)},
+					{v4(0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.0000f)},
+					{v4(-0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.0000f)},
+				};
+				constexpr uint16_t idxs[] = {
+					0, 1, 2, 0, 2, 3
+				};
+				constexpr BBox bbox = {
+					v4Origin,
+					v4(1, 1, 0, 0)
+				};
+
+				ModelDesc mdesc(verts, idxs, bbox, "unit quad");
+				auto ptr = CreateModel(mdesc);
+
+				NuggetData nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
+				ptr->CreateNugget(nug);
+				return ptr;
+			}
+			case EStockModel::BBoxModel:
+			{
+				// Bounding box cube
+				constexpr Vert verts[] = {
+					{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+					{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
+				};
+				constexpr uint16_t idxs[] = {
+					0, 1, 1, 2, 2, 3, 3, 0,
+					4, 5, 5, 6, 6, 7, 7, 4,
+					0, 4, 1, 5, 2, 6, 3, 7,
+				};
+				constexpr BBox bbox = {
+					v4Origin,
+					v4(1, 1, 1, 0)
+				};
+
+				ModelDesc mdesc(verts, idxs, bbox, "bbox cube");
+				auto ptr = CreateModel(mdesc);
+
+				NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
+				ptr->CreateNugget(nug);
+
+				return ptr;
+			}
+			case EStockModel::SelectionBox:
+			{
+				// Selection box
+				// Create the selection box model
+				constexpr float sz = 1.0f;
+				constexpr float dd = 0.8f;
+				constexpr Vert verts[] = {
+					{v4(-sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(-sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(-sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+
+					{v4(-sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+					{v4(-sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
+				};
+				constexpr uint16_t idxs[] = {
+					0,  1,  0,  2,  0,  3,
+					4,  5,  4,  6,  4,  7,
+					8,  9,  8, 10,  8, 11,
+					12, 13, 12, 14, 12, 15,
+					16, 17, 16, 18, 16, 19,
+					20, 21, 20, 22, 20, 23,
+					24, 25, 24, 26, 24, 27,
+					28, 29, 28, 30, 28, 31,
+				};
+				constexpr BBox bbox = {
+					v4Origin,
+					v4(1, 1, 1, 0)
+				};
+
+				ModelDesc mdesc(verts, idxs, bbox, "selection box");
+				auto ptr = CreateModel(mdesc);
+
+				NuggetData nug(ETopo::LineList, EGeom::Vert);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
+				ptr->CreateNugget(nug);
+
+				return ptr;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown stock model type");
+			}
+		}
+	}
 
 	// Create a new texture instance.
 	Texture2DPtr ResourceManager::CreateTexture2D(TextureDesc const& desc)
@@ -226,7 +379,7 @@ namespace pr::rdr12
 		// Add the texture instance pointer (not ref counted) to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return inst;
+		return std::move(inst);
 	}
 	Texture2DPtr ResourceManager::CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
@@ -249,15 +402,8 @@ namespace pr::rdr12
 			if (!stock)
 				throw std::runtime_error(Fmt("Unknown stock texture name: %s", resource_path.string().c_str() + 1));
 
-			// Return a clone of the stock texture
-			auto stock_tex = FindTexture(*stock);
-			if (stock_tex == nullptr)
-				throw std::runtime_error(Fmt("Stock texture '%s' not found", resource_path.string().c_str() + 1));
-
-			// Clone the stock texture, adding another reference to the D3D resource.
-			// A clone is needed because the t2s in the texture instance may be different.
-			res = stock_tex->m_res;
-			desc.m_tdesc = stock_tex->m_res->GetDesc();
+			// Create a stock texture
+			return CreateTexture(*stock);
 		}
 
 		// Create a texture from embedded resource
@@ -344,7 +490,7 @@ namespace pr::rdr12
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return inst;
+		return std::move(inst);
 	}
 	TextureCubePtr ResourceManager::CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
@@ -459,15 +605,184 @@ namespace pr::rdr12
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
 		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return inst;
+		return std::move(inst);
+	}
+	Texture2DPtr ResourceManager::CreateTexture(EStockTexture id)
+	{
+		switch (id)
+		{
+			case EStockTexture::Black:
+			{
+				uint32_t const data[] = { 0xFF000000 };
+				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Black).name("#black");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::White:
+			{
+				uint32_t const data[] = { 0xFFFFFFFF };
+				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::White).name("#white");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::Gray:
+			{
+				uint32_t const data[] = { 0xFF808080 };
+				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Gray).name("#gray");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::Checker:
+			{
+				uint32_t const data[] =
+				{
+					#define X 0xFFFFFFFF
+					#define O 0x00000000
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					#undef X
+					#undef O
+				};
+				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker).name("#checker");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::Checker2:
+			{
+				uint32_t const data[] =
+				{
+					#define X 0xFFFFFFFF
+					#define O 0xFFAAAAAA
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					#undef X
+					#undef O
+				};
+				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker2).name("#checker2");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::Checker3:
+			{
+				uint32_t const data[] =
+				{
+					#define O 0xFFFFFFFF
+					#define X 0xFFEEEEEE
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					#undef X
+					#undef O
+				};
+				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::WhiteSpot:
+			{
+				constexpr int sz = 256;
+				constexpr auto radius = sz / 2.0f;
+				std::vector<uint32_t> data(sz * sz);
+				for (int j = 0; j != sz; ++j)
+				{
+					for (int i = 0; i != sz; ++i)
+					{
+						auto c = Colour32White;
+						auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
+						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
+						data[size_t(j * sz + i)] = c.argb;
+					}
+				}
+
+				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::WhiteTriangle:
+			{
+				constexpr int sz = 64, hsz = sz / 2;
+				constexpr auto dx = maths::root3_by_2f / 2.0f;
+				constexpr auto dy = 0.75f;
+				constexpr auto s = 1.0f / sz;
+
+				// Equilateral triangle, 'pointing' up.
+				// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
+				//               \         /
+				//                \       /
+				//                 \     / 
+				//                   0,0
+				std::vector<uint32_t> data(sz * sz);
+				for (int j = 0; j * 4 <= sz * 3; ++j)
+				{
+					auto y = j * s; // [0, 0.75]
+
+					// Do the positive half x range and mirror to -x
+					for (int i = 0; i != hsz; ++i)
+					{
+						auto x0 = s * (i + 0);
+						auto x1 = s * (i + 1);
+
+						// x*dy == y*dx on the edge
+						auto t =
+							(x1 * dy < y * dx) ? 0.0f :  // inside the triangle
+							(x0 * dy > y * dx) ? 1.0f :  // outside the triangle
+							(Frac(x0 * dy, y * dx, x1 * 0.75f)); // Spanning the edge
+
+						auto c = Colour32White;
+						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
+
+						data[size_t(j * sz + hsz - i)] = c.argb;
+						data[size_t(j * sz + hsz + i)] = c.argb;
+					}
+				}
+
+				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteTriangle).has_alpha().name("#whitetriangle");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::EnvMapProjection:
+			{
+				uint32_t const data[] = { 0 };
+				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::EnvMapProjection).name("#envmapproj");
+				return CreateTexture2D(tdesc);
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown stock texture");
+			}
+		}
 	}
 
 	// Create a new sampler instance.
 	SamplerPtr ResourceManager::CreateSampler(SamplerDesc const& desc)
 	{
-		// Check whether 'id' already exists, if so, throw. Users should use FindSampler first.
-		if (desc.m_id != AutoId && m_lookup_sam.find(desc.m_id) != end(m_lookup_sam))
-			throw std::runtime_error(FmtS("Sampler Id '%d' is already in use", desc.m_id));
+		// Check whether 'id' already exists, if so, return it.
+		// There is no per-instance data in samplers, so they can be shared.
+		// So really 'CreateSampler' isn't quite right, it's more like 'GetOrCreateSampler'.
+		if (desc.m_id != AutoId)
+		{
+			auto iter = m_lookup_sam.find(desc.m_id);
+			if (iter != end(m_lookup_sam))
+				return SamplerPtr(iter->second, true);
+		}
 
 		// Allocate a new sampler instance
 		SamplerPtr inst(rdr12::New<Sampler>(*this, desc), true);
@@ -476,7 +791,52 @@ namespace pr::rdr12
 		// Add the sampler instance pointer (not ref counted) to the lookup table.
 		// The caller owns the sampler, when released it will be removed from this lookup.
 		AddLookup(m_lookup_sam, inst->m_id, inst.get());
-		return inst;
+		return std::move(inst);
+	}
+	SamplerPtr ResourceManager::CreateSampler(EStockSampler id)
+	{
+		switch (id)
+		{
+			case EStockSampler::PointClamp:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
+				return CreateSampler(sdesc);
+			}
+			case EStockSampler::PointWrap:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
+				return CreateSampler(sdesc);
+			}
+			case EStockSampler::LinearClamp:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
+				return CreateSampler(sdesc);
+			}
+			case EStockSampler::LinearWrap:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
+				return CreateSampler(sdesc);
+			}
+			case EStockSampler::AnisotropicClamp:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
+				return CreateSampler(sdesc);
+			}
+			case EStockSampler::AnisotropicWrap:
+			{
+				auto sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
+				return CreateSampler(sdesc);
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown stock sampler type");
+			}
+		}
+	}
+	SamplerPtr ResourceManager::FindSampler(RdrId id) const
+	{
+		auto sam = GetOrDefault(m_lookup_sam, id, (Sampler*)nullptr);
+		return SamplerPtr(sam, true);
 	}
 
 	// Create a new nugget
@@ -485,386 +845,6 @@ namespace pr::rdr12
 		auto ptr = rdr12::New<Nugget>(ndata, model, id);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
-	}
-
-	// Return a stock texture
-	Texture2DPtr ResourceManager::FindTexture(EStockTexture id) const
-	{
-		if (s_cast<size_t>(id) > m_stock_textures.size())
-			throw std::runtime_error(FmtS("Stock texture %s does not exist", Enum<EStockTexture>::ToStringA(id)));
-
-		return m_stock_textures[s_cast<int>(id)];
-	}
-
-	// Return a pointer to an existing sampler
-	SamplerPtr ResourceManager::FindSampler(RdrId id) const
-	{
-		auto sam = GetOrDefault(m_lookup_sam, id, (Sampler*)nullptr);
-		return SamplerPtr(sam, true);
-	}
-
-	// Convenience method for cached samplers
-	SamplerPtr ResourceManager::FindOrCreateSampler(SamplerDesc const& desc)
-	{
-		auto sam = FindSampler(desc.m_sdesc.Id());
-		return sam != nullptr ? sam : CreateSampler(desc);
-	}
-
-	// Return a pointer to a stock sampler
-	SamplerPtr ResourceManager::FindSampler(EStockSampler id) const
-	{
-		if (s_cast<size_t>(id) > m_stock_samplers.size())
-			throw std::runtime_error(FmtS("Stock sampler %s does not exist", Enum<EStockSampler>::ToStringA(id)));
-
-		return m_stock_samplers[s_cast<int>(id)];
-	}
-
-	// Return a pointer to a stock model
-	ModelPtr ResourceManager::FindModel(EStockModel id) const
-	{
-		if (s_cast<size_t>(id) > m_stock_models.size())
-			throw std::runtime_error(FmtS("Stock model %s does not exist", Enum<EStockModel>::ToStringA(id)));
-
-		return m_stock_models[s_cast<int>(id)];
-	}
-
-	// Create the basic textures that exist from startup
-	void ResourceManager::CreateStockTextures()
-	{
-		// Create the stock textures
-		m_stock_textures.resize(EStockTexture_::NumberOf);
-		{// EStockTexture::Black
-			uint32_t const data[] = {0xFF000000};
-			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Black), ResDesc::Tex2D(src, 1), false, 0, "#black");
-			m_stock_textures[s_cast<int>(EStockTexture::Black)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::White:
-			uint32_t const data[] = {0xFFFFFFFF};
-			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::White), ResDesc::Tex2D(src, 1), false, 0, "#white");
-			m_stock_textures[s_cast<int>(EStockTexture::White)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::Gray:
-			uint32_t const data[] = {0xFF808080};
-			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Gray), ResDesc::Tex2D(src, 1), false, 0, "#gray");
-			m_stock_textures[s_cast<int>(EStockTexture::Gray)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::Checker:
-			uint32_t const data[] =
-			{
-				#define X 0xFFFFFFFF
-				#define O 0x00000000
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				#undef X
-				#undef O
-			};
-			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker), ResDesc::Tex2D(src, 0), false, 0, "#checker");
-			m_stock_textures[s_cast<int>(EStockTexture::Checker)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::Checker2:
-			uint32_t const data[] =
-			{
-				#define X 0xFFFFFFFF
-				#define O 0xFFAAAAAA
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				#undef X
-				#undef O
-			};
-			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker2), ResDesc::Tex2D(src, 0), false, 0, "#checker2");
-			m_stock_textures[s_cast<int>(EStockTexture::Checker2)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::Checker3:
-			uint32_t const data[] =
-			{
-				#define O 0xFFFFFFFF
-				#define X 0xFFEEEEEE
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				X, X, O, O, X, X, O, O,
-				X, X, O, O, X, X, O, O,
-				O, O, X, X, O, O, X, X,
-				O, O, X, X, O, O, X, X,
-				#undef X
-				#undef O
-			};
-			Image src(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			//auto sam = SamDesc::LinearWrap(); sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::Checker3), ResDesc::Tex2D(src, 0), false, 0, "#checker3");
-			m_stock_textures[s_cast<int>(EStockTexture::Checker3)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::WhiteSpot:
-			constexpr int sz = 256;
-			constexpr auto radius = sz / 2.0f;
-			std::vector<uint32_t> data(sz * sz);
-			for (int j = 0; j != sz; ++j)
-			{
-				for (int i = 0; i != sz; ++i)
-				{
-					auto c = Colour32White;
-					auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
-					c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-					data[size_t(j * sz + i)] = c.argb;
-				}
-			}
-
-			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteSpot), ResDesc::Tex2D(src, 0), true, 0, "#whitespot");
-			m_stock_textures[s_cast<int>(EStockTexture::WhiteSpot)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::WhiteTriangle:
-			constexpr int sz = 64, hsz = sz / 2;
-			constexpr auto dx = maths::root3_by_2f / 2.0f;
-			constexpr auto dy = 0.75f;
-			constexpr auto s = 1.0f / sz;
-
-			// Equilateral triangle, 'pointing' up.
-			// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
-			//               \         /
-			//                \       /
-			//                 \     / 
-			//                   0,0
-			std::vector<uint32_t> data(sz * sz);
-			for (int j = 0; j * 4 <= sz * 3; ++j)
-			{
-				auto y = j * s; // [0, 0.75]
-
-				// Do the positive half x range and mirror to -x
-				for (int i = 0; i != hsz; ++i)
-				{
-					auto x0 = s * (i + 0);
-					auto x1 = s * (i + 1);
-
-					// x*dy == y*dx on the edge
-					auto t =
-						(x1 * dy < y* dx) ? 0.0f :  // inside the triangle
-						(x0 * dy > y * dx) ? 1.0f :  // outside the triangle
-						(Frac(x0 * dy, y * dx, x1 * 0.75f)); // Spanning the edge
-
-					auto c = Colour32White;
-					c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-
-					data[size_t(j * sz + hsz - i)] = c.argb;
-					data[size_t(j * sz + hsz + i)] = c.argb;
-				}
-			}
-
-			Image src(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::WhiteTriangle), ResDesc::Tex2D(src, 0), true, 0, "#whitetriangle");
-			m_stock_textures[s_cast<int>(EStockTexture::WhiteTriangle)] = CreateTexture2D(tdesc);
-		}
-		{// EStockTexture::EnvMapProjection:
-			uint32_t const data[] = {0};
-			Image src(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-			TextureDesc tdesc(s_cast<RdrId>(EStockTexture::EnvMapProjection), ResDesc::Tex2D(src, 0), false, 0, "#envmapproj");
-			m_stock_textures[s_cast<int>(EStockTexture::EnvMapProjection)] = CreateTexture2D(tdesc);
-		}
-	}
-
-	// Create the basic samplers
-	void ResourceManager::CreateStockSamplers()
-	{
-		// Create the stock samplers
-		m_stock_samplers.resize(EStockSampler_::NumberOf);
-		{// EStockSampler::PointClamp
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::PointClamp), SamDesc::PointClamp(), "#pointclamp");
-			m_stock_samplers[s_cast<int>(EStockSampler::PointClamp)] = CreateSampler(sdesc);
-		}
-		{// EStockSampler::PointWrap
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::PointWrap), SamDesc::PointWrap(), "#pointwrap");
-			m_stock_samplers[s_cast<int>(EStockSampler::PointWrap)] = CreateSampler(sdesc);
-		}
-		{// EStockSampler::LinearClamp
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::LinearClamp), SamDesc::LinearClamp(), "#linearclamp");
-			m_stock_samplers[s_cast<int>(EStockSampler::LinearClamp)] = CreateSampler(sdesc);
-		}
-		{// EStockSampler::LinearWrap
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::LinearWrap), SamDesc::LinearWrap(), "#linearwrap");
-			m_stock_samplers[s_cast<int>(EStockSampler::LinearWrap)] = CreateSampler(sdesc);
-		}
-		{// EStockSampler::AnisotropicClamp
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::AnisotropicClamp), SamDesc::AnisotropicClamp(), "#anisotropicclamp");
-			m_stock_samplers[s_cast<int>(EStockSampler::AnisotropicClamp)] = CreateSampler(sdesc);
-		}
-		{// EStockSampler::AnisotropicWrap
-			SamplerDesc sdesc(s_cast<RdrId>(EStockSampler::AnisotropicWrap), SamDesc::AnisotropicWrap(), "#anisotropicwrap");
-			m_stock_samplers[s_cast<int>(EStockSampler::AnisotropicWrap)] = CreateSampler(sdesc);
-		}
-	}
-
-	// Create stock models
-	void ResourceManager::CreateStockModels()
-	{
-		m_stock_models.resize(EStockModel_::NumberOf);
-		{// Basis/focus point model
-			constexpr Vert verts[] = {
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
-				{v4( 1.0f,  0.0f,  0.0f, 1.0f), Colour(0xFFFF0000), v4::Zero(), v2::Zero()},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
-				{v4( 0.0f,  1.0f,  0.0f, 1.0f), Colour(0xFF00FF00), v4::Zero(), v2::Zero()},
-				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4( 0.0f,  0.0f,  1.0f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-			};
-			constexpr uint16_t idxs[] = {
-				0, 1, 2, 3, 4, 5,
-			};
-			constexpr BBox bbox = {
-				v4(0.5f, 0.5f, 0.5f, 1.0f),
-				v4(1, 1, 1, 0)
-			};
-
-			ModelDesc mdesc(verts, idxs, bbox, "basis");
-			auto ptr = CreateModel(mdesc);
-
-			NuggetData nug(ETopo::LineList, EGeom::Vert|EGeom::Colr);
-			nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-			ptr->CreateNugget(nug);
-
-			m_stock_models[s_cast<int>(EStockModel::Basis)] = ptr;
-		}
-		{// Unit quad in Z = 0 plane
-			constexpr Vert verts[] = {
-				{v4(-0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.9999f)},
-				{v4( 0.5f,-0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.9999f)},
-				{v4( 0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.9999f,0.0000f)},
-				{v4(-0.5f, 0.5f, 0, 1), Colour(0xFFFFFFFF), v4::ZAxis(), v2(0.0000f,0.0000f)},
-			};
-			constexpr uint16_t idxs[] = {
-				0, 1, 2, 0, 2, 3
-			};
-			constexpr BBox bbox = {
-				v4Origin,
-				v4(1, 1, 0, 0)
-			};
-
-			ModelDesc mdesc(verts, idxs, bbox, "unit quad");
-			auto ptr = CreateModel(mdesc);
-
-			NuggetData nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
-			ptr->CreateNugget(nug);
-
-			m_stock_models[s_cast<int>(EStockModel::UnitQuad)] = ptr;
-		}
-		{// Bounding box cube
-			constexpr Vert verts[] = {
-				{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-				{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour(0xFF0000FF), v4::Zero(), v2::Zero()},
-			};
-			constexpr uint16_t idxs[] = {
-				0, 1, 1, 2, 2, 3, 3, 0,
-				4, 5, 5, 6, 6, 7, 7, 4,
-				0, 4, 1, 5, 2, 6, 3, 7,
-			};
-			constexpr BBox bbox = {
-				v4Origin,
-				v4(1, 1, 1, 0)
-			};
-
-			ModelDesc mdesc(verts, idxs, bbox, "bbox cube");
-			auto ptr = CreateModel(mdesc);
-
-			NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
-			nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-			ptr->CreateNugget(nug);
-
-			m_stock_models[s_cast<int>(EStockModel::BBoxModel)] = ptr;
-		}
-		{// Selection box
-			// Create the selection box model
-			constexpr float sz = 1.0f;
-			constexpr float dd = 0.8f;
-			constexpr Vert verts[] = {
-				{v4(-sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(sz, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, -dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(dd, -sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, -sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(-sz, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, dd, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-dd, sz, -sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, sz, -dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(-sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(sz, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, -dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(dd, -sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, -sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-
-				{v4(-sz, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, dd, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-dd, sz, sz, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-				{v4(-sz, sz, dd, 1.0f), Colour(0xFFFFFFFF), v4::Zero(), v2::Zero()},
-			};
-			constexpr uint16_t idxs[] = {
-				0,  1,  0,  2,  0,  3,
-				4,  5,  4,  6,  4,  7,
-				8,  9,  8, 10,  8, 11,
-				12, 13, 12, 14, 12, 15,
-				16, 17, 16, 18, 16, 19,
-				20, 21, 20, 22, 20, 23,
-				24, 25, 24, 26, 24, 27,
-				28, 29, 28, 30, 28, 31,
-			};
-			constexpr BBox bbox = {
-				v4Origin,
-				v4(1, 1, 1, 0)
-			};
-
-			ModelDesc mdesc(verts, idxs, bbox, "selection box");
-			auto ptr = CreateModel(mdesc);
-
-			NuggetData nug(ETopo::LineList, EGeom::Vert);
-			nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-			ptr->CreateNugget(nug);
-
-			m_stock_models[s_cast<int>(EStockModel::SelectionBox)] = ptr;
-		}
 	}
 
 	// Update the data in 'dest' (sub resource range: [sub0,sub0+images.size())) using a staging buffer
@@ -1032,15 +1012,4 @@ namespace pr::rdr12
 		rdr12::Delete<Sampler>(iter->second);
 		m_lookup_sam.erase(iter);
 	}
-
-	//// Return a shader to the allocator
-	//void ResourceManager::Delete(Shader* shader)
-	//{
-	//	if (shader == nullptr)
-	//		return;
-
-	//	Renderer::Lock lock(rdr());
-	//	assert(m_mem_tracker.remove(shader));
-	//	rdr12::Delete<Shader>(shader);
-	//}
 }

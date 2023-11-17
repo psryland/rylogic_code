@@ -25,7 +25,9 @@ namespace pr::rdr12
 {
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(Id, scene)
-		, m_shader(scene.D3DDevice())
+		, m_shader(scene.d3d())
+		, m_default_tex(res().CreateTexture(EStockTexture::White))
+		, m_default_sam(res().CreateSampler(EStockSampler::LinearClamp))
 	{
 		// Create the default PSO description
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
@@ -63,6 +65,11 @@ namespace pr::rdr12
 			},
 			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
 		};
+	}
+	RenderForward::~RenderForward()
+	{
+		m_default_tex = nullptr;
+		m_default_sam = nullptr;
 	}
 
 	// Add model nuggets to the draw list for this render step.
@@ -159,7 +166,7 @@ namespace pr::rdr12
 		{
 			// Todo: consider array-of-structs layout for casters
 			pr::vector<Descriptor, 8> descriptors;
-			for (auto & caster : smap_step->m_caster)
+			for (auto & caster : smap_step->Casters())
 				descriptors.push_back(caster.m_smap->m_srv);
 
 			auto gpu = wnd().m_heap_view.Add(descriptors);
@@ -189,20 +196,18 @@ namespace pr::rdr12
 			m_cmd_list.IASetVertexBuffers(0U, { &nugget.m_model->m_vb_view, 1 });
 			m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
-			// Set shader constants for the nugget
-			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
-
 			// Bind textures to the pipeline
-			auto tex = nugget.m_tex_diffuse;
-			if (auto tex_override = dle.m_instance->find<Texture2DPtr>(EInstComp::DiffTexture)) tex = *tex_override;
-			if (tex == nullptr) tex = rdr().res_mgr().FindTexture(EStockTexture::White);
+			auto tex = FindDiffTexture(*dle.m_instance) << nugget.m_tex_diffuse << m_default_tex;
 			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
 
 			// Bind samplers to the pipeline
-			auto sam = nugget.m_sam_diffuse != nullptr ? nugget.m_sam_diffuse : rdr().res_mgr().FindSampler(EStockSampler::AnisotropicWrap);
+			auto sam = FindDiffTextureSampler(*dle.m_instance) << nugget.m_sam_diffuse << m_default_sam;
 			auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
+
+			// Set shader constants for the nugget
+			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, scn(), &dle);
 
 			// Apply scene pipe state overrides
 			for (auto& ps : scn().m_pso)

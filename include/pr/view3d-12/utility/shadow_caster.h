@@ -23,6 +23,7 @@ namespace pr::rdr12
 		Light const* m_light;      // The shadow casting light
 		Camera const* m_scene_cam; // The position of the camera in the scene
 		Texture2DPtr m_smap;       // The texture containing the shadow map
+		int m_size;                // The dimensions of the (square) shadow map
 
 		ShadowCaster(RenderSmap& owner, Light const& light, int size, DXGI_FORMAT format);
 

@@ -67,9 +67,10 @@ namespace pr::rdr12
 			if (m_settings.m_adapter.ptr == nullptr)
 				throw std::runtime_error("No DirectX Adapter found that supports the requested feature level");
 
-			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
+			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors | ERdrOptions::DeviceGPUDebug, true);
 			//#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
+
+			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::DeviceDebug), "DeviceDebug is enabled");
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::BGRASupport), "BGRASupport is enabled");
 
@@ -80,9 +81,12 @@ namespace pr::rdr12
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
 				dbg->EnableDebugLayer();
 
-				D3DPtr<ID3D12Debug1> dbg1;
-				Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
-				dbg1->SetEnableGPUBasedValidation(true);
+				if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
+				{
+					D3DPtr<ID3D12Debug1> dbg1;
+					Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
+					dbg1->SetEnableGPUBasedValidation(true);
+				}
 			}
 
 			// Create the d3d device
@@ -144,34 +148,42 @@ namespace pr::rdr12
 			// [STATE_CREATION WARNING #1328: CREATERESOURCE_STATE_IGNORED] warnings
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
-				D3DPtr<ID3D12InfoQueue> info;
-				Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
-				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
-				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-				Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+				if (AllSet(m_settings.m_options, ERdrOptions::BreakOnErrors))
+				{
+					D3DPtr<ID3D12InfoQueue> info;
+					Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+				}
 		
-				//// These are work arounds for issues with integrated graphics chips
-				//DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
-				//{
-				//	80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
-				//};
-				//DXGI_INFO_QUEUE_FILTER filter = {};
-				//filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
-				//filter.DenyList.pIDList = hide;
-				//info->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+				// These are work arounds for issues with integrated graphics chips
+				/*
+				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+				{
+					// IDXGISwapChain::GetContainingOutput: The swapchain's adapter does
+					// not control the output on which the swapchain's window resides.
+					80
+				};
+				DXGI_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+				filter.DenyList.pIDList = hide;
+				info->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
 
-				//D3D12_MESSAGE_ID hide[] =
-				//{
-				//	D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-				//	D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-				//	// Workarounds for debug layer issues on hybrid-graphics systems
-				//	D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-				//	D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
-				//};
-				//D3D12_INFO_QUEUE_FILTER filter = {};
-				//filter.DenyList.NumIDs = _countof(hide);
-				//filter.DenyList.pIDList = hide;
-				//Throw(info->AddStorageFilterEntries(&filter));
+				D3D12_MESSAGE_ID hide[] =
+				{
+					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+
+					// Workarounds for debug layer issues on hybrid-graphics systems
+					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+				};
+				D3D12_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = _countof(hide);
+				filter.DenyList.pIDList = hide;
+				Throw(info->AddStorageFilterEntries(&filter));
+				*/
 			}
 		}
 		catch (...)
@@ -201,10 +213,12 @@ namespace pr::rdr12
 		{
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
-				//// Note: this will report that the D3D device is still live
-				//D3DPtr<ID3D12Debug> dbg;
-				//Throw(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
-				//Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+				// Note: this will report that the D3D device is still live
+				/*
+				D3DPtr<ID3D12Debug> dbg;
+				Throw(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
+				Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+				*/
 			}
 			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d3d_device.RefCount());
 			PR_ASSERT(PR_DBG_RDR, rcnt == 1, "Outstanding references to the dx device");
@@ -269,17 +283,17 @@ namespace pr::rdr12
 	}
 
 	// Access the renderer manager classes
+	ID3D12Device4* Renderer::d3d() const
+	{
+		return D3DDevice();
+	}
 	Renderer& Renderer::rdr()
 	{
 		return *this;
 	}
-	ResourceManager const& Renderer::res_mgr() const
+	ResourceManager& Renderer::res()
 	{
 		return m_res_mgr;
-	}
-	ResourceManager& Renderer::res_mgr()
-	{
-		return const_cast<ResourceManager&>(std::as_const(*this).res_mgr());
 	}
 
 	// Read access to the initialisation settings

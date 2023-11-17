@@ -164,14 +164,14 @@ namespace pr::rdr12
 			ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont.data()),
 			ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont.data()),
 			cache.m_bbox, cache.m_name.c_str());
-		auto model = rdr.res_mgr().CreateModel(mdesc);
+		auto model = rdr.res().CreateModel(mdesc);
 
 		// Create the render nuggets
 		for (auto& nug : cache.m_ncont)
 		{
 			// If the model geom has valid texture data but no texture, use white
 			if (AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse == nullptr)
-				nug.m_tex_diffuse = rdr.res_mgr().FindTexture(EStockTexture::White);
+				nug.m_tex_diffuse = rdr.res().CreateTexture(EStockTexture::White);
 
 			// Create the nugget
 			model->CreateNugget(nug);
@@ -779,8 +779,8 @@ namespace pr::rdr12
 	ModelPtr ModelGenerator::SkyboxGeosphere(Renderer& rdr, wchar_t const* texture_path, float radius, int divisions, Colour32 colour)
 	{
 		// One texture per nugget
-		TextureDesc desc(AutoId, ResDesc(), false, 0, "skybox");
-		auto tex = rdr.res_mgr().CreateTexture2D(texture_path, desc);
+		auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
 		return SkyboxGeosphere(rdr, tex, radius, divisions, colour);
 	}
 	ModelPtr ModelGenerator::SkyboxFiveSidedCube(Renderer& rdr, Texture2DPtr sky_texture, float radius, Colour32 colour)
@@ -809,8 +809,8 @@ namespace pr::rdr12
 	ModelPtr ModelGenerator::SkyboxFiveSidedCube(Renderer& rdr, wchar_t const* texture_path, float radius, Colour32 colour)
 	{
 		// One texture per nugget
-		TextureDesc desc(AutoId, ResDesc(), false, 0, "skybox");
-		auto tex = rdr.res_mgr().CreateTexture2D(texture_path, desc);
+		auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
 		return SkyboxFiveSidedCube(rdr, tex, radius, colour);
 	}
 	ModelPtr ModelGenerator::SkyboxSixSidedCube(Renderer& rdr, Texture2DPtr (&sky_texture)[6], float radius, Colour32 colour)
@@ -855,8 +855,8 @@ namespace pr::rdr12
 			// Load the texture for this face of the sky box
 			tpath[ofs + 0] = face[0];
 			tpath[ofs + 1] = face[1];
-			TextureDesc desc(AutoId, ResDesc(), false, 0, "skybox");
-			tex[i++] = rdr.res_mgr().CreateTexture2D(tpath.c_str(), desc);
+			auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+			tex[i++] = rdr.res().CreateTexture2D(tpath.c_str(), desc);
 		}
 
 		return SkyboxSixSidedCube(rdr, tex, radius, colour);
@@ -898,8 +898,8 @@ namespace pr::rdr12
 						if (tex.m_type != p3d::Texture::EType::Diffuse)
 							continue;
 						
-						TextureDesc desc(AutoId, ResDesc(), AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha), 0, tex.m_filepath.c_str());
-						m_tex_diffuse = m_rdr.res_mgr().CreateTexture2D(tex.m_filepath.c_str(), desc);
+						auto desc = TextureDesc(AutoId, ResDesc()).has_alpha(AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha)).name(tex.m_filepath.c_str());
+						m_tex_diffuse = m_rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
 						break;
 					}
 				}
@@ -1045,8 +1045,8 @@ namespace pr::rdr12
 				if (m_tex_diffuse == nullptr && !m_textures.empty())
 				{
 					auto& tex = m_textures[0];
-					TextureDesc desc(AutoId, ResDesc(), false, 0, tex.m_filepath.c_str());
-					m_tex_diffuse = rdr.res_mgr().CreateTexture2D(tex.m_filepath.c_str(), desc);
+					auto desc = TextureDesc(AutoId, ResDesc()).name(tex.m_filepath.c_str());
+					m_tex_diffuse = rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
 
 					// todo
 					//SamplerDesc sam_desc{
@@ -1252,8 +1252,8 @@ namespace pr::rdr12
 		Image img(static_cast<int>(texture_size.x), static_cast<int>(texture_size.y), nullptr, DXGI_FORMAT_B8G8R8A8_UNORM);
 		auto tdesc = ResDesc::Tex2D(img, 1, EUsage::RenderTarget);// | EUsage::SimultaneousAccess);
 		//tdesc.HeapFlags = D3D12_HEAP_FLAG_SHARED;
-		TextureDesc desc(AutoId, tdesc, has_alpha, 0, "text_quad");
-		auto tex = rdr.res_mgr().CreateTexture2D(desc);
+		auto desc = TextureDesc(AutoId, tdesc).has_alpha(has_alpha).name("text_quad");
+		auto tex = rdr.res().CreateTexture2D(desc);
 		
 		//todo SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
 

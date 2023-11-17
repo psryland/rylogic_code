@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
@@ -24,12 +25,35 @@ namespace pr::rdr12
 			,m_name()
 		{}
 
-		TextureDesc(RdrId id, ResDesc const& td, bool has_alpha = false, RdrId uri = 0, char const* name = "")
+		TextureDesc(RdrId id, ResDesc const& td)
 			:m_id(id)
 			,m_tdesc(td)
-			,m_uri(uri)
-			,m_has_alpha(has_alpha)
-			,m_name(name)
+			,m_uri()
+			,m_has_alpha()
+			,m_name()
 		{}
+
+		TextureDesc& name(char const* name)
+		{
+			m_name = name;
+			return *this;
+		}
+
+		TextureDesc& uri(EStockTexture id)
+		{
+			return uri(s_cast<RdrId>(id));
+		}
+
+		TextureDesc& uri(RdrId id)
+		{
+			m_uri = id;
+			return *this;
+		}
+
+		TextureDesc& has_alpha(bool has_alpha = true)
+		{
+			m_has_alpha = has_alpha;
+			return *this;
+		}
 	};
 }
