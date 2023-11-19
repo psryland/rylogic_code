@@ -12,6 +12,13 @@ using namespace pr;
 using namespace pr::gui;
 using namespace pr::rdr12;
 
+// TODO:
+//  Multisample/DLSS?
+//  EnvMapping
+//  Text / Finish the drawing of all LdrObjects
+//  Finish the View3d API
+
+
 // Application window
 struct Main :Form
 {

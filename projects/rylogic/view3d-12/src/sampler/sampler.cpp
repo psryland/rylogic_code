@@ -20,8 +20,11 @@ namespace pr::rdr12
 	}
 	Sampler::~Sampler()
 	{
-		m_mgr->m_descriptor_store.Release(m_samp);
 		OnDestruction(*this, EmptyArgs());
+
+		// Release the sampler resource
+		if (m_samp)
+			m_mgr->m_descriptor_store.Release(m_samp);
 	}
 
 	// Access the renderer

@@ -260,6 +260,7 @@ namespace pr::rdr12
 			// Create a dummy window for BeginInvoke functionality
 			m_dummy_hwnd = ::CreateWindowExW(0, (LPCWSTR)MAKEINTATOM(atom), L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
 			Throw(m_dummy_hwnd != nullptr, HrMsg(GetLastError()).c_str());
+			Poll(); // Start the poll timer
 		}
 		catch (...)
 		{
@@ -393,7 +394,8 @@ namespace pr::rdr12
 	{
 		AssertMainThread();
 		m_poll_callbacks.push_back(cb);
-		Poll();
+		if (m_poll_callbacks.size() == 1)
+			Poll(); // Start the timer 
 	}
 	void Renderer::RemovePollCB(pr::StaticCB<void> cb)
 	{
@@ -408,7 +410,7 @@ namespace pr::rdr12
 			cb();
 
 		// Keep polling while 'm_poll_callbacks' is not empty
-		if (!m_poll_callbacks.empty())
+		if (!m_poll_callbacks.empty() && m_dummy_hwnd != nullptr)
 			::SetTimer(m_dummy_hwnd, UINT_PTR(this), 0, nullptr);
 	}
 

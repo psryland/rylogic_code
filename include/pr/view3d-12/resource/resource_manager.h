@@ -44,6 +44,7 @@ namespace pr::rdr12
 		AllocationsTracker m_mem_tracker;        // Resource allocation tracker
 		Renderer&          m_rdr;                // The owning renderer instance
 		GpuSync            m_gsync;              // Sync with GPU
+		KeepAlive          m_keep_alive;         // Keep alive for the resource manager
 		GfxCmdAllocPool    m_gfx_cmd_alloc_pool; // A pool of command allocators.
 		GfxCmdList         m_gfx_cmd_list;       // Command list for resource manager operations.
 		GpuViewHeap        m_heap_view;          // GPU visible descriptor heap for CBV/SRV/UAV

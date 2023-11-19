@@ -28,6 +28,7 @@ namespace pr::rdr12
 		:m_mem_tracker()
 		,m_rdr(rdr)
 		,m_gsync(rdr.D3DDevice())
+		,m_keep_alive(m_gsync)
 		,m_gfx_cmd_alloc_pool(m_gsync)
 		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, L"ResManCmdListGfx")
 		,m_heap_view(HeapCapacityView, &m_gsync)
@@ -375,6 +376,7 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
 		assert(m_mem_tracker.add(inst.get()));
+		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add the texture instance pointer (not ref counted) to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
@@ -486,6 +488,7 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
 		assert(m_mem_tracker.add(inst.get()));
+		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
@@ -601,6 +604,7 @@ namespace pr::rdr12
 		// Allocate a new texture instance
 		TextureCubePtr inst(rdr12::New<TextureCube>(*this, res.get(), desc), true);
 		assert(m_mem_tracker.add(inst.get()));
+		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
@@ -787,6 +791,7 @@ namespace pr::rdr12
 		// Allocate a new sampler instance
 		SamplerPtr inst(rdr12::New<Sampler>(*this, desc), true);
 		assert(m_mem_tracker.add(inst.get()));
+		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add the sampler instance pointer (not ref counted) to the lookup table.
 		// The caller owns the sampler, when released it will be removed from this lookup.
@@ -967,14 +972,6 @@ namespace pr::rdr12
 	{
 		if (tex == nullptr)
 			return;
-
-		// Release any views
-		if (tex->m_srv)
-			m_descriptor_store.Release(tex->m_srv);
-		if (tex->m_uav)
-			m_descriptor_store.Release(tex->m_uav);
-		if (tex->m_rtv)
-			m_descriptor_store.Release(tex->m_rtv);
 
 		// Find 'tex' in the map of RdrIds to texture instances
 		// We'll remove this, but first use it as a non-const reference

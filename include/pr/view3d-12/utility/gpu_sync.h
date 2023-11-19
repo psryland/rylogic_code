@@ -17,6 +17,11 @@ namespace pr::rdr12
 		// How to use this:
 		//  - Add a sync point to a command list => get a number
 		//  - Call Wait using the number to block until the GPU has reached that point in the command list.
+		// 
+		// Polling/Sweep:
+		//  - Owners of these objects should use 'rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });' to add
+		//    Poll() function to the renderer's periodic timer. This should completely automate the notification
+		//    of sync points being reached.
 
 		ID3D12Device4* m_device;     // The device used to create the fence
 		D3DPtr<ID3D12Fence> m_fence; // For signalling completed execution of commands.
@@ -78,8 +83,13 @@ namespace pr::rdr12
 		// The sync point last added by this GpuSync instance.
 		uint64_t LastAddedSyncPoint() const
 		{
-			// This is used to know when a specific GpuSync 
 			return m_sync;
+		}
+
+		// The sync point that will be added next time 'AddSyncPoint' is called.
+		uint64_t NextSyncPoint() const
+		{
+			return m_sync + 1;
 		}
 
 		// The sync point that this GpuSync (a.k.a fence) has reached so far.
@@ -118,7 +128,7 @@ namespace pr::rdr12
 		// Wait till the last sync point is reached
 		void Wait() const
 		{
-			Wait(m_sync);
+			Wait(LastAddedSyncPoint());
 		}
 
 		// Raised when AddSyncPoint is called
@@ -132,6 +142,8 @@ namespace pr::rdr12
 		{
 			for (;;)
 			{
+				// While the last notified sync point is less than the
+				// completed sync point, notify all up to the current.
 				auto completed = CompletedSyncPoint();
 				if (completed == m_notified) break;
 				m_notified = completed;

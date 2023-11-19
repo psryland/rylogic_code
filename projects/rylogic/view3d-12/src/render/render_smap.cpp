@@ -17,7 +17,7 @@
 #include "view3d-12/src/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 
-#define PR_DBG_SMAP 1
+#define PR_DBG_SMAP 0
 #if PR_DBG_SMAP
 #pragma message(PR_LINK "WARNING: ************************************************** Shadow Map debugging enabled")
 #include "pr/view3d-12/instance/instance.h"
@@ -93,7 +93,7 @@ namespace pr::rdr12
 			.HS = m_shader.m_code.HS,
 			.GS = m_shader.m_code.GS,
 			.StreamOutput = StreamOutputDesc{},
-			.BlendState = BlendStateDesc{}.enable(0).blend(0, D3D12_BLEND_OP_MAX, D3D12_BLEND_SRC_COLOR, D3D12_BLEND_DEST_COLOR),
+			.BlendState = BlendStateDesc{}.enable(0).blend(0, D3D12_BLEND_OP_MAX, D3D12_BLEND_ONE, D3D12_BLEND_ONE),
 			.SampleMask = UINT_MAX,
 			.RasterizerState = RasterStateDesc{}.Set(D3D12_CULL_MODE_BACK),
 			.DepthStencilState = DepthStateDesc{}.Enabled(false),

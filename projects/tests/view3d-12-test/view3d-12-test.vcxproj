@@ -65,7 +65,10 @@
   </ItemGroup>
 
   <!-- Dependencies -->
-  <Target Name="Deploy" AfterTargets="Link">
+  <Target Name="Deploy" AfterTargets="Build"
+    Inputs="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll"
+    Outputs="$(TargetDir)view3d-12.dll"
+  >
     <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\"/>
     <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.pdb $(TargetDir) -OnlyIfNewer -IgnoreMissing" WorkingDirectory="$(SolutionDir)..\"/>
   </Target>
