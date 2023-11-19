@@ -107,10 +107,15 @@ namespace pr::rdr12
 	}
 	TextureBase::~TextureBase()
 	{
-		m_mgr->m_descriptor_store.Release(m_srv);
-		m_mgr->m_descriptor_store.Release(m_uav);
-		m_mgr->m_descriptor_store.Release(m_rtv);
 		OnDestruction(*this, EmptyArgs());
+
+		// Release any views
+		if (m_srv)
+			m_mgr->m_descriptor_store.Release(m_srv);
+		if (m_uav)
+			m_mgr->m_descriptor_store.Release(m_uav);
+		if (m_rtv)
+			m_mgr->m_descriptor_store.Release(m_rtv);
 	}
 
 	// Access the renderer

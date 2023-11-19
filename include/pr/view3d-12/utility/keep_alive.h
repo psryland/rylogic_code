@@ -10,7 +10,18 @@ namespace pr::rdr12
 {
 	struct KeepAlive
 	{
-		using Ref = struct { D3DPtr<ID3D12Object> ptr; uint64_t sync_point; };
+		// Notes:
+		//  - This class simply keeps a ref ptr to an object until the gsync notifies that the 
+		//    GPU has reached a certain sync point. The 'SyncPointCompleted' event should be 
+		//    called automatically by the Timer on the dummy window in the Renderer. This relies
+		//    on the GpuSync object registering it's Poll function with the Renderer.
+
+		using Ref = struct
+		{
+			D3DPtr<ID3D12Object> ptr;
+			D3DPtr<IRefCounted> ptr2;
+			uint64_t sync_point;
+		};
 		using Objects = pr::vector<Ref>;
 
 		Objects m_objects;
@@ -30,10 +41,19 @@ namespace pr::rdr12
 		{
 			m_objects.push_back(Ref{
 				.ptr = D3DPtr<ID3D12Object>(obj, true),
+				.ptr2 = nullptr,
 				.sync_point = sync_point,
 				});
 		}
-
+		template <typename T> requires (std::is_base_of_v<IRefCounted, T>)
+		void Add(D3DPtr<T> obj, uint64_t sync_point)
+		{
+			m_objects.push_back(Ref{
+				.ptr = nullptr,
+				.ptr2 = obj,
+				.sync_point = sync_point,
+				});
+		}
 	private:
 
 		// Remove objects whose sync point has been reached

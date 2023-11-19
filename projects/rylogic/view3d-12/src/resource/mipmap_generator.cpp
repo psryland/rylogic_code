@@ -105,7 +105,7 @@ namespace pr::rdr12
 
 		// Otherwise, we need to generate the mip-maps in a staging resource.
 		auto device = m_rdr.D3DDevice();
-		auto next_sync_point = m_gsync.LastAddedSyncPoint() + 1;
+		auto next_sync_point = m_gsync.NextSyncPoint();
 		auto initial_res_state = m_cmd_list.ResState(texture).Mip0State();
 
 		// Describe a resource the same as 'texture' but with UAV support and not RT/DS support.

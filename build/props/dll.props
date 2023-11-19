@@ -15,8 +15,10 @@
     <ClCompile>
       <AdditionalIncludeDirectories>..\include;..\sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
-    <PostBuildEvent>
-      <Command>py $(SolutionDir)..\script\DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
+
+  <!-- Dependencies -->
+  <Target Name="Deploy" AfterTargets="Build">
+    <Exec Command="py script\DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)" WorkingDirectory="$(SolutionDir)..\"/>
+  </Target>
 </Project>
