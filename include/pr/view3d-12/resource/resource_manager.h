@@ -110,7 +110,7 @@ namespace pr::rdr12
 		}
 
 		// An event that is called when a texture filepath cannot be resolved.
-		EventHandler<ResourceManager&, ResolvePathArgs&, true> ResolveFilepath;
+		EventHandler<ResourceManager const&, ResolvePathArgs&, true> ResolveFilepath;
 
 		// Raised when a model is deleted
 		EventHandler<Model&, EmptyArgs const&, true> ModelDeleted;
@@ -129,6 +129,9 @@ namespace pr::rdr12
 		// Update the data in 'dest' using a staging buffer
 		void UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment);
 		void UpdateSubresource(ID3D12Resource* dest, Image const& image, int sub0, int alignment);
+
+		// Use the 'ResolveFilepath' event to resolve a filepath
+		std::filesystem::path ResolvePath(std::string_view path) const;
 
 		// Delete objects created by the resource manager.
 		// The objects themselves call this when their last reference is dropped.

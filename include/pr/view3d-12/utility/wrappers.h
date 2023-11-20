@@ -24,7 +24,7 @@ namespace pr::rdr12
 	// Resource usage flags
 	enum class EUsage :std::underlying_type_t<D3D12_RESOURCE_FLAGS>
 	{
-		None = D3D12_RESOURCE_FLAG_NONE,
+		Default = D3D12_RESOURCE_FLAG_NONE,
 		RenderTarget = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
 		DepthStencil = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
 		UnorderedAccess = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
@@ -312,22 +312,21 @@ namespace pr::rdr12
 		{
 			*static_cast<D3D12_RESOURCE_DESC*>(this) = rhs;
 		}
-		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride, uint16_t mips, uint64_t resource_alignment, int data_alignment, D3D12_RESOURCE_STATES final_state, EUsage flags, D3D12_TEXTURE_LAYOUT layout)
+		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride)
 			:ResDesc()
 		{
-			Dimension        = dimension;
-			Alignment        = resource_alignment;
-			Width            = width;
-			Height           = height;
+			Dimension = dimension;
+			Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			Width = width;
+			Height = height;
 			DepthOrArraySize = depth;
-			MipLevels        = mips;
-			Format           = format;
-			SampleDesc       = MultiSamp{};
-			Layout           = layout;
-			Flags            = s_cast<D3D12_RESOURCE_FLAGS>(flags);
-			ElemStride       = element_stride;
-			DataAlignment    = data_alignment;
-			FinalState       = final_state;
+			MipLevels = 0;
+			Format = format;
+			SampleDesc = MultiSamp{};
+			Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			Flags = D3D12_RESOURCE_FLAG_NONE;
+			ElemStride = element_stride;
+			DataAlignment = 0;
 		}
 		ResDesc& operator = (D3D12_RESOURCE_DESC const& rhs)
 		{
@@ -336,111 +335,156 @@ namespace pr::rdr12
 			return *this;
 		}
 
+		ResDesc& init_data(Image data)
+		{
+			if (data.m_data.vptr != nullptr)
+				Data.push_back(data);
+
+			return *this;
+		}
 		ResDesc& clear(DXGI_FORMAT format, Colour32 colour)
 		{
 			Colour c(colour);
-			ClearValue = D3D12_CLEAR_VALUE{.Format = format, .Color = {c.a, c.r, c.g, c.b}};
+			ClearValue = D3D12_CLEAR_VALUE{ .Format = format, .Color = {c.a, c.r, c.g, c.b} };
+			return *this;
+		}
+		ResDesc& mips(int mips)
+		{
+			MipLevels = s_cast<uint16_t>(mips);
+			return *this;
+		}
+		ResDesc& usage(EUsage usage)
+		{
+			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
+			return *this;
+		}
+		ResDesc& multisamp(MultiSamp sampling)
+		{
+			SampleDesc = sampling;
+			return *this;
+		}
+		ResDesc& layout(D3D12_TEXTURE_LAYOUT tex_layout)
+		{
+			Layout = tex_layout;
+			return *this;
+		}
+		ResDesc& res_alignment(uint64_t alignment)
+		{
+			Alignment = alignment;
+			return *this;
+		}
+		ResDesc& data_alignment(int alignment)
+		{
+			DataAlignment = alignment;
+			return *this;
+		}
+		ResDesc& state(D3D12_RESOURCE_STATES final_state)
+		{
+			FinalState = final_state;
 			return *this;
 		}
 
 		// Generic buffer resource description
-		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment, D3D12_RESOURCE_STATES final_state, EUsage usage = EUsage::None)
+		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment)
 		{
 			// Width is in bytes for buffer type resources
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride, 1, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, data_alignment, final_state, usage, D3D12_TEXTURE_LAYOUT_ROW_MAJOR);
-			if (data != nullptr) desc.Data.push_back(Image(data, count, element_stride));
-			desc.ElemStride = element_stride;
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride)
+				.mips(1)
+				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+				.data_alignment(data_alignment)
+				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR)
+				.init_data(Image(data, count, element_stride));
+		}
+
+		// Vertex buffer description
+		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data)
+		{
+			return Buf(count, sizeof(TVert), data, alignof(TVert));
+		}
+
+		// Index buffer description
+		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
+		{
+			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
+				.state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		}
+		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
+		{
+			return Buf(count, element_stride, data, element_stride)
+				.state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
 		// Constant buffer description
 		static ResDesc CBuf(int size)
 		{
 			size = PadTo<int>(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(size), 1, 1, 1, 1, 0ULL, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, EUsage::None, D3D12_TEXTURE_LAYOUT_ROW_MAJOR);
-			return desc;
-		}
-
-		// Vertex buffer description
-		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, sizeof(TVert), data, alignof(TVert), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, usage);
-		}
-
-		// Index buffer description
-		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, sizeof(TIndx), data, alignof(TIndx), D3D12_RESOURCE_STATE_INDEX_BUFFER, usage);
-		}
-		static ResDesc IBuf(int64_t count, int element_stride, void const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, element_stride, data, element_stride, D3D12_RESOURCE_STATE_INDEX_BUFFER, usage);
+			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(size), 1, 1, 1)
+				.mips(1)
+				.res_alignment(0ULL)
+				.data_alignment(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
+				.state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
 		// Texture resource descriptions
-		static ResDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.init_data(data);
 		}
-		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.init_data(data);
 		}
-		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.init_data(data);
+		}
+		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
+		{
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 6, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.init_data(data);
+		}
+
+	private:
+
+		// Default resource alignment based on init data size
+		static uint64_t ResourceAlignment(Image const& data, EUsage flags)
+		{
+			return
+				data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT &&
+				!AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil)
+				? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT
+				: D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 		}
 	};
 
 	// Resource barrier - Use BarrierBatch
-	//struct ResourceBarrier : D3D12_RESOURCE_BARRIER
-	//{
-	//	ResourceBarrier() = default;
-	//	ResourceBarrier(D3D12_RESOURCE_BARRIER const& rhs)
-	//		:D3D12_RESOURCE_BARRIER(rhs)
-	//	{}
-	//	static ResourceBarrier Transition(ID3D12Resource* pResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
-	//	{
-	//		ResourceBarrier result = {};
-	//		D3D12_RESOURCE_BARRIER& barrier = result;
-	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	//		barrier.Flags = flags;
-	//		barrier.Transition.pResource = pResource;
-	//		barrier.Transition.StateBefore = stateBefore;
-	//		barrier.Transition.StateAfter = stateAfter;
-	//		barrier.Transition.Subresource = subresource;
-	//		return result;
-	//	}
-	//	static ResourceBarrier Aliasing(ID3D12Resource* pResourceBefore, ID3D12Resource* pResourceAfter)
-	//	{
-	//		ResourceBarrier result = {};
-	//		D3D12_RESOURCE_BARRIER& barrier = result;
-	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
-	//		barrier.Aliasing.pResourceBefore = pResourceBefore;
-	//		barrier.Aliasing.pResourceAfter = pResourceAfter;
-	//		return result;
-	//	}
-	//	static ResourceBarrier UAV(ID3D12Resource* pResource)
-	//	{
-	//		ResourceBarrier result = {};
-	//		D3D12_RESOURCE_BARRIER& barrier = result;
-	//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	//		barrier.UAV.pResource = pResource;
-	//		return result;
-	//	}
-	//};
+	struct ResourceBarrier : D3D12_RESOURCE_BARRIER
+	{
+		ResourceBarrier() = delete;
+	};
 	
 	// Render target blend state description
 	struct RenderTargetBlendDesc :D3D12_RENDER_TARGET_BLEND_DESC

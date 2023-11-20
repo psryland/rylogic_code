@@ -16,6 +16,7 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "view3d-12/src/render/render_smap.h"
@@ -239,11 +240,7 @@ namespace pr::rdr12
 	// Set the env-map to world orientation
 	inline void SetEnvMapConstants(shaders::EnvMap& cb, TextureCube* env_map)
 	{
-		(void)env_map, cb;
-		throw std::runtime_error("not implemented");
-		#if 0 // todo
 		if (env_map == nullptr) return;
 		cb.m_w2env = InvertFast(env_map->m_cube2w);
-		#endif
 	}
 }

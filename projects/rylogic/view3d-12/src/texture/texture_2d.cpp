@@ -11,7 +11,7 @@
 namespace pr::rdr12
 {
 	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
-		:TextureBase(mgr, res, desc)
+		:TextureBase(mgr, res, desc, D3D12_SRV_DIMENSION_TEXTURE2D)
 		,m_t2s(m4x4::Identity())
 	{}
 

@@ -16,6 +16,8 @@
 #include "pr/view3d-12/shaders/shader_forward.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
 #include "pr/view3d-12/texture/texture_base.h"
+#include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/pipe_state.h"
@@ -173,10 +175,12 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::SMap, gpu);
 		}
 
-		#if 0 // todo
-		if (scn().m_global_envmap != nullptr)
-			m_cmd_list->SetGraphicsRootDescriptorTable(((UINT)ERootParam::EnvMap, );
-		#endif
+		// Add the global environment map
+		if (auto* envmap = scn().m_global_envmap.get())
+		{
+			auto gpu = wnd().m_heap_view.Add(envmap->m_srv);
+			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::EnvMap, gpu);
+		}
 
 		// Draw each element in the draw list
 		Lock lock(*this);
@@ -188,6 +192,7 @@ namespace pr::rdr12
 			//  - To uniquely identify an instance in a shader for debugging, set the Instance Id (cb1.m_flags.w)
 			//    Then in the shader, use: if (m_flags.w == 1234) ...
 			auto const& nugget = *dle.m_nugget;
+			auto const& instance = *dle.m_instance;
 			auto desc = m_default_pipe_state;
 
 			// Set pipeline state
@@ -197,12 +202,12 @@ namespace pr::rdr12
 			m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
 			// Bind textures to the pipeline
-			auto tex = FindDiffTexture(*dle.m_instance) << nugget.m_tex_diffuse << m_default_tex;
+			auto tex = FindDiffTexture(instance) << nugget.m_tex_diffuse << m_default_tex;
 			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
 
 			// Bind samplers to the pipeline
-			auto sam = FindDiffTextureSampler(*dle.m_instance) << nugget.m_sam_diffuse << m_default_sam;
+			auto sam = FindDiffTextureSampler(instance) << nugget.m_sam_diffuse << m_default_sam;
 			auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
 
@@ -218,7 +223,7 @@ namespace pr::rdr12
 				desc.Apply(ps);
 
 			// Apply instance pipe state overrides
-			for (auto& ps : GetPipeStates(*dle.m_instance))
+			for (auto& ps : GetPipeStates(instance))
 				desc.Apply(ps);
 
 			// Apply nugget shader overrides

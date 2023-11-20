@@ -57,7 +57,7 @@ namespace pr::rdr12
 		ETextureFlag           m_tflags; // Flags for boolean properties of the texture
 		string32               m_name;   // Human readable id for the texture
 
-		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
+		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension);
 		TextureBase(TextureBase&&) = delete;
 		TextureBase(TextureBase const&) = delete;
 		TextureBase& operator =(TextureBase&&) = delete;
