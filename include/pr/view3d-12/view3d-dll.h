@@ -14,6 +14,7 @@
 // ** No dependencies except standard includes **
 #include <cstdint>
 #include <windows.h>
+#include <d3d12.h>
 
 namespace pr
 {
@@ -24,8 +25,8 @@ namespace pr
 		struct V3dWindow;
 		struct LdrObject;
 		struct LdrGizmo;
-		//struct Texture2D;
-		//struct TextureCube;
+		struct Texture2D;
+		struct TextureCube;
 	}
 
 	namespace view3d
@@ -33,8 +34,8 @@ namespace pr
 		using DllHandle = unsigned char const*;
 		using Object = pr::rdr12::LdrObject*;
 		using Gizmo = pr::rdr12::LdrGizmo*;
-		//using Texture = pr::rdr::Texture2D;
-		//using CubeMap = pr::rdr::TextureCube;
+		using Texture = pr::rdr12::Texture2D*;
+		using CubeMap = pr::rdr12::TextureCube*;
 		using Window = rdr12::V3dWindow*;
 		using ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t pos);
 
@@ -348,9 +349,10 @@ namespace pr
 			Scene                  = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,
 			Scene_Multisampling    = Scene | 1 << 1,
-			Scene_FilllMode        = Scene | 1 << 2,
+			Scene_FillMode         = Scene | 1 << 2,
 			Scene_CullMode         = Scene | 1 << 3,
 			Scene_Viewport         = Scene | 1 << 4,
+			Scene_EnvMap           = Scene | 1 << 5,
 
 			Camera              = 1 << 18,
 			Camera_Position     = Camera | 1 << 0,
@@ -485,18 +487,12 @@ namespace pr
 			BOOL                       m_gdi_compatible;
 			char const*                m_dbg_name;
 		};
-		struct View3DCubeMapOptions
-		{
-			View3DM4x4                 m_cube2w;
-			DXGI_FORMAT                m_format;
-			D3D11_FILTER               m_filter;
-			D3D11_TEXTURE_ADDRESS_MODE m_addrU;
-			D3D11_TEXTURE_ADDRESS_MODE m_addrV;
-			D3D11_BIND_FLAG            m_bind_flags;
-			D3D11_RESOURCE_MISC_FLAG   m_misc_flags;
-			char const*                m_dbg_name;
-		};
 		#endif
+		struct CubeMapOptions
+		{
+			Mat4x4      m_cube2w;
+			char const* m_dbg_name;
+		};
 		struct WindowOptions
 		{
 			ReportErrorCB m_error_cb;
@@ -595,9 +591,9 @@ namespace pr
 		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete, BOOL* cancel);
 		using SourcesChangedCB  = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
 		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
+		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
+		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
 		#if 0 // todo
-		using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
-		using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 		using View3D_OnAddCB               = void (__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 		using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 		using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
@@ -680,6 +676,13 @@ extern "C"
 	// Add an object to a window
 	VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::view3d::Object object);
 
+	// Enumerate the object collection guids associated with 'window'
+	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
+
+	// Enumerate the objects associated with 'window'
+	VIEW3D_API void __stdcall View3D_WindowEnumObjects(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx);
+	VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count);
+
 	// Render the window
 	VIEW3D_API void __stdcall View3D_WindowRender(pr::view3d::Window window);
 
@@ -702,9 +705,6 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
 	VIEW3D_API BOOL           __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object, BOOL search_children);
 	VIEW3D_API int            __stdcall View3D_WindowObjectCount        (View3DWindow window);
-	VIEW3D_API void           __stdcall View3D_WindowEnumGuids          (View3DWindow window, View3D_EnumGuidsCB enum_guids_cb, void* ctx);
-	VIEW3D_API void           __stdcall View3D_WindowEnumObjects        (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
-	VIEW3D_API void           __stdcall View3D_WindowEnumObjectsById    (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void           __stdcall View3D_WindowAddObjectsById     (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveObjectsById  (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void           __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
@@ -718,8 +718,10 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowHitTestObjects     (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, View3DObject const* objects, int object_count);
 	VIEW3D_API void           __stdcall View3D_WindowHitTestByCtx       (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API View3DV2       __stdcall View3D_WindowDpiScale           (View3DWindow window);
-	VIEW3D_API void           __stdcall View3D_WindowEnvMapSet          (View3DWindow window, View3DCubeMap env_map);
+	#endif
+	VIEW3D_API void __stdcall View3D_WindowEnvMapSet(pr::view3d::Window window, pr::view3d::CubeMap env_map);
 
+	#if 0
 	// Rendering
 	VIEW3D_API void            __stdcall View3D_Present                (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_Validate               (View3DWindow window);
@@ -795,8 +797,11 @@ extern "C"
 
 	// Lights *********************************
 
+	// Get/Set the properties of the global light
 	VIEW3D_API pr::view3d::Light __stdcall View3D_LightPropertiesGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_LightPropertiesSet(pr::view3d::Window window, pr::view3d::Light const& light);
+	
+	// Set the global light source for a window
 	VIEW3D_API void __stdcall View3D_LightSource(pr::view3d::Window window, pr::view3d::Vec4 position, pr::view3d::Vec4 direction, BOOL camera_relative);
 	#if 0 // todo
 	VIEW3D_API void        __stdcall View3D_LightShowDialog          (View3DWindow window);
@@ -819,6 +824,10 @@ extern "C"
 	// Get/Set the object's o2w transform
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2WGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2WSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2w, char const* name);
+
+	// Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
+	VIEW3D_API float __stdcall View3D_ObjectReflectivityGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(pr::view3d::Object object, float reflectivity, char const* name);
 
 	#if 0 // todo
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateP3DFile      (char const* name, View3DColour colour, wchar_t const* p3d_filepath, GUID const* context_id);
@@ -854,8 +863,6 @@ extern "C"
 	VIEW3D_API void              __stdcall View3D_ObjectNuggetTintSet      (View3DObject object, View3DColour colour, char const* name, int index);
 	VIEW3D_API View3DColour      __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
-	VIEW3D_API float             __stdcall View3D_ObjectReflectivityGet    (View3DObject object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectReflectivitySet    (View3DObject object, float reflectivity, char const* name);
 	VIEW3D_API BOOL              __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
 	VIEW3D_API BOOL              __stdcall View3D_ObjectNormalsGet         (View3DObject object, char const* name);
@@ -863,15 +870,18 @@ extern "C"
 	VIEW3D_API void              __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
 	VIEW3D_API View3DBBox        __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
+#endif
 
 	// Materials
+	VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex);
+	VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex);
+	VIEW3D_API pr::view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* resource, pr::view3d::CubeMapOptions const& options);
+#if 0
 	VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock            (EView3DStockTexture tex);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromStock      (EView3DStockTexture tex, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
-	VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
-	VIEW3D_API void          __stdcall View3D_TextureRelease              (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (wchar_t const* tex_filepath, View3DImageInfo& info);
 	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);

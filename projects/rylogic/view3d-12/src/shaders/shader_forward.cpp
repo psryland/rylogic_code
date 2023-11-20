@@ -65,7 +65,7 @@ namespace pr::rdr12::shaders
 			SetViewConstants(cb0.m_cam, scene.m_cam);
 			SetLightingConstants(cb0.m_global_light, scene.m_global_light, scene.m_cam);
 			SetShadowMapConstants(cb0.m_shadow, scene.FindRStep<RenderSmap>());
-			//todo SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
+			SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
 			auto gpu_address = cbuf.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 		}

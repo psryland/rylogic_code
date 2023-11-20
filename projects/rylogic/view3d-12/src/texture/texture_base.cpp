@@ -26,7 +26,7 @@ namespace pr::rdr12
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension)
 		:RefCounted<TextureBase>()
 		,m_mgr(&mgr)
 		,m_res(res, true)
@@ -54,7 +54,7 @@ namespace pr::rdr12
 			// Create the SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
 				.Format = tdesc.Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.ViewDimension = srv_dimension,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2D = {
 					.MostDetailedMip = 0,

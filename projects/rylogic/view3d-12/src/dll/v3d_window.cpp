@@ -187,6 +187,38 @@ namespace pr::rdr12
 		OnSettingsChanged(this, view3d::ESettings::Scene_Viewport);
 	}
 
+	// Enumerate the object collection guids associated with this window
+	void V3dWindow::EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& guid : m_guids)
+		{
+			if (enum_guids_cb(guid)) continue;
+			break;
+		}
+	}
+
+	// Enumerate the objects associated with this window
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& object : m_objects)
+		{
+			if (enum_objects_cb(object)) continue;
+			break;
+		}
+	}
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& object : m_objects)
+		{
+			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
+			if (enum_objects_cb(object)) continue;
+			break;
+		}
+	}
+
 	// Add/Remove an object to this window
 	void V3dWindow::Add(LdrObject* object)
 	{
@@ -616,6 +648,21 @@ namespace pr::rdr12
 
 		m_scene.m_global_light = light;
 		OnSettingsChanged(this, settings);
+		Invalidate();
+	}
+
+	// Get/Set the global environment map for this window
+	view3d::CubeMap V3dWindow::EnvMap() const
+	{
+		return m_scene.m_global_envmap.get();
+	}
+	void V3dWindow::EnvMap(view3d::CubeMap env_map)
+	{
+		if (EnvMap() == env_map)
+			return;
+
+		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
+		OnSettingsChanged(this, view3d::ESettings::Scene_EnvMap);
 		Invalidate();
 	}
 

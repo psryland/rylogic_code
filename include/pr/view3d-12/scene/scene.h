@@ -7,6 +7,7 @@
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 

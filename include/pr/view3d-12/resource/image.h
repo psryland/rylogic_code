@@ -34,11 +34,11 @@ namespace pr::rdr12
 			:m_dim()
 			,m_pitch()
 			,m_data()
-			,m_format(DXGI_FORMAT_UNKNOWN)
+			,m_format(DXGI_FORMAT_B8G8R8A8_UNORM)
 		{}
 
 		// Construct a 1D Image.
-		Image(int w, void const* data = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN)
+		Image(int w, void const* data = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_B8G8R8A8_UNORM)
 			: m_dim(w, 1, 1)
 			, m_pitch(w, w, w)
 			, m_data{.vptr = data}
@@ -68,7 +68,7 @@ namespace pr::rdr12
 			: m_dim(s_cast<int>(count), 1, 1)
 			, m_pitch(s_cast<int>(count * element_size_in_bytes))
 			, m_data{.vptr = data}
-			, m_format(DXGI_FORMAT_UNKNOWN)
+			, m_format(DXGI_FORMAT_R8_UNORM)
 		{
 			if (s_cast<int64_t>(count) * s_cast<int64_t>(element_size_in_bytes) > limits<int>::max())
 				throw std::overflow_error("Initialisation data too large");

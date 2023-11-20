@@ -17,7 +17,7 @@ using namespace pr::rdr12;
 //  EnvMapping
 //  Text / Finish the drawing of all LdrObjects
 //  Finish the View3d API
-
+//  Ray cast/ Hit test support
 
 // Application window
 struct Main :Form
@@ -38,6 +38,7 @@ struct Main :Form
 	view3d::Window m_win3d;
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
+	view3d::CubeMap m_envmap;
 	//Renderer m_rdr;
 	//Window m_wnd;
 	//Scene m_scn;
@@ -71,6 +72,7 @@ struct Main :Form
 			//"*Box first_box_eva FF00FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
+		, m_envmap(View3D_CubeMapCreateFromUri("E:/Rylogic/art/textures/cubemaps/hanger/hanger-??.jpg", {}))
 		//,m_rdr(RSettings(hinstance))
 		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
 		//,m_scn(m_wnd)
@@ -103,6 +105,14 @@ struct Main :Form
 		//View3D_WindowAddObject(m_win3d, m_obj1);
 		View3D_DemoSceneCreate(m_win3d);
 
+		// EnvMap
+		View3D_WindowEnvMapSet(m_win3d, m_envmap);
+		View3D_WindowEnumObjects(m_win3d, [](void*, view3d::Object obj)
+			{
+				View3D_ObjectReflectivitySet(obj, 0.5f, "");
+				return true;
+			}, nullptr);
+
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
 		//m_scn.AddInstance(m_inst0);
@@ -110,6 +120,7 @@ struct Main :Form
 	}
 	~Main()
 	{
+		View3D_CubeMapRelease(m_envmap);
 		View3D_WindowDestroy(m_win3d);
 		View3D_ObjectDelete(m_obj0);
 		View3D_ObjectDelete(m_obj1);

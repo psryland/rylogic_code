@@ -314,9 +314,8 @@ namespace pr::rdr12
 		// Resize the depth stencil
 		m_depth_stencil = nullptr;
 		Throw(device->CreateCommittedResource(
-			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE, &clear_value,
-			__uuidof(ID3D12Resource), (void**)&m_depth_stencil.m_ptr));
+			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&clear_value, __uuidof(ID3D12Resource), (void**)&m_depth_stencil.m_ptr));
 		Throw(m_depth_stencil->SetName(L"DepthStencil"));
 
 		// Get the pointer and item size of the RTV descriptor heap.

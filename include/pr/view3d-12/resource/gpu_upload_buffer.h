@@ -43,10 +43,10 @@ namespace pr::rdr12
 				, m_size(0)
 				, m_sync_point(sync_point)
 			{
-				auto desc = ResDesc::Buf(size, 1, nullptr, alignment, D3D12_RESOURCE_STATE_GENERIC_READ);
+				auto desc = ResDesc::Buf(size, 1, nullptr, alignment).state(D3D12_RESOURCE_STATE_GENERIC_READ);
 				Throw(device->CreateCommittedResource(
 					&HeapProps::Upload(), D3D12_HEAP_FLAG_NONE,
-					&desc, desc.FinalState, nullptr,
+					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
 					__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
 				Throw(m_res->SetName(L"GpuUploadBuffer:Block"));
 

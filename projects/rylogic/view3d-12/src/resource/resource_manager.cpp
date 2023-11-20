@@ -130,7 +130,7 @@ namespace pr::rdr12
 		// basis, what the state transitions are for this resource, so that at the end of a cmd list we know
 		// what state the resource will be in, and can then transition it to the correct state for the next
 		// cmd list.
-		m_gfx_cmd_list.ResState(res.get()).Apply(desc.FinalState);
+		m_gfx_cmd_list.ResState(res.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
@@ -507,7 +507,7 @@ namespace pr::rdr12
 			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", desc_.m_id));
 		if (resource_path.empty())
 			throw std::runtime_error("Resource path must be given");
-
+		
 		// Create the texture resource
 		D3DPtr<ID3D12Resource> res;
 		TextureDesc desc = desc_;
@@ -515,11 +515,9 @@ namespace pr::rdr12
 		// Create a texture from embedded resources
 		if (resource_path.c_str()[0] == '@')
 		{
-			auto uri = resource_path.wstring();
-
-			desc.m_uri = MakeId(uri.c_str());
+			desc.m_uri = MakeId(resource_path.c_str());
 			if (desc.m_name.empty())
-				desc.m_name = To<string32>(str::FindLastOf(uri.c_str(), L":"));
+				desc.m_name = To<string32>(str::FindLastOf(resource_path.c_str(), ":"));
 
 			// Look for an existing Dx12 resource corresponding to the uri
 			auto iter = m_lookup_res.find(desc.m_uri);
@@ -527,20 +525,26 @@ namespace pr::rdr12
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
 				HMODULE hmodule; wstring32 res_type, res_name;
-				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
+				ParseEmbeddedResourceUri(resource_path.wstring(), hmodule, res_type, res_name);
 
 				// The faces of the cube
 				pr::vector<std::span<uint8_t const>> source_images;
 
-				// Read each face of the cube
+				// Read each face of the cube map
 				auto idx = res_name.find(L"??");
-				if (idx == std::wstring::npos)
-					throw std::runtime_error("Cube map texture URI pattern should contain '??'");
-
-				for (auto face : { L"+x", L"-x", L"+y", L"-y", L"+z", L"-z" })
+				if (idx != std::wstring::npos)
 				{
-					res_name[idx + 0] = face[0];
-					res_name[idx + 1] = face[1];
+					// Get the data for each face of the cube map
+					for (auto face : { L"px", L"nx", L"py", L"ny", L"pz", L"nz" })
+					{
+						res_name[idx + 0] = face[0];
+						res_name[idx + 1] = face[1];
+						auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
+						source_images.push_back(std::span{ emb.m_data, emb.m_len });
+					}
+				}
+				else // Otherwise, the resource is a single file
+				{
 					auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
 					source_images.push_back(std::span{ emb.m_data, emb.m_len });
 				}
@@ -560,7 +564,7 @@ namespace pr::rdr12
 			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
-		// Otherwise, create from a file on disk
+		// Otherwise, create from a file (or files) on disk
 		else
 		{
 			using namespace std::filesystem;
@@ -575,19 +579,30 @@ namespace pr::rdr12
 			auto iter = m_lookup_res.find(desc.m_uri);
 			if (iter == end(m_lookup_res))
 			{
-				// If the texture filepath doesn't exist, use the resolve event
-				if (!exists(filepath))
-				{
-					auto args = ResolvePathArgs{filepath, false};
-					ResolveFilepath(*this, args);
-					if (!args.handled || !exists(args.filepath))
-						throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", filepath.string().c_str()));
+				auto res_name = filepath.string();
 
-					filepath = std::move(args.filepath);
+				// The faces of the cube
+				pr::vector<path> source_images;
+
+				// If this is a filename pattern rather than a single file, load each face
+				auto idx = res_name.find("??");
+				if (idx != std::string::npos)
+				{
+					// Get the data for each face of the cube map
+					for (auto face : { "px", "nx", "py", "ny", "pz", "nz" })
+					{
+						res_name[idx + 0] = face[0];
+						res_name[idx + 1] = face[1];
+						source_images.push_back(ResolvePath(res_name));
+					}
+				}
+				else // Otherwise, the filename is a single file
+				{
+					source_images.push_back(ResolvePath(res_name));
 				}
 
-				// Load the texture from disk
-				auto [images, tdesc] = LoadImageData(filepath, 1, true, 0, &rdr().Features());
+				// Load the texture from disk (supports '??' in the filepath)
+				auto [images, tdesc] = LoadImageData(source_images, 1, true, 0, &rdr().Features());
 				desc.m_tdesc = tdesc;
 				desc.m_tdesc.Data = images;
 
@@ -942,6 +957,20 @@ namespace pr::rdr12
 	void ResourceManager::UpdateSubresource(ID3D12Resource* dest, Image const& image, int sub0, int alignment)
 	{
 		UpdateSubresource(dest, {&image, 1}, sub0, alignment);
+	}
+	
+	// Use the 'ResolveFilepath' event to resolve a filepath
+	std::filesystem::path ResourceManager::ResolvePath(std::string_view path) const
+	{
+		auto args = ResolvePathArgs{ .filepath = path, .handled = false };
+		if (!std::filesystem::exists(args.filepath))
+		{
+			// If the texture filepath doesn't exist, use the resolve event
+			ResolveFilepath(*this, args);
+			if (!args.handled || !std::filesystem::exists(args.filepath))
+				throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", args.filepath.c_str()));
+		}
+		return std::move(args.filepath);
 	}
 
 	// Return a model to the allocator

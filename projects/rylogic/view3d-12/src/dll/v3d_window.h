@@ -103,6 +103,13 @@ namespace pr::rdr12
 		view3d::Viewport Viewport() const;
 		void Viewport(view3d::Viewport const& vp);
 
+		// Enumerate the object collection guids associated with this window
+		void EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb);
+
+		// Enumerate the objects associated with this window
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count);
+
 		// Add/Remove an object to this window
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
@@ -143,6 +150,10 @@ namespace pr::rdr12
 		// Get/Set the global scene light
 		Light GlobalLight() const;
 		void GlobalLight(Light const& light);
+
+		// Get/Set the global environment map for this window
+		view3d::CubeMap EnvMap() const;
+		void EnvMap(view3d::CubeMap env_map);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
