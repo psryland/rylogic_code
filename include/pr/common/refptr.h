@@ -72,7 +72,7 @@ namespace pr
 		{}
 
 		// Move construct
-		RefPtr(RefPtr&& rhs)
+		RefPtr(RefPtr&& rhs) noexcept
 			:m_ptr(rhs.m_ptr)
 		{
 			rhs.m_ptr = nullptr;
@@ -133,7 +133,7 @@ namespace pr
 		}
 
 		// Move assign
-		RefPtr& operator = (RefPtr&& rhs)
+		RefPtr& operator = (RefPtr&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			auto ptr = m_ptr;

@@ -574,9 +574,19 @@ namespace pr
 		struct SelectObject
 		{
 			HDC m_hdc; HGDIOBJ m_old;
-			~SelectObject() { if (m_old) ::SelectObject(m_hdc, m_old); }
-			SelectObject(HDC hdc, HGDIOBJ obj) :m_hdc(hdc), m_old(::SelectObject(hdc, obj)) {}
-			SelectObject(SelectObject&& rhs) :m_hdc(rhs.m_hdc), m_old() { std::swap(m_old, rhs.m_old); }
+			~SelectObject() {
+				if (m_old) ::SelectObject(m_hdc, m_old);
+			}
+			SelectObject(HDC hdc, HGDIOBJ obj)
+				:m_hdc(hdc)
+				,m_old(::SelectObject(hdc, obj))
+			{}
+			SelectObject(SelectObject&& rhs) noexcept
+				:m_hdc(rhs.m_hdc)
+				,m_old()
+			{
+				std::swap(m_old, rhs.m_old);
+			}
 		};
 
 		// Create a COM IStream from resource data
@@ -1389,7 +1399,7 @@ namespace pr
 				:m_obj(obj)
 				,m_owned(owned)
 			{}
-			Accel(Accel&& rhs)
+			Accel(Accel&& rhs) noexcept
 				:m_obj(rhs.m_obj)
 				,m_owned(rhs.m_owned)
 			{
@@ -1399,7 +1409,7 @@ namespace pr
 				:m_obj(rhs.m_obj)
 				,m_owned(false)
 			{}
-			Accel& operator = (Accel&& rhs)
+			Accel& operator = (Accel&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -1536,7 +1546,7 @@ namespace pr
 			}
 			explicit WndClassEx(HWND hwnd) :WndClassEx(WndClassName(hwnd).c_str())
 			{}
-			WndClassEx(WndClassEx&& rhs)
+			WndClassEx(WndClassEx&& rhs) noexcept
 				:WNDCLASSEXW(rhs)
 				,m_hinst(rhs.m_hinst)
 				,m_atom(rhs.m_atom)
@@ -1550,7 +1560,7 @@ namespace pr
 				,m_atom(rhs.m_atom)
 				,m_unreg(false)
 			{}
-			WndClassEx& operator = (WndClassEx&& rhs)
+			WndClassEx& operator = (WndClassEx&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -3643,29 +3653,29 @@ namespace pr
 				{
 					auto sz_ico_bg = ::GetSystemMetrics(SM_CXICON);
 					auto sz_ico_sm = ::GetSystemMetrics(SM_CXSMICON);
-					m_brush_fore = std::move(
+					m_brush_fore =
 						p.m_colour_fore != CLR_INVALID ? Brush(p.m_colour_fore) :
-						Brush());
-					m_brush_back = std::move(
+						Brush();
+					m_brush_back =
 						p.m_colour_back != CLR_INVALID ? Brush(p.m_colour_back) :
 						WndBackground() != nullptr ? Brush(WndBackground()) :
-						Brush());
-					m_wci = std::move(
+						Brush();
+					m_wci =
 						p.m_wci ? *p.m_wci :
 						p.m_wcn ? WndClassEx(p.m_wcn, p.m_hinst) :
-						WndClassEx());
-					m_menu = std::move(
+						WndClassEx();
+					m_menu =
 						p.m_menu.m_handle != nullptr ? Menu(p.m_menu.m_handle, true) :
 						p.m_menu.m_res_id != nullptr ? Menu(::LoadMenuW(p.m_hinst, p.m_menu.m_res_id)) :
-						Menu());
-					m_icon_bg = std::move(
+						Menu();
+					m_icon_bg =
 						p.m_icon_bg.m_handle != nullptr ? Image(p.m_icon_bg.m_handle, Image::EType::Icon, false) :
 						p.m_icon_bg.m_res_id != nullptr ? Image::Load(p.m_hinst, p.m_icon_bg.m_res_id, Image::EType::Icon, Image::EFit::Zoom, sz_ico_bg, sz_ico_bg) :
-						Image());
-					m_icon_sm = std::move(
+						Image();
+					m_icon_sm =
 						p.m_icon_sm.m_handle != nullptr ? Image(p.m_icon_sm.m_handle, Image::EType::Icon, false) :
 						p.m_icon_sm.m_res_id != nullptr ? Image::Load(p.m_hinst, p.m_icon_sm.m_res_id, Image::EType::Icon, Image::EFit::Zoom, sz_ico_sm, sz_ico_sm) :
-						Image());
+						Image();
 				}
 
 				// Set w,h based on docking to the parent

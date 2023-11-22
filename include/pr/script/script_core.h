@@ -104,6 +104,7 @@ namespace pr::script
 			,m_enc(rhs.m_enc)
 			,m_mb(rhs.m_mb)
 			,m_loc(rhs.m_loc)
+			,m_remaining(rhs.m_remaining)
 		{}
 		Src(Src const& rhs) = delete;
 		Src& operator = (Src&& rhs) = delete;

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Globals -->
   <Import Project="props\globals.props" />
@@ -98,6 +98,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_cube.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_dds.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_loader_wic.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\cmd_list.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\diagnostics.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_state.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_sources.h" />
     <ClInclude Include="..\include\pr\view3d-12\lighting\light.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\config.h" />
+    <ClInclude Include="..\include\pr\view3d-12\main\frame.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\window.h" />
@@ -170,6 +172,7 @@
     <ClInclude Include="..\include\pr\view3d-12\resource\mipmap_generator.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\resource_state.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state_store.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\stock_resources.h" />
     <ClInclude Include="..\include\pr\view3d-12\sampler\sampler.h" />
     <ClInclude Include="..\include\pr\view3d-12\sampler\sampler_desc.h" />
@@ -189,8 +192,10 @@
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_cube.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_desc.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_loader.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\barrier_batch.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\cmd_alloc.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list_collection.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\conversion.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\diagnostics.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
@@ -209,7 +214,6 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>

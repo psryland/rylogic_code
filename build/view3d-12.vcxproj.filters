@@ -216,6 +216,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\shadow_caster.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\cmd_list.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -512,9 +515,6 @@
     <ClInclude Include="..\include\pr\view3d-12\resource\mipmap_generator.h">
       <Filter>src\resource</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\barrier_batch.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\keep_alive.h">
       <Filter>src\utility</Filter>
     </ClInclude>
@@ -537,6 +537,18 @@
       <Filter>src\utility</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\main\frame.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\barrier_batch.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list_collection.h">
       <Filter>src\utility</Filter>
     </ClInclude>
   </ItemGroup>
