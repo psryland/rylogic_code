@@ -573,7 +573,7 @@ namespace pr
 			//       == dist * Abs(m_near - m_far) > float_min
 			//       == dist > float_min / Abs(m_near - m_far);
 			assert(m_near < m_far);
-			double const real_min = limits<double>::min();
+			constexpr double real_min = limits<double>::min();
 			return real_min / Min(Abs(m_near - m_far), 1.0);
 		}
 

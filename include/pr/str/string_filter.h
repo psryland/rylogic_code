@@ -49,7 +49,8 @@ namespace pr::str
 		};
 		friend constexpr EFlags operator | (EFlags lhs, EFlags rhs)
 		{
-			return static_cast<InLiteral::EFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
+			using ut = std::underlying_type_t<InLiteral::EFlags>;
+			return static_cast<InLiteral::EFlags>(static_cast<ut>(lhs) | static_cast<ut>(rhs));
 		}
 
 		EFlags m_flags;
@@ -91,22 +92,26 @@ namespace pr::str
 				{
 					// If escaped, then still within the literal
 					m_escape = false;
-					return m_in_literal = true;
+					m_in_literal = true;
+					return m_in_literal;
 				}
 				else if (ch == m_quote_character)
 				{
 					m_in_literal_state = false;
-					return m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // terminating quote can be part of the literal
+					m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // terminating quote can be part of the literal
+					return m_in_literal;
 				}
 				else if (ch == '\n' && Has(m_flags, EFlags::SingleLineStrings))
 				{
 					m_in_literal_state = false;
-					return m_in_literal = false; // terminating '\n' is not part of the literal
+					m_in_literal = false; // terminating '\n' is not part of the literal
+					return m_in_literal;
 				}
 				else
 				{
 					m_escape = (ch == m_escape_character) && Has(m_flags, EFlags::Escaped);
-					return m_in_literal = true;
+					m_in_literal = true;
+					return m_in_literal;
 				}
 			}
 			else if (ch == '\"' || ch == '\'')
@@ -114,11 +119,13 @@ namespace pr::str
 				m_quote_character = static_cast<char>(ch);
 				m_in_literal_state = true;
 				m_escape = false;
-				return m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // first quote can be part of the literal
+				m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // first quote can be part of the literal
+				return m_in_literal;
 			}
 			else
 			{
-				return m_in_literal = false;
+				m_in_literal = false;
+				return m_in_literal;
 			}
 		}
 	

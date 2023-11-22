@@ -56,7 +56,7 @@ namespace pr
 	struct CallSource
 	{
 		std::filesystem::path m_filepath;
-		unsigned int m_line;
+		unsigned int m_line = 0;
 		std::string m_sym_name;
 	};
 

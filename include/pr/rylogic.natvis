@@ -245,6 +245,14 @@ old:
 		<DisplayString>{m_value}</DisplayString>
 	</Type>
 
+	<!-- Colour -->
+	<Type Name="pr::Colour32">
+		<DisplayString>{argb,Xb}</DisplayString>
+	</Type>
+	<Type Name="pr::Colour">
+		<DisplayString>r={r}, g={g}, b={b} a={a}</DisplayString>
+	</Type>
+	
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
 		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
@@ -275,9 +283,6 @@ old:
 	</Type>
 
 	<!-- Geometry -->
-	<Type Name="pr::Colour32">
-		<DisplayString>{argb,Xb}</DisplayString>
-	</Type>
 	<Type Name="pr::geometry::p3d::ChunkHeader">
 		<DisplayString>[{m_id}] Len={m_length}</DisplayString>
 	</Type>
@@ -320,6 +325,12 @@ old:
 	</Type>
 	<Type Name="pr::rdr12::Model">
 		<DisplayString>{m_name.m_ptr}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::ResStateData">
+		<DisplayString>{m_state[0]}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::ResStateData::MipState">
+		<DisplayString>mip={m_data &amp; 0xFF} state={(D3D12_RESOURCE_STATES)(m_data >> 8)}</DisplayString>
 	</Type>
 
 	<!-- Line Drawer -->
