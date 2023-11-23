@@ -52,9 +52,10 @@ namespace pr::rdr12
 	private:
 
 		shaders::ShadowMap m_shader; // The shader for this render step
+		GfxCmdList m_cmd_list;       // The command list for this render step
 		Texture2DPtr m_default_tex;  // Texture to use if a model has no diffuse texture
 		SamplerPtr m_default_sam;    // Sampler to use if a model has no sampler
-		CasterCont m_casters;           // The light sources that cast shadows. This is the list of lights to create shadow maps for.
+		CasterCont m_casters;        // The light sources that cast shadows. This is the list of lights to create shadow maps for.
 		int m_smap_size;             // Dimensions of the (square) 'smap' textures
 		DXGI_FORMAT m_smap_format;   // The texture format of the smap textures
 		BBox m_bbox_scene;           // The scene bounds of shadow casters
@@ -75,11 +76,11 @@ namespace pr::rdr12
 
 	private:
 
+		// Perform the render step
+		void Execute(Frame& frame) override;
+
 		// Add model nuggets to the draw list for this render step
 		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
-
-		// Perform the render step
-		void ExecuteInternal(BackBuffer& bb) override;
 
 		// Call draw for a nugget
 		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc);

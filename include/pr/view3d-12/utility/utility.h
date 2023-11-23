@@ -300,9 +300,26 @@ namespace pr::rdr12
 		return iter == end(map) ? def : static_cast<Value const&>(iter->second);
 	}
 
-	// Set the name on a DX resource (debug only)
+	// Helper for reading values from an unordered map, and lazy inserting if not found
+	template <class Map, typename Key, typename Value, typename Factory>
+	inline Value const& GetOrAdd(Map const& map, Key const& key, Factory factory)
+	{
+		auto iter = map.find(key);
+		if (iter == end(map)) iter = map.emplace(key, factory()).first;
+		return static_cast<Value const&>(iter->second);
+	}
+
+	// Get/Set the name on a DX resource (debug only)
+	string32 NameResource(ID3D12Object const* res);
+	string32 NameResource(IDXGIObject const* res);
+	string32 NameResource(ID3D12Resource const* res);
 	void NameResource(ID3D12Object* res, char const* name);
 	void NameResource(IDXGIObject* res, char const* name);
+	void NameResource(ID3D12Resource* res, char const* name);
+
+	// Get/Set the default state for a resource
+	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res);
+	void DefaultResState(ID3D12Resource* res, D3D12_RESOURCE_STATES state);
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"
 	void ParseEmbeddedResourceUri(std::wstring const& uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name);

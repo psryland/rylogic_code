@@ -7,8 +7,20 @@
 
 namespace pr::rdr12
 {
-	struct ResState
+	struct ResStateData
 	{
+		// Resource State Management:
+		//  The recommended way to do this is to buffer transitions per resource per command list,
+		//  then before a command list is executed, insert transitions from the global state to the
+		//  first required state of the command list. After the command list is queued, update the global
+		//  state to the final state for the command list.
+		//
+		//   * I'm not doing this *
+		//
+		//  Instead, all resources will have a default state (recorded in the ResourceManager). Command lists
+		//  can assume any resource they use will be in its default state. When CmdList::Close() is called,
+		//  transitions will be added to return any resource back to its default state.
+		//
 		// Notes:
 		//  - This object is used to determine the final state that a resource (or it's mips) is
 		//    in at the end of executing a command list.
@@ -16,10 +28,6 @@ namespace pr::rdr12
 		//    the state changes of any resources that it operates on.
 		//  - Command lists are serialised when executed but can be created in parallel so having
 		//    one state tracking structure per resource doesn't work.
-		//  - The recommended way to do this is to buffer transitions per resource per command list,
-		//    then before a command list is executed, insert transitions from the global state to the
-		//    first required state of the command list. After the command list is queued, update the global
-		//    state to the final state for the command list.
 		//  - 'm_state[0]' is the state for the 'AllSubresources' special case.
 		//  - 'm_state[1:]' maps mip-to-state. States are encoded as [state:24, subresource:8] since
 		//    resource states have a max value of 0x80_0000, and textures won't have more than 0xFF mips.
@@ -67,9 +75,9 @@ namespace pr::rdr12
 
 	public:
 
-		ResState()
+		explicit ResStateData(D3D12_RESOURCE_STATES default_state)
 		{
-			Apply(D3D12_RESOURCE_STATE_COMMON);
+			Apply(default_state);
 		}
 
 		// Return the main mip state
@@ -160,17 +168,17 @@ namespace pr::rdr12
 		template <std::invocable<int, D3D12_RESOURCE_STATES> CB>
 		void EnumMipSpecificStates(CB cb) const
 		{
-			for (int i = 1; m_state[i].sub() != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES; ++i)
+			for (int i = 1; m_state[i].sub() != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && i != _countof(m_state); ++i)
 				cb(m_state[i].sub(), m_state[i].state());
 		}
 
 		// True if the resource state for all mips equals 'rhs'
-		friend bool operator == (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
+		friend bool operator == (ResStateData const& lhs, D3D12_RESOURCE_STATES rhs)
 		{
 			// The default state == 'rhs' and there are no mip-specific states
 			return lhs.Mip0State() == rhs && !lhs.HasMipSpecificStates();
 		}
-		friend bool operator != (ResState const& lhs, D3D12_RESOURCE_STATES rhs)
+		friend bool operator != (ResStateData const& lhs, D3D12_RESOURCE_STATES rhs)
 		{
 			return !(lhs == rhs);
 		}

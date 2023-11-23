@@ -40,7 +40,6 @@ namespace pr::rdr12
 	{
 		auto device = m_mgr->d3d();
 		auto tdesc = desc.m_tdesc;
-		Throw(res->SetName(FmtS(L"%S", m_name.c_str())));
 
 		// Create views for the texture
 		if (!AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))

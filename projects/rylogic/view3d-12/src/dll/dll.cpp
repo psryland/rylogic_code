@@ -352,9 +352,9 @@ VIEW3D_API unsigned int __stdcall View3D_WindowBackgroundColourGet(view3d::Windo
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->BackgroundColour().argb;
+		return window->BackgroundColour().argb().argb;
 	}
-	CatchAndReport(View3D_WindowBackgroundColourGet, window, 0);
+	CatchAndReport(View3D_WindowBackgroundColourGet, window, 0U);
 }
 VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window, unsigned int argb)
 {
@@ -363,7 +363,7 @@ VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->BackgroundColour(Colour32(argb));
+		window->BackgroundColour(pr::Colour(Colour32(argb)));
 	}
 	CatchAndReport(View3D_WindowBackgroundColourSet, window,);
 }

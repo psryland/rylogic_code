@@ -35,15 +35,18 @@ namespace pr::rdr12
 		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
 		using RenderStepCont = pr::vector<std::unique_ptr<RenderStep>, 16, true>;
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
-		//using RayCastStepPtr = std::unique_ptr<RayCastStep>;
+#if 0 //todo
+		using RayCastStepPtr = std::unique_ptr<RayCastStep>;
+#endif
 		
 		Window*          m_wnd;          // The controlling window
 		SceneCamera      m_cam;          // Represents the camera properties used to project onto the screen
 		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
 		InstCont         m_instances;    // Instances added to this scene for rendering.
 		RenderStepCont   m_render_steps; // The stages of rendering the scene
-		Colour           m_bkgd_colour;  // The background colour for the scene. Set to ColourZero to disable clear bb
-		//RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
+#if 0 //todo
+		RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
+#endif
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
 		PipeStates       m_pso;           // Scene-wide pipe state overrides
@@ -138,6 +141,9 @@ namespace pr::rdr12
 		}
 		#endif
 
+		// Render the scene, recording the command lists in 'frame'
+		void Render(Frame& frame);
+
 	private:
 
 		friend struct Window;
@@ -149,9 +155,6 @@ namespace pr::rdr12
 		// Add/Remove an instance from this scene
 		void AddInstance(BaseInstance const& inst);
 		void RemoveInstance(BaseInstance const& inst);
-
-		// Render the scene
-		pr::vector<ID3D12CommandList*> Render(BackBuffer& bb);
 
 		// Resize the viewport on back buffer resize
 		void HandleBackBufferSizeChanged(Window& wnd, BackBufferSizeChangedEventArgs const& evt);

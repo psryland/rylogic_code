@@ -8,8 +8,8 @@
 
 namespace pr::rdr12
 {
-	//// Stores the resource state in a resources private data
-	//static GUID const Guid_ResourceStates = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
+	// Stores the default resource state in a resource's private data
+	static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
 
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)
@@ -515,15 +515,12 @@ namespace pr::rdr12
 		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
 		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
 	};
-
-	/// <summary>Set the name on a DX resource (debug only)</summary>
 	template <HasPrivateData T>
 	void NameResource(T* res, char const* name)
 	{
-		#if PR_DBG_RDR
 		char existing[256];
 		UINT size(sizeof(existing) - 1);
-		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, existing) != DXGI_ERROR_NOT_FOUND)
+		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
 		{
 			existing[size] = 0;
 			if (!str::Equal(existing, name))
@@ -533,9 +530,32 @@ namespace pr::rdr12
 
 		std::string_view res_name(name);
 		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
-		#else
-		(void)res,name;
-		#endif
+	}
+	template <HasPrivateData T>
+	string32 NameResource(T const* res)
+	{
+		char existing[256];
+		UINT size(sizeof(existing) - 1);
+		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
+		{
+			existing[size] = 0;
+			return existing;
+		}
+		return {};
+	}
+
+	/// <summary>Get/Set the name on a DX resource (debug only)</summary>
+	string32 NameResource(ID3D12Object const* res)
+	{
+		return NameResource<ID3D12Object>(res);
+	}
+	string32 NameResource(IDXGIObject const* res)
+	{
+		return NameResource<IDXGIObject>(res);
+	}
+	string32 NameResource(ID3D12Resource const* res)
+	{
+		return NameResource<ID3D12Resource>(res);
 	}
 	void NameResource(ID3D12Object* res, char const* name)
 	{
@@ -544,6 +564,26 @@ namespace pr::rdr12
 	void NameResource(IDXGIObject* res, char const* name)
 	{
 		NameResource<IDXGIObject>(res, name);
+	}
+	void NameResource(ID3D12Resource* res, char const* name)
+	{
+		NameResource<ID3D12Resource>(res, name);
+	}
+
+	// Get/Set the default state for a resource
+	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res)
+	{
+		UINT size(sizeof(D3D12_RESOURCE_STATES));
+		char bytes[sizeof(D3D12_RESOURCE_STATES)];
+		return const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]) != DXGI_ERROR_NOT_FOUND
+			? *reinterpret_cast<D3D12_RESOURCE_STATES*>(&bytes[0])
+			: D3D12_RESOURCE_STATE_COMMON;
+	}
+	void DefaultResState(ID3D12Resource* res, D3D12_RESOURCE_STATES state)
+	{
+		// Assume 'Common' state and don't store it
+		if (state == D3D12_RESOURCE_STATE_COMMON) return;
+		Throw(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
 	}
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"

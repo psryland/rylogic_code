@@ -14,6 +14,9 @@ namespace pr::rdr12
 	// Base class for render steps
 	struct RenderStep
 	{
+		// Notes:
+		//  - Each render step can have its own command lists as some may require more than one
+
 		// Draw list element container
 		using drawlist_t = pr::vector<DrawListElement, 1024, false, alignof(DrawListElement), Allocator<DrawListElement>>;
 		using dl_mutex_t = std::recursive_mutex;
@@ -36,7 +39,6 @@ namespace pr::rdr12
 
 		ERenderStep const  m_step_id;            // Derived type Id
 		Scene*             m_scene;              // The scene this render step is owned by
-		GfxCmdList         m_cmd_list;           // The command list used by this scene
 		drawlist_t         m_drawlist;           // The drawlist for this render step. Access via 'Lock'
 		bool               m_sort_needed;        // True when the list needs sorting
 		GpuUploadBuffer    m_cbuf_upload;        // Shared upload buffer for shaders to used to upload parameters
@@ -85,7 +87,7 @@ namespace pr::rdr12
 		void RemoveInstances(BaseInstance const** inst, std::size_t count);
 
 		// Perform the render step
-		ID3D12GraphicsCommandList* Execute(BackBuffer& bb);
+		virtual void Execute(Frame& frame) = 0;
 
 	protected:
 
@@ -101,9 +103,6 @@ namespace pr::rdr12
 		// as projection texture, line width, etc). This method needs to ensure the
 		// nugget's shader collection contains the appropriate shaders.
 		virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) = 0;
-
-		// Derived render steps perform their action
-		virtual void ExecuteInternal(BackBuffer& bb) = 0;
 
 	private:
 

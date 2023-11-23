@@ -15,6 +15,7 @@ namespace pr::rdr12
 	private:
 
 		shaders::Forward m_shader;
+		GfxCmdList m_cmd_list;
 		Texture2DPtr m_default_tex;
 		SamplerPtr m_default_sam;
 	
@@ -28,11 +29,11 @@ namespace pr::rdr12
 
 	private:
 
+		// Perform the render step
+		void Execute(Frame& frame) override;
+
 		// Add model nuggets to the draw list for this render step
 		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
-
-		// Perform the render step
-		void ExecuteInternal(BackBuffer& bb) override;
 
 		// Draw a single nugget
 		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc);

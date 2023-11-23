@@ -31,6 +31,6 @@ namespace pr::rdr12::shaders
 		// This method may be called with:
 		//  'dle == null' => Setup constants for the frame
 		//  'dle != null' => Setup constants per nugget
-		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, ShadowCaster const& caster, DrawListElement const* dle);
+		void Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, DrawListElement const* dle, ShadowCaster const& caster, SceneCamera const& cam);
 	};
 }

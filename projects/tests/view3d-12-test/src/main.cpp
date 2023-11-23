@@ -13,8 +13,6 @@ using namespace pr::gui;
 using namespace pr::rdr12;
 
 // TODO:
-//  Multisample/DLSS?
-//  EnvMapping
 //  Text / Finish the drawing of all LdrObjects
 //  Finish the View3d API
 //  Ray cast/ Hit test support
@@ -60,7 +58,7 @@ struct Main :Form
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
-		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
+		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
 			"*Plane ground FFFFE8A0\n"
 			"{\n"
@@ -109,7 +107,7 @@ struct Main :Form
 		View3D_WindowEnvMapSet(m_win3d, m_envmap);
 		View3D_WindowEnumObjects(m_win3d, [](void*, view3d::Object obj)
 			{
-				View3D_ObjectReflectivitySet(obj, 0.5f, "");
+				View3D_ObjectReflectivitySet(obj, 0.2f, "");
 				return true;
 			}, nullptr);
 

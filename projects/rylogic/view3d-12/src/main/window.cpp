@@ -5,7 +5,9 @@
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/main/settings.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/main/frame.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 
 namespace pr::rdr12
 {
@@ -16,30 +18,44 @@ namespace pr::rdr12
 	Window::Window(Renderer& rdr, WndSettings const& settings)
 		:m_rdr(&rdr)
 		,m_hwnd(settings.m_hwnd)
-		,m_db_format(settings.m_depth_format)
-		,m_multisamp()
 		,m_swap_chain_flags(settings.m_swap_chain_flags)
 		,m_swap_chain_dbg()
 		,m_swap_chain()
-		,m_depth_stencil()
 		,m_rtv_heap()
 		,m_dsv_heap()
 		,m_d2d_dc()
 		,m_gsync(rdr.D3DDevice())
-		,m_bb(settings.m_buffer_count)
+		,m_swap_bb(settings.m_buffer_count)
+		,m_msaa_bb()
+		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
+		,m_ds_props(settings.m_depth_format, 1.0f, 0)
+		,m_multisamp(settings.m_multisamp)
 		,m_cmd_alloc_pool(m_gsync)
 		,m_cmd_list_pool(m_gsync)
-		,m_cmd_lists()
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_heap_samp(HeapCapacitySamp, &m_gsync)
+		,m_res_state()
 		,m_diag(*this)
 		,m_frame_number()
 		,m_vsync(settings.m_vsync)
 		,m_idle(false)
 		,m_name(settings.m_name)
 	{
+		// Notes:
+		//  The swap chain is the data that's sent to the monitor, and monitors can't display MSAA textures.
+		//  In older versions of D3D, they allowed you to do this, and internally they pulled some magic to resolve the MSAA data
+		//  to a non-MSAA texture before it was sent to the monitor. D3D12 gets rid of all that internal magic. So -
+		//  create your swap chain as normal (non-MSAA), but create yourself another texture that is MSAA and render
+		//  the scene to it. Then resolve your MSAA texture to your non-MSAA swap chain.
+		//
+		// Todo: w-buffer
+		//  https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
+		//  https://www.mvps.org/directx/articles/using_w-buffers.htm
+
 		try
 		{
+			auto device = rdr.D3DDevice();
+
 			// Validate settings
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_options, ERdrOptions::BGRASupport))
 				Throw(false, "D3D device has not been created with GDI compatibility");
@@ -47,16 +63,18 @@ namespace pr::rdr12
 				Throw(false, "GDI compatibility does not support multi-sampling");
 			if (settings.m_vsync && (settings.m_mode.RefreshRate.Numerator == 0 || settings.m_mode.RefreshRate.Denominator == 0))
 				Throw(false, "If VSync is enabled, the refresh rate should be provided (matching the value returned from the graphics card)");
-			//todo: w-buffer
-			// https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
-			// https://www.mvps.org/directx/articles/using_w-buffers.htm
-		
-			auto device = rdr.D3DDevice();
+			if (settings.m_multisamp.Count < 1 || settings.m_multisamp.Count > D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT)
+				Throw(false, "MSAA sample count invalid");
 
 			// Check feature support
-			m_multisamp.Validate(device, settings.m_mode.Format);
-			m_multisamp.Validate(device, settings.m_depth_format);
-		
+			auto const& features = rdr.Features();
+			m_multisamp.ScaleQualityLevel(device, settings.m_mode.Format);
+			m_multisamp.ScaleQualityLevel(device, settings.m_depth_format);
+			if (settings.m_multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+				Throw(false, "Device does not support MSAA for requested render target format");
+			if (settings.m_multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+				Throw(false, "Device does not support MSAA for requested depth stencil format");
+
 			// Get the factory that was used to create 'rdr.m_device'
 			D3DPtr<IDXGIFactory4> factory;
 			Throw(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
@@ -69,7 +87,7 @@ namespace pr::rdr12
 					.Height = settings.m_mode.Height,
 					.Format = settings.m_mode.Format,
 					.Stereo = false, // interesting...
-					.SampleDesc = m_multisamp,
+					.SampleDesc = MultiSamp{}, // Flip Swap chains are always 1 sample
 					.BufferUsage = settings.m_usage,
 					.BufferCount = settings.m_buffer_count,
 					.Scaling = settings.m_scaling,
@@ -84,11 +102,11 @@ namespace pr::rdr12
 					.Windowed = settings.m_windowed,
 				};
 
-				// Create the swap chain
+				// Create the swap chain. Swap chains only contain render targets, not deep buffers.
 				D3DPtr<IDXGISwapChain1> swap_chain;
 				Throw(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
 				Throw(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), FmtS("swap chain")));
+				NameResource(m_swap_chain.get(), "SwapChain");
 		
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 				Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
@@ -99,10 +117,10 @@ namespace pr::rdr12
 				// todo
 			}
 
-			// Create a CPU descriptor heap for the back buffer render targets.
+			// Create a CPU descriptor heap for the back buffers (swap chain buffers + MSAA RT).
 			D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-				.NumDescriptors = s_cast<UINT>(m_bb.size()),
+				.NumDescriptors = s_cast<UINT>(m_swap_bb.size() + 1),
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
 			Throw(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
@@ -154,8 +172,8 @@ namespace pr::rdr12
 		// Release COM pointers
 		m_rtv_heap = nullptr;
 		m_dsv_heap = nullptr;
-		m_depth_stencil = nullptr;
-		m_bb.resize(0);
+		m_msaa_bb = {};
+		m_swap_bb.resize(0);
 		m_gsync.Release();
 
 		// Destroy the D2D device context
@@ -190,6 +208,10 @@ namespace pr::rdr12
 	}
 
 	// Access the renderer manager classes
+	ID3D12Device4* Window::d3d() const
+	{
+		return rdr().d3d();
+	}
 	Renderer& Window::rdr() const
 	{
 		return *m_rdr;
@@ -244,14 +266,14 @@ namespace pr::rdr12
 		#endif
 	}
 	
-	// The current back buffer index
+	// The current swap chain back buffer index
 	int Window::BBIndex() const
 	{
 		return m_swap_chain != nullptr ? m_swap_chain->GetCurrentBackBufferIndex() : 0;
 	}
 	int Window::BBCount() const
 	{
-		return s_cast<int>(m_bb.size());
+		return s_cast<int>(m_swap_bb.size());
 	}
 
 	// The number of times 'RenderFrame' has been called
@@ -260,10 +282,28 @@ namespace pr::rdr12
 		return m_frame_number;
 	}
 
-	// Get/Set the size of the back buffer render target
+	// Get/Set the window background colour / clear value
+	Colour Window::BkgdColour() const
+	{
+		return Colour(m_rt_props.Color);
+	}
+	void Window::BkgdColour(Colour const& colour)
+	{
+		if (BkgdColour() == colour)
+			return;
+
+		// Need to recreate the render targets because the clear colour has changed
+		m_rt_props.Color[0] = colour.r;
+		m_rt_props.Color[1] = colour.g;
+		m_rt_props.Color[2] = colour.b;
+		m_rt_props.Color[3] = colour.a;
+		BackBufferSize(BackBufferSize(), true);
+	}
+
+	// Get/Set the size of the swap chain back buffer (basically the window size in pixels)
 	iv2 Window::BackBufferSize() const
 	{
-		auto rt = m_bb[BBIndex()].m_render_target.get();
+		auto rt = m_swap_bb[BBIndex()].m_render_target.get();
 		if (rt == nullptr)
 			return iv2::Zero();
 
@@ -287,190 +327,191 @@ namespace pr::rdr12
 		m_gsync.Wait();
 
 		// Release references to swap chain resources
-		for (auto& bb : m_bb)
+		for (auto& bb : m_swap_bb)
 		{
+			m_res_state.Forget(bb.m_render_target.get());
+			m_res_state.Forget(bb.m_depth_stencil.get());
+
+			bb.m_render_target = nullptr;
+			bb.m_depth_stencil = nullptr;
+			bb.m_d2d_target = nullptr;
+		}
+		if (auto& bb = m_msaa_bb; true)
+		{
+			m_res_state.Forget(bb.m_render_target.get());
+			m_res_state.Forget(bb.m_depth_stencil.get());
+
 			bb.m_render_target = nullptr;
 			bb.m_depth_stencil = nullptr;
 			bb.m_d2d_target = nullptr;
 		}
 
-		// Resize the swap chain buffers
-		if (m_swap_chain != nullptr)
-		{
-			DXGI_SWAP_CHAIN_DESC scdesc = {};
-			Throw(m_swap_chain->GetDesc(&scdesc));
-			Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
-		}
-
-		// Default to the description of the current depth buffer if it exists
-		auto dsdesc = m_depth_stencil != nullptr ? m_depth_stencil->GetDesc() : ResDesc::Tex2D(Image{16, 16, nullptr, DXGI_FORMAT_D32_FLOAT}, 1U, EUsage::DepthStencil|EUsage::DenyShaderResource);
-		dsdesc.Width = size.x;
-		dsdesc.Height = size.y;
-		auto clear_value = D3D12_CLEAR_VALUE {
-			.Format = DXGI_FORMAT_D32_FLOAT,
-			.DepthStencil = {.Depth = 1.0f, .Stencil=0},
-		};
-
-		// Resize the depth stencil
-		m_depth_stencil = nullptr;
-		Throw(device->CreateCommittedResource(
-			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&clear_value, __uuidof(ID3D12Resource), (void**)&m_depth_stencil.m_ptr));
-		Throw(m_depth_stencil->SetName(L"DepthStencil"));
+		// Finished releasing references. Now to create new resources.
 
 		// Get the pointer and item size of the RTV descriptor heap.
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
-		auto rtv_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 
 		// Get the pointer and item size of the DSV descriptor heap.
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
-		auto dsv_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		auto dsv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
 
-		// Populate the back buffer objects
-		for (int i = 0; i != s_cast<int>(m_bb.size()); ++i)
+		// Swap chain render targets
+		if (m_swap_chain != nullptr)
 		{
-			auto& bb = m_bb[i];
-			bb.m_wnd = this;
-			bb.m_bb_index = i;
-			bb.m_sync_point = m_gsync.CompletedSyncPoint();
-			
-			// Save the pointers to the descriptors
-			bb.m_rtv = rtv_handle;
-			bb.m_rtv.ptr += i * rtv_size; // one RTV for each back buffer
-			bb.m_dsv = dsv_handle;
-			bb.m_dsv.ptr += 0 * dsv_size; // there is only one DSV
+			// Resize the swap chain buffers
+			DXGI_SWAP_CHAIN_DESC scdesc = {};
+			Throw(m_swap_chain->GetDesc(&scdesc));
+			Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
 
-			// Create RTVs for the back buffer resources.
-			if (m_swap_chain != nullptr)
+			for (int i = 0; i != s_cast<int>(m_swap_bb.size()); ++i)
 			{
+				auto& bb = m_swap_bb[i];
+				bb.m_wnd = this;
+				bb.m_sync_point = m_gsync.CompletedSyncPoint();
+
+				// Get the render target resource pointer
 				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
-				device->CreateRenderTargetView(bb.m_render_target.get(), nullptr, bb.m_rtv);
-			}
-			else
-			{
-				// If the renderer has been created without a window handle, there will be no swap chain.
-				// In this case the caller will be setting up a render target to an off-screen buffer.
-				// todo - off-screen rendering should create it's on back buffer which will need an rtv
-			}
+				DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
+				NameResource(bb.m_render_target.get(), FmtS("SwapChainRT-%d", i));
 
-			// Create DSV for the depth stencil buffer
-			bb.m_depth_stencil = m_depth_stencil;
-			device->CreateDepthStencilView(bb.m_depth_stencil.get(), nullptr, bb.m_dsv);
+				// Save the pointers to where the descriptors will be stored
+				bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV for each back buffer
+				bb.m_dsv = dsv_handle; dsv_handle.ptr += 0 * dsv_size; // zero DSVs for the swap chain back buffers
 
-			// Re-link the D2D device context to the back buffer
-			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
-			{
-				// Direct2D needs the DXGI version of the back buffer
-				D3DPtr<IDXGISurface> dxgi_back_buffer;
-				Throw(m_swap_chain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
-		
-				// Create bitmap properties for the bitmap view of the back buffer
-				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
-				auto dpi = Dpi();
-				bp.dpiX = dpi.x;
-				bp.dpiY = dpi.y;
-		
-				// Wrap the back buffer as a bitmap for D2D
-				Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
+				// Create RTVs for the back buffer resources.
+				auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{ .Format = m_rt_props.Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D };
+				device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
+
+				// Re-link the D2D device context to the back buffer
+				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+				{
+					// Direct2D needs the DXGI version of the back buffer
+					D3DPtr<IDXGISurface> dxgi_back_buffer;
+					Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+
+					// Create bitmap properties for the bitmap view of the back buffer
+					auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+					auto dpi = Dpi();
+					bp.dpiX = dpi.x;
+					bp.dpiY = dpi.y;
+
+					// Wrap the back buffer as a bitmap for D2D
+					Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
+				}
 			}
+		}
+
+		// MSAA render target
+		if (auto& bb = m_msaa_bb; true)
+		{
+			bb.m_wnd = this;
+			bb.m_sync_point = m_gsync.CompletedSyncPoint();
+
+			// Render target
+			auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
+				.multisamp(m_multisamp)
+				.clear(m_rt_props);
+			Throw(device->CreateCommittedResource(
+				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
+				&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			NameResource(bb.m_render_target.get(), "RenderTarget");
+
+			// Depth stencil
+			auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
+				.multisamp(m_multisamp)
+				.clear(m_ds_props);
+			Throw(device->CreateCommittedResource(
+				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+				&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
+			DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			NameResource(bb.m_depth_stencil.get(), "DepthStencil");
+
+			// Save the pointers to where the descriptors will be stored
+			bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV stored after the swap chain RTVs
+			bb.m_dsv = dsv_handle; dsv_handle.ptr += 1 * dsv_size; // one DSV for the MSAA render target
+
+			// Create RTV for the MSAA render target
+			auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{
+				.Format = m_rt_props.Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS,
+			};
+			device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
+
+			// Create the DSV for the MSAA depth stencil
+			auto dsvdesc = D3D12_DEPTH_STENCIL_VIEW_DESC{
+				.Format = m_ds_props.Format,
+				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS,
+			};
+			device->CreateDepthStencilView(bb.m_depth_stencil.get(), &dsvdesc, bb.m_dsv);
 		}
 	}
 
-	// Render a frame
-	Window::Frame Window::RenderFrame()
+	// Start rendering a new frame. Returns an object that scenes can render into
+	Frame Window::NewFrame()
 	{
-		// Get the current back buffer
-		auto& bb = m_bb[BBIndex()];
-
-		// Ensure the back buffer is available for rendering
-		m_gsync.Wait(bb.m_sync_point);
-
-		// Bind D2D to the current render target
-		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
-			m_d2d_dc->SetTarget(bb.m_d2d_target.get());
+		++m_frame_number;
 
 		// Flush any pending resource commands to the GPU
 		res().FlushToGpu(false);
 
-		// Start a frame
-		++m_frame_number;
-		m_cmd_lists.resize(0);
-		return Frame(bb, m_cmd_lists);
+		// Get the current swap chain back buffer
+		auto& bb_main = m_msaa_bb;
+		auto& bb_post = m_swap_bb[BBIndex()];
+
+		// Ensure the back buffer is available for rendering
+		m_gsync.Wait(bb_main.m_sync_point);
+		m_gsync.Wait(bb_post.m_sync_point);
+
+		// Bind D2D to the current swap chain render target
+		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+			m_d2d_dc->SetTarget(bb_post.m_d2d_target.get());
+
+		// Create the frame object to be passed to the scenes 
+		Frame frame(d3d(), bb_main, bb_post, m_cmd_alloc_pool);
+
+		// Prepare
+		{
+			// The MSAA render target goes to the 'render target' state
+			BarrierBatch bb(frame.m_prepare);
+			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			bb.Commit();
+
+			frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
+			frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
+		}
+		// Resolve
+		{
+			// Resolve the MSAA render target into the swap chain render target
+			BarrierBatch bb(frame.m_resolve);
+			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST);
+			bb.Commit();
+
+			// Resolve the msaa render target into the swap chain render target
+			frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
+
+			// The swap chain render target goes to the 'render target' state
+			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			bb.Commit();
+		}
+		// Present
+		{
+			// The swap chain render target goes to the 'present' state
+			BarrierBatch bb(frame.m_present);
+			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
+			bb.Commit();
+		}
+
+		// Return the frame object
+		return frame;
 	}
-
-	// Construct a frame render instance
-	Window::Frame::Frame(BackBuffer& bb, CmdLists& cmd_lists)
-		:m_bb(bb)
-		,m_cmd_lists(cmd_lists)
-	{
-		m_cmd_lists.push_back(nullptr); // Make a slot for the first barrier
-	}
-
-	// Render a scene
-	void Window::Frame::Render(Scene& scene)
-	{
-		// Start the scene rendering - If this is done in a background thread, 'scene.Render' will return immediately
-		// returning the not-yet-closed command list that it is rendering to. This allows the window to submit the
-		// command lists in the same order that the caller called 'Render' in.
-		// Remember: One allocator per thread, per list, per frame.
-
-		auto cmd_list = scene.Render(m_bb);
-		m_cmd_lists.insert(m_cmd_lists.end(), cmd_list.begin(), cmd_list.end());
-	}
-
-	// Present the frame
-	void Window::Frame::Present()
-	{
-		// Add a resource barrier for switching the back buffer to the render target state
-		D3D12_RESOURCE_BARRIER barrier0 = {
-			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			.Transition = {
-				.pResource = m_bb.m_render_target.get(),
-				.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				.StateBefore = D3D12_RESOURCE_STATE_PRESENT,
-				.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET,
-			},
-		};
-		auto cmd_list0 = m_bb.wnd().m_cmd_list_pool.Get();
-		cmd_list0.Reset(m_bb.wnd().m_cmd_alloc_pool.Get());
-		cmd_list0.ResourceBarrier(barrier0);
-		cmd_list0.Close();
-		m_cmd_lists[0] = cmd_list0;
-
-		// Transition the back buffer to the presenting state.
-		D3D12_RESOURCE_BARRIER barrier1 = {
-			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			.Transition = {
-				.pResource = m_bb.m_render_target.get(),
-				.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
-				.StateAfter = D3D12_RESOURCE_STATE_PRESENT,
-			},
-		};
-		auto cmd_list1 = m_bb.wnd().m_cmd_list_pool.Get();
-		cmd_list1.Reset(m_bb.wnd().m_cmd_alloc_pool.Get());
-		cmd_list1.ResourceBarrier(barrier1);
-		cmd_list1.Close();
-		m_cmd_lists.push_back(cmd_list1);
-
-		// todo - Wait until all rendering worker threads have completed 
-		{}
-
-		// Submit the command lists to the GPU
-		auto queue = m_bb.rdr().GfxQueue();
-		queue->ExecuteCommandLists(s_cast<UINT>(m_cmd_lists.size()), m_cmd_lists.data());
-
-		// Flip the swap chain
-		m_bb.wnd().Flip();
-
-		// Set the next sync point for this backbuffer
-		m_bb.m_sync_point = m_bb.wnd().m_gsync.AddSyncPoint(queue);
-	}
-
-	// Move to the next back buffer
-	void Window::Flip()
+	
+	// Present the frame to the display
+	void Window::Present(Frame& frame)
 	{
 		// Be careful that you never have the message-pump thread wait on the render thread.
 		// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
@@ -480,14 +521,18 @@ namespace pr::rdr12
 		// thread has a critical section guarding it or if the render thread is blocked, then the
 		// two threads will deadlock.
 
-		// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
-		// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
-		// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
-		// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
-		// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
-		// the swap chain unable to relinquish full-screen mode.
-		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
-		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
+		frame.m_prepare.Close();
+		frame.m_resolve.Close();
+		frame.m_present.Close();
+
+		// Submit the command lists to the GPU
+		rdr().ExecuteCommandLists({
+			frame.m_prepare,
+			frame.m_main,
+			frame.m_resolve,
+			frame.m_post,
+			frame.m_present,
+		});
 
 		// Present with the debug swap chain so that graphics debugging detects a frame
 		if (m_swap_chain_dbg != nullptr)
@@ -517,6 +562,14 @@ namespace pr::rdr12
 		}
 
 		// Render to the display
+		// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
+		// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
+		// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
+		// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
+		// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
+		// the swap chain unable to relinquish full-screen mode.
+		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
+		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
 		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
 		switch (res)
 		{
@@ -548,6 +601,11 @@ namespace pr::rdr12
 				throw std::runtime_error("Unknown result from SwapChain::Present");
 			}
 		}
+
+		// Set the next sync point for the swap chain backbuffer
+		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
+		frame.m_bb_main.m_sync_point = sync_point;
+		frame.m_bb_post.m_sync_point = sync_point;
 	}
 }
 

@@ -9,12 +9,13 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/sampler/sampler.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "pr/view3d-12/utility/shadow_caster.h"
-#include "view3d-12/src/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 
 #define PR_DBG_SMAP 0
@@ -77,6 +78,7 @@ namespace pr::rdr12
 	RenderSmap::RenderSmap(Scene& scene, Light const& light, int size, DXGI_FORMAT format)
 		: RenderStep(Id, scene)
 		, m_shader(scene.d3d())
+		, m_cmd_list(scene.d3d(), nullptr, L"RenderSmap")
 		, m_default_tex(res().CreateTexture(EStockTexture::White))
 		, m_default_sam(res().CreateSampler(EStockSampler::LinearClamp))
 		, m_casters()
@@ -133,7 +135,12 @@ namespace pr::rdr12
 	// Add a shadow casting light source
 	void RenderSmap::AddLight(Light const& light)
 	{
-		m_casters.push_back(ShadowCaster(*this, light, m_smap_size, m_smap_format));
+		auto td = ResDesc::Tex2D(Image(m_smap_size, m_smap_size, nullptr, m_smap_format), 1, EUsage::RenderTarget)
+			.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+			.clear(m_smap_format, pr::Colour32Zero);
+		auto desc = TextureDesc(AutoId, td).name("Smap");
+		auto smap = res().CreateTexture2D(desc);
+		m_casters.push_back(ShadowCaster(smap, light, m_smap_size));
 	}
 
 	// Add model nuggets to the draw list for this render step
@@ -210,13 +217,19 @@ namespace pr::rdr12
 	}
 
 	// Perform the render step
-	void RenderSmap::ExecuteInternal(BackBuffer&)
+	void RenderSmap::Execute(Frame& frame)
 	{
 		PR_EXPAND(PR_DBG_SMAP, auto x = pr::Scope<void>([&] { g_smap_quad.Update(); }));
 
 		// Nothing to render if there are no objects
 		if (m_casters.empty() || !m_bbox_scene.valid() || m_bbox_scene.is_point())
 			return;
+
+		// Reset the command list with a new allocator for this frame
+		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
+
+		// Add the command lists we're using to the frame.
+		frame.m_main.push_back(m_cmd_list);
 
 		// Sort the draw list if needed
 		SortIfNeeded();
@@ -254,7 +267,7 @@ namespace pr::rdr12
 			m_cmd_list.SetGraphicsRootSignature(m_shader.m_signature.get());
 
 			// Set shader constants for the frame
-			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, caster, nullptr);
+			m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, nullptr, caster, scn().m_cam);
 
 			// Draw each element in the draw list
 			Lock lock(*this);
@@ -270,7 +283,7 @@ namespace pr::rdr12
 				m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
 				// Set shader constants for the nugget
-				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, caster, &dle);
+				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, &dle, caster, scn().m_cam);
 
 				// Bind textures to the pipeline
 				auto tex = FindDiffTexture(*dle.m_instance) << nugget.m_tex_diffuse << m_default_tex;
@@ -292,6 +305,9 @@ namespace pr::rdr12
 			barriers.Transition(smap.m_res.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			barriers.Commit();
 		}
+
+		// Close the command list now that we've finished rendering this scene
+		m_cmd_list.Close();
 	}
 
 	// Call draw for a nugget

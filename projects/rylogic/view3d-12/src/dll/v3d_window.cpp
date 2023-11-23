@@ -12,15 +12,11 @@ namespace pr::rdr12
 	// Default window construction settings
 	WndSettings ToWndSettings(HWND hwnd, RdrSettings const& rsettings, view3d::WindowOptions const& opts)
 	{
-		// Null hwnd is allowed when off-screen only rendering
-		auto rect = RECT{};
-		if (hwnd != 0)
-			::GetClientRect(hwnd, &rect);
-
-		auto settings = WndSettings(hwnd, true, rsettings).DefaultOutput().Size(rect.right - rect.left, rect.bottom - rect.top);
-		settings.m_multisamp = MultiSamp(opts.m_multisampling);
-		settings.m_name = opts.m_dbg_name;
-		return settings;
+		return WndSettings(hwnd, true, rsettings)
+			.DefaultOutput()
+			.MutliSampling(opts.m_multisampling)
+			.Name(opts.m_dbg_name)
+			;
 	}
 
 	// View3d Window ****************************
@@ -389,13 +385,15 @@ namespace pr::rdr12
 		// Notify of a render about to happen
 		OnRendering(this);
 
-		//// Set the view and projection matrices. Do this before adding objects to the
-		//// scene as they do last minute transform adjustments based on the camera position.
-		//auto& cam = m_scene.m_cam;
-		//m_scene.SetView(cam);
-		//cam.m_moved = false;
+		/*
+		// Set the view and projection matrices. Do this before adding objects to the
+		// scene as they do last minute transform adjustments based on the camera position.
+		auto& cam = m_scene.m_cam;
+		m_scene.SetView(cam);
+		cam.m_moved = false;
+		*/
 
-		// Set the light source
+		// Set the shadow casting light source
 		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
 
 		// Position and scale the focus point and origin point
@@ -503,15 +501,9 @@ namespace pr::rdr12
 		#endif
 
 		// Render the scene
-		auto frame = m_wnd.RenderFrame();
-		frame.Render(m_scene);
-		frame.Present();
-	}
-	void V3dWindow::Present()
-	{
-		#if 0 // todo
-		m_wnd.Present();
-		#endif
+		auto frame = m_wnd.NewFrame();
+		m_scene.Render(frame);
+		m_wnd.Present(frame);
 
 		// No longer invalidated
 		Validate();
@@ -606,16 +598,16 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the window background colour
-	Colour32 V3dWindow::BackgroundColour() const
+	Colour V3dWindow::BackgroundColour() const
 	{
-		return m_scene.m_bkgd_colour;
+		return m_wnd.BkgdColour();
 	}
-	void V3dWindow::BackgroundColour(Colour32 colour)
+	void V3dWindow::BackgroundColour(Colour_cref colour)
 	{
 		if (BackgroundColour() == colour)
 			return;
 
-		m_scene.m_bkgd_colour = colour;
+		m_wnd.BkgdColour(colour);
 		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
 		Invalidate();
 	}

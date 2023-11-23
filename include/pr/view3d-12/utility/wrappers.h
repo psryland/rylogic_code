@@ -88,6 +88,23 @@ namespace pr::rdr12
 		{}
 	};
 
+	// Resource clear value
+	struct ClearValue :D3D12_CLEAR_VALUE
+	{
+		constexpr ClearValue()
+			:D3D12_CLEAR_VALUE{ .Format = DXGI_FORMAT_UNKNOWN, .Color = { 0.0f, 0.0f, 0.0f, 1.0f } }
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, Colour_cref col)
+			:D3D12_CLEAR_VALUE{ .Format = format, .Color = { col.r, col.g, col.b, col.a } }
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, Colour32 col)
+			:ClearValue(format, Colour(col))
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, float depth, uint8_t stencil)
+			: D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = {.Depth = depth, .Stencil = stencil } }
+		{}
+	};
+
 	// Multi sampling description
 	struct MultiSamp :DXGI_SAMPLE_DESC
 	{
@@ -103,7 +120,7 @@ namespace pr::rdr12
 			Count = count;
 			Quality = quality;
 		}
-		MultiSamp& Validate(ID3D12Device* device, DXGI_FORMAT format)
+		MultiSamp& ScaleQualityLevel(ID3D12Device* device, DXGI_FORMAT format)
 		{
 			uint32_t quality = 0;
 			for (; Count > 1 && (quality = MultisampleQualityLevels(device, format, Count)) == 0; Count >>= 1) {}
@@ -289,13 +306,13 @@ namespace pr::rdr12
 		//  - Size of resource heap must be at least 64K for single-textures and constant buffers
 		using clear_value_t = std::optional<D3D12_CLEAR_VALUE>;
 
-		int ElemStride;                   // Element stride
-		int DataAlignment;                // The alignment that initialisation data should have.
-		pr::vector<Image> Data;           // The initialisation data for the buffer, texture, or texture array
-		HeapProps HeapProps;              // The heap to create this buffer in
-		D3D12_HEAP_FLAGS HeapFlags;       // Properties
-		clear_value_t ClearValue;         // A clear value for the resource
-		D3D12_RESOURCE_STATES FinalState; // The state the resource should be created into (once initialised)
+		int ElemStride;                     // Element stride
+		int DataAlignment;                  // The alignment that initialisation data should have.
+		pr::vector<Image> Data;             // The initialisation data for the buffer, texture, or texture array
+		HeapProps HeapProps;                // The heap to create this buffer in
+		D3D12_HEAP_FLAGS HeapFlags;         // Properties
+		clear_value_t ClearValue;           // A clear value for the resource
+		D3D12_RESOURCE_STATES DefaultState; // The state the resource should be in between command list executions
 
 		ResDesc()
 			: D3D12_RESOURCE_DESC()
@@ -305,8 +322,10 @@ namespace pr::rdr12
 			, HeapProps(HeapProps::Default())
 			, HeapFlags(D3D12_HEAP_FLAG_NONE)
 			, ClearValue()
-			, FinalState(D3D12_RESOURCE_STATE_COMMON)
+			, DefaultState(D3D12_RESOURCE_STATE_COMMON)
 		{}
+		ResDesc(ResDesc&& rhs) = default;
+		ResDesc(ResDesc const& rhs) = default;
 		ResDesc(D3D12_RESOURCE_DESC const& rhs)
 			: ResDesc()
 		{
@@ -328,6 +347,8 @@ namespace pr::rdr12
 			ElemStride = element_stride;
 			DataAlignment = 0;
 		}
+		ResDesc& operator = (ResDesc&& rhs) = default;
+		ResDesc& operator = (ResDesc const& rhs) = default;
 		ResDesc& operator = (D3D12_RESOURCE_DESC const& rhs)
 		{
 			if (&rhs == this) return *this;
@@ -342,11 +363,22 @@ namespace pr::rdr12
 
 			return *this;
 		}
+		ResDesc& clear(D3D12_CLEAR_VALUE clear)
+		{
+			ClearValue = clear;
+			return *this;
+		}
 		ResDesc& clear(DXGI_FORMAT format, Colour32 colour)
 		{
-			Colour c(colour);
-			ClearValue = D3D12_CLEAR_VALUE{ .Format = format, .Color = {c.a, c.r, c.g, c.b} };
-			return *this;
+			return clear(format, Colour(colour));
+		}
+		ResDesc& clear(DXGI_FORMAT format, Colour_cref colour)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
+		}
+		ResDesc& clear(DXGI_FORMAT format, D3D12_DEPTH_STENCIL_VALUE depth_stencil)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = depth_stencil });
 		}
 		ResDesc& mips(int mips)
 		{
@@ -378,9 +410,9 @@ namespace pr::rdr12
 			DataAlignment = alignment;
 			return *this;
 		}
-		ResDesc& state(D3D12_RESOURCE_STATES final_state)
+		ResDesc& def_state(D3D12_RESOURCE_STATES default_state)
 		{
-			FinalState = final_state;
+			DefaultState = default_state;
 			return *this;
 		}
 
@@ -406,12 +438,12 @@ namespace pr::rdr12
 		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
 		{
 			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
-				.state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
 		{
 			return Buf(count, element_stride, data, element_stride)
-				.state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
 		// Constant buffer description
@@ -422,7 +454,7 @@ namespace pr::rdr12
 				.mips(1)
 				.res_alignment(0ULL)
 				.data_alignment(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
-				.state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
 		// Texture resource descriptions
@@ -433,7 +465,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -443,7 +475,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -453,7 +485,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -463,7 +495,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 

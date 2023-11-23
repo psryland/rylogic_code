@@ -123,7 +123,6 @@ namespace pr::rdr12
 
 		// Render this window into whatever render target is currently set
 		void Render();
-		void Present();
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);
@@ -144,8 +143,8 @@ namespace pr::rdr12
 		bool MouseNavigateZ(v2 ss_point, float delta, bool along_ray);
 
 		// Get/Set the window background colour
-		Colour32 BackgroundColour() const;
-		void BackgroundColour(Colour32 colour);
+		Colour BackgroundColour() const;
+		void BackgroundColour(Colour_cref colour);
 
 		// Get/Set the global scene light
 		Light GlobalLight() const;

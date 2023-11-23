@@ -46,7 +46,7 @@ namespace pr::rdr12::shaders
 	}
 
 	// Config the shader
-	void ShadowMap::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, ShadowCaster const& caster, DrawListElement const* dle)
+	void ShadowMap::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, DrawListElement const* dle, ShadowCaster const& caster, SceneCamera const& cam)
 	{
 		// Set the frame constants
 		if (dle == nullptr)
@@ -65,7 +65,7 @@ namespace pr::rdr12::shaders
 
 			CBufNugget cb1 = {};
 			SetFlags(cb1, inst, nug, false);
-			SetTxfm(cb1, inst, *caster.m_scene_cam);
+			SetTxfm(cb1, inst, cam); // todo frame constant?
 			SetTint(cb1, inst, nug);
 			SetTex2Surf(cb1, inst, nug);
 			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
