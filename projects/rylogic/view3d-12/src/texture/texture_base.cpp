@@ -26,7 +26,7 @@ namespace pr::rdr12
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension)
 		:RefCounted<TextureBase>()
 		,m_mgr(&mgr)
 		,m_res(res, true)
@@ -38,9 +38,8 @@ namespace pr::rdr12
 		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		,m_name(desc.m_name)
 	{
-		auto device = m_mgr->D3DDevice();
+		auto device = m_mgr->d3d();
 		auto tdesc = desc.m_tdesc;
-		Throw(res->SetName(FmtS(L"%S", m_name.c_str())));
 
 		// Create views for the texture
 		if (!AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
@@ -54,7 +53,7 @@ namespace pr::rdr12
 			// Create the SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
 				.Format = tdesc.Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.ViewDimension = srv_dimension,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2D = {
 					.MostDetailedMip = 0,
@@ -108,6 +107,14 @@ namespace pr::rdr12
 	TextureBase::~TextureBase()
 	{
 		OnDestruction(*this, EmptyArgs());
+
+		// Release any views
+		if (m_srv)
+			m_mgr->m_descriptor_store.Release(m_srv);
+		if (m_uav)
+			m_mgr->m_descriptor_store.Release(m_uav);
+		if (m_rtv)
+			m_mgr->m_descriptor_store.Release(m_rtv);
 	}
 
 	// Access the renderer

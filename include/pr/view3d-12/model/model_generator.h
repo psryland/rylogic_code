@@ -155,118 +155,6 @@ namespace pr::rdr12
 	// Create model geometry
 	struct ModelGenerator
 	{
-		// Memory pooling for model buffers
-		template <typename VertexType = Vert>
-		struct Cache
-		{
-			using VType = VertexType;
-			using VCont = vector<VType>;
-			using ICont = pr::geometry::IdxBuf;
-			using NCont = vector<NuggetData>;
-
-		private:
-
-			// The cached buffers
-			struct alignas(16) Buffers
-			{
-				string32 m_name;  // Model name
-				VCont    m_vcont; // Model verts
-				ICont    m_icont; // Model faces/lines/points/etc
-				NCont    m_ncont; // Model nuggets
-				BBox     m_bbox;  // Model bounding box
-			};
-			static Buffers& this_thread_instance()
-			{
-				// A static instance for this thread
-				thread_local static Buffers* buffers;
-				if (!buffers) buffers = new Buffers();
-				return *buffers;
-			}
-			static bool& this_thread_cache_in_use()
-			{
-				thread_local static bool in_use;
-				if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
-				return in_use;
-			}
-			Buffers& m_buffers;
-			bool& m_in_use;
-
-		public:
-
-			string32& m_name; // Model name
-			VCont& m_vcont;   // Model verts
-			ICont& m_icont;   // Model faces/lines/points/etc
-			NCont& m_ncont;   // Model nuggets
-			BBox& m_bbox;     // Model bounding box
-
-			Cache() = delete;
-			Cache(int vcount, int icount, int ncount, int idx_stride)
-				:m_buffers(this_thread_instance())
-				,m_in_use(this_thread_cache_in_use())
-				,m_name(m_buffers.m_name)
-				,m_vcont(m_buffers.m_vcont)
-				,m_icont(m_buffers.m_icont)
-				,m_ncont(m_buffers.m_ncont)
-				,m_bbox(m_buffers.m_bbox)
-			{
-				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
-				m_vcont.resize(vcount);
-				m_icont.resize(icount * idx_stride);
-				m_ncont.resize(ncount);
-				m_icont.m_stride = idx_stride;
-				m_in_use = true;
-			}
-			~Cache()
-			{
-				Reset();
-				m_in_use = false;
-			}
-			Cache(Cache const& rhs) = delete;
-			Cache operator =(Cache const& rhs) = delete;
-
-			// Resize all buffers to 0
-			void Reset()
-			{
-				m_name.resize(0);
-				m_vcont.resize(0);
-				m_icont.resize(0);
-				m_ncont.resize(0);
-				m_bbox = BBox::Reset();
-			}
-
-			// Container item counts
-			size_t VCount() const { return m_vcont.size(); }
-			size_t ICount() const { return m_icont.count(); }
-			size_t NCount() const { return m_ncont.size(); }
-
-			// Return the buffer format associated with the index stride
-			DXGI_FORMAT IdxFormat() const
-			{
-				auto stride = m_icont.stride();
-				switch (stride)
-				{
-					case 4: return dx_format_v<uint32_t>;
-					case 2: return dx_format_v<uint16_t>;
-					case 1: return dx_format_v<uint8_t>;
-					default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
-				}
-			}
-
-			// Add a nugget to 'm_ncont' (helper)
-			void AddNugget(ETopo topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetData const* mat = nullptr)
-			{
-				// Notes:
-				// - Don't change the 'geom' flags here based on whether the material has a texture or not.
-				//   The texture may be set in the material after here and before the model is rendered.
-				auto nug = mat ? *mat : NuggetData{};
-				nug.m_topo = topo;
-				nug.m_geom = geom;
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, geometry_has_alpha);
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-				m_ncont.push_back(nug);
-			}
-		};
-
 		// Additional options for model creation
 		struct CreateOptions
 		{
@@ -444,5 +332,119 @@ namespace pr::rdr12
 		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id);
 		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id, v4& dim_out);
 		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id);
+
+		// Cache ****************************************************************************************
+
+			// Memory pooling for model buffers
+		template <typename VertexType = Vert>
+		struct Cache
+		{
+			using VType = VertexType;
+			using VCont = vector<VType>;
+			using ICont = pr::geometry::IdxBuf;
+			using NCont = vector<NuggetData>;
+
+		private:
+
+			// The cached buffers
+			struct alignas(16) Buffers
+			{
+				string32 m_name;  // Model name
+				VCont    m_vcont; // Model verts
+				ICont    m_icont; // Model faces/lines/points/etc
+				NCont    m_ncont; // Model nuggets
+				BBox     m_bbox;  // Model bounding box
+			};
+			static Buffers& this_thread_instance()
+			{
+				// A static instance for this thread
+				thread_local static Buffers* buffers;
+				if (!buffers) buffers = new Buffers();
+				return *buffers;
+			}
+			static bool& this_thread_cache_in_use()
+			{
+				thread_local static bool in_use;
+				if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
+				return in_use;
+			}
+			Buffers& m_buffers;
+			bool& m_in_use;
+
+		public:
+
+			string32& m_name; // Model name
+			VCont& m_vcont;   // Model verts
+			ICont& m_icont;   // Model faces/lines/points/etc
+			NCont& m_ncont;   // Model nuggets
+			BBox& m_bbox;     // Model bounding box
+
+			Cache() = delete;
+			Cache(int vcount, int icount, int ncount, int idx_stride)
+				:m_buffers(this_thread_instance())
+				, m_in_use(this_thread_cache_in_use())
+				, m_name(m_buffers.m_name)
+				, m_vcont(m_buffers.m_vcont)
+				, m_icont(m_buffers.m_icont)
+				, m_ncont(m_buffers.m_ncont)
+				, m_bbox(m_buffers.m_bbox)
+			{
+				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
+				m_vcont.resize(vcount);
+				m_icont.resize(icount * idx_stride);
+				m_ncont.resize(ncount);
+				m_icont.m_stride = idx_stride;
+				m_in_use = true;
+			}
+			~Cache()
+			{
+				Reset();
+				m_in_use = false;
+			}
+			Cache(Cache const& rhs) = delete;
+			Cache operator =(Cache const& rhs) = delete;
+
+			// Resize all buffers to 0
+			void Reset()
+			{
+				m_name.resize(0);
+				m_vcont.resize(0);
+				m_icont.resize(0);
+				m_ncont.resize(0);
+				m_bbox = BBox::Reset();
+			}
+
+			// Container item counts
+			size_t VCount() const { return m_vcont.size(); }
+			size_t ICount() const { return m_icont.count(); }
+			size_t NCount() const { return m_ncont.size(); }
+
+			// Return the buffer format associated with the index stride
+			DXGI_FORMAT IdxFormat() const
+			{
+				auto stride = m_icont.stride();
+				switch (stride)
+				{
+				case 4: return dx_format_v<uint32_t>;
+				case 2: return dx_format_v<uint16_t>;
+				case 1: return dx_format_v<uint8_t>;
+				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
+				}
+			}
+
+			// Add a nugget to 'm_ncont' (helper)
+			void AddNugget(ETopo topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetData const* mat = nullptr)
+			{
+				// Notes:
+				// - Don't change the 'geom' flags here based on whether the material has a texture or not.
+				//   The texture may be set in the material after here and before the model is rendered.
+				auto nug = mat ? *mat : NuggetData{};
+				nug.m_topo = topo;
+				nug.m_geom = geom;
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, geometry_has_alpha);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
+				m_ncont.push_back(nug);
+			}
+		};
 	};
 }

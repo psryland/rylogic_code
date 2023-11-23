@@ -338,14 +338,14 @@ namespace pr::rdr12
 		// Create the texture description.
 		result.desc = D3D12_RESOURCE_DESC{
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-			.Alignment = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT,
+			.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 			.Width = s_cast<UINT64>(dim.x),
 			.Height = s_cast<UINT>(dim.y),
 			.DepthOrArraySize = s_cast<UINT16>(result.images.size()),
 			.MipLevels = s_cast<UINT16>(mips),
 			.Format = format,
 			.SampleDesc = {1, 0},
-			.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+			.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 			.Flags = D3D12_RESOURCE_FLAG_NONE,
 		};
 
@@ -353,7 +353,7 @@ namespace pr::rdr12
 	}
 
 	// Load an image from a WIC image, either in memory or on disk.
-	LoadedImageResult LoadWIC(std::span<std::span<uint8_t const>> const& images, int mips, int max_dimension, FeatureSupport const* features)
+	LoadedImageResult LoadWIC(std::span<std::span<uint8_t const>> images, int mips, int max_dimension, FeatureSupport const* features)
 	{
 		if (images.empty())
 			throw std::runtime_error("Texture file data is invalid");
@@ -384,7 +384,7 @@ namespace pr::rdr12
 		// Create the texture
 		return std::move(LoadWIC(frames, mips, max_dimension, features));
 	}
-	LoadedImageResult LoadWIC(std::span<std::filesystem::path> const& filepaths, int mips, int max_dimension, FeatureSupport const* features)
+	LoadedImageResult LoadWIC(std::span<std::filesystem::path const> filepaths, int mips, int max_dimension, FeatureSupport const* features)
 	{
 		auto wic = GetWIC();
 

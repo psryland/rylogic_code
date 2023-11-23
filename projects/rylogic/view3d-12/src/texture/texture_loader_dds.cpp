@@ -345,7 +345,7 @@ namespace pr::rdr12
 		}
 
 		// Offset to the start of the file data
-		auto offset = sizeof(uint32_t) + sizeof(dds::Header) + is_DXT10 ? sizeof(dds::HeaderDXT10) : 0;
+		auto offset = sizeof(uint32_t) + sizeof(dds::Header) + (is_DXT10 ? sizeof(dds::HeaderDXT10) : 0);
 		img.bits = std::span<uint8_t const>{ img.data.get() + offset, size - offset };
 
 		// Return the image
@@ -539,14 +539,14 @@ namespace pr::rdr12
 		// Generate the resource description
 		result.desc = D3D12_RESOURCE_DESC {
 			.Dimension = resource_dimension,
-			.Alignment = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT,
+			.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 			.Width = s_cast<UINT64>(dim.x),
 			.Height = s_cast<UINT>(dim.y),
 			.DepthOrArraySize = resource_dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ?  s_cast<UINT16>(dim.z) : s_cast<UINT16>(array_size),
 			.MipLevels = s_cast<UINT16>(result.images.ssize() / array_size), // The new mip count (as a result of the 'max_dimension' limit),
 			.Format = format,
 			.SampleDesc = {1, 0},
-			.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+			.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 			.Flags = D3D12_RESOURCE_FLAG_NONE,
 		};
 

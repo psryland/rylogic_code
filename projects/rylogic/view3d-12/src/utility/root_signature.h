@@ -8,7 +8,8 @@
 
 namespace pr::rdr12
 {
-	template <typename EParam, typename ESamp> requires (std::is_enum_v<EParam> && std::is_enum_v<ESamp>)
+	template <typename EParam, typename ESamp>
+	requires (std::is_enum_v<EParam> && std::is_enum_v<ESamp>)
 	struct RootSig
 	{
 		// Notes:
@@ -25,14 +26,24 @@ namespace pr::rdr12
 			,Flags(
 				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 				//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+				//D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+				//D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+				//D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 				//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
 				D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
 				D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
 				D3D12_ROOT_SIGNATURE_FLAG_NONE)
 		{}
+
+		// Add a u32 constant parameter
+		void U32(EParam index, ECBufReg reg, int num_values, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		{
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+				.Constants = {.ShaderRegister = s_cast<UINT>(reg), .RegisterSpace = 0U, .Num32BitValues = s_cast<UINT>(num_values)},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
 
 		// Add a constant buffer parameter
 		void CBuf(EParam index, ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
@@ -44,19 +55,75 @@ namespace pr::rdr12
 			};
 		}
 
+		// Add a constant buffer range parameter
+		void CBuf(EParam index, ECBufReg reg, int count, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		{
+			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1 {
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+				.NumDescriptors = s_cast<UINT>(count),
+				.BaseShaderRegister = s_cast<UINT>(reg),
+				.RegisterSpace = 0U,
+				.Flags = flags,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
+			});
+
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = {.NumDescriptorRanges = 1U, .pDescriptorRanges = &m_des_range.back()},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
 		// Add a texture descriptor range parameter
-		void Tex(EParam index, ETexReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		void Tex(EParam index, ETexReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1 {
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 				.NumDescriptors = s_cast<UINT>(count),
 				.BaseShaderRegister = s_cast<UINT>(reg),
 				.RegisterSpace = 0U,
+				.Flags = flags,
 				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
 			});
 			get(index) = D3D12_ROOT_PARAMETER1 {
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = {.NumDescriptorRanges = 1U, .pDescriptorRanges = &m_des_range.back()},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
+		// Add a Unordered access view descriptor range parameter
+		void Uav(EParam index, EUAVReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		{
+			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+				.NumDescriptors = s_cast<UINT>(count),
+				.BaseShaderRegister = s_cast<UINT>(reg),
+				.RegisterSpace = 0U,
+				.Flags = flags,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
+			});
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = {.NumDescriptorRanges = 1U, .pDescriptorRanges = &m_des_range.back()},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
+		// Add a sampler descriptor range parameter
+		void Samp(EParam index, ESamReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		{
+			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+				.NumDescriptors = s_cast<UINT>(count),
+				.BaseShaderRegister = s_cast<UINT>(reg),
+				.RegisterSpace = 0U,
+				.Flags = flags,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND,
+			});
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = {.NumDescriptorRanges =  1U, .pDescriptorRanges = &m_des_range.back()},
 				.ShaderVisibility = shader_visibility,
 			};
 		}

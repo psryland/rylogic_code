@@ -247,7 +247,7 @@ namespace pr
 		{
 			std::filesystem::path path;
 			Throw(FolderPath(folder_id, flags, token, path), "SHGetKnownFolderPath failed");
-			return std::move(path);
+			return path;
 		}
 
 		// Return the filename for a user settings file

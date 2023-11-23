@@ -12,15 +12,11 @@ namespace pr::rdr12
 	// Default window construction settings
 	WndSettings ToWndSettings(HWND hwnd, RdrSettings const& rsettings, view3d::WindowOptions const& opts)
 	{
-		// Null hwnd is allowed when off-screen only rendering
-		auto rect = RECT{};
-		if (hwnd != 0)
-			::GetClientRect(hwnd, &rect);
-
-		auto settings = WndSettings(hwnd, true, rsettings).DefaultOutput().Size(rect.right - rect.left, rect.bottom - rect.top);
-		settings.m_multisamp = MultiSamp(opts.m_multisampling);
-		settings.m_name = opts.m_dbg_name;
-		return settings;
+		return WndSettings(hwnd, true, rsettings)
+			.DefaultOutput()
+			.MutliSampling(opts.m_multisampling)
+			.Name(opts.m_dbg_name)
+			;
 	}
 
 	// View3d Window ****************************
@@ -97,9 +93,9 @@ namespace pr::rdr12
 	{
 		return m_dll->m_rdr;
 	}
-	ResourceManager& V3dWindow::res_mgr() const
+	ResourceManager& V3dWindow::res() const
 	{
-		return rdr().res_mgr();
+		return rdr().res();
 	}
 
 	// Get/Set the settings
@@ -185,6 +181,38 @@ namespace pr::rdr12
 	{
 		m_scene.m_viewport.Set(vp.m_x, vp.m_y, vp.m_width, vp.m_height, vp.m_screen_w, vp.m_screen_h, vp.m_min_depth, vp.m_max_depth);
 		OnSettingsChanged(this, view3d::ESettings::Scene_Viewport);
+	}
+
+	// Enumerate the object collection guids associated with this window
+	void V3dWindow::EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& guid : m_guids)
+		{
+			if (enum_guids_cb(guid)) continue;
+			break;
+		}
+	}
+
+	// Enumerate the objects associated with this window
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& object : m_objects)
+		{
+			if (enum_objects_cb(object)) continue;
+			break;
+		}
+	}
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& object : m_objects)
+		{
+			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
+			if (enum_objects_cb(object)) continue;
+			break;
+		}
 	}
 
 	// Add/Remove an object to this window
@@ -357,15 +385,16 @@ namespace pr::rdr12
 		// Notify of a render about to happen
 		OnRendering(this);
 
-		//// Set the view and projection matrices. Do this before adding objects to the
-		//// scene as they do last minute transform adjustments based on the camera position.
-		//auto& cam = m_scene.m_cam;
-		//m_scene.SetView(cam);
-		//cam.m_moved = false;
+		/*
+		// Set the view and projection matrices. Do this before adding objects to the
+		// scene as they do last minute transform adjustments based on the camera position.
+		auto& cam = m_scene.m_cam;
+		m_scene.SetView(cam);
+		cam.m_moved = false;
+		*/
 
-		// Set the light source
-		//m_scene.m_global_light = m_light;
-		//m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
+		// Set the shadow casting light source
+		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
 
 		// Position and scale the focus point and origin point
 		if (AnySet(m_visible_objects, EStockObject::FocusPoint | EStockObject::OriginPoint))
@@ -472,15 +501,9 @@ namespace pr::rdr12
 		#endif
 
 		// Render the scene
-		auto frame = m_wnd.RenderFrame();
-		frame.Render(m_scene);
-		frame.Present();
-	}
-	void V3dWindow::Present()
-	{
-		#if 0 // todo
-		m_wnd.Present();
-		#endif
+		auto frame = m_wnd.NewFrame();
+		m_scene.Render(frame);
+		m_wnd.Present(frame);
 
 		// No longer invalidated
 		Validate();
@@ -575,17 +598,63 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the window background colour
-	Colour32 V3dWindow::BackgroundColour() const
+	Colour V3dWindow::BackgroundColour() const
 	{
-		return m_scene.m_bkgd_colour;
+		return m_wnd.BkgdColour();
 	}
-	void V3dWindow::BackgroundColour(Colour32 colour)
+	void V3dWindow::BackgroundColour(Colour_cref colour)
 	{
 		if (BackgroundColour() == colour)
 			return;
 
-		m_scene.m_bkgd_colour = colour;
+		m_wnd.BkgdColour(colour);
 		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
+		Invalidate();
+	}
+
+	// Get/Set the global scene light
+	Light V3dWindow::GlobalLight() const
+	{
+		return m_scene.m_global_light;
+	}
+	void V3dWindow::GlobalLight(Light const& light)
+	{
+		if (GlobalLight() == light)
+			return;
+
+		auto settings = view3d::ESettings::Lighting;
+		if (m_scene.m_global_light.m_type != light.m_type) settings |= view3d::ESettings::Lighting_Type;
+		if (m_scene.m_global_light.m_position != light.m_position) settings |= view3d::ESettings::Lighting_Position;
+		if (m_scene.m_global_light.m_direction != light.m_direction) settings |= view3d::ESettings::Lighting_Direction;
+		if (m_scene.m_global_light.m_ambient != light.m_ambient) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_diffuse != light.m_diffuse) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_specular != light.m_specular) settings |= view3d::ESettings::Lighting_Colour;
+		if (m_scene.m_global_light.m_specular_power != light.m_specular_power) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_range != light.m_range) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_falloff != light.m_falloff) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_inner_angle != light.m_inner_angle) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_outer_angle != light.m_outer_angle) settings |= view3d::ESettings::Lighting_Range;
+		if (m_scene.m_global_light.m_cast_shadow != light.m_cast_shadow) settings |= view3d::ESettings::Lighting_Shadows;
+		if (m_scene.m_global_light.m_cam_relative != light.m_cam_relative) settings |= view3d::ESettings::Lighting_Position | view3d::ESettings::Lighting_Direction;
+		if (m_scene.m_global_light.m_on != light.m_on) settings |= view3d::ESettings::Lighting_All;
+
+		m_scene.m_global_light = light;
+		OnSettingsChanged(this, settings);
+		Invalidate();
+	}
+
+	// Get/Set the global environment map for this window
+	view3d::CubeMap V3dWindow::EnvMap() const
+	{
+		return m_scene.m_global_envmap.get();
+	}
+	void V3dWindow::EnvMap(view3d::CubeMap env_map)
+	{
+		if (EnvMap() == env_map)
+			return;
+
+		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
+		OnSettingsChanged(this, view3d::ESettings::Scene_EnvMap);
 		Invalidate();
 	}
 
@@ -644,15 +713,15 @@ namespace pr::rdr12
 	void V3dWindow::CreateStockObjects()
 	{
 		// Create the focus point/origin models
-		m_focus_point.m_model = res_mgr().FindModel(EStockModel::Basis);
+		m_focus_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
 		m_focus_point.m_i2w = m4x4Identity;
-		m_origin_point.m_model = res_mgr().FindModel(EStockModel::Basis);
+		m_origin_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
 		m_origin_point.m_i2w = m4x4Identity;
 
 		// Create the selection box model
-		m_selection_box.m_model = res_mgr().FindModel(EStockModel::SelectionBox);
+		m_selection_box.m_model = res().CreateModel(EStockModel::SelectionBox);
 		m_selection_box.m_tint = Colour32White;
 		m_selection_box.m_i2w = m4x4Identity;
 	}

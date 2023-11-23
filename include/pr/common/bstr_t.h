@@ -33,7 +33,7 @@ namespace pr
 			:m_str(SysAllocString(rhs))
 			,m_own(true)
 		{}
-		bstr_t(bstr_t&& rhs)
+		bstr_t(bstr_t&& rhs) noexcept
 			:m_str(rhs.m_str)
 			,m_own(rhs.m_own)
 		{
@@ -55,7 +55,7 @@ namespace pr
 			m_own = true;
 			return *this;
 		}
-		bstr_t& operator = (bstr_t&& rhs)
+		bstr_t& operator = (bstr_t&& rhs) noexcept
 		{
 			if (&rhs == this) return *this;
 			std::swap(m_str, rhs.m_str);

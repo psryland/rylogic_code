@@ -1,8 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Globals -->
   <Import Project="..\..\..\build\props\globals.props" />
-	<PropertyGroup Label="Globals">
+  <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}</ProjectGuid>
     <RootNamespace>View3d</RootNamespace>
@@ -39,29 +39,41 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <EnableModules>false</EnableModules>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        $(ProjectDir)..\..\..\include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>view3d-12.imp;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+        view3d-12.imp;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+        $(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration);
+        %(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <CustomBuildStep>
-      <Inputs>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\view3d-12.dll;%(Inputs)</Inputs>
-      <Command>py $(ProjectDir)post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Copying dependencies</Message>
-      <Outputs>view3d-12.dll</Outputs>
-    </CustomBuildStep>
   </ItemDefinitionGroup>
-
+  
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
     <ClCompile Include="src\main.cpp" />
-    <None Include="post_build.py" />
   </ItemGroup>
+
+  <!-- Dependencies -->
+  <Target Name="Deploy" AfterTargets="Build"
+    Inputs="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll"
+    Outputs="$(TargetDir)view3d-12.dll"
+  >
+    <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\"/>
+    <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.pdb $(TargetDir) -OnlyIfNewer -IgnoreMissing" WorkingDirectory="$(SolutionDir)..\"/>
+  </Target>
 
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="..\..\..\build\packages\WinPixEventRuntime.targets" />
 </Project>

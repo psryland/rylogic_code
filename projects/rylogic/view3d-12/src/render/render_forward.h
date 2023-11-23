@@ -12,18 +12,30 @@ namespace pr::rdr12
 {
 	struct RenderForward :RenderStep
 	{
+	private:
+
 		shaders::Forward m_shader;
+		GfxCmdList m_cmd_list;
+		Texture2DPtr m_default_tex;
+		SamplerPtr m_default_sam;
+	
+	public:
+
 		explicit RenderForward(Scene& scene);
+		~RenderForward();
+
+		// Compile-time derived type
+		inline static constexpr ERenderStep Id = ERenderStep::RenderForward;
 
 	private:
+
+		// Perform the render step
+		void Execute(Frame& frame) override;
 
 		// Add model nuggets to the draw list for this render step
 		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist) override;
 
-		// Perform the render step
-		void ExecuteInternal(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list) override;
-
 		// Draw a single nugget
-		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc, ID3D12GraphicsCommandList* cmd_list);
+		void DrawNugget(Nugget const& nugget, PipeStateDesc& desc);
 	};
 }

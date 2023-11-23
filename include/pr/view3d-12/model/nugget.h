@@ -11,6 +11,7 @@
 #include "pr/view3d-12/shaders/shader.h"
 //#include "pr/view3d/models/model_buffer.h"
 #include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 //#include "pr/view3d/textures/texture_cube.h"
 
@@ -90,7 +91,7 @@ namespace pr::rdr12
 		shaders_t       m_shaders;               // Override shaders
 		PipeStates      m_pso;                   // A collection of modifications to the pipeline state object description
 		Texture2DPtr    m_tex_diffuse;           // Diffuse texture
-		//todo SamplerPtr    m_samp_diffuse;          // The sampler to use with the diffuse texture
+		SamplerPtr      m_sam_diffuse;           // The sampler to use with the diffuse texture
 		Colour32        m_tint;                  // Per-nugget tint
 		SortKey         m_sort_key;              // A base sort key for this nugget
 		float           m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
@@ -135,9 +136,6 @@ namespace pr::rdr12
 		// Get/Set the cull mode for this nugget
 		ECullMode CullMode() const;
 		void CullMode(ECullMode fill_mode);
-
-		// True if this nugget should be rendered
-		bool Visible() const;
 
 		// Delete any dependent nuggets based on 'pred'
 		template <typename Pred>

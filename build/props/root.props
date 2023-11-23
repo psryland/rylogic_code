@@ -7,10 +7,12 @@
     <TargetPlatform>$(Platform)</TargetPlatform>
   </PropertyGroup>
 
-  <!-- Compiler flags s-->
+  <!-- Compiler flags -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;_WIN32_WINNT=_WIN32_WINNT_WIN10;NOMINMAX;WIN32_LEAN_AND_MEAN;GDIPVER=0x0110</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355;5105</DisableSpecificWarnings>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -48,7 +50,10 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>
+        $(SolutionDir)..\lib\$(PlatformTarget)\$(Configuration);
+        %(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>

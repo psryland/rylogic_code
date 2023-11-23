@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Rylogic.Common;
 
 namespace TimeTracker
 {
@@ -13,7 +12,16 @@ namespace TimeTracker
 		{
 			TaskName = task_name;
 			Periods = new List<TimePeriod>(periods);
+			foreach (var p in Periods)
+				p.PropertyChanged += WeakRef.MakeWeak(HandlePropChanged, h => p.PropertyChanged -= h);
+			
+			void HandlePropChanged(object? sender, PropertyChangedEventArgs e)
+			{
+				if (e.PropertyName == nameof(TimePeriod.Duration))
+					NotifyPropertyChanged(nameof(Total));
+			}
 		}
+
 
 		/// <summary>The name of the task</summary>
 		public string TaskName { get; }

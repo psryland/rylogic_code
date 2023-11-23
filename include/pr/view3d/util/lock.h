@@ -82,7 +82,7 @@ namespace pr::rdr
 			Map(dc, res, sub, stride, map_type, flags, range);
 		}
 		Lock(Lock const&) = delete;
-		Lock(Lock&& rhs)
+		Lock(Lock&& rhs) noexcept
 			:D3D11_MAPPED_SUBRESOURCE(rhs)
 			,m_dc(rhs.m_dc)
 			,m_res(rhs.m_res)
@@ -100,6 +100,8 @@ namespace pr::rdr
 		{
 			Unmap();
 		}
+		Lock& operator = (Lock&&) = delete;
+		Lock& operator = (Lock const&) = delete;
 
 		// Returns a pointer to the mapped memory
 		// SDK Notes: *Don't read from a sub-resource mapped for writing*

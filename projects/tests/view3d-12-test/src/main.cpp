@@ -12,6 +12,11 @@ using namespace pr;
 using namespace pr::gui;
 using namespace pr::rdr12;
 
+// TODO:
+//  Text / Finish the drawing of all LdrObjects
+//  Finish the View3d API
+//  Ray cast/ Hit test support
+
 // Application window
 struct Main :Form
 {
@@ -31,6 +36,7 @@ struct Main :Form
 	view3d::Window m_win3d;
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
+	view3d::CubeMap m_envmap;
 	//Renderer m_rdr;
 	//Window m_wnd;
 	//Scene m_scn;
@@ -52,9 +58,19 @@ struct Main :Form
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
-		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_dbg_name = "TestWnd"}))
-		, m_obj0(View3D_ObjectCreateLdrA("*Box first_box_eva 8000FF00 { 1 2 3 }", false, nullptr, nullptr))
+		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
+		, m_obj0(View3D_ObjectCreateLdrA(
+			"*Plane ground FFFFE8A0\n"
+			"{\n"
+			"	0 0 0\n"
+			"	0 1 0\n"
+			"	40 40\n"
+			"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
+			"}\n"
+			//"*Box first_box_eva FF00FF00 { 1 2 3 }"
+			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
+		, m_envmap(View3D_CubeMapCreateFromUri("E:/Rylogic/art/textures/cubemaps/hanger/hanger-??.jpg", {}))
 		//,m_rdr(RSettings(hinstance))
 		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
 		//,m_scn(m_wnd)
@@ -62,10 +78,16 @@ struct Main :Form
 		//,m_inst1()
 	{
 		// Set up the scene
-		//m_scn.m_bkgd_colour = Colour32(0xFF908080);
 		View3D_WindowBackgroundColourSet(m_win3d, 0xFF908080);
-		//m_scn.m_cam.LookAt(v4{0, 0, +3, 1}, v4::Origin(), v4::YAxis());
-		View3D_CameraPositionSet(m_win3d, {0, 0, +7, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
+	
+		// Cast shadows
+		auto light = View3D_LightPropertiesGet(m_win3d);
+		light.m_type = view3d::ELight::Directional;
+		light.m_direction = To<view3d::Vec4>(v4::Normal(-1, -1, -1, 0));
+		light.m_cast_shadow = 10.0f;
+		light.m_cam_relative = false;
+		View3D_LightPropertiesSet(m_win3d, light);
 
 		//m_inst0.m_model = m_rdr.res_mgr().FindModel(EStockModel::UnitQuad);
 		//
@@ -79,8 +101,15 @@ struct Main :Form
 		//m_scn.AddInstance(m_inst1);
 		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
-
 		View3D_DemoSceneCreate(m_win3d);
+
+		// EnvMap
+		View3D_WindowEnvMapSet(m_win3d, m_envmap);
+		View3D_WindowEnumObjects(m_win3d, [](void*, view3d::Object obj)
+			{
+				View3D_ObjectReflectivitySet(obj, 0.2f, "");
+				return true;
+			}, nullptr);
 
 		//m_inst0.m_i2w = m4x4::Identity();
 		//m_inst0.m_tint = Colour32Green;
@@ -89,6 +118,7 @@ struct Main :Form
 	}
 	~Main()
 	{
+		View3D_CubeMapRelease(m_envmap);
 		View3D_WindowDestroy(m_win3d);
 		View3D_ObjectDelete(m_obj0);
 		View3D_ObjectDelete(m_obj1);
@@ -173,12 +203,12 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		{
 			time += dt * 0.001f;
 			auto i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
-			View3D_ObjectO2WSet(main.m_obj0, To<view3d::Mat4x4>(i2w), nullptr);
+			//View3D_ObjectO2WSet(main.m_obj0, To<view3d::Mat4x4>(i2w), nullptr);
 			//main.m_inst0.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 			//main.m_inst1.m_i2w = m4x4::Transform(time*0.5f, time*0.3f, time*0.1f, v4::Origin());
 		
 			auto c2w = View3D_CameraToWorldGet(main.m_win3d);
-			SetWindowTextA(main, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z));
+			SetWindowTextA(main, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
 
 			//auto frame = main.m_wnd.RenderFrame();
 			//frame.Render(main.m_scn);

@@ -234,10 +234,41 @@ namespace pr::rdr12
 			if (hr != DXGI_ERROR_UNSUPPORTED) Throw(hr);
 		}
 	}
-	D3D12_FEATURE_DATA_FORMAT_SUPPORT FeatureSupport::Format(DXGI_FORMAT format) const
+
+	// Return the format support
+	FeatureSupport::FormatData FeatureSupport::Format(DXGI_FORMAT format) const
 	{
-		D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {format};
+		FeatureSupport::FormatData support = { format };
 		Throw(m_device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 		return support;
+	}
+
+	// Check the given format is supported
+	bool FeatureSupport::FormatData::Check(D3D12_FORMAT_SUPPORT1 format) const
+	{
+		return AllSet(Support1, format);
+	}
+	bool FeatureSupport::FormatData::Check(D3D12_FORMAT_SUPPORT2 format) const
+	{
+		return AllSet(Support2, format);
+	}
+	bool FeatureSupport::FormatData::CheckSRV() const
+	{
+		return Check(D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
+	}
+	bool FeatureSupport::FormatData::CheckUAV() const
+	{
+		return
+			Check(D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) &&
+			Check(D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) &&
+			Check(D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE);
+	}
+	bool FeatureSupport::FormatData::CheckRTV() const
+	{
+		return Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET);
+	}
+	bool FeatureSupport::FormatData::CheckDSV() const
+	{
+		return Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL);
 	}
 }

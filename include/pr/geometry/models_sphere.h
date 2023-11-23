@@ -37,7 +37,10 @@ namespace pr::geometry
 		{
 			VIndex m_adjacent; // The adjacent vertex (not necessarily at the same recursion level)
 			VIndex m_child;    // The vertex between the associated vertex and 'm_adjacent' in the recursion level below 'm_adjacent'
-			Adjacent() {}
+			Adjacent()
+				:m_adjacent()
+				,m_child()
+			{}
 			Adjacent(VIndex adj, VIndex child)
 				:m_adjacent(adj)
 				,m_child(child)

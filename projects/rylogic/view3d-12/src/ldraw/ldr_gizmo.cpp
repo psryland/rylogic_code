@@ -677,6 +677,10 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
+	ResourceManager& LdrGizmo::res() const
+	{
+		return rdr().res();
+	}
 
 	// Get/Set the mode the gizmo is in
 	bool LdrGizmo::Enabled() const
@@ -713,7 +717,7 @@ namespace pr::rdr12
 			ResDesc::VBuf<Vert>(data.vcount, data.vdata),
 			ResDesc::IBuf<uint16_t>(data.icount, data.idata),
 			*data.bbox, data.name);
-		m_gfx.m_model = rdr().res_mgr().CreateModel(mdesc);
+		m_gfx.m_model = res().CreateModel(mdesc);
 
 		// Create render nuggets for the model.
 		// We render the gizmo in multiple passes because we
@@ -724,7 +728,7 @@ namespace pr::rdr12
 			nugget.m_sort_key.Group(ESortGroup::PostOpaques);
 			nugget.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
 			nugget.m_pso.Set<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER);
-			nugget.m_tex_diffuse = rdr().res_mgr().FindTexture(EStockTexture::Gray);
+			nugget.m_tex_diffuse = res().CreateTexture(EStockTexture::Gray);
 			m_gfx.m_model->CreateNugget(nugget);
 		}
 		{

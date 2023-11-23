@@ -27,6 +27,8 @@
 #include <filesystem>
 #include <type_traits>
 #include <mutex>
+#include <condition_variable>
+#include <thread>
 #include <future>
 #include <cwctype>
 
@@ -42,6 +44,8 @@
 #include <dxgi1_4.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
+#include <pix3.h>
+#include <pix3_win.h>
 
 //#include "pr/macros/link.h"
 //#include "pr/macros/count_of.h"
@@ -58,6 +62,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/fmt.h"
 #include "pr/common/cast.h"
+#include "pr/common/coalesce.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
@@ -107,6 +112,7 @@
 #include "pr/geometry/model_file.h"
 #include "pr/geometry/utility.h"
 #include "pr/threads/synchronise.h"
+#include "pr/threads/name_thread.h"
 #include "pr/gui/gdiplus.h"
 //#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
@@ -118,6 +124,7 @@ namespace pr::rdr12
 {
 	// Types
 	using byte = unsigned char;
+	using float4_t = float[4];
 	using RdrId = std::uintptr_t;
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
@@ -125,10 +132,10 @@ namespace pr::rdr12
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
 	template <typename T> using Scope = pr::Scope<T>;
-	template <typename T> using RefPtr = pr::RefPtr<T>;
-	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
+	template <typename T> using RefCounted = pr::RefCount<T>;
+	template <typename T> using RefPtr = pr::RefPtr<T>;
 
 	// Fixed size strings
 	using string32 = pr::string<char, 32>;
@@ -149,6 +156,7 @@ namespace pr::rdr12
 	struct Renderer;
 	struct Window;
 	struct Scene;
+	struct Frame;
 	struct SceneCamera;
 	struct RdrSettings;
 	struct WndSettings;
@@ -156,6 +164,7 @@ namespace pr::rdr12
 	// Rendering
 	struct RenderStep;
 	struct RenderForward;
+	struct RenderSmap;
 	struct DrawListElement;
 	struct BackBuffer;
 	struct PipeState;
@@ -164,8 +173,13 @@ namespace pr::rdr12
 	// Resources
 	struct ResourceManager;
 	struct ResDesc;
-	    struct SamDesc;
+	struct SamDesc;
 	
+	// Samplers
+	struct SamplerDesc;
+	struct Sampler;
+	using SamplerPtr = RefPtr<Sampler>;
+
 	// Textures
 	struct TextureDesc;
 	struct TextureBase;
@@ -205,14 +219,11 @@ namespace pr::rdr12
 		struct ShowNormalsGS;
 		struct ThickLineStripGS;
 		struct ThickLineListGS;
+		struct ShadowMap;
 	}
 	using ShaderPtr = RefPtr<Shader>;
-		    //struct ShaderDesc;
-		    //struct ShaderSet0;
-		    //struct ShaderSet1;
-		    //struct ShaderMap;
-		    struct ShadowMap;
-
+	struct ShadowMap;
+	struct ShadowCaster;
 
 	// Lighting
 	struct Light;
@@ -223,6 +234,7 @@ namespace pr::rdr12
 	struct Image;
 	struct ImageWithData;
 	struct FeatureSupport;
+	struct GpuSync;
 	
 	// Dll
 	struct Context;
@@ -345,13 +357,20 @@ namespace pr::rdr12
 	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 
-	
-	// Concepts
+	// Instances
 	template <typename T>
-	concept RenderStepType = requires
+	concept InstanceType = requires(T t)
 	{
-		std::is_base_of_v<RenderStep, T>;
-		std::is_same_v<decltype(T::Id), ERenderStep>;
+		{ std::is_same_v<decltype(t.m_base), BaseInstance> };                    // must have a member called 'm_base'
+		{ static_cast<void const*>(&t.m_base) == static_cast<void const*>(&t) }; // it must be the first member
+	};
+	
+	// Render steps
+	template <typename T>
+	concept RenderStepType = requires(T t)
+	{
+		{ std::is_base_of_v<RenderStep, T> };
+		{ std::is_same_v<decltype(T::Id), ERenderStep> };
 	};
 }
 

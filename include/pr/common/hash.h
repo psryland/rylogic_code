@@ -17,6 +17,7 @@
 #include <iterator>
 #include <concepts>
 #include <type_traits>
+#include <cassert>
 
 namespace pr::hash
 {
@@ -223,22 +224,34 @@ namespace pr::hash
 	// Hash a range of bytes
 	inline HashValue32 HashBytes32(void const* ptr, void const* end, uint32_t h = FNV_offset_basis32)
 	{
-		auto bzero = static_cast<uint8_t const*>(nullptr);
+		constexpr auto unaligned_mask = alignof(uint32_t) - 1;
+		constexpr auto bzero = static_cast<uint8_t const*>(nullptr);
 		auto bptr = reinterpret_cast<uint8_t const*>(ptr);
 		auto bend = reinterpret_cast<uint8_t const*>(end);
-		auto unaligned_mask = alignof(uint32_t) - 1;
+		assert(ptr <= end);
 
-		// Hash any unaligned bytes
-		for (; ((bptr - bzero) & unaligned_mask) != 0; ++bptr)
-			h = Hash32CT(*bptr, h);
+		if (bend - bptr < sizeof(uint32_t))
+		{
+			for (; bptr != bend; ++bptr)
+				h = Hash32CT(*bptr, h);
+		}
+		else
+		{
+			// Hash any unaligned bytes
+			auto count = ~((bptr - bzero) - 1) & unaligned_mask;
+			for (; count-- != 0; ++bptr)
+				h = Hash32CT(*bptr, h);
 
-		// Hash in units of uint32_t
-		for (; bend - bptr >= sizeof(uint32_t); bptr += sizeof(uint32_t))
-			h = Hash32CT(*reinterpret_cast<uint32_t const*>(bptr), h);
+			// Hash in units of uint32_t
+			count = (bend - bptr) / sizeof(uint32_t);
+			for (; count-- != 0; bptr += sizeof(uint32_t))
+				h = Hash32CT(*reinterpret_cast<uint32_t const*>(bptr), h);
 
-		// Hash remaining bytes
-		for (; bptr != bend; ++bptr)
-			h = Hash32CT(*bptr, h);
+			// Hash remaining bytes
+			count = bend - bptr;
+			for (; count-- != 0; ++bptr)
+				h = Hash32CT(*bptr, h);
+		}
 
 		return h;
 	}
@@ -427,10 +440,10 @@ namespace pr::hash
 		// Handle the last few bytes of the input array
 		switch (len)
 		{
-			case 3: h ^= data[2] << 16;
-			case 2: h ^= data[1] << 8;
-			case 1: h ^= data[0];
-			h *= m;
+		case 3: h ^= data[2] << 16; [[fallthrough]];
+		case 2: h ^= data[1] << 8; [[fallthrough]];
+		case 1: h ^= data[0]; h *= m; [[fallthrough]];
+		default: break;
 		}
 
 		// Do a few final mixes of the hash to ensure the last few bytes are well-incorporated.
@@ -467,17 +480,17 @@ namespace pr::hash
 		}
 
 		auto data2 = (uint8_t const*)data;
-		switch(len & 7)
+		switch (len & 7)
 		{
-		case 7: h ^= uint64_t(data2[6]) << 48;
-		case 6: h ^= uint64_t(data2[5]) << 40;
-		case 5: h ^= uint64_t(data2[4]) << 32;
-		case 4: h ^= uint64_t(data2[3]) << 24;
-		case 3: h ^= uint64_t(data2[2]) << 16;
-		case 2: h ^= uint64_t(data2[1]) << 8;
-		case 1: h ^= uint64_t(data2[0]);
-				h *= m;
-		};
+		case 7: h ^= uint64_t(data2[6]) << 48; [[fallthrough]];
+		case 6: h ^= uint64_t(data2[5]) << 40; [[fallthrough]];
+		case 5: h ^= uint64_t(data2[4]) << 32; [[fallthrough]];
+		case 4: h ^= uint64_t(data2[3]) << 24; [[fallthrough]];
+		case 3: h ^= uint64_t(data2[2]) << 16; [[fallthrough]];
+		case 2: h ^= uint64_t(data2[1]) << 8; [[fallthrough]];
+		case 1: h ^= uint64_t(data2[0]); h *= m; [[fallthrough]];
+		default: break;
+		}
  
 		h ^= h >> r;
 		h *= m;
@@ -640,7 +653,7 @@ namespace pr::common
 		}
 		{ // Hash arguments
 			char const* s = "was";
-			struct POD { int i; char c; short s[3]; } pod;
+			struct POD { int i; char c; short s[3]; } pod = {};
 			memset(&pod, 0, sizeof(pod)); // Remember padding bytes are not initialised;
 			pod.i = 32;
 			pod.c = 'X';

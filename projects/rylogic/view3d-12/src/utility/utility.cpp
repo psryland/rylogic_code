@@ -8,6 +8,9 @@
 
 namespace pr::rdr12
 {
+	// Stores the default resource state in a resource's private data
+	static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
+
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)
 	{
@@ -97,6 +100,283 @@ namespace pr::rdr12
 				return true;
 			default:
 				return false;
+		}
+	}
+
+	// True if 'fmt' has an alpha channel
+	bool HasAlphaChannel(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+			case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			case DXGI_FORMAT_R32G32B32A32_UINT:
+			case DXGI_FORMAT_R32G32B32A32_SINT:
+			case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+			case DXGI_FORMAT_R16G16B16A16_FLOAT:
+			case DXGI_FORMAT_R16G16B16A16_UNORM:
+			case DXGI_FORMAT_R16G16B16A16_UINT:
+			case DXGI_FORMAT_R16G16B16A16_SNORM:
+			case DXGI_FORMAT_R16G16B16A16_SINT:
+			case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+			case DXGI_FORMAT_R10G10B10A2_UNORM:
+			case DXGI_FORMAT_R10G10B10A2_UINT:
+			case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			case DXGI_FORMAT_R8G8B8A8_UINT:
+			case DXGI_FORMAT_R8G8B8A8_SNORM:
+			case DXGI_FORMAT_R8G8B8A8_SINT:
+			case DXGI_FORMAT_BC1_TYPELESS:
+			case DXGI_FORMAT_BC1_UNORM:
+			case DXGI_FORMAT_BC1_UNORM_SRGB:
+			case DXGI_FORMAT_BC2_TYPELESS:
+			case DXGI_FORMAT_BC2_UNORM:
+			case DXGI_FORMAT_BC2_UNORM_SRGB:
+			case DXGI_FORMAT_BC3_TYPELESS:
+			case DXGI_FORMAT_BC3_UNORM:
+			case DXGI_FORMAT_BC3_UNORM_SRGB:
+			case DXGI_FORMAT_B5G5R5A1_UNORM:
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+			case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+			case DXGI_FORMAT_BC6H_TYPELESS:
+			case DXGI_FORMAT_BC7_TYPELESS:
+			case DXGI_FORMAT_BC7_UNORM:
+			case DXGI_FORMAT_BC7_UNORM_SRGB:
+			case DXGI_FORMAT_A8P8:
+			case DXGI_FORMAT_B4G4R4A4_UNORM:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	// True if 'fmt' is compatible with UA views
+	bool IsUAVCompatible(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			case DXGI_FORMAT_R32G32B32A32_UINT:
+			case DXGI_FORMAT_R32G32B32A32_SINT:
+			case DXGI_FORMAT_R16G16B16A16_FLOAT:
+			case DXGI_FORMAT_R16G16B16A16_UINT:
+			case DXGI_FORMAT_R16G16B16A16_SINT:
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+			case DXGI_FORMAT_R8G8B8A8_UINT:
+			case DXGI_FORMAT_R8G8B8A8_SINT:
+			case DXGI_FORMAT_R32_FLOAT:
+			case DXGI_FORMAT_R32_UINT:
+			case DXGI_FORMAT_R32_SINT:
+			case DXGI_FORMAT_R16_FLOAT:
+			case DXGI_FORMAT_R16_UINT:
+			case DXGI_FORMAT_R16_SINT:
+			case DXGI_FORMAT_R8_UNORM:
+			case DXGI_FORMAT_R8_UINT:
+			case DXGI_FORMAT_R8_SINT:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	// True if 'fmt' is an SRGB format
+	bool IsSRGB(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			case DXGI_FORMAT_BC1_UNORM_SRGB:
+			case DXGI_FORMAT_BC2_UNORM_SRGB:
+			case DXGI_FORMAT_BC3_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+			case DXGI_FORMAT_BC7_UNORM_SRGB:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	// True if 'fmt' is a BGR format
+	bool IsBGRFormat(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	// True if 'fmt' is a depth format
+	bool IsDepth(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+			case DXGI_FORMAT_D32_FLOAT:
+			case DXGI_FORMAT_D24_UNORM_S8_UINT:
+			case DXGI_FORMAT_D16_UNORM:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	// Convert 'fmt' to a typeless format
+	DXGI_FORMAT ToTypeless(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R32G32B32A32_FLOAT:
+			case DXGI_FORMAT_R32G32B32A32_UINT:
+			case DXGI_FORMAT_R32G32B32A32_SINT:
+				return DXGI_FORMAT_R32G32B32A32_TYPELESS;
+			case DXGI_FORMAT_R32G32B32_FLOAT:
+			case DXGI_FORMAT_R32G32B32_UINT:
+			case DXGI_FORMAT_R32G32B32_SINT:
+				return DXGI_FORMAT_R32G32B32_TYPELESS;
+			case DXGI_FORMAT_R16G16B16A16_FLOAT:
+			case DXGI_FORMAT_R16G16B16A16_UNORM:
+			case DXGI_FORMAT_R16G16B16A16_UINT:
+			case DXGI_FORMAT_R16G16B16A16_SNORM:
+			case DXGI_FORMAT_R16G16B16A16_SINT:
+				return DXGI_FORMAT_R16G16B16A16_TYPELESS;
+			case DXGI_FORMAT_R32G32_FLOAT:
+			case DXGI_FORMAT_R32G32_UINT:
+			case DXGI_FORMAT_R32G32_SINT:
+				return DXGI_FORMAT_R32G32_TYPELESS;
+			case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+				return DXGI_FORMAT_R32G8X24_TYPELESS;
+			case DXGI_FORMAT_R10G10B10A2_UNORM:
+			case DXGI_FORMAT_R10G10B10A2_UINT:
+				return DXGI_FORMAT_R10G10B10A2_TYPELESS;
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			case DXGI_FORMAT_R8G8B8A8_UINT:
+			case DXGI_FORMAT_R8G8B8A8_SNORM:
+			case DXGI_FORMAT_R8G8B8A8_SINT:
+				return DXGI_FORMAT_R8G8B8A8_TYPELESS;
+			case DXGI_FORMAT_R16G16_FLOAT:
+			case DXGI_FORMAT_R16G16_UNORM:
+			case DXGI_FORMAT_R16G16_UINT:
+			case DXGI_FORMAT_R16G16_SNORM:
+			case DXGI_FORMAT_R16G16_SINT:
+				return DXGI_FORMAT_R16G16_TYPELESS;
+			case DXGI_FORMAT_D32_FLOAT:
+			case DXGI_FORMAT_R32_FLOAT:
+			case DXGI_FORMAT_R32_UINT:
+			case DXGI_FORMAT_R32_SINT:
+				return DXGI_FORMAT_R32_TYPELESS;
+			case DXGI_FORMAT_R8G8_UNORM:
+			case DXGI_FORMAT_R8G8_UINT:
+			case DXGI_FORMAT_R8G8_SNORM:
+			case DXGI_FORMAT_R8G8_SINT:
+				return DXGI_FORMAT_R8G8_TYPELESS;
+			case DXGI_FORMAT_R16_FLOAT:
+			case DXGI_FORMAT_D16_UNORM:
+			case DXGI_FORMAT_R16_UNORM:
+			case DXGI_FORMAT_R16_UINT:
+			case DXGI_FORMAT_R16_SNORM:
+			case DXGI_FORMAT_R16_SINT:
+				return DXGI_FORMAT_R16_TYPELESS;
+			case DXGI_FORMAT_R8_UNORM:
+			case DXGI_FORMAT_R8_UINT:
+			case DXGI_FORMAT_R8_SNORM:
+			case DXGI_FORMAT_R8_SINT:
+				return DXGI_FORMAT_R8_TYPELESS;
+			case DXGI_FORMAT_BC1_UNORM:
+			case DXGI_FORMAT_BC1_UNORM_SRGB:
+				return DXGI_FORMAT_BC1_TYPELESS;
+			case DXGI_FORMAT_BC2_UNORM:
+			case DXGI_FORMAT_BC2_UNORM_SRGB:
+				return DXGI_FORMAT_BC2_TYPELESS;
+			case DXGI_FORMAT_BC3_UNORM:
+			case DXGI_FORMAT_BC3_UNORM_SRGB:
+				return DXGI_FORMAT_BC3_TYPELESS;
+			case DXGI_FORMAT_BC4_UNORM:
+			case DXGI_FORMAT_BC4_SNORM:
+				return DXGI_FORMAT_BC4_TYPELESS;
+			case DXGI_FORMAT_BC5_UNORM:
+			case DXGI_FORMAT_BC5_SNORM:
+				return DXGI_FORMAT_BC5_TYPELESS;
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8A8_TYPELESS;
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8X8_TYPELESS;
+			case DXGI_FORMAT_BC6H_UF16:
+			case DXGI_FORMAT_BC6H_SF16:
+				return DXGI_FORMAT_BC6H_TYPELESS;
+			case DXGI_FORMAT_BC7_UNORM:
+			case DXGI_FORMAT_BC7_UNORM_SRGB:
+				return DXGI_FORMAT_BC7_TYPELESS;
+			default:
+				return fmt;
+		}
+	}
+
+	// Convert 'fmt' to a SRGB format
+	DXGI_FORMAT ToSRGB(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+				return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+			case DXGI_FORMAT_BC1_TYPELESS:
+			case DXGI_FORMAT_BC1_UNORM:
+				return DXGI_FORMAT_BC1_UNORM_SRGB;
+			case DXGI_FORMAT_BC2_TYPELESS:
+			case DXGI_FORMAT_BC2_UNORM:
+				return DXGI_FORMAT_BC2_UNORM_SRGB;
+			case DXGI_FORMAT_BC3_TYPELESS:
+			case DXGI_FORMAT_BC3_UNORM:
+				return DXGI_FORMAT_BC3_UNORM_SRGB;
+			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+				return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+				return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+			case DXGI_FORMAT_BC7_TYPELESS:
+			case DXGI_FORMAT_BC7_UNORM:
+				return DXGI_FORMAT_BC7_UNORM_SRGB;
+			default:
+				return fmt;
+		}
+	}
+
+	// Convert 'fmt' to a UAV compatible format
+	DXGI_FORMAT ToUAVCompatable(DXGI_FORMAT fmt)
+	{
+		switch (fmt)
+		{
+			case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+			case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+			case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+			case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+				return DXGI_FORMAT_R8G8B8A8_UNORM;
+			case DXGI_FORMAT_R32_TYPELESS:
+			case DXGI_FORMAT_D32_FLOAT:
+				return DXGI_FORMAT_R32_FLOAT;
+			default:
+				return fmt;
 		}
 	}
 
@@ -235,16 +515,12 @@ namespace pr::rdr12
 		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
 		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
 	};
-
-	/// <summary>Set the name on a DX resource (debug only)</summary>
-	template <typename T>
-	void NameResource(T* res, char const* name) requires HasPrivateData<T>
+	template <HasPrivateData T>
+	void NameResource(T* res, char const* name)
 	{
-		#if PR_DBG_RDR
-
 		char existing[256];
 		UINT size(sizeof(existing) - 1);
-		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, existing) != DXGI_ERROR_NOT_FOUND)
+		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
 		{
 			existing[size] = 0;
 			if (!str::Equal(existing, name))
@@ -254,9 +530,32 @@ namespace pr::rdr12
 
 		std::string_view res_name(name);
 		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
-		#else
-		(void)res,name;
-		#endif
+	}
+	template <HasPrivateData T>
+	string32 NameResource(T const* res)
+	{
+		char existing[256];
+		UINT size(sizeof(existing) - 1);
+		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
+		{
+			existing[size] = 0;
+			return existing;
+		}
+		return {};
+	}
+
+	/// <summary>Get/Set the name on a DX resource (debug only)</summary>
+	string32 NameResource(ID3D12Object const* res)
+	{
+		return NameResource<ID3D12Object>(res);
+	}
+	string32 NameResource(IDXGIObject const* res)
+	{
+		return NameResource<IDXGIObject>(res);
+	}
+	string32 NameResource(ID3D12Resource const* res)
+	{
+		return NameResource<ID3D12Resource>(res);
 	}
 	void NameResource(ID3D12Object* res, char const* name)
 	{
@@ -265,6 +564,26 @@ namespace pr::rdr12
 	void NameResource(IDXGIObject* res, char const* name)
 	{
 		NameResource<IDXGIObject>(res, name);
+	}
+	void NameResource(ID3D12Resource* res, char const* name)
+	{
+		NameResource<ID3D12Resource>(res, name);
+	}
+
+	// Get/Set the default state for a resource
+	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res)
+	{
+		UINT size(sizeof(D3D12_RESOURCE_STATES));
+		char bytes[sizeof(D3D12_RESOURCE_STATES)];
+		return const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]) != DXGI_ERROR_NOT_FOUND
+			? *reinterpret_cast<D3D12_RESOURCE_STATES*>(&bytes[0])
+			: D3D12_RESOURCE_STATE_COMMON;
+	}
+	void DefaultResState(ID3D12Resource* res, D3D12_RESOURCE_STATES state)
+	{
+		// Assume 'Common' state and don't store it
+		if (state == D3D12_RESOURCE_STATE_COMMON) return;
+		Throw(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
 	}
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"
