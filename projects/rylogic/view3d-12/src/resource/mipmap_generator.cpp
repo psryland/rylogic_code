@@ -5,10 +5,10 @@
 #include "pr/view3d-12/resource/mipmap_generator.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/shaders/shader.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "view3d-12/src/utility/root_signature.h"
-#include "view3d-12/src/utility/barrier_batch.h"
 
 namespace pr::rdr12
 {

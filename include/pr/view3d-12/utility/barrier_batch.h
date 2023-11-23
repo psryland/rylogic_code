@@ -14,14 +14,15 @@ namespace pr::rdr12
 		// Notes:
 		//  - This type batches barriers eliminating unnecessary transitions.
 		//  - Barriers should be submitted to the command list in batches when possible (for performance).
+		//  - Barriers are per-command list because resource states are per-command list.
+		using Barriers = pr::vector<D3D12_RESOURCE_BARRIER, 4>;
 
-		using Barriers = pr::vector<D3D12_RESOURCE_BARRIER>;
 		Barriers m_barriers;
 		GfxCmdList& m_cmd_list;
-
-		BarrierBatch(GfxCmdList& gfx_cmd_list)
+		
+		BarrierBatch(GfxCmdList& cmd_list)
 			: m_barriers()
-			, m_cmd_list(gfx_cmd_list)
+			, m_cmd_list(cmd_list)
 		{}
 		BarrierBatch(BarrierBatch&&) = delete;
 		BarrierBatch(BarrierBatch const&) = delete;
@@ -29,7 +30,7 @@ namespace pr::rdr12
 		BarrierBatch& operator =(BarrierBatch const&) = delete;
 
 		// Resource usage barrier
-		void Transition(ID3D12Resource* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
+		void Transition(ID3D12Resource const* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
 		{
 			// If the new transition takes all subresources to 'state'...
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
@@ -50,34 +51,34 @@ namespace pr::rdr12
 			auto& res_state = m_cmd_list.ResState(resource);
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && res_state != state) // Tests all subresource states for any != 'state'
 			{
-				// Transition all mips to the default, then default to 'state'
-				auto def_state = res_state.Mip0State();
+				// Transition all mips to the mip0 state, then transition all mips to 'state' in one command
+				auto mip0_state = res_state.Mip0State();
 				res_state.EnumMipSpecificStates([&](int sub, D3D12_RESOURCE_STATES state_before)
 				{
 					// The ResState type should prevent mip-specific states that are the same as the default state.
-					assert(state_before != def_state);
+					assert(state_before != mip0_state);
 					m_barriers.push_back(D3D12_RESOURCE_BARRIER {
 						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 						.Flags = flags,
 						.Transition = {
-							.pResource = resource,
+							.pResource = const_cast<ID3D12Resource*>(resource),
 							.Subresource = s_cast<UINT>(sub),
 							.StateBefore = state_before,
-							.StateAfter = def_state,
+							.StateAfter = mip0_state,
 						},
 					});
 				});
 
 				// Now, transition everything to 'state'
-				if (state != def_state)
+				if (state != mip0_state)
 				{
 					m_barriers.push_back(D3D12_RESOURCE_BARRIER {
 						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 						.Flags = flags,
 						.Transition = {
-							.pResource = resource,
+							.pResource = const_cast<ID3D12Resource*>(resource),
 							.Subresource = sub,
-							.StateBefore = def_state,
+							.StateBefore = mip0_state,
 							.StateAfter = state,
 						},
 					});
@@ -92,7 +93,7 @@ namespace pr::rdr12
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = flags,
 					.Transition = {
-						.pResource = resource,
+						.pResource = const_cast<ID3D12Resource*>(resource),
 						.Subresource = sub,
 						.StateBefore = res_state[sub],
 						.StateAfter = state,
@@ -104,33 +105,33 @@ namespace pr::rdr12
 		}
 
 		// Aliased memory resource barrier
-		void Aliasing(ID3D12Resource* pResourceBefore, ID3D12Resource* pResourceAfter)
+		void Aliasing(ID3D12Resource const* pResourceBefore, ID3D12Resource const* pResourceAfter)
 		{
 			D3D12_RESOURCE_BARRIER barrier = {
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING,
 				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
 				.Aliasing = {
-					.pResourceBefore = pResourceBefore,
-					.pResourceAfter = pResourceAfter,
+					.pResourceBefore = const_cast<ID3D12Resource*>(pResourceBefore),
+					.pResourceAfter = const_cast<ID3D12Resource*>(pResourceAfter),
 				},
 			};
 			m_barriers.push_back(barrier);
 		}
 
 		// UAV resource barrier
-		void UAV(ID3D12Resource* pResource)
+		void UAV(ID3D12Resource const* pResource)
 		{
 			D3D12_RESOURCE_BARRIER barrier = {
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
 				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
 				.UAV = {
-					.pResource = pResource,
+					.pResource = const_cast<ID3D12Resource*>(pResource),
 				}
 			};
 			m_barriers.push_back(barrier);
 		}
 
-		// Send the barriers to the command list
+		// Send the barriers to 'cmd_list'
 		void Commit()
 		{
 			// todo.. Could remove redundant barriers here

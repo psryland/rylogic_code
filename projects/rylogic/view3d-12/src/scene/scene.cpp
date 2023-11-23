@@ -25,7 +25,6 @@ namespace pr::rdr12
 		, m_viewport(wnd.BackBufferSize())
 		, m_instances()
 		, m_render_steps()
-		, m_bkgd_colour(Colour32Black)
 		//, m_ht_immediate()
 		, m_global_light()
 		, m_global_envmap()
@@ -152,41 +151,32 @@ namespace pr::rdr12
 		}
 	}
 
-	// Render the scene
-	pr::vector<ID3D12CommandList*> Scene::Render(BackBuffer& bb)
+	// Render the scene, recording the command lists in 'frame'
+	void Scene::Render(Frame& frame)
 	{
+		// Notes:
+		//  - Start rendering 'scene'. Remember, this is only recording commands into command lists so "drawing" on a back buffer doesn't
+		//    actually happen until 'Present' is called (which executes the command lists). This means a HUD scene can render to 'swap_chain_bb'
+		//    at the same time as a main view scene renders to 'msaa_bb'. Present composites the scene by executing the msaa command lists,
+		//    then resolving the msaa render target into the swap chain back buffer, then executing the swap chain command lists.
+		//  - 'rs->Execute(frame)' could start a background thread and return immediately. It should add it's not-yet-closed command lists
+		//    to the frame from the main thread before starting.
+
 		// Make sure the scene is up to date
 		OnUpdateScene(*this);
 
-		// Don't call 'm_wnd->RestoreRT();' here because we might be rendering to
-		// an off-screen texture. However, if the app contains multiple windows
-		// each window will need to call 'm_wnd->RestoreRT()' before rendering.
-		#if PR_DBG_RDR
+		// Invoke each render step in order
+		for (auto& rs : m_render_steps)
 		{
 			#if 0 // todo
-			// Check a render target has been set
-			// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or RTV will be null
-			D3DPtr<ID3D11RenderTargetView> rtv;
-			D3DPtr<ID3D11DepthStencilView> dsv;
-			dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-			if (rtv == nullptr) throw std::runtime_error("Render target is null."); // Ensure RestoreRT has been called
-			if (dsv == nullptr) throw std::runtime_error("Depth buffer is null."); // Ensure RestoreRT has been called
+			PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
+				[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
+				[&]{ ss.m_dbg->EndEvent(); }));
 			#endif
-		}
-		#endif
+			//PixEvent pix_render_step(m_cmd_list.get(), pr::EColours::Blue, ERenderStep_::ToStringA(rs->m_step_id));
 
-		//todo: run this in a background thread - the thread will need to create and own the cmd_alloc until list->Close is called.
-		//todo: Each render step might be able to run in parallel? So 'Scene::Render' would return a list of command lists to execute.
-		pr::vector<ID3D12CommandList*> cmd_lists;
-		{
-			// Invoke each render step in order
-			for (auto& rs : m_render_steps)
-				cmd_lists.push_back(rs->Execute(bb));
+			rs->Execute(frame);
 		}
-
-		// Return the command list to the caller who will batch up calls to execute.
-		// When multi-threading, we can return this before we're finished
-		return std::move(cmd_lists);
 	}
 
 	// Resize the viewport on back buffer resize

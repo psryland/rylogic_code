@@ -13,18 +13,12 @@
 namespace pr::rdr12
 {
 	// Shadow caster constructor
-	ShadowCaster::ShadowCaster(RenderSmap& owner, Light const& light, int size, DXGI_FORMAT format)
+	ShadowCaster::ShadowCaster(Texture2DPtr smap, Light const& light, int size)
 		: m_params()
 		, m_light(&light)
-		, m_scene_cam(&owner.scn().m_cam)
-		, m_smap()
+		, m_smap(smap)
 		, m_size(size)
-	{
-		auto td = ResDesc::Tex2D(Image(size, size, nullptr, format), 1, EUsage::RenderTarget).clear(format, pr::Colour32Zero);
-		auto desc = TextureDesc(AutoId, td).name("Smap");
-		m_smap = owner.res().CreateTexture2D(desc);
-		owner.m_cmd_list.ResState(m_smap->m_res.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
-	}
+	{}
 
 	// Update the projection parameters for the given scene
 	void ShadowCaster::UpdateParams(Scene const& scene, BBox_cref ws_bounds)

@@ -4,10 +4,9 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/utility/gpu_sync.h"
+#include "pr/view3d-12/resource/resource_state_store.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/resource/resource_state.h"
 
 namespace pr::rdr12
 {
@@ -33,14 +32,13 @@ namespace pr::rdr12
 		friend CmdListPool<ListType>;
 		using alloc_t = typename CmdAlloc<ListType>;
 		using pool_t = typename CmdListPool<ListType>;
-		using res_states_t = std::unordered_map<ID3D12Resource const*, ResState>;
 
 	private:
 
 		D3DPtr<ICommandList> m_list;     // The interface for buffering GPU commands.
 		alloc_t m_cmd_allocator;         // The current allocator in use by this cmd list.
-		res_states_t m_resources_states; // Track the state of each resource as used by this command list
 		std::thread::id m_thread_id;     // The thread id of the thread that called Reset.
+		ResStateStore m_res_state;       // Track the state of resources used in this command list
 		pool_t* m_pool;                  // The pool to return this list too. (can be null)
 
 	public:
@@ -64,7 +62,7 @@ namespace pr::rdr12
 			Throw(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
 			if (name) Throw(m_list->SetName(name));
 		}
-		CmdList(ID3D12Device* device, alloc_t&& cmd_alloc, pool_t* pool, wchar_t const* name)
+		CmdList(ID3D12Device4* device, alloc_t&& cmd_alloc, pool_t* pool, wchar_t const* name)
 			: CmdList(nullptr, std::forward<alloc_t>(cmd_alloc), pool)
 		{
 			// Create an instance of an open cmd list based on 'cmd_alloc'
@@ -101,12 +99,6 @@ namespace pr::rdr12
 			m_thread_id = std::this_thread::get_id();
 		}
 
-		// Record the state of the given resource, as used by this command list
-		ResState& ResState(ID3D12Resource const* res)
-		{
-			return m_resources_states[res];
-		}
-
 		// Access the list
 		ICommandList* get() const
 		{
@@ -116,6 +108,12 @@ namespace pr::rdr12
 		operator ICommandList* () const
 		{
 			return get();
+		}
+
+		// Get the current state (according to this command list) of a resource
+		ResStateData& ResState(ID3D12Resource const* res)
+		{
+			return m_res_state.Get(res);
 		}
 
 		// Assign the shader pipeline state to the command list
@@ -165,6 +163,10 @@ namespace pr::rdr12
 		void Close()
 		{
 			ThrowOnCrossThreadUse();
+			if constexpr (ListType == D3D12_COMMAND_LIST_TYPE_DIRECT)
+			{
+				RestoreResourceStateDefaults(*this);
+			}
 			m_list->Close();
 		}
 
@@ -182,6 +184,7 @@ namespace pr::rdr12
 			ThrowOnCrossThreadUse();
 			m_cmd_allocator = std::move(cmd_alloc);
 			Throw(m_list->Reset(m_cmd_allocator, pipeline_state));
+			m_res_state.Reset();
 		}
 	
 	public : // Graphics
@@ -264,6 +267,16 @@ namespace pr::rdr12
 				s_cast<UINT>(StartIndexLocation), s_cast<INT>(BaseVertexLocation), s_cast<UINT>(StartInstanceLocation));
 		}
 
+		// Resolve an MSAA texture to a non-MSAA texture
+		void ResolveSubresource(ID3D12Resource* pDstResource, ID3D12Resource* pSrcResource, DXGI_FORMAT Format)
+		{
+			m_list->ResolveSubresource(pDstResource, 0U, pSrcResource, 0U, Format);
+		}
+		void ResolveSubresource(ID3D12Resource* pDstResource, int DstSubresource, ID3D12Resource* pSrcResource, int SrcSubresource, DXGI_FORMAT Format)
+		{
+			m_list->ResolveSubresource(pDstResource, s_cast<UINT>(DstSubresource), pSrcResource, s_cast<UINT>(SrcSubresource), Format);
+		}
+
 	public: // Compute
 	
 		// Assign the shader root signature to the command list
@@ -301,6 +314,9 @@ namespace pr::rdr12
 			if (std::this_thread::get_id() != m_thread_id)
 				throw std::runtime_error("Cross thread use of a command list");
 		}
+
+		// Restores the resource state of resources used in this command list to their default state
+		friend void RestoreResourceStateDefaults(CmdList<D3D12_COMMAND_LIST_TYPE_DIRECT>& cmd_list);
 	};
 
 	// A pool of command lists
@@ -342,7 +358,7 @@ namespace pr::rdr12
 			auto list = std::move(m_pool.back());
 			m_pool.pop_back();
 			list.m_pool = this;
-			return std::move(list);
+			return list;
 		}
 
 		// Return the list to the pool
@@ -357,8 +373,9 @@ namespace pr::rdr12
 	};
 
 	// Flavours
-	using GfxCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_DIRECT>;
-	using ComCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 	using GfxCmdList = CmdList<D3D12_COMMAND_LIST_TYPE_DIRECT>;
 	using ComCmdList = CmdList<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+	using GfxCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComCmdListPool = CmdListPool<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
+
 }

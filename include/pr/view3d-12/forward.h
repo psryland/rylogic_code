@@ -124,6 +124,7 @@ namespace pr::rdr12
 {
 	// Types
 	using byte = unsigned char;
+	using float4_t = float[4];
 	using RdrId = std::uintptr_t;
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<size_t>;
@@ -155,6 +156,7 @@ namespace pr::rdr12
 	struct Renderer;
 	struct Window;
 	struct Scene;
+	struct Frame;
 	struct SceneCamera;
 	struct RdrSettings;
 	struct WndSettings;

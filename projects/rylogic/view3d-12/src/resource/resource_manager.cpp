@@ -4,6 +4,7 @@
 //*********************************************
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/resource/image.h"
+#include "pr/view3d-12/resource/resource_state.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
@@ -15,10 +16,10 @@
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
-#include "view3d-12/src/utility/barrier_batch.h"
 
 namespace pr::rdr12
 {
@@ -30,7 +31,7 @@ namespace pr::rdr12
 		,m_gsync(rdr.D3DDevice())
 		,m_keep_alive(m_gsync)
 		,m_gfx_cmd_alloc_pool(m_gsync)
-		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, L"ResManCmdListGfx")
+		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, L"ResGfxCmdList")
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_heap_sampler(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
@@ -84,8 +85,8 @@ namespace pr::rdr12
 		m_gfx_cmd_list.Close();
 
 		// Execute the command list
-		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_gfx_cmd_list.get())};
-		rdr().GfxQueue()->ExecuteCommandLists(s_cast<UINT>(cmd_lists.size()), cmd_lists.begin());
+		rdr().ExecuteCommandLists({ m_gfx_cmd_list });
+
 		m_flush_required = false;
 
 		// Add a sync point
@@ -107,14 +108,14 @@ namespace pr::rdr12
 	}
 
 	// Create and initialise a resource
-	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(ResDesc const& desc)
+	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(ResDesc const& desc, char const* name)
 	{
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
 		auto has_init_data = !desc.Data.empty();
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
-		D3D12_RESOURCE_DESC rd = desc;
+		auto rd = D3D12_RESOURCE_DESC{desc};
 		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			rd.Width *= desc.ElemStride;
 
@@ -125,12 +126,10 @@ namespace pr::rdr12
 			&desc.HeapProps, desc.HeapFlags, &rd, D3D12_RESOURCE_STATE_COMMON,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
-		
-		// We need to record that the initial state is 'desc.FinalState' then track, on a per-cmd-list
-		// basis, what the state transitions are for this resource, so that at the end of a cmd list we know
-		// what state the resource will be in, and can then transition it to the correct state for the next
-		// cmd list.
-		m_gfx_cmd_list.ResState(res.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
+
+		// Assume common state until the resource is initialised
+		DefaultResState(res.get(), D3D12_RESOURCE_STATE_COMMON);
+		NameResource(res.get(), name);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
@@ -148,11 +147,14 @@ namespace pr::rdr12
 			if (desc.MipLevels != 1)
 				m_mipmap_gen.Generate(res.get());
 
-			// Transition the resource to the final state
-			barriers.Transition(res.get(), desc.FinalState);
+			// Transition the resource to the default state
+			barriers.Transition(res.get(), desc.DefaultState);
 			barriers.Commit();
 			m_flush_required = true;
 		}
+
+		// Update the default state for the resource
+		DefaultResState(res.get(), desc.DefaultState);
 
 		return res;
 	}
@@ -166,8 +168,8 @@ namespace pr::rdr12
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
 		// Create a V/I buffers
-		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb);
-		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib);
+		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb, mdesc.m_name.c_str());
+		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
 
 		// Create the model
 		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<size_t>(mdesc.m_vb.Width), s_cast<size_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
@@ -358,7 +360,7 @@ namespace pr::rdr12
 			if (iter == end(m_lookup_res))
 			{
 				// If not, create the resource and add it to the lookup
-				res = CreateResource(desc.m_tdesc);
+				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -370,7 +372,7 @@ namespace pr::rdr12
 		// Otherwise, just create the texture
 		else
 		{
-			res = CreateResource(desc.m_tdesc);
+			res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 		}
 
 		// Allocate a new texture instance
@@ -435,7 +437,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc.m_tdesc);
+				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -476,7 +478,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc.m_tdesc);
+				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -555,7 +557,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc.m_tdesc);
+				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -607,7 +609,7 @@ namespace pr::rdr12
 				desc.m_tdesc.Data = images;
 
 				// Create the texture
-				res = CreateResource(desc.m_tdesc);
+				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
 				AddLookup(m_lookup_res, desc.m_uri, res.get());
@@ -1011,6 +1013,7 @@ namespace pr::rdr12
 		// then check whether it is in the 'fname' lookup table and remove it if it is.
 		if (tex->m_uri != 0 && tex->m_res.RefCount() == 1)
 		{
+			// Remove the Dx resource from our lookup
 			auto jter = m_lookup_res.find(tex->m_uri);
 			if (jter != end(m_lookup_res))
 				m_lookup_res.erase(jter);

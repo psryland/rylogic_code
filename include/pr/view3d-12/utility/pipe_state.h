@@ -26,6 +26,9 @@ namespace pr::rdr12
 		x(DepthWriteMask        , DepthStencilState.DepthWriteMask      )\
 		x(DepthFunc             , DepthStencilState.DepthFunc           )\
 		x(BlendState0           , BlendState.RenderTarget[0]            )\
+		x(RTVFormats            , RTVFormats                            )\
+		x(DSVFormat             , DSVFormat                             )\
+		x(SampleDesc            , SampleDesc                            )\
 		//x(StreamOutput          , StreamOutput                          )\
 		//x(BlendEnable0          , BlendState.RenderTarget[0].BlendEnable)\
 		//x(BlendEnable1          , BlendState.RenderTarget[1].BlendEnable)\
@@ -42,9 +45,6 @@ namespace pr::rdr12
 		//x(IBStripCutValue       , IBStripCutValue                       )\
 		//x(PrimitiveTopologyType , PrimitiveTopologyType                 )\
 		//x(NumRenderTargets      , NumRenderTargets                      )\
-		//x(RTVFormats            , RTVFormats                            )\
-		//x(DSVFormat             , DSVFormat                             )\
-		//x(SampleDesc            , SampleDesc                            )\
 		//x(NodeMask              , NodeMask                              )\
 		//x(CachedPSO             , CachedPSO                             )\
 		//x(Flags                 , Flags                                 )

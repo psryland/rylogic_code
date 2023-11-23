@@ -4,6 +4,9 @@
 //*********************************************
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/config.h"
+#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_state_store.h"
+#include "pr/view3d-12/resource/resource_state.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 
@@ -346,7 +349,7 @@ namespace pr::rdr12
 	{
 		return ++m_id32_src;
 	}
-	
+
 	// Execute any pending tasks in the task queue
 	void Renderer::RunTasks()
 	{

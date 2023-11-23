@@ -28,6 +28,7 @@ namespace pr::rdr12
 	RenderForward::RenderForward(Scene& scene)
 		: RenderStep(Id, scene)
 		, m_shader(scene.d3d())
+		, m_cmd_list(scene.d3d(), nullptr, L"RenderForward")
 		, m_default_tex(res().CreateTexture(EStockTexture::White))
 		, m_default_sam(res().CreateSampler(EStockSampler::LinearClamp))
 	{
@@ -49,7 +50,7 @@ namespace pr::rdr12
 			.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 			.NumRenderTargets = 1U,
 			.RTVFormats = {
-				DXGI_FORMAT_B8G8R8A8_UNORM,
+				scene.wnd().m_rt_props.Format,
 				DXGI_FORMAT_UNKNOWN,
 				DXGI_FORMAT_UNKNOWN,
 				DXGI_FORMAT_UNKNOWN,
@@ -58,8 +59,8 @@ namespace pr::rdr12
 				DXGI_FORMAT_UNKNOWN,
 				DXGI_FORMAT_UNKNOWN,
 			},
-			.DSVFormat = DXGI_FORMAT_D32_FLOAT,
-			.SampleDesc = MultiSamp{},
+			.DSVFormat = scene.wnd().m_ds_props.Format,
+			.SampleDesc = scene.wnd().m_multisamp,
 			.NodeMask = 0U,
 			.CachedPSO = {
 				.pCachedBlob = nullptr,
@@ -133,8 +134,14 @@ namespace pr::rdr12
 	}
 
 	// Perform the render step
-	void RenderForward::ExecuteInternal(BackBuffer& bb)
+	void RenderForward::Execute(Frame& frame)
 	{
+		// Reset the command list with a new allocator for this frame
+		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
+
+		// Add the command lists we're using to the frame.
+		frame.m_main.push_back(m_cmd_list);
+
 		// Sort the draw list if needed
 		SortIfNeeded();
 
@@ -143,14 +150,7 @@ namespace pr::rdr12
 		m_cmd_list.SetDescriptorHeaps({ des_heaps.begin(), des_heaps.size() });
 
 		// Get the back buffer view handle and set the back buffer as the render target.
-		m_cmd_list.OMSetRenderTargets({ &bb.m_rtv, 1 }, FALSE, &bb.m_dsv);
-
-		// Clear the render target to the background colour
-		if (scn().m_bkgd_colour != ColourZero)
-		{
-			m_cmd_list.ClearRenderTargetView(bb.m_rtv, scn().m_bkgd_colour.arr);
-			m_cmd_list.ClearDepthStencilView(bb.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0);
-		}
+		m_cmd_list.OMSetRenderTargets({ &frame.m_bb_main.m_rtv, 1 }, FALSE, &frame.m_bb_main.m_dsv);
 
 		// Set the viewport and scissor rect.
 		auto const& vp = scn().m_viewport;
@@ -249,6 +249,9 @@ namespace pr::rdr12
 			// Draw the nugget **** 
 			DrawNugget(nugget, desc);
 		}
+
+		// Close the command list now that we've finished rendering this scene
+		m_cmd_list.Close();
 	}
 
 	// Draw a single nugget

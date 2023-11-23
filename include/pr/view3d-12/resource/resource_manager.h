@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/resource/descriptor_store.h"
+#include "pr/view3d-12/resource/resource_state_store.h"
 #include "pr/view3d-12/resource/gpu_upload_buffer.h"
 #include "pr/view3d-12/resource/gpu_descriptor_heap.h"
 #include "pr/view3d-12/resource/mipmap_generator.h"
@@ -124,7 +125,7 @@ namespace pr::rdr12
 		friend struct Shader;
 		
 		// Create and initialise a resource
-		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc);
+		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
 
 		// Update the data in 'dest' using a staging buffer
 		void UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment);

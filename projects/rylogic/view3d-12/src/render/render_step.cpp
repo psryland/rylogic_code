@@ -18,7 +18,6 @@ namespace pr::rdr12
 	RenderStep::RenderStep(ERenderStep id, Scene& scene)
 		: m_step_id(id)
 		, m_scene(&scene)
-		, m_cmd_list(d3d(), nullptr, ERenderStep_::ToStringW(id))
 		, m_drawlist()
 		, m_sort_needed(true)
 		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
@@ -137,27 +136,6 @@ namespace pr::rdr12
 			auto iter = std::lower_bound(doomed, doomed_end, dle.m_instance);
 			return iter != doomed_end && *iter == dle.m_instance;
 		});
-	}
-
-	// Perform the render step
-	ID3D12GraphicsCommandList* RenderStep::Execute(BackBuffer& bb)
-	{
-		#if 0 // todo
-		PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
-			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
-			[&]{ ss.m_dbg->EndEvent(); }));
-		#endif
-		//PixEvent pix_render_step(m_cmd_list.get(), pr::EColours::Blue, ERenderStep_::ToStringA(m_step_id));
-		
-		// Reset the command list to use an allocator for this frame
-		m_cmd_list.Reset(wnd().m_cmd_alloc_pool.Get());
-
-		// Record the render step in 'm_cmd_list'
-		ExecuteInternal(bb);
-
-		// Close the command list now that we've finished rendering this scene
-		m_cmd_list.Close();
-		return m_cmd_list.get();
 	}
 
 	// Notification of a model being destroyed

@@ -8,6 +8,7 @@
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/utility/features.h"
 #include "pr/view3d-12/utility/eventargs.h"
+#include "pr/view3d-12/utility/cmd_list_collection.h"
 
 namespace pr::rdr12
 {
@@ -52,9 +53,6 @@ namespace pr::rdr12
 		HWND                 m_dummy_hwnd;
 		std::atomic_int      m_id32_src;
 
-		// These manager classes form part of the public interface of the renderer
-		// Declared last so that events are fully constructed first.
-		// Note: model manager is declared last so that it is destructed first
 		ResourceManager m_res_mgr;
 
 	public:
@@ -149,6 +147,12 @@ namespace pr::rdr12
 		// This is provided on the renderer so that other managers can receive
 		// notification without having to sign up to every window that gets created.
 		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
+
+		// Execute a list of graphics command lists. Allows syntax: ExecuteCommandLists({list, list_array, ...})
+		void ExecuteCommandLists(GfxCmdListCollection cmd_lists) const
+		{
+			GfxQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
+		}
 
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
