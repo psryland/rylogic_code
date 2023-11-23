@@ -97,6 +97,9 @@
     <Filter Include="src\ldraw">
       <UniqueIdentifier>{a9fc0979-5796-4338-a9f7-f09416328e59}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\sampler">
+      <UniqueIdentifier>{e112c7e8-c0d7-484a-96df-7dda775a147a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\main\renderer.cpp">
@@ -197,6 +200,24 @@
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object_templates.cpp">
       <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\mipmap_generator.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\sampler\sampler.cpp">
+      <Filter>src\sampler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_smap.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_smap.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\shadow_caster.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\cmd_list.cpp">
+      <Filter>src\utility</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -491,6 +512,45 @@
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\mipmap_generator.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\keep_alive.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\sampler\sampler.h">
+      <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\sampler\sampler_desc.h">
+      <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_smap.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\main\frame.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_state_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\barrier_batch.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list_collection.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -559,5 +619,8 @@
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\vector.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
     </None>
+    <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

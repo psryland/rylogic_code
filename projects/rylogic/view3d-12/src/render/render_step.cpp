@@ -11,22 +11,27 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/render/drawlist_element.h"
+#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
 	RenderStep::RenderStep(ERenderStep id, Scene& scene)
-		: Id(id)
+		: m_step_id(id)
 		, m_scene(&scene)
 		, m_drawlist()
 		, m_sort_needed(true)
 		, m_cbuf_upload(wnd().m_gsync, 1ULL * 1024 * 1024)
 		, m_default_pipe_state()
 		, m_pipe_state_pool(wnd())
-		, m_evt_model_delete(wnd().res_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
+		, m_evt_model_delete(res().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
 		, m_mutex()
 	{}
 
 	// Access the renderer
+	ID3D12Device4* RenderStep::d3d() const
+	{
+		return rdr().d3d();
+	}
 	Renderer& RenderStep::rdr() const
 	{
 		return wnd().rdr();
@@ -38,6 +43,10 @@ namespace pr::rdr12
 	Scene& RenderStep::scn() const
 	{
 		return *m_scene;
+	}
+	ResourceManager& RenderStep::res() const
+	{
+		return rdr().res();
 	}
 
 	// Reset/Populate the drawlist
@@ -129,39 +138,15 @@ namespace pr::rdr12
 		});
 	}
 
-	// Perform the render step
-	void RenderStep::Execute(BackBuffer& bb, ID3D12GraphicsCommandList* cmd_list)
-	{
-		#if 0 // todo
-		PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
-			[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
-			[&]{ ss.m_dbg->EndEvent(); }));
-
-		// Commit before the start of a render step to ensure changes
-		// are flushed before the render steps try to clear back buffers, etc
-		StateStack::RSFrame frame(ss, *this);
-		ss.Commit();
-		#endif
-
-		ExecuteInternal(bb, cmd_list);
-	}
-
 	// Notification of a model being destroyed
 	void RenderStep::OnModelDeleted(Model& model, EmptyArgs const&) const
 	{
-		(void)model;
-		#if 0 // todo
-		#if PR_DBG_RDR
-
 		// Check the model is not current in a drawlist
 		Lock lock(*this);
 		for (auto& dle : lock.drawlist())
 		{
-			if (&model == dle.m_nugget->m_owner)
+			if (&model == dle.m_nugget->m_model)
 				throw std::runtime_error("Model being deleted is still in the drawlist");
 		}
-
-		#endif
-		#endif
 	}
 }

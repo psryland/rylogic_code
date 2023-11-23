@@ -12,19 +12,20 @@ namespace pr::rdr12
 	// The compiled byte code for the shader stages
 	struct ShaderCode
 	{
+		// This is the order they appear in the pipeline state description
 		ByteCode VS;
 		ByteCode PS;
-		ByteCode GS;
-		ByteCode CS;
 		ByteCode DS;
 		ByteCode HS;
+		ByteCode GS;
+		ByteCode CS;
 	};
 
 	// A shader base class
 	struct Shader :RefCounted<Shader>
 	{
 		// Notes:
-		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc apply to all stages now. 
+		//  - A "shader" means the full set of VS,PS,GS,DS,HS,etc because constant buffers etc apply to all stages now.
 		//  - A shader without a Signature is an 'overlay' shader, intended to replace parts of a full shader. Overlay shaders
 		//    must use constant buffers that don't conflict with the base shader, and the base shader must have a signature that
 		//    handles all possible overlays.
@@ -34,11 +35,14 @@ namespace pr::rdr12
 		//  - The shader contains the shader specific parameters.
 		//  - The realised shader is reused by the window/render step.
 		//  - All shaders can share one GpuUploadBuffer
-		ShaderCode Code;                       // Byte code for the shader parts
-		D3DPtr<ID3D12RootSignature> Signature; // Signature for shader, null if an overlay
+		ShaderCode m_code;                       // Byte code for the shader parts
+		D3DPtr<ID3D12RootSignature> m_signature; // Signature for shader, null if an overlay
 		
 		Shader();
 		virtual ~Shader() {}
+
+		// Sort id for the shader
+		SortKeyId SortId() const;
 
 		// Config the shader.
 		// This method may be called with:
@@ -93,5 +97,8 @@ namespace pr::rdr12
 		extern ByteCode const ray_cast_vert_gs;
 		extern ByteCode const ray_cast_edge_gs;
 		extern ByteCode const ray_cast_face_gs;
+
+		// MipMap generation
+		extern ByteCode const mipmap_generator_cs;
 	}
 }

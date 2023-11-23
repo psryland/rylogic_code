@@ -298,10 +298,9 @@ namespace pr::rdr12
 			"	*o2w {*pos{-10 1.5 -5}}\n"
 			"}\n"
 			"\n"
-		#if 0
-		#endif
-		#if 0
+
 			// Text
+		#if 0
 			"// Text objects are textured quads that contain GDI text.\n"
 			"// There is support for screen space, billboard, and full 3D text objects.\n"
 			"\n"
@@ -405,7 +404,6 @@ namespace pr::rdr12
 			"}\n"
 			"\n"
 		#endif
-		#if 0
 			// Objects
 			"// ************************************************************************************\n"
 			"// Objects\n"
@@ -422,8 +420,8 @@ namespace pr::rdr12
 			"	0 0 0 FFFFFF00  // x y z point positions\n"
 			"\n"
 			"	// Using embedded C# to generate points\n"
-				#if 0
-				"	#embedded(CSharp)\n"
+			#if 0
+			"	#embedded(CSharp)\n"
 			"	var rng = new Random();\n"
 			"	for (int i = 0; i != 1000; ++i)\n"
 			"	{\n"
@@ -437,7 +435,7 @@ namespace pr::rdr12
 			"		Out.AppendLine(p.ToString3() + \" \" + c.ToString());\n"
 			"	}\n"
 			"	#end\n"
-				#endif
+			#endif
 			"\n"
 			"	*Size {5}                  // Optional. Specify a size for the point\n"
 			"	*Style { Circle }          // Optional. One of: Square, Circle, Star, .. Requires 'Width'\n"
@@ -445,7 +443,6 @@ namespace pr::rdr12
 			"	*o2w{*pos{16 6 6}}\n"
 			"}\n"
 			"\n"
-	#endif
 			// Lines
 			"// Lines ***********************************************\n"
 			"\n"
@@ -470,7 +467,6 @@ namespace pr::rdr12
 			"	*o2w{*pos{-15 0 -10}}\n"
 			"}\n"
 			"\n"
-	#if 0
 			"// A list of line segments given point and direction\n"
 			"*LineD directions\n"
 			"{\n"
@@ -1109,8 +1105,6 @@ namespace pr::rdr12
 			"//	*BakeTransform {*pos{0 0 0}} // Optional. Bake a transform into the model (independent of *o2w)\n"
 			"//}\n"
 			"\n"
-		#endif
-		#if 0
 			"*Equation equation\n"
 			"{\n"
 			"	\"sin(x) + cos(y) + a\"         // The equation to plot\n"
@@ -1132,7 +1126,6 @@ namespace pr::rdr12
 			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 0.5 3}}\n"
 			"}\n"
 			"\n"
-		#endif
 		#if 0
 			// Embedded code
 			"// Embedded lua code can be used to programmatically generate script\n"

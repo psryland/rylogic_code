@@ -10,13 +10,6 @@ namespace pr::rdr12
 {
 	struct Texture2D :TextureBase
 	{
-		// Notes:
-		//   - Texture2D (and derived objects) are lightweight, they are basically reference
-		//     counted pointers to D3D resources.
-		//   - Textures have value semantics (i.e. copyable)
-		//   - Each time CreateTexture is called, a new texture instance is allocated.
-		//     However, the resources associated with the texture may be shared with other textures.
-
 		m4x4 m_t2s; // Texture to surface transform
 
 		Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);

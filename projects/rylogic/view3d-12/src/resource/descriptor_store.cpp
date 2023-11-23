@@ -134,6 +134,9 @@ namespace pr::rdr12
 	// Release a descriptor by index
 	void DescriptorStore::Release(Descriptor const& descriptor)
 	{
+		if (descriptor.m_type < 0 || descriptor.m_type >= D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES)
+			throw std::runtime_error("Invalid descriptor type");
+
 		auto blk_index = descriptor.m_index >> ShftBlk;
 		auto des_index = descriptor.m_index & MaskIdx;
 		auto& block = m_store_cpu[descriptor.m_type][blk_index];

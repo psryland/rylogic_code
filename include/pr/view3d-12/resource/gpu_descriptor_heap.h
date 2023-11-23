@@ -10,40 +10,45 @@
 
 namespace pr::rdr12
 {
+	template <D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
 	struct GpuDescriptorHeap
 	{
 		// Notes:
-		//  - Have one of these per window, per heap type (SRV, Sampler).
+		//  - This heap is used to pass descriptors to the GPU. Use a DescriptorStore for long
+		//    term storage of the descriptors. This heap type can be bound to a command list,
+		//    and descriptors are copied from the store into here.
 		//  - The heap is treated like a ring buffer, with 'sync points' interleaved.
+		//  - Have one of these per command list, per heap type (SRV, Sampler).
 		//  - A sync point marks a new "frame" of GPU descriptors.
 		//  - The tail of the ring buffer advances as sync points are reached by the GPU.
 
+		using HeapPtr = D3DPtr<ID3D12DescriptorHeap>;
 		using Lookup = Lookup<int, D3D12_GPU_DESCRIPTOR_HANDLE>;
 		using SyncPoint = struct { uint64_t m_sync_point; int m_index; };
 		using SyncPoints = pr::deque<SyncPoint>;
 
-		D3DPtr<ID3D12DescriptorHeap> m_heap;     // The shader visible heap for descriptors.
-		int                          m_size;     // The total size of the heap
-		GpuSync*                     m_gsync;    // The GPU fence marking GPU progress.
-		SyncPoints                   m_sync;     // Positions in the ring buffer and associated sync points.
-		Lookup                       m_lookup;   // A lookup for descriptors added since the last sync point.
-		AutoSub                      m_eh0;      // Event subscription
-		int                          m_des_size; // The size of one descriptor
-		int                          m_head;     // Insert point for added descriptors
+		HeapPtr    m_heap;     // The shader visible heap for descriptors.
+		int        m_size;     // The total size of the heap
+		GpuSync*   m_gsync;    // The GPU fence marking GPU progress.
+		SyncPoints m_sync;     // Positions in the ring buffer and associated sync points.
+		Lookup     m_lookup;   // A lookup for descriptors added since the last sync point.
+		AutoSub    m_eh0;      // Event subscription
+		int        m_des_size; // The size of one descriptor
+		int        m_head;     // Insert point for added descriptors
 
-		GpuDescriptorHeap(int size, D3D12_DESCRIPTOR_HEAP_TYPE type, GpuSync* gsync)
+		GpuDescriptorHeap(int size, GpuSync* gsync)
 			:m_heap()
 			,m_size(size)
 			,m_gsync(gsync)
 			,m_sync()
 			,m_lookup()
 			,m_eh0()
-			,m_des_size(s_cast<int>(device()->GetDescriptorHandleIncrementSize(type)))
+			,m_des_size(s_cast<int>(device()->GetDescriptorHandleIncrementSize(HeapType)))
 			,m_head()
 		{
 			// Create the GPU heap
 			D3D12_DESCRIPTOR_HEAP_DESC desc = {
-				.Type = type,
+				.Type = HeapType,
 				.NumDescriptors = s_cast<UINT>(m_size),
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				.NodeMask = 0U,
@@ -72,8 +77,15 @@ namespace pr::rdr12
 		// Given a range of descriptors, ensure they exist in the GPU heap, and return the handle of the first one
 		D3D12_GPU_DESCRIPTOR_HANDLE Add(std::span<Descriptor const> descriptors)
 		{
+			// Checks
+			for (auto& des : descriptors)
+			{
+				if (des.m_type != HeapType)
+					throw std::runtime_error("Descriptor is the wrong type");
+			}
+
 			// Hash the CPU descriptor indices to generate a lookup key
-			auto key = 0;
+			auto key = pr::hash::FNV_offset_basis32;
 			for (auto& des : descriptors)
 				key = pr::hash::Hash32CT(des.m_index, key);
 
@@ -108,6 +120,66 @@ namespace pr::rdr12
 		D3D12_GPU_DESCRIPTOR_HANDLE Add(Descriptor const& descriptor)
 		{
 			return Add({&descriptor, 1});
+		}
+
+		// Add a CBV descriptor to the GPU heap, and return its handle
+		D3D12_GPU_DESCRIPTOR_HANDLE Add(D3D12_CONSTANT_BUFFER_VIEW_DESC const& desc) requires (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+		{
+			// Don't bother with caching, this is intended for one-off descriptors
+			auto count = 1;
+
+			// Assert capacity
+			PurgeCompleted();
+			EnsureCapacity(count);
+
+			// Get the heap handles (CPU side, and GPU side) at the insert position (m_head).
+			D3D12_CPU_DESCRIPTOR_HANDLE dest_cpu = { m_heap->GetCPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			D3D12_GPU_DESCRIPTOR_HANDLE dest_gpu = { m_heap->GetGPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			device()->CreateConstantBufferView(&desc, dest_cpu);
+
+			// Return the GPU handle for the descriptor
+			m_head = Wrap(m_head + count, 0, m_size);
+			return dest_gpu;
+		}
+
+		// Add a SRV descriptor to the GPU heap, and return its handle
+		D3D12_GPU_DESCRIPTOR_HANDLE Add(ID3D12Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC const& desc) requires (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+		{
+			// Don't bother with caching, this is intended for one-off descriptors
+			auto count = 1;
+
+			// Assert capacity
+			PurgeCompleted();
+			EnsureCapacity(count);
+
+			// Get the heap handles (CPU side, and GPU side) at the insert position (m_head).
+			D3D12_CPU_DESCRIPTOR_HANDLE dest_cpu = { m_heap->GetCPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			D3D12_GPU_DESCRIPTOR_HANDLE dest_gpu = { m_heap->GetGPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			device()->CreateShaderResourceView(resource, &desc, dest_cpu);
+			
+			// Return the GPU handle for the descriptor
+			m_head = Wrap(m_head + count, 0, m_size);
+			return dest_gpu;
+		}
+
+		// Add a UAV descriptor to the GPU heap, and return its handle
+		D3D12_GPU_DESCRIPTOR_HANDLE Add(ID3D12Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC const& desc) requires (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+		{
+			// Don't bother with caching, this is intended for one-off descriptors
+			auto count = 1;
+
+			// Assert capacity
+			PurgeCompleted();
+			EnsureCapacity(count);
+
+			// Get the heap handles (CPU side, and GPU side) at the insert position (m_head).
+			D3D12_CPU_DESCRIPTOR_HANDLE dest_cpu = { m_heap->GetCPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			D3D12_GPU_DESCRIPTOR_HANDLE dest_gpu = { m_heap->GetGPUDescriptorHandleForHeapStart().ptr + m_head * m_des_size };
+			device()->CreateUnorderedAccessView(resource, nullptr, &desc, dest_cpu);
+
+			// Return the GPU handle for the descriptor
+			m_head = Wrap(m_head + count, 0, m_size);
+			return dest_gpu;
 		}
 
 		// Remove sync points that the GPU has completed, effectively advancing the tail of the ring buffer

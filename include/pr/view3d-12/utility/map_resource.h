@@ -36,7 +36,7 @@ namespace pr::rdr12
 		{
 			Map(res, sub, elem_size, read_range);
 		}
-		MapResource(MapResource&& rhs)
+		MapResource(MapResource&& rhs) noexcept
 			:m_res(rhs.m_res)
 			,m_sub(rhs.m_sub)
 			,m_elem_size(rhs.m_elem_size)
@@ -52,7 +52,7 @@ namespace pr::rdr12
 			rhs.m_data = nullptr;
 		}
 		MapResource(MapResource const&) = delete;
-		MapResource& operator =(MapResource&& rhs)
+		MapResource& operator =(MapResource&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_res, rhs.m_res);

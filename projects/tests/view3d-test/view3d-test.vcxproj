@@ -46,12 +46,6 @@
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <CustomBuildStep>
-      <Inputs>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration)\view3d.dll;%(Inputs)</Inputs>
-      <Command>py $(ProjectDir)post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
-      <Message>Copying dependencies</Message>
-      <Outputs>view3d.dll</Outputs>
-    </CustomBuildStep>
   </ItemDefinitionGroup>
 
   <!-- Files -->
@@ -59,8 +53,16 @@
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="..\..\..\include\pr\view3d\dll\view3d.h" />
-    <None Include="post_build.py" />
   </ItemGroup>
+
+  <!-- Dependencies -->
+  <Target Name="Deploy" AfterTargets="Build"
+    Inputs="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d.dll"
+    Outputs="$(TargetDir)view3d.dll"
+  >
+    <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\"/>
+    <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d.pdb $(TargetDir) -OnlyIfNewer -IgnoreMissing" WorkingDirectory="$(SolutionDir)..\"/>
+  </Target>
 
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

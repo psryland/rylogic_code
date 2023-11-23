@@ -9,12 +9,29 @@
 namespace pr::rdr12
 {
 	// Notes:
-	//   - TextureBase (and derived objects) are lightweight, they are basically reference
-	//     counted pointers to D3D resources.
 	//   - A base class for all renderer texture instances.
-	//   - Textures have value semantics (i.e. copyable)
-	//   - Each time CreateTexture is called, a new texture instance is allocated.
-	//     However, the resources associated with the texture may be shared with other textures.
+	//   - TextureBase (and derived objects) are lightweight-ish, they are basically reference
+	//     counted pointers+data to D3D resources. Think Instance (TextureBase) of a Model (D3D resource).
+	//   - TextureBase does not have value semantics, but is cloneable.
+	//   - Each time CreateTexture is called, a new texture instance is allocated, however, the resources
+	//     associated with the texture may be shared with other textures.
+	//
+	// The structure looks like this:
+	//                 TextureBase
+	//                 +----------+
+	//    +------------+-res, t2s | <------ TexturePtr
+	//    V            | SRV, UAV |
+	// +-----+         | RTV, Id  | <------ TexturePtr
+	// | D3D |         | etc      |
+	// | Res |         +----------+
+	// +-----+                    
+	//    ^            TextureBase
+	//    |            +----------+
+	//    +------------+-res, t2s | <------ TexturePtr
+	//                 | SRV, UAV | <------ TexturePtr
+	//                 | RTV, Id  |
+	//                 | etc      | <------ TexturePtr
+	//                 +----------+
 
 	// Flags for Textures
 	enum class ETextureFlag :int
@@ -32,15 +49,19 @@ namespace pr::rdr12
 	{
 		ResourceManager*       m_mgr;    // The manager that created this texture
 		D3DPtr<ID3D12Resource> m_res;    // The texture resource (possibly shared with other Texture instances)
-		Descriptor             m_srv;    // Shader resource view
-		Descriptor             m_uav;    // Unordered access view
-		Descriptor             m_rtv;    // Render target view(if available)
+		Descriptor             m_srv;    // Shader resource view (if available)
+		Descriptor             m_uav;    // Unordered access view (if available)
+		Descriptor             m_rtv;    // Render target view (if available)
 		RdrId                  m_id;     // Id for this texture in the resource manager
 		RdrId                  m_uri;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
 		ETextureFlag           m_tflags; // Flags for boolean properties of the texture
 		string32               m_name;   // Human readable id for the texture
 
-		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
+		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension);
+		TextureBase(TextureBase&&) = delete;
+		TextureBase(TextureBase const&) = delete;
+		TextureBase& operator =(TextureBase&&) = delete;
+		TextureBase& operator =(TextureBase const&) = delete;
 		virtual ~TextureBase();
 
 		// Access the renderer

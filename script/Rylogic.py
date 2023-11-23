@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
 import sys, os, re, enum, time, shutil, glob, subprocess, threading, socket, code
@@ -254,7 +254,7 @@ def DiffHash(src,dst,trace=False):
 	return False
 	
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False, filter:str=None, filter_flags=0, follow_symlinks=True):
+def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_missing=False, quiet=False, filter:str=None, filter_flags=0, follow_symlinks=True):
 
 	src_is_dir = src.endswith("/") or src.endswith("\\")
 	dst_is_dir = dst.endswith("/") or dst.endswith("\\")
@@ -271,7 +271,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 		lst += [os.path.split(src)[1]]
 	elif "*" in src or "?" in src:
 		lst += [os.path.split(f)[1] for f in glob.glob(src)]
-	elif not ignore_non_existing:
+	elif not ignore_missing:
 		raise FileNotFoundError(f"ERROR: {src} does not exist")
 
 	# If the 'src' represents multiple files, 'dst' must be a directory
@@ -304,7 +304,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 
 		# Call recursively for directory copies
 		if os.path.isdir(s):
-			Copy(s, d+"\\", only_if_modified, show_unchanged, ignore_non_existing, quiet, filter, filter_flags, follow_symlinks)
+			Copy(s, d+"\\", only_if_modified, show_unchanged, ignore_missing, quiet, filter, filter_flags, follow_symlinks)
 
 		# Copy the file
 		else:
@@ -359,20 +359,20 @@ def Gcc2Vs(line):
 
 # Executes a program and returns it's stdout/stderr as a string
 # Returns (result,output)
-def Run(args, expected_return_code=0, show_arguments=False):
+def Run(args, expected_return_code=0, show_arguments=False, cwd=None, shell=False, encoding='utf-8'):
 	try:
 		if show_arguments: print(args)
-		outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
+		outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT, cwd=cwd, shell=shell, encoding=encoding)
 		return True,outp
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return True,e.output
 		return False,e.output
 
 # Executes a program echoing its output to stdout
-def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
+def Exec(args, expected_return_code=0, show_arguments=False, cwd=None, shell=False):
 	try:
 		if show_arguments: print(args)
-		subprocess.check_call(args, cwd=working_dir)
+		subprocess.check_call(args, cwd=cwd, shell=shell)
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
 		raise

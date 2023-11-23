@@ -14,7 +14,11 @@
 //  stack of error handlers.
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/texture/texture_desc.h"
+#include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/conversion.h"
+#include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
 #include "view3d-12/src/dll/dll_forward.h"
@@ -252,6 +256,43 @@ VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::
 	CatchAndReport(View3D_WindowAddObject, window,);
 }
 
+// Enumerate the object collection guids associated with 'window'
+VIEW3D_API void __stdcall View3D_WindowEnumGuids(view3d::Window window, view3d::EnumGuidsCB enum_guids_cb, void* ctx)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->EnumGuids({ enum_guids_cb, ctx });
+	}
+	CatchAndReport(View3D_WindowEnumGuids, window, );
+}
+
+// Enumerate the objects associated with 'window'
+VIEW3D_API void __stdcall View3D_WindowEnumObjects(view3d::Window window, view3d::EnumObjectsCB enum_objects_cb, void* ctx)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->EnumObjects({ enum_objects_cb, ctx });
+	}
+	CatchAndReport(View3D_WindowEnumObjects, window, );
+}
+VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(view3d::Window window, view3d::EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->EnumObjects({ enum_objects_cb, ctx }, context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_WindowEnumObjectsById, window, );
+}
+
 // Render the window
 VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
 {
@@ -311,9 +352,9 @@ VIEW3D_API unsigned int __stdcall View3D_WindowBackgroundColourGet(view3d::Windo
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->BackgroundColour().argb;
+		return window->BackgroundColour().argb().argb;
 	}
-	CatchAndReport(View3D_WindowBackgroundColourGet, window, 0);
+	CatchAndReport(View3D_WindowBackgroundColourGet, window, 0U);
 }
 VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window, unsigned int argb)
 {
@@ -322,9 +363,22 @@ VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->BackgroundColour(Colour32(argb));
+		window->BackgroundColour(pr::Colour(Colour32(argb)));
 	}
 	CatchAndReport(View3D_WindowBackgroundColourSet, window,);
+}
+
+// Set the global environment map for the window
+VIEW3D_API void __stdcall View3D_WindowEnvMapSet(view3d::Window window, view3d::CubeMap env_map)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->EnvMap(env_map);
+	}
+	CatchAndReport(View3D_WindowEnvMapSet, window, );
 }
 
 // Camera *********************************
@@ -467,6 +521,80 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(view3d::Window window, view3d::
 
 // Lights *********************************
 
+// Get/Set the properties of the global light
+VIEW3D_API pr::view3d::Light __stdcall View3D_LightPropertiesGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto global_light = window->GlobalLight();
+		return view3d::Light {
+			.m_position       = To<view3d::Vec4>(global_light.m_position),
+			.m_direction      = To<view3d::Vec4>(global_light.m_direction),
+			.m_type           = s_cast<view3d::ELight>(global_light.m_type),
+			.m_ambient        = global_light.m_ambient.argb,
+			.m_diffuse        = global_light.m_diffuse.argb,
+			.m_specular       = global_light.m_specular.argb,
+			.m_specular_power = global_light.m_specular_power,
+			.m_range          = global_light.m_range,
+			.m_falloff        = global_light.m_falloff,
+			.m_inner_angle    = global_light.m_inner_angle,
+			.m_outer_angle    = global_light.m_outer_angle,
+			.m_cast_shadow    = global_light.m_cast_shadow,
+			.m_cam_relative   = global_light.m_cam_relative,
+			.m_on             = global_light.m_on,
+		};
+	}
+	CatchAndReport(View3D_LightPropertiesGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_LightPropertiesSet(view3d::Window window, view3d::Light const& light)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		assert(light.m_position.w == 1);
+
+		DllLockGuard;
+		rdr12::Light global_light;
+		global_light.m_position       = To<v4>(light.m_position);
+		global_light.m_direction      = To<v4>(light.m_direction);
+		global_light.m_type           = pr::Enum<pr::rdr12::ELight>::From(light.m_type);
+		global_light.m_ambient        = light.m_ambient;
+		global_light.m_diffuse        = light.m_diffuse;
+		global_light.m_specular       = light.m_specular;
+		global_light.m_specular_power = light.m_specular_power;
+		global_light.m_range          = light.m_range;
+		global_light.m_falloff        = light.m_falloff;
+		global_light.m_inner_angle    = light.m_inner_angle;
+		global_light.m_outer_angle    = light.m_outer_angle;
+		global_light.m_cast_shadow    = light.m_cast_shadow;
+		global_light.m_cam_relative   = light.m_cam_relative != 0;
+		global_light.m_on             = light.m_on != 0;
+		window->GlobalLight(global_light);
+	}
+	CatchAndReport(View3D_LightPropertiesSet, window,);
+}
+
+// Set the global light source for a window
+VIEW3D_API void __stdcall View3D_LightSource(view3d::Window window, view3d::Vec4 position, view3d::Vec4 direction, BOOL camera_relative)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		assert(position.w == 1);
+
+		DllLockGuard;
+		auto global_light = window->GlobalLight();
+		global_light.m_position = To<v4>(position);
+		global_light.m_direction = To<v4>(direction);
+		global_light.m_cam_relative = camera_relative != 0;
+		window->GlobalLight(global_light);
+	}
+	CatchAndReport(View3D_LightSource, window,);
+}
+
 // Objects ********************************
 
 // Create objects given in an ldr string or file.
@@ -540,6 +668,76 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(view3d::Object object, view3d::Mat
 		object->O2W(o2w_, name);
 	}
 	CatchAndReport(View3D_ObjectO2WSet, ,);
+}
+
+// Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API float __stdcall View3D_ObjectReflectivityGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return object->Reflectivity(name);
+	}
+	CatchAndReport(View3D_ObjectReflectivityGet, ,0);
+}
+VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(view3d::Object object, float reflectivity, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Reflectivity(reflectivity, name);
+	}
+	CatchAndReport(View3D_ObjectReflectivitySet, ,);
+}
+
+// Materials ******************************
+
+// Release a reference to a texture
+VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex)
+{
+	try
+	{
+		// Release is idempotent
+		if (!tex) return;
+		tex->Release();
+	}
+	CatchAndReport(View3D_TextureRelease, ,);
+}
+VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex)
+{
+	try
+	{
+		// Release is idempotent
+		if (!tex) return;
+		tex->Release();
+	}
+	CatchAndReport(View3D_CubeMapRelease, ,);
+}
+
+// Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+VIEW3D_API view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* resource, view3d::CubeMapOptions const& options)
+{
+	try
+	{
+		DllLockGuard;
+		auto tdesc = TextureDesc(rdr12::AutoId, ResDesc::TexCube({}));
+		auto tex = Dll().m_rdr.res().CreateTextureCube(resource, tdesc);
+
+		// Set the cube map to world transform
+		if (m4x4 cube2w; (cube2w = To<m4x4>(options.m_cube2w)) != m4x4::Zero())
+		{
+			if (!pr::IsAffine(cube2w)) throw std::runtime_error("Invalid cube map orientation transform");
+			tex->m_cube2w = cube2w;
+		}
+
+		// Rely on the caller for correct reference counting
+		return tex.release();
+	}
+	CatchAndReport(View3D_CubeMapCreateFromUri, , nullptr);
 }
 
 // Miscellaneous **************************

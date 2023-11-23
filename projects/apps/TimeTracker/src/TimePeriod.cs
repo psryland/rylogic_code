@@ -45,6 +45,7 @@ namespace TimeTracker
 				m_collection.Sort(x => x.Start, -1);
 				NotifyPropertyChanged(nameof(Start));
 				NotifyPropertyChanged(nameof(Duration));
+				Next?.NotifyPropertyChanged(nameof(Duration));
 				Prev?.NotifyPropertyChanged(nameof(Duration));
 			}
 		}
@@ -55,6 +56,7 @@ namespace TimeTracker
 		{
 			get
 			{
+				// Find the duration until the next task
 				return Next is TimePeriod next
 					? next.Start - Start
 					: DateTimeOffset.Now - Start;
@@ -71,7 +73,7 @@ namespace TimeTracker
 					? m_idx = m_collection.IndexOf(this)
 					: m_idx;
 
-				// Find the duration until the next task
+				// Return the next task in the collection
 				return idx > 0
 					? m_collection[idx - 1]
 					: null;
@@ -88,7 +90,7 @@ namespace TimeTracker
 					? m_idx = m_collection.IndexOf(this)
 					: m_idx;
 
-				// Find the duration until the next task
+				// Return the previous task in the collection
 				return idx < m_collection.Count - 1
 					? m_collection[idx + 1]
 					: null;

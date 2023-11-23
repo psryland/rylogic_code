@@ -120,7 +120,7 @@ namespace pr::rdr12
 		try
 		{
 			V3dWindow* win;
-			m_wnd_cont.emplace_back(win = new V3dWindow(hwnd, *this, opts));
+			m_wnd_cont.push_back(win = new V3dWindow(hwnd, *this, opts));
 			return win;
 		}
 		catch (std::exception const& e)

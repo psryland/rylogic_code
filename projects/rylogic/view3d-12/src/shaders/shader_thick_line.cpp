@@ -15,20 +15,21 @@ namespace pr::rdr12::shaders
 		:Shader()
 		,m_width(width)
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,
-			.GS = shader_code::thick_line_strip_gs,
-			.CS = shader_code::none,
 			.DS = shader_code::none,
 			.HS = shader_code::none,
+			.GS = shader_code::thick_line_strip_gs,
+			.CS = shader_code::none,
 		};
 	}
-	void ThickLineStripGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const&, DrawListElement const*)
+	void ThickLineStripGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const*)
 	{
 		CBufScreenSpace cb = {};
-		cb.m_screen_dim = v2(m_width, m_width);
+		cb.m_size = v2(m_width, m_width);
+		cb.m_screen_dim = To<v2>(scene.wnd().BackBufferSize());
 		cb.m_depth = false;
 		auto gpu_address = cbuf.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufScreenSpace, gpu_address);
@@ -38,20 +39,21 @@ namespace pr::rdr12::shaders
 		:Shader()
 		,m_width(width)
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::none,
 			.PS = shader_code::none,
-			.GS = shader_code::thick_line_list_gs,
-			.CS = shader_code::none,
 			.DS = shader_code::none,
 			.HS = shader_code::none,
+			.GS = shader_code::thick_line_list_gs,
+			.CS = shader_code::none,
 		};
 	}
-	void ThickLineListGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const&, DrawListElement const*)
+	void ThickLineListGS::Setup(ID3D12GraphicsCommandList* cmd_list, GpuUploadBuffer& cbuf, Scene const& scene, DrawListElement const*)
 	{
 		CBufScreenSpace cb = {};
-		cb.m_screen_dim = v2(m_width, m_width);
+		cb.m_size = v2(m_width, m_width);
+		cb.m_screen_dim = To<v2>(scene.wnd().BackBufferSize());
 		cb.m_depth = false;
 		auto gpu_address = cbuf.Add(cb, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true);
 		cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufScreenSpace, gpu_address);

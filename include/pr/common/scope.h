@@ -45,14 +45,14 @@ namespace pr
 			if (m_dont) return;
 			m_undo(m_state);
 		}
-		Scope(Scope&& rhs)
+		Scope(Scope&& rhs) noexcept
 			:m_state(std::move(rhs.m_state))
 			, m_undo(std::move(rhs.m_undo))
 			, m_dont(rhs.m_dont)
 		{
 			rhs.m_dont = true;
 		}
-		Scope& operator = (Scope&& rhs)
+		Scope& operator = (Scope&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_state, rhs.m_state);
@@ -88,13 +88,13 @@ namespace pr
 			if (m_dont) return;
 			m_undo();
 		}
-		Scope(Scope&& rhs)
+		Scope(Scope&& rhs) noexcept
 			:m_undo(std::move(rhs.m_undo))
 			,m_dont(rhs.m_dont)
 		{
 			rhs.m_dont = true;
 		}
-		Scope& operator = (Scope&& rhs)
+		Scope& operator = (Scope&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_undo, rhs.m_undo);

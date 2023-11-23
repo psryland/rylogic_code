@@ -53,23 +53,28 @@ namespace pr::rdr12
 			, m_sync_point(sync_point)
 			, m_pool(pool)
 		{}
-		CmdAlloc(CmdAlloc&&) = default;
+		CmdAlloc(CmdAlloc&& rhs) = default;
 		CmdAlloc(CmdAlloc const&) = delete;
 		CmdAlloc& operator =(CmdAlloc&& rhs)
 		{
-			// default is member-wise std::move, not swap
 			if (&rhs == this) return *this;
-			std::swap(m_alloc, rhs.m_alloc);
-			std::swap(m_thread_id, rhs.m_thread_id);
-			std::swap(m_sync_point, rhs.m_sync_point);
-			std::swap(m_pool, rhs.m_pool);
+			
+			// Move this to the pool before replacing it with 'rhs'
+			if (m_pool != nullptr && m_alloc != nullptr)
+				m_pool->Return(std::move(*this));
+
+			// Move 'rhs' into this
+			m_alloc = std::move(rhs.m_alloc);
+			m_thread_id = std::move(rhs.m_thread_id);
+			m_sync_point = std::move(rhs.m_sync_point);
+			m_pool = std::move(rhs.m_pool);
 			return *this;
 		}
 		CmdAlloc& operator =(CmdAlloc const&) = delete;
 		~CmdAlloc()
 		{
 			if (m_pool != nullptr && m_alloc != nullptr)
-				m_pool->Return(*this);
+				m_pool->Return(std::move(*this));
 		}
 
 		// Set the ID of the thread using this command allocator
@@ -79,18 +84,21 @@ namespace pr::rdr12
 		}
 
 		// Access the allocator
-		ID3D12CommandAllocator* operator ->() const
+		ID3D12CommandAllocator* get() const
 		{
-			if (std::this_thread::get_id() != m_thread_id)
+			auto const this_thread = std::this_thread::get_id();
+			if (this_thread != m_thread_id)
 				throw std::runtime_error("Cross thread use of a command allocator");
 
 			return m_alloc.get();
 		}
-
-		// Convert to the allocator pointer
+		ID3D12CommandAllocator* operator ->() const
+		{
+			return get();
+		}
 		operator ID3D12CommandAllocator* () const
 		{
-			return m_alloc.get();
+			return get();
 		}
 	};
 
@@ -148,17 +156,19 @@ namespace pr::rdr12
 		}
 
 		// Return an allocator to the pool
-		void Return(CmdAlloc<ListType>& cmd_alloc)
+		void Return(CmdAlloc<ListType>&& cmd_alloc)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_gsync != nullptr, "This pool has already been destructed");
 			PR_ASSERT(PR_DBG_RDR, cmd_alloc != nullptr, "Don't add null allocators to the pool");
 			PR_ASSERT(PR_DBG_RDR, cmd_alloc.m_pool == this, "Returned object didn't come from this pool");
 			cmd_alloc.m_pool = nullptr;
-			m_pool.emplace_back(std::move(cmd_alloc));
+			m_pool.push_back(std::move(cmd_alloc));
 		}
 	};
 
 	// Flavours
 	using GfxCmdAllocPool = CmdAllocPool<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComCmdAllocPool = CmdAllocPool<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 	using GfxCmdAlloc = CmdAlloc<D3D12_COMMAND_LIST_TYPE_DIRECT>;
+	using ComCmdAlloc = CmdAlloc<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
 }

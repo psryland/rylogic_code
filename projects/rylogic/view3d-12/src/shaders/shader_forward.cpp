@@ -17,29 +17,25 @@ namespace pr::rdr12::shaders
 	Forward::Forward(ID3D12Device* device)
 		:Shader()
 	{
-		Code = ShaderCode
+		m_code = ShaderCode
 		{
 			.VS = shader_code::forward_vs,
 			.PS = shader_code::forward_ps,
-			.GS = shader_code::none,
-			.CS = shader_code::none,
 			.DS = shader_code::none,
 			.HS = shader_code::none,
+			.GS = shader_code::none,
+			.CS = shader_code::none,
 		};
 		
 		// Create the root signature
 		RootSig<ERootParam, ESampParam> root_sig;
 		root_sig.Flags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
+		// Register mappings
 		root_sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
 		root_sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
 		root_sig.CBuf(ERootParam::CBufFade, ECBufReg::b2);
@@ -49,13 +45,14 @@ namespace pr::rdr12::shaders
 		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1);
 		root_sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
 		root_sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
+		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, shaders::MaxSamplers);
 
-		root_sig.Samp(ESampParam::DiffTexture, SamDescStatic(ESamReg::s0));
+		// Add stock static samplers
 		root_sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
-		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2));
+		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
 		root_sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
 
-		Signature = root_sig.Create(device);
+		m_signature = root_sig.Create(device);
 	}
 
 	// Config the shader
@@ -67,8 +64,8 @@ namespace pr::rdr12::shaders
 			CBufFrame cb0 = {};
 			SetViewConstants(cb0.m_cam, scene.m_cam);
 			SetLightingConstants(cb0.m_global_light, scene.m_global_light, scene.m_cam);
-			//todo SetShadowMapConstants(cb0.m_shadow, smap_rstep);
-			//todo SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
+			SetShadowMapConstants(cb0.m_shadow, scene.FindRStep<RenderSmap>());
+			SetEnvMapConstants(cb0.m_env_map, scene.m_global_envmap.get());
 			auto gpu_address = cbuf.Add(cb0, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufFrame, gpu_address);
 		}
@@ -79,11 +76,11 @@ namespace pr::rdr12::shaders
 			auto& nug = *dle->m_nugget;
 
 			CBufNugget cb1 = {};
-			SetModelFlags(cb1, inst, nug, scene);
+			SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
 			SetTxfm(cb1, inst, scene.m_cam);
 			SetTint(cb1, inst, nug);
 			SetEnvMap(cb1, inst, nug);
-			SetTexDiffuse(cb1, nug);
+			SetTex2Surf(cb1, inst, nug);
 			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 		}

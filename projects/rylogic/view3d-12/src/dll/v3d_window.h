@@ -71,7 +71,7 @@ namespace pr::rdr12
 
 		// Renderer access
 		Renderer& rdr() const;
-		ResourceManager& res_mgr() const;
+		ResourceManager& res() const;
 
 		// Error event. Can be called in a worker thread context
 		MultiCast<ReportErrorCB> ReportError;
@@ -103,6 +103,13 @@ namespace pr::rdr12
 		view3d::Viewport Viewport() const;
 		void Viewport(view3d::Viewport const& vp);
 
+		// Enumerate the object collection guids associated with this window
+		void EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb);
+
+		// Enumerate the objects associated with this window
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count);
+
 		// Add/Remove an object to this window
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
@@ -116,7 +123,6 @@ namespace pr::rdr12
 
 		// Render this window into whatever render target is currently set
 		void Render();
-		void Present();
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);
@@ -137,8 +143,16 @@ namespace pr::rdr12
 		bool MouseNavigateZ(v2 ss_point, float delta, bool along_ray);
 
 		// Get/Set the window background colour
-		Colour32 BackgroundColour() const;
-		void BackgroundColour(Colour32 colour);
+		Colour BackgroundColour() const;
+		void BackgroundColour(Colour_cref colour);
+
+		// Get/Set the global scene light
+		Light GlobalLight() const;
+		void GlobalLight(Light const& light);
+
+		// Get/Set the global environment map for this window
+		view3d::CubeMap EnvMap() const;
+		void EnvMap(view3d::CubeMap env_map);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);

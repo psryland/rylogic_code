@@ -756,7 +756,7 @@ namespace pr
 		}
 
 		// construct by moving right
-		deque(deque&& rhs)
+		deque(deque&& rhs) noexcept
 			:m_map(rhs.alloc())
 			, m_first()
 			, m_last()
@@ -786,7 +786,7 @@ namespace pr
 		}
 
 		// assign by moving rhs
-		deque& operator = (deque&& rhs)
+		deque& operator = (deque&& rhs) noexcept
 		{
 			if (this != &rhs)
 				impl_assign(std::move(rhs));
@@ -1164,7 +1164,7 @@ namespace pr
 		// This allows cast to std::vector<> amoung others.
 		// Note: converting to a std::vector<> when 'value_type' has an alignment greater than the
 		// default alignment causes a compiler error because of std::vector.resize().
-		template <typename TCont, typename = std::enable_if_t<std::is_same_v<TCont::value_type, value_type>>>
+		template <typename TCont> requires (std::is_same_v<typename TCont::value_type, value_type>)
 		explicit operator TCont() const
 		{
 			return TCont(begin(), end());
