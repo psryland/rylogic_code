@@ -38,7 +38,7 @@ namespace pr::script
 		// True if missing includes do not throw errors
 		IgnoreMissing = 1 << 2,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Source locations for includes
@@ -49,7 +49,7 @@ namespace pr::script
 		Resources = 1 << 1,
 		Strings   = 1 << 2,
 		All       = ~None,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// A base class and interface for an include handler

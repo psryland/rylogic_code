@@ -476,7 +476,7 @@ namespace pr::script
 		{
 			None = 0,
 			BufferLocally = 1 << 0,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 	protected:

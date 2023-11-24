@@ -19,7 +19,7 @@ namespace pr::rdr12
 	SortKeyId Shader::SortId() const
 	{
 		// Hash all of the ByteCode pointers together for the sort id.
-		return SortKeyId(pr::hash::HashBytes(&m_code, &m_code + 1) % SortKey::MaxShaderId);
+		return SortKeyId(pr::hash::HashBytes32(&m_code, &m_code + 1) % SortKey::MaxShaderId);
 	}
 	// Config the shader.
 	void Shader::Setup(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*)

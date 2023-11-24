@@ -73,7 +73,7 @@ namespace pr::rdr12
 		// usually an error, but in advanced cases it isn't.
 		RangesCanOverlap = 1 << 5,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Nugget data. Common base for NuggetProps and Nugget

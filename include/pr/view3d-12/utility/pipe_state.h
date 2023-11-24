@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
@@ -74,19 +75,82 @@ namespace pr::rdr12
 	struct PipeState
 	{
 		using field_t = struct { uint16_t size, ofs; };
-		using state_t = pr::vector<uint8_t, 16>;
-
+		using state_t = union { uint64_t local; void* heap; };
+		
+		state_t m_value;  // The data that replaces the PSO description field
+		uint16_t m_size;  // The size of the data in 'm_value'
+		uint16_t m_align; // The alignment of the data in 'm_value'
 		union {
 		EPipeState m_id;  // Identifies the offset and size of the field in the PSO description.
-		field_t m_field;  // Ofs/Size into the PSO description
+		field_t m_field;  // Ofs/Size into the PSO description. (this is how 'EPipeState' is encoded)
 		};
-		state_t m_value;  // The data that replaces the PSO description field
 
 		PipeState() = default;
-		PipeState(EPipeState ps, state_t value)
-			: m_id(ps)
-			, m_value(value)
-		{}
+
+		template <typename TState> PipeState(EPipeState ps, TState const& value)
+			: m_value()
+			, m_size(sizeof(value))
+			, m_align(alignof(TState))
+			, m_id(ps)
+		{
+			static_assert(std::is_trivially_copyable_v<TState>, "TState must be trivially copyable");
+			static_assert(sizeof(value) <=  std::numeric_limits<uint16_t>::max(), "TState is too large");
+			if constexpr (sizeof(TState) <= sizeof(state_t) && alignof(TState) <= alignof(state_t))
+			{
+				memcpy(&m_value.local, &value, sizeof(TState));
+			}
+			else
+			{
+				m_value.heap = _aligned_malloc(m_size, m_align);
+				memcpy(m_value.heap, &value, sizeof(TState));
+			}
+		}
+		PipeState(PipeState&& rhs) noexcept
+			: m_value(rhs.m_value)
+			, m_size(rhs.m_size)
+			, m_align(rhs.m_align)
+			, m_id(rhs.m_id)
+		{
+			rhs.m_value.local = 0;
+			rhs.m_size = 0;
+		}
+		PipeState(PipeState const& rhs)
+			: m_value(rhs.m_value)
+			, m_size(rhs.m_size)
+			, m_align(rhs.m_align)
+			, m_id(rhs.m_id)
+		{
+			if (rhs.is_local()) return;
+			m_value.heap = _aligned_malloc(m_size, m_align);
+			memcpy(m_value.heap, rhs.m_value.heap, m_size);
+		}
+		PipeState& operator=(PipeState&& rhs) noexcept
+		{
+			if (this == &rhs) return *this;
+			std::swap(m_value, rhs.m_value);
+			std::swap(m_size, rhs.m_size);
+			std::swap(m_align, rhs.m_align);
+			std::swap(m_id, rhs.m_id);
+			return *this;
+		}
+		PipeState& operator=(PipeState const& rhs)
+		{
+			if (this == &rhs) return *this;
+			this->~PipeState();
+			new (this) PipeState(rhs);
+			return *this;
+		}
+		~PipeState()
+		{
+			if (is_local()) return;
+			_aligned_free(m_value.heap);
+		}
+
+		// Is the data stored locally?
+		constexpr bool is_local() const
+		{
+			return m_size <= sizeof(state_t) && m_align <= alignof(state_t);
+		}
 
 		// Returns a pointer into 'desc' for this pipe state field
 		void const* ptr(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& desc) const
@@ -99,7 +163,7 @@ namespace pr::rdr12
 		}
 		void const* value() const
 		{
-			return m_value.data();
+			return is_local() ? &m_value.local : m_value.heap;
 		}
 		int size() const
 		{
@@ -110,7 +174,7 @@ namespace pr::rdr12
 	// Create a PipeState object
 	template <EPipeState PS> inline PipeState PSO(pipe_state_field_t<PS> const& data)
 	{
-		return PipeState(PS, {byte_ptr(&data), byte_ptr(&data + 1)});
+		return PipeState(PS, data);
 	}
 
 	// A collection of pipe state changes
@@ -120,7 +184,7 @@ namespace pr::rdr12
 		int m_fixed; // The first modifiable state. Below this index cannot be cleared/set.
 
 		PipeStates()
-			:m_states()
+			: m_states()
 			, m_fixed()
 		{}
 
@@ -150,7 +214,7 @@ namespace pr::rdr12
 		template <EPipeState PS> void Set(pipe_state_field_t<PS> const& data)
 		{
 			Clear<PS>();
-			m_states.push_back(PipeState(PS, {byte_ptr(&data), byte_ptr(&data + 1)}));
+			m_states.push_back(PipeState(PS, data));
 		}
 
 		// See if the given pipe state is in the set of overrides
@@ -160,7 +224,7 @@ namespace pr::rdr12
 			{
 				auto& state = *iter;
 				if (state.m_id != PS) continue;
-				return type_ptr<pipe_state_field_t<PS>>(state.m_value.data());
+				return type_ptr<pipe_state_field_t<PS>>(state.value());
 			}
 			return nullptr;
 		}
@@ -174,18 +238,18 @@ namespace pr::rdr12
 
 		PipeStateDesc()
 			:m_desc()
-			,m_hash(hash::HashBytes(&m_desc, &m_desc + 1))
+			,m_hash(hash::HashBytes32(&m_desc, &m_desc + 1))
 		{}
 		PipeStateDesc(D3D12_GRAPHICS_PIPELINE_STATE_DESC const& rhs)
 			:m_desc(rhs)
-			,m_hash(hash::HashBytes(&m_desc, &m_desc + 1))
+			,m_hash(hash::HashBytes32(&m_desc, &m_desc + 1))
 		{}
 
 		// Apply changes to the pipeline state description
 		void Apply(PipeState const& ps)
 		{
 			// Record the change in the hash
-			m_hash = hash::HashBytes(&ps, &ps + 1, m_hash);
+			m_hash = hash::HashBytes32(byte_ptr(ps.value()), byte_ptr(ps.value()) + ps.size(), m_hash);
 
 			// Set the value of a pipeline state description field
 			memcpy(ps.ptr(m_desc), ps.value(), ps.size());

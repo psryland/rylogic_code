@@ -219,6 +219,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\cmd_list.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\d2d_context.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -550,6 +553,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list_collection.h">
       <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\texture\d2d_context.h">
+      <Filter>src\texture</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -326,12 +326,117 @@ old:
 	<Type Name="pr::rdr12::Model">
 		<DisplayString>{m_name.m_ptr}</DisplayString>
 	</Type>
+	<Type Name="pr::rdr12::BaseInstance">
+		<DisplayString>Cpts={m_cpt_count}</DisplayString>
+		<Expand>
+			<Item Name="[Count]">m_cpt_count</Item>
+			<CustomListItems MaxItemsPerView="20">
+				<Variable Name="idx" InitialValue="0"/>
+				<Variable Name="cpt_ptr" InitialValue="(pr::rdr12::EInstComp*)(this + 1)"/>
+				<Variable Name="data_ptr" InitialValue="(uint8_t*)(((int64_t)(this + 1) + 4 + m_cpt_count + 15) &amp; ~0xf)"/>
+				<Loop>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::ModelPtr">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::ModelPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::ModelPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransform">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransformPtr">
+						<Item Name="{*cpt_ptr}">(pr::m4x4*&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransformFuncPtr">
+						<Item Name="{*cpt_ptr}">(void*)data_ptr</Item>
+						<Exec>data_ptr += sizeof(void*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransform">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2SOptional">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransformPtr">
+						<Item Name="{*cpt_ptr}">(pr::m4x4*&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransformFuncPtr">
+						<Item Name="{*cpt_ptr}">(void*)data_ptr</Item>
+						<Exec>data_ptr += sizeof(void*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::SortkeyOverride">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::SKOverride&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::SKOverride)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::PipeStates">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::PipeStates&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::PipeStates)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Flags">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::EInstFlag&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::EInstFlag)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::TintColour32">
+						<Item Name="{*cpt_ptr}">(pr::Colour32&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::Colour32)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::DiffTexture">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::Texture2DPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::Texture2DPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::DiffTextureSampler">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::SamplerPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::SamplerPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::EnvMapReflectivity">
+						<Item Name="{*cpt_ptr}">(float&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(float)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::UniqueId">
+						<Item Name="{*cpt_ptr}">(int32_t&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(int32_t)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::SSSize">
+						<Item Name="{*cpt_ptr}">(pr::v2&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v2)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float1">
+						<Item Name="{*cpt_ptr}">(float&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(float)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float2">
+						<Item Name="{*cpt_ptr}">(pr::v2&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v2)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float4">
+						<Item Name="{*cpt_ptr}">(pr::v4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v4)</Exec>
+					</If>
+					<Exec>++cpt_ptr</Exec>
+					<Exec>++idx</Exec>
+					<Break Condition="idx == m_cpt_count"/>
+				</Loop>
+			</CustomListItems>
+			<!--<ArrayItems>
+				<Size>m_cpt_count * sizeof(pr::rdr12::EInstComp)</Size>
+				<ValuePointer>(pr::rdr12::EInstComp*)(this + 1)</ValuePointer>
+			</ArrayItems>
+			<ArrayItems>
+				<Size>pr::rdr12::SizeOf((pr::rdr12::EInstComp*)(this + 1)[$i])</Size>
+				<ValuePointer>(pr::rdr12::EInstComp*)(this + 1)</ValuePointer>
+			</ArrayItems>-->
+		</Expand>
+	</Type>
 	<Type Name="pr::rdr12::ResStateData">
 		<DisplayString>{m_state[0]}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr12::ResStateData::MipState">
 		<DisplayString>mip={m_data &amp; 0xFF} state={(D3D12_RESOURCE_STATES)(m_data >> 8)}</DisplayString>
 	</Type>
+
 
 	<!-- Line Drawer -->
 	<Type Name="pr::ldr::LdrObject">

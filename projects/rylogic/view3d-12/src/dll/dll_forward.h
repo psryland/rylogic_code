@@ -18,7 +18,7 @@ namespace pr::rdr12
 		FocusPoint = 1 << 0,
 		OriginPoint = 1 << 1,
 		SelectionBox = 1 << 2,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	using ObjectSet = std::unordered_set<view3d::Object>;

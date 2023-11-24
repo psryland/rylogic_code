@@ -340,7 +340,7 @@ namespace pr::common
 			x(A, = 1 << 0)\
 			x(B, = 1 << 1)\
 			x(C, = 1 << 2)\
-			x(_flags_enum, )
+			x(_flags_enum, = 0)
 		PR_DEFINE_ENUM2(TestEnum4, PR_ENUM);
 		#undef PR_ENUM
 
@@ -348,7 +348,7 @@ namespace pr::common
 			x(A, "a", = 1 << 0)\
 			x(B, "b", = 1 << 1)\
 			x(C, "c", = 1 << 2 | B)\
-			x(_flags_enum,"",)
+			x(_flags_enum,"", = 0)
 		PR_DEFINE_ENUM3(TestEnum5, PR_ENUM);
 		#undef PR_ENUM
 	}
