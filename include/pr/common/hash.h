@@ -27,10 +27,10 @@ namespace pr::hash
 	using HashValue64 = long long;
 
 	// Magic numbers used by the FNV-1a algorithm
-	static uint64_t const FNV_offset_basis64 = 14695981039346656037ULL;
-	static uint64_t const FNV_prime64 = 1099511628211ULL;
-	static uint32_t const FNV_offset_basis32 = 2166136261U;
-	static uint32_t const FNV_prime32 = 16777619U;
+	inline static constexpr uint64_t FNV_offset_basis64 = 14695981039346656037ULL;
+	inline static constexpr uint64_t FNV_prime64 = 1099511628211ULL;
+	inline static constexpr uint32_t FNV_offset_basis32 = 2166136261U;
+	inline static constexpr uint32_t FNV_prime32 = 16777619U;
 
 	// Concepts for strings/PODs/chars
 	template <typename Ty> concept CharType =
@@ -74,8 +74,8 @@ namespace pr::hash
 		}
 		static_assert(Mul64(0x1234567887654321, 0x1234567887654321) == 0x290D0FCAD7A44A41);
 
-		// Dependant value for static asserts
-		template <typename T, bool Value> constexpr bool dependant = Value;
+		// Dependent value for static asserts
+		template <typename T, bool Value> constexpr bool dependent = Value;
 
 		// Convert 'ch' to lower case
 		template <CharType Ty> constexpr Ty Lower(Ty ch)
@@ -87,9 +87,10 @@ namespace pr::hash
 	// Compile Time ***************************************************************************
 
 	// Notes:
+	//  - *DON'T* try to hash blocks of 4/8 bytes at a time. Whatever the unit size is (u8, u16, etc) you have to hash
+	//    each unit individually. This is because the same data should hash to the same value no matter where it is in memory.
+	//    If you hash leading bytes, then blocks, then trailing bytes, the memory locality will affect the hash value.
 	//  - Compile time hash functions are not focused on being fast, just compile time is enough.
-	//  - It's not possible (afaik) to reinterpret data into bytes for efficient hashing in blocks of u32 at compile time.
-	//    This is why strings are hashed per character and why there isn't a HashBytesCT function.
 	//  - If comparing runtime string hashes with compile time string hashes, make sure you use the compile time
 	//    hash functions for the runtime strings as well.
 
@@ -222,63 +223,37 @@ namespace pr::hash
 	}
 
 	// Hash a range of bytes
+	namespace impl
+	{
+		template <typename Ret> requires (std::is_same_v<Ret, HashValue32> || std::is_same_v<Ret, HashValue64>)
+		inline Ret HashBytes(void const* ptr, void const* end, Ret h)
+		{
+			// See comments above. Don't try to hash blocks of 4/8 bytes at
+			// a time as this causes memory locality to affect the hash value.
+			assert(ptr != nullptr && end != nullptr && ptr <= end);
+			using URet = std::make_unsigned_t<Ret>;
+			constexpr auto HashCT = [](uint8_t x, URet h)
+			{
+				if constexpr (std::is_same_v<Ret, HashValue32>)
+					return Hash32CT(x, h);
+				if constexpr (std::is_same_v<Ret, HashValue64>)
+					return Hash64CT(x, h);
+			};
+
+			union { void const* vptr; uint8_t const* byte; } p = { ptr }, e = { end };
+			for (; p.byte != e.byte; ++p.byte)
+				h = HashCT(*p.byte, h);
+
+			return h;
+		}
+	}
 	inline HashValue32 HashBytes32(void const* ptr, void const* end, uint32_t h = FNV_offset_basis32)
 	{
-		constexpr auto unaligned_mask = alignof(uint32_t) - 1;
-		constexpr auto bzero = static_cast<uint8_t const*>(nullptr);
-		auto bptr = reinterpret_cast<uint8_t const*>(ptr);
-		auto bend = reinterpret_cast<uint8_t const*>(end);
-		assert(ptr <= end);
-
-		if (bend - bptr < sizeof(uint32_t))
-		{
-			for (; bptr != bend; ++bptr)
-				h = Hash32CT(*bptr, h);
-		}
-		else
-		{
-			// Hash any unaligned bytes
-			auto count = ~((bptr - bzero) - 1) & unaligned_mask;
-			for (; count-- != 0; ++bptr)
-				h = Hash32CT(*bptr, h);
-
-			// Hash in units of uint32_t
-			count = (bend - bptr) / sizeof(uint32_t);
-			for (; count-- != 0; bptr += sizeof(uint32_t))
-				h = Hash32CT(*reinterpret_cast<uint32_t const*>(bptr), h);
-
-			// Hash remaining bytes
-			count = bend - bptr;
-			for (; count-- != 0; ++bptr)
-				h = Hash32CT(*bptr, h);
-		}
-
-		return h;
+		return impl::HashBytes<HashValue32>(ptr, end, h);
 	}
 	inline HashValue64 HashBytes64(void const* ptr, void const* end, uint64_t h = FNV_offset_basis64)
 	{
-		auto bzero = static_cast<uint8_t const*>(nullptr);
-		auto bptr = reinterpret_cast<uint8_t const*>(ptr);
-		auto bend = reinterpret_cast<uint8_t const*>(end);
-		auto unaligned_mask = alignof(uint64_t) - 1;
-
-		// Hash any unaligned bytes
-		for (; ((bptr - bzero) & unaligned_mask) != 0; ++bptr)
-			h = Hash64CT(*bptr, h);
-
-		// Hash in units of uint64_t
-		for (; bend - bptr >= sizeof(uint64_t); bptr += sizeof(uint64_t))
-			h = Hash64CT(*reinterpret_cast<uint64_t const*>(bptr), h);
-
-		// Hash remaining bytes
-		for (; bptr != bend; ++bptr)
-			h = Hash64CT(*bptr, h);
-
-		return h;
-	}
-	inline HashValue32 HashBytes(void const* ptr, void const* end, uint32_t h = FNV_offset_basis32)
-	{
-		return HashBytes32(ptr, end, h);
+		return impl::HashBytes<HashValue64>(ptr, end, h);
 	}
 
 	// Hash PODs given as arguments. Careful with hidden padding
@@ -304,7 +279,7 @@ namespace pr::hash
 
 			// Not supported
 			else
-				static_assert(impl::dependant<Ty, false>, "Unsupported type for HashArgs()");
+				static_assert(impl::dependent<Ty, false>, "Unsupported type for HashArgs()");
 		};
 		(hash_one(args), ...);
 		return h;
@@ -331,7 +306,7 @@ namespace pr::hash
 
 			// Not supported
 			else
-				static_assert(impl::dependant<Ty, false>, "Unsupported type for Hash()");
+				static_assert(impl::dependent<Ty, false>, "Unsupported type for Hash()");
 		};
 		(hash_one(args), ...);
 		return h;
@@ -572,7 +547,7 @@ namespace pr::hash
 
 		// Not supported
 		else
-			static_assert(impl::dependant<Ty, false>, "Unsupported type for Hash()");
+			static_assert(impl::dependent<Ty, false>, "Unsupported type for Hash()");
 	}
 	// Hash a range of elements
 	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::enable_if_pod32<Ty>> inline HashValue32 Hash(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
@@ -620,6 +595,21 @@ namespace pr::common
 			const auto h5 = Hash(five);
 			PR_CHECK(h4 == h5, true);
 		}
+		{// Hash Bytes
+			uint8_t const alignas(8) data[] = { 0,1,2,3,4,5,6,7, 8,9,0,1,2,3,4,5, 6,7,8,9,0,1,2,3, 4,5,6,7,8,9,0,1,2 };
+			auto h0 = HashBytes64(&data[2], &data[4]); // within alignment boundary
+			PR_CHECK(h0 == 0x08395507b4f137f2LL, true);
+			auto h1 = HashBytes64(&data[5], &data[9]); // spanning alignment boundary + < sizeof(u64)
+			PR_CHECK(h1 == 0x614326560c39f905LL, true);
+			auto h2 = HashBytes64(&data[5], &data[18]); // spanning alignment boundary + > sizeof(u64)
+			PR_CHECK(h2 == 0xd2c939dd1c78c0f4LL, true);
+			auto h3 = HashBytes64(&data[8], &data[16]); // on alignment boundaries
+			PR_CHECK(h3 == 0x5b3ae47deb0dc61dLL, true);
+			auto h4 = HashBytes64(&data[15], &data[19]); // locality check
+			PR_CHECK(h4 == h1, true);
+			auto h5 = HashBytes64(&data[15], &data[28]); // locality check
+			PR_CHECK(h5 == h2, true);
+		}
 		{// Hash POD
 			struct POD { int i; char c[4]; float f; };
 			static_assert(std::is_standard_layout_v<POD>);
@@ -661,7 +651,7 @@ namespace pr::common
 			pod.s[1] = 2;
 			pod.s[2] = 3;
 			const auto h0 = HashArgs("Paul", s, L"here", 1976, 12.29, 1234U, pod);
-			PR_CHECK(h0, static_cast<HashValue32>(0xa9068628));
+			PR_CHECK(h0, static_cast<HashValue32>(0xe94b6ef9));
 		}
 	}
 }

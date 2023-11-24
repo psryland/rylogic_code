@@ -85,7 +85,7 @@ namespace pr::audio
 			Compact       = 1 << 1,
 			FriendlyNames = 1 << 2,
 			Overwrite     = 1 << 3,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		WaveBankBuilder();

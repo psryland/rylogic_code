@@ -68,7 +68,7 @@ namespace pr
 			Colr    = 1 << 1, // Diffuse base colour
 			Norm    = 1 << 2, // Object space 3D normal
 			Tex0    = 1 << 3, // Diffuse texture
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EView3DTopo :int
 		{
@@ -99,7 +99,7 @@ namespace pr
 			// Excluded from shadow map render steps
 			ShadowCastExclude = 1 << 3,
 
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EView3DShaderVS :int
 		{
@@ -195,7 +195,7 @@ namespace pr
 			Reflectivity = 1 << 6,
 			Flags        = 1 << 7,
 			Animation    = 1 << 8,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EView3DGizmoState :int // ELdrGizmoEvent 
 		{
@@ -217,7 +217,7 @@ namespace pr
 			Translate = 1 << 0,
 			Rotate    = 1 << 1,
 			Zoom      = 1 << 2,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		#if 0 // todo
 		enum class EView3DColourOp :int // pr::ldr::EColourOp
@@ -279,7 +279,7 @@ namespace pr
 			ShadowCastExclude = 1 << 12,
 
 			// Bitwise operators supported
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EView3DSortGroup :int
 		{
@@ -295,7 +295,7 @@ namespace pr
 			Max = 127,             // The maximum sort group value
 	
 			// Arithmetic operators supported
-			_arith_enum,
+			_arith_enum = 0,
 		};
 		enum class EView3DSceneBounds :int
 		{
@@ -323,7 +323,7 @@ namespace pr
 			Faces = 1 << 0,
 			Edges = 1 << 1,
 			Verts = 1 << 2,
-			_flags_enum = 0x7FFFFFF,
+			_flags_enum = 0,
 		};
 		enum class EView3DSnapType :int
 		{
@@ -379,7 +379,7 @@ namespace pr
 			Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
 			Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
 
-			_flags_enum = 0x7FFFFFF,
+			_flags_enum = 0,
 		};
 		#pragma endregion
 

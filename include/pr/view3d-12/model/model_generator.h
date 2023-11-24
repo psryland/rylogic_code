@@ -328,10 +328,10 @@ namespace pr::rdr12
 		// 'formatting' defines regions in the text to apply formatting to.
 		// 'formatting_count' is the length of the 'formatting' array.
 		// 'layout' is global text layout information.
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr);
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id);
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id, v4& dim_out);
-		static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id);
 
 		// Cache ****************************************************************************************
 

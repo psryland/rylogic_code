@@ -22,7 +22,7 @@ namespace pr::camera
 		Translate = 1 << 0,
 		Rotate    = 1 << 1,
 		Zoom      = 1 << 2,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Navigation keys
@@ -97,7 +97,7 @@ namespace pr::camera
 		CameraRelative = 1 << 7,
 		Translation    = TransX | TransY | TransZ,
 		Rotation       = RotX | RotY | RotZ,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Convert an MK_ value into the default navigation operation

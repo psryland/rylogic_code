@@ -384,7 +384,7 @@ namespace pr::audio
 		TopBackRight       = SPEAKER_TOP_BACK_RIGHT,
 		Reserved           = SPEAKER_RESERVED, // Bit mask locations reserved for future use
 		All                = SPEAKER_ALL, // Used to specify that any possible permutation of speaker configurations
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Union of all of the different wave format structures

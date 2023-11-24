@@ -45,7 +45,7 @@ namespace pr::rdr12
 			MIPMAP      = 0x00020000, // DDSD_MIPMAPCOUNT
 			LINEARSIZE  = 0x00080000, // DDSD_LINEARSIZE
 			VOLUME      = 0x00800000, // DDSD_DEPTH
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EPixelFormatFlags
 		{
@@ -57,14 +57,14 @@ namespace pr::rdr12
 			RGBA        = 0x00000041, // DDPF_RGB | DDPF_ALPHAPIXELS
 			LUMINANCE   = 0x00020000, // DDPF_LUMINANCE
 			LUMINANCEA  = 0x00020001, // DDPF_LUMINANCE | DDPF_ALPHAPIXELS
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class ECaps
 		{
 			CUBEMAP = 0x00000008, // DDSCAPS_COMPLEX
 			TEXTURE = 0x00001000, // DDSCAPS_TEXTURE
 			MIPMAP  = 0x00400008, // DDSCAPS_COMPLEX | DDSCAPS_MIPMAP
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class ECaps2
 		{
@@ -77,7 +77,7 @@ namespace pr::rdr12
 			CUBEMAP_NEGATIVEZ = 0x00008200, // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEZ
 			CUBEMAP_ALLFACES = CUBEMAP_POSITIVEX | CUBEMAP_NEGATIVEX | CUBEMAP_POSITIVEY | CUBEMAP_NEGATIVEY | CUBEMAP_POSITIVEZ | CUBEMAP_NEGATIVEZ,
 			VOLUME = 0x00200000, // DDSCAPS2_VOLUME
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		struct PixelFormat

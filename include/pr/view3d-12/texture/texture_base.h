@@ -41,7 +41,7 @@ namespace pr::rdr12
 		// The texture contains alpha pixels
 		HasAlpha = 1 << 0,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Texture base class

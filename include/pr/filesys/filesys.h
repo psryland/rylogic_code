@@ -393,7 +393,7 @@ namespace pr::filesys
 			{
 				switch (file_enc)
 				{
-				case EEncoding::utf8:
+					case EEncoding::utf8:
 					{
 						if (false) {}
 						else if (buf_enc == EEncoding::utf16_le)
@@ -416,7 +416,7 @@ namespace pr::filesys
 						}
 						break;
 					}
-				case EEncoding::utf16_le:
+					case EEncoding::utf16_le:
 					{
 						if (false) {}
 						else if (buf_enc == EEncoding::utf8)
@@ -428,8 +428,9 @@ namespace pr::filesys
 						{
 							throw std::runtime_error("todo");
 						}
+						break;
 					}
-				default:
+					default:
 					{
 						throw std::runtime_error("todo");
 					}
@@ -765,7 +766,7 @@ namespace pr::filesys
 		WriteAccess = 1 << 4,
 		ReadAccess = 1 << 5,
 		ExecAccess = 1 << 6,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 	enum class Access
 	{

@@ -16,7 +16,7 @@ namespace pr::rdr
 		Faces = 1 << 0,
 		Edges = 1 << 1,
 		Verts = 1 << 2,
-		_flags_enum = 0x7FFFFFF,
+		_flags_enum = 0,
 	};
 
 	// Snap types (in priority order) (Keep in sync with SNAP_TYPE_ in 'ray_cast_cbuf.hlsli')
