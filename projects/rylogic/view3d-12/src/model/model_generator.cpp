@@ -6,7 +6,10 @@
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_tree.h"
+#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/texture/texture_desc.h"
+#include "pr/view3d-12/texture/texture_2d.h"
 
 namespace pr::rdr12
 {
@@ -1259,43 +1262,50 @@ namespace pr::rdr12
 		// Create a texture large enough to contain the text, and render the text into it
 		constexpr auto format = DXGI_FORMAT_B8G8R8A8_UNORM;
 		auto td = ResDesc::Tex2D(Image{ s_cast<int>(texture_size.x), s_cast<int>(texture_size.y), nullptr, format }, 1)
-			.clear(format, Colour32Black)
+			.heap_flags(D3D12_HEAP_FLAG_SHARED)
 			.usage(EUsage::RenderTarget|EUsage::SimultaneousAccess)
-			.heap_flags(D3D12_HEAP_FLAG_SHARED);
+			.clear(format, To<D3DCOLORVALUE>(layout.m_bk_colour))
+			;
 		auto tdesc = TextureDesc(AutoId, td).has_alpha(has_alpha).name("text_quad");
 		auto tex = rdr.res().CreateTexture2D(tdesc);
 
-		// Get a D2D device context to draw on the texture
-		auto dc = tex->GetD2DeviceContext();
-		auto fr = To<D3DCOLORVALUE>(def.m_font.m_colour);
-		auto bk = To<D3DCOLORVALUE>(layout.m_bk_colour);
-
-		// Apply different colours to text ranges
-		for (auto& fmt : formatting)
+		// Render the text using DWrite
 		{
-			if (fmt.empty()) continue;
-			if (fmt.m_font.m_colour != def.m_font.m_colour)
+			// Get a D2D device context to draw on the texture
+			auto dc = tex->GetD2DeviceContext();
+
+			// Apply different colours to text ranges
+			for (auto& fmt : formatting)
 			{
-				D3DPtr<ID2D1SolidColorBrush> brush;
-				Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
-				brush->SetOpacity(fmt.m_font.m_colour.a);
+				if (fmt.empty()) continue;
+				if (fmt.m_font.m_colour != def.m_font.m_colour)
+				{
+					D3DPtr<ID2D1SolidColorBrush> brush;
+					Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+					brush->SetOpacity(fmt.m_font.m_colour.a);
 
-				// Apply the colour
-				text_layout->SetDrawingEffect(brush.get(), fmt.m_range);
+					// Apply the colour
+					text_layout->SetDrawingEffect(brush.get(), fmt.m_range);
+				}
 			}
+
+			// Create the default text colour brush
+			D3DPtr<ID2D1SolidColorBrush> brush_fr;
+			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), &brush_fr.m_ptr));
+			brush_fr->SetOpacity(def.m_font.m_colour.a);
+
+			// Create the default text colour brush
+			D3DPtr<ID2D1SolidColorBrush> brush_bk;
+			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), &brush_bk.m_ptr));
+			brush_bk->SetOpacity(layout.m_bk_colour.a);
+
+			// Draw the string
+			dc->BeginDraw();
+			dc->Clear(To<D3DCOLORVALUE>(layout.m_bk_colour));
+			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
+			dc->DrawTextLayout({ layout.m_padding.left, layout.m_padding.top }, text_layout.get(), brush_fr.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			Throw(dc->EndDraw());
 		}
-
-		// Create the default text colour brush
-		D3DPtr<ID2D1SolidColorBrush> brush;
-		Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
-		brush->SetOpacity(def.m_font.m_colour.a);
-
-		// Draw the string
-		dc->BeginDraw();
-		//dc->Clear(&bk); // needs to match the clear value
-		dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
-		dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-		Throw(dc->EndDraw());
 
 		// Create a quad using this texture
 		auto [vcount, icount] = geometry::QuadSize(1);
@@ -1317,7 +1327,8 @@ namespace pr::rdr12
 		// Create a nugget
 		NuggetData mat(ETopo::TriList);
 		mat.m_tex_diffuse = tex;
-		cache.AddNugget(ETopo::TriList, props.m_geom & ~EGeom::Norm, props.m_has_alpha, false, &mat);
+		mat.m_sam_diffuse = rdr.res().GetSampler(EStockSampler::AnisotropicClamp);
+		cache.AddNugget(ETopo::TriList, props.m_geom & ~EGeom::Norm, has_alpha, false, &mat);
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model

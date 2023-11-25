@@ -87,8 +87,8 @@ namespace pr::rdr12
 		Texture2DPtr CreateTexture(EStockTexture id);
 
 		// Create a new sampler instance
-		SamplerPtr CreateSampler(SamplerDesc const& desc);
-		SamplerPtr CreateSampler(EStockSampler id);
+		SamplerPtr GetSampler(SamplerDesc const& desc);
+		SamplerPtr GetSampler(EStockSampler id);
 		SamplerPtr FindSampler(RdrId id) const;
 
 		// Create a new nugget

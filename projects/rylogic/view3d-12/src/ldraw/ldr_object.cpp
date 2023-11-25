@@ -598,7 +598,7 @@ namespace pr::rdr12
 			try
 			{
 				auto desc = SamplerDesc(sdesc.Id(), sdesc);
-				sam = p.m_rdr.res().CreateSampler(desc);
+				sam = p.m_rdr.res().GetSampler(desc);
 			}
 			catch(std::exception const& e)
 			{

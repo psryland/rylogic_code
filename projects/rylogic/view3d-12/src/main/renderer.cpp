@@ -70,8 +70,10 @@ namespace pr::rdr12
 			if (m_settings.m_adapter.ptr == nullptr)
 				throw std::runtime_error("No DirectX Adapter found that supports the requested feature level");
 
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors | ERdrOptions::DeviceGPUDebug, true);
-			//#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceGPUDebug, true);
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors, true);
+			#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
 
 			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::DeviceDebug), "DeviceDebug is enabled");
@@ -84,7 +86,7 @@ namespace pr::rdr12
 				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
 				dbg->EnableDebugLayer();
 
-				if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
+				if (AllSet(m_settings.m_options, ERdrOptions::DeviceGPUDebug))
 				{
 					D3DPtr<ID3D12Debug1> dbg1;
 					Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
@@ -94,29 +96,80 @@ namespace pr::rdr12
 
 			// Create the d3d device
 			D3DPtr<ID3D12Device> device;
-			Throw(D3D12CreateDevice(
-				m_settings.m_adapter.ptr.get(),
-				m_settings.m_feature_level,
-				__uuidof(ID3D12Device),
-				(void**)&device.m_ptr));
+			Throw(D3D12CreateDevice(m_settings.m_adapter.ptr.get(), m_settings.m_feature_level, __uuidof(ID3D12Device), (void**)&device.m_ptr));
 			Throw(device->QueryInterface<ID3D12Device4>(&m_d3d_device.m_ptr));
+
+			// More debugging now the device exists
+			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
+			{
+				D3DPtr<ID3D12InfoQueue> info;
+				Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
+
+				if (AllSet(m_settings.m_options, ERdrOptions::BreakOnErrors))
+				{
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+				}
+
+				// Suppress the CREATERESOURCE_STATE_IGNORED warning because ID3D11On12 is generating these.
+				D3D12_MESSAGE_ID hide[] = {
+					D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED,
+					D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+
+					/*
+					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+
+					// Workarounds for debug layer issues on hybrid-graphics systems
+					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+					*/
+				};
+				D3D12_INFO_QUEUE_FILTER filter = {
+					.AllowList = D3D12_INFO_QUEUE_FILTER_DESC{},
+					.DenyList = D3D12_INFO_QUEUE_FILTER_DESC{
+						.NumCategories = 0,
+						.pCategoryList = nullptr,
+						.NumSeverities = 0,
+						.pSeverityList = nullptr,
+						.NumIDs = _countof(hide),
+						.pIDList = &hide[0],
+					}
+				};
+				Throw(info->AddStorageFilterEntries(&filter));
+		
+				// These are work arounds for issues with integrated graphics chips
+				/*
+				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+				{
+					// IDXGISwapChain::GetContainingOutput: The swapchain's adapter does
+					// not control the output on which the swapchain's window resides.
+					80
+				};
+				DXGI_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+				filter.DenyList.pIDList = hide;
+				info->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+				*/
+			}
 
 			// Read the supported features
 			m_features.Read(m_d3d_device.get());
 
 			// Create the command queues
-			D3D12_COMMAND_QUEUE_DESC cmd_queue = {
+			D3D12_COMMAND_QUEUE_DESC queue_desc = {
 				.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
 				.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 				.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
 				.NodeMask = 0,
 			};
-			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_gfx_queue.m_ptr));
-			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_com_queue.m_ptr));
-			cmd_queue.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			Throw(m_d3d_device->CreateCommandQueue(&cmd_queue, __uuidof(ID3D12CommandQueue), (void**)&m_cpy_queue.m_ptr));
+			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_gfx_queue.m_ptr));
+			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_com_queue.m_ptr));
+			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_cpy_queue.m_ptr));
 
 			// Check dlls,DX features,etc required to run the renderer are available.
 			// Check the given settings are valid for the current adaptor.
@@ -137,57 +190,13 @@ namespace pr::rdr12
 			Throw(dx11_device->QueryInterface<ID3D11On12Device>(&m_dx11_device.m_ptr));
 
 			// Create the direct2d factory
-			D2D1_FACTORY_OPTIONS d2dfactory_options = {};
-			d2dfactory_options.debugLevel = AllSet(m_settings.m_options, ERdrOptions::D2D1_DebugInfo) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
+			D2D1_FACTORY_OPTIONS d2dfactory_options = { .debugLevel = AllSet(m_settings.m_options, ERdrOptions::D2D1_DebugInfo) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE };
 			Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
 
 			// Create a D2D device
 			D3DPtr<IDXGIDevice> dxgi_device;
 			Throw(m_dx11_device->QueryInterface<IDXGIDevice>(&dxgi_device.m_ptr));
 			Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
-
-			// More debugging now the device exists
-			// Moved this till after the D2D device is created because it creates
-			// [STATE_CREATION WARNING #1328: CREATERESOURCE_STATE_IGNORED] warnings
-			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
-			{
-				if (AllSet(m_settings.m_options, ERdrOptions::BreakOnErrors))
-				{
-					D3DPtr<ID3D12InfoQueue> info;
-					Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
-				}
-		
-				// These are work arounds for issues with integrated graphics chips
-				/*
-				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
-				{
-					// IDXGISwapChain::GetContainingOutput: The swapchain's adapter does
-					// not control the output on which the swapchain's window resides.
-					80
-				};
-				DXGI_INFO_QUEUE_FILTER filter = {};
-				filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
-				filter.DenyList.pIDList = hide;
-				info->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
-
-				D3D12_MESSAGE_ID hide[] =
-				{
-					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-
-					// Workarounds for debug layer issues on hybrid-graphics systems
-					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
-				};
-				D3D12_INFO_QUEUE_FILTER filter = {};
-				filter.DenyList.NumIDs = _countof(hide);
-				filter.DenyList.pIDList = hide;
-				Throw(info->AddStorageFilterEntries(&filter));
-				*/
-			}
 		}
 		catch (...)
 		{

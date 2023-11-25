@@ -376,6 +376,10 @@ namespace pr::rdr12
 		{
 			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
 		}
+		ResDesc& clear(DXGI_FORMAT format, D3DCOLORVALUE colour)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
+		}
 		ResDesc& clear(DXGI_FORMAT format, D3D12_DEPTH_STENCIL_VALUE depth_stencil)
 		{
 			return clear(D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = depth_stencil });
@@ -470,7 +474,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -480,7 +484,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -490,7 +494,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -500,7 +504,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 
