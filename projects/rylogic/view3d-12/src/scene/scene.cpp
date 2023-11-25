@@ -10,6 +10,7 @@
 #include "pr/view3d-12/utility/eventargs.h"
 #include "view3d-12/src/render/render_forward.h"
 #include "view3d-12/src/render/render_smap.h"
+
 //#include "view3d-12/src/render/state_stack.h"
 //#include "pr/view3d/instances/instance.h"
 //#include "pr/view3d/steps/gbuffer.h"
@@ -167,16 +168,7 @@ namespace pr::rdr12
 
 		// Invoke each render step in order
 		for (auto& rs : m_render_steps)
-		{
-			#if 0 // todo
-			PR_EXPAND(PR_DBG_RDR, auto dbg = Scope<void>(
-				[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
-				[&]{ ss.m_dbg->EndEvent(); }));
-			#endif
-			//PixEvent pix_render_step(m_cmd_list.get(), pr::EColours::Blue, ERenderStep_::ToStringA(rs->m_step_id));
-
 			rs->Execute(frame);
-		}
 	}
 
 	// Resize the viewport on back buffer resize

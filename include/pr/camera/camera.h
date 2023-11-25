@@ -22,7 +22,7 @@ namespace pr::camera
 		Translate = 1 << 0,
 		Rotate    = 1 << 1,
 		Zoom      = 1 << 2,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Navigation keys
@@ -97,7 +97,7 @@ namespace pr::camera
 		CameraRelative = 1 << 7,
 		Translation    = TransX | TransY | TransZ,
 		Rotation       = RotX | RotY | RotZ,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Convert an MK_ value into the default navigation operation
@@ -388,6 +388,8 @@ namespace pr
 		}
 		void Aspect(double aspect_w_by_h)
 		{
+			if (aspect_w_by_h == m_aspect)
+				return;
 			if (aspect_w_by_h <= 0 || !IsFinite(aspect_w_by_h))
 				throw std::runtime_error("Aspect ratio value is invalid");
 
@@ -401,12 +403,14 @@ namespace pr
 			auto fovX = 2.0 * std::atan(std::tan(m_fovY * 0.5) * m_aspect);
 			if (fovX <= 0.0 || fovX >= maths::tau_by_2 || !IsFinite(fovX))
 				throw std::runtime_error("FovX must be > 0 and < tau/2");
+
 			return fovX;
 		}
 		void FovX(double fovX)
 		{
 			if (fovX <= 0.0 || fovX >= maths::tau_by_2 || !IsFinite(fovX))
 				throw std::runtime_error("FovX must be > 0 and < tau/2");
+
 			FovY(2.0 * std::atan(std::tan(fovX * 0.5) / m_aspect));
 		}
 
@@ -417,6 +421,8 @@ namespace pr
 		}
 		void FovY(double fovY)
 		{
+			if (fovY == m_fovY)
+				return;
 			if (fovY <= 0.0 || fovY >= maths::tau_by_2 || !IsFinite(fovY))
 				throw std::runtime_error("FovY value is invalid");
 			

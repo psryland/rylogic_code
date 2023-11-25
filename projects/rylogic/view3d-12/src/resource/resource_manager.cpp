@@ -20,6 +20,7 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -81,6 +82,8 @@ namespace pr::rdr12
 		if (!m_flush_required)
 			return m_gsync.LastAddedSyncPoint();
 
+		PIXBeginEvent(m_gfx_cmd_list.get(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager");
+
 		// Close the command list
 		m_gfx_cmd_list.Close();
 
@@ -100,6 +103,7 @@ namespace pr::rdr12
 		if (block)
 			Wait(sync_point);
 
+		PIXEndEvent(m_gfx_cmd_list.get());
 		return sync_point;
 	}
 	void ResourceManager::Wait(uint64_t sync_point) const
@@ -123,12 +127,12 @@ namespace pr::rdr12
 		// Create in the COMMON state to prevent a D3D12 warning "Buffers are effectively created in state D3D12_RESOURCE_STATE_COMMON"
 		// COMMON state is implicitly promoted to the first state transition.
 		Throw(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd, D3D12_RESOURCE_STATE_COMMON,
+			&desc.HeapProps, desc.HeapFlags, &rd, desc.DefaultState,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 
 		// Assume common state until the resource is initialised
-		DefaultResState(res.get(), D3D12_RESOURCE_STATE_COMMON);
+		DefaultResState(res.get(), desc.DefaultState);
 		NameResource(res.get(), name);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
@@ -152,9 +156,6 @@ namespace pr::rdr12
 			barriers.Commit();
 			m_flush_required = true;
 		}
-
-		// Update the default state for the resource
-		DefaultResState(res.get(), desc.DefaultState);
 
 		return res;
 	}
@@ -792,8 +793,8 @@ namespace pr::rdr12
 		}
 	}
 
-	// Create a new sampler instance.
-	SamplerPtr ResourceManager::CreateSampler(SamplerDesc const& desc)
+	// Get or Create a new sampler instance.
+	SamplerPtr ResourceManager::GetSampler(SamplerDesc const& desc)
 	{
 		// Check whether 'id' already exists, if so, return it.
 		// There is no per-instance data in samplers, so they can be shared.
@@ -815,39 +816,39 @@ namespace pr::rdr12
 		AddLookup(m_lookup_sam, inst->m_id, inst.get());
 		return std::move(inst);
 	}
-	SamplerPtr ResourceManager::CreateSampler(EStockSampler id)
+	SamplerPtr ResourceManager::GetSampler(EStockSampler id)
 	{
 		switch (id)
 		{
 			case EStockSampler::PointClamp:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			case EStockSampler::PointWrap:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearClamp:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearWrap:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicClamp:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicWrap:
 			{
 				auto sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
-				return CreateSampler(sdesc);
+				return GetSampler(sdesc);
 			}
 			default:
 			{

@@ -23,7 +23,7 @@ namespace pr::rdr
 		DestBlendAlpha         = 1 << 7,
 		BlendOpAlpha           = 1 << 8,
 		RenderTargetWriteMask  = 1 << 9,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Depth state flags
@@ -39,7 +39,7 @@ namespace pr::rdr
 		StencilDepthFailOp = 1 << 7,
 		StencilPassOp      = 1 << 8,
 		StencilFailOp      = 1 << 9,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Raster state flags
@@ -55,7 +55,7 @@ namespace pr::rdr
 		DepthBias = 1 << 7,
 		DepthBias_clamp = 1 << 8,
 		SlopeScaledDepthBias = 1 << 9,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Wraps a DX state description and provides a bitmask of changed values
@@ -185,7 +185,7 @@ namespace pr::rdr
 		D3DPtr<TD3DInterface> GetState(TStateBlock const& desc, CreateFunc create)
 		{
 			// Look for a corresponding state object
-			auto hash = pr::hash::HashBytes(&desc, &desc + 1);
+			auto hash = pr::hash::HashBytes64(&desc, &desc + 1);
 			auto iter = m_lookup.find(hash);
 			if (iter == std::end(m_lookup))
 			{

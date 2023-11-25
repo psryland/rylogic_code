@@ -33,6 +33,7 @@ namespace pr::rdr12
 		,m_bbox_model()
 		,m_selection_box()
 		,m_visible_objects()
+		,m_settings()
 		,m_anim_data()
 		,m_bbox_scene(BBox::Reset())
 		,m_global_pso()

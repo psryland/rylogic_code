@@ -14,7 +14,7 @@ namespace pr::rdr12
 			None                  = 0,
 			WarnedNoRenderNuggets = 1 << 0,
 			NormalsVisible        = 1 << 1,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		ResourceManager*         m_mgr;       // The manager that created this model

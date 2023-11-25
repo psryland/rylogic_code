@@ -24,7 +24,6 @@ namespace pr::rdr12
 			,m_has_alpha()
 			,m_name()
 		{}
-
 		TextureDesc(RdrId id, ResDesc const& td)
 			:m_id(id)
 			,m_tdesc(td)

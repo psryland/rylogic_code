@@ -42,17 +42,10 @@
 #include <d3d12sdklayers.h>
 #include <d3d11on12.h>
 #include <dxgi1_4.h>
+#include <dxgitype.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
-#include <pix3.h>
-#include <pix3_win.h>
 
-//#include "pr/macros/link.h"
-//#include "pr/macros/count_of.h"
-//#include "pr/macros/repeat.h"
-//#include "pr/macros/align.h"
-//#include "pr/common/log.h"
-//#include "pr/common/crc.h"
 #include "pr/macros/enum.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/common/min_max_fix.h"

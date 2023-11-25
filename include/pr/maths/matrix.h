@@ -79,7 +79,7 @@ namespace pr
 			memcpy(m_data, data.begin(), sizeof(Real) * size_t(vecs * cmps));
 			m_transposed = transposed;
 		}
-		Matrix(Matrix&& rhs)
+		Matrix(Matrix&& rhs) noexcept
 			:Matrix()
 		{
 			if (rhs.local())
@@ -132,7 +132,7 @@ namespace pr
 		}
 
 		// Assignment
-		Matrix& operator = (Matrix&& rhs)
+		Matrix& operator = (Matrix&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			if (rhs.local())

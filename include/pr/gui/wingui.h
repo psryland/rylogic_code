@@ -3681,13 +3681,13 @@ namespace pr
 				// Set w,h based on docking to the parent
 				switch (p.m_dock)
 				{
-				default: throw std::runtime_error("Unknown dock style");
 				case EDock::None: break;
 				case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
 				case EDock::Top:    p.m_w = Fill; break;
 				case EDock::Bottom: p.m_w = Fill; break;
 				case EDock::Left:   p.m_h = Fill; break;
 				case EDock::Right:  p.m_h = Fill; break;
+				default: throw std::runtime_error("Unknown dock style");
 				}
 
 				// Scale the control position/size for the current DPI (preserving the auto pos size bits)
@@ -5769,10 +5769,10 @@ namespace pr
 						p.m_wci = &RegisterWndClass<Form>();
 
 					// Load accelerators
-					m_accel = std::move(
+					m_accel =
 						p.m_accel.m_handle != nullptr ? Accel(p.m_accel.m_handle, true) :
 						p.m_accel.m_res_id != nullptr ? Accel(::LoadAcceleratorsW(p.m_hinst, p.m_accel.m_res_id)) :
-						Accel());
+						Accel();
 				}
 
 				InitParam lparam(this, p.m_init_param);

@@ -33,7 +33,7 @@ namespace pr::geometry
 		Tex0    = 1 << 3, // Diffuse texture
 		All     = Vert | Colr | Norm | Tex0,
 
-		_flags_enum = 0x7FFFFFFF,
+		_flags_enum = 0,
 	};
 	static_assert(is_flags_enum_v<EGeom>);
 

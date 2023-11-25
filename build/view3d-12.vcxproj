@@ -93,6 +93,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_show_normals.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_smap.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\shaders\shader_thick_line.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\d2d_context.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_2d.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_base.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\texture_cube.cpp" />
@@ -187,6 +188,7 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_smap.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_thick_line.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\stock_shaders.h" />
+    <ClInclude Include="..\include\pr\view3d-12\texture\d2d_context.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_2d.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_base.h" />
     <ClInclude Include="..\include\pr\view3d-12\texture\texture_cube.h" />
