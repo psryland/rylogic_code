@@ -22,6 +22,7 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "view3d-12/src/shaders/common.h"
+#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -30,7 +31,7 @@ namespace pr::rdr12
 		, m_shader(scene.d3d())
 		, m_cmd_list(scene.d3d(), nullptr, L"RenderForward")
 		, m_default_tex(res().CreateTexture(EStockTexture::White))
-		, m_default_sam(res().CreateSampler(EStockSampler::LinearClamp))
+		, m_default_sam(res().GetSampler(EStockSampler::LinearClamp))
 	{
 		// Create the default PSO description
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
@@ -138,7 +139,8 @@ namespace pr::rdr12
 	{
 		// Reset the command list with a new allocator for this frame
 		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-
+		PIXBeginEvent(m_cmd_list.get(), s_cast<uint32_t>(EColours::Blue), L"RenderForward");
+		
 		// Add the command lists we're using to the frame.
 		frame.m_main.push_back(m_cmd_list);
 
@@ -251,6 +253,7 @@ namespace pr::rdr12
 		}
 
 		// Close the command list now that we've finished rendering this scene
+		PIXEndEvent(m_cmd_list.get());
 		m_cmd_list.Close();
 	}
 

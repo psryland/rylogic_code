@@ -8,6 +8,7 @@
 #include "pr/view3d-12/main/frame.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
+#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -473,6 +474,8 @@ namespace pr::rdr12
 
 		// Prepare
 		{
+			PIXBeginEvent(frame.m_prepare.get(), s_cast<uint32_t>(EColours::Orange), L"Prepare");
+
 			// The MSAA render target goes to the 'render target' state
 			BarrierBatch bb(frame.m_prepare);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -481,9 +484,13 @@ namespace pr::rdr12
 
 			frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
 			frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
+
+			PIXEndEvent(frame.m_prepare.get());
 		}
 		// Resolve
 		{
+			PIXBeginEvent(frame.m_resolve.get(), s_cast<uint32_t>(EColours::Orange), L"Resolve");
+
 			// Resolve the MSAA render target into the swap chain render target
 			BarrierBatch bb(frame.m_resolve);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
@@ -497,13 +504,19 @@ namespace pr::rdr12
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Commit();
+
+			PIXEndEvent(frame.m_resolve.get());
 		}
 		// Present
 		{
+			PIXBeginEvent(frame.m_present.get(), s_cast<uint32_t>(EColours::Orange), L"Present");
+
 			// The swap chain render target goes to the 'present' state
 			BarrierBatch bb(frame.m_present);
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
 			bb.Commit();
+
+			PIXEndEvent(frame.m_present.get());
 		}
 
 		// Return the frame object

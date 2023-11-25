@@ -48,7 +48,6 @@ namespace pr::rdr12
 		MultiSamp                    m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
 		GfxCmdAllocPool              m_cmd_alloc_pool;   // A pool of command allocators
 		GfxCmdListPool               m_cmd_list_pool;    // A pool of command lists
-		CmdLists                     m_cmd_lists;        // Command lists (in order) to be executed
 		GpuViewHeap                  m_heap_view;        // Shader visible heap for CBV/SRV/UAV
 		GpuSampHeap                  m_heap_samp;        // Shader visible heap for Samplers
 		ResStateStore                m_res_state;        // Tracks the resource state of render targets and depth stencil resources
