@@ -45,7 +45,7 @@ namespace pr::str
 			// New line characters end literal strings
 			SingleLineStrings = 1 << 2,
 
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		friend constexpr EFlags operator | (EFlags lhs, EFlags rhs)
 		{

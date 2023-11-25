@@ -33,7 +33,7 @@ namespace pr::rdr12
 		SimultaneousAccess = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS,
 		VideoDecodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY,
 		VideoEncodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// 32bit data union
@@ -376,6 +376,10 @@ namespace pr::rdr12
 		{
 			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
 		}
+		ResDesc& clear(DXGI_FORMAT format, D3DCOLORVALUE colour)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
+		}
 		ResDesc& clear(DXGI_FORMAT format, D3D12_DEPTH_STENCIL_VALUE depth_stencil)
 		{
 			return clear(D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = depth_stencil });
@@ -393,6 +397,11 @@ namespace pr::rdr12
 		ResDesc& multisamp(MultiSamp sampling)
 		{
 			SampleDesc = sampling;
+			return *this;
+		}
+		ResDesc& heap_flags(D3D12_HEAP_FLAGS flags)
+		{
+			HeapFlags = flags;
 			return *this;
 		}
 		ResDesc& layout(D3D12_TEXTURE_LAYOUT tex_layout)
@@ -465,7 +474,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -475,7 +484,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -485,7 +494,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -495,7 +504,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 
@@ -681,7 +690,7 @@ namespace pr::rdr12
 		// Hash this description to create an Id that can be used to detect duplicate samplers
 		RdrId Id() const
 		{
-			return s_cast<RdrId>(pr::hash::HashBytes(this, this + 1));
+			return s_cast<RdrId>(pr::hash::HashBytes64(this, this + 1));
 		}
 
 		SamDesc& border(Colour32 colour)

@@ -188,6 +188,7 @@ namespace pr::rdr12
 		x(NoZTest         ,= HashI("NoZTest"             ))\
 		x(NoZWrite        ,= HashI("NoZWrite"            ))\
 		x(Billboard       ,= HashI("Billboard"           ))\
+		x(Billboard3D     ,= HashI("Billboard3D"         ))\
 		x(Depth           ,= HashI("Depth"               ))\
 		x(LeftHanded      ,= HashI("LeftHanded"          ))\
 		x(CastShadow      ,= HashI("CastShadow"          ))\
@@ -212,7 +213,7 @@ namespace pr::rdr12
 		Near    = 1 << 5,
 		Far     = 1 << 6,
 		Ortho   = 1 << 7,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Simple animation styles
@@ -239,7 +240,7 @@ namespace pr::rdr12
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Flags for extra behaviour of an object
@@ -281,7 +282,7 @@ namespace pr::rdr12
 		ShadowCastExclude = 1 << 12,
 
 		// Bitwise operators
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Colour blend operations
@@ -316,14 +317,14 @@ namespace pr::rdr12
 	// A renderer instance type for the body
 	// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
 	#define PR_RDR_INST(x) \
-		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes */\
-		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes */\
-		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes */\
-		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes */\
-		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes */\
-		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes */\
-		x(SKOverride ,m_sko    ,EInstComp::SortkeyOverride    )/*      8 bytes */\
-	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    ??? bytes */
+		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
+		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
+		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes, align 8 */\
+	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
+		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes, align 4 */\
+		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes, align 4 */\
+		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes, align 4 */\
+		x(SKOverride ,m_sko    ,EInstComp::SortkeyOverride    )/*      8 bytes, align 4 */
 	PR_RDR12_DEFINE_INSTANCE(RdrInstance , PR_RDR_INST);
 	#undef PR_RDR_INST
 

@@ -6,7 +6,10 @@
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_tree.h"
+#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/texture/texture_desc.h"
+#include "pr/view3d-12/texture/texture_2d.h"
 
 namespace pr::rdr12
 {
@@ -1182,9 +1185,11 @@ namespace pr::rdr12
 	// Create a quad containing text.
 	// 'text' is the complete text to render into the quad.
 	// 'formatting' defines regions in the text to apply formatting to.
-	// 'formatting_count' is the length of the 'formatting' array.
 	// 'layout' is global text layout information.
-	ModelPtr ModelGenerator::Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id, v4& dim_out, m4x4 const* bake)
+	// 'scale' controls the size of the output quad. Scale of 1 => 100pt = 1m
+	// 'axis_id' is the forward direction of the quad
+	// 'dim_out' is 'xy' = size of text in pixels, 'zw' = size of quad in pixels
+	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, m4x4 const* bake)
 	{
 		// Texture sizes are in physical pixels, but D2D operates in DIP so we need to determine
 		// the size in physical pixels on this device that correspond to the returned metrics.
@@ -1197,9 +1202,9 @@ namespace pr::rdr12
 		Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dwrite.m_ptr));
 
 		// Get the default format
-		auto def = formatting_count != 0 && formatting[0].empty() ? formatting[0] : TextFormat();
+		auto def = !formatting.empty() && !formatting[0].empty() ? formatting[0] : TextFormat();
 
-		// Determine of the model requires alpha blending.
+		// Determine if the model requires alpha blending.
 		// Consider alpha = 0 as not requiring blending, Alpha clip will be used instead
 		auto has_alpha = HasAlpha(layout.m_bk_colour) || HasAlpha(def.m_font.m_colour);
 
@@ -1215,8 +1220,7 @@ namespace pr::rdr12
 		text_layout->SetWordWrapping(layout.m_word_wrapping);
 
 		// Apply the formatting
-		auto fmtting = std::initializer_list<TextFormat>(formatting, formatting + formatting_count);
-		for (auto& fmt : fmtting)
+		for (auto& fmt : formatting)
 		{
 			// A null range can be used to set the default font/style for the whole string
 			if (fmt.empty())
@@ -1239,31 +1243,39 @@ namespace pr::rdr12
 		DWRITE_TEXT_METRICS metrics;
 		Throw(text_layout->GetMetrics(&metrics));
 
-		// The size of the text in device independent pixels, including padding
+		// The size of the text in device independent pixels, including padding.
 		auto dip_size = v2(
 			metrics.widthIncludingTrailingWhitespace + layout.m_padding.left + layout.m_padding.right,
 			metrics.height + layout.m_padding.top + layout.m_padding.bottom);
 
-		// Determine the required texture size
+		// DIP is defined as 1/96th of a logical inch (= 0.2645833 mm/px)
+		// Font size 12pt is 16px high = 4.233mm (1pt = 1/72th of an inch)
+		// Can choose the quat size arbitrarily so defaulting to 1pt = 1cm. 'scale' can be used to adjust this.
+		constexpr float pt_to_px = 96.0f / 72.0f;  // This is used to find the required texture size.
+		const float pt_to_m = 0.00828491f * scale; // This is used to create the quad as a multiple of the text size.
+
+		// Determine the required texture size. This is controlled by the font size only.
+		// DWrite draws in absolute pixels so there is no point in trying to scale the texture.
 		auto text_size = dip_size;
-		auto texture_size = Ceil(text_size) * 2;
+		auto texture_size = Ceil(text_size * pt_to_px);
 
 		// Create a texture large enough to contain the text, and render the text into it
-		Image img(static_cast<int>(texture_size.x), static_cast<int>(texture_size.y), nullptr, DXGI_FORMAT_B8G8R8A8_UNORM);
-		auto tdesc = ResDesc::Tex2D(img, 1, EUsage::RenderTarget);// | EUsage::SimultaneousAccess);
-		//tdesc.HeapFlags = D3D12_HEAP_FLAG_SHARED;
-		auto desc = TextureDesc(AutoId, tdesc).has_alpha(has_alpha).name("text_quad");
-		auto tex = rdr.res().CreateTexture2D(desc);
-		
-		//todo SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+		constexpr auto format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		auto td = ResDesc::Tex2D(Image{ s_cast<int>(texture_size.x), s_cast<int>(texture_size.y), nullptr, format }, 1)
+			.heap_flags(D3D12_HEAP_FLAG_SHARED)
+			.usage(EUsage::RenderTarget|EUsage::SimultaneousAccess)
+			.clear(format, To<D3DCOLORVALUE>(layout.m_bk_colour))
+			;
+		auto tdesc = TextureDesc(AutoId, td).has_alpha(has_alpha).name("text_quad");
+		auto tex = rdr.res().CreateTexture2D(tdesc);
 
-		{// Get a D2D device context to draw on the texture
+		// Render the text using DWrite
+		{
+			// Get a D2D device context to draw on the texture
 			auto dc = tex->GetD2DeviceContext();
-			auto fr = To<D3DCOLORVALUE>(def.m_font.m_colour);
-			auto bk = To<D3DCOLORVALUE>(layout.m_bk_colour);
 
 			// Apply different colours to text ranges
-			for (auto& fmt : fmtting)
+			for (auto& fmt : formatting)
 			{
 				if (fmt.empty()) continue;
 				if (fmt.m_font.m_colour != def.m_font.m_colour)
@@ -1278,22 +1290,27 @@ namespace pr::rdr12
 			}
 
 			// Create the default text colour brush
-			D3DPtr<ID2D1SolidColorBrush> brush;
-			Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
-			brush->SetOpacity(def.m_font.m_colour.a);
+			D3DPtr<ID2D1SolidColorBrush> brush_fr;
+			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), &brush_fr.m_ptr));
+			brush_fr->SetOpacity(def.m_font.m_colour.a);
+
+			// Create the default text colour brush
+			D3DPtr<ID2D1SolidColorBrush> brush_bk;
+			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), &brush_bk.m_ptr));
+			brush_bk->SetOpacity(layout.m_bk_colour.a);
 
 			// Draw the string
 			dc->BeginDraw();
-			dc->Clear(&bk);
-			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
-			dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			dc->Clear(To<D3DCOLORVALUE>(layout.m_bk_colour));
+			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
+			dc->DrawTextLayout({ layout.m_padding.left, layout.m_padding.top }, text_layout.get(), brush_fr.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
 			Throw(dc->EndDraw());
 		}
 
 		// Create a quad using this texture
 		auto [vcount, icount] = geometry::QuadSize(1);
 
-		// Return the size of the quad and the texture
+		// Return the text metrics size and the texture size
 		dim_out = v4(text_size, texture_size);
 
 		// Set the texture coordinates to match the text metrics and the quad size
@@ -1303,33 +1320,33 @@ namespace pr::rdr12
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
 		auto iptr = cache.m_icont.data<uint16_t>();
-		auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q,
+		auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x * pt_to_m, text_size.y * pt_to_m, iv2Zero, Colour32White, t2q,
 			[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 		// Create a nugget
 		NuggetData mat(ETopo::TriList);
 		mat.m_tex_diffuse = tex;
-		cache.AddNugget(ETopo::TriList, props.m_geom & ~EGeom::Norm, props.m_has_alpha, false, &mat);
+		mat.m_sam_diffuse = rdr.res().GetSampler(EStockSampler::AnisotropicClamp);
+		cache.AddNugget(ETopo::TriList, props.m_geom & ~EGeom::Norm, has_alpha, false, &mat);
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		CreateOptions opts = {.m_bake = bake};
+		CreateOptions opts = {.m_bake = bake };
 		return Create(rdr, cache, opts);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id)
+	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id)
 	{
 		v4 dim_out;
-		return Text(rdr, text, formatting, formatting_count, layout, axis_id, dim_out);
+		return Text(rdr, text, formatting, layout, scale, axis_id, dim_out);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id, v4& dim_out)
+	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out)
 	{
-		return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
+		return Text(rdr, text, { &formatting, 1 }, layout, scale, axis_id, dim_out);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id)
+	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id)
 	{
 		v4 dim_out;
-		return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
+		return Text(rdr, text, { &formatting, 1 }, layout, scale, axis_id, dim_out);
 	}
-
 }

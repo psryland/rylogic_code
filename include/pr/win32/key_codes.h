@@ -599,6 +599,6 @@ namespace pr
 		// The ALT modifier key.
 		Alt = 262144,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 }

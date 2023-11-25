@@ -13,7 +13,7 @@ using namespace pr::gui;
 using namespace pr::rdr12;
 
 // TODO:
-//  Text / Finish the drawing of all LdrObjects
+//  Finish the drawing of all LdrObjects
 //  Finish the View3d API
 //  Ray cast/ Hit test support
 
@@ -53,20 +53,56 @@ struct Main :Form
 		: Form(Params<>()
 			.name("main")
 			.title(L"View3d 12 Test")
-			.xy(1500,100).wh(800,600)
+			.xy(1500,100).wh(1024, 768, true)
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Plane ground FFFFE8A0\n"
+			"*Text camera_space_text\n"
 			"{\n"
-			"	0 0 0\n"
-			"	0 1 0\n"
-			"	40 40\n"
-			"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
+			"	*ScreenSpace\n"
+			"\n"
+			"	// Text is concatenated, with changes of style applied\n"
+			"	// Text containing multiple lines has the line-end whitespace and indentation tabs removed.\n"
+			"	*Font { *Name {\"Times New Roman\"} *Colour {FF0000FF} *Size{18}}\n"
+			"	\"This is camera space \n"
+			"	text with new lines, and \"\n"
+			"	*NewLine\n"
+			"	*Font {*Colour {FF00FF00} *Size{24} *Style{Oblique}}\n"
+			"	\"with varying colours \n"
+			"	and \"\n"
+			"	*Font {*Colour {FFFF0000} *Weight{800} *Style{Italic} *Strikeout}\n"
+			"	\"stiles \"\n"
+			"	*Font {*Colour {FFFFFF00} *Style{Italic} *Underline}\n"
+			"	\"styles \"\n"
+			"\n"
+			"	// The background colour of the quad\n"
+			"	*BackColour {40A0A0A0}\n"
+			"\n"
+			"	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right\n"
+			"	*Anchor { -1 +1 }\n"
+			"\n"
+			"	// Padding between the quad boundary and the text\n"
+			"	*Padding {10 20 10 10}\n"
+			"\n"
+			"	// *o2w is interpreted as a 'text to camera space' transform\n"
+			"	// (-1,-1,0) is the lower left corner on the near plane.\n"
+			"	// (+1,+1,1) is the upper right corner on the far plane.\n"
+			"	// The quad is automatically scaled to make the text unscaled on-screen\n"
+			"	*o2w {*pos{-1, +1, 0}}\n"
 			"}\n"
+
+
+
+			//"*Plane ground FFFFE8A0\n"
+			//"{\n"
+			//"	0 0 0\n"
+			//"	0 1 0\n"
+			//"	40 40\n"
+			//"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
+			//"}\n"
 			//"*Box first_box_eva FF00FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
@@ -127,11 +163,12 @@ struct Main :Form
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
 		Form::OnWindowPosChange(args);
-		if (!args.m_before && args.IsResize())
+		if (!args.m_before && args.IsResize() && !IsIconic(*this))
 		{
 			auto dpi = GetDpiForWindow(*this);
-			auto w = s_cast<int>(args.m_wp->cx * dpi / 96.0);
-			auto h = s_cast<int>(args.m_wp->cy * dpi / 96.0);
+			auto rect = ClientRect();
+			auto w = s_cast<int>(rect.width() * dpi / 96.0);
+			auto h = s_cast<int>(rect.height() * dpi / 96.0);
 			View3D_WindowBackBufferSizeSet(m_win3d, w, h);
 			View3D_WindowViewportSet(m_win3d, view3d::Viewport{
 				.m_x = 0,
@@ -187,8 +224,7 @@ struct Main :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
-{
+int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int){
 	pr::InitCom com;
 
 	try

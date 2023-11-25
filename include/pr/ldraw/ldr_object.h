@@ -218,7 +218,7 @@ namespace pr::ldr
 		Near    = 1 << 5,
 		Far     = 1 << 6,
 		Ortho   = 1 << 7,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Simple animation styles
@@ -245,7 +245,7 @@ namespace pr::ldr
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Flags for extra behaviour of an object
@@ -287,7 +287,7 @@ namespace pr::ldr
 		ShadowCastExclude = 1 << 12,
 
 		// Bitwise operators
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Colour blend operations

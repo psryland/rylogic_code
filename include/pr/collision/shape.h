@@ -76,7 +76,7 @@ namespace pr::collision
 		{
 			None                       = 0,
 			WholeShapeTerrainCollision = 1 << 0, // Pass the whole shape to the terrain collision function
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		// Transform from shape space to parent shape space (or physics model space for root objects)

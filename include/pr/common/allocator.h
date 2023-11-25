@@ -70,7 +70,7 @@ namespace pr
 
 			return ptr;
 		}
-		void deallocate(value_type* p, size_t)
+		void deallocate(void* p, size_t = 0)
 		{
 			if constexpr (PR_DBG_MEMORY_ALLOC)
 				_aligned_free_dbg(p);

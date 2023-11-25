@@ -52,7 +52,7 @@ namespace pr::dinput
 		IncludeAliases = DIEDFL_INCLUDEALIASES,
 		IncludeHidden = DIEDFL_INCLUDEHIDDEN,
 		IncludePhantoms = DIEDFL_INCLUDEPHANTOMS,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 	enum class EEnumObjectsFlags
 	{
@@ -111,7 +111,7 @@ namespace pr::dinput
 		// Controls identified by a Human Interface Device(HID) usage alias. This flag applies only to HID-compliant USB devices.
 		Alias = DIDFT_ALIAS,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 	enum class EReadDataFlags
 	{

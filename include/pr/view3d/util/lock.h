@@ -50,7 +50,7 @@ namespace pr::rdr
 	{
 		None = 0,
 		DoNotWait = D3D11_MAP_FLAG_DO_NOT_WAIT,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// A scope object for locking (or "mapping") a resource so that the CPU can access it.

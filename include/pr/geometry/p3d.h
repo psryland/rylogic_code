@@ -186,7 +186,7 @@ namespace pr::geometry::p3d
 		Compressed1 = Verts32Bit | Norms16Bit | Colours32Bit | UVs16Bit | Idx16Bit,
 		CompressedMax = Verts16Bit | NormsPack32 | Colours32Bit | UVs16Bit | IdxNBit,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 	#pragma endregion
 
@@ -377,7 +377,7 @@ namespace pr::geometry::p3d
 		{
 			None = 0,
 			Alpha = 1 << 0,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		// UTF-8 filepath or string identifier for looking up the texture
