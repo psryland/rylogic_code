@@ -56,6 +56,61 @@ namespace pr::rdr12
 		F64U64(uint64_t u) :u64(u) {}
 	};
 
+	// The 3D volume (typically within a resource, relative to mip 0)
+	struct Box :D3D12_BOX
+	{
+		Box()
+			:D3D12_BOX()
+		{}
+		Box(iv3 first, iv3 range)
+			:D3D12_BOX({
+				.left = s_cast<UINT>(first.x),
+				.top = s_cast<UINT>(first.y),
+				.front = s_cast<UINT>(first.z),
+				.right = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.x) + range.x, first.x, pr::limits<int>::max())),
+				.bottom = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.y) + range.y, first.y, pr::limits<int>::max())),
+				.back = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.z) + range.z, first.z, pr::limits<int>::max())),
+			})
+		{}
+
+		iv3 pos(int mip = 0) const
+		{
+			constexpr auto PosAtMip = [](int pos, int mip) { return pos >> mip; };
+			return iv3(
+				PosAtMip(s_cast<int>(left), mip),
+				PosAtMip(s_cast<int>(top), mip),
+				PosAtMip(s_cast<int>(front), mip));
+		}
+		iv3 size(int mip = 0) const
+		{
+			constexpr auto SizeAtMip = [](int size, int mip) { return std::max<int>(size >> mip, 1); };
+			return iv3(
+				SizeAtMip(s_cast<int>(right - left), mip),
+				SizeAtMip(s_cast<int>(bottom - top), mip),
+				SizeAtMip(s_cast<int>(back - front), mip));
+		}
+		Box mip(int mip = 0) const
+		{
+			return Box(pos(mip), size(mip));
+		}
+		Box& Clip(iv3 first, iv3 range)
+		{
+			Vec3l<void> last = {
+				std::clamp<int64_t>(s_cast<int64_t>(first.x) + range.x, first.x, pr::limits<int>::max()),
+				std::clamp<int64_t>(s_cast<int64_t>(first.y) + range.y, first.y, pr::limits<int>::max()),
+				std::clamp<int64_t>(s_cast<int64_t>(first.z) + range.z, first.z, pr::limits<int>::max()),
+			};
+
+			if (s_cast<int>(left)  < first.x) left   = s_cast<UINT>(first.x);
+			if (s_cast<int>(top)   < first.y) top    = s_cast<UINT>(first.y);
+			if (s_cast<int>(front) < first.z) front  = s_cast<UINT>(first.z);
+			if (s_cast<int>(right)  > last.x) right  = s_cast<UINT>(last.x);
+			if (s_cast<int>(bottom) > last.y) bottom = s_cast<UINT>(last.y);
+			if (s_cast<int>(back)   > last.z) back   = s_cast<UINT>(last.z);
+			return *this;
+		}
+	};
+
 	// Display mode description
 	struct DisplayMode :DXGI_MODE_DESC
 	{
@@ -440,7 +495,8 @@ namespace pr::rdr12
 		// Vertex buffer description
 		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data)
 		{
-			return Buf(count, sizeof(TVert), data, alignof(TVert));
+			return Buf(count, sizeof(TVert), data, alignof(TVert))
+				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
 		// Index buffer description

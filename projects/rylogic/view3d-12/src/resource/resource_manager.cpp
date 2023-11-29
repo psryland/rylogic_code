@@ -19,6 +19,7 @@
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/map_resource.h"
+#include "pr/view3d-12/utility/update_resource.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "view3d-12/src/utility/pix_events.h"
 
@@ -119,7 +120,7 @@ namespace pr::rdr12
 		auto has_init_data = !desc.Data.empty();
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
-		auto rd = D3D12_RESOURCE_DESC{desc};
+		D3D12_RESOURCE_DESC rd = desc;
 		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			rd.Width *= desc.ElemStride;
 
@@ -142,8 +143,16 @@ namespace pr::rdr12
 			barriers.Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST);
 			barriers.Commit();
 
-			// Copy the initialisation data into the resource
-			UpdateSubresource(res.get(), desc.Data, 0, desc.DataAlignment);
+			// Copy the initialisation data for each array slice into the resource
+			auto array_length = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : s_cast<int>(desc.DepthOrArraySize);
+			for (auto i = 0; i != array_length; ++i)
+			{
+				// Note: here 'desc.Data' is an array of mip-level-zero images.
+				// The span of images expected by 'UpdateSubresource' is for each mip level.
+				UpdateSubresourceScope map(*this, res.get(), i, 0, 1, desc.DataAlignment);
+				map.Write(desc.Data[i]);
+				map.Commit();
+			}
 			
 			// Generate mip maps for the texture (if needed)
 			// 'm_mipmap_gen' should use the same cmd-list as the resource manager, so that mips are generated as
@@ -173,7 +182,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<size_t>(mdesc.m_vb.Width), s_cast<size_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}
@@ -599,13 +608,15 @@ namespace pr::rdr12
 						source_images.push_back(ResolvePath(res_name));
 					}
 				}
-				else // Otherwise, the filename is a single file
+				else
 				{
+					// Otherwise, the filename is a single file (expect DDS file containing all six faces)
 					source_images.push_back(ResolvePath(res_name));
 				}
 
 				// Load the texture from disk (supports '??' in the filepath)
 				auto [images, tdesc] = LoadImageData(source_images, 1, true, 0, &rdr().Features());
+				tdesc.DepthOrArraySize = s_cast<UINT16>(images.ssize());
 				desc.m_tdesc = tdesc;
 				desc.m_tdesc.Data = images;
 
@@ -870,98 +881,6 @@ namespace pr::rdr12
 		return ptr;
 	}
 
-	// Update the data in 'dest' (sub resource range: [sub0,sub0+images.size())) using a staging buffer
-	void ResourceManager::UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment)
-	{
-		// Notes:
-		//  - 'images' here is an array of any resource initialisation data (i.e. could be verts, indices, texture, etc)
-		//  - 'sub0' is the first sub resource in 'dest' to update
-		//  - Constant buffers must be aligned to D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
-		//  - Texture buffers must be aligned to D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
-		//  - D3D12_TEXTURE_DATA_PITCH_ALIGNMENT(256) is the minimum row pitch for a texture
-		//  - 'dest' must be in the 'copy dest' state
-		if (images.empty())
-			return;
-
-		auto device = rdr().D3DDevice();
-		int subN = s_cast<int>(images.size());
-
-		// Check buffer types. Normal buffers don't have multiple subresources.
-		auto ddesc = dest->GetDesc();
-		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && (sub0 != 0 || subN != 1))
-			throw std::runtime_error("Destination resource is a buffer, but sub-resource range is given");
-
-		// Get the size and footprints for copying 'subN' subresources.
-		uint64_t total_size;
-		auto row_count = PR_ALLOCA(row_count, UINT, subN);
-		auto row_size  = PR_ALLOCA(row_size, UINT64, subN);
-		auto layout    = PR_ALLOCA(layout, D3D12_PLACED_SUBRESOURCE_FOOTPRINT, subN);
-		device->GetCopyableFootprints(&ddesc, sub0, subN, 0ULL, &layout[0], &row_count[0], &row_size[0], &total_size);
-
-		// Get a staging buffer big enough for all of the subresources
-		auto staging = m_upload_buffer.Alloc(total_size, alignment);
-
-		// Copy data from 'images' into the staging buffer
-		for (auto i = 0; i != subN; ++i)
-		{
-			auto const& image = images[i];               // The initialisation data
-			auto const& footprint = layout[i].Footprint; // The dimension and row stride for 'dest'
-
-			if (s_cast<int>(footprint.Depth) != image.m_dim.z)
-				throw std::runtime_error("Image size mismatch (slice count)");
-			if (s_cast<int>(row_count[i]) != image.m_dim.y)
-				throw std::runtime_error("Image size mismatch (row count)");
-			if (s_cast<int>(row_size[i]) != image.m_pitch.x)
-				throw std::runtime_error("Image size mismatch (row size)");
-
-			// 'GetCopyableFootprints' returns values relative to 0 for a staging resource, but 'staging' is a
-			// sub-allocation within a staging resource, so we need to adjust the Offset values.
-			layout[i].Offset += staging.m_ofs;
-
-			// Copy each slice
-			for (auto z = 0; z != image.m_dim.z; ++z)
-			{
-				auto src_slice = image.Slice(z);
-				auto dst_slice = staging.m_mem + layout[i].Offset + footprint.RowPitch * row_count[i] * z;
-
-				// Copy each row of the image
-				for (auto y = 0; y != image.m_dim.y; ++y)
-					memcpy(dst_slice + footprint.RowPitch * y, src_slice.bptr + image.m_pitch.x * y, image.m_pitch.x);
-			}
-		}
-
-		// Add the command to copy from the staging resource to the destination resource
-		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
-		{
-			m_gfx_cmd_list.CopyBufferRegion(dest, 0U, staging.m_buf, staging.m_ofs, layout[0].Footprint.Width);
-			m_flush_required = true;
-		}
-		else
-		{
-			for (auto i = 0; i != subN; ++i)
-			{
-				D3D12_TEXTURE_COPY_LOCATION dst =
-				{
-					.pResource = dest,
-					.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-					.SubresourceIndex = s_cast<UINT>(sub0 + i),
-				};
-				D3D12_TEXTURE_COPY_LOCATION src =
-				{
-					.pResource = staging.m_buf,
-					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-					.PlacedFootprint = layout[i],
-				};
-				m_gfx_cmd_list.CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-				m_flush_required = true;
-			}
-		}
-	}
-	void ResourceManager::UpdateSubresource(ID3D12Resource* dest, Image const& image, int sub0, int alignment)
-	{
-		UpdateSubresource(dest, {&image, 1}, sub0, alignment);
-	}
-	
 	// Use the 'ResolveFilepath' event to resolve a filepath
 	std::filesystem::path ResourceManager::ResolvePath(std::string_view path) const
 	{

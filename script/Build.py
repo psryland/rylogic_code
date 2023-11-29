@@ -1016,6 +1016,8 @@ def Main(args:List[str]):
 
 # Entry Point
 if __name__ == "__main__":
+	argv_before = sys.argv
+
 	# Examples:
 	#sys.argv=['build.py']
 	#sys.argv=['build.py', '-projects', 'Audio', '-deploy']
@@ -1029,4 +1031,6 @@ if __name__ == "__main__":
 	#sys.argv=['build.py', '-projects', 'Csex', '-deploy']
 	#sys.argv=['build.py', '-projects', 'P3d', '-deploy']
 	#print(f"Command Line: {str(sys.argv)}")
+	
+	if argv_before != sys.argv: print("WARNING: Command line arguments have been modified for testing purposes")
 	Main(sys.argv)

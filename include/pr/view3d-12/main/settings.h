@@ -114,7 +114,7 @@ namespace pr::rdr12
 			,m_mode(iv2::Zero())
 			,m_swap_effect(DXGI_SWAP_EFFECT_FLIP_DISCARD)
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
-			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
+			,m_depth_format(DXGI_FORMAT_D32_FLOAT)
 			,m_multisamp()
 			,m_bkgd_colour(ColourBlack)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)

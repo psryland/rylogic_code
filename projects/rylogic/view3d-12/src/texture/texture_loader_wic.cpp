@@ -235,7 +235,7 @@ namespace pr::rdr12
 		}
 	
 		// Clamp the texture dimensions to the maximum, maintaining aspect ratio
-		iv3 dim = {s_cast<int>(width), s_cast<int>(height), 1};
+		iv3 dim = {s_cast<int>(width), s_cast<int>(height), 1}; // WIC only supports 2D images
 		if (dim.x > max_dimension || dim.y > max_dimension)
 		{
 			auto ar = static_cast<double>(height) / static_cast<double>(width);
@@ -290,21 +290,24 @@ namespace pr::rdr12
 		}
 
 		auto pitch = (dim.x * bpp + 7) / 8;
-		auto image_size = pitch * dim.y;
+		auto frame_size = pitch * dim.y;
 		auto conversion_needed = src_format != dst_format;
 		auto resize_needed = dim.x != s_cast<int>(width) || dim.y != s_cast<int>(height);
+		auto is_array = frames.ssize() != 1;
 		mips = mips == 0 ? MipCount(dim.x, dim.y) : mips;
 		
 		LoadedImageResult result;
 
-		// Load image data.
-		for (auto& frame : frames)
+		// Load the image frames
+		for (auto f = 0; f != frames.ssize(); ++f)
 		{
-			ImageWithData img(dim.x, dim.y, 1, std::shared_ptr<uint8_t[]>(new uint8_t[image_size]), format);
+			auto& frame = frames[f];
+			auto image = ImageWithData(dim.x, dim.y, is_array ? 1 : dim.z, std::shared_ptr<uint8_t[]>(new uint8_t[frame_size]), format);
+
 			if (!conversion_needed && !resize_needed)
 			{
 				// No format conversion or resize needed
-				Throw(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(image_size), img.m_data.as<uint8_t>()));
+				Throw(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
 			else
 			{
@@ -330,18 +333,19 @@ namespace pr::rdr12
 				}
 
 				// Copy the data with optional reformat and resize
-				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(image_size), img.m_data.as<uint8_t>()));
+				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
-			result.images.push_back(img);
+			result.images.push_back(std::move(image));
 		}
 
 		// Create the texture description.
+		// Note: this is returning a description of each image in the array, not a description of the array itself.
 		result.desc = D3D12_RESOURCE_DESC{
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 			.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 			.Width = s_cast<UINT64>(dim.x),
 			.Height = s_cast<UINT>(dim.y),
-			.DepthOrArraySize = s_cast<UINT16>(result.images.size()),
+			.DepthOrArraySize = s_cast<UINT16>(is_array ? 1 : dim.z),
 			.MipLevels = s_cast<UINT16>(mips),
 			.Format = format,
 			.SampleDesc = {1, 0},
@@ -349,7 +353,7 @@ namespace pr::rdr12
 			.Flags = D3D12_RESOURCE_FLAG_NONE,
 		};
 
-		return std::move(result);
+		return result;
 	}
 
 	// Load an image from a WIC image, either in memory or on disk.

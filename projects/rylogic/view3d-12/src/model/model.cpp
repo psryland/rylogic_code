@@ -8,30 +8,30 @@
 
 namespace pr::rdr12
 {
-	Model::Model(ResourceManager& mgr, size_t vcount, size_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
-		:m_mgr(&mgr)
-		, m_vcount(vcount)
-		, m_icount(icount)
-		, m_vstride(vstride)
-		, m_istride(istride)
+	Model::Model(ResourceManager& mgr, int64_t vcount, int64_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
+		: m_mgr(&mgr)
 		, m_vb(vb, true)
 		, m_ib(ib, true)
 		, m_vb_view({
 			.BufferLocation = m_vb->GetGPUVirtualAddress(),
-			.SizeInBytes = s_cast<UINT>(m_vcount * m_vstride),
-			.StrideInBytes = s_cast<UINT>(m_vstride),
+			.SizeInBytes = s_cast<UINT>(vcount * vstride),
+			.StrideInBytes = s_cast<UINT>(vstride),
 		})
 		, m_ib_view({
 			.BufferLocation = m_ib->GetGPUVirtualAddress(),
-			.SizeInBytes = s_cast<UINT>(m_icount * m_istride),
+			.SizeInBytes = s_cast<UINT>(icount * istride),
 			.Format =
-				m_istride == sizeof(uint32_t) ? DXGI_FORMAT_R32_UINT :
-				m_istride == sizeof(uint16_t) ? DXGI_FORMAT_R16_UINT :
+				istride == sizeof(uint32_t) ? DXGI_FORMAT_R32_UINT :
+				istride == sizeof(uint16_t) ? DXGI_FORMAT_R16_UINT :
 				throw std::runtime_error("Unsupported index buffer format"),
 		})
 		, m_nuggets()
+		, m_vcount(vcount)
+		, m_icount(icount)
 		, m_bbox(bbox)
 		, m_name(name)
+		, m_vstride(s_cast<int16_t>(vstride))
+		, m_istride(s_cast<int16_t>(istride))
 		, m_dbg_flags(EDbgFlags::None)
 	{
 		Throw(m_vb->SetName(FmtS(L"%S:VB:%d", name, vcount)));

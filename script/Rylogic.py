@@ -358,24 +358,33 @@ def Gcc2Vs(line):
 		return re.sub(pat, repl, line)
 
 # Executes a program and returns it's stdout/stderr as a string
+# 'checked' will raise an exception if the program returns a non-zero exit code
+# 'return_output' will return the output of the program as a string. If false, the output is printed to stdout
+# 'expected_return_code' is the expected return code. If the program returns a different code, an exception is raised
 # Returns (result,output)
-def Run(args, expected_return_code=0, show_arguments=False, cwd=None, shell=False, encoding='utf-8'):
+def Run(args, checked=False, return_output=True, expected_return_code=0, show_arguments=False, cwd=None, shell=False, encoding='utf-8'):
 	try:
 		if show_arguments: print(args)
-		outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT, cwd=cwd, shell=shell, encoding=encoding)
-		return True,outp
+		if return_output:
+			outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT, cwd=cwd, shell=shell, encoding=encoding)
+			return True,outp
+		else:
+			subprocess.check_call(args, universal_newlines=True, stderr=subprocess.STDOUT, cwd=cwd, shell=shell)
+			return True,""
+
 	except subprocess.CalledProcessError as e:
-		if e.returncode == expected_return_code: return True,e.output
-		return False,e.output
+		if return_output:
+			if checked: raise
+			return e.returncode == expected_return_code,e.output
+		else:
+			print(e.output)
+			if checked: raise
+			return e.returncode == expected_return_code,""
 
 # Executes a program echoing its output to stdout
 def Exec(args, expected_return_code=0, show_arguments=False, cwd=None, shell=False):
-	try:
-		if show_arguments: print(args)
-		subprocess.check_call(args, cwd=cwd, shell=shell)
-	except subprocess.CalledProcessError as e:
-		if e.returncode == expected_return_code: return
-		raise
+	print("DEPRECATED: Update to 'Run'")
+	Run(args, checked=True, return_output=False, expected_return_code=expected_return_code, show_arguments=show_arguments, cwd=cwd, shell=shell)
 
 # Call another script. Remember, you can import and call directly.. probably preferable to this
 def Call(script, args=[], expected_return_code=0,show_arguments=False):
