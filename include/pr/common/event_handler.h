@@ -305,7 +305,7 @@ namespace pr
 	// MultiCast<std::function<void(int)>>
 	// Use:
 	//   thg.OnError += [&](int) {...}
-	//   thg.OnError += pr::StaticCallBack(func_ptr, ctx)
+	//   thg.OnError += pr::StaticCallback(func_ptr, ctx)
 	template <typename FuncType, bool ThreadSafe = false>
 	struct MultiCast :multicast::IMultiCast
 	{
@@ -658,13 +658,13 @@ namespace pr::common
 				struct L { static void __stdcall Handler(void* ctx, Thing&, EmptyArgs const&) { ++* static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Event1 += pr::StaticCallBack(&L::Handler, &count);
+				thg.Event1 += pr::StaticCallback(&L::Handler, &count);
 				thg.Call1();
 				PR_CHECK(count, 1);
-				thg.Event1 -= pr::StaticCallBack(&L::Handler, &other); // should not remove anything because ctx is different
+				thg.Event1 -= pr::StaticCallback(&L::Handler, &other); // should not remove anything because ctx is different
 				thg.Call1();
 				PR_CHECK(count, 2);
-				thg.Event1 -= pr::StaticCallBack(&L::Handler, &count); // should remove the callback
+				thg.Event1 -= pr::StaticCallback(&L::Handler, &count); // should remove the callback
 				thg.Call1();
 				PR_CHECK(count, 2);
 			}
@@ -770,13 +770,13 @@ namespace pr::common
 				struct L { static void __stdcall Handler(void* ctx, int*) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Action3 += pr::StaticCallBack(&L::Handler, &count);
+				thg.Action3 += pr::StaticCallback(&L::Handler, &count);
 				thg.Call5();
 				PR_CHECK(count, 1);
-				thg.Action3 -= pr::StaticCallBack(&L::Handler, &other); // should not remove anything because ctx is different
+				thg.Action3 -= pr::StaticCallback(&L::Handler, &other); // should not remove anything because ctx is different
 				thg.Call5();
 				PR_CHECK(count, 2);
-				thg.Action3 -= pr::StaticCallBack(&L::Handler, &count); // should remove the callback
+				thg.Action3 -= pr::StaticCallback(&L::Handler, &count); // should remove the callback
 				thg.Call5();
 				PR_CHECK(count, 2);
 			}

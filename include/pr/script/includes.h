@@ -142,17 +142,17 @@ namespace pr::script
 			,m_strtab()
 			,FileOpened()
 		{}
-		explicit Includes(std::wstring_view search_paths, EIncludeTypes types = EIncludeTypes::All)
-			:Includes(types)
-		{
-			SearchPathList(search_paths);
-		}
 		explicit Includes(std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			ResourceModules(modules);
 		}
-		explicit Includes(std::wstring_view search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
+		explicit Includes(std::string_view search_paths, EIncludeTypes types = EIncludeTypes::All)
+			:Includes(types)
+		{
+			SearchPathList(search_paths);
+		}
+		explicit Includes(std::string_view search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			SearchPathList(search_paths);
@@ -203,18 +203,21 @@ namespace pr::script
 		}
 
 		// Get/Set the search paths as a delimited list
-		std::wstring SearchPathList() const
+		std::string SearchPathList() const
 		{
-			std::wstring paths;
+			std::string paths;
 			for (auto& path : m_paths)
-				paths.append(paths.empty() ? L"" : L",").append(path);
+			{
+				if (!paths.empty()) paths.append(1, ',');
+				paths.append(path.string());
+			}
 
 			return paths;
 		}
-		void SearchPathList(std::wstring_view paths)
+		void SearchPathList(std::string_view paths)
 		{
 			m_paths.resize(0);
-			str::Split<std::wstring_view>(paths, L",;\n", [&](auto& p, size_t s, size_t e, int)
+			str::Split<std::string_view>(paths, ",;\n", [&](auto& p, size_t s, size_t e, int)
 			{
 				m_paths.push_back(p.substr(s, e - s));
 			});

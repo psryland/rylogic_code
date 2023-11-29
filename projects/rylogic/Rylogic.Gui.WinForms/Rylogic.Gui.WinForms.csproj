@@ -8,7 +8,6 @@
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<PublishTrimmed>true</PublishTrimmed>
 		<UseWindowsForms>True</UseWindowsForms>
 	</PropertyGroup>
 

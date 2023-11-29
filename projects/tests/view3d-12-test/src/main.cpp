@@ -23,32 +23,19 @@ struct Main :Form
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
-	//// Declare an instance type
-	//#define PR_RDR_INST(x)\
-	//	x(m4x4, m_i2w, EInstComp::I2WTransform)\
-	//	x(ModelPtr, m_model, EInstComp::ModelPtr)\
-	//	x(Colour32, m_tint, EInstComp::TintColour32)
-	//PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST)
-	//#undef PR_RDR_INST
-
 	view3d::DllHandle m_view3d;
 	view3d::Window m_win3d;
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
 	view3d::CubeMap m_envmap;
-	//Renderer m_rdr;
-	//Window m_wnd;
-	//Scene m_scn;
-	//Instance m_inst0;
-	//Instance m_inst1;
-
+	
 	// Error handler
 	static void __stdcall ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
 	{
 		std::wcout << filepath << "(" << line << "): " << msg << std::endl;
 	}
 
-	Main(HINSTANCE hinstance)
+	Main(HINSTANCE)
 		: Form(Params<>()
 			.name("main")
 			.title(L"View3d 12 Test")
@@ -59,43 +46,24 @@ struct Main :Form
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Equation equation\n"
-			"{\n"
-			"	\"sin(x) + cos(y) + a\"         // The equation to plot\n"
-			"	*Resolution {3000}            // Optional. The number of vertices to use\n"
-			"	*Param {\"a\" 0.2}              // Optional. Set a variable to a constant\n"
-			"	*Weight {0.5}                 // Optional. Controls the density of points at the focus point\n"
-			"	*XAxis { -10 +10 }          // Optional. Set the range to display on the x axis\n"
-			"	*YAxis { *Range {-10 +10} } // Optional. Alternative way to set the range to display on the y axis\n"
-			"	*ZAxis\n"
-			"	{\n"
-			"		*Range {-5 +5}\n"
-			"		*Colours                  // Colour bands for value ranges\n"
-			"		{\n"
-			"			-1.0 FF0000FF         // Value, colour.\n"
-			"			 0.0 FFFF00FF\n"
-			"			+1.0 FFFFFF00\n"
-			"		}\n"
-			"	}\n"
-			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 0.5 3}}\n"
-			"}\n"
-			//"*Plane ground FFFFE8A0\n"
-			//"{\n"
-			//"	0 0 0\n"
-			//"	0 1 0\n"
-			//"	40 40\n"
-			//"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
-			//"}\n"
-			//"*Box first_box_eva FF00FF00 { 1 2 3 }"
+			"*Box first_box_eva FF00FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
-		, m_obj1(View3D_ObjectCreateLdrA("*Sphere sever FF0080FF { 0.4 }", FALSE, nullptr, nullptr))
+		, m_obj1(View3D_ObjectCreateLdrA(
+			"*Sphere sever FF0080FF { 0.4 }"
+			, false, nullptr, nullptr))
 		, m_envmap(View3D_CubeMapCreateFromUri("E:/Rylogic/art/textures/cubemaps/hanger/hanger-??.jpg", {}))
-		//,m_rdr(RSettings(hinstance))
-		//,m_wnd(m_rdr, WSettings(CreateHandle(), m_rdr.Settings()))
-		//,m_scn(m_wnd)
-		//,m_inst0()
-		//,m_inst1()
 	{
+		// Load script
+		auto ctx0 = View3D_LoadScriptFromString(
+			"*Spline spline\n"
+			"{\n"
+			"	0 0 0  -1 1 0  -1 2 0  0 1.5 0 FF00FF00\n"
+			"	0 0 0  +1 1 0  +1 2 0  0 1.5 0 FFFF0000\n"
+			"	*Width { 4 }\n"
+			"	*o2w {*pos{0 10 0}}\n"
+			"}\n"
+			, nullptr, nullptr, nullptr, nullptr);
+
 		// Set up the scene
 		View3D_WindowBackgroundColourSet(m_win3d, 0xFF908080);
 		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
@@ -108,18 +76,9 @@ struct Main :Form
 		light.m_cam_relative = false;
 		View3D_LightPropertiesSet(m_win3d, light);
 
-		//m_inst0.m_model = m_rdr.res_mgr().FindModel(EStockModel::UnitQuad);
-		//
-		//auto tex = m_rdr.res_mgr().FindTexture(EStockTexture::Checker);
-		//for (Nugget& nug : m_inst0.m_model->m_nuggets)
-		//	nug.m_tex_diffuse = tex;
-
-		//m_inst1.m_model = m_rdr.res_mgr().FindModel(EStockModel::BBoxModel);
-		//m_inst1.m_i2w = m4x4::Identity();
-		//m_inst1.m_tint = Colour32White;
-		//m_scn.AddInstance(m_inst1);
 		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
+		View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
 		View3D_DemoSceneCreate(m_win3d);
 
 		// EnvMap
@@ -129,11 +88,6 @@ struct Main :Form
 				View3D_ObjectReflectivitySet(obj, 0.2f, "");
 				return true;
 			}, nullptr);
-
-		//m_inst0.m_i2w = m4x4::Identity();
-		//m_inst0.m_tint = Colour32Green;
-		//m_scn.AddInstance(m_inst0);
-		(void)hinstance;
 	}
 	~Main()
 	{
