@@ -11,7 +11,6 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/render/drawlist_element.h"
-#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {

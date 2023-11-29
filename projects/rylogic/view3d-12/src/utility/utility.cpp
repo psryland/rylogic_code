@@ -5,12 +5,11 @@
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/map_resource.h"
+#include "pr/view3d-12/utility/cmd_list.h"
+#include "pr/view3d-12/main/renderer.h"
 
 namespace pr::rdr12
 {
-	// Stores the default resource state in a resource's private data
-	static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
-
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)
 	{
@@ -509,73 +508,13 @@ namespace pr::rdr12
 		return pixel_count;
 	}
 
-	template <typename T>
-	concept HasPrivateData = requires(T v, Guid const& guid, UINT* mdata_size, UINT cdata_size, void* mdata, void const* cdata)
-	{
-		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
-		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
-	};
-	template <HasPrivateData T>
-	void NameResource(T* res, char const* name)
-	{
-		char existing[256];
-		UINT size(sizeof(existing) - 1);
-		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
-		{
-			existing[size] = 0;
-			if (!str::Equal(existing, name))
-				OutputDebugStringA(FmtS("Resource is already named '%s'. New name '%s' ignored", existing, name));
-			return;
-		}
-
-		std::string_view res_name(name);
-		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
-	}
-	template <HasPrivateData T>
-	string32 NameResource(T const* res)
-	{
-		char existing[256];
-		UINT size(sizeof(existing) - 1);
-		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
-		{
-			existing[size] = 0;
-			return existing;
-		}
-		return {};
-	}
-
-	/// <summary>Get/Set the name on a DX resource (debug only)</summary>
-	string32 NameResource(ID3D12Object const* res)
-	{
-		return NameResource<ID3D12Object>(res);
-	}
-	string32 NameResource(IDXGIObject const* res)
-	{
-		return NameResource<IDXGIObject>(res);
-	}
-	string32 NameResource(ID3D12Resource const* res)
-	{
-		return NameResource<ID3D12Resource>(res);
-	}
-	void NameResource(ID3D12Object* res, char const* name)
-	{
-		NameResource<ID3D12Object>(res, name);
-	}
-	void NameResource(IDXGIObject* res, char const* name)
-	{
-		NameResource<IDXGIObject>(res, name);
-	}
-	void NameResource(ID3D12Resource* res, char const* name)
-	{
-		NameResource<ID3D12Resource>(res, name);
-	}
-
 	// Get/Set the default state for a resource
 	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res)
 	{
 		UINT size(sizeof(D3D12_RESOURCE_STATES));
 		char bytes[sizeof(D3D12_RESOURCE_STATES)];
-		return const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]) != DXGI_ERROR_NOT_FOUND
+		auto hr = const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]);
+		return hr != DXGI_ERROR_NOT_FOUND
 			? *reinterpret_cast<D3D12_RESOURCE_STATES*>(&bytes[0])
 			: D3D12_RESOURCE_STATE_COMMON;
 	}
@@ -648,94 +587,4 @@ namespace pr::rdr12
 		pr::sort(paths);
 		return std::move(paths);
 	}
-
-
-
-
-
-
-	#if 0 // in reosurce manager now
-	// Copy a resource by rows
-	void MemcpySubresource(D3D12_MEMCPY_DEST const& dest, D3D12_SUBRESOURCE_DATA const& src, size_t RowSizeInBytes, int NumRows, int NumSlices)
-	{
-		for (auto z = 0; z != NumSlices; ++z)
-		{
-			auto dest_slice = byte_ptr(dest.pData) + dest.SlicePitch * z;
-			auto src_slice = byte_ptr(src.pData) + src.SlicePitch * z;
-
-			for (auto y = 0; y != NumRows; ++y)
-				memcpy(dest_slice + dest.RowPitch * y, src_slice + src.RowPitch * y, RowSizeInBytes);
-		}
-	}
-
-	// Copy data to an upload resource, then add commands to copy it to a GPU resource.
-	void UpdateSubresource(ID3D12GraphicsCommandList* cmds, ID3D12Resource* destination, ID3D12Resource* staging, D3D12_SUBRESOURCE_DATA image, int sub0)
-	{
-		UpdateSubresource(cmds, destination, staging, &image, sub0, 1);
-	}
-	void UpdateSubresource(ID3D12GraphicsCommandList* cmds, ID3D12Resource* destination, ID3D12Resource* staging, D3D12_SUBRESOURCE_DATA const* images, int sub0, int subN)
-	{
-		if (subN == 0)
-			return;
-
-		// Check buffer types
-		auto sdesc = staging->GetDesc();
-		auto ddesc = destination->GetDesc();
-		if (sdesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
-			throw std::runtime_error("Staging resource must be a buffer");
-		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && (sub0 != 0 || subN != 1))
-			throw std::runtime_error("Destination resource is a buffer, but sub-resource range is given");
-
-		// Get the device associated with the command list
-		D3DPtr<ID3D12Device> device;
-		Throw(cmds->GetDevice(__uuidof(ID3D12Device), (void**)(&device.m_ptr)));
-
-		// Get the sizes for copying
-		UINT64 total_size;
-		auto strides     = PR_ALLOCA(strides, UINT64, subN);
-		auto row_counts  = PR_ALLOCA(row_counts, UINT, subN);
-		auto footprints  = PR_ALLOCA(footprints, D3D12_PLACED_SUBRESOURCE_FOOTPRINT, subN);
-		device->GetCopyableFootprints(&ddesc, sub0, subN, 0ULL, &footprints[0], &row_counts[0], &strides[0], &total_size);
-
-		// Copy the 'data' into the staging buffer
-		{
-			MapResource lock(staging, 0, 1);
-			for (auto i = 0; i != subN; ++i)
-			{
-				D3D12_MEMCPY_DEST dst =
-				{
-					lock.data() + footprints[i].Offset,
-					footprints[i].Footprint.RowPitch,
-					s_cast<size_t>(footprints[i].Footprint.RowPitch) * row_counts[i],
-				};
-				MemcpySubresource(dst, images[i], strides[i], row_counts[i], footprints[i].Footprint.Depth);
-			}
-		}
-
-		// Add the command to copy the staging resource to the destination
-		if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
-		{
-			cmds->CopyBufferRegion(destination, 0, staging, footprints[0].Offset, footprints[0].Footprint.Width);
-		}
-		else
-		{
-			for (auto i = 0; i != subN; ++i)
-			{
-				D3D12_TEXTURE_COPY_LOCATION dst =
-				{
-					.pResource = destination,
-					.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-					.SubresourceIndex = s_cast<UINT>(i + sub0),
-				};
-				D3D12_TEXTURE_COPY_LOCATION src =
-				{
-					.pResource = staging,
-					.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-					.PlacedFootprint = footprints[i],
-				};
-				cmds->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-			}
-		}
-	}
-	#endif
 }

@@ -244,10 +244,10 @@ namespace pr
 		using difference_type = typename alloc_traits::difference_type;
 		using size_type       = typename alloc_traits::size_type;
 
-		static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
-		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
-		static constexpr int  type_alignment_v   = Alignment;
-		static constexpr int  local_size_v       = LocalCount;
+		inline static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
+		inline static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
+		inline static constexpr int  type_alignment_v   = Alignment;
+		inline static constexpr int  local_count_v      = LocalCount;
 
 		struct traits
 		{
@@ -370,17 +370,20 @@ namespace pr
 
 	private:
 
-		using TLocalStore = struct alignas(type_alignment_v) { std::byte _[sizeof(Type)]; };
-		static_assert((std::alignment_of_v<TLocalStore> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
+		using local_store_t = struct alignas(type_alignment_v)
+		{
+			std::byte _[local_count_v != 0 ? sizeof(Type) : sizeof(Type*)];
+		};
+		static_assert((std::alignment_of_v<local_store_t> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
 
-		TLocalStore m_local[local_size_v]; // Local cache for small arrays
-		union {                            //
-		Type      (*m_data)[local_size_v]; // Debugging helper for viewing the data as an array
-		Type*       m_ptr;                 // Pointer to the array of data
-		};                                 //
-		size_type m_capacity;              // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
-		size_type m_count;                 // The number of used elements in the array
-		allocator_type m_alloc;            // The memory allocator
+		local_store_t m_local[std::max(local_count_v, 1)]; // Local cache for small arrays
+		union {                                            // Union of types for debugging
+		Type      (*m_data)[local_count_v];                // Debugging helper for viewing the data as an array
+		Type*       m_ptr;                                 // Pointer to the array of data
+		};                                                 //
+		size_type m_capacity;                              // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
+		size_type m_count;                                 // The number of used elements in the array
+		allocator_type m_alloc;                            // The memory allocator
 
 		// Any combination of type, local count, fixed, alignment, and allocator is a friend
 		template <class T, int L, bool F, int A, class C> friend class vector;
@@ -432,7 +435,7 @@ namespace pr
 		{
 			if constexpr (!Fixed)
 			{
-				assert(m_capacity >= local_size_v);
+				assert(m_capacity >= local_count_v);
 				if (new_count <= m_capacity)
 					return;
 
@@ -457,7 +460,7 @@ namespace pr
 
 				m_ptr = new_array;
 				m_capacity = new_cap;
-				assert(m_capacity >= local_size_v);
+				assert(m_capacity >= local_count_v);
 			}
 			else
 			{
@@ -472,7 +475,7 @@ namespace pr
 		// construct empty collection
 		vector()
 			:m_ptr(local_ptr())
-			,m_capacity(local_size_v)
+			,m_capacity(local_count_v)
 			,m_count(0)
 			,m_alloc()
 		{}
@@ -480,7 +483,7 @@ namespace pr
 		// construct with custom allocator
 		explicit vector(allocator_type const& allocator)
 			:m_ptr(local_ptr())
-			,m_capacity(local_size_v)
+			,m_capacity(local_count_v)
 			,m_count(0)
 			,m_alloc(allocator)
 		{}
@@ -740,7 +743,7 @@ namespace pr
 			traits::destruct(alloc(), m_ptr, m_count);
 			if (!local()) alloc().deallocate(m_ptr, m_capacity);
 			m_ptr      = local_ptr();
-			m_capacity = local_size_v;
+			m_capacity = local_count_v;
 			m_count    = 0;
 		}
 
@@ -1022,15 +1025,15 @@ namespace pr
 		// Requests the removal of unused capacity
 		void shrink_to_fit()
 		{
-			assert(m_capacity >= local_size_v);
-			if (m_capacity != local_size_v)
+			assert(m_capacity >= local_count_v);
+			if (m_capacity != local_count_v)
 			{
 				assert(!local());
 
 				Type* new_array; size_type new_count;
-				if (m_count <= local_size_v)
+				if (m_count <= local_count_v)
 				{
-					new_count = local_size_v;
+					new_count = local_count_v;
 					new_array = local_ptr();
 				}
 				else
@@ -1123,7 +1126,7 @@ namespace pr
 				// If using different allocators => can't steal
 				// If right is locally buffered => can't steal
 				// If right's capacity is <= our local buffer size, no point in stealing
-				if (!(alloc() == right.alloc()) || right.local() || right.capacity() <= local_size_v)
+				if (!(alloc() == right.alloc()) || right.local() || right.capacity() <= local_count_v)
 				{
 					// Move the elements of right
 					if (right.size() == 0) // new sequence empty, erase existing sequence
@@ -1165,7 +1168,7 @@ namespace pr
 
 					// Set right to empty. 'right's elements don't need destructing in this case because we're grabbed them
 					right.m_ptr      = right.local_ptr();
-					right.m_capacity = right.local_size_v;
+					right.m_capacity = right.local_count_v;
 					right.m_count    = 0;
 				}
 			}
@@ -1665,7 +1668,7 @@ namespace pr::container
 					PR_CHECK(arr0.capacity(), 50U);
 					arr0.resize(1);
 					arr0.shrink_to_fit();
-					PR_CHECK(arr0.capacity(), (size_t)arr0.local_size_v);
+					PR_CHECK(arr0.capacity(), (size_t)arr0.local_count_v);
 				}
 			}
 		}
@@ -1815,6 +1818,15 @@ namespace pr::container
 					PR_CHECK(arr0[7].val, 300);
 				}
 			}
+		}
+		{// No local storage
+			pr::vector<Type, 0, false> arr0;
+			for (int i = 0; i != 10; ++i)
+				arr0.push_back(Type(i));
+			PR_CHECK(arr0.ssize() == 10, true);
+			for (int i = 0; i != 10; ++i)
+				arr0.pop_back();
+			PR_CHECK(arr0.ssize() == 0, true);
 		}
 	}
 }

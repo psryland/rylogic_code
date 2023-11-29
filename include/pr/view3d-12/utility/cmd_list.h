@@ -7,6 +7,7 @@
 #include "pr/view3d-12/resource/resource_state_store.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
@@ -41,34 +42,35 @@ namespace pr::rdr12
 		ResStateStore m_res_state;       // Track the state of resources used in this command list
 		pool_t* m_pool;                  // The pool to return this list too. (can be null)
 
-	public:
-
-		CmdList()
-			: m_list()
-			, m_cmd_allocator()
-			, m_thread_id(std::this_thread::get_id())
-			, m_pool()
-		{}
 		CmdList(D3DPtr<ICommandList> list, alloc_t&& cmd_alloc, pool_t* pool)
 			: m_list(list)
 			, m_cmd_allocator(std::move(cmd_alloc))
 			, m_thread_id(std::this_thread::get_id())
 			, m_pool(pool)
 		{}
-		CmdList(ID3D12Device4* device, pool_t* pool, wchar_t const* name)
+
+	public:
+
+		CmdList(ID3D12Device4* device, pool_t* pool, char const* name, Colour32 pix_colour)
 			: CmdList(nullptr, {}, pool)
 		{
 			// Create an instance of a cmd list with no allocator assigned yet
 			Throw(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
-			if (name) Throw(m_list->SetName(name));
+			if (name) DebugName(m_list, name);
+			DebugColour(m_list, pix_colour);
 		}
-		CmdList(ID3D12Device4* device, alloc_t&& cmd_alloc, pool_t* pool, wchar_t const* name)
+		CmdList(ID3D12Device4* device, alloc_t&& cmd_alloc, pool_t* pool, char const* name, Colour32 pix_colour)
 			: CmdList(nullptr, std::forward<alloc_t>(cmd_alloc), pool)
 		{
 			// Create an instance of an open cmd list based on 'cmd_alloc'
 			Throw(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)&m_list.m_ptr));
-			if (name) Throw(m_list->SetName(name));
+			if (name) DebugName(m_list, name);
+			DebugColour(m_list, pix_colour);
+
+			// The command list is open, so start the pix event
+			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
+
 		CmdList(CmdList&& rhs) = default;
 		CmdList(CmdList const&) = delete;
 		CmdList& operator =(CmdList&& rhs)
@@ -167,6 +169,7 @@ namespace pr::rdr12
 			{
 				RestoreResourceStateDefaults(*this);
 			}
+			PIXEndEvent(m_list.get());
 			m_list->Close();
 		}
 
@@ -185,6 +188,8 @@ namespace pr::rdr12
 			m_cmd_allocator = std::move(cmd_alloc);
 			Throw(m_list->Reset(m_cmd_allocator, pipeline_state));
 			m_res_state.Reset();
+
+			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
 	
 	public : // Graphics

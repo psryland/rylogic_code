@@ -9,16 +9,18 @@
 namespace pr::rdr12
 {
 	// Notes:
-	//  - These functions convert image files into 'ImageWithData' objects,
-	//    *not* into ID3D12Resources because resource initialisation requires command lists.
+	//  - These functions convert image files into an 'ImageWithData' object, *not* into
+	//    ID3D12Resources because resource initialisation requires command lists.
 	//  - LoadWIC no longer automatically generates mip-maps. A function on the ResourceManager will have to do it.
 	//  - DDS textures can contain arrays of images, where as WIC images are simple 2D bitmaps.
 	//  - WIC functions support arrays by filepath pattern or by array of raw data. Array textures all have the same dimensions.
+	//  - Arrays of 3D textures are not supported.
 	
-	// Use structured binding. i.e. auto [images, desc] = LoadDDS(...);
+	
+	// Use structured binding. i.e. auto [image, desc] = LoadDDS(...);
 	struct LoadedImageResult
 	{
-		pr::vector<ImageWithData> images;
+		pr::vector<ImageWithData> images; // Each image is an array slice (not a mip map)
 		D3D12_RESOURCE_DESC desc;
 	};
 

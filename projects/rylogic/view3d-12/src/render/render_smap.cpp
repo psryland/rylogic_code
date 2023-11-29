@@ -17,7 +17,6 @@
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "pr/view3d-12/utility/shadow_caster.h"
 #include "pr/view3d-12/utility/diagnostics.h"
-#include "view3d-12/src/utility/pix_events.h"
 
 #define PR_DBG_SMAP 0
 #if PR_DBG_SMAP
@@ -79,7 +78,7 @@ namespace pr::rdr12
 	RenderSmap::RenderSmap(Scene& scene, Light const& light, int size, DXGI_FORMAT format)
 		: RenderStep(Id, scene)
 		, m_shader(scene.d3d())
-		, m_cmd_list(scene.d3d(), nullptr, L"RenderSmap")
+		, m_cmd_list(scene.d3d(), nullptr, "RenderSmap", EColours::Yellow)
 		, m_default_tex(res().CreateTexture(EStockTexture::White))
 		, m_default_sam(res().GetSampler(EStockSampler::LinearClamp))
 		, m_casters()
@@ -228,7 +227,6 @@ namespace pr::rdr12
 
 		// Reset the command list with a new allocator for this frame
 		m_cmd_list.Reset(frame.m_cmd_alloc_pool.Get());
-		PIXBeginEvent(m_cmd_list.get(), s_cast<uint32_t>(EColours::Yellow), L"RenderSmap");
 
 		// Add the command lists we're using to the frame.
 		frame.m_main.push_back(m_cmd_list);
@@ -309,7 +307,6 @@ namespace pr::rdr12
 		}
 
 		// Close the command list now that we've finished rendering this scene
-		PIXEndEvent(m_cmd_list.get());
 		m_cmd_list.Close();
 	}
 

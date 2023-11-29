@@ -41,7 +41,7 @@ namespace pr::rdr12
 		Scene*             m_scene;              // The scene this render step is owned by
 		drawlist_t         m_drawlist;           // The drawlist for this render step. Access via 'Lock'
 		bool               m_sort_needed;        // True when the list needs sorting
-		GpuUploadBuffer    m_cbuf_upload;        // Shared upload buffer for shaders to used to upload parameters
+		GpuUploadBuffer    m_cbuf_upload;        // Shared upload buffer for shaders to use to upload parameters
 		PipeStateDesc      m_default_pipe_state; // Default settings for the pipeline state
 		PipeStatePool      m_pipe_state_pool;    // Pool of pipeline state objects
 		AutoSub            m_evt_model_delete;   // Event subscription for model deleted notification

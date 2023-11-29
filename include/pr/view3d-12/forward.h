@@ -45,6 +45,7 @@
 #include <dxgitype.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
+#include <pix3.h>
 
 #include "pr/macros/enum.h"
 #include "pr/meta/alignment_of.h"

@@ -18,9 +18,10 @@
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
 #include "pr/view3d-12/lighting/light.h"
-#include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/pipe_state.h"
+#include "pr/view3d-12/utility/update_resource.h"
+#include "pr/view3d-12/utility/wrappers.h"
 
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
@@ -4692,10 +4693,11 @@ namespace pr::rdr12
 			assert(nv <= (int)model.m_vcount);
 			assert(ni <= (int)model.m_icount);
 
-#if 0 //todo
-			MLock mlock(&model, EMap::WriteDiscard);
-			auto vout = mlock.m_vlock.ptr<Vert>();
-			auto iout = mlock.m_ilock.ptr<uint32_t>();
+			auto update_v = model.UpdateVertices();
+			auto update_i = model.UpdateIndices();
+			auto vout = update_v.ptr<Vert>();
+			auto iout = update_i.ptr<uint32_t>();
+
 			auto props = geometry::HexPatch(rings,
 				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
 				{
@@ -4721,28 +4723,25 @@ namespace pr::rdr12
 					auto n = Cross(v4(2 * dx, 0, h.y - h.x, 0), v4(0, 2 * dy, h.w - h.z, 0));
 					auto norm = Normalise(n, v4::Zero());
 
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2Zero);
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2::Zero());
 				},
 				[&](auto idx)
 				{
 					*iout++ = idx;
 				});
 
+			assert(vout - update_v.ptr<Vert>() == nv);
+			assert(iout - update_i.ptr<uint32_t>() == ni);
+			update_v.Commit();
+			update_i.Commit();
+
 			// Generate nuggets if initialising
 			if (init)
 			{
-				auto [vcount, icount] = geometry::HexPatchSize(rings);
-
-				NuggetData n(ETopo::TriStrip, props.m_geom, Range(0, vcount), Range(0, icount));
+				NuggetData n(ETopo::TriStrip, props.m_geom, Range(0, nv), Range(0, ni));
 				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.CreateNugget(n);
 			}
-#endif
-			(void)init;
-			(void)extras;
-			(void)equation;
-			(void)dx_step;
-			(void)dy_step;
 		}
 		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
