@@ -141,7 +141,7 @@ namespace pr::rdr12
 
 		// Return a pointer to the staging buffer memory for the given mip level.
 		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
-		template <typename TElement> TElement* ptr(int mip) const
+		template <typename TElement> TElement* ptr(int mip = 0) const
 		{
 			// Make sure the mip is within the range of mips being updated
 			if (mip < 0 || mip >= m_mipN)
@@ -149,12 +149,12 @@ namespace pr::rdr12
 
 			// The mip in the staging buffer
 			auto const& layout = m_layout[mip];
-			return m_staging.m_mem + layout.Offset;
+			return type_ptr<TElement>(m_staging.m_mem + layout.Offset);
 		}
-		template <typename TElement> TElement* ptr(int mip, iv3 pos) const
+		template <typename TElement> TElement* ptr(iv3 pos, int mip = 0) const
 		{
 			// The z slice in the staging buffer
-			auto slice = ptr(mip);
+			auto slice = byte_ptr(ptr(mip));
 
 			// The dimensions of the range being updated
 			auto const& dim = m_range.size(mip);
@@ -165,10 +165,11 @@ namespace pr::rdr12
 
 			// Return a pointer to the position on the mip
 			auto const& layout = m_layout[mip];
-			return slice + 
+			return type_ptr<TElement>(
+				slice + 
 				(layout.Footprint.RowPitch * layout.Footprint.Height) * pos.z +
 				(layout.Footprint.RowPitch) * pos.y +
-				sizeof(TElement) * pos.x;
+				sizeof(TElement) * pos.x);
 		}
 
 		// Copy data from the given images to the staging buffer. Each image is a mip.
@@ -238,7 +239,7 @@ namespace pr::rdr12
 			{
 				auto pos = m_range.pos(m_mip0);
 				auto size = m_range.size(m_mip0);
-				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_buf, m_staging.m_ofs, s_cast<UINT64>(size.x));
+				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_buf, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
 			}
 			else
 			{
