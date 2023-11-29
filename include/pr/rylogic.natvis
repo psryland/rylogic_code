@@ -436,6 +436,9 @@ old:
 	<Type Name="pr::rdr12::ResStateData::MipState">
 		<DisplayString>mip={m_data &amp; 0xFF} state={(D3D12_RESOURCE_STATES)(m_data >> 8)}</DisplayString>
 	</Type>
+	<Type Name="pr::rdr12::Image">
+		<DisplayString>dim={m_dim} rowpitch={m_pitch.x} fmt={m_format}</DisplayString>
+	</Type>
 
 
 	<!-- Line Drawer -->

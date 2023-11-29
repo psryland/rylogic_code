@@ -557,6 +557,9 @@
     <ClInclude Include="..\include\pr\view3d-12\texture\d2d_context.h">
       <Filter>src\texture</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\update_resource.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">

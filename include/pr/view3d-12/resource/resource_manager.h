@@ -123,13 +123,10 @@ namespace pr::rdr12
 		friend struct TextureBase;
 		friend struct Sampler;
 		friend struct Shader;
+		friend struct UpdateSubresourceScope;
 		
 		// Create and initialise a resource
 		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
-
-		// Update the data in 'dest' using a staging buffer
-		void UpdateSubresource(ID3D12Resource* dest, std::span<Image const> images, int sub0, int alignment);
-		void UpdateSubresource(ID3D12Resource* dest, Image const& image, int sub0, int alignment);
 
 		// Use the 'ResolveFilepath' event to resolve a filepath
 		std::filesystem::path ResolvePath(std::string_view path) const;

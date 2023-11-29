@@ -53,7 +53,7 @@ struct Main :Form
 		: Form(Params<>()
 			.name("main")
 			.title(L"View3d 12 Test")
-			.xy(1500,100).wh(1024, 768, true)
+			.xy(1400,100).wh(1024, 768, true)
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
@@ -224,7 +224,8 @@ struct Main :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int){
+int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
+{
 	pr::InitCom com;
 
 	try

@@ -386,7 +386,7 @@ namespace pr::rdr12
 			"// Texture quad containing text\n"
 			"*Text three_dee_text\n"
 			"{\n"
-			"	*Font {*Name {\"Courier New\"} *Size {20}}\n"
+			"	*Font {*Name {\"Courier New\"} *Size {16}}\n"
 			"\n"
 			"	// Normal text string, everything between quotes (including new lines)\n"
 			"	\n"
