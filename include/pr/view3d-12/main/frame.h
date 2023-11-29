@@ -31,9 +31,9 @@ namespace pr::rdr12
 		GfxCmdAllocPool& m_cmd_alloc_pool; // The command allocator pool to create allocators from
 
 		Frame(ID3D12Device4* device, BackBuffer& bb_main, BackBuffer& bb_post, GfxCmdAllocPool& cmd_alloc_pool)
-			: m_prepare(device, cmd_alloc_pool.Get(), nullptr, L"Prepare")
-			, m_resolve(device, cmd_alloc_pool.Get(), nullptr, L"Resolve")
-			, m_present(device, cmd_alloc_pool.Get(), nullptr, L"Present")
+			: m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
+			, m_resolve(device, cmd_alloc_pool.Get(), nullptr, "Resolve", EColours::Orange)
+			, m_present(device, cmd_alloc_pool.Get(), nullptr, "Present", EColours::Orange)
 			, m_main()
 			, m_post()
 			, m_bb_main(bb_main)

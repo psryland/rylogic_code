@@ -119,9 +119,9 @@ namespace pr::rdr12
 
 		struct Image
 		{
-			std::shared_ptr<uint8_t[]> data;
 			Header const* header;
 			std::span<uint8_t const> bits;
+			std::shared_ptr<uint8_t[]> data;
 		};
 	}
 
@@ -352,47 +352,6 @@ namespace pr::rdr12
 		return std::move(img);
 	}
 
-	// Return an array of images including each mip.
-	// An array of images: [I,I,I] becomes [I,i,.,I,i,.,I,i.,], i.e. expanded mips.
-	// The length of the returned array will always be a multiple of the 'array_size'.
-	pr::vector<Image> SplitIntoMips(iv3 dim, int mip_count, int array_size, DXGI_FORMAT format, int max_dimension, std::span<uint8_t const> bits)
-	{
-		pr::vector<Image> images;
-		images.reserve(mip_count * array_size);
-
-		auto bits_beg = bits.data();
-		auto bits_end = bits_beg + bits.size();
-
-		// Generate mips for each texture in the array
-		for (int j = 0, jend = int(array_size); j != jend; ++j)
-		{
-			auto w = dim.x;
-			auto h = dim.y;
-			auto d = dim.z;
-
-			// Generate each mip level
-			for (int i = 0; i != mip_count; ++i)
-			{
-				// Get the image dimensions for the given width, height, and depth
-				Image img(w, h, d, bits_beg, format);
-				if (bits_beg + img.m_pitch.y * d > bits_end)
-					throw std::runtime_error("Insufficient image data provided");
-
-				// Only add mips with dimensions <= 'max_dimension'
-				if (mip_count <= 1 || max_dimension == 0 || (w <= max_dimension && h <= max_dimension && d <= max_dimension))
-					images.push_back(img);
-
-				// Do the next mip
-				w = std::max<int>(w >> 1, 1);
-				h = std::max<int>(h >> 1, 1);
-				d = std::max<int>(d >> 1, 1);
-				bits_beg += img.m_pitch.y * d;
-			}
-		}
-
-		return std::move(images);
-	}
-
 	// Return an array of 'Image's and a resource description from DDS image data.
 	LoadedImageResult LoadDDS(dds::Image const& img, int mips, bool is_cube_map, int max_dimension)
 	{
@@ -432,7 +391,9 @@ namespace pr::rdr12
 					if (AllSet(d3d10ext.miscFlag, D3D10_RESOURCE_MISC_TEXTURECUBE) != is_cube_map)
 						throw std::runtime_error(FmtS("Image %s a cube map but %s expected to be", (is_cube_map ? "is" : "was not"), (is_cube_map ? "is not" : "was")));
 
-					array_size *= 6;
+					if (is_cube_map)
+						array_size *= 6;
+
 					break;
 				}
 				case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
@@ -453,8 +414,10 @@ namespace pr::rdr12
 		}
 		else
 		{
-			// Determine texture type and perform sanity checks
+			// Determine texture type
 			format = GetDXGIFormat(img.header->ddspf);
+
+			// Perform sanity checks
 			if (format == DXGI_FORMAT_UNKNOWN)
 				throw std::runtime_error(FmtS("Unsupported DDS format. Pixel format %d cannot be converted to a DXGI format", img.header->ddspf));
 			if (BitsPerPixel(format) == 0)
@@ -526,23 +489,70 @@ namespace pr::rdr12
 			}
 		}
 
-		// Convert the DDS image into initialisation data and a resource description
-		auto dim = iv3{s_cast<int>(img.header->width), s_cast<int>(img.header->height), s_cast<int>(img.header->depth)};
-		auto images = SplitIntoMips(dim, mip_count, array_size, format, max_dimension, img.bits);
-		dim = images[0].m_dim; // The largest image dimension
-		
-		LoadedImageResult result;
+		auto bits_beg = img.bits.data();
+		auto bits_end = bits_beg + img.bits.size();
+		auto is_array = array_size > 1;
+		auto NextMip = [=](iv3 d)
+		{
+			return iv3{
+				std::max<int>(d.x >> 1, 1),
+				std::max<int>(d.y >> 1, 1),
+				is_array ? 1 : std::max<int>(d.z >> 1, 1)};
+		};
 
-		for (auto& image : images)
-			result.images.push_back(ImageWithData(image));
+		LoadedImageResult result;
+		result.images.reserve(array_size);
+		for (auto i = 0; i != array_size; ++i)
+		{
+			// The dimensions of the dds image
+			auto dim = iv3{
+				s_cast<int>(img.header->width),
+				s_cast<int>(img.header->height),
+				is_array ? 1 : s_cast<int>(img.header->depth)
+			};
+
+			// Split into mips
+			ImageWithData* parent = nullptr;
+			for (auto m = 0; m != mip_count; ++m, dim = NextMip(dim))
+			{
+				// Only add mips with dimensions <= 'max_dimension'
+				if (mip_count > 1 && // There are multiple mips
+					max_dimension != 0 && // There is a restriction on the mip size
+					(dim.x > max_dimension || dim.y > max_dimension || dim.z > max_dimension)) // One of the dimensions is too large
+					continue;
+
+				// Get the frame size for this mip
+				auto frame_size = img.header->pitchOrLinearSize * dim.y * dim.z;
+				if (bits_beg + frame_size > bits_end)
+					throw std::runtime_error("Insufficient image data provided");
+
+				// Copy the data into storage within 'image'
+				auto image = ImageWithData(dim.x, dim.y, dim.z, std::shared_ptr<uint8_t[]>(new uint8_t[frame_size]), format);
+				memcpy(image.m_data.as<uint8_t>(), bits_beg, frame_size);
+				bits_beg += frame_size;
+
+				// Attach the image to the mip chain
+				if (parent == nullptr)
+				{
+					result.images.push_back(std::move(image));
+					parent = &result.images.back();
+				}
+				else
+				{
+					parent->m_mip.reset(new ImageWithData(std::move(image)));
+					parent = parent->m_mip.get();
+				}
+			}
+		}
 
 		// Generate the resource description
+		// Note: this is returning a description of each image in the array, not a description of the array itself.
 		result.desc = D3D12_RESOURCE_DESC {
 			.Dimension = resource_dimension,
 			.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-			.Width = s_cast<UINT64>(dim.x),
-			.Height = s_cast<UINT>(dim.y),
-			.DepthOrArraySize = resource_dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ?  s_cast<UINT16>(dim.z) : s_cast<UINT16>(array_size),
+			.Width = s_cast<UINT64>(img.header->width),
+			.Height = s_cast<UINT>(img.header->height),
+			.DepthOrArraySize = s_cast<UINT16>(is_array ? 1 : img.header->depth),
 			.MipLevels = s_cast<UINT16>(result.images.ssize() / array_size), // The new mip count (as a result of the 'max_dimension' limit),
 			.Format = format,
 			.SampleDesc = {1, 0},
@@ -550,7 +560,7 @@ namespace pr::rdr12
 			.Flags = D3D12_RESOURCE_FLAG_NONE,
 		};
 
-		return std::move(result);
+		return result;
 	}
 
 	// Load an image from a DDS image data, either in memory or on disk.

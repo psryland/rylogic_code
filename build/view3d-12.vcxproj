@@ -208,6 +208,7 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\update_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\wrappers.h" />
     <ClInclude Include="..\include\pr\view3d-12\view3d.h" />
@@ -216,7 +217,6 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>

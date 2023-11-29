@@ -37,7 +37,7 @@ namespace pr::rdr12
 		// Get a DXGI surface from the wrapped resource
 		D3DPtr<IDXGISurface> surf;
 		Throw(m_dx11_res->QueryInterface<IDXGISurface>(&surf.m_ptr));
-		NameResource(surf.get(), FmtS("%s-dx11", NameResource(res).c_str()));
+		DebugName(surf, FmtS("%s-dx11", DebugName(res)));
 
 		// Create a bitmap wrapper for 'surf'
 		D3DPtr<ID2D1Bitmap1> target;

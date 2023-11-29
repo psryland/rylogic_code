@@ -13,7 +13,6 @@ using namespace pr::gui;
 using namespace pr::rdr12;
 
 // TODO:
-//  Finish the drawing of all LdrObjects
 //  Finish the View3d API
 //  Ray cast/ Hit test support
 
@@ -53,49 +52,33 @@ struct Main :Form
 		: Form(Params<>()
 			.name("main")
 			.title(L"View3d 12 Test")
-			.xy(1500,100).wh(1024, 768, true)
+			.xy(1400,100).wh(1024, 768, true)
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Text camera_space_text\n"
+			"*Equation equation\n"
 			"{\n"
-			"	*ScreenSpace\n"
-			"\n"
-			"	// Text is concatenated, with changes of style applied\n"
-			"	// Text containing multiple lines has the line-end whitespace and indentation tabs removed.\n"
-			"	*Font { *Name {\"Times New Roman\"} *Colour {FF0000FF} *Size{18}}\n"
-			"	\"This is camera space \n"
-			"	text with new lines, and \"\n"
-			"	*NewLine\n"
-			"	*Font {*Colour {FF00FF00} *Size{24} *Style{Oblique}}\n"
-			"	\"with varying colours \n"
-			"	and \"\n"
-			"	*Font {*Colour {FFFF0000} *Weight{800} *Style{Italic} *Strikeout}\n"
-			"	\"stiles \"\n"
-			"	*Font {*Colour {FFFFFF00} *Style{Italic} *Underline}\n"
-			"	\"styles \"\n"
-			"\n"
-			"	// The background colour of the quad\n"
-			"	*BackColour {40A0A0A0}\n"
-			"\n"
-			"	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right\n"
-			"	*Anchor { -1 +1 }\n"
-			"\n"
-			"	// Padding between the quad boundary and the text\n"
-			"	*Padding {10 20 10 10}\n"
-			"\n"
-			"	// *o2w is interpreted as a 'text to camera space' transform\n"
-			"	// (-1,-1,0) is the lower left corner on the near plane.\n"
-			"	// (+1,+1,1) is the upper right corner on the far plane.\n"
-			"	// The quad is automatically scaled to make the text unscaled on-screen\n"
-			"	*o2w {*pos{-1, +1, 0}}\n"
+			"	\"sin(x) + cos(y) + a\"         // The equation to plot\n"
+			"	*Resolution {3000}            // Optional. The number of vertices to use\n"
+			"	*Param {\"a\" 0.2}              // Optional. Set a variable to a constant\n"
+			"	*Weight {0.5}                 // Optional. Controls the density of points at the focus point\n"
+			"	*XAxis { -10 +10 }          // Optional. Set the range to display on the x axis\n"
+			"	*YAxis { *Range {-10 +10} } // Optional. Alternative way to set the range to display on the y axis\n"
+			"	*ZAxis\n"
+			"	{\n"
+			"		*Range {-5 +5}\n"
+			"		*Colours                  // Colour bands for value ranges\n"
+			"		{\n"
+			"			-1.0 FF0000FF         // Value, colour.\n"
+			"			 0.0 FFFF00FF\n"
+			"			+1.0 FFFFFF00\n"
+			"		}\n"
+			"	}\n"
+			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 0.5 3}}\n"
 			"}\n"
-
-
-
 			//"*Plane ground FFFFE8A0\n"
 			//"{\n"
 			//"	0 0 0\n"
@@ -224,7 +207,8 @@ struct Main :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int){
+int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
+{
 	pr::InitCom com;
 
 	try

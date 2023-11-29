@@ -20,11 +20,11 @@ try:
 
 	# If the target is an exe, just run it
 	if RunTests and target_extn == ".exe":
-		Rylogic.Exec([target_path])
+		Rylogic.Run([target_path], return_output=False)
 
 	elif RunTests and target_extn == ".dll":
 		vstest = Rylogic.Path(UserVars.vs_dir, "Common7\\IDE\\Extensions\\TestPlatform\\vstest.console.exe")
-		Rylogic.Exec([vstest, target_path, "--logger:console;verbosity=minimal", "--nologo"])
+		Rylogic.Run([vstest, target_path, "--logger:console;verbosity=minimal", "--nologo"], return_output=False)
 
 	else:
 		print("   **** Unit tests not run ****   ")

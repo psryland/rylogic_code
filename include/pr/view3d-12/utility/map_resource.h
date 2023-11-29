@@ -13,6 +13,16 @@ namespace pr::rdr12
 	// Unmapping: Invalidate the pointer to a resource and re-enable the GPU's access to that resource.
 	struct MapResource
 	{
+		// Notes:
+		//  - THIS WILL STALL THE GPU IF THE RESOURCE IS CURRENTLY IN USE BY THE GPU
+		//  - SDK Notes from Dx11: *DON'T read from a sub-resource mapped for writing*
+		//    When you pass D3D11_MAP_WRITE, D3D11_MAP_WRITE_DISCARD, or D3D11_MAP_WRITE_NO_OVERWRITE to the MapType parameter,
+		//    you must ensure that your app does not read the sub-resource data to which the pData member of D3D11_MAPPED_SUBRESOURCE
+		//    points because doing so can cause a significant performance penalty. The memory region to which pData points can be
+		//    allocated with PAGE_WRITECOMBINE, and your app must honour all restrictions that are associated with such memory.
+		// The SDK recommends using volatile pointers (but struct assignment for volatiles requires CV-qualified assignment operators)
+		// Just don't read from m_data...
+
 		ID3D12Resource* m_res;       // The resource to be locked
 		UINT            m_sub;       // e.g. mip level (use 0 for V/I buffers)
 		int             m_elem_size; // The size of each element (in bytes)
@@ -20,9 +30,6 @@ namespace pr::rdr12
 		Range           m_rrange;    // The read range (while mapped), the range modified after Unmap (in elements, not bytes)
 		void*           m_data;      // The pointer to the mapped resource data
 
-		// Provide a 'dc' if you want to use a deferred context to lock the resource.
-		// This will override the 'dc' passed to Map by the renderer manager classes (which will pass in the immediate DC)
-		// Note: that to map a deferred context, you can only use write discard or write no overwrite.
 		MapResource()
 			:m_res()
 			,m_sub()
@@ -69,15 +76,6 @@ namespace pr::rdr12
 			Unmap();
 		}
 
-		// Returns a pointer to the mapped memory
-		// SDK Notes: *Don't read from a sub-resource mapped for writing*
-		//  When you pass D3D11_MAP_WRITE, D3D11_MAP_WRITE_DISCARD, or D3D11_MAP_WRITE_NO_OVERWRITE to the MapType parameter,
-		//  you must ensure that your app does not read the sub-resource data to which the pData member of D3D11_MAPPED_SUBRESOURCE
-		//  points because doing so can cause a significant performance penalty. The memory region to which pData points can be
-		//  allocated with PAGE_WRITECOMBINE, and your app must honour all restrictions that are associated with such memory.
-		// The SDK recommends using volatile pointers (but struct assignment for volatiles requires CV-qualified assignment operators)
-		// Just don't read from ptr()...
-		
 		// Write access
 		uint8_t* data(uint64_t ofs = 0) { return byte_ptr(m_data) + m_elem_size * m_wrange.m_beg + ofs; }
 		uint8_t* end()                  { return byte_ptr(m_data) + m_elem_size * m_wrange.m_end; }
@@ -98,8 +96,8 @@ namespace pr::rdr12
 
 		// Maps a resource to CPU accessible memory.
 		// 'read_range' (in units of elements) indicates the region the CPU might read,
-		// and the coordinates are subresource-relative. Pass RangeZero if the CPU will not read.
-		bool Map(ID3D12Resource* res, int sub, int elem_size, Range read_range = RangeZero)
+		// and the coordinates are subresource-relative. Pass Range::Zero() if the CPU will not read.
+		bool Map(ID3D12Resource* res, int sub, int elem_size, Range read_range = Range::Zero())
 		{
 			PR_ASSERT(PR_DBG_RDR, m_res == nullptr, "Already mapped");
 
@@ -107,8 +105,8 @@ namespace pr::rdr12
 			auto desc = res->GetDesc();
 			auto write_range = Range(0, s_cast<size_t>(desc.Width * desc.Height * desc.DepthOrArraySize));
 
-			// Do not wait means the caller expects the map to potentially not to work
-			void* data;
+			// Get the pointer to the mmemory
+			void* data = nullptr;
 			auto rrange = To<D3D12_RANGE>(read_range);
 			Throw(res->Map(sub, &rrange, &data));
 
@@ -124,7 +122,7 @@ namespace pr::rdr12
 		void Unmap()
 		{
 			if (!m_res) return;
-			D3D12_RANGE range;
+			D3D12_RANGE range = {};
 			m_res->Unmap(m_sub, &range);
 			m_rrange = Scale(To<Range>(range), 1, m_elem_size);
 			m_wrange = Scale(To<Range>(range), 1, m_elem_size);
