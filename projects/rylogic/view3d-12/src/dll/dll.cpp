@@ -69,7 +69,7 @@ using LockGuard = std::lock_guard<std::recursive_mutex>;
 // Note: this function is not thread safe, avoid race calls
 VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_error_cb, void* ctx)
 {
-	auto error_cb = StaticCallBack(global_error_cb, ctx);
+	auto error_cb = StaticCallback(global_error_cb, ctx);
 	try
 	{
 		// Create the dll context on the first call
@@ -111,11 +111,62 @@ VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb
 	{
 		DllLockGuard;
 		if (add)
-			Dll().ReportError += StaticCallBack(error_cb, ctx);
+			Dll().ReportError += StaticCallback(error_cb, ctx);
 		else
-			Dll().ReportError -= StaticCallBack(error_cb, ctx);
+			Dll().ReportError -= StaticCallback(error_cb, ctx);
 	}
 	CatchAndReport(View3D_GlobalErrorCBSet, , );
+}
+
+// Data Sources ***************************
+
+// Create an include handler that can load from directories or embedded resources
+static script::Includes GetIncludes(view3d::Includes const* includes)
+{
+	if (includes == nullptr)
+		return script::Includes{};
+
+	script::Includes inc;
+	if (includes->m_include_paths != nullptr)
+		inc.SearchPathList(includes->m_include_paths);
+
+	if (includes->m_module_count != 0)
+		inc.ResourceModules(std::initializer_list<HMODULE>(includes->m_modules, includes->m_modules + includes->m_module_count));
+
+	return inc;
+}
+
+// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
+VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, view3d::Includes const* includes, view3d::OnAddCB on_add_cb, void* ctx)
+{
+	try
+	{
+		// Concurrent entry is allowed
+		auto on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScript(std::string_view(ldr_script), false, EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::OnAddCB)nullptr);
+	}
+	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
+}
+VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, view3d::Includes const* includes, view3d::OnAddCB on_add_cb, void* ctx)
+{
+	try
+	{
+		// Concurrent entry is allowed
+		auto on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScript(std::string_view(ldr_file), true, EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::OnAddCB)nullptr);
+	}
+	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
+}
+
+// Enumerate the Guids of objects in the sources collection
+VIEW3D_API void __stdcall View3D_SourceEnumGuids(view3d::EnumGuidsCB enum_guids_cb, void* ctx)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().SourceEnumGuids(StaticCallback(enum_guids_cb, ctx));
+	}
+	CatchAndReport(View3D_SourceEnumGuids,, );
 }
 
 // Windows ********************************
@@ -149,9 +200,9 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->ReportError += StaticCallBack(error_cb, ctx);
+			window->ReportError += StaticCallback(error_cb, ctx);
 		else
-			window->ReportError -= StaticCallBack(error_cb, ctx);
+			window->ReportError -= StaticCallback(error_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
@@ -205,7 +256,7 @@ VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, 
 }
 
 // Get/Set the window viewport (and clipping area)
-VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window)
+VIEW3D_API view3d::Viewport __stdcall View3D_WindowViewportGet(view3d::Window window)
 {
 	try
 	{
@@ -216,7 +267,7 @@ VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::W
 	}
 	CatchAndReport(View3D_WindowViewportGet, window, view3d::Viewport{});
 }
-VIEW3D_API void __stdcall View3D_WindowViewportSet(pr::view3d::Window window, pr::view3d::Viewport const& vp)
+VIEW3D_API void __stdcall View3D_WindowViewportSet(view3d::Window window, view3d::Viewport const& vp)
 {
 	try
 	{
@@ -235,9 +286,9 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, 
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSettingsChanged += StaticCallBack(settings_changed_cb, ctx);
+			window->OnSettingsChanged += StaticCallback(settings_changed_cb, ctx);
 		else
-			window->OnSettingsChanged -= StaticCallBack(settings_changed_cb, ctx);
+			window->OnSettingsChanged -= StaticCallback(settings_changed_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
@@ -254,6 +305,30 @@ VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::
 		window->Add(object);
 	}
 	CatchAndReport(View3D_WindowAddObject, window,);
+}
+
+// Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
+VIEW3D_API void __stdcall View3D_WindowAddObjectsById(view3d::Window window, GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Add(context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_WindowAddObjectsById, window,);
+}
+VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(view3d::Window window, GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Remove(context_ids, include_count, exclude_count, false);
+	}
+	CatchAndReport(View3D_WindowRemoveObjectsById, window,);
 }
 
 // Enumerate the object collection guids associated with 'window'
@@ -337,9 +412,9 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view
 		if (!window) throw std::runtime_error("window is null");
 
 		if (add)
-			window->OnInvalidated += StaticCallBack(invalidated_cb, ctx);
+			window->OnInvalidated += StaticCallback(invalidated_cb, ctx);
 		else
-			window->OnInvalidated -= StaticCallBack(invalidated_cb, ctx);
+			window->OnInvalidated -= StaticCallback(invalidated_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }
@@ -522,7 +597,7 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(view3d::Window window, view3d::
 // Lights *********************************
 
 // Get/Set the properties of the global light
-VIEW3D_API pr::view3d::Light __stdcall View3D_LightPropertiesGet(view3d::Window window)
+VIEW3D_API view3d::Light __stdcall View3D_LightPropertiesGet(view3d::Window window)
 {
 	try
 	{
@@ -560,7 +635,7 @@ VIEW3D_API void __stdcall View3D_LightPropertiesSet(view3d::Window window, view3
 		rdr12::Light global_light;
 		global_light.m_position       = To<v4>(light.m_position);
 		global_light.m_direction      = To<v4>(light.m_direction);
-		global_light.m_type           = pr::Enum<pr::rdr12::ELight>::From(light.m_type);
+		global_light.m_type           = Enum<rdr12::ELight>::From(light.m_type);
 		global_light.m_ambient        = light.m_ambient;
 		global_light.m_diffuse        = light.m_diffuse;
 		global_light.m_specular       = light.m_specular;
@@ -697,7 +772,7 @@ VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(view3d::Object object, fl
 // Materials ******************************
 
 // Release a reference to a texture
-VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex)
+VIEW3D_API void __stdcall View3D_TextureRelease(view3d::Texture tex)
 {
 	try
 	{
@@ -707,7 +782,7 @@ VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex)
 	}
 	CatchAndReport(View3D_TextureRelease, ,);
 }
-VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex)
+VIEW3D_API void __stdcall View3D_CubeMapRelease(view3d::CubeMap tex)
 {
 	try
 	{
@@ -730,7 +805,7 @@ VIEW3D_API view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* res
 		// Set the cube map to world transform
 		if (m4x4 cube2w; (cube2w = To<m4x4>(options.m_cube2w)) != m4x4::Zero())
 		{
-			if (!pr::IsAffine(cube2w)) throw std::runtime_error("Invalid cube map orientation transform");
+			if (!IsAffine(cube2w)) throw std::runtime_error("Invalid cube map orientation transform");
 			tex->m_cube2w = cube2w;
 		}
 

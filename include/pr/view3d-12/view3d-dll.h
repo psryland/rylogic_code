@@ -554,9 +554,9 @@ namespace pr
 		};
 		struct Includes
 		{
-			wchar_t const* m_include_paths; // A comma or semicolon separated list of search directories
-			HMODULE        m_modules[16];   // An array of binary modules that contain resources. '0' means 'this' module
-			int            m_module_count;  // The number of valid module values in 'm_modules'
+			char const* m_include_paths; // A comma or semicolon separated list of search directories
+			HMODULE     m_modules[16];   // An array of binary modules that contain resources. '0' means 'this' module
+			int         m_module_count;  // The number of valid module values in 'm_modules'
 			// (ToDo) A string lookup table
 		};
 		struct SceneChanged
@@ -593,8 +593,8 @@ namespace pr
 		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
 		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
+		using OnAddCB           = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 		#if 0 // todo
-		using View3D_OnAddCB               = void (__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 		using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 		using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
 		using View3D_AnimationCB           = void (__stdcall *)(void* ctx, View3DWindow window, EView3DAnimCommand command, double clock);
@@ -634,9 +634,16 @@ extern "C"
 	// This error callback is called for errors that are associated with the dll (rather than with a window).
 	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
+	// Data Sources ***************************
+
+	// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
+
+	// Enumerate the Guids of objects in the sources collection
+	VIEW3D_API void __stdcall View3D_SourceEnumGuids(pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
+
 	#if 0 // todo
-	VIEW3D_API void          __stdcall View3D_SourceEnumGuids       (View3D_EnumGuidsCB enum_guids_cb, void* ctx);
-	VIEW3D_API GUID          __stdcall View3D_LoadScript            (wchar_t const* ldr_script, BOOL is_file, GUID const* context_id, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx);
 	VIEW3D_API void          __stdcall View3D_ReloadScriptSources   ();
 	VIEW3D_API void          __stdcall View3D_ObjectsDeleteAll      ();
 	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int include_count, int exclude_count);
@@ -676,6 +683,10 @@ extern "C"
 	// Add an object to a window
 	VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::view3d::Object object);
 
+	// Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
+	VIEW3D_API void __stdcall View3D_WindowAddObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
+
 	// Enumerate the object collection guids associated with 'window'
 	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
 
@@ -705,8 +716,6 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
 	VIEW3D_API BOOL           __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object, BOOL search_children);
 	VIEW3D_API int            __stdcall View3D_WindowObjectCount        (View3DWindow window);
-	VIEW3D_API void           __stdcall View3D_WindowAddObjectsById     (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
-	VIEW3D_API void           __stdcall View3D_WindowRemoveObjectsById  (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void           __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveGizmo        (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API View3DBBox     __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);

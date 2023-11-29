@@ -3540,8 +3540,8 @@ namespace pr::ldr
 					nug.m_topo = is_strip ? ETopo::LineStrip : ETopo::LineList;
 					nug.m_geom = EGeom::Vert |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -3571,8 +3571,8 @@ namespace pr::ldr
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
 						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -3599,8 +3599,8 @@ namespace pr::ldr
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
 						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -4166,18 +4166,18 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			case EKeyword::BakeTransform:
+				case EKeyword::BakeTransform:
 				{
 					p.m_reader.TransformS(m_opts.m_bake);
 					return true;
 				}
-			}
-			default:
+				default:
 				{
 					return
 						m_gen_norms.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
+			}
 		}
 		void Parse() override
 		{
