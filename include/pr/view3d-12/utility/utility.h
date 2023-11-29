@@ -309,15 +309,70 @@ namespace pr::rdr12
 		return static_cast<Value const&>(iter->second);
 	}
 
-	// Get/Set the name on a DX resource (debug only)
-	string32 NameResource(ID3D12Object const* res);
-	string32 NameResource(IDXGIObject const* res);
-	string32 NameResource(ID3D12Resource const* res);
-	void NameResource(ID3D12Object* res, char const* name);
-	void NameResource(IDXGIObject* res, char const* name);
-	void NameResource(ID3D12Resource* res, char const* name);
+	// Concept for interface with private data
+	template <typename T>
+	concept HasPrivateData = requires(T v, Guid const& guid, UINT* mdata_size, UINT cdata_size, void* mdata, void const* cdata)
+	{
+		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
+		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
+	};
+
+	// Get/Set the debug name
+	template <HasPrivateData T> char const* DebugName(T const* res)
+	{
+		static thread_local char existing[256];
+
+		UINT size(sizeof(existing) - 1);
+		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
+			existing[size] = 0;
+		else
+			existing[0] = 0;
+
+		return &existing[0];
+	}
+	template <HasPrivateData T> void DebugName(T* res, char const* name)
+	{
+		std::string_view res_name(name);
+		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
+	}
+	template <HasPrivateData T> char const* DebugName(D3DPtr<T> res)
+	{
+		return DebugName(res.get());
+	}
+	template <HasPrivateData T> void DebugName(D3DPtr<T> res, char const* name)
+	{
+		DebugName(res.get(), name);
+	}
+
+	// Get/Set the debug colour
+	inline static GUID const Guid_DebugColour = { 0x0405DEE4, 0xADF7, 0x4A27, { 0xBF, 0x37, 0x0B, 0x37, 0x28, 0x39, 0x39, 0x17 } };
+	template <HasPrivateData T> Colour32 DebugColour(T const* res)
+	{
+		extern GUID const Guid_DebugColour;
+
+		Colour32 existing = {};
+		UINT size = sizeof(existing);
+		if (const_cast<T*>(res)->GetPrivateData(Guid_DebugColour, &size, &existing) != DXGI_ERROR_NOT_FOUND)
+			return existing;
+
+		return Colour32Zero;
+	}
+	template <HasPrivateData T> void DebugColour(T* res, Colour32 colour)
+	{
+		extern GUID const Guid_DebugColour;
+		Throw(res->SetPrivateData(Guid_DebugColour, sizeof(colour), &colour));
+	}
+	template <HasPrivateData T> Colour32 DebugColour(D3DPtr<T> res)
+	{
+		return DebugColour(res.get());
+	}
+	template <HasPrivateData T> void DebugColour(D3DPtr<T> res, Colour32 colour)
+	{
+		DebugColour(res.get(), colour);
+	}
 
 	// Get/Set the default state for a resource
+	inline static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
 	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res);
 	void DefaultResState(ID3D12Resource* res, D3D12_RESOURCE_STATES state);
 

@@ -217,7 +217,6 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>

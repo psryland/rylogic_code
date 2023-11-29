@@ -8,7 +8,6 @@
 #include "pr/view3d-12/main/frame.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
-#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -107,7 +106,7 @@ namespace pr::rdr12
 				D3DPtr<IDXGISwapChain1> swap_chain;
 				Throw(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
 				Throw(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
-				NameResource(m_swap_chain.get(), "SwapChain");
+				DebugName(m_swap_chain, "SwapChain");
 		
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 				Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
@@ -155,7 +154,7 @@ namespace pr::rdr12
 				sd.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 				sd.Flags        = s_cast<DXGI_SWAP_CHAIN_FLAG>(0);
 				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain_dbg.get(), FmtS("swap chain dbg")));
+				PR_EXPAND(PR_DBG_RDR, DebugName(m_swap_chain_dbg, FmtS("swap chain dbg")));
 				#endif
 			}
 
@@ -374,7 +373,7 @@ namespace pr::rdr12
 				// Get the render target resource pointer
 				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
 				DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
-				NameResource(bb.m_render_target.get(), FmtS("SwapChainRT-%d", i));
+				DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
 
 				// Save the pointers to where the descriptors will be stored
 				bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV for each back buffer
@@ -417,7 +416,7 @@ namespace pr::rdr12
 				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
 				&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
 			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-			NameResource(bb.m_render_target.get(), "RenderTarget");
+			DebugName(bb.m_render_target, "RenderTarget");
 
 			// Depth stencil
 			auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
@@ -427,7 +426,7 @@ namespace pr::rdr12
 				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
 				&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
 			DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			NameResource(bb.m_depth_stencil.get(), "DepthStencil");
+			DebugName(bb.m_depth_stencil, "DepthStencil");
 
 			// Save the pointers to where the descriptors will be stored
 			bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV stored after the swap chain RTVs
@@ -474,8 +473,6 @@ namespace pr::rdr12
 
 		// Prepare
 		{
-			PIXBeginEvent(frame.m_prepare.get(), s_cast<uint32_t>(EColours::Orange), L"Prepare");
-
 			// The MSAA render target goes to the 'render target' state
 			BarrierBatch bb(frame.m_prepare);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -484,13 +481,9 @@ namespace pr::rdr12
 
 			frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
 			frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
-
-			PIXEndEvent(frame.m_prepare.get());
 		}
 		// Resolve
 		{
-			PIXBeginEvent(frame.m_resolve.get(), s_cast<uint32_t>(EColours::Orange), L"Resolve");
-
 			// Resolve the MSAA render target into the swap chain render target
 			BarrierBatch bb(frame.m_resolve);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
@@ -504,19 +497,13 @@ namespace pr::rdr12
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Commit();
-
-			PIXEndEvent(frame.m_resolve.get());
 		}
 		// Present
 		{
-			PIXBeginEvent(frame.m_present.get(), s_cast<uint32_t>(EColours::Orange), L"Present");
-
 			// The swap chain render target goes to the 'present' state
 			BarrierBatch bb(frame.m_present);
 			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
 			bb.Commit();
-
-			PIXEndEvent(frame.m_present.get());
 		}
 
 		// Return the frame object

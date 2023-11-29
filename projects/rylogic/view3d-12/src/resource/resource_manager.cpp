@@ -21,7 +21,6 @@
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/update_resource.h"
 #include "pr/view3d-12/utility/utility.h"
-#include "view3d-12/src/utility/pix_events.h"
 
 namespace pr::rdr12
 {
@@ -33,7 +32,7 @@ namespace pr::rdr12
 		,m_gsync(rdr.D3DDevice())
 		,m_keep_alive(m_gsync)
 		,m_gfx_cmd_alloc_pool(m_gsync)
-		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, L"ResGfxCmdList")
+		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, "ResourceManager", EColours::LightGreen)
 		,m_heap_view(HeapCapacityView, &m_gsync)
 		,m_heap_sampler(HeapCapacityView, &m_gsync)
 		,m_lookup_res()
@@ -83,10 +82,10 @@ namespace pr::rdr12
 		if (!m_flush_required)
 			return m_gsync.LastAddedSyncPoint();
 
-		PIXBeginEvent(rdr().GfxQueue(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager");
-
 		// Close the command list
 		m_gfx_cmd_list.Close();
+
+		PIXBeginEvent(rdr().GfxQueue(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager Flush");
 
 		// Execute the command list
 		rdr().ExecuteCommandLists({ m_gfx_cmd_list });
@@ -134,7 +133,7 @@ namespace pr::rdr12
 
 		// Assume common state until the resource is initialised
 		DefaultResState(res.get(), desc.DefaultState);
-		NameResource(res.get(), name);
+		DebugName(res, name);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
