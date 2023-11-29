@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/utility/update_resource.h"
 
 namespace pr::rdr12
 {
@@ -27,11 +28,11 @@ namespace pr::rdr12
 		int64_t                  m_icount;    // The count of elements in the I-buffer
 		BBox                     m_bbox;      // A bounding box for the model. Set by the client
 		string32                 m_name;      // A human readable name for the model
-		int16_t                  m_vstride;   // The size (in bytes) of a single V-element
-		int16_t                  m_istride;   // The size (in bytes) of a single I-element
+		SizeAndAlign16           m_vstride;   // The size and alignment (in bytes) of a single V-element
+		SizeAndAlign16           m_istride;   // The size and alignment (in bytes) of a single I-element
 		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
-		Model(ResourceManager& mgr, int64_t vcount, int64_t icount, int vstride, int istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
+		Model(ResourceManager& mgr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
 		Model(Model const&) = delete;
 		Model& operator =(Model const&) = delete;
 		~Model();
@@ -40,10 +41,9 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 		ResourceManager& res_mgr() const;
 
-		// Access to the vertex/index buffers
-		// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-		//todo bool MapVerts  (Lock& lock, EMap map_type = EMap::Write, EMapFlags flags = EMapFlags::None, Range vrange = RangeZero);
-		//todo bool MapIndices(Lock& lock, EMap map_type = EMap::Write, EMapFlags flags = EMapFlags::None, Range irange = RangeZero);
+		// Allow update of the vertex/index buffers
+		UpdateSubresourceScope UpdateVertices(Range vrange = RangeZero);
+		UpdateSubresourceScope UpdateIndices(Range vrange = RangeZero);
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)

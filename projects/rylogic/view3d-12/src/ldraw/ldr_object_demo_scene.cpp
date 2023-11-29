@@ -1138,7 +1138,7 @@ namespace pr::rdr12
 			"			+1.0 FFFFFF00\n"
 			"		}\n"
 			"	}\n"
-			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 0.5 3}}\n"
+			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 1.1 3}}\n"
 			"}\n"
 			"\n"
 		#if 0

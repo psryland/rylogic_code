@@ -236,10 +236,30 @@ namespace pr
 		return x | (y << 1);
 	}
 
+	// Pack a value into 'bits' in the range [lo, hi).
+	// 'lo' is the LSB, 'hi' is one past the MSB.
+	// e.g. PackBits(0b00000001, 0b101, 6, 3) => 0b00101001
+	template <std::integral T, std::unsigned_integral U>
+	constexpr U PackBits(U bits, T value, int hi, int lo)
+	{
+		const U mask = (1ULL << (hi - lo)) - 1;
+		return static_cast<U>((bits & ~(mask << lo)) | ((value & mask) << lo));
+	}
+
+	// Unpack a value from 'bits' in the range [lo, hi).
+	// 'lo' is the LSB, 'hi' is one past the MSB.
+	// e.g. GrabBits(0b00101001, 6, 3) => 0b101
+	template <std::integral T, std::unsigned_integral U>
+	constexpr T GrabBits(U bits, int hi, int lo)
+	{
+		const U mask = (1ULL << (hi - lo)) - 1;
+		return static_cast<T>((bits >> lo) & mask);
+	}
+
 	// Extract the bit range [hi,lo] (inclusive) from 'value'.
 	// 'hi' and 'lo' are zero-based bit indices. The returned result is shifted down by .lo'.
 	// e.g. Bits(0b11111111, 6, 3) => 0b01111000 => 0b0001111
-	template <typename T> constexpr T Bits(unsigned long long value, int hi, int lo)
+	template <typename T> [[deprecated("Use GrabBits")]] constexpr T Bits(unsigned long long value, int hi, int lo)
 	{
 		unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 		return static_cast<T>((value >> lo) & mask);
@@ -248,7 +268,7 @@ namespace pr
 	// Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
 	// 'hi' and 'lo' are zero-based bit indices.
 	// e.g. BitStuff(0b11111111, 6, 3) => 0b00001111 => 0b01111000
-	template <typename T> constexpr T BitStuff(unsigned long long value, int hi, int lo)
+	template <typename T> [[deprecated("Use PackBits")]] constexpr T BitStuff(unsigned long long value, int hi, int lo)
     {
 	    unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 	    return static_cast<T>((value & mask) << lo);
@@ -348,6 +368,17 @@ namespace pr::maths
 			PR_CHECK(bits[2], 1U << 4);
 			PR_CHECK(bits[3], 1U << 6);
 			PR_CHECK(bits[4], 1U << 9);
+		}
+		{
+			uint8_t bits = 0;
+			bits = PackBits(bits, 0b101, 6, 3);
+			PR_CHECK(bits == 0b00101000, true);
+			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
+
+			bits = 0b11111100;
+			bits = PackBits(bits, 0b101, 6, 3);
+			PR_CHECK(bits == 0b11101100, true);
+			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
 		}
 		{
 			auto n0 = 0b1; // 1

@@ -83,7 +83,7 @@ namespace pr::rdr12
 		if (!m_flush_required)
 			return m_gsync.LastAddedSyncPoint();
 
-		PIXBeginEvent(m_gfx_cmd_list.get(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager");
+		PIXBeginEvent(rdr().GfxQueue(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager");
 
 		// Close the command list
 		m_gfx_cmd_list.Close();
@@ -104,7 +104,7 @@ namespace pr::rdr12
 		if (block)
 			Wait(sync_point);
 
-		PIXEndEvent(m_gfx_cmd_list.get());
+		PIXEndEvent(rdr().GfxQueue());
 		return sync_point;
 	}
 	void ResourceManager::Wait(uint64_t sync_point) const
@@ -181,8 +181,12 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb, mdesc.m_name.c_str());
 		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
 
+		// Set the size and alignment of the vertex/index element types
+		SizeAndAlign16 vstride(mdesc.m_vb.ElemStride, mdesc.m_vb.DataAlignment);
+		SizeAndAlign16 istride(mdesc.m_ib.ElemStride, mdesc.m_ib.DataAlignment);
+
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), mdesc.m_vb.ElemStride, mdesc.m_ib.ElemStride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), vstride, istride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
 	}

@@ -56,6 +56,47 @@ namespace pr::rdr12
 		F64U64(uint64_t u) :u64(u) {}
 	};
 
+	// Bit stuff a size and alignment value
+	template <std::unsigned_integral U, int AlignBits, int SizeBits>
+	struct SizeAndAlign
+	{
+		enum
+		{
+			size_bits_t = SizeBits,
+			align_bits_t = AlignBits
+		};
+		static_assert(size_bits_t + align_bits_t <= 8 * sizeof(U));
+
+		U sa;
+		SizeAndAlign() = default;
+		SizeAndAlign(int sz, int al)
+			: sa()
+		{
+			size(sz);
+			align(al);
+		}
+		int size() const
+		{
+			return GrabBits<int>(sa, size_bits_t, 0);
+		}
+		int align() const
+		{
+			return GrabBits<int>(sa, align_bits_t + size_bits_t, size_bits_t);
+		}
+		void size(int sz)
+		{
+			if (sz > (1U << size_bits_t)) throw std::runtime_error("Size too large");
+			sa = PackBits(sa, sz, size_bits_t, 0);
+		}
+		void align(int al)
+		{
+			if (al > (1U << align_bits_t)) throw std::runtime_error("Alignment too large");
+			sa = PackBits(sa, al, align_bits_t + size_bits_t, size_bits_t);
+		}
+	};
+	using SizeAndAlign16 = SizeAndAlign<uint16_t, 6, 10>;
+	using SizeAndAlign32 = SizeAndAlign<uint32_t, 10, 22>;
+
 	// The 3D volume (typically within a resource, relative to mip 0)
 	struct Box :D3D12_BOX
 	{
@@ -578,7 +619,7 @@ namespace pr::rdr12
 	};
 
 	// Resource barrier - Use BarrierBatch
-	struct ResourceBarrier : D3D12_RESOURCE_BARRIER
+	struct ResourceBarrier :D3D12_RESOURCE_BARRIER
 	{
 		ResourceBarrier() = delete;
 	};
