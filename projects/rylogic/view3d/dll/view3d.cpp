@@ -62,7 +62,7 @@ static Context& Dll()
 // Note: this function is not thread safe, avoid race calls
 VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags)
 {
-	auto error_cb = pr::StaticCallBack(global_error_cb, ctx);
+	auto error_cb = pr::StaticCallback(global_error_cb, ctx);
 	try
 	{
 		// Create the dll context on the first call
@@ -131,7 +131,10 @@ pr::script::Includes GetIncludes(View3DIncludes const* includes)
 	if (includes != nullptr)
 	{
 		if (includes->m_include_paths != nullptr)
-			inc.SearchPathList(includes->m_include_paths);
+		{
+			auto inc_paths = Narrow(includes->m_include_paths);
+			inc.SearchPathList(inc_paths);
+		}
 
 		if (includes->m_module_count != 0)
 			inc.ResourceModules(std::initializer_list<HMODULE>(includes->m_modules, includes->m_modules + includes->m_module_count));
@@ -218,9 +221,9 @@ VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(View3D_AddFileProgressCB p
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnAddFileProgress += pr::StaticCallBack(progress_cb, ctx);
+			Dll().OnAddFileProgress += pr::StaticCallback(progress_cb, ctx);
 		else
-			Dll().OnAddFileProgress -= pr::StaticCallBack(progress_cb, ctx);
+			Dll().OnAddFileProgress -= pr::StaticCallback(progress_cb, ctx);
 	}
 	CatchAndReport(View3D_AddFileProgressCBSet,,);
 }
@@ -232,9 +235,9 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sou
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnSourcesChanged += pr::StaticCallBack(sources_changed_cb, ctx);
+			Dll().OnSourcesChanged += pr::StaticCallback(sources_changed_cb, ctx);
 		else
-			Dll().OnSourcesChanged -= pr::StaticCallBack(sources_changed_cb, ctx);
+			Dll().OnSourcesChanged -= pr::StaticCallback(sources_changed_cb, ctx);
 	}
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
@@ -294,9 +297,9 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(View3DWindow window, View3D_Re
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->ReportError += pr::StaticCallBack(error_cb, ctx);
+			window->ReportError += pr::StaticCallback(error_cb, ctx);
 		else
-			window->ReportError -= pr::StaticCallBack(error_cb, ctx);
+			window->ReportError -= pr::StaticCallback(error_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
@@ -358,9 +361,9 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(View3DWindow window, Vi
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSettingsChanged += pr::StaticCallBack(settings_changed_cb, ctx);
+			window->OnSettingsChanged += pr::StaticCallback(settings_changed_cb, ctx);
 		else
-			window->OnSettingsChanged -= pr::StaticCallBack(settings_changed_cb, ctx);
+			window->OnSettingsChanged -= pr::StaticCallback(settings_changed_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
@@ -372,9 +375,9 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(View3DWindow window, View3D
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnInvalidated += pr::StaticCallBack(invalidated_cb, ctx);
+			window->OnInvalidated += pr::StaticCallback(invalidated_cb, ctx);
 		else
-			window->OnInvalidated -= pr::StaticCallBack(invalidated_cb, ctx);
+			window->OnInvalidated -= pr::StaticCallback(invalidated_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }
@@ -386,9 +389,9 @@ VIEW3D_API void __stdcall View3D_WindowRenderingCB(View3DWindow window, View3D_R
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnRendering += pr::StaticCallBack(rendering_cb, ctx);
+			window->OnRendering += pr::StaticCallback(rendering_cb, ctx);
 		else
-			window->OnRendering -= pr::StaticCallBack(rendering_cb, ctx);
+			window->OnRendering -= pr::StaticCallback(rendering_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowRenderingCB, window,);
 }
@@ -400,9 +403,9 @@ VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(View3DWindow window, View3
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSceneChanged += pr::StaticCallBack(scene_changed_cb, ctx);
+			window->OnSceneChanged += pr::StaticCallback(scene_changed_cb, ctx);
 		else
-			window->OnSceneChanged -= pr::StaticCallBack(scene_changed_cb, ctx);
+			window->OnSceneChanged -= pr::StaticCallback(scene_changed_cb, ctx);
 	}
 	CatchAndReport(View3D_WindowSceneChangedCB, window, );
 }
@@ -627,9 +630,9 @@ VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(View3DWindow window, View3
 
 		DllLockGuard;
 		if (add)
-			window->OnAnimationEvent += pr::StaticCallBack(anim_cb, ctx);
+			window->OnAnimationEvent += pr::StaticCallback(anim_cb, ctx);
 		else
-			window->OnAnimationEvent -= pr::StaticCallBack(anim_cb, ctx);
+			window->OnAnimationEvent -= pr::StaticCallback(anim_cb, ctx);
 	}
 	CatchAndReport(View3D_AnimationEventCBSet, , );
 }

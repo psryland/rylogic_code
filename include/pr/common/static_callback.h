@@ -91,7 +91,7 @@ namespace pr
 	};
 
 	// Create a wrapped static callback function instance
-	template <typename Ret, typename... Args> StaticCB<Ret,Args...> StaticCallBack(Ret (__stdcall *cb)(void*,Args...), void* ctx = nullptr)
+	template <typename Ret, typename... Args> StaticCB<Ret,Args...> StaticCallback(Ret (__stdcall *cb)(void*,Args...), void* ctx = nullptr)
 	{
 		return StaticCB<Ret, Args...>(cb, ctx);
 	}
@@ -111,9 +111,9 @@ namespace pr::common
 			}
 		};
 
-		auto cb0 = StaticCallBack(L::Func, (void*)0);
-		auto cb1 = StaticCallBack(L::Func, (void*)0);
-		auto cb2 = StaticCallBack(L::Func, (void*)1);
+		auto cb0 = StaticCallback(L::Func, (void*)0);
+		auto cb1 = StaticCallback(L::Func, (void*)0);
+		auto cb2 = StaticCallback(L::Func, (void*)1);
 
 		PR_CHECK(cb0 == cb1, true);
 		PR_CHECK(cb0 != cb2, true);

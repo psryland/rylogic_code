@@ -68,6 +68,9 @@ namespace pr::rdr12
 		// Delete all objects with matching ids
 		void DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count);
 
+		// Enumerate the Guids in the sources collection
+		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
+
 		// Create an embedded code handler for the given language
 		std::unique_ptr<IEmbeddedCode> CreateHandler(wchar_t const* lang);
 	};
