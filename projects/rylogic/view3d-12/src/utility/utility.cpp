@@ -10,9 +10,6 @@
 
 namespace pr::rdr12
 {
-	// Stores the default resource state in a resource's private data
-	static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
-
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)
 	{
@@ -509,67 +506,6 @@ namespace pr::rdr12
 			size = MipDimensions(size, 1);
 		}
 		return pixel_count;
-	}
-
-	template <typename T>
-	concept HasPrivateData = requires(T v, Guid const& guid, UINT* mdata_size, UINT cdata_size, void* mdata, void const* cdata)
-	{
-		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
-		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
-	};
-	template <HasPrivateData T>
-	void NameResource(T* res, char const* name)
-	{
-		char existing[256];
-		UINT size(sizeof(existing) - 1);
-		if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
-		{
-			existing[size] = 0;
-			if (!str::Equal(existing, name))
-				OutputDebugStringA(FmtS("Resource is already named '%s'. New name '%s' ignored", existing, name));
-			return;
-		}
-
-		std::string_view res_name(name);
-		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
-	}
-	template <HasPrivateData T>
-	string32 NameResource(T const* res)
-	{
-		char existing[256];
-		UINT size(sizeof(existing) - 1);
-		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
-		{
-			existing[size] = 0;
-			return existing;
-		}
-		return {};
-	}
-
-	/// <summary>Get/Set the name on a DX resource (debug only)</summary>
-	string32 NameResource(ID3D12Object const* res)
-	{
-		return NameResource<ID3D12Object>(res);
-	}
-	string32 NameResource(IDXGIObject const* res)
-	{
-		return NameResource<IDXGIObject>(res);
-	}
-	string32 NameResource(ID3D12Resource const* res)
-	{
-		return NameResource<ID3D12Resource>(res);
-	}
-	void NameResource(ID3D12Object* res, char const* name)
-	{
-		NameResource<ID3D12Object>(res, name);
-	}
-	void NameResource(IDXGIObject* res, char const* name)
-	{
-		NameResource<IDXGIObject>(res, name);
-	}
-	void NameResource(ID3D12Resource* res, char const* name)
-	{
-		NameResource<ID3D12Resource>(res, name);
 	}
 
 	// Get/Set the default state for a resource

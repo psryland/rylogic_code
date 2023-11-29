@@ -539,9 +539,6 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h">
       <Filter>src\utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\pix_events.h">
-      <Filter>src\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\main\frame.h">
       <Filter>src\main</Filter>
     </ClInclude>
