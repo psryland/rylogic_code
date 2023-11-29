@@ -225,6 +225,14 @@ namespace pr::rdr12
 		m_sources.Remove(context_ids, include_count, exclude_count);
 	}
 
+	// Enumerate the Guids in the sources collection
+	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
+	{
+		for (auto& src : m_sources.Sources())
+			if (!enum_guids_cb(src.second.m_context_id))
+				return;
+	}
+
 	// Create an embedded code handler for the given language
 	std::unique_ptr<Context::IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
 	{

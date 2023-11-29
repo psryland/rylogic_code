@@ -700,7 +700,7 @@ namespace view3d
 		auto hash = pr::hash::HashICT(lang);
 		if (add)
 		{
-			auto cb = pr::StaticCallBack(embedded_code_cb, ctx);
+			auto cb = pr::StaticCallback(embedded_code_cb, ctx);
 
 			// Look for and replace the execution function 
 			for (auto& emb : m_emb)

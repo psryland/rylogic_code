@@ -8,7 +8,6 @@
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
 	</PropertyGroup>

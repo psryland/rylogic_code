@@ -536,7 +536,7 @@ namespace pr::ldr
 				{
 					StringSrc src(script, StringSrc::EFlags::None, enc);
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
-					Parse(*m_rdr, reader, out, context, StaticCallBack(AddFileProgressCB, this));
+					Parse(*m_rdr, reader, out, context, StaticCallback(AddFileProgressCB, this));
 				}
 				else if (
 					str::EqualI(extn.c_str(), ".p3d") ||
@@ -547,14 +547,14 @@ namespace pr::ldr
 					// STL = "Stereolithography" model files (binary and text)
 					StringSrc src(FmtS(L"*Model {\"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
-					Parse(*m_rdr, reader, out, context, StaticCallBack(AddFileProgressCB, this));
+					Parse(*m_rdr, reader, out, context, StaticCallback(AddFileProgressCB, this));
 				}
 				else if (str::EqualI(extn.c_str(), ".csv"))
 				{
 					// CSV data, create a chart to graph the data
 					StringSrc src(FmtS(L"*Chart {3 #include \"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
-					Parse(*m_rdr, reader, out, context, StaticCallBack(AddFileProgressCB, this));
+					Parse(*m_rdr, reader, out, context, StaticCallback(AddFileProgressCB, this));
 				}
 				else if (str::EqualI(extn.c_str(), ".lua"))
 				{
@@ -569,7 +569,7 @@ namespace pr::ldr
 					// Parse the ldr script file
 					FileSrc src(filepath, 0, enc);
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
-					Parse(*m_rdr, reader, out, context, StaticCallBack(AddFileProgressCB, this));
+					Parse(*m_rdr, reader, out, context, StaticCallback(AddFileProgressCB, this));
 				}
 			}
 			catch (ScriptException const& ex)

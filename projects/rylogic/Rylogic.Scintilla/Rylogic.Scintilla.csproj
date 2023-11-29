@@ -7,7 +7,6 @@
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<UseWpf>True</UseWpf>
