@@ -28,7 +28,6 @@
 using namespace pr;
 using namespace pr::rdr12;
 using namespace pr::view3d;
-//using namespace pr::log;
 
 // DLL entry point
 HINSTANCE g_hInstance;
@@ -129,6 +128,44 @@ VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::AddFileProgressCB 
 			Dll().OnAddFileProgress -= {progress_cb, ctx};
 	}
 	CatchAndReport(View3D_AddFileProgressCBSet,,);
+}
+
+// Set the callback that is called when the sources are reloaded
+VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		if (add)
+			Dll().OnSourcesChanged += {sources_changed_cb, ctx};
+		else
+			Dll().OnSourcesChanged -= {sources_changed_cb, ctx};
+	}
+	CatchAndReport(View3D_SourcesChangedCBSet,,);
+}
+
+// Add/Remove a callback for handling embedded code within scripts
+VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(char const* lang, view3d::EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().SetEmbeddedCodeHandler(lang, { embedded_code_cb, ctx }, add != 0);
+	}
+	CatchAndReport(View3D_EmbeddedCodeCBSet, , );
+}
+
+// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id)
+{
+	try
+	{
+		DllLockGuard;
+		auto guid = Dll().ContextIdFromFilepath(filepath);
+		id = guid ? *guid : GuidZero;
+		return guid != nullptr;
+	}
+	CatchAndReport(View3D_ContextIdFromFilepath,,FALSE);
 }
 
 // Data Sources ***************************
@@ -361,7 +398,37 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, 
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
 
-// Add an object to a window
+// Add/Remove a callback that is called when the collection of objects associated with 'window' changes
+VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(view3d::Window window, view3d::SceneChangedCB scene_changed_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		if (add)
+			window->OnSceneChanged += {scene_changed_cb, ctx};
+		else
+			window->OnSceneChanged -= {scene_changed_cb, ctx};
+	}
+	CatchAndReport(View3D_WindowSceneChangedCB, window, );
+}
+
+// Add/Remove a callback that is called just prior to rendering the window
+VIEW3D_API void __stdcall View3D_WindowRenderingCB(view3d::Window window, view3d::RenderingCB rendering_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		if (add)
+			window->OnRendering += {rendering_cb, ctx};
+		else
+			window->OnRendering -= {rendering_cb, ctx};
+	}
+	CatchAndReport(View3D_WindowRenderingCB, window,);
+}
+
+// Add/Remove an object to/from a window
 VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::Object object)
 {
 	try
@@ -373,6 +440,44 @@ VIEW3D_API void __stdcall View3D_WindowAddObject(view3d::Window window, view3d::
 		window->Add(object);
 	}
 	CatchAndReport(View3D_WindowAddObject, window,);
+}
+VIEW3D_API void __stdcall View3D_WindowRemoveObject(view3d::Window window, view3d::Object object)
+{
+	try
+	{
+		if (!object) return;
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Remove(object);
+	}
+	CatchAndReport(View3D_WindowRemoveObject, window,);
+}
+
+// Add/Remove an gizmo to/from a window
+VIEW3D_API void __stdcall View3D_WindowAddGizmo(view3d::Window window, view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		if (!gizmo) throw std::runtime_error("gizmo is null");
+		
+		DllLockGuard;
+		window->Add(gizmo);
+	}
+	CatchAndReport(View3D_WindowAddGizmo, window,);
+}
+VIEW3D_API void __stdcall View3D_WindowRemoveGizmo(view3d::Window window, view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) return;
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Remove(gizmo);
+	}
+	CatchAndReport(View3D_WindowRemoveGizmo, window,);
 }
 
 // Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
@@ -397,6 +502,19 @@ VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(view3d::Window window, 
 		window->Remove(context_ids, include_count, exclude_count, false);
 	}
 	CatchAndReport(View3D_WindowRemoveObjectsById, window,);
+}
+
+// Remove all objects 'window'
+VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->RemoveAllObjects();
+	}
+	CatchAndReport(View3D_WindowRemoveAllObjects, window,);
 }
 
 // Enumerate the object collection guids associated with 'window'
@@ -434,6 +552,45 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(view3d::Window window, vi
 		window->EnumObjects({ enum_objects_cb, ctx }, context_ids, include_count, exclude_count);
 	}
 	CatchAndReport(View3D_WindowEnumObjectsById, window, );
+}
+
+// Return true if 'object' is among 'window's objects
+VIEW3D_API BOOL __stdcall View3D_WindowHasObject(view3d::Window window, view3d::Object object, BOOL search_children)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Has(object, search_children != 0);
+	}
+	CatchAndReport(View3D_WindowHasObject, window, false);
+}
+
+// Return the number of objects assigned to 'window'
+VIEW3D_API int __stdcall View3D_WindowObjectCount(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->ObjectCount();
+	}
+	CatchAndReport(View3D_WindowObjectCount, window, 0);
+}
+
+// Return the bounds of a scene
+VIEW3D_API view3d::BBox __stdcall View3D_WindowSceneBounds(view3d::Window window, view3d::ESceneBounds bounds, int except_count, GUID const* except)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::BBox>(window->SceneBounds(bounds, except_count, except));
+	}
+	CatchAndReport(View3D_WindowSceneBounds, window, To<view3d::BBox>(pr::BBox::Unit()));
 }
 
 // Render the window
@@ -526,11 +683,97 @@ VIEW3D_API void __stdcall View3D_WindowEnvMapSet(view3d::Window window, view3d::
 
 // Camera *********************************
 
+// Commit the current O2W position as the reference position
+VIEW3D_API void __stdcall View3D_CameraCommit(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.Commit();
+	}
+	CatchAndReport(View3D_CameraCommit, window,);
+}
+
+// Enable/Disable orthographic projection
+VIEW3D_API BOOL __stdcall View3D_CameraOrthographicGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Orthographic();
+	}
+	CatchAndReport(View3D_CameraOrthographicGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_CameraOrthographicSet(view3d::Window window, BOOL on)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Orthographic(on != 0);
+	}
+	CatchAndReport(View3D_CameraOrthographicSet, window,);
+}
+
+// Get/Set the distance to the camera focus point
+VIEW3D_API float __stdcall View3D_CameraFocusDistanceGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->FocusDistance();
+	}
+	CatchAndReport(View3D_CameraFocusDistanceGet, window, 0.0f);
+}
+VIEW3D_API void __stdcall View3D_CameraFocusDistanceSet(view3d::Window window, float dist)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FocusDistance(dist);
+	}
+	CatchAndReport(View3D_CameraFocusDistanceSet, window,);
+}
+
+// Get/Set the camera focus point position
+VIEW3D_API view3d::Vec4 __stdcall View3D_CameraFocusPointGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec4>(window->FocusPoint());
+	}
+	CatchAndReport(View3D_CameraFocusPointGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraFocusPointSet(view3d::Window window, view3d::Vec4 position)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FocusPoint(To<v4>(position));
+	}
+	CatchAndReport(View3D_CameraFocusPointSet, window,);
+}
+
 // Position the camera and focus distance
 VIEW3D_API void __stdcall View3D_CameraPositionSet(view3d::Window window, view3d::Vec4 position, view3d::Vec4 lookat, view3d::Vec4 up)
 {
 	try
 	{
+
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
@@ -538,7 +781,6 @@ VIEW3D_API void __stdcall View3D_CameraPositionSet(view3d::Window window, view3d
 	}
 	CatchAndReport(View3D_CameraPositionSet, window,);
 }
-
 
 // Get/Set the current camera to world transform
 VIEW3D_API view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(view3d::Window window)
@@ -562,6 +804,19 @@ VIEW3D_API void __stdcall View3D_CameraToWorldSet(view3d::Window window, view3d:
 		window->m_scene.m_cam.CameraToWorld(To<m4x4>(c2w));
 	}
 	CatchAndReport(View3D_CameraToWorldSet, window,);
+}
+
+// Direct movement of the camera
+VIEW3D_API BOOL __stdcall View3D_Navigate(view3d::Window window, float dx, float dy, float dz)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->m_scene.m_cam.Translate(dx, dy, dz);
+	}
+	CatchAndReport(View3D_Navigate, window, FALSE);
 }
 
 // General mouse navigation

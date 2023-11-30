@@ -108,7 +108,7 @@ namespace pr
 			memcpy(m_data, rhs.m_data, sizeof(Real) * size());
 			m_transposed = rhs.m_transposed;
 		}
-		explicit Matrix(v4_cref<> v)
+		explicit Matrix(v4_cref v)
 			:Matrix(1, 4)
 		{
 			auto data = m_data;
@@ -117,7 +117,7 @@ namespace pr
 			*data++ = Real(v.z);
 			*data++ = Real(v.w);
 		}
-		explicit Matrix(m4_cref<> m)
+		explicit Matrix(m4_cref m)
 			:Matrix(4, 4)
 		{
 			auto data = m_data;
@@ -771,7 +771,7 @@ namespace pr
 		{
 			return FEqlRelative(lhs, rhs, maths::tiny<Real>);
 		}
-		friend bool FEqlRelative(Matrix<Real> const& lhs, m4_cref<> rhs, float tol)
+		friend bool FEqlRelative(Matrix<Real> const& lhs, m4_cref rhs, float tol)
 		{
 			if (lhs.vecs() != 4) return false;
 			if (lhs.cmps() != 4) return false;
@@ -781,11 +781,11 @@ namespace pr
 				FEqlRelative(float(lhs(2, 0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2, 1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2, 2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2, 3)), rhs.z.w, tol) &&
 				FEqlRelative(float(lhs(3, 0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3, 1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3, 2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3, 3)), rhs.w.w, tol);
 		}
-		friend bool FEql(Matrix<Real> const& lhs, m4_cref<> rhs)
+		friend bool FEql(Matrix<Real> const& lhs, m4_cref rhs)
 		{
 			return FEqlRelative(lhs, rhs, maths::tinyf);
 		}
-		friend bool FEqlRelative(Matrix<Real> const& lhs, v4_cref<> rhs, float tol)
+		friend bool FEqlRelative(Matrix<Real> const& lhs, v4_cref rhs, float tol)
 		{
 			if (lhs.vecs() != 1 && lhs.cmps() != 1) return false;
 			if (lhs.size() != 4) return false;
@@ -795,7 +795,7 @@ namespace pr
 				FEqlRelative(float(lhs.m_data[2]), rhs.z, tol) &&
 				FEqlRelative(float(lhs.m_data[3]), rhs.w, tol);
 		}
-		friend bool FEql(Matrix<Real> const& lhs, v4_cref<> rhs)
+		friend bool FEql(Matrix<Real> const& lhs, v4_cref rhs)
 		{
 			return FEqlRelative(lhs, rhs, maths::tinyf);
 		}

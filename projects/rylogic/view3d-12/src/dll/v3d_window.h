@@ -3,10 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #pragma once
-#include "view3d-12/src/dll/dll_forward.h"
+#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
 {
@@ -111,10 +112,26 @@ namespace pr::rdr12
 		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
 		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count);
 
-		// Add/Remove an object to this window
+		// Return true if 'object' is part of this scene
+		bool Has(LdrObject const* object, bool search_children) const;
+		bool Has(LdrGizmo const* gizmo) const;
+
+		// Return the number of objects or object groups in this scene
+		int ObjectCount() const;
+		int GizmoCount() const;
+		int GuidCount() const;
+
+		// Return the bounding box of objects in this scene
+		BBox SceneBounds(view3d::ESceneBounds bounds, int except_count, GUID const* except) const;
+
+		// Add/Remove an object to/from this window
 		void Add(LdrObject* object);
 		void Remove(LdrObject* object);
 
+		// Add/Remove a gizmo to/from this window
+		void Add(LdrGizmo* gizmo);
+		void Remove(LdrGizmo* gizmo);
+	
 		// Add/Remove all objects to this window with the given context ids (or not with)
 		void Add(GUID const* context_ids, int include_count, int exclude_count);
 		void Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids = false);
@@ -146,6 +163,18 @@ namespace pr::rdr12
 		// Get/Set the window background colour
 		Colour BackgroundColour() const;
 		void BackgroundColour(Colour_cref colour);
+
+		// Enable/Disable orthographic projection
+		bool Orthographic() const;
+		void Orthographic(bool on);
+
+		// Get/Set the distance to the camera focus point
+		float FocusDistance() const;
+		void FocusDistance(float dist);
+
+		// Get/Set the camera focus point position
+		v4 FocusPoint() const;
+		void FocusPoint(v4_cref position);
 
 		// Get/Set the global scene light
 		Light GlobalLight() const;

@@ -13,28 +13,28 @@
 namespace pr::ldr
 {
 	// Forward declare Shape function for recursive shape types
-	TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref<> o2w = m4x4::Identity());
+	TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref o2w = m4x4::Identity());
 
 	// Create ldr script for a collision shape
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeSphere const& shape, m4_cref<> o2w = m4x4::Identity())
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeSphere const& shape, m4_cref o2w = m4x4::Identity())
 	{
 		return Sphere(str, name, colour, shape.m_radius, o2w * shape.m_base.m_s2p);
 	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeBox const& shape, m4_cref<> o2w = m4x4::Identity())
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeBox const& shape, m4_cref o2w = m4x4::Identity())
 	{
 		return Box(str, name, colour, shape.m_radius * 2, o2w * shape.m_base.m_s2p);
 	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeTriangle const& shape, m4_cref<> o2w = m4x4::Identity())
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeTriangle const& shape, m4_cref o2w = m4x4::Identity())
 	{
 		return Triangle(str, name, colour, shape.m_v.x, shape.m_v.y, shape.m_v.z, o2w * shape.m_base.m_s2p);
 	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeLine const& shape, m4_cref<> o2w_ = m4x4::Identity())
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeLine const& shape, m4_cref o2w_ = m4x4::Identity())
 	{
 		auto o2w = o2w_ * shape.m_base.m_s2p;
 		auto r = shape.m_radius * o2w.z;
 		return Line(str, name, colour, o2w.pos - r, o2w.pos + r);
 	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeArray const& shape, m4_cref<> o2w = m4x4::Identity())
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeArray const& shape, m4_cref o2w = m4x4::Identity())
 	{
 		GroupStart(str, name, colour);
 		for (collision::Shape const *s = shape.begin(), *s_end = shape.end(); s != s_end; s = next(s))
@@ -44,7 +44,7 @@ namespace pr::ldr
 		GroupEnd(str, o2w * shape.m_base.m_s2p);
 		return str;
 	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref<> o2w)
+	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref o2w)
 	{
 		using namespace collision;
 		switch (shape.m_type)

@@ -45,7 +45,7 @@ namespace pr::collision
 		// Nbrs m_nbrs[m_vert_count]
 		// Idx  m_nbr[sum(m_nbrs[i].m_count)]
 
-		explicit ShapePolytope(m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+		explicit ShapePolytope(m4_cref shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 			:m_base(EShape::Polytope, sizeof(ShapePolytope), shape_to_parent, material_id, flags)
 			,m_vert_count()
 			,m_face_count()
@@ -185,7 +185,7 @@ namespace pr::collision
 	// 'shift' should be in 'shape' space. NOTE: This invalidates the inertia matrix.
 	// You will need to translate the inertia matrix by the same shift.
 	template <typename>
-	void pr_vectorcall ShiftCentre(ShapePolytope& shape, v4_cref<> shift)
+	void pr_vectorcall ShiftCentre(ShapePolytope& shape, v4_cref shift)
 	{
 		assert(shift.w == 0.0f);
 		for (v4 *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) *v -= shift;
@@ -194,7 +194,7 @@ namespace pr::collision
 
 	// Return a support vertex for a polytope
 	template <typename>
-	v4 pr_vectorcall SupportVertex(ShapePolytope const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
+	v4 pr_vectorcall SupportVertex(ShapePolytope const& shape, v4_cref direction, int hint_vert_id, int& sup_vert_id)
 	{
 		assert("Invalid hint vertex index" && hint_vert_id >= 0 && hint_vert_id < shape.m_vert_count);
 		assert("Direction is too short" && Length(direction) > maths::tinyf);

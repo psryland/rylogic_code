@@ -18,7 +18,7 @@ namespace view3d
 	pr::Guid const Context::GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 	// Constructor
-	Context::Context(HINSTANCE instance, ReportErrorCB global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags)
+	Context::Context(HINSTANCE instance, StaticCB<View3D_ReportErrorCB> global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags)
 		:m_rdr(RdrSettings(instance, device_flags))
 		,m_wnd_cont()
 		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
@@ -698,22 +698,7 @@ namespace view3d
 	void Context::SetEmbeddedCodeHandler(wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, bool add)
 	{
 		auto hash = pr::hash::HashICT(lang);
-		if (add)
-		{
-			auto cb = pr::StaticCallback(embedded_code_cb, ctx);
-
-			// Look for and replace the execution function 
-			for (auto& emb : m_emb)
-			{
-				if (emb.m_lang != hash) continue;
-				emb.m_cb = cb;
-				return;
-			}
-			m_emb.push_back(EmbCodeCB{hash, cb});
-		}
-		else
-		{
-			pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
-		}
+		pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
+		if (add) m_emb.push_back(EmbCodeCB{hash, { embedded_code_cb, ctx }});
 	}
 }

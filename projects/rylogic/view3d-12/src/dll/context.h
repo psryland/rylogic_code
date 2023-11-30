@@ -12,9 +12,10 @@ namespace pr::rdr12
 {
 	struct Context
 	{
+		struct EmbCodeCB { int m_lang; StaticCB<view3d::EmbeddedCodeHandlerCB> m_cb; };
+
 		using InitSet = std::unordered_set<view3d::DllHandle>;
 		using WindowCont = std::vector<V3dWindow*>;
-		using EmbCodeCB = struct { int m_lang; EmbeddedCodeHandlerCB m_cb; };
 		using EmbCodeCBCont = std::vector<EmbCodeCB>;
 		using IEmbeddedCode = pr::script::IEmbeddedCode;
 
@@ -83,5 +84,11 @@ namespace pr::rdr12
 
 		// Create an embedded code handler for the given language
 		std::unique_ptr<IEmbeddedCode> CreateCodeHandler(wchar_t const* lang);
+
+		// Add an embedded code handler for 'lang'
+		void SetEmbeddedCodeHandler(char const* lang, StaticCB<view3d::EmbeddedCodeHandlerCB> embedded_code_cb, bool add);
+
+		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+		Guid const* ContextIdFromFilepath(char const* filepath) const;
 	};
 }
