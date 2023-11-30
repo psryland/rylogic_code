@@ -111,14 +111,14 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Helper function for generating normals
-		auto norm = [](v4_cref<> a, v4_cref<> b, v4_cref<> c) { return Normalise(Cross3(a - b, c - b), v4Zero); };
+		auto norm = [](v4_cref a, v4_cref b, v4_cref c) { return Normalise(Cross3(a - b, c - b), v4Zero); };
 
 		// Colour iterator wrapper
 		auto col = CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4_cref<> v) { Grow(props.m_bbox, v); return v; };
+		auto bb = [&](v4_cref v) { Grow(props.m_bbox, v); return v; };
 
 		// Texture coords
 		auto t00 = (t2q * v4(0.0f, 0.0f, 0.0f, 1.0f)).xy;
@@ -289,7 +289,7 @@ namespace pr::geometry
 		// Bounding box
 		auto lwr = +v4Max;
 		auto upr = -v4Max;
-		auto bb = [&](v4_cref<> v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
+		auto bb = [&](v4_cref v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
 
 		// Texture coords (note: 1D texture)
 		auto t00 = v2(0.0f, 0.0f);

@@ -74,7 +74,7 @@ namespace pr
 		}
 
 		// Include 'rhs' in 'lhs' and re-centre the centre point. Returns 'rhs'
-		v4_cref<> pr_vectorcall Grow(v4_cref<> rhs)
+		v4_cref pr_vectorcall Grow(v4_cref rhs)
 		{
 			if (Radius() < 0.0f)
 			{
@@ -121,7 +121,7 @@ namespace pr
 		}
 
 		// Include 'rhs' within 'bsphere' without moving the centre point.
-		v4_cref<> pr_vectorcall GrowLoose(v4_cref<> rhs)
+		v4_cref pr_vectorcall GrowLoose(v4_cref rhs)
 		{
 			if (m_ctr_rad.w < 0.0f)
 			{
@@ -157,13 +157,13 @@ namespace pr
 		friend bool operator >  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 		friend bool operator <= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 		friend bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-		friend BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref<> offset)
+		friend BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref offset)
 		{
 			assert(offset.w == 0.0f);
 			lhs.m_ctr_rad += offset;
 			return lhs;
 		}
-		friend BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref<> offset)
+		friend BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref offset)
 		{
 			assert(offset.w == 0.0f);
 			lhs.m_ctr_rad -= offset;
@@ -179,12 +179,12 @@ namespace pr
 			lhs.m_ctr_rad.w /= s;
 			return lhs;
 		}
-		friend BSphere pr_vectorcall operator + (BSphere const& bsph, v4_cref<> offset)
+		friend BSphere pr_vectorcall operator + (BSphere const& bsph, v4_cref offset)
 		{
 			auto bs = bsph;
 			return bs += offset;
 		}
-		friend BSphere pr_vectorcall operator - (BSphere const& bsph, v4_cref<> offset)
+		friend BSphere pr_vectorcall operator - (BSphere const& bsph, v4_cref offset)
 		{
 			auto bs = bsph;
 			return bs -= offset;
@@ -199,7 +199,7 @@ namespace pr
 			auto bs = bsph;
 			return bs *= s;
 		}
-		friend BSphere pr_vectorcall operator * (m4_cref<> m, BSphere const& bsph)
+		friend BSphere pr_vectorcall operator * (m4_cref m, BSphere const& bsph)
 		{
 			return BSphere(m * bsph.Centre(), bsph.m_ctr_rad.w);
 		}
@@ -223,20 +223,20 @@ namespace pr
 	}
 
 	// Returns the most extreme point in the direction of 'separating_axis'
-	inline v4 pr_vectorcall SupportPoint(BSphere_cref bsphere, v4_cref<> separating_axis)
+	inline v4 pr_vectorcall SupportPoint(BSphere_cref bsphere, v4_cref separating_axis)
 	{
 		return bsphere.m_ctr_rad.w1() + bsphere.m_ctr_rad.w * separating_axis;
 	}
 
 	// Include 'point' within 'bsphere' and re-centre the centre point.
 	[[nodiscard]]
-	inline BSphere pr_vectorcall Union(BSphere_cref bsphere, v4_cref<> point)
+	inline BSphere pr_vectorcall Union(BSphere_cref bsphere, v4_cref point)
 	{
 		auto bsph = bsphere;
 		bsph.Grow(point);
 		return bsph;
 	}
-	inline v4_cref<> pr_vectorcall Grow(BSphere& bsphere, v4_cref<> point)
+	inline v4_cref pr_vectorcall Grow(BSphere& bsphere, v4_cref point)
 	{
 		return bsphere.Grow(point);
 	}
@@ -256,13 +256,13 @@ namespace pr
 
 	// Include 'point' within 'bsphere' without moving the centre point
 	[[nodiscard]] 
-	inline BSphere pr_vectorcall UnionLoose(BSphere_cref bsphere, v4_cref<> point)
+	inline BSphere pr_vectorcall UnionLoose(BSphere_cref bsphere, v4_cref point)
 	{
 		auto bsph = bsphere;
 		bsph.GrowLoose(point);
 		return bsph;
 	}
-	inline v4_cref<> pr_vectorcall GrowLoose(BSphere& bsphere, v4_cref<> point)
+	inline v4_cref pr_vectorcall GrowLoose(BSphere& bsphere, v4_cref point)
 	{
 		return bsphere.GrowLoose(point);
 	}
@@ -281,7 +281,7 @@ namespace pr
 	}
 
 	// Return true if 'point' is within the bounding sphere
-	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, v4_cref<> point, float tol = 0)
+	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, v4_cref point, float tol = 0)
 	{
 		return LengthSq(point - bsphere.Centre()) <= bsphere.RadiusSq() + tol;
 	}

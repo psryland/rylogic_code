@@ -36,7 +36,7 @@ namespace pr::rdr12
 			auto file_offset = s_cast<int64_t>(args.m_loc.Pos());
 			BOOL complete = args.m_complete;
 			BOOL cancel = false;
-			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, &cancel);
+			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, cancel);
 			args.m_cancel = cancel != 0;
 		};
 		m_sources.OnReload += [&](ScriptSources&, EmptyArgs const&)
@@ -284,6 +284,8 @@ namespace pr::rdr12
 		// Embedded code handler that buffers support code and forwards to a provided code handler function
 		struct EmbeddedCode :IEmbeddedCode
 		{
+			using EmbeddedCodeHandlerCB = StaticCB<view3d::EmbeddedCodeHandlerCB>;
+
 			std::wstring m_lang;
 			std::wstring m_code;
 			std::wstring m_support;
@@ -349,5 +351,19 @@ namespace pr::rdr12
 
 		// No code handler found, unsupported
 		throw std::runtime_error(FmtS("Unsupported embedded code language: %S", lang));
+	}
+
+	// Add an embedded code handler for 'lang'
+	void Context::SetEmbeddedCodeHandler(char const* lang, StaticCB<view3d::EmbeddedCodeHandlerCB> embedded_code_cb, bool add)
+	{
+		auto hash = hash::HashICT(lang);
+		pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
+		if (add) m_emb.push_back(EmbCodeCB{hash, embedded_code_cb});
+	}
+
+	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+	Guid const* Context::ContextIdFromFilepath(char const* filepath) const
+	{
+		return m_sources.ContextIdFromFilepath(filepath);
 	}
 }

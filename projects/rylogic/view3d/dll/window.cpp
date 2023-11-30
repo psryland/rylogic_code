@@ -78,7 +78,7 @@ namespace view3d
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us
-			ReportError += StaticCallback(opts.m_error_cb, opts.m_error_cb_ctx);
+			ReportError += {opts.m_error_cb, opts.m_error_cb_ctx};
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.RenderTargetSize();

@@ -311,7 +311,7 @@ namespace pr::geometry::p3d
 		v2     pad;
 
 		FatVert() = default;
-		FatVert(v4_cref<> p, Colour_cref c, v4_cref<> n, v2_cref<> t)
+		FatVert(v4_cref p, Colour_cref c, v4_cref n, v2_cref t)
 			:m_vert(p)
 			, m_diff(c)
 			, m_norm(n)

@@ -126,10 +126,10 @@ namespace pr::common
 			}
 		};
 
-		auto cb0 = StaticCallback(L::Func, (void*)0);
-		auto cb1 = StaticCallback(L::Func, (void*)0);
-		auto cb2 = StaticCallback(L::Func, (void*)1);
-
+		StaticCB<void> cb0 = { &L::Func, (void*)0 };
+		StaticCB<void> cb1 = { &L::Func, (void*)0 };
+		StaticCB<void> cb2 = { &L::Func, (void*)1 };
+	
 		PR_CHECK(cb0 == cb1, true);
 		PR_CHECK(cb0 != cb2, true);
 		PR_CHECK(cb0 <  cb2, true);

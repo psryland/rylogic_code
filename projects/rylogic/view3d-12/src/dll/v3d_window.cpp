@@ -215,6 +215,109 @@ namespace pr::rdr12
 			break;
 		}
 	}
+	
+	// Return true if 'object' is part of this scene
+	bool V3dWindow::Has(LdrObject const* object, bool search_children) const
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+
+		// Search (recursively) for a match for 'object'.
+		auto name = search_children ? "" : nullptr;
+		for (auto& obj : m_objects)
+		{
+			// 'Apply' returns false if a quick out occurred (i.e. 'object' was found)
+			if (obj->Apply([=](auto* ob){ return ob != object; }, name)) continue;
+			return true;
+		}
+		return false;
+	}
+	bool V3dWindow::Has(LdrGizmo const* gizmo) const
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& giz : m_gizmos)
+		{
+			if (giz != gizmo) continue;
+			return true;
+		}
+		return false;
+	}
+
+	// Return the number of objects or object groups in this scene
+	int V3dWindow::ObjectCount() const
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		return s_cast<int>(m_objects.size());
+	}
+	int V3dWindow::GizmoCount() const
+	{
+		return s_cast<int>(m_gizmos.size());
+	}
+	int V3dWindow::GuidCount() const
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		return s_cast<int>(m_guids.size());
+	}
+	
+	// Return the bounding box of objects in this scene
+	BBox V3dWindow::SceneBounds(view3d::ESceneBounds bounds, int except_count, GUID const* except) const
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		std::span<GUID const> except_arr(except, except_count);
+		auto pred = [](LdrObject const& ob){ return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
+
+		BBox bbox;
+		switch (bounds)
+		{
+			case view3d::ESceneBounds::All:
+			{
+				// Update the scene bounding box if out of date
+				if (m_bbox_scene == BBox::Reset())
+				{
+					bbox = BBox::Reset();
+					for (auto& obj : m_objects)
+					{
+						if (!pred(*obj)) continue;
+						if (pr::contains(except_arr, obj->m_context_id)) continue;
+						Grow(bbox, obj->BBoxWS(true, pred));
+					}
+					m_bbox_scene = bbox;
+				}
+				bbox = m_bbox_scene;
+				break;
+			}
+			case view3d::ESceneBounds::Selected:
+			{
+				bbox = BBox::Reset();
+				for (auto& obj : m_objects)
+				{
+					if (!pred(*obj)) continue;
+					if (!AllSet(obj->m_ldr_flags, ELdrFlags::Selected)) continue;
+					if (pr::contains(except_arr, obj->m_context_id)) continue;
+					Grow(bbox, obj->BBoxWS(true, pred));
+				}
+				break;
+			}
+			case view3d::ESceneBounds::Visible:
+			{
+				bbox = BBox::Reset();
+				for (auto& obj : m_objects)
+				{
+					if (!pred(*obj)) continue;
+					if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden)) continue;
+					if (pr::contains(except_arr, obj->m_context_id)) continue;
+					Grow(bbox, obj->BBoxWS(true, pred));
+				}
+				break;
+			}
+			default:
+			{
+				assert(!"Unknown scene bounds type");
+				bbox = BBox::Unit();
+				break;
+			}
+		}
+		return bbox.valid() ? bbox : BBox::Unit();
+	}
 
 	// Add/Remove an object to this window
 	void V3dWindow::Add(LdrObject* object)
@@ -242,6 +345,23 @@ namespace pr::rdr12
 		// Notify if changed
 		if (m_objects.size() != count)
 			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
+	}
+
+	// Add/Remove a gizmo to this window
+	void V3dWindow::Add(LdrGizmo* gizmo)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		auto iter = m_gizmos.find(gizmo);
+		if (iter == std::end(m_gizmos))
+		{
+			m_gizmos.insert(iter, gizmo);
+			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, nullptr, 0, nullptr); // todo, overload and pass 'gizmo' out
+		}
+	}
+	void V3dWindow::Remove(LdrGizmo* gizmo)
+	{
+		m_gizmos.erase(gizmo);
+		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, nullptr, 0, nullptr);
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
@@ -611,6 +731,48 @@ namespace pr::rdr12
 		m_wnd.BkgdColour(colour);
 		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
 		Invalidate();
+	}
+
+	// Enable/Disable orthographic projection
+	bool V3dWindow::Orthographic() const
+	{
+		return m_scene.m_cam.m_orthographic;
+	}
+	void V3dWindow::Orthographic(bool on)
+	{
+		if (Orthographic() == on)
+			return;
+
+		m_scene.m_cam.m_orthographic = on;
+		OnSettingsChanged(this, view3d::ESettings::Camera_Orthographic);
+	}
+
+	// Get/Set the distance to the camera focus point
+	float V3dWindow::FocusDistance() const
+	{
+		return s_cast<float>(m_scene.m_cam.FocusDist());
+	}
+	void V3dWindow::FocusDistance(float dist)
+	{
+		if (FocusDistance() == dist)
+			return;
+
+		m_scene.m_cam.FocusDist(dist);
+		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
+	}
+
+	// Get/Set the camera focus point position
+	v4 V3dWindow::FocusPoint() const
+	{
+		return m_scene.m_cam.FocusPoint();
+	}
+	void V3dWindow::FocusPoint(v4_cref position)
+	{
+		if (FocusPoint() != position)
+			return;
+		
+		m_scene.m_cam.FocusPoint(position);
+		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
 	}
 
 	// Get/Set the global scene light

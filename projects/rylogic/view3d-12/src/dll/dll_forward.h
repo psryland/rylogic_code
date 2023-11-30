@@ -24,8 +24,6 @@ namespace pr::rdr12
 	using ObjectSet = std::unordered_set<view3d::Object>;
 	using GizmoSet  = std::unordered_set<view3d::Gizmo>;
 	using GuidSet   = std::unordered_set<Guid>;
-
-	using EmbeddedCodeHandlerCB = StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
 }
 
 

@@ -214,7 +214,7 @@ namespace pr::geometry
 		}
 
 		// Record the minimum depth separation
-		void operator()(float depth, v4_cref<> axis)
+		void operator()(float depth, v4_cref axis)
 		{
 			// Defer the sqrt by comparing squared depths.
 			// Need to preserve the sign however.

@@ -45,6 +45,13 @@ namespace pr
 			return m4x4(To<v4>(m.x),To<v4>(m.y),To<v4>(m.z),To<v4>(m.w));
 		}
 	};
+	template <> struct Convert<BBox, view3d::BBox>
+	{
+		static BBox To_(view3d::BBox const& bbox)
+		{
+			return BBox(To<v4>(bbox.centre), To<v4>(bbox.radius));
+		}
+	};
 
 	// From pr::maths to view3d
 	template <> struct Convert<view3d::Vec2, v2>
@@ -66,6 +73,13 @@ namespace pr
 		static view3d::Mat4x4 To_(m4x4 const& m)
 		{
 			return view3d::Mat4x4{To<view3d::Vec4>(m.x), To<view3d::Vec4>(m.y), To<view3d::Vec4>(m.z), To<view3d::Vec4>(m.w)};
+		}
+	};
+	template <> struct Convert<view3d::BBox, BBox>
+	{
+		static view3d::BBox To_(BBox const& bbox)
+		{
+			return view3d::BBox{To<view3d::Vec4>(bbox.m_centre), To<view3d::Vec4>(bbox.m_radius)};
 		}
 	};
 }

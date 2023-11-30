@@ -297,13 +297,13 @@ namespace pr
 			// Arithmetic operators supported
 			_arith_enum = 0,
 		};
-		enum class EView3DSceneBounds :int
+		#endif
+		enum class ESceneBounds :int
 		{
 			All,
 			Selected,
 			Visible,
 		};
-		#endif
 		enum class ESourcesChangedReason :int
 		{
 			NewData,
@@ -584,16 +584,18 @@ namespace pr
 		#pragma endregion
 
 		// Callbacks
-		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL* cancel);
-		using SourcesChangedCB  = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
-		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
-		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
-		using OnAddCB           = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
-		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
-		using RenderingCB       = void(__stdcall *)(void* ctx, Window window);
-		using SceneChangedCB    = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
-		using AnimationCB       = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
+		using SettingsChangedCB     = void(__stdcall *)(void* ctx, Window window, ESettings setting);
+		using AddFileProgressCB     = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
+		using SourcesChangedCB      = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+		using EnumGuidsCB           = bool(__stdcall *)(void* ctx, GUID const& context_id);
+		using EnumObjectsCB         = bool(__stdcall *)(void* ctx, Object object);
+		using OnAddCB               = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using InvalidatedCB         = void(__stdcall *)(void* ctx, Window window);
+		using RenderingCB           = void(__stdcall *)(void* ctx, Window window);
+		using SceneChangedCB        = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
+		using AnimationCB           = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
+		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
+
 
 		#if 0 // todo
 		using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmo gizmo, EView3DGizmoState state);
@@ -635,11 +637,14 @@ extern "C"
 	// Set the callback for progress events when script sources are loaded or updated
 	VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(pr::view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add);
 	
-	#if 0 // todo
-	VIEW3D_API void          __stdcall View3D_SourcesChangedCBSet   (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
-	VIEW3D_API BOOL          __stdcall View3D_ContextIdFromFilepath (wchar_t const* filepath, GUID& id);
-	#endif
+	// Set the callback that is called when the sources are reloaded
+	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+
+	// Add/Remove a callback for handling embedded code within scripts
+	VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(char const* lang, pr::view3d::EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
+
+	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+	VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id);
 
 	// Data Sources ***************************
 
@@ -690,12 +695,26 @@ extern "C"
 	// Set a notification handler for when a window setting changes
 	VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(pr::view3d::Window window, pr::view3d::SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
 
-	// Add an object to a window
+	// Add/Remove a callback that is called when the collection of objects associated with 'window' changes
+	VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(pr::view3d::Window window, pr::view3d::SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
+
+	// Add/Remove a callback that is called just prior to rendering the window
+	VIEW3D_API void __stdcall View3D_WindowRenderingCB(pr::view3d::Window window, pr::view3d::RenderingCB rendering_cb, void* ctx, BOOL add);
+
+	// Add/Remove an object to/from a window
 	VIEW3D_API void __stdcall View3D_WindowAddObject(pr::view3d::Window window, pr::view3d::Object object);
+	VIEW3D_API void __stdcall View3D_WindowRemoveObject(pr::view3d::Window window, pr::view3d::Object object);
+
+	// Add/Remove a gizmo to/from a window
+	VIEW3D_API void __stdcall View3D_WindowAddGizmo(pr::view3d::Window window, pr::view3d::Gizmo giz);
+	VIEW3D_API void __stdcall View3D_WindowRemoveGizmo(pr::view3d::Window window, pr::view3d::Gizmo giz);
 
 	// Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
 	VIEW3D_API void __stdcall View3D_WindowAddObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(pr::view3d::Window window, GUID const* context_ids, int include_count, int exclude_count);
+
+	// Remove all objects 'window'
+	VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(pr::view3d::Window window);
 
 	// Enumerate the object collection guids associated with 'window'
 	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
@@ -703,6 +722,14 @@ extern "C"
 	// Enumerate the objects associated with 'window'
 	VIEW3D_API void __stdcall View3D_WindowEnumObjects(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx);
 	VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(pr::view3d::Window window, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count);
+
+	// Return true if 'object' is among 'window's objects
+	VIEW3D_API BOOL __stdcall View3D_WindowHasObject(pr::view3d::Window window, pr::view3d::Object object, BOOL search_children);
+
+	// Return the number of objects assigned to 'window'
+	VIEW3D_API int __stdcall View3D_WindowObjectCount(pr::view3d::Window window);
+
+	VIEW3D_API pr::view3d::BBox __stdcall View3D_WindowSceneBounds(pr::view3d::Window window, pr::view3d::ESceneBounds bounds, int except_count, GUID const* except);
 
 	// Render the window
 	VIEW3D_API void __stdcall View3D_WindowRender(pr::view3d::Window window);
@@ -720,15 +747,6 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(pr::view3d::Window window, unsigned int argb);
 
 	#if 0 // todo
-	VIEW3D_API void           __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderingCB rendering_cb, void* ctx, BOOL add);
-	VIEW3D_API void           __stdcall View3D_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void           __stdcall View3D_WindowRemoveObject       (View3DWindow window, View3DObject object);
-	VIEW3D_API void           __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
-	VIEW3D_API BOOL           __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object, BOOL search_children);
-	VIEW3D_API int            __stdcall View3D_WindowObjectCount        (View3DWindow window);
-	VIEW3D_API void           __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
-	VIEW3D_API void           __stdcall View3D_WindowRemoveGizmo        (View3DWindow window, View3DGizmo giz);
-	VIEW3D_API View3DBBox     __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
 	VIEW3D_API BOOL           __stdcall View3D_WindowAnimating          (View3DWindow window);
 	VIEW3D_API double         __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
 	VIEW3D_API void           __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, double time_s);
@@ -738,6 +756,8 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowHitTestByCtx       (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API View3DV2       __stdcall View3D_WindowDpiScale           (View3DWindow window);
 	#endif
+
+	// Set the global environment map for the window
 	VIEW3D_API void __stdcall View3D_WindowEnvMapSet(pr::view3d::Window window, pr::view3d::CubeMap env_map);
 
 	#if 0
@@ -756,12 +776,50 @@ extern "C"
 
 	// Camera *********************************
 
+	VIEW3D_API void __stdcall View3D_CameraCommit(pr::view3d::Window window);
+
 	// Position the camera and focus distance
 	VIEW3D_API void __stdcall View3D_CameraPositionSet(pr::view3d::Window window, pr::view3d::Vec4 position, pr::view3d::Vec4 lookat, pr::view3d::Vec4 up);
 
 	// Get/Set the current camera to world transform
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_CameraToWorldSet(pr::view3d::Window window, pr::view3d::Mat4x4 const& c2w);
+
+	// Enable/Disable orthographic projection
+	VIEW3D_API BOOL __stdcall View3D_CameraOrthographicGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_CameraOrthographicSet(pr::view3d::Window window, BOOL on);
+
+	// Get/Set the distance to the camera focus point
+	VIEW3D_API float __stdcall View3D_CameraFocusDistanceGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_CameraFocusDistanceSet(pr::view3d::Window window, float dist);
+
+	// Get/Set the camera focus point position
+	VIEW3D_API pr::view3d::Vec4 __stdcall View3D_CameraFocusPointGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_CameraFocusPointSet(pr::view3d::Window window, pr::view3d::Vec4 position);
+
+#if 0 // todo
+	VIEW3D_API void                  __stdcall View3D_CameraViewRectSet     (View3DWindow window, float width, float height, float dist);
+	VIEW3D_API float                 __stdcall View3D_CameraAspectGet       (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraAspectSet       (View3DWindow window, float aspect);
+	VIEW3D_API float                 __stdcall View3D_CameraFovXGet         (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraFovXSet         (View3DWindow window, float fovX);
+	VIEW3D_API float                 __stdcall View3D_CameraFovYGet         (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraFovYSet         (View3DWindow window, float fovY);
+	VIEW3D_API void                  __stdcall View3D_CameraFovSet          (View3DWindow window, float fovX, float fovY);
+	VIEW3D_API void                  __stdcall View3D_CameraBalanceFov      (View3DWindow window, float fov);
+	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesGet   (View3DWindow window, float& near_, float& far_, BOOL focus_relative);
+	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesSet   (View3DWindow window, float near_, float far_, BOOL focus_relative);
+	VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet     (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraLockMaskSet     (View3DWindow window, EView3DCameraLockMask mask);
+	VIEW3D_API View3DV4              __stdcall View3D_CameraAlignAxisGet    (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraAlignAxisSet    (View3DWindow window, View3DV4 axis);
+	VIEW3D_API void                  __stdcall View3D_CameraResetZoom       (View3DWindow window);
+	VIEW3D_API float                 __stdcall View3D_CameraZoomGet         (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraZoomSet         (View3DWindow window, float zoom);
+#endif
+
+	// Direct movement of the camera
+	VIEW3D_API BOOL __stdcall View3D_Navigate(pr::view3d::Window window, float dx, float dy, float dz);
 
 	// Move the scene camera using the mouse
 	VIEW3D_API BOOL __stdcall View3D_MouseNavigate(pr::view3d::Window window, pr::view3d::Vec2 ss_pos, pr::view3d::ENavOp nav_op, BOOL nav_start_or_end);
@@ -781,33 +839,8 @@ extern "C"
 	// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 	// The z component should be the world space distance from the camera
 	VIEW3D_API void __stdcall View3D_NSSPointToWSRay(pr::view3d::Window window, pr::view3d::Vec4 screen, pr::view3d::Vec4& ws_point, pr::view3d::Vec4& ws_direction);
-	#if 0 // todo
-	VIEW3D_API BOOL                  __stdcall View3D_Navigate              (View3DWindow window, float dx, float dy, float dz);
-	VIEW3D_API void                  __stdcall View3D_CameraCommit          (View3DWindow window);
-	VIEW3D_API BOOL                  __stdcall View3D_CameraOrthographicGet (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraOrthographicSet (View3DWindow window, BOOL on);
-	VIEW3D_API float                 __stdcall View3D_CameraFocusDistanceGet(View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraFocusDistanceSet(View3DWindow window, float dist);
-	VIEW3D_API void                  __stdcall View3D_CameraFocusPointGet   (View3DWindow window, View3DV4& position);
-	VIEW3D_API void                  __stdcall View3D_CameraFocusPointSet   (View3DWindow window, View3DV4 position);
-	VIEW3D_API void                  __stdcall View3D_CameraViewRectSet     (View3DWindow window, float width, float height, float dist);
-	VIEW3D_API float                 __stdcall View3D_CameraAspectGet       (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraAspectSet       (View3DWindow window, float aspect);
-	VIEW3D_API float                 __stdcall View3D_CameraFovXGet         (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraFovXSet         (View3DWindow window, float fovX);
-	VIEW3D_API float                 __stdcall View3D_CameraFovYGet         (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraFovYSet         (View3DWindow window, float fovY);
-	VIEW3D_API void                  __stdcall View3D_CameraFovSet          (View3DWindow window, float fovX, float fovY);
-	VIEW3D_API void                  __stdcall View3D_CameraBalanceFov      (View3DWindow window, float fov);
-	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesGet   (View3DWindow window, float& near_, float& far_, BOOL focus_relative);
-	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesSet   (View3DWindow window, float near_, float far_, BOOL focus_relative);
-	VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet     (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraLockMaskSet     (View3DWindow window, EView3DCameraLockMask mask);
-	VIEW3D_API View3DV4              __stdcall View3D_CameraAlignAxisGet    (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraAlignAxisSet    (View3DWindow window, View3DV4 axis);
-	VIEW3D_API void                  __stdcall View3D_CameraResetZoom       (View3DWindow window);
-	VIEW3D_API float                 __stdcall View3D_CameraZoomGet         (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraZoomSet         (View3DWindow window, float zoom);
+
+#if 0 //todo
 	VIEW3D_API void                  __stdcall View3D_ResetView             (View3DWindow window, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit);
 	VIEW3D_API void                  __stdcall View3D_ResetViewBBox         (View3DWindow window, View3DBBox bbox, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit);
 	VIEW3D_API View3DV2              __stdcall View3D_ViewArea              (View3DWindow window, float dist);

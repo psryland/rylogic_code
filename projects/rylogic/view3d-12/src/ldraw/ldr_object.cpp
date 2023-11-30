@@ -4699,7 +4699,7 @@ namespace pr::rdr12
 			auto iout = update_i.ptr<uint32_t>();
 
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
+				[&](v4_cref pos, Colour32, v4_cref, v2_cref)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform

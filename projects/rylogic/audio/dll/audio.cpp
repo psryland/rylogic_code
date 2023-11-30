@@ -99,9 +99,9 @@ AUDIO_API void __stdcall Audio_GlobalErrorCBSet(Audio_ReportErrorCB error_cb, vo
 	try
 	{
 		if (add)
-			Dll().OnError += pr::StaticCallback(error_cb, ctx);
+			Dll().OnError += {error_cb, ctx};
 		else
-			Dll().OnError -= pr::StaticCallback(error_cb, ctx);
+			Dll().OnError -= {error_cb, ctx};
 	}
 	CatchAndReport(Audio_GlobalErrorCBSet,);
 }
