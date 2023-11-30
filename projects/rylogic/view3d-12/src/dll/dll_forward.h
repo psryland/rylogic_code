@@ -25,17 +25,7 @@ namespace pr::rdr12
 	using GizmoSet  = std::unordered_set<view3d::Gizmo>;
 	using GuidSet   = std::unordered_set<Guid>;
 
-	using OnAddCB = std::function<void(Guid const&, bool)>;
-	using ReportErrorCB = pr::StaticCB<void, wchar_t const*, wchar_t const*, int, int64_t>;
-	using AddFileProgressCB = pr::StaticCB<void, Guid const&, wchar_t const*, long long, BOOL, BOOL*>;
-	using SourcesChangedCB = pr::StaticCB<void, view3d::ESourcesChangedReason, BOOL>;
-	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
-	using SettingsChangedCB = pr::StaticCB<void, V3dWindow*, view3d::ESettings>;
-	using InvalidatedCB = pr::StaticCB<void, V3dWindow*>;
-	using RenderingCB = pr::StaticCB<void, V3dWindow*>;
-	using SceneChangedCB = pr::StaticCB<void, V3dWindow*, view3d::SceneChanged const&>;
-	using AnimationCB = pr::StaticCB<void, V3dWindow*, view3d::EAnimCommand, double>;
-
+	using EmbeddedCodeHandlerCB = StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
 }
 
 

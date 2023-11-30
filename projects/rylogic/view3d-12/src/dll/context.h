@@ -3,9 +3,10 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #pragma once
-#include "view3d-12/src/dll/dll_forward.h"
+#include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/ldraw/ldr_sources.h"
+#include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
 {
@@ -26,7 +27,7 @@ namespace pr::rdr12
 		EmbCodeCBCont        m_emb;             // Embedded code execution callbacks
 		std::recursive_mutex m_mutex;
 
-		Context(HINSTANCE instance, ReportErrorCB global_error_cb);
+		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb);
 		Context(Context&&) = delete;
 		Context(Context const&) = delete;
 		Context& operator=(Context&) = delete;
@@ -43,17 +44,17 @@ namespace pr::rdr12
 		void WindowDestroy(V3dWindow* window);
 
 		// Global error callback. Can be called in a worker thread context
-		MultiCast<ReportErrorCB, true> ReportError;
+		MultiCast<StaticCB<view3d::ReportErrorCB>, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
-		MultiCast<AddFileProgressCB, true> OnAddFileProgress;
+		MultiCast<StaticCB<view3d::AddFileProgressCB>, true> OnAddFileProgress;
 
 		// Event raised when the script sources are updated
-		MultiCast<SourcesChangedCB, true> OnSourcesChanged;
+		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> OnSourcesChanged;
 
 		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		template <typename Char>
-		Guid LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add);
+		Guid LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 
 		// Load/Add ldr objects and return the first object from the script
 		template <typename Char>
@@ -67,11 +68,20 @@ namespace pr::rdr12
 
 		// Delete all objects with matching ids
 		void DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count);
+		
+		// Delete all objects not displayed in any windows
+		void DeleteUnused(Guid const* context_ids, int include_count, int exclude_count);
 
 		// Enumerate the Guids in the sources collection
 		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
+		
+		// Reload file sources
+		void ReloadScriptSources();
+
+		// Poll for changed script source files, and reload any that have changed
+		void CheckForChangedSources();
 
 		// Create an embedded code handler for the given language
-		std::unique_ptr<IEmbeddedCode> CreateHandler(wchar_t const* lang);
+		std::unique_ptr<IEmbeddedCode> CreateCodeHandler(wchar_t const* lang);
 	};
 }

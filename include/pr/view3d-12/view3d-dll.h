@@ -37,7 +37,7 @@ namespace pr
 		using Texture = pr::rdr12::Texture2D*;
 		using CubeMap = pr::rdr12::TextureCube*;
 		using Window = rdr12::V3dWindow*;
-		using ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t pos);
+		using ReportErrorCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
 
 		#pragma region Enumerations
 		enum class EResult :int
@@ -573,31 +573,29 @@ namespace pr
 			// Pointer to the object that changed (for single object changes only)
 			Object m_object;
 		};
-		#if 0 //todo
-		struct View3DAnimEvent
+		struct AnimEvent
 		{
 			// The state change type
-			EView3DAnimCommand m_command;
+			EAnimCommand m_command;
 
 			// The current animation clock value
 			double m_clock;
 		};
-		#endif
 		#pragma endregion
 
 		// Callbacks
-		using ReportErrorCB     = void(__stdcall *)(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t pos);
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete, BOOL* cancel);
+		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL* cancel);
 		using SourcesChangedCB  = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
-		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
 		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
 		using OnAddCB           = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
+		using RenderingCB       = void(__stdcall *)(void* ctx, Window window);
+		using SceneChangedCB    = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
+		using AnimationCB       = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
+
 		#if 0 // todo
-		using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
-		using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
-		using View3D_AnimationCB           = void (__stdcall *)(void* ctx, View3DWindow window, EView3DAnimCommand command, double clock);
 		using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmo gizmo, EView3DGizmoState state);
 		using View3D_EditObjectCB          = void (__stdcall *)(
 			void* ctx,             // User callback context pointer
@@ -634,26 +632,38 @@ extern "C"
 	// This error callback is called for errors that are associated with the dll (rather than with a window).
 	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
+	// Set the callback for progress events when script sources are loaded or updated
+	VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(pr::view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add);
+	
+	#if 0 // todo
+	VIEW3D_API void          __stdcall View3D_SourcesChangedCBSet   (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
+	VIEW3D_API BOOL          __stdcall View3D_ContextIdFromFilepath (wchar_t const* filepath, GUID& id);
+	#endif
+
 	// Data Sources ***************************
 
 	// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
 	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
 	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
 
+	// Delete all objects and object sources
+	VIEW3D_API void __stdcall View3D_DeleteAllObjects();
+
+	// Delete all objects matching (or not matching) a context id
+	VIEW3D_API void __stdcall View3D_DeleteById(GUID const* context_ids, int include_count, int exclude_count);
+
+	// Delete all objects not displayed in any windows
+	VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int include_count, int exclude_count);
+
 	// Enumerate the Guids of objects in the sources collection
 	VIEW3D_API void __stdcall View3D_SourceEnumGuids(pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
 
-	#if 0 // todo
-	VIEW3D_API void          __stdcall View3D_ReloadScriptSources   ();
-	VIEW3D_API void          __stdcall View3D_ObjectsDeleteAll      ();
-	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int include_count, int exclude_count);
-	VIEW3D_API void          __stdcall View3D_ObjectsDeleteUnused   (GUID const* context_ids, int include_count, int exclude_count);
-	VIEW3D_API void          __stdcall View3D_CheckForChangedSources();
-	VIEW3D_API void          __stdcall View3D_AddFileProgressCBSet  (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
-	VIEW3D_API void          __stdcall View3D_SourcesChangedCBSet   (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
-	VIEW3D_API BOOL          __stdcall View3D_ContextIdFromFilepath (wchar_t const* filepath, GUID& id);
-	#endif
+	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
+	VIEW3D_API void __stdcall View3D_ReloadScriptSources();
+
+	// Poll for changed script sources and reload any that have changed
+	VIEW3D_API void __stdcall View3D_CheckForChangedSources();
 
 	// Windows ********************************
 
@@ -710,7 +720,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(pr::view3d::Window window, unsigned int argb);
 
 	#if 0 // todo
-	VIEW3D_API void           __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add);
+	VIEW3D_API void           __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderingCB rendering_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveObject       (View3DWindow window, View3DObject object);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);

@@ -30,9 +30,9 @@ struct Main :Form
 	view3d::CubeMap m_envmap;
 	
 	// Error handler
-	static void __stdcall ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+	static void __stdcall ReportError(void*, char const* msg, char const* filepath, int line, int64_t)
 	{
-		std::wcout << filepath << "(" << line << "): " << msg << std::endl;
+		std::cout << filepath << "(" << line << "): " << msg << std::endl;
 	}
 
 	Main(HINSTANCE)
@@ -158,6 +158,15 @@ struct Main :Form
 			View3D_MouseNavigateZ(m_win3d, pt, args.m_delta, TRUE);
 		}
 	}
+	void OnKey(KeyEventArgs& args) override
+	{
+		Form::OnKey(args);
+		if (!args.m_down && args.m_vk_key == VK_F7)
+		{
+			View3D_ReloadScriptSources();
+		}
+	}
+
 };
 
 // Entry point
