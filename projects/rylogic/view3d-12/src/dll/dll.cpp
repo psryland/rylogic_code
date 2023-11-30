@@ -69,12 +69,11 @@ using LockGuard = std::lock_guard<std::recursive_mutex>;
 // Note: this function is not thread safe, avoid race calls
 VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_error_cb, void* ctx)
 {
-	auto error_cb = StaticCallback(global_error_cb, ctx);
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, error_cb);
+			g_ctx = new Context(g_hInstance, { global_error_cb, ctx });
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static DllHandle handles = nullptr;
@@ -83,12 +82,12 @@ VIEW3D_API DllHandle  __stdcall View3D_Initialise(view3d::ReportErrorCB global_e
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
+		global_error_cb(ctx, FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()), "", 0, 0);
 		return nullptr;
 	}
 	catch (...)
 	{
-		error_cb(L"Failed to initialise View3D.\nReason: An unknown exception occurred\n", L"", 0, 0);
+		global_error_cb(ctx, "Failed to initialise View3D.\nReason: An unknown exception occurred\n", "", 0, 0);
 		return nullptr;
 	}
 }
@@ -111,11 +110,25 @@ VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb
 	{
 		DllLockGuard;
 		if (add)
-			Dll().ReportError += StaticCallback(error_cb, ctx);
+			Dll().ReportError += {error_cb, ctx};
 		else
-			Dll().ReportError -= StaticCallback(error_cb, ctx);
+			Dll().ReportError -= {error_cb, ctx};
 	}
 	CatchAndReport(View3D_GlobalErrorCBSet, , );
+}
+
+// Set the callback for progress events when script sources are loaded or updated
+VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		DllLockGuard;
+		if (add)
+			Dll().OnAddFileProgress += {progress_cb, ctx};
+		else
+			Dll().OnAddFileProgress -= {progress_cb, ctx};
+	}
+	CatchAndReport(View3D_AddFileProgressCBSet,,);
 }
 
 // Data Sources ***************************
@@ -142,8 +155,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GU
 	try
 	{
 		// Concurrent entry is allowed
-		auto on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScript(std::string_view(ldr_script), false, EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::OnAddCB)nullptr);
+		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScript(std::string_view(ldr_script), false, EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
 }
@@ -152,8 +165,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	try
 	{
 		// Concurrent entry is allowed
-		auto on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScript(std::string_view(ldr_file), true, EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::OnAddCB)nullptr);
+		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScript(std::string_view(ldr_file), true, EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
@@ -164,9 +177,64 @@ VIEW3D_API void __stdcall View3D_SourceEnumGuids(view3d::EnumGuidsCB enum_guids_
 	try
 	{
 		DllLockGuard;
-		Dll().SourceEnumGuids(StaticCallback(enum_guids_cb, ctx));
+		Dll().SourceEnumGuids({ enum_guids_cb, ctx });
 	}
 	CatchAndReport(View3D_SourceEnumGuids,, );
+}
+
+// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
+VIEW3D_API void __stdcall View3D_ReloadScriptSources()
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ReloadScriptSources();
+	}
+	CatchAndReport(View3D_ReloadScriptSources,,);
+}
+
+// Delete all objects and object sources
+VIEW3D_API void __stdcall View3D_DeleteAllObjects()
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjects();
+	}
+	CatchAndReport(View3D_DeleteAllObjects, ,);
+}
+
+// Delete all objects matching (or not matching) a context id
+VIEW3D_API void __stdcall View3D_DeleteById(GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteAllObjectsById(context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_DeleteById, ,);
+}
+
+// Delete all objects not displayed in any windows
+VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteUnused(context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_DeleteUnused, ,);
+}
+
+// Poll for changed script sources and reload any that have changed
+VIEW3D_API void __stdcall View3D_CheckForChangedSources()
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().CheckForChangedSources();
+	}
+	CatchAndReport(View3D_CheckForChangedSources,,);
 }
 
 // Windows ********************************
@@ -200,9 +268,9 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->ReportError += StaticCallback(error_cb, ctx);
+			window->ReportError += {error_cb, ctx};
 		else
-			window->ReportError -= StaticCallback(error_cb, ctx);
+			window->ReportError -= {error_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
@@ -286,9 +354,9 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(view3d::Window window, 
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSettingsChanged += StaticCallback(settings_changed_cb, ctx);
+			window->OnSettingsChanged += {settings_changed_cb, ctx};
 		else
-			window->OnSettingsChanged -= StaticCallback(settings_changed_cb, ctx);
+			window->OnSettingsChanged -= {settings_changed_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
@@ -412,9 +480,9 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view
 		if (!window) throw std::runtime_error("window is null");
 
 		if (add)
-			window->OnInvalidated += StaticCallback(invalidated_cb, ctx);
+			window->OnInvalidated += {invalidated_cb, ctx};
 		else
-			window->OnInvalidated -= StaticCallback(invalidated_cb, ctx);
+			window->OnInvalidated -= {invalidated_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }

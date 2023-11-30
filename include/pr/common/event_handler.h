@@ -34,7 +34,7 @@ namespace pr
 		// Non-template interface for all event handlers and multicasts
 		struct IMultiCast
 		{
-			virtual ~IMultiCast() {}
+			virtual ~IMultiCast() = default;
 			virtual void unsubscribe(Sub& sub) = 0;
 		};
 
@@ -464,8 +464,7 @@ namespace pr
 			remove_handlers([=](auto& h) { return h == sub; });
 			sub = Sub();
 		}
-		template <typename FuncType, typename = std::enable_if_t<std::is_same_v<decltype(std::declval<FuncType&>() == std::declval<FuncType&>()), bool>>>
-		void operator -= (FuncType func)
+		void operator -= (FuncType func) requires (requires (FuncType f) { f == f; })
 		{
 			// Notes:
 			//  - This operator will only work if 'FuncType' is equality compareable

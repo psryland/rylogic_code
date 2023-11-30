@@ -14,35 +14,34 @@
 
 namespace pr::rdr12
 {
-	Context::Context(HINSTANCE instance, ReportErrorCB global_error_cb)
-		:m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
-		,m_wnd_cont()
-		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
-		,m_inits()
-		,m_emb()
-		,m_mutex()
-		,ReportError()
-		,OnAddFileProgress()
-		,OnSourcesChanged()
+	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb)
+		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
+		, m_wnd_cont()
+		, m_sources(m_rdr, [this](auto lang) { return CreateCodeHandler(lang); })
+		, m_inits()
+		, m_emb()
+		, m_mutex()
+		, ReportError()
+		, OnAddFileProgress()
+		, OnSourcesChanged()
 	{
 		PR_ASSERT(PR_DBG, meta::is_aligned_to<16>(this), "dll data not aligned");
 		ReportError += global_error_cb;
 
-		#if 0 // todo
 		// Hook up the sources events
 		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
 		{
-			auto context_id  = args.m_context_id;
-			auto filepath    = args.m_loc.Filepath();
-			auto file_offset = args.m_loc.Pos();
-			auto complete    = args.m_complete;
-			BOOL cancel      = FALSE;
+			auto context_id = args.m_context_id;
+			auto filepath = args.m_loc.Filepath().generic_string();
+			auto file_offset = s_cast<int64_t>(args.m_loc.Pos());
+			BOOL complete = args.m_complete;
+			BOOL cancel = false;
 			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, &cancel);
 			args.m_cancel = cancel != 0;
 		};
 		m_sources.OnReload += [&](ScriptSources&, EmptyArgs const&)
 		{
-			OnSourcesChanged(EView3DSourcesChangedReason::Reload, true);
+			OnSourcesChanged(view3d::ESourcesChangedReason::Reload, true);
 		};
 		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
 		{
@@ -51,7 +50,7 @@ namespace pr::rdr12
 			// When a source is about to be removed, remove it's objects from the windows.
 			// If this is a reload, save a reference to the removed objects so we know what to reload.
 			for (auto& wnd : m_wnd_cont)
-				wnd->RemoveObjectsById(&args.m_context_id, 1, false, reload);
+				wnd->Remove(&args.m_context_id, 1, false, reload);
 		};
 		m_sources.OnStoreChange += [&](ScriptSources&, ScriptSources::StoreChangeEventArgs const& args)
 		{
@@ -60,37 +59,43 @@ namespace pr::rdr12
 
 			switch (args.m_reason)
 			{
-			default:
-				throw std::exception("Unknown store changed reason");
-		
-			// On NewData, do nothing. Callers will add objects to windows as they see fit.
-			case ScriptSources::EReason::NewData:
-				break;
-
-			// On Removal, do nothing. Removed objects should already have been removed from the windows.
-			case ScriptSources::EReason::Removal:
-				break;
-
-			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
-			case ScriptSources::EReason::Reload:
+				// On NewData, do nothing. Callers will add objects to windows as they see fit.
+				case ScriptSources::EReason::NewData:
+				{
+					break;
+				}
+				// On Removal, do nothing. Removed objects should already have been removed from the windows.
+				case ScriptSources::EReason::Removal:
+				{
+					break;
+				}
+				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
+				case ScriptSources::EReason::Reload:
 				{
 					for (auto& wnd : m_wnd_cont)
 					{
-						wnd->AddObjectsById(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
+						wnd->Add(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
 						wnd->Invalidate();
 					}
 					break;
 				}
+				default:
+				{
+					throw std::runtime_error("Unknown store changed reason");
+				}
 			}
 
 			// Notify of updated sources
-			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
+			OnSourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
 		};
 		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)
 		{
-			ReportError(args.m_msg.c_str(), args.m_loc.Filepath().c_str(), args.m_loc.Line(), args.m_loc.Pos());
+			auto msg = Narrow(args.m_msg);
+			auto filepath = args.m_loc.Filepath().generic_string();
+			auto line = s_cast<int>(args.m_loc.Line());
+			auto pos = s_cast<int64_t>(args.m_loc.Pos());
+			ReportError(msg.c_str(), filepath.c_str(), line, pos);
 		};
-		#endif
 	}
 	Context::~Context()
 	{
@@ -102,16 +107,16 @@ namespace pr::rdr12
 	void Context::ReportAPIError(char const* func_name, view3d::Window wnd, std::exception const* ex)
 	{
 		// Create the error message
-		auto msg = Fmt<pr::string<wchar_t>>(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
+		auto msg = Fmt<pr::string<char>>("%s failed.\n%s", func_name, ex ? ex->what() : "Unknown exception occurred.");
 		if (msg.last() != '\n')
 			msg.push_back('\n');
 
 		// If a window handle is provided, report via the window's event.
 		// Otherwise, fall back to the global error handler
 		if (wnd != nullptr)
-			wnd->ReportError(msg.c_str(), L"", 0, 0);
+			wnd->ReportError(msg.c_str(), "", 0, 0);
 		else
-			ReportError(msg.c_str(), L"", 0, 0);
+			ReportError(msg.c_str(), "", 0, 0);
 	}
 
 	// Create/Destroy windows
@@ -125,12 +130,12 @@ namespace pr::rdr12
 		}
 		catch (std::exception const& e)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS(L"Failed to create View3D Window.\n%S", e.what()), L"", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\n%s", e.what()), "", 0, 0);
 			return nullptr;
 		}
 		catch (...)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS(L"Failed to create View3D Window.\nUnknown reason"), L"", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\nUnknown reason"), "", 0, 0);
 			return nullptr;
 		}
 	}
@@ -157,12 +162,12 @@ namespace pr::rdr12
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 	template <typename Char>
-	Guid Context::LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add) // worker thread context
+	Guid Context::LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
 		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
-	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add);
-	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add);
+	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
@@ -215,7 +220,7 @@ namespace pr::rdr12
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int include_count, int exclude_count)
+	void Context::DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count)
 	{
 		// Remove objects from any windows they might be assigned to
 		for (auto& wnd : m_wnd_cont)
@@ -225,6 +230,34 @@ namespace pr::rdr12
 		m_sources.Remove(context_ids, include_count, exclude_count);
 	}
 
+	// Delete all objects not displayed in any windows
+	void Context::DeleteUnused(Guid const* context_ids, int include_count, int exclude_count)
+	{
+		// Build a set of context ids, included in 'context_ids', and not used in any windows
+		GuidSet unused;
+
+		// Initialise 'unused' with all context ids (filtered by 'context_ids')
+		for (auto& src : m_sources.Sources())
+		{
+			if (!IncludeFilter(src.first, context_ids, include_count, exclude_count)) continue;
+			unused.insert(src.first);
+		}
+
+		// Remove those that are used in the windows
+		for (auto& wnd :m_wnd_cont)
+		{
+			for (auto& id : wnd->m_guids)
+				unused.erase(id);
+		}
+
+		// Remove unused sources
+		if (!unused.empty())
+		{
+			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
+			m_sources.Remove(ids.data(), s_cast<int>(ids.ssize()), 0, ScriptSources::EReason::Removal);
+		}
+	}
+
 	// Enumerate the Guids in the sources collection
 	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
@@ -232,9 +265,21 @@ namespace pr::rdr12
 			if (!enum_guids_cb(src.second.m_context_id))
 				return;
 	}
+	
+	// Reload file sources
+	void Context::ReloadScriptSources()
+	{
+		m_sources.ReloadFiles();
+	}
+	
+	// Poll for changed script source files, and reload any that have changed
+	void Context::CheckForChangedSources()
+	{
+		m_sources.RefreshChangedFiles();
+	}
 
 	// Create an embedded code handler for the given language
-	std::unique_ptr<Context::IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
+	std::unique_ptr<Context::IEmbeddedCode> Context::CreateCodeHandler(wchar_t const* lang)
 	{
 		// Embedded code handler that buffers support code and forwards to a provided code handler function
 		struct EmbeddedCode :IEmbeddedCode

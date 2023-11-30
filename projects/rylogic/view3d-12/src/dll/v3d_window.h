@@ -14,6 +14,7 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - Combines a renderer Window with a collection of LdrObjects
+
 		using AnimData = struct AnimData
 		{
 			std::thread  m_thread;
@@ -74,22 +75,22 @@ namespace pr::rdr12
 		ResourceManager& res() const;
 
 		// Error event. Can be called in a worker thread context
-		MultiCast<ReportErrorCB> ReportError;
+		MultiCast<StaticCB<view3d::ReportErrorCB>, true> ReportError;
 
 		// Settings changed event
-		MultiCast<SettingsChangedCB> OnSettingsChanged;
+		MultiCast<StaticCB<view3d::SettingsChangedCB>, true> OnSettingsChanged;
 
 		// Window invalidated
-		MultiCast<InvalidatedCB> OnInvalidated;
+		MultiCast<StaticCB<view3d::InvalidatedCB>, true> OnInvalidated;
 
 		// Rendering event
-		MultiCast<RenderingCB> OnRendering;
+		MultiCast<StaticCB<view3d::RenderingCB>, true> OnRendering;
 
 		// Scene changed event
-		MultiCast<SceneChangedCB> OnSceneChanged;
+		MultiCast<StaticCB<view3d::SceneChangedCB>, true> OnSceneChanged;
 
 		// Animation event
-		MultiCast<AnimationCB> OnAnimationEvent;
+		MultiCast<StaticCB<view3d::AnimationCB>, true> OnAnimationEvent;
 
 		// Get/Set the settings
 		wchar_t const* Settings() const;
