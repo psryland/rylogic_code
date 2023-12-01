@@ -83,11 +83,23 @@ namespace pr::rdr12
 		iv2 BackBufferSize() const;
 		void BackBufferSize(iv2 size, bool force);
 
+		// Get/Set the multi sampling used. Changing the multi-sampling is like resizing the MSAA back buffer only.
+		MultiSamp MultiSampling() const;
+		void MultiSampling(MultiSamp ms);
+
 		// Start rendering a new frame. Returns an object that scenes can render into
 		Frame NewFrame();
 
 		// Present the frame to the display
 		void Present(Frame& frame);
+
+	private:
+
+		// Create the MSAA render target and depth stencil
+		void CreateMSAA(BackBuffer& bb, iv2 size);
+
+		// Create the swap chain back buffers
+		void CreateSwapChain(iv2 size);
 	};
 }
 
@@ -115,19 +127,6 @@ namespace pr::rdr12
 
 		// The display mode of the main render target
 		DXGI_FORMAT DisplayFormat() const;
-		#endif
-
-		#if 0 // todo
-		// Get/Set the size of the swap chain back buffer.
-		// Passing iv2.Zero will cause the RT to get its size from the associated window
-		// Call when the window size changes (e.g. from a WM_SIZE message)
-		iv2 BackBufferSize() const;
-		void BackBufferSize(iv2 const& size, bool force = false);
-
-		// Get/Set the multi-sampling used
-		// Changing the multi-sampling mode is a bit like resizing the back buffer
-		MultiSamp MultiSampling() const;
-		void MultiSampling(MultiSamp ms);
 
 		// Release all references to the swap chain to allow it to be created or resized.
 		void RebuildRT(std::function<void(ID3D11Device*)> work);

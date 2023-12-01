@@ -189,8 +189,8 @@ namespace view3d
 			auto fd = m_camera.FocusDist();
 
 			// Get the scaling factors from 'm_camera' to 'v_camera'
-			auto viewarea_c = m_camera.ViewArea(fd);
-			auto viewarea_v = v_camera.ViewArea(fd);
+			auto viewarea_c = m_camera.ViewRectAtDistance(fd);
+			auto viewarea_v = v_camera.ViewRectAtDistance(fd);
 
 			if (m_focus_point_visible)
 			{

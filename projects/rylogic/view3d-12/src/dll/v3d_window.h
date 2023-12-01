@@ -7,6 +7,7 @@
 #include "pr/view3d-12/main/window.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/utility/ray_cast.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -97,6 +98,9 @@ namespace pr::rdr12
 		wchar_t const* Settings() const;
 		void Settings(wchar_t const* settings);
 
+		// The DPI of the monitor that this window is displayed on
+		v2 Dpi() const;
+
 		// Get/Set the back buffer size
 		iv2 BackBufferSize() const;
 		void BackBufferSize(iv2 sz);
@@ -148,6 +152,15 @@ namespace pr::rdr12
 
 		// Clear the invalidated state for the window
 		void Validate();
+		
+		// Reset the scene camera, using it's current forward and up directions, to view all objects in the scene
+		void ResetView();
+
+		// Reset the scene camera to view all objects in the scene
+		void ResetView(v4 const& forward, v4 const& up, float dist = 0.0f, bool preserve_aspect = true, bool commit = true);
+
+		// Reset the camera to view a bbox
+		void ResetView(BBox const& bbox, v4 const& forward, v4 const& up, float dist = 0.0f, bool preserve_aspect = true, bool commit = true);
 
 		// General mouse navigation
 		// 'ss_pos' is the mouse pointer position in 'window's screen space
@@ -163,6 +176,14 @@ namespace pr::rdr12
 		// Get/Set the window background colour
 		Colour BackgroundColour() const;
 		void BackgroundColour(Colour_cref colour);
+			
+		// Get/Set the window fill mode
+		EFillMode FillMode() const;
+		void FillMode(EFillMode fill_mode);
+
+		// Get/Set the window cull mode
+		ECullMode CullMode() const;
+		void CullMode(ECullMode cull_mode);
 
 		// Enable/Disable orthographic projection
 		bool Orthographic() const;
@@ -176,13 +197,47 @@ namespace pr::rdr12
 		v4 FocusPoint() const;
 		void FocusPoint(v4_cref position);
 
+		// Get/Set the aspect ratio for the camera field of view
+		float Aspect() const;
+		void Aspect(float aspect);
+
+		// Get/Set the camera field of view. null means don't change
+		v2 Fov() const;
+		void Fov(float* fovX, float* fovY);
+
+		// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+		void BalanceFov(float fov);
+
+		// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
+		v2 ViewRectAtDistance(float dist) const;
+		void ViewRectAtDistance(v2_cref rect, float focus_dist = 0);
+
+		// Get/Set the near and far clip planes for the camera
+		v2 ClipPlanes(bool focus_relative) const;
+		void ClipPlanes(float* near_, float* far_, bool focus_relative);
+
+		// Get/Set the scene camera lock mask
+		camera::ELockMask LockMask() const;
+		void LockMask(camera::ELockMask mask);
+
+		// Get/Set the camera align axis
+		v4 AlignAxis() const;
+		void AlignAxis(v4_cref axis);
+
+		// Reset to the default zoom
+		void ResetZoom();
+
+		// Get/Set the FOV zoom
+		float Zoom() const;
+		void Zoom(float zoom);
+
 		// Get/Set the global scene light
 		Light GlobalLight() const;
 		void GlobalLight(Light const& light);
 
 		// Get/Set the global environment map for this window
-		view3d::CubeMap EnvMap() const;
-		void EnvMap(view3d::CubeMap env_map);
+		TextureCube* EnvMap() const;
+		void EnvMap(TextureCube* env_map);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
@@ -192,6 +247,25 @@ namespace pr::rdr12
 
 		// Position the selection box to include the selected objects
 		void SelectionBoxFitToSelected();
+	
+		// Get/Set the window background colour
+		int MultiSampling() const;
+		void MultiSampling(int multisampling);
+
+		// Control animation
+		void AnimControl(view3d::EAnimCommand command, seconds_t time = seconds_t::zero());
+	
+		// True if animation is currently active
+		bool Animating() const;
+	
+		// Get/Set the value of the animation clock
+		seconds_t AnimTime() const;
+		void AnimTime(seconds_t clock);
+
+		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockObjects();

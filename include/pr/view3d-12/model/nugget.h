@@ -76,7 +76,7 @@ namespace pr::rdr12
 		_flags_enum = 0,
 	};
 
-	// Nugget data. Common base for NuggetProps and Nugget
+	// Nugget initialisation data
 	struct NuggetData
 	{
 		using shader_t = struct

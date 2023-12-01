@@ -593,6 +593,19 @@ VIEW3D_API view3d::BBox __stdcall View3D_WindowSceneBounds(view3d::Window window
 	CatchAndReport(View3D_WindowSceneBounds, window, To<view3d::BBox>(pr::BBox::Unit()));
 }
 
+// Clear the 'invalidated' state of the window.
+VIEW3D_API void __stdcall View3D_Validate(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Validate();
+	}
+	CatchAndReport(View3D_Validate, window, );
+}
+
 // Render the window
 VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
 {
@@ -628,8 +641,7 @@ VIEW3D_API void __stdcall View3D_WindowInvalidateRect(view3d::Window window, REC
 	CatchAndReport(View3D_InvalidateRect, window,);
 }
 
-// Register a callback for when the window is invalidated.
-// This can be used to render in response to invalidation, rather than rendering on a polling cycle.
+// Register a callback for when the window is invalidated. This can be used to render in response to invalidation, rather than rendering on a polling cycle.
 VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view3d::InvalidatedCB invalidated_cb, void* ctx, BOOL add)
 {
 	try
@@ -668,6 +680,155 @@ VIEW3D_API void __stdcall View3D_WindowBackgroundColourSet(view3d::Window window
 	CatchAndReport(View3D_WindowBackgroundColourSet, window,);
 }
 
+// Get/Set the fill mode for the window
+VIEW3D_API view3d::EFillMode __stdcall View3D_WindowFillModeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return static_cast<view3d::EFillMode>(window->FillMode());
+	}
+	CatchAndReport(View3D_WindowFillModeGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_WindowFillModeSet(view3d::Window window, view3d::EFillMode mode)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FillMode(static_cast<pr::rdr12::EFillMode>(mode));
+	}
+	CatchAndReport(View3D_WindowFillModeSet, window,);
+}
+
+// Get/Set the cull mode for a faces in window
+VIEW3D_API view3d::ECullMode __stdcall View3D_WindowCullModeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return static_cast<view3d::ECullMode>(window->CullMode());
+	}
+	CatchAndReport(View3D_CullModeGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_WindowCullModeSet(view3d::Window window, view3d::ECullMode mode)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->CullMode(static_cast<pr::rdr12::ECullMode>(mode));
+	}
+	CatchAndReport(View3D_CullModeSet, window,);
+}
+
+// Get/Set the multi-sampling mode for a window
+VIEW3D_API int  __stdcall View3D_MultiSamplingGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->MultiSampling();
+	}
+	CatchAndReport(View3D_MultiSamplingGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_MultiSamplingSet(view3d::Window window, int multisampling)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->MultiSampling(multisampling);
+	}
+	CatchAndReport(View3D_MultiSamplingSet, window, );
+}
+
+// Control animation
+VIEW3D_API void __stdcall View3D_WindowAnimControl(view3d::Window window, view3d::EAnimCommand command, double time_s)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->AnimControl(command, seconds_t(time_s));
+	}
+	CatchAndReport(View3D_WindowAnimControl, window, );
+}
+
+// Set the callback for animation events
+VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(view3d::Window window, view3d::AnimationCB anim_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		if (add)
+			window->OnAnimationEvent += {anim_cb, ctx};
+		else
+			window->OnAnimationEvent -= {anim_cb, ctx};
+	}
+	CatchAndReport(View3D_AnimationEventCBSet, , );
+}
+
+// Get/Set the animation time
+VIEW3D_API BOOL __stdcall View3D_WindowAnimating(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Animating();
+	}
+	CatchAndReport(View3D_WindowAnimating, window, FALSE);
+}
+VIEW3D_API double __stdcall View3D_WindowAnimTimeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->AnimTime().count();
+	}
+	CatchAndReport(View3D_WindowAnimTimeGet, window, 0.0f);
+}
+VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(view3d::Window window, double time_s)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->AnimTime(seconds_t(time_s));
+	}
+	CatchAndReport(View3D_WindowAnimTimeSet, window, );
+}
+
+// Return the DPI of the monitor that 'window' is displayed on
+VIEW3D_API view3d::Vec2 __stdcall View3D_WindowDpiScale(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(DIPtoPhysical(v2::One(), window->Dpi()));
+	}
+	CatchAndReport(View3d_WindowDPI, window, {});
+}
+
 // Set the global environment map for the window
 VIEW3D_API void __stdcall View3D_WindowEnvMapSet(view3d::Window window, view3d::CubeMap env_map)
 {
@@ -681,19 +842,118 @@ VIEW3D_API void __stdcall View3D_WindowEnvMapSet(view3d::Window window, view3d::
 	CatchAndReport(View3D_WindowEnvMapSet, window, );
 }
 
+// Cast a ray into the scene, returning information about what it hit.
+// 'rays' - is an input buffer of rays to cast for hit testing
+// 'hits' - are the nearest intercepts with the given rays
+// 'ray_count' - is the length of the 'rays' array
+// 'snap_distance' - the world space distance to snap to
+// 'flags' - what can be hit.
+// 'objects' - An array of objects to hit test
+// 'object_count' - The length of the 'objects' array.
+VIEW3D_API void __stdcall View3D_WindowHitTestObjects(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, float snap_distance, view3d::EHitTestFlags flags, view3d::Object const* objects, int object_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// todo: add the non-immediate version of this function
+		// to allow continuous hit-testing during constant rendering.
+
+		DllLockGuard;
+		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, objects, object_count);
+	}
+	CatchAndReport(View3D_WindowHitTestObjects, window, );
+}
+
+// Cast a ray into the scene, returning information about what it hit
+// 'rays' - is an input buffer of rays to cast for hit testing
+// 'hits' - are the nearest intercepts with the given rays
+// 'ray_count' - is the length of the 'rays' array
+// 'snap_distance' - the world space distance to snap to
+// 'flags' - what can be hit.
+// 'context_ids' - context ids for objects to include/exclude from hit testing
+// 'include_count' - the number of context ids that should be included
+// 'exclude_count' - the number of context ids that should be excluded
+// 'include_count+exclude_count' = the length of the 'context_ids' array. If 0, then all context ids are included for hit testing
+VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3d::HitTestRay const* rays, view3d::HitTestResult* hits, int ray_count, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// todo: add the non-immediate version of this function
+		// to allow continuous hit-testing during constant rendering.
+
+		DllLockGuard;
+		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_WindowHitTestByCtx, window, );
+}
+
 // Camera *********************************
 
-// Commit the current O2W position as the reference position
-VIEW3D_API void __stdcall View3D_CameraCommit(view3d::Window window)
+// Position the camera and focus distance
+VIEW3D_API void __stdcall View3D_CameraPositionSet(view3d::Window window, view3d::Vec4 position, view3d::Vec4 lookat, view3d::Vec4 up)
+{
+	try
+	{
+
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.LookAt(To<v4>(position), To<v4>(lookat), To<v4>(up), true);
+	}
+	CatchAndReport(View3D_CameraPositionSet, window,);
+}
+
+// Get/Set the current camera to world transform
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(view3d::Window window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_scene.m_cam.Commit();
+		return To<view3d::Mat4x4>(window->m_scene.m_cam.CameraToWorld());
 	}
-	CatchAndReport(View3D_CameraCommit, window,);
+	CatchAndReport(View3D_CameraToWorldGet, window, view3d::Mat4x4{});
+}
+VIEW3D_API void __stdcall View3D_CameraToWorldSet(view3d::Window window, view3d::Mat4x4 const& c2w)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.CameraToWorld(To<m4x4>(c2w));
+	}
+	CatchAndReport(View3D_CameraToWorldSet, window,);
+}
+
+// Move the camera to a position that can see the whole scene. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+VIEW3D_API void __stdcall View3D_ResetView(view3d::Window window, view3d::Vec4 forward, view3d::Vec4 up, float dist, BOOL preserve_aspect, BOOL commit)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ResetView(To<v4>(forward), To<v4>(up), dist, preserve_aspect != 0, commit != 0);
+	}
+	CatchAndReport(View3D_ResetView, window,);
+}
+
+// Reset the camera to view a bbox. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+VIEW3D_API void __stdcall View3D_ResetViewBBox(view3d::Window window, view3d::BBox bbox, view3d::Vec4 forward, view3d::Vec4 up, float dist, BOOL preserve_aspect, BOOL commit)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ResetView(To<pr::BBox>(bbox), To<v4>(forward), To<v4>(up), dist, preserve_aspect != 0, commit != 0);
+	}
+	CatchAndReport(View3D_ResetViewBBox, window,);
 }
 
 // Enable/Disable orthographic projection
@@ -768,43 +1028,214 @@ VIEW3D_API void __stdcall View3D_CameraFocusPointSet(view3d::Window window, view
 	CatchAndReport(View3D_CameraFocusPointSet, window,);
 }
 
-// Position the camera and focus distance
-VIEW3D_API void __stdcall View3D_CameraPositionSet(view3d::Window window, view3d::Vec4 position, view3d::Vec4 lookat, view3d::Vec4 up)
-{
-	try
-	{
-
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->m_scene.m_cam.LookAt(To<v4>(position), To<v4>(lookat), To<v4>(up), true);
-	}
-	CatchAndReport(View3D_CameraPositionSet, window,);
-}
-
-// Get/Set the current camera to world transform
-VIEW3D_API view3d::Mat4x4 __stdcall View3D_CameraToWorldGet(view3d::Window window)
+// Get/Set the aspect ratio for the camera field of view
+VIEW3D_API float __stdcall View3D_CameraAspectGet(view3d::Window window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<view3d::Mat4x4>(window->m_scene.m_cam.CameraToWorld());
+		return window->Aspect();
 	}
-	CatchAndReport(View3D_CameraToWorldGet, window, view3d::Mat4x4{});
+	CatchAndReport(View3D_CameraAspectGet, window, {});
 }
-VIEW3D_API void __stdcall View3D_CameraToWorldSet(view3d::Window window, view3d::Mat4x4 const& c2w)
+VIEW3D_API void __stdcall View3D_CameraAspectSet(view3d::Window window, float aspect)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_scene.m_cam.CameraToWorld(To<m4x4>(c2w));
+		window->Aspect(aspect);
 	}
-	CatchAndReport(View3D_CameraToWorldSet, window,);
+	CatchAndReport(View3D_CameraAspectSet, window,);
 }
+
+// Get/Set both the X and Y fields of view (i.e. set the aspect ratio). Null fov means don't change the current value.
+VIEW3D_API view3d::Vec2 __stdcall View3D_CameraFovGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->Fov());
+	}
+	CatchAndReport(View3D_CameraFovSet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraFovSet(view3d::Window window, float* fovX, float* fovY)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Fov(fovX, fovY);
+	}
+	CatchAndReport(View3D_CameraFovSet, window,);
+}
+
+// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+VIEW3D_API void __stdcall View3D_CameraBalanceFov(view3d::Window window, float fov)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BalanceFov(fov);
+	}
+	CatchAndReport(View3D_CameraBalanceFov, window,);
+}
+
+// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
+VIEW3D_API view3d::Vec2 __stdcall View3D_CameraViewRectAtDistanceGet(view3d::Window window, float dist)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->ViewRectAtDistance(dist));
+	}
+	CatchAndReport(View3D_ViewArea, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraViewRectAtDistanceSet(view3d::Window window, view3d::Vec2 rect, float focus_dist)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ViewRectAtDistance(To<v2>(rect), focus_dist);
+	}
+	CatchAndReport(View3D_CameraViewRectSet, window,);
+}
+
+// Get/Set the near and far clip planes for the camera
+VIEW3D_API view3d::Vec2 __stdcall View3D_CameraClipPlanesGet(view3d::Window window, BOOL focus_relative)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->ClipPlanes(focus_relative != 0));
+	}
+	CatchAndReport(View3D_CameraClipPlanesGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(view3d::Window window, float* near_, float* far_, BOOL focus_relative)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ClipPlanes(near_, far_, focus_relative != 0);
+	}
+	CatchAndReport(View3D_CameraClipPlanesSet, window,);
+}
+
+// Get/Set the scene camera lock mask
+VIEW3D_API view3d::ECameraLockMask __stdcall View3D_CameraLockMaskGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return s_cast<view3d::ECameraLockMask>(window->LockMask());
+	}
+	CatchAndReport(View3D_CameraLockMaskGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraLockMaskSet(view3d::Window window, view3d::ECameraLockMask mask)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->LockMask(s_cast<camera::ELockMask>(mask));
+	}
+	CatchAndReport(View3D_CameraLockMaskSet, window,);
+}
+
+// Get/Set the camera align axis
+VIEW3D_API view3d::Vec4 __stdcall View3D_CameraAlignAxisGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec4>(window->AlignAxis());
+	}
+	CatchAndReport(View3D_CameraAlignAxisGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(view3d::Window window, view3d::Vec4 axis)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->AlignAxis(To<v4>(axis));
+	}
+	CatchAndReport(View3D_CameraAlignAxisSet, window,);
+}
+
+// Reset to the default zoom
+VIEW3D_API void __stdcall View3D_CameraResetZoom(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ResetZoom();
+	}
+	CatchAndReport(View3D_CameraResetZoom, window,);
+}
+
+// Get/Set the FOV zoom
+VIEW3D_API float __stdcall View3D_CameraZoomGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->Zoom();
+	}
+	CatchAndReport(View3D_CameraZoomGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_CameraZoomSet(view3d::Window window, float zoom)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Zoom(zoom);
+	}
+	CatchAndReport(View3D_CameraZoomSet, window,);
+}
+
+// Commit the current O2W position as the reference position
+VIEW3D_API void __stdcall View3D_CameraCommit(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_cam.Commit();
+	}
+	CatchAndReport(View3D_CameraCommit, window,);
+}
+
+// Navigation *****************************
 
 // Direct movement of the camera
 VIEW3D_API BOOL __stdcall View3D_Navigate(view3d::Window window, float dx, float dy, float dz)
@@ -848,6 +1279,12 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(view3d::Window window, view3d::V
 		return window->MouseNavigateZ(To<v2>(ss_pos), delta, along_ray != 0);
 	}
 	CatchAndReport(View3D_MouseNavigate, window, FALSE);
+}
+
+// Convert an MK_ macro to a default navigation operation
+VIEW3D_API view3d::ENavOp __stdcall View3D_MouseBtnToNavOp(int mk)
+{
+	return static_cast<view3d::ENavOp>(camera::MouseBtnToNavOp(mk));
 }
 
 // Convert a point between 'window' screen space and normalised screen space
@@ -995,6 +1432,17 @@ VIEW3D_API void __stdcall View3D_LightSource(view3d::Window window, view3d::Vec4
 
 // Objects ********************************
 
+// Create an object from provided buffers
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreate(char const* name, view3d::Colour colour, int vcount, int icount, int ncount, view3d::Vertex const* verts, UINT16 const* indices, view3d::Nugget const* nuggets, GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreate(name, colour, { verts, s_cast<size_t>(vcount) }, { indices, s_cast<size_t>(icount) }, { nuggets, s_cast<size_t>(ncount) }, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreate, , nullptr);
+}
+
 // Create objects given in an ldr string or file.
 // If multiple objects are created, the handle returned is to the first object only.
 // 'ldr_script' - an ldr string, or filepath to a file containing ldr script
@@ -1022,6 +1470,28 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
+}
+
+// Load a p3d model file as a view3d object
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DFile(char const* name, view3d::Colour colour, char const* p3d_filepath, GUID const* context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreateP3D, , {});
+}
+
+// Load a p3d model in memory as a view3d object
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* name, view3d::Colour colour, size_t size, void const* p3d_data, GUID const* context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreateP3D, , {});
 }
 
 // Delete an object, freeing its resources

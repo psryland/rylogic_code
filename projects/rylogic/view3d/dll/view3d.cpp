@@ -848,7 +848,7 @@ VIEW3D_API void __stdcall View3D_CameraViewRectSet(View3DWindow window, float wi
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.View(width, height, dist);
+		window->m_camera.ViewRectAtDistance(v2(width, height), dist);
 		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist | EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraViewRectSet, window,);
@@ -1103,7 +1103,7 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<View3DV2>(window->m_camera.ViewArea(dist));
+		return To<View3DV2>(window->m_camera.ViewRectAtDistance(dist));
 	}
 	CatchAndReport(View3D_ViewArea, window, To<View3DV2>(v2Zero));
 }

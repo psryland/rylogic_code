@@ -14,6 +14,8 @@ namespace pr::rdr12
 	// Parameters structure for creating mesh models
 	struct MeshCreationData
 	{
+		// TODO: Use spans
+
 		int m_vcount;                // The length of the 'verts' array
 		int m_icount;                // The length of the 'indices' array
 		int m_gcount;                // The length of the 'nuggets' array
