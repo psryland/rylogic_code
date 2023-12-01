@@ -4568,7 +4568,7 @@ namespace pr::rdr12
 			// Find the range to plot the equation over
 			auto& cam = scene.m_cam;
 			auto fp = cam.FocusPoint();
-			auto area = cam.ViewArea(cam.FocusDist());
+			auto area = cam.ViewRectAtDistance(cam.FocusDist());
 
 			// Determine the interval to plot within. Default to a sphere around the focus point.
 			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
@@ -5022,8 +5022,8 @@ namespace pr::rdr12
 						auto fd = main_camera.FocusDist();
 
 						// Get the scaling factors from 'main_camera' to 'text_camera'
-						auto viewarea_camera = main_camera.ViewArea(fd);
-						auto viewarea_txtcam = text_camera.ViewArea(fd);
+						auto viewarea_camera = main_camera.ViewRectAtDistance(fd);
+						auto viewarea_txtcam = text_camera.ViewRectAtDistance(fd);
 
 						// Scale the X,Y coords in camera space
 						auto pt_cs = w2c * ob.m_i2w.pos;
@@ -5069,7 +5069,7 @@ namespace pr::rdr12
 
 						// Convert the world space position into a screen space position
 						auto pt_ss = w2c * ob.m_i2w.pos;
-						auto viewarea = main_camera.ViewArea(abs(pt_ss.z));
+						auto viewarea = main_camera.ViewRectAtDistance(abs(pt_ss.z));
 						pt_ss.x *= ViewPortSize / viewarea.x;
 						pt_ss.y *= ViewPortSize / viewarea.y;
 						pt_ss.z = static_cast<float>(main_camera.NormalisedDistance(pt_ss.z));

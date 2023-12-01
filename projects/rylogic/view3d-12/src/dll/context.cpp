@@ -5,6 +5,7 @@
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/model/model_generator.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/script/embedded_lua.h"
@@ -169,6 +170,194 @@ namespace pr::rdr12
 	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 
+	// Create an object from geometry
+	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
+	{
+		using namespace pr::script;
+
+		auto geom = EGeom::None;
+		pr::vector<NuggetData> ngt;
+
+		// Generate the nuggets first so we can tell what geometry data is needed
+		for (auto const& nugget : nuggets)
+		{
+			// Create the renderer nugget
+			auto nug = NuggetData(
+				static_cast<ETopo>(nugget.m_topo),
+				static_cast<EGeom>(nugget.m_geom),
+				nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()),
+				nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size())
+			);
+
+			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
+			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.m_pso.Set<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
+			//todo nug.m_tex_diffuse = Texture2DPtr(nugget.m_mat.m_diff_tex, true);
+			//todo nug.m_sam_diffuse = SamplerPtr(nugget.m_mat.m_diff_sam, true);
+			nug.m_nflags = static_cast<ENuggetFlag>(nugget.m_nflags);
+			nug.m_relative_reflectivity = nugget.m_mat.m_relative_reflectivity;
+			//todo nug.m_shaders = nugget.m_mat.m_shader_map;
+			nug.m_tint = nugget.m_mat.m_tint;
+		
+			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
+			{
+#if 0 // todo
+				auto& rstep0 = nugget.m_mat.m_shader_map.m_rstep[rs];
+				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
+				{// VS
+					switch (rstep0.m_vs.shdr)
+					{
+						case EView3DShaderVS::Standard: break;
+						default: throw std::runtime_error("Unknown vertex shader");
+					}
+				}
+				{// PS
+					switch (rstep0.m_ps.shdr)
+					{
+						case EView3DShaderPS::Standard: break;
+						case EView3DShaderPS::RadialFadePS:
+						{
+							Reader reader(rstep0.m_ps.params);
+							auto type = reader.Keyword(L"Type").EnumS<pr::rdr::ERadial>();
+							auto radius = reader.Keyword(L"Radius").Vector2S();
+							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : v4Zero;
+							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
+							auto id = pr::hash::HashArgs("RadialFadePS", centre, radius, type, focus_relative);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
+							shdr->m_fade_centre = centre;
+							shdr->m_fade_radius = radius;
+							shdr->m_fade_type = type;
+							shdr->m_focus_relative = focus_relative;
+							rstep1.m_ps = shdr;
+							break;
+						}
+						default: throw std::runtime_error("Unknown pixel shader");
+					}
+				}
+				{// GS
+					switch (rstep0.m_gs.shdr)
+					{
+						case EView3DShaderGS::Standard: break;
+						case EView3DShaderGS::PointSpritesGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto point_size = reader.Keyword(L"PointSize").Vector2S();
+							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
+							auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
+							shdr->m_size = point_size;
+							shdr->m_depth = depth;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ThickLineListGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::HashArgs("ThickLineList", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ThickLineStripGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::HashArgs("ThickLineStrip", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ArrowHeadGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto size = reader.Keyword(L"Size").RealS<float>();
+							auto id = pr::hash::HashArgs("ArrowHead", size);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
+							shdr->m_size = size;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						default: throw std::runtime_error("Unknown geometry shader");
+					}
+				}
+				{// CS
+					switch (rstep0.m_cs.shdr)
+					{
+						case EView3DShaderCS::None: break;
+						default: throw std::runtime_error("Unknown compute shader");
+					}
+				}
+#endif
+			}
+			ngt.push_back(nug);
+
+			// Sanity check the nugget
+			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && int(nug.m_vrange.end()) <= verts.size(), "Invalid nugget V-range");
+			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && int(nug.m_irange.end()) <= indices.size(), "Invalid nugget I-range");
+
+			// Union of geometry data type
+			geom |= nug.m_geom;
+		}
+
+		// Vertex buffer
+		pr::vector<v4> pos;
+		{
+			pos.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				pos[i] = To<v4>(verts[i].pos);
+		}
+
+		// Colour buffer
+		pr::vector<Colour32> col;
+		if (AllSet(geom, EGeom::Colr))
+		{
+			col.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				col[i] = verts[i].col;
+		}
+
+		// Normals
+		pr::vector<v4> nrm;
+		if (AllSet(geom, EGeom::Norm))
+		{
+			nrm.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				nrm[i] = To<v4>(verts[i].norm);
+		}
+
+		// Texture coords
+		pr::vector<v2> tex;
+		if (AllSet(geom, EGeom::Tex0))
+		{
+			tex.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				tex[i] = To<v2>(verts[i].tex);
+		}
+
+		// Indices
+		auto& ind = indices;
+
+		// Create the model
+		auto attr  = ObjectAttributes(ELdrObject::Custom, name, Colour32(colour));
+		auto cdata = MeshCreationData()
+			.verts  (pos.data(), int(pos.size()))
+			.indices(ind.data(), int(ind.size()))
+			.nuggets(ngt.data(), int(ngt.size()))
+			.colours(col.data(), int(col.size()))
+			.normals(nrm.data(), int(nrm.size()))
+			.tex    (tex.data(), int(tex.size()));
+		auto obj = Create(m_rdr, attr, cdata, context_id);
+	
+		// Add to the sources
+		if (obj)
+			m_sources.Add(obj);
+
+		// Return the created object
+		return obj.get();
+	}
+
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
 	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)
@@ -196,6 +385,30 @@ namespace pr::rdr12
 	}
 	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+
+	// Create an LdrObject from the p3d model
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : GenerateGUID();
+
+		// Create an ldr object
+		ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = CreateP3D(m_rdr, attr, p3d_filepath, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : pr::GenerateGUID();
+
+		// Create an ldr object
+		ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = CreateP3D(m_rdr, attr, size, p3d_data, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
 
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)

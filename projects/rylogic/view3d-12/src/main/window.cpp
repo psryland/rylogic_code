@@ -13,6 +13,9 @@ namespace pr::rdr12
 {
 	constexpr int HeapCapacityView = 256;
 	constexpr int HeapCapacitySamp = 16;
+	constexpr int HeapIdxMsaaRtv = 0;
+	constexpr int HeapIdxMsaaDsv = 0;
+	constexpr int HeapIdxSwapRtv = 1;
 
 	// Constructor
 	Window::Window(Renderer& rdr, WndSettings const& settings)
@@ -120,7 +123,7 @@ namespace pr::rdr12
 			// Create a CPU descriptor heap for the back buffers (swap chain buffers + MSAA RT).
 			D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-				.NumDescriptors = s_cast<UINT>(m_swap_bb.size() + 1),
+				.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
 			Throw(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
@@ -315,12 +318,11 @@ namespace pr::rdr12
 		if (size.x <= 0 || size.y <= 0)
 			throw std::runtime_error("Back buffer size must be greater than zero");
 
-		auto queue = rdr().GfxQueue();
-		auto device = rdr().D3DDevice();
-
 		// No-op if not a resize
 		if (!force && BackBufferSize() == size)
 			return;
+
+		auto queue = rdr().GfxQueue();
 
 		// Flush any GPU commands that are still in flight
 		m_gsync.AddSyncPoint(queue);
@@ -348,103 +350,51 @@ namespace pr::rdr12
 
 		// Finished releasing references. Now to create new resources.
 
-		// Get the pointer and item size of the RTV descriptor heap.
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
-		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-
-		// Get the pointer and item size of the DSV descriptor heap.
-		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
-		auto dsv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-
 		// Swap chain render targets
 		if (m_swap_chain != nullptr)
 		{
-			// Resize the swap chain buffers
-			DXGI_SWAP_CHAIN_DESC scdesc = {};
-			Throw(m_swap_chain->GetDesc(&scdesc));
-			Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
-
-			for (int i = 0; i != s_cast<int>(m_swap_bb.size()); ++i)
-			{
-				auto& bb = m_swap_bb[i];
-				bb.m_wnd = this;
-				bb.m_sync_point = m_gsync.CompletedSyncPoint();
-
-				// Get the render target resource pointer
-				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
-				DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
-				DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
-
-				// Save the pointers to where the descriptors will be stored
-				bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV for each back buffer
-				bb.m_dsv = dsv_handle; dsv_handle.ptr += 0 * dsv_size; // zero DSVs for the swap chain back buffers
-
-				// Create RTVs for the back buffer resources.
-				auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{ .Format = m_rt_props.Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D };
-				device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
-
-				// Re-link the D2D device context to the back buffer
-				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
-				{
-					// Direct2D needs the DXGI version of the back buffer
-					D3DPtr<IDXGISurface> dxgi_back_buffer;
-					Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
-
-					// Create bitmap properties for the bitmap view of the back buffer
-					auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
-					auto dpi = Dpi();
-					bp.dpiX = dpi.x;
-					bp.dpiY = dpi.y;
-
-					// Wrap the back buffer as a bitmap for D2D
-					Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
-				}
-			}
+			CreateSwapChain(size);
 		}
 
 		// MSAA render target
 		if (auto& bb = m_msaa_bb; true)
 		{
-			bb.m_wnd = this;
-			bb.m_sync_point = m_gsync.CompletedSyncPoint();
+			CreateMSAA(bb, size);
+		}
+	}
 
-			// Render target
-			auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
-				.multisamp(m_multisamp)
-				.clear(m_rt_props);
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
-				&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
-			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-			DebugName(bb.m_render_target, "RenderTarget");
+	// Get/Set the multi sampling used.
+	MultiSamp Window::MultiSampling() const
+	{
+		return m_multisamp;
+	}
+	void Window::MultiSampling(MultiSamp ms)
+	{
+		if (MultiSampling() == ms)
+			return;
 
-			// Depth stencil
-			auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
-				.multisamp(m_multisamp)
-				.clear(m_ds_props);
-			Throw(device->CreateCommittedResource(
-				&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-				&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
-			DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			DebugName(bb.m_depth_stencil, "DepthStencil");
+		auto queue = rdr().GfxQueue();
+		auto size = BackBufferSize();
 
-			// Save the pointers to where the descriptors will be stored
-			bb.m_rtv = rtv_handle; rtv_handle.ptr += 1 * rtv_size; // one RTV stored after the swap chain RTVs
-			bb.m_dsv = dsv_handle; dsv_handle.ptr += 1 * dsv_size; // one DSV for the MSAA render target
+		// Flush any GPU commands that are still in flight
+		m_gsync.AddSyncPoint(queue);
+		m_gsync.Wait();
 
-			// Create RTV for the MSAA render target
-			auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{
-				.Format = m_rt_props.Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS,
-			};
-			device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
+		// Release the MSAA render target and depth stencil
+		if (auto& bb = m_msaa_bb; true)
+		{
+			m_res_state.Forget(bb.m_render_target.get());
+			m_res_state.Forget(bb.m_depth_stencil.get());
 
-			// Create the DSV for the MSAA depth stencil
-			auto dsvdesc = D3D12_DEPTH_STENCIL_VIEW_DESC{
-				.Format = m_ds_props.Format,
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS,
-			};
-			device->CreateDepthStencilView(bb.m_depth_stencil.get(), &dsvdesc, bb.m_dsv);
+			bb.m_render_target = nullptr;
+			bb.m_depth_stencil = nullptr;
+			bb.m_d2d_target = nullptr;
+		}
+
+		// Create MSAA render target
+		if (auto& bb = m_msaa_bb; true)
+		{
+			CreateMSAA(bb, size);
 		}
 	}
 
@@ -606,6 +556,113 @@ namespace pr::rdr12
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
 		frame.m_bb_main.m_sync_point = sync_point;
 		frame.m_bb_post.m_sync_point = sync_point;
+	}
+
+	// Create the MSAA render target and depth stencil
+	void Window::CreateMSAA(BackBuffer& bb, iv2 size)
+	{
+		auto device = rdr().D3DDevice();
+
+		bb.m_wnd = this;
+		bb.m_sync_point = m_gsync.CompletedSyncPoint();
+
+		// Render target
+		auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
+			.multisamp(m_multisamp)
+			.clear(m_rt_props);
+		Throw(device->CreateCommittedResource(
+			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
+			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+		DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+		DebugName(bb.m_render_target, "RenderTarget");
+
+		// Depth stencil
+		auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
+			.multisamp(m_multisamp)
+			.clear(m_ds_props);
+		Throw(device->CreateCommittedResource(
+			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
+		DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		DebugName(bb.m_depth_stencil, "DepthStencil");
+
+		// Save the pointer to where the RTV descriptor will be stored
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+		rtv_handle.ptr += HeapIdxMsaaRtv * rtv_size;
+		bb.m_rtv = rtv_handle;
+
+		// Save the pointer to where the DSV descriptor will be stored
+		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
+		auto dsv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+		dsv_handle.ptr += HeapIdxMsaaDsv * dsv_size;
+		bb.m_dsv = dsv_handle;
+
+		// Create RTV for the MSAA render target
+		auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{
+			.Format = m_rt_props.Format,
+			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS,
+		};
+		device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
+
+		// Create the DSV for the MSAA depth stencil
+		auto dsvdesc = D3D12_DEPTH_STENCIL_VIEW_DESC{
+			.Format = m_ds_props.Format,
+			.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS,
+		};
+		device->CreateDepthStencilView(bb.m_depth_stencil.get(), &dsvdesc, bb.m_dsv);
+	}
+
+	// Create the swap chain back buffers
+	void Window::CreateSwapChain(iv2 size)
+	{
+		auto device = rdr().D3DDevice();
+
+		DXGI_SWAP_CHAIN_DESC scdesc = {};
+		Throw(m_swap_chain->GetDesc(&scdesc));
+		Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
+
+		// Get the pointer and item size of the RTV descriptor heap.
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
+		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
+		rtv_handle.ptr += HeapIdxSwapRtv * rtv_size;
+
+		for (int i = 0; i != s_cast<int>(m_swap_bb.size()); ++i)
+		{
+			auto& bb = m_swap_bb[i];
+			bb.m_wnd = this;
+			bb.m_sync_point = m_gsync.CompletedSyncPoint();
+
+			// Get the render target resource pointer
+			Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
+			DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
+
+			// Save the pointers to where the descriptors will be stored
+			bb.m_rtv = rtv_handle; rtv_handle.ptr += rtv_size; // one RTV for each back buffer
+			bb.m_dsv = {};
+
+			// Create RTVs for the back buffer resources.
+			auto rtvdesc = D3D12_RENDER_TARGET_VIEW_DESC{ .Format = m_rt_props.Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D };
+			device->CreateRenderTargetView(bb.m_render_target.get(), &rtvdesc, bb.m_rtv);
+
+			// Re-link the D2D device context to the back buffer
+			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
+			{
+				// Direct2D needs the DXGI version of the back buffer
+				D3DPtr<IDXGISurface> dxgi_back_buffer;
+				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+
+				// Create bitmap properties for the bitmap view of the back buffer
+				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+				auto dpi = Dpi();
+				bp.dpiX = dpi.x;
+				bp.dpiY = dpi.y;
+
+				// Wrap the back buffer as a bitmap for D2D
+				Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
+			}
+		}
 	}
 }
 

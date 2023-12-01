@@ -159,6 +159,7 @@ namespace pr::rdr12
 	struct RenderStep;
 	struct RenderForward;
 	struct RenderSmap;
+	struct RenderRayCast;
 	struct DrawListElement;
 	struct BackBuffer;
 	struct PipeState;
@@ -221,6 +222,10 @@ namespace pr::rdr12
 
 	// Lighting
 	struct Light;
+
+	// Ray cast
+	struct HitTestRay;
+	struct HitTestResult;
 
 	// Utility
 	struct Lock;
@@ -313,8 +318,8 @@ namespace pr::rdr12
 	#define PR_ENUM(x)\
 		x(Default   ,= 0)\
 		x(Points    ,= 1)\
-		x(Wireframe ,= D3D12_FILL_MODE_WIREFRAME)\
-		x(Solid     ,= D3D12_FILL_MODE_SOLID)\
+		x(Wireframe ,= D3D12_FILL_MODE::D3D12_FILL_MODE_WIREFRAME)\
+		x(Solid     ,= D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID)\
 		x(SolidWire ,= 4)
 	PR_DEFINE_ENUM2(EFillMode , PR_ENUM);
 	#undef PR_ENUM
@@ -322,9 +327,9 @@ namespace pr::rdr12
 	// ECullMode
 	#define PR_ENUM(x)\
 		x(Default ,= 0)\
-		x(None    ,= D3D12_CULL_MODE_NONE)\
-		x(Front   ,= D3D12_CULL_MODE_FRONT)\
-		x(Back    ,= D3D12_CULL_MODE_BACK)
+		x(None    ,= D3D12_CULL_MODE::D3D12_CULL_MODE_NONE)\
+		x(Front   ,= D3D12_CULL_MODE::D3D12_CULL_MODE_FRONT)\
+		x(Back    ,= D3D12_CULL_MODE::D3D12_CULL_MODE_BACK)
 	PR_DEFINE_ENUM2(ECullMode , PR_ENUM);
 	#undef PR_ENUM
 

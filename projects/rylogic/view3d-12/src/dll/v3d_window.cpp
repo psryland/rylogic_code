@@ -22,29 +22,29 @@ namespace pr::rdr12
 	// View3d Window ****************************
 	V3dWindow::V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts)
 		:m_dll(&context)
-		,m_hwnd(hwnd)
-		,m_wnd(context.m_rdr, ToWndSettings(hwnd, context.m_rdr.Settings(), opts))
-		,m_scene(m_wnd)
-		,m_objects()
-		,m_gizmos()
-		,m_guids()
-		,m_focus_point()
-		,m_origin_point()
-		,m_bbox_model()
-		,m_selection_box()
-		,m_visible_objects()
-		,m_settings()
-		,m_anim_data()
-		,m_bbox_scene(BBox::Reset())
-		,m_global_pso()
-		,m_main_thread_id(std::this_thread::get_id())
-		,m_invalidated(false)
-		,ReportError()
-		,OnSettingsChanged()
-		,OnInvalidated()
-		,OnRendering()
-		,OnSceneChanged()
-		,OnAnimationEvent()
+		, m_hwnd(hwnd)
+		, m_wnd(context.m_rdr, ToWndSettings(hwnd, context.m_rdr.Settings(), opts))
+		, m_scene(m_wnd)
+		, m_objects()
+		, m_gizmos()
+		, m_guids()
+		, m_focus_point()
+		, m_origin_point()
+		, m_bbox_model()
+		, m_selection_box()
+		, m_visible_objects()
+		, m_settings()
+		, m_anim_data()
+		, m_bbox_scene(BBox::Reset())
+		, m_global_pso()
+		, m_main_thread_id(std::this_thread::get_id())
+		, m_invalidated(false)
+		, ReportError()
+		, OnSettingsChanged()
+		, OnInvalidated()
+		, OnRendering()
+		, OnSceneChanged()
+		, OnAnimationEvent()
 	{
 		try
 		{
@@ -58,14 +58,14 @@ namespace pr::rdr12
 				m_scene.m_cam.Aspect(rt_area.x / float(rt_area.y));
 
 			// The light for the scene
-			m_scene.m_global_light.m_type           = ELight::Directional;
-			m_scene.m_global_light.m_ambient        = Colour32(0xFF404040U);
-			m_scene.m_global_light.m_diffuse        = Colour32(0xFF404040U);
-			m_scene.m_global_light.m_specular       = Colour32(0xFF808080U);
+			m_scene.m_global_light.m_type = ELight::Directional;
+			m_scene.m_global_light.m_ambient = Colour32(0xFF404040U);
+			m_scene.m_global_light.m_diffuse = Colour32(0xFF404040U);
+			m_scene.m_global_light.m_specular = Colour32(0xFF808080U);
 			m_scene.m_global_light.m_specular_power = 1000.0f;
-			m_scene.m_global_light.m_direction      = -v4ZAxis;
-			m_scene.m_global_light.m_on             = true;
-			m_scene.m_global_light.m_cam_relative   = true;
+			m_scene.m_global_light.m_direction = -v4ZAxis;
+			m_scene.m_global_light.m_on = true;
+			m_scene.m_global_light.m_cam_relative = true;
 
 			// Create the stock models
 			CreateStockObjects();
@@ -78,15 +78,13 @@ namespace pr::rdr12
 	}
 	V3dWindow::~V3dWindow()
 	{
-		#if 0 // todo
-		AnimControl(EView3DAnimCommand::Stop);
+		AnimControl(view3d::EAnimCommand::Stop);
 
-		Close();
+		m_hwnd = 0;
 		m_scene.RemoveInstance(m_focus_point);
 		m_scene.RemoveInstance(m_origin_point);
 		m_scene.RemoveInstance(m_bbox_model);
 		m_scene.RemoveInstance(m_selection_box);
-		#endif
 	}
 
 	// Renderer access
@@ -135,6 +133,12 @@ namespace pr::rdr12
 		}
 	}
 
+	// The DPI of the monitor that this window is displayed on
+	v2 V3dWindow::Dpi() const
+	{
+		return m_wnd.Dpi();
+	}
+
 	// Get/Set the back buffer size
 	iv2 V3dWindow::BackBufferSize() const
 	{
@@ -167,15 +171,15 @@ namespace pr::rdr12
 	view3d::Viewport V3dWindow::Viewport() const
 	{
 		auto& vp = m_scene.m_viewport;
-		return view3d::Viewport {
-			.m_x         = vp.TopLeftX,
-			.m_y         = vp.TopLeftY,
-			.m_width     = vp.Width,
-			.m_height    = vp.Height,
+		return view3d::Viewport{
+			.m_x = vp.TopLeftX,
+			.m_y = vp.TopLeftY,
+			.m_width = vp.Width,
+			.m_height = vp.Height,
 			.m_min_depth = vp.MinDepth,
 			.m_max_depth = vp.MaxDepth,
-			.m_screen_w  = vp.ScreenW,
-			.m_screen_h  = vp.ScreenH,
+			.m_screen_w = vp.ScreenW,
+			.m_screen_h = vp.ScreenH,
 		};
 	}
 	void V3dWindow::Viewport(view3d::Viewport const& vp)
@@ -215,7 +219,7 @@ namespace pr::rdr12
 			break;
 		}
 	}
-	
+
 	// Return true if 'object' is part of this scene
 	bool V3dWindow::Has(LdrObject const* object, bool search_children) const
 	{
@@ -226,7 +230,7 @@ namespace pr::rdr12
 		for (auto& obj : m_objects)
 		{
 			// 'Apply' returns false if a quick out occurred (i.e. 'object' was found)
-			if (obj->Apply([=](auto* ob){ return ob != object; }, name)) continue;
+			if (obj->Apply([=](auto* ob) { return ob != object; }, name)) continue;
 			return true;
 		}
 		return false;
@@ -257,13 +261,13 @@ namespace pr::rdr12
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		return s_cast<int>(m_guids.size());
 	}
-	
+
 	// Return the bounding box of objects in this scene
 	BBox V3dWindow::SceneBounds(view3d::ESceneBounds bounds, int except_count, GUID const* except) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		std::span<GUID const> except_arr(except, except_count);
-		auto pred = [](LdrObject const& ob){ return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
 
 		BBox bbox;
 		switch (bounds)
@@ -456,7 +460,7 @@ namespace pr::rdr12
 		{
 			// Remove objects in the 'remove' set
 			auto old_count = m_objects.size();
-			pr::erase_if(m_objects, [&](auto* obj){ return removed.count(obj->m_context_id); });
+			pr::erase_if(m_objects, [&](auto* obj) { return removed.count(obj->m_context_id); });
 
 			// Remove context ids
 			if (!keep_context_ids)
@@ -532,8 +536,8 @@ namespace pr::rdr12
 			v_camera.Aspect(aspect_v);
 
 			// Get the scaling factors from 'm_camera' to 'v_camera'
-			auto viewarea_c = scene_cam.ViewArea(fd);
-			auto viewarea_v = v_camera.ViewArea(fd);
+			auto viewarea_c = scene_cam.ViewRectAtDistance(fd);
+			auto viewarea_v = v_camera.ViewRectAtDistance(fd);
 
 			if (AllSet(m_visible_objects, EStockObject::FocusPoint))
 			{
@@ -583,19 +587,19 @@ namespace pr::rdr12
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)
 		{
-			#if 0 // todo, global pso?
+#if 0 // todo, global pso?
 			// Apply the fill mode and cull mode to user models
 			obj->Apply([=](LdrObject* obj)
+			{
+				if (obj->m_model == nullptr || AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude)) return true;
+				for (auto& nug : obj->m_model->m_nuggets)
 				{
-					if (obj->m_model == nullptr || AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude)) return true;
-					for (auto& nug : obj->m_model->m_nuggets)
-					{
-						nug.FillMode(m_fill_mode);
-						nug.CullMode(m_cull_mode);
-					}
-					return true;
-				}, "");
-			#endif
+					nug.FillMode(m_fill_mode);
+					nug.CullMode(m_cull_mode);
+				}
+				return true;
+			}, "");
+#endif
 
 			// Recursively add the object to the scene
 			obj->AddToScene(m_scene, anim_time);
@@ -611,7 +615,7 @@ namespace pr::rdr12
 			giz->AddToScene(m_scene);
 		}
 
-		#if 0
+#if 0
 		// Add the measure tool objects if the window is visible
 		if (m_measure_tool_ui != nullptr && LdrMeasureUI().Visible() && LdrMeasureUI().Gfx())
 			LdrMeasureUI().Gfx()->AddToScene(m_scene);
@@ -619,7 +623,7 @@ namespace pr::rdr12
 		// Add the angle tool objects if the window is visible
 		if (m_angle_tool_ui != nullptr && LdrAngleUI().Visible() && LdrAngleUI().Gfx())
 			LdrAngleUI().Gfx()->AddToScene(m_scene);
-		#endif
+#endif
 
 		// Render the scene
 		auto frame = m_wnd.NewFrame();
@@ -635,7 +639,7 @@ namespace pr::rdr12
 	{
 		if (m_hwnd != nullptr)
 			::InvalidateRect(m_hwnd, rect, erase);
-		
+
 		if (!m_invalidated)
 			OnInvalidated(this);
 
@@ -652,6 +656,32 @@ namespace pr::rdr12
 	{
 		m_invalidated = false;
 	}
+		
+	// Reset the scene camera, using it's current forward and up directions, to view all objects in the scene
+	void V3dWindow::ResetView()
+	{
+		auto c2w = m_scene.m_cam.CameraToWorld();
+		ResetView(-c2w.z, c2w.y);
+	}
+
+	// Reset the scene camera to view all objects in the scene
+	void V3dWindow::ResetView(v4 const& forward, v4 const& up, float dist, bool preserve_aspect, bool commit)
+	{
+		auto bbox = SceneBounds(view3d::ESceneBounds::All, 0, nullptr);
+		ResetView(bbox, forward, up, dist, preserve_aspect, commit);
+	}
+
+	// Reset the camera to view a bbox
+	void V3dWindow::ResetView(BBox const& bbox, v4 const& forward, v4 const& up, float dist, bool preserve_aspect, bool commit)
+	{
+		m_scene.m_cam.View(bbox, forward, up, dist, preserve_aspect, commit);
+
+		auto settings = view3d::ESettings::Camera_Position;
+		if (dist != 0) settings|= view3d::ESettings::Camera_FocusDist;
+		if (!preserve_aspect) settings |= view3d::ESettings::Camera_Aspect;
+		OnSettingsChanged(this, settings);
+		Invalidate();
+	}
 
 	// General mouse navigation
 	// 'ss_pos' is the mouse pointer position in 'window's screen space
@@ -664,7 +694,7 @@ namespace pr::rdr12
 	bool V3dWindow::MouseNavigate(v2 ss_point, camera::ENavOp nav_op, bool nav_start_or_end)
 	{
 		auto nss_point = m_scene.m_viewport.SSPointToNSSPoint(ss_point);
-		
+
 		// This is true-ish. 'ss_pos' is allowed to be outside the window area which breaks this check
 		//if (nss_point.x < -1.0 || nss_point.x > +1.0 || nss_point.y < -1.0 || nss_point.y > +1.0)
 		//	throw std::runtime_error("Window viewport has not been set correctly. The ScreenW/H values should match the window size (not the viewport size)");
@@ -698,7 +728,7 @@ namespace pr::rdr12
 		auto gizmo_in_use = false;
 
 		// Check any gizmos in the scene for interaction with the mouse
-		#if 0 // todo, gizmo mouse wheel behaviour
+#if 0 // todo, gizmo mouse wheel behaviour
 		for (auto& giz : m_gizmos)
 		{
 			refresh |= giz->MouseControlZ(m_scene.m_cam, nss_point, dist);
@@ -706,7 +736,7 @@ namespace pr::rdr12
 			if (gizmo_in_use)
 				break;
 		}
-		#endif
+#endif
 
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
@@ -732,6 +762,46 @@ namespace pr::rdr12
 		OnSettingsChanged(this, view3d::ESettings::Scene_BackgroundColour);
 		Invalidate();
 	}
+	
+	// Get/Set the window fill mode
+	EFillMode V3dWindow::FillMode() const
+	{
+		auto fill_mode = m_global_pso.Find<EPipeState::FillMode>();
+		return fill_mode != nullptr ? s_cast<EFillMode>(*fill_mode) : EFillMode::Default;
+	}
+	void V3dWindow::FillMode(EFillMode fill_mode)
+	{
+		if (FillMode() == fill_mode)
+			return;
+
+		if (fill_mode != EFillMode::Default)
+			m_global_pso.Set<EPipeState::FillMode>(s_cast<D3D12_FILL_MODE>(fill_mode));
+		else
+			m_global_pso.Clear<EPipeState::FillMode>();
+
+		OnSettingsChanged(this, view3d::ESettings::Scene_FillMode);
+		Invalidate();
+	}
+
+	// Get/Set the window cull mode
+	ECullMode V3dWindow::CullMode() const
+	{
+		auto cull_mode = m_global_pso.Find<EPipeState::CullMode>();
+		return cull_mode != nullptr ? s_cast<ECullMode>(*cull_mode) : ECullMode::Default;
+	}
+	void V3dWindow::CullMode(ECullMode cull_mode)
+	{
+		if (CullMode() == cull_mode)
+			return;
+
+		if (cull_mode != ECullMode::Default)
+			m_global_pso.Set<EPipeState::CullMode>(s_cast<D3D12_CULL_MODE>(cull_mode));
+		else
+			m_global_pso.Clear<EPipeState::CullMode>();
+
+		OnSettingsChanged(this, view3d::ESettings::Scene_CullMode);
+		Invalidate();
+	}
 
 	// Enable/Disable orthographic projection
 	bool V3dWindow::Orthographic() const
@@ -745,6 +815,7 @@ namespace pr::rdr12
 
 		m_scene.m_cam.m_orthographic = on;
 		OnSettingsChanged(this, view3d::ESettings::Camera_Orthographic);
+		Invalidate();
 	}
 
 	// Get/Set the distance to the camera focus point
@@ -759,6 +830,7 @@ namespace pr::rdr12
 
 		m_scene.m_cam.FocusDist(dist);
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
+		Invalidate();
 	}
 
 	// Get/Set the camera focus point position
@@ -770,9 +842,149 @@ namespace pr::rdr12
 	{
 		if (FocusPoint() != position)
 			return;
-		
+
 		m_scene.m_cam.FocusPoint(position);
 		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist);
+		Invalidate();
+	}
+
+	// Get/Set the aspect ratio for the camera field of view
+	float V3dWindow::Aspect() const
+	{
+		return s_cast<float>(m_scene.m_cam.Aspect());
+	}
+	void V3dWindow::Aspect(float aspect)
+	{
+		if (Aspect() == aspect)
+			return;
+
+		m_scene.m_cam.Aspect(aspect);
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_Aspect);
+		Invalidate();
+	}
+
+	// Get/Set the camera field of view. null means don't change
+	v2 V3dWindow::Fov() const
+	{
+		return v2(
+			s_cast<float>(m_scene.m_cam.FovX()),
+			s_cast<float>(m_scene.m_cam.FovY()));
+	}
+	void V3dWindow::Fov(float* fovX, float* fovY)
+	{
+		auto fov = Fov();
+		if (fovX != nullptr) fov.x = *fovX;
+		if (fovY != nullptr) fov.y = *fovY;
+		if (fov == Fov())
+			return;
+
+		m_scene.m_cam.Fov(fov.x, fov.y);
+		OnSettingsChanged(this, view3d::ESettings::Camera_Fov);
+		Invalidate();
+	}
+
+	// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+	void V3dWindow::BalanceFov(float fov)
+	{
+		m_scene.m_cam.BalanceFov(fov);
+		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist | view3d::ESettings::Camera_Fov);
+		Invalidate();
+	}
+
+	// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
+	v2 V3dWindow::ViewRectAtDistance(float dist) const
+	{
+		return m_scene.m_cam.ViewRectAtDistance(dist);
+	}
+	void V3dWindow::ViewRectAtDistance(v2_cref rect, float focus_dist)
+	{
+		if (ViewRectAtDistance(focus_dist) == rect)
+			return;
+
+		m_scene.m_cam.ViewRectAtDistance(rect, focus_dist);
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_FocusDist | view3d::ESettings::Camera_Fov);
+		Invalidate();
+	}
+
+	// Get/Set the near and far clip planes for the camera
+	v2 V3dWindow::ClipPlanes(bool focus_relative) const
+	{
+		return m_scene.m_cam.ClipPlanes(focus_relative);
+	}
+	void V3dWindow::ClipPlanes(float* near_, float* far_, bool focus_relative)
+	{
+		auto cp = ClipPlanes(focus_relative);
+		if (near_ != nullptr) cp.x = *near_;
+		if (far_ != nullptr) cp.y = *far_;
+		if (ClipPlanes(focus_relative) == cp)
+			return;
+
+		m_scene.m_cam.ClipPlanes(cp.x, cp.y, focus_relative);
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_ClipPlanes);
+		Invalidate();
+	}
+
+	// Get/Set the scene camera lock mask
+	camera::ELockMask V3dWindow::LockMask() const
+	{
+		return m_scene.m_cam.m_lock_mask;
+	}
+	void V3dWindow::LockMask(camera::ELockMask mask)
+	{
+		if (LockMask() == mask)
+			return;
+
+		m_scene.m_cam.m_lock_mask = static_cast<camera::ELockMask>(mask);
+		
+		OnSettingsChanged(this, view3d::ESettings::Camera_LockMask);
+		Invalidate();
+	}
+
+	// Get/Set the camera align axis
+	v4 V3dWindow::AlignAxis() const
+	{
+		return m_scene.m_cam.m_align;
+	}
+	void V3dWindow::AlignAxis(v4_cref axis)
+	{
+		if (AlignAxis() == axis)
+			return;
+
+		m_scene.m_cam.Align(axis);
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_AlignAxis);
+		Invalidate();
+	}
+	
+	// Reset to the default zoom
+	void V3dWindow::ResetZoom()
+	{
+		auto z = Zoom();
+		m_scene.m_cam.ResetZoom();
+		if (Zoom() == z)
+			return;
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_Fov);
+		Invalidate();
+	}
+	
+	// Get/Set the FOV zoom
+	float V3dWindow::Zoom() const
+	{
+		return s_cast<float>(m_scene.m_cam.Zoom());
+	}
+	void V3dWindow::Zoom(float zoom)
+	{
+		if (Zoom() == zoom)
+			return;
+
+		m_scene.m_cam.Zoom(zoom, true);
+
+		OnSettingsChanged(this, view3d::ESettings::Camera_Fov);
+		Invalidate();
 	}
 
 	// Get/Set the global scene light
@@ -807,16 +1019,17 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the global environment map for this window
-	view3d::CubeMap V3dWindow::EnvMap() const
+	TextureCube* V3dWindow::EnvMap() const
 	{
 		return m_scene.m_global_envmap.get();
 	}
-	void V3dWindow::EnvMap(view3d::CubeMap env_map)
+	void V3dWindow::EnvMap(TextureCube* env_map)
 	{
 		if (EnvMap() == env_map)
 			return;
 
 		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
+
 		OnSettingsChanged(this, view3d::ESettings::Scene_EnvMap);
 		Invalidate();
 	}
@@ -870,6 +1083,193 @@ namespace pr::rdr12
 			}, "");
 		}
 		SetSelectionBox(bbox);
+	}
+
+	// Get/Set the window background colour
+	int V3dWindow::MultiSampling() const
+	{
+		return m_wnd.MultiSampling().Count;
+	}
+	void V3dWindow::MultiSampling(int multisampling)
+	{
+		if (MultiSampling() == multisampling)
+			return;
+
+		m_wnd.MultiSampling(MultiSamp(multisampling));
+
+		OnSettingsChanged(this, view3d::ESettings::Scene_Multisampling);
+		Invalidate();
+	}
+
+	// Control animation
+	void V3dWindow::AnimControl(view3d::EAnimCommand command, seconds_t time)
+	{
+		using namespace std::chrono;
+		static constexpr auto tick_size_s = seconds_t(0.01);
+
+		// Callback function that is polled as fast as the message queue will allow
+		static auto const AnimTick = [](void* ctx)
+		{
+			auto& me = *reinterpret_cast<V3dWindow*>(ctx);
+			me.Invalidate();
+			me.OnAnimationEvent(&me, view3d::EAnimCommand::Step, me.m_anim_data.m_clock.load().count());
+		};
+
+		switch (command)
+		{
+			case view3d::EAnimCommand::Reset:
+			{
+				AnimControl(view3d::EAnimCommand::Stop);
+				assert(IsFinite(time.count()));
+				m_anim_data.m_clock.store(time);
+				Invalidate();
+				break;
+			}
+			case view3d::EAnimCommand::Play:
+			{
+				AnimControl(view3d::EAnimCommand::Stop);
+				auto rate = time.count();
+				auto issue = m_anim_data.m_issue.load();
+				m_anim_data.m_thread = std::thread([this, issue, rate]
+				{
+					// 'time' is the seconds/second step rate
+					auto start = system_clock::now();
+					for (; ; std::this_thread::sleep_for(tick_size_s))
+					{
+						auto iss = m_anim_data.m_issue.load();
+						if (iss != issue)
+							break;
+
+						// Every loop is a tick, and the step size is 'time'. 
+						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed' 
+						auto increment = rate == 0.0 ? system_clock::now() - start : tick_size_s * rate;
+						start = system_clock::now();
+
+						// Update the animation clock
+						m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
+					}
+				});
+				m_wnd.m_rdr->AddPollCB({ AnimTick, this });
+				break;
+			}
+			case view3d::EAnimCommand::Stop:
+			{
+				m_wnd.m_rdr->RemovePollCB({ AnimTick, this });
+				++m_anim_data.m_issue;
+				if (m_anim_data.m_thread.joinable())
+					m_anim_data.m_thread.join();
+
+				break;
+			}
+			case view3d::EAnimCommand::Step:
+			{
+				AnimControl(view3d::EAnimCommand::Stop);
+				m_anim_data.m_clock = m_anim_data.m_clock.load() + time;
+				Invalidate();
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error(FmtS("Unknown animation command: %d", command));
+			}
+		}
+
+		// Notify of the animation event
+		OnAnimationEvent(this, command, m_anim_data.m_clock.load().count());
+	}
+
+	// True if animation is currently active
+	bool V3dWindow::Animating() const
+	{
+		return m_anim_data.m_thread.joinable();
+	}
+	
+	// Get/Set the value of the animation clock
+	seconds_t V3dWindow::AnimTime() const
+	{
+		return m_anim_data.m_clock.load();
+	}
+	void V3dWindow::AnimTime(seconds_t clock)
+	{
+		assert(IsFinite(clock.count()) && clock.count() >= 0);
+		m_anim_data.m_clock.store(clock);
+	}
+
+	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances)
+	{
+		if (rays.size() != hits.size())
+			throw std::runtime_error("There should be a hit object for each ray");
+
+		// Set up the ray cast
+		auto ray_casts = pr::vector<HitTestRay>{};
+		for (auto& ray : rays)
+		{
+			ray_casts.push_back(HitTestRay {
+				.m_ws_origin = To<v4>(ray.m_ws_origin),
+				.m_ws_direction = To<v4>(ray.m_ws_direction),
+			});
+		}
+
+		// Initialise the results
+		auto const invalid = view3d::HitTestResult{.m_distance = maths::float_max};
+		for (auto& r : hits)
+			r = invalid;
+
+		// Do the ray casts into the scene and save the results
+		m_scene.HitTest(ray_casts, snap_distance, static_cast<EHitTestFlags>(flags), instances, [=](HitTestResult const& hit)
+		{
+			// Check that 'hit.m_instance' is a valid instance in this scene.
+			// It could be a child instance, we need to search recursively for a match
+			auto ldr_obj = cast<LdrObject>(hit.m_instance);
+
+			// Not an object in this scene, keep looking
+			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
+			if (!Has(ldr_obj, true))
+				return true;
+
+			// Not visible to hit tests, keep looking
+			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
+				return true;
+
+			// The intercepts are already sorted from nearest to furtherest.
+			// So we can just accept the first intercept as the hit test.
+
+			// Save the hit
+			auto& result = hits[hit.m_ray_index];
+			result.m_ws_ray_origin    = To<view3d::Vec4>(hit.m_ws_origin);
+			result.m_ws_ray_direction = To<view3d::Vec4>(hit.m_ws_direction);
+			result.m_ws_intercept     = To<view3d::Vec4>(hit.m_ws_intercept);
+			result.m_distance         = hit.m_distance;
+			result.m_obj              = const_cast<view3d::Object>(ldr_obj);
+			result.m_snap_type        = static_cast<view3d::ESnapType>(hit.m_snap_type);
+			return false;
+		});
+	}
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count)
+	{
+		// Create an instances function based on the given list of objects
+		auto beg = &objects[0];
+		auto end = beg + object_count;
+		auto instances = [&]() -> BaseInstance const*
+		{
+			if (beg == end) return nullptr;
+			auto* inst = *beg++;
+			return &inst->m_base;
+		};
+		HitTest(rays, hits, snap_distance, flags, instances);
+	}
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+	{
+		// Create an instances function based on the context ids
+		auto beg = std::begin(m_scene.m_instances);
+		auto end = std::end(m_scene.m_instances);
+		auto instances = [&]() -> BaseInstance const*
+		{
+			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
+			return beg != end ? *beg++ : nullptr;
+		};
+		HitTest(rays, hits, snap_distance, flags, instances);
 	}
 
 	// Create stock models such as the focus point, origin, etc
