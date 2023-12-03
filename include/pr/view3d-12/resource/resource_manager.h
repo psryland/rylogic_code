@@ -89,7 +89,6 @@ namespace pr::rdr12
 		// Create a new sampler instance
 		SamplerPtr GetSampler(SamplerDesc const& desc);
 		SamplerPtr GetSampler(EStockSampler id);
-		SamplerPtr FindSampler(RdrId id) const;
 
 		// Create a new nugget
 		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);

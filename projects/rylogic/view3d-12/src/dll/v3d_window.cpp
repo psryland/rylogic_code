@@ -5,6 +5,7 @@
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "view3d-12/src/dll/context.h"
 
 namespace pr::rdr12
@@ -1270,6 +1271,88 @@ namespace pr::rdr12
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
+	}
+
+	// Show/Hide the focus point
+	bool V3dWindow::FocusPointVisible() const
+	{
+		return AllSet(m_visible_objects, EStockObject::FocusPoint);
+	}
+	void V3dWindow::FocusPointVisible(bool vis)
+	{
+		if (FocusPointVisible() == vis)
+			return;
+
+		m_visible_objects = SetBits(m_visible_objects, EStockObject::FocusPoint, vis);
+
+		OnSettingsChanged(this, view3d::ESettings::General_FocusPointVisible);
+		Invalidate();
+	}
+
+	// Show/Hide the bounding boxes
+	bool V3dWindow::BBoxesVisible() const
+	{
+		return m_wnd.m_diag.m_bboxes_visible;
+	}
+	void V3dWindow::BBoxesVisible(bool vis)
+	{
+		if (BBoxesVisible() == vis)
+			return;
+
+		m_wnd.m_diag.m_bboxes_visible = vis;
+
+		OnSettingsChanged(this, view3d::ESettings::Diagnostics_BBoxesVisible);
+		Invalidate();
+	}
+
+	// Get/Set the length of the displayed vertex normals
+	float V3dWindow::NormalsLength() const
+	{
+		return m_wnd.m_diag.m_normal_lengths;
+	}
+	void V3dWindow::NormalsLength(float length)
+	{
+		if (NormalsLength() == length)
+			return;
+
+		m_wnd.m_diag.m_normal_lengths = length;
+
+		OnSettingsChanged(this, view3d::ESettings::Diagnostics_NormalsLength);
+		Invalidate();
+	}
+	
+	// Get/Set the colour of the displayed vertex normals
+	Colour32 V3dWindow::NormalsColour() const
+	{
+		return m_wnd.m_diag.m_normal_colour;
+	}
+	void V3dWindow::NormalsColour(Colour32 colour)
+	{
+		if (NormalsColour() == colour)
+			return;
+
+		m_wnd.m_diag.m_normal_colour = colour;
+
+		OnSettingsChanged(this, view3d::ESettings::Diagnostics_NormalsColour);
+		Invalidate();
+	}
+
+	// Get/Set the colour of the displayed vertex normals
+	v2 V3dWindow::FillModePointsSize() const
+	{
+		auto shdr = static_cast<shaders::PointSpriteGS const*>(m_wnd.m_diag.m_gs_fillmode_points.get());
+		return shdr->m_size;
+	}
+	void V3dWindow::FillModePointsSize(v2 size)
+	{
+		if (FillModePointsSize() == size)
+			return;
+		
+		auto shdr = static_cast<shaders::PointSpriteGS*>(m_wnd.m_diag.m_gs_fillmode_points.get());
+		shdr->m_size = size;
+		
+		OnSettingsChanged(this, view3d::ESettings::Diagnostics_FillModePointsSize);
+		Invalidate();
 	}
 
 	// Create stock models such as the focus point, origin, etc

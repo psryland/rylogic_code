@@ -27,6 +27,7 @@
 #include "pr/maths/convex_hull.h"
 #include "pr/script/forward.h"
 #include "pr/storage/csv.h"
+
 //#include <string>
 //#include <sstream>
 //#include <array>
@@ -6057,10 +6058,9 @@ namespace pr::rdr12
 		}, name);
 	}
 
-	// Set the texture on this object or child objects matching 'name' (see Apply)
-	// Note for 'difference-mode' drawlist management: if the object is currently in
-	// one or more drawlists (i.e. added to a scene) it will need to be removed and
-	// re-added so that the sort order is correct.
+	// Set the texture on this object or child objects matching 'name' (see Apply).
+	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
 	void LdrObject::SetTexture(Texture2D* tex, char const* name)
 	{
 		Apply([=](LdrObject* o)
@@ -6076,6 +6076,22 @@ namespace pr::rdr12
 		}, name);
 	}
 
+	// Set the sampler on the nuggets of this object or child objects matching 'name' (see Apply).
+	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
+	void LdrObject::SetSampler(Sampler* sam, char const* name)
+	{
+		Apply([=](LdrObject* o)
+		{
+			if (o->m_model == nullptr) return true;
+			for (auto& nug : o->m_model->m_nuggets)
+			{
+				nug.m_sam_diffuse = SamplerPtr(sam, true);
+			}
+
+			return true;
+		}, name);
+	}
 	// Return the bounding box for this object in model space
 	// To convert this to parent space multiply by 'm_o2p'
 	// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)

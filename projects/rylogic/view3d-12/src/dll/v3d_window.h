@@ -266,6 +266,28 @@ namespace pr::rdr12
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+	
+		// Show/Hide the focus point
+		bool FocusPointVisible() const;
+		void FocusPointVisible(bool vis);
+
+		// Show/Hide the bounding boxes
+		bool BBoxesVisible() const;
+		void BBoxesVisible(bool vis);
+
+		// Get/Set the length of the displayed vertex normals
+		float NormalsLength() const;
+		void NormalsLength(float length);
+		
+		// Get/Set the colour of the displayed vertex normals
+		Colour32 NormalsColour() const;
+		void NormalsColour(Colour32 colour);
+
+		// Get/Set the colour of the displayed vertex normals
+		v2 FillModePointsSize() const;
+		void FillModePointsSize(v2 size);
+
+	private:
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockObjects();

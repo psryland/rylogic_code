@@ -14,9 +14,12 @@
 //  stack of error handlers.
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/model/model.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
+#include "pr/view3d-12/sampler/sampler_desc.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
@@ -1508,6 +1511,202 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(view3d::Object object)
 	CatchAndReport(View3D_ObjectDelete, ,);
 }
 
+// Create an instance of 'obj'
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateInstance(view3d::Object existing)
+{
+	try
+	{
+		DllLockGuard;
+		auto obj = CreateInstance(existing);
+		if (obj) Dll().m_sources.Add(obj);
+		return obj.get();
+	}
+	CatchAndReport(View3D_ObjectCreateInstance, , {});
+}
+
+// Return the context id that this object belongs to
+VIEW3D_API GUID __stdcall View3D_ObjectContextIdGet(view3d::Object object)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->m_context_id;
+	}
+	CatchAndReport(View3D_ObjectContextIdGet, , {});
+}
+
+// Return the root object of 'object' (possibly itself)
+VIEW3D_API view3d::Object __stdcall View3D_ObjectGetRoot(view3d::Object object)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		auto p = object;
+		for (; p->m_parent != nullptr; p = p->m_parent) {}
+		return p;
+	}
+	CatchAndReport(View3D_ObjectGetRoot, , nullptr);
+}
+
+// Return the immediate parent of 'object'
+VIEW3D_API view3d::Object __stdcall View3D_ObjectGetParent(view3d::Object object)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->m_parent;
+	}
+	CatchAndReport(View3D_ObjectGetParent, , nullptr);
+}
+
+// Return a child object of 'object'
+VIEW3D_API view3d::Object __stdcall View3D_ObjectGetChildByName(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->Child(name);
+	}
+	CatchAndReport(View3D_ObjectGetChildByName, , nullptr);
+}
+VIEW3D_API view3d::Object __stdcall View3D_ObjectGetChildByIndex(view3d::Object object, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return object->Child(index);
+	}
+	CatchAndReport(View3D_ObjectGetChildByIndex, , nullptr);
+}
+
+// Return the number of child objects of 'object'
+VIEW3D_API int __stdcall View3D_ObjectChildCount(view3d::Object object)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return int(object->m_child.size());
+	}
+	CatchAndReport(View3D_ObjectChildCount, object, 0);
+}
+
+// Enumerate the child objects of 'object'. (Not recursive)
+VIEW3D_API void __stdcall View3D_ObjectEnumChildren(view3d::Object object, view3d::EnumObjectsCB enum_objects_cb, void* ctx)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		for (auto& child : object->m_child)
+		{
+			if (enum_objects_cb(ctx, child.get())) continue;
+			break;
+		}
+	}
+	CatchAndReport(View3D_ObjectEnumChildren, object, );
+}
+
+// Get/Set the name of 'object'
+VIEW3D_API BSTR __stdcall View3D_ObjectNameGetBStr(view3d::Object object)
+{
+	try
+	{
+		DllLockGuard;
+		auto name = Widen(object->m_name);
+		return ::SysAllocStringLen(name.c_str(), UINT(name.size()));
+	}
+	CatchAndReport(View3D_ObjectNameGetBStr, , BSTR());
+}
+VIEW3D_API char const* __stdcall View3D_ObjectNameGet(view3d::Object object)
+{
+	try
+	{
+		DllLockGuard;
+		return object->m_name.c_str();
+	}
+	CatchAndReport(View3D_ObjectNameGet, , nullptr);
+}
+VIEW3D_API void __stdcall View3D_ObjectNameSet(view3d::Object object, char const* name)
+{
+	try
+	{
+		DllLockGuard;
+		object->m_name.assign(name);
+	}
+	CatchAndReport(View3D_ObjectNameGet, ,);
+}
+
+// Get the type of 'object'
+VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(view3d::Object object)
+{
+	try
+	{
+		DllLockGuard;
+		auto name = pr::Enum<ELdrObject>::ToStringW(object->m_type);
+		return ::SysAllocStringLen(name, UINT(wcslen(name)));
+	}
+	CatchAndReport(View3D_ObjectTypeGetBStr, , BSTR());
+}
+VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(view3d::Object object)
+{
+	try
+	{
+		DllLockGuard;
+		return Enum<ELdrObject>::ToStringA(object->m_type);
+	}
+	CatchAndReport(View3D_ObjectTypeGet, , nullptr);
+}
+
+// Get/Set the current or base colour of an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API view3d::Colour __stdcall View3D_ObjectColourGet(view3d::Object object, BOOL base_colour, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return To<view3d::Colour>(object->Colour(base_colour != 0, name));
+	}
+	CatchAndReport(View3D_ObjectColourGet, ,view3d::Colour(0xFFFFFFFF));
+}
+VIEW3D_API void __stdcall View3D_ObjectColourSet(view3d::Object object, view3d::Colour colour, UINT32 mask, char const* name, view3d::EColourOp op, float op_value)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Colour(Colour32(colour), mask, name, static_cast<rdr12::EColourOp>(op), op_value);
+	}
+	CatchAndReport(View3D_ObjectColourSet, ,);
+}
+
+// Reset the object colour back to its default
+VIEW3D_API void __stdcall View3D_ObjectResetColour(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->ResetColour(name);
+	}
+	CatchAndReport(View3D_ObjectResetColour, ,);
+}
+
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
 // Note, setting the o2w for a child object positions the object in world space rather than parent space
 // (internally the appropriate O2P transform is calculated to put the object at the given O2W location)
@@ -1538,6 +1737,118 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(view3d::Object object, view3d::Mat
 	CatchAndReport(View3D_ObjectO2WSet, ,);
 }
 
+// Get/Set the object to parent transform for an object.
+// This is the object to world transform for objects without parents.
+// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}".
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_ObjectO2PGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		return To<view3d::Mat4x4>(object->O2P(name));
+	}
+	CatchAndReport(View3D_ObjectGetO2P, , To<view3d::Mat4x4>(m4x4::Identity()));
+}
+VIEW3D_API void __stdcall View3D_ObjectO2PSet(view3d::Object object, view3d::Mat4x4 const& o2p, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+		if (!FEql(o2p.w.w, 1.0f)) throw std::runtime_error("invalid object to parent transform");
+
+		DllLockGuard;
+		object->O2P(To<m4x4>(o2p), name);
+	}
+	CatchAndReport(View3D_ObjectSetO2P, ,);
+}
+
+// Return the model space bounding box for 'object'
+VIEW3D_API view3d::BBox __stdcall View3D_ObjectBBoxMS(view3d::Object object, int include_children)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return To<view3d::BBox>(object->BBoxMS(include_children != 0));
+	}
+	CatchAndReport(View3D_ObjectBBoxMS, , {});
+}
+
+// Get/Set the object visibility. See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return const_cast<LdrObject const*>(object)->Visible(name);
+	}
+	CatchAndReport(View3D_ObjectGetVisibility, ,FALSE);
+}
+VIEW3D_API void __stdcall View3D_ObjectVisibilitySet(view3d::Object object, BOOL visible, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Visible(visible != 0, name);
+	}
+	CatchAndReport(View3D_ObjectSetVisibility, ,);
+}
+
+// Get/Set wireframe mode for an object (the first object to match 'name'). (See LdrObject::Apply)
+VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return const_cast<LdrObject const*>(object)->Wireframe(name);
+	}
+	CatchAndReport(View3D_ObjectWireframeGet, , FALSE);
+}
+VIEW3D_API void __stdcall View3D_ObjectWireframeSet(view3d::Object object, BOOL wire_frame, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Wireframe(wire_frame != 0, name);
+	}
+	CatchAndReport(View3D_ObjectWireframeSet, , );
+}
+
+// Get/Set the object flags. See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API view3d::ELdrFlags __stdcall View3D_ObjectFlagsGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<view3d::ELdrFlags>(object->Flags(name));
+	}
+	CatchAndReport(View3D_ObjectFlagsGet, ,view3d::ELdrFlags::None);
+}
+VIEW3D_API void __stdcall View3D_ObjectFlagsSet(view3d::Object object, view3d::ELdrFlags flags, BOOL state, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Flags(static_cast<rdr12::ELdrFlags>(flags), state != 0, name);
+	}
+	CatchAndReport(View3D_ObjectFlagsSet, ,);
+}
+
 // Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
 VIEW3D_API float __stdcall View3D_ObjectReflectivityGet(view3d::Object object, char const* name)
 {
@@ -1562,28 +1873,199 @@ VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(view3d::Object object, fl
 	CatchAndReport(View3D_ObjectReflectivitySet, ,);
 }
 
+// Get/Set the sort group for the object or its children. (See LdrObject::Apply)
+VIEW3D_API view3d::ESortGroup __stdcall View3D_ObjectSortGroupGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<view3d::ESortGroup>(object->SortGroup(name));
+	}
+	CatchAndReport(View3D_ObjectSortGroupGet, ,view3d::ESortGroup::Default);
+}
+VIEW3D_API void __stdcall View3D_ObjectSortGroupSet(view3d::Object object, view3d::ESortGroup group, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->SortGroup(static_cast<rdr12::ESortGroup>(group), name);
+	}
+	CatchAndReport(View3D_ObjectSortGroupSet, ,);
+}
+
+// Get/Set 'show normals' mode for an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API BOOL __stdcall View3D_ObjectNormalsGet(view3d::Object object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return const_cast<LdrObject const*>(object)->Normals(name);
+	}
+	CatchAndReport(View3D_ObjectNormalsGet, , FALSE);
+}
+VIEW3D_API void __stdcall View3D_ObjectNormalsSet(view3d::Object object, BOOL show, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		// Normals length is a scene-wide property set in View3D_WindowNormalsLength
+		DllLockGuard;
+		object->Normals(show, name);
+	}
+	CatchAndReport(View3D_ObjectNormalsSet, , );
+}
+
+// Set the texture/sampler for all nuggets of 'object' or its children. (See LdrObject::Apply)
+VIEW3D_API void __stdcall View3D_ObjectSetTexture(view3d::Object object, view3d::Texture tex, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->SetTexture(tex, name);
+	}
+	CatchAndReport(View3D_ObjectSetTexture, ,);
+}
+VIEW3D_API void __stdcall View3D_ObjectSetSampler(view3d::Object object, view3d::Sampler sam, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->SetSampler(sam, name);
+	}
+	CatchAndReport(View3D_ObjectSetSampler, ,);
+}
+
+// Get/Set the nugget flags on an object or its children (See LdrObject::Apply)
+VIEW3D_API view3d::ENuggetFlag __stdcall View3D_ObjectNuggetFlagsGet(view3d::Object object, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<view3d::ENuggetFlag>(object->NuggetFlags(name, index));
+	}
+	CatchAndReport(View3D_ObjectNuggetFlagsGet, ,view3d::ENuggetFlag::None);
+}
+VIEW3D_API void __stdcall View3D_ObjectNuggetFlagsSet(view3d::Object object, view3d::ENuggetFlag flags, BOOL state, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->NuggetFlags(static_cast<rdr12::ENuggetFlag>(flags), state != 0, name, index);
+	}
+	CatchAndReport(View3D_ObjectNuggetFlagsSet, ,);
+}
+
+// Get/Set the tint colour for a nugget within the model of an object or its children. (See LdrObject::Apply)
+VIEW3D_API view3d::Colour __stdcall View3D_ObjectNuggetTintGet(view3d::Object object, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<view3d::Colour>(object->NuggetTint(name, index));
+	}
+	CatchAndReport(View3D_ObjectNuggetTintGet, , {});
+}
+VIEW3D_API void __stdcall View3D_ObjectNuggetTintSet(view3d::Object object, view3d::Colour colour, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->NuggetTint(static_cast<Colour32>(colour), name, index);
+	}
+	CatchAndReport(View3D_ObjectNuggetTintSet, ,);
+}
+
 // Materials ******************************
 
-// Release a reference to a texture
-VIEW3D_API void __stdcall View3D_TextureRelease(view3d::Texture tex)
+// Create a texture from data in memory.
+// Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
+// of the size appropriate for the given format. e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
+// Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
+VIEW3D_API view3d::Texture __stdcall View3D_TextureCreate(int width, int height, void const* data, size_t data_size, view3d::TextureOptions const& options)
 {
 	try
 	{
-		// Release is idempotent
-		if (!tex) return;
-		tex->Release();
+		Image src(width, height, data, options.m_format);
+		if (src.m_data != nullptr && src.m_pitch.y != s_cast<int>(data_size))
+			throw std::runtime_error("Incorrect data size provided");
+
+		//tdesc.SampleDesc = pr::rdr::MultiSamp(options.m_multisamp, 0U);
+		auto rdesc = ResDesc::Tex2D(src, s_cast<uint16_t>(options.m_mips), s_cast<EUsage>(options.m_usage))
+			.multisamp(options.m_multisamp)
+			.clear(options.m_clear_value);
+		auto tdesc = TextureDesc(rdr12::AutoId, rdesc)
+			.has_alpha(options.m_has_alpha != 0)
+			.name(options.m_dbg_name);
+
+		DllLockGuard;
+		auto tex = Dll().res().CreateTexture2D(tdesc);
+		tex->m_t2s = To<m4x4>(options.m_t2s);
+		tex->m_t2s =
+			IsAffine(tex->m_t2s) ? tex->m_t2s :
+			tex->m_t2s == m4x4::Zero() ? m4x4::Identity() :
+			throw std::runtime_error("Invalid texture to surface transform");
+
+		// Rely on the caller for correct reference counting
+		return tex.release();
 	}
-	CatchAndReport(View3D_TextureRelease, ,);
+	CatchAndReport(View3D_TextureCreate, , nullptr);
 }
-VIEW3D_API void __stdcall View3D_CubeMapRelease(view3d::CubeMap tex)
+
+// Create one of the stock textures
+VIEW3D_API view3d::Texture __stdcall View3D_TextureFromStock(view3d::EStockTexture stock_texture)
 {
 	try
 	{
-		// Release is idempotent
-		if (!tex) return;
-		tex->Release();
+		DllLockGuard;
+		auto tex = Dll().res().CreateTexture(static_cast<rdr12::EStockTexture>(stock_texture));
+		return tex.release();
 	}
-	CatchAndReport(View3D_CubeMapRelease, ,);
+	CatchAndReport(View3D_TextureFromStock, , nullptr);
+}
+
+// Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+VIEW3D_API view3d::Texture __stdcall View3D_TextureCreateFromUri(char const* resource, int width, int height, view3d::TextureOptions const& options)
+{
+	try
+	{
+		auto rdesc = ResDesc::Tex2D(Image{width, height, nullptr, options.m_format})
+			.multisamp(options.m_multisamp)
+			.clear(options.m_clear_value);
+		auto tdesc = TextureDesc(AutoId, rdesc)
+			.has_alpha(options.m_has_alpha != 0)
+			.name(options.m_dbg_name);
+
+		DllLockGuard;
+		auto tex = Dll().res().CreateTexture2D(resource, tdesc);
+		tex->m_t2s = To<m4x4>(options.m_t2s);
+		tex->m_t2s =
+			IsAffine(tex->m_t2s) ? tex->m_t2s :
+			tex->m_t2s == m4x4::Zero() ? m4x4::Identity() :
+			throw std::runtime_error("Invalid texture to surface transform");
+
+		// Rely on the caller for correct reference counting
+		return tex.release();
+	}
+	CatchAndReport(View3D_TextureCreateFromUri, , nullptr);
 }
 
 // Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
@@ -1608,7 +2090,179 @@ VIEW3D_API view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* res
 	CatchAndReport(View3D_CubeMapCreateFromUri, , nullptr);
 }
 
+// Create a texture sampler
+VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreate(view3d::SamplerOptions const& options)
+{
+	try
+	{
+		auto desc = SamDesc(options.m_addrU, options.m_addrV, options.m_addrW, options.m_filter);
+		auto sdesc = rdr12::SamplerDesc(AutoId, desc)
+			.name(options.m_dbg_name);
+
+		DllLockGuard;
+		auto sam = Dll().res().GetSampler(sdesc);
+
+		// Rely on the caller for correct reference counting
+		return sam.release();
+	}
+	CatchAndReport(View3D_TextureCreate, , nullptr);
+}
+
+// Release a reference to a texture
+VIEW3D_API void __stdcall View3D_TextureRelease(view3d::Texture tex)
+{
+	try
+	{
+		// Release is idempotent
+		if (!tex) return;
+		tex->Release();
+	}
+	CatchAndReport(View3D_TextureRelease, ,);
+}
+VIEW3D_API void __stdcall View3D_CubeMapRelease(view3d::CubeMap tex)
+{
+	try
+	{
+		// Release is idempotent
+		if (!tex) return;
+		tex->Release();
+	}
+	CatchAndReport(View3D_CubeMapRelease, ,);
+}
+VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam)
+{
+	try
+	{
+		// Release is idempotent
+		if (!sam) return;
+		sam->Release();
+	}
+	CatchAndReport(View3D_SamplerRelease, ,);
+}
+
+// Diagnostics ****************************
+
+// Get/Set whether object bounding boxes are visible
+VIEW3D_API BOOL __stdcall View3D_DiagBBoxesVisibleGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->BBoxesVisible();
+	}
+	CatchAndReport(View3D_DiagBBoxesVisibleGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_DiagBBoxesVisibleSet(view3d::Window window, BOOL visible)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BBoxesVisible(visible != 0);
+	}
+	CatchAndReport(View3D_DiagBBoxesVisibleSet, window, );
+}
+
+// Get/Set the length of the vertex normals
+VIEW3D_API float __stdcall View3D_DiagNormalsLengthGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->NormalsLength();
+	}
+	CatchAndReport(View3D_DiagNormalsLengthGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_DiagNormalsLengthSet(view3d::Window window, float length)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->NormalsLength(length);
+	}
+	CatchAndReport(View3D_DiagNormalsLengthSet, window, );
+}
+
+// Get/Set the colour of the vertex normals
+VIEW3D_API view3d::Colour __stdcall View3D_DiagNormalsColourGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Colour>(window->NormalsColour());
+	}
+	CatchAndReport(View3D_DiagNormalsColourGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_DiagNormalsColourSet(view3d::Window window, view3d::Colour colour)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->NormalsColour(colour);
+	}
+	CatchAndReport(View3D_DiagNormalsColourSet, window, );
+}
+
+// Get/Set the size of the 'Points' fill mode points
+VIEW3D_API view3d::Vec2 __stdcall View3D_DiagFillModePointsSizeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<view3d::Vec2>(window->FillModePointsSize());
+	}
+	CatchAndReport(View3D_DiagFillModePointsSizeGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_DiagFillModePointsSizeSet(view3d::Window window, view3d::Vec2 size)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FillModePointsSize(To<v2>(size));
+	}
+	CatchAndReport(View3D_DiagFillModePointsSizeSet, window, );
+}
+
 // Miscellaneous **************************
+
+// Return true if the focus point is visible. Add/Remove the focus point to a window.
+VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->FocusPointVisible();
+	}
+	CatchAndReport(View3D_FocusPointVisibleGet, window, false);
+}
+VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(view3d::Window window, BOOL show)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FocusPointVisible(show != 0);
+	}
+	CatchAndReport(View3D_FocusPointVisibleSet, window,);
+}
 
 // Create/Delete the demo scene in the given window
 VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
