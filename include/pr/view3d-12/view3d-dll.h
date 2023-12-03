@@ -27,6 +27,7 @@ namespace pr
 		struct LdrGizmo;
 		struct Texture2D;
 		struct TextureCube;
+		struct Sampler;
 	}
 
 	namespace view3d
@@ -36,6 +37,7 @@ namespace pr
 		using Gizmo = pr::rdr12::LdrGizmo*;
 		using Texture = pr::rdr12::Texture2D*;
 		using CubeMap = pr::rdr12::TextureCube*;
+		using Sampler = pr::rdr12::Sampler*;
 		using Window = rdr12::V3dWindow*;
 		using ReportErrorCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
 
@@ -155,7 +157,8 @@ namespace pr
 			RayCast,
 			_number_of,
 		};
-		enum class EView3DStockTexture :int
+		#endif
+		enum class EStockTexture :int // pr::rdr12::EStockTexture
 		{
 			Invalid = 0,
 			Black,
@@ -168,7 +171,6 @@ namespace pr
 			WhiteTriangle,
 			EnvMapProjection,
 		};
-		#endif
 		enum class ELight :int
 		{
 			Ambient,
@@ -241,8 +243,7 @@ namespace pr
 			CameraRelative = 1 << 7,
 			All            = (1 << 7) - 1, // Not including camera relative
 		};
-		#if 0 // todo
-		enum class EView3DColourOp :int // pr::ldr::EColourOp
+		enum class EColourOp :int // pr::rdr12::EColourOp
 		{
 			Overwrite,
 			Add,
@@ -250,7 +251,7 @@ namespace pr
 			Multiply,
 			Lerp,
 		};
-		enum class EView3DFlags :int // sync with 'ELdrFlags'
+		enum class ELdrFlags :int // sync with 'ELdrFlags'
 		{
 			None = 0,
 
@@ -290,7 +291,7 @@ namespace pr
 			// Bitwise operators supported
 			_flags_enum = 0,
 		};
-		enum class EView3DSortGroup :int
+		enum class ESortGroup :int // pr::rdr12::ESortGroup
 		{
 			Min = 0,               // The minimum sort group value
 			PreOpaques = 63,       // 
@@ -306,7 +307,6 @@ namespace pr
 			// Arithmetic operators supported
 			_arith_enum = 0,
 		};
-		#endif
 		enum class ESceneBounds :int
 		{
 			All,
@@ -449,17 +449,6 @@ namespace pr
 			ENuggetFlag m_nflags;         // Nugget flags
 			Material    m_mat;
 		};
-#if 0 // todo
-		struct View3DImageInfo
-		{
-			UINT32      m_width;
-			UINT32      m_height;
-			UINT32      m_depth;
-			UINT32      m_mips;
-			DXGI_FORMAT m_format;
-			UINT32      m_image_file_format;//D3DXIMAGE_FILEFORMAT
-		};
-		#endif
 		struct Light
 		{
 			Vec4 m_position;
@@ -477,28 +466,41 @@ namespace pr
 			BOOL m_cam_relative;
 			BOOL m_on;
 		};
-		#if 0
-		struct View3DTextureOptions
+#if 0 // todo
+		struct View3DImageInfo
 		{
-			View3DM4x4                 m_t2s;
-			DXGI_FORMAT                m_format;
-			UINT                       m_mips;
-			D3D11_FILTER               m_filter;
-			D3D11_TEXTURE_ADDRESS_MODE m_addrU;
-			D3D11_TEXTURE_ADDRESS_MODE m_addrV;
-			D3D11_BIND_FLAG            m_bind_flags;
-			D3D11_RESOURCE_MISC_FLAG   m_misc_flags;
-			UINT                       m_multisamp;
-			UINT                       m_colour_key;
-			BOOL                       m_has_alpha;
-			BOOL                       m_gdi_compatible;
-			char const*                m_dbg_name;
+			UINT32      m_width;
+			UINT32      m_height;
+			UINT32      m_depth;
+			UINT32      m_mips;
+			DXGI_FORMAT m_format;
+			UINT32      m_image_file_format;//D3DXIMAGE_FILEFORMAT
 		};
 		#endif
+		struct TextureOptions
+		{
+			Mat4x4               m_t2s;
+			DXGI_FORMAT          m_format;
+			int                  m_mips;
+			D3D12_RESOURCE_FLAGS m_usage;
+			D3D12_CLEAR_VALUE    m_clear_value;
+			int                  m_multisamp;
+			UINT                 m_colour_key;
+			BOOL                 m_has_alpha;
+			char const*          m_dbg_name;
+		};
 		struct CubeMapOptions
 		{
 			Mat4x4      m_cube2w;
 			char const* m_dbg_name;
+		};
+		struct SamplerOptions
+		{
+			D3D12_FILTER               m_filter;
+			D3D12_TEXTURE_ADDRESS_MODE m_addrU;
+			D3D12_TEXTURE_ADDRESS_MODE m_addrV;
+			D3D12_TEXTURE_ADDRESS_MODE m_addrW;
+			char const*                m_dbg_name;
 		};
 		struct WindowOptions
 		{
@@ -793,7 +795,7 @@ extern "C"
 	// Rendering
 	VIEW3D_API void            __stdcall View3D_Present                (pr::view3d::Window window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (pr::view3d::Window window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (pr::view3d::Window window, View3DTexture render_target, View3DTexture depth_buffer, BOOL is_new_main_rt);
+	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (pr::view3d::Window window, pr::view3d::Texture render_target, pr::view3d::Texture depth_buffer, BOOL is_new_main_rt);
 	#endif
 
 	// Camera *********************************
@@ -923,87 +925,146 @@ extern "C"
 	// Delete an object, freeing its resources
 	VIEW3D_API void __stdcall View3D_ObjectDelete(pr::view3d::Object object);
 
+	// Create an instance of 'obj'
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateInstance(pr::view3d::Object object);
+
+	// Return the context id that this object belongs to
+	VIEW3D_API GUID __stdcall View3D_ObjectContextIdGet (pr::view3d::Object object);
+
+	// Return the root object of 'object'(possibly itself)
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectGetRoot(pr::view3d::Object object);
+
+	// Return the immediate parent of 'object'
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectGetParent(pr::view3d::Object object);
+
+	// Return a child object of 'object'
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectGetChildByName(pr::view3d::Object object, char const* name);
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectGetChildByIndex(pr::view3d::Object object, int index);
+
+	// Return the number of child objects of 'object'
+	VIEW3D_API int __stdcall View3D_ObjectChildCount (pr::view3d::Object object);
+
+	// Enumerate the child objects of 'object'. (Not recursive)
+	VIEW3D_API void __stdcall View3D_ObjectEnumChildren (pr::view3d::Object object, pr::view3d::EnumObjectsCB enum_objects_cb, void* ctx);
+
+	// Get/Set the name of 'object'
+	VIEW3D_API BSTR __stdcall View3D_ObjectNameGetBStr(pr::view3d::Object object);
+	VIEW3D_API char const* __stdcall View3D_ObjectNameGet(pr::view3d::Object object);
+	VIEW3D_API void __stdcall View3D_ObjectNameSet(pr::view3d::Object object, char const* name);
+
+	// Get the type of 'object'
+	VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(pr::view3d::Object object);
+	VIEW3D_API char const* __stdcall View3D_ObjectTypeGet(pr::view3d::Object object);
+
+	// Get/Set the current or base colour of an object(the first object to match 'name') (See LdrObject::Apply)
+	VIEW3D_API pr::view3d::Colour __stdcall View3D_ObjectColourGet(pr::view3d::Object object, BOOL base_colour, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectColourSet(pr::view3d::Object object, pr::view3d::Colour colour, UINT32 mask, char const* name, pr::view3d::EColourOp op, float op_value);
+	
+	// Reset the object colour back to its default
+	VIEW3D_API void __stdcall View3D_ObjectResetColour(pr::view3d::Object object, char const* name);
+
 	// Get/Set the object's o2w transform
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2WGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectO2WSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2w, char const* name);
+
+	// Get/Set the object to parent transform for an object.
+	// This is the object to world transform for objects without parents.
+	// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}".
+	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ObjectO2PGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectO2PSet(pr::view3d::Object object, pr::view3d::Mat4x4 const& o2p, char const* name);
+
+	// Return the model space bounding box for 'object'
+	VIEW3D_API pr::view3d::BBox __stdcall View3D_ObjectBBoxMS(pr::view3d::Object object, int include_children);
+
+	// Get/Set the object visibility. See LdrObject::Apply for docs on the format of 'name'
+	VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectVisibilitySet(pr::view3d::Object object, BOOL visible, char const* name);
+
+	// Get/Set wireframe mode for an object (the first object to match 'name'). (See LdrObject::Apply)
+	VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectWireframeSet(pr::view3d::Object object, BOOL wireframe, char const* name);
+
+	// Get/Set the object flags. See LdrObject::Apply for docs on the format of 'name'
+	VIEW3D_API pr::view3d::ELdrFlags __stdcall View3D_ObjectFlagsGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectFlagsSet(pr::view3d::Object object, pr::view3d::ELdrFlags flags, BOOL state, char const* name);
 
 	// Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
 	VIEW3D_API float __stdcall View3D_ObjectReflectivityGet(pr::view3d::Object object, char const* name);
 	VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(pr::view3d::Object object, float reflectivity, char const* name);
 
+	// Get/Set the sort group for the object or its children. (See LdrObject::Apply)
+	VIEW3D_API pr::view3d::ESortGroup __stdcall View3D_ObjectSortGroupGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectSortGroupSet(pr::view3d::Object object, pr::view3d::ESortGroup group, char const* name);
+
+	// Get/Set 'show normals' mode for an object (the first object to match 'name') (See LdrObject::Apply)
+	VIEW3D_API BOOL __stdcall View3D_ObjectNormalsGet(pr::view3d::Object object, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectNormalsSet(pr::view3d::Object object, BOOL show, char const* name);
+
+	// Set the texture/sampler for all nuggets of 'object' or its children. (See LdrObject::Apply)
+	VIEW3D_API void __stdcall View3D_ObjectSetTexture(pr::view3d::Object object, pr::view3d::Texture tex, char const* name);
+	VIEW3D_API void __stdcall View3D_ObjectSetSampler(pr::view3d::Object object, pr::view3d::Sampler sam, char const* name);
+
+	// Get/Set the nugget flags on an object or its children (See LdrObject::Apply)
+	VIEW3D_API pr::view3d::ENuggetFlag __stdcall View3D_ObjectNuggetFlagsGet(pr::view3d::Object object, char const* name, int index);
+	VIEW3D_API void __stdcall View3D_ObjectNuggetFlagsSet(pr::view3d::Object object, pr::view3d::ENuggetFlag flags, BOOL state, char const* name, int index);
+
+	// Get/Set the tint colour for a nugget within the model of an object or its children. (See LdrObject::Apply)
+	VIEW3D_API pr::view3d::Colour __stdcall View3D_ObjectNuggetTintGet(pr::view3d::Object object, char const* name, int index);
+	VIEW3D_API void __stdcall View3D_ObjectNuggetTintSet(pr::view3d::Object object, pr::view3d::Colour colour, char const* name, int index);
+
+
 	#if 0 // todo
 	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectCreateEditCB       (char const* name, pr::view3d::Colour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectCreateInstance     (pr::view3d::Object object);
 	VIEW3D_API void              __stdcall View3D_ObjectEdit               (pr::view3d::Object object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void              __stdcall View3D_ObjectUpdate             (pr::view3d::Object object, wchar_t const* ldr_script, EView3DUpdateObject flags);
-	VIEW3D_API GUID              __stdcall View3D_ObjectContextIdGet       (pr::view3d::Object object);
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectGetRoot            (pr::view3d::Object object);
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectGetParent          (pr::view3d::Object object);
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectGetChildByName     (pr::view3d::Object object, char const* name);
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectGetChildByIndex    (pr::view3d::Object object, int index);
-	VIEW3D_API int               __stdcall View3D_ObjectChildCount         (pr::view3d::Object object);
-	VIEW3D_API void              __stdcall View3D_ObjectEnumChildren       (pr::view3d::Object object, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
-	VIEW3D_API BSTR              __stdcall View3D_ObjectNameGetBStr        (pr::view3d::Object object);
-	VIEW3D_API char const*       __stdcall View3D_ObjectNameGet            (pr::view3d::Object object);
-	VIEW3D_API void              __stdcall View3D_ObjectNameSet            (pr::view3d::Object object, char const* name);
-	VIEW3D_API BSTR              __stdcall View3D_ObjectTypeGetBStr        (pr::view3d::Object object);
-	VIEW3D_API char const*       __stdcall View3D_ObjectTypeGet            (pr::view3d::Object object);
-	VIEW3D_API View3DM4x4        __stdcall View3D_ObjectO2PGet             (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectO2PSet             (pr::view3d::Object object, View3DM4x4 const& o2p, char const* name);
-	VIEW3D_API BOOL              __stdcall View3D_ObjectVisibilityGet      (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectVisibilitySet      (pr::view3d::Object object, BOOL visible, char const* name);
-	VIEW3D_API EView3DFlags      __stdcall View3D_ObjectFlagsGet           (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectFlagsSet           (pr::view3d::Object object, EView3DFlags flags, BOOL state, char const* name);
-	VIEW3D_API EView3DSortGroup  __stdcall View3D_ObjectSortGroupGet       (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectSortGroupSet       (pr::view3d::Object object, EView3DSortGroup group, char const* name);
-	VIEW3D_API EView3DNuggetFlag __stdcall View3D_ObjectNuggetFlagsGet     (pr::view3d::Object object, char const* name, int index);
-	VIEW3D_API void              __stdcall View3D_ObjectNuggetFlagsSet     (pr::view3d::Object object, EView3DNuggetFlag flags, BOOL state, char const* name, int index);
-	VIEW3D_API pr::view3d::Colour      __stdcall View3D_ObjectNuggetTintGet      (pr::view3d::Object object, char const* name, int index);
-	VIEW3D_API void              __stdcall View3D_ObjectNuggetTintSet      (pr::view3d::Object object, pr::view3d::Colour colour, char const* name, int index);
-	VIEW3D_API pr::view3d::Colour      __stdcall View3D_ObjectColourGet          (pr::view3d::Object object, BOOL base_colour, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectColourSet          (pr::view3d::Object object, pr::view3d::Colour colour, UINT32 mask, char const* name, EOp op, float op_value);
-	VIEW3D_API BOOL              __stdcall View3D_ObjectWireframeGet       (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectWireframeSet       (pr::view3d::Object object, BOOL wireframe, char const* name);
-	VIEW3D_API BOOL              __stdcall View3D_ObjectNormalsGet         (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectNormalsSet         (pr::view3d::Object object, BOOL show, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectResetColour        (pr::view3d::Object object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectSetTexture         (pr::view3d::Object object, View3DTexture tex, char const* name);
-	VIEW3D_API View3DBBox        __stdcall View3D_ObjectBBoxMS             (pr::view3d::Object object, int include_children);
 #endif
 
-	// Materials
+	// Materials ******************************
+
+	// Create a texture from data in memory.
+	// Set 'data' to nullptr to leave the texture uninitialised, if not null then data must point to width x height pixel data
+	// of the size appropriate for the given format. e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
+	// Note: careful with stride, 'data' is expected to have the appropriate stride for BytesPerPixel(format) * width
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureCreate(int width, int height, void const* data, size_t data_size, pr::view3d::TextureOptions const& options);
+
+	// Create one of the stock textures
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureCreateStock(pr::view3d::EStockTexture stock_texture);
+
+	// Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureCreateFromUri(char const* resource, int width, int height, pr::view3d::TextureOptions const& options);
+
+	// Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+	VIEW3D_API pr::view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* resource, pr::view3d::CubeMapOptions const& options);
+
+	// Create a texture sampler
+	VIEW3D_API pr::view3d::Sampler __stdcall View3D_SamplerCreate(pr::view3d::SamplerOptions const& options);
+
+	// Release a reference to a resources
 	VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex);
 	VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex);
-	VIEW3D_API pr::view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* resource, pr::view3d::CubeMapOptions const& options);
+	VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam);
+
 #if 0
-	VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock            (EView3DStockTexture tex);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromStock      (EView3DStockTexture tex, View3DTextureOptions const& options);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
-	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, pr::view3d::Colour colour_key);
-	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
+	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (pr::view3d::Texture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, pr::view3d::Colour colour_key);
+	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (pr::view3d::Texture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (wchar_t const* tex_filepath, View3DImageInfo& info);
-	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
-	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (View3DTexture tex, BOOL discard);
-	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
-	VIEW3D_API void          __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataGet       (View3DTexture tex, GUID const& guid, UINT& size, void* data);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataSet       (View3DTexture tex, GUID const& guid, UINT size, void const* data);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataIFSet     (View3DTexture tex, GUID const& guid, IUnknown* pointer);
-	VIEW3D_API ULONG         __stdcall View3D_TextureRefCount             (View3DTexture tex);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget         (pr::view3d::Window window);
-	VIEW3D_API void          __stdcall View3D_TextureResolveAA            (View3DTexture dst, View3DTexture src);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, View3DTextureOptions const& options);
-	VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget       (HWND hwnd, UINT width, UINT height, View3DTextureOptions const& options, HANDLE* shared_handle);
+	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (pr::view3d::Texture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
+	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (pr::view3d::Texture tex, BOOL discard);
+	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (pr::view3d::Texture tex);
+	VIEW3D_API void          __stdcall View3D_TextureResize               (pr::view3d::Texture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataGet       (pr::view3d::Texture tex, GUID const& guid, UINT& size, void* data);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataSet       (pr::view3d::Texture tex, GUID const& guid, UINT size, void const* data);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataIFSet     (pr::view3d::Texture tex, GUID const& guid, IUnknown* pointer);
+	VIEW3D_API ULONG         __stdcall View3D_TextureRefCount             (pr::view3d::Texture tex);
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureRenderTarget         (pr::view3d::Window window);
+	VIEW3D_API void          __stdcall View3D_TextureResolveAA            (pr::view3d::Texture dst, pr::view3d::Texture src);
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, pr::view3d::TextureOptions const& options);
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_CreateDx9RenderTarget       (HWND hwnd, UINT width, UINT height, pr::view3d::TextureOptions const& options, HANDLE* shared_handle);
+#endif
 
-	// Tools
-	VIEW3D_API void __stdcall View3D_ObjectManagerShow        (pr::view3d::Window window, BOOL show);
-	VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible       (pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_ShowMeasureTool          (pr::view3d::Window window, BOOL show);
-	VIEW3D_API BOOL __stdcall View3D_AngleToolVisible         (pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_ShowAngleTool            (pr::view3d::Window window, BOOL show);
+	// Gizmos *********************************
 
-	// Gizmos
+#if 0
 	VIEW3D_API View3DGizmo      __stdcall View3D_GizmoCreate       (EView3DGizmoMode mode, View3DM4x4 const& o2w);
 	VIEW3D_API void             __stdcall View3D_GizmoDelete       (View3DGizmo gizmo);
 	VIEW3D_API void             __stdcall View3D_GizmoMovedCBSet   (View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx, BOOL add);
@@ -1019,31 +1080,40 @@ extern "C"
 	VIEW3D_API BOOL             __stdcall View3D_GizmoEnabled      (View3DGizmo gizmo);
 	VIEW3D_API void             __stdcall View3D_GizmoSetEnabled   (View3DGizmo gizmo, BOOL enabled);
 	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating (View3DGizmo gizmo);
+#endif
 
-	// Diagnostics
-	VIEW3D_API BOOL         __stdcall View3D_DiagBBoxesVisibleGet     (pr::view3d::Window window);
-	VIEW3D_API void         __stdcall View3D_DiagBBoxesVisibleSet     (pr::view3d::Window window, BOOL visible);
-	VIEW3D_API float        __stdcall View3D_DiagNormalsLengthGet     (pr::view3d::Window window);
-	VIEW3D_API void         __stdcall View3D_DiagNormalsLengthSet     (pr::view3d::Window window, float length);
-	VIEW3D_API pr::view3d::Colour __stdcall View3D_DiagNormalsColourGet     (pr::view3d::Window window);
-	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet     (pr::view3d::Window window, pr::view3d::Colour colour);
-	VIEW3D_API View3DV2     __stdcall View3D_DiagFillModePointsSizeGet(pr::view3d::Window window);
-	VIEW3D_API void         __stdcall View3D_DiagFillModePointsSizeSet(pr::view3d::Window window, View3DV2 size);
-	#endif
+	// Diagnostics ****************************
+
+	// Get/Set whether object bounding boxes are visible
+	VIEW3D_API BOOL __stdcall View3D_DiagBBoxesVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DiagBBoxesVisibleSet(pr::view3d::Window window, BOOL visible);
+
+	// Get/Set the length of the vertex normals
+	VIEW3D_API float __stdcall View3D_DiagNormalsLengthGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DiagNormalsLengthSet(pr::view3d::Window window, float length);
+
+	// Get/Set the colour of the vertex normals
+	VIEW3D_API pr::view3d::Colour __stdcall View3D_DiagNormalsColourGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DiagNormalsColourSet(pr::view3d::Window window, pr::view3d::Colour colour);
+
+	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_DiagFillModePointsSizeGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DiagFillModePointsSizeSet(pr::view3d::Window window, pr::view3d::Vec2 size);
 
 	// Miscellaneous **************************
+
+	// Return true if the focus point is visible. Add/Remove the focus point to a window.
+	VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(pr::view3d::Window window, BOOL show);
 
 	// Create/Delete the demo scene in the given window
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
 
-	#if 0
+#if 0
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (pr::view3d::Window window, int key_code);
 	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (pr::view3d::Window window);
 	VIEW3D_API void       __stdcall View3D_DepthBufferEnabledSet    (pr::view3d::Window window, BOOL enabled);
-	VIEW3D_API BOOL       __stdcall View3D_FocusPointVisibleGet     (pr::view3d::Window window);
-	VIEW3D_API void       __stdcall View3D_FocusPointVisibleSet     (pr::view3d::Window window, BOOL show);
 	VIEW3D_API void       __stdcall View3D_FocusPointSizeSet        (pr::view3d::Window window, float size);
 	VIEW3D_API BOOL       __stdcall View3D_OriginVisibleGet         (pr::view3d::Window window);
 	VIEW3D_API void       __stdcall View3D_OriginVisibleSet         (pr::view3d::Window window, BOOL show);
@@ -1058,12 +1128,22 @@ extern "C"
 	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (wchar_t const* ldr_script);
 	VIEW3D_API BSTR       __stdcall View3D_ObjectAddressAt          (wchar_t const* ldr_script, int64_t position);
 	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);
+#endif
 
+	// Tools **********************************
+
+#if 0
+	VIEW3D_API void __stdcall View3D_ObjectManagerShow        (pr::view3d::Window window, BOOL show);
+	VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible       (pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_ShowMeasureTool          (pr::view3d::Window window, BOOL show);
+	VIEW3D_API BOOL __stdcall View3D_AngleToolVisible         (pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_ShowAngleTool            (pr::view3d::Window window, BOOL show);
+#endif
+
+#if 0
 	// Ldr Editor Ctrl
 	VIEW3D_API HWND __stdcall View3D_LdrEditorCreate          (HWND parent);
 	VIEW3D_API void __stdcall View3D_LdrEditorDestroy         (HWND hwnd);
 	VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit        (HWND scintilla_control, BOOL dark);
-
-
-	#endif
+#endif
 }

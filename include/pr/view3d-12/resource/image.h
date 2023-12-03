@@ -38,6 +38,8 @@ namespace pr::rdr12
 			uint32_t const* u32ptr;
 			template <typename T> T* as() { return static_cast<T*>(const_cast<void*>(vptr)); }
 			explicit operator bool() const { return vptr != nullptr; }
+			bool operator ==(nullptr_t) const { return vptr == nullptr; }
+			bool operator !=(nullptr_t) const { return vptr != nullptr; }
 		};
 
 		iv3 m_dim;            // x = width, y = height, z = depth

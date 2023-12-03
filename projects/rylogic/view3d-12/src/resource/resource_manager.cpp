@@ -870,11 +870,6 @@ namespace pr::rdr12
 			}
 		}
 	}
-	SamplerPtr ResourceManager::FindSampler(RdrId id) const
-	{
-		auto sam = GetOrDefault(m_lookup_sam, id, (Sampler*)nullptr);
-		return SamplerPtr(sam, true);
-	}
 
 	// Create a new nugget
 	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)

@@ -490,6 +490,10 @@ namespace pr::rdr12
 			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
 			return *this;
 		}
+		ResDesc& multisamp(int samples)
+		{
+			return multisamp(MultiSamp(s_cast<uint32_t>(samples)));
+		}
 		ResDesc& multisamp(MultiSamp sampling)
 		{
 			SampleDesc = sampling;
