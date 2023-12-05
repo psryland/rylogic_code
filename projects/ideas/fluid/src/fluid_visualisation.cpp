@@ -2,6 +2,7 @@
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/utility/update_resource.h"
@@ -13,12 +14,6 @@ using namespace pr::rdr12;
 
 namespace pr::fluid
 {
-	struct Vert
-	{
-		v4 m_pos;
-		Colour m_col;
-	};
-
 	FluidVisualisation::FluidVisualisation(FluidSimulation const& sim, Renderer& rdr)
 		: m_sim(&sim)
 		, m_rdr(&rdr)
@@ -33,7 +28,7 @@ namespace pr::fluid
 		// Use the point sprite shader
 		m_instance.m_model->CreateNugget(NuggetDesc(ETopo::PointList, EGeom::Vert|EGeom::Colr|EGeom::Tex0)
 			.use_shader(ERenderStep::RenderForward, m_gs_points)
-			.tex_diffuse(rdr.res().CreateTexture(EStockTexture::WhiteSpot))
+			.tex_diffuse(rdr.res().StockTexture(EStockTexture::WhiteSpot))
 			.irange(0,0)
 			);
 	}
@@ -50,8 +45,11 @@ namespace pr::fluid
 		auto* ptr = update.ptr<Vert>();
 		for (auto& pos : m_sim->m_particles.m_positions)
 		{
-			ptr->m_pos = pos;
-			ptr->m_col = Colour32(0xFF0033AA);
+			ptr->m_vert = pos;
+			ptr->m_diff = Colour32(0xFF0033AA);
+			ptr->m_norm = v4::Zero();
+			ptr->m_tex0 = v2::Zero();
+			ptr->pad = v2::Zero();
 			++ptr;
 		}
 		update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);

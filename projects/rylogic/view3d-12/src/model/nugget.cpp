@@ -12,9 +12,13 @@ namespace pr::rdr12
 	Nugget::Nugget(NuggetDesc const& ndata, Model* model)
 		:NuggetDesc(ndata)
 		,m_model(model)
-		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
+		,m_prim_count()
 		,m_nuggets()
 	{
+		m_prim_count = ndata.m_irange.empty()
+			? PrimCount(ndata.m_vrange.size(), ndata.m_topo)
+			: PrimCount(ndata.m_irange.size(), ndata.m_topo);
+
 		// Fixed the initial pipe state overrides
 		m_pso.m_fixed = m_pso.count();
 

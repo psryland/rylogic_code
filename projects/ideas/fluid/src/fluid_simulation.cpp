@@ -10,7 +10,7 @@ namespace pr::fluid
 		std::default_random_engine rng;
 		for (auto& p : m_particles.m_positions)
 		{
-			p = v4::Random(rng, v4(0, 1, 0, 1), 1.0f);
+			p = v3::Random(rng, v3(0, 1, 0), 1.0f).w1();
 		}
 	}
 	
