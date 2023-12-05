@@ -227,6 +227,7 @@ namespace pr
 			PR_ASSERT(PR_DBG, IsFinite(m_aspect), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, IsFinite(m_focus_dist), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, m_focus_dist > maths::tinyd, "invalid scene view parameters");
+			m_nav.Commit(*this);
 		}
 
 		// Return the camera to world transform
@@ -587,11 +588,11 @@ namespace pr
 		}
 		void FocusDist(double dist)
 		{
-			if (!IsFinite(dist) || dist >= maths::tinyd)
+			if (!IsFinite(dist) || dist < maths::tinyd)
 				throw std::runtime_error("'dist' should not be negative");
 
 			dist = Clamp(dist, FocusDistMin(), FocusDistMax());
-			if (!IsFinite(dist) || dist > maths::tinyd)
+			if (!IsFinite(dist) || dist < maths::tinyd)
 				throw std::runtime_error("'dist' should not be negative");
 
 			m_moved |= dist != m_focus_dist;
