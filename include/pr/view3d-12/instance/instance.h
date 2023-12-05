@@ -16,7 +16,6 @@
 //   component
 #pragma once
 #include "pr/view3d-12/forward.h"
-//#include "pr/view3d/models/model.h"
 #include "pr/view3d-12/render/sortkey.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/sampler/sampler.h"
@@ -295,8 +294,8 @@ namespace pr::rdr12
 	// Use this to define class types that are compatible with the renderer
 	// Example:
 	//  #define PR_RDR_INST(x)\
-	//     x(ModelPtr ,m_model  ,EInstComp::ModelPtr)\
-	//     x(Colour32 ,m_colour ,EInstComp::TintColour32)
+	//     x(pr::rdr12::ModelPtr ,m_model  ,pr::rdr12::EInstComp::ModelPtr)\
+	//     x(pr::Colour32        ,m_colour ,pr::rdr12::EInstComp::TintColour32)
 	//  PR_RDR_DEFINE_INSTANCE(name, PR_RDR_INST)
 	//  #undef PR_RDR_INST
 

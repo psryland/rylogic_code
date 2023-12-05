@@ -156,10 +156,6 @@ namespace pr::rdr12
 		// If initialisation data is provided, initialise using an UploadBuffer
 		if (has_init_data)
 		{
-			BarrierBatch barriers(m_gfx_cmd_list);
-			barriers.Transition(res.get(), D3D12_RESOURCE_STATE_COPY_DEST);
-			barriers.Commit();
-
 			// Copy the initialisation data for each array slice into the resource
 			auto array_length = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : s_cast<int>(desc.DepthOrArraySize);
 			for (auto i = 0; i != array_length; ++i)
@@ -168,7 +164,7 @@ namespace pr::rdr12
 				// The span of images expected by 'UpdateSubresource' is for each mip level.
 				UpdateSubresourceScope map(*this, res.get(), i, 0, 1, desc.DataAlignment);
 				map.Write(desc.Data[i]);
-				map.Commit();
+				map.Commit(std::nullopt);
 			}
 			
 			// Generate mip maps for the texture (if needed)
@@ -178,6 +174,7 @@ namespace pr::rdr12
 				m_mipmap_gen.Generate(res.get());
 
 			// Transition the resource to the default state
+			BarrierBatch barriers(m_gfx_cmd_list);
 			barriers.Transition(res.get(), desc.DefaultState);
 			barriers.Commit();
 			m_flush_required = true;

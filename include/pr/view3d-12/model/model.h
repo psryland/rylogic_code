@@ -10,6 +10,11 @@ namespace pr::rdr12
 {
 	struct Model :RefCounted<Model>
 	{
+		// Notes:
+		//  - Models without index buffers are not supported because they are a rare case and
+		//    they would add loads of if statements. Just create a dummy index buffer, and create
+		//    nuggets with a zero range for the index buffer.
+
 		enum class EDbgFlags
 		{
 			None                  = 0,

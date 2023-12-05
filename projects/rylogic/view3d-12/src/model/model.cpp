@@ -56,12 +56,12 @@ namespace pr::rdr12
 	UpdateSubresourceScope Model::UpdateVertices(Range vrange)
 	{
 		if (vrange == RangeZero) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope{ *m_mgr, m_vb.get(), 0, 0, 1, m_vstride.align(), iv3(s_cast<int>(vrange.m_beg), 0, 0), iv3(s_cast<int>(vrange.size() * m_vstride.size()), 1, 1)};
+		return UpdateSubresourceScope(*m_mgr, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
 	}
 	UpdateSubresourceScope Model::UpdateIndices(Range irange)
 	{
 		if (irange == RangeZero) irange = Range(0, m_icount);
-		return UpdateSubresourceScope{ *m_mgr, m_ib.get(), 0, 0, 1, m_istride.align(), iv3(s_cast<int>(irange.m_beg), 0, 0), iv3(s_cast<int>(irange.size() * m_istride.size()), 1, 1)};
+		return UpdateSubresourceScope(*m_mgr, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
 	}
 
 	// Create a nugget from a range within this model
