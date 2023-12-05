@@ -22,6 +22,10 @@
 		<Name>pr::s_cast.*</Name>
 		<Action>NoStepInto</Action>
 	</Function>
+	<Function>
+		<Name>pr::isize.*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
 
 	<!-- WinGui -->
 	<Function>
@@ -72,6 +76,14 @@
 	</Function>
 	<Function>
 		<Name>std::.*::operator==</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>.*operator std::span.*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
+		<Name>.*::data().*</Name>
 		<Action>NoStepInto</Action>
 	</Function>
 </StepFilter>

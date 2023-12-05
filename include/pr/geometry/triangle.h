@@ -87,10 +87,10 @@ namespace pr::geometry
 	}
 
 	// Determine the area of a polygon
-	inline float PolygonArea(v2 const* poly, int count)
+	inline float PolygonArea(std::span<v2 const> poly)
 	{
 		auto area = 0.0f;
-		for (int i = 0; i != count-1; ++i)
+		for (int i = 0; i != isize(poly)-1; ++i)
 			area += Cross(poly[i+1], poly[i]);
 
 		return area / 2.0f;
@@ -130,7 +130,7 @@ namespace pr::geometry
 		enum class EType { Left, Right, Start, End, Split, Merge, };
 
 		// The vertices of the polygon
-		v2 const* m_verts;
+		std::span<v2 const> m_verts;
 
 		// Indices of the polygon edges (winding order CCW)
 		IdxCont m_idx;
@@ -145,16 +145,17 @@ namespace pr::geometry
 		TOut m_out;
 
 		// Triangulate a 2d polygon
-		SeidelTriangulation(v2 const* polygon, int count, TOut out)
+		SeidelTriangulation(std::span<v2 const> polygon, TOut out)
 			:m_verts(polygon)
-			,m_idx(count)
-			,m_sorted(count)
-			,m_lookup(count)
+			,m_idx(m_verts.size())
+			,m_sorted(m_idx.size())
+			,m_lookup(m_idx.size())
 			,m_out(out)
 		{
+			auto count = isize(polygon);
 			if (count <  3) { return; }
 			if (count == 3) { out(0,1,2); return; }
-			assert(PolygonArea(polygon, count) >= 0 && "Polygon winding order is incorrect");
+			assert(PolygonArea(polygon) >= 0 && "Polygon winding order is incorrect");
 
 			#if LDR_OUTPUT
 			pr::ldr::LdrBuilder ldr;
@@ -361,9 +362,9 @@ namespace pr::geometry
 			return lhs.y != rhs.y ? lhs.y < rhs.y : lhs.x < rhs.x;
 		}
 	};
-	template <typename TOut> inline void TriangulatePolygon(v2 const* poly, int count, TOut out)
+	template <typename TOut> inline void TriangulatePolygon(std::span<v2 const> poly, TOut out)
 	{
-		SeidelTriangulation<TOut>(poly, count, out);
+		SeidelTriangulation<TOut>(poly, out);
 	}
 }
 
@@ -398,7 +399,7 @@ namespace pr::geometry
 				{0.0f, 1.0f},
 			};
 			pr::vector<int> tris;
-			TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
+			TriangulatePolygon(poly, [&](int i0, int i1, int i2)
 			{
 				tris.push_back(i0);
 				tris.push_back(i1);
@@ -426,7 +427,7 @@ namespace pr::geometry
 				{1.5f, 2.5f},
 			};
 			pr::vector<int> tris;
-			TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
+			TriangulatePolygon(poly, [&](int i0, int i1, int i2)
 			{
 				tris.push_back(i0);
 				tris.push_back(i1);

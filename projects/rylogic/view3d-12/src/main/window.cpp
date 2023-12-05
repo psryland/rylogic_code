@@ -32,7 +32,6 @@ namespace pr::rdr12
 		,m_msaa_bb()
 		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
 		,m_ds_props(settings.m_depth_format, 1.0f, 0)
-		,m_multisamp(settings.m_multisamp)
 		,m_cmd_alloc_pool(m_gsync)
 		,m_cmd_list_pool(m_gsync)
 		,m_heap_view(HeapCapacityView, &m_gsync)
@@ -71,11 +70,12 @@ namespace pr::rdr12
 
 			// Check feature support
 			auto const& features = rdr.Features();
-			m_multisamp.ScaleQualityLevel(device, settings.m_mode.Format);
-			m_multisamp.ScaleQualityLevel(device, settings.m_depth_format);
-			if (settings.m_multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			auto multisamp = settings.m_multisamp;
+			multisamp.ScaleQualityLevel(device, m_rt_props.Format);
+			multisamp.ScaleQualityLevel(device, m_ds_props.Format);
+			if (multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
 				Throw(false, "Device does not support MSAA for requested render target format");
-			if (settings.m_multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			if (multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
 				Throw(false, "Device does not support MSAA for requested depth stencil format");
 
 			// Get the factory that was used to create 'rdr.m_device'
@@ -162,7 +162,7 @@ namespace pr::rdr12
 			}
 
 			// Initialise the render target views
-			BackBufferSize(iv2{s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height)}, true);
+			BackBufferSize(iv2{s_cast<int>(settings.m_mode.Width), s_cast<int>(settings.m_mode.Height)}, true, &multisamp);
 		}
 		catch (...)
 		{
@@ -313,7 +313,7 @@ namespace pr::rdr12
 		auto desc = rt->GetDesc();
 		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
 	}
-	void Window::BackBufferSize(iv2 size, bool force)
+	void Window::BackBufferSize(iv2 size, bool force, MultiSamp const* multisamp)
 	{
 		if (size.x <= 0 || size.y <= 0)
 			throw std::runtime_error("Back buffer size must be greater than zero");
@@ -359,19 +359,29 @@ namespace pr::rdr12
 		// MSAA render target
 		if (auto& bb = m_msaa_bb; true)
 		{
-			CreateMSAA(bb, size);
+			multisamp = multisamp != nullptr ? multisamp : &bb.m_multisamp;
+			CreateMSAA(bb, size, *multisamp);
 		}
 	}
 
 	// Get/Set the multi sampling used.
 	MultiSamp Window::MultiSampling() const
 	{
-		return m_multisamp;
+		return m_msaa_bb.m_multisamp;
 	}
 	void Window::MultiSampling(MultiSamp ms)
 	{
 		if (MultiSampling() == ms)
 			return;
+
+		// Check feature support
+		auto const& features = rdr().Features();
+		ms.ScaleQualityLevel(d3d(), m_rt_props.Format);
+		ms.ScaleQualityLevel(d3d(), m_ds_props.Format);
+		if (ms.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			Throw(false, "Device does not support MSAA for requested render target format");
+		if (ms.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
+			Throw(false, "Device does not support MSAA for requested depth stencil format");
 
 		auto queue = rdr().GfxQueue();
 		auto size = BackBufferSize();
@@ -394,7 +404,7 @@ namespace pr::rdr12
 		// Create MSAA render target
 		if (auto& bb = m_msaa_bb; true)
 		{
-			CreateMSAA(bb, size);
+			CreateMSAA(bb, size, ms);
 		}
 	}
 
@@ -422,6 +432,7 @@ namespace pr::rdr12
 		Frame frame(d3d(), bb_main, bb_post, m_cmd_alloc_pool);
 
 		// Prepare
+		if (bb_main.m_render_target != nullptr && bb_post.m_render_target != nullptr)
 		{
 			// The MSAA render target goes to the 'render target' state
 			BarrierBatch bb(frame.m_prepare);
@@ -432,23 +443,52 @@ namespace pr::rdr12
 			frame.m_prepare.ClearRenderTargetView(bb_main.m_rtv, bb_main.rt_clear());
 			frame.m_prepare.ClearDepthStencilView(bb_main.m_dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, bb_main.ds_depth(), bb_main.ds_stencil());
 		}
-		// Resolve
+		else if (bb_main.m_render_target != nullptr)
 		{
-			// Resolve the MSAA render target into the swap chain render target
-			BarrierBatch bb(frame.m_resolve);
-			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
-			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST);
-			bb.Commit();
-
-			// Resolve the msaa render target into the swap chain render target
-			frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
-
-			// The swap chain render target goes to the 'render target' state
-			bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+			// The MSAA render target goes to the 'resolve source' state
+			BarrierBatch bb(frame.m_prepare);
 			bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 			bb.Commit();
 		}
+
+		// Resolve
+		if (bb_main.m_render_target != nullptr && bb_post.m_render_target != nullptr)
+		{
+			if (bb_main.m_multisamp.Count > 1)
+			{
+				// Resolve the MSAA render target into the swap chain render target
+				BarrierBatch bb(frame.m_resolve);
+				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_SOURCE);
+				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST);
+				bb.Commit();
+
+				// Resolve the msaa render target into the swap chain render target
+				frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
+
+				// The swap chain render target goes to the 'render target' state
+				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+				bb.Commit();
+			}
+			else
+			{
+				// Copy the MSAA render target into the swap chain render target
+				BarrierBatch bb(frame.m_resolve);
+				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_COPY_DEST);
+				bb.Commit();
+
+				frame.m_resolve.CopyResource(bb_post.m_render_target.get(), bb_main.m_render_target.get());
+
+				// The swap chain render target goes to the 'render target' state
+				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+				bb.Transition(bb_main.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+				bb.Commit();
+			}
+		}
+
 		// Present
+		if (bb_post.m_render_target != nullptr)
 		{
 			// The swap chain render target goes to the 'present' state
 			BarrierBatch bb(frame.m_present);
@@ -559,16 +599,17 @@ namespace pr::rdr12
 	}
 
 	// Create the MSAA render target and depth stencil
-	void Window::CreateMSAA(BackBuffer& bb, iv2 size)
+	void Window::CreateMSAA(BackBuffer& bb, iv2 size, MultiSamp ms)
 	{
 		auto device = rdr().D3DDevice();
 
 		bb.m_wnd = this;
 		bb.m_sync_point = m_gsync.CompletedSyncPoint();
+		bb.m_multisamp = ms;
 
 		// Render target
 		auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
-			.multisamp(m_multisamp)
+			.multisamp(ms)
 			.clear(m_rt_props);
 		Throw(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -578,7 +619,7 @@ namespace pr::rdr12
 
 		// Depth stencil
 		auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
-			.multisamp(m_multisamp)
+			.multisamp(ms)
 			.clear(m_ds_props);
 		Throw(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,

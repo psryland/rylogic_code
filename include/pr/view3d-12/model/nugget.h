@@ -47,6 +47,8 @@ namespace pr::rdr12
 	//    leave them as null. When a nugget is added to a render step, the render step ensures that there are appropriate
 	//    shaders in the shader map for it to be rendered by that render step. If they're missing it adds them.
 
+	inline static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
+
 	// Flags for nuggets
 	enum class ENuggetFlag :int
 	{
@@ -77,7 +79,7 @@ namespace pr::rdr12
 	};
 
 	// Nugget initialisation data
-	struct NuggetData
+	struct NuggetDesc
 	{
 		using shader_t = struct
 		{
@@ -92,6 +94,7 @@ namespace pr::rdr12
 		PipeStates      m_pso;                   // A collection of modifications to the pipeline state object description
 		Texture2DPtr    m_tex_diffuse;           // Diffuse texture
 		SamplerPtr      m_sam_diffuse;           // The sampler to use with the diffuse texture
+		RdrId           m_id;                    // An id to allow identification of procedurally added nuggets
 		Colour32        m_tint;                  // Per-nugget tint
 		SortKey         m_sort_key;              // A base sort key for this nugget
 		float           m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
@@ -102,23 +105,135 @@ namespace pr::rdr12
 		Range           m_vrange;
 		Range           m_irange;
 
-		NuggetData(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid, Range vrange = Range(), Range irange = Range());
+		NuggetDesc(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid)
+			: m_topo(topo)
+			, m_geom(geom)
+			, m_shaders()
+			, m_pso()
+			, m_tex_diffuse()
+			, m_sam_diffuse()
+			, m_id(AutoId)
+			, m_tint(Colour32White)
+			, m_sort_key(ESortGroup::Default)
+			, m_relative_reflectivity(1)
+			, m_nflags(ENuggetFlag::None)
+			, m_vrange()
+			, m_irange()
+		{}
+
+		// Set the vertex range for this nugget
+		NuggetDesc& vrange(Range range)
+		{
+			m_vrange = range;
+			return *this;
+		}
+		NuggetDesc& vrange(int64_t beg, int64_t end)
+		{
+			return vrange(Range(beg, end));
+		}
+
+		// Set the index range for this nugget
+		NuggetDesc& irange(Range range)
+		{
+			m_irange = range;
+			return *this;
+		}
+		NuggetDesc& irange(int64_t beg, int64_t end)
+		{
+			return irange(Range(beg, end));
+		}
+
+		// Add/overide a shader for this nugget
+		NuggetDesc& use_shader(ERenderStep step, ShaderPtr shader)
+		{
+			m_shaders.push_back({step, shader});
+			return *this;
+		}
+
+		// Override the pipeline state object for this nugget
+		template <EPipeState PS>
+		NuggetDesc& pso(pipe_state_field_t<PS> const& value)
+		{
+			m_pso.Set<PS>(value);
+			return *this;
+		}
+
+		// Set the diffuse texture for the nugget
+		NuggetDesc& tex_diffuse(Texture2DPtr tex)
+		{
+			m_tex_diffuse = tex;
+			return *this;
+		}
+
+		// Set the sampler for the diffuse texture
+		NuggetDesc& sam_diffuse(SamplerPtr sam)
+		{
+			m_sam_diffuse = sam;
+			return *this;
+		}
+
+		// Set the tint colour
+		NuggetDesc& tint(Colour32 tint)
+		{
+			m_tint = tint;
+			return *this;
+		}
+
+		// Set the flags
+		NuggetDesc& flags(ENuggetFlag flags, bool state = true)
+		{
+			m_nflags = SetBits(m_nflags, flags, state);
+			return *this;
+		}
+		NuggetDesc& alpha_geom(bool has = true)
+		{
+			m_nflags = SetBits(m_nflags, ENuggetFlag::GeometryHasAlpha, has);
+			return *this;
+		}
+		NuggetDesc& alpha_tint(bool has = true)
+		{
+			m_nflags = SetBits(m_nflags, ENuggetFlag::TintHasAlpha, has);
+			return *this;
+		}
+
+		// Id for procedurally added nuggets
+		NuggetDesc& id(RdrId id)
+		{
+			m_id = id;
+			return *this;
+		}
+
+		// Set the sort key for this nugget
+		NuggetDesc& sort_key(SortKey key)
+		{
+			m_sort_key = key;
+			return *this;
+		}
+		NuggetDesc& sort_key(ESortGroup group)
+		{
+			m_sort_key.Group(group);
+			return *this;
+		}
+
+		// Set the relative reflectivity for this nugget
+		NuggetDesc& relative_reflectivity(float reflectivity)
+		{
+			m_relative_reflectivity = reflectivity;
+			return *this;
+		}
 	};
 
 	// A nugget is a sub range within a model buffer containing any data needed to render
 	// that sub range. Not all data is necessarily needed to render each nugget (depends on
 	// the shader that the render step uses), but each nugget can be rendered with a single
 	// DrawIndexed call for any possible shader.
-	struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>, NuggetData
+	struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>, NuggetDesc
 	{
-		static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
-		
 		Model*       m_model;         // The model that owns this nugget.
 		size_t       m_prim_count;    // The number of primitives in this nugget.
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget.
-		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
 
-		Nugget(NuggetData const& ndata, Model* model, RdrId id);
+		Nugget(NuggetDesc const& ndata, Model* model);
 		~Nugget();
 
 		// Renderer access

@@ -25,20 +25,20 @@ namespace pr::geometry
 	// 'out_verts' is an output iterator to receive the [vert,colour] data
 	// 'out_indices' is an output iterator to receive the index data
 	template <typename VOut, typename IOut>
-	Props Points(int num_points, v4 const* points, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Points(std::span<v4 const> points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None) | EGeom::Tex0; // UVs are added in the geometry shader
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Tex0; // UVs are added in the geometry shader
 
 		// Colour iterator
-		auto col = CreateRepeater(colours, num_colours, num_points, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), isize(points), Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
 		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
-		v4 const* v_in = points; int index = 0;
-		for (int i = 0; i != num_points; ++i)
+		auto v_in = points.data(); int index = 0;
+		for (int i = 0; i != isize(points); ++i)
 		{
 			vout(bb(*v_in++), cc(*col++));
 			iout(index++);

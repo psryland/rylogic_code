@@ -67,9 +67,9 @@ namespace pr::rdr12
 	// Create a nugget from a range within this model
 	// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 	// Remember you might need to delete render nuggets first
-	void Model::CreateNugget(NuggetData const& nugget_data, RdrId id)
+	void Model::CreateNugget(NuggetDesc const& nugget_data)
 	{
-		NuggetData ndata(nugget_data);
+		auto ndata = NuggetDesc(nugget_data);
 
 		#if PR_DBG_RDR
 		if (ndata.m_vrange.empty() != ndata.m_irange.empty())
@@ -78,9 +78,9 @@ namespace pr::rdr12
 
 		// Empty ranges are assumed to mean the entire model
 		if (ndata.m_vrange.empty())
-			ndata.m_vrange = Range(0, m_vcount);
+			ndata.vrange(0, m_vcount);
 		if (ndata.m_irange.empty())
-			ndata.m_irange = Range(0, m_icount);
+			ndata.irange(0, m_icount);
 
 		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 		#if PR_DBG_RDR
@@ -97,7 +97,7 @@ namespace pr::rdr12
 		// Defend against crashes in release...
 		if (!ndata.m_irange.empty())
 		{
-			auto nug = res_mgr().CreateNugget(ndata, this, id);
+			auto nug = res_mgr().CreateNugget(ndata, this);
 			m_nuggets.push_back(*nug);
 		}
 	}

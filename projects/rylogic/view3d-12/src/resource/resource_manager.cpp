@@ -5,6 +5,7 @@
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/resource/image.h"
 #include "pr/view3d-12/resource/resource_state.h"
+#include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
@@ -27,27 +28,44 @@ namespace pr::rdr12
 	constexpr int HeapCapacityView = 12;
 
 	ResourceManager::ResourceManager(Renderer& rdr)
-		:m_mem_tracker()
-		,m_rdr(rdr)
-		,m_gsync(rdr.D3DDevice())
-		,m_keep_alive(m_gsync)
-		,m_gfx_cmd_alloc_pool(m_gsync)
-		,m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, "ResourceManager", EColours::LightGreen)
-		,m_heap_view(HeapCapacityView, &m_gsync)
-		,m_heap_sampler(HeapCapacityView, &m_gsync)
-		,m_lookup_res()
-		,m_lookup_tex()
-		,m_lookup_sam()
-		,m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
-		,m_descriptor_store(rdr.D3DDevice())
-		,m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
-		,m_gdiplus()
-		,m_eh_resize()
-		,m_gdi_dc_ref_count()
-		,m_flush_required()
+		: m_mem_tracker()
+		, m_rdr(rdr)
+		, m_gsync(rdr.D3DDevice())
+		, m_keep_alive(m_gsync)
+		, m_gfx_cmd_alloc_pool(m_gsync)
+		, m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, "ResourceManager", EColours::LightGreen)
+		, m_heap_view(HeapCapacityView, &m_gsync)
+		, m_heap_sampler(HeapCapacityView, &m_gsync)
+		, m_lookup_res()
+		, m_lookup_tex()
+		, m_lookup_sam()
+		, m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
+		, m_descriptor_store(rdr.D3DDevice())
+		, m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
+		, m_stock_textures()
+		, m_gdiplus()
+		, m_eh_resize()
+		, m_gdi_dc_ref_count()
+		, m_flush_required()
 	{
 		// Setup notification of sync points
 		m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
+		
+		// Create the stock textures
+		m_stock_textures.resize(EStockTexture_::NumberOf);
+		for (auto id : EStockTexture_::Members())
+		{
+			if (id == EStockTexture::Invalid) continue;
+			m_stock_textures[s_cast<int>(id)] = CreateTexture(id);
+		}
+
+		// Create the stock samplers
+		m_stock_samplers.resize(EStockSampler_::NumberOf);
+		for (auto id : EStockSampler_::Members())
+		{
+			if (id == EStockSampler::Invalid) continue;
+			m_stock_samplers[s_cast<int>(id)] = GetSampler(id);
+		}
 
 		// Wait till stock resources are created
 		FlushToGpu(true);
@@ -215,7 +233,7 @@ namespace pr::rdr12
 				ModelDesc mdesc(verts, idxs, bbox, "basis");
 				auto ptr = CreateModel(mdesc);
 
-				NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
+				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
 				ptr->CreateNugget(nug);
 
@@ -241,7 +259,7 @@ namespace pr::rdr12
 				ModelDesc mdesc(verts, idxs, bbox, "unit quad");
 				auto ptr = CreateModel(mdesc);
 
-				NuggetData nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
+				NuggetDesc nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
 				ptr->CreateNugget(nug);
 				return ptr;
 			}
@@ -271,7 +289,7 @@ namespace pr::rdr12
 				ModelDesc mdesc(verts, idxs, bbox, "bbox cube");
 				auto ptr = CreateModel(mdesc);
 
-				NuggetData nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
+				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
 				ptr->CreateNugget(nug);
 
@@ -342,7 +360,7 @@ namespace pr::rdr12
 				ModelDesc mdesc(verts, idxs, bbox, "selection box");
 				auto ptr = CreateModel(mdesc);
 
-				NuggetData nug(ETopo::LineList, EGeom::Vert);
+				NuggetDesc nug(ETopo::LineList, EGeom::Vert);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
 				ptr->CreateNugget(nug);
 
@@ -871,10 +889,20 @@ namespace pr::rdr12
 		}
 	}
 
-	// Create a new nugget
-	Nugget* ResourceManager::CreateNugget(NuggetData const& ndata, Model* model, RdrId id)
+	// Stock resources
+	Texture2DPtr ResourceManager::StockTexture(EStockTexture id) const
 	{
-		auto ptr = rdr12::New<Nugget>(ndata, model, id);
+		return m_stock_textures[s_cast<int>(id)];
+	}
+	SamplerPtr ResourceManager::StockSampler(EStockSampler id) const
+	{
+		return m_stock_samplers[s_cast<int>(id)];
+	}
+
+	// Create a new nugget
+	Nugget* ResourceManager::CreateNugget(NuggetDesc const& ndata, Model* model)
+	{
+		auto ptr = rdr12::New<Nugget>(ndata, model);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
 	}

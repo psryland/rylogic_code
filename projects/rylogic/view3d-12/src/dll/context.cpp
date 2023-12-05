@@ -176,27 +176,24 @@ namespace pr::rdr12
 		using namespace pr::script;
 
 		auto geom = EGeom::None;
-		pr::vector<NuggetData> ngt;
+		pr::vector<NuggetDesc> ngt;
 
 		// Generate the nuggets first so we can tell what geometry data is needed
 		for (auto const& nugget : nuggets)
 		{
 			// Create the renderer nugget
-			auto nug = NuggetData(
-				static_cast<ETopo>(nugget.m_topo),
-				static_cast<EGeom>(nugget.m_geom),
-				nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()),
-				nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size())
-			);
+			auto nug = NuggetDesc(static_cast<ETopo>(nugget.m_topo), static_cast<EGeom>(nugget.m_geom))
+				.vrange(nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()))
+				.irange(nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size()));
 
-			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
-			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.m_pso.Set<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
-			//todo nug.m_tex_diffuse = Texture2DPtr(nugget.m_mat.m_diff_tex, true);
-			//todo nug.m_sam_diffuse = SamplerPtr(nugget.m_mat.m_diff_sam, true);
-			nug.m_nflags = static_cast<ENuggetFlag>(nugget.m_nflags);
-			nug.m_relative_reflectivity = nugget.m_mat.m_relative_reflectivity;
 			//todo nug.m_shaders = nugget.m_mat.m_shader_map;
-			nug.m_tint = nugget.m_mat.m_tint;
+			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.pso<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
+			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.pso<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
+			nug.tex_diffuse(Texture2DPtr(nugget.m_mat.m_tex_diffuse, true));
+			nug.sam_diffuse(SamplerPtr(nugget.m_mat.m_sam_diffuse, true));
+			nug.flags(static_cast<ENuggetFlag>(nugget.m_nflags));
+			nug.relative_reflectivity(nugget.m_mat.m_relative_reflectivity);
+			nug.tint(nugget.m_mat.m_tint);
 		
 			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
 			{
@@ -341,13 +338,7 @@ namespace pr::rdr12
 
 		// Create the model
 		auto attr  = ObjectAttributes(ELdrObject::Custom, name, Colour32(colour));
-		auto cdata = MeshCreationData()
-			.verts  (pos.data(), int(pos.size()))
-			.indices(ind.data(), int(ind.size()))
-			.nuggets(ngt.data(), int(ngt.size()))
-			.colours(col.data(), int(col.size()))
-			.normals(nrm.data(), int(nrm.size()))
-			.tex    (tex.data(), int(tex.size()));
+		auto cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
 		auto obj = Create(m_rdr, attr, cdata, context_id);
 	
 		// Add to the sources

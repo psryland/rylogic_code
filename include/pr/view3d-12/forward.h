@@ -193,9 +193,9 @@ namespace pr::rdr12
 	
 	// Models
 	struct ModelDesc;
+	struct NuggetDesc;
 	struct Model;
 	struct Nugget;
-	struct NuggetData;
 	struct ModelTreeNode;
 	struct MeshCreationData;
 	using ModelPtr = RefPtr<Model>;

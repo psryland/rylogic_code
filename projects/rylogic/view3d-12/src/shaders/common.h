@@ -86,7 +86,7 @@ namespace pr::rdr12
 
 	// Set the CBuffer model constants flags
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_flags; })
-	void SetFlags(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug, bool env_mapped)
+	void SetFlags(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug, bool env_mapped)
 	{
 		auto model_flags = 0;
 		{
@@ -152,7 +152,7 @@ namespace pr::rdr12
 
 	// Set the tint properties of a constants buffer
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_tint; })
-	void SetTint(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
+	void SetTint(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
 	{
 		auto col = inst.find<Colour32>(EInstComp::TintColour32);
 		auto c = Colour((col ? *col : Colour32White) * nug.m_tint);
@@ -161,7 +161,7 @@ namespace pr::rdr12
 
 	// Set the texture properties of a constants buffer
 	template <typename TCBuf> requires (requires(TCBuf x) { x.m_tex2surf0; })
-	void SetTex2Surf(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
+	void SetTex2Surf(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
 	{
 		auto tex = FindDiffTexture(inst) << nug.m_tex_diffuse;
 		cb.m_tex2surf0 = tex != nullptr
@@ -171,7 +171,7 @@ namespace pr::rdr12
 
 	// Set the environment map properties of a constants buffer
 	template <typename TCBuf> requires (requires(TCBuf x) { x.m_env_reflectivity; })
-	void SetEnvMap(TCBuf& cb, BaseInstance const& inst, NuggetData const& nug)
+	void SetEnvMap(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
 	{
 		auto reflectivity = inst.find<float>(EInstComp::EnvMapReflectivity);
 		cb.m_env_reflectivity = reflectivity != nullptr
