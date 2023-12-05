@@ -56,6 +56,8 @@ namespace pr::rdr12
 		GpuUploadBuffer    m_upload_buffer;      // Upload memory buffer for initialising resources
 		DescriptorStore    m_descriptor_store;   // Manager of resource descriptors
 		MipMapGenerator    m_mipmap_gen;         // Utility class for generating mip maps for a texture
+		TextureCont        m_stock_textures;     // Stock textures
+		SamplerCont        m_stock_samplers;     // Stock samplers
 		GdiPlus            m_gdiplus;            // Context scope for GDI
 		AutoSub            m_eh_resize;          // Event handler subscription for the RT resize event
 		int                m_gdi_dc_ref_count;   // Used to detect outstanding DC references
@@ -90,8 +92,12 @@ namespace pr::rdr12
 		SamplerPtr GetSampler(SamplerDesc const& desc);
 		SamplerPtr GetSampler(EStockSampler id);
 
+		// Return one of the stock textures. These should be considered immutable.
+		Texture2DPtr StockTexture(EStockTexture id) const;
+		SamplerPtr StockSampler(EStockSampler id) const;
+
 		// Create a new nugget
-		Nugget* CreateNugget(NuggetData const& ndata, Model* model, RdrId id = 0);
+		Nugget* CreateNugget(NuggetDesc const& ndata, Model* model);
 
 		// Return a pointer to an existing texture
 		template <typename TextureType> requires (std::is_base_of_v<TextureBase, TextureType>)

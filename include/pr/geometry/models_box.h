@@ -39,7 +39,7 @@ namespace pr::geometry
 	// The texture coordinates set on the box have the 'walls' with Y as up.
 	// On top (-x,+y,-z) is the top left corner, on the bottom (-x,-y,+z) is the top left corner
 	template <typename TVertCIter, typename VOut, typename IOut>
-	Props Boxes(int num_boxes, TVertCIter points, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Boxes(int num_boxes, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		int const vidx[] =
 		{
@@ -69,13 +69,13 @@ namespace pr::geometry
 		auto t11 = v2(1.0f, 1.0f);
 
 		Props props;
-		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Helper function for generating normals
 		auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise(Cross3(c - b, a - b), v4Zero); };
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours, num_colours, 8*num_boxes, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), 8*num_boxes, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -124,14 +124,14 @@ namespace pr::geometry
 
 	// Create a transformed box
 	template <typename TVertCIter, typename VOut, typename IOut>
-	Props Boxes(int num_boxes, TVertCIter points, m4x4 const& o2w, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Boxes(int num_boxes, TVertCIter points, m4x4 const& o2w, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
-		if (o2w == m4x4Identity)
-			return Boxes(num_boxes, points, num_colours, colours, vout, iout);
+		if (o2w == m4x4::Identity())
+			return Boxes(num_boxes, points, colours, vout, iout);
 
 		// An iterator wrapper for applying a transform to 'points'
 		Transformer<TVertCIter> tx(points, o2w);
-		auto props = Boxes(num_boxes, tx, num_colours, colours, vout, iout);
+		auto props = Boxes(num_boxes, tx, colours, vout, iout);
 		return props;
 	}
 
@@ -151,12 +151,12 @@ namespace pr::geometry
 			{+rad.x, +rad.y,  rad.z, 1.0f},
 		};
 		assert(pr::maths::is_aligned(&pt[0]));
-		return Boxes(1, &pt[0], o2w, 1, &colour, vout, iout);
+		return Boxes(1, &pt[0], o2w, { &colour, 1 }, vout, iout);
 	}
 
 	// Create boxes at each point in 'positions' with side half lengths = rad.x,rad.y,rad.z
 	template <typename TVertCIter, typename VOut, typename IOut>
-	Props BoxList(int num_boxes, TVertCIter positions, v4 const& rad, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props BoxList(int num_boxes, TVertCIter positions, v4 const& rad, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		auto pos = positions;
 		pr::vector<v4,64> points(8*num_boxes);
@@ -172,6 +172,6 @@ namespace pr::geometry
 			*pt++ = v4(pos->x - rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f);
 			*pt++ = v4(pos->x + rad.x, pos->y + rad.y, pos->z + rad.z, 1.0f);
 		}
-		return Boxes(num_boxes, &points[0], num_colours, colours, vout, iout);
+		return Boxes(num_boxes, &points[0], colours, vout, iout);
 	}
 }

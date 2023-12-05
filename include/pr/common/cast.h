@@ -100,5 +100,22 @@ namespace pr
 		}
 		return static_cast<T>(x);
 	}
+
+	// Helper for getting the size of a container
+	template <typename T> requires (requires (T t) { t.size(); })
+	inline int isize(T const& cont)
+	{
+		return s_cast<int>(cont.size());
+	}
+
+	// Int sizeof
+	template <typename T> inline int isizeof()
+	{
+		return s_cast<int>(sizeof(T));
+	}
+	template <typename T> inline int isizeof(T&)
+	{
+		return s_cast<int>(sizeof(T));
+	}
 }
 

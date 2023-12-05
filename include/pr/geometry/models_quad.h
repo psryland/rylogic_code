@@ -105,16 +105,16 @@ namespace pr::geometry
 	// 'out_verts' is an output iterator to receive the [vert,norm,colour,tex] data
 	// 'out_indices' is an output iterator to receive the index data
 	template <typename TVertCIter, typename VOut, typename IOut>
-	Props Quad(int num_quads, TVertCIter verts, int num_colours, Colour32 const* colours, m4x4 const& t2q, VOut vout, IOut iout)
+	Props Quad(int num_quads, TVertCIter verts, std::span<Colour32 const> colours, m4x4 const& t2q, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Helper function for generating normals
-		auto norm = [](v4_cref a, v4_cref b, v4_cref c) { return Normalise(Cross3(a - b, c - b), v4Zero); };
+		auto norm = [](v4_cref a, v4_cref b, v4_cref c) { return Normalise(Cross3(a - b, c - b), v4::Zero()); };
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), num_quads * 4, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -156,14 +156,14 @@ namespace pr::geometry
 		return props;
 	}
 	template <typename TVertCIter, typename VOut, typename IOut>
-	Props Quad(int num_quads, TVertCIter verts, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Quad(int num_quads, TVertCIter verts, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
-		return Quad(num_quads, verts, num_colours, colours, m4x4Identity, vout, iout);
+		return Quad(num_quads, verts, colours, m4x4::Identity(), vout, iout);
 	}
 	template <typename TVertCIter, typename VOut, typename IOut>
 	Props Quad(int num_quads, TVertCIter verts, VOut vout, IOut iout)
 	{
-		return Quad(num_quads, verts, 0, 0, m4x4Identity, vout, iout);
+		return Quad(num_quads, verts, {}, m4x4::Identity(), vout, iout);
 	}
 
 	// Generate an NxM patch of triangles
@@ -271,20 +271,20 @@ namespace pr::geometry
 	// 'v_out' is an output iterator to receive the [vert,colour,norm,tex] data
 	// 'i_out' is an output iterator to receive the index data
 	template <typename TVertCIter, typename TNormCIter, typename VOut, typename IOut>
-	Props QuadStrip(int num_quads, TVertCIter verts, float width, int num_normals, TNormCIter normals, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props QuadStrip(int num_quads, TVertCIter verts, float width, int num_normals, TNormCIter normals, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		if (num_quads < 1) return Props();
 		auto num_verts = num_quads + 1;
 
 		// Colour iterator wrapper
-		auto col = CreateLerpRepeater(colours, num_colours, num_verts, Colour32White);
+		auto col = CreateLerpRepeater(colours.data(), isize(colours), num_verts, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Normal iterator wrapper
-		auto norm = CreateLerpRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
+		auto norm = CreateLerpRepeater(normals, num_normals, num_verts, v4::ZAxis());
 
 		// Bounding box
 		auto lwr = +v4Max;
@@ -292,8 +292,8 @@ namespace pr::geometry
 		auto bb = [&](v4_cref v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
 
 		// Texture coords (note: 1D texture)
-		auto t00 = v2(0.0f, 0.0f);
-		auto t10 = v2(1.0f, 0.0f);
+		auto t00 = v2(0.0f, 0.01f);
+		auto t10 = v2(1.0f, 0.01f);
 
 		int index = 0;
 		auto hwidth = width * 0.5f;

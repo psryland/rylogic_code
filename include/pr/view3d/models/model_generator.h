@@ -458,7 +458,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Points(num_points, points, num_colours, colours,
+			auto props = geometry::Points({ points, size_t(num_points) }, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -486,7 +486,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Lines(num_lines, points, num_colours, colours, 
+			auto props = geometry::Lines(num_lines, { points, 1 }, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -506,7 +506,7 @@ namespace pr::rdr
 			Cache cache(vcount, icount, 0, 2);
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::LinesD(num_lines, points, directions, num_colours, colours,
+			auto props = geometry::LinesD(num_lines, points, directions, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 		
@@ -528,7 +528,7 @@ namespace pr::rdr
 			auto vptr = cache.m_vcont.data();
 			auto iptr32 = cache.m_icont.data<uint32_t>();
 			auto iptr16 = cache.m_icont.data<uint16_t>();
-			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour,
+			auto props = geometry::LinesStrip(num_lines, points, { colour, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c)
 				{
 					SetPC(*vptr++, p, Colour(c));
@@ -563,7 +563,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Quad(num_quads, verts, num_colours, colours, t2q,
+			auto props = geometry::Quad(num_quads, verts, { colours, size_t(num_colours) }, t2q,
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -623,7 +623,7 @@ namespace pr::rdr
 			Cache cache(vcount, icount, 0, 2);
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours,
+			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -731,7 +731,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Polygon(num_points, points, solid, num_colours, colours,
+			auto props = geometry::Polygon({ points, size_t(num_points) }, solid, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -755,7 +755,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Boxes(num_boxes, points, num_colours, colours,
+			auto props = geometry::Boxes(num_boxes, points, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -775,7 +775,7 @@ namespace pr::rdr
 			Cache cache(vcount, icount, 0, 2);
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Boxes(num_boxes, points, o2w, num_colours, colours,
+			auto props = geometry::Boxes(num_boxes, points, o2w, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -819,7 +819,7 @@ namespace pr::rdr
 			Cache cache(vcount, icount, 0, 2);
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::BoxList(num_boxes, positions, rad, num_colours, colours,
+			auto props = geometry::BoxList(num_boxes, positions, rad, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -891,7 +891,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours,
+			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
@@ -921,12 +921,10 @@ namespace pr::rdr
 
 			// Convert a stream of points into a stream of transforms
 			// At each vertex, ori.z should be the tangent to the extrusion path.
-			int p = -1;
 			auto ori = m4x4Identity;
 			auto yaxis = Perpendicular(path[1] - path[0], v4YAxis);
-			auto make_path = [&]
+			auto make_path = [&](int p, int pcount)
 			{
-				++p;
 				if (p == 0)
 				{
 					auto tang = path[1] - path[0];
@@ -936,7 +934,7 @@ namespace pr::rdr
 						ori.rot = OriFromDir(tang, AxisId::PosZ, yaxis);
 					}
 				}
-				else if (p == path_count - 1)
+				else if (p == pcount - 1)
 				{
 					auto tang = path[p] - path[p - 1];
 					if (!FEql(tang, v4Zero))
@@ -964,7 +962,7 @@ namespace pr::rdr
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 			auto vptr = cache.m_vcont.data();
 			auto iptr = cache.m_icont.data<uint16_t>();
-			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours,
+			auto props = geometry::Extrude({ cs, size_t(cs_count) }, make_path, path_count, closed, smooth_cs, { colours, size_t(num_colours) },
 				[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 

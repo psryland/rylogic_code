@@ -3414,18 +3414,13 @@ namespace pr::ldr
 			// Create the cross section for implicit profiles
 			switch (m_type)
 			{
-			default:
-				{
-					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
-					return;
-				}
-			case ECSType::Round:
+				case ECSType::Round:
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
 						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
 					break;
 				}
-			case ECSType::Square:
+				case ECSType::Square:
 				{
 					// Create the cross section
 					m_cs.push_back(v2(-m_radx, -m_rady));
@@ -3434,19 +3429,24 @@ namespace pr::ldr
 					m_cs.push_back(v2(-m_radx, +m_rady));
 					break;
 				}
-			case ECSType::CrossSection:
+				case ECSType::CrossSection:
 				{
 					if (m_cs.empty())
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
 						return;
 					}
-					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					if (pr::geometry::PolygonArea(m_cs) < 0)
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
 						return;
 					}
 					break;
+				}
+				default:
+				{
+					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
 				}
 			}
 

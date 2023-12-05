@@ -247,26 +247,26 @@ namespace pr::geometry
 	// 'num_colours' - The number of colours in the 'colours' array. Can be 0, 1, or num_points.
 	// 'colours' - A array of colour values for the polygon
 	template <typename VOut, typename IOut>
-	Props Polygon(int num_points, v2 const* points, bool solid, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Polygon(std::span<v2 const> points, bool solid, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours, num_colours, num_points-1, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), isize(points)-1, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
 		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Verts
-		for (int i = 0; i != num_points; ++i)
-			vout(bb(v4(points[i], 0, 1)), cc(*col++), v4ZAxis, v2Zero);
+		for (int i = 0; i != isize(points); ++i)
+			vout(bb(v4(points[i], 0, 1)), cc(*col++), v4::ZAxis(), v2::Zero());
 
 		// Faces/Lines
 		if (solid)
 		{
-			TriangulatePolygon(points, num_points, [&](int i0, int i1, int i2)
+			TriangulatePolygon(points, [&](int i0, int i1, int i2)
 			{
 				iout(i0);
 				iout(i1);
@@ -275,7 +275,7 @@ namespace pr::geometry
 		}
 		else
 		{
-			for (int i = 0; i != num_points; ++i)
+			for (int i = 0; i != isize(points); ++i)
 				iout(i);
 			
 			iout(0);

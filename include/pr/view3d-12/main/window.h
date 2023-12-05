@@ -45,7 +45,6 @@ namespace pr::rdr12
 		BackBuffer                   m_msaa_bb;          // The MSAA back buffer render target
 		RTProps                      m_rt_props;         // The properties of the MSAA back buffer
 		DSProps                      m_ds_props;         // The properties of the depth stencil buffer
-		MultiSamp                    m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
 		GfxCmdAllocPool              m_cmd_alloc_pool;   // A pool of command allocators
 		GfxCmdListPool               m_cmd_list_pool;    // A pool of command lists
 		GpuViewHeap                  m_heap_view;        // Shader visible heap for CBV/SRV/UAV
@@ -81,7 +80,7 @@ namespace pr::rdr12
 
 		// Get/Set the size of the back buffer
 		iv2 BackBufferSize() const;
-		void BackBufferSize(iv2 size, bool force);
+		void BackBufferSize(iv2 size, bool force, MultiSamp const* multisamp = nullptr);
 
 		// Get/Set the multi sampling used. Changing the multi-sampling is like resizing the MSAA back buffer only.
 		MultiSamp MultiSampling() const;
@@ -96,7 +95,7 @@ namespace pr::rdr12
 	private:
 
 		// Create the MSAA render target and depth stencil
-		void CreateMSAA(BackBuffer& bb, iv2 size);
+		void CreateMSAA(BackBuffer& bb, iv2 size, MultiSamp ms);
 
 		// Create the swap chain back buffers
 		void CreateSwapChain(iv2 size);

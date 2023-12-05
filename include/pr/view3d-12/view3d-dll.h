@@ -434,7 +434,8 @@ namespace pr
 			};
 			ShaderMap     m_shader_map;
 #endif
-			Texture m_diff_tex;
+			Texture m_tex_diffuse;
+			Sampler m_sam_diffuse;
 			Colour  m_tint;
 			float   m_relative_reflectivity;
 		};
