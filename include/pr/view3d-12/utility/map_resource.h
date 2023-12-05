@@ -14,7 +14,10 @@ namespace pr::rdr12
 	struct MapResource
 	{
 		// Notes:
-		//  - THIS WILL STALL THE GPU IF THE RESOURCE IS CURRENTLY IN USE BY THE GPU
+		// 
+		//  - THIS WILL STALL THE GPU IF THE RESOURCE IS CURRENTLY IN USE BY THE GPU.
+		//  - Are you sure you don't want 'UpdateSubresourceScope' instead?
+		// 
 		//  - SDK Notes from Dx11: *DON'T read from a sub-resource mapped for writing*
 		//    When you pass D3D11_MAP_WRITE, D3D11_MAP_WRITE_DISCARD, or D3D11_MAP_WRITE_NO_OVERWRITE to the MapType parameter,
 		//    you must ensure that your app does not read the sub-resource data to which the pData member of D3D11_MAPPED_SUBRESOURCE
