@@ -5,6 +5,7 @@
 #include "pr/view3d-12/view3d-dll.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/model/model_generator.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/script/embedded_lua.h"
@@ -14,35 +15,34 @@
 
 namespace pr::rdr12
 {
-	Context::Context(HINSTANCE instance, ReportErrorCB global_error_cb)
-		:m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
-		,m_wnd_cont()
-		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
-		,m_inits()
-		,m_emb()
-		,m_mutex()
-		,ReportError()
-		,OnAddFileProgress()
-		,OnSourcesChanged()
+	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb)
+		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
+		, m_wnd_cont()
+		, m_sources(m_rdr, [this](auto lang) { return CreateCodeHandler(lang); })
+		, m_inits()
+		, m_emb()
+		, m_mutex()
+		, ReportError()
+		, OnAddFileProgress()
+		, OnSourcesChanged()
 	{
 		PR_ASSERT(PR_DBG, meta::is_aligned_to<16>(this), "dll data not aligned");
 		ReportError += global_error_cb;
 
-		#if 0 // todo
 		// Hook up the sources events
 		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
 		{
-			auto context_id  = args.m_context_id;
-			auto filepath    = args.m_loc.Filepath();
-			auto file_offset = args.m_loc.Pos();
-			auto complete    = args.m_complete;
-			BOOL cancel      = FALSE;
-			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, &cancel);
+			auto context_id = args.m_context_id;
+			auto filepath = args.m_loc.Filepath().generic_string();
+			auto file_offset = s_cast<int64_t>(args.m_loc.Pos());
+			BOOL complete = args.m_complete;
+			BOOL cancel = false;
+			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, cancel);
 			args.m_cancel = cancel != 0;
 		};
 		m_sources.OnReload += [&](ScriptSources&, EmptyArgs const&)
 		{
-			OnSourcesChanged(EView3DSourcesChangedReason::Reload, true);
+			OnSourcesChanged(view3d::ESourcesChangedReason::Reload, true);
 		};
 		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
 		{
@@ -51,7 +51,7 @@ namespace pr::rdr12
 			// When a source is about to be removed, remove it's objects from the windows.
 			// If this is a reload, save a reference to the removed objects so we know what to reload.
 			for (auto& wnd : m_wnd_cont)
-				wnd->RemoveObjectsById(&args.m_context_id, 1, false, reload);
+				wnd->Remove(&args.m_context_id, 1, false, reload);
 		};
 		m_sources.OnStoreChange += [&](ScriptSources&, ScriptSources::StoreChangeEventArgs const& args)
 		{
@@ -60,37 +60,43 @@ namespace pr::rdr12
 
 			switch (args.m_reason)
 			{
-			default:
-				throw std::exception("Unknown store changed reason");
-		
-			// On NewData, do nothing. Callers will add objects to windows as they see fit.
-			case ScriptSources::EReason::NewData:
-				break;
-
-			// On Removal, do nothing. Removed objects should already have been removed from the windows.
-			case ScriptSources::EReason::Removal:
-				break;
-
-			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
-			case ScriptSources::EReason::Reload:
+				// On NewData, do nothing. Callers will add objects to windows as they see fit.
+				case ScriptSources::EReason::NewData:
+				{
+					break;
+				}
+				// On Removal, do nothing. Removed objects should already have been removed from the windows.
+				case ScriptSources::EReason::Removal:
+				{
+					break;
+				}
+				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
+				case ScriptSources::EReason::Reload:
 				{
 					for (auto& wnd : m_wnd_cont)
 					{
-						wnd->AddObjectsById(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
+						wnd->Add(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
 						wnd->Invalidate();
 					}
 					break;
 				}
+				default:
+				{
+					throw std::runtime_error("Unknown store changed reason");
+				}
 			}
 
 			// Notify of updated sources
-			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
+			OnSourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
 		};
 		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)
 		{
-			ReportError(args.m_msg.c_str(), args.m_loc.Filepath().c_str(), args.m_loc.Line(), args.m_loc.Pos());
+			auto msg = Narrow(args.m_msg);
+			auto filepath = args.m_loc.Filepath().generic_string();
+			auto line = s_cast<int>(args.m_loc.Line());
+			auto pos = s_cast<int64_t>(args.m_loc.Pos());
+			ReportError(msg.c_str(), filepath.c_str(), line, pos);
 		};
-		#endif
 	}
 	Context::~Context()
 	{
@@ -102,16 +108,16 @@ namespace pr::rdr12
 	void Context::ReportAPIError(char const* func_name, view3d::Window wnd, std::exception const* ex)
 	{
 		// Create the error message
-		auto msg = Fmt<pr::string<wchar_t>>(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
+		auto msg = Fmt<pr::string<char>>("%s failed.\n%s", func_name, ex ? ex->what() : "Unknown exception occurred.");
 		if (msg.last() != '\n')
 			msg.push_back('\n');
 
 		// If a window handle is provided, report via the window's event.
 		// Otherwise, fall back to the global error handler
 		if (wnd != nullptr)
-			wnd->ReportError(msg.c_str(), L"", 0, 0);
+			wnd->ReportError(msg.c_str(), "", 0, 0);
 		else
-			ReportError(msg.c_str(), L"", 0, 0);
+			ReportError(msg.c_str(), "", 0, 0);
 	}
 
 	// Create/Destroy windows
@@ -125,12 +131,12 @@ namespace pr::rdr12
 		}
 		catch (std::exception const& e)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS(L"Failed to create View3D Window.\n%S", e.what()), L"", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\n%s", e.what()), "", 0, 0);
 			return nullptr;
 		}
 		catch (...)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS(L"Failed to create View3D Window.\nUnknown reason"), L"", 0, 0);
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, FmtS("Failed to create View3D Window.\nUnknown reason"), "", 0, 0);
 			return nullptr;
 		}
 	}
@@ -157,12 +163,191 @@ namespace pr::rdr12
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 	template <typename Char>
-	Guid Context::LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add) // worker thread context
+	Guid Context::LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
 		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
-	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add);
-	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, OnAddCB on_add);
+	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+
+	// Create an object from geometry
+	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
+	{
+		using namespace pr::script;
+
+		auto geom = EGeom::None;
+		pr::vector<NuggetDesc> ngt;
+
+		// Generate the nuggets first so we can tell what geometry data is needed
+		for (auto const& nugget : nuggets)
+		{
+			// Create the renderer nugget
+			auto nug = NuggetDesc(static_cast<ETopo>(nugget.m_topo), static_cast<EGeom>(nugget.m_geom))
+				.vrange(nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()))
+				.irange(nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size()));
+
+			//todo nug.m_shaders = nugget.m_mat.m_shader_map;
+			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.pso<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
+			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.pso<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
+			nug.tex_diffuse(Texture2DPtr(nugget.m_mat.m_tex_diffuse, true));
+			nug.sam_diffuse(SamplerPtr(nugget.m_mat.m_sam_diffuse, true));
+			nug.flags(static_cast<ENuggetFlag>(nugget.m_nflags));
+			nug.relative_reflectivity(nugget.m_mat.m_relative_reflectivity);
+			nug.tint(nugget.m_mat.m_tint);
+		
+			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
+			{
+#if 0 // todo
+				auto& rstep0 = nugget.m_mat.m_shader_map.m_rstep[rs];
+				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
+				{// VS
+					switch (rstep0.m_vs.shdr)
+					{
+						case EView3DShaderVS::Standard: break;
+						default: throw std::runtime_error("Unknown vertex shader");
+					}
+				}
+				{// PS
+					switch (rstep0.m_ps.shdr)
+					{
+						case EView3DShaderPS::Standard: break;
+						case EView3DShaderPS::RadialFadePS:
+						{
+							Reader reader(rstep0.m_ps.params);
+							auto type = reader.Keyword(L"Type").EnumS<pr::rdr::ERadial>();
+							auto radius = reader.Keyword(L"Radius").Vector2S();
+							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : v4Zero;
+							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
+							auto id = pr::hash::HashArgs("RadialFadePS", centre, radius, type, focus_relative);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
+							shdr->m_fade_centre = centre;
+							shdr->m_fade_radius = radius;
+							shdr->m_fade_type = type;
+							shdr->m_focus_relative = focus_relative;
+							rstep1.m_ps = shdr;
+							break;
+						}
+						default: throw std::runtime_error("Unknown pixel shader");
+					}
+				}
+				{// GS
+					switch (rstep0.m_gs.shdr)
+					{
+						case EView3DShaderGS::Standard: break;
+						case EView3DShaderGS::PointSpritesGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto point_size = reader.Keyword(L"PointSize").Vector2S();
+							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
+							auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
+							shdr->m_size = point_size;
+							shdr->m_depth = depth;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ThickLineListGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::HashArgs("ThickLineList", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ThickLineStripGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::HashArgs("ThickLineStrip", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						case EView3DShaderGS::ArrowHeadGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto size = reader.Keyword(L"Size").RealS<float>();
+							auto id = pr::hash::HashArgs("ArrowHead", size);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
+							shdr->m_size = size;
+							rstep1.m_gs = shdr;
+							break;
+						}
+						default: throw std::runtime_error("Unknown geometry shader");
+					}
+				}
+				{// CS
+					switch (rstep0.m_cs.shdr)
+					{
+						case EView3DShaderCS::None: break;
+						default: throw std::runtime_error("Unknown compute shader");
+					}
+				}
+#endif
+			}
+			ngt.push_back(nug);
+
+			// Sanity check the nugget
+			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && int(nug.m_vrange.end()) <= verts.size(), "Invalid nugget V-range");
+			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && int(nug.m_irange.end()) <= indices.size(), "Invalid nugget I-range");
+
+			// Union of geometry data type
+			geom |= nug.m_geom;
+		}
+
+		// Vertex buffer
+		pr::vector<v4> pos;
+		{
+			pos.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				pos[i] = To<v4>(verts[i].pos);
+		}
+
+		// Colour buffer
+		pr::vector<Colour32> col;
+		if (AllSet(geom, EGeom::Colr))
+		{
+			col.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				col[i] = verts[i].col;
+		}
+
+		// Normals
+		pr::vector<v4> nrm;
+		if (AllSet(geom, EGeom::Norm))
+		{
+			nrm.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				nrm[i] = To<v4>(verts[i].norm);
+		}
+
+		// Texture coords
+		pr::vector<v2> tex;
+		if (AllSet(geom, EGeom::Tex0))
+		{
+			tex.resize(verts.size());
+			for (auto i = 0; i != verts.size(); ++i)
+				tex[i] = To<v2>(verts[i].tex);
+		}
+
+		// Indices
+		auto& ind = indices;
+
+		// Create the model
+		auto attr  = ObjectAttributes(ELdrObject::Custom, name, Colour32(colour));
+		auto cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
+		auto obj = Create(m_rdr, attr, cdata, context_id);
+	
+		// Add to the sources
+		if (obj)
+			m_sources.Add(obj);
+
+		// Return the created object
+		return obj.get();
+	}
 
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
@@ -192,6 +377,30 @@ namespace pr::rdr12
 	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
+	// Create an LdrObject from the p3d model
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : GenerateGUID();
+
+		// Create an ldr object
+		ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = CreateP3D(m_rdr, attr, p3d_filepath, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : pr::GenerateGUID();
+
+		// Create an ldr object
+		ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = CreateP3D(m_rdr, attr, size, p3d_data, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
+
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)
 	{
@@ -215,7 +424,7 @@ namespace pr::rdr12
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int include_count, int exclude_count)
+	void Context::DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count)
 	{
 		// Remove objects from any windows they might be assigned to
 		for (auto& wnd : m_wnd_cont)
@@ -225,6 +434,34 @@ namespace pr::rdr12
 		m_sources.Remove(context_ids, include_count, exclude_count);
 	}
 
+	// Delete all objects not displayed in any windows
+	void Context::DeleteUnused(Guid const* context_ids, int include_count, int exclude_count)
+	{
+		// Build a set of context ids, included in 'context_ids', and not used in any windows
+		GuidSet unused;
+
+		// Initialise 'unused' with all context ids (filtered by 'context_ids')
+		for (auto& src : m_sources.Sources())
+		{
+			if (!IncludeFilter(src.first, context_ids, include_count, exclude_count)) continue;
+			unused.insert(src.first);
+		}
+
+		// Remove those that are used in the windows
+		for (auto& wnd :m_wnd_cont)
+		{
+			for (auto& id : wnd->m_guids)
+				unused.erase(id);
+		}
+
+		// Remove unused sources
+		if (!unused.empty())
+		{
+			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
+			m_sources.Remove(ids.data(), s_cast<int>(ids.ssize()), 0, ScriptSources::EReason::Removal);
+		}
+	}
+
 	// Enumerate the Guids in the sources collection
 	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
@@ -232,13 +469,27 @@ namespace pr::rdr12
 			if (!enum_guids_cb(src.second.m_context_id))
 				return;
 	}
+	
+	// Reload file sources
+	void Context::ReloadScriptSources()
+	{
+		m_sources.ReloadFiles();
+	}
+	
+	// Poll for changed script source files, and reload any that have changed
+	void Context::CheckForChangedSources()
+	{
+		m_sources.RefreshChangedFiles();
+	}
 
 	// Create an embedded code handler for the given language
-	std::unique_ptr<Context::IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
+	std::unique_ptr<Context::IEmbeddedCode> Context::CreateCodeHandler(wchar_t const* lang)
 	{
 		// Embedded code handler that buffers support code and forwards to a provided code handler function
 		struct EmbeddedCode :IEmbeddedCode
 		{
+			using EmbeddedCodeHandlerCB = StaticCB<view3d::EmbeddedCodeHandlerCB>;
+
 			std::wstring m_lang;
 			std::wstring m_code;
 			std::wstring m_support;
@@ -304,5 +555,19 @@ namespace pr::rdr12
 
 		// No code handler found, unsupported
 		throw std::runtime_error(FmtS("Unsupported embedded code language: %S", lang));
+	}
+
+	// Add an embedded code handler for 'lang'
+	void Context::SetEmbeddedCodeHandler(char const* lang, StaticCB<view3d::EmbeddedCodeHandlerCB> embedded_code_cb, bool add)
+	{
+		auto hash = hash::HashICT(lang);
+		pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
+		if (add) m_emb.push_back(EmbCodeCB{hash, embedded_code_cb});
+	}
+
+	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+	Guid const* Context::ContextIdFromFilepath(char const* filepath) const
+	{
+		return m_sources.ContextIdFromFilepath(filepath);
 	}
 }

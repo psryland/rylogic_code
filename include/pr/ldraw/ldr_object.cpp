@@ -3414,18 +3414,13 @@ namespace pr::ldr
 			// Create the cross section for implicit profiles
 			switch (m_type)
 			{
-			default:
-				{
-					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
-					return;
-				}
-			case ECSType::Round:
+				case ECSType::Round:
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
 						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
 					break;
 				}
-			case ECSType::Square:
+				case ECSType::Square:
 				{
 					// Create the cross section
 					m_cs.push_back(v2(-m_radx, -m_rady));
@@ -3434,19 +3429,24 @@ namespace pr::ldr
 					m_cs.push_back(v2(-m_radx, +m_rady));
 					break;
 				}
-			case ECSType::CrossSection:
+				case ECSType::CrossSection:
 				{
 					if (m_cs.empty())
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
 						return;
 					}
-					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					if (pr::geometry::PolygonArea(m_cs) < 0)
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
 						return;
 					}
 					break;
+				}
+				default:
+				{
+					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
 				}
 			}
 
@@ -4552,7 +4552,7 @@ namespace pr::ldr
 
 			// Find the range to plot the equation over
 			auto fp = scene.m_view.FocusPoint();
-			auto area = scene.m_view.ViewArea(scene.m_view.FocusDist());
+			auto area = scene.m_view.ViewRectAtDistance(scene.m_view.FocusDist());
 
 			// Determine the interval to plot within. Default to a sphere around the focus point.
 			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
@@ -4678,7 +4678,7 @@ namespace pr::ldr
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			auto iout = mlock.m_ilock.ptr<uint32_t>();
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
+				[&](v4_cref pos, Colour32, v4_cref, v2_cref)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform
@@ -5002,8 +5002,8 @@ namespace pr::ldr
 							auto fd = main_camera.FocusDist();
 
 							// Get the scaling factors from 'main_camera' to 'text_camera'
-							auto viewarea_camera = main_camera.ViewArea(fd);
-							auto viewarea_txtcam = text_camera.ViewArea(fd);
+							auto viewarea_camera = main_camera.ViewRectAtDistance(fd);
+							auto viewarea_txtcam = text_camera.ViewRectAtDistance(fd);
 
 							// Scale the X,Y coords in camera space
 							auto pt_cs = w2c * ob.m_i2w.pos;
@@ -5049,7 +5049,7 @@ namespace pr::ldr
 
 						// Convert the world space position into a screen space position
 						auto pt_ss = w2c * ob.m_i2w.pos;
-						auto viewarea = main_camera.ViewArea(abs(pt_ss.z));
+						auto viewarea = main_camera.ViewRectAtDistance(abs(pt_ss.z));
 						pt_ss.x *= ViewPortSize / viewarea.x;
 						pt_ss.y *= ViewPortSize / viewarea.y;
 						pt_ss.z = s_cast<float>(main_camera.NormalisedDistance(pt_ss.z));

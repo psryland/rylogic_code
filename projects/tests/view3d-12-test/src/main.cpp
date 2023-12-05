@@ -30,9 +30,9 @@ struct Main :Form
 	view3d::CubeMap m_envmap;
 	
 	// Error handler
-	static void __stdcall ReportError(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+	static void __stdcall ReportError(void*, char const* msg, char const* filepath, int line, int64_t)
 	{
-		std::wcout << filepath << "(" << line << "): " << msg << std::endl;
+		std::cout << filepath << "(" << line << "): " << msg << std::endl;
 	}
 
 	Main(HINSTANCE)
@@ -44,7 +44,7 @@ struct Main :Form
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
-		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 4, .m_dbg_name = "TestWnd"}))
+		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 8, .m_dbg_name = "TestWnd"}))
 		, m_obj0(View3D_ObjectCreateLdrA(
 			"*Box first_box_eva FF00FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
@@ -76,6 +76,7 @@ struct Main :Form
 		light.m_cam_relative = false;
 		View3D_LightPropertiesSet(m_win3d, light);
 
+		// Add objects to the scene
 		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
 		View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
@@ -158,6 +159,15 @@ struct Main :Form
 			View3D_MouseNavigateZ(m_win3d, pt, args.m_delta, TRUE);
 		}
 	}
+	void OnKey(KeyEventArgs& args) override
+	{
+		Form::OnKey(args);
+		if (!args.m_down && args.m_vk_key == VK_F7)
+		{
+			View3D_ReloadScriptSources();
+		}
+	}
+
 };
 
 // Entry point

@@ -13,7 +13,7 @@ namespace pr::rdr12
 	// then call 'GetDisplayModes' for the format needed.
 	struct SystemConfig
 	{
-		/// <summary>An output of a graphics adapter (i.e. a monitor)</summary>
+		// An output of a graphics adapter (i.e. a monitor)
 		struct Output
 		{
 			D3DPtr<IDXGIOutput> ptr;
@@ -23,14 +23,14 @@ namespace pr::rdr12
 				:ptr()
 				,desc()
 			{}
-			Output(D3DPtr<IDXGIOutput>& output)
-				:ptr(std::move(output))
+			Output(D3DPtr<IDXGIOutput> output)
+				:ptr(output)
 				,desc()
 			{
 				Throw(ptr->GetDesc(&desc));
 			}
 
-			/// <summary>Return the number of modes for a given surface format</summary>
+			// Return the number of modes for a given surface format
 			UINT ModeCount(DXGI_FORMAT format) const
 			{
 				UINT mode_count = 0;
@@ -38,28 +38,46 @@ namespace pr::rdr12
 				return mode_count;
 			}
 
-			/// <summary>Populate a list of display modes for the given format</summary>
-			std::vector<DisplayMode> DisplayModes(DXGI_FORMAT format) const
+			// Populate a list of display modes for the given format
+			pr::vector<DisplayMode, 8> DisplayModes(DXGI_FORMAT format) const
 			{
 				auto mode_count = ModeCount(format);
 				
-				std::vector<DisplayMode> modes(mode_count);
+				pr::vector<DisplayMode, 8> modes(mode_count);
 				if (!modes.empty())
 					Throw(ptr->GetDisplayModeList(format, 0, &mode_count, modes.data()));
 
-				return std::move(modes);
+				return modes;
 			}
 
-			/// <summary>Return the best match for the given mode</summary>
+			// Return the best match for the given mode
 			DisplayMode FindClosestMatchingMode(DisplayMode const& ideal) const
 			{
 				DisplayMode closest;
 				Throw(ptr->FindClosestMatchingMode(&ideal, &closest, nullptr));
 				return closest;
 			}
+
+			// Return a full screen mode that is at least 60Hz
+			DisplayMode FindBestFullScreenMode() const
+			{
+				auto monitor_info = MONITORINFOEXW{ {.cbSize = sizeof(MONITORINFOEXW)} };
+				Throw(GetMonitorInfoW(desc.Monitor, &monitor_info));
+  
+				auto dev_mode = DEVMODEW{
+					.dmSize = sizeof(DEVMODEW),
+					.dmDriverExtra = 0,
+				};
+				Throw(EnumDisplaySettingsW(monitor_info.szDevice, ENUM_CURRENT_SETTINGS, &dev_mode));
+
+				auto mode = DisplayMode(dev_mode.dmPelsWidth, dev_mode.dmPelsHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+				if (dev_mode.dmDisplayFrequency == 1 || dev_mode.dmDisplayFrequency == 0) mode.default_refresh_rate();
+				else mode.refresh_rate(dev_mode.dmDisplayFrequency, 1);
+				return FindClosestMatchingMode(mode);
+			}
 		};
 		
-		/// <summary>A graphics adapter on the system</summary>
+		// A graphics adapter on the system
 		struct Adapter
 		{
 			D3DPtr<IDXGIAdapter1> ptr;

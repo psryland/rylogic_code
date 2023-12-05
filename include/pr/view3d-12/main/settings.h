@@ -51,22 +51,22 @@ namespace pr::rdr12
 			,m_options(ERdrOptions::None)
 			,m_adapter()
 		{}
-		
-		// Fill any missing values in 'settings' with defaults
+
+		// Enable the debug layer
+		RdrSettings& DebugLayer(bool enable = true)
+		{
+			if (m_adapter.ptr != nullptr) Throw(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
+			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
+			return *this;
+		}
+
+		// Select the default adaptor (Call after setting the debug layer)
 		RdrSettings& DefaultAdapter()
 		{
 			SystemConfig cfg(AllSet(m_options, ERdrOptions::DeviceDebug));
 			if (!cfg.adapters.empty())
 				m_adapter = cfg.adapters[0];
 
-			return *this;
-		}
-
-		// Enable the debug layer
-		RdrSettings& DebugLayer(bool enable)
-		{
-			if (m_adapter.ptr != nullptr) Throw(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
-			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
 			return *this;
 		}
 	};
@@ -127,6 +127,7 @@ namespace pr::rdr12
 			,m_name()
 		{
 			DefaultOutput();
+			DefaultMode();
 
 			// Default to the window client area
 			// Null hwnd is allowed when off-screen only rendering
@@ -140,17 +141,9 @@ namespace pr::rdr12
 			
 			return *this;
 		}
-		WndSettings& GdiCompatible()
+		WndSettings& DefaultMode()
 		{
-			// Must use B8G8R8A8_UNORM for GDI compatibility
-			m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-			
-			// Make the swap chain GDI compatible
-			m_swap_chain_flags |= DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE;
-			
-			// Also, multi-sampling isn't supported
-			m_multisamp = MultiSamp();
-			return *this;
+			return m_windowed ? Size(1024, 768) : Mode(m_output.FindBestFullScreenMode());
 		}
 		WndSettings& Mode(DisplayMode const& mode)
 		{
@@ -189,6 +182,18 @@ namespace pr::rdr12
 		WndSettings& UseWBuffer(bool use = true)
 		{
 			m_use_w_buffer = use;
+			return *this;
+		}
+		WndSettings& GdiCompatible()
+		{
+			// Must use B8G8R8A8_UNORM for GDI compatibility
+			m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+			
+			// Make the swap chain GDI compatible
+			m_swap_chain_flags |= DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE;
+			
+			// Also, multi-sampling isn't supported
+			m_multisamp = MultiSamp();
 			return *this;
 		}
 		WndSettings& Name(std::string_view name)

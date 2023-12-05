@@ -64,9 +64,11 @@ namespace pr::rdr12
 		{
 			// Check for incompatible build settings
 			RdrSettings::BuildOptions bo;
-			pr::CheckBuildOptions(bo, settings.m_build_options);
+			CheckBuildOptions(bo, settings.m_build_options);
 
 			// Find the first adapter that supports Dx12
+			if (m_settings.m_adapter.ptr == nullptr)
+				m_settings.DefaultAdapter();
 			if (m_settings.m_adapter.ptr == nullptr)
 				throw std::runtime_error("No DirectX Adapter found that supports the requested feature level");
 

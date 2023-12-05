@@ -10,6 +10,7 @@
 #include "pr/view3d-12/utility/eventargs.h"
 #include "view3d-12/src/render/render_forward.h"
 #include "view3d-12/src/render/render_smap.h"
+#include "view3d-12/src/render/render_raycast.h"
 
 //#include "view3d-12/src/render/state_stack.h"
 //#include "pr/view3d/instances/instance.h"
@@ -133,7 +134,7 @@ namespace pr::rdr12
 				//case ERenderStep::GBuffer:       m_render_steps.emplace_back(new GBuffer(*this)); break;
 				//case ERenderStep::DSLighting:    m_render_steps.emplace_back(new DSLighting(*this)); break;
 				case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new RenderSmap(*this, m_global_light)); break;
-				//case ERenderStep::RayCast:       m_render_steps.emplace_back(new RayCastStep(*this, true)); break;
+				case ERenderStep::RayCast:       m_render_steps.emplace_back(new RenderRayCast(*this, true)); break;
 				default: throw std::runtime_error("Unknown render step");
 			}
 		}
@@ -150,6 +151,90 @@ namespace pr::rdr12
 		{
 			pr::erase_if(m_render_steps, [](auto& rs) { return rs->m_step_id == ERenderStep::ShadowMap; });
 		}
+	}
+
+	// Perform an immediate hit test
+	void Scene::HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& results)
+	{
+		if (rays.empty())
+			return;
+
+		// Lazy create the ray cast step
+		// Note: I've noticed that with runtime shaders enabled, reusing the same RenderRayCast
+		// doesn't seem to work, I never figured out why though. I had to create a new RenderRayCast
+		// for each hit test.
+		if (m_ht_immediate == nullptr)
+			m_ht_immediate.reset(new RenderRayCast(*this, false));
+			
+		auto& rs = *m_ht_immediate.get();
+
+		// Set the rays to cast
+		rs.SetRays(rays, snap_distance, flags, [=](auto) { return true; });
+
+		// Create a ray cast render step and populate its draw list.
+		// Note: don't look for and reuse an existing RayCastStep because callers may want
+		// to invoke immediate ray casts without interfering with existing continuous ray casts.
+		if (instances != nullptr)
+		{
+			for (BaseInstance const* inst; (inst = instances()) != nullptr;)
+				rs.AddInstance(*inst);
+		}
+		else
+		{
+			for (auto& inst : m_instances)
+				rs.AddInstance(*inst);
+		}
+
+#if 0 // todo
+		// Render just this step
+		Renderer::Lock lock(m_wnd->rdr());
+		StateStack ss(lock.ImmediateDC(), *this);
+		rs.Execute(ss);
+#endif
+
+		// Read (blocking) the hit test results
+		rs.ReadOutput(results);
+
+		// Reset ready for next time
+		rs.ClearDrawlist();
+	}
+
+	// Set the collection of rays to cast into the scene for continuous hit testing.
+	void Scene::HitTestContinuous(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter const& include)
+	{
+		// Look for an existing RayCast render step
+		if (rays.empty())
+		{
+			// Ensure there is a ray cast render step, add if not.
+			auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
+			if (rs == nullptr)
+			{
+				// Add the ray cast step first so that 'CopyResource' can happen while we render the rest of the scene
+				RenderRayCastPtr step(new RenderRayCast(*this, true));
+				auto iter = m_render_steps.insert(begin(m_render_steps), std::move(step));
+				rs = static_cast<RenderRayCast*>(iter->get());
+			}
+
+			// Set the rays to cast.
+			// Results will be available in 'm_ht_results' after Render() has been called a few times (due to multi-buffering)
+			rs->SetRays(rays, snap_distance, flags, include);
+		}
+		else
+		{
+			// Remove the ray cast step if there are no rays to cast
+			pr::erase_if(m_render_steps, [](auto& rs){ return rs->m_step_id == ERenderStep::RayCast; });
+		}
+	}
+
+	// Read the hit test results from the continuous ray cast render step
+	void Scene::HitTestGetResults(RayCastResultsOut const& results)
+	{
+		auto rs = static_cast<RenderRayCast*>(FindRStep(ERenderStep::RayCast));
+		if (rs == nullptr)
+			return;
+
+		// Read the hit test results
+		rs->ReadOutput(results);
 	}
 
 	// Render the scene, recording the command lists in 'frame'

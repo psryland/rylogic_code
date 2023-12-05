@@ -9,29 +9,11 @@
 
 namespace pr::rdr12
 {
-	// NuggetData ctor
-	NuggetData::NuggetData(ETopo topo, EGeom geom, Range vrange, Range irange)
-		:m_topo(topo)
-		,m_geom(geom)
-		,m_shaders()
-		,m_pso()
-		,m_tex_diffuse()
-		,m_sam_diffuse()
-		,m_tint(Colour32White)
-		,m_sort_key(ESortGroup::Default)
-		,m_relative_reflectivity(1)
-		,m_nflags(ENuggetFlag::None)
-		,m_vrange(vrange)
-		,m_irange(irange)
-	{}
-
-	// Nugget ctor
-	Nugget::Nugget(NuggetData const& ndata, Model* model, RdrId id)
-		:NuggetData(ndata)
+	Nugget::Nugget(NuggetDesc const& ndata, Model* model)
+		:NuggetDesc(ndata)
 		,m_model(model)
 		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
 		,m_nuggets()
-		,m_id(id)
 	{
 		// Fixed the initial pipe state overrides
 		m_pso.m_fixed = m_pso.count();
@@ -111,23 +93,24 @@ namespace pr::rdr12
 			// Create a dependent nugget to do the back faces
 			if (m_model != nullptr)
 			{
-				auto& nug = *m_model->res_mgr().CreateNugget(*this, m_model, AlphaNuggetId);
-				nug.m_sort_key.Group(ESortGroup::AlphaBack);
-				nug.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT);
-				nug.m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
-				nug.m_pso.Set<EPipeState::BlendState0>({
-					.BlendEnable = TRUE,
-					.LogicOpEnable = FALSE,
-					.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
-					.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
-					.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
-					.SrcBlendAlpha = D3D12_BLEND_ONE,
-					.DestBlendAlpha = D3D12_BLEND_ONE,
-					.BlendOpAlpha = D3D12_BLEND_OP_MAX,
-					.LogicOp = D3D12_LOGIC_OP_CLEAR,
-					.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
-				});
-				m_nuggets.push_back(nug);
+				auto nug = NuggetDesc(*this)
+					.id(AlphaNuggetId)
+					.sort_key(ESortGroup::AlphaBack)
+					.pso<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT)
+					.pso<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO)
+					.pso<EPipeState::BlendState0>({
+						.BlendEnable = TRUE,
+						.LogicOpEnable = FALSE,
+						.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
+						.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
+						.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
+						.SrcBlendAlpha = D3D12_BLEND_ONE,
+						.DestBlendAlpha = D3D12_BLEND_ONE,
+						.BlendOpAlpha = D3D12_BLEND_OP_MAX,
+						.LogicOp = D3D12_LOGIC_OP_CLEAR,
+						.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+					});
+				m_nuggets.push_back(*m_model->res_mgr().CreateNugget(nug, m_model));
 			}
 		}
 	}

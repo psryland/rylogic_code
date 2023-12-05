@@ -149,7 +149,7 @@ namespace pr
 		explicit Quat(Mat3x4_cref<S,A,B> m);
 
 		// Create a quaternion from a rotation matrix
-		explicit Quat(m4_cref<A,B> m)
+		explicit Quat(Mat4x4_cref<S,A,B> m)
 			:Quat(m.rot)
 		{}
 

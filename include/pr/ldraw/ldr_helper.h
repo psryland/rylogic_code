@@ -674,7 +674,7 @@ namespace pr::ldr
 			{
 				return o2w(m4x4::Translation(x, y, z));
 			}
-			Derived& pos(v4_cref<> pos)
+			Derived& pos(v4_cref pos)
 			{
 				return o2w(m4x4::Translation(pos));
 			}
@@ -777,7 +777,7 @@ namespace pr::ldr
 			Width m_width;
 
 			// Line points
-			LdrLine& pt(v4_cref<> a, v4_cref<> b)
+			LdrLine& pt(v4_cref a, v4_cref b)
 			{
 				m_points.push_back(a);
 				m_points.push_back(b);
@@ -821,7 +821,7 @@ namespace pr::ldr
 				:m_points()
 			{}
 
-			LdrTriangle& pt(v4_cref<> a, v4_cref<> b, v4_cref<> c)
+			LdrTriangle& pt(v4_cref a, v4_cref b, v4_cref c)
 			{
 				m_points.push_back(a);
 				m_points.push_back(b);
@@ -902,7 +902,7 @@ namespace pr::ldr
 				m_dim = Vec4d<void>{dim, dim, dim, 0};
 				return *this;
 			}
-			LdrBox& dim(v4_cref<> dim)
+			LdrBox& dim(v4_cref dim)
 			{
 				m_dim = Vec4d<void>(dim.x, dim.y, dim.z, 0);
 				return *this;
@@ -977,7 +977,7 @@ namespace pr::ldr
 				m_nf = Vec2d<void>(n, f);
 				return *this;
 			}
-			LdrFrustum& nf(v2_cref<> nf_)
+			LdrFrustum& nf(v2_cref nf_)
 			{
 				return nf(nf_.x, nf_.y);
 			}
@@ -991,7 +991,7 @@ namespace pr::ldr
 				m_aspect = 0;
 				return *this;
 			}
-			LdrFrustum& wh(v2_cref<> sz)
+			LdrFrustum& wh(v2_cref sz)
 			{
 				return wh(sz.x, sz.y);
 			}

@@ -724,20 +724,20 @@ namespace pr::rdr12
 		// need it to draw "through" other objects in the scene.
 		{
 			// On the first pass, draw after all opaques with inverted Z test
-			NuggetData nugget(ETopo::TriList, Vert::GeomMask);
-			nugget.m_sort_key.Group(ESortGroup::PostOpaques);
-			nugget.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
-			nugget.m_pso.Set<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER);
-			nugget.m_tex_diffuse = res().CreateTexture(EStockTexture::Gray);
-			m_gfx.m_model->CreateNugget(nugget);
+			m_gfx.m_model->CreateNugget(
+				NuggetDesc(ETopo::TriList, Vert::GeomMask)
+				.sort_key(ESortGroup::PostOpaques)
+				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
+				.pso<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER)
+				.tex_diffuse(res().StockTexture(EStockTexture::Gray)));
 		}
 		{
 			// On the second pass, draw the gizmo normally
-			NuggetData nugget(ETopo::TriList, Vert::GeomMask);
-			nugget.m_sort_key.Group(static_cast<ESortGroup>(int(ESortGroup::PostOpaques) + 1));
-			nugget.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
-			nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::RangesCanOverlap, true);
-			m_gfx.m_model->CreateNugget(nugget);
+			m_gfx.m_model->CreateNugget(
+				NuggetDesc(ETopo::TriList, Vert::GeomMask)
+				.sort_key(ESortGroup(int(ESortGroup::PostOpaques) + 1))
+				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
+				.flags(ENuggetFlag::RangesCanOverlap, true));
 		}
 
 		// Initialise the instances
