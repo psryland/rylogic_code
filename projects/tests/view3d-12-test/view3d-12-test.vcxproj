@@ -64,8 +64,12 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
 
+  <ItemGroup>
+    <UpToDateCheckInput Include="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll" />
+  </ItemGroup>
+  
   <!-- Dependencies -->
-  <Target Name="Deploy" AfterTargets="Build"
+  <Target Name="CopyDependencies" AfterTargets="Build" BeforeTargets="Deploy"
     Inputs="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll"
     Outputs="$(TargetDir)view3d-12.dll"
   >

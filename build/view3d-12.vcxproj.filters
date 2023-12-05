@@ -222,6 +222,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\texture\d2d_context.cpp">
       <Filter>src\texture</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_raycast.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -555,6 +558,12 @@
       <Filter>src\texture</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\update_resource.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_raycast.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\ray_cast.h">
       <Filter>src\utility</Filter>
     </ClInclude>
   </ItemGroup>

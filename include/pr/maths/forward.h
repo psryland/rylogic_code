@@ -296,16 +296,16 @@ namespace pr
 	using iv2 = Vec2<int, void>;
 	using iv3 = Vec3i<void>;
 	using iv4 = Vec4i<void>;
-	template <typename T = void> using v2_cref = Vec2_cref<float, T>;
-	template <typename T = void> using v3_cref = Vec3_cref<float, T>;
-	template <typename T = void> using v4_cref = Vec4_cref<float, T>;
-	template <typename T = void> using v8_cref = Vec8_cref<float, T>;
-	template <typename T = void> using iv2_cref = Vec2_cref<int, T>;
-	template <typename T = void> using iv4_cref = Vec4_cref<int, T>;
-	template <typename A = void, typename B = void> using quat_cref = Quat_cref<float, A, B>;
-	template <typename A = void, typename B = void> using m3_cref = Mat3x4_cref<float, A, B>;
-	template <typename A = void, typename B = void> using m4_cref = Mat4x4_cref<float, A, B>;
-	template <typename A = void, typename B = void> using m6_cref = Mat6x8_cref<float, A, B>;
+	using v2_cref = Vec2_cref<float, void>;
+	using v3_cref = Vec3_cref<float, void>;
+	using v4_cref = Vec4_cref<float, void>;
+	using v8_cref = Vec8_cref<float, void>;
+	using iv2_cref = Vec2_cref<int, void>;
+	using iv4_cref = Vec4_cref<int, void>;
+	using quat_cref = Quat_cref<float, void, void>;
+	using m3_cref = Mat3x4_cref<float, void, void>;
+	using m4_cref = Mat4x4_cref<float, void, void>;
+	using m6_cref = Mat6x8_cref<float, void, void>;
 
 	// Helper trait for 'underlying_type' that works for non-enums as well
 	template <typename T, bool = std::is_enum_v<T>> struct underlying_type : std::underlying_type<T> {};

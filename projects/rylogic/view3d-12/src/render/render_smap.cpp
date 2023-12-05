@@ -167,7 +167,7 @@ namespace pr::rdr12
 					break;
 
 				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.m_id == Nugget::AlphaNuggetId)
+				if (nug.m_id == AlphaNuggetId)
 					break;
 
 				// Create the combined sort key for this nugget

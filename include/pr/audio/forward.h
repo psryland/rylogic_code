@@ -59,7 +59,7 @@ namespace pr::audio
 	struct Sound;
 	class AudioManager;
 	using SoundPtr = pr::RefPtr<Sound>;
-	using ReportErrorCB = pr::StaticCB<void, wchar_t const*>;
+	using ReportErrorCB = StaticCB<void, wchar_t const*>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
 

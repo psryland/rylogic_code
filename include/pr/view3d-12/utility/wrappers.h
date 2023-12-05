@@ -163,7 +163,7 @@ namespace pr::rdr12
 		//    the proper refresh rate. If we don't do this and just set the refresh rate to a default value which may
 		//    not exist on all computers then DirectX will respond by performing a buffer copy instead of a buffer flip
 		//    which will degrade performance and give us annoying errors in the debug output.
-		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, you�ll want to create the Render
+		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, you'll want to create the Render
 		//    Target using an sRGB format. The new flip modes, however, do not allow you to create a swap chain back buffer
 		//    using an sRGB format. In this case, you create one using the non-sRGB format (i.e. DXGI_SWAP_CHAIN_DESC1.Format
 		//    = DXGI_FORMAT_B8G8R8A8_UNORM) and use sRGB for the Render Target View (i.e. D3D12_RENDER_TARGET_VIEW_DESC.Format
@@ -182,6 +182,39 @@ namespace pr::rdr12
 		DisplayMode(iv2 const& area, DXGI_FORMAT format = DXGI_FORMAT_B8G8R8A8_UNORM)
 			:DisplayMode(area.x, area.y, format)
 		{}
+		DisplayMode& size(int w, int h)
+		{
+			Width  = w ? s_cast<uint32_t>(w) : 16;
+			Height = h ? s_cast<uint32_t>(h) : 16;
+			return *this;
+		}
+		DisplayMode& format(DXGI_FORMAT fmt)
+		{
+			Format = fmt;
+			return *this;
+		}
+		DisplayMode& refresh_rate(int numerator, int denominator)
+		{
+			RefreshRate.Numerator   = numerator;
+			RefreshRate.Denominator = denominator;
+			return *this;
+		}
+		DisplayMode& default_refresh_rate()
+		{
+			RefreshRate.Numerator   = 0;
+			RefreshRate.Denominator = 0;
+			return *this;
+		}
+		DisplayMode& scaling(DXGI_MODE_SCALING scaling)
+		{
+			Scaling = scaling;
+			return *this;
+		}
+		DisplayMode& scanline_order(DXGI_MODE_SCANLINE_ORDER scanline_order)
+		{
+			ScanlineOrdering = scanline_order;
+			return *this;
+		}
 	};
 
 	// Resource clear value
@@ -490,6 +523,10 @@ namespace pr::rdr12
 			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
 			return *this;
 		}
+		ResDesc& multisamp(int samples)
+		{
+			return multisamp(MultiSamp(s_cast<uint32_t>(samples)));
+		}
 		ResDesc& multisamp(MultiSamp sampling)
 		{
 			SampleDesc = sampling;
@@ -760,28 +797,30 @@ namespace pr::rdr12
 	// Texture sampler description
 	struct SamDesc :D3D12_SAMPLER_DESC
 	{
-		SamDesc()
-			:SamDesc(D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
-		{}
+		// Notes:
+		//  - There isn't a logical "default" sampler choice. Using invalid values in the default
+		//    constructor to force instances to set their own values.
+		
+		SamDesc() :SamDesc(s_cast<D3D12_TEXTURE_ADDRESS_MODE>(0), D3D12_FILTER_MIN_MAG_MIP_POINT) {}
 		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
 			:SamDesc(addr, addr, addr, filter)
 		{}
 		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter)
 			:D3D12_SAMPLER_DESC()
 		{
-			Filter         = filter;
-			AddressU       = addrU;
-			AddressV       = addrV;
-			AddressW       = addrW;
-			MipLODBias     = 0.0f;
-			MaxAnisotropy  = 1;
+			Filter = filter;
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			MipLODBias = 0.0f;
+			MaxAnisotropy = 1;
 			ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 			BorderColor[0] = 0.0f;
 			BorderColor[1] = 0.0f;
 			BorderColor[2] = 0.0f;
 			BorderColor[3] = 0.0f;
-			MinLOD         = 0.0f;
-			MaxLOD         = D3D12_FLOAT32_MAX;
+			MinLOD = 0.0f;
+			MaxLOD = D3D12_FLOAT32_MAX;
 		}
 
 		// Hash this description to create an Id that can be used to detect duplicate samplers

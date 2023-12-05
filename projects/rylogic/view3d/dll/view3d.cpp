@@ -62,12 +62,11 @@ static Context& Dll()
 // Note: this function is not thread safe, avoid race calls
 VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags)
 {
-	auto error_cb = pr::StaticCallback(global_error_cb, ctx);
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, error_cb, device_flags);
+			g_ctx = new Context(g_hInstance, { global_error_cb, ctx }, device_flags);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -76,12 +75,12 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
+		global_error_cb(ctx, pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
 		return nullptr;
 	}
 	catch (...)
 	{
-		error_cb(L"Failed to initialise View3D.\nReason: An unknown exception occurred\n", L"", 0, 0);
+		global_error_cb(ctx, L"Failed to initialise View3D.\nReason: An unknown exception occurred\n", L"", 0, 0);
 		return nullptr;
 	}
 }
@@ -104,9 +103,9 @@ VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(View3D_ReportErrorCB error_cb,
 	{
 		DllLockGuard;
 		if (add)
-			Dll().ReportError += ReportErrorCB(error_cb, ctx);
+			Dll().ReportError += {error_cb, ctx};
 		else
-			Dll().ReportError -= ReportErrorCB(error_cb, ctx);
+			Dll().ReportError -= {error_cb, ctx};
 	}
 	CatchAndReport(View3D_GlobalErrorCBSet, , );
 }
@@ -221,9 +220,9 @@ VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(View3D_AddFileProgressCB p
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnAddFileProgress += pr::StaticCallback(progress_cb, ctx);
+			Dll().OnAddFileProgress += {progress_cb, ctx};
 		else
-			Dll().OnAddFileProgress -= pr::StaticCallback(progress_cb, ctx);
+			Dll().OnAddFileProgress -= {progress_cb, ctx};
 	}
 	CatchAndReport(View3D_AddFileProgressCBSet,,);
 }
@@ -235,9 +234,9 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sou
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnSourcesChanged += pr::StaticCallback(sources_changed_cb, ctx);
+			Dll().OnSourcesChanged += {sources_changed_cb, ctx};
 		else
-			Dll().OnSourcesChanged -= pr::StaticCallback(sources_changed_cb, ctx);
+			Dll().OnSourcesChanged -= {sources_changed_cb, ctx};
 	}
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
@@ -297,9 +296,9 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(View3DWindow window, View3D_Re
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->ReportError += pr::StaticCallback(error_cb, ctx);
+			window->ReportError += {error_cb, ctx};
 		else
-			window->ReportError -= pr::StaticCallback(error_cb, ctx);
+			window->ReportError -= {error_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
@@ -361,9 +360,9 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(View3DWindow window, Vi
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSettingsChanged += pr::StaticCallback(settings_changed_cb, ctx);
+			window->OnSettingsChanged += {settings_changed_cb, ctx};
 		else
-			window->OnSettingsChanged -= pr::StaticCallback(settings_changed_cb, ctx);
+			window->OnSettingsChanged -= {settings_changed_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
@@ -375,9 +374,9 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(View3DWindow window, View3D
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnInvalidated += pr::StaticCallback(invalidated_cb, ctx);
+			window->OnInvalidated += {invalidated_cb, ctx};
 		else
-			window->OnInvalidated -= pr::StaticCallback(invalidated_cb, ctx);
+			window->OnInvalidated -= {invalidated_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
 }
@@ -389,9 +388,9 @@ VIEW3D_API void __stdcall View3D_WindowRenderingCB(View3DWindow window, View3D_R
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnRendering += pr::StaticCallback(rendering_cb, ctx);
+			window->OnRendering += {rendering_cb, ctx};
 		else
-			window->OnRendering -= pr::StaticCallback(rendering_cb, ctx);
+			window->OnRendering -= {rendering_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowRenderingCB, window,);
 }
@@ -403,9 +402,9 @@ VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(View3DWindow window, View3
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnSceneChanged += pr::StaticCallback(scene_changed_cb, ctx);
+			window->OnSceneChanged += {scene_changed_cb, ctx};
 		else
-			window->OnSceneChanged -= pr::StaticCallback(scene_changed_cb, ctx);
+			window->OnSceneChanged -= {scene_changed_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowSceneChangedCB, window, );
 }
@@ -630,9 +629,9 @@ VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(View3DWindow window, View3
 
 		DllLockGuard;
 		if (add)
-			window->OnAnimationEvent += pr::StaticCallback(anim_cb, ctx);
+			window->OnAnimationEvent += {anim_cb, ctx};
 		else
-			window->OnAnimationEvent -= pr::StaticCallback(anim_cb, ctx);
+			window->OnAnimationEvent -= {anim_cb, ctx};
 	}
 	CatchAndReport(View3D_AnimationEventCBSet, , );
 }
@@ -849,7 +848,7 @@ VIEW3D_API void __stdcall View3D_CameraViewRectSet(View3DWindow window, float wi
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.View(width, height, dist);
+		window->m_camera.ViewRectAtDistance(v2(width, height), dist);
 		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist | EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraViewRectSet, window,);
@@ -1104,7 +1103,7 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<View3DV2>(window->m_camera.ViewArea(dist));
+		return To<View3DV2>(window->m_camera.ViewRectAtDistance(dist));
 	}
 	CatchAndReport(View3D_ViewArea, window, To<View3DV2>(v2Zero));
 }

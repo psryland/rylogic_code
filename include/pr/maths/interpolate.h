@@ -14,15 +14,15 @@ namespace pr
 	{
 		struct Point
 		{
-			template <typename F> v2 operator()(v2 lhs, v4_cref<>, F, F) const
+			template <typename F> v2 operator()(v2 lhs, v4_cref, F, F) const
 			{
 				return lhs;
 			}
-			template <typename F> v3 operator()(v3 lhs, v4_cref<>, F, F) const
+			template <typename F> v3 operator()(v3 lhs, v4_cref, F, F) const
 			{
 				return lhs;
 			}
-			template <typename F> v4 operator()(v4_cref<> lhs, v4_cref<>, F, F) const
+			template <typename F> v4 operator()(v4_cref lhs, v4_cref, F, F) const
 			{
 				return lhs;
 			}
@@ -39,7 +39,7 @@ namespace pr
 				if (N-- <= 1) return lhs;
 				return Lerp(lhs, rhs, float(n)/N);
 			}
-			template <typename F> v4 operator()(v4_cref<> lhs, v4_cref<> rhs, F n, F N) const
+			template <typename F> v4 operator()(v4_cref lhs, v4_cref rhs, F n, F N) const
 			{
 				if (N-- <= 1) return lhs;
 				return Lerp(lhs, rhs, float(n)/N);

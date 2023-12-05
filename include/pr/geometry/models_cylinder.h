@@ -31,14 +31,14 @@ namespace pr::geometry
 	// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
 	// on the ends of the cylinder since this is the most likely way it would be textured
 	template <typename VOut, typename IOut>
-	Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		if (wedges < 3) wedges = 3;
 		if (layers < 1) layers = 1;
 		auto [vcount,icount] = CylinderSize(wedges, layers);
 
 		Props props;
-		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Bounding box
 		float max_radius = std::max(radius0, radius1);
@@ -46,7 +46,7 @@ namespace pr::geometry
 		Grow(props.m_bbox, v4(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours, num_colours, vcount, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), vcount, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		auto z  = -height * 0.5f;

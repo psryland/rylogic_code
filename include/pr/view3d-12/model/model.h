@@ -48,7 +48,7 @@ namespace pr::rdr12
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
-		void CreateNugget(NuggetData const& props, RdrId id = 0);
+		void CreateNugget(NuggetDesc const& props);
 
 		// Call to release the nuggets that this model has been
 		// divided into. Nuggets are the contiguous sub groups

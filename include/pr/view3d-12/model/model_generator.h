@@ -14,141 +14,55 @@ namespace pr::rdr12
 	// Parameters structure for creating mesh models
 	struct MeshCreationData
 	{
-		int m_vcount;                // The length of the 'verts' array
-		int m_icount;                // The length of the 'indices' array
-		int m_gcount;                // The length of the 'nuggets' array
-		int m_ccount;                // The length of the 'colours' array. 0, 1, or 'vcount'
-		int m_ncount;                // The length of the 'normals' array. 0, 1, or 'vcount'
-		v4 const* m_verts;           // The vertex data for the model
-		uint16_t const* m_indices;   // The index data for the model
-		NuggetData const* m_nuggets; // The nugget data for the model
-		Colour32 const* m_colours;   // The colour data for the model. Typically nullptr, 1, or 'vcount' colours
-		v4 const* m_normals;         // The normal data for the model. Typically nullptr or a pointer to 'vcount' normals
-		v2 const* m_tex_coords;      // The texture coordinates data for the model. nullptr or a pointer to 'vcount' texture coords
+		std::span<v4 const> m_verts;           // The vertex data for the model
+		std::span<uint16_t const> m_indices;   // The index data for the model
+		std::span<NuggetDesc const> m_nuggets; // The nugget data for the model
+		std::span<Colour32 const> m_colours;   // The colour data for the model. Typically 0, 1, or 'vcount' colours. Not a requirement though because of interpolation.
+		std::span<v4 const> m_normals;         // The normal data for the model. Typically 0, 1, or 'vcount' normals. Not a requirement though because of interpolation.
+		std::span<v2 const> m_tex_coords;      // The texture coordinates data for the model. 0, or 'vcount' texture coords
 
 		MeshCreationData()
-			:m_vcount()
-			,m_icount()
-			,m_gcount()
-			,m_ccount()
-			,m_ncount()
-			,m_verts()
+			:m_verts()
 			,m_indices()
 			,m_nuggets()
 			,m_colours()
 			,m_normals()
 			,m_tex_coords()
 		{}
-		MeshCreationData& verts(v4 const* vbuf, int count)
+		MeshCreationData& verts(std::span<v4 const> vbuf)
 		{
-			assert(count == 0 || vbuf != nullptr);
-			assert(maths::is_aligned(vbuf));
-			m_vcount = count;
+			assert(maths::is_aligned(vbuf.data()));
 			m_verts = vbuf;
 			return *this;
 		}
-		MeshCreationData& indices(uint16_t const* ibuf, int count)
+		MeshCreationData& indices(std::span<uint16_t const> ibuf)
 		{
-			assert(count == 0 || ibuf != nullptr);
-			m_icount = count;
 			m_indices = ibuf;
 			return *this;
 		}
-		MeshCreationData& nuggets(NuggetData const* gbuf, int count)
+		MeshCreationData& nuggets(std::span<NuggetDesc const> gbuf)
 		{
-			assert(count == 0 || gbuf != nullptr);
-			m_gcount = count;
 			m_nuggets = gbuf;
 			return *this;
 		}
-		MeshCreationData& colours(Colour32 const* cbuf, int count)
+		MeshCreationData& colours(std::span<Colour32 const> cbuf)
 		{
 			// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
-			assert(count == 0 || cbuf != nullptr);
-			m_ccount = count;
 			m_colours = cbuf;
 			return *this;
 		}
-		MeshCreationData& normals(v4 const* nbuf, int count)
+		MeshCreationData& normals(std::span<v4 const> nbuf)
 		{
 			// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
-			assert(count == 0 || nbuf != nullptr);
-			assert(maths::is_aligned(nbuf));
-			m_ncount = count;
+			assert(maths::is_aligned(nbuf.data()));
 			m_normals = nbuf;
 			return *this;
 		}
-		MeshCreationData& tex(v2 const* tbuf, int count)
+		MeshCreationData& tex(std::span<v2 const> tbuf)
 		{
 			// Count doesn't have to be 0, 1, or 'vcount' because interpolation is used
-			assert(count == 0 || tbuf != nullptr);
 			m_tex_coords = tbuf;
-			(void)count;
 			return *this;
-		}
-		MeshCreationData& verts(std::initializer_list<v4> vbuf)
-		{
-			assert(maths::is_aligned(vbuf.begin()));
-			m_vcount = int(vbuf.size());
-			m_verts = vbuf.begin();
-			return *this;
-		}
-		MeshCreationData& indices(std::initializer_list<uint16_t> ibuf)
-		{
-			m_icount = int(ibuf.size());
-			m_indices = ibuf.begin();
-			return *this;
-		}
-		MeshCreationData& nuggets(std::initializer_list<NuggetData> gbuf)
-		{
-			m_gcount = int(gbuf.size());
-			m_nuggets = gbuf.begin();
-			return *this;
-		}
-		MeshCreationData& colours(std::initializer_list<Colour32> cbuf)
-		{
-			m_ccount = int(cbuf.size());
-			m_colours = cbuf.begin();
-			return *this;
-		}
-		MeshCreationData& normals(std::initializer_list<v4> nbuf)
-		{
-			assert(int(nbuf.size()) == m_vcount);
-			assert(maths::is_aligned(nbuf.begin()));
-			m_ncount = int(nbuf.size());
-			m_normals = nbuf.begin();
-			return *this;
-		}
-		MeshCreationData& tex(std::initializer_list<v2> tbuf)
-		{
-			assert(int(tbuf.size()) == m_vcount);
-			m_tex_coords = tbuf.begin();
-			return *this;
-		}
-
-		template <int N> MeshCreationData& verts(v4 const (&vbuf)[N])
-		{
-			return verts(&vbuf[0], N);
-		}
-		template <int N> MeshCreationData& indices(uint16_t const (&ibuf)[N])
-		{
-			return indices(&ibuf[0], N);
-		}
-		template <int N> MeshCreationData& nuggets(NuggetData const (&nbuf)[N])
-		{
-			return nuggets(&nbuf[0], N);
-		}
-		template <int N> MeshCreationData& colours(Colour32 const (&cbuf)[N])
-		{
-			return colours(&cbuf[0], N);
-		}
-		template <int N> MeshCreationData& normals(v4 const (&nbuf)[N])
-		{
-			return normals(&nbuf[0], N);
-		}
-		template <int N> MeshCreationData& tex(v2 const (&tbuf)[N])
-		{
-			return tex(&tbuf[0], N);
 		}
 	};
 
@@ -158,81 +72,94 @@ namespace pr::rdr12
 		// Additional options for model creation
 		struct CreateOptions
 		{
+			// Per-vertex or per-object colour
+			std::span<Colour32 const> m_colours = {};
+
 			// Transform the model verts by the given transform.
-			m4x4 const* m_bake;
+			m4x4 const* m_bake = nullptr;
+
+			// Diffuse texture
+			Texture2DPtr m_tex_diffuse = nullptr;
+
+			// Diffuse texture sampler
+			SamplerPtr m_sam_diffuse = nullptr;
+
+			// Texture to surface transform
+			m4x4 const* m_t2s = nullptr;
 
 			// Algorithmically generate surface normals. Value is the smoothing angle.
-			float const* m_gen_normals;
+			float const* m_gen_normals = nullptr;
 		};
 
 		// Points/Sprites *********************************************************************
 		// Generate a cloud of points from an array of points
-		static ModelPtr Points(Renderer& rdr, int num_points, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
+		// Supports optional colours (opts->m_colours), either, 0, 1, or num_points
+		static ModelPtr Points(Renderer& rdr, std::span<v4 const> points, CreateOptions const* opts = nullptr);
 
 		// Lines ******************************************************************************
-		// Generate lines from an array of start point, end point pairs.
-		// 'num_lines' is the number of start/end point pairs in the following arrays
+		// Generate a batch of lines.
+		// 'num_lines' is the number of line segments to create.
 		// 'points' is the input array of start and end points for lines.
-		// 'num_colours' should be either, 0, 1, or num_lines * 2
-		// 'colours' is an input array of colour values or a pointer to a single colour.
-		// 'mat' is an optional material to use for the lines
-		static ModelPtr Lines(Renderer& rdr, int num_lines, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr LinesD(Renderer& rdr, int num_lines, v4 const* points, v4 const* directions, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr LineStrip(Renderer& rdr, int num_lines, v4 const* points, int num_colours = 0, Colour32 const* colour = nullptr, NuggetData const* mat = nullptr);
+		// 'directions' is the vector from each point to the next.
+		// Supports optional colours (opts->m_colours), either, 0, 1, or num_lines * 2
+		static ModelPtr Lines(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr LinesD(Renderer& rdr, int num_lines, std::span<v4 const> points, std::span<v4 const> directions, CreateOptions const* opts = nullptr);
+		static ModelPtr LineStrip(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
 
 		// Quad *******************************************************************************
-		static ModelPtr Quad(Renderer& rdr, NuggetData const* mat = nullptr);
-		static ModelPtr Quad(Renderer& rdr, int num_quads, v4 const* verts, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const& t2q = m4x4Identity, NuggetData const* mat = nullptr);
-		static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetData const* mat = nullptr);
-		static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetData const* mat = nullptr);
-		static ModelPtr QuadStrip(Renderer& rdr, int num_quads, v4 const* verts, float width, int num_normals = 0, v4 const* normals = nullptr, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy, NuggetData const* mat = nullptr);
+		// Create a quad.
+		// Supports optional colours (opts->m_colours), either, 0, 1, or num_quads
+		static ModelPtr Quad(Renderer& rdr, CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(Renderer& rdr, int num_quads, std::span<v4 const> verts, CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
+		static ModelPtr QuadStrip(Renderer& rdr, int num_quads, std::span<v4 const> verts, float width, std::span<v4 const> normals = {}, CreateOptions const* opts = nullptr);
+		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy, CreateOptions const* opts = nullptr);
 
 		// Shape2d ****************************************************************************
-		static ModelPtr Ellipse(Renderer& rdr, float dimx, float dimy, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);		
-		static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr Polygon(Renderer& rdr, int num_points, v2 const* points, bool solid, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
+		static ModelPtr Ellipse(Renderer& rdr, float dimx, float dimy, bool solid, int facets = 40, CreateOptions const* opts = nullptr);		
+		static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, CreateOptions const* opts = nullptr);
+		static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, CreateOptions const* opts = nullptr);
+		static ModelPtr Polygon(Renderer& rdr, std::span<v2 const> points, bool solid, CreateOptions const* opts = nullptr);
 
 		// Boxes ******************************************************************************
-		static ModelPtr Boxes(Renderer& rdr, int num_boxes, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr Boxes(Renderer& rdr, int num_boxes, v4 const* points, m4x4 const& o2w, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
-		static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
-		static ModelPtr BoxList(Renderer& rdr, int num_boxes, v4 const* positions, v4 const& rad, int num_colours = 0, Colour32 const* colours = nullptr, NuggetData const* mat = nullptr);
+		static ModelPtr Box(Renderer& rdr, float rad, CreateOptions const* opts = nullptr);
+		static ModelPtr Box(Renderer& rdr, v4_cref rad, CreateOptions const* opts = nullptr);
+		static ModelPtr Boxes(Renderer& rdr, int num_boxes, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr BoxList(Renderer& rdr, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts = nullptr);
 
 		// Sphere *****************************************************************************
-		static ModelPtr Geosphere(Renderer& rdr, v4 const& radius, int divisions = 3, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
-		static ModelPtr Geosphere(Renderer& rdr, float radius, int divisions = 3, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
-		static ModelPtr Sphere(Renderer& rdr, v4 const& radius, int wedges = 20, int layers = 5, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
-		static ModelPtr Sphere(Renderer& rdr, float radius, int wedges = 20, int layers = 5, Colour32 colour = Colour32White, NuggetData const* mat = nullptr);
+		static ModelPtr Geosphere(Renderer& rdr, float radius, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr Geosphere(Renderer& rdr, v4_cref radius, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr Sphere(Renderer& rdr, float radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
+		static ModelPtr Sphere(Renderer& rdr, v4 const& radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
 
 		// Cylinder ***************************************************************************
-		static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, int wedges = 20, int layers = 1, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
+		static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, int wedges = 20, int layers = 1, CreateOptions const* opts = nullptr);
 
 		// Extrude ****************************************************************************
-		static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, v4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
-		static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, m4x4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetData const* mat = nullptr);
+		static ModelPtr Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<v4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
+		static ModelPtr Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<m4x4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
 
 		// Mesh *******************************************************************************
-		static ModelPtr Mesh(Renderer& rdr, MeshCreationData const& cdata);
+		static ModelPtr Mesh(Renderer& rdr, MeshCreationData const& cdata, CreateOptions const* opts = nullptr);
 
 		// SkyBox *****************************************************************************
-		static ModelPtr SkyboxGeosphere(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, int divisions = 3, Colour32 colour = Colour32White);
-		static ModelPtr SkyboxGeosphere(Renderer& rdr, wchar_t const* texture_path, float radius = 1.0f, int divisions = 3, Colour32 colour = Colour32White);
-		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, Colour32 colour = Colour32White);
-		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, wchar_t const* texture_path, float radius = 1.0f, Colour32 colour = Colour32White);
-		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, Texture2DPtr (&sky_texture)[6], float radius = 1.0f, Colour32 colour = Colour32White);
-		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, wchar_t const* texture_path_pattern, float radius = 1.0f, Colour32 colour = Colour32White);
+		static ModelPtr SkyboxGeosphere(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxGeosphere(Renderer& rdr, std::filesystem::path const& texture_path, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, std::filesystem::path const& texture_path, float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, Texture2DPtr (&sky_texture)[6], float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, std::filesystem::path const& texture_path_pattern, float radius = 1.0f, CreateOptions const* opts = nullptr);
 
 		// ModelFile **************************************************************************
 		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
 		// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
 		using ModelOutFunc = std::function<bool(std::span<ModelTreeNode>)>;
-		static void LoadP3DModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const& opts = CreateOptions{});		
-		static void Load3DSModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const& opts = CreateOptions{});
-		static void LoadSTLModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const& opts = CreateOptions{});
-		static void LoadModel(geometry::EModelFileFormat format, Renderer& rdr, std::istream& src, ModelOutFunc mout, CreateOptions const& opts = CreateOptions{});
+		static void LoadP3DModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void Load3DSModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void LoadSTLModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void LoadModel(geometry::EModelFileFormat format, Renderer& rdr, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
 
 		// Text *******************************************************************************
 
@@ -328,10 +255,10 @@ namespace pr::rdr12
 		// 'formatting' defines regions in the text to apply formatting to.
 		// 'formatting_count' is the length of the 'formatting' array.
 		// 'layout' is global text layout information.
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
 
 		// Cache ****************************************************************************************
 
@@ -342,7 +269,7 @@ namespace pr::rdr12
 			using VType = VertexType;
 			using VCont = vector<VType>;
 			using ICont = pr::geometry::IdxBuf;
-			using NCont = vector<NuggetData>;
+			using NCont = vector<NuggetDesc>;
 
 		private:
 
@@ -430,20 +357,6 @@ namespace pr::rdr12
 				case 1: return dx_format_v<uint8_t>;
 				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
 				}
-			}
-
-			// Add a nugget to 'm_ncont' (helper)
-			void AddNugget(ETopo topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetData const* mat = nullptr)
-			{
-				// Notes:
-				// - Don't change the 'geom' flags here based on whether the material has a texture or not.
-				//   The texture may be set in the material after here and before the model is rendered.
-				auto nug = mat ? *mat : NuggetData{};
-				nug.m_topo = topo;
-				nug.m_geom = geom;
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, geometry_has_alpha);
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-				m_ncont.push_back(nug);
 			}
 		};
 	};

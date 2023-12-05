@@ -196,7 +196,7 @@ namespace pr
 		Camera(m4x4 const& c2w, double fovY = maths::tau_by_8, double aspect = 1.0, double focus_dist = 1.0)
 			:Camera(c2w, fovY, aspect, focus_dist, false, 0.01, 100.0)
 		{}
-		Camera(v4_cref<> eye, v4_cref<> pt, v4_cref<> up, double fovY = maths::tau_by_8, double aspect = 1.0)
+		Camera(v4_cref eye, v4_cref pt, v4_cref up, double fovY = maths::tau_by_8, double aspect = 1.0)
 			:Camera(m4x4::Identity(), fovY, aspect)
 		{
 			LookAt(eye, pt, up, true);
@@ -345,7 +345,7 @@ namespace pr
 		}
 
 		// Get/Set the distances to the near and far clip planes
-		v2 ClipPlanes(bool focus_relative)
+		v2 ClipPlanes(bool focus_relative) const
 		{
 			return v2(s_cast<float>(Near(focus_relative)), s_cast<float>(Far(focus_relative)));
 		}
@@ -455,7 +455,7 @@ namespace pr
 			// Measure the current focus distance and view size at that distance
 			auto d = FocusDist();
 			auto pt = FocusPoint();
-			auto wh = ViewArea(d);
+			auto wh = ViewRectAtDistance(d);
 			auto size = (wh.x + wh.y) * 0.5;
 
 			// The focus distance at 'fov' with a view size of 'size' is:
@@ -512,12 +512,31 @@ namespace pr
 			m_moved = true;
 		}
 
-		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
-		v2 ViewArea(double dist) const
+		// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
+		v2 ViewRectAtDistance(double dist) const
 		{
 			dist = m_orthographic ? m_focus_dist : dist;
 			auto h = 2.0 * std::tan(m_fovY * 0.5);
 			return v2(s_cast<float>(dist * h * m_aspect), s_cast<float>(dist * h));
+		}
+		void ViewRectAtDistance(v2 rect, double focus_dist = 0)
+		{
+			PR_ASSERT(PR_DBG, rect.x > 0 && rect.y > 0 && focus_dist >= 0, "");
+
+			// This works for orthographic mode as well so long as we set FOV
+			Aspect(rect.x / rect.y);
+
+			// If 'focus_dist' is given, choose FOV so that the view exactly fits
+			if (focus_dist != 0)
+			{
+				FovY(2.0 * std::atan(0.5 * rect.y / focus_dist));
+				FocusDist(focus_dist);
+			}
+			// Otherwise, choose a focus distance that preserves FOV
+			else
+			{
+				FocusDist(0.5 * rect.y / std::tan(0.5 * FovY()));
+			}
 		}
 
 		// Return the view frustum for this camera.
@@ -527,7 +546,7 @@ namespace pr
 			// and the far plane at (0,0,0). However, the 'Intersect_LineToFrustum' function allows for this
 			// meaning clipping can be done in camera space assuming the frustum apex is at (0,0,0)
 			return Orthographic()
-				? Frustum::MakeOrtho(ViewArea(m_focus_dist))
+				? Frustum::MakeOrtho(ViewRectAtDistance(m_focus_dist))
 				: Frustum::MakeFA(s_cast<float>(m_fovY), s_cast<float>(m_aspect), s_cast<float>(zfar));
 		}
 		Frustum ViewFrustum() const
@@ -953,27 +972,6 @@ namespace pr
 
 			// the distance from camera to bbox_centre is 'dist + sizez'
 			LookAt(bbox_centre - s_cast<float>(focus_dist) * forward, bbox_centre, up, update_base);
-		}
-
-		// Set the camera fields of view so that a rectangle with dimensions 'width'/'height' exactly fits the view at 'dist'.
-		void View(float width, float height, double focus_dist = 0)
-		{
-			PR_ASSERT(PR_DBG, width > 0 && height > 0 && focus_dist >= 0, "");
-
-			// This works for orthographic mode as well so long as we set FOV
-			Aspect(width / height);
-
-			// If 'focus_dist' is given, choose FOV so that the view exactly fits
-			if (focus_dist != 0)
-			{
-				FovY(2.0 * std::atan(0.5 * height / focus_dist));
-				FocusDist(focus_dist);
-			}
-			// Otherwise, choose a focus distance that preserves FOV
-			else
-			{
-				FocusDist(0.5 * height / std::tan(0.5 * FovY()));
-			}
 		}
 
 		// Orbit the camera about the focus point by 'angle_rad' radians

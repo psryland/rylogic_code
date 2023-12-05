@@ -10,6 +10,7 @@
 #include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
+#include "pr/view3d-12/utility/ray_cast.h"
 
 namespace pr::rdr12
 {
@@ -35,18 +36,14 @@ namespace pr::rdr12
 		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
 		using RenderStepCont = pr::vector<std::unique_ptr<RenderStep>, 16, true>;
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
-#if 0 //todo
-		using RayCastStepPtr = std::unique_ptr<RayCastStep>;
-#endif
+		using RenderRayCastPtr = std::unique_ptr<RenderRayCast>;
 		
-		Window*          m_wnd;          // The controlling window
-		SceneCamera      m_cam;          // Represents the camera properties used to project onto the screen
-		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
-		InstCont         m_instances;    // Instances added to this scene for rendering.
-		RenderStepCont   m_render_steps; // The stages of rendering the scene
-#if 0 //todo
-		RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
-#endif
+		Window*          m_wnd;           // The controlling window
+		SceneCamera      m_cam;           // Represents the camera properties used to project onto the screen
+		Viewport         m_viewport;      // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
+		InstCont         m_instances;     // Instances added to this scene for rendering.
+		RenderStepCont   m_render_steps;  // The stages of rendering the scene
+		RenderRayCastPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
 		PipeStates       m_pso;           // Scene-wide pipe state overrides
@@ -106,18 +103,18 @@ namespace pr::rdr12
 		// Enable/Disable shadow casting
 		void ShadowCasting(bool enable, int shadow_map_size);
 
-		#if 0 // todo
-		// Perform an immediate hit test on the instances provided by coroutine 'instances'
+		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
-		void HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::Instances instances, RayCastStep::ResultsOut const& results);
+		void HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& results);
 
 		// Set the collection of rays to cast into the scene for continuous hit testing.
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
-		void HitTestContinuous(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include);
+		void HitTestContinuous(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter const& include);
 			
 		// Read the hit test results from the continuous ray cast render step.
-		void HitTestGetResults(RayCastStep::ResultsOut const& results);
+		void HitTestGetResults(RayCastResultsOut const& results);
 
+		#if 0 // todo
 		// Render step specific accessors
 		template <typename TRStep, typename = enable_if_render_step<TRStep>> TRStep* FindRStep() const
 		{

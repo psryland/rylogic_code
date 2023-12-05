@@ -169,7 +169,7 @@ namespace pr
 		// There are two variations of 'Encompass':
 		//   1) Grow = modifies the provided instance returning the point enclosed,
 		//   2) Union = operates on a const BBox returning a new BBox that includes 'point'
-		v4_cref<> Grow(v4_cref<> point)
+		v4_cref Grow(v4_cref point)
 		{
 			assert("BBox Grow. Point must have w = 1" && point.w == 1.0f);
 			assert("'point' must be aligned to 16" && maths::is_aligned(&point));
@@ -216,12 +216,12 @@ namespace pr
 		friend bool pr_vectorcall operator >  (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 		friend bool pr_vectorcall operator <= (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 		friend bool pr_vectorcall operator >= (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-		friend BBox& pr_vectorcall operator += (BBox& lhs, v4_cref<> offset)
+		friend BBox& pr_vectorcall operator += (BBox& lhs, v4_cref offset)
 		{
 			lhs.m_centre += offset;
 			return lhs;
 		}
-		friend BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref<> offset)
+		friend BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref offset)
 		{
 			lhs.m_centre -= offset;
 			return lhs;
@@ -236,17 +236,17 @@ namespace pr
 			lhs *= (1.0f / s);
 			return lhs;
 		}
-		friend BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref<> offset)
+		friend BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref offset)
 		{
 			auto bb = lhs;
 			return bb += offset;
 		}
-		friend BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref<> offset)
+		friend BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref offset)
 		{
 			auto bb = lhs;
 			return bb -= offset;
 		}
-		friend BBox pr_vectorcall operator * (m4_cref<> m, BBox_cref rhs)
+		friend BBox pr_vectorcall operator * (m4_cref m, BBox_cref rhs)
 		{
 			assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
 			assert("Transforming an invalid bounding box" && rhs.valid());
@@ -260,7 +260,7 @@ namespace pr
 			}
 			return bb;
 		}
-		friend BBox pr_vectorcall operator * (m3_cref<> m, BBox_cref rhs)
+		friend BBox pr_vectorcall operator * (m3_cref m, BBox_cref rhs)
 		{
 			assert("Transforming an invalid bounding box" && rhs.valid());
 
@@ -349,7 +349,7 @@ namespace pr
 	}
 
 	// Returns the most extreme point in the direction of 'separating_axis'
-	inline v4 pr_vectorcall SupportPoint(BBox_cref bbox, v4_cref<> separating_axis)
+	inline v4 pr_vectorcall SupportPoint(BBox_cref bbox, v4_cref separating_axis)
 	{
 		return bbox.m_centre + Sign(separating_axis, false) * bbox.m_radius;
 	}
@@ -376,7 +376,7 @@ namespace pr
 	}
 
 	// Multiply the bounding box by a non-affine transform
-	inline BBox pr_vectorcall MulNonAffine(m4_cref<> m, BBox_cref rhs)
+	inline BBox pr_vectorcall MulNonAffine(m4_cref m, BBox_cref rhs)
 	{
 		assert("Transforming an invalid bounding box" && rhs.valid());
 
@@ -391,14 +391,14 @@ namespace pr
 
 	// Include 'point' within 'bbox'.
 	[[nodiscard]]
-	inline BBox pr_vectorcall Union(BBox_cref bbox, v4_cref<> point)
+	inline BBox pr_vectorcall Union(BBox_cref bbox, v4_cref point)
 	{
 		// Const version returns lhs, non-const returns rhs!
 		BBox bb = bbox;
 		bb.Grow(point);
 		return bb;
 	}
-	inline v4_cref<> pr_vectorcall Grow(BBox& bbox, v4_cref<> point)
+	inline v4_cref pr_vectorcall Grow(BBox& bbox, v4_cref point)
 	{
 		// Const version returns lhs, non-const returns rhs!
 		return bbox.Grow(point);
@@ -449,7 +449,7 @@ namespace pr
 	}
 
 	// Returns true if 'point' is within the bounding volume
-	inline bool pr_vectorcall IsWithin(BBox_cref bbox, v4_cref<> point, float tol = 0)
+	inline bool pr_vectorcall IsWithin(BBox_cref bbox, v4_cref point, float tol = 0)
 	{
 		return
 			Abs(point.x - bbox.m_centre.x) <= bbox.m_radius.x + tol &&

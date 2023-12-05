@@ -568,11 +568,15 @@ namespace pr::rdr12
 		float Reflectivity(char const* name = nullptr) const;
 		void Reflectivity(float reflectivity, char const* name = nullptr);
 
-		// Set the texture on this object or child objects matching 'name' (see Apply)
-		// Note for difference mode drawlist management, if the object is currently in
-		// one or more drawlists (i.e. added to a scene) it will need to be removed and
-		// re-added so that the sort order is correct.
+		// Set the texture on this object or child objects matching 'name' (see Apply).
+		// Note for difference mode drawlist management, if the object is currently in one or more drawlists
+		// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
 		void SetTexture(Texture2D* tex, char const* name = nullptr);
+
+		// Set the sampler on the nuggets of this object or child objects matching 'name' (see Apply).
+		// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+		// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
+		void SetSampler(Sampler* sam, char const* name = nullptr);
 
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'

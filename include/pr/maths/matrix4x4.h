@@ -545,7 +545,7 @@ namespace pr
 	}
 
 	// Scale each component of 'mat' by the values in 'scale'
-	template <Scalar S, typename A, typename B> inline Mat4x4<S,A,B> pr_vectorcall CompMul(m4_cref<A, B> mat, Vec4_cref<S,void> scale)
+	template <Scalar S, typename A, typename B> inline Mat4x4<S,A,B> pr_vectorcall CompMul(Mat4x4_cref<S, A, B> mat, Vec4_cref<S,void> scale)
 	{
 		return Mat4x4<S,A,B>(
 			mat.x * scale.x,

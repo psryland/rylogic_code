@@ -4,7 +4,6 @@
 //***********************************************
 #ifndef PR_RDR_SHADER_RAY_CAST_CBUF_HLSL
 #define PR_RDR_SHADER_RAY_CAST_CBUF_HLSL
-
 #include "../types.hlsli"
 
 // The maximum number of rays in a single pass
@@ -28,7 +27,7 @@ struct Intercept
 };
 
 // Per-frame constants
-cbuffer FrameCBuf :reg(b0, 0)
+cbuffer CBufFrame :reg(b0, 0)
 {
 	Ray m_rays[MaxRays];
 
@@ -46,7 +45,7 @@ cbuffer FrameCBuf :reg(b0, 0)
 };
 
 // Per-nugget constants
-cbuffer NuggetCBuf :reg(b1, 0)
+cbuffer CBufNugget :reg(b1, 0)
 {
 	// Object transform
 	row_major float4x4 m_o2w;

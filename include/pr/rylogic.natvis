@@ -439,6 +439,12 @@ old:
 	<Type Name="pr::rdr12::Image">
 		<DisplayString>dim={m_dim} rowpitch={m_pitch.x} fmt={m_format}</DisplayString>
 	</Type>
+	<Type Name="pr::rdr12::TextureBase">
+		<DisplayString>{m_name} {m_res}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Sampler">
+		<DisplayString>{m_name} {m_samp}</DisplayString>
+	</Type>
 	<Type Name="pr::rdr12::SizeAndAlign&lt;*,*,*&gt;">
 		<DisplayString>size={(sa >> 0) &amp; ~(~0U &lt;&lt; size_bits_t)} align={(sa >> size_bits_t) &amp; ~(~0u &lt;&lt; align_bits_t)}</DisplayString>
 	</Type>

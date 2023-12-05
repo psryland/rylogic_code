@@ -60,7 +60,7 @@ namespace pr::rdr12
 				DXGI_FORMAT_UNKNOWN,
 			},
 			.DSVFormat = scene.wnd().m_ds_props.Format,
-			.SampleDesc = scene.wnd().m_multisamp,
+			.SampleDesc = scene.wnd().MultiSampling(),
 			.NodeMask = 0U,
 			.CachedPSO = {
 				.pCachedBlob = nullptr,
@@ -89,7 +89,7 @@ namespace pr::rdr12
 			for (;;)
 			{
 				// Don't add alpha back faces when using 'Points' fill mode
-				if (nug.m_id == Nugget::AlphaNuggetId && nug.FillMode() == EFillMode::Points)
+				if (nug.m_id == AlphaNuggetId && nug.FillMode() == EFillMode::Points)
 					break;
 
 				// Create the combined sort key for this nugget

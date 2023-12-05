@@ -78,7 +78,7 @@ namespace view3d
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us
-			ReportError += StaticCallback(opts.m_error_cb, opts.m_error_cb_ctx);
+			ReportError += {opts.m_error_cb, opts.m_error_cb_ctx};
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.RenderTargetSize();
@@ -189,8 +189,8 @@ namespace view3d
 			auto fd = m_camera.FocusDist();
 
 			// Get the scaling factors from 'm_camera' to 'v_camera'
-			auto viewarea_c = m_camera.ViewArea(fd);
-			auto viewarea_v = v_camera.ViewArea(fd);
+			auto viewarea_c = m_camera.ViewRectAtDistance(fd);
+			auto viewarea_v = v_camera.ViewRectAtDistance(fd);
 
 			if (m_focus_point_visible)
 			{
