@@ -378,19 +378,23 @@ namespace pr::rdr12
 				}
 				case EKeyword::Near:
 				{
-					p.m_reader.Real(out.m_cam.m_near);
+					float near_;
+					p.m_reader.Real(near_);
+					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
 				case EKeyword::Far:
 				{
-					p.m_reader.Real(out.m_cam.m_far);
+					float far_;
+					p.m_reader.Real(far_);
+					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
 				case EKeyword::Orthographic:
 				{
-					out.m_cam.m_orthographic = true;
+					out.m_cam.Orthographic(true);
 					out.m_cam_fields |= ECamField::Ortho;
 					break;
 				}
@@ -4743,8 +4747,8 @@ namespace pr::rdr12
 
 			assert(vout - update_v.ptr<Vert>() == nv);
 			assert(iout - update_i.ptr<uint32_t>() == ni);
-			update_v.Commit();
-			update_i.Commit();
+			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 			// Generate nuggets if initialising
 			if (init)

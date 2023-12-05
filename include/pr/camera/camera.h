@@ -154,18 +154,18 @@ namespace pr
 			// Save the current camera state as the initial state
 			void Commit(Camera const& cam)
 			{
-				m_c2w0        = cam.m_c2w;
-				m_fovY0       = cam.m_fovY;
-				m_focus_dist0 = cam.m_focus_dist;
+				m_c2w0        = cam.CameraToWorld();
+				m_fovY0       = cam.FovY();
+				m_focus_dist0 = cam.FocusDist();
 			}
 
 			// Roll back to the initial values.
 			void Revert(Camera& cam)
 			{
-				cam.m_c2w        = m_c2w0;
-				cam.m_fovY       = m_fovY0;
-				cam.m_focus_dist = m_focus_dist0;
-				cam.m_moved      = true;
+				cam.CameraToWorld(m_c2w0);
+				cam.FovY(m_fovY0);
+				cam.FocusDist(m_focus_dist0);
+				cam.Moved(true);
 			}
 		};
 
@@ -173,6 +173,8 @@ namespace pr
 		using ELockMask      = camera::ELockMask;
 		using ENavOp         = camera::ENavOp;
 		using ENavKey        = camera::ENavKey;
+
+	private:
 
 		m4x4           m_c2w;               // Camera to world transform
 		NavState       m_nav;               // Navigation initial state data
@@ -189,6 +191,8 @@ namespace pr
 		NavKeyBindings m_key;               // Key bindings
 		bool           m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		bool           m_moved;             // Dirty flag for when the camera moves
+
+	public:
 
 		Camera()
 			:Camera(m4x4::Identity())
@@ -222,6 +226,7 @@ namespace pr
 			PR_ASSERT(PR_DBG, IsFinite(m_fovY), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, IsFinite(m_aspect), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, IsFinite(m_focus_dist), "invalid scene view parameters");
+			PR_ASSERT(PR_DBG, m_focus_dist > maths::tinyd, "invalid scene view parameters");
 		}
 
 		// Return the camera to world transform
@@ -345,34 +350,34 @@ namespace pr
 		}
 
 		// Get/Set the distances to the near and far clip planes
-		v2 ClipPlanes(bool focus_relative) const
+		v2 ClipPlanes(bool as_percentage_of_focus_distance) const
 		{
-			return v2(s_cast<float>(Near(focus_relative)), s_cast<float>(Far(focus_relative)));
+			return v2(s_cast<float>(Near(as_percentage_of_focus_distance)), s_cast<float>(Far(as_percentage_of_focus_distance)));
 		}
-		void ClipPlanes(double near_, double far_, bool focus_relative)
+		void ClipPlanes(double near_, double far_, bool as_percentage_of_focus_distance)
 		{
-			Near(near_, focus_relative);
-			Far(far_, focus_relative);
+			Near(near_, as_percentage_of_focus_distance);
+			Far(far_, as_percentage_of_focus_distance);
 		}
 
 		// Get/Set the near clip plane
-		double Near(bool focus_relative) const
+		double Near(bool as_percentage_of_focus_distance) const
 		{
-			return (focus_relative ? 1 : m_focus_dist) * m_near;
+			return (as_percentage_of_focus_distance ? 1 : m_focus_dist) * m_near;
 		}
-		void Near(double value, bool focus_relative)
+		void Near(double value, bool as_percentage_of_focus_distance)
 		{
-			m_near = value / (focus_relative ? 1.0 : m_focus_dist);
+			m_near = value / (as_percentage_of_focus_distance ? 1.0 : m_focus_dist);
 		}
 
 		// Get/Set the far clip plane (in world space)
-		double Far(bool focus_relative) const
+		double Far(bool as_percentage_of_focus_distance) const
 		{
-			return (focus_relative ? 1 : m_focus_dist) * m_far;
+			return (as_percentage_of_focus_distance ? 1 : m_focus_dist) * m_far;
 		}
-		void Far(double value, bool focus_relative)
+		void Far(double value, bool as_percentage_of_focus_distance)
 		{
-			m_far = value / (focus_relative ? 1.0 : m_focus_dist);
+			m_far = value / (as_percentage_of_focus_distance ? 1.0 : m_focus_dist);
 		}
 
 		// Get the normalized from the camera relative to the clip planes
@@ -512,6 +517,16 @@ namespace pr
 			m_moved = true;
 		}
 
+		// Get/Set the locks on camera motion
+		ELockMask LockMask() const
+		{
+			return m_lock_mask;
+		}
+		void LockMask(ELockMask mask)
+		{
+			m_lock_mask = mask;
+		}
+
 		// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
 		v2 ViewRectAtDistance(double dist) const
 		{
@@ -572,8 +587,13 @@ namespace pr
 		}
 		void FocusDist(double dist)
 		{
-			assert("'dist' should not be negative" && IsFinite(dist) && dist >= 0.0);
+			if (!IsFinite(dist) || dist >= maths::tinyd)
+				throw std::runtime_error("'dist' should not be negative");
+
 			dist = Clamp(dist, FocusDistMin(), FocusDistMax());
+			if (!IsFinite(dist) || dist > maths::tinyd)
+				throw std::runtime_error("'dist' should not be negative");
+
 			m_moved |= dist != m_focus_dist;
 			m_focus_dist = dist;
 		}
@@ -695,7 +715,7 @@ namespace pr
 			// If the 'TranslateZ' key is down move the focus point too.
 			// Otherwise move the camera toward or away from the focus point.
 			if (!KeyDown(m_key[ENavKey::TranslateZ]))
-				m_focus_dist = Clamp(m_nav.m_focus_dist0 + ray_cs.z, FocusDistMin(), FocusDistMax());
+				FocusDist(Clamp(m_nav.m_focus_dist0 + ray_cs.z, FocusDistMin(), FocusDistMax()));
 
 			// Translate
 			auto pos = m_nav.m_c2w0.pos + m_nav.m_c2w0 * ray_cs;
@@ -746,7 +766,7 @@ namespace pr
 			// Move in a fraction of the focus distance
 			dz = -m_nav.m_focus_dist0 * dz * 0.1;
 			if (!KeyDown(m_key[ENavKey::TranslateZ]))
-				m_focus_dist = Clamp(m_nav.m_focus_dist0 + dz, FocusDistMin(), FocusDistMax());
+				FocusDist(Clamp(m_nav.m_focus_dist0 + dz, FocusDistMin(), FocusDistMax()));
 
 			// Translate
 			auto pos = m_nav.m_c2w0.pos + m_nav.m_c2w0.rot * v4(s_cast<float>(dx), s_cast<float>(dy), s_cast<float>(dz), 0.0f);
@@ -873,8 +893,8 @@ namespace pr
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
 		void LookAt(v4 const& position, v4 const& lookat, v4 const& up, bool commit = true)
 		{
-			m_c2w = m4x4::LookAt(position, lookat, up);
-			m_focus_dist = Clamp<double>(Length(lookat - position), FocusDistMin(), FocusDistMax());
+			CameraToWorld(m4x4::LookAt(position, lookat, up));
+			FocusDist(Clamp<double>(Length(lookat - position), FocusDistMin(), FocusDistMax()));
 
 			// Set the base values
 			if (commit) Commit();
@@ -1017,6 +1037,16 @@ namespace pr
 				if (KeyDown(m_key[ENavKey::Up   ])) Translate(0, 0, -mov, true);
 				if (KeyDown(m_key[ENavKey::Down ])) Translate(0, 0, +mov, true);
 			}
+		}
+
+		// Get/Set the state of the 'moved' flag
+		bool Moved() const
+		{
+			return m_moved;
+		}
+		void Moved(bool moved)
+		{
+			m_moved = moved;
 		}
 	};
 }
