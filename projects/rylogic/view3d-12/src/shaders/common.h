@@ -171,7 +171,7 @@ namespace pr::rdr12
 
 	// Set the environment map properties of a constants buffer
 	template <typename TCBuf> requires (requires(TCBuf x) { x.m_env_reflectivity; })
-	void SetEnvMap(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
+	void SetReflectivity(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
 	{
 		auto reflectivity = inst.find<float>(EInstComp::EnvMapReflectivity);
 		cb.m_env_reflectivity = reflectivity != nullptr

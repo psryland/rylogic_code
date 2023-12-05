@@ -79,8 +79,8 @@ namespace pr::rdr12::shaders
 			SetFlags(cb1, inst, nug, scene.m_global_envmap != nullptr);
 			SetTxfm(cb1, inst, scene.m_cam);
 			SetTint(cb1, inst, nug);
-			SetEnvMap(cb1, inst, nug);
 			SetTex2Surf(cb1, inst, nug);
+			SetReflectivity(cb1, inst, nug);
 			auto gpu_address = cbuf.Add(cb1, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, false);
 			cmd_list->SetGraphicsRootConstantBufferView((UINT)ERootParam::CBufNugget, gpu_address);
 		}

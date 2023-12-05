@@ -47,5 +47,11 @@ namespace pr::rdr12
 			,m_bbox(bbox)
 			,m_name(name)
 		{}
+
+		ModelDesc& name(std::string_view name)
+		{
+			m_name = name;
+			return *this;
+		}
 	};
 }
