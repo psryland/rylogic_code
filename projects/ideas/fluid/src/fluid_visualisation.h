@@ -1,13 +1,9 @@
 // Fluid
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/container/vector.h"
-#include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/instance/instance.h"
+#include "src/forward.h"
 
 namespace pr::fluid
 {
-	struct FluidSimulation;
 	struct FluidVisualisation
 	{
 		#define PR_INST(x)\
@@ -18,7 +14,8 @@ namespace pr::fluid
 		FluidSimulation const* m_sim;
 		rdr12::Renderer* m_rdr;
 		rdr12::ShaderPtr m_gs_points;
-		Instance m_instance;
+		Instance m_container;
+		Instance m_fluid;
 
 		FluidVisualisation(FluidSimulation const& sim, rdr12::Renderer& rdr);
 		~FluidVisualisation();

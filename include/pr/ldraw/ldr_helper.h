@@ -70,6 +70,12 @@ namespace pr::ldr
 		Wireframe() :m_wire(false) {}
 		Wireframe(bool w) :m_wire(w) {}
 	};
+	struct Solid
+	{
+		bool m_solid;
+		Solid() :m_solid(false) {}
+		Solid(bool s) : m_solid(s) {}
+	};
 	enum class EArrowType
 	{
 		Fwd,
@@ -93,16 +99,20 @@ namespace pr::ldr
 		// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
 		static_assert(dependent_false<Type>, "no overload for 'Type'");
 	}
-	inline TStr& Append(TStr& str, char const* s)
+	inline TStr& Append(TStr& str, std::string_view s)
 	{
-		if (s == nullptr || *s == '\0') return str;
-		if (*s != '}' && *s != ')') AppendSpace(str);
+		if (s.empty()) return str;
+		if (*s.data() != '}' && *s.data() != ')') AppendSpace(str);
 		str.append(s);
 		return str;
 	}
+	inline TStr& Append(TStr& str, char const* s)
+	{
+		return Append(str, std::string_view(s));
+	}
 	inline TStr& Append(TStr& str, std::string const& s)
 	{
-		return Append(str, s.c_str());
+		return Append(str, std::string_view(s));
 	}
 	inline TStr& Append(TStr& str, std::wstring const& s)
 	{
@@ -142,6 +152,11 @@ namespace pr::ldr
 	{
 		if (!w.m_wire) return str;
 		return Append(str, "*Wireframe");
+	}
+	inline TStr& Append(TStr& str, Solid s)
+	{
+		if (!s.m_solid) return str;
+		return Append(str, "*Solid");
 	}
 	inline TStr& Append(TStr& str, AxisId id)
 	{
@@ -303,7 +318,7 @@ namespace pr::ldr
 	}
 	inline TStr& Rect(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float w, float h, bool solid, m4x4 const& o2w)
 	{
-		return Append(str,"*Rect",name,colour,"{",axis, w, h, solid?"*solid":"",O2W(o2w),"}\n");
+		return Append(str,"*Rect",name,colour,"{",axis, w, h, Solid(solid),O2W(o2w),"}\n");
 	}
 	inline TStr& Rect(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& TL, v4 const& BL, v4 const& BR, v4 const& TR)
 	{
@@ -571,7 +586,9 @@ namespace pr::ldr
 		struct LdrRawString;
 		struct LdrGroup;
 		struct LdrLine;
+		struct LdrLineD;
 		struct LdrTriangle;
+		struct LdrCircle;
 		struct LdrSphere;
 		struct LdrBox;
 		struct LdrCylinder;
@@ -594,7 +611,9 @@ namespace pr::ldr
 			}
 			LdrGroup& Group(std::string_view name = "", Col colour = Col());
 			LdrLine& Line(std::string_view name = "", Col colour = Col());
+			LdrLineD& LineD(std::string_view name = "", Col colour = Col());
 			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col());
+			LdrCircle& Circle(std::string_view name = "", Col colour = Col());
 			LdrSphere& Sphere(std::string_view name = "", Col colour = Col());
 			LdrBox& Box(std::string_view name = "", Col colour = Col());
 			LdrCylinder& Cylinder(std::string_view name = "", Col colour = Col());
@@ -610,7 +629,19 @@ namespace pr::ldr
 			}
 
 			// Serialise the ldr script to a string
+			std::string ToString() const
+			{
+				std::string str;
+				ToString(str);
+				return str;
+			}
 			virtual void ToString(std::string& str) const
+			{
+				NestedToString(str);
+			}
+
+			// Write nested objects to 'str'
+			virtual void NestedToString(std::string& str) const
 			{
 				for (auto& s : m_objects)
 					s->ToString(str);
@@ -651,6 +682,7 @@ namespace pr::ldr
 				, m_o2w(m4x4Identity)
 				, m_wire()
 				, m_axis_id(AxisId::PosZ)
+				, m_solid()
 			{}
 
 			// Object name
@@ -717,6 +749,14 @@ namespace pr::ldr
 			}
 			AxisId m_axis_id;
 
+			// Solid
+			Derived& solid(bool s = true)
+			{
+				m_solid = s;
+				return static_cast<Derived&>(*this);
+			}
+			bool m_solid;
+
 			// Copy all modifiers from another object
 			template <typename D> Derived& modifiers(LdrBase<D> const& rhs)
 			{
@@ -729,10 +769,10 @@ namespace pr::ldr
 			}
 
 			/// <inheritdoc/>
-			virtual void ToString(std::string& str) const
+			void NestedToString(std::string& str) const override
 			{
-				LdrObj::ToString(str);
-				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
+				LdrObj::NestedToString(str);
+				ldr::Append(str, Wireframe(m_wire), Solid(m_solid), O2W(m_o2w));
 			}
 		};
 
@@ -811,12 +851,55 @@ namespace pr::ldr
 					ldr::Append(str, m_points[i].xyz);
 					if ((i & 1) == 1) ldr::Append(str, delim);
 				}
-				LdrBase<LdrLine>::ToString(str);
+				NestedToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrLineD :LdrBase<LdrLineD>
+		{
+			LdrLineD()
+				:m_width()
+				,m_lines()
+			{}
+
+			// Line width
+			LdrLineD& width(Width w)
+			{
+				m_width = w;
+				return *this;
+			}
+			Width m_width;
+
+			// Line points
+			LdrLineD& add(v4_cref pt, v4_cref dir)
+			{
+				m_lines.push_back(pt);
+				m_lines.push_back(dir);
+				return *this;
+			}
+			std::vector<v4> m_lines;
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				assert((m_lines.size() & 1) == 0);
+				auto const delim = m_lines.size() > 1 ? "\n" : "";
+				ldr::Append(str, "*LineD", m_name, m_colour, "{", delim, m_width, delim);
+				for (int i = 0, iend = isize(m_lines); i != iend; i += 2)
+				{
+					ldr::Append(str
+						,m_lines[i + 0].xyz
+						,m_lines[i + 1].xyz
+						, delim);
+				}
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
 		struct LdrTriangle :LdrBase<LdrTriangle>
 		{
+			std::vector<v4> m_points;
+
 			LdrTriangle()
 				:m_points()
 			{}
@@ -838,7 +921,6 @@ namespace pr::ldr
 				}
 				return *this;
 			}
-			std::vector<v4> m_points;
 
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
@@ -850,7 +932,29 @@ namespace pr::ldr
 					ldr::Append(str, m_points[i].xyz);
 					if ((i & 3) == 3) ldr::Append(str, delim);
 				}
-				LdrBase<LdrTriangle>::ToString(str);
+				NestedToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrCircle :LdrBase<LdrCircle>
+		{
+			float m_radius;
+
+			LdrCircle()
+				:m_radius(1.0f)
+			{}
+
+			LdrCircle& radius(float r)
+			{
+				m_radius = r;
+				return *this;
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				ldr::Append(str, "*Circle", m_name, m_colour, "{", m_radius, m_axis_id);
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
@@ -886,7 +990,7 @@ namespace pr::ldr
 					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x);
 				else
 					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x, m_radius.y, m_radius.z);
-				LdrBase<LdrSphere>::ToString(str);
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
@@ -920,7 +1024,7 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Box", m_name, m_colour, "{", m_dim.xyz);
-				LdrBase<LdrBox>::ToString(str);
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
@@ -949,7 +1053,7 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Cylinder", m_name, m_colour, "{", m_height, m_radius.x, m_radius.y, m_axis_id);
-				LdrBase<LdrCylinder>::ToString(str);
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
@@ -1048,7 +1152,7 @@ namespace pr::ldr
 				else
 					ldr::Append(str, "*FrustumFA", m_name, m_colour, "{", RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
 
-				LdrBase<LdrFrustum>::ToString(str);
+				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
@@ -1058,7 +1162,7 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Group", m_name, m_colour, "{\n");
-				LdrBase<LdrGroup>::ToString(str);
+				NestedToString(str);
 				for (;!str.empty() && str.back() == '\n';) str.pop_back();
 				ldr::Append(str, "\n}\n");
 			}
@@ -1077,9 +1181,21 @@ namespace pr::ldr
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
+		inline LdrLineD& LdrObj::LineD(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrLineD;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
 		inline LdrTriangle& LdrObj::Triangle(std::string_view name, Col colour)
 		{
 			auto ptr = new LdrTriangle;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrCircle& LdrObj::Circle(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrCircle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
@@ -1131,12 +1247,30 @@ namespace pr::ldr
 		PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
 		str.resize(0);
 
-		Builder L;
-		L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
-		L.Triangle().name("tri").col(0xFFFF0000).pt(v4(0,0,0,1), v4(1,0,0,1), v4(0,1,0,1));
-		L.ToString(str);
-		PR_CHECK(str, "*Box b ff00ff00 {1 1 1}\n*Triangle tri ffff0000 {0 0 0 1 0 0 0 1 0}\n");
-		str.resize(0);
+		{
+			Builder L;
+			L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
+			L.ToString(str);
+
+			PR_CHECK(str, "*Box b ff00ff00 {1 1 1}\n");
+			str.resize(0);
+		}
+		{
+			Builder L;
+			L.Triangle().name("tri").col(0xFFFF0000).pt(v4(0,0,0,1), v4(1,0,0,1), v4(0,1,0,1));
+			L.ToString(str);
+			
+			PR_CHECK(str, "*Triangle tri ffff0000 {0 0 0 1 0 0 0 1 0}\n");
+			str.resize(0);
+		}
+		{
+			Builder L;
+			L.LineD().name("lined").col(0xFF00FF00).add(v4(0,0,0,1), v4(1,0,0,1)).add(v4(0,0,0,1), v4(0,0,1,1));
+			L.ToString(str);
+			
+			PR_CHECK(str, "*LineD lined ff00ff00 {\n\n0 0 0 1 0 0 \n0 0 0 0 0 1 \n}\n");
+			str.resize(0);
+		}
 	}
 }
 #endif
