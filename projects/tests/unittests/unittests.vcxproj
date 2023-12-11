@@ -3,7 +3,7 @@
   
   <!-- Properties -->
   <Import Project="..\..\..\build\props\globals.props" />
-	<PropertyGroup Label="Globals">
+  <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <RootNamespace>unittests</RootNamespace>
     <ConfigurationType>Application</ConfigurationType>
@@ -180,6 +180,7 @@
     <ClInclude Include="..\..\..\include\pr\geometry\models_shape2d.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\models_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\point.h" />
+    <ClInclude Include="..\..\..\include\pr\geometry\reflect.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\tetramesh.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\unit_tests.h" />

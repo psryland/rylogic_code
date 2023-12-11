@@ -33,7 +33,7 @@ struct Main :Form
 			.dbl_buffer()
 			.wndclass(RegisterWndClass<Main>()))
 		, m_rdr(RdrSettings(hinst).DebugLayer())
-		, m_wnd(m_rdr, WndSettings(CreateHandle(), true, m_rdr.Settings()))
+		, m_wnd(m_rdr, WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xA0A080))
 		, m_scn(m_wnd)
 	{
 	}
@@ -111,6 +111,9 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		InitCom com;
 		Main main(hinstance);
 		main.Show();
+
+		main.m_scn.m_cam.LookAt(v4(2, 2, -5, 1), v4(0, 1, 0, 1), v4(0, 1, 0, 0));
+		main.m_scn.m_cam.Align(v4::YAxis());
 
 		fluid::FluidSimulation fluid_sim;
 		fluid::FluidVisualisation fluid_vis(fluid_sim, main.m_rdr);

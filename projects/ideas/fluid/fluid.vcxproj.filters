@@ -7,6 +7,21 @@
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
       <Filter>pr</Filter>
     </ClInclude>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fluid_simulation.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fluid_visualisation.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\particles.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\spatial_partition.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -18,6 +33,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fluid_simulation.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fluid_visualisation.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\spatial_partition.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

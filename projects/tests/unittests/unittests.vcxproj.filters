@@ -1011,6 +1011,9 @@
     <ClInclude Include="..\..\..\include\pr\gfx\dpi.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\geometry\reflect.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
