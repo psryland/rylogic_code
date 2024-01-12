@@ -16,10 +16,13 @@
     <ClInclude Include="src\fluid_visualisation.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\particles.h">
+    <ClInclude Include="src\particle.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\spatial_partition.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\probe.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
@@ -42,6 +45,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\spatial_partition.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\particle.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
