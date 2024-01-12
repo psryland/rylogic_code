@@ -354,6 +354,12 @@ namespace pr::rdr12
 			return *this;
 		}
 
+		// The aspect ratio of the viewport
+		float Aspect() const
+		{
+			return 1.0f * Width / Height;
+		}
+
 		// The viewport rectangle, in render target pixels
 		FRect AsFRect() const
 		{

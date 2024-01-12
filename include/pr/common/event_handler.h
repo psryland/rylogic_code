@@ -24,6 +24,11 @@ namespace pr
 	inline constexpr auto _2 = std::placeholders::_2;
 	inline constexpr auto _3 = std::placeholders::_3;
 	inline constexpr auto _4 = std::placeholders::_4;
+	inline constexpr auto _5 = std::placeholders::_5;
+	inline constexpr auto _6 = std::placeholders::_6;
+	inline constexpr auto _7 = std::placeholders::_7;
+	inline constexpr auto _8 = std::placeholders::_8;
+	inline constexpr auto _9 = std::placeholders::_9;
 
 	// Implementation detail for EventHandler
 	namespace multicast
