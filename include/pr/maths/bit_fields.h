@@ -337,6 +337,102 @@ namespace pr
 	{
 		return BitEnumerator<T>(bits);
 	}
+
+	// Decompose/Compose an IEEE754 double into the sign, mantissa, exponent
+	inline std::tuple<int, int32_t, int64_t> Decompose(double x, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+		// Translate the double into sign, exponent, and mantissa.
+		auto bits = reinterpret_cast<uint64_t const&>(x);
+		auto sign = GrabBits<int>(bits, 64, 63) != 0 ? -1 : +1;
+		auto exponent = GrabBits<int32_t>(bits, 63, 52);
+		auto mantissa = GrabBits<int64_t>(bits, 52, 0);
+		if (!raw)
+		{
+			// Normal numbers: add the '1' to the front of the mantissa.
+			if (exponent != 0)
+				mantissa |= 1ULL << 52;
+			else
+				exponent++;
+
+			// Bias the exponent
+			exponent -= 1023;
+		}
+		return std::tie(sign, exponent, mantissa);
+	}
+	inline double Compose(int sign, int32_t exponent, int64_t mantissa, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+		// Translate the sign, exponent, and mantissa into a double.
+		if (!raw)
+		{
+			// Bias the exponent
+			exponent += 1023;
+
+			// Normal numbers: remove the '1' from the front of the mantissa.
+			if (exponent != 0)
+				mantissa &= ~(1ULL << 52);
+			else
+				exponent--;
+		}
+		auto bits = 0ULL;
+		bits = PackBits(bits, int(sign < 0), 64, 63);
+		bits = PackBits(bits, exponent, 63, 52);
+		bits = PackBits(bits, mantissa, 52, 0);
+		return reinterpret_cast<double const&>(bits);
+	}
+
+	// Decompose an IEEE754 float into the sign, mantissa, exponent
+	inline std::tuple<int, int32_t, int32_t> Decompose(float x, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 127) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 127) x 0.fraction
+
+		// Translate the double into sign, exponent, and mantissa.
+		auto bits = reinterpret_cast<uint32_t const&>(x);
+		auto sign = GrabBits<int>(bits, 32, 31) != 0 ? -1 : +1;
+		auto exponent = GrabBits<int32_t>(bits, 31, 23);
+		auto mantissa = GrabBits<int32_t>(bits, 23, 0);
+		if (!raw)
+		{
+			// Normal numbers: add the '1' to the front of the mantissa.
+			if (exponent != 0)
+				mantissa |= 1U << 23;
+			else
+				exponent++;
+
+			// Bias the exponent
+			exponent -= 127;
+		}
+		return std::tie(sign, exponent, mantissa);
+	}
+	inline float Compose(int sign, int32_t exponent, int32_t mantissa, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 127) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 127) x 0.fraction
+
+		// Translate the sign, exponent, and mantissa into a float.
+		if (!raw)
+		{
+			// Bias the exponent
+			exponent += 127;
+
+			// Normal numbers: remove the '1' from the front of the mantissa.
+			if (exponent != 0)
+				mantissa &= ~(1U << 23);
+			else
+				exponent--;
+		}
+		auto bits = 0U;
+		bits = PackBits(bits, int(sign < 0), 32, 31);
+		bits = PackBits(bits, exponent, 31, 23);
+		bits = PackBits(bits, mantissa, 23, 0);
+		return reinterpret_cast<float const&>(bits);
+	}
 }
 
 #if PR_UNITTESTS
@@ -453,6 +549,24 @@ namespace pr::maths
 			auto c = ReverseBits64(a, 12); // just the lower 12 bits
 			auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
 			PR_CHECK(c, C);
+		}
+		{
+			auto d1 = -9.887654321e126;
+			auto [sign, exponent, mantissa] = Decompose(d1);
+			auto d2 = Compose(sign, exponent, mantissa);
+			PR_CHECK(d1 == d2, true);
+			PR_CHECK(sign, -1);
+			PR_CHECK(exponent, 421);
+			PR_CHECK(mantissa, 0x001d36ae824ee75f);
+		}
+		{
+			auto f1 = -9.887654321e25f;
+			auto [sign, exponent, mantissa] = Decompose(f1);
+			auto f2 = Compose(sign, exponent, mantissa);
+			PR_CHECK(f1 == f2, true);
+			PR_CHECK(sign, -1);
+			PR_CHECK(exponent, 86);
+			PR_CHECK(mantissa, 0x00a393d8);
 		}
 	}
 }
