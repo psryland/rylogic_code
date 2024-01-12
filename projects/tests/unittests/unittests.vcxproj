@@ -101,6 +101,7 @@
     <ClInclude Include="..\..\..\include\pr\common\fmt.h" />
     <ClInclude Include="..\..\..\include\pr\common\guid.h" />
     <ClInclude Include="..\..\..\include\pr\common\hash.h" />
+    <ClInclude Include="..\..\..\include\pr\common\space_filling.h" />
     <ClInclude Include="..\..\..\include\pr\common\hresult.h" />
     <ClInclude Include="..\..\..\include\pr\common\inplacealloc.h" />
     <ClInclude Include="..\..\..\include\pr\common\ireport.h" />
@@ -303,6 +304,7 @@
     <ClInclude Include="..\..\..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h" />
     <ClInclude Include="..\..\..\include\pr\script\unit_tests.h" />
     <ClInclude Include="..\..\..\include\pr\str\char8.h" />
     <ClInclude Include="..\..\..\include\pr\str\convert_utf.h" />

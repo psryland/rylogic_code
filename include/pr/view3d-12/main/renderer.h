@@ -166,7 +166,7 @@ namespace pr::rdr12
 			{
 				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
 				if (m_last_task) return; // Don't add further tasks after 'LastTask' has been called.
-				m_task_queue.emplace_back(std::async(policy, func, args...));
+				m_task_queue.emplace_back(std::async(policy, std::move(func), std::forward<Args>(args)...));
 			}
 
 			// Post a message to notify of the new task
@@ -187,8 +187,8 @@ namespace pr::rdr12
 		template <typename Func, typename... Args>
 		void RunOnMainThread(Func&& func, Args&&... args)
 		{
-			static_assert(noexcept(func(args...)));
-			RunOnMainThread(std::launch::deferred, func, args...);
+			static_assert(noexcept(func(std::forward<Args>(args)...)), "func should be noexcept");
+			RunOnMainThread(std::launch::deferred, func, std::forward<Args>(args)...);
 		}
 
 		// Execute any pending tasks in the task queue

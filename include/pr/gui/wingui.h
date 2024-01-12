@@ -121,7 +121,7 @@ namespace pr
 			StandardClasses = ICC_STANDARD_CLASSES   ,
 			LinkClass       = ICC_LINK_CLASS         ,
 			All             = ~None,
-			allow_bitops,
+			allow_bitops = 0,
 		};
 
 		//todo: unused at the mo
@@ -151,7 +151,7 @@ namespace pr
 			LeftTopBottom   = Left|Top|Bottom,
 			RightTopBottom  = Right|Top|Bottom,
 			All             = Left|Top|Right|Bottom,
-			allow_bitops,
+			allow_bitops = 0,
 		};
 
 		// Window docking
@@ -213,7 +213,7 @@ namespace pr
 			NoClientSize   = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
 			NoClientMove   = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
 			StateChange    = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
-			allow_bitops,
+			allow_bitops = 0,
 		};
 
 		// Control key state
@@ -229,7 +229,7 @@ namespace pr
 			LAlt   = 1 << 4,
 			RAlt   = 1 << 5,
 			Alt    = LAlt | RAlt,
-			allow_bitops,
+			allow_bitops = 0,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -244,7 +244,7 @@ namespace pr
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
 			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
-			allow_bitops,
+			allow_bitops = 0,
 		};
 
 		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
@@ -822,7 +822,7 @@ namespace pr
 				MaxPosition  = 1 << 1,
 				MinTrackSize = 1 << 2,
 				MaxTrackSize = 1 << 3,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 			EMask m_mask;
 			
@@ -1646,7 +1646,7 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 			enum class EType :UINT
 			{
@@ -1660,7 +1660,7 @@ namespace pr
 				RightOrder   = MFT_RIGHTORDER,
 				Separator    = MFT_SEPARATOR,
 				String       = MFT_STRING,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 			enum class EState :UINT
 			{
@@ -1672,7 +1672,7 @@ namespace pr
 				Disabled = MFS_DISABLED,
 				Hilite   = MFS_HILITE,
 				Unhilite = MFS_UNHILITE,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 			enum class EStockBmp :INT_PTR
 			{
@@ -1951,7 +1951,7 @@ namespace pr
 				Background = 1 << 0,
 				Foreground = 1 << 1,
 				All = Background | Foreground,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 
 			EParts m_parts;    // The parts to be painted
@@ -2114,15 +2114,15 @@ namespace pr
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
-			short     m_delta;   // The amount the mouse wheel has turned
-			Point     m_point;   // The client space location of the mouse at the time of the event
-			EMouseKey m_button;  // The state of all mouse buttons and control keys
-			bool      m_handled; // Set to true to prevent further handling of this key event
+			short     m_delta;    // The amount the mouse wheel has turned
+			Point     m_point;    // The client space location of the mouse at the time of the event
+			EMouseKey m_keystate; // The state of all mouse buttons and control keys
+			bool      m_handled;  // Set to true to prevent further handling of this key event
 
-			MouseWheelArgs(short delta, Point point, EMouseKey button)
+			MouseWheelArgs(short delta, Point point, EMouseKey keystate)
 				:m_delta(delta)
 				,m_point(point)
-				,m_button(button)
+				,m_keystate(keystate)
 				,m_handled(false)
 			{}
 		};
@@ -4930,7 +4930,9 @@ namespace pr
 						// Handle the key down/up event
 						auto vk_key = UINT(wparam);
 						auto repeats = UINT(lparam & 0xFFFF);
-						auto flags = UINT((lparam & 0xFFFF0000) >> 16);
+						auto flags = UINT(lparam >> 16) & 0xFFFF;
+						//auto is_extended = (flags & KF_EXTENDED) != 0;
+						//auto scancode = (is_extended ? 0xE000 : 0x0000) | (flags & 0xFF);
 						auto args = KeyEventArgs(vk_key, message == WM_KEYDOWN, m_hwnd, repeats, flags);
 
 						// Allow parent controls to filter the key events
@@ -8856,7 +8858,7 @@ namespace pr
 				YesNoCancel      = YesNo | Cancel,
 				AbortRetryIgnore = (1 << int(EDialogResult::Abort)) | (1 << int(EDialogResult::Retry)) | (1 << int(EDialogResult::Ignore)),
 				RetryCancel      = (1 << int(EDialogResult::Retry)) | Cancel,
-				allow_bitops,
+				allow_bitops = 0,
 			};
 			enum class EIcon
 			{

@@ -286,12 +286,12 @@ namespace pr::rdr12
 				m_shader.Setup(m_cmd_list.get(), m_cbuf_upload, &dle, caster, scn().m_cam);
 
 				// Bind textures to the pipeline
-				auto tex = FindDiffTexture(*dle.m_instance) << nugget.m_tex_diffuse << m_default_tex;
+				auto tex = coalesce(FindDiffTexture(*dle.m_instance), nugget.m_tex_diffuse, m_default_tex);
 				auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTexture, srv_descriptor);
 
 				// Bind samplers to the pipeline (can't use static samplers because each mode may use different address modes)
-				auto sam = FindDiffTextureSampler(*dle.m_instance) << nugget.m_sam_diffuse << m_default_sam;
+				auto sam = coalesce(FindDiffTextureSampler(*dle.m_instance), nugget.m_sam_diffuse, m_default_sam);
 				auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
 				m_cmd_list.SetGraphicsRootDescriptorTable(shaders::smap::ERootParam::DiffTextureSampler, sam_descriptor);
 

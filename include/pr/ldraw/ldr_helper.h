@@ -57,6 +57,13 @@ namespace pr::ldr
 		Col(Colour32 c) :m_col(c) {}
 		Col(unsigned int ui) :m_ui(ui) {}
 	};
+	struct Size
+	{
+		float m_size;
+		Size() :m_size(0) {}
+		Size(float size) :m_size(size) {}
+		Size(int size) :m_size(float(size)) {}
+	};
 	struct Width
 	{
 		float m_width;
@@ -142,6 +149,11 @@ namespace pr::ldr
 	{
 		if (c.m_ui == 0xFFFFFFFF) return str;
 		return AppendSpace(str).append(To<TStr>(c.m_col));
+	}
+	inline TStr& Append(TStr& str, Size s)
+	{
+		if (s.m_size == 0) return str;
+		return Append(str, "*Size {", s.m_size, "} ");
 	}
 	inline TStr& Append(TStr& str, Width w)
 	{
@@ -585,6 +597,7 @@ namespace pr::ldr
 	{
 		struct LdrRawString;
 		struct LdrGroup;
+		struct LdrPoint;
 		struct LdrLine;
 		struct LdrLineD;
 		struct LdrTriangle;
@@ -600,7 +613,7 @@ namespace pr::ldr
 			using ObjCont = std::vector<ObjPtr>;
 
 			ObjCont m_objects;
-			virtual ~LdrObj() {}
+			virtual ~LdrObj() = default;
 
 			template <typename Arg0, typename... Args>
 			LdrObj& Append(Arg0 const& arg0, Args&&... args)
@@ -610,6 +623,7 @@ namespace pr::ldr
 				return *this;
 			}
 			LdrGroup& Group(std::string_view name = "", Col colour = Col());
+			LdrPoint& Point(std::string_view name = "", Col colour = Col());
 			LdrLine& Line(std::string_view name = "", Col colour = Col());
 			LdrLineD& LineD(std::string_view name = "", Col colour = Col());
 			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col());
@@ -792,21 +806,55 @@ namespace pr::ldr
 				str.append(m_str);
 			}
 		};
+		struct LdrPoint :LdrBase<LdrPoint>
+		{
+			std::vector<v4> m_points;
+			Size m_size;
+
+			LdrPoint()
+				:m_size()
+				,m_points()
+			{}
+
+			// Points
+			LdrPoint& pt(v4_cref pt)
+			{
+				m_points.push_back(pt);
+				return *this;
+			}
+
+			// Point size
+			LdrPoint& size(float s)
+			{
+				m_size = s;
+				return *this;
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				auto delim = m_points.size() > 1 ? "\n" : "";
+				ldr::Append(str, "*Point", m_name, m_colour, "{", delim, m_size, delim);
+				for (auto& pt : m_points)
+				{
+					ldr::Append(str, pt.xyz);
+					ldr::Append(str, delim);
+				}
+				NestedToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
 		struct LdrLine :LdrBase<LdrLine>
 		{
+			pr::vector<v4> m_points;
+			Width m_width;
+			bool m_strip;
+
 			LdrLine()
 				:m_strip()
 				,m_width()
 				,m_points()
 			{}
-
-			// Line strip
-			LdrLine& strip()
-			{
-				m_strip = true;
-				return *this;
-			}
-			bool m_strip;
 
 			// Line width
 			LdrLine& width(Width w)
@@ -814,36 +862,51 @@ namespace pr::ldr
 				m_width = w;
 				return *this;
 			}
-			Width m_width;
 
 			// Line points
-			LdrLine& pt(v4_cref a, v4_cref b)
+			LdrLine& line(v4_cref a, v4_cref b)
 			{
 				m_points.push_back(a);
 				m_points.push_back(b);
 				return *this;
 			}
-			LdrLine& pt(v4 const* verts, int const* lines, int num_lines)
+			LdrLine& lines(std::span<v4 const> verts, std::span<int const> indices)
 			{
-				for (int const* i = lines, *i_end = i + 2*num_lines; i < i_end;)
-				{
-					m_points.push_back(verts[*i++]);
-					m_points.push_back(verts[*i++]);
-				}
+				for (auto& index : indices)
+					m_points.push_back(verts[index]);
+
 				return *this;
 			}
-			template <typename EnumPts> LdrLine& pt(EnumPts points)
+
+			// Add points by callback function
+			template <typename EnumPts> requires (requires (EnumPts e) { e(std::declval<int>(), std::declval<v4&>()); })
+			LdrLine& pt(EnumPts points)
 			{
 				v4 x;
-				for (int i = 0; points(i++, x);) m_points.push_back(x);
+				for (int i = 0; points(i++, x);)
+					m_points.push_back(x);
+
 				return *this;
 			}
-			std::vector<v4> m_points;
+
+			// Line strip
+			LdrLine& strip(v4_cref start)
+			{
+				m_points.push_back(start);
+				m_strip = true;
+				return *this;
+			}
+			LdrLine& line_to(v4_cref pt)
+			{
+				assert(m_strip);
+				m_points.push_back(pt);
+				return *this;
+			}
 
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto ty = m_strip ? "*Line" : "*LineStrip";
+				auto ty = m_strip ? "*LineStrip" : "*Line";
 				auto delim = m_points.size() > 1 ? "\n" : "";
 				ldr::Append(str, ty, m_name, m_colour, "{", delim, m_width, delim);
 				for (int i = 0, iend = (int)m_points.size(); i != iend; ++i)
@@ -857,6 +920,9 @@ namespace pr::ldr
 		};
 		struct LdrLineD :LdrBase<LdrLineD>
 		{
+			pr::vector<v4> m_lines;
+			Width m_width;
+
 			LdrLineD()
 				:m_width()
 				,m_lines()
@@ -868,7 +934,6 @@ namespace pr::ldr
 				m_width = w;
 				return *this;
 			}
-			Width m_width;
 
 			// Line points
 			LdrLineD& add(v4_cref pt, v4_cref dir)
@@ -877,7 +942,6 @@ namespace pr::ldr
 				m_lines.push_back(dir);
 				return *this;
 			}
-			std::vector<v4> m_lines;
 
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
@@ -996,6 +1060,8 @@ namespace pr::ldr
 		};
 		struct LdrBox :LdrBase<LdrBox>
 		{
+			Vec4d<void> m_dim;
+
 			LdrBox()
 				:m_dim()
 			{}
@@ -1011,7 +1077,11 @@ namespace pr::ldr
 				m_dim = Vec4d<void>(dim.x, dim.y, dim.z, 0);
 				return *this;
 			}
-			Vec4d<void> m_dim;
+			LdrBox& dim(double sx, double sy, double sz)
+			{
+				m_dim = Vec4d<void>(sx, sy, sz, 0);
+				return *this;
+			}
 
 			// Create from bounding box
 			LdrBox& bbox(BBox_cref bbox)

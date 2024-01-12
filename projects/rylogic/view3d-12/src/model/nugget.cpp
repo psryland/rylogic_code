@@ -94,8 +94,8 @@ namespace pr::rdr12
 				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 			});
 
-			// Create a dependent nugget to do the back faces
-			if (m_model != nullptr)
+			// Create a dependent nugget to do the back faces. Only triangle data needs back faces rendered
+			if (m_model != nullptr && TopoGroup(m_topo) == ETopoGroup::Triangles)
 			{
 				auto nug = NuggetDesc(*this)
 					.id(AlphaNuggetId)

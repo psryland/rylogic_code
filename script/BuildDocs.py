@@ -1,9 +1,8 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os, sys, imp, re
+import os, re
 import Rylogic as Tools
 import HtmlExpand
-import UserVars
 
 # Expands '*.htm' files in a directory and copies them to an output directory
 # 'src' can be a filepath or a directory. 'dst' must be a directory
