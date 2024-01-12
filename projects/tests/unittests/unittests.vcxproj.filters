@@ -110,6 +110,9 @@
     <Filter Include="pr\view3d\textures">
       <UniqueIdentifier>{203dae01-f4b1-454d-a93e-48daf8f28a4b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\physics\utility">
+      <UniqueIdentifier>{77a87cc7-6474-41ea-8c71-3957fa41da22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\sdk\sqlite3\src\sqlite3.c">
@@ -1013,6 +1016,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\include\pr\geometry\reflect.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\space_filling.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h">
+      <Filter>pr\physics\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

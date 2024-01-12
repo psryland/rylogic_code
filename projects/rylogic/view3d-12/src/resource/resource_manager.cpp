@@ -749,21 +749,88 @@ namespace pr::rdr12
 			case EStockTexture::WhiteSpot:
 			{
 				constexpr int sz = 256;
-				constexpr auto radius = sz / 2.0f;
+				constexpr auto radius = (sz - 1.0f) / 2.0f;
 				std::vector<uint32_t> data(sz * sz);
 				for (int j = 0; j != sz; ++j)
 				{
 					for (int i = 0; i != sz; ++i)
 					{
 						auto c = Colour32White;
-						auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
-						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
+						auto r = Len(i - radius, j - radius);
+						auto t = Frac(0.0f, r, radius);
+						t = SmoothStep(0.0f, 1.0f, t);
+						c.a = uint8_t(Lerp(0xFF, 0x00, t));
 						data[size_t(j * sz + i)] = c.argb;
 					}
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
 				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::WhiteSpike:
+			{
+				constexpr int sz = 256;
+				constexpr auto radius = (sz - 1.0f) / 2.0f;
+				std::vector<uint32_t> data(sz * sz);
+				for (int j = 0; j != sz; ++j)
+				{
+					for (int i = 0; i != sz; ++i)
+					{
+						auto c = Colour32White;
+						auto r = Len(i - radius, j - radius);
+						auto t = Frac(0.0f, r, radius);
+						if (t > 1.0f)
+						{
+							data[size_t(j * sz + i)] = 0;
+						}
+						else
+						{
+							t = Clamp(1.0f - t, 0.0f, 1.0f);
+							t = Clamp(Pow(t, 3.0f) + 0.05f, 0.0f, 1.0f);
+							c.a = uint8_t(Lerp(0x00, 0xFF, t));
+							data[size_t(j * sz + i)] = c.argb;
+						}
+					}
+				}
+
+				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpike).has_alpha().name("#whitespike");
+				return CreateTexture2D(tdesc);
+			}
+			case EStockTexture::WhiteSphere:
+			{
+				constexpr int sz = 256;
+				constexpr auto radius = (sz - 1.0f) / 2.0f;
+				constexpr auto light = v4(1000, 1000, 1000, 1);
+				constexpr auto eye = v4(0, 0, 1000, 1);
+
+				std::vector<uint32_t> data(sz * sz);
+				for (int j = 0; j != sz; ++j)
+				{
+					for (int i = 0; i != sz; ++i)
+					{
+						auto r = Len(i - radius, j - radius);
+						if (r > radius)
+						{
+							// Note: alpha is 0 or 1 => has_alpha = false for thresholding.
+							data[size_t(j * sz + i)] = 0x00000000;
+							continue;
+						}
+
+						// The point on the sphere
+						auto pt = v4(i - radius, j - radius, Sqrt(Sqr(radius) - Sqr(r)), 1);
+						auto nm = Normalise(pt.w0());
+
+						// Brightness based on the surface orientation compared to the light
+						auto b = Dot(nm, Normalise(light - pt));
+						b = Clamp(b, 0.05f, 1.0f);
+						data[size_t(j * sz + i)] = Colour(b, b, b, 1).argb().argb;
+					}
+				}
+
+				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSphere).has_alpha(false).name("#whitesphere");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteTriangle:

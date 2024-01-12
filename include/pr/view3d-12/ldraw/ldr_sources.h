@@ -40,6 +40,7 @@ namespace pr::rdr12
 		using GuidCont = pr::vector<Guid>;
 		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 		using OnAddCB = std::function<void(Guid const&, bool)>;
+		//using OnAddCB = pr::StaticCB<void, Guid const&, bool>;
 		using Location = pr::script::Loc;
 		using filepath_t = std::filesystem::path;
 		using Includes = pr::script::Includes;
@@ -72,12 +73,12 @@ namespace pr::rdr12
 			Source();
 			Source(Guid const& context_id);
 			Source(Guid const& context_id, filepath_t const& filepath, EEncoding enc, Includes const& includes);
+			Source(Source&&) = default;
+			Source(Source const&) = default;
+			Source& operator=(Source&&) = default;
+			Source& operator=(Source const&) = default;
 			bool IsFile() const;
 		};
-
-		// A container that doesn't invalidate on add/remove is needed because
-		// the file watcher contains a pointer into the 'Source' objects.
-		using SourceCont = std::unordered_map<Guid, Source>;
 
 		// Progress update event args
 		struct AddFileProgressEventArgs :CancelEventArgs
@@ -142,7 +143,7 @@ namespace pr::rdr12
 			// True if this event is just prior to the changes being made to the store
 			bool m_before;
 
-			StoreChangeEventArgs(EReason why, std::initializer_list<Guid const> context_ids, ParseResult const* result, bool before)
+			StoreChangeEventArgs(EReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
 				:m_reason(why)
 				,m_context_ids(context_ids)
 				,m_result(result)
@@ -164,6 +165,16 @@ namespace pr::rdr12
 				,m_reason(reason)
 			{}
 		};
+
+		// A container that doesn't invalidate on add/remove is needed because
+		// the file watcher contains a pointer into the 'Source' objects.
+		using SourceCont = std::unordered_map<Guid, Source>;
+
+		// Container of errors
+		using ErrorCont = pr::vector<ParseErrorEventArgs>;
+
+		// Container of filepaths
+		using PathsCont = pr::vector<filepath_t>;
 
 	private:
 
@@ -228,11 +239,16 @@ namespace pr::rdr12
 		// Add an object created externally
 		void Add(LdrObjectPtr object, EReason reason = EReason::NewData);
 
-		// Parse a string or file containing ldr script.
+		// Parse file containing ldr script.
+		// This function can be called from any thread and may be called concurrently by multiple threads.
+		// Returns the GUID of the context that the objects were added to.
+		Guid AddFile(std::filesystem::path script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
+
+		// Parse a string containing ldr script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		template <typename Char>
-		Guid Add(std::basic_string_view<Char> script, bool is_file, EEncoding enc, EReason reason, Guid const* context_id, Includes const& includes, OnAddCB on_add);
+		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
 
 		// Create a gizmo object and add it to the gizmo collection
 		LdrGizmo* CreateGizmo(ELdrGizmoMode mode, m4x4 const& o2w);
@@ -244,6 +260,9 @@ namespace pr::rdr12
 		Guid const* ContextIdFromFilepath(filepath_t const& filepath) const;
 
 	private:
+		
+		// Merge parsed objects into the pool of sources
+		void MergeResults(Source&& source, ParseResult&& out, PathsCont&& filepaths, ErrorCont&& errors, Guid context, EReason reason, OnAddCB on_add) noexcept;
 
 		// 'filepath' is the name of the changed file
 		void FileWatch_OnFileChanged(wchar_t const*, Guid const& context_id, void*, bool&);
