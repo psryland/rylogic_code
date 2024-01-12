@@ -511,6 +511,11 @@ namespace pr::rdr12
 	// Get/Set the default state for a resource
 	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res)
 	{
+		#if PR_DBG
+		auto name = DebugName(res);
+		(void)name;
+		#endif
+
 		UINT size(sizeof(D3D12_RESOURCE_STATES));
 		char bytes[sizeof(D3D12_RESOURCE_STATES)];
 		auto hr = const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]);

@@ -55,7 +55,7 @@ namespace pr::script
 	// A base class and interface for an include handler
 	struct IIncludeHandler
 	{
-		virtual ~IIncludeHandler() {}
+		virtual ~IIncludeHandler() = default;
 
 		// Add a path to the include search paths
 		virtual void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t())
@@ -158,6 +158,10 @@ namespace pr::script
 			SearchPathList(search_paths);
 			ResourceModules(modules);
 		}
+		Includes(Includes&&) = default;
+		Includes(Includes const&) = default;
+		Includes& operator=(Includes&&) = default;
+		Includes& operator=(Includes const&) = default;
 
 		// Raised whenever a file is opened
 		EventHandler<Includes&, std::filesystem::path const&, true> FileOpened;

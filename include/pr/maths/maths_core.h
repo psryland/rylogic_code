@@ -1002,6 +1002,12 @@ namespace pr
 		auto r = Normalise(v);
 		return IsFinite(r) ? r : def;
 	}
+	template <maths::VectorFP T, typename F> requires (requires (F f) { { f() } -> std::convertible_to<T>; })
+	inline T Normalise(T const& v, F def_factory)
+	{
+		auto r = Normalise(v);
+		return IsFinite(r) ? r : def_factory();
+	}
 	template <maths::VectorX T> inline bool IsNormal(T const& v)
 	{
 		return FEql(LengthSq(v), static_cast<maths::vec_comp_t<T>>(1));

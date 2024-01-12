@@ -145,6 +145,7 @@ namespace pr::rdr12
 	// Enums
 	using EGeom = pr::geometry::EGeom;
 	using ETopo = pr::geometry::ETopo;
+	using ETopoGroup = pr::geometry::ETopoGroup;
 
 	// Renderer
 	struct Renderer;
