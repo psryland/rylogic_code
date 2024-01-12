@@ -573,6 +573,7 @@ namespace pr::rdr12
 		// Vertex buffer description
 		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data)
 		{
+			count += int64_t(count == 0);
 			return Buf(count, sizeof(TVert), data, alignof(TVert))
 				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
@@ -580,11 +581,13 @@ namespace pr::rdr12
 		// Index buffer description
 		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
 		{
+			count += int64_t(count == 0);
 			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
 		{
+			count += int64_t(count == 0);
 			return Buf(count, element_stride, data, element_stride)
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
