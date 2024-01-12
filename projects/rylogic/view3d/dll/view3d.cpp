@@ -721,7 +721,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldGet(View3DWindow window, View3DM4x
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		c2w = To<View3DM4x4>(window->m_camera.m_c2w);
+		c2w = To<View3DM4x4>(window->m_camera.CameraToWorld());
 	}
 	CatchAndReport(View3D_CameraToWorldGet, window,);
 }
@@ -734,7 +734,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldSet(View3DWindow window, View3DM4x
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.m_c2w = To<m4x4>(c2w);
+		window->m_camera.CameraToWorld(To<m4x4>(c2w));
 	}
 	CatchAndReport(View3D_CameraToWorldSet, window,);
 }
@@ -773,7 +773,7 @@ VIEW3D_API BOOL __stdcall View3D_CameraOrthographicGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_camera.m_orthographic;
+		return window->m_camera.Orthographic();
 	}
 	CatchAndReport(View3D_CameraOrthographicGet, window, FALSE);
 }
@@ -784,7 +784,7 @@ VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.m_orthographic = on != 0;
+		window->m_camera.Orthographic(on != 0);
 		window->NotifySettingsChanged(EView3DSettings::Camera_Orthographic);
 	}
 	CatchAndReport(View3D_CameraOrthographicSet, window,);
@@ -992,7 +992,7 @@ VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet(View3DWindow
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return static_cast<EView3DCameraLockMask>(window->m_camera.m_lock_mask);
+		return static_cast<EView3DCameraLockMask>(window->m_camera.LockMask());
 	}
 	CatchAndReport(View3D_CameraLockMaskGet, window, EView3DCameraLockMask::None);
 }
@@ -1003,7 +1003,7 @@ VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DC
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
+		window->m_camera.LockMask(static_cast<camera::ELockMask>(mask));
 		window->NotifySettingsChanged(EView3DSettings::Camera_LockMask);
 	}
 	CatchAndReport(View3D_CameraLockMaskSet, window,);
@@ -1017,7 +1017,7 @@ VIEW3D_API View3DV4 __stdcall View3D_CameraAlignAxisGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<View3DV4>(window->m_camera.m_align);
+		return To<View3DV4>(window->m_camera.Align());
 	}
 	CatchAndReport(View3D_CameraAlignAxisGet, window, To<View3DV4>(v4Zero));
 }

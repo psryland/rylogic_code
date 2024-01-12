@@ -55,13 +55,13 @@ namespace pr::rdr12
 	// Allow update of the vertex/index buffers
 	UpdateSubresourceScope Model::UpdateVertices(Range vrange)
 	{
-		if (vrange == RangeZero) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope{ *m_mgr, m_vb.get(), 0, 0, 1, m_vstride.align(), iv3(s_cast<int>(vrange.m_beg), 0, 0), iv3(s_cast<int>(vrange.size() * m_vstride.size()), 1, 1)};
+		if (vrange == Range::Reset()) vrange = Range(0, m_vcount);
+		return UpdateSubresourceScope(*m_mgr, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
 	}
 	UpdateSubresourceScope Model::UpdateIndices(Range irange)
 	{
-		if (irange == RangeZero) irange = Range(0, m_icount);
-		return UpdateSubresourceScope{ *m_mgr, m_ib.get(), 0, 0, 1, m_istride.align(), iv3(s_cast<int>(irange.m_beg), 0, 0), iv3(s_cast<int>(irange.size() * m_istride.size()), 1, 1)};
+		if (irange == Range::Reset()) irange = Range(0, m_icount);
+		return UpdateSubresourceScope(*m_mgr, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
 	}
 
 	// Create a nugget from a range within this model
@@ -71,19 +71,16 @@ namespace pr::rdr12
 	{
 		auto ndata = NuggetDesc(nugget_data);
 
-		#if PR_DBG_RDR
-		if (ndata.m_vrange.empty() != ndata.m_irange.empty())
-			throw std::runtime_error(FmtS("Illogical combination of I-Range and V-Range for nugget (%s)", m_name.c_str()));
-		#endif
-
-		// Empty ranges are assumed to mean the entire model
-		if (ndata.m_vrange.empty())
+		// Invalid ranges are assumed to mean the entire model
+		if (ndata.m_vrange == Range::Reset())
 			ndata.vrange(0, m_vcount);
-		if (ndata.m_irange.empty())
+		if (ndata.m_irange == Range::Reset())
 			ndata.irange(0, m_icount);
 
-		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
+		// Sanity checks
 		#if PR_DBG_RDR
+
+		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 		if (!IsWithin(Range(0, m_vcount), ndata.m_vrange))
 			throw std::runtime_error(FmtS("V-Range exceeds the size of this model  (%s)", m_name.c_str()));
 		if (!IsWithin(Range(0, m_icount), ndata.m_irange))
@@ -94,12 +91,8 @@ namespace pr::rdr12
 					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
 		#endif
 
-		// Defend against crashes in release...
-		if (!ndata.m_irange.empty())
-		{
-			auto nug = res_mgr().CreateNugget(ndata, this);
-			m_nuggets.push_back(*nug);
-		}
+		auto nug = res_mgr().CreateNugget(ndata, this);
+		m_nuggets.push_back(*nug);
 	}
 
 	// Clear the render nuggets for this model.

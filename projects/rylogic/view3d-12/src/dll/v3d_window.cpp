@@ -405,7 +405,7 @@ namespace pr::rdr12
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Align))
 				{
-					m_scene.m_cam.Align(cam.m_align);
+					m_scene.m_cam.Align(cam.Align());
 					changed |= view3d::ESettings::Camera_AlignAxis;
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Aspect))
@@ -807,14 +807,14 @@ namespace pr::rdr12
 	// Enable/Disable orthographic projection
 	bool V3dWindow::Orthographic() const
 	{
-		return m_scene.m_cam.m_orthographic;
+		return m_scene.m_cam.Orthographic();
 	}
 	void V3dWindow::Orthographic(bool on)
 	{
 		if (Orthographic() == on)
 			return;
 
-		m_scene.m_cam.m_orthographic = on;
+		m_scene.m_cam.Orthographic(on);
 		OnSettingsChanged(this, view3d::ESettings::Camera_Orthographic);
 		Invalidate();
 	}
@@ -931,15 +931,15 @@ namespace pr::rdr12
 	// Get/Set the scene camera lock mask
 	camera::ELockMask V3dWindow::LockMask() const
 	{
-		return m_scene.m_cam.m_lock_mask;
+		return m_scene.m_cam.LockMask();
 	}
 	void V3dWindow::LockMask(camera::ELockMask mask)
 	{
 		if (LockMask() == mask)
 			return;
 
-		m_scene.m_cam.m_lock_mask = static_cast<camera::ELockMask>(mask);
-		
+		m_scene.m_cam.LockMask(mask);
+
 		OnSettingsChanged(this, view3d::ESettings::Camera_LockMask);
 		Invalidate();
 	}
@@ -947,7 +947,7 @@ namespace pr::rdr12
 	// Get/Set the camera align axis
 	v4 V3dWindow::AlignAxis() const
 	{
-		return m_scene.m_cam.m_align;
+		return m_scene.m_cam.Align();
 	}
 	void V3dWindow::AlignAxis(v4_cref axis)
 	{

@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
   <!-- Globals -->
   <Import Project="..\..\..\build\props\globals.props" />
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{C14AF62A-C11C-4A91-AC82-8A9D520B93C7}</ProjectGuid>
-    <RootNamespace>View3d</RootNamespace>
-    <ProjectName>view3d-12-test</ProjectName>
+    <ProjectGuid>{A34D76E2-52AC-4C2D-9873-7305977B7015}</ProjectGuid>
+    <RootNamespace>fluid</RootNamespace>
+    <ProjectName>fluid</ProjectName>
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
-  
+
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -29,7 +30,7 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -40,13 +41,14 @@
     <ClCompile>
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>
+        $(ProjectDir);
         $(ProjectDir)..\..\..\include;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies>
-        view3d-12.imp;
+        view3d-12-static.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>
       <AdditionalLibraryDirectories>
@@ -56,25 +58,33 @@
       <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
-  
+
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
+    <ClCompile Include="src\fluid_simulation.cpp" />
+    <ClCompile Include="src\fluid_visualisation.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClInclude Include="src\fluid_simulation.h" />
+    <ClInclude Include="src\fluid_visualisation.h" />
+    <ClInclude Include="src\particles.h" />
   </ItemGroup>
+
 
   <!-- Dependencies -->
   <ItemGroup>
     <UpToDateCheckInput Include="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll" />
   </ItemGroup>
-  <Target Name="CopyDependencies" AfterTargets="Build" BeforeTargets="Deploy"
+  <!--
+  <Target Name="Deploy" AfterTargets="Build"
     Inputs="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll"
     Outputs="$(TargetDir)view3d-12.dll"
   >
     <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\"/>
     <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.pdb $(TargetDir) -OnlyIfNewer -IgnoreMissing" WorkingDirectory="$(SolutionDir)..\"/>
   </Target>
+  -->
 
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

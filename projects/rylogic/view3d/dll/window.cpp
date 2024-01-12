@@ -170,7 +170,7 @@ namespace view3d
 		// scene as they do last minute transform adjustments based on the camera position.
 		auto& cam = m_camera;
 		m_scene.SetView(cam);
-		cam.m_moved = false;
+		cam.Moved(false);
 
 		// Set the light source
 		m_scene.m_global_light = m_light;
@@ -507,7 +507,7 @@ namespace view3d
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Align))
 				{
-					m_camera.Align(cam.m_align);
+					m_camera.Align(cam.Align());
 					changed |= EView3DSettings::Camera_AlignAxis;
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Aspect))
@@ -1124,7 +1124,7 @@ namespace view3d
 		{
 		case EKeyCodes::F7:
 			{
-				auto up = LengthSq(m_camera.m_align) > maths::tinyf ? m_camera.m_align : v4YAxis;
+				auto up = LengthSq(m_camera.Align()) > maths::tinyf ? m_camera.Align() : v4YAxis;
 				auto forward = up.z > up.y ? v4YAxis : -v4ZAxis;
 
 				auto bounds =
