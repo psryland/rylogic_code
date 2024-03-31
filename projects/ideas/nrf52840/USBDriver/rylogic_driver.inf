@@ -1,0 +1,93 @@
+; Copyright (c) 2017 Nordic Semiconductor
+; Windows 2000, XP, Vista, 7 and 8 (x32 and x64) driver for Nordic CDC ACM
+
+[Version] 
+Signature   = "$Windows NT$"
+Class       = Ports
+ClassGuid   = {4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider    = %Manufacturer%
+DriverVer   = 08/10/2020,1.0.0.0
+CatalogFile = rylogic_driver.cat
+
+;----------------------------------------------------------
+; Targets
+;----------------------------------------------------------
+[Manufacturer]
+%Manufacturer%=DeviceList, NTAMD64, NTIA64, NTx86
+
+[DeviceList.NTx86]
+%REXBIONICS_RYLOGIC_SENSOR%=DriverInstall, USB\VID_1915&PID_5943&MI_00
+%REXBIONICS_RYLOGIC_DONGLE%=DriverInstall, USB\VID_1915&PID_5942&MI_00
+%REXBIONICS_RYLOGIC_DONGLE_CLI%=DriverInstall, USB\VID_1915&PID_5942&MI_02
+
+[DeviceList.NTAMD64]
+%REXBIONICS_RYLOGIC_SENSOR%=DriverInstall.NTamd64, USB\VID_1915&PID_5943&MI_00
+%REXBIONICS_RYLOGIC_DONGLE%=DriverInstall.NTamd64, USB\VID_1915&PID_5942&MI_00
+%REXBIONICS_RYLOGIC_DONGLE_CLI%=DriverInstall.NTamd64, USB\VID_1915&PID_5942&MI_02
+
+[DeviceList.NTIA64]
+%REXBIONICS_RYLOGIC_SENSOR%=DriverInstall.NTamd64, USB\VID_1915&PID_5943&MI_00
+%REXBIONICS_RYLOGIC_DONGLE%=DriverInstall.NTamd64, USB\VID_1915&PID_5942&MI_00
+%REXBIONICS_RYLOGIC_DONGLE_CLI%=DriverInstall.NTamd64, USB\VID_1915&PID_5942&MI_02
+
+;----------------------------------------------------------
+; Windows 2000, XP, Vista, Windows 7, Windows 8 - 32bit
+;----------------------------------------------------------
+
+[DestinationDirs]
+DefaultDestDir=12
+DriverInstall.NT.Copy=12
+
+[DriverInstall.NT]
+include=mdmcpq.inf
+CopyFiles=DriverInstall.NT.Copy
+AddReg=DriverInstall.NT.AddReg
+
+[DriverInstall.NT.Copy]
+
+[DriverInstall.NT.AddReg]
+HKR,,DevLoader,,*ntkern
+HKR,,NTMPDriver,,usbser.sys
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[DriverInstall.NT.Services]
+include=mdmcpq.inf
+AddService = usbser, 0x00000002, DriverService.NT
+
+[DriverService.NT] 
+DisplayName = %Serial.SvcDesc%
+ServiceType = 1 ; SERVICE_KERNEL_DRIVER
+StartType = 3 ; SERVICE_DEMAND_START
+ErrorControl = 1 ; SERVICE_ERROR_NORMAL
+ServiceBinary = %12%\usbser.sys
+LoadOrderGroup = Base
+
+;----------------------------------------------------------
+; Windows XP, Vista, Windows 7, Windows 8 - 64bit
+;----------------------------------------------------------
+
+[DriverInstall.NTamd64]
+include=mdmcpq.inf
+CopyFiles=DriverCopyFiles.NTamd64
+AddReg=DriverInstall.NTamd64.AddReg
+
+[DriverCopyFiles.NTamd64]
+
+[DriverInstall.NTamd64.AddReg]
+HKR,,DevLoader,,*ntkern
+HKR,,NTMPDriver,,usbser.sys
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[DriverInstall.NTamd64.Services]
+include=mdmcpq.inf
+AddService=usbser, 0x00000002, DriverService.NT
+
+;----------------------------------------------------------
+; String
+;----------------------------------------------------------
+
+[Strings] 
+Manufacturer = "Rylogic" 
+RYLOGIC_DEVICE = "Rylogic Device"
+Serial.SvcDesc = "USB Serial emulation driver" 
+

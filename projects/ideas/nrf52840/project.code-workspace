@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"name": "nRF52840",
+			"path": "."
+		},
+		{
+			"path": "../../../sdk/nordic"
+		},
+		{
+			"path": "../../../sdk/arm"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.hzp": "xml",
+			"*.emProject": "xml",
+			"*.tcc": "c",
+			"ios": "c"
+		}
+	}
+}
