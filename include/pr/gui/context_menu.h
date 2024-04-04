@@ -569,7 +569,7 @@ namespace pr
 			void Selected(int index, bool final_selection)
 			{
 				if (index < 0 || index >= int(m_items.size()))
-					throw std::exception(pr::FmtS("menu item index (%d) out of Range [0,%d)", index, int(m_items.size())));
+					throw std::runtime_error(pr::FmtS("menu item index (%d) out of Range [0,%d)", index, int(m_items.size())));
 
 				// Calculate the item bounds
 				Rect bounds(MenuMargin, MenuMargin, MenuMargin + m_size.cx, MenuMargin);
@@ -705,7 +705,7 @@ namespace pr
 						auto thread_id = GetCurrentThreadId();
 						ThreadHookMap()[thread_id] = this;
 						m_mouse_hook = SetWindowsHookExW(WH_MOUSE, static_cast<HOOKPROC>(MouseHook), 0, thread_id);
-						Throw(m_mouse_hook != nullptr, "Failed to install mouse hook procedure");
+						Check(m_mouse_hook != nullptr, "Failed to install mouse hook procedure");
 
 						return ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren);
 					}
@@ -1020,7 +1020,7 @@ namespace pr
 					:ContextMenuItem(-1, &menu)
 				{
 					auto cmi = static_cast<ContextMenuItem*>(this);
-					Throw(::AppendMenuW(Menu(), MF_SEPARATOR|MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu separater");
+					Check(::AppendMenuW(Menu(), MF_SEPARATOR|MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu separater");
 				}
 				void MeasureItem(ContextMenu&, gdi::Graphics&, MEASUREITEMSTRUCT* mi) override
 				{
@@ -1059,7 +1059,7 @@ namespace pr
 					,m_rect_text()
 				{
 					auto cmi = static_cast<ContextMenuItem*>(this);
-					Throw(::AppendMenuW(Menu(), MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu item");
+					Check(::AppendMenuW(Menu(), MF_OWNERDRAW, m_id, LPCWSTR(cmi)), "Failed to append menu item");
 				}
 				void MeasureItem(ContextMenu&, gdi::Graphics& gfx, MEASUREITEMSTRUCT* mi) override
 				{
