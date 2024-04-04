@@ -148,7 +148,7 @@ namespace pr::rdr
 		static IWICImagingFactory* s_factory = []
 		{
 			IWICImagingFactory* factory;
-			pr::Throw(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
+			pr::Check(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
 			return factory;
 		}();
 		return s_factory;
@@ -185,18 +185,18 @@ namespace pr::rdr
 		auto wic = GetWIC();
 
 		RefPtr<IWICComponentInfo> cinfo;
-		Throw(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
+		Check(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
 
 		WICComponentType type;
-		Throw(cinfo->GetComponentType(&type));
+		Check(cinfo->GetComponentType(&type));
 		if (type != WICPixelFormat)
 			return 0;
 
 		RefPtr<IWICPixelFormatInfo> pfinfo;
-		Throw(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
+		Check(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
 
 		UINT bpp;
-		Throw(pfinfo->GetBitsPerPixel(&bpp));
+		Check(pfinfo->GetBitsPerPixel(&bpp));
 		return bpp;
 	}
 
@@ -229,7 +229,7 @@ namespace pr::rdr
 
 		// Read the image dimensions
 		UINT width, height;
-		Throw(first->GetSize(&width, &height));
+		Check(first->GetSize(&width, &height));
 		assert(width > 0 && height > 0);
 
 		// Clamp the texture dimensions to the maximum, maintaining aspect ratio
@@ -252,7 +252,7 @@ namespace pr::rdr
 
 		// Determine the pixel format
 		WICPixelFormatGUID src_format, dst_format;
-		Throw(first->GetPixelFormat(&src_format));
+		Check(first->GetPixelFormat(&src_format));
 		auto format = WICToDXGI(src_format, true, &dst_format);
 		if (format == DXGI_FORMAT_UNKNOWN)
 			throw std::runtime_error("Pixel format is not supported");
@@ -297,7 +297,7 @@ namespace pr::rdr
 			if (!conversion_needed && !resize_needed)
 			{
 				// No format conversion or resize needed
-				Throw(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(image_size), buf.get()));
+				Check(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(image_size), buf.get()));
 			}
 			else
 			{
@@ -309,21 +309,21 @@ namespace pr::rdr
 				if (resize_needed)
 				{
 					WICPixelFormatGUID pf;
-					Throw(wic->CreateBitmapScaler(&scaler.m_ptr));
-					Throw(scaler->Initialize(frame.get(), s_cast<UINT>(twidth), s_cast<UINT>(theight), WICBitmapInterpolationModeFant));
-					Throw(scaler->GetPixelFormat(&pf));
+					Check(wic->CreateBitmapScaler(&scaler.m_ptr));
+					Check(scaler->Initialize(frame.get(), s_cast<UINT>(twidth), s_cast<UINT>(theight), WICBitmapInterpolationModeFant));
+					Check(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
 				}
 
 				// Create a format converter if needed
 				if (conversion_needed)
 				{
-					Throw(wic->CreateFormatConverter(&converter.m_ptr));
-					Throw(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
+					Check(wic->CreateFormatConverter(&converter.m_ptr));
+					Check(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
 				}
 
 				// Copy the data with optional reformat and resize
-				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(image_size), buf.get()));
+				Check(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(image_size), buf.get()));
 			}
 			images.push_back(SubResourceData(buf.get(), s_cast<UINT>(pitch), s_cast<UINT>(image_size)));
 			image_data.emplace_back(std::move(buf));
@@ -345,7 +345,7 @@ namespace pr::rdr
 
 		// Create texture
 		ID3D11Texture2D* tex;
-		Throw(d3d_device->CreateTexture2D(&tdesc.Tex2D, mip_autogen ? nullptr : images.data(), &tex));
+		Check(d3d_device->CreateTexture2D(&tdesc.Tex2D, mip_autogen ? nullptr : images.data(), &tex));
 		res = D3DPtr<ID3D11Resource>(tex, false);
 		
 		// Create the SRV
@@ -373,7 +373,7 @@ namespace pr::rdr
 			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			srv_desc.Texture2D.MipLevels = tdesc.Tex2D.MipLevels;
 		}
-		Throw(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
+		Check(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
 		srv = D3DPtr<ID3D11ShaderResourceView>(srv2, false);
 
 		// Generate mips
@@ -405,16 +405,16 @@ namespace pr::rdr
 
 			// Create input stream for memory
 			RefPtr<IWICStream> stream;
-			Throw(wic->CreateStream(&stream.m_ptr));
-			Throw(stream->InitializeFromMemory(static_cast<uint8_t*>(const_cast<void*>(img.data)), static_cast<DWORD>(img.size)));
+			Check(wic->CreateStream(&stream.m_ptr));
+			Check(stream->InitializeFromMemory(static_cast<uint8_t*>(const_cast<void*>(img.data)), static_cast<DWORD>(img.size)));
 
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 			frames.emplace_back(std::move(frame));
 		}
 
@@ -436,11 +436,11 @@ namespace pr::rdr
 		{
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 
 			frames.emplace_back(frame);
 		}

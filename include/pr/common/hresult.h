@@ -164,7 +164,11 @@ namespace pr
 		assert(Succeeded(result) && Reason().c_str());
 		(void)result;
 	}
-	template <typename Result> inline void Throw(Result result, char const* msg = nullptr)
+	template <typename Result> [[deprecated]] inline void Throw(Result result, char const* msg = nullptr)
+	{
+		Check<Result>(result, msg);
+	}
+	template <typename Result> inline void Check(Result result, char const* msg = nullptr)
 	{
 		if (Succeeded(result)) return;
 		throw std::runtime_error(std::string(msg?msg:"") + (msg?" ":"") + Reason());
