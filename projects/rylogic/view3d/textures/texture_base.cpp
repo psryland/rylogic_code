@@ -14,11 +14,11 @@ namespace pr::rdr
 	{
 		// Get the DXGI resource interface for the shared resource
 		D3DPtr<IDXGIResource> dxgi_resource;
-		Throw(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
+		Check(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
 
 		// Get the handled of the shared resource so that we can open it with our d3d device
 		HANDLE shared_handle;
-		Throw(dxgi_resource->GetSharedHandle(&shared_handle));
+		Check(dxgi_resource->GetSharedHandle(&shared_handle));
 
 		return shared_handle;
 	}
@@ -41,10 +41,10 @@ namespace pr::rdr
 		// Open the shared resource in our d3d device
 		D3DPtr<IUnknown> resource;
 		Renderer::Lock lock(m_mgr->m_rdr);
-		Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
+		Check(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
 
 		// Query the resource interface from the resource
-		Throw(resource->QueryInterface(__uuidof(ID3D11Resource), (void**)&m_res.m_ptr));
+		Check(resource->QueryInterface(__uuidof(ID3D11Resource), (void**)&m_res.m_ptr));
 	}
 	TextureBase::TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name)
 		:TextureBase(mgr, id, SharedHandleFromSharedResource(shared_resource), src_id, name)
@@ -62,7 +62,7 @@ namespace pr::rdr
 	{
 		Renderer::Lock lock(m_mgr->m_rdr);
 		D3DPtr<ID3D11SamplerState> samp_state;
-		pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
+		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
 		m_samp = samp_state;
 	}
 
@@ -77,7 +77,7 @@ namespace pr::rdr
 
 		Renderer::Lock lock(m_mgr->m_rdr);
 		D3DPtr<ID3D11SamplerState> samp;
-		pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
+		pr::Check(lock.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
 		m_samp = samp;
 	}
 
@@ -86,8 +86,8 @@ namespace pr::rdr
 	{
 		HANDLE handle;
 		D3DPtr<IDXGIResource> res;
-		pr::Throw(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
-		pr::Throw(res->GetSharedHandle(&handle));
+		pr::Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+		pr::Check(res->GetSharedHandle(&handle));
 		return handle;
 	}
 

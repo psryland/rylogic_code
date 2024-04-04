@@ -181,7 +181,7 @@ namespace pr::rdr12
 				}
 
 				auto msg = pr::HrMsg(err);
-				throw std::exception(msg.c_str());
+				throw std::runtime_error(msg.c_str());
 			}
 		}
 		template <typename Func, typename... Args>

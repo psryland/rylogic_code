@@ -138,8 +138,7 @@ namespace pr::rdr
 			{
 				// Create a shader based on 'base_id'
 				auto existing = FindShader<ShaderType>(base_id);
-				if (!existing)
-					throw Exception<HRESULT>(E_FAIL, FmtS("Existing shader with id %d not found", base_id));
+				Check(existing != nullptr, FmtS("Existing shader with id %d not found", base_id));
 
 				// Create a copy of 'existing'
 				shdr = CreateShader<ShaderType>(id, existing->dx_shader(), name ? name : existing->m_name.c_str());

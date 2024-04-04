@@ -143,7 +143,7 @@ namespace pr::rdr
 			auto hr = m_dc->Map(res, sub, static_cast<D3D11_MAP>(map_type), static_cast<UINT>(flags), this);
 			if (Failed(hr))
 			{
-				if (!AllSet(flags, EMapFlags::DoNotWait)) Throw(hr);
+				if (!AllSet(flags, EMapFlags::DoNotWait)) Check(hr);
 				return false;
 			}
 			else

@@ -36,13 +36,13 @@ namespace pr::sound
 			for(;;)
 			{
 				HRESULT res = m_buf->Lock(DWORD(offset), DWORD(count), (void**)&m_ptr0, &m_size0, (void**)&m_ptr1, &m_size1, DWORD(flags));
-				if (res == DSERR_BUFFERLOST) { pr::Throw(m_buf->Restore()); continue; }
-				pr::Throw(res); break;
+				if (res == DSERR_BUFFERLOST) { pr::Check(m_buf->Restore()); continue; }
+				pr::Check(res); break;
 			}
 		}
 		~Lock()
 		{
-			pr::Throw(m_buf->Unlock(m_ptr0, m_size0, m_ptr1, m_size1));
+			pr::Check(m_buf->Unlock(m_ptr0, m_size0, m_ptr1, m_size1));
 		}
 	};
 
@@ -64,9 +64,9 @@ namespace pr::sound
 	inline D3DPtr<IDirectSound8> InitDSound(HWND hwnd, GUID const* device = 0, DWORD coop_flags = DSSCL_EXCLUSIVE)
 	{
 		D3DPtr<IDirectSound8> dsound;
-		Throw(::DirectSoundCreate8(device, &dsound.m_ptr, 0));
-		Throw(dsound->Initialize(0));
-		Throw(dsound->SetCooperativeLevel(hwnd, coop_flags));
+		Check(::DirectSoundCreate8(device, &dsound.m_ptr, 0));
+		Check(dsound->Initialize(0));
+		Check(dsound->SetCooperativeLevel(hwnd, coop_flags));
 		return dsound;
 	}
 
@@ -74,7 +74,7 @@ namespace pr::sound
 	inline DSCAPS GetCaps(D3DPtr<IDirectSound8> dsound)
 	{
 		DSCAPS caps;
-		Throw(dsound->GetCaps(&caps));
+		Check(dsound->GetCaps(&caps));
 		return caps;
 	}
 
@@ -157,11 +157,11 @@ namespace pr::sound
 
 		// Get a standard buffer
 		D3DPtr<IDirectSoundBuffer> buf;
-		Throw(dsound->CreateSoundBuffer(&desc, &buf.m_ptr, 0));
+		Check(dsound->CreateSoundBuffer(&desc, &buf.m_ptr, 0));
 
 		// Query for the IDirectSoundBuffer8 interface
 		D3DPtr<IDirectSoundBuffer8> buf8;
-		Throw(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)&buf8.m_ptr));
+		Check(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)&buf8.m_ptr));
 		return buf8;
 	}
 
@@ -170,7 +170,7 @@ namespace pr::sound
 	{
 		PR_ASSERT(PR_DBG_SND, 0.0f <= vol && vol <= 1.0f, "'vol' must be in the range [0,1]");
 		double v = Clamp(vol, 0.0f, 1.0f) * log10(double(DSBVOLUME_MAX - DSBVOLUME_MIN));
-		Throw(buf->SetVolume(-long(pow(10.0, v))));
+		Check(buf->SetVolume(-long(pow(10.0, v))));
 	}
 
 	// Return the allocated size of a dsound buffer

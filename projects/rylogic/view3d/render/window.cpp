@@ -15,7 +15,7 @@ namespace pr::rdr
 		if (hwnd != nullptr)
 		{
 			RECT rect;
-			Throw(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
+			Check(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
 			return iv2(rect.right - rect.left, rect.bottom - rect.top);
 		}
 		return iv2One;
@@ -74,9 +74,9 @@ namespace pr::rdr
 
 			// Validate settings
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
-				Throw(false, "D3D device has not been created with GDI compatibility");
+				Check(false, "D3D device has not been created with GDI compatibility");
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
-				Throw(false, "GDI compatibility does not support multi-sampling");
+				Check(false, "GDI compatibility does not support multi-sampling");
 			//todo: w-buffer
 			// https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
 			// https://www.mvps.org/directx/articles/using_w-buffers.htm
@@ -89,15 +89,15 @@ namespace pr::rdr
 			D3DPtr<IDXGIDevice> dxgi_device;
 			D3DPtr<IDXGIAdapter> adapter;
 			D3DPtr<IDXGIFactory> factory;
-			Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
-			Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
-			Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+			Check(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+			Check(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+			Check(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
 			// Create a query interface for querying the GPU events related to this scene
 			D3D11_QUERY_DESC query_desc;
 			query_desc.Query = D3D11_QUERY_EVENT;
 			query_desc.MiscFlags = static_cast<D3D11_QUERY_MISC_FLAG>(0);
-			Throw(device->CreateQuery(&query_desc, &m_query.m_ptr));
+			Check(device->CreateQuery(&query_desc, &m_query.m_ptr));
 
 			// Creating a device with hwnd == nullptr is allowed if you only want to render to 
 			// off-screen render targets. If there's no window handle, don't create a swap chain
@@ -115,18 +115,18 @@ namespace pr::rdr
 				sd.Windowed     = settings.m_windowed;
 				sd.SwapEffect   = settings.m_swap_effect;
 				sd.Flags        = settings.m_swap_chain_flags;
-				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
+				Check(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), FmtS("swap chain")));
 
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-				Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+				Check(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 			}
 
 			// If D2D is enabled, Connect D2D to the same render target as D3D
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 			{
 				// Create a D2D device context
-				Throw(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
+				Check(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 			}
 
 			// In device debug mode, create a dummy swap chain so that the graphics debugging
@@ -142,7 +142,7 @@ namespace pr::rdr
 				sd.Windowed     = TRUE;
 				sd.SwapEffect   = DXGI_SWAP_EFFECT_DISCARD;
 				sd.Flags        = DXGI_SWAP_CHAIN_FLAG(0);
-				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
+				Check(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain_dbg.get(), FmtS("swap chain dbg")));
 			}
 
@@ -234,7 +234,7 @@ namespace pr::rdr
 
 		// Get the back buffer so we can copy its properties
 		D3DPtr<ID3D11Texture2D> back_buffer;
-		Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
+		Check(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer.get(), "main RT"));
 			
 		// Read the texture properties from the BB
@@ -243,11 +243,11 @@ namespace pr::rdr
 		static_cast<DXGI_SAMPLE_DESC&>(m_multisamp) = bbdesc.SampleDesc;
 
 		// Create a render-target view of the back buffer
-		Throw(device->CreateRenderTargetView(back_buffer.m_ptr, nullptr, &m_main_rtv.m_ptr));
+		Check(device->CreateRenderTargetView(back_buffer.m_ptr, nullptr, &m_main_rtv.m_ptr));
 
 		// If the texture was created with SRV binding, create a SRV
 		if (bbdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
-			Throw(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
+			Check(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
 
 		// Get the render target as a texture
 		m_main_rt = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
@@ -265,7 +265,7 @@ namespace pr::rdr
 		desc.CPUAccessFlags     = 0;
 		desc.MiscFlags          = 0;
 		D3DPtr<ID3D11Texture2D> depth_stencil;
-		Throw(device->CreateTexture2D(&desc, 0, &depth_stencil.m_ptr));
+		Check(device->CreateTexture2D(&desc, 0, &depth_stencil.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(depth_stencil.get(), "main DB"));
 
 		// Create a depth/stencil view of the texture buffer we just created
@@ -273,14 +273,14 @@ namespace pr::rdr
 		dsv_desc.Format             = desc.Format;
 		dsv_desc.ViewDimension      = bbdesc.SampleDesc.Count == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DMS;
 		dsv_desc.Texture2D.MipSlice = 0;
-		Throw(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
+		Check(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
 
 		// Re-link the D2D device context to the back buffer
 		if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 		{
 			// Direct2D needs the DXGI version of the back buffer
 			D3DPtr<IDXGISurface> dxgi_back_buffer;
-			Throw(m_swap_chain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+			Check(m_swap_chain->GetBuffer(0, __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
 
 			// Create bitmap properties for the bitmap view of the back buffer
 			auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
@@ -290,7 +290,7 @@ namespace pr::rdr
 
 			// Wrap the back buffer as a bitmap for D2D
 			D3DPtr<ID2D1Bitmap1> d2d_render_target;
-			Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &d2d_render_target.m_ptr));
+			Check(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &d2d_render_target.m_ptr));
 
 			// Set the bitmap as the render target
 			m_d2d_dc->SetTarget(d2d_render_target.get());
@@ -351,7 +351,7 @@ namespace pr::rdr
 
 		// Get a render target view of the render target texture
 		D3DPtr<ID3D11RenderTargetView> rtv;
-		Throw(device->CreateRenderTargetView(render_target, nullptr, &rtv.m_ptr));
+		Check(device->CreateRenderTargetView(render_target, nullptr, &rtv.m_ptr));
 
 		// If no depth buffer is given, create a temporary depth buffer
 		D3DPtr<ID3D11Texture2D> tmp_depth_buffer;
@@ -366,13 +366,13 @@ namespace pr::rdr
 			dbdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 			dbdesc.CPUAccessFlags = 0;
 			dbdesc.MiscFlags = 0;
-			Throw(lock.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &tmp_depth_buffer.m_ptr));
+			Check(lock.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &tmp_depth_buffer.m_ptr));
 			depth_buffer = tmp_depth_buffer.get();
 		}
 
 		// Create a depth stencil view of the depth buffer
 		D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
-		Throw(device->CreateDepthStencilView(depth_buffer, nullptr, &dsv.m_ptr));
+		Check(device->CreateDepthStencilView(depth_buffer, nullptr, &dsv.m_ptr));
 
 		// Set the render target
 		SetRT(rtv.get(), dsv.get(), is_new_main_rt);
@@ -380,7 +380,7 @@ namespace pr::rdr
 		if (is_new_main_rt)
 		{
 			D3DPtr<ID3D11ShaderResourceView> srv;
-			Throw(device->CreateShaderResourceView(render_target, nullptr, &srv.m_ptr));
+			Check(device->CreateShaderResourceView(render_target, nullptr, &srv.m_ptr));
 			m_main_rt = tex_mgr().CreateTexture2D(AutoId, render_target, srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
 			m_main_srv = srv;
 		}
@@ -394,20 +394,20 @@ namespace pr::rdr
 
 		// Create a solid brush
 		D3DPtr<ID2D1SolidColorBrush> brush;
-		Throw(m_d2d_dc->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Blue), &brush.m_ptr));
+		Check(m_d2d_dc->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Blue), &brush.m_ptr));
 
 		// Create a text format
 		D3DPtr<IDWriteTextFormat> text_format;
-		Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
+		Check(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
 
 		// Create a text layout
 		D3DPtr<IDWriteTextLayout> text_layout;
-		Throw(dwrite->CreateTextLayout(text, UINT32(wcslen(text)), text_format.get(), 100.0f, 100.0f, &text_layout.m_ptr));
+		Check(dwrite->CreateTextLayout(text, UINT32(wcslen(text)), text_format.get(), 100.0f, 100.0f, &text_layout.m_ptr));
 
 		// Draw the string
 		m_d2d_dc->BeginDraw();
 		m_d2d_dc->DrawTextLayout(D2D1::Point2F(x, y), text_layout.get(), brush.get());
-		Throw(m_d2d_dc->EndDraw());
+		Check(m_d2d_dc->EndDraw());
 	}
 
 	// Set the viewport to all of the render target
@@ -425,7 +425,7 @@ namespace pr::rdr
 	{
 		BOOL full_screen;
 		D3DPtr<IDXGIOutput> ppTarget;
-		Throw(m_swap_chain->GetFullscreenState(&full_screen, &ppTarget.m_ptr));
+		Check(m_swap_chain->GetFullscreenState(&full_screen, &ppTarget.m_ptr));
 		return full_screen != 0;
 	}
 	void Window::FullScreenMode(bool on, rdr::DisplayMode mode)
@@ -472,24 +472,24 @@ namespace pr::rdr
 
 		BOOL currently_fullscreen;
 		D3DPtr<IDXGIOutput> output;
-		Throw(m_swap_chain->GetFullscreenState(&currently_fullscreen, &output.m_ptr));
+		Check(m_swap_chain->GetFullscreenState(&currently_fullscreen, &output.m_ptr));
 
 		// Windowed -> Full screen
 		if (!currently_fullscreen && on)
 		{
-			Throw(m_swap_chain->ResizeTarget(&mode));
-			Throw(m_swap_chain->SetFullscreenState(TRUE, output.m_ptr));
+			Check(m_swap_chain->ResizeTarget(&mode));
+			Check(m_swap_chain->SetFullscreenState(TRUE, output.m_ptr));
 		}
 		// Full screen -> windowed
 		else if (currently_fullscreen && !on)
 		{
-			Throw(m_swap_chain->SetFullscreenState(FALSE, nullptr));
-			Throw(m_swap_chain->ResizeTarget(&mode));
+			Check(m_swap_chain->SetFullscreenState(FALSE, nullptr));
+			Check(m_swap_chain->ResizeTarget(&mode));
 		}
 		// Full screen -> Full screen
 		else if (currently_fullscreen && on)
 		{
-			Throw(m_swap_chain->ResizeTarget(&mode));
+			Check(m_swap_chain->ResizeTarget(&mode));
 		}
 	}
 
@@ -500,7 +500,7 @@ namespace pr::rdr
 			return DXGI_FORMAT_UNKNOWN;
 			
 		DXGI_SWAP_CHAIN_DESC desc;
-		Throw(m_swap_chain->GetDesc(&desc));
+		Check(m_swap_chain->GetDesc(&desc));
 		return desc.BufferDesc.Format;
 	}
 
@@ -521,7 +521,7 @@ namespace pr::rdr
 
 		// Get the Texture2D pointer to the resource
 		D3DPtr<ID3D11Texture2D> rt;
-		Throw(res->QueryInterface<ID3D11Texture2D>(&rt.m_ptr));
+		Check(res->QueryInterface<ID3D11Texture2D>(&rt.m_ptr));
 		if (rt == nullptr)
 			return iv2Zero;
 
@@ -542,7 +542,7 @@ namespace pr::rdr
 			return iv2{};
 
 		DXGI_SWAP_CHAIN_DESC desc;
-		Throw(m_swap_chain->GetDesc(&desc));
+		Check(m_swap_chain->GetDesc(&desc));
 		return iv2(desc.BufferDesc.Width, desc.BufferDesc.Height);
 	}
 
@@ -561,7 +561,7 @@ namespace pr::rdr
 		{
 			// Get the swap chain to resize itself
 			// Pass 0 for width and height, DirectX gets them from the associated window
-			Throw(m_swap_chain->ResizeBuffers(0, s_cast<UINT>(size.x), s_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
+			Check(m_swap_chain->ResizeBuffers(0, s_cast<UINT>(size.x), s_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
 		});
 	}
 
@@ -585,14 +585,14 @@ namespace pr::rdr
 			D3DPtr<IDXGIDevice> dxgi_device;
 			D3DPtr<IDXGIAdapter> adapter;
 			D3DPtr<IDXGIFactory> factory;
-			Throw(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
-			Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
-			Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
+			Check(device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+			Check(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
+			Check(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
 			// Get the description of the existing swap chain
 			DXGI_SWAP_CHAIN_DESC sd = {0};
-			Throw(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
-			Throw(!AllSet(sd.Flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) || ms.Count == 1, "GDI compatibility cannot be used with multi-sampling");
+			Check(m_swap_chain->GetDesc(&sd), "Failed to get current swap chain description");
+			Check(!AllSet(sd.Flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) || ms.Count == 1, "GDI compatibility cannot be used with multi-sampling");
 
 			// Check for feature support
 			ms.Validate(device, sd.BufferDesc.Format);
@@ -603,7 +603,7 @@ namespace pr::rdr
 			// render using GDI on a swap chain or a surface. This will allow the application
 			// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
 			m_swap_chain = nullptr;
-			Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
+			Check(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), "swap chain"));
 
 			m_multisamp = ms;
@@ -727,7 +727,7 @@ namespace pr::rdr
 				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
 				if (res == S_OK) break;
 				if (res == S_FALSE) continue;
-				Throw(res);
+				Check(res);
 			}
 			return;
 		}
@@ -751,14 +751,14 @@ namespace pr::rdr
 			{
 				// The device failed due to a badly formed command. This is a run-time issue;
 				// The application should destroy and recreate the device.
-				throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+				Check(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
 			}
 			case DXGI_ERROR_DEVICE_REMOVED:
 			{
 				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 				// We'll just throw so the app can shutdown/reset/whatever
 				Renderer::Lock lock(*m_rdr);
-				throw Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				Check(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 			}
 			default:
 			{
