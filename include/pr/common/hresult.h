@@ -12,9 +12,9 @@
 #include <type_traits>
 #include <cassert>
 #include <cerrno>
+#include <format>
+#include <stdexcept>
 #include <windows.h>
-#include "pr/common/fmt.h"
-#include "pr/common/exception.h"
 
 // Support d3d errors if the header has been included before now.
 #if defined(PR_SUPPORT_D3D_HRESULTS) || defined(_D3D9_H_)
@@ -55,8 +55,8 @@ namespace pr
 		if (HRESULT_FACILITY(result) == _FACD3D)
 		{
 			std::stringstream ss;
-			ss << "D3D9 Error: "  << pr::To<std::string>(DXGetErrorString(result)) << std::endl;
-			ss << "Description: " << pr::To<std::string>(DXGetErrorDescription(result)) << std::endl;
+			ss << "D3D9 Error: "  << DXGetErrorString(result) << std::endl;
+			ss << "Description: " << DXGetErrorDescription(result) << std::endl;
 			return ss.str();
 		}
 		#endif
@@ -104,13 +104,16 @@ namespace pr
 		// else ask windows
 		std::string msg(4096, '\0');
 		auto len = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg.data(), DWORD(msg.size()), nullptr);
-		if (len != 0) msg.resize(len); else msg = Fmt("Unknown error code: 0x%80X", result);
+		if (len != 0) msg.resize(len); else msg = std::format("Unknown error code: 0x{:08X}", static_cast<unsigned>(result));
 		return msg;
 	}
 
 	// Forward declare the ToString function
 	// Here 'Result' is expected to be an enum error code
-	template <typename Result> std::string ToString(Result result);
+	template <typename Result> std::string ToString(Result result)
+	{
+		static_assert(sizeof(Result) != 0, "ToString not implementated for this Result type");
+	}
 	template <> inline std::string ToString(HResult result)
 	{
 		return HrMsg(static_cast<HRESULT>(result));
@@ -164,7 +167,7 @@ namespace pr
 	template <typename Result> inline void Throw(Result result, char const* msg = nullptr)
 	{
 		if (Succeeded(result)) return;
-		throw pr::Exception<Result>(result, std::string(msg?msg:"") + (msg?" ":"") + Reason());
+		throw std::runtime_error(std::string(msg?msg:"") + (msg?" ":"") + Reason());
 	}
 
 	// Check the 'errno' value, and throw if non-zero

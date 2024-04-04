@@ -12,7 +12,56 @@
 //     libraries needed)
 //   - Automatic support for resizing
 //   - C#.NET style event handlers
-//
+/*
+Example Use:
+
+	struct MyWindow :Form
+	{
+		enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
+		
+		Panel    m_panel;
+		Splitter m_split;
+
+		MyWindow()
+			:Form(Params<>()
+				.name("test")
+				.title(L"My Window")
+				.xy(2000,100)
+				.wh(800,600)
+				.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+				.main_wnd(true)
+				.wndclass(RegisterWndClass<MyWindow>()))
+			,m_panel(Panel   ::Params<>().parent(this_   ).xy(50,50).wh(Fill,Fill).anchor(EAnchor::All))
+			,m_split(Splitter::Params<>().parent(&m_panel).dock(EDock::Fill))
+		{
+			m_split.Pane0.Style('+', WS_BORDER);
+			m_split.Pane1.Style('+', WS_BORDER);
+		}
+	};
+
+	// Entry point
+	int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+	{
+		InitCtrls();
+		try
+		{
+			(void)hInstance;
+			MyWindow main;
+			main.Show();
+
+			MessageLoop loop;
+			loop.AddMessageFilter(main);
+			return loop.Run();
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA("Died: ");
+			OutputDebugStringA(ex.what());
+			OutputDebugStringA("\n");
+			return -1;
+		}
+	}
+*/
 #pragma once
 
 #ifndef _WIN32_WINNT
