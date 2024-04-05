@@ -101,7 +101,7 @@ namespace pr::rdr12
 		ENuggetFlag     m_nflags;                // Flags for boolean properties of the nugget
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
-		// If the ranges are zero length, they are assume to mean the entire model
+		// If the ranges are invalid, they are assumed to mean the entire model.
 		Range           m_vrange;
 		Range           m_irange;
 
@@ -117,8 +117,8 @@ namespace pr::rdr12
 			, m_sort_key(ESortGroup::Default)
 			, m_relative_reflectivity(1)
 			, m_nflags(ENuggetFlag::None)
-			, m_vrange()
-			, m_irange()
+			, m_vrange(Range::Reset())
+			, m_irange(Range::Reset())
 		{}
 
 		// Set the vertex range for this nugget
@@ -162,7 +162,7 @@ namespace pr::rdr12
 		NuggetDesc& tex_diffuse(Texture2DPtr tex)
 		{
 			m_tex_diffuse = tex;
-			return *this;
+			return flags(ENuggetFlag::TexDiffuseHasAlpha, AllSet(tex->m_tflags, ETextureFlag::HasAlpha));
 		}
 
 		// Set the sampler for the diffuse texture
@@ -193,6 +193,11 @@ namespace pr::rdr12
 		NuggetDesc& alpha_tint(bool has = true)
 		{
 			m_nflags = SetBits(m_nflags, ENuggetFlag::TintHasAlpha, has);
+			return *this;
+		}
+		NuggetDesc& alpha_tex(bool has = true)
+		{
+			m_nflags = SetBits(m_nflags, ENuggetFlag::TexDiffuseHasAlpha, has);
 			return *this;
 		}
 

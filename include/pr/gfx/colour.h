@@ -440,11 +440,26 @@ namespace pr
 	// Linearly interpolate between colours
 	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, double frac)
 	{
+		assert(frac >= 0.0f && frac <= 1.0f);
 		return Colour32(
 			int(lhs.r * (1.0 - frac) + rhs.r * frac),
 			int(lhs.g * (1.0 - frac) + rhs.g * frac),
 			int(lhs.b * (1.0 - frac) + rhs.b * frac),
 			int(lhs.a * (1.0 - frac) + rhs.a * frac));
+	}
+
+	inline Colour32 Lerp(std::span<Colour32 const> colours, double frac)
+	{
+		assert(!colours.empty());
+		assert(frac >= 0.0f && frac <= 1.0f);
+
+		if (colours.size() == 1)
+			return colours[0];
+
+		auto const num = colours.size() - 1;
+		auto const idx = Clamp<size_t>(static_cast<size_t>(frac * num), 0, num - 1);
+		auto const f = Clamp<double>(frac * num - idx, 0.0, 1.0);
+		return Lerp(colours[idx], colours[idx + 1], f);
 	}
 
 	// Convert this colour to it's associated gray-scale value

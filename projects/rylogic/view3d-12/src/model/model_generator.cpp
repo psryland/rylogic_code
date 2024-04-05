@@ -143,16 +143,20 @@ namespace pr::rdr12
 	static ModelPtr Create(Renderer& rdr, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const* opts)
 	{
 		// Sanity check 'cache'
-		#if PR_DBG_RDR
 		assert(!cache.m_ncont.empty() && "No nuggets given");
 		for (auto& nug : cache.m_ncont)
 		{
+			// Invalid range means "full range"
+			if (nug.m_vrange == Range::Reset())
+				nug.m_vrange = Range(0, cache.VCount());
+			if (nug.m_irange == Range::Reset())
+				nug.m_irange = Range(0, cache.ICount());
+
 			assert(nug.m_vrange.begin() < cache.VCount() && "Nugget range invalid");
 			assert(nug.m_irange.begin() < cache.ICount() && "Nugget range invalid");
 			assert(nug.m_vrange.end() <= cache.VCount() && "Nugget range invalid");
 			assert(nug.m_irange.end() <= cache.ICount() && "Nugget range invalid");
 		}
-		#endif
 
 		// Bake a transform into the model
 		if (opts && opts->m_bake != nullptr)

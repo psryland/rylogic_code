@@ -378,19 +378,23 @@ namespace pr::rdr12
 				}
 				case EKeyword::Near:
 				{
-					p.m_reader.Real(out.m_cam.m_near);
+					float near_;
+					p.m_reader.Real(near_);
+					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
 				case EKeyword::Far:
 				{
-					p.m_reader.Real(out.m_cam.m_far);
+					float far_;
+					p.m_reader.Real(far_);
+					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
 				case EKeyword::Orthographic:
 				{
-					out.m_cam.m_orthographic = true;
+					out.m_cam.Orthographic(true);
 					out.m_cam_fields |= ECamField::Ortho;
 					break;
 				}
@@ -1177,7 +1181,7 @@ namespace pr::rdr12
 					// The number of indices in this nugget
 					auto iptr = indices.data();
 					auto icount = indices.size();
-					if (!nug.m_irange.empty())
+					if (nug.m_irange != Range::Reset())
 					{
 						iptr += nug.m_irange.begin();
 						icount = nug.m_irange.size();
@@ -4743,8 +4747,8 @@ namespace pr::rdr12
 
 			assert(vout - update_v.ptr<Vert>() == nv);
 			assert(iout - update_i.ptr<uint32_t>() == ni);
-			update_v.Commit();
-			update_i.Commit();
+			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 
 			// Generate nuggets if initialising
 			if (init)
@@ -5336,8 +5340,10 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	void Parse(Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, pr::script::Reader& reader, Guid const& context_id, ParseProgressCB progress_cb)
 	{
+		ParseResult out;
+
 		// Give initial and final progress updates
 		auto start_loc = reader.Location();
 		auto exit = Scope<void>(
@@ -5358,7 +5364,47 @@ namespace pr::rdr12
 		bool cancel = false;
 		ParseParams pp(rdr, reader, out, context_id, progress_cb, cancel);
 		ParseLdrObjects(pp, [&](int){});
+		return out;
 	}
+
+	// Parse ldr script from a text file.
+	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+	// life-times of the script reader, the parse output, and the 'store' container it refers to.
+	ParseResult ParseFile(Renderer& rdr, std::filesystem::path filename, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		script::FileSrc src(filename);
+		script::Reader reader(src);
+		return Parse(rdr, reader, context_id, progress_cb);
+	}
+
+	// Parse ldr script from a string
+	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+	// life-times of the script reader, the parse output, and the 'store' container it refers to.
+	template <typename Char>
+	ParseResult ParseString(Renderer& rdr, Char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		script::StringSrc src(ldr_script);
+		script::Reader reader(src);
+		return Parse(rdr, reader, context_id, progress_cb);
+	}
+	template ParseResult ParseString<char>(Renderer& rdr, char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
+	template ParseResult ParseString<wchar_t>(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
+
+	// Create a single ldr object from a string
+	template <typename Char>
+	LdrObjectPtr CreateLdr(Renderer& rdr, Char const* ldr_script, Guid const& context_id)
+	{
+		auto result = ParseString(rdr, ldr_script, context_id);
+		if (result.m_objects.empty())
+			throw std::runtime_error("No objects created");
+		if (result.m_objects.size() > 1)
+			throw std::runtime_error("Multiple objects created");
+		return result.m_objects[0];
+	}
+	template LdrObjectPtr CreateLdr(Renderer& rdr, char const* ldr_script, Guid const& context_id);
+	template LdrObjectPtr CreateLdr(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id);
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, Guid const& context_id)

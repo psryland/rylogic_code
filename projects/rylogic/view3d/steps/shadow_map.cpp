@@ -125,7 +125,7 @@ namespace pr::rdr
 	// Update the projection parameters for the given scene
 	void ShadowMap::ShadowCaster::UpdateParams(Scene const& scene, BBox_cref ws_bounds)
 	{
-		auto& c2w = scene.m_view.m_c2w;
+		auto const& c2w = scene.m_view.CameraToWorld();
 		auto l2w = m_light->LightToWorld(ws_bounds.Centre(), 0.5f * ws_bounds.Diametre(), c2w);
 		m_params.m_l2w = l2w;
 

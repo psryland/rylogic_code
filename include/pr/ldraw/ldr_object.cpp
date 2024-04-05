@@ -294,7 +294,7 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			case EKeyword::O2W:
+				case EKeyword::O2W:
 				{
 					auto c2w = pr::m4x4Identity;
 					p.m_reader.TransformS(c2w);
@@ -302,7 +302,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::C2W;
 					break;
 				}
-			case EKeyword::LookAt:
+				case EKeyword::LookAt:
 				{
 					pr::v4 lookat;
 					p.m_reader.Vector3S(lookat, 1.0f);
@@ -312,7 +312,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Focus;
 					break;
 				}
-			case EKeyword::Align:
+				case EKeyword::Align:
 				{
 					pr::v4 align;
 					p.m_reader.Vector3S(align, 0.0f);
@@ -320,7 +320,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
-			case EKeyword::Aspect:
+				case EKeyword::Aspect:
 				{
 					float aspect;
 					p.m_reader.RealS(aspect);
@@ -328,7 +328,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
-			case EKeyword::FovX:
+				case EKeyword::FovX:
 				{
 					float fovX;
 					p.m_reader.RealS(fovX);
@@ -336,7 +336,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::FovY:
+				case EKeyword::FovY:
 				{
 					float fovY;
 					p.m_reader.RealS(fovY);
@@ -344,7 +344,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::Fov:
+				case EKeyword::Fov:
 				{
 					float fov[2];
 					p.m_reader.RealS(fov, 2);
@@ -353,25 +353,29 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::Near:
+				case EKeyword::Near:
 				{
-					p.m_reader.Real(out.m_cam.m_near);
+					float near_;
+					p.m_reader.Real(near_);
+					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
-			case EKeyword::Far:
+				case EKeyword::Far:
 				{
-					p.m_reader.Real(out.m_cam.m_far);
+					float far_;
+					p.m_reader.Real(far_);
+					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
-			case EKeyword::Orthographic:
+				case EKeyword::Orthographic:
 				{
-					out.m_cam.m_orthographic = true;
+					out.m_cam.Orthographic(true);
 					out.m_cam_fields |= ECamField::Ortho;
 					break;
 				}
-			default:
+				default:
 				{
 					p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Camera", p.m_reader.LastKeyword().c_str()));
 					break;

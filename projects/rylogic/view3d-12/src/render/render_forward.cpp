@@ -202,12 +202,12 @@ namespace pr::rdr12
 			m_cmd_list.IASetIndexBuffer(&nugget.m_model->m_ib_view);
 
 			// Bind textures to the pipeline
-			auto tex = FindDiffTexture(instance) << nugget.m_tex_diffuse << m_default_tex;
+			auto tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex);
 			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
 
 			// Bind samplers to the pipeline
-			auto sam = FindDiffTextureSampler(instance) << nugget.m_sam_diffuse << m_default_sam;
+			auto sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam);
 			auto sam_descriptor = wnd().m_heap_samp.Add(sam->m_samp);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTextureSampler, sam_descriptor);
 

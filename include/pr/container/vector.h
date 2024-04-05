@@ -423,13 +423,6 @@ namespace pr
 				std::swap(*beg, *end);
 		}
 
-		//// return the iterator category for 'iter'
-		//template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const
-		//{
-		//	typename std::iterator_traits<iter>::iterator_category cat;
-		//	return cat;
-		//}
-
 		// Make sure 'm_ptr' is big enough to hold 'new_count' elements
 		void ensure_space(size_type new_count, [[maybe_unused]] bool autogrow)
 		{
@@ -802,6 +795,13 @@ namespace pr
 		{
 			assert(i < size() && "out of range");
 			return m_ptr[i];
+		}
+
+		// Return the index of 'value' within this container
+		size_type index(value_type const& value) const
+		{
+			assert(inside(&value) && "value not in this container");
+			return &value - data();
 		}
 
 		// assign right (explicit assignment operator needed to prevent auto generated one even tho there's a template one that would work)

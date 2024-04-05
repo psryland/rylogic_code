@@ -49,7 +49,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	fullpath = Tools.Path(fullpath)
 	fdir,fname = os.path.split(fullpath)
 	ftitle,extn  = os.path.splitext(fname)
-	if trace: print(f"File: {fdir}\\{ftitle}{extn}")
+	if trace: print(f"File: {fdir}/{ftitle}{extn}")
 
 	# Determine the output directory
 	outdir = fdir

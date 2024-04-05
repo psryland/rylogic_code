@@ -162,13 +162,19 @@ namespace pr::rdr12
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	template <typename Char>
-	Guid Context::LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
-		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
+		return m_sources.AddFile(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
-	template Guid Context::LoadScript<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
-	template Guid Context::LoadScript<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+
+	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
+	template <typename Char>
+	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	{
+		return m_sources.AddString(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
+	}
+	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 
 	// Create an object from geometry
 	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
@@ -351,7 +357,7 @@ namespace pr::rdr12
 
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
-	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)
+	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes)
 	{
 		// Get the context id for this script
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -365,7 +371,10 @@ namespace pr::rdr12
 		auto count = iter != end(srcs) ? iter->second.m_objects.size() : 0U;
 
 		// Load the ldr script
-		LoadScript(ldr_script, file, enc, &id, include_handler, nullptr);
+		if (file)
+			LoadScriptFile(ldr_script, enc, id, include_handler, nullptr);
+		else
+			LoadScriptString(ldr_script, enc, id, include_handler, nullptr);
 
 		// Return the first object, expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context.
@@ -374,11 +383,11 @@ namespace pr::rdr12
 			? iter->second.m_objects[count].get()
 			: nullptr;
 	}
-	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
-	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
+	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
 
 	// Create an LdrObject from the p3d model
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, std::optional<Guid const> context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -389,7 +398,7 @@ namespace pr::rdr12
 		m_sources.Add(obj);
 		return obj.get();
 	}
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, Guid const* context_id)
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, std::optional<Guid const> context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : pr::GenerateGUID();
