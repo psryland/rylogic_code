@@ -2,237 +2,327 @@
 // KD Tree
 //  Copyright (c) March 2005 Paul Ryland
 //*****************************************
-//
-// Example use:
-//
-// struct AccessorFunctions
-// {
-//		static kdtree::AxisType	GetAxis  (const Thing& elem)						{ return elem.m_axis; }
-//		static void				SetAxis  (      Thing& elem, kdtree::AxisType axis)	{ elem.m_axis = axis; }
-//		static float			GetValue (const Thing& elem, kdtree::AxisType axis)	{ return elem.m_position[axis]; }
-//		static void				AddResult(const Thing& elem, float distSq)			{ ... }
-//	};
-//
-//	// Build a kd tree
-//	inline void BuildKDTree()
-//	{
-//		std::vector<Thing>::iterator first = m_things.begin();
-//		std::vector<Thing>::iterator last  = m_things.end();
-//		AccessorFunctions func;
-//		kdtree::Build<3>(first, last, func);
-//	}
-//
-//	// Find things in a kd tree
-//	inline void Find()
-//	{
-//		std::vector<Thing>::const_iterator first = m_thing.begin();
-//		std::vector<Thing>::const_iterator last  = m_thing.end();
-//		MAv4 where = (...);
-//		float radius = (...);
-//		
-//		AccessorFunctions results;
-//		kdtree::Search<3>	search;
-//		search.m_where[0]	= where[0];
-//		search.m_where[1]	= where[2];
-//		search.m_where[2]	= where[2];
-//		search.m_radius		= radius;
-//		kdtree::Find<3>(first, last, search, results);
-//	}
-
-#ifndef PR_KD_TREE_H
-#define PR_KD_TREE_H
-
-#include <iterator>
+// Updated 2023
+#pragma once
+#include <concepts>
 #include <algorithm>
 
-namespace pr
+namespace pr::kdtree
 {
-	namespace kdtree
+	// Concept for a value to pivot on
+	template <typename S> concept ValueType = requires(S s)
 	{
-		typedef unsigned int AxisType;
+		{ s - s };
+		{ s * s };
+		{ s < s };
+	};
 
-		// The 'AccessorFunctions' object must be a type containing these member functions:
-		// struct AccessorFunctions
-		// {
-		//		AxisType	GetAxis  (const T& elem);					// Only needed for "Find"
-		//		void		SetAxis  (      T& elem, AxisType axis);	// Only needed for "Build"
-		//		float		GetValue (const T& elem, AxisType axis);
-		//		void		AddResult(const T& elem, float distSq);		// Only needed for "Find"
-		//	};
+	// Concept for 'int GetAxis(Item const& item)' function
+	template <typename T, typename Item> concept GetAxisFunc = requires(T t)
+	{
+		{ t(std::declval<Item const&>()) } -> std::convertible_to<int>;
+	};
 
-		// Search parameters
-		template <unsigned int dimensions>
-		struct Search
+	// Concept for a 'void SetAxis(Item& item, int axis)' function
+	template <typename T, typename Item> concept SetAxisFunc = requires(T t)
+	{
+		{ t(std::declval<Item&>(), std::declval<int>()) };
+	};
+
+	// Concept for a 'S GetValue(Item const& item, int axis)' function
+	template <typename T, typename S, typename Item> concept GetValueFunc = requires(T t)
+	{
+		ValueType<S>;
+		{ t(std::declval<Item const&>(), std::declval<int>()) } -> std::convertible_to<S>;
+	};
+
+	// Concept for a 'void Found(Item const&, S dist_sq)' function
+	template <typename T, typename S, typename Item> concept FoundFunc = requires(T t)
+	{
+		ValueType<S>;
+		{ t(std::declval<Item const&>(), std::declval<S>()) };
+	};
+
+	// Strategies for selecting the axis to split on
+	enum class EStrategy
+	{
+		AxisByLevel,
+		LongestAxis,
+	};
+
+	// Search a kdtree
+	// 'get_value' = S GetValue(Item const& item, int axis)
+	// 'get_axis' = int GetAxis(Item const& item)
+	// 'found' = void Found(Item const&, S dist_sq)
+	template <int Dim, ValueType S, typename Item, GetValueFunc<S, Item> GetValue, GetAxisFunc<Item> GetAxis, FoundFunc<S, Item> Found>
+	void Find(std::span<Item const> items, S const (&search)[Dim], S radius, GetValue get_value, GetAxis get_axis, Found found)
+	{
+		struct L
 		{
-			float	m_where[dimensions];
-			float	m_radius;
-		};
+			S m_radius_sq;
+			S const (&m_search)[Dim];
+			GetValue m_get_value;
+			GetAxis m_get_axis;
+			Found m_found;
 
-		// KD tree building function
-		template <unsigned int dimension, typename Iter, typename AccessorFunctions>
-		void Build(Iter first, Iter last, AccessorFunctions& func);
-		
-		// Find
-		template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-		void Find(Iter first, Iter last, const Search<dimensions>& search, AccessorFunctions& func);
-
-		// Implementation **********************************
-		namespace impl
-		{
-			// Find in Area Implementation **********************************
-			template <unsigned int dimensions>
-			struct Search
+			// Emits an 'item' if it is within the search region.
+			void AddIfInRegion(Item const& item)
 			{
-				float	m_where[dimensions];
-				float	m_radius;
-				float	m_radiusSq;
-			};
-
-			// Calls the client if 'elem' is within the search region.
-			template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-			void AddIfInRegion(Iter elem_iter, const Search<dimensions>& search, AccessorFunctions& func)
-			{
-				(void)(func); // Prevent "unreferenced" compile warning
-				float distSq = 0;
-				for( AxisType a = 0; a < dimensions; ++a )
+				// Find the squared distance from the search point to 'item'
+				auto dist_sq = S{};
+				for (int a = 0; a != Dim; ++a)
 				{
-					float dist = func.GetValue(*elem_iter, a) - search.m_where[a];
-					distSq += dist * dist;
+					auto dist = m_get_value(item, a) - m_search[a];
+					dist_sq += dist * dist;
 				}
-				if( distSq <= search.m_radiusSq )
+
+				// If within the search radius, add to the results
+				if (dist_sq <= m_radius_sq)
 				{
-					func.AddResult(*elem_iter, distSq);
+					m_found(item, dist_sq);
 				}
 			}
 
-			// Find nodes within a region
-			template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-			void Find(Iter first, Iter last, const Search<dimensions>& search, AccessorFunctions& func)
+			// Find nodes within a spherical search region
+			void DoFind(Item const* first, Item const* last)
 			{
-				if( first == last ) return;
+				if (first == last)
+					return;
 
-				Iter split_point = first + (last - first) / 2;
-				AddIfInRegion(split_point, search, func);
-					
+				auto split_point = first + (last - first) / 2;
+				AddIfInRegion(*split_point);
+
 				// Bottom of the tree? Time to leave
-				if( (last - first) <= 1 ) return;
-				
-				AxisType	split_axis	= func.GetAxis (*split_point);
-				float		split_value = func.GetValue(*split_point, split_axis);
+				if (last - first <= 1)
+					return;
 
-				// If the test point is to the right of the split point
-				if( search.m_where[split_axis] > split_value )
+				// Get the axis to search on
+				auto split_axis = m_get_axis(*split_point);
+				auto split_value = m_get_value(*split_point, split_axis);
+
+				// If the test point is to the left of the split point
+				if (m_search[split_axis] < split_value)
 				{
-					Iter right = split_point; ++right;
-					Find(right, last, search, func);
-
-					float distance = search.m_where[split_axis] - split_value;
-					if( distance - search.m_radius < 0.0f )
-						Find(first, split_point, search, func);
+					// Search the left sub tree
+					DoFind(first, split_point);
+				
+					// If the search area overlaps the split value, we need to search the right side too
+					auto distance = split_value - m_search[split_axis];
+					if (distance * distance < m_radius_sq)
+						DoFind(split_point + 1, last);
 				}
-
-				// Otherwise the test point is to the left of the split point
+				// Otherwise, the test point is to the right of the split point
 				else
 				{
-					Find(first, split_point, search, func);
+					// Search the right sub tree
+					DoFind(split_point + 1, last);
 
-					float distance = split_value - search.m_where[split_axis];
-					if( distance - search.m_radius < 0.0f )
-					{
-						Iter right = split_point; ++right;
-						Find(right, last, search, func);
-					}
+					// If the search area overlaps the split value, we need to search the left side too
+					auto distance = m_search[split_axis] - split_value;
+					if (distance * distance < m_radius_sq)
+						DoFind(first, split_point);
 				}
 			}
+		};
 
-			// Build Implementation **********************************
-			// Find the axis with the greatest range
-			template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-			AxisType LongestAxis(Iter first, Iter last, AccessorFunctions& func)
+		// Recursive search
+		L x = { radius * radius, search, get_value, get_axis, found };
+		x.DoFind(items.data(), items.data() + items.size());
+	}
+
+	// Build a kdtree
+	// 'get_value' = S GetValue(Item const& item, int axis)
+	// 'set_axis' = void SetAxis(Item& item, int axis)
+	template <int Dim, ValueType S, typename Item, EStrategy SelectAxis, GetValueFunc<S, Item> GetValue, SetAxisFunc<Item> SetAxis>
+	void Build(std::span<Item> items, GetValue get_value, SetAxis set_axis)
+	{
+		struct L
+		{
+			GetValue m_get_value;
+			SetAxis m_set_axis;
+
+			// Select the axis simply based on level
+			int AxisByLevel(std::span<Item>, int level)
 			{
-				func; // Prevent weird "unreferenced formal parameter" warning
-				float lower[dimensions];
-				float upper[dimensions];
-				for( AxisType a = 0; a != dimensions; ++a )
+				return level % Dim;
+			}
+
+			// Find the axis with the greatest range
+			int LongestAxis(std::span<Item> items, int)
+			{
+				auto ptr = items.data();
+				auto end = ptr + items.size();
+
+				// Find the bounds over all axes
+				S lower[Dim], upper[Dim];
+				for (int a = 0; a != Dim; ++a)
 				{
-					lower[a] = func.GetValue(*first, a);
+					lower[a] = m_get_value(*ptr, a);
 					upper[a] = lower[a];
 				}
-				for( ++first; first != last; ++first )
+				for (++ptr; ptr != end; ++ptr)
 				{
-					for( AxisType a = 0; a != dimensions; ++a )
+					for (int a = 0; a != Dim; ++a)
 					{
-						float value = func.GetValue(*first, a);
-						lower[a] = std::min(lower[a], value);
-						upper[a] = std::max(upper[a], value);
+						auto value = m_get_value(*ptr, a);
+						if (value < lower[a]) lower[a] = value;
+						if (value > upper[a]) upper[a] = value;
 					}
 				}
-				AxisType largest = 0;
-				float largest_range = upper[0] - lower[0];
-				for( AxisType a = 1; a != dimensions; ++a )
-				{
-					float range = upper[a] - lower[a];
-					if( range > largest_range )
-					{
-						largest_range = range;
-						largest = a;
-					}
-				}
+
+				// Select the axis with the greatest range
+				for (int a = 0; a != Dim; ++a)
+					upper[a] -= lower[a];
+
+				int largest = 0;
+				for (int a = 1; a != Dim; ++a)
+					largest = upper[a] > upper[largest] ? a : largest;
+
 				return largest;
 			}
-
-			// Predicate for nth element sort
-			template <typename AccessorFunctions>
-			struct LessThanPred
-			{
-				template <typename T> bool operator () (const T& a, const T& b) const { return m_func->GetValue(a, m_axis) < m_func->GetValue(b, m_axis); }
-				AxisType			m_axis;
-				AccessorFunctions*	m_func;
-			};
 
 			// Ensure that the element at the centre of the range has only values less than it on
 			// the left and values greater or equal than it on the right, where the values are the
 			// component of the axis to split on
-			template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-			Iter MedianSplit(Iter first, Iter last, AxisType split_axis, AccessorFunctions& func)
+			Item* MedianSplit(std::span<Item> items, int split_axis)
 			{
-				Iter split_point = first + (last - first) / 2;
-				LessThanPred<AccessorFunctions> pred = { split_axis, &func };
-				std::nth_element(first, split_point, last, pred);
+				auto split_point = items.data() + items.size() / 2;
+				std::nth_element(items.data(), split_point, items.data() + items.size(), [=](auto const& lhs, auto const& rhs)
+				{
+					return m_get_value(lhs, split_axis) < m_get_value(rhs, split_axis);
+				});
 				return split_point;
 			}
 
-		}//namespace impl
+			// Sort values based on the median value of the longest axis
+			void DoBuild(std::span<Item> items, int level)
+			{
+				if (items.size() <= 1)
+					return;
 
-		// Build a kdtree
-		template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-		void Build(Iter first, Iter last, AccessorFunctions& func)
+				// Set the axis to split on.
+				int split_axis = 0;
+				if constexpr (SelectAxis == EStrategy::AxisByLevel)
+					split_axis = AxisByLevel(items, level);
+				if constexpr (SelectAxis == EStrategy::LongestAxis)
+					split_axis = LongestAxis(items, level);
+
+				auto split_point = MedianSplit(items, split_axis);
+				m_set_axis(*split_point, split_axis);
+
+				// Construct recursively
+				DoBuild({ items.data(), split_point }, level + 1);
+				DoBuild({ split_point + 1, items.data() + items.size() }, level + 1);
+			};
+		};
+
+		// Recursive build
+		L x = { get_value, set_axis };
+		x.DoBuild(items, 0);
+	}
+}
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/ldraw/ldr_helper.h"
+
+namespace pr::container
+{
+	PRUnitTest(KDTreeTests)
+	{
+		std::vector<v2> points(100);
+		std::bitset<100> pivots;
+
+		auto GetValue = [](v2 const& p, int a) { return p[a]; };
+		auto GetAxis = [&](v2 const& p) { return pivots[&p - &points[0]]; };
+		auto SetAxis = [&](v2& p, int a) { pivots[&p - &points[0]] = a != 0; };
+		auto IsFound = [&](v2 const& p, std::set<v2> const& results) { return results.find(p) != std::end(results); };
+		auto Search = [&](v2 search_point, float search_radius)
 		{
-			if( last - first <= 1 ) return;
+			std::set<v2> results;
+			kdtree::Find<2, float, v2>(points, search_point.arr, search_radius, GetValue, GetAxis, [&](v2 const& p, float d_sq)
+			{
+				results.insert(p);
+				PR_CHECK(Sqrt(d_sq) < search_radius + maths::tinyf, true);
+				PR_CHECK(Length(search_point - p) < search_radius + maths::tinyf, true);
+			});
+			return results;
+		};
+		auto CheckResults = [&](v2 search_point, float search_radius, std::set<v2> const& results)
+		{
+			// Check all points are found or not found appropriately
+			for (auto const& p : points)
+			{
+				auto sep = Length(search_point - p);
+				if (IsFound(p, results))
+					PR_CHECK(sep < search_radius + maths::tinyf, true);
+				else
+					PR_CHECK(sep > search_radius - maths::tinyf, true);
+			}
+		};
+		auto LdrDump = [&](v2 search_point, float search_radius, std::set<v2> const& results)
+		{
+			ldr::Builder L;
+			L.Circle("search", 0x8000FF00).radius(search_radius).pos(v4(search_point, 0, 1));
+			for (auto const& p : points)
+			{
+				auto colour = IsFound(p, results) ? 0xFFFF0000 : 0xFF0000FF;
+				L.Circle("pt", colour).radius(0.1f).solid().pos(v4(p, 0, 1));
+			}
+			L.Write("E:/Dump/kdtree.ldr");
+		};
 
-			AxisType	split_axis	= impl::LongestAxis<dimensions>(first, last, func);
-			Iter		split_point	= impl::MedianSplit<dimensions>(first, last, split_axis, func);
+		// Normal case
+		{
+			// Create a regular grid of points
+			for (int i = 0; i != isize(points); ++i)
+				points[i] = v2(s_cast<float>(i % 10), s_cast<float>(i / 10));
 
-			func.SetAxis(*split_point, split_axis);
+			// Randomise the order of the points
+			std::default_random_engine rng;
+			std::shuffle(std::begin(points), std::end(points), rng);
 
-			Build<dimensions>(first, split_point, func);
-			++split_point;
-			Build<dimensions>(split_point, last, func);
+			// Build the tree
+			kdtree::Build<2, float, v2, kdtree::EStrategy::LongestAxis>(points, GetValue, SetAxis);
+
+			v2 const search_point = { 2, 1 };
+			float const search_radius = 3.0f;
+			auto results = Search(search_point, search_radius);
+			LdrDump(search_point, search_radius, results);
+			CheckResults(search_point, search_radius, results);
 		}
 
-		// Find in area
-		template <unsigned int dimensions, typename Iter, typename AccessorFunctions>
-		void Find(Iter first, Iter last, const Search<dimensions>& search, AccessorFunctions& func)
+		// Degenerate case
 		{
-			impl::Search<dimensions> impl_search;
-			for( AxisType a = 0; a < dimensions; ++a )	{ impl_search.m_where[a] = search.m_where[a]; }
-			impl_search.m_radius	= search.m_radius;
-			impl_search.m_radiusSq	= search.m_radius * search.m_radius;
+			// Test some pathological cases
+			for (auto& pt : points)
+				pt.y = 0;
 
-			impl::Find(first, last, impl_search, func);
+			// Build the tree
+			kdtree::Build<2, float, v2, kdtree::EStrategy::AxisByLevel>(points, GetValue, SetAxis);
+
+			v2 const search_point = { 2, 1 };
+			float const search_radius = 3.0f;
+			auto results = Search(search_point, search_radius);
+			LdrDump(search_point, search_radius, results);
+			CheckResults(search_point, search_radius, results);
 		}
 
-	}//namespace kdtree
-}//namespace pr
+		// Degenerate case
+		{
+			// Test some pathological cases
+			for (auto& pt : points)
+				pt = v2::Zero();
 
-#endif//PR_KD_TREE_H
+			// Build the tree
+			kdtree::Build<2, float, v2, kdtree::EStrategy::AxisByLevel>(points, GetValue, SetAxis);
+
+			v2 const search_point = { 2, 1 };
+			float const search_radius = 3.0f;
+			auto results = Search(search_point, search_radius);
+			LdrDump(search_point, search_radius, results);
+			CheckResults(search_point, search_radius, results);
+		}
+	}
+}
+#endif

@@ -9,6 +9,7 @@
 #include "pr/view3d-12/resource/gpu_upload_buffer.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 
 namespace pr::rdr12
 {
@@ -16,6 +17,7 @@ namespace pr::rdr12
 	struct UpdateSubresourceScope
 	{
 		// Notes:
+		//  - Updating model verts? Use Model::UpdateVertices() instead.
 		//  - This class is a scope object for updating a sub resource (including mip maps).
 		//    The usage is to create an instance of this class, call 'write' or directly fill
 		//    the staging buffer via the 'ptr' methods, then call 'commit' to submit the update
@@ -44,7 +46,6 @@ namespace pr::rdr12
 		//    An Array slice is for texture arrays (like cubemaps). Typical textures have only one array slice. 3D textures only have one array slice
 		//  - It's too complicated to handle all possible resource types (arrays, mips, planes, etc), so this class only handles single images (1D, 2D, or 3D)
 		//    Array textures should use an UpdateSubresourceScope for each array slice.
-		//
 
 		using footprints_t = pr::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 16>;
 		using staging_t = GpuUploadBuffer::Allocation;
@@ -58,6 +59,9 @@ namespace pr::rdr12
 		footprints_t     m_layout;       // The memory layout of the subresources within 'm_dest' start at mip 'm_sub0'
 		staging_t        m_staging;      // The allocation within the upload buffer
 
+		UpdateSubresourceScope(ResourceManager& res, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
+			: UpdateSubresourceScope(res, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
+		{}
 		UpdateSubresourceScope(ResourceManager& res, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
 			: m_res(res)
 			, m_dest(dest)
@@ -172,6 +176,14 @@ namespace pr::rdr12
 				sizeof(TElement) * pos.x);
 		}
 
+		// Return a pointer to the end of the staging buffer memory for the given mip level.
+		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
+		template <typename TElement> TElement* end(int mip = 0) const
+		{
+			auto const& layout = m_layout[mip];
+			return ptr<TElement>(mip) + layout.Footprint.RowPitch * layout.Footprint.Height * layout.Footprint.Depth;
+		}
+
 		// Copy data from the given images to the staging buffer. Each image is a mip.
 		void Write(std::span<Image const> images)
 		{
@@ -229,14 +241,20 @@ namespace pr::rdr12
 			Write({ &image, 1 });
 		}
 
-		// Submit the command to the command list
-		void Commit()
+		// Submit the command to the command list.
+		// 'final_state' is the state to transition the resource to after the update.
+		// Set this to 'std::nullopt' to manage the resource state outside of this class.
+		void Commit(std::optional<D3D12_RESOURCE_STATES> final_state)
 		{
+			BarrierBatch barriers(m_res.m_gfx_cmd_list);
 			auto ddesc = m_dest->GetDesc();
 
 			// Add the command to copy from the staging resource to the destination resource
 			if (ddesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			{
+				barriers.Transition(m_dest, D3D12_RESOURCE_STATE_COPY_DEST);
+				barriers.Commit();
+
 				auto pos = m_range.pos(m_mip0);
 				auto size = m_range.size(m_mip0);
 				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_buf, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
@@ -247,6 +265,9 @@ namespace pr::rdr12
 				{
 					auto const& layout = m_layout[i];
 					auto box = m_range.mip(m_mip0 + i);
+
+					barriers.Transition(m_dest, D3D12_RESOURCE_STATE_COPY_DEST, s_cast<uint32_t>(m_sub0 + m_mip0 + i));
+					barriers.Commit();
 
 					D3D12_TEXTURE_COPY_LOCATION src =
 					{
@@ -262,6 +283,13 @@ namespace pr::rdr12
 					};
 					m_res.m_gfx_cmd_list.CopyTextureRegion(&dst, s_cast<UINT>(box.left), s_cast<UINT>(box.top), s_cast<UINT>(box.front), &src, &box);
 				}
+			}
+
+			// Transition the resource to the final state (if provided)
+			if (final_state)
+			{
+				barriers.Transition(m_dest, *final_state);
+				barriers.Commit();
 			}
 
 			// Signal that the resource manager command list needs executing

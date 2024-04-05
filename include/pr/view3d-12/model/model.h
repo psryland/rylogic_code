@@ -10,6 +10,11 @@ namespace pr::rdr12
 {
 	struct Model :RefCounted<Model>
 	{
+		// Notes:
+		//  - Models without index buffers are not supported because they are a rare case and
+		//    they would add loads of if statements. Just create a dummy index buffer, and create
+		//    nuggets with a zero range for the index buffer.
+
 		enum class EDbgFlags
 		{
 			None                  = 0,
@@ -42,8 +47,8 @@ namespace pr::rdr12
 		ResourceManager& res_mgr() const;
 
 		// Allow update of the vertex/index buffers
-		UpdateSubresourceScope UpdateVertices(Range vrange = RangeZero);
-		UpdateSubresourceScope UpdateIndices(Range vrange = RangeZero);
+		UpdateSubresourceScope UpdateVertices(Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateIndices(Range vrange = Range::Reset());
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)

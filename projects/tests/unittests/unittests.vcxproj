@@ -3,7 +3,7 @@
   
   <!-- Properties -->
   <Import Project="..\..\..\build\props\globals.props" />
-	<PropertyGroup Label="Globals">
+  <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <RootNamespace>unittests</RootNamespace>
     <ConfigurationType>Application</ConfigurationType>
@@ -101,6 +101,7 @@
     <ClInclude Include="..\..\..\include\pr\common\fmt.h" />
     <ClInclude Include="..\..\..\include\pr\common\guid.h" />
     <ClInclude Include="..\..\..\include\pr\common\hash.h" />
+    <ClInclude Include="..\..\..\include\pr\common\space_filling.h" />
     <ClInclude Include="..\..\..\include\pr\common\hresult.h" />
     <ClInclude Include="..\..\..\include\pr\common\inplacealloc.h" />
     <ClInclude Include="..\..\..\include\pr\common\ireport.h" />
@@ -180,6 +181,7 @@
     <ClInclude Include="..\..\..\include\pr\geometry\models_shape2d.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\models_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\point.h" />
+    <ClInclude Include="..\..\..\include\pr\geometry\reflect.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\tetramesh.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\unit_tests.h" />
@@ -302,6 +304,7 @@
     <ClInclude Include="..\..\..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h" />
     <ClInclude Include="..\..\..\include\pr\script\unit_tests.h" />
     <ClInclude Include="..\..\..\include\pr\str\char8.h" />
     <ClInclude Include="..\..\..\include\pr\str\convert_utf.h" />

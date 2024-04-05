@@ -409,7 +409,7 @@ namespace pr::rdr12
 		Camera      m_cam;        // Camera description has been read
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
-			
+
 		ParseResult()
 			:m_objects()
 			,m_models()
@@ -622,10 +622,9 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	void Parse(
+	ParseResult Parse(
 		Renderer& rdr,                          // The renderer to create models for
 		script::Reader& reader,                 // The source of the script
-		ParseResult& out,                       // The results of parsing the script
 		Guid const& context_id = GuidZero,      // The context id to assign to each created object
 		ParseProgressCB progress_cb = nullptr); // Progress callback
 
@@ -633,40 +632,34 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	inline void ParseFile(
-		Renderer& rdr,                         // The renderer to create models for
-		wchar_t const* filename,               // The file containing the ldr script
-		ParseResult& out,                      // The results of parsing the script
-		Guid const& context_id = GuidZero,     // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr) // Progress callback
-	{
-		script::FileSrc src(filename);
-		script::Reader reader(src);
-		Parse(rdr, reader, out, context_id, progress_cb);
-	}
+	ParseResult ParseFile(
+		Renderer& rdr,                          // The renderer to create models for
+		std::filesystem::path filename,         // The file containing the ldr script
+		Guid const& context_id = GuidZero,      // The context id to assign to each created object
+		ParseProgressCB progress_cb = nullptr); // Progress callback
 
 	// Parse ldr script from a string
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
 	template <typename Char>
-	inline void ParseString(
-		Renderer& rdr,                         // The reader to create models for
-		Char const* ldr_script,                // The string containing the script
-		ParseResult& out,                      // The results of parsing the script
-		Guid const& context_id = GuidZero,     // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr) // Progress callback
-	{
-		using namespace pr::script;
-		StringSrc src(ldr_script);
-		Reader reader(src);
-		Parse(rdr, reader, out, context_id, progress_cb);
-	}
+	ParseResult ParseString(
+		Renderer& rdr,                          // The reader to create models for
+		Char const* ldr_script,                 // The string containing the script
+		Guid const& context_id = GuidZero,      // The context id to assign to each created object
+		ParseProgressCB progress_cb = nullptr); // Progress callback
 
 	// Callback function for editing a dynamic model
 	// This callback is intentionally low level, providing the whole model for editing.
 	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-	typedef void (__stdcall *EditObjectCB)(Model* model, void* ctx, Renderer& rdr);
+	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
+
+	// Create an ldr object from a string
+	template <typename Char>
+	LdrObjectPtr CreateLdr(
+		Renderer& rdr,                      // The reader to create models for
+		Char const* ldr_script,             // The string containing the script
+		Guid const& context_id = GuidZero); // The context id to assign to the object
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(
