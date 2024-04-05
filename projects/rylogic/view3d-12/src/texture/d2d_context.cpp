@@ -15,7 +15,7 @@ namespace pr::rdr12
 		,m_dx11(rdr.Dx11Device())
 	{
 		// Create a d2d device context to access the d2d drawing commands
-		Throw(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_dc.m_ptr));
+		Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_dc.m_ptr));
 
 		// Need to use blend source over to use ClearType fonts
 		m_dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_SOURCE_OVER);
@@ -32,16 +32,16 @@ namespace pr::rdr12
 			.StructureByteStride = 0U,
 		};
 		auto default_state = DefaultResState(res);
-		Throw(m_dx11->CreateWrappedResource(res, &flags, D3D12_RESOURCE_STATE_RENDER_TARGET, default_state, __uuidof(IDXGISurface), (void**)&m_dx11_res.m_ptr));
+		Check(m_dx11->CreateWrappedResource(res, &flags, D3D12_RESOURCE_STATE_RENDER_TARGET, default_state, __uuidof(IDXGISurface), (void**)&m_dx11_res.m_ptr));
 
 		// Get a DXGI surface from the wrapped resource
 		D3DPtr<IDXGISurface> surf;
-		Throw(m_dx11_res->QueryInterface<IDXGISurface>(&surf.m_ptr));
+		Check(m_dx11_res->QueryInterface<IDXGISurface>(&surf.m_ptr));
 		DebugName(surf, FmtS("%s-dx11", DebugName(res)));
 
 		// Create a bitmap wrapper for 'surf'
 		D3DPtr<ID2D1Bitmap1> target;
-		Throw(m_dc->CreateBitmapFromDxgiSurface(surf.get(), &bmp_props, &target.m_ptr));
+		Check(m_dc->CreateBitmapFromDxgiSurface(surf.get(), &bmp_props, &target.m_ptr));
 
 		// Acquire the texture as the current render target.
 		// Transitions the texture from the 'InState' to a render target state

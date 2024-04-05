@@ -34,8 +34,8 @@ namespace pr::rdr12
 		, m_istride(istride)
 		, m_dbg_flags(EDbgFlags::None)
 	{
-		Throw(m_vb->SetName(FmtS(L"%S:VB:%d", name, vcount)));
-		Throw(m_ib->SetName(FmtS(L"%S:IB:%d", name, icount)));
+		Check(m_vb->SetName(FmtS(L"%S:VB:%d", name, vcount)));
+		Check(m_ib->SetName(FmtS(L"%S:IB:%d", name, icount)));
 	}
 	Model::~Model()
 	{

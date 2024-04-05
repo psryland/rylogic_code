@@ -61,7 +61,7 @@ namespace pr::gui
 		
 			static void __stdcall DefaultErrorHandler(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
 			{
-				throw std::runtime_error(Fmt("%S(%d): %S", filepath, line, msg));
+				throw std::runtime_error(Narrow(std::format(L"{}({}): {}", filepath, line, msg)));
 			}
 		};
 

@@ -83,6 +83,7 @@ Example Use:
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <format>
 #include <type_traits>
 #include <cassert>
 #include <tchar.h>
@@ -105,6 +106,7 @@ Example Use:
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "uxtheme.lib")
 #pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "shlwapi.lib")
 
 // Required for thunking
 #include <atlstdthunk.h>
@@ -8872,7 +8874,7 @@ namespace pr
 					for (DWORD i = 0; i != count; ++i)
 					{
 						CComPtr<IShellItem> item;
-						Check(items->GetItemAt(i, &item), FmtS("Failed to read result %d from the file open dialog results", i));
+						Check(items->GetItemAt(i, &item.p), FmtS("Failed to read result %d from the file open dialog results", i));
 						
 						wchar_t* fpath;
 						Check(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
@@ -8883,7 +8885,7 @@ namespace pr
 				else
 				{
 					CComPtr<IShellItem> item;
-					Check(fod->GetResult(&item), "Failed to read result from the file open dialog results");
+					Check(fod->GetResult(&item.p), "Failed to read result from the file open dialog results");
 
 					wchar_t* fpath;
 					Check(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");

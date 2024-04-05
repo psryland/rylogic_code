@@ -62,9 +62,9 @@ namespace pr::rdr12
 			Release();
 
 			m_device = device;
-			Throw(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence.m_ptr));
+			Check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&m_fence.m_ptr));
 			m_event = CreateEventExW(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-			Throw(m_event != nullptr, "Creating an event for the thread fence failed");
+			Check(m_event != nullptr, "Creating an event for the thread fence failed");
 		}
 
 		// Release COM pointers
@@ -101,7 +101,7 @@ namespace pr::rdr12
 		// Add a synchronisation point to 'queue'. Returns the sync point number to wait for.
 		uint64_t AddSyncPoint(ID3D12CommandQueue* queue)
 		{
-			Throw(queue->Signal(m_fence.get(), ++m_sync));
+			Check(queue->Signal(m_fence.get(), ++m_sync));
 			SyncPointAdded(*this);
 			return m_sync;
 		}
@@ -113,7 +113,7 @@ namespace pr::rdr12
 			// Wait until the fence reports a completed sync point >= 'sync_point'
 			for (auto sp = CompletedSyncPoint(); sp < sync_point; sp = CompletedSyncPoint())
 			{
-				Throw(m_fence->SetEventOnCompletion(sync_point, m_event));
+				Check(m_fence->SetEventOnCompletion(sync_point, m_event));
 				switch (WaitForSingleObject(m_event, timeout))
 				{
 					case WAIT_OBJECT_0: break; // Event signalled, go round again

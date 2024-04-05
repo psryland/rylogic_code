@@ -26,9 +26,9 @@ namespace pr::audio
 
 		// Check for compatibility
 		if (m_settings.m_channels != XAUDIO2_DEFAULT_CHANNELS && !(m_settings.m_channels >= 1 && m_settings.m_channels <= XAUDIO2_MAX_AUDIO_CHANNELS))
-			Throw(false, FmtS("Too many audio channels: %d. Maximum is %d", m_settings.m_channels, XAUDIO2_MAX_AUDIO_CHANNELS));
+			Check(false, FmtS("Too many audio channels: %d. Maximum is %d", m_settings.m_channels, XAUDIO2_MAX_AUDIO_CHANNELS));
 		if (m_settings.m_sample_rate != XAUDIO2_DEFAULT_SAMPLERATE && !(m_settings.m_sample_rate >= XAUDIO2_MIN_SAMPLE_RATE && m_settings.m_sample_rate <= XAUDIO2_MAX_SAMPLE_RATE))
-			Throw(false, FmtS("Unsupported sample rate: %d. Supported range: [%d,%d]", m_settings.m_sample_rate, XAUDIO2_MIN_SAMPLE_RATE, XAUDIO2_MAX_SAMPLE_RATE));
+			Check(false, FmtS("Unsupported sample rate: %d. Supported range: [%d,%d]", m_settings.m_sample_rate, XAUDIO2_MIN_SAMPLE_RATE, XAUDIO2_MAX_SAMPLE_RATE));
 
 		// Note:
 		//  IXAudio2 is the only XAudio2 interface that is derived from the COM IUnknown interface.
@@ -37,7 +37,7 @@ namespace pr::audio
 		//  and are bounded by the lifetime of the XAudio2 object that owns them.
 
 		// Create The XAudio2 interface
-		Throw(XAudio2Create(&m_xaudio.m_ptr, 0, XAUDIO2_DEFAULT_PROCESSOR));
+		Check(XAudio2Create(&m_xaudio.m_ptr, 0, XAUDIO2_DEFAULT_PROCESSOR));
 
 		// To see the trace output, you need to view ETW logs for this application:
 		// Go to Control Panel, Administrative Tools, Event Viewer.
@@ -53,7 +53,7 @@ namespace pr::audio
 
 		// Create the mastering voice, the staging buffer that goes to the hardware
 		IXAudio2MasteringVoice* mastering_voice;
-		Throw(m_xaudio->CreateMasteringVoice(
+		Check(m_xaudio->CreateMasteringVoice(
 			&mastering_voice,
 			m_settings.m_channels,
 			m_settings.m_sample_rate,
@@ -93,7 +93,7 @@ namespace pr::audio
 		// Play the wave using a XAudio2SourceVoice
 		// Create the source voice
 		IXAudio2SourceVoice* src_voice_;
-		Throw(m_xaudio->CreateSourceVoice(&src_voice_, wave_data.wfx));
+		Check(m_xaudio->CreateSourceVoice(&src_voice_, wave_data.wfx));
 		audio::VoicePtr<IXAudio2SourceVoice> src_voice(src_voice_);
 
 		// Submit the wave sample data using an XAUDIO2_BUFFER structure
@@ -109,13 +109,13 @@ namespace pr::audio
 		}
 
 		// Check for platform support
-		Throw(wave_data.seek == 0, "This platform does not support xWMA or XMA2");
+		Check(wave_data.seek == 0, "This platform does not support xWMA or XMA2");
 
 		// Queue the buffer to be played on the voice
-		Throw(src_voice->SubmitSourceBuffer(&buffer));
+		Check(src_voice->SubmitSourceBuffer(&buffer));
 
 		// Start the source voice playing
-		Throw(src_voice->Start(0));
+		Check(src_voice->Start(0));
 
 		// Let the sound play
 		for (bool running = true; running;)

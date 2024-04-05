@@ -150,10 +150,10 @@ namespace pr::rdr12
 			};
 			
 			D3DPtr<ID3DBlob> signature, error;
-			Throw(D3D12SerializeVersionedRootSignature(&rs_desc, &signature.m_ptr, &error.m_ptr));
+			Check(D3D12SerializeVersionedRootSignature(&rs_desc, &signature.m_ptr, &error.m_ptr));
 			
 			D3DPtr<ID3D12RootSignature> shader_sig;
-			Throw(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&shader_sig.m_ptr));
+			Check(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&shader_sig.m_ptr));
 			return shader_sig;
 		}
 

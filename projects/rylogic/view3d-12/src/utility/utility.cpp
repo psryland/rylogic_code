@@ -28,7 +28,7 @@ namespace pr::rdr12
 		if (hr == E_INVALIDARG)
 			return 0;
 
-		Throw(hr);
+		Check(hr);
 		return opts.NumQualityLevels;
 	}
 
@@ -522,7 +522,7 @@ namespace pr::rdr12
 	{
 		// Assume 'Common' state and don't store it
 		if (state == D3D12_RESOURCE_STATE_COMMON) return;
-		Throw(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
+		Check(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
 	}
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"

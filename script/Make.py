@@ -3,6 +3,8 @@
 #
 # Project builder
 #  This script is the base for a project building script.
+#  This is because declarative build systems like CMake, make, etc suck, are hard to debug, and have ugly syntax.
+#  Python can be debugged, is flexible enough to do anything, and has well known syntax.
 #  In your project,
 #   - Create a class that subclasses 'Builder'
 #   - Populate the members 'cc', 'ccplus', 'ld', etc as needed
@@ -11,7 +13,7 @@
 #     e.g.
 #        builder = MyProject()
 #        builder.Build(sys.argv)
-import os, enum, shutil, subprocess, abc
+import os, enum, shutil, subprocess
 from typing import List
 	
 # The build system to use

@@ -152,16 +152,16 @@ namespace pr
 			{
 				port_name name(port_number);
 				m_handle = ::CreateFileW(name, GENERIC_READ|GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, DWORD(file_flags), nullptr);
-				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open 'COM%d'", port_number));
+				Check(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open 'COM%d'", port_number));
 				m_overlapped = (file_flags & FILE_FLAG_OVERLAPPED) != 0;
 
 				// Create manual reset events for the overlapped i/o calls
 				if (m_overlapped)
 				{
 					m_evt_read = ::CreateEventW(0, TRUE, FALSE, 0);
-					Throw(m_evt_read != nullptr, "Failed to create async read event");
+					Check(m_evt_read != nullptr, "Failed to create async read event");
 					m_evt_write = ::CreateEventW(0, TRUE, FALSE, 0);
-					Throw(m_evt_write != nullptr, "Failed to create async write event");
+					Check(m_evt_write != nullptr, "Failed to create async write event");
 				}
 
 				// Set up buffering
@@ -169,7 +169,7 @@ namespace pr
 				{
 					if (ibuf_size < 16) ibuf_size = 16;
 					if (obuf_size < 16) obuf_size = 16;
-					Throw(::SetupComm(m_handle, DWORD(ibuf_size), DWORD(obuf_size)), "Failed to set comm port i/o buffering");
+					Check(::SetupComm(m_handle, DWORD(ibuf_size), DWORD(obuf_size)), "Failed to set comm port i/o buffering");
 				}
 
 				// Set the data read interval to the minimum. This means calls to Read() will block for up to the 
@@ -185,7 +185,7 @@ namespace pr
 					// 'GetDefaultCommConfigW' can fail for bluetooth ports and some virtual ports
 					// ('http://stackoverflow.com/questions/6850965/how-come-getdefaultcommconfig-doesnt-work-with-bluetooth-spp-devices')
 					// Try to set defaults but if we can't, just hope for the best.
-					Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
+					Check(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
 				}
 
 				// Apply the port settings
@@ -193,13 +193,13 @@ namespace pr
 
 				// Check the properties of the comm port and warn if we're trying to exceed them
 				COMMPROP prop;
-				Throw(::GetCommProperties(m_handle, &prop), "GetCommProperties failed");
+				Check(::GetCommProperties(m_handle, &prop), "GetCommProperties failed");
 				if (m_settings.m_baud > prop.dwMaxBaud)
 					OutputDebugStringA(FmtS("Requested baud rate %d exceeds the maximum of %d for this comm port", m_settings.m_baud, prop.dwMaxBaud));
 
 				// Check that the configured state of the port matches what we asked for
 				DCB dcb;
-				Throw(::GetCommState(m_handle, &dcb), "GetCommState failed");
+				Check(::GetCommState(m_handle, &dcb), "GetCommState failed");
 				if (dcb.BaudRate != m_settings.m_baud)
 					OutputDebugStringA(FmtS("Baud rate of %d being used instead of the requested baud rate: %d", dcb.BaudRate, m_settings.m_baud));
 				if (dcb.ByteSize != m_settings.m_data_bits)
@@ -406,7 +406,7 @@ namespace pr
 				auto last_error = GetLastError();
 				if (last_error == ERROR_NOT_SUPPORTED) return;
 				if (last_error == ERROR_INVALID_FUNCTION) return;
-				Throw(res, "Failed to flush write buffer");
+				Check(res, "Failed to flush write buffer");
 			}
 		}
 
@@ -420,8 +420,8 @@ namespace pr
 			if (!IsOpen()) return;
 
 			DWORD errors; COMSTAT stat;
-			Throw(::PurgeComm(m_handle, PURGE_RXABORT|PURGE_TXABORT|PURGE_RXCLEAR|PURGE_TXCLEAR), "Purge comm port failed");
-			Throw(::ClearCommError(m_handle, &errors, &stat), "Failed to clear comm errors");
+			Check(::PurgeComm(m_handle, PURGE_RXABORT|PURGE_TXABORT|PURGE_RXCLEAR|PURGE_TXCLEAR), "Purge comm port failed");
+			Check(::ClearCommError(m_handle, &errors, &stat), "Failed to clear comm errors");
 		}
 
 		// Set/Clear the break state
@@ -445,12 +445,12 @@ namespace pr
 		COMMTIMEOUTS CommTimeouts() const
 		{
 			COMMTIMEOUTS cto = {};
-			Throw(::GetCommTimeouts(m_handle, &cto), "Failed to read comm port timeouts");
+			Check(::GetCommTimeouts(m_handle, &cto), "Failed to read comm port timeouts");
 			return cto;
 		}
 		void CommTimeouts(COMMTIMEOUTS cto)
 		{
-			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
+			Check(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
 		}
 
 		// Set the maximum time allowed to elapse before the arrival of the next byte on the communications line, in milliseconds.
@@ -504,7 +504,7 @@ namespace pr
 			{
 				// Write the data and wait for the overlapped operation to complete
 				OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_evt_read; // Uses the same event as Read
-				Throw(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "WaitCommEvent failed");
+				Check(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "WaitCommEvent failed");
 
 				auto r = ::WaitForSingleObject(ovrlap.hEvent, timeout_ms);
 				switch (r)
@@ -587,17 +587,17 @@ namespace pr
 		{
 			// Read the comm state, update the data, then set it again
 			DCB comm_state = {sizeof(DCB)};
-			Throw(::GetCommState(m_handle, &comm_state), "Failed to read comm state");
+			Check(::GetCommState(m_handle, &comm_state), "Failed to read comm state");
 			comm_state.BaudRate = m_settings.m_baud;
 			comm_state.ByteSize = m_settings.m_data_bits;
 			comm_state.Parity   = m_settings.m_parity;
 			comm_state.StopBits = m_settings.m_stop_bits;
 			comm_state.fParity  = m_settings.m_parity != NOPARITY;
-			Throw(::SetCommState(m_handle, &comm_state), "Failed to set comm state");
+			Check(::SetCommState(m_handle, &comm_state), "Failed to set comm state");
 		}
 
 		// Throws if 'res' is not TRUE
-		void Throw(BOOL res, char const* msg) const
+		void Check(BOOL res, char const* msg) const
 		{
 			if (res) return;
 			std::string error_desc;

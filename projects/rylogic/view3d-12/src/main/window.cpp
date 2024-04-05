@@ -60,13 +60,13 @@ namespace pr::rdr12
 
 			// Validate settings
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && !AllSet(m_rdr->Settings().m_options, ERdrOptions::BGRASupport))
-				Throw(false, "D3D device has not been created with GDI compatibility");
+				Check(false, "D3D device has not been created with GDI compatibility");
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
-				Throw(false, "GDI compatibility does not support multi-sampling");
+				Check(false, "GDI compatibility does not support multi-sampling");
 			if (settings.m_vsync && (settings.m_mode.RefreshRate.Numerator == 0 || settings.m_mode.RefreshRate.Denominator == 0))
-				Throw(false, "If VSync is enabled, the refresh rate should be provided (matching the value returned from the graphics card)");
+				Check(false, "If VSync is enabled, the refresh rate should be provided (matching the value returned from the graphics card)");
 			if (settings.m_multisamp.Count < 1 || settings.m_multisamp.Count > D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT)
-				Throw(false, "MSAA sample count invalid");
+				Check(false, "MSAA sample count invalid");
 
 			// Check feature support
 			auto const& features = rdr.Features();
@@ -74,13 +74,13 @@ namespace pr::rdr12
 			multisamp.ScaleQualityLevel(device, m_rt_props.Format);
 			multisamp.ScaleQualityLevel(device, m_ds_props.Format);
 			if (multisamp.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-				Throw(false, "Device does not support MSAA for requested render target format");
+				Check(false, "Device does not support MSAA for requested render target format");
 			if (multisamp.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-				Throw(false, "Device does not support MSAA for requested depth stencil format");
+				Check(false, "Device does not support MSAA for requested depth stencil format");
 
 			// Get the factory that was used to create 'rdr.m_device'
 			D3DPtr<IDXGIFactory4> factory;
-			Throw(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
+			Check(rdr.Adapter()->GetParent(__uuidof(IDXGIFactory4), (void **)&factory.m_ptr));
 
 			// Create the swap chain, if there is a HWND. (Depth Stencil created into BackBufferSize)
 			if (settings.m_hwnd != nullptr)
@@ -107,12 +107,12 @@ namespace pr::rdr12
 
 				// Create the swap chain. Swap chains only contain render targets, not deep buffers.
 				D3DPtr<IDXGISwapChain1> swap_chain;
-				Throw(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
-				Throw(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
+				Check(factory->CreateSwapChainForHwnd(rdr.GfxQueue(), settings.m_hwnd, &desc0, &desc1, nullptr, &swap_chain.m_ptr));
+				Check(swap_chain->QueryInterface(&m_swap_chain.m_ptr));
 				DebugName(m_swap_chain, "SwapChain");
 		
 				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-				Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+				Check(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 			}
 			else
 			{
@@ -126,7 +126,7 @@ namespace pr::rdr12
 				.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
-			Throw(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
+			Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
 
 			// Create a CPU descriptor heap for the depth stencil
 			D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
@@ -134,13 +134,13 @@ namespace pr::rdr12
 				.NumDescriptors = 1,
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			};
-			Throw(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_dsv_heap.m_ptr));
+			Check(device->CreateDescriptorHeap(&dsv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_dsv_heap.m_ptr));
 
 			// If D2D is enabled, create a device context for this window
 			if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
 			{
 				// Create a D2D device context
-				Throw(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
+				Check(rdr.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 			}
 
 			// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
@@ -156,7 +156,7 @@ namespace pr::rdr12
 				sd.Windowed     = TRUE;
 				sd.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 				sd.Flags        = s_cast<DXGI_SWAP_CHAIN_FLAG>(0);
-				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
+				Check(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, DebugName(m_swap_chain_dbg, FmtS("swap chain dbg")));
 				#endif
 			}
@@ -379,9 +379,9 @@ namespace pr::rdr12
 		ms.ScaleQualityLevel(d3d(), m_rt_props.Format);
 		ms.ScaleQualityLevel(d3d(), m_ds_props.Format);
 		if (ms.Count != 1 && !features.Format(m_rt_props.Format).Check(D3D12_FORMAT_SUPPORT1_RENDER_TARGET | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RESOLVE | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-			Throw(false, "Device does not support MSAA for requested render target format");
+			Check(false, "Device does not support MSAA for requested render target format");
 		if (ms.Count != 1 && !features.Format(m_ds_props.Format).Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL | D3D12_FORMAT_SUPPORT1_MULTISAMPLE_RENDERTARGET))
-			Throw(false, "Device does not support MSAA for requested depth stencil format");
+			Check(false, "Device does not support MSAA for requested depth stencil format");
 
 		auto queue = rdr().GfxQueue();
 		auto size = BackBufferSize();
@@ -545,7 +545,7 @@ namespace pr::rdr12
 				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
 				if (res == S_OK) break;
 				if (res == S_FALSE) continue;
-				Throw(res);
+				Check(res);
 			}
 			#endif
 			return;
@@ -578,13 +578,13 @@ namespace pr::rdr12
 			{
 				// The device failed due to a badly formed command. This is a run-time issue;
 				// The application should destroy and recreate the device.
-				throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+				Check(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
 			}
 			case DXGI_ERROR_DEVICE_REMOVED:
 			{
 				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
 				// We'll just throw so the app can shutdown/reset/whatever
-				throw Exception<HRESULT>(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				Check(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 			}
 			default:
 			{
@@ -611,7 +611,7 @@ namespace pr::rdr12
 		auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
 			.multisamp(ms)
 			.clear(m_rt_props);
-		Throw(device->CreateCommittedResource(
+		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
 		DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -621,7 +621,7 @@ namespace pr::rdr12
 		auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
 			.multisamp(ms)
 			.clear(m_ds_props);
-		Throw(device->CreateCommittedResource(
+		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
 		DefaultResState(bb.m_depth_stencil.get(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
@@ -660,8 +660,8 @@ namespace pr::rdr12
 		auto device = rdr().D3DDevice();
 
 		DXGI_SWAP_CHAIN_DESC scdesc = {};
-		Throw(m_swap_chain->GetDesc(&scdesc));
-		Throw(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
+		Check(m_swap_chain->GetDesc(&scdesc));
+		Check(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
 
 		// Get the pointer and item size of the RTV descriptor heap.
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
@@ -675,7 +675,7 @@ namespace pr::rdr12
 			bb.m_sync_point = m_gsync.CompletedSyncPoint();
 
 			// Get the render target resource pointer
-			Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
+			Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
 			DefaultResState(bb.m_render_target.get(), D3D12_RESOURCE_STATE_PRESENT);
 			DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
 
@@ -692,7 +692,7 @@ namespace pr::rdr12
 			{
 				// Direct2D needs the DXGI version of the back buffer
 				D3DPtr<IDXGISurface> dxgi_back_buffer;
-				Throw(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
+				Check(m_swap_chain->GetBuffer(s_cast<UINT>(i), __uuidof(IDXGISurface), (void**)&dxgi_back_buffer.m_ptr));
 
 				// Create bitmap properties for the bitmap view of the back buffer
 				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
@@ -701,7 +701,7 @@ namespace pr::rdr12
 				bp.dpiY = dpi.y;
 
 				// Wrap the back buffer as a bitmap for D2D
-				Throw(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
+				Check(m_d2d_dc->CreateBitmapFromDxgiSurface(dxgi_back_buffer.get(), &bp, &bb.m_d2d_target.m_ptr));
 			}
 		}
 	}
@@ -736,7 +736,7 @@ namespace pr::rdr12
 			m_cmd_alloc.flip();
 				
 			// Reset (re-use) the memory associated with the next available command allocator.
-			Throw(m_cmd_alloc[0]->Reset());
+			Check(m_cmd_alloc[0]->Reset());
 		});
 
 		// Present with the debug swap chain so that graphics debugging detects a frame
@@ -760,7 +760,7 @@ namespace pr::rdr12
 				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
 				if (res == S_OK) break;
 				if (res == S_FALSE) continue;
-				Throw(res);
+				Check(res);
 			}
 			#endif
 			return;
@@ -814,10 +814,10 @@ namespace pr::rdr12
 		// shaders and extra setup that we will not be covering until the next tutorial.
 
 		// Reset (re-use) the memory associated command allocator.
-		Throw(m_cmd_alloc->Reset());
+		Check(m_cmd_alloc->Reset());
 
 		// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-		Throw(m_cmd_list->Reset(m_cmd_alloc.get(), m_pipeline_state.get()));
+		Check(m_cmd_list->Reset(m_cmd_alloc.get(), m_pipeline_state.get()));
 
 		// The second step is to use a resource barrier to synchronize/transition the next back buffer for rendering. We then set that as a step in the command list.
 
@@ -855,7 +855,7 @@ namespace pr::rdr12
 		m_cmd_list->ResourceBarrier(1, &barrier);
 	
 		// Once we are done our rendering list we close the command list and then submit it to the command queue to execute that list for us.
-		Throw(m_cmd_list->Close());
+		Check(m_cmd_list->Close());
 
 		// Execute the list of commands.
 		auto cmd_lists = {static_cast<ID3D12CommandList*>(m_cmd_list.get())};
@@ -864,7 +864,7 @@ namespace pr::rdr12
 		// We then call the swap chain to present the rendered frame to the screen.
 
 		// Finally present the back buffer to the screen since rendering is complete.
-		Throw(m_swap_chain->Present(m_vsync, 0));
+		Check(m_swap_chain->Present(m_vsync, 0));
 
 		// Then we setup the fence to synchronize and let us know when the GPU is complete rendering.
 		// For this tutorial we just wait infinitely until it's done this single command list.

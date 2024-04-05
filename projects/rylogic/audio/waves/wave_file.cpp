@@ -399,7 +399,7 @@ namespace pr::audio
 		// Open the file
 		auto file = win32::FileOpen(filepath, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING);
 		if (file == INVALID_HANDLE_VALUE)
-			pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+			pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 		// File is too big for 32-bit allocation, so reject read
 		if (file_size > 0xFFFFFFFF)
@@ -416,7 +416,7 @@ namespace pr::audio
 
 		// Read the data into the buffer
 		if (!ReadFile(file, wav_data.get(), s_cast<DWORD,true>(file_size), &bytes_read, nullptr))
-			pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+			pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 		if (bytes_read < file_size)
 			throw std::runtime_error(pr::FmtS("LoadAudioFromFile: Partial read of wave file. Expected %u bytes, read %u bytes", file_size, bytes_read));
 	}

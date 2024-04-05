@@ -2245,7 +2245,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataGet(View3DTexture tex, GUID c
 	{
 		// 'size' should be the size of the data pointed to by 'data'
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_res->GetPrivateData(guid, &size, data));
+		pr::Check(tex->m_res->GetPrivateData(guid, &size, data));
 	}
 	CatchAndReport(View3d_TexturePrivateDataGet, ,);
 }
@@ -2254,7 +2254,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataSet(View3DTexture tex, GUID c
 	try
 	{
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_res->SetPrivateData(guid, size, data));
+		pr::Check(tex->m_res->SetPrivateData(guid, size, data));
 	}
 	CatchAndReport(View3d_TexturePrivateDataSet, ,);
 }
@@ -2263,7 +2263,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataIFSet(View3DTexture tex, GUID
 	try
 	{
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_res->SetPrivateDataInterface(guid, pointer));
+		pr::Check(tex->m_res->SetPrivateDataInterface(guid, pointer));
 	}
 	CatchAndReport(View3d_TexturePrivateDataIFSet, ,);
 }
