@@ -108,7 +108,7 @@ namespace pr::rdr12
 			// Get the pointer to the mmemory
 			void* data = nullptr;
 			auto rrange = To<D3D12_RANGE>(read_range);
-			Throw(res->Map(sub, &rrange, &data));
+			Check(res->Map(sub, &rrange, &data));
 
 			// Update only on success
 			m_res       = res;

@@ -144,7 +144,7 @@ namespace pr::rdr12
 		// Create a GPU visible resource that will hold the created texture/verts/indices/etc.
 		// Create in the COMMON state to prevent a D3D12 warning "Buffers are effectively created in state D3D12_RESOURCE_STATE_COMMON"
 		// COMMON state is implicitly promoted to the first state transition.
-		Throw(device->CreateCommittedResource(
+		Check(device->CreateCommittedResource(
 			&desc.HeapProps, desc.HeapFlags, &rd, desc.DefaultState,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));

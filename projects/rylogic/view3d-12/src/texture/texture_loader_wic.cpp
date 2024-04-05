@@ -146,7 +146,7 @@ namespace pr::rdr12
 		static IWICImagingFactory* s_factory = []
 		{
 			IWICImagingFactory* factory;
-			Throw(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
+			Check(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
 			return factory;
 		}();
 		return s_factory;
@@ -183,18 +183,18 @@ namespace pr::rdr12
 		auto wic = GetWIC();
 
 		RefPtr<IWICComponentInfo> cinfo;
-		Throw(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
+		Check(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
 
 		WICComponentType type;
-		Throw(cinfo->GetComponentType(&type));
+		Check(cinfo->GetComponentType(&type));
 		if (type != WICPixelFormat)
 			return 0;
 
 		RefPtr<IWICPixelFormatInfo> pfinfo;
-		Throw(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
+		Check(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
 
 		UINT bpp;
-		Throw(pfinfo->GetBitsPerPixel(&bpp));
+		Check(pfinfo->GetBitsPerPixel(&bpp));
 		return s_cast<int>(bpp);
 	}
 
@@ -209,7 +209,7 @@ namespace pr::rdr12
 
 		// Read the image dimensions
 		UINT width, height;
-		Throw(first->GetSize(&width, &height));
+		Check(first->GetSize(&width, &height));
 		assert(width > 0 && height > 0);
 
 		// Determine the maximum texture dimension
@@ -254,7 +254,7 @@ namespace pr::rdr12
 
 		// Determine the pixel format
 		WICPixelFormatGUID src_format, dst_format;
-		Throw(first->GetPixelFormat(&src_format));
+		Check(first->GetPixelFormat(&src_format));
 		auto format = WICToDXGI(src_format, true, &dst_format);
 		if (format == DXGI_FORMAT_UNKNOWN)
 			throw std::runtime_error("Pixel format is not supported");
@@ -307,7 +307,7 @@ namespace pr::rdr12
 			if (!conversion_needed && !resize_needed)
 			{
 				// No format conversion or resize needed
-				Throw(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
+				Check(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
 			else
 			{
@@ -319,21 +319,21 @@ namespace pr::rdr12
 				if (resize_needed)
 				{
 					WICPixelFormatGUID pf;
-					Throw(wic->CreateBitmapScaler(&scaler.m_ptr));
-					Throw(scaler->Initialize(frame.get(), s_cast<UINT>(dim.x), s_cast<UINT>(dim.y), WICBitmapInterpolationModeFant));
-					Throw(scaler->GetPixelFormat(&pf));
+					Check(wic->CreateBitmapScaler(&scaler.m_ptr));
+					Check(scaler->Initialize(frame.get(), s_cast<UINT>(dim.x), s_cast<UINT>(dim.y), WICBitmapInterpolationModeFant));
+					Check(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
 				}
 
 				// Create a format converter if needed
 				if (conversion_needed)
 				{
-					Throw(wic->CreateFormatConverter(&converter.m_ptr));
-					Throw(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
+					Check(wic->CreateFormatConverter(&converter.m_ptr));
+					Check(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
 				}
 
 				// Copy the data with optional reformat and resize
-				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
+				Check(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
 			result.images.push_back(std::move(image));
 		}
@@ -372,16 +372,16 @@ namespace pr::rdr12
 
 			// Create input stream for memory
 			RefPtr<IWICStream> stream;
-			Throw(wic->CreateStream(&stream.m_ptr));
-			Throw(stream->InitializeFromMemory(const_cast<uint8_t*>(img.data()), static_cast<DWORD>(img.size())));
+			Check(wic->CreateStream(&stream.m_ptr));
+			Check(stream->InitializeFromMemory(const_cast<uint8_t*>(img.data()), static_cast<DWORD>(img.size())));
 
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 			frames.push_back(frame);
 		}
 
@@ -398,11 +398,11 @@ namespace pr::rdr12
 		{
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 
 			// Add the frame
 			frames.push_back(frame);

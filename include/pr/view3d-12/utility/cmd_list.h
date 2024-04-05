@@ -55,7 +55,7 @@ namespace pr::rdr12
 			: CmdList(nullptr, {}, pool)
 		{
 			// Create an instance of a cmd list with no allocator assigned yet
-			Throw(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			Check(device->CreateCommandList1(0, ListType, D3D12_COMMAND_LIST_FLAG_NONE, __uuidof(ICommandList), (void**)&m_list.m_ptr));
 			if (name) DebugName(m_list, name);
 			DebugColour(m_list, pix_colour);
 		}
@@ -63,7 +63,7 @@ namespace pr::rdr12
 			: CmdList(nullptr, std::forward<alloc_t>(cmd_alloc), pool)
 		{
 			// Create an instance of an open cmd list based on 'cmd_alloc'
-			Throw(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)&m_list.m_ptr));
+			Check(device->CreateCommandList(0, ListType, m_cmd_allocator, nullptr, __uuidof(ICommandList), (void**)&m_list.m_ptr));
 			if (name) DebugName(m_list, name);
 			DebugColour(m_list, pix_colour);
 
@@ -186,7 +186,7 @@ namespace pr::rdr12
 		{
 			ThrowOnCrossThreadUse();
 			m_cmd_allocator = std::move(cmd_alloc);
-			Throw(m_list->Reset(m_cmd_allocator, pipeline_state));
+			Check(m_list->Reset(m_cmd_allocator, pipeline_state));
 			m_res_state.Reset();
 
 			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));

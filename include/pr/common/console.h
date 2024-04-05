@@ -424,7 +424,7 @@ namespace pr
 			friend struct ColourScope;
 			friend Pad;
 
-			void Throw(int result, char const* msg) const
+			void Check(int result, char const* msg) const
 			{
 				if (result != 0) return;
 
@@ -1087,9 +1087,9 @@ namespace pr
 			{
 				if (m_opened) return;
 				m_console_created = AllocConsole() == TRUE;
-				Throw((m_stdout = GetStdHandle(STD_OUTPUT_HANDLE)) != INVALID_HANDLE_VALUE, "Duplicate stdout handle failed");
-				Throw((m_stdin  = GetStdHandle(STD_INPUT_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stdin handle failed" );
-				Throw((m_stderr = GetStdHandle(STD_ERROR_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stderr handle failed");
+				Check((m_stdout = GetStdHandle(STD_OUTPUT_HANDLE)) != INVALID_HANDLE_VALUE, "Duplicate stdout handle failed");
+				Check((m_stdin  = GetStdHandle(STD_INPUT_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stdin handle failed" );
+				Check((m_stderr = GetStdHandle(STD_ERROR_HANDLE )) != INVALID_HANDLE_VALUE, "Duplicate stderr handle failed");
 				m_buf[0] = m_buf[1] = INVALID_HANDLE_VALUE;
 				m_opened = true;
 			}
@@ -1160,7 +1160,7 @@ namespace pr
 			ConsoleScreenBufferInfo Info() const
 			{
 				ConsoleScreenBufferInfo info;
-				Throw(GetConsoleScreenBufferInfoEx(*m_back, &info), "Failed to read console info");
+				Check(GetConsoleScreenBufferInfoEx(*m_back, &info), "Failed to read console info");
 				return info;
 			}
 			void Info(ConsoleScreenBufferInfo info)
@@ -1169,33 +1169,33 @@ namespace pr
 				info.dwSize.Y = std::min(info.dwSize.Y, info.dwMaximumWindowSize.Y);
 				info.dwCursorPosition.X = std::max(std::min(info.dwCursorPosition.X, info.dwSize.X), SHORT(0));
 				info.dwCursorPosition.Y = std::max(std::min(info.dwCursorPosition.Y, info.dwSize.Y), SHORT(0));
-				Throw(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
-				Throw(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
+				Check(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
+				Check(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
 			}
 
 			// Get/Set the high level console output mode
 			DWORD OutMode() const
 			{
 				DWORD mode;
-				Throw(GetConsoleMode(*m_back, &mode), "failed to read console output mode");
+				Check(GetConsoleMode(*m_back, &mode), "failed to read console output mode");
 				return mode;
 			}
 			void OutMode(DWORD mode)
 			{
-				Throw(SetConsoleMode(*m_back,  mode), "failed to set console output mode");
-				Throw(SetConsoleMode(*m_front, mode), "failed to set console output mode");
+				Check(SetConsoleMode(*m_back,  mode), "failed to set console output mode");
+				Check(SetConsoleMode(*m_front, mode), "failed to set console output mode");
 			}
 
 			// Get/Set the high level console input mode
 			DWORD InMode() const
 			{
 				DWORD mode;
-				Throw(GetConsoleMode(m_stdin, &mode), "failed to read console input mode");
+				Check(GetConsoleMode(m_stdin, &mode), "failed to read console input mode");
 				return mode;
 			}
 			void InMode(DWORD mode)
 			{
-				Throw(SetConsoleMode(m_stdin,  mode), "failed to set console input mode");
+				Check(SetConsoleMode(m_stdin,  mode), "failed to set console input mode");
 			}
 
 			// Return the hwnd for the console window
@@ -1249,12 +1249,12 @@ namespace pr
 					auto info = Info();
 					m_buf[0] = CreateConsoleScreenBuffer(GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, nullptr, CONSOLE_TEXTMODE_BUFFER, nullptr);
 					m_buf[1] = CreateConsoleScreenBuffer(GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE, nullptr, CONSOLE_TEXTMODE_BUFFER, nullptr);
-					Throw(m_buf[0] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
-					Throw(m_buf[1] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
+					Check(m_buf[0] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
+					Check(m_buf[1] != INVALID_HANDLE_VALUE, "Failed to create console screen buffer");
 					m_back  = &m_buf[0];
 					m_front = &m_buf[1];
-					Throw(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
-					Throw(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
+					Check(SetConsoleScreenBufferInfoEx(*m_back , &info), "Failed to set console dimensions");
+					Check(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
 					FlipBuffer();
 					m_double_buffered = true;
 				}
@@ -1271,7 +1271,7 @@ namespace pr
 			void FlipBuffer()
 			{
 				std::swap(m_back, m_front);
-				Throw(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
+				Check(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
 			}
 
 			// Get the currently buffered line input
@@ -1331,7 +1331,7 @@ namespace pr
 				auto info = Info();
 				coord.X = SHORT(std::max(std::min(coord.X + dx, int(info.dwSize.X - 1)), 0));
 				coord.Y = SHORT(std::max(std::min(coord.Y + dy, int(info.dwSize.Y - 1)), 0));
-				Throw(SetConsoleCursorPosition(*m_back, coord), "Failed to set cursor position");
+				Check(SetConsoleCursorPosition(*m_back, coord), "Failed to set cursor position");
 			}
 			void Cursor(int x, int y)
 			{
@@ -1349,7 +1349,7 @@ namespace pr
 			}
 			void Colour(Colours c)
 			{
-				Throw(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes");
+				Check(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes");
 			}
 			void Colour(EColour fore, EColour back)
 			{
@@ -1425,7 +1425,7 @@ namespace pr
 				for(;WaitForEvent(WORD(EEvent::Any), 0);)
 				{
 					Event in[128]; DWORD read;
-					Throw(ReadConsoleInputW(m_stdin, in, 128, &read), "Failed to read a console input events");
+					Check(ReadConsoleInputW(m_stdin, in, 128, &read), "Failed to read a console input events");
 					for (DWORD i = 0; i != read; ++i)
 					{
 						switch (EEvent(in[i].EventType))
@@ -1452,7 +1452,7 @@ namespace pr
 			DWORD InputEventCount() const
 			{
 				DWORD count;
-				Throw(GetNumberOfConsoleInputEvents(m_stdin, &count), "Failed to read input event count");
+				Check(GetNumberOfConsoleInputEvents(m_stdin, &count), "Failed to read input event count");
 				return count;
 			}
 
@@ -1461,7 +1461,7 @@ namespace pr
 			{
 				_ASSERT(InputEventCount() != 0);
 				Event in; DWORD read;
-				Throw(PeekConsoleInputW(m_stdin, &in, 1, &read), "Failed to peek a console input event");
+				Check(PeekConsoleInputW(m_stdin, &in, 1, &read), "Failed to peek a console input event");
 				return in;
 			}
 
@@ -1470,7 +1470,7 @@ namespace pr
 			{
 				_ASSERT(InputEventCount() != 0);
 				Event in; DWORD read;
-				Throw(ReadConsoleInputW(m_stdin, &in, 1, &read), "Failed to read a console input event");
+				Check(ReadConsoleInputW(m_stdin, &in, 1, &read), "Failed to read a console input event");
 				return in;
 			}
 

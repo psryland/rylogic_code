@@ -17,11 +17,11 @@ namespace pr::rdr12
 	{
 		// Get the DXGI resource interface for the shared resource
 		D3DPtr<IDXGIResource> dxgi_resource;
-		Throw(shared_resource->QueryInterface<IDXGIResource>(&dxgi_resource.m_ptr));
+		Check(shared_resource->QueryInterface<IDXGIResource>(&dxgi_resource.m_ptr));
 
 		// Get the handled of the shared resource so that we can open it with our d3d device
 		HANDLE shared_handle;
-		Throw(dxgi_resource->GetSharedHandle(&shared_handle));
+		Check(dxgi_resource->GetSharedHandle(&shared_handle));
 		return shared_handle;
 	}
 
@@ -46,7 +46,7 @@ namespace pr::rdr12
 		{
 			// Check the texture format is supported
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE))
 				throw std::runtime_error("Texture format is not supported as a shader resource view");
 
@@ -68,7 +68,7 @@ namespace pr::rdr12
 		{
 			// Check the texture format is supported
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) ||
 				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) ||
 				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE))
@@ -88,7 +88,7 @@ namespace pr::rdr12
 		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET))
 		{
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
 				throw std::runtime_error("Texture format is not supported as a render target view");
 
@@ -128,8 +128,8 @@ namespace pr::rdr12
 	{
 		HANDLE handle;
 		D3DPtr<IDXGIResource> res;
-		Throw(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
-		Throw(res->GetSharedHandle(&handle));
+		Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+		Check(res->GetSharedHandle(&handle));
 		return handle;
 	}
 

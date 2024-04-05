@@ -45,7 +45,7 @@ namespace pr::network
 
 			r = WSAGetLastError();
 			if (r == WSANO_DATA) { m_more = false; return; }
-			Throw(r);
+			Check(r);
 		}
 		~BluetoothServices()
 		{
@@ -70,7 +70,7 @@ namespace pr::network
 				r = WSAGetLastError();
 				if (r == WSA_E_NO_MORE) { m_more = false; break; }
 				if (r == WSAEFAULT) { m_buf.resize(size); continue; }
-				Throw(r);
+				Check(r);
 			}
 			return m_more;
 		}
@@ -193,7 +193,7 @@ namespace pr::network
 		int len = sizeof(addr);
 		auto r = WSAStringToAddressW(&addr_str[0], AF_BTH, nullptr, (SOCKADDR*)&addr, &len);
 		if (r != NO_ERROR)
-			Throw(WSAGetLastError());
+			Check(WSAGetLastError());
 	}
 
 	// A bluetooth socket with server behaviour
@@ -208,7 +208,7 @@ namespace pr::network
 			// Create the listen socket using the RFCOMM protocol
 			auto socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
 			if (socket == INVALID_SOCKET)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 
 			// Bind the local address to the socket
 			SOCKADDR_BTH my_address = {};
@@ -216,7 +216,7 @@ namespace pr::network
 			my_address.port = BT_PORT_ANY;
 			auto r = ::bind(socket, (sockaddr const*)&my_address, sizeof(my_address));
 			if (r == SOCKET_ERROR)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 			
 			return socket;
 		}
@@ -267,7 +267,7 @@ namespace pr::network
 
 			auto r = WSASetServiceW(&reg_info, RNRSERVICE_REGISTER, 0);
 			if (r == SOCKET_ERROR)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 
 			m_services.push_back(guid);
 		}
@@ -277,7 +277,7 @@ namespace pr::network
 			reg_info.lpServiceClassId = const_cast<GUID*>(&guid);
 			auto r = WSASetServiceW(&reg_info, RNRSERVICE_DELETE, 0);
 			if (r == SOCKET_ERROR)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 
 			m_services.erase(std::remove(std::begin(m_services), std::end(m_services), guid), std::end(m_services));
 		}
@@ -295,7 +295,7 @@ namespace pr::network
 			// Connect to the remote socket
 			auto r = ::connect(m_socket, (struct sockaddr *)&addr, sizeof(addr));
 			if (r == SOCKET_ERROR)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 
 			// Wait for the socket to say it's writable (meaning it's connected)
 			fd_set set = {};
@@ -305,7 +305,7 @@ namespace pr::network
 			if (r == NO_ERROR)
 				return false;
 			if (r == SOCKET_ERROR)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 
 			return true;
 		}
@@ -335,7 +335,7 @@ namespace pr::network
 			// Create a bluetooth socket using the RFCOMM protocol
 			m_socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
 			if (m_socket == INVALID_SOCKET)
-				Throw(WSAGetLastError());
+				Check(WSAGetLastError());
 		}
 
 		// Connect to a BT device

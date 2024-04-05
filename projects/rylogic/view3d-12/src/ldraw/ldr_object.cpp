@@ -988,14 +988,14 @@ namespace pr::rdr12
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
 				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
 
 				// Draw the spot
 				dc->BeginDraw();
 				dc->Clear(&bk);
 				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Throw(dc->EndDraw());
+				pr::Check(dc->EndDraw());
 				#endif
 				return tex;
 			}
@@ -1028,8 +1028,8 @@ namespace pr::rdr12
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
@@ -1039,7 +1039,7 @@ namespace pr::rdr12
 							sink->AddLine({ 0.0f * w0, h1 });
 							sink->AddLine({ 0.5f * w0, h0 + h1 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
@@ -1051,8 +1051,8 @@ namespace pr::rdr12
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -1066,7 +1066,7 @@ namespace pr::rdr12
 							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
 							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
