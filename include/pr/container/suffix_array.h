@@ -132,8 +132,8 @@ namespace pr::suffix_array
 
 		// Classify the type of each character into S or L types.
 		// The sentinel must be in 'data', important!!!
-		ls_types[std::ssize(data) - 2] = 0; // One before the sentinal
-		ls_types[std::ssize(data) - 1] = 1; // The expected sentinal position
+		s_types[std::ssize(data) - 2] = 0; // One before the sentinal
+		s_types[std::ssize(data) - 1] = 1; // The expected sentinal position
 		for (auto i = std::ssize(data) - 3; i >= 0; --i)
 		{
 			s_types[i] =
