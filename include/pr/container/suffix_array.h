@@ -36,6 +36,7 @@ namespace pr::suffix_array
 			for (auto d : data)
 				bkt[d]++;
 
+			// Convert the counts into an accumulation
 			int sum = 0;
 			for (auto& b : bkt)
 			{
@@ -46,28 +47,28 @@ namespace pr::suffix_array
 
 		// Compute Suffix Array L
 		template <std::integral Int>
-		void InduceSuffixArrayL(std::vector<bool> const& ls_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
+		void InduceSuffixArrayL(std::vector<bool> const& s_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
 		{
 			// Find the starts of the buckets
 			GetBuckets<Int>(data, bkt, end);
 			for (auto i = 0; i != std::ssize(data); ++i)
 			{
 				auto j = SA[i] - 1;
-				if (j >= 0 && !ls_types[j])
+				if (j >= 0 && !s_types[j])
 					SA[bkt[data[j]]++] = j;
 			}
 		}
 
 		// Compute Suffix Array S
 		template <std::integral Int>
-		void InduceSuffixArrayS(std::vector<bool> const& ls_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
+		void InduceSuffixArrayS(std::vector<bool> const& s_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
 		{
 			// Find the ends of the buckets
 			GetBuckets<Int>(data, bkt, end);
 			for (auto i = std::ssize(data) - 1; i >= 0; --i)
 			{
 				auto j = SA[i] - 1;
-				if (j >= 0 && ls_types[j])
+				if (j >= 0 && s_types[j])
 					SA[--bkt[data[j]]] = j;
 			}
 		}
@@ -122,22 +123,22 @@ namespace pr::suffix_array
 			return;
 		}
 
-		// L/S-type array in bits
-		auto ls_types = std::vector<bool>(std::size(data));
-		static auto IsLeftmostSType = [](int i, std::vector<bool> const& ls_types) -> bool
+		// L/S-type array in bits. Suffixes that aren't S-type are L-type.
+		auto s_types = std::vector<bool>(std::size(data));
+		static auto IsLeftmostSType = [](int i, std::vector<bool> const& s_types) -> bool
 		{
-			return i > 0 && ls_types[i] && !ls_types[i - 1];
+			return i > 0 && s_types[i] && !s_types[i - 1];
 		};
 
-		// Classify the type of each character
+		// Classify the type of each character into S or L types.
 		// The sentinel must be in 'data', important!!!
 		ls_types[std::ssize(data) - 2] = 0; // One before the sentinal
 		ls_types[std::ssize(data) - 1] = 1; // The expected sentinal position
 		for (auto i = std::ssize(data) - 3; i >= 0; --i)
 		{
-			ls_types[i] =
+			s_types[i] =
 				(data[i] <  data[i + 1]) ||
-				(data[i] == data[i + 1] && ls_types[i + 1]);
+				(data[i] == data[i + 1] && s_types[i + 1]);
 		}
 
 		// Stage 1: reduce the problem by at least 1/2. Sort all the S-substrings
@@ -149,18 +150,18 @@ namespace pr::suffix_array
 			std::fill(SA.begin(), SA.end(), -1);
 			for (int i = 1; i != std::ssize(data); ++i)
 			{
-				if (IsLeftmostSType(i, ls_types))
+				if (IsLeftmostSType(i, s_types))
 					SA[--bkt[data[i]]] = i;
 			}
-			InduceSuffixArrayL(ls_types, SA, data, bkt, false);
-			InduceSuffixArrayS(ls_types, SA, data, bkt, true);
+			InduceSuffixArrayL(s_types, SA, data, bkt, false);
+			InduceSuffixArrayS(s_types, SA, data, bkt, true);
 		}
 
 		// Compact all the sorted substrings into the first 'n1' items of SA.
 		// 2*n1 is not larger than 'size' (proveable)
 		int n1 = 0;
 		for (int i = 0; i != std::ssize(data); ++i)
-			if (IsLeftmostSType(SA[i], ls_types))
+			if (IsLeftmostSType(SA[i], s_types))
 				SA[n1++] = SA[i];
 
 		// Find the lexicographic names of substrings.
@@ -172,12 +173,12 @@ namespace pr::suffix_array
 			bool diff = false;
 			for (int d = 0; d < std::ssize(data); ++d)
 			{
-				if (prev == -1 || data[pos + d] != data[prev + d] || ls_types[pos + d] != ls_types[prev + d])
+				if (prev == -1 || data[pos + d] != data[prev + d] || s_types[pos + d] != s_types[prev + d])
 				{
 					diff = true;
 					break;
 				}
-				if (d > 0 && (IsLeftmostSType(pos + d, ls_types) || IsLeftmostSType(prev + d, ls_types)))
+				if (d > 0 && (IsLeftmostSType(pos + d, s_types) || IsLeftmostSType(prev + d, s_types)))
 				{
 					break;
 				}
@@ -220,7 +221,7 @@ namespace pr::suffix_array
 			// find ends of buckets
 			GetBuckets(data, bkt, true);
 			for (int i = 1, j = 0; i < std::ssize(data); ++i)
-				if (IsLeftmostSType(i, ls_types))
+				if (IsLeftmostSType(i, s_types))
 					s1[j++] = i; // get p1
 
 			// Get index in src
@@ -236,8 +237,8 @@ namespace pr::suffix_array
 				SA[--bkt[data[j]]] = j;
 			}
 
-			InduceSuffixArrayL(ls_types, SA, data, bkt, false);
-			InduceSuffixArrayS(ls_types, SA, data, bkt, true);
+			InduceSuffixArrayL(s_types, SA, data, bkt, false);
+			InduceSuffixArrayS(s_types, SA, data, bkt, true);
 		}
 	}
 
@@ -326,8 +327,11 @@ namespace pr::container
 		{// String data
 			//                   0123456789ab
 			char const data[] = "abracadabra";
+
 			int sa[sizeof(data)];
+
 			suffix_array::Build<char>(data, sa, 256);
+
 			PR_CHECK(sa[0], 11);
 			PR_CHECK(sa[1], 10);
 			PR_CHECK(sa[2], 7);
