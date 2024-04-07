@@ -1260,8 +1260,7 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 s
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		v4 pt,dir;
-		window->m_camera.NSSPointToWSRay(To<v4>(screen), pt, dir);
+		auto [pt,dir] = window->m_camera.NSSPointToWSRay(To<v4>(screen));
 		ws_point = To<View3DV4>(pt);
 		ws_direction = To<View3DV4>(dir);
 	}

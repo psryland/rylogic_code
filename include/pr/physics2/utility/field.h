@@ -239,11 +239,11 @@ namespace pr::physics
 		{
 			if constexpr (Dim == 2)
 			{
-				return ZOrder2D(index);
+				return space_filling::ZOrder2D(index);
 			}
 			else if constexpr (Dim == 3)
 			{
-				return ZOrder3D(index);
+				return space_filling::ZOrder3D(index);
 			}
 			else
 			{

@@ -926,8 +926,7 @@ namespace pr::ldr
 		auto hit = EComponent::None;
 
 		// Cast a ray into the scene to get a line in world space
-		v4 p, d;
-		camera.NSSPointToWSRay(v4(nss_point, 1.0f, 0.0f), p, d);
+		auto [p, d] = camera.NSSPointToWSRay(v4(nss_point, 1.0f, 0.0f));
 
 		// Then transform the ray from world space to gizmo space (note, it might be scaled)
 		auto w2o = Invert(O2W() * m4x4::Scale(m_scale, v4Origin));
@@ -1041,12 +1040,10 @@ namespace pr::ldr
 		}
 
 		// Get the WS ray for 'm_ref_pt'
-		v4 p0, dir0;
-		camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
+		auto [p0, dir0] = camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f));
 
 		// Get the WS ray for 'nss_point'
-		v4 p1, dir1;
-		camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
+		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
 		float t0, t1, tdummy;
@@ -1106,12 +1103,10 @@ namespace pr::ldr
 		}
 
 		// Get the WS ray for 'm_ref_pt'
-		v4 p0, dir0;
-		camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
+		auto [p0, dir0] = camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f));
 
 		// Get the WS ray for 'nss_point'
-		v4 p1, dir1;
-		camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
+		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
 		float t0, t1, tdummy;
