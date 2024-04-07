@@ -8,142 +8,180 @@
 //   Nong G, Zhang S, Chan WH "Two efficient algorithms for linear time suffix array construction"
 //   https://www.researchgate.net/publication/224176324_Two_Efficient_Algorithms_for_Linear_Time_Suffix_Array_Construction
 #pragma once
+#include <string>
 #include <vector>
 #include <concepts>
+#include <span>
 
 namespace pr::suffix_array
 {
+	// Longest Common Prefix
+	struct LCP
+	{
+		// The length of the match
+		size_t length = 0;
+
+		// The index of the match
+		size_t sa_index = 0;
+	};
+
 	namespace impl
 	{
-		inline int chr(int i, int cs, unsigned char const* s)
-		{
-			return cs == sizeof(int) ? ((int const*)s)[i] : ((unsigned char const*)s)[i];
-		}
-		inline int isLMS(int i, std::vector<bool> const& ls_types)
-		{
-			return i > 0 && ls_types[i] && !ls_types[i - 1];
-		}
-
 		// Find the start or end of each bucket
-		void getBuckets(unsigned char const* s, int* bkt, int n, int K, int cs, bool end)
+		template <std::integral Int>
+		void GetBuckets(std::span<Int const> data, std::span<int> bkt, bool end)
 		{
-			int i, sum = 0;
+			// Compute the size of each bucket
+			std::fill(bkt.begin(), bkt.end(), 0);
+			for (auto d : data)
+				bkt[d]++;
 
-			// clear all buckets
-			for (i = 0; i <= K; i++)
-				bkt[i] = 0;
-
-			// compute the size of each bucket
-			for (i = 0; i < n; i++)
-				bkt[chr(i, cs, s)]++;
-
-			for (i = 0; i <= K; i++)
+			int sum = 0;
+			for (auto& b : bkt)
 			{
-				sum += bkt[i];
-				bkt[i] = end ? sum : sum - bkt[i];
+				sum += b;
+				b = end ? sum : sum - b;
 			}
 		}
 
-		// compute SAl
-		void induceSAl(std::vector<bool> const& ls_types, int* SA, unsigned char const* s, int* bkt, int n, int K, int cs, bool end)
+		// Compute Suffix Array L
+		template <std::integral Int>
+		void InduceSuffixArrayL(std::vector<bool> const& ls_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
 		{
-			// find starts of buckets
-			getBuckets(s, bkt, n, K, cs, end);
-			for (int i = 0; i < n; i++)
+			// Find the starts of the buckets
+			GetBuckets<Int>(data, bkt, end);
+			for (auto i = 0; i != std::ssize(data); ++i)
 			{
 				auto j = SA[i] - 1;
 				if (j >= 0 && !ls_types[j])
-					SA[bkt[chr(j, cs, s)]++] = j;
+					SA[bkt[data[j]]++] = j;
 			}
 		}
 
-		// compute SAs
-		void induceSAs(std::vector<bool> const& ls_types, int* SA, unsigned char const* s, int* bkt, int n, int K, int cs, bool end)
+		// Compute Suffix Array S
+		template <std::integral Int>
+		void InduceSuffixArrayS(std::vector<bool> const& ls_types, std::span<int> SA, std::span<Int const> data, std::span<int> bkt, bool end)
 		{
-			// find ends of buckets
-			getBuckets(s, bkt, n, K, cs, end);
-			for (int i = n - 1; i >= 0; i--)
+			// Find the ends of the buckets
+			GetBuckets<Int>(data, bkt, end);
+			for (auto i = std::ssize(data) - 1; i >= 0; --i)
 			{
 				auto j = SA[i] - 1;
 				if (j >= 0 && ls_types[j])
-					SA[--bkt[chr(j, cs, s)]] = j;
+					SA[--bkt[data[j]]] = j;
 			}
 		}
 	}
 
-	// Construct the suffix array of data[0..n-1] in {1..K}ˆn
-	// require s[n-1]=0 (the sentinel!), n>=2
-	// use a working space (excluding s and SA) of
-	// at most 2.25n+O(1) for a constant alphabet
-	void Build(void const* data, int size, int* SA, int K, int cs)
+	// Construct the suffix array of 'data' where each element is in the range [0, alphabet_size).
+	// Requires a sentinal (0) at data[n-1]
+	template <std::integral Int>
+	void Build(std::span<Int const> data, std::span<int> SA, int alphabet_size)
 	{
+		// Uses a working space (excluding 'data' and 'SA') of at most 2.25n+O(1) for a constant alphabet.
+		//
+		// Basic notation commonly used in the presentations of this algorithm.
+		// Let S be a string of n characters stored in an array[0..n − 1], and Σ(S) be the alphabet of S.
+		// For a substring, S[i]S[i + 1]...S[j] in S, we denote it as S[i..j].
+		// For presentation simplicity, S is supposed to be terminated by a sentinel $, which is the unique
+		// lexicographically smallest character in S (using a sentinel is widely adopted in the literature for SACAs [5]).
+		// Let suf(S, i) be the sufﬁx in S starting at S[i] and running to the sentinel.
+		// A sufﬁx suf (S, i) is said to be S-type or L-type if suf (S, i) < suf(S, i + 1) or suf(S, i) > suf(S, i + 1), respectively.
+		// The last sufﬁx suf(S, n − 1) consisting of only the single character $ (the sentinel) is deﬁned as S-type.
+		// Correspondingly, we can classify a character S[i] to be S-type or L-type if suf(S, i) is S-type or L-type, respectively.
+		// To store the type of every character/sufﬁx, we introduce an n-bit boolean array t, where t[i] records the type of character
+		// S[i] as well as sufﬁx suf(S, i): 1 for S-type and 0 for L-type.
+		// From the S-type and L-type deﬁnitions, we observe the following properties:
+		//   1) S[i] is S-type if (i.1) S[i] < S[i + 1] or (i.2)S[i] = S[i + 1] and suf(S, i + 1) is S-type.
+		//   2) S[i] isL-type if (ii.1) S[i] > S[i + 1] or (ii.2) S[i] = S[i + 1] andsuf(S, i + 1) is L-type.
+		// These properties suggest that by scanning S once from right to left, we can determine the type of each
+		// character/sufﬁx in O(1) time and ﬁll out the type array in O(n) time.
+		//
+		// So:
+		//  S-type means "this suffix is smaller than the next adjacent suffix".
+		//  L-type means "this suffix is larger than the next adjacent suffix".
+
 		using namespace impl;
 
-		unsigned char const* s = (unsigned char*)data;
-
-		// A character s[i] is said to be L-type and S-type if the sufﬁx s[i..n − 1] is L-type and S-type, respectively.
-		// Based on the classiﬁed sufﬁxes of L-type and S-type, an S-substring is deﬁned as any substring s[i..j], j > i,
-		// satisfying that s[i] and s[j] are the only two S-type characters in s[i..j]. Similarly, an L-substring s[i..j], j > i,
-		// satisﬁes that s[i] and s[j] are the only two L-type characters in S[i..j].
+		// Handle degenerate cases
+		if (data.empty())
+		{
+			return;
+		}
+		if (data.size() > SA.size())
+		{
+			throw std::runtime_error("The output suffix array size must be >= input data size");
+		}
+		if (data.back() != 0)
+		{
+			throw std::runtime_error("There must be a sentinel at the end of 'data'");
+		}
+		if (data.size() == 1)
+		{
+			SA[0] = 0;
+			return;
+		}
 
 		// L/S-type array in bits
-		auto ls_types = std::vector<bool>(size);
+		auto ls_types = std::vector<bool>(std::size(data));
+		static auto IsLeftmostSType = [](int i, std::vector<bool> const& ls_types) -> bool
+		{
+			return i > 0 && ls_types[i] && !ls_types[i - 1];
+		};
 
 		// Classify the type of each character
-		// The sentinel must be in s1, important!!!
-		ls_types[size - 2] = 0;
-		ls_types[size - 1] = 1;
-		for (int i = size - 3; i >= 0; i--)
+		// The sentinel must be in 'data', important!!!
+		ls_types[std::ssize(data) - 2] = 0; // One before the sentinal
+		ls_types[std::ssize(data) - 1] = 1; // The expected sentinal position
+		for (auto i = std::ssize(data) - 3; i >= 0; --i)
 		{
-			auto val = chr(i, cs, s) < chr(i + 1, cs, s) || (chr(i, cs, s) == chr(i + 1, cs, s) && ls_types[i + 1]) ? true : false;
-			ls_types[i] = val;
+			ls_types[i] =
+				(data[i] <  data[i + 1]) ||
+				(data[i] == data[i + 1] && ls_types[i + 1]);
 		}
 
-		// stage 1: reduce the problem by at least 1/2
-		// sort all the S-substrings
+		// Stage 1: reduce the problem by at least 1/2. Sort all the S-substrings
 		{
-			// bucket array
-			auto bkt = std::vector<int>(K + 1);
+			auto bkt = std::vector<int>(alphabet_size + 1);
 
-			// find ends of buckets
-			getBuckets(s, bkt.data(), size, K, cs, true);
-			for (int i = 0; i < size; i++)
-				SA[i] = -1;
-			for (int i = 1; i < size; i++)
-				if (isLMS(i, ls_types))
-					SA[--bkt[chr(i, cs, s)]] = i;
-
-			induceSAl(ls_types, SA, s, bkt.data(), size, K, cs, false);
-			induceSAs(ls_types, SA, s, bkt.data(), size, K, cs, true);
+			// Find ends of buckets
+			GetBuckets(data, bkt, true);
+			std::fill(SA.begin(), SA.end(), -1);
+			for (int i = 1; i != std::ssize(data); ++i)
+			{
+				if (IsLeftmostSType(i, ls_types))
+					SA[--bkt[data[i]]] = i;
+			}
+			InduceSuffixArrayL(ls_types, SA, data, bkt, false);
+			InduceSuffixArrayS(ls_types, SA, data, bkt, true);
 		}
 
-		// compact all the sorted substrings into
-		// the first n1 items of SA
-		// 2*n1 must be not larger than 'size' (proveable)
+		// Compact all the sorted substrings into the first 'n1' items of SA.
+		// 2*n1 is not larger than 'size' (proveable)
 		int n1 = 0;
-		for (int i = 0; i < size; i++)
-			if (isLMS(SA[i], ls_types))
+		for (int i = 0; i != std::ssize(data); ++i)
+			if (IsLeftmostSType(SA[i], ls_types))
 				SA[n1++] = SA[i];
 
-		// find the lexicographic names of substrings
-		// init the name array buffer
-		for (int i = n1; i < size; i++)
-			SA[i] = -1;
-
+		// Find the lexicographic names of substrings.
+		std::fill(SA.begin() + n1, SA.end(), -1);
 		int name = 0, prev = -1;
-		for (int i = 0; i < n1; i++)
+		for (int i = 0; i < n1; ++i)
 		{
 			int pos = SA[i];
 			bool diff = false;
-			for (int d = 0; d < size; d++)
-				if (prev == -1 || chr(pos + d, cs, s) != chr(prev + d, cs, s) || ls_types[pos + d] != ls_types[prev + d])
+			for (int d = 0; d < std::ssize(data); ++d)
+			{
+				if (prev == -1 || data[pos + d] != data[prev + d] || ls_types[pos + d] != ls_types[prev + d])
 				{
 					diff = true;
 					break;
 				}
-				else if (d > 0 && (isLMS(pos + d, ls_types) || isLMS(prev + d, ls_types)))
+				if (d > 0 && (IsLeftmostSType(pos + d, ls_types) || IsLeftmostSType(prev + d, ls_types)))
+				{
 					break;
-
+				}
+			}
 			if (diff)
 			{
 				name++;
@@ -152,201 +190,130 @@ namespace pr::suffix_array
 			pos = (pos % 2 == 0) ? pos / 2 : (pos - 1) / 2;
 			SA[n1 + pos] = name - 1;
 		}
-		for (int i = size - 1, j = size - 1; i >= n1; i--)
+
+		for (int i = (int)std::ssize(data) - 1, j = (int)std::ssize(data) - 1; i >= n1; --i)
+		{
 			if (SA[i] >= 0)
 				SA[j--] = SA[i];
+		}
 
-		// stage 2: solve the reduced problem
-		// recurse if names are not yet unique
-		int* SA1 = SA, * s1 = SA + size - n1;
+		// Stage 2: solve the reduced problem.
+		// Recurse if names are not yet unique.
+		auto SA1 = SA.subspan(0, n1);
+		auto s1 = SA.subspan(std::ssize(data) - n1, n1);
 		if (name < n1)
 		{
-			Build((unsigned char*)s1, n1, SA1, name - 1, sizeof(int));
+			Build<int>(s1, SA1, name - 1);
 		}
 		else
 		{
 			// Generate the suffix array of s1 directly
-			for (int i = 0; i < n1; i++)
+			for (int i = 0; i != n1; ++i)
 				SA1[s1[i]] = i;
 		}
 
-		// stage 3: induce the result for
-		// the original problem
-
-		{// bucket array
-			auto bkt = std::vector<int>(K + 1);
+		// Stage 3: induce the result for the original problem.
+		{
+			auto bkt = std::vector<int>(alphabet_size + 1);
 
 			// put all the LMS characters into their buckets
 			// find ends of buckets
-			getBuckets(s, bkt.data(), size, K, cs, true);
-			for (int i = 1, j = 0; i < size; i++)
-				if (isLMS(i, ls_types))
+			GetBuckets(data, bkt, true);
+			for (int i = 1, j = 0; i < std::ssize(data); ++i)
+				if (IsLeftmostSType(i, ls_types))
 					s1[j++] = i; // get p1
 
-			// get index in s
+			// Get index in src
 			for (int i = 0; i < n1; i++)
 				SA1[i] = s1[SA1[i]];
 
-			// init SA[n1..n-1]
-			for (int i = n1; i < size; i++)
-				SA[i] = -1;
-
+			// Init SA[n1..n-1]
+			std::fill(SA.begin() + n1, SA.end(), -1);
 			for (int i = n1 - 1; i >= 0; i--)
 			{
 				auto j = SA[i];
 				SA[i] = -1;
-				SA[--bkt[chr(j, cs, s)]] = j;
+				SA[--bkt[data[j]]] = j;
 			}
 
-			induceSAl(ls_types, SA, s, bkt.data(), size, K, cs, false);
-			induceSAs(ls_types, SA, s, bkt.data(), size, K, cs, true);
+			InduceSuffixArrayL(ls_types, SA, data, bkt, false);
+			InduceSuffixArrayS(ls_types, SA, data, bkt, true);
 		}
 	}
 
-
-	// Find the longest common prefix between two suffixes.
-	template <typename T, std::integral Int>
-	size_t LongestCommonPrefix(const T* data, size_t size, Int* sa, size_t sa_size, size_t a, size_t b)
+	// Find the longest common prefix for 'sub' and 'data' (using the suffix array).
+	template <std::integral Int>
+	LCP LongCommonPrefix(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
 	{
-		size_t lcp = 0;
-		while (a + lcp < size && b + lcp < size && data[a + lcp] == data[b + lcp])
-			lcp++;
-		return lcp;
-	}
-
-	// See if a substring is in the suffix array.
-	template <typename T, std::integral Int>
-	bool Contains(const T* data, size_t size, Int* sa, size_t sa_size, const T* sub, size_t sub_size)
-	{
-		// Binary search for the substring
-		size_t low = 0;
-		size_t high = size;
-		while (low < high)
+		// Binary search for 'sub' in 'data'
+		size_t lcp0 = 0, lcp1 = 0; // track the longest common prefix for the lower/upper bounds
+		for (size_t low = 0, high = sa.size(); ; )
 		{
-			size_t mid = (low + high) / 2;
-			size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, mid, 0);
-			if (lcp == sub_size)
-				return true;
-			if (lcp < sub_size)
+			auto mid = (low + high) / 2;
+			auto sign = 0;
+
+			// Find the longest common prefix at 'mid'. We know the prefix is common up to 'lcp' so far.
+			auto prefix = data.subspan(sa[mid]);
+			auto match_length = std::min(lcp0, lcp1);
+			for (; ; ++match_length)
 			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
+				if (match_length == sub.size())
+					return { match_length, mid };
+
+				sign = match_length < prefix.size()
+					? sub[match_length] - prefix[match_length]
+					: -1;
+				
+				if (sign != 0)
+					break;
+			}
+
+			// Update the search range
+			if (sign > 0)
+			{
+				low = mid + 1;
+				lcp0 = match_length;
 			}
 			else
 			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
+				high = mid;
+				lcp1 = match_length;
+			}
+
+			if (low == high)
+			{
+				return { std::min(lcp0, lcp1), low };
 			}
 		}
-		return false;
 	}
 
-	// Count the occurrances of a substring in the suffix array.
-	template <typename T, std::integral Int>
-	size_t Count(const T* data, size_t size, Int* sa, size_t sa_size, const T* sub, size_t sub_size)
+	// See if substring 'sub' occurs in 'data' (using the suffix array).
+	template <std::integral Int>
+	bool Contains(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
 	{
-		// Binary search for the substring
-		size_t low = 0;
-		size_t high = size;
-		while (low < high)
-		{
-			size_t mid = (low + high) / 2;
-			size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, mid, 0);
-			if (lcp == sub_size)
-			{
-				size_t count = 1;
-				size_t left = mid;
-				size_t right = mid;
-				while (left > 0)
-				{
-					size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, left - 1, 0);
-					if (lcp < sub_size)
-						break;
-					count++;
-					left--;
-				}
-				while (right < size)
-				{
-					size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, right + 1, 0);
-					if (lcp < sub_size)
-						break;
-					count++;
-					right++;
-				}
-				return count;
-			}
-			if (lcp < sub_size)
-			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
-			}
-			else
-			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
-			}
-		}
-		return 0;
+		auto [length,_] = LongCommonPrefix(sub, data, sa);
+		return length == sub.size();
 	}
+	
+	// Count the occurrences of a substring in the suffix array.
+	template <std::integral Int>
+	size_t Count(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
+	{
+		// Find the node in the SA that matches 'sub'.
+		auto [length,_] = LongCommonPrefix(sub, data, sa);
+		if (length != sub.size())
+			return 0;
+
+		// Count the number of leaves in the sub trees.
+		return 0; //todo
+	}
+
 
 	// Return the locations of the occurrances of a substring 
 	template <typename T, std::integral Int>
 	std::vector<size_t> Find(const T* data, size_t size, Int* sa, size_t sa_size, const T* sub, size_t sub_size)
 	{
-		std::vector<size_t> locations;
-		// Binary search for the substring
-		size_t low = 0;
-		size_t high = size;
-		while (low < high)
-		{
-			size_t mid = (low + high) / 2;
-			size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, mid, 0);
-			if (lcp == sub_size)
-			{
-				size_t left = mid;
-				size_t right = mid;
-				while (left > 0)
-				{
-					size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, left - 1, 0);
-					if (lcp < sub_size)
-						break;
-					locations.push_back(left - 1);
-					left--;
-				}
-				while (right < size)
-				{
-					size_t lcp = LongestCommonPrefix(data, size, sa, sa_size, right + 1, 0);
-					if (lcp < sub_size)
-						break;
-					locations.push_back(right + 1);
-					right++;
-				}
-				return locations;
-			}
-			if (lcp < sub_size)
-			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
-			}
-			else
-			{
-				if (data[sa[mid] + lcp] < sub[lcp])
-					low = mid + 1;
-				else
-					high = mid;
-			}
-		}
-		return locations;
+		return {};
 	}
 }
 
@@ -356,28 +323,51 @@ namespace pr::container
 {
 	PRUnitTest(SuffixArrayTests)
 	{
-		//                   0123456789ab
-		char const data[] = "abracadabra";
-		int sa[12];
-		suffix_array::Build(&data[0], sizeof(data), sa, 256, 1);
-		PR_CHECK(sa[0], 11);
-		PR_CHECK(sa[1], 10);
-		PR_CHECK(sa[2], 7);
-		PR_CHECK(sa[3], 0);
-		PR_CHECK(sa[4], 3);
-		PR_CHECK(sa[5], 5);
-		PR_CHECK(sa[6], 8);
-		PR_CHECK(sa[7], 1);
-		PR_CHECK(sa[8], 4);
-		PR_CHECK(sa[9], 6);
-		PR_CHECK(sa[10], 9);
-		PR_CHECK(sa[11], 2);
+		{// String data
+			//                   0123456789ab
+			char const data[] = "abracadabra";
+			int sa[sizeof(data)];
+			suffix_array::Build<char>(data, sa, 256);
+			PR_CHECK(sa[0], 11);
+			PR_CHECK(sa[1], 10);
+			PR_CHECK(sa[2], 7);
+			PR_CHECK(sa[3], 0);
+			PR_CHECK(sa[4], 3);
+			PR_CHECK(sa[5], 5);
+			PR_CHECK(sa[6], 8);
+			PR_CHECK(sa[7], 1);
+			PR_CHECK(sa[8], 4);
+			PR_CHECK(sa[9], 6);
+			PR_CHECK(sa[10], 9);
+			PR_CHECK(sa[11], 2);
 
+			PR_CHECK(suffix_array::Contains<char>({ "aca", 3 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "db", 2 }, data, sa), false);
+			PR_CHECK(suffix_array::Contains<char>({ "abracadabra", 11 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "rab", 3 }, data, sa), false);
 
-		//PR_CHECK(suffix_array::Contains(data, 12, sa, 12, "aca", 3), true);
-		//PR_CHECK(suffix_array::Contains(data, 12, sa, 12, "cad", 3), true);
-		//PR_CHECK(suffix_array::Contains(data, 12, sa, 12, "dabra", 5), true);
+			//PR_CHECK(suffix_array::Count<char>({ "ab", 2 }, data, sa) == 2, true);
 
+		}
+		//{// Binary data
+		//	//                    0    1    2    3    4    5    6    7    8    9    a    b
+		//	int const data[] = { 'a', 'b', 'r', 'a', 'c', 'a', 'd', 'a', 'b', 'r', 'a' };
+		//
+		//	int sa[sizeof(data)];
+		//	suffix_array::Build(&data[0], sizeof(data), sa, 256, 1);
+		//	PR_CHECK(sa[0], 11);
+		//	PR_CHECK(sa[1], 10);
+		//	PR_CHECK(sa[2], 7);
+		//	PR_CHECK(sa[3], 0);
+		//	PR_CHECK(sa[4], 3);
+		//	PR_CHECK(sa[5], 5);
+		//	PR_CHECK(sa[6], 8);
+		//	PR_CHECK(sa[7], 1);
+		//	PR_CHECK(sa[8], 4);
+		//	PR_CHECK(sa[9], 6);
+		//	PR_CHECK(sa[10], 9);
+		//	PR_CHECK(sa[11], 2);
+		//}
 	}
 }
 #endif
