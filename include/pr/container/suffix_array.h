@@ -36,10 +36,9 @@ namespace pr::suffix_array
 				:m_stypes(data.size())
 			{
 				// Classify the type of each character into S or L types. Suffixes that aren't S-type are L-type.
-				// The sentinel must be in 'data', important!!!
-				m_stypes[std::ssize(data) - 1] = true; // The expected sentinal position
-				m_stypes[std::ssize(data) - 2] = false; // One before the sentinal
-				for (auto i = std::ssize(data) - 3; i >= 0; --i)
+				// There is an implicit sentinal at the end of the string that is less than all characters in the alphabet
+				m_stypes[std::ssize(data) - 1] = false; // The last character is always larger than the sentinal
+				for (auto i = std::ssize(data) - 2; i >= 0; --i)
 				{
 					m_stypes[i] =
 						(data[i] <  data[i + 1]) ||
@@ -106,6 +105,13 @@ namespace pr::suffix_array
 			// Find the starts of the buckets
 			GetBuckets<Int, true>(data, bkt);
 
+			// Normally, there is a sentinel that is the first value in 'SA'. This implementation uses an implicit sentinel.
+			// The character before the sentinel is always L-Type.
+			{
+				auto j = static_cast<int>(std::ssize(data) - 1);
+				SA[bkt[data[j]]++] = j;
+			}
+
 			// Left to Right pass
 			for (auto i = 0; i != std::ssize(data); ++i)
 			{
@@ -144,10 +150,11 @@ namespace pr::suffix_array
 	}
 
 	// Construct the suffix array of 'data' where each element is in the range [0, alphabet_size).
-	// Requires a sentinal (0) at data[n-1]
 	template <std::integral Int>
 	void Build(std::span<Int const> data, std::span<int> SA, int alphabet_size)
 	{
+		// NOTE: This implementation does not require a sentinel at the end of 'data'.
+		// 
 		// Basic notation commonly used in the presentations of this algorithm.
 		// Let S be a string of n characters stored in an array[0..n − 1], and Σ(S) be the alphabet of S.
 		// For a substring, S[i]S[i + 1]...S[j] in S, we denote it as S[i..j].
@@ -192,14 +199,14 @@ namespace pr::suffix_array
 		{
 			throw std::runtime_error("The output suffix array size must be >= input data size");
 		}
-		if (data.back() != 0)
-		{
-			throw std::runtime_error("There must be a sentinel at the end of 'data'");
-		}
 		if (data.size() == 1)
 		{
 			SA[0] = 0;
 			return;
+		}
+		if (data.size() > std::numeric_limits<int>::max())
+		{
+			throw std::runtime_error("The input data size must be <= INT_MAX");
 		}
 
 		// Classify the type of each character into S or L types
@@ -210,9 +217,9 @@ namespace pr::suffix_array
 
 		// Stage 1: reduce the problem by at least 1/2. Sort all the S-suffixes
 		{
-			auto bkt = std::vector<int>(alphabet_size + 1);
+			auto bkt = std::vector<int>(alphabet_size);
 
-			// Find the indices for the end of each character bucket in 'SA'
+			// Find the indices for the end position of each character bucket in 'SA'
 			GetBuckets<Int, false>(data, bkt);
 
 			// Record the index of each "LMS" suffix in the bucket corresponding to its first character.
@@ -261,6 +268,7 @@ namespace pr::suffix_array
 			SA[n1 + pos] = name - 1;
 		}
 
+		// Move the names to the end of 'SA'
 		for (auto i = std::ssize(data) - 1, j = i; i >= n1; --i)
 		{
 			if (SA[i] >= 0)
@@ -274,7 +282,7 @@ namespace pr::suffix_array
 		// Recurse if names are not yet unique.
 		if (name < n1)
 		{
-			Build<int>(data1, SA1, name - 1);
+			Build<int>(data1, SA1, name);
 		}
 		else
 		{
@@ -285,7 +293,7 @@ namespace pr::suffix_array
 
 		// Stage 3: induce the result for the original problem.
 		{
-			auto bkt = std::vector<int>(alphabet_size + 1);
+			auto bkt = std::vector<int>(alphabet_size);
 
 			// Find ends of buckets
 			GetBuckets<Int, false>(data, bkt);
@@ -395,26 +403,24 @@ namespace pr::container
 {
 	PRUnitTest(SuffixArrayTests)
 	{
+		//std::string data = "abbaaabbb";
 		{// String data
-			//                   0123456789ab
-			char const data[] = "abracadabra";
+			//                  0123456789ab
+			std::string data = "abracadabra";
+			std::vector<int> sa(std::size(data));
 
-			int sa[sizeof(data)];
+			for (auto& c : data) c -= 'a';
+			suffix_array::Build<char>(data, sa, 'z' - 'a');
+			for (auto& c : data) c += 'a';
 
-			suffix_array::Build<char>(data, sa, 256);
-
-			PR_CHECK(sa[0], 11);
-			PR_CHECK(sa[1], 10);
-			PR_CHECK(sa[2], 7);
-			PR_CHECK(sa[3], 0);
-			PR_CHECK(sa[4], 3);
-			PR_CHECK(sa[5], 5);
-			PR_CHECK(sa[6], 8);
-			PR_CHECK(sa[7], 1);
-			PR_CHECK(sa[8], 4);
-			PR_CHECK(sa[9], 6);
-			PR_CHECK(sa[10], 9);
-			PR_CHECK(sa[11], 2);
+			// Check that each substring is less than the next
+			std::string_view sdata(data);
+			for (auto i = 0; i != sa.size() - 1; ++i)
+			{
+				auto a = sdata.substr(sa[i + 0]);
+				auto b = sdata.substr(sa[i + 1]);
+				PR_CHECK(a < b, true);
+			}
 
 			PR_CHECK(suffix_array::Contains<char>({ "aca", 3 }, data, sa), true);
 			PR_CHECK(suffix_array::Contains<char>({ "db", 2 }, data, sa), false);
@@ -423,46 +429,79 @@ namespace pr::container
 
 			//PR_CHECK(suffix_array::Count<char>({ "ab", 2 }, data, sa) == 2, true);
 		}
-		{
-			std::uniform_int_distribution<int> dist('a', 'z');
+		{// Large random data
+			std::uniform_int_distribution<int> dist(0, 'z' - 'a');
 			std::default_random_engine rng(0);
 
 			std::string data(1024, '\0');
-			for (auto& c : data)
-				c = static_cast<char>(dist(rng));
-			data.push_back(0);
-
 			std::vector<int> sa(data.size());
-			suffix_array::Build<char>(data, sa, 256);
+
+			for (auto& c : data) c = static_cast<char>(dist(rng));
+			suffix_array::Build<char>(data, sa, dist.max() + 1);
+			for (auto& c : data) c += 'a';
 
 			// Check that each substring is less than the next
-			for (size_t i = 0; i < data.size() - 1; ++i)
+			std::string_view sdata(data);
+			for (auto i = 0; i != sa.size() - 1; ++i)
+			{
+				auto a = sdata.substr(sa[i + 0]);
+				auto b = sdata.substr(sa[i + 1]);
+				PR_CHECK(a < b, true);
+			}
+		}
+		{// Limited alphabet data
+
+			std::vector<unsigned char> data = {0,1,2,3,2,1,0,1,2,0,3,0,1,3,1,2,2,3,1,1,1,3,0,0,1,0};
+			std::vector<int> sa(data.size());
+
+			suffix_array::Build<unsigned char>(data, sa, 4);
+			for (auto& c : data) c += 'a';
+
+
+			// Check that each substring is less than the next
+			auto sdata = std::string_view(reinterpret_cast<char const*>(data.data()), data.size());
+			for (auto i = 0; i != sa.size() - 1; ++i)
+			{
+				auto a = sdata.substr(sa[i]);
+				auto b = sdata.substr(sa[i + 1]);
+				PR_CHECK(a < b, true);
+			}
+		}
+		{// Highly repeditious data
+			std::string data = "aabbaabbaabbbbaabbaabbaabbaa";
+			std::vector<int> sa(data.size());
+			
+			for (auto& c : data) c -= 'a';
+			suffix_array::Build<char>(data, sa, 2);
+			for (auto& c : data) c += 'a';
+
+			// Check that each substring is less than the next
+			for (auto i = 0; i != sa.size() - 1; ++i)
 			{
 				auto a = std::string_view(data.data() + sa[i]);
 				auto b = std::string_view(data.data() + sa[i + 1]);
 				PR_CHECK(a < b, true);
 			}
 		}
+		{// int data
+			std::uniform_int_distribution<int> dist(0, 65535);
+			std::default_random_engine rng(0);
 
-		//{// Binary data
-		//	//                    0    1    2    3    4    5    6    7    8    9    a    b
-		//	int const data[] = { 'a', 'b', 'r', 'a', 'c', 'a', 'd', 'a', 'b', 'r', 'a' };
-		//
-		//	int sa[sizeof(data)];
-		//	suffix_array::Build(&data[0], sizeof(data), sa, 256, 1);
-		//	PR_CHECK(sa[0], 11);
-		//	PR_CHECK(sa[1], 10);
-		//	PR_CHECK(sa[2], 7);
-		//	PR_CHECK(sa[3], 0);
-		//	PR_CHECK(sa[4], 3);
-		//	PR_CHECK(sa[5], 5);
-		//	PR_CHECK(sa[6], 8);
-		//	PR_CHECK(sa[7], 1);
-		//	PR_CHECK(sa[8], 4);
-		//	PR_CHECK(sa[9], 6);
-		//	PR_CHECK(sa[10], 9);
-		//	PR_CHECK(sa[11], 2);
-		//}
+			std::vector<int> data(23);
+			std::vector<int> sa(data.size());
+			for (auto& c : data) c = dist(rng);
+
+			suffix_array::Build<int>(data, sa, dist.max() + 1);
+
+			// Check that each substring is less than the next
+			std::u32string_view sdata(reinterpret_cast<char32_t const*>(data.data()), data.size());
+			for (auto i = 0; i != sa.size() - 1; ++i)
+			{
+				auto a = sdata.substr(sa[i]);
+				auto b = sdata.substr(sa[i + 1]);
+				PR_CHECK(a < b, true);
+			}
+		}
 	}
 }
 #endif
