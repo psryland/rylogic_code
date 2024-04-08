@@ -62,49 +62,40 @@ namespace pr::suffix_array
 				return i > 0 && IsSType(i) && IsLType(i - 1);
 			}
 		};
-
-		// Returns, in 'bkt', the index position of the start or end of the character buckets.
-		template <std::integral Int, bool StartIndices>
-		void GetBuckets(std::span<Int const> data, std::span<int> bkt)
+		struct BucketIndexRanges
 		{
-			// Buckets are ranges within the SA that contain all the suffixes that start with a particular character.
-			// e.g. {$|aaaaaa|bbbb|ccc|dddd}
+			std::vector<int> beg;
+			std::vector<int> end;
+		};
 
-			// Compute the size of each bucket
-			std::fill(bkt.begin(), bkt.end(), 0);
+		// Return the bucket indices for the start/end of the character buckets.
+		template <std::integral Int>
+		BucketIndexRanges GetBuckets(std::span<Int const> data, int alphabet_size)
+		{
+			// Get the character frequencies in 'data'
+			auto freq = std::vector<int>(alphabet_size);
 			for (auto d : data)
-				bkt[d]++;
+				freq[d]++;
 
-			// Return the indices in 'bkt'
-			if constexpr (StartIndices)
+			auto bkt = BucketIndexRanges{ freq, freq };
+
+			int sum = 0;
+			auto beg = bkt.beg.begin();
+			auto end = bkt.end.begin();
+			for (auto& f : freq)
 			{
-				// Find the index for the start of each character bucket
-				int sum = 0;
-				for (auto& b : bkt)
-				{
-					sum += b;
-					b = sum - b;
-				}
+				*beg++ = sum;
+				sum += f;
+				*end++ = sum;
 			}
-			else
-			{
-				// Find the index for the end of each character bucket
-				int sum = 0;
-				for (auto& b : bkt)
-				{
-					sum += b;
-					b = sum;
-				}
-			}
+
+			return bkt;
 		}
 
-		// Sort L-type suffix indices by induction from left to right
+		// Sort L-type suffix indices by induction from left to right. 'bkt' is the start index for each bucket
 		template <std::integral Int>
 		void InduceSortLtoR(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt)
 		{
-			// Find the starts of the buckets
-			GetBuckets<Int, true>(data, bkt);
-
 			// Normally, there is a sentinel that is the first value in 'SA'. This implementation uses an implicit sentinel.
 			// The character before the sentinel is always L-Type.
 			{
@@ -128,13 +119,10 @@ namespace pr::suffix_array
 			}
 		}
 
-		// Sort R-type suffix indices by induction from right to left
+		// Sort R-type suffix indices by induction from right to left. 'bkt' is the end index for each bucket
 		template <std::integral Int>
 		void InduceSortRtoL(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt)
 		{
-			// Find the ends of the buckets
-			GetBuckets<Int, false>(data, bkt);
-
 			// Right to Left pass
 			for (auto i = std::ssize(data) - 1; i >= 0; --i)
 			{
@@ -215,23 +203,23 @@ namespace pr::suffix_array
 		// Initialize the suffix array to 'unknowns'
 		std::fill(SA.begin(), SA.end(), -1);
 
+		// Determine bucket index ranges
+		auto const [bkt_beg, bkt_end] = GetBuckets<Int>(data, alphabet_size);
+		std::vector<int> bkt(alphabet_size);
+
 		// Stage 1: reduce the problem by at least 1/2. Sort all the S-suffixes
 		{
-			auto bkt = std::vector<int>(alphabet_size);
-
-			// Find the indices for the end position of each character bucket in 'SA'
-			GetBuckets<Int, false>(data, bkt);
-
 			// Record the index of each "LMS" suffix in the bucket corresponding to its first character.
 			// Fill the buckets from the right (that's why bucket end indices are used)
+			bkt = bkt_end;
 			for (int i = 1; i != std::ssize(data); ++i)
 			{
 				if (sfx_type.IsLeftmostSType(i))
 					SA[--bkt[data[i]]] = i;
 			}
 
-			InduceSortLtoR(sfx_type, SA, data, bkt);
-			InduceSortRtoL(sfx_type, SA, data, bkt);
+			InduceSortLtoR(sfx_type, SA, data, bkt = bkt_beg);
+			InduceSortRtoL(sfx_type, SA, data, bkt = bkt_end);
 		}
 
 		// Compact all the sorted LMS suffixes into the first 'n1' items of SA.
@@ -293,12 +281,8 @@ namespace pr::suffix_array
 
 		// Stage 3: induce the result for the original problem.
 		{
-			auto bkt = std::vector<int>(alphabet_size);
-
-			// Find ends of buckets
-			GetBuckets<Int, false>(data, bkt);
-
 			// Put all the LMS characters into their buckets
+			bkt = bkt_end;
 			for (int i = 1, j = 0; i < std::ssize(data); ++i)
 				if (sfx_type.IsLeftmostSType(i))
 					data1[j++] = i; // get p1
@@ -317,8 +301,8 @@ namespace pr::suffix_array
 				SA[--bkt[data[j]]] = j;
 			}
 
-			InduceSortLtoR(sfx_type, SA, data, bkt);
-			InduceSortRtoL(sfx_type, SA, data, bkt);
+			InduceSortLtoR(sfx_type, SA, data, bkt = bkt_beg);
+			InduceSortRtoL(sfx_type, SA, data, bkt = bkt_end);
 		}
 	}
 
@@ -403,7 +387,6 @@ namespace pr::container
 {
 	PRUnitTest(SuffixArrayTests)
 	{
-		//std::string data = "abbaaabbb";
 		{// String data
 			//                  0123456789ab
 			std::string data = "abracadabra";
