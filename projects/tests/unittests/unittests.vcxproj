@@ -141,6 +141,7 @@
     <ClInclude Include="..\..\..\include\pr\container\span.h" />
     <ClInclude Include="..\..\..\include\pr\container\chain.h" />
     <ClInclude Include="..\..\..\include\pr\container\deque.h" />
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h" />
     <ClInclude Include="..\..\..\include\pr\container\vector.h" />
     <ClInclude Include="..\..\..\include\pr\container\bit_array.h" />
     <ClInclude Include="..\..\..\include\pr\container\byte_data.h" />

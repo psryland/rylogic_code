@@ -1023,6 +1023,9 @@
     <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
