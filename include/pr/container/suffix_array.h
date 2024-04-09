@@ -8,23 +8,15 @@
 //   Nong G, Zhang S, Chan WH "Two efficient algorithms for linear time suffix array construction"
 //   https://www.researchgate.net/publication/224176324_Two_Efficient_Algorithms_for_Linear_Time_Suffix_Array_Construction
 #pragma once
+#include <span>
 #include <string>
 #include <vector>
 #include <concepts>
-#include <span>
+#include <algorithm>
+#include <cassert>
 
 namespace pr::suffix_array
 {
-	// Longest Common Prefix
-	struct LCP
-	{
-		// The length of the match
-		size_t length = 0;
-
-		// The index of the match
-		size_t sa_index = 0;
-	};
-
 	namespace impl
 	{
 		struct SuffixType
@@ -46,7 +38,6 @@ namespace pr::suffix_array
 				}
 			}
 
-
 			bool IsSType(int i) const
 			{
 				return i >= 0 && m_stypes[i];
@@ -67,6 +58,15 @@ namespace pr::suffix_array
 			std::vector<int> beg;
 			std::vector<int> end;
 		};
+		struct MatchResult
+		{
+			// The length of the match
+			size_t length = 0;
+
+			// The index range of the match in 'sa'
+			size_t sa_beg = 0;
+			size_t sa_end = 0;
+		};
 
 		// Return the bucket indices for the start/end of the character buckets.
 		template <std::integral Int>
@@ -79,6 +79,7 @@ namespace pr::suffix_array
 
 			auto bkt = BucketIndexRanges{ freq, freq };
 
+			// Calculate the start/end indices for each bucket
 			int sum = 0;
 			auto beg = bkt.beg.begin();
 			auto end = bkt.end.begin();
@@ -92,15 +93,15 @@ namespace pr::suffix_array
 			return bkt;
 		}
 
-		// Sort L-type suffix indices by induction from left to right. 'bkt' is the start index for each bucket
+		// Sort L-type suffix indices by induction from left to right. 'bkt_beg' is the start index for each bucket
 		template <std::integral Int>
-		void InduceSortLtoR(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt)
+		void InduceSortLtoR(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt_beg)
 		{
 			// Normally, there is a sentinel that is the first value in 'SA'. This implementation uses an implicit sentinel.
 			// The character before the sentinel is always L-Type.
 			{
 				auto j = static_cast<int>(std::ssize(data) - 1);
-				SA[bkt[data[j]]++] = j;
+				SA[bkt_beg[data[j]]++] = j;
 			}
 
 			// Left to Right pass
@@ -115,13 +116,13 @@ namespace pr::suffix_array
 				// The 'SA' is assumed to contain '-1' for unknown indices.
 				auto j = SA[i] - 1;
 				if (j >= 0 && sfx_type.IsLType(j))
-					SA[bkt[data[j]]++] = j;
+					SA[bkt_beg[data[j]]++] = j;
 			}
 		}
 
-		// Sort R-type suffix indices by induction from right to left. 'bkt' is the end index for each bucket
+		// Sort R-type suffix indices by induction from right to left. 'bkt_end' is the end index for each bucket
 		template <std::integral Int>
-		void InduceSortRtoL(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt)
+		void InduceSortRtoL(SuffixType const& sfx_type, std::span<int> SA, std::span<Int const> data, std::span<int> bkt_end)
 		{
 			// Right to Left pass
 			for (auto i = std::ssize(data) - 1; i >= 0; --i)
@@ -132,10 +133,98 @@ namespace pr::suffix_array
 
 				auto j = SA[i] - 1;
 				if (j >= 0 && sfx_type.IsSType(j))
-					SA[--bkt[data[j]]] = j;
+					SA[--bkt_end[data[j]]] = j;
+			}
+		}
+
+		// Find the range of suffixes in 'sa' that match 'sub'.
+		// If 'LCPOnly' is true, then the search exits as soon as any match is found.
+		template <std::integral Int, bool LCPOnly>
+		MatchResult Find(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
+		{
+			// Binary search until 'mid' lands in the range of matches for 'sub'
+			size_t lcp0 = 0, lcp1 = 0; // track the longest common prefix for the lower/upper bounds
+			for (size_t low = 0, high = sa.size(); ; )
+			{
+				auto mid = (low + high) / 2;
+
+				// Compare suffixes starting at 'i'. Assumes a[0..i) == b[0..i)
+				auto Compare = [](std::span<Int const> a, std::span<Int const> b, size_t& i) -> int
+				{
+					for (;;++i)
+					{
+						if (i == a.size()) return static_cast<int>(b.size() - a.size());
+						if (i == b.size()) return static_cast<int>(a.size() - b.size());
+						if (a[i] < b[i]) return -1;
+						if (a[i] > b[i]) return +1;
+					}
+				};
+
+				// Find the longest common prefix at 'mid'.
+				// We know the prefix matches up to 'match_length' so far.
+				auto prefix = data.subspan(sa[mid]);
+				auto match_length = std::min(lcp0, lcp1);
+				auto sign = Compare(sub, prefix, match_length);
+
+				// If 'mid' is within the range of matches, binary search to find the high/low bounds.
+				if (match_length == sub.size())
+				{
+					if constexpr (LCPOnly)
+					{
+						return { match_length, mid, mid + 1 };
+					}
+					else
+					{
+						size_t lcp;
+
+						// Binary search to the lower bound
+						for (size_t hi = mid; low < hi;)
+						{
+							auto m = (low + hi) / 2;
+							auto p = data.subspan(sa[m]);
+							Compare(sub, p, lcp = lcp0);
+							if (lcp == sub.size()) { hi = m; }
+							else { low = m + 1; lcp0 = lcp; }
+						}
+
+						// Binary search to the upper bound
+						for (size_t lo = mid; lo < high;)
+						{
+							auto m = (lo + high) / 2;
+							auto p = data.subspan(sa[m]);
+							Compare(p, sub, lcp = lcp1);
+							if (lcp == sub.size()) { lo = m + 1; }
+							else { high = m; lcp1 = lcp; }
+						}
+
+						return { match_length, low, high };
+					}
+				}
+
+				// Otherwise, keep searching for any match
+				if (sign > 0)
+				{
+					low = mid + 1;
+					lcp0 = match_length;
+				}
+				else
+				{
+					high = mid;
+					lcp1 = match_length;
+				}
+
+				// If the search range reaches zero, return the longest common prefix
+				if (low == high)
+				{
+					return { match_length, low, high };
+				}
 			}
 		}
 	}
+
+	using MatchResult = impl::MatchResult;
+
+	// Construction ***********************************************************
 
 	// Construct the suffix array of 'data' where each element is in the range [0, alphabet_size).
 	template <std::integral Int>
@@ -196,6 +285,9 @@ namespace pr::suffix_array
 		{
 			throw std::runtime_error("The input data size must be <= INT_MAX");
 		}
+
+		// Ensure all characters are within the alphabet
+		assert(std::all_of(data.begin(), data.end(), [alphabet_size](auto c) { return c >= 0 && c < alphabet_size; }));
 
 		// Classify the type of each character into S or L types
 		SuffixType sfx_type(data);
@@ -306,82 +398,45 @@ namespace pr::suffix_array
 		}
 	}
 
-	// Find the longest common prefix for 'sub' and 'data' (using the suffix array).
-	template <std::integral Int>
-	LCP LongCommonPrefix(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
+	// Construct the suffix array of the string 'str'
+	void Build(std::string_view str, std::span<int> SA)
 	{
-		// Binary search for 'sub' in 'data'
-		size_t lcp0 = 0, lcp1 = 0; // track the longest common prefix for the lower/upper bounds
-		for (size_t low = 0, high = sa.size(); ; )
-		{
-			auto mid = (low + high) / 2;
-			auto sign = 0;
-
-			// Find the longest common prefix at 'mid'. We know the prefix is common up to 'lcp' so far.
-			auto prefix = data.subspan(sa[mid]);
-			auto match_length = std::min(lcp0, lcp1);
-			for (; ; ++match_length)
-			{
-				if (match_length == sub.size())
-					return { match_length, mid };
-
-				sign = match_length < prefix.size()
-					? sub[match_length] - prefix[match_length]
-					: -1;
-				
-				if (sign != 0)
-					break;
-			}
-
-			// Update the search range
-			if (sign > 0)
-			{
-				low = mid + 1;
-				lcp0 = match_length;
-			}
-			else
-			{
-				high = mid;
-				lcp1 = match_length;
-			}
-
-			if (low == high)
-			{
-				return { std::min(lcp0, lcp1), low };
-			}
-		}
+		auto data = std::span{reinterpret_cast<unsigned char const*>(str.data()), str.size()};
+		Build(data, SA, 256);
 	}
 
-	// See if substring 'sub' occurs in 'data' (using the suffix array).
+	// Suffix Array Operations ************************************************
+
+	// See if substring 'sub' occurs in 'data'
 	template <std::integral Int>
 	bool Contains(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
 	{
-		auto [length,_] = LongCommonPrefix(sub, data, sa);
-		return length == sub.size();
+		auto mr = impl::Find<Int, true>(sub, data, sa);
+		return mr.length == sub.size();
 	}
-	
-	// Count the occurrences of a substring in the suffix array.
+
+	// Count the occurrences of 'sub' in 'data'
 	template <std::integral Int>
 	size_t Count(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
 	{
 		// Find the node in the SA that matches 'sub'.
-		auto [length,_] = LongCommonPrefix(sub, data, sa);
-		if (length != sub.size())
-			return 0;
-
-		// Count the number of leaves in the sub trees.
-		return 0; //todo
+		auto mr = impl::Find<Int, false>(sub, data, sa);
+		return mr.sa_end - mr.sa_beg;
 	}
-
-	// Return the locations of the occurrances of a substring 
-	template <typename T, std::integral Int>
-	std::vector<size_t> Find(const T* data, size_t size, Int* sa, size_t sa_size, const T* sub, size_t sub_size)
+	
+	// Return the locations of the occurrences of 'sub' in 'data.
+	// Locations in 'data' are given by 'sa[MatchResult.sa_beg..MatchResult.sa_end)'
+	template <std::integral Int>
+	MatchResult Find(std::span<Int const> sub, std::span<Int const> data, std::span<int const> sa)
 	{
-		return {}; //todo
+		return impl::Find<Int, false>(sub, data, sa);
 	}
 }
 
 #if PR_UNITTESTS
+#include <random>
+#include <fstream>
+#include <filesystem>
 #include "pr/common/unittests.h"
 namespace pr::container
 {
@@ -389,7 +444,7 @@ namespace pr::container
 	{
 		{// String data
 			//                  0123456789ab
-			std::string data = "abracadabra";
+			std::string data = "mmiisiisiissiippiiii";
 			std::vector<int> sa(std::size(data));
 
 			for (auto& c : data) c -= 'a';
@@ -405,12 +460,36 @@ namespace pr::container
 				PR_CHECK(a < b, true);
 			}
 
-			PR_CHECK(suffix_array::Contains<char>({ "aca", 3 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "db", 2 }, data, sa), false);
-			PR_CHECK(suffix_array::Contains<char>({ "abracadabra", 11 }, data, sa), true);
-			PR_CHECK(suffix_array::Contains<char>({ "rab", 3 }, data, sa), false);
+			PR_CHECK(suffix_array::Contains<char>({ "m", 1 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "i", 1 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "iis", 3 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "isp", 3 }, data, sa), false);
+			PR_CHECK(suffix_array::Contains<char>({ "mmiisiisiissiippiiii", 20 }, data, sa), true);
+			PR_CHECK(suffix_array::Contains<char>({ "iiiii", 5 }, data, sa), false);
 
-			//PR_CHECK(suffix_array::Count<char>({ "ab", 2 }, data, sa) == 2, true);
+			PR_CHECK(suffix_array::Count<char>({ "i", 1 }, data, sa) == 12, true);
+			PR_CHECK(suffix_array::Count<char>({ "ii", 2 }, data, sa) == 7, true);
+			PR_CHECK(suffix_array::Count<char>({ "iii", 3 }, data, sa) == 2, true);
+			PR_CHECK(suffix_array::Count<char>({ "iiii", 4 }, data, sa) == 1, true);
+			PR_CHECK(suffix_array::Count<char>({ "iiiii", 5 }, data, sa) == 0, true);
+			PR_CHECK(suffix_array::Count<char>({ "m", 1 }, data, sa) == 2, true);
+			PR_CHECK(suffix_array::Count<char>({ "isis", 4 }, data, sa) == 0, true);
+			{
+				auto mr = suffix_array::Find<char>({ "ii", 2 }, data, sa);
+				for (auto i = 0; i != std::ssize(sa); ++i)
+				{
+					auto s = data.substr(sa[i]);
+					PR_CHECK(s.substr(0, 2) == "ii", i >= mr.sa_beg && i < mr.sa_end);
+				}
+			}
+			{
+				auto mr = suffix_array::Find<char>({ "isi", 3 }, data, sa);
+				for (auto i = 0; i != std::ssize(sa); ++i)
+				{
+					auto s = data.substr(sa[i]);
+					PR_CHECK(s.substr(0, 3) == "isi", i >= mr.sa_beg && i < mr.sa_end);
+				}
+			}
 		}
 		{// Large random data
 			std::uniform_int_distribution<int> dist(0, 'z' - 'a');
@@ -484,6 +563,27 @@ namespace pr::container
 				auto b = sdata.substr(sa[i + 1]);
 				PR_CHECK(a < b, true);
 			}
+		}
+		{// use this file
+			std::string data(std::filesystem::file_size(__FILE__), '\0');
+			{
+				std::ifstream ifile(__FILE__, std::ios::in | std::ios::binary);
+				ifile.read(data.data(), data.size());
+			}
+
+			std::vector<int> sa(data.size());
+			suffix_array::Build(data, sa);
+
+			// Check that each substring is less than the next
+			std::string_view sdata(data);
+			for (auto i = 0; i != sa.size() - 1; ++i)
+			{
+				auto a = sdata.substr(sa[i + 0]);
+				auto b = sdata.substr(sa[i + 1]);
+				PR_CHECK(a < b, true);
+			}
+
+			PR_CHECK(suffix_array::Contains<char>({ "Boobs", 5 }, data, sa), true);
 		}
 	}
 }
