@@ -30,6 +30,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"
 //#include "pr/container/deque.h"
+//#include "pr/container/suffix_array.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/matrix6x8.h"

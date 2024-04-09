@@ -55,6 +55,10 @@
 		<Action>NoStepInto</Action>
 	</Function>
 	<Function>
+		<Name>std::span.*</Name>
+		<Action>NoStepInto</Action>
+	</Function>
+	<Function>
 		<Name>std::shared_ptr.*</Name>
 		<Action>NoStepInto</Action>
 	</Function>

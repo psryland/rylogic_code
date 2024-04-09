@@ -118,6 +118,7 @@
 #include "pr\container\segmented_list.h"
 #include "pr\container\span.h"
 #include "pr\container\stack.h"
+#include "pr\container\suffix_array.h"
 #include "pr\container\tri_table.h"
 #include "pr\container\vector.h"
 #include "pr\container\vector_map.h"
