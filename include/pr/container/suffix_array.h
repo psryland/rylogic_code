@@ -13,6 +13,7 @@
 #include <vector>
 #include <concepts>
 #include <algorithm>
+#include <stdexcept>
 #include <cassert>
 
 namespace pr::suffix_array
