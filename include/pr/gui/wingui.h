@@ -12,12 +12,58 @@
 //     libraries needed)
 //   - Automatic support for resizing
 //   - C#.NET style event handlers
-//
+/*
+Example Use:
+
+	struct MyWindow :Form
+	{
+		enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
+		
+		Panel    m_panel;
+		Splitter m_split;
+
+		MyWindow()
+			:Form(Params<>()
+				.name("test")
+				.title(L"My Window")
+				.xy(2000,100)
+				.wh(800,600)
+				.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+				.main_wnd(true)
+				.wndclass(RegisterWndClass<MyWindow>()))
+			,m_panel(Panel   ::Params<>().parent(this_   ).xy(50,50).wh(Fill,Fill).anchor(EAnchor::All))
+			,m_split(Splitter::Params<>().parent(&m_panel).dock(EDock::Fill))
+		{
+			m_split.Pane0.Style('+', WS_BORDER);
+			m_split.Pane1.Style('+', WS_BORDER);
+		}
+	};
+
+	// Entry point
+	int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+	{
+		InitCtrls();
+		try
+		{
+			(void)hInstance;
+			MyWindow main;
+			main.Show();
+
+			MessageLoop loop;
+			loop.AddMessageFilter(main);
+			return loop.Run();
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA("Died: ");
+			OutputDebugStringA(ex.what());
+			OutputDebugStringA("\n");
+			return -1;
+		}
+	}
+*/
 #pragma once
 
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT _WIN32_WINNT_WIN7
-#endif
 #ifdef NOGDI
 #error The GDI is required for wingui.h
 #endif
@@ -34,22 +80,23 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <format>
 #include <type_traits>
 #include <cassert>
-#include <tchar.h>
-#include <atlbase.h>
-#include <atlstdthunk.h>
+
+#include <winsdkver.h>
+#include <sdkddkver.h>
+#include <winuser.h>
 #include <commctrl.h>
 #include <commdlg.h>
 #include <richedit.h>
 #include <shellapi.h>
 #include <shobjidl.h>
 #include <shlguid.h>
+#include <shlwapi.h>
 #include <uxtheme.h>
-#pragma warning(push,1)
-#pragma warning(disable:4458) 
 #include <gdiplus.h>
-#pragma warning(pop)
+#include <tchar.h>
 
 #define PR_WNDPROCDEBUG 0
 #if PR_WNDPROCDEBUG
@@ -60,6 +107,11 @@
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "uxtheme.lib")
 #pragma comment(lib, "gdiplus.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+// Required for thunking
+#include <atlstdthunk.h>
+#pragma comment(lib, "atls.lib")
 
 // Disable warnings
 #pragma warning(push)
@@ -80,6 +132,10 @@ namespace pr
 		struct Form;
 
 		#pragma region Constants
+		// Control Id range
+		inline constexpr int ID_BEG = 0x00000001;
+		inline constexpr int ID_END = 0x00010000;
+
 		// Special id for controls that don't need an id.
 		// Id's should be in the range [0,0xffff] because they are sometimes
 		// represented by a 'ushort'. Auto size/positioning also packs a int32
@@ -418,11 +474,13 @@ namespace pr
 		}
 		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator | (T lhs, T rhs)
 		{
-			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) | static_cast<std::underlying_type_t<T>>(rhs));
+			auto r = static_cast<std::underlying_type_t<T>>(lhs) | static_cast<std::underlying_type_t<T>>(rhs);
+			return static_cast<T>(r);
 		}
 		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator & (T lhs, T rhs)
 		{
-			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs));
+			auto r = static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs);
+			return static_cast<T>(r);
 		}
 		
 		// Convert an error code into an error message
@@ -436,18 +494,18 @@ namespace pr
 		}
 
 		// Test an HRESULT and throw on error
-		inline void Throw(HRESULT result, std::string message)
+		inline void Check(HRESULT result, std::string message)
 		{
 			if (SUCCEEDED(result)) return;
 			throw std::runtime_error(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
 		}
-		inline void Throw(BOOL result, std::string message)
+		inline void Check(BOOL result, std::string message)
 		{
 			if (result != 0) return;
 			auto hr = HRESULT(GetLastError());
-			Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
+			Check(SUCCEEDED(hr) ? E_FAIL : hr, message);
 		}
-		inline void Throw(gdi::Status result, std::string message)
+		inline void Check(gdi::Status result, std::string message)
 		{
 			if (result == gdi::Status::Ok) return;
 			throw std::runtime_error(message.c_str());
@@ -457,7 +515,7 @@ namespace pr
 		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
 		{
 			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
-			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
+			Check(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
 		}
 
 		// Replace macros from windowsx.h
@@ -589,12 +647,28 @@ namespace pr
 			}
 		};
 
+		// Basically CComPtr with needing to include atlbase.h
+		template <typename T> struct CComPtr
+		{
+			T* p;
+			CComPtr(T* ptr = nullptr) :p(ptr) { if (p != nullptr) p->AddRef(); }
+			CComPtr(CComPtr&& rhs) :p() { std::swap(p, rhs.p); }
+			CComPtr(CComPtr const&) = delete;
+			CComPtr& operator = (CComPtr&& rhs) noexcept { std::swap(p, rhs.p); return *this; }
+			CComPtr& operator = (CComPtr const&) = delete;
+			~CComPtr() { if (p != nullptr) p->Release(); }
+			explicit operator bool() const { return p != nullptr; }
+			bool operator == (nullptr_t) const { return p == nullptr; }
+			T* operator -> () const { return p; }
+		};
+
 		// Create a COM IStream from resource data
 		inline CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type)
 		{
 			// Find the resource and it's size
 			auto hres = ::FindResourceW(inst, resource, res_type);
-			auto data = hres != nullptr ? ::LockResource(::LoadResource(inst, hres)) : nullptr;
+			auto res = hres != nullptr ? ::LoadResource(inst, hres) : nullptr;
+			auto data = res != nullptr ? ::LockResource(res) : nullptr;
 			auto size = hres != nullptr ? ::SizeofResource(inst, hres) : 0;
 			if (!data || !size)
 				throw std::runtime_error("Bitmap resource not found");
@@ -668,7 +742,7 @@ namespace pr
 			Point& topleft()                              { return points()[0]; }
 			Point& bottomright()                          { return points()[1]; }
 
-			// This functions return false if the result is a zero rect (that's why I'm not using Throw())
+			// This function returns false if the result is a zero rect (that's why I'm not using Check())
 			// The returned rect is the bounding box of the geometric operation (note how that effects subtract)
 			bool Contains(Point const& pt, bool incl = false) const
 			{
@@ -826,18 +900,18 @@ namespace pr
 			};
 			EMask m_mask;
 			
-			MinMaxInfo()
+			MinMaxInfo(UINT dpi)
 				:MINMAXINFO()
-				,m_mask()
+				, m_mask()
 			{
-				ptMaxSize.x      = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
-				ptMaxSize.y      = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
-				ptMaxPosition.x  = ::GetSystemMetrics(SM_XVIRTUALSCREEN) + ptMaxSize.x;
-				ptMaxPosition.y  = ::GetSystemMetrics(SM_YVIRTUALSCREEN) + ptMaxSize.y;
-				ptMinTrackSize.x = ::GetSystemMetrics(SM_CXMINTRACK);
-				ptMinTrackSize.y = ::GetSystemMetrics(SM_CYMINTRACK);
-				ptMaxTrackSize.x = ::GetSystemMetrics(SM_CXMAXTRACK);
-				ptMaxTrackSize.y = ::GetSystemMetrics(SM_CYMAXTRACK);
+				ptMaxSize.x      = GetSystemMetricsForDpi(SM_CXVIRTUALSCREEN, dpi);
+				ptMaxSize.y      = GetSystemMetricsForDpi(SM_CYVIRTUALSCREEN, dpi);
+				ptMaxPosition.x  = GetSystemMetricsForDpi(SM_XVIRTUALSCREEN, dpi) + ptMaxSize.x;
+				ptMaxPosition.y  = GetSystemMetricsForDpi(SM_YVIRTUALSCREEN, dpi) + ptMaxSize.y;
+				ptMinTrackSize.x = GetSystemMetricsForDpi(SM_CXMINTRACK, dpi);
+				ptMinTrackSize.y = GetSystemMetricsForDpi(SM_CYMINTRACK, dpi);
+				ptMaxTrackSize.x = GetSystemMetricsForDpi(SM_CXMAXTRACK, dpi);
+				ptMaxTrackSize.y = GetSystemMetricsForDpi(SM_CYMAXTRACK, dpi);
 			}
 			Rect Bounds() const
 			{
@@ -877,7 +951,7 @@ namespace pr
 			{
 				MonitorInfo info;
 				auto hmon = MonitorFromWindow(hwnd, flags);
-				Throw(::GetMonitorInfoW(hmon, &info), "Get monitor info failed");
+				Check(::GetMonitorInfoW(hmon, &info), "Get monitor info failed");
 				return info;
 			}
 		};
@@ -888,7 +962,7 @@ namespace pr
 			NonClientMetrics() :NONCLIENTMETRICSW()
 			{
 				cbSize = sizeof(NONCLIENTMETRICSW);
-				Throw(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), this, 0), "Failed to read non-client system metrics");
+				Check(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), this, 0), "Failed to read non-client system metrics");
 			}
 		};
 
@@ -1069,7 +1143,7 @@ namespace pr
 			~Brush()
 			{
 				if (!m_owned || !m_obj) return;
-				Throw(::DeleteObject(m_obj), "Delete brush failed. It's likely still in use");
+				Check(::DeleteObject(m_obj), "Delete brush failed. It's likely still in use");
 			}
 			Brush()
 				:m_obj(nullptr)
@@ -1083,7 +1157,7 @@ namespace pr
 				:m_obj(CreateSolidBrush(col))
 				,m_owned(true)
 			{
-				Throw(m_obj != 0, "Failed to create solid brush");
+				Check(m_obj != 0, "Failed to create solid brush");
 			}
 			Brush(Brush&& rhs)
 				:m_obj(rhs.m_obj)
@@ -1136,7 +1210,7 @@ namespace pr
 				// Create a 'gray' pattern
 				WORD pat[8] = {0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa};
 				auto bm_gray = CreateBitmap(8, 8, 1, 1, &pat);
-				Throw(bm_gray != nullptr, "Failed to create half-tone brush");
+				Check(bm_gray != nullptr, "Failed to create half-tone brush");
 				auto bsh = ::CreatePatternBrush(bm_gray);
 				::DeleteObject(bm_gray);
 				return std::move(Brush(bsh, true));
@@ -1158,9 +1232,9 @@ namespace pr
 			{
 				if (!m_owned || !m_obj) return;
 				switch (m_type) {
-				case EType::Bitmap: Throw(::DeleteObject(HGDIOBJ(m_obj)), "Delete bitmap failed. It's likely still in use"); break;
-				case EType::Icon:   Throw(::DestroyIcon(HICON(m_obj)), "Delete icon failed. It's likely still in use"); break;
-				case EType::Cursor: Throw(::DestroyCursor(HCURSOR(m_obj)), "Delete cursor failed. It's likely still in use"); break;
+				case EType::Bitmap: Check(::DeleteObject(HGDIOBJ(m_obj)), "Delete bitmap failed. It's likely still in use"); break;
+				case EType::Icon:   Check(::DestroyIcon(HICON(m_obj)), "Delete icon failed. It's likely still in use"); break;
+				case EType::Cursor: Check(::DestroyCursor(HCURSOR(m_obj)), "Delete cursor failed. It's likely still in use"); break;
 				}
 			}
 			Image()
@@ -1221,7 +1295,7 @@ namespace pr
 			static Image CreateBitmap(int sx, int sy, UINT planes = 1, UINT bit_count = 32, void const* data = nullptr)
 			{
 				auto obj = ::CreateBitmap(sx, sy, planes, bit_count, data);
-				Throw(obj != 0, "Failed to create bitmap");
+				Check(obj != 0, "Failed to create bitmap");
 				return std::move(Image(obj, EType::Bitmap, true));
 			}
 
@@ -1229,7 +1303,7 @@ namespace pr
 			static Image CreateBitmap(HDC hdc, int sx, int sy)
 			{
 				auto obj = ::CreateCompatibleBitmap(hdc, sx, sy);
-				Throw(obj != 0, "Failed to create bitmap");
+				Check(obj != 0, "Failed to create bitmap");
 				return std::move(Image(obj, EType::Bitmap, true));
 			}
 
@@ -1265,7 +1339,7 @@ namespace pr
 			static BITMAP Info(HBITMAP hbmp)
 			{
 				BITMAP info = {};
-				if (hbmp) Throw(::GetObjectW(hbmp, sizeof(BITMAP), &info), "Get Bitmap info failed");
+				if (hbmp) Check(::GetObjectW(hbmp, sizeof(BITMAP), &info), "Get Bitmap info failed");
 				return info;
 			}
 
@@ -1285,7 +1359,7 @@ namespace pr
 				if (type == EType::Icon || type == EType::Cursor || type == EType::EnhMetaFile || (type == EType::Bitmap && fit == EFit::Unchanged))
 				{
 					auto h = ::LoadImageW(file ? nullptr : hinst, resource, (int)type, cx, cy, flags);
-					Throw(h != nullptr, "LoadImage failed");
+					Check(h != nullptr, "LoadImage failed");
 					return std::move(Image(h, type, true));
 				}
 
@@ -1316,7 +1390,7 @@ namespace pr
 				if (fit == EFit::Unchanged)
 				{
 					// Create the GDI bitmap from the GDI+ bitmap
-					Throw(orig.GetHBITMAP(gdi::ARGB(gdi::Color::White), &hbmp), "Failed to get HBITMAP from GDI+ bitmap");
+					Check(orig.GetHBITMAP(gdi::ARGB(gdi::Color::White), &hbmp), "Failed to get HBITMAP from GDI+ bitmap");
 				}
 				else // Scaled/tiled/etc
 				{
@@ -1370,7 +1444,7 @@ namespace pr
 					}
 
 					// Create the GDI bitmap from the GDI+ bitmap
-					Throw(bmp.GetHBITMAP(gdi::ARGB(gdi::Color::White), &hbmp), "Failed to get HBITMAP from GDI+ bitmap");
+					Check(bmp.GetHBITMAP(gdi::ARGB(gdi::Color::White), &hbmp), "Failed to get HBITMAP from GDI+ bitmap");
 				}
 
 				// Return the scaled image
@@ -1389,7 +1463,7 @@ namespace pr
 			~Accel()
 			{
 				if (!m_owned || !m_obj) return;
-				Throw(::DestroyAcceleratorTable(m_obj), "Delete accelerators failed. It's likely still in use");
+				Check(::DestroyAcceleratorTable(m_obj), "Delete accelerators failed. It's likely still in use");
 			}
 			Accel()
 				:m_obj(nullptr)
@@ -1437,8 +1511,8 @@ namespace pr
 		struct PaintStruct :PAINTSTRUCT
 		{
 			HWND m_hwnd;
-			PaintStruct(HWND hwnd) :m_hwnd(hwnd) { Throw(::BeginPaint(m_hwnd, this) != nullptr, "BeginPaint failed"); }
-			~PaintStruct()                       { Throw(::EndPaint(m_hwnd, this), "EndPaint failed"); }
+			PaintStruct(HWND hwnd) :m_hwnd(hwnd) { Check(::BeginPaint(m_hwnd, this) != nullptr, "BeginPaint failed"); }
+			~PaintStruct()                       { Check(::EndPaint(m_hwnd, this), "EndPaint failed"); }
 		};
 
 		// TrackMouseEvent
@@ -1490,8 +1564,8 @@ namespace pr
 			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773236(v=vs.85).aspx
 			void Text(HDC hdc, int part_id, int state_id, LPCWSTR text, int count, DWORD flags, RECT* rect, DTTOPTS const* opts)
 			{
-				Throw(m_htheme != nullptr, "Themes not available");
-				Throw(::DrawThemeTextEx(m_htheme, hdc, part_id, state_id, text, count, flags, rect, opts), "Draw theme text failed");
+				Check(m_htheme != nullptr, "Themes not available");
+				Check(::DrawThemeTextEx(m_htheme, hdc, part_id, state_id, text, count, flags, rect, opts), "Draw theme text failed");
 			}
 
 			// 'hdc' = what to draw on
@@ -1500,16 +1574,16 @@ namespace pr
 			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773233(v=vs.85).aspx
 			void Bkgd(HDC hdc, int part_id, int state_id, RECT const* rect, DTBGOPTS const* opts)
 			{
-				Throw(m_htheme != nullptr, "Themes not available");
-				Throw(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
+				Check(m_htheme != nullptr, "Themes not available");
+				Check(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
 			}
 
 			// Retrieves the size of the content area for the background defined by the visual style.
 			Rect BkgdContentRect(HDC hdc, int part_id, int state_id, RECT const* bounding_rect)
 			{
 				Rect res;
-				Throw(m_htheme != nullptr, "Themes not available");
-				Throw(::GetThemeBackgroundContentRect(m_htheme, hdc, part_id, state_id, bounding_rect, &res), "Get themed background content rect failed");
+				Check(m_htheme != nullptr, "Themes not available");
+				Check(::GetThemeBackgroundContentRect(m_htheme, hdc, part_id, state_id, bounding_rect, &res), "Get themed background content rect failed");
 				return res;
 			}
 		};
@@ -1590,7 +1664,7 @@ namespace pr
 				if (m_atom == 0)
 				{
 					m_atom = ATOM(::RegisterClassExW(this));
-					Throw(m_atom != 0, "RegisterClassEx failed");
+					Check(m_atom != 0, "RegisterClassEx failed");
 					m_unreg = true;
 				}
 				return *this;
@@ -1856,8 +1930,8 @@ namespace pr
 			{
 				assert(m_menu != nullptr);
 				auto i = (idx == -1) ? DWORD(Count()) : DWORD(idx);
-				//Throw(::InsertMenuW(m_menu, i, MF_BYPOSITION, info.wID, info.dwTypeData), "InsertMenu failed");
-				Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
+				//Check(::InsertMenuW(m_menu, i, MF_BYPOSITION, info.wID, info.dwTypeData), "InsertMenu failed");
+				Check(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
 			}
 
 			// Set a pop-up menu by name. If it exists already, then it is replaced, otherwise insert
@@ -1865,7 +1939,7 @@ namespace pr
 			{
 				auto index = IndexByName(text);
 				auto info = MenuItem().text(text).submenu(submenu);
-				Throw(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
+				Check(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
 			}
 
 			// Return a sub menu by address
@@ -2252,7 +2326,7 @@ namespace pr
 				MSG msg = {};
 				for (int result; (result = ::GetMessageW(&msg, NULL, 0, 0)) != 0;)
 				{
-					Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
+					Check(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
 					HandleMessage(msg);
 				}
 				return static_cast<int>(msg.wParam);
@@ -2487,31 +2561,42 @@ namespace pr
 			// Controls/Forms are laid out assuming 96 DPI.
 			// This struct is used to scale positions/sizes to pixels.
 			// All operations for a control after scaling are in pixels
-			gdi::PointF m_dt_dpi; // The design-time DPI
-			gdi::PointF m_rt_dpi; // The run-time DPI
+			int m_dt_dpi; // The design-time DPI
+			int m_rt_dpi; // The run-time DPI
 
-			DpiScale(gdi::PointF const& dt_dpi, bool from_font = false)
+			DpiScale(int dt_dpi, bool from_font = false)
 				:m_dt_dpi(dt_dpi)
 				,m_rt_dpi(from_font ? DPIFromFont() : DPI())
 			{}
 
+			// Get/Set the current DPI
+			int CurrentDPI() const
+			{
+				return m_rt_dpi;
+			}
+			void CurrentDPI(int dpi)
+			{
+				m_rt_dpi = dpi;
+			}
+
 			// Scale from 96 DPI to the current DPI
-			int   X(int   x) const { return int(x * m_rt_dpi.X / m_dt_dpi.X + (x >= 0 ? 0.5f : -0.5f)); }
-			int   Y(int   y) const { return int(y * m_rt_dpi.Y / m_dt_dpi.Y + (y >= 0 ? 0.5f : -0.5f)); }
-			float X(float x) const { return x * m_rt_dpi.X / m_rt_dpi.X; }
-			float Y(float y) const { return y * m_rt_dpi.Y / m_rt_dpi.Y; }
+			int   X(int   x) const { return int(x * m_rt_dpi / float(m_dt_dpi) + (x >= 0 ? 0.5f : -0.5f)); }
+			int   Y(int   y) const { return int(y * m_rt_dpi / float(m_dt_dpi) + (y >= 0 ? 0.5f : -0.5f)); }
+			float X(float x) const { return x * m_rt_dpi / float(m_rt_dpi); }
+			float Y(float y) const { return y * m_rt_dpi / float(m_rt_dpi); }
 
 			// Return the current DPI
-			static gdi::PointF DPI()
+			static int DPI()
 			{
+				// Windows assumes square DPI
 				ClientDC dc(nullptr);
-				auto x = gdi::REAL(::GetDeviceCaps(dc, LOGPIXELSX));
-				auto y = gdi::REAL(::GetDeviceCaps(dc, LOGPIXELSY));
-				return gdi::PointF(x, y);
+				auto x = ::GetDeviceCaps(dc, LOGPIXELSX);
+				auto y = ::GetDeviceCaps(dc, LOGPIXELSY);
+				return std::max(x, y);
 			}
 
 			// Return the estimated DPI by comparing the size of system font to the system font size at 96 DPI
-			static gdi::PointF DPIFromFont()
+			static int DPIFromFont()
 			{
 				// Measure the size of the system font at the current DPI.
 				// We'll use this to auto-scale all control positions and sizes.
@@ -2521,13 +2606,13 @@ namespace pr
 				ClientDC dc(nullptr);
 				SelectObject old(dc, font);
 				Size sz; TEXTMETRICW tm;
-				Throw(::GetTextExtentPointW(dc, L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 52, &sz), "GetTextExtentPoint failed when calculating scaling factor");
-				Throw(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed when calculating scaling factor");
+				Check(::GetTextExtentPointW(dc, L"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 52, &sz), "GetTextExtentPoint failed when calculating scaling factor");
+				Check(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed when calculating scaling factor");
 
 				// Size of the system font 'MS Shell Dlg' at 96 DPI is 6.0f, 13.0f
-				return gdi::PointF(
-					(sz.cx*1.9230769e-2f * 96.0f) /  6.0f, //1/52 = 0.01923...
-					(tm.tmHeight         * 96.0f) / 13.0f);
+				return std::max(
+					static_cast<int>((sz.cx*1.9230769e-2f * 96.0f) /  6.0f), //1/52 = 0.01923...
+					static_cast<int>((tm.tmHeight         * 96.0f) / 13.0f));
 			}
 		};
 		#pragma endregion
@@ -2670,7 +2755,7 @@ namespace pr
 				{
 					auto hwnd = CreateWindowExW(0, L"STATIC", L"", 0, IsAutoPos(x)?Dflt:x, IsAutoPos(y)?Dflt:y, IsAutoSize(w)?Dflt:w, IsAutoSize(h)?Dflt:h, nullptr, nullptr, nullptr, nullptr);
 					auto cleanup = OnScopeExit([=]{ ::DestroyWindow(hwnd); });
-					Throw(hwnd != nullptr, "Failed to create temporary window");
+					Check(hwnd != nullptr, "Failed to create temporary window");
 					Rect rc; ::GetWindowRect(hwnd, &rc);
 					if (x == Dflt) x = rc.left;
 					if (y == Dflt) y = rc.top;
@@ -2733,6 +2818,7 @@ namespace pr
 			DlgTemplate()
 				:m_mem()
 				,m_item_base()
+				,m_has_menu()
 			{}
 			template <typename TParams, typename = typename TParams::this_type>
 			DlgTemplate(TParams const& p)
@@ -2761,7 +2847,7 @@ namespace pr
 				// Auto size to the parent
 				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 				{
-					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo().Bounds();
+					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo(p.m_dpi).Bounds();
 					if (id == -1) throw std::runtime_error("Auto size not supported for dialog templates");
 					throw std::runtime_error("DlgTemplate can only be positioned related to the screen or owner window");
 				});
@@ -2870,7 +2956,7 @@ namespace pr
 						// Get the size of the dialog window client area
 						auto& h = hdr();
 						auto adj = Rect();
-						Throw(::AdjustWindowRectEx(&adj, h.style, BOOL(m_has_menu), h.dwExtendedStyle), "AdjustWindowRectEx failed.");
+						Check(::AdjustWindowRectEx(&adj, h.style, BOOL(m_has_menu), h.dwExtendedStyle), "AdjustWindowRectEx failed.");
 						return Rect(h.x - adj.left, h.y - adj.top, h.x + h.cx - adj.right, h.y + h.cy - adj.bottom);
 					}
 					else if (id == -1)
@@ -2897,7 +2983,7 @@ namespace pr
 
 				// Add a description of the item
 				m_item_base.push_back(m_mem.size());
-				auto item = DLGITEMTEMPLATE{cast<DWORD>(p.m_style), cast<DWORD>(p.m_style_ex), cast<short>(x), cast<short>(y), cast<short>(w), cast<short>(h), cast<WORD>(p.m_id)};
+				auto item = DLGITEMTEMPLATE{cast<DWORD>(p.m_style), cast<DWORD>(p.m_style_ex), cast<short>(x), cast<short>(y), cast<short>(w), cast<short>(h), cast<WORD>(p.m_id.value)};
 				append(m_mem, &item, sizeof(item));
 
 				// Immediately following each DLGITEMTEMPLATE structure is a class array that specifies the window class of the control.
@@ -2972,6 +3058,19 @@ namespace pr
 		};
 		#pragma endregion
 
+		#pragma region Control ID
+		struct CtrlId
+		{
+			int value;
+			CtrlId(int id) :value(id & 0xFFFF) {}
+			static CtrlId NextId()
+			{
+				static int s_id = ID_BEG;
+				return CtrlId(++s_id);
+			}
+		};
+		#pragma endregion
+
 		#pragma region CreateParams
 
 		// Notes:
@@ -2998,7 +3097,7 @@ namespace pr
 			wchar_t const*    m_text;           // Control text
 			int               m_x, m_y;         // Negative values for 'x,y' mean relative to the right,bottom of the parent. Remember auto position Left|RightOf, etc..
 			int               m_w, m_h;         // Can use Control::Fill, etc
-			int               m_id;             // The control id, used to match the control to windows created in dialog resources
+			CtrlId            m_id;             // The control id, used to match the control to windows created in dialog resources
 			WndRef            m_parent;         // The control that contains this control, or form that owns this form
 			EAnchor           m_anchor;         // How to move/resize this control when the parent resizes
 			EDock             m_dock;           // How to position/size this control within its parent
@@ -3014,7 +3113,7 @@ namespace pr
 			bool              m_allow_drop;     // True if the control is a drag and drop target
 			bool              m_dbl_buffer;     // True if painting is double buffered for this control
 			void*             m_init_param;     // The initialisation data to pass through to WM_CREATE
-			gdi::PointF       m_dpi;            // The design-time DPI of the control's size and position.
+			int               m_dpi;            // The design-time DPI of the control's size and position.
 			Rect              m_margin;         // Stored as an addition to the bounding rect (i.e. negative l,t)
 			Rect              m_padding;        // Stored as an addition to the bounding rect (i.e. negative r,b)
 			MinMaxInfo        m_min_max_info;   // The size limits on the control
@@ -3032,7 +3131,7 @@ namespace pr
 				,m_y(0)
 				,m_w(50)
 				,m_h(50)
-				,m_id(ID_UNUSED)
+				,m_id(CtrlId::NextId())
 				,m_parent()
 				,m_anchor(EAnchor::None)
 				,m_dock(EDock::None)
@@ -3048,10 +3147,10 @@ namespace pr
 				,m_allow_drop(false)
 				,m_dbl_buffer(false)
 				,m_init_param()
-				,m_dpi(96,96)
+				,m_dpi(USER_DEFAULT_SCREEN_DPI)
 				,m_margin(-0, -0, 0, 0)
 				,m_padding()
-				,m_min_max_info()
+				,m_min_max_info(m_dpi)
 				,clone(Clone)
 			{}
 			virtual ~CtrlParams() {}
@@ -3124,7 +3223,7 @@ namespace pr
 				m_text = t ? t : L"";
 				return me();
 			}
-			this_type& dpi(gdi::PointF dpi)
+			this_type& dpi(int dpi)
 			{
 				m_dpi = dpi;
 				return me();
@@ -3134,7 +3233,7 @@ namespace pr
 				// Note: If you're transferring a resource dialog to code, this scaling factor assumes
 				// the dialog resource uses 'MS Shell Dlg (8)'. If not, then the scaling factor will be different
 				m_client_wh = true;
-				return dpi(gdi::PointF(4 * 96 / 6.0f, 8 * 96 / 13.0f));
+				return dpi(static_cast<int>(std::max(4 * 96 / 6.0f, 8 * 96 / 13.0f)));
 			}
 			this_type& xy(int x, int y)
 			{
@@ -3161,7 +3260,7 @@ namespace pr
 				m_client_wh = client;
 				return me();
 			}
-			this_type& id(int id_)
+			this_type& id(CtrlId id_)
 			{
 				m_id = id_;
 				return me();
@@ -3326,6 +3425,7 @@ namespace pr
 			bool               m_dlg_behaviour; // True if this form has dialog-like keyboard shortcuts
 			bool               m_hide_on_close; // True if closing the form only makes it hidden
 			bool               m_pin_window;    // True if this form moves with it's parent
+			bool               m_dpi_aware;     // True if per-monitor DPI awareness should be enabled
 
 			FormParams()
 				:m_start_pos    (EStartPosition::Default)
@@ -3337,6 +3437,9 @@ namespace pr
 				,m_hide_on_close(false)
 				,m_pin_window   (false)
 			{
+				// Form's with Id's are normally dialogs in a resource
+				this->m_id.value = ID_UNUSED;
+
 				this->m_style = DefaultFormStyle;
 				this->m_style_ex = DefaultFormStyleEx;
 
@@ -3416,6 +3519,11 @@ namespace pr
 			{
 				m_pin_window = p;
 				this->m_anchor = p ? EAnchor::TopLeft : EAnchor::None;
+				return this->me();
+			}
+			this_type& dpi_aware(bool on = true)
+			{
+				m_dpi_aware = on;
 				return this->me();
 			}
 		};
@@ -3590,6 +3698,12 @@ namespace pr
 				return m_hwnd;
 			}
 
+			// Control ID
+			int id() const
+			{
+				return m_cp->m_id.value;
+			}
+
 			// The parameters used to create this control (but updated to the current state)
 			template <typename TParams = Params<>> TParams const& cp() const
 			{
@@ -3681,13 +3795,13 @@ namespace pr
 				// Set w,h based on docking to the parent
 				switch (p.m_dock)
 				{
-				case EDock::None: break;
-				case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
-				case EDock::Top:    p.m_w = Fill; break;
-				case EDock::Bottom: p.m_w = Fill; break;
-				case EDock::Left:   p.m_h = Fill; break;
-				case EDock::Right:  p.m_h = Fill; break;
-				default: throw std::runtime_error("Unknown dock style");
+					case EDock::None: break;
+					case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
+					case EDock::Top:    p.m_w = Fill; break;
+					case EDock::Bottom: p.m_w = Fill; break;
+					case EDock::Left:   p.m_h = Fill; break;
+					case EDock::Right:  p.m_h = Fill; break;
+					default: throw std::runtime_error("Unknown dock style");
 				}
 
 				// Scale the control position/size for the current DPI (preserving the auto pos size bits)
@@ -3704,7 +3818,7 @@ namespace pr
 				if (p.m_client_wh)
 				{
 					auto r = Rect(0, 0, w, h);
-					Throw(::AdjustWindowRectEx(&r, p.m_style, p.m_menu != nullptr, p.m_style_ex), "AdjustWindowRectEx failed.");
+					Check(::AdjustWindowRectEx(&r, p.m_style, p.m_menu != nullptr, p.m_style_ex), "AdjustWindowRectEx failed.");
 					w = r.width();
 					h = r.height();
 				}
@@ -3721,7 +3835,7 @@ namespace pr
 				// Determine the value to pass as the HMENU parameter in CreateWindowEx.
 				// For pop-up and overlapped windows this should be a valid menu handle or null
 				// Otherwise, it should be the id of the control being created
-				auto menu = p.top_level() ? static_cast<HMENU>(m_menu) : (HMENU() + p.m_id);
+				auto menu = p.top_level() ? static_cast<HMENU>(m_menu) : (HMENU() + p.m_id.value);
 
 				// Break just before a control/form is created
 				//if (strcmp(p.m_name, "ldr-measure-ui") == 0) _CrtDbgBreak();
@@ -3731,7 +3845,7 @@ namespace pr
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, p.m_init_param);
 				auto hwnd = ::CreateWindowExW(p.m_style_ex, p.atom(), p.m_text, p.m_style, x, y, w, h, p.m_parent, menu, p.m_hinst, &init);
-				Throw(hwnd != nullptr, FmtS("CreateWindowEx failed for window class '%S', instance '%s'.", p.wcn(), p.m_name));
+				Check(hwnd != nullptr, FmtS("CreateWindowEx failed for window class '%S', instance '%s'.", p.wcn(), p.m_name));
 
 				// If we're creating a control whose window class we don't control (i.e. a system/third party control),
 				// then Attach won't have been called because the InitialWndProc function was not called (indicated by m_hwnd == nullptr).
@@ -3807,7 +3921,7 @@ namespace pr
 					// Update the parent from windows' point of view for WS_CHILD windows
 					if (::GetParent(m_hwnd) != m_parent.hwnd() && !cp().top_level())
 					{
-						Throw(::SetParent(m_hwnd, m_parent.hwnd()) != nullptr, "SetParent failed");
+						Check(::SetParent(m_hwnd, m_parent.hwnd()) != nullptr, "SetParent failed");
 
 						// Update the UI state based on the new parent
 						auto hwnd = m_parent.hwnd() ? m_parent.hwnd() : m_hwnd;
@@ -4070,7 +4184,7 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				ClientDC dc(m_hwnd);
 				TextMetrics tm;
-				Throw(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed");
+				Check(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed");
 				return tm;
 			}
 
@@ -4115,7 +4229,7 @@ namespace pr
 			virtual void Invalidate(bool erase = false, Rect* rect = nullptr, bool include_children = false)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw(::InvalidateRect(m_hwnd, rect, erase), "InvalidateRect failed");
+				Check(::InvalidateRect(m_hwnd, rect, erase), "InvalidateRect failed");
 				if (include_children)
 				{
 					for (auto c : m_child)
@@ -4127,7 +4241,7 @@ namespace pr
 			virtual void Validate(Rect const* rect = nullptr)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw(::ValidateRect(m_hwnd, rect), "ValidateRect failed");
+				Check(::ValidateRect(m_hwnd, rect), "ValidateRect failed");
 			}
 
 			// Get/Set the control's background colour
@@ -4211,12 +4325,12 @@ namespace pr
 				if (grow)
 				{
 					r = rect;
-					Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+					Check(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
 				}
 				else
 				{
 					r = Rect();
-					Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+					Check(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
 					r = rect.Adjust(-r.left, -r.top, -r.right, -r.bottom);
 				}
 				return r;
@@ -4234,12 +4348,12 @@ namespace pr
 					auto child_rect = child->ParentRect().Adjust(child->cp().m_margin);
 					switch (child->cp().m_dock)
 					{
-					default: throw std::runtime_error("Unknown dock style");
 					case EDock::Fill:   return Rect();
 					case EDock::Left:   rect.left   += child_rect.width(); break;
 					case EDock::Right:  rect.right  -= child_rect.width(); break;
 					case EDock::Top:    rect.top    += child_rect.height(); break;
 					case EDock::Bottom: rect.bottom -= child_rect.height(); break;
+					default: throw std::runtime_error("Unknown dock style");
 					}
 				}
 				return rect;
@@ -4291,7 +4405,7 @@ namespace pr
 				assert(::IsWindow(hwnd));
 
 				Rect r;
-				Throw(::GetClientRect(hwnd, &r), "GetClientRect failed.");
+				Check(::GetClientRect(hwnd, &r), "GetClientRect failed.");
 				
 				// If 'hwnd' is a 'Control', adjust for it's padding
 				if (padded)
@@ -4316,7 +4430,7 @@ namespace pr
 			{
 				assert(::IsWindow(hwnd));
 				Rect r;
-				Throw(::GetWindowRect(hwnd, &r), "GetWindowRect failed.");
+				Check(::GetWindowRect(hwnd, &r), "GetWindowRect failed.");
 				return r;
 			}
 			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, EWindowPos flags = EWindowPos::NoZorder)
@@ -4332,7 +4446,7 @@ namespace pr
 				}
 
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
-				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
+				Check(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
 				Invalidate();
 			}
@@ -4372,7 +4486,7 @@ namespace pr
 				// SetWindowPos takes client space coordinates
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
 				// Note: this does not call Invalidate internally (tested using GetUpdateRect)
-				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
+				Check(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
 				Invalidate();
 			}
@@ -4391,14 +4505,14 @@ namespace pr
 			// Convert a screen space point to client window space
 			Point PointToClient(Point pt) const
 			{
-				Throw(::ScreenToClient(m_hwnd, &pt), "ScreenToClient failed");
+				Check(::ScreenToClient(m_hwnd, &pt), "ScreenToClient failed");
 				return pt;
 			}
 
 			// Convert a client window space point to screen space
 			Point PointToScreen(Point pt) const
 			{
-				Throw(::ClientToScreen(m_hwnd, &pt), "ClientToScreen failed");
+				Check(::ClientToScreen(m_hwnd, &pt), "ClientToScreen failed");
 				return pt;
 			}
 
@@ -4447,10 +4561,10 @@ namespace pr
 
 					// Centre within screen coordinates
 					HMONITOR monitor = ::MonitorFromWindow(centre_hwnd ? centre_hwnd : m_hwnd, MONITOR_DEFAULTTONEAREST);
-					Throw(monitor != nullptr, "Failed to determine the monitor containing the centre on window");
+					Check(monitor != nullptr, "Failed to determine the monitor containing the centre on window");
 
 					MonitorInfo minfo;
-					Throw(::GetMonitorInfoW(monitor, &minfo), "Failed to get info on monitor containing centre on window");
+					Check(::GetMonitorInfoW(monitor, &minfo), "Failed to get info on monitor containing centre on window");
 
 					area = minfo.rcWork;
 					centre = centre_hwnd ? ::GetWindowRect(centre_hwnd, &centre),centre : area;
@@ -4482,7 +4596,7 @@ namespace pr
 				if (t < area.top)                 t = area.top;
 
 				// Map screen coordinates to child coordinates
-				Throw(::SetWindowPos(m_hwnd, ::GetWindow(m_hwnd, GW_HWNDPREV), l, t, -1, -1, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE), "Failed to centre window");
+				Check(::SetWindowPos(m_hwnd, ::GetWindow(m_hwnd, GW_HWNDPREV), l, t, -1, -1, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE), "Failed to centre window");
 			}
 
 			// Position this window relative to it's parent
@@ -4786,7 +4900,7 @@ namespace pr
 								DefWndProc(WM_PRINTCLIENT, (WPARAM)mem.m_hdc, LPARAM(PRF_CHECKVISIBLE | PRF_NONCLIENT | PRF_CLIENT));
 
 							// Copy to the screen buffer
-							Throw(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
+							Check(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
 
 							// Mark the update rect as updated
 							Validate();
@@ -4813,7 +4927,16 @@ namespace pr
 						}
 						break;
 					}
+					case WM_DPICHANGED:
+					{
+						auto dpi = static_cast<int>(::GetDpiForWindow(m_hwnd));
+						m_metrics.CurrentDPI(dpi);
+						[[fallthrough]];
+					}
 					case WM_WINDOWPOSCHANGING:
+					{
+						[[fallthrough]];
+					}
 					case WM_WINDOWPOSCHANGED:
 					{
 						// WM_WINDOWPOSCHANGING/ED is sent to a form/control when it is resized using SetWindowPos (or similar).
@@ -5037,7 +5160,7 @@ namespace pr
 						for (auto& path : drop.m_filepaths)
 						{
 							path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
-							Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
+							Check(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
 							++i;
 						}
 
@@ -5085,8 +5208,8 @@ namespace pr
 							// which case why does it exist? It can't be used to interact with the control on the dialog.
 							// However, allow this control to not match a control on the dialog, for debugging convenience.
 							// The first use of it's zero m_hwnd will catch it
-							assert("Controls on a dialog must have IDs" && cp().m_id != ID_UNUSED);
-							auto hwnd = ::GetDlgItem(toplevel_hwnd, cp().m_id);
+							assert("Controls on a dialog must have IDs" && cp().m_id.value != ID_UNUSED);
+							auto hwnd = ::GetDlgItem(toplevel_hwnd, cp().m_id.value);
 							if (hwnd != nullptr)
 								Attach(hwnd);
 						}
@@ -5141,15 +5264,15 @@ namespace pr
 								auto col = m_brush_fore.colour();
 
 								// If we have a fore colour, set it, otherwise leave it as the default
-								Throw(::SetTextColor(hdc, col) != CLR_INVALID, "Set text fore colour failed");
+								Check(::SetTextColor(hdc, col) != CLR_INVALID, "Set text fore colour failed");
 							}
 							if (m_brush_back != nullptr)
 							{
 								auto col = m_brush_back.colour();
 
 								// If we have a background colour, set it and return the background brush
-								Throw(::SetBkMode(hdc, OPAQUE) != 0, "Set back colour mode failed");
-								Throw(::SetBkColor(hdc, col) != CLR_INVALID, "Set text back colour failed");
+								Check(::SetBkMode(hdc, OPAQUE) != 0, "Set back colour mode failed");
+								Check(::SetBkColor(hdc, col) != CLR_INVALID, "Set text back colour failed");
 								result = LRESULT(static_cast<HBRUSH>(m_brush_back));
 								return true;
 							}
@@ -5212,6 +5335,7 @@ namespace pr
 
 					ChildBuf(Controls const& children)
 						:m_count(children.size())
+						,m_stack()
 						,m_heap(m_count > _countof(m_stack) ? m_count    : 0U)
 						,m_buf (m_count > _countof(m_stack) ? &m_heap[0] : &m_stack[0])
 					{
@@ -5258,6 +5382,8 @@ namespace pr
 			void SaveParams(Params<> const& p)
 			{
 				if (m_cp.get() == &p) return;
+				assert("Control ID is out of range" && p.m_id.value >= ID_BEG && p.m_id.value < ID_END);
+
 				auto cp = p.clone(p);
 				assert("You've forgotten to overload 'clone' for this Params type" && typeid(*cp).hash_code() == typeid(p).hash_code());
 				m_cp.reset(cp);
@@ -5314,7 +5440,7 @@ namespace pr
 					// See if the wndclass is already registered
 					WndClassEx wc(class_name, hinst);
 					if (wc.m_atom != 0)
-						return std::move(wc);
+						return wc;
 
 					// Register the window class
 					wc.cbSize        = sizeof(WNDCLASSEXW);
@@ -5357,7 +5483,7 @@ namespace pr
 			{
 				(void)hinst;
 				auto cur = ::LoadCursor(nullptr, IDC_ARROW); // Load arrow from the system, not this EXE image
-				Throw(cur != nullptr, "Failed to load default arrow cursor");
+				Check(cur != nullptr, "Failed to load default arrow cursor");
 				return cur;
 			}
 			static HBRUSH WndBackground()
@@ -5522,12 +5648,12 @@ namespace pr
 					p = m_parent.ctrl() != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
 					switch (cp().m_dock)
 					{
-					default: throw std::runtime_error("Unknown dock style");
-					case EDock::Fill:   c = p; break;
-					case EDock::Top:    c = Rect(p.left      , p.top        , p.right    , p.top + h); break;
-					case EDock::Bottom: c = Rect(p.left      , p.bottom - h , p.right    , p.bottom ); break;
-					case EDock::Left:   c = Rect(p.left      , p.top        , p.left + w , p.bottom ); break;
-					case EDock::Right:  c = Rect(p.right - w , p.top        , p.right    , p.bottom ); break;
+						case EDock::Fill:   c = p; break;
+						case EDock::Top:    c = Rect(p.left, p.top, p.right, p.top + h); break;
+						case EDock::Bottom: c = Rect(p.left, p.bottom - h, p.right, p.bottom); break;
+						case EDock::Left:   c = Rect(p.left, p.top, p.left + w, p.bottom); break;
+						case EDock::Right:  c = Rect(p.right - w, p.top, p.right, p.bottom); break;
+						default: throw std::runtime_error("Unknown dock style");
 					}
 				}
 				RAII<bool> no_save_ofs(m_pos_ofs_suspend, true);
@@ -5550,7 +5676,7 @@ namespace pr
 					if (id == 0)
 					{
 						// Get the parent control bounds in parent client space
-						if (parent == nullptr) return MinMaxInfo().Bounds();
+						if (parent == nullptr) return MinMaxInfo(m_metrics.CurrentDPI()).Bounds();
 						return parent->ExcludeDockedChildren(parent->ClientRect()); // Includes padding in the parent
 					}
 					else if (id == -1)
@@ -5565,7 +5691,7 @@ namespace pr
 						assert("Sibling control id given without a parent" && parent != nullptr);
 						for (auto child : parent->m_child)
 						{
-							if (child->cp().m_id != id)
+							if (child->cp().m_id.value != id)
 								continue;
 
 							// If the sibling exists, get it's parent space rect
@@ -5614,7 +5740,7 @@ namespace pr
 
 				// If the window exists, measure using it's DC. If not, create a dummy window and use that
 				auto hwnd = m_hwnd;
-				if (!hwnd) Throw((hwnd = ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr)) != 0, "Create dummy window in MeasureString failed");
+				if (!hwnd) Check((hwnd = ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr)) != 0, "Create dummy window in MeasureString failed");
 				auto cleanup = OnScopeExit([=]
 				{
 					if (hwnd == m_hwnd) return;
@@ -5627,7 +5753,7 @@ namespace pr
 
 				Rect sz(0,0,max_width,0);
 				if (max_width != 0) flags |= DT_WORDBREAK;
-				Throw(DrawTextW(dc, text.c_str(), int(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
+				Check(DrawTextW(dc, text.c_str(), int(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
 				return sz.size();
 			}
 
@@ -5738,7 +5864,14 @@ namespace pr
 				,m_dialog_result()
 				,m_accel()
 				,m_modal()
-			{}
+			{
+				if (p.m_dpi_aware)
+				{
+					// This needs to be called before any HWNDs are created.
+					if constexpr (WINVER >= 0x0605)
+						Check(::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2), "DPI Aware mode not set");
+				}
+			}
 			virtual ~Form()
 			{
 				// Close on destruction
@@ -5784,13 +5917,13 @@ namespace pr
 				{
 					assert(p.m_templ->valid());
 					m_hwnd = ::CreateDialogIndirectParamW(p.m_hinst, *p.m_templ, p.m_parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
-					Throw(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
+					Check(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
 					Parent(p.m_parent);
 				}
-				else if (p.m_id != ID_UNUSED) // Create from a dialog resource id
+				else if (p.m_id.value != ID_UNUSED) // Create from a dialog resource id
 				{
-					m_hwnd = ::CreateDialogParamW(p.m_hinst, MakeIntResourceW(p.m_id), p.m_parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
-					Throw(m_hwnd != nullptr, "CreateDialogParam failed");
+					m_hwnd = ::CreateDialogParamW(p.m_hinst, MakeIntResourceW(p.m_id.value), p.m_parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
+					Check(m_hwnd != nullptr, "CreateDialogParam failed");
 					Parent(p.m_parent);
 				}
 				else // Otherwise create as a normal window
@@ -5871,8 +6004,8 @@ namespace pr
 					if (sysmenu)
 					{
 						auto idx = ::GetMenuItemCount(sysmenu) - 2;
-						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_SEPARATOR, IDC_PINWINDOW_SEP, 0), "InsertMenu failed");
-						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_STRING|(PinWindow()?MF_CHECKED:MF_UNCHECKED), IDC_PINWINDOW_OPT, L"Pin Window"), "InsertMenu failed");
+						Check(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_SEPARATOR, IDC_PINWINDOW_SEP, 0), "InsertMenu failed");
+						Check(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_STRING|(PinWindow()?MF_CHECKED:MF_UNCHECKED), IDC_PINWINDOW_OPT, L"Pin Window"), "InsertMenu failed");
 					}
 				}
 			}
@@ -5888,7 +6021,7 @@ namespace pr
 			{
 				CreateHandle();
 				auto prev = MenuStrip();
-				Throw(::SetMenu(m_hwnd, menu) != 0, "Failed to set menu");
+				Check(::SetMenu(m_hwnd, menu) != 0, "Failed to set menu");
 				return prev;
 			}
 			Menu MenuStrip(Menu::EKind kind, Menu::ItemList const& items)
@@ -5994,7 +6127,7 @@ namespace pr
 						MSG msg = {};
 						for (int result; m_dialog->m_hwnd != nullptr && (result = ::GetMessageW(&msg, nullptr, 0, 0)) != 0; )
 						{
-							Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
+							Check(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
 							//WndProcDebug(msg, "ModalLoop");
 
 							// If the message is handled as a dialog message, don't translate it
@@ -6461,7 +6594,7 @@ namespace pr
 			// Perform the action as though the button was clicked
 			void PerformClick()
 			{
-				SendMsg<int>(WM_COMMAND, MakeWParam(BN_CLICKED, cp().m_id), m_hwnd);
+				SendMsg<int>(WM_COMMAND, MakeWParam(BN_CLICKED, cp().m_id.value), m_hwnd);
 			}
 
 			// Return the ideal size for this control. Includes padding, excludes margin
@@ -6846,7 +6979,7 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				auto c = int(::SendMessageW(m_hwnd, CB_GETCOUNT, 0, 0L));
-				Throw(c != CB_ERR, "Error retrieving combo box item count");
+				Check(c != CB_ERR, "Error retrieving combo box item count");
 				return c;
 			}
 
@@ -6857,7 +6990,7 @@ namespace pr
 
 				string s;
 				auto len = ::SendMessageW(m_hwnd, CB_GETLBTEXTLEN, index, 0);
-				Throw(len != CB_ERR, std::string("ComboBox: Invalid item index ").append(std::to_string(index)));
+				Check(len != CB_ERR, std::string("ComboBox: Invalid item index ").append(std::to_string(index)));
 				if (len == 0) return s;
 
 				s.resize(len);
@@ -6981,7 +7114,7 @@ namespace pr
 			// Details view column
 			struct ColumnInfo :LVCOLUMNW
 			{
-				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt); }
+				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt).min_width(10).def_width(80); }
 				ColumnInfo& text(wchar_t const* text)  { mask |= LVCF_TEXT; pszText = const_cast<wchar_t *>(text); return *this; }
 				ColumnInfo& width(int w)               { mask |= LVCF_WIDTH; cx = w; return *this; }
 				ColumnInfo& format(int lvcfmt)         { mask |= LVCF_FMT; fmt = lvcfmt; return *this; }
@@ -6997,7 +7130,10 @@ namespace pr
 			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				std::vector<ColumnInfo> m_columns;
+
 				Params()
+					:m_columns()
 				{
 					this->wndclass(WndClassName())
 						.name("listview")
@@ -7018,6 +7154,11 @@ namespace pr
 				this_type& no_hdr_sort()
 				{
 					return this->style('+', LVS_NOSORTHEADER);
+				}
+				this_type& add_column(ColumnInfo const& cinfo)
+				{
+					m_columns.push_back(cinfo);
+					return this->me();
 				}
 			};
 
@@ -7048,7 +7189,7 @@ namespace pr
 			void Clear()
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_DELETEALLITEMS, 0, 0L), "Delete all list items failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_DELETEALLITEMS, 0, 0L), "Delete all list items failed");
 			}
 
 			// Get the number of elements in the list
@@ -7090,13 +7231,13 @@ namespace pr
 			ItemInfo Item(ItemInfo info) const
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_GETITEMW, 0, (LPARAM)&info), "Get list item failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_GETITEMW, 0, (LPARAM)&info), "Get list item failed");
 				return info;
 			}
 			void Item(ItemInfo info)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMW, 0, (LPARAM)&info), "Set list item failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMW, 0, (LPARAM)&info), "Set list item failed");
 			}
 
 			// Get/Set the state of an item
@@ -7109,14 +7250,14 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				auto info = ItemInfo(item).state(state, state_mask);
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMSTATE, item, (LPARAM)&info), "Set list item state failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMSTATE, item, (LPARAM)&info), "Set list item state failed");
 			}
 
 			// Scroll an item into view
 			void EnsureVisible(HITEM item, bool partial_ok)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_ENSUREVISIBLE, (WPARAM)item, MakeLParam(partial_ok, 0)), "Ensure list item is visible failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_ENSUREVISIBLE, (WPARAM)item, MakeLParam(partial_ok, 0)), "Ensure list item is visible failed");
 			}
 
 			// Get/Set user data on the item
@@ -7145,7 +7286,7 @@ namespace pr
 			void InsertColumn(int idx, ColumnInfo const& column)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw(::SendMessageW(m_hwnd, LVM_INSERTCOLUMNW, idx, (LPARAM)&column) != -1, "Insert column failed.");
+				Check(::SendMessageW(m_hwnd, LVM_INSERTCOLUMNW, idx, (LPARAM)&column) != -1, "Insert column failed.");
 			}
 
 			// Get/Set the width of a column
@@ -7157,7 +7298,7 @@ namespace pr
 			void ColumnWidth(int col, int width) // use 'LVSCW_AUTOSIZE'
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETCOLUMNWIDTH, col, MakeLParam(width, 0)), "Set list column width failed");
+				Check((BOOL)::SendMessageW(m_hwnd, LVM_SETCOLUMNWIDTH, col, MakeLParam(width, 0)), "Set list column width failed");
 			}
 			#pragma endregion
 
@@ -7205,7 +7346,7 @@ namespace pr
 			{
 				switch (message)
 				{
-				case WM_NOTIFY:
+					case WM_NOTIFY:
 					{
 						auto notification_hdr = (LPNMHDR)lparam;
 						if (notification_hdr->hwndFrom == m_hwnd)
@@ -7213,7 +7354,7 @@ namespace pr
 							auto hdr = reinterpret_cast<NMLISTVIEW*>(notification_hdr);
 							switch (hdr->hdr.code)
 							{
-							case LVN_ITEMCHANGING:
+								case LVN_ITEMCHANGING:
 								{
 									ItemChangingEventArgs args(*hdr);
 									OnItemChanging(args);
@@ -7225,7 +7366,7 @@ namespace pr
 									result = args.m_cancel ? TRUE : FALSE;
 									return true;
 								}
-							case LVN_ITEMCHANGED:
+								case LVN_ITEMCHANGED:
 								{
 									ItemChangedEventArgs args(*hdr);
 									OnItemChanged(args);
@@ -7242,6 +7383,16 @@ namespace pr
 					}
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+		
+			// Add columns once the control is created
+			void OnCreate(CreateStruct const& cs) override
+			{
+				Control::OnCreate(cs);
+
+				int index = 0;
+				for (auto& col : cp<Params<>>().m_columns)
+					InsertColumn(index++, col);
 			}
 		};
 		struct TreeView :Control
@@ -7323,7 +7474,7 @@ namespace pr
 			void Clear()
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, TVM_DELETEITEM, 0, (LPARAM)TVI_ROOT), "Delete all tree items failed");
+				Check((BOOL)::SendMessageW(m_hwnd, TVM_DELETEITEM, 0, (LPARAM)TVI_ROOT), "Delete all tree items failed");
 			}
 
 			// Return the root, next sibling, previous sibling, child, parent, etc item relative to 'item'
@@ -7356,13 +7507,13 @@ namespace pr
 			ItemInfo Item(ItemInfo info) const
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, TVM_GETITEMW, 0, (LPARAM)&info), "Get tree item failed");
+				Check((BOOL)::SendMessageW(m_hwnd, TVM_GETITEMW, 0, (LPARAM)&info), "Get tree item failed");
 				return info;
 			}
 			void Item(ItemInfo info)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, TVM_SETITEMW, 0, (LPARAM)&info), "Set tree item failed");
+				Check((BOOL)::SendMessageW(m_hwnd, TVM_SETITEMW, 0, (LPARAM)&info), "Set tree item failed");
 			}
 
 			// Get/Set the state of an item
@@ -7380,7 +7531,7 @@ namespace pr
 			void EnsureVisible(HITEM item)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, TVM_ENSUREVISIBLE, 0, (LPARAM)item), "Ensure tree item is visible failed");
+				Check((BOOL)::SendMessageW(m_hwnd, TVM_ENSUREVISIBLE, 0, (LPARAM)item), "Ensure tree item is visible failed");
 			}
 
 			// Get/Set user data on the item
@@ -7398,7 +7549,7 @@ namespace pr
 			void ExpandItem(HITEM item, EExpand code)
 			{
 				assert(::IsWindow(m_hwnd));
-				Throw((BOOL)::SendMessageW(m_hwnd, TVM_EXPAND, code, (LPARAM)item), "Expand tree node failed");
+				Check((BOOL)::SendMessageW(m_hwnd, TVM_EXPAND, code, (LPARAM)item), "Expand tree node failed");
 			}
 
 			// Message map function
@@ -7563,7 +7714,7 @@ namespace pr
 				/*switch (message)
 				{
 				case WM_PROGRESS_UPDATE:
-					if (LoWord(wparam) != m_id) break;
+					if (LoWord(wparam) != m_id.value) break;
 					switch (HiWord(wparam))
 					{
 					case BN_CLICKED:
@@ -7882,7 +8033,7 @@ namespace pr
 			void Text(int pane, string text, int type = 0)
 			{
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
-				Throw(::SendMessageW(m_hwnd, SB_SETTEXTW, WPARAM(MakeLong(MakeWord(pane, type), 0)), LPARAM(text.c_str())) != 0, "Failed to set status bar pane text");
+				Check(::SendMessageW(m_hwnd, SB_SETTEXTW, WPARAM(MakeLong(MakeWord(pane, type), 0)), LPARAM(text.c_str())) != 0, "Failed to set status bar pane text");
 			}
 
 			// Get the client area of a pane in the status bar
@@ -7890,7 +8041,7 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
 				pr::gui::Rect rect;
-				Throw(::SendMessageW(m_hwnd, SB_GETRECT, WPARAM(pane), LPARAM(&rect)) != 0, "Failed to get the client rect for a status bar pane");
+				Check(::SendMessageW(m_hwnd, SB_GETRECT, WPARAM(pane), LPARAM(&rect)) != 0, "Failed to get the client rect for a status bar pane");
 				return rect;
 			}
 
@@ -8049,7 +8200,7 @@ namespace pr
 				// Insert the item at the end of the tab control
 				index = index != -1 ? index : TabCount();
 				index = int(::SendMessageW(m_hwnd, TCM_INSERTITEMW, WPARAM(index), LPARAM(&item)));
-				Throw(index != -1, FmtS("Failed to add tab %s", Narrow(label).c_str()));
+				Check(index != -1, FmtS("Failed to add tab %s", Narrow(label).c_str()));
 
 				// Add the tab
 				m_tabs.push_back(&tab);
@@ -8086,7 +8237,7 @@ namespace pr
 					active_tab_index = new_tab_count - 1;
 
 				// Remove the item from the view list
-				Throw(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, FmtS("Failed to delete tab %d", tab_index));
+				Check(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, FmtS("Failed to delete tab %d", tab_index));
 				m_tabs.erase(std::begin(m_tabs) + tab_index);
 				tab->Parent(nullptr);
 
@@ -8113,7 +8264,7 @@ namespace pr
 				info.mask = mask;
 				info.pszText = buf;
 				info.cchTextMax = buf_count;
-				Throw(::SendMessage(m_hwnd, TCM_GETITEMW, tab_index, LPARAM(&info)) != 0, FmtS("Failed to read item info for tab %d", tab_index));
+				Check(::SendMessage(m_hwnd, TCM_GETITEMW, tab_index, LPARAM(&info)) != 0, FmtS("Failed to read item info for tab %d", tab_index));
 				return info;
 			}
 
@@ -8245,7 +8396,7 @@ namespace pr
 			// Throw if 'tab_index' is invalid
 			void ValidateTabIndex(int tab_index) const
 			{
-				Throw(tab_index >= 0 && tab_index < TabCount(), FmtS("Tab index (%d) out of range", tab_index));
+				Check(tab_index >= 0 && tab_index < TabCount(), FmtS("Tab index (%d) out of range", tab_index));
 			}
 
 			// Switch from tab 'old' to tab 'neu'
@@ -8711,7 +8862,7 @@ namespace pr
 
 			// CoCreate the File Open Dialog object.
 			CComPtr<IFileDialog> fd;
-			Throw(fd.CoCreateInstance(type), "CoCreateInstance failed. Ensure CoInitialize has been called");
+			Check(::CoCreateInstance(type, nullptr, CLSCTX_ALL, __uuidof(IFileDialog), (void**)&fd.p), "CoCreateInstance failed. Ensure CoInitialize has been called");
 
 			// Hook up the event handler.
 			struct EvtHook
@@ -8721,13 +8872,13 @@ namespace pr
 				EvtHook(IFileDialog* fd, FileUIOptions const& opts) :m_fd(fd) ,m_opts()
 				{
 					if (opts.m_handler == nullptr) return;
-					Throw(m_fd->Advise(opts.m_handler, &opts.m_handler_cookie), "Failed to assign file open/save event handler");
+					Check(m_fd->Advise(opts.m_handler, &opts.m_handler_cookie), "Failed to assign file open/save event handler");
 					m_opts = &opts; // use the saved pointer to indicate 'unadvise' is needed
 				}
 				~EvtHook()
 				{
 					if (m_opts == nullptr) return;
-					Throw(m_fd->Unadvise(m_opts->m_handler_cookie), "Failed to un-register file open/save dialog event handler");
+					Check(m_fd->Unadvise(m_opts->m_handler_cookie), "Failed to un-register file open/save dialog event handler");
 				}
 			} evt_hook(fd.p, opts);
 
@@ -8736,25 +8887,25 @@ namespace pr
 			{
 				// Before setting, always get the options first in order not to override existing options.
 				DWORD flags;
-				Throw(fd->GetOptions(&flags), "Failed to set file open/save dialog options");
-				Throw(fd->SetOptions(flags | opts.m_flags), "");
+				Check(fd->GetOptions(&flags), "Failed to set file open/save dialog options");
+				Check(fd->SetOptions(flags | opts.m_flags), "");
 			}
 
 			// Set the file types to display only.
 			if (opts.m_filter_count != 0)
 			{
-				Throw(fd->SetFileTypes(UINT(opts.m_filter_count), opts.m_filters), "Failed to set file type filters");
-				Throw(fd->SetFileTypeIndex(UINT(opts.m_filter_index)), "Failed to set the file type filter index");
+				Check(fd->SetFileTypes(UINT(opts.m_filter_count), opts.m_filters), "Failed to set file type filters");
+				Check(fd->SetFileTypeIndex(UINT(opts.m_filter_index)), "Failed to set the file type filter index");
 			}
 
 			// Set the default extension to be ".doc" file.
 			if (opts.m_def_extn != nullptr)
-				Throw(fd->SetDefaultExtension(opts.m_def_extn), "Failed to set the default file extension");
+				Check(fd->SetDefaultExtension(opts.m_def_extn), "Failed to set the default file extension");
 
 			// Show the dialog
 			auto r = fd->Show(parent);
 			if (r == HRESULT_FROM_WIN32(ERROR_CANCELLED)) return false;
-			if (r != S_OK) Throw(r, "Failed to show the file open/save dialog");
+			if (r != S_OK) Check(r, "Failed to show the file open/save dialog");
 
 			// Pass the dialog to 'results' to allow the caller to get what they want
 			return results(fd.p);
@@ -8770,17 +8921,17 @@ namespace pr
 
 				// Obtain the results once the user clicks the 'Open' button. The result is an IShellItem object.
 				CComPtr<IShellItemArray> items;
-				if (SUCCEEDED(fod->GetResults(&items)) && items != nullptr)
+				if (SUCCEEDED(fod->GetResults(&items.p)) && items != nullptr)
 				{
 					DWORD count;
-					Throw(items->GetCount(&count), "Failed to read the number of results from the file open dialog result");
+					Check(items->GetCount(&count), "Failed to read the number of results from the file open dialog result");
 					for (DWORD i = 0; i != count; ++i)
 					{
 						CComPtr<IShellItem> item;
-						Throw(items->GetItemAt(i, &item), FmtS("Failed to read result %d from the file open dialog results", i));
+						Check(items->GetItemAt(i, &item.p), FmtS("Failed to read result %d from the file open dialog results", i));
 						
 						wchar_t* fpath;
-						Throw(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
+						Check(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
 						results.emplace_back(fpath);
 						CoTaskMemFree(fpath);
 					}
@@ -8788,10 +8939,10 @@ namespace pr
 				else
 				{
 					CComPtr<IShellItem> item;
-					Throw(fod->GetResult(&item), "Failed to read result from the file open dialog results");
+					Check(fod->GetResult(&item.p), "Failed to read result from the file open dialog results");
 
 					wchar_t* fpath;
-					Throw(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
+					Check(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
 					results.emplace_back(fpath);
 					CoTaskMemFree(fpath);
 				}
@@ -8809,10 +8960,10 @@ namespace pr
 				auto fsd = static_cast<IFileSaveDialog*>(fd);
 					
 				CComPtr<IShellItem> res;
-				Throw(fsd->GetResult(&res.p), "Failed to read result %d from the file save dialog result");
+				Check(fsd->GetResult(&res.p), "Failed to read result %d from the file save dialog result");
 
 				wchar_t* fpath;
-				Throw(res->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from a the save file dialog result");
+				Check(res->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from a the save file dialog result");
 				filepath = std::wstring(fpath);
 				CoTaskMemFree(fpath);
 				return true;

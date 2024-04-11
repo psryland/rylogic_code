@@ -309,17 +309,17 @@ namespace pr::rdr12
 		Viewport& Set(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
 		{
 			#if PR_DBG_RDR
-			Throw(x >= D3D12_VIEWPORT_BOUNDS_MIN && x <= D3D12_VIEWPORT_BOUNDS_MAX , "X value out of range");
-			Throw(y >= D3D12_VIEWPORT_BOUNDS_MIN && y <= D3D12_VIEWPORT_BOUNDS_MAX , "Y value out of range");
-			Throw(width >= 0.0f                                                    , "Width value invalid");
-			Throw(height >= 0.0f                                                   , "Height value invalid");
-			Throw(x + width  <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Width value out of range");
-			Throw(y + height <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Height value out of range");
-			Throw(min_depth >= 0.0f && min_depth <= 1.0f                           , "Min depth value out of range");
-			Throw(max_depth >= 0.0f && max_depth <= 1.0f                           , "Max depth value out of range");
-			Throw(min_depth <= max_depth                                           , "Min and max depth values invalid");
-			Throw(screen_w >= 0                                                    , "Screen Width value invalid");
-			Throw(screen_h >= 0                                                    , "Screen Height value invalid");
+			Check(x >= D3D12_VIEWPORT_BOUNDS_MIN && x <= D3D12_VIEWPORT_BOUNDS_MAX , "X value out of range");
+			Check(y >= D3D12_VIEWPORT_BOUNDS_MIN && y <= D3D12_VIEWPORT_BOUNDS_MAX , "Y value out of range");
+			Check(width >= 0.0f                                                    , "Width value invalid");
+			Check(height >= 0.0f                                                   , "Height value invalid");
+			Check(x + width  <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Width value out of range");
+			Check(y + height <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Height value out of range");
+			Check(min_depth >= 0.0f && min_depth <= 1.0f                           , "Min depth value out of range");
+			Check(max_depth >= 0.0f && max_depth <= 1.0f                           , "Max depth value out of range");
+			Check(min_depth <= max_depth                                           , "Min and max depth values invalid");
+			Check(screen_w >= 0                                                    , "Screen Width value invalid");
+			Check(screen_h >= 0                                                    , "Screen Height value invalid");
 			#endif
 
 			TopLeftX = x;

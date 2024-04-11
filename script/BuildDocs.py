@@ -19,7 +19,7 @@ def BuildDocs(src:str, dst:str):
 
 			# Maintain the relative directory structure in 'dstdir'
 			relpath = os.path.relpath(filepath, src)
-			dir,fname = os.path.split(relpath)
+			dir,_ = os.path.split(relpath)
 			outdir = os.path.join(dst, dir)
 
 			# Expand the 'htm' file

@@ -27,14 +27,14 @@ namespace pr::rdr12
 				:ptr(output)
 				,desc()
 			{
-				Throw(ptr->GetDesc(&desc));
+				Check(ptr->GetDesc(&desc));
 			}
 
 			// Return the number of modes for a given surface format
 			UINT ModeCount(DXGI_FORMAT format) const
 			{
 				UINT mode_count = 0;
-				Throw(ptr->GetDisplayModeList(format, 0, &mode_count, nullptr));
+				Check(ptr->GetDisplayModeList(format, 0, &mode_count, nullptr));
 				return mode_count;
 			}
 
@@ -45,7 +45,7 @@ namespace pr::rdr12
 				
 				pr::vector<DisplayMode, 8> modes(mode_count);
 				if (!modes.empty())
-					Throw(ptr->GetDisplayModeList(format, 0, &mode_count, modes.data()));
+					Check(ptr->GetDisplayModeList(format, 0, &mode_count, modes.data()));
 
 				return modes;
 			}
@@ -54,7 +54,7 @@ namespace pr::rdr12
 			DisplayMode FindClosestMatchingMode(DisplayMode const& ideal) const
 			{
 				DisplayMode closest;
-				Throw(ptr->FindClosestMatchingMode(&ideal, &closest, nullptr));
+				Check(ptr->FindClosestMatchingMode(&ideal, &closest, nullptr));
 				return closest;
 			}
 
@@ -62,13 +62,13 @@ namespace pr::rdr12
 			DisplayMode FindBestFullScreenMode() const
 			{
 				auto monitor_info = MONITORINFOEXW{ {.cbSize = sizeof(MONITORINFOEXW)} };
-				Throw(GetMonitorInfoW(desc.Monitor, &monitor_info));
+				Check(GetMonitorInfoW(desc.Monitor, &monitor_info));
   
 				auto dev_mode = DEVMODEW{
 					.dmSize = sizeof(DEVMODEW),
 					.dmDriverExtra = 0,
 				};
-				Throw(EnumDisplaySettingsW(monitor_info.szDevice, ENUM_CURRENT_SETTINGS, &dev_mode));
+				Check(EnumDisplaySettingsW(monitor_info.szDevice, ENUM_CURRENT_SETTINGS, &dev_mode));
 
 				auto mode = DisplayMode(dev_mode.dmPelsWidth, dev_mode.dmPelsHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 				if (dev_mode.dmDisplayFrequency == 1 || dev_mode.dmDisplayFrequency == 0) mode.default_refresh_rate();
@@ -94,7 +94,7 @@ namespace pr::rdr12
 				: ptr(std::move(adapter))
 			{
 				// Read the description
-				Throw(ptr->GetDesc1(&desc));
+				Check(ptr->GetDesc1(&desc));
 
 				// Enumerate the outputs
 				D3DPtr<IDXGIOutput> output;
@@ -111,7 +111,7 @@ namespace pr::rdr12
 		{
 			// Create a DXGIFactory
 			D3DPtr<IDXGIFactory4> factory;
-			pr::Throw(CreateDXGIFactory2(with_debug_layer ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void**)&factory.m_ptr));
+			pr::Check(CreateDXGIFactory2(with_debug_layer ? DXGI_CREATE_FACTORY_DEBUG : 0, __uuidof(IDXGIFactory4), (void**)&factory.m_ptr));
 
 			// Enumerate each adapter on the system (this includes the software  warp adapter)
 			D3DPtr<IDXGIAdapter1> adapter;

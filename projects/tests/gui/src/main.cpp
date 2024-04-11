@@ -91,14 +91,14 @@ struct Main :Form
 			.main_wnd(true)
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
-		,m_lbl         (Label::Params<>() .name("m_lbl")         .parent(this_).text(L"hello world")       .xy(10,10)                          .wh(Auto,Auto))
-		,m_btn_progress(Button::Params<>().name("m_btn_progress").parent(this_).text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )
-		,m_btn_nm_prog (Button::Params<>().name("m_btn_nm_prog") .parent(this_).text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS))
-		,m_btn_modeless(Button::Params<>().name("m_btn_modeless").parent(this_).text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   )
-		,m_btn_cmenu   (Button::Params<>().name("m_btn_cmenu")   .parent(this_).text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU))
-		,m_btn         (Button::Params<>().name("btn")           .parent(this_).text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,40) .id(IDC_POSTEST)    .image(L"refresh", pr::gui::Image::EType::Png))
-		,m_btn_about   (Button::Params<>().name("m_btn_about")   .parent(this_).text(L"About")             .xy(-10,-10)                        .wh(100,32) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
-		,m_btn_msgbox  (Button::Params<>().name("m_btn_msgbox")  .parent(this_).text(L"MsgBox")            .xy(-10,Bottom|TopOf|IDC_ABOUT)     .wh(100,32) .id(IDC_MSGBOX)     .anchor(EAnchor::BottomRight)) 
+		,m_lbl         (Label::Params<>() .name("m_lbl")         .parent(this_).text(L"hello world")       .xy(10,10)                              .wh(Auto,Auto))
+		,m_btn_progress(Button::Params<>().name("m_btn_progress").parent(this_).text(L"progress")          .xy(10,30)                              .wh(100,20) .id(IDC_PROGRESS)   )
+		,m_btn_nm_prog (Button::Params<>().name("m_btn_nm_prog") .parent(this_).text(L"non-modal progress").xy(10,Top|BottomOf|m_btn_progress.id()).wh(100,20) .id(IDC_NM_PROGRESS))
+		,m_btn_modeless(Button::Params<>().name("m_btn_modeless").parent(this_).text(L"show modeless")     .xy(10,Top|BottomOf|m_btn_nm_prog.id()) .wh(100,20) .id(IDC_MODELESS)   )
+		,m_btn_cmenu   (Button::Params<>().name("m_btn_cmenu")   .parent(this_).text(L"context menu")      .xy(10,Top|BottomOf|m_btn_modeless.id()).wh(100,20) .id(IDC_CONTEXTMENU))
+		,m_btn         (Button::Params<>().name("btn")           .parent(this_).text(L"BOOBS")             .xy(10,Top|BottomOf|m_btn_cmenu.id())   .wh(100,40) .id(IDC_POSTEST)    .image(L"refresh", pr::gui::Image::EType::Png))
+		,m_btn_about   (Button::Params<>().name("m_btn_about")   .parent(this_).text(L"About")             .xy(-10,-10)                            .wh(100,32) .id(IDC_ABOUT)      .anchor(EAnchor::BottomRight)) 
+		,m_btn_msgbox  (Button::Params<>().name("m_btn_msgbox")  .parent(this_).text(L"MsgBox")            .xy(-10,Bottom|TopOf|m_btn_about.id())  .wh(100,32) .id(IDC_MSGBOX)     .anchor(EAnchor::BottomRight)) 
 
 		,m_tc          (TabControl::Params<>().name("m_tc").parent(this_).xy(120,10).wh(500,500).id(IDC_TAB).anchor(EAnchor::All).style_ex('=',0).padding(0))
 		,m_split       (Splitter  ::Params<>().name("split").parent(&m_tc))
@@ -250,7 +250,7 @@ struct Test2 :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+int __stdcall wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 {
 	pr::InitCom com;
 	pr::GdiPlus gdi;

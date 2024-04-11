@@ -1,4 +1,4 @@
-﻿//***********************************************************************
+//***********************************************************************
 // UnitTest
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
@@ -30,6 +30,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"
 //#include "pr/container/deque.h"
+//#include "pr/container/suffix_array.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/matrix6x8.h"
@@ -58,6 +59,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/geometry/p3d.h"
 //#include "pr/hardware/find_bt_device.h"
 //#include "pr/filesys/filesys.h"
+//#include "pr/storage/json.h"
 //#include "pr/str/convert_utf.h"
 //#include "pr/str/string_core.h"
 //#include "pr/str/string_util.h"

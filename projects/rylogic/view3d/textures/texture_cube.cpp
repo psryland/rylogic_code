@@ -28,7 +28,7 @@ namespace pr::rdr
 			srvdesc.TextureCube.MipLevels = ~0U;
 
 			Renderer::Lock lock(tex.m_mgr->rdr());
-			pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex.m_res.get(), &srvdesc, &tex.m_srv.m_ptr));
+			pr::Check(lock.D3DDevice()->CreateShaderResourceView(tex.m_res.get(), &srvdesc, &tex.m_srv.m_ptr));
 		}
 	}
 

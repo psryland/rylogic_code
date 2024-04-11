@@ -144,7 +144,7 @@ namespace pr
 			case WAIT_ABANDONED:
 				return false;
 			case WAIT_FAILED:
-				pr::Throw(HRESULT_FROM_WIN32(m_last_error), "Named pipe connect failed");
+				pr::Check(HRESULT_FROM_WIN32(m_last_error), "Named pipe connect failed");
 				break;
 			default:
 				throw std::runtime_error(FmtS("Unknown return code (%d) during Named pipe connect", r));
@@ -204,7 +204,7 @@ namespace pr
 				case WAIT_ABANDONED:
 					return false;
 				case WAIT_FAILED:
-					pr::Throw(HRESULT_FROM_WIN32(m_last_error), "Named pipe Write command failed");
+					pr::Check(HRESULT_FROM_WIN32(m_last_error), "Named pipe Write command failed");
 				default:
 					throw std::exception(FmtS("Unknown return code (%d) during Named pipe Write", r));
 				}
@@ -274,7 +274,7 @@ namespace pr
 				case WAIT_ABANDONED:
 					return false;
 				case WAIT_FAILED:
-					pr::Throw(HRESULT_FROM_WIN32(LastError()), "Named pipe Read failed");
+					pr::Check(HRESULT_FROM_WIN32(LastError()), "Named pipe Read failed");
 				default:
 					throw std::exception(FmtS("Unknown return code (%d) during Serial port Read command", r));
 				}
@@ -315,7 +315,7 @@ namespace pr
 				m_last_error = GetLastError();
 				if (m_last_error == ERROR_NOT_SUPPORTED) return;
 				if (m_last_error == ERROR_INVALID_FUNCTION) return;
-				Throw(res, "Failed to flush write buffer");
+				Check(res, "Failed to flush write buffer");
 			}
 		}
 

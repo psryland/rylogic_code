@@ -68,7 +68,7 @@ namespace pr::rdr12
 			.CachedPSO = D3D12_CACHED_PIPELINE_STATE{},
 			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
 		};
-		Throw(device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&m_mipmap_pso.m_ptr));
+		Check(device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&m_mipmap_pso.m_ptr));
 		DebugName(m_mipmap_pso, "MipMapGenPSO");
 	}
 
@@ -134,21 +134,21 @@ namespace pr::rdr12
 			.Alignment = 0, //info.Alignment,
 			.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
 		};
-		Throw(device->CreateHeap(&heap_desc, __uuidof(ID3D12Heap), (void**)&heap.m_ptr));
+		Check(device->CreateHeap(&heap_desc, __uuidof(ID3D12Heap), (void**)&heap.m_ptr));
 		DebugName(heap, "MipMapGenHeap");
 		m_keep_alive.Add(heap.get(), next_sync_point);
 
 		// Create a placed resource that matches the description of the original resource.
 		// The original texture is copied to this resource, which is then aliased as a UAV resource.
 		D3DPtr<ID3D12Resource> staging;
-		Throw(device->CreatePlacedResource(heap.get(), 0, &staging_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&staging.m_ptr));
+		Check(device->CreatePlacedResource(heap.get(), 0, &staging_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&staging.m_ptr));
 		DebugName(staging, "MipMapStagingAliasRes");
 		m_cmd_list.ResState(staging.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		m_keep_alive.Add(staging.get(), next_sync_point);
 
 		// Create a UAV resource that is an alias of 'staging'.
 		D3DPtr<ID3D12Resource> uav_resource;
-		Throw(device->CreatePlacedResource(heap.get(), 0, &uav_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&uav_resource.m_ptr));
+		Check(device->CreatePlacedResource(heap.get(), 0, &uav_desc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(ID3D12Resource), (void**)&uav_resource.m_ptr));
 		DebugName(uav_resource, "MipMapStagingUAVRes");
 		m_cmd_list.ResState(uav_resource.get()).Apply(D3D12_RESOURCE_STATE_COMMON);
 		m_keep_alive.Add(uav_resource.get(), next_sync_point);

@@ -510,4 +510,33 @@ old:
 	<Type Name="pr::script::Location">
 		<DisplayString>{m_stream_name}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
 	</Type>
+	
+	<!-- Storage -->
+	<Type Name="pr::json::Null">
+		<DisplayString>null</DisplayString>
+	</Type>
+	<Type Name="pr::json::Boolean">
+		<DisplayString>data</DisplayString>
+	</Type>
+	<Type Name="pr::json::String">
+		<DisplayString>{data}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Number">
+		<DisplayString>{data}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Array">
+		<DisplayString>{items}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Object">
+		<DisplayString>{items}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Value">
+		<DisplayString Condition="value._Which==0">{key,s} : {*(pr::json::Null*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==1">{key,s} : {*(pr::json::Boolean*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==2">{key,s} : {*(pr::json::String*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==3">{key,s} : {*(pr::json::Number*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==4">{key,s} : {*(pr::json::Array*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==5">{key,s} : {*(pr::json::Object*)&amp;value._Head}</DisplayString>
+		<DisplayString>{key}: {value}</DisplayString>
+	</Type>
 </AutoVisualizer>

@@ -1022,14 +1022,14 @@ namespace pr::ldr
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = pr::To<D3DCOLORVALUE>(Colour32(0xFFFFFFFF));
 				auto bk = pr::To<D3DCOLORVALUE>(Colour32(0x00000000));
-				pr::Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				pr::Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				pr::Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				pr::Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
 
 				// Draw the spot
 				dc->BeginDraw();
 				dc->Clear(&bk);
 				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Throw(dc->EndDraw());
+				pr::Check(dc->EndDraw());
 				return tex;
 			}
 			Texture2DPtr PointStyleTexture(ParseParams& p)
@@ -1062,8 +1062,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
@@ -1073,7 +1073,7 @@ namespace pr::ldr
 							sink->AddLine({ 0.0f * w0, h1 });
 							sink->AddLine({ 0.5f * w0, h0 + h1 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
@@ -1086,8 +1086,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -1101,7 +1101,7 @@ namespace pr::ldr
 							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
 							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});

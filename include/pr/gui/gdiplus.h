@@ -12,10 +12,11 @@
 
 #include <vector>
 #include <filesystem>
-#pragma warning(push,1)
-#pragma warning(disable:4458) 
+#include <Windows.h>
 #include <gdiplus.h>
-#pragma warning(pop)
+//#pragma warning(push,1)
+//#pragma warning(disable:4458) 
+//#pragma warning(pop)
 #include "pr/common/to.h"
 
 #pragma comment(lib, "gdiplus.lib")

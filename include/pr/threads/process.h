@@ -32,7 +32,7 @@ namespace pr
 				SIZE_T size;
 				InitializeProcThreadAttributeList(nullptr, attribute_count, 0, &size);
 				m_list = std::unique_ptr<BYTE[]>(new BYTE[size]);
-				Throw(InitializeProcThreadAttributeList(*this, attribute_count, 0, &size));
+				Check(InitializeProcThreadAttributeList(*this, attribute_count, 0, &size));
 			}
 			~AttributeList()
 			{
@@ -40,7 +40,7 @@ namespace pr
 			}
 			void AddHandleList(std::vector<HANDLE> const& handles)
 			{
-				Throw(UpdateProcThreadAttribute(*this, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, (void*)handles.data(), sizeof(HANDLE)*handles.size(), nullptr, nullptr));
+				Check(UpdateProcThreadAttribute(*this, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, (void*)handles.data(), sizeof(HANDLE)*handles.size(), nullptr, nullptr));
 			}
 			operator LPPROC_THREAD_ATTRIBUTE_LIST() const
 			{
@@ -120,7 +120,7 @@ namespace pr
 			WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
 			
 			DWORD exit_code;
-			Throw(GetExitCodeProcess(ProcessInfo.hProcess, &exit_code), "Process exit code not available");
+			Check(GetExitCodeProcess(ProcessInfo.hProcess, &exit_code), "Process exit code not available");
 			return static_cast<int>(exit_code);
 		}
 
