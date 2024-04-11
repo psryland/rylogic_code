@@ -64,9 +64,6 @@ Example Use:
 */
 #pragma once
 
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT _WIN32_WINNT_WIN7
-#endif
 #ifdef NOGDI
 #error The GDI is required for wingui.h
 #endif
@@ -86,7 +83,10 @@ Example Use:
 #include <format>
 #include <type_traits>
 #include <cassert>
-#include <tchar.h>
+
+#include <winsdkver.h>
+#include <sdkddkver.h>
+#include <winuser.h>
 #include <commctrl.h>
 #include <commdlg.h>
 #include <richedit.h>
@@ -96,6 +96,7 @@ Example Use:
 #include <shlwapi.h>
 #include <uxtheme.h>
 #include <gdiplus.h>
+#include <tchar.h>
 
 #define PR_WNDPROCDEBUG 0
 #if PR_WNDPROCDEBUG
@@ -901,16 +902,16 @@ namespace pr
 			
 			MinMaxInfo(UINT dpi)
 				:MINMAXINFO()
-				,m_mask()
+				, m_mask()
 			{
-				ptMaxSize.x      = ::GetSystemMetricsForDpi(SM_CXVIRTUALSCREEN, dpi);
-				ptMaxSize.y      = ::GetSystemMetricsForDpi(SM_CYVIRTUALSCREEN, dpi);
-				ptMaxPosition.x  = ::GetSystemMetricsForDpi(SM_XVIRTUALSCREEN, dpi) + ptMaxSize.x;
-				ptMaxPosition.y  = ::GetSystemMetricsForDpi(SM_YVIRTUALSCREEN, dpi) + ptMaxSize.y;
-				ptMinTrackSize.x = ::GetSystemMetricsForDpi(SM_CXMINTRACK, dpi);
-				ptMinTrackSize.y = ::GetSystemMetricsForDpi(SM_CYMINTRACK, dpi);
-				ptMaxTrackSize.x = ::GetSystemMetricsForDpi(SM_CXMAXTRACK, dpi);
-				ptMaxTrackSize.y = ::GetSystemMetricsForDpi(SM_CYMAXTRACK, dpi);
+				ptMaxSize.x      = GetSystemMetricsForDpi(SM_CXVIRTUALSCREEN, dpi);
+				ptMaxSize.y      = GetSystemMetricsForDpi(SM_CYVIRTUALSCREEN, dpi);
+				ptMaxPosition.x  = GetSystemMetricsForDpi(SM_XVIRTUALSCREEN, dpi) + ptMaxSize.x;
+				ptMaxPosition.y  = GetSystemMetricsForDpi(SM_YVIRTUALSCREEN, dpi) + ptMaxSize.y;
+				ptMinTrackSize.x = GetSystemMetricsForDpi(SM_CXMINTRACK, dpi);
+				ptMinTrackSize.y = GetSystemMetricsForDpi(SM_CYMINTRACK, dpi);
+				ptMaxTrackSize.x = GetSystemMetricsForDpi(SM_CXMAXTRACK, dpi);
+				ptMaxTrackSize.y = GetSystemMetricsForDpi(SM_CYMAXTRACK, dpi);
 			}
 			Rect Bounds() const
 			{
@@ -3232,7 +3233,7 @@ namespace pr
 				// Note: If you're transferring a resource dialog to code, this scaling factor assumes
 				// the dialog resource uses 'MS Shell Dlg (8)'. If not, then the scaling factor will be different
 				m_client_wh = true;
-				return dpi(gdi::PointF(4 * 96 / 6.0f, 8 * 96 / 13.0f));
+				return dpi(static_cast<int>(std::max(4 * 96 / 6.0f, 8 * 96 / 13.0f)));
 			}
 			this_type& xy(int x, int y)
 			{
@@ -4928,11 +4929,14 @@ namespace pr
 					}
 					case WM_DPICHANGED:
 					{
-						auto dpi = ::GetDpiForWindow(m_hwnd);
+						auto dpi = static_cast<int>(::GetDpiForWindow(m_hwnd));
 						m_metrics.CurrentDPI(dpi);
 						[[fallthrough]];
 					}
 					case WM_WINDOWPOSCHANGING:
+					{
+						[[fallthrough]];
+					}
 					case WM_WINDOWPOSCHANGED:
 					{
 						// WM_WINDOWPOSCHANGING/ED is sent to a form/control when it is resized using SetWindowPos (or similar).
