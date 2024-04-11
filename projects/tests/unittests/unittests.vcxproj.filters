@@ -1023,6 +1023,15 @@
     <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\storage\json.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\win32\user_directories.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

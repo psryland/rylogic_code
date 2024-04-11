@@ -117,7 +117,7 @@ namespace pr::rdr
 		return GetState(desc, [&](pr::rdr::BlendStateDesc const& d)
 		{
 			ID3D11BlendState* bs;
-			pr::Throw(lock.D3DDevice()->CreateBlendState(&d, &bs));
+			pr::Check(lock.D3DDevice()->CreateBlendState(&d, &bs));
 			return bs;
 		});
 	}
@@ -250,7 +250,7 @@ namespace pr::rdr
 		return GetState(desc, [&](DepthStateDesc const& d)
 		{
 			ID3D11DepthStencilState* ds;
-			pr::Throw(lock.D3DDevice()->CreateDepthStencilState(&d, &ds));
+			pr::Check(lock.D3DDevice()->CreateDepthStencilState(&d, &ds));
 			return ds;
 		});
 	}
@@ -357,7 +357,7 @@ namespace pr::rdr
 		return GetState(desc, [&](RasterStateDesc const& d)
 		{
 			ID3D11RasterizerState* rs;
-			pr::Throw(lock.D3DDevice()->CreateRasterizerState(&d, &rs));
+			pr::Check(lock.D3DDevice()->CreateRasterizerState(&d, &rs));
 			return rs;
 		});
 	}

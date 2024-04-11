@@ -152,7 +152,7 @@ namespace pr::dinput
 	inline D3DPtr<IDirectInput8> GetDInput(HINSTANCE app_inst)
 	{
 		D3DPtr<IDirectInput8> ptr;
-		Throw(::DirectInput8Create(app_inst, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&ptr.m_ptr, 0));
+		Check(::DirectInput8Create(app_inst, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&ptr.m_ptr, 0));
 		return ptr;
 	}
 
@@ -248,7 +248,7 @@ namespace pr::dinput
 			:m_data_format(fmt_cont)
 			,m_obj_inst(inst_cont)
 		{
-			Throw(device->EnumObjects(EnumDeviceObjectsCB, this, static_cast<DWORD>(flags)));
+			Check(device->EnumObjects(EnumDeviceObjectsCB, this, static_cast<DWORD>(flags)));
 		}
 		static BOOL CALLBACK EnumDeviceObjectsCB(DIDEVICEOBJECTINSTANCE const* lpddoi, LPVOID ctx)
 		{
@@ -327,13 +327,13 @@ namespace pr::dinput
 			,m_event()
 		{
 			// Check the device instance guid is valid
-			Throw(settings.m_instance.valid(), "direct input device instance invalid");
+			Check(settings.m_instance.valid(), "direct input device instance invalid");
 
 			// Create the device
-			Throw(settings.m_dinput->CreateDevice(settings.m_instance.m_instance_guid, &m_device.m_ptr, 0));
+			Check(settings.m_dinput->CreateDevice(settings.m_instance.m_instance_guid, &m_device.m_ptr, 0));
 
 			// Cooperate with windows
-			Throw(m_device->SetCooperativeLevel(m_settings.m_hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE));
+			Check(m_device->SetCooperativeLevel(m_settings.m_hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE));
 
 			// Setup buffered data
 			if (m_settings.m_buffered)
@@ -344,15 +344,15 @@ namespace pr::dinput
 				prop_data.diph.dwObj = 0;
 				prop_data.diph.dwHow = DIPH_DEVICE;
 				prop_data.dwData = m_settings.m_buffer_size;
-				Throw(m_device->SetProperty(DIPROP_BUFFERSIZE, &prop_data.diph));
+				Check(m_device->SetProperty(DIPROP_BUFFERSIZE, &prop_data.diph));
 			}
 
 			// Setup event notification
 			if (m_settings.m_events)
 			{
 				m_event = CreateEvent(0, FALSE, FALSE, 0);
-				Throw(m_event != nullptr, "Failed to create a system event for dinput events");
-				Throw(m_device->SetEventNotification(m_event));
+				Check(m_event != nullptr, "Failed to create a system event for dinput events");
+				Check(m_device->SetEventNotification(m_event));
 			}
 		}
 		Device(Device const&) = delete;
@@ -367,21 +367,21 @@ namespace pr::dinput
 		{
 			auto res = m_device->Acquire();
 			if (res == DIERR_OTHERAPPHASPRIO) return false;
-			Throw(res);
+			Check(res);
 			return true;
 		}
 
 		// Release the acquired device
 		void UnAcquire()
 		{
-			Throw(m_device->Unacquire());
+			Check(m_device->Unacquire());
 		}
 
 		// Flush the data from the buffer
 		void FlushBuffer()
 		{
 			DWORD count = INFINITE;
-			Throw(m_device->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), 0, &count, 0));
+			Check(m_device->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), 0, &count, 0));
 		}
 
 	protected:
@@ -399,7 +399,7 @@ namespace pr::dinput
 					if (Acquire()) continue;
 					return res;
 				}
-				Throw(res);
+				Check(res);
 			}
 		}
 
@@ -417,7 +417,7 @@ namespace pr::dinput
 				if (res == DIERR_NOTACQUIRED) { if (Acquire()) continue; return res; }
 				if (res == DIERR_INPUTLOST) { if (Acquire()) continue; return res; }
 				if (res == DI_BUFFEROVERFLOW) return res; // This indicates some data was lost
-				Throw(res);
+				Check(res);
 			}
 		}
 	};
@@ -442,7 +442,7 @@ namespace pr::dinput
 			:Device(settings)
 			,m_key_state()
 		{
-			Throw(m_device->SetDataFormat(&c_dfDIKeyboard));
+			Check(m_device->SetDataFormat(&c_dfDIKeyboard));
 		}
 
 		// Non buffered data
@@ -518,7 +518,7 @@ namespace pr::dinput
 			,m_prev(&m_state[0])
 			,m_curr(&m_state[1])
 		{
-			Throw(m_device->SetDataFormat(&c_dfDIMouse2));
+			Check(m_device->SetDataFormat(&c_dfDIMouse2));
 		}
 
 		// Non buffered data
@@ -651,7 +651,7 @@ namespace pr::dinput
 		{
 			// Enumerate the buttons, axes, etc for this device
 			DeviceObjectEnum<> em(m_device.get());
-			Throw(!em.m_data_format.empty(), "Can't enumerate any buttons, axes, etc, for this joystick");
+			Check(!em.m_data_format.empty(), "Can't enumerate any buttons, axes, etc, for this joystick");
 
 			// Construct a data format
 			DIDATAFORMAT format = {};
@@ -662,7 +662,7 @@ namespace pr::dinput
 			format.dwNumObjs = static_cast<DWORD>(em.m_data_format.size());
 			format.rgodf = &em.m_data_format[0];
 			m_state.resize(em.m_data_format.size());
-			Throw(m_device->SetDataFormat(&format));
+			Check(m_device->SetDataFormat(&format));
 		}
 
 		// Non buffered data

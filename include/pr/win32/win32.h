@@ -40,7 +40,7 @@ namespace pr
 		static HMODULE ModuleHandleEx(DWORD flags, char const* module_name)
 		{
 			HMODULE library;
-			Throw(::GetModuleHandleExA(flags, module_name, &library), "GetModuleHandleExW failed");
+			Check(::GetModuleHandleExA(flags, module_name, &library), "GetModuleHandleExW failed");
 			return library;
 		}
 
@@ -68,7 +68,7 @@ namespace pr
 		static HMODULE ModuleHandleEx(DWORD flags, wchar_t const* module_name)
 		{
 			HMODULE library;
-			Throw(::GetModuleHandleExW(flags, module_name, &library), "GetModuleHandleExW failed");
+			Check(::GetModuleHandleExW(flags, module_name, &library), "GetModuleHandleExW failed");
 			return library;
 		}
 
@@ -187,7 +187,7 @@ namespace pr
 
 			std::wstring name(len, 0);
 			len = ::GetModuleFileNameW(library, &name[0], len);
-			Throw(len == name.size(), "GetModuleFileNameW failed");
+			Check(len == name.size(), "GetModuleFileNameW failed");
 			return std::move(name);
 		}
 
@@ -246,7 +246,7 @@ namespace pr
 		inline std::filesystem::path FolderPath(KNOWNFOLDERID const& folder_id, DWORD flags, HANDLE token)
 		{
 			std::filesystem::path path;
-			Throw(FolderPath(folder_id, flags, token, path), "SHGetKnownFolderPath failed");
+			Check(FolderPath(folder_id, flags, token, path), "SHGetKnownFolderPath failed");
 			return path;
 		}
 

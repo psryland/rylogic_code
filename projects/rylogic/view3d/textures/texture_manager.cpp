@@ -81,9 +81,9 @@ namespace pr::rdr
 		{
 			Renderer::Lock lock(rdr);
 			auto sdesc = SamplerDesc::LinearClamp();
-			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler.m_ptr));
+			Check(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler.m_ptr));
 			sdesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler_comp.m_ptr));
+			Check(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler_comp.m_ptr));
 		}
 
 		// Create the basic textures that exist from startup
@@ -222,7 +222,7 @@ namespace pr::rdr
 
 		// Convert the resource pointer to a texture pointer
 		D3DPtr<ID3D11Texture2D> tex;
-		Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+		Check(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 		auto sort_id = static_cast<SortKeyId>(m_lookup_tex.size() % SortKey::MaxTextureId);
 
 		// Allocate the texture instance
@@ -453,7 +453,7 @@ namespace pr::rdr
 
 		// Convert the resource pointer to a texture pointer
 		D3DPtr<ID3D11Texture2D> tex;
-		Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+		Check(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 
 		// Allocate the texture instance
 		TextureCubePtr inst(rdr::New<TextureCube>(this, id, tex.get(), srv.get(), sdesc, tex_name.c_str()), true);

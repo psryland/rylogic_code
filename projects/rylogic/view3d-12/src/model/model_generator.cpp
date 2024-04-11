@@ -1206,7 +1206,7 @@ namespace pr::rdr12
 		//  A DIP is defined as 1/96th of a logical inch. In Direct2D, all drawing operations are
 		//  specified in DIPs and then scaled to the current DPI setting."
 		D3DPtr<IDWriteFactory> dwrite;
-		Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dwrite.m_ptr));
+		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&dwrite.m_ptr));
 
 		// Get the default format
 		auto def = !formatting.empty() && !formatting[0].empty() ? formatting[0] : TextFormat();
@@ -1217,11 +1217,11 @@ namespace pr::rdr12
 
 		// Create the default font
 		D3DPtr<IDWriteTextFormat> text_format;
-		Throw(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
+		Check(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
 
 		// Create a text layout interface
 		D3DPtr<IDWriteTextLayout> text_layout;
-		Throw(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
+		Check(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
 		text_layout->SetTextAlignment(layout.m_align_h);
 		text_layout->SetParagraphAlignment(layout.m_align_v);
 		text_layout->SetWordWrapping(layout.m_word_wrapping);
@@ -1248,7 +1248,7 @@ namespace pr::rdr12
 
 		// Measure the formatted text
 		DWRITE_TEXT_METRICS metrics;
-		Throw(text_layout->GetMetrics(&metrics));
+		Check(text_layout->GetMetrics(&metrics));
 
 		// The size of the text in device independent pixels, including padding.
 		auto dip_size = v2(
@@ -1288,7 +1288,7 @@ namespace pr::rdr12
 				if (fmt.m_font.m_colour != def.m_font.m_colour)
 				{
 					D3DPtr<ID2D1SolidColorBrush> brush;
-					Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+					Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
 					brush->SetOpacity(fmt.m_font.m_colour.a);
 
 					// Apply the colour
@@ -1298,12 +1298,12 @@ namespace pr::rdr12
 
 			// Create the default text colour brush
 			D3DPtr<ID2D1SolidColorBrush> brush_fr;
-			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), &brush_fr.m_ptr));
+			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(def.m_font.m_colour), &brush_fr.m_ptr));
 			brush_fr->SetOpacity(def.m_font.m_colour.a);
 
 			// Create the default text colour brush
 			D3DPtr<ID2D1SolidColorBrush> brush_bk;
-			Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), &brush_bk.m_ptr));
+			Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(layout.m_bk_colour), &brush_bk.m_ptr));
 			brush_bk->SetOpacity(layout.m_bk_colour.a);
 
 			// Draw the string
@@ -1311,7 +1311,7 @@ namespace pr::rdr12
 			dc->Clear(To<D3DCOLORVALUE>(layout.m_bk_colour));
 			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
 			dc->DrawTextLayout({ layout.m_padding.left, layout.m_padding.top }, text_layout.get(), brush_fr.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-			Throw(dc->EndDraw());
+			Check(dc->EndDraw());
 		}
 
 		// Create a quad using this texture

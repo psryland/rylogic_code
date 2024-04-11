@@ -1,0 +1,10 @@
+{
+	"SearchPaths": [
+		"E:\\Work",
+	],
+	"FileExtensions": [
+		".cpp",
+		".h",
+	],
+	"MaxFileSize": 1000000,
+}

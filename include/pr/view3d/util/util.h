@@ -314,7 +314,7 @@ namespace pr::rdr
 		}
 
 		string32 res_name = name;
-		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
+		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
 		#endif
 	}
 }

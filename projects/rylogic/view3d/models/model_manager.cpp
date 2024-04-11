@@ -44,7 +44,7 @@ namespace pr::rdr
 		mb->m_mdl_mgr = this;
 		{// Create a vertex buffer
 			SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
-			Throw(device.CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
+			Check(device.CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
 			mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 			mb->m_vb.m_used.set(0, 0);
 			mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
@@ -52,7 +52,7 @@ namespace pr::rdr
 		}
 		{// Create an index buffer
 			SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
-			Throw(device.CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
+			Check(device.CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
 			mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 			mb->m_ib.m_used.set(0, 0);
 			mb->m_ib.m_format = settings.m_ib.Format;

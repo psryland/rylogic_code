@@ -405,7 +405,7 @@ namespace pr::audio
 			// Create an event used for overlapped file IO
 			m_event.reset(safe_handle(CreateEventExW(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, EVENT_MODIFY_STATE | SYNCHRONIZE)));
 			if (!m_event)
-				pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+				pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 			// Open the wave bank file
 			auto params = CREATEFILE2_EXTENDED_PARAMETERS{sizeof(CREATEFILE2_EXTENDED_PARAMETERS), 0};
@@ -413,7 +413,7 @@ namespace pr::audio
 			params.dwFileFlags = FILE_FLAG_OVERLAPPED | FILE_FLAG_SEQUENTIAL_SCAN;
 			ScopedHandle hFile(safe_handle(CreateFile2(filepath.c_str(), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, &params)));
 			if (!hFile)
-				pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+				pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 			// Read and verify header
 			{
@@ -423,22 +423,22 @@ namespace pr::audio
 				{
 					auto error = GetLastError();
 					if (error != ERROR_IO_PENDING)
-						pr::Throw(HRESULT_FROM_WIN32(error));
+						pr::Check(HRESULT_FROM_WIN32(error));
 				}
 
 				// Get the results from the file read
 				DWORD bytes;
 				auto result = GetOverlappedResultEx(hFile.get(), &request, &bytes, INFINITE, FALSE);
 				if (!result || (bytes != sizeof(m_header)))
-					pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+					pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 				// Verify the header
 				if (m_header.dwSignature == HEADER::BE_SIGNATURE)
-					pr::Throw(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED), "Big-endian wave banks are not supported");
+					pr::Check(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED), "Big-endian wave banks are not supported");
 				if (m_header.dwSignature != HEADER::SIGNATURE)
-					pr::Throw(E_FAIL, "Invalid header signature");
+					pr::Check(E_FAIL, "Invalid header signature");
 				if (m_header.dwHeaderVersion != HEADER::VERSION)
-					pr::Throw(E_FAIL, "Unsupported header version");
+					pr::Check(E_FAIL, "Unsupported header version");
 			}
 
 			// Load bank data
@@ -451,43 +451,43 @@ namespace pr::audio
 				{
 					auto error = GetLastError();
 					if (error != ERROR_IO_PENDING)
-						pr::Throw(HRESULT_FROM_WIN32(error));
+						pr::Check(HRESULT_FROM_WIN32(error));
 				}
 
 				// Get the results from the file read
 				DWORD bytes;
 				auto result = GetOverlappedResultEx(hFile.get(), &request, &bytes, INFINITE, FALSE);
 				if (!result || (bytes != sizeof(m_data)))
-					pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+					pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 				if (m_data.dwEntryCount == 0)
-					pr::Throw(HRESULT_FROM_WIN32(ERROR_NO_DATA));
+					pr::Check(HRESULT_FROM_WIN32(ERROR_NO_DATA));
 
 				// Verify the data
 				if (m_data.dwFlags & BANKDATA::FLAGS_COMPACT)
 				{
 					if (m_data.dwEntryMetaDataElementSize != sizeof(ENTRYCOMPACT))
-						pr::Throw(E_FAIL, "Unsupported entry meta data element size");
+						pr::Check(E_FAIL, "Unsupported entry meta data element size");
 					if (m_header.Segments[HEADER::SEGIDX_ENTRYWAVEDATA].dwLength > MAX_COMPACT_DATA_SEGMENT_SIZE)
-						pr::Throw(E_FAIL, "Data segment is too large to be valid compact wave bank");
+						pr::Check(E_FAIL, "Data segment is too large to be valid compact wave bank");
 				}
 				else
 				{
 					if (m_data.dwEntryMetaDataElementSize != sizeof(ENTRY))
-						pr::Throw(E_FAIL, "Unsupported entry meta data element size");
+						pr::Check(E_FAIL, "Unsupported entry meta data element size");
 				}
 
 				auto meta_data_bytes = m_header.Segments[HEADER::SEGIDX_ENTRYMETADATA].dwLength;
 				if (meta_data_bytes != (m_data.dwEntryCount * m_data.dwEntryMetaDataElementSize))
-					pr::Throw(E_FAIL, "Invalid meta data size");
+					pr::Check(E_FAIL, "Invalid meta data size");
 
 				if (m_data.dwFlags & BANKDATA::TYPE_STREAMING)
 				{
 					if (m_data.alignment < ALIGNMENT_DVD)
-						pr::Throw(E_FAIL, "Invalid data alignment");
+						pr::Check(E_FAIL, "Invalid data alignment");
 				}
 				else if (m_data.alignment < ALIGNMENT_MIN)
 				{
-					pr::Throw(E_FAIL, "Invalid data alignment");
+					pr::Check(E_FAIL, "Invalid data alignment");
 				}
 			}
 
@@ -496,7 +496,7 @@ namespace pr::audio
 			{
 				auto names_bytes = m_header.Segments[HEADER::SEGIDX_ENTRYNAMES].dwLength;
 				if (names_bytes < m_data.dwEntryNameElementSize * m_data.dwEntryCount)
-					pr::Throw(E_FAIL, "Invalid names chunk");
+					pr::Check(E_FAIL, "Invalid names chunk");
 
 				// Allocate a buffer to read the names into
 				std::unique_ptr<char[]> temp(new char[names_bytes]);
@@ -509,14 +509,14 @@ namespace pr::audio
 				{
 					auto error = GetLastError();
 					if (error != ERROR_IO_PENDING)
-						pr::Throw(HRESULT_FROM_WIN32(error));
+						pr::Check(HRESULT_FROM_WIN32(error));
 				}
 
 				// Get the read results
 				DWORD bytes;
 				auto result = GetOverlappedResultEx(hFile.get(), &request, &bytes, INFINITE, FALSE);
 				if (!result || (names_bytes != bytes))
-					pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+					pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 				// Create a map from name to wave index
 				for (uint32_t j = 0; j != m_data.dwEntryCount; ++j)
@@ -547,14 +547,14 @@ namespace pr::audio
 				{
 					auto error = GetLastError();
 					if (error != ERROR_IO_PENDING)
-						pr::Throw(HRESULT_FROM_WIN32(error));
+						pr::Check(HRESULT_FROM_WIN32(error));
 				}
 
 				// Get the read results
 				DWORD bytes;
 				auto result = GetOverlappedResultEx(hFile.get(), &request, &bytes, INFINITE, FALSE);
 				if (!result || (meta_data_bytes != bytes))
-					pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+					pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 			}
 
 			// Load seek tables (XMA2 / xWMA)
@@ -572,14 +572,14 @@ namespace pr::audio
 				{
 					auto error = GetLastError();
 					if (error != ERROR_IO_PENDING)
-						pr::Throw(HRESULT_FROM_WIN32(error));
+						pr::Check(HRESULT_FROM_WIN32(error));
 				}
 
 				// Get the read results
 				DWORD bytes;
 				auto result = GetOverlappedResultEx(hFile.get(), &request, &bytes, INFINITE, FALSE);
 				if (!result || (seek_len != bytes))
-					pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+					pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 			}
 
 			// Set up the file handle to read the wave data
@@ -597,7 +597,7 @@ namespace pr::audio
 					params.dwSecurityQosFlags = SECURITY_IMPERSONATION;
 					m_async.reset(safe_handle(CreateFile2(filepath.c_str(), GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, &params)));
 					if (!m_async)
-						pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+						pr::Check(HRESULT_FROM_WIN32(GetLastError()));
 
 					m_prepared = true;
 				}
@@ -614,7 +614,7 @@ namespace pr::audio
 					{
 						auto error = GetLastError();
 						if (error != ERROR_IO_PENDING)
-							pr::Throw(HRESULT_FROM_WIN32(error));
+							pr::Check(HRESULT_FROM_WIN32(error));
 					}
 					else
 					{
@@ -647,7 +647,7 @@ namespace pr::audio
 		void GetFormat(int index, WaveFormatsU& format) const
 		{
 			if (index < 0 || index >= int(m_data.dwEntryCount) || !m_entries)
-				pr::Throw(E_FAIL);
+				pr::Check(E_FAIL);
 
 			memset(&format, 0, sizeof(format));
 
@@ -678,11 +678,11 @@ namespace pr::audio
 				}
 			case MINIWAVEFORMAT::TAG_XMA: // XMA2 is supported by XBox One
 				{
-					pr::Throw(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED));
+					pr::Check(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED));
 				}
 			default:
 				{
-					pr::Throw(E_FAIL, "Unsupported format");
+					pr::Check(E_FAIL, "Unsupported format");
 				}
 			}
 
@@ -697,13 +697,13 @@ namespace pr::audio
 		void GetWaveData(int index, uint8_t const*& pData, uint32_t& dataSize) const
 		{
 			if (index < 0 || index >= int(m_data.dwEntryCount) || !m_entries || !m_wave_data)
-				pr::Throw(E_FAIL, "index out of bounds");
+				pr::Check(E_FAIL, "index out of bounds");
 
 			if (m_data.dwFlags & BANKDATA::TYPE_STREAMING)
-				pr::Throw(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED));
+				pr::Check(HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED));
 
 			if (!m_prepared)
-				pr::Throw(HRESULT_FROM_WIN32(ERROR_IO_INCOMPLETE), "Still loading wave data");
+				pr::Check(HRESULT_FROM_WIN32(ERROR_IO_INCOMPLETE), "Still loading wave data");
 
 			if (m_data.dwFlags & BANKDATA::FLAGS_COMPACT)
 			{
@@ -712,7 +712,7 @@ namespace pr::audio
 				DWORD dwOffset, dwLength;
 				entry.ComputeLocations(dwOffset, dwLength, index, m_header, m_data, reinterpret_cast<const ENTRYCOMPACT*>(m_entries.get()));
 				if ((dwOffset + dwLength) > m_header.Segments[HEADER::SEGIDX_ENTRYWAVEDATA].dwLength)
-					pr::Throw(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+					pr::Check(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
 
 				pData = &m_wave_data.get()[dwOffset];
 				dataSize = dwLength;
@@ -721,7 +721,7 @@ namespace pr::audio
 			{
 				auto& entry = reinterpret_cast<const ENTRY*>(m_entries.get())[index];
 				if ((entry.PlayRegion.dwOffset + entry.PlayRegion.dwLength) > m_header.Segments[HEADER::SEGIDX_ENTRYWAVEDATA].dwLength)
-					pr::Throw(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+					pr::Check(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
 
 				pData = &m_wave_data.get()[entry.PlayRegion.dwOffset];
 				dataSize = entry.PlayRegion.dwLength;
@@ -736,7 +736,7 @@ namespace pr::audio
 			tag = 0;
 
 			if (index < 0 || index >= int(m_data.dwEntryCount) || !m_entries)
-				pr::Throw(E_FAIL, "index out of bounds");
+				pr::Check(E_FAIL, "index out of bounds");
 
 			if (!m_seek_data)
 				return;
@@ -768,7 +768,7 @@ namespace pr::audio
 		void GetMetadata(int index, Metadata& metadata) const
 		{
 			if (index < 0 || index >= int(m_data.dwEntryCount) || !m_entries)
-				pr::Throw(E_FAIL, "index out of bounds");
+				pr::Check(E_FAIL, "index out of bounds");
 
 			if (m_data.dwFlags & BANKDATA::FLAGS_COMPACT)
 			{

@@ -124,7 +124,7 @@ namespace pr::fluid
 	// Handle input
 	void FluidVisualisation::OnMouseButton(gui::MouseEventArgs& args)
 	{
-
+		(void)args;
 	}
 	void FluidVisualisation::OnMouseMove(gui::MouseEventArgs& args)
 	{
