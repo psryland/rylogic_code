@@ -37,7 +37,7 @@ namespace blitzsearch
 			.margin(1))
 	{
 		CreateHandle();
-		auto c = m_results.ColumnCount();
+		assert(m_results.ColumnCount() == 3);
 		m_results.InsertItem(ui::ListView::ItemInfo().text(L"Hello"));
 	}
 }
