@@ -250,7 +250,7 @@ struct Test2 :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+int __stdcall wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int)
 {
 	pr::InitCom com;
 	pr::GdiPlus gdi;
