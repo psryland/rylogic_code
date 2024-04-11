@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{36745ab3-4d50-4591-867e-71d7340ccb7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ui">
+      <UniqueIdentifier>{55ff2935-b629-4dbe-84dd-6ee375f3ea40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{040b23c5-c59c-436a-9f60-08a8fadbcd25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{f39276ff-ee05-4c87-8bd7-831be618288d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\storage">
+      <UniqueIdentifier>{61500321-40d9-46d5-895b-b01d20bdf489}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{c6bc1848-504c-46d7-a80f-7f9942080384}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\main_ui.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui\main_ui.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\hresult.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\storage\json.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="src\settings.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="settings.json" />
+  </ItemGroup>
+</Project>
