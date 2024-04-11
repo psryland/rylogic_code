@@ -21,6 +21,7 @@
 #include "pr/storage/json.h"
 #include "pr/gui/wingui.h"
 #include "pr/win32/user_directories.h"
+#include "pr/win32/windows_com.h"
 
 namespace ui = pr::gui;
 namespace blitzsearch

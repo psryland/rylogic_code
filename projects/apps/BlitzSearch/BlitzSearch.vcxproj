@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
   <!-- Properties -->
   <Import Project="..\..\..\build\props\globals.props" />
   <PropertyGroup Label="Globals">
@@ -7,6 +8,7 @@
     <RootNamespace>BlitzSearch</RootNamespace>
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
+
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -26,10 +28,12 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="..\..\..\build\props\app.props" />
+
   <!-- Build Options -->
   <ItemDefinitionGroup>
     <ClCompile>
@@ -42,13 +46,18 @@
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\sdk\quickmail\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libquickmail.a;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(ProjectDir)res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
+
   <!-- Source -->
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\ui\main_ui.cpp" />
+    <ClInclude Include="res\resource.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\ui\main_ui.h" />
@@ -63,5 +72,9 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\resource.rc" />
+  </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
