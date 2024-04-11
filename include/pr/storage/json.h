@@ -1,39 +1,25 @@
 #pragma once
 #include <string>
 #include <string_view>
+#include <fstream>
+#include <filesystem>
 #include <format>
 #include <variant>
 #include <algorithm>
+#include <concepts>
 
 namespace pr::json
 {
-	//enum class EValueType
-	//{
-	//	String,
-	//	Number,
-	//	Object,
-	//	Array,
-	//	True,
-	//	False,
-	//	Null
-	//};
-	enum class EToken
-	{
-		EndOfString,
-		Null,
-		False,
-		True,
-		String,
-		Number,
-		OpenBrace,
-		CloseBrace,
-		OpenBracket,
-		CloseBracket,
-		Colon,
-		Comma,
-	};
-
 	struct Value;
+	Value const& null_value();
+
+	template <typename T>
+	concept BooleanType = std::is_same_v<T, bool>;
+	template <typename T>
+	concept StringType = std::is_same_v<T, char const*> || std::is_same_v<T, std::string_view> || std::is_same_v<T, std::string> || std::is_same_v<T, std::filesystem::path>;
+	template <typename T>
+	concept NumericType = std::is_arithmetic_v<T> || std::is_floating_point_v<T>;
+
 	struct Null
 	{
 		operator nullptr_t () const { return nullptr; }
@@ -41,21 +27,56 @@ namespace pr::json
 	struct Boolean
 	{
 		bool data;
-
-		operator bool () const { return data; }
+		operator bool() const
+		{
+			return data;
+		}
 	};
 	struct String
 	{
-		std::string_view data;
-
-		operator std::string_view() const { return data; }
+		std::string data;
+		operator std::string_view() const
+		{
+			return data;
+		}
+		operator std::string const& () const
+		{
+			return data;
+		}
+		operator std::filesystem::path() const
+		{
+			return data;
+		}
+		friend bool operator == (String const& lhs, std::string_view rhs)
+		{
+			return lhs.data == rhs;
+		}
+		friend bool operator != (String const& lhs, std::string_view rhs)
+		{
+			return !(lhs == rhs);
+		}
 	};
-	struct Number
+	struct Number : String
 	{
-		std::string_view data;
-
-		operator double () const { return std::stod(std::string(data)); }
-		operator int64_t () const { return std::stoll(std::string(data)); }
+		template <NumericType T> operator T () const
+		{
+			if constexpr (std::is_floating_point_v<T>)
+				return static_cast<T>(std::stod(data));
+			else if constexpr (std::is_signed_v<T>)
+				return static_cast<T>(std::stoll(data));
+			else if constexpr (std::is_unsigned_v<T>)
+				return static_cast<T>(std::stoull(data));
+			else
+				static_assert(sizeof(T) == 0, "Unsupported type");
+		}
+		template <NumericType T> friend bool operator == (Number const& lhs, T rhs)
+		{
+			return static_cast<T>(lhs) == rhs;
+		}
+		template <NumericType T> friend bool operator != (Number const& lhs, T rhs)
+		{
+			return !(lhs == rhs);
+		}
 	};
 	struct Array
 	{
@@ -79,6 +100,7 @@ namespace pr::json
 		}
 		Value const& operator [] (size_t index) const
 		{
+			if (index >= items.size()) return null_value();
 			return items[index];
 		}
 	};
@@ -102,45 +124,99 @@ namespace pr::json
 		{
 			return items.end();
 		}
+		Value const* find(std::string_view key) const
+		{
+			auto iter = std::find_if(items.begin(), items.end(), [key](auto& v) { return v.key == key; });
+			return iter != items.end() ? &*iter : nullptr;
+		}
 		Value const& operator [] (std::string_view key) const
 		{
-			static constexpr Value null_value = { {}, Null{} };
-			auto iter = std::find_if(items.begin(), items.end(), [key](auto& v) { v.key == key; });
-			if (iter == items.end()) return null_value;
-			return *iter;
+			auto value = find(key);
+			return value ? *value : null_value();
 		}
 		Value const& operator [] (size_t index) const
 		{
+			if (index >= items.size()) return null_value();
 			return items[index];
 		}
-		std::optional<Value> find(std::string_view key) const;
 	};
+
 	struct Value
 	{
-		std::string_view key;
-		std::variant<Null, Boolean, String, Number, Object, Array> value;
+		std::string key;
+		std::variant<Null, Boolean, String, Number, Array, Object> value;
 
-		template <typename T> T const& to() const
+		// Convert to a json type
+		template <typename T> T const* as() const
 		{
-			return as<T>.value();
+			return std::get_if<T>(&value);
 		}
-		template <typename T> std::optional<T const&> as() const
+
+		// Convert to a value
+		template <typename T> requires (!std::is_same_v<T, Object> && !std::is_same_v<T, Array>)
+		T to() const
 		{
-			return std::holds_alternative<T>(value) ? std::get<T>(value) : std::nullopt;
+			if constexpr (BooleanType<T>)
+			{
+				if (auto b = as<Boolean>())
+					return static_cast<T>(*b);
+
+				throw std::runtime_error("Not a boolean");
+			}
+			else if constexpr (StringType<T>)
+			{
+				if (auto s = as<String>())
+					return static_cast<T>(*s);
+
+				throw std::runtime_error("Not a string");
+			}
+			else if constexpr (NumericType<T>)
+			{
+				if (auto n = as<Number>())
+					return static_cast<T>(*n);
+
+				throw std::runtime_error("Not a number");
+			}
+			else
+			{
+				if (auto n = as<T>())
+					return *n;
+
+				throw std::runtime_error("Not the expected type");
+			}
 		}
+		template <typename T> requires (std::is_same_v<T, Object> || std::is_same_v<T, Array>)
+		T const& to() const
+		{
+			if constexpr (std::is_same_v<T, Array>)
+			{
+				if (auto a = as<Array>())
+					return *a;
+
+				throw std::runtime_error("Not an array");
+			}
+			else if constexpr (std::is_same_v<T, Object>)
+			{
+				if (auto o = as<Object>())
+					return *o;
+
+				throw std::runtime_error("Not an object");
+			}
+		}
+
 		Value const& operator [] (std::string_view k) const
 		{
-			if (std::holds_alternative<Object>(value))
-				return std::get<Object>(value)[k];
+			if (auto object = as<Object>())
+				return (*object)[k];
 
 			throw std::runtime_error("Not an object");
 		}
 		Value const& operator [] (size_t index) const
 		{
-			if (std::holds_alternative<Object>(value))
-				return std::get<Object>(value)[index];
-			if (std::holds_alternative<Array>(value))
-				return std::get<Array>(value)[index];
+			if (auto object = as<Object>())
+				return (*object)[index];
+			if (auto list = as<Array>())
+				return (*list)[index];
 
 			throw std::runtime_error("Not an object or array");
 		}
@@ -154,20 +230,48 @@ namespace pr::json
 		}
 	};
 
-	inline std::optional<Value> Object::find(std::string_view key) const
+	namespace checks
 	{
-		auto iter = std::find_if(items.begin(), items.end(), [key](auto& v) { v.key == key; });
-		return iter != items.end() ? std::optional<Value>{*iter} : std::nullopt;
+		static_assert(std::is_same_v<bool,                decltype(std::declval<Value>().to<bool>())>);
+		static_assert(std::is_same_v<int,                 decltype(std::declval<Value>().to<int>())>);
+		static_assert(std::is_same_v<std::string_view,    decltype(std::declval<Value>().to<std::string_view>())>);
+		static_assert(std::is_same_v<json::Array const&,  decltype(std::declval<Value>().to<Array>())>);
+		static_assert(std::is_same_v<json::Object const&, decltype(std::declval<Value>().to<Object>())>);
 	}
 
+	// Static null value returned for non-existent keys/indices
+	inline Value const& null_value()
+	{
+		static Value s_null_value = { {}, Null{} };
+		return s_null_value;
+	}
+	std::string UnescapeString(std::string_view str);
 
+	// Json parsing options
 	struct Options
 	{
 		bool AllowComments;
+		bool AllowTrailingCommas;
 	};
 
+	// Implementation
 	namespace impl
 	{
+		enum class EToken
+		{
+			EndOfString,
+			Null,
+			False,
+			True,
+			String,
+			Number,
+			OpenBrace,
+			CloseBrace,
+			OpenBracket,
+			CloseBracket,
+			Colon,
+			Comma,
+		};
 		struct Token
 		{
 			EToken token;
@@ -175,12 +279,15 @@ namespace pr::json
 		};
 
 		// Advance the string pointer to the next non-whitespace character
-		inline void EatWS(std::string_view& src, bool allow_eos)
+		inline bool EatWS(std::string_view& src, bool allow_eos)
 		{
 			for (;!src.empty() && std::isspace(src[0]); )
 				src.remove_prefix(1);
 			if (src.empty() && !allow_eos)
 				throw std::runtime_error("Unexpected end of string");
+			
+			// Always return true to allow if chaining
+			return true;
 		}
 
 		// Return the next token in the json string
@@ -261,6 +368,7 @@ namespace pr::json
 					if (ptr == end)
 						throw std::runtime_error("Incomplete literal string or character");
 
+					// Unescape the string
 					auto str = src.substr(1, ptr - src.data() - 1);
 					src.remove_prefix(ptr - src.data() + 1);
 					return { EToken::String, str };
@@ -347,23 +455,23 @@ namespace pr::json
 				}
 				case EToken::Null:
 				{
-					return Value{ key, Null{} };
+					return Value{ std::string(key), Null{} };
 				}
 				case EToken::True:
 				{
-					return Value{ key, Boolean{ true } };
+					return Value{ std::string(key), Boolean{ true } };
 				}
 				case EToken::False:
 				{
-					return Value{ key, Boolean{ false } };
+					return Value{ std::string(key), Boolean{ false } };
 				}
 				case EToken::String:
 				{
-					return Value{ key, String{ tok.data } };
+					return Value{ std::string(key), String{ UnescapeString(tok.data) } };
 				}
 				case EToken::Number:
 				{
-					return Value{ key, Number{ tok.data } };
+					return Value{ std::string(key), Number{ std::string(tok.data) } };
 				}
 				case EToken::OpenBracket:
 				{
@@ -371,8 +479,7 @@ namespace pr::json
 					auto require_comma = false;
 					for (;;)
 					{
-						EatWS(src, false);
-						if (src[0] == ']')
+						if (EatWS(src, false) && src[0] == ']')
 						{
 							std::ignore = NextToken(src, opts);
 							break;
@@ -381,12 +488,17 @@ namespace pr::json
 						{
 							throw std::runtime_error("Expected comma");
 						}
+						if (opts.AllowTrailingCommas && EatWS(src, false) && src[0] == ']')
+						{
+							std::ignore = NextToken(src, opts);
+							break;
+						}
 
 						// Not the end of the array, so add the next value
 						list.items.push_back(NextValue(src, {}, opts));
 						require_comma = true;
 					}
-					return Value{ key, list };
+					return Value{ std::string(key), list };
 				}
 				case EToken::OpenBrace:
 				{
@@ -394,8 +506,7 @@ namespace pr::json
 					auto require_comma = false;
 					for (;;)
 					{
-						EatWS(src, false);
-						if (src[0] == '}')
+						if (EatWS(src, false) && src[0] == '}')
 						{
 							std::ignore = NextToken(src, opts);
 							break;
@@ -403,6 +514,11 @@ namespace pr::json
 						if (require_comma && NextToken(src, opts).token != EToken::Comma)
 						{
 							throw std::runtime_error("Expected comma");
+						}
+						if (opts.AllowTrailingCommas && EatWS(src, false) && src[0] == '}')
+						{
+							std::ignore = NextToken(src, opts);
+							break;
 						}
 
 						// Not the end of the object, so add the next key/value pair
@@ -414,7 +530,7 @@ namespace pr::json
 						obj.items.push_back(NextValue(src, k, opts));
 						require_comma = true;
 					}
-					return Value{ key, obj };
+					return Value{ std::string(key), obj };
 				}
 				default:
 				{
@@ -422,6 +538,68 @@ namespace pr::json
 				}
 			}
 		}
+	}
+	
+	// Convert an escaped string to a normal string
+	inline std::string UnescapeString(std::string_view str)
+	{
+		auto ptr = str.data();
+		auto end = str.data() + str.size();
+			
+		std::string result(str.size(), '\0');
+		auto out = result.data();
+
+		for (; ptr != end; ++ptr)
+		{
+			if (*ptr != '\\')
+			{
+				*out++ = *ptr;
+				continue;
+			}
+			switch (*++ptr)
+			{
+				case '"': *out++ = '"'; break;
+				case '\\': *out++ = '\\'; break;
+				case '/': *out++ = '/'; break;
+				case 'b': *out++ = '\b'; break;
+				case 'f': *out++ = '\f'; break;
+				case 'n': *out++ = '\n'; break;
+				case 'r': *out++ = '\r'; break;
+				case 't': *out++ = '\t'; break;
+				case 'u':
+				{
+					if (end - ptr < 5)
+						throw std::runtime_error("Incomplete unicode escape sequence");
+					
+					char const digits[] = { ptr[1], ptr[2], ptr[3], ptr[4] };
+					auto code = std::strtoul(&digits[0], nullptr, 16);
+					if (code < 0x80)
+					{
+						*out++ = static_cast<char>(code);
+					}
+					else if (code < 0x800)
+					{
+						*out++ = static_cast<char>(0xC0 | (code >> 6));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					else
+					{
+						*out++ = static_cast<char>(0xE0 | (code >> 12));
+						*out++ = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					ptr += 4;
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown escape sequence");
+				}
+			}
+		}
+
+		result.resize(out - result.data());
+		return result;
 	}
 
 	/// <summary>Parse a UTF-8 JSON string into a DOM tree.</summary>
@@ -436,9 +614,25 @@ namespace pr::json
 		}
 		catch (std::runtime_error& ex)
 		{
-			ex = std::runtime_error(std::format("{}\nParsing failed at offset {}", ex.what(), start.data() - src.data()));
+			ex = std::runtime_error(std::format("Parsing failed at offset {} - {}", ex.what(), src.data() - start.data()));
 			throw;
 		}
+	}
+
+	/// <summary>Read a JSON file into a DOM tree.</summary>
+	Value Read(std::filesystem::path const& path, Options const& opts)
+	{
+		std::ifstream file(path);
+		if (!file.is_open())
+			throw std::runtime_error(std::format("Failed to open file '{}'", path.string()));
+
+		auto size = std::filesystem::file_size(path);
+		if (size > std::numeric_limits<size_t>::max())
+			throw std::runtime_error(std::format("File '{}' is too large", path.string()));
+
+		std::string data(static_cast<size_t>(size), '\0');
+		file.read(data.data(), data.size());
+		return Parse(data, opts);
 	}
 }
 
@@ -448,8 +642,9 @@ namespace pr::storage
 {
 	PRUnitTest(JsonTests)
 	{
-		char const test_data[] =
-		#pragma region TestData
+		{
+			char const test_data[] =
+#pragma region TestData
 R"({
 	"key1": "value1",
 	"key2": 123,
@@ -483,19 +678,37 @@ R"({
 		123,
 		true,
 		false,
-		null
+		null,
 	]
 })";
-		#pragma endregion
+#pragma endregion
 
-		auto root = json::Parse(test_data, {.AllowComments = true});
-		PR_CHECK(root["key1"].to<json::String>() == "value1"_sv, true);
-		PR_CHECK(root["key2"].to<json::Number>() == 123, true);
-		PR_CHECK(root["key3"].to<json::Boolean>() == true, true);
-		PR_CHECK(root["key4"].to<json::Boolean>() == false, true);
-		PR_CHECK(root["key5"] == nullptr, true);
-		PR_CHECK(root["key6"] != nullptr, true);
-		PR_CHECK(root["key20"].as != nullptr, true);
+			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
+			PR_CHECK(root["key1"].to<std::string_view>() == "value1", true);
+			PR_CHECK(root["key2"].to<int64_t>() == 123, true);
+			PR_CHECK(root["key3"].to<bool>() == true, true);
+			PR_CHECK(root["key4"].to<bool>() == false, true);
+			PR_CHECK(root["key5"] == nullptr, true);
+			PR_CHECK(root["key6"] != nullptr, true);
+			PR_CHECK(root["key6"]["key12"]["key14"].to<int>() == 789, true);
+			PR_CHECK(root["key6"]["key12"].to<json::Object>().size() == 5, true);
+			PR_CHECK(root["key6"]["key18"].to<json::Array>().empty(), false);
+		}
+		{
+			char const test_data[] =
+#pragma region TestData
+R"({
+	"EscapedString": "This is a string with a \"quote\" in it",
+	"SearchPaths": [
+		"C:\\Work\\Path",
+	],
+})";
+#pragma endregion
+
+			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
+			PR_CHECK(root["SearchPaths"][0].to<std::string_view>() == "C:\\Work\\Path", true);
+			PR_CHECK(root["EscapedString"].to<std::string_view>() == "This is a string with a \"quote\" in it", true);
+		}
 	}
 }
 #endif
