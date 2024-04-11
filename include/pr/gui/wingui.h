@@ -899,18 +899,18 @@ namespace pr
 			};
 			EMask m_mask;
 			
-			MinMaxInfo()
+			MinMaxInfo(UINT dpi)
 				:MINMAXINFO()
 				,m_mask()
 			{
-				ptMaxSize.x      = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
-				ptMaxSize.y      = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
-				ptMaxPosition.x  = ::GetSystemMetrics(SM_XVIRTUALSCREEN) + ptMaxSize.x;
-				ptMaxPosition.y  = ::GetSystemMetrics(SM_YVIRTUALSCREEN) + ptMaxSize.y;
-				ptMinTrackSize.x = ::GetSystemMetrics(SM_CXMINTRACK);
-				ptMinTrackSize.y = ::GetSystemMetrics(SM_CYMINTRACK);
-				ptMaxTrackSize.x = ::GetSystemMetrics(SM_CXMAXTRACK);
-				ptMaxTrackSize.y = ::GetSystemMetrics(SM_CYMAXTRACK);
+				ptMaxSize.x      = ::GetSystemMetricsForDpi(SM_CXVIRTUALSCREEN, dpi);
+				ptMaxSize.y      = ::GetSystemMetricsForDpi(SM_CYVIRTUALSCREEN, dpi);
+				ptMaxPosition.x  = ::GetSystemMetricsForDpi(SM_XVIRTUALSCREEN, dpi) + ptMaxSize.x;
+				ptMaxPosition.y  = ::GetSystemMetricsForDpi(SM_YVIRTUALSCREEN, dpi) + ptMaxSize.y;
+				ptMinTrackSize.x = ::GetSystemMetricsForDpi(SM_CXMINTRACK, dpi);
+				ptMinTrackSize.y = ::GetSystemMetricsForDpi(SM_CYMINTRACK, dpi);
+				ptMaxTrackSize.x = ::GetSystemMetricsForDpi(SM_CXMAXTRACK, dpi);
+				ptMaxTrackSize.y = ::GetSystemMetricsForDpi(SM_CYMAXTRACK, dpi);
 			}
 			Rect Bounds() const
 			{
@@ -2560,31 +2560,42 @@ namespace pr
 			// Controls/Forms are laid out assuming 96 DPI.
 			// This struct is used to scale positions/sizes to pixels.
 			// All operations for a control after scaling are in pixels
-			gdi::PointF m_dt_dpi; // The design-time DPI
-			gdi::PointF m_rt_dpi; // The run-time DPI
+			int m_dt_dpi; // The design-time DPI
+			int m_rt_dpi; // The run-time DPI
 
-			DpiScale(gdi::PointF const& dt_dpi, bool from_font = false)
+			DpiScale(int dt_dpi, bool from_font = false)
 				:m_dt_dpi(dt_dpi)
 				,m_rt_dpi(from_font ? DPIFromFont() : DPI())
 			{}
 
+			// Get/Set the current DPI
+			int CurrentDPI() const
+			{
+				return m_rt_dpi;
+			}
+			void CurrentDPI(int dpi)
+			{
+				m_rt_dpi = dpi;
+			}
+
 			// Scale from 96 DPI to the current DPI
-			int   X(int   x) const { return int(x * m_rt_dpi.X / m_dt_dpi.X + (x >= 0 ? 0.5f : -0.5f)); }
-			int   Y(int   y) const { return int(y * m_rt_dpi.Y / m_dt_dpi.Y + (y >= 0 ? 0.5f : -0.5f)); }
-			float X(float x) const { return x * m_rt_dpi.X / m_rt_dpi.X; }
-			float Y(float y) const { return y * m_rt_dpi.Y / m_rt_dpi.Y; }
+			int   X(int   x) const { return int(x * m_rt_dpi / float(m_dt_dpi) + (x >= 0 ? 0.5f : -0.5f)); }
+			int   Y(int   y) const { return int(y * m_rt_dpi / float(m_dt_dpi) + (y >= 0 ? 0.5f : -0.5f)); }
+			float X(float x) const { return x * m_rt_dpi / float(m_rt_dpi); }
+			float Y(float y) const { return y * m_rt_dpi / float(m_rt_dpi); }
 
 			// Return the current DPI
-			static gdi::PointF DPI()
+			static int DPI()
 			{
+				// Windows assumes square DPI
 				ClientDC dc(nullptr);
-				auto x = gdi::REAL(::GetDeviceCaps(dc, LOGPIXELSX));
-				auto y = gdi::REAL(::GetDeviceCaps(dc, LOGPIXELSY));
-				return gdi::PointF(x, y);
+				auto x = ::GetDeviceCaps(dc, LOGPIXELSX);
+				auto y = ::GetDeviceCaps(dc, LOGPIXELSY);
+				return std::max(x, y);
 			}
 
 			// Return the estimated DPI by comparing the size of system font to the system font size at 96 DPI
-			static gdi::PointF DPIFromFont()
+			static int DPIFromFont()
 			{
 				// Measure the size of the system font at the current DPI.
 				// We'll use this to auto-scale all control positions and sizes.
@@ -2598,9 +2609,9 @@ namespace pr
 				Check(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed when calculating scaling factor");
 
 				// Size of the system font 'MS Shell Dlg' at 96 DPI is 6.0f, 13.0f
-				return gdi::PointF(
-					(sz.cx*1.9230769e-2f * 96.0f) /  6.0f, //1/52 = 0.01923...
-					(tm.tmHeight         * 96.0f) / 13.0f);
+				return std::max(
+					static_cast<int>((sz.cx*1.9230769e-2f * 96.0f) /  6.0f), //1/52 = 0.01923...
+					static_cast<int>((tm.tmHeight         * 96.0f) / 13.0f));
 			}
 		};
 		#pragma endregion
@@ -2835,7 +2846,7 @@ namespace pr
 				// Auto size to the parent
 				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 				{
-					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo().Bounds();
+					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo(p.m_dpi).Bounds();
 					if (id == -1) throw std::runtime_error("Auto size not supported for dialog templates");
 					throw std::runtime_error("DlgTemplate can only be positioned related to the screen or owner window");
 				});
@@ -3101,7 +3112,7 @@ namespace pr
 			bool              m_allow_drop;     // True if the control is a drag and drop target
 			bool              m_dbl_buffer;     // True if painting is double buffered for this control
 			void*             m_init_param;     // The initialisation data to pass through to WM_CREATE
-			gdi::PointF       m_dpi;            // The design-time DPI of the control's size and position.
+			int               m_dpi;            // The design-time DPI of the control's size and position.
 			Rect              m_margin;         // Stored as an addition to the bounding rect (i.e. negative l,t)
 			Rect              m_padding;        // Stored as an addition to the bounding rect (i.e. negative r,b)
 			MinMaxInfo        m_min_max_info;   // The size limits on the control
@@ -3135,10 +3146,10 @@ namespace pr
 				,m_allow_drop(false)
 				,m_dbl_buffer(false)
 				,m_init_param()
-				,m_dpi(96,96)
+				,m_dpi(USER_DEFAULT_SCREEN_DPI)
 				,m_margin(-0, -0, 0, 0)
 				,m_padding()
-				,m_min_max_info()
+				,m_min_max_info(m_dpi)
 				,clone(Clone)
 			{}
 			virtual ~CtrlParams() {}
@@ -3211,7 +3222,7 @@ namespace pr
 				m_text = t ? t : L"";
 				return me();
 			}
-			this_type& dpi(gdi::PointF dpi)
+			this_type& dpi(int dpi)
 			{
 				m_dpi = dpi;
 				return me();
@@ -3413,6 +3424,7 @@ namespace pr
 			bool               m_dlg_behaviour; // True if this form has dialog-like keyboard shortcuts
 			bool               m_hide_on_close; // True if closing the form only makes it hidden
 			bool               m_pin_window;    // True if this form moves with it's parent
+			bool               m_dpi_aware;     // True if per-monitor DPI awareness should be enabled
 
 			FormParams()
 				:m_start_pos    (EStartPosition::Default)
@@ -3506,6 +3518,11 @@ namespace pr
 			{
 				m_pin_window = p;
 				this->m_anchor = p ? EAnchor::TopLeft : EAnchor::None;
+				return this->me();
+			}
+			this_type& dpi_aware(bool on = true)
+			{
+				m_dpi_aware = on;
 				return this->me();
 			}
 		};
@@ -3777,13 +3794,13 @@ namespace pr
 				// Set w,h based on docking to the parent
 				switch (p.m_dock)
 				{
-				case EDock::None: break;
-				case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
-				case EDock::Top:    p.m_w = Fill; break;
-				case EDock::Bottom: p.m_w = Fill; break;
-				case EDock::Left:   p.m_h = Fill; break;
-				case EDock::Right:  p.m_h = Fill; break;
-				default: throw std::runtime_error("Unknown dock style");
+					case EDock::None: break;
+					case EDock::Fill:   p.m_w = Fill; p.m_h = Fill; break;
+					case EDock::Top:    p.m_w = Fill; break;
+					case EDock::Bottom: p.m_w = Fill; break;
+					case EDock::Left:   p.m_h = Fill; break;
+					case EDock::Right:  p.m_h = Fill; break;
+					default: throw std::runtime_error("Unknown dock style");
 				}
 
 				// Scale the control position/size for the current DPI (preserving the auto pos size bits)
@@ -4909,6 +4926,12 @@ namespace pr
 						}
 						break;
 					}
+					case WM_DPICHANGED:
+					{
+						auto dpi = ::GetDpiForWindow(m_hwnd);
+						m_metrics.CurrentDPI(dpi);
+						[[fallthrough]];
+					}
 					case WM_WINDOWPOSCHANGING:
 					case WM_WINDOWPOSCHANGED:
 					{
@@ -5621,12 +5644,12 @@ namespace pr
 					p = m_parent.ctrl() != nullptr ? m_parent->ExcludeDockedChildren(p, Index()) : p;
 					switch (cp().m_dock)
 					{
-					case EDock::Fill:   c = p; break;
-					case EDock::Top:    c = Rect(p.left      , p.top        , p.right    , p.top + h); break;
-					case EDock::Bottom: c = Rect(p.left      , p.bottom - h , p.right    , p.bottom ); break;
-					case EDock::Left:   c = Rect(p.left      , p.top        , p.left + w , p.bottom ); break;
-					case EDock::Right:  c = Rect(p.right - w , p.top        , p.right    , p.bottom ); break;
-					default: throw std::runtime_error("Unknown dock style");
+						case EDock::Fill:   c = p; break;
+						case EDock::Top:    c = Rect(p.left, p.top, p.right, p.top + h); break;
+						case EDock::Bottom: c = Rect(p.left, p.bottom - h, p.right, p.bottom); break;
+						case EDock::Left:   c = Rect(p.left, p.top, p.left + w, p.bottom); break;
+						case EDock::Right:  c = Rect(p.right - w, p.top, p.right, p.bottom); break;
+						default: throw std::runtime_error("Unknown dock style");
 					}
 				}
 				RAII<bool> no_save_ofs(m_pos_ofs_suspend, true);
@@ -5649,7 +5672,7 @@ namespace pr
 					if (id == 0)
 					{
 						// Get the parent control bounds in parent client space
-						if (parent == nullptr) return MinMaxInfo().Bounds();
+						if (parent == nullptr) return MinMaxInfo(m_metrics.CurrentDPI()).Bounds();
 						return parent->ExcludeDockedChildren(parent->ClientRect()); // Includes padding in the parent
 					}
 					else if (id == -1)
@@ -5837,7 +5860,14 @@ namespace pr
 				,m_dialog_result()
 				,m_accel()
 				,m_modal()
-			{}
+			{
+				if (p.m_dpi_aware)
+				{
+					// This needs to be called before any HWNDs are created.
+					if constexpr (WINVER >= 0x0605)
+						Check(::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2), "DPI Aware mode not set");
+				}
+			}
 			virtual ~Form()
 			{
 				// Close on destruction
@@ -7080,7 +7110,7 @@ namespace pr
 			// Details view column
 			struct ColumnInfo :LVCOLUMNW
 			{
-				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt); }
+				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt).min_width(10).def_width(80); }
 				ColumnInfo& text(wchar_t const* text)  { mask |= LVCF_TEXT; pszText = const_cast<wchar_t *>(text); return *this; }
 				ColumnInfo& width(int w)               { mask |= LVCF_WIDTH; cx = w; return *this; }
 				ColumnInfo& format(int lvcfmt)         { mask |= LVCF_FMT; fmt = lvcfmt; return *this; }
@@ -7096,7 +7126,10 @@ namespace pr
 			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				std::vector<ColumnInfo> m_columns;
+
 				Params()
+					:m_columns()
 				{
 					this->wndclass(WndClassName())
 						.name("listview")
@@ -7117,6 +7150,11 @@ namespace pr
 				this_type& no_hdr_sort()
 				{
 					return this->style('+', LVS_NOSORTHEADER);
+				}
+				this_type& add_column(ColumnInfo const& cinfo)
+				{
+					m_columns.push_back(cinfo);
+					return this->me();
 				}
 			};
 
@@ -7304,7 +7342,7 @@ namespace pr
 			{
 				switch (message)
 				{
-				case WM_NOTIFY:
+					case WM_NOTIFY:
 					{
 						auto notification_hdr = (LPNMHDR)lparam;
 						if (notification_hdr->hwndFrom == m_hwnd)
@@ -7312,7 +7350,7 @@ namespace pr
 							auto hdr = reinterpret_cast<NMLISTVIEW*>(notification_hdr);
 							switch (hdr->hdr.code)
 							{
-							case LVN_ITEMCHANGING:
+								case LVN_ITEMCHANGING:
 								{
 									ItemChangingEventArgs args(*hdr);
 									OnItemChanging(args);
@@ -7324,7 +7362,7 @@ namespace pr
 									result = args.m_cancel ? TRUE : FALSE;
 									return true;
 								}
-							case LVN_ITEMCHANGED:
+								case LVN_ITEMCHANGED:
 								{
 									ItemChangedEventArgs args(*hdr);
 									OnItemChanged(args);
@@ -7341,6 +7379,16 @@ namespace pr
 					}
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+		
+			// Add columns once the control is created
+			void OnCreate(CreateStruct const& cs) override
+			{
+				Control::OnCreate(cs);
+
+				int index = 0;
+				for (auto& col : cp<Params<>>().m_columns)
+					InsertColumn(index++, col);
 			}
 		};
 		struct TreeView :Control
