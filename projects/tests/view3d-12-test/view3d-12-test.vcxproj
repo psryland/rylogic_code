@@ -78,5 +78,5 @@
 
   <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="..\..\..\build\packages\WinPixEventRuntime.targets" />
+  <Import Project="..\..\..\build\targets\WinPixEventRuntime.targets" />
 </Project>

@@ -929,7 +929,7 @@ namespace pr::ldr
 		auto [p, d] = camera.NSSPointToWSRay(v4(nss_point, 1.0f, 0.0f));
 
 		// Then transform the ray from world space to gizmo space (note, it might be scaled)
-		auto w2o = Invert(O2W() * m4x4::Scale(m_scale, v4Origin));
+		auto w2o = Invert(O2W() * m4x4::Scale(m_scale, v4::Origin()));
 		p = (w2o * p).w1();
 		d = (w2o * d).w0();
 
