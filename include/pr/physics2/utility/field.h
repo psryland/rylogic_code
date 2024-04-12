@@ -127,7 +127,7 @@ namespace pr::physics
 		// Loops over the grid points that fall within the kernel radius of 'position'.
 		void EnumSamplePoints(FVec position, std::function<TProperty(FVec)> value)
 		{
-			auto const radius = m_kernel.Radius();;
+			auto const radius = m_kernel.Radius();
 			auto const radius_sq = Sqr(radius);
 			auto const range = (radius * 2 + 1);
 
