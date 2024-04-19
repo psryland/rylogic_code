@@ -322,6 +322,7 @@
 #include "pr\threads\sim_message_pump.h"
 #include "pr\threads\spin_lock.h"
 #include "pr\threads\synchronise.h"
+#include "pr\threads\thread_pool.h"
 #include "pr\threads\wait_state.h"
 #include "pr\view3d\forward.h"
 #include "pr\view3d\renderer.h"

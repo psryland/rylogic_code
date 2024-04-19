@@ -222,11 +222,11 @@ namespace pr::physics
 		{
 			if constexpr (Dim == 2)
 			{
-				return ZOrder2D(grid_point);
+				return space_filling::ZOrder2D(grid_point);
 			}
 			else if constexpr (Dim == 3)
 			{
-				return ZOrder3D(grid_point);
+				return space_filling::ZOrder3D(grid_point);
 			}
 			else
 			{

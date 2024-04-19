@@ -1032,6 +1032,9 @@
     <ClInclude Include="..\..\..\include\pr\win32\user_directories.h">
       <Filter>pr\win32</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

@@ -182,6 +182,13 @@ namespace pr
 		return ((n - 1) & n) == 0 && n != 0;
 	}
 
+	// Return the highest power of two that is less that 'n'
+	template <std::integral T> constexpr T PowerOfTwoLessThan(T n)
+	{
+		// A bitmask containing just the highest bit is a power of two just less than 'n'
+		return HighBit<T>(n);
+	}
+
 	// Return the next highest power of two greater than 'n'
 	template <std::integral T> constexpr T PowerOfTwoGreaterThan(T n)
 	{
