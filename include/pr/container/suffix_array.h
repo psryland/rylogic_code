@@ -330,7 +330,7 @@ namespace pr::suffix_array
 		for (auto i = 0; i != n1; ++i)
 		{
 			auto pos = SA[i];
-			for (int d = 0; d != std::ssize(data); ++d)
+			for (int d = 0; d != std::ssize(data) - std::max(pos, prev); ++d)
 			{
 				// If this substring is different from the previous one, then it gets a new name.
 				if (prev == -1 || data[pos + d] != data[prev + d] || sfx_type.IsSType(pos + d) != sfx_type.IsSType(prev + d))
@@ -400,7 +400,7 @@ namespace pr::suffix_array
 	}
 
 	// Construct the suffix array of the string 'str'
-	void Build(std::string_view str, std::span<int> SA)
+	inline void Build(std::string_view str, std::span<int> SA)
 	{
 		auto data = std::span{reinterpret_cast<unsigned char const*>(str.data()), str.size()};
 		Build(data, SA, 256);

@@ -80,6 +80,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
+//#include "pr/threads/thread_pool.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests

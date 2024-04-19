@@ -245,7 +245,7 @@ namespace pr::json
 		static Value s_null_value = { {}, Null{} };
 		return s_null_value;
 	}
-	std::string UnescapeString(std::string_view str);
+	inline std::string UnescapeString(std::string_view str);
 
 	// Json parsing options
 	struct Options
@@ -603,7 +603,7 @@ namespace pr::json
 	}
 
 	/// <summary>Parse a UTF-8 JSON string into a DOM tree.</summary>
-	Value Parse(std::string_view src, Options const& opts)
+	inline Value Parse(std::string_view src, Options const& opts)
 	{
 		using namespace impl;
 
@@ -620,7 +620,7 @@ namespace pr::json
 	}
 
 	/// <summary>Read a JSON file into a DOM tree.</summary>
-	Value Read(std::filesystem::path const& path, Options const& opts)
+	inline Value Read(std::filesystem::path const& path, Options const& opts)
 	{
 		std::ifstream file(path);
 		if (!file.is_open())
