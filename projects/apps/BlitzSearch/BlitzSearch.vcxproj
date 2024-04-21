@@ -39,13 +39,13 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
-	  <PreprocessorDefinitions>PR_PROFILE_ENABLE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\sdk\quickmail\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libquickmail.a;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -59,7 +59,6 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\ui\main_ui.cpp" />
-    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h" />
     <ClInclude Include="res\resource.h" />
     <ClInclude Include="src\dir_scanner.h" />
     <ClInclude Include="src\forward.h" />
@@ -70,6 +69,7 @@
     <ClInclude Include="..\..\..\include\pr\common\hresult.h" />
     <ClInclude Include="..\..\..\include\pr\container\suffix_array.h" />
     <ClInclude Include="..\..\..\include\pr\storage\json.h" />
+    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="settings.json">

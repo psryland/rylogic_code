@@ -17,7 +17,7 @@
 
 #include <string>
 #include <vector>
-#include <hash_map>
+#include <unordered_map>
 #include <algorithm>
 #include <chrono>
 #include <cassert>
@@ -59,6 +59,8 @@ namespace pr::profile
 	using clock_t = std::chrono::high_resolution_clock;
 	using duration_t = clock_t::duration;
 	using time_point_t = clock_t::time_point;
+	void RegisterProfile(struct Profile& profile);
+	void UnregisterProfile(struct Profile& profile);
 
 	// Profile data
 	struct Data
@@ -87,7 +89,7 @@ namespace pr::profile
 	// time spent in the house keeping of starting/stopping profiles
 	struct Profile
 	{
-		using CallerMap = std::hash_map<Profile*, Caller>;
+		using CallerMap = std::unordered_map<Profile*, Caller>;
 
 		Data         m_data;           // Frame data
 		char         m_name[NameSize]; // The name of the profile
@@ -119,11 +121,11 @@ namespace pr::profile
 			Reset();
 
 			// Register with the profile manager
-			get().RegisterProfile(*this);
+			RegisterProfile(*this);
 		}
 		~Profile()
 		{
-			get().UnregisterProfile(*this);
+			UnregisterProfile(*this);
 		}
 
 		// Reset the profile data, called after profile output has been generated
@@ -261,10 +263,18 @@ namespace pr::profile
 	};
 
 	// Singleton access
-	inline Profiler& get()
+	inline Profiler& GlobalProfiler()
 	{
 		static Profiler s_profiler;
 		return s_profiler;
+	}
+	inline void RegisterProfile(Profile& profile)
+	{
+		GlobalProfiler().RegisterProfile(profile);
+	}
+	inline void UnregisterProfile(Profile& profile)
+	{
+		GlobalProfiler().UnregisterProfile(profile);
 	}
 
 	// Scoped profile
@@ -274,11 +284,11 @@ namespace pr::profile
 		explicit Scoped(Profile& profile)
 			:m_profile(profile)
 		{
-			get().Start(m_profile);
+			GlobalProfiler().Start(m_profile);
 		}
 		~Scoped()
 		{
-			get().Stop (m_profile);
+			GlobalProfiler().Stop (m_profile);
 		}
 		Scoped(Scoped const&) = delete;
 		Scoped& operator=(Scoped const&) = delete;
