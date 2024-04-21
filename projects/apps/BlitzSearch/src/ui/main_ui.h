@@ -10,9 +10,18 @@ namespace blitzsearch
 {
 	struct MainUI : ui::Form
 	{
-		ui::TextBox m_search_box;
+		ui::Panel m_panel_search;
+		ui::TextBox m_tb_search;
+		ui::Button m_btn_search;
 		ui::ListView m_results;
+		ui::Button m_btn;
 
-		MainUI();
+		MainIndex& m_main_index;
+
+		explicit MainUI(MainIndex& main_index);
+		MainUI(MainUI&&) = delete;
+		MainUI(MainUI const&) = delete;
+		MainUI& operator =(MainUI&&) = delete;
+		MainUI& operator =(MainUI const&) = delete;
 	};
 }

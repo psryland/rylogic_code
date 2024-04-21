@@ -4,19 +4,28 @@
 //***********************************************************************
 #include "src/forward.h"
 #include "src/settings.h"
+#include "src/index.h"
 #include "src/ui/main_ui.h"
+
+#include "src/ntfs.h"
 
 int __stdcall wWinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPWSTR, _In_ int)
 {
+	using namespace blitzsearch;
+
 	try
 	{
 		pr::InitCom com;
 		ui::InitCtrls();
 
 		// Load the settings
-		blitzsearch::Settings settings;
-		
-		blitzsearch::MainUI main_ui;
+		Settings settings;
+
+		// The index of all searched files
+		MainIndex main_index(settings);
+
+		// Display the main UI
+		MainUI main_ui(main_index);
 		main_ui.Show();
 		return ui::MessageLoop().Run();
 	}
