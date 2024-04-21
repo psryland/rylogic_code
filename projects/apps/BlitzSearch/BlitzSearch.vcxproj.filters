@@ -19,6 +19,9 @@
     <Filter Include="pr\container">
       <UniqueIdentifier>{c6bc1848-504c-46d7-a80f-7f9942080384}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\threads">
+      <UniqueIdentifier>{762c89a2-7131-4464-9a67-efc1b1135b45}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -26,6 +29,9 @@
     </ClCompile>
     <ClCompile Include="src\ui\main_ui.cpp">
       <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\index.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -47,8 +53,24 @@
     <ClInclude Include="src\settings.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="src\index.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ntfs.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dir_scanner.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="settings.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\resource.rc" />
   </ItemGroup>
 </Project>
