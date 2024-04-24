@@ -366,6 +366,9 @@ namespace pr::unittests
 #define PR_FAIL(msg)\
 	pr::unittests::TestFramework::Fail(msg, __FILE__, __LINE__)
 
+#define PR_EXPECT(expr)\
+	pr::unittests::TestFramework::IsTrue(expr, L#expr, __FILE__, __LINE__)
+
 #define PR_CHECK(expr, ...)\
 	pr::unittests::TestFramework::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr, __FILE__, __LINE__)
 
