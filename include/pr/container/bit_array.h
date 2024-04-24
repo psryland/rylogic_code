@@ -2,104 +2,628 @@
 // Bit Array
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
-#ifndef PR_BIT_ARRAY_H
-#define PR_BIT_ARRAY_H
-
+#pragma once
 #include <bitset>
 #include <vector>
+#include <string>
+#include <string_view>
+#include <concepts>
+#include <stdexcept>
+#include <algorithm>
+#include <format>
+#include <span>
 
 namespace pr
 {
+	enum class EEndian
+	{
+		Little,
+		Big,
+	};
+
 	// Use std::bitset for compile time sets
 	template <std::size_t N>
 	class bitset : std::bitset<N> {};
 
 	// Dynamic bitset
-	// 'n' is always a bit index
-	template <typename WordType = unsigned int>
+	template <std::unsigned_integral WordType = unsigned int>
 	class bitsetRT
 	{
-		enum { BitsPerWord = sizeof(WordType) * 8, Mask = ~(BitsPerWord - 1) };
-		typedef std::vector<WordType> TBits;
-		TBits m_bits;
+		// Note:
+		//  Memory layout:
+		//  Word |MSB           LSB
+		//         +-------------+
+		//   0     |1010101100111|
+		//         +-------------+
+		//   1     |    <-- 10011|
+		//         +-------------+
+		//   2     |             |
+		//  In String Form:
+		//    LSB   ->  MSB,LSB ->
+		//    "111001101010111001..."
+		// Shifts:
+		//  Shifts are performed in the string representation, so "1110010" >> 3 = "0001110"
+		//  Since LSB is first in string form, this is actually a << operation in memory
+		
+		// Assuming little endian architecture. Will need to extend this class if not true
+		static_assert(std::endian::native == std::endian::little);
 
-		WordType			word(std::size_t n) const			{ return m_bits[n / BitsPerWord]; }
-		WordType&			word(std::size_t n)					{ return m_bits[n / BitsPerWord]; }
+		using TBits = std::vector<WordType>;
+		enum { BitsPerWord = sizeof(WordType) * 8 };
+		inline static constexpr WordType ALL_ONES = static_cast<WordType>(~0ULL);
+
+		TBits m_bits;     // The container of bits
+		uint8_t m_unused; // The number of unused bits in the last word
+
+		// Returns the number of words required to store the specified number of bits
+		constexpr std::size_t word_count(std::size_t bit_count) const
+		{
+			return (bit_count + BitsPerWord - 1) / BitsPerWord;
+		}
+
+		// Access the word that contains the n'th bit
+		WordType word(std::size_t n) const
+		{
+			if (n >= size()) throw std::out_of_range(std::format("bitsetRT::word() index {} is outside range [0,{})", n, size()));
+			return m_bits[n / BitsPerWord];
+		}
+		WordType& word(std::size_t n)
+		{
+			if (n >= size()) throw std::out_of_range(std::format("bitsetRT::word() index {} is outside range [0,{})", n, size()));
+			return m_bits[n / BitsPerWord];
+		}
 
 	public:
+
+		bitsetRT()
+			: m_bits()
+			, m_unused()
+		{}
+		explicit bitsetRT(std::string_view bit_string)
+			: bitsetRT()
+		{
+			*this = bit_string;
+		}
+
 		// Proxy for a single bit
 		class reference
 		{
 			friend class bitsetRT;
-			bitsetRT*	m_bs;
-			std::size_t m_n;
-			reference(bitsetRT& bs, std::size_t n) :m_bs(&bs) ,m_n(n) {}
+
+			bitsetRT* m_bs;
+			std::size_t m_idx;
+
+			reference(bitsetRT& bs, std::size_t idx)
+				:m_bs(&bs)
+				,m_idx(idx)
+			{}
+
 		public:
-			reference& operator = (bool val)					{ m_bs->set(m_n, val); return *this; }
-			reference& operator = (const reference& ref)		{ m_bs->set(m_n, bool(ref)); return *this; }
-			reference& flip()									{ m_bs->flip(m_n); return *this; }
-			bool operator~() const								{ return !m_bs->test(m_n); }
-			operator bool() const								{ return m_bs->test(m_n); }
+
+			reference& operator = (bool val)
+			{
+				m_bs->set(m_idx, val);
+				return *this;
+			}
+			reference& operator = (reference const& ref)
+			{
+				m_bs->set(m_idx, static_cast<bool>(ref));
+				return *this;
+			}
+			reference& flip()
+			{
+				m_bs->set(m_idx, !m_bs->test(m_idx));
+				return *this;
+			}
+			bool operator~() const
+			{
+				return !m_bs->test(m_idx);
+			}
+			operator bool() const
+			{
+				return m_bs->test(m_idx);
+			}
 		};
 
-		bool				empty() const						{ return m_bits.empty(); }
-		std::size_t			size() const						{ return m_bits.size() * BitsPerWord; }
-		void				resize(std::size_t count)			{ m_bits.resize((count + BitsPerWord - 1) / BitsPerWord); }
-		void				reset()								{ if( !empty() ) { memset(&m_bits[0], 0x00, m_bits.size() * sizeof(WordType)); } }
-		void				reset(std::size_t n)				{ word(n) &= ~(1 << (n & Mask)); }
-		void				set()								{ if( !empty() ) { memset(&m_bits[0], 0xFF, m_bits.size() * sizeof(WordType)); } }
-		void				set(std::size_t n)					{ word(n) |=  (1 << (n & Mask)); }
-		void				set(std::size_t n, bool val)		{ return val ? set(n) : reset(n); }
+		// Access the n'th (zero based) bit
+		bool operator[](std::size_t n) const
+		{
+			if (n >= size()) throw std::out_of_range(std::format("bitsetRT::operator[] index {} is outside range [0,{})", n, size()));
+			return test(n);
+		}
+		reference operator[](std::size_t n)
+		{
+			if (n >= size()) throw std::out_of_range(std::format("bitsetRT::operator[] index {} is outside range [0,{})", n, size()));
+			return reference(*this, n);
+		}
 
-//		bool				any() const							{ PR_STUB_FUNC(); return false; }
-//		std::size_t			count() const						{ PR_STUB_FUNC(); return 0; }
-//		BitSet<NumBits>&	flip()								{ PR_STUB_FUNC(); return *this; }
-//		BitSet<NumBits>&	flip(std::size_t n)					{ PR_STUB_FUNC(); return *this; }
-//		bool				none() const						{ PR_STUB_FUNC(); return false; }
-		bool				testW(std::size_t n) const			{ return word(n) != 0; }
-		bool				test(std::size_t n) const			{ return ((word(n) >> (n & Mask)) & 1) != 0; }
-//		// to_string - Converts a bitset object to a string representation.
-//		// to_ulong -  Converts a bitset object to the integer that would generate the sequence of bits contained if used to initialize the bitset.
+		// Set the bits based on a string of 1s and 0s
+		bitsetRT& operator = (std::string_view bit_string)
+		{
+			m_bits.resize(0);
+			m_bits.reserve(word_count(bit_string.size()));
 
-		// Operators
-		bool				operator[](std::size_t n) const		{ return test(n); }
-		reference			operator[](std::size_t n)			{ return reference(*this, n); }
+			auto eat_ws = [](auto& ptr, auto end)
+			{
+				for (; ptr != end && isspace(*ptr); ++ptr) {}
+				if (ptr != end && *ptr != '0' && *ptr != '1')
+					throw std::invalid_argument("bitsetRT::operator= invalid character in bit string");
+			};
+
+			auto len = 0;
+			auto ptr = bit_string.data();
+			auto end = ptr + bit_string.size();
+			eat_ws(ptr, end);
+
+			for (; ptr != end; )
+			{
+				auto w = WordType{};
+				for (int j = 0; j != BitsPerWord && ptr != end; ++j, ++len, eat_ws(ptr, end))
+					w |= int(*ptr++ == '1') << j;
+
+				m_bits.push_back(w);
+			}
+
+			m_unused = static_cast<decltype(m_unused)>(m_bits.size() * BitsPerWord - len);
+			return *this;
+		}
+
+		// True if there are no bits in the container
+		bool empty() const
+		{
+			return m_bits.empty();
+		}
+
+		// The number of bits in the container
+		std::size_t size() const
+		{
+			return size_in_words() * BitsPerWord - m_unused;
+		}
+
+		// The number of words used to contain the bits
+		std::size_t size_in_words() const
+		{
+			return m_bits.size();
+		}
+
+		// Access the bit data buffer
+		WordType const* data() const
+		{
+			return m_bits.data();
+		}
+
+		// Resize to a new number of bits
+		void resize(std::size_t count)
+		{
+			m_bits.resize(word_count(count));
+			m_unused = static_cast<decltype(m_unused)>(m_bits.size() * BitsPerWord - count);
+			MaskLast();
+		}
+
+		// Append a bit to the end of the container
+		bitsetRT& append(bool bit)
+		{
+			if (m_unused == 0)
+			{
+				m_bits.push_back(0);
+				m_unused = BitsPerWord;
+			}
+			if (bit)
+			{
+				m_bits.back() |= 1 << (BitsPerWord - m_unused);
+			}
+			--m_unused;
+			return *this;
+		}
+
+		// Append a number of bits from the least significant end of 'value'.
+		bitsetRT& append(uint64_t value, int bits)
+		{
+			for (int i = bits; i-- != 0; value >>= 1)
+			{
+				append(value & 1);
+			}
+			return *this;
+		}
+
+		// Allow enums to be used like an integral type
+		template <typename T> requires (std::is_enum_v<T>)
+		bitsetRT& append(T value, int bits)
+		{
+			return append(static_cast<uint64_t>(value), bits);
+		}
+
+		// Append a range of bytes to the end of the container. 8 bits are added for each byte.
+		bitsetRT& append_bytes(std::span<uint8_t const> bytes)
+		{
+			for (auto byte : bytes)
+			{
+				for (int i = 8; i-- != 0; byte >>= 1)
+				{
+					append(byte & 1);
+				}
+			}
+			return *this;
+		}
+		bitsetRT& append_bytes(std::string_view bytes)
+		{
+			auto data = std::span<uint8_t const>{ reinterpret_cast<uint8_t const*>(bytes.data()), bytes.size() };
+			return append_bytes(data);
+		}
+
+		// Append 'count' 0s or 1s to the container
+		bitsetRT& append_fill(bool bit, int count)
+		{
+			for (auto i = 0; i != count; ++i)
+				append(bit);
+
+			return *this;
+		}
+
+		// Set all bits to zero
+		bitsetRT& reset()
+		{
+			memset(m_bits.data(), 0x00, m_bits.size() * sizeof(WordType));
+			MaskLast();
+			return *this;
+		}
+
+		// Set all bits to one
+		bitsetRT& set()
+		{
+			memset(m_bits.data(), 0xFF, m_bits.size() * sizeof(WordType));
+			MaskLast();
+			return *this;
+		}
+
+		// Flip all bits in this container
+		bitsetRT& flip()
+		{
+			for (auto& w : m_bits)
+				w = ~w;
+
+			MaskLast();
+			return *this;
+		}
+
+		// Test the value of the 'nth' bit
+		bool test(std::size_t n) const
+		{
+			auto w = word(n);
+			n %= BitsPerWord;
+			return w & (1 << n);
+		}
+
+		// Set the value of the 'nth' bit
+		bitsetRT& set(std::size_t n, bool val = true)
+		{
+			auto& w = word(n);
+			n %= BitsPerWord;
+			if (val) w |=  (1 << n);
+			else     w &= ~(1 << n);
+			return *this;
+		}
+
+		// True if any bit is set. Empty containers return false
+		bool any() const
+		{
+			// Note: the last word should have zeros in the unused bit positions
+			for (auto& w : m_bits) { if (w) return true; }
+			return false;
+		}
+
+		// True if all bits are set. Empty containers return false
+		bool all() const
+		{
+			if (empty())
+				return false;
+
+			auto whole_words = std::span<WordType const>{ m_bits.data(), m_bits.size() - int(m_unused != 0) };
+			return
+				std::all_of(whole_words.begin(), whole_words.end(), [](auto w) { return w == ALL_ONES; }) &&
+				(m_unused == 0 || m_bits.back() == WordType(ALL_ONES >> m_unused));
+		}
+
+		// Test bitset for equality
+		friend bool operator == (bitsetRT const& lhs, bitsetRT const& rhs)
+		{
+			return lhs.m_bits == rhs.m_bits && lhs.m_unused == rhs.m_unused;
+		}
+		friend bool operator != (bitsetRT const& lhs, bitsetRT const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+
+		// Performs a bitwise combination of bitsets with the logical AND operation.
+		friend bitsetRT& operator &= (bitsetRT& lhs, bitsetRT const& rhs)
+		{
+			if (lhs.size() != rhs.size())
+				throw std::invalid_argument("bitsetRT::operator& bitset sizes do not match");
+
+			for (auto count = lhs.m_bits.size(); count-- != 0;)
+				lhs.m_bits[count] &= rhs.m_bits[count];
+
+			lhs.MaskLast();
+			return lhs;
+		}
+		friend bitsetRT operator & (bitsetRT const& lhs, bitsetRT const& rhs)
+		{
+			bitsetRT bs(lhs);
+			return bs &= rhs;
+		}
+
+		// Performs a bitwise combination of bitsets with the inclusive OR operation.
+		friend bitsetRT& operator |= (bitsetRT& lhs, bitsetRT const& rhs)
+		{
+			if (lhs.size() != rhs.size())
+				throw std::invalid_argument("bitsetRT::operator| bitset sizes do not match");
+
+			for (auto count = lhs.m_bits.size(); count-- != 0;)
+				lhs.m_bits[count] |= rhs.m_bits[count];
+
+			lhs.MaskLast();
+			return lhs;
+		}
+		friend bitsetRT operator | (bitsetRT const& lhs, bitsetRT const& rhs)
+		{
+			bitsetRT bs(lhs);
+			return bs |= rhs;
+		}
+
+		// Performs a bitwise combination of bitsets with the exclusive OR operation.
+		friend bitsetRT& operator ^= (bitsetRT& lhs, bitsetRT const& rhs)
+		{
+			if (lhs.size() != rhs.size())
+				throw std::invalid_argument("bitsetRT::operator^ bitset sizes do not match");
+
+			for (auto count = lhs.m_bits.size(); count-- != 0;)
+				lhs.m_bits[count] ^= rhs.m_bits[count];
+
+			lhs.MaskLast();
+			return lhs;
+		}
+		friend bitsetRT operator ^ (bitsetRT const& lhs, bitsetRT const& rhs)
+		{
+			bitsetRT bs(lhs);
+			return bs ^= rhs;
+		}
+
+		// Shifts the bits in a bitset to the left a specified number of positions
+		// NOTE: The shift is performed in the string representation, so "1110010" << 3 = "0010000"
+		// which is actually a >> operation in memory since the LSB is first in the string form.
+		friend bitsetRT& operator <<= (bitsetRT& lhs, std::size_t n)
+		{
+			if (n == 0)
+				return lhs;
+			if (n >= lhs.size())
+				return lhs.reset();
+
+			auto shift = n % BitsPerWord;
+			auto count = n / BitsPerWord;
+
+			if (count != 0)
+			{
+				auto i = 0ULL;
+				for (; i != lhs.m_bits.size() - count; ++i)
+					lhs.m_bits[i] = lhs.m_bits[i + count];
+				for (; i != lhs.m_bits.size(); ++i)
+					lhs.m_bits[i] = 0;
+			}
+			if (shift != 0)
+			{
+				for (auto i = 0; i != lhs.m_bits.size() - std::max(1ULL, count); ++i)
+					lhs.m_bits[i] = (lhs.m_bits[i] >> shift) | (lhs.m_bits[i + 1] << (BitsPerWord - shift));
+			}
+
+			lhs.MaskLast();
+			return lhs;
+		}
+		friend bitsetRT operator << (bitsetRT const& lhs, std::size_t n)
+		{
+			bitsetRT bs(lhs);
+			return bs <<= n;
+		}
+
+		// Shifts the bits to the right by a specified number of positions.
+		// NOTE: The shift is performed in the string representation, so "1110010" >> 3 = "0001110"
+		// which is actually a << operation in memory since the LSB is first in the string form.
+		friend bitsetRT& operator >>= (bitsetRT& lhs, std::size_t n)
+		{
+			if (n == 0)
+				return lhs;
+			if (n >= lhs.size())
+				return lhs.reset();
+
+			auto shift = n % BitsPerWord;
+			auto count = n / BitsPerWord;
+
+			if (count != 0)
+			{
+				for (auto i = lhs.m_bits.size(); i-- != count; )
+					lhs.m_bits[i] = lhs.m_bits[i - count];
+				for (auto i = count; i-- != 0; )
+					lhs.m_bits[i] = 0;
+			}
+			if (shift != 0)
+			{
+				for (auto i = lhs.m_bits.size(); i-- != std::max(1ULL, count); )
+					lhs.m_bits[i] = (lhs.m_bits[i - 1] >> (BitsPerWord - shift)) | (lhs.m_bits[i] << shift);
+			}
+
+			lhs.MaskLast();
+			return lhs;
+		}
+		friend bitsetRT operator >> (bitsetRT const& lhs, std::size_t n)
+		{
+			bitsetRT bs(lhs);
+			return bs >>= n;
+		}
+
+		// Returns a container with all bits flipped
+		friend bitsetRT operator ~(bitsetRT const& lhs)
+		{
+			bitsetRT bs(lhs);
+			for (auto& w : bs.m_bits) w = ~w;
+			bs.MaskLast();
+			return bs;
+		}
+
+		// Convert the bitset to a string of 1s and 0s.
+		// Note: see comments above for the bit order. Left-most character is the LSB of Word 0
+		std::string to_string(std::string_view delimiter = "") const
+		{
+			std::string str;
+			if (!empty())
+			{
+				str.reserve(size() + size_in_words()*delimiter.size());
+
+				auto whole_words = std::span<WordType const>{ m_bits.data(), m_bits.size() - int(m_unused != 0) };
+				for (auto w : whole_words)
+				{
+					if (!str.empty())
+						str.append(delimiter);
+
+					for (int i = BitsPerWord; i-- != 0; w >>= 1)
+						str.push_back('0' + (w & 1));
+				}
+				if (m_unused != 0)
+				{
+					if (!str.empty())
+						str.append(delimiter);
+
+					auto w = m_bits.back();
+					for (int i = BitsPerWord; i-- != m_unused; w >>= 1)
+						str.push_back('0' + (w & 1));
+				}
+			}
+			return str;
+		}
+
+	private:
+
+		// Set the unused bits at the end of the container to zeros
+		void MaskLast()
+		{
+			if (!m_unused) return;
+			m_bits.back() &= WordType(ALL_ONES >> m_unused);
+		}
 	};
-//
-//operator!=
-// Tests a target bitset for inequality with a specified bitset.
-//
-//operator&=
-// Performs a bitwise combination of bitsets with the logical AND operation.
-//
-//operator<<
-// Shifts the bits in a bitset to the left a specified number of positions and returns the result to a new bitset.
-//
-//operator<<=
-// Shifts the bits in a bitset to the left a specified number of positions and returns the result to the targeted bitset.
-//
-//operator==
-// Tests a target bitset for equality with a specified bitset.
-//
-//operator>>
-// Shifts the bits in a bitset to the right a specified number of positions and returns the result to a new bitset.
-//
-//operator>>=
-// Shifts the bits in a bitset to the right a specified number of positions and returns the result to the targeted bitset.
-//
-//operator[]
-// Returns a reference to a bit at a specified position in a bitset if the bitset is modifiable; otherwise, it returns the value of the bit at that position.
-//
-//operator^=
-// Performs a bitwise combination of bitsets with the exclusive OR operation.
-//
-//operator|=
-// Performs a bitwise combination of bitsets with the inclusive OR operation.
-//
-//operator~
-// Toggles all the bits in a target bitset and returns the result.
-//
-//	//std::bitset
-}//namespace pr
+}
 
-#endif//PR_BIT_ARRAY_H
+// unit tests
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::container
+{
+	PRUnitTest(BitArrayTests)
+	{
+		bitsetRT<unsigned char> bs1;
+		PR_EXPECT(bs1.empty());
+		PR_EXPECT(bs1.size() == 0);
+		bs1.append(true);  PR_EXPECT(bs1.size() == 1);
+		bs1.append(false); PR_EXPECT(bs1.size() == 2);
+		bs1.append(true);  PR_EXPECT(bs1.size() == 3);
+		bs1.append(false); PR_EXPECT(bs1.size() == 4);
+		bs1.append(false); PR_EXPECT(bs1.size() == 5);
+		bs1.append(true);  PR_EXPECT(bs1.size() == 6);
+		PR_EXPECT(bs1[0] == true);
+		PR_EXPECT(bs1[1] == false);
+		PR_EXPECT(bs1[2] == true);
+		PR_EXPECT(bs1[3] == false);
+		PR_EXPECT(bs1[4] == false);
+		PR_EXPECT(bs1[5] == true);
+		PR_EXPECT(bs1.to_string() == "101001");
+		PR_EXPECT(!bs1.empty());
+
+		bs1.append(true);  PR_EXPECT(bs1.size() == 7);
+		bs1.append(false); PR_EXPECT(bs1.size() == 8);
+		bs1.append(true);  PR_EXPECT(bs1.size() == 9);
+		bs1.append(false); PR_EXPECT(bs1.size() == 10);
+		bs1.append(false); PR_EXPECT(bs1.size() == 11);
+		PR_EXPECT(bs1[6] == true);
+		PR_EXPECT(bs1[7] == false);
+		PR_EXPECT(bs1[8] == true);
+		PR_EXPECT(bs1[9] == false);
+		PR_EXPECT(bs1[10] == false);
+		PR_EXPECT(bs1.to_string() == "10100110100");
+
+		bs1.resize(8);
+		PR_EXPECT(bs1.size() == 8);
+		PR_EXPECT(bs1.to_string() == "10100110");
+		bs1[7] = true;
+		PR_EXPECT(bs1.to_string() == "10100111");
+		bs1.flip();
+		PR_EXPECT(bs1.to_string() == "01011000");
+
+		bs1[6] = true;
+		bs1[7] = true;
+		PR_EXPECT(bs1.to_string() == "01011011");
+		bs1.resize(6);
+		PR_EXPECT(bs1.to_string() == "010110");
+		bs1.resize(7);
+		PR_EXPECT(bs1.to_string() == "0101100");
+
+		PR_EXPECT(bs1.all() == false);
+		PR_EXPECT(bs1.any() == true);
+		bs1.set();
+		PR_EXPECT(bs1.all() == true);
+		PR_EXPECT(bs1.any() == true);
+		bs1.reset();
+		PR_EXPECT(bs1.all() == false);
+		PR_EXPECT(bs1.any() == false);
+
+		bs1 = "0110010";
+		PR_EXPECT(bs1.to_string() == "0110010");
+		bs1 = "1011 0111 0010 1110 10";
+		PR_EXPECT(bs1.to_string() == "101101110010111010");
+		PR_EXPECT(bs1.data()[0] == 0b11101101);
+		PR_EXPECT(bs1.data()[1] == 0b01110100);
+		PR_EXPECT(bs1.data()[2] == 0b00000001);
+
+		bitsetRT<unsigned char> bs2("101101110010111010");
+		PR_EXPECT(bs1 == bs2);
+		bs1[1].flip();
+		PR_EXPECT(bs1 != bs2);
+
+		PR_EXPECT(bs1.to_string() == "111101110010111010");
+		bs1 >>= 9;
+		PR_EXPECT(bs1.to_string() == "000000000111101110");
+		bs1 <<= 10;
+		PR_EXPECT(bs1.to_string() == "111011100000000000");
+		
+		PR_EXPECT(bs1.to_string() == "111011100000000000");
+		PR_EXPECT(bs2.to_string() == "101101110010111010");
+		auto bs3 = bs1 & bs2;
+		PR_EXPECT(bs3.to_string() == "101001100000000000");
+		auto bs4 = bs1 | bs2;
+		PR_EXPECT(bs4.to_string() == "111111110010111010");
+		auto bs5 = bs1 ^ bs2;
+		PR_EXPECT(bs5.to_string() == "010110010010111010");
+		auto bs6 = ~bs2;
+		PR_EXPECT(bs2.to_string() == "101101110010111010");
+		PR_EXPECT(bs6.to_string() == "010010001101000101");
+
+		bs1 = "";
+		PR_EXPECT(bs1.empty());
+		PR_EXPECT(bs1.to_string() == "");
+		bs1.append_bytes("\x01\x02\x03\x04");
+		PR_EXPECT(bs1.to_string(" ") == "10000000 01000000 11000000 00100000");
+
+		bs1 = "";
+		bs1.append(0x4321, 10);
+		PR_EXPECT(bs1.data()[0] == 0x21);
+		PR_EXPECT(bs1.data()[1] == 0x03);
+		PR_EXPECT(bs1.to_string(" ") == "10000100 11");
+
+		enum class EFlags { One = 1 << 0, Two = 1 << 1, Three = 1 << 2, Four = 1 << 3 };
+		bs1 = "";
+		bs1.append(EFlags::Three, 4);
+		PR_EXPECT(bs1.to_string() == "0010");
+
+		bs1 = "0101";
+		bs1.append_fill(false, 3);
+		bs1.append_fill(true, 5);
+		PR_EXPECT(bs1.to_string() == "010100011111");
+	}
+}
+#endif

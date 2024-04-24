@@ -114,6 +114,17 @@ old:
 			</ArrayItems>
 		</Expand>
 	</Type>
+	<Type Name="pr::bitsetRT&lt;*&gt;">
+		<DisplayString Condition="m_bits._Mypair._Myval2._Myfirst == m_bits._Mypair._Myval2._Mylast">empty</DisplayString>
+		<DisplayString>[size={m_bits.size() * sizeof(*m_bits.data()) * 8 - m_unused}]</DisplayString>
+		<Expand>
+			<Item Name="[size]">m_bits.size() * sizeof(*m_bits.data()) * 8 - m_unused</Item>
+			<ArrayItems>
+				<Size>m_bits._Mypair._Myval2._Mylast - m_bits._Mypair._Myval2._Myfirst</Size>
+				<ValuePointer>m_bits._Mypair._Myval2._Myfirst,b</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
 	
 	<!-- Expression Evaluator -->
 	<Type Name="pr::eval::Val">

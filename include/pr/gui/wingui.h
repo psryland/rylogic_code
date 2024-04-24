@@ -3436,6 +3436,7 @@ namespace pr
 				,m_dlg_behaviour(false)
 				,m_hide_on_close(false)
 				,m_pin_window   (false)
+				,m_dpi_aware    (true)
 			{
 				// Form's with Id's are normally dialogs in a resource
 				this->m_id.value = ID_UNUSED;

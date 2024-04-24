@@ -27,6 +27,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
 //#include "pr/common/compress.h"
+#include "pr/container/bit_array.h"
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"
 //#include "pr/container/deque.h"

@@ -3,7 +3,11 @@
 //	Copyright (c) Rylogic 2019
 //*****************************************
 #pragma once
+#include <mutex>
+#include <thread>
+#include <condition_variable>
 #include <functional>
+#include <cassert>
 #include "pr/network/winsock.h"
 
 namespace pr::network
