@@ -2,15 +2,15 @@
 // Winsock
 //	Copyright (c) Rylogic 2019
 //*****************************************
-
 #pragma once
 
-// Thanks microsoft... :-/
 #if defined(_INC_WINDOWS) && !defined(_WINSOCK2API_)
 #error "winsock2.h must be included before windows.h"
 #endif
 
 #include <string>
+#include <string_view>
+#include <format>
 #include <stdexcept>
 #include <ws2tcpip.h>
 #include <winsock2.h>
@@ -65,38 +65,6 @@ namespace pr::network
 		operator SOCKET() const
 		{
 			return m_socket;
-		}
-	};
-
-	// Network exception
-	struct exception : std::runtime_error
-	{
-		int m_code;
-
-		exception()
-			:std::runtime_error("")
-			,m_code()     
-		{}
-		exception(char const* msg)
-			:std::runtime_error(msg)
-			,m_code()
-		{}
-		exception(int code)
-			:std::runtime_error("")
-			,m_code(code)
-		{}
-		exception(char const* msg, int code)
-			:std::runtime_error(msg)
-			,m_code(code)
-		{}
-
-		char const* what() const override
-		{
-			return std::runtime_error::what();
-		}
-		int code() const
-		{
-			return m_code;
 		}
 	};
 
@@ -206,13 +174,18 @@ namespace pr::network
 	inline void Throw(DWORD code, std::string_view message = "")
 	{
 		auto err = SocketErrorToMsg(code);
-		throw exception(std::string(message).append(" ").append(err).c_str(), code);
+		throw std::runtime_error(std::format("{} [{}] {}", message, code, err));
 	}
 
 	// Error checking helper
 	inline void Check(bool success, std::string_view message = "")
 	{
 		if (success) return;
+		Throw(WSAGetLastError(), message);
+	}
+	inline void Check(int socket_result, std::string_view message = "")
+	{
+		if (socket_result != SOCKET_ERROR) return;
 		Throw(WSAGetLastError(), message);
 	}
 
@@ -259,15 +232,15 @@ namespace pr::network
 		// 'service' can be a string representation of a port number or
 		//  a service name like 'http', 'https', or something listed in
 		//  %WINDIR%\system32\drivers\etc\services
-		AddrInfo(char const* ip, char const* service, int addr_family = AF_UNSPEC, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP)
+		AddrInfo(std::string_view ip, std::string_view service, int addr_family = AF_UNSPEC, int socket_type = SOCK_STREAM, int proto = IPPROTO_TCP)
 		{
 			ADDRINFO hints = {};
 			hints.ai_family = addr_family;
 			hints.ai_socktype = socket_type;
 			hints.ai_protocol = proto;
-			auto r = ::getaddrinfo(ip, service, &hints, &m_first.m_ptr);
+			auto r = ::getaddrinfo(std::string(ip).c_str(), std::string(service).c_str(), &hints, &m_first.m_ptr);
 			if (r != 0)
-				Throw(WSAGetLastError(), std::string("Failed to resolve address: ").append(ip).append("(").append(service).append(")").c_str());;
+				Throw(WSAGetLastError(), std::format("Failed to resolve address: {}:{}", ip, service));
 		}
 		~AddrInfo()
 		{
@@ -288,25 +261,36 @@ namespace pr::network
 	// 'service' can be a string representation of a port number or
 	// a service name like 'http', 'https', or something listed in
 	// %WINDIR%\system32\drivers\etc\services
-	inline SOCKADDR_IN GetAddress(char const* ip, char const* service)
+	inline SOCKADDR_IN GetAddress(std::string_view ip, std::string_view service)
 	{
 		for (auto& i : AddrInfo(ip, service))
 		{
 			switch (i.ai_family)
 			{
-			default: break;
-			case AF_INET:
-			case AF_INET6:
-				return *reinterpret_cast<sockaddr_in const*>(i.ai_addr);
+				case AF_INET:
+				case AF_INET6:
+					return *reinterpret_cast<sockaddr_in const*>(i.ai_addr);
+				default:
+					break;
 			}
 		}
-		throw exception(std::string("Failed to resolve address: ").append(ip).append("(").append(service).append(")").c_str());
+		throw std::runtime_error(std::format("Failed to resolve address: {}:{}", ip, service));
 	}
 
 	// Convert an ip and port to a socket address
-	inline SOCKADDR_IN GetAddress(char const* ip, uint16_t port)
+	inline SOCKADDR_IN GetAddress(std::string_view ip, uint16_t port)
 	{
-		char buf[32];
+		char buf[32] = {};
 		return GetAddress(ip, _itoa(port, buf, 10));
+	}
+
+	// Get the address bound to 'socket'. This can be used when 'connect' is called without
+	// calling 'bind' to retrieve the local address assigned by the system.
+	inline sockaddr GetSockName(SOCKET socket)
+	{
+		sockaddr addr;
+		int addr_size = sizeof(addr);
+		Check(::getsockname(socket, &addr, &addr_size));
+		return addr;
 	}
 }

@@ -1,22 +1,34 @@
 //*******************************************************************
-// A collection of window related functions
+// Scope for CoInitialize and CoUninitialize
 //  Copyright (c) Rylogic Ltd 2008
 //*******************************************************************
 #pragma once
-
 #include <objbase.h>
-#include "pr/common/hresult.h"
+#include <comdef.h>
 
 namespace pr
 {
 	// RAII class for initialising COM
 	struct InitCom
 	{
-		enum EFlag { NoThrow };
+		enum EFlags
+		{
+			None = 0,
+			NoThrow = 1 << 0,
+		};
+
 		HRESULT m_res;
-		InitCom(DWORD dwCoInit = COINIT_MULTITHREADED)        { pr::Check(m_res = ::CoInitializeEx(0, dwCoInit)); }
-		InitCom(EFlag, DWORD dwCoInit = COINIT_MULTITHREADED) { m_res = ::CoInitializeEx(0, dwCoInit); }
-		~InitCom()                                            { ::CoUninitialize(); }
+
+		explicit InitCom(DWORD dwCoInit = COINIT_MULTITHREADED, EFlags flags = EFlags::None)
+			:m_res(::CoInitializeEx(0, dwCoInit))
+		{
+			if ((int(flags) & int(EFlags::NoThrow)) == 0 && FAILED(m_res))
+				throw std::runtime_error(_com_error(m_res).ErrorMessage());
+		}
+		~InitCom()
+		{
+			::CoUninitialize();
+		}
 	};
 
 	// Tests whether CoInitialize has been called

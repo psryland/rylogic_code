@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <span>
 #include <algorithm>
 #include <mutex>
 #include <thread>
@@ -89,23 +90,23 @@ namespace pr::network
 		}
 
 		// Send data to all clients
-		bool Send(void const* data, size_t size, int timeout_ms = ~0)
+		bool Send(std::span<uint8_t const> data, int timeout_ms = ~0)
 		{
-			return ServerSocket::Send(data, size, timeout_ms);
+			return ServerSocket::SendStream(data, timeout_ms);
 		}
 
 		// Receive data from any client
 		// Returns true when data is read from a client, 'out_client' is the client that was read from
 		// Returns false if no data was read from any client.
 		// Throws if a connection was aborted, or had a problem
-		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = 0, int flags = 0, SOCKET* out_client = nullptr)
+		bool Recv(std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = 0, SOCKET* out_client = nullptr)
 		{
-			return ServerSocket::Recv(data, size, bytes_read, timeout_ms, flags, out_client);
+			return ServerSocket::RecvStream(data, bytes_read, timeout_ms, out_client);
 		}
-		bool Recv(void* data, size_t size, int timeout_ms = ~0, int flags = 0, SOCKET* out_client = nullptr)
+		bool Recv(std::span<uint8_t> data, int timeout_ms = ~0, SOCKET* out_client = nullptr)
 		{
 			size_t bytes_read;
-			return Recv(data, size, bytes_read, timeout_ms, flags, out_client);
+			return Recv(data, bytes_read, timeout_ms, out_client);
 		}
 	};
 
@@ -179,20 +180,20 @@ namespace pr::network
 		// True if a the socket is connected to a host
 		bool IsConnected() const
 		{
-			return ClientSocket::IsConnected();
+			return ClientSocket::IsValid();
 		}
 
 		// Send/Recv data to/from the host
 		// Returns true if all data was sent/received
 		// Returns false if the connection to the client was closed gracefully
 		// Throws if the connection was aborted, or had a problem
-		bool Send(void const* data, size_t size, int timeout_ms = ~0)
+		bool Send(std::span<uint8_t const> data, int timeout_ms = ~0)
 		{
-			return ClientSocket::Send(data, size, timeout_ms);
+			return ClientSocket::SendStream(data, timeout_ms);
 		}
-		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = ~0, int flags = 0)
+		bool Recv(std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0)
 		{
-			return ClientSocket::Recv(data, size, bytes_read, timeout_ms, flags);
+			return ClientSocket::RecvStream(data, bytes_read, timeout_ms);
 		}
 
 		// Get/Set a socket option
@@ -286,20 +287,20 @@ namespace pr::network
 
 		// Send data.
 		// Returns true if all data was sent
-		bool Send(void const* data, size_t size, SOCKADDR_IN ep, int timeout_ms = ~0)
+		bool Send(std::span<uint8_t const> data, SOCKADDR_IN ep, int timeout_ms = ~0)
 		{
-			return network::SendTo(m_socket, ep, data, size, timeout_ms);
+			return network::SendDatagram(m_socket, data, timeout_ms, ep);
 		}
 
 		// Receive data from any client
 		// Returns true when data is read from a client
 		// Returns false if no data was read from any client.
 		// Throws if a connection was aborted, or had a problem
-		bool Recv(void* data, size_t size, size_t& bytes_read, SOCKADDR_IN* ep = nullptr, int timeout_ms = 0, int flags = 0)
+		bool Recv(std::span<uint8_t> data, size_t& bytes_read, SOCKADDR_IN* ep = nullptr, int timeout_ms = 0)
 		{
 			SOCKADDR_IN sender;
 			ep = ep ? ep : &sender;
-			return network::RecvFrom(m_socket, *ep, data, size, bytes_read, timeout_ms, flags);
+			return network::RecvDatagram(m_socket, data, bytes_read, timeout_ms, *ep);
 		}
 	};
 }
@@ -331,17 +332,17 @@ namespace pr::network
 			TcpClient client(wsa);
 			client.Connect("127.0.0.1", TestPort);
 
-			PR_CHECK(svr.WaitForClients(1), true);
-			PR_CHECK(connected, true);
+			PR_EXPECT(svr.WaitForClients(1));
+			PR_EXPECT(connected);
 
-			char const data[] = "Test data";
-			PR_CHECK(svr.Send(&data[0], sizeof(data)), true);
+			uint8_t const data[] = "Test data";
+			PR_EXPECT(svr.Send(data));
 
 			size_t bytes_read;
-			char result[sizeof(data)] = {};
-			PR_CHECK(client.Recv(&result[0], sizeof(result), bytes_read), true);
+			uint8_t result[sizeof(data)] = {};
+			PR_EXPECT(client.Recv(result, bytes_read));
 
-			PR_CHECK(data, result);
+			PR_EXPECT(memcmp(&data[0], &result[0], sizeof(data)) == 0);
 			svr.StopConnections();
 		}
 		{
@@ -351,15 +352,15 @@ namespace pr::network
 			TcpClient client(wsa);
 			client.Connect("127.0.0.1", TestPort);
 
-			PR_CHECK(svr.WaitForClients(1), true);
+			PR_EXPECT(svr.WaitForClients(1));
 
-			char const data[] = "Test data";
-			PR_CHECK(client.Send(data, sizeof(data)), true);
+			uint8_t const data[] = "Test data";
+			PR_EXPECT(client.Send(data, sizeof(data)));
 
-			char result[sizeof(data)] = {};
-			PR_CHECK(svr.Recv(result, sizeof(result)), true);
+			uint8_t result[sizeof(data)] = {};
+			PR_EXPECT(svr.Recv(result, sizeof(result)));
 
-			PR_CHECK(data, result);
+			PR_EXPECT(memcmp(&data[0], &result[0], sizeof(data)) == 0);
 
 			client.Close();
 			svr.StopConnections();

@@ -138,33 +138,41 @@ namespace pr
 	// Returns the bit position of the highest bit
 	constexpr int HighBitIndex(uint64_t n)
 	{
-		unsigned int shift = 0, pos = 0;
-		shift = ((n & 0xFFFFFFFF00000000ULL) != 0) << 5; n >>= shift; pos |= shift;
-		shift = ((n &         0xFFFF0000ULL) != 0) << 4; n >>= shift; pos |= shift;
-		shift = ((n &             0xFF00ULL) != 0) << 3; n >>= shift; pos |= shift;
-		shift = ((n &               0xF0ULL) != 0) << 2; n >>= shift; pos |= shift;
-		shift = ((n &                0xCULL) != 0) << 1; n >>= shift; pos |= shift;
-		shift = ((n &                0x2ULL) != 0) << 0; n >>= shift; pos |= shift;
+		if (n == 0) return -1;
+		auto x = n; int shift = 0, pos = 0;
+		shift = ((x & 0xFFFFFFFF00000000ULL) != 0) << 5; x >>= shift; pos |= shift;
+		shift = ((x &         0xFFFF0000ULL) != 0) << 4; x >>= shift; pos |= shift;
+		shift = ((x &             0xFF00ULL) != 0) << 3; x >>= shift; pos |= shift;
+		shift = ((x &               0xF0ULL) != 0) << 2; x >>= shift; pos |= shift;
+		shift = ((x &                0xCULL) != 0) << 1; x >>= shift; pos |= shift;
+		shift = ((x &                0x2ULL) != 0) << 0; x >>= shift; pos |= shift;
 		return pos;
 	}
 
 	// Returns the bit position of the lowest bit
 	constexpr int LowBitIndex(uint64_t n)
 	{
-		return HighBitIndex(LowBit(n));
+		auto low_bit = LowBit(n);
+		return n != 0 ? HighBitIndex(low_bit) : -1;
 	}
 
-	// Return the integer log2 of 'n'
-	constexpr int IntegerLog2(uint64_t n)
+	// Returns the log2 of 'n' rounded down to the nearest integer
+	constexpr int FloorLog2(uint64_t n)
 	{
 		return HighBitIndex(n);
+	}
 
-		// Doesn't work for values greater than (1 << 52)
-		// // This only works for IEEE 64bit floats: [1:sign][11:exponent][52:fraction]
-		// assert(n != 0);
-		// auto v = static_cast<double const>(n);
-		// auto c = *reinterpret_cast<long long const*>(&v);
-		// return ((c >> 52) & 0x7FF) - 1023;
+	// Returns the log2 of 'n' rounded up to the nearest integer
+	constexpr int CeilLog2(uint64_t n)
+	{
+		return HighBitIndex(n) + 1;
+	}
+
+	// Returns the number of leading zeros in 'n' (64-bit)
+	constexpr int LeadingZeros(uint64_t n)
+	{
+		if (n == 0) return 64;
+		return 63 - FloorLog2(n);
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
@@ -485,15 +493,15 @@ namespace pr::maths
 		}
 		{
 			auto n0 = 0b1; // 1
-			PR_CHECK(IntegerLog2(n0), 0);
+			PR_CHECK(FloorLog2(n0), 0);
 			auto n1 = 0b10; // 2
-			PR_CHECK(IntegerLog2(n1), 1);
+			PR_CHECK(FloorLog2(n1), 1);
 			auto n2 = 0b1000000; // 64
-			PR_CHECK(IntegerLog2(n2), 6);
+			PR_CHECK(FloorLog2(n2), 6);
 			auto n3 = 0b101010101010101ULL; // 21845
-			PR_CHECK(IntegerLog2(n3), 14);
+			PR_CHECK(FloorLog2(n3), 14);
 			auto n4 = 0xFFFFFFFFFFFFFFFFULL; // 18446744073709551615
-			PR_CHECK(IntegerLog2(n4), 63);
+			PR_CHECK(FloorLog2(n4), 63);
 		}
 		{
 			char const* mask_str = "1001110010";
@@ -504,6 +512,14 @@ namespace pr::maths
 			PR_CHECK(LowBitIndex(mask), 1);
 			PR_CHECK(LowBit(mask), 2U);
 			PR_CHECK(HighBit(mask), 0x200U);
+		}
+		{
+			auto bits = 0b001011000100;
+			PR_EXPECT(HighBitIndex(bits) == 9);
+			PR_EXPECT(LowBitIndex(bits) == 2);
+			PR_EXPECT((1ULL << FloorLog2(bits)) == 0b001000000000ULL);
+			PR_EXPECT((1ULL << CeilLog2(bits))  == 0b010000000000ULL);
+			PR_EXPECT(LeadingZeros(bits) == 63 - 9);
 		}
 		{
 			char const* mask_str = "1111010100010";

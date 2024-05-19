@@ -615,7 +615,11 @@ namespace pr
 			HitTestResult m_selected;
 
 			using HookMap = std::unordered_map<DWORD, ContextMenu*>;
-			static HookMap& ThreadHookMap() { static HookMap s_thread_hook_map; return s_thread_hook_map; }
+			static HookMap& ThreadHookMap()
+			{
+				static HookMap s_thread_hook_map;
+				return s_thread_hook_map;
+			}
 			HHOOK m_mouse_hook;
 
 			// Subclass the dialog window class for the context menu
@@ -661,8 +665,7 @@ namespace pr
 			{
 				switch (message)
 				{
-				case WM_INITDIALOG:
-					#pragma region 
+					case WM_INITDIALOG:
 					{
 						// Allow child menu items to create hosted controls now that we have an hwnd
 						for (auto& item : m_items)
@@ -674,7 +677,7 @@ namespace pr
 						m_size = MeasureItem(gfx);
 
 						// Client area is the contained item size plus margins
-						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
+						auto client = Rect(Point(), m_size + Size(2 * MenuMargin, 2 * MenuMargin));
 						auto bounds = AdjRect(client).Shifted(pt.x, pt.y);
 						ParentRect(bounds, true);
 
@@ -709,9 +712,7 @@ namespace pr
 
 						return ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren);
 					}
-					#pragma endregion
-				case WM_DESTROY:
-					#pragma region 
+					case WM_DESTROY:
 					{
 						if (m_hwnd == hwnd)
 						{
@@ -725,9 +726,7 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
-				case WM_NCACTIVATE:
-					#pragma region 
+					case WM_NCACTIVATE:
 					{
 						if (m_hwnd == hwnd)
 						{
@@ -736,18 +735,14 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
-				case WM_PAINT:
-					#pragma region 
+					case WM_PAINT:
 					{
 						PaintStruct ps(m_hwnd);
 						gdi::Graphics gfx(ps.hdc);
 						DrawItem(gfx, Rect());
 						return false;
 					}
-					#pragma endregion
-				case WM_MOUSEMOVE:
-					#pragma region 
+					case WM_MOUSEMOVE:
 					{
 						// Only retest for hits when outside the last hit rect
 						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
@@ -761,23 +756,19 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
-				case WM_LBUTTONUP:
-					#pragma region
+					case WM_LBUTTONUP:
 					{
 						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
 						auto hit = HitTest(pt);
 						Selected(hit, true);
 						return true;
 					}
-					#pragma endregion
-				case WM_KEYUP:
-					#pragma region
+					case WM_KEYUP:
 					{
 						// Handle key selection of menu items
 						auto item_count = int(m_items.size());
 						if (item_count == 0) break;
-						auto ch    = TCHAR(wparam);
+						auto ch = TCHAR(wparam);
 						int index = Selected().m_item != nullptr ? Selected().m_index : item_count;
 
 						auto prev = [=](int idx) { return int(idx - 1 + item_count) % item_count; };
@@ -841,7 +832,6 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				}
 
 				// Messages that get here will be forwarded to child controls as well

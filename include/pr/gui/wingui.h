@@ -70,6 +70,7 @@ Example Use:
 
 #include <vector>
 #include <string>
+#include <string_view>
 #include <fstream>
 #include <iterator>
 #include <unordered_map>
@@ -310,7 +311,7 @@ namespace pr
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
 		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for directX apps
-		enum :DWORD { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
+		enum :DWORD { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN };
 		enum :DWORD { DefaultFormStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE };
 
 		enum :DWORD { DefaultDialogStyle = (DefaultFormStyle | DS_MODALFRAME | WS_POPUPWINDOW) & ~(WS_OVERLAPPED) };
@@ -511,31 +512,6 @@ namespace pr
 			throw std::runtime_error(message.c_str());
 		}
 
-		// Initialise common controls (makes them look modern). Must be called before creating any controls
-		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
-		{
-			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
-			Check(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
-		}
-
-		// Replace macros from windowsx.h
-		inline WORD MakeWord(DWORD_PTR lo, DWORD_PTR hi) { return WORD((lo &   0xff) | ((hi &   0xff) <<  8)); }
-		inline LONG MakeLong(DWORD_PTR lo, DWORD_PTR hi) { return LONG((lo & 0xffff) | ((hi & 0xffff) << 16)); }
-		inline WORD HiWord(DWORD_PTR l)                  { return WORD((l >> 16) & 0xffff); }
-		inline BYTE HiByte(DWORD_PTR w)                  { return BYTE((w >>  8) &   0xff); }
-		inline WORD LoWord(DWORD_PTR l)                  { return WORD(l & 0xffff); }
-		inline BYTE LoByte(DWORD_PTR w)                  { return BYTE(w &   0xff); }
-		inline int GetXLParam(LPARAM lparam)             { return int(short(LoWord(lparam))); } // GET_X_LPARAM
-		inline int GetYLParam(LPARAM lparam)             { return int(short(HiWord(lparam))); } // GET_Y_LPARAM
-		inline WPARAM MakeWParam(int lo, int hi)         { return WPARAM(MakeLong(lo, hi)); }
-		inline LPARAM MakeLParam(int lo, int hi)         { return LPARAM(MakeLong(lo, hi)); }
-		inline LPCWSTR MakeIntResourceW(int i)           { return rcast<LPCWSTR>(cast<WORD>(i)    + (LPCSTR)0); } // MAKEINTRESOURCEW
-		inline LPCWSTR MakeIntAtomW(ATOM atom)           { return rcast<LPCWSTR>(cast<WORD>(atom) + (LPCSTR)0); } // MAKEINTATOM
-		inline bool IsIntResource(LPCWSTR res_id)        { return res_id != nullptr && HiWord(rcast<LPCSTR>(res_id) - (LPCSTR)0) == 0; } // IS_INTRESOURCE
-		inline bool IsIntResource(LPCSTR res_id)         { return res_id != nullptr && HiWord(rcast<LPCSTR>(res_id) - (LPCSTR)0) == 0; } // IS_INTRESOURCE
-		inline WORD ResourceInt(LPCWSTR res)             { assert(IsIntResource(res)); return LoWord(rcast<LPCSTR>(res) - (LPCSTR)0); }
-		inline WORD ResourceInt(LPCSTR res)              { assert(IsIntResource(res)); return LoWord(rcast<LPCSTR>(res) - (LPCSTR)0); }
-
 		// Return the window class name that 'hwnd' is an instance of
 		inline std::wstring WndClassName(HWND hwnd)
 		{
@@ -548,6 +524,76 @@ namespace pr
 				cn.resize(len == 0 ? cn.size() * 2 : len);
 			}
 			return cn;
+		}
+
+		// Replace macros from windowsx.h
+		constexpr WORD MakeWord(DWORD_PTR lo, DWORD_PTR hi)
+		{
+			return WORD((lo & 0xff) | ((hi & 0xff) << 8));
+		}
+		constexpr LONG MakeLong(DWORD_PTR lo, DWORD_PTR hi)
+		{
+			return LONG((lo & 0xffff) | ((hi & 0xffff) << 16));
+		}
+		constexpr WORD HiWord(DWORD_PTR l)
+		{
+			return WORD((l >> 16) & 0xffff);
+		}
+		constexpr BYTE HiByte(DWORD_PTR w)
+		{
+			return BYTE((w >> 8) & 0xff);
+		}
+		constexpr WORD LoWord(DWORD_PTR l)
+		{
+			return WORD(l & 0xffff);
+		}
+		constexpr BYTE LoByte(DWORD_PTR w)
+		{
+			return BYTE(w & 0xff);
+		}
+		constexpr int GetXLParam(LPARAM lparam) // GET_X_LPARAM
+		{
+			return int(short(LoWord(lparam)));
+		}
+		constexpr int GetYLParam(LPARAM lparam) // GET_Y_LPARAM
+		{
+			return int(short(HiWord(lparam)));
+		}
+		constexpr WPARAM MakeWParam(int lo, int hi)
+		{
+			return WPARAM(MakeLong(lo, hi));
+		}
+		constexpr LPARAM MakeLParam(int lo, int hi)
+		{
+			return LPARAM(MakeLong(lo, hi));
+		}
+
+		// Replacements for win32 macros
+		inline LPCWSTR MakeIntResourceW(int i) // MAKEINTRESOURCEW
+		{
+			return rcast<LPCWSTR>(cast<WORD>(i) + (LPCSTR)0);
+		}
+		inline LPCWSTR MakeIntAtomW(ATOM atom) // MAKEINTATOM
+		{
+			return rcast<LPCWSTR>(cast<WORD>(atom) + (LPCSTR)0);
+		}
+		inline bool IsIntResource(LPCWSTR res_id) // IS_INTRESOURCE
+		{
+			return res_id != nullptr && HiWord(rcast<LPCSTR>(res_id) - (LPCSTR)0) == 0;
+		}
+		inline bool IsIntResource(LPCSTR res_id) // IS_INTRESOURCE
+		{
+			return res_id != nullptr && HiWord(rcast<LPCSTR>(res_id) - (LPCSTR)0) == 0;
+		}
+		inline WORD ResourceInt(LPCWSTR res)
+		{
+			assert(IsIntResource(res));
+			return LoWord(rcast<LPCSTR>(res) - (LPCSTR)0);
+		}
+		inline WORD ResourceInt(LPCSTR res)
+		{
+			assert(IsIntResource(res));
+			return LoWord(rcast<LPCSTR>(res) - (LPCSTR)0);
 		}
 
 		// Select 'Lhs' if not void, otherwise 'Rhs'
@@ -662,27 +708,9 @@ namespace pr
 			T* operator -> () const { return p; }
 		};
 
-		// Create a COM IStream from resource data
-		inline CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type)
-		{
-			// Find the resource and it's size
-			auto hres = ::FindResourceW(inst, resource, res_type);
-			auto res = hres != nullptr ? ::LoadResource(inst, hres) : nullptr;
-			auto data = res != nullptr ? ::LockResource(res) : nullptr;
-			auto size = hres != nullptr ? ::SizeofResource(inst, hres) : 0;
-			if (!data || !size)
-				throw std::runtime_error("Bitmap resource not found");
+		// Forward
+		CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type);
 
-			// Create a GDI+ bitmap from the resource
-			return CComPtr<IStream>(SHCreateMemStream(static_cast<BYTE const*>(data), size));
-		}
-
-		// Convert a mouse key to an index
-		inline int MouseKeyToIndex(EMouseKey mk)
-		{
-			// Mouse keys are all single bit, so log2() returns the bit index
-			return int(log2(int(mk)) + 0.5f);
-		}
 		#pragma endregion
 
 		#pragma region Win32 Structure Wrappers
@@ -693,6 +721,7 @@ namespace pr
 
 		// String
 		using string = std::wstring;
+		using string_view = std::wstring_view;
 
 		// Point
 		struct Point :POINT
@@ -1024,15 +1053,120 @@ namespace pr
 		struct Font
 		{
 			enum class ETypes { Raster, Vector, TrueType };
-			enum EFaceName { CourierNew, Tahoma, };
-			static wchar_t const* FaceName(EFaceName fam)
+			enum EFaceName { CourierNew, Tahoma, SegoeUI };
+			static constexpr wchar_t const* FaceName(EFaceName fam)
 			{
-				switch (fam) {
-				default:         return L"";
-				case CourierNew: return L"couriernew";
-				case Tahoma:     return L"tahoma";
+				switch (fam)
+				{
+					case EFaceName::CourierNew: return L"CourierNew";
+					case EFaceName::Tahoma:     return L"Tahoma";
+					case EFaceName::SegoeUI:    return L"Segoe UI";
+					default: return L"";
 				}
 			}
+
+			struct Params
+			{
+				wchar_t const* m_face_name = FaceName(EFaceName::Tahoma);
+				int m_point_size = 12;
+				int m_weight = FW_NORMAL;
+				bool m_italic = false;
+				bool m_underline = false;
+				bool m_strike_out = false;
+				uint8_t m_charset = DEFAULT_CHARSET;
+				HFONT m_hfont = nullptr;
+				HDC m_hdc = nullptr;
+
+				Params& family(EFaceName fname)
+				{
+					m_face_name = FaceName(fname);
+					return *this;
+				}
+				Params& pt_size(int sz)
+				{
+					m_point_size = sz;
+					return *this;
+				}
+				Params& bold()
+				{
+					return weight(600);
+				}
+				Params& weight(int w)
+				{
+					m_weight = w;
+					return *this;
+				}
+				Params& italic(bool i)
+				{
+					m_italic = i;
+					return *this;
+				}
+				Params& underline(bool u)
+				{
+					m_underline = u;
+					return *this;
+				}
+				Params& strike_out(bool s)
+				{
+					m_strike_out = s;
+					return *this;
+				}
+				Params& charset(uint8_t cs)
+				{
+					m_charset = cs;
+					return *this;
+				}
+				Params& hfont(HFONT hf)
+				{
+					m_hfont = hf;
+					return *this;
+				}
+				Params& hdc(HDC hdc)
+				{
+					m_hdc = hdc;
+					return *this;
+				}
+			};
+			struct Modify
+			{
+				std::optional<int> m_point_size = {};
+				std::optional<int> m_weight = {};
+				std::optional<bool> m_italic = {};
+				std::optional<bool> m_underline = {};
+				std::optional<bool> m_strikeout = {};
+				HDC m_hdc = nullptr;
+
+				Modify& point_size(int ps)
+				{
+					m_point_size = ps;
+					return *this;
+				}
+				Modify& weight(int w)
+				{
+					m_weight = w;
+					return *this;
+				}
+				Modify& italic(bool i)
+				{
+					m_italic = i;
+					return *this;
+				}
+				Modify& underline(bool u)
+				{
+					m_underline = u;
+					return *this;
+				}
+				Modify& strikeout(bool s)
+				{
+					m_strikeout = s;
+					return *this;
+				}
+				Modify& hdc(HDC hdc)
+				{
+					m_hdc = hdc;
+					return *this;
+				}
+			};
 
 			HFONT m_obj;
 			bool m_owned;
@@ -1044,73 +1178,55 @@ namespace pr
 				:m_obj(obj)
 				,m_owned(owned)
 			{}
-			Font(EFaceName face_name, int point_size, void*, int weight = FW_NORMAL, bool italic = false)
-				:Font(FaceName(face_name), point_size, nullptr, weight, italic)
-			{}
-			Font(wchar_t const* face_name, int point_size, void*, int weight = FW_NORMAL, bool italic = false, bool underline = false, bool strike_out = false, HDC hdc = nullptr)
+			explicit Font(Params const& p)
 			{
-				ClientDC clientdc(nullptr);
-				auto hdc_ = hdc ? hdc : clientdc.m_hdc;
+				auto client_dc = ClientDC(nullptr);
+				auto hdc_ = p.m_hdc ? p.m_hdc : client_dc.m_hdc;
 
-				LOGFONTW lf    = {};
-				lf.lfCharSet   = DEFAULT_CHARSET;
-				lf.lfWeight    = LONG(weight);
-				lf.lfItalic    = BYTE(italic ? TRUE : FALSE);
-				lf.lfUnderline = BYTE(underline ? TRUE : FALSE);
-				lf.lfStrikeOut = BYTE(strike_out ? TRUE : FALSE);
-				::wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), face_name, _TRUNCATE);
+				auto lf = LOGFONTW{};
+				lf.lfCharSet   = p.m_charset;
+				lf.lfWeight    = p.m_weight;
+				lf.lfItalic    = p.m_italic ? TRUE : FALSE;
+				lf.lfUnderline = p.m_underline ? TRUE : FALSE;
+				lf.lfStrikeOut = p.m_strike_out ? TRUE : FALSE;
+				lf.lfHeight	   = -MulDiv(p.m_point_size, ::GetDeviceCaps(hdc_, LOGPIXELSY), 72);
+				::wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), p.m_face_name, _TRUNCATE);
 
-				// convert point_size to logical units based on hDC
-				auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), point_size, 720)); // 72 points/inch, 10 'decipoints'/point
-				auto ptOrg = Point{};
-				::DPtoLP(hdc_, &pt, 1);
-				::DPtoLP(hdc_, &ptOrg, 1);
-				lf.lfHeight = -abs(pt.y - ptOrg.y);
-		
 				m_obj = ::CreateFontIndirectW(&lf);
 				m_owned = true;
 			}
-			Font(HFONT font, int weight)
-				:Font(font, nullptr, &weight, nullptr, nullptr, nullptr, nullptr)
-			{}
-			Font(HFONT font, int point_size, int weight)
-				:Font(font, &point_size, &weight, nullptr, nullptr, nullptr, nullptr)
-			{}
-			Font(HFONT font, int point_size, int weight, bool italic , bool underline, bool strike_out, HDC hdc = nullptr)
-				:Font(font, &point_size, &weight, &italic, &underline, &strike_out, hdc)
-			{}
-			Font(HFONT font, int* point_size, int* weight, bool* italic, bool* underline, bool* strike_out, HDC hdc)
+			Font(HFONT font, Modify const& p)
 			{
-				LOGFONTW lf;
+				auto lf = LOGFONTW{};
 				GetObjectW(font, sizeof(LOGFONTW), &lf);
 
-				if (point_size)
+				if (p.m_point_size)
 				{
 					// convert point_size to logical units based on hDC
-					ClientDC clientdc(nullptr);
-					auto hdc_ = hdc ? hdc : clientdc.m_hdc;
-					auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), *point_size, 720)); // 72 points/inch, 10 'decipoints'/point
+					auto client_dc = ClientDC(nullptr);
+					auto hdc_ = p.m_hdc ? p.m_hdc : client_dc.m_hdc;
+					auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), *p.m_point_size, 720)); // 72 points/inch, 10 'decipoints'/point
 					auto ptOrg = Point{};
 					::DPtoLP(hdc_, &pt, 1);
 					::DPtoLP(hdc_, &ptOrg, 1);
 					lf.lfHeight = -abs(pt.y - ptOrg.y);
 					lf.lfWeight = 0;
 				}
-				if (weight)
+				if (p.m_weight)
 				{
-					lf.lfWeight = *weight;
+					lf.lfWeight = *p.m_weight;
 				}
-				if (italic)
+				if (p.m_italic)
 				{
-					lf.lfItalic = *italic;
+					lf.lfItalic = *p.m_italic;
 				}
-				if (underline)
+				if (p.m_underline)
 				{
-					lf.lfUnderline = *underline;
+					lf.lfUnderline = *p.m_underline;
 				}
-				if (strike_out)
+				if (p.m_strikeout)
 				{
-					lf.lfStrikeOut = *strike_out;
+					lf.lfStrikeOut = *p.m_strikeout;
 				}
 				m_obj = ::CreateFontIndirectW(&lf);
 				m_owned = true;
@@ -1200,7 +1316,7 @@ namespace pr
 				if (m_obj == nullptr)
 					return CLR_INVALID;
 
-				LOGBRUSH lb;
+				LOGBRUSH lb = {};
 				::GetObjectW(m_obj, sizeof(lb), &lb);
 				return lb.lbColor;
 			}
@@ -1379,7 +1495,7 @@ namespace pr
 				}
 				else
 				{
-					stream = StreamFromResource(hinst, resource, ResType(type));
+					stream = gui::StreamFromResource(hinst, resource, ResType(type));
 				}
 
 				// Create a GDI+ bitmap from the stream
@@ -1703,6 +1819,97 @@ namespace pr
 		};
 		#pragma endregion
 
+		#pragma region Static Functions
+
+		// Initialise common controls (makes them look modern). Must be called before creating any controls
+		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
+		{
+			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
+			Check(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
+		}
+
+		// Create a COM IStream from resource data
+		inline CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type)
+		{
+			// Find the resource and it's size
+			auto hres = ::FindResourceW(inst, resource, res_type);
+			auto res = hres != nullptr ? ::LoadResource(inst, hres) : nullptr;
+			auto data = res != nullptr ? ::LockResource(res) : nullptr;
+			auto size = hres != nullptr ? ::SizeofResource(inst, hres) : 0;
+			if (!data || !size)
+				throw std::runtime_error("Bitmap resource not found");
+
+			// Create a GDI+ bitmap from the resource
+			return CComPtr<IStream>(SHCreateMemStream(static_cast<BYTE const*>(data), size));
+		}
+
+		// Convert a mouse key to an index
+		inline int MouseKeyToIndex(EMouseKey mk)
+		{
+			// Mouse keys are all single bit, so log2() returns the bit index
+			return int(log2(int(mk)) + 0.5f);
+		}
+
+		// Default fonts
+		template <typename Ctx>
+		inline HFONT DefaultFontImpl(LOGFONTW NonClientMetrics::* logfont, bool refresh = false)
+		{
+			static NonClientMetrics ncm;
+			static HFONT font = CreateFontIndirectW(&(ncm.*logfont));
+			if (refresh)
+			{
+				ncm = NonClientMetrics();
+				font = CreateFontIndirectW(&(ncm.*logfont));
+			}
+			return font;
+		}
+		inline HFONT DefaultGuiFont()
+		{
+			return HFONT(GetStockObject(DEFAULT_GUI_FONT));
+		}
+		inline HFONT DefaultMessageFont(bool refresh = false)
+		{
+			return DefaultFontImpl<struct DefMessageFont>(&NonClientMetrics::lfMessageFont, refresh);
+		}
+		inline HFONT DefaultMenuFont(bool refresh = false)
+		{
+			return DefaultFontImpl<struct DefMenuFont>(&NonClientMetrics::lfMenuFont, refresh);
+		}
+		inline HFONT DefaultStatusFont(bool refresh = false)
+		{
+			return DefaultFontImpl<struct DefStatusFont>(&NonClientMetrics::lfStatusFont, refresh);
+		}
+		inline HFONT DefaultCaptionFont(bool refresh = false)
+		{
+			return DefaultFontImpl<struct DefCaptionFont>(&NonClientMetrics::lfCaptionFont, refresh);
+		}
+		inline HFONT DefaultSmallCaptionFont(bool refresh = false)
+		{
+			return DefaultFontImpl<struct DefSmCaptionFont>(&NonClientMetrics::lfSmCaptionFont, refresh);
+		}
+
+		// Measure 'text' using the font in this control
+		inline Size MeasureString(string_view text, HWND hwnd = nullptr, HFONT hfont = nullptr, int max_width = 0, UINT flags = 0)
+		{
+			if (text.empty())
+				return {};
+
+			// If a window is provided measure using it's DC, otherwise create a dummy window and use that.
+			auto hwnd_ = hwnd ? hwnd : ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr);
+			auto cleanup = OnScopeExit([=] { if (hwnd != hwnd_) ::DestroyWindow(hwnd_); });
+			Check(::IsWindow(hwnd_), "MeasureString failed. No window available");
+
+			ClientDC dc(hwnd_);
+			SelectObject sel_font(dc, hfont ? hfont : DefaultGuiFont());
+
+			Rect sz(0, 0, max_width, 0);
+			if (max_width != 0) flags |= DT_WORDBREAK;
+			Check(DrawTextW(dc, text.data(), static_cast<int>(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
+			return sz.size();
+		}
+
+		#pragma endregion
+
 		#pragma region Menu
 		struct MenuItem :MENUITEMINFOW
 		{
@@ -1938,7 +2145,7 @@ namespace pr
 			void Set(wchar_t const* text, Menu& submenu)
 			{
 				auto index = IndexByName(text);
-				auto info = MenuItem().text(text).submenu(submenu);
+				auto& info = MenuItem().text(text).submenu(submenu);
 				Check(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
 			}
 
@@ -2649,7 +2856,7 @@ namespace pr
 			inline constexpr int CentreP  = Centre | CentreOf;
 
 			// True if 'x' contains auto position information (where 'x' is x or y)
-			inline bool IsAutoPos(int x)
+			inline constexpr bool IsAutoPos(int x)
 			{
 				// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
 				// Otherwise, the top 8 bits are the auto position bits and the lower 16
@@ -2658,7 +2865,7 @@ namespace pr
 			}
 
 			// True if 'x' contains auto size information (where 'x' is width or height)
-			inline bool IsAutoSize(int x)
+			inline constexpr bool IsAutoSize(int x)
 			{
 				return (x & AutoSizeMask) != 0;
 			}
@@ -2670,7 +2877,7 @@ namespace pr
 			// 'measure(-1)' means return the size of the control being positioned using preferred size.
 			// 'measure([1,0xffff))' means return the parent space rect of a sibling control with 'id' in the range 1,0xffff.
 			// All aligning is done after margins have been added. 'measure' should return bounds that include margins.
-			template <typename Measure> void CalcPosSize(int& x, int& y, int& w, int& h, Rect const& margin, Measure const& measure)
+			inline void CalcPosSize(int& x, int& y, int& w, int& h, Rect const& margin, std::function<Rect(int)> measure)
 			{
 				auto parent_area = measure(0);
 
@@ -3096,7 +3303,7 @@ namespace pr
 			WndClassEx const* m_wci;            // Window class information
 			wchar_t const*    m_text;           // Control text
 			int               m_x, m_y;         // Negative values for 'x,y' mean relative to the right,bottom of the parent. Remember auto position Left|RightOf, etc..
-			int               m_w, m_h;         // Can use Control::Fill, etc
+			int               m_w, m_h;         // Can use Control::Fill, Control::Auto, etc
 			CtrlId            m_id;             // The control id, used to match the control to windows created in dialog resources
 			WndRef            m_parent;         // The control that contains this control, or form that owns this form
 			EAnchor           m_anchor;         // How to move/resize this control when the parent resizes
@@ -3108,6 +3315,7 @@ namespace pr
 			ResId<HICON>      m_icon_sm;        // The resource id of an icon or an icon handle. The control takes ownership if a handle is passed
 			COLORREF          m_colour_fore;    // The foreground colour of the control
 			COLORREF          m_colour_back;    // The background colour of the control
+			Font const*       m_font;           // The font for the control
 			bool              m_client_wh;      // True if width and height parameters are desired client width/height, rather than screen bounds
 			bool              m_selectable;     // True if the control gains keyboard input focus when selected
 			bool              m_allow_drop;     // True if the control is a drag and drop target
@@ -3142,6 +3350,7 @@ namespace pr
 				,m_icon_sm()
 				,m_colour_fore(CLR_INVALID)
 				,m_colour_back(CLR_INVALID)
+				,m_font()
 				,m_client_wh(false)
 				,m_selectable(false)
 				,m_allow_drop(false)
@@ -3334,6 +3543,11 @@ namespace pr
 			{
 				assert((c & 0xFF000000) == 0 && "Don't use alpha");
 				m_colour_back = c;
+				return me();
+			}
+			this_type& font(Font const& f)
+			{
+				m_font = &f;
 				return me();
 			}
 			this_type& selectable(bool on = true)
@@ -3807,10 +4021,10 @@ namespace pr
 
 				// Scale the control position/size for the current DPI (preserving the auto pos size bits)
 				// Note: If this control is a pop-up or overlapped window (i.e. not a child), then x,y,w,h should be in screen coords.
-				auto x = !auto_size_position::IsAutoPos (p.m_x) ? m_metrics.X(p.m_x) : p.m_x;
-				auto y = !auto_size_position::IsAutoPos (p.m_y) ? m_metrics.Y(p.m_y) : p.m_y;
-				auto w = !auto_size_position::IsAutoSize(p.m_w) ? m_metrics.X(p.m_w) : p.m_w;
-				auto h = !auto_size_position::IsAutoSize(p.m_h) ? m_metrics.Y(p.m_h) : p.m_h;
+				auto x = auto_size_position::IsAutoPos (p.m_x) ? p.m_x : m_metrics.X(p.m_x);
+				auto y = auto_size_position::IsAutoPos (p.m_y) ? p.m_y : m_metrics.Y(p.m_y);
+				auto w = auto_size_position::IsAutoSize(p.m_w) ? p.m_w : m_metrics.X(p.m_w);
+				auto h = auto_size_position::IsAutoSize(p.m_h) ? p.m_h : m_metrics.Y(p.m_h);
 
 				// Handle auto position/size
 				AutoSizePosition(x, y, w, h, p.m_parent);
@@ -4187,43 +4401,6 @@ namespace pr
 				TextMetrics tm;
 				Check(::GetTextMetricsW(dc, &tm), "GetTextMetrics failed");
 				return tm;
-			}
-
-			// Default fonts
-			template <typename Ctx> static HFONT DefaultFontImpl(LOGFONTW NonClientMetrics::* logfont, bool refresh = false)
-			{
-				static NonClientMetrics ncm;
-				static HFONT font = CreateFontIndirectW(&(ncm.*logfont));
-				if (refresh)
-				{
-					ncm = NonClientMetrics();
-					font = CreateFontIndirectW(&(ncm.*logfont));
-				}
-				return font;
-			}
-			static HFONT DefaultGuiFont()
-			{
-				return HFONT(GetStockObject(DEFAULT_GUI_FONT));
-			}
-			static HFONT DefaultMessageFont(bool refresh = false)
-			{
-				return DefaultFontImpl<struct DefMessageFont>(&NonClientMetrics::lfMessageFont, refresh);
-			}
-			static HFONT DefaultMenuFont(bool refresh = false)
-			{
-				return DefaultFontImpl<struct DefMenuFont>(&NonClientMetrics::lfMenuFont, refresh);
-			}
-			static HFONT DefaultStatusFont(bool refresh = false)
-			{
-				return DefaultFontImpl<struct DefStatusFont>(&NonClientMetrics::lfStatusFont, refresh);
-			}
-			static HFONT DefaultCaptionFont(bool refresh = false)
-			{
-				return DefaultFontImpl<struct DefCaptionFont>(&NonClientMetrics::lfCaptionFont, refresh);
-			}
-			static HFONT DefaultSmallCaptionFont(bool refresh = false)
-			{
-				return DefaultFontImpl<struct DefSmCaptionFont>(&NonClientMetrics::lfSmCaptionFont, refresh);
 			}
 
 			// Invalidate the control for redraw
@@ -4713,7 +4890,7 @@ namespace pr
 				}
 
 				// Initialise with a default true type font.
-				Font(DefaultGuiFont());
+				Font(cp().m_font ? static_cast<HFONT>(*cp().m_font) : DefaultGuiFont());
 
 				// Enable drag and drop
 				AllowDrop(cp().m_allow_drop);
@@ -4837,20 +5014,10 @@ namespace pr
 						// Notes:
 						//  - WM_ERASEBKGND means clear the client area background. When we're double
 						//    buffering, we need to fill with the background colour.
-						//  - WM_ERASEBKGND occurs before WM_PAINT, so 
-
-						//// If double buffering, do all drawing in a memory DC
-						//if (cp().m_dbl_buffer)
-						//{
-						//	EnsureDoubleBuffer();
-						//
-						//	ClientDC dc(m_hwnd);
-						//	auto client_rect = ClientRect(false);
-						//	MemDC mem(dc, client_rect, m_dbl_buffer);
-						//}
+						//  - WM_ERASEBKGND occurs before WM_PAINT
 
 						// Prevent erase background. It results in flickering.
-						return S_FALSE;
+						return 1;
 					}
 					case WM_PAINT:
 					{
@@ -4979,7 +5146,9 @@ namespace pr
 						{
 							auto is_resize = !AllSet(wp.flags, int(EWindowPos::NoSize));
 							auto is_move = !AllSet(wp.flags, int(EWindowPos::NoMove));
-							auto redraw = !AllSet(wp.flags, int(EWindowPos::NoRedraw));
+
+							// "NoRedraw" means, the *system* isn't going to redraw the window so you have to.
+							auto manual_redraw = AllSet(wp.flags, int(EWindowPos::NoRedraw));
 
 							// Record the new position/size in the parameters
 							if (is_move)
@@ -5013,7 +5182,7 @@ namespace pr
 								}
 							}
 
-							// If we're double buffering, resize the backbuffer
+							// If we're double buffering, resize the back buffer
 							if (is_resize && cp().m_dbl_buffer)
 								EnsureDoubleBuffer();
 
@@ -5027,8 +5196,11 @@ namespace pr
 								OnVisibilityChanged(VisibleEventArgs(false));
 
 							// Invalidate the window
-							if (redraw)
+							if (manual_redraw)
+							{
+								// Todo: we need to track what needs drawing and invalidate those areas
 								Invalidate(true, nullptr, true);
+							}
 						}
 						break;
 					}
@@ -5736,26 +5908,7 @@ namespace pr
 			// Measure 'text' using the font in this control
 			Size MeasureString(string const& text, int max_width = 0, UINT flags = 0) const
 			{
-				if (text.empty())
-					return Size();
-
-				// If the window exists, measure using it's DC. If not, create a dummy window and use that
-				auto hwnd = m_hwnd;
-				if (!hwnd) Check((hwnd = ::CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr)) != 0, "Create dummy window in MeasureString failed");
-				auto cleanup = OnScopeExit([=]
-				{
-					if (hwnd == m_hwnd) return;
-					::DestroyWindow(hwnd);
-				});
-
-				assert(::IsWindow(hwnd));
-				ClientDC dc(hwnd);
-				SelectObject sel_font(dc, DefaultGuiFont());
-
-				Rect sz(0,0,max_width,0);
-				if (max_width != 0) flags |= DT_WORDBREAK;
-				Check(DrawTextW(dc, text.c_str(), int(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
-				return sz.size();
+				return gui::MeasureString(text, m_hwnd, cp().m_font ? *cp().m_font : nullptr, max_width, flags);
 			}
 
 			// Return the client area of this control, including or excluding padding
@@ -5869,8 +6022,9 @@ namespace pr
 				if (p.m_dpi_aware)
 				{
 					// This needs to be called before any HWNDs are created.
+					// 'ERROR_ACCESS_DENIED' is returned if the DPI awareness is already set (from the manifest).
 					if constexpr (WINVER >= 0x0605)
-						Check(::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2), "DPI Aware mode not set");
+						Check(::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) || GetLastError() == ERROR_ACCESS_DENIED, "DPI Aware mode not set");
 				}
 			}
 			virtual ~Form()
@@ -7115,7 +7269,12 @@ namespace pr
 			// Details view column
 			struct ColumnInfo :LVCOLUMNW
 			{
-				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt).min_width(10).def_width(80); }
+				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW()
+				{
+					constexpr int margin = 8;
+					auto sz = gui::MeasureString(text_) + Size(2*margin, 2*margin);
+					text(text_).format(fmt).min_width(10).def_width(80).ideal_width(sz.cx).width(sz.cx);
+				}
 				ColumnInfo& text(wchar_t const* text)  { mask |= LVCF_TEXT; pszText = const_cast<wchar_t *>(text); return *this; }
 				ColumnInfo& width(int w)               { mask |= LVCF_WIDTH; cx = w; return *this; }
 				ColumnInfo& format(int lvcfmt)         { mask |= LVCF_FMT; fmt = lvcfmt; return *this; }
@@ -7155,6 +7314,12 @@ namespace pr
 				this_type& no_hdr_sort()
 				{
 					return this->style('+', LVS_NOSORTHEADER);
+				}
+				this_type& columns(std::vector<std::wstring_view> const& names)
+				{
+					m_columns.clear();
+					for (auto& name : names) add_column(ColumnInfo(name.data()));
+					return this->me();
 				}
 				this_type& add_column(ColumnInfo const& cinfo)
 				{

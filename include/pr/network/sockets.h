@@ -3,24 +3,26 @@
 //	Copyright (c) Rylogic 2019
 //*****************************************
 #pragma once
+#include <span>
 #include <mutex>
 #include <thread>
+#include <atomic>
 #include <condition_variable>
 #include <functional>
+#include <optional>
+#include <cstdint>
 #include <cassert>
-#include "pr/network/winsock.h"
+#include "winsock.h"
 
 namespace pr::network
 {
 	// Return the maximum packet size supported by the network
 	inline size_t GetMaxPacketSize(SOCKET socket)
 	{
-		size_t max_size;
-		int max_size_size = sizeof(max_size);
-		if (::getsockopt(socket, SOL_SOCKET, SO_MAX_MSG_SIZE, (char*)&max_size, &max_size_size) == SOCKET_ERROR)
-			throw exception("Failed to get socket options", WSAGetLastError());
-
-		return max_size;
+		unsigned int max_packet_size = {};
+		int opt_len = sizeof(max_packet_size);
+		Check(::getsockopt(socket, SOL_SOCKET, SO_MAX_MSG_SIZE, (char*)&max_packet_size, &opt_len), "Failed to get socket options");
+		return max_packet_size;
 	}
 
 	// Convert a time in milliseconds to a timeval
@@ -32,125 +34,131 @@ namespace pr::network
 		return tv;
 	}
 
-	// Send data on 'socket'
-	// Returns true if all data was sent
-	// Throws if the connection was aborted, or had a problem
-	inline bool Send(SOCKET socket, void const* data, size_t size, int timeout_ms = ~0)
+	// Block up to 'timeout_ms' waiting for 'socket' to be available for sending
+	inline bool SelectToSend(SOCKET socket, int timeout_ms = ~0)
 	{
-		auto max_packet_size = GetMaxPacketSize(socket);
+		// Select the socket to check that there's transmit buffer space
+		fd_set set = {};
+		FD_SET(socket, &set);
+		auto timeout = TimeVal(timeout_ms);
+		auto result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
+		if (result == 0)
+			return false; // timeout, connection still fine but no room to send
+
+		Check(result != SOCKET_ERROR, "Select failed");
+		return true;
+	}
+
+	// Block up to 'timeout_ms' waiting for 'socket' to be available for receiving
+	inline bool SelectToRecv(SOCKET socket, int timeout_ms = ~0)
+	{
+		// Wait for the socket to be readable
+		fd_set set = {0};
+		FD_SET(socket, &set);
+		auto timeout = TimeVal(timeout_ms);
+		auto result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
+		if (result == 0)
+			return false; // timeout, no more bytes available, connection still fine
+
+		Check(result != SOCKET_ERROR, "Select failed");
+		return true;
+	}
+
+	// Send a datagram.
+	// Datagrams are expected to the <= the maximum packet size of the network.
+	inline bool SendDatagram(SOCKET socket, std::span<uint8_t const> data, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
+	{
+		if (!SelectToSend(socket, timeout_ms))
+			return false;
+
+		auto buf = reinterpret_cast<char const*>(data.data());
+		auto len = static_cast<int>(data.size());
+
+		// Send data. Datagram sockets should send all the data or fail.
+		auto sent = addr
+			? ::sendto(socket, buf, len, 0, &reinterpret_cast<sockaddr const&>(*addr), sizeof(*addr))
+			: ::send(socket, buf, len, 0);
+		Check(sent != SOCKET_ERROR && sent == len, "Send datagram failed");
+
+		return true;
+	}
+	
+	// Send 'data' as a stream (i.e., repeatedly call send until all data is sent)
+	inline bool SendStream(SOCKET socket, std::span<uint8_t const> data, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
+	{
+		auto buf = reinterpret_cast<char const*>(data.data());
+		auto len = static_cast<int>(data.size());
 
 		// Send all of the data
 		size_t bytes_sent = 0;
-		for (auto ptr = static_cast<char const*>(data); size != 0;)
+		for (; len != 0;)
 		{
-			// Select the socket to check that there's transmit buffer space
-			fd_set set = {};
-			FD_SET(socket, &set);
-			auto timeout = TimeVal(timeout_ms);
-			int result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
-			if (result == 0) return false; // timeout, connection still fine but not all bytes sent
-			Check(result != SOCKET_ERROR, "Select failed");
+			if (!SelectToSend(socket, timeout_ms))
+				return false;
 
-			// Send data
-			int sent = ::send(socket, ptr, static_cast<int>(std::min(size, max_packet_size)), 0);
+			int sent = addr
+				? ::sendto(socket, buf, len, 0, &reinterpret_cast<sockaddr const&>(*addr), sizeof(*addr))
+				: ::send(socket, buf, len, 0);
 			Check(sent == 0 || sent != SOCKET_ERROR);
 
-			ptr += sent;
 			bytes_sent += sent;
-			size -= sent;
+			buf += sent;
+			len -= sent;
 		}
 		return true;
 	}
 
-	// Receive data on 'socket'
-	// Returns false if the connection to the client was closed gracefully
-	// Throws if the connection was aborted, or had a problem
-	// 'flags' : MSG_PEEK
-	inline bool Recv(SOCKET socket, void* data, size_t size, size_t& bytes_read, int timeout_ms = ~0, int flags = 0)
+	// Receive a datagram
+	// Datagrams are expected to the <= the maximum packet size of the network.
+	inline bool RecvDatagram(SOCKET socket, std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
 	{
 		bytes_read = 0;
-		for (auto ptr = static_cast<char*>(data); size != 0;)
-		{
-			// Wait for the socket to be readable
-			fd_set set = {0};
-			FD_SET(socket, &set);
-			auto timeout = TimeVal(timeout_ms);
-			int result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
-			if (result == 0) return true; // timeout, no more bytes available, connection still fine
-			Check(result != SOCKET_ERROR, "Select failed");
+		if (!SelectToRecv(socket, timeout_ms))
+			return false;
 
-			// Read the data
-			int read = ::recv(socket, ptr, int(size), flags);
-			if (read == 0) return false; // read zero bytes indicates the socket has been closed gracefully
-			Check(read != SOCKET_ERROR);
+		auto buf = reinterpret_cast<char*>(data.data());
+		auto len = static_cast<int>(data.size());
+		auto addrlen = addr ? static_cast<int>(sizeof(*addr)) : 0;
 
-			ptr += read;
-			bytes_read += read;
-			size -= read;
-		}
+		// Read data. Datagram sockets should read a full datagram or fail.
+		int read = addr
+			? ::recvfrom(socket, buf, len, 0, &reinterpret_cast<sockaddr&>(*addr), &addrlen)
+			: ::recv(socket, buf, len, 0);
+		Check(read != SOCKET_ERROR && read != 0, "Receive datagram failed");
+
+		bytes_read = read;
 		return true;
 	}
 
-	// Send data to a particular ip using 'socket'.
-	// Use 'GetAddress' to convert an IP:port into a 'SOCKADDR_IN' end point.
-	// Returns true if all data was sent, false if there was a problem with the connection
-	// Throws if the connection was aborted, or had a problem
-	inline bool SendTo(SOCKET socket, SOCKADDR_IN ep, void const* data, size_t size, int timeout_ms = ~0)
+	// Receive a stream of data (i.e., repeatedly call recv until all data is received)
+	inline bool RecvStream(SOCKET socket, std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
 	{
-		// Set the destination address
-		auto max_packet_size = GetMaxPacketSize(socket);
+		auto buf = reinterpret_cast<char*>(data.data());
+		auto len = static_cast<int>(data.size());
+		auto addrlen = addr ? static_cast<int>(sizeof(*addr)) : 0;
 
-		// Send all of the data to the host
-		size_t bytes_sent = 0;
-		for (auto ptr = static_cast<char const*>(data); size != 0;)
-		{
-			// Select the socket to check that there's transmit buffer space
-			fd_set set = {};
-			FD_SET(socket, &set);
-			auto timeout = TimeVal(timeout_ms);
-			int result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
-			if (result == 0) return false; // timeout, connection still fine but not all bytes sent
-			Check(result != SOCKET_ERROR, "Select failed");
-
-			// Send data
-			int sent = ::sendto(socket, ptr, static_cast<int>(std::min(size, max_packet_size)), 0, (sockaddr const*)&ep, sizeof(ep));
-			Check(sent == 0 || sent != SOCKET_ERROR);
-
-			ptr += sent;
-			bytes_sent += sent;
-			size -= sent;
-		}
-		return true;
-	}
-
-	// Receive data on 'socket'
-	// 'ep' is an output, containing the end-point that the data was received from.
-	// 'data','size' is a buffer to receive data into.
-	// 'bytes_read' is the size of the data written to 'data'.
-	// 'flags' : MSG_PEEK
-	// Returns false if the connection to the client was closed gracefully
-	// Throws if the connection was aborted, or had a problem
-	inline bool RecvFrom(SOCKET socket, SOCKADDR_IN& ep, void* data, size_t size, size_t& bytes_read, int timeout_ms = ~0, int flags = 0)
-	{
+		// Read all of the data
 		bytes_read = 0;
-		for (auto ptr = static_cast<char*>(data); size != 0;)
+		for (; len != 0;)
 		{
-			fd_set set = {};
-			FD_SET(socket, &set);
-			auto timeout = TimeVal(timeout_ms);
-			int result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
-			if (result == 0) return true; // timeout, no more bytes available, connection still fine
-			Check(result != SOCKET_ERROR, "Select failed");
+			// Timeout on select means no more data is available. If the caller provided a timeout,
+			// then this is expected so return true. If no timeout was provided, then this function
+			// won't return until data arrives or the socket is closed.
+			if (!SelectToRecv(socket, timeout_ms))
+				return timeout_ms != ~0;
 
-			// Read the data
-			int ep_size;
-			int read = ::recvfrom(socket, ptr, int(size), flags, (sockaddr*)&ep, &ep_size);
-			if (read == 0) return false; // read zero bytes indicates the socket has been closed gracefully
-			Check(read != SOCKET_ERROR, "recvform failed");
+			int read = addr
+				? ::recvfrom(socket, buf, len, 0, &reinterpret_cast<sockaddr&>(*addr), &addrlen)
+				: ::recv(socket, buf, len, 0);
+			Check(read == 0 || read != SOCKET_ERROR);
+			
+			// Reading zero bytes indicates the socket has been closed gracefully
+			if (read == 0)
+				return false;
 
-			ptr += read;
 			bytes_read += read;
-			size -= read;
+			buf += read;
+			len -= read;
 		}
 		return true;
 	}
@@ -168,13 +176,164 @@ namespace pr::network
 		SOCKET                  m_listen_socket;   // The socket we're listen for incoming connections on
 		uint16_t                m_listen_port;     // The port we're listening on
 		int                     m_max_connections; // The maximum number of clients we'll accept connections from
-		SocketCont              m_clients;         // The connected clients
-		bool                    m_run_server;      // True while the server should run
-		mutable std::mutex      m_mutex;           // Synchronise access to the clients list
+		std::thread             m_listen_thread;   // Thread that listens for incoming connections
 		std::condition_variable m_cv_run_server;   // Sync
 		std::condition_variable m_cv_clients;      // Sync
-		std::thread             m_listen_thread;   // Thread that listens for incoming connections
+		std::atomic_bool        m_run_server;      // True while the server should run
+		mutable std::mutex      m_mutex;           // Synchronise access to the clients list
+		SocketCont              m_clients;         // The connected clients
 
+	public:
+
+		ServerSocket(Winsock const& winsock)
+			: m_winsock(winsock)
+			, m_listen_socket(INVALID_SOCKET)
+			, m_listen_port()
+			, m_max_connections()
+			, m_listen_thread()
+			, m_cv_run_server()
+			, m_cv_clients()
+			, m_run_server(false)
+			, m_mutex()
+			, m_clients()
+		{}
+		ServerSocket(ServerSocket&&) = delete;
+		ServerSocket(ServerSocket const&) = delete;
+		ServerSocket& operator =(ServerSocket&&) = delete;
+		ServerSocket& operator =(ServerSocket const&) = delete;
+		~ServerSocket()
+		{
+			StopConnections();
+		}
+
+		// True if the server is listening for connections
+		bool Listening() const
+		{
+			return m_run_server;
+		}
+
+		// The port we're listening on
+		uint16_t ListenPort() const
+		{
+			return m_listen_port;
+		}
+
+		// Turn on/off the server. 'listen_port' is a port number of your choosing.
+		void AllowConnections(uint16_t listen_port, ConnectionCB connect_cb, int max_connections = SOMAXCONN)
+		{
+			StopConnections();
+
+			// If this fails with WSAEACCESS, it's probably because the firewall is blocking it
+			m_listen_port = listen_port;
+			m_max_connections = max_connections;
+			m_listen_socket = CreateListenSocket(m_listen_port);
+
+			// Start the thread for incoming connections
+			m_run_server = true;
+			m_listen_thread = std::thread([this](ConnectionCB connect_cb)
+			{
+				try
+				{
+					ListenThread(connect_cb);
+				}
+				catch (std::exception const& ex)
+				{
+					assert(false && ex.what());
+					(void)ex;
+				}
+				catch (...)
+				{
+					assert(false && "Unhandled exception in tcp listen thread");
+				}
+			}, connect_cb);
+		}
+		void AllowConnections(uint16_t listen_port, int max_connections = SOMAXCONN)
+		{
+			AllowConnections(listen_port, [](SOCKET, sockaddr_in const*){}, max_connections);
+		}
+
+		// Block until 'client_count' connections have been made
+		bool WaitForClients(size_t client_count, int timeout_ms = ~0)
+		{
+			Lock lock(m_mutex);
+			return (timeout_ms != ~0)
+				? m_cv_clients.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return m_clients.size() >= client_count; })
+				: (m_cv_clients.wait(lock, [&] { return m_clients.size() >= client_count; }), true);
+		}
+
+		// Stop accepting incoming connections
+		void StopConnections()
+		{
+			if (m_listen_socket == INVALID_SOCKET)
+				return;
+
+			// Stop the incoming connections thread
+			m_run_server = false;
+			m_cv_run_server.notify_all();
+			if (m_listen_thread.joinable())
+				m_listen_thread.join();
+
+			{// Shutdown the listen socket
+				::shutdown(m_listen_socket, SD_BOTH);
+				::closesocket(m_listen_socket);
+				m_listen_socket = INVALID_SOCKET;
+			}
+
+			{// Shutdown all client connections
+				Lock lock(m_mutex);
+				for (auto& client : m_clients)
+				{
+					::shutdown(client, SD_BOTH);
+					::closesocket(client);
+				}
+				m_clients.resize(0);
+			}
+		}
+
+		// Return the number of connected clients
+		size_t ClientCount() const
+		{
+			Lock lock(m_mutex);
+			return m_clients.size();
+		}
+
+		// Send data to all clients
+		bool SendStream(std::span<uint8_t const> data, int timeout_ms = ~0)
+		{
+			Lock lock(m_mutex);
+
+			// Send the data to each client
+			bool all_sent = true;
+			for (auto& client : m_clients)
+				all_sent &= network::SendStream(client, data, timeout_ms);
+
+			return all_sent;
+		}
+
+		// Receive data from any client.
+		// Returns true when data is read from a client, 'out_client' is the client that was read from.
+		// Returns false if no data was read from any client.
+		// Throws if a connection was aborted, or had a problem.
+		bool RecvStream(std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = 0, SOCKET* out_client = nullptr)
+		{
+			Lock lock(m_mutex);
+
+			// Attempt to read from all clients
+			for (auto& client : m_clients)
+			{
+				// Read data from this client, if data found, then return it
+				bytes_read = 0;
+				if (!network::RecvStream(client, data, bytes_read, timeout_ms) || bytes_read == 0)
+					continue;
+
+				if (out_client) *out_client = client;
+				return true;
+			}
+			return false;
+		}
+
+	private:
+			
 		// Thread for listening for incoming connections
 		void ListenThread(ConnectionCB connect_cb)
 		{
@@ -223,15 +382,16 @@ namespace pr::network
 					// Remove dead connections
 					client_count -= RemoveDeadConnections(connect_cb);
 				}
-				catch (exception const& ex)
+				catch (std::exception const&)
 				{
-					switch (ex.code()) {
-					default: throw;
+					auto code = WSAGetLastError();
+					switch (code) {
 					case WSAENETDOWN:
 					case WSAECONNRESET:
 					case WSAEWOULDBLOCK:
 						listening = false;
 						break; // retry to listen
+					default: throw;
 					}
 				}
 			}
@@ -242,12 +402,8 @@ namespace pr::network
 		size_t WaitForConnections(int timeout_ms, ConnectionCB connect_cb)
 		{
 			// Test for the listen socket being readable (meaning incoming connection request)
-			fd_set set = {};
-			FD_SET(m_listen_socket, &set);
-			auto timeout = TimeVal(timeout_ms);
-			int result = ::select(0, &set, 0, 0, &timeout);
-			if (result == 0) return 0; // no incoming connections
-			Check(result != SOCKET_ERROR, "Select socket failed");
+			if (!SelectToRecv(m_listen_socket, timeout_ms))
+				return 0; // no incoming connections
 
 			// Someone is trying to connect
 			sockaddr_in client_addr;
@@ -263,6 +419,7 @@ namespace pr::network
 			// Notify connect
 			if (connect_cb)
 				connect_cb(client, &client_addr);
+
 			return 1;
 		}
 
@@ -276,48 +433,48 @@ namespace pr::network
 			int dropped = 0;
 			for (auto& client : m_clients)
 			{
-				// Detect shutdown sockets by those that "can be read" but return '0' bytes read
-				fd_set set = {};
-				FD_SET(client, &set);
-				auto timeout = TimeVal(0);
-				int result = ::select(0, &set, 0, 0, &timeout);
-				if (result == 0) continue; // socket cannot be read (i.e. no data, that's fine it's not closed)
-				Check(result != SOCKET_ERROR, "Select failed");
+				if (!SelectToRecv(client, 0))
+					continue; // socket cannot be read (i.e. no data, that's fine it's not closed)
 
 				char sink_char;
-				result = ::recv(client, &sink_char, 1, MSG_PEEK);
+				auto result = ::recv(client, &sink_char, 1, MSG_PEEK);
 				if (result != SOCKET_ERROR)
 					continue; // read is ready and the connection is still good
 
 				// Check the socket error for dead connection cases
 				auto code = WSAGetLastError();
-				switch (code) {
-				case WSAEINTR:
-				case WSAEINPROGRESS:
-				case WSAEWOULDBLOCK:
-					break;
+				switch (code)
+				{
+					case WSAEINTR:
+					case WSAEINPROGRESS:
+					case WSAEWOULDBLOCK:
+					{
+						break;
+					}
+					case WSAENOTCONN:
+					case WSAENETDOWN:
+					case WSAENETRESET:
+					case WSAESHUTDOWN:
+					case WSAECONNABORTED:
+					case WSAETIMEDOUT:
+					case WSAECONNRESET:
+					{
+						// Notify disconnect
+						if (connect_cb)
+							connect_cb(client, nullptr);
 
-				case WSAENOTCONN:
-				case WSAENETDOWN:
-				case WSAENETRESET:
-				case WSAESHUTDOWN:
-				case WSAECONNABORTED:
-				case WSAETIMEDOUT:
-				case WSAECONNRESET:
-					// Notify disconnect
-					if (connect_cb)
-						connect_cb(client, nullptr);
-
-					// Close the client socket
-					::shutdown(client, SD_BOTH);
-					::closesocket(client);
-					client = INVALID_SOCKET;
-					++dropped;
-					break;
-
-				default:
-					Throw(code);
-					break;
+						// Close the client socket
+						::shutdown(client, SD_BOTH);
+						::closesocket(client);
+						client = INVALID_SOCKET;
+						++dropped;
+						break;
+					}
+					default:
+					{
+						Throw(code);
+						break;
+					}
 				}
 			}
 
@@ -330,153 +487,6 @@ namespace pr::network
 
 		// Create m_listen_socket to use for listening on
 		virtual SOCKET CreateListenSocket(int port) = 0;
-
-	public:
-
-		ServerSocket(Winsock const& winsock)
-			:m_winsock(winsock)
-			,m_listen_socket(INVALID_SOCKET)
-			,m_listen_port()
-			,m_max_connections()
-			,m_run_server(false)
-			,m_mutex()
-			,m_cv_run_server()
-			,m_cv_clients()
-			,m_listen_thread()
-		{}
-		ServerSocket(ServerSocket const&) = delete;
-		ServerSocket& operator =(ServerSocket const&) = delete;
-		~ServerSocket()
-		{
-			StopConnections();
-		}
-
-		// True if the server is listening for connections
-		bool Listening() const
-		{
-			Lock lock(m_mutex);
-			return m_run_server;
-		}
-
-		// The port we're listening on
-		uint16_t ListenPort() const
-		{
-			return m_listen_port;
-		}
-
-		// Turn on/off the server
-		// 'listen_port' is a port number of your choosing
-		// 'connect_cb' should have the signature: void ConnectionCB(void* ctx, SOCKET socket, sockaddr_in const* client_addr);
-		// 'client_addr' will be non-null for connections, null for disconnections
-		void AllowConnections(uint16_t listen_port, ConnectionCB connect_cb, int max_connections = SOMAXCONN)
-		{
-			StopConnections();
-
-			// If this fails with WSAEACCESS, it's probably because the firewall is blocking it
-			m_listen_port     = listen_port;
-			m_max_connections = max_connections;
-			m_listen_socket   = CreateListenSocket(m_listen_port);
-
-			// Start the thread for incoming connections
-			m_run_server = true;
-			m_listen_thread = std::thread([this](ConnectionCB connect_cb)
-			{
-				try                              { ListenThread(connect_cb); }
-				catch (std::exception const& ex) { assert(false && ex.what()); (void)ex; }
-				catch (...)                      { assert(false && "Unhandled exception in tcp listen thread"); }
-			}, connect_cb);
-		}
-		void AllowConnections(uint16_t listen_port, int max_connections = SOMAXCONN)
-		{
-			AllowConnections(listen_port, [](SOCKET, sockaddr_in const*){}, max_connections);
-		}
-
-		// Block until 'client_count' connections have been made
-		bool WaitForClients(size_t client_count, int timeout_ms = ~0)
-		{
-			Lock lock(m_mutex);
-			if (timeout_ms != ~0)
-				return m_cv_clients.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return m_clients.size() >= client_count; });
-
-			m_cv_clients.wait(lock, [&] { return m_clients.size() >= client_count; });
-			return true;
-		}
-
-		// Stop accepting incoming connections
-		void StopConnections()
-		{
-			if (m_listen_socket == INVALID_SOCKET)
-				return;
-
-			{// Stop the incoming connections thread
-				Lock lock(m_mutex);
-				m_run_server = false;
-				m_cv_run_server.notify_all();
-			}
-
-			if (m_listen_thread.joinable())
-				m_listen_thread.join();
-
-			{// Shutdown the listen socket
-				::shutdown(m_listen_socket, SD_BOTH);
-				::closesocket(m_listen_socket);
-				m_listen_socket = INVALID_SOCKET;
-			}
-
-			{// Shutdown all client connections
-				Lock lock(m_mutex);
-				for (auto& client : m_clients)
-				{
-					::shutdown(client, SD_BOTH);
-					::closesocket(client);
-				}
-				m_clients.resize(0);
-			}
-		}
-
-		// Return the number of connected clients
-		size_t ClientCount() const
-		{
-			Lock lock(m_mutex);
-			return m_clients.size();
-		}
-
-		// Send data to all clients
-		bool Send(void const* data, size_t size, int timeout_ms = ~0)
-		{
-			Lock lock(m_mutex);
-
-			// Send the data to each client
-			bool all_sent = true;
-			for (auto& client : m_clients)
-				all_sent &= network::Send(client, data, size, timeout_ms);
-
-			return all_sent;
-		}
-
-		// Receive data from any client
-		// Returns true when data is read from a client, 'out_client' is the client that was read from
-		// Returns false if no data was read from any client.
-		// Throws if a connection was aborted, or had a problem
-		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = 0, int flags = 0, SOCKET* out_client = nullptr)
-		{
-			Lock lock(m_mutex);
-
-			// Attempt to read from all clients
-			for (auto& client : m_clients)
-			{
-				// Read data from this client, if data found, then return it
-				bytes_read = 0;
-				if (network::Recv(client, data, size, bytes_read, timeout_ms, flags) && bytes_read != 0)
-				{
-					if (out_client) *out_client = client;
-					return true;
-				}
-			}
-
-			// no data read from any client
-			return false;
-		}
 	};
 
 	// Base class for a socket connection with client behaviour
@@ -495,7 +505,9 @@ namespace pr::network
 			,m_socket(INVALID_SOCKET)
 			,m_port()
 		{}
+		ClientSocket(ClientSocket&&) = default;
 		ClientSocket(ClientSocket const&) = delete;
+		ClientSocket& operator =(ClientSocket&&) = default;
 		ClientSocket& operator =(ClientSocket const&) = delete;
 		~ClientSocket()
 		{
@@ -513,8 +525,8 @@ namespace pr::network
 			m_socket = INVALID_SOCKET;
 		}
 
-		// True if a the socket is connected to a host
-		bool IsConnected() const
+		// True if the socket handle "looks" valid
+		bool IsValid() const
 		{
 			return m_socket != INVALID_SOCKET;
 		}
@@ -523,13 +535,13 @@ namespace pr::network
 		// Returns true if all data was sent/received
 		// Returns false if the connection to the client was closed gracefully
 		// Throws if the connection was aborted, or had a problem
-		bool Send(void const* data, size_t size, int timeout_ms = ~0)
+		bool SendStream(std::span<uint8_t const> data, int timeout_ms = ~0)
 		{
-			return network::Send(m_socket, data, size, timeout_ms);
+			return network::SendStream(m_socket, data, timeout_ms);
 		}
-		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = ~0, int flags = 0)
+		bool RecvStream(std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0)
 		{
-			return network::Recv(m_socket, data, size, bytes_read, timeout_ms, flags);
+			return network::RecvStream(m_socket, data, bytes_read, timeout_ms);
 		}
 
 		// Get/Set a socket option

@@ -1035,6 +1035,9 @@
     <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\bit_data.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
