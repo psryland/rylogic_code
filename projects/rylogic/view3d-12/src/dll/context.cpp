@@ -533,7 +533,7 @@ namespace pr::rdr12
 				else
 				{
 					// Return false if the handler did not handle the given code
-					bstr_t res, err;
+					BSTR_t res, err;
 					if (m_handler(code, m_support.c_str(), res, err) == 0)
 						return false;
 
