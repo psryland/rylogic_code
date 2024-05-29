@@ -51,6 +51,7 @@
 #include "pr\common\allocator.h"
 #include "pr\common\archiver.h"
 #include "pr\common\assert.h"
+#include "pr\common\async_wrap.h"
 #include "pr\common\base64.h"
 #include "pr\common\bit_data.h"
 #include "pr\common\bstr_t.h"

@@ -16,33 +16,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\gui\wingui.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\colour_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\gdiplus.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\graph_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\vt100.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\progress_ui.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\context_menu.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\view3d_panel.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="res\resource.h">
       <Filter>res</Filter>
     </ClInclude>
@@ -55,6 +28,33 @@
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\colour_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\context_menu.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\gdiplus.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\graph_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\progress_ui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\view3d_panel.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\vt100.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -65,11 +65,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="post_build.py" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="res\resource.rc">
       <Filter>res</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="post_build.py" />
   </ItemGroup>
 </Project>

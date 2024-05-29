@@ -37,7 +37,7 @@ namespace ace
 		using Screen = pr::SpaceInvaders::Screen;
 		using SoundBank = std::vector<pr::ByteData<4>>;
 		using AudioManager = pr::audio::AudioManager;
-		static wchar_t const* AppName() { return L"AceInspaders"; };
+		static char const* AppName() { return "AceInspaders"; };
 
 		#define PR_FIELDS(x)\
 		x(pr::m4x4, m_i2w, pr::rdr::EInstComp::I2WTransform)\

@@ -56,15 +56,15 @@
   <ItemGroup>
     <ResourceCompile Include="res\resource.rc" />
     <ClInclude Include="res\resource.h" />
-    <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\context_menu.h" />
-    <ClInclude Include="..\include\pr\gui\gdiplus.h" />
-    <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\progress_ui.h" />
-    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
-    <ClInclude Include="..\include\pr\gui\vt100.h" />
-    <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\colour_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\context_menu.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\gdiplus.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\graph_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\progress_ui.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\view3d_panel.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\vt100.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="src\about.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\modeless.h" />
