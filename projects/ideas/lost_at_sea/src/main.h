@@ -17,7 +17,7 @@ namespace las
 		using base = pr::app::Main<Main, MainUI, Settings>;
 		using Skybox = pr::app::Skybox;
 
-		static wchar_t const* AppName() { return L"LostAtSea"; }
+		static char const* AppName() { return "LostAtSea"; }
 
 		Skybox     m_skybox;
 		//Ship       m_ship;

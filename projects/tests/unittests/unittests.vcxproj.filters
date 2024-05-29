@@ -1038,6 +1038,9 @@
     <ClInclude Include="..\..\..\include\pr\common\bit_data.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\async_wrap.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
   <!-- Properties -->
   <Import Project="..\..\..\build\props\globals.props" />
   <PropertyGroup Label="Globals">
@@ -8,7 +7,6 @@
     <RootNamespace>unittests</RootNamespace>
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
-
   <!-- Configuration -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -28,12 +26,10 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="..\..\..\build\props\app.props" />
-
   <!-- Build Options -->
   <ItemDefinitionGroup>
     <ClCompile>
@@ -53,7 +49,6 @@
       <Command>py $(ProjectDir)run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-
   <!-- Files -->
   <ItemGroup>
     <ClCompile Include="..\..\..\include\pr\crypt\monocypher.c" />
@@ -85,6 +80,7 @@
     <ClInclude Include="..\..\..\include\pr\common\allocator.h" />
     <ClInclude Include="..\..\..\include\pr\common\archiver.h" />
     <ClInclude Include="..\..\..\include\pr\common\assert.h" />
+    <ClInclude Include="..\..\..\include\pr\common\async_wrap.h" />
     <ClInclude Include="..\..\..\include\pr\common\base64.h" />
     <ClInclude Include="..\..\..\include\pr\common\bit_data.h" />
     <ClInclude Include="..\..\..\include\pr\common\cast.h" />
