@@ -95,8 +95,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Shared\icon.png">
-      <Link>icon.png</Link>
+    <Content Include="icon.png">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="license.txt">
