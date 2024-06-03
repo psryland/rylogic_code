@@ -1041,6 +1041,9 @@
     <ClInclude Include="..\..\..\include\pr\common\async_wrap.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\storage\ini_file.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

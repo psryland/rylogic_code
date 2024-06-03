@@ -6,7 +6,7 @@
 	<PropertyGroup Label="Globals">
     <ProjectGuid>{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}</ProjectGuid>
     <RootNamespace>neuralnet</RootNamespace>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
 
   <!-- Configuration -->
@@ -32,7 +32,7 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\..\build\props\lib.props" />
+  <Import Project="..\..\..\build\props\app.props" />
 
   <!-- Build Options -->
   <ItemDefinitionGroup>

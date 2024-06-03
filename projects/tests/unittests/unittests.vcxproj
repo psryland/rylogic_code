@@ -304,6 +304,7 @@
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_mass.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h" />
     <ClInclude Include="..\..\..\include\pr\script\unit_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\storage\ini_file.h" />
     <ClInclude Include="..\..\..\include\pr\storage\json.h" />
     <ClInclude Include="..\..\..\include\pr\str\char8.h" />
     <ClInclude Include="..\..\..\include\pr\str\convert_utf.h" />

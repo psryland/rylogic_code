@@ -301,6 +301,7 @@
 #include "pr\script\tokeniser.h"
 #include "pr\script\unit_tests.h"
 #include "pr\storage\csv.h"
+#include "pr\storage\ini_file.h"
 #include "pr\storage\json.h"
 #include "pr\storage\settings.h"
 #include "pr\storage\sqlite.h"
