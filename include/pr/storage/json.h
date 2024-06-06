@@ -1,24 +1,15 @@
 #pragma once
 #include <string>
 #include <string_view>
-#include <fstream>
-#include <filesystem>
-#include <format>
 #include <variant>
 #include <algorithm>
-#include <concepts>
+#include <filesystem>
+#include <fstream>
 
 namespace pr::json
 {
 	struct Value;
 	Value const& null_value();
-
-	template <typename T>
-	concept BooleanType = std::is_same_v<T, bool>;
-	template <typename T>
-	concept StringType = std::is_same_v<T, char const*> || std::is_same_v<T, std::string_view> || std::is_same_v<T, std::string> || std::is_same_v<T, std::filesystem::path>;
-	template <typename T>
-	concept NumericType = std::is_arithmetic_v<T> || std::is_floating_point_v<T>;
 
 	struct Null
 	{
@@ -58,22 +49,27 @@ namespace pr::json
 	};
 	struct Number : String
 	{
-		template <NumericType T> operator T () const
+		operator long long () const
 		{
-			if constexpr (std::is_floating_point_v<T>)
-				return static_cast<T>(std::stod(data));
-			else if constexpr (std::is_signed_v<T>)
-				return static_cast<T>(std::stoll(data));
-			else if constexpr (std::is_unsigned_v<T>)
-				return static_cast<T>(std::stoull(data));
-			else
-				static_assert(sizeof(T) == 0, "Unsupported type");
+			return std::stoll(data);
 		}
-		template <NumericType T> friend bool operator == (Number const& lhs, T rhs)
+		operator double () const
 		{
-			return static_cast<T>(lhs) == rhs;
+			return std::stod(data);
 		}
-		template <NumericType T> friend bool operator != (Number const& lhs, T rhs)
+		friend bool operator == (Number const& lhs, long long rhs)
+		{
+			return static_cast<long long>(lhs) == rhs;
+		}
+		friend bool operator == (Number const& lhs, double rhs)
+		{
+			return static_cast<double>(lhs) == rhs;
+		}
+		friend bool operator != (Number const& lhs, long long rhs)
+		{
+			return !(lhs == rhs);
+		}
+		friend bool operator != (Number const& lhs, double rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -153,57 +149,30 @@ namespace pr::json
 		}
 
 		// Convert to a value
-		template <typename T> requires (!std::is_same_v<T, Object> && !std::is_same_v<T, Array>)
-		T to() const
+		bool to_bool() const
 		{
-			if constexpr (BooleanType<T>)
-			{
-				if (auto b = as<Boolean>())
-					return static_cast<T>(*b);
-
-				throw std::runtime_error("Not a boolean");
-			}
-			else if constexpr (StringType<T>)
-			{
-				if (auto s = as<String>())
-					return static_cast<T>(*s);
-
-				throw std::runtime_error("Not a string");
-			}
-			else if constexpr (NumericType<T>)
-			{
-				if (auto n = as<Number>())
-					return static_cast<T>(*n);
-
-				throw std::runtime_error("Not a number");
-			}
-			else
-			{
-				if (auto n = as<T>())
-					return *n;
-
-				throw std::runtime_error("Not the expected type");
-			}
+			return std::get<Boolean>(value);
 		}
-		template <typename T> requires (std::is_same_v<T, Object> || std::is_same_v<T, Array>)
-		T const& to() const
+		std::string_view to_string() const
 		{
-			if constexpr (std::is_same_v<T, Array>)
-			{
-				if (auto a = as<Array>())
-					return *a;
-
-				throw std::runtime_error("Not an array");
-			}
-			else if constexpr (std::is_same_v<T, Object>)
-			{
-				if (auto o = as<Object>())
-					return *o;
-
-				throw std::runtime_error("Not an object");
-			}
+			return std::get<String>(value);
 		}
-
+		long long to_int() const
+		{
+			return std::get<Number>(value);
+		}
+		double to_float() const
+		{
+			return std::get<Number>(value);
+		}
+		Array const& to_array() const
+		{
+			return std::get<Array>(value);
+		}
+		Object const& to_object() const
+		{
+			return std::get<Object>(value);
+		}
 		Value const& operator [] (std::string_view k) const
 		{
 			if (auto object = as<Object>())
@@ -229,15 +198,6 @@ namespace pr::json
 			return !(lhs == nullptr);
 		}
 	};
-
-	namespace checks
-	{
-		static_assert(std::is_same_v<bool,                decltype(std::declval<Value>().to<bool>())>);
-		static_assert(std::is_same_v<int,                 decltype(std::declval<Value>().to<int>())>);
-		static_assert(std::is_same_v<std::string_view,    decltype(std::declval<Value>().to<std::string_view>())>);
-		static_assert(std::is_same_v<json::Array const&,  decltype(std::declval<Value>().to<Array>())>);
-		static_assert(std::is_same_v<json::Object const&, decltype(std::declval<Value>().to<Object>())>);
-	}
 
 	// Static null value returned for non-existent keys/indices
 	inline Value const& null_value()
@@ -278,6 +238,16 @@ namespace pr::json
 			std::string_view data;
 		};
 
+		// Format a string with arguments
+		template <typename... Args>
+		inline std::string Fmt(char const* fmt, Args... args)
+		{
+			std::string result;
+			result.resize(std::snprintf(nullptr, 0, fmt, args...));
+			std::snprintf(result.data(), result.size() + 1, fmt, args...);
+			return result;
+		}
+		
 		// Advance the string pointer to the next non-whitespace character
 		inline bool EatWS(std::string_view& src, bool allow_eos)
 		{
@@ -614,7 +584,7 @@ namespace pr::json
 		}
 		catch (std::runtime_error& ex)
 		{
-			ex = std::runtime_error(std::format("Parsing failed at offset {} - {}", ex.what(), src.data() - start.data()));
+			ex = std::runtime_error(impl::Fmt("Parsing failed at offset %zu - %s", src.data() - start.data(), ex.what()));
 			throw;
 		}
 	}
@@ -624,11 +594,11 @@ namespace pr::json
 	{
 		std::ifstream file(path);
 		if (!file.is_open())
-			throw std::runtime_error(std::format("Failed to open file '{}'", path.string()));
+			throw std::runtime_error(impl::Fmt("Failed to open file '%s'", path.string().c_str()));
 
 		auto size = std::filesystem::file_size(path);
 		if (size > std::numeric_limits<size_t>::max())
-			throw std::runtime_error(std::format("File '{}' is too large", path.string()));
+			throw std::runtime_error(impl::Fmt("File '%s' is too large", path.string().c_str()));
 
 		std::string data(static_cast<size_t>(size), '\0');
 		file.read(data.data(), data.size());
@@ -684,15 +654,15 @@ R"({
 #pragma endregion
 
 			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
-			PR_CHECK(root["key1"].to<std::string_view>() == "value1", true);
-			PR_CHECK(root["key2"].to<int64_t>() == 123, true);
-			PR_CHECK(root["key3"].to<bool>() == true, true);
-			PR_CHECK(root["key4"].to<bool>() == false, true);
+			PR_CHECK(root["key1"].to_string() == "value1", true);
+			PR_CHECK(root["key2"].to_int() == 123, true);
+			PR_CHECK(root["key3"].to_bool() == true, true);
+			PR_CHECK(root["key4"].to_bool() == false, true);
 			PR_CHECK(root["key5"] == nullptr, true);
 			PR_CHECK(root["key6"] != nullptr, true);
-			PR_CHECK(root["key6"]["key12"]["key14"].to<int>() == 789, true);
-			PR_CHECK(root["key6"]["key12"].to<json::Object>().size() == 5, true);
-			PR_CHECK(root["key6"]["key18"].to<json::Array>().empty(), false);
+			PR_CHECK(root["key6"]["key12"]["key14"].to_int() == 789, true);
+			PR_CHECK(root["key6"]["key12"].to_object().size() == 5, true);
+			PR_CHECK(root["key6"]["key18"].to_array().empty(), false);
 		}
 		{
 			char const test_data[] =
@@ -706,8 +676,8 @@ R"({
 #pragma endregion
 
 			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
-			PR_CHECK(root["SearchPaths"][0].to<std::string_view>() == "C:\\Work\\Path", true);
-			PR_CHECK(root["EscapedString"].to<std::string_view>() == "This is a string with a \"quote\" in it", true);
+			PR_CHECK(root["SearchPaths"][0].to_string() == "C:\\Work\\Path", true);
+			PR_CHECK(root["EscapedString"].to_string() == "This is a string with a \"quote\" in it", true);
 		}
 	}
 }
