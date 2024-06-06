@@ -1,8 +1,8 @@
 #include "config.h"
 #include "filesys.h"
 #include "console.h"
-#include "ini_file.h"
-#include "util.h"
+#include "utils/ini_file.h"
+#include "utils/utils.h"
 
 namespace lightz
 {

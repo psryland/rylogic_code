@@ -1,10 +1,150 @@
-<html>
-	<head>
-		<title>Lightz</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	</head>
-	<body>
-		<p>HELLO</p>
-	</body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Lightz Control</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			text-align: center;
+			padding: 50px;
+		}
+		.state {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 20px;
+			margin-top: 20px;
+		}
+		.state span {
+			padding: 0px 10px;
+		}
+		.switch {
+			position: relative;
+			display: inline-block;
+			width: 60px;
+			height: 34px;
+		}
+		.switch input {
+			opacity: 0;
+			width: 0;
+			height: 0;
+		}
+		.slider {
+			position: absolute;
+			cursor: pointer;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background-color: #ccc;
+			transition: .4s;
+			border-radius: 34px;
+		}
+		.slider:before {
+			position: absolute;
+			content: "";
+			height: 26px;
+			width: 26px;
+			left: 4px;
+			bottom: 4px;
+			background-color: white;
+			transition: .4s;
+			border-radius: 50%;
+		}
+		input:checked + .slider {
+			background-color: #2196F3;
+		}
+		input:checked + .slider:before {
+			transform: translateX(26px);
+		}
+		.color-picker {
+			display: inline-block;
+			padding: 15px;
+			border-radius: 20px;
+			min-width: 100px;
+			cursor: pointer;
+			color: #333;
+			font-size: 20px;
+			margin-top: 20px;
+		}
+	</style>
+</head>
+<body>
+	<h1>Lightz</h1>
+	<div class="state">
+		<span>Current State: </span><span id="state-text">[[current-state]]</span>
+		<label class="switch">
+			<input type="checkbox" id="toggle-switch">
+			<span class="slider"></span>
+		</label>
+	</div>
+	<div class="color-picker" id="color-display" style="background-color: #ff6666;">
+		[[current-colour]]
+	</div>
+	<input type="color" id="color-picker" style="display: none;">
+	<script>
+		document.getElementById('toggle-switch').addEventListener('change', function() {
+			const stateText = document.getElementById('state-text');
+			const state = this.checked ? 'On' : 'Off';
+			stateText.textContent = state;
+			stateText.style.color = this.checked ? 'green' : 'red';
+
+			// Send POST request
+			fetch('/api/state', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ state: state }),
+			});
+		});
+
+		document.getElementById('color-display').addEventListener('click', function() {
+			document.getElementById('color-picker').click();
+		});
+
+		document.getElementById('color-picker').addEventListener('input', function() {
+			const colorDisplay = document.getElementById('color-display');
+			colorDisplay.style.backgroundColor = this.value;
+			colorDisplay.textContent = this.value.slice(1);
+
+			// Send POST request
+			fetch('/api/color', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ color: this.value }),
+			});
+		});
+
+		// Initialize state and color
+		window.addEventListener('load', function() {
+			fetch('/api/state')
+				.then(response => response.json())
+				.then(data => {
+					const toggleSwitch = document.getElementById('toggle-switch');
+					const stateText = document.getElementById('state-text');
+					const isOn = data.state === 'On';
+					toggleSwitch.checked = isOn;
+					stateText.textContent = data.state;
+					stateText.style.color = isOn ? 'green' : 'red';
+				})
+				.catch(error => console.error('Error:', error));
+
+			fetch('/api/color')
+				.then(response => response.json())
+				.then(data => {
+					const colorDisplay = document.getElementById('color-display');
+					const colorPicker = document.getElementById('color-picker');
+					colorDisplay.style.backgroundColor = data.color;
+					colorDisplay.textContent = data.color.slice(1);
+					colorPicker.value = data.color;
+				})
+				.catch(error => console.error('Error:', error));;
+		});
+	</script>
+</body>
 </html>
