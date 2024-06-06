@@ -207,6 +207,7 @@
     <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h" />
     <ClInclude Include="..\..\..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\..\..\include\pr\gui\vt100.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\vt100_colours.h" />
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\gui\wtl_tab_view_ctrl.h" />
     <ClInclude Include="..\..\..\include\pr\hardware\comm_port_io.h" />

@@ -1044,6 +1044,9 @@
     <ClInclude Include="..\..\..\include\pr\storage\ini_file.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\vt100_colours.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
