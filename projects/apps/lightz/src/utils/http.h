@@ -6,7 +6,6 @@ namespace lightz
 	// Convert a string to a method
 	enum class EMethod
 	{
-		INVALID,
 		GET,
 		POST,
 		PUT,
@@ -16,21 +15,12 @@ namespace lightz
 	{
 		switch (method)
 		{
-		case EMethod::INVALID: return "INVALID";
 		case EMethod::GET: return "GET";
 		case EMethod::POST: return "POST";
 		case EMethod::PUT: return "PUT";
 		case EMethod::DELETE: return "DELETE";
 		default: throw std::runtime_error("Unknown method");
 		}
-	}
-	inline EMethod ToMethod(std::string_view verb)
-	{
-		if (verb == "GET") return EMethod::GET;
-		if (verb == "POST") return EMethod::POST;
-		if (verb == "PUT") return EMethod::PUT;
-		if (verb == "DELETE") return EMethod::DELETE;
-		return EMethod::INVALID;
 	}
 
 	// HTTP response codes

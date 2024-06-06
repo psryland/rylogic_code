@@ -1,17 +1,25 @@
 #include "web.h"
 #include "config.h"
-#include "clock.h"
+#include "lightstrip.h"
+#include "utils/json.h"
 #include "utils/utils.h"
 #include "data/resources.h"
+#define PR_VT100_COLOUR_DEFINES 1
+#include "utils/term_colours.h"
 
 namespace lightz
 {
 	static char const LineEnd[] = "\r\n";
 	static char const BlockEnd[] = "\r\n\r\n";
+	size_t const ReadTimeoutMS = 1000; // 1 second
+	size_t const LimitRequestLine = 8190; // same as Apache default
+	size_t const LimitRequestFieldSize = 8190; // same as Apache default
+	size_t const LimitRequestBody = 10485760; // same as Apache default
+	namespace Col = pr::vt100::colour;
 
 	Web::Web()
 		: m_wifi_server(80)
-		, m_buf()
+		, m_buf(LimitRequestLine, '\0')
 		, m_connected()
 	{}
 
@@ -25,149 +33,206 @@ namespace lightz
 		m_wifi_server.begin();
 	}
 
-	// Receive data from 'client'. Returns false on timeout
-	EResponseCode ReceiveData(WiFiClient& client, std::string& buf, unsigned long timeout_ms)
+	// Read a line of text from the client. 
+	EResponseCode ReadLine(WiFiClient& client, std::string& buf, size_t max_size)
 	{
-		size_t const MaxPacketSize = 1024 * 1024;
 		buf.resize(0);
+		int prev_byte = 0;
 
-		// Receive data from the client until a double '\r\n' is received
+		// Read bytes until a newline is found or timeout
 		for (auto start = millis(); client.connected(); )
 		{
-			auto sofar = buf.size();
+			// Reading one byte at a time is not that inefficient.
+			// The wifi client is doing the buffering for us.
 			auto avail = client.available();
-
-			if (avail == 0 && millis() - start > timeout_ms)
-				return EResponseCode::REQUEST_TIMEOUT;
-
-			if (sofar + avail > MaxPacketSize)
-				return EResponseCode::BAD_REQUEST;
-
 			if (avail == 0)
 			{
+				if (millis() - start > ReadTimeoutMS)
+					return EResponseCode::REQUEST_TIMEOUT;
+
 				delay(1);
 				continue;
 			}
 
-			buf.resize(sofar + avail);
-			auto read = client.readBytes(&buf[sofar], avail);
-			buf.resize(sofar + read);
+			auto byte = client.read();
 
-			auto end = buf.find(BlockEnd);
-			if (end != std::string::npos)
+			if (byte < 0)
 			{
-				buf.resize(end + strlen(BlockEnd));
+				throw std::runtime_error("Read error");
+			}
+			if (buf.size() == max_size)
+			{
+				return EResponseCode::BAD_REQUEST;
+			}
+
+			buf.push_back(byte);
+
+			if (prev_byte == '\r' && byte == '\n')
+			{
 				return EResponseCode::OK;
 			}
+
+			prev_byte = byte;
 		}
 		return EResponseCode::REQUEST_TIMEOUT;
 	}
 
-	// Parse the request line of the HTTP request
-	bool ParseRequestLine(std::string_view& request, std::string_view& method, std::string_view& path, std::string_view& version)
+	// Convert a string to a method
+	EResponseCode ParseMethod(std::string_view verb, EMethod& method)
 	{
-		auto delim0 = request.find(' ');
-		if (delim0 == std::string::npos)
-			return false;
+		if (verb == "GET") { method = EMethod::GET; return EResponseCode::OK; }
+		if (verb == "POST") { method = EMethod::POST; return EResponseCode::OK; }
+		if (verb == "PUT") { method = EMethod::PUT; return EResponseCode::OK; }
+		if (verb == "DELETE") { method = EMethod::DELETE; return EResponseCode::OK; }
+		return EResponseCode::BAD_REQUEST;
+	}
 
-		auto delim1 = request.find(' ', delim0 + 1);
-		if (delim1 == std::string::npos)
-			return false;
+	// Convert a string into a 'path' with validation
+	EResponseCode ParsePath(std::string_view p, std::string& path)
+	{
+		if (p.empty() || p[0] != '/')
+			return EResponseCode::BAD_REQUEST;
 
-		auto endl = request.find(LineEnd, delim1 + 1);
-		if (endl == std::string::npos)
-			return false;
+		path = std::string(p);
+		return EResponseCode::OK;
+	}
 
-		method = request.substr(0, delim0);
-		path = request.substr(delim0 + 1, delim1 - (delim0+1));
-		version = request.substr(delim1 + 1, endl - (delim1+1));
+	// Check the version of the HTTP request
+	EResponseCode ParseVersion(std::string_view version)
+	{
+		return version == "HTTP/1.1" ? EResponseCode::OK : EResponseCode::BAD_REQUEST;
+	}
 
-		request.remove_prefix(endl + strlen(LineEnd));
-		return true;
+	// Parse the request line of the HTTP request
+	EResponseCode ParseRequestLine(std::string_view request, std::string_view& method, std::string_view& path, std::string_view& version)
+	{
+		auto end = request.find(' ');
+		if (end == std::string::npos)
+			return EResponseCode::BAD_REQUEST;
+
+		method = request.substr(0, end);
+		request.remove_prefix(end + 1);
+
+		end = request.find(' ');
+		if (end == std::string::npos)
+			return EResponseCode::BAD_REQUEST;
+
+		path = request.substr(0, end);
+		request.remove_prefix(end + 1);
+
+		end = request.find(LineEnd);
+		if (end == std::string::npos)
+			return EResponseCode::BAD_REQUEST;
+
+		version = request.substr(0, end);
+		request.remove_prefix(end + strlen(LineEnd));
+
+		return request.empty() ? EResponseCode::OK : EResponseCode::BAD_REQUEST;
 	}
 
 	// Parse the headers of the HTTP request
-	bool ParseHeaders(std::string_view& request, std::vector<std::string_view>& headers)
+	EResponseCode ParseHeader(std::string_view request, Web::header_t& header)
 	{
-		for (;!request.empty();)
-		{
-			// Find the end of the line
-			auto endl = request.find(LineEnd);
-			if (endl == std::string::npos)
-				return false;
+		header = {};
 
-			// Add the header to the list
-			auto header = request.substr(0, endl);
-			if (!header.empty())
-				headers.push_back(header);
-			
-			// An empty line signals the end of the headers
-			request.remove_prefix(endl + strlen(LineEnd));
-			if (header.empty())
-				return true;
-		}
-		return false;
+		auto endl = request.find(LineEnd);
+		if (endl == std::string::npos)
+			return EResponseCode::BAD_REQUEST;
+		
+		if (endl == 0)
+			return EResponseCode::OK;
+
+		auto end = request.find(':');
+		if (end == std::string::npos)
+			return EResponseCode::BAD_REQUEST;
+
+		header.first = request.substr(0, end);
+		request.remove_prefix(end + 1);
+
+		header.second = request.substr(0, endl);
+		request.remove_prefix(endl + strlen(LineEnd));
+		return EResponseCode::OK;
+	}
+
+	// Load for a specific header
+	std::string const* FindHeader(Web::headers_t const& headers, std::string_view name)
+	{
+		auto it = std::find_if(headers.begin(), headers.end(), [=](auto& h) { return h.first == name; });
+		return it != headers.end() ? &it->second : nullptr;
 	}
 
 	// Handle a client connection
 	void Web::HandleClient(WiFiClient client)
 	{
-		size_t const TimeoutMS = 1000;
+		using namespace Col;
 
-		// Receive data from the client
-		auto& buf = m_buf; // Reuse for performance
-		switch (ReceiveData(client, buf, TimeoutMS))
+		// Reuse for performance
+		auto& buf = m_buf;
+
+		try
 		{
-			case EResponseCode::OK:
+			EMethod method;
+			std::string path;
+			headers_t headers;
+			EResponseCode status;
+
+			// Parse the request line
+			std::string_view m,p,v;
+			if ((status = ReadLine(client, buf, LimitRequestLine)) != EResponseCode::OK ||
+				(status = ParseRequestLine(buf, m, p, v)) != EResponseCode::OK ||
+				(status = ParseMethod(m, method)) != EResponseCode::OK ||
+				(status = ParsePath(p, path)) != EResponseCode::OK ||
+				(status = ParseVersion(v)) != EResponseCode::OK)
 			{
-				break;
-			}
-			case EResponseCode::REQUEST_TIMEOUT:
-			{
-				Serial.printf("[0x%08X] Timeout waiting for data\r\n", client.fd());
-				SendResponse(client, EResponseCode::REQUEST_TIMEOUT);
+				SendResponse(client, status, "Failed to read request line");
 				return;
 			}
-			case EResponseCode::BAD_REQUEST:
+
+			// Parse the headers
+			for (;;)
 			{
-				Serial.printf("[0x%08X] Buffer overflow\r\n", client.fd());
-				SendResponse(client, EResponseCode::BAD_REQUEST);
-				return;
+				header_t header;
+				if ((status = ReadLine(client, buf, LimitRequestFieldSize)) != EResponseCode::OK ||
+					(status = ParseHeader(buf, header)) != EResponseCode::OK)
+				{
+					SendResponse(client, status, "Failed to read headers");
+					return;
+				}
+				if (header.first.empty())
+				{
+					break;
+				}
+				headers.push_back(header);
 			}
-			default:
+
+			// Parse content
+			auto content_length = FindHeader(headers, "Content-Length");
+			if (content_length)
 			{
-				Serial.printf("[0x%08X] Unknown error\r\n", client.fd());
-				SendResponse(client, EResponseCode::INTERNAL_SERVER_ERROR);
-				return;
+				buf.resize(std::min<size_t>(std::stoull(*content_length), LimitRequestBody));
+				auto read = client.read(reinterpret_cast<uint8_t*>(buf.data()), buf.size());
+				if (read != buf.size())
+				{
+					SendResponse(client, EResponseCode::BAD_REQUEST, "Failed to read content");
+					return;
+				}
 			}
+			else
+			{
+				buf.resize(0);
+			}
+
+			// Dispatch the request
+			HandleRequest(method, path, headers, buf, client);
 		}
-
-		// Get the request as a string view
-		auto request = std::string_view{ buf.data(), buf.size() };
-
-		// Parse the request line
-		EMethod method;
-		std::string_view verb, path, version;
-		if (!ParseRequestLine(request, verb, path, version) || (method = ToMethod(verb)) == EMethod::INVALID || version != "HTTP/1.1")
+		catch(const std::exception& ex)
 		{
-			SendResponse(client, EResponseCode::BAD_REQUEST);
-			return;
+			SendResponse(client, EResponseCode::BAD_REQUEST, ex.what());
 		}
-
-		// Parse the headers
-		std::vector<std::string_view> headers;
-		if (!ParseHeaders(request, headers))
-		{
-			SendResponse(client, EResponseCode::BAD_REQUEST);
-			return;
-		}
-
-		// Dispatch to the handler
-		HandleRequest(method, path, headers, request, client);
 	}
 
 	// Handle a web request
-	void Web::HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view request, WiFiClient &client)
+	void Web::HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view body, WiFiClient &client)
 	{
 		Serial.printf("[0x%08X] \033[36m%s %.*s\033[0m\r\n", client.fd(), ToString(method), PRINTF_SV(path));
 
@@ -183,33 +248,81 @@ namespace lightz
 		// Handle the request
 		if (method == EMethod::GET && (MatchI(path, "/") || MatchI(path, "/index.html")))
 		{
-			SendResponse(client, EResponseCode::OK, EContentType::TEXT_HTML, data::index_html);
+			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_HTML, data::index_html);
 			return;
 		}
 		if (method == EMethod::GET && MatchI(path, "/favicon.ico"))
 		{
-			SendResponse(client, EResponseCode::OK, EContentType::IMAGE_X_ICON, data::favicon_ico);
+			SendResponse(client, EResponseCode::OK, {}, EContentType::IMAGE_X_ICON, data::favicon_ico);
 			return;
 		}
 		if (method == EMethod::GET && MatchI(path, "/api/state"))
 		{
-			SendResponse(client, EResponseCode::OK, EContentType::TEXT_JSON, {"{\"state\": \"On\"}"});
+			auto state = lightstrip.On()
+				? std::string_view{"{\"state\": \"On\"}"}
+				: std::string_view{"{\"state\": \"Off\"}"};
+			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, state);
+			return;
+		}
+		if (method == EMethod::POST && MatchI(path, "/api/state"))
+		{
+			auto jobj = pr::json::Parse(body, {}).to_object();
+			auto state = jobj["state"].to_string();
+			if (MatchI(state, "on"))
+			{
+				lightstrip.On(true);
+				SendResponse(client, EResponseCode::OK);
+				return;
+			}
+			if (MatchI(state, "off"))
+			{
+				lightstrip.On(false);
+				SendResponse(client, EResponseCode::OK);
+				return;
+			}
+			SendResponse(client, EResponseCode::BAD_REQUEST, "Invalid state value");
 			return;
 		}
 		if (method == EMethod::GET && MatchI(path, "/api/color"))
 		{
-			SendResponse(client, EResponseCode::OK, EContentType::TEXT_JSON, {"{\"color\": \"#00FF00\"}"});
+			char buf[64];
+			CRGB rgb(config.LED.Colour);
+			auto n = snprintf(&buf[0], sizeof(buf), "{\"color\": \"#%02X%02X%02X\"}", static_cast<int>(rgb.r), static_cast<int>(rgb.g), static_cast<int>(rgb.b));
+			auto color = std::string_view{buf, static_cast<size_t>(n)};
+			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, color);
 			return;
 		}
-		
-		SendResponse(client, EResponseCode::NOT_FOUND);
+		if (method == EMethod::POST && MatchI(path, "/api/color"))
+		{
+			auto jobj = pr::json::Parse(body, {}).to_object();
+			auto jcolor = jobj["color"].to_string();
+			if (jcolor.size() == 7 && jcolor[0] == '#')
+			{
+				lightstrip.Colour(strtoul(jcolor.data() + 1, nullptr, 16));
+				SendResponse(client, EResponseCode::OK);
+				return;
+			}
+			if (jcolor.size() == 4 && jcolor[0] == '#')
+			{
+				auto rgb = strtoul(jcolor.data() + 1, nullptr, 16);
+				lightstrip.Colour(CRGB(
+					((rgb >> 8) & 0xF) * 0xff,
+					((rgb >> 4) & 0xF) * 0xff,
+					((rgb >> 0) & 0xF) * 0xff));
+				SendResponse(client, EResponseCode::OK);
+				return;
+			}
+			SendResponse(client, EResponseCode::BAD_REQUEST, "Invalid color value");
+			return;
+		}
+		SendResponse(client, EResponseCode::NOT_FOUND, "Unknown endpoint");
 	}
 
 	// Send a response to the client
-	void Web::SendResponse(WiFiClient& client, EResponseCode status, EContentType content_type, std::string_view body)
+	void Web::SendResponse(WiFiClient& client, EResponseCode status, std::string_view details, EContentType content_type, std::string_view body)
 	{
-		auto colour = status == EResponseCode::OK ? "\033[92m" : "\033[91m";
-		Serial.printf("[0x%08X] %s%d %s\033[0m\r\n", client.fd(), colour, status, ToString(status));
+		auto colour = status == EResponseCode::OK ? Col::GREEN : Col::RED;
+		Serial.printf("[0x%08X] %s%d %s - %.*s" TC_RESET "\r\n", client.fd(), colour, status, ToString(status), PRINTF_SV(details));
 
 		client.printf("HTTP/1.1 %d %s\r\n", status, ToString(status));
 		if (!body.empty())
@@ -239,7 +352,7 @@ namespace lightz
 		if (WiFi.status() != wl_status_t::WL_CONNECTED)
 		{
 			m_connected = false;
-			digitalWrite(BuiltInLED, fmod(rtc.Seconds(), 1.0) > 0.5);
+			digitalWrite(BuiltInLED, (millis() % 1000) > 500);
 		}
 
 		// Listen for incoming clients

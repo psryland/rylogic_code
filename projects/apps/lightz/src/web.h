@@ -6,7 +6,8 @@ namespace lightz
 {
 	struct Web
 	{
-		using headers_t = std::vector<std::string_view>;
+		using header_t = std::pair<std::string, std::string>;
+		using headers_t = std::vector<header_t>;
 		using clients_t = std::deque<WiFiClient>;
 
 		WiFiServer m_wifi_server;
@@ -19,7 +20,7 @@ namespace lightz
 
 		void ThreadMain();
 		void HandleClient(WiFiClient client);
-		void HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view request, WiFiClient &client);
-		void SendResponse(WiFiClient& client, EResponseCode status, EContentType content_type = {}, std::string_view body = {});
+		void HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view body, WiFiClient &client);
+		void SendResponse(WiFiClient& client, EResponseCode status, std::string_view details = {}, EContentType content_type = {}, std::string_view body = {});
 	};
 }

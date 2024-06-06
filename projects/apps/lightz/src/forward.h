@@ -6,9 +6,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <algorithm>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
+#include <optional>
 
 #include <Arduino.h>
 #include <Stream.h>
