@@ -1,5 +1,6 @@
 #include "console.h"
 #include "config.h"
+#include "utils/utils.h"
 
 namespace lightz
 {
@@ -20,7 +21,7 @@ namespace lightz
 		registerNetworkCommands();
 		//registerGPIOCommands();
 
-		registerCommand(ESP32Console::ConsoleCommand("config", &Console::Config, "Set configuration options", "<key> <value> | <show> | <save>"));
+		registerCommand(ESP32Console::ConsoleCommand("config", &Console::Config, "Set configuration options", "<section.key>[=<value>] | <show> | <save> | <load>"));
 
 		enablePersistentHistory(HistoryFilePath);
 		setPrompt("%pwd%> ");
@@ -29,10 +30,10 @@ namespace lightz
 	// Usage: config <key> <value>
 	int Console::Config(int argc, char **argv)
 	{
-		auto arg1 = argc >= 2 ? String{argv[1]} : String{};
-		auto arg2 = argc >= 3 ? String{argv[2]} : String{};
+		auto arg1 = argc >= 2 ? std::string_view{argv[1]} : std::string_view{};
+		auto arg2 = argc >= 3 ? std::string_view{argv[2]} : std::string_view{};
 
-		if (arg1 == "show")
+		if (argc == 1 || arg1 == "show")
 		{
 			config.Print();
 			return EXIT_SUCCESS;
@@ -42,17 +43,37 @@ namespace lightz
 			config.Save();
 			return EXIT_SUCCESS;
 		}
-		if (argc == 2)
+		if (arg1 == "load")
 		{
-			printf("%s: %s\n", arg1.c_str(), config.Get(arg1).c_str());
+			config.Load();
 			return EXIT_SUCCESS;
 		}
-		if (argc == 3)
+		if (argc == 2)
 		{
-			return config.Set(arg1, arg2) ? EXIT_SUCCESS : EXIT_FAILURE;
+			auto eq = arg1.find('=');
+			if (eq != std::string_view::npos)
+			{
+				arg2 = arg1.substr(eq + 1);
+				arg1 = arg1.substr(0, eq);
+				if (config.Set(arg1, arg2))
+				{
+					printf("%.*s updated to %.*s.\nRemember to save config\n", PRINTF_SV(arg1), PRINTF_SV(arg2));
+					return EXIT_SUCCESS;
+				}
+				else
+				{
+					printf("Unknown setting: %.*s\n", PRINTF_SV(arg1));
+					return EXIT_FAILURE;
+				}
+			}
+			else
+			{
+				printf("%.*s: %s\n", PRINTF_SV(arg1), config.Get(arg1).c_str());
+				return EXIT_SUCCESS;
+			}
 		}
 
-		printf("Usage: config <key> <value> | <show> | <save>\n");
+		printf("Usage: config <section.key>[=<value>] | <show> | <save> | <load>\n");
 		return EXIT_FAILURE;
 	}
 }

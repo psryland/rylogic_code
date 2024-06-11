@@ -71,6 +71,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/str/string.h"
 //#include "pr/str/string2.h"
 //#include "pr/str/to_string.h"
+//#include "pr/str/utf8.h"
 //#include "pr/script/buf.h"
 //#include "pr/script/location.h"
 //#include "pr/script/script_core.h"

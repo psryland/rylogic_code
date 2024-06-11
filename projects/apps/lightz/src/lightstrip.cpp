@@ -21,6 +21,8 @@ namespace lightz
 	void LightStrip::Update()
 	{
 		auto colour = m_on ? config.LED.Colour : CRGB::Black;
+
+		m_leds.resize(config.LED.NumLEDs);
 		for (auto& led : m_leds)
 			led = colour;
 

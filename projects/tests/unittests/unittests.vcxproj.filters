@@ -1047,6 +1047,9 @@
     <ClInclude Include="..\..\..\include\pr\gui\vt100_colours.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\str\utf8.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

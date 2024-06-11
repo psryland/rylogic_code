@@ -4,7 +4,6 @@
 #include "utils/json.h"
 #include "utils/utils.h"
 #include "data/resources.h"
-#define PR_VT100_COLOUR_DEFINES 1
 #include "utils/term_colours.h"
 
 namespace lightz
@@ -31,6 +30,37 @@ namespace lightz
 		
 		// Start the web server
 		m_wifi_server.begin();
+	}
+
+	// Update the web server
+	void Web::Update()
+	{
+		// Display connection status on the built-in LED
+		if (WiFi.status() != wl_status_t::WL_CONNECTED)
+		{
+			if (m_connected)
+				Serial.printf("WiFi Disconnected\r\n");
+
+			m_connected = false;
+			digitalWrite(BuiltInLED, (millis() % 1000) > 500);
+			return;
+		}
+		if (WiFi.status() == wl_status_t::WL_CONNECTED && !m_connected)
+		{
+			m_connected = true;
+			Serial.printf("WiFi Connected\r\n");
+			digitalWrite(BuiltInLED, LOW);
+		}
+
+		// Listen for incoming clients
+		for (;;)
+		{
+			WiFiClient client = m_wifi_server.available();
+			if (!client)
+				break;
+
+			HandleClient(client);
+		}
 	}
 
 	// Read a line of text from the client. 
@@ -234,7 +264,11 @@ namespace lightz
 	// Handle a web request
 	void Web::HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view body, WiFiClient &client)
 	{
-		Serial.printf("[0x%08X] \033[36m%s %.*s\033[0m\r\n", client.fd(), ToString(method), PRINTF_SV(path));
+		if (config.WiFi.ShowWebTrace)
+		{
+			auto colour = Col::CYAN;
+			Serial.printf("[0x%08X] %s%s %.*s" TC_RESET "\r\n", client.fd(), colour, ToString(method), PRINTF_SV(path));
+		}
 
 		// Split the path into the path and query string
 		std::string_view query;
@@ -258,16 +292,16 @@ namespace lightz
 		}
 		if (method == EMethod::GET && MatchI(path, "/api/state"))
 		{
-			auto state = lightstrip.On()
-				? std::string_view{"{\"state\": \"On\"}"}
-				: std::string_view{"{\"state\": \"Off\"}"};
-			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, state);
+			pr::json::Document doc;
+			doc.root()["state"] = lightstrip.On() ? "On" : "Off";
+			auto json = pr::json::Serialize(doc, {});
+			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, json);
 			return;
 		}
 		if (method == EMethod::POST && MatchI(path, "/api/state"))
 		{
 			auto jobj = pr::json::Parse(body, {}).to_object();
-			auto state = jobj["state"].to_string();
+			auto state = jobj["state"].to<std::string_view>();
 			if (MatchI(state, "on"))
 			{
 				lightstrip.On(true);
@@ -285,8 +319,13 @@ namespace lightz
 		}
 		if (method == EMethod::GET && MatchI(path, "/api/color"))
 		{
-			char buf[64];
+			//pr::json::Object doc;
+			//doc["color"] = Fmt("\"#%02X%02X%02X\"}", static_cast<int>(rgb.r), static_cast<int>(rgb.g), static_cast<int>(rgb.b));
+			//// Fmt("RGB: #%02X%02X%02X", rgb.r, rgb.g, rgb.b);
+
 			CRGB rgb(config.LED.Colour);
+
+			char buf[64];
 			auto n = snprintf(&buf[0], sizeof(buf), "{\"color\": \"#%02X%02X%02X\"}", static_cast<int>(rgb.r), static_cast<int>(rgb.g), static_cast<int>(rgb.b));
 			auto color = std::string_view{buf, static_cast<size_t>(n)};
 			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, color);
@@ -295,7 +334,7 @@ namespace lightz
 		if (method == EMethod::POST && MatchI(path, "/api/color"))
 		{
 			auto jobj = pr::json::Parse(body, {}).to_object();
-			auto jcolor = jobj["color"].to_string();
+			auto jcolor = jobj["color"].to<std::string_view>();
 			if (jcolor.size() == 7 && jcolor[0] == '#')
 			{
 				lightstrip.Colour(strtoul(jcolor.data() + 1, nullptr, 16));
@@ -315,14 +354,24 @@ namespace lightz
 			SendResponse(client, EResponseCode::BAD_REQUEST, "Invalid color value");
 			return;
 		}
+		if (method == EMethod::GET && MatchI(path, "/api/ledcount"))
+		{
+			int ledcount = config.LED.NumLEDs;
+			std::string json = "{}";//pr::json::Serialize();
+			SendResponse(client, EResponseCode::OK, {}, EContentType::TEXT_JSON, json);
+			return;
+		}
 		SendResponse(client, EResponseCode::NOT_FOUND, "Unknown endpoint");
 	}
 
 	// Send a response to the client
 	void Web::SendResponse(WiFiClient& client, EResponseCode status, std::string_view details, EContentType content_type, std::string_view body)
 	{
-		auto colour = status == EResponseCode::OK ? Col::GREEN : Col::RED;
-		Serial.printf("[0x%08X] %s%d %s - %.*s" TC_RESET "\r\n", client.fd(), colour, status, ToString(status), PRINTF_SV(details));
+		if (config.WiFi.ShowWebTrace)
+		{
+			auto colour = status == EResponseCode::OK ? Col::GREEN : Col::RED;
+			Serial.printf("[0x%08X] %s%d %s - %.*s" TC_RESET "\r\n", client.fd(), colour, status, ToString(status), PRINTF_SV(details));
+		}
 
 		client.printf("HTTP/1.1 %d %s\r\n", status, ToString(status));
 		if (!body.empty())
@@ -337,33 +386,6 @@ namespace lightz
 			client.write(body.data(), body.size());
 		}
 		client.stop();
-	}
-
-	// Update the web server
-	void Web::Update()
-	{
-		// Display connection status on the built-in LED
-		if (WiFi.status() == wl_status_t::WL_CONNECTED && !m_connected)
-		{
-			m_connected = true;
-			Serial.printf("WiFi Connected\r\n");
-			digitalWrite(BuiltInLED, LOW);
-		}
-		if (WiFi.status() != wl_status_t::WL_CONNECTED)
-		{
-			m_connected = false;
-			digitalWrite(BuiltInLED, (millis() % 1000) > 500);
-		}
-
-		// Listen for incoming clients
-		for (;;)
-		{
-			WiFiClient client = m_wifi_server.available();
-			if (!client)
-				break;
-
-			HandleClient(client);
-		}
 	}
 }
 

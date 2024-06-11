@@ -311,6 +311,7 @@
     <ClInclude Include="..\..\..\include\pr\str\convert_utf.h" />
     <ClInclude Include="..\..\..\include\pr\str\string2.h" />
     <ClInclude Include="..\..\..\include\pr\str\unit_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\str\utf8.h" />
     <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h" />
     <ClInclude Include="..\..\..\include\pr\view3d\renderer.h" />
     <ClInclude Include="..\..\..\include\pr\view3d\textures\projected_texture.h" />
