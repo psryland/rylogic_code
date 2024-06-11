@@ -2,36 +2,33 @@
 #include "filesys.h"
 #include "console.h"
 #include "utils/ini_file.h"
+#include "utils/convert.h"
 #include "utils/utils.h"
+#include "utils/term_colours.h"
 
 namespace lightz
 {
 	char const* Config::FilePath = "/config.ini";
 
-	// Construct the default WiFi configuration
-	Config::WiFiConfig::WiFiConfig()
-		: SSID("Your-SSID-Here")
-		, Password("Your-Password-Here")
-	{}
-
-	// Construct the default LED configuration
-	Config::LEDConfig::LEDConfig()
-		: NumLEDs(1)
-		, Colour(0x800000)
-	{}
-
 	// Construct the configuration
 	Config::Config()
-		: WiFi()
+		: SavePending()
+		, WiFi()
 		, LED()
 	{}
 
 	// Initialise the configuration component
 	void Config::Setup()
 	{
+		Load();
+	}
+
+	// Load the configuration from the file system
+	void Config::Load()
+	{
 		if (!filesys.exists(FilePath))
 		{
-			Serial.println("Configuration file not found, using default configuration");
+			printf("Configuration file not found, using default configuration\n");
 			return;
 		}
 		
@@ -42,138 +39,38 @@ namespace lightz
 		ini_file::Iterator it(file);
 		Load(it);
 	}
-
-	// Load the wifi configuration from the file system
-	void Config::WiFiConfig::Load(ini_file::Iterator& it)
-	{
-		for (; !it.AtEnd() && it.IsMatch(ini_file::EElement::KeyValue); it.Next())
-		{
-			if (it.IsMatch(ini_file::EElement::KeyValue, "ssid"))
-			{
-				SSID = it.Value();
-				continue;
-			}
-			if (it.IsMatch(ini_file::EElement::KeyValue, "password"))
-			{
-				Password = it.Value();
-				continue;
-			}
-		}
-	}
-
-	// Save the wifi configuration to the file system
-	void Config::WiFiConfig::Save(fs::File& file)
-	{
-		file.printf("ssid=%s\n", SSID.c_str());
-		file.printf("password=%s\n", Password.c_str());
-	}
-
-	// Print the wifi configuration to the console
-	void Config::WiFiConfig::Print()
-	{
-		printf("ssid=%s\n", SSID.c_str());
-		printf("password=%s\n", Password.c_str());
-	}
-
-	// Return the value of a configuration key as a string
-	String Config::WiFiConfig::Get(String const& key) const
-	{
-		if (key.equalsIgnoreCase("ssid"))
-			return SSID;
-		if (key.equalsIgnoreCase("password"))
-			return Password;
-		return {};
-	}
-	
-	// Set the value of a configuration value
-	bool Config::WiFiConfig::Set(String const& key, String const& value)
-	{
-		if (key.equalsIgnoreCase("ssid"))
-		{
-			SSID = value;
-			return true;
-		}
-		if (key.equalsIgnoreCase("password"))
-		{
-			Password = value;
-			return true;
-		}
-		return false;
-	}
-
-	// Load the LED configuration from the file system
-	void Config::LEDConfig::Load(ini_file::Iterator& it)
-	{
-		for (; !it.AtEnd() && it.IsMatch(ini_file::EElement::KeyValue); it.Next())
-		{
-			if (it.IsMatch(ini_file::EElement::KeyValue, "num_leds"))
-			{
-				NumLEDs = it.Value().toInt();
-				continue;
-			}
-			if (it.IsMatch(ini_file::EElement::KeyValue, "colour"))
-			{
-				Colour = strtol(it.Value().c_str(), nullptr, 16);
-				continue;
-			}
-		}
-	}
-
-	// Save the LED configuration to the file system
-	void Config::LEDConfig::Save(fs::File& file)
-	{
-		file.printf("num_leds=%d\n", NumLEDs);
-		file.printf("colour=%d\n", Colour);
-	}
-
-	// Print the LED configuration to the console
-	void Config::LEDConfig::Print()
-	{
-		printf("num_leds=%d\n", NumLEDs);
-		printf("colour=0x%08X\n", Colour);
-	}
-
-	// Return the value of a configuration key as a string
-	String Config::LEDConfig::Get(String const& key) const
-	{
-		if (key.equalsIgnoreCase("num_leds"))
-			return String(NumLEDs);
-		if (key.equalsIgnoreCase("colour"))
-			return String(Colour, 16);
-		return {};
-	}
-
-	// Set the value of a configuration value
-	bool Config::LEDConfig::Set(String const& key, String const& value)
-	{
-		if (key.equalsIgnoreCase("num_leds"))
-		{
-			NumLEDs = value.toInt();
-			return true;
-		}
-		if (key.equalsIgnoreCase("colour"))
-		{
-			Colour = strtol(value.c_str(), nullptr, 16);
-			return true;
-		}
-		return false;
-	}
-
-	// Load the configuration from the file system
 	void Config::Load(ini_file::Iterator& it)
 	{
 		for (; !it.AtEnd(); )
 		{
 			if (it.IsMatch(ini_file::EElement::Section, "wifi"))
 			{
-				it.Next();
-				WiFi.Load(it);
+				for (it.Next(); !it.AtEnd() && it.IsMatch(ini_file::EElement::KeyValue); it.Next())
+				{
+					#define x(type, name, key, def)\
+					if (it.IsMatch(ini_file::EElement::KeyValue, key))\
+					{\
+						WiFi.name = ConvertTo<type>(it.Value());\
+						continue;\
+					}
+					LIGHTZ_WIFI_CONFIG(x)
+					#undef x
+				}
 				continue;
 			}
 			if (it.IsMatch(ini_file::EElement::Section, "led"))
 			{
-				it.Next();
-				LED.Load(it);
+				for (it.Next(); !it.AtEnd() && it.IsMatch(ini_file::EElement::KeyValue); it.Next())
+				{
+					#define x(type, name, key, def)\
+					if (it.IsMatch(ini_file::EElement::KeyValue, key))\
+					{\
+						LED.name = ConvertTo<type>(it.Value());\
+						continue;\
+					}
+					LIGHTZ_LED_CONFIG(x)
+					#undef x
+				}
 				continue;
 			}
 
@@ -187,47 +84,104 @@ namespace lightz
 	{
 		auto file = filesys.open(FilePath, "w");
 		Save(file);
+		SavePending = false;
+		printf("Configuration saved to %s\n", FilePath);
 	}
 	void Config::Save(fs::File& file)
 	{
 		file.println("[wifi]");
-		WiFi.Save(file);
+		#define x(type, name, key, def)\
+		file.printf(key "=%s\n", ToString<type>(WiFi.name).c_str());
+		LIGHTZ_WIFI_CONFIG(x)
+		#undef x
 		file.println();
 
 		file.println("[led]");
-		LED.Save(file);
+		#define x(type, name, key, def)\
+		file.printf(key "=%s\n", ToString<type>(LED.name).c_str());
+		LIGHTZ_LED_CONFIG(x)
+		#undef x
 		file.println();
 	}
 
 	// Print the configuration to the console
 	void Config::Print()
 	{
-		printf("[wifi]\n");
-		WiFi.Print();
+		printf("" TC_CYAN "[wifi]" TC_RESET "\n");
+		#define x(type, name, key, def)\
+		printf(TC_GREEN key TC_RESET "=%s\n", ToString<type>(WiFi.name).c_str());
+		LIGHTZ_WIFI_CONFIG(x)
+		#undef x
 		printf("\n");
 
-		printf("[led]\n");
-		LED.Print();
+		printf("" TC_CYAN "[led]" TC_RESET "\n");
+		#define x(type, name, key, def)\
+		printf(TC_GREEN key TC_RESET "=%s\n", ToString<type>(LED.name).c_str());
+		LIGHTZ_LED_CONFIG(x)
+		#undef x
 		printf("\n");
+
+		if (SavePending)
+			printf(" *** Save pending ***\n\n");
 	}
 
 	// Return the value of a configuration key as a string
-	String Config::Get(String const& key) const
+	String Config::Get(std::string_view full_key) const
 	{
-		if (StartsWith(key, "wifi"))
-			return WiFi.Get(key.substring(5));
-		if (StartsWith(key, "led"))
-			return LED.Get(key.substring(4));
+		if (MatchI(full_key, "wifi.", 5))
+		{
+			auto sub_key = full_key.substr(5);
+			#define x(type, name, key, def)\
+			if (MatchI(sub_key, key))\
+				return ToString<type>(WiFi.name);
+			LIGHTZ_WIFI_CONFIG(x)
+			#undef x
+		}
+		if (MatchI(full_key, "led.", 4))
+		{
+			auto sub_key = full_key.substr(4);
+			#define x(type, name, key, def)\
+			if (MatchI(sub_key, key))\
+				return ToString<type>(LED.name);
+			LIGHTZ_LED_CONFIG(x)
+			#undef x
+		}
 		return {};
 	}
 
 	// Set the value of a configuration value
-	bool Config::Set(String const& key, String const& value)
+	bool Config::Set(std::string_view full_key, std::string_view value)
 	{
-		if (StartsWith(key, "wifi"))
-			return WiFi.Set(key.substring(5), value);
-		if (StartsWith(key, "led"))
-			return LED.Set(key.substring(4), value);
+		// Update the configuration value if changed
+		auto DoSet = [this](auto& prop, std::string_view sv_value)
+		{
+			auto value = ConvertTo<std::decay_t<decltype(prop)>>(sv_value);
+			if (prop == value)
+				return true;
+
+			prop = value;
+			SavePending = true;
+			return true;
+		};
+
+		if (MatchI(full_key, "wifi.", 5))
+		{
+			auto sub_key = full_key.substr(5);
+			#define x(type, name, key, def)\
+			if (MatchI(sub_key, key))\
+				return DoSet(WiFi.name, value);
+			LIGHTZ_WIFI_CONFIG(x)
+			#undef x
+		}
+		if (MatchI(full_key, "led.", 4))
+		{
+			auto sub_key = full_key.substr(4);
+			#define x(type, name, key, def)\
+			if (MatchI(sub_key, key))\
+				return DoSet(LED.name, value);
+			LIGHTZ_LED_CONFIG(x)
+			#undef x
+		}
 		return false;
 	}
 }

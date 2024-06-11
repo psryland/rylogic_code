@@ -18,7 +18,8 @@ namespace lightz
 		void Setup();
 		void Update();
 
-		void ThreadMain();
+	private:
+
 		void HandleClient(WiFiClient client);
 		void HandleRequest(EMethod method, std::string_view path, headers_t const& headers, std::string_view body, WiFiClient &client);
 		void SendResponse(WiFiClient& client, EResponseCode status, std::string_view details = {}, EContentType content_type = {}, std::string_view body = {});

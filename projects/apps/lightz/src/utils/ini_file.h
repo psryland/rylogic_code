@@ -52,9 +52,9 @@ namespace lightz::ini_file
 		}
 
 		// Get the value for the current key/value pair
-		String Value() const
+		std::string_view Value() const
 		{
-			return String(m_vbeg, m_vend - m_vbeg);
+			return {m_vbeg, size_t(m_vend - m_vbeg)};
 		}
 
 		// Match the key name against the given string

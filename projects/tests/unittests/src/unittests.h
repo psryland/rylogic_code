@@ -318,6 +318,7 @@
 #include "pr\str\string_util.h"
 #include "pr\str\to_string.h"
 #include "pr\str\unit_tests.h"
+#include "pr\str\utf8.h"
 #include "pr\threads\concurrent_queue.h"
 #include "pr\threads\name_thread.h"
 #include "pr\threads\pause_thread.h"

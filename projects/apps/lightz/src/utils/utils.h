@@ -6,25 +6,18 @@ namespace lightz
 	// Use with '%.*s' format string
 	#define PRINTF_SV(str) static_cast<int>(str.size()), str.data()
 
-	// Match a string against a pattern
-	inline bool Match(std::string_view str, std::string_view pattern)
+	// Match a string against a pattern. 'len' is how much of 'str' needs to match
+	inline bool Match(std::string_view str, std::string_view pattern, size_t len = ~size_t{})
 	{
 		return
-			str.length() == pattern.length() &&
+			std::min(str.length(), len) == pattern.length() &&
 			strncmp(str.data(), pattern.data(), pattern.length()) == 0;
 	}
-	inline bool MatchI(std::string_view str, std::string_view pattern)
+	inline bool MatchI(std::string_view str, std::string_view pattern, size_t len = ~size_t{})
 	{
 		return
-			str.length() == pattern.length() && 
+			std::min(str.length(), len) == pattern.length() && 
 			lwip_strnicmp(str.data(), pattern.data(), pattern.length()) == 0;
-	}
-
-	// Case insensitive string comparison
-	template <int N>
-	inline bool StartsWith(String const& str, char const(&match)[N])
-	{
-		return str.length() >= N - 1 && lwip_strnicmp(str.c_str(), &match[0], N - 1) == 0;
 	}
 
 	// Write out data in hex

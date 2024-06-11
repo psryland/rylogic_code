@@ -1,83 +1,32 @@
 #pragma once
+#include <vector>
 #include <string>
 #include <string_view>
 #include <variant>
 #include <algorithm>
-#include <filesystem>
+#include <ostream>
+#include <sstream>
 #include <fstream>
+#include <filesystem>
+#include <type_traits>
+#include "utils/utf8.h"
 
 namespace pr::json
 {
 	struct Value;
-	Value const& null_value();
+	Value const& NullValue();
 
-	struct Null
-	{
-		operator nullptr_t () const { return nullptr; }
-	};
-	struct Boolean
-	{
-		bool data;
-		operator bool() const
-		{
-			return data;
-		}
-	};
-	struct String
-	{
-		std::string data;
-		operator std::string_view() const
-		{
-			return data;
-		}
-		operator std::string const& () const
-		{
-			return data;
-		}
-		operator std::filesystem::path() const
-		{
-			return data;
-		}
-		friend bool operator == (String const& lhs, std::string_view rhs)
-		{
-			return lhs.data == rhs;
-		}
-		friend bool operator != (String const& lhs, std::string_view rhs)
-		{
-			return !(lhs == rhs);
-		}
-	};
-	struct Number : String
-	{
-		operator long long () const
-		{
-			return std::stoll(data);
-		}
-		operator double () const
-		{
-			return std::stod(data);
-		}
-		friend bool operator == (Number const& lhs, long long rhs)
-		{
-			return static_cast<long long>(lhs) == rhs;
-		}
-		friend bool operator == (Number const& lhs, double rhs)
-		{
-			return static_cast<double>(lhs) == rhs;
-		}
-		friend bool operator != (Number const& lhs, long long rhs)
-		{
-			return !(lhs == rhs);
-		}
-		friend bool operator != (Number const& lhs, double rhs)
-		{
-			return !(lhs == rhs);
-		}
-	};
+	// Compound types
 	struct Array
 	{
 		std::vector<Value> items;
 
+		Array() = default;
+		Array(std::initializer_list<Value> values)
+			: items(values)
+		{}
+
+		// Array interface
 		bool empty() const
 		{
 			return items.empty();
@@ -94,53 +43,177 @@ namespace pr::json
 		{
 			return items.end();
 		}
+
+		// Access the value associated with 'index'
 		Value const& operator [] (size_t index) const
 		{
-			if (index >= items.size()) return null_value();
+			if (index >= items.size()) return NullValue();
+			return items[index];
+		}
+		Value& operator[](size_t index)
+		{
+			items.resize(std::max<size_t>(items.size(), index + 1));
 			return items[index];
 		}
 	};
 	struct Object
 	{
-		std::vector<Value> items;
+		using key_t = std::string;
+		using keys_t = std::vector<key_t>;
+		using vals_t = std::vector<Value>;
+		
+		keys_t keys;
+		vals_t values;
 
+		Object() = default;
+		Object(std::initializer_list<std::pair<std::string_view, Value>> items);
+
+		// Array interface
 		bool empty() const
 		{
-			return items.empty();
+			return keys.empty();
 		}
 		size_t size() const
 		{
-			return items.size();
+			return keys.size();
 		}
+
+		// Range based for iteration
+		template <typename key_iter_t, typename val_iter_t> struct Iter
+		{
+			using pair_t = struct {
+				typename key_iter_t::value_type const& key;
+				typename val_iter_t::value_type const& val;
+			};
+			key_iter_t key;
+			val_iter_t value;
+
+			pair_t operator * () const
+			{
+				return pair_t{ *key, *value };
+			}
+			Iter& operator ++ ()
+			{
+				++key;
+				++value;
+				return *this;
+			}
+			friend bool operator != (Iter const& lhs, Iter const& rhs)
+			{
+				return lhs.key != rhs.key;
+			}
+		};
 		auto begin() const
 		{
-			return items.begin();
+			return Iter<keys_t::const_iterator, vals_t::const_iterator>{ keys.begin(), values.begin() };
+		}
+		auto begin()
+		{
+			return Iter<keys_t::iterator, vals_t::iterator>{ keys.begin(), values.begin() };
 		}
 		auto end() const
 		{
-			return items.end();
+			return Iter<keys_t::const_iterator, vals_t::const_iterator>{ keys.end(), values.end() };
 		}
-		Value const* find(std::string_view key) const
+		auto end()
 		{
-			auto iter = std::find_if(items.begin(), items.end(), [key](auto& v) { return v.key == key; });
-			return iter != items.end() ? &*iter : nullptr;
+			return Iter<keys_t::iterator, vals_t::iterator>{ keys.end(), values.end() };
 		}
-		Value const& operator [] (std::string_view key) const
+
+		// Find 'key' in the object and return its index
+		size_t index_of(std::string_view key) const
 		{
-			auto value = find(key);
-			return value ? *value : null_value();
+			auto it = std::find_if(keys.begin(), keys.end(), [key](auto& k) { return k == key; });
+			return std::distance(keys.begin(), it);
 		}
+
+		// Access the value associated with 'index'
 		Value const& operator [] (size_t index) const
 		{
-			if (index >= items.size()) return null_value();
-			return items[index];
+			if (index >= values.size()) return NullValue();
+			return values[index];
+		}
+		Value& operator[](size_t index)
+		{
+			if (index >= values.size()) throw std::out_of_range("Index out of range");
+			return values[index];
+		}
+
+		// Access the value associated with 'key'
+		Value const& operator [] (std::string_view key) const
+		{
+			auto idx = index_of(key);
+			return (*this)[idx];
+		}
+		Value& operator[](std::string_view key)
+		{
+			auto idx = index_of(key);
+			if (idx == keys.size())
+			{
+				idx = keys.size();
+				keys.push_back(std::string{ key });
+				values.push_back(NullValue());
+			}
+			return (*this)[idx];
+		}
+
+		// Look for an item. Returns nullptr if not found
+		Value const* find(std::string_view key) const
+		{
+			auto idx = index_of(key);
+			return idx < keys.size() ? &values[idx] : nullptr;
+		}
+		Value* find(std::string_view key)
+		{
+			auto idx = index_of(key);
+			return idx < keys.size() ? &values[idx] : nullptr;
 		}
 	};
 
+	// Variant type
 	struct Value
 	{
-		std::string key;
-		std::variant<Null, Boolean, String, Number, Array, Object> value;
+		using variant_t = std::variant<nullptr_t, bool, std::string, double, Array, Object>;
+		variant_t value;
+
+		Value() = default;
+		Value(Value&& rhs) = default;
+		Value(Value const& rhs) = default;
+		Value& operator = (Value&& rhs) = default;
+		Value& operator = (Value const& rhs) = default;
+
+		// Want implicit conversion to Value for all types but don't want implicit conversion to bool.
+		// Only way to avoid this is to provide a constructor for each type.
+		Value(nullptr_t)
+			: value(nullptr)
+		{}
+		Value(bool value_)
+			: value(value_)
+		{}
+		Value(std::string&& value_)
+			: value(std::move(value_))
+		{}
+		Value(std::string const& value_)
+			: value(value_)
+		{}
+		Value(std::string_view value_)
+			: Value(std::string{ value_ })
+		{}
+		Value(char const* value_)
+			: Value(std::string{ value_ })
+		{}
+		Value(double value_)
+			: value(value_)
+		{}
+		Value(int value_)
+			: Value(static_cast<double>(value_))
+		{}
+		Value(Array&& value_)
+			: value(std::move(value_))
+		{}
+		Value(Object&& value_)
+			: value(std::move(value_))
+		{}
 
 		// Convert to a json type
 		template <typename T> T const* as() const
@@ -148,22 +221,10 @@ namespace pr::json
 			return std::get_if<T>(&value);
 		}
 
-		// Convert to a value
-		bool to_bool() const
+		// Value accessors - only const because setting non-variant types is not supported
+		template <typename T> T to() const
 		{
-			return std::get<Boolean>(value);
-		}
-		std::string_view to_string() const
-		{
-			return std::get<String>(value);
-		}
-		long long to_int() const
-		{
-			return std::get<Number>(value);
-		}
-		double to_float() const
-		{
-			return std::get<Number>(value);
+			return std::get<std::decay_t<T>>(value);
 		}
 		Array const& to_array() const
 		{
@@ -173,10 +234,29 @@ namespace pr::json
 		{
 			return std::get<Object>(value);
 		}
-		Value const& operator [] (std::string_view k) const
+		Array& to_array()
+		{
+			return std::get<Array>(value);
+		}
+		Object& to_object()
+		{
+			return std::get<Object>(value);
+		}
+
+		// Object/Array accessors
+		size_t size() const
 		{
 			if (auto object = as<Object>())
-				return (*object)[k];
+				return object->size();
+			if (auto list = as<Array>())
+				return list->size();
+
+			throw std::runtime_error("Not an object or array");
+		}
+		Value const& operator [] (std::string_view key_) const
+		{
+			if (auto object = as<Object>())
+				return (*object)[key_];
 
 			throw std::runtime_error("Not an object");
 		}
@@ -189,30 +269,171 @@ namespace pr::json
 
 			throw std::runtime_error("Not an object or array");
 		}
+
+		// Comparison operators
 		friend bool operator == (Value const& lhs, nullptr_t)
 		{
-			return lhs.value.valueless_by_exception() || std::holds_alternative<Null>(lhs.value);
+			return lhs.value.valueless_by_exception() || std::holds_alternative<nullptr_t>(lhs.value);
 		}
 		friend bool operator != (Value const& lhs, nullptr_t)
 		{
 			return !(lhs == nullptr);
 		}
 	};
-
-	// Static null value returned for non-existent keys/indices
-	inline Value const& null_value()
+	template <> inline std::string_view Value::to<std::string_view>() const
 	{
-		static Value s_null_value = { {}, Null{} };
-		return s_null_value;
+		return std::string_view{ to<std::string const&>() };
 	}
-	inline std::string UnescapeString(std::string_view str);
+	template <> inline int64_t Value::to<int64_t>() const
+	{
+		return std::llround(to<double>());
+	}
+	template <> inline int Value::to<int>() const
+	{
+		return static_cast<int>(to<int64_t>());
+	}
+
+	// JSON DOM
+	struct Document : Value
+	{
+		Document()
+			:Value(Object{})
+		{}
+		Object const& root() const
+		{
+			return std::get<Object>(value);
+		}
+		Object& root()
+		{
+			return std::get<Object>(value);
+		}
+	};
 
 	// Json parsing options
 	struct Options
 	{
-		bool AllowComments;
-		bool AllowTrailingCommas;
+		// Deserialize options
+		bool AllowComments = false;
+		bool AllowTrailingCommas = false;
+		
+		// Serialize options
+		bool Indent = false;
+		std::string_view IndentString = "\t";
 	};
+
+	// Static null value returned for non-existent keys/indices
+	inline Value const& NullValue()
+	{
+		static Value s_null_value;
+		return s_null_value;
+	}
+
+	// Convert a normal string to an escaped string
+	inline std::string EscapeString(std::string_view str)
+	{
+		auto ptr = str.data();
+		auto end = str.data() + str.size();
+
+		std::string out;
+		out.reserve(str.size() * 2);
+
+		for (; ptr != end;)
+		{
+			if (*ptr == '\\' || *ptr == '"' || *ptr == '/' || *ptr == '\b' || *ptr == '\f' || *ptr == '\n' || *ptr == '\r' || *ptr == '\t')
+			{
+				out.push_back('\\');
+				out.push_back(*ptr++);
+			}
+			else if (str::utf8::ByteLength(*ptr) > 1)
+			{
+				auto code = str::utf8::CodePoint(ptr, end);
+				str::utf8::Escape(code, out);
+			}
+			else
+			{
+				out.push_back(*ptr++);
+			}
+		}
+		return out;
+	}
+
+	// Convert an escaped string to a normal string
+	inline std::string UnescapeString(std::string_view str)
+	{
+		auto ptr = str.data();
+		auto end = str.data() + str.size();
+
+		std::string result(str.size(), '\0');
+		auto out = result.data();
+
+		for (; ptr != end; ++ptr)
+		{
+			if (*ptr != '\\')
+			{
+				*out++ = *ptr;
+				continue;
+			}
+			switch (*++ptr)
+			{
+				case '\\': *out++ = '\\'; break;
+				case '"': *out++ = '"'; break;
+				case '/': *out++ = '/'; break;
+				case 'b': *out++ = '\b'; break;
+				case 'f': *out++ = '\f'; break;
+				case 'n': *out++ = '\n'; break;
+				case 'r': *out++ = '\r'; break;
+				case 't': *out++ = '\t'; break;
+				case 'u':
+				{
+					if (end - ptr < 5)
+						throw std::runtime_error("Incomplete unicode escape sequence");
+
+					auto code =
+						((ptr[1] - '0') << 12) +
+						((ptr[2] - '0') << 8) +
+						((ptr[3] - '0') << 4) +
+						((ptr[4] - '0') << 0);
+
+					if (code < 0x80)
+					{
+						*out++ = static_cast<char>(code);
+					}
+					else if (code < 0x800)
+					{
+						*out++ = static_cast<char>(0xC0 | (code >> 6));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					else
+					{
+						*out++ = static_cast<char>(0xE0 | (code >> 12));
+						*out++ = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
+						*out++ = static_cast<char>(0x80 | (code & 0x3F));
+					}
+					ptr += 4;
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown escape sequence");
+				}
+			}
+		}
+
+		result.resize(out - result.data());
+		return result;
+	}
+
+	// Initializer list constructor for objects
+	inline Object::Object(std::initializer_list<std::pair<std::string_view, Value>> items)
+		: keys()
+		, values()
+	{
+		for (auto& [key, value] : items)
+		{
+			keys.push_back(std::string{ key });
+			values.push_back(value);
+		}
+	}
 
 	// Implementation
 	namespace impl
@@ -247,15 +468,15 @@ namespace pr::json
 			std::snprintf(result.data(), result.size() + 1, fmt, args...);
 			return result;
 		}
-		
+
 		// Advance the string pointer to the next non-whitespace character
 		inline bool EatWS(std::string_view& src, bool allow_eos)
 		{
-			for (;!src.empty() && std::isspace(src[0]); )
+			for (; !src.empty() && std::isspace(src[0]); )
 				src.remove_prefix(1);
 			if (src.empty() && !allow_eos)
 				throw std::runtime_error("Unexpected end of string");
-			
+
 			// Always return true to allow if chaining
 			return true;
 		}
@@ -414,7 +635,7 @@ namespace pr::json
 		}
 
 		// Return the next value in the json string
-		inline Value NextValue(std::string_view& src, std::string_view key, Options const& opts)
+		inline Value NextValue(std::string_view& src, Options const& opts)
 		{
 			auto tok = NextToken(src, opts);
 			switch (tok.token)
@@ -425,23 +646,28 @@ namespace pr::json
 				}
 				case EToken::Null:
 				{
-					return Value{ std::string(key), Null{} };
+					return nullptr;
 				}
 				case EToken::True:
 				{
-					return Value{ std::string(key), Boolean{ true } };
+					return true;
 				}
 				case EToken::False:
 				{
-					return Value{ std::string(key), Boolean{ false } };
+					return false;
 				}
 				case EToken::String:
 				{
-					return Value{ std::string(key), String{ UnescapeString(tok.data) } };
+					return UnescapeString(tok.data);
 				}
 				case EToken::Number:
 				{
-					return Value{ std::string(key), Number{ std::string(tok.data) } };
+					size_t end = 0;
+					auto d = std::stod(std::string{ tok.data }, &end);
+					if (end == tok.data.size())
+						return d;
+
+					throw std::runtime_error("Invalid number");
 				}
 				case EToken::OpenBracket:
 				{
@@ -465,10 +691,10 @@ namespace pr::json
 						}
 
 						// Not the end of the array, so add the next value
-						list.items.push_back(NextValue(src, {}, opts));
+						list.items.push_back(NextValue(src, opts));
 						require_comma = true;
 					}
-					return Value{ std::string(key), list };
+					return list;
 				}
 				case EToken::OpenBrace:
 				{
@@ -492,15 +718,19 @@ namespace pr::json
 						}
 
 						// Not the end of the object, so add the next key/value pair
-						auto k = NextKey(src, opts);
+						auto key = NextKey(src, opts);
 
 						if (NextToken(src, opts).token != EToken::Colon)
 							throw std::runtime_error("Expected colon");
 
-						obj.items.push_back(NextValue(src, k, opts));
+						auto val = NextValue(src, opts);
+
+						// Add the item
+						obj.keys.push_back(std::string{ key });
+						obj.values.push_back(val);
 						require_comma = true;
 					}
-					return Value{ std::string(key), obj };
+					return obj;
 				}
 				default:
 				{
@@ -508,68 +738,6 @@ namespace pr::json
 				}
 			}
 		}
-	}
-	
-	// Convert an escaped string to a normal string
-	inline std::string UnescapeString(std::string_view str)
-	{
-		auto ptr = str.data();
-		auto end = str.data() + str.size();
-			
-		std::string result(str.size(), '\0');
-		auto out = result.data();
-
-		for (; ptr != end; ++ptr)
-		{
-			if (*ptr != '\\')
-			{
-				*out++ = *ptr;
-				continue;
-			}
-			switch (*++ptr)
-			{
-				case '"': *out++ = '"'; break;
-				case '\\': *out++ = '\\'; break;
-				case '/': *out++ = '/'; break;
-				case 'b': *out++ = '\b'; break;
-				case 'f': *out++ = '\f'; break;
-				case 'n': *out++ = '\n'; break;
-				case 'r': *out++ = '\r'; break;
-				case 't': *out++ = '\t'; break;
-				case 'u':
-				{
-					if (end - ptr < 5)
-						throw std::runtime_error("Incomplete unicode escape sequence");
-					
-					char const digits[] = { ptr[1], ptr[2], ptr[3], ptr[4] };
-					auto code = std::strtoul(&digits[0], nullptr, 16);
-					if (code < 0x80)
-					{
-						*out++ = static_cast<char>(code);
-					}
-					else if (code < 0x800)
-					{
-						*out++ = static_cast<char>(0xC0 | (code >> 6));
-						*out++ = static_cast<char>(0x80 | (code & 0x3F));
-					}
-					else
-					{
-						*out++ = static_cast<char>(0xE0 | (code >> 12));
-						*out++ = static_cast<char>(0x80 | ((code >> 6) & 0x3F));
-						*out++ = static_cast<char>(0x80 | (code & 0x3F));
-					}
-					ptr += 4;
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown escape sequence");
-				}
-			}
-		}
-
-		result.resize(out - result.data());
-		return result;
 	}
 
 	/// <summary>Parse a UTF-8 JSON string into a DOM tree.</summary>
@@ -580,7 +748,7 @@ namespace pr::json
 		auto start = src;
 		try
 		{
-			return NextValue(src, {}, opts);
+			return NextValue(src, opts);
 		}
 		catch (std::runtime_error& ex)
 		{
@@ -604,6 +772,100 @@ namespace pr::json
 		file.read(data.data(), data.size());
 		return Parse(data, opts);
 	}
+
+	/// <summary>Write a JSON DOM to a string</summary>
+	inline std::ostream& Serialize(std::ostream& out, Value const& value, Options const& opts)
+	{
+		struct L {
+			static void DoSerialize(std::ostream& out, Value const& value, Options const& opts, int indent)
+			{
+				switch (value.value.index())
+				{
+					case 0:
+					{
+						out << "null";
+						break;
+					}
+					case 1:
+					{
+						out << (std::get<bool>(value.value) ? "true" : "false");
+						break;
+					}
+					case 2:
+					{
+						out << '"' << EscapeString(std::get<std::string>(value.value)) << '"';
+						break;
+					}
+					case 3:
+					{
+						out << std::get<double>(value.value);
+						break;
+					}
+					case 4:
+					{
+						auto& arr = std::get<Array>(value.value);
+						char const* comma = "";
+
+						out << '[';
+						for (auto& item : arr.items)
+						{
+							out << comma;
+							Indent(out, indent + 1, opts);
+							DoSerialize(out, item, opts, indent + 1);
+							comma = ",";
+						}
+						Indent(out, indent, opts);
+						out << ']';
+						break;
+					}
+					case 5:
+					{
+						auto const& obj = std::get<Object>(value.value);
+						char const* comma = "";
+						char const* space = opts.Indent ? " " : "";
+
+						out << '{';
+						for (auto const& [key, val] : obj)
+						{
+							out << comma;
+							Indent(out, indent + 1, opts);
+							out << '"' << EscapeString(key) << '"' << ":" << space;
+							DoSerialize(out, val, opts, indent + 1);
+							comma = ",";
+						}
+						Indent(out, indent, opts);
+						out << '}';
+						break;
+					}
+				}
+			}
+			static void Indent(std::ostream& out, int indent, Options const& opts)
+			{
+				if (!opts.Indent || opts.IndentString.empty())
+					return;
+
+				out << '\n';
+				for (int i = 0; i < indent; ++i)
+					out << opts.IndentString;
+			}
+		};
+		L::DoSerialize(out, value, opts, 0);
+		return out;
+	}
+	inline std::string Serialize(Value const& value, Options const& opts)
+	{
+		std::ostringstream out;
+		Serialize(out, value, opts);
+		return out.str();
+	}
+	inline void Serialize(std::filesystem::path filepath, Value const& value, Options const& opts)
+	{
+		std::ofstream file(filepath);
+		if (!file.is_open())
+			throw std::runtime_error(impl::Fmt("Failed to open file '%s'", filepath.string().c_str()));
+
+		Serialize(file, value, opts);
+	}
 }
 
 #if PR_UNITTESTS
@@ -614,70 +876,170 @@ namespace pr::storage
 	{
 		{
 			char const test_data[] =
-#pragma region TestData
-R"({
-	"key1": "value1",
-	"key2": 123,
-	"key3": true,
-	"key4": false,
-	"key5": null,
-	"key6": {
-		"key7": "value7",
-		"key8": 456,
-		"key9": true,
-		"key10": false,
-		"key11": null,
-		"key12": {
-			"key13": "value13",
-			"key14": 789,
-			"key15": true,
-			"key16": false,
-			"key17": null
-		},
-		// Comments allowed
-		"key18": [
-			"value19",
-			123,
-			true,
-			false,
-			null
-		]
-	},
-	"key20": [
-		"value21",
-		123,
-		true,
-		false,
-		null,
-	]
-})";
-#pragma endregion
+				"{\n"
+				"	\"key1\": \"value1\",\n"
+				"	\"key2\": 123,\n"
+				"	\"key3\": true,\n"
+				"	\"key4\": false,\n"
+				"	\"key5\": null,\n"
+				"	\"key6\": {\n"
+				"		\"key7\": \"value7\",\n"
+				"		\"key8\": 456,\n"
+				"		\"key9\": true,\n"
+				"		\"key10\": false,\n"
+				"		\"key11\": null,\n"
+				"		\"key12\": {\n"
+				"			\"key13\": \"value13\",\n"
+				"			\"key14\": 789,\n"
+				"			\"key15\": true,\n"
+				"			\"key16\": false,\n"
+				"			\"key17\": null\n"
+				"		},\n"
+				"		// Comments allowed\n"
+				"		\"key18\": [\n"
+				"			\"value19\",\n"
+				"			123,\n"
+				"			true,\n"
+				"			false,\n"
+				"			null\n"
+				"		]\n"
+				"	},\n"
+				"	\"key20\": [\n"
+				"		\"value21\",\n"
+				"		123,\n"
+				"		true,\n"
+				"		false,\n"
+				"		null,\n"
+				"	]\n"
+				"}\n";
 
 			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
-			PR_CHECK(root["key1"].to_string() == "value1", true);
-			PR_CHECK(root["key2"].to_int() == 123, true);
-			PR_CHECK(root["key3"].to_bool() == true, true);
-			PR_CHECK(root["key4"].to_bool() == false, true);
-			PR_CHECK(root["key5"] == nullptr, true);
-			PR_CHECK(root["key6"] != nullptr, true);
-			PR_CHECK(root["key6"]["key12"]["key14"].to_int() == 789, true);
-			PR_CHECK(root["key6"]["key12"].to_object().size() == 5, true);
-			PR_CHECK(root["key6"]["key18"].to_array().empty(), false);
+			PR_EXPECT(root["key1"].to<std::string_view>() == "value1");
+			PR_EXPECT(root["key2"].to<double>() == 123);
+			PR_EXPECT(root["key3"].to<bool>() == true);
+			PR_EXPECT(root["key4"].to<bool>() == false);
+			PR_EXPECT(root["key5"] == nullptr);
+			PR_EXPECT(root["key6"] != nullptr);
+			PR_EXPECT(root["key6"]["key12"]["key14"].to<int>() == 789);
+			PR_EXPECT(root["key6"]["key12"].to_object().size() == 5);
+			PR_EXPECT(root["key6"]["key18"].to_array().empty() == false);
 		}
 		{
 			char const test_data[] =
-#pragma region TestData
-R"({
-	"EscapedString": "This is a string with a \"quote\" in it",
-	"SearchPaths": [
-		"C:\\Work\\Path",
-	],
-})";
-#pragma endregion
+				"{\n"
+				"	\"EscapedString\": \"This is a string with a \\\"quote\\\" in it\",\n"
+				"	\"SearchPaths\": [\n"
+				"		\"C:\\\\Work\\\\Path\",\n"
+				"	],\n"
+				"}\n";
 
 			auto root = json::Parse(test_data, { .AllowComments = true, .AllowTrailingCommas = true });
-			PR_CHECK(root["SearchPaths"][0].to_string() == "C:\\Work\\Path", true);
-			PR_CHECK(root["EscapedString"].to_string() == "This is a string with a \"quote\" in it", true);
+			PR_EXPECT(root["SearchPaths"][0].to<std::string>() == "C:\\Work\\Path");
+			PR_EXPECT(root["EscapedString"].to<std::string>() == "This is a string with a \"quote\" in it");
+		}
+		{
+			json::Document doc;
+			auto& root = doc.root();
+
+			root["key1"] = nullptr;
+			root["key2"] = true;
+			root["key3"] = false;
+			root["key4"] = "value1";
+			root["key5"] = 123;
+			root["key6"] = 456.78;
+			root["key7"] = json::Array{ 1, 2, 3, 4 };
+			root["key8"] = json::Object{};
+
+			auto& child = root["key8"].to_object();
+			child["key10"] = nullptr;
+			child["key11"] = true;
+			child["key12"] = false;
+			child["key13"] = "value2";
+			child["key14"] = 456;
+			child["key15"] = 123.45;
+			child["key16"] = json::Array{
+				true,
+				"value3",
+				80085,
+			};
+			child["key17"] = json::Object{
+				{"one", "1"},
+				{"two", 2},
+				{"three", true},
+			};
+			
+			char const* expected = 
+				"{\n"
+				"	\"key1\": null,\n"
+				"	\"key2\": true,\n"
+				"	\"key3\": false,\n"
+				"	\"key4\": \"value1\",\n"
+				"	\"key5\": 123,\n"
+				"	\"key6\": 456.78,\n"
+				"	\"key7\": [\n"
+				"		1,\n"
+				"		2,\n"
+				"		3,\n"
+				"		4\n"
+				"	],\n"
+				"	\"key8\": {\n"
+				"		\"key10\": null,\n"
+				"		\"key11\": true,\n"
+				"		\"key12\": false,\n"
+				"		\"key13\": \"value2\",\n"
+				"		\"key14\": 456,\n"
+				"		\"key15\": 123.45,\n"
+				"		\"key16\": [\n"
+				"			true,\n"
+				"			\"value3\",\n"
+				"			80085\n"
+				"		],\n"
+				"		\"key17\": {\n"
+				"			\"one\": \"1\",\n"
+				"			\"two\": 2,\n"
+				"			\"three\": true\n"
+				"		}\n"
+				"	}\n"
+				"}";
+
+			PR_EXPECT(root["key1"] == nullptr);
+			PR_EXPECT(root["key2"].to<bool>() == true);
+			PR_EXPECT(root["key3"].to<bool>() == false);
+			PR_EXPECT(root["key4"].to<std::string_view>() == "value1");
+			PR_EXPECT(root["key5"].to<int>() == 123);
+			PR_EXPECT(root["key6"].to<double>() == 456.78);
+			PR_EXPECT(root["key7"] != nullptr);
+			
+			auto& arr = root["key7"].to_array();
+			PR_EXPECT(arr.size() == 4);
+			PR_EXPECT(arr[0].to<int>() == 1);
+			PR_EXPECT(arr[1].to<int>() == 2);
+			PR_EXPECT(arr[2].to<int>() == 3);
+			PR_EXPECT(arr[3].to<int>() == 4);
+
+			auto& obj = root["key8"].to_object();
+			PR_EXPECT(obj.size() == 8);
+			PR_EXPECT(obj["key10"] == nullptr);
+			PR_EXPECT(obj["key11"].to<bool>() == true);
+			PR_EXPECT(obj["key12"].to<bool>() == false);
+			PR_EXPECT(obj["key13"].to<std::string_view>() == "value2");
+			PR_EXPECT(obj["key14"].to<int>() == 456);
+			PR_EXPECT(obj["key15"].to<double>() == 123.45);
+
+			PR_EXPECT(obj["key16"] != nullptr);
+			PR_EXPECT(obj["key16"].size() == 3);
+			PR_EXPECT(obj["key16"][0].to<bool>() == true);
+			PR_EXPECT(obj["key16"][1].to<std::string_view>() == "value3");
+			PR_EXPECT(obj["key16"][2].to<int>() == 80085);
+
+			PR_EXPECT(obj["key17"] != nullptr);
+			PR_EXPECT(obj["key17"].size() == 3);
+			PR_EXPECT(obj["key17"]["one"].to<std::string_view>() == "1");
+			PR_EXPECT(obj["key17"]["two"].to<int>() == 2);
+			PR_EXPECT(obj["key17"]["three"].to<bool>() == true);
+
+			std::string str = json::Serialize(doc, { .Indent = true });
+			PR_EXPECT(str == expected);
 		}
 	}
 }
