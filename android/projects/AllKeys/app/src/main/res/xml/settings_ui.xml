@@ -1,0 +1,103 @@
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+    <!-- KEY -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/key"
+        style="@style/PreferenceCategoryStyleNoDivider"
+        >
+        <androidx.preference.MultiSelectListPreference
+            android:key="selected_keys"
+            android:entries="@array/key_groups"
+            android:entryValues="@array/key_groups"
+            android:defaultValue="@array/key_groups_defaults"
+            android:title="@string/choose_keys"
+            />
+    </androidx.preference.PreferenceCategory>
+
+    <!-- CHORD -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/chord"
+        style="@style/PreferenceCategoryStyleNoDivider"
+        >
+        <androidx.preference.MultiSelectListPreference
+            android:key="selected_chords"
+            android:defaultValue="@array/chords_defaults"
+            android:title="@string/choose_chords"
+            />
+        <androidx.preference.EditTextPreference
+            android:key="custom_chords"
+            android:defaultValue=""
+            android:selectAllOnFocus="false"
+            android:singleLine="false"
+            android:title="@string/custom_chord_names"
+            app:useSimpleSummaryProvider="true"
+            />
+     </androidx.preference.PreferenceCategory>
+
+    <!-- SOUNDS -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/sounds"
+        style="@style/PreferenceCategoryStyleNoDivider"
+        >
+
+        <!-- ROOT NOTES -->
+        <androidx.preference.SwitchPreference
+            android:key="play_root_note"
+            android:title="@string/play_root_notes"
+            />
+
+        <!-- METRONOME -->
+        <androidx.preference.SwitchPreference
+            android:key="metronome_sounds"
+            android:title="@string/metronome_sounds"
+            />
+        <androidx.preference.ListPreference
+            android:key="metronome_accent"
+            android:title="@string/metronome_accent"
+            android:entries="@array/metronome_sounds"
+            android:entryValues="@array/metronome_sounds"
+            android:enabled="false"
+            app:useSimpleSummaryProvider="true"
+            />
+        <androidx.preference.ListPreference
+            android:key="metronome_click"
+            android:title="@string/metronome_click"
+            android:entries="@array/metronome_sounds"
+            android:entryValues="@array/metronome_sounds"
+            android:enabled="false"
+            app:useSimpleSummaryProvider="true"
+            />
+
+        <!-- BEATS PER BAR -->
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="beats_per_bar"
+            android:title="@string/beats_per_bar"
+            android:min="1"
+            android:max="7"
+            />
+
+        <!-- BARS PER CHORD -->
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="bars_per_chord"
+            android:title="@string/bars_per_chord"
+            android:min="1"
+            android:max="8"
+            />
+    </androidx.preference.PreferenceCategory>
+
+    <!-- GENERAL -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/general"
+        style="@style/PreferenceCategoryStyleNoDivider"
+        >
+        <androidx.preference.ListPreference
+            android:key="theme"
+            android:title="@string/theme"
+            android:entries="@array/themes"
+            android:entryValues="@array/themes"
+            app:useSimpleSummaryProvider="true"
+            />
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

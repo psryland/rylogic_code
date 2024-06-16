@@ -9,24 +9,23 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 	{
 		const val NOTIFY_CHORD = "chord"
 		const val NOTIFY_BEAT = "beat"
+		const val RUNNING = "running"
 	}
 
+	private lateinit var mSettings: Settings
 	private val mHandler: Handler = handler
+	private var mRunning: Boolean = false
 	private var mKeys: List<String> = listOf()
 	private var mChords: List<String> = listOf()
 	private var mKeysOrder: MutableList<Int> = mutableListOf()
 	private var mChordsOrder: MutableList<Int> = mutableListOf()
-	private var mBeatsPerBar: Int = 4
-	private var mBarsPerChord: Int = 2
 	private var mBeat: Int = 0
 
 	// Snapshot the settings
-	fun reset(settings: Settings, tempo:Double)
+	fun reset(settings: Settings)
 	{
-		this.tempo = tempo
 		this.mBeat = 0
-		this.mBeatsPerBar = settings.beatsPerBar
-		this.mBarsPerChord = settings.barsPerChord
+		this.mSettings = settings
 
 		// Snapshot the settings into lists
 		mKeys = settings.keys
@@ -42,11 +41,19 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 
 	// The current 'key'
 	val key: String
-		get() = if (mKeysOrder.size != 0) mKeys[mKeysOrder.last()] else "---"
+		get() = if (mKeysOrder.size > 0) mKeys[mKeysOrder[0]] else "---"
 
 	// The current 'chord'
 	val chord: String
-		get() = if (mChordsOrder.size != 0) mChords[mChordsOrder.last()] else "---"
+		get() = if (mChordsOrder.size > 0) mChords[mChordsOrder[0]] else "---"
+
+	// The next 'key'
+	val keyNext: String
+		get() = if (mKeysOrder.size > 1) mKeys[mKeysOrder[1]] else "---"
+
+	// The current 'chord'
+	val chordNext: String
+		get() = if (mChordsOrder.size > 1) mChords[mChordsOrder[1]] else "---"
 
 	// True if the updater is running
 	var running
@@ -57,26 +64,20 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 			mRunning = value
 			mHandler.removeCallbacks(this)
 			if (mRunning) run()
-			notifyUpdated()
+			notifyUpdated(RUNNING, !value, value)
 		}
-	private var mRunning: Boolean = false
-
-	// The rate to change chords (in 8x beats/min)
-	var tempo: Double
-		get() = mTempo
-		set(value) { mTempo = value }
-	private var mTempo: Double = 120.0
 
 	// Advance to the next chord
 	fun next(stop:Boolean = true)
 	{
 		fun adv(list: MutableList<Int>, size: Int)
 		{
-			if (list.size != 0)
+			// We need the current and next in the list at all times
+			if (list.size > 1)
 			{
-				list.removeLast()
+				list.removeFirst()
 			}
-			if (list.size == 0)
+			if (list.size <= 1)
 			{
 				list.addAll(0 until size)
 				list.shuffle()
@@ -91,6 +92,8 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 		// Notify of new values
 		running = !stop
 		notifyUpdated(NOTIFY_CHORD)
+		notifyUpdated(NOTIFY_BEAT, null, mBeat)
+
 	}
 
 	override fun run()
@@ -99,17 +102,16 @@ class Updater(handler: Handler) :Runnable, PropertyChangeSupport(handler)
 			return
 
 		// Time for next chord?
-		if (mBeat == mBeatsPerBar * mBarsPerChord)
+		if (mBeat == mSettings.beatsPerBar * mSettings.barsPerChord)
 			next(false)
-
-		// Notify metronome
-		notifyUpdated(NOTIFY_BEAT,null,mBeat)
+		else
+			notifyUpdated(NOTIFY_BEAT, null, mBeat)
 
 		// Beat played
 		++mBeat
 
 		// Schedule the next call
-		var periodS = 60.0 / tempo // seconds / beat
+		val periodS = 60.0 / mSettings.tempo // seconds / beat
 		mHandler.postDelayed(this, (periodS * 1000).toLong())
 	}
 

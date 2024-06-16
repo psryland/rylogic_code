@@ -8,43 +8,61 @@
     android:orientation="vertical"
     app:menu="@menu/menu_main"
     >
-    <GridLayout
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="2"
+        android:gravity="center_vertical"
         >
+        <TextView
+            android:id="@+id/label_chord"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textSize="24sp"
+            android:text="@string/chord"
+            />
         <LinearLayout
             android:orientation="vertical"
-            android:layout_gravity="center_vertical|center_horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:background="@color/panel_background"
+            android:minWidth="280dp"
+            android:minHeight="240dp"
             >
-            <TextView
-                android:id="@+id/label_chord"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:textSize="24sp"
-                android:text="@string/chord"
-                />
             <TextView
                 android:id="@+id/text_chord"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
+                android:layout_weight="3"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@color/panel_background"
-                android:minWidth="280dp"
-                android:minHeight="240dp"
-                android:textSize="56sp"
+                android:textSize="70sp"
+                android:textColor="@color/chord_text"
+                android:text="@string/no_chord"
+                />
+            <TextView
+                android:id="@+id/text_chord_next"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center"
+                android:textSize="30sp"
+                android:textColor="@color/chord_text_next"
                 android:text="@string/no_chord"
                 />
         </LinearLayout>
-    </GridLayout>
+    </LinearLayout>
     <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.3"
-        android:orientation="vertical"
         android:paddingTop="20dp"
         android:paddingBottom="0dp"
         >
@@ -67,6 +85,7 @@
             android:layout_marginBottom="20dp"
             android:min="40"
             android:max="300"
+            android:progress="120"
             />
         <LinearLayout
             android:layout_width="match_parent"
@@ -128,39 +147,36 @@
                 />
         </LinearLayout>
     </LinearLayout>
+
     <LinearLayout
+        style="?android:attr/buttonBarStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="0.6"
-        android:gravity="center"
+        android:layout_gravity="center"
         android:orientation="horizontal"
-        android:paddingBottom="0dp"
-        android:paddingTop="0dp"
         >
         <Button
             android:id="@+id/button_start"
             style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:layout_marginHorizontal="20dp"
+            android:layout_weight="1"
+            android:maxWidth="100dp"
             android:paddingVertical="20dp"
-            android:paddingHorizontal="50dp"
-            android:minWidth="180dp"
-            android:textSize="24sp"
+            android:textSize="40sp"
             android:text="@string/start"
             />
         <Button
             android:id="@+id/button_next"
             style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:layout_marginHorizontal="20dp"
+            android:layout_weight="1"
+            android:maxWidth="100dp"
             android:paddingVertical="20dp"
-            android:paddingHorizontal="30dp"
-            android:minWidth="0dp"
-            android:textSize="24sp"
+            android:textSize="40sp"
             android:text="@string/next"
             />
     </LinearLayout>
