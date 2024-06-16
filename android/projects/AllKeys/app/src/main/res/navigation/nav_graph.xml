@@ -8,8 +8,9 @@
     >
     <fragment
         android:id="@+id/FragmentMain"
-        android:label="@string/label_all_keys"
         android:name="nz.co.rylogic.allkeys.FragmentMain"
+        tools:layout="@layout/fragment_main"
+        android:label="@string/label_all_keys"
         >
         <action
             android:id="@+id/action_Main_to_Settings"
@@ -18,8 +19,9 @@
     </fragment>
     <fragment
         android:id="@+id/FragmentSettings"
-        android:label="@string/label_settings"
         android:name="nz.co.rylogic.allkeys.FragmentSettings"
+        android:label="@string/label_settings"
+        app:defaultNavHost="true"
         >
         <action
             android:id="@+id/action_Settings_to_Main"

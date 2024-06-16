@@ -16,10 +16,18 @@
     <string name="choose_chords">Choose Chords</string>
     <string name="additional_chords">Additional Chords</string>
     <string name="play_root_notes">Play Root Notes</string>
-    <string name="metronome_sound">Metronome Sound</string>
+    <string name="metronome_sounds">Metronome Sounds</string>
     <string name="custom_chord_names">Custom Chord Names</string>
     <string name="add_custom_chords">Add Custom Chords</string>
     <string name="custom_chords">Custom Chords</string>
     <string name="tempo">-- Tempo --</string>
     <string name="no_tempo">---</string>
+    <string name="theme">Theme</string>
+    <string name="tempo_bpm">-- Tempo: %1$d bpm --</string>
+    <string name="key_and_chord">%1$s %2$s</string>
+    <string name="sounds">-- Sounds --</string>
+    <string name="beats_per_bar">Beats per Bar</string>
+    <string name="bars_per_chord">Bars per Chord</string>
+    <string name="metronome_accent">Accent Sound</string>
+    <string name="metronome_click">Click Sound</string>
 </resources>

@@ -5,30 +5,44 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
+import androidx.navigation.NavController
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.preference.PreferenceManager
 import nz.co.rylogic.allkeys.databinding.ActivityMainBinding
-import java.util.*
+import java.util.Locale
 
 class MainActivity : AppCompatActivity()
 {
-	private lateinit var appBarConfiguration: AppBarConfiguration
-	private lateinit var binding: ActivityMainBinding
+	private lateinit var mNavController: NavController
+	private lateinit var mAppBarConfiguration: AppBarConfiguration
+	private lateinit var mBinding: ActivityMainBinding
 
 	override fun onCreate(savedInstanceState: Bundle?)
 	{
+		setAppTheme()
 		super.onCreate(savedInstanceState)
 
 		// Get the binding data from the main activity XML
-		binding = ActivityMainBinding.inflate(layoutInflater)
-		setContentView(binding.root)
-		setSupportActionBar(binding.toolbar)
+		mBinding = ActivityMainBinding.inflate(layoutInflater)
+		setContentView(mBinding.root)
+		setSupportActionBar(mBinding.toolbar)
 
 		// Setup the navigation
-		val navController = findNavController(R.id.nav_host_fragment_content_main)
-		appBarConfiguration = AppBarConfiguration(navController.graph)
-		setupActionBarWithNavController(navController, appBarConfiguration)
+		val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment
+		mNavController = navHostFragment.navController
+		mNavController.addOnDestinationChangedListener { _, destination, _ ->
+			if (destination.id == R.id.FragmentSettings)
+				mBinding.toolbar.menu.clear()
+			else
+				menuInflater.inflate(R.menu.menu_main, mBinding.toolbar.menu)
+		}
+
+		// Configure the app bar
+		mAppBarConfiguration = AppBarConfiguration(mNavController.graph)// setOf(R.id.FragmentMain, R.id.FragmentSettings)
+		setupActionBarWithNavController(mNavController, mAppBarConfiguration)
 	}
 
 	override fun onCreateOptionsMenu(menu: Menu): Boolean
@@ -55,7 +69,17 @@ class MainActivity : AppCompatActivity()
 
 	override fun onSupportNavigateUp(): Boolean
 	{
-		val navController = findNavController(R.id.nav_host_fragment_content_main)
-		return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+		//mAppBarConfiguration
+		return mNavController.navigateUp() || super.onSupportNavigateUp()
+	}
+
+	private fun setAppTheme()
+	{
+		val settings = Settings(this)
+		when  (settings.theme) {
+			"Light" -> setTheme(R.style.Theme_AllKeys_Light)
+			"Dark" -> setTheme(R.style.Theme_AllKeys_Dark)
+			else -> setTheme(R.style.Theme_AllKeys)
+		}
 	}
 }

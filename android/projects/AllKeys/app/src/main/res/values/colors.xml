@@ -10,4 +10,7 @@
     <color name="panel_background">#EEE</color>
     <color name="metronome_beat1">#CAA</color>
     <color name="metronome_beat0">#CCC</color>
+    <color name="chord_text">#000</color>
+    <color name="chord_text_next">#888</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

@@ -33,4 +33,16 @@
         <item>ø7</item>
     </string-array>
 
+    <string-array name="metronome_sounds">
+        <item>Click</item>
+        <item>CowBell</item>
+        <item>Woodblock</item>
+    </string-array>
+
+    <string-array name="themes">
+        <item>System</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+
 </resources>
