@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#5941B7</color>
+    <color name="primary_variant">#6549D4</color>
+    <color name="color_on_primary">#FFF</color>
+
+    <color name="secondary">#FF018786</color>
+    <color name="secondary_variant">#FF3700B3</color>
+    <color name="color_on_secondary">#FFF</color>
+
+    <color name="text_color_primary">#FFF</color>
+    <color name="text_color">#FFF</color>
+    <color name="text_color_on_surface">#F00</color>
+
+    <color name="panel_background">#222</color>
+    <color name="metronome_beat1">#DACDFA</color>
+    <color name="metronome_beat0">#2C244E</color>
+
+    <color name="chord_text">#CCC</color>
+    <color name="chord_next_text">#888</color>
+    <color name="button_text">#7E67CC</color>
+
+    <color name="ic_launcher_background">#000</color>
+
+</resources>
