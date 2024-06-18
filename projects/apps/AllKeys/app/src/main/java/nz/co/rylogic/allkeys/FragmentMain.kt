@@ -1,4 +1,6 @@
 package nz.co.rylogic.allkeys
+//TODO
+//  Fix colors in menu
 
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
@@ -38,13 +40,13 @@ class FragmentMain : Fragment(), PropertyChangeListener
 
 	// For playing root note sounds
 	private lateinit var mSoundPoolNotes: SoundPool
-	private var mSoundRootNotes: List<Int> = listOf()
+	private var mSoundRootNotes: Map<String, List<Int>> = mapOf()
 
 	// For playing metronome sounds
 	private lateinit var mSoundPoolClicks: SoundPool
 	private var mSoundClicks: Map<String, Int> = mapOf()
 
-	// The sound if of the root note to play
+	// The sound of the root note to play
 	private var mSoundRootNote: Int = 0
 
 	override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View
@@ -53,44 +55,17 @@ class FragmentMain : Fragment(), PropertyChangeListener
 		mUpdater = Updater(context as Context, Handler(Looper.getMainLooper()))
 
 		mSoundPoolNotes = SoundPool.Builder().setMaxStreams(1).build()
-		mSoundPoolNotes.setOnLoadCompleteListener { _, sampleId, status ->
-			if (status != 0)
-			{
-				// Write error to logcat
-				android.util.Log.e("AllKeys", "Failed to load sound $sampleId")
-			}
-		}
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.g1, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.ab1, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.a2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.bb2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.b2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.c2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.db2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.d2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.eb2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.e2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.f2, 1)
-		mSoundRootNotes += mSoundPoolNotes.load(context, R.raw.gb2, 1)
-
 		mSoundPoolClicks = SoundPool.Builder().setMaxStreams(1).build()
-		mSoundPoolClicks.setOnLoadCompleteListener { _, sampleId, status ->
-			if (status != 0)
-			{
-				// Write error to logcat
-				android.util.Log.e("AllKeys", "Failed to load sound $sampleId")
-			}
-		}
-		mSoundClicks += "Click" to mSoundPoolClicks.load(context, R.raw.click0, 1)
-		mSoundClicks += "CowBell" to mSoundPoolClicks.load(context, R.raw.click0, 1)
-		mSoundClicks += "WoodBlock" to mSoundPoolClicks.load(context, R.raw.click0, 1)
+
+		loadRootNotes()
+		loadClicks()
 
 		mBinding = FragmentMainBinding.inflate(inflater, container, false)
 		mBeat0 = ColorDrawable(ContextCompat.getColor(requireContext(), R.color.metronome_beat0))
 		mBeat1 = ColorDrawable(ContextCompat.getColor(requireContext(), R.color.metronome_beat1))
 
 		val tempoLayout = mBinding.tempoLayout
-		mBeats = listOf(tempoLayout.beat0,tempoLayout.beat1, tempoLayout.beat2, tempoLayout.beat3, tempoLayout.beat4, tempoLayout.beat5, tempoLayout.beat6)
+		mBeats = listOf(tempoLayout.beat0, tempoLayout.beat1, tempoLayout.beat2, tempoLayout.beat3, tempoLayout.beat4, tempoLayout.beat5, tempoLayout.beat6)
 		mUpdater.addPropertyChangeListener(this)
 		return mBinding.root
 	}
@@ -158,12 +133,14 @@ class FragmentMain : Fragment(), PropertyChangeListener
 	override fun onPause()
 	{
 		mUpdater.running = false
+		mSoundPoolNotes.autoPause()
+		mSoundPoolClicks.autoPause()
 		super.onPause()
 	}
 
 	override fun propertyChange(prop: PropertyChangeEvent?)
 	{
-		val chordLayout  = mBinding.chordLayout
+		val chordLayout = mBinding.chordLayout
 		val buttonLayout = mBinding.buttonLayout
 
 		// Start/Stop running
@@ -190,31 +167,32 @@ class FragmentMain : Fragment(), PropertyChangeListener
 			chordLayout.textChordNext.text = getString(R.string.key_and_chord, mUpdater.keyNext, mUpdater.chordNext)
 
 			// Update the root note in the media player
-			if (mSettings.playRootNote)
+			val instrument = mSoundRootNotes[mSettings.rootNoteInstrument]
+			if (mSettings.rootNoteSounds && instrument != null)
 			{
 				mSoundRootNote = when (mUpdater.key)
 				{
-					"G" -> mSoundRootNotes[0]
-					"G♯" -> mSoundRootNotes[1]
-					"A♭" -> mSoundRootNotes[1]
-					"A" -> mSoundRootNotes[2]
-					"A♯" -> mSoundRootNotes[3]
-					"B♭" -> mSoundRootNotes[3]
-					"B" -> mSoundRootNotes[4]
-					"B♯" -> mSoundRootNotes[5]
-					"C♭" -> mSoundRootNotes[4]
-					"C" -> mSoundRootNotes[5]
-					"C♯" -> mSoundRootNotes[6]
-					"D♭" -> mSoundRootNotes[6]
-					"D" -> mSoundRootNotes[7]
-					"D♯" -> mSoundRootNotes[8]
-					"E♭" -> mSoundRootNotes[8]
-					"E" -> mSoundRootNotes[9]
-					"E♯" -> mSoundRootNotes[10]
-					"F♭" -> mSoundRootNotes[9]
-					"F" -> mSoundRootNotes[10]
-					"F♯" -> mSoundRootNotes[11]
-					"G♭" -> mSoundRootNotes[11]
+					"G" -> instrument[0]
+					"G♯" -> instrument[1]
+					"A♭" -> instrument[1]
+					"A" -> instrument[2]
+					"A♯" -> instrument[3]
+					"B♭" -> instrument[3]
+					"B" -> instrument[4]
+					"B♯" -> instrument[5]
+					"C♭" -> instrument[4]
+					"C" -> instrument[5]
+					"C♯" -> instrument[6]
+					"D♭" -> instrument[6]
+					"D" -> instrument[7]
+					"D♯" -> instrument[8]
+					"E♭" -> instrument[8]
+					"E" -> instrument[9]
+					"E♯" -> instrument[10]
+					"F♭" -> instrument[9]
+					"F" -> instrument[10]
+					"F♯" -> instrument[11]
+					"G♭" -> instrument[11]
 					else -> 0
 				}
 			}
@@ -241,7 +219,7 @@ class FragmentMain : Fragment(), PropertyChangeListener
 			}
 
 			// Play the root note on beat 1
-			if (mSettings.playRootNote && beat == 0)
+			if (mSettings.rootNoteSounds && beat == 0)
 			{
 				mSoundPoolNotes.play(mSoundRootNote, 1.0f, 1.0f, 0, 0, 1.0f)
 			}
@@ -252,5 +230,70 @@ class FragmentMain : Fragment(), PropertyChangeListener
 			else
 				buttonLayout.buttonStart.setText(R.string.start)
 		}
+	}
+
+	private fun loadRootNotes()
+	{
+		val piano = listOf(
+			mSoundPoolNotes.load(context, R.raw.piano_00_g, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_01_ab, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_02_a, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_03_bb, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_04_b, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_05_c, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_06_db, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_07_d, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_08_eb, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_09_e, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_10_f, 1),
+			mSoundPoolNotes.load(context, R.raw.piano_11_gb, 1),
+		)
+		val acousticBase = listOf(
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_00_g, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_01_ab, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_02_a, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_03_bb, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_04_b, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_05_c, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_06_db, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_07_d, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_08_eb, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_09_e, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_10_f, 1),
+			mSoundPoolNotes.load(context, R.raw.acoustic_bass_11_gb, 1),
+		)
+		val electricBass = listOf(
+			mSoundPoolNotes.load(context, R.raw.electric_bass_00_g, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_01_ab, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_02_a, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_03_bb, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_04_b, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_05_c, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_06_db, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_07_d, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_08_eb, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_09_e, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_10_f, 1),
+			mSoundPoolNotes.load(context, R.raw.electric_bass_11_gb, 1),
+		)
+		val instrumentNames = resources.getStringArray(R.array.instruments)
+		mSoundRootNotes = mapOf(
+			instrumentNames[0] to piano,
+			instrumentNames[1] to acousticBase,
+			instrumentNames[2] to electricBass,
+		)
+	}
+
+	private fun loadClicks()
+	{
+		val clickNames = resources.getStringArray(R.array.metronome_sounds)
+		mSoundClicks = mapOf(
+			clickNames[0] to mSoundPoolClicks.load(context, R.raw.click_00_clave, 1),
+			clickNames[1] to mSoundPoolClicks.load(context, R.raw.click_01_woodblock_low, 1),
+			clickNames[2] to mSoundPoolClicks.load(context, R.raw.click_02_woodblock_med, 1),
+			clickNames[3] to mSoundPoolClicks.load(context, R.raw.click_03_woodblock_high, 1),
+			clickNames[4] to mSoundPoolClicks.load(context, R.raw.click_04_cowbell, 1),
+			clickNames[5] to mSoundPoolClicks.load(context, R.raw.click_05_drumsticks, 1),
+		)
 	}
 }
