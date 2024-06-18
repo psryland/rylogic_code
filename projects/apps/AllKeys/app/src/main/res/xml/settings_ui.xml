@@ -62,7 +62,6 @@
             android:title="@string/metronome_accent"
             android:entries="@array/metronome_sounds"
             android:entryValues="@array/metronome_sounds"
-            android:enabled="false"
             app:useSimpleSummaryProvider="true"
             />
         <androidx.preference.ListPreference
@@ -70,7 +69,6 @@
             android:title="@string/metronome_click"
             android:entries="@array/metronome_sounds"
             android:entryValues="@array/metronome_sounds"
-            android:enabled="false"
             app:useSimpleSummaryProvider="true"
             />
 
