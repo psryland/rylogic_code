@@ -17,7 +17,7 @@ class ActivitySettings : AppCompatActivity()
 		{
 			supportFragmentManager
 				.beginTransaction()
-				.replace(R.id.settings, FragmentSettings())
+				.replace(R.id.fragment_settings, FragmentSettings())
 				.commit()
 		}
 	}
