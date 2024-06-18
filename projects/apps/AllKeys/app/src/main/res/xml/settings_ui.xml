@@ -5,7 +5,6 @@
     <!-- KEY -->
     <androidx.preference.PreferenceCategory
         android:title="@string/key"
-        style="@style/PreferenceCategoryStyleNoDivider"
         >
         <androidx.preference.MultiSelectListPreference
             android:key="selected_keys"
@@ -19,7 +18,6 @@
     <!-- CHORD -->
     <androidx.preference.PreferenceCategory
         android:title="@string/chord"
-        style="@style/PreferenceCategoryStyleNoDivider"
         >
         <androidx.preference.MultiSelectListPreference
             android:key="selected_chords"
@@ -39,13 +37,19 @@
     <!-- SOUNDS -->
     <androidx.preference.PreferenceCategory
         android:title="@string/sounds"
-        style="@style/PreferenceCategoryStyleNoDivider"
         >
 
         <!-- ROOT NOTES -->
         <androidx.preference.SwitchPreference
-            android:key="play_root_note"
+            android:key="root_note_sounds"
             android:title="@string/play_root_notes"
+            />
+        <androidx.preference.DropDownPreference
+            android:key="root_note_instrument"
+            android:title="@string/root_note_instrument"
+            android:entries="@array/instruments"
+            android:entryValues="@array/instruments"
+            app:useSimpleSummaryProvider="true"
             />
 
         <!-- METRONOME -->
@@ -90,7 +94,6 @@
     <!-- GENERAL -->
     <androidx.preference.PreferenceCategory
         android:title="@string/general"
-        style="@style/PreferenceCategoryStyleNoDivider"
         >
         <androidx.preference.ListPreference
             android:key="theme"

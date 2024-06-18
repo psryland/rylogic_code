@@ -1,5 +1,7 @@
 package nz.co.rylogic.allkeys
 
+import android.app.Activity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.MultiSelectListPreference
 
 // Split strings and remove empty values
@@ -17,4 +19,15 @@ fun MultiSelectListPreference.setSummaryFrom(values:HashSet<String>, sep:String)
 		.map { this.findIndexOfValue(it) }
 		.filter { it != -1 }
 		.joinToString(sep) { this.entries[it] }
+}
+
+// Set the activity theme based on the user's settings
+fun Activity.setThemeFromSettings()
+{
+	val settings = Settings(this)
+	when  (settings.theme) {
+		"Light" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+		"Dark" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+		else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+	}
 }

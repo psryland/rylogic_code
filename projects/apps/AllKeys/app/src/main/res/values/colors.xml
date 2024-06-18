@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#6549D4</color>
+    <color name="primary">#DACDFA</color>
     <color name="primary_variant">#6549D4</color>
     <color name="color_on_primary">#000</color>
 
@@ -8,9 +8,9 @@
     <color name="secondary_variant">#FF3700B3</color>
     <color name="color_on_secondary">#000</color>
 
-    <color name="text_color_primary">#FFF</color>
+    <color name="text_color_primary">#000</color>
     <color name="text_color">#000</color>
-    <color name="text_color_on_surface">#F00</color>
+    <color name="text_color_on_surface">#000</color>
 
     <color name="panel_background">#EEE</color>
     <color name="metronome_beat1">#4732AD</color>
@@ -20,5 +20,5 @@
     <color name="chord_next_text">#888</color>
     <color name="button_text">#6549D4</color>
 
-    <color name="ic_launcher_background">#FFF</color>
+    <color name="ic_launcher_background">#DACDFA</color>
  </resources>

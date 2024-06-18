@@ -13,7 +13,8 @@ class Settings(context: Context)
 		const val SELECTED_KEYS = "selected_keys"
 		const val SELECTED_CHORDS = "selected_chords"
 		const val CUSTOM_CHORDS = "custom_chords"
-		const val PLAY_ROOT_NOTE = "play_root_note"
+		const val ROOT_NOTE_SOUNDS = "root_note_sounds"
+		const val ROOT_NOTE_INSTRUMENT = "root_note_instrument"
 		const val METRONOME_SOUNDS = "metronome_sounds"
 		const val METRONOME_ACCENT = "metronome_accent"
 		const val METRONOME_CLICK = "metronome_click"
@@ -26,6 +27,7 @@ class Settings(context: Context)
 	private val mKeysDefaults = context.resources.getStringArray(R.array.key_groups_defaults)
 	private val mChordsDefaults = context.resources.getStringArray(R.array.chords_defaults)
 	private val mChordsStd = context.resources.getStringArray(R.array.chords)
+	private val mInstruments = context.resources.getStringArray(R.array.instruments)
 	private val mMetronomeSounds = context.resources.getStringArray(R.array.metronome_sounds)
 	private val mThemes = context.resources.getStringArray(R.array.themes)
 
@@ -36,7 +38,8 @@ class Settings(context: Context)
 		editor.putStringSet(SELECTED_KEYS, keyGroupsSelected)
 		editor.putStringSet(SELECTED_CHORDS, chordsSelected)
 		editor.putString(CUSTOM_CHORDS, chordsCustom.joinToString(" "))
-		editor.putBoolean(PLAY_ROOT_NOTE, playRootNote)
+		editor.putBoolean(ROOT_NOTE_SOUNDS, rootNoteSounds)
+		editor.putString(ROOT_NOTE_INSTRUMENT, rootNoteInstrument)
 		editor.putBoolean(METRONOME_SOUNDS, metronomeSounds)
 		editor.putString(METRONOME_ACCENT, metronomeAccent)
 		editor.putString(METRONOME_CLICK, metronomeClick)
@@ -124,20 +127,33 @@ class Settings(context: Context)
 		}
 
 	// True if the tonic should be played with each chord change
-	var playRootNote:Boolean
+	var rootNoteSounds:Boolean
 		get()
 		{
-			return mSettings.getBoolean(PLAY_ROOT_NOTE, false)
+			return mSettings.getBoolean(ROOT_NOTE_SOUNDS, true)
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putBoolean(PLAY_ROOT_NOTE, value)
+			editor.putBoolean(ROOT_NOTE_SOUNDS, value)
+			editor.apply()
+		}
+
+	// The instrument to use for the root notes
+	var rootNoteInstrument:String
+		get()
+		{
+			return mSettings.getString(ROOT_NOTE_INSTRUMENT, null) ?: mInstruments[0]
+		}
+		set(value)
+		{
+			val editor = mSettings.edit()
+			editor.putString(ROOT_NOTE_INSTRUMENT, value)
 			editor.apply()
 		}
 
 	// True if the metronome should play sounds
-	var metronomeSounds: Boolean
+	var metronomeSounds:Boolean
 		get()
 		{
 			return mSettings.getBoolean(METRONOME_SOUNDS, true)

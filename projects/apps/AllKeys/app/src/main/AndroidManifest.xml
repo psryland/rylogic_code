@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    >
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -13,20 +14,22 @@
         android:theme="@style/Theme.AllKeys"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".ActivityMain"
             android:exported="true"
-            android:theme="@style/Theme.AllKeys"
-            >
+            android:theme="@style/Theme.AllKeys">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="nz.co.rylogic.allkeys.MainActivity"
+                android:value="nz.co.rylogic.allkeys.ActivityMain"
                 />
         </activity>
+        <activity
+            android:name=".ActivitySettings"
+            android:exported="false"
+            android:label="@string/title_activity_settings"
+            />
     </application>
-
 </manifest>

@@ -10,7 +10,7 @@
 
     <color name="text_color_primary">#FFF</color>
     <color name="text_color">#FFF</color>
-    <color name="text_color_on_surface">#F00</color>
+    <color name="text_color_on_surface">#FFF</color>
 
     <color name="panel_background">#222</color>
     <color name="metronome_beat1">#DACDFA</color>
@@ -20,6 +20,6 @@
     <color name="chord_next_text">#888</color>
     <color name="button_text">#7E67CC</color>
 
-    <color name="ic_launcher_background">#000</color>
+    <color name="ic_launcher_background">#595762</color>
 
 </resources>
