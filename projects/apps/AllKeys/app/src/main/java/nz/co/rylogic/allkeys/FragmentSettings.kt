@@ -42,29 +42,23 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 		// Create the settings layout from the resources
 		setPreferencesFromResource(R.xml.settings_ui, rootKey)
 
-		// Initialize the optional controls
-		val instrument = findPreference<DropDownPreference>(Settings.ROOT_NOTE_INSTRUMENT) as DropDownPreference
-		instrument.isVisible = mSettings.rootNoteSounds
-		val metronomeAccent = findPreference<ListPreference>(Settings.METRONOME_ACCENT) as ListPreference
-		metronomeAccent.isVisible = mSettings.metronomeSounds
-		val metronomeClick = findPreference<ListPreference>(Settings.METRONOME_CLICK) as ListPreference
-		metronomeClick.isVisible = mSettings.metronomeSounds
-
-		// Initialize the summary from the selected setting
-		val keys = findPreference<MultiSelectListPreference>(Settings.SELECTED_KEYS) as MultiSelectListPreference
-		keys.setSummaryFrom(mSettings.keyGroupsSelected.toHashSet(), "\n")
-
-		// Initialize the summary from the selected setting
-		val chords = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS) as MultiSelectListPreference
-		chords.entries = mSettings.chordsAll
-		chords.entryValues = mSettings.chordsAll
-		chords.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
-
-		// Initialize the summary
-		val bpb = findPreference<SeekBarPreference>(Settings.BEATS_PER_BAR) as SeekBarPreference
-		bpb.setSummary(mSettings.beatsPerBar.toString())
-		val bpc = findPreference<SeekBarPreference>(Settings.BARS_PER_CHORD) as SeekBarPreference
-		bpc.setSummary(mSettings.barsPerChord.toString())
+		// Initialize the controls
+		val keys = listOf(
+			Settings.SELECTED_KEYS,
+			Settings.SELECTED_CHORDS,
+			Settings.CUSTOM_CHORDS,
+			Settings.ROOT_NOTE_SOUNDS,
+			Settings.ROOT_NOTE_VOLUME,
+			Settings.ROOT_NOTE_INSTRUMENT,
+			Settings.METRONOME_SOUNDS,
+			Settings.METRONOME_VOLUME,
+			Settings.METRONOME_ACCENT,
+			Settings.METRONOME_CLICK,
+			Settings.BEATS_PER_BAR,
+			Settings.BARS_PER_CHORD,
+		)
+		for (key in keys)
+			onSharedPreferenceChanged(null, key)
 	}
 
 	override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?)
@@ -73,41 +67,37 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 		{
 			Settings.SELECTED_KEYS ->
 			{
-				val keys = findPreference<MultiSelectListPreference>(Settings.SELECTED_KEYS) as MultiSelectListPreference
-				keys.setSummaryFrom(mSettings.keyGroupsSelected.toHashSet(), "\n")
+				findPreference<MultiSelectListPreference>(Settings.SELECTED_KEYS)?.setSummaryFrom(mSettings.keyGroupsSelected.toHashSet(), "\n")
 			}
 			Settings.SELECTED_CHORDS ->
 			{
-				val chords = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS) as MultiSelectListPreference
-				chords.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
+				findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS)?.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
 			}
 			Settings.CUSTOM_CHORDS ->
 			{
-				val chords = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS) as MultiSelectListPreference
+				val chords = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS)!!
 				chords.entries = mSettings.chordsAll
 				chords.entryValues = mSettings.chordsAll
+				chords.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
 			}
 			Settings.ROOT_NOTE_SOUNDS ->
 			{
-				val instrument = findPreference<DropDownPreference>(Settings.ROOT_NOTE_INSTRUMENT) as DropDownPreference
-				instrument.isVisible = mSettings.rootNoteSounds
+				findPreference<SeekBarPreference>(Settings.ROOT_NOTE_VOLUME)?.isVisible = mSettings.rootNoteSounds
+				findPreference<DropDownPreference>(Settings.ROOT_NOTE_INSTRUMENT)?.isVisible = mSettings.rootNoteSounds
 			}
 			Settings.METRONOME_SOUNDS ->
 			{
-				val metronomeAccent = findPreference<ListPreference>(Settings.METRONOME_ACCENT) as ListPreference
-				metronomeAccent.isVisible = mSettings.metronomeSounds
-				val metronomeClick = findPreference<ListPreference>(Settings.METRONOME_CLICK) as ListPreference
-				metronomeClick.isVisible = mSettings.metronomeSounds
+				findPreference<SeekBarPreference>(Settings.METRONOME_VOLUME)?.isVisible = mSettings.metronomeSounds
+				findPreference<ListPreference>(Settings.METRONOME_ACCENT)?.isVisible = mSettings.metronomeSounds
+				findPreference<ListPreference>(Settings.METRONOME_CLICK)?.isVisible = mSettings.metronomeSounds
 			}
 			Settings.BEATS_PER_BAR ->
 			{
-				val beatsPerBar = findPreference<SeekBarPreference>(Settings.BEATS_PER_BAR) as SeekBarPreference
-				beatsPerBar.setSummary(mSettings.beatsPerBar.toString())
+				findPreference<SeekBarPreference>(Settings.BEATS_PER_BAR)?.setSummary(mSettings.beatsPerBar.toString())
 			}
 			Settings.BARS_PER_CHORD ->
 			{
-				val barsPerChord = findPreference<SeekBarPreference>(Settings.BARS_PER_CHORD) as SeekBarPreference
-				barsPerChord.setSummary(mSettings.barsPerChord.toString())
+				findPreference<SeekBarPreference>(Settings.BARS_PER_CHORD)?.setSummary(mSettings.barsPerChord.toString())
 			}
 			Settings.THEME ->
 			{

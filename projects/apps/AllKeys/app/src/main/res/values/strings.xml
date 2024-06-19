@@ -26,4 +26,6 @@
     <string name="fab_description">Open settings</string>
     <string name="root_note_instrument">Instrument</string>
     <string name="title_activity_settings">ActivitySettings</string>
+    <string name="metronome_volume">Metronome Volume</string>
+    <string name="root_note_volume">Root Note Volume</string>
 </resources>
