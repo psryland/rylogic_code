@@ -1,6 +1,7 @@
 package nz.co.rylogic.allkeys
 // TODO
-//  Volume settings for instrument and metronome
+//  Walking bass
+//  Correct Chords/Bass player practise mode
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity

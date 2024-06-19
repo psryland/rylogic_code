@@ -112,27 +112,27 @@ class FragmentMain : Fragment(), PropertyChangeListener
 		// Buttons
 		val buttonLayout = mBinding.buttonLayout
 		buttonLayout.buttonNext.setOnClickListener {
-			mUpdater.next()
+			mUpdater.runMode = ERunMode.StepOne
 		}
 		buttonLayout.buttonStart.setOnClickListener {
-			if (mUpdater.running)
-			{
-				mUpdater.running = false
-			}
+			if (mUpdater.runMode == ERunMode.Stopped)
+				mUpdater.runMode = ERunMode.Continuous
 			else
-			{
-				mUpdater.reset(mSettings)
-				mUpdater.running = true
-			}
+				mUpdater.runMode = ERunMode.Stopped
 		}
 
 		// Initialise the updater
 		mUpdater.reset(mSettings)
 	}
 
+	override fun onResume()
+	{
+		super.onResume()
+		mUpdater.reset(mSettings)
+	}
 	override fun onPause()
 	{
-		mUpdater.running = false
+		mUpdater.runMode = ERunMode.Stopped
 		mSoundPoolNotes.autoPause()
 		mSoundPoolClicks.autoPause()
 		super.onPause()
@@ -144,16 +144,18 @@ class FragmentMain : Fragment(), PropertyChangeListener
 		val buttonLayout = mBinding.buttonLayout
 
 		// Start/Stop running
-		if (prop?.propertyName == Updater.RUNNING)
+		if (prop?.propertyName == Updater.RUN_MODE)
 		{
 			// Update the button text
-			if (mUpdater.running)
-			{
+			if (mUpdater.runMode == ERunMode.Continuous)
 				buttonLayout.buttonStart.setText(R.string.stop)
-			}
 			else
-			{
 				buttonLayout.buttonStart.setText(R.string.start)
+
+			// Stop sounds
+			val prevRunMode = prop.oldValue as ERunMode
+			if (prevRunMode == ERunMode.Continuous && mUpdater.runMode == ERunMode.Stopped)
+			{
 				mSoundPoolNotes.autoPause()
 				mSoundPoolClicks.autoPause()
 			}
@@ -209,26 +211,22 @@ class FragmentMain : Fragment(), PropertyChangeListener
 				mBeats[i].background = if (i == beat) mBeat1 else mBeat0
 			}
 
-			// Play the metronome sound on each beat
-			if (mSettings.metronomeSounds)
-			{
-				if (beat == 0)
-					mSoundPoolClicks.play(mSoundClicks[mSettings.metronomeAccent] ?: 0, 1.0f, 1.0f, 0, 0, 1.0f)
-				else
-					mSoundPoolClicks.play(mSoundClicks[mSettings.metronomeClick] ?: 0, 0.7f, 0.7f, 0, 0, 1.0f)
-			}
-
 			// Play the root note on beat 1
 			if (mSettings.rootNoteSounds && beat == 0)
 			{
-				mSoundPoolNotes.play(mSoundRootNote, 1.0f, 1.0f, 0, 0, 1.0f)
+				val volume = mSettings.rootNoteVolume / 100.0f
+				mSoundPoolNotes.play(mSoundRootNote, volume, volume, 0, 0, 1.0f)
 			}
 
-			// Update the button text
-			if (mUpdater.running)
-				buttonLayout.buttonStart.setText(R.string.stop)
-			else
-				buttonLayout.buttonStart.setText(R.string.start)
+			// Play the metronome sound on each beat
+			if (mSettings.metronomeSounds)
+			{
+				val volume = mSettings.metronomeVolume / 100.0f
+				if (beat == 0)
+					mSoundPoolClicks.play(mSoundClicks[mSettings.metronomeAccent] ?: 0, 1.0f * volume, 1.0f * volume, 0, 0, 1.0f)
+				else
+					mSoundPoolClicks.play(mSoundClicks[mSettings.metronomeClick] ?: 0, 0.7f * volume, 0.7f * volume, 0, 0, 1.0f)
+			}
 		}
 	}
 

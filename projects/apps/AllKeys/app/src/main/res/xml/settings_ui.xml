@@ -44,6 +44,12 @@
             android:key="root_note_sounds"
             android:title="@string/play_root_notes"
             />
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="root_note_volume"
+            android:title="@string/root_note_volume"
+            android:min="0"
+            android:max="100"
+            />
         <androidx.preference.DropDownPreference
             android:key="root_note_instrument"
             android:title="@string/root_note_instrument"
@@ -56,6 +62,12 @@
         <androidx.preference.SwitchPreference
             android:key="metronome_sounds"
             android:title="@string/metronome_sounds"
+            />
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="metronome_volume"
+            android:title="@string/metronome_volume"
+            android:min="0"
+            android:max="100"
             />
         <androidx.preference.ListPreference
             android:key="metronome_accent"

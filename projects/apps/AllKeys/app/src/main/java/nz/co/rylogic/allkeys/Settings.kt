@@ -14,8 +14,10 @@ class Settings(context: Context)
 		const val SELECTED_CHORDS = "selected_chords"
 		const val CUSTOM_CHORDS = "custom_chords"
 		const val ROOT_NOTE_SOUNDS = "root_note_sounds"
+		const val ROOT_NOTE_VOLUME = "root_note_volume"
 		const val ROOT_NOTE_INSTRUMENT = "root_note_instrument"
 		const val METRONOME_SOUNDS = "metronome_sounds"
+		const val METRONOME_VOLUME = "metronome_volume"
 		const val METRONOME_ACCENT = "metronome_accent"
 		const val METRONOME_CLICK = "metronome_click"
 		const val BEATS_PER_BAR = "beats_per_bar"
@@ -39,8 +41,10 @@ class Settings(context: Context)
 		editor.putStringSet(SELECTED_CHORDS, chordsSelected)
 		editor.putString(CUSTOM_CHORDS, chordsCustom.joinToString(" "))
 		editor.putBoolean(ROOT_NOTE_SOUNDS, rootNoteSounds)
+		editor.putInt(ROOT_NOTE_VOLUME, rootNoteVolume)
 		editor.putString(ROOT_NOTE_INSTRUMENT, rootNoteInstrument)
 		editor.putBoolean(METRONOME_SOUNDS, metronomeSounds)
+		editor.putInt(METRONOME_VOLUME, metronomeVolume)
 		editor.putString(METRONOME_ACCENT, metronomeAccent)
 		editor.putString(METRONOME_CLICK, metronomeClick)
 		editor.putInt(BEATS_PER_BAR, beatsPerBar)
@@ -139,6 +143,19 @@ class Settings(context: Context)
 			editor.apply()
 		}
 
+	// Relative volume of the root notes
+	var rootNoteVolume:Int
+		get()
+		{
+			return mSettings.getInt(ROOT_NOTE_VOLUME, 80)
+		}
+		set(value)
+		{
+			val editor = mSettings.edit()
+			editor.putInt(ROOT_NOTE_VOLUME, value)
+			editor.apply()
+		}
+
 	// The instrument to use for the root notes
 	var rootNoteInstrument:String
 		get()
@@ -162,6 +179,19 @@ class Settings(context: Context)
 		{
 			val editor = mSettings.edit()
 			editor.putBoolean(METRONOME_SOUNDS, value)
+			editor.apply()
+		}
+
+	// Relative volume of the metronome
+	var metronomeVolume:Int
+		get()
+		{
+			return mSettings.getInt(METRONOME_VOLUME, 80)
+		}
+		set(value)
+		{
+			val editor = mSettings.edit()
+			editor.putInt(METRONOME_VOLUME, value)
 			editor.apply()
 		}
 
