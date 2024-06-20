@@ -12,6 +12,7 @@ import androidx.preference.MultiSelectListPreference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SeekBarPreference
+import androidx.preference.SwitchPreference
 
 // A simple [Fragment] subclass as the second destination in the navigation.
 class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener
@@ -43,22 +44,8 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 		setPreferencesFromResource(R.xml.settings_ui, rootKey)
 
 		// Initialize the controls
-		val keys = listOf(
-			Settings.SELECTED_KEYS,
-			Settings.SELECTED_CHORDS,
-			Settings.CUSTOM_CHORDS,
-			Settings.ROOT_NOTE_SOUNDS,
-			Settings.ROOT_NOTE_VOLUME,
-			Settings.ROOT_NOTE_INSTRUMENT,
-			Settings.METRONOME_SOUNDS,
-			Settings.METRONOME_VOLUME,
-			Settings.METRONOME_ACCENT,
-			Settings.METRONOME_CLICK,
-			Settings.BEATS_PER_BAR,
-			Settings.BARS_PER_CHORD,
-		)
-		for (key in keys)
-			onSharedPreferenceChanged(null, key)
+		for (field in mSettings.fields)
+			onSharedPreferenceChanged(null, field)
 	}
 
 	override fun onSharedPreferenceChanged(prefs: SharedPreferences?, key: String?)
@@ -69,27 +56,53 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 			{
 				findPreference<MultiSelectListPreference>(Settings.SELECTED_KEYS)?.setSummaryFrom(mSettings.keyGroupsSelected.toHashSet(), "\n")
 			}
+
 			Settings.SELECTED_CHORDS ->
 			{
 				findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS)?.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
 			}
+
 			Settings.CUSTOM_CHORDS ->
 			{
-				val chords = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS)!!
-				chords.entries = mSettings.chordsAll
-				chords.entryValues = mSettings.chordsAll
-				chords.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
+				val control = findPreference<MultiSelectListPreference>(Settings.SELECTED_CHORDS)!!
+				control.entries = mSettings.chordsAll
+				control.entryValues = mSettings.chordsAll
+				control.setSummaryFrom(mSettings.chordsSelected.toHashSet(), " ")
 			}
+
+			Settings.NEXT_CHORD_MODE ->
+			{
+				val control = findPreference<DropDownPreference>(Settings.NEXT_CHORD_MODE)!!
+				control.entryValues = ENextChordMode.values().map { it.name }.toTypedArray()
+			}
+
 			Settings.ROOT_NOTE_SOUNDS ->
 			{
 				findPreference<SeekBarPreference>(Settings.ROOT_NOTE_VOLUME)?.isVisible = mSettings.rootNoteSounds
 				findPreference<DropDownPreference>(Settings.ROOT_NOTE_INSTRUMENT)?.isVisible = mSettings.rootNoteSounds
+				findPreference<SwitchPreference>(Settings.ROOT_NOTE_WALKING)?.isVisible = mSettings.rootNoteSounds
+			}
+
+			Settings.ROOT_NOTE_INSTRUMENT ->
+			{
+				val control = findPreference<DropDownPreference>(Settings.ROOT_NOTE_INSTRUMENT)!!
+				control.entryValues = EInstrument.values().map { it.name }.toTypedArray()
 			}
 			Settings.METRONOME_SOUNDS ->
 			{
 				findPreference<SeekBarPreference>(Settings.METRONOME_VOLUME)?.isVisible = mSettings.metronomeSounds
 				findPreference<ListPreference>(Settings.METRONOME_ACCENT)?.isVisible = mSettings.metronomeSounds
 				findPreference<ListPreference>(Settings.METRONOME_CLICK)?.isVisible = mSettings.metronomeSounds
+			}
+			Settings.METRONOME_ACCENT ->
+			{
+				val control = findPreference<DropDownPreference>(Settings.METRONOME_ACCENT)!!
+				control.entryValues = EMetronomeSounds.values().map { it.name }.toTypedArray()
+			}
+			Settings.METRONOME_CLICK ->
+			{
+				val control = findPreference<DropDownPreference>(Settings.METRONOME_CLICK)!!
+				control.entryValues = EMetronomeSounds.values().map { it.name }.toTypedArray()
 			}
 			Settings.BEATS_PER_BAR ->
 			{
@@ -101,7 +114,10 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 			}
 			Settings.THEME ->
 			{
-				activity?.recreate()
+				val control = findPreference<DropDownPreference>(Settings.THEME)!!
+				control.entryValues = EThemes.values().map { it.name }.toTypedArray()
+				if (prefs != null)
+					activity?.recreate()
 			}
 			else ->
 			{
