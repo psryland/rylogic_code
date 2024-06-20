@@ -13,9 +13,11 @@ class Settings(context: Context)
 		const val SELECTED_KEYS = "selected_keys"
 		const val SELECTED_CHORDS = "selected_chords"
 		const val CUSTOM_CHORDS = "custom_chords"
+		const val NEXT_CHORD_MODE = "next_chord_mode"
 		const val ROOT_NOTE_SOUNDS = "root_note_sounds"
 		const val ROOT_NOTE_VOLUME = "root_note_volume"
 		const val ROOT_NOTE_INSTRUMENT = "root_note_instrument"
+		const val ROOT_NOTE_WALKING = "root_note_walking"
 		const val METRONOME_SOUNDS = "metronome_sounds"
 		const val METRONOME_VOLUME = "metronome_volume"
 		const val METRONOME_ACCENT = "metronome_accent"
@@ -29,29 +31,34 @@ class Settings(context: Context)
 	private val mKeysDefaults = context.resources.getStringArray(R.array.key_groups_defaults)
 	private val mChordsDefaults = context.resources.getStringArray(R.array.chords_defaults)
 	private val mChordsStd = context.resources.getStringArray(R.array.chords)
-	private val mInstruments = context.resources.getStringArray(R.array.instruments)
-	private val mMetronomeSounds = context.resources.getStringArray(R.array.metronome_sounds)
-	private val mThemes = context.resources.getStringArray(R.array.themes)
 
 	init
 	{
+		// This is needed because the settings UI accesses the 'SharedPreferences' object directly.
+		// We need to ensure all settings exist or the Preferences stuff will crash.
 		val editor = mSettings.edit()
 		editor.putInt(TEMPO, tempo)
 		editor.putStringSet(SELECTED_KEYS, keyGroupsSelected)
 		editor.putStringSet(SELECTED_CHORDS, chordsSelected)
 		editor.putString(CUSTOM_CHORDS, chordsCustom.joinToString(" "))
+		editor.putString(NEXT_CHORD_MODE, nextChordMode.toString())
 		editor.putBoolean(ROOT_NOTE_SOUNDS, rootNoteSounds)
 		editor.putInt(ROOT_NOTE_VOLUME, rootNoteVolume)
-		editor.putString(ROOT_NOTE_INSTRUMENT, rootNoteInstrument)
+		editor.putString(ROOT_NOTE_INSTRUMENT, rootNoteInstrument.toString())
+		editor.putBoolean(ROOT_NOTE_WALKING, rootNoteWalking)
 		editor.putBoolean(METRONOME_SOUNDS, metronomeSounds)
 		editor.putInt(METRONOME_VOLUME, metronomeVolume)
-		editor.putString(METRONOME_ACCENT, metronomeAccent)
-		editor.putString(METRONOME_CLICK, metronomeClick)
+		editor.putString(METRONOME_ACCENT, metronomeAccent.toString())
+		editor.putString(METRONOME_CLICK, metronomeClick.toString())
 		editor.putInt(BEATS_PER_BAR, beatsPerBar)
 		editor.putInt(BARS_PER_CHORD, barsPerChord)
-		editor.putString(THEME, theme)
+		editor.putString(THEME, theme.toString())
 		editor.apply()
 	}
+
+	// Return the settings field names
+	val fields: Set<String>
+		get() = mSettings.all.keys
 
 	// The last selected tempo value
 	var tempo: Int
@@ -120,13 +127,27 @@ class Settings(context: Context)
 		get()
 		{
 			return (mSettings.getString(CUSTOM_CHORDS, null) ?: "")
-				.splitIgnoreEmpty(" ", ",")
+				.splitIgnoreEmpty(",")
+				.map { it.trim() }
 				.toList()
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putString(CUSTOM_CHORDS, value.joinToString(" "))
+			editor.putString(CUSTOM_CHORDS, value.joinToString(","))
+			editor.apply()
+		}
+
+	// How to display the next chord
+	var nextChordMode: ENextChordMode
+		get()
+		{
+			return ENextChordMode.valueOf(mSettings.getString(NEXT_CHORD_MODE, null) ?: ENextChordMode.BarBefore.toString())
+		}
+		set(value)
+		{
+			val editor = mSettings.edit()
+			editor.putString(NEXT_CHORD_MODE, value.toString())
 			editor.apply()
 		}
 
@@ -157,15 +178,28 @@ class Settings(context: Context)
 		}
 
 	// The instrument to use for the root notes
-	var rootNoteInstrument:String
+	var rootNoteInstrument:EInstrument
 		get()
 		{
-			return mSettings.getString(ROOT_NOTE_INSTRUMENT, null) ?: mInstruments[0]
+			return EInstrument.valueOf(mSettings.getString(ROOT_NOTE_INSTRUMENT, null) ?: EInstrument.Piano.toString())
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putString(ROOT_NOTE_INSTRUMENT, value)
+			editor.putString(ROOT_NOTE_INSTRUMENT, value.toString())
+			editor.apply()
+		}
+
+	// True if the bass should walk
+	var rootNoteWalking:Boolean
+		get()
+		{
+			return mSettings.getBoolean(ROOT_NOTE_WALKING, true)
+		}
+		set(value)
+		{
+			val editor = mSettings.edit()
+			editor.putBoolean(ROOT_NOTE_WALKING, value)
 			editor.apply()
 		}
 
@@ -196,28 +230,28 @@ class Settings(context: Context)
 		}
 
 	// The accented click sound to use
-	var metronomeAccent: String
+	var metronomeAccent: EMetronomeSounds
 		get()
 		{
-			return mSettings.getString(METRONOME_ACCENT, null) ?: mMetronomeSounds[0]
+			return EMetronomeSounds.valueOf(mSettings.getString(METRONOME_ACCENT, null) ?: EMetronomeSounds.Clave.toString())
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putString(METRONOME_ACCENT, value)
+			editor.putString(METRONOME_ACCENT, value.toString())
 			editor.apply()
 		}
 
 	// The click sound to use
-	var metronomeClick: String
+	var metronomeClick: EMetronomeSounds
 		get()
 		{
-			return mSettings.getString(METRONOME_CLICK, null) ?: mMetronomeSounds[0]
+			return EMetronomeSounds.valueOf(mSettings.getString(METRONOME_CLICK, null) ?: EMetronomeSounds.Clave.toString())
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putString(METRONOME_CLICK, value)
+			editor.putString(METRONOME_CLICK, value.toString())
 			editor.apply()
 		}
 
@@ -260,15 +294,15 @@ class Settings(context: Context)
 		}
 
 	// The user's theme preference
-	var theme:String
+	var theme:EThemes
 		get()
 		{
-			return mSettings.getString(THEME, null) ?: mThemes[0]
+			return EThemes.valueOf(mSettings.getString(THEME, null) ?: EThemes.System.toString())
 		}
 		set(value)
 		{
 			val editor = mSettings.edit()
-			editor.putString(THEME, value)
+			editor.putString(THEME, value.toString())
 			editor.apply()
 		}
 }

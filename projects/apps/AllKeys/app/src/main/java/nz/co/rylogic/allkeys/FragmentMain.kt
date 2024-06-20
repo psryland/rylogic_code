@@ -1,6 +1,4 @@
 package nz.co.rylogic.allkeys
-//TODO
-//  Fix colors in menu
 
 import android.content.Context
 import android.graphics.drawable.ColorDrawable
@@ -11,10 +9,13 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.GridLayout
 import android.widget.SeekBar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import nz.co.rylogic.allkeys.databinding.ButtonLayoutBinding
+import nz.co.rylogic.allkeys.databinding.ChordLayoutBinding
 import nz.co.rylogic.allkeys.databinding.FragmentMainBinding
 import java.beans.PropertyChangeEvent
 import java.beans.PropertyChangeListener
@@ -40,14 +41,11 @@ class FragmentMain : Fragment(), PropertyChangeListener
 
 	// For playing root note sounds
 	private lateinit var mSoundPoolNotes: SoundPool
-	private var mSoundRootNotes: Map<String, List<Int>> = mapOf()
+	private var mSoundRootNotes: Map<EInstrument, List<Int>> = mapOf()
 
 	// For playing metronome sounds
 	private lateinit var mSoundPoolClicks: SoundPool
-	private var mSoundClicks: Map<String, Int> = mapOf()
-
-	// The sound of the root note to play
-	private var mSoundRootNote: Int = 0
+	private var mSoundClicks: Map<EMetronomeSounds, Int> = mapOf()
 
 	override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View
 	{
@@ -102,23 +100,16 @@ class FragmentMain : Fragment(), PropertyChangeListener
 			}
 		})
 
-		// Update the beat indicators
-		for (i in mBeats.indices)
-		{
-			mBeats[i].background = if (i == 0) mBeat1 else mBeat0
-			mBeats[i].visibility = if (i < mSettings.beatsPerBar) View.VISIBLE else View.GONE
-		}
-
 		// Buttons
 		val buttonLayout = mBinding.buttonLayout
-		buttonLayout.buttonNext.setOnClickListener {
-			mUpdater.runMode = ERunMode.StepOne
-		}
 		buttonLayout.buttonStart.setOnClickListener {
 			if (mUpdater.runMode == ERunMode.Stopped)
 				mUpdater.runMode = ERunMode.Continuous
 			else
 				mUpdater.runMode = ERunMode.Stopped
+		}
+		buttonLayout.buttonNext.setOnClickListener {
+			mUpdater.runMode = ERunMode.StepOne
 		}
 
 		// Initialise the updater
@@ -130,8 +121,10 @@ class FragmentMain : Fragment(), PropertyChangeListener
 		super.onResume()
 		mUpdater.reset(mSettings)
 	}
+
 	override fun onPause()
 	{
+		activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 		mUpdater.runMode = ERunMode.Stopped
 		mSoundPoolNotes.autoPause()
 		mSoundPoolClicks.autoPause()
@@ -143,14 +136,20 @@ class FragmentMain : Fragment(), PropertyChangeListener
 		val chordLayout = mBinding.chordLayout
 		val buttonLayout = mBinding.buttonLayout
 
+		// Reset
+		if (prop?.propertyName == Updater.NOTIFY_RESET)
+		{
+			updateChordText(chordLayout)
+			updateNextChord(chordLayout, 0, 0)
+			updateBeatIndicators(0)
+			updateButtons(buttonLayout)
+		}
+
 		// Start/Stop running
-		if (prop?.propertyName == Updater.RUN_MODE)
+		if (prop?.propertyName == Updater.NOTIFY_RUN_MODE)
 		{
 			// Update the button text
-			if (mUpdater.runMode == ERunMode.Continuous)
-				buttonLayout.buttonStart.setText(R.string.stop)
-			else
-				buttonLayout.buttonStart.setText(R.string.start)
+			updateButtons(buttonLayout)
 
 			// Stop sounds
 			val prevRunMode = prop.oldValue as ERunMode
@@ -159,63 +158,40 @@ class FragmentMain : Fragment(), PropertyChangeListener
 				mSoundPoolNotes.autoPause()
 				mSoundPoolClicks.autoPause()
 			}
+
+			// Update the screen on flag
+			if (mUpdater.runMode == ERunMode.Continuous)
+				activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+			else
+				activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 		}
 
 		// Chord change
 		if (prop?.propertyName == Updater.NOTIFY_CHORD)
 		{
 			// Update the chord text
-			chordLayout.textChord.text = getString(R.string.key_and_chord, mUpdater.key, mUpdater.chord)
-			chordLayout.textChordNext.text = getString(R.string.key_and_chord, mUpdater.keyNext, mUpdater.chordNext)
-
-			// Update the root note in the media player
-			val instrument = mSoundRootNotes[mSettings.rootNoteInstrument]
-			if (mSettings.rootNoteSounds && instrument != null)
-			{
-				mSoundRootNote = when (mUpdater.key)
-				{
-					"G" -> instrument[0]
-					"G♯" -> instrument[1]
-					"A♭" -> instrument[1]
-					"A" -> instrument[2]
-					"A♯" -> instrument[3]
-					"B♭" -> instrument[3]
-					"B" -> instrument[4]
-					"B♯" -> instrument[5]
-					"C♭" -> instrument[4]
-					"C" -> instrument[5]
-					"C♯" -> instrument[6]
-					"D♭" -> instrument[6]
-					"D" -> instrument[7]
-					"D♯" -> instrument[8]
-					"E♭" -> instrument[8]
-					"E" -> instrument[9]
-					"E♯" -> instrument[10]
-					"F♭" -> instrument[9]
-					"F" -> instrument[10]
-					"F♯" -> instrument[11]
-					"G♭" -> instrument[11]
-					else -> 0
-				}
-			}
+			updateChordText(chordLayout)
 		}
 
-		// Update metronome
+		// Beat change
 		if (prop?.propertyName == Updater.NOTIFY_BEAT)
 		{
-			val beat = (prop.newValue as Int) % mSettings.beatsPerBar
+			val beat = mUpdater.beat
+			val bar = mUpdater.bar
 
-			// Update the visuals for each beat
-			for (i in mBeats.indices)
-			{
-				mBeats[i].background = if (i == beat) mBeat1 else mBeat0
-			}
+			// Update the beat indicators
+			updateBeatIndicators(beat)
 
-			// Play the root note on beat 1
-			if (mSettings.rootNoteSounds && beat == 0)
+			// Update the 'next chord' visibility
+			updateNextChord(chordLayout, beat, bar)
+
+			// Play the root note
+			if (mSettings.rootNoteSounds && (mSettings.rootNoteWalking || beat == 0))
 			{
-				val volume = mSettings.rootNoteVolume / 100.0f
-				mSoundPoolNotes.play(mSoundRootNote, volume, volume, 0, 0, 1.0f)
+				val volume = (mSettings.rootNoteVolume / 100.0f) * if (beat == 0) 1.0f else 0.8f
+				val note = mSoundRootNotes[mSettings.rootNoteInstrument]?.get(mUpdater.rootNote)
+				if (note != null)
+					mSoundPoolNotes.play(note, volume, volume, 0, 0, 1.0f)
 			}
 
 			// Play the metronome sound on each beat
@@ -227,6 +203,53 @@ class FragmentMain : Fragment(), PropertyChangeListener
 				else
 					mSoundPoolClicks.play(mSoundClicks[mSettings.metronomeClick] ?: 0, 0.7f * volume, 0.7f * volume, 0, 0, 1.0f)
 			}
+		}
+	}
+
+	// Update the button text
+	private fun updateButtons(buttonLayout: ButtonLayoutBinding)
+	{
+		if (mUpdater.runMode == ERunMode.Continuous)
+			buttonLayout.buttonStart.setText(R.string.stop)
+		else
+			buttonLayout.buttonStart.setText(R.string.start)
+	}
+
+	// Update the beat indicators
+	private fun updateBeatIndicators(beat: Int)
+	{
+		for (i in mBeats.indices)
+		{
+			mBeats[i].background = if (i == beat) mBeat1 else mBeat0
+			mBeats[i].visibility = if (i < mSettings.beatsPerBar) View.VISIBLE else View.GONE
+		}
+	}
+
+	// Update the chord text
+	private fun updateChordText(chordLayout: ChordLayoutBinding)
+	{
+		chordLayout.textChord.text = getString(R.string.key_and_chord, mUpdater.key, mUpdater.chord)
+		chordLayout.textChordNext.text = getString(R.string.key_and_chord, mUpdater.keyNext, mUpdater.chordNext)
+	}
+
+	// Update the 'next chord' visibility
+	private fun updateNextChord(chordLayout: ChordLayoutBinding, beat: Int, bar: Int)
+	{
+		when (mSettings.nextChordMode)
+		{
+			ENextChordMode.Hidden -> chordLayout.textChordNext.visibility =
+				View.GONE
+			ENextChordMode.OneBeatBefore -> chordLayout.textChordNext.visibility =
+				if (beat >= mSettings.beatsPerBar - 1 && bar == mSettings.barsPerChord - 1)
+					View.VISIBLE else View.INVISIBLE
+			ENextChordMode.TwoBeatsBefore -> chordLayout.textChordNext.visibility =
+				if (beat >= mSettings.beatsPerBar - 2 && bar == mSettings.barsPerChord - 1)
+					View.VISIBLE else View.INVISIBLE
+			ENextChordMode.BarBefore -> chordLayout.textChordNext.visibility =
+				if (bar >= mSettings.barsPerChord - 1)
+					View.VISIBLE else View.INVISIBLE
+			ENextChordMode.Always -> chordLayout.textChordNext.visibility =
+				View.VISIBLE
 		}
 	}
 
@@ -274,24 +297,22 @@ class FragmentMain : Fragment(), PropertyChangeListener
 			mSoundPoolNotes.load(context, R.raw.electric_bass_10_f, 1),
 			mSoundPoolNotes.load(context, R.raw.electric_bass_11_gb, 1),
 		)
-		val instrumentNames = resources.getStringArray(R.array.instruments)
 		mSoundRootNotes = mapOf(
-			instrumentNames[0] to piano,
-			instrumentNames[1] to acousticBase,
-			instrumentNames[2] to electricBass,
+			EInstrument.Piano to piano,
+			EInstrument.AcousticBass to acousticBase,
+			EInstrument.ElectricBass to electricBass,
 		)
 	}
 
 	private fun loadClicks()
 	{
-		val clickNames = resources.getStringArray(R.array.metronome_sounds)
 		mSoundClicks = mapOf(
-			clickNames[0] to mSoundPoolClicks.load(context, R.raw.click_00_clave, 1),
-			clickNames[1] to mSoundPoolClicks.load(context, R.raw.click_01_woodblock_low, 1),
-			clickNames[2] to mSoundPoolClicks.load(context, R.raw.click_02_woodblock_med, 1),
-			clickNames[3] to mSoundPoolClicks.load(context, R.raw.click_03_woodblock_high, 1),
-			clickNames[4] to mSoundPoolClicks.load(context, R.raw.click_04_cowbell, 1),
-			clickNames[5] to mSoundPoolClicks.load(context, R.raw.click_05_drumsticks, 1),
+			EMetronomeSounds.Clave to mSoundPoolClicks.load(context, R.raw.click_00_clave, 1),
+			EMetronomeSounds.WoodblockLow to mSoundPoolClicks.load(context, R.raw.click_01_woodblock_low, 1),
+			EMetronomeSounds.WoodblockMed to mSoundPoolClicks.load(context, R.raw.click_02_woodblock_med, 1),
+			EMetronomeSounds.WoodblockHigh to mSoundPoolClicks.load(context, R.raw.click_03_woodblock_high, 1),
+			EMetronomeSounds.CowBell to mSoundPoolClicks.load(context, R.raw.click_04_cowbell, 1),
+			EMetronomeSounds.Drumsticks to mSoundPoolClicks.load(context, R.raw.click_05_drumsticks, 1),
 		)
 	}
 }

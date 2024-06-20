@@ -1,7 +1,5 @@
 package nz.co.rylogic.allkeys
-// TODO
-//  Walking bass
-//  Correct Chords/Bass player practise mode
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
