@@ -6,18 +6,27 @@ plugins {
 android {
     namespace 'nz.co.rylogic.allkeys'
     compileSdk 34
-
     defaultConfig {
         applicationId "nz.co.rylogic.allkeys"
         minSdk 26
-        //noinspection EditedTargetSdkVersion
         targetSdk 34
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags ''
+            }
+        }
     }
-
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
     buildTypes {
         debug {
             minifyEnabled false
@@ -36,6 +45,12 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.22.1'
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 *.iml
 .gradle
+local.properties
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -8,8 +9,13 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
+/build/
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+
+# Ignore files from the fluidsynth project.
+# These are copied into the project but the project setup script
+/app/src/main/jniLibs
+/app/src/main/cpp/fluidsynth/
+/app/src/main/cpp/fluidsynth.h

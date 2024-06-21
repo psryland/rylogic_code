@@ -1,8 +1,11 @@
 package nz.co.rylogic.allkeys
 
 import android.app.Activity
+import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.MultiSelectListPreference
+import java.io.File
+import java.io.FileOutputStream
 
 // Split strings and remove empty values
 fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String>
@@ -30,4 +33,19 @@ fun Activity.setThemeFromSettings()
 		EThemes.Light -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 		EThemes.Dark -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 	}
+}
+
+// Copy an asset to internal storage
+fun copyAssetToFile(context: Context, assetName: String): File
+{
+	val file = File(context.filesDir, assetName)
+	if (!file.exists())
+	{
+		context.assets.open(assetName).use { input ->
+			FileOutputStream(file).use { output ->
+				input.copyTo(output)
+			}
+		}
+	}
+	return file
 }
