@@ -14,6 +14,7 @@
     <string name="play_root_notes">Play Root Notes</string>
     <string name="metronome_sounds">Metronome Sounds</string>
     <string name="custom_chords">Custom Chords</string>
+    <string name="genre">-- Genre --</string>
     <string name="key">-- Key --</string>
     <string name="chord">-- Chord --</string>
     <string name="general">-- General --</string>
@@ -31,4 +32,10 @@
     <string name="root_note_walking">Walking Bass</string>
     <string name="theme">Theme</string>
     <string name="next_chord_mode">Next Chord</string>
+    <string name="accompaniment">Accompaniment</string>
+    <string name="play_accompaniment">Play Chord Accompaniment</string>
+    <string name="accompaniment_volume">Accompaniment Volume</string>
+    <string name="playback">Playback</string>
+    <string name="choose_genre">Choose Genre</string>
+    <string name="credits_title">Credits</string>
 </resources>

@@ -2,68 +2,48 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     >
-    <!-- KEY -->
+    <!-- GENRE -->
     <androidx.preference.PreferenceCategory
-        android:title="@string/key"
+        android:title="@string/genre"
+        >
+        <androidx.preference.ListPreference
+            android:key="genre"
+            android:title="@string/choose_genre"
+            app:useSimpleSummaryProvider="true"
+            />
+    </androidx.preference.PreferenceCategory>
+
+    <!-- PLAYBACK -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/playback"
         >
         <androidx.preference.MultiSelectListPreference
             android:key="selected_keys"
             android:entries="@array/key_groups"
             android:entryValues="@array/key_groups"
-            android:defaultValue="@array/key_groups_defaults"
             android:title="@string/choose_keys"
             />
-    </androidx.preference.PreferenceCategory>
-
-    <!-- CHORD -->
-    <androidx.preference.PreferenceCategory
-        android:title="@string/chord"
-        >
         <androidx.preference.MultiSelectListPreference
             android:key="selected_chords"
-            android:defaultValue="@array/chords_defaults"
             android:title="@string/choose_chords"
-            />
-        <androidx.preference.EditTextPreference
-            android:key="custom_chords"
-            android:defaultValue=""
-            android:selectAllOnFocus="false"
-            android:singleLine="false"
-            android:title="@string/custom_chords"
-            app:useSimpleSummaryProvider="true"
             />
         <androidx.preference.DropDownPreference
             android:key="next_chord_mode"
             android:title="@string/next_chord_mode"
             android:entries="@array/next_chord_modes"
-
             app:useSimpleSummaryProvider="true"
-            />
-    </androidx.preference.PreferenceCategory>
-
-    <!-- ROOT NOTES -->
-    <androidx.preference.PreferenceCategory
-        android:title="@string/root_notes"
-        >
-        <androidx.preference.SwitchPreference
-            android:key="root_note_sounds"
-            android:title="@string/play_root_notes"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
-            android:key="root_note_volume"
-            android:title="@string/root_note_volume"
-            android:min="0"
-            android:max="100"
+            android:key="beats_per_bar"
+            android:title="@string/beats_per_bar"
+            android:min="1"
+            android:max="7"
             />
-        <androidx.preference.DropDownPreference
-            android:key="root_note_instrument"
-            android:title="@string/root_note_instrument"
-            android:entries="@array/instruments"
-            app:useSimpleSummaryProvider="true"
-            />
-        <androidx.preference.SwitchPreference
-            android:key="root_note_walking"
-            android:title="@string/root_note_walking"
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="bars_per_chord"
+            android:title="@string/bars_per_chord"
+            android:min="1"
+            android:max="8"
             />
     </androidx.preference.PreferenceCategory>
 
@@ -93,17 +73,47 @@
             android:entries="@array/metronome_sounds"
             app:useSimpleSummaryProvider="true"
             />
-        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
-            android:key="beats_per_bar"
-            android:title="@string/beats_per_bar"
-            android:min="1"
-            android:max="7"
+    </androidx.preference.PreferenceCategory>
+
+    <!-- ROOT NOTES -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/root_notes"
+        >
+        <androidx.preference.SwitchPreference
+            android:key="root_note_sounds"
+            android:title="@string/play_root_notes"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
-            android:key="bars_per_chord"
-            android:title="@string/bars_per_chord"
-            android:min="1"
-            android:max="8"
+            android:key="root_note_volume"
+            android:title="@string/root_note_volume"
+            android:min="0"
+            android:max="100"
+            />
+        <androidx.preference.DropDownPreference
+            android:key="root_note_instrument"
+            android:title="@string/root_note_instrument"
+            android:entries="@array/root_note_instruments"
+            app:useSimpleSummaryProvider="true"
+            />
+        <androidx.preference.SwitchPreference
+            android:key="root_note_walking"
+            android:title="@string/root_note_walking"
+            />
+    </androidx.preference.PreferenceCategory>
+
+    <!-- COMPING -->
+    <androidx.preference.PreferenceCategory
+        android:title="@string/accompaniment"
+        >
+        <androidx.preference.SwitchPreference
+            android:key="chord_comp_sounds"
+            android:title="@string/play_accompaniment"
+            />
+        <nz.co.rylogic.allkeys.SeekBarPreferenceRange
+            android:key="chord_comp_volume"
+            android:title="@string/accompaniment_volume"
+            android:min="0"
+            android:max="100"
             />
     </androidx.preference.PreferenceCategory>
 
@@ -116,6 +126,10 @@
             android:title="@string/theme"
             android:entries="@array/themes"
             app:useSimpleSummaryProvider="true"
+            />
+        <androidx.preference.Preference
+            android:key="credits"
+            android:title="@string/credits_title"
             />
     </androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>

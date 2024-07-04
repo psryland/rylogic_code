@@ -20,6 +20,7 @@ class ActivityMain : AppCompatActivity()
 
 		if (savedInstanceState == null)
 		{
+			val app: AllKeysApp = application as AllKeysApp
 			supportFragmentManager
 				.beginTransaction()
 				.replace(R.id.fragment_main, FragmentMain())

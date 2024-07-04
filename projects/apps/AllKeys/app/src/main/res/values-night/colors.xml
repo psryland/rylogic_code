@@ -20,6 +20,7 @@
     <color name="chord_next_text">#888</color>
     <color name="button_text">#7E67CC</color>
 
-    <color name="ic_launcher_background">#595762</color>
+    <color name="ic_launcher_background">#FFF</color>
+<!--    <color name="ic_launcher_background">#595762</color>-->
 
 </resources>
