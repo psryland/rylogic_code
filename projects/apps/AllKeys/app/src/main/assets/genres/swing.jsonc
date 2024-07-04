@@ -1,0 +1,316 @@
+{
+	// Style name
+	"name": "Swing",
+
+	// Scales
+	//  - Scales are chromatic note indices from the root
+	//    e.g. C major: C=0,D=2,E=4,F=5,G=7,A=9,B=11
+	"scales": {
+		"Major": [0, 2, 4, 5, 7, 9, 11],
+		"Natural Minor": [0, 2, 3, 5, 7, 8, 10],
+		"Melodic Minor": [0, 2, 3, 5, 7, 9, 11],
+		"Harmonic Minor": [0, 2, 3, 5, 7, 8, 11],
+		"Harmonic Major": [0, 2, 4, 5, 7, 8, 11],
+		"WH Diminished": [0, 2, 3, 5, 6, 8, 9, 11],
+		"HW Diminished": [0, 1, 3, 4, 6, 7, 9, 10],
+		"Major Pentatonic": [0, 2, 4, 7, 9],
+		"Minor Pentatonic": [0, 3, 5, 7, 10],
+		"Blues": [0, 3, 5, 6, 7, 10]
+	},
+
+	// Chords
+	"chords": {
+		"TEST": {
+		},
+		"Δ7": {
+			// Scale options. <scale-name>:<chromatic-offset>.
+			// E.g. Dorian = Major:-2, Lydian = Major:-5, Mixolydian = Major:5,
+			// I.e. use <scale> at root+<offset>
+			"scales": ["Major:0", "Major Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Basic",       // Name for the voicing
+					"lh": [0, 7],          // Notes to play in the left hand
+					"rh": [11, 14, 16, 19] // Notes to play in the right hand
+				},
+				{
+					"name": "So What",
+					"lh": [4, 9, 14],
+					"rh": [19, 23]
+				}
+			]
+		},
+		"7": {
+			"scales": ["Major:5"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 10],
+					"rh": [16]
+				},
+				{
+					"name": "Shell+Extensions",
+					"lh": [0, 10],
+					"rh": [16, 21, 26]
+				}
+			]
+		},
+		"m7": {
+			"scales": ["Major:-2", "Minor Pentatonic:0"],
+			"voicings": [
+				{
+					"name": "Basic",
+					"lh": [0, 7, 10],
+					"rh": [15, 19, 22]
+				},
+				{
+					"name": "Bill Evans",
+					"lh": [0, 10],
+					"rh": [10, 14, 15, 19]
+				},
+				{
+					"name": "Stacked 3rds",
+					"lh": [0, 3, 7],
+					"rh": [10, 14, 17]
+				},
+				{
+					"name": "Stacked 5ths",
+					"lh": [0, 7, 14],
+					"rh": [15, 22, 29]
+				}
+			]
+		},
+		"m6": {
+			"scales": [],
+			"voicings": []
+		},
+		"sus": {
+			"scales": [],
+			"voicings": []
+		},
+		"ø7": {
+			"scales": [],
+			"voicings": []
+		},
+		"o": {
+			"scales": [],
+			"voicings": []
+		},
+		"mΔ7": {
+			"scales": [],
+			"voicings": []
+		},
+		"+": {
+			"scales": [],
+			"voicings": []
+		},
+		"7♭9": {
+			"scales": [],
+			"voicings": []
+		},
+		"7♯9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭3",
+					"lh": [4, 10],
+					"rh": [13, 19, 22]
+				},
+				{
+					"name": "US-1minor",
+					"lh": [4, 10],
+					"rh": [12, 15, 19]
+				}
+			]
+		},
+		"alt": {
+			"scales": ["Melodic Minor:1"],
+			"voicings": [
+				{
+					"name": "Bill Evans",
+					"lh": [4, 10],
+					"rh": [16, 20, 22, 27]
+				}
+			]
+		},
+		"7♯5": {
+			"scales": [],
+			"voicings": []
+		},
+		"7♭5♭9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭5",
+					"lh": [4, 10],
+					"rh": [13, 18, 22]
+				}
+			]
+		},
+		"7♯5♯9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭6",
+					"lh": [4, 10],
+					"rh": [15, 20, 24]
+				}
+			]
+		},
+		"7♭5♯9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭3minor",
+					"lh": [4, 10],
+					"rh": [15, 18, 22]
+				}
+			]
+		},
+		"7♯5♭9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭2minor",
+					"lh": [4, 10],
+					"rh": [13, 16, 20]
+				}
+			]
+		},
+		"13♭9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-6",
+					"lh": [4, 10],
+					"rh": [13, 16, 21]
+				}
+			]
+		},
+		"13♯11": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-2",
+					"lh": [4, 10],
+					"rh": [14, 18, 21]
+				}
+			]
+		},
+		"13♭5♭9": {
+			"scales": [],
+			"voicings": [
+				{
+					"name": "US-♭5minor",
+					"lh": [4, 10],
+					"rh": [13, 18, 21]
+				}
+			]
+		}
+	},
+
+	// Walking Bass patterns
+	//  Format: <c|n|_>[bs]<scale-degree>:<note-length>:<velocity>
+	//  c = current chord, n = next chord, _ = rest
+	//  b = flat, s = sharp
+	//  scale-degree = -n..+n, 0 is not used, negative numbers are
+	//  inverted scale degrees, c1 == c-1, c7 = c-2 + 8
+	//  note-length = percentage of a quarter note,
+	//  velocity = percentage of max velocity
+	//  e.g.  c1:100:100, c5:100:80, c7:50:90, _0:50:0 nb2:100:90
+	"walks": {
+		"1-beat": [
+			["c1:100:70"]
+		],
+		"2-beat": [
+			["c1:100:70", "c5:100:60"],
+			["c8:100:70", "c5:100:60"],
+			["c1:100:70", "c-4:100:60"],
+			["c1:62:80", "c5:38:50", "c4:100:70"],
+			["c3:100:80", "c2:100:50"],
+
+			//["c-6:100:70", "c-4:100:60"],
+			//["c8:33:80", "c5:33:70", "c1:33:70", "c-2:100:80"],
+			//["c1:100:80", "c8:33:70", "c5:33:70", "c1:33:70"],
+			//["c7:100:80", "c8:100:70"],
+
+
+			["c1:100:80", "c2:62:70", "c5:38:60"],
+			["c1:100:80", "nb2:100:70"],
+			["c1:100:80", "n7:100:70"]
+		],
+		"3-beat": [
+			["c1:100:80", "c5:100:70", "c5:100:70"],
+			["c1:100:80", "c2:100:70", "c5:100:70"],
+			["c1:100:80", "c5:100:70", "c7:100:60"],
+			["c8:100:80", "c4:100:70", "c6:100:70"],
+			["c8:100:80", "c5:100:70", "c-4:100:70"],
+			["c8:66:80", "c6:33:70", "c5:100:70", "c3:100:70"],
+			["c1:100:80", "c2:100:70", "c3:66:70", "c5:33:70"],
+			["c1:100:80", "c5:100:70", "nb2:100:70"],
+			["c1:100:80", "c5:100:70", "n7:100:70"],
+			["c1:100:80", "n2:100:70", "n5:100:70"]
+		],
+		"4-beat": [
+			["c1:100:80", "c5:100:70", "c8:100:70", "c5:100:70"],
+			["c1:100:80", "c2:100:70", "c3:33:70", "_0:33:00", "c5:33:70", "c7:100:70"],
+			["c1:66:80", "c8:33:70", "c7:100:70", "c6:100:70", "c5:100:70"],
+			["c2:100:80", "c5:100:70", "c6:100:70", "c5:66:70", "c7:33:50"],
+			["c4:100:70", "c3:100:70", "c2:100:70", "c5:100:80"],
+			["c3:100:80", "c6:100:70", "c2:100:80", "c5:100:70"],
+			["c8:100:80", "c9:100:80", "c10:100:80", "c5:100:80"],
+			["c8:33:80", "c5:33:70", "c1:33:50", "c1:100:70", "c3:100:80", "c5:100:70"],
+			["c1:100:80", "c2:100:70", "c3:60:70", "c5:40:50", "c-4:100:90"],
+			["c1:100:80", "c2:100:70", "c3:100:70", "nb2:100:90"],
+			["c1:100:80", "c-2:100:60", "n2:100:70", "n5:100:70"],
+			["c8:100:80", "c9:100:80", "c10:100:80", "nb2:100:90"],
+			["c8:100:80", "c9:100:70", "c10:66:70", "c5:33:50", "n7:100:70"]
+		]
+	},
+
+	// Comping rhythms
+	//  Format: <c|_>:<chord-length>:<velocity>
+	//  c = current chord, _ = rest
+	//  chord-length = percentage of a quarter note
+	//  velocity = percentage of max velocity
+	"vamps": {
+		"1-beat": [
+			["c:100:50"]
+		],
+		"2-beat": [
+			["c:200:50"],
+			["_:200:00"],
+			["_:162:50", "c:38:30"],
+			["c:62:50", "_:38:40", "_:100:00"],
+			["_:62:50", "c:38:40", "_:100:00"],
+			["c:62:50", "_:100:00", "c:38:30"]
+		],
+		"3-beat": [
+			["c:300:50"],
+			["_:300:00"],
+			["_:262:50", "c:38:30"],
+			["c:62:50", "_:200:00", "c:38:30"],
+			["_:62:50", "c:38:30", "_:200:00"]
+		],
+		"4-beat": [
+			["c:400:50"],
+			["c:100:80", "_:260:80", "c:40:80"],
+			["c:266:80", "_:33:80", "c:100:80"],
+			["c:66:80", "c:133:70", "_:200:80"],
+			["c:66:80", "_:333:70"]
+			//["c:33:80", "_:104:80", "c:162:70", "_:100:80"],
+			//["_:100:80", "c:60:70", "c:40:80", "_:200:80"]
+		]
+	},
+
+	// Drum patterns
+	"rhythms": [
+		{
+			"name": "Basic Swing", // Name of the rhythm
+			"midi": "rhythms/swing0.mid",  // Midi file that contains the loop
+			"beats-per-bar": 4,    // Number of beats per bar
+			"number-of-bars": 4,   // The number of bars in the loop
+			"swing": true          // True if the pattern is swing (i.e affects bass line timing)
+		}
+	]
+}

@@ -1,10 +1,32 @@
 package nz.co.rylogic.allkeys
 
-import android.content.Context
-import kotlin.jvm.Throws
+import java.io.Closeable
+import java.io.File
 
-class FluidSynth
+class FluidSynth : Closeable
 {
+	// Midi channels
+	enum class EMidiChannel(val value: Short)
+	{
+		Ch1(0),
+		Ch2(1),
+		Ch3(2),
+		Ch4(3),
+		Ch5(4),
+		Ch6(5),
+		Ch7(6),
+		Ch8(7),
+		Ch9(8),
+		Ch10(9),
+		Ch11(10),
+		Ch12(11),
+		Ch13(12),
+		Ch14(13),
+		Ch15(14),
+		Ch16(15),
+		ChAll(16),
+	}
+
 	companion object
 	{
 		init
@@ -14,51 +36,67 @@ class FluidSynth
 		}
 	}
 
-	private var handle: Long = createSynth()
-
-	// Clean up the synth
-	@Throws(Throwable::class)
-	protected fun finalize()
-	{
-		release()
-	}
+	private var synth: Long = createSynth()
 
 	// Release this synth
-	fun release()
+	override fun close()
 	{
-		if (handle == 0L) return
-		destroySynth(handle)
-		handle = 0L
+		if (synth != 0L) destroySynth()
+		synth = 0L
 	}
 
 	// Get/Set the master gain
 	var masterGain: Float
-		get() = masterGainGet(handle)
-		set(value) { masterGainSet(handle, value) }
+		get() = masterGainGet()
+		set(value) { masterGainSet(value) }
 
 	// Load a sound font from the assets folder
-	fun loadSoundFont(context: Context, assetName: String)
+	fun loadSoundFont(soundFont: File)
 	{
-		val file = copyAssetToFile(context, assetName)
-		loadSoundFont(handle, file.absolutePath)
+		loadSoundFont(soundFont.absolutePath)
+	}
+
+	// Stop all sounds immediately
+	fun allSoundsOff(channel: EMidiChannel)
+	{
+		allSoundsOff(channel.value)
+	}
+
+	// Stop all notes on 'channel' using Release events
+	fun allNotesOff(channel: EMidiChannel)
+	{
+		allNotesOff(channel.value)
 	}
 
 	// Play/Stop a note
-	fun playNote(channel: Int, key: Int, velocity: Int)
+	fun playNote(channel: EMidiChannel, key: Short, velocity: Short)
 	{
-		playNote(handle, channel, key, velocity)
+		playNote(channel.value, key, velocity)
 	}
-	fun stopNote(channel: Int, key: Int)
+	fun stopNote(channel: EMidiChannel, key: Short)
 	{
-		stopNote(handle, channel, key)
+		stopNote(channel.value, key)
 	}
 
-	// Interop functions
+	// Change the program
+	fun programChange(channel: EMidiChannel, program: Int)
+	{
+		programChange(channel.value, program)
+	}
+
+	// The fluidsynth handle
+	val handle: Long
+		get() = synth
+
+	// Synth
 	private external fun createSynth(): Long
-	private external fun destroySynth(handle: Long)
-	private external fun loadSoundFont(handle: Long, soundFontPath: String)
-	private external fun masterGainGet(handle: Long): Float
-	private external fun masterGainSet(handle: Long, gain: Float)
-	private external fun playNote(handle: Long, channel: Int, key: Int, velocity: Int)
-	private external fun stopNote(handle: Long, channel: Int, key: Int)
+	private external fun destroySynth()
+	private external fun loadSoundFont(soundFontPath: String)
+	private external fun masterGainGet(): Float
+	private external fun masterGainSet(gain: Float)
+	private external fun allSoundsOff(channel: Short)
+	private external fun allNotesOff(channel: Short)
+	private external fun playNote(channel: Short, key: Short, velocity: Short)
+	private external fun stopNote(channel: Short, key: Short)
+	private external fun programChange(channel: Short, program: Int)
 }

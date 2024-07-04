@@ -32,7 +32,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # used in the AndroidManifest.xml file.
 add_library(${CMAKE_PROJECT_NAME} SHARED
     # List C/C++ source files with relative paths to this CMakeLists.txt.
-    fluidsynth_jni.cpp
+    fluid_synth_jni.cpp
+    fluid_sequencer_jni.cpp
+    fluid_event_jni.cpp
+    fluid_player_jni.cpp
+    player.cpp
+    event.cpp
+    sequencer.cpp
     synth.cpp
 )
 

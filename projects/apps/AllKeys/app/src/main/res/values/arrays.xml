@@ -1,37 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+     <!-- Key groups -->
     <string-array name="key_groups">
         <item>A, B, C, D, E, F, G</item>
         <item>A♭, B♭, D♭, E♭, G♭</item>
         <item>A♯, C♯, D♯, F♯, G♯</item>
         <item>B♯, C♭, E♯, F♭</item>
     </string-array>
-    <string-array name="key_groups_defaults">
-        <item>A, B, C, D, E, F, G</item>
-        <item>A♭, B♭, D♭, E♭, G♭</item>
-        <item>A♯, C♯, D♯, F♯, G♯</item>
+
+    <!-- Root Note Instruments -->
+    <string-array name="root_note_instruments">
+        <item>Acoustic Bass</item>
+        <item>Electric Bass</item>
+        <item>Piano</item>
     </string-array>
 
-    <!-- If you add chords, remember to add scales for that chord-->
-    <string-array name="chords">
-        <item>Δ7</item>
-        <item>7</item>
-        <item>m6</item>
-        <item>m7</item>
-        <item>ø7</item>
-        <item>o</item>
-        <item>♭9</item>
-        <item>alt</item>
-        <item>+</item>
-        <item>+7</item>
-        <item>sus</item>
-        <item>mΔ7</item>
-    </string-array>
-    <string-array name="chords_defaults">
-        <item>Δ7</item>
-        <item>7</item>
-        <item>m7</item>
-        <item>ø7</item>
+    <!-- Metronome Sounds -->
+    <string-array name="metronome_sounds">
+        <item>Woodblock High</item>
+        <item>Woodblock Low</item>
+        <item>Woodblock Med</item>
+        <item>CowBell</item>
+        <item>Tambourine</item>
+        <item>RimShot</item>
     </string-array>
 
     <!-- Next chord mode -->
@@ -41,61 +32,6 @@
         <item>2 Beats Before</item>
         <item>Bar Before</item>
         <item>Always</item>
-    </string-array>
-
-    <!-- Convert chords to scales-->
-    <string-array name="scales">
-        <item>Δ7:0,2,4,5,7,9,11</item> <!-- Ionian -->
-        <item>7:0,2,4,5,7,9,10</item> <!-- Mixolydian -->
-        <item>m6:0,2,3,5,7,9,11</item> <!-- Melodic Minor -->
-        <item>m7:0,2,3,5,7,9,10</item> <!-- Dorian -->
-        <item>m7:0,2,3,5,7,8,11</item> <!-- Harmonic Minor -->
-        <item>ø7:0,2,3,5,6,8,10</item> <!-- X+b3 melodic minor -->
-        <item>o:0,2,3,5,6,8,9,11</item> <!-- WH Diminished -->
-        <item>♭9:0,1,3,4,6,8,10</item> <!-- X+b2 melodic minor -->
-        <item>alt:0,1,3,4,6,8,10</item> <!-- X+b2 melodic minor -->
-        <item>+:0,2,4,5,7,8,11</item> <!-- Harmonic Major -->
-        <item>+7:0,1,3,4,6,8,10</item> <!-- X+b2 melodic minor -->
-        <item>sus:0,2,4,5,7,9,10</item> <!-- Mixolydian -->
-        <item>mΔ7:0,2,3,5,7,8,11</item> <!-- Harmonic Minor -->
-    </string-array>
-
-    <!-- Walking patterns for various bar lengths. -->
-    <!-- c = current chord, n = next chord -->
-    <!-- numbers are scale degrees, - = flat, + = sharp -->
-    <string-array name="walks">
-        <item>c1,c5</item>
-        <item>c1,n-2</item>
-        <item>c1,n+7</item>
-        <item>c1,c5,c5</item>
-        <item>c1,c5,n-2</item>
-        <item>c1,c5,n+7</item>
-        <item>c1,n2,n5</item>
-        <item>c1,c1,c5,c5</item>
-        <item>c1,c2,c3,c5</item>
-        <item>c1,c5,c1,c5</item>
-        <item>c1,c7,c6,c5</item>
-        <item>c1,c1,c2,c3,c5</item>
-        <item>c1,c5,c1,c7,c5</item>
-        <item>c1,c2,c3,c5,c6,n-2</item>
-        <item>c1,c2,c3,c5,c1,c6,n-2</item>
-    </string-array>
-
-    <!-- Root Note Instruments -->
-    <string-array name="instruments">
-        <item>Piano</item>
-        <item>Acoustic Bass</item>
-        <item>Electric Bass</item>
-    </string-array>
-
-    <!-- Metronome Sounds -->
-    <string-array name="metronome_sounds">
-        <item>Clave</item>
-        <item>Woodblock Low</item>
-        <item>Woodblock Med</item>
-        <item>Woodblock High</item>
-        <item>CowBell</item>
-        <item>Drumsticks</item>
     </string-array>
 
     <!-- App themes -->

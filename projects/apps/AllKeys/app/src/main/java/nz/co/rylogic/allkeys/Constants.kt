@@ -1,5 +1,6 @@
 package nz.co.rylogic.allkeys
 
+// Running state of the app
 enum class ERunMode
 {
 	Stopped,
@@ -7,6 +8,7 @@ enum class ERunMode
 	Continuous,
 }
 
+// Visibility of the next chord
 enum class ENextChordMode
 {
 	Hidden,
@@ -16,23 +18,35 @@ enum class ENextChordMode
 	Always,
 }
 
-enum class EInstrument
+// The instruments available in the sound font
+enum class EInstruments(val value: Int)
 {
-	Piano,
-	AcousticBass,
-	ElectricBass,
+	AcousticBass(0),
+	ElectricBass(1),
+	Piano(2),
+	DrumKit(3),
 }
 
-enum class EMetronomeSounds
+// The instruments suitable for playing root notes
+enum class ERootNoteInstruments(val value: Int)
 {
-	Clave,
-	WoodblockLow,
-	WoodblockMed,
-	WoodblockHigh,
-	CowBell,
-	Drumsticks,
+	AcousticBass(EInstruments.AcousticBass.value),
+	ElectricBass(EInstruments.ElectricBass.value),
+	Piano(EInstruments.Piano.value),
 }
 
+// The keys corresponding to metronome sounds
+enum class EMetronomeSounds(val value: Short)
+{
+	WoodblockHigh(75),
+	WoodblockLow(76),
+	WoodblockMed(77),
+	CowBell(56),
+	Tambourine(54),
+	RimShot(37),
+}
+
+// App themes
 enum class EThemes
 {
 	System,
