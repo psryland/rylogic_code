@@ -262,7 +262,11 @@ class Updater(context: Context, settings: Settings, handler: Handler) :Runnable,
 			val name = it[0]
 			val ofs = it[1].toInt()
 			val notes = mSettings.genre.scales[name] ?: listOf(0)
-			Scale(name, notes.map { n -> (n + ofs) % 12 }.sorted())
+			val scaleNotes = notes.map { n -> (12 + (n + ofs)) % 12 }.sorted()
+
+			Log.d("Scale", "Selected scale $name:$ofs. ${scaleNotes.joinToString(",") { n -> mSettings.midiKeyToNote(n.toShort(), includeOctave = false) }}")
+
+			Scale(name, scaleNotes)
 		}
 	}
 
@@ -277,15 +281,6 @@ class Updater(context: Context, settings: Settings, handler: Handler) :Runnable,
 
 		if (rootNote == null || chord == null || chord.voicings.isEmpty())
 			return listOf(Voice("silent", listOf(), listOf()))
-
-		fun mapToRange(root: Short, notes: List<Int>, range: IntRange): List<Short>
-		{
-			var shift = 0
-			val n = root + notes.first()
-			while (n + shift < range.first) { shift += 12 }
-			while (n + shift >= range.last) { shift -= 12 }
-			return notes.map { (root + it + shift).toShort() }
-		}
 
 		// Map the voicings into a nice range for the key
 		val voices: MutableList<Voice> = mutableListOf()
@@ -334,7 +329,7 @@ class Updater(context: Context, settings: Settings, handler: Handler) :Runnable,
 		val idx = weights.withIndex().minByOrNull { it.value }?.index ?: 0
 
 		// Log the walk index
-		Log.d("Walk", "Selected walk $idx. Weights: ${weights.joinToString(",")}")
+		Log.d("Walk", "Selected walk $idx")
 
 		return if (walks.isNotEmpty()) Walk(idx, walks[idx]) else Walk(-1, listOf())
 	}
@@ -364,7 +359,7 @@ class Updater(context: Context, settings: Settings, handler: Handler) :Runnable,
 		val idx = weights.withIndex().minByOrNull { it.value }?.index ?: 0
 
 		// Log the vamp index
-		Log.d("Vamp", "Selected vamp $idx. Weights: ${weights.joinToString(",")}")
+		Log.d("Vamp", "Selected vamp $idx")
 
 		return if (vamps.isNotEmpty()) Vamp(idx, vamps[idx]) else Vamp(-1, listOf())
 	}
