@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16.0)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(lightz VERSION 1.0.0)
+
+# spiffs_create_partition_image(storage ../root FLASH_IN_PROJECT)
