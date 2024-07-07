@@ -363,18 +363,19 @@ namespace pr::unittests
 	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, &testname::func));\
 	template <typename T> void testname::test()
 
-#define PR_FAIL(msg)\
-	pr::unittests::TestFramework::Fail(msg, __FILE__, __LINE__)
-
 #define PR_EXPECT(expr)\
 	pr::unittests::TestFramework::IsTrue(expr, L#expr, __FILE__, __LINE__)
 
+#define PR_THROWS(expr, what)\
+	pr::unittests::TestFramework::Throws<what>([&]{ expr; }, L#expr, __FILE__, __LINE__)
+
+// Deprecated
+#define PR_FAIL(msg)\
+	pr::unittests::TestFramework::Fail(msg, __FILE__, __LINE__)
 #define PR_CHECK(expr, ...)\
 	pr::unittests::TestFramework::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr, __FILE__, __LINE__)
-
-#define PR_THROWS(func, what)\
+#define PR_THROWS2(func, what)\
 	pr::unittests::TestFramework::Throws<what>(func, L#func, __FILE__, __LINE__)
-
 #define PR_UNITTEST_OUT\
 	pr::unittests::TestFramework::out()
 

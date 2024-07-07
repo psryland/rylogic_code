@@ -1,4 +1,8 @@
-﻿#pragma once
+﻿//**********************************
+// UTF-8
+//  Copyright (c) Rylogic Ltd 2024
+//**********************************
+#pragma once
 #include <cstdint>
 #include <stdexcept>
 

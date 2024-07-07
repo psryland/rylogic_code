@@ -562,10 +562,10 @@ namespace pr::filesys
 			auto c1 = weakly_canonical(p1);
 
 			// equivalent requires the file/directory to exist
-			PR_THROWS([=] { [[maybe_unused]] auto _ = equivalent(p0, p1); }, filesystem_error);
+			PR_THROWS([[maybe_unused]] auto _ = equivalent(p0, p1), filesystem_error);
 
 			// canonical requires the file/directory to exist
-			PR_THROWS([=] { [[maybe_unused]] auto _ = canonical(p0); }, filesystem_error);
+			PR_THROWS([[maybe_unused]] auto _ = canonical(p0), filesystem_error);
 
 			//
 			try

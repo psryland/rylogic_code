@@ -195,6 +195,25 @@ namespace pr
 			return m_bits.data();
 		}
 
+		// Access the bit data buffer at an offset and reinterpret as type T
+		template <typename T> requires (std::is_standard_layout_v<T>)
+		T const* ptr(std::size_t word_offset) const
+		{
+			static_assert(alignof(T) % alignof(WordType) == 0, "Alignment of T is not compatible with the word type");
+			static_assert(sizeof(T) % sizeof(WordType) == 0, "Size of T is not compatible with the word type");
+
+			auto t_size_in_words = sizeof(T) / sizeof(WordType);
+			if (word_offset + t_size_in_words > size_in_words())
+				throw std::out_of_range("bitsetRT::ptr word offset is outside the buffer");
+
+			return reinterpret_cast<T const*>(data() + word_offset);
+		}
+		template <typename T> requires (std::is_standard_layout_v<T>)
+		T* ptr(std::size_t word_offset)
+		{
+			return const_cast<T*>(const_cast<bitsetRT const*>(this)->ptr<T>(word_offset));
+		}
+
 		// Reserve space for 'count' bits
 		void reserve(std::size_t count)
 		{
@@ -799,6 +818,29 @@ namespace pr::container
 			PR_EXPECT(bs1.to_string() == "1111100111");
 			bs1.resize(6);
 			PR_EXPECT(bs1.to_string() == "111110");
+		}
+		{
+			bitsetRT<unsigned char> bs1("10101010 01010101 10101010 01010101 10101010 01010101 10101010");
+
+			PR_EXPECT(bs1.size_in_words() == 7);
+			PR_EXPECT(*bs1.ptr<uint32_t>(0) == 0xAA55AA55);
+			PR_EXPECT(*bs1.ptr<uint32_t>(1) == 0x55AA55AA);
+			PR_EXPECT(*bs1.ptr<uint32_t>(2) == 0xAA55AA55);
+
+			auto data = bs1.data();
+			*bs1.ptr<uint16_t>(0) = 0xFFFF;
+			*bs1.ptr<uint16_t>(3) = 0xFFFF;
+			*bs1.ptr<uint8_t>(6) = 0xFF;
+
+			PR_EXPECT(data[0] == 0xFF);
+			PR_EXPECT(data[1] == 0xFF);
+			PR_EXPECT(data[2] == 0x55);
+			PR_EXPECT(data[3] == 0xFF);
+			PR_EXPECT(data[4] == 0xFF);
+			PR_EXPECT(data[5] == 0xAA);
+			PR_EXPECT(data[6] == 0xFF);
+
+			PR_THROWS(bs1.ptr<uint32_t>(5), std::out_of_range);
 		}
 	}
 }

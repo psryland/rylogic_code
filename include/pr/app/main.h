@@ -50,7 +50,7 @@ namespace pr::app
 		//  - The App framework creates the UI first so that the HWND exists before 'Main'
 		//    is created. This allows normal construction of the renderer etc.
 
-		Logger        m_log;         // App log
+		log::Logger   m_log;         // App log
 		UserSettings  m_settings;    // Application-wide user settings
 		rdr::Renderer m_rdr;         // The renderer
 		rdr::Window   m_window;      // The window that will be rendered into
@@ -59,7 +59,7 @@ namespace pr::app
 		MainUI&       m_ui;          // The GUI that owns this app logic class
 		bool          m_rdr_pending; // Render call batching, true if 'RenderNeeded' has been called
 
-		static Logger::OutputCB LoggerOutput()
+		static log::Logger::OutputCB LoggerOutput()
 		{
 			return log::ToFile(FmtS("%s.log", Derived::AppName()));
 		}

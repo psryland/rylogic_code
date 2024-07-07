@@ -494,7 +494,7 @@ namespace pr::common
 			PR_EXPECT(reader.RemainingBits() == 7);
 			PR_EXPECT(reader.ReadBits<int>(7) == 0x63);
 			PR_EXPECT(reader.RemainingBits() == 0);
-			PR_THROWS([&] { reader.ReadBit(); }, std::out_of_range);
+			PR_THROWS(reader.ReadBit(), std::out_of_range);
 		}
 		{
 			uint8_t data[] = { 0x21, 0x43, 0x65, 0x87, 0xA9, 0xCB, 0xED, 0x0F, 0x10, 0x32 };

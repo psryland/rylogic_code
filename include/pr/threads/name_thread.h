@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <string_view>
 #include <windows.h>
 
 namespace pr::threads
@@ -13,10 +14,11 @@ namespace pr::threads
 	}
 
 	// Sets a name for the current thread
-	inline void SetCurrentThreadName(char const* name)
+	inline void SetCurrentThreadName(std::string_view name)
 	{
 		// Save the name to the thread local storage
-		strncpy(&thread_name[0], name, _countof(thread_name) - 1);
+		memset(&thread_name[0], 0, sizeof(thread_name));
+		memcpy(&thread_name[0], name.data(), std::min(name.size(), sizeof(thread_name) - 1));
 		thread_name[_countof(thread_name)-1] = 0;
 
 		// Call 'SetThreadDescription'. 'SetThreadDescription' only exists on >= Win10
@@ -28,7 +30,7 @@ namespace pr::threads
 			if (set_thread_desc != nullptr)
 			{
 				wchar_t wname[32];
-				MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, name, -1, &wname[0], _countof(wname));
+				MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, &thread_name[0], -1, &wname[0], _countof(wname));
 				set_thread_desc(GetCurrentThread(), &wname[0]);
 			}
 			::FreeLibrary(kernal32);
@@ -60,5 +62,4 @@ namespace pr::threads
 		}
 		#endif
 	}
-
 }

@@ -1,3 +1,7 @@
+//**********************************
+// JSON DOM
+//  Copyright (c) Rylogic Ltd 2024
+//**********************************
 #pragma once
 #include <vector>
 #include <string>
