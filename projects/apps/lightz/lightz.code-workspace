@@ -1,0 +1,96 @@
+{
+	"folders": [
+		{
+			"name": "Lightz",
+			"path": "."
+		},
+		{
+			"name": "ESP",
+			"path": "E:/ESP",
+		}
+	],
+	"settings": {
+		"python.analysis.typeCheckingMode": "basic",
+		"terminal.integrated.defaultProfile.windows": "PowerShell",
+		"terminal.integrated.profiles.windows": {
+			"PowerShell-IDF": {
+				"path": "C:/Program Files/PowerShell/7/pwsh.exe",
+				"args": [
+					"-NoExit",
+					"-Command", "& { . \"${workspaceFolder:ESP}/frameworks/esp-idf-v5.2.2/export.ps1\"; Clear-Host; }",
+				]
+			},
+			"Cmd-IDF": {
+				"path": "C:/Windows/System32/cmd.exe",
+				"args": [
+					"/k",
+					"${workspaceFolder:ESP}/frameworks/esp-idf-v5.2.2/export.bat",
+				]
+			}
+		},
+		"files.associations": {
+			"*.jcfg": "python",
+			"string_view": "cpp",
+			"*.tcc": "cpp",
+			"array": "cpp",
+			"deque": "cpp",
+			"list": "cpp",
+			"string": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"initializer_list": "cpp",
+			"regex": "cpp",
+			"system_error": "cpp",
+			"variant": "cpp",
+			"optional": "cpp",
+			"atomic": "cpp",
+			"bitset": "cpp",
+			"cctype": "cpp",
+			"chrono": "cpp",
+			"clocale": "cpp",
+			"cmath": "cpp",
+			"codecvt": "cpp",
+			"condition_variable": "cpp",
+			"cstdarg": "cpp",
+			"cstddef": "cpp",
+			"cstdint": "cpp",
+			"cstdio": "cpp",
+			"cstdlib": "cpp",
+			"cstring": "cpp",
+			"ctime": "cpp",
+			"cwchar": "cpp",
+			"cwctype": "cpp",
+			"exception": "cpp",
+			"algorithm": "cpp",
+			"functional": "cpp",
+			"iterator": "cpp",
+			"map": "cpp",
+			"memory": "cpp",
+			"memory_resource": "cpp",
+			"numeric": "cpp",
+			"random": "cpp",
+			"ratio": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"fstream": "cpp",
+			"iomanip": "cpp",
+			"iosfwd": "cpp",
+			"istream": "cpp",
+			"limits": "cpp",
+			"mutex": "cpp",
+			"new": "cpp",
+			"ostream": "cpp",
+			"sstream": "cpp",
+			"stdexcept": "cpp",
+			"streambuf": "cpp",
+			"thread": "cpp",
+			"cinttypes": "cpp",
+			"typeinfo": "cpp",
+			"span": "cpp",
+			"freertos.h": "c",
+			"portable.h": "c"
+		},
+	}
+}
