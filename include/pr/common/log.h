@@ -2,13 +2,7 @@
 // Log
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
-// Notes:
-//  If you create a log function like this:
-//     inline Logger& Log() { static Logger s_log; return s_log; }
-//  Be careful about async access. Multiple threads calling the Log() function
-//  is a race condition, you need to instantiate the static s_log object first.
 #pragma once
-
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -26,188 +20,192 @@
 #include <cstdint>
 #include <concurrent_queue.h>
 #include <libloaderapi.h>
+#include <debugapi.h>
 
-namespace pr
+// Notes:
+//  If you create a log function like this:
+//     inline Logger& Log() { static Logger s_log; return s_log; }
+//  be careful about async access. Multiple threads calling the Log() function
+//  is a race condition, you need to instantiate the static s_log object first.
+
+namespace pr::log
 {
-	namespace log
+	enum class ELevel :uint8_t
 	{
-		enum class ELevel :uint8_t
+		Debug,
+		Info,
+		Warn,
+		Error,
+	};
+	constexpr char const* ToString(ELevel level)
+	{
+		switch (level)
 		{
-			Debug,
-			Info,
-			Warn,
-			Error,
-		};
-		constexpr char const* ToString(ELevel level)
-		{
-			switch (level)
-			{
-				case ELevel::Debug: return "Debug";
-				case ELevel::Info:  return "Info";
-				case ELevel::Warn:  return "Warn";
-				case ELevel::Error: return "Error";
-				default: return "Unknown";
-			}
+			case ELevel::Debug: return "Debug";
+			case ELevel::Info:  return "Info";
+			case ELevel::Warn:  return "Warn";
+			case ELevel::Error: return "Error";
+			default: return "Unknown";
 		}
-
-		// Event types
-		enum class EEventType :uint8_t
-		{
-			Normal,
-			Fence,
-			TerminationSentinel,
-		};
-
-		// Timer
-		using RTC = std::chrono::high_resolution_clock;
-		inline std::string ToString(RTC::duration ts)
-		{
-			using namespace std::chrono;
-			auto hours = duration_cast<std::chrono::hours>(ts); ts -= hours;
-			auto mins = duration_cast<minutes>(ts); ts -= mins;
-			auto secs = duration_cast<seconds>(ts); ts -= secs;
-			auto ms = duration_cast<milliseconds>(ts);
-			return std::format("{:02}:{:02}:{:02}:{:03}", hours.count(), mins.count(), secs.count(), ms.count());
-		}
-
-		// An individual log event
-		struct Event
-		{
-			using path = std::filesystem::path;
-
-			ELevel           m_level;       // Debug, Info, Warn, Error
-			EEventType       m_event_type;  // Normal, Fence, TerminationSentinel
-			uint16_t         m_event_data;  // Data specific to the event type
-			path             m_file;        // Source file
-			int              m_line;        // Line number in the source file
-			int              m_occurrences; // When event type != normal, this is the fence count
-			RTC::duration    m_timestamp;   // Time since logging started
-			std::string_view m_context;     // Context
-			std::string      m_msg;         // Message
-
-			Event()
-				: m_level()
-				, m_event_type()
-				, m_event_data()
-				, m_file()
-				, m_line()
-				, m_occurrences()
-				, m_timestamp()
-				, m_context()
-				, m_msg()
-			{}
-			Event(ELevel level, RTC::time_point tzero, std::string_view ctx, std::string_view msg, path const& file, int line)
-				: m_level(level)
-				, m_event_type()
-				, m_event_data()
-				, m_file(file)
-				, m_line(line)
-				, m_occurrences(1)
-				, m_timestamp(RTC::now() - tzero)
-				, m_context(ctx)
-				, m_msg(msg)
-			{}
-			Event(ELevel level, RTC::time_point tzero, std::string_view ctx, std::string&& msg, path const& file, int line)
-				: m_level(level)
-				, m_event_type()
-				, m_event_data()
-				, m_file(file)
-				, m_line(line)
-				, m_occurrences(1)
-				, m_timestamp(RTC::now() - tzero)
-				, m_context(ctx)
-				, m_msg(std::move(msg))
-			{}
-			explicit Event(EEventType event_type)
-				: Event()
-			{
-				static std::atomic_int s_fence = 0;
-				m_event_type = event_type;
-				m_event_data = static_cast<decltype(m_event_data)>(++s_fence);
-			}
-
-			// Compare two event for equality
-			static bool Same(Event const& lhs, Event const& rhs)
-			{
-				return
-					lhs.m_level == rhs.m_level &&
-					lhs.m_context == rhs.m_context &&
-					lhs.m_file == rhs.m_file &&
-					lhs.m_line == rhs.m_line &&
-					lhs.m_msg == rhs.m_msg &&
-					lhs.m_event_type == EEventType::Normal &&
-					rhs.m_event_type == EEventType::Normal;
-			}
-
-			// Write 'ev' as a string to 'stream'
-			friend std::ostream& operator << (std::ostream& stream, Event const& ev)
-			{
-				char const* delim = "";
-				if (!ev.m_file.empty()) { stream << ev.m_file; delim = " "; }
-				if (ev.m_line != -1) { stream << "(" << ev.m_line << "):"; delim = " "; }
-				stream << std::format("{}{:8}|{}|{}|{}\n", delim, ev.m_context, ToString(ev.m_level), ToString(ev.m_timestamp), ev.m_msg);
-				return stream;
-			}
-			friend std::string ToString(Event const& ev)
-			{
-				std::stringstream s;
-				s << ev;
-				return s.str();
-			}
-		};
-
-		// Write log output to stdout
-		struct ToStdout
-		{
-			ELevel m_level = ELevel::Debug;
-			void operator ()(Event const& ev)
-			{
-				if (ev.m_level < m_level) return;
-				std::cout << ev;
-			}
-		};
-
-		// Write log output to stderr
-		struct ToStderr
-		{
-			ELevel m_level = ELevel::Debug;
-			void operator ()(Event const& ev)
-			{
-				if (ev.m_level < m_level) return;
-				std::cerr << ev;
-			}
-		};
-
-		// Write log output to the debug output window
-		struct ToOutputDebugString
-		{
-			ELevel m_level = ELevel::Debug;
-			void operator ()(Event const& ev)
-			{
-				if (ev.m_level < m_level) return;
-				OutputDebugStringA(ToString(ev).c_str());
-			}
-		};
-
-		// Helper object for writing log output to a file
-		struct ToFile
-		{
-			std::filesystem::path m_filepath;
-			std::shared_ptr<std::ofstream> m_outf;
-
-			ToFile(std::filesystem::path const& filepath, std::ios_base::openmode mode = std::ios_base::out)
-				: m_filepath(filepath)
-				, m_outf(std::make_shared<std::ofstream>(filepath, mode))
-			{}
-			void operator ()(Event const& ev)
-			{
-				auto& fp = *m_outf;
-				fp.seekp(0, std::ios_base::end);
-				fp << ev;
-				fp.flush();
-			}
-		};
 	}
+
+	// Event types
+	enum class EEventType :uint8_t
+	{
+		Normal,
+		Fence,
+		TerminationSentinel,
+	};
+
+	// Timer
+	using RTC = std::chrono::high_resolution_clock;
+	inline std::string ToString(RTC::duration ts)
+	{
+		using namespace std::chrono;
+		auto hours = duration_cast<std::chrono::hours>(ts); ts -= hours;
+		auto mins = duration_cast<minutes>(ts); ts -= mins;
+		auto secs = duration_cast<seconds>(ts); ts -= secs;
+		auto ms = duration_cast<milliseconds>(ts);
+		return std::format("{:02}:{:02}:{:02}:{:03}", hours.count(), mins.count(), secs.count(), ms.count());
+	}
+
+	// An individual log event
+	struct Event
+	{
+		using path = std::filesystem::path;
+
+		ELevel           m_level;       // Debug, Info, Warn, Error
+		EEventType       m_event_type;  // Normal, Fence, TerminationSentinel
+		uint16_t         m_event_data;  // Data specific to the event type
+		path             m_file;        // Source file
+		int              m_line;        // Line number in the source file
+		int              m_occurrences; // When event type != normal, this is the fence count
+		RTC::duration    m_timestamp;   // Time since logging started
+		std::string_view m_context;     // Context
+		std::string      m_msg;         // Message
+
+		Event()
+			: m_level()
+			, m_event_type()
+			, m_event_data()
+			, m_file()
+			, m_line()
+			, m_occurrences()
+			, m_timestamp()
+			, m_context()
+			, m_msg()
+		{}
+		Event(ELevel level, RTC::time_point tzero, std::string_view ctx, std::string_view msg, path const& file, int line)
+			: m_level(level)
+			, m_event_type()
+			, m_event_data()
+			, m_file(file)
+			, m_line(line)
+			, m_occurrences(1)
+			, m_timestamp(RTC::now() - tzero)
+			, m_context(ctx)
+			, m_msg(msg)
+		{}
+		Event(ELevel level, RTC::time_point tzero, std::string_view ctx, std::string&& msg, path const& file, int line)
+			: m_level(level)
+			, m_event_type()
+			, m_event_data()
+			, m_file(file)
+			, m_line(line)
+			, m_occurrences(1)
+			, m_timestamp(RTC::now() - tzero)
+			, m_context(ctx)
+			, m_msg(std::move(msg))
+		{}
+		explicit Event(EEventType event_type)
+			: Event()
+		{
+			static std::atomic_int s_fence = 0;
+			m_event_type = event_type;
+			m_event_data = static_cast<decltype(m_event_data)>(++s_fence);
+		}
+
+		// Compare two event for equality
+		static bool Same(Event const& lhs, Event const& rhs)
+		{
+			return
+				lhs.m_level == rhs.m_level &&
+				lhs.m_context == rhs.m_context &&
+				lhs.m_file == rhs.m_file &&
+				lhs.m_line == rhs.m_line &&
+				lhs.m_msg == rhs.m_msg &&
+				lhs.m_event_type == EEventType::Normal &&
+				rhs.m_event_type == EEventType::Normal;
+		}
+
+		// Write 'ev' as a string to 'stream'
+		friend std::ostream& operator << (std::ostream& stream, Event const& ev)
+		{
+			char const* delim = "";
+			if (!ev.m_file.empty()) { stream << ev.m_file; delim = " "; }
+			if (ev.m_line != -1) { stream << "(" << ev.m_line << "):"; delim = " "; }
+			stream << std::format("{}{:8}|{}|{}|{}\n", delim, ev.m_context, ToString(ev.m_level), ToString(ev.m_timestamp), ev.m_msg);
+			return stream;
+		}
+		friend std::string ToString(Event const& ev)
+		{
+			std::stringstream s;
+			s << ev;
+			return s.str();
+		}
+	};
+
+	// Write log output to stdout
+	struct ToStdout
+	{
+		ELevel m_level = ELevel::Debug;
+		void operator ()(Event const& ev)
+		{
+			if (ev.m_level < m_level) return;
+			std::cout << ev;
+		}
+	};
+
+	// Write log output to stderr
+	struct ToStderr
+	{
+		ELevel m_level = ELevel::Debug;
+		void operator ()(Event const& ev)
+		{
+			if (ev.m_level < m_level) return;
+			std::cerr << ev;
+		}
+	};
+
+	// Write log output to the debug output window
+	struct ToOutputDebugString
+	{
+		ELevel m_level = ELevel::Debug;
+		void operator ()(Event const& ev)
+		{
+			if (ev.m_level < m_level) return;
+			OutputDebugStringA(ToString(ev).c_str());
+		}
+	};
+
+	// Helper object for writing log output to a file
+	struct ToFile
+	{
+		std::filesystem::path m_filepath;
+		std::shared_ptr<std::ofstream> m_outf;
+
+		ToFile(std::filesystem::path const& filepath, std::ios_base::openmode mode = std::ios_base::out)
+			: m_filepath(filepath)
+			, m_outf(std::make_shared<std::ofstream>(filepath, mode))
+		{}
+		void operator ()(Event const& ev)
+		{
+			auto& fp = *m_outf;
+			fp.seekp(0, std::ios_base::end);
+			fp << ev;
+			fp.flush();
+		}
+	};
 
 	// Provides logging support
 	struct Logger
@@ -332,8 +330,12 @@ namespace pr
 				// Call 'SetThreadDescription'. 'SetThreadDescription' only exists on >= Win10
 				if (auto kernal32 = ::LoadLibraryW(L"kernel32.dll"))
 				{
+					using GetCurrentThreadFn = HANDLE(__stdcall*)();
 					using SetThreadDescriptionFn = HRESULT(__stdcall*)(HANDLE hThread, PCWSTR lpThreadDescription);
-					if (auto SetThreadDescription = reinterpret_cast<SetThreadDescriptionFn>(GetProcAddress(kernal32, "SetThreadDescription")))
+
+					auto SetThreadDescription = reinterpret_cast<SetThreadDescriptionFn>(GetProcAddress(kernal32, "SetThreadDescription"));
+					auto GetCurrentThread = reinterpret_cast<GetCurrentThreadFn>(GetProcAddress(kernal32, "GetCurrentThread"));
+					if (SetThreadDescription && GetCurrentThread)
 						SetThreadDescription(GetCurrentThread(), &name[0]);
 
 					::FreeLibrary(kernal32);
@@ -461,7 +463,7 @@ namespace pr
 	};
 }
 
-#if PR_LOGGING
+#if PR_LOGGING == 1
 	#define PR_LOG(logger, level, message)          do { logger.Write(pr::log::ELevel::level,         (message), __FILE__, __LINE__); } while (0)
 	#define PR_LOGE(logger, level, except, message) do { logger.Write(pr::log::ELevel::level, except, (message), __FILE__, __LINE__); } while (0)
 #else

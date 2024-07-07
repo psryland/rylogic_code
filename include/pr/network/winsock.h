@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <ws2tcpip.h>
 #include <winsock2.h>
+
 #pragma comment(lib, "ws2_32.lib")
 
 namespace pr::network
@@ -39,16 +40,16 @@ namespace pr::network
 	struct Socket
 	{
 		SOCKET m_socket;
+
 		Socket(int af, int type, int protocol)
 			:m_socket(::socket(af, type, protocol))
 		{}
-		Socket(Socket const&) = delete;
 		Socket(Socket&& rhs) noexcept
 			:m_socket(rhs.m_socket)
 		{
 			rhs.m_socket = INVALID_SOCKET;
 		}
-		Socket& operator =(Socket const&) = delete;
+		Socket(Socket const&) = delete;
 		Socket& operator =(Socket&& rhs) noexcept
 		{
 			if (this != &rhs)
@@ -56,6 +57,7 @@ namespace pr::network
 
 			return *this;
 		}
+		Socket& operator = (Socket const&) = delete;
 		~Socket()
 		{
 			if (m_socket != INVALID_SOCKET)
@@ -197,6 +199,7 @@ namespace pr::network
 		struct AddrIter
 		{
 			ADDRINFOA* m_ptr;
+
 			AddrIter()
 				:m_ptr()
 			{}
@@ -280,8 +283,7 @@ namespace pr::network
 	// Convert an ip and port to a socket address
 	inline SOCKADDR_IN GetAddress(std::string_view ip, uint16_t port)
 	{
-		char buf[32] = {};
-		return GetAddress(ip, _itoa(port, buf, 10));
+		return GetAddress(ip, std::to_string(port));
 	}
 
 	// Get the address bound to 'socket'. This can be used when 'connect' is called without

@@ -4,19 +4,20 @@
 
 - There is a 'RGB' solder bridge you need to connect on the board to enable the RGB LED
 - The built-in RGB LED is actually on pin 47, not 48. Don't use the RGB_BUILTIN macro
-
 - The JTAG port on pins 39-42 is not physically connected. To enable it you need to burn an "E-Fuse" which permenantly disables the USB JTAG
-
 - ESP32 support was added to OpenOCD around 2019
-
 - You need to manually install the "E:\ESP\tools\idf-driver\idf-driver-esp32-usb-jtag-2021-07-15\USB_JTAG_debug_unit.inf" driver. The install process doesn't seem to work. When you do, you can connect with openocd, using the config:
-```
-source [find interface/esp_usb_jtag.cfg]
-transport select "jtag"
-adapter speed 40000
-source [find target/esp32s3.cfg]
-```
-Although, you don't need to use openocd manually. The platformio extension has openocd as part of it.
+  ```
+  source [find interface/esp_usb_jtag.cfg]
+  transport select "jtag"
+  adapter speed 40000
+  source [find target/esp32s3.cfg]
+  ```
+- You can run openocd using:
+  ```
+  openocd -c "set ESP_RTOS none" -f board/esp32s3-builtin.cfg
+  ```
+  Apparently, the `-c "set ESP_RTOS none"` part is needed to handle FreeRTOS tasks properly...
 
 - Plug the USB cable into the 'USB' port, not the 'COM' port for JTAG debugging
 

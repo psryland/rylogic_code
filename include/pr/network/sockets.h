@@ -19,19 +19,18 @@ namespace pr::network
 	// Return the maximum packet size supported by the network
 	inline size_t GetMaxPacketSize(SOCKET socket)
 	{
-		unsigned int max_packet_size = {};
-		int opt_len = sizeof(max_packet_size);
-		Check(::getsockopt(socket, SOL_SOCKET, SO_MAX_MSG_SIZE, (char*)&max_packet_size, &opt_len), "Failed to get socket options");
-		return max_packet_size;
+		union { unsigned int max_packet_size; char first_byte; } u = {}; int len = sizeof(u);
+		Check(::getsockopt(socket, SOL_SOCKET, SO_MAX_MSG_SIZE, &u.first_byte, &len), "Failed to get socket options");
+		return u.max_packet_size;
 	}
 
 	// Convert a time in milliseconds to a timeval
 	inline timeval TimeVal(long timeout_ms)
 	{
-		timeval tv;
-		tv.tv_sec  = timeout_ms/1000;
-		tv.tv_usec = (timeout_ms - tv.tv_sec*1000)*1000;
-		return tv;
+		return timeval {
+			.tv_sec  = timeout_ms/1000,
+			.tv_usec = 0,
+		};
 	}
 
 	// Block up to 'timeout_ms' waiting for 'socket' to be available for sending
@@ -41,7 +40,7 @@ namespace pr::network
 		fd_set set = {};
 		FD_SET(socket, &set);
 		auto timeout = TimeVal(timeout_ms);
-		auto result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
+		auto result = ::select(0, 0, &set, 0, timeout_ms != ~0 ? &timeout : nullptr);
 		if (result == 0)
 			return false; // timeout, connection still fine but no room to send
 
@@ -56,7 +55,7 @@ namespace pr::network
 		fd_set set = {0};
 		FD_SET(socket, &set);
 		auto timeout = TimeVal(timeout_ms);
-		auto result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
+		auto result = ::select(0, &set, 0, 0, timeout_ms != ~0 ? &timeout : nullptr);
 		if (result == 0)
 			return false; // timeout, no more bytes available, connection still fine
 
@@ -78,8 +77,8 @@ namespace pr::network
 		auto sent = addr
 			? ::sendto(socket, buf, len, 0, &reinterpret_cast<sockaddr const&>(*addr), sizeof(*addr))
 			: ::send(socket, buf, len, 0);
-		Check(sent != SOCKET_ERROR && sent == len, "Send datagram failed");
 
+		Check(sent != SOCKET_ERROR && sent == len, "Send datagram failed");
 		return true;
 	}
 	
@@ -96,11 +95,11 @@ namespace pr::network
 			if (!SelectToSend(socket, timeout_ms))
 				return false;
 
-			int sent = addr
+			auto sent = addr
 				? ::sendto(socket, buf, len, 0, &reinterpret_cast<sockaddr const&>(*addr), sizeof(*addr))
 				: ::send(socket, buf, len, 0);
-			Check(sent == 0 || sent != SOCKET_ERROR);
 
+			Check(sent == 0 || sent != SOCKET_ERROR);
 			bytes_sent += sent;
 			buf += sent;
 			len -= sent;
@@ -124,8 +123,8 @@ namespace pr::network
 		int read = addr
 			? ::recvfrom(socket, buf, len, 0, &reinterpret_cast<sockaddr&>(*addr), &addrlen)
 			: ::recv(socket, buf, len, 0);
-		Check(read != SOCKET_ERROR && read != 0, "Receive datagram failed");
 
+		Check(read != SOCKET_ERROR && read != 0, "Receive datagram failed");
 		bytes_read = read;
 		return true;
 	}
@@ -150,6 +149,7 @@ namespace pr::network
 			int read = addr
 				? ::recvfrom(socket, buf, len, 0, &reinterpret_cast<sockaddr&>(*addr), &addrlen)
 				: ::recv(socket, buf, len, 0);
+
 			Check(read == 0 || read != SOCKET_ERROR);
 			
 			// Reading zero bytes indicates the socket has been closed gracefully

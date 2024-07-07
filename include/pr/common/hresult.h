@@ -2,9 +2,7 @@
 // HRESULT error codes
 //  Copyright (c) Rylogic Ltd 2011
 //********************************
-
 #pragma once
-
 #include <vector>
 #include <string>
 #include <sstream>
@@ -38,15 +36,15 @@
 	#include <dxgitype.h>
 #endif
 
-// Map HRESULT to an enum type
-enum class HResult :long long
-{
-	Ok   = HRESULT(S_OK),
-	Fail = HRESULT(E_FAIL),
-};
-
 namespace pr
 {
+	// Map HRESULT to an enum type
+	enum class HResult :long long
+	{
+		Ok   = HRESULT(S_OK),
+		Fail = HRESULT(E_FAIL),
+	};
+
 	// Convert an HRESULT into an error message string
 	inline std::string HrMsg(HRESULT result)
 	{
