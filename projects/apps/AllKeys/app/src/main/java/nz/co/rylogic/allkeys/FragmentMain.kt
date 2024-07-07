@@ -153,8 +153,9 @@ class FragmentMain : Fragment(), PropertyChangeListener, SharedPreferences.OnSha
 			}
 			Settings.BEATS_PER_BAR ->
 			{
-				updateBeatIndicators(0)
 				soundsOff()
+				updateBeatIndicators(0)
+				mUpdater.reset()
 			}
 			Settings.SELECTED_KEYS ->
 			{
@@ -321,7 +322,12 @@ class FragmentMain : Fragment(), PropertyChangeListener, SharedPreferences.OnSha
 			// Sequence the notes
 			if (step.key == 'c')
 			{
-				voice = if (Random.nextDouble() < changeChordWeight * step.duration) mUpdater.voice else voice
+				// Change the voice sometimes
+				if (Random.nextDouble() < changeChordWeight * step.duration)
+					voice = mUpdater.voice
+
+				Log.d("Voice", "Selected voice ${voice.name}")
+
 				for (note in voice.lh.union(voice.rh))
 				{
 					FluidEvent().note(CHANNEL_COMPING.value, note, (127 * velocity).toInt().toShort(), duration.toInt()).use {
@@ -374,7 +380,8 @@ class FragmentMain : Fragment(), PropertyChangeListener, SharedPreferences.OnSha
 			// Sequence the notes
 			if (key != null)
 			{
-				FluidEvent().note(CHANNEL_ROOT_NOTES.value, key, (127*volume).toInt().toShort(), duration.toInt()).use {
+				val note = mapToRange(key, listOf(0), 28..96).first()
+				FluidEvent().note(CHANNEL_ROOT_NOTES.value, note, (127*volume).toInt().toShort(), duration.toInt()).use {
 					mFluidSequencer.queue(it, time.toLong(), true)
 				}
 			}

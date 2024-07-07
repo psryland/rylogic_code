@@ -11,14 +11,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStreamReader
 
-// Split strings and remove empty values
-fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String>
-{
-	return this
-		.split(*delimiters)
-		.filter { it.isNotEmpty() }
-}
-
 // Set the summary for a MultiSelectListPreference
 fun MultiSelectListPreference.setSummaryFrom(values:HashSet<String>, sep:String)
 {
@@ -78,4 +70,15 @@ fun Context.readAssetFileToString(fileName: String): String
 	val inputStream = this.assets.open(fileName)
 	val bufferedReader = BufferedReader(InputStreamReader(inputStream))
 	return bufferedReader.use { it.readText() }
+}
+
+// Map a list of notes to a range, keeping the relative intervals
+// 'notes' are a list of chromatic intervals from the root note
+fun mapToRange(root: Short, notes: List<Int>, range: IntRange): List<Short>
+{
+	var shift = 0
+	val n = root + notes.first()
+	while (n + shift < range.first) { shift += 12 }
+	while (n + shift >= range.last) { shift -= 12 }
+	return notes.map { (root + it + shift).toShort() }
 }

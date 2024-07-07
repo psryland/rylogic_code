@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.preference.PreferenceManager
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -14,6 +15,7 @@ import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.lang.reflect.Type
 import kotlin.math.absoluteValue
+import kotlin.system.exitProcess
 
 class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeListener
 {
@@ -40,6 +42,7 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 		const val THEME = "theme"
 	}
 
+	private val mContext = context
 	private val mSettings: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 	private val mKeyGroups = context.resources.getStringArray(R.array.key_groups)
 	private val mGenres: MutableList<Genre> = mutableListOf()
@@ -47,10 +50,9 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 	init
 	{
 		mSettings.registerOnSharedPreferenceChangeListener(this)
-		val genreDir = "genres"
 
 		// Ensure that all embedded 'genres' are copied to the app's 'genres' directory
-		val genresDir = File(context.filesDir, genreDir)
+		val genresDir = genreDirectory
 		if (!genresDir.exists())
 		{
 			genresDir.mkdirs()
@@ -59,9 +61,9 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 		{
 			throw Exception("Genres directory is not a directory")
 		}
-		for (file in context.assets.list(genreDir) ?: arrayOf())
+		for (file in context.assets.list(genresDir.name) ?: arrayOf())
 		{
-			context.localFile("$genreDir/$file")
+			context.localFile("${genresDir.name}/${file}")
 		}
 
 		// Create a json parser
@@ -149,11 +151,11 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 
 	// Map from key to MIDI root notes
 	val keyRootNotes: Map<String, Short> = mapOf(
+		"E" to 28, "F♭" to 28, "F" to 29, "E♯" to 29, "F♯" to 30, "G♭" to 30,
 		"G" to 31, "G♯" to 32, "A♭" to 32, "A" to 33, "A♯" to 34, "B♭" to 34, "B" to 35, "C♭" to 35,
-		"C" to 36, "B♯" to 36, "C♯" to 37, "D♭" to 37, "D" to 38, "D♯" to 39, "E♭" to 39, "E" to 40,
-		"F♭" to 40, "F" to 41, "E♯" to 41, "F♯" to 42, "G♭" to 42,
+		"C" to 36, "B♯" to 36, "C♯" to 37, "D♭" to 37, "D" to 38, "D♯" to 39, "E♭" to 39,
 	)
-	fun midiKeyToNote(key: Short, flats: Boolean = true): String
+	fun midiKeyToNote(key: Short, flats: Boolean = true, includeOctave: Boolean = true): String
 	{
 		// C-1 = 0, C4 = 60
 		val note = key % 12
@@ -161,12 +163,16 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 		val noteNamesSharps = arrayOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")
 		val noteNamesFlats = arrayOf("C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B")
 		val noteName = if (flats) noteNamesFlats[note] else noteNamesSharps[note]
-		return "${noteName}${octave}"
+		return if (includeOctave) "${noteName}${octave}" else noteName
 	}
 
 	// Return the settings field names
 	val fields: Set<String>
 		get() = mSettings.all.keys
+
+	// The directory where genre files are stored
+	val genreDirectory: File
+		get() = File(mContext.filesDir, "genres")
 
 	// Return all available genre names
 	val genresAll: List<String>
@@ -312,7 +318,7 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 	var barsPerChord:Int
 		get()
 		{
-			return mSettings.getInt(BARS_PER_CHORD, 1)
+			return mSettings.getInt(BARS_PER_CHORD, 2)
 		}
 		set(value)
 		{
@@ -463,6 +469,25 @@ data class Genre(
 				throw Exception("Empty scale in $name.scales[${scale.key}]")
 			if (scale.value.any { it < 0 || it > 11 })
 				throw Exception("Invalid scale degree in $name.scale[${scale.key}]")
+		}
+		for (chord in chords)
+		{
+			@Suppress("SENSELESS_COMPARISON")
+			if (chord.value == null)
+				throw Exception("Empty chord in $name.chords[${chord.key}]")
+			for (scale in chord.value.scales)
+			{
+				val parts = scale.split(":")
+				if (parts.size != 2)
+					throw Exception("Invalid scale name in $name.chords[${chord.key}]")
+				if (!scales.containsKey(parts[0]))
+					throw Exception("Unknown scale name in $name.chords[${chord.key}]")
+			}
+			for (voicing in chord.value.voicings)
+			{
+				if (voicing.name.isEmpty())
+					throw Exception("Empty name in $name.chords[${chord.key}].voicings")
+			}
 		}
 		for (walk in walks)
 		{
