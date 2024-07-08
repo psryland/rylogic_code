@@ -1,26 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#5941B7</color>
-    <color name="primary_variant">#6549D4</color>
-    <color name="color_on_primary">#FFF</color>
+    <color name="primary">#FF5941B7</color>
+    <color name="primary_variant">#FFDACDFA</color>
 
     <color name="secondary">#FF018786</color>
-    <color name="secondary_variant">#FF3700B3</color>
-    <color name="color_on_secondary">#FFF</color>
+    <color name="secondary_variant">#015454</color>
 
-    <color name="text_color_primary">#FFF</color>
     <color name="text_color">#FFF</color>
-    <color name="text_color_on_surface">#FFF</color>
-
-    <color name="panel_background">#222</color>
-    <color name="metronome_beat1">#DACDFA</color>
-    <color name="metronome_beat0">#2C244E</color>
+    <color name="text_color_primary">#FFF</color>
 
     <color name="chord_text">#CCC</color>
     <color name="chord_next_text">#888</color>
-    <color name="button_text">#7E67CC</color>
+    <color name="panel_background">#222</color>
+    <color name="menu_button_background">#FF4f378b</color>
+    <color name="status_bar_background">#FF6549d4</color>
+    <color name="main_buttons">#FF7e67cc</color>
+    <color name="beat0">#FFdacdfa</color>
+    <color name="beat1">#FF2c244e</color>
 
     <color name="ic_launcher_background">#FFF</color>
-<!--    <color name="ic_launcher_background">#595762</color>-->
-
 </resources>

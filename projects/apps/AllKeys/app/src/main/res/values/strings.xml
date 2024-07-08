@@ -38,4 +38,25 @@
     <string name="playback">Playback</string>
     <string name="choose_genre">Choose Genre</string>
     <string name="credits_title">Credits</string>
+    <string name="accesssibility_beats_per_bar">Adjust the number of beats per bar</string>
+    <string name="accesssibility_bars_per_chord">Adjust the number of bars per chord</string>
+    <string name="accessibility_choose_keys">Choose which keys to generate chords for</string>
+    <string name="accessibility_choose_chords">Choose which chords to generate</string>
+    <string name="accessibility_next_chord_mode">Select when the next chord hint is displayed</string>
+    <string name="accessibility_metronome_volume">Set the volume of the Metronome</string>
+    <string name="accessibility_metronome_accent">Set the sound for beat one of the metronome</string>
+    <string name="accessibility_metronome_click">Set the sound for the other beats of the metronome</string>
+    <string name="accessibility_root_note_volume">Choose the volume for the root note playback</string>
+    <string name="accessibility_root_note_instrument">Select the instrument sound to play root notes</string>
+    <string name="accessibility_accompaniment_volume">Set the volume of the accompaniment</string>
+    <string name="accessibility_theme">Choose the app theme</string>
+    <string name="accessibility_credits">Display the credits for All Keys</string>
+    <string name="accessibility_tempo">Set the tempo for playback</string>
+    <string name="accessibility_choose_genre">Select the playback genre</string>
+    <string name="accessibility_metronome_sounds">Enable or disable the metronome</string>
+    <string name="accessibility_play_root_notes">Enable or disable root notes</string>
+    <string name="accessibility_root_note_walking">Enable or disable the walking bass line</string>
+    <string name="accessibility_play_accompaniment">Enable or disable accompaniment</string>
+    <string name="accessibility_metronome_indicator">Display of the current beat within the bar</string>
+    <string name="accessibility_chord_panel">Displays the current key and chord</string>
 </resources>

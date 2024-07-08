@@ -22,60 +22,63 @@
         android:min="40"
         android:max="240"
         android:progress="120"
+        android:thumb="@drawable/thumb"
+        android:contentDescription="@string/accessibility_tempo"
         />
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:contentDescription="@string/accessibility_metronome_indicator"
         >
         <GridLayout
             android:id="@+id/beat0"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat1"
+            android:background="@color/beat0"
             />
         <GridLayout
             android:id="@+id/beat1"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
         <GridLayout
             android:id="@+id/beat2"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
         <GridLayout
             android:id="@+id/beat3"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
         <GridLayout
             android:id="@+id/beat4"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
         <GridLayout
             android:id="@+id/beat5"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
         <GridLayout
             android:id="@+id/beat6"
             android:layout_width="@dimen/metronome_box_size"
             android:layout_height="@dimen/metronome_box_size"
             android:layout_marginHorizontal="@dimen/metronome_box_spacing"
-            android:background="@color/metronome_beat0"
+            android:background="@color/beat1"
             />
     </LinearLayout>
 </LinearLayout>

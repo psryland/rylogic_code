@@ -2,23 +2,21 @@
 <resources>
     <color name="primary">#FFDACDFA</color>
     <color name="primary_variant">#FF6549D4</color>
-    <color name="color_on_primary">#000</color>
 
     <color name="secondary">#FF018786</color>
-    <color name="secondary_variant">#FF3700B3</color>
-    <color name="color_on_secondary">#000</color>
+    <color name="secondary_variant">#015454</color>
 
-    <color name="text_color_primary">#000</color>
     <color name="text_color">#000</color>
-    <color name="text_color_on_surface">#000</color>
-
-    <color name="panel_background">#EEE</color>
-    <color name="metronome_beat1">#FF4732AD</color>
-    <color name="metronome_beat0">#FFDACDFA</color>
+    <color name="text_color_primary">#000</color>
 
     <color name="chord_text">#000</color>
     <color name="chord_next_text">#888</color>
-    <color name="button_text">#FF6549D4</color>
+    <color name="panel_background">#EEE</color>
+    <color name="menu_button_background">#FFeaddff</color>
+    <color name="status_bar_background">#FF6549d4</color>
+    <color name="main_buttons">#FF6143d3</color>
+    <color name="beat0">#FF4732ad</color>
+    <color name="beat1">#FFdacdfa</color>
 
     <color name="ic_launcher_background">#FFF</color>
- </resources>
+</resources>
