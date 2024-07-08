@@ -33,6 +33,7 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\..\..\build\props\tools.props" />
   <Import Project="..\..\..\build\props\app.props" />
 
   <!-- Build options -->

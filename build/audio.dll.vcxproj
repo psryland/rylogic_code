@@ -34,6 +34,7 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="props\tools.props" />
 	<Import Project="props\dll.props" />
 
 	<!-- Build options -->

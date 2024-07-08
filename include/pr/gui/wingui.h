@@ -111,7 +111,7 @@ Example Use:
 #pragma comment(lib, "shlwapi.lib")
 
 // Required for thunking
-#include <atlstdthunk.h>
+#include <atlthunk.h>
 #pragma comment(lib, "atls.lib")
 
 // Disable warnings
@@ -159,25 +159,25 @@ namespace pr
 		// The common control classes
 		enum class ECommonControl
 		{
-			None            = 0,
-			ListViewClasses = ICC_LISTVIEW_CLASSES   , // listview, header
-			TreeViewClasses = ICC_TREEVIEW_CLASSES   , // treeview, tooltips
-			BarClasses      = ICC_BAR_CLASSES        , // toolbar, statusbar, trackbar, tooltips
-			TabClasses      = ICC_TAB_CLASSES        , // tab, tooltips
-			UpDown          = ICC_UPDOWN_CLASS       , // updown
-			Progress        = ICC_PROGRESS_CLASS     , // progress
-			Hotkey          = ICC_HOTKEY_CLASS       , // hotkey
-			Animate         = ICC_ANIMATE_CLASS      , // animate
-			Win95Classes    = ICC_WIN95_CLASSES      , //
-			DateClasses     = ICC_DATE_CLASSES       , // month picker, date picker, time picker, updown
-			ComboEx         = ICC_USEREX_CLASSES     , // comboex
-			Rebar           = ICC_COOL_CLASSES       , // rebar (coolbar) control
-			Internet        = ICC_INTERNET_CLASSES   , //
-			PageScroller    = ICC_PAGESCROLLER_CLASS , // page scroller
-			NativeFontCtrl  = ICC_NATIVEFNTCTL_CLASS , // native font control
-			StandardClasses = ICC_STANDARD_CLASSES   ,
-			LinkClass       = ICC_LINK_CLASS         ,
-			All             = ~None,
+			None = 0,
+			ListViewClasses = ICC_LISTVIEW_CLASSES, // listview, header
+			TreeViewClasses = ICC_TREEVIEW_CLASSES, // treeview, tooltips
+			BarClasses = ICC_BAR_CLASSES, // toolbar, statusbar, trackbar, tooltips
+			TabClasses = ICC_TAB_CLASSES, // tab, tooltips
+			UpDown = ICC_UPDOWN_CLASS, // updown
+			Progress = ICC_PROGRESS_CLASS, // progress
+			Hotkey = ICC_HOTKEY_CLASS, // hotkey
+			Animate = ICC_ANIMATE_CLASS, // animate
+			Win95Classes = ICC_WIN95_CLASSES, //
+			DateClasses = ICC_DATE_CLASSES, // month picker, date picker, time picker, updown
+			ComboEx = ICC_USEREX_CLASSES, // comboex
+			Rebar = ICC_COOL_CLASSES, // rebar (coolbar) control
+			Internet = ICC_INTERNET_CLASSES, //
+			PageScroller = ICC_PAGESCROLLER_CLASS, // page scroller
+			NativeFontCtrl = ICC_NATIVEFNTCTL_CLASS, // native font control
+			StandardClasses = ICC_STANDARD_CLASSES,
+			LinkClass = ICC_LINK_CLASS,
+			All = ~None,
 			allow_bitops = 0,
 		};
 
@@ -194,50 +194,50 @@ namespace pr
 		// Auto size anchors
 		enum class EAnchor
 		{
-			None            = 0,
-			Left            = 1 << 0,
-			Top             = 1 << 1,
-			Right           = 1 << 2,
-			Bottom          = 1 << 3,
-			TopLeft         = Left|Top,
-			TopRight        = Right|Top,
-			BottomLeft      = Left|Bottom,
-			BottomRight     = Right|Bottom,
-			LeftTopRight    = Left|Top|Right,
-			LeftBottomRight = Left|Bottom|Right,
-			LeftTopBottom   = Left|Top|Bottom,
-			RightTopBottom  = Right|Top|Bottom,
-			All             = Left|Top|Right|Bottom,
+			None = 0,
+			Left = 1 << 0,
+			Top = 1 << 1,
+			Right = 1 << 2,
+			Bottom = 1 << 3,
+			TopLeft = Left | Top,
+			TopRight = Right | Top,
+			BottomLeft = Left | Bottom,
+			BottomRight = Right | Bottom,
+			LeftTopRight = Left | Top | Right,
+			LeftBottomRight = Left | Bottom | Right,
+			LeftTopBottom = Left | Top | Bottom,
+			RightTopBottom = Right | Top | Bottom,
+			All = Left | Top | Right | Bottom,
 			allow_bitops = 0,
 		};
 
 		// Window docking
 		enum class EDock
 		{
-			None   = 0,
-			Fill   = 1,
-			Top    = 2,
+			None = 0,
+			Fill = 1,
+			Top = 2,
 			Bottom = 3,
-			Left   = 4,
-			Right  = 5
+			Left = 4,
+			Right = 5
 		};
 
 		// Dialog result
 		enum class EDialogResult
 		{
-			None     = 0,
-			Ok       = IDOK,
-			Cancel   = IDCANCEL,
-			Abort    = IDABORT,
-			Retry    = IDRETRY,
-			Ignore   = IDIGNORE,
-			Yes      = IDYES,
-			No       = IDNO,
-			Close    = IDCLOSE,
-			Help     = IDHELP,
+			None = 0,
+			Ok = IDOK,
+			Cancel = IDCANCEL,
+			Abort = IDABORT,
+			Retry = IDRETRY,
+			Ignore = IDIGNORE,
+			Yes = IDYES,
+			No = IDNO,
+			Close = IDCLOSE,
+			Help = IDHELP,
 			TryAgain = IDTRYAGAIN,
 			Continue = IDCONTINUE,
-			Timeout  = IDTIMEOUT,
+			Timeout = IDTIMEOUT,
 		};
 
 		// Window start position
@@ -251,56 +251,56 @@ namespace pr
 		// Set window position flags
 		enum class EWindowPos :UINT
 		{
-			None           = 0,
-			NoSize         = SWP_NOSIZE        ,
-			NoMove         = SWP_NOMOVE        ,
-			NoZorder       = SWP_NOZORDER      ,
-			NoRedraw       = SWP_NOREDRAW      ,
-			NoActivate     = SWP_NOACTIVATE    ,
-			FrameChanged   = SWP_FRAMECHANGED  ,
-			ShowWindow     = SWP_SHOWWINDOW    ,
-			HideWindow     = SWP_HIDEWINDOW    ,
-			NoCopyBits     = SWP_NOCOPYBITS    ,
-			NoOwnerZOrder  = SWP_NOOWNERZORDER ,
+			None = 0,
+			NoSize = SWP_NOSIZE,
+			NoMove = SWP_NOMOVE,
+			NoZorder = SWP_NOZORDER,
+			NoRedraw = SWP_NOREDRAW,
+			NoActivate = SWP_NOACTIVATE,
+			FrameChanged = SWP_FRAMECHANGED,
+			ShowWindow = SWP_SHOWWINDOW,
+			HideWindow = SWP_HIDEWINDOW,
+			NoCopyBits = SWP_NOCOPYBITS,
+			NoOwnerZOrder = SWP_NOOWNERZORDER,
 			NoSendChanging = SWP_NOSENDCHANGING,
-			DrawFrame      = SWP_DRAWFRAME     ,
-			NoReposition   = SWP_NOREPOSITION  ,
-			DeferErase     = SWP_DEFERERASE    ,
+			DrawFrame = SWP_DRAWFRAME,
+			NoReposition = SWP_NOREPOSITION,
+			DeferErase = SWP_DEFERERASE,
 			AsyncWindowpos = SWP_ASYNCWINDOWPOS,
-			NoClientSize   = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
-			NoClientMove   = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
-			StateChange    = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
+			NoClientSize = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
+			NoClientMove = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
+			StateChange = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
 			allow_bitops = 0,
 		};
 
 		// Control key state
 		enum class EModifierKey
 		{
-			None   = 0,
+			None = 0,
 			LShift = 1 << 0,
 			RShift = 1 << 1,
-			Shift  = LShift|RShift,
-			LCtrl  = 1 << 2,
-			RCtrl  = 1 << 3,
-			Ctrl   = LCtrl | RCtrl,
-			LAlt   = 1 << 4,
-			RAlt   = 1 << 5,
-			Alt    = LAlt | RAlt,
+			Shift = LShift | RShift,
+			LCtrl = 1 << 2,
+			RCtrl = 1 << 3,
+			Ctrl = LCtrl | RCtrl,
+			LAlt = 1 << 4,
+			RAlt = 1 << 5,
+			Alt = LAlt | RAlt,
 			allow_bitops = 0,
 		};
 
 		// Mouse key state, used in mouse down/up events
 		enum class EMouseKey
 		{
-			None     = 0,
-			Left     = MK_LBUTTON, // 0x0001
-			Right    = MK_RBUTTON, // 0x0002
-			Shift    = MK_SHIFT,   // 0x0004
-			Ctrl     = MK_CONTROL, // 0x0008
-			Middle   = MK_MBUTTON, // 0x0010
+			None = 0,
+			Left = MK_LBUTTON, // 0x0001
+			Right = MK_RBUTTON, // 0x0002
+			Shift = MK_SHIFT,   // 0x0004
+			Ctrl = MK_CONTROL, // 0x0008
+			Middle = MK_MBUTTON, // 0x0010
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
-			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
+			Alt = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
 			allow_bitops = 0,
 		};
 
@@ -331,7 +331,7 @@ namespace pr
 		{
 			if (!from) return std::string();
 			if (len == 0) len = strlen(from);
-			return std::string(from, from+len);
+			return std::string(from, from + len);
 		}
 		inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
 		{
@@ -341,7 +341,7 @@ namespace pr
 			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
 			return std::string(&buffer[0], &buffer[len]);
 		}
-		inline std::string Narrow(std::string const& from)  { return from; }
+		inline std::string Narrow(std::string const& from) { return from; }
 		inline std::string Narrow(std::wstring const& from) { return Narrow(from.c_str(), from.size()); }
 
 		// Widen
@@ -349,7 +349,7 @@ namespace pr
 		{
 			if (!from) return std::wstring();
 			if (len == 0) len = wcslen(from);
-			return std::wstring(from, from+len);
+			return std::wstring(from, from + len);
 		}
 		inline std::wstring Widen(char const* from, std::size_t len = 0)
 		{
@@ -360,7 +360,7 @@ namespace pr
 			return std::wstring(&buffer[0], &buffer[len]);
 		}
 		inline std::wstring Widen(std::wstring const& from) { return from; }
-		inline std::wstring Widen(std::string const& from)  { return Widen(from.c_str(), from.size()); }
+		inline std::wstring Widen(std::string const& from) { return Widen(from.c_str(), from.size()); }
 
 		// Template specialised versions of the win32 API functions
 		template <typename Char> struct Win32;
@@ -411,7 +411,7 @@ namespace pr
 
 		// Convert to byte pointer
 		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
-		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
+		template <typename T> byte* bptr(T* t) { return reinterpret_cast<byte*>(t); }
 
 		// Append bytes
 		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
@@ -420,8 +420,8 @@ namespace pr
 		}
 
 		// Raw string copy
-		template <int N> void StrCopy(char    (&dest)[N], char    const* src) { strncpy(dest, src, N); dest[N-1] = 0; }
-		template <int N> void StrCopy(wchar_t (&dest)[N], wchar_t const* src) { wcsncpy(dest, src, N); dest[N-1] = 0; }
+		template <int N> void StrCopy(char(&dest)[N], char    const* src) { strncpy(dest, src, N); dest[N - 1] = 0; }
+		template <int N> void StrCopy(wchar_t(&dest)[N], wchar_t const* src) { wcsncpy(dest, src, N); dest[N - 1] = 0; }
 
 		// All in container
 		template <typename TCont, typename Pred> void for_all(TCont& cont, Pred pred)
@@ -452,14 +452,14 @@ namespace pr
 			int const buf_count = _countof(buf);
 
 			struct L {
-			static int Format(char*    dst, size_t max_count, char const*    fmt, va_list arg_list) { return _vsprintf_p(dst, max_count, fmt, arg_list); }
-			static int Format(wchar_t* dst, size_t max_count, wchar_t const* fmt, va_list arg_list) { return _vswprintf_p(dst, max_count, fmt, arg_list); }
+				static int Format(char* dst, size_t max_count, char const* fmt, va_list arg_list) { return _vsprintf_p(dst, max_count, fmt, arg_list); }
+				static int Format(wchar_t* dst, size_t max_count, wchar_t const* fmt, va_list arg_list) { return _vswprintf_p(dst, max_count, fmt, arg_list); }
 			};
 
 			va_list arg_list;
 			va_start(arg_list, format);
 			auto n = L::Format(buf, buf_count, format, arg_list);
-			buf[n >= 0 ? std::min(buf_count-1, n) : 0] = 0;
+			buf[n >= 0 ? std::min(buf_count - 1, n) : 0] = 0;
 			va_end(arg_list);
 
 			return buf;
@@ -483,13 +483,13 @@ namespace pr
 			auto r = static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs);
 			return static_cast<T>(r);
 		}
-		
+
 		// Convert an error code into an error message
 		inline std::string ErrorMessage(HRESULT result)
 		{
 			char msg[8192];
 			DWORD length(_countof(msg));
-			if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
+			if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
 				sprintf_s(msg, "Unknown error code: 0x%80X", result);
 			return msg;
 		}
@@ -605,8 +605,8 @@ namespace pr
 		{
 			T* m_var;
 			T old_value;
-			RAII(T& var, T new_value) :m_var(&var) ,old_value(var) { *m_var = new_value; }
-			~RAII()                                                { *m_var = old_value; }
+			RAII(T& var, T new_value) :m_var(&var), old_value(var) { *m_var = new_value; }
+			~RAII() { *m_var = old_value; }
 			RAII(RAII const&) = delete;
 			RAII& operator =(RAII const&) = delete;
 		};
@@ -624,11 +624,11 @@ namespace pr
 			}
 			ScopeExit(Func func)
 				:m_func(func)
-				,m_doit(true)
+				, m_doit(true)
 			{}
 			ScopeExit(ScopeExit&& rhs)
 				:m_func(rhs.m_func)
-				,m_doit(rhs.m_doit)
+				, m_doit(rhs.m_doit)
 			{
 				rhs.m_doit = false;
 			}
@@ -654,9 +654,9 @@ namespace pr
 			HandleType m_handle;
 
 			ResId() :m_res_id(), m_handle() {}
-			ResId(wchar_t const* res) :m_res_id(res) ,m_handle() {}
-			ResId(HandleType handle) :m_res_id() ,m_handle(handle) {}
-			ResId(int id) :m_res_id(id != ID_UNUSED ? MakeIntResourceW(id) : nullptr) ,m_handle() {}
+			ResId(wchar_t const* res) :m_res_id(res), m_handle() {}
+			ResId(HandleType handle) :m_res_id(), m_handle(handle) {}
+			ResId(int id) :m_res_id(id != ID_UNUSED ? MakeIntResourceW(id) : nullptr), m_handle() {}
 			ResId(char const*) = delete; // Prevent accidental use of narrow resource name strings
 
 			bool operator == (nullptr_t) const { return m_handle == nullptr && m_res_id == nullptr; }
@@ -669,7 +669,7 @@ namespace pr
 		{
 			static TRet Send(HWND hwnd, UINT msg, WP wparam, LP lparam) { return TRet(::SendMessageW(hwnd, msg, WPARAM(wparam), LPARAM(lparam))); }
 		};
-		template <typename WP, typename LP> struct SendMsg<bool,WP,LP>
+		template <typename WP, typename LP> struct SendMsg<bool, WP, LP>
 		{
 			static bool Send(HWND hwnd, UINT msg, WP wparam, LP lparam) { return ::SendMessageW(hwnd, msg, WPARAM(wparam), LPARAM(lparam)) != 0; }
 		};
@@ -683,11 +683,11 @@ namespace pr
 			}
 			SelectObject(HDC hdc, HGDIOBJ obj)
 				:m_hdc(hdc)
-				,m_old(::SelectObject(hdc, obj))
+				, m_old(::SelectObject(hdc, obj))
 			{}
 			SelectObject(SelectObject&& rhs) noexcept
 				:m_hdc(rhs.m_hdc)
-				,m_old()
+				, m_old()
 			{
 				std::swap(m_old, rhs.m_old);
 			}
@@ -710,6 +710,33 @@ namespace pr
 
 		// Forward
 		CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type);
+
+		#pragma pack(push,8)
+		struct StdCallThunk
+		{
+			AtlThunkData_t* pThunk;
+			StdCallThunk() :pThunk(NULL)
+			{}
+			~StdCallThunk()
+			{
+				if (!pThunk) return;
+				AtlThunk_FreeData(pThunk);
+			}
+			BOOL Init(_In_ DWORD_PTR proc, _In_opt_ void* pThis)
+			{
+				pThunk = pThunk ? pThunk : AtlThunk_AllocateData();
+				if (pThunk == NULL)
+					return FALSE;
+
+				AtlThunk_InitData(pThunk, (void*)proc, (size_t)pThis);
+				return TRUE;
+			}
+			void* GetCodeAddress() const
+			{
+				return AtlThunk_DataToCode(pThunk);
+			}
+		};
+		#pragma pack(pop)
 
 		#pragma endregion
 
@@ -3806,25 +3833,25 @@ namespace pr
 		protected:
 			using BtnDownMap = std::unordered_map<EMouseKey, LONG>;
 
-			Ptr<Params<>>      m_cp;              // Initial creation parameters for the control
-			HWND               m_hwnd;            // Window handle for the control
-			WndRef             m_parent;          // The parent that contains this control, or owner form
-			Controls           m_child;           // The controls nested with this control
-			DpiScale           m_metrics;         // Used to scale this control based on the current DPI
-			Menu               m_menu;            // Associated menu
-			Image              m_icon_bg;         // Associated icon
-			Image              m_icon_sm;         // Associated icon
-			Brush              m_brush_fore;      // Foreground colour brush
-			Brush              m_brush_back;      // Background colour brush
-			Rect               m_pos_offset;      // Distances from this control to the edges of the parent client area
-			bool               m_pos_ofs_suspend; // Disables the saving of the position offset when the control is moved
-			BtnDownMap         m_down_at;         // Button down timestamp
-			bool               m_handle_only;     // True if this object does not own 'm_hwnd'
-			HBITMAP            m_dbl_buffer;      // Non-null if the control is double buffered
-			WndClassEx         m_wci;             // Window class info
-			ATL::CStdCallThunk m_thunk;           // WndProc thunk, turns a __stdcall into a __thiscall
-			WNDPROC            m_oldproc;         // The window class default wndproc function
-			std::thread::id    m_thread_id;       // The thread that this control was created on
+			Ptr<Params<>>   m_cp;              // Initial creation parameters for the control
+			HWND            m_hwnd;            // Window handle for the control
+			WndRef          m_parent;          // The parent that contains this control, or owner form
+			Controls        m_child;           // The controls nested with this control
+			DpiScale        m_metrics;         // Used to scale this control based on the current DPI
+			Menu            m_menu;            // Associated menu
+			Image           m_icon_bg;         // Associated icon
+			Image           m_icon_sm;         // Associated icon
+			Brush           m_brush_fore;      // Foreground colour brush
+			Brush           m_brush_back;      // Background colour brush
+			Rect            m_pos_offset;      // Distances from this control to the edges of the parent client area
+			bool            m_pos_ofs_suspend; // Disables the saving of the position offset when the control is moved
+			BtnDownMap      m_down_at;         // Button down timestamp
+			bool            m_handle_only;     // True if this object does not own 'm_hwnd'
+			HBITMAP         m_dbl_buffer;      // Non-null if the control is double buffered
+			WndClassEx      m_wci;             // Window class info
+			StdCallThunk    m_thunk;           // WndProc thunk, turns a __stdcall into a __thiscall
+			WNDPROC         m_oldproc;         // The window class default wndproc function
+			std::thread::id m_thread_id;       // The thread that this control was created on
 
 		public:
 
