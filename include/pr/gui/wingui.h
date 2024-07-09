@@ -110,10 +110,6 @@ Example Use:
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "shlwapi.lib")
 
-// Required for thunking
-#include <atlthunk.h>
-#pragma comment(lib, "atls.lib")
-
 // Disable warnings
 #pragma warning(push)
 #pragma warning(disable: 4351) // C4351: new behaviour: elements of array will be default initialized
@@ -712,28 +708,34 @@ namespace pr
 		CComPtr<IStream> StreamFromResource(HINSTANCE inst, wchar_t const* resource, wchar_t const* res_type);
 
 		#pragma pack(push,8)
+		struct AtlThunkData_t; // opaque
 		struct StdCallThunk
 		{
-			AtlThunkData_t* pThunk;
-			StdCallThunk() :pThunk(NULL)
-			{}
+			inline static HMODULE atlthunk_dll = LoadLibraryW(L"atlthunk.dll");
+			using AllocFn = AtlThunkData_t* (__stdcall *)();
+			using FreeFn = void(__stdcall *)(AtlThunkData_t*);
+			using InitFn = void(__stdcall *)(AtlThunkData_t*, void*, size_t);
+			using CodeFn = void*(__stdcall *)(AtlThunkData_t*);
+
+			AtlThunkData_t* m_thunk;
+			StdCallThunk() :m_thunk(reinterpret_cast<AllocFn>(GetProcAddress(atlthunk_dll, "AtlThunk_AllocateData"))()) {}
+			StdCallThunk(StdCallThunk&&) = delete;
+			StdCallThunk(StdCallThunk const&) = delete;
+			StdCallThunk& operator = (StdCallThunk&&) = delete;
+			StdCallThunk& operator = (StdCallThunk const&) = delete;
 			~StdCallThunk()
 			{
-				if (!pThunk) return;
-				AtlThunk_FreeData(pThunk);
+				if (!m_thunk) return;
+				reinterpret_cast<FreeFn>(GetProcAddress(atlthunk_dll, "AtlThunk_FreeData"))(m_thunk);
 			}
-			BOOL Init(_In_ DWORD_PTR proc, _In_opt_ void* pThis)
+			void Init(_In_ DWORD_PTR proc, _In_opt_ void* this_)
 			{
-				pThunk = pThunk ? pThunk : AtlThunk_AllocateData();
-				if (pThunk == NULL)
-					return FALSE;
-
-				AtlThunk_InitData(pThunk, (void*)proc, (size_t)pThis);
-				return TRUE;
+				Check(m_thunk != nullptr, "Failed to allocate thunk data");
+				reinterpret_cast<InitFn>(GetProcAddress(atlthunk_dll, "AtlThunk_InitData"))(m_thunk, (void*)proc, (size_t)this_);
 			}
 			void* GetCodeAddress() const
 			{
-				return AtlThunk_DataToCode(pThunk);
+				return reinterpret_cast<CodeFn>(GetProcAddress(atlthunk_dll, "AtlThunk_DataToCode"))(m_thunk);
 			}
 		};
 		#pragma pack(pop)
@@ -1715,7 +1717,7 @@ namespace pr
 			// 'part_id','state_id' = see https://msdn.microsoft.com/en-us/library/windows/desktop/bb773210(v=vs.85).aspx
 			// 'rect' = where to draw (in logical units)
 			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773233(v=vs.85).aspx
-			void Bkgd(HDC hdc, int part_id, int state_id, RECT const* rect, DTBGOPTS const* opts)
+			void Bkgd(HDC hdc, int part_id, int state_id, RECT const* rect, DTBGOPTS const* opts) const
 			{
 				Check(m_htheme != nullptr, "Themes not available");
 				Check(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
