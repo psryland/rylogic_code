@@ -1,29 +1,50 @@
 ﻿@page
-@model www.Pages.TextAligner.TextAlignerModel
+@model rylogic.co.nz.Pages.TextAligner.TextAlignerModel
 @{
     ViewData["Title"] = "Text Aligner";
 }
 
-<img class="feature-graphics" src="~/images/textaligner/screen-shot-0.png" alt="Text Aligner Feature Graphics">
+<div>
+    <img class="feature-graphics" src="~/images/textaligner/screen-shot-0.png" alt="Text Aligner Feature Graphics">
+</div>
 
-<h3>Text Aligner Extension</h3>
-<p>
-    Text Aligning extension for Visual Studio.
-</p>
+<div>
+    <h3>Text Aligner</h3>
+    <p class="one-liner-description">
+        Text Aligning extension for Visual Studio.
+    </p>
+</div>
 
 <div class="features">
     <h3>Key Features</h3>
     <ul>
-        <li>.</li>
+        <li>(todo)</li>
     </ul>
 </div>
 
 <div class="download_buttons">
-    <a href="~/files/textaligner/Rylogic.TextAligner.2022.v1.11.7.vsix" class="button">Download Now (VS 2022)</a>
-    <span>Rylogic.TextAligner.2022.v1.11.7.vsix (@Model.DownloadSize) </span>
+    <a href="@Model.DownloadVS2022Url">
+        <b>Download Now (VS 2022)</b>
+        <p>@Model.DownloadVS2022File (@Model.DownloadVS2022Size)</p>
+    </a>
 </div>
 
 <div class="download_buttons">
-    <a href="~/files/textaligner/Rylogic.TextAligner.2019.v1.11.7.vsix" class="button">Download Now (VS 2019)</a>
-    <span>Rylogic.TextAligner.2019.v1.11.7.vsix (@Model.DownloadSize) </span>
+    <a href="@Model.DownloadVS2019Url">
+        <b>Download Now (VS 2019)</b>
+        <p>@Model.DownloadVS2019File (@Model.DownloadVS2019Size)</p>
+    </a>
+</div>
+
+<div>
+    <h6>Alternatively, download from the Visual Studio Marketplace</h6>
+    <ul>
+        <li><a href="https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner64">Visual Studio 2022 Marketplace Version</a></li>
+        <li><a href="https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner">Visual Studio 2019 Marketplace Version</a></li>
+        <li><a href="https://marketplace.visualstudio.com/items?itemName=Rylogic.rylogic-textaligner-vscode">Visual Studio Code Marketplace Version</a></li>
+    </ul>
+</div>
+
+<div>
+    <p>For source code, check out my <a href="https://github.com/psryland/rylogic_code/tree/main/projects/apps/Rylogic.TextAligner">GitHub Repository</a></p>
 </div>

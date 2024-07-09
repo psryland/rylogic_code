@@ -1,27 +1,30 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 
-namespace www.Pages;
+namespace rylogic.co.nz.Pages;
 
 [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 [IgnoreAntiforgeryToken]
 public class ErrorModel : PageModel
 {
-    public string? RequestId { get; set; }
+	private readonly ILogger<ErrorModel> m_logger;
 
-    public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+	public ErrorModel(ILogger<ErrorModel> logger)
+	{
+		m_logger = logger;
+	}
 
-    private readonly ILogger<ErrorModel> _logger;
+	/// <summary></summary>
+	public string? RequestId { get; set; }
 
-    public ErrorModel(ILogger<ErrorModel> logger)
-    {
-        _logger = logger;
-    }
+	/// <summary></summary>
+	public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 
-    public void OnGet()
-    {
-        RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-    }
+	public void OnGet()
+	{
+		RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+	}
 }
 

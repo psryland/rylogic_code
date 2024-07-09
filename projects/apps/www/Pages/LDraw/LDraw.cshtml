@@ -1,27 +1,41 @@
 ﻿@page
-@model www.Pages.LDraw.LDrawModel
+@model rylogic.co.nz.Pages.LDraw.LDrawModel
 @{
     ViewData["Title"] = "LDraw";
 }
 
-<img class="feature-graphics" src="~/images/ldraw/screen-shot-0.png" alt="All Keys Feature Graphics">
+<div>
+    <img class="feature-graphics" src="~/images/ldraw/screen-shot-0.png" alt="LDraw Feature Graphics">
+</div>
 
-<h3>LDraw</h3>
-<p>
-    3D Visualisation aid based on scenes described using scripts.
-</p>
+<div>
+    <h3>LDraw</h3>
+    <p class="one-liner-description">
+        3D Visualisation aid based on scenes described using scripts.
+    </p>
+</div>
 
 <div class="features">
     <h3>Key Features:</h3>
     <ul>
-        <li>Feature 1</li>
-        <li>Feature 2</li>
-        <li>Feature 3</li>
-        <!-- Add more features as needed -->
+        <li>Describe a scene using a simple recursive declarative script</li>
+        <li>C-style preprocessor macro support</li>
+        <li>Small, but performant, DirectX 11 renderer</li>
+        <li>A variety camera and lighting tools</li>
+        <li>Orthographic and Perspective projection supported</li>
+        <li>3D measurement tool</li>
     </ul>
 </div>
 
 <div class="download_buttons">
-    <a href="~/files/ldraw/LDrawInstaller_v6.3.2.msi" class="button">Download Now</a>
-    <span>LDrawInstaller_v6.3.2.msi</span>
+    <a href=@Model.DownloadUrl>
+        <b>Download Now</b>
+        <p>@Model.DownloadFile (@Model.DownloadSize)</p>
+    </a>
+</div>
+
+<div>
+    <p>
+        For source code, check out my <a href="https://github.com/psryland/rylogic_code/tree/main/projects/apps/LDraw/LDraw">GitHub Repository</a>
+    </p>
 </div>

@@ -1,17 +1,21 @@
 ﻿@page
-@model www.Pages.AllKeys.AllKeysModel
+@model rylogic.co.nz.Pages.AllKeys.AllKeysModel
 @{
     ViewData["Title"] = "All Keys";
 }
 
-<img class="feature-graphics" src="~/images/allkeys/feature-graphic.png" alt="All Keys Feature Graphics">
+<div>
+    <img class="feature-graphics" src="~/images/allkeys/feature-graphic.png" alt="All Keys Feature Graphics">
+</div>
 
-<h3>All Keys</h3>
-<p>
-    All Keys is the ultimate practice tool for intermediate and advanced jazz musicians!
-    Our app is designed to help you improve your chord voicings and improvisation skills
-    in all 12 keys, enhancing your response time and overall musicianship.
-</p>
+<div>
+    <h3>All Keys</h3>
+    <p>
+        All Keys is the ultimate practice tool for intermediate and advanced jazz musicians!
+        This app is designed to help you improve your chord voicings and improvisation skills
+        in all 12 keys. Reduce your reaction time by pushing up the tempo!
+    </p>
+</div>
 
 <div class="features">
     <h3>Key Features</h3>
@@ -25,6 +29,14 @@
 </div>
 
 <div class="download_buttons">
-    <a href="~/files/allkeys/all-keys-v1.0.apk" class="button">Download Now</a>
-    <span>all-keys-v1.0.apk (@Model.DownloadSize) </span>
+    <a href="@Model.DownloadUrl">
+        <b>Download Now</b>
+        <p>@Model.DownloadFile (@Model.DownloadSize)</p>
+    </a>
+</div>
+
+<div>
+    <p>
+        For source code, check out my <a href="https://github.com/psryland/rylogic_code/tree/main/projects/apps/AllKeys">GitHub Repository</a>
+    </p>
 </div>

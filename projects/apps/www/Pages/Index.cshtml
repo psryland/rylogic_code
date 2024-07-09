@@ -1,10 +1,82 @@
 ﻿@page
-@model IndexModel
+@model rylogic.co.nz.Pages.IndexModel
 @{
     ViewData["Title"] = "Home page";
 }
 
 <div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p></a>.</p>
+    <h1 class="display-4">Welcome to Rylogic</h1>
+    <p class="main-blurb">
+        Rylogic is all about turning creative ideas into functional software.
+        As a lone developer, there are a variety of unique (and somewhat unrelated)
+        applications here. Most were designed to solve a specific problem I was facing
+        at some point in time. Have a look around, and try out some of the applications.
+    </p>
+
+    <section class="applications">
+        <div class="app-list">
+
+            <!-- LDraw -->
+            <div class="app-item">
+                <img src="~/images/ldraw/screen-shot-0.png" alt="LDraw">
+                <h3>LDraw</h3>
+                <p class="one-liner-description">
+                    3D Visualisation aid based on scenes described using scripts.
+                </p>
+                <p class="description">
+                    This is a more powerful tool than you might expect. Especially for debugging
+                    collision detection in game physics engines! The script syntax is fairly simple
+                    and can be spat out as debug output to a file. You can then view the scene from
+                    any angle, perfect for visualization and animation projects.
+                </p>
+                <a class="learn_more_button" asp-area="" asp-page="/LDraw/LDraw">Learn More</a>
+            </div>
+
+            <!-- RyLogViewer -->
+            <div class="app-item">
+                <img src="~/images/rylogviewer/screen-shot-0.png" alt="RyLogViewer">
+                <h3>RyLogViewer</h3>
+                <p class="one-liner-description">
+                    Tool for viewing/searching extremely large log files.
+                </p>
+                <p class="description">
+                    This was a tool a developed back in the early days of Android development, before there
+                    were decent tools for viewing logcat. The main strength of this tool is the highly configurable
+                    filtering and highlighting as well as the ability to handle log files that are many gigabytes in size.
+                </p>
+                <a class="learn_more_button" asp-area="" asp-page="/RyLogViewer/RyLogViewer">Learn More</a>
+            </div>
+
+            <!-- Text Aligner -->
+            <div class="app-item">
+                <img src="~/images/textaligner/screen-shot-0.png" alt="Text Aligner">
+                <h3>Text Aligner Extension</h3>
+                <p class="one-liner-description">
+                    Text Aligning extension for Visual Studio and VSCode.
+                </p>
+                <p class="description">
+                    Based on the regular expression knowledge I gained from <i>RyLogViewer</i>, this vertical text aligning
+                    extension is something I still use every day.
+                </p>
+                <a class="learn_more_button" asp-area="" asp-page="/TextAligner/TextAligner">Learn More</a>
+            </div>
+
+            <!-- All Keys -->
+            <div class="app-item">
+                <img src="~/images/allkeys/screen-shot-0.png" alt="All Keys">
+                <h3>All Keys</h3>
+                <p class="one-liner-description">
+                    A random key/chord generator for practising in all 12 keys.
+                </p>
+                <p class="description">
+                    This is a simple app I developed for my own use when practicing chord voicing and improvisation.
+                    It generates random keys and chords to practice over, along with an optional walking bass and piano
+                    accompaniment.
+                </p>
+                <a class="learn_more_button" asp-area="" asp-page="/AllKeys/AllKeys">Learn More</a>
+            </div>
+
+        </div>
+    </section>
+
 </div>

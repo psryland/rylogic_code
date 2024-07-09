@@ -201,7 +201,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BlitzSearch", "..\projects\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "www", "www", "{DFBA3370-4DE4-4B70-A222-A7A25894F46C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "www", "..\projects\apps\www\www.csproj", "{CA1734A4-32F4-4824-B1DF-463842625C3E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rylogic.co.nz", "..\projects\apps\www\rylogic.co.nz.csproj", "{CA1734A4-32F4-4824-B1DF-463842625C3E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

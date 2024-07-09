@@ -1,51 +1,123 @@
 html {
-  font-size: 14px;
+	font-size: 14px;
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+	html {
+		font-size: 16px;
+	}
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+	box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+	position: relative;
+	min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+	margin-bottom: 60px;
 }
 
 p {
-    max-width: 100%;
+	max-width: 100%;
 }
 
 .logo-img {
-    width: 140px;
-    height: auto;
+	width: 140px;
+	height: auto;
 }
 
 
 .feature-graphics {
-    margin: 20px;
-    max-width: 80%;
+	margin: 20px;
+	max-width: 80%;
 }
 
-
-.button {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 5px;
+.learn_more_button {
+	display: inline-block;
+	padding: 10px 20px;
+	background-color: #007bff;
+	color: #fff;
+	text-decoration: none;
+	border-radius: 5px;
 }
 
+/* The blue download or Learn more buttons */
 .download_buttons {
-    margin: 10px;
+	margin: 10px;
+}
+
+	.download_buttons a {
+		display: inline-block;
+		padding: 10px 20px;
+		background-color: #007bff;
+		color: #fff;
+		text-decoration: none;
+		border-radius: 5px;
+		min-width: 250px;
+	}
+
+	.download_buttons b {
+		font-weight: bold;
+		font-size: 1.2em;
+	}
+
+	.download_buttons p {
+		font-size: 0.8em;
+	}
+
+
+/* The text below the title of a page */
+.main-blurb {
+	margin: 10px auto
+}
+
+/* Text below a header that summarises the section */
+.one-liner-description {
+	font-style: italic;
+}
+
+/* A main body description usually after the one-liner description */
+.description {
+	max-width: 95%;
+	margin: 10px auto;
+}
+
+.applications h2 {
+	text-align: center;
+	font-size: 2em;
+}
+
+.app-list {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.app-item {
+	margin: 15px auto;
+	text-align: center;
+	max-width: 50%;
+}
+
+	.app-item img {
+		max-width: 60%;
+		max-height: 250px;
+	}
+
+	.app-item h3 {
+		font-size: 1.5em;
+	}
+
+	.app-item p {
+		color: #666;
+	}
+
+.app-details img {
+	max-width: 50%;
+	display: block;
+	margin: 0 auto;
 }
