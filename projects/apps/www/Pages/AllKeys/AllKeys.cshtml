@@ -1,0 +1,30 @@
+﻿@page
+@model www.Pages.AllKeys.AllKeysModel
+@{
+    ViewData["Title"] = "All Keys";
+}
+
+<img class="feature-graphics" src="~/images/allkeys/feature-graphic.png" alt="All Keys Feature Graphics">
+
+<h3>All Keys</h3>
+<p>
+    All Keys is the ultimate practice tool for intermediate and advanced jazz musicians!
+    Our app is designed to help you improve your chord voicings and improvisation skills
+    in all 12 keys, enhancing your response time and overall musicianship.
+</p>
+
+<div class="features">
+    <h3>Key Features</h3>
+    <ul>
+        <li>Random key/chord generator with equal representation of all keys.</li>
+        <li>Optional backing bass lines and piano accompaniment.</li>
+        <li>Configurable rate of chords and types of chords/keys to display.</li>
+        <li>Metronome with customizable click sounds.</li>
+        <li>Intuitive and user-friendly interface.</li>
+    </ul>
+</div>
+
+<div class="download_buttons">
+    <a href="~/files/allkeys/all-keys-v1.0.apk" class="button">Download Now</a>
+    <span>all-keys-v1.0.apk (@Model.DownloadSize) </span>
+</div>

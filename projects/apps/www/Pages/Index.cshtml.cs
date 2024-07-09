@@ -3,17 +3,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace www.Pages;
 
-public class IndexModel : PageModel
+public class IndexModel(ILogger<IndexModel> m_logger) :PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
-
-    public IndexModel(ILogger<IndexModel> logger)
-    {
-        _logger = logger;
-    }
-
-    public void OnGet()
-    {
-
-    }
+	public void OnGet()
+	{
+		m_logger.LogInformation("Index page visited");
+	}
 }
