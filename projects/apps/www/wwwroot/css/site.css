@@ -121,3 +121,23 @@ p {
 	display: block;
 	margin: 0 auto;
 }
+
+.last-updated {
+	font-size: 0.8rem;
+}
+
+.privacy-policy {
+	max-width: 80%;
+}
+
+	.privacy-policy p {
+		max-width: 60%;
+	}
+	
+	.privacy-policy h3 {
+		padding: 0px;
+		margin: 0px;
+		font-style: italic;
+		font-weight: bold;
+		font-size: 1.1rem;
+	}
