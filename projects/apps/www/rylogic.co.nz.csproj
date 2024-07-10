@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<Target Name="PostPublish" AfterTargets="Publish">
-		<Exec Command="echo. &amp; echo *** Remember to run the SetPermissions.ps1 on the web server PC *** &amp; echo."/>
+		<Exec Command="echo. &amp; echo *** Remember to run the SetPermissions.ps1 on the web server PC *** &amp; echo." />
 	</Target>
 
 </Project>
