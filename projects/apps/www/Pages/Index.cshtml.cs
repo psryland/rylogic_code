@@ -11,8 +11,8 @@ public class IndexModel :PageModel
 		m_logger = logger;
 	}
 
+	/// <summary></summary>
 	public void OnGet()
 	{
-		m_logger.LogInformation("Index page visited");
 	}
 }

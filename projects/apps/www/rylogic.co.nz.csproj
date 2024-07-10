@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
@@ -7,7 +7,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Content Include="SetPermissions.ps1">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
+
+	<Target Name="PostPublish" AfterTargets="Publish">
+		<Exec Command="echo. &amp; echo *** Remember to run the SetPermissions.ps1 on the web server PC *** &amp; echo."/>
+	</Target>
 
 </Project>

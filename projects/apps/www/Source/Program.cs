@@ -1,17 +1,12 @@
 using System;
 using System.IO;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using rylogic.co.nz;
-
-// Load app config
-var config = new ConfigurationBuilder()
-	.AddJsonFile("appsettings.json")
-	.AddJsonFile("appsettings.Development.json", optional: true)
-	.Build();
 
 // Create the app builder
 var builder = WebApplication.CreateBuilder(args);
@@ -22,8 +17,14 @@ builder.Services.AddRazorPages();
 // Create the app instance
 var app = builder.Build();
 
+// Load app config
+var config = new ConfigurationBuilder()
+	.AddJsonFile("appsettings.json")
+	.AddJsonFileIf(app.Environment.IsDevelopment(), "appsettings.Development.json", optional: true)
+	.Build();
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || true)
 {
 	app.UseDeveloperExceptionPage();
 }
@@ -44,8 +45,16 @@ if (!Directory.Exists(file_store_path))
 app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
-	FileProvider = new PhysicalFileProvider(file_store_path),
 	RequestPath = Paths.FileStore,
+	FileProvider = new PhysicalFileProvider(file_store_path),
+	ContentTypeProvider = new FileExtensionContentTypeProvider
+	{
+		Mappings =
+		{
+			[".apk"] = "application/vnd.android.package-archive",
+			[".vsix"] = "application/octet-stream",
+		}
+	},
 });
 
 // Set the default landing page

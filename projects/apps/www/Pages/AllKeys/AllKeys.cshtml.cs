@@ -13,7 +13,7 @@ public class AllKeysModel : PageModel
 		// Find the newest version apk file
 		var file_store = config[ConfigTag.FileStore] ?? throw new Exception("FileStore path not set");
 		var dir = Path.Combine(file_store, "allkeys");
-		var latest_apk = Directory.GetFiles(dir, "all-keys-*.apk").Max();
+		var latest_apk = Directory.GetFiles(dir, "all-keys*.apk").Max();
 
 		// If the file exists, get the size
 		if (latest_apk != null && Path.Exists(latest_apk))

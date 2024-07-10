@@ -19,4 +19,11 @@ public static class Extensions
 			_ => $"{size_in_bytes / 1024.0 / 1024.0:N2} MB",
 		};
 	}
+
+	/// <summary>Optionally add a json file</summary>
+	public static IConfigurationBuilder AddJsonFileIf(this IConfigurationBuilder builder, bool condition, string path, bool optional)
+	{
+		if (condition) builder.AddJsonFile(path, optional);
+		return builder;
+	}
 }
