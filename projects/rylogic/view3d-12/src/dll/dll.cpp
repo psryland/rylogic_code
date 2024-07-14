@@ -195,8 +195,9 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GU
 	try
 	{
 		// Concurrent entry is allowed
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScript(std::string_view(ldr_script), false, EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
+		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
 }
@@ -205,8 +206,9 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	try
 	{
 		// Concurrent entry is allowed
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScript(std::string_view(ldr_file), true, EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
+		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
@@ -1458,8 +1460,9 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_s
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf16_le;
-		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, context_id, includes);
+		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1469,8 +1472,9 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf8;
-		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
+		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1481,7 +1485,8 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DFile(char const* name,
 	try
 	{
 		DllLockGuard;
-		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, context_id);
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
+		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, id);
 	}
 	CatchAndReport(View3D_ObjectCreateP3D, , {});
 }
@@ -1492,7 +1497,8 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* nam
 	try
 	{
 		DllLockGuard;
-		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, context_id);
+		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
+		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, id);
 	}
 	CatchAndReport(View3D_ObjectCreateP3D, , {});
 }
@@ -2277,7 +2283,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
 		DllLockGuard;
 
 		// Add the demo objects to the sources
-		Dll().LoadScript(std::string_view(scene), false, EEncoding::utf8, &Context::GuidDemoSceneObjects, script::Includes(), [=](Guid const& id, bool before)
+		Dll().LoadScriptString(std::string_view(scene), EEncoding::utf8, Context::GuidDemoSceneObjects, script::Includes(), [=](Guid const& id, bool before)
 		{
 			if (before)
 				window->Remove(&id, 1, 0);

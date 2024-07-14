@@ -8,7 +8,7 @@
 //      // Derive a application logic type from app::Main
 //      struct Main :app::Main<UserSettings, MainUI>
 //      {
-//          static wchar_t const* AppName() const { return L"MyNewApp"; };
+//          static char const* AppName() const { return "MyNewApp"; };
 //          Main(MainUI& gui)
 //              :base(app::DefaultSetup(), gui)
 //          {}
@@ -50,7 +50,7 @@ namespace pr::app
 		//  - The App framework creates the UI first so that the HWND exists before 'Main'
 		//    is created. This allows normal construction of the renderer etc.
 
-		Logger        m_log;         // App log
+		log::Logger   m_log;         // App log
 		UserSettings  m_settings;    // Application-wide user settings
 		rdr::Renderer m_rdr;         // The renderer
 		rdr::Window   m_window;      // The window that will be rendered into
@@ -59,10 +59,15 @@ namespace pr::app
 		MainUI&       m_ui;          // The GUI that owns this app logic class
 		bool          m_rdr_pending; // Render call batching, true if 'RenderNeeded' has been called
 
+		static log::Logger::OutputCB LoggerOutput()
+		{
+			return log::ToFile(FmtS("%s.log", Derived::AppName()));
+		}
+
 		// Construct using a template set up object.
 		template <typename Setup>
 		Main(Setup setup, MainUI& ui)
-			:m_log(Derived::AppName(), log::ToFile(FmtS(L"%s.log", Derived::AppName())), 0)
+			:m_log(Derived::AppName(), LoggerOutput())
 			,m_settings(setup.UserSettings())
 			,m_rdr(setup.RdrSettings())
 			,m_window(m_rdr, setup.RdrWindowSettings(ui))

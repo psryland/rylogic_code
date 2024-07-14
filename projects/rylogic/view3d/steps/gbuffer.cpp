@@ -85,19 +85,19 @@ namespace pr::rdr
 		{
 			// Create the resource
 			tdesc.Format = fmt[i];
-			pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
+			pr::Check(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i].get(), FmtS("GBuffer %s tex", ToString((GBuffer::RTEnum_)i))));
 
 			// Get the render target view
 			RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
 			rtvdesc.Texture2D.MipSlice = 0;
-			pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
+			pr::Check(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
 
 			// Get the shader res view
 			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 			srvdesc.Texture2D.MostDetailedMip = 0;
 			srvdesc.Texture2D.MipLevels = 1;
-			pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
+			pr::Check(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
 		}
 
 		// We need to create our own depth buffer to ensure it has the same dimensions
@@ -105,12 +105,12 @@ namespace pr::rdr
 		D3DPtr<ID3D11Texture2D> dtex;
 		tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
+		pr::Check(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(dtex.get(), "GBuffer DSV"));
 
 		DepthStencilViewDesc dsvdesc(tdesc.Format);
 		dsvdesc.Texture2D.MipSlice = 0;
-		pr::Throw(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
+		pr::Check(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
 	}
 
 	// Bind the GBuffer RTs to the output merger

@@ -1,4 +1,4 @@
-﻿//***********************************************************************
+//***********************************************************************
 // UnitTest
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
@@ -20,16 +20,20 @@ namespace pr::unittests::your::namespace
 // and just include the header you care about
 #include "pr/common/unittests.h"
 #include "src/unittests.h" // all tests
-//#include "pr/common/hash.h"
-//#include "pr/common/guid.h"
-//#include "pr/common/flags_enum.h"
 //#include "pr/common/allocator.h"
+//#include "pr/common/bit_data.h"
+//#include "pr/common/compress.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
-//#include "pr/common/compress.h"
+//#include "pr/common/flags_enum.h"
+//#include "pr/common/guid.h"
+//#include "pr/common/hash.h"
+//#include "pr/common/log.h"
+//#include "pr/container/bit_array.h"
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"
 //#include "pr/container/deque.h"
+//#include "pr/container/suffix_array.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/matrix6x8.h"
@@ -58,6 +62,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/geometry/p3d.h"
 //#include "pr/hardware/find_bt_device.h"
 //#include "pr/filesys/filesys.h"
+//#include "pr/storage/json.h"
 //#include "pr/str/convert_utf.h"
 //#include "pr/str/string_core.h"
 //#include "pr/str/string_util.h"
@@ -66,6 +71,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/str/string.h"
 //#include "pr/str/string2.h"
 //#include "pr/str/to_string.h"
+//#include "pr/str/utf8.h"
 //#include "pr/script/buf.h"
 //#include "pr/script/location.h"
 //#include "pr/script/script_core.h"
@@ -78,6 +84,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
+//#include "pr/threads/thread_pool.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests

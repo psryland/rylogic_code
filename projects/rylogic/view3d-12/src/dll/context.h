@@ -57,19 +57,22 @@ namespace pr::rdr12
 		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> OnSourcesChanged;
 
 		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
+		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+
+		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		template <typename Char>
-		Guid LoadScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
 
 		// Create an object from geometry
 		LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);
 
 		// Load/Add ldr objects and return the first object from the script
 		template <typename Char>
-		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
 
 		// Create an LdrObject from the p3d model
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, pr::Guid const* context_id);
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, pr::Guid const* context_id);
+		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, std::optional<Guid const> context_id);
+		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, std::optional<Guid const> context_id);
 
 		// Delete a single object
 		void DeleteObject(LdrObject* object);

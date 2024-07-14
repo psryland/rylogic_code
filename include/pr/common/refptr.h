@@ -1,4 +1,4 @@
-﻿//**********************************************************************************
+//**********************************************************************************
 // Pointer to a reference counted object
 //  Copyright (c) Rylogic Ltd 2011
 //**********************************************************************************
@@ -56,6 +56,8 @@ namespace pr
 	template <typename T>
 	struct RefPtr
 	{
+		using element_type = T; // Same as std::unique_ptr<>::element_type
+
 		// Notes:
 		//  - Can't use a concept for 'T' because that means RefPtr can't be defined using forward
 		//    declared types. 

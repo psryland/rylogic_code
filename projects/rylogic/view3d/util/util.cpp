@@ -34,7 +34,7 @@ namespace pr::rdr
 	UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count)
 	{
 		UINT num_quality_levels;
-		pr::Throw(device->CheckMultisampleQualityLevels(format, sample_count, &num_quality_levels));
+		pr::Check(device->CheckMultisampleQualityLevels(format, sample_count, &num_quality_levels));
 		return num_quality_levels;
 	}
 

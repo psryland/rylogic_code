@@ -44,14 +44,14 @@ namespace pr::rdr12
 				, m_sync_point(sync_point)
 			{
 				auto desc = ResDesc::Buf(size, 1, nullptr, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
-				Throw(device->CreateCommittedResource(
+				Check(device->CreateCommittedResource(
 					&HeapProps::Upload(), D3D12_HEAP_FLAG_NONE,
 					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
 					__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
-				Throw(m_res->SetName(L"GpuUploadBuffer:Block"));
+				Check(m_res->SetName(L"GpuUploadBuffer:Block"));
 
 				// Upload buffers can live mapped
-				Throw(m_res->Map(0U, nullptr, (void**)&m_mem));
+				Check(m_res->Map(0U, nullptr, (void**)&m_mem));
 			}
 			Block(Block&&) = default;
 			Block(Block const&) = delete;

@@ -2050,7 +2050,7 @@ namespace pr::sqlite
 			PR_CHECK(table.Insert(Record('a')), 1);
 			PR_CHECK(table.Insert(Record('b')), 1);
 			Record a('a');
-			PR_THROWS([&](){ table.Insert(a); }, pr::sqlite::Exception);
+			PR_THROWS(table.Insert(a), pr::sqlite::Exception);
 			try { table.Insert(Record('b')); }
 			catch (pr::sqlite::Exception const& ex) { PR_CHECK(ex.code(), SQLITE_CONSTRAINT); }
 		}

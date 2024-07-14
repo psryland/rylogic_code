@@ -1,0 +1,13 @@
+<resources>
+    <dimen name="fab_margin">48dp</dimen>
+    <dimen name="label_text_size">30sp</dimen>
+    <dimen name="chord_panel_min_size">250dp</dimen>
+    <dimen name="chord_text_size">70sp</dimen>
+    <dimen name="chord_next_text_size">30sp</dimen>
+    <dimen name="tempo_slider_min_width">200dp</dimen>
+    <dimen name="tempo_slider_padding">20dp</dimen>
+    <dimen name="metronome_box_size">30dp</dimen>
+    <dimen name="metronome_box_spacing">10dp</dimen>
+    <dimen name="button_text_size">40sp</dimen>
+    <dimen name="button_vertical_padding">20dp</dimen>
+</resources>

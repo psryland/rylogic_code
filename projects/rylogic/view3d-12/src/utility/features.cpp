@@ -184,7 +184,7 @@ namespace pr::rdr12
 				ShaderModel.HighestShaderModel = versions[i];
 				auto hr = device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL));
 				if (hr == E_INVALIDARG) continue;
-				Throw(hr);
+				Check(hr);
 				break;
 			}
 		}
@@ -203,7 +203,7 @@ namespace pr::rdr12
 				RootSignature.HighestVersion = versions[i];
 				auto hr = device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &RootSignature, sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE));
 				if (hr == E_INVALIDARG) continue;
-				Throw(hr);
+				Check(hr);
 				break;
 			}
 		}
@@ -231,7 +231,7 @@ namespace pr::rdr12
 			FeatureLevel.pFeatureLevelsRequested = levels;
 			auto hr = device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevel, sizeof(D3D12_FEATURE_DATA_FEATURE_LEVELS));
 			MaxFeatureLevel = Succeeded(hr) ? FeatureLevel.MaxSupportedFeatureLevel : static_cast<D3D_FEATURE_LEVEL>(0);
-			if (hr != DXGI_ERROR_UNSUPPORTED) Throw(hr);
+			if (hr != DXGI_ERROR_UNSUPPORTED) Check(hr);
 		}
 	}
 
@@ -239,7 +239,7 @@ namespace pr::rdr12
 	FeatureSupport::FormatData FeatureSupport::Format(DXGI_FORMAT format) const
 	{
 		FeatureSupport::FormatData support = { format };
-		Throw(m_device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+		Check(m_device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 		return support;
 	}
 

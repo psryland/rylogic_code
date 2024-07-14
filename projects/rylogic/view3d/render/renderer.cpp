@@ -96,8 +96,8 @@ namespace pr::rdr
 				&m_feature_level,
 				&immediate.m_ptr);
 		}
-		pr::Throw(hr);
-		pr::Throw(immediate->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)&m_immediate.m_ptr));
+		Check(hr);
+		Check(immediate->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)&m_immediate.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device.get(), "D3D device"));
 		PR_EXPAND(PR_DBG_RDR, NameResource(immediate.get(), "immediate DC"));
 
@@ -108,7 +108,7 @@ namespace pr::rdr
 				throw std::exception("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
 			
 			D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS opts;
-			pr::Throw(m_d3d_device->CheckFeatureSupport(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &opts, sizeof(opts)));
+			Check(m_d3d_device->CheckFeatureSupport(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &opts, sizeof(opts)));
 			if (opts.ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x == FALSE)
 				throw std::exception("DirectX device does not support Compute Shaders 4x");
 		}
@@ -116,20 +116,20 @@ namespace pr::rdr
 		// Create the direct2d factory
 		D2D1_FACTORY_OPTIONS d2dfactory_options;
 		d2dfactory_options.debugLevel = AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE;
-		pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+		Check(D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, __uuidof(ID2D1Factory1), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
 
 		// Create the direct write factory
-		pr::Throw(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_dwrite.m_ptr));
+		Check(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), (IUnknown**)&m_dwrite.m_ptr));
 
 		// Creating a D2D device for drawing 2D to the back buffer requires 'D3D11_CREATE_DEVICE_BGRA_SUPPORT'
 		if (AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT))
 		{
 			// Get the DXGI Device from the d3d device
 			D3DPtr<IDXGIDevice> dxgi_device;
-			pr::Throw(m_d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
+			Check(m_d3d_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
 
 			// Create a D2D device
-			pr::Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
+			Check(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
 		}
 	}
 
@@ -159,8 +159,8 @@ namespace pr::rdr
 			{
 				// Note: this will report that the D3D device is still live
 				D3DPtr<ID3D11Debug> dbg;
-				pr::Throw(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&dbg.m_ptr));
-				pr::Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+				Check(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&dbg.m_ptr));
+				Check(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
 			}
 			#endif
 

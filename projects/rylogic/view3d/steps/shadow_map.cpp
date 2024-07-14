@@ -109,17 +109,17 @@ namespace pr::rdr
 		tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 		tdesc.CPUAccessFlags = 0;
 		tdesc.MiscFlags = 0;//D3D11_RESOURCE_MISC_TEXTURECUBE;
-		Throw(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
+		Check(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
 		PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap"));
 
 		// Get the render target view
 		RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
-		Throw(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
+		Check(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
 
 		// Get the shader res view
 		ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 		srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-		Throw(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
+		Check(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
 	}
 
 	// Update the projection parameters for the given scene
@@ -293,7 +293,7 @@ namespace pr::rdr
 			sdesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 			sdesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
 			sdesc.ComparisonFunc = D3D11_COMPARISON_GREATER;
-			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_samp.m_ptr));
+			Check(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_samp.m_ptr));
 		}
 
 		AddLight(light);

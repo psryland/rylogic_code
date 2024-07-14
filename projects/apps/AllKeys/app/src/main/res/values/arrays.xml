@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+     <!-- Key groups -->
+    <string-array name="key_groups">
+        <item>A, B, C, D, E, F, G</item>
+        <item>A♭, B♭, D♭, E♭, G♭</item>
+        <item>A♯, C♯, D♯, F♯, G♯</item>
+        <item>B♯, C♭, E♯, F♭</item>
+    </string-array>
+
+    <!-- Root Note Instruments -->
+    <string-array name="root_note_instruments">
+        <item>Acoustic Bass</item>
+        <item>Electric Bass</item>
+        <item>Piano</item>
+    </string-array>
+
+    <!-- Metronome Sounds -->
+    <string-array name="metronome_sounds">
+        <item>Woodblock High</item>
+        <item>Woodblock Low</item>
+        <item>Woodblock Med</item>
+        <item>CowBell</item>
+        <item>Tambourine</item>
+        <item>RimShot</item>
+    </string-array>
+
+    <!-- Next chord mode -->
+    <string-array name="next_chord_modes">
+        <item>Hidden</item>
+        <item>1 Beat Before</item>
+        <item>2 Beats Before</item>
+        <item>Bar Before</item>
+        <item>Always</item>
+    </string-array>
+
+    <!-- App themes -->
+    <string-array name="themes">
+        <item>System</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+
+</resources>

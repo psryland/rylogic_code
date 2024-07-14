@@ -59,7 +59,7 @@ namespace pr
 		{}
 		PEFile(TCHAR const* file, bool read_only = true) :PEFile()
 		{
-			pr::Throw(Open(file, read_only), pr::FmtS(_T("Failed to open binary PE file '%s'"), file));
+			pr::Check(Open(file, read_only), pr::FmtS(_T("Failed to open binary PE file '%s'"), file));
 		}
 		~PEFile()
 		{
