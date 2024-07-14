@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // PR3D Model file format
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -186,7 +186,7 @@ namespace pr::geometry::p3d
 		Compressed1 = Verts32Bit | Norms16Bit | Colours32Bit | UVs16Bit | Idx16Bit,
 		CompressedMax = Verts16Bit | NormsPack32 | Colours32Bit | UVs16Bit | IdxNBit,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 	#pragma endregion
 
@@ -311,7 +311,7 @@ namespace pr::geometry::p3d
 		v2     pad;
 
 		FatVert() = default;
-		FatVert(v4_cref<> p, Colour_cref c, v4_cref<> n, v2_cref<> t)
+		FatVert(v4_cref p, Colour_cref c, v4_cref n, v2_cref t)
 			:m_vert(p)
 			, m_diff(c)
 			, m_norm(n)
@@ -377,7 +377,7 @@ namespace pr::geometry::p3d
 		{
 			None = 0,
 			Alpha = 1 << 0,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		// UTF-8 filepath or string identifier for looking up the texture

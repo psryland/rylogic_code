@@ -67,7 +67,7 @@ namespace pr::app
 		{
 			auto& view = scene.m_view;
 			m_inst.m_i2w = m_i2w;
-			m_inst.m_i2w.pos = view.m_c2w.pos;
+			m_inst.m_i2w.pos = view.CameraToWorld().pos;
 			scene.AddInstance(m_inst);
 		}
 

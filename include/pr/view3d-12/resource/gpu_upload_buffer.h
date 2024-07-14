@@ -10,17 +10,15 @@
 
 namespace pr::rdr12
 {
-	struct GpuUploadBuffer
+	struct GpuUploadBuffer :RefCounted<GpuUploadBuffer>
 	{
 		// Notes:
 		//  - In Dx11, setting the shader constants would copy to a new area of memory, behind the scenes, for each Map/Unmap.
 		//    In Dx12, we have to do this ourselves, you can't use the same bit of memory in 'SetGraphicsRootConstantBufferView'
 		//    calls (for e.g.). It's not making any copies.
 		//  - This class is a deque of ID3D12Resource buffers (blocks) used to store data until the GPU has finished with it.
-		//    It's a  bit like the GpuDescriptorHeap, except that it is a container of Upload resource memory.
+		//    It's a bit like the GpuDescriptorHeap, except that it is a container of Upload resource memory.
 		//  - This type is used for uploading constant buffers for shaders, initialising textures, initialising V/I buffers, etc.
-
-		// Todo: this supersedes the UploadBufferPool...
 
 		// A 'page' in the upload buffer
 		struct Block
@@ -45,15 +43,15 @@ namespace pr::rdr12
 				, m_size(0)
 				, m_sync_point(sync_point)
 			{
-				auto desc = ResDesc::Buf(size, 1, nullptr, alignment, D3D12_RESOURCE_STATE_GENERIC_READ);
-				Throw(device->CreateCommittedResource(
+				auto desc = ResDesc::Buf(size, 1, nullptr, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
+				Check(device->CreateCommittedResource(
 					&HeapProps::Upload(), D3D12_HEAP_FLAG_NONE,
-					&desc, desc.FinalState, nullptr,
+					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
 					__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
-				Throw(m_res->SetName(L"GpuUploadBuffer:Block"));
+				Check(m_res->SetName(L"GpuUploadBuffer:Block"));
 
 				// Upload buffers can live mapped
-				Throw(m_res->Map(0U, nullptr, (void**)&m_mem));
+				Check(m_res->Map(0U, nullptr, (void**)&m_mem));
 			}
 			Block(Block&&) = default;
 			Block(Block const&) = delete;
@@ -71,9 +69,11 @@ namespace pr::rdr12
 		};
 		struct Allocation
 		{
-			ID3D12Resource* m_buf; // The upload resource.
+			// Notes:
+			//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
+			ID3D12Resource* m_buf; // The upload resource that contains this allocation.
 			uint8_t* m_mem;        // The system memory address, mapped to m_buf->GetGPUAddress().
-			int64_t m_ofs;         // The offset from 'm_buf->GetGPUAddress()' and 'm_mem' to the start of the allocation.
+			int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
 			int64_t m_size;        // The size of the allocation (in bytes).
 		};
 
@@ -107,6 +107,42 @@ namespace pr::rdr12
 				m_lookup.clear();
 				PurgeCompleted();
 			};
+		}
+		GpuUploadBuffer(GpuUploadBuffer&& rhs) noexcept
+			: m_used(std::move(rhs.m_used))
+			, m_free(std::move(rhs.m_free))
+			, m_blk_size(rhs.m_blk_size)
+			, m_blk_align(rhs.m_blk_align)
+			, m_gsync(rhs.m_gsync)
+			, m_lookup(std::move(rhs.m_lookup))
+			, m_eh0(std::move(rhs.m_eh0))
+		{
+			rhs.m_blk_size = 0;
+			rhs.m_blk_align = 0;
+			rhs.m_gsync = nullptr;
+		}
+		GpuUploadBuffer(GpuUploadBuffer const&) = delete;
+		GpuUploadBuffer& operator=(GpuUploadBuffer&& rhs) noexcept
+		{
+			if (this == &rhs) return *this;
+			std::swap(m_used, rhs.m_used);
+			std::swap(m_free, rhs.m_free);
+			std::swap(m_blk_size, rhs.m_blk_size);
+			std::swap(m_blk_align, rhs.m_blk_align);
+			std::swap(m_gsync, rhs.m_gsync);
+			std::swap(m_lookup, rhs.m_lookup);
+			std::swap(m_eh0, rhs.m_eh0);
+			return *this;
+		}
+		GpuUploadBuffer& operator=(GpuUploadBuffer const&) = delete;
+		~GpuUploadBuffer()
+		{
+			for (; !m_used.empty();)
+			{
+				auto& used = m_used.front();
+				m_gsync->Wait(used.m_sync_point);
+				PurgeCompleted(false);
+			}
 		}
 
 		// Allocate some upload buffer space
@@ -144,7 +180,7 @@ namespace pr::rdr12
 			if (might_reuse)
 			{
 				// Generate a key
-				key = pr::hash::HashBytes(&item, &item + 1);
+				key = pr::hash::HashBytes32(&item, &item + 1);
 				auto iter = m_lookup.find(key);
 				if (iter != end(m_lookup))
 					return iter->second;
@@ -166,13 +202,17 @@ namespace pr::rdr12
 		}
 
 		// Recycle blocks that the GPU has finished with
-		void PurgeCompleted()
+		void PurgeCompleted(bool keep_one = true)
 		{
 			auto completed = m_gsync->CompletedSyncPoint();
 
 			// Any blocks with sync points <= 'completed' are ready to be recycled.
-			for (; m_used.size() > 1 && m_used.front().m_sync_point <= completed; )
+			for (; !m_used.empty() && m_used.front().m_sync_point <= completed; )
 			{
+				// To reduce allocations, keep the last used block active (unless destructing)
+				if (keep_one && m_used.size() == 1)
+					break;
+
 				// Remove from the used list
 				auto block = std::move(m_used.front());
 				m_used.pop_front();
@@ -218,5 +258,13 @@ namespace pr::rdr12
 			Block block(device(), blk_size, m_blk_align, m_gsync->LastAddedSyncPoint());
 			m_used.push_back(std::move(block));
 		}
+
+		// Ref-counting clean up function
+		static void RefCountZero(RefCounted<GpuUploadBuffer>* doomed)
+		{
+			auto upload_buffer = static_cast<GpuUploadBuffer*>(doomed);
+			rdr12::Delete(upload_buffer);
+		}
+		friend struct RefCount<GpuUploadBuffer>;
 	};
 }

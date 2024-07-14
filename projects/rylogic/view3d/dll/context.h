@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-
 #include "view3d/dll/forward.h"
 
 namespace view3d
@@ -28,14 +27,14 @@ namespace view3d
 		EmbCodeCBCont        m_emb;             // Embedded code execution callbacks
 		std::recursive_mutex m_mutex;
 
-		explicit Context(HINSTANCE instance, ReportErrorCB global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags);
+		explicit Context(HINSTANCE instance, pr::StaticCB<View3D_ReportErrorCB> global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags);
 
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;
 		Context* This() { return this; }
 
 		// Global error callback. Can be called in a worker thread context
-		pr::MultiCast<ReportErrorCB, true> ReportError;
+		pr::MultiCast<pr::StaticCB<View3D_ReportErrorCB>, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
 		pr::MultiCast<AddFileProgressCB, true> OnAddFileProgress;

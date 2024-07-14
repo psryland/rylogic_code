@@ -16,8 +16,9 @@
 //   component
 #pragma once
 #include "pr/view3d-12/forward.h"
-//#include "pr/view3d/models/model.h"
 #include "pr/view3d-12/render/sortkey.h"
+#include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 
 namespace pr::rdr12
@@ -38,6 +39,8 @@ namespace pr::rdr12
 		PipeStates,          // pr::rdr::PipeStates
 		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
+		DiffTexture,         // An override of the main diffuse texture
+		DiffTextureSampler,  // An override of the main diffuse texture sampler
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
@@ -59,11 +62,11 @@ namespace pr::rdr12
 		ShadowCastExclude = 1 << 12,
 
 		// flags
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// The size of an instance component
-	constexpr int SizeOf(EInstComp comp)
+	constexpr int SizeOf(EInstComp const comp)
 	{
 		switch (comp)
 		{
@@ -80,6 +83,8 @@ namespace pr::rdr12
 			case EInstComp::PipeStates:          return sizeof(PipeStates);
 			case EInstComp::Flags:               return sizeof(EInstFlag);
 			case EInstComp::TintColour32:        return sizeof(Colour32);
+			case EInstComp::DiffTexture:         return sizeof(Texture2DPtr);
+			case EInstComp::DiffTextureSampler:  return sizeof(SamplerPtr);
 			case EInstComp::EnvMapReflectivity:  return sizeof(float);
 			case EInstComp::UniqueId:            return sizeof(int32_t);
 			case EInstComp::SSSize:              return sizeof(v2);
@@ -262,6 +267,20 @@ namespace pr::rdr12
 		return pps ? *pps : NoPipeStates;
 	}
 
+	// Return the texture override in this instance (if exists)
+	inline Texture2DPtr FindDiffTexture(BaseInstance const& inst)
+	{
+		auto const* ptex = inst.find<Texture2DPtr>(EInstComp::DiffTexture);
+		return ptex ? *ptex : nullptr;
+	}
+
+	// Return the sampler override in this isntance (if exists)
+	inline SamplerPtr FindDiffTextureSampler(BaseInstance const& inst)
+	{
+		auto const* psamp = inst.find<SamplerPtr>(EInstComp::DiffTextureSampler);
+		return psamp ? *psamp : nullptr;
+	}
+
 	// Cast from a 'BaseInstance' pointer to an instance type
 	template <typename InstType> constexpr InstType const* cast(BaseInstance const* base_ptr)
 	{
@@ -275,8 +294,8 @@ namespace pr::rdr12
 	// Use this to define class types that are compatible with the renderer
 	// Example:
 	//  #define PR_RDR_INST(x)\
-	//     x(ModelPtr ,m_model  ,EInstComp::ModelPtr)\
-	//     x(Colour32 ,m_colour ,EInstComp::TintColour32)
+	//     x(pr::rdr12::ModelPtr ,m_model  ,pr::rdr12::EInstComp::ModelPtr)\
+	//     x(pr::Colour32        ,m_colour ,pr::rdr12::EInstComp::TintColour32)
 	//  PR_RDR_DEFINE_INSTANCE(name, PR_RDR_INST)
 	//  #undef PR_RDR_INST
 
@@ -285,6 +304,8 @@ namespace pr::rdr12
 	#define PR_RDR12_INST_MEMBER_COUNT(ty,nm,em)      + 1
 	#define PR_RDR12_INST_MEMBERS(ty,nm,em)           ty nm;
 	#define PR_RDR12_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
+	#define PR_RDR12_INST_COMPONENT_SIZES(ty,nm,em)   SizeOf(em),
+	#define PR_RDR12_INST_ALIGNMENT_CHECK(ty,nm,em)   if (offsetof(ThisType, nm) == ofs) { ofs += Sizes[i++]; } else { return false; }
 
 	// Notes:
 	//  - Be careful with alignment of members, esp. m4x4's
@@ -294,29 +315,73 @@ namespace pr::rdr12
 	struct name\
 	{\
 		static constexpr int CompCount = 0 fields(PR_RDR12_INST_MEMBER_COUNT);\
+		static constexpr int CompCapacity = CompCount + pr::Pad<int>(sizeof(pr::rdr12::BaseInstance) + CompCount*sizeof(pr::rdr12::EInstComp), 16U);\
 		pr::rdr12::BaseInstance m_base;\
-		pr::rdr12::EInstComp m_cpt[CompCount + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + CompCount, 16U)];\
+		pr::rdr12::EInstComp m_cpt[CompCapacity];\
 		fields(PR_RDR12_INST_MEMBERS)\
 		\
 		name()\
-			:m_base()\
+			:m_base({CompCount})\
 			,m_cpt()\
 			fields(PR_RDR12_INST_INITIALISERS)\
 		{\
 			using namespace pr::rdr12;\
-			static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
+			using ThisType = name;\
 			int i = 0;\
-			m_base.m_cpt_count = CompCount;\
 			fields(PR_RDR12_INST_INIT_COMPONENTS)\
+			constexpr auto AlignCheck = []()\
+			{\
+				constexpr int Sizes[] = {fields(PR_RDR12_INST_COMPONENT_SIZES)};\
+				int i = 0, ofs = PadTo<int>(sizeof(BaseInstance) + CompCount*sizeof(EInstComp), 16);\
+				fields(PR_RDR12_INST_ALIGNMENT_CHECK)\
+				return true;\
+			};\
+			static_assert(AlignCheck(), "Member alignment issue");\
+			static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
 		}\
 	};\
 	static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");
-
-	// Concept for instance types
-	template <typename T>
-	concept InstanceType = requires(T t)
-	{
-		{ std::is_same_v<decltype(t.m_base), BaseInstance> };                    // must have a member called 'm_base'
-		{ static_cast<void const*>(&t.m_base) == static_cast<void const*>(&t) }; // it must be the first member
-	};
 }
+
+/*
+struct Test
+{
+	pr::rdr12::BaseInstance m_base;
+	pr::rdr12::EInstComp m_cpt[3 + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + 3, 16U)];
+	pr::rdr12::ModelPtr m_model;
+	pr::Colour32 m_colour;
+	pr::m4x4 m_i2w;
+
+	Test()
+		:m_base({ 3 })
+		,m_cpt()
+		,m_model()
+		,m_colour()
+		,m_i2w()
+	{
+		using namespace pr::rdr12;
+		using ThisType = Test;
+		int i = 0;
+		m_cpt[i++] = EInstComp::ModelPtr;
+		m_cpt[i++] = EInstComp::TintColour32;
+		m_cpt[i++] = EInstComp::I2WTransform;
+		static_assert(offsetof(Test, m_base) == 0, "'m_base' must be be the first member");
+		
+		constexpr auto AlignCheck = []()
+		{
+			constexpr int Sizes[] = {
+				pr::rdr12::SizeOf(EInstComp::ModelPtr),
+				pr::rdr12::SizeOf(EInstComp::TintColour32),
+				pr::rdr12::SizeOf(EInstComp::I2WTransform),
+			};
+
+			int i = 0, ofs = pr::PadTo<int>(sizeof(BaseInstance) + 3 * sizeof(EInstComp), 16);
+			if (offsetof(ThisType, m_model ) == ofs) { ofs += Sizes[i++]; } else return false;
+			if (offsetof(ThisType, m_colour) == ofs) { ofs += Sizes[i++]; } else return false;
+			if (offsetof(ThisType, m_i2w   ) == ofs) { ofs += Sizes[i++]; } else return false;
+			return true;
+		};
+		static_assert(AlignCheck(), "Member alignment issue");
+	}
+};
+*/

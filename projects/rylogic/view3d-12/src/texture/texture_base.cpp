@@ -17,16 +17,16 @@ namespace pr::rdr12
 	{
 		// Get the DXGI resource interface for the shared resource
 		D3DPtr<IDXGIResource> dxgi_resource;
-		Throw(shared_resource->QueryInterface<IDXGIResource>(&dxgi_resource.m_ptr));
+		Check(shared_resource->QueryInterface<IDXGIResource>(&dxgi_resource.m_ptr));
 
 		// Get the handled of the shared resource so that we can open it with our d3d device
 		HANDLE shared_handle;
-		Throw(dxgi_resource->GetSharedHandle(&shared_handle));
+		Check(dxgi_resource->GetSharedHandle(&shared_handle));
 		return shared_handle;
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension)
 		:RefCounted<TextureBase>()
 		,m_mgr(&mgr)
 		,m_res(res, true)
@@ -38,23 +38,22 @@ namespace pr::rdr12
 		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		,m_name(desc.m_name)
 	{
-		auto device = m_mgr->D3DDevice();
+		auto device = m_mgr->d3d();
 		auto tdesc = desc.m_tdesc;
-		Throw(res->SetName(FmtS(L"%S", m_name.c_str())));
 
 		// Create views for the texture
 		if (!AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
 		{
 			// Check the texture format is supported
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE))
 				throw std::runtime_error("Texture format is not supported as a shader resource view");
 
 			// Create the SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
 				.Format = tdesc.Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.ViewDimension = srv_dimension,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2D = {
 					.MostDetailedMip = 0,
@@ -69,7 +68,7 @@ namespace pr::rdr12
 		{
 			// Check the texture format is supported
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) ||
 				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) ||
 				!AllSet(support.Support2, D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE))
@@ -89,7 +88,7 @@ namespace pr::rdr12
 		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET))
 		{
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
-			Throw(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
 				throw std::runtime_error("Texture format is not supported as a render target view");
 
@@ -108,6 +107,14 @@ namespace pr::rdr12
 	TextureBase::~TextureBase()
 	{
 		OnDestruction(*this, EmptyArgs());
+
+		// Release any views
+		if (m_srv)
+			m_mgr->m_descriptor_store.Release(m_srv);
+		if (m_uav)
+			m_mgr->m_descriptor_store.Release(m_uav);
+		if (m_rtv)
+			m_mgr->m_descriptor_store.Release(m_rtv);
 	}
 
 	// Access the renderer
@@ -121,8 +128,8 @@ namespace pr::rdr12
 	{
 		HANDLE handle;
 		D3DPtr<IDXGIResource> res;
-		Throw(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
-		Throw(res->GetSharedHandle(&handle));
+		Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+		Check(res->GetSharedHandle(&handle));
 		return handle;
 	}
 

@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -188,6 +188,7 @@ namespace pr::rdr12
 		x(NoZTest         ,= HashI("NoZTest"             ))\
 		x(NoZWrite        ,= HashI("NoZWrite"            ))\
 		x(Billboard       ,= HashI("Billboard"           ))\
+		x(Billboard3D     ,= HashI("Billboard3D"         ))\
 		x(Depth           ,= HashI("Depth"               ))\
 		x(LeftHanded      ,= HashI("LeftHanded"          ))\
 		x(CastShadow      ,= HashI("CastShadow"          ))\
@@ -212,7 +213,7 @@ namespace pr::rdr12
 		Near    = 1 << 5,
 		Far     = 1 << 6,
 		Ortho   = 1 << 7,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Simple animation styles
@@ -239,7 +240,7 @@ namespace pr::rdr12
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Flags for extra behaviour of an object
@@ -281,7 +282,7 @@ namespace pr::rdr12
 		ShadowCastExclude = 1 << 12,
 
 		// Bitwise operators
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Colour blend operations
@@ -316,14 +317,14 @@ namespace pr::rdr12
 	// A renderer instance type for the body
 	// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
 	#define PR_RDR_INST(x) \
-		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes */\
-		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes */\
-		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes */\
-		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes */\
-		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes */\
-		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes */\
-		x(SKOverride ,m_sko    ,EInstComp::SortkeyOverride    )/*      8 bytes */\
-	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    ??? bytes */
+		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
+		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
+		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes, align 8 */\
+	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
+		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes, align 4 */\
+		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes, align 4 */\
+		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes, align 4 */\
+		x(SKOverride ,m_sko    ,EInstComp::SortkeyOverride    )/*      8 bytes, align 4 */
 	PR_RDR12_DEFINE_INSTANCE(RdrInstance , PR_RDR_INST);
 	#undef PR_RDR_INST
 
@@ -408,7 +409,7 @@ namespace pr::rdr12
 		Camera      m_cam;        // Camera description has been read
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
-			
+
 		ParseResult()
 			:m_objects()
 			,m_models()
@@ -567,11 +568,15 @@ namespace pr::rdr12
 		float Reflectivity(char const* name = nullptr) const;
 		void Reflectivity(float reflectivity, char const* name = nullptr);
 
-		// Set the texture on this object or child objects matching 'name' (see Apply)
-		// Note for difference mode drawlist management, if the object is currently in
-		// one or more drawlists (i.e. added to a scene) it will need to be removed and
-		// re-added so that the sort order is correct.
+		// Set the texture on this object or child objects matching 'name' (see Apply).
+		// Note for difference mode drawlist management, if the object is currently in one or more drawlists
+		// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
 		void SetTexture(Texture2D* tex, char const* name = nullptr);
+
+		// Set the sampler on the nuggets of this object or child objects matching 'name' (see Apply).
+		// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+		// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
+		void SetSampler(Sampler* sam, char const* name = nullptr);
 
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
@@ -617,10 +622,9 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	void Parse(
+	ParseResult Parse(
 		Renderer& rdr,                          // The renderer to create models for
 		script::Reader& reader,                 // The source of the script
-		ParseResult& out,                       // The results of parsing the script
 		Guid const& context_id = GuidZero,      // The context id to assign to each created object
 		ParseProgressCB progress_cb = nullptr); // Progress callback
 
@@ -628,40 +632,34 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	inline void ParseFile(
-		Renderer& rdr,                         // The renderer to create models for
-		wchar_t const* filename,               // The file containing the ldr script
-		ParseResult& out,                      // The results of parsing the script
-		Guid const& context_id = GuidZero,     // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr) // Progress callback
-	{
-		script::FileSrc src(filename);
-		script::Reader reader(src);
-		Parse(rdr, reader, out, context_id, progress_cb);
-	}
+	ParseResult ParseFile(
+		Renderer& rdr,                          // The renderer to create models for
+		std::filesystem::path filename,         // The file containing the ldr script
+		Guid const& context_id = GuidZero,      // The context id to assign to each created object
+		ParseProgressCB progress_cb = nullptr); // Progress callback
 
 	// Parse ldr script from a string
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
 	template <typename Char>
-	inline void ParseString(
-		Renderer& rdr,                         // The reader to create models for
-		Char const* ldr_script,                // The string containing the script
-		ParseResult& out,                      // The results of parsing the script
-		Guid const& context_id = GuidZero,     // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr) // Progress callback
-	{
-		using namespace pr::script;
-		StringSrc src(ldr_script);
-		Reader reader(src);
-		Parse(rdr, reader, out, context_id, progress_cb);
-	}
+	ParseResult ParseString(
+		Renderer& rdr,                          // The reader to create models for
+		Char const* ldr_script,                 // The string containing the script
+		Guid const& context_id = GuidZero,      // The context id to assign to each created object
+		ParseProgressCB progress_cb = nullptr); // Progress callback
 
 	// Callback function for editing a dynamic model
 	// This callback is intentionally low level, providing the whole model for editing.
 	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-	typedef void (__stdcall *EditObjectCB)(Model* model, void* ctx, Renderer& rdr);
+	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
+
+	// Create an ldr object from a string
+	template <typename Char>
+	LdrObjectPtr CreateLdr(
+		Renderer& rdr,                      // The reader to create models for
+		Char const* ldr_script,             // The string containing the script
+		Guid const& context_id = GuidZero); // The context id to assign to the object
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(

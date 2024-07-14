@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="sqlite3">
@@ -109,6 +109,9 @@
     </Filter>
     <Filter Include="pr\view3d\textures">
       <UniqueIdentifier>{203dae01-f4b1-454d-a93e-48daf8f28a4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\utility">
+      <UniqueIdentifier>{77a87cc7-6474-41ea-8c71-3957fa41da22}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -1011,8 +1014,41 @@
     <ClInclude Include="..\..\..\include\pr\gfx\dpi.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\filesys\fat_filesystem.h">
-      <Filter>pr\filesys</Filter>
+    <ClInclude Include="..\..\..\include\pr\geometry\reflect.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\space_filling.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h">
+      <Filter>pr\physics\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\storage\json.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\win32\user_directories.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\bit_data.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\async_wrap.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\storage\ini_file.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\gui\vt100_colours.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\str\utf8.h">
+      <Filter>pr\str</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

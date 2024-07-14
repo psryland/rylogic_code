@@ -44,7 +44,7 @@ namespace pr
 	inline Guid GenerateGUID()
 	{
 		Guid guid;
-		Throw(CoCreateGuid(&guid), "Failed to create GUID");
+		Check(CoCreateGuid(&guid), "Failed to create GUID");
 		return guid;
 	}
 

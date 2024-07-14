@@ -133,13 +133,15 @@ namespace pr::rdr
 		// Access to the shaders for a given render step
 		ShaderSet0 const& operator [](ERenderStep rstep) const
 		{
-			assert(int(rstep) >= 0 && int(rstep) < Enum<ERenderStep>::NumberOf);
-			return m_rstep[(int)rstep];
+			auto idx = static_cast<int>(rstep);
+			assert(idx >= 0 && idx < _countof(m_rstep));
+			return m_rstep[idx];
 		}
 		ShaderSet0& operator [](ERenderStep rstep)
 		{
-			assert(int(rstep) >= 0 && int(rstep) < Enum<ERenderStep>::NumberOf);
-			return m_rstep[(int)rstep];
+			auto idx = static_cast<int>(rstep);
+			assert(idx >= 0 && idx < _countof(m_rstep));
+			return m_rstep[idx];
 		}
 
 		// Equality

@@ -82,7 +82,7 @@ namespace view3d
 	using RenderingCB           = pr::StaticCB<void, Window*>;
 	using SceneChangedCB        = pr::StaticCB<void, Window*, View3DSceneChanged const&>;
 	using AnimationCB           = pr::StaticCB<void, Window*, EView3DAnimCommand, double>;
-	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*, wchar_t const*, int, int64_t>;
+	//using ReportErrorCB         = void(__stdcall*)(void*, wchar_t const*, wchar_t const*, int, int64_t);
 
 	// An instance type for other models used in LDraw
 	#define PR_RDR_INST(x)\

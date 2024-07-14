@@ -29,48 +29,49 @@ namespace pr::geometry
 	}
 
 	// Generate a model from an extrusion of a 2d polygon
-	// 'cs_count' - the number of verts in the 2d cross section (closed) polygon
 	// 'cs' - the cross section points (expects v2 const*). CCW winding order
-	// 'path_count' - the number of matrices in the extrusion path
 	// 'path' - a function that supplies a stream of transforms describing the extrusion path. Z axis should be the path tangent.
+	// 'path_count' - the number of matrices in the extrusion path
 	// 'num_colours - the number of colours pointed to by 'colours', can be equal to 0, 1, or path_count
 	// 'colours' - the array of colours of length 'num_colours'
-	template <typename TPath, typename VOut, typename IOut>
+	template <typename VOut, typename IOut>
 	Props Extrude(
-		int cs_count, v2 const* cs,
-		int path_count, TPath path,
+		std::span<v2 const> cs,
+		std::function<m4x4(int p, int pcount)> path,
+		int path_count,
 		bool closed,
 		bool smooth_cs,
-		int num_colours, Colour32 const* colours,
+		std::span<Colour32 const> colours,
 		VOut vout, IOut iout)
 	{
 		// Don't bother handling acute angles, users can just insert really small
 		// line segments between acute lines within the path
 		assert(path_count >= 2 && "Path must have at least 2 points");
 
+		auto cs_count = isize(cs);
 		auto [vcount, icount] = ExtrudeSize(cs_count, path_count, closed, smooth_cs);
 
 		Props props;
 		props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm;
 
 		// Colour iterator wrapper
-		auto col = CreateRepeater(colours, num_colours, path_count, num_colours != 0 ? colours[num_colours-1] : Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), path_count, !colours.empty() ? colours.back() : Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
 		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Verts - create planes of cross sections at each path point
-		auto xsection = MakeRing(cs, cs + cs_count);
-		auto ori = path();
+		auto xsection = MakeRing(cs.begin(), cs.end());
+		auto ori = path(0, path_count);
 		if (closed)
 		{
 			// Starting end cap
 			for (int x = 0; x != cs_count; ++x)
 			{
 				auto pt   = ori * v4(xsection[x], 0, 1.0f);
-				auto norm = ori * -v4ZAxis;
-				vout(bb(pt), cc(*col), norm, v2Zero);
+				auto norm = ori * -v4::ZAxis();
+				vout(bb(pt), cc(*col), norm, v2::Zero());
 				--vcount;
 			}
 		}
@@ -79,14 +80,14 @@ namespace pr::geometry
 			// Cross section verts for each segment of the path
 			// Doubled if outward normals are not smooth
 			v4 pt, norm;
-			ori = p != 0 ? path() : ori;
+			ori = p == 0 ? ori : path(p, path_count);
 			if (smooth_cs)
 			{
 				for (int x = 0; x != cs_count; ++x)
 				{
 					pt = ori * v4(xsection[x], 0, 1.0f);
-					norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x-1]), v2Zero), 0, 0);
-					vout(bb(pt), cc(*col), norm, v2Zero);
+					norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x-1]), v2::Zero()), 0, 0);
+					vout(bb(pt), cc(*col), norm, v2::Zero());
 					--vcount;
 				}
 			}
@@ -97,14 +98,14 @@ namespace pr::geometry
 					pt = ori * v4(xsection[x], 0, 1.0f);
 					if (x != 0)
 					{
-						norm = ori * v4(Normalise(Rotate90CCW(xsection[x] - xsection[x-1]), v2Zero), 0, 0);
-						vout(bb(pt), cc(*col), norm, v2Zero);
+						norm = ori * v4(Normalise(Rotate90CCW(xsection[x] - xsection[x-1]), v2::Zero()), 0, 0);
+						vout(bb(pt), cc(*col), norm, v2::Zero());
 						--vcount;
 					}
 					if (x != cs_count)
 					{
-						norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x]), v2Zero), 0, 0);
-						vout(bb(pt), cc(*col), norm, v2Zero);
+						norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x]), v2::Zero()), 0, 0);
+						vout(bb(pt), cc(*col), norm, v2::Zero());
 						--vcount;
 					}
 				}
@@ -116,8 +117,8 @@ namespace pr::geometry
 			for (int x = 0; x != cs_count; ++x)
 			{
 				auto pt   = ori * v4(xsection[x], 0, 1.0f);
-				auto norm = ori * +v4ZAxis;
-				vout(bb(pt), cc(*col), norm, v2Zero);
+				auto norm = ori * +v4::ZAxis();
+				vout(bb(pt), cc(*col), norm, v2::Zero());
 				--vcount;
 			}
 		}
@@ -130,7 +131,7 @@ namespace pr::geometry
 		{
 			// The cross section may not be convex.
 			// Triangulate the end cap using non-convex polygon triangulation.
-			TriangulatePolygon(cs, cs_count, [&](int i0, int i1, int i2)
+			TriangulatePolygon(cs, [&](int i0, int i1, int i2)
 			{
 				cap_faces.push_back(i0);
 				cap_faces.push_back(i1);

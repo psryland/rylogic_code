@@ -85,27 +85,27 @@ namespace pr
 	inline bool operator >  (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (OBox const& lhs, OBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline OBox& pr_vectorcall operator += (OBox& lhs, v4_cref<> offset)
+	inline OBox& pr_vectorcall operator += (OBox& lhs, v4_cref offset)
 	{
 		lhs.m_box_to_world.pos += offset;
 		return lhs;
 	}
-	inline OBox& pr_vectorcall operator -= (OBox& lhs, v4_cref<> offset)
+	inline OBox& pr_vectorcall operator -= (OBox& lhs, v4_cref offset)
 	{
 		lhs.m_box_to_world.pos -= offset;
 		return lhs;
 	}
-	inline OBox pr_vectorcall operator + (OBox const& lhs, v4_cref<> offset)
+	inline OBox pr_vectorcall operator + (OBox const& lhs, v4_cref offset)
 	{
 		auto ob = lhs;
 		return ob += offset;
 	}
-	inline OBox pr_vectorcall operator - (OBox const& lhs, v4_cref<> offset)
+	inline OBox pr_vectorcall operator - (OBox const& lhs, v4_cref offset)
 	{
 		auto ob = lhs;
 		return ob -= offset;
 	}
-	inline OBox pr_vectorcall operator * (m4_cref<> m, OBox const& ob)
+	inline OBox pr_vectorcall operator * (m4_cref m, OBox const& ob)
 	{
 		OBox obox;
 		obox.m_box_to_world = m * ob.m_box_to_world;

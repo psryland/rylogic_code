@@ -34,7 +34,7 @@ namespace pr::app
 		void HandleUpdateScene(rdr::Scene& scene, EmptyArgs const&)
 		{
 			auto const& view = scene.m_view;
-			m_inst.m_i2w = m4x4::Scale(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
+			m_inst.m_i2w = m4x4::Scale(m_scale, view.FocusPoint() + view.CameraToWorld() * m_ofs_pos);
 			scene.AddInstance(m_inst);
 		}
 

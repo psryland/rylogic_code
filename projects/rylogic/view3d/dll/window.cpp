@@ -1,4 +1,4 @@
-﻿//***************************************************************************************************
+//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -78,7 +78,7 @@ namespace view3d
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us
-			ReportError += StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
+			ReportError += {opts.m_error_cb, opts.m_error_cb_ctx};
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.RenderTargetSize();
@@ -170,7 +170,7 @@ namespace view3d
 		// scene as they do last minute transform adjustments based on the camera position.
 		auto& cam = m_camera;
 		m_scene.SetView(cam);
-		cam.m_moved = false;
+		cam.Moved(false);
 
 		// Set the light source
 		m_scene.m_global_light = m_light;
@@ -189,8 +189,8 @@ namespace view3d
 			auto fd = m_camera.FocusDist();
 
 			// Get the scaling factors from 'm_camera' to 'v_camera'
-			auto viewarea_c = m_camera.ViewArea(fd);
-			auto viewarea_v = v_camera.ViewArea(fd);
+			auto viewarea_c = m_camera.ViewRectAtDistance(fd);
+			auto viewarea_v = v_camera.ViewRectAtDistance(fd);
 
 			if (m_focus_point_visible)
 			{
@@ -507,7 +507,7 @@ namespace view3d
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Align))
 				{
-					m_camera.Align(cam.m_align);
+					m_camera.Align(cam.Align());
 					changed |= EView3DSettings::Camera_AlignAxis;
 				}
 				if (AllSet(src.m_cam_fields, ECamField::Aspect))
@@ -1124,7 +1124,7 @@ namespace view3d
 		{
 		case EKeyCodes::F7:
 			{
-				auto up = LengthSq(m_camera.m_align) > maths::tinyf ? m_camera.m_align : v4YAxis;
+				auto up = LengthSq(m_camera.Align()) > maths::tinyf ? m_camera.Align() : v4YAxis;
 				auto forward = up.z > up.y ? v4YAxis : -v4ZAxis;
 
 				auto bounds =

@@ -5,34 +5,20 @@
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/resource/resource_manager.h"
-#include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
 {
-	// NuggetData ctor
-	NuggetData::NuggetData(ETopo topo, EGeom geom, Range vrange, Range irange)
-		:m_topo(topo)
-		,m_geom(geom)
-		,m_shaders()
-		,m_pso()
-		,m_tex_diffuse()
-		,m_tint(Colour32White)
-		,m_sort_key(ESortGroup::Default)
-		,m_relative_reflectivity(1)
-		,m_nflags(ENuggetFlag::None)
-		,m_vrange(vrange)
-		,m_irange(irange)
-	{}
-
-	// Nugget ctor
-	Nugget::Nugget(NuggetData const& ndata, Model* model, RdrId id)
-		:NuggetData(ndata)
+	Nugget::Nugget(NuggetDesc const& ndata, Model* model)
+		:NuggetDesc(ndata)
 		,m_model(model)
-		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
+		,m_prim_count()
 		,m_nuggets()
-		,m_id(id)
 	{
+		m_prim_count = ndata.m_irange.empty()
+			? PrimCount(ndata.m_vrange.size(), ndata.m_topo)
+			: PrimCount(ndata.m_irange.size(), ndata.m_topo);
+
 		// Fixed the initial pipe state overrides
 		m_pso.m_fixed = m_pso.count();
 
@@ -82,9 +68,9 @@ namespace pr::rdr12
 
 		// Clear the alpha blending states 
 		m_sort_key.Group(ESortGroup::Default);
-		m_pso.Clear<EPipeState::BlendState0>();
-		m_pso.Clear<EPipeState::DepthWriteMask>();
 		m_pso.Clear<EPipeState::CullMode>();
+		m_pso.Clear<EPipeState::DepthWriteMask>();
+		m_pso.Clear<EPipeState::BlendState0>();
 
 		// Find and delete the dependent alpha nugget
 		DeleteDependent([](auto& nug) { return nug.m_id == AlphaNuggetId; });
@@ -93,28 +79,42 @@ namespace pr::rdr12
 		{
 			// Set this nugget to do the front faces
 			m_sort_key.Group(ESortGroup::AlphaFront);
-			m_pso.Set<EPipeState::BlendState0>({ // D3D12_RENDER_TARGET_BLEND_DESC 
+			m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
+			m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
+			m_pso.Set<EPipeState::BlendState0>({
 				.BlendEnable = TRUE,
 				.LogicOpEnable = FALSE,
-				.SrcBlend = D3D12_BLEND_SRC_ALPHA,
-				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA,
-				.BlendOp = D3D12_BLEND_OP_ADD,
-				.SrcBlendAlpha = D3D12_BLEND_SRC_ALPHA,
-				.DestBlendAlpha = D3D12_BLEND_DEST_ALPHA,
+				.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
+				.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
+				.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
+				.SrcBlendAlpha = D3D12_BLEND_ONE,
+				.DestBlendAlpha = D3D12_BLEND_ONE,
 				.BlendOpAlpha = D3D12_BLEND_OP_MAX,
 				.LogicOp = D3D12_LOGIC_OP_CLEAR,
 				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 			});
-			m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
-			m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
 
-			// Create a dependent nugget to do the back faces
-			if (m_model != nullptr)
+			// Create a dependent nugget to do the back faces. Only triangle data needs back faces rendered
+			if (m_model != nullptr && TopoGroup(m_topo) == ETopoGroup::Triangles)
 			{
-				auto& nug = *m_model->res_mgr().CreateNugget(*this, m_model, AlphaNuggetId);
-				nug.m_sort_key.Group(ESortGroup::AlphaBack);
-				nug.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT);
-				m_nuggets.push_back(nug);
+				auto nug = NuggetDesc(*this)
+					.id(AlphaNuggetId)
+					.sort_key(ESortGroup::AlphaBack)
+					.pso<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT)
+					.pso<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO)
+					.pso<EPipeState::BlendState0>({
+						.BlendEnable = TRUE,
+						.LogicOpEnable = FALSE,
+						.SrcBlend = D3D12_BLEND_SRC_ALPHA,      // Alpha is always drawn over opaque pixels, so the dest
+						.DestBlend = D3D12_BLEND_INV_SRC_ALPHA, // alpha is always 1. Blend the RGB using the src alpha.
+						.BlendOp = D3D12_BLEND_OP_ADD,          // And write the dest alpha as one
+						.SrcBlendAlpha = D3D12_BLEND_ONE,
+						.DestBlendAlpha = D3D12_BLEND_ONE,
+						.BlendOpAlpha = D3D12_BLEND_OP_MAX,
+						.LogicOp = D3D12_LOGIC_OP_CLEAR,
+						.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+					});
+				m_nuggets.push_back(*m_model->res_mgr().CreateNugget(nug, m_model));
 			}
 		}
 	}
@@ -161,22 +161,6 @@ namespace pr::rdr12
 		// Apply recursively
 		for (auto& nug : m_nuggets)
 			nug.CullMode(cull_mode);
-	}
-
-	// True if this nugget should be rendered
-	bool Nugget::Visible() const
-	{
-		// If the object cull mode does not match the pipe state cull mode then skip.
-		// This makes back/front face culling work with Alpha nuggets because render state
-		// culling mode has priority over the nugget cull mode.
-		#if 0 // todo - need a better way, rather than storing cull mode twice in the nugget. Maybe pass in the cull mode for the alpha pass
-		if (CullMode() != ECullMode::None &&
-			CullMode() != ECullMode::Default &&
-			CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))
-			return false;
-		#endif
-
-		return true;
 	}
 
 	// Delete this nugget, removing it from the owning model

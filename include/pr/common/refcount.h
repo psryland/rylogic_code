@@ -19,6 +19,13 @@
 
 namespace pr
 {
+	struct IRefCounted
+	{
+		virtual ~IRefCounted() = default;
+		virtual long AddRef() const = 0;
+		virtual long Release() const = 0;
+	};
+
 	// Reference counting mix-in base class
 	// 'Deleter' is a type containing a static function with signature: 'void RefCountZero(RefCount* obj)'
 	// Its purpose is to release resources owned by the ref counted object because there are no more references to it.
@@ -26,35 +33,30 @@ namespace pr
 	// which will pick up the default behaviour of deleting the ref counted object when the count hits zero
 	// 'Shared' should be true if AddRef()/Release() can be called from multiple threads
 	template <typename Deleter, bool Shared = true>
-	struct RefCount
+	struct RefCount :IRefCounted
 	{
 		mutable volatile long m_ref_count;
 
 		RefCount()
 			:m_ref_count(0)
 		{}
-
-		virtual ~RefCount()
-		{}
-
 		RefCount(RefCount&& rhs)
 			:m_ref_count(rhs.m_ref_count)
 		{
 			rhs.m_ref_count = 0;
 		}
-
 		RefCount& operator = (RefCount&& rhs)
 		{
+			if (this == &rhs) return *this;
 			std::swap(m_ref_count, rhs.m_ref_count);
 			return *this;
 		}
 
-		long AddRef() const
+		long AddRef() const override
 		{
 			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
 		}
-
-		long Release() const
+		long Release() const override
 		{
 			assert(m_ref_count > 0);
 			long ref_count = Shared ? ::InterlockedDecrement(&m_ref_count) : --m_ref_count;
@@ -62,13 +64,14 @@ namespace pr
 			return ref_count;
 		}
 
-		static void RefCountZero(RefCount<Deleter,Shared>* doomed)
+		static void RefCountZero(RefCount* doomed)
 		{
 			delete doomed;
 		}
 
 	private:
-		RefCount(RefCount const&) // Ref counted objects should be copyable
+
+		RefCount(RefCount const&) // Ref counted objects should not be copyable
 			:m_ref_count(0)
 		{
 			// This object has just been constructed, therefore AddRef() has

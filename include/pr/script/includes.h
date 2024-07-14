@@ -1,4 +1,4 @@
-﻿//**********************************
+//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -38,7 +38,7 @@ namespace pr::script
 		// True if missing includes do not throw errors
 		IgnoreMissing = 1 << 2,
 
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Source locations for includes
@@ -49,13 +49,13 @@ namespace pr::script
 		Resources = 1 << 1,
 		Strings   = 1 << 2,
 		All       = ~None,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// A base class and interface for an include handler
 	struct IIncludeHandler
 	{
-		virtual ~IIncludeHandler() {}
+		virtual ~IIncludeHandler() = default;
 
 		// Add a path to the include search paths
 		virtual void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t())
@@ -142,22 +142,26 @@ namespace pr::script
 			,m_strtab()
 			,FileOpened()
 		{}
-		explicit Includes(std::wstring_view search_paths, EIncludeTypes types = EIncludeTypes::All)
-			:Includes(types)
-		{
-			SearchPathList(search_paths);
-		}
 		explicit Includes(std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			ResourceModules(modules);
 		}
-		explicit Includes(std::wstring_view search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
+		explicit Includes(std::string_view search_paths, EIncludeTypes types = EIncludeTypes::All)
+			:Includes(types)
+		{
+			SearchPathList(search_paths);
+		}
+		explicit Includes(std::string_view search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			SearchPathList(search_paths);
 			ResourceModules(modules);
 		}
+		Includes(Includes&&) = default;
+		Includes(Includes const&) = default;
+		Includes& operator=(Includes&&) = default;
+		Includes& operator=(Includes const&) = default;
 
 		// Raised whenever a file is opened
 		EventHandler<Includes&, std::filesystem::path const&, true> FileOpened;
@@ -203,18 +207,21 @@ namespace pr::script
 		}
 
 		// Get/Set the search paths as a delimited list
-		std::wstring SearchPathList() const
+		std::string SearchPathList() const
 		{
-			std::wstring paths;
+			std::string paths;
 			for (auto& path : m_paths)
-				paths.append(paths.empty() ? L"" : L",").append(path);
+			{
+				if (!paths.empty()) paths.append(1, ',');
+				paths.append(path.string());
+			}
 
 			return paths;
 		}
-		void SearchPathList(std::wstring_view paths)
+		void SearchPathList(std::string_view paths)
 		{
 			m_paths.resize(0);
-			str::Split<std::wstring_view>(paths, L",;\n", [&](auto& p, size_t s, size_t e, int)
+			str::Split<std::string_view>(paths, ",;\n", [&](auto& p, size_t s, size_t e, int)
 			{
 				m_paths.push_back(p.substr(s, e - s));
 			});

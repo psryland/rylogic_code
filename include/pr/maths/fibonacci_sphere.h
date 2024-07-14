@@ -40,7 +40,7 @@ namespace pr
 	}
 
 	// Inverse mapping from a spherical direction vector to the nearest point of a Fibonacci sphere
-	inline int FibonacciSphericalMapping(v4_cref<> dir, int N)
+	inline int FibonacciSphericalMapping(v4_cref dir, int N)
 	{
 		// Notes:
 		//  - If N points are distributed evenly over the sphere, then each point can be associated with

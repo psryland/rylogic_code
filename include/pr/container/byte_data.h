@@ -40,7 +40,7 @@ namespace pr
 			, m_capacity(0)
 		{
 		}
-		byte_data(byte_data&& rhs)
+		byte_data(byte_data&& rhs) noexcept
 			:m_ptr(rhs.m_ptr)
 			, m_size(rhs.m_size)
 			, m_capacity(rhs.m_capacity)
@@ -79,7 +79,7 @@ namespace pr
 			set_capacity(0);
 		}
 
-		byte_data& operator = (byte_data&& rhs)
+		byte_data& operator = (byte_data&& rhs) noexcept
 		{
 			if (this != &rhs)
 			{

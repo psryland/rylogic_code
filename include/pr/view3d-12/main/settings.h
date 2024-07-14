@@ -12,10 +12,14 @@ namespace pr::rdr12
 	/// <summary>Options</summary>
 	enum class ERdrOptions
 	{
-		None = 0,
-		DeviceDebug = 1 << 0,
-		BGRASupport = 1 << 2,
+		None           = 0,
+		DeviceDebug    = 1 << 0,
+		DeviceGPUDebug = 1 << 1 | DeviceDebug,
+		BreakOnErrors  = 1 << 2 | DeviceDebug,
+		BGRASupport    = 1 << 3,
 		D2D1_DebugInfo = 1 << 4,
+
+		_flags_enum = 0,
 	};
 
 	/// <summary>Settings for constructing the renderer</summary>
@@ -47,22 +51,22 @@ namespace pr::rdr12
 			,m_options(ERdrOptions::None)
 			,m_adapter()
 		{}
-		
-		// Fill any missing values in 'settings' with defaults
+
+		// Enable the debug layer
+		RdrSettings& DebugLayer(bool enable = true)
+		{
+			if (m_adapter.ptr != nullptr) Check(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
+			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
+			return *this;
+		}
+
+		// Select the default adaptor (Call after setting the debug layer)
 		RdrSettings& DefaultAdapter()
 		{
 			SystemConfig cfg(AllSet(m_options, ERdrOptions::DeviceDebug));
 			if (!cfg.adapters.empty())
 				m_adapter = cfg.adapters[0];
 
-			return *this;
-		}
-
-		// Enable the debug layer
-		RdrSettings& DebugLayer(bool enable)
-		{
-			if (m_adapter.ptr != nullptr) Throw(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
-			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
 			return *this;
 		}
 	};
@@ -87,6 +91,7 @@ namespace pr::rdr12
 		DXGI_SWAP_CHAIN_FLAG  m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 		DXGI_FORMAT           m_depth_format;     // Depth buffer format
 		MultiSamp             m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
+		Colour                m_bkgd_colour;      // The clear value colour for the window
 		DXGI_USAGE            m_usage;            // Usage flags for the swap chain buffer
 		DXGI_SCALING          m_scaling;          // 
 		DXGI_ALPHA_MODE       m_alpha_mode;       //
@@ -106,11 +111,12 @@ namespace pr::rdr12
 			,m_rdr_settings(&rdr_settings)
 			,m_output()
 			,m_windowed(windowed)
-			,m_mode(iv2Zero)
+			,m_mode(iv2::Zero())
 			,m_swap_effect(DXGI_SWAP_EFFECT_FLIP_DISCARD)
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
-			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
+			,m_depth_format(DXGI_FORMAT_D32_FLOAT)
 			,m_multisamp()
+			,m_bkgd_colour(ColourBlack)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
 			,m_scaling(DXGI_SCALING_STRETCH)
 			,m_alpha_mode(DXGI_ALPHA_MODE_UNSPECIFIED)
@@ -120,19 +126,62 @@ namespace pr::rdr12
 			,m_allow_alt_enter(false)
 			,m_name()
 		{
+			DefaultOutput();
+			DefaultMode();
+
 			// Default to the window client area
-			if (hwnd != nullptr)
-			{
-				RECT rect;
-				Throw(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
-				m_mode = DisplayMode(rect.right - rect.left, rect.bottom - rect.top);
-			}
+			// Null hwnd is allowed when off-screen only rendering
+			if (m_output.ptr != nullptr && hwnd != nullptr)
+				Size(hwnd);
 		}
 		WndSettings& DefaultOutput()
 		{
 			if (!m_rdr_settings->m_adapter.outputs.empty())
 				m_output = m_rdr_settings->m_adapter.outputs[0];
 			
+			return *this;
+		}
+		WndSettings& DefaultMode()
+		{
+			return m_windowed ? Size(1024, 768) : Mode(m_output.FindBestFullScreenMode());
+		}
+		WndSettings& Mode(DisplayMode const& mode)
+		{
+			m_mode = mode;
+			return *this;
+		}
+		WndSettings& Size(iv2 const& area)
+		{
+			Check(m_output.ptr != nullptr, "Set the output before setting the display mode");
+			return Mode(m_output.FindClosestMatchingMode(DisplayMode(area)));
+		}
+		WndSettings& Size(int w, int h)
+		{
+			return Size(iv2(w,h));
+		}
+		WndSettings& Size(HWND hwnd)
+		{
+			RECT rect;
+			Check(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
+			return Size(iv2(rect.right - rect.left, rect.bottom - rect.top));
+		}
+		WndSettings& MutliSampling(int count)
+		{
+			m_multisamp = MultiSamp(count);
+			return *this;
+		}
+		WndSettings& BackgroundColour(Colour colour)
+		{
+			m_bkgd_colour = colour;
+			return *this;
+		}
+		WndSettings& BackgroundColour(Colour32 colour)
+		{
+			return BackgroundColour(Colour(colour));
+		}
+		WndSettings& UseWBuffer(bool use = true)
+		{
+			m_use_w_buffer = use;
 			return *this;
 		}
 		WndSettings& GdiCompatible()
@@ -147,23 +196,9 @@ namespace pr::rdr12
 			m_multisamp = MultiSamp();
 			return *this;
 		}
-		WndSettings& Mode(DisplayMode const& mode)
+		WndSettings& Name(std::string_view name)
 		{
-			m_mode = mode;
-			return *this;
-		}
-		WndSettings& Size(iv2 const& area)
-		{
-			Throw(m_output.ptr != nullptr, "Set the output before setting the display mode");
-			return Mode(m_output.FindClosestMatchingMode(DisplayMode(area)));
-		}
-		WndSettings& Size(int w, int h)
-		{
-			return Size(iv2(w,h));
-		}
-		WndSettings& UseWBuffer()
-		{
-			m_use_w_buffer = true;
+			m_name = name;
 			return *this;
 		}
 	};

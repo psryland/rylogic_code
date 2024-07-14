@@ -8,15 +8,27 @@
 
 namespace pr
 {
+	// Concept for 'BitField'
+	template <typename T> concept BitField =
+		std::is_integral_v<T> ||
+		std::is_enum_v<T> ||
+		requires(T t)
+		{
+			{ t |= t };
+			{ t &= t };
+		};
+
 	// Convert to/from uint64 to uint32[2]
 	constexpr uint64_t MakeLL(uint32_t hi, uint32_t lo)
 	{
 		return (static_cast<uint64_t>(hi) << 32) | lo;
 	}
-	inline void BreakLL(uint64_t ll, uint32_t& hi, uint32_t& lo)
+	constexpr std::tuple<uint32_t, uint32_t> BreakLL(uint64_t ll)
 	{
-		hi = uint32_t((ll >> 32L) & 0xFFFFFFFF);
-		lo = uint32_t((ll       ) & 0xFFFFFFFF);
+		return {
+			static_cast<uint32_t>((ll >> 32L) & 0xFFFFFFFF),
+			static_cast<uint32_t>((ll) & 0xFFFFFFFF),
+		};
 	}
 
 	// Bit manipulation functions
@@ -29,41 +41,43 @@ namespace pr
 		return 1i64 << n;
 	}
 
-	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
-	template <typename T, typename U> 
-	[[nodiscard]] constexpr T SetBits(T value, U mask, bool state)
+	// Sets the masked bits of 'value' to the state 'state'
+	// If 'state' is boolean-true, returns 'value | mask'. If false, returns 'value &~ mask'
+	// If 'state' is integral, then applies 'mask & state' to 'value'
+	template <BitField T, BitField U, typename B>
+	requires (BitField<B> || std::is_same_v<B,bool>)
+	[[nodiscard]] constexpr T SetBits(T value, U mask, B state)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return state
-			? static_cast<T>(static_cast<Int>(value) |  static_cast<Int>(mask))
-			: static_cast<T>(static_cast<Int>(value) & ~static_cast<Int>(mask));
-	}
-
-	// Sets the masked bits of 'value' to the state 'bitfield'
-	template <typename T, typename U>
-	[[nodiscard]] constexpr T SetBits(T value, U mask, U bitfield)
-	{
-		using Int = pr::underlying_type_t<T>;
-		auto result = static_cast<Int>(value);
-		result &= ~static_cast<Int>(mask);            // clear masked bits to zero
-		result |=  static_cast<Int>(mask & bitfield); // set bits from bit field
-		return result;
+		using UT = underlying_type_t<T>;
+		if constexpr (std::is_same_v<B, bool>)
+		{
+			return state
+				? static_cast<T>(static_cast<UT>(value) | static_cast<UT>(mask))
+				: static_cast<T>(static_cast<UT>(value) & ~static_cast<UT>(mask));
+		}
+		else
+		{
+			auto result = static_cast<UT>(value);
+			result &= ~static_cast<UT>(mask);         // clear masked bits to zero
+			result |=  static_cast<UT>(mask & state); // set bits from bit field
+			return result;
+		}
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
 	template <typename T, typename U>
 	[[nodiscard]] constexpr bool AnySet(T value, U mask)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return (static_cast<Int>(value) & static_cast<Int>(mask)) != 0;
+		using UT = pr::underlying_type_t<T>;
+		return (static_cast<UT>(value) & static_cast<UT>(mask)) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
 	template <typename T, typename U>
 	[[nodiscard]] constexpr bool AllSet(T value, U mask)
 	{
-		using Int = pr::underlying_type_t<T>;
-		return (static_cast<Int>(value) & static_cast<Int>(mask)) == static_cast<Int>(mask);
+		using UT = pr::underlying_type_t<T>;
+		return (static_cast<UT>(value) & static_cast<UT>(mask)) == static_cast<UT>(mask);
 	}
 
 	// Reverse the order of bits in 'v'
@@ -124,33 +138,41 @@ namespace pr
 	// Returns the bit position of the highest bit
 	constexpr int HighBitIndex(uint64_t n)
 	{
-		unsigned int shift = 0, pos = 0;
-		shift = ((n & 0xFFFFFFFF00000000ULL) != 0) << 5; n >>= shift; pos |= shift;
-		shift = ((n &         0xFFFF0000ULL) != 0) << 4; n >>= shift; pos |= shift;
-		shift = ((n &             0xFF00ULL) != 0) << 3; n >>= shift; pos |= shift;
-		shift = ((n &               0xF0ULL) != 0) << 2; n >>= shift; pos |= shift;
-		shift = ((n &                0xCULL) != 0) << 1; n >>= shift; pos |= shift;
-		shift = ((n &                0x2ULL) != 0) << 0; n >>= shift; pos |= shift;
+		if (n == 0) return -1;
+		auto x = n; int shift = 0, pos = 0;
+		shift = ((x & 0xFFFFFFFF00000000ULL) != 0) << 5; x >>= shift; pos |= shift;
+		shift = ((x &         0xFFFF0000ULL) != 0) << 4; x >>= shift; pos |= shift;
+		shift = ((x &             0xFF00ULL) != 0) << 3; x >>= shift; pos |= shift;
+		shift = ((x &               0xF0ULL) != 0) << 2; x >>= shift; pos |= shift;
+		shift = ((x &                0xCULL) != 0) << 1; x >>= shift; pos |= shift;
+		shift = ((x &                0x2ULL) != 0) << 0; x >>= shift; pos |= shift;
 		return pos;
 	}
 
 	// Returns the bit position of the lowest bit
 	constexpr int LowBitIndex(uint64_t n)
 	{
-		return HighBitIndex(LowBit(n));
+		auto low_bit = LowBit(n);
+		return n != 0 ? HighBitIndex(low_bit) : -1;
 	}
 
-	// Return the integer log2 of 'n'
-	constexpr int IntegerLog2(uint64_t n)
+	// Returns the log2 of 'n' rounded down to the nearest integer
+	constexpr int FloorLog2(uint64_t n)
 	{
 		return HighBitIndex(n);
+	}
 
-		// Doesn't work for values greater than (1 << 52)
-		// // This only works for IEEE 64bit floats: [1:sign][11:exponent][52:fraction]
-		// assert(n != 0);
-		// auto v = static_cast<double const>(n);
-		// auto c = *reinterpret_cast<long long const*>(&v);
-		// return ((c >> 52) & 0x7FF) - 1023;
+	// Returns the log2 of 'n' rounded up to the nearest integer
+	constexpr int CeilLog2(uint64_t n)
+	{
+		return HighBitIndex(n) + 1;
+	}
+
+	// Returns the number of leading zeros in 'n' (64-bit)
+	constexpr int LeadingZeros(uint64_t n)
+	{
+		if (n == 0) return 64;
+		return 63 - FloorLog2(n);
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
@@ -166,6 +188,13 @@ namespace pr
 		// Zero is not a power of two because 2^n means "1 doubled n times". There is no number of times you can double 1 to get zero.
 		// Incidentally, this is why '2^0 == 1', "1 doubled no times" is still 1.
 		return ((n - 1) & n) == 0 && n != 0;
+	}
+
+	// Return the highest power of two that is less that 'n'
+	template <std::integral T> constexpr T PowerOfTwoLessThan(T n)
+	{
+		// A bitmask containing just the highest bit is a power of two just less than 'n'
+		return HighBit<T>(n);
 	}
 
 	// Return the next highest power of two greater than 'n'
@@ -222,10 +251,30 @@ namespace pr
 		return x | (y << 1);
 	}
 
+	// Pack a value into 'bits' in the range [lo, hi).
+	// 'lo' is the LSB, 'hi' is one past the MSB.
+	// e.g. PackBits(0b00000001, 0b101, 6, 3) => 0b00101001
+	template <std::integral T, std::unsigned_integral U>
+	constexpr U PackBits(U bits, T value, int hi, int lo)
+	{
+		const U mask = (1ULL << (hi - lo)) - 1;
+		return static_cast<U>((bits & ~(mask << lo)) | ((value & mask) << lo));
+	}
+
+	// Unpack a value from 'bits' in the range [lo, hi).
+	// 'lo' is the LSB, 'hi' is one past the MSB.
+	// e.g. GrabBits(0b00101001, 6, 3) => 0b101
+	template <std::integral T, std::unsigned_integral U>
+	constexpr T GrabBits(U bits, int hi, int lo)
+	{
+		const U mask = (1ULL << (hi - lo)) - 1;
+		return static_cast<T>((bits >> lo) & mask);
+	}
+
 	// Extract the bit range [hi,lo] (inclusive) from 'value'.
 	// 'hi' and 'lo' are zero-based bit indices. The returned result is shifted down by .lo'.
 	// e.g. Bits(0b11111111, 6, 3) => 0b01111000 => 0b0001111
-	template <typename T> constexpr T Bits(unsigned long long value, int hi, int lo)
+	template <typename T> [[deprecated("Use GrabBits")]] constexpr T Bits(unsigned long long value, int hi, int lo)
 	{
 		unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 		return static_cast<T>((value >> lo) & mask);
@@ -234,7 +283,7 @@ namespace pr
 	// Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
 	// 'hi' and 'lo' are zero-based bit indices.
 	// e.g. BitStuff(0b11111111, 6, 3) => 0b00001111 => 0b01111000
-	template <typename T> constexpr T BitStuff(unsigned long long value, int hi, int lo)
+	template <typename T> [[deprecated("Use PackBits")]] constexpr T BitStuff(unsigned long long value, int hi, int lo)
     {
 	    unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 	    return static_cast<T>((value & mask) << lo);
@@ -303,6 +352,102 @@ namespace pr
 	{
 		return BitEnumerator<T>(bits);
 	}
+
+	// Decompose/Compose an IEEE754 double into the sign, mantissa, exponent
+	inline std::tuple<int, int32_t, int64_t> Decompose(double x, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+		// Translate the double into sign, exponent, and mantissa.
+		auto bits = reinterpret_cast<uint64_t const&>(x);
+		auto sign = GrabBits<int>(bits, 64, 63) != 0 ? -1 : +1;
+		auto exponent = GrabBits<int32_t>(bits, 63, 52);
+		auto mantissa = GrabBits<int64_t>(bits, 52, 0);
+		if (!raw)
+		{
+			// Normal numbers: add the '1' to the front of the mantissa.
+			if (exponent != 0)
+				mantissa |= 1ULL << 52;
+			else
+				exponent++;
+
+			// Bias the exponent
+			exponent -= 1023;
+		}
+		return std::tie(sign, exponent, mantissa);
+	}
+	inline double Compose(int sign, int32_t exponent, int64_t mantissa, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+		// Translate the sign, exponent, and mantissa into a double.
+		if (!raw)
+		{
+			// Bias the exponent
+			exponent += 1023;
+
+			// Normal numbers: remove the '1' from the front of the mantissa.
+			if (exponent != 0)
+				mantissa &= ~(1ULL << 52);
+			else
+				exponent--;
+		}
+		auto bits = 0ULL;
+		bits = PackBits(bits, int(sign < 0), 64, 63);
+		bits = PackBits(bits, exponent, 63, 52);
+		bits = PackBits(bits, mantissa, 52, 0);
+		return reinterpret_cast<double const&>(bits);
+	}
+
+	// Decompose an IEEE754 float into the sign, mantissa, exponent
+	inline std::tuple<int, int32_t, int32_t> Decompose(float x, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 127) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 127) x 0.fraction
+
+		// Translate the double into sign, exponent, and mantissa.
+		auto bits = reinterpret_cast<uint32_t const&>(x);
+		auto sign = GrabBits<int>(bits, 32, 31) != 0 ? -1 : +1;
+		auto exponent = GrabBits<int32_t>(bits, 31, 23);
+		auto mantissa = GrabBits<int32_t>(bits, 23, 0);
+		if (!raw)
+		{
+			// Normal numbers: add the '1' to the front of the mantissa.
+			if (exponent != 0)
+				mantissa |= 1U << 23;
+			else
+				exponent++;
+
+			// Bias the exponent
+			exponent -= 127;
+		}
+		return std::tie(sign, exponent, mantissa);
+	}
+	inline float Compose(int sign, int32_t exponent, int32_t mantissa, bool raw = false)
+	{
+		//    Normal numbers: (-1)^sign x 2^(e - 127) x 1.fraction
+		// Subnormal numbers: (-1)^sign x 2^(1 - 127) x 0.fraction
+
+		// Translate the sign, exponent, and mantissa into a float.
+		if (!raw)
+		{
+			// Bias the exponent
+			exponent += 127;
+
+			// Normal numbers: remove the '1' from the front of the mantissa.
+			if (exponent != 0)
+				mantissa &= ~(1U << 23);
+			else
+				exponent--;
+		}
+		auto bits = 0U;
+		bits = PackBits(bits, int(sign < 0), 32, 31);
+		bits = PackBits(bits, exponent, 31, 23);
+		bits = PackBits(bits, mantissa, 23, 0);
+		return reinterpret_cast<float const&>(bits);
+	}
 }
 
 #if PR_UNITTESTS
@@ -312,8 +457,7 @@ namespace pr::maths
 	PRUnitTest(BitFunctionTest)
 	{
 		{
-			uint32_t hi,lo;
-			BreakLL(0x0123456789abcdef, hi, lo);
+			auto [hi,lo] = BreakLL(0x0123456789abcdef);
 			PR_CHECK(hi, 0x01234567U);
 			PR_CHECK(lo, 0x89abcdefU);
 
@@ -337,16 +481,27 @@ namespace pr::maths
 			PR_CHECK(bits[4], 1U << 9);
 		}
 		{
+			uint8_t bits = 0;
+			bits = PackBits(bits, 0b101, 6, 3);
+			PR_CHECK(bits == 0b00101000, true);
+			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
+
+			bits = 0b11111100;
+			bits = PackBits(bits, 0b101, 6, 3);
+			PR_CHECK(bits == 0b11101100, true);
+			PR_CHECK(GrabBits<uint8_t>(bits, 6, 3) == 0b101, true);
+		}
+		{
 			auto n0 = 0b1; // 1
-			PR_CHECK(IntegerLog2(n0), 0);
+			PR_CHECK(FloorLog2(n0), 0);
 			auto n1 = 0b10; // 2
-			PR_CHECK(IntegerLog2(n1), 1);
+			PR_CHECK(FloorLog2(n1), 1);
 			auto n2 = 0b1000000; // 64
-			PR_CHECK(IntegerLog2(n2), 6);
+			PR_CHECK(FloorLog2(n2), 6);
 			auto n3 = 0b101010101010101ULL; // 21845
-			PR_CHECK(IntegerLog2(n3), 14);
+			PR_CHECK(FloorLog2(n3), 14);
 			auto n4 = 0xFFFFFFFFFFFFFFFFULL; // 18446744073709551615
-			PR_CHECK(IntegerLog2(n4), 63);
+			PR_CHECK(FloorLog2(n4), 63);
 		}
 		{
 			char const* mask_str = "1001110010";
@@ -357,6 +512,14 @@ namespace pr::maths
 			PR_CHECK(LowBitIndex(mask), 1);
 			PR_CHECK(LowBit(mask), 2U);
 			PR_CHECK(HighBit(mask), 0x200U);
+		}
+		{
+			auto bits = 0b001011000100;
+			PR_EXPECT(HighBitIndex(bits) == 9);
+			PR_EXPECT(LowBitIndex(bits) == 2);
+			PR_EXPECT((1ULL << FloorLog2(bits)) == 0b001000000000ULL);
+			PR_EXPECT((1ULL << CeilLog2(bits))  == 0b010000000000ULL);
+			PR_EXPECT(LeadingZeros(bits) == 63 - 9);
 		}
 		{
 			char const* mask_str = "1111010100010";
@@ -409,6 +572,24 @@ namespace pr::maths
 			auto c = ReverseBits64(a, 12); // just the lower 12 bits
 			auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
 			PR_CHECK(c, C);
+		}
+		{
+			auto d1 = -9.887654321e126;
+			auto [sign, exponent, mantissa] = Decompose(d1);
+			auto d2 = Compose(sign, exponent, mantissa);
+			PR_CHECK(d1 == d2, true);
+			PR_CHECK(sign, -1);
+			PR_CHECK(exponent, 421);
+			PR_CHECK(mantissa, 0x001d36ae824ee75f);
+		}
+		{
+			auto f1 = -9.887654321e25f;
+			auto [sign, exponent, mantissa] = Decompose(f1);
+			auto f2 = Compose(sign, exponent, mantissa);
+			PR_CHECK(f1 == f2, true);
+			PR_CHECK(sign, -1);
+			PR_CHECK(exponent, 86);
+			PR_CHECK(mantissa, 0x00a393d8);
 		}
 	}
 }

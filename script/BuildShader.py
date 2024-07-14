@@ -49,7 +49,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	fullpath = Tools.Path(fullpath)
 	fdir,fname = os.path.split(fullpath)
 	ftitle,extn  = os.path.splitext(fname)
-	if trace: print(f"File: {fdir}\{ftitle}{extn}")
+	if trace: print(f"File: {fdir}/{ftitle}{extn}")
 
 	# Determine the output directory
 	outdir = fdir
@@ -164,7 +164,8 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 if __name__ == "__main__":
 	try:
 		#sys.argv = ["", "P:\\pr\\projects\\rylogic\\view3d\\shaders\\hlsl\\shadow\\shadow_map.hlsl", "x86", "debug", "dbg"]
-		#sys.argv = ["", "P:\\pr2\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\forward\\forward.hlsl", "x86", "debug", "dbg"]
+		#sys.argv = ["", "P:\\pr\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\forward\\forward.hlsl", "x86", "debug", "dbg"]
+		#sys.argv = ["", "P:\\pr\\projects\\rylogic\\view3d-12\\src\\shaders\\hlsl\\utility\\generate_mipmaps.hlsl", "x86", "debug", "dbg"]
 
 		trace = False
 		if trace:

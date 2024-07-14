@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -149,12 +149,6 @@ namespace TimeTracker
 					if (TimePeriods.Count != 0)
 					{
 						TimePeriods[0].NotifyPropertyChanged(nameof(TimePeriod.Duration));
-					}
-
-					// Notify total time updated
-					if (TimeTotals.Find(x => x.TaskName == CurrentTaskName) is TimeTotal totals)
-					{
-						totals.NotifyPropertyChanged(nameof(TimeTotal.Total));
 					}
 
 					// Remove tasks not created today

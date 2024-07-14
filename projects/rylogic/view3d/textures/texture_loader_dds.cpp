@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -50,7 +50,7 @@ namespace pr::rdr
 			MIPMAP      = 0x00020000, // DDSD_MIPMAPCOUNT
 			LINEARSIZE  = 0x00080000, // DDSD_LINEARSIZE
 			VOLUME      = 0x00800000, // DDSD_DEPTH
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class EPixelFormatFlags
 		{
@@ -62,14 +62,14 @@ namespace pr::rdr
 			RGBA        = 0x00000041, // DDPF_RGB | DDPF_ALPHAPIXELS
 			LUMINANCE   = 0x00020000, // DDPF_LUMINANCE
 			LUMINANCEA  = 0x00020001, // DDPF_LUMINANCE | DDPF_ALPHAPIXELS
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class ECaps
 		{
 			CUBEMAP = 0x00000008, // DDSCAPS_COMPLEX
 			TEXTURE = 0x00001000, // DDSCAPS_TEXTURE
 			MIPMAP  = 0x00400008, // DDSCAPS_COMPLEX | DDSCAPS_MIPMAP
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		enum class ECaps2
 		{
@@ -82,7 +82,7 @@ namespace pr::rdr
 			CUBEMAP_NEGATIVEZ = 0x00008200, // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_NEGATIVEZ
 			CUBEMAP_ALLFACES = CUBEMAP_POSITIVEX | CUBEMAP_NEGATIVEX | CUBEMAP_POSITIVEY | CUBEMAP_NEGATIVEY | CUBEMAP_POSITIVEZ | CUBEMAP_NEGATIVEZ,
 			VOLUME = 0x00200000, // DDSCAPS2_VOLUME
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 		struct PixelFormat
@@ -431,7 +431,7 @@ namespace pr::rdr
 
 				// Create the 1D texture
 				ID3D11Texture1D* tex;
-				Throw(d3d_device->CreateTexture1D(&tdesc.Tex1D, images.data(), &tex));
+				Check(d3d_device->CreateTexture1D(&tdesc.Tex1D, images.data(), &tex));
 				res = D3DPtr<ID3D11Resource>(tex, false);
 
 				// Create the SRV
@@ -448,7 +448,7 @@ namespace pr::rdr
 					srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
 					srv_desc.Texture1D.MipLevels = tdesc.Tex1D.MipLevels;
 				}
-				Throw(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
+				Check(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
 				srv = D3DPtr<ID3D11ShaderResourceView>(srv2, false);
 				break;
 			}
@@ -469,7 +469,7 @@ namespace pr::rdr
 
 				// Create the 2D texture
 				ID3D11Texture2D* tex;
-				Throw(d3d_device->CreateTexture2D(&tdesc.Tex2D, images.data(), &tex));
+				Check(d3d_device->CreateTexture2D(&tdesc.Tex2D, images.data(), &tex));
 
 				// Create the SRV
 				ID3D11ShaderResourceView* srv2;
@@ -496,7 +496,7 @@ namespace pr::rdr
 					srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 					srv_desc.Texture2D.MipLevels = tdesc.Tex2D.MipLevels;
 				}
-				Throw(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
+				Check(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
 				srv = D3DPtr<ID3D11ShaderResourceView>(srv2, false);
 				break;
 			}
@@ -515,7 +515,7 @@ namespace pr::rdr
 
 				// Create the 3D texture
 				ID3D11Texture3D* tex;
-				Throw(d3d_device->CreateTexture3D(&tdesc.Tex3D, images.data(), &tex));
+				Check(d3d_device->CreateTexture3D(&tdesc.Tex3D, images.data(), &tex));
 				res = D3DPtr<ID3D11Resource>(tex, false);
 
 				// Create the SRV
@@ -523,7 +523,7 @@ namespace pr::rdr
 				ShaderResourceViewDesc srv_desc(format);
 				srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
 				srv_desc.Texture3D.MipLevels = tdesc.Tex3D.MipLevels;
-				Throw(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
+				Check(d3d_device->CreateShaderResourceView(res.get(), &srv_desc, &srv2));
 				srv = D3DPtr<ID3D11ShaderResourceView>(srv2, false);
 				break; 
 			}

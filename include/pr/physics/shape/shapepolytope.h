@@ -27,8 +27,8 @@ namespace pr
 		};
 		struct ShapePolyNbrs
 		{
-			uint16_t m_first;		// Byte offset to the first neighbour
-			uint16_t m_count;		// Number of neighbours
+			uint16_t m_first; // Byte offset to the first neighbour
+			uint16_t m_count; // Number of neighbours
 
 			PolyIdx const* begin() const              { return reinterpret_cast<PolyIdx const*>(this) + m_first; }
 			PolyIdx*       begin()                    { return reinterpret_cast<PolyIdx*      >(this) + m_first; }

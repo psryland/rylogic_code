@@ -1,4 +1,4 @@
-﻿//*****************************************
+//*****************************************
 // XmlLite wrapper
 //	Copyright (C) Paul Ryland 2009
 //*****************************************
@@ -31,7 +31,7 @@ namespace pr::xml
 		ByteOrderMark      = 1 << XmlWriterProperty_ByteOrderMark,
 		OmitXmlDeclaration = 1 << XmlWriterProperty_OmitXmlDeclaration,
 		ConformanceLevel   = 1 << XmlWriterProperty_ConformanceLevel,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Forward declarations

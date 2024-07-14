@@ -7,8 +7,11 @@
 #include "pr/view3d-12/scene/scene_camera.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
+#include "pr/view3d-12/utility/ray_cast.h"
+#include "pr/view3d-12/ldraw/ldr_object.h"
 
 namespace pr::rdr12
 {
@@ -32,19 +35,16 @@ namespace pr::rdr12
 		// but non-fixed means we need the pr::rdr::Allocator to construct it.
 		// Conceptually, 'InstCont' should be an unordered_set, but using an array is way
 		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
-		using GfxCmdList = D3DPtr<ID3D12GraphicsCommandList>;
-		using RenderStepCont = pr::vector<RenderStep*, 16, true>;
+		using RenderStepCont = pr::vector<std::unique_ptr<RenderStep>, 16, true>;
 		using InstCont = pr::vector<BaseInstance const*, 1024, false>;
-		//using RayCastStepPtr = std::unique_ptr<RayCastStep>;
+		using RenderRayCastPtr = std::unique_ptr<RenderRayCast>;
 		
-		Window*          m_wnd;          // The controlling window
-		SceneCamera      m_cam;          // Represents the camera properties used to project onto the screen
-		Viewport         m_viewport;     // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
-		InstCont         m_instances;    // Instances added to this scene for rendering.
-		RenderStepCont   m_render_steps; // The stages of rendering the scene
-		GfxCmdList       m_cmd_list;     // The command list used by this scene
-		Colour           m_bkgd_colour;  // The background colour for the scene. Set to ColourZero to disable clear bb
-		//RayCastStepPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
+		Window*          m_wnd;           // The controlling window
+		SceneCamera      m_cam;           // Represents the camera properties used to project onto the screen
+		Viewport         m_viewport;      // Represents the rectangular area on the back buffer that this scene covers (modify this variable if you want. Use the methods tho. Remember clip regions)
+		InstCont         m_instances;     // Instances added to this scene for rendering.
+		RenderStepCont   m_render_steps;  // The stages of rendering the scene
+		RenderRayCastPtr m_ht_immediate;  // A ray cast render step for performing immediate hit tests
 		Light            m_global_light;  // The global light settings
 		TextureCubePtr   m_global_envmap; // A global environment map
 		PipeStates       m_pso;           // Scene-wide pipe state overrides
@@ -54,9 +54,10 @@ namespace pr::rdr12
 		~Scene();
 
 		// Renderer access
+		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
 		Window& wnd() const;
-		ID3D12Device* D3DDevice() const;
+		ResourceManager& res() const;
 
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame
@@ -68,58 +69,57 @@ namespace pr::rdr12
 		// in the scene, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 		// This method will add the instance to all render steps for which the model has appropriate nuggets.
 		// Instances can be added to render steps directly if finer control is needed
-		void AddInstance(BaseInstance const& inst);
-		template <InstanceType Inst> void AddInstance(Inst const& inst)
+		template <InstanceType Inst>
+		void AddInstance(Inst const& inst)
 		{
 			AddInstance(inst.m_base);
 		}
+		void AddInstance(LdrObjectPtr inst)
+		{
+			AddInstance(inst->m_base);
+		}
 
 		// Remove an instance from the drawlist
-		void RemoveInstance(BaseInstance const& inst);
-		template <InstanceType Inst> void RemoveInstance(Inst const& inst)
+		template <InstanceType Inst>
+		void RemoveInstance(Inst const& inst)
 		{
 			RemoveInstance(inst.m_base);
 		}
-
-		//// Get/Set the viewport
-		//Viewport const& Viewport() const;
-		//void Viewport(rdr12::Viewport const& vp);
-
-		//// Get/Set the scene camera (i.e. the camera to screen projection or 'View' matrix in dx speak)
-		//SceneCamera const& Camera() const;
-		//void Camera(SceneCamera const& cam);
-		//void Camera(pr::Camera const& cam);
 
 		// Raised just before the drawlist is sorted. Handlers should add/remove
 		// instances from the scene, or add/remove render steps as required.
 		EventHandler<Scene&, EmptyArgs const&> OnUpdateScene;
 
 		// Set the render steps to use for rendering the scene
-		void SetRenderSteps(std::initializer_list<ERenderStep> rsteps);
+		void SetRenderSteps(std::span<ERenderStep const> rsteps);
 
-		// Access the render step by Id
-		RenderStep const* FindRStep(ERenderStep id) const;
-		RenderStep const& operator[](ERenderStep id) const;
-		RenderStep* FindRStep(ERenderStep id);
-		RenderStep& operator[](ERenderStep id);
+		// Access the render step by type
 		template <RenderStepType TRenderStep>
 		TRenderStep const* FindRStep() const
 		{
 			return static_cast<TRenderStep const*>(FindRStep(TRenderStep::Id));
 		}
+		template <RenderStepType TRenderStep>
+		TRenderStep* FindRStep()
+		{
+			return static_cast<TRenderStep*>(FindRStep(TRenderStep::Id));
+		}
 
-		#if 0 // todo
-		// Perform an immediate hit test on the instances provided by coroutine 'instances'
+		// Enable/Disable shadow casting
+		void ShadowCasting(bool enable, int shadow_map_size);
+
+		// Perform an immediate hit test on the instances provided by coroutine 'instances'.
 		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
-		void HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::Instances instances, RayCastStep::ResultsOut const& results);
+		void HitTest(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastInstancesCB instances, RayCastResultsOut const& results);
 
 		// Set the collection of rays to cast into the scene for continuous hit testing.
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
-		void HitTestContinuous(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include);
+		void HitTestContinuous(std::span<HitTestRay const> rays, float snap_distance, EHitTestFlags flags, RayCastFilter const& include);
 			
 		// Read the hit test results from the continuous ray cast render step.
-		void HitTestGetResults(RayCastStep::ResultsOut const& results);
+		void HitTestGetResults(RayCastResultsOut const& results);
 
+		#if 0 // todo
 		// Render step specific accessors
 		template <typename TRStep, typename = enable_if_render_step<TRStep>> TRStep* FindRStep() const
 		{
@@ -132,9 +132,6 @@ namespace pr::rdr12
 			throw std::runtime_error(Fmt("RenderStep %s is not part of this scene", Enum<ERenderStep>::ToStringA(TRStep::Id)));
 		}
 
-		// Enable/Disable shadow casting
-		void ShadowCasting(bool enable, int shadow_map_size);
-
 		// Some render step pre-sets
 		static std::vector<ERenderStep> ForwardRendering()
 		{
@@ -146,12 +143,20 @@ namespace pr::rdr12
 		}
 		#endif
 
+		// Render the scene, recording the command lists in 'frame'
+		void Render(Frame& frame);
+
 	private:
 
 		friend struct Window;
 
-		// Render the scene
-		ID3D12CommandList* Render(BackBuffer& bb);
+		// Return a render step from this scene (if present)
+		RenderStep const* FindRStep(ERenderStep id) const;
+		RenderStep* FindRStep(ERenderStep id);
+
+		// Add/Remove an instance from this scene
+		void AddInstance(BaseInstance const& inst);
+		void RemoveInstance(BaseInstance const& inst);
 
 		// Resize the viewport on back buffer resize
 		void HandleBackBufferSizeChanged(Window& wnd, BackBufferSizeChangedEventArgs const& evt);

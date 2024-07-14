@@ -1,4 +1,4 @@
-﻿//******************************************
+//******************************************
 // uint8_t Ptr Cast
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
@@ -99,6 +99,23 @@ namespace pr
 			assert("Cast loses data" && x >= std::numeric_limits<T>::lowest() && x <= std::numeric_limits<T>::max());
 		}
 		return static_cast<T>(x);
+	}
+
+	// Helper for getting the size of a container
+	template <typename T> requires (requires (T t) { t.size(); })
+	inline int isize(T const& cont)
+	{
+		return s_cast<int>(cont.size());
+	}
+
+	// Int sizeof
+	template <typename T> inline int isizeof()
+	{
+		return s_cast<int>(sizeof(T));
+	}
+	template <typename T> inline int isizeof(T&)
+	{
+		return s_cast<int>(sizeof(T));
 	}
 }
 

@@ -35,23 +35,24 @@ namespace pr::geometry
 	// 'out_verts' is an output iterator to receive the [vert,colour] data
 	// 'out_indices' is an output iterator to receive the index data
 	template <typename VOut, typename IOut>
-	Props Lines(int num_lines, v4 const* points, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
+	Props Lines(int num_lines, std::span<v4 const> points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), 2*num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
 		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		int index = 0;
+		auto pt = points.data();
 		for (int i = 0; i != num_lines; ++i)
 		{
-			vout(bb(*points++), cc(*col++));
-			vout(bb(*points++), cc(*col++));
+			vout(bb(*pt++), cc(*col++));
+			vout(bb(*pt++), cc(*col++));
 			iout(index++);
 			iout(index++);
 		}
@@ -60,14 +61,14 @@ namespace pr::geometry
 	}
 
 	// Create lines using collections of points and directions
-	template <typename TVertCIter, typename TColCIter, typename VOut, typename IOut>
-	inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, int num_colours, TColCIter colours, VOut vout, IOut iout)
+	template <typename TVertCIter, typename VOut, typename IOut>
+	inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
+		auto col = CreateRepeater(colours.data(), isize(colours), 2*num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
@@ -86,14 +87,14 @@ namespace pr::geometry
 	}
 
 	// Create a line strip
-	template <typename TVertCIter, typename TColCIter, typename VOut, typename IOut>
-	inline Props LinesStrip(int num_lines, TVertCIter points, int num_colours, TColCIter colours, VOut vout, IOut iout)
+	template <typename TVertCIter, typename VOut, typename IOut>
+	inline Props LinesStrip(int num_lines, TVertCIter points, std::span<Colour32 const> colours, VOut vout, IOut iout)
 	{
 		Props props;
-		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
+		props.m_geom = EGeom::Vert | (isize(colours) ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = CreateLerpRepeater(colours, num_colours, 1+num_lines, Colour32White);
+		auto col = CreateLerpRepeater(colours.data(), isize(colours), 1+num_lines, Colour32White);
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box

@@ -677,6 +677,10 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
+	ResourceManager& LdrGizmo::res() const
+	{
+		return rdr().res();
+	}
 
 	// Get/Set the mode the gizmo is in
 	bool LdrGizmo::Enabled() const
@@ -713,27 +717,27 @@ namespace pr::rdr12
 			ResDesc::VBuf<Vert>(data.vcount, data.vdata),
 			ResDesc::IBuf<uint16_t>(data.icount, data.idata),
 			*data.bbox, data.name);
-		m_gfx.m_model = rdr().res_mgr().CreateModel(mdesc);
+		m_gfx.m_model = res().CreateModel(mdesc);
 
 		// Create render nuggets for the model.
 		// We render the gizmo in multiple passes because we
 		// need it to draw "through" other objects in the scene.
 		{
 			// On the first pass, draw after all opaques with inverted Z test
-			NuggetData nugget(ETopo::TriList, Vert::GeomMask);
-			nugget.m_sort_key.Group(ESortGroup::PostOpaques);
-			nugget.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
-			nugget.m_pso.Set<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER);
-			nugget.m_tex_diffuse = rdr().res_mgr().FindTexture(EStockTexture::Gray);
-			m_gfx.m_model->CreateNugget(nugget);
+			m_gfx.m_model->CreateNugget(
+				NuggetDesc(ETopo::TriList, Vert::GeomMask)
+				.sort_key(ESortGroup::PostOpaques)
+				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
+				.pso<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER)
+				.tex_diffuse(res().StockTexture(EStockTexture::Gray)));
 		}
 		{
 			// On the second pass, draw the gizmo normally
-			NuggetData nugget(ETopo::TriList, Vert::GeomMask);
-			nugget.m_sort_key.Group(static_cast<ESortGroup>(int(ESortGroup::PostOpaques) + 1));
-			nugget.m_pso.Set<EPipeState::CullMode>(D3D12_CULL_MODE_BACK);
-			nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::RangesCanOverlap, true);
-			m_gfx.m_model->CreateNugget(nugget);
+			m_gfx.m_model->CreateNugget(
+				NuggetDesc(ETopo::TriList, Vert::GeomMask)
+				.sort_key(ESortGroup(int(ESortGroup::PostOpaques) + 1))
+				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
+				.flags(ENuggetFlag::RangesCanOverlap, true));
 		}
 
 		// Initialise the instances
@@ -919,8 +923,7 @@ namespace pr::rdr12
 		auto hit = EComponent::None;
 
 		// Cast a ray into the scene to get a line in world space
-		v4 p, d;
-		camera.NSSPointToWSRay(v4(nss_point, 1.0f, 0.0f), p, d);
+		auto [p, d] = camera.NSSPointToWSRay(v4(nss_point, 1.0f, 0.0f));
 
 		// Then transform the ray from world space to gizmo space (note, it might be scaled)
 		auto w2o = Invert(O2W() * m4x4::Scale(m_scale, v4Origin));
@@ -1037,12 +1040,10 @@ namespace pr::rdr12
 		}
 
 		// Get the WS ray for 'm_ref_pt'
-		v4 p0, dir0;
-		camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
+		auto [p0, dir0] = camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f));
 
 		// Get the WS ray for 'nss_point'
-		v4 p1, dir1;
-		camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
+		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
 		float t0, t1, tdummy;
@@ -1102,12 +1103,10 @@ namespace pr::rdr12
 		}
 
 		// Get the WS ray for 'm_ref_pt'
-		v4 p0, dir0;
-		camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
+		auto [p0, dir0] = camera.NSSPointToWSRay(v4(m_ref_pt, c2w.pos.z - p.z,1.0f));
 
 		// Get the WS ray for 'nss_point'
-		v4 p1, dir1;
-		camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
+		auto [p1, dir1] = camera.NSSPointToWSRay(v4(nss_point, c2w.pos.z - p.z,1.0f));
 
 		// Find the nearest points on 'd' for 'dir0' and 'dir1'
 		float t0, t1, tdummy;

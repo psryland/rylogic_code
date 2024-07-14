@@ -24,7 +24,7 @@ namespace pr::rdr12
 	// Resource usage flags
 	enum class EUsage :std::underlying_type_t<D3D12_RESOURCE_FLAGS>
 	{
-		None = D3D12_RESOURCE_FLAG_NONE,
+		Default = D3D12_RESOURCE_FLAG_NONE,
 		RenderTarget = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
 		DepthStencil = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
 		UnorderedAccess = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
@@ -33,7 +33,123 @@ namespace pr::rdr12
 		SimultaneousAccess = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS,
 		VideoDecodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY,
 		VideoEncodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY,
-		_flags_enum,
+		_flags_enum = 0,
+	};
+
+	// 32bit data union
+	union F32U32
+	{
+		float f32;
+		uint32_t u32;
+
+		F32U32(float f) : f32(f) {}
+		F32U32(uint32_t u) :u32(u) {}
+	};
+
+	// 64bit data union
+	union F64U64
+	{
+		double f64;
+		uint64_t u64;
+
+		F64U64(double f) : f64(f) {}
+		F64U64(uint64_t u) :u64(u) {}
+	};
+
+	// Bit stuff a size and alignment value
+	template <std::unsigned_integral U, int AlignBits, int SizeBits>
+	struct SizeAndAlign
+	{
+		enum
+		{
+			size_bits_t = SizeBits,
+			align_bits_t = AlignBits
+		};
+		static_assert(size_bits_t + align_bits_t <= 8 * sizeof(U));
+
+		U sa;
+		SizeAndAlign() = default;
+		SizeAndAlign(int sz, int al)
+			: sa()
+		{
+			size(sz);
+			align(al);
+		}
+		int size() const
+		{
+			return GrabBits<int>(sa, size_bits_t, 0);
+		}
+		int align() const
+		{
+			return GrabBits<int>(sa, align_bits_t + size_bits_t, size_bits_t);
+		}
+		void size(int sz)
+		{
+			if (sz > (1U << size_bits_t)) throw std::runtime_error("Size too large");
+			sa = PackBits(sa, sz, size_bits_t, 0);
+		}
+		void align(int al)
+		{
+			if (al > (1U << align_bits_t)) throw std::runtime_error("Alignment too large");
+			sa = PackBits(sa, al, align_bits_t + size_bits_t, size_bits_t);
+		}
+	};
+	using SizeAndAlign16 = SizeAndAlign<uint16_t, 6, 10>;
+	using SizeAndAlign32 = SizeAndAlign<uint32_t, 10, 22>;
+
+	// The 3D volume (typically within a resource, relative to mip 0)
+	struct Box :D3D12_BOX
+	{
+		Box()
+			:D3D12_BOX()
+		{}
+		Box(iv3 first, iv3 range)
+			:D3D12_BOX({
+				.left = s_cast<UINT>(first.x),
+				.top = s_cast<UINT>(first.y),
+				.front = s_cast<UINT>(first.z),
+				.right = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.x) + range.x, first.x, pr::limits<int>::max())),
+				.bottom = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.y) + range.y, first.y, pr::limits<int>::max())),
+				.back = s_cast<UINT>(std::clamp<int64_t>(s_cast<int64_t>(first.z) + range.z, first.z, pr::limits<int>::max())),
+			})
+		{}
+
+		iv3 pos(int mip = 0) const
+		{
+			constexpr auto PosAtMip = [](int pos, int mip) { return pos >> mip; };
+			return iv3(
+				PosAtMip(s_cast<int>(left), mip),
+				PosAtMip(s_cast<int>(top), mip),
+				PosAtMip(s_cast<int>(front), mip));
+		}
+		iv3 size(int mip = 0) const
+		{
+			constexpr auto SizeAtMip = [](int size, int mip) { return std::max<int>(size >> mip, 1); };
+			return iv3(
+				SizeAtMip(s_cast<int>(right - left), mip),
+				SizeAtMip(s_cast<int>(bottom - top), mip),
+				SizeAtMip(s_cast<int>(back - front), mip));
+		}
+		Box mip(int mip = 0) const
+		{
+			return Box(pos(mip), size(mip));
+		}
+		Box& Clip(iv3 first, iv3 range)
+		{
+			Vec3l<void> last = {
+				std::clamp<int64_t>(s_cast<int64_t>(first.x) + range.x, first.x, pr::limits<int>::max()),
+				std::clamp<int64_t>(s_cast<int64_t>(first.y) + range.y, first.y, pr::limits<int>::max()),
+				std::clamp<int64_t>(s_cast<int64_t>(first.z) + range.z, first.z, pr::limits<int>::max()),
+			};
+
+			if (s_cast<int>(left)  < first.x) left   = s_cast<UINT>(first.x);
+			if (s_cast<int>(top)   < first.y) top    = s_cast<UINT>(first.y);
+			if (s_cast<int>(front) < first.z) front  = s_cast<UINT>(first.z);
+			if (s_cast<int>(right)  > last.x) right  = s_cast<UINT>(last.x);
+			if (s_cast<int>(bottom) > last.y) bottom = s_cast<UINT>(last.y);
+			if (s_cast<int>(back)   > last.z) back   = s_cast<UINT>(last.z);
+			return *this;
+		}
 	};
 
 	// Display mode description
@@ -47,7 +163,7 @@ namespace pr::rdr12
 		//    the proper refresh rate. If we don't do this and just set the refresh rate to a default value which may
 		//    not exist on all computers then DirectX will respond by performing a buffer copy instead of a buffer flip
 		//    which will degrade performance and give us annoying errors in the debug output.
-		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, you�ll want to create the Render
+		//  - For gamma-correct rendering to standard 8-bit per channel UNORM formats, you'll want to create the Render
 		//    Target using an sRGB format. The new flip modes, however, do not allow you to create a swap chain back buffer
 		//    using an sRGB format. In this case, you create one using the non-sRGB format (i.e. DXGI_SWAP_CHAIN_DESC1.Format
 		//    = DXGI_FORMAT_B8G8R8A8_UNORM) and use sRGB for the Render Target View (i.e. D3D12_RENDER_TARGET_VIEW_DESC.Format
@@ -66,6 +182,56 @@ namespace pr::rdr12
 		DisplayMode(iv2 const& area, DXGI_FORMAT format = DXGI_FORMAT_B8G8R8A8_UNORM)
 			:DisplayMode(area.x, area.y, format)
 		{}
+		DisplayMode& size(int w, int h)
+		{
+			Width  = w ? s_cast<uint32_t>(w) : 16;
+			Height = h ? s_cast<uint32_t>(h) : 16;
+			return *this;
+		}
+		DisplayMode& format(DXGI_FORMAT fmt)
+		{
+			Format = fmt;
+			return *this;
+		}
+		DisplayMode& refresh_rate(int numerator, int denominator)
+		{
+			RefreshRate.Numerator   = numerator;
+			RefreshRate.Denominator = denominator;
+			return *this;
+		}
+		DisplayMode& default_refresh_rate()
+		{
+			RefreshRate.Numerator   = 0;
+			RefreshRate.Denominator = 0;
+			return *this;
+		}
+		DisplayMode& scaling(DXGI_MODE_SCALING scaling)
+		{
+			Scaling = scaling;
+			return *this;
+		}
+		DisplayMode& scanline_order(DXGI_MODE_SCANLINE_ORDER scanline_order)
+		{
+			ScanlineOrdering = scanline_order;
+			return *this;
+		}
+	};
+
+	// Resource clear value
+	struct ClearValue :D3D12_CLEAR_VALUE
+	{
+		constexpr ClearValue()
+			:D3D12_CLEAR_VALUE{ .Format = DXGI_FORMAT_UNKNOWN, .Color = { 0.0f, 0.0f, 0.0f, 1.0f } }
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, Colour_cref col)
+			:D3D12_CLEAR_VALUE{ .Format = format, .Color = { col.r, col.g, col.b, col.a } }
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, Colour32 col)
+			:ClearValue(format, Colour(col))
+		{}
+		constexpr ClearValue(DXGI_FORMAT format, float depth, uint8_t stencil)
+			: D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = {.Depth = depth, .Stencil = stencil } }
+		{}
 	};
 
 	// Multi sampling description
@@ -83,7 +249,7 @@ namespace pr::rdr12
 			Count = count;
 			Quality = quality;
 		}
-		MultiSamp& Validate(ID3D12Device* device, DXGI_FORMAT format)
+		MultiSamp& ScaleQualityLevel(ID3D12Device* device, DXGI_FORMAT format)
 		{
 			uint32_t quality = 0;
 			for (; Count > 1 && (quality = MultisampleQualityLevels(device, format, Count)) == 0; Count >>= 1) {}
@@ -143,17 +309,17 @@ namespace pr::rdr12
 		Viewport& Set(float x, float y, float width, float height, int screen_w, int screen_h, float min_depth, float max_depth)
 		{
 			#if PR_DBG_RDR
-			Throw(x >= D3D12_VIEWPORT_BOUNDS_MIN && x <= D3D12_VIEWPORT_BOUNDS_MAX , "X value out of range");
-			Throw(y >= D3D12_VIEWPORT_BOUNDS_MIN && y <= D3D12_VIEWPORT_BOUNDS_MAX , "Y value out of range");
-			Throw(width >= 0.0f                                                    , "Width value invalid");
-			Throw(height >= 0.0f                                                   , "Height value invalid");
-			Throw(x + width  <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Width value out of range");
-			Throw(y + height <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Height value out of range");
-			Throw(min_depth >= 0.0f && min_depth <= 1.0f                           , "Min depth value out of range");
-			Throw(max_depth >= 0.0f && max_depth <= 1.0f                           , "Max depth value out of range");
-			Throw(min_depth <= max_depth                                           , "Min and max depth values invalid");
-			Throw(screen_w >= 0                                                    , "Screen Width value invalid");
-			Throw(screen_h >= 0                                                    , "Screen Height value invalid");
+			Check(x >= D3D12_VIEWPORT_BOUNDS_MIN && x <= D3D12_VIEWPORT_BOUNDS_MAX , "X value out of range");
+			Check(y >= D3D12_VIEWPORT_BOUNDS_MIN && y <= D3D12_VIEWPORT_BOUNDS_MAX , "Y value out of range");
+			Check(width >= 0.0f                                                    , "Width value invalid");
+			Check(height >= 0.0f                                                   , "Height value invalid");
+			Check(x + width  <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Width value out of range");
+			Check(y + height <= D3D12_VIEWPORT_BOUNDS_MAX                          , "Height value out of range");
+			Check(min_depth >= 0.0f && min_depth <= 1.0f                           , "Min depth value out of range");
+			Check(max_depth >= 0.0f && max_depth <= 1.0f                           , "Max depth value out of range");
+			Check(min_depth <= max_depth                                           , "Min and max depth values invalid");
+			Check(screen_w >= 0                                                    , "Screen Width value invalid");
+			Check(screen_h >= 0                                                    , "Screen Height value invalid");
 			#endif
 
 			TopLeftX = x;
@@ -186,6 +352,12 @@ namespace pr::rdr12
 		{
 			m_clip.push_back(rect);
 			return *this;
+		}
+
+		// The aspect ratio of the viewport
+		float Aspect() const
+		{
+			return 1.0f * Width / Height;
 		}
 
 		// The viewport rectangle, in render target pixels
@@ -269,45 +441,49 @@ namespace pr::rdr12
 		//  - Size of resource heap must be at least 64K for single-textures and constant buffers
 		using clear_value_t = std::optional<D3D12_CLEAR_VALUE>;
 
-		int ElemStride;                   // Element stride
-		int DataAlignment;                // The alignment that initialisation data should have.
-		pr::vector<Image> Data;           // The initialisation data for the buffer, texture, or texture array
-		HeapProps HeapProps;              // The heap to create this buffer in
-		D3D12_HEAP_FLAGS HeapFlags;       // Properties
-		clear_value_t ClearValue;         // A clear value for the resource
-		D3D12_RESOURCE_STATES FinalState; // The state the resource should be created into (once initialised)
+		int ElemStride;                     // Element stride
+		int DataAlignment;                  // The alignment that initialisation data should have.
+		pr::vector<Image> Data;             // The initialisation data for the buffer, texture, or texture array
+		HeapProps HeapProps;                // The heap to create this buffer in
+		D3D12_HEAP_FLAGS HeapFlags;         // Properties
+		clear_value_t ClearValue;           // A clear value for the resource
+		D3D12_RESOURCE_STATES DefaultState; // The state the resource should be in between command list executions
 
 		ResDesc()
 			: D3D12_RESOURCE_DESC()
 			, ElemStride()
+			, DataAlignment()
 			, Data()
 			, HeapProps(HeapProps::Default())
 			, HeapFlags(D3D12_HEAP_FLAG_NONE)
 			, ClearValue()
-			, FinalState(D3D12_RESOURCE_STATE_COMMON)
+			, DefaultState(D3D12_RESOURCE_STATE_COMMON)
 		{}
+		ResDesc(ResDesc&& rhs) = default;
+		ResDesc(ResDesc const& rhs) = default;
 		ResDesc(D3D12_RESOURCE_DESC const& rhs)
 			: ResDesc()
 		{
 			*static_cast<D3D12_RESOURCE_DESC*>(this) = rhs;
 		}
-		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride, uint16_t mips, uint64_t resource_alignment, int data_alignment, D3D12_RESOURCE_STATES final_state, EUsage flags, D3D12_TEXTURE_LAYOUT layout)
+		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride)
 			:ResDesc()
 		{
-			Dimension        = dimension;
-			Alignment        = resource_alignment;
-			Width            = width;
-			Height           = height;
+			Dimension = dimension;
+			Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			Width = width;
+			Height = height;
 			DepthOrArraySize = depth;
-			MipLevels        = mips;
-			Format           = format;
-			SampleDesc       = MultiSamp{};
-			Layout           = layout;
-			Flags            = s_cast<D3D12_RESOURCE_FLAGS>(flags);
-			ElemStride       = element_stride;
-			DataAlignment    = data_alignment;
-			FinalState       = final_state;
+			MipLevels = 0;
+			Format = format;
+			SampleDesc = MultiSamp{};
+			Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			Flags = D3D12_RESOURCE_FLAG_NONE;
+			ElemStride = element_stride;
+			DataAlignment = 0;
 		}
+		ResDesc& operator = (ResDesc&& rhs) = default;
+		ResDesc& operator = (ResDesc const& rhs) = default;
 		ResDesc& operator = (D3D12_RESOURCE_DESC const& rhs)
 		{
 			if (&rhs == this) return *this;
@@ -315,104 +491,183 @@ namespace pr::rdr12
 			return *this;
 		}
 
+		ResDesc& init_data(Image data)
+		{
+			if (data.m_data.vptr != nullptr)
+				Data.push_back(data);
+
+			return *this;
+		}
+		ResDesc& clear(D3D12_CLEAR_VALUE clear)
+		{
+			ClearValue = clear;
+			return *this;
+		}
+		ResDesc& clear(DXGI_FORMAT format, Colour32 colour)
+		{
+			return clear(format, Colour(colour));
+		}
+		ResDesc& clear(DXGI_FORMAT format, Colour_cref colour)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
+		}
+		ResDesc& clear(DXGI_FORMAT format, D3DCOLORVALUE colour)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .Color = {colour.r, colour.g, colour.b, colour.a} });
+		}
+		ResDesc& clear(DXGI_FORMAT format, D3D12_DEPTH_STENCIL_VALUE depth_stencil)
+		{
+			return clear(D3D12_CLEAR_VALUE{ .Format = format, .DepthStencil = depth_stencil });
+		}
+		ResDesc& mips(int mips)
+		{
+			MipLevels = s_cast<uint16_t>(mips);
+			return *this;
+		}
+		ResDesc& usage(EUsage usage)
+		{
+			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
+			return *this;
+		}
+		ResDesc& multisamp(int samples)
+		{
+			return multisamp(MultiSamp(s_cast<uint32_t>(samples)));
+		}
+		ResDesc& multisamp(MultiSamp sampling)
+		{
+			SampleDesc = sampling;
+			return *this;
+		}
+		ResDesc& heap_flags(D3D12_HEAP_FLAGS flags)
+		{
+			HeapFlags = flags;
+			return *this;
+		}
+		ResDesc& layout(D3D12_TEXTURE_LAYOUT tex_layout)
+		{
+			Layout = tex_layout;
+			return *this;
+		}
+		ResDesc& res_alignment(uint64_t alignment)
+		{
+			Alignment = alignment;
+			return *this;
+		}
+		ResDesc& data_alignment(int alignment)
+		{
+			DataAlignment = alignment;
+			return *this;
+		}
+		ResDesc& def_state(D3D12_RESOURCE_STATES default_state)
+		{
+			DefaultState = default_state;
+			return *this;
+		}
+
 		// Generic buffer resource description
-		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment, D3D12_RESOURCE_STATES final_state, EUsage usage = EUsage::None)
+		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment)
 		{
 			// Width is in bytes for buffer type resources
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride, 1, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, data_alignment, final_state, usage, D3D12_TEXTURE_LAYOUT_ROW_MAJOR);
-			if (data != nullptr) desc.Data.push_back(Image(data, count, element_stride));
-			desc.ElemStride = element_stride;
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride)
+				.mips(1)
+				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+				.data_alignment(data_alignment)
+				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR)
+				.init_data(Image(data, count, element_stride));
+		}
+
+		// Vertex buffer description
+		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data)
+		{
+			count += int64_t(count == 0);
+			return Buf(count, sizeof(TVert), data, alignof(TVert))
+				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		}
+
+		// Index buffer description
+		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
+		{
+			count += int64_t(count == 0);
+			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
+				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		}
+		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
+		{
+			count += int64_t(count == 0);
+			return Buf(count, element_stride, data, element_stride)
+				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
 		// Constant buffer description
 		static ResDesc CBuf(int size)
 		{
 			size = PadTo<int>(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(size), 1, 1, 1, 1, 0ULL, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, EUsage::None, D3D12_TEXTURE_LAYOUT_ROW_MAJOR);
-			return desc;
-		}
-
-		// Vertex buffer description
-		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, sizeof(TVert), data, alignof(TVert), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, usage);
-		}
-
-		// Index buffer description
-		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, sizeof(TIndx), data, alignof(TIndx), D3D12_RESOURCE_STATE_INDEX_BUFFER, usage);
-		}
-		static ResDesc IBuf(int64_t count, int element_stride, void const* data, EUsage usage = EUsage::None)
-		{
-			return Buf(count, element_stride, data, element_stride, D3D12_RESOURCE_STATE_INDEX_BUFFER, usage);
+			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(size), 1, 1, 1)
+				.mips(1)
+				.res_alignment(0ULL)
+				.data_alignment(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
+				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
 		// Texture resource descriptions
-		static ResDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex1D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE1D, data.m_format, s_cast<uint64_t>(data.m_dim.x), 1, 1, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.init_data(data);
 		}
-		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.init_data(data);
 		}
-		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::None)
+		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
-			auto final_state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-			auto resource_alignment = data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT && !AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil) ? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			ResDesc desc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format), mips, s_cast<uint64_t>(resource_alignment), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, final_state, flags, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-			if (data.m_data.vptr != nullptr) desc.Data.push_back(data);
-			return desc;
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE3D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), s_cast<uint16_t>(data.m_dim.z), BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.init_data(data);
+		}
+		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
+		{
+			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 6, BytesPerPixel(data.m_format))
+				.mips(mips)
+				.usage(flags)
+				.res_alignment(ResourceAlignment(data, flags))
+				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.init_data(data);
 		}
 
+	private:
+
+		// Default resource alignment based on init data size
+		static uint64_t ResourceAlignment(Image const& data, EUsage flags)
+		{
+			return
+				data.SizeInBytes() <= D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT &&
+				!AnySet(flags, EUsage::RenderTarget | EUsage::DepthStencil)
+				? D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT
+				: D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+		}
 	};
 
-	// Resource barrier
-	struct ResourceBarrier : D3D12_RESOURCE_BARRIER
+	// Resource barrier - Use BarrierBatch
+	struct ResourceBarrier :D3D12_RESOURCE_BARRIER
 	{
-		ResourceBarrier() = default;
-		ResourceBarrier(D3D12_RESOURCE_BARRIER const& rhs)
-			:D3D12_RESOURCE_BARRIER(rhs)
-		{}
-		static ResourceBarrier Transition(ID3D12Resource* pResource, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Flags = flags;
-			barrier.Transition.pResource = pResource;
-			barrier.Transition.StateBefore = stateBefore;
-			barrier.Transition.StateAfter = stateAfter;
-			barrier.Transition.Subresource = subresource;
-			return result;
-		}
-		static ResourceBarrier Aliasing(ID3D12Resource* pResourceBefore, ID3D12Resource* pResourceAfter)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
-			barrier.Aliasing.pResourceBefore = pResourceBefore;
-			barrier.Aliasing.pResourceAfter = pResourceAfter;
-			return result;
-		}
-		static ResourceBarrier UAV(ID3D12Resource* pResource)
-		{
-			ResourceBarrier result = {};
-			D3D12_RESOURCE_BARRIER& barrier = result;
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-			barrier.UAV.pResource = pResource;
-			return result;
-		}
+		ResourceBarrier() = delete;
 	};
 	
 	// Render target blend state description
@@ -424,11 +679,11 @@ namespace pr::rdr12
 			BlendEnable = FALSE;
 			LogicOpEnable = FALSE;
 			SrcBlend = D3D12_BLEND_ONE;
-			DestBlend = D3D12_BLEND_ZERO;
-			BlendOp = D3D12_BLEND_OP_ADD;
+			DestBlend = D3D12_BLEND_ONE;
+			BlendOp = D3D12_BLEND_OP_MAX;
 			SrcBlendAlpha = D3D12_BLEND_ONE;
-			DestBlendAlpha = D3D12_BLEND_ZERO;
-			BlendOpAlpha = D3D12_BLEND_OP_ADD;
+			DestBlendAlpha = D3D12_BLEND_ONE;
+			BlendOpAlpha = D3D12_BLEND_OP_MAX;
 			LogicOp = D3D12_LOGIC_OP_NOOP;
 			RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 		}
@@ -443,14 +698,38 @@ namespace pr::rdr12
 			AlphaToCoverageEnable = FALSE;
 			IndependentBlendEnable = FALSE;
 			RenderTarget[0] = 
-				RenderTarget[1] = 
-				RenderTarget[2] = 
-				RenderTarget[3] = 
-				RenderTarget[4] = 
-				RenderTarget[5] = 
-				RenderTarget[6] = 
-				RenderTarget[7] = RenderTargetBlendDesc{};
+				RenderTarget[1] =
+				RenderTarget[2] =
+				RenderTarget[3] =
+				RenderTarget[4] =
+				RenderTarget[5] =
+				RenderTarget[6] =
+				RenderTarget[7] =
+				RenderTargetBlendDesc{};
 		}
+		BlendStateDesc& enable(int idx, bool on = true)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendEnable = on ? TRUE : FALSE;
+			return *this;
+		}
+		BlendStateDesc& blend(int idx, D3D12_BLEND_OP op, D3D12_BLEND src, D3D12_BLEND dest)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendOp = op;
+			RenderTarget[idx].SrcBlend = src;
+			RenderTarget[idx].DestBlend = dest;
+			return *this;
+		}
+		BlendStateDesc& blend_alpha(int idx, D3D12_BLEND_OP op, D3D12_BLEND src, D3D12_BLEND dest)
+		{
+			assert(idx >= 0 && idx < _countof(RenderTarget));
+			RenderTarget[idx].BlendOpAlpha = op;
+			RenderTarget[idx].SrcBlendAlpha = src;
+			RenderTarget[idx].DestBlendAlpha = dest;
+			return *this;
+		}
+
 	};
 
 	// Raster state description
@@ -470,6 +749,11 @@ namespace pr::rdr12
 			AntialiasedLineEnable = FALSE;
 			ForcedSampleCount = 0U;
 			ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		}
+		RasterStateDesc& Set(D3D12_CULL_MODE mode)
+		{
+			CullMode = mode;
+			return *this;
 		}
 	};
 
@@ -498,6 +782,11 @@ namespace pr::rdr12
 				.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS,
 			};
 		}
+		DepthStateDesc& Enabled(bool enabled)
+		{
+			DepthEnable = enabled ? TRUE : FALSE;
+			return *this;
+		}
 	};
 
 	// Stream output description
@@ -517,28 +806,71 @@ namespace pr::rdr12
 	// Texture sampler description
 	struct SamDesc :D3D12_SAMPLER_DESC
 	{
-		SamDesc()
-			:SamDesc(D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
-		{}
+		// Notes:
+		//  - There isn't a logical "default" sampler choice. Using invalid values in the default
+		//    constructor to force instances to set their own values.
+		
+		SamDesc() :SamDesc(s_cast<D3D12_TEXTURE_ADDRESS_MODE>(0), D3D12_FILTER_MIN_MAG_MIP_POINT) {}
 		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
 			:SamDesc(addr, addr, addr, filter)
 		{}
 		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter)
 			:D3D12_SAMPLER_DESC()
 		{
-			Filter         = filter;
-			AddressU       = addrU;
-			AddressV       = addrV;
-			AddressW       = addrW;
-			MipLODBias     = 0.0f;
-			MaxAnisotropy  = 1;
+			Filter = filter;
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			MipLODBias = 0.0f;
+			MaxAnisotropy = 1;
 			ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 			BorderColor[0] = 0.0f;
 			BorderColor[1] = 0.0f;
 			BorderColor[2] = 0.0f;
 			BorderColor[3] = 0.0f;
-			MinLOD         = 0.0f;
-			MaxLOD         = D3D12_FLOAT32_MAX;
+			MinLOD = 0.0f;
+			MaxLOD = D3D12_FLOAT32_MAX;
+		}
+
+		// Hash this description to create an Id that can be used to detect duplicate samplers
+		RdrId Id() const
+		{
+			return s_cast<RdrId>(pr::hash::HashBytes64(this, this + 1));
+		}
+
+		SamDesc& border(Colour32 colour)
+		{
+			Colour c(colour);
+			BorderColor[0] = c.a;
+			BorderColor[1] = c.r;
+			BorderColor[2] = c.g;
+			BorderColor[3] = c.b;
+			return *this;
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE modeUVW)
+		{
+			return addr(modeUVW, modeUVW, modeUVW);
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
+		{
+			return addr(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+		}
+		SamDesc& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
+		{
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			return *this;
+		}
+		SamDesc& filter(D3D12_FILTER mode)
+		{
+			Filter = mode;
+			return *this;
+		}
+		SamDesc& compare(D3D12_COMPARISON_FUNC comp)
+		{
+			ComparisonFunc = comp;
+			return *this;
 		}
 
 		// Standard samplers
@@ -547,18 +879,19 @@ namespace pr::rdr12
 		static SamDesc const& LinearClamp()      { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR); return sam; }
 		static SamDesc const& LinearWrap()       { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_MIN_MAG_MIP_LINEAR); return sam; }
 		static SamDesc const& AnisotropicClamp() { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_ANISOTROPIC); return sam; }
+		static SamDesc const& AnisotropicWrap()  { static SamDesc sam(D3D12_TEXTURE_ADDRESS_MODE_WRAP , D3D12_FILTER_ANISOTROPIC); return sam; }
 	};
 
 	// Static sampler description
 	struct SamDescStatic :D3D12_STATIC_SAMPLER_DESC
 	{
-		SamDescStatic(ESamReg shader_register, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR, vis)
+		SamDescStatic(ESamReg shader_register)
+			:SamDescStatic(shader_register, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_FILTER_MIN_MAG_MIP_LINEAR)
 		{}
-		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
-			:SamDescStatic(shader_register, addr, addr, addr, filter, vis)
+		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
+			:SamDescStatic(shader_register, addr, addr, addr, filter)
 		{}
-		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter, D3D12_SHADER_VISIBILITY vis = D3D12_SHADER_VISIBILITY_PIXEL)
+		SamDescStatic(ESamReg shader_register, D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW, D3D12_FILTER filter)
 			:D3D12_STATIC_SAMPLER_DESC()
 		{
 			Filter           = filter;
@@ -573,7 +906,42 @@ namespace pr::rdr12
 			MaxLOD           = D3D12_FLOAT32_MAX;
 			ShaderRegister   = s_cast<UINT>(shader_register);
 			RegisterSpace    = 0U;
+			ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		}
+		SamDescStatic& border(D3D12_STATIC_BORDER_COLOR colour)
+		{
+			BorderColor = colour;
+			return *this;
+		}
+		SamDescStatic& shader_vis(D3D12_SHADER_VISIBILITY vis)
+		{
 			ShaderVisibility = vis;
+			return *this;
+		}
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE modeUVW)
+		{
+			return addr(modeUVW, modeUVW, modeUVW);
+		}
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV)
+		{
+			return addr(addrU, addrV, D3D12_TEXTURE_ADDRESS_MODE_BORDER);
+		}
+		SamDescStatic& addr(D3D12_TEXTURE_ADDRESS_MODE addrU, D3D12_TEXTURE_ADDRESS_MODE addrV, D3D12_TEXTURE_ADDRESS_MODE addrW)
+		{
+			AddressU = addrU;
+			AddressV = addrV;
+			AddressW = addrW;
+			return *this;
+		}
+		SamDescStatic& filter(D3D12_FILTER mode)
+		{
+			Filter = mode;
+			return *this;
+		}
+		SamDescStatic& compare(D3D12_COMPARISON_FUNC comp)
+		{
+			ComparisonFunc = comp;
+			return *this;
 		}
 	};
 
@@ -588,7 +956,7 @@ namespace pr::rdr12
 		{}
 		explicit operator bool() const
 		{
-			return pShaderBytecode == nullptr;
+			return pShaderBytecode != nullptr;
 		}
 	};
 }

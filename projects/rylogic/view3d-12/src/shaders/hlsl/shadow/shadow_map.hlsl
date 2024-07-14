@@ -6,8 +6,8 @@
 #include "../common/functions.hlsli"
 
 // Texture2D /w sampler
-Texture2D<float4> m_texture0; //:register(t0);
-SamplerState      m_sampler0; //:register(s0);
+Texture2D<float4> m_texture0 :reg(t0,0);
+SamplerState      m_sampler0 :reg(s0,0);
 
 struct PSIn_ShadowMap
 {

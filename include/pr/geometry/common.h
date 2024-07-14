@@ -1,4 +1,4 @@
-﻿//********************************
+//********************************
 // Geometry properties
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
@@ -33,7 +33,7 @@ namespace pr::geometry
 		Tex0    = 1 << 3, // Diffuse texture
 		All     = Vert | Colr | Norm | Tex0,
 
-		_flags_enum = 0x7FFFFFFF,
+		_flags_enum = 0,
 	};
 	static_assert(is_flags_enum_v<EGeom>);
 
@@ -214,7 +214,7 @@ namespace pr::geometry
 		}
 
 		// Record the minimum depth separation
-		void operator()(float depth, v4_cref<> axis)
+		void operator()(float depth, v4_cref axis)
 		{
 			// Defer the sqrt by comparing squared depths.
 			// Need to preserve the sign however.

@@ -1,4 +1,4 @@
-﻿//**********************************
+//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -104,6 +104,7 @@ namespace pr::script
 			,m_enc(rhs.m_enc)
 			,m_mb(rhs.m_mb)
 			,m_loc(rhs.m_loc)
+			,m_remaining(rhs.m_remaining)
 		{}
 		Src(Src const& rhs) = delete;
 		Src& operator = (Src&& rhs) = delete;
@@ -475,7 +476,7 @@ namespace pr::script
 		{
 			None = 0,
 			BufferLocally = 1 << 0,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 
 	protected:

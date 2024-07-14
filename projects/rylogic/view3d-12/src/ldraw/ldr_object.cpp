@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -13,18 +13,21 @@
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/texture/texture_desc.h"
+#include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
 #include "pr/view3d-12/lighting/light.h"
-#include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/pipe_state.h"
+#include "pr/view3d-12/utility/update_resource.h"
+#include "pr/view3d-12/utility/wrappers.h"
 
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/script/forward.h"
 #include "pr/storage/csv.h"
+
 //#include <string>
 //#include <sstream>
 //#include <array>
@@ -57,27 +60,27 @@ namespace pr::rdr12
 	using ICont = pr::vector<uint16_t>;
 	using CCont = pr::vector<Colour32>;
 	using TCont = pr::vector<v2>;
-	using GCont = pr::vector<NuggetData>;
+	using GCont = pr::vector<NuggetDesc>;
 	using ModelCont = ParseResult::ModelLookup;
 	using EScriptResult = pr::script::EResult;
 	using EScriptResult_ = pr::script::EResult_;
 	using Font = ModelGenerator::Font;
 	using TextFormat = ModelGenerator::TextFormat;
 	using TextLayout = ModelGenerator::TextLayout;
-	
+
 	enum class EFlags
 	{
 		None = 0,
 		ExplicitName = 1 << 0,
 		ExplicitColour = 1 << 1,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// Template prototype for ObjectCreators
 	struct IObjectCreator;
 	template <ELdrObject ObjType> struct ObjectCreator;
 
-	// A global pool of 'Buffers' objects
+	// Buffers
 	#pragma region Buffer Pool / Cache
 	struct alignas(16) Buffers
 	{
@@ -100,11 +103,11 @@ namespace pr::rdr12
 		{
 			auto ptr = std::move(g_buffer_pool.back());
 			g_buffer_pool.pop_back();
-			return std::move(ptr);
+			return ptr;
 		}
 		return BuffersPtr(new Buffers()); // using make_unique causes a crash in x64 release here
 	}
-	void ReturnToPool(BuffersPtr& bptr)
+	void ReturnToPool(BuffersPtr&& bptr)
 	{
 		std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
 		g_buffer_pool.push_back(std::move(bptr));
@@ -133,9 +136,11 @@ namespace pr::rdr12
 		~Cache()
 		{
 			Reset();
-			ReturnToPool(m_bptr);
+			ReturnToPool(std::move(m_bptr));
 		}
+		Cache(Cache&& rhs) = delete;
 		Cache(Cache const& rhs) = delete;
+		Cache operator =(Cache&& rhs) = delete;
 		Cache operator =(Cache const& rhs) = delete;
 	
 		// Resize all buffers to zero
@@ -208,7 +213,9 @@ namespace pr::rdr12
 			,m_flags(p.m_flags)
 			,m_cancel(p.m_cancel)
 		{}
+		ParseParams(ParseParams&&) = delete;
 		ParseParams(ParseParams const&) = delete;
+		ParseParams& operator = (ParseParams&&) = delete;
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
@@ -371,19 +378,23 @@ namespace pr::rdr12
 				}
 				case EKeyword::Near:
 				{
-					p.m_reader.Real(out.m_cam.m_near);
+					float near_;
+					p.m_reader.Real(near_);
+					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
 				case EKeyword::Far:
 				{
-					p.m_reader.Real(out.m_cam.m_far);
+					float far_;
+					p.m_reader.Real(far_);
+					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
 				case EKeyword::Orthographic:
 				{
-					out.m_cam.m_orthographic = true;
+					out.m_cam.Orthographic(true);
 					out.m_cam_fields |= ECamField::Ortho;
 					break;
 				}
@@ -519,109 +530,6 @@ namespace pr::rdr12
 		reader.SectionEnd();
 	}
 
-	// Parse a texture description. Returns a pointer to the Texture created in the renderer.
-	bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
-	{
-		auto& reader = p.m_reader;
-
-		std::wstring tex_resource;
-		auto t2s = pr::m4x4Identity;
-		bool has_alpha = false;
-		SamDesc sam;
-
-		reader.SectionStart();
-		while (!reader.IsSectionEnd())
-		{
-			if (reader.IsKeyword())
-			{
-				auto kw = reader.NextKeywordH<EKeyword>();
-				switch (kw)
-				{
-					case EKeyword::O2W:
-					{
-						reader.TransformS(t2s);
-						break;
-					}
-					case EKeyword::Addr:
-					{
-						char word[20];
-						reader.SectionStart();
-						reader.Identifier(word); sam.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						reader.Identifier(word); sam.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						reader.SectionEnd();
-						break;
-					}
-					case EKeyword::Filter:
-					{
-						char word[20];
-						reader.SectionStart();
-						reader.Identifier(word); sam.Filter = (D3D12_FILTER)Enum<EFilter>::Parse(word, false);
-						reader.SectionEnd();
-						break;
-					}
-					case EKeyword::Alpha:
-					{
-						has_alpha = true;
-						break;
-					}
-					default:
-					{
-						p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Texture", reader.LastKeyword().c_str()));
-						break;
-					}
-				}
-			}
-			else
-			{
-				reader.String(tex_resource);
-			}
-		}
-		reader.SectionEnd();
-
-		// Silently ignore missing texture files
-		if (!tex_resource.empty())
-		{
-			// Create the texture
-			try
-			{
-				TextureDesc desc(AutoId, ResDesc(), has_alpha, 0, nullptr);
-				tex = p.m_rdr.res_mgr().CreateTexture2D(tex_resource, desc);
-				tex->m_t2s = t2s;
-			}
-			catch (std::exception const& e)
-			{
-				p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
-			}
-		}
-		return true;
-	}
-
-	// Parse a video texture
-	bool ParseVideo(ParseParams& p, Texture2DPtr& vid)
-	{
-		auto& reader = p.m_reader;
-
-		std::string filepath;
-		reader.SectionStart();
-		reader.String(filepath);
-		if (!filepath.empty())
-		{
-			(void)vid;
-			//todo
-			//' // Load the video texture
-			//' try
-			//' {
-			//' 	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(AutoId, filepath.c_str());
-			//' }
-			//' catch (std::exception const& e)
-			//' {
-			//' 	p.ReportError(EScriptResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
-			//' }
-		}
-		reader.SectionEnd();
-		return true;
-	}
-
 	// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
 	bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
 	{
@@ -739,11 +647,11 @@ namespace pr::rdr12
 	// Convert a line strip into a line list of "dash" line segments
 	void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
 	{
-		assert(int(in.size()) >= 2);
+		assert(isize(in) >= 2);
 
 		// Turn the sequence of line segments into a single dashed line
 		auto t = 0.0f;
-		for (int i = 1, iend = int(in.size()); i != iend; ++i)
+		for (int i = 1, iend = isize(in); i != iend; ++i)
 		{
 			auto d = in[i] - in[i-1];
 			auto len = Length(d);
@@ -761,11 +669,11 @@ namespace pr::rdr12
 	// Convert a line list into a list of "dash" line segments
 	void DashLineList(VCont const& in, VCont& out, v2 const& dash)
 	{
-		assert(int(in.size()) >= 2 && int(in.size() & 1) == 0);
+		assert(isize(in) >= 2 && int(in.size() & 1) == 0);
 
 		// Turn the line list 'in' into dashed lines
 		// Turn the sequence of line segments into a single dashed line
-		for (int i = 0, iend = int(in.size()); i != iend; i += 2)
+		for (int i = 0, iend = isize(in); i != iend; i += 2)
 		{
 			auto d  = in[i+1] - in[i];
 			auto len = Length(d);
@@ -789,24 +697,119 @@ namespace pr::rdr12
 		struct Textured
 		{
 			Texture2DPtr m_texture;
-			NuggetData m_local_mat;
+			SamplerPtr m_sampler;
+			SamDesc m_def_sdesc;
 
-			Textured()
-				:m_texture()
-				,m_local_mat()
+			explicit Textured(SamDesc def_sdesc)
+				: m_texture()
+				, m_sampler()
+				, m_def_sdesc(def_sdesc)
 			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw)
 			{
+				auto& reader = p.m_reader;
 				switch (kw)
 				{
 					case EKeyword::Texture:
 					{
-						ParseTexture(p, m_texture);
+						std::wstring tex_resource = L"#white";
+						auto t2s = m4x4::Identity();
+						bool has_alpha = false;
+						auto rdesc = ResDesc();
+						auto sdesc = m_def_sdesc;
+
+						reader.SectionStart();
+						while (!reader.IsSectionEnd())
+						{
+							if (reader.IsKeyword())
+							{
+								switch (reader.NextKeywordH<EKeyword>())
+								{
+									case EKeyword::O2W:
+									{
+										reader.TransformS(t2s);
+										break;
+									}
+									case EKeyword::Addr:
+									{
+										char word[20];
+										reader.SectionStart();
+										reader.Identifier(word); sdesc.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+										reader.Identifier(word); sdesc.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+										reader.SectionEnd();
+										break;
+									}
+									case EKeyword::Filter:
+									{
+										char word[20];
+										reader.SectionStart();
+										reader.Identifier(word); sdesc.Filter = (D3D12_FILTER)Enum<EFilter>::Parse(word, false);
+										reader.SectionEnd();
+										break;
+									}
+									case EKeyword::Alpha:
+									{
+										has_alpha = true;
+										break;
+									}
+									default:
+									{
+										p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Texture", reader.LastKeyword().c_str()));
+										break;
+									}
+								}
+							}
+							else
+							{
+								reader.String(tex_resource);
+							}
+						}
+						reader.SectionEnd();
+
+						// Create the texture
+						try
+						{
+							auto desc = TextureDesc(AutoId, rdesc).has_alpha(has_alpha);
+							m_texture = p.m_rdr.res().CreateTexture2D(tex_resource, desc);
+							m_texture->m_t2s = t2s;
+						}
+						catch (std::exception const& e)
+						{
+							p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
+						}
+
+						// Create the sampler
+						try
+						{
+							auto desc = SamplerDesc(sdesc.Id(), sdesc);
+							m_sampler = p.m_rdr.res().GetSampler(desc);
+						}
+						catch(std::exception const& e)
+						{
+							p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create sampler for texture %s\n%s", tex_resource.c_str(), e.what()));
+						}
 						return true;
 					}
 					case EKeyword::Video:
 					{
-						ParseVideo(p, m_texture);
+						std::string filepath;
+						reader.SectionStart();
+						reader.String(filepath);
+						reader.SectionEnd();
+
+						if (!filepath.empty())
+						{
+							//todo
+							//' // Load the video texture
+							//' try
+							//' {
+							//' 	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(AutoId, filepath.c_str());
+							//' }
+							//' catch (std::exception const& e)
+							//' {
+							//' 	p.ReportError(EScriptResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
+							//' }
+						}
 						return true;
 					}
 					default:
@@ -814,15 +817,6 @@ namespace pr::rdr12
 						return false;
 					}
 				}
-			}
-			NuggetData* Material()
-			{
-				// This function is used to pass texture/shader data to the model generator.
-				// Topo and Geom are not used, each model type knows what topo and geom it's using.
-				m_local_mat.m_tex_diffuse = m_texture;
-				//if (m_texture->m_video)
-				//	m_texture->m_video->Play(true);
-				return &m_local_mat;
 			}
 		};
 
@@ -834,7 +828,7 @@ namespace pr::rdr12
 			AxisId m_align;     // The axis we want the main axis to be aligned to
 
 			MainAxis(AxisId main_axis = AxisId::PosZ, AxisId align = AxisId::PosZ)
-				:m_o2w(m4x4Identity)
+				:m_o2w(m4x4::Identity())
 				,m_main_axis(main_axis)
 				,m_align(align)
 			{}
@@ -883,8 +877,6 @@ namespace pr::rdr12
 		// Support for light sources that cast
 		struct CastingLight
 		{
-			CastingLight()
-			{}
 			bool ParseKeyword(ParseParams& p, Light& light, EKeyword kw)
 			{
 				switch (kw)
@@ -987,8 +979,8 @@ namespace pr::rdr12
 				// Create a texture large enough to contain the text, and render the text into it
 				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
 				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
-				TextureDesc desc(id, tdesc, false, 0, name);
-				auto tex = p.m_rdr.res_mgr().CreateTexture2D(desc);
+				auto desc = TextureDesc(id, tdesc).name(name);
+				auto tex = p.m_rdr.res().CreateTexture2D(desc);
 
 				(void)draw;
 				#if 0 //todo
@@ -1000,14 +992,14 @@ namespace pr::rdr12
 				D3DPtr<ID2D1SolidColorBrush> bk_brush;
 				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
 				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
 
 				// Draw the spot
 				dc->BeginDraw();
 				dc->Clear(&bk);
 				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Throw(dc->EndDraw());
+				pr::Check(dc->EndDraw());
 				#endif
 				return tex;
 			}
@@ -1026,79 +1018,79 @@ namespace pr::rdr12
 					case EStyle::Circle:
 					{
 						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								auto w0 = sz.x * 0.5f;
-								auto h0 = sz.y * 0.5f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
-							});
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({ {w0, h0}, w0, h0 }, fr); });
+						});
 					}
 					case EStyle::Triangle:
 					{
 						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								D3DPtr<ID2D1PathGeometry> geom;
-								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-								pr::Throw(geom->Open(&sink.m_ptr));
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						{
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							pr::Check(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
-								auto w0 = 1.0f * sz.x;
-								auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
-								auto h1 = 0.5f * (sz.y - h0);
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
+							auto h1 = 0.5f * (sz.y - h0);
 
-								sink->BeginFigure({w0, h1}, D2D1_FIGURE_BEGIN_FILLED);
-								sink->AddLine({0.0f * w0, h1});
-								sink->AddLine({0.5f * w0, h0 + h1});
-								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-								pr::Throw(sink->Close());
+							sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.0f * w0, h1 });
+							sink->AddLine({ 0.5f * w0, h0 + h1 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							pr::Check(sink->Close());
 
-								return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-							});
+							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
 					}
 					case EStyle::Star:
 					{
 						auto id = pr::hash::HashArgs("PointStyleStar", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
-							{
-								D3DPtr<ID2D1PathGeometry> geom;
-								D3DPtr<ID2D1GeometrySink> sink;
-								pr::Throw(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-								pr::Throw(geom->Open(&sink.m_ptr));
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						{
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							pr::Check(p.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
-								auto w0 = 1.0f * sz.x;
-								auto h0 = 1.0f * sz.y;
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 1.0f * sz.y;
 
-								sink->BeginFigure({0.5f * w0, 0.0f * h0}, D2D1_FIGURE_BEGIN_FILLED);
-								sink->AddLine({0.4f * w0, 0.4f * h0});
-								sink->AddLine({0.0f * w0, 0.5f * h0});
-								sink->AddLine({0.4f * w0, 0.6f * h0});
-								sink->AddLine({0.5f * w0, 1.0f * h0});
-								sink->AddLine({0.6f * w0, 0.6f * h0});
-								sink->AddLine({1.0f * w0, 0.5f * h0});
-								sink->AddLine({0.6f * w0, 0.4f * h0});
-								sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-								pr::Throw(sink->Close());
+							sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.4f * w0, 0.4f * h0 });
+							sink->AddLine({ 0.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.4f * w0, 0.6f * h0 });
+							sink->AddLine({ 0.5f * w0, 1.0f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.6f * h0 });
+							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							pr::Check(sink->Close());
 
-								return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-							});
+							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
 					}
 					case EStyle::Annulus:
 					{
 						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
-						return p.m_rdr.res_mgr().FindTexture<Texture2D>(id, [&]
+						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							auto w1 = sz.x * 0.4f;
+							auto h1 = sz.y * 0.4f;
+							return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
 							{
-								auto w0 = sz.x * 0.5f;
-								auto h0 = sz.y * 0.5f;
-								auto w1 = sz.x * 0.4f;
-								auto h1 = sz.y * 0.4f;
-								return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
-									{
-										dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-										dc->FillEllipse({{w0, h0}, w0, h0}, fr);
-										dc->FillEllipse({{w0, h0}, w1, h1}, bk);
-									});
+								dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+								dc->FillEllipse({ {w0, h0}, w0, h0 }, fr);
+								dc->FillEllipse({ {w0, h0}, w1, h1 }, bk);
 							});
+						});
 					}
 					default:
 					{
@@ -1111,10 +1103,10 @@ namespace pr::rdr12
 		// Support baked in transforms
 		struct BakeTransform
 		{
-			m4x4 m_bake;
+			m4x4 m_o2w;
 
-			BakeTransform(m4x4 const& bake = m4x4::Zero())
-				:m_bake(bake)
+			BakeTransform(m4x4 const& o2w = m4x4::Zero())
+				:m_o2w(o2w)
 			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw)
 			{
@@ -1122,7 +1114,7 @@ namespace pr::rdr12
 				{
 					case EKeyword::BakeTransform:
 					{
-						p.m_reader.TransformS(m_bake);
+						p.m_reader.TransformS(m_o2w);
 						return true;
 					}
 					default:
@@ -1131,9 +1123,11 @@ namespace pr::rdr12
 					}
 				}
 			}
-			explicit operator bool() const
+			
+			// Returns a pointer to a rotation from 'main_axis' to 'axis'. Returns null if identity
+			m4x4 const* O2WPtr() const
 			{
-				return m_bake.w.w != 0;
+				return m_o2w.w.w != 0 ? &m_o2w : nullptr;
 			}
 		};
 
@@ -1168,7 +1162,7 @@ namespace pr::rdr12
 				if (m_smoothing_angle < 0.0f)
 					return;
 
-				auto& verts   = p.m_cache.m_point;
+				auto& verts = p.m_cache.m_point;
 				auto& indices = p.m_cache.m_index;
 				auto& normals = p.m_cache.m_norms;
 				auto& nuggets = p.m_cache.m_nugts;
@@ -1187,7 +1181,7 @@ namespace pr::rdr12
 					// The number of indices in this nugget
 					auto iptr = indices.data();
 					auto icount = indices.size();
-					if (!nug.m_irange.empty())
+					if (nug.m_irange != Range::Reset())
 					{
 						iptr += nug.m_irange.begin();
 						icount = nug.m_irange.size();
@@ -1196,28 +1190,33 @@ namespace pr::rdr12
 					// Not sure if this works... needs testing
 					pr::geometry::GenerateNormals(icount, iptr, m_smoothing_angle, 0,
 						[&](uint16_t i)
-						{
-							return verts[i];
-						},
+					{
+						return verts[i];
+					},
 						[&](uint16_t new_idx, uint16_t orig_idx, v4 const& norm)
+					{
+						if (new_idx >= verts.size())
 						{
-							if (new_idx >= verts.size())
-							{
-								verts.resize(new_idx + 1, verts[orig_idx]);
-								normals.resize(new_idx + 1, normals[orig_idx]);
-							}
-							normals[new_idx] = norm;
-						},
+							verts.resize(new_idx + 1, verts[orig_idx]);
+							normals.resize(new_idx + 1, normals[orig_idx]);
+						}
+						normals[new_idx] = norm;
+					},
 						[&](uint16_t i0, uint16_t i1, uint16_t i2)
-						{
-							*iptr++ = i0;
-							*iptr++ = i1;
-							*iptr++ = i2;
-						});
+					{
+						*iptr++ = i0;
+						*iptr++ = i1;
+						*iptr++ = i2;
+					});
 
 					// Geometry has normals now
 					nug.m_geom |= EGeom::Norm;
 				}
+			}
+
+			explicit operator bool() const
+			{
+				return m_smoothing_angle >= 0;
 			}
 		};
 	}
@@ -1237,7 +1236,6 @@ namespace pr::rdr12
 		TCont& m_texs;
 		GCont& m_nuggets;
 
-		virtual ~IObjectCreator() {}
 		IObjectCreator(ParseParams& p_)
 			:p(p_)
 			,m_verts  (p.m_cache.m_point)
@@ -1247,6 +1245,7 @@ namespace pr::rdr12
 			,m_texs   (p.m_cache.m_texts)
 			,m_nuggets(p.m_cache.m_nugts)
 		{}
+		virtual ~IObjectCreator() = default;
 		virtual bool ParseKeyword(EKeyword)
 		{
 			return false;
@@ -1273,9 +1272,9 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
-			,m_sprite()
-			,m_per_point_colour()
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_sprite()
+			, m_per_point_colour()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
@@ -1311,7 +1310,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Points(p.m_rdr, int(m_verts.size()), m_verts.data(), int(m_colours.size()), m_colours.data(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours };
+			obj->m_model = ModelGenerator::Points(p.m_rdr, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use a geometry shader to draw points
@@ -1354,10 +1354,6 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Param:
 				{
 					float t[2];
@@ -1383,6 +1379,10 @@ namespace pr::rdr12
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -1425,7 +1425,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			auto opts = ModelGenerator::CreateOptions{.m_colours = m_colours };
+			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1455,10 +1456,6 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Param:
 				{
 					float t[2];
@@ -1484,6 +1481,10 @@ namespace pr::rdr12
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -1526,7 +1527,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			auto opts = ModelGenerator::CreateOptions{.m_colours = m_colours };
+			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1646,9 +1648,10 @@ namespace pr::rdr12
 			}
 
 			// Create the model
+			auto opts = ModelGenerator::CreateOptions{.m_colours = m_colours};
 			obj->m_model = line_strip
-				? ModelGenerator::LineStrip(p.m_rdr, int(m_verts.size() - 1), m_verts.data(), int(m_colours.size()), m_colours.data())
-				: ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+				? ModelGenerator::LineStrip(p.m_rdr, int(m_verts.size() - 1), m_verts, &opts)
+				: ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1736,12 +1739,14 @@ namespace pr::rdr12
 				DashLineList(verts, m_verts, m_dashed);
 			}
 
+			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
+
 			// Create the model
 			auto cdata = MeshCreationData()
-				.verts  (m_verts.data(), int(m_verts.size()))
-				.indices(m_indices.data(), int(m_indices.size()))
-				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetData(ETopo::LineList, EGeom::Vert|EGeom::Colr)});
+				.verts  (m_verts)
+				.indices(m_indices)
+				.colours(m_colours)
+				.nuggets(m_nuggets);
 			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -1838,7 +1843,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours };
+			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1964,12 +1970,14 @@ namespace pr::rdr12
 				}
 			}
 
+			m_nuggets.push_back(NuggetDesc(ETopo::LineStrip, EGeom::Vert|EGeom::Colr));
+
 			// Create the model
 			auto cdata = MeshCreationData()
-				.verts  (m_verts.data(), int(m_verts.size()))
-				.indices(m_indices.data(), int(m_indices.size()))
-				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetData(ETopo::LineStrip, EGeom::Vert|EGeom::Colr)});
+				.verts  (m_verts)
+				.indices(m_indices)
+				.colours(m_colours)
+				.nuggets(m_nuggets);
 			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -2082,7 +2090,7 @@ namespace pr::rdr12
 			pr::geometry::Props props;
 
 			// Colour interpolation iterator
-			auto col = pr::CreateLerpRepeater(m_colours.data(), int(m_colours.size()), int(m_verts.size()), pr::Colour32White);
+			auto col = pr::CreateLerpRepeater(m_colours.data(), isize(m_colours), isize(m_verts), pr::Colour32White);
 			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Model bounding box
@@ -2122,20 +2130,20 @@ namespace pr::rdr12
 
 			// Create the model
 			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
-			obj->m_model = p.m_rdr.res_mgr().CreateModel(mdesc);
+			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
 			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 			auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(m_line_width*2);
 
 			// Create nuggets
-			NuggetData nug;
 			Range vrange(0,0);
 			Range irange(0,0);
 			if (m_type & EArrowType::Back)
 			{
 				vrange = Range(0, 1);
 				irange = Range(0, 1);
+				NuggetDesc nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
@@ -2147,6 +2155,7 @@ namespace pr::rdr12
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + m_verts.size());
 				irange = Range(irange.m_end, irange.m_end + m_verts.size());
+				NuggetDesc nug;
 				nug.m_topo = ETopo::LineStrip;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr()});
@@ -2159,6 +2168,7 @@ namespace pr::rdr12
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + 1);
 				irange = Range(irange.m_end, irange.m_end + 1);
+				NuggetDesc nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
@@ -2200,8 +2210,8 @@ namespace pr::rdr12
 			pr::m4x4 basis;
 			p.m_reader.Matrix3x3(basis.rot);
 
-			pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
+			pr::v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
+			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
 			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
@@ -2217,12 +2227,14 @@ namespace pr::rdr12
 				return;
 			}
 
+			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
+
 			// Create the model
 			auto cdata = MeshCreationData()
-				.verts(m_verts.data(), int(m_verts.size()))
-				.indices(m_indices.data(), int(m_indices.size()))
-				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetData(ETopo::LineList, EGeom::Vert|EGeom::Colr)});
+				.verts(m_verts)
+				.indices(m_indices)
+				.colours(m_colours)
+				.nuggets(m_nuggets);
 			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -2250,8 +2262,8 @@ namespace pr::rdr12
 			,m_scale()
 			,m_rh(true)
 		{
-			pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
+			pr::v4       pts[] = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
+			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
 			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
@@ -2297,7 +2309,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours };
+			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -2326,7 +2339,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_dim()
 			,m_facets(40)
@@ -2336,22 +2349,22 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+				case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Solid:
-				{
-					m_solid = true;
-					return true;
-				}
-			case EKeyword::Facets:
-				{
-					p.m_reader.IntS(m_facets, 10);
-					return true;
 				}
 			}
 		}
@@ -2371,7 +2384,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2389,7 +2403,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_scale(v2One)
 			,m_ang()
@@ -2401,27 +2415,27 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+				case EKeyword::Scale:
+				{
+					p.m_reader.Vector2S(m_scale);
+					return true;
+				}
+				case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Solid:
-				{
-					m_solid = true;
-					return true;
-				}
-			case EKeyword::Scale:
-				{
-					p.m_reader.Vector2S(m_scale);
-					return true;
-				}
-			case EKeyword::Facets:
-				{
-					p.m_reader.IntS(m_facets, 10);
-					return true;
 				}
 			}
 		}
@@ -2436,7 +2450,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Pie(p.m_rdr, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Pie(p.m_rdr, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2453,7 +2468,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_dim()
 			,m_corner_radius()
@@ -2464,28 +2479,28 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::CornerRadius:
+				case EKeyword::CornerRadius:
 				{
 					p.m_reader.RealS(m_corner_radius);
 					return true;
 				}
-			case EKeyword::Facets:
+				case EKeyword::Facets:
 				{
 					p.m_reader.IntS(m_facets, 10);
 					m_facets *= 4;
 					return true;
 				}
-			case EKeyword::Solid:
+				case EKeyword::Solid:
 				{
 					m_solid = true;
 					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -2506,7 +2521,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2522,7 +2538,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_poly()
 			,m_per_vertex_colour()
@@ -2532,17 +2548,17 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Solid:
-				{
-					m_solid = true;
-					return true;
 				}
 			}
 		}
@@ -2569,7 +2585,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Polygon(p.m_rdr, int(m_poly.size()), m_poly.data(), m_solid, int(m_colours.size()), m_colours.data(), m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Polygon(p.m_rdr, m_poly, m_solid, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2581,14 +2598,14 @@ namespace pr::rdr12
 	// ELdrObject::Triangle
 	template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreator
 	{
-		creation::MainAxis m_axis;
 		creation::Textured m_tex;
+		creation::MainAxis m_axis;
 		std::optional<bool> m_per_vert_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
-			,m_tex()
 			,m_per_vert_colour()
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -2639,7 +2656,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2647,14 +2665,14 @@ namespace pr::rdr12
 	// ELdrObject::Quad
 	template <> struct ObjectCreator<ELdrObject::Quad> :IObjectCreator
 	{
-		creation::MainAxis m_axis;
 		creation::Textured m_tex;
+		creation::MainAxis m_axis;
 		std::optional<bool> m_per_vert_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
-			,m_tex()
 			,m_per_vert_colour()
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -2705,7 +2723,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2717,7 +2736,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicWrap())
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
@@ -2753,7 +2772,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2761,6 +2781,10 @@ namespace pr::rdr12
 	// ELdrObject::Ribbon
 	template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreator
 	{
+		// Notes:
+		//  - Defaulting to 'clamp' because ribbons use the first row of the 2D texture and extrude it.
+		//    This doesn't work with 'wrap' or 'border' modes.
+
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
 		float m_width;
@@ -2769,7 +2793,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_width(10.0f)
 			,m_per_vert_colour()
@@ -2779,13 +2803,6 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_width);
@@ -2795,6 +2812,13 @@ namespace pr::rdr12
 				{
 					m_smooth = true;
 					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -2832,7 +2856,8 @@ namespace pr::rdr12
 			}
 
 			pr::v4 normal = m_axis.m_align;
-			obj->m_model = ModelGenerator::QuadStrip(p.m_rdr, int(m_verts.size() - 1), m_verts.data(), m_width, 1, &normal, int(m_colours.size()), m_colours.data(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::QuadStrip(p.m_rdr, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2849,7 +2874,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_dim()
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -2868,7 +2893,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Box(p.m_rdr, m_dim, m4x4::Identity(), Colour32White, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Box(p.m_rdr, m_dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2882,7 +2908,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_pt0()
 			,m_pt1()
 			,m_up(v4YAxis)
@@ -2893,16 +2919,16 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Up:
+				{
+					p.m_reader.Vector3S(m_up, 0.0f);
+					return true;
+				}
+				default:
 				{
 					return
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Up:
-				{
-					p.m_reader.Vector3S(m_up, 0.0f);
-					return true;
 				}
 			}
 		}
@@ -2920,7 +2946,8 @@ namespace pr::rdr12
 		{
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
 			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
-			obj->m_model = ModelGenerator::Box(p.m_rdr, dim, b2w, Colour32White, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = &b2w, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Box(p.m_rdr, dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2934,7 +2961,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_location()
 			,m_dim()
 		{}
@@ -2970,7 +2997,8 @@ namespace pr::rdr12
 			m_dim *= 0.5f;
 
 			// Create the model
-			obj->m_model = ModelGenerator::BoxList(p.m_rdr, int(m_location.size()), m_location.data(), m_dim, 0, 0, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::BoxList(p.m_rdr, isize(m_location), m_location, m_dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2987,7 +3015,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_pt()
 			,m_width(1.0f)
@@ -3040,7 +3068,8 @@ namespace pr::rdr12
 			m_pt[6] = v4(-n*w, +n*h, -n, 1.0f);
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
-			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3056,7 +3085,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_axis()
 			,m_pt()
 			,m_fovY(maths::tau_by_8f)
@@ -3095,7 +3124,8 @@ namespace pr::rdr12
 			m_pt[6] = v4(-n*w, +n*h, -n, 1.0f);
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
-			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3109,7 +3139,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicWrap())
 			,m_dim()
 			,m_facets(3)
 		{}
@@ -3117,16 +3147,16 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+				default:
 				{
 					return
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Facets:
-				{
-					p.m_reader.IntS(m_facets, 10);
-					return true;
 				}
 			}
 		}
@@ -3138,7 +3168,8 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			obj->m_model = ModelGenerator::Geosphere(p.m_rdr, m_dim, m_facets, Colour32White, m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Geosphere(p.m_rdr, m_dim, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3156,7 +3187,7 @@ namespace pr::rdr12
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_axis()
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_dim()
 			,m_scale(v2One)
 			,m_layers(1)
@@ -3166,14 +3197,7 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Facets:
+				case EKeyword::Facets:
 				{
 					int facets[2];
 					p.m_reader.IntS(facets, 2, 10);
@@ -3181,10 +3205,17 @@ namespace pr::rdr12
 					m_wedges = facets[1];
 					return true;
 				}
-			case EKeyword::Scale:
+				case EKeyword::Scale:
 				{
 					p.m_reader.Vector2S(m_scale);
 					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -3197,7 +3228,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3215,7 +3247,7 @@ namespace pr::rdr12
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_axis()
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_dim()
 			,m_scale(v2One)
 			,m_layers(1)
@@ -3225,14 +3257,7 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Facets:
+				case EKeyword::Facets:
 				{
 					int facets[2];
 					p.m_reader.IntS(facets, 2, 10);
@@ -3240,10 +3265,17 @@ namespace pr::rdr12
 					m_wedges = facets[1];
 					return true;
 				}
-			case EKeyword::Scale:
+				case EKeyword::Scale:
 				{
 					p.m_reader.Vector2S(m_scale);
 					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -3263,7 +3295,8 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_axis.O2WPtr(), .m_tex_diffuse = m_tex.m_texture, .m_sam_diffuse = m_tex.m_sampler };
+			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3304,11 +3337,7 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Style:
+				case EKeyword::Style:
 				{
 					// Expect *Style { cross_section_type <data> }
 					p.m_reader.SectionStart();
@@ -3325,12 +3354,7 @@ namespace pr::rdr12
 					// Create the cross section profile based on the style
 					switch (m_type)
 					{
-					default:
-						{
-							p.ReportError(EScriptResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
-							return false;
-						}
-					case ECSType::Round:
+						case ECSType::Round:
 						{
 							// Elliptical cross section, expect 1 or 2 radii to follow
 							p.m_reader.Real(m_radx);
@@ -3338,7 +3362,7 @@ namespace pr::rdr12
 							m_cs_smooth = true;
 							break;
 						}
-					case ECSType::Square:
+						case ECSType::Square:
 						{
 							// Square cross section, expect 1 or 2 radii to follow
 							p.m_reader.Real(m_radx);
@@ -3346,7 +3370,7 @@ namespace pr::rdr12
 							m_cs_smooth = false;
 							break;
 						}
-					case ECSType::CrossSection:
+						case ECSType::CrossSection:
 						{
 							// Create the cross section, expect X,Y pairs
 							for (; p.m_reader.IsValue();)
@@ -3357,6 +3381,11 @@ namespace pr::rdr12
 							}
 							break;
 						}
+						default:
+						{
+							p.ReportError(EScriptResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
+							return false;
+						}
 					}
 
 					// Optional cross section parameters
@@ -3364,15 +3393,20 @@ namespace pr::rdr12
 					{
 						switch (kw0)
 						{
-						case EKeyword::Facets:
+							case EKeyword::Facets:
 							{
 								p.m_reader.IntS(m_cs_facets, 10);
 								break;
 							}
-						case EKeyword::Smooth:
+							case EKeyword::Smooth:
 							{
 								m_cs_smooth = true;
 								break;
+							}
+							default:
+							{
+								p.ReportError(EScriptResult::UnknownValue, FmtS("Unknown cross section parameter"));
+								return false;
 							}
 						}
 					}
@@ -3380,15 +3414,19 @@ namespace pr::rdr12
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Smooth:
+				case EKeyword::Smooth:
 				{
 					m_smooth = true;
 					return true;
 				}
-			case EKeyword::Closed:
+				case EKeyword::Closed:
 				{
 					m_closed = true;
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -3422,18 +3460,13 @@ namespace pr::rdr12
 			// Create the cross section for implicit profiles
 			switch (m_type)
 			{
-			default:
-				{
-					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
-					return;
-				}
-			case ECSType::Round:
+				case ECSType::Round:
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
 						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
 					break;
 				}
-			case ECSType::Square:
+				case ECSType::Square:
 				{
 					// Create the cross section
 					m_cs.push_back(v2(-m_radx, -m_rady));
@@ -3442,19 +3475,24 @@ namespace pr::rdr12
 					m_cs.push_back(v2(-m_radx, +m_rady));
 					break;
 				}
-			case ECSType::CrossSection:
+				case ECSType::CrossSection:
 				{
 					if (m_cs.empty())
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
 						return;
 					}
-					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					if (pr::geometry::PolygonArea(m_cs) < 0)
 					{
 						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
 						return;
 					}
 					break;
+				}
+				default:
+				{
+					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
 				}
 			}
 
@@ -3467,7 +3505,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_verts.size()), m_verts.data(), m_closed, m_cs_smooth, int(m_colours.size()), m_colours.data());
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours };
+			obj->m_model = ModelGenerator::Extrude(p.m_rdr, m_cs, m_verts, m_closed, m_cs_smooth, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3480,7 +3519,7 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_gen_norms(-1.0f)
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -3544,13 +3583,12 @@ namespace pr::rdr12
 				case EKeyword::LineStrip:
 				{
 					auto is_strip = kw == EKeyword::LineStrip;
-					auto nug = *m_tex.Material();
-					nug.m_topo = is_strip ? ETopo::LineStrip : ETopo::LineList;
-					nug.m_geom = EGeom::Vert |
-						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
+					auto nug = NuggetDesc(is_strip ? ETopo::LineStrip : ETopo::LineList, EGeom::Vert |
+						(!m_colours.empty() ? EGeom::Colr : EGeom::None))
+						.vrange(Range::Reset())
+						.irange(Range(m_indices.size(), m_indices.size()))
+						.tex_diffuse(m_tex.m_texture)
+						.sam_diffuse(m_tex.m_sampler);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3573,15 +3611,14 @@ namespace pr::rdr12
 				case EKeyword::TriStrip:
 				{
 					auto is_strip = kw == EKeyword::TriStrip;
-					auto nug = *m_tex.Material();
-					nug.m_topo = is_strip ? ETopo::TriStrip : ETopo::TriList;
-					nug.m_geom = EGeom::Vert |
+					auto nug = NuggetDesc(is_strip ? ETopo::TriStrip : ETopo::TriList, EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
-						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
+						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None))
+						.vrange(Range::Reset())
+						.irange(Range(m_indices.size(), m_indices.size()))
+						.tex_diffuse(m_tex.m_texture)
+						.sam_diffuse(m_tex.m_sampler);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3601,15 +3638,14 @@ namespace pr::rdr12
 				}
 				case EKeyword::Tetra:
 				{
-					auto nug = *m_tex.Material();
-					nug.m_topo = ETopo::TriList;
-					nug.m_geom = EGeom::Vert |
+					auto nug = NuggetDesc(ETopo::TriList, EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
-						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = Range::Reset();
-					nug.m_irange = Range(m_indices.size(), m_indices.size());
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
+						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None))
+						.vrange(Range::Reset())
+						.irange(Range(m_indices.size(), m_indices.size()))
+						.tex_diffuse(m_tex.m_texture)
+						.sam_diffuse(m_tex.m_sampler);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3666,17 +3702,17 @@ namespace pr::rdr12
 			}
 			if (!m_colours.empty() && m_colours.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", int(m_verts.size()), int(m_colours.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", isize(m_verts), isize(m_colours)));
 				return;
 			}
 			if (!m_normals.empty() && m_normals.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", isize(m_verts), isize(m_normals)));
 				return;
 			}
 			if (!m_texs.empty() && m_texs.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", isize(m_verts), isize(m_normals)));
 				return;
 			}
 			for (auto& nug : m_nuggets)
@@ -3705,12 +3741,12 @@ namespace pr::rdr12
 
 			// Create the model
 			auto cdata = MeshCreationData()
-				.verts  (m_verts  .data(), int(m_verts  .size()))
-				.indices(m_indices.data(), int(m_indices.size()))
-				.nuggets(m_nuggets.data(), int(m_nuggets.size()))
-				.colours(m_colours.data(), int(m_colours.size()))
-				.normals(m_normals.data(), int(m_normals.size()))
-				.tex    (m_texs   .data(), int(m_texs   .size()));
+				.verts(m_verts)
+				.indices(m_indices)
+				.nuggets(m_nuggets)
+				.colours(m_colours)
+				.normals(m_normals)
+				.tex(m_texs);
 			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
@@ -3724,20 +3760,13 @@ namespace pr::rdr12
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_tex()
+			,m_tex(SamDesc::AnisotropicClamp())
 			,m_gen_norms(0.0f)
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return
-						m_tex.ParseKeyword(p, kw) ||
-						m_gen_norms.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Verts:
 				{
 					int r = 1;
@@ -3750,6 +3779,13 @@ namespace pr::rdr12
 					}
 					p.m_reader.SectionEnd();
 					return true;
+				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						m_gen_norms.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -3777,22 +3813,19 @@ namespace pr::rdr12
 			m_indices.resize(3 * num_faces);
 
 			// Create a nugget for the hull
-			auto nug = *m_tex.Material();
-			nug.m_topo = ETopo::TriList;
-			nug.m_geom = EGeom::Vert;
-			m_nuggets.push_back(nug);
+			m_nuggets.push_back(NuggetDesc(ETopo::TriList, EGeom::Vert).tex_diffuse(m_tex.m_texture).sam_diffuse(m_tex.m_sampler));
 
 			// Generate normals if needed
 			m_gen_norms.Generate(p);
 
 			// Create the model
 			auto cdata = MeshCreationData()
-				.verts  (m_verts  .data(), int(m_verts  .size()))
-				.indices(m_indices.data(), int(m_indices.size()))
-				.nuggets(m_nuggets.data(), int(m_nuggets.size()))
-				.colours(m_colours.data(), int(m_colours.size()))
-				.normals(m_normals.data(), int(m_normals.size()))
-				.tex    (m_texs   .data(), int(m_texs   .size()));
+				.verts(m_verts)
+				.indices(m_indices)
+				.nuggets(m_nuggets)
+				.colours(m_colours)
+				.normals(m_normals)
+				.tex(m_texs);
 			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
@@ -3894,21 +3927,17 @@ namespace pr::rdr12
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Data:
 				{
 					// Create an adapter that makes the script reader look like a std::stream
 					struct StreamWrapper
 					{
-						Reader&      m_reader; // The reader to adapt
+						Reader& m_reader; // The reader to adapt
 						std::wstring m_delims; // Preserve the delimiters
 
 						StreamWrapper(Reader& reader)
 							:m_reader(reader)
-							,m_delims(reader.Delimiters())
+							, m_delims(reader.Delimiters())
 						{
 							// Read up to the first non-delimiter. This is the start of the CSV data
 							m_reader.IsSectionEnd();
@@ -3961,6 +3990,10 @@ namespace pr::rdr12
 					std::ifstream file(filepath);
 					ParseDataStream(file);
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -4141,7 +4174,8 @@ namespace pr::rdr12
 			// Create a plot from the points
 			if (!verts.empty())
 			{
-				obj->m_model = ModelGenerator::LineStrip(p.m_rdr, int(verts.size()) - 1, verts.data(), 1, &obj->m_base_colour);
+				auto opts = ModelGenerator::CreateOptions{ .m_colours = {&obj->m_base_colour, 1} };
+				obj->m_model = ModelGenerator::LineStrip(p.m_rdr, isize(verts) - 1, verts, &opts);
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Use thick lines
@@ -4220,7 +4254,7 @@ namespace pr::rdr12
 				path(m_filepath.string() + ".textures"),
 				m_filepath.parent_path(),
 			};
-			AutoSub sub = p.m_rdr.res_mgr().ResolveFilepath += [&](auto&, ResolvePathArgs& args)
+			AutoSub sub = p.m_rdr.res().ResolveFilepath += [&](auto&, ResolvePathArgs& args)
 			{
 				// Look in a folder with the same name as the model
 				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
@@ -4229,17 +4263,15 @@ namespace pr::rdr12
 				args.handled = true;
 			};
 
-			ModelGenerator::CreateOptions m_opts = {};
-			if (m_bake) m_opts.m_bake = &m_bake.m_bake;
-
 
 			// Create the models
+			auto opts = ModelGenerator::CreateOptions{ .m_colours = m_colours, .m_bake = m_bake.O2WPtr() };
 			ModelGenerator::LoadModel(format, p.m_rdr, *src, [&](ModelTree const& tree)
 				{
 					auto child = ModelTreeToLdr(tree, obj->m_context_id);
 					if (child != nullptr) obj->AddChild(child);
 					return false;
-				}, m_opts);
+				}, &opts);
 		}
 
 		// Convert a model tree into a tree of LdrObjects
@@ -4449,6 +4481,7 @@ namespace pr::rdr12
 				case EKeyword::Weight:
 				{
 					p.m_reader.RealS(m_extras.m_weight);
+					m_extras.m_weight = std::clamp(m_extras.m_weight, -1.0f, +1.0f);
 					return true;
 				}
 				case EKeyword::XAxis:
@@ -4521,7 +4554,7 @@ namespace pr::rdr12
 				BBox::Reset(), obj->TypeAndName().c_str());
 
 			// Create the model
-			obj->m_model = p.m_rdr.res_mgr().CreateModel(mdesc);
+			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
 
 			// Store the expression in the object user data
 			obj->m_user_data.get<eval::Expression>() = m_eq;
@@ -4550,7 +4583,7 @@ namespace pr::rdr12
 			// Find the range to plot the equation over
 			auto& cam = scene.m_cam;
 			auto fp = cam.FocusPoint();
-			auto area = cam.ViewArea(cam.FocusDist());
+			auto area = cam.ViewRectAtDistance(cam.FocusDist());
 
 			// Determine the interval to plot within. Default to a sphere around the focus point.
 			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
@@ -4642,7 +4675,7 @@ namespace pr::rdr12
 			if (init)
 			{
 				// Create a nugget
-				NuggetData n = {};
+				NuggetDesc n = {};
 				n.m_topo = ETopo::LineStrip;
 				n.m_geom = EGeom::Vert;
 				n.m_vrange = Range(0, count);
@@ -4675,12 +4708,13 @@ namespace pr::rdr12
 			assert(nv <= (int)model.m_vcount);
 			assert(ni <= (int)model.m_icount);
 
-#if 0 //todo
-			MLock mlock(&model, EMap::WriteDiscard);
-			auto vout = mlock.m_vlock.ptr<Vert>();
-			auto iout = mlock.m_ilock.ptr<uint32_t>();
+			auto update_v = model.UpdateVertices();
+			auto update_i = model.UpdateIndices();
+			auto vout = update_v.ptr<Vert>();
+			auto iout = update_i.ptr<uint32_t>();
+
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
+				[&](v4_cref pos, Colour32, v4_cref, v2_cref)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform
@@ -4689,14 +4723,14 @@ namespace pr::rdr12
 					// 'weight' controls the density of points near the range centre since 'len_sq' is on [0,1].
 					auto dir = pos.w0();
 					auto len_sq = LengthSq(dir);
-					auto weight = Lerp(extras.m_weight, 1.0f, len_sq); //Pow(len_sq, extras.m_weight * 0.5f);
+					auto weight = Lerp(extras.m_weight, 1.0f, len_sq);
 					auto pt = range.Centre() + dir * range.Radius() * weight;
 					
 					// Evaluate the equation at 'pt' to get z = f(x,y) and the colour.
 					auto [z,col] = extras.m_axis[2].clamp(static_cast<float>(equation(pt.x, pt.y).db()));
 
 					// Evaluate the normal at 'pt'. Want to choose a 'd' value that is proportional to the density of points at 'pt'
-					auto dx = dx_step * weight;
+					auto dx = dx_step * weight; // this isn't right, 'd' should be the smallest step that produces an accurate normal...
 					auto dy = dy_step * weight;
 
 					// Evaluate the function at four points around (x,y) to get the height 'h'
@@ -4704,28 +4738,23 @@ namespace pr::rdr12
 					auto n = Cross(v4(2 * dx, 0, h.y - h.x, 0), v4(0, 2 * dy, h.w - h.z, 0));
 					auto norm = Normalise(n, v4::Zero());
 
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2Zero);
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2::Zero());
 				},
 				[&](auto idx)
 				{
 					*iout++ = idx;
 				});
 
+			assert(vout - update_v.ptr<Vert>() == nv);
+			assert(iout - update_i.ptr<uint32_t>() == ni);
+			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+
 			// Generate nuggets if initialising
 			if (init)
 			{
-				auto [vcount, icount] = geometry::HexPatchSize(rings);
-
-				NuggetData n(ETopo::TriStrip, props.m_geom, Range(0, vcount), Range(0, icount));
-				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
-				model.CreateNugget(n);
+				model.CreateNugget(NuggetDesc(ETopo::TriStrip, props.m_geom).vrange(Range(0, nv)).irange(Range(0, ni)).alpha_geom(extras.has_alpha()));
 			}
-#endif
-			(void)init;
-			(void)extras;
-			(void)equation;
-			(void)dx_step;
-			(void)dy_step;
 		}
 		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
@@ -4843,6 +4872,7 @@ namespace pr::rdr12
 		enum class EType
 		{
 			Full3D,
+			Billboard3D,
 			Billboard,
 			ScreenSpace,
 		};
@@ -4873,7 +4903,7 @@ namespace pr::rdr12
 					m_text.append(text);
 
 					// Record the formatting state
-					m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
+					m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), p.m_font.back()));
 					return true;
 				}
 				case EKeyword::NewLine:
@@ -4889,6 +4919,11 @@ namespace pr::rdr12
 				case EKeyword::Billboard:
 				{
 					m_type = EType::Billboard;
+					return true;
+				}
+				case EKeyword::Billboard3D:
+				{
+					m_type = EType::Billboard3D;
 					return true;
 				}
 				case EKeyword::BackColour:
@@ -4957,12 +4992,12 @@ namespace pr::rdr12
 			m_text.append(text);
 
 			// Record the formatting state
-			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
+			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), p.m_font.back()));
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator::Text(p.m_rdr, m_text, m_fmt.data(), int(m_fmt.size()), m_layout, m_axis.m_align);
+			obj->m_model = ModelGenerator::Text(p.m_rdr, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Create the model
@@ -4973,8 +5008,8 @@ namespace pr::rdr12
 				{
 					break;
 				}
-				// Position the text quad so that it always faces the camera and has the same size
-				case EType::Billboard:
+				// Position the text quad so that it always faces the camera but scales with distance
+				case EType::Billboard3D:
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
@@ -4983,6 +5018,7 @@ namespace pr::rdr12
 					// Update the rendering 'i2w' transform on add-to-scene
 					obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
 					{
+						// The size of the text texture is the text metrics size / 96.0.
 						auto c2w = scene.m_cam.CameraToWorld();
 						auto w2c = scene.m_cam.WorldToCamera();
 						auto w = 1.0f * scene.m_viewport.ScreenW;
@@ -4993,35 +5029,30 @@ namespace pr::rdr12
 						#endif
 
 						// Create a camera with an aspect ratio that matches the viewport
-						auto& m_camera = static_cast<Camera const&>(scene.m_cam);
-						auto  v_camera = m_camera; v_camera.Aspect(w / h);
-						auto fd = m_camera.FocusDist();
+						// This handles the case where main camera X/Y are not using the same resolution.
+						auto& main_camera = static_cast<Camera const&>(scene.m_cam);
+						auto  text_camera = main_camera; text_camera.Aspect(w / h);
+						auto fd = main_camera.FocusDist();
 
-						// Get the scaling factors from 'm_camera' to 'v_camera'
-						auto viewarea_c = m_camera.ViewArea(fd);
-						auto viewarea_v = v_camera.ViewArea(fd);
+						// Get the scaling factors from 'main_camera' to 'text_camera'
+						auto viewarea_camera = main_camera.ViewRectAtDistance(fd);
+						auto viewarea_txtcam = text_camera.ViewRectAtDistance(fd);
 
 						// Scale the X,Y coords in camera space
 						auto pt_cs = w2c * ob.m_i2w.pos;
-						pt_cs.x *= viewarea_v.x / viewarea_c.x;
-						pt_cs.y *= viewarea_v.y / viewarea_c.y;
+						pt_cs.x *= viewarea_txtcam.x / viewarea_camera.x;
+						pt_cs.y *= viewarea_txtcam.y / viewarea_camera.y;
 						auto pt_ws = c2w * pt_cs;
 
-						// Scale the instance so that it covers 'dim' pixels on-screen
-						auto sz_z = abs(pt_cs.z) / m_camera.FocusDist();
-						auto sz_x = (viewarea_v.x / w) * sz_z;
-						auto sz_y = (viewarea_v.y / h) * sz_z;
-						ob.m_i2w = m4x4(c2w.rot, pt_ws) * m4x4::Scale(s_cast<float>(sz_x), s_cast<float>(sz_y), 1.0f, v4::Origin());
-						ob.m_c2s = v_camera.CameraToScreen();
+						// Position facing the camera
+						ob.m_i2w = m4x4(c2w.rot, pt_ws) * ob.m_i2w.scale();
+						ob.m_c2s = text_camera.CameraToScreen();
 					};
 					break;
 				}
-				// Position the text quad in screen space.
-				case EType::ScreenSpace:
+				// Position the text quad so that it always faces the camera and has the same size
+				case EType::Billboard:
 				{
-					// Scale up the view port to reduce floating point precision noise.
-					static constexpr int ViewPortSize = 1024;
-
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
 					obj->Flags(
@@ -5029,6 +5060,57 @@ namespace pr::rdr12
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
 						ELdrFlags::ShadowCastExclude, true, "");
+
+					// Scale up the view port to reduce floating point precision noise.
+					constexpr int ViewPortSize = 1024;
+
+					// Screen space uses a standard normalised orthographic projection
+					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
+
+					// Update the rendering 'i2w' transform on add-to-scene
+					obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
+					{
+						auto& main_camera = static_cast<Camera const&>(scene.m_cam);
+						auto c2w = main_camera.CameraToWorld();
+						auto w2c = main_camera.WorldToCamera();
+						auto w = 1.0f * scene.m_viewport.ScreenW;
+						auto h = 1.0f * scene.m_viewport.ScreenH;
+						#if PR_DBG
+						if (w < 1.0f || h < 1.0f)
+							throw std::runtime_error("Invalid viewport size");
+						#endif
+
+						// Convert the world space position into a screen space position
+						auto pt_ss = w2c * ob.m_i2w.pos;
+						auto viewarea = main_camera.ViewRectAtDistance(abs(pt_ss.z));
+						pt_ss.x *= ViewPortSize / viewarea.x;
+						pt_ss.y *= ViewPortSize / viewarea.y;
+						pt_ss.z = static_cast<float>(main_camera.NormalisedDistance(pt_ss.z));
+
+						// The text quad has a scale of 100pt == 1m. For screen space make this 100pt * 96/72 == 133px
+						constexpr float m_to_px = 133.0f;
+
+						// Scale the object from physical pixels to normalised screen space
+						auto scale = m4x4::Scale(m_to_px * ViewPortSize / w, m_to_px * ViewPortSize / h, 1, v4::Origin());
+
+						// Construct the 'i2w' using the screen space position
+						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale();
+					};
+					break;
+				}
+				// Position the text quad in screen space.
+				case EType::ScreenSpace:
+				{
+					// Do not include in scene bounds calculations because we're scaling
+					// this model at a point that the bounding box calculation can't see.
+					obj->Flags(
+						ELdrFlags::BBoxExclude |
+						ELdrFlags::SceneBoundsExclude |
+						ELdrFlags::HitTestExclude |
+						ELdrFlags::ShadowCastExclude, true, "");
+
+					// Scale up the view port to reduce floating point precision noise.
+					constexpr int ViewPortSize = 1024;
 
 					// Screen space uses a standard normalised orthographic projection
 					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -5039,23 +5121,29 @@ namespace pr::rdr12
 						// The 'ob.m_i2w' is a normalised screen space position
 						// (-1,-1,-0) is the lower left corner on the near plane,
 						// (+1,+1,-1) is the upper right corner on the far plane.
+						auto& main_camera = static_cast<Camera const&>(scene.m_cam);
+						auto c2w = main_camera.CameraToWorld();
 						auto w = 1.0f * scene.m_viewport.ScreenW;
 						auto h = 1.0f * scene.m_viewport.ScreenH;
-						auto c2w = scene.m_cam.CameraToWorld();
 						#if PR_DBG
 						if (w < 1.0f || h < 1.0f)
 							throw std::runtime_error("Invalid viewport size");
 						#endif
 
+						// Convert the position givin in the ldr script as 2D screen space
+						// Note: pt_ss.z should already be the normalised distance from the camera
+						auto pt_ss = ob.m_i2w.pos;
+						pt_ss.x *= 0.5f * ViewPortSize;
+						pt_ss.y *= 0.5f * ViewPortSize;
+
+						// The text quad has a scale of 100pt == 1m. For screen space make this 100pt * 96/72 == 133px
+						constexpr float m_to_px = 133.0f;
+
 						// Scale the object from physical pixels to normalised screen space
-						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4Origin);
+						auto scale = m4x4::Scale(m_to_px * ViewPortSize / w, m_to_px * ViewPortSize / h, 1, v4::Origin());
 
-						// Reverse 'pos.z' so positive values can be used
-						ob.m_i2w.pos.x *= 0.5f * ViewPortSize;
-						ob.m_i2w.pos.y *= 0.5f * ViewPortSize;
-
-						// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
-						ob.m_i2w = c2w * ob.m_i2w * scale;
+						// Convert 'i2w', which is 'i2c' in the ldr script, into an actual 'i2w'
+						ob.m_i2w = c2w * m4x4::Translation(pt_ss.x, pt_ss.y, pt_ss.z) * scale * ob.m_i2w.scale();
 					};
 					break;
 				}
@@ -5230,7 +5318,7 @@ namespace pr::rdr12
 				default:
 				{
 					// Save the current number of objects
-					auto object_count = int(p.m_objects.size());
+					auto object_count = isize(p.m_objects);
 
 					// Assume the keyword is an object and start parsing
 					if (!ParseLdrObject(static_cast<ELdrObject>(kw), p))
@@ -5238,7 +5326,7 @@ namespace pr::rdr12
 						p.ReportError(EScriptResult::UnknownToken, Fmt("Expected an object declaration"));
 						break;
 					}
-					assert("Objects removed but 'ParseLdrObject' didn't fail" && int(p.m_objects.size()) > object_count);
+					assert("Objects removed but 'ParseLdrObject' didn't fail" && isize(p.m_objects) > object_count);
 
 					// Call the callback with the freshly minted object.
 					add_cb(object_count);
@@ -5252,8 +5340,10 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	void Parse(Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, pr::script::Reader& reader, Guid const& context_id, ParseProgressCB progress_cb)
 	{
+		ParseResult out;
+
 		// Give initial and final progress updates
 		auto start_loc = reader.Location();
 		auto exit = Scope<void>(
@@ -5274,7 +5364,47 @@ namespace pr::rdr12
 		bool cancel = false;
 		ParseParams pp(rdr, reader, out, context_id, progress_cb, cancel);
 		ParseLdrObjects(pp, [&](int){});
+		return out;
 	}
+
+	// Parse ldr script from a text file.
+	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+	// life-times of the script reader, the parse output, and the 'store' container it refers to.
+	ParseResult ParseFile(Renderer& rdr, std::filesystem::path filename, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		script::FileSrc src(filename);
+		script::Reader reader(src);
+		return Parse(rdr, reader, context_id, progress_cb);
+	}
+
+	// Parse ldr script from a string
+	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
+	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
+	// life-times of the script reader, the parse output, and the 'store' container it refers to.
+	template <typename Char>
+	ParseResult ParseString(Renderer& rdr, Char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		script::StringSrc src(ldr_script);
+		script::Reader reader(src);
+		return Parse(rdr, reader, context_id, progress_cb);
+	}
+	template ParseResult ParseString<char>(Renderer& rdr, char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
+	template ParseResult ParseString<wchar_t>(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
+
+	// Create a single ldr object from a string
+	template <typename Char>
+	LdrObjectPtr CreateLdr(Renderer& rdr, Char const* ldr_script, Guid const& context_id)
+	{
+		auto result = ParseString(rdr, ldr_script, context_id);
+		if (result.m_objects.empty())
+			throw std::runtime_error("No objects created");
+		if (result.m_objects.size() > 1)
+			throw std::runtime_error("Multiple objects created");
+		return result.m_objects[0];
+	}
+	template LdrObjectPtr CreateLdr(Renderer& rdr, char const* ldr_script, Guid const& context_id);
+	template LdrObjectPtr CreateLdr(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id);
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, Guid const& context_id)
@@ -5350,10 +5480,10 @@ namespace pr::rdr12
 		settings.m_ib.HeapProps = HeapProps::Upload();
 
 		// Create the model
-		obj->m_model = rdr.res_mgr().CreateModel(settings);
+		obj->m_model = rdr.res().CreateModel(settings);
 
 		// Create dummy nuggets
-		NuggetData nug(ETopo::PointList, EGeom::Vert);
+		NuggetDesc nug(ETopo::PointList, EGeom::Vert);
 		nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::RangesCanOverlap, true);
 		for (int i = ncount; i-- != 0;)
 			obj->m_model->CreateNugget(nug);
@@ -5586,7 +5716,7 @@ namespace pr::rdr12
 		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 		{
 			// Find the object to world for the bbox
-			m_bbox_instance.m_model = scene.rdr().res_mgr().FindModel(EStockModel::BBoxModel);
+			m_bbox_instance.m_model = scene.res().CreateModel(EStockModel::BBoxModel);
 			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
 			scene.AddInstance(m_bbox_instance);
 		}
@@ -5605,7 +5735,7 @@ namespace pr::rdr12
 	}
 	LdrObject* LdrObject::Child(int index) const
 	{
-		if (index < 0 || index >= int(m_child.size())) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, int(m_child.size())));
+		if (index < 0 || index >= isize(m_child)) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, isize(m_child)));
 		return m_child[index].get();
 	}
 
@@ -5982,10 +6112,9 @@ namespace pr::rdr12
 		}, name);
 	}
 
-	// Set the texture on this object or child objects matching 'name' (see Apply)
-	// Note for 'difference-mode' drawlist management: if the object is currently in
-	// one or more drawlists (i.e. added to a scene) it will need to be removed and
-	// re-added so that the sort order is correct.
+	// Set the texture on this object or child objects matching 'name' (see Apply).
+	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
 	void LdrObject::SetTexture(Texture2D* tex, char const* name)
 	{
 		Apply([=](LdrObject* o)
@@ -6001,6 +6130,22 @@ namespace pr::rdr12
 		}, name);
 	}
 
+	// Set the sampler on the nuggets of this object or child objects matching 'name' (see Apply).
+	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
+	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
+	void LdrObject::SetSampler(Sampler* sam, char const* name)
+	{
+		Apply([=](LdrObject* o)
+		{
+			if (o->m_model == nullptr) return true;
+			for (auto& nug : o->m_model->m_nuggets)
+			{
+				nug.m_sam_diffuse = SamplerPtr(sam, true);
+			}
+
+			return true;
+		}, name);
+	}
 	// Return the bounding box for this object in model space
 	// To convert this to parent space multiply by 'm_o2p'
 	// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)

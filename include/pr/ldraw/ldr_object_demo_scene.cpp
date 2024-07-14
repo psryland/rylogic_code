@@ -2,7 +2,6 @@
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
-
 #include <string>
 
 namespace pr::ldr

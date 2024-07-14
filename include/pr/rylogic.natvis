@@ -114,6 +114,17 @@ old:
 			</ArrayItems>
 		</Expand>
 	</Type>
+	<Type Name="pr::bitsetRT&lt;*&gt;">
+		<DisplayString Condition="m_bits._Mypair._Myval2._Myfirst == m_bits._Mypair._Myval2._Mylast">empty</DisplayString>
+		<DisplayString>[size={m_bits.size() * sizeof(*m_bits.data()) * 8 - m_unused}]</DisplayString>
+		<Expand>
+			<Item Name="[size]">m_bits.size() * sizeof(*m_bits.data()) * 8 - m_unused</Item>
+			<ArrayItems>
+				<Size>m_bits._Mypair._Myval2._Mylast - m_bits._Mypair._Myval2._Myfirst</Size>
+				<ValuePointer>m_bits._Mypair._Myval2._Myfirst,b</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
 	
 	<!-- Expression Evaluator -->
 	<Type Name="pr::eval::Val">
@@ -245,6 +256,14 @@ old:
 		<DisplayString>{m_value}</DisplayString>
 	</Type>
 
+	<!-- Colour -->
+	<Type Name="pr::Colour32">
+		<DisplayString>{argb,Xb}</DisplayString>
+	</Type>
+	<Type Name="pr::Colour">
+		<DisplayString>r={r}, g={g}, b={b} a={a}</DisplayString>
+	</Type>
+	
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
 		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
@@ -275,9 +294,6 @@ old:
 	</Type>
 
 	<!-- Geometry -->
-	<Type Name="pr::Colour32">
-		<DisplayString>{argb,Xb}</DisplayString>
-	</Type>
 	<Type Name="pr::geometry::p3d::ChunkHeader">
 		<DisplayString>[{m_id}] Len={m_length}</DisplayString>
 	</Type>
@@ -309,6 +325,139 @@ old:
 	</Type>
 	<Type Name="pr::rdr::StateBlock&lt;*,*,*&gt;">
 		<DisplayString>{m_mask}</DisplayString>
+	</Type>
+
+	<!-- Renderer12 -->
+	<Type Name="pr::rdr12::ByteCode">
+		<DisplayString>[{BytecodeLength}] {pShaderBytecode}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::DrawListElement">
+		<DisplayString>{m_nugget->m_model->m_name.m_ptr} key={m_sort_key.m_value}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Model">
+		<DisplayString>{m_name.m_ptr}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::BaseInstance">
+		<DisplayString>Cpts={m_cpt_count}</DisplayString>
+		<Expand>
+			<Item Name="[Count]">m_cpt_count</Item>
+			<CustomListItems MaxItemsPerView="20">
+				<Variable Name="idx" InitialValue="0"/>
+				<Variable Name="cpt_ptr" InitialValue="(pr::rdr12::EInstComp*)(this + 1)"/>
+				<Variable Name="data_ptr" InitialValue="(uint8_t*)(((int64_t)(this + 1) + 4 + m_cpt_count + 15) &amp; ~0xf)"/>
+				<Loop>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::ModelPtr">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::ModelPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::ModelPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransform">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransformPtr">
+						<Item Name="{*cpt_ptr}">(pr::m4x4*&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::I2WTransformFuncPtr">
+						<Item Name="{*cpt_ptr}">(void*)data_ptr</Item>
+						<Exec>data_ptr += sizeof(void*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransform">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2SOptional">
+						<Item Name="{*cpt_ptr}">(pr::m4x4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransformPtr">
+						<Item Name="{*cpt_ptr}">(pr::m4x4*&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::m4x4*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::C2STransformFuncPtr">
+						<Item Name="{*cpt_ptr}">(void*)data_ptr</Item>
+						<Exec>data_ptr += sizeof(void*)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::SortkeyOverride">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::SKOverride&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::SKOverride)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::PipeStates">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::PipeStates&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::PipeStates)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Flags">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::EInstFlag&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::EInstFlag)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::TintColour32">
+						<Item Name="{*cpt_ptr}">(pr::Colour32&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::Colour32)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::DiffTexture">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::Texture2DPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::Texture2DPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::DiffTextureSampler">
+						<Item Name="{*cpt_ptr}">(pr::rdr12::SamplerPtr&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::rdr12::SamplerPtr)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::EnvMapReflectivity">
+						<Item Name="{*cpt_ptr}">(float&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(float)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::UniqueId">
+						<Item Name="{*cpt_ptr}">(int32_t&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(int32_t)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::SSSize">
+						<Item Name="{*cpt_ptr}">(pr::v2&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v2)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float1">
+						<Item Name="{*cpt_ptr}">(float&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(float)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float2">
+						<Item Name="{*cpt_ptr}">(pr::v2&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v2)</Exec>
+					</If>
+					<If Condition="*cpt_ptr == pr::rdr12::EInstComp::Float4">
+						<Item Name="{*cpt_ptr}">(pr::v4&amp;)*data_ptr</Item>
+						<Exec>data_ptr += sizeof(pr::v4)</Exec>
+					</If>
+					<Exec>++cpt_ptr</Exec>
+					<Exec>++idx</Exec>
+					<Break Condition="idx == m_cpt_count"/>
+				</Loop>
+			</CustomListItems>
+			<!--<ArrayItems>
+				<Size>m_cpt_count * sizeof(pr::rdr12::EInstComp)</Size>
+				<ValuePointer>(pr::rdr12::EInstComp*)(this + 1)</ValuePointer>
+			</ArrayItems>
+			<ArrayItems>
+				<Size>pr::rdr12::SizeOf((pr::rdr12::EInstComp*)(this + 1)[$i])</Size>
+				<ValuePointer>(pr::rdr12::EInstComp*)(this + 1)</ValuePointer>
+			</ArrayItems>-->
+		</Expand>
+	</Type>
+	<Type Name="pr::rdr12::ResStateData">
+		<DisplayString>{m_state[0]}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::ResStateData::MipState">
+		<DisplayString>mip={m_data &amp; 0xFF} state={(D3D12_RESOURCE_STATES)(m_data >> 8)}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Image">
+		<DisplayString>dim={m_dim} rowpitch={m_pitch.x} fmt={m_format}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::TextureBase">
+		<DisplayString>{m_name} {m_res}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::Sampler">
+		<DisplayString>{m_name} {m_samp}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr12::SizeAndAlign&lt;*,*,*&gt;">
+		<DisplayString>size={(sa >> 0) &amp; ~(~0U &lt;&lt; size_bits_t)} align={(sa >> size_bits_t) &amp; ~(~0u &lt;&lt; align_bits_t)}</DisplayString>
 	</Type>
 
 	<!-- Line Drawer -->
@@ -371,5 +520,34 @@ old:
 	</Type>
 	<Type Name="pr::script::Location">
 		<DisplayString>{m_stream_name}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
+	</Type>
+	
+	<!-- Storage -->
+	<Type Name="pr::json::Null">
+		<DisplayString>null</DisplayString>
+	</Type>
+	<Type Name="pr::json::Boolean">
+		<DisplayString>data</DisplayString>
+	</Type>
+	<Type Name="pr::json::String">
+		<DisplayString>{data}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Number">
+		<DisplayString>{data}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Array">
+		<DisplayString>{items}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Object">
+		<DisplayString>{items}</DisplayString>
+	</Type>
+	<Type Name="pr::json::Value">
+		<DisplayString Condition="value._Which==0">{key,s} : {*(pr::json::Null*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==1">{key,s} : {*(pr::json::Boolean*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==2">{key,s} : {*(pr::json::String*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==3">{key,s} : {*(pr::json::Number*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==4">{key,s} : {*(pr::json::Array*)&amp;value._Head}</DisplayString>
+		<DisplayString Condition="value._Which==5">{key,s} : {*(pr::json::Object*)&amp;value._Head}</DisplayString>
+		<DisplayString>{key}: {value}</DisplayString>
 	</Type>
 </AutoVisualizer>

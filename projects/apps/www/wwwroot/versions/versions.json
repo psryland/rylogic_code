@@ -1,0 +1,72 @@
+{
+	"ldraw": [
+		{
+			"version": "v5.2.0",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v5.2.0.msi"
+		},
+		{
+			"version": "v5.2.1",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v5.2.1.msi"
+		},
+		{
+			"version": "v6.0.0",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v6.0.0.msi"
+		},
+		{
+			"version": "v6.1.0",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v6.1.0.msi"
+		},
+		{
+			"version": "v6.2.1",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v6.2.1.msi"
+		},
+		{
+			"version": "v6.3.1",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v6.3.1.msi"
+		},
+		{
+			"version": "v6.3.2",
+			"url": "https://www.rylogic.co.nz/filestore/ldraw/LDrawInstaller_v6.3.2.msi"
+		}
+	],
+
+	"rylogviewer": [
+		{
+			"version": "v1.0.1",
+			"url": "https://www.rylogic.co.nz/filestore/rylogviewer/RyLogViewerInstaller_v1.0.1.msi"
+		},
+		{
+			"version": "v1.0.2",
+			"url": "https://www.rylogic.co.nz/filestore/rylogviewer/RyLogViewerInstaller_v1.0.2.msi"
+		}
+	],
+
+	"textaligner.2019": [
+		{
+			"version": "v1.11.0",
+			"url": "https://www.rylogic.co.nz/filestore/textaligner/Rylogic.TextAligner.2019.v1.11.0.vsix"
+		},
+		{
+			"version": "v1.11.7",
+			"url": "https://www.rylogic.co.nz/filestore/textaligner/Rylogic.TextAligner.2019.v1.11.7.vsix"
+		}
+	],
+
+	"textaligner.2022": [
+		{
+			"version": "v1.11.0",
+			"url": "https://www.rylogic.co.nz/filestore/textaligner/Rylogic.TextAligner.2022.v1.11.0.vsix"
+		},
+		{
+			"version": "v1.11.7",
+			"url": "https://www.rylogic.co.nz/filestore/textaligner/Rylogic.TextAligner.2022.v1.11.7.vsix"
+		}
+	],
+
+	"all-keys": [
+		{
+			"version": "v1.0",
+			"url": "https://www.rylogic.co.nz/filestore/allkeys/all-keys-v1.0.apk"
+		}
+	]
+}

@@ -13,7 +13,7 @@ namespace pr::collision
 		Shape m_base;
 		v4    m_radius;
 
-		ShapeBox(v4_cref<> dim, m4_cref<> shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+		ShapeBox(v4_cref dim, m4_cref shape_to_parent = m4x4::Identity(), MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 			:m_base(EShape::Box, sizeof(ShapeBox), shape_to_parent, material_id, flags)
 			,m_radius(dim * 0.5f)
 		{
@@ -54,7 +54,7 @@ namespace pr::collision
 
 	// Shift the centre of a box shape
 	template <typename>
-	void pr_vectorcall ShiftCentre(ShapeBox&, v4_cref<> shift)
+	void pr_vectorcall ShiftCentre(ShapeBox&, v4_cref shift)
 	{
 		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4::Zero()));
 		(void)shift; 
@@ -62,7 +62,7 @@ namespace pr::collision
 
 	// Return a support vertex for a box shape
 	template <typename>
-	v4 pr_vectorcall SupportVertex(ShapeBox const& shape, v4_cref<> direction, int, int& sup_vert_id)
+	v4 pr_vectorcall SupportVertex(ShapeBox const& shape, v4_cref direction, int, int& sup_vert_id)
 	{
 		int sign_x = (direction.x > 0.0f);
 		int sign_y = (direction.y > 0.0f);
@@ -78,7 +78,7 @@ namespace pr::collision
 
 	// Returns the closest point on 'shape' to 'point'. 'shape' and 'point' are in the same space
 	template <typename>
-	void pr_vectorcall ClosestPoint(ShapeBox const& shape, v4_cref<> point, float& distance, v4& closest)
+	void pr_vectorcall ClosestPoint(ShapeBox const& shape, v4_cref point, float& distance, v4& closest)
 	{
 		closest = point;
 		distance = 0.0f;

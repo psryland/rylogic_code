@@ -20,7 +20,8 @@ namespace pr::rdr12
 		//
 		//    When a resource is created, descriptors are created for any views it needs in the CPU memory store.
 		//    At draw time, descriptors are copied into the GPU heap on demand. However, many textures will be reused, to we don't want
-		//    to blindly add descriptors to the GPU ring buffer. Also, need a way to record sync points in the GPU heap ring.
+		//    to blindly add descriptors to the GPU ring buffer, it needs to be smart enough to handle duplicates.
+		//    Also, it needs a way to record sync points in the GPU heap ring.
 		//
 		// "A descriptor heap is not something immutable but an always changing object. When you bind a descriptor table, you are in fact
 		//  binding it from any offset. Swapping descriptor heaps is a costly operation you want to avoid at all cost.
@@ -38,11 +39,10 @@ namespace pr::rdr12
 		struct Block { D3DPtr<ID3D12DescriptorHeap> heap; uint64_t free; };
 		using Store = pr::vector<Block, 16, false>; // A collection of pointers to blocks of descriptors
 
+		// The store of descriptors
 		ID3D12Device* m_device;
 		Store m_store_cpu[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
-		// 'gpu_srv_count' is the size of the GPU srv heap
-		// 'gpu_samp_count' is the size of the GPU sampler heap
 		explicit DescriptorStore(ID3D12Device* device);
 
 		// Create CPU memory descriptors

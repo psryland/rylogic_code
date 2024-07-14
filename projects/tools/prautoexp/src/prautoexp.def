@@ -19,7 +19,6 @@ EXPORTS
 	AddIn_QuaternionAsMatrix
 	AddIn_PhShape
 	AddIn_LuaState
-	AddIn_DateTime
 	AddIn_stdstringstream
 	AddIn_stdifstream
 	AddIn_stdofstream

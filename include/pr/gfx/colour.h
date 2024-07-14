@@ -1,4 +1,4 @@
-﻿//*******************************************************************************************
+//*******************************************************************************************
 // Colour32
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
@@ -440,11 +440,26 @@ namespace pr
 	// Linearly interpolate between colours
 	inline Colour32 Lerp(Colour32 lhs, Colour32 rhs, double frac)
 	{
+		assert(frac >= 0.0f && frac <= 1.0f);
 		return Colour32(
 			int(lhs.r * (1.0 - frac) + rhs.r * frac),
 			int(lhs.g * (1.0 - frac) + rhs.g * frac),
 			int(lhs.b * (1.0 - frac) + rhs.b * frac),
 			int(lhs.a * (1.0 - frac) + rhs.a * frac));
+	}
+
+	inline Colour32 Lerp(std::span<Colour32 const> colours, double frac)
+	{
+		assert(!colours.empty());
+		assert(frac >= 0.0f && frac <= 1.0f);
+
+		if (colours.size() == 1)
+			return colours[0];
+
+		auto const num = colours.size() - 1;
+		auto const idx = Clamp<size_t>(static_cast<size_t>(frac * num), 0, num - 1);
+		auto const f = Clamp<double>(frac * num - idx, 0.0, 1.0);
+		return Lerp(colours[idx], colours[idx + 1], f);
 	}
 
 	// Convert this colour to it's associated gray-scale value
@@ -476,6 +491,8 @@ namespace pr
 	// Equivalent to pr::v4, XMVECTOR, D3DCOLORVALUE, etc
 	struct alignas(16) Colour
 	{
+		using float4_t = float[4];
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct/union
 		union
@@ -483,7 +500,7 @@ namespace pr
 			struct { float r, g, b, a; };
 			struct { v4 rgba; };
 			struct { v3 rgb; };
-			struct { float arr[4]; };
+			struct { float4_t arr; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
@@ -513,6 +530,9 @@ namespace pr
 		explicit Colour(Colour32 c32, float alpha)
 			:Colour(c32.r / 255.0f, c32.g / 255.0f, c32.b / 255.0f, alpha)
 		{}
+		explicit Colour(float4_t const& f4)
+			:Colour(f4[0], f4[1], f4[2], f4[3])
+		{}
 		template <typename T, typename = enable_if_col<T>>
 		explicit Colour(T const& v)
 			: Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
@@ -529,8 +549,8 @@ namespace pr
 		{
 			a = ((argb >> 24) & 0xFF) / 255.0f;
 			r = ((argb >> 16) & 0xFF) / 255.0f;
-			g = ((argb >>  8) & 0xFF) / 255.0f;
-			b = ((argb >>  0) & 0xFF) / 255.0f;
+			g = ((argb >> 8) & 0xFF) / 255.0f;
+			b = ((argb >> 0) & 0xFF) / 255.0f;
 		}
 
 		// Array access
@@ -550,9 +570,17 @@ namespace pr
 		{
 			return *this = Colour(c32);
 		}
+		Colour& operator = (float4_t const& f4)
+		{
+			return *this = Colour(f4);
+		}
 		template <typename T, typename = enable_if_col<T>> Colour& operator = (T const& c)
 		{
 			return *this = Colour(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
+		}
+		operator float4_t const &() const
+		{
+			return arr;
 		}
 
 		// Component accessors
@@ -561,11 +589,13 @@ namespace pr
 			return Colour32(r, g, b, a);
 		}
 
-		// Set alpha channel
+		// This valid with alpha = 0
 		Colour a0() const
 		{
 			return Colour(r, g, b, 0.0f);
 		}
+
+		// This valid with alpha = 1
 		Colour a1() const
 		{
 			return Colour(r, g, b, 1.0f);

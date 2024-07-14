@@ -46,7 +46,6 @@
 //
 // Templates should be multi-line, users can replace the \n characters with ' ' if needed.
 // Templates can contain comments, but comments must not contain: {}[]()<>|*@$
-
 #include <string>
 
 namespace pr::ldr

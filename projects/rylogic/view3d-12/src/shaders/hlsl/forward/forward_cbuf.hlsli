@@ -1,7 +1,7 @@
-//***********************************************
-// Renderer
-//  Copyright © Rylogic Ltd 2014
-//***********************************************
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
 // Constant buffer definitions for forward shaders.
 // This file is included from C++ source as well
 #ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL

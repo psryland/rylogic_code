@@ -45,9 +45,9 @@ namespace pr::rdr12
 		#define PR_RDR_INST(x)\
 			x(m4x4       ,m_i2w   ,EInstComp::I2WTransform   )\
 			x(ModelPtr   ,m_model ,EInstComp::ModelPtr       )\
+			x(PipeStates ,m_pso   ,EInstComp::PipeStates     )\
 			x(Colour32   ,m_colour,EInstComp::TintColour32   )\
-			x(SKOverride ,m_sko   ,EInstComp::SortkeyOverride)\
-			x(PipeStates ,m_pso   ,EInstComp::PipeStates     )
+			x(SKOverride ,m_sko   ,EInstComp::SortkeyOverride)
 		PR_RDR12_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
@@ -87,6 +87,7 @@ namespace pr::rdr12
 
 		// Render access
 		Renderer& rdr() const;
+		ResourceManager& res() const;
 
 		// Raised whenever the gizmo is manipulated
 		MultiCast<GizmoMovedCB> Manipulated;

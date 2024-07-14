@@ -16,7 +16,7 @@ namespace keyspy
 			Ctrl = 1 << 1,
 			Alt = 1 << 2,
 			Win = 1 << 3,
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		static size_t const PostThreshold = 1024;
 

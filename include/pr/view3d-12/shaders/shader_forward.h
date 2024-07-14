@@ -21,11 +21,11 @@ namespace pr::rdr12::shaders
 			EnvMap,
 			SMap,
 			ProjTex,
+			DiffTextureSampler,
 		};
 
 		enum class ESampParam
 		{
-			DiffTexture,
 			EnvMap,
 			SMap,
 			ProjTex,

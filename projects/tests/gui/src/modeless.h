@@ -9,10 +9,9 @@ namespace pr::gui
 		Label m_lbl;
 		Button m_btn_ok;
 
-		enum { IDC_LBL };
 		Modeless(WndRef parent)
 			:Form(Params<>().dlg().name("modeless").title(L"Modeless").parent(parent).menu(IDC_MENU).wh(400,400).start_pos(EStartPosition::CentreParent).wndclass(RegisterWndClass<Modeless>()))
-			,m_lbl   (Label ::Params<>().parent(this_).name("modeless-label").text(L"I am a modeless dialog").wh(Auto,Auto).xy(10,10).id(IDC_LBL).anchor(EAnchor::TopLeft))
+			,m_lbl   (Label ::Params<>().parent(this_).name("modeless-label").text(L"I am a modeless dialog").wh(Auto,Auto).xy(10,10).anchor(EAnchor::TopLeft))
 			,m_btn_ok(Button::Params<>().parent(this_).name("btn_ok").text(L"OK").xy(-10,-10).id(IDOK).anchor(EAnchor::BottomRight))
 		{
 			HideOnClose(true);

@@ -11,9 +11,10 @@
 #include <cstdio>
 #include <cstdarg>
 #include <cassert>
+#include <stdexcept>
 #include <string>
-#include <malloc.h>
 #include <thread>
+#include <malloc.h>
 
 // C++11's thread_local
 #if _MSC_VER < 1900
@@ -52,7 +53,7 @@ namespace pr
 			{
 				enum { sane_hint_size_limit = 32 * 1024 * 1024 };
 				if (hint_size > sane_hint_size_limit)
-					throw std::exception("failed to format string, string too large");
+					throw std::runtime_error("failed to format string, string too large");
 
 				// Allocate a buffer, preferably on the stack
 				MallocaScope buf(_malloca(hint_size * sizeof(TChar)), hint_size);
@@ -61,8 +62,12 @@ namespace pr
 				// copy each time. For now, we don't need to
 				int result = Format(buf.m_ptr, buf.m_count, fmt, arg_list);
 
+				// Format error
+				if (result < 0)
+					throw std::runtime_error("string format error");
+
 				// It fits, w00t!
-				if (result >= 0 && result < int(buf.m_count))
+				if (result < int(buf.m_count))
 				{
 					dst.append(buf.m_ptr, result);
 					break;

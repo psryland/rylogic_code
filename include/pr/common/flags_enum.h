@@ -2,8 +2,9 @@
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
-// Add '_flags_enum' to your enum for bitwise operators
-// Add '_arith_enum' to your enum for arithmetic operators
+// Add '_flags_enum = 0' to your enum for bitwise operators
+// Add '_arith_enum = 0' to your enum for arithmetic operators
+// The '= 0' prevents a warning about forgetting to assign a value
 #pragma once
 
 // These are in the global namespace so that they work in any namespace
@@ -190,7 +191,7 @@ namespace pr::common
 			One   = 1 << 0,
 			Two   = 1 << 1,
 
-			_flags_enum,
+			_flags_enum = 0,
 		};
 		static_assert(is_flags_enum_v<Flags> == true, "");
 
@@ -203,7 +204,7 @@ namespace pr::common
 			Three    = 3,
 			MinusTwo = -2,
 
-			_arith_enum,
+			_arith_enum = 0,
 		};
 		static_assert(is_arith_enum_v<Numbers> == true, "");
 	}

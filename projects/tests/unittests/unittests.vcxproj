@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
-  <!-- Properties -->
   <Import Project="..\..\..\build\props\globals.props" />
-	<PropertyGroup Label="Globals">
+
+  <!-- Properties -->
+  <PropertyGroup Label="Globals">
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <RootNamespace>unittests</RootNamespace>
     <ConfigurationType>Application</ConfigurationType>
@@ -28,10 +28,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  
+
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\..\..\build\props\tools.props" />
   <Import Project="..\..\..\build\props\app.props" />
 
   <!-- Build Options -->
@@ -85,7 +86,9 @@
     <ClInclude Include="..\..\..\include\pr\common\allocator.h" />
     <ClInclude Include="..\..\..\include\pr\common\archiver.h" />
     <ClInclude Include="..\..\..\include\pr\common\assert.h" />
+    <ClInclude Include="..\..\..\include\pr\common\async_wrap.h" />
     <ClInclude Include="..\..\..\include\pr\common\base64.h" />
+    <ClInclude Include="..\..\..\include\pr\common\bit_data.h" />
     <ClInclude Include="..\..\..\include\pr\common\cast.h" />
     <ClInclude Include="..\..\..\include\pr\common\clipboard.h" />
     <ClInclude Include="..\..\..\include\pr\common\command_line.h" />
@@ -101,6 +104,7 @@
     <ClInclude Include="..\..\..\include\pr\common\fmt.h" />
     <ClInclude Include="..\..\..\include\pr\common\guid.h" />
     <ClInclude Include="..\..\..\include\pr\common\hash.h" />
+    <ClInclude Include="..\..\..\include\pr\common\space_filling.h" />
     <ClInclude Include="..\..\..\include\pr\common\hresult.h" />
     <ClInclude Include="..\..\..\include\pr\common\inplacealloc.h" />
     <ClInclude Include="..\..\..\include\pr\common\ireport.h" />
@@ -140,6 +144,7 @@
     <ClInclude Include="..\..\..\include\pr\container\span.h" />
     <ClInclude Include="..\..\..\include\pr\container\chain.h" />
     <ClInclude Include="..\..\..\include\pr\container\deque.h" />
+    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h" />
     <ClInclude Include="..\..\..\include\pr\container\vector.h" />
     <ClInclude Include="..\..\..\include\pr\container\bit_array.h" />
     <ClInclude Include="..\..\..\include\pr\container\byte_data.h" />
@@ -156,7 +161,6 @@
     <ClInclude Include="..\..\..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\..\..\include\pr\crypt\sha1.h" />
     <ClInclude Include="..\..\..\include\pr\crypt\sha512.h" />
-    <ClInclude Include="..\..\..\include\pr\filesys\fat_filesystem.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\filesys.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\filewatch.h" />
     <ClInclude Include="..\..\..\include\pr\filesys\file_time.h" />
@@ -181,6 +185,7 @@
     <ClInclude Include="..\..\..\include\pr\geometry\models_shape2d.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\models_sphere.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\point.h" />
+    <ClInclude Include="..\..\..\include\pr\geometry\reflect.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\tetramesh.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\..\..\include\pr\geometry\unit_tests.h" />
@@ -208,6 +213,7 @@
     <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h" />
     <ClInclude Include="..\..\..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\..\..\include\pr\gui\vt100.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\vt100_colours.h" />
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\gui\wtl_tab_view_ctrl.h" />
     <ClInclude Include="..\..\..\include\pr\hardware\comm_port_io.h" />
@@ -303,11 +309,16 @@
     <ClInclude Include="..\..\..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\..\..\include\pr\physics2\utility\field.h" />
     <ClInclude Include="..\..\..\include\pr\script\unit_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\storage\ini_file.h" />
+    <ClInclude Include="..\..\..\include\pr\storage\json.h" />
     <ClInclude Include="..\..\..\include\pr\str\char8.h" />
     <ClInclude Include="..\..\..\include\pr\str\convert_utf.h" />
     <ClInclude Include="..\..\..\include\pr\str\string2.h" />
     <ClInclude Include="..\..\..\include\pr\str\unit_tests.h" />
+    <ClInclude Include="..\..\..\include\pr\str\utf8.h" />
+    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h" />
     <ClInclude Include="..\..\..\include\pr\view3d\renderer.h" />
     <ClInclude Include="..\..\..\include\pr\view3d\textures\projected_texture.h" />
     <ClInclude Include="..\..\..\include\pr\script\buf.h" />
@@ -349,6 +360,7 @@
     <ClInclude Include="..\..\..\include\pr\win32\dummy_window.h" />
     <ClInclude Include="..\..\..\include\pr\win32\key_codes.h" />
     <ClInclude Include="..\..\..\include\pr\win32\stackdump.h" />
+    <ClInclude Include="..\..\..\include\pr\win32\user_directories.h" />
     <ClInclude Include="..\..\..\include\pr\win32\win32.h" />
     <ClInclude Include="..\..\..\include\pr\win32\windows_com.h" />
     <ClInclude Include="..\..\..\sdk\sqlite3\include\sqlite3.h" />

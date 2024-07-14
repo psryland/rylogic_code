@@ -8,6 +8,7 @@
 #include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/utility/features.h"
 #include "pr/view3d-12/utility/eventargs.h"
+#include "pr/view3d-12/utility/cmd_list_collection.h"
 
 namespace pr::rdr12
 {
@@ -26,17 +27,17 @@ namespace pr::rdr12
 		struct RdrState
 		{
 			// This is needed so that the Dx12 device is created before the managers are constructed.
-			RdrSettings                  m_settings;
-			FeatureSupport               m_features;
-			D3DPtr<ID3D12Device4>        m_d3d_device;
-			D3DPtr<ID3D12CommandQueue>   m_gfx_queue;
-			D3DPtr<ID3D12CommandQueue>   m_com_queue;
-			D3DPtr<ID3D12CommandQueue>   m_cpy_queue;
-			D3DPtr<ID3D11On12Device>     m_dx11_device;
-			D3DPtr<ID3D11DeviceContext>  m_dx11_dc;
-			D3DPtr<ID2D1Factory2>        m_d2dfactory;
-			D3DPtr<ID2D1Device>          m_d2d_device;
-			DWORD                        m_main_thread_id;
+			RdrSettings                 m_settings;
+			FeatureSupport              m_features;
+			D3DPtr<ID3D12Device4>       m_d3d_device;
+			D3DPtr<ID3D12CommandQueue>  m_gfx_queue;
+			D3DPtr<ID3D12CommandQueue>  m_com_queue;
+			D3DPtr<ID3D12CommandQueue>  m_cpy_queue;
+			D3DPtr<ID3D11On12Device>    m_dx11_device;
+			D3DPtr<ID3D11DeviceContext> m_dx11_dc;
+			D3DPtr<ID2D1Factory2>       m_d2dfactory;
+			D3DPtr<ID2D1Device>         m_d2d_device;
+			DWORD                       m_main_thread_id;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -52,9 +53,6 @@ namespace pr::rdr12
 		HWND                 m_dummy_hwnd;
 		std::atomic_int      m_id32_src;
 
-		// These manager classes form part of the public interface of the renderer
-		// Declared last so that events are fully constructed first.
-		// Note: model manager is declared last so that it is destructed first
 		ResourceManager m_res_mgr;
 
 	public:
@@ -63,6 +61,11 @@ namespace pr::rdr12
 		Renderer(Renderer const&) = delete;
 		Renderer& operator=(Renderer const&) = delete;
 		~Renderer();
+
+		// Access the renderer manager classes
+		ID3D12Device4* d3d() const;
+		Renderer& rdr();
+		ResourceManager& res();
 
 		// Access the adapter that the device was created on
 		IDXGIAdapter* Adapter() const
@@ -122,11 +125,6 @@ namespace pr::rdr12
 			return m_state.m_d2d_device.get();
 		}
 
-		// Access the renderer manager classes
-		Renderer& rdr();
-		ResourceManager const& res_mgr() const;
-		ResourceManager& res_mgr();
-
 		// Read access to the initialisation settings
 		RdrSettings const& Settings() const;
 
@@ -150,6 +148,12 @@ namespace pr::rdr12
 		// notification without having to sign up to every window that gets created.
 		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
 
+		// Execute a list of graphics command lists. Allows syntax: ExecuteCommandLists({list, list_array, ...})
+		void ExecuteCommandLists(GfxCmdListCollection cmd_lists) const
+		{
+			GfxQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
+		}
+
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
 		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
@@ -162,7 +166,7 @@ namespace pr::rdr12
 			{
 				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
 				if (m_last_task) return; // Don't add further tasks after 'LastTask' has been called.
-				m_task_queue.emplace_back(std::async(policy, func, args...));
+				m_task_queue.emplace_back(std::async(policy, std::move(func), std::forward<Args>(args)...));
 			}
 
 			// Post a message to notify of the new task
@@ -177,14 +181,14 @@ namespace pr::rdr12
 				}
 
 				auto msg = pr::HrMsg(err);
-				throw std::exception(msg.c_str());
+				throw std::runtime_error(msg.c_str());
 			}
 		}
 		template <typename Func, typename... Args>
 		void RunOnMainThread(Func&& func, Args&&... args)
 		{
-			static_assert(noexcept(func(args...)));
-			RunOnMainThread(std::launch::deferred, func, args...);
+			static_assert(noexcept(func(std::forward<Args>(args)...)), "func should be noexcept");
+			RunOnMainThread(std::launch::deferred, func, std::forward<Args>(args)...);
 		}
 
 		// Execute any pending tasks in the task queue

@@ -43,7 +43,7 @@ namespace pr::rdr12
 		PostAlpha,             // First group after the alpha groups
 		Max = 127,             // The maximum sort group value
 
-		_arith_enum,
+		_arith_enum = 0,
 	};
 	static_assert(is_arith_enum_v<ESortGroup>);
 

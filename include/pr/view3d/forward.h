@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -227,7 +227,7 @@ namespace pr::rdr
 		x(HS      ,= 1 << 4)\
 		x(DS      ,= 1 << 5)\
 		x(All     ,= ~0)\
-		x(_flags_enum, = 0x7FFFFFFF)
+		x(_flags_enum, = 0x7fffffff)
 	PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
 	#undef PR_ENUM
 

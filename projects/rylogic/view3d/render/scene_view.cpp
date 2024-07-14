@@ -29,12 +29,16 @@ namespace pr::rdr
 	// Return the scene views for the left and right eye in stereoscopic view
 	void SceneView::Stereo(float separation, SceneView (&eye)[Enum<EEye>::NumberOf]) const
 	{
-		auto sep = 0.5f * separation * m_c2w.x;
+		auto const& c2w = CameraToWorld();
+		auto sep = 0.5f * separation * c2w.x;
 		auto focus_point = FocusPoint();
-		auto lc2w = m4x4::LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
-		auto rc2w = m4x4::LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
+		auto lc2w = m4x4::LookAt(c2w.pos - sep, focus_point, c2w.y);
+		auto rc2w = m4x4::LookAt(c2w.pos + sep, focus_point, c2w.y);
 
-		eye[(int)EEye::Left ] = SceneView(lc2w, s_cast<float>(m_fovY), s_cast<float>(m_aspect), Length(lc2w.pos - focus_point), m_orthographic);
-		eye[(int)EEye::Right] = SceneView(rc2w, s_cast<float>(m_fovY), s_cast<float>(m_aspect), Length(rc2w.pos - focus_point), m_orthographic);
+		auto fovY = FovY();
+		auto aspect = Aspect();
+		auto orthographic = Orthographic();
+		eye[(int)EEye::Left ] = SceneView(lc2w, s_cast<float>(fovY), s_cast<float>(aspect), Length(lc2w.pos - focus_point), orthographic);
+		eye[(int)EEye::Right] = SceneView(rc2w, s_cast<float>(fovY), s_cast<float>(aspect), Length(rc2w.pos - focus_point), orthographic);
 	}
 }

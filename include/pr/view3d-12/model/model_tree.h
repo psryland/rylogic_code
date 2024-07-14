@@ -19,7 +19,7 @@ namespace pr::rdr12
 		int m_level;
 		
 		ModelTreeNode() = default;
-		ModelTreeNode(ModelPtr model, m4_cref<> o2p, int level)
+		ModelTreeNode(ModelPtr model, m4_cref o2p, int level)
 			:m_o2p(o2p)
 			,m_model(model)
 			,m_level(level)

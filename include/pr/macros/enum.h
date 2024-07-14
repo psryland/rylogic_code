@@ -1,4 +1,4 @@
-﻿//******************************************************************************
+//******************************************************************************
 // Reflective enum
 //  Copyright (c) Rylogic Ltd 2013
 //******************************************************************************
@@ -340,7 +340,7 @@ namespace pr::common
 			x(A, = 1 << 0)\
 			x(B, = 1 << 1)\
 			x(C, = 1 << 2)\
-			x(_flags_enum, )
+			x(_flags_enum, = 0)
 		PR_DEFINE_ENUM2(TestEnum4, PR_ENUM);
 		#undef PR_ENUM
 
@@ -348,7 +348,7 @@ namespace pr::common
 			x(A, "a", = 1 << 0)\
 			x(B, "b", = 1 << 1)\
 			x(C, "c", = 1 << 2 | B)\
-			x(_flags_enum,"",)
+			x(_flags_enum,"", = 0)
 		PR_DEFINE_ENUM3(TestEnum5, PR_ENUM);
 		#undef PR_ENUM
 	}
@@ -423,12 +423,10 @@ namespace pr::common
 			TestEnum1 out; s >> out;
 			PR_CHECK(out, TestEnum1::A);
 		}
-		PR_THROWS([&]()
 		{
-			volatile int i = 4;
-			Enum<TestEnum3>::From(i); // invalid conversion, 4 is not an enum value
-		}, std::exception);
-
+			volatile int i = 4; // invalid conversion, 4 is not an enum value
+			PR_THROWS(Enum<TestEnum3>::From(i), std::exception);
+		}
 		char const* names[] = {"A","B","C"};
 		TestEnum1 values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
 		for (int i = 0; i != Enum<TestEnum1>::NumberOf; ++i)

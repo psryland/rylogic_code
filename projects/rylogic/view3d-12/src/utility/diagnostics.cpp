@@ -57,12 +57,12 @@ namespace pr::rdr12
 					continue;
 
 				// Create a dependent nugget that draws the normals
+				auto ndesc = NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr)
+					.irange(RangeZero)
+					.id(ShowNormalsId)
+					.use_shader(ERenderStep::RenderForward, shdr);
+
 				auto& dep = *model->res_mgr().CreateNugget(nug, model);
-				dep.m_shaders.push_back({ERenderStep::RenderForward, shdr});
-				dep.m_topo = ETopo::PointList;
-				dep.m_geom = EGeom::Vert | EGeom::Colr;
-				dep.m_irange = RangeZero;
-				dep.m_id = ShowNormalsId;
 				nug.m_nuggets.push_back(dep);
 			}
 		}

@@ -30,11 +30,12 @@ using namespace pr::script;
 namespace pr::ldr
 {
 	// Notes:
-	// Handling Errors:
-	//  For parsing or logical errors (e.g. negative widths, etc) use p.ReportError(EResult, msg)
-	//  then return gracefully or continue with a valid value. The ReportError function may not
-	//  throw in which case parsing will need to continue with sane values.
+	//  - Handling Errors:
+	//    For parsing or logical errors (e.g. negative widths, etc) use p.ReportError(EScriptResult, msg)
+	//    then return gracefully or continue with a valid value. The ReportError function may not
+	//    throw in which case parsing will need to continue with sane values.
 
+	using Guid = pr::Guid;
 	using VCont = pr::vector<pr::v4>;
 	using NCont = pr::vector<pr::v4>;
 	using ICont = pr::vector<uint16_t>;
@@ -42,8 +43,8 @@ namespace pr::ldr
 	using TCont = pr::vector<pr::v2>;
 	using GCont = pr::vector<pr::rdr::NuggetProps>;
 	using ModelCont = ParseResult::ModelLookup;
-	using EResult = pr::script::EResult;
-	using EResult_ = pr::script::EResult_;
+	using EScriptResult = pr::script::EResult;
+	using EScriptResult_ = pr::script::EResult_;
 	using Font = pr::rdr::ModelGenerator<>::Font;
 	using TextFormat = pr::rdr::ModelGenerator<>::TextFormat;
 	using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
@@ -53,6 +54,14 @@ namespace pr::ldr
 		ExplicitName = 1 << 0,
 		ExplicitColour = 1 << 1,
 		_allow_bitwise_operators,
+	};
+
+	using EFlags = enum EFlags
+	{
+		None = 0,
+		ExplicitName = 1 << 0,
+		ExplicitColour = 1 << 1,
+		_flags_enum = 0,
 	};
 
 	// Template prototype for ObjectCreators
@@ -71,6 +80,8 @@ namespace pr::ldr
 		GCont m_nugts;
 	};
 	using BuffersPtr = std::unique_ptr<Buffers>;
+
+	// Global buffers
 	std::vector<BuffersPtr> g_buffer_pool;
 	std::mutex g_buffer_pool_mutex;
 	BuffersPtr GetFromPool()
@@ -143,7 +154,7 @@ namespace pr::ldr
 		ParseResult&    m_result;
 		ObjectCont&     m_objects;
 		ModelCont&      m_models;
-		pr::Guid        m_context_id;
+		Guid            m_context_id;
 		Cache           m_cache;
 		ELdrObject      m_type;
 		LdrObject*      m_parent;
@@ -154,7 +165,7 @@ namespace pr::ldr
 		int             m_flags; // EFlags
 		bool&           m_cancel;
 
-		ParseParams(Renderer& rdr, Reader& reader, ParseResult& result, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
+		ParseParams(Renderer& rdr, Reader& reader, ParseResult& result, Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
 			:m_rdr(rdr)
 			,m_reader(reader)
 			,m_result(result)
@@ -192,9 +203,9 @@ namespace pr::ldr
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
-		void ReportError(EResult result, std::string msg = {})
+		void ReportError(EScriptResult result, std::string msg = {})
 		{
-			if (msg.empty()) msg = EResult_::ToStringA(result);
+			if (msg.empty()) msg = EScriptResult_::ToStringA(result);
 			m_reader.ReportError(result, m_reader.Location(), msg);
 		}
 
@@ -235,7 +246,7 @@ namespace pr::ldr
 		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok0, L"{}"); ++count; }
 		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok1, L"{}"); ++count; }
 		if (!p.m_reader.IsSectionStart())
-			p.ReportError(EResult::UnknownToken, "object attributes are invalid");
+			p.ReportError(EScriptResult::UnknownToken, "object attributes are invalid");
 
 		switch (count)
 		{
@@ -243,9 +254,9 @@ namespace pr::ldr
 			{
 				// Expect: *Type <name> <colour>
 				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-					p.ReportError(EResult::TokenNotFound, "object name is invalid");
+					p.ReportError(EScriptResult::TokenNotFound, "object name is invalid");
 				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-					p.ReportError(EResult::TokenNotFound, "object colour is invalid");
+					p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
 				p.m_flags |= EFlags::ExplicitName;
 				p.m_flags |= EFlags::ExplicitColour;
 				break;
@@ -258,7 +269,7 @@ namespace pr::ldr
 				{
 					attr.m_name = "";
 					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
-						p.ReportError(EResult::TokenNotFound, "object colour is invalid");
+						p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
 	
 					p.m_flags |= EFlags::ExplicitColour;
 				}
@@ -266,7 +277,7 @@ namespace pr::ldr
 				{
 					attr.m_colour = 0xFFFFFFFF;
 					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-						p.ReportError(EResult::TokenNotFound, "object name is invalid");
+						p.ReportError(EScriptResult::TokenNotFound, "object name is invalid");
 				
 					p.m_flags |= EFlags::ExplicitName;
 				}
@@ -290,12 +301,7 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Camera", p.m_reader.LastKeyword().c_str()));
-					break;
-				}
-			case EKeyword::O2W:
+				case EKeyword::O2W:
 				{
 					auto c2w = pr::m4x4Identity;
 					p.m_reader.TransformS(c2w);
@@ -303,7 +309,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::C2W;
 					break;
 				}
-			case EKeyword::LookAt:
+				case EKeyword::LookAt:
 				{
 					pr::v4 lookat;
 					p.m_reader.Vector3S(lookat, 1.0f);
@@ -313,7 +319,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Focus;
 					break;
 				}
-			case EKeyword::Align:
+				case EKeyword::Align:
 				{
 					pr::v4 align;
 					p.m_reader.Vector3S(align, 0.0f);
@@ -321,7 +327,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
-			case EKeyword::Aspect:
+				case EKeyword::Aspect:
 				{
 					float aspect;
 					p.m_reader.RealS(aspect);
@@ -329,7 +335,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
-			case EKeyword::FovX:
+				case EKeyword::FovX:
 				{
 					float fovX;
 					p.m_reader.RealS(fovX);
@@ -337,7 +343,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::FovY:
+				case EKeyword::FovY:
 				{
 					float fovY;
 					p.m_reader.RealS(fovY);
@@ -345,7 +351,7 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::Fov:
+				case EKeyword::Fov:
 				{
 					float fov[2];
 					p.m_reader.RealS(fov, 2);
@@ -354,22 +360,31 @@ namespace pr::ldr
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
-			case EKeyword::Near:
+				case EKeyword::Near:
 				{
-					p.m_reader.Real(out.m_cam.m_near);
+					float near_;
+					p.m_reader.Real(near_);
+					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
-			case EKeyword::Far:
+				case EKeyword::Far:
 				{
-					p.m_reader.Real(out.m_cam.m_far);
+					float far_;
+					p.m_reader.Real(far_);
+					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
-			case EKeyword::Orthographic:
+				case EKeyword::Orthographic:
 				{
-					out.m_cam.m_orthographic = true;
+					out.m_cam.Orthographic(true);
 					out.m_cam_fields |= ECamField::Ortho;
+					break;
+				}
+				default:
+				{
+					p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Camera", p.m_reader.LastKeyword().c_str()));
 					break;
 				}
 			}
@@ -389,11 +404,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Font", reader.LastKeyword().c_str()));
-					break;
-				}
 			case EKeyword::Name:
 				{
 					reader.StringS(font.m_name);
@@ -438,6 +448,11 @@ namespace pr::ldr
 					font.m_strikeout = true;
 					break;
 				}
+			default:
+				{
+					p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Font", reader.LastKeyword().c_str()));
+					break;
+				}
 			}
 		}
 		reader.SectionEnd();
@@ -453,11 +468,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Animation", reader.LastKeyword().c_str()));
-					break;
-				}
 			case EKeyword::Style:
 				{
 					char style[50];
@@ -494,6 +504,11 @@ namespace pr::ldr
 					reader.Vector3S(anim.m_aacc, 0.0f);
 					break;
 				}
+			default:
+				{
+					p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Animation", reader.LastKeyword().c_str()));
+					break;
+				}
 			}
 		}
 		reader.SectionEnd();
@@ -517,11 +532,6 @@ namespace pr::ldr
 				auto kw = reader.NextKeywordH<EKeyword>();
 				switch (kw)
 				{
-				default:
-					{
-						p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Texture", reader.LastKeyword().c_str()));
-						break;
-					}
 				case EKeyword::O2W:
 					{
 						reader.TransformS(t2s);
@@ -549,6 +559,11 @@ namespace pr::ldr
 						has_alpha = true;
 						break;
 					}
+				default:
+					{
+						p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Texture", reader.LastKeyword().c_str()));
+						break;
+					}
 				}
 			}
 			else
@@ -569,7 +584,7 @@ namespace pr::ldr
 			}
 			catch (std::exception const& e)
 			{
-				p.ReportError(EResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
+				p.ReportError(EScriptResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
 			}
 		}
 		return true;
@@ -594,7 +609,7 @@ namespace pr::ldr
 			//' }
 			//' catch (std::exception const& e)
 			//' {
-			//' 	p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
+			//' 	p.ReportError(EScriptResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
 			//' }
 		}
 		reader.SectionEnd();
@@ -858,10 +873,6 @@ namespace pr::ldr
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return false;
-					}
 				case EKeyword::AxisId:
 					{
 						p.m_reader.IntS(m_align.value, 10);
@@ -871,7 +882,11 @@ namespace pr::ldr
 							return true;
 						}
 
-						p.ReportError(EResult::InvalidValue, "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
+						p.ReportError(EScriptResult::InvalidValue, "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
+						return false;
+					}
+				default:
+					{
 						return false;
 					}
 				}
@@ -905,10 +920,6 @@ namespace pr::ldr
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return false;
-					}
 				case EKeyword::Range:
 					{
 						p.m_reader.SectionStart();
@@ -929,6 +940,10 @@ namespace pr::ldr
 					{
 						p.m_reader.RealS(light.m_cast_shadow);
 						return true;
+					}
+				default:
+					{
+						return false;
 					}
 				}
 			}
@@ -959,10 +974,6 @@ namespace pr::ldr
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return false;
-					}
 				case EKeyword::Size:
 					{
 						// Allow one or two dimensions
@@ -981,12 +992,12 @@ namespace pr::ldr
 						p.m_reader.IdentifierS(ident);
 						switch (HashI(ident.c_str()))
 						{
-						default: p.ReportError(EResult::UnknownToken, Fmt("'%s' is not a valid point sprite style", ident.c_str())); break;
 						case HashI("square"):   m_style = EStyle::Square; break;
 						case HashI("circle"):   m_style = EStyle::Circle; break;
 						case HashI("triangle"): m_style = EStyle::Triangle; break;
 						case HashI("star"):     m_style = EStyle::Star; break;
 						case HashI("annulus"):  m_style = EStyle::Annulus; break;
+						default: p.ReportError(EScriptResult::UnknownToken, Fmt("'%s' is not a valid point sprite style", ident.c_str())); break;
 						}
 						return true;
 					}
@@ -995,7 +1006,38 @@ namespace pr::ldr
 						m_depth = true;
 						return true;
 					}
+				default:
+					{
+						return false;
+					}
 				}
+			}
+			template <typename TDrawOnIt>
+			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
+			{
+				// Create a texture large enough to contain the text, and render the text into it
+				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
+				Texture2DDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+				auto tex = p.m_rdr.m_tex_mgr.CreateTexture2D(id, Image(), tdesc, sdesc, false, name);
+
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+
+				// Create the brushes
+				D3DPtr<ID2D1SolidColorBrush> fr_brush;
+				D3DPtr<ID2D1SolidColorBrush> bk_brush;
+				auto fr = pr::To<D3DCOLORVALUE>(Colour32(0xFFFFFFFF));
+				auto bk = pr::To<D3DCOLORVALUE>(Colour32(0x00000000));
+				pr::Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				pr::Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+
+				// Draw the spot
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				draw(dc, fr_brush.get(), bk_brush.get());
+				pr::Check(dc->EndDraw());
+				return tex;
 			}
 			Texture2DPtr PointStyleTexture(ParseParams& p)
 			{
@@ -1004,7 +1046,6 @@ namespace pr::ldr
 				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
 				switch (style)
 				{
-				default: throw std::exception("Unknown point style");
 				case EStyle::Square:
 					{
 						// No texture needed for square style
@@ -1028,8 +1069,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
@@ -1039,7 +1080,7 @@ namespace pr::ldr
 							sink->AddLine({ 0.0f * w0, h1 });
 							sink->AddLine({ 0.5f * w0, h0 + h1 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
@@ -1052,8 +1093,8 @@ namespace pr::ldr
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Throw(geom->Open(&sink.m_ptr));
+							pr::Check(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Check(geom->Open(&sink.m_ptr));
 
 							auto w0 = 1.0f * sz.x;
 							auto h0 = 1.0f * sz.y;
@@ -1067,7 +1108,7 @@ namespace pr::ldr
 							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
 							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
 							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Throw(sink->Close());
+							pr::Check(sink->Close());
 
 							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
@@ -1089,34 +1130,11 @@ namespace pr::ldr
 							});
 						});
 					}
+				default:
+                    {
+                    	throw std::runtime_error("Unknown point style");
+					}
 				}
-			}
-			template <typename TDrawOnIt>
-			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
-			{
-				// Create a texture large enough to contain the text, and render the text into it
-				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
-				Texture2DDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-				auto tex = p.m_rdr.m_tex_mgr.CreateTexture2D(id, Image(), tdesc, sdesc, false, name);
-
-				// Get a D2D device context to draw on
-				auto dc = tex->GetD2DeviceContext();
-
-				// Create the brushes
-				D3DPtr<ID2D1SolidColorBrush> fr_brush;
-				D3DPtr<ID2D1SolidColorBrush> bk_brush;
-				auto fr = pr::To<D3DCOLORVALUE>(Colour32(0xFFFFFFFF));
-				auto bk = pr::To<D3DCOLORVALUE>(Colour32(0x00000000));
-				pr::Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				pr::Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
-
-				// Draw the spot
-				dc->BeginDraw();
-				dc->Clear(&bk);
-				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Throw(dc->EndDraw());
-				return tex;
 			}
 		};
 
@@ -1132,15 +1150,15 @@ namespace pr::ldr
 			{
 				switch (kw)
 				{
-				default:
-					{
-						return false;
-					}
 				case EKeyword::GenerateNormals:
 					{
 						p.m_reader.RealS(m_smoothing_angle);
 						m_smoothing_angle = pr::DegreesToRadians(m_smoothing_angle);
 						return true;
+					}
+				default:
+					{
+						return false;
 					}
 				}
 			}
@@ -1236,7 +1254,7 @@ namespace pr::ldr
 		}
 		virtual void Parse()
 		{
-			p.ReportError(EResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str()));
+			p.ReportError(EScriptResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str()));
 		}
 		virtual void CreateModel(LdrObject*)
 		{
@@ -1289,7 +1307,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 1)
 			{
-				p.ReportError(EResult::Failed, FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1347,7 +1365,7 @@ namespace pr::ldr
 					p.m_reader.RealS(t, 2);
 					if (m_verts.size() < 2)
 					{
-						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+						p.ReportError(EScriptResult::Failed, "No preceding line to apply parametric values to");
 					}
 					auto& p0 = m_verts[m_verts.size() - 2];
 					auto& p1 = m_verts[m_verts.size() - 1];
@@ -1394,7 +1412,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1448,7 +1466,7 @@ namespace pr::ldr
 					p.m_reader.RealS(t, 2);
 					if (m_verts.size() < 2)
 					{
-						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+						p.ReportError(EScriptResult::Failed, "No preceding line to apply parametric values to");
 					}
 					auto& p0 = m_verts[m_verts.size() - 2];
 					auto& p1 = m_verts[m_verts.size() - 1];
@@ -1495,7 +1513,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1551,7 +1569,7 @@ namespace pr::ldr
 					p.m_reader.RealS(t, 2);
 					if (m_verts.size() < 2)
 					{
-						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+						p.ReportError(EScriptResult::Failed, "No preceding line to apply parametric values to");
 					}
 					auto& p0 = m_verts[m_verts.size() - 2];
 					auto& p1 = m_verts[m_verts.size() - 1];
@@ -1699,14 +1717,14 @@ namespace pr::ldr
 			m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
 
 			uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1800,7 +1818,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1854,14 +1872,14 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
+				}
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -1890,7 +1908,7 @@ namespace pr::ldr
 			// Validate
 			if (m_splines.empty())
 			{
-				p.ReportError(EResult::Failed, FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1909,7 +1927,7 @@ namespace pr::ldr
 				// Check for 16-bit index overflow
 				if (m_verts.size() + raster.size() >= 0xFFFF)
 				{
-					p.ReportError(EResult::Failed, FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
+					p.ReportError(EScriptResult::Failed, FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -1921,7 +1939,7 @@ namespace pr::ldr
 					auto ibeg = m_indices.size();
 					m_indices.reserve(m_indices.size() + raster.size() + (thick ? 2 : 0) + 1);
 
-					// The thick line strip shader uses 'lineadj' which requires an extra first and last vert
+					// The thick line strip shader uses LineAdj which requires an extra first and last vert
 					if (thick)
 						m_indices.push_back_fast(vert);
 
@@ -1997,11 +2015,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return
-						IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
@@ -2011,6 +2024,11 @@ namespace pr::ldr
 				{
 					m_smooth = true;
 					return true;
+				}
+				default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -2025,7 +2043,7 @@ namespace pr::ldr
 				else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
 				else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
 				else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-				else p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack");
+				else p.ReportError(EScriptResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack");
 			}
 			else
 			{
@@ -2050,7 +2068,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -2168,15 +2186,15 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return
-						IObjectCreator::ParseKeyword(kw);
-				}
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
+				}
+			default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -2189,16 +2207,16 @@ namespace pr::ldr
 			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
 			uint16_t     idx[] = { 0, 1, 2, 3, 4, 5 };
 
-			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
-			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
-			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
+			m_colours.insert(m_colours.end(), col, col + _countof(col));
+			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -2239,18 +2257,14 @@ namespace pr::ldr
 			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
 			uint16_t     idx[] = { 0, 1, 2, 3, 4, 5 };
 
-			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
-			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
-			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
+			m_colours.insert(m_colours.end(), col, col + _countof(col));
+			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
@@ -2265,6 +2279,10 @@ namespace pr::ldr
 				{
 					m_rh = false;
 					return true;
+				}
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -2350,7 +2368,7 @@ namespace pr::ldr
 
 			if (Abs(m_dim) != m_dim)
 			{
-				p.ReportError(EResult::InvalidValue, "Circle dimensions contain a negative value");
+				p.ReportError(EScriptResult::InvalidValue, "Circle dimensions contain a negative value");
 			}
 		}
 		void CreateModel(LdrObject* obj) override
@@ -2485,7 +2503,7 @@ namespace pr::ldr
 
 			if (Abs(m_dim) != m_dim)
 			{
-				p.ReportError(EResult::InvalidValue, "Rect dimensions contain a negative value");
+				p.ReportError(EScriptResult::InvalidValue, "Rect dimensions contain a negative value");
 			}
 		}
 		void CreateModel(LdrObject* obj) override
@@ -2612,7 +2630,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
 			{
-				p.ReportError(EResult::Failed, "Object description incomplete");
+				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
 			}
 
@@ -2678,7 +2696,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
 			{
-				p.ReportError(EResult::Failed, "Object description incomplete");
+				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
 			}
 
@@ -2733,7 +2751,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
 			{
-				p.ReportError(EResult::Failed, "Object description incomplete");
+				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
 			}
 
@@ -2804,7 +2822,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, "Object description incomplete");
+				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
 			}
 
@@ -2853,7 +2871,7 @@ namespace pr::ldr
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create the model
-			obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, m_tex.Material());
+			obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m4x4::Identity(), Colour32White, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2943,12 +2961,12 @@ namespace pr::ldr
 			// Validate
 			if (m_dim == pr::v4Zero || m_location.size() == 0)
 			{
-				p.ReportError(EResult::Failed, "BoxList object description incomplete");
+				p.ReportError(EScriptResult::Failed, "BoxList object description incomplete");
 				return;
 			}
 			if (Abs(m_dim) != m_dim)
 			{
-				p.ReportError(EResult::InvalidValue, "BoxList box dimensions contain a negative value");
+				p.ReportError(EScriptResult::InvalidValue, "BoxList box dimensions contain a negative value");
 				return;
 			}
 
@@ -3312,7 +3330,7 @@ namespace pr::ldr
 					{
 					default:
 						{
-							p.ReportError(EResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
+							p.ReportError(EScriptResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
 							return false;
 						}
 					case ECSType::Round:
@@ -3400,25 +3418,20 @@ namespace pr::ldr
 			// If no cross section or extrusion path is given
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
 				return;
 			}
 
 			// Create the cross section for implicit profiles
 			switch (m_type)
 			{
-			default:
-				{
-					p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
-					return;
-				}
-			case ECSType::Round:
+				case ECSType::Round:
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
 						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
 					break;
 				}
-			case ECSType::Square:
+				case ECSType::Square:
 				{
 					// Create the cross section
 					m_cs.push_back(v2(-m_radx, -m_rady));
@@ -3427,19 +3440,24 @@ namespace pr::ldr
 					m_cs.push_back(v2(-m_radx, +m_rady));
 					break;
 				}
-			case ECSType::CrossSection:
+				case ECSType::CrossSection:
 				{
 					if (m_cs.empty())
 					{
-						p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
+						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
 						return;
 					}
-					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					if (pr::geometry::PolygonArea(m_cs) < 0)
 					{
-						p.ReportError(EResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
+						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
 						return;
 					}
 					break;
+				}
+				default:
+				{
+					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
 				}
 			}
 
@@ -3472,13 +3490,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return
-						m_tex.ParseKeyword(p, kw) ||
-						m_gen_norms.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Verts:
 				{
 					int r = 1;
@@ -3540,8 +3551,8 @@ namespace pr::ldr
 					nug.m_topo = is_strip ? ETopo::LineStrip : ETopo::LineList;
 					nug.m_geom = EGeom::Vert |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
-					nug.m_vrange = pr::rdr::Range::Reset();
-					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -3571,8 +3582,8 @@ namespace pr::ldr
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
 						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = pr::rdr::Range::Reset();
-					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -3599,8 +3610,8 @@ namespace pr::ldr
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
 						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
-					nug.m_vrange = pr::rdr::Range::Reset();
-					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
+					nug.m_vrange = rdr::Range::Reset();
+					nug.m_irange = rdr::Range(m_indices.size(), m_indices.size());
 					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
@@ -3634,34 +3645,41 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						m_gen_norms.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
 			}
 		}
 		void Parse() override
 		{
 			// All fields are child keywords
-			p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
+			p.ReportError(EScriptResult::UnknownValue, "Mesh object description invalid");
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Validate
 			if (m_indices.empty() || m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, "Mesh object description incomplete");
+				p.ReportError(EScriptResult::Failed, "Mesh object description incomplete");
 				return;
 			}
 			if (!m_colours.empty() && m_colours.size() != m_verts.size())
 			{
-				p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", int(m_verts.size()), int(m_colours.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", int(m_verts.size()), int(m_colours.size())));
 				return;
 			}
 			if (!m_normals.empty() && m_normals.size() != m_verts.size())
 			{
-				p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
 				return;
 			}
 			if (!m_texs.empty() && m_texs.size() != m_verts.size())
 			{
-				p.ReportError(EResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
+				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", int(m_verts.size()), int(m_normals.size())));
 				return;
 			}
 			for (auto& nug : m_nuggets)
@@ -3669,7 +3687,7 @@ namespace pr::ldr
 				// Check the index range is valid
 				if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > m_verts.size())
 				{
-					p.ReportError(EResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
+					p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
 					return;
 				}
 
@@ -3741,14 +3759,14 @@ namespace pr::ldr
 		void Parse() override
 		{
 			// All fields are child keywords
-			p.ReportError(EResult::UnknownValue, "Convex hull object description invalid");
+			p.ReportError(EScriptResult::UnknownValue, "Convex hull object description invalid");
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, "Convex hull object description incomplete. At least 2 vertices required");
+				p.ReportError(EScriptResult::Failed, "Convex hull object description incomplete. At least 2 vertices required");
 				return;
 			}
 
@@ -4020,7 +4038,7 @@ namespace pr::ldr
 			}
 			else
 			{
-				p.ReportError(EResult::SyntaxError, "Series objects must be children of a Chart object");
+				p.ReportError(EScriptResult::SyntaxError, "Series objects must be children of a Chart object");
 				throw std::runtime_error("Series objects must be children of a Chart object");
 			}
 		}
@@ -4047,10 +4065,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::XAxis:
 				{
 					std::string expr;
@@ -4075,6 +4089,10 @@ namespace pr::ldr
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
 				}
 			}
 		}
@@ -4117,7 +4135,7 @@ namespace pr::ldr
 				if (!in_range)
 					break;
 
-				// Evaluate the ith data point
+				// Evaluate the data point at 'i'
 				auto x = m_xaxis(args);
 				auto y = m_yaxis(args);
 				verts.push_back(v4{static_cast<float>(x.db()), static_cast<float>(y.db()), 0, 1});
@@ -4145,8 +4163,8 @@ namespace pr::ldr
 	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
 		std::filesystem::path m_filepath;
-		ModelGenerator<>::CreateOptions m_opts;
 		creation::GenNorms m_gen_norms;
+		ModelGenerator<>::CreateOptions m_opts;
 		int m_part;
 
 		ObjectCreator(ParseParams& p)
@@ -4159,16 +4177,16 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::BakeTransform:
+				{
+					p.m_reader.TransformS(m_opts.m_bake);
+					return true;
+				}
+				default:
 				{
 					return
 						m_gen_norms.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::BakeTransform:
-				{
-					p.m_reader.TransformS(m_opts.m_bake);
-					return true;
 				}
 			}
 		}
@@ -4187,7 +4205,7 @@ namespace pr::ldr
 			// Validate
 			if (m_filepath.empty())
 			{
-				p.ReportError(EResult::Failed, "Model filepath not given");
+				p.ReportError(EScriptResult::Failed, "Model filepath not given");
 				return;
 			}
 
@@ -4197,7 +4215,7 @@ namespace pr::ldr
 			{
 				auto msg = Fmt("Model file '%S' is not supported.\nSupported Formats: ", m_filepath.c_str());
 				for (auto f : Enum<EModelFileFormat>::Members()) msg.append(Enum<EModelFileFormat>::ToStringA(f)).append(" ");
-				p.ReportError(EResult::Failed, msg.c_str());
+				p.ReportError(EScriptResult::Failed, msg.c_str());
 				return;
 			}
 
@@ -4206,7 +4224,7 @@ namespace pr::ldr
 			auto src = p.m_reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
 			if (!src || !*src)
 			{
-				p.ReportError(EResult::Failed, FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
+				p.ReportError(EScriptResult::Failed, FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
 				return;
 			}
 
@@ -4421,11 +4439,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return
-						IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Resolution:
 				{
 					p.m_reader.IntS(m_resolution, 10);
@@ -4464,6 +4477,11 @@ namespace pr::ldr
 					m_extras.m_axis[2] = Extras::Axis::Parse(p.m_reader);
 					return true;
 				}
+				default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
+				}
 			}
 		}
 		void Parse() override
@@ -4476,7 +4494,7 @@ namespace pr::ldr
 			try { m_eq = eval::Compile<wchar_t>(equation); }
 			catch (std::exception const& ex)
 			{
-				p.ReportError(EResult::ExpressionSyntaxError, Fmt("Equation expression is invalid: %s", ex.what()));
+				p.ReportError(EScriptResult::ExpressionSyntaxError, Fmt("Equation expression is invalid: %s", ex.what()));
 				return;
 			}
 		}
@@ -4488,7 +4506,7 @@ namespace pr::ldr
 			// Validate
 			if (!m_eq)
 			{
-				p.ReportError(EResult::Failed, "Equation not given");
+				p.ReportError(EScriptResult::Failed, "Equation not given");
 				return;
 			}
 
@@ -4498,7 +4516,7 @@ namespace pr::ldr
 			// Update the model before each render so the range depends on the visible area at the focus point
 			obj->OnAddToScene += UpdateModel;
 
-			// Choose suitable vcount, icount based on the equation dimension and resolution
+			// Choose suitable 'vcount, icount' based on the equation dimension and resolution
 			int vcount, icount, dim = m_eq.m_args.unassigned_count();
 			switch (dim)
 			{
@@ -4545,7 +4563,7 @@ namespace pr::ldr
 
 			// Find the range to plot the equation over
 			auto fp = scene.m_view.FocusPoint();
-			auto area = scene.m_view.ViewArea(scene.m_view.FocusDist());
+			auto area = scene.m_view.ViewRectAtDistance(scene.m_view.FocusDist());
 
 			// Determine the interval to plot within. Default to a sphere around the focus point.
 			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
@@ -4671,7 +4689,7 @@ namespace pr::ldr
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			auto iout = mlock.m_ilock.ptr<uint32_t>();
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
+				[&](v4_cref pos, Colour32, v4_cref, v2_cref)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform
@@ -4856,12 +4874,6 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
 			case EKeyword::CString:
 				{
 					wstring256 text;
@@ -4943,6 +4955,12 @@ namespace pr::ldr
 					p.m_reader.Vector2S(m_layout.m_dim);
 					return true;
 				}
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
 			}
 		}
 		void Parse() override
@@ -4995,8 +5013,8 @@ namespace pr::ldr
 							auto fd = main_camera.FocusDist();
 
 							// Get the scaling factors from 'main_camera' to 'text_camera'
-							auto viewarea_camera = main_camera.ViewArea(fd);
-							auto viewarea_txtcam = text_camera.ViewArea(fd);
+							auto viewarea_camera = main_camera.ViewRectAtDistance(fd);
+							auto viewarea_txtcam = text_camera.ViewRectAtDistance(fd);
 
 							// Scale the X,Y coords in camera space
 							auto pt_cs = w2c * ob.m_i2w.pos;
@@ -5042,7 +5060,7 @@ namespace pr::ldr
 
 						// Convert the world space position into a screen space position
 						auto pt_ss = w2c * ob.m_i2w.pos;
-						auto viewarea = main_camera.ViewArea(abs(pt_ss.z));
+						auto viewarea = main_camera.ViewRectAtDistance(abs(pt_ss.z));
 						pt_ss.x *= ViewPortSize / viewarea.x;
 						pt_ss.y *= ViewPortSize / viewarea.y;
 						pt_ss.z = s_cast<float>(main_camera.NormalisedDistance(pt_ss.z));
@@ -5128,7 +5146,7 @@ namespace pr::ldr
 			auto mdl = p.m_models.find(model_key);
 			if (mdl == p.m_models.end())
 			{
-				p.ReportError(EResult::UnknownValue, "Instance not found");
+				p.ReportError(EScriptResult::UnknownValue, "Instance not found");
 				return;
 			}
 			obj->m_model = mdl->second;
@@ -5164,7 +5182,7 @@ namespace pr::ldr
 			// Check for incomplete script
 			if (p.m_reader.IsSourceEnd())
 			{
-				p.ReportError(EResult::UnexpectedEndOfFile);
+				p.ReportError(EScriptResult::UnexpectedEndOfFile);
 				break;
 			}
 
@@ -5188,7 +5206,7 @@ namespace pr::ldr
 					continue;
 
 				// Unknown token
-				p.ReportError(EResult::UnknownToken);
+				p.ReportError(EScriptResult::UnknownToken);
 				continue;
 			}
 
@@ -5283,7 +5301,7 @@ namespace pr::ldr
 					// Assume the keyword is an object and start parsing
 					if (!ParseLdrObject(static_cast<ELdrObject>(kw), p))
 					{
-						p.ReportError(EResult::UnknownToken, Fmt("Expected an object declaration"));
+						p.ReportError(EScriptResult::UnknownToken, Fmt("Expected an object declaration"));
 						break;
 					}
 					assert("Objects removed but 'ParseLdrObject' didn't fail" && int(p.m_objects.size()) > object_count);

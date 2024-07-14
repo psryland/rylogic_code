@@ -1,4 +1,4 @@
-﻿//******************************************
+//******************************************
 // Multicast Event
 //  Copyright (c) Oct 2011 Rylogic Ltd
 //******************************************
@@ -24,6 +24,11 @@ namespace pr
 	inline constexpr auto _2 = std::placeholders::_2;
 	inline constexpr auto _3 = std::placeholders::_3;
 	inline constexpr auto _4 = std::placeholders::_4;
+	inline constexpr auto _5 = std::placeholders::_5;
+	inline constexpr auto _6 = std::placeholders::_6;
+	inline constexpr auto _7 = std::placeholders::_7;
+	inline constexpr auto _8 = std::placeholders::_8;
+	inline constexpr auto _9 = std::placeholders::_9;
 
 	// Implementation detail for EventHandler
 	namespace multicast
@@ -34,7 +39,7 @@ namespace pr
 		// Non-template interface for all event handlers and multicasts
 		struct IMultiCast
 		{
-			virtual ~IMultiCast() {}
+			virtual ~IMultiCast() = default;
 			virtual void unsubscribe(Sub& sub) = 0;
 		};
 
@@ -305,7 +310,7 @@ namespace pr
 	// MultiCast<std::function<void(int)>>
 	// Use:
 	//   thg.OnError += [&](int) {...}
-	//   thg.OnError += pr::StaticCallBack(func_ptr, ctx)
+	//   thg.OnError += pr::StaticCallback(func_ptr, ctx)
 	template <typename FuncType, bool ThreadSafe = false>
 	struct MultiCast :multicast::IMultiCast
 	{
@@ -464,8 +469,7 @@ namespace pr
 			remove_handlers([=](auto& h) { return h == sub; });
 			sub = Sub();
 		}
-		template <typename FuncType, typename = std::enable_if_t<std::is_same_v<decltype(std::declval<FuncType&>() == std::declval<FuncType&>()), bool>>>
-		void operator -= (FuncType func)
+		void operator -= (FuncType func) requires (requires (FuncType f) { f == f; })
 		{
 			// Notes:
 			//  - This operator will only work if 'FuncType' is equality compareable
@@ -655,16 +659,16 @@ namespace pr::common
 			}
 			{ // pr::StaticCB
 				Thing thg;
-				struct L { static void __stdcall Handler(void* ctx, Thing&, EmptyArgs const&) { ++* static_cast<int*>(ctx); }; };
+				struct L { static void __stdcall Handler(void* ctx, Thing&, EmptyArgs const&) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Event1 += pr::StaticCallBack(&L::Handler, &count);
+				thg.Event1 += StaticCB{&L::Handler, & count};
 				thg.Call1();
 				PR_CHECK(count, 1);
-				thg.Event1 -= pr::StaticCallBack(&L::Handler, &other); // should not remove anything because ctx is different
+				thg.Event1 -= StaticCB{&L::Handler, & other}; // should not remove anything because ctx is different
 				thg.Call1();
 				PR_CHECK(count, 2);
-				thg.Event1 -= pr::StaticCallBack(&L::Handler, &count); // should remove the callback
+				thg.Event1 -= StaticCB{&L::Handler, & count}; // should remove the callback
 				thg.Call1();
 				PR_CHECK(count, 2);
 			}
@@ -770,13 +774,13 @@ namespace pr::common
 				struct L { static void __stdcall Handler(void* ctx, int*) { ++*static_cast<int*>(ctx); }; };
 				int count = 0, other = 0;
 
-				thg.Action3 += pr::StaticCallBack(&L::Handler, &count);
+				thg.Action3 += StaticCB{ &L::Handler, &count };
 				thg.Call5();
 				PR_CHECK(count, 1);
-				thg.Action3 -= pr::StaticCallBack(&L::Handler, &other); // should not remove anything because ctx is different
+				thg.Action3 -= StaticCB{ &L::Handler, &other }; // should not remove anything because ctx is different
 				thg.Call5();
 				PR_CHECK(count, 2);
-				thg.Action3 -= pr::StaticCallBack(&L::Handler, &count); // should remove the callback
+				thg.Action3 -= StaticCB{ &L::Handler, &count }; // should remove the callback
 				thg.Call5();
 				PR_CHECK(count, 2);
 			}

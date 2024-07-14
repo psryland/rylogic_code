@@ -9,17 +9,6 @@
 
 namespace pr::rdr12
 {
-	BackBuffer::BackBuffer()
-		:m_wnd()
-		,m_bb_index()
-		,m_sync_point()
-		,m_render_target()
-		,m_depth_stencil()
-		,m_rtv()
-		,m_dsv()
-		,m_d2d_target()
-	{}
-
 	// Accessors
 	Renderer& BackBuffer::rdr() const
 	{
@@ -28,5 +17,17 @@ namespace pr::rdr12
 	Window& BackBuffer::wnd() const
 	{
 		return *m_wnd;
+	}
+	float4_t const& BackBuffer::rt_clear() const
+	{
+		return wnd().m_rt_props.Color;
+	}
+	float BackBuffer::ds_depth() const
+	{
+		return wnd().m_ds_props.DepthStencil.Depth;
+	}
+	uint8_t BackBuffer::ds_stencil() const
+	{
+		return wnd().m_ds_props.DepthStencil.Stencil;
 	}
 }

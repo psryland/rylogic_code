@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
@@ -7,7 +7,6 @@
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
 		<UseWpf>true</UseWpf>

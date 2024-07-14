@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
@@ -48,7 +48,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)icon.png" />
     <Content Include="$(MSBuildThisFileDirectory)res\aligning_examples.txt" />
     <Content Include="$(MSBuildThisFileDirectory)res\align_tests.txt" />
     <Resource Include="$(MSBuildThisFileDirectory)res\edit_add.png" />

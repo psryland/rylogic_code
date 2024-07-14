@@ -25,8 +25,21 @@ namespace pr::rdr12
 		x(Checker2        ,)\
 		x(Checker3        ,)\
 		x(WhiteSpot       ,)\
+		x(WhiteSpike      ,)\
+		x(WhiteSphere     ,)\
 		x(WhiteTriangle   ,)\
 		x(EnvMapProjection,)
 	PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
+	#undef PR_ENUM
+
+	#define PR_ENUM(x) \
+		x(Invalid    ,= InvalidId)\
+		x(PointClamp       ,)\
+		x(PointWrap        ,)\
+		x(LinearClamp      ,)\
+		x(LinearWrap       ,)\
+		x(AnisotropicClamp ,)\
+		x(AnisotropicWrap  ,)
+	PR_DEFINE_ENUM2_BASE(EStockSampler, PR_ENUM, RdrId);
 	#undef PR_ENUM
 }

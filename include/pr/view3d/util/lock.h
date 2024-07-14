@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -50,7 +50,7 @@ namespace pr::rdr
 	{
 		None = 0,
 		DoNotWait = D3D11_MAP_FLAG_DO_NOT_WAIT,
-		_flags_enum,
+		_flags_enum = 0,
 	};
 
 	// A scope object for locking (or "mapping") a resource so that the CPU can access it.
@@ -82,7 +82,7 @@ namespace pr::rdr
 			Map(dc, res, sub, stride, map_type, flags, range);
 		}
 		Lock(Lock const&) = delete;
-		Lock(Lock&& rhs)
+		Lock(Lock&& rhs) noexcept
 			:D3D11_MAPPED_SUBRESOURCE(rhs)
 			,m_dc(rhs.m_dc)
 			,m_res(rhs.m_res)
@@ -100,6 +100,8 @@ namespace pr::rdr
 		{
 			Unmap();
 		}
+		Lock& operator = (Lock&&) = delete;
+		Lock& operator = (Lock const&) = delete;
 
 		// Returns a pointer to the mapped memory
 		// SDK Notes: *Don't read from a sub-resource mapped for writing*
@@ -141,7 +143,7 @@ namespace pr::rdr
 			auto hr = m_dc->Map(res, sub, static_cast<D3D11_MAP>(map_type), static_cast<UINT>(flags), this);
 			if (Failed(hr))
 			{
-				if (!AllSet(flags, EMapFlags::DoNotWait)) Throw(hr);
+				if (!AllSet(flags, EMapFlags::DoNotWait)) Check(hr);
 				return false;
 			}
 			else

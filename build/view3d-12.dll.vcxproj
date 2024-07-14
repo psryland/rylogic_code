@@ -34,7 +34,8 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="props/dll.props" />
+  <Import Project="props\tools.props" />
+  <Import Project="props\dll.props" />
 
   <!-- Build options -->
   <ItemDefinitionGroup>
@@ -67,5 +68,9 @@
       <Project>{0a6cc9e3-76d2-4f4e-a193-1a816d24a555}</Project>
     </ProjectReference>
   </ItemGroup>
+
+  <!-- Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="targets\WinPixEventRuntime.targets" />
+
 </Project>

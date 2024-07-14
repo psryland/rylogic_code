@@ -1,4 +1,4 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
@@ -146,7 +146,7 @@ namespace pr::rdr12
 		static IWICImagingFactory* s_factory = []
 		{
 			IWICImagingFactory* factory;
-			Throw(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
+			Check(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (void**)&factory));
 			return factory;
 		}();
 		return s_factory;
@@ -183,18 +183,18 @@ namespace pr::rdr12
 		auto wic = GetWIC();
 
 		RefPtr<IWICComponentInfo> cinfo;
-		Throw(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
+		Check(wic->CreateComponentInfo(guid, &cinfo.m_ptr));
 
 		WICComponentType type;
-		Throw(cinfo->GetComponentType(&type));
+		Check(cinfo->GetComponentType(&type));
 		if (type != WICPixelFormat)
 			return 0;
 
 		RefPtr<IWICPixelFormatInfo> pfinfo;
-		Throw(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
+		Check(cinfo->QueryInterface(__uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>(&pfinfo)));
 
 		UINT bpp;
-		Throw(pfinfo->GetBitsPerPixel(&bpp));
+		Check(pfinfo->GetBitsPerPixel(&bpp));
 		return s_cast<int>(bpp);
 	}
 
@@ -209,7 +209,7 @@ namespace pr::rdr12
 
 		// Read the image dimensions
 		UINT width, height;
-		Throw(first->GetSize(&width, &height));
+		Check(first->GetSize(&width, &height));
 		assert(width > 0 && height > 0);
 
 		// Determine the maximum texture dimension
@@ -235,7 +235,7 @@ namespace pr::rdr12
 		}
 	
 		// Clamp the texture dimensions to the maximum, maintaining aspect ratio
-		iv3 dim = {s_cast<int>(width), s_cast<int>(height), 1};
+		iv3 dim = {s_cast<int>(width), s_cast<int>(height), 1}; // WIC only supports 2D images
 		if (dim.x > max_dimension || dim.y > max_dimension)
 		{
 			auto ar = static_cast<double>(height) / static_cast<double>(width);
@@ -254,7 +254,7 @@ namespace pr::rdr12
 
 		// Determine the pixel format
 		WICPixelFormatGUID src_format, dst_format;
-		Throw(first->GetPixelFormat(&src_format));
+		Check(first->GetPixelFormat(&src_format));
 		auto format = WICToDXGI(src_format, true, &dst_format);
 		if (format == DXGI_FORMAT_UNKNOWN)
 			throw std::runtime_error("Pixel format is not supported");
@@ -290,21 +290,24 @@ namespace pr::rdr12
 		}
 
 		auto pitch = (dim.x * bpp + 7) / 8;
-		auto image_size = pitch * dim.y;
+		auto frame_size = pitch * dim.y;
 		auto conversion_needed = src_format != dst_format;
 		auto resize_needed = dim.x != s_cast<int>(width) || dim.y != s_cast<int>(height);
+		auto is_array = frames.ssize() != 1;
 		mips = mips == 0 ? MipCount(dim.x, dim.y) : mips;
 		
 		LoadedImageResult result;
 
-		// Load image data.
-		for (auto& frame : frames)
+		// Load the image frames
+		for (auto f = 0; f != frames.ssize(); ++f)
 		{
-			ImageWithData img(dim.x, dim.y, 1, std::shared_ptr<uint8_t[]>(new uint8_t[image_size]), format);
+			auto& frame = frames[f];
+			auto image = ImageWithData(dim.x, dim.y, is_array ? 1 : dim.z, std::shared_ptr<uint8_t[]>(new uint8_t[frame_size]), format);
+
 			if (!conversion_needed && !resize_needed)
 			{
 				// No format conversion or resize needed
-				Throw(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(image_size), img.m_data.as<uint8_t>()));
+				Check(frame->CopyPixels(0, static_cast<UINT>(pitch), static_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
 			else
 			{
@@ -316,44 +319,45 @@ namespace pr::rdr12
 				if (resize_needed)
 				{
 					WICPixelFormatGUID pf;
-					Throw(wic->CreateBitmapScaler(&scaler.m_ptr));
-					Throw(scaler->Initialize(frame.get(), s_cast<UINT>(dim.x), s_cast<UINT>(dim.y), WICBitmapInterpolationModeFant));
-					Throw(scaler->GetPixelFormat(&pf));
+					Check(wic->CreateBitmapScaler(&scaler.m_ptr));
+					Check(scaler->Initialize(frame.get(), s_cast<UINT>(dim.x), s_cast<UINT>(dim.y), WICBitmapInterpolationModeFant));
+					Check(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
 				}
 
 				// Create a format converter if needed
 				if (conversion_needed)
 				{
-					Throw(wic->CreateFormatConverter(&converter.m_ptr));
-					Throw(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
+					Check(wic->CreateFormatConverter(&converter.m_ptr));
+					Check(converter->Initialize(frame.get(), dst_format, WICBitmapDitherTypeErrorDiffusion, 0, 0, WICBitmapPaletteTypeCustom));
 				}
 
 				// Copy the data with optional reformat and resize
-				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(image_size), img.m_data.as<uint8_t>()));
+				Check(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(frame_size), image.m_data.as<uint8_t>()));
 			}
-			result.images.push_back(img);
+			result.images.push_back(std::move(image));
 		}
 
 		// Create the texture description.
+		// Note: this is returning a description of each image in the array, not a description of the array itself.
 		result.desc = D3D12_RESOURCE_DESC{
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-			.Alignment = D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT,
+			.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 			.Width = s_cast<UINT64>(dim.x),
 			.Height = s_cast<UINT>(dim.y),
-			.DepthOrArraySize = s_cast<UINT16>(result.images.size()),
+			.DepthOrArraySize = s_cast<UINT16>(is_array ? 1 : dim.z),
 			.MipLevels = s_cast<UINT16>(mips),
 			.Format = format,
 			.SampleDesc = {1, 0},
-			.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+			.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 			.Flags = D3D12_RESOURCE_FLAG_NONE,
 		};
 
-		return std::move(result);
+		return result;
 	}
 
 	// Load an image from a WIC image, either in memory or on disk.
-	LoadedImageResult LoadWIC(std::span<std::span<uint8_t const>> const& images, int mips, int max_dimension, FeatureSupport const* features)
+	LoadedImageResult LoadWIC(std::span<std::span<uint8_t const>> images, int mips, int max_dimension, FeatureSupport const* features)
 	{
 		if (images.empty())
 			throw std::runtime_error("Texture file data is invalid");
@@ -368,23 +372,23 @@ namespace pr::rdr12
 
 			// Create input stream for memory
 			RefPtr<IWICStream> stream;
-			Throw(wic->CreateStream(&stream.m_ptr));
-			Throw(stream->InitializeFromMemory(const_cast<uint8_t*>(img.data()), static_cast<DWORD>(img.size())));
+			Check(wic->CreateStream(&stream.m_ptr));
+			Check(stream->InitializeFromMemory(const_cast<uint8_t*>(img.data()), static_cast<DWORD>(img.size())));
 
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromStream(stream.get(), 0, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 			frames.push_back(frame);
 		}
 
 		// Create the texture
 		return std::move(LoadWIC(frames, mips, max_dimension, features));
 	}
-	LoadedImageResult LoadWIC(std::span<std::filesystem::path> const& filepaths, int mips, int max_dimension, FeatureSupport const* features)
+	LoadedImageResult LoadWIC(std::span<std::filesystem::path const> filepaths, int mips, int max_dimension, FeatureSupport const* features)
 	{
 		auto wic = GetWIC();
 
@@ -394,11 +398,11 @@ namespace pr::rdr12
 		{
 			// Initialize WIC image decoder
 			RefPtr<IWICBitmapDecoder> decoder;
-			Throw(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
+			Check(wic->CreateDecoderFromFilename(path.c_str(), 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &decoder.m_ptr));
 
 			// Get the first frame in the image
 			RefPtr<IWICBitmapFrameDecode> frame;
-			Throw(decoder->GetFrame(0, &frame.m_ptr));
+			Check(decoder->GetFrame(0, &frame.m_ptr));
 
 			// Add the frame
 			frames.push_back(frame);

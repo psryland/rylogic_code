@@ -29,6 +29,10 @@ namespace pr
 		public:
 
 			MD5()
+				:m_bits()
+				,m_state()
+				,m_in()
+				,m_digest()
 			{
 				m_bits[0] = m_bits[1] = (u32)0;
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
@@ -7,7 +7,6 @@
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
 		<UseWpf>True</UseWpf>

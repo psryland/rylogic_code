@@ -8,6 +8,7 @@
 static const float TINY = 0.0001f;
 static const int MaxShadowMaps = 1;
 static const int MaxProjectedTextures = 1;
+static const int MaxSamplers = 1;
 
 // Model flags
 static const int ModelFlags_HasNormals           = (1 << 0);

@@ -7,6 +7,10 @@
 
 namespace pr::rdr12
 {
+	// Turn an r-value into an l-value. Basically 'std::unmove()'
+	template <typename T>
+	inline T& LValue(T&& x) { return x; }
+
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr);
 	template <typename T> ULONG RefCount(RefPtr<T> ptr)
@@ -216,7 +220,7 @@ namespace pr::rdr12
 		return BitsPerPixel(fmt) >> 3;
 	}
 
-	// Compile time type to 'DXGI_FORMAT' conversion
+	// Compile-time type to 'DXGI_FORMAT' conversion
 	using dxgi = struct { DXGI_FORMAT format; int size; };
 	template <typename T> constexpr dxgi dx_format_v =
 		std::is_same_v<uint8_t , T> ? dxgi{DXGI_FORMAT_R8_UINT           , (int)sizeof(uint8_t )} :
@@ -231,48 +235,6 @@ namespace pr::rdr12
 		static_assert(dx_format_v<uint32_t>.format == DXGI_FORMAT_R32_UINT);
 		static_assert(dx_format_v<uint16_t>.format == DXGI_FORMAT_R16_UINT);
 
-	//// Compile time type to 'DXGI_FORMAT' conversion
-	//template <typename Type> struct dx_format { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
-	//template <> struct dx_format<uint8_t >    { static const DXGI_FORMAT value = DXGI_FORMAT_R8_UINT;            static const int size = sizeof(uint8_t ); };
-	//template <> struct dx_format<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16_t); };
-	//template <> struct dx_format<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32_t); };
-	//template <> struct dx_format<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
-	//template <> struct dx_format<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
-	//template <> struct dx_format<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
-	//template <> struct dx_format<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
-	//template <> struct dx_format<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
-	//template <typename Type> static constexpr DXGI_FORMAT dx_format_v = dx_format<Type>::value;
-
-	//// Compile 'DXGI_FORMAT' to pixel type conversion
-	//template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
-	//template <> struct type_for<DXGI_FORMAT_R8_UINT           >{ using type = uint8_t;  };
-	//template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
-	//template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
-	//template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };
-	//template <> struct type_for<DXGI_FORMAT_R32G32B32_FLOAT   >{ using type = v3;       };
-	//template <> struct type_for<DXGI_FORMAT_R32G32B32A32_FLOAT>{ using type = Colour;   };
-	//template <> struct type_for<DXGI_FORMAT_R8G8B8A8_UNORM    >{ using type = Colour32; };
-	//template <DXGI_FORMAT Fmt> using type_for_t = typename type_for<Fmt>::type;
-	//static_assert(std::is_same_v<type_for_t<DXGI_FORMAT_R32G32B32A32_FLOAT>, Colour>) ;
-
-	//// Shader type to enum map
-	//template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
-	//template <> struct ShaderTypeId<ID3D11VertexShader  > { static const EShaderType value = EShaderType::VS; };
-	//template <> struct ShaderTypeId<ID3D11PixelShader   > { static const EShaderType value = EShaderType::PS; };
-	//template <> struct ShaderTypeId<ID3D11GeometryShader> { static const EShaderType value = EShaderType::GS; };
-	//template <> struct ShaderTypeId<ID3D11ComputeShader > { static const EShaderType value = EShaderType::CS; };
-	//template <> struct ShaderTypeId<ID3D11HullShader    > { static const EShaderType value = EShaderType::HS; };
-	//template <> struct ShaderTypeId<ID3D11DomainShader  > { static const EShaderType value = EShaderType::DS; };
-
-	//// Shader enum to dx type map
-	//template <EShaderType ST> struct DxShaderType {};
-	//template <> struct DxShaderType<EShaderType::VS> { typedef ID3D11VertexShader   type; };
-	//template <> struct DxShaderType<EShaderType::PS> { typedef ID3D11PixelShader    type; };
-	//template <> struct DxShaderType<EShaderType::GS> { typedef ID3D11GeometryShader type; };
-	//template <> struct DxShaderType<EShaderType::CS> { typedef ID3D11ComputeShader  type; };
-	//template <> struct DxShaderType<EShaderType::HS> { typedef ID3D11HullShader     type; };
-	//template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
-
 	// The number of supported quality levels for the given format and sample count
 	UINT MultisampleQualityLevels(ID3D12Device* device, DXGI_FORMAT format, UINT sample_count);
 
@@ -281,6 +243,30 @@ namespace pr::rdr12
 
 	// Returns the number of indices implied by a primitive count and geometry topology
 	size_t IndexCount(size_t pcount, ETopo topo);
+	
+	// True if 'fmt' is a compression image format
+	bool IsCompressed(DXGI_FORMAT fmt);
+
+	// True if 'fmt' has an alpha channel
+	bool HasAlphaChannel(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is compatible with UA views
+	bool IsUAVCompatible(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is an SRGB format
+	bool IsSRGB(DXGI_FORMAT fmt);
+
+	// True if 'fmt' is a depth format
+	bool IsDepth(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a typeless format
+	DXGI_FORMAT ToTypeless(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a SRGB format
+	DXGI_FORMAT ToSRGB(DXGI_FORMAT fmt);
+
+	// Convert 'fmt' to a UAV compatible format
+	DXGI_FORMAT ToUAVCompatable(DXGI_FORMAT fmt);
 
 	// Returns the expected row, slice, and block pitch for a given image width*height*depth and format
 	iv3 Pitch(iv3 size, DXGI_FORMAT fmt);
@@ -314,9 +300,81 @@ namespace pr::rdr12
 		return iter == end(map) ? def : static_cast<Value const&>(iter->second);
 	}
 
-	/// <summary>Set the name on a DX resource (debug only)</summary>
-	void NameResource(ID3D12Object* res, char const* name);
-	void NameResource(IDXGIObject* res, char const* name);
+	// Helper for reading values from an unordered map, and lazy inserting if not found
+	template <class Map, typename Key, typename Value, typename Factory>
+	inline Value const& GetOrAdd(Map const& map, Key const& key, Factory factory)
+	{
+		auto iter = map.find(key);
+		if (iter == end(map)) iter = map.emplace(key, factory()).first;
+		return static_cast<Value const&>(iter->second);
+	}
+
+	// Concept for interface with private data
+	template <typename T>
+	concept HasPrivateData = requires(T v, Guid const& guid, UINT* mdata_size, UINT cdata_size, void* mdata, void const* cdata)
+	{
+		{ v.GetPrivateData(guid, mdata_size, mdata) } -> std::same_as<HRESULT>;
+		{ v.SetPrivateData(guid, cdata_size, cdata) } -> std::same_as<HRESULT>;
+	};
+
+	// Get/Set the debug name
+	template <HasPrivateData T> char const* DebugName(T const* res)
+	{
+		static thread_local char existing[256];
+
+		UINT size(sizeof(existing) - 1);
+		if (const_cast<T*>(res)->GetPrivateData(WKPDID_D3DDebugObjectName, &size, &existing[0]) != DXGI_ERROR_NOT_FOUND)
+			existing[size] = 0;
+		else
+			existing[0] = 0;
+
+		return &existing[0];
+	}
+	template <HasPrivateData T> void DebugName(T* res, char const* name)
+	{
+		std::string_view res_name(name);
+		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
+	}
+	template <HasPrivateData T> char const* DebugName(D3DPtr<T> res)
+	{
+		return DebugName(res.get());
+	}
+	template <HasPrivateData T> void DebugName(D3DPtr<T> res, char const* name)
+	{
+		DebugName(res.get(), name);
+	}
+
+	// Get/Set the debug colour
+	inline static GUID const Guid_DebugColour = { 0x0405DEE4, 0xADF7, 0x4A27, { 0xBF, 0x37, 0x0B, 0x37, 0x28, 0x39, 0x39, 0x17 } };
+	template <HasPrivateData T> Colour32 DebugColour(T const* res)
+	{
+		extern GUID const Guid_DebugColour;
+
+		Colour32 existing = {};
+		UINT size = sizeof(existing);
+		if (const_cast<T*>(res)->GetPrivateData(Guid_DebugColour, &size, &existing) != DXGI_ERROR_NOT_FOUND)
+			return existing;
+
+		return Colour32Zero;
+	}
+	template <HasPrivateData T> void DebugColour(T* res, Colour32 colour)
+	{
+		extern GUID const Guid_DebugColour;
+		Check(res->SetPrivateData(Guid_DebugColour, sizeof(colour), &colour));
+	}
+	template <HasPrivateData T> Colour32 DebugColour(D3DPtr<T> res)
+	{
+		return DebugColour(res.get());
+	}
+	template <HasPrivateData T> void DebugColour(D3DPtr<T> res, Colour32 colour)
+	{
+		DebugColour(res.get(), colour);
+	}
+
+	// Get/Set the default state for a resource
+	inline static GUID const Guid_DefaultResourceState = { 0x5DFA5A73, 0xA8A0, 0x466B, { 0xA1, 0x0A, 0x3E, 0x3A, 0x35, 0x87, 0x5B, 0xB3 } };
+	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res);
+	void DefaultResState(ID3D12Resource* res, D3D12_RESOURCE_STATES state);
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"
 	void ParseEmbeddedResourceUri(std::wstring const& uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name);

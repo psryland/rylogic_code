@@ -11,18 +11,35 @@ namespace pr::rdr12
 	// A basic image description
 	struct Image
 	{
+		// Image:
+		//
+		//   +----- +-slice-+
+		//   B    +-slice-+ |
+		//   L  +-slice-+ | |
+		//   O  | [row] | | |
+		//   C  | [row] | |-+
+		//   K  | [row] |-+
+		//   +- +-------+
+		//
 		// Notes:
-		//  - Images can be generalised to a 1, 2, or 3D buffer of any type. E.g. a vertex buffer is a 1D image of Verts.
+		//  - Images can be generalised to a 1D, 2D, or 3D buffer of any type. E.g. a vertex buffer is a 1D image of Verts.
 		//  - row pitch is the number of bytes per row of the image.
-		//  - slice pitch is the number of bytes per 2D plane (i.e. normally the image size in bytes,
+		//  - slice pitch is the number of bytes per 2D slice (i.e. normally the image size in bytes,
 		//    but if the image is an array, then this is the size of one image in the array)
-		//  - block pitch is the number of bytes for the image
+		//  - block pitch is the number of bytes for the image.
+		//  - 'Image' does not store mip levels. Use an array of Images to represent a mip chain.
+
 		union data_t
 		{
+			using factory_t = void const* (*)(void* ctx, void* mem);
+
 			void const* vptr;
 			uint8_t const* bptr;
 			uint32_t const* u32ptr;
 			template <typename T> T* as() { return static_cast<T*>(const_cast<void*>(vptr)); }
+			explicit operator bool() const { return vptr != nullptr; }
+			bool operator ==(nullptr_t) const { return vptr == nullptr; }
+			bool operator !=(nullptr_t) const { return vptr != nullptr; }
 		};
 
 		iv3 m_dim;            // x = width, y = height, z = depth
@@ -34,11 +51,11 @@ namespace pr::rdr12
 			:m_dim()
 			,m_pitch()
 			,m_data()
-			,m_format(DXGI_FORMAT_UNKNOWN)
+			,m_format(DXGI_FORMAT_B8G8R8A8_UNORM)
 		{}
 
 		// Construct a 1D Image.
-		Image(int w, void const* data = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_UNKNOWN)
+		Image(int w, void const* data = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_B8G8R8A8_UNORM)
 			: m_dim(w, 1, 1)
 			, m_pitch(w, w, w)
 			, m_data{.vptr = data}
@@ -68,7 +85,7 @@ namespace pr::rdr12
 			: m_dim(s_cast<int>(count), 1, 1)
 			, m_pitch(s_cast<int>(count * element_size_in_bytes))
 			, m_data{.vptr = data}
-			, m_format(DXGI_FORMAT_UNKNOWN)
+			, m_format(DXGI_FORMAT_R8_UNORM)
 		{
 			if (s_cast<int64_t>(count) * s_cast<int64_t>(element_size_in_bytes) > limits<int>::max())
 				throw std::overflow_error("Initialisation data too large");
@@ -87,20 +104,22 @@ namespace pr::rdr12
 			return m_pitch.z;
 		}
 
-		// Access a slice in the image
-		data_t Slice(int n) const
+		// Access a slice (i.e. a Z plane) in the image
+		Image Slice(int z) const
 		{
-			auto ptr = m_data;
-			ptr.bptr += m_pitch.y * n;
-			return ptr;
+			if (z < 0 || z >= m_dim.z)
+				throw std::runtime_error("Slice index out of range");
+
+			return Image(m_dim.x, m_dim.y, m_data.bptr + m_pitch.y * z, m_format);
 		}
 
-		// Access a row in the image
-		data_t Row(int n, int slice = 0) const
+		// Access a row (i.e. a Y line) in the image
+		Image Row(int y, int z = 0) const
 		{
-			auto ptr = Slice(slice);
-			ptr.bptr += m_pitch.x * n;
-			return ptr;
+			if (y < 0 || y >= m_dim.y)
+				throw std::runtime_error("Row index out of range");
+
+			return Image(m_dim.x, m_data.bptr + m_pitch.x * y + m_pitch.y * z, m_format);
 		}
 
 		// Convert to Dx12 types
@@ -125,9 +144,17 @@ namespace pr::rdr12
 	// An image that owns it's data
 	struct ImageWithData :Image
 	{
-		std::shared_ptr<uint8_t[]> m_bits;
+		using local_data_t = std::shared_ptr<uint8_t[]>;
+		using mip_t = std::shared_ptr<ImageWithData>;
 
-		ImageWithData() :Image() {}
+		local_data_t m_bits;
+		mip_t m_mip; // Linked list of mip levels
+
+		ImageWithData()
+			:Image()
+			,m_bits()
+			,m_mip()
+		{}
 		ImageWithData(ImageWithData const&) = default;
 		ImageWithData& operator =(ImageWithData const&) = default;
 
