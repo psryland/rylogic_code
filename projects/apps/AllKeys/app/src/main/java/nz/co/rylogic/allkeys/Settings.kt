@@ -260,7 +260,7 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 	var metronomeVolume: Double
 		get()
 		{
-			return mSettings.getInt(METRONOME_VOLUME, 80) * 0.01
+			return mSettings.getInt(METRONOME_VOLUME, 60) * 0.01
 		}
 		set(value)
 		{
@@ -363,7 +363,7 @@ class Settings(context: Context) : SharedPreferences.OnSharedPreferenceChangeLis
 	var rootNoteInstrument:ERootNoteInstruments
 		get()
 		{
-			return ERootNoteInstruments.valueOf(mSettings.getString(ROOT_NOTE_INSTRUMENT, null) ?: ERootNoteInstruments.AcousticBass.toString())
+			return ERootNoteInstruments.valueOf(mSettings.getString(ROOT_NOTE_INSTRUMENT, null) ?: ERootNoteInstruments.Piano.toString())
 		}
 		set(value)
 		{

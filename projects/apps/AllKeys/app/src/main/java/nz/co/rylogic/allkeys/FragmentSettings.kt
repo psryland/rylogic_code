@@ -46,7 +46,7 @@ class FragmentSettings : PreferenceFragmentCompat(), SharedPreferences.OnSharedP
 		// Add click listener for credits
 		val credits = findPreference<Preference>("credits")!!
 		credits.setOnPreferenceClickListener {
-			val builder = AlertDialog.Builder(mContext)
+			val builder = AlertDialog.Builder(mContext, R.style.Theme_AllKeys_Dialog)
 			builder.setTitle("Credits")
 			builder.setView(R.layout.credits)
 			builder.setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }

@@ -9,6 +9,7 @@
         <androidx.preference.ListPreference
             android:key="genre"
             android:title="@string/choose_genre"
+            android:contentDescription="@string/accessibility_choose_genre"
             app:useSimpleSummaryProvider="true"
             />
     </androidx.preference.PreferenceCategory>
@@ -22,26 +23,31 @@
             android:entries="@array/key_groups"
             android:entryValues="@array/key_groups"
             android:title="@string/choose_keys"
+            android:contentDescription="@string/accessibility_choose_keys"
             />
         <androidx.preference.MultiSelectListPreference
             android:key="selected_chords"
             android:title="@string/choose_chords"
+            android:contentDescription="@string/accessibility_choose_chords"
             />
         <androidx.preference.DropDownPreference
             android:key="next_chord_mode"
             android:title="@string/next_chord_mode"
             android:entries="@array/next_chord_modes"
+            android:contentDescription="@string/accessibility_next_chord_mode"
             app:useSimpleSummaryProvider="true"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
             android:key="beats_per_bar"
             android:title="@string/beats_per_bar"
+            android:contentDescription="@string/accesssibility_beats_per_bar"
             android:min="1"
             android:max="7"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
             android:key="bars_per_chord"
             android:title="@string/bars_per_chord"
+            android:contentDescription="@string/accesssibility_bars_per_chord"
             android:min="1"
             android:max="8"
             />
@@ -54,10 +60,12 @@
         <androidx.preference.SwitchPreference
             android:key="metronome_sounds"
             android:title="@string/metronome_sounds"
+            android:contentDescription="@string/accessibility_metronome_sounds"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
             android:key="metronome_volume"
             android:title="@string/metronome_volume"
+            android:contentDescription="@string/accessibility_metronome_volume"
             android:min="0"
             android:max="100"
             />
@@ -65,12 +73,14 @@
             android:key="metronome_accent"
             android:title="@string/metronome_accent"
             android:entries="@array/metronome_sounds"
+            android:contentDescription="@string/accessibility_metronome_accent"
             app:useSimpleSummaryProvider="true"
             />
         <androidx.preference.DropDownPreference
             android:key="metronome_click"
             android:title="@string/metronome_click"
             android:entries="@array/metronome_sounds"
+            android:contentDescription="@string/accessibility_metronome_click"
             app:useSimpleSummaryProvider="true"
             />
     </androidx.preference.PreferenceCategory>
@@ -82,10 +92,12 @@
         <androidx.preference.SwitchPreference
             android:key="root_note_sounds"
             android:title="@string/play_root_notes"
+            android:contentDescription="@string/accessibility_play_root_notes"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
             android:key="root_note_volume"
             android:title="@string/root_note_volume"
+            android:contentDescription="@string/accessibility_root_note_volume"
             android:min="0"
             android:max="100"
             />
@@ -93,11 +105,13 @@
             android:key="root_note_instrument"
             android:title="@string/root_note_instrument"
             android:entries="@array/root_note_instruments"
+            android:contentDescription="@string/accessibility_root_note_instrument"
             app:useSimpleSummaryProvider="true"
             />
         <androidx.preference.SwitchPreference
             android:key="root_note_walking"
             android:title="@string/root_note_walking"
+            android:contentDescription="@string/accessibility_root_note_walking"
             />
     </androidx.preference.PreferenceCategory>
 
@@ -108,10 +122,12 @@
         <androidx.preference.SwitchPreference
             android:key="chord_comp_sounds"
             android:title="@string/play_accompaniment"
+            android:contentDescription="@string/accessibility_play_accompaniment"
             />
         <nz.co.rylogic.allkeys.SeekBarPreferenceRange
             android:key="chord_comp_volume"
             android:title="@string/accompaniment_volume"
+            android:contentDescription="@string/accessibility_accompaniment_volume"
             android:min="0"
             android:max="100"
             />
@@ -125,11 +141,13 @@
             android:key="theme"
             android:title="@string/theme"
             android:entries="@array/themes"
+            android:contentDescription="@string/accessibility_theme"
             app:useSimpleSummaryProvider="true"
             />
         <androidx.preference.Preference
             android:key="credits"
             android:title="@string/credits_title"
+            android:contentDescription="@string/accessibility_credits"
             />
     </androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>

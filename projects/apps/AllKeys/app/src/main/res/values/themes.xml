@@ -2,22 +2,32 @@
     <!-- Base application theme. -->
     <style name="Theme.AllKeys" parent="Theme.Material3.DayNight.NoActionBar">
 
+        <item name="android:color">@color/primary</item>
+        <item name="android:colorAccent">@color/primary_variant</item>
+        <item name="android:textColor">@color/text_color</item>
+
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_variant</item>
-        <item name="colorOnPrimary">@color/color_on_primary</item>
 
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorSecondaryVariant">@color/secondary_variant</item>
-        <item name="colorOnSecondary">@color/color_on_secondary</item>
 
-        <item name="colorOnSurface">@color/text_color_on_surface</item>
-
-        <item name="android:textColorPrimary">@color/text_color_primary</item>
-        <item name="android:textColorSecondary">@color/text_color_primary</item>
-        <item name="android:textColor">@color/text_color</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-
+        <item name="android:statusBarColor">@color/status_bar_background</item>
+        <item name="android:toolbarStyle">@style/Theme.AllKeys.ToolbarStyle</item>
+        <item name="alertDialogTheme">@style/Theme.AllKeys.Dialog</item>
     </style>
+
+    <!-- Custom toolbar style -->
+    <style name="Theme.AllKeys.ToolbarStyle" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@color/primary</item>
+    </style>
+
+    <!-- Custom dialog theme -->
+    <style name="Theme.AllKeys.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/primary_variant</item>
+        <item name="colorSecondary">@color/primary_variant</item>
+    </style>
+
 </resources>

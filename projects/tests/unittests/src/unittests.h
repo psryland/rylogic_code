@@ -1,6 +1,7 @@
 // This is a generated file
 #pragma once
 #include <sdkddkver.h>
+#include <winsock2.h> // Include winsock2.h before windows.h
 
 // Headers to unit test
 #include "pr\app\default_setup.h"

@@ -20,6 +20,7 @@
         android:background="@color/panel_background"
         android:minWidth="@dimen/chord_panel_min_size"
         android:minHeight="@dimen/chord_panel_min_size"
+        android:contentDescription="@string/accessibility_chord_panel"
         >
         <TextView
             android:id="@+id/text_chord"

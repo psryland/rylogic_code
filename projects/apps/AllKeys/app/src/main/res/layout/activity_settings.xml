@@ -11,16 +11,16 @@
         android:layout_height="wrap_content"
         android:theme="@style/Theme.AllKeys"
         >
+
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?attr/colorPrimary"
+            android:background="@color/primary"
             android:elevation="4dp"
             android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
             app:popupTheme="@style/Theme.AllKeys"
-            app:title="@string/label_settings"
-            />
+            app:title="@string/label_settings" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout

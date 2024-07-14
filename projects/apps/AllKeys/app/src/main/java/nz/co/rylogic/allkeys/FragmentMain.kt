@@ -273,7 +273,7 @@ class FragmentMain : Fragment(), PropertyChangeListener, SharedPreferences.OnSha
 	{
 		for (i in mBeats.indices)
 		{
-			mBeats[i].background = if (i == beat) mBeat1 else mBeat0
+			mBeats[i].background = if (i == beat) mBeat0 else mBeat1
 			mBeats[i].visibility = if (i < mSettings.beatsPerBar) View.VISIBLE else View.GONE
 		}
 	}

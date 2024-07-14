@@ -1,9 +1,10 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <!-- Globals -->
   <Import Project="props\globals.props" />
-	<PropertyGroup Label="Globals">
+
+  <!-- Globals -->
+  <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{0618738D-AEAB-4643-9953-BE49459BCBA1}</ProjectGuid>
     <ProjectName>view3d</ProjectName>
@@ -35,6 +36,7 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="props\tools.props" />
   <Import Project="props\lib.props" />
   <Import Project="props\fxc_build_rule.props" />
 

@@ -80,32 +80,36 @@ def OpenInVS(file:str, line:int):
 	return
 
 # Add a bookmark
-def Add(marks_file:str, label:str, file:str, line:int, group:Optional[str] = None):
+def Add(marks_file:str, label:str, file:str, line:str, group:Optional[str] = None):
 
 	if label is None or len(label) == 0:
 		raise ValueError("Missing label")
 	if file is None or len(file) == 0:
 		raise ValueError("Missing file")
-	if line is None:
+	if line is None or len(line) == 0:
 		raise ValueError("Missing line")
 	
-	marks = _LoadMarks(marks_file)
-
+	line = int(line)
 	group = group if group is not None else GroupOther
+	
+	marks = _LoadMarks(marks_file)
 	marks.setdefault(group, [])
 
 	# Remove for duplicates
 	marks[group] = [mark for mark in marks[group] if Path(mark.file) != Path(file) or mark.line != line]
+
+	# Add the new bookmark
 	marks[group].append(Bookmark(label, file, line))
 
 	_SaveMarks(marks_file, marks)
 	return
 
 # Remove a bookmark
-def Remove(marks_file:str, label:Optional[str], file:Optional[str], line:Optional[int], group:Optional[str] = None):
+def Remove(marks_file:str, label:Optional[str], file:Optional[str], line:Optional[str], group:Optional[str] = None):
 
 	marks = _LoadMarks(marks_file)
 
+	# Ignore if group not found
 	group = group if group is not None else GroupOther
 	if group not in marks:
 		return
@@ -117,9 +121,12 @@ def Remove(marks_file:str, label:Optional[str], file:Optional[str], line:Optiona
 	# Remove matching file and line
 	if file is not None:
 		if line is not None:
-			marks[group] = [mark for mark in marks[group] if Path(mark.file) != Path(file) or mark.line != line]
+			file = Path(file)
+			line = int(line)
+			marks[group] = [mark for mark in marks[group] if Path(mark.file) != file or mark.line != line]
 		else:
-			marks[group] = [mark for mark in marks[group] if Path(mark.file) != Path(file)]
+			file = Path(file)
+			marks[group] = [mark for mark in marks[group] if Path(mark.file) != file]
 
 	_SaveMarks(marks_file, marks)
 	return
@@ -128,10 +135,12 @@ def Remove(marks_file:str, label:Optional[str], file:Optional[str], line:Optiona
 def Show(marks_file:str):
 
 	marks = _LoadMarks(marks_file)
+
 	for group in marks:
 		print(f"Group: {group}")
 		for mark in marks[group]:
 			print(f"\t{mark.label} - {mark.file}({mark.line})")
+
 	return
 
 # Display a UI for managing bookmarks
@@ -140,9 +149,8 @@ def ShowUI(marks_file:str, spawn:bool = False, switches:Dict[str, Any] = {}):
 	# Spawn the UI in a separate process
 	if spawn:
 		switches.pop("-spawn", None)
-		switches.pop("-marks", None)
 		args = [f"{k}={v}" for k, v in switches.items()]
-		subprocess.Popen([sys.executable, __file__, "ui", f"-marks={marks_file}"] + args, creationflags=subprocess.DETACHED_PROCESS)
+		subprocess.Popen([sys.executable, __file__, "ui"] + args, creationflags=subprocess.DETACHED_PROCESS)
 		return
 	
 	class UI(FileSystemEventHandler):
@@ -282,6 +290,71 @@ def ShowUI(marks_file:str, spawn:bool = False, switches:Dict[str, Any] = {}):
 	UI().Run()
 	return
 
+# Syntax help
+def ShowHelp():
+	print(
+		"Utility for maintaining bookmarks in a project\n"
+		"Usage:\n"
+		"  Bookmark.py add|remove|list|ui|help <options>\n"
+		"Options:\n"
+		"  -label=<bookmark_name>  The name of the bookmark\n"
+		"  -file=<file_name>       The file to bookmark\n"
+		"  -line=<line_number>     The line number to bookmark\n"
+		"  -group=<group_name>     The group to add the bookmark to\n"
+		"  -marks=<bookmarks_file> The file to store the bookmarks\n"
+		"  -spawn                  Spawn the UI in a separate process\n"
+		"  -vscode                 Open bookmarks in Visual Studio Code\n"
+		"  -vs                     Open bookmarks in Visual Studio\n"
+		"\n"
+		"Notes:\n"
+		"  The '-marks' option is optional. If not given, the bookmarks file is searched for\n"
+		"  using the following paths:\n"
+		"    <current-directory>/.bookmarks.json\n"
+		"    <current-directory>/.vs/.bookmarks.json  (if -vs option is given)\n"
+		"    <current-directory>/.vscode/.bookmarks.json (if -vscode option is given)\n"
+		"    ~/.bookmarks.json\n"
+		"\n"
+		"Examples:\n"
+		"  Bookmark.py add -label=<bookmark_name> -file=<file_name> -line=<line_number> [-group=<group_name>] [-marks=<bookmarks_file>]\n"
+		"     Add a bookmark to the list\n"
+		"  Bookmark.py remove [-label=<bookmark_name>] [-file=<file_name>] [-line=<line_number>] [-group=<group_name>] [-marks=<bookmarks_file>]\n"
+		"     Remove a bookmark from the list by label, file, or file:line\n"
+		"  Bookmark.py list -marks=<bookmarks_file>\n"
+		"     List all bookmarks\n"
+		"  Bookmark.py ui -marks=<bookmarks_file> [-spawn] [-vscode] [-vs]\n"
+		"     Show the UI and show bookmarks in Visual Studio Code or Visual Studio\n"
+	)
+	return
+
+# Find the marks file to operate on
+def GetMarksFile(switches:Dict[str, Any]) -> str:
+	
+	# Check the command line
+	marks_file = switches["-marks"] if "-marks" in switches else None
+	if marks_file is not None and os.path.exists(marks_file):
+		return os.path.abspath(marks_file)
+
+	# Look in the local directory
+	if marks_file is None and os.path.exists('.bookmarks.json'):
+		return os.path.abspath('.bookmarks.json')
+	
+	# Look in the .vs directory
+	if "-vs" in switches and os.path.exists('.vs/.bookmarks.json'):
+		return  os.path.abspath('.vs/.bookmarks.json')
+
+	# Look in the .vscode directory
+	if "-vscode" in switches and os.path.exists('.vscode/.bookmarks.json'):
+		return os.path.abspath('.vscode/.bookmarks.json')
+
+	# Look in the home directory
+	if os.path.exists(os.path.expanduser("~/.bookmarks.json")):
+		return os.path.expanduser("~/.bookmarks.json")
+	
+	# Create one in the home directory
+	marks_file = os.path.expanduser("~/.bookmarks.json")
+	_SaveMarks(marks_file, {})
+	return marks_file
+
 # Run a bookmarks command
 def Cmd(args:List[str]):
 
@@ -298,25 +371,26 @@ def Cmd(args:List[str]):
 		else:
 			raise ValueError(f"Unexpected argument: {arg}")
 
-	# Get the marks file
-	marks_file = switches["-marks"] if "-marks" in switches else 'bookmarks.txt'
-	marks_file = os.path.abspath(marks_file)
-
+	# Default to UI mode
 	if cmd is None:
-		raise ValueError("Missing command")
+		cmd = "ui"
 
+	# Get the marks file
+	marks_file = GetMarksFile(switches)
+
+	# Run the command
 	if cmd == "add":
 		label = switches["-label"] if "-label" in switches else "New Bookmark"
 		file = switches["-file"] if "-file" in switches else ""
-		line = int(switches["-line"]) if "-line" in switches else 0
+		line = switches["-line"] if "-line" in switches else "0"
 		group = switches["-group"] if "-group" in switches else None
-		Add(marks_file, label, file, line, group)
+		Add(marks_file, label, file, int(line), group)
 		return
 
 	if cmd == "remove":
 		label = switches["-label"] if "-label" in switches else None
 		file = switches["-file"] if "-file" in switches else None
-		line = int(switches["-line"]) if "-line" in switches else None
+		line = switches["-line"] if "-line" in switches else None
 		group = switches["-group"] if "-group" in switches else None
 		Remove(marks_file, label, file, line, group)
 		return
@@ -330,13 +404,12 @@ def Cmd(args:List[str]):
 		ShowUI(marks_file, spawn, switches)
 		return
 
+	if cmd == "help":
+		ShowHelp()
+		return
+
 # Entry point
 if __name__ == "__main__":
-	
-	# Default to UI mode
-	if len(sys.argv) == 1:
-		bm_file = os.path.expanduser("~/.bookmarks.json")
-		sys.argv = ["", "ui", f"-marks={bm_file}", "-vscode"]
 	
 	# Examples:
 	if False:
