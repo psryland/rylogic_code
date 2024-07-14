@@ -176,6 +176,14 @@ namespace pr::rdr12
 				sizeof(TElement) * pos.x);
 		}
 
+		// Return a pointer to the end of the staging buffer memory for the given mip level.
+		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
+		template <typename TElement> TElement* end(int mip = 0) const
+		{
+			auto const& layout = m_layout[mip];
+			return ptr<TElement>(mip) + layout.Footprint.RowPitch * layout.Footprint.Height * layout.Footprint.Depth;
+		}
+
 		// Copy data from the given images to the staging buffer. Each image is a mip.
 		void Write(std::span<Image const> images)
 		{

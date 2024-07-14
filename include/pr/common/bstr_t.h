@@ -11,9 +11,10 @@
 namespace pr
 {
 	// An RAII wrapper for BSTR
-	struct bstr_t
+	struct BSTR_t
 	{
 		// Notes:
+		//  There is a macro named 'bstr_t' in one of the com headers... :(
 		//  BSTR's are allocated on a special heap that retains the length of the allocation.
 		//  This means BSTR's can contain embedded '\0'.
 		//  BSTR's are wchar_t strings
@@ -21,33 +22,33 @@ namespace pr
 		BSTR m_str;
 		bool m_own;
 
-		bstr_t()
+		BSTR_t()
 			:m_str()
 			,m_own(true)
 		{}
-		bstr_t(BSTR str, bool own)
+		BSTR_t(BSTR str, bool own)
 			:m_str(str)
 			,m_own(own)
 		{}
-		bstr_t(bstr_t const& rhs)
+		BSTR_t(BSTR_t const& rhs)
 			:m_str(SysAllocString(rhs))
 			,m_own(true)
 		{}
-		bstr_t(bstr_t&& rhs) noexcept
+		BSTR_t(BSTR_t&& rhs) noexcept
 			:m_str(rhs.m_str)
 			,m_own(rhs.m_own)
 		{
 			rhs.m_str = nullptr;
 			rhs.m_own = false;
 		}
-		~bstr_t()
+		~BSTR_t()
 		{
 			if (m_str && m_own)
 				SysFreeString(m_str);
 		}
 
 		// Assignment
-		bstr_t& operator = (bstr_t const& rhs)
+		BSTR_t& operator = (BSTR_t const& rhs)
 		{
 			if (&rhs == this) return *this;
 			if (m_str && m_own) SysFreeString(m_str);
@@ -55,7 +56,7 @@ namespace pr
 			m_own = true;
 			return *this;
 		}
-		bstr_t& operator = (bstr_t&& rhs) noexcept
+		BSTR_t& operator = (BSTR_t&& rhs) noexcept
 		{
 			if (&rhs == this) return *this;
 			std::swap(m_str, rhs.m_str);

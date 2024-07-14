@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <!-- Globals -->
@@ -33,6 +33,7 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\..\..\build\props\tools.props" />
   <Import Project="..\..\..\build\props\app.props" />
 
   <!-- Build Options -->
@@ -56,15 +57,15 @@
   <ItemGroup>
     <ResourceCompile Include="res\resource.rc" />
     <ClInclude Include="res\resource.h" />
-    <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\context_menu.h" />
-    <ClInclude Include="..\include\pr\gui\gdiplus.h" />
-    <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\progress_ui.h" />
-    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
-    <ClInclude Include="..\include\pr\gui\vt100.h" />
-    <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\colour_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\context_menu.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\gdiplus.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\graph_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\progress_ui.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\view3d_panel.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\vt100.h" />
+    <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="src\about.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\modeless.h" />

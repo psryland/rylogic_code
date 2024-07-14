@@ -55,7 +55,7 @@ namespace pr::rdr12
 		// Enable the debug layer
 		RdrSettings& DebugLayer(bool enable = true)
 		{
-			if (m_adapter.ptr != nullptr) Throw(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
+			if (m_adapter.ptr != nullptr) Check(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
 			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
 			return *this;
 		}
@@ -152,7 +152,7 @@ namespace pr::rdr12
 		}
 		WndSettings& Size(iv2 const& area)
 		{
-			Throw(m_output.ptr != nullptr, "Set the output before setting the display mode");
+			Check(m_output.ptr != nullptr, "Set the output before setting the display mode");
 			return Mode(m_output.FindClosestMatchingMode(DisplayMode(area)));
 		}
 		WndSettings& Size(int w, int h)
@@ -162,7 +162,7 @@ namespace pr::rdr12
 		WndSettings& Size(HWND hwnd)
 		{
 			RECT rect;
-			Throw(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
+			Check(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
 			return Size(iv2(rect.right - rect.left, rect.bottom - rect.top));
 		}
 		WndSettings& MutliSampling(int count)

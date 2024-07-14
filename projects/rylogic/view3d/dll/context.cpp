@@ -661,7 +661,7 @@ namespace view3d
 				else
 				{
 					// Return false if the handler did not handle the given code
-					pr::bstr_t res, err;
+					pr::BSTR_t res, err;
 					if (m_handler(code, m_support.c_str(), res, err) == 0)
 						return false;
 

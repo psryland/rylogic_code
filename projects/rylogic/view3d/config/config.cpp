@@ -12,7 +12,7 @@ namespace pr::rdr
 	{
 		// Create a DXGIFactory
 		D3DPtr<IDXGIFactory> factory;
-		pr::Throw(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
+		pr::Check(CreateDXGIFactory(__uuidof(IDXGIFactory) ,(void**)&factory.m_ptr));
 
 		// Enumerate each adapter on the system
 		D3DPtr<IDXGIAdapter> adapter;
@@ -25,7 +25,7 @@ namespace pr::rdr
 	:m_adapter(adapter)
 	{
 		// Read the description
-		pr::Throw(m_adapter->GetDesc(&m_desc));
+		pr::Check(m_adapter->GetDesc(&m_desc));
 
 		// Enumerate the outputs
 		D3DPtr<IDXGIOutput> output;
@@ -38,7 +38,7 @@ namespace pr::rdr
 	:m_output(output)
 	{
 		// Read the description
-		pr::Throw(m_output->GetDesc(&m_desc));
+		pr::Check(m_output->GetDesc(&m_desc));
 	}
 
 	// Return the number of modes for a given surface format
@@ -46,7 +46,7 @@ namespace pr::rdr
 	{
 		// Get the number of display modes supported
 		UINT mode_count = 0;
-		pr::Throw(m_output->GetDisplayModeList(format, 0, &mode_count, 0));
+		pr::Check(m_output->GetDisplayModeList(format, 0, &mode_count, 0));
 		return mode_count;
 	}
 
@@ -57,14 +57,14 @@ namespace pr::rdr
 		UINT mode_count = ModeCount(format);
 		modes.resize(mode_count);
 		if (!modes.empty())
-			pr::Throw(m_output->GetDisplayModeList(format, 0, &mode_count, &modes[0]));
+			pr::Check(m_output->GetDisplayModeList(format, 0, &mode_count, &modes[0]));
 	}
 
 	// Return the best match for
 	DisplayMode SystemConfig::Output::FindClosestMatchingMode(DisplayMode const& ideal) const
 	{
 		DisplayMode close;
-		pr::Throw(m_output->FindClosestMatchingMode(&ideal, &close, 0));
+		pr::Check(m_output->FindClosestMatchingMode(&ideal, &close, 0));
 		return close;
 	}
 }

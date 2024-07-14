@@ -423,12 +423,10 @@ namespace pr::common
 			TestEnum1 out; s >> out;
 			PR_CHECK(out, TestEnum1::A);
 		}
-		PR_THROWS([&]()
 		{
-			volatile int i = 4;
-			Enum<TestEnum3>::From(i); // invalid conversion, 4 is not an enum value
-		}, std::exception);
-
+			volatile int i = 4; // invalid conversion, 4 is not an enum value
+			PR_THROWS(Enum<TestEnum3>::From(i), std::exception);
+		}
 		char const* names[] = {"A","B","C"};
 		TestEnum1 values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
 		for (int i = 0; i != Enum<TestEnum1>::NumberOf; ++i)

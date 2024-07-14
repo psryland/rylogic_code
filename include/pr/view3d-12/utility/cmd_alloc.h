@@ -137,8 +137,8 @@ namespace pr::rdr12
 
 				// Create a command allocator
 				D3DPtr<ID3D12CommandAllocator> cmd_alloc;
-				Throw(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&cmd_alloc.m_ptr));
-				Throw(cmd_alloc->SetName(L"CmdAllocPool:CmdAlloc"));
+				Check(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&cmd_alloc.m_ptr));
+				Check(cmd_alloc->SetName(L"CmdAllocPool:CmdAlloc"));
 				m_pool.emplace_back(cmd_alloc, sync_point, nullptr);
 			}
 
@@ -151,7 +151,7 @@ namespace pr::rdr12
 			alloc.UseThisThread();
 			alloc.m_sync_point = m_gsync->LastAddedSyncPoint() + 1;
 			alloc.m_pool = this;
-			Throw(alloc->Reset()); // Reset it ready for use
+			Check(alloc->Reset()); // Reset it ready for use
 			return std::move(alloc);
 		}
 

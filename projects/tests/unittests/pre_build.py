@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Generate a header file that includes all
@@ -46,6 +46,7 @@ try:
 			"// This is a generated file\n"
 			"#pragma once\n"
 			"#include <sdkddkver.h>\n"
+			"#include <winsock2.h> // Include winsock2.h before windows.h\n"
 			"\n"
 			"// Headers to unit test\n"
 			)

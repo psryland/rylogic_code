@@ -333,7 +333,7 @@ namespace pr::rdr12
 	template <HasPrivateData T> void DebugName(T* res, char const* name)
 	{
 		std::string_view res_name(name);
-		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
+		Check(res->SetPrivateData(WKPDID_D3DDebugObjectName, s_cast<UINT>(res_name.size()), res_name.data()));
 	}
 	template <HasPrivateData T> char const* DebugName(D3DPtr<T> res)
 	{
@@ -360,7 +360,7 @@ namespace pr::rdr12
 	template <HasPrivateData T> void DebugColour(T* res, Colour32 colour)
 	{
 		extern GUID const Guid_DebugColour;
-		Throw(res->SetPrivateData(Guid_DebugColour, sizeof(colour), &colour));
+		Check(res->SetPrivateData(Guid_DebugColour, sizeof(colour), &colour));
 	}
 	template <HasPrivateData T> Colour32 DebugColour(D3DPtr<T> res)
 	{

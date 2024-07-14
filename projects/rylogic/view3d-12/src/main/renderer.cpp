@@ -85,33 +85,33 @@ namespace pr::rdr12
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
 				D3DPtr<ID3D12Debug> dbg;
-				Throw(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
+				Check(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
 				dbg->EnableDebugLayer();
 
 				if (AllSet(m_settings.m_options, ERdrOptions::DeviceGPUDebug))
 				{
 					D3DPtr<ID3D12Debug1> dbg1;
-					Throw(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
+					Check(dbg->QueryInterface<ID3D12Debug1>(&dbg1.m_ptr));
 					dbg1->SetEnableGPUBasedValidation(true);
 				}
 			}
 
 			// Create the d3d device
 			D3DPtr<ID3D12Device> device;
-			Throw(D3D12CreateDevice(m_settings.m_adapter.ptr.get(), m_settings.m_feature_level, __uuidof(ID3D12Device), (void**)&device.m_ptr));
-			Throw(device->QueryInterface<ID3D12Device4>(&m_d3d_device.m_ptr));
+			Check(D3D12CreateDevice(m_settings.m_adapter.ptr.get(), m_settings.m_feature_level, __uuidof(ID3D12Device), (void**)&device.m_ptr));
+			Check(device->QueryInterface<ID3D12Device4>(&m_d3d_device.m_ptr));
 
 			// More debugging now the device exists
 			if (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug))
 			{
 				D3DPtr<ID3D12InfoQueue> info;
-				Throw(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
+				Check(device->QueryInterface<ID3D12InfoQueue>(&info.m_ptr));
 
 				if (AllSet(m_settings.m_options, ERdrOptions::BreakOnErrors))
 				{
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-					Throw(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+					Check(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
+					Check(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+					Check(info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
 				}
 
 				// Suppress the CREATERESOURCE_STATE_IGNORED warning because ID3D11On12 is generating these.
@@ -139,7 +139,7 @@ namespace pr::rdr12
 						.pIDList = &hide[0],
 					}
 				};
-				Throw(info->AddStorageFilterEntries(&filter));
+				Check(info->AddStorageFilterEntries(&filter));
 		
 				// These are work arounds for issues with integrated graphics chips
 				/*
@@ -167,11 +167,11 @@ namespace pr::rdr12
 				.NodeMask = 0,
 			};
 			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_gfx_queue.m_ptr));
+			Check(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_gfx_queue.m_ptr));
 			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_com_queue.m_ptr));
+			Check(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_com_queue.m_ptr));
 			queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			Throw(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_cpy_queue.m_ptr));
+			Check(m_d3d_device->CreateCommandQueue(&queue_desc, __uuidof(ID3D12CommandQueue), (void**)&m_cpy_queue.m_ptr));
 
 			// Check dlls,DX features,etc required to run the renderer are available.
 			// Check the given settings are valid for the current adaptor.
@@ -188,17 +188,17 @@ namespace pr::rdr12
 			D3DPtr<ID3D11Device> dx11_device;
 			IUnknown* gfx_queue = m_gfx_queue.get();
 			UINT dx11_device_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | (AllSet(m_settings.m_options, ERdrOptions::DeviceDebug) ? D3D11_CREATE_DEVICE_DEBUG : 0);
-			Throw(D3D11On12CreateDevice(m_d3d_device.get(), dx11_device_flags, nullptr, 0, &gfx_queue, 1, 0, &dx11_device.m_ptr, &m_dx11_dc.m_ptr, nullptr));
-			Throw(dx11_device->QueryInterface<ID3D11On12Device>(&m_dx11_device.m_ptr));
+			Check(D3D11On12CreateDevice(m_d3d_device.get(), dx11_device_flags, nullptr, 0, &gfx_queue, 1, 0, &dx11_device.m_ptr, &m_dx11_dc.m_ptr, nullptr));
+			Check(dx11_device->QueryInterface<ID3D11On12Device>(&m_dx11_device.m_ptr));
 
 			// Create the direct2d factory
 			D2D1_FACTORY_OPTIONS d2dfactory_options = { .debugLevel = AllSet(m_settings.m_options, ERdrOptions::D2D1_DebugInfo) ? D2D1_DEBUG_LEVEL_INFORMATION  : D2D1_DEBUG_LEVEL_NONE };
-			Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
+			Check(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory2), &d2dfactory_options, (void**)&m_d2dfactory.m_ptr));
 
 			// Create a D2D device
 			D3DPtr<IDXGIDevice> dxgi_device;
-			Throw(m_dx11_device->QueryInterface<IDXGIDevice>(&dxgi_device.m_ptr));
-			Throw(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
+			Check(m_dx11_device->QueryInterface<IDXGIDevice>(&dxgi_device.m_ptr));
+			Check(m_d2dfactory->CreateDevice(dxgi_device.get(), &m_d2d_device.m_ptr));
 		}
 		catch (...)
 		{
@@ -230,8 +230,8 @@ namespace pr::rdr12
 				// Note: this will report that the D3D device is still live
 				/*
 				D3DPtr<ID3D12Debug> dbg;
-				Throw(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
-				Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+				Check(m_d3d_device->QueryInterface(__uuidof(ID3D12Debug), (void**)&dbg.m_ptr));
+				Check(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
 				*/
 			}
 			PR_EXPAND(PR_DBG_RDR, auto rcnt = m_d3d_device.RefCount());
@@ -273,7 +273,7 @@ namespace pr::rdr12
 
 			// Create a dummy window for BeginInvoke functionality
 			m_dummy_hwnd = ::CreateWindowExW(0, (LPCWSTR)MAKEINTATOM(atom), L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, nullptr, nullptr);
-			Throw(m_dummy_hwnd != nullptr, HrMsg(GetLastError()).c_str());
+			Check(m_dummy_hwnd != nullptr, HrMsg(GetLastError()).c_str());
 			Poll(); // Start the poll timer
 		}
 		catch (...)
@@ -348,10 +348,10 @@ namespace pr::rdr12
 	DXGI_QUERY_VIDEO_MEMORY_INFO Renderer::GPUMemoryInfo() const
 	{
 		D3DPtr<IDXGIAdapter3> adapter;
-		Throw(m_state.m_settings.m_adapter.ptr->QueryInterface<IDXGIAdapter3>(&adapter.m_ptr));
+		Check(m_state.m_settings.m_adapter.ptr->QueryInterface<IDXGIAdapter3>(&adapter.m_ptr));
 
 		DXGI_QUERY_VIDEO_MEMORY_INFO info = {};
-		Throw(adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info));
+		Check(adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &info));
 		return info;
 	}
 

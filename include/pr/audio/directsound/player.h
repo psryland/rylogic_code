@@ -73,7 +73,7 @@ namespace pr::sound
 			m_buf = buf;
 			m_buf_size = GetBufferSize(buf);
 			SetVolume(m_volume);
-			Throw(m_buf->SetCurrentPosition(0));
+			Check(m_buf->SetCurrentPosition(0));
 			Update(true);
 		}
 
@@ -84,7 +84,7 @@ namespace pr::sound
 				return false;
 
 			DWORD status;
-			Throw(m_buf->GetStatus(&status));
+			Check(m_buf->GetStatus(&status));
 			return (status & DSBSTATUS_PLAYING) != 0;
 		}
 
@@ -102,7 +102,7 @@ namespace pr::sound
 			// The dsound buffer is played as looping because its size is independent of the src data size.
 			// For non-looped sounds we will call stop during Update() after all data has been read from the stream.
 			PR_ASSERT(PR_DBG_SND, m_buf, "");
-			Throw(m_buf->Play(0, priority, DSBPLAY_LOOPING));
+			Check(m_buf->Play(0, priority, DSBPLAY_LOOPING));
 			m_src_end = false;
 			m_loop = loop;
 		}
@@ -113,7 +113,7 @@ namespace pr::sound
 		void Stop()
 		{
 			if (!m_buf) return;
-			Throw(m_buf->Stop());
+			Check(m_buf->Stop());
 		}
 
 		// Transfers more data from the source stream into the dsound buffer
@@ -128,7 +128,7 @@ namespace pr::sound
 			// Get the read/write positions in the dsound buffer and the space that is available for filling
 			// Note: wpos here is the next byte that can be written, not where we last finished writing to.
 			DWORD rpos;
-			pr::Throw(m_buf->GetCurrentPosition(&rpos, 0));
+			pr::Check(m_buf->GetCurrentPosition(&rpos, 0));
 			size_t ahead = (m_pos - rpos + m_buf_size) % m_buf_size; // This is how far ahead of the read position our write position is
 				
 			// If we've reached the end of the source, and 'rpos' has moved past 'm_pos'

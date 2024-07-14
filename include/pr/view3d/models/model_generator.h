@@ -1563,11 +1563,11 @@ namespace pr::rdr
 
 			// Create the default font
 			D3DPtr<IDWriteTextFormat> text_format;
-			Throw(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
+			Check(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
 
 			// Create a text layout interface
 			D3DPtr<IDWriteTextLayout> text_layout;
-			Throw(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
+			Check(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
 			text_layout->SetTextAlignment(layout.m_align_h);
 			text_layout->SetParagraphAlignment(layout.m_align_v);
 			text_layout->SetWordWrapping(layout.m_word_wrapping);
@@ -1594,7 +1594,7 @@ namespace pr::rdr
 
 			// Measure the formatted text
 			DWRITE_TEXT_METRICS metrics;
-			Throw(text_layout->GetMetrics(&metrics));
+			Check(text_layout->GetMetrics(&metrics));
 
 			// The size of the text in device independent pixels, including padding.
 			auto dip_size = v2(
@@ -1630,7 +1630,7 @@ namespace pr::rdr
 				if (fmt.m_font.m_colour != def.m_font.m_colour)
 				{
 					D3DPtr<ID2D1SolidColorBrush> brush;
-					Throw(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+					Check(dc->CreateSolidColorBrush(To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
 					brush->SetOpacity(fmt.m_font.m_colour.a);
 
 					// Apply the colour
@@ -1640,7 +1640,7 @@ namespace pr::rdr
 
 			// Create the default text colour brush
 			D3DPtr<ID2D1SolidColorBrush> brush;
-			Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
+			Check(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
 			brush->SetOpacity(def.m_font.m_colour.a);
 
 			// Draw the string
@@ -1648,7 +1648,7 @@ namespace pr::rdr
 			dc->Clear(&bk);
 			dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
 			dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
-			Throw(dc->EndDraw());
+			Check(dc->EndDraw());
 
 			// Create a quad using this texture
 			auto [vcount, icount] = geometry::QuadSize(1);

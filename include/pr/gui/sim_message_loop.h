@@ -164,7 +164,7 @@ namespace pr::gui
 				int result = ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE);
 				if (result != 0 && msg.message != WM_QUIT)
 				{
-					Throw(result > 0, "PeekMessage failed");
+					Check(result > 0, "PeekMessage failed");
 
 					// Pass the message to each filter. The last filter is this message loop which always handles the message.
 					for (auto filter : m_filters)

@@ -155,7 +155,7 @@ namespace pr::rdr
 		}
 		catch (ScriptException const& e)
 		{
-			throw Exception<HRESULT>(E_INVALIDARG, e.what());
+			throw std::invalid_argument(e.what());
 		}
 	}
 }

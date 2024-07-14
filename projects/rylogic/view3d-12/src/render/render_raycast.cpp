@@ -171,8 +171,8 @@ namespace pr::rdr12
 			bdesc.Usage = D3D11_USAGE_DEFAULT;
 			bdesc.BindFlags = D3D11_BIND_STREAM_OUTPUT;
 			bdesc.ByteWidth = MaxIntercepts * sizeof(Intercept);
-			pr::Throw(device->CreateBuffer(&bdesc, &init_data, &m_buf_results.m_ptr));
-			pr::Throw(device->CreateBuffer(&bdesc, &init_data, &m_buf_zeros.m_ptr));
+			pr::Check(device->CreateBuffer(&bdesc, &init_data, &m_buf_results.m_ptr));
+			pr::Check(device->CreateBuffer(&bdesc, &init_data, &m_buf_zeros.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_buf_results.get(), "RayCast Output Intercepts"));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_buf_zeros.get(), "RayCast Output Zero"));
 		}
@@ -191,7 +191,7 @@ namespace pr::rdr12
 			for (int i = 0, iend = m_continuous ? _countof(m_buf_stage) : 1; i != iend; ++i)
 			{
 				auto& stage = m_buf_stage[i];
-				pr::Throw(device->CreateBuffer(&bdesc, nullptr, &stage.m_ptr));
+				pr::Check(device->CreateBuffer(&bdesc, nullptr, &stage.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(stage.get(), "RayCast Staging Buffer"));
 			}
 		}

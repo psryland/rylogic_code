@@ -27,12 +27,12 @@ namespace pr::rdr12
 		Store const& States() const { return m_states; }
 		ResStateData const& Get(ID3D12Resource const* resource) const
 		{
-			Throw(resource != nullptr, "Resource is null");
+			Check(resource != nullptr, "Resource is null");
 			return m_states.at(resource);
 		}
 		ResStateData& Get(ID3D12Resource const* resource)
 		{
-			Throw(resource != nullptr, "Resource is null");
+			Check(resource != nullptr, "Resource is null");
 			auto iter = m_states.find(resource);
 			if (iter == end(m_states))
 			{

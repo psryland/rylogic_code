@@ -28,7 +28,7 @@ namespace pr::rdr12
 		if (hr == E_INVALIDARG)
 			return 0;
 
-		Throw(hr);
+		Check(hr);
 		return opts.NumQualityLevels;
 	}
 
@@ -511,6 +511,11 @@ namespace pr::rdr12
 	// Get/Set the default state for a resource
 	D3D12_RESOURCE_STATES DefaultResState(ID3D12Resource const* res)
 	{
+		#if PR_DBG
+		auto name = DebugName(res);
+		(void)name;
+		#endif
+
 		UINT size(sizeof(D3D12_RESOURCE_STATES));
 		char bytes[sizeof(D3D12_RESOURCE_STATES)];
 		auto hr = const_cast<ID3D12Resource*>(res)->GetPrivateData(Guid_DefaultResourceState, &size, &bytes[0]);
@@ -522,7 +527,7 @@ namespace pr::rdr12
 	{
 		// Assume 'Common' state and don't store it
 		if (state == D3D12_RESOURCE_STATE_COMMON) return;
-		Throw(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
+		Check(res->SetPrivateData(Guid_DefaultResourceState, s_cast<UINT>(sizeof(D3D12_RESOURCE_STATES)), &state));
 	}
 
 	// Parse an embedded resource string of the form: "@<hmodule|module_name>:<res_type>:<res_name>"

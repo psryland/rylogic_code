@@ -98,7 +98,7 @@ namespace pr::rdr12
 		auto texture_flags = 0;
 		{
 			// Has diffuse texture
-			if (Texture2DPtr tex; pr::AllSet(nug.m_geom, EGeom::Tex0) && (tex = FindDiffTexture(inst) << nug.m_tex_diffuse) != nullptr)
+			if (Texture2DPtr tex; pr::AllSet(nug.m_geom, EGeom::Tex0) && (tex = coalesce(FindDiffTexture(inst), nug.m_tex_diffuse)) != nullptr)
 			{
 				texture_flags |= shaders::TextureFlags_HasDiffuse;
 
@@ -163,7 +163,7 @@ namespace pr::rdr12
 	template <typename TCBuf> requires (requires(TCBuf x) { x.m_tex2surf0; })
 	void SetTex2Surf(TCBuf& cb, BaseInstance const& inst, NuggetDesc const& nug)
 	{
-		auto tex = FindDiffTexture(inst) << nug.m_tex_diffuse;
+		auto tex = coalesce(FindDiffTexture(inst), nug.m_tex_diffuse);
 		cb.m_tex2surf0 = tex != nullptr
 			? tex->m_t2s
 			: m4x4::Identity();
