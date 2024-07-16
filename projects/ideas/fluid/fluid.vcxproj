@@ -63,17 +63,21 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
+    <ClCompile Include="src\bucket_collision.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClInclude Include="src\bucket_collision.h" />
     <ClInclude Include="src\forward.h" />
+    <ClInclude Include="src\iboundary_collision.h" />
+    <ClInclude Include="src\ispatial_partition.h" />
     <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\fluid_simulation.h" />
     <ClCompile Include="src\fluid_simulation.cpp" />
     <ClInclude Include="src\fluid_visualisation.h" />
     <ClCompile Include="src\fluid_visualisation.cpp" />
     <ClInclude Include="src\probe.h" />
-    <ClInclude Include="src\spatial_partition.h" />
+    <ClInclude Include="src\kdtree_partition.h" />
     <ClCompile Include="src\particle.cpp" />
-    <ClCompile Include="src\spatial_partition.cpp" />
+    <ClCompile Include="src\kdtree_partition.cpp" />
   </ItemGroup>
 
   <!-- Dependencies -->

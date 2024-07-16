@@ -1,26 +1,28 @@
 // Fluid
-#include "src/spatial_partition.h"
+#include "src/kdtree_partition.h"
 #include "src/particle.h"
 
 namespace pr::fluid
 {
-	SpatialPartition::SpatialPartition()
+	KDTreePartition::KDTreePartition()
 		: m_pivots()
 	{
 	}
 
-	void SpatialPartition::Update(std::span<Particle> particles)
+	// Spatially partition the particles for faster locality testing
+	void KDTreePartition::Update(std::span<Particle> particles)
 	{
 		m_pivots.resize(particles.size());
 
 		kdtree::Build<Dimensions, float, Particle, kdtree::EStrategy::AxisByLevel>(
 			particles,
 			[](Particle const& p, int a) { return p.m_pos[a]; },
-			[&](Particle& p, int a) { m_pivots[&p - particles.data()] = s_cast<int8_t>(a); }
+			[&](Particle const& p, int a) { m_pivots[&p - particles.data()] = s_cast<int8_t>(a); }
 		);
 	}
 
-	void SpatialPartition::Find(v4_cref position, float radius, std::span<Particle const> particles, std::function<void(Particle const&, float)> found) const
+	// Find all particles within 'radius' of 'position'
+	void KDTreePartition::Find(v4_cref position, float radius, std::span<Particle const> particles, std::function<void(Particle const&, float)> found) const
 	{
 		if constexpr (Dimensions == 2)
 		{

@@ -10,6 +10,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/coalesce.h"
+#include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/container/vector.h"
 #include "pr/container/kdtree.h"
@@ -37,5 +38,7 @@ namespace pr::fluid
 	struct Particles;
 	struct FluidSimulation;
 	struct FluidVisualisation;
+	struct IBoundaryCollision;
+	struct ISpatialPartition;
 }
 

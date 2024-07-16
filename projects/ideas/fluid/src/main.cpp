@@ -2,6 +2,8 @@
 #include "src/forward.h"
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
+#include "src/kdtree_partition.h"
+#include "src/bucket_collision.h"
 
 using namespace pr;
 using namespace pr::gui;
@@ -21,6 +23,8 @@ struct Main :Form
 	Scene m_scn;
 
 	SimMessageLoop m_loop;
+	BucketCollision m_bucket_collision;
+	KDTreePartition m_kdtree_partition;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
@@ -31,7 +35,7 @@ struct Main :Form
 		: Form(Params<>()
 			.name("main")
 			.title(L"Fluid")
-			.xy(1400,100)
+			.xy(1200,100)
 			.wh(1024, 768, true)
 			.main_wnd()
 			.dbl_buffer()
@@ -40,20 +44,22 @@ struct Main :Form
 		, m_wnd(m_rdr, WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
 		, m_loop()
-		, m_fluid_sim()
+		, m_bucket_collision()
+		, m_kdtree_partition()
+		, m_fluid_sim(m_bucket_collision, m_kdtree_partition)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_time()
 		, m_run_mode(ERunMode::Paused)
 	{
 		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 		if constexpr (Dimensions == 2)
-			m_scn.m_cam.LookAt(v4(0.0f, 1.0f, 3.0f, 1), v4(0, 0.1f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.0f, 0.5f, 2.8f, 1), v4(0, 0.7f, 0, 1), v4(0, 1, 0, 0));
 		if constexpr (Dimensions == 3)
-			m_scn.m_cam.LookAt(v4(0.2f, 0.2f, 0.2f, 1), v4(0, 0.1f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.2f, 0.2f, 0.2f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
 		m_scn.m_cam.Align(v4::YAxis());
 
 		m_loop.AddMessageFilter(*this);
-		m_loop.AddLoop(10, false, [this](auto dt)
+		m_loop.AddLoop(10, false, [this](auto dt) // Sim loop
 		{
 			switch (m_run_mode)
 			{
@@ -74,7 +80,7 @@ struct Main :Form
 				}
 			}
 		});
-		m_loop.AddLoop(10, false, [this](auto dt)
+		m_loop.AddLoop(30, false, [this](auto dt) // Render Loop
 		{
 			m_time += dt * 0.001f;
 
@@ -122,8 +128,8 @@ struct Main :Form
 		
 		auto nss_point = m_scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
 		auto nav_op =
-			args.m_button == EMouseKey::Left ? Camera::ENavOp::Rotate :
-			args.m_button == EMouseKey::Right ? Camera::ENavOp::Translate :
+			pr::AllSet(args.m_button, EMouseKey::Left) ? Camera::ENavOp::Rotate :
+			pr::AllSet(args.m_button, EMouseKey::Right) ? Camera::ENavOp::Translate :
 			Camera::ENavOp::None;
 
 		m_scn.m_cam.MouseControl(nss_point, nav_op, true);
@@ -137,8 +143,8 @@ struct Main :Form
 
 		auto nss_point = m_scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
 		auto nav_op =
-			args.m_button == EMouseKey::Left ? Camera::ENavOp::Rotate :
-			args.m_button == EMouseKey::Right ? Camera::ENavOp::Translate :
+			pr::AllSet(args.m_button, EMouseKey::Left) ? Camera::ENavOp::Rotate :
+			pr::AllSet(args.m_button, EMouseKey::Right) ? Camera::ENavOp::Translate :
 			Camera::ENavOp::None;
 
 		m_scn.m_cam.MouseControl(nss_point, nav_op, false);
@@ -184,7 +190,7 @@ struct Main :Form
 };
 
 // Entry point
-int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
+int __stdcall wWinMain(HINSTANCE hinstance, HINSTANCE, LPWSTR, int)
 {
 	try
 	{

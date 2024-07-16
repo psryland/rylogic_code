@@ -2419,6 +2419,11 @@ namespace pr
 				,m_down(down)
 				,m_handled(false)
 			{}
+			bool ModifierKey(int vk) const
+			{
+				auto key_state = ::GetKeyState(vk);
+				return (key_state & 0x8000) != 0;
+			}
 		};
 
 		// Event args for mouse wheel events

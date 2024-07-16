@@ -1,6 +1,7 @@
 // Fluid
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
+#include "src/ispatial_partition.h"
 
 using namespace pr::rdr12;
 
@@ -57,7 +58,7 @@ namespace pr::fluid
 		// If the probe is active, find all the particles within the probe
 		if (m_probe.m_active)
 		{
-			m_sim->m_spatial.Find(m_probe.m_position, m_probe.m_radius, m_sim->m_particles, [&](auto& particle, float)
+			m_sim->m_spatial->Find(m_probe.m_position, m_probe.m_radius, m_sim->m_particles, [&](auto& particle, float)
 			{
 				within.insert(Idx(particle));
 			});
@@ -133,7 +134,7 @@ namespace pr::fluid
 			return;
 
 		
-		if (KeyDown(VK_CONTROL))
+		if (args.ModifierKey(VK_CONTROL))
 		{
 			// Shoot a ray through the mouse pointer
 			auto nss_point = m_scn->m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
@@ -146,7 +147,7 @@ namespace pr::fluid
 				auto epicentre = pt + t * dir;
 
 				static float radius = 0.4f;
-				m_sim->m_spatial.Find(epicentre, radius, m_sim->m_particles, [&](auto& particle, float dist_sq)
+				m_sim->m_spatial->Find(epicentre, radius, m_sim->m_particles, [&](auto& particle, float dist_sq)
 				{
 					auto dist = Sqrt(dist_sq);
 					if (dist == 0.0f) return;

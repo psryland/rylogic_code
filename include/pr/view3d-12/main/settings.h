@@ -53,10 +53,12 @@ namespace pr::rdr12
 		{}
 
 		// Enable the debug layer
-		RdrSettings& DebugLayer(bool enable = true)
+		RdrSettings& DebugLayer(bool enable = true, bool gpu_debug = false, bool break_on_errors = true)
 		{
 			if (m_adapter.ptr != nullptr) Check(false, "DebugLayer must be enabled before setting the adapter (technically before creating the DXGI factory)");
 			m_options = SetBits(m_options, ERdrOptions::DeviceDebug, enable);
+			m_options = SetBits(m_options, ERdrOptions::DeviceGPUDebug, gpu_debug);
+			m_options = SetBits(m_options, ERdrOptions::BreakOnErrors, break_on_errors);
 			return *this;
 		}
 

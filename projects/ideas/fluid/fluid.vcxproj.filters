@@ -19,10 +19,19 @@
     <ClInclude Include="src\particle.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\spatial_partition.h">
+    <ClInclude Include="src\kdtree_partition.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\probe.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\iboundary_collision.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ispatial_partition.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\bucket_collision.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,10 +53,13 @@
     <ClCompile Include="src\fluid_visualisation.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\spatial_partition.cpp">
+    <ClCompile Include="src\kdtree_partition.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\particle.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\bucket_collision.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

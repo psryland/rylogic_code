@@ -11,25 +11,25 @@
 //	VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL 
 //
 #pragma once
-#ifndef PR_COMMON_KEY_STATE_H
-#define PR_COMMON_KEY_STATE_H
-
 #include <windows.h>
 
 namespace pr
 {
+	// True if a virtual key is currently down
 	inline bool KeyDown(int vk_key)
 	{
 		short key_state = GetAsyncKeyState(vk_key);
 		return (key_state & 0x8000) != 0;
 	}
 
+	// True if a virtual key was pressed
 	inline bool KeyPressed(int vk_key)
 	{
 		short key_state = GetAsyncKeyState(vk_key);
 		return (key_state & 0x0001) != 0;
 	}
 
+	// True if there is an key down and up event
 	inline bool KeyPress(int vk_key)
 	{
 		if   (!KeyDown(vk_key)) return false;
@@ -37,6 +37,4 @@ namespace pr
 		return true;
 	}
 }
-
-#endif
 

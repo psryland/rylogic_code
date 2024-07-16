@@ -639,7 +639,7 @@ def MSBuild(sln_or_proj_file:str, projects:List[str], platforms:List[str], confi
 	errors = False
 	try:
 		if not platforms and not configs:
-			Exec(args)
+			Run(args)
 		else:
 			for platform in platforms:
 				for config in configs:
@@ -649,7 +649,7 @@ def MSBuild(sln_or_proj_file:str, projects:List[str], platforms:List[str], confi
 						procs.append(proc)
 					else:
 						print(f"{platform}|{config}:")
-						Exec(args_)
+						Run(args_)
 	# Wait for all processes to finish, and check for error return codes
 	finally:	
 		for proc in procs:
