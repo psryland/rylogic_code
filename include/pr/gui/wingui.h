@@ -2419,11 +2419,6 @@ namespace pr
 				,m_down(down)
 				,m_handled(false)
 			{}
-			bool ModifierKey(int vk) const
-			{
-				auto key_state = ::GetKeyState(vk);
-				return (key_state & 0x8000) != 0;
-			}
 		};
 
 		// Event args for mouse wheel events
@@ -2613,18 +2608,30 @@ namespace pr
 			using step_func_t = std::function<void(int64_t)>;
 
 		private:
+			union buf8
+			{
+				uint64_t u64;
+				uint8_t b[sizeof(uint64_t)];
+				void add(uint8_t v)
+				{
+					u64 <<= 8;
+					b[0] = v;
+				}
+			};
 
 			// A loop represents a process that should be run at a given frame rate
 			struct Loop
 			{
 				step_func_t m_step;
-				int64_t m_clock;     // The time this loop was last stepped (in ms)
+				int64_t m_clock;    // The time this loop was last stepped (in ms)
+				buf8 m_avr;         // Last 8 execution times of the loop (in ms, capped at 255)
 				int m_step_rate_ms; // (Minimum) step rate
 				bool m_variable;    // Variable step rate
 
 				Loop(step_func_t step, int step_rate_ms, bool variable)
 					:m_step(step)
 					,m_clock()
+					,m_avr()
 					,m_step_rate_ms(step_rate_ms)
 					,m_variable(variable)
 				{}
@@ -2634,11 +2641,13 @@ namespace pr
 				}
 			};
 			using LoopCont = std::vector<Loop>;
+			using LoopOrder = std::vector<int>;
 
-			LoopCont m_loop;             // A priority queue of loops. The loop at position 0 is the next to be stepped
-			int64_t  m_clock0;           // The time when 'Run' was called.
-			int64_t  m_clock;            // The last time StepLoops was called.
-			int      m_max_loop_steps;   // The maximum number of loops to step before checking for messages
+			LoopCont m_loop;           // The loops to execute
+			LoopOrder m_order;         // A priority queue of loops. The loop at position 0 is the next to be stepped
+			int64_t  m_clock0;         // The time when 'Run' was called.
+			int64_t  m_clock;          // The last time StepLoops was called.
+			int      m_max_loop_steps; // The maximum number of loops to step before checking for messages
 
 		public:
 
@@ -2652,7 +2661,8 @@ namespace pr
 			// Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate
 			void AddLoop(int step_rate_ms, bool variable, step_func_t step)
 			{
-				m_loop.emplace_back(step, step_rate_ms, variable);
+				m_loop.push_back(Loop(step, step_rate_ms, variable));
+				m_order.push_back(isize(m_loop) - 1);
 			}
 
 			// Run the thread message pump while maintaining the desired loop rates
@@ -2697,31 +2707,50 @@ namespace pr
 				if (m_loop.empty())
 					return INFINITE;
 
-				// Get the elapsed time
 				auto now = Clock();
 				auto dt = now - m_clock;
 				m_clock = now;
+
+				// Check the StepLoops function is being called frequently enough.
+				// If not, it's probably due to a blocking windows message handler
+				for (auto const& loop : m_loop)
+				{
+					if (dt < loop.m_step_rate_ms * m_max_loop_steps) continue;
+					OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
+				}
 
 				// Step all loops that are pending
 				for (int i = 0; i != m_max_loop_steps; ++i)
 				{
 					// Sort by soonest to step
-					std::sort(m_loop.begin(), m_loop.end(), [=](Loop const& lhs, Loop const& rhs){ return lhs.next() < rhs.next(); }); // Smaller values need to be stepped sooner
+					std::sort(m_order.begin(), m_order.end(), [&](int lhs, int rhs)
+					{
+						// Smaller values need to be stepped sooner
+						return m_loop[lhs].next() < m_loop[rhs].next();
+					});
 
 					// Get the next due to be stepped
-					auto& loop = m_loop[0];
+					auto& loop = m_loop[m_order[0]];
 					auto time_till_step = loop.next() - m_clock;
 					if (time_till_step > 0)
 						return static_cast<DWORD>(time_till_step);
 
+					// Elapsed time for the loop step, either a fixed value or the wall time since last stepped
+					auto elapsed_ms = loop.m_variable ? m_clock - loop.m_clock : loop.m_step_rate_ms;
+
 					// Step the loop
-					auto elapsed_ms = loop.m_variable ? dt : loop.m_step_rate_ms;
+					auto t0 = Clock();
 					loop.m_step(elapsed_ms);
 					loop.m_clock += elapsed_ms;
+					loop.m_avr.add(static_cast<uint8_t>(std::min(255LL, Clock() - t0)));
+
+					if (loop.m_avr.b[0] > loop.m_step_rate_ms)
+						OutputDebugStringA(std::format("SimMessagePump: WARNING - long step: {}% \n", loop.m_avr.b[0] * 100.0 / loop.m_step_rate_ms).c_str());
 				}
 
 				// If we get here, the loops are taking too long. Return a timeout of 0 to indicate
 				// loops still need stepping. This allows the message queue still to be processed though.
+				// Loop at 'm_avr' to see the last 8 loop execution times in ms.
 				OutputDebugStringA("SimMessagePump: WARNING - loops are staving the message queue\n");
 				return 0;
 			}

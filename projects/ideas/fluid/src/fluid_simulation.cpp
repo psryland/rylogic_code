@@ -15,15 +15,15 @@ namespace pr::fluid
 	// So water should have a particle every 0.01m
 	// Hydrostatic pressure vs. depth: P = rho * g * h
 
-	FluidSimulation::FluidSimulation(IBoundaryCollision& boundary, ISpatialPartition& spatial)
+	FluidSimulation::FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial)
 		: m_gravity(0, -9.8f, 0, 0)
-		, m_particles(30*30)
+		, m_particles(particle_count)
 		, m_densities(m_particles.size())
 		, m_boundary(&boundary)
 		, m_spatial(&spatial)
 		, m_mass(0.001f) // kg
-		, m_density0(1.0f) // kg/m^3 or g/cm^3
-		, m_radius(0.08f)
+		, m_radius(0.1f)
+		, m_density0(ExpectedDensity(isize(m_particles), m_mass, 2.0f)) // kg/m^3 or g/cm^3
 	{
 		// Distribute the particles
 		m_boundary->Fill(m_particles, m_radius);
@@ -45,7 +45,10 @@ namespace pr::fluid
 
 		// Update the cached densities at the particle positions
 		for (auto& particle : m_particles)
-			m_densities[m_particles.index(particle)] = DensityAt(particle.m_pos);
+		{
+			auto density = DensityAt(particle.m_pos);
+			m_densities[m_particles.index(particle)] = density;
+		}
 
 		// Evolve the particles forward in time
 		for (auto& particle : m_particles)
@@ -54,11 +57,13 @@ namespace pr::fluid
 			auto pressure = PressureAt(particle.m_pos, m_particles.index(particle));
 
 			// Sum up all sources of acceleration
-			auto accel = m_gravity + pressure / m_densities[m_particles.index(particle)];
+			auto accel = v4::Zero();
+			accel += pressure / m_densities[m_particles.index(particle)];
+			//accel += m_gravity;
 
 			// Update velocity
 			particle.m_vel += accel * dt;
-			particle.m_vel *= 0.9f; // drag
+			particle.m_vel *= 0.95f; // drag
 			
 			// Collision restitution with the boundary
 			auto [pos, vel] = m_boundary->ResolveCollision(particle, m_radius, dt);
@@ -91,10 +96,11 @@ namespace pr::fluid
 	// Calculate the pressure gradient at 'position'
 	v4 FluidSimulation::PressureAt(v4_cref position, std::optional<size_t> index) const
 	{
-		v4 pressure = v4::Zero();
+		auto pressure = v4::Zero();
 		m_spatial->Find(position, m_radius, m_particles, [&](auto const& particle, float dist_sq)
 		{
-			if (index && *index == m_particles.index(particle))
+			auto idx = m_particles.index(particle);
+			if (index && *index == idx)
 				return;
 
 			// Get the direction from 'position' to 'particle'
@@ -106,7 +112,7 @@ namespace pr::fluid
 
 			// Get the density at the particle position. Pressure is due to
 			// a difference in density, so compare to the target density to get pressure
-			auto density = m_densities[m_particles.index(particle)];
+			auto density = m_densities[idx];
 			static float C = 7.0f;
 			auto pres = C * (density - m_density0);
 

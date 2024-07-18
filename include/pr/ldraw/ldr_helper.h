@@ -187,6 +187,10 @@ namespace pr::ldr
 	{
 		return Append(str, Col(c));
 	}
+	inline TStr& Append(TStr& str, v2 const& v)
+	{
+		return AppendSpace(str).append(To<TStr>(v));
+	}
 	inline TStr& Append(TStr& str, v3 const& v)
 	{
 		return AppendSpace(str).append(To<TStr>(v));
@@ -194,6 +198,10 @@ namespace pr::ldr
 	inline TStr& Append(TStr& str, v4 const& v)
 	{
 		return AppendSpace(str).append(To<TStr>(v));
+	}
+	template <Scalar S> inline TStr& Append(TStr& str, Vec2<S,void> const& v)
+	{
+		return Append(AppendSpace(str), To<TStr>(v));
 	}
 	template <Scalar S> inline TStr& Append(TStr& str, Vec3<S,void> const& v)
 	{
@@ -601,6 +609,7 @@ namespace pr::ldr
 		struct LdrLine;
 		struct LdrLineD;
 		struct LdrTriangle;
+		struct LdrPlane;
 		struct LdrCircle;
 		struct LdrSphere;
 		struct LdrBox;
@@ -627,6 +636,7 @@ namespace pr::ldr
 			LdrLine& Line(std::string_view name = "", Col colour = Col());
 			LdrLineD& LineD(std::string_view name = "", Col colour = Col());
 			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col());
+			LdrPlane& Plane(std::string_view name = "", Col colour = Col());
 			LdrCircle& Circle(std::string_view name = "", Col colour = Col());
 			LdrSphere& Sphere(std::string_view name = "", Col colour = Col());
 			LdrBox& Box(std::string_view name = "", Col colour = Col());
@@ -1000,6 +1010,42 @@ namespace pr::ldr
 				ldr::Append(str, "}\n");
 			}
 		};
+		struct LdrPlane :LdrBase<LdrPlane>
+		{
+			v4 m_position;
+			v4 m_direction;
+			v2 m_wh;
+
+			LdrPlane()
+				:m_position(v4::Origin())
+				,m_direction(v4::ZAxis())
+				,m_wh(1,1)
+			{}
+
+			LdrPlane& pos(v4_cref position)
+			{
+				m_position = position;
+				return *this;
+			}
+			LdrPlane& dir(v4_cref direction)
+			{
+				m_direction = direction;
+				return *this;
+			}
+			LdrPlane& wh(float width, float height)
+			{
+				m_wh = { width, height };
+				return *this;
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				ldr::Append(str, "*Plane", m_name, m_colour, "{", m_position.xyz, m_direction.xyz, m_wh);
+				NestedToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
 		struct LdrCircle :LdrBase<LdrCircle>
 		{
 			float m_radius;
@@ -1260,6 +1306,12 @@ namespace pr::ldr
 		inline LdrTriangle& LdrObj::Triangle(std::string_view name, Col colour)
 		{
 			auto ptr = new LdrTriangle;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrPlane& LdrObj::Plane(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrPlane;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}

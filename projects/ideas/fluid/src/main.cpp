@@ -46,7 +46,7 @@ struct Main :Form
 		, m_loop()
 		, m_bucket_collision()
 		, m_kdtree_partition()
-		, m_fluid_sim(m_bucket_collision, m_kdtree_partition)
+		, m_fluid_sim(30*30, m_bucket_collision, m_kdtree_partition)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_time()
 		, m_run_mode(ERunMode::Paused)
@@ -80,16 +80,21 @@ struct Main :Form
 				}
 			}
 		});
-		m_loop.AddLoop(30, false, [this](auto dt) // Render Loop
+		m_loop.AddLoop(50, false, [this](auto dt) // Render Loop
 		{
 			m_time += dt * 0.001f;
 
 			// Update the window title
-			auto c2w = m_scn.m_cam.CameraToWorld();
-			SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
-
-			//auto density = m_fluid_sim.DensityAt(m_fluid_vis.m_probe.m_position);
-			//SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f", density));
+			if (m_fluid_vis.m_probe.m_active)
+			{
+				auto density = m_fluid_sim.DensityAt(m_fluid_vis.m_probe.m_position);
+				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Probe Radius: %3.3f", density, m_fluid_vis.m_probe.m_radius));
+			}
+			else
+			{
+				auto c2w = m_scn.m_cam.CameraToWorld();
+				SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
+			}
 
 			// Render the particles
 			m_scn.ClearDrawlists();

@@ -74,9 +74,9 @@ namespace pr::rdr12
 		{
 			AddInstance(inst.m_base);
 		}
-		void AddInstance(LdrObjectPtr inst)
+		void AddInstance(LdrObjectPtr ldr_obj)
 		{
-			AddInstance(inst->m_base);
+			ldr_obj->AddToScene(*this);
 		}
 
 		// Remove an instance from the drawlist

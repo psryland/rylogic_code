@@ -30,8 +30,8 @@ namespace pr::fluid
 			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
 			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
 
-			// Find where it intersect the plane at y = m_position.y
-			auto t = (m_position.y - pt.y) / dir.y;
+			// Find where it intersects the XY plane at z = m_position.z
+			auto t = (m_position.z - pt.z) / dir.z;
 			m_position = pt + t * dir;
 			UpdateI2W();
 			args.m_handled = true;
@@ -41,7 +41,7 @@ namespace pr::fluid
 			if (!gui::AllSet(args.m_keystate, gui::EMouseKey::Ctrl))
 				return;
 
-			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, 0.001f, 0.100f);
+			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, 0.001f, 0.500f);
 			UpdateI2W();
 			args.m_handled = true;
 		}
@@ -73,7 +73,8 @@ namespace pr::fluid
 		}
 		void UpdateI2W()
 		{
-			m_gfx->m_i2w = m4x4::Scale(m_radius, m_position);
+			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
+
 		}
 	};
 }

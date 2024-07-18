@@ -6,9 +6,6 @@ namespace pr::fluid
 	// The influence at 'distance' from a particle
 	float Particle::InfluenceAt(float distance, float radius)
 	{
-		if (distance >= radius)
-			return 0.0f;
-
 		// Influence is the contribution to a property that a particle has at a given distance. The range of this contribution is controlled
 		// by 'radius', which is the smoothing kernel radius. A property at a given point is calculated by taking the sum of that property for
 		// all particles, weighted by their distance from the given point. If we limit the influence to a given radius, then we don't need to
@@ -35,9 +32,12 @@ namespace pr::fluid
 		// So, start with a uniform grid and a known property (e.g. density @ 1g/cm^3) and a radius that ensures a typical number of particles
 		// influence each point. Then measure the combined influence, and use that value to rescale.
 
+		if (distance >= radius)
+			return 0.0f;
+
 		if constexpr (Dimensions == 2)
 		{
-			float const C = 1.0f / 4.0f;
+			float const C = 0.95f * (1.0f / 4.0f);
 			return C * Sqr(radius - distance) / Pow(radius, 4.0f);
 		}
 		if constexpr (Dimensions == 3)

@@ -10,7 +10,7 @@ namespace pr::fluid
 		// A square well with walls at +/- 'm_hwidth' and a lid at 'm_ceiling'
 		float const m_hwidth;  // Half width of the bucket
 		float const m_ceiling; // The height limit
-		float m_restitution;   // The coefficient of restitution
+		v2 m_restitution;      // The coefficient of restitution (normal, tangent)
 
 		BucketCollision();
 		

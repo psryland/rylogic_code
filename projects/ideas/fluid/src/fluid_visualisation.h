@@ -16,10 +16,11 @@ namespace pr::fluid
 		FluidSimulation* m_sim;
 		rdr12::Renderer* m_rdr;
 		rdr12::Scene* m_scn;
+		rdr12::LdrObjectPtr m_gfx_container;
 		PointShaderPtr m_gs_points;
-		Instance m_gfx_container;
 		Instance m_gfx_fluid;
 		Instance m_gfx_gradient;
+		Instance m_gfx_velocities;
 		Probe m_probe;
 
 		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn);
