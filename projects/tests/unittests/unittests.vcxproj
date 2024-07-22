@@ -138,6 +138,7 @@
     <ClInclude Include="..\..\..\include\pr\common\to.h" />
     <ClInclude Include="..\..\..\include\pr\common\repeater.h" />
     <ClInclude Include="..\..\..\include\pr\common\tstring.h" />
+    <ClInclude Include="..\..\..\include\pr\common\tweakables.h" />
     <ClInclude Include="..\..\..\include\pr\common\unittests.h" />
     <ClInclude Include="..\..\..\include\pr\common\user_data.h" />
     <ClInclude Include="..\..\..\include\pr\common\value_ptr.h" />

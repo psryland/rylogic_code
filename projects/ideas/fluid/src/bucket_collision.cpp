@@ -6,64 +6,108 @@ namespace pr::fluid
 {
 	BucketCollision::BucketCollision()
 		: m_hwidth(1.0f)
-		, m_ceiling(5.0f)
+		, m_hheight(0.5f)
+		, m_ceiling(2.0f)
 		, m_restitution(0.95f, 1.0f)
 	{}
+	
+	// The approximate volume (in m^3 or m^2 depending on Dimensions) occupied by the particles under normal conditions
+	float BucketCollision::Volume() const
+	{
+		if constexpr (Dimensions == 2)
+		{
+			return (2 * m_hwidth) * (2 * m_hheight);
+		}
+		if constexpr (Dimensions == 3)
+		{
+			return (2 * m_hwidth) * (2 * m_hwidth) * (2 * m_hheight);
+		}
+	}
 
 	// Distribute the particles within the boundary
-	void BucketCollision::Fill(std::span<Particle> particles, float radius) const
+	void BucketCollision::Fill(EFillStyle style, std::span<Particle> particles, float radius) const
 	{
-		const bool HardCoded = false;
-		const bool Random = false;
-		const bool Lattice = true;
-
-		if constexpr (HardCoded)
+		switch (style)
 		{
-			for (auto& particle : particles)
+			case EFillStyle::Point:
 			{
-				particle.m_pos = v4(-0.9f, 0.5f, 0, 1);
-				particle.m_vel = v4(-1, 0, 0, 0);
+				for (auto& particle : particles)
+				{
+					particle.m_pos = v4(0, 0, 0, 1);
+					particle.m_vel = v4(0, 0, 0, 0);
+				}
+				particles[0].m_pos = v4(0.05f, 0, 0, 1);
+				particles[0].m_vel = v4(-10, 0, 0, 0);
+				break;
 			}
-		}
-		if constexpr (Random)
-		{
-			std::default_random_engine rng;
-			for (auto& particle : particles)
+			case EFillStyle::Random:
 			{
-				// Uniform distribution over the volume
-				particle.m_pos = v3::Random(rng, v3(-m_hwidth, radius, -m_hwidth), v3(+m_hwidth, +2*m_hwidth - radius, +m_hwidth)).w1();
-				particle.m_vel = v3::Random(rng, v3::Zero(), 10.0f).w0();
-				if constexpr (Dimensions == 2)
-					particle.m_pos.z = 0;
-			}
-		}
-		if constexpr (Lattice)
-		{
-			// The number of particles on an edge of the volume/area
-			int const N = s_cast<int>(Pow<double>(isize(particles), 1.0 / Dimensions));
+				auto const margin = 0.95f;
+				auto hw = m_hwidth * margin;
+				auto hh = m_hheight * margin;
 
-			float const sep = 0.05f;
-			float const halfW = 0.5f * N * sep;
-			for (int i = 0, iend = isize(particles); i < iend; ++i)
+				std::default_random_engine rng;
+				for (auto& particle : particles)
+				{
+					// Uniform distribution over the volume
+					particle.m_pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
+					particle.m_vel = v3::Random(rng, v3::Zero(), 10.0f).w0();
+					if constexpr (Dimensions == 2)
+						particle.m_pos.z = 0;
+				}
+				break;
+			}
+			case EFillStyle::Lattice:
 			{
-				auto& particle = particles[i];
-				particle.m_vel = v4::Zero();
 				if constexpr (Dimensions == 2)
 				{
-					particle.m_pos = v4(
-						sep * (i % N) - halfW,
-						sep * (i / N) + sep + radius,
-						0,
-						1);
+					// Want to spread N particles evenly over the volume.
+					// Area is 2*hwidth * 2*hheight
+					// Want to find 'step' such that:
+					//   (2*hwidth / step) * (2*hheight / step) = N
+					// => step = sqrt((2*hwidth * 2*hheight) / N)
+					auto const margin = 0.95f;
+					auto hw = m_hwidth * margin;
+					auto hh = m_hheight * margin;
+					auto step = Sqrt((2 * hw * 2 * hh) / isize(particles));
+
+					auto x = -hw;
+					auto y = -hh;
+					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					{
+						auto& particle = particles[i];
+						particle.m_vel = v4::Zero();
+						particle.m_pos = v4(x, y, 0, 1);
+						x += step;
+						if (x > hw) { x = -hw; y += step; }
+					}
 				}
 				if constexpr (Dimensions == 3)
 				{
-					particle.m_pos = v4(
-						sep * ((i / 1) % N) - halfW,
-						sep * ((i / N) % N) + sep + radius,
-						sep * ((i / N * N) % N) - halfW,
-						1);
+					// Want to spread N particles evenly over the volume.
+					// Volume is 2*hwidth * 2*hwidth * 2*hheight
+					// Want to find 'step' such that:
+					//  (2*hwidth/step) * (2*hwidth/step) * (2*hheight/step) = N
+					// => step = cubert((2*hwidth * 2*hwidth * 2*hheight) / N)
+					auto const margin = 0.95f;
+					auto hw = m_hwidth * margin;
+					auto hh = m_hheight * margin;
+					auto step = Cubert((2 * hw * 2 * hh * 2 * hw) / isize(particles));
+
+					auto x = -hw;
+					auto y = -hh;
+					auto z = -hw;
+					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					{
+						auto& particle = particles[i];
+						particle.m_vel = v4::Zero();
+						particle.m_pos = v4(x, y, z, 1);
+						x += step;
+						if (x > hw) { x = -hw; z += step; }
+						if (z > hw) { z = -hw; y += step; }
+					}
 				}
+				break;
 			}
 		}
 	}
@@ -81,12 +125,12 @@ namespace pr::fluid
 		// The Walls of the container
 		v4 const Walls[] =
 		{
-			v4( 0, 1, 0, -0),
-			v4(-1, 0, 0, +m_hwidth),
-			v4(+1, 0, 0, +m_hwidth),
-			v4( 0, 0, -1, +m_hwidth),
-			v4( 0, 0, +1, +m_hwidth),
-			v4( 0,-1, 0, 3.0f), // lid
+			v4( 0, 1, 0, m_hheight),
+			v4(-1, 0, 0, m_hwidth),
+			v4(+1, 0, 0, m_hwidth),
+			v4( 0, 0, -1, m_hwidth),
+			v4( 0, 0, +1, m_hwidth),
+			v4( 0,-1, 0, m_hheight), // lid
 		};
 
 		// Reflect the ray off all walls of the boundary

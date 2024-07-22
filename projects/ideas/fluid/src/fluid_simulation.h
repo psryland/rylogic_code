@@ -16,9 +16,10 @@ namespace pr::fluid
 		Densities m_densities;          // The cached density at each particle position
 		IBoundaryCollision* m_boundary; // The container collision for the fluid
 		ISpatialPartition* m_spatial;   // Spatial partitioning of the particles
-		float m_mass;                   // The mass of each particle
+		float m_thermal_noise;          // Random noise	
 		float m_radius;                 // The radius of influence of a particle
 		float m_density0;               // The expected density of the fluid
+		float m_mass;                   // The mass of each particle
 
 		FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial);
 
@@ -34,6 +35,8 @@ namespace pr::fluid
 		// Calculate the pressure gradient at 'position'
 		v4 PressureAt(v4_cref position, std::optional<size_t> index) const;
 
+		// Update the cache of density values at the particle locations
+		void CacheDensities();
 	};
 
 	// Calculate the expected density for a given number of particles in a volume

@@ -11,9 +11,12 @@ namespace pr::fluid
 	//  A(x) = Sum_i A_i * (mass_i / density_i) * W(x - x_i)
 	// 
 	// Use SI units.
-	// Density of water is 1000kg/m^3 = 1g/cm^3
-	// So water should have a particle every 0.01m
-	// Hydrostatic pressure vs. depth: P = rho * g * h
+	//  - Density of water is 1000kg/m^3 = 1g/cm^3
+	//  - Pressure of water at sea level = 101 kN/m^2
+	//  - Hydrostatic pressure vs. depth: P = rho * g * h
+	//
+	// A particle represents a small unit of fluid. Given a volume and a number of particles,
+	// the mass of each fluid unit is: mass = density * volume / number of particles.
 
 	FluidSimulation::FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial)
 		: m_gravity(0, -9.8f, 0, 0)
@@ -21,15 +24,19 @@ namespace pr::fluid
 		, m_densities(m_particles.size())
 		, m_boundary(&boundary)
 		, m_spatial(&spatial)
-		, m_mass(0.001f) // kg
+		, m_thermal_noise(0.001f)
 		, m_radius(0.1f)
-		, m_density0(ExpectedDensity(isize(m_particles), m_mass, 2.0f)) // kg/m^3 or g/cm^3
+		, m_density0(Dimensions == 3 ? 1000.0f : 10.0f) // kg/m^3 (3d), kg/m^2 (2d)
+		, m_mass(m_density0 * m_boundary->Volume() / isize(m_particles)) // kg
 	{
 		// Distribute the particles
-		m_boundary->Fill(m_particles, m_radius);
+		m_boundary->Fill(EFillStyle::Point, m_particles, m_radius);
 
 		// Update the spatial partitioning of the particles
 		m_spatial->Update(m_particles);
+
+		// Update the cache of density values at the particle locations
+		CacheDensities();
 	}
 	
 	// The number of simulated particles
@@ -43,23 +50,22 @@ namespace pr::fluid
 	{
 		//dt = 0;
 
-		// Update the cached densities at the particle positions
-		for (auto& particle : m_particles)
-		{
-			auto density = DensityAt(particle.m_pos);
-			m_densities[m_particles.index(particle)] = density;
-		}
-
 		// Evolve the particles forward in time
+		std::default_random_engine rng;
 		for (auto& particle : m_particles)
 		{
+			auto pidx = m_particles.index(particle);
+
 			// Get the force experienced by the particle due to pressure
-			auto pressure = PressureAt(particle.m_pos, m_particles.index(particle));
+			auto pressure = PressureAt(particle.m_pos, pidx);
 
 			// Sum up all sources of acceleration
 			auto accel = v4::Zero();
-			accel += pressure / m_densities[m_particles.index(particle)];
+			accel += pressure / m_densities[pidx];
+			//accel += m_thermal_noise * v4::RandomN(rng, 0);
 			//accel += m_gravity;
+			if (accel.w != 0)
+				accel = accel;
 
 			// Update velocity
 			particle.m_vel += accel * dt;
@@ -75,6 +81,9 @@ namespace pr::fluid
 
 		// Update the spatial partitioning of the particles
 		m_spatial->Update(m_particles);
+
+		// Update the cached densities at the particle positions
+		CacheDensities();
 	}
 
 	// Calculates the fluid density at 'position'
@@ -108,11 +117,22 @@ namespace pr::fluid
 			auto dist = Sqrt(dist_sq);
 
 			// Normalize the direction vector
-			direction = dist != 0 ? (direction / dist) : v4::RandomN(g_rng(), 0);
+			direction = dist > maths::tinyf ? (direction / dist) : v4::RandomN(g_rng(), 0);
+			if constexpr (Dimensions == 2) { direction.z = 0; }
+
+			// We need to simulate the force due to pressure being applied to
+			// both particles (idx and index). Taking the average of the densities
+			// at the two particle positions is kind of the same as applying the force
+			// equal and opposite to both particles
 
 			// Get the density at the particle position. Pressure is due to
 			// a difference in density, so compare to the target density to get pressure
-			auto density = m_densities[idx];
+			
+			auto density = index
+				? (m_densities[idx] + m_densities[*index]) / 2.0f
+				: m_densities[idx];
+
+			//static tweakables::Tweakable<float, "DensityToPressure"> C = 7.0f;
 			static float C = 7.0f;
 			auto pres = C * (density - m_density0);
 
@@ -122,5 +142,15 @@ namespace pr::fluid
 		});
 
 		return pressure;
+	}
+
+	// Update the cache of density values at the particle locations
+	void FluidSimulation::CacheDensities()
+	{
+		for (auto& particle : m_particles)
+		{
+			auto density = DensityAt(particle.m_pos);
+			m_densities[m_particles.index(particle)] = density;
+		}
 	}
 }

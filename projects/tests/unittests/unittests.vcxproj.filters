@@ -1050,6 +1050,9 @@
     <ClInclude Include="..\..\..\include\pr\str\utf8.h">
       <Filter>pr\str</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\tweakables.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

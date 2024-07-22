@@ -6,18 +6,21 @@ namespace pr::fluid
 {
 	KDTreePartition::KDTreePartition()
 		: m_pivots()
+		, m_order()
 	{
 	}
 
 	// Spatially partition the particles for faster locality testing
-	void KDTreePartition::Update(std::span<Particle> particles)
+	void KDTreePartition::Update(std::span<Particle const> particles)
 	{
 		m_pivots.resize(particles.size());
+		m_order.resize(particles.size());
+		auto i = 0; for (auto& o : m_order) o = i++;
 
-		kdtree::Build<Dimensions, float, Particle, kdtree::EStrategy::AxisByLevel>(
-			particles,
-			[](Particle const& p, int a) { return p.m_pos[a]; },
-			[&](Particle const& p, int a) { m_pivots[&p - particles.data()] = s_cast<int8_t>(a); }
+		kdtree::Build<Dimensions, float, int, kdtree::EStrategy::AxisByLevel>(
+			m_order,
+			[&](int i, int a) { return particles[i].m_pos[a]; },
+			[&](int i, int a) { m_pivots[i] = s_cast<int8_t>(a); }
 		);
 	}
 
@@ -27,23 +30,23 @@ namespace pr::fluid
 		if constexpr (Dimensions == 2)
 		{
 			float const search[2] = { position.x, position.y };
-			kdtree::Find<2, float, Particle>(
-				particles,
+			kdtree::Find<2, float, int>(
+				m_order,
 				search, radius,
-				[](Particle const& p, int a) { return p.m_pos[a]; },
-				[&](Particle const& p) { return s_cast<int>(m_pivots[&p - particles.data()]); },
-				[&](Particle const& p, float dist_sq) { found(p, dist_sq); }
+				[&](int i, int a) { return particles[i].m_pos[a]; },
+				[&](int i) { return s_cast<int>(m_pivots[i]); },
+				[&](int i, float dist_sq) { found(particles[i], dist_sq); }
 			);
 		}
 		if constexpr (Dimensions == 3)
 		{
 			float const search[3] = { position.x, position.y, position.z };
-			kdtree::Find<3, float, Particle>(
-				particles,
+			kdtree::Find<3, float, int>(
+				m_order,
 				search, radius,
-				[](Particle const& p, int a) { return p.m_pos[a]; },
-				[&](Particle const& p) { return s_cast<int>(m_pivots[&p - particles.data()]); },
-				[&](Particle const& p, float dist_sq) { found(p, dist_sq); }
+				[&](int i, int a) { return particles[i].m_pos[a]; },
+				[&](int i) { return s_cast<int>(m_pivots[i]); },
+				[&](int i, float dist_sq) { found(particles[i], dist_sq); }
 			);
 		}
 	}

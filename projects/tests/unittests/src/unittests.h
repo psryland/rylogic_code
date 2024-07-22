@@ -107,6 +107,7 @@
 #include "pr\common\stride_ptr.h"
 #include "pr\common\to.h"
 #include "pr\common\tstring.h"
+#include "pr\common\tweakables.h"
 #include "pr\common\unittests.h"
 #include "pr\common\user_data.h"
 #include "pr\common\value_ptr.h"

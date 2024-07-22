@@ -21,9 +21,9 @@ namespace pr::fluid
 		// Create the model for the container
 		ldr::Builder L;
 		auto& g = L.Group();
-		g.Plane("floor", 0x80008000).wh(2.0f, 0.1f).pos(v4::Origin()).dir(v4::YAxis());
-		g.Plane("wall-L", 0x80008000).wh(0.1f, 1.0f).pos(v4(-1, 0.5f, 0, 1)).dir(+v4::XAxis());
-		g.Plane("wall-R", 0x80008000).wh(0.1f, 1.0f).pos(v4(+1, 0.5f, 0, 1)).dir(-v4::XAxis());
+		g.Plane("floor", 0x80008000).wh(2.0f, 0.1f).pos(v4(0, -0.5f, 0, 1)).dir(v4::YAxis());
+		g.Plane("wall-L", 0x80008000).wh(0.1f, 1.0f).pos(v4(-1, 0, 0, 1)).dir(+v4::XAxis());
+		g.Plane("wall-R", 0x80008000).wh(0.1f, 1.0f).pos(v4(+1, 0, 0, 1)).dir(-v4::XAxis());
 		m_gfx_container = rdr12::CreateLdr(*m_rdr, L.ToString().c_str());
 
 		{// Create a dynamic model for the fluid particles
@@ -117,7 +117,7 @@ namespace pr::fluid
 
 		{// Update the gradient
 			Colour32 const col = Colour32Green;
-			static float Scale = 1.0f;
+			static float Scale = 0.0001f;
 
 			UpdateSubresourceScope update = m_gfx_gradient.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
@@ -168,7 +168,7 @@ namespace pr::fluid
 		// Add the instance to the scene to be rendered
 		scene.AddInstance(m_gfx_fluid);
 		scene.AddInstance(m_gfx_container);
-		//scene.AddInstance(m_gfx_gradient);
+		scene.AddInstance(m_gfx_gradient);
 		scene.AddInstance(m_gfx_velocities);
 		if (m_probe.m_active)
 			scene.AddInstance(m_probe.m_gfx);

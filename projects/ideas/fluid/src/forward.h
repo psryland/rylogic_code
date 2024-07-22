@@ -10,6 +10,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/coalesce.h"
+#include "pr/common/tweakables.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/container/vector.h"

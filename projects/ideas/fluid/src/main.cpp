@@ -53,9 +53,9 @@ struct Main :Form
 	{
 		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 		if constexpr (Dimensions == 2)
-			m_scn.m_cam.LookAt(v4(0.0f, 0.5f, 2.8f, 1), v4(0, 0.7f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.0f, 0.5f, 2.8f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
 		if constexpr (Dimensions == 3)
-			m_scn.m_cam.LookAt(v4(0.2f, 0.2f, 0.2f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.2f, 0.5f, 0.2f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
 		m_scn.m_cam.Align(v4::YAxis());
 
 		m_loop.AddMessageFilter(*this);
@@ -88,7 +88,9 @@ struct Main :Form
 			if (m_fluid_vis.m_probe.m_active)
 			{
 				auto density = m_fluid_sim.DensityAt(m_fluid_vis.m_probe.m_position);
-				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Probe Radius: %3.3f", density, m_fluid_vis.m_probe.m_radius));
+				auto press = m_fluid_sim.PressureAt(m_fluid_vis.m_probe.m_position, std::nullopt);
+				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
+					density, press.x, press.y, press.z, m_fluid_vis.m_probe.m_radius));
 			}
 			else
 			{
