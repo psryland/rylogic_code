@@ -10,8 +10,8 @@
     <TargetName>view3d-12-static</TargetName>
     <ConfigurationType>StaticLibrary</ConfigurationType>
   </PropertyGroup>
-
-  <!-- Configurations -->
+  <!--
+  Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -30,15 +30,15 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-
-  <!-- Property Sheets -->
+  <!--
+  Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="props\tools.props" />
-  <Import Project="props\lib.props" />
-  <Import Project="props\fxc_build_rule.props" />
-
-  <!-- Build options -->
+  <Import Project="$(PropsPath)\tools.props" />
+  <Import Project="$(PropsPath)\lib.props" />
+  <Import Project="$(PropsPath)\fxc_build_rule.props" />
+  <!--
+  Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -63,8 +63,8 @@
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-
-  <!-- Files -->
+  <!--
+  Files -->
   <ItemGroup>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_gizmo.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\ldraw\ldr_object.cpp" />
@@ -146,6 +146,8 @@
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
     <ClInclude Include="..\include\pr\str\extract.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\compute_pso.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\gpu_radix_sort.h" />
     <ClInclude Include="..\include\pr\view3d-12\forward.h" />
     <ClInclude Include="..\include\pr\view3d-12\instance\instance.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h" />
@@ -167,7 +169,7 @@
     <ClInclude Include="..\include\pr\view3d-12\render\drawlist_element.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\render_step.h" />
     <ClInclude Include="..\include\pr\view3d-12\render\sortkey.h" />
-    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_upload_buffer.h" />
+    <ClInclude Include="..\include\pr\view3d-12\resource\gpu_transfer_buffer.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\descriptor.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\descriptor_store.h" />
     <ClInclude Include="..\include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
@@ -210,6 +212,7 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\ray_cast.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\root_signature.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\update_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\utility.h" />
@@ -221,9 +224,9 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\utility\root_signature.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\projects\rylogic\view3d-12\src\compute\hlsl\gpu_radix_sort.hlsl" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\geometry.hlsli" />
@@ -250,9 +253,11 @@
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\show_normals.hlsl" />
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
-
-  <!-- Targets -->
+  <ItemGroup>
+    <ResourceCompile Include="..\projects\rylogic\view3d-12\src\compute\hlsl\shaders.rc" />
+  </ItemGroup>
+  <!--
+  Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="targets\WinPixEventRuntime.targets" />
-
 </Project>

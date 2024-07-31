@@ -75,10 +75,10 @@ namespace pr::collision
 		feature_type = EFeature::Vert;
 		return shape.m_v[MaxElementIndex(d.xyz)];
 	}
-	template <typename TShape, typename = enable_if_shape<TShape>>
+	template <ShapeType TShape>
 	inline v4 SupportVertex(TShape const& shape, v4_cref direction)
 	{
-		EFeature feature_type;
+		auto feature_type = EFeature{};
 		return SupportVertex(shape, direction, feature_type);
 	}
 
@@ -289,9 +289,10 @@ namespace pr::collision
 	v4 FindContactPoint(Shape0 const& lhs, m4_cref l2w, Shape1 const& rhs, m4_cref r2w, v4_cref axis, float pen)
 	{
 		// Find the support feature on each shape (in each shape's space)
-		EFeature featA, featB;
-		v4 pointA[FeaturePolygonMaxSides];
-		v4 pointB[FeaturePolygonMaxSides];
+		auto featA = EFeature{};
+		auto featB = EFeature{};
+		v4 pointA[FeaturePolygonMaxSides] = {};
+		v4 pointB[FeaturePolygonMaxSides] = {};
 		SupportFeature(lhs, InvertFast(l2w) * +axis, featA, pointA);
 		SupportFeature(rhs, InvertFast(r2w) * -axis, featB, pointB);
 

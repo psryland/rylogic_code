@@ -6,7 +6,7 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/render/drawlist_element.h"
 #include "pr/view3d-12/utility/shadow_caster.h"
-#include "view3d-12/src/utility/root_signature.h"
+#include "pr/view3d-12/utility/root_signature.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12::shaders
@@ -39,8 +39,8 @@ namespace pr::rdr12::shaders
 		// Register mappings
 		root_sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
 		root_sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
-		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0);
-		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0);
+		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
+		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, 1);
 
 		m_signature = root_sig.Create(device);
 	}

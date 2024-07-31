@@ -516,7 +516,7 @@ namespace pr::rdr12
 		frame.m_present.Close();
 
 		// Submit the command lists to the GPU
-		rdr().ExecuteCommandLists({
+		rdr().ExecuteGfxCommandLists({
 			frame.m_prepare,
 			frame.m_main,
 			frame.m_resolve,

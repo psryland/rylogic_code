@@ -149,9 +149,13 @@ namespace pr::rdr12
 		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
 
 		// Execute a list of graphics command lists. Allows syntax: ExecuteCommandLists({list, list_array, ...})
-		void ExecuteCommandLists(GfxCmdListCollection cmd_lists) const
+		void ExecuteGfxCommandLists(GfxCmdListCollection cmd_lists) const
 		{
 			GfxQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
+		}
+		void ExecuteComCommandLists(ComCmdListCollection cmd_lists) const
+		{
+			ComQueue()->ExecuteCommandLists(cmd_lists.count(), cmd_lists.data());
 		}
 
 		// Run the given function on the Main/GUI thread

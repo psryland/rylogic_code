@@ -7,20 +7,13 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CustomBuild>
-      <Command>py ..\script\BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ScriptPath)\BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>
       </Message>
       <Outputs>%(RelativeDir)\..\compiled\$(Configuration)\%(Filename).built;%(Outputs)</Outputs>
-      <AdditionalInputs>..\script\BuildShader.py</AdditionalInputs>
+      <AdditionalInputs>$(ScriptPath)\BuildShader.py</AdditionalInputs>
       <LinkObjects>false</LinkObjects>
     </CustomBuild>
-    <BatchFileBuild>
-      <BatchFileToRun>Q:\bin\_build_shader.cmd</BatchFileToRun>
-    </BatchFileBuild>
-    <BatchFileBuild>
-      <BatchFileArgs>%(FullPath)</BatchFileArgs>
-      <OutputFiles>%(RelativeDir)\%(Filename).h</OutputFiles>
-    </BatchFileBuild>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

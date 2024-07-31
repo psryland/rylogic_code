@@ -1,7 +1,6 @@
 // Fluid
 #pragma once
 #include "src/forward.h"
-#include "src/probe.h"
 
 namespace pr::fluid
 {
@@ -21,7 +20,6 @@ namespace pr::fluid
 		Instance m_gfx_fluid;
 		Instance m_gfx_gradient;
 		Instance m_gfx_velocities;
-		Probe m_probe;
 
 		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn);
 		~FluidVisualisation();

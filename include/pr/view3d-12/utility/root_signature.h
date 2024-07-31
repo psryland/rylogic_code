@@ -45,12 +45,12 @@ namespace pr::rdr12
 			};
 		}
 
-		// Add a constant buffer parameter
-		void CBuf(EParam index, ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		// Add a constant buffer root parameter
+		void CBuf(EParam index, ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 		{
-			get(index) = D3D12_ROOT_PARAMETER1 {
+			get(index) = D3D12_ROOT_PARAMETER1{
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
-				.Descriptor = {.ShaderRegister = s_cast<UINT>(reg), .RegisterSpace = 0U},
+				.Descriptor = {.ShaderRegister = s_cast<UINT>(reg), .RegisterSpace = 0U, .Flags = flags},
 				.ShaderVisibility = shader_visibility,
 			};
 		}
@@ -74,8 +74,18 @@ namespace pr::rdr12
 			};
 		}
 
+		// Add a texture descriptor root parameter
+		void Tex(EParam index, ETexReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+		{
+			get(index) = D3D12_ROOT_PARAMETER1 {
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
+				.Descriptor = {.ShaderRegister = s_cast<UINT>(reg), .RegisterSpace = 0, .Flags = flags},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
 		// Add a texture descriptor range parameter
-		void Tex(EParam index, ETexReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		void Tex(EParam index, ETexReg reg, int count, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1 {
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
@@ -92,8 +102,18 @@ namespace pr::rdr12
 			};
 		}
 
-		// Add a Unordered access view descriptor range parameter
-		void Uav(EParam index, EUAVReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		// Add an Unordered access view root descriptor parameter
+		void Uav(EParam index, EUAVReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+		{
+			get(index) = D3D12_ROOT_PARAMETER1{
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV,
+				.Descriptor = {.ShaderRegister = s_cast<UINT>(reg), .RegisterSpace = 0, .Flags = flags},
+				.ShaderVisibility = shader_visibility,
+			};
+		}
+
+		// Add an Unordered access view descriptor range parameter
+		void Uav(EParam index, EUAVReg reg, int count, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
@@ -111,7 +131,7 @@ namespace pr::rdr12
 		}
 
 		// Add a sampler descriptor range parameter
-		void Samp(EParam index, ESamReg reg, int count = 1, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		void Samp(EParam index, ESamReg reg, int count, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAGS flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			m_des_range.push_back(D3D12_DESCRIPTOR_RANGE1{
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
@@ -164,7 +184,7 @@ namespace pr::rdr12
 		{
 			auto i = s_cast<int>(index);
 			if (i >= s_cast<int>(m_root_params.size()))
-				m_root_params.resize(i + 1);
+				m_root_params.resize(i + 1, {});
 			
 			return m_root_params[i];
 		}
@@ -174,7 +194,7 @@ namespace pr::rdr12
 		{
 			auto i = s_cast<int>(index);
 			if (i >= s_cast<int>(m_static_samplers.size()))
-				m_static_samplers.resize(i + 1);
+				m_static_samplers.resize(i + 1, {});
 			
 			return m_static_samplers[i];
 		}

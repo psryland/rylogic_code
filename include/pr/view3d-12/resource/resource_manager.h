@@ -7,7 +7,7 @@
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/resource/descriptor_store.h"
 #include "pr/view3d-12/resource/resource_state_store.h"
-#include "pr/view3d-12/resource/gpu_upload_buffer.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/resource/gpu_descriptor_heap.h"
 #include "pr/view3d-12/resource/mipmap_generator.h"
 #include "pr/view3d-12/utility/lookup.h"
@@ -77,6 +77,9 @@ namespace pr::rdr12
 		// Flush creation commands to the GPU. Returns the sync point for when they've been executed
 		uint64_t FlushToGpu(bool block);
 		void Wait(uint64_t sync_point) const;
+		
+		// Create and initialise a resource
+		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
 
 		// Create a model.
 		ModelPtr CreateModel(ModelDesc const& desc);
@@ -129,9 +132,6 @@ namespace pr::rdr12
 		friend struct Sampler;
 		friend struct Shader;
 		friend struct UpdateSubresourceScope;
-		
-		// Create and initialise a resource
-		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
 
 		// Use the 'ResolveFilepath' event to resolve a filepath
 		std::filesystem::path ResolvePath(std::string_view path) const;

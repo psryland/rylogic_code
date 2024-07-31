@@ -40,6 +40,70 @@ namespace pr::rdr12
 		rdr12::Delete<Shader>(this);
 	}
 
+	// Compile a shader at run time
+	// 'entry_point' is the kernel function name
+	// 'code' is the source file as a string
+	// 'args' is an array of pointers to arguments
+	// 'shader_model' is the shader model to compile to
+	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args)
+	{
+		DxcBuffer source = {
+			.Ptr = code.data(),
+			.Size = code.size(),
+			.Encoding = DXC_CP_UTF8,
+		};
+		
+		D3DPtr<IDxcUtils> utils;
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+
+		D3DPtr<IDxcIncludeHandler> include_handler;
+		Check(utils->CreateDefaultIncludeHandler(&include_handler.m_ptr));
+
+		D3DPtr<IDxcCompiler3> compiler;
+		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)&compiler.m_ptr));
+
+		D3DPtr<IDxcResult> result;
+		auto hr = compiler->Compile(&source, args.data(), s_cast<uint32_t>(args.size()), include_handler.get(), __uuidof(IDxcResult), (void**)&result.m_ptr);
+		if (SUCCEEDED(hr))
+		{
+			Check(result->GetStatus(&hr));
+		}
+		if (FAILED(hr))
+		{
+			std::string message = "Compile Failed";
+			if (result)
+			{
+				D3DPtr<IDxcBlobEncoding> errors_blob;
+				if (SUCCEEDED(result->GetErrorBuffer(&errors_blob.m_ptr)))
+					message.append(": ").append(static_cast<char const*>(errors_blob->GetBufferPointer()));
+			}
+			Check(hr, message.c_str());
+		}
+
+		D3DPtr<IDxcBlob> shader;
+		Check(result->GetResult(&shader.m_ptr));
+
+		std::vector<uint8_t> byte_code(shader->GetBufferSize());
+		memcpy(byte_code.data(), shader->GetBufferPointer(), shader->GetBufferSize());
+		return byte_code;
+	}
+	std::vector<uint8_t> CompileShader(std::filesystem::path const& shader_path, std::span<wchar_t const*> args)
+	{
+		uint32_t code_page = DXC_CP_UTF8;
+		
+		D3DPtr<IDxcUtils> utils;
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+
+		D3DPtr<IDxcBlobEncoding> source_blob;
+		Check(utils->LoadFile(shader_path.wstring().c_str(), &code_page, &source_blob.m_ptr));
+
+		//D3DPtr<IDxcCompilerArgs> compiler_args;
+		//Check(utils->BuildArguments(shader_path.wstring().c_str(), entry_point, shader_model, args.data(), s_cast<uint32_t>(args.size()), nullptr, 0, &compiler_args.m_ptr));
+
+		auto source = std::string_view{ static_cast<char const*>(source_blob->GetBufferPointer()), source_blob->GetBufferSize() };
+		return CompileShader(source, args);
+	}
+
 	// Compiled shader byte code
 	namespace shader_code
 	{

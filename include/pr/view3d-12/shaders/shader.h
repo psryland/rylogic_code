@@ -4,7 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/resource/gpu_upload_buffer.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr::rdr12
@@ -63,6 +63,20 @@ namespace pr::rdr12
 		protected: virtual void Delete();
 	};
 
+	// Compile a shader at run time
+	// 'code' is the source file as a string
+	// 'args' is an array of pointers to arguments
+	//
+	// Example Arguments:
+	//  args = {
+	//     L"-E", L"<entry_point>",
+	//     L"-T", L"<shader_model>",
+	//     L"-D<define>",
+	//     L"-O3",
+	//     L"-Zi",
+	// };
+	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args);
+	std::vector<uint8_t> CompileShader(std::filesystem::path const& shader_path, std::span<wchar_t const*> args);
 
 	// Statically declared shader byte code
 	namespace shader_code

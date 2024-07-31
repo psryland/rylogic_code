@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-  <!-- Globals -->
+  <!--
+  Globals -->
   <Import Project="..\..\..\build\props\globals.props" />
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -10,8 +10,8 @@
     <ProjectName>fluid</ProjectName>
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
-
-  <!-- Configurations -->
+  <!--
+  Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -30,13 +30,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-
-  <!-- Property Sheets -->
+  <!--
+  Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\..\build\props\app.props" />
-
-  <!-- Build options -->
+  <Import Project="$(PropsPath)\app.props" />
+  <Import Project="$(PropsPath)\fxc_build_rule.props" />
+  <!--
+  Build options -->
   <ItemDefinitionGroup>
     <ClCompile>
       <EnableModules>false</EnableModules>
@@ -58,8 +59,8 @@
       <SubSystem>Windows</SubSystem>
     </Link>
   </ItemDefinitionGroup>
-
-  <!-- Files -->
+  <!--
+  Files -->
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
@@ -68,6 +69,7 @@
     <ClInclude Include="src\bucket_collision.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\iboundary_collision.h" />
+    <ClInclude Include="src\iexternal_forces.h" />
     <ClInclude Include="src\ispatial_partition.h" />
     <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\fluid_simulation.h" />
@@ -78,9 +80,16 @@
     <ClInclude Include="src\kdtree_partition.h" />
     <ClCompile Include="src\particle.cpp" />
     <ClCompile Include="src\kdtree_partition.cpp" />
+    <CustomBuild Include="src\hlsl\spatial.hlsl">
+      <ShaderModel>6.0</ShaderModel>
+      <FileType>Document</FileType>
+      <Command>py $(ScriptPath)\BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
+      <Outputs>%(RelativeDir)\..\compiled\$(Configuration)\%(Filename).built;%(Outputs)</Outputs>
+      <AdditionalInputs>$(ScriptPath)\BuildShader.py</AdditionalInputs>
+    </CustomBuild>
   </ItemGroup>
-
-  <!-- Dependencies -->
+  <!--
+  Dependencies -->
   <ItemGroup>
     <UpToDateCheckInput Include="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll" />
   </ItemGroup>
@@ -93,8 +102,8 @@
     <Exec Command="py script\Copy.py lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.pdb $(TargetDir) -OnlyIfNewer -IgnoreMissing" WorkingDirectory="$(SolutionDir)..\"/>
   </Target>
   -->
-
-  <!-- Targets -->
+  <!--
+  Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="..\..\..\build\targets\WinPixEventRuntime.targets" />
 </Project>

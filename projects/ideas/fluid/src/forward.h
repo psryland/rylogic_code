@@ -29,10 +29,15 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/utility/update_resource.h"
+#include "pr/view3d-12/utility/root_signature.h"
+#include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/compute/gpu_radix_sort.h"
+
 
 namespace pr::fluid
 {
+	using namespace tweakables;
 	inline static const int Dimensions = 2;
 
 	struct Particle;
@@ -41,5 +46,6 @@ namespace pr::fluid
 	struct FluidVisualisation;
 	struct IBoundaryCollision;
 	struct ISpatialPartition;
+	struct IExternalForces;
 }
 

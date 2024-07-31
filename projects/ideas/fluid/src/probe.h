@@ -1,30 +1,86 @@
 // Fluid
 #pragma once
 #include "src/forward.h"
+#include "src/iexternal_forces.h"
+
+using namespace pr::rdr12;
 
 namespace pr::fluid
 {
-	struct Probe
+	struct Probe :IExternalForces
 	{
 		v4 m_position;
 		rdr12::LdrObjectPtr m_gfx;
 		float m_radius;
+		float m_sign;
 		bool m_active;
 
 		explicit Probe(rdr12::Renderer& rdr)
 			:m_position(0,0,0,1)
 			,m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
 			,m_radius(0.05f)
+			,m_sign()
 			,m_active(false)
 		{
 			UpdateI2W();
 		}
 
-		// Handle input
-		void OnMouseMove(gui::MouseEventArgs& args, rdr12::Scene& scn)
+		// Add the probe to the scene
+		void AddToScene(Scene& scene)
 		{
-			if (!gui::AllSet(args.m_keystate, gui::EMouseKey::Ctrl))
+			if (!m_active)
 				return;
+
+			// If the probe is active, find all the particles within the probe
+			//auto within = std::set<int>{};
+			//auto Idx = [&](auto& particle) { return s_cast<int>(m_sim->m_particles.index(particle)); };
+			//auto IsWithin = [&](auto& particle) { return within.find(Idx(particle)) != std::end(within); };
+			//m_sim->m_spatial->Find(m_probe.m_position, m_probe.m_radius, m_sim->m_particles, [&](auto& particle, float)
+			//{
+			//	within.insert(Idx(particle));
+			//});
+			//if (m_probe.m_active && IsWithin(particle))
+			// return Colour32(0xFFFFFF00);
+
+			// Add the probe graphics
+			scene.AddInstance(m_gfx);
+		}
+
+		// Update the graphics position
+		void UpdateI2W()
+		{
+			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
+		}
+
+		// Returns the acceleration Apply external forces to the particles
+		v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const override
+		{
+			if (!m_active)
+				return v4::Zero();
+
+			auto dir = position - m_position;
+			auto dist_sq = LengthSq(dir);
+			if (dist_sq < maths::tinyf || dist_sq > m_radius * m_radius)
+				return v4::Zero();
+
+			static Tweakable<float, "PushForce"> PushForce = 1.0f;
+			auto dist = Sqrt(dist_sq);
+			auto frac = SmoothStep<float>(1.0f, 0.0f, dist / m_radius);
+			return (m_sign * frac * PushForce / dist) * dir;
+		}
+
+		// Handle input
+		void OnMouseButton(gui::MouseEventArgs& args, rdr12::Scene& scn)
+		{
+			if (!m_active || args.m_handled)
+				return;
+
+			args.m_handled = true;
+
+			m_sign = 
+				args.m_down && gui::AllSet(args.m_button, gui::EMouseKey::Left) ? +1.0f :
+				args.m_down && gui::AllSet(args.m_button, gui::EMouseKey::Right) ? -1.0f :
+				0.0f;
 
 			// Shoot a ray through the mouse pointer
 			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
@@ -34,30 +90,43 @@ namespace pr::fluid
 			auto t = (m_position.z - pt.z) / dir.z;
 			m_position = pt + t * dir;
 			UpdateI2W();
+		}
+		void OnMouseMove(gui::MouseEventArgs& args, rdr12::Scene& scn)
+		{
+			if (!m_active || args.m_handled)
+				return;
+
 			args.m_handled = true;
+
+			// Shoot a ray through the mouse pointer
+			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
+			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
+
+			// Find where it intersects the XY plane at z = m_position.z
+			auto t = (m_position.z - pt.z) / dir.z;
+			m_position = pt + t * dir;
+			UpdateI2W();
 		}
 		void OnMouseWheel(gui::MouseWheelArgs& args)
 		{
-			if (!gui::AllSet(args.m_keystate, gui::EMouseKey::Ctrl))
+			if (!m_active || args.m_handled)
 				return;
+
+			args.m_handled = true;
 
 			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, 0.001f, 0.500f);
 			UpdateI2W();
-			args.m_handled = true;
 		}
 		void OnKey(gui::KeyEventArgs& args)
 		{
+			if (args.m_handled)
+				return;
+
+			if (args.m_down)
+				return;
+
+			args.m_handled = true;
 			const float step = 0.05f;
-			if (args.m_down) return;
-			if (args.m_vk_key == 'P')
-			{
-				m_active = !m_active;
-				return;
-			}
-			if (!m_active)
-			{
-				return;
-			}
 			switch (args.m_vk_key)
 			{
 				case 'W': { m_position.z += step; break; }
@@ -68,13 +137,19 @@ namespace pr::fluid
 				case 'E': { m_position.y += step; break; }
 				case 'R': { m_radius = std::min(m_radius * 1.1f, 0.100f); break; }
 				case 'F': { m_radius = std::max(m_radius * 0.9f, 0.001f); break; }
+				case VK_SHIFT:
+				{
+					m_active = !m_active;
+					m_sign = 0.0f;
+					break;
+				}
+				default:
+				{
+					args.m_handled = false;
+					break;
+				}
 			}
 			UpdateI2W();
-		}
-		void UpdateI2W()
-		{
-			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
-
 		}
 	};
 }

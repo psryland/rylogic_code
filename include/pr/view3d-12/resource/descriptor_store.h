@@ -19,7 +19,7 @@ namespace pr::rdr12
 		//      - A large static ring buffer of GPU visible descriptors that is bound to the GPU once for the life of the application.
 		//
 		//    When a resource is created, descriptors are created for any views it needs in the CPU memory store.
-		//    At draw time, descriptors are copied into the GPU heap on demand. However, many textures will be reused, to we don't want
+		//    At draw time, descriptors are copied into the GPU heap on demand. However, many textures will be reused, so we don't want
 		//    to blindly add descriptors to the GPU ring buffer, it needs to be smart enough to handle duplicates.
 		//    Also, it needs a way to record sync points in the GPU heap ring.
 		//

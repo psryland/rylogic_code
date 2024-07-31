@@ -16,8 +16,9 @@
 //	 finding the overlap between objects.
 // * Shapes for rigid bodies should be in centre of mass frame
 #pragma once
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <concepts>
 #include "pr/maths/maths.h"
 #include "pr/common/cast.h"
 #include "pr/common/scope.h"

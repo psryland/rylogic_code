@@ -3,6 +3,7 @@
 #include "src/particle.h"
 #include "src/ispatial_partition.h"
 #include "src/iboundary_collision.h"
+#include "src/iexternal_forces.h"
 
 namespace pr::fluid
 {
@@ -18,19 +19,20 @@ namespace pr::fluid
 	// A particle represents a small unit of fluid. Given a volume and a number of particles,
 	// the mass of each fluid unit is: mass = density * volume / number of particles.
 
-	FluidSimulation::FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial)
+	FluidSimulation::FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial, IExternalForces& external)
 		: m_gravity(0, -9.8f, 0, 0)
 		, m_particles(particle_count)
 		, m_densities(m_particles.size())
 		, m_boundary(&boundary)
 		, m_spatial(&spatial)
+		, m_external(&external)
 		, m_thermal_noise(0.001f)
 		, m_radius(0.1f)
 		, m_density0(Dimensions == 3 ? 1000.0f : 10.0f) // kg/m^3 (3d), kg/m^2 (2d)
 		, m_mass(m_density0 * m_boundary->Volume() / isize(m_particles)) // kg
 	{
 		// Distribute the particles
-		m_boundary->Fill(EFillStyle::Point, m_particles, m_radius);
+		m_boundary->Fill(EFillStyle::Random, m_particles, m_radius);
 
 		// Update the spatial partitioning of the particles
 		m_spatial->Update(m_particles);
@@ -48,33 +50,48 @@ namespace pr::fluid
 	// Advance the simulation forward in time by 'dt' seconds
 	void FluidSimulation::Step(float dt)
 	{
-		//dt = 0;
-
 		// Evolve the particles forward in time
 		std::default_random_engine rng;
 		for (auto& particle : m_particles)
 		{
 			auto pidx = m_particles.index(particle);
 
-			// Get the force experienced by the particle due to pressure
-			auto pressure = PressureAt(particle.m_pos, pidx);
+			// Use Leapfrog integration to predict the next particle position
+			auto pos1 = particle.m_pos + particle.m_vel * dt / 2;
 
 			// Sum up all sources of acceleration
 			auto accel = v4::Zero();
-			accel += pressure / m_densities[pidx];
-			//accel += m_thermal_noise * v4::RandomN(rng, 0);
-			//accel += m_gravity;
-			if (accel.w != 0)
-				accel = accel;
 
-			// Update velocity
+			// Get the force experienced by the particle due to pressure
+			auto pressure = PressureAt(pos1, pidx);
+			accel += pressure / DensityAt(pidx);
+
+			// Get the viscosity force experienced by the particle
+			auto viscosity = ViscosityAt(pos1, pidx);
+			accel += viscosity;
+
+			// External forces
+			auto external = m_external->ForceAt(*this, pos1, pidx);
+			accel += external / DensityAt(pidx);
+			
+			// Gravity
+			static Tweakable<float, "Gravity"> Gravity = 0.0f;
+			accel += Gravity * m_gravity;
+
+			// Check for valid acceleration
+			if constexpr (Dimensions == 2) accel.z = 0;
+			assert(accel.w == 0);
+
+			//static Tweakable<float, "Drag"> Drag = 0.99f;
+			//particle.m_vel *= Drag;
+
+			// Integrate the particle dynamics
 			particle.m_vel += accel * dt;
-			particle.m_vel *= 0.95f; // drag
 			
 			// Collision restitution with the boundary
 			auto [pos, vel] = m_boundary->ResolveCollision(particle, m_radius, dt);
 
-			// Integrate the particle dynamics
+			// Apply new position and velocity
 			particle.m_pos = pos;
 			particle.m_vel = vel;
 		}
@@ -89,7 +106,7 @@ namespace pr::fluid
 	// Calculates the fluid density at 'position'
 	float FluidSimulation::DensityAt(v4_cref position) const
 	{
-		float density = 0;
+		auto density = 0.0f;
 
 		// Find all particles within the particle radius of 'position'
 		m_spatial->Find(position, m_radius, m_particles, [&](auto const&, float dist_sq)
@@ -101,47 +118,79 @@ namespace pr::fluid
 
 		return density;
 	}
+	float FluidSimulation::DensityAt(size_t index) const
+	{
+		return m_densities[index];
+	}
 
 	// Calculate the pressure gradient at 'position'
 	v4 FluidSimulation::PressureAt(v4_cref position, std::optional<size_t> index) const
 	{
-		auto pressure = v4::Zero();
+		auto nett_pressure = v4::Zero();
 		m_spatial->Find(position, m_radius, m_particles, [&](auto const& particle, float dist_sq)
 		{
 			auto idx = m_particles.index(particle);
 			if (index && *index == idx)
 				return;
 
-			// Get the direction from 'position' to 'particle'
-			auto direction = particle.m_pos - position;
+			// The distance from 'position' to 'particle'
 			auto dist = Sqrt(dist_sq);
 
-			// Normalize the direction vector
+			// Get the influence due to 'particle' at 'dist'
+			auto influence = Particle::dInfluenceAt(dist, m_radius);
+
+			// Get the direction from 'particle' to 'position'
+			auto direction = position - particle.m_pos;
 			direction = dist > maths::tinyf ? (direction / dist) : v4::RandomN(g_rng(), 0);
 			if constexpr (Dimensions == 2) { direction.z = 0; }
 
-			// We need to simulate the force due to pressure being applied to
-			// both particles (idx and index). Taking the average of the densities
-			// at the two particle positions is kind of the same as applying the force
-			// equal and opposite to both particles
-
-			// Get the density at the particle position. Pressure is due to
-			// a difference in density, so compare to the target density to get pressure
-			
+			// We need to simulate the force due to pressure being applied to both particles (idx and index).
+			// A simple way to do this is to average the pressure between the two particles. Since pressure is
+			// a linear function of density, we can use the average density.
 			auto density = index
-				? (m_densities[idx] + m_densities[*index]) / 2.0f
-				: m_densities[idx];
+				? (DensityAt(idx) + DensityAt(*index)) / 2.0f
+				: DensityAt(idx);
 
-			//static tweakables::Tweakable<float, "DensityToPressure"> C = 7.0f;
-			static float C = 7.0f;
-			auto pres = C * (density - m_density0);
+			// Convert the density to a pressure (P = k * (rho - rho0))
+			//static float C = 7.0f;
+			static Tweakable<float, "DensityToPressure"> DensityToPressure = 7.0f;
+			static Tweakable<float, "Density0"> Density0 = 0.0f;
+			auto pressure = DensityToPressure * (density - Density0); //m_density0
 
 			// Get the pressure gradient at 'position' due to 'particle'
-			auto influence = Particle::dInfluenceAt(dist, m_radius);
-			pressure += (pres * influence * m_mass / density) * direction;
+			nett_pressure += (pressure * influence * m_mass / density) * direction;
 		});
 
-		return pressure;
+		return nett_pressure;
+	}
+
+	// Calculate the viscosity at 'position'
+	v4 FluidSimulation::ViscosityAt(v4_cref position, std::optional<size_t> index) const
+	{
+		auto nett_viscosity = v4::Zero();
+		m_spatial->Find(position, m_radius, m_particles, [&](auto const& particle, float dist_sq)
+		{
+			auto idx = m_particles.index(particle);
+			if (index && *index == idx)
+				return;
+
+			// The distance from 'position' to 'particle'
+			auto dist = Sqrt(dist_sq);
+
+			// Get the influence due to 'particle' at 'dist'
+			auto influence = Particle::dInfluenceAt(dist, m_radius);
+
+			// Calculate the viscosity from the relative velocity of the particles
+			auto visocity = index
+				? (m_particles[idx].m_vel - m_particles[*index].m_vel)
+				: v4::Zero();
+
+			// Viscosity
+			static Tweakable<float, "Viscosity"> Viscosity = 0.0f;
+			nett_viscosity = Viscosity * influence * visocity;
+		});
+
+		return nett_viscosity;
 	}
 
 	// Update the cache of density values at the particle locations

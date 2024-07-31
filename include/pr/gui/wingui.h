@@ -2662,7 +2662,7 @@ namespace pr
 			void AddLoop(int step_rate_ms, bool variable, step_func_t step)
 			{
 				m_loop.push_back(Loop(step, step_rate_ms, variable));
-				m_order.push_back(isize(m_loop) - 1);
+				m_order.push_back(static_cast<int>(m_loop.size()) - 1);
 			}
 
 			// Run the thread message pump while maintaining the desired loop rates
@@ -2716,7 +2716,7 @@ namespace pr
 				for (auto const& loop : m_loop)
 				{
 					if (dt < loop.m_step_rate_ms * m_max_loop_steps) continue;
-					OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
+					//OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
 				}
 
 				// Step all loops that are pending
@@ -2744,14 +2744,14 @@ namespace pr
 					loop.m_clock += elapsed_ms;
 					loop.m_avr.add(static_cast<uint8_t>(std::min(255LL, Clock() - t0)));
 
-					if (loop.m_avr.b[0] > loop.m_step_rate_ms)
-						OutputDebugStringA(std::format("SimMessagePump: WARNING - long step: {}% \n", loop.m_avr.b[0] * 100.0 / loop.m_step_rate_ms).c_str());
+					//if (loop.m_avr.b[0] > loop.m_step_rate_ms)
+					//	OutputDebugStringA(std::format("SimMessagePump: WARNING - long step: {}% \n", loop.m_avr.b[0] * 100.0 / loop.m_step_rate_ms).c_str());
 				}
 
 				// If we get here, the loops are taking too long. Return a timeout of 0 to indicate
 				// loops still need stepping. This allows the message queue still to be processed though.
 				// Loop at 'm_avr' to see the last 8 loop execution times in ms.
-				OutputDebugStringA("SimMessagePump: WARNING - loops are staving the message queue\n");
+				//OutputDebugStringA("SimMessagePump: WARNING - loops are staving the message queue\n");
 				return 0;
 			}
 		};

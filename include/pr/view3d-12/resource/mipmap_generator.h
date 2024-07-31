@@ -22,7 +22,7 @@ namespace pr::rdr12
 		GpuSync&         m_gsync;          // The GPU fence
 		GfxCmdList&      m_cmd_list;       // Command list for mip generator operations.
 		KeepAlive        m_keep_alive;     // Keeps D3D objects alive until the GPU has finished with them
-		GpuViewHeap      m_heap_view;      // GPU visible descriptor heap for CBV/SRV/UAV
+		GpuViewHeap      m_view_heap;      // GPU visible descriptor heap for CBV/SRV/UAV
 		SignaturePtr     m_mipmap_sig;     // Root signature for the mip map generator
 		PipelineStatePtr m_mipmap_pso;     // Pipeline state for the mip map generator
 		bool             m_flush_required; // True when there is mip-map generation work pending

@@ -6,7 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/resource_manager.h"
-#include "pr/view3d-12/resource/gpu_upload_buffer.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/barrier_batch.h"

@@ -469,6 +469,10 @@ namespace pr::rdr12
 		ResDesc(D3D12_RESOURCE_DIMENSION dimension, DXGI_FORMAT format, uint64_t width, uint32_t height, uint16_t depth, int element_stride)
 			:ResDesc()
 		{
+			// Note: Dx12 expects 'Width' to be in bytes for buffers
+			// However, I'm using 'Width' as the array length (in elements) to be consistent with textures
+			// ResourceManager::CreateResource() converts to bytes as needed, but you'll need to convert
+			// manually if you don't use 'ResourceManager'.
 			Dimension = dimension;
 			Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			Width = width;
@@ -567,7 +571,6 @@ namespace pr::rdr12
 		// Generic buffer resource description
 		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment)
 		{
-			// Width is in bytes for buffer type resources
 			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride)
 				.mips(1)
 				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)

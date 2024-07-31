@@ -27,12 +27,11 @@ namespace pr
 		//  - Does not support infinities or NaN
 		//  - Few, partially pipeline-able, non-branching instructions,
 		//  - Core operations ~10 clock cycles on modern x86-64
-		using aliaser = union { float f; unsigned int u; };
-		auto x = aliaser{f32};
-		auto t1 = static_cast<uint32_t>(x.u & 0x7fffffff);        // Non-sign bits
-		auto t2 = static_cast<uint32_t>(x.u & 0x80000000);        // Sign bit
-		auto t3 = static_cast<uint32_t>(x.u & 0x7f800000);        // Exponent
-		auto t4 = static_cast<uint32_t>(x.u & 0x007fffffu) >> 13; // NaN signal >> 13
+		auto u = std::bit_cast<uint32_t>(f32);
+		auto t1 = static_cast<uint32_t>(u & 0x7fffffff);        // Non-sign bits
+		auto t2 = static_cast<uint32_t>(u & 0x80000000);        // Sign bit
+		auto t3 = static_cast<uint32_t>(u & 0x7f800000);        // Exponent
+		auto t4 = static_cast<uint32_t>(u & 0x007fffffu) >> 13; // NaN signal >> 13
 
 		t1 >>= 13;                                     // Align mantissa on MSB
 		t2 >>= 16;                                     // Shift sign bit into position
@@ -53,7 +52,7 @@ namespace pr
 		//  - Does not support infinities or NaN
 		//  - Few, partially pipeline-able, non-branching instructions,
 		//  - Core operations ~6 clock cycles on modern x86-64
-		using aliaser = union { unsigned int u; float f; };
+
 		auto t1 = static_cast<uint32_t>(f16 & 0x7fff);      // Non-sign bits
 		auto t2 = static_cast<uint32_t>(f16 & 0x8000);      // Sign bit
 		auto t3 = static_cast<uint32_t>(f16 & 0x7c00);      // Exponent
@@ -65,7 +64,7 @@ namespace pr
 		t1 = t3 == 0 ? 0 : t1;                             // Denormals-as-zero
 		t1 = t3 >= 0x7c00u ? 0x7f800000u + t4 : t1;        // NaN or Inf (t4 == 0)
 		t1 |= t2;                                          // Re-insert sign bit
-		return aliaser{ t1 }.f;
+		return std::bit_cast<float>(t1);
 	}
 
 	// Convert between 32-bit float (1s7e24m) and 16-bit float (1s5e10m)
@@ -134,7 +133,7 @@ namespace pr::maths
 	{
 		// Literals
 		{
-			auto h0 = 1.2345_hf;
+			constexpr half_t h0 = 1.2345_hf;
 			static_assert(sizeof(h0) == sizeof(half_t));
 
 			auto h1 = F32toF16(1.2345f);

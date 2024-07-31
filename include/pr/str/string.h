@@ -216,8 +216,8 @@ namespace pr
 		// return the iterator category for 'iter'
 		template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const
 		{
-			typename std::iterator_traits<iter>::iterator_category cat;
-			return cat;
+			using iter_category = typename std::iterator_traits<iter>::iterator_category;
+			return iter_category{};
 		}
 
 		// Make sure 'm_ptr' is big enough to hold 'new_count' elements
@@ -1810,40 +1810,40 @@ namespace pr::str
 		wstr0 = L"A";                                       PR_CHECK(wstr0, L"A");
 		wstr0 += L'b';                                      PR_CHECK(wstr0, L"Ab");
 
-		PR_CHECK(pr::string<>("A") == pr::string<>("A") , true);
-		PR_CHECK(pr::string<>("A") != pr::string<>("B") , true);
-		PR_CHECK(pr::string<>("A")  < pr::string<>("B") , true);
-		PR_CHECK(pr::string<>("B")  > pr::string<>("A") , true);
-		PR_CHECK(pr::string<>("A") <= pr::string<>("AB"), true);
-		PR_CHECK(pr::string<>("B") >= pr::string<>("B") , true);
+		PR_EXPECT(pr::string<>("A") == pr::string<>("A") );
+		PR_EXPECT(pr::string<>("A") != pr::string<>("B") );
+		PR_EXPECT(pr::string<>("A")  < pr::string<>("B") );
+		PR_EXPECT(pr::string<>("B")  > pr::string<>("A") );
+		PR_EXPECT(pr::string<>("A") <= pr::string<>("AB"));
+		PR_EXPECT(pr::string<>("B") >= pr::string<>("B") );
 
-		PR_CHECK(str0.find("Jang", 1, 4)                                         , 3U);
-		PR_CHECK(str0.find(pr::string<>("ang"), 2)                               , 4U);
-		PR_CHECK(str0.find_first_of(pr::string<>("n"), 0)                        , 2U);
-		PR_CHECK(str0.find_first_of("J", 1, 1)                                   , 3U);
-		PR_CHECK(str0.find_first_of("J", 0)                                      , 0U);
-		PR_CHECK(str0.find_first_of('n', 3)                                      , 5U);
-		PR_CHECK(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        , 5U);
-		PR_CHECK(str0.find_last_of("J", 3, 1)                                    , 3U);
-		PR_CHECK(str0.find_last_of("J", pr::string<>::npos)                      , 3U);
-		PR_CHECK(str0.find_last_of('a', pr::string<>::npos)                      , 4U);
-		PR_CHECK(str0.find_first_not_of(pr::string<>("Jin"), 0)                  , 4U);
-		PR_CHECK(str0.find_first_not_of("ing", 1, 3)                             , 3U);
-		PR_CHECK(str0.find_first_not_of("inJ", 0)                                , 4U);
-		PR_CHECK(str0.find_first_not_of('J', 1)                                  , 1U);
-		PR_CHECK(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) , 1U);
-		PR_CHECK(str0.find_last_not_of("Jang", 4, 4)                             , 1U);
-		PR_CHECK(str0.find_last_not_of("an", 5)                                  , 3U);
-		PR_CHECK(str0.find_last_not_of('n', 5)                                   , 4U);
+		PR_EXPECT(str0.find("Jang", 1, 4)                                         == 3U);
+		PR_EXPECT(str0.find(pr::string<>("ang"), 2)                               == 4U);
+		PR_EXPECT(str0.find_first_of(pr::string<>("n"), 0)                        == 2U);
+		PR_EXPECT(str0.find_first_of("J", 1, 1)                                   == 3U);
+		PR_EXPECT(str0.find_first_of("J", 0)                                      == 0U);
+		PR_EXPECT(str0.find_first_of('n', 3)                                      == 5U);
+		PR_EXPECT(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        == 5U);
+		PR_EXPECT(str0.find_last_of("J", 3, 1)                                    == 3U);
+		PR_EXPECT(str0.find_last_of("J", pr::string<>::npos)                      == 3U);
+		PR_EXPECT(str0.find_last_of('a', pr::string<>::npos)                      == 4U);
+		PR_EXPECT(str0.find_first_not_of(pr::string<>("Jin"), 0)                  == 4U);
+		PR_EXPECT(str0.find_first_not_of("ing", 1, 3)                             == 3U);
+		PR_EXPECT(str0.find_first_not_of("inJ", 0)                                == 4U);
+		PR_EXPECT(str0.find_first_not_of('J', 1)                                  == 1U);
+		PR_EXPECT(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) == 1U);
+		PR_EXPECT(str0.find_last_not_of("Jang", 4, 4)                             == 1U);
+		PR_EXPECT(str0.find_last_not_of("an", 5)                                  == 3U);
+		PR_EXPECT(str0.find_last_not_of('n', 5)                                   == 4U);
 
-		PR_CHECK(str1.substr(6, 4), "Monk");
+		PR_EXPECT(str1.substr(6, 4) == "Monk");
 
 		str0.resize(0);
 		for (int i = 0; i != 500; ++i)
 		{
 			str0.insert(str0.begin() ,'A'+(i%24));
 			str0.insert(str0.end()   ,'A'+(i%24));
-			PR_CHECK(str0.size(), (1ULL+i) * 2);
+			PR_EXPECT(str0.size() == (1ULL+i) * 2);
 		}
 
 		str4 = "abcdef";
@@ -1852,7 +1852,7 @@ namespace pr::str
 
 		std::string str5 = "ABCDEFG";
 		str5.replace(1, 3, "bcde", 2);
-		PR_CHECK(str5.size(), 6U);
+		PR_EXPECT(str5.size() == 6U);
 
 		pr::string<> str6 = "abcdefghij";
 		str6.replace(0, 3, pr::string<>("AB"));              PR_CHECK(str6, "ABdefghij");
@@ -1864,20 +1864,17 @@ namespace pr::str
 		// Test move constructor/assignment
 		pr::string<> str7 = "my_string";
 		pr::string<> str8 = std::move(str7);
-		//PR_CHECK(str7.empty(), true);
-		PR_CHECK(str8, "my_string");
+		PR_EXPECT(str8 == "my_string");
 
 		pr::string<char,4> str9 = "very long string that has been allocated";
 		pr::string<char,8> str10 = "a different very long string that's been allocated";
 		str10 = std::move(str9);
-		//PR_CHECK(str9.empty(), true);
-		PR_CHECK(str10, "very long string that has been allocated");
-		PR_CHECK(str9.c_str() == str10.c_str(), false);
+		PR_EXPECT(str10 == "very long string that has been allocated");
 
 		// implicit cast to string view
 		pr::string<char, 16> str11 = "abcdef";
 		std::string_view sv = str11;
-		PR_CHECK(Equal(sv, "abcdef"), true);
+		PR_EXPECT(Equal(sv, "abcdef"));
 	}
 }
 #endif

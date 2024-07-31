@@ -7,7 +7,7 @@
 #include "pr/view3d-12/render/drawlist_element.h"
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/instance/instance.h"
-#include "view3d-12/src/utility/root_signature.h"
+#include "pr/view3d-12/utility/root_signature.h"
 #include "view3d-12/src/shaders/common.h"
 
 namespace pr::rdr12::shaders
@@ -41,8 +41,8 @@ namespace pr::rdr12::shaders
 		root_sig.CBuf(ERootParam::CBufFade, ECBufReg::b2);
 		root_sig.CBuf(ERootParam::CBufScreenSpace, ECBufReg::b3);
 		root_sig.CBuf(ERootParam::CBufDiag, ECBufReg::b3); // Uses the same reg as ScreenSpace
-		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0);
-		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1);
+		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
+		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1, 1);
 		root_sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
 		root_sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
 		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, shaders::MaxSamplers);

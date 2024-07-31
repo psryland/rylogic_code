@@ -26,7 +26,8 @@ namespace pr::rdr12
 		//  - Can reset a command list immediately after executing it, but it has to use a different allocator.
 		//  - Need to wrap the command list because state (such as Resource States) needs to be buffered per command list.
 		//  - Not storing a ref to a cmd_alloc_pool in here, because not all CmdLists are used where there is an allocator pool.
-		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12CommandList>;
+
+		using ICommandList = std::conditional_t<ListType == D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12GraphicsCommandList, ID3D12GraphicsCommandList>;
 
 	private:
 
@@ -298,11 +299,25 @@ namespace pr::rdr12
 			m_list->SetComputeRoot32BitConstant(s_cast<UINT>(RootParameterIndex), SrcData.u32, DestOffsetIn32BitValues);
 		}
 
+		// Set a contiguous set of root parameter constants
+		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		void SetComputeRoot32BitConstants(Idx RootParameterIndex, int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues)
+		{
+			m_list->SetComputeRoot32BitConstants(s_cast<UINT>(RootParameterIndex), s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
+		}
+
 		// Set a compute shader's root parameter descriptor table
 		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
 		void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
 		{
 			m_list->SetComputeRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
+		}
+
+		// Sets a CPU descriptor handle for the unordered-access-view resource in the compute root signature.
+		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		{
+			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), buffer_address);
 		}
 
 		// Dispatch a compute shader

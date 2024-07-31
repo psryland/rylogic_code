@@ -8,7 +8,7 @@
 #include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/utility.h"
-#include "view3d-12/src/utility/root_signature.h"
+#include "pr/view3d-12/utility/root_signature.h"
 
 namespace pr::rdr12
 {
@@ -21,7 +21,7 @@ namespace pr::rdr12
 		,m_gsync(gsync)
 		,m_cmd_list(cmd_list)
 		,m_keep_alive(m_gsync)
-		,m_heap_view(HeapCapacityView, &m_gsync)
+		,m_view_heap(HeapCapacityView, &m_gsync)
 		,m_mipmap_sig()
 		,m_mipmap_pso()
 		,m_flush_required()
@@ -200,7 +200,7 @@ namespace pr::rdr12
 		m_cmd_list.SetPipelineState(m_mipmap_pso.get());
 
 		// Set the descriptor heap
-		auto heaps = { m_heap_view.get() };
+		auto heaps = { m_view_heap.get() };
 		m_cmd_list.SetDescriptorHeaps({ heaps.begin(), heaps.size() });
 
 		// Prepare the SRV/UAV view descriptions (changed for each mip).
@@ -237,13 +237,13 @@ namespace pr::rdr12
 			m_cmd_list.SetComputeRoot32BitConstant(EMipMapParam::Constants, 1.0f / dst_h, 1);
 
 			// Create shader resource view for the source texture in the descriptor heap
-			auto srv = m_heap_view.Add(uav_resource, srv_desc);
+			auto srv = m_view_heap.Add(uav_resource, srv_desc);
 			m_cmd_list.SetComputeRootDescriptorTable(EMipMapParam::SrcTexture, srv);
 			barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, s_cast<uint32_t>(mip - 1));
 
 			// Create unordered access view for the destination texture in the descriptor heap
 			uav_desc.Texture2D.MipSlice = mip;
-			auto uav = m_heap_view.Add(uav_resource, uav_desc);
+			auto uav = m_view_heap.Add(uav_resource, uav_desc);
 			m_cmd_list.SetComputeRootDescriptorTable(EMipMapParam::DstTexture, uav);
 			barriers.Transition(uav_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, s_cast<uint32_t>(mip));
 

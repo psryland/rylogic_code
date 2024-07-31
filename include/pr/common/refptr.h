@@ -265,6 +265,11 @@ namespace pr
 		friend bool operator != (T const* lhs, RefPtr const& rhs) { return lhs != rhs.m_ptr; }
 		friend bool operator == (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr == nullptr; }
 		friend bool operator != (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr != nullptr; }
+
+		friend void swap(RefPtr& left, RefPtr& right) noexcept
+		{
+			std::swap(left.m_ptr, right.m_ptr);
+		}
 	};
 
 	// Implementation

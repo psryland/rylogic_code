@@ -16,20 +16,21 @@ namespace pr::fluid
 		, m_gfx_fluid()
 		, m_gfx_gradient()
 		, m_gfx_velocities()
-		, m_probe(rdr)
 	{
 		// Create the model for the container
 		ldr::Builder L;
 		auto& g = L.Group();
-		g.Plane("floor", 0x80008000).wh(2.0f, 0.1f).pos(v4(0, -0.5f, 0, 1)).dir(v4::YAxis());
-		g.Plane("wall-L", 0x80008000).wh(0.1f, 1.0f).pos(v4(-1, 0, 0, 1)).dir(+v4::XAxis());
-		g.Plane("wall-R", 0x80008000).wh(0.1f, 1.0f).pos(v4(+1, 0, 0, 1)).dir(-v4::XAxis());
+		auto r = sim.m_radius;
+		g.Plane("floor", 0x80008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, -0.5f-r, 0, 1)).dir(v4::YAxis());
+		g.Plane("wall-L", 0x80008000).wh(0.1f, 1.0f + 2*r).pos(v4(-1-r, 0, 0, 1)).dir(+v4::XAxis());
+		g.Plane("wall-R", 0x80008000).wh(0.1f, 1.0f + 2*r).pos(v4(+1+r, 0, 0, 1)).dir(-v4::XAxis());
+		g.Plane("ceiling", 0x80008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, +0.5f+r, 0, 1)).dir(v4::YAxis());
 		m_gfx_container = rdr12::CreateLdr(*m_rdr, L.ToString().c_str());
-
+		
 		{// Create a dynamic model for the fluid particles
 			auto vb = ResDesc::VBuf<Vert>(m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("particles");
+			auto& mdesc = ModelDesc(vb, ib).name("particles");
 			m_gfx_fluid.m_model = rdr.res().CreateModel(mdesc);
 
 			// Use the point sprite shader
@@ -39,18 +40,18 @@ namespace pr::fluid
 				.irange(0, 0));
 		}
 		{// Create a dynamic model for the pressure gradient lines
-			auto vb = ResDesc::VBuf<Vert>(2 * m_sim->ParticleCount(), nullptr);
+			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("pressure gradient");
+			auto& mdesc = ModelDesc(vb, ib).name("pressure gradient");
 			m_gfx_gradient.m_model = rdr.res().CreateModel(mdesc);
 
 			m_gfx_gradient.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
 				.irange(0, 0));
 		}
 		{// Create a dynamic model for particle velocities
-			auto vb = ResDesc::VBuf<Vert>(2 * m_sim->ParticleCount(), nullptr);
+			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("particle velocities");
+			auto& mdesc = ModelDesc(vb, ib).name("particle velocities");
 			m_gfx_velocities.m_model = rdr.res().CreateModel(mdesc);
 
 			m_gfx_velocities.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
@@ -66,41 +67,25 @@ namespace pr::fluid
 	// Add the particles to the scene that renders them
 	void FluidVisualisation::AddToScene(Scene& scene)
 	{
-		auto within = std::set<int>{};
-		auto Idx = [&](auto& particle) { return s_cast<int>(m_sim->m_particles.index(particle)); };
-		auto IsWithin = [&](auto& particle) { return within.find(Idx(particle)) != std::end(within); };
-
-		// If the probe is active, find all the particles within the probe
-		if (m_probe.m_active)
+		// Update the positions of the particles in the vertex buffer
+		if (true)
 		{
-			m_sim->m_spatial->Find(m_probe.m_position, m_probe.m_radius, m_sim->m_particles, [&](auto& particle, float)
+			// Update the colour from the spatial partitioning so we can see when it's wrong
+			auto GetColour = [&](auto& particle)
 			{
-				within.insert(Idx(particle));
-			});
-		}
+				// Set colour based on velocity
+				Colour32 const colours[] = {
+					0xFF0000A0,
+					0xFFFF0000,
+					0xFFFFFF00,
+					0xFFFFFFFF,
+				};
 
-		// Update the colour from the spatial partitioning so we can see when it's wrong
-		auto GetColour = [&](auto& particle)
-		{
-			if (m_probe.m_active && IsWithin(particle))
-				return Colour32(0xFFFFFF00);
-
-			auto avr = 0.0f;
-			for (auto d : m_sim->m_densities) avr += d;
-			if (avr != 0.0f) avr /= isize(m_sim->m_densities); else avr = 1.0;
-
-			auto relative_density = m_sim->m_densities[Idx(particle)] / avr;//m_sim->m_density0;
-			Colour32 const colours[] = {
-				0xFFff0000,
-				0xFFff5a00,
-				0xFFff9a00,
-				0xFFffce00,
-				0xFFffe808,
+				auto vel = Length(particle.m_vel);
+				static Tweakable<float, "VisMaxSpeed"> VisMaxSpeed = 10.f;
+				return Lerp(colours, Clamp(vel / VisMaxSpeed, 0.f, 1.f));
 			};
-			return Lerp(colours, Clamp(relative_density / _countof(colours), 0.0f, 1.0f));
-		};
 
-		{// Update the positions of the particles in the vertex buffer
 			UpdateSubresourceScope update = m_gfx_fluid.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
 			for (auto& particle : m_sim->m_particles)
@@ -113,9 +98,16 @@ namespace pr::fluid
 				++ptr;
 			}
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+			static Tweakable<float, "DropletSize"> DropletSize = 1.0f;
+			m_gs_points->m_size = v2(DropletSize * 2 * m_sim->m_radius);
+
+			scene.AddInstance(m_gfx_fluid);
 		}
 
-		{// Update the gradient
+		// Update the gradient
+		if (false)
+		{
 			Colour32 const col = Colour32Green;
 			static float Scale = 0.0001f;
 
@@ -138,9 +130,12 @@ namespace pr::fluid
 				++ptr;
 			}
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			scene.AddInstance(m_gfx_gradient);
 		}
 
-		{// Update the velocities
+		// Update the velocities
+		if (false)
+		{
 			Colour32 const col = 0xFF800000;
 			static float Scale = 0.01f;
 
@@ -163,75 +158,24 @@ namespace pr::fluid
 				++ptr;
 			}
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			scene.AddInstance(m_gfx_velocities);
 		}
 
-		// Add the instance to the scene to be rendered
-		scene.AddInstance(m_gfx_fluid);
+		// The container
 		scene.AddInstance(m_gfx_container);
-		scene.AddInstance(m_gfx_gradient);
-		scene.AddInstance(m_gfx_velocities);
-		if (m_probe.m_active)
-			scene.AddInstance(m_probe.m_gfx);
 	}
 
 	// Handle input
-	void FluidVisualisation::OnMouseButton(gui::MouseEventArgs& args)
+	void FluidVisualisation::OnMouseButton(gui::MouseEventArgs&)
 	{
-		(void)args;
 	}
-	void FluidVisualisation::OnMouseMove(gui::MouseEventArgs& args)
+	void FluidVisualisation::OnMouseMove(gui::MouseEventArgs&)
 	{
-		m_probe.OnMouseMove(args, *m_scn);
-		if (args.m_handled)
-			return;
-
-		
-		if (gui::AllSet(args.m_keystate, gui::EMouseKey::Shift))
-		{
-			// Shoot a ray through the mouse pointer
-			auto nss_point = m_scn->m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
-			auto [pt, dir] = m_scn->m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
-
-			if constexpr (Dimensions == 2)
-			{
-				// Find the intercept with the z = 0 plane
-				auto t = -pt.z / dir.z;
-				auto epicentre = pt + t * dir;
-
-				static float radius = 0.4f;
-				m_sim->m_spatial->Find(epicentre, radius, m_sim->m_particles, [&](auto& particle, float dist_sq)
-				{
-					auto dist = Sqrt(dist_sq);
-					if (dist == 0.0f) return;
-
-					auto dir = (particle.m_pos - epicentre) / dist;
-					auto& part = m_sim->m_particles[m_sim->m_particles.index(particle)];
-					part.m_vel += SmoothStep(10.0f, 0.0f, dist / radius) * dir;
-				});
-			}
-			args.m_handled = true;
-		}
 	}
-	void FluidVisualisation::OnMouseWheel(gui::MouseWheelArgs& args)
+	void FluidVisualisation::OnMouseWheel(gui::MouseWheelArgs&)
 	{
-		m_probe.OnMouseWheel(args);
-		if (args.m_handled)
-			return;
 	}
-	void FluidVisualisation::OnKey(gui::KeyEventArgs& args)
+	void FluidVisualisation::OnKey(gui::KeyEventArgs&)
 	{
-		m_probe.OnKey(args);
-		if (args.m_handled)
-			return;
-
-		if (args.m_down) return;
-		switch (args.m_vk_key)
-		{
-			case VK_OEM_PLUS:
-			{
-				//m_sim.m_radius = Clamp(m_sim.m_radius * 1.1f, 0.01f, 1.0f);
-				break;
-			}
-		}
 	}
 }

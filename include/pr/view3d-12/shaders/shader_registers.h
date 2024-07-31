@@ -30,7 +30,7 @@ namespace pr::rdr12
 	// Unordered access views
 	enum EUAVReg
 	{
-		u0 = 0, u1, u2, u3, //...
+		u0 = 0, u1, u2, u3, u4, u5, u6, u7, u8, u9, //...
 	};
 
 	// Base class to define a shader register type and value

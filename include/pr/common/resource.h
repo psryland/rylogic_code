@@ -55,6 +55,10 @@ namespace pr
 		{
 			return m_len * sizeof(Type);
 		}
+		operator std::string_view() const
+		{
+			return std::string_view{ m_buf, m_len };
+		}
 	};
 
 	namespace resource

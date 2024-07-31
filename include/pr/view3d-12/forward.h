@@ -43,6 +43,7 @@
 #include <d3d11on12.h>
 #include <dxgi1_4.h>
 #include <dxgitype.h>
+#include <dxcapi.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
 #include <pix3.h>
@@ -72,6 +73,7 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/static_callback.h"
 #include "pr/common/bstr_t.h"
+#include "pr/common/resource.h"
 #include "pr/container/ring.h"
 #include "pr/container/chain.h"
 #include "pr/container/vector.h"

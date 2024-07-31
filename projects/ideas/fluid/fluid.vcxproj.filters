@@ -34,6 +34,9 @@
     <ClInclude Include="src\bucket_collision.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\iexternal_forces.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -41,6 +44,9 @@
     </Filter>
     <Filter Include="pr">
       <UniqueIdentifier>{5685dd69-9848-4c34-b85f-7ee8313b1e01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\hlsl">
+      <UniqueIdentifier>{eec1bb03-f5d6-4f80-b086-f6229447f3a3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -62,5 +68,10 @@
     <ClCompile Include="src\bucket_collision.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\hlsl\spatial.hlsl">
+      <Filter>src\hlsl</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

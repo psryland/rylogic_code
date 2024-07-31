@@ -9,6 +9,7 @@
 
 namespace pr::rdr12
 {
+	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct BarrierBatch
 	{
 		// Notes:
@@ -16,11 +17,12 @@ namespace pr::rdr12
 		//  - Barriers should be submitted to the command list in batches when possible (for performance).
 		//  - Barriers are per-command list because resource states are per-command list.
 		using Barriers = pr::vector<D3D12_RESOURCE_BARRIER, 4>;
+		using CmdList = CmdList<ListType>;
 
 		Barriers m_barriers;
-		GfxCmdList& m_cmd_list;
+		CmdList& m_cmd_list;
 		
-		BarrierBatch(GfxCmdList& cmd_list)
+		BarrierBatch(CmdList& cmd_list)
 			: m_barriers()
 			, m_cmd_list(cmd_list)
 		{}

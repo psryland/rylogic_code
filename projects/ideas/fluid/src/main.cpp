@@ -2,8 +2,10 @@
 #include "src/forward.h"
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
+#include "src/grid_partition.h"
 #include "src/kdtree_partition.h"
 #include "src/bucket_collision.h"
+#include "src/probe.h"
 
 using namespace pr;
 using namespace pr::gui;
@@ -22,13 +24,16 @@ struct Main :Form
 	Window m_wnd;
 	Scene m_scn;
 
+	Probe m_probe;
 	SimMessageLoop m_loop;
 	BucketCollision m_bucket_collision;
+	GridPartition m_grid_partition;
 	KDTreePartition m_kdtree_partition;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
 	ERunMode m_run_mode;
+	float m_last_frame_rendered;
 	float m_time;
 
 	Main(HINSTANCE hinst)
@@ -43,11 +48,14 @@ struct Main :Form
 		, m_rdr(RdrSettings(hinst).DebugLayer())
 		, m_wnd(m_rdr, WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
+		, m_probe(m_rdr)
 		, m_loop()
 		, m_bucket_collision()
+		, m_grid_partition(m_rdr)
 		, m_kdtree_partition()
-		, m_fluid_sim(30*30, m_bucket_collision, m_kdtree_partition)
+		, m_fluid_sim(30*30, m_bucket_collision, m_kdtree_partition, m_probe)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
+		, m_last_frame_rendered(-1.0f)
 		, m_time()
 		, m_run_mode(ERunMode::Paused)
 	{
@@ -69,12 +77,17 @@ struct Main :Form
 				}
 				case ERunMode::SingleStep:
 				{
+					//hack
+					m_grid_partition.Update(m_fluid_sim.m_particles);
+
+					m_time += dt * 0.001f;
 					m_run_mode = ERunMode::Paused;
 					m_fluid_sim.Step(dt * 0.001f);
 					break;
 				}
 				case ERunMode::FreeRun:
 				{
+					m_time += dt * 0.001f;
 					m_fluid_sim.Step(dt * 0.001f);
 					break;
 				}
@@ -82,15 +95,16 @@ struct Main :Form
 		});
 		m_loop.AddLoop(50, false, [this](auto dt) // Render Loop
 		{
-			m_time += dt * 0.001f;
+			if (m_time == m_last_frame_rendered)
+				return;
 
 			// Update the window title
-			if (m_fluid_vis.m_probe.m_active)
+			if (m_probe.m_active)
 			{
-				auto density = m_fluid_sim.DensityAt(m_fluid_vis.m_probe.m_position);
-				auto press = m_fluid_sim.PressureAt(m_fluid_vis.m_probe.m_position, std::nullopt);
+				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
+				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
 				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
-					density, press.x, press.y, press.z, m_fluid_vis.m_probe.m_radius));
+					density, press.x, press.y, press.z, m_probe.m_radius));
 			}
 			else
 			{
@@ -100,12 +114,15 @@ struct Main :Form
 
 			// Render the particles
 			m_scn.ClearDrawlists();
+			m_probe.AddToScene(m_scn);
 			m_fluid_vis.AddToScene(m_scn);
 
 			// Render the frame
 			auto frame = m_wnd.NewFrame();
 			m_scn.Render(frame);
 			m_wnd.Present(frame);
+
+			m_last_frame_rendered = m_time;
 		});
 	}
 	int Run()
@@ -130,6 +147,7 @@ struct Main :Form
 	{
 		Form::OnMouseButton(args);
 		m_fluid_vis.OnMouseButton(args);
+		m_probe.OnMouseButton(args, m_scn);
 		if (args.m_handled)
 			return;
 		
@@ -145,6 +163,7 @@ struct Main :Form
 	{
 		Form::OnMouseMove(args);
 		m_fluid_vis.OnMouseMove(args);
+		m_probe.OnMouseMove(args, m_scn);
 		if (args.m_handled)
 			return;
 
@@ -160,6 +179,7 @@ struct Main :Form
 	{
 		Form::OnMouseWheel(args);
 		m_fluid_vis.OnMouseWheel(args);
+		m_probe.OnMouseWheel(args);
 		if (args.m_handled)
 			return;
 
@@ -170,6 +190,7 @@ struct Main :Form
 	{
 		Form::OnKey(args);
 		m_fluid_vis.OnKey(args);
+		m_probe.OnKey(args);
 		if (args.m_handled)
 			return;
 

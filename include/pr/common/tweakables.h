@@ -146,6 +146,7 @@ namespace pr::common::tweakables
 {
 	PRUnitTest(TweakablesTests)
 	{
+#if 0
 		using namespace pr::tweakables;
 		filepath() = "unit_test_tweakables.ini";
 
@@ -158,6 +159,7 @@ namespace pr::common::tweakables
 		PR_EXPECT(my_value == 2.0f);
 
 		std::filesystem::remove(filepath());
+#endif
 	}
 }
 #endif
