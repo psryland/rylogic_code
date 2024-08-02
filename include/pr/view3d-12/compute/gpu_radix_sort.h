@@ -5,13 +5,16 @@
 // Usage:
 //  Create a long-lived instance of the GpuRadixSort.
 //  Resize it to the size of the data to be sorted.
+//  Call the overload of Sort that suits your needs.
 
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/shaders/shader.h"
 #include "pr/view3d-12/utility/root_signature.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
+#include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
+#include "pr/view3d-12/compute/compute_step.h"
 #include "pr/view3d-12/main/renderer.h"
 
 namespace pr::rdr12
@@ -27,8 +30,13 @@ namespace pr::rdr12
 	struct GpuRadixSort
 	{
 		// Notes:
-		//  - This type is intended to be used repeatedly to sort large numbers of elements.
-		//    It's not suited for transient sorts.
+		//  - This class is set up to be used as part of other GPU tasks.
+		//    Have a look at the 'GpuJob' class, it can be used to provide
+		//    the gsync, command list, and upload/readback buffers.
+		//  - You can replace the 'm_sort[0]' resource with your own resource
+		//    if you want to avoid copying data. Just be care with resize.
+		//  - This type is intended to be used repeatedly to sort large
+		//    numbers of elements. It's not suited for transient sorts.
 		//  - Use 'Value = void' if no payload is required, i.e., you just want to sort key values.
 
 		static constexpr int KeyBits = sizeof(Key)*8; // 32-bit keys atm
@@ -43,11 +51,6 @@ namespace pr::rdr12
 		enum class EParam {};
 		enum class ESamp {};
 
-		struct ComputeStep
-		{
-			D3DPtr<ID3D12RootSignature> m_sig;
-			D3DPtr<ID3D12PipelineState> m_pso;
-		};
 		struct TuningParams
 		{
 			std::wstring shader_model = L"cs_6_6";
@@ -57,26 +60,22 @@ namespace pr::rdr12
 			bool use_16bit = true;
 		};
 
-		Renderer* m_rdr;            // The renderer instance to use to run the compute shader
-		GpuSync m_gsync;            // The GPU fence
-		ComCmdAllocPool m_cmd_pool; // Command allocator pool for the compute shader
-		ComCmdList m_cmd_list;      // Command list for the compute shader
+		Renderer* m_rdr;
 
 		ComputeStep m_init;
+		ComputeStep m_init_payload;
 		ComputeStep m_sweep_up;
 		ComputeStep m_scan;
 		ComputeStep m_sweep_down;
 
-		mutable GpuUploadBuffer m_upload;     // Upload buffer for the compute shader
-		mutable GpuReadbackBuffer m_readback; // Readback buffer for the compute shader
 		D3DPtr<ID3D12Resource> m_sort[2];
 		D3DPtr<ID3D12Resource> m_payload[2];
 		D3DPtr<ID3D12Resource> m_pass_histogram;
 		D3DPtr<ID3D12Resource> m_global_histogram;
 		D3DPtr<ID3D12Resource> m_error_count;
 
-		TuningParams m_tuning; // Tuning parameters
-		int64_t m_size; // The number of elements to be sorted
+		TuningParams m_tuning;
+		int64_t m_size;
 
 		struct Result
 		{
@@ -86,15 +85,11 @@ namespace pr::rdr12
 
 		explicit GpuRadixSort(Renderer& rdr, TuningParams const& tuning = {})
 			: m_rdr(&rdr)
-			, m_gsync(rdr.D3DDevice())
-			, m_cmd_pool(m_gsync)
-			, m_cmd_list(rdr.D3DDevice(), m_cmd_pool.Get(), nullptr, "GpuRadixSort", 0xFF78A79d)
 			, m_init()
+			, m_init_payload()
 			, m_sweep_up()
 			, m_scan()
 			, m_sweep_down()
-			, m_upload(m_gsync, 0)
-			, m_readback(m_gsync, 0)
 			, m_sort()
 			, m_payload()
 			, m_pass_histogram()
@@ -103,7 +98,7 @@ namespace pr::rdr12
 			, m_tuning(tuning)
 			, m_size()
 		{
-			auto device = rdr.D3DDevice();
+			auto device = m_rdr->D3DDevice();
 			auto shader_model = L"-T" + m_tuning.shader_model;
 			auto source = resource::Read<char>(L"GPU_RADIX_SORT_HLSL", L"TEXT");
 			auto args = std::vector<wchar_t const*>{ L"-E<entry_point_placeholder>", shader_model.c_str(), L"-O3", L"-Zi" };
@@ -127,24 +122,16 @@ namespace pr::rdr12
 			args.push_back(keys_per_thread.c_str());
 			auto part_size = std::format(L"-DPART_SIZE={}", m_tuning.part_size);
 			args.push_back(part_size.c_str());
-			auto use_16bit = std::format(L"-DUSE_16_BIT={}", m_tuning.use_16bit ? 1 : 0);
-			args.push_back(use_16bit.c_str());
 			if (m_tuning.use_16bit)
+			{
+				args.push_back(L"-DDIGIT_TYPE=uint16_t");
 				args.push_back(L"-enable-16bit-types");
+			}
 
 			// InitRadixSort
 			{
-				RootSig<EParam, ESamp> sig;
-				sig.Flags = {
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_NONE };
-				sig.Uav(EParam(0), EUAVReg::u4);
+				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
+				sig.Uav(EParam(0), EUAVReg::u4); // m_global_histogram
 				m_init.m_sig = sig.Create(device);
 
 				args[0] = L"-EInitRadixSort";
@@ -153,18 +140,22 @@ namespace pr::rdr12
 				m_init.m_pso = pso.Create(device, "GpuRadixSort:Init");
 			}
 
+			// InitPayload
+			{
+				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
+				sig.U32(EParam(0), ECBufReg::b0, 4);
+				sig.Uav(EParam(1), EUAVReg::u2); // m_payload0
+				m_init_payload.m_sig = sig.Create(device);
+
+				args[0] = L"-EInitPayload";
+				auto bytecode = CompileShader(source, args);
+				ComputePSO pso(m_init_payload.m_sig.get(), bytecode);
+				m_init_payload.m_pso = pso.Create(device, "GpuRadixSort:InitPayload");
+			}
+
 			// Sweep Up
 			{
-				RootSig<EParam, ESamp> sig;
-				sig.Flags = {
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_NONE };
+				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
 				sig.U32(EParam(0), ECBufReg::b0, 4);
 				sig.Uav(EParam(1), EUAVReg::u0); // m_sort0
 				sig.Uav(EParam(2), EUAVReg::u4); // m_global_histogram
@@ -179,16 +170,7 @@ namespace pr::rdr12
 
 			// Scan
 			{
-				RootSig<EParam, ESamp> sig;
-				sig.Flags = {
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_NONE };
+				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
 				sig.U32(EParam(0), ECBufReg::b0, 4);
 				sig.Uav(EParam(1), EUAVReg::u5); // m_pass_histogram
 				m_scan.m_sig = sig.Create(device);
@@ -201,16 +183,7 @@ namespace pr::rdr12
 
 			// Sweep Down
 			{
-				RootSig<EParam, ESamp> sig;
-				sig.Flags = {
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-					D3D12_ROOT_SIGNATURE_FLAG_NONE };
+				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
 				sig.U32(EParam(0), ECBufReg::b0, 4);
 				sig.Uav(EParam(1), EUAVReg::u0); // m_sort0
 				sig.Uav(EParam(2), EUAVReg::u1); // m_sort1
@@ -229,11 +202,11 @@ namespace pr::rdr12
 			// Create sort-size independent buffers
 			{
 				auto& desc = ResDesc::Buf(Radix * RadixPasses, sizeof(Key), nullptr, alignof(Key)).usage(EUsage::UnorderedAccess);
-				m_global_histogram = rdr.res().CreateResource(desc, "RadixSort:histogram");
+				m_global_histogram = m_rdr->res().CreateResource(desc, "RadixSort:histogram");
 			}
 			{
 				auto& desc = ResDesc::Buf(1, sizeof(Key), nullptr, alignof(Key)).usage(EUsage::UnorderedAccess);
-				m_error_count = rdr.res().CreateResource(desc, "RadixSort:error_count");
+				m_error_count = m_rdr->res().CreateResource(desc, "RadixSort:error_count");
 			}
 		}
 
@@ -261,8 +234,8 @@ namespace pr::rdr12
 				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
 			}
 			{
-				auto partitions = ThreadBlocks(size);
-				auto& desc = ResDesc::Buf(Radix * partitions, sizeof(Key), nullptr, alignof(Key))
+				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
+				auto& desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -273,26 +246,13 @@ namespace pr::rdr12
 		}
 
 		// Sort 'values' by 'keys' in-place
-		void Sort(std::span<Key> keys, std::span<Value> values)
+		void Sort(std::span<Key> keys, std::span<Value> values, ComputeJob& job)
 		{
 			// Upload 'keys' and 'values' to the GPU and then sort them
-			auto result = Sort(m_cmd_list, keys, values);
+			auto result = Sort(job.m_cmd_list, keys, values, job.m_upload, job.m_readback);
 
-			// Job complete
-			m_cmd_list.Close();
-
-			// Run the sort job
-			m_rdr->ExecuteComCommandLists({ m_cmd_list.get() });
-
-			// Record the sync point for when the command will be finished
-			auto sync_point = m_gsync.AddSyncPoint(m_rdr->ComQueue());
-			m_cmd_list.SyncPoint(sync_point);
-
-			// Reset for the next job
-			m_cmd_list.Reset(m_cmd_pool.Get());
-
-			// Wait for the GPU to finish
-			m_gsync.Wait();
+			// Do the sort and wait for it to complete
+			job.Run();
 
 			// Readback the results and update the input arrays
 			{
@@ -306,7 +266,7 @@ namespace pr::rdr12
 
 		// Sort 'values' by 'keys' using the provided command list
 		// Returns Readback buffer allocations that will contain the sorted result once the command list has been executed.
-		Result Sort(ComCmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values) const
+		Result Sort(ComCmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback) const
 		{
 			if (ssize(keys) > m_size)
 			{
@@ -330,17 +290,17 @@ namespace pr::rdr12
 
 			// Copy the keys and values to the GPU. If 'keys' is smaller than 'm_size', pad with 0xFF
 			{
-				auto upload = m_upload.Alloc(m_size * sizeof(Key), alignof(Key));
-				memcpy(upload.ptr<Key>(), keys.data(), keys.size() * sizeof(Key));
-				memset(upload.ptr<Key>() + keys.size(), 0xFF, (m_size - keys.size()) * sizeof(Key));
-				cmd_list.CopyBufferRegion(m_sort[0].get(), 0, upload.m_buf, upload.m_ofs, upload.m_size);
+				auto buf = upload.Alloc(m_size * sizeof(Key), alignof(Key));
+				memcpy(buf.ptr<Key>(), keys.data(), keys.size() * sizeof(Key));
+				memset(buf.ptr<Key>() + keys.size(), 0xFF, (m_size - keys.size()) * sizeof(Key));
+				cmd_list.CopyBufferRegion(m_sort[0].get(), 0, buf.m_res, buf.m_ofs, buf.m_size);
 			}
 			if constexpr (HasPayload)
 			{
-				auto upload = m_upload.Alloc(m_size * sizeof(Value), alignof(Value));
-				memcpy(upload.ptr<Value>(), values.data(), values.size() * sizeof(Value));
-				memset(upload.ptr<Key>() + values.size(), 0xFF, (m_size - values.size()) * sizeof(Value));
-				cmd_list.CopyBufferRegion(m_payload[0].get(), 0, upload.m_buf, upload.m_ofs, upload.m_size);
+				auto buf = upload.Alloc(m_size * sizeof(Value), alignof(Value));
+				memcpy(buf.ptr<Value>(), values.data(), values.size() * sizeof(Value));
+				memset(buf.ptr<Key>() + values.size(), 0xFF, (m_size - values.size()) * sizeof(Value));
+				cmd_list.CopyBufferRegion(m_payload[0].get(), 0, buf.m_res, buf.m_ofs, buf.m_size);
 			}
 
 			barriers.Transition(m_sort[0].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -358,15 +318,15 @@ namespace pr::rdr12
 
 			// Copy the results back to the CPU
 			{
-				auto readback = m_readback.Alloc(ssize(keys) * sizeof(Key), alignof(Key));
-				cmd_list.CopyBufferRegion(readback.m_buf, readback.m_ofs, m_sort[0].get(), 0, readback.m_size);
-				result.keys = readback;
+				auto buf = readback.Alloc(ssize(keys) * sizeof(Key), alignof(Key));
+				cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_sort[0].get(), 0, buf.m_size);
+				result.keys = buf;
 			}
 			if constexpr (HasPayload)
 			{
-				auto readback = m_readback.Alloc(ssize(values) * sizeof(Value), alignof(Value));
-				cmd_list.CopyBufferRegion(readback.m_buf, readback.m_ofs, m_payload[0].get(), 0, readback.m_size);
-				result.values = readback;
+				auto buf = readback.Alloc(ssize(values) * sizeof(Value), alignof(Value));
+				cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_payload[0].get(), 0, buf.m_size);
+				result.values = buf;
 			}
 			
 			barriers.Transition(m_sort[0].get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
@@ -377,9 +337,11 @@ namespace pr::rdr12
 		}
 
 		// Sort the keys/values in 'm_sort[0]/m_payload[0]' assuming they're uploaded to the GPU already.
-		// This overload is indended for use when you want to leave the keys/values on the GPU without reading them back.
+		// This overload is intended for use when you want to leave the keys/values on the GPU without reading them back.
 		void Sort(ComCmdList& cmd_list) const
 		{
+			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
+
 			// Reset the histogram
 			{
 				cmd_list.SetPipelineState(m_init.m_pso.get());
@@ -394,36 +356,29 @@ namespace pr::rdr12
 
 			// Do the sort
 			int i = 0, j = 1;
-			const auto thread_blocks = s_cast<uint32_t>(ThreadBlocks(m_size));
 			for (auto radix_shift = 0U; radix_shift != KeyBits; radix_shift += RadixBits)
 			{
 				// Sweep Up
 				{
-					const auto full_blocks = thread_blocks / MaxDispatchDimension;
+					cmd_list.SetPipelineState(m_sweep_up.m_pso.get());
+					cmd_list.SetComputeRootSignature(m_sweep_up.m_sig.get());
+					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(2, m_global_histogram->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(3, m_pass_histogram->GetGPUVirtualAddress());
+
+					const auto full_blocks = s_cast<uint32_t>(thread_blocks / MaxDispatchDimension);
 					if (full_blocks)
 					{
-						cmd_list.SetPipelineState(m_sweep_up.m_pso.get());
-						cmd_list.SetComputeRootSignature(m_sweep_up.m_sig.get());
-
 						std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), radix_shift, thread_blocks, 0 };
 						cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
-						cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(2, m_global_histogram->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(3, m_pass_histogram->GetGPUVirtualAddress());
 						cmd_list.Dispatch(MaxDispatchDimension, full_blocks, 1);
 					}
 
-					const auto partial_blocks = thread_blocks - full_blocks * MaxDispatchDimension;
+					const auto partial_blocks = s_cast<uint32_t>(thread_blocks - full_blocks * MaxDispatchDimension);
 					if (partial_blocks)
 					{
-						cmd_list.SetPipelineState(m_sweep_up.m_pso.get());
-						cmd_list.SetComputeRootSignature(m_sweep_up.m_sig.get());
-
 						std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), radix_shift, thread_blocks, (full_blocks << 1) | 1 };
 						cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
-						cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(2, m_global_histogram->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(3, m_pass_histogram->GetGPUVirtualAddress());
 						cmd_list.Dispatch(partial_blocks, 1, 1);
 					}
 				}
@@ -433,10 +388,9 @@ namespace pr::rdr12
 
 				// Scan
 				{
+					std::array<uint32_t, 4> t = { 0, 0, thread_blocks, 0 };
 					cmd_list.SetPipelineState(m_scan.m_pso.get());
 					cmd_list.SetComputeRootSignature(m_scan.m_sig.get());
-
-					std::array<uint32_t, 4> t = { 0, 0, thread_blocks, 0 };
 					cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
 					cmd_list.SetComputeRootUnorderedAccessView(1, m_pass_histogram->GetGPUVirtualAddress());
 					cmd_list.Dispatch(256, 1, 1);
@@ -448,37 +402,28 @@ namespace pr::rdr12
 
 				// Sweep Down
 				{
-					const uint32_t full_blocks = thread_blocks / MaxDispatchDimension;
+					cmd_list.SetPipelineState(m_sweep_down.m_pso.get());
+					cmd_list.SetComputeRootSignature(m_sweep_down.m_sig.get());
+					cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(2, m_sort[j]->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(3, m_payload[i]->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(4, m_payload[j]->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(5, m_global_histogram->GetGPUVirtualAddress());
+					cmd_list.SetComputeRootUnorderedAccessView(6, m_pass_histogram->GetGPUVirtualAddress());
+
+					const auto full_blocks = s_cast<uint32_t>(thread_blocks / MaxDispatchDimension);
 					if (full_blocks)
 					{
-						cmd_list.SetPipelineState(m_sweep_down.m_pso.get());
-						cmd_list.SetComputeRootSignature(m_sweep_down.m_sig.get());
-
 						std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), radix_shift, thread_blocks, 0 };
 						cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
-						cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(2, m_sort[j]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(3, m_payload[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(4, m_payload[j]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(5, m_global_histogram->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(6, m_pass_histogram->GetGPUVirtualAddress());
 						cmd_list.Dispatch(MaxDispatchDimension, full_blocks, 1);
 					}
 
-					const uint32_t partial_blocks = thread_blocks - full_blocks * MaxDispatchDimension;
+					const auto partial_blocks = s_cast<uint32_t>(thread_blocks - full_blocks * MaxDispatchDimension);
 					if (partial_blocks)
 					{
-						cmd_list.SetPipelineState(m_sweep_down.m_pso.get());
-						cmd_list.SetComputeRootSignature(m_sweep_down.m_sig.get());
-
 						std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), radix_shift, thread_blocks, (full_blocks << 1) | 1 };
 						cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
-						cmd_list.SetComputeRootUnorderedAccessView(1, m_sort[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(2, m_sort[j]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(3, m_payload[i]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(4, m_payload[j]->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(5, m_global_histogram->GetGPUVirtualAddress());
-						cmd_list.SetComputeRootUnorderedAccessView(6, m_pass_histogram->GetGPUVirtualAddress());
 						cmd_list.Dispatch(partial_blocks, 1, 1);
 					}
 				}
@@ -494,15 +439,26 @@ namespace pr::rdr12
 			}
 		}
 
-	private:
-
-		// How many blocks to partition the job into
-		int ThreadBlocks(int64_t size) const
+		// Initialise the payload buffer to incrementing indices.
+		// A common case when creating a lookup map
+		void InitPayload(ComCmdList& cmd_list) const
 		{
-			auto partitions = (size + m_tuning.partition_size - 1) / m_tuning.partition_size;
-			return s_cast<int>(partitions);
-				
-		}
+			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
 
+			cmd_list.SetPipelineState(m_init_payload.m_pso.get());
+			cmd_list.SetComputeRootSignature(m_init_payload.m_sig.get());
+
+			std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), 0, 0, 0 };
+			cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
+			cmd_list.SetComputeRootUnorderedAccessView(1, m_payload[0]->GetGPUVirtualAddress());
+
+			const auto full_blocks = s_cast<uint32_t>(thread_blocks / MaxDispatchDimension);
+			if (full_blocks)
+				cmd_list.Dispatch(MaxDispatchDimension, full_blocks, 1);
+
+			const auto partial_blocks = s_cast<uint32_t>(thread_blocks - full_blocks * MaxDispatchDimension);
+			if (partial_blocks)
+				cmd_list.Dispatch(partial_blocks, 1, 1);
+		}
 	};
 }

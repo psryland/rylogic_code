@@ -13,10 +13,20 @@
   <!-- Compiler flags s-->
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>
+        onecore.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
     </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
 </Project>

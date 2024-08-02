@@ -50,6 +50,7 @@
     <Link>
       <AdditionalDependencies>
         view3d-12-static.lib;
+        dxcompiler.lib;
         %(AdditionalDependencies)
       </AdditionalDependencies>
       <AdditionalLibraryDirectories>
@@ -58,6 +59,13 @@
       </AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+        $(ProjectDir);
+        $(ProjectDir)..\..\..\include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <!--
   Files -->
@@ -65,9 +73,11 @@
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
     <ClCompile Include="src\bucket_collision.cpp" />
+    <ClCompile Include="src\grid_partition.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\bucket_collision.h" />
     <ClInclude Include="src\forward.h" />
+    <ClInclude Include="src\grid_partition.h" />
     <ClInclude Include="src\iboundary_collision.h" />
     <ClInclude Include="src\iexternal_forces.h" />
     <ClInclude Include="src\ispatial_partition.h" />
@@ -80,18 +90,22 @@
     <ClInclude Include="src\kdtree_partition.h" />
     <ClCompile Include="src\particle.cpp" />
     <ClCompile Include="src\kdtree_partition.cpp" />
-    <CustomBuild Include="src\hlsl\spatial.hlsl">
-      <ShaderModel>6.0</ShaderModel>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="src\hlsl\grid_partition.hlsl">
       <FileType>Document</FileType>
-      <Command>py $(ScriptPath)\BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
-      <Outputs>%(RelativeDir)\..\compiled\$(Configuration)\%(Filename).built;%(Outputs)</Outputs>
-      <AdditionalInputs>$(ScriptPath)\BuildShader.py</AdditionalInputs>
-    </CustomBuild>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+      <EntryPointName>Populate</EntryPointName>
+    </FxCompile>
   </ItemGroup>
   <!--
   Dependencies -->
   <ItemGroup>
     <UpToDateCheckInput Include="$(SolutionDir)..\lib\$(PlatformTarget)\$(ConfigurationName)\view3d-12.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\shaders.rc" />
   </ItemGroup>
   <!--
   <Target Name="Deploy" AfterTargets="Build"

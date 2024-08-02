@@ -171,6 +171,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Solution", "_Solution", "{
 	ProjectSection(SolutionItems) = preProject
 		..\.editorconfig = ..\.editorconfig
 		packages.config = packages.config
+		..\exclusions.dic = ..\exclusions.dic
 		..\include\pr\rylogic.natstepfilter = ..\include\pr\rylogic.natstepfilter
 		..\include\pr\rylogic.natvis = ..\include\pr\rylogic.natvis
 	EndProjectSection

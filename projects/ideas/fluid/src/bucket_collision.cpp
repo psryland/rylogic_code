@@ -27,6 +27,7 @@ namespace pr::fluid
 	// Distribute the particles within the boundary
 	void BucketCollision::Fill(EFillStyle style, std::span<Particle> particles, float radius) const
 	{
+		(void)radius;
 		switch (style)
 		{
 			case EFillStyle::Point:
@@ -115,6 +116,8 @@ namespace pr::fluid
 	// Apply collision resolution with the container boundary
 	BucketCollision::Dynamics BucketCollision::ResolveCollision(Particle const& particle, float radius, float dt) const
 	{
+		(void)radius;
+
 		// The particle velocity
 		auto vel = particle.m_vel;
 
@@ -190,6 +193,7 @@ namespace pr::fluid
 
 		// Conserve energy: mgh + 0.5mv^2. Set 'm' == 1
 		auto nrg1 = pos.y + 0.5f * Dot(vel, vel);
+		(void)nrg1, nrg0;
 		//assert(nrg0 >= nrg1);
 
 		if constexpr (Dimensions == 2)

@@ -10,11 +10,22 @@
     <TargetExt>.dll</TargetExt>
   </PropertyGroup>
 
-  <!-- Compiler flags s-->
+  <!-- Compiler flags -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;..\sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        ..\include;
+        ..\sdk;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>
+        ..\include;
+        ..\sdk;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
 
   <!-- Dependencies -->

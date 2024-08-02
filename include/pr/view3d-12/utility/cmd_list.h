@@ -325,6 +325,10 @@ namespace pr::rdr12
 		{
 			m_list->Dispatch(s_cast<UINT>(ThreadGroupCountX), s_cast<UINT>(ThreadGroupCountY), s_cast<UINT>(ThreadGroupCountZ));
 		}
+		void Dispatch(iv3 ThreadGroupCount)
+		{
+			m_list->Dispatch(s_cast<UINT>(ThreadGroupCount.x), s_cast<UINT>(ThreadGroupCount.y), s_cast<UINT>(ThreadGroupCount.z));
+		}
 
 	private:
 

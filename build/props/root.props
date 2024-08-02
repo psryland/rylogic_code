@@ -67,7 +67,9 @@
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ResourceCompile>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>

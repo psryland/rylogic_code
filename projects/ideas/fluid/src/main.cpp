@@ -20,6 +20,9 @@ struct Main :Form
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 	enum class ERunMode { Paused, SingleStep, FreeRun };
 
+	inline static constexpr int ParticleCount = 30 * 30;
+	inline static constexpr float ParticleRadius = 0.1f;
+
 	Renderer m_rdr;
 	Window m_wnd;
 	Scene m_scn;
@@ -51,9 +54,9 @@ struct Main :Form
 		, m_probe(m_rdr)
 		, m_loop()
 		, m_bucket_collision()
-		, m_grid_partition(m_rdr)
+		, m_grid_partition(m_rdr, ParticleRadius)
 		, m_kdtree_partition()
-		, m_fluid_sim(30*30, m_bucket_collision, m_kdtree_partition, m_probe)
+		, m_fluid_sim(ParticleCount, ParticleRadius, m_bucket_collision, m_kdtree_partition, m_probe)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_last_frame_rendered(-1.0f)
 		, m_time()
@@ -93,7 +96,7 @@ struct Main :Form
 				}
 			}
 		});
-		m_loop.AddLoop(50, false, [this](auto dt) // Render Loop
+		m_loop.AddLoop(50, false, [this](auto) // Render Loop
 		{
 			if (m_time == m_last_frame_rendered)
 				return;

@@ -37,6 +37,9 @@
     <ClInclude Include="src\iexternal_forces.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\grid_partition.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -47,6 +50,9 @@
     </Filter>
     <Filter Include="src\hlsl">
       <UniqueIdentifier>{eec1bb03-f5d6-4f80-b086-f6229447f3a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{eff5ba73-22cb-4da9-9aad-17bcfd3a6d80}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -68,10 +74,18 @@
     <ClCompile Include="src\bucket_collision.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\grid_partition.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="src\hlsl\spatial.hlsl">
+    <FxCompile Include="src\hlsl\grid_partition.hlsl">
       <Filter>src\hlsl</Filter>
-    </CustomBuild>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="res\shaders.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

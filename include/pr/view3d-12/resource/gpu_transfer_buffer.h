@@ -74,7 +74,7 @@ namespace pr::rdr12
 		{
 			// Notes:
 			//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
-			ID3D12Resource* m_buf; // The upload resource that contains this allocation.
+			ID3D12Resource* m_res; // The upload resource that contains this allocation.
 			uint8_t* m_mem;        // The system memory address, mapped to m_buf->GetGPUAddress().
 			int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
 			int64_t m_size;        // The size of the allocation (in bytes).
@@ -163,7 +163,7 @@ namespace pr::rdr12
 
 			// Allocate space
 			Allocation alex = {
-				.m_buf = block.m_res.get(),
+				.m_res = block.m_res.get(),
 				.m_mem = block.m_mem,
 				.m_ofs = PadTo(block.m_size, alignment),
 				.m_size = size,
@@ -195,7 +195,7 @@ namespace pr::rdr12
 			// Add 'item' to the upload buffer
 			auto alex = Alloc(sizeof(item), alignment);
 			memcpy(alex.m_mem + alex.m_ofs, &item, sizeof(item));
-			auto gpu_address = alex.m_buf->GetGPUVirtualAddress() + alex.m_ofs;
+			auto gpu_address = alex.m_res->GetGPUVirtualAddress() + alex.m_ofs;
 
 			// Save in the lookup if this object might be reused
 			if (might_reuse)

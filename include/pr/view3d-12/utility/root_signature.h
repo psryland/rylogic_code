@@ -14,26 +14,26 @@ namespace pr::rdr12
 	{
 		// Notes:
 		//  - This type helps build a root signature
+		//  - EParam and ESamp are really just indexes. They are indexes into the array of
+		//    root parameters or static samplers which don't need to be the same as registers
+		//    declared in a shader.
 		pr::vector<D3D12_ROOT_PARAMETER1, 16, false> m_root_params;
 		pr::vector<D3D12_STATIC_SAMPLER_DESC, 8, false> m_static_samplers;
 		pr::deque<D3D12_DESCRIPTOR_RANGE1, 16> m_des_range;
-		D3D12_ROOT_SIGNATURE_FLAGS Flags;
+		ERootSigFlags m_flags;
 
-		RootSig()
+		RootSig(ERootSigFlags flags = ERootSigFlags::GraphicsOnly)
 			:m_root_params()
 			,m_des_range()
 			,m_static_samplers()
-			,Flags(
-				D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-				//D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
-				//D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-				//D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-				//D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-				//D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
-				D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-				D3D12_ROOT_SIGNATURE_FLAG_NONE)
+			,m_flags(flags)
 		{}
+
+		// Set the flags for the root signature
+		void Flags(ERootSigFlags flags)
+		{
+			m_flags = flags;
+		}
 
 		// Add a u32 constant parameter
 		void U32(EParam index, ECBufReg reg, int num_values, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
@@ -165,7 +165,7 @@ namespace pr::rdr12
 					.pParameters = m_root_params.data(),
 					.NumStaticSamplers = s_cast<UINT>(m_static_samplers.size()),
 					.pStaticSamplers = m_static_samplers.data(),
-					.Flags = Flags,
+					.Flags = s_cast<D3D12_ROOT_SIGNATURE_FLAGS>(m_flags),
 				},
 			};
 			

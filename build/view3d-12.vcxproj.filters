@@ -578,6 +578,12 @@
     <ClInclude Include="..\include\pr\view3d-12\compute\compute_pso.h">
       <Filter>src\compute</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\compute\compute_step.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\compute\gpu_job.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -651,13 +657,13 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\rylogic\view3d-12\src\compute\hlsl\gpu_radix_sort.hlsl">
-      <Filter>src\compute\hlsl</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\projects\rylogic\view3d-12\src\compute\hlsl\shaders.rc">
+    <ResourceCompile Include="..\include\pr\view3d-12\compute\hlsl\shaders.rc">
       <Filter>src\compute\hlsl</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\gpu_radix_sort.hlsl">
+      <Filter>src\compute\hlsl</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

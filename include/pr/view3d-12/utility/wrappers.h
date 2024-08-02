@@ -18,7 +18,7 @@ namespace pr::rdr12
 		UAV = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		Sampler = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 		RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-        DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 	};
 
 	// Resource usage flags
@@ -33,6 +33,51 @@ namespace pr::rdr12
 		SimultaneousAccess = D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS,
 		VideoDecodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY,
 		VideoEncodeRefOnly = D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY,
+		_flags_enum = 0,
+	};
+
+	// Root signature flags
+	enum class ERootSigFlags :std::underlying_type_t<D3D12_ROOT_SIGNATURE_FLAGS>
+	{
+		None                              = D3D12_ROOT_SIGNATURE_FLAG_NONE,
+		AllowInputAssemblerInputLayout    = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT,
+		DenyVertexShaderRootAccess        = D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS,
+		DenyHullShaderRootAccess          = D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS,
+		DenyDomainShaderRootAccess        = D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS,
+		DenyGeometryShaderRootAccess      = D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS,
+		DenyPixelShaderRootAccess         = D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS,
+		AllowStreamOutput                 = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT,
+		LocalRootSignature                = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE,
+		DenyAmplificationShaderRootAccess = D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS,
+		DenyMeshShaderRootAccess          = D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS,
+		CbvSrvUavHeapDirectlyIndexed      = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED,
+		SamplerHeapDirectlyIndexed        = D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED,
+
+		GraphicsOnly =
+			AllowInputAssemblerInputLayout    |
+			DenyAmplificationShaderRootAccess |
+			DenyMeshShaderRootAccess          |
+			None,
+
+		ComputeOnly =
+			DenyVertexShaderRootAccess        |
+			DenyHullShaderRootAccess          |
+			DenyDomainShaderRootAccess        |
+			DenyGeometryShaderRootAccess      |
+			DenyPixelShaderRootAccess         |
+			DenyAmplificationShaderRootAccess |
+			DenyMeshShaderRootAccess          |
+			None,
+
+		VertGeomPixelOnly =
+			AllowInputAssemblerInputLayout    |
+			DenyHullShaderRootAccess          |
+			DenyDomainShaderRootAccess        |
+			AllowStreamOutput                 |
+			DenyAmplificationShaderRootAccess |
+			DenyMeshShaderRootAccess          |
+			None,
+
 		_flags_enum = 0,
 	};
 

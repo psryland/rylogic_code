@@ -22,7 +22,7 @@ namespace pr::fluid
 		float m_density0;               // The expected density of the fluid
 		float m_mass;                   // The mass of each particle
 
-		FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial, IExternalForces& external);
+		FluidSimulation(int particle_count, float particle_radius, IBoundaryCollision& boundary, ISpatialPartition& spatial, IExternalForces& external);
 
 		// The number of simulated particles
 		int ParticleCount() const;

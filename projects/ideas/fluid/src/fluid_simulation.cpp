@@ -19,7 +19,7 @@ namespace pr::fluid
 	// A particle represents a small unit of fluid. Given a volume and a number of particles,
 	// the mass of each fluid unit is: mass = density * volume / number of particles.
 
-	FluidSimulation::FluidSimulation(int particle_count, IBoundaryCollision& boundary, ISpatialPartition& spatial, IExternalForces& external)
+	FluidSimulation::FluidSimulation(int particle_count, float particle_radius, IBoundaryCollision& boundary, ISpatialPartition& spatial, IExternalForces& external)
 		: m_gravity(0, -9.8f, 0, 0)
 		, m_particles(particle_count)
 		, m_densities(m_particles.size())
@@ -27,7 +27,7 @@ namespace pr::fluid
 		, m_spatial(&spatial)
 		, m_external(&external)
 		, m_thermal_noise(0.001f)
-		, m_radius(0.1f)
+		, m_radius(particle_radius)
 		, m_density0(Dimensions == 3 ? 1000.0f : 10.0f) // kg/m^3 (3d), kg/m^2 (2d)
 		, m_mass(m_density0 * m_boundary->Volume() / isize(m_particles)) // kg
 	{

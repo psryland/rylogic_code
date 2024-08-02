@@ -257,7 +257,7 @@ namespace pr::rdr12
 
 				auto pos = m_range.pos(m_mip0);
 				auto size = m_range.size(m_mip0);
-				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_buf, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
+				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_res, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
 			}
 			else
 			{
@@ -271,7 +271,7 @@ namespace pr::rdr12
 
 					D3D12_TEXTURE_COPY_LOCATION src =
 					{
-						.pResource = m_staging.m_buf,
+						.pResource = m_staging.m_res,
 						.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
 						.PlacedFootprint = layout,
 					};

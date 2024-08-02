@@ -28,31 +28,26 @@ namespace pr::rdr12::shaders
 		};
 		
 		// Create the root signature
-		RootSig<ERootParam, ESampParam> root_sig;
-		root_sig.Flags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS	|
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_NONE;
+		RootSig<ERootParam, ESampParam> sig(ERootSigFlags::GraphicsOnly);
 
 		// Register mappings
-		root_sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
-		root_sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
-		root_sig.CBuf(ERootParam::CBufFade, ECBufReg::b2);
-		root_sig.CBuf(ERootParam::CBufScreenSpace, ECBufReg::b3);
-		root_sig.CBuf(ERootParam::CBufDiag, ECBufReg::b3); // Uses the same reg as ScreenSpace
-		root_sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
-		root_sig.Tex(ERootParam::EnvMap, ETexReg::t1, 1);
-		root_sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
-		root_sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
-		root_sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, shaders::MaxSamplers);
+		sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
+		sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
+		sig.CBuf(ERootParam::CBufFade, ECBufReg::b2);
+		sig.CBuf(ERootParam::CBufScreenSpace, ECBufReg::b3);
+		sig.CBuf(ERootParam::CBufDiag, ECBufReg::b3); // Uses the same reg as ScreenSpace
+		sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
+		sig.Tex(ERootParam::EnvMap, ETexReg::t1, 1);
+		sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
+		sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
+		sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, shaders::MaxSamplers);
 
 		// Add stock static samplers
-		root_sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
-		root_sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
-		root_sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
+		sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
+		sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
+		sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
 
-		m_signature = root_sig.Create(device);
+		m_signature = sig.Create(device);
 	}
 
 	// Config the shader

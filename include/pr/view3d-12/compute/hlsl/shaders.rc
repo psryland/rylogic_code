@@ -1,0 +1,5 @@
+// This file is just an example because resource files are not compiled into static libraries.
+// In any project that wants to include shaders as resources, create a file like this one and
+// list the shaders to be included.
+// Remember to add 'pr/include' to the resource compiler's include path.
+GPU_RADIX_SORT_HLSL    TEXT    DISCARDABLE     "gpu_radix_sort.hlsl"
