@@ -39,25 +39,13 @@
   <Import Project="$(PropsPath)\fxc_build_rule.props" />
   <!--
   Build options -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

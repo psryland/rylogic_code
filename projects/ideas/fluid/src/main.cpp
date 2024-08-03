@@ -31,7 +31,7 @@ struct Main :Form
 	SimMessageLoop m_loop;
 	BucketCollision m_bucket_collision;
 	GridPartition m_grid_partition;
-	KDTreePartition m_kdtree_partition;
+	//KDTreePartition m_kdtree_partition;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
@@ -54,9 +54,9 @@ struct Main :Form
 		, m_probe(m_rdr)
 		, m_loop()
 		, m_bucket_collision()
-		, m_grid_partition(m_rdr, ParticleRadius)
-		, m_kdtree_partition()
-		, m_fluid_sim(ParticleCount, ParticleRadius, m_bucket_collision, m_kdtree_partition, m_probe)
+		, m_grid_partition(m_rdr, 1.f / ParticleRadius)
+		//, m_kdtree_partition()
+		, m_fluid_sim(ParticleCount, ParticleRadius, m_bucket_collision, m_grid_partition, m_probe)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_last_frame_rendered(-1.0f)
 		, m_time()
@@ -80,9 +80,6 @@ struct Main :Form
 				}
 				case ERunMode::SingleStep:
 				{
-					//hack
-					m_grid_partition.Update(m_fluid_sim.m_particles);
-
 					m_time += dt * 0.001f;
 					m_run_mode = ERunMode::Paused;
 					m_fluid_sim.Step(dt * 0.001f);
@@ -98,9 +95,6 @@ struct Main :Form
 		});
 		m_loop.AddLoop(50, false, [this](auto) // Render Loop
 		{
-			if (m_time == m_last_frame_rendered)
-				return;
-
 			// Update the window title
 			if (m_probe.m_active)
 			{
@@ -114,6 +108,9 @@ struct Main :Form
 				auto c2w = m_scn.m_cam.CameraToWorld();
 				SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
 			}
+
+			if (m_time == m_last_frame_rendered)
+				return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();

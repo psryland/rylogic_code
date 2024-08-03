@@ -22,18 +22,12 @@ namespace pr::rdr12
 		pr::deque<D3D12_DESCRIPTOR_RANGE1, 16> m_des_range;
 		ERootSigFlags m_flags;
 
-		RootSig(ERootSigFlags flags = ERootSigFlags::GraphicsOnly)
+		explicit RootSig(ERootSigFlags flags)
 			:m_root_params()
 			,m_des_range()
 			,m_static_samplers()
 			,m_flags(flags)
 		{}
-
-		// Set the flags for the root signature
-		void Flags(ERootSigFlags flags)
-		{
-			m_flags = flags;
-		}
 
 		// Add a u32 constant parameter
 		void U32(EParam index, ECBufReg reg, int num_values, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)

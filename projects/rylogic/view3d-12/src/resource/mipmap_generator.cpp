@@ -29,7 +29,7 @@ namespace pr::rdr12
 		auto device = rdr.D3DDevice();
 
 		// Create a root signature for the MipMap generator compute shader
-		RootSig<EMipMapParam, EMipMapSamp> sig(ERootSigFlags::ComputeOnly);
+		RootSig<EMipMapParam, EMipMapSamp> sig(ERootSigFlags::ComputeOnly | ERootSigFlags::AllowInputAssemblerInputLayout);
 		sig.U32(EMipMapParam::Constants, ECBufReg::b0, 2);
 		sig.Tex(EMipMapParam::SrcTexture, ETexReg::t0, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 		sig.Uav(EMipMapParam::DstTexture, EUAVReg::u0, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);

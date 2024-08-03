@@ -21,10 +21,10 @@ namespace pr::fluid
 		ldr::Builder L;
 		auto& g = L.Group();
 		auto r = sim.m_radius;
-		g.Plane("floor", 0x80008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, -0.5f-r, 0, 1)).dir(v4::YAxis());
-		g.Plane("wall-L", 0x80008000).wh(0.1f, 1.0f + 2*r).pos(v4(-1-r, 0, 0, 1)).dir(+v4::XAxis());
-		g.Plane("wall-R", 0x80008000).wh(0.1f, 1.0f + 2*r).pos(v4(+1+r, 0, 0, 1)).dir(-v4::XAxis());
-		g.Plane("ceiling", 0x80008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, +0.5f+r, 0, 1)).dir(v4::YAxis());
+		g.Plane("floor", 0xFF008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, -0.5f-r, 0, 1)).dir(v4::YAxis());
+		g.Plane("wall-L", 0xFF008000).wh(0.1f, 1.0f + 2*r).pos(v4(-1-r, 0, 0, 1)).dir(+v4::XAxis());
+		g.Plane("wall-R", 0xFF008000).wh(0.1f, 1.0f + 2*r).pos(v4(+1+r, 0, 0, 1)).dir(-v4::XAxis());
+		g.Plane("ceiling", 0xFF008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, +0.5f+r, 0, 1)).dir(v4::YAxis());
 		m_gfx_container = rdr12::CreateLdr(*m_rdr, L.ToString().c_str());
 		
 		{// Create a dynamic model for the fluid particles

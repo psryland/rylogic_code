@@ -12,8 +12,8 @@ RWStructuredBuffer<float3> m_positions : register(u0);
 // The length of this buffer is the same as the positions buffer.
 RWStructuredBuffer<uint> m_grid_hash : register(u1);
 
-// The counts per grid cell
-RWStructuredBuffer<uint> m_histogram : register(u2);
+// The lowest index (from m_positions) for each cell hash
+RWStructuredBuffer<uint> m_start_idx : register(u2);
 
 // Constants
 cbuffer cbGridPartition : register(b0)
@@ -33,14 +33,14 @@ inline uint Hash(uint3 grid)
 	return hash % CellCount;
 }
 
-// Reset the histogram of positions per cell
+// Reset the start index array
 [numthreads(1024, 1, 1)]
 void Init(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= CellCount)
 		return;
 	
-	m_histogram[gtid.x] = 0;
+	m_start_idx[gtid.x] = 0xFFFFFFFF;
 }
 
 // Populate the grid hash buffer with the hash value for each position
@@ -54,6 +54,8 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	uint hash = Hash(grid);
 	
 	m_grid_hash[gtid.x] = hash;
-	InterlockedAdd(m_histogram[hash], 1);
+	
+	// Record the smallest index for each cell hash value
+	InterlockedMin(m_start_idx[hash], gtid.x);
 }
 

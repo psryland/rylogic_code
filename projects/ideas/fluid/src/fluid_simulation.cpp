@@ -58,13 +58,16 @@ namespace pr::fluid
 
 			// Use Leapfrog integration to predict the next particle position
 			auto pos1 = particle.m_pos + particle.m_vel * dt / 2;
+			auto density = DensityAt(pidx);
+			if (density < maths::tinyf)
+				continue;
 
 			// Sum up all sources of acceleration
 			auto accel = v4::Zero();
 
 			// Get the force experienced by the particle due to pressure
 			auto pressure = PressureAt(pos1, pidx);
-			accel += pressure / DensityAt(pidx);
+			accel += pressure / density;
 
 			// Get the viscosity force experienced by the particle
 			auto viscosity = ViscosityAt(pos1, pidx);
@@ -72,7 +75,7 @@ namespace pr::fluid
 
 			// External forces
 			auto external = m_external->ForceAt(*this, pos1, pidx);
-			accel += external / DensityAt(pidx);
+			accel += external / density;
 			
 			// Gravity
 			static Tweakable<float, "Gravity"> Gravity = 0.0f;
