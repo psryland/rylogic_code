@@ -2406,16 +2406,18 @@ namespace pr
 		// Event args for mouse button events
 		struct MouseEventArgs :EmptyArgs
 		{
-			Point     m_point;    // The location of the mouse at the button event (in client space)
-			EMouseKey m_button;   // The button that triggered the event
-			EMouseKey m_keystate; // The state of all mouse buttons and control keys
-			bool      m_down;     // True if the button was a down event, false if an up event
-			bool      m_handled;  // Set to true to prevent further handling of this key event
+			Point     m_point;     // The location of the mouse at the button event (in DIP client space)
+			Point     m_point_px;  // The location of the mouse at the button event (in client space pixels, i.e DIP adjusted)
+			EMouseKey m_button;    // The button that triggered the event
+			EMouseKey m_key_state; // The state of all mouse buttons and control keys
+			bool      m_down;      // True if the button was a down event, false if an up event
+			bool      m_handled;   // Set to true to prevent further handling of this key event
 
-			MouseEventArgs(EMouseKey btn, bool down, Point point, EMouseKey keystate)
+			MouseEventArgs(EMouseKey btn, bool down, Point point, Point point_px, EMouseKey key_state)
 				:m_point(point)
+				,m_point_px(point_px)
 				,m_button(btn)
-				,m_keystate(keystate)
+				,m_key_state(key_state)
 				,m_down(down)
 				,m_handled(false)
 			{}
@@ -2424,15 +2426,17 @@ namespace pr
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
-			short     m_delta;    // The amount the mouse wheel has turned
-			Point     m_point;    // The client space location of the mouse at the time of the event
-			EMouseKey m_keystate; // The state of all mouse buttons and control keys
-			bool      m_handled;  // Set to true to prevent further handling of this key event
+			Point     m_point;     // The client space location of the mouse at the time of the event
+			Point     m_point_px;  // The location of the mouse at the button event (in client space pixels, i.e DIP adjusted)
+			EMouseKey m_key_state; // The state of all mouse buttons and control keys
+			short     m_delta;     // The amount the mouse wheel has turned
+			bool      m_handled;   // Set to true to prevent further handling of this key event
 
-			MouseWheelArgs(short delta, Point point, EMouseKey keystate)
-				:m_delta(delta)
-				,m_point(point)
-				,m_keystate(keystate)
+			MouseWheelArgs(short delta, Point point, Point point_px, EMouseKey key_state)
+				:m_point(point)
+				,m_point_px(point_px)
+				,m_key_state(key_state)
+				,m_delta(delta)
 				,m_handled(false)
 			{}
 		};
@@ -2852,8 +2856,12 @@ namespace pr
 			// Scale from 96 DPI to the current DPI
 			int   X(int   x) const { return int(x * m_rt_dpi / float(m_dt_dpi) + (x >= 0 ? 0.5f : -0.5f)); }
 			int   Y(int   y) const { return int(y * m_rt_dpi / float(m_dt_dpi) + (y >= 0 ? 0.5f : -0.5f)); }
-			float X(float x) const { return x * m_rt_dpi / float(m_rt_dpi); }
-			float Y(float y) const { return y * m_rt_dpi / float(m_rt_dpi); }
+			float X(float x) const { return x * m_rt_dpi / float(m_dt_dpi); }
+			float Y(float y) const { return y * m_rt_dpi / float(m_dt_dpi); }
+			Point Pt(Point pt) const
+			{
+				return Point(X(s_cast<int>(pt.x)), Y(s_cast<int>(pt.y)));
+			}
 
 			// Return the current DPI
 			static int DPI()
@@ -4954,7 +4962,8 @@ namespace pr
 
 				// Initialise with a default true type font.
 				Font(cp().m_font ? static_cast<HFONT>(*cp().m_font) : DefaultGuiFont());
-
+				m_metrics.CurrentDPI(static_cast<int>(::GetDpiForWindow(m_hwnd)));
+						
 				// Enable drag and drop
 				AllowDrop(cp().m_allow_drop);
 			}
@@ -5327,7 +5336,7 @@ namespace pr
 					case WM_XBUTTONUP:
 					{
 						Point pt(lparam);
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
+						auto key_state = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						auto down =
 							message == WM_LBUTTONDOWN ||
 							message == WM_RBUTTONDOWN ||
@@ -5341,7 +5350,7 @@ namespace pr
 							EMouseKey();
 
 						// Event order is: down, click, up
-						MouseEventArgs args(btn, down, pt, keystate);
+						MouseEventArgs args(btn, down, pt, m_metrics.Pt(pt), key_state);
 						if (down) OnMouseButton(args);
 						DetectSingleClicks(args);
 						if (!down) OnMouseButton(args);
@@ -5354,8 +5363,8 @@ namespace pr
 					{
 						auto pt = PointToClient(Point(lparam));
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseWheelArgs args(delta, pt, keystate);
+						auto key_state = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
+						MouseWheelArgs args(delta, pt, m_metrics.Pt(pt), key_state);
 						OnMouseWheel(args);
 						if (args.m_handled)
 							return true;
@@ -5365,8 +5374,8 @@ namespace pr
 					case WM_MOUSEMOVE:
 					{
 						auto pt = Point(lparam);
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseEventArgs args(keystate, false, pt, keystate);
+						auto key_state = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
+						MouseEventArgs args(key_state, false, pt, m_metrics.Pt(pt), key_state);
 						OnMouseMove(args);
 						if (args.m_handled)
 							return true;
@@ -5531,7 +5540,7 @@ namespace pr
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = PointToClient(Point(lparam));
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseWheelArgs args(delta, pt, keystate);
+						MouseWheelArgs args(delta, pt, m_metrics.Pt(pt), keystate);
 						OnMouseWheel(args);
 						if (args.m_handled)
 							return true;

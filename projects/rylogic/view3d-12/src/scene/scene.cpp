@@ -27,11 +27,15 @@ namespace pr::rdr12
 		, m_viewport(wnd.BackBufferSize())
 		, m_instances()
 		, m_render_steps()
-		//, m_ht_immediate()
+		, m_ht_immediate()
 		, m_global_light()
 		, m_global_envmap()
 		, m_eh_resize()
 	{
+		// Initialise the scene camera to match the full window
+		auto bb_size = m_wnd->BackBufferSize();
+		m_cam.Aspect(1.0f * bb_size.x / bb_size.y);
+
 		// Set the render steps for the scene
 		SetRenderSteps({ rsteps.begin(), rsteps.size() });
 

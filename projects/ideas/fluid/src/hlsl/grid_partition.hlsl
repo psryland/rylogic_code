@@ -8,12 +8,14 @@
 // The positions to sort into the grid
 RWStructuredBuffer<float3> m_positions : register(u0);
 
-// The grid cell hash for each position.
-// The length of this buffer is the same as the positions buffer.
+// The grid cell hash for each position. (length of m_positions)
 RWStructuredBuffer<uint> m_grid_hash : register(u1);
 
-// The lowest index (from m_positions) for each cell hash
-RWStructuredBuffer<uint> m_start_idx : register(u2);
+// The lowest index (from m_positions) for each cell hash (length CellCount)
+RWStructuredBuffer<uint> m_idx_start : register(u2);
+
+// The number of positions for each cell hash (length CellCount)
+RWStructuredBuffer<uint> m_idx_count : register(u3);
 
 // Constants
 cbuffer cbGridPartition : register(b0)
@@ -24,12 +26,11 @@ cbuffer cbGridPartition : register(b0)
 };
 
 // Generate a hash from a quantised grid position.
-inline uint Hash(uint3 grid)
+inline uint Hash(int3 grid)
 {
-	const uint prime1 = 73856093;
-	const uint prime2 = 19349663;
-	const uint prime3 = 83492791;
-	uint hash = (grid.x * prime1) ^ (grid.y * prime2) ^ (grid.z * prime3);
+	const int3 prime = int3(73856093, 19349663, 83492791);
+	int3 product = grid * prime;
+	uint hash = uint(product.x ^ product.y ^ product.z);
 	return hash % CellCount;
 }
 
@@ -40,7 +41,9 @@ void Init(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= CellCount)
 		return;
 	
-	m_start_idx[gtid.x] = 0xFFFFFFFF;
+	m_idx_start[gtid.x] = 0xFFFFFFFF;
+	m_idx_count[gtid.x] = 0;
+
 }
 
 // Populate the grid hash buffer with the hash value for each position
@@ -50,12 +53,14 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= NumPositions)
 		return;
 
-	uint3 grid = uint3(m_positions[gtid.x] * GridScale);
+	int3 grid = int3(m_positions[gtid.x] * GridScale);
 	uint hash = Hash(grid);
-	
 	m_grid_hash[gtid.x] = hash;
 	
 	// Record the smallest index for each cell hash value
-	InterlockedMin(m_start_idx[hash], gtid.x);
+	InterlockedMin(m_idx_start[hash], gtid.x);
+	
+	// Record the number of positions for each cell hash value
+	InterlockedAdd(m_idx_count[hash], 1);
 }
 

@@ -30,7 +30,7 @@ namespace pr::fluid
 		{// Create a dynamic model for the fluid particles
 			auto vb = ResDesc::VBuf<Vert>(m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto& mdesc = ModelDesc(vb, ib).name("particles");
+			auto mdesc = ModelDesc(vb, ib).name("particles");
 			m_gfx_fluid.m_model = rdr.res().CreateModel(mdesc);
 
 			// Use the point sprite shader
@@ -42,7 +42,7 @@ namespace pr::fluid
 		{// Create a dynamic model for the pressure gradient lines
 			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto& mdesc = ModelDesc(vb, ib).name("pressure gradient");
+			auto mdesc = ModelDesc(vb, ib).name("pressure gradient");
 			m_gfx_gradient.m_model = rdr.res().CreateModel(mdesc);
 
 			m_gfx_gradient.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
@@ -51,7 +51,7 @@ namespace pr::fluid
 		{// Create a dynamic model for particle velocities
 			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto& mdesc = ModelDesc(vb, ib).name("particle velocities");
+			auto mdesc = ModelDesc(vb, ib).name("particle velocities");
 			m_gfx_velocities.m_model = rdr.res().CreateModel(mdesc);
 
 			m_gfx_velocities.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
@@ -65,7 +65,7 @@ namespace pr::fluid
 	}
 
 	// Add the particles to the scene that renders them
-	void FluidVisualisation::AddToScene(Scene& scene)
+	void FluidVisualisation::AddToScene(Scene& scene, IndexSet const& highlight)
 	{
 		// Update the positions of the particles in the vertex buffer
 		if (true)
@@ -80,6 +80,11 @@ namespace pr::fluid
 					0xFFFFFF00,
 					0xFFFFFFFF,
 				};
+
+				if (highlight.contains(m_sim->m_particles.index(particle)))
+					return Colour32(0xFFFFFF00);
+				else
+					return colours[0];
 
 				auto vel = Length(particle.m_vel);
 				static Tweakable<float, "VisMaxSpeed"> VisMaxSpeed = 10.f;

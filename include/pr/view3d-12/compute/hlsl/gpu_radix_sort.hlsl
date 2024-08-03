@@ -249,8 +249,8 @@ inline void HistogramDigitCounts(uint gtid, uint gid)
 {
 	// histogram, 64 threads to a histogram
 	const uint hist_offset = gtid / 64 * Radix;
-	const uint partitionEnd = gid == ThreadBlocks - 1 ? NumKeys : (gid + 1) * PartSize;
-	for (uint i = gtid + gid * PartSize; i < partitionEnd; i += SweepUpDimension)
+	const uint partition_end = gid == ThreadBlocks - 1 ? NumKeys : (gid + 1) * PartSize;
+	for (uint i = gtid + gid * PartSize; i < partition_end; i += SweepUpDimension)
 		InterlockedAdd(gs_sweep_up[ExtractDigit(KeyToUInt(m_sort0[i])) + hist_offset], 1);
 }
 
@@ -1161,11 +1161,10 @@ void InitRadixSort(int3 id : SV_DispatchThreadID)
 [numthreads(InitPayloadDimension, 1, 1)]
 void InitPayload(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
-	uint index = FlattenGid(gid); //todo: Check this. Is it this or 'gtid.x'?
-	if (index > NumKeys)
-		return;
-
-	m_payload0[index] = ToPayload(index);
+	const uint group = FlattenGid(gid);
+	const uint partition_end = group == ThreadBlocks - 1 ? NumKeys : (group + 1) * PartSize;
+	for (uint i = gtid.x + group * PartSize; i < partition_end; i += InitPayloadDimension)
+		m_payload0[i] = payload_t(i);
 }
 
 // SWEEP UP KERNEL

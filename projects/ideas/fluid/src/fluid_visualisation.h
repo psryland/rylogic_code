@@ -24,7 +24,7 @@ namespace pr::fluid
 		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn);
 		~FluidVisualisation();
 
-		void AddToScene(rdr12::Scene& scene);
+		void AddToScene(rdr12::Scene& scene, IndexSet const& highlight);
 
 		// Handle input
 		void OnMouseButton(gui::MouseEventArgs& args);

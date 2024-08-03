@@ -1006,5 +1006,9 @@ namespace pr::rdr12
 		{
 			return pShaderBytecode != nullptr;
 		}
+		operator std::span<BYTE const>() const
+		{
+			return std::span<BYTE const>(static_cast<BYTE const*>(pShaderBytecode), BytecodeLength);
+		}
 	};
 }

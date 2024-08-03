@@ -11,16 +11,18 @@ namespace pr::fluid
 	{
 		v4 m_position;
 		rdr12::LdrObjectPtr m_gfx;
+		IndexSet m_found;
 		float m_radius;
 		float m_sign;
 		bool m_active;
 
 		explicit Probe(rdr12::Renderer& rdr)
-			:m_position(0,0,0,1)
-			,m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
-			,m_radius(0.05f)
-			,m_sign()
-			,m_active(false)
+			: m_position(0,0,0,1)
+			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
+			, m_found()
+			, m_radius(0.05f)
+			, m_sign()
+			, m_active(false)
 		{
 			UpdateI2W();
 		}
@@ -30,17 +32,6 @@ namespace pr::fluid
 		{
 			if (!m_active)
 				return;
-
-			// If the probe is active, find all the particles within the probe
-			//auto within = std::set<int>{};
-			//auto Idx = [&](auto& particle) { return s_cast<int>(m_sim->m_particles.index(particle)); };
-			//auto IsWithin = [&](auto& particle) { return within.find(Idx(particle)) != std::end(within); };
-			//m_sim->m_spatial->Find(m_probe.m_position, m_probe.m_radius, m_sim->m_particles, [&](auto& particle, float)
-			//{
-			//	within.insert(Idx(particle));
-			//});
-			//if (m_probe.m_active && IsWithin(particle))
-			// return Colour32(0xFFFFFF00);
 
 			// Add the probe graphics
 			scene.AddInstance(m_gfx);
@@ -83,7 +74,7 @@ namespace pr::fluid
 				0.0f;
 
 			// Shoot a ray through the mouse pointer
-			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
+			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point_px));
 			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
 
 			// Find where it intersects the XY plane at z = m_position.z
@@ -99,7 +90,7 @@ namespace pr::fluid
 			args.m_handled = true;
 
 			// Shoot a ray through the mouse pointer
-			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point));
+			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point_px));
 			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
 
 			// Find where it intersects the XY plane at z = m_position.z
@@ -122,7 +113,7 @@ namespace pr::fluid
 			if (args.m_handled)
 				return;
 
-			if (args.m_down)
+			if (!args.m_down)
 				return;
 
 			args.m_handled = true;

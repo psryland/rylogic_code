@@ -9,6 +9,7 @@
 #include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/utility/root_signature.h"
+#include "pr/view3d-12/compute/compute_pso.h"
 
 namespace pr::rdr12
 {
@@ -51,15 +52,8 @@ namespace pr::rdr12
 		m_mipmap_sig = sig.Create(device);
 
 		// Create pipeline state object for the compute shader using the root signature.
-		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {
-			.pRootSignature = m_mipmap_sig.get(),
-			.CS = shader_code::mipmap_generator_cs,
-			.NodeMask = 0,
-			.CachedPSO = D3D12_CACHED_PIPELINE_STATE{},
-			.Flags = D3D12_PIPELINE_STATE_FLAG_NONE,
-		};
-		Check(device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&m_mipmap_pso.m_ptr));
-		DebugName(m_mipmap_pso, "MipMapGenPSO");
+		ComputePSO pos(m_mipmap_sig.get(), shader_code::mipmap_generator_cs);
+		m_mipmap_pso = pos.Create(device, "MipMapGenPSO");
 	}
 
 	// Generate mip maps for a texture

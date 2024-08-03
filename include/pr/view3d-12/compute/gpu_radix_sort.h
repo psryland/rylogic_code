@@ -447,18 +447,23 @@ namespace pr::rdr12
 
 			cmd_list.SetPipelineState(m_init_payload.m_pso.get());
 			cmd_list.SetComputeRootSignature(m_init_payload.m_sig.get());
-
-			std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), 0, 0, 0 };
-			cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
 			cmd_list.SetComputeRootUnorderedAccessView(1, m_payload[0]->GetGPUVirtualAddress());
 
 			const auto full_blocks = s_cast<uint32_t>(thread_blocks / MaxDispatchDimension);
 			if (full_blocks)
+			{
+				std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), 0, thread_blocks, 0 };
+				cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
 				cmd_list.Dispatch(MaxDispatchDimension, full_blocks, 1);
+			}
 
 			const auto partial_blocks = s_cast<uint32_t>(thread_blocks - full_blocks * MaxDispatchDimension);
 			if (partial_blocks)
+			{
+				std::array<uint32_t, 4> t = { s_cast<uint32_t>(m_size), 0, thread_blocks, (full_blocks << 1) | 1 };
+				cmd_list.SetComputeRoot32BitConstants(0, isize(t), t.data(), 0);
 				cmd_list.Dispatch(partial_blocks, 1, 1);
+			}
 		}
 	};
 }

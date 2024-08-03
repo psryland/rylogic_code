@@ -164,8 +164,11 @@ namespace pr::rdr12
 		WndSettings& Size(HWND hwnd)
 		{
 			RECT rect;
+			auto dpi = GetDpiForWindow(hwnd);
 			Check(::GetClientRect(hwnd, &rect), "GetClientRect failed.");
-			return Size(iv2(rect.right - rect.left, rect.bottom - rect.top));
+			return Size(iv2(
+				(rect.right - rect.left) * dpi / 96,
+				(rect.bottom - rect.top) * dpi / 96));
 		}
 		WndSettings& MutliSampling(int count)
 		{

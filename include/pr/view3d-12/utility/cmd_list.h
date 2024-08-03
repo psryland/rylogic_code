@@ -306,18 +306,25 @@ namespace pr::rdr12
 			m_list->SetComputeRoot32BitConstants(s_cast<UINT>(RootParameterIndex), s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
 
-		// Set a compute shader's root parameter descriptor table
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
-		void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
-		{
-			m_list->SetComputeRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
-		}
-
 		// Sets a CPU descriptor handle for the unordered-access-view resource in the compute root signature.
 		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
 		void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
 		{
 			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), buffer_address);
+		}
+
+		// Sets a CPU descriptor handle for the shared-resource-view resource in the compute root signature.
+		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		void SetComputeRootShaderResourceView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		{
+			m_list->SetComputeRootShaderResourceView(s_cast<UINT>(RootParameterIndex), buffer_address);
+		}
+
+		// Set a compute shader's root parameter descriptor table
+		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
+		{
+			m_list->SetComputeRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
 		}
 
 		// Dispatch a compute shader

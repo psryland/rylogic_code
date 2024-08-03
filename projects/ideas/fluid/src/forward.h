@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <unordered_set>
 #include <stdexcept>
 #include <windows.h>
 
@@ -50,5 +51,7 @@ namespace pr::fluid
 	struct IBoundaryCollision;
 	struct ISpatialPartition;
 	struct IExternalForces;
+
+	using IndexSet = std::unordered_set<int64_t>;
 }
 

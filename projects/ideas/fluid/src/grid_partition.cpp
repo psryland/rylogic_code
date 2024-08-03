@@ -15,10 +15,9 @@ namespace pr::fluid
 	// Generate a hash from a quantised grid position.
 	inline uint32_t Hash(iv3 grid)
 	{
-		constexpr uint32_t prime1 = 73856093;
-		constexpr uint32_t prime2 = 19349663;
-		constexpr uint32_t prime3 = 83492791;
-		auto hash = (grid.x * prime1) ^ (grid.y * prime2) ^ (grid.z * prime3);
+		const iv3 prime = { 73856093, 19349663, 83492791 };
+		auto product = grid * prime;
+		auto hash = static_cast<uint32_t>(product.x ^ product.y ^ product.z);
 		return hash % GridPartition::CellCount;
 	}
 
@@ -29,7 +28,8 @@ namespace pr::fluid
 		, m_init()
 		, m_positions()
 		, m_grid_hash()
-		, m_start_idx()
+		, m_idx_start()
+		, m_idx_count()
 		, m_sorter(rdr)
 		, m_size()
 		, m_scale(scale)
@@ -42,7 +42,8 @@ namespace pr::fluid
 		{
 			rdr12::RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
 			sig.U32(EParam(0), ECBufReg::b0, 3); // constants
-			sig.Uav(EParam(1), EUAVReg::u2); // start_idx
+			sig.Uav(EParam(1), EUAVReg::u2); // idx_start
+			sig.Uav(EParam(2), EUAVReg::u3); // idx_count
 			m_init.m_sig = sig.Create(device);
 
 			args[0] = L"-EInit";
@@ -57,7 +58,8 @@ namespace pr::fluid
 			sig.U32(EParam(0), ECBufReg::b0, 3); // constants
 			sig.Uav(EParam(1), EUAVReg::u0); // positions
 			sig.Uav(EParam(2), EUAVReg::u1); // grid_hash
-			sig.Uav(EParam(3), EUAVReg::u2); // start_idx
+			sig.Uav(EParam(3), EUAVReg::u2); // idx_start
+			sig.Uav(EParam(4), EUAVReg::u3); // idx_count
 			m_populate.m_sig = sig.Create(device);
 
 			args[0] = L"-EPopulate";
@@ -69,7 +71,8 @@ namespace pr::fluid
 		// Create static buffers
 		{
 			auto& desc = ResDesc::Buf(CellCount, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
-			m_start_idx = rdr.res().CreateResource(desc, "GridPartition:Histogram");
+			m_idx_start = rdr.res().CreateResource(desc, "GridPartition:IdxStart");
+			m_idx_count = rdr.res().CreateResource(desc, "GridPartition:IdxCount");
 		}
 	}
 
@@ -109,7 +112,6 @@ namespace pr::fluid
 		// Ensure the buffers are large enough
 		Resize(ssize(particles));
 
-		GpuReadbackBuffer::Allocation start_idx, hashes, lookup;
 		BarrierBatch barriers(m_job.m_cmd_list);
 
 		// Upload the particle positions
@@ -128,13 +130,14 @@ namespace pr::fluid
 			barriers.Commit();
 		}
 
-		// Reset the histogram
+		// Reset the index start/count buffers
 		{
 			std::array<uint32_t, 3> constants = { CellCount, 0, 0 };
 			m_job.m_cmd_list.SetPipelineState(m_init.m_pso.get());
 			m_job.m_cmd_list.SetComputeRootSignature(m_init.m_sig.get());
 			m_job.m_cmd_list.SetComputeRoot32BitConstants(0, isize(constants), constants.data(), 0);
-			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_start_idx->GetGPUVirtualAddress());
+			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_idx_start->GetGPUVirtualAddress());
+			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_count->GetGPUVirtualAddress());
 			m_job.m_cmd_list.Dispatch(DispatchCount({ CellCount, 1, 1 }, InitDimension));
 		}
 
@@ -146,32 +149,33 @@ namespace pr::fluid
 			m_job.m_cmd_list.SetComputeRoot32BitConstants(0, isize(constants), constants.data(), 0);
 			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_positions->GetGPUVirtualAddress());
 			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash->GetGPUVirtualAddress());
-			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_start_idx->GetGPUVirtualAddress());
+			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_idx_start->GetGPUVirtualAddress());
+			m_job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_idx_count->GetGPUVirtualAddress());
 			m_job.m_cmd_list.Dispatch(DispatchCount({ s_cast<int>(m_size), 1, 1 }, PopulateDimension));
 		}
 
-		// Initialize the payload buffer and 
-		// sort the cell hashes so that they're contiguous
+		// Initialize the payload buffer and sort the cell hashes so that they're contiguous
 		{
 			m_sorter.InitPayload(m_job.m_cmd_list);
 			m_sorter.Sort(m_job.m_cmd_list);
 		}
 
-		// Read back the histogram and the lookup 
+		// Read back the index start/count buffers and lookup table
+		GpuReadbackBuffer::Allocation idx_start, idx_count, lookup;
 		{
-			barriers.Transition(m_grid_hash.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-			barriers.Transition(m_start_idx.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 			barriers.Transition(m_sorter.m_payload[0].get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 			barriers.Commit();
 			{
 				auto buf = m_job.m_readback.Alloc(CellCount * sizeof(uint32_t), alignof(uint32_t));
-				m_job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_start_idx.get(), 0, buf.m_size);
-				start_idx = buf;
+				m_job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_idx_start.get(), 0, buf.m_size);
+				idx_start = buf;
 			}
 			{
-				auto buf = m_job.m_readback.Alloc(m_size * sizeof(uint32_t), alignof(uint32_t));
-				m_job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_grid_hash.get(), 0, buf.m_size);
-				hashes = buf;
+				auto buf = m_job.m_readback.Alloc(CellCount * sizeof(uint32_t), alignof(uint32_t));
+				m_job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_idx_count.get(), 0, buf.m_size);
+				idx_count = buf;
 			}
 			{
 				auto buf = m_job.m_readback.Alloc(m_size * sizeof(uint32_t), alignof(uint32_t));
@@ -185,14 +189,16 @@ namespace pr::fluid
 
 		// Create the spatial partition structure
 		{
+			// The map from cell hash to index start/count
 			m_lookup.resize(CellCount);
-			memcpy(m_lookup.data(), start_idx.ptr<uint32_t>(), CellCount * sizeof(uint32_t));
+			auto idx_start_ptr = idx_start.ptr<int32_t>();
+			auto idx_count_ptr = idx_count.ptr<int32_t>();
+			for (auto& cell : m_lookup)
+				cell = {*idx_start_ptr++, *idx_count_ptr++};
 
+			// The spatially ordered list of particle indices
 			m_spatial.resize(ssize(particles));
-			auto hash_ptr = hashes.ptr<uint32_t>();
-			auto start_ptr = start_idx.ptr<uint32_t>();
-			for (int i = 0, iend = isize(m_spatial); i != iend; ++i)
-				m_spatial[i] = (int64_t(*hash_ptr++) << 32) | int64_t(*start_ptr++);
+			memcpy(m_spatial.data(), lookup.ptr<int32_t>(), m_spatial.size() * sizeof(int32_t));
 		}
 	}
 
@@ -203,7 +209,6 @@ namespace pr::fluid
 	void GridPartition::Find(v4_cref position, float radius, std::span<Particle const> particles, std::function<void(Particle const&, float)> found) const
 	{
 		//assert(radius == m_radius); // for now...
-		constexpr uint32_t IndexMask = 0xFFFFFFFF;
 		auto radius_sq = radius * radius;
 
 		// Find the cell that 'position' is in
@@ -216,17 +221,13 @@ namespace pr::fluid
 			{
 				for (auto dx : { 0, -1, +1 })
 				{
-					auto key = Hash(cell + iv3(dx, dy, dz));
-					auto idx = m_lookup[key];
-					if (idx == -1)
-						continue;
-
-					for (; (m_spatial[idx] >> 32) == key; ++idx)
+					auto& idx = m_lookup[Hash(cell + iv3(dx, dy, dz))];
+					for (int i = idx.start, iend = idx.start + idx.count; i != iend; ++i)
 					{
-						//auto& particle = particles[m_spatial[idx] & IndexMask];
-						//auto dist_sq = LengthSq(position - particle.m_pos);
-						//if (dist_sq < radius_sq)
-						//	found(particle, dist_sq);
+						auto& particle = particles[m_spatial[i]];
+						auto dist_sq = LengthSq(position - particle.m_pos);
+						if (dist_sq < radius_sq)
+							found(particle, dist_sq);
 					}
 				}
 				if constexpr (Dimensions == 1)

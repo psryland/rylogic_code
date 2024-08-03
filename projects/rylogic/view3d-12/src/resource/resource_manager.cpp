@@ -660,27 +660,32 @@ namespace pr::rdr12
 	}
 	Texture2DPtr ResourceManager::CreateTexture(EStockTexture id)
 	{
+		// Note:
+		//  - Don't make "auto tdesc" into "auto& tdesc" inspite of the lint warning.
+		//    'auto& tdesc' binds to an rvalue which is destroyed at the end of the expression,
+		//    so 'tdesc' is invalid in the call to CreateTexture2D.
+
 		switch (id)
 		{
 			case EStockTexture::Black:
 			{
 				uint32_t const data[] = { 0xFF000000 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Black).name("#black");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Black).name("#black");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::White:
 			{
 				uint32_t const data[] = { 0xFFFFFFFF };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::White).name("#white");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::White).name("#white");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Gray:
 			{
 				uint32_t const data[] = { 0xFF808080 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Gray).name("#gray");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Gray).name("#gray");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker:
@@ -701,7 +706,7 @@ namespace pr::rdr12
 					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker).name("#checker");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker).name("#checker");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker2:
@@ -722,7 +727,7 @@ namespace pr::rdr12
 					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker2).name("#checker2");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker2).name("#checker2");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker3:
@@ -743,7 +748,7 @@ namespace pr::rdr12
 					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSpot:
@@ -765,7 +770,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSpike:
@@ -795,7 +800,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpike).has_alpha().name("#whitespike");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpike).has_alpha().name("#whitespike");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSphere:
@@ -830,7 +835,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSphere).has_alpha(false).name("#whitesphere");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSphere).has_alpha(false).name("#whitesphere");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteTriangle:
@@ -872,14 +877,14 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteTriangle).has_alpha().name("#whitetriangle");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteTriangle).has_alpha().name("#whitetriangle");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::EnvMapProjection:
 			{
 				uint32_t const data[] = { 0 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto& tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::EnvMapProjection).name("#envmapproj");
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::EnvMapProjection).name("#envmapproj");
 				return CreateTexture2D(tdesc);
 			}
 			default:
@@ -918,32 +923,32 @@ namespace pr::rdr12
 		{
 			case EStockSampler::PointClamp:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
+				auto sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::PointWrap:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
+				auto sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearClamp:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
+				auto sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearWrap:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
+				auto sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicClamp:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
+				auto sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicWrap:
 			{
-				auto& sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
+				auto sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
 				return GetSampler(sdesc);
 			}
 			default:

@@ -20,6 +20,7 @@ struct Main :Form
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 	enum class ERunMode { Paused, SingleStep, FreeRun };
 
+	inline static constexpr iv2 WinSize = { 2048, 1600 };
 	inline static constexpr int ParticleCount = 30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
 
@@ -44,7 +45,7 @@ struct Main :Form
 			.name("main")
 			.title(L"Fluid")
 			.xy(1200,100)
-			.wh(1024, 768, true)
+			.wh(WinSize.x, WinSize.y, true)
 			.main_wnd()
 			.dbl_buffer()
 			.wndclass(RegisterWndClass<Main>()))
@@ -98,6 +99,13 @@ struct Main :Form
 			// Update the window title
 			if (m_probe.m_active)
 			{
+				// Find the particles in the probe
+				m_probe.m_found.clear();
+				m_grid_partition.Find(m_probe.m_position, m_probe.m_radius, m_fluid_sim.m_particles, [this](auto& p, float)
+				{
+					m_probe.m_found.insert(m_fluid_sim.m_particles.index(p));
+				});
+
 				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
 				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
 				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
@@ -105,17 +113,19 @@ struct Main :Form
 			}
 			else
 			{
+				m_probe.m_found.clear();
 				auto c2w = m_scn.m_cam.CameraToWorld();
 				SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
 			}
 
-			if (m_time == m_last_frame_rendered)
-				return;
+			// Use this only render per main loop step
+			//if (m_time == m_last_frame_rendered)
+			//	return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();
 			m_probe.AddToScene(m_scn);
-			m_fluid_vis.AddToScene(m_scn);
+			m_fluid_vis.AddToScene(m_scn, m_probe.m_found);
 
 			// Render the frame
 			auto frame = m_wnd.NewFrame();
@@ -134,8 +144,8 @@ struct Main :Form
 		Form::OnWindowPosChange(args);
 		if (!args.m_before && args.IsResize() && !IsIconic(*this))
 		{
-			auto dpi = GetDpiForWindow(*this);
 			auto rect = ClientRect();
+			auto dpi = GetDpiForWindow(*this);
 			auto w = s_cast<int>(rect.width() * dpi / 96.0);
 			auto h = s_cast<int>(rect.height() * dpi / 96.0);
 			m_wnd.BackBufferSize({ w, h }, false);
