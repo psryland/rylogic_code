@@ -48,8 +48,16 @@ namespace pr::rdr12
 		static constexpr bool HasPayload = !std::is_same_v<Value, void>;
 		static constexpr bool SortAscending = Ascending;
 
-		enum class EParam {};
-		enum class ESamp {};
+		struct EReg
+		{
+			inline static constexpr auto Constants = ECBufReg::b0;
+			inline static constexpr auto Sort0 = EUAVReg::u0;
+			inline static constexpr auto Sort1 = EUAVReg::u1;
+			inline static constexpr auto Payload0 = EUAVReg::u2;
+			inline static constexpr auto Payload1 = EUAVReg::u3;
+			inline static constexpr auto GlobalHistogram = EUAVReg::u4;
+			inline static constexpr auto PassHistogram = EUAVReg::u5;
+		};
 
 		struct TuningParams
 		{
@@ -130,73 +138,73 @@ namespace pr::rdr12
 
 			// InitRadixSort
 			{
-				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
-				sig.Uav(EParam(0), EUAVReg::u4); // m_global_histogram
-				m_init.m_sig = sig.Create(device);
+				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.Uav(EReg::GlobalHistogram)
+					.Create(device);
 
 				args[0] = L"-EInitRadixSort";
 				auto bytecode = CompileShader(source, args);
-				ComputePSO pso(m_init.m_sig.get(), bytecode);
-				m_init.m_pso = pso.Create(device, "GpuRadixSort:Init");
+				m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
+					.Create(device, "GpuRadixSort:Init");
 			}
 
 			// InitPayload
 			{
-				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
-				sig.U32(EParam(0), ECBufReg::b0, 4);
-				sig.Uav(EParam(1), EUAVReg::u2); // m_payload0
-				m_init_payload.m_sig = sig.Create(device);
+				m_init_payload.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32(EReg::Constants, 4)
+					.Uav(EReg::Payload0)
+					.Create(device);
 
 				args[0] = L"-EInitPayload";
 				auto bytecode = CompileShader(source, args);
-				ComputePSO pso(m_init_payload.m_sig.get(), bytecode);
-				m_init_payload.m_pso = pso.Create(device, "GpuRadixSort:InitPayload");
+				m_init_payload.m_pso = ComputePSO(m_init_payload.m_sig.get(), bytecode)
+					.Create(device, "GpuRadixSort:InitPayload");
 			}
 
 			// Sweep Up
 			{
-				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
-				sig.U32(EParam(0), ECBufReg::b0, 4);
-				sig.Uav(EParam(1), EUAVReg::u0); // m_sort0
-				sig.Uav(EParam(2), EUAVReg::u4); // m_global_histogram
-				sig.Uav(EParam(3), EUAVReg::u5); // m_pass_histogram
-				m_sweep_up.m_sig = sig.Create(device);
+				m_sweep_up.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32(EReg::Constants, 4)
+					.Uav(EReg::Sort0)
+					.Uav(EReg::GlobalHistogram)
+					.Uav(EReg::PassHistogram)
+					.Create(device);
 
 				args[0] = L"-ESweepUp";
 				auto bytecode = CompileShader(source, args);
-				ComputePSO pso(m_sweep_up.m_sig.get(), bytecode);
-				m_sweep_up.m_pso = pso.Create(device, "GpuRadixSort:SweepUp");
+				m_sweep_up.m_pso = ComputePSO(m_sweep_up.m_sig.get(), bytecode)
+					.Create(device, "GpuRadixSort:SweepUp");
 			}
 
 			// Scan
 			{
-				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
-				sig.U32(EParam(0), ECBufReg::b0, 4);
-				sig.Uav(EParam(1), EUAVReg::u5); // m_pass_histogram
-				m_scan.m_sig = sig.Create(device);
+				m_scan.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32(EReg::Constants, 4)
+					.Uav(EReg::PassHistogram)
+					.Create(device);
 
 				args[0] = L"-EScan";
 				auto bytecode = CompileShader(source, args);
-				ComputePSO pso(m_scan.m_sig.get(), bytecode);
-				m_scan.m_pso = pso.Create(device, "GpuRadixSort:Scan");
+				m_scan.m_pso = ComputePSO(m_scan.m_sig.get(), bytecode)
+					.Create(device, "GpuRadixSort:Scan");
 			}
 
 			// Sweep Down
 			{
-				RootSig<EParam, ESamp> sig(ERootSigFlags::ComputeOnly);
-				sig.U32(EParam(0), ECBufReg::b0, 4);
-				sig.Uav(EParam(1), EUAVReg::u0); // m_sort0
-				sig.Uav(EParam(2), EUAVReg::u1); // m_sort1
-				sig.Uav(EParam(3), EUAVReg::u2); // m_payload0
-				sig.Uav(EParam(4), EUAVReg::u3); // m_payload1
-				sig.Uav(EParam(5), EUAVReg::u4); // m_global_histogram
-				sig.Uav(EParam(6), EUAVReg::u5); // m_pass_histogram
-				m_sweep_down.m_sig = sig.Create(device);
+				m_sweep_down.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32(EReg::Constants, 4)
+					.Uav(EReg::Sort0)
+					.Uav(EReg::Sort1)
+					.Uav(EReg::Payload0)
+					.Uav(EReg::Payload1)
+					.Uav(EReg::GlobalHistogram)
+					.Uav(EReg::PassHistogram)
+					.Create(device);
 
 				args[0] = L"-ESweepDown";
 				auto bytecode = CompileShader(source, args);
-				ComputePSO pso(m_sweep_down.m_sig.get(), bytecode);
-				m_sweep_down.m_pso = pso.Create(device, "GpuRadixSort:SweepDown");
+				m_sweep_down.m_pso = ComputePSO(m_sweep_down.m_sig.get(), bytecode)
+					.Create(device, "GpuRadixSort:SweepDown");
 			}
 
 			// Create sort-size independent buffers
@@ -208,6 +216,38 @@ namespace pr::rdr12
 				auto& desc = ResDesc::Buf(1, sizeof(Key), nullptr, alignof(Key)).usage(EUsage::UnorderedAccess);
 				m_error_count = m_rdr->res().CreateResource(desc, "RadixSort:error_count");
 			}
+		}
+
+		// Bind the given resources for sorting
+		void Bind(int64_t size, D3DPtr<ID3D12Resource> sort0, D3DPtr<ID3D12Resource> payload0)
+		{
+			{
+				auto& desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
+					.usage(EUsage::UnorderedAccess)
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+				m_sort[0] = sort0;
+				m_sort[1] = m_rdr->res().CreateResource(desc, "RadixSort:sort1");
+			}
+			{
+				using T = std::conditional_t<HasPayload, Value, int>;
+				auto& desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
+					.usage(EUsage::UnorderedAccess)
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+				m_payload[0] = payload0;
+				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
+			}
+			{
+				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
+				auto& desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
+					.usage(EUsage::UnorderedAccess)
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+				m_pass_histogram = m_rdr->res().CreateResource(desc, "RadixSort:passHistBuffer");
+			}
+
+			m_size = size;
 		}
 
 		// Resize the GPU buffers in preparation for sorting 'size' elements

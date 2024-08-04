@@ -5,6 +5,7 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <iostream>
 #include <type_traits>
@@ -162,14 +163,10 @@ namespace pr
 		assert(Succeeded(result) && Reason().c_str());
 		(void)result;
 	}
-	template <typename Result> [[deprecated]] inline void Throw(Result result, char const* msg = nullptr)
-	{
-		Check<Result>(result, msg);
-	}
-	template <typename Result> inline void Check(Result result, char const* msg = nullptr)
+	template <typename Result> inline void Check(Result result, std::string_view msg = {})
 	{
 		if (Succeeded(result)) return;
-		throw std::runtime_error(std::string(msg?msg:"") + (msg?" ":"") + Reason());
+		throw std::runtime_error(std::string(msg).append(!msg.empty()?" ":"").append(Reason()));
 	}
 
 	// Check the 'errno' value, and throw if non-zero

@@ -325,7 +325,7 @@ namespace pr::gui
 			}
 
 			// Layout the dialog
-			OnLayout(ClientRect());
+			OnLayout(ClientRect(true));
 		}
 		virtual void OnDestroy() override
 		{
@@ -360,7 +360,7 @@ namespace pr::gui
 		{
 			// Layout the dialog whenever it resizes
 			if (!args.m_before && args.IsResize() && !args.Iconic())
-				OnLayout(ClientRect());
+				OnLayout(ClientRect(true));
 		}
 		virtual void OnCancelling(CancelEventArgs& args)
 		{

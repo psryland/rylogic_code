@@ -2406,8 +2406,8 @@ namespace pr
 		// Event args for mouse button events
 		struct MouseEventArgs :EmptyArgs
 		{
-			Point     m_point;     // The location of the mouse at the button event (in DIP client space)
-			Point     m_point_px;  // The location of the mouse at the button event (in client space pixels, i.e DIP adjusted)
+			Point     m_point;     // The location of the mouse at the button event relative to (unpadded) client space (in DIP client space)
+			Point     m_point_px;  // The mouse position converted to physical pixels (relative to (unpadded) client space)
 			EMouseKey m_button;    // The button that triggered the event
 			EMouseKey m_key_state; // The state of all mouse buttons and control keys
 			bool      m_down;      // True if the button was a down event, false if an up event
@@ -2426,8 +2426,8 @@ namespace pr
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
-			Point     m_point;     // The client space location of the mouse at the time of the event
-			Point     m_point_px;  // The location of the mouse at the button event (in client space pixels, i.e DIP adjusted)
+			Point     m_point;     // The (unpadded) client space location of the mouse at the time of the event.
+			Point     m_point_px;  // The mouse position converted to physical pixels (relative to (unpadded) client space)
 			EMouseKey m_key_state; // The state of all mouse buttons and control keys
 			short     m_delta;     // The amount the mouse wheel has turned
 			bool      m_handled;   // Set to true to prevent further handling of this key event
@@ -2860,7 +2860,7 @@ namespace pr
 			float Y(float y) const { return y * m_rt_dpi / float(m_dt_dpi); }
 			Point Pt(Point pt) const
 			{
-				return Point(X(s_cast<int>(pt.x)), Y(s_cast<int>(pt.y)));
+				return Point(X(static_cast<int>(pt.x)), Y(static_cast<int>(pt.y)));
 			}
 
 			// Return the current DPI
@@ -4640,10 +4640,6 @@ namespace pr
 			// Get the client rect [TL,BR) for the window in this controls client space.
 			// Note: Menus are part of the non-client area, you don't need to offset the client rect for the menu.
 			// ClientRect also includes padding by default. Use 'padded' = false for the unpadded client area.
-			Rect ClientRect() const
-			{
-				return ClientRect(true);
-			}
 			Rect ClientRect(bool padded) const
 			{
 				// Call the protected virtual implementation
@@ -5237,7 +5233,7 @@ namespace pr
 							// Resize all descendants
 							if (is_resize || is_move)
 							{
-								auto client = ClientRect();
+								auto client = ClientRect(true);
 								auto screen = ScreenRect();
 								for (auto c : m_child)
 								{
@@ -5922,7 +5918,7 @@ namespace pr
 					{
 						// Get the parent control bounds in parent client space
 						if (parent == nullptr) return MinMaxInfo(m_metrics.CurrentDPI()).Bounds();
-						return parent->ExcludeDockedChildren(parent->ClientRect()); // Includes padding in the parent
+						return parent->ExcludeDockedChildren(parent->ClientRect(true)); // Includes padding in the parent
 					}
 					else if (id == -1)
 					{
@@ -6775,7 +6771,7 @@ namespace pr
 			}
 			void Image(ResId<> id, EType img_type, EFit fit = EFit::Zoom)
 			{
-				auto rc = ClientRect();
+				auto rc = ClientRect(true);
 				m_img = std::move(
 					id.m_handle != nullptr ? gui::Image(id.m_handle, img_type, true) :
 					id.m_res_id != nullptr ? gui::Image::Load(cp().m_hinst, id.m_res_id, img_type, fit, rc.width(), rc.height()) :
@@ -8165,7 +8161,7 @@ namespace pr
 			}
 			void Image(ResId<> id, EType img_type, EFit fit = EFit::Zoom, UINT flags = LR_DEFAULTCOLOR|LR_DEFAULTSIZE)
 			{
-				auto rc = ClientRect();
+				auto rc = ClientRect(true);
 				Image(cp().m_hinst, id, img_type, fit, rc.width(), rc.height(), flags);
 			}
 			void Image(HINSTANCE hinst, ResId<> id, EType img_type, EFit fit = EFit::Zoom, int cx = 0, int cy = 0, UINT flags = LR_DEFAULTCOLOR|LR_DEFAULTSIZE)
@@ -8445,7 +8441,7 @@ namespace pr
 				tab.Parent(this);
 
 				// Resize it appropriately
-				LayoutTab(tab, ClientRect());
+				LayoutTab(tab, ClientRect(true));
 
 				// Select the tab that is being added, if desired
 				if (active)
@@ -8538,7 +8534,7 @@ namespace pr
 			}
 			void UpdateLayout(bool repaint = false)
 			{
-				UpdateLayout(ClientRect(), repaint);
+				UpdateLayout(ClientRect(true), repaint);
 			}
 
 			// Events
@@ -8620,7 +8616,7 @@ namespace pr
 			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
 				if (!args.m_before && args.IsResize() && !args.Iconic())
-					UpdateLayout(ClientRect());
+					UpdateLayout(ClientRect(true));
 
 				Control::OnWindowPosChange(args);
 			}
@@ -8788,7 +8784,7 @@ namespace pr
 			void BarPos(float pos, bool repaint = false)
 			{
 				// Get the available client size based on orientation
-				auto w = m_vertical ? ClientRect().width() : ClientRect().height();
+				auto w = m_vertical ? ClientRect(true).width() : ClientRect(true).height();
 				if (w > 0)
 				{
 					auto f = 2*w > m_min_pane_size ? m_min_pane_size / (float)w : 0.5f;
@@ -8821,7 +8817,7 @@ namespace pr
 			}
 			void UpdateLayout(bool repaint = false)
 			{
-				UpdateLayout(ClientRect(), repaint);
+				UpdateLayout(ClientRect(true), repaint);
 			}
 
 		protected:
@@ -8846,7 +8842,7 @@ namespace pr
 			}
 			Rect BarRect() const
 			{
-				return BarRect(ClientRect());
+				return BarRect(ClientRect(true));
 			}
 
 			// Return the rect for a pane in client space
@@ -8870,7 +8866,7 @@ namespace pr
 			}
 			Rect PaneRect(int idx) const
 			{
-				return PaneRect(idx, ClientRect());
+				return PaneRect(idx, ClientRect(true));
 			}
 
 			// Draw the ghost bar. Note, drawing twice 'undraws' the ghost bar
@@ -8899,7 +8895,7 @@ namespace pr
 			void OnWindowPosChange(WindowPosEventArgs const& args) override
 			{
 				if (!args.m_before && args.IsResize() && !args.Iconic())
-					UpdateLayout(ClientRect());
+					UpdateLayout(ClientRect(true));
 
 				Control::OnWindowPosChange(args);
 			}
@@ -8975,7 +8971,7 @@ namespace pr
 				if (::GetCapture() == m_hwnd)
 				{
 					args.m_handled = true;
-					auto client = ClientRect();
+					auto client = ClientRect(true);
 					auto pos = m_vertical
 						? float(pt.x - client.left) / client.width()
 						: float(pt.y - client.top ) / client.height();

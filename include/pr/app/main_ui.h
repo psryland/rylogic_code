@@ -160,7 +160,7 @@ namespace pr::app
 			if (m_nav_enabled)
 			{
 				auto pt = NormalisePoint(*this, args.m_point);
-				m_main->Nav(pt, args.m_keystate, false);
+				m_main->Nav(pt, args.m_key_state, false);
 				Invalidate();
 			}
 		}
@@ -183,7 +183,7 @@ namespace pr::app
 				if (!args.m_before)
 				{
 					// Find the new client area
-					auto area = ExcludeDockedChildren(ClientRect());
+					auto area = ExcludeDockedChildren(ClientRect(true));
 					if (m_main && area.width() > 0 && area.height() > 0)
 					{
 						m_main->Resize(To<IRect>(area));

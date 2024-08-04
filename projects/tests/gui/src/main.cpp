@@ -205,10 +205,10 @@ struct Main :Form
 	{
 		auto sr = ScreenRect();
 		auto ar = AdjRect();
-		auto cr = ClientRect().Shifted(-ar.left, -ar.top);
+		auto cr = ClientRect(true).Shifted(-ar.left, -ar.top);
 
 		auto tsr = m_tc.ScreenRect();
-		auto tcr = m_tc.ClientRect();
+		auto tcr = m_tc.ClientRect(true);
 		auto tpr = m_tc.ParentRect();
 		m_tc.ParentRect(tpr);
 	}

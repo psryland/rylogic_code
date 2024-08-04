@@ -14,6 +14,12 @@
 namespace pr::rdr12
 {
 	constexpr int HeapCapacityView = 256;
+	struct EReg
+	{
+		inline static constexpr ECBufReg Constants = ECBufReg::b0;
+		inline static constexpr ETexReg SrcTexture = ETexReg::t0;
+		inline static constexpr EUAVReg DstTexture = EUAVReg::u0;
+	};
 	enum class EMipMapParam { Constants, SrcTexture, DstTexture };
 	enum class EMipMapSamp { Samp0 };
 
@@ -30,30 +36,30 @@ namespace pr::rdr12
 		auto device = rdr.D3DDevice();
 
 		// Create a root signature for the MipMap generator compute shader
-		RootSig<EMipMapParam, EMipMapSamp> sig(ERootSigFlags::ComputeOnly | ERootSigFlags::AllowInputAssemblerInputLayout);
-		sig.U32(EMipMapParam::Constants, ECBufReg::b0, 2);
-		sig.Tex(EMipMapParam::SrcTexture, ETexReg::t0, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-		sig.Uav(EMipMapParam::DstTexture, EUAVReg::u0, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-		sig.Samp(EMipMapSamp::Samp0, D3D12_STATIC_SAMPLER_DESC{
-			.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
-			.MinLOD = 0.0f,
-			.MaxLOD = D3D12_FLOAT32_MAX,
-			.ShaderRegister = 0,
-			.RegisterSpace = 0,
-			.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
-			});
-		m_mipmap_sig = sig.Create(device);
+		m_mipmap_sig = RootSig(ERootSigFlags::ComputeOnly | ERootSigFlags::AllowInputAssemblerInputLayout)
+			.U32(EReg::Constants, 2)
+			.Tex(EReg::SrcTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
+			.Uav(EReg::DstTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
+			.Samp(D3D12_STATIC_SAMPLER_DESC{
+				.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
+				.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+				.MipLODBias = 0.0f,
+				.MaxAnisotropy = 0,
+				.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
+				.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
+				.MinLOD = 0.0f,
+				.MaxLOD = D3D12_FLOAT32_MAX,
+				.ShaderRegister = 0,
+				.RegisterSpace = 0,
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
+				})
+			.Create(device);
 
 		// Create pipeline state object for the compute shader using the root signature.
-		ComputePSO pos(m_mipmap_sig.get(), shader_code::mipmap_generator_cs);
-		m_mipmap_pso = pos.Create(device, "MipMapGenPSO");
+		m_mipmap_pso = ComputePSO(m_mipmap_sig.get(), shader_code::mipmap_generator_cs)
+			.Create(device, "MipMapGenPSO");
 	}
 
 	// Generate mip maps for a texture

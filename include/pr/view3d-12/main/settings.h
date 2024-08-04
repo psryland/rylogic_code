@@ -155,7 +155,9 @@ namespace pr::rdr12
 		WndSettings& Size(iv2 const& area)
 		{
 			Check(m_output.ptr != nullptr, "Set the output before setting the display mode");
-			return Mode(m_output.FindClosestMatchingMode(DisplayMode(area)));
+			auto mode = m_output.FindClosestMatchingMode(DisplayMode(area));
+			if (m_windowed) { mode.Width = area.x; mode.Height = area.y; }
+			return Mode(mode);
 		}
 		WndSettings& Size(int w, int h)
 		{

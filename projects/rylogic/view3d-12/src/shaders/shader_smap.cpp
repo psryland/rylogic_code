@@ -13,6 +13,14 @@ namespace pr::rdr12::shaders
 {
 	using namespace smap;
 
+	struct EReg
+	{
+		inline static constexpr auto CBufFrame = ECBufReg::b0;
+		inline static constexpr auto CBufNugget = ECBufReg::b1;
+		inline static constexpr auto DiffTexture = ETexReg::t0;
+		inline static constexpr auto DiffTextureSampler = ESamReg::s0;
+	};
+
 	ShadowMap::ShadowMap(ID3D12Device* device)
 		:Shader()
 	{
@@ -27,12 +35,12 @@ namespace pr::rdr12::shaders
 		};
 		
 		// Create the root signature
-		RootSig<ERootParam, ESampParam> sig(ERootSigFlags::VertGeomPixelOnly);
-		sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
-		sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
-		sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
-		sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, 1);
-		m_signature = sig.Create(device);
+		m_signature = RootSig(ERootSigFlags::VertGeomPixelOnly)
+			.CBuf(EReg::CBufFrame)
+			.CBuf(EReg::CBufNugget)
+			.Tex(EReg::DiffTexture, 1)
+			.Samp(EReg::DiffTextureSampler, 1)
+			.Create(device);
 	}
 
 	// Config the shader

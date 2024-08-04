@@ -14,6 +14,28 @@ namespace pr::rdr12::shaders
 {
 	using namespace fwd;
 
+	struct EReg
+	{
+		inline static constexpr auto CBufFrame = ECBufReg::b0;
+		inline static constexpr auto CBufNugget = ECBufReg::b1;
+		inline static constexpr auto CBufFade = ECBufReg::b2;
+		inline static constexpr auto CBufScreenSpace = ECBufReg::b3;
+		inline static constexpr auto CBufDiag = ECBufReg::b3; // Uses the same reg as ScreenSpace
+
+		inline static constexpr auto DiffTexture = ETexReg::t0;
+		inline static constexpr auto EnvMap = ETexReg::t1;
+		inline static constexpr auto SMap = ETexReg::t2;
+		inline static constexpr auto ProjTex = ETexReg::t3;
+
+		inline static constexpr auto DiffTextureSampler = ESamReg::s0;
+	};
+	struct ESamp
+	{
+		inline static constexpr auto EnvMap = SamDescStatic(ESamReg::s1);
+		inline static constexpr auto SMap = SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL);
+		inline static constexpr auto ProjTex = SamDescStatic(ESamReg::s3);
+	};
+
 	Forward::Forward(ID3D12Device* device)
 		:Shader()
 	{
@@ -28,26 +50,25 @@ namespace pr::rdr12::shaders
 		};
 		
 		// Create the root signature
-		RootSig<ERootParam, ESampParam> sig(ERootSigFlags::GraphicsOnly);
+		m_signature = RootSig(ERootSigFlags::GraphicsOnly)
 
-		// Register mappings
-		sig.CBuf(ERootParam::CBufFrame, ECBufReg::b0);
-		sig.CBuf(ERootParam::CBufNugget, ECBufReg::b1);
-		sig.CBuf(ERootParam::CBufFade, ECBufReg::b2);
-		sig.CBuf(ERootParam::CBufScreenSpace, ECBufReg::b3);
-		sig.CBuf(ERootParam::CBufDiag, ECBufReg::b3); // Uses the same reg as ScreenSpace
-		sig.Tex(ERootParam::DiffTexture, ETexReg::t0, 1);
-		sig.Tex(ERootParam::EnvMap, ETexReg::t1, 1);
-		sig.Tex(ERootParam::SMap, ETexReg::t2, shaders::MaxShadowMaps);
-		sig.Tex(ERootParam::ProjTex, ETexReg::t3, shaders::MaxProjectedTextures);
-		sig.Samp(ERootParam::DiffTextureSampler, ESamReg::s0, shaders::MaxSamplers);
+			// Register mappings
+			.CBuf(EReg::CBufFrame)
+			.CBuf(EReg::CBufNugget)
+			.CBuf(EReg::CBufFade)
+			.CBuf(EReg::CBufScreenSpace) // Shared to CBufDiag
+			.Tex(EReg::DiffTexture, 1)
+			.Tex(EReg::EnvMap, 1)
+			.Tex(EReg::SMap, shaders::MaxShadowMaps)
+			.Tex(EReg::ProjTex, shaders::MaxProjectedTextures)
+			.Samp(EReg::DiffTextureSampler, shaders::MaxSamplers)
 
-		// Add stock static samplers
-		sig.Samp(ESampParam::EnvMap, SamDescStatic(ESamReg::s1));
-		sig.Samp(ESampParam::SMap, SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL));
-		sig.Samp(ESampParam::ProjTex, SamDescStatic(ESamReg::s3));
+			// Add stock static samplers
+			.Samp(ESamp::EnvMap)
+			.Samp(ESamp::SMap)
+			.Samp(ESamp::ProjTex)
 
-		m_signature = sig.Create(device);
+			.Create(device);
 	}
 
 	// Config the shader

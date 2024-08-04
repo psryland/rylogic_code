@@ -303,7 +303,7 @@ namespace ace
 	// Return user input
 	inline Main::SpaceInvaders::UserInputData Main::UserInput()
 	{
-		auto rect = m_ui.ClientRect();
+		auto rect = m_ui.ClientRect(false);
 		auto pt = m_ui.MousePosition();
 		pt = m_ui.PointToClient(pt);
 

@@ -103,8 +103,8 @@ struct Main :Form
 		Form::OnWindowPosChange(args);
 		if (!args.m_before && args.IsResize() && !IsIconic(*this))
 		{
+			auto rect = ClientRect(false);
 			auto dpi = GetDpiForWindow(*this);
-			auto rect = ClientRect();
 			auto w = s_cast<int>(rect.width() * dpi / 96.0);
 			auto h = s_cast<int>(rect.height() * dpi / 96.0);
 			View3D_WindowBackBufferSizeSet(m_win3d, w, h);

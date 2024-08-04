@@ -87,7 +87,7 @@ namespace pr::app
 				v4YAxis, true);
 
 			// Initialise the viewport to the padded client area
-			auto area = To<FRect>(m_ui.ClientRect());
+			auto area = To<FRect>(m_ui.ClientRect(true));
 			if (area.SizeX() != 0 && area.SizeY() != 0)
 			{
 				m_cam.Aspect(area.Aspect());

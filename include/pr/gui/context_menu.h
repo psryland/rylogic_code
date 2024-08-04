@@ -431,7 +431,7 @@ namespace pr
 					auto lbl_sz = Label::MeasureItem(gfx);
 
 					// Measure the edit box portion
-					auto edit_sz = m_edit.ClientRect(); // same as WindowRect();
+					auto edit_sz = m_edit.ClientRect(true); // same as WindowRect();
 
 					// Return the item dimensions
 					Size sz;
@@ -448,7 +448,7 @@ namespace pr
 					Label::DrawItem(gfx, rect);
 
 					// Position the edit box
-					auto r = m_edit.ClientRect();
+					auto r = m_edit.ClientRect(true);
 					auto pt = Point(
 						style.m_margin_left + m_rect_text.width() + 2*style.m_text_margin,
 						rect.top + (rect.height() - r.height()) / 2);

@@ -1589,7 +1589,7 @@ namespace pr::gui
 		void OnPaint(PaintEventArgs& args) override
 		{
 			PaintStruct ps(m_hwnd);
-			DoPaint(args.m_dc, ClientRect());
+			DoPaint(args.m_dc, ClientRect(false));
 			Control::OnPaint(args);
 		}
 	};
