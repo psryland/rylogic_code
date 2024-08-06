@@ -40,7 +40,7 @@ namespace pr::rdr12::shaders
 			.CBuf(EReg::CBufNugget)
 			.Tex(EReg::DiffTexture, 1)
 			.Samp(EReg::DiffTextureSampler, 1)
-			.Create(device);
+			.Create(device, "ShadowMapSig");
 	}
 
 	// Config the shader

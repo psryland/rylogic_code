@@ -2283,7 +2283,7 @@ static int _ov_d_seek_lap(OggVorbis_File *vf,double pos,
                            int (*localseek)(OggVorbis_File *,double)){
   vorbis_info *vi;
   float **lappcm;
-  float **pcm;
+  float **pcm = NULL;
   const float *w1,*w2;
   int n1,n2,ch1,ch2,hs;
   int i,ret;

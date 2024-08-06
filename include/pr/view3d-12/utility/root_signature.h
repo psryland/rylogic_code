@@ -156,7 +156,7 @@ namespace pr::rdr12
 		}
 
 		// Compile the shader signature
-		D3DPtr<ID3D12RootSignature> Create(ID3D12Device* device)
+		D3DPtr<ID3D12RootSignature> Create(ID3D12Device* device, char const* name)
 		{
 			// Create the root signature
 			D3D12_VERSIONED_ROOT_SIGNATURE_DESC rs_desc = {
@@ -177,6 +177,7 @@ namespace pr::rdr12
 			
 			D3DPtr<ID3D12RootSignature> shader_sig;
 			Check(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&shader_sig.m_ptr));
+			DebugName(shader_sig, name);
 			return shader_sig;
 		}
 

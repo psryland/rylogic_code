@@ -21,7 +21,7 @@ struct Main :Form
 	enum class ERunMode { Paused, SingleStep, FreeRun };
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
-	inline static constexpr int ParticleCount = 30 * 30;
+	inline static constexpr int ParticleCount = 10 * 10;// 30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
 
 	Renderer m_rdr;
@@ -106,9 +106,12 @@ struct Main :Form
 					m_probe.m_found.insert(m_fluid_sim.m_particles.index(p));
 				});
 
+				auto pos = m_probe.m_position;
+				auto hash = Hash(To<iv3>(pos.xyz * 10.0f));
 				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
 				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
-				SetWindowTextA(*this, pr::FmtS("Fluid - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
+				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Hash: %d - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
+					pos.x, pos.y, pos.z, hash,
 					density, press.x, press.y, press.z, m_probe.m_radius));
 			}
 			else
@@ -119,8 +122,7 @@ struct Main :Form
 			}
 
 			// Use this only render per main loop step
-			//if (m_time == m_last_frame_rendered)
-			//	return;
+			//if (m_time == m_last_frame_rendered) return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();
@@ -144,7 +146,7 @@ struct Main :Form
 		Form::OnWindowPosChange(args);
 		if (!args.m_before && args.IsResize() && !IsIconic(*this))
 		{
-			auto rect = ClientRect();
+			auto rect = ClientRect(false);
 			auto dpi = GetDpiForWindow(*this);
 			auto w = s_cast<int>(rect.width() * dpi / 96.0);
 			auto h = s_cast<int>(rect.height() * dpi / 96.0);

@@ -75,7 +75,7 @@ namespace pr::rdr12
 	//     L"-O3",
 	//     L"-Zi",
 	// };
-	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args);
+	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args, IDxcIncludeHandler* include_handler = nullptr);
 	std::vector<uint8_t> CompileShader(std::filesystem::path const& shader_path, std::span<wchar_t const*> args);
 
 	// Statically declared shader byte code

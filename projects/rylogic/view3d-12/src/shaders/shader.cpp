@@ -45,7 +45,7 @@ namespace pr::rdr12
 	// 'code' is the source file as a string
 	// 'args' is an array of pointers to arguments
 	// 'shader_model' is the shader model to compile to
-	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args)
+	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args, IDxcIncludeHandler* include_handler)
 	{
 		DxcBuffer source = {
 			.Ptr = code.data(),
@@ -56,14 +56,11 @@ namespace pr::rdr12
 		D3DPtr<IDxcUtils> utils;
 		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
 
-		D3DPtr<IDxcIncludeHandler> include_handler;
-		Check(utils->CreateDefaultIncludeHandler(&include_handler.m_ptr));
-
 		D3DPtr<IDxcCompiler3> compiler;
 		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)&compiler.m_ptr));
 
 		D3DPtr<IDxcResult> result;
-		auto hr = compiler->Compile(&source, args.data(), s_cast<uint32_t>(args.size()), include_handler.get(), __uuidof(IDxcResult), (void**)&result.m_ptr);
+		auto hr = compiler->Compile(&source, args.data(), s_cast<uint32_t>(args.size()), include_handler, __uuidof(IDxcResult), (void**)&result.m_ptr);
 		if (SUCCEEDED(hr))
 		{
 			Check(result->GetStatus(&hr));
@@ -97,11 +94,14 @@ namespace pr::rdr12
 		D3DPtr<IDxcBlobEncoding> source_blob;
 		Check(utils->LoadFile(shader_path.wstring().c_str(), &code_page, &source_blob.m_ptr));
 
+		D3DPtr<IDxcIncludeHandler> include_handler;
+		Check(utils->CreateDefaultIncludeHandler(&include_handler.m_ptr));
+
 		//D3DPtr<IDxcCompilerArgs> compiler_args;
 		//Check(utils->BuildArguments(shader_path.wstring().c_str(), entry_point, shader_model, args.data(), s_cast<uint32_t>(args.size()), nullptr, 0, &compiler_args.m_ptr));
 
 		auto source = std::string_view{ static_cast<char const*>(source_blob->GetBufferPointer()), source_blob->GetBufferSize() };
-		return CompileShader(source, args);
+		return CompileShader(source, args, include_handler.get());
 	}
 
 	// Compiled shader byte code

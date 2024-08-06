@@ -632,6 +632,17 @@ namespace pr::rdr12
 				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
+		// Derive a vertex buffer description from an existing vertex buffer
+		template <typename TVert> static ResDesc VBuf(ID3D12Resource* vbuf)
+		{
+			auto vb = vbuf->GetDesc();
+			auto count = int64_t(vb.Width) / sizeof(TVert);
+			count += int64_t(count == 0);
+			return Buf(count, sizeof(TVert), nullptr, alignof(TVert))
+				.usage(static_cast<EUsage>(vb.Flags))
+				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+		}
+
 		// Index buffer description
 		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
 		{
@@ -639,6 +650,20 @@ namespace pr::rdr12
 			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
+
+
+		// Derive an index buffer description from an existing index buffer
+		template <typename TIndx> static ResDesc IBuf(ID3D12Resource* ibuf)
+		{
+			auto ib = ibuf->GetDesc();
+			auto count = int64_t(ib.Width) / sizeof(TIndx);
+			count += int64_t(count == 0);
+			return Buf(count, sizeof(TIndx), nullptr, alignof(TIndx))
+				.usage(static_cast<EUsage>(ib.Flags))
+				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
+		}
+
+		// Index buffer description of arbitrary element size
 		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
 		{
 			count += int64_t(count == 0);

@@ -18,8 +18,10 @@ namespace pr::fluid
 		rdr12::ComputeJob m_job;            // The job to run the compute shader
 		rdr12::ComputeStep m_init;          // Reset buffers
 		rdr12::ComputeStep m_populate;      // Populate the grid cells
+		rdr12::ComputeStep m_build;         // Build the lookup data structure
 		D3DPtr<ID3D12Resource> m_positions; // The positions of the objects/particles
 		D3DPtr<ID3D12Resource> m_grid_hash; // The cell hash for each position
+		D3DPtr<ID3D12Resource> m_pos_index; // The cell hash for each position
 		D3DPtr<ID3D12Resource> m_idx_start; // The smallest index for each cell hash value
 		D3DPtr<ID3D12Resource> m_idx_count; // The number of particles in each cell
 		GpuRadixSorter m_sorter;            // Sort the cell hashes on the GPU
@@ -39,4 +41,6 @@ namespace pr::fluid
 		// Find all particles within 'radius' of 'position'
 		void Find(v4_cref position, float radius, std::span<Particle const> particles, std::function<void(Particle const& particle, float dist_sq)> found) const override;
 	};
+
+	uint32_t Hash(iv3 grid);
 }

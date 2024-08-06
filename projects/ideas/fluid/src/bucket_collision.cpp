@@ -72,15 +72,19 @@ namespace pr::fluid
 					auto hh = m_hheight * margin;
 					auto step = Sqrt((2 * hw * 2 * hh) / isize(particles));
 
-					auto x = -hw;
-					auto y = -hh;
+					auto x = -hw + step/2;
+					auto y = -hh + step/2;
 					for (int i = 0, iend = isize(particles); i < iend; ++i)
 					{
 						auto& particle = particles[i];
 						particle.m_vel = v4::Zero();
 						particle.m_pos = v4(x, y, 0, 1);
 						x += step;
-						if (x > hw) { x = -hw; y += step; }
+						if (x > hw)
+						{
+							x = -hw / step/2;
+							y += step;
+						}
 					}
 				}
 				if constexpr (Dimensions == 3)
@@ -106,6 +110,32 @@ namespace pr::fluid
 						x += step;
 						if (x > hw) { x = -hw; z += step; }
 						if (z > hw) { z = -hw; y += step; }
+					}
+				}
+				break;
+			}
+			case EFillStyle::Grid:
+			{
+				if constexpr (Dimensions == 2)
+				{
+					auto const margin = 1.0f;//0.95f;
+					auto hw = m_hwidth * margin;
+					auto hh = m_hheight * margin;
+					auto step = 0.1f;
+
+					auto x = -hw + step / 2.0f;
+					auto y = -hh + step / 2.0f;
+					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					{
+						auto& particle = particles[i];
+						particle.m_vel = v4::Zero();
+						particle.m_pos = v4(x, y, 0, 1);
+						x += step;
+						if (x > hw)
+						{
+							x = -hw + step/2;
+							y += step;
+						}
 					}
 				}
 				break;

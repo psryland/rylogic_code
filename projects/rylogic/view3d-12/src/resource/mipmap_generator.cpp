@@ -55,7 +55,7 @@ namespace pr::rdr12
 				.RegisterSpace = 0,
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL,
 				})
-			.Create(device);
+			.Create(device, "MipMapGenSig");
 
 		// Create pipeline state object for the compute shader using the root signature.
 		m_mipmap_pso = ComputePSO(m_mipmap_sig.get(), shader_code::mipmap_generator_cs)

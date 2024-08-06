@@ -32,7 +32,7 @@ namespace pr::fluid
 		, m_mass(m_density0 * m_boundary->Volume() / isize(m_particles)) // kg
 	{
 		// Distribute the particles
-		m_boundary->Fill(EFillStyle::Random, m_particles, m_radius);
+		m_boundary->Fill(EFillStyle::Grid, m_particles, m_radius);
 
 		// Update the spatial partitioning of the particles
 		m_spatial->Update(m_particles);

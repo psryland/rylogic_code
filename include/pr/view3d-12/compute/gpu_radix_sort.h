@@ -140,12 +140,12 @@ namespace pr::rdr12
 			{
 				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.Uav(EReg::GlobalHistogram)
-					.Create(device);
+					.Create(device, "GpuRadixSort:InitSig");
 
 				args[0] = L"-EInitRadixSort";
 				auto bytecode = CompileShader(source, args);
 				m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
-					.Create(device, "GpuRadixSort:Init");
+					.Create(device, "GpuRadixSort:InitPSO");
 			}
 
 			// InitPayload
@@ -153,12 +153,12 @@ namespace pr::rdr12
 				m_init_payload.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::Payload0)
-					.Create(device);
+					.Create(device, "GpuRadixSort:InitPayloadSig");
 
 				args[0] = L"-EInitPayload";
 				auto bytecode = CompileShader(source, args);
 				m_init_payload.m_pso = ComputePSO(m_init_payload.m_sig.get(), bytecode)
-					.Create(device, "GpuRadixSort:InitPayload");
+					.Create(device, "GpuRadixSort:InitPayloadPSO");
 			}
 
 			// Sweep Up
@@ -168,12 +168,12 @@ namespace pr::rdr12
 					.Uav(EReg::Sort0)
 					.Uav(EReg::GlobalHistogram)
 					.Uav(EReg::PassHistogram)
-					.Create(device);
+					.Create(device, "GpuRadixSort:SweepUpSig");
 
 				args[0] = L"-ESweepUp";
 				auto bytecode = CompileShader(source, args);
 				m_sweep_up.m_pso = ComputePSO(m_sweep_up.m_sig.get(), bytecode)
-					.Create(device, "GpuRadixSort:SweepUp");
+					.Create(device, "GpuRadixSort:SweepUpPSO");
 			}
 
 			// Scan
@@ -181,12 +181,12 @@ namespace pr::rdr12
 				m_scan.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::PassHistogram)
-					.Create(device);
+					.Create(device, "GpuRadixSort:ScanSig");
 
 				args[0] = L"-EScan";
 				auto bytecode = CompileShader(source, args);
 				m_scan.m_pso = ComputePSO(m_scan.m_sig.get(), bytecode)
-					.Create(device, "GpuRadixSort:Scan");
+					.Create(device, "GpuRadixSort:ScanPSO");
 			}
 
 			// Sweep Down
@@ -199,12 +199,12 @@ namespace pr::rdr12
 					.Uav(EReg::Payload1)
 					.Uav(EReg::GlobalHistogram)
 					.Uav(EReg::PassHistogram)
-					.Create(device);
+					.Create(device, "GpuRadixSort:SweepDownSig");
 
 				args[0] = L"-ESweepDown";
 				auto bytecode = CompileShader(source, args);
 				m_sweep_down.m_pso = ComputePSO(m_sweep_down.m_sig.get(), bytecode)
-					.Create(device, "GpuRadixSort:SweepDown");
+					.Create(device, "GpuRadixSort:SweepDownPSO");
 			}
 
 			// Create sort-size independent buffers
@@ -222,7 +222,7 @@ namespace pr::rdr12
 		void Bind(int64_t size, D3DPtr<ID3D12Resource> sort0, D3DPtr<ID3D12Resource> payload0)
 		{
 			{
-				auto& desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
+				auto desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -231,7 +231,7 @@ namespace pr::rdr12
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
-				auto& desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
+				auto desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -240,7 +240,7 @@ namespace pr::rdr12
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
-				auto& desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
+				auto desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -257,7 +257,7 @@ namespace pr::rdr12
 				return;
 
 			{
-				auto& desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
+				auto desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -266,7 +266,7 @@ namespace pr::rdr12
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
-				auto& desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
+				auto desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -275,7 +275,7 @@ namespace pr::rdr12
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
-				auto& desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
+				auto desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
 					.usage(EUsage::UnorderedAccess)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 

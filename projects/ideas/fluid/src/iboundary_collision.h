@@ -9,6 +9,7 @@ namespace pr::fluid
 		Point,
 		Random,
 		Lattice,
+		Grid,
 	};
 
 	struct IBoundaryCollision

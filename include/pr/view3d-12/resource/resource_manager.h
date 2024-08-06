@@ -82,6 +82,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
 
 		// Create a model.
+		ModelPtr CreateModel(ModelDesc const& mdesc, D3DPtr<ID3D12Resource> vb, D3DPtr<ID3D12Resource> ib);
 		ModelPtr CreateModel(ModelDesc const& desc);
 		ModelPtr CreateModel(EStockModel id);
 

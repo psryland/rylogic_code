@@ -68,7 +68,7 @@ namespace pr::rdr12::shaders
 			.Samp(ESamp::SMap)
 			.Samp(ESamp::ProjTex)
 
-			.Create(device);
+			.Create(device, "ForwardSig");
 	}
 
 	// Config the shader

@@ -184,7 +184,7 @@ namespace pr::rdr12
 	}
 
 	// Create a model.
-	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc)
+	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc, D3DPtr<ID3D12Resource> vb, D3DPtr<ID3D12Resource> ib)
 	{
 		if (mdesc.m_vb.Width == 0)
 			throw std::runtime_error("Attempt to create 0-length model vertex buffer");
@@ -192,8 +192,8 @@ namespace pr::rdr12
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
 		// Create a V/I buffers
-		D3DPtr<ID3D12Resource> vb = CreateResource(mdesc.m_vb, mdesc.m_name.c_str());
-		D3DPtr<ID3D12Resource> ib = CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
+		vb = vb ? vb : CreateResource(mdesc.m_vb, mdesc.m_name.c_str());
+		ib = ib ? ib : CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
 
 		// Set the size and alignment of the vertex/index element types
 		SizeAndAlign16 vstride(mdesc.m_vb.ElemStride, mdesc.m_vb.DataAlignment);
@@ -203,6 +203,10 @@ namespace pr::rdr12
 		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), vstride, istride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
 		assert(m_mem_tracker.add(ptr.m_ptr));
 		return ptr;
+	}
+	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc)
+	{
+		return CreateModel(mdesc, nullptr, nullptr);
 	}
 	ModelPtr ResourceManager::CreateModel(EStockModel id)
 	{

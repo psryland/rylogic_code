@@ -15,6 +15,7 @@
 #include "pr/common/resource.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/conversion.h"
 #include "pr/container/vector.h"
 #include "pr/container/kdtree.h"
 #include "pr/gui/wingui.h"

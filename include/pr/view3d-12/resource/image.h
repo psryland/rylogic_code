@@ -35,7 +35,10 @@ namespace pr::rdr12
 
 			void const* vptr;
 			uint8_t const* bptr;
+			uint16_t const* u16ptr;
 			uint32_t const* u32ptr;
+			v4 const* v4ptr;
+			Vert const* vertptr;
 			template <typename T> T* as() { return static_cast<T*>(const_cast<void*>(vptr)); }
 			explicit operator bool() const { return vptr != nullptr; }
 			bool operator ==(nullptr_t) const { return vptr == nullptr; }
@@ -52,6 +55,14 @@ namespace pr::rdr12
 			,m_pitch()
 			,m_data()
 			,m_format(DXGI_FORMAT_B8G8R8A8_UNORM)
+		{}
+
+		// Construct explicit
+		Image(iv3 dim, iv3 pitch, void const* data = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_B8G8R8A8_UNORM)
+			: m_dim(dim)
+			, m_pitch(pitch)
+			, m_data{.vptr = data}
+			, m_format(fmt)
 		{}
 
 		// Construct a 1D Image.
@@ -110,7 +121,10 @@ namespace pr::rdr12
 			if (z < 0 || z >= m_dim.z)
 				throw std::runtime_error("Slice index out of range");
 
-			return Image(m_dim.x, m_dim.y, m_data.bptr + m_pitch.y * z, m_format);
+			return Image(
+				iv3(m_dim.x, m_dim.y, 1),
+				iv3(m_pitch.x, m_pitch.y, m_pitch.y), // Not a bug, z = 1 so pitch.z == pitch.y
+				m_data.bptr + m_pitch.y * z, m_format);
 		}
 
 		// Access a row (i.e. a Y line) in the image
