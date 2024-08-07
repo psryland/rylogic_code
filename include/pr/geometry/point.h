@@ -27,12 +27,12 @@ namespace pr
 	inline v4 pr_vectorcall BaryCentric(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
 	{
 		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
-		v4 ab = b - a, ac = c - a, pa = point - a;
+		v4 ab = b - a, ac = c - a, ap = point - a;
 		float d00 = Dot3(ab, ab);
 		float d01 = Dot3(ab, ac);
 		float d11 = Dot3(ac, ac);
-		float d20 = Dot3(pa, ab);
-		float d21 = Dot3(pa, ac);
+		float d20 = Dot3(ap, ab);
+		float d21 = Dot3(ap, ac);
 		float denom = d00 * d11 - d01 * d01;
 		assert(denom != 0.0f && "This triangle has no area");
 		v4 bary;

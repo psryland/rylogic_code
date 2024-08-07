@@ -584,6 +584,9 @@
     <ClInclude Include="..\include\pr\view3d-12\compute\gpu_job.h">
       <Filter>src\compute</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_include_handler.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">

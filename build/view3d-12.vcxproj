@@ -176,6 +176,7 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_arrow_head.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_forward.h" />
+    <ClInclude Include="..\include\pr\view3d-12\shaders\shader_include_handler.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_point_sprites.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_registers.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_show_normals.h" />
