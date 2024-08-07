@@ -2,7 +2,7 @@
 // In any project that wants to include shaders as resources, create a file like this one and
 // list the shaders to be included.
 FLUID_HLSL                 TEXT    DISCARDABLE     "src/hlsl/fluid.hlsl"
-SPATIAL_PARTITION_HLSL     TEXT    DISCARDABLE     "src/hlsl/spatial_partition.hlsl"
-SPATIAL_PARTITION_HLSLI    TEXT    DISCARDABLE     "src/hlsl/spatial_partition.hlsli"
-PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "src/hlsl/particle_collision.hlsl"
+SPATIAL_PARTITION_HLSL     TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/spatial_partition.hlsl"
+SPATIAL_PARTITION_HLSLI    TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
+PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/particle_collision.hlsl"
 GPU_RADIX_SORT_HLSL        TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/gpu_radix_sort.hlsl"

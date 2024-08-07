@@ -587,6 +587,12 @@
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_include_handler.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\compute\spatial_partition.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -668,5 +674,16 @@
     <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\gpu_radix_sort.hlsl">
       <Filter>src\compute\hlsl</Filter>
     </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\particle_collision.hlsl">
+      <Filter>src\compute\hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsl">
+      <Filter>src\compute\hlsl</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsli">
+      <Filter>src\compute\hlsl</Filter>
+    </None>
   </ItemGroup>
 </Project>

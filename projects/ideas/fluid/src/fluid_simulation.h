@@ -8,74 +8,51 @@ namespace pr::fluid
 {
 	struct FluidSimulation
 	{
+		struct Constants
+		{
+			int NumParticles;        // The number of particles
+			int CellCount;           // The number of grid cells in the spatial partition
+			float GridScale;         // The scale factor for the spatial partition grid
+			float Radius;            // The radius of influence for each particle
+			v3 Gravity;              // The acceleration due to gravity
+			float Mass;              // The particle mass
+			float DensityToPressure; // The conversion factor from density to pressure
+			float Density0;          // The baseline density
+			float Viscosity;         // The viscosity scaler
+		};
+		inline static constexpr int NumConstants = sizeof(Constants) / sizeof(uint32_t);
+
+		inline static constexpr wchar_t const* ParticleLayout =
+			L"struct PosType "
+			L"{ "
+			L"	float4 pos; "
+			L"	float4 col; "
+			L"	float4 vel; "
+			L"	float3 accel; "
+			L"	float density; "
+			L"}";
+
 		rdr12::Renderer* m_rdr;               // The renderer instance to use to run the compute shader
 		rdr12::ComputeJob m_job;              // Manages running the compute shader steps
 		rdr12::ComputeStep m_cs_densities;    // Calculate the density at each particle position
 		rdr12::ComputeStep m_cs_apply_forces; // Calculate the forces acting on each particle position
-		rdr12::ComputeStep m_cs_integrate;    // Update the particle positions and apply collision
 		D3DPtr<ID3D12Resource> m_r_particles; // The vertex buffer of the particles (includes position/colour/norm(velocity))
-		D3DPtr<ID3D12Resource> m_r_collision; // A buffer of collision primitives
+		SpatialPartition m_spatial;          // Spatial partitioning of the particles
+		ParticleCollision m_collision;       // The collision resolution for the fluid
+		Constants m_constants;
 
-
-
-
-
-		using Bucket = pr::vector<Particle>;
-		using Densities = pr::vector<float>;
-
-		v4 m_gravity;                   // Down
-		Bucket m_particles;             // The particles being simulated
-		Densities m_densities;          // The cached density at each particle position
-		IBoundaryCollision* m_boundary; // The container collision for the fluid
-		SpatialPartition* m_spatial;    // Spatial partitioning of the particles
-		IExternalForces* m_external;    // External forces acting on the fluid
-		float m_thermal_noise;          // Random noise	
-		float const m_radius;           // The radius of influence of a particle
-		float m_density0;               // The expected density of the fluid
-		float m_mass;                   // The mass of each particle
-		int64_t m_count;                // The number of particles
-
-
-		FluidSimulation(rdr12::Renderer& rdr, int particle_count, float particle_radius, IBoundaryCollision& boundary, SpatialPartition& spatial, IExternalForces& external);
-
-		// The number of simulated particles
-		int ParticleCount() const;
+		FluidSimulation(rdr12::Renderer& rdr, Constants const& constants, std::span<Vert const> init_data);
 
 		// Advance the simulation forward in time by 'dt' seconds
 		void Step(float dt);
 
-		// Calculates the fluid density at 'position'
-		float DensityAt(v4_cref position) const;
-		float DensityAt(size_t index) const;
-
-		// Calculate the pressure gradient at 'position'
-		v4 PressureAt(v4_cref position, std::optional<size_t> index) const;
-
-		// Calculate the viscosity at 'position'
-		v4 ViscosityAt(v4_cref position, std::optional<size_t> index) const;
-
 	private:
 
-		// Get the compute shader constants for "fluid" compute shaders
-		struct cbFluid FluidConstants(float dt = 0.0f) const;
-
-		// Get the compute shader constants for "collision" compute shaders
-		struct cbCollision CollisionConstants(float dt = 0.0f) const;
-
-		// Create the D3D Resources
-		void CreateBuffers(int particle_count);
-
-		// Create the compute steps for the fluid simulation
-		void CreateComputeSteps();
-
-		// Advance the particles in time
-		void Integrate();
-
 		// Apply forces to each particle
-		void ApplyForces();
+		void ApplyForces(ComputeJob& job);
 
 		// Calculate the fluid density at the particle locations
-		void CalculateDensities();
+		void CalculateDensities(ComputeJob& job);
 
 		// Convert the particles buffer to a compute resource or a vertex buffer
 		void ParticleBufferAsUAV(bool for_compute);

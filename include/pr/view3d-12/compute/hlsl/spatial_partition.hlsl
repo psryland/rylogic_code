@@ -17,8 +17,8 @@ static const uint PosCountDimension = 1024;
 // Constants
 cbuffer cbGridPartition : register(b0)
 {
-	uint NumPositions; // The length of 'm_positions'
-	uint CellCount;    // The maximum number of grid cells
+	int NumPositions; // The length of 'm_positions'
+	int CellCount;    // The maximum number of grid cells
 	float GridScale;   // The quantising factor to apply to the positions
 };
 
@@ -67,7 +67,7 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 
 // Build the lookup structure (run post-sort)
 [numthreads(PosCountDimension, 1, 1)]
-void BuildLookup(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+void BuildSpatial(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumPositions)
 		return;

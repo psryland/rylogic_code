@@ -1,13 +1,12 @@
 // Fluid
 #pragma once
 #include "src/forward.h"
-#include "src/iexternal_forces.h"
 
 using namespace pr::rdr12;
 
 namespace pr::fluid
 {
-	struct Probe :IExternalForces
+	struct Probe
 	{
 		v4 m_position;
 		rdr12::LdrObjectPtr m_gfx;
@@ -44,7 +43,7 @@ namespace pr::fluid
 		}
 
 		// Returns the acceleration Apply external forces to the particles
-		v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const override
+		v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const
 		{
 			if (!m_active)
 				return v4::Zero();

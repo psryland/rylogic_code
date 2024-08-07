@@ -2,6 +2,7 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
+#pragma once
 #include "pr/view3d-12/forward.h"
 
 namespace pr::rdr12
@@ -37,6 +38,7 @@ namespace pr::rdr12
 		/// <inheritdoc/>
 		HRESULT LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource) override
 		{
+			// Ignore the directory path, just lookup the filename in the resources
 			std::filesystem::path path(pFilename);
 			auto name = path.filename().wstring();
 			std::transform(name.begin(), name.end(), name.begin(), [](wchar_t c)
@@ -45,6 +47,7 @@ namespace pr::rdr12
 				return static_cast<wchar_t>(std::toupper(c));
 			});
 
+			// Read the file from the resources
 			auto source = resource::Read<char>(name, L"TEXT");
 		
 			D3DPtr<IDxcLibrary> library;

@@ -138,6 +138,8 @@
     <ClInclude Include="..\include\pr\view3d-12\compute\compute_step.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\gpu_job.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\gpu_radix_sort.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\spatial_partition.h" />
     <ClInclude Include="..\include\pr\view3d-12\forward.h" />
     <ClInclude Include="..\include\pr\view3d-12\instance\instance.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h" />
@@ -217,6 +219,7 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\geometry.hlsli" />
@@ -245,10 +248,19 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\gpu_radix_sort.hlsl">
-      <FileType>Document</FileType>
+      <EntryPointName>SweepDown</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
-      <EntryPointName>SweepDown</EntryPointName>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\particle_collision.hlsl">
+      <EntryPointName>Integrate</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsl">
+      <EntryPointName>BuildSpatial</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

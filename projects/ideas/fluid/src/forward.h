@@ -40,7 +40,8 @@
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/gpu_radix_sort.h"
-
+#include "pr/view3d-12/compute/spatial_partition.h"
+#include "pr/view3d-12/compute/particle_collision.h"
 
 namespace pr::fluid
 {
@@ -51,10 +52,9 @@ namespace pr::fluid
 	struct Particles;
 	struct FluidSimulation;
 	struct FluidVisualisation;
-	struct SpatialPartition;
-	struct IBoundaryCollision;
-	struct IExternalForces;
 
 	using IndexSet = std::unordered_set<int64_t>;
+	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition;
+	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision;
 }
 

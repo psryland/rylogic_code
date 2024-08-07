@@ -1,18 +1,14 @@
 // Fluid
+#ifndef POS_TYPE
+#define POS_TYPE struct PosType { float3 pos; float3 vel; float3 accel; float density; }
+#endif
 #ifndef SPATIAL_DIMENSIONS 
 #define SPATIAL_DIMENSIONS 2
 #endif
 
 static const uint PosCountDimension = 1024;
 
-struct Vert
-{
-	float4 pos;
-	float4 col;
-	float4 vel;
-	float3 accel;
-	float density;
-};
+POS_TYPE;
 
 cbuffer cbFluid : register(b0)
 {
@@ -25,11 +21,10 @@ cbuffer cbFluid : register(b0)
 	float DensityToPressure; // The conversion factor from density to pressure
 	float Density0;          // The baseline density
 	float Viscosity;         // The viscosity scaler
-	float dt;                // The time to advance each particle by
 };
 
 // The positions of each particle
-RWStructuredBuffer<Vert> m_particles : register(u0);
+RWStructuredBuffer<PosType> m_particles : register(u0);
 
 // The indices of particle positions sorted spatially
 RWStructuredBuffer<uint> m_spatial : register(u1);
@@ -40,7 +35,7 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
-#include "spatial_partition.hlsli"
+#include "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
 
 // Square a value
 inline float sqr(float x)
@@ -165,7 +160,7 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= NumParticles)
 		return;
 
-	Vert target = m_particles[gtid.x];
+	PosType target = m_particles[gtid.x];
 	float3 nett_pressure = float3(0, 0, 0);
 	float3 nett_viscosity = float3(0, 0, 0);
 	
@@ -175,7 +170,7 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
-			Vert neighbour = m_particles[m_spatial[i]];
+			PosType neighbour = m_particles[m_spatial[i]];
 			
 			float3 direction = target.pos.xyz - neighbour.pos.xyz;
 			float dist = length(direction);

@@ -72,15 +72,8 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
-    <ClCompile Include="src\bucket_collision.cpp" />
-    <ClCompile Include="src\spatial_partition.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClInclude Include="src\bucket_collision.h" />
     <ClInclude Include="src\forward.h" />
-    <ClInclude Include="src\spatial_partition.h" />
-    <ClInclude Include="src\iboundary_collision.h" />
-    <ClInclude Include="src\iexternal_forces.h" />
-    <ClInclude Include="src\ispatial_partition.h" />
     <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\fluid_simulation.h" />
     <ClCompile Include="src\fluid_simulation.cpp" />
@@ -94,16 +87,10 @@
       <EntryPointName>DensityAtParticles</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="src\hlsl\spatial_partition.hlsl">
-      <EntryPointName>Populate</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="src\hlsl\particle_collision.hlsl">
-      <EntryPointName>Integrate</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
+      <AdditionalIncludeDirectories>
+        $(ProjectDir)..\..\..\include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </FxCompile>
   </ItemGroup>
   <!--
@@ -113,9 +100,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\shaders.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\hlsl\spatial_partition.hlsli" />
   </ItemGroup>
   <!--
   <Target Name="Deploy" AfterTargets="Build"

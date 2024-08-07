@@ -22,21 +22,6 @@
     <ClInclude Include="src\probe.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\iboundary_collision.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ispatial_partition.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\bucket_collision.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\iexternal_forces.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="src\spatial_partition.h">
-      <Filter>src</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -65,21 +50,9 @@
     <ClCompile Include="src\particle.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\bucket_collision.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\spatial_partition.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="src\hlsl\spatial_partition.hlsl">
-      <Filter>src\hlsl</Filter>
-    </FxCompile>
     <FxCompile Include="src\hlsl\fluid.hlsl">
-      <Filter>src\hlsl</Filter>
-    </FxCompile>
-    <FxCompile Include="src\hlsl\particle_collision.hlsl">
       <Filter>src\hlsl</Filter>
     </FxCompile>
   </ItemGroup>
@@ -87,10 +60,5 @@
     <ResourceCompile Include="res\shaders.rc">
       <Filter>res</Filter>
     </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\hlsl\spatial_partition.hlsli">
-      <Filter>src\hlsl</Filter>
-    </None>
   </ItemGroup>
 </Project>

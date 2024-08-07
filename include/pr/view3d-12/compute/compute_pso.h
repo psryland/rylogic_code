@@ -2,6 +2,7 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
+#pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/utility/utility.h"
 

@@ -17,7 +17,7 @@
 #include "pr/view3d-12/compute/compute_step.h"
 #include "pr/view3d-12/main/renderer.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::compute::gpu_radix_sort
 {
 	// Types that can be sorted on the GPU
 	template <typename T>

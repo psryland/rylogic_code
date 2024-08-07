@@ -1,7 +1,6 @@
 // Fluid
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
-#include "src/ispatial_partition.h"
 
 using namespace pr::rdr12;
 
@@ -12,7 +11,7 @@ namespace pr::fluid
 		, m_rdr(&rdr)
 		, m_scn(&scn)
 		, m_gfx_container()
-		, m_gs_points(Shader::Create<shaders::PointSpriteGS>(v2(2*sim.m_radius), true))
+		, m_gs_points(Shader::Create<shaders::PointSpriteGS>(v2(2*sim.m_constants.Radius), true))
 		, m_gfx_fluid()
 		, m_gfx_gradient()
 		, m_gfx_velocities()
@@ -20,7 +19,7 @@ namespace pr::fluid
 		// Create the model for the container
 		ldr::Builder L;
 		auto& g = L.Group();
-		auto r = sim.m_radius;
+		auto r = sim.m_constants.Radius;
 		g.Plane("floor", 0xFF008000).wh(2.0f + 2*r, 0.1f).pos(v4(0, -0.5f-r, 0, 1)).dir(v4::YAxis());
 		g.Plane("wall-L", 0xFF008000).wh(0.1f, 1.0f + 2*r).pos(v4(-1-r, 0, 0, 1)).dir(+v4::XAxis());
 		g.Plane("wall-R", 0xFF008000).wh(0.1f, 1.0f + 2*r).pos(v4(+1+r, 0, 0, 1)).dir(-v4::XAxis());
@@ -40,7 +39,7 @@ namespace pr::fluid
 				.irange(0, 0));
 		}
 		{// Create a dynamic model for the pressure gradient lines
-			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
+			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->m_constants.NumParticles, nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
 			auto mdesc = ModelDesc(vb, ib).name("pressure gradient");
 			m_gfx_gradient.m_model = rdr.res().CreateModel(mdesc);
@@ -49,7 +48,7 @@ namespace pr::fluid
 				.irange(0, 0));
 		}
 		{// Create a dynamic model for particle velocities
-			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->ParticleCount(), nullptr);
+			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->m_constants.NumParticles, nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
 			auto mdesc = ModelDesc(vb, ib).name("particle velocities");
 			m_gfx_velocities.m_model = rdr.res().CreateModel(mdesc);
@@ -83,10 +82,10 @@ namespace pr::fluid
 					0xFFFFFFFF,
 				};
 
-				if (highlight.contains(m_sim->m_particles.index(particle)))
-					return Colour32(0xFFFFFF00);
-				else
-					return colours[0];
+				//if (highlight.contains(m_sim->m_particles.index(particle)))
+				//	return Colour32(0xFFFFFF00);
+				//else
+				//	return colours[0];
 
 				auto vel = Length(particle.m_vel);
 				return Lerp(colours, Clamp(vel / VisMaxSpeed, 0.f, 1.f));
@@ -106,11 +105,12 @@ namespace pr::fluid
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 			*/
 			static Tweakable<float, "DropletSize"> DropletSize = 0.4f;
-			m_gs_points->m_size = v2(DropletSize * 2 * m_sim->m_radius);
+			m_gs_points->m_size = v2(DropletSize * 2 * m_sim->m_constants.Radius);
 
 			scene.AddInstance(m_gfx_fluid);
 		}
 
+		/*
 		// Update the gradient
 		if (false)
 		{
@@ -166,7 +166,7 @@ namespace pr::fluid
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 			scene.AddInstance(m_gfx_velocities);
 		}
-
+		*/
 		// The container
 		scene.AddInstance(m_gfx_container);
 	}

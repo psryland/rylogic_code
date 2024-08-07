@@ -1,4 +1,7 @@
 // Particle collision resolution
+#ifndef POS_TYPE
+#define POS_TYPE struct PosType { float3 pos; float3 vel; float3 accel; float density; }
+#endif
 
 static const uint PosCountDimension = 1024;
 static const uint PrimMask = (1 << 3) - 1;
@@ -6,14 +9,7 @@ static const uint Prim_Plane = 0;
 static const uint Prim_Sphere = 1;
 static const uint Prim_Triangle = 2;
 
-struct Vert
-{
-	float4 pos;
-	float4 col;
-	float4 vel;
-	float3 accel;
-	float density;
-};
+POS_TYPE;
 
 struct Prim
 {
@@ -30,13 +26,13 @@ struct Prim
 cbuffer cbCollision : register(b0)
 {
 	float TimeStep; // The time to advance each particle by
-	uint NumParticles; // The number of particles
-	uint NumPrimitives; // The number of primitives
+	int NumParticles; // The number of particles
+	int NumPrimitives; // The number of primitives
 	float2 Restitution; // The coefficient of restitution (normal, tangential)
 };
 
 // The positions/velocities of each particle
-RWStructuredBuffer<Vert> m_particles : register(u0);
+RWStructuredBuffer<PosType> m_particles : register(u0);
 
 // The primitives to collide against
 RWStructuredBuffer<Prim> m_collision : register(u1);
@@ -188,12 +184,12 @@ inline bool InterceptRayVsTriangle(float3 pos, float3 ray, inout float t1, float
 
 // Evolves the particles forward in time while resolving collisions
 [numthreads(PosCountDimension, 1, 1)]
-void Integrate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumParticles)
 		return;
 	
-	Vert target = m_particles[gtid.x];
+	PosType target = m_particles[gtid.x];
 	
 	// Integrate velocity
 	target.vel.xyz += target.accel * TimeStep;
@@ -207,7 +203,7 @@ void Integrate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		// Find the nearest intercept
 		float t = 1.0f;
 		float3 normal, hit;
-		bool intercept_found = false;
+		int intercept_found = 0;
 		for (int i = 0; i != NumPrimitives; ++i)
 		{
 			Prim prim = m_collision[i];

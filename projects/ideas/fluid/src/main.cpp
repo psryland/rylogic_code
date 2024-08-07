@@ -2,8 +2,6 @@
 #include "src/forward.h"
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
-#include "src/spatial_partition.h"
-#include "src/bucket_collision.h"
 #include "src/probe.h"
 
 using namespace pr;
@@ -17,7 +15,21 @@ struct Main :Form
 	enum { IDR_MAINFRAME = 100 };
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
-	enum class ERunMode { Paused, SingleStep, FreeRun };
+
+	enum class ERunMode
+	{
+		Paused,
+		SingleStep,
+		FreeRun,
+	};
+
+	enum class EFillStyle
+	{
+		Point,
+		Random,
+		Lattice,
+		Grid,
+	};
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
 	inline static constexpr int ParticleCount = 10;//30 * 30;
@@ -31,8 +43,6 @@ struct Main :Form
 
 	Probe m_probe;
 	SimMessageLoop m_loop;
-	BucketCollision m_bucket_collision;
-	SpatialPartition m_spatial_partition;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
@@ -54,9 +64,7 @@ struct Main :Form
 		, m_scn(m_wnd)
 		, m_probe(m_rdr)
 		, m_loop()
-		, m_bucket_collision()
-		, m_spatial_partition(m_rdr, GridCellCount, 1.f / ParticleRadius, PositionLayout)
-		, m_fluid_sim(m_rdr, ParticleCount, ParticleRadius, m_bucket_collision, m_spatial_partition, m_probe)
+		, m_fluid_sim(m_rdr, FluidConstants(), ParticleInitData(EFillStyle::Lattice))
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_last_frame_rendered(-1.0f)
 		, m_time()
@@ -98,6 +106,7 @@ struct Main :Form
 			// Update the window title
 			if (m_probe.m_active)
 			{
+#if 0
 				// Find the particles in the probe
 				m_probe.m_found.clear();
 				struct Ctx
@@ -113,15 +122,14 @@ struct Main :Form
 						m_probe.m_found.insert(m_fluid_sim.m_particles.index(particle));
 					}
 				} ctx = { m_fluid_sim, m_probe };
-#if 0
 				m_spatial_partition.Find(m_probe.m_position, m_probe.m_radius, m_fluid_sim.m_particles, { &Ctx::Found, &ctx });
-#endif
 				auto pos = m_probe.m_position;
 				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
 				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
 				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
 					pos.x, pos.y, pos.z,
 					density, press.x, press.y, press.z, m_probe.m_radius));
+#endif
 			}
 			else
 			{
@@ -229,6 +237,132 @@ struct Main :Form
 				break;
 			}
 		}
+	}
+
+	static FluidSimulation::Constants FluidConstants()
+	{
+		return FluidSimulation::Constants
+		{
+			.NumParticles = ParticleCount,
+			.CellCount = GridCellCount,
+			.GridScale = 1.0f / ParticleRadius,
+			.Radius = ParticleRadius,
+			.Gravity = v3(0, -9.8f, 0),
+			.Mass = 1.0f,
+			.DensityToPressure = 1.0f,
+			.Density0 = 1.0f,
+			.Viscosity = 0.1f,
+		};
+	}
+	static std::vector<Vert> ParticleInitData(EFillStyle style)
+	{
+		std::vector<Vert> particles;
+		particles.reserve(ParticleCount);
+		auto points = [&](v4 p)
+		{
+			particles.push_back(Vert{ .m_vert = p, .m_diff = ColourWhite, .m_norm = {}, .m_tex0 = {}, .pad = {} });
+		};
+
+		const float hwidth = 1.0f;
+		const float hheight = 0.5f;
+
+		switch (style)
+		{
+			case EFillStyle::Point:
+			{
+				for (int i = 0; i != ParticleCount; ++i)
+					points(v4(0, 0, 0, 1));
+
+				break;
+			}
+			case EFillStyle::Random:
+			{
+				auto const margin = 0.95f;
+				auto hw = hwidth * margin;
+				auto hh = hheight * margin;
+
+				// Uniform distribution over the volume
+				std::default_random_engine rng;
+				for (int i = 0; i != ParticleCount; ++i)
+				{
+					auto pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
+					if constexpr (Dimensions == 2) pos.z = 0;
+					points(pos);
+				}
+				break;
+			}
+			case EFillStyle::Lattice:
+			{
+				auto const margin = 0.95f;
+				auto hw = hwidth * margin;
+				auto hh = hheight * margin;
+
+				if constexpr (Dimensions == 2)
+				{
+					// Want to spread N particles evenly over the volume.
+					// Area is 2*hwidth * 2*hheight
+					// Want to find 'step' such that:
+					//   (2*hwidth / step) * (2*hheight / step) = N
+					// => step = sqrt((2*hwidth * 2*hheight) / N)
+					auto step = Sqrt((2 * hw * 2 * hh) / ParticleCount);
+
+					auto x = -hw + step/2;
+					auto y = -hh + step/2;
+					for (int i = 0; i != ParticleCount; ++i)
+					{
+						points(v4(x, y, 0, 1));
+
+						x += step;
+						if (x > hw) { x = -hw + step/2; y += step; }
+					}
+				}
+				if constexpr (Dimensions == 3)
+				{
+					// Want to spread N particles evenly over the volume.
+					// Volume is 2*hwidth * 2*hwidth * 2*hheight
+					// Want to find 'step' such that:
+					//  (2*hwidth/step) * (2*hwidth/step) * (2*hheight/step) = N
+					// => step = cubert((2*hwidth * 2*hwidth * 2*hheight) / N)
+					auto step = Cubert((2 * hw * 2 * hh * 2 * hw) / ParticleCount);
+
+					auto x = -hw + step/2;
+					auto y = -hh + step/2;
+					auto z = -hw + step/2;
+					for (int i = 0; i != ParticleCount; ++i)
+					{
+						points(v4(x, y, z, 1));
+
+						x += step;
+						if (x > hw) { x = -hw + step/2; z += step; }
+						if (z > hw) { z = -hw + step/2; y += step; }
+					}
+				}
+				break;
+			}
+			case EFillStyle::Grid:
+			{
+				auto const margin = 1.0f;//0.95f;
+				auto hw = hwidth * margin;
+				auto hh = hheight * margin;
+				auto step = 0.1f;
+
+				if constexpr (Dimensions == 2)
+				{
+					auto x = -hw + step / 2.0f;
+					auto y = -hh + step / 2.0f;
+					for (int i = 0; i != ParticleCount; ++i)
+					{
+						points(v4(x, y, 0, 1));
+
+						x += step;
+						if (x > hw) { x = -hw + step/2; y += step; }
+					}
+				}
+				break;
+			}
+		}
+
+		return particles;
 	}
 
 	// Error handler
