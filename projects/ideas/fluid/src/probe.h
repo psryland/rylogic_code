@@ -54,7 +54,7 @@ namespace pr::fluid
 			if (dist_sq < maths::tinyf || dist_sq > m_radius * m_radius)
 				return v4::Zero();
 
-			static Tweakable<float, "PushForce"> PushForce = 1.0f;
+			static Tweakable<float, "PushForce"> PushForce = 100.0f;
 			auto dist = Sqrt(dist_sq);
 			auto frac = SmoothStep<float>(1.0f, 0.0f, dist / m_radius);
 			return (m_sign * frac * PushForce / dist) * dir;

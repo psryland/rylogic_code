@@ -28,10 +28,10 @@ namespace pr::fluid
 		m_gfx_container = rdr12::CreateLdr(*m_rdr, L.ToString().c_str());
 		
 		{// Create a dynamic model for the fluid particles
-			auto vb = ResDesc::VBuf<Vert>(m_sim->ParticleCount(), nullptr);
+			auto vb = ResDesc::VBuf<Vert>(m_sim->m_r_particles.get()).usage(EUsage::UnorderedAccess);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("particles");
-			m_gfx_fluid.m_model = rdr.res().CreateModel(mdesc);
+			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
+			m_gfx_fluid.m_model = rdr.res().CreateModel(mdesc, m_sim->m_r_particles, nullptr);
 
 			// Use the point sprite shader
 			m_gfx_fluid.m_model->CreateNugget(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
@@ -70,6 +70,8 @@ namespace pr::fluid
 		// Update the positions of the particles in the vertex buffer
 		if (true)
 		{
+			static Tweakable<float, "VisMaxSpeed"> VisMaxSpeed = 2.f;
+
 			// Update the colour from the spatial partitioning so we can see when it's wrong
 			auto GetColour = [&](auto& particle)
 			{
@@ -87,10 +89,9 @@ namespace pr::fluid
 					return colours[0];
 
 				auto vel = Length(particle.m_vel);
-				static Tweakable<float, "VisMaxSpeed"> VisMaxSpeed = 10.f;
 				return Lerp(colours, Clamp(vel / VisMaxSpeed, 0.f, 1.f));
 			};
-
+			/*
 			UpdateSubresourceScope update = m_gfx_fluid.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
 			for (auto& particle : m_sim->m_particles)
@@ -103,8 +104,8 @@ namespace pr::fluid
 				++ptr;
 			}
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-			static Tweakable<float, "DropletSize"> DropletSize = 1.0f;
+			*/
+			static Tweakable<float, "DropletSize"> DropletSize = 0.4f;
 			m_gs_points->m_size = v2(DropletSize * 2 * m_sim->m_radius);
 
 			scene.AddInstance(m_gfx_fluid);

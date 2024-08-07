@@ -2,8 +2,7 @@
 #include "src/forward.h"
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
-#include "src/grid_partition.h"
-#include "src/kdtree_partition.h"
+#include "src/spatial_partition.h"
 #include "src/bucket_collision.h"
 #include "src/probe.h"
 
@@ -21,8 +20,10 @@ struct Main :Form
 	enum class ERunMode { Paused, SingleStep, FreeRun };
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
-	inline static constexpr int ParticleCount = 10 * 10;// 30 * 30;
+	inline static constexpr int ParticleCount = 10;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
+	inline static constexpr int GridCellCount = 10;//1024;
+	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
 
 	Renderer m_rdr;
 	Window m_wnd;
@@ -31,8 +32,7 @@ struct Main :Form
 	Probe m_probe;
 	SimMessageLoop m_loop;
 	BucketCollision m_bucket_collision;
-	GridPartition m_grid_partition;
-	//KDTreePartition m_kdtree_partition;
+	SpatialPartition m_spatial_partition;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
@@ -55,9 +55,8 @@ struct Main :Form
 		, m_probe(m_rdr)
 		, m_loop()
 		, m_bucket_collision()
-		, m_grid_partition(m_rdr, 1.f / ParticleRadius)
-		//, m_kdtree_partition()
-		, m_fluid_sim(ParticleCount, ParticleRadius, m_bucket_collision, m_grid_partition, m_probe)
+		, m_spatial_partition(m_rdr, GridCellCount, 1.f / ParticleRadius, PositionLayout)
+		, m_fluid_sim(m_rdr, ParticleCount, ParticleRadius, m_bucket_collision, m_spatial_partition, m_probe)
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
 		, m_last_frame_rendered(-1.0f)
 		, m_time()
@@ -101,17 +100,27 @@ struct Main :Form
 			{
 				// Find the particles in the probe
 				m_probe.m_found.clear();
-				m_grid_partition.Find(m_probe.m_position, m_probe.m_radius, m_fluid_sim.m_particles, [this](auto& p, float)
+				struct Ctx
 				{
-					m_probe.m_found.insert(m_fluid_sim.m_particles.index(p));
-				});
-
+					FluidSimulation& m_fluid_sim;
+					Probe& m_probe;
+					static void Found(void* ctx, Particle const& particle, float dist_sq)
+					{
+						static_cast<Ctx*>(ctx)->DoFound(particle, dist_sq);
+					}
+					void DoFound(Particle const& particle, float)
+					{
+						m_probe.m_found.insert(m_fluid_sim.m_particles.index(particle));
+					}
+				} ctx = { m_fluid_sim, m_probe };
+#if 0
+				m_spatial_partition.Find(m_probe.m_position, m_probe.m_radius, m_fluid_sim.m_particles, { &Ctx::Found, &ctx });
+#endif
 				auto pos = m_probe.m_position;
-				auto hash = Hash(To<iv3>(pos.xyz * 10.0f));
 				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
 				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
-				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Hash: %d - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
-					pos.x, pos.y, pos.z, hash,
+				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
+					pos.x, pos.y, pos.z,
 					density, press.x, press.y, press.z, m_probe.m_radius));
 			}
 			else
@@ -122,7 +131,7 @@ struct Main :Form
 			}
 
 			// Use this only render per main loop step
-			//if (m_time == m_last_frame_rendered) return;
+			if (m_time == m_last_frame_rendered) return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();

@@ -38,12 +38,12 @@ namespace pr::fluid
 		if constexpr (Dimensions == 2)
 		{
 			float const C = 0.95f * (1.0f / 4.0f);
-			return C * Sqr(radius - distance) / Pow(radius, 4.0f);
+			return C * Sqr(radius - distance) / Sqr(Sqr(radius)); //Pow(radius, 4.0f);
 		}
 		if constexpr (Dimensions == 3)
 		{
 			float const C = 0.00242f;
-			return C * Sqr(radius - distance) / Pow(radius, 5.0f);
+			return C * Sqr(radius - distance) / (Sqr(Sqr(radius))*radius); //Pow(radius, 5.0f);
 		}
 	}
 	
@@ -56,12 +56,12 @@ namespace pr::fluid
 		if constexpr (Dimensions == 2)
 		{
 			float const C = 0.00242f;
-			return 2 * C * (radius - distance) / Pow(radius, 4.0f);
+			return 2 * C * (radius - distance) / Sqr(Sqr(radius)); //Pow(radius, 4.0f);
 		}
 		if constexpr (Dimensions == 3)
 		{
 			float const C = 0.00242f;
-			return 2 * C * (radius - distance) / Pow(radius, 5.0f);
+			return 2 * C * (radius - distance) / (Sqr(Sqr(radius))*radius); //Pow(radius, 5.0f);
 		}
 	}
 

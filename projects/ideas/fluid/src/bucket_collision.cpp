@@ -24,21 +24,17 @@ namespace pr::fluid
 		}
 	}
 
-	// Distribute the particles within the boundary
-	void BucketCollision::Fill(EFillStyle style, std::span<Particle> particles, float radius) const
+	// Generate a distribution of positions within the boundary
+	void BucketCollision::Fill(EFillStyle style, int count, float radius, std::function<void(v4 const&)> points) const
 	{
 		(void)radius;
 		switch (style)
 		{
 			case EFillStyle::Point:
 			{
-				for (auto& particle : particles)
-				{
-					particle.m_pos = v4(0, 0, 0, 1);
-					particle.m_vel = v4(0, 0, 0, 0);
-				}
-				particles[0].m_pos = v4(0.05f, 0, 0, 1);
-				//particles[0].m_vel = v4(-10, 0, 0, 0);
+				for (int i = 0; i != count; ++i)
+					points(v4(0, 0, 0, 1));
+
 				break;
 			}
 			case EFillStyle::Random:
@@ -47,19 +43,22 @@ namespace pr::fluid
 				auto hw = m_hwidth * margin;
 				auto hh = m_hheight * margin;
 
+				// Uniform distribution over the volume
 				std::default_random_engine rng;
-				for (auto& particle : particles)
+				for (int i = 0; i != count; ++i)
 				{
-					// Uniform distribution over the volume
-					particle.m_pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
-					particle.m_vel = v3::Random(rng, v3::Zero(), 10.0f).w0();
-					if constexpr (Dimensions == 2)
-						particle.m_pos.z = 0;
+					auto pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
+					if constexpr (Dimensions == 2) pos.z = 0;
+					points(pos);
 				}
 				break;
 			}
 			case EFillStyle::Lattice:
 			{
+				auto const margin = 0.95f;
+				auto hw = m_hwidth * margin;
+				auto hh = m_hheight * margin;
+
 				if constexpr (Dimensions == 2)
 				{
 					// Want to spread N particles evenly over the volume.
@@ -67,24 +66,16 @@ namespace pr::fluid
 					// Want to find 'step' such that:
 					//   (2*hwidth / step) * (2*hheight / step) = N
 					// => step = sqrt((2*hwidth * 2*hheight) / N)
-					auto const margin = 0.95f;
-					auto hw = m_hwidth * margin;
-					auto hh = m_hheight * margin;
-					auto step = Sqrt((2 * hw * 2 * hh) / isize(particles));
+					auto step = Sqrt((2 * hw * 2 * hh) / count);
 
 					auto x = -hw + step/2;
 					auto y = -hh + step/2;
-					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					for (int i = 0; i != count; ++i)
 					{
-						auto& particle = particles[i];
-						particle.m_vel = v4::Zero();
-						particle.m_pos = v4(x, y, 0, 1);
+						points(v4(x, y, 0, 1));
+
 						x += step;
-						if (x > hw)
-						{
-							x = -hw / step/2;
-							y += step;
-						}
+						if (x > hw) { x = -hw + step/2; y += step; }
 					}
 				}
 				if constexpr (Dimensions == 3)
@@ -94,48 +85,39 @@ namespace pr::fluid
 					// Want to find 'step' such that:
 					//  (2*hwidth/step) * (2*hwidth/step) * (2*hheight/step) = N
 					// => step = cubert((2*hwidth * 2*hwidth * 2*hheight) / N)
-					auto const margin = 0.95f;
-					auto hw = m_hwidth * margin;
-					auto hh = m_hheight * margin;
-					auto step = Cubert((2 * hw * 2 * hh * 2 * hw) / isize(particles));
+					auto step = Cubert((2 * hw * 2 * hh * 2 * hw) / count);
 
-					auto x = -hw;
-					auto y = -hh;
-					auto z = -hw;
-					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					auto x = -hw + step/2;
+					auto y = -hh + step/2;
+					auto z = -hw + step/2;
+					for (int i = 0; i != count; ++i)
 					{
-						auto& particle = particles[i];
-						particle.m_vel = v4::Zero();
-						particle.m_pos = v4(x, y, z, 1);
+						points(v4(x, y, z, 1));
+
 						x += step;
-						if (x > hw) { x = -hw; z += step; }
-						if (z > hw) { z = -hw; y += step; }
+						if (x > hw) { x = -hw + step/2; z += step; }
+						if (z > hw) { z = -hw + step/2; y += step; }
 					}
 				}
 				break;
 			}
 			case EFillStyle::Grid:
 			{
+				auto const margin = 1.0f;//0.95f;
+				auto hw = m_hwidth * margin;
+				auto hh = m_hheight * margin;
+				auto step = 0.1f;
+
 				if constexpr (Dimensions == 2)
 				{
-					auto const margin = 1.0f;//0.95f;
-					auto hw = m_hwidth * margin;
-					auto hh = m_hheight * margin;
-					auto step = 0.1f;
-
 					auto x = -hw + step / 2.0f;
 					auto y = -hh + step / 2.0f;
-					for (int i = 0, iend = isize(particles); i < iend; ++i)
+					for (int i = 0; i != count; ++i)
 					{
-						auto& particle = particles[i];
-						particle.m_vel = v4::Zero();
-						particle.m_pos = v4(x, y, 0, 1);
+						points(v4(x, y, 0, 1));
+
 						x += step;
-						if (x > hw)
-						{
-							x = -hw + step/2;
-							y += step;
-						}
+						if (x > hw) { x = -hw + step/2; y += step; }
 					}
 				}
 				break;

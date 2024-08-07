@@ -12,6 +12,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/coalesce.h"
 #include "pr/common/tweakables.h"
+#include "pr/common/static_callback.h"
 #include "pr/common/resource.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
@@ -31,6 +32,7 @@
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/shaders/shader.h"
+#include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/utility/update_resource.h"
 #include "pr/view3d-12/utility/root_signature.h"
@@ -49,8 +51,8 @@ namespace pr::fluid
 	struct Particles;
 	struct FluidSimulation;
 	struct FluidVisualisation;
+	struct SpatialPartition;
 	struct IBoundaryCollision;
-	struct ISpatialPartition;
 	struct IExternalForces;
 
 	using IndexSet = std::unordered_set<int64_t>;

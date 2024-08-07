@@ -19,8 +19,8 @@ namespace pr::fluid
 		// The approximate volume (in m^3 or m^2 depending on Dimensions) occupied by the particles under normal conditions
 		virtual float Volume() const = 0;
 
-		// Distribute the particles within the boundary
-		virtual void Fill(EFillStyle style, std::span<Particle> particles, float radius) const = 0;
+		// Generate a distribution of positions within the boundary
+		virtual void Fill(EFillStyle style, int count, float radius, std::function<void(v4 const&)> points) const = 0;
 
 		// Apply collision resolution with the container boundary
 		struct Dynamics { v4 pos, vel; };

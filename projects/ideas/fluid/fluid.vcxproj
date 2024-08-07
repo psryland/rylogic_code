@@ -73,11 +73,11 @@
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
     <ClCompile Include="src\bucket_collision.cpp" />
-    <ClCompile Include="src\grid_partition.cpp" />
+    <ClCompile Include="src\spatial_partition.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\bucket_collision.h" />
     <ClInclude Include="src\forward.h" />
-    <ClInclude Include="src\grid_partition.h" />
+    <ClInclude Include="src\spatial_partition.h" />
     <ClInclude Include="src\iboundary_collision.h" />
     <ClInclude Include="src\iexternal_forces.h" />
     <ClInclude Include="src\ispatial_partition.h" />
@@ -87,16 +87,23 @@
     <ClInclude Include="src\fluid_visualisation.h" />
     <ClCompile Include="src\fluid_visualisation.cpp" />
     <ClInclude Include="src\probe.h" />
-    <ClInclude Include="src\kdtree_partition.h" />
     <ClCompile Include="src\particle.cpp" />
-    <ClCompile Include="src\kdtree_partition.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="src\hlsl\grid_partition.hlsl">
-      <FileType>Document</FileType>
+    <FxCompile Include="src\hlsl\fluid.hlsl">
+      <EntryPointName>DensityAtParticles</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="src\hlsl\spatial_partition.hlsl">
       <EntryPointName>Populate</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="src\hlsl\particle_collision.hlsl">
+      <EntryPointName>Integrate</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
     </FxCompile>
   </ItemGroup>
   <!--
@@ -106,6 +113,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\shaders.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\hlsl\spatial_partition.hlsli" />
   </ItemGroup>
   <!--
   <Target Name="Deploy" AfterTargets="Build"
