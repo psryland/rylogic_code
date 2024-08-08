@@ -69,6 +69,7 @@ namespace pr::fluid
 		// Update the positions of the particles in the vertex buffer
 		if (true)
 		{
+			/*
 			static Tweakable<float, "VisMaxSpeed"> VisMaxSpeed = 2.f;
 
 			// Update the colour from the spatial partitioning so we can see when it's wrong
@@ -90,7 +91,6 @@ namespace pr::fluid
 				auto vel = Length(particle.m_vel);
 				return Lerp(colours, Clamp(vel / VisMaxSpeed, 0.f, 1.f));
 			};
-			/*
 			UpdateSubresourceScope update = m_gfx_fluid.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
 			for (auto& particle : m_sim->m_particles)

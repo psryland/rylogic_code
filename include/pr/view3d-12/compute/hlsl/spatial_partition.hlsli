@@ -61,21 +61,19 @@ inline FindIter Find(float3 position, float3 radius, uniform float grid_scale, u
 inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 {
 	// Advance to the next cell
+	++iter.cell.x;
 	if (iter.cell.x == iter.upr.x)
 	{
+		iter.cell.x = iter.lwr.x;
+		++iter.cell.y;
 		if (iter.cell.y == iter.upr.y)
 		{
+			iter.cell.y = iter.lwr.y;
+			++iter.cell.z;
 			if (iter.cell.z == iter.upr.z)
 				return false;
-
-			++iter.cell.z;
-			iter.cell.y = iter.lwr.y;
 		}
-
-		++iter.cell.y;
-		iter.cell.x = iter.lwr.x;
 	}
-	++iter.cell.x;
 
 	// Get the range of indices in 'cell'
 	uint hash = Hash(iter.cell, cell_count);

@@ -63,20 +63,40 @@ namespace pr::rdr12
 		protected: virtual void Delete();
 	};
 
-	// Compile a shader at run time
-	// 'code' is the source file as a string
-	// 'args' is an array of pointers to arguments
-	//
-	// Example Arguments:
-	//  args = {
-	//     L"-E", L"<entry_point>",
-	//     L"-T", L"<shader_model>",
-	//     L"-D<define>",
-	//     L"-O3",
-	//     L"-Zi",
-	// };
-	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args, IDxcIncludeHandler* include_handler = nullptr);
-	std::vector<uint8_t> CompileShader(std::filesystem::path const& shader_path, std::span<wchar_t const*> args);
+	// Compiler options helper
+	struct ShaderCompiler
+	{
+		using Defines = std::unordered_map<std::wstring, std::wstring>;
+		using StrList = std::vector<std::wstring>;
+		using Args = std::vector<wchar_t const*>;
+
+		D3DPtr<IDxcResult> m_result;
+		D3DPtr<IDxcCompiler3> m_compiler;
+		D3DPtr<IDxcBlobEncoding> m_source_blob;
+		D3DPtr<IDxcIncludeHandler> m_includes;
+		std::filesystem::path m_pdb_path;
+		DxcBuffer m_source;
+		Defines m_defines;
+		std::wstring m_ep;
+		std::wstring m_sm;
+		bool m_optimise;
+		bool m_debug_info;
+		StrList m_extras;
+		Args m_args;
+
+		ShaderCompiler();
+		ShaderCompiler& File(std::filesystem::path file);
+		ShaderCompiler& Source(std::string_view code);
+		ShaderCompiler& Includes(D3DPtr<IDxcIncludeHandler> handler);
+		ShaderCompiler& EntryPoint(std::wstring_view ep);
+		ShaderCompiler& ShaderModel(std::wstring_view sm);
+		ShaderCompiler& Optimise(bool opt = true);
+		ShaderCompiler& DebugInfo(bool dbg = true);
+		ShaderCompiler& Define(std::wstring_view sym, std::wstring_view value = {});
+		ShaderCompiler& PDBOutput(std::filesystem::path dir, std::string_view filename = {});
+		ShaderCompiler& Arg(std::wstring_view arg);
+		std::vector<uint8_t> Compile();
+	};
 
 	// Statically declared shader byte code
 	namespace shader_code

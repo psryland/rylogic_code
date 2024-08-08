@@ -69,15 +69,17 @@ namespace pr::rdr12::compute::particle_collision
 			, m_primitives()
 		{
 			auto device = rdr.D3DDevice();
-			auto include_handler = ResourceIncludeHandler{};
-			auto source = resource::Read<char>(L"PARTICLE_COLLISION_HLSL", L"TEXT");
-			auto pos_type = std::format(L"-DPOS_TYPE={}", position_layout);
-			wchar_t const* args[] = { L"-E<placeholder>", pos_type.c_str(), L"-Tcs_6_6", L"-O3", L"-Zi" };
+			auto compiler = ShaderCompiler{}
+				.Source(resource::Read<char>(L"PARTICLE_COLLISION_HLSL", L"TEXT"))
+				.Includes({ new ResourceIncludeHandler, true })
+				.EntryPoint(L"Integrate")
+				.Define(L"POS_TYPE", position_layout)
+				.ShaderModel(L"cs_6_6")
+				.Optimise();
 
 			// Integrate
 			{
-				args[0] = L"-EIntegrate";
-				auto bytecode = CompileShader(source, args, &include_handler);
+				auto bytecode = compiler.Compile();
 				m_integrate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, NumConstants)
 					.Uav(EReg::Particles)
@@ -105,13 +107,13 @@ namespace pr::rdr12::compute::particle_collision
 		/// <summary>Set the primitives that the particles will collide with</summary>
 		void SetCollisionPrimitives(std::span<Prim const> primitives)
 		{
-			auto desc = ResDesc::Buf(ssize(primitives), sizeof(Prim), primitives.data(), alignof(Prim)).usage(EUsage::UnorderedAccess);
+			ResDesc desc = ResDesc::Buf(ssize(primitives), sizeof(Prim), primitives.data(), alignof(Prim)).usage(EUsage::UnorderedAccess);
 			m_primitives = m_rdr->res().CreateResource(desc, "ParticleCollision:Primitives");
 			m_rdr->res().FlushToGpu(true);
 		}
 
 		// Integrate the particle positions (with collision)
-		void Update(ComputeJob& job, int count, D3DPtr<ID3D12Resource> particles)
+		void Update(ComputeJob& job, int count, D3DPtr<ID3D12Resource> particles) const
 		{
 			{
 				job.m_cmd_list.SetPipelineState(m_integrate.m_pso.get());

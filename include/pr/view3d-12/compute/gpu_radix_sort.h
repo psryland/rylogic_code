@@ -107,90 +107,82 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			, m_size()
 		{
 			auto device = m_rdr->D3DDevice();
-			auto shader_model = L"-T" + m_tuning.shader_model;
-			auto source = resource::Read<char>(L"GPU_RADIX_SORT_HLSL", L"TEXT");
-			auto args = std::vector<wchar_t const*>{ L"-E<entry_point_placeholder>", shader_model.c_str(), L"-O3", L"-Zi" };
+			auto compiler = ShaderCompiler{}
+				.Source(resource::Read<char>(L"GPU_RADIX_SORT_HLSL", L"TEXT"))
+				.ShaderModel(m_tuning.shader_model)
+				.Optimise()
+				.Define(L"KEYS_PER_THREAD", std::to_wstring(m_tuning.keys_per_thread))
+				.Define(L"PART_SIZE", std::to_wstring(m_tuning.part_size));
 			if constexpr (std::is_same_v<Key, int>)
-				args.push_back(L"-DKEY_TYPE=int");
+				compiler.Define(L"KEY_TYPE", L"int");
 			if constexpr (std::is_same_v<Key, uint32_t>)
-				args.push_back(L"-DKEY_TYPE=uint");
+				compiler.Define(L"KEY_TYPE", L"uint");
 			if constexpr (std::is_same_v<Key, float>)
-				args.push_back(L"-DKEY_TYPE=float");
+				compiler.Define(L"KEY_TYPE", L"float");
 			if constexpr (std::is_same_v<Value, int>)
-				args.push_back(L"-DPAYLOAD_TYPE=int");
+				compiler.Define(L"PAYLOAD_TYPE", L"int");
 			if constexpr (std::is_same_v<Value, uint32_t>)
-				args.push_back(L"-DPAYLOAD_TYPE=uint");
+				compiler.Define(L"PAYLOAD_TYPE", L"uint");
 			if constexpr (std::is_same_v<Value, float>)
-				args.push_back(L"-DPAYLOAD_TYPE=float");
+				compiler.Define(L"PAYLOAD_TYPE", L"float");
 			if constexpr (Ascending)
-				args.push_back(L"-DSHOULD_ASCEND");
+				compiler.Define(L"SHOULD_ASCEND");
 			if constexpr (HasPayload)
-				args.push_back(L"-DSORT_PAIRS=1");
-			auto keys_per_thread = std::format(L"-DKEYS_PER_THREAD={}", m_tuning.keys_per_thread);
-			args.push_back(keys_per_thread.c_str());
-			auto part_size = std::format(L"-DPART_SIZE={}", m_tuning.part_size);
-			args.push_back(part_size.c_str());
+				compiler.Define(L"SORT_PAIRS", L"1");
 			if (m_tuning.use_16bit)
 			{
-				args.push_back(L"-DDIGIT_TYPE=uint16_t");
-				args.push_back(L"-enable-16bit-types");
+				compiler.Define(L"DIGIT_TYPE", L"uint16_t");
+				compiler.Arg(L"-enable-16bit-types");
 			}
 
 			// InitRadixSort
 			{
+				auto bytecode = compiler.EntryPoint(L"InitRadixSort").Compile();
 				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.Uav(EReg::GlobalHistogram)
 					.Create(device, "GpuRadixSort:InitSig");
-
-				args[0] = L"-EInitRadixSort";
-				auto bytecode = CompileShader(source, args);
 				m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:InitPSO");
 			}
 
 			// InitPayload
 			{
+				auto bytecode = compiler.EntryPoint(L"InitPayload").Compile();
 				m_init_payload.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::Payload0)
 					.Create(device, "GpuRadixSort:InitPayloadSig");
-
-				args[0] = L"-EInitPayload";
-				auto bytecode = CompileShader(source, args);
 				m_init_payload.m_pso = ComputePSO(m_init_payload.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:InitPayloadPSO");
 			}
 
 			// Sweep Up
 			{
+				auto bytecode = compiler.EntryPoint(L"SweepUp").Compile();
 				m_sweep_up.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::Sort0)
 					.Uav(EReg::GlobalHistogram)
 					.Uav(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:SweepUpSig");
-
-				args[0] = L"-ESweepUp";
-				auto bytecode = CompileShader(source, args);
 				m_sweep_up.m_pso = ComputePSO(m_sweep_up.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:SweepUpPSO");
 			}
 
 			// Scan
 			{
+				auto bytecode = compiler.EntryPoint(L"Scan").Compile();
 				m_scan.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:ScanSig");
-
-				args[0] = L"-EScan";
-				auto bytecode = CompileShader(source, args);
 				m_scan.m_pso = ComputePSO(m_scan.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:ScanPSO");
 			}
 
 			// Sweep Down
 			{
+				auto bytecode = compiler.EntryPoint(L"SweepDown").Compile();
 				m_sweep_down.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
 					.Uav(EReg::Sort0)
@@ -200,9 +192,6 @@ namespace pr::rdr12::compute::gpu_radix_sort
 					.Uav(EReg::GlobalHistogram)
 					.Uav(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:SweepDownSig");
-
-				args[0] = L"-ESweepDown";
-				auto bytecode = CompileShader(source, args);
 				m_sweep_down.m_pso = ComputePSO(m_sweep_down.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:SweepDownPSO");
 			}

@@ -1,6 +1,6 @@
 // Fluid
 #ifndef POS_TYPE
-#define POS_TYPE struct PosType { float3 pos; float3 vel; float3 accel; float density; }
+#define POS_TYPE struct PosType { float4 pos; float4 col; float4 vel; float3 accel; float density; }
 #endif
 #ifndef SPATIAL_DIMENSIONS 
 #define SPATIAL_DIMENSIONS 2
@@ -23,6 +23,22 @@ cbuffer cbFluid : register(b0)
 	float Viscosity;         // The viscosity scaler
 };
 
+cbuffer cbColour : register(b1)
+{
+	// [0] = Velocity Based
+	// [1] = Density Based
+	// [2] = Probe Active
+	uint Scheme;        // Bit field of colouring schemes
+	float4 Colours[4];  // The colour scale to use
+	float2 Range;       // Set scale to colour
+	float3 ProbePos;    // Probe position
+	float ProbeRadius;  // Probe radius
+	float4 ProbeColour; // Probe colour
+};
+static const uint ColourScheme_Velocity = 1;
+static const uint ColourScheme_Density = 2;
+static const uint ColourScheme_Probe = 4;
+
 // The positions of each particle
 RWStructuredBuffer<PosType> m_particles : register(u0);
 
@@ -35,7 +51,8 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
-#include "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
+//#include "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
+#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
 
 // Square a value
 inline float sqr(float x)
@@ -45,6 +62,17 @@ inline float sqr(float x)
 inline uint sqr(uint x)
 {
 	return x * x;
+}
+
+// Return the colour interpolated on the colour scale
+inline float4 LerpColour(float value)
+{
+	float scale = saturate((value - Range.x) / (Range.y - Range.x));
+	if (scale <= 0.0f)  return Colours[0];
+	if (scale < 0.333f) return lerp(Colours[0], Colours[1], (scale - 0.000f) / 0.333f);
+	if (scale < 0.666f) return lerp(Colours[1], Colours[2], (scale - 0.333f) / 0.333f);
+	if (scale < 1.0f)   return lerp(Colours[2], Colours[3], (scale - 0.666f) / 0.333f);
+	return Colours[3];
 }
 
 // Generate a random float on the interval [0, 1)
@@ -134,22 +162,23 @@ void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID
 		return;
 
 	float density = 0.0f;
-	float3 target = m_particles[gtid.x].pos.xyz;
+	PosType target = m_particles[gtid.x];
 	
 	// Search the neighbours of 'target'
-	FindIter find = Find(target, float3(Radius, Radius, Radius), GridScale, CellCount);
+	FindIter find = Find(target.pos.xyz, float3(Radius, Radius, Radius), GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
 			// 'ParticleInfluenceAt' contains a distance check, so we don't need to check here
-			float dist = length(target - m_particles[m_spatial[i]].pos.xyz);
+			float dist = length(target.pos.xyz - m_particles[m_spatial[i]].pos.xyz);
 			float influence = ParticleInfluenceAt(dist, Radius);
 			density += influence * Mass;
 		}
 	}
 	
-	// Record the density
+	// Record the density - It should be impossible for density to be
+	// zero because the particle itself contributes to the density.
 	m_particles[gtid.x].density = density;
 }
 
@@ -191,16 +220,58 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			float3 relative_velocity = target.vel.xyz - neighbour.vel.xyz;
 			
 			// Get the pressure gradient at 'position' due to 'neighbour'
-			nett_pressure += DensityToPressure * (relative_density * influence * Mass / density) * direction;
+			if (abs(density) > 0.0001f) // Shouldn't need this if
+				nett_pressure += DensityToPressure * (relative_density * influence * Mass / density) * direction;
 
 			// Get the viscosity at 'position' due to 'neighbour'
 			nett_viscosity += Viscosity * influence * relative_velocity;
 		}
 	}
 	
-	// Record the density
-	m_particles[gtid.x].accel.xyz +=
-		nett_pressure / m_particles[gtid.x].density +
-		nett_viscosity +
-		Gravity;
+	// Record the nett force
+	if (abs(m_particles[gtid.x].density) > 0.0001f) // Shouldn't need this if
+		m_particles[gtid.x].accel.xyz += nett_pressure / m_particles[gtid.x].density;
+	m_particles[gtid.x].accel.xyz += nett_viscosity;
+	m_particles[gtid.x].accel.xyz += Gravity;
+}
+
+// Apply colours to the particles
+[numthreads(PosCountDimension, 1, 1)]
+void ColourParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+{
+	if (gtid.x >= NumParticles)
+		return;
+
+	// Colour the particles based on their velocity
+	if (Scheme & ColourScheme_Velocity)
+	{
+		float speed = length(m_particles[gtid.x].vel.xyz);
+		m_particles[gtid.x].col = LerpColour(speed);
+	}
+	
+	// Colour the particles based on their density
+	if (Scheme & ColourScheme_Density)
+	{
+		float density = m_particles[gtid.x].density;
+		m_particles[gtid.x].col = LerpColour(density);
+	}
+
+	// Colour particles within the probe radius
+	if (Scheme & ColourScheme_Probe)
+	{
+		// Search the neighbours of 'target'
+		float radius_sq = sqr(ProbeRadius);
+		FindIter find = Find(ProbePos.xyz, float3(ProbeRadius, ProbeRadius, ProbeRadius), GridScale, CellCount);
+		while (DoFind(find, CellCount))
+		{
+			for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
+			{
+				float3 r = ProbePos - m_particles[m_spatial[i]].pos.xyz;
+				if (dot(r, r) > radius_sq)
+					continue;
+				
+				m_particles[m_spatial[i]].col = ProbeColour;
+			}
+		}
+	}
 }

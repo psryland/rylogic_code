@@ -40,68 +40,155 @@ namespace pr::rdr12
 		rdr12::Delete<Shader>(this);
 	}
 
-	// Compile a shader at run time
-	// 'entry_point' is the kernel function name
-	// 'code' is the source file as a string
-	// 'args' is an array of pointers to arguments
-	// 'shader_model' is the shader model to compile to
-	std::vector<uint8_t> CompileShader(std::string_view code, std::span<wchar_t const*> args, IDxcIncludeHandler* include_handler)
+	// Runtime shader compiler
+	ShaderCompiler::ShaderCompiler()
+		: m_result()
+		, m_compiler()
+		, m_source_blob()
+		, m_includes()
+		, m_pdb_path()
+		, m_source()
+		, m_defines()
+		, m_ep()
+		, m_sm()
+		, m_optimise()
+		, m_debug_info()
+		, m_extras()
+		, m_args()
 	{
-		DxcBuffer source = {
+		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)&m_compiler.m_ptr));
+
+		D3DPtr<IDxcUtils> utils;
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+		Check(utils->CreateDefaultIncludeHandler(&m_includes.m_ptr));
+	}
+	ShaderCompiler& ShaderCompiler::File(std::filesystem::path file)
+	{		
+		D3DPtr<IDxcUtils> utils;
+		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+
+		m_source_blob = nullptr;
+		uint32_t code_page = DXC_CP_UTF8;
+		Check(utils->LoadFile(file.wstring().c_str(), &code_page, &m_source_blob.m_ptr));
+
+		Source({ static_cast<char const*>(m_source_blob->GetBufferPointer()), m_source_blob->GetBufferSize() });
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::Source(std::string_view code)
+	{
+		m_source = DxcBuffer {
 			.Ptr = code.data(),
 			.Size = code.size(),
 			.Encoding = DXC_CP_UTF8,
 		};
-		
-		D3DPtr<IDxcUtils> utils;
-		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::Includes(D3DPtr<IDxcIncludeHandler> handler)
+	{
+		m_includes = handler;
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::EntryPoint(std::wstring_view ep)
+	{
+		m_ep.clear();
+		m_ep.append(L"-E").append(ep);
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::ShaderModel(std::wstring_view sm)
+	{
+		m_sm.clear();
+		m_sm.append(L"-T").append(sm);
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::Optimise(bool opt)
+	{
+		m_optimise = opt;
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::DebugInfo(bool dbg)
+	{
+		m_debug_info = dbg;
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::Define(std::wstring_view sym, std::wstring_view value)
+	{
+		m_defines[std::wstring(sym)] = !value.empty()
+			? std::format(L"-D{}={}", sym, value)
+			: std::format(L"-D{}", sym);
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::PDBOutput(std::filesystem::path dir, std::string_view filename)
+	{
+		m_pdb_path = dir / filename;
+		return *this;
+	}
+	ShaderCompiler& ShaderCompiler::Arg(std::wstring_view arg)
+	{
+		m_extras.push_back(std::wstring(arg));
+		return *this;
+	}
+	std::vector<uint8_t> ShaderCompiler::Compile()
+	{
+		m_args.clear();
+		m_args.push_back(m_ep.c_str());
+		m_args.push_back(m_sm.c_str());
+		m_args.push_back(m_optimise ? L"-O3" : L"-Od");
+		if (m_debug_info)
+		{
+			m_args.push_back(L"-Zi");
+		}
+		for (auto& def : m_defines)
+		{
+			m_args.push_back(def.second.c_str());
+		}
+		if (!m_pdb_path.empty())
+		{
+			m_args.push_back(L"-Fd");
+			m_args.push_back(m_pdb_path.c_str());
+		}
+		for (auto& extra : m_extras)
+		{
+			m_args.push_back(extra.c_str());
+		}
 
-		D3DPtr<IDxcCompiler3> compiler;
-		Check(DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler3), (void**)&compiler.m_ptr));
-
-		D3DPtr<IDxcResult> result;
-		auto hr = compiler->Compile(&source, args.data(), s_cast<uint32_t>(args.size()), include_handler, __uuidof(IDxcResult), (void**)&result.m_ptr);
+		// Compile the shader code
+		m_result = nullptr;
+		auto hr = m_compiler->Compile(&m_source, m_args.data(), s_cast<uint32_t>(m_args.size()), m_includes.get(), __uuidof(IDxcResult), (void**)&m_result.m_ptr);
 		if (SUCCEEDED(hr))
 		{
-			Check(result->GetStatus(&hr));
+			Check(m_result->GetStatus(&hr));
 		}
 		if (FAILED(hr))
 		{
 			std::string message = "Compile Failed";
-			if (result)
+			if (m_result)
 			{
 				D3DPtr<IDxcBlobEncoding> errors_blob;
-				if (SUCCEEDED(result->GetErrorBuffer(&errors_blob.m_ptr)))
+				if (SUCCEEDED(m_result->GetErrorBuffer(&errors_blob.m_ptr)))
 					message.append(": ").append(static_cast<char const*>(errors_blob->GetBufferPointer()));
 			}
 			Check(hr, message.c_str());
 		}
 
+		// Get the compiled shader code
 		D3DPtr<IDxcBlob> shader;
-		Check(result->GetResult(&shader.m_ptr));
-
+		Check(m_result->GetResult(&shader.m_ptr));
 		std::vector<uint8_t> byte_code(shader->GetBufferSize());
 		memcpy(byte_code.data(), shader->GetBufferPointer(), shader->GetBufferSize());
+
+		// Output the pdb file
+		if (!m_pdb_path.empty())
+		{
+			D3DPtr<IDxcBlob> pdb;
+			D3DPtr<IDxcBlobUtf16> pdb_name;
+			Check(m_result->GetOutput(DXC_OUT_PDB, __uuidof(IDxcBlob), (void**)&pdb.m_ptr, &pdb_name.m_ptr));
+			auto pdb_path = m_pdb_path / pdb_name->GetStringPointer();
+
+			std::ofstream file(pdb_path, std::ios::binary);
+			file.write(static_cast<char const*>(pdb->GetBufferPointer()), pdb->GetBufferSize());
+		}
+
 		return byte_code;
-	}
-	std::vector<uint8_t> CompileShader(std::filesystem::path const& shader_path, std::span<wchar_t const*> args)
-	{
-		uint32_t code_page = DXC_CP_UTF8;
-		
-		D3DPtr<IDxcUtils> utils;
-		Check(DxcCreateInstance(CLSID_DxcUtils, __uuidof(IDxcUtils), (void**)&utils.m_ptr));
-
-		D3DPtr<IDxcBlobEncoding> source_blob;
-		Check(utils->LoadFile(shader_path.wstring().c_str(), &code_page, &source_blob.m_ptr));
-
-		D3DPtr<IDxcIncludeHandler> include_handler;
-		Check(utils->CreateDefaultIncludeHandler(&include_handler.m_ptr));
-
-		//D3DPtr<IDxcCompilerArgs> compiler_args;
-		//Check(utils->BuildArguments(shader_path.wstring().c_str(), entry_point, shader_model, args.data(), s_cast<uint32_t>(args.size()), nullptr, 0, &compiler_args.m_ptr));
-
-		auto source = std::string_view{ static_cast<char const*>(source_blob->GetBufferPointer()), source_blob->GetBufferSize() };
-		return CompileShader(source, args, include_handler.get());
 	}
 
 	// Compiled shader byte code

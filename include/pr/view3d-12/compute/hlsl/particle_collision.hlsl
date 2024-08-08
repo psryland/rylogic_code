@@ -241,4 +241,10 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		float3 vel_t = target.vel.xyz + vel_n;
 		target.vel.xyz = vel_n * Restitution.x + vel_t * Restitution.y;
 	}
+	
+	// Update the particle dynamics
+	m_particles[gtid.x].pos.xyz = target.pos.xyz;
+	m_particles[gtid.x].vel.xyz = target.vel.xyz;
+	m_particles[gtid.x].accel.xyz = float3(0, 0, 0);
+
 }

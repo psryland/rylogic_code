@@ -48,11 +48,10 @@ namespace pr::fluid
 	using namespace tweakables;
 	inline static const int Dimensions = 2;
 
-	struct Particle;
-	struct Particles;
 	struct FluidSimulation;
 	struct FluidVisualisation;
 
+	using Particle = rdr12::Vert;
 	using IndexSet = std::unordered_set<int64_t>;
 	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition;
 	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision;

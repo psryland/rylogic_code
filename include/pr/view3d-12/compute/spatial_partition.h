@@ -102,15 +102,16 @@ namespace pr::rdr12::compute::spatial_partition
 			, m_lookup()
 		{
 			auto device = rdr.D3DDevice();
-			auto include_handler = ResourceIncludeHandler{};
-			auto source = resource::Read<char>(L"SPATIAL_PARTITION_HLSL", L"TEXT");
-			auto pos_type = std::format(L"-DPOS_TYPE={}", position_layout);
-			wchar_t const* args[] = { L"-E<placeholder>", pos_type.c_str(), L"-Tcs_6_6", L"-O3", L"-Zi" };
+			auto compiler = ShaderCompiler{}
+				.Source(resource::Read<char>(L"SPATIAL_PARTITION_HLSL", L"TEXT"))
+				.Includes({ new ResourceIncludeHandler, true })
+				.Define(L"POS_TYPE", position_layout)
+				.ShaderModel(L"cs_6_6")
+				.Optimise();
 
 			// Init
 			{
-				args[0] = L"-EInit";
-				auto bytecode = CompileShader(source, args, &include_handler);
+				auto bytecode = compiler.EntryPoint(L"Init").Compile();
 				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, NumConstants)
 					.Uav(EReg::IdxStart)
@@ -122,8 +123,7 @@ namespace pr::rdr12::compute::spatial_partition
 
 			// Populate
 			{
-				args[0] = L"-EPopulate";
-				auto bytecode = CompileShader(source, args, &include_handler);
+				auto bytecode = compiler.EntryPoint(L"Populate").Compile();
 				m_populate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, NumConstants)
 					.Uav(EReg::Positions)
@@ -136,8 +136,7 @@ namespace pr::rdr12::compute::spatial_partition
 
 			// Build lookup
 			{
-				args[0] = L"-EBuildSpatial";
-				auto bytecode = CompileShader(source, args, &include_handler);
+				auto bytecode = compiler.EntryPoint(L"BuildSpatial").Compile();
 				m_build.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, NumConstants)
 					.Uav(EReg::GridHash)

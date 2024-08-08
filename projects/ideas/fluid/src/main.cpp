@@ -84,6 +84,7 @@ struct Main :Form
 			{
 				case ERunMode::Paused:
 				{
+					m_fluid_sim.UpdateColours();
 					break;
 				}
 				case ERunMode::SingleStep:
@@ -103,43 +104,30 @@ struct Main :Form
 		});
 		m_loop.AddLoop(50, false, [this](auto) // Render Loop
 		{
+			m_fluid_sim.m_colour_constants.ProbeActive = m_probe.m_active;
+			m_fluid_sim.m_colour_constants.ProbePosition = m_probe.m_position.xyz;
+			m_fluid_sim.m_colour_constants.ProbeRadius = m_probe.m_radius;
+
 			// Update the window title
 			if (m_probe.m_active)
 			{
-#if 0
-				// Find the particles in the probe
-				m_probe.m_found.clear();
-				struct Ctx
-				{
-					FluidSimulation& m_fluid_sim;
-					Probe& m_probe;
-					static void Found(void* ctx, Particle const& particle, float dist_sq)
-					{
-						static_cast<Ctx*>(ctx)->DoFound(particle, dist_sq);
-					}
-					void DoFound(Particle const& particle, float)
-					{
-						m_probe.m_found.insert(m_fluid_sim.m_particles.index(particle));
-					}
-				} ctx = { m_fluid_sim, m_probe };
-				m_spatial_partition.Find(m_probe.m_position, m_probe.m_radius, m_fluid_sim.m_particles, { &Ctx::Found, &ctx });
 				auto pos = m_probe.m_position;
-				auto density = m_fluid_sim.DensityAt(m_probe.m_position);
-				auto press = m_fluid_sim.PressureAt(m_probe.m_position, std::nullopt);
+				auto density = v3{ 0,0,0 };
+				auto press = v3{ 0,0,0 };
+
+
 				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
 					pos.x, pos.y, pos.z,
 					density, press.x, press.y, press.z, m_probe.m_radius));
-#endif
 			}
 			else
 			{
-				m_probe.m_found.clear();
 				auto c2w = m_scn.m_cam.CameraToWorld();
 				SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
 			}
 
 			// Use this only render per main loop step
-			if (m_time == m_last_frame_rendered) return;
+			//if (m_time == m_last_frame_rendered) return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();

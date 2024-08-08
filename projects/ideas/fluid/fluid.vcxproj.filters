@@ -16,9 +16,6 @@
     <ClInclude Include="src\fluid_visualisation.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\particle.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\probe.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -45,9 +42,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\fluid_visualisation.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\particle.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
