@@ -60,7 +60,7 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		return;
 
 	int3 grid = GridCell(m_positions[gtid.x].pos, GridScale);
-	uint hash = Hash(grid, CellCount);
+	uint hash = CellHash(grid, CellCount);
 	m_grid_hash[gtid.x] = hash;
 	m_spatial[gtid.x] = gtid.x;
 }

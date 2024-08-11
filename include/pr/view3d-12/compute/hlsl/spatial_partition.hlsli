@@ -17,22 +17,29 @@ RWStructuredBuffer<uint> m_idx_count;
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
 
+// Accumulative hash function
+inline uint Hash(int value, uint hash = FNV_offset_basis32)
+{
+	return hash = (value + hash) * FNV_prime32;
+}
+
 // Convert a floating point position into a grid cell coordinate
 inline int3 GridCell(float4 position, uniform float grid_scale)
 {
 	return int3(ceil(position.xyz * grid_scale));
 }
 
-// Accumulative hash function
-inline uint Hash(int value, uint hash = FNV_offset_basis32)
-{
-	return hash = (value ^ hash) * FNV_prime32;
-}
-
 // Generate a hash from a grid cell coordinate.
-inline uint Hash(int3 grid, uniform uint cell_count)
+inline uint CellHash(int3 grid, uniform uint cell_count)
 {
-	return Hash(grid.x, Hash(grid.y, Hash(grid.z))) % cell_count;
+	// This performs better than using the same prime for each component
+    uint h1 = Hash(grid.x);
+    uint h2 = Hash(grid.y);
+    uint h3 = Hash(grid.z);
+    const uint prime1 = 73856093;
+    const uint prime2 = 19349663;
+    const uint prime3 = 83492791;
+    return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
 }
 
 // A coroutine context for iterating over neighbouring particles
@@ -75,7 +82,7 @@ inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 	}
 
 	// Get the range of indices in 'cell'
-	uint hash = Hash(iter.cell, cell_count);
+	uint hash = CellHash(iter.cell, cell_count);
 	iter.idx_range = int2(m_idx_start[hash], m_idx_start[hash] + m_idx_count[hash]);
 	return true;
 }

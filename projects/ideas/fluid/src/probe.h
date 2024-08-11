@@ -19,7 +19,7 @@ namespace pr::fluid
 			: m_position(0,0,0,1)
 			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
 			, m_found()
-			, m_radius(0.05f)
+			, m_radius(0.1f)
 			, m_sign()
 			, m_active(false)
 		{

@@ -129,7 +129,7 @@ namespace pr::rdr12
 	}
 	std::vector<uint8_t> ShaderCompiler::Compile()
 	{
-		DebugInfo().Optimise(false).PDBOutput(L"E:\\Dump\\Symbols");
+		DebugInfo().Arg(L"-Wx").Optimise(false).PDBOutput(L"E:\\Dump\\Symbols");
 		#pragma message(PR_LINK "WARNING: ************************************************** Debug Shader Compiling enabled")
 
 		m_args.clear();

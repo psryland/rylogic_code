@@ -24,13 +24,17 @@ namespace pr::fluid
 			float ParticleRadius = 0.1f;      // The radius of influence for each particle
 			int CellCount = 1021;             // The number of grid cells in the spatial partition
 			float GridScale = 10.0f;          // The scale factor for the spatial partition grid
+
+			v4 Gravity = { 0, -9.8f, 0, 0 };  // The acceleration due to gravity
+
 			float Mass = 1.0f;                // The particle mass
 			float DensityToPressure = 100.0f; // The conversion factor from density to pressure
 			float Density0 = 0.0f;            // The baseline density
 			float Viscosity = 10.0f;          // The viscosity scaler
-			v4 Gravity = { 0, -9.8f, 0, 0 };  // The acceleration due to gravity
-			float ThermalDiffusion = 0.01f;   // The thermal diffusion rate
-			int RandomSeed = 0;               // Seed value for the RNG
+
+			float ThermalDiffusion = 0.01f; // The thermal diffusion rate
+			float TimeStep = 0.0f;          // Particle position prediction
+			int RandomSeed = 0;             // Seed value for the RNG
 		} Params;
 		struct ColoursData
 		{
@@ -70,16 +74,16 @@ namespace pr::fluid
 	private:
 
 		// Calculate the fluid density at the particle locations
-		void CalculateDensities(ComputeJob& job) const;
+		void CalculateDensities(ComputeJob& job, float dt);
 
 		// Apply forces to each particle
-		void ApplyForces(ComputeJob& job) const;
+		void ApplyForces(ComputeJob& job, float dt);
 
 		// Apply colours to the particles
-		void ColourParticles(ComputeJob& job) const;
+		void ColourParticles(ComputeJob& job);
 
 		// Convert the particles buffer to a compute resource or a vertex buffer
-		void ParticleBufferAsUAV(ComputeJob& job, bool for_compute) const;
+		void ParticleBufferAsUAV(ComputeJob& job, bool for_compute);
 
 		// Run the debugging function
 		void Debugging(ComputeJob& job) const;

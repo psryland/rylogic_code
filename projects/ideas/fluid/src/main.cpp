@@ -32,9 +32,9 @@ struct Main :Form
 	};
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
-	inline static constexpr int ParticleCount = 900;//100;//30 * 30;
+	inline static constexpr int ParticleCount = 946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
-	inline static constexpr int GridCellCount = 1021;//1021;//65521;//1048573;//16777213;
+	inline static constexpr int GridCellCount = 1021;//65521;//1021;//1048573;//16777213;
 	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
 
 	Renderer m_rdr;
@@ -47,15 +47,17 @@ struct Main :Form
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
+	std::string m_title;
 	ERunMode m_run_mode;
-	float m_last_frame_rendered;
+	bool m_frame_lock;
+	int m_last_frame;
 	float m_time;
 
 	Main(HINSTANCE hinst)
 		: Form(Params<>()
 			.name("main")
 			.title(L"Fluid")
-			.xy(1200,100)
+			.xy(1200, 100)
 			.wh(WinSize.x, WinSize.y, true)
 			.main_wnd()
 			.dbl_buffer()
@@ -68,9 +70,11 @@ struct Main :Form
 		, m_col_builder(CollisionInitData())
 		, m_fluid_sim(m_rdr, FluidConstants(), ParticleInitData(EFillStyle::Lattice), m_col_builder.Build())
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn, m_col_builder.Ldr().WrapAsGroup().ToString())
-		, m_last_frame_rendered(-1.0f)
-		, m_time()
+		, m_title()
 		, m_run_mode(ERunMode::Paused)
+		, m_frame_lock(false)
+		, m_last_frame(-1)
+		, m_time()
 	{
 		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
 
@@ -116,24 +120,11 @@ struct Main :Form
 		m_loop.AddLoop(50, false, [this](auto) // Render Loop
 		{
 			// Update the window title
-			if (m_probe.m_active)
-			{
-				auto pos = m_probe.m_position;
-				auto density = v3{ 0,0,0 };
-				auto press = v3{ 0,0,0 };
-
-				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
-					pos.x, pos.y, pos.z,
-					density, press.x, press.y, press.z, m_probe.m_radius));
-			}
-			else
-			{
-				auto c2w = m_scn.m_cam.CameraToWorld();
-				SetWindowTextA(*this, pr::FmtS("Fluid - Time: %3.3fs - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", m_time, c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
-			}
+			UpdateWindowTitle();
 
 			// Use this only render per main loop step
-			if (m_time == m_last_frame_rendered) return;
+			if (m_frame_lock && m_last_frame == m_fluid_sim.m_frame)
+				return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();
@@ -145,12 +136,61 @@ struct Main :Form
 			m_scn.Render(frame);
 			m_wnd.Present(frame);
 
-			m_last_frame_rendered = m_time;
+			m_last_frame = m_fluid_sim.m_frame;
 		});
 	}
 	int Run()
 	{
 		return m_loop.Run();
+	}
+	void UpdateWindowTitle()
+	{
+		m_title = "Fluid";
+
+		if (m_frame_lock)
+			m_title.append(std::format("[FL={}]", m_last_frame));
+
+		if (m_probe.m_active)
+		{
+			auto pos = m_probe.m_position;
+			auto rad_sq = Sqr(m_probe.m_radius);
+			//auto density = 0;
+			//auto press = v3{ 0,0,0 };
+
+			auto count = 0;
+			auto nearest = 0;
+			auto nearest_dist_sq = std::numeric_limits<float>::max();
+			auto particles = m_fluid_vis.ReadParticles();
+			for (auto& particle : particles)
+			{
+				auto dist_sq = LengthSq(particle.pos - pos);
+				if (dist_sq > rad_sq)
+					continue;
+
+				++count;
+				if (dist_sq < nearest_dist_sq)
+				{
+					nearest = s_cast<int>(&particle - particles.data());
+					nearest_dist_sq = dist_sq;
+				}
+			}
+
+			m_title.append(std::format(" - Pos: {:.3f} {:.3f} {:.3f}", pos.x, pos.y, pos.z));
+			m_title.append(std::format(" - Nearest: {}", nearest));
+			m_title.append(std::format(" - Count: {}", count));
+			//m_title.append(std::format(" - Density: {:.3f}", density));
+			//m_title.append(std::format(" - Press: {:.3f} {:.3f} {:.3f}", press.x, press.y, press.z));
+			m_title.append(std::format(" - Probe Radius: {:.3f}", m_probe.m_radius));
+		}
+		else
+		{
+			auto c2w = m_scn.m_cam.CameraToWorld();
+			m_title.append(std::format(" - Time: {:.3f}s", m_time));
+			m_title.append(std::format(" - Frame: {}", m_fluid_sim.m_frame));
+			m_title.append(std::format(" - Cam: {:.3f} {:.3f} {:.3f}  Dir: {:.3f} {:.3f} {:.3f}", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
+		}
+
+		SetWindowTextA(*this, m_title.c_str());
 	}
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
@@ -225,9 +265,14 @@ struct Main :Form
 				Close();
 				break;
 			}
+			case 'F':
+			{
+				m_frame_lock = !m_frame_lock;
+				break;
+			}
 			case VK_F5:
 			{
-				m_run_mode = ERunMode::FreeRun;
+				m_run_mode = m_run_mode != ERunMode::FreeRun ? ERunMode::FreeRun : ERunMode::Paused;
 				break;
 			}
 			case VK_F6:
@@ -251,12 +296,14 @@ struct Main :Form
 			.ParticleRadius = ParticleRadius,
 			.CellCount = GridCellCount,
 			.GridScale = 1.0f / ParticleRadius,
+			.Gravity = v4(0, -9.8f, 0, 0),
 			.Mass = 1.0f,
 			.DensityToPressure = 100.0f,
 			.Density0 = 1.0f,
 			.Viscosity = 10.0f,
-			.Gravity = v4(0, -9.8f, 0, 0),
 			.ThermalDiffusion = 0.01f,
+			.TimeStep = 0,
+			.RandomSeed = 0,
 		};
 	}
 	static std::vector<Particle> ParticleInitData(EFillStyle style)
@@ -377,7 +424,7 @@ struct Main :Form
 		using namespace ldr;
 		return std::move(CollisionBuilder(true)
 			.Plane(v4(0, +1, 0, 0.5f), ldr::Name("floor"), 0xFFade3ff, {2, 0.5f})
-			.Plane(v4(0, -1, 0, 0.5f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
+			.Plane(v4(0, -1, 0, 1.5f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
 			.Plane(v4(+1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
 			.Plane(v4(-1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
 		);

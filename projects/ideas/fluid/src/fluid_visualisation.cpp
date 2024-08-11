@@ -17,7 +17,7 @@ namespace pr::fluid
 		, m_gfx_gradient()
 		, m_gfx_velocities()
 		, m_read_back()
-		, m_last_read_back()
+		, m_last_read_back(-1)
 		, Params()
 	{
 		{// Create a dynamic model for the fluid particles (using the particle buffer)

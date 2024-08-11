@@ -28,13 +28,19 @@ namespace pr::rdr12::compute::spatial_partition
 	// Accumulative hash function
 	inline uint32_t Hash(int value, uint32_t hash = FNV_offset_basis32)
 	{
-		return hash = (value ^ hash) * FNV_prime32;
+		return hash = (value + hash) * FNV_prime32;
 	}
 
 	// Generate a hash from a grid cell coordinate.
-	inline uint32_t Hash(iv3 grid, int cell_count)
+	inline uint32_t CellHash(iv3 grid, int cell_count)
 	{
-		return Hash(grid.x, Hash(grid.y, Hash(grid.z))) % cell_count;
+		auto h1 = Hash(grid.x);
+		auto h2 = Hash(grid.y);
+		auto h3 = Hash(grid.z);
+		constexpr uint32_t prime1 = 73856093;
+		constexpr uint32_t prime2 = 19349663;
+		constexpr uint32_t prime3 = 83492791;
+		return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
 	}
 
 	// Grid-based Spatial Partitioning
@@ -314,7 +320,7 @@ namespace pr::rdr12::compute::spatial_partition
 					for (auto x = lwr.x; x <= upr.x; ++x)
 					{
 						auto cell = iv3(x, y, z);
-						auto hash = Hash(cell, Params.CellCount);
+						auto hash = CellHash(cell, Params.CellCount);
 						auto& idx = m_lookup[hash];
 						for (int i = idx.start, iend = idx.start + idx.count; i != iend; ++i)
 						{

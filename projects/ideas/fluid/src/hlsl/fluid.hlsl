@@ -17,12 +17,16 @@ cbuffer cbFluid : register(b0)
 	float ParticleRadius;    // The radius of influence for each particle
 	uint CellCount;          // The number of grid cells in the spatial partition
 	float GridScale;         // The scale factor for the spatial partition grid
+
+	float4 Gravity;          // The acceleration due to gravity
+
 	float Mass;              // The particle mass
 	float DensityToPressure; // The conversion factor from density to pressure
 	float Density0;          // The baseline density
 	float Viscosity;         // The viscosity scaler
-	float4 Gravity;          // The acceleration due to gravity
+
 	float ThermalDiffusion;  // The thermal diffusion rate
+	float TimeStep;          // Leap-frog time step
 	int RandomSeed;          // Seed value for the RNG
 };
 
@@ -177,8 +181,10 @@ void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID
 	if (gtid.x >= NumParticles)
 		return;
 
-	float density = 0.0f;
 	PosType target = m_particles[gtid.x];
+	
+	// Calculate the density at the predicted particle position
+	float4 target_pos = target.pos + TimeStep * target.vel;
 
 	#if SPATIAL_DIMENSIONS == 2
 	float4 volume = float4(ParticleRadius, ParticleRadius, 0, 0);
@@ -186,14 +192,21 @@ void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID
 	float4 volume = float4(ParticleRadius, ParticleRadius, ParticleRadius, 0);
 	#endif
 	
-	// Search the neighbours of 'target'
-	FindIter find = Find(target.pos, volume, GridScale, CellCount);
+	float density = ParticleInfluenceAt(0.0f, ParticleRadius) * Mass;
+	
+	// Search the neighbours of 'target_pos'
+	FindIter find = Find(target_pos, volume, GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
 			// 'ParticleInfluenceAt' contains a distance check, so we don't need to check here
-			float dist = length(target.pos - m_particles[m_spatial[i]].pos);
+			// It's faster to sum with a multiply by zero than to branch.
+			if (m_spatial[i] == gtid.x) continue; // no self-contribution
+			PosType neighbour = m_particles[m_spatial[i]];
+			float4 neighbour_pos = neighbour.pos;// + TimeStep * neighbour.vel;
+
+			float dist = length(target_pos - neighbour_pos);
 			float influence = ParticleInfluenceAt(dist, ParticleRadius);
 			density += influence * Mass;
 		}
@@ -212,8 +225,9 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		return;
 
 	PosType target = m_particles[gtid.x];
-	float4 nett_pressure = float4(0, 0, 0, 0);
-	float4 nett_viscosity = float4(0, 0, 0, 0);
+
+	// Calculate pressure at the predicted particle position
+	float4 target_pos = target.pos + TimeStep * target.vel;
 	
 	#if SPATIAL_DIMENSIONS == 2
 	float4 volume = float4(ParticleRadius, ParticleRadius, 0, 0);
@@ -221,35 +235,39 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	float4 volume = float4(ParticleRadius, ParticleRadius, ParticleRadius, 0);
 	#endif
 
+	float4 nett_pressure = float4(0, 0, 0, 0);
+	float4 nett_viscosity = float4(0, 0, 0, 0);
+
 	// Search the neighbours of 'target'
-	FindIter find = Find(target.pos, volume, GridScale, CellCount);
+	FindIter find = Find(target_pos, volume, GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
 			if (m_spatial[i] == gtid.x) continue; // no self-interaction
 			PosType neighbour = m_particles[m_spatial[i]];
+			float4 neighbour_pos = neighbour.pos;// + TimeStep * neighbour.vel;
 			
-			float4 direction = target.pos - neighbour.pos;
+			float4 direction = target_pos - neighbour_pos;
 			float dist = length(direction);
 
 			// 'dParticleInfluenceAt' contains a distance check, so we don't need to check here
 			float influence = dParticleInfluenceAt(dist, ParticleRadius);
 			direction = (dist > 0.0001f) ? direction / dist : normalize(Random3(gtid.x));
 
-			// We need to simulate the force due to pressure being applied to both particles (idx and index).
+			// We need to simulate the force due to pressure being applied to both particles (target and neighbour).
 			// A simple way to do this is to average the pressure between the two particles. Since pressure is
 			// a linear function of density, we can use the average density.
 			float density = (target.density + neighbour.density) / 2.0f;
 
 			// Convert the density to a pressure (P = k * (rho - rho0))
-			float relative_density = density - Density0;
+			float pressure = DensityToPressure * (density - Density0);
 
 			// Calculate the viscosity from the relative velocity of the particles
 			float4 relative_velocity = neighbour.vel - target.vel;
 			
 			// Get the pressure gradient at 'position' due to 'neighbour'
-			nett_pressure += DensityToPressure * (relative_density * influence * Mass / density) * direction;
+			nett_pressure += (pressure * influence * Mass / density) * direction;
 
 			// Get the viscosity at 'position' due to 'neighbour'
 			nett_viscosity += Viscosity * influence * relative_velocity;
@@ -303,13 +321,15 @@ void ApplyProbe(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= NumParticles)
 		return;
 
-	// Use: y = 6xe^(-7x^2). y(0) = 0, y(0.25) ~= 1, y(1) ~= 0
-	float4 r = ProbePosition - m_particles[gtid.x].pos;
-	float dist = length(r);
-	if (dist > 0.001f)
+	float4 r = m_particles[gtid.x].pos - ProbePosition;
+	float dist_sq = dot(r, r);
+	if (dist_sq < sqr(ProbeRadius))
 	{
-		float x = saturate(dist / ProbeRadius);
-		m_particles[gtid.x].accel += (6.0f * x * exp(-7.0f * sqr(x)) * ProbeForce / dist) * r.xyz;
+		float dist = sqrt(dist_sq);
+		float influence = 1 - saturate(dist / ProbeRadius);
+		float4 direction = dist > 0.0001f ? r / dist : float4(0, 0, 0, 0);
+		float4 force = influence * (ProbeForce * direction - m_particles[gtid.x].vel);
+		m_particles[gtid.x].accel += force.xyz * (Mass / m_particles[gtid.x].density);
 	}
 }
 
@@ -323,19 +343,22 @@ void Debugging(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	float4 volume = float4(ProbeRadius, ProbeRadius, ProbeRadius, 0);
 	#endif
 
+	float4 pos = ProbePosition;
 	float radius_sq = sqr(ProbeRadius);
 	
 	// Search the neighbours of 'target'
-	FindIter find = Find(ProbePosition, volume, GridScale, CellCount);
+	FindIter find = Find(pos, volume, GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
-			float4 r = ProbePosition - m_particles[m_spatial[i]].pos;
-			if (dot(r, r) > radius_sq)
-				continue;
+			PosType neighbour = m_particles[m_spatial[i]];
+			
+			//float4 r = ProbePosition - .pos;
+			//if (dot(r, r) > radius_sq)
+			//	continue;
 				
-			m_particles[m_spatial[i]].col = float4(1, 0, 0, 1);
+			m_particles[m_spatial[i]].col = float4(0, 1, 0, 1);
 		}
 	}
 }

@@ -167,7 +167,6 @@ namespace pr::fluid
 		m_collision.Params.Restitution = Restitution;
 
 		// todo:
-		//  - Leap frog integration
 		//  - better viscosity
 		//  -3D
 
@@ -178,10 +177,10 @@ namespace pr::fluid
 		ParticleBufferAsUAV(m_job, true);
 
 		// Calculate the density values at each particle location
-		CalculateDensities(m_job);
+		CalculateDensities(m_job, dt);
 
 		// Apply the forces to each particle
-		ApplyForces(m_job);
+		ApplyForces(m_job, dt);
 
 		// Integrate velocity and position (with collision)
 		m_collision.Update(m_job, dt, Params.NumParticles, m_r_particles);
@@ -192,6 +191,7 @@ namespace pr::fluid
 		// Set particle colours
 		ColourParticles(m_job);
 
+		// Test stuff
 		//Debugging(m_job);
 
 		// Make the particle buffer a vertex buffer again
@@ -241,8 +241,10 @@ namespace pr::fluid
 	}
 
 	// Update the cache of density values at the particle locations
-	void FluidSimulation::CalculateDensities(ComputeJob& job) const
+	void FluidSimulation::CalculateDensities(ComputeJob& job, float dt)
 	{
+		Params.TimeStep = dt / 2;
+
 		job.m_barriers.UAV(m_r_particles.get());
 		job.m_barriers.UAV(m_spatial.m_pos_index.get());
 		job.m_barriers.UAV(m_spatial.m_idx_start.get());
@@ -260,8 +262,10 @@ namespace pr::fluid
 	}
 
 	// Apply the force due to pressure for each particle
-	void FluidSimulation::ApplyForces(ComputeJob& job) const
+	void FluidSimulation::ApplyForces(ComputeJob& job, float dt)
 	{
+		Params.TimeStep = dt / 2;
+
 		job.m_barriers.UAV(m_r_particles.get());
 		job.m_barriers.UAV(m_spatial.m_pos_index.get());
 		job.m_barriers.UAV(m_spatial.m_idx_start.get());
@@ -292,7 +296,7 @@ namespace pr::fluid
 	}
 
 	// Apply colours to the particles
-	void FluidSimulation::ColourParticles(ComputeJob& job) const
+	void FluidSimulation::ColourParticles(ComputeJob& job)
 	{
 		job.m_barriers.UAV(m_r_particles.get());
 		job.m_barriers.UAV(m_spatial.m_pos_index.get());
@@ -313,7 +317,7 @@ namespace pr::fluid
 	}
 
 	// Convert the particles buffer to a compute resource or a vertex buffer
-	void FluidSimulation::ParticleBufferAsUAV(ComputeJob& job, bool for_compute) const
+	void FluidSimulation::ParticleBufferAsUAV(ComputeJob& job, bool for_compute)
 	{
 		BarrierBatch barriers(job.m_cmd_list);
 		barriers.Transition(m_r_particles.get(), for_compute
@@ -325,6 +329,12 @@ namespace pr::fluid
 	// Run the debugging function
 	void FluidSimulation::Debugging(ComputeJob& job) const
 	{
+		job.m_barriers.UAV(m_r_particles.get());
+		job.m_barriers.UAV(m_spatial.m_pos_index.get());
+		job.m_barriers.UAV(m_spatial.m_idx_start.get());
+		job.m_barriers.UAV(m_spatial.m_idx_count.get());
+		job.m_barriers.Commit();
+
 		job.m_cmd_list.SetPipelineState(m_cs_debugging.m_pso.get());
 		job.m_cmd_list.SetComputeRootSignature(m_cs_debugging.m_sig.get());
 		job.m_cmd_list.SetComputeRoot32BitConstants(0, Params, 0);
