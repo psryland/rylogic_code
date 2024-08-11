@@ -78,6 +78,7 @@
     <ClCompile Include="src\fluid_simulation.cpp" />
     <ClInclude Include="src\fluid_visualisation.h" />
     <ClCompile Include="src\fluid_visualisation.cpp" />
+    <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\probe.h" />
   </ItemGroup>
   <ItemGroup>

@@ -80,6 +80,10 @@ namespace pr::rdr12
 	}
 	ResourceManager::~ResourceManager()
 	{
+		// We're shutting down, keep alive be damned.
+		// Need to clear this before destructing the texture lookup map.
+		m_keep_alive.m_objects.clear();
+
 		// Stop polling 'm_gsync'
 		m_rdr.RemovePollCB({ &GpuSync::Poll, &m_gsync });
 	}

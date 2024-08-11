@@ -10,7 +10,10 @@
 
 namespace pr
 {
-	// Planes are stored as: [dx dy dz -dist]
+	// Notes:
+	//  - Plane.w should be positive if the normal faces the origin.
+	//    Another way to think of it is, how far is the origin above the plane.
+	//    Then, when using dot(plane, point), > 0 means above the plane.
 	using Plane = Vec4f<struct PlaneType>;
 
 	// Define the dot product for planes

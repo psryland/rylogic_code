@@ -129,6 +129,9 @@ namespace pr::rdr12
 	}
 	std::vector<uint8_t> ShaderCompiler::Compile()
 	{
+		DebugInfo().Optimise(false).PDBOutput(L"E:\\Dump\\Symbols");
+		#pragma message(PR_LINK "WARNING: ************************************************** Debug Shader Compiling enabled")
+
 		m_args.clear();
 		m_args.push_back(m_ep.c_str());
 		m_args.push_back(m_sm.c_str());
@@ -165,7 +168,10 @@ namespace pr::rdr12
 			{
 				D3DPtr<IDxcBlobEncoding> errors_blob;
 				if (SUCCEEDED(m_result->GetErrorBuffer(&errors_blob.m_ptr)))
-					message.append(": ").append(static_cast<char const*>(errors_blob->GetBufferPointer()));
+				{
+					std::string error(static_cast<char const*>(errors_blob->GetBufferPointer()), errors_blob->GetBufferSize());
+					message.append(": ").append(error);
+				}
 			}
 			Check(hr, message.c_str());
 		}

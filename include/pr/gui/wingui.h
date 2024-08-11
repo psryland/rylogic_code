@@ -2386,59 +2386,73 @@ namespace pr
 		// Event args for keyboard key events
 		struct KeyEventArgs :EmptyArgs
 		{
-			UINT m_vk_key;  // The VK_ key that was pressed
-			UINT m_repeats; // Repeat count
-			UINT m_flags;   //
-			HWND m_hwnd;    // The handle of the window that the key event is for
-			bool m_down;    // True if this is a key down event, false if key up
-			bool m_handled; // Set to true to prevent further handling of this key event
+			Control* m_owner; // The control that the key event is for
+			UINT m_vk_key;    // The VK_ key that was pressed
+			UINT m_repeats;   // Repeat count
+			UINT m_flags;     //
+			HWND m_hwnd;      // The handle of the window that the key event is for
+			bool m_down;      // True if this is a key down event, false if key up
+			bool m_handled;   // Set to true to prevent further handling of this key event
 
-			KeyEventArgs(UINT vk_key, bool down, HWND hwnd, UINT repeats, UINT flags)
-				:m_vk_key(vk_key)
+			KeyEventArgs(Control* owner, UINT vk_key, bool down, HWND hwnd, UINT repeats, UINT flags)
+				:m_owner(owner)
+				,m_vk_key(vk_key)
 				,m_repeats(repeats)
 				,m_flags(flags)
 				,m_hwnd(hwnd)
 				,m_down(down)
 				,m_handled(false)
 			{}
+
+			// The location of the mouse (client space) at the key event
+			Point point() const;
+
+			// Get the point in absolute pixels
+			Point point_px() const;
 		};
 
 		// Event args for mouse button events
 		struct MouseEventArgs :EmptyArgs
 		{
+			Control*  m_owner;     // The control that the mouse event is for
 			Point     m_point;     // The location of the mouse at the button event relative to (unpadded) client space (in DIP client space)
-			Point     m_point_px;  // The mouse position converted to physical pixels (relative to (unpadded) client space)
 			EMouseKey m_button;    // The button that triggered the event
 			EMouseKey m_key_state; // The state of all mouse buttons and control keys
 			bool      m_down;      // True if the button was a down event, false if an up event
 			bool      m_handled;   // Set to true to prevent further handling of this key event
 
-			MouseEventArgs(EMouseKey btn, bool down, Point point, Point point_px, EMouseKey key_state)
-				:m_point(point)
-				,m_point_px(point_px)
+			MouseEventArgs(Control* owner, EMouseKey btn, bool down, Point point, EMouseKey key_state)
+				:m_owner(owner)
+				,m_point(point)
 				,m_button(btn)
 				,m_key_state(key_state)
 				,m_down(down)
 				,m_handled(false)
 			{}
+
+			// Get the point in absolute pixels
+			Point point_px() const;
 		};
 
 		// Event args for mouse wheel events
 		struct MouseWheelArgs :EmptyArgs
 		{
+			Control*  m_owner;     // The control that the mouse event is for
 			Point     m_point;     // The (unpadded) client space location of the mouse at the time of the event.
-			Point     m_point_px;  // The mouse position converted to physical pixels (relative to (unpadded) client space)
 			EMouseKey m_key_state; // The state of all mouse buttons and control keys
 			short     m_delta;     // The amount the mouse wheel has turned
 			bool      m_handled;   // Set to true to prevent further handling of this key event
 
-			MouseWheelArgs(short delta, Point point, Point point_px, EMouseKey key_state)
-				:m_point(point)
-				,m_point_px(point_px)
+			MouseWheelArgs(Control* owner, short delta, Point point, EMouseKey key_state)
+				:m_owner(owner)
+				,m_point(point)
 				,m_key_state(key_state)
 				,m_delta(delta)
 				,m_handled(false)
 			{}
+
+			// Get the point in absolute pixels
+			Point point_px() const;
 		};
 
 		// Event args for timer events
@@ -4554,6 +4568,12 @@ namespace pr
 				PositionWindow(0, 0, width(), h, EWindowPos::NoMove|(repaint?EWindowPos::None:EWindowPos::NoRedraw));
 			}
 
+			// The DPI scaling for this control
+			DpiScale Metrics() const
+			{
+				return m_metrics;
+			}
+
 			// Return the ideal size for this control. Includes padding, excludes margin.
 			// This method can be called before the HWND is created.
 			virtual Size PreferredSize() const
@@ -5296,8 +5316,8 @@ namespace pr
 						auto repeats = UINT(lparam & 0xFFFF);
 						auto flags = UINT(lparam >> 16) & 0xFFFF;
 						//auto is_extended = (flags & KF_EXTENDED) != 0;
-						//auto scancode = (is_extended ? 0xE000 : 0x0000) | (flags & 0xFF);
-						auto args = KeyEventArgs(vk_key, message == WM_KEYDOWN, m_hwnd, repeats, flags);
+						//auto scan_code = (is_extended ? 0xE000 : 0x0000) | (flags & 0xFF);
+						auto args = KeyEventArgs(this, vk_key, message == WM_KEYDOWN, m_hwnd, repeats, flags);
 
 						// Allow parent controls to filter the key events
 						OnKeyPreview(args);
@@ -5346,7 +5366,7 @@ namespace pr
 							EMouseKey();
 
 						// Event order is: down, click, up
-						MouseEventArgs args(btn, down, pt, m_metrics.Pt(pt), key_state);
+						MouseEventArgs args(this, btn, down, pt, key_state);
 						if (down) OnMouseButton(args);
 						DetectSingleClicks(args);
 						if (!down) OnMouseButton(args);
@@ -5360,7 +5380,7 @@ namespace pr
 						auto pt = PointToClient(Point(lparam));
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto key_state = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseWheelArgs args(delta, pt, m_metrics.Pt(pt), key_state);
+						MouseWheelArgs args(this, delta, pt, key_state);
 						OnMouseWheel(args);
 						if (args.m_handled)
 							return true;
@@ -5371,7 +5391,7 @@ namespace pr
 					{
 						auto pt = Point(lparam);
 						auto key_state = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseEventArgs args(key_state, false, pt, m_metrics.Pt(pt), key_state);
+						MouseEventArgs args(this, key_state, false, pt, key_state);
 						OnMouseMove(args);
 						if (args.m_handled)
 							return true;
@@ -5536,7 +5556,7 @@ namespace pr
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = PointToClient(Point(lparam));
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						MouseWheelArgs args(delta, pt, m_metrics.Pt(pt), keystate);
+						MouseWheelArgs args(this, delta, pt, keystate);
 						OnMouseWheel(args);
 						if (args.m_handled)
 							return true;
@@ -9479,6 +9499,38 @@ namespace pr
 					m_cancel_button->PerformClick();
 			}
 		};
+		#pragma endregion
+
+		#pragma region Implementation
+
+		// The location of the mouse (client space) at the key event
+		inline Point KeyEventArgs::point() const
+		{
+			Point pt; ::GetCursorPos(&pt);
+			::ScreenToClient(m_hwnd, &pt);
+			return pt;
+		}
+
+		// Get the point in absolute pixels
+		inline Point KeyEventArgs::point_px() const
+		{
+			auto pt = point();
+			pt = m_owner->Metrics().Pt(pt);
+			return pt;
+		}
+
+		// Get the point in absolute pixels
+		inline Point MouseEventArgs::point_px() const
+		{
+			return m_owner->Metrics().Pt(m_point);
+		}
+
+		// Get the point in absolute pixels
+		inline Point MouseWheelArgs::point_px() const
+		{
+			return m_owner->Metrics().Pt(m_point);
+		}
+
 		#pragma endregion
 	}
 }

@@ -5383,18 +5383,24 @@ namespace pr::rdr12
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
 	template <typename Char>
-	ParseResult ParseString(Renderer& rdr, Char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult ParseString(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
 	{
 		script::StringSrc src(ldr_script);
 		script::Reader reader(src);
 		return Parse(rdr, reader, context_id, progress_cb);
 	}
-	template ParseResult ParseString<char>(Renderer& rdr, char const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
-	template ParseResult ParseString<wchar_t>(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id, ParseProgressCB progress_cb);
+	ParseResult ParseString(Renderer& rdr, std::string_view ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		return ParseString<char>(rdr, ldr_script, context_id, progress_cb);
+	}
+	ParseResult ParseString(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		return ParseString<wchar_t>(rdr, ldr_script, context_id, progress_cb);
+	}
 
-	// Create a single ldr object from a string
+	// Create a single LDR object from a string
 	template <typename Char>
-	LdrObjectPtr CreateLdr(Renderer& rdr, Char const* ldr_script, Guid const& context_id)
+	LdrObjectPtr CreateLdr(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id)
 	{
 		auto result = ParseString(rdr, ldr_script, context_id);
 		if (result.m_objects.empty())
@@ -5403,8 +5409,14 @@ namespace pr::rdr12
 			throw std::runtime_error("Multiple objects created");
 		return result.m_objects[0];
 	}
-	template LdrObjectPtr CreateLdr(Renderer& rdr, char const* ldr_script, Guid const& context_id);
-	template LdrObjectPtr CreateLdr(Renderer& rdr, wchar_t const* ldr_script, Guid const& context_id);
+	LdrObjectPtr CreateLdr(Renderer& rdr, std::string_view ldr_script, Guid const& context_id)
+	{
+		return CreateLdr<char>(rdr, ldr_script, context_id);
+	}
+	LdrObjectPtr CreateLdr(Renderer & rdr, std::wstring_view ldr_script, Guid const& context_id)
+	{
+		return CreateLdr<wchar_t>(rdr, ldr_script, context_id);
+	}
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, Guid const& context_id)

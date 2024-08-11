@@ -37,6 +37,13 @@ namespace pr::rdr12
 			};
 			return *this;
 		}
+		template <typename CBufType>
+		RootSig& U32(ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL)
+		{
+			static_assert(sizeof(CBufType) % sizeof(uint32_t) == 0);
+			auto count = s_cast<int>(sizeof(CBufType) / sizeof(uint32_t));
+			return U32(reg, count, shader_visibility);
+		}
 
 		// Add a constant buffer root parameter
 		RootSig& CBuf(ECBufReg reg, D3D12_SHADER_VISIBILITY shader_visibility = D3D12_SHADER_VISIBILITY_ALL, D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)

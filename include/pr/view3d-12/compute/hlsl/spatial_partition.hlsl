@@ -8,7 +8,7 @@
 //   POS_TYPE - Define the element structure of the 'positions' buffer. The field 'pos' is
 //      expected to be the position information. It can be float3 or float4.
 #ifndef POS_TYPE
-#define POS_TYPE struct PosType { float3 pos; }
+#define POS_TYPE struct PosType { float4 pos; }
 #endif
 
 static const uint CellCountDimension = 1024;
@@ -18,7 +18,7 @@ static const uint PosCountDimension = 1024;
 cbuffer cbGridPartition : register(b0)
 {
 	int NumPositions; // The length of 'm_positions'
-	int CellCount;    // The maximum number of grid cells
+	int CellCount;    // The maximum number of grid cells (Primes are a good choice: 1021, 65521, 1048573, 16777213)
 	float GridScale;   // The quantising factor to apply to the positions
 };
 
@@ -59,7 +59,7 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= NumPositions)
 		return;
 
-	int3 grid = GridCell(m_positions[gtid.x].pos.xyz, GridScale);
+	int3 grid = GridCell(m_positions[gtid.x].pos, GridScale);
 	uint hash = Hash(grid, CellCount);
 	m_grid_hash[gtid.x] = hash;
 	m_spatial[gtid.x] = gtid.x;

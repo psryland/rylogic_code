@@ -2,6 +2,7 @@
 #include "src/forward.h"
 #include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
+#include "src/particle.h"
 #include "src/probe.h"
 
 using namespace pr;
@@ -22,7 +23,6 @@ struct Main :Form
 		SingleStep,
 		FreeRun,
 	};
-
 	enum class EFillStyle
 	{
 		Point,
@@ -32,9 +32,9 @@ struct Main :Form
 	};
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
-	inline static constexpr int ParticleCount = 10;//30 * 30;
+	inline static constexpr int ParticleCount = 900;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
-	inline static constexpr int GridCellCount = 10;//1024;
+	inline static constexpr int GridCellCount = 1021;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
 
 	Renderer m_rdr;
@@ -43,6 +43,7 @@ struct Main :Form
 
 	Probe m_probe;
 	SimMessageLoop m_loop;
+	CollisionBuilder m_col_builder;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
 
@@ -64,34 +65,44 @@ struct Main :Form
 		, m_scn(m_wnd)
 		, m_probe(m_rdr)
 		, m_loop()
-		, m_fluid_sim(m_rdr, FluidConstants(), ParticleInitData(EFillStyle::Lattice))
-		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn)
+		, m_col_builder(CollisionInitData())
+		, m_fluid_sim(m_rdr, FluidConstants(), ParticleInitData(EFillStyle::Lattice), m_col_builder.Build())
+		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn, m_col_builder.Ldr().WrapAsGroup().ToString())
 		, m_last_frame_rendered(-1.0f)
 		, m_time()
 		, m_run_mode(ERunMode::Paused)
 	{
+		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
+
 		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 		if constexpr (Dimensions == 2)
-			m_scn.m_cam.LookAt(v4(0.0f, 0.5f, 2.8f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.0f, 0.0f, 2.8f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
 		if constexpr (Dimensions == 3)
-			m_scn.m_cam.LookAt(v4(0.2f, 0.5f, 0.2f, 1), v4(0, 0.5f, 0, 1), v4(0, 1, 0, 0));
+			m_scn.m_cam.LookAt(v4(0.2f, 0.5f, 0.2f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
 		m_scn.m_cam.Align(v4::YAxis());
 
 		m_loop.AddMessageFilter(*this);
 		m_loop.AddLoop(10, false, [this](auto dt) // Sim loop
 		{
+			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
+
+			m_fluid_sim.Colours.VelocityBased = true;
+			m_fluid_sim.Colours.WithinProbe = m_probe.m_active;
+			m_fluid_sim.Probe.Position = m_probe.m_position;
+			m_fluid_sim.Probe.Radius = m_probe.m_radius;
+			m_fluid_sim.Probe.Force = m_probe.m_active ? m_probe.m_sign * ProbeForce : 0;
+
 			switch (m_run_mode)
 			{
 				case ERunMode::Paused:
 				{
-					m_fluid_sim.UpdateColours();
 					break;
 				}
 				case ERunMode::SingleStep:
 				{
 					m_time += dt * 0.001f;
-					m_run_mode = ERunMode::Paused;
 					m_fluid_sim.Step(dt * 0.001f);
+					m_run_mode = ERunMode::Paused;
 					break;
 				}
 				case ERunMode::FreeRun:
@@ -104,17 +115,12 @@ struct Main :Form
 		});
 		m_loop.AddLoop(50, false, [this](auto) // Render Loop
 		{
-			m_fluid_sim.m_colour_constants.ProbeActive = m_probe.m_active;
-			m_fluid_sim.m_colour_constants.ProbePosition = m_probe.m_position.xyz;
-			m_fluid_sim.m_colour_constants.ProbeRadius = m_probe.m_radius;
-
 			// Update the window title
 			if (m_probe.m_active)
 			{
 				auto pos = m_probe.m_position;
 				auto density = v3{ 0,0,0 };
 				auto press = v3{ 0,0,0 };
-
 
 				SetWindowTextA(*this, pr::FmtS("Fluid - Pos: %3.3f %3.3f %3.3f - Density: %3.3f - Press: %3.3f %3.3f %3.3f - Probe Radius: %3.3f",
 					pos.x, pos.y, pos.z,
@@ -127,12 +133,12 @@ struct Main :Form
 			}
 
 			// Use this only render per main loop step
-			//if (m_time == m_last_frame_rendered) return;
+			if (m_time == m_last_frame_rendered) return;
 
 			// Render the particles
 			m_scn.ClearDrawlists();
 			m_probe.AddToScene(m_scn);
-			m_fluid_vis.AddToScene(m_scn, m_probe.m_found);
+			m_fluid_vis.AddToScene(m_scn);
 
 			// Render the frame
 			auto frame = m_wnd.NewFrame();
@@ -196,7 +202,7 @@ struct Main :Form
 	{
 		Form::OnMouseWheel(args);
 		m_fluid_vis.OnMouseWheel(args);
-		m_probe.OnMouseWheel(args);
+		m_probe.OnMouseWheel(args, m_scn);
 		if (args.m_handled)
 			return;
 
@@ -207,7 +213,7 @@ struct Main :Form
 	{
 		Form::OnKey(args);
 		m_fluid_vis.OnKey(args);
-		m_probe.OnKey(args);
+		m_probe.OnKey(args, m_scn);
 		if (args.m_handled)
 			return;
 
@@ -219,6 +225,16 @@ struct Main :Form
 				Close();
 				break;
 			}
+			case VK_F5:
+			{
+				m_run_mode = ERunMode::FreeRun;
+				break;
+			}
+			case VK_F6:
+			{
+				m_run_mode = ERunMode::SingleStep;
+				break;
+			}
 			case VK_SPACE:
 			{
 				m_run_mode = KeyDown(VK_CONTROL) ? ERunMode::FreeRun : ERunMode::SingleStep;
@@ -227,28 +243,30 @@ struct Main :Form
 		}
 	}
 
-	static FluidSimulation::Constants FluidConstants()
+	static FluidSimulation::ParamsData FluidConstants()
 	{
-		return FluidSimulation::Constants
+		return FluidSimulation::ParamsData
 		{
 			.NumParticles = ParticleCount,
+			.ParticleRadius = ParticleRadius,
 			.CellCount = GridCellCount,
 			.GridScale = 1.0f / ParticleRadius,
-			.Radius = ParticleRadius,
-			.Gravity = v3(0, -9.8f, 0),
 			.Mass = 1.0f,
-			.DensityToPressure = 1.0f,
+			.DensityToPressure = 100.0f,
 			.Density0 = 1.0f,
-			.Viscosity = 0.1f,
+			.Viscosity = 10.0f,
+			.Gravity = v4(0, -9.8f, 0, 0),
+			.ThermalDiffusion = 0.01f,
 		};
 	}
-	static std::vector<Vert> ParticleInitData(EFillStyle style)
+	static std::vector<Particle> ParticleInitData(EFillStyle style)
 	{
-		std::vector<Vert> particles;
+		std::vector<Particle> particles;
 		particles.reserve(ParticleCount);
-		auto points = [&](v4 p)
+		auto points = [&](v4 p, v4 v)
 		{
-			particles.push_back(Vert{ .m_vert = p, .m_diff = ColourWhite, .m_norm = {}, .m_tex0 = {}, .pad = {} });
+			assert(p.w == 1 && v.w == 0);
+			particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .density = {} });
 		};
 
 		const float hwidth = 1.0f;
@@ -259,7 +277,7 @@ struct Main :Form
 			case EFillStyle::Point:
 			{
 				for (int i = 0; i != ParticleCount; ++i)
-					points(v4(0, 0, 0, 1));
+					points(v4(0,-1,0,1), v4(1,-1,0,0));
 
 				break;
 			}
@@ -268,14 +286,16 @@ struct Main :Form
 				auto const margin = 0.95f;
 				auto hw = hwidth * margin;
 				auto hh = hheight * margin;
+				auto vx = 0.2f;
 
 				// Uniform distribution over the volume
 				std::default_random_engine rng;
 				for (int i = 0; i != ParticleCount; ++i)
 				{
 					auto pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
-					if constexpr (Dimensions == 2) pos.z = 0;
-					points(pos);
+					auto vel = v3::Random(rng, v3(-vx, -vx, -vx), v3(+vx, +vx, +vx)).w0();
+					if constexpr (Dimensions == 2) { pos.z = 0; vel.z = 0; }
+					points(pos, vel);
 				}
 				break;
 			}
@@ -298,7 +318,7 @@ struct Main :Form
 					auto y = -hh + step/2;
 					for (int i = 0; i != ParticleCount; ++i)
 					{
-						points(v4(x, y, 0, 1));
+						points(v4(x, y, 0, 1), v4::Zero());
 
 						x += step;
 						if (x > hw) { x = -hw + step/2; y += step; }
@@ -318,7 +338,7 @@ struct Main :Form
 					auto z = -hw + step/2;
 					for (int i = 0; i != ParticleCount; ++i)
 					{
-						points(v4(x, y, z, 1));
+						points(v4(x, y, z, 1), v4::Zero());
 
 						x += step;
 						if (x > hw) { x = -hw + step/2; z += step; }
@@ -340,7 +360,7 @@ struct Main :Form
 					auto y = -hh + step / 2.0f;
 					for (int i = 0; i != ParticleCount; ++i)
 					{
-						points(v4(x, y, 0, 1));
+						points(v4(x, y, 0, 1), v4::Zero());
 
 						x += step;
 						if (x > hw) { x = -hw + step/2; y += step; }
@@ -351,6 +371,16 @@ struct Main :Form
 		}
 
 		return particles;
+	}
+	static CollisionBuilder CollisionInitData()
+	{
+		using namespace ldr;
+		return std::move(CollisionBuilder(true)
+			.Plane(v4(0, +1, 0, 0.5f), ldr::Name("floor"), 0xFFade3ff, {2, 0.5f})
+			.Plane(v4(0, -1, 0, 0.5f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
+			.Plane(v4(+1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
+			.Plane(v4(-1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
+		);
 	}
 
 	// Error handler

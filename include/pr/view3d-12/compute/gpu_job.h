@@ -8,12 +8,14 @@
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/resource/gpu_transfer_buffer.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
 
 namespace pr::rdr12
 {
 	template <D3D12_COMMAND_LIST_TYPE QueueType>
 	struct GpuJob
 	{
+		using BarrierBatch = BarrierBatch<QueueType>;
 		using CmdAllocPool = CmdAllocPool<QueueType>;
 		using CmdList = CmdList<QueueType>;
 
@@ -22,8 +24,9 @@ namespace pr::rdr12
 		GpuSync                    m_gsync;    // The GPU fence
 		CmdAllocPool               m_cmd_pool; // Command allocator pool for the compute shader
 		ComCmdList                 m_cmd_list; // Command list for the compute shader
+		BarrierBatch               m_barriers;  // Barrier batch for the compute shader
 		GpuUploadBuffer            m_upload;   // Upload buffer for the compute shader
-		GpuReadbackBuffer          m_readback; // Readback buffer for the compute shader
+		GpuReadbackBuffer          m_readback; // Read back buffer for the compute shader
 		
 		// Get a pointer to the queue
 		static D3DPtr<ID3D12CommandQueue> GetQueue(ID3D12Device4* device)
@@ -45,6 +48,7 @@ namespace pr::rdr12
 			, m_gsync(device)
 			, m_cmd_pool(m_gsync)
 			, m_cmd_list(device, m_cmd_pool.Get(), nullptr, name, pix_colour)
+			, m_barriers(m_cmd_list)
 			, m_upload(m_gsync, 0)
 			, m_readback(m_gsync, 0)
 		{}

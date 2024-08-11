@@ -47,6 +47,15 @@ namespace pr::ldr
 		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
 		O2W(m4x4 const& mat) :m_mat(mat) {}
 	};
+	struct Name
+	{
+		std::string m_name;
+		Name() :m_name() {}
+		Name(std::string_view str) :m_name(str) {}
+		Name(std::wstring_view str) :m_name(Narrow(str)) {}
+		template <int N> Name(char const (&str)[N]) :m_name(str) {}
+		template <int N> Name(wchar_t const (&str)[N]) :m_name(Narrow(str)) {}
+	};
 	struct Col
 	{
 		union {
@@ -144,6 +153,11 @@ namespace pr::ldr
 	inline TStr& Append(TStr& str, double f)
 	{
 		return AppendSpace(str).append(To<TStr>(f));
+	}
+	inline TStr& Append(TStr& str, Name n)
+	{
+		if (n.m_name.empty()) return str;
+		return AppendSpace(str).append(n.m_name);
 	}
 	inline TStr& Append(TStr& str, Col c)
 	{
@@ -622,6 +636,12 @@ namespace pr::ldr
 			using ObjCont = std::vector<ObjPtr>;
 
 			ObjCont m_objects;
+
+			LdrObj() = default;
+			LdrObj(LdrObj&&) = default;
+			LdrObj(LdrObj const&) = delete;
+			LdrObj& operator=(LdrObj&&) = default;
+			LdrObj& operator=(LdrObj const&) = delete;
 			virtual ~LdrObj() = default;
 
 			template <typename Arg0, typename... Args>
@@ -631,17 +651,17 @@ namespace pr::ldr
 				m_objects.emplace_back(ptr);
 				return *this;
 			}
-			LdrGroup& Group(std::string_view name = "", Col colour = Col());
-			LdrPoint& Point(std::string_view name = "", Col colour = Col());
-			LdrLine& Line(std::string_view name = "", Col colour = Col());
-			LdrLineD& LineD(std::string_view name = "", Col colour = Col());
-			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col());
-			LdrPlane& Plane(std::string_view name = "", Col colour = Col());
-			LdrCircle& Circle(std::string_view name = "", Col colour = Col());
-			LdrSphere& Sphere(std::string_view name = "", Col colour = Col());
-			LdrBox& Box(std::string_view name = "", Col colour = Col());
-			LdrCylinder& Cylinder(std::string_view name = "", Col colour = Col());
-			LdrFrustum& Frustum(std::string_view name = "", Col colour = Col());
+			LdrGroup& Group(Name name = {}, Col colour = Col());
+			LdrPoint& Point(Name name = {}, Col colour = Col());
+			LdrLine& Line(Name name = {}, Col colour = Col());
+			LdrLineD& LineD(Name name = {}, Col colour = Col());
+			LdrTriangle& Triangle(Name name = {}, Col colour = Col());
+			LdrPlane& Plane(Name name = {}, Col colour = Col());
+			LdrCircle& Circle(Name name = {}, Col colour = Col());
+			LdrSphere& Sphere(Name name = {}, Col colour = Col());
+			LdrBox& Box(Name name = {}, Col colour = Col());
+			LdrCylinder& Cylinder(Name name = {}, Col colour = Col());
+			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
 
 			// Extension objects
 			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj, LdrCustom>>>
@@ -651,6 +671,9 @@ namespace pr::ldr
 				m_objects.emplace_back(ptr);
 				return (*ptr).name(name).col(colour);
 			}
+
+			// Wrap all objects into a group
+			LdrObj& WrapAsGroup(Name name = {}, Col colour = Col());
 
 			// Serialise the ldr script to a string
 			std::string ToString() const
@@ -710,12 +733,12 @@ namespace pr::ldr
 			{}
 
 			// Object name
-			Derived& name(std::string_view name)
+			Derived& name(Name name)
 			{
 				m_name = name;
 				return static_cast<Derived&>(*this);
 			}
-			std::string m_name;
+			Name m_name;
 
 			// Object colour
 			Derived& col(Col colour)
@@ -757,7 +780,7 @@ namespace pr::ldr
 			}
 			m4x4 m_o2w;
 
-			// Wireframe
+			// Wire frame
 			Derived& wireframe(bool w = true)
 			{
 				m_wire = w;
@@ -1022,6 +1045,12 @@ namespace pr::ldr
 				,m_wh(1,1)
 			{}
 
+			LdrPlane& plane(v4_cref p)
+			{
+				m_position = (p.xyz * -p.w).w1();
+				m_direction = Normalise(p.xyz.w0());
+				return *this;
+			}
 			LdrPlane& pos(v4_cref position)
 			{
 				m_position = position;
@@ -1035,6 +1064,11 @@ namespace pr::ldr
 			LdrPlane& wh(float width, float height)
 			{
 				m_wh = { width, height };
+				return *this;
+			}
+			LdrPlane& wh(v2_cref wh)
+			{
+				m_wh = wh;
 				return *this;
 			}
 
@@ -1285,65 +1319,73 @@ namespace pr::ldr
 		};
 
 		#pragma region LdrObj::Implementation
-		inline LdrGroup& LdrObj::Group(std::string_view name, Col colour)
+		inline LdrGroup& LdrObj::Group(Name name, Col colour)
 		{
 			auto ptr = new LdrGroup;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrLine& LdrObj::Line(std::string_view name, Col colour)
+		inline LdrLine& LdrObj::Line(Name name, Col colour)
 		{
 			auto ptr = new LdrLine;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrLineD& LdrObj::LineD(std::string_view name, Col colour)
+		inline LdrLineD& LdrObj::LineD(Name name, Col colour)
 		{
 			auto ptr = new LdrLineD;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrTriangle& LdrObj::Triangle(std::string_view name, Col colour)
+		inline LdrTriangle& LdrObj::Triangle(Name name, Col colour)
 		{
 			auto ptr = new LdrTriangle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrPlane& LdrObj::Plane(std::string_view name, Col colour)
+		inline LdrPlane& LdrObj::Plane(Name name, Col colour)
 		{
 			auto ptr = new LdrPlane;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrCircle& LdrObj::Circle(std::string_view name, Col colour)
+		inline LdrCircle& LdrObj::Circle(Name name, Col colour)
 		{
 			auto ptr = new LdrCircle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrSphere& LdrObj::Sphere(std::string_view name, Col colour)
+		inline LdrSphere& LdrObj::Sphere(Name name, Col colour)
 		{
 			auto ptr = new LdrSphere;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrBox& LdrObj::Box(std::string_view name, Col colour)
+		inline LdrBox& LdrObj::Box(Name name, Col colour)
 		{
 			auto ptr = new LdrBox;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrCylinder& LdrObj::Cylinder(std::string_view name, Col colour)
+		inline LdrCylinder& LdrObj::Cylinder(Name name, Col colour)
 		{
 			auto ptr = new LdrCylinder;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
-		inline LdrFrustum& LdrObj::Frustum(std::string_view name, Col colour)
+		inline LdrFrustum& LdrObj::Frustum(Name name, Col colour)
 		{
 			auto ptr = new LdrFrustum;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
+		}
+		inline LdrObj& LdrObj::WrapAsGroup(Name name, Col colour)
+		{
+			auto ptr = new LdrGroup;
+			swap(m_objects, ptr->m_objects);
+			m_objects.emplace_back(ptr);
+			(*ptr).name(name).col(colour);
+			return *this;
 		}
 		#pragma endregion
 	}

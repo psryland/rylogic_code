@@ -642,10 +642,14 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	template <typename Char>
 	ParseResult ParseString(
 		Renderer& rdr,                          // The reader to create models for
-		Char const* ldr_script,                 // The string containing the script
+		std::string_view ldr_script,            // The string containing the script
+		Guid const& context_id = GuidZero,      // The context id to assign to each created object
+		ParseProgressCB progress_cb = nullptr); // Progress callback
+	ParseResult ParseString(
+		Renderer& rdr,                          // The reader to create models for
+		std::wstring_view ldr_script,           // The string containing the script
 		Guid const& context_id = GuidZero,      // The context id to assign to each created object
 		ParseProgressCB progress_cb = nullptr); // Progress callback
 
@@ -654,11 +658,14 @@ namespace pr::rdr12
 	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
 	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
 
-	// Create an ldr object from a string
-	template <typename Char>
+	// Create an LDR object from a string
 	LdrObjectPtr CreateLdr(
 		Renderer& rdr,                      // The reader to create models for
-		Char const* ldr_script,             // The string containing the script
+		std::string_view ldr_script,        // The string containing the script
+		Guid const& context_id = GuidZero); // The context id to assign to the object
+	LdrObjectPtr CreateLdr(
+		Renderer& rdr,                      // The reader to create models for
+		std::wstring_view ldr_script,       // The string containing the script
 		Guid const& context_id = GuidZero); // The context id to assign to the object
 
 	// Create an ldr object from creation data.

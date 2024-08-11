@@ -42,21 +42,34 @@ namespace pr::fluid
 			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
 		}
 
-		// Returns the acceleration Apply external forces to the particles
-		v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const
+		//// Returns the acceleration Apply external forces to the particles
+		//v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const
+		//{
+		//	if (!m_active)
+		//		return v4::Zero();
+
+		//	auto dir = position - m_position;
+		//	auto dist_sq = LengthSq(dir);
+		//	if (dist_sq < maths::tinyf || dist_sq > m_radius * m_radius)
+		//		return v4::Zero();
+
+		//	Tweakable<float, "PushForce"> PushForce = 100.0f;
+		//	auto dist = Sqrt(dist_sq);
+		//	auto frac = SmoothStep<float>(1.0f, 0.0f, dist / m_radius);
+		//	return (m_sign * frac * PushForce / dist) * dir;
+		//}
+
+		// Set the probe position from a SS point
+		void SetPosition(gui::Point ss_pt, rdr12::Scene& scn)
 		{
-			if (!m_active)
-				return v4::Zero();
+			// Shoot a ray through the mouse pointer
+			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(ss_pt));
+			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
 
-			auto dir = position - m_position;
-			auto dist_sq = LengthSq(dir);
-			if (dist_sq < maths::tinyf || dist_sq > m_radius * m_radius)
-				return v4::Zero();
-
-			static Tweakable<float, "PushForce"> PushForce = 100.0f;
-			auto dist = Sqrt(dist_sq);
-			auto frac = SmoothStep<float>(1.0f, 0.0f, dist / m_radius);
-			return (m_sign * frac * PushForce / dist) * dir;
+			// Find where it intersects the XY plane at z = m_position.z
+			auto t = (m_position.z - pt.z) / dir.z;
+			m_position = pt + t * dir;
+			UpdateI2W();
 		}
 
 		// Handle input
@@ -65,49 +78,32 @@ namespace pr::fluid
 			if (!m_active || args.m_handled)
 				return;
 
-			args.m_handled = true;
-
 			m_sign = 
 				args.m_down && gui::AllSet(args.m_button, gui::EMouseKey::Left) ? +1.0f :
 				args.m_down && gui::AllSet(args.m_button, gui::EMouseKey::Right) ? -1.0f :
 				0.0f;
 
-			// Shoot a ray through the mouse pointer
-			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point_px));
-			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
-
-			// Find where it intersects the XY plane at z = m_position.z
-			auto t = (m_position.z - pt.z) / dir.z;
-			m_position = pt + t * dir;
-			UpdateI2W();
+			SetPosition(args.point_px(), scn);
+			args.m_handled = true;
 		}
 		void OnMouseMove(gui::MouseEventArgs& args, rdr12::Scene& scn)
 		{
 			if (!m_active || args.m_handled)
 				return;
 
+			SetPosition(args.point_px(), scn);
 			args.m_handled = true;
-
-			// Shoot a ray through the mouse pointer
-			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(args.m_point_px));
-			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
-
-			// Find where it intersects the XY plane at z = m_position.z
-			auto t = (m_position.z - pt.z) / dir.z;
-			m_position = pt + t * dir;
-			UpdateI2W();
 		}
-		void OnMouseWheel(gui::MouseWheelArgs& args)
+		void OnMouseWheel(gui::MouseWheelArgs& args, rdr12::Scene&)
 		{
 			if (!m_active || args.m_handled)
 				return;
 
-			args.m_handled = true;
-
 			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, 0.001f, 0.500f);
 			UpdateI2W();
+			args.m_handled = true;
 		}
-		void OnKey(gui::KeyEventArgs& args)
+		void OnKey(gui::KeyEventArgs& args, rdr12::Scene& scn)
 		{
 			if (args.m_handled)
 				return;
@@ -129,6 +125,7 @@ namespace pr::fluid
 				case 'F': { m_radius = std::max(m_radius * 0.9f, 0.001f); break; }
 				case VK_SHIFT:
 				{
+					SetPosition(args.point_px(), scn);
 					m_active = !m_active;
 					m_sign = 0.0f;
 					break;

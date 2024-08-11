@@ -16,11 +16,10 @@
 
 namespace pr::tweakables
 {
-	// Helper to allow string literals to be used as template arguments
 	namespace impl
 	{
-		template <size_t N>
-		struct StringLiteral
+		// Helper to allow string literals to be used as template arguments
+		template <size_t N> struct StringLiteral
 		{
 			char value[N];
 			constexpr StringLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
@@ -37,7 +36,7 @@ namespace pr::tweakables
 		}
 
 		// Master switch
-		inline static constexpr bool Enable = false;
+		inline static constexpr bool Enable = true;
 
 		// A file to contain the tweakables
 		inline static std::filesystem::path filepath = "tweakables.ini";
@@ -197,7 +196,9 @@ namespace pr::tweakables
 		void SaveVariables(map_t const& variables)
 		{
 			std::ofstream ofile(filepath);
-			for (auto const& [key, value] : variables)
+			std::vector<std::pair<std::string, std::string>> sorted(variables.begin(), variables.end());
+			std::sort(sorted.begin(), sorted.end());
+			for (auto const& [key, value] : sorted)
 				ofile << key << " = " << value << std::endl;
 		}
 
@@ -212,14 +213,13 @@ namespace pr::tweakables
 	template <typename T, impl::StringLiteral S>
 	struct Tweakable
 	{
-		Tweakable(T const& value)
+		Tweakable(T&& value)
 		{
 			if constexpr (Tweakables::Enable)
 				m_value = Tweakables::Value<T, S>(&value);
 			else
 				m_value = value;
 		}
-
 		operator T() const
 		{
 			if constexpr (Tweakables::Enable)

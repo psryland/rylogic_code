@@ -18,9 +18,9 @@ static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
 
 // Convert a floating point position into a grid cell coordinate
-inline int3 GridCell(float3 position, uniform float grid_scale)
+inline int3 GridCell(float4 position, uniform float grid_scale)
 {
-	return int3(ceil(position * grid_scale));
+	return int3(ceil(position.xyz * grid_scale));
 }
 
 // Accumulative hash function
@@ -38,21 +38,20 @@ inline uint Hash(int3 grid, uniform uint cell_count)
 // A coroutine context for iterating over neighbouring particles
 struct FindIter
 {
-	int3 lwr;
-	int3 upr;
-	int3 cell;
-	int2 idx_range;
+	int3 cell;      // Current cell
+	int3 lwr;       // Inclusive lower bound
+	int3 upr;       // Exclusive upper bound
+	int2 idx_range; // Range of indices in the spatially sorted index buffer
 };
 
 // Find all particles within 'radius' of 'position'
-inline FindIter Find(float3 position, float3 radius, uniform float grid_scale, uniform uint cell_count)
+inline FindIter Find(float4 position, float4 radius, uniform float grid_scale, uniform uint cell_count)
 {
 	FindIter iter;
 	iter.lwr = GridCell(position - radius, grid_scale);
-	iter.upr = GridCell(position + radius, grid_scale);
-	iter.cell = iter.lwr;
+	iter.upr = GridCell(position + radius, grid_scale) + uint3(1, 1, 1);
+	iter.cell = uint3(iter.lwr.x - 1, iter.lwr.y, iter.lwr.z);
 	iter.idx_range = int2(0, 0);
-	--iter.cell.x;
 	return iter;
 }
 
@@ -64,12 +63,12 @@ inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 	++iter.cell.x;
 	if (iter.cell.x == iter.upr.x)
 	{
-		iter.cell.x = iter.lwr.x;
 		++iter.cell.y;
+		iter.cell.x = iter.lwr.x;
 		if (iter.cell.y == iter.upr.y)
 		{
-			iter.cell.y = iter.lwr.y;
 			++iter.cell.z;
+			iter.cell.y = iter.lwr.y;
 			if (iter.cell.z == iter.upr.z)
 				return false;
 		}

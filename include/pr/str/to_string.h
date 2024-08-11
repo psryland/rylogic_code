@@ -17,6 +17,7 @@
 #include "pr/common/hresult.h"
 #include "pr/str/string_core.h"
 #include "pr/str/string.h"
+#include "pr/str/string_util.h"
 
 namespace pr
 {
@@ -31,6 +32,14 @@ namespace pr
 				return from ? "true" : "false";
 			if constexpr (std::is_same_v<Char, wchar_t>)
 				return from ? L"true" : L"false";
+		}
+	};
+	template <StringType Str>
+	struct Convert<bool, Str>
+	{
+		static bool To_(Str const& from)
+		{
+			return str::CompareI(from, "true") == 0 || str::CompareI(from, "1") == 0;
 		}
 	};
 

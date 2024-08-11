@@ -20,11 +20,20 @@ namespace pr::fluid
 		Instance m_gfx_fluid;
 		Instance m_gfx_gradient;
 		Instance m_gfx_velocities;
+		std::vector<Particle> m_read_back;
+		int m_last_read_back = 0;
 
-		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn);
+		struct ParamsData
+		{
+			bool ShowVelocities = true;
+			bool ShowGradients = false;
+		} Params;
+
+		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn, std::string_view ldr);
 		~FluidVisualisation();
 
-		void AddToScene(rdr12::Scene& scene, IndexSet const& highlight);
+		void AddToScene(rdr12::Scene& scene);
+		std::span<Particle const> ReadParticles();
 
 		// Handle input
 		void OnMouseButton(gui::MouseEventArgs& args);

@@ -66,6 +66,11 @@ namespace pr::rdr12
 	// Compiler options helper
 	struct ShaderCompiler
 	{
+		// Notes:
+		//  - If you need pdb's for PIX debugging, use options like this:
+		//    compiler.DebugInfo().Optimise(false).PDBOutput(L"E:\\dump\\Symbols");
+		//    This will create a pdb in the specified directory. Point the PDB Search Path
+		//    in PIX to this directory and you should be able to debug the shader.
 		using Defines = std::unordered_map<std::wstring, std::wstring>;
 		using StrList = std::vector<std::wstring>;
 		using Args = std::vector<wchar_t const*>;
