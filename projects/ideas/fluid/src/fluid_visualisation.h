@@ -4,6 +4,14 @@
 
 namespace pr::fluid
 {
+	enum class EVectorFieldMode
+	{
+		None,
+		Velocities,
+		Accelerations,
+		Gradients
+	};
+
 	struct FluidVisualisation
 	{
 		#define PR_INST(x)\
@@ -16,17 +24,17 @@ namespace pr::fluid
 		rdr12::Renderer* m_rdr;
 		rdr12::Scene* m_scn;
 		rdr12::LdrObjectPtr m_gfx_container;
+		rdr12::Texture2DPtr m_tex_map;
 		PointShaderPtr m_gs_points;
 		Instance m_gfx_fluid;
-		Instance m_gfx_gradient;
-		Instance m_gfx_velocities;
+		Instance m_gfx_vector_field;
+		Instance m_gfx_map;
 		std::vector<Particle> m_read_back;
 		int m_last_read_back = 0;
 
 		struct ParamsData
 		{
-			bool ShowVelocities = true;
-			bool ShowGradients = false;
+			EVectorFieldMode VectorFieldMode = EVectorFieldMode::None;
 		} Params;
 
 		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn, std::string_view ldr);

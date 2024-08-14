@@ -219,7 +219,10 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\include\pr\view3d-12\compute\hlsl\geometry.hlsli" />
+    <None Include="..\include\pr\view3d-12\compute\hlsl\collision_primitives.hlsli" />
     <None Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsli" />
+    <None Include="..\include\pr\view3d-12\compute\hlsl\utility.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\geometry.hlsli" />

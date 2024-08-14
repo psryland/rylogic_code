@@ -42,23 +42,6 @@ namespace pr::fluid
 			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
 		}
 
-		//// Returns the acceleration Apply external forces to the particles
-		//v4 ForceAt(FluidSimulation&, v4_cref position, std::optional<size_t>) const
-		//{
-		//	if (!m_active)
-		//		return v4::Zero();
-
-		//	auto dir = position - m_position;
-		//	auto dist_sq = LengthSq(dir);
-		//	if (dist_sq < maths::tinyf || dist_sq > m_radius * m_radius)
-		//		return v4::Zero();
-
-		//	Tweakable<float, "PushForce"> PushForce = 100.0f;
-		//	auto dist = Sqrt(dist_sq);
-		//	auto frac = SmoothStep<float>(1.0f, 0.0f, dist / m_radius);
-		//	return (m_sign * frac * PushForce / dist) * dir;
-		//}
-
 		// Set the probe position from a SS point
 		void SetPosition(gui::Point ss_pt, rdr12::Scene& scn)
 		{
@@ -69,6 +52,9 @@ namespace pr::fluid
 			// Find where it intersects the XY plane at z = m_position.z
 			auto t = (m_position.z - pt.z) / dir.z;
 			m_position = pt + t * dir;
+			if constexpr (Dimensions == 2)
+				m_position.z = 0;
+
 			UpdateI2W();
 		}
 

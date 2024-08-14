@@ -11,6 +11,8 @@
 
 namespace pr::rdr12
 {
+	template <typename Idx> concept RootParamIdx = std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>;
+
 	// Forward declaration
 	template <D3D12_COMMAND_LIST_TYPE ListType>
 	struct CmdListPool;
@@ -251,7 +253,7 @@ namespace pr::rdr12
 		}
 
 		// Set a compute shader's root parameter descriptor table
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		template <RootParamIdx Idx>
 		void SetGraphicsRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor)
 		{
 			m_list->SetGraphicsRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
@@ -293,42 +295,49 @@ namespace pr::rdr12
 		}
 
 		// Set a compute shader's root parameter constant
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
-		void SetComputeRoot32BitConstant(Idx RootParameterIndex, F32U32 SrcData, UINT DestOffsetIn32BitValues)
+		template <RootParamIdx Idx>
+		void SetComputeRoot32BitConstant(Idx RootParameterIndex, F32U32 SrcData, UINT DestOffsetIn32BitValues = 0)
 		{
 			m_list->SetComputeRoot32BitConstant(s_cast<UINT>(RootParameterIndex), SrcData.u32, DestOffsetIn32BitValues);
 		}
 
 		// Set a contiguous set of root parameter constants
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
-		void SetComputeRoot32BitConstants(Idx RootParameterIndex, int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues)
+		template <RootParamIdx Idx>
+		void SetComputeRoot32BitConstants(Idx RootParameterIndex, int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues = 0)
 		{
 			m_list->SetComputeRoot32BitConstants(s_cast<UINT>(RootParameterIndex), s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
 		template <typename Idx, typename CBufType> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
-		void SetComputeRoot32BitConstants(Idx RootParameterIndex, CBufType const& cb, size_t DestOffsetIn32BitValues)
+		void SetComputeRoot32BitConstants(Idx RootParameterIndex, CBufType const& cb, size_t DestOffsetIn32BitValues = 0)
 		{
 			static_assert(sizeof(CBufType) % sizeof(uint32_t) == 0);
 			auto count = s_cast<int>(sizeof(CBufType) / sizeof(uint32_t));
 			SetComputeRoot32BitConstants(RootParameterIndex, count, &cb, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
 
-		// Sets a CPU descriptor handle for the unordered-access-view resource in the compute root signature.
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		// Set a GPU descriptor handle for a constant buffer view
+		template <RootParamIdx Idx>
+		void SetComputeRootConstantBufferView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
+		{
+			m_list->SetComputeRootConstantBufferView(s_cast<UINT>(RootParameterIndex), BufferLocation);
+		}
+
+		// Sets a GPU descriptor handle for the unordered-access-view resource in the compute root signature.
+		template <RootParamIdx Idx>
 		void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
 		{
 			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), buffer_address);
 		}
 
-		// Sets a CPU descriptor handle for the shared-resource-view resource in the compute root signature.
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		// Sets a GPU descriptor handle for the shared-resource-view resource in the compute root signature.
+		template <RootParamIdx Idx>
 		void SetComputeRootShaderResourceView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
 		{
 			m_list->SetComputeRootShaderResourceView(s_cast<UINT>(RootParameterIndex), buffer_address);
 		}
 
 		// Set a compute shader's root parameter descriptor table
-		template <typename Idx> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		template <RootParamIdx Idx>
 		void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
 		{
 			m_list->SetComputeRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);

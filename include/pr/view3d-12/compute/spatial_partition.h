@@ -54,8 +54,7 @@ namespace pr::rdr12::compute::spatial_partition
 		//    have this form: "struct PosType { float4 _dummy; float4 pos; float4 _dummy2; }". A field
 		//    called 'pos' must exist and be a float4.
 
-		inline static constexpr iv3 CellCountDimension = { 1024, 1, 1 };
-		inline static constexpr iv3 PosCountDimension = { 1024, 1, 1 };
+		inline static constexpr int ThreadGroupSize = 1024;
 
 		struct EReg
 		{
@@ -188,7 +187,7 @@ namespace pr::rdr12::compute::spatial_partition
 		}
 
 		// Spatially partition the particles for faster locality testing
-		void Update(ComputeJob& job, int count, D3DPtr<ID3D12Resource> positions, bool readback)
+		void Update(GraphicsJob& job, int count, D3DPtr<ID3D12Resource> positions, bool readback)
 		{
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
 			
@@ -202,7 +201,7 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, Params, 0);
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_idx_start->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_count->GetGPUVirtualAddress());
-				job.m_cmd_list.Dispatch(DispatchCount({ Params.CellCount, 1, 1 }, CellCountDimension));
+				job.m_cmd_list.Dispatch(DispatchCount({ Params.CellCount, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 			}
 
 			job.m_barriers.UAV(positions.get());
@@ -216,7 +215,7 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, positions->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_pos_index->GetGPUVirtualAddress());
-				job.m_cmd_list.Dispatch(DispatchCount({ Params.NumPositions, 1, 1 }, PosCountDimension));
+				job.m_cmd_list.Dispatch(DispatchCount({ Params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 			}
 
 			job.m_barriers.UAV(m_grid_hash.get());
@@ -241,7 +240,7 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_grid_hash->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_start->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_idx_count->GetGPUVirtualAddress());
-				job.m_cmd_list.Dispatch(DispatchCount({ Params.NumPositions, 1, 1 }, PosCountDimension));
+				job.m_cmd_list.Dispatch(DispatchCount({ Params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 			}
 
 			job.m_barriers.UAV(m_idx_start.get());

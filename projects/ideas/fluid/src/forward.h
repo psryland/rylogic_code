@@ -23,20 +23,6 @@
 #include "pr/win32/windows_com.h"
 
 #include "pr/view3d-12/view3d.h"
-#include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/scene/scene.h"
-#include "pr/view3d-12/model/model_desc.h"
-#include "pr/view3d-12/model/model.h"
-#include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/model/vertex_layout.h"
-#include "pr/view3d-12/model/model_generator.h"
-#include "pr/view3d-12/instance/instance.h"
-#include "pr/view3d-12/shaders/shader.h"
-#include "pr/view3d-12/shaders/shader_include_handler.h"
-#include "pr/view3d-12/shaders/shader_point_sprites.h"
-#include "pr/view3d-12/utility/update_resource.h"
-#include "pr/view3d-12/utility/root_signature.h"
-#include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/gpu_radix_sort.h"
@@ -52,9 +38,10 @@ namespace pr::fluid
 	struct FluidSimulation;
 	struct FluidVisualisation;
 
-	using ComputeJob = rdr12::ComputeJob;
-	using ComputeStep = rdr12::ComputeStep;
 	using IndexSet = std::unordered_set<int64_t>;
+
+	using GpuJob = rdr12::GraphicsJob;
+	using ComputeStep = rdr12::ComputeStep;
 	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition;
 	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision;
 	using CollisionPrim = rdr12::compute::particle_collision::Prim;

@@ -298,7 +298,6 @@ namespace pr::rdr12
 
 			// Restore it
 			desc.Apply(PSO<EPipeState::FillMode>(prev_fill_mode));
-			//ps.Clear(EPipeState::BlendEnable0);
 		}
 
 		// Render points for 'Points' mode

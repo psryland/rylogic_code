@@ -21,6 +21,30 @@ namespace pr::rdr12
 		//  - Have one of these per command list, per heap type (SRV, Sampler).
 		//  - A sync point marks a new "frame" of GPU descriptors.
 		//  - The tail of the ring buffer advances as sync points are reached by the GPU.
+		//
+		// Usage Patterns:
+		//  Textures:
+		//    For textures created with the Resource Manager, SRV/UAVs are created and added to
+		//    the ResourceManager's descriptor store. When these textures are rendered by RenderForward
+		//    there is a shared GpuDescriprHeap owned by the window. Descriptors are copied from the 
+		//    store to the heap using 'Add' which creates a GPU handle pointing at the first descriptor.
+		//    This handle is then set on the command list using 'SetGraphicsRootDescriptorTable'.
+		//  Compute Shaders:
+		//    For resources used in compute shaders, the ResourceManager's descriptor store can still be
+		//    used, but the code managing the compute shader should create it's only GpuDescriptorHeap.
+		//    (If using ComputeJob, there's one already in there). Copy the UAV/SRV descriptors into the heap
+		//    for each job run.
+		//  Constant Buffer View:
+		//    1. Use an Upload Heap
+		//    2. In Shader use: cbuffer my_cbuf : register(bN);
+		//    3. In RootSig use: RootSig(ERootSigFlags::ComputeOnly).CBuf(ECBufReg::uN)
+		//    4. In Job use: cmd_list.SetComputeRootConstantBufferView(n, upload.Add(my_cbuf, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true));
+		//  Texture in Compute Shader:
+		//    1. In Shader use: RWTexture2D<float4> my_tex : register(uN);
+		//    2. In RootSig use: RootSig(ERootSigFlags::ComputeOnly).Uav(EUAVReg::uN)
+		//    3. In Job use: cmd_list.SetComputeRootDescriptorTable(n, upload.Add(my_tex->m_uav));
+		//    4. Use Barrier.UAV(my_tex->m_res.get()) before using the texture.
+		//    
 
 		using HeapPtr = D3DPtr<ID3D12DescriptorHeap>;
 		using Lookup = Lookup<int, D3D12_GPU_DESCRIPTOR_HANDLE>;
@@ -36,16 +60,19 @@ namespace pr::rdr12
 		int        m_des_size; // The size of one descriptor
 		int        m_head;     // Insert point for added descriptors
 
-		GpuDescriptorHeap(int size, GpuSync* gsync)
+		GpuDescriptorHeap(int size, GpuSync& gsync)
 			:m_heap()
 			,m_size(size)
-			,m_gsync(gsync)
+			,m_gsync(&gsync)
 			,m_sync()
 			,m_lookup()
 			,m_eh0()
 			,m_des_size(s_cast<int>(device()->GetDescriptorHandleIncrementSize(HeapType)))
 			,m_head()
 		{
+			if (size < 1)
+				throw std::runtime_error("Heap capacity must be >= 1");
+
 			// Create the GPU heap
 			D3D12_DESCRIPTOR_HEAP_DESC desc = {
 				.Type = HeapType,

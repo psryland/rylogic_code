@@ -7,12 +7,8 @@
 // Defines:
 //   POS_TYPE - Define the element structure of the 'positions' buffer. The field 'pos' is
 //      expected to be the position information. It can be float3 or float4.
-#ifndef POS_TYPE
-#define POS_TYPE struct PosType { float4 pos; }
-#endif
 
-static const uint CellCountDimension = 1024;
-static const uint PosCountDimension = 1024;
+static const uint ThreadGroupSize = 1024;
 
 // Constants
 cbuffer cbGridPartition : register(b0)
@@ -22,6 +18,9 @@ cbuffer cbGridPartition : register(b0)
 	float GridScale;   // The quantising factor to apply to the positions
 };
 
+#ifndef POS_TYPE
+#define POS_TYPE struct PosType { float4 pos; }
+#endif
 POS_TYPE;
 
 // The positions to sort into the grid
@@ -42,7 +41,7 @@ RWStructuredBuffer<uint> m_idx_count : register(u4);
 #include "spatial_partition.hlsli"
 
 // Reset the start/count arrays
-[numthreads(CellCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void Init(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= CellCount)
@@ -53,7 +52,7 @@ void Init(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 }
 
 // Populate the grid hash buffer with the hash value for each position
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumPositions)
@@ -66,7 +65,7 @@ void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 }
 
 // Build the lookup structure (run post-sort)
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void BuildSpatial(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumPositions)

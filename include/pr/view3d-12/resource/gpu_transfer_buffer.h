@@ -75,7 +75,7 @@ namespace pr::rdr12
 			// Notes:
 			//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
 			ID3D12Resource* m_res; // The upload resource that contains this allocation.
-			uint8_t* m_mem;        // The system memory address, mapped to m_buf->GetGPUAddress().
+			uint8_t* m_mem;        // The system memory address, mapped to m_res->GetGPUAddress().
 			int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
 			int64_t m_size;        // The size of the allocation (in bytes).
 

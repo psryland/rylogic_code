@@ -54,6 +54,7 @@ namespace pr::rdr12
 		Descriptor             m_rtv;    // Render target view (if available)
 		RdrId                  m_id;     // Id for this texture in the resource manager
 		RdrId                  m_uri;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
+		iv3                    m_dim;    // The dimensions of the texture
 		ETextureFlag           m_tflags; // Flags for boolean properties of the texture
 		string32               m_name;   // Human readable id for the texture
 

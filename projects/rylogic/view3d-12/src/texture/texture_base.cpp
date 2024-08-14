@@ -35,6 +35,7 @@ namespace pr::rdr12
 		,m_rtv()
 		,m_id(desc.m_id == AutoId ? MakeId(this) : desc.m_id)
 		,m_uri(desc.m_uri)
+		,m_dim(s_cast<int>(desc.m_tdesc.Width), s_cast<int>(desc.m_tdesc.Height), s_cast<int>(desc.m_tdesc.DepthOrArraySize))
 		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		,m_name(desc.m_name)
 	{

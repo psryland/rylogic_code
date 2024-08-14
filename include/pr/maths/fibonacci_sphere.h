@@ -10,7 +10,7 @@
 namespace pr
 {
 	// Notes:
-	//  - A Fibonacci sphere is basically a spirial from (0,0,-1) to (0,0,+1). Over evenly distributed
+	//  - A Fibonacci sphere is basically a spiral from (0,0,-1) to (0,0,+1). Over evenly distributed
 	//    z-steps from -1 to +1, the phase angle moves in steps of the 'golden_angle' (~137.5 degrees).
 	// 
 	// Future:

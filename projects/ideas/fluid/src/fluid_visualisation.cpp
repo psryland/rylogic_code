@@ -14,13 +14,13 @@ namespace pr::fluid
 		, m_gfx_container(rdr12::CreateLdr(*m_rdr, ldr))
 		, m_gs_points(Shader::Create<shaders::PointSpriteGS>(v2(2*sim.Params.ParticleRadius), true))
 		, m_gfx_fluid()
-		, m_gfx_gradient()
-		, m_gfx_velocities()
+		, m_gfx_vector_field()
 		, m_read_back()
 		, m_last_read_back(-1)
 		, Params()
 	{
-		{// Create a dynamic model for the fluid particles (using the particle buffer)
+		// Create a dynamic model for the fluid particles (using the particle buffer)
+		{
 			auto vb = ResDesc::VBuf<Vert>(m_sim->m_r_particles.get()).usage(EUsage::UnorderedAccess);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
 			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
@@ -30,20 +30,31 @@ namespace pr::fluid
 				.tex_diffuse(rdr.res().StockTexture(EStockTexture::WhiteSpike))
 				.irange(0, 0));
 		}
-		{// Create a dynamic model for the pressure gradient lines
+
+		// Create a dynamic model for the pressure gradient lines
+		{
 			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->Params.NumParticles, nullptr);
 			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("pressure gradient");
-			m_gfx_gradient.m_model = rdr.res().CreateModel(mdesc);
-			m_gfx_gradient.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
+			auto mdesc = ModelDesc(vb, ib).name("Fluid:VectorField");
+			m_gfx_vector_field.m_model = rdr.res().CreateModel(mdesc);
+			m_gfx_vector_field.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
 		}
-		{// Create a dynamic model for particle velocities
-			auto vb = ResDesc::VBuf<Vert>(2LL * m_sim->Params.NumParticles, nullptr);
-			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
-			auto mdesc = ModelDesc(vb, ib).name("particle velocities");
-			m_gfx_velocities.m_model = rdr.res().CreateModel(mdesc);
-			m_gfx_velocities.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
+
+		// Create a texture for displaying a fluid property
+		{
+			auto src = Image(4096, 4096, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM);
+			auto rdesc = ResDesc::Tex2D(src, 1).usage(EUsage::UnorderedAccess);
+			auto tdesc = TextureDesc(AutoId, rdesc).name("Fluid:Map");
+			m_tex_map = rdr.res().CreateTexture2D(tdesc);
+
+			auto opts = ModelGenerator::CreateOptions().bake(m4x4::Translation(0,0,-0.01f));
+			m_gfx_map.m_model = ModelGenerator::Quad(rdr, AxisId::PosZ, { 0, 0 }, 2, 2, iv2::Zero(), &opts);
+			m_gfx_map.m_model->m_name = "Fluid:MapQuad";
+			m_gfx_map.m_model->m_nuggets.front().m_tex_diffuse = m_tex_map;
 		}
+
+		// Make sure everything ready to go
+		rdr.res().FlushToGpu(true);
 	}
 	FluidVisualisation::~FluidVisualisation()
 	{
@@ -58,21 +69,23 @@ namespace pr::fluid
 		scene.AddInstance(m_gfx_container);
 
 		// The particles
+		Tweakable<bool, "ShowParticles"> ShowParticles = true;
+		if (ShowParticles)
 		{
 			Tweakable<float, "DropletSize"> DropletSize = 0.4f;
 			m_gs_points->m_size = v2(DropletSize * 2 * m_sim->Params.ParticleRadius);
 			scene.AddInstance(m_gfx_fluid);
 		}
 
-		// Update the velocities
-		Tweakable<bool, "ShowVelocities"> ShowVelocities = true;
-		Params.ShowVelocities = ShowVelocities;
-		if (Params.ShowVelocities)
+		// Update the vector field
+		Tweakable<int, "VectorFieldMode"> VectorFieldMode = (int)EVectorFieldMode::None;
+		Params.VectorFieldMode = (EVectorFieldMode)VectorFieldMode.operator int();
+		if (Params.VectorFieldMode != EVectorFieldMode::None)
 		{
-			Tweakable<float, "VelocityScale"> Scale = 0.01f;
+			Tweakable<float, "VectorFieldScale"> VectorFieldScale = 0.01f;
 			Colour32 const col = 0xFF800000;
-
-			UpdateSubresourceScope update = m_gfx_velocities.m_model->UpdateVertices();
+				
+			UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
 			for (auto const& particle : ReadParticles())
 			{
@@ -83,7 +96,11 @@ namespace pr::fluid
 				ptr->pad = v2::Zero();
 				++ptr;
 
-				ptr->m_vert = particle.pos + Scale * particle.vel;
+				ptr->m_vert = particle.pos + VectorFieldScale * (
+					Params.VectorFieldMode != EVectorFieldMode::Velocities    ? particle.vel :
+					Params.VectorFieldMode != EVectorFieldMode::Accelerations ? particle.acc.w0() :
+					Params.VectorFieldMode != EVectorFieldMode::Gradients     ? particle.density * v4::YAxis() :
+					v4::Zero());
 				ptr->m_diff = col;
 				ptr->m_norm = v4::Zero();
 				ptr->m_tex0 = v2::Zero();
@@ -91,11 +108,23 @@ namespace pr::fluid
 				++ptr;
 			}
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-			scene.AddInstance(m_gfx_velocities);
+			scene.AddInstance(m_gfx_vector_field);
+		}
+
+		// Show the density map
+		Tweakable<bool, "ShowDensityMap"> ShowDensityMap = false;
+		if (ShowDensityMap)
+		{
+			FluidSimulation::MapData map_data = {
+				.MapToWorld = m4x4::Scale(2.0f/m_tex_map->m_dim.xy.x, 2.0f/m_tex_map->m_dim.xy.y, 1.0f, v4(-1, -1, 0, 1)),
+				.MapTexDim = m_tex_map->m_dim.xy
+			};
+			m_sim->GenerateDensityMap(m_tex_map, map_data);
+			scene.AddInstance(m_gfx_map);
 		}
 
 		// Update the gradient
-#if 0
+		#if 0
 		if (Params.ShowGradients)
 		{
 			Tweakable<float, "GradientScale"> Scale = 0.0001f;
@@ -122,7 +151,7 @@ namespace pr::fluid
 			update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 			scene.AddInstance(m_gfx_gradient);
 		}
-#endif
+		#endif
 
 		#if 0 // Read back particles
 		auto const& p = particles[0];

@@ -224,6 +224,12 @@ namespace pr::geometry
 	}
 
 	// Create a simple quad, with a normal along 'axis_id', with a texture mapped over the whole surface
+	// 'anchor' is the origin of the quad, (0,0) = centre, (-1,-1) = left,bottom, (+1,+1) = right,top, etc
+	// 'width' is the length of the quad_w axis
+	// 'height' is the length of the quad_h axis
+	// 'divisions' is the number of times to divide the width/height of the quad. Note: num_verts_across = divisions.x + 2
+	// 'colour' is a colour for the whole quad
+	// 't2q' is a transform to apply to the standard texture coordinates 0,0 -> 1,1
 	template <typename VOut, typename IOut>
 	Props Quad(AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{

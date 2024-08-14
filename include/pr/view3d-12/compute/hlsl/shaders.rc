@@ -2,8 +2,11 @@
 // In any project that wants to include shaders as resources, create a file like this one and
 // list the shaders to be included.
 // Remember to add 'pr/include' to the resource compiler's include path.
+COLLISION_PRIMITIVES_HLSLI TEXT    DISCARDABLE     "collision_primitives.hlsli"
+GEOMETRY_HLSLI             TEXT    DISCARDABLE     "geometry.hlsli"
 GPU_RADIX_SORT_HLSL        TEXT    DISCARDABLE     "gpu_radix_sort.hlsl"
+PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "particle_collision.hlsl"
 SPATIAL_PARTITION_HLSL     TEXT    DISCARDABLE     "spatial_partition.hlsl"
 SPATIAL_PARTITION_HLSLI    TEXT    DISCARDABLE     "spatial_partition.hlsli"
-PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "particle_collision.hlsl"
+UTILITY_HLSLI              TEXT    DISCARDABLE     "utility.hlsli"
 

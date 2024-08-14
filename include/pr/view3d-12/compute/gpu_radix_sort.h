@@ -26,7 +26,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 	concept GpuSortableValue = std::is_same_v<T, int> || std::is_same_v<T, uint32_t> || std::is_same_v<T, float> || std::is_same_v<T, void>;
 
 	// Radix sort on the GPU
-	template <GpuSortableKey Key, GpuSortableValue Value, bool Ascending = true>
+	template <GpuSortableKey Key, GpuSortableValue Value, bool Ascending = true, D3D12_COMMAND_LIST_TYPE QueueType = D3D12_COMMAND_LIST_TYPE_DIRECT>
 	struct GpuRadixSort
 	{
 		// Notes:
@@ -38,6 +38,8 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		//  - This type is intended to be used repeatedly to sort large
 		//    numbers of elements. It's not suited for transient sorts.
 		//  - Use 'Value = void' if no payload is required, i.e., you just want to sort key values.
+
+		using CmdList = CmdList<QueueType>;
 
 		static constexpr int KeyBits = sizeof(Key)*8; // 32-bit keys atm
 		static constexpr int RadixBits = 8;
@@ -295,7 +297,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 		// Sort 'values' by 'keys' using the provided command list
 		// Returns Readback buffer allocations that will contain the sorted result once the command list has been executed.
-		Result Sort(ComCmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback) const
+		Result Sort(CmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback) const
 		{
 			if (ssize(keys) > m_size)
 			{
@@ -367,7 +369,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 		// Sort the keys/values in 'm_sort[0]/m_payload[0]' assuming they're uploaded to the GPU already.
 		// This overload is intended for use when you want to leave the keys/values on the GPU without reading them back.
-		void Sort(ComCmdList& cmd_list) const
+		void Sort(CmdList& cmd_list) const
 		{
 			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
 			PIXBeginEvent(cmd_list.get(), 0xFF90aa3f, "Gpu Radix Sort");
@@ -473,7 +475,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 		// Initialise the payload buffer to incrementing indices.
 		// A common case when creating a lookup map
-		void InitPayload(ComCmdList& cmd_list) const
+		void InitPayload(CmdList& cmd_list) const
 		{
 			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
 

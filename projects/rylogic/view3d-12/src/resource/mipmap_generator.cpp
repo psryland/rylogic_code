@@ -28,7 +28,7 @@ namespace pr::rdr12
 		,m_gsync(gsync)
 		,m_cmd_list(cmd_list)
 		,m_keep_alive(m_gsync)
-		,m_view_heap(HeapCapacityView, &m_gsync)
+		,m_view_heap(HeapCapacityView, m_gsync)
 		,m_mipmap_sig()
 		,m_mipmap_pso()
 		,m_flush_required()

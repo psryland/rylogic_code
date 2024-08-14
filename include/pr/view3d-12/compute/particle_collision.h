@@ -85,7 +85,7 @@ namespace pr::rdr12::compute::particle_collision
 			}
 			return *this;
 		}
-		std::span<Prim const> Build() const
+		std::span<Prim const> Primitives() const
 		{
 			return m_prims;
 		}
@@ -97,7 +97,7 @@ namespace pr::rdr12::compute::particle_collision
 
 	struct ParticleCollision
 	{
-		inline static constexpr iv3 PosCountDimension = { 1024, 1, 1 };
+		inline static constexpr int ThreadGroupSize = 1024;
 
 		struct EReg
 		{
@@ -113,10 +113,11 @@ namespace pr::rdr12::compute::particle_collision
 		// Shader parameters
 		struct ParamsData
 		{
-			int NumParticles = 0;              // The number of particles
-			int NumPrimitives = 0;             // The number of primitives
+			int NumParticles = 0;            // The number of particles
+			int NumPrimitives = 0;           // The number of primitives
 			v2 Restitution = { 1.0f, 1.0f }; // The coefficient of restitution (normal, tangential)
-			float TimeStep = 0.0f;             // The time to advance each particle by
+			float ParticleRadius = 0.1f;     // The radius of volume that each particle represents
+			float TimeStep = 0.0f;           // The time to advance each particle by
 		} Params;
 		
 		ParticleCollision(Renderer& rdr, std::wstring_view position_layout, std::span<Prim const> init_data = {})
@@ -160,7 +161,7 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Integrate the particle positions (with collision)
-		void Update(ComputeJob& job, float dt, int count, D3DPtr<ID3D12Resource> particles)
+		void Update(GraphicsJob& job, float dt, int count, D3DPtr<ID3D12Resource> particles)
 		{
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "ParticleCollision::Update");
 
@@ -175,7 +176,7 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, Params, 0);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_primitives->GetGPUVirtualAddress());
-			job.m_cmd_list.Dispatch(DispatchCount({ count, 1, 1 }, PosCountDimension));
+			job.m_cmd_list.Dispatch(DispatchCount({ count, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			PIXEndEvent(job.m_cmd_list.get());
 		}

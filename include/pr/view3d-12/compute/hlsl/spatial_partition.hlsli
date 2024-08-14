@@ -1,10 +1,11 @@
 // Spatial partition
 #pragma once
+#include "utility.hlsli"
 
 #if 0 // Expected Buffers
 
 // The indices of particle positions sorted spatially
-//RWStructuredBuffer<uint> m_spatial;
+RWStructuredBuffer<uint> m_spatial;
 
 // The lowest index (in m_spatial) for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_start;
@@ -14,14 +15,6 @@ RWStructuredBuffer<uint> m_idx_count;
 
 #endif
 
-static const uint FNV_offset_basis32 = 2166136261U;
-static const uint FNV_prime32 = 16777619U;
-
-// Accumulative hash function
-inline uint Hash(int value, uint hash = FNV_offset_basis32)
-{
-	return hash = (value + hash) * FNV_prime32;
-}
 
 // Convert a floating point position into a grid cell coordinate
 inline int3 GridCell(float4 position, uniform float grid_scale)
@@ -33,13 +26,13 @@ inline int3 GridCell(float4 position, uniform float grid_scale)
 inline uint CellHash(int3 grid, uniform uint cell_count)
 {
 	// This performs better than using the same prime for each component
-    uint h1 = Hash(grid.x);
-    uint h2 = Hash(grid.y);
-    uint h3 = Hash(grid.z);
-    const uint prime1 = 73856093;
-    const uint prime2 = 19349663;
-    const uint prime3 = 83492791;
-    return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
+	uint h1 = Hash(grid.x);
+	uint h2 = Hash(grid.y);
+	uint h3 = Hash(grid.z);
+	const uint prime1 = 73856093;
+	const uint prime2 = 19349663;
+	const uint prime3 = 83492791;
+	return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
 }
 
 // A coroutine context for iterating over neighbouring particles

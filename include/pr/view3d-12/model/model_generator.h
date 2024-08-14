@@ -76,7 +76,7 @@ namespace pr::rdr12
 			std::span<Colour32 const> m_colours = {};
 
 			// Transform the model verts by the given transform.
-			m4x4 const* m_bake = nullptr;
+			std::optional<m4x4> m_bake = std::nullopt;
 
 			// Diffuse texture
 			Texture2DPtr m_tex_diffuse = nullptr;
@@ -85,10 +85,47 @@ namespace pr::rdr12
 			SamplerPtr m_sam_diffuse = nullptr;
 
 			// Texture to surface transform
-			m4x4 const* m_t2s = nullptr;
+			std::optional<m4x4> m_t2s = std::nullopt;
 
 			// Algorithmically generate surface normals. Value is the smoothing angle.
-			float const* m_gen_normals = nullptr;
+			std::optional<float> m_gen_normals = std::nullopt;
+
+			CreateOptions& colours(std::span<Colour32 const> colours)
+			{
+				m_colours = colours;
+				return *this;
+			}
+			CreateOptions& bake(m4x4 const& m)
+			{
+				m_bake = m;
+				return *this;
+			}
+			CreateOptions& bake(m4x4 const* m)
+			{
+				if (m) m_bake = *m;
+				return *this;
+			}
+			CreateOptions& tex_diffuse(Texture2DPtr tex, SamplerPtr sam)
+			{
+				m_tex_diffuse = tex;
+				m_sam_diffuse = sam;
+				return *this;
+			}
+			CreateOptions& tex2surf(m4x4 const& t2s)
+			{
+				m_t2s = t2s;
+				return *this;
+			}
+			CreateOptions& tex2surf(m4x4 const* t2s)
+			{
+				if (t2s) m_t2s = *t2s;
+				return *this;
+			}
+			CreateOptions& gen_normals(float angle)
+			{
+				m_gen_normals = angle;
+				return *this;
+			}
 		};
 
 		// Points/Sprites *********************************************************************

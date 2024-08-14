@@ -1,22 +1,22 @@
 // Fluid
-#ifndef POS_TYPE
-#define POS_TYPE struct PosType { float4 pos; float4 col; float4 vel; float3 accel; float density; }
-#endif
 #ifndef SPATIAL_DIMENSIONS 
 #define SPATIAL_DIMENSIONS 2
 #endif
 
-static const uint PosCountDimension = 1024;
+static const uint ThreadGroupSize = 1024;
 
+#ifndef POS_TYPE
+#define POS_TYPE struct PosType { float4 pos; float4 col; float4 vel; float3 accel; float density; }
+#endif
 POS_TYPE;
 
-cbuffer cbFluid : register(b0)
+// Note: alignment matters. float4 must be aligned to 16 bytes.
+cbuffer cbFluidSim : register(b0)
 {
-	// Note: alignment matters. float4 must be aligned to 16 bytes.
-	uint NumParticles;       // The number of particles
-	float ParticleRadius;    // The radius of influence for each particle
-	uint CellCount;          // The number of grid cells in the spatial partition
-	float GridScale;         // The scale factor for the spatial partition grid
+	uint NumParticles;    // The number of particles
+	uint NumPrimitives;   // The number of collision primitives
+	float ParticleRadius; // The radius of influence for each particle
+	float TimeStep;       // Leap-frog time step
 
 	float4 Gravity;          // The acceleration due to gravity
 
@@ -25,22 +25,21 @@ cbuffer cbFluid : register(b0)
 	float Density0;          // The baseline density
 	float Viscosity;         // The viscosity scaler
 
-	float ThermalDiffusion;  // The thermal diffusion rate
-	float TimeStep;          // Leap-frog time step
-	int RandomSeed;          // Seed value for the RNG
+	float ThermalDiffusion; // The thermal diffusion rate
+	float GridScale;        // The scale factor for the spatial partition grid
+	uint CellCount;         // The number of grid cells in the spatial partition
+	int RandomSeed;         // Seed value for the RNG
 };
-
 cbuffer cbColour : register(b1)
 {
 	// Note: alignment matters. float4 must be aligned to 16 bytes.
 	// [0] = Velocity Based
 	// [1] = Density Based
 	// [2] = Within Probe
-	float4 Colours[4];  // The colour scale to use
-	float2 Range;       // Set scale to colour
-	uint Scheme;        // Bit field of colouring schemes
+	float4 Colours[4];       // The colour scale to use
+	float2 ColourValueRange; // Set scale to colour
+	uint Scheme;             // Bit field of colouring schemes
 };
-
 cbuffer cbProbe : register(b2)
 {
 	// Note: alignment matters. float4 must be aligned to 16 bytes.
@@ -49,6 +48,11 @@ cbuffer cbProbe : register(b2)
 	float ProbeRadius;
 	float ProbeForce;
 }
+cbuffer cbMap : register(b3)
+{
+	float4x4 MapToWorld; // Transform from map space to world space (including scale)
+	int2 MapTexDim;      // The dimensions of the map texture
+};
 
 static const uint ColourScheme_Velocity = 1;
 static const uint ColourScheme_Density = 2;
@@ -66,23 +70,42 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
-//#include "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
-#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
+#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/collision_primitives.hlsli"
 
-// Square a value
-inline float sqr(float x)
+// The primitives to collide against
+RWStructuredBuffer<Prim> m_collision : register(u4);
+
+#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
+#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/geometry.hlsli"
+#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/utility.hlsli"
+
+// A texture for writing the density map to
+RWTexture2D<float4> m_tex_map : register(u5);
+
+// A random direction vector in 2 or 3 dimensions with components in (-1,+1)
+inline float4 Random3WithDim(uint seed)
 {
-	return x * x;
+	float4 r = Random3(RandomSeed + seed);
+	#if SPATIAL_DIMENSIONS == 2
+	r.z = 0;
+	#endif
+	return r;
 }
-inline uint sqr(uint x)
+
+// Return a volume radius for a neighbour search
+inline float4 SearchVolume(float radius)
 {
-	return x * x;
+	#if SPATIAL_DIMENSIONS == 2
+	return float4(radius, radius, 0, 0);
+	#elif SPATIAL_DIMENSIONS == 3
+	return float4(radius, radius, radius, 0);
+	#endif
 }
 
 // Return the colour interpolated on the colour scale
 inline float4 LerpColour(float value)
 {
-	float scale = saturate((value - Range.x) / (Range.y - Range.x));
+	float scale = saturate((value - ColourValueRange.x) / (ColourValueRange.y - ColourValueRange.x));
 	if (scale <= 0.0f)  return Colours[0];
 	if (scale < 0.333f) return lerp(Colours[0], Colours[1], (scale - 0.000f) / 0.333f);
 	if (scale < 0.666f) return lerp(Colours[1], Colours[2], (scale - 0.333f) / 0.333f);
@@ -90,28 +113,8 @@ inline float4 LerpColour(float value)
 	return Colours[3];
 }
 
-// Generate a random float on the interval [0, 1)
-inline float Random(uint seed)
-{
-	return Hash(RandomSeed + seed) / 4294967296.0f; // Normalise to [0, 1)
-}
-
-// Generate a random direction vector components on the interval (-1, +1)
-inline float4 Random3(uint seed)
-{
-	return float4(
-		2 * Random(seed + FNV_prime32) - 1,
-		2 * Random(seed + sqr(FNV_prime32)) - 1,
-		#if SPATIAL_DIMENSIONS == 2
-		0,
-		#elif SPATIAL_DIMENSIONS == 3
-		2 * Random(seed + sqr(FNV_prime32*FNV_prime32)) - 1,
-		#endif
-		0);
-}
-
 // The influence at 'distance' from a particle
-inline float ParticleInfluenceAt(float distance, float radius)
+inline float DensityKernel(float distance)
 {
 	// Influence is the contribution to a property that a particle has at a given distance. The range of this contribution is controlled
 	// by 'radius', which is the smoothing kernel radius. A property at a given point is calculated by taking the sum of that property for
@@ -120,8 +123,8 @@ inline float ParticleInfluenceAt(float distance, float radius)
 	// 
 	// As 'radius' increases, more particles contribute to the measurement of the property. This means the weights need to reduce.
 	// Consider a uniform grid of particles. A measured property (e.g. density) should be constant regardless of the value of 'radius'.
-	// To make the weights independent of radius, we need to normalise them, i.e. divide by the total weight, which is the volume (in 2D)
-	// under the influence curve (in 3D, it's a hyper volume).
+	// To make the weights independent of radius, we need to normalise them, i.e. divide by the total weight, which is the "volume" under
+	// the influence curve in 2D (in 3D, it's a hyper volume).
 	// 
 	// If the smoothing curve is: P(r) = (R - |r|)^2
 	// Then the volume under the curve is found from the double integral (in polar coordinates)
@@ -139,43 +142,71 @@ inline float ParticleInfluenceAt(float distance, float radius)
 	// So, start with a uniform grid and a known property (e.g. density @ 1g/cm^3) and a radius that ensures a typical number of particles
 	// influence each point. Then measure the combined influence, and use that value to rescale.
 
-	if (distance >= radius)
+	if (distance >= ParticleRadius)
 		return 0.0f;
 
 	#if SPATIAL_DIMENSIONS == 2
 	{
-		const float C = 0.95f * (1.0f / 4.0f);
-		return C * sqr(radius - distance) / pow(radius, 4.0f);
+		// P(r) = (1/V) * (R - |r|)^2, where V is the volume under the curve (R - |r|)^2
+		// V = (tau/12) * radius^4
+		#if 1
+		{
+			//const float C = 0.95f * (1.0f / 4.0f);
+			//return C * sqr(ParticleRadius - distance) / pow(ParticleRadius, 4.0f);
+			const float C = 0.52359877559829887308f * pow(ParticleRadius, 4); // = (tau/12) * radius^4
+			return sqr(ParticleRadius - distance) / C;
+		}
+		#endif
+		#if 0
+		{ // P(r) = (R - |r|)
+			const float C = 1.04719755119659774615f * pow(ParticleRadius, 3.0f); // = (tau/6) * radius^3
+			return (ParticleRadius - distance) / C;
+		}
+		#endif
+		
 	}
 	#elif SPATIAL_DIMENSIONS == 3
 	{
 		const float C = 0.00242f;
-		return C * sqr(radius - distance) / pow(radius, 5.0f);
+		return C * sqr(ParticleRadius - distance) / pow(ParticleRadius, 5.0f);
 	}
 	#endif
 }
 	
 // The gradient of the influence function at 'distance' from a particle
-inline float dParticleInfluenceAt(float distance, float radius)
+inline float dDensityKernel(float distance)
 {
-	if (distance >= radius)
+	if (distance >= ParticleRadius)
 		return 0.0f;
 
 	#if SPATIAL_DIMENSIONS == 2
 	{
-		const float C = 0.00242f;
-		return 2 * C * (radius - distance) / pow(radius, 4.0f);
+		// dP(r)/dr = 2 * (1/V) * (R - |r|)
+		#if 1
+		{
+			//const float C = 0.00242f;
+			//return 2 * C * (ParticleRadius - distance) / pow(ParticleRadius, 4.0f);
+			const float C = 0.52359877559829887308f * pow(ParticleRadius, 4); // = (tau/12) * radius^4
+			return 2 * (ParticleRadius - distance) / C;
+		}
+		#endif
+		#if 0
+		{// dP(r)/dr = -1
+			const float C = 1.04719755119659774615f * pow(ParticleRadius, 3.0f); // = (tau/6) * radius^3
+			return -1.0f / C;
+		}
+		#endif
 	}
 	#elif SPATIAL_DIMENSIONS == 3
 	{
 		const float C = 0.00242f;
-		return 2 * C * (radius - distance) / pow(radius, 5.0f);
+		return 2 * C * (ParticleRadius - distance) / pow(ParticleRadius, 5.0f);
 	}
 	#endif
 }
 
 // Calculate the density at each particle
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumParticles)
@@ -185,29 +216,21 @@ void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID
 	
 	// Calculate the density at the predicted particle position
 	float4 target_pos = target.pos + TimeStep * target.vel;
-
-	#if SPATIAL_DIMENSIONS == 2
-	float4 volume = float4(ParticleRadius, ParticleRadius, 0, 0);
-	#elif SPATIAL_DIMENSIONS == 3
-	float4 volume = float4(ParticleRadius, ParticleRadius, ParticleRadius, 0);
-	#endif
-	
-	float density = ParticleInfluenceAt(0.0f, ParticleRadius) * Mass;
+	float density = DensityKernel(0.0f) * Mass;
 	
 	// Search the neighbours of 'target_pos'
-	FindIter find = Find(target_pos, volume, GridScale, CellCount);
+	FindIter find = Find(target_pos, SearchVolume(ParticleRadius), GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
-			// 'ParticleInfluenceAt' contains a distance check, so we don't need to check here
+			// 'DensityKernel' contains a distance check, so we don't need to check here
 			// It's faster to sum with a multiply by zero than to branch.
 			if (m_spatial[i] == gtid.x) continue; // no self-contribution
 			PosType neighbour = m_particles[m_spatial[i]];
-			float4 neighbour_pos = neighbour.pos;// + TimeStep * neighbour.vel;
 
-			float dist = length(target_pos - neighbour_pos);
-			float influence = ParticleInfluenceAt(dist, ParticleRadius);
+			float dist = length(target_pos - neighbour.pos);
+			float influence = DensityKernel(dist);
 			density += influence * Mass;
 		}
 	}
@@ -217,8 +240,90 @@ void DensityAtParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID
 	m_particles[gtid.x].density = density;
 }
 
+// Make adjustments to the particles near the boundaries
+[numthreads(ThreadGroupSize, 1, 1)]
+void BoundaryEffects(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+{
+	// Because of the way density is calculated, particles near the boundaries have lower density.
+	// This causes them to get pushed closer together. The density of particles near the boundary
+	// needs to be artificially increased.
+	//
+	// Density is calculated from the weighted sum of particles in a sphere around the particle.
+	// Near the boundary, that sphere should really be clipped. The ratio of volume between the
+	// unclipped and clipped sphere is the ratio to multiply the density by.
+	//
+	// Clipping a sphere to a set of arbitrary planes is a bit tricky. Instead, approximate the
+	// sphere with a cloud of points. Clip the points, and use the ratio of clipped to unclipped
+	// points to scale the density.
+	//
+	// Unfortunately, just increasing the density near the boundary doesn't work, because adjacent
+	// particles on the boundary all have the same density so the pressure between them is zero.
+	// All this does is push the layer above the boundary further away.
+	//
+	// I really need a way to push adjacent particles apart. I could try to push them apart by
+	// applying a force to each particle that is proportional to the distance to the boundary.
+	//
+	// I could mark particles that are near a boundary, then in 'ApplyForces' increase the 'DensityToPressure'
+	// scalar between boundary particles.
+	
+	if (gtid.x >= NumParticles)
+		return;
+
+	// Assume particle accelerations have already been set.
+	PosType target = m_particles[gtid.x];
+
+	#if 0
+	// 'clipped' is a bit field of Fibonacci spiral points that are clipped
+	static const int NumFibSpiralPoints = 32;
+	uint clipped = 0;
+
+	// Find the distance to each boundary surface
+	for (int i = 0; i != NumPrimitives; ++i)
+	{
+		Prim prim = m_collision[i];
+
+		// The returned value is a plane relative to 'target.pos'.
+		// i.e. 'target.pos' is 'above.w' units above the plane with normal 'above.xyz'.
+		float4 above = float4(0, 0, 0, 0);
+		switch (prim.flags.x)
+		{
+			case Prim_Plane:
+			{
+				above = DistancePointToPlane(target.pos, prim.data[0]);
+				break;
+			}
+			case Prim_Sphere:
+			{
+				break;
+			}
+			case Prim_Triangle:
+			{
+				break;
+			}
+		}
+
+		// If the particle is near the boundary, then clip the sample points
+		if (abs(above.w) < ParticleRadius)
+		{
+			// Given some sample points around a sphere, clip those behind the plane 'distance'
+			[unroll]
+			for (int i = 0; i != NumFibSpiralPoints; ++i)
+			{
+				if (clipped & (1u << i)) continue;
+				clipped |= uint(dot(above, FibonacciSpiral(i, NumFibSpiralPoints)) < 0) << i;
+			}
+		}
+	}
+	
+	// Count the number of bits in 'clipped'
+	int removed = CountBits(clipped);
+	if (removed != NumFibSpiralPoints)
+		m_particles[gtid.x].density *= float(NumFibSpiralPoints) / float(NumFibSpiralPoints - removed);
+	#endif
+}
+
 // Calculates forces at each particle position
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumParticles)
@@ -228,18 +333,12 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 
 	// Calculate pressure at the predicted particle position
 	float4 target_pos = target.pos + TimeStep * target.vel;
-	
-	#if SPATIAL_DIMENSIONS == 2
-	float4 volume = float4(ParticleRadius, ParticleRadius, 0, 0);
-	#elif SPATIAL_DIMENSIONS == 3
-	float4 volume = float4(ParticleRadius, ParticleRadius, ParticleRadius, 0);
-	#endif
 
 	float4 nett_pressure = float4(0, 0, 0, 0);
 	float4 nett_viscosity = float4(0, 0, 0, 0);
 
 	// Search the neighbours of 'target'
-	FindIter find = Find(target_pos, volume, GridScale, CellCount);
+	FindIter find = Find(target_pos, SearchVolume(ParticleRadius), GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
@@ -251,9 +350,10 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			float4 direction = target_pos - neighbour_pos;
 			float dist = length(direction);
 
-			// 'dParticleInfluenceAt' contains a distance check, so we don't need to check here
-			float influence = dParticleInfluenceAt(dist, ParticleRadius);
-			direction = (dist > 0.0001f) ? direction / dist : normalize(Random3(gtid.x));
+			// 'dDensityKernel' contains a distance check, so we don't need to check here
+			float influence = dDensityKernel(dist);
+			
+			direction = (dist > 0.0001f) ? direction / dist : normalize(Random3WithDim(gtid.x));
 
 			// We need to simulate the force due to pressure being applied to both particles (target and neighbour).
 			// A simple way to do this is to average the pressure between the two particles. Since pressure is
@@ -262,7 +362,7 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 
 			// Convert the density to a pressure (P = k * (rho - rho0))
 			float pressure = DensityToPressure * (density - Density0);
-
+			
 			// Calculate the viscosity from the relative velocity of the particles
 			float4 relative_velocity = neighbour.vel - target.vel;
 			
@@ -277,12 +377,12 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	// Record the nett force
 	m_particles[gtid.x].accel += nett_pressure.xyz / m_particles[gtid.x].density;
 	m_particles[gtid.x].accel += nett_viscosity.xyz;
-	m_particles[gtid.x].accel += Random3(gtid.x).xyz * ThermalDiffusion;
+	m_particles[gtid.x].accel += Random3WithDim(gtid.x).xyz * ThermalDiffusion;
 	m_particles[gtid.x].accel += Gravity.xyz;
 }
 
 // Apply colours to the particles
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void ColourParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumParticles)
@@ -315,7 +415,7 @@ void ColourParticles(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 }
 
 // Apply an attractor to the particles
-[numthreads(PosCountDimension, 1, 1)]
+[numthreads(ThreadGroupSize, 1, 1)]
 void ApplyProbe(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {
 	if (gtid.x >= NumParticles)
@@ -333,21 +433,45 @@ void ApplyProbe(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	}
 }
 
+// Create a texture with each pixel representing the density at that point
+[numthreads(32, 32, 1)]
+void DensityMap(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+{
+	if (gtid.x > MapTexDim.x || gtid.y > MapTexDim.y)
+		return;
+	
+	float density = 0.0f;
+
+	// Search the neighbours of 'pos'
+	float radius_sq = sqr(ParticleRadius);
+	float4 pos = mul(MapToWorld, float4(gtid.x, gtid.y, 0, 1));
+	FindIter find = Find(pos, SearchVolume(ParticleRadius), GridScale, CellCount);
+	while (DoFind(find, CellCount))
+	{
+		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
+		{
+			PosType neighbour = m_particles[m_spatial[i]];
+			float4 neighbour_pos = neighbour.pos;
+
+			float dist = length(pos - neighbour_pos);
+			float influence = DensityKernel(dist);
+			density += influence * Mass;
+		}
+	}
+	
+	// Write the density to the map
+	m_tex_map[uint2(gtid.x, gtid.y)] = LerpColour(density);
+}
+
 // Debug Function
 [numthreads(1, 1, 1)]
 void Debugging(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 {	
-	#if SPATIAL_DIMENSIONS == 2
-	float4 volume = float4(ProbeRadius, ProbeRadius, 0, 0);
-	#elif SPATIAL_DIMENSIONS == 3
-	float4 volume = float4(ProbeRadius, ProbeRadius, ProbeRadius, 0);
-	#endif
-
 	float4 pos = ProbePosition;
 	float radius_sq = sqr(ProbeRadius);
 	
 	// Search the neighbours of 'target'
-	FindIter find = Find(pos, volume, GridScale, CellCount);
+	FindIter find = Find(pos, SearchVolume(ProbeRadius), GridScale, CellCount);
 	while (DoFind(find, CellCount))
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)

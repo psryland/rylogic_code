@@ -32,9 +32,9 @@ struct Main :Form
 	};
 
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
-	inline static constexpr int ParticleCount = 946;//100;//30 * 30;
+	inline static constexpr int ParticleCount = 1000;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
-	inline static constexpr int GridCellCount = 1021;//65521;//1021;//1048573;//16777213;
+	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
 
 	Renderer m_rdr;
@@ -53,6 +53,29 @@ struct Main :Form
 	int m_last_frame;
 	float m_time;
 
+	static FluidSimulation::ParamsData FluidConstants(int NumCollisionPrimitives)
+	{
+		return FluidSimulation::ParamsData
+		{
+			.NumParticles = ParticleCount,
+			.NumPrimitives = NumCollisionPrimitives,
+			.ParticleRadius = ParticleRadius,
+			.TimeStep = 0,
+
+			.Gravity = v4(0, -9.8f, 0, 0),
+
+			.Mass = 1.0f,
+			.DensityToPressure = 100.0f,
+			.Density0 = 1.0f,
+			.Viscosity = 10.0f,
+
+			.ThermalDiffusion = 0.01f,
+			.GridScale = 1.0f / ParticleRadius,
+			.CellCount = GridCellCount,
+			.RandomSeed = 0,
+		};
+	}
+
 	Main(HINSTANCE hinst)
 		: Form(Params<>()
 			.name("main")
@@ -68,7 +91,7 @@ struct Main :Form
 		, m_probe(m_rdr)
 		, m_loop()
 		, m_col_builder(CollisionInitData())
-		, m_fluid_sim(m_rdr, FluidConstants(), ParticleInitData(EFillStyle::Lattice), m_col_builder.Build())
+		, m_fluid_sim(m_rdr, FluidConstants(isize(m_col_builder.Primitives())), ParticleInitData(EFillStyle::Random), m_col_builder.Primitives())
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn, m_col_builder.Ldr().WrapAsGroup().ToString())
 		, m_title()
 		, m_run_mode(ERunMode::Paused)
@@ -89,9 +112,15 @@ struct Main :Form
 		m_loop.AddLoop(10, false, [this](auto dt) // Sim loop
 		{
 			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
+			Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
+			Tweakable<bool, "ColourByVelocity"> ColourByVelocity = false;
+			Tweakable<bool, "ColourByDensity"> ColourByDensity = false;
+			Tweakable<bool, "ColourByProbe"> ColourByProbe = true;
 
-			m_fluid_sim.Colours.VelocityBased = true;
-			m_fluid_sim.Colours.WithinProbe = m_probe.m_active;
+			m_fluid_sim.Colours.Range = ColourRange;
+			m_fluid_sim.Colours.VelocityBased = ColourByVelocity;
+			m_fluid_sim.Colours.DensityBased = ColourByDensity;
+			m_fluid_sim.Colours.WithinProbe = ColourByProbe && m_probe.m_active;
 			m_fluid_sim.Probe.Position = m_probe.m_position;
 			m_fluid_sim.Probe.Radius = m_probe.m_radius;
 			m_fluid_sim.Probe.Force = m_probe.m_active ? m_probe.m_sign * ProbeForce : 0;
@@ -150,37 +179,38 @@ struct Main :Form
 		if (m_frame_lock)
 			m_title.append(std::format("[FL={}]", m_last_frame));
 
+		auto pos = m_probe.m_position;
+		m_title.append(std::format(" - Pos: {:.3f} {:.3f} {:.3f}", pos.x, pos.y, pos.z));
+		m_title.append(std::format(" - Probe Radius: {:.3f}", m_probe.m_radius));
+
 		if (m_probe.m_active)
 		{
-			auto pos = m_probe.m_position;
-			auto rad_sq = Sqr(m_probe.m_radius);
-			//auto density = 0;
-			//auto press = v3{ 0,0,0 };
-
-			auto count = 0;
-			auto nearest = 0;
-			auto nearest_dist_sq = std::numeric_limits<float>::max();
-			auto particles = m_fluid_vis.ReadParticles();
-			for (auto& particle : particles)
+			if (!m_frame_lock)
 			{
-				auto dist_sq = LengthSq(particle.pos - pos);
-				if (dist_sq > rad_sq)
-					continue;
-
-				++count;
-				if (dist_sq < nearest_dist_sq)
+				auto count = 0;
+				auto nearest = 0;
+				auto rad_sq = Sqr(m_probe.m_radius);
+				auto nearest_dist_sq = std::numeric_limits<float>::max();
+				auto particles = m_fluid_vis.ReadParticles();
+				for (auto& particle : particles)
 				{
-					nearest = s_cast<int>(&particle - particles.data());
-					nearest_dist_sq = dist_sq;
+					auto dist_sq = LengthSq(particle.pos - pos);
+					if (dist_sq > rad_sq)
+						continue;
+
+					++count;
+					if (dist_sq < nearest_dist_sq)
+					{
+						nearest = s_cast<int>(&particle - particles.data());
+						nearest_dist_sq = dist_sq;
+					}
 				}
+				m_title.append(std::format(" - Nearest: {}", nearest));
+				m_title.append(std::format(" - Count: {}", count));
 			}
 
-			m_title.append(std::format(" - Pos: {:.3f} {:.3f} {:.3f}", pos.x, pos.y, pos.z));
-			m_title.append(std::format(" - Nearest: {}", nearest));
-			m_title.append(std::format(" - Count: {}", count));
 			//m_title.append(std::format(" - Density: {:.3f}", density));
 			//m_title.append(std::format(" - Press: {:.3f} {:.3f} {:.3f}", press.x, press.y, press.z));
-			m_title.append(std::format(" - Probe Radius: {:.3f}", m_probe.m_radius));
 		}
 		else
 		{
@@ -288,24 +318,6 @@ struct Main :Form
 		}
 	}
 
-	static FluidSimulation::ParamsData FluidConstants()
-	{
-		return FluidSimulation::ParamsData
-		{
-			.NumParticles = ParticleCount,
-			.ParticleRadius = ParticleRadius,
-			.CellCount = GridCellCount,
-			.GridScale = 1.0f / ParticleRadius,
-			.Gravity = v4(0, -9.8f, 0, 0),
-			.Mass = 1.0f,
-			.DensityToPressure = 100.0f,
-			.Density0 = 1.0f,
-			.Viscosity = 10.0f,
-			.ThermalDiffusion = 0.01f,
-			.TimeStep = 0,
-			.RandomSeed = 0,
-		};
-	}
 	static std::vector<Particle> ParticleInitData(EFillStyle style)
 	{
 		std::vector<Particle> particles;
@@ -324,7 +336,7 @@ struct Main :Form
 			case EFillStyle::Point:
 			{
 				for (int i = 0; i != ParticleCount; ++i)
-					points(v4(0,-1,0,1), v4(1,-1,0,0));
+					points(v4(-0.9f,0,0,1), v4(-0.1f,-0.1f,0,0));
 
 				break;
 			}
@@ -423,10 +435,10 @@ struct Main :Form
 	{
 		using namespace ldr;
 		return std::move(CollisionBuilder(true)
-			.Plane(v4(0, +1, 0, 0.5f), ldr::Name("floor"), 0xFFade3ff, {2, 0.5f})
-			.Plane(v4(0, -1, 0, 1.5f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
-			.Plane(v4(+1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
-			.Plane(v4(-1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 1})
+			.Plane(v4(0, +1, 0, 1.0f), ldr::Name("floor"), 0xFFade3ff, {2, 0.5f})
+			.Plane(v4(0, -1, 0, 1.0f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
+			.Plane(v4(+1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 2})
+			.Plane(v4(-1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 2})
 		);
 	}
 

@@ -159,11 +159,11 @@ namespace pr::rdr12
 		}
 
 		// Bake a transform into the model
-		if (opts && opts->m_bake != nullptr)
+		if (opts && opts->m_bake)
 			Impl::BakeTransform(cache, *opts->m_bake);
 
 		// Generate normals
-		if (opts && opts->m_gen_normals != nullptr)
+		if (opts && opts->m_gen_normals)
 			Impl::GenerateNormals(cache, *opts->m_gen_normals);
 
 		// Create the model
