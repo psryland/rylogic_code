@@ -3,6 +3,7 @@
 // list the shaders to be included.
 // Remember to add 'pr/include' to the resource compiler's include path.
 COLLISION_PRIMITIVES_HLSLI TEXT    DISCARDABLE     "collision_primitives.hlsli"
+FLUID_SIMULATION_HLSL      TEXT    DISCARDABLE     "fluid_simulation.hlsl"
 GEOMETRY_HLSLI             TEXT    DISCARDABLE     "geometry.hlsli"
 GPU_RADIX_SORT_HLSL        TEXT    DISCARDABLE     "gpu_radix_sort.hlsl"
 PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "particle_collision.hlsl"

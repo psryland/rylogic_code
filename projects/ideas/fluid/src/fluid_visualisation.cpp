@@ -1,7 +1,5 @@
 // Fluid
-#include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
-#include "src/particle.h"
 
 using namespace pr::rdr12;
 
@@ -17,7 +15,6 @@ namespace pr::fluid
 		, m_gfx_vector_field()
 		, m_read_back()
 		, m_last_read_back(-1)
-		, Params()
 	{
 		// Create a dynamic model for the fluid particles (using the particle buffer)
 		{
@@ -50,11 +47,14 @@ namespace pr::fluid
 			auto opts = ModelGenerator::CreateOptions().bake(m4x4::Translation(0,0,-0.01f));
 			m_gfx_map.m_model = ModelGenerator::Quad(rdr, AxisId::PosZ, { 0, 0 }, 2, 2, iv2::Zero(), &opts);
 			m_gfx_map.m_model->m_name = "Fluid:MapQuad";
-			m_gfx_map.m_model->m_nuggets.front().m_tex_diffuse = m_tex_map;
+			
+			auto& nug = m_gfx_map.m_model->m_nuggets.front();
+			nug.m_tex_diffuse = m_tex_map;
+			nug.m_sam_diffuse = rdr.res().StockSampler(EStockSampler::PointClamp);
 		}
 
 		// Make sure everything ready to go
-		rdr.res().FlushToGpu(true);
+		rdr.res().FlushToGpu(EGpuFlush::Block);
 	}
 	FluidVisualisation::~FluidVisualisation()
 	{
@@ -63,7 +63,7 @@ namespace pr::fluid
 	}
 
 	// Add the particles to the scene that renders them
-	void FluidVisualisation::AddToScene(Scene& scene)
+	void FluidVisualisation::AddToScene(GpuJob& job, Scene& scene)
 	{
 		// The container
 		scene.AddInstance(m_gfx_container);
@@ -78,16 +78,15 @@ namespace pr::fluid
 		}
 
 		// Update the vector field
-		Tweakable<int, "VectorFieldMode"> VectorFieldMode = (int)EVectorFieldMode::None;
-		Params.VectorFieldMode = (EVectorFieldMode)VectorFieldMode.operator int();
-		if (Params.VectorFieldMode != EVectorFieldMode::None)
+		Tweakable<int, "VectorFieldMode"> VectorFieldMode = 0;
+		if (VectorFieldMode != 0)
 		{
 			Tweakable<float, "VectorFieldScale"> VectorFieldScale = 0.01f;
 			Colour32 const col = 0xFF800000;
 				
 			UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices();
 			auto* ptr = update.ptr<Vert>();
-			for (auto const& particle : ReadParticles())
+			for (auto const& particle : ReadParticles(job))
 			{
 				ptr->m_vert = particle.pos;
 				ptr->m_diff = col;
@@ -97,9 +96,9 @@ namespace pr::fluid
 				++ptr;
 
 				ptr->m_vert = particle.pos + VectorFieldScale * (
-					Params.VectorFieldMode != EVectorFieldMode::Velocities    ? particle.vel :
-					Params.VectorFieldMode != EVectorFieldMode::Accelerations ? particle.acc.w0() :
-					Params.VectorFieldMode != EVectorFieldMode::Gradients     ? particle.density * v4::YAxis() :
+					VectorFieldMode == 1 ? particle.vel :
+					VectorFieldMode == 2 ? particle.acc.w0() :
+					VectorFieldMode == 3 ? particle.mass * v4::YAxis() :
 					v4::Zero());
 				ptr->m_diff = col;
 				ptr->m_norm = v4::Zero();
@@ -112,14 +111,15 @@ namespace pr::fluid
 		}
 
 		// Show the density map
-		Tweakable<bool, "ShowDensityMap"> ShowDensityMap = false;
-		if (ShowDensityMap)
+		Tweakable<int, "MapType"> MapType = 0;
+		if (MapType != 0)
 		{
 			FluidSimulation::MapData map_data = {
 				.MapToWorld = m4x4::Scale(2.0f/m_tex_map->m_dim.xy.x, 2.0f/m_tex_map->m_dim.xy.y, 1.0f, v4(-1, -1, 0, 1)),
-				.MapTexDim = m_tex_map->m_dim.xy
+				.MapTexDim = m_tex_map->m_dim.xy,
+				.MapType = MapType,
 			};
-			m_sim->GenerateDensityMap(m_tex_map, map_data);
+			m_sim->GenerateMap(job, m_tex_map, map_data);
 			scene.AddInstance(m_gfx_map);
 		}
 
@@ -165,12 +165,12 @@ namespace pr::fluid
 	}
 
 	// Read the particles from the GPU
-	std::span<Particle const> FluidVisualisation::ReadParticles()
+	std::span<Particle const> FluidVisualisation::ReadParticles(GpuJob& job)
 	{
 		if (m_last_read_back != m_sim->m_frame)
 		{
 			m_read_back.resize(m_sim->Params.NumParticles);
-			m_sim->ReadParticles(m_read_back);
+			m_sim->ReadParticles(job, m_read_back);
 		}
 		return m_read_back;
 	}

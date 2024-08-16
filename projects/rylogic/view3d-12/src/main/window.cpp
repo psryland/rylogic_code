@@ -414,7 +414,7 @@ namespace pr::rdr12
 		++m_frame_number;
 
 		// Flush any pending resource commands to the GPU
-		res().FlushToGpu(false);
+		res().FlushToGpu(EGpuFlush::Async);
 
 		// Get the current swap chain back buffer
 		auto& bb_main = m_msaa_bb;
@@ -501,7 +501,7 @@ namespace pr::rdr12
 	}
 	
 	// Present the frame to the display
-	void Window::Present(Frame& frame)
+	void Window::Present(Frame& frame, EGpuFlush flush)
 	{
 		// Be careful that you never have the message-pump thread wait on the render thread.
 		// For instance, calling IDXGISwapChain1::Present1 (from the render thread) may cause
@@ -510,6 +510,8 @@ namespace pr::rdr12
 		// and either of these methods call ::SendMessage(). In this scenario, if the message-pump
 		// thread has a critical section guarding it or if the render thread is blocked, then the
 		// two threads will deadlock.
+		if (flush == EGpuFlush::DontFlush)
+			return;
 
 		frame.m_prepare.Close();
 		frame.m_resolve.Close();
@@ -592,10 +594,13 @@ namespace pr::rdr12
 			}
 		}
 
-		// Set the next sync point for the swap chain backbuffer
+		// Set the next sync point for the swap chain back buffer
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
 		frame.m_bb_main.m_sync_point = sync_point;
 		frame.m_bb_post.m_sync_point = sync_point;
+
+		if (flush == EGpuFlush::Block)
+			m_gsync.Wait();
 	}
 
 	// Create the MSAA render target and depth stencil

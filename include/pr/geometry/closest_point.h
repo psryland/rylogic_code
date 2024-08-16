@@ -182,15 +182,15 @@ namespace pr
 		if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f)
 		{
 			// Barycentric coordinates (1-v, v, 0)
-			float v = d1 / (d1 - d3);
+			auto v = d1 / (d1 - d3);
 			barycentric = v4(1.0f - v, v, 0.0f, 0.0f);
 			return a + v * ab;
 		}
 
 		// Check if P in vertex region outside C
-		v4 cp = p - c;
-		float d5 = Dot3(ab, cp);
-		float d6 = Dot3(ac, cp);
+		auto cp = p - c;
+		auto d5 = Dot3(ab, cp);
+		auto d6 = Dot3(ac, cp);
 		if (d6 >= 0.0f && d5 <= d6)
 		{
 			barycentric = v4(0.0f, 0.0f, 1.0f, 0.0f);
@@ -198,30 +198,30 @@ namespace pr
 		}
 
 		// Check if P in edge region of AC, if so return projection of P onto AC
-		float vb = d5*d2 - d1*d6;
+		auto vb = d5*d2 - d1*d6;
 		if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f)
 		{
 			// Barycentric coordinates (1-w, 0, w)
-			float w = d2 / (d2 - d6);
+			auto w = d2 / (d2 - d6);
 			barycentric = v4(1.0f - w, 0.0f, w, 0.0f);
 			return a + w * ac;
 		}
 
 		// Check if P in edge region of BC, if so return projection of P onto BC
-		float va = d3*d6 - d5*d4;
+		auto va = d3*d6 - d5*d4;
 		if (va <= 0.0f && d4 - d3 >= 0.0f && d5 - d6 >= 0.0f)
 		{
 			// Barycentric coordinates (0, 1-w, w)
-			float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+			auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
 			barycentric = v4(0.0f, 1.0f - w, w, 0.0f);
 			return b + w * (c - b);
 		}
 
 		// P inside face region. Compute Q through its barycentric coordinates (u,v,w)
 		//'  = u*a + v*b + w*c, u = va * denom = 1.0f - v - w
-		float denom = 1.0f / (va + vb + vc);
-		float v = vb * denom;
-		float w = vc * denom;
+		auto denom = 1.0f / (va + vb + vc);
+		auto v = vb * denom;
+		auto w = vc * denom;
 		barycentric = v4(1.0f - v - w, v, w, 0.0f);
 		return a + ab * v + ac * w;
 	}

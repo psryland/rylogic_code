@@ -140,6 +140,7 @@
     <ClInclude Include="..\include\pr\view3d-12\compute\gpu_radix_sort.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\spatial_partition.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\fluid_simulation.h" />
     <ClInclude Include="..\include\pr\view3d-12\forward.h" />
     <ClInclude Include="..\include\pr\view3d-12\instance\instance.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h" />
@@ -262,6 +263,11 @@
     </FxCompile>
     <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsl">
       <EntryPointName>BuildSpatial</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\fluid_simulation.hlsl">
+      <EntryPointName>ApplyForces</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
     </FxCompile>

@@ -1,13 +1,10 @@
 // Fluid
 #include "src/forward.h"
-#include "src/fluid_simulation.h"
 #include "src/fluid_visualisation.h"
-#include "src/particle.h"
 #include "src/probe.h"
 
 using namespace pr;
 using namespace pr::gui;
-using namespace pr::rdr12;
 using namespace pr::fluid;
 
 // Application window
@@ -31,21 +28,22 @@ struct Main :Form
 		Grid,
 	};
 
-	inline static constexpr iv2 WinSize = { 2048, 1600 };
 	inline static constexpr int ParticleCount = 1000;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
+	inline static constexpr iv2 WinSize = { 2048, 1600 };
 
-	Renderer m_rdr;
-	Window m_wnd;
-	Scene m_scn;
+	rdr12::Renderer m_rdr;
+	rdr12::Window m_wnd;
+	rdr12::Scene m_scn;
 
 	Probe m_probe;
 	SimMessageLoop m_loop;
 	CollisionBuilder m_col_builder;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
+	GpuJob m_job;
 
 	std::string m_title;
 	ERunMode m_run_mode;
@@ -60,16 +58,6 @@ struct Main :Form
 			.NumParticles = ParticleCount,
 			.NumPrimitives = NumCollisionPrimitives,
 			.ParticleRadius = ParticleRadius,
-			.TimeStep = 0,
-
-			.Gravity = v4(0, -9.8f, 0, 0),
-
-			.Mass = 1.0f,
-			.DensityToPressure = 100.0f,
-			.Density0 = 1.0f,
-			.Viscosity = 10.0f,
-
-			.ThermalDiffusion = 0.01f,
 			.GridScale = 1.0f / ParticleRadius,
 			.CellCount = GridCellCount,
 			.RandomSeed = 0,
@@ -85,14 +73,15 @@ struct Main :Form
 			.main_wnd()
 			.dbl_buffer()
 			.wndclass(RegisterWndClass<Main>()))
-		, m_rdr(RdrSettings(hinst).DebugLayer())
-		, m_wnd(m_rdr, WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
+		, m_rdr(rdr12::RdrSettings(hinst).DebugLayer())
+		, m_wnd(m_rdr, rdr12::WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
 		, m_probe(m_rdr)
 		, m_loop()
 		, m_col_builder(CollisionInitData())
 		, m_fluid_sim(m_rdr, FluidConstants(isize(m_col_builder.Primitives())), ParticleInitData(EFillStyle::Random), m_col_builder.Primitives())
 		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn, m_col_builder.Ldr().WrapAsGroup().ToString())
+		, m_job(m_rdr.D3DDevice(), "Fluid", 0xFFA83250, 5)
 		, m_title()
 		, m_run_mode(ERunMode::Paused)
 		, m_frame_lock(false)
@@ -100,6 +89,7 @@ struct Main :Form
 		, m_time()
 	{
 		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
+		m_fluid_sim.Init(m_job);
 
 		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 		if constexpr (Dimensions == 2)
@@ -111,19 +101,38 @@ struct Main :Form
 		m_loop.AddMessageFilter(*this);
 		m_loop.AddLoop(10, false, [this](auto dt) // Sim loop
 		{
-			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
+			Tweakable<int, "ColourScheme"> ColourScheme = 0;
 			Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
-			Tweakable<bool, "ColourByVelocity"> ColourByVelocity = false;
-			Tweakable<bool, "ColourByDensity"> ColourByDensity = false;
-			Tweakable<bool, "ColourByProbe"> ColourByProbe = true;
-
+			m_fluid_sim.Colours.Scheme = ColourScheme;
 			m_fluid_sim.Colours.Range = ColourRange;
-			m_fluid_sim.Colours.VelocityBased = ColourByVelocity;
-			m_fluid_sim.Colours.DensityBased = ColourByDensity;
-			m_fluid_sim.Colours.WithinProbe = ColourByProbe && m_probe.m_active;
+			
+			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
+			Tweakable<bool, "ShowWithinProbe"> ShowWithinProbe = true;
 			m_fluid_sim.Probe.Position = m_probe.m_position;
 			m_fluid_sim.Probe.Radius = m_probe.m_radius;
 			m_fluid_sim.Probe.Force = m_probe.m_active ? m_probe.m_sign * ProbeForce : 0;
+			m_fluid_sim.Probe.Highlight = ShowWithinProbe && m_probe.m_active;
+
+			Tweakable<float, "Gravity"> Gravity = 0.1f;
+			Tweakable<float, "Mass"> Mass = 1.0f;
+			Tweakable<float, "ForceScale"> ForceScale = 10.0f;
+			Tweakable<float, "Viscosity"> Viscosity = 10.0f;
+			Tweakable<float, "ThermalDiffusion"> ThermalDiffusion = 0.01f;
+			Tweakable<float, "Attraction"> Attraction = 1.6f;
+			Tweakable<float, "Falloff"> Falloff = 2.5f;
+			m_fluid_sim.Params.Gravity = v4(0, -9.8f, 0, 0) * Gravity;
+			m_fluid_sim.Params.Mass = Mass;
+			m_fluid_sim.Params.ForceScale = ForceScale;
+			m_fluid_sim.Params.Viscosity = Viscosity;
+			m_fluid_sim.Params.ThermalDiffusion = ThermalDiffusion;
+			m_fluid_sim.Params.Attraction = Attraction;
+			m_fluid_sim.Params.Falloff = Falloff;
+
+			Tweakable<v2, "Restitution"> Restitution = v2{ 1.0f, 1.0f };
+			Tweakable<float, "BoundaryThickness"> BoundaryThickness = 0.01f;
+			m_fluid_sim.m_collision.Params.Restitution = Restitution;
+			m_fluid_sim.m_collision.Params.BoundaryThickness = BoundaryThickness;
+
 
 			switch (m_run_mode)
 			{
@@ -134,14 +143,14 @@ struct Main :Form
 				case ERunMode::SingleStep:
 				{
 					m_time += dt * 0.001f;
-					m_fluid_sim.Step(dt * 0.001f);
+					m_fluid_sim.Step(m_job, dt * 0.001f);
 					m_run_mode = ERunMode::Paused;
 					break;
 				}
 				case ERunMode::FreeRun:
 				{
 					m_time += dt * 0.001f;
-					m_fluid_sim.Step(dt * 0.001f);
+					m_fluid_sim.Step(m_job, dt * 0.001f);
 					break;
 				}
 			}
@@ -155,15 +164,18 @@ struct Main :Form
 			if (m_frame_lock && m_last_frame == m_fluid_sim.m_frame)
 				return;
 
+			m_job.m_gsync.Wait();
+
 			// Render the particles
 			m_scn.ClearDrawlists();
 			m_probe.AddToScene(m_scn);
-			m_fluid_vis.AddToScene(m_scn);
+			m_fluid_vis.AddToScene(m_job, m_scn);
 
 			// Render the frame
 			auto frame = m_wnd.NewFrame();
 			m_scn.Render(frame);
-			m_wnd.Present(frame);
+			m_wnd.Present(frame, rdr12::EGpuFlush::Block);
+			
 
 			m_last_frame = m_fluid_sim.m_frame;
 		});
@@ -191,7 +203,7 @@ struct Main :Form
 				auto nearest = 0;
 				auto rad_sq = Sqr(m_probe.m_radius);
 				auto nearest_dist_sq = std::numeric_limits<float>::max();
-				auto particles = m_fluid_vis.ReadParticles();
+				auto particles = m_fluid_vis.ReadParticles(m_job);
 				for (auto& particle : particles)
 				{
 					auto dist_sq = LengthSq(particle.pos - pos);
@@ -325,7 +337,7 @@ struct Main :Form
 		auto points = [&](v4 p, v4 v)
 		{
 			assert(p.w == 1 && v.w == 0);
-			particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .density = {} });
+			particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .mass = 1.0f });
 		};
 
 		const float hwidth = 1.0f;

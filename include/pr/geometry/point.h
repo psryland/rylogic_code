@@ -20,7 +20,9 @@ namespace pr
 	// Return a point that is the weighted result of verts 'a','b','c' and 'bary'
 	inline v4 pr_vectorcall BaryPoint(v4_cref a, v4_cref b, v4_cref c, v4_cref bary)
 	{
-		return bary.x * a + bary.y * b + bary.z * c;
+		assert(a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && bary.w == 0.0f);
+		auto pt = bary.x * a + bary.y * b + bary.z * c;
+		return pt / pt.w;
 	}
 
 	// Return the 'Bary-Centric' coordinates for 'point' with respect to triangle a,b,c

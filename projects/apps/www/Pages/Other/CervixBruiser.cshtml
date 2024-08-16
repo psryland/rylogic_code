@@ -1,0 +1,12 @@
+﻿@page
+@model rylogic.co.nz.Pages.Other.CervixBruiserModel
+@{
+    ViewData["Title"] = "Other";
+}
+
+<div class="download_buttons">
+    <a href="@Model.DownloadUrl">
+        <b>Pound This!</b>
+        <p>@Model.DownloadFile (@Model.DownloadSize)</p>
+    </a>
+</div>

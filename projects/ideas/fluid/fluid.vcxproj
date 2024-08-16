@@ -66,6 +66,14 @@
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ResourceCompile>
+    <FxCompile>
+      <AdditionalIncludeDirectories>
+        $(ProjectDir);
+        $(ProjectDir)..\..\..\include;
+        %(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
   </ItemDefinitionGroup>
   <!--
   Files -->
@@ -74,23 +82,9 @@
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\forward.h" />
-    <ClInclude Include="src\fluid_simulation.h" />
-    <ClCompile Include="src\fluid_simulation.cpp" />
     <ClInclude Include="src\fluid_visualisation.h" />
     <ClCompile Include="src\fluid_visualisation.cpp" />
-    <ClInclude Include="src\particle.h" />
     <ClInclude Include="src\probe.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="src\hlsl\fluid.hlsl">
-      <EntryPointName>DensityAtParticles</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-      <AdditionalIncludeDirectories>
-        $(ProjectDir)..\..\..\include;
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </FxCompile>
   </ItemGroup>
   <!--
   Dependencies -->

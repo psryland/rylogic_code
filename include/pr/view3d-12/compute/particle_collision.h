@@ -108,6 +108,7 @@ namespace pr::rdr12::compute::particle_collision
 
 		Renderer* m_rdr;                     // The renderer instance to use to run the compute shader
 		ComputeStep m_integrate;             // Integrate particles forward in time (with collision)
+		ComputeStep m_resting_contact;       // Apply resting contact forces (call before integrate)
 		D3DPtr<ID3D12Resource> m_primitives; // The primitives to collide with
 
 		// Shader parameters
@@ -117,12 +118,14 @@ namespace pr::rdr12::compute::particle_collision
 			int NumPrimitives = 0;           // The number of primitives
 			v2 Restitution = { 1.0f, 1.0f }; // The coefficient of restitution (normal, tangential)
 			float ParticleRadius = 0.1f;     // The radius of volume that each particle represents
+			float BoundaryThickness = 0.01f; // The distance at which boundary effects apply
 			float TimeStep = 0.0f;           // The time to advance each particle by
 		} Params;
 		
-		ParticleCollision(Renderer& rdr, std::wstring_view position_layout, std::span<Prim const> init_data = {})
+		ParticleCollision(Renderer& rdr, std::wstring_view position_layout, std::span<Prim const> init_data = {}, EGpuFlush flush = EGpuFlush::Block)
 			: m_rdr(&rdr)
 			, m_integrate()
+			, m_resting_contact()
 			, m_primitives()
 			, Params()
 		{
@@ -130,40 +133,51 @@ namespace pr::rdr12::compute::particle_collision
 			auto compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"PARTICLE_COLLISION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
-				.EntryPoint(L"Integrate")
 				.Define(L"POS_TYPE", position_layout)
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 
 			// Integrate
 			{
-				auto bytecode = compiler.Compile();
+				auto bytecode = compiler.EntryPoint(L"Integrate").Compile();
 				m_integrate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<ParamsData>(EReg::Constants)
 					.Uav(EReg::Particles)
 					.Uav(EReg::Primitives)
-					.Create(device, "ParticleCollision:Integrate");
+					.Create(device, "ParticleCollision:IntegrateSig");
 				m_integrate.m_pso = ComputePSO(m_integrate.m_sig.get(), bytecode)
-					.Create(device, "ParticleCollision:Integrate");
+					.Create(device, "ParticleCollision:IntegratePSO");
+			}
+
+			// Resting contact
+			{
+				auto bytecode = compiler.EntryPoint(L"RestingContact").Compile();
+				m_resting_contact.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32<ParamsData>(EReg::Constants)
+					.Uav(EReg::Particles)
+					.Uav(EReg::Primitives)
+					.Create(device, "ParticleCollision:RestingContactSig");
+				m_resting_contact.m_pso = ComputePSO(m_resting_contact.m_sig.get(), bytecode)
+					.Create(device, "ParticleCollision:RestingContactPSO");
 			}
 
 			// Set default collision primitives
-			SetCollisionPrimitives(init_data);
+			SetCollisionPrimitives(init_data, flush);
 		}
 
 		/// <summary>Set the primitives that the particles will collide with</summary>
-		void SetCollisionPrimitives(std::span<Prim const> primitives)
+		void SetCollisionPrimitives(std::span<Prim const> primitives, EGpuFlush flush)
 		{
 			ResDesc desc = ResDesc::Buf(ssize(primitives), sizeof(Prim), primitives.data(), alignof(Prim)).usage(EUsage::UnorderedAccess);
 			m_primitives = m_rdr->res().CreateResource(desc, "ParticleCollision:Primitives");
-			m_rdr->res().FlushToGpu(true);
+			m_rdr->res().FlushToGpu(flush);
 			Params.NumPrimitives = isize(primitives);
 		}
 
 		// Integrate the particle positions (with collision)
-		void Update(GraphicsJob& job, float dt, int count, D3DPtr<ID3D12Resource> particles)
+		void Integrate(GraphicsJob& job, float dt, int count, D3DPtr<ID3D12Resource> particles)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "ParticleCollision::Update");
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "ParticleCollision::Integrate");
 
 			Params.TimeStep = dt;
 			Params.NumParticles = count;
@@ -173,6 +187,27 @@ namespace pr::rdr12::compute::particle_collision
 
 			job.m_cmd_list.SetPipelineState(m_integrate.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_integrate.m_sig.get());
+			job.m_cmd_list.SetComputeRoot32BitConstants(0, Params, 0);
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.Dispatch(DispatchCount({ count, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+
+			PIXEndEvent(job.m_cmd_list.get());
+		}
+
+		// Apply resting contact forces
+		void RestingContact(GraphicsJob& job, float dt, int count, D3DPtr<ID3D12Resource> particles)
+		{
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "ParticleCollision::RestingContact");
+
+			Params.TimeStep = dt;
+			Params.NumParticles = count;
+
+			job.m_barriers.UAV(particles.get());
+			job.m_barriers.Commit();
+
+			job.m_cmd_list.SetPipelineState(m_resting_contact.m_pso.get());
+			job.m_cmd_list.SetComputeRootSignature(m_resting_contact.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, Params, 0);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_primitives->GetGPUVirtualAddress());

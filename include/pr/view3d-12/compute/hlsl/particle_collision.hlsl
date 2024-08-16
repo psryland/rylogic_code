@@ -4,18 +4,19 @@ static const int ThreadGroupSize = 1024;
 static const int MaxCollisionResolutionSteps = 10;
 
 #ifndef POS_TYPE
-#define POS_TYPE struct PosType { float4 pos; float4 col; float4 vel; float3 accel; float density; }
+#define POS_TYPE struct PosType { float4 pos; float4 col; float4 vel; float3 accel; float mass; }
 #endif
 POS_TYPE;
 
 cbuffer cbCollision : register(b0)
 {
 	// Note: Alignment matters. float2 must be aligned to 8 bytes.
-	int NumParticles; // The number of particles
-	int NumPrimitives; // The number of primitives
-	float2 Restitution; // The coefficient of restitution (normal, tangential)
-	float ParticleRadius; // The radius of volume that each particle represents
-	float TimeStep; // The time to advance each particle by
+	int NumParticles;        // The number of particles
+	int NumPrimitives;       // The number of primitives
+	float2 Restitution;      // The coefficient of restitution (normal, tangential)
+	float ParticleRadius;    // The radius of volume that each particle represents
+	float BoundaryThickness; // The thickness in with boundary effects are applied
+	float TimeStep;          // The time to advance each particle by
 };
 
 #include "geometry.hlsli"
@@ -61,17 +62,17 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			{
 				case Prim_Plane:
 				{
-					intercept_found |= InterceptRayVsPlane(target.pos, ray, prim.data[0], t, normal);
+					intercept_found |= Intercept_RayVsPlane(target.pos, ray, prim.data[0], t, normal);
 					break;
 				}
 				case Prim_Sphere:
 				{
-					intercept_found |= InterceptRayVsSphere(target.pos, ray, prim.data[0], t, normal);
+					intercept_found |= Intercept_RayVsSphere(target.pos, ray, prim.data[0], t, normal);
 					break;
 				}
 				case Prim_Triangle:
 				{
-					intercept_found |= InterceptRayVsTriangle(target.pos, ray, prim.data, t, normal);
+					intercept_found |= Intercept_RayVsTriangle(target.pos, ray, prim.data, t, normal);
 					break;
 				}
 			}
@@ -111,9 +112,6 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			vel0 = vel0 - dot(vel0, normal) * normal;
 			vel1 = vel1 - dot(vel1, normal) * normal;
 
-			// Set the "reset" acceleration to the -normal component of the current acceleration
-			target.accel += -dot(acc, normal) * normal.xyz;
-
 			// Remove the normal component of the acceleration
 			acc = acc - dot(acc, normal) * normal;
 		}
@@ -125,3 +123,62 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	m_particles[gtid.x].vel = target.vel;
 	m_particles[gtid.x].accel = target.accel;
 }
+
+// Apply a force from surfaces to reduce collisions for particles at rest.
+// Typically run this after applying forces to particles but before running 'Integrate'
+[numthreads(ThreadGroupSize, 1, 1)]
+void RestingContact(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+{
+	if (gtid.x >= NumParticles)
+		return;
+
+	PosType target = m_particles[gtid.x];
+
+	// Find the distance to each boundary surface
+	for (int i = 0; i != NumPrimitives; ++i)
+	{
+		Prim prim = m_collision[i];
+
+		// Get a direction vector that is a ray from the closest point on the surface to 'target.pos'
+		float4 normal;
+		float dist_sq = 0;
+		switch (prim.flags.x)
+		{
+			case Prim_Plane:
+			{
+				dist_sq = sqr(target.pos - ClosestPoint_PointToPlane(target.pos, prim.data[0], normal));
+				break;
+			}
+			case Prim_Sphere:
+			{
+				dist_sq = sqr(target.pos - ClosestPoint_PointToSphere(target.pos, prim.data[0], normal));
+				break;
+			}
+			case Prim_Triangle:
+			{
+				float4 bary;
+				dist_sq = sqr(target.pos - ClosestPoint_PointToTriangle(target.pos, prim.data, bary, normal));
+				break;
+			}
+		}
+		
+		// If the particle is within BoundaryThickness of the surface, and has a velocity
+		// that will not take it out of the boundary thickness, then cancel the acceleration
+		// into the surface
+		if (dist_sq < sqr(BoundaryThickness))
+		{
+			float4 vel = target.vel + TimeStep * float4(target.accel, 0);
+			float dist_n = dot(vel, normal) * TimeStep;
+			if (dist_n < 0 && dist_n < BoundaryThickness)
+			{
+				target.accel -= dot(target.accel, normal.xyz) * normal.xyz;
+				target.vel -= dot(target.vel, normal) * normal;
+				target.vel *= Restitution.y;
+			}
+		}
+	}
+
+	m_particles[gtid.x].accel = target.accel;
+	m_particles[gtid.x].vel   = target.vel;
+}
+

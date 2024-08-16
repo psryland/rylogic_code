@@ -75,7 +75,7 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 
 		// Flush creation commands to the GPU. Returns the sync point for when they've been executed
-		uint64_t FlushToGpu(bool block);
+		uint64_t FlushToGpu(EGpuFlush flush);
 		void Wait(uint64_t sync_point) const;
 		
 		// Create and initialise a resource

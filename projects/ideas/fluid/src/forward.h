@@ -28,23 +28,24 @@
 #include "pr/view3d-12/compute/gpu_radix_sort.h"
 #include "pr/view3d-12/compute/spatial_partition.h"
 #include "pr/view3d-12/compute/particle_collision.h"
+#include "pr/view3d-12/compute/fluid_simulation.h"
 
 namespace pr::fluid
 {
 	using namespace tweakables;
 	inline static const int Dimensions = 2;
 
-	struct Particle;
-	struct FluidSimulation;
 	struct FluidVisualisation;
 
 	using IndexSet = std::unordered_set<int64_t>;
 
-	using GpuJob = rdr12::GraphicsJob;
 	using ComputeStep = rdr12::ComputeStep;
+	using FluidSimulation = rdr12::compute::fluid::FluidSimulation<Dimensions>;
 	using SpatialPartition = rdr12::compute::spatial_partition::SpatialPartition;
 	using ParticleCollision = rdr12::compute::particle_collision::ParticleCollision;
-	using CollisionPrim = rdr12::compute::particle_collision::Prim;
 	using CollisionBuilder = rdr12::compute::particle_collision::CollisionBuilder;
+	using CollisionPrim = rdr12::compute::particle_collision::Prim;
+	using Particle = rdr12::compute::fluid::Particle;
+	using GpuJob = FluidSimulation::GpuJob;
 }
 

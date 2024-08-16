@@ -8,6 +8,9 @@
 namespace pr
 {
 	// Forward
+	v4 pr_vectorcall BaryPoint(v4_cref a, v4_cref b, v4_cref c, v4_cref bary);
+	v4 pr_vectorcall BaryCentric(v4_cref point, v4_cref a, v4_cref b, v4_cref c);
+	v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref p, v4_cref a, v4_cref b, v4_cref c, v4& barycentric);
 	geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref s, v4_cref e, BBox_cref bbox);
 
 	// Return the distance that 'point' is from the infinite plane: 'plane'
@@ -87,6 +90,14 @@ namespace pr
 		if      (point.z < lower.z) dist_sq += Sqr(lower.z - point.z);
 		else if (point.z > upper.z) dist_sq += Sqr(point.z - upper.z);
 		return dist_sq;
+	}
+
+	// Returns the squared distance from 'point' to a 'triangle'
+	inline float pr_vectorcall DistanceSq_PointToTriangle(v4_cref point, v4_cref a, v4_cref b, v4_cref c)
+	{
+		v4 bary;
+		auto pt = ClosestPoint_PointToTriangle(point, a, b, c, bary);
+		return LengthSq(pt - point);
 	}
 
 	// Returns the signed minimum distance between a line segment '(s,e)' and an AABB 'bbox'.

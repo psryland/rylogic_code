@@ -593,6 +593,9 @@
     <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision.h">
       <Filter>src\compute</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\compute\fluid_simulation.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -678,6 +681,9 @@
       <Filter>src\compute\hlsl</Filter>
     </FxCompile>
     <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsl">
+      <Filter>src\compute\hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\fluid_simulation.hlsl">
       <Filter>src\compute\hlsl</Filter>
     </FxCompile>
   </ItemGroup>

@@ -2,8 +2,6 @@
 #pragma once
 #include "src/forward.h"
 
-using namespace pr::rdr12;
-
 namespace pr::fluid
 {
 	struct Probe
@@ -27,7 +25,7 @@ namespace pr::fluid
 		}
 
 		// Add the probe to the scene
-		void AddToScene(Scene& scene)
+		void AddToScene(rdr12::Scene& scene)
 		{
 			if (!m_active)
 				return;

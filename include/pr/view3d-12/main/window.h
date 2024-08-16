@@ -90,7 +90,7 @@ namespace pr::rdr12
 		Frame NewFrame();
 
 		// Present the frame to the display
-		void Present(Frame& frame);
+		void Present(Frame& frame, EGpuFlush flush = EGpuFlush::Async);
 
 	private:
 

@@ -4,14 +4,6 @@
 
 namespace pr::fluid
 {
-	enum class EVectorFieldMode
-	{
-		None,
-		Velocities,
-		Accelerations,
-		Gradients
-	};
-
 	struct FluidVisualisation
 	{
 		#define PR_INST(x)\
@@ -32,16 +24,11 @@ namespace pr::fluid
 		std::vector<Particle> m_read_back;
 		int m_last_read_back = 0;
 
-		struct ParamsData
-		{
-			EVectorFieldMode VectorFieldMode = EVectorFieldMode::None;
-		} Params;
-
 		FluidVisualisation(FluidSimulation& sim, rdr12::Renderer& rdr, rdr12::Scene& scn, std::string_view ldr);
 		~FluidVisualisation();
 
-		void AddToScene(rdr12::Scene& scene);
-		std::span<Particle const> ReadParticles();
+		void AddToScene(GpuJob& job, rdr12::Scene& scene);
+		std::span<Particle const> ReadParticles(GpuJob& job);
 
 		// Handle input
 		void OnMouseButton(gui::MouseEventArgs& args);

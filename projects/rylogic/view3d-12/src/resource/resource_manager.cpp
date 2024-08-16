@@ -68,7 +68,7 @@ namespace pr::rdr12
 		}
 
 		// Wait till stock resources are created
-		FlushToGpu(true);
+		FlushToGpu(EGpuFlush::Block);
 
 		#if 0 // todo
 		// Detect outstanding references to GDI device contexts
@@ -99,9 +99,9 @@ namespace pr::rdr12
 	}
 
 	// Flush creation commands to the GPU. Returns the sync point for when they've been executed
-	uint64_t ResourceManager::FlushToGpu(bool block)
+	uint64_t ResourceManager::FlushToGpu(EGpuFlush flush)
 	{
-		if (!m_flush_required)
+		if (!m_flush_required || flush == EGpuFlush::DontFlush)
 			return m_gsync.LastAddedSyncPoint();
 
 		// Close the command list
@@ -122,7 +122,7 @@ namespace pr::rdr12
 		m_gfx_cmd_list.Reset(m_gfx_cmd_alloc_pool.Get());
 
 		// Wait till done?
-		if (block)
+		if (flush == EGpuFlush::Block)
 			Wait(sync_point);
 
 		PIXEndEvent(rdr().GfxQueue());

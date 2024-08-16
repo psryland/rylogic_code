@@ -359,6 +359,14 @@ namespace pr::rdr12
 	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 
+	// EGpulush
+	#define PR_ENUM(x)\
+		x(DontFlush)\
+		x(Async)\
+		x(Block)
+	PR_DEFINE_ENUM1(EGpuFlush, PR_ENUM);
+	#undef PR_ENUM
+
 	// Instances
 	template <typename T>
 	concept InstanceType = requires(T t)
