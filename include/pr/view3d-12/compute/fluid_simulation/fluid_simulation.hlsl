@@ -1,4 +1,7 @@
-// Fluid
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
 #ifndef SPATIAL_DIMENSIONS 
 #define SPATIAL_DIMENSIONS 2
 #endif
@@ -13,33 +16,29 @@ POS_TYPE;
 // Note: alignment matters. float4 must be aligned to 16 bytes.
 cbuffer cbFluidSim : register(b0)
 {
-	uint NumParticles;    // The number of particles
-	uint NumPrimitives;   // The number of collision primitives
-	float ParticleRadius; // The radius of influence for each particle
-	float TimeStep;       // Leap-frog time step
-
-	float4 Gravity;          // The acceleration due to gravity
-
-	float Mass;             // The particle mass
-	float ForceScale;       // The force scaling factor
-	float Viscosity;        // The viscosity scaler
-	float ThermalDiffusion; // The thermal diffusion rate
-
+	float4 Gravity;         // The acceleration due to gravity
+	uint NumParticles;      // The number of particles
+	uint NumPrimitives;     // The number of collision primitives
+	float ParticleRadius;   // The radius of influence for each particle
 	float Attraction;       // A value that controls the attraction force. <= 1 = no attraction, >1 = more attraction
 	float Falloff;          // The falloff distance for the pressure force
+	float ForceScale;       // The force scaling factor
+	float Viscosity;        // The viscosity scaler
+	float Mass;             // The particle mass
+	float ThermalDiffusion; // The thermal diffusion rate
 	float GridScale;        // The scale factor for the spatial partition grid
 	uint CellCount;         // The number of grid cells in the spatial partition
-
 	int RandomSeed;         // Seed value for the RNG
+	float TimeStep;         // Leap-frog time step
 };
-cbuffer cbColour : register(b1)
+cbuffer cbColourData : register(b1)
 {
 	// Note: alignment matters. float4 must be aligned to 16 bytes.
 	float4 Colours[4];       // The colour scale to use
 	float2 ColourValueRange; // Set scale to colour
 	uint Scheme;             // 0 = None, 1 = Velocity, 2 = Accel, 3 = Density, 0x80000000 = Within Probe
 };
-cbuffer cbProbe : register(b2)
+cbuffer cbProbeData : register(b2)
 {
 	// Note: alignment matters. float4 must be aligned to 16 bytes.
 	float4 ProbePosition;
@@ -48,7 +47,7 @@ cbuffer cbProbe : register(b2)
 	float ProbeForce;
 	int ProbeHighlight; // 0 = None, 1 = Highlight
 }
-cbuffer cbMap : register(b3)
+cbuffer cbMapData : register(b3)
 {
 	float4x4 MapToWorld; // Transform from map space to world space (including scale)
 	int2 MapTexDim;      // The dimensions of the map texture
@@ -76,14 +75,14 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
-#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/collision_primitives.hlsli"
+#include "../particle_collision/collision.hlsli"
 
 // The primitives to collide against
 RWStructuredBuffer<Prim> m_collision : register(u4);
 
-#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
-#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/geometry.hlsli"
-#include "E:/Rylogic/include/pr/view3d-12/compute/hlsl/utility.hlsli"
+#include "../spatial_partition/spatial_partition.hlsli"
+#include "../common/geometry.hlsli"
+#include "../common/utility.hlsli"
 
 // A texture for writing the density map to
 RWTexture2D<float4> m_tex_map : register(u5);
@@ -172,11 +171,11 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			PosType neighbour = m_particles[m_spatial[i]];
 
 			// Advance the neighbour by a leap-frog integration half step
-			float4 neighbour_pos = neighbour.pos + TimeStep * neighbour.vel;
+			float4 neighbour_pos = neighbour.pos;// + TimeStep * neighbour.vel;
 
 			// Distance check
 			float4 direction = target_pos - neighbour_pos;
-			float distance_sq = sqr(direction);
+			float distance_sq = dot(direction, direction);
 			if (distance_sq >= sqr(ParticleRadius))
 				continue;
 
@@ -206,12 +205,14 @@ void ApplyProbe(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 	if (gtid.x >= NumParticles)
 		return;
 
+	// If the particle is within the probe radius apply a force toward the centre.
+	// Scale by inverse distance so that the centre of the probe isn't high pressure.
 	float4 r = m_particles[gtid.x].pos - ProbePosition;
 	float dist_sq = dot(r, r);
 	if (dist_sq < sqr(ProbeRadius))
 	{
 		float dist = sqrt(dist_sq);
-		float influence = 1 - saturate(dist / ProbeRadius);
+		float influence = saturate(dist / ProbeRadius); // 1 at range, 0 in the centre
 		float4 direction = dist > 0.0001f ? r / dist : float4(0, 0, 0, 0);
 		float4 force = influence * (ProbeForce * direction - m_particles[gtid.x].vel);
 		m_particles[gtid.x].accel += force.xyz * Mass;
@@ -289,7 +290,7 @@ void GenerateMap(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			PosType neighbour = m_particles[m_spatial[i]];
 
 			float4 direction = pos - neighbour.pos;
-			float distance_sq = sqr(direction);
+			float distance_sq = dot(direction, direction);
 			if (distance_sq >= sqr(ParticleRadius))
 				continue;
 

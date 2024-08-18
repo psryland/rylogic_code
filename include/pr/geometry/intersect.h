@@ -378,7 +378,7 @@ namespace pr
 				// Make t1 be intersection with near plane, t2 with far plane
 				if (t1 > t2) std::swap(t1, t2);
 
-				// Compute the intersection of slab intersections intervals
+				// Compute the intersection of slab intersection intervals
 				if (t1 > tmin) tmin = t1;
 				if (t2 < tmax) tmax = t2;
 

@@ -763,7 +763,7 @@ namespace pr::ldr
 			}
 			Derived& ori(m3x4 const& rot)
 			{
-				return o2w(m4x4(rot, v4::Origin()));
+				return o2w(rot, v4::Origin());
 			}
 			Derived& scale(float s)
 			{
@@ -772,6 +772,11 @@ namespace pr::ldr
 			Derived& scale(float sx, float sy, float sz)
 			{
 				return ori(m3x4::Scale(sx, sy, sz));
+			}
+			Derived& o2w(m3x4 const& rot, v4 const& pos)
+			{
+				m_o2w = m4x4{ rot, pos } * m_o2w;
+				return static_cast<Derived&>(*this);
 			}
 			Derived& o2w(m4x4 const& o2w)
 			{

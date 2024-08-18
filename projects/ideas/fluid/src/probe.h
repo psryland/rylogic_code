@@ -25,7 +25,7 @@ namespace pr::fluid
 		}
 
 		// Add the probe to the scene
-		void AddToScene(rdr12::Scene& scene)
+		void AddToScene(rdr12::Scene& scene) const
 		{
 			if (!m_active)
 				return;

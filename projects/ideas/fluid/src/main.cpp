@@ -1,7 +1,9 @@
 // Fluid
 #include "src/forward.h"
 #include "src/fluid_visualisation.h"
+#include "src/idemo_scene.h"
 #include "src/probe.h"
+#include "src/demo/scene2d.h"
 
 using namespace pr;
 using namespace pr::gui;
@@ -20,13 +22,6 @@ struct Main :Form
 		SingleStep,
 		FreeRun,
 	};
-	enum class EFillStyle
-	{
-		Point,
-		Random,
-		Lattice,
-		Grid,
-	};
 
 	inline static constexpr int ParticleCount = 1000;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
@@ -34,35 +29,61 @@ struct Main :Form
 	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
 
+	using rtc_time_t = std::chrono::high_resolution_clock::time_point;
+	using ema_t = maths::ExpMovingAvr<double>;
+	using demo_scenes_t = std::vector<std::shared_ptr<IDemoScene>>;
+	using particles_t = std::vector<Particle>;
+	using colours_t = FluidSimulation::ColourData;
+	using probe_t = FluidSimulation::ProbeData;
+	using map_t = FluidSimulation::MapData;
+
+	struct FPS
+	{
+		ema_t m_fps = {20};
+		rtc_time_t m_time0 = {};
+		int m_frame0 = {};
+
+		double get() const
+		{
+			return m_fps.Mean();
+		}
+		void frame(int frame)
+		{
+			using namespace std::chrono;
+
+			auto time = rtc_time_t::clock::now();
+			if (time - m_time0 > milliseconds(200))
+			{
+				auto duration = 1e-9 * duration_cast<nanoseconds>(time - m_time0).count();
+				auto fps = (frame - m_frame0) / duration;
+				m_fps.Add(fps);
+				m_time0 = time;
+				m_frame0 = frame;
+			}
+		}
+	};
+
 	rdr12::Renderer m_rdr;
 	rdr12::Window m_wnd;
 	rdr12::Scene m_scn;
+	GpuJob m_job;
 
 	Probe m_probe;
+	demo_scenes_t m_demo;
 	SimMessageLoop m_loop;
-	CollisionBuilder m_col_builder;
 	FluidSimulation m_fluid_sim;
 	FluidVisualisation m_fluid_vis;
-	GpuJob m_job;
+	particles_t m_read_back;
+	colours_t m_colour_data;
+	probe_t m_probe_data;
 
 	std::string m_title;
 	ERunMode m_run_mode;
+	int m_scene_index;
 	bool m_frame_lock;
 	int m_last_frame;
 	float m_time;
-
-	static FluidSimulation::ParamsData FluidConstants(int NumCollisionPrimitives)
-	{
-		return FluidSimulation::ParamsData
-		{
-			.NumParticles = ParticleCount,
-			.NumPrimitives = NumCollisionPrimitives,
-			.ParticleRadius = ParticleRadius,
-			.GridScale = 1.0f / ParticleRadius,
-			.CellCount = GridCellCount,
-			.RandomSeed = 0,
-		};
-	}
+	FPS m_fps;
 
 	Main(HINSTANCE hinst)
 		: Form(Params<>()
@@ -76,42 +97,42 @@ struct Main :Form
 		, m_rdr(rdr12::RdrSettings(hinst).DebugLayer())
 		, m_wnd(m_rdr, rdr12::WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
-		, m_probe(m_rdr)
-		, m_loop()
-		, m_col_builder(CollisionInitData())
-		, m_fluid_sim(m_rdr, FluidConstants(isize(m_col_builder.Primitives())), ParticleInitData(EFillStyle::Random), m_col_builder.Primitives())
-		, m_fluid_vis(m_fluid_sim, m_rdr, m_scn, m_col_builder.Ldr().WrapAsGroup().ToString())
 		, m_job(m_rdr.D3DDevice(), "Fluid", 0xFFA83250, 5)
+		, m_probe(m_rdr)
+		, m_demo(CreateDemo())
+		, m_loop()
+		, m_fluid_sim(m_rdr, Dimensions)
+		, m_fluid_vis(m_rdr, m_scn)
+		, m_read_back()
+		, m_colour_data()
+		, m_probe_data()
 		, m_title()
+		, m_fps()
 		, m_run_mode(ERunMode::Paused)
+		, m_scene_index(-1)
 		, m_frame_lock(false)
 		, m_last_frame(-1)
 		, m_time()
 	{
 		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
-		m_fluid_sim.Init(m_job);
-
-		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
-		if constexpr (Dimensions == 2)
-			m_scn.m_cam.LookAt(v4(0.0f, 0.0f, 2.8f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
-		if constexpr (Dimensions == 3)
-			m_scn.m_cam.LookAt(v4(0.2f, 0.5f, 0.2f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
-		m_scn.m_cam.Align(v4::YAxis());
+		
+		// Load the next demo scene
+		NextScene();
 
 		m_loop.AddMessageFilter(*this);
 		m_loop.AddLoop(10, false, [this](auto dt) // Sim loop
 		{
 			Tweakable<int, "ColourScheme"> ColourScheme = 0;
 			Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
-			m_fluid_sim.Colours.Scheme = ColourScheme;
-			m_fluid_sim.Colours.Range = ColourRange;
+			m_colour_data.Scheme = ColourScheme;
+			m_colour_data.Range = ColourRange;
 			
 			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
 			Tweakable<bool, "ShowWithinProbe"> ShowWithinProbe = true;
-			m_fluid_sim.Probe.Position = m_probe.m_position;
-			m_fluid_sim.Probe.Radius = m_probe.m_radius;
-			m_fluid_sim.Probe.Force = m_probe.m_active ? m_probe.m_sign * ProbeForce : 0;
-			m_fluid_sim.Probe.Highlight = ShowWithinProbe && m_probe.m_active;
+			m_probe_data.Position = m_probe.m_position;
+			m_probe_data.Radius = m_probe.m_radius;
+			m_probe_data.Force = m_probe.m_active ? m_probe.m_sign * ProbeForce : 0;
+			m_probe_data.Highlight = ShowWithinProbe && m_probe.m_active;
 
 			Tweakable<float, "Gravity"> Gravity = 0.1f;
 			Tweakable<float, "Mass"> Mass = 1.0f;
@@ -120,19 +141,18 @@ struct Main :Form
 			Tweakable<float, "ThermalDiffusion"> ThermalDiffusion = 0.01f;
 			Tweakable<float, "Attraction"> Attraction = 1.6f;
 			Tweakable<float, "Falloff"> Falloff = 2.5f;
-			m_fluid_sim.Params.Gravity = v4(0, -9.8f, 0, 0) * Gravity;
-			m_fluid_sim.Params.Mass = Mass;
-			m_fluid_sim.Params.ForceScale = ForceScale;
-			m_fluid_sim.Params.Viscosity = Viscosity;
-			m_fluid_sim.Params.ThermalDiffusion = ThermalDiffusion;
-			m_fluid_sim.Params.Attraction = Attraction;
-			m_fluid_sim.Params.Falloff = Falloff;
+			m_fluid_sim.Config.Gravity = v4(0, -9.8f, 0, 0) * Gravity;
+			m_fluid_sim.Config.Mass = Mass;
+			m_fluid_sim.Config.ForceScale = ForceScale;
+			m_fluid_sim.Config.Viscosity = Viscosity;
+			m_fluid_sim.Config.ThermalDiffusion = ThermalDiffusion;
+			m_fluid_sim.Config.Attraction = Attraction;
+			m_fluid_sim.Config.Falloff = Falloff;
 
 			Tweakable<v2, "Restitution"> Restitution = v2{ 1.0f, 1.0f };
 			Tweakable<float, "BoundaryThickness"> BoundaryThickness = 0.01f;
-			m_fluid_sim.m_collision.Params.Restitution = Restitution;
-			m_fluid_sim.m_collision.Params.BoundaryThickness = BoundaryThickness;
-
+			m_fluid_sim.m_collision.Config.Restitution = Restitution;
+			m_fluid_sim.m_collision.Config.BoundaryThickness = BoundaryThickness;
 
 			switch (m_run_mode)
 			{
@@ -143,16 +163,35 @@ struct Main :Form
 				case ERunMode::SingleStep:
 				{
 					m_time += dt * 0.001f;
-					m_fluid_sim.Step(m_job, dt * 0.001f);
+					m_fluid_sim.Step(m_job, dt * 0.001f, &m_probe_data, &m_colour_data);
 					m_run_mode = ERunMode::Paused;
 					break;
 				}
 				case ERunMode::FreeRun:
 				{
 					m_time += dt * 0.001f;
-					m_fluid_sim.Step(m_job, dt * 0.001f);
+					m_fluid_sim.Step(m_job, dt * 0.001f, &m_probe_data, &m_colour_data);
+					m_fps.frame(m_fluid_sim.m_frame);
 					break;
 				}
+			}
+
+			if (m_probe.m_active)
+			{
+				m_read_back.resize(m_fluid_sim.Config.NumParticles);
+				m_fluid_sim.ReadParticles(m_job, m_read_back);
+			}
+
+			Tweakable<int, "MapType"> MapType = 0;
+			if (MapType != 0)
+			{
+				auto map_size = m_fluid_vis.m_tex_map->m_dim.xy;
+				map_t map_data = {
+					.MapToWorld = m4x4::Scale(2.0f/map_size.x, 2.0f/map_size.y, 1.0f, v4(-1, -1, 0, 1)),
+					.MapTexDim = map_size,
+					.MapType = MapType,
+				};
+				m_fluid_sim.GenerateMap(m_job, m_fluid_vis.m_tex_map, m_colour_data, map_data);
 			}
 		});
 		m_loop.AddLoop(50, false, [this](auto) // Render Loop
@@ -164,18 +203,41 @@ struct Main :Form
 			if (m_frame_lock && m_last_frame == m_fluid_sim.m_frame)
 				return;
 
+			EScene scene = EScene::None;
+
+			Tweakable<bool, "ShowParticles"> ShowParticles = true;
+			if (ShowParticles)
+			{
+				Tweakable<float, "DropletSize"> DropletSize = 0.4f;
+				m_fluid_vis.m_gs_points->m_size = v2(DropletSize);
+				scene |= EScene::Particles;
+			}
+
+			Tweakable<int, "VectorFieldMode"> VectorFieldMode = 0;
+			Tweakable<float, "VectorFieldScale"> VectorFieldScale = 0.01f;
+			if (VectorFieldMode != 0)
+			{
+				m_fluid_vis.UpdateVectorField(m_read_back, VectorFieldScale, VectorFieldMode);
+				scene |= EScene::VectorField;
+			}
+			
+			// Show the map
+			Tweakable<int, "MapType"> MapType = 0;
+			if (MapType != 0)
+				scene |= EScene::Map;
+
+			// Wait for the compute job to finish
 			m_job.m_gsync.Wait();
 
 			// Render the particles
 			m_scn.ClearDrawlists();
 			m_probe.AddToScene(m_scn);
-			m_fluid_vis.AddToScene(m_job, m_scn);
+			m_fluid_vis.AddToScene(m_scn, scene);
 
 			// Render the frame
 			auto frame = m_wnd.NewFrame();
 			m_scn.Render(frame);
 			m_wnd.Present(frame, rdr12::EGpuFlush::Block);
-			
 
 			m_last_frame = m_fluid_sim.m_frame;
 		});
@@ -192,6 +254,7 @@ struct Main :Form
 			m_title.append(std::format("[FL={}]", m_last_frame));
 
 		auto pos = m_probe.m_position;
+		m_title.append(std::format(" - FPS: {:.3f}", m_fps.get()));
 		m_title.append(std::format(" - Pos: {:.3f} {:.3f} {:.3f}", pos.x, pos.y, pos.z));
 		m_title.append(std::format(" - Probe Radius: {:.3f}", m_probe.m_radius));
 
@@ -203,8 +266,7 @@ struct Main :Form
 				auto nearest = 0;
 				auto rad_sq = Sqr(m_probe.m_radius);
 				auto nearest_dist_sq = std::numeric_limits<float>::max();
-				auto particles = m_fluid_vis.ReadParticles(m_job);
-				for (auto& particle : particles)
+				for (auto& particle : m_read_back)
 				{
 					auto dist_sq = LengthSq(particle.pos - pos);
 					if (dist_sq > rad_sq)
@@ -213,7 +275,7 @@ struct Main :Form
 					++count;
 					if (dist_sq < nearest_dist_sq)
 					{
-						nearest = s_cast<int>(&particle - particles.data());
+						nearest = s_cast<int>(&particle - m_read_back.data());
 						nearest_dist_sq = dist_sq;
 					}
 				}
@@ -234,6 +296,8 @@ struct Main :Form
 
 		SetWindowTextA(*this, m_title.c_str());
 	}
+
+	// Windows events
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
 	{
 		Form::OnWindowPosChange(args);
@@ -312,6 +376,16 @@ struct Main :Form
 				m_frame_lock = !m_frame_lock;
 				break;
 			}
+			case 'R':
+			{
+				m_fluid_sim.m_frame = 0;
+				m_last_frame = 0;
+
+				// Reset the sim
+				m_scene_index = -1;
+				NextScene();
+				break;
+			}
 			case VK_F5:
 			{
 				m_run_mode = m_run_mode != ERunMode::FreeRun ? ERunMode::FreeRun : ERunMode::Paused;
@@ -330,128 +404,51 @@ struct Main :Form
 		}
 	}
 
-	static std::vector<Particle> ParticleInitData(EFillStyle style)
+	// Load the next demo scene
+	void NextScene()
 	{
-		std::vector<Particle> particles;
-		particles.reserve(ParticleCount);
-		auto points = [&](v4 p, v4 v)
-		{
-			assert(p.w == 1 && v.w == 0);
-			particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .mass = 1.0f });
+		// Advance to the next scene
+		if (m_scene_index + 1 == m_demo.size()) return;
+		++m_scene_index;
+
+		// Get the next scene
+		auto& scene = *m_demo[m_scene_index].get();
+
+		// Remove models from the draw lists
+		m_scn.ClearDrawlists();
+
+		// Setup the simulation (override defaults)
+		FluidSimulation::ConfigData fs_config = {
+			.NumParticles = ParticleCount,
+			.ParticleRadius = ParticleRadius,
+		};
+		ParticleCollision::ConfigData pc_config = {
+			.NumPrimitives = isize(scene.Collision()),
+		};
+		SpatialPartition::ConfigData sp_config = {
 		};
 
-		const float hwidth = 1.0f;
-		const float hheight = 0.5f;
+		// Reset the sim for the current scene
+		m_fluid_sim.Init(m_job, fs_config, pc_config, sp_config, scene.Particles(), scene.Collision());
 
-		switch (style)
+		// Reset the visualisation for the current scene
+		m_fluid_vis.Init(ParticleCount, scene.LdrScene(), m_fluid_sim.m_r_particles);
+
+		// Set the initial camera position
+		auto cam = scene.Camera();
+		if (cam)
 		{
-			case EFillStyle::Point:
-			{
-				for (int i = 0; i != ParticleCount; ++i)
-					points(v4(-0.9f,0,0,1), v4(-0.1f,-0.1f,0,0));
-
-				break;
-			}
-			case EFillStyle::Random:
-			{
-				auto const margin = 0.95f;
-				auto hw = hwidth * margin;
-				auto hh = hheight * margin;
-				auto vx = 0.2f;
-
-				// Uniform distribution over the volume
-				std::default_random_engine rng;
-				for (int i = 0; i != ParticleCount; ++i)
-				{
-					auto pos = v3::Random(rng, v3(-hw, -hh, -hw), v3(+hw, +hh, +hw)).w1();
-					auto vel = v3::Random(rng, v3(-vx, -vx, -vx), v3(+vx, +vx, +vx)).w0();
-					if constexpr (Dimensions == 2) { pos.z = 0; vel.z = 0; }
-					points(pos, vel);
-				}
-				break;
-			}
-			case EFillStyle::Lattice:
-			{
-				auto const margin = 0.95f;
-				auto hw = hwidth * margin;
-				auto hh = hheight * margin;
-
-				if constexpr (Dimensions == 2)
-				{
-					// Want to spread N particles evenly over the volume.
-					// Area is 2*hwidth * 2*hheight
-					// Want to find 'step' such that:
-					//   (2*hwidth / step) * (2*hheight / step) = N
-					// => step = sqrt((2*hwidth * 2*hheight) / N)
-					auto step = Sqrt((2 * hw * 2 * hh) / ParticleCount);
-
-					auto x = -hw + step/2;
-					auto y = -hh + step/2;
-					for (int i = 0; i != ParticleCount; ++i)
-					{
-						points(v4(x, y, 0, 1), v4::Zero());
-
-						x += step;
-						if (x > hw) { x = -hw + step/2; y += step; }
-					}
-				}
-				if constexpr (Dimensions == 3)
-				{
-					// Want to spread N particles evenly over the volume.
-					// Volume is 2*hwidth * 2*hwidth * 2*hheight
-					// Want to find 'step' such that:
-					//  (2*hwidth/step) * (2*hwidth/step) * (2*hheight/step) = N
-					// => step = cubert((2*hwidth * 2*hwidth * 2*hheight) / N)
-					auto step = Cubert((2 * hw * 2 * hh * 2 * hw) / ParticleCount);
-
-					auto x = -hw + step/2;
-					auto y = -hh + step/2;
-					auto z = -hw + step/2;
-					for (int i = 0; i != ParticleCount; ++i)
-					{
-						points(v4(x, y, z, 1), v4::Zero());
-
-						x += step;
-						if (x > hw) { x = -hw + step/2; z += step; }
-						if (z > hw) { z = -hw + step/2; y += step; }
-					}
-				}
-				break;
-			}
-			case EFillStyle::Grid:
-			{
-				auto const margin = 1.0f;//0.95f;
-				auto hw = hwidth * margin;
-				auto hh = hheight * margin;
-				auto step = 0.1f;
-
-				if constexpr (Dimensions == 2)
-				{
-					auto x = -hw + step / 2.0f;
-					auto y = -hh + step / 2.0f;
-					for (int i = 0; i != ParticleCount; ++i)
-					{
-						points(v4(x, y, 0, 1), v4::Zero());
-
-						x += step;
-						if (x > hw) { x = -hw + step/2; y += step; }
-					}
-				}
-				break;
-			}
+			m_scn.m_cam = *cam;
+			m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 		}
-
-		return particles;
 	}
-	static CollisionBuilder CollisionInitData()
+
+	// Create the scenes of the demo
+	static demo_scenes_t CreateDemo()
 	{
-		using namespace ldr;
-		return std::move(CollisionBuilder(true)
-			.Plane(v4(0, +1, 0, 1.0f), ldr::Name("floor"), 0xFFade3ff, {2, 0.5f})
-			.Plane(v4(0, -1, 0, 1.0f), ldr::Name("ceiling"), 0xFFade3ff, {2, 0.5f})
-			.Plane(v4(+1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 2})
-			.Plane(v4(-1, 0, 0, 1), ldr::Name("wall"), 0xFFade3ff, {0.5f, 2})
-		);
+		auto scenes = demo_scenes_t();
+		scenes.emplace_back(new Scene2d(ParticleCount));
+		return scenes;
 	}
 
 	// Error handler

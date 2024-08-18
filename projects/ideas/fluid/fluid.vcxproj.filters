@@ -16,6 +16,12 @@
     <ClInclude Include="src\probe.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\idemo_scene.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\demo\scene2d.h">
+      <Filter>src\demo</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -26,6 +32,9 @@
     </Filter>
     <Filter Include="res">
       <UniqueIdentifier>{eff5ba73-22cb-4da9-9aad-17bcfd3a6d80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\demo">
+      <UniqueIdentifier>{94345110-0428-4d17-8436-1a36648d9010}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -40,5 +49,8 @@
     <ResourceCompile Include="res\shaders.rc">
       <Filter>res</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

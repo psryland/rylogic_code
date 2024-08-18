@@ -1,6 +1,7 @@
 // Spatial partition
-#pragma once
-#include "utility.hlsli"
+#ifndef SPATIAL_PARTITION_HLSLI
+#define SPATIAL_PARTITION_HLSLI
+#include "../common/utility.hlsli"
 
 #if 0 // Expected Buffers
 
@@ -79,3 +80,5 @@ inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 	iter.idx_range = int2(m_idx_start[hash], m_idx_start[hash] + m_idx_count[hash]);
 	return true;
 }
+
+#endif

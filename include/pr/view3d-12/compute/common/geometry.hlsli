@@ -1,20 +1,17 @@
-// Particle collision resolution
-#pragma once
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
+#ifndef GEOMETRY_HLSLI
+#define GEOMETRY_HLSLI
 #include "utility.hlsli"
 
-// Strategy: There is a lot of overlap with geometry functions, create the function most naturally
-// suited to the algorithm rather than Distance/ClosestPoint/Intercept variants for each combination.
-
-// Forwards
-float4 ClosestPoint_PointToPlane(float4 pos, float4 plane);
-float4 ClosestPoint_PointToPlane(float4 pos, float4 plane, out float4 normal);
-float4 ClosestPoint_PointToSphere(float4 pos, float4 sphere);
-float4 ClosestPoint_PointToSphere(float4 pos, float4 sphere, out float4 normal);
-float4 ClosestPoint_PointToTriangle(float4 pos, float4 tri[3]);
-float4 ClosestPoint_PointToTriangle(float4 pos, float4 tri[3], out float4 bary);
-float4 ClosestPoint_PointToTriangle(float4 pos, float4 tri[3], out float4 bary, out float4 normal);
-
 // Return a point that is the weighted result of verts 'a','b','c' and 'bary'
+inline float2 BaryPoint(float2 a, float2 b, float2 c, float4 bary)
+{
+	float4 pt = bary.x * float4(a,0,1) + bary.y * float4(b,0,1) + bary.z * float4(c,0,1);
+	return pt.xy / pt.w;
+}
 inline float4 BaryPoint(float4 a, float4 b, float4 c, float4 bary)
 {
 	float4 pt = bary.x * a + bary.y * b + bary.z * c;
@@ -22,11 +19,11 @@ inline float4 BaryPoint(float4 a, float4 b, float4 c, float4 bary)
 }
 
 // Return the barycentric coordinates for 'point' with respect to triangle a,b,c
-inline float4 Barycentric(float4 pos, float4 tri[3])
+inline float4 Barycentric(float2 pos, float2 a, float2 b, float2 c)
 {
-	float4 ab = tri[1] - tri[0];
-	float4 ac = tri[2] - tri[0];
-	float4 ap = pos - tri[0];
+	float2 ab = b - a;
+	float2 ac = c - a;
+	float2 ap = pos - a;
 
 	float d00 = dot(ab, ab);
 	float d01 = dot(ab, ac);
@@ -47,6 +44,56 @@ inline float4 Barycentric(float4 pos, float4 tri[3])
 	bary.w = 0.0f;
 	return bary;
 }
+inline float4 Barycentric(float4 pos, float4 a, float4 b, float4 c)
+{
+	float4 ab = b - a;
+	float4 ac = c - a;
+	float4 ap = pos - a;
+
+	float d00 = dot(ab, ab);
+	float d01 = dot(ab, ac);
+	float d11 = dot(ac, ac);
+	float d20 = dot(ap, ab);
+	float d21 = dot(ap, ac);
+
+	// If 'denom' == 0, the triangle has no area
+	// Return an invalid coordinate to signal this.
+	float denom = d00 * d11 - d01 * d01;
+	if (denom == 0)
+		return float4(0, 0, 0, 0);
+	
+	float4 bary;
+	bary.y = (d11 * d20 - d01 * d21) / denom;
+	bary.z = (d00 * d21 - d01 * d20) / denom;
+	bary.x = 1.0f - bary.y - bary.z;
+	bary.w = 0.0f;
+	return bary;
+}
+
+// Returns a spherical direction vector corresponding to the i'th point of a Fibonacci sphere
+inline float4 FibonacciSpiral(int i, int N)
+{
+	// Z goes from -1 to +1
+	// Using a half step bias so that there is no point at the poles.
+	// This prevents degenerates during 'unmapping' and also results in more evenly
+	// spaced points. See "Fibonacci grids: A novel approach to global modelling".
+	float z = -1.0f + (2.0f * i + 1.0f) / N;
+
+	// Radius at z
+	float r = sqrt(1.0 - z * z);
+
+	// Golden angle increment
+	static const float GoldenAngle = 2.39996322972865332223f;
+	float theta = i * GoldenAngle;
+	
+	float x = cos(theta) * r;
+	float y = sin(theta) * r;
+	return float4(x, y, z, 0);
+}
+
+
+
+#if 0 // World space functions
 
 // Finds the closest point on a plane to 'pos'. Returns the normal at the closest point
 inline float4 ClosestPoint_PointToPlane(float4 pos, float4 plane)
@@ -163,7 +210,9 @@ inline float4 ClosestPoint_PointToTriangle(float4 pos, float4 tri[3], out float4
 	return pt;
 }
 
-// Intersects a ray with a plane, returning true if their is an intercept
+
+// Intersects a ray with a plane, returning true if there is an intercept.
+// 'plane.xyz' is the (normalised) plane normal, 'plane.w' is the signed distance to the origin from the plane
 inline bool Intercept_RayVsPlane(float4 pos, float4 ray, float4 plane, inout float t1, inout float4 normal)
 {
 	// 'step' is the length of the projection of 'ray' on the normal
@@ -191,7 +240,8 @@ inline bool Intercept_RayVsPlane(float4 pos, float4 ray, float4 plane, inout flo
 	return true;
 }
 
-// Intersects a ray with a sphere, returning true if their is an intercept
+// Intersects a ray with a sphere, returning true if there is an intercept
+// 'sphere.xyz' is the center of the sphere, 'sphere.w' is the radius
 inline bool Intercept_RayVsSphere(float4 pos, float4 ray, float4 sphere, inout float t1, inout float4 normal)
 {
 	float4 p = pos - float4(sphere.xyz, 1);
@@ -231,7 +281,8 @@ inline bool Intercept_RayVsSphere(float4 pos, float4 ray, float4 sphere, inout f
 	return true;
 }
 
-// Intersects a ray with a triangle, returning true if their is an intercept
+
+// Intersects a ray with a triangle, returning true if there is an intercept
 inline bool Intercept_RayVsTriangle(float4 pos, float4 ray, float4 tri[3], inout float t1, inout float4 normal)
 {
 	float4 e0 = tri[1] - tri[0];
@@ -276,23 +327,7 @@ inline bool Intercept_RayVsTriangle(float4 pos, float4 ray, float4 tri[3], inout
 	return true;
 }
 
-// Returns a spherical direction vector corresponding to the i'th point of a Fibonacci sphere
-inline float4 FibonacciSpiral(int i, int N)
-{
-	// Z goes from -1 to +1
-	// Using a half step bias so that there is no point at the poles.
-	// This prevents degenerates during 'unmapping' and also results in more evenly
-	// spaced points. See "Fibonacci grids: A novel approach to global modelling".
-	float z = -1.0f + (2.0f * i + 1.0f) / N;
+#endif
 
-	// Radius at z
-	float r = sqrt(1.0 - z * z);
+#endif
 
-	// Golden angle increment
-	static const float GoldenAngle = 2.39996322972865332223f;
-	float theta = i * GoldenAngle;
-	
-	float x = cos(theta) * r;
-	float y = sin(theta) * r;
-	return float4(x, y, z, 0);
-}

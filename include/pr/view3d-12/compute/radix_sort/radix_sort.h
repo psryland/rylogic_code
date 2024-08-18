@@ -110,7 +110,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		{
 			auto device = m_rdr->D3DDevice();
 			auto compiler = ShaderCompiler{}
-				.Source(resource::Read<char>(L"GPU_RADIX_SORT_HLSL", L"TEXT"))
+				.Source(resource::Read<char>(L"RADIX_SORT_HLSL", L"TEXT"))
 				.ShaderModel(m_tuning.shader_model)
 				.Optimise()
 				.Define(L"KEYS_PER_THREAD", std::to_wstring(m_tuning.keys_per_thread))

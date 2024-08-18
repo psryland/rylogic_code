@@ -1,5 +1,10 @@
-// Particle collision resolution
-
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
+#ifndef SPATIAL_DIMENSIONS 
+#define SPATIAL_DIMENSIONS 2
+#endif
 static const int ThreadGroupSize = 1024;
 static const int MaxCollisionResolutionSteps = 10;
 
@@ -19,8 +24,7 @@ cbuffer cbCollision : register(b0)
 	float TimeStep;          // The time to advance each particle by
 };
 
-#include "geometry.hlsli"
-#include "collision_primitives.hlsli"
+#include "collision.hlsli"
 
 // The positions/velocities of each particle
 RWStructuredBuffer<PosType> m_particles : register(u0);
@@ -56,27 +60,7 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		int intercept_found = 0;
 		float4 normal = float4(0, 0, 0, 0);
 		for (int i = 0; i != NumPrimitives; ++i)
-		{
-			Prim prim = m_collision[i];
-			switch (prim.flags.x)
-			{
-				case Prim_Plane:
-				{
-					intercept_found |= Intercept_RayVsPlane(target.pos, ray, prim.data[0], t, normal);
-					break;
-				}
-				case Prim_Sphere:
-				{
-					intercept_found |= Intercept_RayVsSphere(target.pos, ray, prim.data[0], t, normal);
-					break;
-				}
-				case Prim_Triangle:
-				{
-					intercept_found |= Intercept_RayVsTriangle(target.pos, ray, prim.data, t, normal);
-					break;
-				}
-			}
-		}
+			intercept_found |= Intercept_RayVsPrimitive(target.pos, ray, m_collision[i], normal, t);
 
 		// Stop if no intercept found or too many collisions
 		if (!intercept_found || attempt == MaxCollisionResolutionSteps)
@@ -86,6 +70,10 @@ void Integrate(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			//target.col = attempt != MaxCollisionResolutionSteps ? float4(0,0.6f,0,1) : float4(1,0,1,1);
 			break;
 		}
+		
+		#if SPATIAL_DIMENSIONS == 2
+		normal.z = 0;
+		#endif
 		
 		// Advance the point to the intercept and recalculate the velocity
 		target.pos += ray * t;
@@ -133,49 +121,42 @@ void RestingContact(int3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 		return;
 
 	PosType target = m_particles[gtid.x];
+	
+	// Only slow-moving particles qualify for resting contact.
+	float4 vel = target.vel + TimeStep * float4(target.accel, 0);
+	float dist_sq = dot(vel, vel) * sqr(TimeStep);
+	if (dist_sq > sqr(BoundaryThickness))
+		return;
 
 	// Find the distance to each boundary surface
 	for (int i = 0; i != NumPrimitives; ++i)
 	{
-		Prim prim = m_collision[i];
-
-		// Get a direction vector that is a ray from the closest point on the surface to 'target.pos'
 		float4 normal;
-		float dist_sq = 0;
-		switch (prim.flags.x)
-		{
-			case Prim_Plane:
-			{
-				dist_sq = sqr(target.pos - ClosestPoint_PointToPlane(target.pos, prim.data[0], normal));
-				break;
-			}
-			case Prim_Sphere:
-			{
-				dist_sq = sqr(target.pos - ClosestPoint_PointToSphere(target.pos, prim.data[0], normal));
-				break;
-			}
-			case Prim_Triangle:
-			{
-				float4 bary;
-				dist_sq = sqr(target.pos - ClosestPoint_PointToTriangle(target.pos, prim.data, bary, normal));
-				break;
-			}
-		}
+		float4 range = target.pos - ClosestPoint_PointToPrimitive(target.pos, m_collision[i], normal);
 		
-		// If the particle is within BoundaryThickness of the surface, and has a velocity
-		// that will not take it out of the boundary thickness, then cancel the acceleration
-		// into the surface
-		if (dist_sq < sqr(BoundaryThickness))
-		{
-			float4 vel = target.vel + TimeStep * float4(target.accel, 0);
-			float dist_n = dot(vel, normal) * TimeStep;
-			if (dist_n < 0 && dist_n < BoundaryThickness)
-			{
-				target.accel -= dot(target.accel, normal.xyz) * normal.xyz;
-				target.vel -= dot(target.vel, normal) * normal;
-				target.vel *= Restitution.y;
-			}
-		}
+		// If the particle is:
+		//  - Within BoundaryThickness of the surface,
+		if (dot(range, range) > sqr(BoundaryThickness))
+			continue;
+
+		//  - Has an acceleration that is anti-parallel to the surface normal (for vertical walls),
+		float accel_n = dot(normal.xyz, target.accel);
+		if (accel_n > 0 || sqr(accel_n) < dot(target.accel, target.accel) * 0.95f)
+			continue;
+		
+		//  - Has a velocity that will not take it out of the boundary thickness,
+		float dist_n = dot(vel, normal) * TimeStep;
+		if (dist_n > 0 || -dist_n > BoundaryThickness)
+			continue;
+
+		#if SPATIAL_DIMENSIONS == 2
+		normal.z = 0;
+		#endif
+
+		// then cancel the acceleration into the surface.
+		target.accel -= dot(target.accel, normal.xyz) * normal.xyz;
+		target.vel -= dot(target.vel, normal) * normal;
+		target.vel *= Restitution.y;
 	}
 
 	m_particles[gtid.x].accel = target.accel;

@@ -1,12 +1,16 @@
 // This file is just an example because resource files are not compiled into static libraries.
 // In any project that wants to include shaders as resources, create a file like this one and
 // list the shaders to be included.
-FLUID_SIMULATION_HLSL      TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/fluid_simulation.hlsl"
-COLLISION_PRIMITIVES_HLSLI TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/collision_primitives.hlsli"
-GEOMETRY_HLSLI             TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/geometry.hlsli"
-GPU_RADIX_SORT_HLSL        TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/gpu_radix_sort.hlsl"
-PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/particle_collision.hlsl"
-SPATIAL_PARTITION_HLSL     TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/spatial_partition.hlsl"
-SPATIAL_PARTITION_HLSLI    TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/spatial_partition.hlsli"
-UTILITY_HLSLI              TEXT    DISCARDABLE     "pr/view3d-12/compute/hlsl/utility.hlsli"
+GEOMETRY_HLSLI             TEXT    DISCARDABLE     "pr/view3d-12/compute/common/geometry.hlsli"
+UTILITY_HLSLI              TEXT    DISCARDABLE     "pr/view3d-12/compute/common/utility.hlsli"
+
+FLUID_SIMULATION_HLSL      TEXT    DISCARDABLE     "pr/view3d-12/compute/fluid_simulation/fluid_simulation.hlsl"
+
+COLLISION_HLSLI            TEXT    DISCARDABLE     "pr/view3d-12/compute/particle_collision/collision.hlsli"
+PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "pr/view3d-12/compute/particle_collision/particle_collision.hlsl"
+
+RADIX_SORT_HLSL            TEXT    DISCARDABLE     "pr/view3d-12/compute/radix_sort/radix_sort.hlsl"
+
+SPATIAL_PARTITION_HLSL     TEXT    DISCARDABLE     "pr/view3d-12/compute/spatial_partition/spatial_partition.hlsl"
+SPATIAL_PARTITION_HLSLI    TEXT    DISCARDABLE     "pr/view3d-12/compute/spatial_partition/spatial_partition.hlsli"
 

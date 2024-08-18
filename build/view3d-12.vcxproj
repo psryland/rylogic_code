@@ -136,11 +136,12 @@
     <ClInclude Include="..\include\pr\str\extract.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\compute_pso.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\compute_step.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.h" />
     <ClInclude Include="..\include\pr\view3d-12\compute\gpu_job.h" />
-    <ClInclude Include="..\include\pr\view3d-12\compute\gpu_radix_sort.h" />
-    <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision.h" />
-    <ClInclude Include="..\include\pr\view3d-12\compute\spatial_partition.h" />
-    <ClInclude Include="..\include\pr\view3d-12\compute\fluid_simulation.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision\collision_builder.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\particle_collision\particle_collision.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\radix_sort\radix_sort.h" />
+    <ClInclude Include="..\include\pr\view3d-12\compute\spatial_partition\spatial_partition.h" />
     <ClInclude Include="..\include\pr\view3d-12\forward.h" />
     <ClInclude Include="..\include\pr\view3d-12\instance\instance.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h" />
@@ -220,10 +221,6 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\include\pr\view3d-12\compute\hlsl\geometry.hlsli" />
-    <None Include="..\include\pr\view3d-12\compute\hlsl\collision_primitives.hlsli" />
-    <None Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsli" />
-    <None Include="..\include\pr\view3d-12\compute\hlsl\utility.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\common\geometry.hlsli" />
@@ -251,29 +248,33 @@
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\gpu_radix_sort.hlsl">
-      <EntryPointName>SweepDown</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\particle_collision.hlsl">
-      <EntryPointName>Integrate</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\spatial_partition.hlsl">
-      <EntryPointName>BuildSpatial</EntryPointName>
-      <ShaderType>Compute</ShaderType>
-      <ShaderModel>6.6</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="..\include\pr\view3d-12\compute\hlsl\fluid_simulation.hlsl">
+    <FxCompile Include="..\include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <EntryPointName>ApplyForces</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
     </FxCompile>
+    <None Include="..\include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
+    <FxCompile Include="..\include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
+      <EntryPointName>Integrate</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="..\include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
+      <EntryPointName>SweepDown</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <None Include="..\include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
+    <FxCompile Include="..\include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
+      <EntryPointName>BuildSpatial</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <None Include="..\include\pr\view3d-12\compute\common\geometry.hlsli" />
+    <None Include="..\include\pr\view3d-12\compute\common\utility.hlsli" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\include\pr\view3d-12\compute\hlsl\shaders.rc" />
+    <ResourceCompile Include="..\include\pr\view3d-12\compute\shaders.rc" />
   </ItemGroup>
   <!--
   Targets -->

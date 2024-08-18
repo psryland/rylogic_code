@@ -1,4 +1,7 @@
-// Fluid
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
 // Algorithm:
 //  1. Find the cell hash value for each position
 //  2. Build a histogram of positions per cell
