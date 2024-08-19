@@ -122,6 +122,9 @@ namespace pr::rdr12
 		{
 			if (rhs.is_local()) return;
 			m_value.heap = _aligned_malloc(m_size, m_align);
+			if (m_value.heap == nullptr)
+				throw std::runtime_error("_aligned_malloc failed");
+			
 			memcpy(m_value.heap, rhs.m_value.heap, m_size);
 		}
 		PipeState& operator=(PipeState&& rhs) noexcept

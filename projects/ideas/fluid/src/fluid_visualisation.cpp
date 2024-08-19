@@ -72,7 +72,7 @@ namespace pr::fluid
 	}
 
 	// Populate the vector field with
-	void FluidVisualisation::UpdateVectorField(std::span<Particle const> particles, float scale, int mode)
+	void FluidVisualisation::UpdateVectorField(std::span<Particle const> particles, float scale, int mode) const
 	{
 		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices();
 		Colour32 const col = 0xFF800000;
@@ -101,7 +101,7 @@ namespace pr::fluid
 	}
 
 	// Add the particles to the scene that renders them
-	void FluidVisualisation::AddToScene(Scene& scene, EScene flags)
+	void FluidVisualisation::AddToScene(Scene& scene, EScene flags) const
 	{
 		// Add the static scene
 		scene.AddInstance(m_gfx_scene);

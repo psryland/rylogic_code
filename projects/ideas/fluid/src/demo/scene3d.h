@@ -4,7 +4,7 @@
 
 namespace pr::fluid
 {
-	struct Scene2d : IDemoScene
+	struct Scene3d : IDemoScene
 	{
 		enum class EFillStyle
 		{
@@ -18,26 +18,42 @@ namespace pr::fluid
 		CollisionBuilder m_col;
 		ldr::Builder m_ldr;
 
-		explicit Scene2d(int particle_count)
+		explicit Scene3d(int particle_count)
 			: m_col()
 			, m_ldr()
 			, m_particles(ParticleInitData(EFillStyle::Random, particle_count))
 		{
+			m4x4 o2w;
+
 			// Floor
-			m_ldr.Plane("floor", 0xFFade3ff).wh({ 2, 0.5f }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::PosY), v4{ 0, -1, 0, 1 });
-			m_col.Plane().o2w(m3x4::Rotation(AxisId::PosZ, AxisId::PosY), v4{ 0, -1, 0, 1 });
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::PosY), v4{ 0, -0.5f, 0, 1 } };
+			m_ldr.Plane("floor", 0xFFade3ff).wh({ 1, 1 }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
 
 			// Ceiling
-			m_ldr.Plane("ceiling", 0xFFade3ff).wh({ 2, 0.5f }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegY), v4{ 0, +1, 0, 1 });
-			m_col.Plane().o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegY), v4{ 0, +1, 0, 1 });
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::NegY), v4{ 0, +0.5f, 0, 1 } };
+			m_ldr.Plane("ceiling", 0x10ade3ff).wh({ 1, 1 }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
 
 			// Left Wall
-			m_ldr.Plane("left_wall", 0xFFade3ff).wh({ 0.5f, 2 }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::PosX), v4{ -1, 0, 0, 1 });
-			m_col.Plane().o2w(m3x4::Rotation(AxisId::PosZ, AxisId::PosX), v4{ -1, 0, 0, 1 });
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::PosX), v4{ -0.5f, -0.25f, 0, 1 } };
+			m_ldr.Plane("left_wall", 0x40ade3ff).wh({ 1, 0.5f }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
 
 			// Right Wall
-			m_ldr.Plane("right_wall", 0xFFade3ff).wh({ 0.5f, 2 }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegX), v4{ +1, 0, 0, 1 });
-			m_col.Plane().o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegX), v4{ +1, 0, 0, 1 });
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::NegX), v4{ +0.5f, -0.25f, 0, 1 } };
+			m_ldr.Plane("right_wall", 0x40ade3ff).wh({ 1, 0.5f }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
+
+			// Front Wall
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::PosZ), v4{ 0, -0.25f, -0.5f, 1 } };
+			m_ldr.Plane("left_wall", 0x40ade3ff).wh({ 1, 0.5f }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
+
+			// Back Wall
+			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::NegZ), v4{ 0, -0.25f, +0.5f, 1 } };
+			m_ldr.Plane("right_wall", 0x40ade3ff).wh({ 1, 0.5f }).o2w(o2w);
+			m_col.Plane().o2w(o2w);
 
 			m_ldr.WrapAsGroup();
 		}
@@ -46,7 +62,7 @@ namespace pr::fluid
 		std::optional<pr::Camera> Camera() const override
 		{
 			pr::Camera cam;
-			cam.LookAt(v4(0.0f, 0.0f, 2.8f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
+			cam.LookAt(v4(1.0f, 1.2f, 1.0f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
 			cam.Align(v4::YAxis());
 			return cam;
 		}
@@ -68,18 +84,16 @@ namespace pr::fluid
 		{
 			return m_col.Primitives();
 		}
-		
+
 		// Move the probe around
 		v4 PositionProbe(gui::Point ss_pt, rdr12::Scene& scn) const override
 		{
 			// Set the probe position from a SS point
 			// Shoot a ray through the mouse pointer
+			auto d = -scn.m_cam.WorldToCamera().pos.z; // Z-Distance to the origin from the camera
 			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(ss_pt));
-			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
-
-			// Find where it intersects the XY plane at z = 0
-			auto t = (0 - pt.z) / dir.z;
-			return v4{ pt.xy + t * dir.xy, 0, 1 };
+			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, d, 0));
+			return pt + d * dir;
 		}
 
 		// Create particles
@@ -93,8 +107,9 @@ namespace pr::fluid
 				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .mass = 1.0f });
 			};
 
-			const float hwidth = 1.0f;
+			const float hwidth = 0.5f;
 			const float hheight = 0.5f;
+			const float hdepth = 0.5f;
 
 			switch (style)
 			{
@@ -110,14 +125,15 @@ namespace pr::fluid
 					auto const margin = 0.95f;
 					auto hw = hwidth * margin;
 					auto hh = hheight * margin;
+					auto hd = hdepth * margin;
 					auto vx = 0.2f;
 
 					// Uniform distribution over the volume
 					std::default_random_engine rng;
 					for (int i = 0; i != count; ++i)
 					{
-						auto pos = v3::Random(rng, v3(-hw, -hh, 0), v3(+hw, +hh, 0)).w1();
-						auto vel = v3::Random(rng, v3(-vx, -vx, 0), v3(+vx, +vx, 0)).w0();
+						auto pos = v3::Random(rng, v3(-hw, -hh, -hd), v3(+hw, +hh, +hd)).w1();
+						auto vel = v3::Random(rng, v3(-vx, -vx, -vx), v3(+vx, +vx, +vx)).w0();
 						points(pos, vel);
 					}
 					break;
@@ -127,22 +143,25 @@ namespace pr::fluid
 					auto const margin = 0.95f;
 					auto hw = hwidth * margin;
 					auto hh = hheight * margin;
+					auto hd = hdepth * margin;
 
 					// Want to spread N particles evenly over the volume.
-					// Area is 2*hwidth * 2*hheight
+					// Volume is 2*hwidth * 2*hdepth * 2*hheight
 					// Want to find 'step' such that:
-					//   (2*hwidth / step) * (2*hheight / step) = N
-					// => step = sqrt(4 * hwidth * hheight / N)
-					auto step = Sqrt(4 * hw * hh / count);
+					//  (2*hwidth/step) * (2*hdepth/step) * (2*hheight/step) = N
+					// => step = cubert(8 * hwidth * hdepth * hheight / N)
+					auto step = Cubert(8 * hw * hh * hw / count);
 
 					auto x = -hw + step / 2;
 					auto y = -hh + step / 2;
+					auto z = -hd + step / 2;
 					for (int i = 0; i != count; ++i)
 					{
-						points(v4(x, y, 0, 1), v4::Zero());
+						points(v4(x, y, z, 1), v4::Zero());
 
 						x += step;
-						if (x > hw) { x = -hw + step / 2; y += step; }
+						if (x > hw) { x = -hw + step / 2; z += step; }
+						if (z > hd) { z = -hd + step / 2; y += step; }
 					}
 					break;
 				}
@@ -151,16 +170,19 @@ namespace pr::fluid
 					auto const margin = 1.0f;//0.95f;
 					auto hw = hwidth * margin;
 					auto hh = hheight * margin;
+					auto hd = hdepth * margin;
 					auto step = 0.1f;
 
 					auto x = -hw + step / 2.0f;
 					auto y = -hh + step / 2.0f;
+					auto z = -hd + step / 2.0f;
 					for (int i = 0; i != count; ++i)
 					{
-						points(v4(x, y, 0, 1), v4::Zero());
+						points(v4(x, y, z, 1), v4::Zero());
 
 						x += step;
-						if (x > hw) { x = -hw + step / 2; y += step; }
+						if (x > hw) { x = -hw + step / 2; z += step; }
+						if (z > hd) { z = -hd + step / 2; y += step; }
 					}
 					break;
 				}

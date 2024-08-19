@@ -36,8 +36,8 @@ namespace pr::fluid
 		~FluidVisualisation();
 
 		void Init(int particle_count, std::string_view ldr, D3DPtr<ID3D12Resource> particle_buffer);
-		void UpdateVectorField(std::span<Particle const> particles, float scale, int mode);
-		void AddToScene(rdr12::Scene& scene, EScene flags);
+		void UpdateVectorField(std::span<Particle const> particles, float scale, int mode) const;
+		void AddToScene(rdr12::Scene& scene, EScene flags) const;
 
 		// Handle input
 		void OnMouseButton(gui::MouseEventArgs& args);

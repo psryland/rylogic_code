@@ -4,6 +4,7 @@
 #include "src/idemo_scene.h"
 #include "src/probe.h"
 #include "src/demo/scene2d.h"
+#include "src/demo/scene3d.h"
 
 using namespace pr;
 using namespace pr::gui;
@@ -23,11 +24,12 @@ struct Main :Form
 		FreeRun,
 	};
 
-	inline static constexpr int ParticleCount = 1000;//946;//100;//30 * 30;
+	inline static constexpr int ParticleCount = 5000;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.1f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
-	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float4 pad; }";
+	inline static constexpr wchar_t const* PositionLayout = L"struct PosType { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
 	inline static constexpr iv2 WinSize = { 2048, 1600 };
+	inline static constexpr int SpatialDimensions = 3;
 
 	using rtc_time_t = std::chrono::high_resolution_clock::time_point;
 	using ema_t = maths::ExpMovingAvr<double>;
@@ -98,10 +100,10 @@ struct Main :Form
 		, m_wnd(m_rdr, rdr12::WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
 		, m_job(m_rdr.D3DDevice(), "Fluid", 0xFFA83250, 5)
-		, m_probe(m_rdr)
+		, m_probe(m_rdr, std::bind(&Main::PositionProbe, this, _1))
 		, m_demo(CreateDemo())
 		, m_loop()
-		, m_fluid_sim(m_rdr, Dimensions)
+		, m_fluid_sim(m_rdr, SpatialDimensions)
 		, m_fluid_vis(m_rdr, m_scn)
 		, m_read_back()
 		, m_colour_data()
@@ -110,7 +112,7 @@ struct Main :Form
 		, m_fps()
 		, m_run_mode(ERunMode::Paused)
 		, m_scene_index(-1)
-		, m_frame_lock(false)
+		, m_frame_lock(true)
 		, m_last_frame(-1)
 		, m_time()
 	{
@@ -296,6 +298,14 @@ struct Main :Form
 
 		SetWindowTextA(*this, m_title.c_str());
 	}
+	v4 PositionProbe(gui::Point ss_pt)
+	{
+		if (m_scene_index == -1)
+			return v4::Origin();
+
+		auto& scene = *m_demo[m_scene_index].get();
+		return scene.PositionProbe(ss_pt, m_scn);
+	}
 
 	// Windows events
 	void OnWindowPosChange(WindowPosEventArgs const& args) override
@@ -316,7 +326,7 @@ struct Main :Form
 	{
 		Form::OnMouseButton(args);
 		m_fluid_vis.OnMouseButton(args);
-		m_probe.OnMouseButton(args, m_scn);
+		m_probe.OnMouseButton(args);
 		if (args.m_handled)
 			return;
 		
@@ -332,7 +342,7 @@ struct Main :Form
 	{
 		Form::OnMouseMove(args);
 		m_fluid_vis.OnMouseMove(args);
-		m_probe.OnMouseMove(args, m_scn);
+		m_probe.OnMouseMove(args);
 		if (args.m_handled)
 			return;
 
@@ -348,7 +358,7 @@ struct Main :Form
 	{
 		Form::OnMouseWheel(args);
 		m_fluid_vis.OnMouseWheel(args);
-		m_probe.OnMouseWheel(args, m_scn);
+		m_probe.OnMouseWheel(args);
 		if (args.m_handled)
 			return;
 
@@ -359,7 +369,7 @@ struct Main :Form
 	{
 		Form::OnKey(args);
 		m_fluid_vis.OnKey(args);
-		m_probe.OnKey(args, m_scn);
+		m_probe.OnKey(args);
 		if (args.m_handled)
 			return;
 
@@ -379,7 +389,7 @@ struct Main :Form
 			case 'R':
 			{
 				m_fluid_sim.m_frame = 0;
-				m_last_frame = 0;
+				m_last_frame = -1;
 
 				// Reset the sim
 				m_scene_index = -1;
@@ -408,7 +418,7 @@ struct Main :Form
 	void NextScene()
 	{
 		// Advance to the next scene
-		if (m_scene_index + 1 == m_demo.size()) return;
+		if (m_scene_index + 1 == isize(m_demo)) return;
 		++m_scene_index;
 
 		// Get the next scene
@@ -426,6 +436,8 @@ struct Main :Form
 			.NumPrimitives = isize(scene.Collision()),
 		};
 		SpatialPartition::ConfigData sp_config = {
+			.CellCount = GridCellCount,
+			.GridScale = 1.0f / ParticleRadius,
 		};
 
 		// Reset the sim for the current scene
@@ -447,7 +459,8 @@ struct Main :Form
 	static demo_scenes_t CreateDemo()
 	{
 		auto scenes = demo_scenes_t();
-		scenes.emplace_back(new Scene2d(ParticleCount));
+		scenes.emplace_back(new Scene3d(ParticleCount));
+		//scenes.emplace_back(new Scene2d(ParticleCount));
 		return scenes;
 	}
 

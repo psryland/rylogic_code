@@ -101,7 +101,7 @@ namespace pr::rdr12::compute::particle_collision
 		void CreateComputeSteps(std::wstring_view position_layout, int spatial_dimensions)
 		{
 			auto device = m_rdr->D3DDevice();
-			auto compiler = ShaderCompiler{}
+			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"PARTICLE_COLLISION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
 				.Define(L"POS_TYPE", position_layout)

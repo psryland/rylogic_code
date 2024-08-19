@@ -82,6 +82,7 @@
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\demo\scene2d.h" />
+    <ClInclude Include="src\demo\scene3d.h" />
     <ClInclude Include="src\forward.h" />
     <ClInclude Include="src\fluid_visualisation.h" />
     <ClCompile Include="src\fluid_visualisation.cpp" />

@@ -7,21 +7,21 @@ namespace pr::fluid
 	struct Probe
 	{
 		v4 m_position;
-		rdr12::LdrObjectPtr m_gfx;
-		IndexSet m_found;
 		float m_radius;
 		float m_sign;
+		std::function<v4(gui::Point)> m_update;
+		rdr12::LdrObjectPtr m_gfx;
 		bool m_active;
 
-		explicit Probe(rdr12::Renderer& rdr)
+		explicit Probe(rdr12::Renderer& rdr, std::function<v4(gui::Point)> update_cb)
 			: m_position(0,0,0,1)
-			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
-			, m_found()
 			, m_radius(0.1f)
 			, m_sign()
+			, m_update(update_cb)
+			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe 40FF0000 { 1 }"))
 			, m_active(false)
 		{
-			UpdateI2W();
+			UpdateGfx();
 		}
 
 		// Add the probe to the scene
@@ -35,29 +35,13 @@ namespace pr::fluid
 		}
 
 		// Update the graphics position
-		void UpdateI2W()
+		void UpdateGfx()
 		{
 			m_gfx->m_o2p = m4x4::Scale(m_radius, m_position);
 		}
 
-		// Set the probe position from a SS point
-		void SetPosition(gui::Point ss_pt, rdr12::Scene& scn)
-		{
-			// Shoot a ray through the mouse pointer
-			auto nss_point = scn.m_viewport.SSPointToNSSPoint(To<v2>(ss_pt));
-			auto [pt, dir] = scn.m_cam.NSSPointToWSRay(v4(nss_point, 1, 0));
-
-			// Find where it intersects the XY plane at z = m_position.z
-			auto t = (m_position.z - pt.z) / dir.z;
-			m_position = pt + t * dir;
-			if constexpr (Dimensions == 2)
-				m_position.z = 0;
-
-			UpdateI2W();
-		}
-
 		// Handle input
-		void OnMouseButton(gui::MouseEventArgs& args, rdr12::Scene& scn)
+		void OnMouseButton(gui::MouseEventArgs& args)
 		{
 			if (!m_active || args.m_handled)
 				return;
@@ -67,27 +51,29 @@ namespace pr::fluid
 				args.m_down && gui::AllSet(args.m_button, gui::EMouseKey::Right) ? -1.0f :
 				0.0f;
 
-			SetPosition(args.point_px(), scn);
+			m_position = m_update(args.point_px());
 			args.m_handled = true;
+			UpdateGfx();
 		}
-		void OnMouseMove(gui::MouseEventArgs& args, rdr12::Scene& scn)
+		void OnMouseMove(gui::MouseEventArgs& args)
 		{
 			if (!m_active || args.m_handled)
 				return;
 
-			SetPosition(args.point_px(), scn);
+			m_position = m_update(args.point_px());
 			args.m_handled = true;
+			UpdateGfx();
 		}
-		void OnMouseWheel(gui::MouseWheelArgs& args, rdr12::Scene&)
+		void OnMouseWheel(gui::MouseWheelArgs& args)
 		{
 			if (!m_active || args.m_handled)
 				return;
 
 			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, 0.001f, 0.500f);
-			UpdateI2W();
+			UpdateGfx();
 			args.m_handled = true;
 		}
-		void OnKey(gui::KeyEventArgs& args, rdr12::Scene& scn)
+		void OnKey(gui::KeyEventArgs& args)
 		{
 			if (args.m_handled)
 				return;
@@ -109,7 +95,7 @@ namespace pr::fluid
 				case 'F': { m_radius = std::max(m_radius * 0.9f, 0.001f); break; }
 				case VK_SHIFT:
 				{
-					SetPosition(args.point_px(), scn);
+					m_position = m_update(args.point_px());
 					m_active = !m_active;
 					m_sign = 0.0f;
 					break;
@@ -120,7 +106,7 @@ namespace pr::fluid
 					break;
 				}
 			}
-			UpdateI2W();
+			UpdateGfx();
 		}
 	};
 }

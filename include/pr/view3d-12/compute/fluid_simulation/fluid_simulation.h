@@ -59,6 +59,7 @@ namespace pr::rdr12::compute::fluid
 		SpatialPartition m_spatial;           // Spatial partitioning of the particles
 		int m_frame;                          // Frame counter
 
+		// Runtime configurable data
 		struct ConfigData
 		{
 			int NumParticles = 0;            // The number of particles
@@ -93,7 +94,7 @@ namespace pr::rdr12::compute::fluid
 			float Force = 0.0f;
 			int Highlight = 0;
 		};
-		struct MapData // = cbMapData;
+		struct MapData
 		{
 			m4x4 MapToWorld = m4x4::Identity(); // Transform from map space to world space (including scale)
 			iv2 MapTexDim = { 1,1 };            // The dimensions of the map texture
@@ -117,7 +118,8 @@ namespace pr::rdr12::compute::fluid
 		}
 
 		// Set the initial state of the simulation (spatial partition, colours, etc.)
-		void Init(GpuJob& job, ConfigData const& fs_config,
+		void Init(GpuJob& job,
+			ConfigData const& fs_config,
 			ParticleCollision::ConfigData const& pc_config,
 			SpatialPartition::ConfigData const& sp_config,
 			std::span<Particle const> particle_init_data = {},
@@ -266,6 +268,7 @@ namespace pr::rdr12::compute::fluid
 			int CellCount;
 			int RandomSeed;
 			float TimeStep;
+			int pad[3];
 		};
 		struct cbColourData
 		{
@@ -306,6 +309,7 @@ namespace pr::rdr12::compute::fluid
 				.CellCount = m_spatial.Config.CellCount,
 				.RandomSeed = m_frame,
 				.TimeStep = time_step,
+				.pad = {0,0,0},
 			};
 		};
 		cbColourData ColoursCBuf(ColourData const& colours)
@@ -339,7 +343,7 @@ namespace pr::rdr12::compute::fluid
 		void CreateComputeSteps(std::wstring_view position_layout, int spatial_dimensions)
 		{
 			auto device = m_rdr->D3DDevice();
-			auto compiler = ShaderCompiler{}
+			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"FLUID_SIMULATION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
 				.Define(L"POS_TYPE", position_layout)

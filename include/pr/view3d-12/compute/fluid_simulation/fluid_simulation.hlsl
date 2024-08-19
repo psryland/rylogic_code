@@ -17,8 +17,8 @@ POS_TYPE;
 cbuffer cbFluidSim : register(b0)
 {
 	float4 Gravity;         // The acceleration due to gravity
-	uint NumParticles;      // The number of particles
-	uint NumPrimitives;     // The number of collision primitives
+	int NumParticles;      // The number of particles
+	int NumPrimitives;     // The number of collision primitives
 	float ParticleRadius;   // The radius of influence for each particle
 	float Attraction;       // A value that controls the attraction force. <= 1 = no attraction, >1 = more attraction
 	float Falloff;          // The falloff distance for the pressure force
@@ -30,6 +30,7 @@ cbuffer cbFluidSim : register(b0)
 	uint CellCount;         // The number of grid cells in the spatial partition
 	int RandomSeed;         // Seed value for the RNG
 	float TimeStep;         // Leap-frog time step
+	int pad[3];
 };
 cbuffer cbColourData : register(b1)
 {
@@ -191,11 +192,13 @@ void ApplyForces(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
 			nett_accel += Viscosity * ViscosityProfile(distance) * (neighbour.vel - target.vel);
 		}
 	}
+
+	// Apply the thermal diffusion and gravity
+	nett_accel += Random3WithDim(gtid.x) * ThermalDiffusion;
+	nett_accel += Gravity;
 	
 	// Record the nett force
 	m_particles[gtid.x].accel += nett_accel.xyz;
-	m_particles[gtid.x].accel += Random3WithDim(gtid.x).xyz * ThermalDiffusion;
-	m_particles[gtid.x].accel += Gravity.xyz;
 }
 
 // Apply an attractor to the particles

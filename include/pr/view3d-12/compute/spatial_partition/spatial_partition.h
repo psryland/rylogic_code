@@ -196,7 +196,7 @@ namespace pr::rdr12::compute::spatial_partition
 		void CreateComputeSteps(std::wstring_view position_layout)
 		{
 			auto device = m_rdr->D3DDevice();
-			auto compiler = ShaderCompiler{}
+			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"SPATIAL_PARTITION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
 				.Define(L"POS_TYPE", position_layout)
@@ -250,13 +250,13 @@ namespace pr::rdr12::compute::spatial_partition
 
 			// Grid hash
 			{
-				auto desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
+				ResDesc desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
 				m_grid_hash = m_rdr->res().CreateResource(desc, "SpatialPartition:GridHash");
 			}
 
 			// Position indices
 			{
-				auto desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
+				ResDesc desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
 				m_pos_index = m_rdr->res().CreateResource(desc, "SpatialPartition:PosIndex");
 			}
 

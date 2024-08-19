@@ -160,7 +160,7 @@ namespace pr
 			}
 
 			// Roll back to the initial values.
-			void Revert(Camera& cam)
+			void Revert(Camera& cam) const
 			{
 				cam.CameraToWorld(m_c2w0);
 				cam.FovY(m_fovY0);
@@ -274,7 +274,7 @@ namespace pr
 			auto half_height = m_focus_dist * std::tan(m_fovY * 0.5);
 
 			// Calculate the point in camera space
-			v4 point;
+			v4 point = {};
 			point.x = s_cast<float>(nss_point.x * m_aspect * half_height);
 			point.y = s_cast<float>(nss_point.y * half_height);
 			if (!m_orthographic)

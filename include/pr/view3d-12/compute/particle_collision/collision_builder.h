@@ -69,7 +69,7 @@ namespace pr::rdr12::compute::particle_collision
 		Prim& o2w(m4x4 const& o2w)
 		{
 			m_o2w = o2w * m_o2w;
-			return static_cast<Prim&>(*this);
+			return *this;
 		}
 	};
 

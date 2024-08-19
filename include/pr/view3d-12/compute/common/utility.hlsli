@@ -19,15 +19,15 @@ inline float sqr(float v)
 }
 inline float2 sqr(float2 v)
 {
-	return v * v; //float2(sqr(v.x), sqr(v.y));
+	return v * v;
 }
 inline float3 sqr(float3 v)
 {
-	return v * v; //float3(sqr(v.x), sqr(v.y), sqr(v.z));
+	return v * v;
 }
 inline float4 sqr(float4 v)
 {
-	return v * v; //float4(sqr(v.x), sqr(v.y), sqr(v.z), sqr(v.w));
+	return v * v;
 }
 
 // Swap two values
@@ -153,8 +153,8 @@ inline float4 Random3N(float seed)
 {
 	float x = RandomN(seed);
 	float y = RandomN(x);
-	float z = sign(x*y) * sqrt(1 - sqr(x) - sqr(y));
-	return float4(x, y, z, 0);
+	float z = RandomN(y);
+	return normalize(float4(x, y, z, 0));
 }
 
 // Constant time bit count

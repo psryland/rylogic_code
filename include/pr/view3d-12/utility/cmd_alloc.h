@@ -53,21 +53,24 @@ namespace pr::rdr12
 			, m_sync_point(sync_point)
 			, m_pool(pool)
 		{}
-		CmdAlloc(CmdAlloc&& rhs) = default;
-		CmdAlloc(CmdAlloc const&) = delete;
-		CmdAlloc& operator =(CmdAlloc&& rhs)
+		CmdAlloc(CmdAlloc&& rhs) noexcept
+			:CmdAlloc()
 		{
-			if (&rhs == this) return *this;
-			
-			// Move this to the pool before replacing it with 'rhs'
-			if (m_pool != nullptr && m_alloc != nullptr)
-				m_pool->Return(std::move(*this));
+			std::swap(m_alloc, rhs.m_alloc);
+			std::swap(m_thread_id, rhs.m_thread_id);
+			std::swap(m_sync_point, rhs.m_sync_point);
+			std::swap(m_pool, rhs.m_pool);
+		}
+		CmdAlloc(CmdAlloc const&) = delete;
+		CmdAlloc& operator =(CmdAlloc&& rhs) noexcept
+		{
+			if (&rhs == this)
+				return *this;
 
-			// Move 'rhs' into this
-			m_alloc = std::move(rhs.m_alloc);
-			m_thread_id = std::move(rhs.m_thread_id);
-			m_sync_point = std::move(rhs.m_sync_point);
-			m_pool = std::move(rhs.m_pool);
+			std::swap(m_alloc, rhs.m_alloc);
+			std::swap(m_thread_id, rhs.m_thread_id);
+			std::swap(m_sync_point, rhs.m_sync_point);
+			std::swap(m_pool, rhs.m_pool);
 			return *this;
 		}
 		CmdAlloc& operator =(CmdAlloc const&) = delete;

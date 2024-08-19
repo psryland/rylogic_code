@@ -35,7 +35,6 @@
 namespace pr::fluid
 {
 	using namespace tweakables;
-	inline static const int Dimensions = 2;
 
 	struct FluidVisualisation;
 
