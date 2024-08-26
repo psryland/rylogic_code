@@ -116,10 +116,10 @@ namespace pr::rdr12::compute::particle_collision
 			});
 			return m_prims.back();
 		}
-		Prim& Box(v4 radii)
+		Prim& Box(v4 dim)
 		{
 			m_prims.push_back(Prim{
-				.m_data = {.box = {radii}},
+				.m_data = {.box = {dim * 0.5f}},
 				.m_type = EPrimType::Box,
 			});
 			return m_prims.back();

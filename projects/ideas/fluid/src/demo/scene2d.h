@@ -39,7 +39,14 @@ namespace pr::fluid
 			m_ldr.Plane("right_wall", 0xFFade3ff).wh({ 0.5f, 2 }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegX), v4{ +1, 0, 0, 1 });
 			m_col.Plane().o2w(m3x4::Rotation(AxisId::PosZ, AxisId::NegX), v4{ +1, 0, 0, 1 });
 
+			//m_ldr.Plane("cull_plane", 0x80FF0000).wh({ 2,0.5f }).o2w(m3x4::Rotation(AxisId::NegZ, AxisId::PosY), v4{ 0, -0.95f, 0, 1 });
 			m_ldr.WrapAsGroup();
+		}
+
+		// 2D or 3D
+		int SpatialDimensions() const override
+		{
+			return 2;
 		}
 
 		// Initial camera position
@@ -69,8 +76,17 @@ namespace pr::fluid
 			return m_col.Primitives();
 		}
 		
+		// Particle culling
+		ParticleCollision::CullData Culling() const override
+		{
+			return ParticleCollision::CullData{
+				.Geom = { v4(0, 1, 0, 0.95f), v4::Zero() },
+				.Mode = ParticleCollision::ECullMode::None,
+			};
+		}
+
 		// Move the probe around
-		v4 PositionProbe(gui::Point ss_pt, rdr12::Scene& scn) const override
+		v4 PositionProbe(gui::Point ss_pt, rdr12::Scene const& scn) const override
 		{
 			// Set the probe position from a SS point
 			// Shoot a ray through the mouse pointer
@@ -100,9 +116,12 @@ namespace pr::fluid
 			{
 				case EFillStyle::Point:
 				{
-					for (int i = 0; i != count; ++i)
-						points(v4(-0.9f, 0, 0, 1), v4(-0.1f, -0.1f, 0, 0));
-
+					//points(v4(0, 0, 0, 1), v4(0.0f, 0, 0, 0));
+					points(v4(-0.1f, 0, 0, 1), v4(+1.0f, 0, 0, 0));
+					points(v4(+0.1f, 0, 0, 1), v4(-1.0f, 0, 0, 0));
+					//points(v4(0.1f, 0.1f, 0, 1), v4(0, -1.0f, 0, 0));
+					for (; isize(particles) != count;)
+						points(v4(0, 0, 0, 1), v4(0, 0, 0, 0));
 					break;
 				}
 				case EFillStyle::Random:

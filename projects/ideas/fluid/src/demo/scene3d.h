@@ -24,6 +24,7 @@ namespace pr::fluid
 			, m_particles(ParticleInitData(EFillStyle::Random, particle_count))
 		{
 			m4x4 o2w;
+			//v4 dim;
 
 			// Floor
 			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::PosY), v4{ 0, -0.5f, 0, 1 } };
@@ -31,9 +32,9 @@ namespace pr::fluid
 			m_col.Plane().o2w(o2w);
 
 			// Ceiling
-			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::NegY), v4{ 0, +0.5f, 0, 1 } };
-			m_ldr.Plane("ceiling", 0x10ade3ff).wh({ 1, 1 }).o2w(o2w);
-			m_col.Plane().o2w(o2w);
+			//o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::NegY), v4{ 0, +0.5f, 0, 1 } };
+			//m_ldr.Plane("ceiling", 0x10ade3ff).wh({ 1, 1 }).o2w(o2w);
+			//m_col.Plane().o2w(o2w);
 
 			// Left Wall
 			o2w = m4x4{ m3x4::Rotation(AxisId::PosZ, AxisId::PosX), v4{ -0.5f, -0.25f, 0, 1 } };
@@ -55,7 +56,19 @@ namespace pr::fluid
 			m_ldr.Plane("right_wall", 0x40ade3ff).wh({ 1, 0.5f }).o2w(o2w);
 			m_col.Plane().o2w(o2w);
 
+			// Box in the middle
+			//dim = v4(0.3f, 0.2f, 0.1f, 0);
+			//o2w = m4x4::Identity();
+			//m_ldr.Box("cube", 0x80FFB86D).dim(dim).o2w(o2w);
+			//m_col.Box(dim).o2w(o2w);
+
 			m_ldr.WrapAsGroup();
+		}
+
+		// 2D or 3D
+		int SpatialDimensions() const override
+		{
+			return 3;
 		}
 
 		// Initial camera position
@@ -76,7 +89,7 @@ namespace pr::fluid
 		// Returns initialisation data for the particles.
 		std::span<Particle const> Particles() const override
 		{
-			return m_particles;
+			return {};//m_particles;
 		}
 
 		// Return the collision
@@ -85,8 +98,17 @@ namespace pr::fluid
 			return m_col.Primitives();
 		}
 
+		// Particle culling
+		ParticleCollision::CullData Culling() const override
+		{
+			return ParticleCollision::CullData{
+				.Geom = { v4::Zero(), v4::Zero() },
+				.Mode = ParticleCollision::ECullMode::None,
+			};
+		}
+
 		// Move the probe around
-		v4 PositionProbe(gui::Point ss_pt, rdr12::Scene& scn) const override
+		v4 PositionProbe(gui::Point ss_pt, rdr12::Scene const& scn) const override
 		{
 			// Set the probe position from a SS point
 			// Shoot a ray through the mouse pointer

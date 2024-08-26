@@ -72,10 +72,10 @@ namespace pr::rdr12
 			if (m_settings.m_adapter.ptr == nullptr)
 				throw std::runtime_error("No DirectX Adapter found that supports the requested feature level");
 
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceGPUDebug, true);
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors, true);
-			//#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceGPUDebug, true);
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors, true);
+			#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
 
 			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::DeviceDebug), "DeviceDebug is enabled");

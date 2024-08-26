@@ -12,6 +12,63 @@
 
 namespace pr::rdr12
 {
+	// System Values:
+	//   'dtid' = dispatch thread index (i.e. global thread index)
+	//   'gtid' = group thread index (i.e. group relative thread index)
+	//   'gpid' = group index (i.e. index of the group witihn the dispatch)
+	//   'gpsz' = group size (i.e. number of threads per group)
+	// 
+	// Dispatch:
+	//   Dispatch = ThreadGroups[N]
+	//      where N = ([0,65536), [0,65536), [0,65536)) for Dx11 and Dx12
+	//   ThreadGroup = Threads[N]
+	//      where N = ([1,A), [1,B), [1,C)) where A*B*C <= 1024 for Dx11 and Dx12
+	//     
+	//   WaveSize = Threads[N]
+	//      where N = 32/64 threads (depending on hardware)
+	//   ThreadGroup = Waves[N]
+	//      where N = (ThreadGroup + WaveSize - 1) / WaveSize
+	//
+	//   Groups are divided into Waves and Waves are managed by a scheduler on the hardware.
+	//   Wave execution is hidden by the hardware, but conceptually all Waves run in parallel
+	//   so that all threads in a Group conceptually run in parallel.
+	//   
+	//   Groups conceptually run in parallel as well, but there is no cross-group synchronization.
+	//   There is also no shared memory between groups, only within a group ("group" shared memory).
+	//   However, there is a group index so data can be stored per group in a RWStructuredBuffer.
+	// 
+	// Waves:
+	//   A Wave is 32/64 threads running in lock-step. Each thread in a wave is called a Lane.
+	//   Waves can be treated as Sub-Groups within a Group, with Wave intrinsic functions used
+	//   to share data between Lanes in the Wave. This means it's often possible to store data
+	//   in group shared memory per Wave, rather than per Thread.
+	//
+	//   To get a "Wave Index" use:
+	//      int dispatch_wave_index = dtid.x / WaveGetLaneCount();
+	//      int group_wave_index = gpid.x / WaveGetLaneCount();
+	//   Use "WaveActiveSum" to calculate totals across all active lanes in a wave.
+	//   Use "WavePrefixSum" to determine an offset based on Lane index.
+	//
+	// Group Shared Memory:
+	//   - Group shared memory for one thread group is entirely independent of the group shared memory
+	//     for any other thread group. There is no way for one group to access or interfere with the
+	//     shared memory of another group.
+	//   - The lifetime of the group shared memory is limited to the duration of the thread group execution.
+	//     Once all the threads in a group have completed their execution, the contents of the group shared
+	//     memory are discarded.
+	//   - All threads within a single group can read from and write to the group shared memory.
+	//     This allows for efficient communication and synchronization among threads within the same group.
+	
+	// Calculate the number of dispatches needed to process 'total' items in groups of 'group_size'
+	inline int DispatchCount(int total, int group_size)
+	{
+		return (total + group_size - int(1)) / group_size;
+	}
+	inline iv3 DispatchCount(iv3 total, iv3 group_size)
+	{
+		return (total + group_size - iv3(1)) / group_size;
+	}
+
 	template <D3D12_COMMAND_LIST_TYPE QueueType>
 	struct GpuJob
 	{
@@ -64,6 +121,7 @@ namespace pr::rdr12
 		void Run()
 		{
 			// Job complete
+			m_barriers.Commit();
 			m_cmd_list.Close();
 
 			// Run the sort job
@@ -88,14 +146,4 @@ namespace pr::rdr12
 
 	using GraphicsJob = GpuJob<D3D12_COMMAND_LIST_TYPE_DIRECT>;
 	using ComputeJob = GpuJob<D3D12_COMMAND_LIST_TYPE_COMPUTE>;
-	
-	// Calculate the number of dispatches needed to process 'total' items in groups of 'group_size'
-	inline int DispatchCount(int total, int group_size)
-	{
-		return (total + group_size - int(1)) / group_size;
-	}
-	inline iv3 DispatchCount(iv3 total, iv3 group_size)
-	{
-		return (total + group_size - iv3(1)) / group_size;
-	}
 }
