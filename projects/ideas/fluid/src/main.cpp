@@ -296,7 +296,7 @@ struct Main :Form, IProbeActions
 		if (ForceProfileSlope != m_fp_slope && m_fluid_sim.m_r_force_profile != nullptr)
 		{
 			std::vector<float> profile(m_fluid_sim.m_force_profile_length);
-			FluidSimulation::DefaultForceProfile(ForceProfileSlope, profile);
+			FluidSimulation::DefaultForceProfile(FluidSimulation::EForceProfileType::Type0, { ForceProfileSlope }, profile);
 			
 			auto alex = m_job.m_upload.Alloc<float>(isize(profile));
 			memcpy(alex.ptr<float>(), profile.data(), profile.size() * sizeof(float));

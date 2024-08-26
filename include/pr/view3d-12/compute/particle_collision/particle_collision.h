@@ -92,7 +92,7 @@ namespace pr::rdr12::compute::particle_collision
 			// Create the primitives buffer
 			{
 				ResDesc desc = ResDesc::Buf<Prim>(setup.PrimitiveCapacity, setup.CollisionInitData)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
 
 				m_r_primitives = m_rdr->res().CreateResource(desc, "ParticleCollision:Primitives");
@@ -146,8 +146,8 @@ namespace pr::rdr12::compute::particle_collision
 			inline static constexpr ECBufReg Constants = ECBufReg::b0;
 			inline static constexpr ECBufReg Cull = ECBufReg::b1;
 			inline static constexpr EUAVReg Particles = EUAVReg::u0;
-			inline static constexpr EUAVReg Primitives = EUAVReg::u1;
-			inline static constexpr EUAVReg ForceProfile = EUAVReg::u2;
+			inline static constexpr ESRVReg Primitives = ESRVReg::t0;
+			inline static constexpr ESRVReg ForceProfile = ESRVReg::t1;
 		};
 
 		struct cbCollision
@@ -210,7 +210,7 @@ namespace pr::rdr12::compute::particle_collision
 					.U32<cbCollision>(EReg::Constants)
 					.U32<cbCull>(EReg::Cull)
 					.UAV(EReg::Particles)
-					.UAV(EReg::Primitives)
+					.SRV(EReg::Primitives)
 					.Create(device, "ParticleCollision:IntegrateSig");
 				m_integrate.m_pso = ComputePSO(m_integrate.m_sig.get(), bytecode)
 					.Create(device, "ParticleCollision:IntegratePSO");
@@ -222,8 +222,8 @@ namespace pr::rdr12::compute::particle_collision
 				m_resting_contact.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbCollision>(EReg::Constants)
 					.UAV(EReg::Particles)
-					.UAV(EReg::Primitives)
-					.UAV(EReg::ForceProfile)
+					.SRV(EReg::Primitives)
+					.SRV(EReg::ForceProfile)
 					.Create(device, "ParticleCollision:RestingContactSig");
 				m_resting_contact.m_pso = ComputePSO(m_resting_contact.m_sig.get(), bytecode)
 					.Create(device, "ParticleCollision:RestingContactPSO");
@@ -243,7 +243,7 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 			job.m_cmd_list.SetComputeRoot32BitConstants(1, cb_cull, 0);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_r_primitives->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(particles.get());
@@ -260,8 +260,8 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetComputeRootSignature(m_resting_contact.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_primitives->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, force_profile ? force_profile->GetGPUVirtualAddress() : 0);
+			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootShaderResourceView(3, force_profile ? force_profile->GetGPUVirtualAddress() : 0);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(particles.get());

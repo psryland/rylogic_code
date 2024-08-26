@@ -38,9 +38,9 @@ namespace pr::rdr12
 			assert(resource != nullptr);
 
 			#if PR_DBG_RDR
-			auto res_name = DebugName(resource);
-			if (std::string_view(res_name) == "SpatialPartition:IdxCount")
-				PR_INFO(1, std::format("Resource '{}' -> {}", res_name, To<std::string>(state)).c_str());
+			//auto res_name = DebugName(resource);
+			//if (std::string_view(res_name) == "SpatialPartition:IdxCount")
+			//	PR_INFO(1, std::format("Resource '{}' -> {}", res_name, To<std::string>(state)).c_str());
 			#endif
 
 			// If the new transition takes all sub resources to 'state'...

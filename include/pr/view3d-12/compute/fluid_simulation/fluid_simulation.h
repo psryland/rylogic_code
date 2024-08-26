@@ -353,15 +353,49 @@ namespace pr::rdr12::compute::fluid
 			DoGenerateMap(job, tex_map, map_data, colour_data);
 		}
 
-		// Generate the default force profile
-		static void DefaultForceProfile(float slope, std::span<float> profile)
+		enum class EForceProfileType
 		{
+			Type0,
+			Type1,
+			Type2,
+			Type3,
+		};
+
+		// Generate the default force profile
+		static void DefaultForceProfile(EForceProfileType type, std::initializer_list<float const> params, std::span<float> profile)
+		{
+			auto const* p = params.begin();
 			for (int i = 0; i != isize(profile); ++i)
 			{
-				float x = 1.0f * i / isize(profile);
-				float a = -slope * x + 1;                // a(x) = -slope * x + 1
-				float b = 2 * x * x * x - 3 * x * x + 1; // b(x) = 2x^3 - 3x^2 + 1
-				profile[i] = a * b;
+				auto x = 1.0f * i / isize(profile);
+				switch (type)
+				{
+					case EForceProfileType::Type0:
+					{
+						float a = -p[0] * x + 1;                 // a(x) = -m * x + 1
+						float b = 2 * x * x * x - 3 * x * x + 1; // b(x) = 2x^3 - 3x^2 + 1
+						profile[i] = a * b;
+						break;
+					}
+					case EForceProfileType::Type1:
+					{
+						float a = -std::powf(x, p[0]) + 1;
+						profile[i] = a;
+						break;
+					}
+					case EForceProfileType::Type2:
+					{
+						float a = -x + 1;
+						profile[i] = a;
+						break;
+					}
+					case EForceProfileType::Type3:
+					{
+						float a = -0.28f + 1.0f / Sqr(x + 0.88f);
+						profile[i] = a;
+						break;
+					}
+				}
 			}
 		}
 
@@ -626,7 +660,7 @@ namespace pr::rdr12::compute::fluid
 				if (setup.ForceProfileData.empty())
 				{
 					force_profile_data.resize(100);
-					DefaultForceProfile(1.5f, force_profile_data);
+					DefaultForceProfile(FluidSimulation::EForceProfileType::Type0, { 1.4f }, force_profile_data);
 				}
 
 				auto profile = !setup.ForceProfileData.empty() ? setup.ForceProfileData : force_profile_data;

@@ -131,8 +131,6 @@ RWStructuredBuffer<uint> m_idx_count : register(u3);
 // A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
 StructuredBuffer<float> m_force_profile : register(t3);
 
-#include "../spatial_partition/spatial_partition.hlsli"
-
 // A buffer for passing back results
 RWStructuredBuffer<uint> m_output : register(u5);
 
@@ -141,6 +139,8 @@ RWTexture2D<float4> m_tex_map : register(u6);
 
 // General purpose group shared memory
 groupshared uint gs_memory[TotalSharedMemory];
+
+#include "../spatial_partition/spatial_partition.hlsli"
 
 // A random direction vector (not normalised) in 2 or 3 dimensions with components in (-1,+1)
 inline float4 Random3WithDim(float2 seed, uniform int spatial_dimensions)
