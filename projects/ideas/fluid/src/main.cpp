@@ -24,7 +24,7 @@ struct Main :Form, IProbeActions
 		FreeRun,
 	};
 
-	inline static constexpr int MaxParticleCount = 500;//00;//946;//100;//30 * 30;
+	inline static constexpr int MaxParticleCount = 50000;//00;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.05f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* ParticleLayout = L"struct Particle { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
