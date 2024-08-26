@@ -120,24 +120,24 @@ static const uint MapType_Density = 3;
 RWStructuredBuffer<Particle> m_particles : register(u0);
 
 // The indices of particle positions sorted spatially
-StructuredBuffer<uint> m_spatial : register(t0);
+RWStructuredBuffer<uint> m_spatial : register(u1);
 
 // The lowest index (in m_spatial) for each cell hash (length CellCount)
-StructuredBuffer<uint> m_idx_start : register(t1);
+RWStructuredBuffer<uint> m_idx_start : register(u2);
 
 // The number of positions for each cell hash (length CellCount)
-StructuredBuffer<uint> m_idx_count : register(t2);
+RWStructuredBuffer<uint> m_idx_count : register(u3);
 
 // A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
-StructuredBuffer<float> m_force_profile : register(t3);
+RWStructuredBuffer<float> m_force_profile : register(u4);
 
 #include "../spatial_partition/spatial_partition.hlsli"
 
 // A buffer for passing back results
-RWStructuredBuffer<uint> m_output : register(u1);
+RWStructuredBuffer<uint> m_output : register(u5);
 
 // A texture for writing the density map to
-RWTexture2D<float4> m_tex_map : register(u2);
+RWTexture2D<float4> m_tex_map : register(u6);
 
 // General purpose group shared memory
 groupshared uint gs_memory[TotalSharedMemory];

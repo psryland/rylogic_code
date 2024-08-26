@@ -34,19 +34,19 @@ cbuffer cbGridPartition : register(b0)
 PARTICLE_TYPE;
 
 // The positions to sort into the grid
-StructuredBuffer<Particle> m_positions : register(t0);
+RWStructuredBuffer<Particle> m_positions : register(u0);
 
 // The grid cell hash for each position. (length of m_positions)
-RWStructuredBuffer<uint> m_grid_hash : register(u0);
+RWStructuredBuffer<uint> m_grid_hash : register(u1);
 
 // The spatially sorted index buffer (length m_positions)
-RWStructuredBuffer<uint> m_spatial : register(u1);
+RWStructuredBuffer<uint> m_spatial : register(u2);
 
 // The lowest index (from m_positions) for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_start : register(u2);
+RWStructuredBuffer<uint> m_idx_start : register(u3);
 
 // The number of positions for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_count : register(u3);
+RWStructuredBuffer<uint> m_idx_count : register(u4);
 
 #include "spatial_partition.hlsli"
 

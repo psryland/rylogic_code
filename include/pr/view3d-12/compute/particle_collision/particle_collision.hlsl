@@ -45,10 +45,10 @@ static const float4 CulledPosition = float4(0,0,0,0)/0;
 RWStructuredBuffer<Particle> m_particles : register(u0);
 
 // The primitives to collide against
-StructuredBuffer<Prim> m_collision : register(t0);
+RWStructuredBuffer<Prim> m_collision : register(u1);
 
 // A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
-StructuredBuffer<float> m_force_profile : register(t1);
+RWStructuredBuffer<float> m_force_profile : register(u2);
 
 // Test a position for being culled
 inline float4 CullCheck(float4 pos, uniform int cull_mode)

@@ -382,13 +382,12 @@ namespace pr::rdr12::compute::fluid
 			inline static constexpr ECBufReg Map = ECBufReg::b0;
 
 			inline static constexpr EUAVReg Particles = EUAVReg::u0;
-			inline static constexpr EUAVReg Output = EUAVReg::u1;
-			inline static constexpr EUAVReg TexMap = EUAVReg::u2;
-
-			inline static constexpr ESRVReg Spatial = ESRVReg::t0;
-			inline static constexpr ESRVReg IdxStart = ESRVReg::t1;
-			inline static constexpr ESRVReg IdxCount = ESRVReg::t2;
-			inline static constexpr ESRVReg ForceProfile = ESRVReg::t3;
+			inline static constexpr EUAVReg Spatial = EUAVReg::u1;
+			inline static constexpr EUAVReg IdxStart = EUAVReg::u2;
+			inline static constexpr EUAVReg IdxCount = EUAVReg::u3;
+			inline static constexpr EUAVReg ForceProfile = EUAVReg::u4;
+			inline static constexpr EUAVReg Output = EUAVReg::u5;
+			inline static constexpr EUAVReg TexMap = EUAVReg::u6;
 		};
 
 		struct cbFluidSim
@@ -543,10 +542,10 @@ namespace pr::rdr12::compute::fluid
 				m_cs_apply_forces.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbFluidSim>(EReg::Fluid)
 					.UAV(EReg::Particles)
-					.SRV(EReg::Spatial)
-					.SRV(EReg::IdxStart)
-					.SRV(EReg::IdxCount)
-					.SRV(EReg::ForceProfile)
+					.UAV(EReg::Spatial)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
+					.UAV(EReg::ForceProfile)
 					.Create(device, "Fluid:ApplyForcesSig");
 				m_cs_apply_forces.m_pso = ComputePSO(m_cs_apply_forces.m_sig.get(), bytecode)
 					.Create(device, "Fluid:ApplyForcesPSO");
@@ -569,9 +568,9 @@ namespace pr::rdr12::compute::fluid
 				m_cs_cull_particles.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbCullData>(EReg::Cull)
 					.UAV(EReg::Particles)
-					.SRV(EReg::Spatial)
-					.SRV(EReg::IdxStart)
-					.SRV(EReg::IdxCount)
+					.UAV(EReg::Spatial)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
 					.UAV(EReg::Output)
 					.Create(device, "Fluid:CullParticlesSig");
 				m_cs_cull_particles.m_pso = ComputePSO(m_cs_cull_particles.m_sig.get(), bytecode)
@@ -584,9 +583,9 @@ namespace pr::rdr12::compute::fluid
 				m_cs_colour.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbColourData>(EReg::Colours)
 					.UAV(EReg::Particles)
-					.SRV(EReg::Spatial)
-					.SRV(EReg::IdxStart)
-					.SRV(EReg::IdxCount)
+					.UAV(EReg::Spatial)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
 					.Create(device, "Fluid:ColourParticlesSig");
 				m_cs_colour.m_pso = ComputePSO(m_cs_colour.m_sig.get(), bytecode)
 					.Create(device, "Fluid:ColourParticlesPSO");
@@ -598,10 +597,10 @@ namespace pr::rdr12::compute::fluid
 				m_cs_gen_map.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.CBuf(EReg::Map)
 					.UAV(EReg::Particles)
-					.SRV(EReg::Spatial)
-					.SRV(EReg::IdxStart)
-					.SRV(EReg::IdxCount)
-					.SRV(EReg::ForceProfile)
+					.UAV(EReg::Spatial)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
+					.UAV(EReg::ForceProfile)
 					.UAV(EReg::TexMap, 1)
 					.Create(device, "Fluid:GenerateMapSig");
 				m_cs_gen_map.m_pso = ComputePSO(m_cs_gen_map.m_sig.get(), bytecode)
@@ -632,7 +631,8 @@ namespace pr::rdr12::compute::fluid
 
 				auto force_profile = !setup.ForceProfileData.empty() ? setup.ForceProfileData : force_profile_data;
 				ResDesc desc = ResDesc::Buf<float>(isize(force_profile), force_profile)
-					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 				m_r_force_profile = m_rdr->res().CreateResource(desc, "Fluid:ForceProfile");
 				m_force_profile_length = isize(force_profile);
 			}
@@ -640,7 +640,7 @@ namespace pr::rdr12::compute::fluid
 			// Create the output buffer
 			{
 				ResDesc desc = ResDesc::Buf<int>(1, {})
-					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 				m_r_output = m_rdr->res().CreateResource(desc, "Fluid:Output");
 			}
@@ -659,10 +659,10 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_forces.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(5, m_r_force_profile->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_r_force_profile->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -703,9 +703,9 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_cull_particles.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_r_output->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
@@ -738,9 +738,9 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_colour.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_colours);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_colours.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -762,9 +762,9 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_gen_map.m_sig.get());
 			job.m_cmd_list.SetComputeRootConstantBufferView(0, job.m_upload.Add(cb_map, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true));
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootDescriptorTable(5, job.m_view_heap.Add(tex_map->m_uav));
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_map.TexDim, 1 }, { 32, 32, 1 }));
 
