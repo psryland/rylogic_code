@@ -30,6 +30,40 @@ inline float4 sqr(float4 v)
 	return v * v;
 }
 
+inline float cube(float v)
+{
+	return v * v * v;
+}
+inline float2 cube(float2 v)
+{
+	return v * v * v;
+}
+inline float3 cube(float3 v)
+{
+	return v * v * v;
+}
+inline float4 cube(float4 v)
+{
+	return v * v * v;
+}
+
+inline float signed_sqr(float v)
+{
+	return sign(v) * sqr(v);
+}
+inline float2 signed_sqr(float2 v)
+{
+	return sign(v) * sqr(v);
+}
+inline float3 signed_sqr(float3 v)
+{
+	return sign(v) * sqr(v);
+}
+inline float4 signed_sqr(float4 v)
+{
+	return sign(v) * sqr(v);
+}
+
 // Swap two values
 inline void swap(inout float a, inout float b)
 {
@@ -138,34 +172,35 @@ inline uint Hash(int value, uint hash = FNV_offset_basis32)
 }
 
 // A random number on the interval (-1, +1)
-inline float RandomN(float seed)
+inline float RandomN(float2 seed)
 {
-	const float prime_32bit = 4294967291.0f;
-	const float phi = 2.39996322972865332;
-
-	seed = Hash(asuint(seed * phi));
-	float fseed = float(seed) / prime_32bit;
-	return sin(fseed);
+	// float2(e^pi = 'Gelfond's constant), 2^sqrt(2) = 'Gelfond Schneider's constant)
+	float2 K1 = float2(23.14069263277926, 2.665144142690225);
+	return 2.0f * frac(cos(dot(seed, K1)) * 12345.6789) - 1.0f;
 }
 
 // A random normalised direction vector on the interval (-1, +1)
-inline float4 Random3N(float seed)
+inline float2 Random2N(float2 seed)
+{
+	float x = RandomN(seed);
+	float y = RandomN(x);
+	return normalize(float2(x, y));
+}
+inline float4 Random3N(float2 seed)
 {
 	float x = RandomN(seed);
 	float y = RandomN(x);
 	float z = RandomN(y);
 	return normalize(float4(x, y, z, 0));
 }
-
-// Constant time bit count
-// use countbits()
-//inline int CountBits(uint n)
-//{
-//	// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-//	// Constant time bit count works for 32-bit numbers only.
-//	uint tmp = n - ((n >> 1) & 033333333333) - ((n >> 2) & 011111111111);
-//	return ((tmp + (tmp >> 3)) & 030707070707) % 63;
-//}
+inline float4 Random4N(float2 seed)
+{
+	float x = RandomN(seed);
+	float y = RandomN(x);
+	float z = RandomN(y);
+	float w = RandomN(z);
+	return normalize(float4(x, y, z, w));
+}
 
 // Return a vector that is not parallel to 'v'
 inline float2 NotParallel(float2 v)
@@ -182,6 +217,23 @@ inline float4 NotParallel(float4 v)
 {
 	v = abs(v);
 	return select(v.x > v.y && v.x > v.z, float4(0,0,1,0), float4(1,0,0,0));
+}
+
+// Normalise a vector or return zero if the length is zero
+inline float2 NormaliseOrZero(float2 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float2(0,0));
+}
+inline float3 NormaliseOrZero(float3 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float3(0,0,0));
+}
+inline float4 NormaliseOrZero(float4 vec)
+{
+	float len = length(vec);
+	return select(len != 0, vec / len, float4(0,0,0,0));
 }
 
 // Invert an orthonormal matrix

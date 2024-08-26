@@ -141,7 +141,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			{
 				auto bytecode = compiler.EntryPoint(L"InitRadixSort").Compile();
 				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
-					.Uav(EReg::GlobalHistogram)
+					.UAV(EReg::GlobalHistogram)
 					.Create(device, "GpuRadixSort:InitSig");
 				m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:InitPSO");
@@ -152,7 +152,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				auto bytecode = compiler.EntryPoint(L"InitPayload").Compile();
 				m_init_payload.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
-					.Uav(EReg::Payload0)
+					.UAV(EReg::Payload0)
 					.Create(device, "GpuRadixSort:InitPayloadSig");
 				m_init_payload.m_pso = ComputePSO(m_init_payload.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:InitPayloadPSO");
@@ -163,9 +163,9 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				auto bytecode = compiler.EntryPoint(L"SweepUp").Compile();
 				m_sweep_up.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
-					.Uav(EReg::Sort0)
-					.Uav(EReg::GlobalHistogram)
-					.Uav(EReg::PassHistogram)
+					.UAV(EReg::Sort0)
+					.UAV(EReg::GlobalHistogram)
+					.UAV(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:SweepUpSig");
 				m_sweep_up.m_pso = ComputePSO(m_sweep_up.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:SweepUpPSO");
@@ -176,7 +176,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				auto bytecode = compiler.EntryPoint(L"Scan").Compile();
 				m_scan.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
-					.Uav(EReg::PassHistogram)
+					.UAV(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:ScanSig");
 				m_scan.m_pso = ComputePSO(m_scan.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:ScanPSO");
@@ -187,12 +187,12 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				auto bytecode = compiler.EntryPoint(L"SweepDown").Compile();
 				m_sweep_down.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32(EReg::Constants, 4)
-					.Uav(EReg::Sort0)
-					.Uav(EReg::Sort1)
-					.Uav(EReg::Payload0)
-					.Uav(EReg::Payload1)
-					.Uav(EReg::GlobalHistogram)
-					.Uav(EReg::PassHistogram)
+					.UAV(EReg::Sort0)
+					.UAV(EReg::Sort1)
+					.UAV(EReg::Payload0)
+					.UAV(EReg::Payload1)
+					.UAV(EReg::GlobalHistogram)
+					.UAV(EReg::PassHistogram)
 					.Create(device, "GpuRadixSort:SweepDownSig");
 				m_sweep_down.m_pso = ComputePSO(m_sweep_down.m_sig.get(), bytecode)
 					.Create(device, "GpuRadixSort:SweepDownPSO");
@@ -200,11 +200,11 @@ namespace pr::rdr12::compute::gpu_radix_sort
 
 			// Create sort-size independent buffers
 			{
-				auto& desc = ResDesc::Buf(Radix * RadixPasses, sizeof(Key), nullptr, alignof(Key)).usage(EUsage::UnorderedAccess);
+				ResDesc desc = ResDesc::Buf<Key>(Radix * RadixPasses, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
 				m_global_histogram = m_rdr->res().CreateResource(desc, "RadixSort:histogram");
 			}
 			{
-				auto& desc = ResDesc::Buf(1, sizeof(Key), nullptr, alignof(Key)).usage(EUsage::UnorderedAccess);
+				ResDesc desc = ResDesc::Buf<Key>(1, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
 				m_error_count = m_rdr->res().CreateResource(desc, "RadixSort:error_count");
 			}
 		}
@@ -213,27 +213,27 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		void Bind(int64_t size, D3DPtr<ID3D12Resource> sort0, D3DPtr<ID3D12Resource> payload0)
 		{
 			{
-				auto desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<Key>(size, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_sort[0] = sort0;
 				m_sort[1] = m_rdr->res().CreateResource(desc, "RadixSort:sort1");
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
-				auto desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<T>(HasPayload ? size : 1, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_payload[0] = payload0;
 				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
-				auto desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<Key>(s_cast<int64_t>(Radix) * partitions, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_pass_histogram = m_rdr->res().CreateResource(desc, "RadixSort:passHistBuffer");
 			}
@@ -248,27 +248,27 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				return;
 
 			{
-				auto desc = ResDesc::Buf(size, sizeof(Key), nullptr, alignof(Key))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<Key>(size, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_sort[0] = m_rdr->res().CreateResource(desc, "RadixSort:sort0");
 				m_sort[1] = m_rdr->res().CreateResource(desc, "RadixSort:sort1");
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
-				auto desc = ResDesc::Buf(HasPayload ? size : 1, sizeof(T), nullptr, alignof(T))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<T>(HasPayload ? size : 1, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_payload[0] = m_rdr->res().CreateResource(desc, "RadixSort:payload0");
 				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
-				auto desc = ResDesc::Buf(s_cast<int64_t>(Radix) * partitions, sizeof(Key), nullptr, alignof(Key))
-					.usage(EUsage::UnorderedAccess)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				ResDesc desc = ResDesc::Buf<Key>(s_cast<int64_t>(Radix) * partitions, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 
 				m_pass_histogram = m_rdr->res().CreateResource(desc, "RadixSort:passHistBuffer");
 			}
@@ -285,7 +285,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			// Do the sort and wait for it to complete
 			job.Run();
 
-			// Readback the results and update the input arrays
+			// Read back the results and update the input arrays
 			{
 				memcpy(keys.data(), result.keys.ptr<Key>(), result.keys.m_size);
 			}
@@ -296,7 +296,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		}
 
 		// Sort 'values' by 'keys' using the provided command list
-		// Returns Readback buffer allocations that will contain the sorted result once the command list has been executed.
+		// Returns Read back buffer allocations that will contain the sorted result once the command list has been executed.
 		Result Sort(CmdList& cmd_list, std::span<Key const> keys, std::span<Value const> values, GpuUploadBuffer& upload, GpuReadbackBuffer& readback) const
 		{
 			if (ssize(keys) > m_size)

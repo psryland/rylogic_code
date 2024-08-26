@@ -33,7 +33,15 @@ inline uint CellHash(int3 grid, uniform uint cell_count)
 	const uint prime1 = 73856093;
 	const uint prime2 = 19349663;
 	const uint prime3 = 83492791;
-	return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
+	
+	// The last cell is reserved for 'nan' positions
+	return (h1 * prime1 + h2 * prime2 + h3 * prime3) % (cell_count - 1);
+}
+
+// Return the index range for a given cell hash
+inline int2 IndexRange(uint cell_hash)
+{
+	return int2(m_idx_start[cell_hash], m_idx_start[cell_hash] + m_idx_count[cell_hash]);
 }
 
 // A coroutine context for iterating over neighbouring particles
@@ -76,8 +84,8 @@ inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 	}
 
 	// Get the range of indices in 'cell'
-	uint hash = CellHash(iter.cell, cell_count);
-	iter.idx_range = int2(m_idx_start[hash], m_idx_start[hash] + m_idx_count[hash]);
+	uint cell_hash = CellHash(iter.cell, cell_count);
+	iter.idx_range = IndexRange(cell_hash);
 	return true;
 }
 

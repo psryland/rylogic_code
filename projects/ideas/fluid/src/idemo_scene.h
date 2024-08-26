@@ -9,6 +9,9 @@ namespace pr::fluid
 	{
 		virtual ~IDemoScene() = default;
 
+		// 2D or 3D
+		virtual int SpatialDimensions() const = 0;
+
 		// Initial camera position
 		virtual std::optional<pr::Camera> Camera() const = 0;
 
@@ -19,11 +22,14 @@ namespace pr::fluid
 		// Return initialization data for the static collision scene.
 		virtual std::span<CollisionPrim const> Collision() const { return {}; }
 
+		// Particle culling
+		virtual ParticleCollision::CullData Culling() const { return {}; }
+
 		// Return a string representation of the scene for visualisation
 		virtual std::string LdrScene() const = 0;
 
 		// Move the probe around
-		virtual v4 PositionProbe(gui::Point, rdr12::Scene&) const { return v4::Origin(); }
+		virtual v4 PositionProbe(gui::Point, rdr12::Scene const&) const { return v4::Origin(); }
 
 		// Handle input
 		virtual void OnMouseButton(gui::MouseEventArgs&) {}

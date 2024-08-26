@@ -40,7 +40,9 @@ namespace pr::rdr12::compute::spatial_partition
 		constexpr uint32_t prime1 = 73856093;
 		constexpr uint32_t prime2 = 19349663;
 		constexpr uint32_t prime3 = 83492791;
-		return (h1 * prime1 + h2 * prime2 + h3 * prime3) % cell_count;
+
+		// The last cell is reserved for 'nan' positions
+		return (h1 * prime1 + h2 * prime2 + h3 * prime3) % (cell_count - 1);
 	}
 
 	// Grid-based Spatial Partitioning
@@ -57,27 +59,50 @@ namespace pr::rdr12::compute::spatial_partition
 		using GpuRadixSorter = compute::gpu_radix_sort::GpuRadixSort<uint32_t, uint32_t>;
 		using Cell = struct { int32_t start; int32_t count; };
 
+		struct ConfigData
+		{
+			// The number of cells in the grid.
+			// The last cell is reserved for NaN positions.
+			// Primes + 1 are a good choice: 1021+1, 65521+1, 1048573+1, 16777213+1
+			int CellCount = 1021 + 1;
+
+			// Scale positions to grid cells. E.g. scale = 10, then 0.1 -> 1, 0.2 -> 2, etc
+			float GridScale = 1.0f;
+		};
+		struct StepOutput
+		{
+			GpuReadbackBuffer::Allocation m_lookup;
+			GpuReadbackBuffer::Allocation m_idx_start;
+			GpuReadbackBuffer::Allocation m_idx_count;
+			float m_grid_scale;
+			int m_cell_count;
+			int m_pos_count;
+		};
+		struct Setup
+		{
+			int Capacity;
+			ConfigData Config;                  // Runtime configuration for the spatial partitioning
+		
+			bool valid() const noexcept
+			{
+				return Config.CellCount >= 0 && Config.GridScale > 0;
+			}
+		};
+
 		Renderer* m_rdr;                    // The renderer instance to use to run the compute shader
 		ComputeStep m_init;                 // Reset buffers
 		ComputeStep m_populate;             // Populate the grid cells
 		ComputeStep m_build;                // Build the lookup data structure
 		D3DPtr<ID3D12Resource> m_grid_hash; // The cell hash for each position
-		D3DPtr<ID3D12Resource> m_pos_index; // The spatially sorted position indices
+		D3DPtr<ID3D12Resource> m_spatial;   // The spatially sorted position indices
 		D3DPtr<ID3D12Resource> m_idx_start; // The smallest index for each cell hash value
 		D3DPtr<ID3D12Resource> m_idx_count; // The number of particles in each cell
 		GpuRadixSorter m_sorter;            // Sort the cell hashes on the GPU
 		int m_size;                         // The size that the resources are set up for
 
-		// These fields are used if the spatial partitioning data is copied back to the CPU.
-		std::vector<int32_t> m_spatial;     // The spatially sorted position indices
-		std::vector<Cell> m_lookup;         // A map (length CellCount) from cell hash to (start,count) into 'm_spatial'
-
 		// Partitioning params
-		struct ConfigData
-		{
-			int CellCount = 1021;   // The number of cells in the grid. (Primes are a good choice: 1021, 65521, 1048573, 16777213)
-			float GridScale = 1.0f; // Scale positions to grid cells. E.g. scale = 10, then 0.1 -> 1, 0.2 -> 2, etc
-		} Config;
+		ConfigData Config;
+		StepOutput Output;
 
 		SpatialPartition(Renderer& rdr, std::wstring_view position_layout)
 			: m_rdr(&rdr)
@@ -85,81 +110,39 @@ namespace pr::rdr12::compute::spatial_partition
 			, m_populate()
 			, m_build()
 			, m_grid_hash()
-			, m_pos_index()
+			, m_spatial()
 			, m_idx_start()
 			, m_idx_count()
 			, m_sorter(rdr)
 			, m_size()
-			, m_spatial()
-			, m_lookup()
 			, Config()
+			, Output()
 		{
 			CreateComputeSteps(position_layout);
 		}
 
 		// (Re)Initialise the spatial partitioning
-		void Init(ConfigData const& config, EGpuFlush flush = EGpuFlush::Block)
+		void Init(Setup const& setup, EGpuFlush flush = EGpuFlush::Block)
 		{
-			Config = config;
+			assert(setup.valid());
 
-			ResDesc desc = ResDesc::Buf(Config.CellCount, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
-			m_idx_start = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxStart");
-			m_idx_count = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxCount");
+			Config = setup.Config;
+
+			CreateResourceBuffers();
+			Resize(setup.Capacity);
 			m_rdr->res().FlushToGpu(flush);
 		}
 
 		// Spatially partition the particles for faster locality testing
 		void Update(GraphicsJob& job, int count, D3DPtr<ID3D12Resource> positions, bool readback)
 		{
+			Output = {};
+			if (count == 0)
+				return;
+			
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
 			DoUpdate(job, count, positions, readback);
-		}
-
-		// Find all particles in the cells overlapping 'volume'.
-		template <typename PosType, typename FoundCB> requires std::is_invocable_v<FoundCB, PosType const&>
-		void Find(BBox_cref volume, std::span<PosType const> particles, FoundCB found) const
-		{
-			assert(!m_spatial.empty() && "Requires Update() with 'readback' = true");
-
-			auto lwr = GridCell(volume.Lower(), Config.GridScale);
-			auto upr = GridCell(volume.Upper(), Config.GridScale);
-
-			for (auto z = lwr.z; z <= upr.z; ++z)
-			{
-				for (auto y = lwr.y; y <= upr.y; ++y)
-				{
-					for (auto x = lwr.x; x <= upr.x; ++x)
-					{
-						auto cell = iv3(x, y, z);
-						auto hash = CellHash(cell, Config.CellCount);
-						auto& idx = m_lookup[hash];
-						for (int i = idx.start, iend = idx.start + idx.count; i != iend; ++i)
-						{
-							auto& particle = particles[m_spatial[i]];
-
-							// Ignore cell hash collisions
-							if (GridCell(particle.m_pos, Config.GridScale) != cell)
-								continue;
-
-							found(particle);
-						}
-					}
-				}
-			}
-		}
-
-		// Find all particles within 'radius' of 'position'
-		template <typename PosType, typename FoundCB> requires std::is_invocable_v<FoundCB, PosType const&, float>
-		void Find(v4_cref position, float radius, std::span<PosType const> particles, FoundCB found) const
-		{
-			auto radius_sq = radius * radius;
-			Find(BBox(position, v4(radius)), particles, [=](auto const& particle)
-			{
-				auto dist_sq = LengthSq(position - particle.m_pos);
-				if (dist_sq > radius_sq)
-					return;
-
-				found(particle, dist_sq);
-			});
+			PIXEndEvent(job.m_cmd_list.get());
 		}
 
 	private:
@@ -171,7 +154,7 @@ namespace pr::rdr12::compute::spatial_partition
 			inline static constexpr ECBufReg Constants = ECBufReg::b0;
 			inline static constexpr EUAVReg Positions = EUAVReg::u0;
 			inline static constexpr EUAVReg GridHash = EUAVReg::u1;
-			inline static constexpr EUAVReg PosIndex = EUAVReg::u2;
+			inline static constexpr EUAVReg Spatial = EUAVReg::u2;
 			inline static constexpr EUAVReg IdxStart = EUAVReg::u3;
 			inline static constexpr EUAVReg IdxCount = EUAVReg::u4;
 		};
@@ -199,7 +182,7 @@ namespace pr::rdr12::compute::spatial_partition
 			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"SPATIAL_PARTITION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
-				.Define(L"POS_TYPE", position_layout)
+				.Define(L"PARTICLE_TYPE", position_layout)
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 
@@ -208,8 +191,8 @@ namespace pr::rdr12::compute::spatial_partition
 				auto bytecode = compiler.EntryPoint(L"Init").Compile();
 				m_init.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbGridPartition>(EReg::Constants)
-					.Uav(EReg::IdxStart)
-					.Uav(EReg::IdxCount)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
 					.Create(device, "SpatialPartition:InitSig");
 				m_init.m_pso = ComputePSO(m_init.m_sig.get(), bytecode)
 					.Create(device, "SpatialPartition:InitPSO");
@@ -217,29 +200,39 @@ namespace pr::rdr12::compute::spatial_partition
 
 			// Populate
 			{
-				auto bytecode = compiler.EntryPoint(L"Populate").Compile();
+				auto bytecode = compiler.EntryPoint(L"CalculateHashes").Compile();
 				m_populate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbGridPartition>(EReg::Constants)
-					.Uav(EReg::Positions)
-					.Uav(EReg::GridHash)
-					.Uav(EReg::PosIndex)
-					.Create(device, "SpatialPartition:PopulateSig");
+					.UAV(EReg::Positions)
+					.UAV(EReg::GridHash)
+					.UAV(EReg::Spatial)
+					.Create(device, "SpatialPartition:CalculateHashesSig");
 				m_populate.m_pso = ComputePSO(m_populate.m_sig.get(), bytecode)
-					.Create(device, "SpatialPartition:PopulatePSO");
+					.Create(device, "SpatialPartition:CalculateHashesPSO");
 			}
 
 			// Build lookup
 			{
-				auto bytecode = compiler.EntryPoint(L"BuildSpatial").Compile();
+				auto bytecode = compiler.EntryPoint(L"BuildLookup").Compile();
 				m_build.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbGridPartition>(EReg::Constants)
-					.Uav(EReg::GridHash)
-					.Uav(EReg::IdxStart)
-					.Uav(EReg::IdxCount)
+					.UAV(EReg::GridHash)
+					.UAV(EReg::IdxStart)
+					.UAV(EReg::IdxCount)
 					.Create(device, "SpatialPartition:BuildLookupSig");
 				m_build.m_pso = ComputePSO(m_build.m_sig.get(), bytecode)
 					.Create(device, "SpatialPartition:BuildLookupPSO");
 			}
+		}
+
+		// Create resource buffers
+		void CreateResourceBuffers()
+		{
+			ResDesc desc = ResDesc::Buf<uint32_t>(Config.CellCount, {})
+				.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+				.usage(EUsage::UnorderedAccess);
+			m_idx_start = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxStart");
+			m_idx_count = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxCount");
 		}
 
 		// Ensure the buffers are large enough to partition 'size' positions
@@ -250,21 +243,25 @@ namespace pr::rdr12::compute::spatial_partition
 
 			// Grid hash
 			{
-				ResDesc desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
+				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
 				m_grid_hash = m_rdr->res().CreateResource(desc, "SpatialPartition:GridHash");
 			}
 
 			// Position indices
 			{
-				ResDesc desc = ResDesc::Buf(size, sizeof(uint32_t), nullptr, alignof(uint32_t)).usage(EUsage::UnorderedAccess);
-				m_pos_index = m_rdr->res().CreateResource(desc, "SpatialPartition:PosIndex");
+				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
+					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.usage(EUsage::UnorderedAccess);
+				m_spatial = m_rdr->res().CreateResource(desc, "SpatialPartition:Spatial");
 			}
 
 			// Resize the sorter
 			{
 				// Point the sort and payload buffers of the sorter to our grid-hash and pos-index
 				// buffer so that we don't need to copy data from 'm_grid_hash' to 'm_sort[0]' etc.
-				m_sorter.Bind(size, m_grid_hash, m_pos_index);
+				m_sorter.Bind(size, m_grid_hash, m_spatial);
 			}
 
 			m_size = size;
@@ -273,53 +270,67 @@ namespace pr::rdr12::compute::spatial_partition
 		// Spatially partition the particles for faster locality testing
 		void DoUpdate(GraphicsJob& job, int count, D3DPtr<ID3D12Resource> positions, bool readback)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
-			
 			auto cb_params = GridPartitionCBuf(count);
+			auto positions_state0 = job.m_cmd_list.ResState(positions.get()).Mip0State();
 
 			// Ensure the buffer sizes are correct
 			Resize(count);
 
+			// Our buffers should be read-only for everyone else
+			job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 			// Reset the index start/count buffers
 			{
+				job.m_barriers.Commit();
+
 				job.m_cmd_list.SetPipelineState(m_init.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_init.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_idx_start->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_count->GetGPUVirtualAddress());
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.CellCount, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+
+				job.m_barriers.UAV(m_idx_start.get());
+				job.m_barriers.UAV(m_idx_count.get());
 			}
 
-			job.m_barriers.UAV(positions.get());
-			job.m_barriers.Commit();
+			job.m_barriers.Transition(positions.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_grid_hash.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 			// Find the grid cell hash for each position
 			{
+				job.m_barriers.Commit();
+
 				job.m_cmd_list.SetPipelineState(m_populate.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_populate.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, positions->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash->GetGPUVirtualAddress());
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_pos_index->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial->GetGPUVirtualAddress());
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
-			}
 
-			job.m_barriers.UAV(m_grid_hash.get());
-			job.m_barriers.UAV(m_pos_index.get());
-			job.m_barriers.Commit();
+				job.m_barriers.UAV(m_grid_hash.get());
+				job.m_barriers.UAV(m_spatial.get());
+			}
 
 			// Sort the cell hashes and position indices so that they're contiguous
 			{
+				job.m_barriers.Commit();
+
 				m_sorter.Sort(job.m_cmd_list);
+
+				job.m_barriers.UAV(m_grid_hash.get());
+				job.m_barriers.UAV(m_idx_start.get());
+				job.m_barriers.UAV(m_idx_count.get());
 			}
 
-			job.m_barriers.UAV(m_grid_hash.get());
-			job.m_barriers.UAV(m_idx_start.get());
-			job.m_barriers.UAV(m_idx_count.get());
-			job.m_barriers.Commit();
 
 			// Build the lookup data structure
 			{
+				job.m_barriers.Commit();
+
 				job.m_cmd_list.SetPipelineState(m_build.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_build.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
@@ -327,66 +338,129 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_idx_start->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_idx_count->GetGPUVirtualAddress());
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+
+				job.m_barriers.UAV(m_idx_start.get());
+				job.m_barriers.UAV(m_idx_count.get());
 			}
 
-			job.m_barriers.UAV(m_idx_start.get());
-			job.m_barriers.UAV(m_idx_count.get());
-			job.m_barriers.UAV(m_pos_index.get());
-			job.m_barriers.Commit();
-
 			// Read back the index start/count buffers and lookup table
-			GpuReadbackBuffer::Allocation lookup, idx_start, idx_count;
 			if (readback)
 			{
+				Output.m_grid_scale = cb_params.GridScale;
+				Output.m_cell_count = cb_params.CellCount;
+				Output.m_pos_count = cb_params.NumPositions;
+
 				job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 				job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-				job.m_barriers.Transition(m_pos_index.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+				job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 				job.m_barriers.Commit();
+
 				{
 					auto buf = job.m_readback.Alloc(cb_params.NumPositions * sizeof(uint32_t), alignof(uint32_t));
-					job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_pos_index.get(), 0, buf.m_size);
-					lookup = buf;
+					job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_spatial.get(), 0, buf.m_size);
+					Output.m_lookup = buf;
 				}
 				{
 					auto buf = job.m_readback.Alloc(cb_params.CellCount * sizeof(uint32_t), alignof(uint32_t));
 					job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_idx_start.get(), 0, buf.m_size);
-					idx_start = buf;
+					Output.m_idx_start = buf;
 				}
 				{
 					auto buf = job.m_readback.Alloc(cb_params.CellCount * sizeof(uint32_t), alignof(uint32_t));
 					job.m_cmd_list.CopyBufferRegion(buf.m_res, buf.m_ofs, m_idx_count.get(), 0, buf.m_size);
-					idx_count = buf;
+					Output.m_idx_count = buf;
 				}
-				job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-				job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-				job.m_barriers.Transition(m_pos_index.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-				job.m_barriers.Commit();
 			}
 
-			PIXEndEvent(job.m_cmd_list.get());
+			// Our buffers should be read-only for everyone else
+			job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(positions.get(), positions_state0);
+			job.m_barriers.Commit();
+		}
+	};
 
-			// Create the spatial partition structure
-			if (readback)
+	// A structure that provides spatial partitioning on the CPU.
+	struct SpatialLookup
+	{
+		// Notes:
+		//  - Create a long lived instance of this class
+		//  - Run the 'SpatialPartition::Update' on the GPU
+		//  - Use the step output to update this structure (after calling job.Run())
+		//  - You need 'readback = true' in the call to 'SpatialPartition::Update'
+
+		using Cell = SpatialPartition::Cell;
+		using StepOutput = SpatialPartition::StepOutput;
+
+		std::vector<int32_t> m_spatial;
+		std::vector<Cell> m_lookup;
+		float m_grid_scale;
+
+		// Update the spatial partitioning lookup data based on output from a 'SpatialPartition::Update' call.
+		// Requires 'job.Run()' to have been called on the job used to generate the output.
+		void Update(StepOutput const& output)
+		{
+			m_grid_scale = output.m_grid_scale;
+
+			// The spatially ordered list of particle indices
+			m_spatial.resize(output.m_pos_count);
+			memcpy(m_spatial.data(), output.m_lookup.ptr<int32_t>(), m_spatial.size() * sizeof(int32_t));
+
+			// The map from cell hash to index start/count
+			m_lookup.resize(output.m_cell_count);
+			auto idx_start_ptr = output.m_idx_start.ptr<int32_t>();
+			auto idx_count_ptr = output.m_idx_count.ptr<int32_t>();
+			for (auto& cell : m_lookup)
+				cell = { *idx_start_ptr++, *idx_count_ptr++ };
+		}
+
+		// Find all particles in the cells overlapping 'volume'.
+		template <typename PosType, typename FoundCB> requires std::is_invocable_v<FoundCB, PosType const&>
+		void Find(BBox_cref volume, std::span<PosType const> particles, FoundCB found) const
+		{
+			assert(!m_spatial.empty() && "Requires Update() with 'readback' = true");
+
+			auto cell_count = isize(m_lookup);
+			auto lwr = GridCell(volume.Lower(), m_grid_scale);
+			auto upr = GridCell(volume.Upper(), m_grid_scale);
+
+			for (auto z = lwr.z; z <= upr.z; ++z)
 			{
-				// k go
-				job.Run();
+				for (auto y = lwr.y; y <= upr.y; ++y)
+				{
+					for (auto x = lwr.x; x <= upr.x; ++x)
+					{
+						auto cell = iv3(x, y, z);
+						auto hash = CellHash(cell, cell_count);
+						auto& idx = m_lookup[hash];
+						for (int i = idx.start, iend = idx.start + idx.count; i != iend; ++i)
+						{
+							// Get the particle, but skip cell hash collisions
+							auto& particle = particles[m_spatial[i]];
+							if (GridCell(particle.m_pos, m_grid_scale) != cell)
+								continue;
 
-				// The spatially ordered list of particle indices
-				m_spatial.resize(count);
-				memcpy(m_spatial.data(), lookup.ptr<int32_t>(), m_spatial.size() * sizeof(int32_t));
-
-				// The map from cell hash to index start/count
-				m_lookup.resize(cb_params.CellCount);
-				auto idx_start_ptr = idx_start.ptr<int32_t>();
-				auto idx_count_ptr = idx_count.ptr<int32_t>();
-				for (auto& cell : m_lookup)
-					cell = { *idx_start_ptr++, *idx_count_ptr++ };
+							found(particle);
+						}
+					}
+				}
 			}
-			else
+		}
+
+		// Find all particles within 'radius' of 'position'
+		template <typename PosType, typename FoundCB> requires std::is_invocable_v<FoundCB, PosType const&, float>
+		void Find(v4_cref position, float radius, std::span<PosType const> particles, FoundCB found) const
+		{
+			auto radius_sq = radius * radius;
+			Find(BBox(position, v4(radius)), particles, [=](auto const& particle)
 			{
-				m_spatial.clear();
-				m_lookup.clear();
-			}
+				auto dist_sq = LengthSq(position - particle.m_pos);
+				if (dist_sq > radius_sq)
+					return;
+
+				found(particle, dist_sq);
+			});
 		}
 	};
 }

@@ -17,7 +17,7 @@ namespace pr::rdr12
 	struct EReg
 	{
 		inline static constexpr ECBufReg Constants = ECBufReg::b0;
-		inline static constexpr ETexReg SrcTexture = ETexReg::t0;
+		inline static constexpr ESRVReg SrcTexture = ESRVReg::t0;
 		inline static constexpr EUAVReg DstTexture = EUAVReg::u0;
 	};
 	enum class EMipMapParam { Constants, SrcTexture, DstTexture };
@@ -38,8 +38,8 @@ namespace pr::rdr12
 		// Create a root signature for the MipMap generator compute shader
 		m_mipmap_sig = RootSig(ERootSigFlags::ComputeOnly | ERootSigFlags::AllowInputAssemblerInputLayout)
 			.U32(EReg::Constants, 2)
-			.Tex(EReg::SrcTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
-			.Uav(EReg::DstTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
+			.SRV(EReg::SrcTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
+			.UAV(EReg::DstTexture, 1, D3D12_SHADER_VISIBILITY_ALL, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE)
 			.Samp(D3D12_STATIC_SAMPLER_DESC{
 				.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
 				.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP,

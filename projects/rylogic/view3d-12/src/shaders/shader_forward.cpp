@@ -22,10 +22,10 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto CBufScreenSpace = ECBufReg::b3;
 		inline static constexpr auto CBufDiag = ECBufReg::b3; // Uses the same reg as ScreenSpace
 
-		inline static constexpr auto DiffTexture = ETexReg::t0;
-		inline static constexpr auto EnvMap = ETexReg::t1;
-		inline static constexpr auto SMap = ETexReg::t2;
-		inline static constexpr auto ProjTex = ETexReg::t3;
+		inline static constexpr auto DiffTexture = ESRVReg::t0;
+		inline static constexpr auto EnvMap = ESRVReg::t1;
+		inline static constexpr auto SMap = ESRVReg::t2;
+		inline static constexpr auto ProjTex = ESRVReg::t3;
 
 		inline static constexpr auto DiffTextureSampler = ESamReg::s0;
 	};
@@ -57,10 +57,10 @@ namespace pr::rdr12::shaders
 			.CBuf(EReg::CBufNugget)
 			.CBuf(EReg::CBufFade)
 			.CBuf(EReg::CBufScreenSpace) // Shared to CBufDiag
-			.Tex(EReg::DiffTexture, 1)
-			.Tex(EReg::EnvMap, 1)
-			.Tex(EReg::SMap, shaders::MaxShadowMaps)
-			.Tex(EReg::ProjTex, shaders::MaxProjectedTextures)
+			.SRV(EReg::DiffTexture, 1)
+			.SRV(EReg::EnvMap, 1)
+			.SRV(EReg::SMap, shaders::MaxShadowMaps)
+			.SRV(EReg::ProjTex, shaders::MaxProjectedTextures)
 			.Samp(EReg::DiffTextureSampler, shaders::MaxSamplers)
 
 			// Add stock static samplers

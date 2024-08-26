@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/resource/resource_state.h"
 
 namespace pr::rdr12
@@ -34,7 +35,13 @@ namespace pr::rdr12
 		// Resource usage barrier
 		void Transition(ID3D12Resource const* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
 		{
-			// If the new transition takes all subresources to 'state'...
+			#if PR_DBG_RDR
+			auto res_name = DebugName(resource);
+			if (std::string_view(res_name) == "SpatialPartition:IdxCount")
+				PR_INFO(1, std::format("Resource '{}' -> {}", res_name, To<std::string>(state)).c_str());
+			#endif
+
+			// If the new transition takes all sub resources to 'state'...
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
 			{
 				// Remove all transitions for 'resource' (even sub-resource only transitions)
@@ -136,7 +143,11 @@ namespace pr::rdr12
 		// Send the barriers to 'cmd_list'
 		void Commit()
 		{
-			// todo.. Could remove redundant barriers here
+			// Note:
+			//  - The ideal way to use a barrier batch is to call 'Commit()' before adding
+			//    commands and UAV/Transition/etc after adding commands.
+
+			//TODO.. Could remove redundant barriers here
 			if (m_barriers.empty())
 				return;
 

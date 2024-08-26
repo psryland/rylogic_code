@@ -39,7 +39,7 @@ namespace pr::fluid
 	}
 
 	// Reset the visualisation
-	void FluidVisualisation::Init(int particle_count, std::string_view ldr, D3DPtr<ID3D12Resource> particle_buffer)
+	void FluidVisualisation::Init(int particle_capacity, std::string_view ldr, D3DPtr<ID3D12Resource> particle_buffer)
 	{
 		// Create the visualisation scene
 		m_gfx_scene = rdr12::CreateLdr(*m_rdr, ldr);
@@ -47,20 +47,20 @@ namespace pr::fluid
 		// Create a dynamic model for the fluid particles (using the particle buffer)
 		{
 			auto vb = ResDesc::VBuf<Vert>(particle_buffer.get()).usage(EUsage::UnorderedAccess);
-			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
+			auto ib = ResDesc::IBuf<uint16_t>(0, {});
 			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
 			m_gfx_fluid.m_model = m_rdr->res().CreateModel(mdesc, particle_buffer, nullptr);
 			m_gfx_fluid.m_model->CreateNugget(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 				.use_shader(ERenderStep::RenderForward, m_gs_points)
-				.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteSpike))
+				.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteSphere))
 				.irange(0, 0));
 			m_gfx_fluid.m_i2w = m4x4::Identity();
 		}
 
 		// Create a dynamic model for the pressure gradient lines
 		{
-			auto vb = ResDesc::VBuf<Vert>(2LL * particle_count, nullptr);
-			auto ib = ResDesc::IBuf<uint16_t>(0, nullptr);
+			auto vb = ResDesc::VBuf<Vert>(2LL * particle_capacity, {});
+			auto ib = ResDesc::IBuf<uint16_t>(0, {});
 			auto mdesc = ModelDesc(vb, ib).name("Fluid:VectorField");
 			m_gfx_vector_field.m_model = m_rdr->res().CreateModel(mdesc);
 			m_gfx_vector_field.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
@@ -98,21 +98,33 @@ namespace pr::fluid
 			++ptr;
 		}
 		update.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	
+		// Update the size of the model
+		auto& nug = m_gfx_vector_field.m_model->m_nuggets.front();
+		nug.m_vrange = { 0, 2 * particles.size() };
 	}
 
 	// Add the particles to the scene that renders them
-	void FluidVisualisation::AddToScene(Scene& scene, EScene flags) const
+	void FluidVisualisation::AddToScene(Scene& scene, EScene flags, int particle_count) const
 	{
 		// Add the static scene
 		scene.AddInstance(m_gfx_scene);
 
 		// The particles
 		if (AllSet(flags, EScene::Particles))
+		{
+			auto& nug = m_gfx_fluid.m_model->m_nuggets.front();
+			nug.m_vrange = { 0, size_t(particle_count) };
 			scene.AddInstance(m_gfx_fluid);
+		}
 
 		// The vector field
 		if (AllSet(flags, EScene::VectorField))
+		{
+			auto& nug = m_gfx_fluid.m_model->m_nuggets.front();
+			nug.m_vrange = { 0, size_t(particle_count) };
 			scene.AddInstance(m_gfx_vector_field);
+		}
 
 		// The map
 		if (AllSet(flags, EScene::Map))

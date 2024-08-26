@@ -8,7 +8,7 @@
 //  3. Sort the 'm_grid_hash' buffer by hash value so that all positions in the same cell are contiguous
 //  4. Create a lookup from cell hash to the start index of the cell in the sorted buffer
 // Defines:
-//   POS_TYPE - Define the element structure of the 'positions' buffer. The field 'pos' is
+//   PARTICLE_TYPE - Define the element structure of the 'positions' buffer. The field 'pos' is
 //      expected to be the position information. It can be float3 or float4.
 
 static const uint ThreadGroupSize = 1024;
@@ -16,18 +16,25 @@ static const uint ThreadGroupSize = 1024;
 // Constants
 cbuffer cbGridPartition : register(b0)
 {
-	int NumPositions; // The length of 'm_positions'
-	int CellCount;    // The maximum number of grid cells (Primes are a good choice: 1021, 65521, 1048573, 16777213)
-	float GridScale;   // The quantising factor to apply to the positions
+	// The length of 'm_positions'
+	int NumPositions;
+
+	// The maximum number of grid cells.
+	// The last cell is reserved for NaN particles, so size must be >= 2
+	// Primes + 1 are a good choice: 1021 + 1, 65521 + 1, 1048573 + 1, 16777213 + 1
+	int CellCount;
+
+	// The quantising factor to apply to the positions
+	float GridScale;
 };
 
-#ifndef POS_TYPE
-#define POS_TYPE struct PosType { float4 pos; }
+#ifndef PARTICLE_TYPE
+#define PARTICLE_TYPE struct Particle { float4 pos; }
 #endif
-POS_TYPE;
+PARTICLE_TYPE;
 
 // The positions to sort into the grid
-RWStructuredBuffer<PosType> m_positions : register(u0);
+RWStructuredBuffer<Particle> m_positions : register(u0);
 
 // The grid cell hash for each position. (length of m_positions)
 RWStructuredBuffer<uint> m_grid_hash : register(u1);
@@ -45,39 +52,40 @@ RWStructuredBuffer<uint> m_idx_count : register(u4);
 
 // Reset the start/count arrays
 [numthreads(ThreadGroupSize, 1, 1)]
-void Init(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+void Init(uint3 dtid : SV_DispatchThreadID)
 {
-	if (gtid.x >= CellCount)
+	if (dtid.x >= CellCount)
 		return;
 	
-	m_idx_start[gtid.x] = 0xFFFFFFFF;
-	m_idx_count[gtid.x] = 0;
+	m_idx_start[dtid.x] = 0xFFFFFFFF;
+	m_idx_count[dtid.x] = 0;
 }
 
 // Populate the grid hash buffer with the hash value for each position
 [numthreads(ThreadGroupSize, 1, 1)]
-void Populate(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+void CalculateHashes(uint3 dtid : SV_DispatchThreadID)
 {
-	if (gtid.x >= NumPositions)
+	if (dtid.x >= NumPositions)
 		return;
 
-	int3 grid = GridCell(m_positions[gtid.x].pos, GridScale);
-	uint hash = CellHash(grid, CellCount);
-	m_grid_hash[gtid.x] = hash;
-	m_spatial[gtid.x] = gtid.x;
+	// Handle 'nan' positions by placing them in the last cell
+	int3 grid = GridCell(m_positions[dtid.x].pos, GridScale);
+	uint hash = any(isnan(m_positions[dtid.x].pos)) ? CellCount - 1 : CellHash(grid, CellCount);
+	m_grid_hash[dtid.x] = hash;
+	m_spatial[dtid.x] = dtid.x;
 }
 
 // Build the lookup structure (run post-sort)
 [numthreads(ThreadGroupSize, 1, 1)]
-void BuildSpatial(uint3 gtid : SV_DispatchThreadID, uint3 gid : SV_GroupID)
+void BuildLookup(uint3 dtid : SV_DispatchThreadID)
 {
-	if (gtid.x >= NumPositions)
+	if (dtid.x >= NumPositions)
 		return;
 
-	uint hash = m_grid_hash[gtid.x];
+	uint hash = m_grid_hash[dtid.x];
 	
 	// Record the smallest index for each cell hash value
-	InterlockedMin(m_idx_start[hash], gtid.x);
+	InterlockedMin(m_idx_start[hash], dtid.x);
 	
 	// Record the number of positions for each cell hash value
 	InterlockedAdd(m_idx_count[hash], 1);
