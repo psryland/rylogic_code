@@ -39,15 +39,29 @@
   <!-- Build Options -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1;SCI_LEXER</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1
+        ;_SILENCE_CXX20_CODECVT_CHAR8_T_FACETS_DEPRECATION_WARNING=1
+        ;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
+        ;_CRT_SECURE_NO_DEPRECATE=1
+        ;_SCL_SECURE_NO_WARNINGS=1
+        ;_ENABLE_EXTENDED_ALIGNED_STORAGE=1
+        ;SCI_LEXER
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)include
+        ;$(ProjectDir)src
+        ;$(ProjectDir)win32
+        ;$(ProjectDir)lexlib
+        ;$(ProjectDir)..\..\include
+      </AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PreBuildEvent>
       <Command>
-py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py
-py $(ProjectDir)scripts\LexFacer.py
+        py $(ProjectDir)scripts\LexGen.py
+        py $(ProjectDir)scripts\HFacer.py
+        py $(ProjectDir)scripts\LexFacer.py
       </Command>
     </PreBuildEvent>
     <Link>

@@ -80,16 +80,40 @@ namespace pr::rdr12
 		}
 
 		// Write access
-		uint8_t* data(uint64_t ofs = 0) { return byte_ptr(m_data) + m_elem_size * m_wrange.m_beg + ofs; }
-		uint8_t* end()                  { return byte_ptr(m_data) + m_elem_size * m_wrange.m_end; }
-		template <typename T> T* ptr()  { return type_ptr<T>(data()); }
-		template <typename T> T* end()  { return type_ptr<T>(end()); }
+		std::byte* data(uint64_t ofs = 0)
+		{
+			return byte_ptr(m_data) + m_elem_size * m_wrange.m_beg + ofs;
+		}
+		std::byte* end()
+		{
+			return byte_ptr(m_data) + m_elem_size * m_wrange.m_end;
+		}
+		template <typename T> T* ptr()
+		{
+			return type_ptr<T>(data());
+		}
+		template <typename T> T* end()
+		{
+			return type_ptr<T>(end());
+		}
 		
 		// Read access
-		uint8_t const* data(uint64_t ofs = 0) const { return byte_ptr(m_data) + m_elem_size * m_rrange.m_beg + ofs; }
-		uint8_t const* end() const                  { return byte_ptr(m_data) + m_elem_size * m_rrange.m_end; }
-		template <typename T> T const* ptr() const  { return type_ptr<T>(data()); }
-		template <typename T> T const* end() const  { return type_ptr<T>(end()); }
+		std::byte const* data(uint64_t ofs = 0) const
+		{
+			return byte_ptr(m_data) + m_elem_size * m_rrange.m_beg + ofs;
+		}
+		std::byte const* end() const
+		{
+			return byte_ptr(m_data) + m_elem_size * m_rrange.m_end;
+		}
+		template <typename T> T const* ptr() const
+		{
+			return type_ptr<T>(data());
+		}
+		template <typename T> T const* end() const
+		{
+			return type_ptr<T>(end());
+		}
 
 		// Interpret the memory at 'byte_offset' as type 'T&'
 		template <typename T> T& at(int byte_offset)
@@ -108,7 +132,7 @@ namespace pr::rdr12
 			auto desc = res->GetDesc();
 			auto write_range = Range(0, s_cast<size_t>(desc.Width * desc.Height * desc.DepthOrArraySize));
 
-			// Get the pointer to the mmemory
+			// Get the pointer to the memory
 			void* data = nullptr;
 			auto rrange = To<D3D12_RANGE>(read_range);
 			Check(res->Map(sub, &rrange, &data));

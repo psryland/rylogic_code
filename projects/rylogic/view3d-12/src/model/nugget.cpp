@@ -10,15 +10,10 @@
 namespace pr::rdr12
 {
 	Nugget::Nugget(NuggetDesc const& ndata, Model* model)
-		:NuggetDesc(ndata)
-		,m_model(model)
-		,m_prim_count()
-		,m_nuggets()
+		: NuggetDesc(ndata)
+		, m_model(model)
+		, m_nuggets()
 	{
-		m_prim_count = ndata.m_irange.empty()
-			? PrimCount(ndata.m_vrange.size(), ndata.m_topo)
-			: PrimCount(ndata.m_irange.size(), ndata.m_topo);
-
 		// Fixed the initial pipe state overrides
 		m_pso.m_fixed = m_pso.count();
 
@@ -40,6 +35,14 @@ namespace pr::rdr12
 	ResourceManager& Nugget::res_mgr() const
 	{
 		return m_model->res_mgr();
+	}
+
+	// The number of primitives in this nugget
+	size_t Nugget::PrimCount() const
+	{
+		return m_irange.empty()
+			? rdr12::PrimCount(m_vrange.size(), m_topo)
+			: rdr12::PrimCount(m_irange.size(), m_topo);
 	}
 
 	// True if this nugget requires alpha blending

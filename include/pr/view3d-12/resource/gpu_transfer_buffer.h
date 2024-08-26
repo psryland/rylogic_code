@@ -46,7 +46,7 @@ namespace pr::rdr12
 				, m_sync_point(sync_point)
 			{
 				HeapProps heap_props(HeapType);
-				auto& desc = ResDesc::Buf(size, 1, nullptr, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
+				auto& desc = ResDesc::Buf(size, 1, {}, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
 				Check(device->CreateCommittedResource(
 					&heap_props, D3D12_HEAP_FLAG_NONE,
 					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,
@@ -79,6 +79,8 @@ namespace pr::rdr12
 			int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
 			int64_t m_size;        // The size of the allocation (in bytes).
 
+			template <typename T> T const* ptr() const { return reinterpret_cast<T*>(m_mem + m_ofs); }
+			template <typename T> T const* end() const { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
 			template <typename T> T* ptr() { return reinterpret_cast<T*>(m_mem + m_ofs); }
 			template <typename T> T* end() { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
 		};

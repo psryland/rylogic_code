@@ -825,6 +825,15 @@ namespace pr
 		}
 	};
 
+	// Colour to pr::v4
+	template <> struct Convert<v4, Colour>
+	{
+		static v4 To_(Colour const& c)
+		{
+			return v4(c.r, c.g, c.b, c.a);
+		}
+	};
+
 	// Whatever to Colour32
 	template <typename TFrom> struct Convert<Colour32, TFrom>
 	{
@@ -858,6 +867,10 @@ namespace pr
 		static Colour To_(Colour32 c)
 		{
 			return static_cast<Colour>(c);
+		}
+		static Colour To_(v4_cref c)
+		{
+			return Colour(c.x, c.y, c.z, c.w);
 		}
 	};
 

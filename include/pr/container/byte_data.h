@@ -427,6 +427,10 @@ namespace pr
 		{
 			return span<Type const>();
 		}
+		operator std::span<std::byte const>() const
+		{
+			return span<std::byte const>();
+		}
 
 	private:
 

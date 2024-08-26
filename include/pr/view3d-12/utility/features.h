@@ -9,6 +9,10 @@ namespace pr::rdr12
 {
 	struct FeatureSupport
 	{
+		// Notes:
+		// - Create an instance of this object to read *ALL* feature information from the device.
+		// - Check feature support by accessing the members.
+
 		ID3D12Device* m_device;
 		D3D_FEATURE_LEVEL                                                     MaxFeatureLevel;
 		D3D12_FEATURE_DATA_D3D12_OPTIONS                                      Options;
@@ -38,6 +42,11 @@ namespace pr::rdr12
 		D3D12_FEATURE_DATA_D3D12_OPTIONS12                                    Options12;
 		#endif
 
+		struct AdapterInfo :DXGI_ADAPTER_DESC1
+		{
+			bool IsWarpDevice() const;
+		};
+
 		struct FormatData :D3D12_FEATURE_DATA_FORMAT_SUPPORT
 		{
 			bool Check(D3D12_FORMAT_SUPPORT1 format) const;
@@ -48,9 +57,23 @@ namespace pr::rdr12
 			bool CheckDSV() const;
 		};
 
+		struct ComputeInfo
+		{
+			std::string_view SupportedShaderModel() const;
+			D3D_SHADER_MODEL HighestShaderModel;
+			uint32_t SIMDWidth;
+			uint32_t SIMDMaxWidth;
+			uint32_t SIMDLaneCount;
+			bool SupportsWaveIntrinsics;
+			bool Supports16BitTypes;
+		};
+
 		FeatureSupport();
 		FeatureSupport(ID3D12Device* device);
 		void Read(ID3D12Device* device);
+
+		AdapterInfo Adapter() const;
 		FormatData Format(DXGI_FORMAT format) const;
+		ComputeInfo Compute() const;
 	};
 }

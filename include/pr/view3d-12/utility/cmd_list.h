@@ -307,7 +307,7 @@ namespace pr::rdr12
 		{
 			m_list->SetComputeRoot32BitConstants(s_cast<UINT>(RootParameterIndex), s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
-		template <typename Idx, typename CBufType> requires (std::integral<Idx> || std::integral<std::underlying_type_t<Idx>>)
+		template <RootParamIdx Idx, typename CBufType>
 		void SetComputeRoot32BitConstants(Idx RootParameterIndex, CBufType const& cb, size_t DestOffsetIn32BitValues = 0)
 		{
 			static_assert(sizeof(CBufType) % sizeof(uint32_t) == 0);

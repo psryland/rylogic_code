@@ -266,7 +266,7 @@
     </FxCompile>
     <None Include="..\include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
     <FxCompile Include="..\include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
-      <EntryPointName>BuildSpatial</EntryPointName>
+      <EntryPointName>BuildLookup</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
     </FxCompile>

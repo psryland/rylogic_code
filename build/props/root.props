@@ -14,15 +14,15 @@
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <PreprocessorDefinitions>
-        _CRT_SECURE_NO_WARNINGS;
-        _SCL_SECURE_NO_WARNINGS;
-        _ENABLE_EXTENDED_ALIGNED_STORAGE;
-        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;
-        _SILENCE_CXX20_CODECVT_CHAR8_T_FACETS_DEPRECATION_WARNING;
-        _WIN32_WINNT=_WIN32_WINNT_WIN10;
-        NOMINMAX;
-        WIN32_LEAN_AND_MEAN;
-        GDIPVER=0x0110
+        ;_CRT_SECURE_NO_WARNINGS
+        ;_SCL_SECURE_NO_WARNINGS
+        ;_ENABLE_EXTENDED_ALIGNED_STORAGE
+        ;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+        ;_SILENCE_CXX20_CODECVT_CHAR8_T_FACETS_DEPRECATION_WARNING
+        ;_WIN32_WINNT=_WIN32_WINNT_WIN10
+        ;NOMINMAX
+        ;WIN32_LEAN_AND_MEAN
+        ;GDIPVER=0x0110
       </PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355;5105</DisableSpecificWarnings>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -41,7 +41,12 @@
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <ClCompile Condition="'$(Configuration)'=='Debug'">
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>
+        ;_DEBUG
+        ;_ITERATOR_DEBUG_LEVEL=1
+        ;_CONTAINER_DEBUG_LEVEL=1
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>

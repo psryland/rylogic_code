@@ -169,6 +169,7 @@ namespace pr::rdr12
 			// Check support in descending order
 			constexpr D3D_SHADER_MODEL versions[] =
 			{
+				D3D_HIGHEST_SHADER_MODEL,
 				D3D_SHADER_MODEL_6_7,
 				D3D_SHADER_MODEL_6_6,
 				D3D_SHADER_MODEL_6_5,
@@ -235,12 +236,67 @@ namespace pr::rdr12
 		}
 	}
 
+	// Get Adapter properties
+	FeatureSupport::AdapterInfo FeatureSupport::Adapter() const
+	{
+		auto luid = m_device->GetAdapterLuid();
+
+		D3DPtr<IDXGIFactory4> factory;
+		Check(CreateDXGIFactory2(0, __uuidof(IDXGIFactory4), (void**)&factory.m_ptr));
+
+		D3DPtr<IDXGIAdapter1> adapter;
+		Check(factory->EnumAdapterByLuid(luid, __uuidof(IDXGIAdapter1), (void**)&adapter.m_ptr));
+
+		FeatureSupport::AdapterInfo desc = {};
+		Check(adapter->GetDesc1(&desc));
+		return desc;
+	}
+
+	// True if the adapter is a warp device
+	bool FeatureSupport::AdapterInfo::IsWarpDevice() const
+	{
+		return
+			(Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == DXGI_ADAPTER_FLAG_SOFTWARE ||
+			_wcsicmp(Description, L"Microsoft Basic Render Driver") == 0;
+	}
+
 	// Return the format support
 	FeatureSupport::FormatData FeatureSupport::Format(DXGI_FORMAT format) const
 	{
 		FeatureSupport::FormatData support = { format };
 		Check(m_device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
 		return support;
+	}
+
+	// Return info about the GPU
+	FeatureSupport::ComputeInfo FeatureSupport::Compute() const
+	{
+		return FeatureSupport::ComputeInfo{
+			.HighestShaderModel = ShaderModel.HighestShaderModel,
+			.SIMDWidth = Options1.WaveLaneCountMin,
+			.SIMDMaxWidth = Options1.WaveLaneCountMax,
+			.SIMDLaneCount = Options1.TotalLaneCount,
+			.SupportsWaveIntrinsics = Options1.WaveOps != 0,
+			.Supports16BitTypes = Options4.Native16BitShaderOpsSupported != 0,
+		};
+	}
+
+	// Return the string representation of the highest shader model supported
+	std::string_view FeatureSupport::ComputeInfo::SupportedShaderModel() const
+	{
+		switch (HighestShaderModel)
+		{
+			case D3D_SHADER_MODEL_5_1: return "cs_5_1";
+			case D3D_SHADER_MODEL_6_0: return "cs_6_0";
+			case D3D_SHADER_MODEL_6_1: return "cs_6_1";
+			case D3D_SHADER_MODEL_6_2: return "cs_6_2";
+			case D3D_SHADER_MODEL_6_3: return "cs_6_3";
+			case D3D_SHADER_MODEL_6_4: return "cs_6_4";
+			case D3D_SHADER_MODEL_6_5: return "cs_6_5";
+			case D3D_SHADER_MODEL_6_6: return "cs_6_6";
+			case D3D_SHADER_MODEL_6_7: return "cs_6_7";
+			default: return "unknown";
+		}
 	}
 
 	// Check the given format is supported
@@ -272,3 +328,4 @@ namespace pr::rdr12
 		return Check(D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL);
 	}
 }
+

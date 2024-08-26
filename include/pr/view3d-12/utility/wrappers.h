@@ -614,21 +614,26 @@ namespace pr::rdr12
 		}
 
 		// Generic buffer resource description
-		static ResDesc Buf(int64_t count, int element_stride, void const* data, int data_alignment)
+		static ResDesc Buf(int64_t count, int element_stride, std::span<std::byte const> init_data, int data_alignment)
 		{
+			assert((isize(init_data) % element_stride) == 0); // 'init_data' must be [0, count] elements
 			return ResDesc(D3D12_RESOURCE_DIMENSION_BUFFER, DXGI_FORMAT_UNKNOWN, s_cast<uint64_t>(count), 1, 1, element_stride)
 				.mips(1)
 				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 				.data_alignment(data_alignment)
 				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR)
-				.init_data(Image(data, count, element_stride));
+				.init_data(Image(init_data.data(), init_data.size() / element_stride, element_stride));
+		}
+		template <typename TElem> static ResDesc Buf(int64_t count, std::span<TElem const> init_data)
+		{
+			return Buf(count, sizeof(TElem), byte_span(init_data), alignof(TElem));
 		}
 
 		// Vertex buffer description
-		template <typename TVert> static ResDesc VBuf(int64_t count, TVert const* data)
+		template <typename TVert> static ResDesc VBuf(int64_t count, std::span<TVert const> init_data)
 		{
 			count += int64_t(count == 0);
-			return Buf(count, sizeof(TVert), data, alignof(TVert))
+			return Buf(count, sizeof(TVert), byte_span(init_data), alignof(TVert))
 				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
@@ -638,16 +643,16 @@ namespace pr::rdr12
 			auto vb = vbuf->GetDesc();
 			auto count = int64_t(vb.Width) / sizeof(TVert);
 			count += int64_t(count == 0);
-			return Buf(count, sizeof(TVert), nullptr, alignof(TVert))
+			return Buf(count, sizeof(TVert), {}, alignof(TVert))
 				.usage(static_cast<EUsage>(vb.Flags))
 				.def_state(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 		}
 
 		// Index buffer description
-		template <typename TIndx> static ResDesc IBuf(int64_t count, TIndx const* data)
+		template <typename TIndx> static ResDesc IBuf(int64_t count, std::span<TIndx const> init_data)
 		{
 			count += int64_t(count == 0);
-			return Buf(count, sizeof(TIndx), data, alignof(TIndx))
+			return Buf(count, sizeof(TIndx), byte_span(init_data), alignof(TIndx))
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
@@ -658,13 +663,13 @@ namespace pr::rdr12
 			auto ib = ibuf->GetDesc();
 			auto count = int64_t(ib.Width) / sizeof(TIndx);
 			count += int64_t(count == 0);
-			return Buf(count, sizeof(TIndx), nullptr, alignof(TIndx))
+			return Buf(count, sizeof(TIndx), {}, alignof(TIndx))
 				.usage(static_cast<EUsage>(ib.Flags))
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
 		// Index buffer description of arbitrary element size
-		static ResDesc IBuf(int64_t count, int element_stride, void const* data)
+		static ResDesc IBuf(int64_t count, int element_stride, std::span<std::byte const> data)
 		{
 			count += int64_t(count == 0);
 			return Buf(count, element_stride, data, element_stride)

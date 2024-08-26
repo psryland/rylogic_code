@@ -19,8 +19,8 @@ namespace pr::rdr12
 	{
 		char const* name;
 		int vcount, icount;
-		Vert const* vdata;
-		uint16_t const* idata;
+		std::span<Vert const> vdata;
+		std::span<uint16_t const> idata;
 		BBox const* bbox;
 	};
 	namespace TranslateGizmo

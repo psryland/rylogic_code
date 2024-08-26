@@ -45,7 +45,7 @@ namespace pr::rdr
 		template <typename PixelType> PixelType* Pixels(int row)
 		{
 			PR_ASSERT(PR_DBG_RDR, sizeof(PixelType) == BitsPerPixel(m_format) / 8, "Pointer type is not the correct size for the image format");
-			auto ptr = const_cast<uint8_t*>(byte_ptr(m_pixels) + m_pitch.x * row);
+			auto ptr = const_cast<std::byte*>(byte_ptr(m_pixels) + m_pitch.x * row);
 			return type_ptr<PixelType>(ptr);
 		}
 	};

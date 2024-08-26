@@ -4,10 +4,11 @@
 //******************************************
 // Use to cast any pointer to a uint8_t pointer
 #pragma once
-#include <cstdint>
+#include <cstddef>
 #include <cassert>
 #include <stdexcept>
 #include <type_traits>
+#include <span>
 
 namespace pr
 {
@@ -15,20 +16,14 @@ namespace pr
 	// Use:
 	//   int* int_ptr = ...
 	//   uint8_t* u8_ptr = byte_ptr(int_ptr);
-	template <typename T> constexpr uint8_t const* byte_ptr(T const* t) { return reinterpret_cast<uint8_t const*>(t); }
-	template <typename T> constexpr uint8_t*       byte_ptr(T*       t) { return reinterpret_cast<uint8_t*      >(t); }
-	template <typename T> constexpr char const*    char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
-	template <typename T> constexpr char*          char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
+	template <typename T> constexpr std::byte const* byte_ptr(T const* t) { return reinterpret_cast<std::byte const*>(t); }
+	template <typename T> constexpr std::byte*       byte_ptr(T*       t) { return reinterpret_cast<std::byte*      >(t); }
+	template <typename T> constexpr char const*      char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
+	template <typename T> constexpr char*            char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
 	
 	// Handle casting nullptr to bytes/chars
-	constexpr uint8_t const* byte_ptr(nullptr_t)
-	{
-		return static_cast<uint8_t const*>(nullptr);
-	}
-	constexpr char const* char_ptr(nullptr_t)
-	{
-		return static_cast<char const*>(nullptr);
-	}
+	constexpr std::byte const* byte_ptr(nullptr_t) { return static_cast<std::byte const*>(nullptr); }
+	constexpr char const*      char_ptr(nullptr_t) { return static_cast<char const*>(nullptr); }
 
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
 	template <typename T> constexpr T const* type_ptr(void const* t)
@@ -101,7 +96,7 @@ namespace pr
 		return static_cast<T>(x);
 	}
 
-	// Helper for getting the size of a container
+	// Helper for getting the size of a container as an int
 	template <typename T> requires (requires (T t) { t.size(); })
 	inline int isize(T const& cont)
 	{
@@ -116,6 +111,16 @@ namespace pr
 	template <typename T> inline int isizeof(T&)
 	{
 		return s_cast<int>(sizeof(T));
+	}
+
+	// Convert a span of 'T' to a span of bytes
+	template <typename T> inline std::span<std::byte const> byte_span(std::span<T const> x)
+	{
+		return std::span<std::byte const>(reinterpret_cast<std::byte const*>(x.data()), x.size_bytes());
+	}
+	template <typename T> inline std::span<std::byte> byte_span(std::span<T> x)
+	{
+		return std::span<std::byte>(reinterpret_cast<std::byte const*>(x.data()), x.size_bytes());
 	}
 }
 

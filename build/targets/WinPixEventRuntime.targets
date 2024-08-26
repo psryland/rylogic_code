@@ -8,13 +8,13 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-        $(MSBuildThisFileDirectory)../packages/$(PackageVersion)\Include\WinPixEventRuntime;
+        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\Include\WinPixEventRuntime;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>
-        $(MSBuildThisFileDirectory)../packages/$(PackageVersion)\bin\$(PlatformName);
+        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\bin\$(PlatformName);
         %(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>

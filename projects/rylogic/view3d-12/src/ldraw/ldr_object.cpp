@@ -4549,8 +4549,8 @@ namespace pr::rdr12
 
 			// Create buffers for a dynamic model
 			ModelDesc mdesc(
-				ResDesc::VBuf<Vert>(vcount, nullptr),
-				ResDesc::IBuf<uint32_t>(icount, nullptr),
+				ResDesc::VBuf<Vert>(vcount, {}),
+				ResDesc::IBuf<uint32_t>(icount, {}),
 				BBox::Reset(), obj->TypeAndName().c_str());
 
 			// Create the model
@@ -5485,8 +5485,8 @@ namespace pr::rdr12
 
 		// Create buffers for a dynamic model
 		ModelDesc settings(
-			ResDesc::VBuf<Vert>(vcount, nullptr),
-			ResDesc::IBuf<uint16_t>(icount, nullptr),
+			ResDesc::VBuf<Vert>(vcount, {}),
+			ResDesc::IBuf<uint16_t>(icount, {}),
 			BBox::Reset(), obj->TypeAndName().c_str());
 		settings.m_vb.HeapProps = HeapProps::Upload();
 		settings.m_ib.HeapProps = HeapProps::Upload();

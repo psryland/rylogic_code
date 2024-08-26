@@ -12,43 +12,42 @@ namespace pr::rdr
 
 	NuggetData::NuggetData(ETopo topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:m_topo(topo)
-		,m_geom(geom)
-		,m_smap(smap ? *smap : ShaderMap())
-		,m_tex_diffuse()
-		,m_tint(Colour32White)
-		,m_bsb()
-		,m_dsb()
-		,m_rsb()
-		,m_sort_key(ESortGroup::Default)
-		,m_relative_reflectivity(1)
-		,m_nflags(ENuggetFlag::None)
-		,m_vrange(vrange)
-		,m_irange(irange)
+		, m_geom(geom)
+		, m_smap(smap ? *smap : ShaderMap())
+		, m_tex_diffuse()
+		, m_tint(Colour32White)
+		, m_bsb()
+		, m_dsb()
+		, m_rsb()
+		, m_sort_key(ESortGroup::Default)
+		, m_relative_reflectivity(1)
+		, m_nflags(ENuggetFlag::None)
+		, m_vrange(vrange)
+		, m_irange(irange)
 	{}
 
 	// NuggetProps ************************************************
 
 	NuggetProps::NuggetProps(ETopo topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:NuggetData(topo, geom, smap, vrange, irange)
-		,m_range_overlaps(false)
+		, m_range_overlaps(false)
 	{}
 	NuggetProps::NuggetProps(NuggetData const& data)
 		:NuggetData(data)
-		,m_range_overlaps(false)
+		, m_range_overlaps(false)
 	{}
 
 	// Nugget *****************************************************
 
 	Nugget::Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner)
 		:NuggetData(ndata)
-		,m_model_buffer(model_buffer)
-		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
-		,m_owner(owner)
-		,m_nuggets()
-		,m_fill_mode(EFillMode::Default)
-		,m_cull_mode(ECullMode::Default)
-		,m_alpha_enabled()
-		,m_id()
+		, m_model_buffer(model_buffer)
+		, m_owner(owner)
+		, m_nuggets()
+		, m_fill_mode(EFillMode::Default)
+		, m_cull_mode(ECullMode::Default)
+		, m_alpha_enabled()
+		, m_id()
 	{
 		// Enable alpha if the geometry or the diffuse texture map contains alpha
 		Alpha(RequiresAlpha());
@@ -67,6 +66,12 @@ namespace pr::rdr
 	ModelManager& Nugget::mdl_mgr() const
 	{
 		return m_model_buffer->mdl_mgr();
+	}
+
+	// The number of primitives in this nugget
+	size_t Nugget::PrimCount() const
+	{
+		return rdr::PrimCount(m_irange.size(), m_topo);
 	}
 
 	// True if this nugget should be rendered

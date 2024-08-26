@@ -115,7 +115,6 @@ namespace pr::rdr
 		static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
 
 		ModelBuffer* m_model_buffer;  // The vertex and index buffers.
-		size_t       m_prim_count;    // The number of primitives in this nugget
 		Model*       m_owner;         // The model that this nugget belongs to (for debugging mainly)
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget
 		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
@@ -129,6 +128,9 @@ namespace pr::rdr
 		// Renderer access
 		Renderer& rdr() const;
 		ModelManager& mdl_mgr() const;
+
+		// The number of primitives in this nugget
+		size_t PrimCount() const;
 
 		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 		SortKey SortKey(ERenderStep rstep) const;

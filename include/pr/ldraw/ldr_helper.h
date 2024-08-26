@@ -1152,6 +1152,14 @@ namespace pr::ldr
 			{}
 
 			// Box dimensions
+			LdrBox& radii(double radii)
+			{
+				return dim(radii * 2);
+			}
+			LdrBox& radii(v4_cref radii)
+			{
+				return dim(radii * 2);
+			}
 			LdrBox& dim(double dim)
 			{
 				m_dim = Vec4d<void>{dim, dim, dim, 0};

@@ -235,7 +235,6 @@ namespace pr::rdr12
 	struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>, NuggetDesc
 	{
 		Model*       m_model;         // The model that owns this nugget.
-		size_t       m_prim_count;    // The number of primitives in this nugget.
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget.
 
 		Nugget(NuggetDesc const& ndata, Model* model);
@@ -244,6 +243,9 @@ namespace pr::rdr12
 		// Renderer access
 		Renderer& rdr() const;
 		ResourceManager& res_mgr() const;
+
+		// The number of primitives in this nugget
+		size_t PrimCount() const;
 
 		// True if this nugget requires alpha blending
 		bool RequiresAlpha() const;

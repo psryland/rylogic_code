@@ -318,7 +318,7 @@ old:
 		<DisplayString>{m_topo} {m_geom} {m_shader} {m_tex_diffuse}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr::Nugget">
-		<DisplayString>{m_owner} {m_topo} {m_geom} count:{m_prim_count}</DisplayString>
+		<DisplayString>{m_owner} {m_topo} {m_geom} count:{PrimCount()}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr::DrawListElement">
 		<DisplayString>{m_nugget->m_owner} {m_shader}</DisplayString>

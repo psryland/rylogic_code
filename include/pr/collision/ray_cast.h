@@ -510,7 +510,7 @@ namespace pr::collision
 	}
 
 	// Cast a world space ray
-	template <typename TShape, typename = enable_if_shape<TShape>>
+	template <ShapeType TShape>
 	inline RayCastResult RayCastWS(Ray const& ray, TShape const& shape, m4x4 const& s2w)
 	{
 		// Transform the ray cast into shape space
