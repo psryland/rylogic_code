@@ -26,6 +26,13 @@ namespace pr
 		virtual long Release() const = 0;
 	};
 
+	// RefCounted concept
+	template <typename T> concept RefCountedType = requires(T t)
+	{
+		t.AddRef();
+		t.Release();
+	};
+
 	// Reference counting mix-in base class
 	// 'Deleter' is a type containing a static function with signature: 'void RefCountZero(RefCount* obj)'
 	// Its purpose is to release resources owned by the ref counted object because there are no more references to it.

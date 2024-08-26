@@ -78,15 +78,16 @@ namespace pr::rdr12
 		using CmdAllocPool = CmdAllocPool<QueueType>;
 		using CmdList = CmdList<QueueType>;
 
-		D3DPtr<ID3D12Device4>      m_device;    // The device to use for the GPU operations
-		D3DPtr<ID3D12CommandQueue> m_queue;     // The command queue to use for the GPU operations
-		GpuSync                    m_gsync;     // The GPU fence
-		GpuViewHeap                m_view_heap; // A GPU visible descriptor heap
-		CmdAllocPool               m_cmd_pool;  // Command allocator pool for the compute shader
-		CmdList                    m_cmd_list;  // Command list for the compute shader
-		BarrierBatch               m_barriers;  // Barrier batch for the compute shader
-		GpuUploadBuffer            m_upload;    // Upload buffer for the compute shader
-		GpuReadbackBuffer          m_readback;  // Read back buffer for the compute shader
+		D3DPtr<ID3D12Device4>      m_device;     // The device to use for the GPU operations
+		D3DPtr<ID3D12CommandQueue> m_queue;      // The command queue to use for the GPU operations
+		GpuSync                    m_gsync;      // The GPU fence
+		GpuViewHeap                m_view_heap;  // A GPU visible descriptor heap
+		CmdAllocPool               m_cmd_pool;   // Command allocator pool for the compute shader
+		CmdList                    m_cmd_list;   // Command list for the compute shader
+		BarrierBatch               m_barriers;   // Barrier batch for the compute shader
+		KeepAlive                  m_keep_alive; // Keep alive for temporary resources
+		GpuUploadBuffer            m_upload;     // Upload buffer for the compute shader
+		GpuReadbackBuffer          m_readback;   // Read back buffer for the compute shader
 
 		// Get a pointer to the queue
 		static D3DPtr<ID3D12CommandQueue> GetQueue(ID3D12Device4* device)
@@ -110,6 +111,7 @@ namespace pr::rdr12
 			, m_cmd_pool(m_gsync)
 			, m_cmd_list(device, m_cmd_pool.Get(), nullptr, name, pix_colour)
 			, m_barriers(m_cmd_list)
+			, m_keep_alive(m_gsync)
 			, m_upload(m_gsync, 0)
 			, m_readback(m_gsync, 0)
 		{

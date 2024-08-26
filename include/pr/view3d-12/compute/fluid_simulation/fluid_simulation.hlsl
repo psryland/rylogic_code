@@ -129,7 +129,7 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
 // A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
-RWStructuredBuffer<float> m_force_profile : register(u4);
+StructuredBuffer<float> m_force_profile : register(t3);
 
 #include "../spatial_partition/spatial_partition.hlsli"
 

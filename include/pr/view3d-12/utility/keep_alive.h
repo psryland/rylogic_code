@@ -37,6 +37,18 @@ namespace pr::rdr12
 		KeepAlive& operator = (KeepAlive const&) = delete;
 
 		// Add an object to be kept alive until 'sync_point' is reached
+		template <RefCountedType T> void Add(D3DPtr<T> obj, uint64_t sync_point)
+		{
+			m_objects.push_back(Ref{
+				.ptr = nullptr,
+				.ptr2 = obj,
+				.sync_point = sync_point,
+				});
+		}
+		template <RefCountedType T> void Add(D3DPtr<T> obj)
+		{
+			Add(obj, m_gsync.NextSyncPoint());
+		}
 		void Add(ID3D12Object* obj, uint64_t sync_point)
 		{
 			m_objects.push_back(Ref{
@@ -45,15 +57,11 @@ namespace pr::rdr12
 				.sync_point = sync_point,
 				});
 		}
-		template <typename T> requires (std::is_base_of_v<IRefCounted, T>)
-		void Add(D3DPtr<T> obj, uint64_t sync_point)
+		void Add(ID3D12Object* obj)
 		{
-			m_objects.push_back(Ref{
-				.ptr = nullptr,
-				.ptr2 = obj,
-				.sync_point = sync_point,
-				});
+			Add(obj, m_gsync.NextSyncPoint());
 		}
+
 	private:
 
 		// Remove objects whose sync point has been reached

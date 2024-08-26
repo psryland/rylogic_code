@@ -10,6 +10,22 @@
 
 namespace pr::rdr12
 {
+	// An allocation a GpuTransferBuffer
+	struct GpuTransferAllocation
+	{
+		// Notes:
+		//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
+		ID3D12Resource* m_res; // The upload resource that contains this allocation.
+		uint8_t* m_mem;        // The system memory address, mapped to m_res->GetGPUAddress().
+		int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
+		int64_t m_size;        // The size of the allocation (in bytes).
+
+		template <typename T> T const* ptr() const { return reinterpret_cast<T*>(m_mem + m_ofs); }
+		template <typename T> T const* end() const { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
+		template <typename T> T* ptr() { return reinterpret_cast<T*>(m_mem + m_ofs); }
+		template <typename T> T* end() { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
+	};
+
 	template <D3D12_HEAP_TYPE HeapType>
 	struct GpuTransferBuffer :RefCounted<GpuTransferBuffer<HeapType>>
 	{
@@ -70,24 +86,11 @@ namespace pr::rdr12
 				return m_capacity - m_size;
 			}
 		};
-		struct Allocation
-		{
-			// Notes:
-			//  - The allocation is a linear block of memory, but for images can be interpreted as an array of mips.
-			ID3D12Resource* m_res; // The upload resource that contains this allocation.
-			uint8_t* m_mem;        // The system memory address, mapped to m_res->GetGPUAddress().
-			int64_t m_ofs;         // The offset from 'm_mem' (aka 'm_buf->GetGPUAddress()') to the start of the allocation.
-			int64_t m_size;        // The size of the allocation (in bytes).
-
-			template <typename T> T const* ptr() const { return reinterpret_cast<T*>(m_mem + m_ofs); }
-			template <typename T> T const* end() const { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
-			template <typename T> T* ptr() { return reinterpret_cast<T*>(m_mem + m_ofs); }
-			template <typename T> T* end() { return reinterpret_cast<T*>(m_mem + m_ofs + m_size); }
-		};
 
 		using Lookup = Lookup<int, D3D12_GPU_VIRTUAL_ADDRESS>;
 		using SyncPoint = struct { Block const* m_block; int64_t m_offset; };
 		using SyncPoints = pr::deque<SyncPoint>;
+		using Allocation = GpuTransferAllocation;
 
 		pr::deque<Block>  m_used;      // The set of blocks in use by the GPU (or currently being added to).
 		pr::vector<Block> m_free;      // Blocks that the GPU has finished with and can be recycled.
@@ -176,6 +179,10 @@ namespace pr::rdr12
 
 			// Return the allocation
 			return alex;
+		}
+		template <typename T> Allocation Alloc(int count)
+		{
+			return Alloc(count * sizeof(T), alignof(T));
 		}
 
 		// Copy an object into upload buffer memory, and return the GPU pointer to it's location

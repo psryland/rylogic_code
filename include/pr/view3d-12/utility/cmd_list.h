@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/resource/resource_state_store.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/utility.h"
@@ -145,6 +146,14 @@ namespace pr::rdr12
 		void CopyBufferRegion(ID3D12Resource *pDstBuffer, UINT64 DstOffset, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset, UINT64 NumBytes)
 		{
 			m_list->CopyBufferRegion(pDstBuffer, DstOffset, pSrcBuffer, SrcOffset, NumBytes);
+		}
+		void CopyBufferRegion(GpuTransferAllocation DstBuffer, ID3D12Resource *pSrcBuffer, UINT64 SrcOffset = 0)
+		{
+			CopyBufferRegion(DstBuffer.m_res, DstBuffer.m_ofs, pSrcBuffer, SrcOffset, DstBuffer.m_size);
+		}
+		void CopyBufferRegion(ID3D12Resource *DstBuffer, UINT64 DstOffset, GpuTransferAllocation pSrcBuffer)
+		{
+			CopyBufferRegion(DstBuffer, DstOffset, pSrcBuffer.m_res, pSrcBuffer.m_ofs, pSrcBuffer.m_size);
 		}
 
 		// Copy a region within a texture

@@ -84,6 +84,7 @@ struct Main :Form, IProbeActions
 	int m_scene_index;
 	bool m_frame_lock;
 	int m_last_frame;
+	float m_fp_slope;
 	float m_time;
 	FPS m_fps;
 
@@ -113,6 +114,7 @@ struct Main :Form, IProbeActions
 		, m_scene_index(-1)
 		, m_frame_lock(PIXIsAttachedForGpuCapture())
 		, m_last_frame(-1)
+		, m_fp_slope()
 		, m_time()
 	{
 		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
@@ -289,6 +291,21 @@ struct Main :Form, IProbeActions
 		Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
 		m_colour_data.Range = ColourRange;
 		m_colour_data.Scheme = ColourScheme;
+
+		Tweakable<float, "ForceProfile"> ForceProfileSlope = 1.0f;
+		if (ForceProfileSlope != m_fp_slope && m_fluid_sim.m_r_force_profile != nullptr)
+		{
+			std::vector<float> profile(m_fluid_sim.m_force_profile_length);
+			FluidSimulation::DefaultForceProfile(ForceProfileSlope, profile);
+			
+			auto alex = m_job.m_upload.Alloc<float>(isize(profile));
+			memcpy(alex.ptr<float>(), profile.data(), profile.size() * sizeof(float));
+			m_job.m_barriers.Transition(m_fluid_sim.m_r_force_profile.get(), D3D12_RESOURCE_STATE_COPY_DEST).Commit();
+			m_job.m_cmd_list.CopyBufferRegion(m_fluid_sim.m_r_force_profile.get(), 0, alex);
+			m_job.m_barriers.Transition(m_fluid_sim.m_r_force_profile.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE).Commit();
+			m_job.Run();
+			m_fp_slope = ForceProfileSlope;
+		}
 	}
 
 	// Update the window title

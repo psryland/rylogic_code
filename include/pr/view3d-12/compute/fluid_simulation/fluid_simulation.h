@@ -354,7 +354,7 @@ namespace pr::rdr12::compute::fluid
 		}
 
 		// Generate the default force profile
-		static void ForceProfile(float slope, std::span<float> profile)
+		static void DefaultForceProfile(float slope, std::span<float> profile)
 		{
 			for (int i = 0; i != isize(profile); ++i)
 			{
@@ -385,7 +385,7 @@ namespace pr::rdr12::compute::fluid
 			inline static constexpr EUAVReg Spatial = EUAVReg::u1;
 			inline static constexpr EUAVReg IdxStart = EUAVReg::u2;
 			inline static constexpr EUAVReg IdxCount = EUAVReg::u3;
-			inline static constexpr EUAVReg ForceProfile = EUAVReg::u4;
+			inline static constexpr ESRVReg ForceProfile = ESRVReg::t3;
 			inline static constexpr EUAVReg Output = EUAVReg::u5;
 			inline static constexpr EUAVReg TexMap = EUAVReg::u6;
 		};
@@ -545,7 +545,7 @@ namespace pr::rdr12::compute::fluid
 					.UAV(EReg::Spatial)
 					.UAV(EReg::IdxStart)
 					.UAV(EReg::IdxCount)
-					.UAV(EReg::ForceProfile)
+					.SRV(EReg::ForceProfile)
 					.Create(device, "Fluid:ApplyForcesSig");
 				m_cs_apply_forces.m_pso = ComputePSO(m_cs_apply_forces.m_sig.get(), bytecode)
 					.Create(device, "Fluid:ApplyForcesPSO");
@@ -600,7 +600,7 @@ namespace pr::rdr12::compute::fluid
 					.UAV(EReg::Spatial)
 					.UAV(EReg::IdxStart)
 					.UAV(EReg::IdxCount)
-					.UAV(EReg::ForceProfile)
+					.SRV(EReg::ForceProfile)
 					.UAV(EReg::TexMap, 1)
 					.Create(device, "Fluid:GenerateMapSig");
 				m_cs_gen_map.m_pso = ComputePSO(m_cs_gen_map.m_sig.get(), bytecode)
@@ -626,15 +626,15 @@ namespace pr::rdr12::compute::fluid
 				if (setup.ForceProfileData.empty())
 				{
 					force_profile_data.resize(100);
-					ForceProfile(1.5f, force_profile_data);
+					DefaultForceProfile(1.5f, force_profile_data);
 				}
 
-				auto force_profile = !setup.ForceProfileData.empty() ? setup.ForceProfileData : force_profile_data;
-				ResDesc desc = ResDesc::Buf<float>(isize(force_profile), force_profile)
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-					.usage(EUsage::UnorderedAccess);
+				auto profile = !setup.ForceProfileData.empty() ? setup.ForceProfileData : force_profile_data;
+				ResDesc desc = ResDesc::Buf<float>(isize(profile), profile)
+					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
 				m_r_force_profile = m_rdr->res().CreateResource(desc, "Fluid:ForceProfile");
-				m_force_profile_length = isize(force_profile);
+				m_force_profile_length = isize(profile);
 			}
 
 			// Create the output buffer
@@ -662,7 +662,7 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_r_force_profile->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootShaderResourceView(5, m_r_force_profile->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -765,7 +765,8 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootDescriptorTable(5, job.m_view_heap.Add(tex_map->m_uav));
+			job.m_cmd_list.SetComputeRootShaderResourceView(5, m_r_force_profile->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootDescriptorTable(6, job.m_view_heap.Add(tex_map->m_uav));
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_map.TexDim, 1 }, { 32, 32, 1 }));
 
 			job.m_barriers.UAV(tex_map->m_res.get());

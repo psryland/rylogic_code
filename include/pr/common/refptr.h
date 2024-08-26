@@ -44,13 +44,6 @@ namespace pr
 	template <typename T> long PtrRefCount(T*);
 	#endif
 
-	// RefCounted concept
-	template <typename T> concept RefCountedType = requires(T t)
-	{
-		t.AddRef();
-		t.Release();
-	};
-
 	// A ptr wrapper to a reference counting object. 'T' should have methods 'AddRef' and 'Release'
 	// Not the same as std::shared_ptr<> because it assumes the pointed-to object has AddRef()/Release() methods
 	template <typename T>

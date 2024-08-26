@@ -33,8 +33,10 @@ namespace pr::rdr12
 		BarrierBatch& operator =(BarrierBatch const&) = delete;
 
 		// Resource usage barrier
-		void Transition(ID3D12Resource const* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
+		BarrierBatch& Transition(ID3D12Resource const* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
 		{
+			assert(resource != nullptr);
+
 			#if PR_DBG_RDR
 			auto res_name = DebugName(resource);
 			if (std::string_view(res_name) == "SpatialPartition:IdxCount")
@@ -111,10 +113,11 @@ namespace pr::rdr12
 			}
 
 			// Only record the new states for 'resource' when they've been commited
+			return *this;
 		}
 
 		// Aliased memory resource barrier
-		void Aliasing(ID3D12Resource const* pResourceBefore, ID3D12Resource const* pResourceAfter)
+		BarrierBatch& Aliasing(ID3D12Resource const* pResourceBefore, ID3D12Resource const* pResourceAfter)
 		{
 			D3D12_RESOURCE_BARRIER barrier = {
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_ALIASING,
@@ -125,10 +128,11 @@ namespace pr::rdr12
 				},
 			};
 			m_barriers.push_back(barrier);
+			return *this;
 		}
 
 		// UAV resource barrier
-		void UAV(ID3D12Resource const* pResource)
+		BarrierBatch& UAV(ID3D12Resource const* pResource)
 		{
 			D3D12_RESOURCE_BARRIER barrier = {
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
@@ -138,6 +142,7 @@ namespace pr::rdr12
 				}
 			};
 			m_barriers.push_back(barrier);
+			return *this;
 		}
 
 		// Send the barriers to 'cmd_list'
