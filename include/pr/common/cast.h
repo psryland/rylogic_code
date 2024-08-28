@@ -97,11 +97,15 @@ namespace pr
 	}
 
 	// Helper for getting the size of a container as an int
-	template <typename T> requires (requires (T t) { t.size(); })
-	inline int isize(T const& cont)
+	template <typename T> requires (requires (T t) { t.size(); }) inline int isize(T const& cont)
 	{
 		return s_cast<int>(cont.size());
 	}
+	template <typename T, int N> inline int isize(T const (&)[N])
+	{
+		return N;
+	}
+
 
 	// Int sizeof
 	template <typename T> inline int isizeof()

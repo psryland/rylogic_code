@@ -621,7 +621,7 @@ namespace pr::rdr12
 				.mips(1)
 				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 				.data_alignment(data_alignment)
-				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR)
+				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR) // required for DIMENSION_BUFFER types
 				.init_data(Image(init_data.data(), init_data.size() / element_stride, element_stride));
 		}
 		template <typename TElem> static ResDesc Buf(int64_t count, std::span<TElem const> init_data)

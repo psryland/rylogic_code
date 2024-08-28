@@ -325,7 +325,8 @@ namespace pr::unittests
 	}
 
 	// A directory for temporary files needed by unit tests. Note: automatically cleaned
-	inline std::filesystem::path CreateTempDir(wchar_t const* testname)
+	// Use 'temp_dir' in your unit test. Also remember 'auto temp_file = temp_dir / std::filesystem::unique_path("tempfile-%%%%-%%%%-%%%%-%%%%")'
+	inline std::filesystem::path CreateTempDir(char const* testname)
 	{
 		using namespace std::filesystem;
 		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
@@ -344,7 +345,7 @@ namespace pr::unittests
 	TEST_CLASS(testname)\
 	{\
 	public:\
-		inline static std::filesystem::path const temp_dir = pr::unittests::CreateTempDir(L#testname);\
+		inline static std::filesystem::path const temp_dir = pr::unittests::CreateTempDir(#testname);\
 		TEST_METHOD(UnitTest) { func(); }\
 		static void func()\
 		{\

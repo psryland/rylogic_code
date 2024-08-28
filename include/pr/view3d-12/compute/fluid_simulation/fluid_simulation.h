@@ -43,6 +43,9 @@ namespace pr::rdr12::compute::fluid
 	template <D3D12_COMMAND_LIST_TYPE QueueType = D3D12_COMMAND_LIST_TYPE_DIRECT>
 	struct FluidSimulation
 	{
+		// Notes:
+		//  Hydrostatic pressure is: P = density * gravity * depth
+		//
 		using GpuJob = GpuJob<QueueType>;
 		using SpatialPartition = compute::spatial_partition::SpatialPartition;
 		using ParticleCollision = compute::particle_collision::ParticleCollision;
@@ -87,6 +90,8 @@ namespace pr::rdr12::compute::fluid
 			{
 				v4 Gravity = { 0, -9.8f, 0, 0 }; // The acceleration due to gravity
 				float ForceScale = 10.0f;        // The force scaling factor
+				float ForceAmplitude = 1.0f;     // The magnitude of the force profile at X = 0 
+				float ForceBalance = 0.7f;       // The X value of the Y = 0 intercept in the force profile
 				float Viscosity = 0.05f;         // The viscosity scaler
 				float ThermalDiffusion = 0.01f;  // The thermal diffusion rate
 				int Pad = 0;
@@ -144,11 +149,9 @@ namespace pr::rdr12::compute::fluid
 		ComputeStep m_cs_colour;                  // Apply colours to the particles
 		ComputeStep m_cs_gen_map;                 // Populate a texture with a map of a property
 		D3DPtr<ID3D12Resource> m_r_particles;     // The buffer of the particles (includes position/colour/norm(velocity))
-		D3DPtr<ID3D12Resource> m_r_force_profile; // The normalised force vs. distance function for particles
 		D3DPtr<ID3D12Resource> m_r_output;        // The buffer that receives the output of the compute shader
 		ParticleCollision m_collision;            // The collision resolution for the fluid
 		SpatialPartition m_spatial;               // Spatial partitioning of the particles
-		int m_force_profile_length;               // The length of the force profile buffer
 		int m_capacity;                           // The maximum number of particles
 		int m_frame;                              // Frame counter
 
@@ -163,11 +166,9 @@ namespace pr::rdr12::compute::fluid
 			, m_cs_colour()
 			, m_cs_gen_map()
 			, m_r_particles()
-			, m_r_force_profile()
 			, m_r_output()
 			, m_collision(rdr, Particle::Layout)
 			, m_spatial(rdr, Particle::Layout)
-			, m_force_profile_length()
 			, m_capacity()
 			, m_frame()
 			, Config()
@@ -244,18 +245,18 @@ namespace pr::rdr12::compute::fluid
 			ApplyForces(job, elapsed_s);
 
 			// Integrate velocity and position (with collision)
-			m_collision.RestingContact(job, elapsed_s, Config.NumParticles, Config.Particles.Radius, m_force_profile_length, m_r_particles, m_r_force_profile);
+			m_collision.RestingContact(job, elapsed_s, Config.NumParticles, Config.Particles.Radius, m_r_particles);
 			m_collision.Integrate(job, elapsed_s, Config.NumParticles, Config.Particles.Radius, m_r_particles);
 
 			// Update the spatial partitioning of the particles
 			m_spatial.Update(job, Config.NumParticles, m_r_particles, false);
 
-			// Cull any particles that are initially out of bounds
-			CullParticles(job);
-
 			// Read back the particle buffer
 			if (read_back)
 				Output.m_particles = ReadParticles(job, 0, Output.m_particle_buffer_size);
+
+			// Cull any particles that are initially out of bounds
+			CullParticles(job);
 
 			// Make the particle buffer a vertex buffer again
 			ParticleBufferAsUAV(job, false);
@@ -353,52 +354,6 @@ namespace pr::rdr12::compute::fluid
 			DoGenerateMap(job, tex_map, map_data, colour_data);
 		}
 
-		enum class EForceProfileType
-		{
-			Type0,
-			Type1,
-			Type2,
-			Type3,
-		};
-
-		// Generate the default force profile
-		static void DefaultForceProfile(EForceProfileType type, std::initializer_list<float const> params, std::span<float> profile)
-		{
-			auto const* p = params.begin();
-			for (int i = 0; i != isize(profile); ++i)
-			{
-				auto x = 1.0f * i / isize(profile);
-				switch (type)
-				{
-					case EForceProfileType::Type0:
-					{
-						float a = -p[0] * x + 1;                 // a(x) = -m * x + 1
-						float b = 2 * x * x * x - 3 * x * x + 1; // b(x) = 2x^3 - 3x^2 + 1
-						profile[i] = a * b;
-						break;
-					}
-					case EForceProfileType::Type1:
-					{
-						float a = -std::powf(x, p[0]) + 1;
-						profile[i] = a;
-						break;
-					}
-					case EForceProfileType::Type2:
-					{
-						float a = -x + 1;
-						profile[i] = a;
-						break;
-					}
-					case EForceProfileType::Type3:
-					{
-						float a = -0.28f + 1.0f / Sqr(x + 0.88f);
-						profile[i] = a;
-						break;
-					}
-				}
-			}
-		}
-
 	private:
 
 		static constexpr int ThreadGroupSize = 1024;
@@ -419,29 +374,30 @@ namespace pr::rdr12::compute::fluid
 			inline static constexpr EUAVReg Spatial = EUAVReg::u1;
 			inline static constexpr EUAVReg IdxStart = EUAVReg::u2;
 			inline static constexpr EUAVReg IdxCount = EUAVReg::u3;
-			inline static constexpr ESRVReg ForceProfile = ESRVReg::t3;
-			inline static constexpr EUAVReg Output = EUAVReg::u5;
-			inline static constexpr EUAVReg TexMap = EUAVReg::u6;
+			inline static constexpr EUAVReg Output = EUAVReg::u4;
+			inline static constexpr EUAVReg TexMap = EUAVReg::u5;
 		};
 
 		struct cbFluidSim
 		{
+			float4 Gravity;         // The acceleration due to gravity
+
 			int Dimensions;         // 2D or 3D simulation
 			int NumParticles;       // The number of particles
 			int CellCount;          // The number of grid cells in the spatial partition
 			float GridScale;        // The scale factor for the spatial partition grid
 
-			int RandomSeed;         // Seed value for the RNG
 			float ParticleRadius;   // The radius of influence for each particle
 			float TimeStep;         // Leap-frog time step
 			float Mass;             // The particle mass
-
-			float4 Gravity;         // The acceleration due to gravity
+			int RandomSeed;         // Seed value for the RNG
 
 			float ForceScale;       // The force scaling factor
+			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
+			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 			float Viscosity;        // The viscosity scaler
+
 			float ThermalDiffusion; // The thermal diffusion rate
-			int ForceProfileLength; // The length of the force profile buffer
 		};
 		struct cbProbeData
 		{
@@ -480,26 +436,28 @@ namespace pr::rdr12::compute::fluid
 			float ParticleRadius;   // The particle radius
 			float ParticleMass;     // The particle mass
 			float ForceScale;       // The force scaling factor
-			int ForceProfileLength; // The length of the force profile buffer
+			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
+			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 		};
 
 		// Create constant buffer data for the fluid simulation
 		cbFluidSim FluidSimCBuf(float time_step) const
 		{
 			return cbFluidSim{
+				.Gravity = Config.Dyn.Gravity,
 				.Dimensions = m_collision.Config.SpatialDimensions,
 				.NumParticles = Config.NumParticles,
 				.CellCount = m_spatial.Config.CellCount,
 				.GridScale = m_spatial.Config.GridScale,
-				.RandomSeed = m_frame,
 				.ParticleRadius = Config.Particles.Radius,
 				.TimeStep = time_step,
 				.Mass = Config.Particles.Mass,
-				.Gravity = Config.Dyn.Gravity,
+				.RandomSeed = m_frame,
 				.ForceScale = Config.Dyn.ForceScale,
+				.ForceAmplitude = Config.Dyn.ForceAmplitude,
+				.ForceBalance = Config.Dyn.ForceBalance,
 				.Viscosity = Config.Dyn.Viscosity,
 				.ThermalDiffusion = Config.Dyn.ThermalDiffusion,
-				.ForceProfileLength = m_force_profile_length,
 			};
 		};
 		cbProbeData ProbeCBuf(ProbeData const& probe) const
@@ -555,7 +513,8 @@ namespace pr::rdr12::compute::fluid
 				.ParticleRadius = Config.Particles.Radius,
 				.ParticleMass = Config.Particles.Mass,
 				.ForceScale = Config.Dyn.ForceScale,
-				.ForceProfileLength = m_force_profile_length,
+				.ForceAmplitude = Config.Dyn.ForceAmplitude,
+				.ForceBalance = Config.Dyn.ForceBalance,
 			};
 		}
 
@@ -579,7 +538,6 @@ namespace pr::rdr12::compute::fluid
 					.UAV(EReg::Spatial)
 					.UAV(EReg::IdxStart)
 					.UAV(EReg::IdxCount)
-					.SRV(EReg::ForceProfile)
 					.Create(device, "Fluid:ApplyForcesSig");
 				m_cs_apply_forces.m_pso = ComputePSO(m_cs_apply_forces.m_sig.get(), bytecode)
 					.Create(device, "Fluid:ApplyForcesPSO");
@@ -634,7 +592,6 @@ namespace pr::rdr12::compute::fluid
 					.UAV(EReg::Spatial)
 					.UAV(EReg::IdxStart)
 					.UAV(EReg::IdxCount)
-					.SRV(EReg::ForceProfile)
 					.UAV(EReg::TexMap, 1)
 					.Create(device, "Fluid:GenerateMapSig");
 				m_cs_gen_map.m_pso = ComputePSO(m_cs_gen_map.m_sig.get(), bytecode)
@@ -651,24 +608,6 @@ namespace pr::rdr12::compute::fluid
 					.usage(EUsage::UnorderedAccess);
 				m_r_particles = m_rdr->res().CreateResource(desc, "Fluid:ParticlePositions");
 				m_capacity = setup.ParticleCapacity;
-			}
-
-			// Create the force profile
-			{
-				// Create a default force profile if one isn't provided
-				std::vector<float> force_profile_data;
-				if (setup.ForceProfileData.empty())
-				{
-					force_profile_data.resize(100);
-					DefaultForceProfile(FluidSimulation::EForceProfileType::Type0, { 1.4f }, force_profile_data);
-				}
-
-				auto profile = !setup.ForceProfileData.empty() ? setup.ForceProfileData : force_profile_data;
-				ResDesc desc = ResDesc::Buf<float>(isize(profile), profile)
-					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-
-				m_r_force_profile = m_rdr->res().CreateResource(desc, "Fluid:ForceProfile");
-				m_force_profile_length = isize(profile);
 			}
 
 			// Create the output buffer
@@ -688,7 +627,7 @@ namespace pr::rdr12::compute::fluid
 			auto cb_params = FluidSimCBuf(time_step);
 
 			job.m_barriers.Commit();
-
+		
 			job.m_cmd_list.SetPipelineState(m_cs_apply_forces.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_forces.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
@@ -696,9 +635,8 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(5, m_r_force_profile->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
-
+		
 			job.m_barriers.UAV(m_r_particles.get());
 
 			PIXEndEvent(job.m_cmd_list.get());
@@ -799,8 +737,7 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(5, m_r_force_profile->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootDescriptorTable(6, job.m_view_heap.Add(tex_map->m_uav));
+			job.m_cmd_list.SetComputeRootDescriptorTable(5, job.m_view_heap.Add(tex_map->m_uav));
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_map.TexDim, 1 }, { 32, 32, 1 }));
 
 			job.m_barriers.UAV(tex_map->m_res.get());

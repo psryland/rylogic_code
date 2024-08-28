@@ -267,6 +267,10 @@ namespace pr::eval
 			if (m_ty == EType::Real4) throw std::runtime_error("Cannot demote vec4 to long long");
 			throw std::runtime_error("Value not given. Value type is unknown");
 		}
+		int intg() const
+		{
+			return static_cast<int>(ll());
+		}
 		double db() const
 		{
 			if (m_ty == EType::Real) return m_db;
@@ -274,6 +278,10 @@ namespace pr::eval
 			if (m_ty == EType::Intg4) throw std::runtime_error("Cannot demote ivec4 to double");
 			if (m_ty == EType::Real4) throw std::runtime_error("Cannot demote vec4 to double");
 			throw std::runtime_error("Value not given. Value type is unknown");
+		}
+		float flt() const
+		{
+			return static_cast<float>(db());
 		}
 		pr::iv4 i4() const
 		{

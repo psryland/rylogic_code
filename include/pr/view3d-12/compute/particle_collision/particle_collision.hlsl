@@ -16,13 +16,11 @@ cbuffer cbCollision : register(b0)
 	int NumParticles;        // The number of particles
 	int NumPrimitives;       // The number of primitives
 	int SpatialDimensions;   // The number of spatial dimensions
-	int ForceProfileLength;  // The length of the force profile buffer
+	float TimeStep;          // The time to advance each particle by
 	
 	float ParticleRadius;    // The radius of volume that each particle represents
 	float BoundaryThickness; // The thickness in with boundary effects are applied
 	float2 Restitution;      // The coefficient of restitution (normal, tangential)
-
-	float TimeStep;          // The time to advance each particle by
 };
 cbuffer cbCull : register(b1)
 {
@@ -46,9 +44,6 @@ RWStructuredBuffer<Particle> m_particles : register(u0);
 
 // The primitives to collide against
 StructuredBuffer<Prim> m_collision : register(t0);
-
-// A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
-StructuredBuffer<float> m_force_profile : register(t1);
 
 // Test a position for being culled
 inline float4 CullCheck(float4 pos, uniform int cull_mode)
@@ -98,14 +93,13 @@ inline float4 CullCheck(float4 pos, uniform int cull_mode)
 	}
 }
 
-// The influence at 'distance' from a particle
-inline float ForceProfile(float normalised_distance, uniform int force_profile_length)
+// Boundary force profile
+inline float BoundaryForceProfile(float normalised_distance)
 {
-	int index = (int)floor(force_profile_length * normalised_distance);
-	if (index >= force_profile_length)
-		return 0.0f;
-	
-	return lerp(m_force_profile[index], m_force_profile[index+1], frac(force_profile_length * normalised_distance));
+	// -x + 1
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	float attenuation = 1.0f - x;
+	return attenuation;
 }
 
 // Evolves the particles forward in time while resolving collisions
@@ -123,7 +117,6 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 	float4 acc = float4(target.accel, 0);
 	float4 vel0 = target.vel;
 	float4 vel1 = vel0 + acc * dt;
-	target.accel = float3(0,0,0);
 
 	// Repeat until ray consumed
 	for (int attempt = 0; ; ++attempt)
@@ -185,7 +178,7 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 	m_particles[dtid.x].pos = target.pos;
 	m_particles[dtid.x].col = target.col;
 	m_particles[dtid.x].vel = target.vel;
-	m_particles[dtid.x].accel = target.accel;
+	m_particles[dtid.x].accel = float3(0,0,0);
 }
 
 // Apply a force from surfaces to reduce collisions for particles at rest.
@@ -200,7 +193,7 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 
 	// Only slow-moving particles qualify for resting contact.
 	float4 vel = target.vel + TimeStep * float4(target.accel, 0);
-#if 0
+#if 1
 	float dist_sq = dot(vel, vel) * sqr(TimeStep);
 	if (dist_sq > sqr(BoundaryThickness))
 		return;
@@ -228,16 +221,20 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 		if (dist_n > 0 || -dist_n > BoundaryThickness)
 			continue;
 
-		// Constrain to 2D
+		// Constrain for 2D
 		normal.z = select(SpatialDimensions == 3, normal.z, 0);
 
+		float nomalised_distance = sqrt(range_sq) / BoundaryThickness;
+		float attenuation = BoundaryForceProfile(nomalised_distance);
+		
 		// Then cancel the acceleration into the surface.
-		target.accel -= accel_n * ForceProfile(sqrt(range_sq), ForceProfileLength) * normal.xyz;
-		target.vel -= dot(target.vel, normal) * normal;
-		target.vel *= Restitution.y;
+		//float vel_n = dot(target.vel, normal);
+		target.accel -= attenuation * accel_n * normal.xyz;
+		//target.vel -= vel_n * normal;
+	//	target.vel *= Restitution.y;
 	}
 
 	m_particles[dtid.x].accel = target.accel;
-	m_particles[dtid.x].vel   = target.vel;
+	//m_particles[dtid.x].vel   = target.vel;
 }
 

@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
+#include <span>
+#include <concepts>
 #include "pr/container/vector.h"
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -12,12 +14,19 @@
 
 namespace pr
 {
-	// x = start position
-	// y = start control point. tangent = y - x
-	// z = end control point.   tangent = w - z
-	// w = end position
 	struct Spline :m4x4
 	{
+		// Notes:
+		//   x = P0, start position
+		//   y = P1, start control point. tangent = y - x
+		//   z = P2, end control point.   tangent = w - z
+		//   w = P3, end position
+		// Info:
+		//  A Cubic Bezier Curve is defined by four points: two endpoints P0, P3, and two control points P1, P2
+		//  In parametric form:
+		//     P(t) = (1-t)^3.P0 + 3(1-t)^2.t.P1 + 3(1-t)t^2.P2 + t^3.P3, where t is in [0,1]
+
+
 		enum { Start, SCtrl, ECtrl, End };
 		enum class ETopo
 		{
@@ -98,15 +107,21 @@ namespace pr
 		{
 			return OriFromDir(Velocity(time), axis, up, Position(time));
 		}
+
+		// Equality operators
+		friend bool operator == (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+		friend bool operator != (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+		friend bool operator <  (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+		friend bool operator >  (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+		friend bool operator <= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+		friend bool operator >= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 	};
 
-	// Equality operators
-	inline bool operator == (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (Spline const& lhs, Spline const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	// Spline output function func(Spline const& spline, bool last)
+	template <typename T> concept SplineOutput = std::invocable<T, Spline const&, bool>;
+
+	// Smoothed points output function func(std::span<v4 const> points, std::span<float const> times)
+	template <typename T> concept SmoothOutput = std::invocable<T, std::span<v4 const>, std::span<float const>>;
 
 	// Split 'spline' at 't' to produce two new splines
 	// Given the 4 control points P0,P1,P2,P3 of 'spline'
@@ -134,16 +149,20 @@ namespace pr
 	// Return the length of a spline from t0 to t1
 	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf)
 	{
-		struct L { static float Len(Spline const& s, float tol)
+		struct L
 		{
-			float poly_length  = Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z);
-			float chord_length = Length(s.w - s.x);
-			if ((poly_length - chord_length) < tol) return (poly_length + chord_length) * 0.5f;
+			static float Len(Spline const& s, float tol)
+			{
+				float poly_length = Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z);
+				float chord_length = Length(s.w - s.x);
+				if ((poly_length - chord_length) < tol)
+					return (poly_length + chord_length) * 0.5f;
 
-			Spline lhs, rhs;
-			Split(s, 0.5f, lhs, rhs);
-			return Len(lhs, tol) + Len(rhs, tol);
-		}};
+				Spline lhs, rhs;
+				Split(s, 0.5f, lhs, rhs);
+				return Len(lhs, tol) + Len(rhs, tol);
+			}
+		};
 
 		// Trim 'spline' to the region of interest
 		Spline clipped = spline, dummy;
@@ -197,11 +216,11 @@ namespace pr
 	// Convert a container of points into a list of splines
 	// Generates a spline from each set of three points in 'points'
 	// VOut(Spline const& spline, bool last);
-	template <typename Cont, typename VOut>
-	void CreateSplines(Cont const& points, Spline::ETopo topo, VOut out)
+	template <SplineOutput VOut>
+	void CreateSplines(std::span<v4 const> points, Spline::ETopo topo, VOut out)
 	{
-		auto beg = std::begin(points);
-		auto end = std::end(points);
+		auto beg = points.data();
+		auto end = beg + points.size();
 		v4 p0,p1,p2,p3;
 
 		// Zero points, no splines
@@ -314,7 +333,7 @@ namespace pr
 		}
 	}
 
-	// Fill a container of points with a rastered version of 'spline'
+	// Fill a container of points with a rasterized version of 'spline'
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
 	template <typename PCont, typename TCont>
@@ -404,40 +423,31 @@ namespace pr
 	}
 
 	// Fill a container of points with a smoothed spline based on 'points
-	template <typename Cont, typename VOut, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, Spline::ETopo topo, VOut out, float tol = maths::tinyf)
+	template <SmoothOutput VOut, int MaxPointsPerSpline = 30>
+	void Smooth(std::span<v4 const> points, Spline::ETopo topo, VOut out, float tol = maths::tinyf)
 	{
 		if (points.size() < 3)
 		{
 			float times[] = {0.0f, 1.0f};
-			out(points.data(), times, points.size());
+			out(points, times);
 			return;
 		}
 
-		using points_t = typename pr::vector<v4, MaxPointsPerSpline, true>;
-		using times_t = typename pr::vector<float, MaxPointsPerSpline, true>;
-		points_t raster;
-		times_t times;
-
+		pr::vector<v4, MaxPointsPerSpline, true> spline_points;
+		pr::vector<float, MaxPointsPerSpline, true> spline_times;
 		CreateSplines(points, topo, [&](Spline const& spline, bool last)
 		{
-			raster.resize(0);
-			times.resize(0);
+			spline_points.resize(0);
+			spline_times.resize(0);
 
 			// Raster the spline into a temp buffer
-			Raster(spline, raster, times, MaxPointsPerSpline, tol);
+			Raster(spline, spline_points, spline_times, MaxPointsPerSpline, tol);
 
 			// Stream out the verts
-			out(raster.data(), times.data(), raster.size() - !last);
+			auto points = std::span<v4 const>(spline_points.data(), spline_points.size() - !last);
+			auto times = std::span<float const>(spline_times.data(), spline_times.size() - !last);
+			out(points, times);
 		});
-	}
-	template <typename Cont, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, Spline::ETopo topo, Cont& out, float tol = maths::tinyf)
-	{
-		Smooth(points, topo, [&](v4 const* vert, float const*, size_t count)
-		{
-			out.insert(std::end(out), vert, vert + count);
-		}, tol);
 	}
 	
 	// Random infinite spline within a bounding box

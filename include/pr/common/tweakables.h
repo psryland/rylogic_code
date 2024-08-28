@@ -75,6 +75,21 @@ namespace pr::tweakables
 			return s_value;
 		}
 
+		// Once only changed detection
+		template <typename T, impl::StringLiteral S>
+		static bool Changed()
+		{
+			auto changed = false;
+			if constexpr (Enable)
+			{
+				static T s_previous = Value<T,S>(nullptr);
+				auto value = Value<T, S>(nullptr);
+				changed = value != s_previous;
+				s_previous = value;
+			}
+			return changed;
+		}
+
 	private:
 
 		using ftime_t = std::filesystem::file_time_type;
@@ -176,6 +191,10 @@ namespace pr::tweakables
 			std::ifstream ifile(filepath);
 			for (std::string line; std::getline(ifile, line); )
 			{
+				// Ignore comment lines
+				if (line.starts_with(";"))
+					continue;
+
 				// Find the position of the '=' character
 				auto pos = line.find('=');
 				if (pos == std::string::npos)
@@ -213,22 +232,40 @@ namespace pr::tweakables
 	template <typename T, impl::StringLiteral S>
 	struct Tweakable
 	{
-		Tweakable(T&& value)
+		template <typename U> requires std::is_convertible_v<U, T>
+		Tweakable(U value)
 		{
+			m_value = value;
 			if constexpr (Tweakables::Enable)
-				m_value = Tweakables::Value<T, S>(&value);
-			else
-				m_value = value;
+				m_value = Tweakables::Value<T, S>(&m_value);
 		}
+
 		operator T() const
 		{
-			if constexpr (Tweakables::Enable)
-				return m_value = Tweakables::Value<T, S>(nullptr);
-			else
-				return m_value;
+			return get_latest();
+		}
+
+		template <typename U> requires std::is_convertible_v<U, T>
+		friend bool operator == (Tweakable<T, S> const& lhs, U const& rhs)
+		{
+			return lhs.get_latest() == T(rhs);
+		}
+
+		template <typename U> requires std::is_convertible_v<U, T>
+		friend bool operator != (Tweakable<T, S> const& lhs, U const& rhs)
+		{
+			return lhs.get_latest() != T(rhs);
 		}
 
 	private:
+		T const& get_latest() const
+		{
+			if constexpr (Tweakables::Enable)
+				m_value = Tweakables::Value<T, S>(nullptr);
+
+			return m_value;
+		}
+
 		mutable T m_value; // To ensure the size and alignment of this type is the same as T (and for debugging)
 	};
 }
@@ -241,28 +278,37 @@ namespace pr::tweakables
 	{
 		#if 1
 		using namespace pr::tweakables;
-		Tweakables::filepath = "unit_test_tweakables.ini";
+		Tweakables::filepath = temp_dir / "tweakables.ini";
 		Tweakables::poll_rate = std::chrono::milliseconds(100);
-		std::filesystem::remove(Tweakables::filepath);
 
-		auto& tweakables = Tweakables::Instance();
+		Tweakable<bool, "MY_BOOL"> my_bool = true;
+		Tweakable<int, "MY_INT"> my_int = 2;
+		Tweakable<float, "MY_FLOAT"> my_float = 1.0f;
+		Tweakable<std::string, "MY_STRING"> my_string = "hello";
 
-		Tweakable<float, "MY_VALUE"> my_value = 1.0f;
-		PR_EXPECT(my_value == 1.0f);
+		PR_EXPECT(my_bool == true);
+		PR_EXPECT(my_int == 2);
+		PR_EXPECT(my_float == 1.0f);
+		PR_EXPECT(my_string == "hello");
 
 		if constexpr (Tweakables::Enable)
 		{
+			auto& tweakables = Tweakables::Instance();
 			auto variables = tweakables.m_variables;
-			(*variables)["MY_VALUE"] = "2.0";
+			(*variables)["MY_BOOL"] = "false";
+			(*variables)["MY_INT"] = "3";
+			(*variables)["MY_FLOAT"] = "-1.0";
+			(*variables)["MY_STRING"] = "world";
 			tweakables.SaveVariables(*variables);
 
 			for (; variables == tweakables.m_variables; )
 				std::this_thread::sleep_for(Tweakables::poll_rate);
 
-			PR_EXPECT(my_value == 2.0f);
+			PR_EXPECT(my_bool == false);
+			PR_EXPECT(my_int == 3);
+			PR_EXPECT(my_float == -1.0f);
+			PR_EXPECT(my_string == "world");
 		}
-
-		std::filesystem::remove(Tweakables::filepath);
 		#endif
 	}
 }

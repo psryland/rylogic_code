@@ -1618,7 +1618,10 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
+				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
+				{
+					m_verts.insert(std::end(m_verts), std::begin(points), std::end(points));
+				});
 			}
 
 			// Convert lines to dashed lines
@@ -2070,7 +2073,10 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
+				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
+				{
+					m_verts.insert(std::end(m_verts), std::begin(points), std::end(points));
+				});
 			}
 
 			pr::geometry::Props props;
@@ -2824,7 +2830,10 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
+				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
+				{
+					m_verts.insert(std::end(m_verts), std::begin(points), std::end(points));
+				});
 			}
 
 			pr::v4 normal = m_axis.m_align;
@@ -3459,7 +3468,10 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
+				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
+				{
+					m_verts.insert(std::end(m_verts), std::begin(points), std::end(points));
+				});
 			}
 
 			// Create the model

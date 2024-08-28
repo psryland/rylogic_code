@@ -35,22 +35,25 @@ cbuffer cbFluidSim : register(b0)
 {
 	struct
 	{
+		float4 Gravity;         // The acceleration due to gravity
+
 		int Dimensions;         // 2D or 3D simulation
 		int NumParticles;       // The number of particles
 		int CellCount;          // The number of grid cells in the spatial partition
 		float GridScale;        // The scale factor for the spatial partition grid
 
-		int RandomSeed;         // Seed value for the RNG
 		float ParticleRadius;   // The radius of influence for each particle
 		float TimeStep;         // Leap-frog time step
 		float Mass;             // The particle mass
-
-		float4 Gravity;         // The acceleration due to gravity
+		int RandomSeed;         // Seed value for the RNG
 
 		float ForceScale;       // The force scaling factor
+		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
+		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 		float Viscosity;        // The viscosity scaler
+
 		float ThermalDiffusion; // The thermal diffusion rate
-		int ForceProfileLength; // The length of the force profile buffer
+
 	} Sim;
 };
 cbuffer cbProbeData : register(b0)
@@ -101,7 +104,9 @@ cbuffer cbMapData : register(b0)
 		float ParticleRadius; // The particle radius
 		float ParticleMass;   // The particle mass
 		float ForceScale;     // The force scaling factor
-		int ForceProfileLength; // The length of the force profile buffer
+		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
+
+		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 	} Map;
 };
 
@@ -128,14 +133,11 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
 
-// A function that defines the normalised force vs. distance from a particle. Values should be [0, 1]. (length ForceProfileLength)
-StructuredBuffer<float> m_force_profile : register(t3);
-
 // A buffer for passing back results
-RWStructuredBuffer<uint> m_output : register(u5);
+RWStructuredBuffer<uint> m_output : register(u4);
 
 // A texture for writing the density map to
-RWTexture2D<float4> m_tex_map : register(u6);
+RWTexture2D<float4> m_tex_map : register(u5);
 
 // General purpose group shared memory
 groupshared uint gs_memory[TotalSharedMemory];
@@ -166,22 +168,36 @@ inline float4 LerpColour(float value, uniform ColourData col)
 }
 
 // The influence at normalised 'distance' from a particle
-inline float ForceProfile(float normalised_distance, uniform int force_profile_length)
+inline float ForceProfile(float normalised_distance, uniform float amplitude, uniform float balance)
 {
-	int index = (int)floor(force_profile_length * normalised_distance);
-	if (index >= force_profile_length)
-		return 0.0f;
-	
-	return lerp(m_force_profile[index], m_force_profile[index+1], frac(force_profile_length * normalised_distance));
+	// Functions:
+	//   a(x) = -x + B
+	//   b(x) = 2.x^3 - 3.x^2 + 1
+	//   Profile(x) = (A/B).a(x).b(x)
+	// 
+	// Controls:
+	//  A = amplitude = the value at X = 0
+	//  B = balance point = (0,1] = Controls where the profile goes below zero or where the forces balance
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	float a = -x + balance;
+	float b = 2.0f * cube(x) - 3.0f * sqr(x) + 1.0f;
+	return (amplitude / balance) * a * b;
 }
 
 // The influence at normalised 'distance' from a particle
-inline float ViscosityProfile(float normalised_distance)
+inline float ViscosityProfile(float normalised_distance, uniform float viscosity_power)
 {
-	if (normalised_distance >= 1)
-		return 0.0f;
+	// -pow(x, viscosity_power) + 1
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	float viscosity = -pow(x, sqr(viscosity_power)) + 1.0f;
+	return select(viscosity_power != 0, viscosity, 0.0f);
+}
 
-	return 1.0f / (normalised_distance + 0.001f);
+// Contribution to density based on distance
+inline float DensityProfile(float normalised_distance)
+{
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	return 1.0f - x;
 }
 
 // True if 'particle' is a dead particle
@@ -198,16 +214,29 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 		return;
 
 	Particle target = m_particles[dtid.x];
-
-	// Sub step integration
-	const int sub_steps = 5;
-	const float sub_step = Sim.TimeStep / sub_steps;
+	
+	// Apply gravity and thermal diffusion
+	float4 nett_accel = float4(0, 0, 0, 0);
+	nett_accel += Sim.Gravity;
+	nett_accel += Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions) * Sim.ThermalDiffusion;
 	
 	// Sample the environment for neighbours at the predicted particle position at TimeStep/2
 	float4 target_pos = target.pos + 0.5f * Sim.TimeStep * target.vel;
+	
+	// The weighted group velocity
+	float4 group_velocity = target.vel;
+	float group_velocity_weight = 1;
 
+	// Weighted particle density
+	float density = 1.0f;
+	float density_weight = 1;
+	
+	// Sub step integration
+	const int sub_steps = 3;
+	const float sub_step = Sim.TimeStep / sub_steps;
+	const float DistanceScale = 1.0f;
+	
 	// Search the neighbours of 'target'
-	float4 nett_accel = float4(0, 0, 0, 0);
 	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
 	while (DoFind(find, Sim.CellCount))
 	{
@@ -219,12 +248,21 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 
 			Particle neighbour = m_particles[m_spatial[i]];
 
+			// Viscosity is inter-particle friction. When particles are close, their velocities should
+			// tend toward the average of the group. Find the group average velocity (weighted by distance)
+			{
+				float normalised_distance = length(neighbour.pos - target_pos) / Sim.ParticleRadius;
+				float visocity = ViscosityProfile(normalised_distance, Sim.Viscosity);
+				group_velocity += visocity * neighbour.vel;
+				group_velocity_weight += visocity;
+			}
+
 			float4 t_pos = target.pos;
 			float4 n_pos = neighbour.pos;
 			float4 t_vel = target.vel;
 			float4 n_vel = neighbour.vel;
 
-			// Loop over sub-steps
+			// Calculate sub-steps for a more accurate acceleration calculation
 			[unroll]
 			for (int k = 0; k != sub_steps; ++k)
 			{
@@ -236,30 +274,32 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 				float4 sep = t_pos_half_step - n_pos_half_step;
 				float distance = length(sep);
 				float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions));
-				float normalised_distance = distance / Sim.ParticleRadius;
+				float normalised_distance = distance / (DistanceScale * Sim.ParticleRadius);
 
-				// Calculate the acceleration
-				float4 accel =
-					(Sim.ForceScale * Sim.Mass * ForceProfile(normalised_distance, Sim.ForceProfileLength)) * direction +
-					(Sim.Viscosity * ViscosityProfile(normalised_distance)) * signed_sqr(n_vel - t_vel);
+				// Calculate the acceleration due to particle forces
+				float force = ForceProfile(normalised_distance, Sim.ForceAmplitude, Sim.ForceBalance);
+				float4 accel = (Sim.ForceScale * Sim.Mass * force) * direction;
 
 				// Update the particle velocities by the acceleration
 				t_vel += sub_step * accel;
 				n_vel -= sub_step * accel;
-				
+
 				// Advance the particles by a sub step
 				t_pos += t_vel * sub_step;
 				n_pos += n_vel * sub_step;
 			}
-
+			
 			// 't_pos' and 't_vel' is where the particle should end up, calculate an acceleration that gives this result
 			nett_accel += t_vel - target.vel;
 		}
 	}
 
-	// Apply the thermal diffusion and gravity
-	nett_accel += Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions) * Sim.ThermalDiffusion;
-	nett_accel += Sim.Gravity;
+	// Apply viscosity. Add an acceleration that makes the particles velocity closer to the group average
+	{
+		float4 target_vel = target.vel;// + 0.5f * nett_accel * Sim.TimeStep;
+		group_velocity *= 1.0f / group_velocity_weight;
+		nett_accel += (group_velocity - target_vel) / Sim.TimeStep;
+	}
 	
 	// Record the nett force
 	m_particles[dtid.x].accel += nett_accel.xyz;
@@ -404,7 +444,7 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 			if (Map.Type == MapType_Accel)
 			{
 				// Add up the nett force
-				value += (Map.ForceScale * Map.ParticleMass * ForceProfile(normalised_distance, Map.ForceProfileLength)) * direction;
+				value += (Map.ForceScale * Map.ParticleMass * ForceProfile(normalised_distance, Map.ForceAmplitude, Map.ForceBalance)) * direction;
 			}
 			if (Map.Type == MapType_Density)
 			{

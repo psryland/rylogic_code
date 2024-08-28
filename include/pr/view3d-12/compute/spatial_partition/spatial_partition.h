@@ -152,17 +152,18 @@ namespace pr::rdr12::compute::spatial_partition
 		struct EReg
 		{
 			inline static constexpr ECBufReg Constants = ECBufReg::b0;
-			inline static constexpr EUAVReg Positions = EUAVReg::u0;
-			inline static constexpr EUAVReg GridHash = EUAVReg::u1;
-			inline static constexpr EUAVReg Spatial = EUAVReg::u2;
-			inline static constexpr EUAVReg IdxStart = EUAVReg::u3;
-			inline static constexpr EUAVReg IdxCount = EUAVReg::u4;
+			inline static constexpr ESRVReg Positions = ESRVReg::t0;
+			inline static constexpr EUAVReg GridHash = EUAVReg::u0;
+			inline static constexpr EUAVReg Spatial = EUAVReg::u1;
+			inline static constexpr EUAVReg IdxStart = EUAVReg::u2;
+			inline static constexpr EUAVReg IdxCount = EUAVReg::u3;
 		};
 		struct cbGridPartition
 		{
 			int NumPositions;
 			int CellCount;
 			float GridScale;
+			int pad;
 		};
 
 		// Create constant buffer data for the grid partition parameters
@@ -172,6 +173,7 @@ namespace pr::rdr12::compute::spatial_partition
 				.NumPositions = count,
 				.CellCount = Config.CellCount,
 				.GridScale = Config.GridScale,
+				.pad = 0,
 			};
 		}
 
@@ -203,7 +205,7 @@ namespace pr::rdr12::compute::spatial_partition
 				auto bytecode = compiler.EntryPoint(L"CalculateHashes").Compile();
 				m_populate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbGridPartition>(EReg::Constants)
-					.UAV(EReg::Positions)
+					.SRV(EReg::Positions)
 					.UAV(EReg::GridHash)
 					.UAV(EReg::Spatial)
 					.Create(device, "SpatialPartition:CalculateHashesSig");
@@ -229,7 +231,7 @@ namespace pr::rdr12::compute::spatial_partition
 		void CreateResourceBuffers()
 		{
 			ResDesc desc = ResDesc::Buf<uint32_t>(Config.CellCount, {})
-				.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 				.usage(EUsage::UnorderedAccess);
 			m_idx_start = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxStart");
 			m_idx_count = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxCount");
@@ -244,7 +246,7 @@ namespace pr::rdr12::compute::spatial_partition
 			// Grid hash
 			{
 				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
 				m_grid_hash = m_rdr->res().CreateResource(desc, "SpatialPartition:GridHash");
 			}
@@ -252,7 +254,7 @@ namespace pr::rdr12::compute::spatial_partition
 			// Position indices
 			{
 				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
-					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
 				m_spatial = m_rdr->res().CreateResource(desc, "SpatialPartition:Spatial");
 			}
@@ -277,6 +279,9 @@ namespace pr::rdr12::compute::spatial_partition
 			Resize(count);
 
 			// Our buffers should be read-only for everyone else
+			job.m_barriers.Transition(positions.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			job.m_barriers.Transition(m_grid_hash.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -295,10 +300,6 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_barriers.UAV(m_idx_count.get());
 			}
 
-			job.m_barriers.Transition(positions.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Transition(m_grid_hash.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
 			// Find the grid cell hash for each position
 			{
 				job.m_barriers.Commit();
@@ -306,7 +307,7 @@ namespace pr::rdr12::compute::spatial_partition
 				job.m_cmd_list.SetPipelineState(m_populate.m_pso.get());
 				job.m_cmd_list.SetComputeRootSignature(m_populate.m_sig.get());
 				job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-				job.m_cmd_list.SetComputeRootUnorderedAccessView(1, positions->GetGPUVirtualAddress());
+				job.m_cmd_list.SetComputeRootShaderResourceView(1, positions->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_grid_hash->GetGPUVirtualAddress());
 				job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial->GetGPUVirtualAddress());
 				job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumPositions, 1, 1 }, { ThreadGroupSize, 1, 1 }));
@@ -322,10 +323,8 @@ namespace pr::rdr12::compute::spatial_partition
 				m_sorter.Sort(job.m_cmd_list);
 
 				job.m_barriers.UAV(m_grid_hash.get());
-				job.m_barriers.UAV(m_idx_start.get());
-				job.m_barriers.UAV(m_idx_count.get());
+				job.m_barriers.UAV(m_spatial.get());
 			}
-
 
 			// Build the lookup data structure
 			{
@@ -373,10 +372,11 @@ namespace pr::rdr12::compute::spatial_partition
 			}
 
 			// Our buffers should be read-only for everyone else
-			job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 			job.m_barriers.Transition(positions.get(), positions_state0);
+			job.m_barriers.Transition(m_grid_hash.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			job.m_barriers.Transition(m_spatial.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			job.m_barriers.Transition(m_idx_start.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			job.m_barriers.Transition(m_idx_count.get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 			job.m_barriers.Commit();
 		}
 	};

@@ -114,13 +114,13 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Apply resting contact forces
-		void RestingContact(GraphicsJob& job, float dt, int count, float radius, int fp_length, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> force_profile)
+		void RestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
 		{
 			if (count == 0)
 				return;
 
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::RestingContact");
-			DoRestingContact(job, dt, count, radius, fp_length, particles, force_profile);
+			DoRestingContact(job, dt, count, radius, particles);
 			PIXEndEvent(job.m_cmd_list.get());
 		}
 
@@ -147,7 +147,6 @@ namespace pr::rdr12::compute::particle_collision
 			inline static constexpr ECBufReg Cull = ECBufReg::b1;
 			inline static constexpr EUAVReg Particles = EUAVReg::u0;
 			inline static constexpr ESRVReg Primitives = ESRVReg::t0;
-			inline static constexpr ESRVReg ForceProfile = ESRVReg::t1;
 		};
 
 		struct cbCollision
@@ -155,13 +154,12 @@ namespace pr::rdr12::compute::particle_collision
 			int NumParticles;        // The number of particles
 			int NumPrimitives;       // The number of primitives
 			int SpatialDimensions;   // The number of spatial dimension
-			int ForceProfileLength;  // The length of the force profile buffer
+			float TimeStep;          // The time to advance each particle by
 
 			float ParticleRadius;    // The radius of volume that each particle represents
 			float BoundaryThickness; // The thickness in with boundary effects are applied
 			float2 Restitution;      // The coefficient of restitution (normal, tangential)
 
-			float TimeStep;          // The time to advance each particle by
 		};
 		struct cbCull
 		{
@@ -170,18 +168,17 @@ namespace pr::rdr12::compute::particle_collision
 		};
 
 		// Create constant buffer data for the collision parameters
-		cbCollision CollisionCBuf(float dt, int count, float radius, int fp_length)
+		cbCollision CollisionCBuf(float dt, int count, float radius)
 		{
 			assert(Config.NumPrimitives >= 0 && Config.NumPrimitives <= m_capacity);
 			return cbCollision {
 				.NumParticles = count,
 				.NumPrimitives = Config.NumPrimitives,
 				.SpatialDimensions = Config.SpatialDimensions,
-				.ForceProfileLength = fp_length,
+				.TimeStep = dt,
 				.ParticleRadius = radius,
 				.BoundaryThickness = Config.BoundaryThickness,
 				.Restitution = Config.Restitution,
-				.TimeStep = dt,
 			};
 		}
 		cbCull CullCBuf()
@@ -223,7 +220,6 @@ namespace pr::rdr12::compute::particle_collision
 					.U32<cbCollision>(EReg::Constants)
 					.UAV(EReg::Particles)
 					.SRV(EReg::Primitives)
-					.SRV(EReg::ForceProfile)
 					.Create(device, "ParticleCollision:RestingContactSig");
 				m_resting_contact.m_pso = ComputePSO(m_resting_contact.m_sig.get(), bytecode)
 					.Create(device, "ParticleCollision:RestingContactPSO");
@@ -233,7 +229,7 @@ namespace pr::rdr12::compute::particle_collision
 		// Integrate the particle positions (with collision)
 		void DoIntegrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
 		{
-			auto cb_params = CollisionCBuf(dt, count, radius, 0);
+			auto cb_params = CollisionCBuf(dt, count, radius);
 			auto cb_cull = CullCBuf();
 
 			job.m_barriers.Commit();
@@ -250,9 +246,9 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Apply resting contact forces
-		void DoRestingContact(GraphicsJob& job, float dt, int count, float radius, int fp_length, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> force_profile)
+		void DoRestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
 		{
-			auto cb_params = CollisionCBuf(dt, count, radius, fp_length);
+			auto cb_params = CollisionCBuf(dt, count, radius);
 
 			job.m_barriers.Commit();
 
@@ -261,7 +257,6 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
 			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_r_primitives->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, force_profile ? force_profile->GetGPUVirtualAddress() : 0);
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(particles.get());
