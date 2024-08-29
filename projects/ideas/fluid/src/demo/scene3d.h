@@ -126,7 +126,7 @@ namespace pr::fluid
 			auto points = [&](v4 p, v4 v)
 			{
 				assert(p.w == 1 && v.w == 0);
-				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .mass = 1.0f });
+				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .density = 0.0f });
 			};
 
 			const float hwidth = 0.5f;

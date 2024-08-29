@@ -21,7 +21,7 @@ namespace pr::fluid
 		explicit Scene2d(int particle_count)
 			: m_col()
 			, m_ldr()
-			, m_particles(ParticleInitData(EFillStyle::Random, particle_count))
+			, m_particles(ParticleInitData(EFillStyle::Lattice, particle_count))
 		{
 			// Floor
 			m_ldr.Plane("floor", 0xFFade3ff).wh({ 2, 0.5f }).o2w(m3x4::Rotation(AxisId::PosZ, AxisId::PosY), v4{ 0, -1, 0, 1 });
@@ -106,7 +106,7 @@ namespace pr::fluid
 			auto points = [&](v4 p, v4 v)
 			{
 				assert(p.w == 1 && v.w == 0);
-				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .mass = 1.0f });
+				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .density = 0.0f });
 			};
 
 			const float hwidth = 1.0f;

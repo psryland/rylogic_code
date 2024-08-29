@@ -6,7 +6,7 @@ static const int ThreadGroupSize = 1024;
 static const int MaxCollisionResolutionSteps = 10;
 
 #ifndef PARTICLE_TYPE
-#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float mass; }
+#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float density; }
 #endif
 PARTICLE_TYPE;
 
@@ -20,6 +20,9 @@ cbuffer cbCollision : register(b0)
 	
 	float ParticleRadius;    // The radius of volume that each particle represents
 	float BoundaryThickness; // The thickness in with boundary effects are applied
+	float BoundaryForce;     // The repulsive force of the boundary
+	float pad;
+
 	float2 Restitution;      // The coefficient of restitution (normal, tangential)
 };
 cbuffer cbCull : register(b1)
@@ -98,8 +101,24 @@ inline float BoundaryForceProfile(float normalised_distance)
 {
 	// -x + 1
 	float x = clamp(normalised_distance, 0.0f, 1.0f);
-	float attenuation = 1.0f - x;
-	return attenuation;
+	return 1.0f - x;
+}
+
+// The influence at normalised 'distance' from a particle
+inline float ForceProfile(float normalised_distance, uniform float amplitude, uniform float balance)
+{
+	// Functions:
+	//   a(x) = -x + B
+	//   b(x) = 2.x^3 - 3.x^2 + 1
+	//   Profile(x) = (A/B).a(x).b(x)
+	// 
+	// Controls:
+	//  A = amplitude = the value at X = 0
+	//  B = balance point = (0,1] = Controls where the profile goes below zero or where the forces balance
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	float a = -x + balance;
+	float b = 2.0f * cube(x) - 3.0f * sqr(x) + 1.0f;
+	return (amplitude / balance) * a * b;
 }
 
 // Evolves the particles forward in time while resolving collisions
@@ -132,7 +151,8 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 			intercept_found |= Intercept_RayVsPrimitive(target.pos, ray, m_collision[i], normal, t);
 
 		// Stop if no intercept found or too many collisions
-		if (!intercept_found || attempt == MaxCollisionResolutionSteps)
+		bool done = !intercept_found || attempt == MaxCollisionResolutionSteps;
+		if (WaveActiveAllTrue(done) || done)
 		{
 			target.pos += ray * t;
 			target.vel = attempt != MaxCollisionResolutionSteps ? vel1 : float4(0,0,0,0);
@@ -188,53 +208,107 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 {
 	if (dtid.x >= NumParticles)
 		return;
-
+	
 	Particle target = m_particles[dtid.x];
 
-	// Only slow-moving particles qualify for resting contact.
-	float4 vel = target.vel + TimeStep * float4(target.accel, 0);
 #if 1
-	float dist_sq = dot(vel, vel) * sqr(TimeStep);
-	if (dist_sq > sqr(BoundaryThickness))
+#if 0
+	// Only slow-moving particles qualify for resting contact.
+	float4 vel1 = target.vel + TimeStep * float4(target.accel, 0);
+	bool too_fast = dot(vel1, vel1) * sqr(TimeStep) > sqr(BoundaryThickness);
+	if (WaveActiveAllTrue(too_fast) || too_fast)
 		return;
 #endif
 	
+	for (int i = 0; i != NumPrimitives; ++i)
+	{
+		float4 normal;
+	
+		// Find the distance to each boundary surface
+		float4 range = target.pos - ClosestPoint_PointToPrimitive(target.pos, m_collision[i], normal);
+
+		// Constrain for 2D
+		normal.z = select(SpatialDimensions == 3, normal.z, 0);
+		
+		// If the particle:
+		// Has a starting position within the BoundaryThickness
+		float range_sq = dot(range, range);
+		bool within_boundary = range_sq < sqr(BoundaryThickness);
+		if (WaveActiveAllTrue(!within_boundary) || !within_boundary)
+			continue;
+
+		// Has an acceleration that is anti-parallel to the surface normal (for vertical walls),
+		float accel_n = dot(normal.xyz, target.accel);
+		bool is_anti_parallel = accel_n < 0 && sqr(accel_n) > dot(target.accel, target.accel) * 0.95f;
+		if (WaveActiveAllTrue(!is_anti_parallel) || !is_anti_parallel)
+			continue;
+		
+		// Has a velocity that will not take it out of the boundary thickness,
+		float dist_n = dot(target.vel, normal) * TimeStep;
+		bool moving_within_boundary = dist_n < 0 && -dist_n < BoundaryThickness;
+		if (WaveActiveAllTrue(!moving_within_boundary) || !moving_within_boundary)
+			continue;
+
+		float nomalised_distance = sqrt(range_sq) / BoundaryThickness;
+		float force = ForceProfile(nomalised_distance, 1, 1);
+		target.accel += (BoundaryForce * target.density * force) * normal.xyz;
+		
+		// Then cancel the acceleration into the surface.
+		//float attenuation = BoundaryForceProfile(nomalised_distance);
+		//target.accel -= attenuation * accel_n * normal.xyz;
+
+		// Increase the mass of particles near the boundary
+		//target.mass += sqr(attenuation);
+		
+		// Cancel the velocity into the surface as well
+		//float vel_n = dot(target.vel, normal);
+		//target.vel -= attenuation * vel_n * normal;
+		//target.vel *= Restitution.y;
+	}
+
+	m_particles[dtid.x].accel = target.accel;
+	m_particles[dtid.x].vel   = target.vel;
+
+#endif
+	
+	
+	#if 0
 	// Find the distance to each boundary surface
 	for (int i = 0; i != NumPrimitives; ++i)
 	{
 		float4 normal;
 		float4 range = target.pos - ClosestPoint_PointToPrimitive(target.pos, m_collision[i], normal);
-		
-		// If the particle is:
-		//  - Within BoundaryThickness of the surface,
 		float range_sq = dot(range, range);
-		if (range_sq > sqr(BoundaryThickness))
-			continue;
-
-		//  - Has an acceleration that is anti-parallel to the surface normal (for vertical walls),
-		float accel_n = dot(normal.xyz, target.accel);
-		if (accel_n > 0 || sqr(accel_n) < dot(target.accel, target.accel) * 0.95f)
+		bool within_boundary = range_sq > sqr(BoundaryThickness);
+		if (WaveActiveAllTrue(within_boundary) || within_boundary)
 			continue;
 		
-		//  - Has a velocity that will not take it out of the boundary thickness,
-		float dist_n = dot(vel, normal) * TimeStep;
-		if (dist_n > 0 || -dist_n > BoundaryThickness)
-			continue;
-
 		// Constrain for 2D
 		normal.z = select(SpatialDimensions == 3, normal.z, 0);
 
-		float nomalised_distance = sqrt(range_sq) / BoundaryThickness;
-		float attenuation = BoundaryForceProfile(nomalised_distance);
-		
-		// Then cancel the acceleration into the surface.
-		//float vel_n = dot(target.vel, normal);
-		target.accel -= attenuation * accel_n * normal.xyz;
-		//target.vel -= vel_n * normal;
-	//	target.vel *= Restitution.y;
-	}
+		// Check the particle has an acceleration that is anti-parallel to the surface normal (for vertical walls),
+		float accel_n = dot(normal.xyz, target.accel);
+		bool is_anti_parallel = accel_n > 0 || sqr(accel_n) < dot(target.accel, target.accel) * 0.005f;
+		if (WaveActiveAllTrue(is_anti_parallel) || is_anti_parallel)
+			continue;		
 
+		float amount = BoundaryForceProfile(sqrt(range_sq) / BoundaryThickness);
+		target.accel -= amount * dot(target.accel, normal.xyz) * normal.xyz;
+		
+		// Apply a boundary force
+		//float force = ForceProfile(sqrt(range_sq) / BoundaryThickness, 1, 1);
+		//target.accel += 100 * force * normal.xyz;
+		
+		//target.vel -= amount * target.vel; // Static friction at the boundary surface
+		//float vel_n = dot(target.vel, normal);
+		//target.vel -= amount * vel_n * normal;
+		//target.vel *= Restitution.y;
+		
+	}
+	
 	m_particles[dtid.x].accel = target.accel;
-	//m_particles[dtid.x].vel   = target.vel;
+	m_particles[dtid.x].vel   = target.vel;
+	#endif
+
 }
 

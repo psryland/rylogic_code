@@ -89,7 +89,7 @@ namespace pr::fluid
 			ptr->m_vert = particle.pos + scale * (
 				mode == 1 ? particle.vel :
 				mode == 2 ? particle.acc.w0() :
-				mode == 3 ? particle.mass * v4::YAxis() :
+				mode == 3 ? particle.density * v4::YAxis() :
 				v4::Zero());
 			ptr->m_diff = col;
 			ptr->m_norm = v4::Zero();

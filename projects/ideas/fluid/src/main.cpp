@@ -24,7 +24,7 @@ struct Main :Form, IProbeActions
 		FreeRun,
 	};
 
-	inline static constexpr int MaxParticleCount = 10000;//00;//946;//100;//30 * 30;
+	inline static constexpr int MaxParticleCount = 50000;//00;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.05f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* ParticleLayout = L"struct Particle { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
@@ -281,13 +281,12 @@ struct Main :Form, IProbeActions
 		m_fluid_sim.Config.Dyn.Viscosity = Viscosity;
 		m_fluid_sim.Config.Dyn.ThermalDiffusion = ThermalDiffusion;
 
-		Tweakable<float, "Mass"> Mass = 1.0f;
-		m_fluid_sim.Config.Particles.Mass = Mass;
-
 		Tweakable<v2, "Restitution"> Restitution = v2{ 1.0f, 1.0f };
 		Tweakable<float, "BoundaryThickness"> BoundaryThickness = 0.01f;
+		Tweakable<float, "BoundaryForce"> BoundaryForce = 10.f;
 		m_fluid_sim.m_collision.Config.Restitution = Restitution;
 		m_fluid_sim.m_collision.Config.BoundaryThickness = BoundaryThickness;
+		m_fluid_sim.m_collision.Config.BoundaryForce = BoundaryForce;
 
 		Tweakable<int, "ColourScheme"> ColourScheme = 0;
 		Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
@@ -312,6 +311,8 @@ struct Main :Form, IProbeActions
 		{
 			auto count = 0;
 			auto nearest = 0;
+			auto density = 0.0f;
+			
 			auto rad_sq = Sqr(m_probe.m_radius);
 			auto nearest_dist_sq = std::numeric_limits<float>::max();
 			for (auto& particle : m_cpu_particles)
@@ -325,10 +326,12 @@ struct Main :Form, IProbeActions
 				{
 					nearest = s_cast<int>(&particle - m_cpu_particles.data());
 					nearest_dist_sq = dist_sq;
+					density = particle.density;
 				}
 			}
 			m_title.append(std::format(" - Nearest: {}", nearest));
 			m_title.append(std::format(" - Count: {}", count));
+			m_title.append(std::format(" - Density: {}", density));
 		}
 		else
 		{
@@ -373,7 +376,7 @@ struct Main :Form, IProbeActions
 					.col = v4::One(),
 					.vel = v4::Zero(),
 					.acc = v3::Zero(),
-					.mass = 1.0f,
+					.density = 0.0f,
 				});
 			}
 

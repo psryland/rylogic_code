@@ -21,7 +21,7 @@ namespace pr::rdr12::compute::fluid
 		v4 col;
 		v4 vel;
 		v3 acc;
-		float mass;
+		float density;
 
 		inline static constexpr wchar_t const* Layout =
 			L"struct Particle "
@@ -30,7 +30,7 @@ namespace pr::rdr12::compute::fluid
 			L"	float4 col; "
 			L"	float4 vel; "
 			L"	float3 accel; "
-			L"	float mass; "
+			L"	float density; "
 			L"}";
 	};
 	static_assert(sizeof(Particle) == sizeof(Vert));
@@ -83,7 +83,6 @@ namespace pr::rdr12::compute::fluid
 			struct
 			{
 				float Radius = 0.1f; // The radius of influence for each particle
-				float Mass   = 1.0f; // The particle mass
 				iv2 Pad      = {};
 			} Particles;
 			struct
@@ -389,15 +388,13 @@ namespace pr::rdr12::compute::fluid
 
 			float ParticleRadius;   // The radius of influence for each particle
 			float TimeStep;         // Leap-frog time step
-			float Mass;             // The particle mass
+			float ThermalDiffusion; // The thermal diffusion rate
 			int RandomSeed;         // Seed value for the RNG
 
 			float ForceScale;       // The force scaling factor
 			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
 			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 			float Viscosity;        // The viscosity scaler
-
-			float ThermalDiffusion; // The thermal diffusion rate
 		};
 		struct cbProbeData
 		{
@@ -415,13 +412,8 @@ namespace pr::rdr12::compute::fluid
 		{
 			float4 Spectrum[4];     // The colour scale to use
 			float2 Range;           // Scales [0,1] to the colour range
-			int Dimensions;         // 2D or 3D simulation
 			int NumParticles;       // The number of particles in the 'm_particles' buffer
-		
 			int Scheme;             // 0 = None, 1 = Velocity, 2 = Accel, 3 = Density
-			int CellCount;          // The number of grid cells in the spatial partition
-			float GridScale;        // The scale factor for the spatial partition grid
-			float ParticleRadius;   // The particle radius
 		};
 		struct cbMapData
 		{
@@ -434,7 +426,6 @@ namespace pr::rdr12::compute::fluid
 			int CellCount;          // The number of grid cells in the spatial partition
 			float GridScale;        // The scale factor for the spatial partition grid
 			float ParticleRadius;   // The particle radius
-			float ParticleMass;     // The particle mass
 			float ForceScale;       // The force scaling factor
 			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
 			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
@@ -451,13 +442,12 @@ namespace pr::rdr12::compute::fluid
 				.GridScale = m_spatial.Config.GridScale,
 				.ParticleRadius = Config.Particles.Radius,
 				.TimeStep = time_step,
-				.Mass = Config.Particles.Mass,
+				.ThermalDiffusion = Config.Dyn.ThermalDiffusion,
 				.RandomSeed = m_frame,
 				.ForceScale = Config.Dyn.ForceScale,
 				.ForceAmplitude = Config.Dyn.ForceAmplitude,
 				.ForceBalance = Config.Dyn.ForceBalance,
 				.Viscosity = Config.Dyn.Viscosity,
-				.ThermalDiffusion = Config.Dyn.ThermalDiffusion,
 			};
 		};
 		cbProbeData ProbeCBuf(ProbeData const& probe) const
@@ -486,12 +476,8 @@ namespace pr::rdr12::compute::fluid
 					To<v4>(colours.Spectrum[3]),
 				},
 				.Range = colours.Range,
-				.Dimensions = m_collision.Config.SpatialDimensions,
 				.NumParticles = Config.NumParticles,
 				.Scheme = colours.Scheme,
-				.CellCount = m_spatial.Config.CellCount,
-				.GridScale = m_spatial.Config.GridScale,
-				.ParticleRadius = Config.Particles.Radius,
 			};
 		}
 		cbMapData MapCBuf(MapData const& map_data, ColourData const& colours) const
@@ -511,7 +497,6 @@ namespace pr::rdr12::compute::fluid
 				.CellCount = m_spatial.Config.CellCount,
 				.GridScale = m_spatial.Config.GridScale,
 				.ParticleRadius = Config.Particles.Radius,
-				.ParticleMass = Config.Particles.Mass,
 				.ForceScale = Config.Dyn.ForceScale,
 				.ForceAmplitude = Config.Dyn.ForceAmplitude,
 				.ForceBalance = Config.Dyn.ForceBalance,
@@ -575,9 +560,6 @@ namespace pr::rdr12::compute::fluid
 				m_cs_colour.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbColourData>(EReg::Colours)
 					.UAV(EReg::Particles)
-					.UAV(EReg::Spatial)
-					.UAV(EReg::IdxStart)
-					.UAV(EReg::IdxCount)
 					.Create(device, "Fluid:ColourParticlesSig");
 				m_cs_colour.m_pso = ComputePSO(m_cs_colour.m_sig.get(), bytecode)
 					.Create(device, "Fluid:ColourParticlesPSO");
@@ -710,9 +692,6 @@ namespace pr::rdr12::compute::fluid
 			job.m_cmd_list.SetComputeRootSignature(m_cs_colour.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_colours);
 			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_colours.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());

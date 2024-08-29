@@ -41,10 +41,11 @@ namespace pr::rdr12::compute::particle_collision
 		};
 		struct ConfigData
 		{
-			int NumPrimitives = 0;                   // The number of primitives to sort
-			int SpatialDimensions = 3;               // The number of spatial dimensions
-			float BoundaryThickness = 0.01f;         // The distance at which boundary effects apply
-			v2 Restitution = { 1.0f, 1.0f };         // The coefficient of restitution (normal, tangential)
+			int NumPrimitives = 0;           // The number of primitives to sort
+			int SpatialDimensions = 3;       // The number of spatial dimensions
+			float BoundaryThickness = 0.01f; // The distance at which boundary effects apply
+			float BoundaryForce = 1.f;       // The repulsive force of the boundary
+			v2 Restitution = { 1.0f, 1.0f }; // The coefficient of restitution (normal, tangential)
 			CullData Culling;
 		};
 		struct Setup
@@ -158,6 +159,9 @@ namespace pr::rdr12::compute::particle_collision
 
 			float ParticleRadius;    // The radius of volume that each particle represents
 			float BoundaryThickness; // The thickness in with boundary effects are applied
+			float BoundaryForce;     // The repulsive force of the boundary
+			float pad;
+
 			float2 Restitution;      // The coefficient of restitution (normal, tangential)
 
 		};
@@ -178,6 +182,8 @@ namespace pr::rdr12::compute::particle_collision
 				.TimeStep = dt,
 				.ParticleRadius = radius,
 				.BoundaryThickness = Config.BoundaryThickness,
+				.BoundaryForce = Config.BoundaryForce,
+				.pad = 0,
 				.Restitution = Config.Restitution,
 			};
 		}

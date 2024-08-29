@@ -6,7 +6,7 @@
 #include "../common/utility.hlsli"
 
 #ifndef PARTICLE_TYPE
-#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float mass; }
+#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float density; }
 #endif
 PARTICLE_TYPE;
 
@@ -44,16 +44,13 @@ cbuffer cbFluidSim : register(b0)
 
 		float ParticleRadius;   // The radius of influence for each particle
 		float TimeStep;         // Leap-frog time step
-		float Mass;             // The particle mass
+		float ThermalDiffusion; // The thermal diffusion rate
 		int RandomSeed;         // Seed value for the RNG
 
 		float ForceScale;       // The force scaling factor
 		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
 		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 		float Viscosity;        // The viscosity scaler
-
-		float ThermalDiffusion; // The thermal diffusion rate
-
 	} Sim;
 };
 cbuffer cbProbeData : register(b0)
@@ -79,13 +76,8 @@ cbuffer cbColourData : register(b0)
 	struct
 	{
 		ColourData Colours;     // Colouring data
-		int Dimensions;         // 2D or 3D simulation
 		int NumParticles;       // The number of particles in the 'm_particles' buffer
-		
 		int Scheme;             // 0 = None, 1 = Velocity, 2 = Accel, 3 = Density
-		int CellCount;          // The number of grid cells in the spatial partition
-		float GridScale;        // The scale factor for the spatial partition grid
-		float ParticleRadius;   // The particle radius
 	} Col;
 };
 cbuffer cbMapData : register(b0)
@@ -102,10 +94,8 @@ cbuffer cbMapData : register(b0)
 		float GridScale;      // The scale factor for the spatial partition grid
 		
 		float ParticleRadius; // The particle radius
-		float ParticleMass;   // The particle mass
 		float ForceScale;     // The force scaling factor
 		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
-
 		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
 	} Map;
 };
@@ -168,7 +158,7 @@ inline float4 LerpColour(float value, uniform ColourData col)
 }
 
 // The influence at normalised 'distance' from a particle
-inline float ForceProfile(float normalised_distance, uniform float amplitude, uniform float balance)
+inline float ForceKernel(float normalised_distance, uniform float amplitude, uniform float balance)
 {
 	// Functions:
 	//   a(x) = -x + B
@@ -185,7 +175,7 @@ inline float ForceProfile(float normalised_distance, uniform float amplitude, un
 }
 
 // The influence at normalised 'distance' from a particle
-inline float ViscosityProfile(float normalised_distance, uniform float viscosity_power)
+inline float ViscosityKernel(float normalised_distance, uniform float viscosity_power)
 {
 	// -pow(x, viscosity_power) + 1
 	float x = clamp(normalised_distance, 0.0f, 1.0f);
@@ -194,10 +184,18 @@ inline float ViscosityProfile(float normalised_distance, uniform float viscosity
 }
 
 // Contribution to density based on distance
-inline float DensityProfile(float normalised_distance)
+inline float DensityKernel(float normalised_distance, uniform int spatial_dimensions, uniform float particle_radius)
 {
+	// The calculated density needs to be independent of particle radius.
+	// Conceptually, we divide the sum of particle densities within the kernel
+	// by the volume under the kernel.
+	const float tau = 6.28318530717958647693f;
+	float volume = 1.0f;// select(spatial_dimensions == 2,
+		//(1.0f/6.0f) * tau * sqr(particle_radius),
+		//(1.0f/6.0f) * tau * cube(particle_radius));
+
 	float x = clamp(normalised_distance, 0.0f, 1.0f);
-	return 1.0f - x;
+	return (1.0f - x) / volume;
 }
 
 // True if 'particle' is a dead particle
@@ -223,18 +221,16 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 	// Sample the environment for neighbours at the predicted particle position at TimeStep/2
 	float4 target_pos = target.pos + 0.5f * Sim.TimeStep * target.vel;
 	
+	// Weighted particle density
+	float density = 1.0f;
+	
 	// The weighted group velocity
 	float4 group_velocity = target.vel;
 	float group_velocity_weight = 1;
 
-	// Weighted particle density
-	float density = 1.0f;
-	float density_weight = 1;
-	
-	// Sub step integration
-	const int sub_steps = 3;
+	// Acceleration integration sub-step 
+	const int sub_steps = 5;
 	const float sub_step = Sim.TimeStep / sub_steps;
-	const float DistanceScale = 1.0f;
 	
 	// Search the neighbours of 'target'
 	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
@@ -247,62 +243,70 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 				continue;
 
 			Particle neighbour = m_particles[m_spatial[i]];
+			float normalised_distance = length(neighbour.pos - target_pos) / Sim.ParticleRadius;
 
-			// Viscosity is inter-particle friction. When particles are close, their velocities should
-			// tend toward the average of the group. Find the group average velocity (weighted by distance)
+			// Density
 			{
-				float normalised_distance = length(neighbour.pos - target_pos) / Sim.ParticleRadius;
-				float visocity = ViscosityProfile(normalised_distance, Sim.Viscosity);
+				density += DensityKernel(normalised_distance, Sim.Dimensions, Sim.ParticleRadius);
+			}
+
+			// Viscosity
+			{
+				// Viscosity is inter-particle friction. When particles are close, their velocities should
+				// tend toward the average of the group. Find the group average velocity (weighted by distance)
+				float visocity = ViscosityKernel(normalised_distance, Sim.Viscosity);
 				group_velocity += visocity * neighbour.vel;
 				group_velocity_weight += visocity;
 			}
-
-			float4 t_pos = target.pos;
-			float4 n_pos = neighbour.pos;
-			float4 t_vel = target.vel;
-			float4 n_vel = neighbour.vel;
-
-			// Calculate sub-steps for a more accurate acceleration calculation
-			[unroll]
-			for (int k = 0; k != sub_steps; ++k)
-			{
-				// Advance the particles by a half step
-				float4 t_pos_half_step = t_pos + 0.5f * sub_step * t_vel;
-				float4 n_pos_half_step = n_pos + 0.5f * sub_step * n_vel;
-
-				// Get the separating vector and distance
-				float4 sep = t_pos_half_step - n_pos_half_step;
-				float distance = length(sep);
-				float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions));
-				float normalised_distance = distance / (DistanceScale * Sim.ParticleRadius);
-
-				// Calculate the acceleration due to particle forces
-				float force = ForceProfile(normalised_distance, Sim.ForceAmplitude, Sim.ForceBalance);
-				float4 accel = (Sim.ForceScale * Sim.Mass * force) * direction;
-
-				// Update the particle velocities by the acceleration
-				t_vel += sub_step * accel;
-				n_vel -= sub_step * accel;
-
-				// Advance the particles by a sub step
-				t_pos += t_vel * sub_step;
-				n_pos += n_vel * sub_step;
-			}
 			
-			// 't_pos' and 't_vel' is where the particle should end up, calculate an acceleration that gives this result
-			nett_accel += t_vel - target.vel;
+			// Acceleration
+			{
+				float4 t_pos = target.pos;
+				float4 n_pos = neighbour.pos;
+				float4 t_vel = target.vel;
+				float4 n_vel = neighbour.vel;
+
+				// Calculate sub-steps for a more accurate acceleration calculation
+				[unroll] for (int k = 0; k != sub_steps; ++k)
+				{
+					// Advance the particles by a half step
+					float4 t_pos_half_step = t_pos + 0.5f * sub_step * t_vel;
+					float4 n_pos_half_step = n_pos + 0.5f * sub_step * n_vel;
+
+					// Get the separating vector and distance
+					float4 sep = t_pos_half_step - n_pos_half_step;
+					float distance = length(sep);
+					float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions));
+
+					// Calculate the acceleration due to particle forces
+					float force = ForceKernel(distance / Sim.ParticleRadius, Sim.ForceAmplitude, Sim.ForceBalance);
+					float4 accel = (Sim.ForceScale * target.density * neighbour.density * force) * direction;
+
+					// Update the particle velocities by the acceleration
+					t_vel += sub_step * accel;
+					n_vel -= sub_step * accel;
+
+					// Advance the particles by a sub step
+					t_pos += t_vel * sub_step;
+					n_pos += n_vel * sub_step;
+				}
+			
+				// 't_pos' and 't_vel' is where the particle should end up, calculate an acceleration that gives this result
+				nett_accel += t_vel - target.vel;
+			}
 		}
 	}
 
 	// Apply viscosity. Add an acceleration that makes the particles velocity closer to the group average
 	{
-		float4 target_vel = target.vel;// + 0.5f * nett_accel * Sim.TimeStep;
+		float4 target_vel = target.vel + 0.5f * nett_accel * Sim.TimeStep;
 		group_velocity *= 1.0f / group_velocity_weight;
 		nett_accel += (group_velocity - target_vel) / Sim.TimeStep;
 	}
 	
 	// Record the nett force
 	m_particles[dtid.x].accel += nett_accel.xyz;
+	m_particles[dtid.x].density = density;
 }
 
 // Apply an attractor to the particles
@@ -390,19 +394,8 @@ void ColourParticles(uint3 dtid : SV_DispatchThreadID)
 	// Colour particles within the probe radius
 	if (scheme == ColourScheme_Density)
 	{
-		float weight = 0.0f;
-		float4 pos = m_particles[dtid.x].pos;
-		FindIter find = Find(pos, SearchVolume(Col.ParticleRadius, Col.Dimensions), Col.GridScale, Col.CellCount);
-		while (DoFind(find, Col.CellCount))
-		{
-			for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
-			{
-				Particle neighbour = m_particles[m_spatial[i]];
-				float distance = length(pos - neighbour.pos);
-				weight += lerp(1, 0, distance / Col.ParticleRadius);
-			}
-		}
-		m_particles[dtid.x].col = LerpColour(weight, Col.Colours);
+		float density = length(m_particles[dtid.x].density);
+		m_particles[dtid.x].col = LerpColour(density, Col.Colours);
 	}
 }
 
@@ -444,12 +437,12 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 			if (Map.Type == MapType_Accel)
 			{
 				// Add up the nett force
-				value += (Map.ForceScale * Map.ParticleMass * ForceProfile(normalised_distance, Map.ForceAmplitude, Map.ForceBalance)) * direction;
+				value += (Map.ForceScale * ForceKernel(normalised_distance, Map.ForceAmplitude, Map.ForceBalance)) * direction;
 			}
 			if (Map.Type == MapType_Density)
 			{
 				// Add up the density
-				value += lerp(Map.ParticleMass, 0.0, distance / Map.ParticleRadius);
+				value += DensityKernel(normalised_distance, Map.Dimensions, Map.ParticleRadius);
 			}
 		}
 	}
