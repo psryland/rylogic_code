@@ -7,9 +7,6 @@
 //  2. Build a histogram of positions per cell
 //  3. Sort the 'm_grid_hash' buffer by hash value so that all positions in the same cell are contiguous
 //  4. Create a lookup from cell hash to the start index of the cell in the sorted buffer
-// Defines:
-//   PARTICLE_TYPE - Define the element structure of the 'positions' buffer. The field 'pos' is
-//      expected to be the position information. It can be float3 or float4.
 
 static const uint ThreadGroupSize = 1024;
 
@@ -30,13 +27,10 @@ cbuffer cbGridPartition : register(b0)
 	int pad;
 };
 
-#ifndef PARTICLE_TYPE
-#define PARTICLE_TYPE struct Particle { float4 pos; }
-#endif
-PARTICLE_TYPE;
+#include "../particle_collision/particle.hlsli"
 
 // The positions to sort into the grid
-StructuredBuffer<Particle> m_positions : register(t0);
+StructuredBuffer<PositionType> m_positions : register(t0);
 
 // The grid cell hash for each position. (length of m_positions)
 RWStructuredBuffer<uint> m_grid_hash : register(u0);

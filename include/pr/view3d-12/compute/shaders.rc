@@ -9,6 +9,7 @@ UTILITY_HLSLI              TEXT    DISCARDABLE     "common/utility.hlsli"
 FLUID_SIMULATION_HLSL      TEXT    DISCARDABLE     "fluid_simulation/fluid_simulation.hlsl"
 
 COLLISION_HLSLI            TEXT    DISCARDABLE     "particle_collision/collision.hlsli"
+PARTICLE_HLSLI             TEXT    DISCARDABLE     "particle_collision/particle.hlsli"
 PARTICLE_COLLISION_HLSL    TEXT    DISCARDABLE     "particle_collision/particle_collision.hlsl"
 
 RADIX_SORT_HLSL            TEXT    DISCARDABLE     "radix_sort/radix_sort.hlsl"

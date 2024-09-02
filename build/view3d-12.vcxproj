@@ -254,6 +254,7 @@
       <ShaderModel>6.6</ShaderModel>
     </FxCompile>
     <None Include="..\include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
+    <None Include="..\include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
     <FxCompile Include="..\include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
       <EntryPointName>Integrate</EntryPointName>
       <ShaderType>Compute</ShaderType>

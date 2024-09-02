@@ -184,7 +184,8 @@ namespace pr::rdr12::compute::spatial_partition
 			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"SPATIAL_PARTITION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
-				.Define(L"PARTICLE_TYPE", position_layout)
+				.Define(L"POSITION_TYPE", position_layout)
+				.Define(L"DYNAMICS_TYPE", L"struct DynamicsType {}" )
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 

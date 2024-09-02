@@ -49,6 +49,8 @@ static const uint Prim_Box = 4;
 static const uint Prim_Sphere = 5;
 static const uint Prim_Cylinder = 6;
 
+static const float TINY = 0.0001f;
+
 // Forwards
 float4 ClosestPoint_PointToPlane(float4 pos);
 float4 ClosestPoint_PointToPlane(float4 pos, out float4 normal);
@@ -451,12 +453,13 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 		// If the ray is parallel to the slab, then no hit if origin not within slab
 		if (ray[i] == 0)
 		{
-			if (pos[i] < -radii[i] || pos[i] > radii[i])
+			// On the surface is not a hit because the reflected ray is the same as the incident ray
+			if (abs(pos[i]) >= radii[i])
 				return false;
 		}
 		else
 		{
-			// Compute intersection t value of ray with near and far plane of slab
+			// Compute intersection 't' value of ray with near and far plane of slab
 			float ood = 1.0f / ray[i];
 			float ta = (-radii[i] - pos[i]) * ood;
 			float tb = (+radii[i] - pos[i]) * ood;
@@ -469,14 +472,14 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 			if (tb < tmax) { tmax = tb; }
 
 			// Exit with no collision as soon as slab intersection becomes empty
-			if (tmin > tmax)
+			if (tmax - tmin < TINY)
 				return false;
 		}
 	}
 	
 	// 'tmin' is the nearest intersection
 	t1 = tmin;
-	normal = float4(select(axis == 0, 1, 0), select(axis == 1, 1, 0), select(axis == 2, 1, 0), 0);
+	normal = float4(select(axis == 0, sign(pos.x), 0), select(axis == 1, sign(pos.y), 0), select(axis == 2, sign(pos.z), 0), 0);
 	return true;
 }
 

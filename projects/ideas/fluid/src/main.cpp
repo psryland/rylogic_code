@@ -33,7 +33,6 @@ struct Main :Form, IProbeActions
 	using rtc_time_t = std::chrono::high_resolution_clock::time_point;
 	using ema_t = maths::ExpMovingAvr<double>;
 	using demo_scenes_t = std::vector<std::shared_ptr<IDemoScene>>;
-	using particles_t = std::vector<Particle>;
 	using colours_t = FluidSimulation::ColourData;
 
 	struct FPS
@@ -201,9 +200,17 @@ struct Main :Form, IProbeActions
 		if (read_back)
 		{
 			m_cpu_particles.resize(m_fluid_sim.Config.NumParticles);
-			m_fluid_sim.Output.ReadParticles(m_cpu_particles, 0);
+			m_fluid_sim.Output.ReadParticles(0, isize(m_cpu_particles), [&](Particle const* particles, Dynamics const* dynamics)
+			{
+				for (int i = 0; i != isize(m_cpu_particles); ++i)
+				{
+					m_cpu_particles[i].pos = particles[i].pos;
+					m_cpu_particles[i].vel = dynamics[i].vel.w0();
+					m_cpu_particles[i].acc = dynamics[i].accel.w0();
+					m_cpu_particles[i].density = dynamics[i].density;
+				}
+			});
 		}
-
 	}
 
 	// Render the simulation
@@ -338,7 +345,7 @@ struct Main :Form, IProbeActions
 			auto c2w = m_scn.m_cam.CameraToWorld();
 			m_title.append(std::format(" - Time: {:.3f}s", m_time));
 			m_title.append(std::format(" - Frame: {}", m_fluid_sim.m_frame));
-			m_title.append(std::format(" - PartCount: {}", m_fluid_sim.Config.NumParticles));
+			m_title.append(std::format(" - PCount: {}", m_fluid_sim.Config.NumParticles));
 			m_title.append(std::format(" - Cam: {:.3f} {:.3f} {:.3f}  Dir: {:.3f} {:.3f} {:.3f}", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
 		}
 
@@ -360,44 +367,45 @@ struct Main :Form, IProbeActions
 	}
 	void SourceSink(GpuJob& job, int count) override
 	{
-		auto start = isize(m_cpu_particles);
-
 		// Add up to 'count' particles from within the probe volume
 		if (count > 0)
 		{
+			int start = m_fluid_sim.Config.NumParticles;
+			std::vector<Particle> particles(s_cast<size_t>(std::min(count, MaxParticleCount - start)));
 			std::default_random_engine rng(s_cast<uint32_t>(m_time * 1000.0f));
-			auto added = s_cast<size_t>(std::min(count, MaxParticleCount - start));
-			for (int i = 0; i != added; ++i)
+			for (auto& particle : particles)
 			{
 				auto pos = v3::Random(rng, m_probe.m_position.xyz, m_probe.m_radius).w1();
 				if (m_fluid_sim.m_collision.Config.SpatialDimensions != 3) pos.z = 0;
-				m_cpu_particles.push_back(Particle{
+				particle = Particle{
 					.pos = pos,
 					.col = v4::One(),
-					.vel = v4::Zero(),
-					.acc = v3::Zero(),
-					.density = 0.0f,
-				});
+				};
 			}
 
 			// Add the new particles to the particle buffer
-			m_fluid_sim.WriteParticles(job, start, { m_cpu_particles.data() + start, added });
+			m_fluid_sim.WriteParticles(job, start, particles, {});
+			m_fluid_sim.Config.NumParticles += isize(particles);
 		}
 
 		// Remove up to 'count' particles from within the probe volume
 		else
 		{
+			/* TODO
+			int removed = 0;
 			auto rad_sq = Sqr(m_probe.m_radius);
-			pr::erase_if_unstable(m_cpu_particles, [&](auto& particle)
+			for (auto const& particle : m_cpu_particles)
 			{
-				return LengthSq(particle.pos - m_probe.m_position) < rad_sq && count++ < 0;
-			});
+				if (LengthSq(particle.pos - m_probe.m_position) > rad_sq) continue;
+
+				removed++;
+			}
 
 			// Update the whole particle buffer because we could've removed from anywhere
 			m_fluid_sim.WriteParticles(job, 0, m_cpu_particles);
+			m_fluid_sim.Config.NumParticles = isize(m_cpu_particles);
+			*/
 		}
-
-		m_fluid_sim.Config.NumParticles = isize(m_cpu_particles);
 	}
 
 	// Windows events
@@ -525,6 +533,7 @@ struct Main :Form, IProbeActions
 				.NumParticles = isize(scene.Particles()),
 			},
 			.ParticleInitData = scene.Particles(),
+			.DynamicsInitData = scene.Dynamics(),
 		};
 		ParticleCollision::Setup pc_setup = {
 			.PrimitiveCapacity = isize(scene.Collision()),

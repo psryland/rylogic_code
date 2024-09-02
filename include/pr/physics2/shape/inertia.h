@@ -921,7 +921,7 @@ namespace pr::physics
 	{
 		auto mass = 5.0f;
 		{// Inertia Construction
-			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 
 			auto I0 = Inertia{moment, mass};
 			PR_CHECK(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}), true);
@@ -938,7 +938,7 @@ namespace pr::physics
 			PR_CHECK(FEql(I2, Inertia{I2.To6x6()}), true);
 		}
 		{// InertiaInv Construction
-			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 			
 			auto I0¯ = Invert(Inertia{moment, mass});
 			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}), true);
@@ -958,7 +958,7 @@ namespace pr::physics
 			PR_CHECK(inf == Inertia::Infinite(), true);
 		}
 		{// Translate and Rotate
-			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 			auto Ic0 = Inertia{moment, mass};
 			auto Ic1 = Ic0;
 			
@@ -970,7 +970,7 @@ namespace pr::physics
 			PR_CHECK(FEql(Ic0, Ic1), true);
 		}
 		{// Transform
-			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			constexpr auto moment = (1.0f/6.0f) * Sqr(2.0f);
 			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
 			auto Ic0 = Inertia{moment, mass};
 			auto Ic1 = Translate(Rotate(Ic0, a2b.rot), a2b.pos, ETranslateInertia::AwayFromCoM);

@@ -15,9 +15,13 @@ namespace pr::fluid
 		// Initial camera position
 		virtual std::optional<pr::Camera> Camera() const = 0;
 
-		// Returns initialisation data for the particles.
+		// Returns initialisation data for the particle positions.
 		// Return empty() if the existing particle state is to be used.
 		virtual std::span<Particle const> Particles() const { return {}; }
+
+		// Returns initialisation data for the particle dynamics.
+		// Return empty() if the existing particle state is to be used.
+		virtual std::span<Dynamics const> Dynamics() const { return {}; }
 
 		// Return initialization data for the static collision scene.
 		virtual std::span<CollisionPrim const> Collision() const { return {}; }

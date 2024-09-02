@@ -71,7 +71,7 @@ namespace pr::rdr12::compute::particle_collision
 		// Collision config
 		ConfigData Config;
 		
-		ParticleCollision(Renderer& rdr, std::wstring_view position_layout)
+		ParticleCollision(Renderer& rdr, std::wstring_view position_layout, std::wstring_view dynamics_layout)
 			: m_rdr(&rdr)
 			, m_integrate()
 			, m_resting_contact()
@@ -79,7 +79,7 @@ namespace pr::rdr12::compute::particle_collision
 			, m_capacity()
 			, Config()
 		{
-			CreateComputeSteps(position_layout);
+			CreateComputeSteps(position_layout, dynamics_layout);
 		}
 
 		// (Re)Initialise the particle collision system
@@ -104,37 +104,25 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Integrate the particle positions (with collision)
-		void Integrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
+		void Integrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> dynamics)
 		{
 			if (count == 0)
 				return;
 
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::Integrate");
-			DoIntegrate(job, dt, count, radius, particles);
+			DoIntegrate(job, dt, count, radius, particles, dynamics);
 			PIXEndEvent(job.m_cmd_list.get());
 		}
 
 		// Apply resting contact forces
-		void RestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
+		void RestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> dynamics)
 		{
 			if (count == 0)
 				return;
 
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::RestingContact");
-			DoRestingContact(job, dt, count, radius, particles);
+			DoRestingContact(job, dt, count, radius, particles, dynamics);
 			PIXEndEvent(job.m_cmd_list.get());
-		}
-
-		// Generate the default force profile
-		static void ForceProfile(float slope, std::span<float> profile)
-		{
-			for (int i = 0; i != isize(profile); ++i)
-			{
-				float x = 1.0f * i / isize(profile);
-				float a = -slope * x + 1;                // a(x) = -slope * x + 1
-				float b = 2 * x * x * x - 3 * x * x + 1; // b(x) = 2x^3 - 3x^2 + 1
-				profile[i] = a * b;
-			}
 		}
 
 	private:
@@ -147,6 +135,7 @@ namespace pr::rdr12::compute::particle_collision
 			inline static constexpr ECBufReg Constants = ECBufReg::b0;
 			inline static constexpr ECBufReg Cull = ECBufReg::b1;
 			inline static constexpr EUAVReg Particles = EUAVReg::u0;
+			inline static constexpr EUAVReg Dynamics = EUAVReg::u1;
 			inline static constexpr ESRVReg Primitives = ESRVReg::t0;
 		};
 
@@ -196,13 +185,14 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Create the compute steps
-		void CreateComputeSteps(std::wstring_view position_layout)
+		void CreateComputeSteps(std::wstring_view position_layout, std::wstring_view dynamics_layout)
 		{
 			auto device = m_rdr->D3DDevice();
 			ShaderCompiler compiler = ShaderCompiler{}
 				.Source(resource::Read<char>(L"PARTICLE_COLLISION_HLSL", L"TEXT"))
 				.Includes({ new ResourceIncludeHandler, true })
-				.Define(L"PARTICLE_TYPE", position_layout)
+				.Define(L"POSITION_TYPE", position_layout)
+				.Define(L"DYNAMICS_TYPE", dynamics_layout)
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 
@@ -213,6 +203,7 @@ namespace pr::rdr12::compute::particle_collision
 					.U32<cbCollision>(EReg::Constants)
 					.U32<cbCull>(EReg::Cull)
 					.UAV(EReg::Particles)
+					.UAV(EReg::Dynamics)
 					.SRV(EReg::Primitives)
 					.Create(device, "ParticleCollision:IntegrateSig");
 				m_integrate.m_pso = ComputePSO(m_integrate.m_sig.get(), bytecode)
@@ -225,6 +216,7 @@ namespace pr::rdr12::compute::particle_collision
 				m_resting_contact.m_sig = RootSig(ERootSigFlags::ComputeOnly)
 					.U32<cbCollision>(EReg::Constants)
 					.UAV(EReg::Particles)
+					.UAV(EReg::Dynamics)
 					.SRV(EReg::Primitives)
 					.Create(device, "ParticleCollision:RestingContactSig");
 				m_resting_contact.m_pso = ComputePSO(m_resting_contact.m_sig.get(), bytecode)
@@ -233,7 +225,7 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// Integrate the particle positions (with collision)
-		void DoIntegrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
+		void DoIntegrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> positions, D3DPtr<ID3D12Resource> dynamics)
 		{
 			auto cb_params = CollisionCBuf(dt, count, radius);
 			auto cb_cull = CullCBuf();
@@ -244,15 +236,17 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetComputeRootSignature(m_integrate.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
 			job.m_cmd_list.SetComputeRoot32BitConstants(1, cb_cull, 0);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, positions->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_r_primitives->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
-			job.m_barriers.UAV(particles.get());
+			job.m_barriers.UAV(positions.get());
+			job.m_barriers.UAV(dynamics.get());
 		}
 
 		// Apply resting contact forces
-		void DoRestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles)
+		void DoRestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> positions, D3DPtr<ID3D12Resource> dynamics)
 		{
 			auto cb_params = CollisionCBuf(dt, count, radius);
 
@@ -261,11 +255,13 @@ namespace pr::rdr12::compute::particle_collision
 			job.m_cmd_list.SetPipelineState(m_resting_contact.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_resting_contact.m_sig.get());
 			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(2, m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, positions->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_r_primitives->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
-			job.m_barriers.UAV(particles.get());
+			job.m_barriers.UAV(positions.get());
+			job.m_barriers.UAV(dynamics.get());
 		}
 	};
 }

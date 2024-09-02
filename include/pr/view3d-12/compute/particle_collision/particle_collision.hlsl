@@ -5,11 +5,6 @@
 static const int ThreadGroupSize = 1024;
 static const int MaxCollisionResolutionSteps = 10;
 
-#ifndef PARTICLE_TYPE
-#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float density; }
-#endif
-PARTICLE_TYPE;
-
 cbuffer cbCollision : register(b0)
 {
 	// Note: Alignment matters. float2 must be aligned to 8 bytes.
@@ -32,6 +27,7 @@ cbuffer cbCull : register(b1)
 };
 
 #include "collision.hlsli"
+#include "particle.hlsli"
 
 static const int Cull_None = 0;         // Cull no used
 static const int Cull_Plane = 1;        // Cull[0].xyz = normal, Cull[0].w = distance
@@ -42,11 +38,28 @@ static const int Cull_BoxInside = 5;    // Cull[0].xyz = centre, Cull[1].xyz = h
 static const int Cull_Mask = 0x07;
 static const float4 CulledPosition = float4(0,0,0,0)/0;
 
-// The positions/velocities of each particle
-RWStructuredBuffer<Particle> m_particles : register(u0);
+// The positions/colours of each particle
+RWStructuredBuffer<PositionType> m_positions : register(u0);
+
+// The dynamics for each particle
+RWStructuredBuffer<DynamicsType> m_dynamics : register(u1);
 
 // The primitives to collide against
 StructuredBuffer<Prim> m_collision : register(t0);
+
+// Return a particle from the particle and dynamics buffers
+inline Particle GetParticle(int i)
+{
+	Particle part;
+	part.pos = float4(m_positions[i].pos.xyz, 1);
+	part.vel = float4(m_dynamics[i].vel.xyz, 0);
+	part.acc = float4(m_dynamics[i].accel.xyz, 0);
+	part.surface = float4(m_dynamics[i].surface.xyz, 0);
+	part.colour = m_positions[i].col;
+	part.density = m_dynamics[i].density;
+	part.flags = m_dynamics[i].flags;
+	return part;
+}
 
 // Test a position for being culled
 inline float4 CullCheck(float4 pos, uniform int cull_mode)
@@ -128,15 +141,18 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 	if (dtid.x >= NumParticles)
 		return;
 
-	Particle target = m_particles[dtid.x];
+	Particle target = GetParticle(dtid.x);
 	
 	// Integrate velocity. Assume the acceleration is constant over the time step.
 	// When collisions change the velocity direction, the acceleration shouldn't also change direction.
 	float dt = TimeStep;
-	float4 acc = float4(target.accel, 0);
+	float4 acc = target.acc;
 	float4 vel0 = target.vel;
 	float4 vel1 = vel0 + acc * dt;
 
+	// Reset particle dynamics/states
+	target.acc = float4(0,0,0,0);
+	
 	// Repeat until ray consumed
 	for (int attempt = 0; ; ++attempt)
 	{	
@@ -155,8 +171,7 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		if (WaveActiveAllTrue(done) || done)
 		{
 			target.pos += ray * t;
-			target.vel = attempt != MaxCollisionResolutionSteps ? vel1 : float4(0,0,0,0);
-			//target.col = attempt != MaxCollisionResolutionSteps ? float4(0,1,0,1) : float4(1,0,1,1);
+			target.vel = select(attempt != MaxCollisionResolutionSteps, vel1, float4(0,0,0,0));
 			break;
 		}
 		
@@ -195,10 +210,9 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 	target.pos = CullCheck(target.pos, Flags & Cull_Mask);
 
 	// Update the particle dynamics
-	m_particles[dtid.x].pos = target.pos;
-	m_particles[dtid.x].col = target.col;
-	m_particles[dtid.x].vel = target.vel;
-	m_particles[dtid.x].accel = float3(0,0,0);
+	m_positions[dtid.x].pos.xyz = target.pos.xyz;
+	m_dynamics[dtid.x].vel.xyz = target.vel.xyz;
+	m_dynamics[dtid.x].accel.xyz = target.acc.xyz;
 }
 
 // Apply a force from surfaces to reduce collisions for particles at rest.
@@ -209,12 +223,13 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 	if (dtid.x >= NumParticles)
 		return;
 	
-	Particle target = m_particles[dtid.x];
+	Particle target = GetParticle(dtid.x);
+	target.flags = 0;
 
 #if 1
-#if 0
+#if 1
 	// Only slow-moving particles qualify for resting contact.
-	float4 vel1 = target.vel + TimeStep * float4(target.accel, 0);
+	float4 vel1 = target.vel + TimeStep * target.acc;
 	bool too_fast = dot(vel1, vel1) * sqr(TimeStep) > sqr(BoundaryThickness);
 	if (WaveActiveAllTrue(too_fast) || too_fast)
 		return;
@@ -238,8 +253,8 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 			continue;
 
 		// Has an acceleration that is anti-parallel to the surface normal (for vertical walls),
-		float accel_n = dot(normal.xyz, target.accel);
-		bool is_anti_parallel = accel_n < 0 && sqr(accel_n) > dot(target.accel, target.accel) * 0.95f;
+		float accel_n = dot(target.acc, normal);
+		bool is_anti_parallel = accel_n < 0 && sqr(accel_n) > dot(target.acc, target.acc) * 0.95f;
 		if (WaveActiveAllTrue(!is_anti_parallel) || !is_anti_parallel)
 			continue;
 		
@@ -251,12 +266,12 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 
 		float nomalised_distance = sqrt(range_sq) / BoundaryThickness;
 		float force = ForceProfile(nomalised_distance, 1, 1);
-		target.accel += (BoundaryForce * target.density * force) * normal.xyz;
-		
+		target.acc += (BoundaryForce * target.density * force) * normal;
+
 		// Then cancel the acceleration into the surface.
 		//float attenuation = BoundaryForceProfile(nomalised_distance);
 		//target.accel -= attenuation * accel_n * normal.xyz;
-
+		
 		// Increase the mass of particles near the boundary
 		//target.mass += sqr(attenuation);
 		
@@ -264,10 +279,16 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 		//float vel_n = dot(target.vel, normal);
 		//target.vel -= attenuation * vel_n * normal;
 		//target.vel *= Restitution.y;
+
+		// flag as boundary particle
+		target.flags |= ParticleFlag_Boundary;
+		target.surface = normal;
 	}
 
-	m_particles[dtid.x].accel = target.accel;
-	m_particles[dtid.x].vel   = target.vel;
+	m_dynamics[dtid.x].vel.xyz = target.vel.xyz;
+	m_dynamics[dtid.x].accel.xyz = target.acc.xyz;
+	m_dynamics[dtid.x].surface.xyz = target.surface.xyz;
+	m_dynamics[dtid.x].flags = target.flags;
 
 #endif
 	
@@ -306,8 +327,8 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 		
 	}
 	
-	m_particles[dtid.x].accel = target.accel;
-	m_particles[dtid.x].vel   = target.vel;
+	m_positions[dtid.x].accel = target.accel;
+	m_positions[dtid.x].vel   = target.vel;
 	#endif
 
 }

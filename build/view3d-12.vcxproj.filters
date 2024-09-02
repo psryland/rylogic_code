@@ -696,6 +696,9 @@
     <None Include="..\include\pr\view3d-12\compute\particle_collision\collision.hlsli">
       <Filter>src\compute\particle_collision</Filter>
     </None>
+    <None Include="..\include\pr\view3d-12\compute\particle_collision\particle.hlsli">
+      <Filter>src\compute\particle_collision</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">

@@ -37,7 +37,15 @@ namespace pr::fluid
 	using namespace tweakables;
 
 	struct FluidVisualisation;
+	struct particle_t
+	{
+		v4 pos;
+		v4 vel;
+		v4 acc;
+		float density;
+	};
 
+	using particles_t = std::vector<particle_t>;
 	using IndexSet = std::unordered_set<int64_t>;
 
 	using ComputeStep = rdr12::ComputeStep;
@@ -47,6 +55,7 @@ namespace pr::fluid
 	using CollisionBuilder = rdr12::compute::particle_collision::CollisionBuilder;
 	using CollisionPrim = rdr12::compute::particle_collision::Prim;
 	using Particle = rdr12::compute::fluid::Particle;
+	using Dynamics = rdr12::compute::fluid::Dynamics;
 	using GpuJob = FluidSimulation::GpuJob;
 }
 

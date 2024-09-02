@@ -72,11 +72,13 @@ namespace pr::fluid
 	}
 
 	// Populate the vector field with
-	void FluidVisualisation::UpdateVectorField(std::span<Particle const> particles, float scale, int mode) const
+	void FluidVisualisation::UpdateVectorField(std::span<particle_t const> particles, float scale, int mode) const
 	{
 		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices();
-		Colour32 const col = 0xFF800000;
 		auto* ptr = update.ptr<Vert>();
+
+		Colour32 const col = 0xFF800000;
+
 		for (auto const& particle : particles)
 		{
 			ptr->m_vert = particle.pos;
@@ -88,7 +90,7 @@ namespace pr::fluid
 
 			ptr->m_vert = particle.pos + scale * (
 				mode == 1 ? particle.vel :
-				mode == 2 ? particle.acc.w0() :
+				mode == 2 ? particle.acc :
 				mode == 3 ? particle.density * v4::YAxis() :
 				v4::Zero());
 			ptr->m_diff = col;

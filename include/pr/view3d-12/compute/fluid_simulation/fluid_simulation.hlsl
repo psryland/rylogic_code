@@ -4,11 +4,7 @@
 //*********************************************
 #include "../common/geometry.hlsli"
 #include "../common/utility.hlsli"
-
-#ifndef PARTICLE_TYPE
-#define PARTICLE_TYPE struct Particle { float4 pos; float4 col; float4 vel; float3 accel; float density; }
-#endif
-PARTICLE_TYPE;
+#include "../particle_collision/particle.hlsli"
 
 #ifndef THREAD_GROUP_SIZE
 #define THREAD_GROUP_SIZE 1024U
@@ -112,27 +108,44 @@ static const uint MapType_Accel = 2;
 static const uint MapType_Density = 3;
 
 // The positions of each particle
-RWStructuredBuffer<Particle> m_particles : register(u0);
+RWStructuredBuffer<PositionType> m_positions : register(u0);
+
+// The dynamics for each particle
+RWStructuredBuffer<DynamicsType> m_dynamics : register(u1);
 
 // The indices of particle positions sorted spatially
-RWStructuredBuffer<uint> m_spatial : register(u1);
+RWStructuredBuffer<uint> m_spatial : register(u2);
 
 // The lowest index (in m_spatial) for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_start : register(u2);
+RWStructuredBuffer<uint> m_idx_start : register(u3);
 
 // The number of positions for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_count : register(u3);
+RWStructuredBuffer<uint> m_idx_count : register(u4);
 
 // A buffer for passing back results
-RWStructuredBuffer<uint> m_output : register(u4);
+RWStructuredBuffer<uint> m_output : register(u5);
 
 // A texture for writing the density map to
-RWTexture2D<float4> m_tex_map : register(u5);
+RWTexture2D<float4> m_tex_map : register(u6);
 
 // General purpose group shared memory
 groupshared uint gs_memory[TotalSharedMemory];
 
 #include "../spatial_partition/spatial_partition.hlsli"
+
+// Return a particle from the particle and dynamics buffers
+inline Particle GetParticle(int i)
+{
+	Particle part;
+	part.pos = float4(m_positions[i].pos.xyz, 1);
+	part.vel = float4(m_dynamics[i].vel.xyz, 0);
+	part.acc = float4(m_dynamics[i].accel.xyz, 0);
+	part.colour = m_positions[i].col;
+	part.surface = float4(m_dynamics[i].surface.xyz, 0);
+	part.density = m_dynamics[i].density;
+	part.flags = m_dynamics[i].flags;
+	return part;
+}
 
 // A random direction vector (not normalised) in 2 or 3 dimensions with components in (-1,+1)
 inline float4 Random3WithDim(float2 seed, uniform int spatial_dimensions)
@@ -199,9 +212,44 @@ inline float DensityKernel(float normalised_distance, uniform int spatial_dimens
 }
 
 // True if 'particle' is a dead particle
-inline bool IsDeadParticle(Particle particle)
+inline bool IsDeadParticle(PositionType position)
 {
-	return any(isnan(particle.pos));
+	return any(isnan(position.pos));
+}
+
+// Update the 'density' property of each particle
+[numthreads(ThreadGroupSize, 1, 1)]
+void MeasureDensity(uint3 dtid : SV_DispatchThreadID)
+{
+	if (dtid.x >= Sim.NumParticles)
+		return;
+
+	Particle target = GetParticle(dtid.x);
+	
+	// Sample the environment for neighbours at the predicted particle position at TimeStep/2
+	float4 target_pos = target.pos + 0.5f * Sim.TimeStep * target.vel;
+	
+	// Weighted particle density
+	float density = 1.0f;
+	
+	// Search the neighbours of 'target'
+	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
+	while (DoFind(find, Sim.CellCount))
+	{
+		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
+		{
+			// Self already accounted for
+			if (m_spatial[i] == dtid.x)
+				continue;
+
+			Particle neighbour = GetParticle(m_spatial[i]);
+			float4 neighbour_pos = neighbour.pos + 0.5f * Sim.TimeStep * neighbour.vel;
+			float normalised_distance = length(neighbour_pos - target_pos) / Sim.ParticleRadius;
+			density += DensityKernel(normalised_distance, Sim.Dimensions, Sim.ParticleRadius);
+		}
+	}
+	
+	m_dynamics[dtid.x].density = density;
 }
 
 // Calculates forces at each particle position
@@ -211,19 +259,16 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 	if (dtid.x >= Sim.NumParticles)
 		return;
 
-	Particle target = m_particles[dtid.x];
+	Particle target = GetParticle(dtid.x);
+	
+	// Sample the environment for neighbours at the predicted particle position at TimeStep/2
+	float4 target_pos = target.pos + 0.5f * Sim.TimeStep * target.vel;
 	
 	// Apply gravity and thermal diffusion
 	float4 nett_accel = float4(0, 0, 0, 0);
 	nett_accel += Sim.Gravity;
 	nett_accel += Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions) * Sim.ThermalDiffusion;
-	
-	// Sample the environment for neighbours at the predicted particle position at TimeStep/2
-	float4 target_pos = target.pos + 0.5f * Sim.TimeStep * target.vel;
-	
-	// Weighted particle density
-	float density = 1.0f;
-	
+
 	// The weighted group velocity
 	float4 group_velocity = target.vel;
 	float group_velocity_weight = 1;
@@ -242,13 +287,9 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 			if (m_spatial[i] == dtid.x)
 				continue;
 
-			Particle neighbour = m_particles[m_spatial[i]];
-			float normalised_distance = length(neighbour.pos - target_pos) / Sim.ParticleRadius;
-
-			// Density
-			{
-				density += DensityKernel(normalised_distance, Sim.Dimensions, Sim.ParticleRadius);
-			}
+			Particle neighbour = GetParticle(m_spatial[i]);
+			float4 neighbour_pos = neighbour.pos + 0.5f * Sim.TimeStep * neighbour.vel;
+			float normalised_distance = length(neighbour_pos - target_pos) / Sim.ParticleRadius;
 
 			// Viscosity
 			{
@@ -276,15 +317,37 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 					// Get the separating vector and distance
 					float4 sep = t_pos_half_step - n_pos_half_step;
 					float distance = length(sep);
-					float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions));
+					float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions)); // points at target
 
 					// Calculate the acceleration due to particle forces
 					float force = ForceKernel(distance / Sim.ParticleRadius, Sim.ForceAmplitude, Sim.ForceBalance);
-					float4 accel = (Sim.ForceScale * target.density * neighbour.density * force) * direction;
+					float accel = Sim.ForceScale * target.density * neighbour.density * force;
 
+					//// If a particle is on the boundary, then it can't be accelerated into the boundary surface.
+					//// Any velocity the particle has will be in the plane of the boundary, so 'cross(velocity, cross(velocity, direction))'
+					//// is normal to the boundary surface.
+					//float4 t_direction = direction;
+					//float4 n_direction = direction;
+					//if (target.flags & ParticleFlag_Boundary)
+					//{
+					//	float4 boundary_normal = NormaliseOrZero(float4(cross(target.vel, cross(target.vel, direction.xyz)), 0));
+					//	t_direction -= dot(boundary_normal, t_direction) * boundary_normal;
+					//}
+					//if (neighbour.flags & ParticleFlag_Boundary)
+					//{
+					//	float4 boundary_normal = NormaliseOrZero(float4(cross(neighbour.vel, cross(neighbour.vel, -direction.xyz)), 0));
+					//	n_direction -= dot(boundary_normal, n_direction) * boundary_normal;
+					//}					
+					////can only be accelerated in the direction of the particles velocity
+					//// since collision detection will ensure the velocity is not into the boundary.
+					
+					////float4 t_accel = select(target.flags & ParticleFlag_Boundary, accel, accel)
+					////float4 n_accel = select(neighbour.flags & ParticleFlag_Boundary, accel, accel)
+
+					
 					// Update the particle velocities by the acceleration
-					t_vel += sub_step * accel;
-					n_vel -= sub_step * accel;
+					t_vel += sub_step * accel * direction;
+					n_vel -= sub_step * accel * direction;
 
 					// Advance the particles by a sub step
 					t_pos += t_vel * sub_step;
@@ -305,8 +368,7 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 	}
 	
 	// Record the nett force
-	m_particles[dtid.x].accel += nett_accel.xyz;
-	m_particles[dtid.x].density = density;
+	m_dynamics[dtid.x].accel.xyz += nett_accel.xyz;
 }
 
 // Apply an attractor to the particles
@@ -316,17 +378,19 @@ void ApplyProbe(uint3 dtid : SV_DispatchThreadID)
 	if (dtid.x >= Probe.NumParticles)
 		return;
 
+	Particle target = GetParticle(dtid.x);
+
 	// If the particle is within the probe radius apply a force toward the centre.
 	// Scale by inverse distance so that the centre of the probe isn't high pressure.
-	float4 r = m_particles[dtid.x].pos - Probe.Position;
+	float4 r = target.pos - Probe.Position;
 	float dist_sq = dot(r, r);
 	if (dist_sq < sqr(Probe.Radius))
 	{
 		float dist = sqrt(dist_sq);
 		float influence = saturate(dist / Probe.Radius); // 1 at range, 0 in the centre
 		float4 direction = dist > 0.0001f ? r / dist : float4(0, 0, 0, 0);
-		float4 force = influence * (Probe.Force * direction - m_particles[dtid.x].vel);
-		m_particles[dtid.x].accel += force.xyz; // Probe ignores mass
+		float4 force = influence * (Probe.Force * direction - target.vel);
+		m_dynamics[dtid.x].accel += force.xyz; // Probe ignores mass
 	}
 }
 
@@ -355,7 +419,7 @@ void CullParticles(uint3 dtid : SV_DispatchThreadID)
 		return;
 	
 	// If the source particle is dead then there is a dead particle in the dead range already. We're done
-	if (IsDeadParticle(m_particles[src_idx]))
+	if (IsDeadParticle(m_positions[src_idx]))
 		return;
 
 	// While 'dst_idx' is within the dead range, look up the next 'dst_idx'
@@ -364,7 +428,10 @@ void CullParticles(uint3 dtid : SV_DispatchThreadID)
 	
 	// If the destination index is not within the dead range then replace and we're done
 	if (dst_idx < dead_range.x || dst_idx >= dead_range.y)
-		m_particles[dst_idx] = m_particles[src_idx];
+	{
+		m_positions[dst_idx] = m_positions[src_idx];
+		m_dynamics[dst_idx] = m_dynamics[src_idx];
+	}
 }
 
 // Apply colours to the particles
@@ -374,28 +441,30 @@ void ColourParticles(uint3 dtid : SV_DispatchThreadID)
 	if (dtid.x >= Col.NumParticles)
 		return;
 
+	Particle target = GetParticle(dtid.x);
+	
 	int scheme = Col.Scheme & ColourScheme_MASK;
-	m_particles[dtid.x].col = Col.Colours.Spectrum[0];
+	m_positions[dtid.x].col = Col.Colours.Spectrum[0];
 
 	// Colour the particles based on their velocity
 	if (scheme == ColourScheme_Velocity)
 	{
-		float speed = length(m_particles[dtid.x].vel);
-		m_particles[dtid.x].col = LerpColour(speed, Col.Colours);
+		float speed = length(target.vel);
+		m_positions[dtid.x].col = LerpColour(speed, Col.Colours);
 	}
 	
 	// Colour the particles based on their density
 	if (scheme == ColourScheme_Accel)
 	{
-		float accel = length(m_particles[dtid.x].accel);
-		m_particles[dtid.x].col = LerpColour(accel, Col.Colours);
+		float accel = length(target.acc);
+		m_positions[dtid.x].col = LerpColour(accel, Col.Colours);
 	}
 
 	// Colour particles within the probe radius
 	if (scheme == ColourScheme_Density)
 	{
-		float density = length(m_particles[dtid.x].density);
-		m_particles[dtid.x].col = LerpColour(density, Col.Colours);
+		float density = length(target.density);
+		m_positions[dtid.x].col = LerpColour(density, Col.Colours);
 	}
 }
 
@@ -417,7 +486,7 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
-			Particle neighbour = m_particles[m_spatial[i]];
+			Particle neighbour = GetParticle(m_spatial[i]);
 
 			float4 direction = pos - neighbour.pos;
 			float distance_sq = dot(direction, direction);

@@ -14,15 +14,19 @@ namespace pr::fluid
 			Grid,
 		};
 
-		std::vector<Particle> m_particles;
+		std::vector<fluid::Particle> m_particles;
+		std::vector<fluid::Dynamics> m_dynamics;
 		CollisionBuilder m_col;
 		ldr::Builder m_ldr;
 
 		explicit Scene3d(int particle_count)
 			: m_col()
 			, m_ldr()
-			, m_particles(ParticleInitData(EFillStyle::Random, particle_count))
+			, m_particles(particle_count)
+			, m_dynamics(particle_count)
 		{
+			ParticleInitData(EFillStyle::Lattice, m_particles, m_dynamics);
+
 			m4x4 o2w;
 			//v4 dim;
 
@@ -87,9 +91,15 @@ namespace pr::fluid
 		}
 
 		// Returns initialisation data for the particles.
-		std::span<Particle const> Particles() const override
+		std::span<fluid::Particle const> Particles() const override
 		{
-			return {};//m_particles;
+			return m_particles;
+		}
+
+		// Returns initialisation data for the particle dynamics.
+		std::span<fluid::Dynamics const> Dynamics() const override
+		{
+			return m_dynamics;
 		}
 
 		// Return the collision
@@ -119,14 +129,26 @@ namespace pr::fluid
 		}
 
 		// Create particles
-		static std::vector<Particle> ParticleInitData(EFillStyle style, int count)
+		static void ParticleInitData(EFillStyle style, std::span<fluid::Particle> particles, std::span<fluid::Dynamics> dynamics)
 		{
-			std::vector<Particle> particles;
-			particles.reserve(count);
+			assert(particles.size() == dynamics.size());
+			int idx = 0, count = isize(particles);
 			auto points = [&](v4 p, v4 v)
 			{
 				assert(p.w == 1 && v.w == 0);
-				particles.push_back(Particle{ .pos = p, .col = v4::One(), .vel = v, .acc = {}, .density = 0.0f });
+				particles[idx] = fluid::Particle{
+					.pos = p,
+					.col = v4::One(),
+				};
+				dynamics[idx] = fluid::Dynamics{
+					.vel = v.xyz,
+					.pad = 0,
+					.accel = v3::Zero(),
+					.density = 0,
+					.surface = v3::Zero(),
+					.flags = 0,
+				};
+				++idx;
 			};
 
 			const float hwidth = 0.5f;
@@ -209,8 +231,6 @@ namespace pr::fluid
 					break;
 				}
 			}
-
-			return particles;
 		}
 	};
 }
