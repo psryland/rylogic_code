@@ -5,6 +5,7 @@
 #include "../common/geometry.hlsli"
 #include "../common/utility.hlsli"
 #include "../particle_collision/particle.hlsli"
+#include "../particle_collision/collision.hlsli"
 
 #ifndef THREAD_GROUP_SIZE
 #define THREAD_GROUP_SIZE 1024U
@@ -44,9 +45,12 @@ cbuffer cbFluidSim : register(b0)
 		int RandomSeed;         // Seed value for the RNG
 
 		float ForceScale;       // The force scaling factor
-		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
-		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
+		float ForceRange;       // Controls the range between particles
+		float ForceBalance;     // The position of the transition from repulsive to attractive forces
+		float ForceDip;         // The depth of the attractive force
+
 		float Viscosity;        // The viscosity scaler
+		float3 pad;
 	} Sim;
 };
 cbuffer cbProbeData : register(b0)
@@ -80,19 +84,22 @@ cbuffer cbMapData : register(b0)
 {
 	struct
 	{
-		float4x4 MapToWorld;  // Transform from map space to world space (including scale)
-		ColourData Colours;     // Colouring data
-		int2 TexDim;          // The dimensions of the map texture
+		float4x4 MapToWorld;   // Transform from map space to world space (including scale)
+		ColourData Colours;    // Colouring data
+		int2 TexDim;           // The dimensions of the map texture
 
-		int Type;             // 0 = Pressure
-		int Dimensions;         // 2D or 3D simulation
-		int CellCount;        // The number of grid cells in the spatial partition
-		float GridScale;      // The scale factor for the spatial partition grid
+		int Type;              // 0 = Pressure
+		int Dimensions;        // 2D or 3D simulation
+		int CellCount;         // The number of grid cells in the spatial partition
+		float GridScale;       // The scale factor for the spatial partition grid
 		
-		float ParticleRadius; // The particle radius
-		float ForceScale;     // The force scaling factor
-		float ForceAmplitude;   // The magnitude of the force profile at X = 0 
-		float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
+		float ForceScale;      // The force scaling factor
+		float ForceRange;       // Controls the range between particles
+		float ForceBalance;     // The position of the transition from repulsive to attractive forces
+		float ForceDip;         // The depth of the attractive force
+
+		float ParticleRadius;  // The particle radius
+		float3 pad;
 	} Map;
 };
 
@@ -129,7 +136,15 @@ RWStructuredBuffer<uint> m_output : register(u5);
 RWTexture2D<float4> m_tex_map : register(u6);
 
 // General purpose group shared memory
-groupshared uint gs_memory[TotalSharedMemory];
+//groupshared uint gs_memory[TotalSharedMemory];
+static const int MaxNeighboursParticle = 50;
+struct Neighbour
+{
+	float4 pos;
+	float4 vel;
+};
+groupshared float4 gs_neighbours[ThreadGroupSize][MaxNeighboursParticle];
+
 
 #include "../spatial_partition/spatial_partition.hlsli"
 
@@ -170,21 +185,30 @@ inline float4 LerpColour(float value, uniform ColourData col)
 	return col.Spectrum[3];
 }
 
-// The influence at normalised 'distance' from a particle
-inline float ForceKernel(float normalised_distance, uniform float amplitude, uniform float balance)
+// The force at normalised 'distance' from a particle. I.e. Force as a function of distance.
+inline float ForceKernel(float normalised_distance, uniform float range, uniform float balance, uniform float dip)
 {
-	// Functions:
-	//   a(x) = -x + B
-	//   b(x) = 2.x^3 - 3.x^2 + 1
-	//   Profile(x) = (A/B).a(x).b(x)
-	// 
-	// Controls:
-	//  A = amplitude = the value at X = 0
-	//  B = balance point = (0,1] = Controls where the profile goes below zero or where the forces balance
-	float x = clamp(normalised_distance, 0.0f, 1.0f);
-	float a = -x + balance;
-	float b = 2.0f * cube(x) - 3.0f * sqr(x) + 1.0f;
-	return (amplitude / balance) * a * b;
+	// 'range' scales the repulsive force effectively making it act at greater range. [0,inf) (typically 1.0)
+	// 'balance' is the position of the switch from the repulsive to the attractive force. [0,1] (typically ~0.8)
+	// 'dip' is the depth of the attractive force [0,inf) (typically ~0.1
+	// The function is a piecewise function created from:
+	//  Repulsive force: (range * balance / x) * sqr(1 - x/balance), for x in [0,balance]
+	//  Attractive force: -dip * sqr(sqr(Cx - C + 1) - 1), where C = 2 / (1 - balance), for x in [balance,1]
+	float x = clamp(normalised_distance, 0.001f, 1.0f);
+	float C = 2.0f / (1.0f - balance);
+	return select(x <= range,
+		+(range * balance / x) * sqr(1.0f - x / range),
+		-(dip) * sqr(sqr(C * x - C + 1) - 1));
+}
+inline float dForceKernal(float normalised_distance, uniform float range, uniform float balance, uniform float dip)
+{
+	// The slope of the Repulsive force is: (range/balance) - range * balance / sqr(x)
+	// The slope of the attractive force is: -4 * dip * C * (C * x - C + 1) * (sqr(C * x - C + 1) - 1), where C = 2 / (1 - balance)
+	float x = clamp(normalised_distance, 0.0001f, 1.0f);
+	float C = 2.0f / (1.0f - balance);
+	return select(x <= range,
+		(range / balance) - (range * balance / sqr(x)),
+		-4.0f * dip * C * (C * x - C + 1) * (sqr(C * x - C + 1) - 1));
 }
 
 // The influence at normalised 'distance' from a particle
@@ -215,6 +239,62 @@ inline float DensityKernel(float normalised_distance, uniform int spatial_dimens
 inline bool IsDeadParticle(PositionType position)
 {
 	return any(isnan(position.pos));
+}
+
+// Calculates the acceleration experienced at 'target' as a result of the interaction between 'target' and 'neighbour'
+inline float4 ParticleInteraction(uniform int idx, Particle target, Particle neighbour, float time_step)
+{
+	// Integration stability is an issue because the force kernel is asymptotic at x = 0.
+	// Concepts:
+	//  - If we had infinitesimal 'dt' steps, the acceleration would fall sharply as the particles moved apart.
+	//  - If we do the calculation relative to one of the particles, we only need to do half the calculations.
+	//  - For each change in distance between the particles, the relative velocity changes by the area under the
+	//    ForceKernel curve, evaluated from dist0 to dist1 (direction is centre to centre).
+	//  - We can stop when the particle velocity is moving away and the range is greater than the particle radius.
+	//
+	// Constrain the step size based on distance travelled, whichever is smaller min(vel * dt, ParticleRadius / N).
+	// For each step, we want to integrate the ForceKernel based on the distance between the particles.
+	
+	const float SubSteps = 10.0f;
+	const float MaxStepLength = Sim.ParticleRadius / SubSteps;
+	const float MaxStepTime = time_step / SubSteps;
+	
+	// Get the relative position and velocity. Treat 'target' as stationary.
+	float4 pos0 = neighbour.pos - target.pos;
+	float4 vel0 = neighbour.vel - target.vel;
+	float4 pos = pos0;
+	float4 vel = vel0;
+	float time_remaining = time_step;
+
+	// Integrate the force kernel over the step
+	for (int max_steps = 100; max_steps-- != 0 && time_remaining != 0;)
+	{
+		// If the particle is moving away and out of range, then there is no more influence from it
+		float dist_sq = length_sq(pos);
+		if (dot(pos, vel) >= 0 && dist_sq >= sqr(Sim.ParticleRadius))
+			break;
+
+		// Determine a step time / size
+		float dt = min(MaxStepTime, time_remaining);
+		dt = select(length_sq(vel * dt) > sqr(MaxStepLength), MaxStepLength / length(vel), dt);
+
+		// Integrate the force kernel over the step
+		{
+			float4 hstep = pos + 0.5f * vel * dt;
+			float hstep_dist = length(hstep);
+			float force = ForceKernel(hstep_dist / Sim.ParticleRadius, Sim.ForceRange, Sim.ForceBalance, Sim.ForceDip) * Sim.ForceScale;
+			float4 direction = select(hstep_dist != 0, hstep / hstep_dist, Random3WithDim(float2(idx, Sim.RandomSeed), Sim.Dimensions));
+			vel += force * /*target.density * neighbour.density **/ direction;
+		}
+
+		// Advance the particles by the step
+		pos += vel * dt;
+		time_remaining -= dt;
+	}
+
+	// 'vel' is the expected final relative velocity of 'neighbour'. 'vel - vel0' is an acceleration that gives this result.
+	// The acceleration is shared between both particles, and we're returning the acceleration for 'target'.
+	return -0.5f * (vel - vel0);
 }
 
 // Update the 'density' property of each particle
@@ -254,7 +334,7 @@ void MeasureDensity(uint3 dtid : SV_DispatchThreadID)
 
 // Calculates forces at each particle position
 [numthreads(ThreadGroupSize, 1, 1)]
-void ApplyForces(uint3 dtid : SV_DispatchThreadID)
+void ApplyForces(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID)
 {
 	if (dtid.x >= Sim.NumParticles)
 		return;
@@ -273,9 +353,10 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 	float4 group_velocity = target.vel;
 	float group_velocity_weight = 1;
 
-	// Acceleration integration sub-step 
-	const int sub_steps = 5;
-	const float sub_step = Sim.TimeStep / sub_steps;
+	// Get the range of shared memory available to this thread.
+	
+	//gs_neighbours[gtid.x]
+	
 	
 	// Search the neighbours of 'target'
 	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
@@ -301,62 +382,7 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 			}
 			
 			// Acceleration
-			{
-				float4 t_pos = target.pos;
-				float4 n_pos = neighbour.pos;
-				float4 t_vel = target.vel;
-				float4 n_vel = neighbour.vel;
-
-				// Calculate sub-steps for a more accurate acceleration calculation
-				[unroll] for (int k = 0; k != sub_steps; ++k)
-				{
-					// Advance the particles by a half step
-					float4 t_pos_half_step = t_pos + 0.5f * sub_step * t_vel;
-					float4 n_pos_half_step = n_pos + 0.5f * sub_step * n_vel;
-
-					// Get the separating vector and distance
-					float4 sep = t_pos_half_step - n_pos_half_step;
-					float distance = length(sep);
-					float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions)); // points at target
-
-					// Calculate the acceleration due to particle forces
-					float force = ForceKernel(distance / Sim.ParticleRadius, Sim.ForceAmplitude, Sim.ForceBalance);
-					float accel = Sim.ForceScale * target.density * neighbour.density * force;
-
-					//// If a particle is on the boundary, then it can't be accelerated into the boundary surface.
-					//// Any velocity the particle has will be in the plane of the boundary, so 'cross(velocity, cross(velocity, direction))'
-					//// is normal to the boundary surface.
-					//float4 t_direction = direction;
-					//float4 n_direction = direction;
-					//if (target.flags & ParticleFlag_Boundary)
-					//{
-					//	float4 boundary_normal = NormaliseOrZero(float4(cross(target.vel, cross(target.vel, direction.xyz)), 0));
-					//	t_direction -= dot(boundary_normal, t_direction) * boundary_normal;
-					//}
-					//if (neighbour.flags & ParticleFlag_Boundary)
-					//{
-					//	float4 boundary_normal = NormaliseOrZero(float4(cross(neighbour.vel, cross(neighbour.vel, -direction.xyz)), 0));
-					//	n_direction -= dot(boundary_normal, n_direction) * boundary_normal;
-					//}					
-					////can only be accelerated in the direction of the particles velocity
-					//// since collision detection will ensure the velocity is not into the boundary.
-					
-					////float4 t_accel = select(target.flags & ParticleFlag_Boundary, accel, accel)
-					////float4 n_accel = select(neighbour.flags & ParticleFlag_Boundary, accel, accel)
-
-					
-					// Update the particle velocities by the acceleration
-					t_vel += sub_step * accel * direction;
-					n_vel -= sub_step * accel * direction;
-
-					// Advance the particles by a sub step
-					t_pos += t_vel * sub_step;
-					n_pos += n_vel * sub_step;
-				}
-			
-				// 't_pos' and 't_vel' is where the particle should end up, calculate an acceleration that gives this result
-				nett_accel += t_vel - target.vel;
-			}
+			nett_accel += ParticleInteraction(dtid.x, target, neighbour, Sim.TimeStep);
 		}
 	}
 
@@ -366,6 +392,10 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID)
 		group_velocity *= 1.0f / group_velocity_weight;
 		nett_accel += (group_velocity - target_vel) / Sim.TimeStep;
 	}
+
+
+	//// If the particle is on a boundary, don't allow acceleration into the boundary
+	//nett_accel -= dot(nett_accel, target.surface) * target.surface;
 	
 	// Record the nett force
 	m_dynamics[dtid.x].accel.xyz += nett_accel.xyz;
@@ -496,7 +526,6 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 			// Get the normalised direction vector to 'neighbour'
 			float distance = sqrt(distance_sq);
 			direction = distance > 0.0001f ? direction / distance : normalize(Random3WithDim(float2(dtid.x, 0), Map.Dimensions));
-			float normalised_distance = distance / Map.ParticleRadius;
 
 			if (Map.Type == MapType_Velocity)
 			{
@@ -506,12 +535,13 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 			if (Map.Type == MapType_Accel)
 			{
 				// Add up the nett force
-				value += (Map.ForceScale * ForceKernel(normalised_distance, Map.ForceAmplitude, Map.ForceBalance)) * direction;
+				float force = ForceKernel(distance / Map.ParticleRadius, Map.ForceRange, Map.ForceBalance, Map.ForceDip);
+				value += (Map.ForceScale * force) * direction;
 			}
 			if (Map.Type == MapType_Density)
 			{
 				// Add up the density
-				value += DensityKernel(normalised_distance, Map.Dimensions, Map.ParticleRadius);
+				value += DensityKernel(distance / Map.ParticleRadius, Map.Dimensions, Map.ParticleRadius);
 			}
 		}
 	}
@@ -519,3 +549,60 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 	// Write the density to the map
 	m_tex_map[uint2(dtid.x, dtid.y)] = LerpColour(length(value), Map.Colours);
 }
+
+
+
+
+
+
+
+			#if 0 // Good version
+			{
+				// Acceleration integration sub-step 
+				const int sub_steps = 5;
+				const float sub_step = Sim.TimeStep / sub_steps;
+
+				float4 t_pos = target.pos;
+				float4 n_pos = neighbour.pos;
+				float4 t_vel = target.vel;
+				float4 n_vel = neighbour.vel;
+
+				// Calculate sub-steps for a more accurate acceleration calculation
+				[unroll] for (int k = 0; k != sub_steps; ++k)
+				{
+					// Advance the particles by a half step
+					float4 t_pos_half_step = t_pos + 0.5f * sub_step * t_vel;
+					float4 n_pos_half_step = n_pos + 0.5f * sub_step * n_vel;
+
+					// Get the separating vector and distance
+					float4 sep = t_pos_half_step - n_pos_half_step;
+					float distance = length(sep);
+					float4 direction = select(distance != 0, sep / distance, Random3WithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions)); // points at target
+
+					// Calculate the acceleration due to particle forces
+					float force = ForceKernel(distance / Sim.ParticleRadius, Sim.ForceRange, Sim.ForceBalance, Sim.ForceDip);
+					float accel = Sim.ForceScale * target.density * neighbour.density * force;
+
+					// TODO Accel based sub step size
+					
+					// If a particle is on the boundary, then it can't be accelerated into the boundary surface.
+					// Instead the acceleration is reflected
+					float4 t_accel = +accel * direction;
+					float4 n_accel = -accel * direction;
+
+					t_accel -= max(0, 2 * dot(t_accel, target.surface)) * target.surface;
+					n_accel -= max(0, 2 * dot(n_accel, neighbour.surface)) * neighbour.surface;
+					
+					// Update the particle velocities by the acceleration
+					t_vel += sub_step * t_accel;
+					n_vel += sub_step * n_accel;
+
+					// Advance the particles by a sub step
+					t_pos += t_vel * sub_step;
+					n_pos += n_vel * sub_step;
+				}
+			
+				// 't_pos' and 't_vel' is where the particle should end up, calculate an acceleration that gives this result
+				nett_accel += t_vel - target.vel;
+			}
+			#endif

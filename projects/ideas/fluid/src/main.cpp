@@ -24,7 +24,7 @@ struct Main :Form, IProbeActions
 		FreeRun,
 	};
 
-	inline static constexpr int MaxParticleCount = 50000;//00;//946;//100;//30 * 30;
+	inline static constexpr int MaxParticleCount = 10000;//946;//100;//30 * 30;
 	inline static constexpr float ParticleRadius = 0.05f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* ParticleLayout = L"struct Particle { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
@@ -117,6 +117,9 @@ struct Main :Form, IProbeActions
 		Tweakables::filepath = "E:/Rylogic/projects/ideas/fluid/tweakables.ini";
 		ApplyTweakables();
 
+		//rdr12::FeatureSupport features(m_rdr.d3d());
+		//.Adapter();
+
 		// Load the next demo scene
 		NextScene();
 
@@ -124,6 +127,10 @@ struct Main :Form, IProbeActions
 		m_loop.AddLoop(10, false, [this](int64_t dt)
 		{
 			auto elapsed_s = dt * 0.001f;
+
+			//hack
+			//elapsed_s *= 0.1f;
+
 			switch (m_run_mode)
 			{
 				case ERunMode::Paused:
@@ -181,14 +188,15 @@ struct Main :Form, IProbeActions
 	{
 		bool read_back = true;
 
+		// Colour the particles
+		m_fluid_sim.UpdateColours(m_job, m_colour_data);
+
 		// Apply the probe
 		m_probe.Step(m_job, elapsed_s);
 
 		// Step the simulation
 		m_fluid_sim.Step(m_job, elapsed_s, read_back);
 
-		// Colour the particles
-		m_fluid_sim.UpdateColours(m_job, m_colour_data);
 
 		// Run the jobs
 		m_job.Run();
@@ -277,14 +285,16 @@ struct Main :Form, IProbeActions
 	{
 		Tweakable<float, "Gravity"> Gravity = 0.1f;
 		Tweakable<float, "ForceScale"> ForceScale = 10.0f;
-		Tweakable<float, "ForceAmplitude"> ForceAmplitude = 1.0f;
-		Tweakable<float, "ForceBalance"> ForceBalance = 0.7f;
+		Tweakable<float, "ForceRange"> ForceRange = 1.0f;
+		Tweakable<float, "ForceBalance"> ForceBalance = 0.8f;
+		Tweakable<float, "ForceDip"> ForceDip = 0.05f;
 		Tweakable<float, "Viscosity"> Viscosity = 10.0f;
 		Tweakable<float, "ThermalDiffusion"> ThermalDiffusion = 0.01f;
 		m_fluid_sim.Config.Dyn.Gravity = v4(0, -9.8f, 0, 0) * Gravity;
 		m_fluid_sim.Config.Dyn.ForceScale = ForceScale;
-		m_fluid_sim.Config.Dyn.ForceAmplitude = ForceAmplitude;
+		m_fluid_sim.Config.Dyn.ForceRange = ForceRange;
 		m_fluid_sim.Config.Dyn.ForceBalance = ForceBalance;
+		m_fluid_sim.Config.Dyn.ForceDip = ForceDip;
 		m_fluid_sim.Config.Dyn.Viscosity = Viscosity;
 		m_fluid_sim.Config.Dyn.ThermalDiffusion = ThermalDiffusion;
 

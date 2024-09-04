@@ -103,8 +103,9 @@ namespace pr::rdr12::compute::fluid
 			{
 				v4 Gravity = { 0, -9.8f, 0, 0 }; // The acceleration due to gravity
 				float ForceScale = 10.0f;        // The force scaling factor
-				float ForceAmplitude = 1.0f;     // The magnitude of the force profile at X = 0 
-				float ForceBalance = 0.7f;       // The X value of the Y = 0 intercept in the force profile
+				float ForceRange = 1.0f;         // Controls the range between particles
+				float ForceBalance = 0.8f;       // The position of the transition from repulsive to attractive forces
+				float ForceDip = 0.05f;          // The depth of the attractive force
 				float Viscosity = 0.05f;         // The viscosity scaler
 				float ThermalDiffusion = 0.01f;  // The thermal diffusion rate
 				int Pad = 0;
@@ -413,9 +414,10 @@ namespace pr::rdr12::compute::fluid
 
 	private:
 
-		static constexpr int ThreadGroupSize = 1024;
+		static constexpr int ThreadGroupSize = 32;
 		using float4x4 = pr::m4x4;
 		using float4 = pr::v4;
+		using float3 = pr::v3;
 		using float2 = pr::v2;
 		using int2 = pr::iv2;
 
@@ -451,9 +453,12 @@ namespace pr::rdr12::compute::fluid
 			int RandomSeed;         // Seed value for the RNG
 
 			float ForceScale;       // The force scaling factor
-			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
-			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
+			float ForceRange;       // Controls the range between particles
+			float ForceBalance;     // The position of the transition from repulsive to attractive forces
+			float ForceDip;         // The depth of the attractive force
+
 			float Viscosity;        // The viscosity scaler
+			float3 pad;
 		};
 		struct cbProbeData
 		{
@@ -480,14 +485,19 @@ namespace pr::rdr12::compute::fluid
 			float4 Spectrum[4];     // The colour scale to use
 			float2 Range;           // Scales [0,1] to the colour range
 			int2 TexDim;            // The dimensions of the map texture
+
 			int Type;               // 0 = Pressure
 			int Dimensions;         // 2D or 3D simulation
 			int CellCount;          // The number of grid cells in the spatial partition
 			float GridScale;        // The scale factor for the spatial partition grid
-			float ParticleRadius;   // The particle radius
+
 			float ForceScale;       // The force scaling factor
-			float ForceAmplitude;   // The magnitude of the force profile at X = 0 
-			float ForceBalance;     // The X value of the Y = 0 intercept in the force profile
+			float ForceRange;       // Controls the range between particles
+			float ForceBalance;     // The position of the transition from repulsive to attractive forces
+			float ForceDip;         // The depth of the attractive force
+
+			float ParticleRadius;   // The particle radius
+			float3 pad;
 		};
 
 		// Create constant buffer data for the fluid simulation
@@ -504,9 +514,11 @@ namespace pr::rdr12::compute::fluid
 				.ThermalDiffusion = Config.Dyn.ThermalDiffusion,
 				.RandomSeed = m_frame,
 				.ForceScale = Config.Dyn.ForceScale,
-				.ForceAmplitude = Config.Dyn.ForceAmplitude,
+				.ForceRange = Config.Dyn.ForceRange,
 				.ForceBalance = Config.Dyn.ForceBalance,
+				.ForceDip = Config.Dyn.ForceDip,
 				.Viscosity = Config.Dyn.Viscosity,
+				.pad = {},
 			};
 		};
 		cbProbeData ProbeCBuf(ProbeData const& probe) const
@@ -555,10 +567,12 @@ namespace pr::rdr12::compute::fluid
 				.Dimensions = m_collision.Config.SpatialDimensions,
 				.CellCount = m_spatial.Config.CellCount,
 				.GridScale = m_spatial.Config.GridScale,
-				.ParticleRadius = Config.Particles.Radius,
 				.ForceScale = Config.Dyn.ForceScale,
-				.ForceAmplitude = Config.Dyn.ForceAmplitude,
+				.ForceRange = Config.Dyn.ForceRange,
 				.ForceBalance = Config.Dyn.ForceBalance,
+				.ForceDip = Config.Dyn.ForceDip,
+				.ParticleRadius = Config.Particles.Radius,
+				.pad = {},
 			};
 		}
 
@@ -571,6 +585,7 @@ namespace pr::rdr12::compute::fluid
 				.Includes({ new ResourceIncludeHandler, true })
 				.Define(L"POSITION_TYPE", position_layout)
 				.Define(L"DYNAMICS_TYPE", dynamics_layout)
+				.Define(L"THREAD_GROUP_SIZE", std::to_wstring(ThreadGroupSize))
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 
@@ -701,12 +716,12 @@ namespace pr::rdr12::compute::fluid
 		
 			job.m_cmd_list.SetPipelineState(m_cs_measure_density.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_measure_density.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 		
 			job.m_barriers.UAV(m_r_particles.get());
@@ -726,12 +741,12 @@ namespace pr::rdr12::compute::fluid
 		
 			job.m_cmd_list.SetPipelineState(m_cs_apply_forces.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_forces.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 		
 			job.m_barriers.UAV(m_r_particles.get());
@@ -751,9 +766,9 @@ namespace pr::rdr12::compute::fluid
 
 			job.m_cmd_list.SetPipelineState(m_cs_apply_probe.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_apply_probe.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_probe);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_probe);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_probe.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -773,13 +788,13 @@ namespace pr::rdr12::compute::fluid
 
 			job.m_cmd_list.SetPipelineState(m_cs_cull_particles.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_cull_particles.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(6, m_r_output->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -810,9 +825,9 @@ namespace pr::rdr12::compute::fluid
 
 			job.m_cmd_list.SetPipelineState(m_cs_colour.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_colour.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_colours);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_colours);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_colours.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(m_r_particles.get());
@@ -832,13 +847,13 @@ namespace pr::rdr12::compute::fluid
 
 			job.m_cmd_list.SetPipelineState(m_cs_gen_map.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_gen_map.m_sig.get());
-			job.m_cmd_list.SetComputeRootConstantBufferView(0, job.m_upload.Add(cb_map, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true));
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(4, m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(5, m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootDescriptorTable(5, job.m_view_heap.Add(tex_map->m_uav));
+			job.m_cmd_list.AddComputeRootConstantBufferView(job.m_upload.Add(cb_map, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, true));
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootDescriptorTable(job.m_view_heap.Add(tex_map->m_uav));
 			job.m_cmd_list.Dispatch(DispatchCount({ cb_map.TexDim, 1 }, { 32, 32, 1 }));
 
 			job.m_barriers.UAV(tex_map->m_res.get());

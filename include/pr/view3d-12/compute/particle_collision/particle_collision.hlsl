@@ -152,6 +152,8 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 
 	// Reset particle dynamics/states
 	target.acc = float4(0,0,0,0);
+	target.surface = float4(0,0,0,0);
+	target.flags = 0;
 	
 	// Repeat until ray consumed
 	for (int attempt = 0; ; ++attempt)
@@ -172,6 +174,8 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		{
 			target.pos += ray * t;
 			target.vel = select(attempt != MaxCollisionResolutionSteps, vel1, float4(0,0,0,0));
+			if (attempt == MaxCollisionResolutionSteps)
+				target.colour = float4(1,0,1,1);
 			break;
 		}
 		
@@ -200,19 +204,28 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		if (dot(vel1, normal) < 0)
 		{
 			// Remove the normal component of the velocity
-			vel0 = vel0 - dot(vel0, normal) * normal;
-			vel1 = vel1 - dot(vel1, normal) * normal;
+			vel0 -= dot(vel0, normal) * normal;
+			vel1 -= dot(vel1, normal) * normal;
 
 			// Remove the normal component of the acceleration
-			acc = acc - dot(acc, normal) * normal;
+			acc -= dot(acc, normal) * normal;
+
+			target.surface = normal;
+			target.flags = ParticleFlag_Boundary;
+
+			// Use for testing boundaries
+			// target.colour = float4(0,1,0,1);
 		}
 	}
 	target.pos = CullCheck(target.pos, Flags & Cull_Mask);
 
 	// Update the particle dynamics
 	m_positions[dtid.x].pos.xyz = target.pos.xyz;
+	m_positions[dtid.x].col = target.colour;
 	m_dynamics[dtid.x].vel.xyz = target.vel.xyz;
 	m_dynamics[dtid.x].accel.xyz = target.acc.xyz;
+	m_dynamics[dtid.x].surface.xyz = target.surface.xyz;
+	m_dynamics[dtid.x].flags = target.flags;
 }
 
 // Apply a force from surfaces to reduce collisions for particles at rest.

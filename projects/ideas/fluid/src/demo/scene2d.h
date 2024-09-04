@@ -142,10 +142,11 @@ namespace pr::fluid
 			{
 				case EFillStyle::Point:
 				{
-					//points(v4(0, 0, 0, 1), v4(0.0f, 0, 0, 0));
-					points(v4(-0.1f, 0, 0, 1), v4(+1.0f, 0, 0, 0));
-					points(v4(+0.1f, 0, 0, 1), v4(-1.0f, 0, 0, 0));
-					//points(v4(0.1f, 0.1f, 0, 1), v4(0, -1.0f, 0, 0));
+					for (int i = 0; i != isize(particles); ++i)
+						points(v4(0.0f, 0.0f + i*0.1f, 0, 1), v4(0, 0, 0, 0));
+				
+					//points(v4(-0.1f, 0, 0, 1), v4(+1.0f, 0, 0, 0));
+					//points(v4(+0.1f, 0, 0, 1), v4(-1.0f, 0, 0, 0));
 					for (; isize(particles) != count;)
 						points(v4(0, 0, 0, 1), v4(0, 0, 0, 0));
 					break;
