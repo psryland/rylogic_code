@@ -8,7 +8,7 @@
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
 
-// Component square function
+// Component square functions
 inline uint sqr(uint v)
 {
 	return v * v;
@@ -30,6 +30,7 @@ inline float4 sqr(float4 v)
 	return v * v;
 }
 
+// Component cube functions
 inline float cube(float v)
 {
 	return v * v * v;
@@ -47,6 +48,7 @@ inline float4 cube(float4 v)
 	return v * v * v;
 }
 
+// Component signed square function
 inline float signed_sqr(float v)
 {
 	return sign(v) * sqr(v);
@@ -88,6 +90,24 @@ inline void swap(inout float4 a, inout float4 b)
 	float4 t = a;
 	a = b;
 	b = t;
+}
+
+// Length squared functions
+inline float length_sq(float a)
+{
+	return dot(a, a);
+}
+inline float length_sq(float2 a)
+{
+	return dot(a, a);
+}
+inline float length_sq(float3 a)
+{
+	return dot(a, a);
+}
+inline float length_sq(float4 a)
+{
+	return dot(a, a);
 }
 
 // Some the components of a float4

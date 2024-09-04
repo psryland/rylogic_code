@@ -52,7 +52,7 @@ namespace pr::fluid
 			m_gfx_fluid.m_model = m_rdr->res().CreateModel(mdesc, particle_buffer, nullptr);
 			m_gfx_fluid.m_model->CreateNugget(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 				.use_shader(ERenderStep::RenderForward, m_gs_points)
-				.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteSphere))
+				.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
 				.irange(0, 0));
 			m_gfx_fluid.m_i2w = m4x4::Identity();
 		}

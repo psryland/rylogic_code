@@ -45,12 +45,14 @@ namespace pr::rdr12
 		std::thread::id m_thread_id;     // The thread id of the thread that called Reset.
 		ResStateStore m_res_state;       // Track the state of resources used in this command list
 		pool_t* m_pool;                  // The pool to return this list too. (can be null)
+		UINT m_root_sig_idx;             // The index of the next root parameter to add
 
 		CmdList(D3DPtr<ICommandList> list, alloc_t&& cmd_alloc, pool_t* pool)
 			: m_list(list)
 			, m_cmd_allocator(std::move(cmd_alloc))
 			, m_thread_id(std::this_thread::get_id())
 			, m_pool(pool)
+			, m_root_sig_idx()
 		{}
 
 	public:
@@ -206,13 +208,6 @@ namespace pr::rdr12
 	
 	public : // Graphics
 
-		// Set the signature for the command list
-		void SetGraphicsRootSignature(ID3D12RootSignature* signature)
-		{
-			ThrowOnCrossThreadUse();
-			m_list->SetGraphicsRootSignature(signature);
-		}
-
 		// Reset a render target to a single colour
 		void ClearRenderTargetView(D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView, FLOAT const ColorRGBA[4], std::span<D3D12_RECT const> rects = {})
 		{
@@ -261,13 +256,6 @@ namespace pr::rdr12
 			m_list->IASetIndexBuffer(view);
 		}
 
-		// Set a compute shader's root parameter descriptor table
-		template <RootParamIdx Idx>
-		void SetGraphicsRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor)
-		{
-			m_list->SetGraphicsRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
-		}
-
 		// Dispatch a draw shader
 		void DrawInstanced(size_t VertexCountPerInstance, size_t InstanceCount, size_t StartVertexLocation, size_t StartInstanceLocation)
 		{
@@ -284,6 +272,16 @@ namespace pr::rdr12
 				s_cast<UINT>(StartIndexLocation), s_cast<INT>(BaseVertexLocation), s_cast<UINT>(StartInstanceLocation));
 		}
 
+		// Dispatch a compute shader
+		void Dispatch(int ThreadGroupCountX, int ThreadGroupCountY, int ThreadGroupCountZ)
+		{
+			m_list->Dispatch(s_cast<UINT>(ThreadGroupCountX), s_cast<UINT>(ThreadGroupCountY), s_cast<UINT>(ThreadGroupCountZ));
+		}
+		void Dispatch(iv3 ThreadGroupCount)
+		{
+			m_list->Dispatch(s_cast<UINT>(ThreadGroupCount.x), s_cast<UINT>(ThreadGroupCount.y), s_cast<UINT>(ThreadGroupCount.z));
+		}
+
 		// Resolve an MSAA texture to a non-MSAA texture
 		void ResolveSubresource(ID3D12Resource* pDstResource, ID3D12Resource* pSrcResource, DXGI_FORMAT Format)
 		{
@@ -294,72 +292,104 @@ namespace pr::rdr12
 			m_list->ResolveSubresource(pDstResource, s_cast<UINT>(DstSubresource), pSrcResource, s_cast<UINT>(SrcSubresource), Format);
 		}
 
-	public: // Compute
+	public: // Root Signatures
+
+		// Set the signature for the command list
+		void SetGraphicsRootSignature(ID3D12RootSignature* signature)
+		{
+			ThrowOnCrossThreadUse();
+			m_list->SetGraphicsRootSignature(signature);
+			m_root_sig_idx = 0;
+		}
 	
 		// Assign the shader root signature to the command list
 		void SetComputeRootSignature(ID3D12RootSignature* signature)
 		{
 			ThrowOnCrossThreadUse();
 			m_list->SetComputeRootSignature(signature);
+			m_root_sig_idx = 0;
 		}
 
-		// Set a compute shader's root parameter constant
-		template <RootParamIdx Idx>
-		void SetComputeRoot32BitConstant(Idx RootParameterIndex, F32U32 SrcData, UINT DestOffsetIn32BitValues = 0)
+		// Set a compute shader's root parameter descriptor table
+		template <RootParamIdx Idx> void SetGraphicsRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor)
+		{
+			m_list->SetGraphicsRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
+		}
+		void AddGraphicsRootDescriptorTable(D3D12_GPU_DESCRIPTOR_HANDLE descriptor)
+		{
+			SetGraphicsRootDescriptorTable(m_root_sig_idx++, descriptor);
+		}
+
+		// Set a constant
+		template <RootParamIdx Idx> void SetComputeRoot32BitConstant(Idx RootParameterIndex, F32U32 SrcData, UINT DestOffsetIn32BitValues = 0)
 		{
 			m_list->SetComputeRoot32BitConstant(s_cast<UINT>(RootParameterIndex), SrcData.u32, DestOffsetIn32BitValues);
 		}
+		void AddComputeRoot32BitConstant(F32U32 SrcData, UINT DestOffsetIn32BitValues = 0)
+		{
+			SetComputeRoot32BitConstant(m_root_sig_idx++, SrcData.u32, DestOffsetIn32BitValues);
+		}
 
-		// Set a contiguous set of root parameter constants
-		template <RootParamIdx Idx>
-		void SetComputeRoot32BitConstants(Idx RootParameterIndex, int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues = 0)
+		// Set a contiguous set of constants
+		template <RootParamIdx Idx> void SetComputeRoot32BitConstants(Idx RootParameterIndex, int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues = 0)
 		{
 			m_list->SetComputeRoot32BitConstants(s_cast<UINT>(RootParameterIndex), s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
-		template <RootParamIdx Idx, typename CBufType>
-		void SetComputeRoot32BitConstants(Idx RootParameterIndex, CBufType const& cb, size_t DestOffsetIn32BitValues = 0)
+		template <RootParamIdx Idx, typename CBufType> void SetComputeRoot32BitConstants(Idx RootParameterIndex, CBufType const& cb, size_t DestOffsetIn32BitValues = 0)
 		{
 			static_assert(sizeof(CBufType) % sizeof(uint32_t) == 0);
 			auto count = s_cast<int>(sizeof(CBufType) / sizeof(uint32_t));
 			SetComputeRoot32BitConstants(RootParameterIndex, count, &cb, s_cast<UINT>(DestOffsetIn32BitValues));
 		}
+		void AddComputeRoot32BitConstants(int Num32BitValuesToSet, void const* pSrcData, size_t DestOffsetIn32BitValues = 0)
+		{
+			SetComputeRoot32BitConstants(m_root_sig_idx++, s_cast<UINT>(Num32BitValuesToSet), pSrcData, s_cast<UINT>(DestOffsetIn32BitValues));
+		}
+		template <typename CBufType> void AddComputeRoot32BitConstants(CBufType const& cb, size_t DestOffsetIn32BitValues = 0)
+		{
+			static_assert(sizeof(CBufType) % sizeof(uint32_t) == 0);
+			auto count = s_cast<int>(sizeof(CBufType) / sizeof(uint32_t));
+			AddComputeRoot32BitConstants(count, &cb, s_cast<UINT>(DestOffsetIn32BitValues));
+		}
 
 		// Set a GPU descriptor handle for a constant buffer view
-		template <RootParamIdx Idx>
-		void SetComputeRootConstantBufferView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
+		template <RootParamIdx Idx> void SetComputeRootConstantBufferView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
 		{
 			m_list->SetComputeRootConstantBufferView(s_cast<UINT>(RootParameterIndex), BufferLocation);
 		}
+		void AddComputeRootConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS BufferLocation)
+		{
+			SetComputeRootConstantBufferView(m_root_sig_idx++, BufferLocation);
+		}
 
 		// Sets a GPU descriptor handle for the unordered-access-view resource in the compute root signature.
-		template <RootParamIdx Idx>
-		void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		template <RootParamIdx Idx> void SetComputeRootUnorderedAccessView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
 		{
 			m_list->SetComputeRootUnorderedAccessView(s_cast<UINT>(RootParameterIndex), buffer_address);
 		}
+		void AddComputeRootUnorderedAccessView(D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		{
+			SetComputeRootUnorderedAccessView(m_root_sig_idx++, buffer_address);
+		}
 
 		// Sets a GPU descriptor handle for the shared-resource-view resource in the compute root signature.
-		template <RootParamIdx Idx>
-		void SetComputeRootShaderResourceView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		template <RootParamIdx Idx> void SetComputeRootShaderResourceView(Idx RootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
 		{
 			m_list->SetComputeRootShaderResourceView(s_cast<UINT>(RootParameterIndex), buffer_address);
 		}
+		void AddComputeRootShaderResourceView(D3D12_GPU_VIRTUAL_ADDRESS buffer_address)
+		{
+			SetComputeRootShaderResourceView(m_root_sig_idx++, buffer_address);
+		}
 
 		// Set a compute shader's root parameter descriptor table
-		template <RootParamIdx Idx>
-		void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
+		template <RootParamIdx Idx> void SetComputeRootDescriptorTable(Idx RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
 		{
 			m_list->SetComputeRootDescriptorTable(s_cast<UINT>(RootParameterIndex), descriptor);
 		}
-
-		// Dispatch a compute shader
-		void Dispatch(int ThreadGroupCountX, int ThreadGroupCountY, int ThreadGroupCountZ)
+		void AddComputeRootDescriptorTable(D3D12_GPU_DESCRIPTOR_HANDLE  descriptor)
 		{
-			m_list->Dispatch(s_cast<UINT>(ThreadGroupCountX), s_cast<UINT>(ThreadGroupCountY), s_cast<UINT>(ThreadGroupCountZ));
-		}
-		void Dispatch(iv3 ThreadGroupCount)
-		{
-			m_list->Dispatch(s_cast<UINT>(ThreadGroupCount.x), s_cast<UINT>(ThreadGroupCount.y), s_cast<UINT>(ThreadGroupCount.z));
+			SetComputeRootDescriptorTable(m_root_sig_idx++, descriptor);
 		}
 
 	private:

@@ -24,6 +24,7 @@ namespace pr::rdr12
 		x(Checker         ,)\
 		x(Checker2        ,)\
 		x(Checker3        ,)\
+		x(WhiteDot        ,)\
 		x(WhiteSpot       ,)\
 		x(WhiteSpike      ,)\
 		x(WhiteSphere     ,)\

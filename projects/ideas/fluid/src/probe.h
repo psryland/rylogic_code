@@ -160,7 +160,9 @@ namespace pr::fluid
 
 			args.m_handled = true;
 
-			m_radius = Clamp(m_radius + args.m_delta * 0.0001f, MinRadius, MaxRadius);
+			int delta = Clamp<short>(args.m_delta, -999, 999);
+			m_radius *= (1.0f - delta * 0.001f);
+			m_radius = Clamp(m_radius, MinRadius, MaxRadius);
 			UpdateGfx();
 		}
 		void OnKey(gui::KeyEventArgs& args)
@@ -181,14 +183,14 @@ namespace pr::fluid
 				}
 				case '2':
 				{
-					m_mode = EProbeMode::PushPull;
+					m_mode = m_mode != EProbeMode::PushPull ? EProbeMode::PushPull : EProbeMode::None;
 					m_position = m_actions->PositionProbe(args.point_px());
 					m_sign = 0.0f;
 					break;
 				}
 				case '3':
 				{
-					m_mode = EProbeMode::SourceSink;
+					m_mode = m_mode != EProbeMode::SourceSink ? EProbeMode::SourceSink : EProbeMode::None;
 					m_position = m_actions->PositionProbe(args.point_px());
 					m_sign = 0.0f;
 					break;

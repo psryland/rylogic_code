@@ -759,6 +759,26 @@ namespace pr::rdr12
 				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
 				return CreateTexture2D(tdesc);
 			}
+			case EStockTexture::WhiteDot:
+			{
+				constexpr int sz = 256;
+				constexpr auto radius = (sz - 1.0f) / 2.0f;
+				std::vector<uint32_t> data(sz * sz);
+				for (int j = 0; j != sz; ++j)
+				{
+					for (int i = 0; i != sz; ++i)
+					{
+						auto c = Colour32White;
+						auto r = Len(i - radius, j - radius);
+						c.a = r <= radius ? 0xff : 0x00;
+						data[size_t(j * sz + i)] = c.argb;
+					}
+				}
+
+				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
+				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteDot).has_alpha().name("#whitedot");
+				return CreateTexture2D(tdesc);
+			}
 			case EStockTexture::WhiteSpot:
 			{
 				constexpr int sz = 256;

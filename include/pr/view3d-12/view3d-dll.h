@@ -167,6 +167,7 @@ namespace pr
 			Checker,
 			Checker2,
 			Checker3,
+			WhiteDot,
 			WhiteSpot,
 			WhiteTriangle,
 			EnvMapProjection,

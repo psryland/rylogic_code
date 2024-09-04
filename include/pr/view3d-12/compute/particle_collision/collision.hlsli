@@ -50,8 +50,11 @@ static const uint Prim_Sphere = 5;
 static const uint Prim_Cylinder = 6;
 
 static const float TINY = 0.0001f;
+static const float FLT_MAX = 3.402823e38f;
 
 // Forwards
+float4 ClosestPoint_PointToInfiniteLine(float4 pos, float4 a, float4 b);
+float4 ClosestPoint_PointToInfiniteLine(float4 pos, float4 a, float4 b, out float t);
 float4 ClosestPoint_PointToPlane(float4 pos);
 float4 ClosestPoint_PointToPlane(float4 pos, out float4 normal);
 float4 ClosestPoint_PointToQuad(float4 pos, float2 radii);
@@ -75,6 +78,19 @@ bool Intercept_RayVsEllipse(float4 pos, float4 ray, float2 radii, inout float4 n
 bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float4 normal, inout float t1);
 bool Intercept_RayVsSphere(float4 pos, float4 ray, float radius, inout float4 normal, inout float t1);
 bool Intercept_RayVsCylinder(float4 pos, float4 ray, float4 radii, inout float4 normal, inout float t1);
+
+// Closest point on an infinite line to 'pos'
+inline float4 ClosestPoint_PointToInfiniteLine(float4 pos, float4 a, float4 b)
+{
+	float t;
+	return ClosestPoint_PointToInfiniteLine(pos, a, b, t);
+}
+inline float4 ClosestPoint_PointToInfiniteLine(float4 pos, float4 a, float4 b, out float t)
+{
+	float4 ab = b - a;
+	t = dot(pos - a, ab) / dot(ab,ab);
+	return a + t * ab;
+}
 
 // Closest point on a plane to 'pos'
 // The plane is the XY plane with normal (0,0,1) and distance 0.
@@ -442,9 +458,9 @@ inline bool Intercept_RayVsEllipse(float4 pos, float4 ray, float2 radii, inout f
 // The box is at the origin with half extents 'radii'.
 inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float4 normal, inout float t1)
 {
-	float tmin = 0;
-	float tmax = t1;
-	int axis;
+	int axis = -1;
+	float tmin = -FLT_MAX;
+	float tmax = +FLT_MAX;
 	
 	// For all three slabs
 	[unroll]
@@ -457,6 +473,7 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 			if (abs(pos[i]) >= radii[i])
 				return false;
 		}
+		// Only if the ray is pointing into the slab
 		else
 		{
 			// Compute intersection 't' value of ray with near and far plane of slab
@@ -464,8 +481,9 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 			float ta = (-radii[i] - pos[i]) * ood;
 			float tb = (+radii[i] - pos[i]) * ood;
 
-			// Make ta be intersection with near plane, tb with far plane
-			if (ta > tb) swap(ta, tb);
+			// Make 'ta' be intersection with near plane, 'tb' with far plane
+			if (ta > tb)
+				swap(ta, tb);
 
 			// Compute the intersection of slab intersection intervals
 			if (ta > tmin) { tmin = ta; axis = i; }
@@ -476,10 +494,18 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 				return false;
 		}
 	}
+
+	// No collision if 'tmin' >= t1
+	if (axis == -1 || tmin >= t1 || tmax <= 0 || sign(pos[axis]) == sign(ray[axis]))
+		return false;
 	
 	// 'tmin' is the nearest intersection
-	t1 = tmin;
-	normal = float4(select(axis == 0, sign(pos.x), 0), select(axis == 1, sign(pos.y), 0), select(axis == 2, sign(pos.z), 0), 0);
+	t1 = max(0, tmin);
+	normal = float4(
+		select(axis == 0, sign(pos.x), 0),
+		select(axis == 1, sign(pos.y), 0),
+		select(axis == 2, sign(pos.z), 0),
+	0);
 	return true;
 }
 
