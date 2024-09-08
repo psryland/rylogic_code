@@ -64,6 +64,10 @@ namespace pr
 		{
 			return x < 0.0f ? -1.0f : x > 0.0f ? 1.0f : 0.0f;
 		}
+		float sign_nz(float x)
+		{
+			return 2.0f * (x >= 0) - 1.0f;
+		}
 		float smoothstep(float lo, float hi, float t)
 		{
 			return SmoothStep(lo,hi,t);

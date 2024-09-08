@@ -8,12 +8,30 @@
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
 
+// Component sign (never zero) functions
+inline float sign_nz(float x)
+{
+	return 2.0f * (x >= 0.0f) - 1.0f;
+}
+inline float2 sign_nz(float2 x)
+{
+	return 2.0f * (x >= 0.0f) - 1.0f;
+}
+inline float3 sign_nz(float3 x)
+{
+	return 2.0f * (x >= 0.0f) - 1.0f;
+}
+inline float4 sign_nz(float4 x)
+{
+	return 2.0f * (x >= 0.0f) - 1.0f;
+}
+
 // Component square functions
 inline uint sqr(uint v)
 {
 	return v * v;
 }
-inline float sqr(float v)
+inline float1 sqr(float1 v)
 {
 	return v * v;
 }
@@ -31,7 +49,7 @@ inline float4 sqr(float4 v)
 }
 
 // Component cube functions
-inline float cube(float v)
+inline float1 cube(float1 v)
 {
 	return v * v * v;
 }
@@ -49,7 +67,7 @@ inline float4 cube(float4 v)
 }
 
 // Component signed square function
-inline float signed_sqr(float v)
+inline float1 signed_sqr(float1 v)
 {
 	return sign(v) * sqr(v);
 }
@@ -93,7 +111,7 @@ inline void swap(inout float4 a, inout float4 b)
 }
 
 // Length squared functions
-inline float length_sq(float a)
+inline float1 length_sq(float1 a)
 {
 	return dot(a, a);
 }
@@ -111,6 +129,10 @@ inline float length_sq(float4 a)
 }
 
 // Some the components of a float4
+inline float sum(float1 v)
+{
+	return dot(v, float1(1));
+}
 inline float sum(float2 v)
 {
 	return dot(v, float2(1,1));
@@ -130,7 +152,7 @@ inline int select(bool condition, int true_case, int false_case)
 	int mask = -(int)condition;
 	return (mask & true_case) | (~mask & false_case);
 }
-inline float select(bool condition, float true_case, float false_case)
+inline float1 select(bool condition, float1 true_case, float1 false_case)
 {
 	return lerp(false_case, true_case, float(condition));
 }

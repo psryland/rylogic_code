@@ -338,9 +338,6 @@
     <ClInclude Include="..\include\pr\view3d-12\lighting\light.h">
       <Filter>src\lighting</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h">
-      <Filter>src\shaders</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\shaders\stock_shaders.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
@@ -610,6 +607,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.h">
       <Filter>src\compute\fluid_simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\shaders\hlsl_proxy.h">
+      <Filter>src\shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

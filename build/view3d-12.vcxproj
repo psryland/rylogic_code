@@ -177,6 +177,7 @@
     <ClInclude Include="..\include\pr\view3d-12\sampler\sampler_desc.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene.h" />
     <ClInclude Include="..\include\pr\view3d-12\scene\scene_camera.h" />
+    <ClInclude Include="..\include\pr\view3d-12\shaders\hlsl_proxy.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_arrow_head.h" />
     <ClInclude Include="..\include\pr\view3d-12\shaders\shader_forward.h" />
@@ -218,7 +219,6 @@
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_raycast.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\render\render_smap.h" />
     <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\common.h" />
-    <ClInclude Include="..\projects\rylogic\view3d-12\src\shaders\hlsl_proxy.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\types.hlsli" />
