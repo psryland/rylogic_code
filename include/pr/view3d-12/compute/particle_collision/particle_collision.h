@@ -156,8 +156,8 @@ namespace pr::rdr12::compute::particle_collision
 		};
 		struct cbCull
 		{
-			v4 Cull[2];              // A plane, sphere, etc used to cull particles (set their positions to nan)
-			int Flags;               // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
+			v4 Geom[2]; // A plane, sphere, etc used to cull particles (set their positions to nan)
+			int Flags;   // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
 		};
 
 		// Create constant buffer data for the collision parameters
@@ -179,7 +179,7 @@ namespace pr::rdr12::compute::particle_collision
 		cbCull CullCBuf()
 		{
 			return cbCull{
-				.Cull = { Config.Culling.Geom[0], Config.Culling.Geom[1] },
+				.Geom = { Config.Culling.Geom[0], Config.Culling.Geom[1] },
 				.Flags = static_cast<int>(Config.Culling.Mode) & (int)ECullMode::MASK,
 			};
 		}

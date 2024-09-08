@@ -24,7 +24,7 @@ struct Main :Form, IProbeActions
 		FreeRun,
 	};
 
-	inline static constexpr int MaxParticleCount = 10000;//946;//100;//30 * 30;
+	inline static constexpr int MaxParticleCount = 10000;
 	inline static constexpr float ParticleRadius = 0.05f;
 	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
 	inline static constexpr wchar_t const* ParticleLayout = L"struct Particle { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
@@ -197,7 +197,6 @@ struct Main :Form, IProbeActions
 		// Step the simulation
 		m_fluid_sim.Step(m_job, elapsed_s, read_back);
 
-
 		// Run the jobs
 		m_job.Run();
 
@@ -215,6 +214,7 @@ struct Main :Form, IProbeActions
 					m_cpu_particles[i].pos = particles[i].pos;
 					m_cpu_particles[i].vel = dynamics[i].vel.w0();
 					m_cpu_particles[i].acc = dynamics[i].accel.w0();
+					m_cpu_particles[i].surface = dynamics[i].surface;
 					m_cpu_particles[i].density = dynamics[i].density;
 				}
 			});
@@ -246,7 +246,7 @@ struct Main :Form, IProbeActions
 		if (VectorFieldMode != 0)
 		{
 			Tweakable<float, "VectorFieldScale"> VectorFieldScale = 0.01f;
-			m_fluid_vis.UpdateVectorField(m_cpu_particles, VectorFieldScale, VectorFieldMode);
+			m_fluid_vis.UpdateVectorField(m_cpu_particles, ParticleRadius, VectorFieldScale, VectorFieldMode);
 			scene |= EScene::VectorField;
 		}
 
@@ -263,6 +263,14 @@ struct Main :Form, IProbeActions
 			m_fluid_sim.GenerateMap(m_job, m_fluid_vis.m_tex_map, map_data, m_colour_data);
 			scene |= EScene::Map;
 		}
+
+		// Show particle within the probe radius
+		//{
+		//	m_fluid_sim.UpdateColours(m_job, m_colour_data);
+		//	m_fluid_sim.Debugging(m_job, m_probe.Data());
+		//	m_job.Run();
+		//}
+
 
 		// Wait for the compute job to finish
 		m_job.m_gsync.Wait();

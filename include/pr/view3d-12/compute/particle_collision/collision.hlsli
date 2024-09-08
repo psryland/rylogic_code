@@ -113,7 +113,7 @@ inline float4 ClosestPoint_PointToQuad(float4 pos, float2 radii)
 inline float4 ClosestPoint_PointToQuad(float4 pos, float2 radii, out float4 normal)
 {
 	float4 pt = ClosestPoint_PointToQuad(pos, radii);
-	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign(pos.z), 0));
+	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign_nz(pos.z), 0));
 	return pt;
 }
 
@@ -200,7 +200,7 @@ inline float4 ClosestPoint_PointToTriangle(float4 pos, float2 a, float2 b, float
 inline float4 ClosestPoint_PointToTriangle(float4 pos, float2 a, float2 b, float2 c, out float4 bary, out float4 normal)
 {
 	float4 pt = ClosestPoint_PointToTriangle(pos, a, b, c, bary);
-	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign(pos.z), 0));
+	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign_nz(pos.z), 0));
 	return pt;
 }
 
@@ -221,7 +221,7 @@ inline float4 ClosestPoint_PointToEllipse(float4 pos, float2 radii)
 inline float4 ClosestPoint_PointToEllipse(float4 pos, float2 radii, out float4 normal)
 {
 	float4 pt = ClosestPoint_PointToEllipse(pos, radii);
-	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign(pos.z), 0));
+	normal = select(any(pos.xy - pt.xy), normalize(pos - pt), float4(0, 0, sign_nz(pos.z), 0));
 	return pt;
 }
 
@@ -234,27 +234,28 @@ inline float4 ClosestPoint_PointToBox(float4 pos, float4 radii)
 }
 inline float4 ClosestPoint_PointToBox(float4 pos, float4 radii, out float4 normal)
 {
-	float4 pt = pos;
 	normal = float4(0,0,0,0);
 	
-	// If 'pos' is inside the box, push the shortest distance component to the surface
-	float4 dist = abs(pos) - radii;
-	if (all(dist < 0))
+	// Guarantee that 'radii' is not degenerate
+	radii.xyz += TINY * (radii.xyz == 0);
+
+	// If 'pos' is inside or on the surface of the box, push the shortest distance component to the surface
+	float3 pt = pos.xyz;
+	float3 dist = abs(pt) - radii.xyz;
+	if (all(dist <= 0))
 	{
+		// If 'abs(pt) == radii' => 'dist == 0', but 'pos[i]' is not zero because 'radii' is not zero
+		// If 'pt == 0' => 'abs(dist) == radii'. 'i' will be the smallest axis, but 'pos[i]' could be zero.
 		int i = min_component_index(abs(dist));
-		pt[i] *= radii[i] / abs(pos[i]);
-		normal[i] = sign(pos[i]);
+		pt[i] = sign_nz(pos[i]) * radii[i];
+		normal[i] = sign_nz(pos[i]);
 	}
 	else
 	{
-		pt = float4(
-			clamp(pos.x, -radii.x, +radii.x),
-			clamp(pos.y, -radii.y, +radii.y),
-			clamp(pos.z, -radii.z, +radii.z),
-			1);
-		normal = normalize(pos - pt);
+		pt = clamp(pos.xyz, -radii.xyz, +radii.xyz);
+		normal.xyz = normalize(pos.xyz - pt);
 	}
-	return pt;
+	return float4(pt, 1);
 }
 
 // Closest point on a sphere (ellipsoid) to 'pos'
@@ -502,9 +503,9 @@ inline bool Intercept_RayVsBox(float4 pos, float4 ray, float4 radii, inout float
 	// 'tmin' is the nearest intersection
 	t1 = max(0, tmin);
 	normal = float4(
-		select(axis == 0, sign(pos.x), 0),
-		select(axis == 1, sign(pos.y), 0),
-		select(axis == 2, sign(pos.z), 0),
+		select(axis == 0, sign_nz(pos.x), 0),
+		select(axis == 1, sign_nz(pos.y), 0),
+		select(axis == 2, sign_nz(pos.z), 0),
 	0);
 	return true;
 }

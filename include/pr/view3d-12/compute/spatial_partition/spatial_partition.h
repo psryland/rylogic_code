@@ -463,5 +463,19 @@ namespace pr::rdr12::compute::spatial_partition
 				found(particle, dist_sq);
 			});
 		}
+
+		struct Stats
+		{
+			// The average number and variance of particles per cell
+			pr::maths::AvrVar<> occupancy;
+		};
+		Stats GetPerformanceStat() const
+		{
+			Stats stats;
+			for (auto const& cell : m_lookup)
+				stats.occupancy.Add(cell.count);
+
+			return stats;
+		}
 	};
 }

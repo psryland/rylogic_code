@@ -12,13 +12,26 @@
 
 // Custom type for position data
 #ifndef POSITION_TYPE
-#define POSITION_TYPE struct PositionType { float4 pos; float4 col; }
+#define POSITION_TYPE \
+struct PositionType \
+{ \
+	float4 pos; \
+	float4 col; \
+}
 #endif
 POSITION_TYPE;
 
 // Custom type for dynamics data
 #ifndef DYNAMICS_TYPE
-#define DYNAMICS_TYPE struct DynamicsType { float4 vel; float3 accel; float density; float3 surface; int flags; }
+#define DYNAMICS_TYPE \
+struct DynamicsType \
+{ \
+	float3 accel; \
+	float density; \
+	float3 vel; \
+	int flags; \
+	float4 surface; \
+}
 #endif
 DYNAMICS_TYPE;
 
@@ -29,7 +42,7 @@ struct Particle
 	float4 vel;
 	float4 acc;
 	float4 colour;
-	float4 surface;
+	float4 surface; // This is a plane equation of a nearby surface
 	float density;
 	int flags;
 	int2 pad;

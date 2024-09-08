@@ -51,6 +51,19 @@ namespace pr::fluid
 			UpdateGfx();
 		}
 
+		// Return the probe data
+		FluidSimulation::ProbeData Data() const
+		{
+			Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
+			Tweakable<bool, "ShowWithinProbe"> ShowWithinProbe = true;
+			return {
+				.Position = m_position,
+				.Radius = m_radius,
+				.Force = m_sign * ProbeForce,
+				.Highlight = ShowWithinProbe,
+			};
+		}
+
 		// Reset the probe
 		void Reset()
 		{
@@ -73,15 +86,7 @@ namespace pr::fluid
 					//  Push or pull the fluid
 					if (m_sign != 0)
 					{
-						Tweakable<float, "ProbeForce"> ProbeForce = 1.0f;
-						Tweakable<bool, "ShowWithinProbe"> ShowWithinProbe = true;
-						FluidSimulation::ProbeData probe_data = {
-							.Position = m_position,
-							.Radius = m_radius,
-							.Force = m_sign * ProbeForce,
-							.Highlight = ShowWithinProbe,
-						};
-						m_actions->PushPull(job, probe_data);
+						m_actions->PushPull(job, Data());
 					}
 					break;
 				}

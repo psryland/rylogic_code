@@ -42,6 +42,7 @@ namespace pr::fluid
 		v4 pos;
 		v4 vel;
 		v4 acc;
+		v4 surface;
 		float density;
 	};
 

@@ -8,15 +8,9 @@
 #include "../particle_collision/collision.hlsli"
 
 #ifndef THREAD_GROUP_SIZE
-#define THREAD_GROUP_SIZE 1024U
+#define THREAD_GROUP_SIZE 32
 #endif
 static const uint ThreadGroupSize = THREAD_GROUP_SIZE;
-
-// Valid values are 4096, 7936
-#ifndef TOTAL_SHARED_MEM
-#define TOTAL_SHARED_MEM 7936U
-#endif
-static const uint TotalSharedMemory = TOTAL_SHARED_MEM;
 
 // ** Note ** : alignment matters. float4 must be aligned to 16 bytes. [arrays] get aligned to 16 bytes
 
@@ -53,7 +47,7 @@ cbuffer cbFluidSim : register(b0)
 		float3 pad;
 	} Sim;
 };
-cbuffer cbProbeData : register(b0)
+cbuffer cbProbeData : register(b1)
 {
 	struct
 	{
@@ -107,12 +101,19 @@ static const uint ColourScheme_None = 0;
 static const uint ColourScheme_Velocity = 1;
 static const uint ColourScheme_Accel = 2;
 static const uint ColourScheme_Density = 3;
-static const uint ColourScheme_MASK = 0xFF;
+static const uint ColourScheme_Probe = 4;
 
 static const uint MapType_None = 0;
 static const uint MapType_Velocity = 1;
 static const uint MapType_Accel = 2;
 static const uint MapType_Density = 3;
+
+struct OutputData
+{
+	int num_particles;
+	uint warnings;
+};
+static const uint WarningFlags_TooManyNeighbours = 1 << 0;
 
 // The positions of each particle
 RWStructuredBuffer<PositionType> m_positions : register(u0);
@@ -130,21 +131,10 @@ RWStructuredBuffer<uint> m_idx_start : register(u3);
 RWStructuredBuffer<uint> m_idx_count : register(u4);
 
 // A buffer for passing back results
-RWStructuredBuffer<uint> m_output : register(u5);
+RWStructuredBuffer<OutputData> m_output : register(u5);
 
 // A texture for writing the density map to
 RWTexture2D<float4> m_tex_map : register(u6);
-
-// General purpose group shared memory
-//groupshared uint gs_memory[TotalSharedMemory];
-static const int MaxNeighboursParticle = 50;
-struct Neighbour
-{
-	float4 pos;
-	float4 vel;
-};
-groupshared float4 gs_neighbours[ThreadGroupSize][MaxNeighboursParticle];
-
 
 #include "../spatial_partition/spatial_partition.hlsli"
 
@@ -156,7 +146,7 @@ inline Particle GetParticle(int i)
 	part.vel = float4(m_dynamics[i].vel.xyz, 0);
 	part.acc = float4(m_dynamics[i].accel.xyz, 0);
 	part.colour = m_positions[i].col;
-	part.surface = float4(m_dynamics[i].surface.xyz, 0);
+	part.surface = m_dynamics[i].surface;
 	part.density = m_dynamics[i].density;
 	part.flags = m_dynamics[i].flags;
 	return part;
@@ -185,6 +175,32 @@ inline float4 LerpColour(float value, uniform ColourData col)
 	return col.Spectrum[3];
 }
 
+// Potential energy versus distance from a particle
+inline float PotentialEnergy(float normalised_distance, uniform float range, uniform float balance, uniform float dip)
+{
+	// 'range' scales the repulsive force effectively making it act at greater range. [0,inf) (typically 1.0)
+	// 'balance' is the position of the switch from the repulsive to the attractive force. [0,1] (typically ~0.8)
+	// 'dip' is the depth of the attractive force [0,inf) (typically ~0.1
+	// The function is a piecewise function created from:
+	//  Repulsive force: (range * balance / x) * sqr(1 - x/balance), for x in [0,balance]
+	//  Attractive force: -dip * sqr(sqr(Cx - C + 1) - 1), where C = 2 / (1 - balance), for x in [balance,1]
+	float x = clamp(normalised_distance, 0.0001f, 1.0f);
+	float C = 2.0f / (1.0f - balance);
+	return select(x <= range,
+		+(range * balance / x) * sqr(1.0f - x / range),
+		-(dip) * sqr(sqr(C * x - C + 1) - 1));
+}
+inline float dPotentialEnergy(float normalised_distance, uniform float range, uniform float balance, uniform float dip)
+{
+	float x = clamp(normalised_distance, 0.0001f, 1.0f);
+	float C = 2.0f / (1.0f - balance);
+	float D = C * x - C + 1;
+	return select(x <= range,
+		+(balance / range) - (balance * range / sqr(x)),
+		-(4 * C * dip) * D * (sqr(D) - 1));
+}
+
+
 // The force at normalised 'distance' from a particle. I.e. Force as a function of distance.
 inline float ForceKernel(float normalised_distance, uniform float range, uniform float balance, uniform float dip)
 {
@@ -194,7 +210,7 @@ inline float ForceKernel(float normalised_distance, uniform float range, uniform
 	// The function is a piecewise function created from:
 	//  Repulsive force: (range * balance / x) * sqr(1 - x/balance), for x in [0,balance]
 	//  Attractive force: -dip * sqr(sqr(Cx - C + 1) - 1), where C = 2 / (1 - balance), for x in [balance,1]
-	float x = clamp(normalised_distance, 0.001f, 1.0f);
+	float x = clamp(normalised_distance, 0.0001f, 1.0f);
 	float C = 2.0f / (1.0f - balance);
 	return select(x <= range,
 		+(range * balance / x) * sqr(1.0f - x / range),
@@ -243,6 +259,36 @@ inline bool IsDeadParticle(PositionType position)
 
 // Calculates the acceleration experienced at 'target' as a result of the interaction between 'target' and 'neighbour'
 inline float4 ParticleInteraction(uniform int idx, Particle target, Particle neighbour, float time_step)
+#if 1
+{
+	// Concepts:
+	//  - Using Lagrangian mechanics, so that energy is conserved.
+	//    Total energy is the sum of kinetic and potential energy. E = KE(vel) + PE(pos)
+	//    KE(vel) = 0.5.m.vel^2, PE(pos) = PotentialEnergy profile
+	//    The force is the negative gradient of the potential energy. F = -dV(pos)/dx.
+	//  - If we do the calculation relative to one of the particles, we only need to do half the calculations.
+	//
+	// Algorithm:
+	//  1. Calculate the initial energy. Ei = KE(vel0) + PE(pos0)
+	//  2. The energy at the end of the step, Ef = KE(vel1) + PE(pos1), should equal Ei
+	//  3. 
+
+	// Get the relative position and velocity. Treat 'target' as stationary.
+	float4 pos0 = neighbour.pos - target.pos;
+	float4 vel0 = neighbour.vel - target.vel;
+	float4 pos = pos0;
+	float4 vel = vel0;
+	float time_remaining = time_step;
+
+	float distance = length(pos);
+
+	float nrg0 =
+		0.5f * dot(vel, vel) +
+		PotentialEnergy(distance / Sim.ParticleRadius, Sim.ForceRange, Sim.ForceBalance, Sim.ForceDip);
+
+	
+}
+#else
 {
 	// Integration stability is an issue because the force kernel is asymptotic at x = 0.
 	// Concepts:
@@ -296,6 +342,7 @@ inline float4 ParticleInteraction(uniform int idx, Particle target, Particle nei
 	// The acceleration is shared between both particles, and we're returning the acceleration for 'target'.
 	return -0.5f * (vel - vel0);
 }
+#endif
 
 // Update the 'density' property of each particle
 [numthreads(ThreadGroupSize, 1, 1)]
@@ -353,14 +400,9 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID
 	float4 group_velocity = target.vel;
 	float group_velocity_weight = 1;
 
-	// Get the range of shared memory available to this thread.
-	
-	//gs_neighbours[gtid.x]
-	
-	
 	// Search the neighbours of 'target'
 	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
-	while (DoFind(find, Sim.CellCount))
+	for (; DoFind(find, Sim.CellCount); )
 	{
 		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
 		{
@@ -373,6 +415,7 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID
 			float normalised_distance = length(neighbour_pos - target_pos) / Sim.ParticleRadius;
 
 			// Viscosity
+			if (true)
 			{
 				// Viscosity is inter-particle friction. When particles are close, their velocities should
 				// tend toward the average of the group. Find the group average velocity (weighted by distance)
@@ -380,23 +423,40 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID
 				group_velocity += visocity * neighbour.vel;
 				group_velocity_weight += visocity;
 			}
-			
+
 			// Acceleration
-			nett_accel += ParticleInteraction(dtid.x, target, neighbour, Sim.TimeStep);
+			if (true)
+			{
+				// If the neighbour is not near a boundary or is on the positive side of the boundary,
+				// then interact with it. Particles behind the boundary are excluded because that increases
+				// the density when the virtual particles are included
+				float4 pos_r = neighbour.pos - target.pos;
+				float boundary_distance = dot(pos_r, target.surface) + target.surface.w;
+				if (boundary_distance > 0)
+				{
+					nett_accel += ParticleInteraction(dtid.x, target, neighbour, Sim.TimeStep);
+				}
+
+				// Interact with a mirror image virtual particle if the target is near a boundary
+				if (boundary_distance > 0 && target.surface.w < Sim.ParticleRadius)
+				{
+					Particle ghost;
+					ghost.pos = neighbour.pos - (2 * boundary_distance) * float4(target.surface.xyz, 0);
+					ghost.vel = float4(0, 0, 0, 0);
+					nett_accel += ParticleInteraction(dtid.x, target, ghost, Sim.TimeStep);
+				}
+			}
 		}
 	}
 
 	// Apply viscosity. Add an acceleration that makes the particles velocity closer to the group average
+	if (true)
 	{
 		float4 target_vel = target.vel + 0.5f * nett_accel * Sim.TimeStep;
 		group_velocity *= 1.0f / group_velocity_weight;
 		nett_accel += (group_velocity - target_vel) / Sim.TimeStep;
 	}
 
-
-	//// If the particle is on a boundary, don't allow acceleration into the boundary
-	//nett_accel -= dot(nett_accel, target.surface) * target.surface;
-	
 	// Record the nett force
 	m_dynamics[dtid.x].accel.xyz += nett_accel.xyz;
 }
@@ -442,7 +502,7 @@ void CullParticles(uint3 dtid : SV_DispatchThreadID)
 
 	// Return the new length of the particle buffer in 'm_output'
 	if (dtid.x == 0)
-		m_output[0] = Cull.NumParticles - (dead_range.y - dead_range.x);
+		m_output[0].num_particles = Cull.NumParticles - (dead_range.y - dead_range.x);
 	
 	// If we're not in the dead range, nothing to do.
 	if (src_idx < dead_range.x || src_idx >= dead_range.y)
@@ -472,26 +532,24 @@ void ColourParticles(uint3 dtid : SV_DispatchThreadID)
 		return;
 
 	Particle target = GetParticle(dtid.x);
-	
-	int scheme = Col.Scheme & ColourScheme_MASK;
 	m_positions[dtid.x].col = Col.Colours.Spectrum[0];
 
 	// Colour the particles based on their velocity
-	if (scheme == ColourScheme_Velocity)
+	if (Col.Scheme == ColourScheme_Velocity)
 	{
 		float speed = length(target.vel);
 		m_positions[dtid.x].col = LerpColour(speed, Col.Colours);
 	}
 	
-	// Colour the particles based on their density
-	if (scheme == ColourScheme_Accel)
+	// Colour the particles based on their acceleration
+	if (Col.Scheme == ColourScheme_Accel)
 	{
 		float accel = length(target.acc);
 		m_positions[dtid.x].col = LerpColour(accel, Col.Colours);
 	}
 
-	// Colour particles within the probe radius
-	if (scheme == ColourScheme_Density)
+	// Colour particles based on their density
+	if (Col.Scheme == ColourScheme_Density)
 	{
 		float density = length(target.density);
 		m_positions[dtid.x].col = LerpColour(density, Col.Colours);
@@ -550,7 +608,158 @@ void GenerateMap(uint3 dtid : SV_DispatchThreadID)
 	m_tex_map[uint2(dtid.x, dtid.y)] = LerpColour(length(value), Map.Colours);
 }
 
+// Test function
+[numthreads(1, 1, 1)]
+void Debugging(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID)
+{
+	// Search the neighbours of the probe position
+	FindIter find = Find(Probe.Position, SearchVolume(Probe.Radius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
+	for (; DoFind(find, Sim.CellCount); )
+	{
+		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
+		{
+			Particle neighbour = GetParticle(m_spatial[i]);
+			float4 neighbour_pos = neighbour.pos + 0.5f * Sim.TimeStep * neighbour.vel;
+			float normalised_distance = length(neighbour_pos - Probe.Position) / Probe.Radius;
+			m_positions[m_spatial[i]].col = select(normalised_distance < 1, float4(0,1,0,1), float4(1,0,0,1));
+		}
+	}
+}
 
+
+
+#if 0 // not working
+
+// Slim representation of a neighbour
+struct Neighbour
+{
+	float4 pos;
+	float4 vel;
+};
+
+// Shared memory for buffering neighbours
+static const int MaxNeighbours = 30;
+groupshared Neighbour gs_neighbours[ThreadGroupSize][MaxNeighbours];
+
+
+// Calculates the acceleration experienced at 'target' as a result of the interaction between 'target' and its neighbours
+inline float4 ParticleInteractions(uniform int idx, uniform int gidx, int neighbour_count, Particle target, float time_step)
+{
+	// Integration stability is an issue because the force kernel is asymptotic at x = 0.
+	// Concepts:
+	//  - If we had infinitesimal 'dt' steps, the acceleration would fall sharply as the particles moved apart.
+	//  - For each change in distance between the particles, the relative velocity changes by the area under the
+	//    ForceKernel curve, evaluated from dist0 to dist1 (direction is centre to centre).
+	//  - We can stop when the particle velocity is moving away and the range is greater than the particle radius.
+	//  - For particles near a boundary, every particle interaction also has a virtual particle reflected through
+	//    the boundary surface.
+	//  - Particles on a boundary (i.e. distance zero) only experience force from other zero-distance particles.
+	//
+	// Constrain the step size based on distance travelled, whichever is smaller min(vel * dt, ParticleRadius / N).
+	// For each step, we want to integrate the ForceKernel based on the distance between the particles.
+	
+	const float SubSteps = 10.0f;
+	const float MaxStepLength = Sim.ParticleRadius / SubSteps;
+	const float MaxStepTime = time_step / SubSteps;
+	
+	float4 pos0 = target.pos;
+	float4 vel0 = target.vel;
+	int i;
+
+	// Advance the particle and its neighbours using sub-steps
+	float time_remaining = time_step;
+	for (int max_steps = 100; max_steps-- != 0 && time_remaining != 0;)
+	{
+		// Determine a step time / size
+		float dt = min(MaxStepTime, time_remaining);
+		for (i = 0; i != neighbour_count; ++i)
+		{
+			float4 pos = gs_neighbours[gidx][i].pos - pos0;
+			float4 vel = gs_neighbours[gidx][i].vel - vel0;
+
+			// If the particle is out of range, skip it 
+			if (length_sq(pos) > sqr(Sim.ParticleRadius))
+				continue;
+			
+			// Set the step size based on the largest relative velocity
+			dt = select(length_sq(vel * dt) > sqr(MaxStepLength), MaxStepLength / length(vel), dt);
+		}
+
+		// Calculate the change of velocity experienced by 'target'
+		float4 nett_vel = vel0;
+		for (i = 0; i != neighbour_count; ++i)
+		{
+			float4 pos = gs_neighbours[gidx][i].pos - pos0;
+			float4 vel = gs_neighbours[gidx][i].vel - vel0;
+			
+			// If the particle is out of range, skip it 
+			if (length_sq(pos) >= sqr(Sim.ParticleRadius))
+				continue;
+
+			// Integrate the force kernel over the step
+			float4 hstep = pos + 0.5f * vel * dt; // remember, 'pos' is relative to 'pos0' so it's also a direction vector
+			float distance = length(hstep);
+			
+			// Measure the force between the particles
+			float force = Sim.ForceScale * ForceKernel(distance / Sim.ParticleRadius, Sim.ForceRange, Sim.ForceBalance, Sim.ForceDip);
+			float4 direction = select(distance != 0, hstep / distance, Random3WithDim(float2(idx, Sim.RandomSeed), Sim.Dimensions));
+
+			// Apply half the acceleration to each particle
+			float4 accel = (0.5f * force * dt) * direction;
+			gs_neighbours[gidx][i].vel += accel;
+			nett_vel -= accel;
+		}
+
+		// Advance the particles by the sub-step
+		vel0 = nett_vel;
+		pos0 += vel0 * dt;
+		for (int i = 0; i != neighbour_count; ++i)
+		{
+			gs_neighbours[gidx][i].pos += gs_neighbours[gidx][i].vel * dt;
+		}
+
+		// Advance time
+		time_remaining -= dt;
+	}
+
+	// 'vel0' is the velocity we predict 'target' to have, so 'vel0 - target.vel' is the acceleration that gives this result.
+	return vel0 - target.vel;
+}
+
+
+	// Build a list of neighbours in the group shared memory
+	int neighbour_count = 0;
+	FindIter find = Find(target_pos, SearchVolume(Sim.ParticleRadius, Sim.Dimensions), Sim.GridScale, Sim.CellCount);
+	while (DoFind(find, Sim.CellCount) && neighbour_count != MaxNeighbours)
+	{
+		for (int i = find.idx_range.x; i != find.idx_range.y; ++i)
+		{
+			// No self-interaction
+			if (m_spatial[i] == dtid.x)
+				continue;
+
+			// Range check
+			Particle neighbour = GetParticle(m_spatial[i]);
+			float4 neighbour_pos = neighbour.pos + 0.5f * Sim.TimeStep * neighbour.vel;
+			if (length_sq(target_pos - neighbour_pos) >= sqr(Sim.ParticleRadius))
+				continue;
+
+			// Add a neighbour to be considered
+			gs_neighbours[gtid.x][neighbour_count].pos = neighbour.pos;
+			gs_neighbours[gtid.x][neighbour_count].vel = neighbour.vel;
+			if (++neighbour_count == MaxNeighbours)
+			{
+				nett_accel += ParticleInteractions(dtid.x, gtid.x, neighbour_count, target, Sim.TimeStep);
+				neighbour_count = 0;
+			}
+		}
+	}
+	
+	// Interact with each neighbour
+	//for (int i = 0; i != neighbour_count; ++i)
+	//	nett_accel += ParticleInteraction(dtid.x, gtid.x, neighbour_count, target, Sim.TimeStep);
+	nett_accel += ParticleInteractions(dtid.x, gtid.x, neighbour_count, target, Sim.TimeStep);
+	#endif
 
 
 

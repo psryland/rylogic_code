@@ -120,17 +120,17 @@ namespace pr::fluid
 			auto points = [&](v4 p, v4 v)
 			{
 				assert(p.w == 1 && v.w == 0);
+				if (idx >= isize(particles)) return;
 				particles[idx] = fluid::Particle{
 					.pos = p,
 					.col = v4::One(),
 				};
 				dynamics[idx] = fluid::Dynamics{
-					.vel = v.xyz,
-					.pad = 0,
 					.accel = v3::Zero(),
 					.density = 0,
-					.surface = v3::Zero(),
+					.vel = v.xyz,
 					.flags = 0,
+					.surface = v4{0, 0, 0, limits<float>::max()},
 				};
 				++idx;
 			};
@@ -142,13 +142,21 @@ namespace pr::fluid
 			{
 				case EFillStyle::Point:
 				{
+					points(v4( -0.99f, -0.99f, 0, 1), v4(0.0f, 0, 0, 0));
 					for (int i = 0; i != isize(particles); ++i)
-						points(v4(0.0f, 0.0f + i*0.1f, 0, 1), v4(0, 0, 0, 0));
+					{
+						points(v4(-0.01f * (i + 1), 0, 0, 1), v4(+0.1f, 0, 0, 0));
+						points(v4(+0.01f * (i + 1), 0, 0, 1), v4(-0.1f, 0, 0, 0));
+					}
+
+					//for (int i = 0; i != isize(particles); ++i)
+					//	points(v4(0.0f, 0.0f + i*0.1f, 0, 1), v4(0, 0, 0, 0));
 				
 					//points(v4(-0.1f, 0, 0, 1), v4(+1.0f, 0, 0, 0));
 					//points(v4(+0.1f, 0, 0, 1), v4(-1.0f, 0, 0, 0));
-					for (; isize(particles) != count;)
-						points(v4(0, 0, 0, 1), v4(0, 0, 0, 0));
+
+					//for (; isize(particles) != count;)
+					//	points(v4(0, 0, 0, 1), v4(0, 0, 0, 0));
 					break;
 				}
 				case EFillStyle::Random:

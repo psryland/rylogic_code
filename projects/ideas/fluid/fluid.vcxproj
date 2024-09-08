@@ -80,6 +80,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\..\..\include\pr\view3d-12\view3d.h" />
+    <ClCompile Include="src\hlsl_emulated.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClInclude Include="src\demo\scene2d.h" />
     <ClInclude Include="src\demo\scene3d.h" />

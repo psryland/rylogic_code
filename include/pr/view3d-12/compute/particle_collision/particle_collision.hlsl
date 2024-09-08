@@ -7,23 +7,29 @@ static const int MaxCollisionResolutionSteps = 10;
 
 cbuffer cbCollision : register(b0)
 {
-	// Note: Alignment matters. float2 must be aligned to 8 bytes.
-	int NumParticles;        // The number of particles
-	int NumPrimitives;       // The number of primitives
-	int SpatialDimensions;   // The number of spatial dimensions
-	float TimeStep;          // The time to advance each particle by
+	struct
+	{
+		// Note: Alignment matters. float2 must be aligned to 8 bytes.
+		int NumParticles; // The number of particles
+		int NumPrimitives; // The number of primitives
+		int SpatialDimensions; // The number of spatial dimensions
+		float TimeStep; // The time to advance each particle by
 	
-	float ParticleRadius;    // The radius of volume that each particle represents
-	float BoundaryThickness; // The thickness in with boundary effects are applied
-	float BoundaryForce;     // The repulsive force of the boundary
-	float pad;
+		float ParticleRadius; // The radius of volume that each particle represents
+		float BoundaryThickness; // The thickness in with boundary effects are applied
+		float BoundaryForce; // The repulsive force of the boundary
+		float pad;
 
-	float2 Restitution;      // The coefficient of restitution (normal, tangential)
+		float2 Restitution; // The coefficient of restitution (normal, tangential)
+	} Sim;
 };
 cbuffer cbCull : register(b1)
 {
-	float4 Cull[2];          // A plane, sphere, etc used to cull particles (set their positions to NaN)
-	int Flags;               // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
+	struct
+	{
+		float4 Geom[2]; // A plane, sphere, etc used to cull particles (set their positions to NaN)
+		int Flags; // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
+	} Cull;
 };
 
 #include "collision.hlsli"
@@ -54,11 +60,19 @@ inline Particle GetParticle(int i)
 	part.pos = float4(m_positions[i].pos.xyz, 1);
 	part.vel = float4(m_dynamics[i].vel.xyz, 0);
 	part.acc = float4(m_dynamics[i].accel.xyz, 0);
-	part.surface = float4(m_dynamics[i].surface.xyz, 0);
+	part.surface = m_dynamics[i].surface;
 	part.colour = m_positions[i].col;
 	part.density = m_dynamics[i].density;
 	part.flags = m_dynamics[i].flags;
 	return part;
+}
+
+// Boundary force profile
+inline float BoundaryForceProfile(float normalised_distance)
+{
+	// -x + 1
+	float x = clamp(normalised_distance, 0.0f, 1.0f);
+	return 1.0f - x;
 }
 
 // Test a position for being culled
@@ -74,32 +88,32 @@ inline float4 CullCheck(float4 pos, uniform int cull_mode)
 		case Cull_Plane:
 		{
 			// Cull if below the plane
-			return dot(pos, Cull[0]) >= 0 ? pos : CulledPosition;
+			return dot(pos, Cull.Geom[0]) >= 0 ? pos : CulledPosition;
 		}
 		case Cull_Sphere:
 		{
 			// Cull if outside the sphere
-			float r_sq = sqr(Cull[0].w);
-			float3 r = pos.xyz - Cull[0].xyz;
+			float r_sq = sqr(Cull.Geom[0].w);
+			float3 r = pos.xyz - Cull.Geom[0].xyz;
 			return dot(r,r) <= r_sq ? pos : CulledPosition;
 		}
 		case Cull_SphereInside:
 		{
 			// Cull if inside the sphere
-			float r_sq = sqr(Cull[0].w);
-			float3 r = pos.xyz - Cull[0].xyz;
+			float r_sq = sqr(Cull.Geom[0].w);
+			float3 r = pos.xyz - Cull.Geom[0].xyz;
 			return dot(r,r) >= r_sq ? pos : CulledPosition;
 		}
 		case Cull_Box:
 		{
 			// Cull if outside the box
-			float3 r = abs(pos.xyz - Cull[0].xyz) - Cull[1].xyz;
+			float3 r = abs(pos.xyz - Cull.Geom[0].xyz) - Cull.Geom[1].xyz;
 			return all(r <= 0) ? pos : CulledPosition;
 		}
 		case Cull_BoxInside:
 		{
 			// Cull if inside the box
-			float3 r = abs(pos.xyz - Cull[0].xyz) - Cull[1].xyz;
+			float3 r = abs(pos.xyz - Cull.Geom[0].xyz) - Cull.Geom[1].xyz;
 			return any(r >= 0) ? pos : CulledPosition;
 		}
 		default:
@@ -109,53 +123,25 @@ inline float4 CullCheck(float4 pos, uniform int cull_mode)
 	}
 }
 
-// Boundary force profile
-inline float BoundaryForceProfile(float normalised_distance)
-{
-	// -x + 1
-	float x = clamp(normalised_distance, 0.0f, 1.0f);
-	return 1.0f - x;
-}
-
-// The influence at normalised 'distance' from a particle
-inline float ForceProfile(float normalised_distance, uniform float amplitude, uniform float balance)
-{
-	// Functions:
-	//   a(x) = -x + B
-	//   b(x) = 2.x^3 - 3.x^2 + 1
-	//   Profile(x) = (A/B).a(x).b(x)
-	// 
-	// Controls:
-	//  A = amplitude = the value at X = 0
-	//  B = balance point = (0,1] = Controls where the profile goes below zero or where the forces balance
-	float x = clamp(normalised_distance, 0.0f, 1.0f);
-	float a = -x + balance;
-	float b = 2.0f * cube(x) - 3.0f * sqr(x) + 1.0f;
-	return (amplitude / balance) * a * b;
-}
-
 // Evolves the particles forward in time while resolving collisions
 [numthreads(ThreadGroupSize, 1, 1)]
 void Integrate(int3 dtid : SV_DispatchThreadID)
 {
-	if (dtid.x >= NumParticles)
+	if (dtid.x >= Sim.NumParticles)
 		return;
 
 	Particle target = GetParticle(dtid.x);
 	
-	// Integrate velocity. Assume the acceleration is constant over the time step.
-	// When collisions change the velocity direction, the acceleration shouldn't also change direction.
-	float dt = TimeStep;
+	float dt = Sim.TimeStep;
 	float4 acc = target.acc;
 	float4 vel0 = target.vel;
 	float4 vel1 = vel0 + acc * dt;
-
-	// Reset particle dynamics/states
 	target.acc = float4(0,0,0,0);
-	target.surface = float4(0,0,0,0);
-	target.flags = 0;
-	
-	// Repeat until ray consumed
+
+	// Integrate position and velocity and resolve collisions.
+	// Assume the acceleration is constant over the time step.
+	// The ApplyForces function should calculate an acceleration that represents the average for the time step.
+	// When collisions change the velocity direction, the acceleration shouldn't also change direction.
 	for (int attempt = 0; ; ++attempt)
 	{	
 		// The ray to the next position of the particle
@@ -165,7 +151,7 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		float t = 1.0f;
 		int intercept_found = 0;
 		float4 normal = float4(0, 0, 0, 0);
-		for (int i = 0; i != NumPrimitives; ++i)
+		for (int i = 0; i != Sim.NumPrimitives; ++i)
 			intercept_found |= Intercept_RayVsPrimitive(target.pos, ray, m_collision[i], normal, t);
 
 		// Stop if no intercept found or too many collisions
@@ -180,7 +166,7 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		}
 		
 		// Constrain to 2D
-		normal.z = select(SpatialDimensions == 3, normal.z, 0);
+		normal.z = select(Sim.SpatialDimensions == 3, normal.z, 0);
 		
 		// Advance the point to the intercept and recalculate the velocity
 		target.pos += ray * t;
@@ -196,7 +182,7 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 		// Be careful not to add the acceleration first and then reflect it, accel should be reflected.
 		float4 vel_n = -dot(vel0, normal) * normal;
 		float4 vel_t = vel0 + vel_n;
-		vel0 = vel_n * Restitution.x + vel_t * Restitution.y;
+		vel0 = vel_n * Sim.Restitution.x + vel_t * Sim.Restitution.y;
 		vel1 = vel0 + acc * dt;
 
 		// If the particle does not bounce sufficiently to escape the surface, then zero the normal
@@ -210,21 +196,37 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 			// Remove the normal component of the acceleration
 			acc -= dot(acc, normal) * normal;
 
-			target.surface = normal;
-			target.flags = ParticleFlag_Boundary;
-
 			// Use for testing boundaries
 			// target.colour = float4(0,1,0,1);
 		}
 	}
-	target.pos = CullCheck(target.pos, Flags & Cull_Mask);
+
+	// Measure proximity to the nearest boundary
+	float4 blended_normal = float4(0,0,0,0);
+	float blended_distance = Sim.ParticleRadius;
+	for (int i = 0; i != Sim.NumPrimitives; ++i)
+	{
+		float4 normal;
+		float4 range = target.pos - ClosestPoint_PointToPrimitive(target.pos, m_collision[i], normal);
+		float distance = length(range);
+		
+		blended_normal += clamp(1 - distance / Sim.ParticleRadius, 0, 1) * normal;
+		blended_distance = min(blended_distance, distance);
+	}
+
+	// Constrain to 2D
+	target.surface = select(any(blended_normal), float4(normalize(blended_normal).xyz, blended_distance), float4(0,0,0,Sim.ParticleRadius));
+	target.surface.z = select(Sim.SpatialDimensions == 3, target.surface.z, 0);
+
+	// Delete dead particles
+	target.pos = CullCheck(target.pos, Cull.Flags & Cull_Mask);
 
 	// Update the particle dynamics
 	m_positions[dtid.x].pos.xyz = target.pos.xyz;
 	m_positions[dtid.x].col = target.colour;
 	m_dynamics[dtid.x].vel.xyz = target.vel.xyz;
 	m_dynamics[dtid.x].accel.xyz = target.acc.xyz;
-	m_dynamics[dtid.x].surface.xyz = target.surface.xyz;
+	m_dynamics[dtid.x].surface = target.surface;
 	m_dynamics[dtid.x].flags = target.flags;
 }
 
@@ -233,77 +235,37 @@ void Integrate(int3 dtid : SV_DispatchThreadID)
 [numthreads(ThreadGroupSize, 1, 1)]
 void RestingContact(int3 dtid : SV_DispatchThreadID)
 {
-	if (dtid.x >= NumParticles)
+	if (dtid.x >= Sim.NumParticles)
 		return;
 	
 	Particle target = GetParticle(dtid.x);
-	target.flags = 0;
+	float4 normal = float4(target.surface.xyz, 0);
 
-#if 1
-#if 1
-	// Only slow-moving particles qualify for resting contact.
-	float4 vel1 = target.vel + TimeStep * target.acc;
-	bool too_fast = dot(vel1, vel1) * sqr(TimeStep) > sqr(BoundaryThickness);
-	if (WaveActiveAllTrue(too_fast) || too_fast)
+	// Only slow-moving particles near boundaries qualify for resting contact.
+	// Don't don't use anti-parallel velocity/accel as a test, that causes discontinuous forces.
+	float4 vel1 = target.vel + Sim.TimeStep * target.acc;
+	//float vel_n = dot(vel1, normal) * normal;
+	//float vel_t = vel1 - vel_n;
+	bool within_boundary = target.surface.w < Sim.BoundaryThickness; // Starting within the boundary
+	bool slow_enough = length_sq(vel1) < sqr(Sim.BoundaryThickness); // Not going to move more than the boundary thickness in 1 sec.
+	bool at_rest = within_boundary && slow_enough;
+	if (WaveActiveAllTrue(!at_rest) || !at_rest)
 		return;
-#endif
-	
-	for (int i = 0; i != NumPrimitives; ++i)
-	{
-		float4 normal;
-	
-		// Find the distance to each boundary surface
-		float4 range = target.pos - ClosestPoint_PointToPrimitive(target.pos, m_collision[i], normal);
 
-		// Constrain for 2D
-		normal.z = select(SpatialDimensions == 3, normal.z, 0);
-		
-		// If the particle:
-		// Has a starting position within the BoundaryThickness
-		float range_sq = dot(range, range);
-		bool within_boundary = range_sq < sqr(BoundaryThickness);
-		if (WaveActiveAllTrue(!within_boundary) || !within_boundary)
-			continue;
+	// Resting forces:
+	// - We need the force to be smooth and continuous or particles get kicked.
+	// - Particles within 'TINY' of the boundary have zero acceleration into the boundary.
+	// - Particles at the BoundaryThickness range have no adjustment to their acceleration.
+	float4 accel_n = dot(target.acc, normal) * normal;
+	target.acc -= Sim.BoundaryForce * BoundaryForceProfile(target.surface.w / Sim.BoundaryThickness) * accel_n;
 
-		// Has an acceleration that is anti-parallel to the surface normal (for vertical walls),
-		float accel_n = dot(target.acc, normal);
-		bool is_anti_parallel = accel_n < 0 && sqr(accel_n) > dot(target.acc, target.acc) * 0.95f;
-		if (WaveActiveAllTrue(!is_anti_parallel) || !is_anti_parallel)
-			continue;
-		
-		// Has a velocity that will not take it out of the boundary thickness,
-		float dist_n = dot(target.vel, normal) * TimeStep;
-		bool moving_within_boundary = dist_n < 0 && -dist_n < BoundaryThickness;
-		if (WaveActiveAllTrue(!moving_within_boundary) || !moving_within_boundary)
-			continue;
+	// Apply tangential restitution (Assume vel_n is near zero already)
+	target.vel *= Sim.Restitution.y * (abs(target.vel) > TINY);
 
-		float nomalised_distance = sqrt(range_sq) / BoundaryThickness;
-		float force = ForceProfile(nomalised_distance, 1, 1);
-		target.acc += (BoundaryForce * target.density * force) * normal;
-
-		// Then cancel the acceleration into the surface.
-		//float attenuation = BoundaryForceProfile(nomalised_distance);
-		//target.accel -= attenuation * accel_n * normal.xyz;
-		
-		// Increase the mass of particles near the boundary
-		//target.mass += sqr(attenuation);
-		
-		// Cancel the velocity into the surface as well
-		//float vel_n = dot(target.vel, normal);
-		//target.vel -= attenuation * vel_n * normal;
-		//target.vel *= Restitution.y;
-
-		// flag as boundary particle
-		target.flags |= ParticleFlag_Boundary;
-		target.surface = normal;
-	}
-
+	// Update the particle dynamics
 	m_dynamics[dtid.x].vel.xyz = target.vel.xyz;
 	m_dynamics[dtid.x].accel.xyz = target.acc.xyz;
-	m_dynamics[dtid.x].surface.xyz = target.surface.xyz;
-	m_dynamics[dtid.x].flags = target.flags;
-
-#endif
+}
 	
 	
 	#if 0
@@ -344,5 +306,4 @@ void RestingContact(int3 dtid : SV_DispatchThreadID)
 	m_positions[dtid.x].vel   = target.vel;
 	#endif
 
-}
 
