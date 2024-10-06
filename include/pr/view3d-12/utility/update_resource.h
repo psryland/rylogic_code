@@ -145,6 +145,7 @@ namespace pr::rdr12
 
 		// Return a pointer to the staging buffer memory for the given mip level.
 		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
+		// Note: there is no 'end' because RowPitch != Width which means 'end' isn't well defined.
 		template <typename TElement> TElement* ptr(int mip = 0) const
 		{
 			// Make sure the mip is within the range of mips being updated
@@ -176,16 +177,9 @@ namespace pr::rdr12
 				sizeof(TElement) * pos.x);
 		}
 
-		// Return a pointer to the end of the staging buffer memory for the given mip level.
-		// 'mip' is relative to 'm_mip0' that was passed to the constructor.
-		template <typename TElement> TElement* end(int mip = 0) const
-		{
-			auto const& layout = m_layout[mip];
-			return ptr<TElement>(mip) + layout.Footprint.RowPitch * layout.Footprint.Height * layout.Footprint.Depth;
-		}
-
 		// Copy data from the given images to the staging buffer. Each image is a mip.
-		void Write(std::span<Image const> images)
+		// 'partial_data' indicates the image data does not file the entire resource.
+		void Write(std::span<Image const> images, bool partial_data = false)
 		{
 			// Note: 'images' is an image for each mip level. The images must be 1D, 2D, or 3D textures and *NOT* texture arrays.
 			// This object only handles a single array slice. So, if the destination resource is a texture array, then the caller
@@ -195,6 +189,11 @@ namespace pr::rdr12
 			if (s_cast<int>(images.size()) != m_mipN)
 				throw std::runtime_error("Insufficient image data provided");
 
+			auto check_size = [partial_data](int res_size, int image_dim)
+			{
+				return partial_data ? res_size >= image_dim : res_size == image_dim;
+			};
+
 			// Copy data from 'images' into the staging buffer
 			for (auto i = 0; i != m_mipN; ++i)
 			{
@@ -203,13 +202,13 @@ namespace pr::rdr12
 				auto size = m_range.size(m_mip0 + i);           // The size of the range to be updated (in both m_dest and m_staging) at 'm_mip0 + i'
 				auto staging = m_staging.m_mem + layout.Offset; // The pointer to the start of the mip in staging buffer memory
 
-				if (size.z != image.m_dim.z)
+				if (!check_size(size.z, image.m_dim.z))
 					throw std::runtime_error("Image size mismatch (depth)");
-				if (size.y != image.m_dim.y)
+				if (!check_size(size.y, image.m_dim.y))
 					throw std::runtime_error("Image size mismatch (height)");
-				if (size.x != image.m_dim.x && image.m_format != DXGI_FORMAT_R8_UNORM)
+				if (!check_size(size.x, image.m_dim.x) && image.m_format != DXGI_FORMAT_R8_UNORM)
 					throw std::runtime_error("Image size mismatch (width)");
-				if (size.x != image.m_pitch.x && image.m_format == DXGI_FORMAT_R8_UNORM)
+				if (!check_size(size.x, image.m_pitch.x) && image.m_format == DXGI_FORMAT_R8_UNORM)
 					throw std::runtime_error("Image size mismatch (pitch)");
 				if (image.m_pitch.x > s_cast<int>(layout.Footprint.RowPitch))
 					throw std::runtime_error("Image size mismatch (row pitch)");
@@ -236,9 +235,9 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void Write(Image const& image)
+		void Write(Image const& image, bool partial_data = false)
 		{
-			Write({ &image, 1 });
+			Write({ &image, 1 }, partial_data);
 		}
 
 		// Submit the command to the command list.

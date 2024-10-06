@@ -18,6 +18,10 @@ namespace pr::rdr12::compute::particle_collision
 {
 	struct ParticleCollision
 	{
+		// Notes:
+		//  - Supports 2D or 3D particles
+		//  - Supports Euler or Verlet integration
+		// 
 		// TODO:
 		//  - ReadPrimitives/WritePrimitives methods for updating collision
 		//  - Support primitives with dynamics (i.e. moving, with mass, accumulate force from particles)
@@ -43,8 +47,6 @@ namespace pr::rdr12::compute::particle_collision
 		{
 			int NumPrimitives = 0;           // The number of primitives to sort
 			int SpatialDimensions = 3;       // The number of spatial dimensions
-			float BoundaryThickness = 0.01f; // The distance at which boundary effects apply
-			float BoundaryForce = 1.f;       // The repulsive force of the boundary
 			v2 Restitution = { 1.0f, 1.0f }; // The coefficient of restitution (normal, tangential)
 			CullData Culling;
 		};
@@ -63,18 +65,20 @@ namespace pr::rdr12::compute::particle_collision
 		};
 
 		Renderer* m_rdr;                       // The renderer instance to use to run the compute shader
-		ComputeStep m_integrate;               // Integrate particles forward in time (with collision)
-		ComputeStep m_resting_contact;         // Apply resting contact forces (call before integrate)
+		ComputeStep m_cs_integrate;            // Integrate particles forward in time (with collision)
+		ComputeStep m_cs_boundaries;           // Detect proximity to boundaries for each particle
+		ComputeStep m_cs_culldead;             // Mark culled particles with NaN positions
 		D3DPtr<ID3D12Resource> m_r_primitives; // The primitives to collide with
 		int m_capacity;                        // The maximum space in the buffers
 
-		// Collision config
+		// Runtime collision config
 		ConfigData Config;
 		
 		ParticleCollision(Renderer& rdr, std::wstring_view position_layout, std::wstring_view dynamics_layout)
 			: m_rdr(&rdr)
-			, m_integrate()
-			, m_resting_contact()
+			, m_cs_integrate()
+			, m_cs_boundaries()
+			, m_cs_culldead()
 			, m_r_primitives()
 			, m_capacity()
 			, Config()
@@ -114,14 +118,25 @@ namespace pr::rdr12::compute::particle_collision
 			PIXEndEvent(job.m_cmd_list.get());
 		}
 
-		// Apply resting contact forces
-		void RestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> dynamics)
+		// Find nearby surfaces for particles
+		void DetectBoundaries(GraphicsJob& job, int count, float radius, D3DPtr<ID3D12Resource> particles, D3DPtr<ID3D12Resource> dynamics)
 		{
 			if (count == 0)
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::RestingContact");
-			DoRestingContact(job, dt, count, radius, particles, dynamics);
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::DetectBoundaries");
+			DoDetectBoundaries(job, count, radius, particles, dynamics);
+			PIXEndEvent(job.m_cmd_list.get());
+		}
+
+		// Mark culled particles with NaN positions
+		void CullDeadParticles(GraphicsJob& job, int count, D3DPtr<ID3D12Resource> particles)
+		{
+			if (count == 0)
+				return;
+
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::CullDeadParticles");
+			DoCullDeadParticles(job, count, particles);
 			PIXEndEvent(job.m_cmd_list.get());
 		}
 
@@ -132,13 +147,13 @@ namespace pr::rdr12::compute::particle_collision
 
 		struct EReg
 		{
-			inline static constexpr ECBufReg Constants = ECBufReg::b0;
-			inline static constexpr ECBufReg Cull = ECBufReg::b1;
+			inline static constexpr ECBufReg Sim = ECBufReg::b0;
+			inline static constexpr ECBufReg Bound = ECBufReg::b0;
+			inline static constexpr ECBufReg Cull = ECBufReg::b0;
 			inline static constexpr EUAVReg Particles = EUAVReg::u0;
 			inline static constexpr EUAVReg Dynamics = EUAVReg::u1;
 			inline static constexpr ESRVReg Primitives = ESRVReg::t0;
 		};
-
 		struct cbCollision
 		{
 			int NumParticles;        // The number of particles
@@ -147,17 +162,22 @@ namespace pr::rdr12::compute::particle_collision
 			float TimeStep;          // The time to advance each particle by
 
 			float ParticleRadius;    // The radius of volume that each particle represents
-			float BoundaryThickness; // The thickness in with boundary effects are applied
-			float BoundaryForce;     // The repulsive force of the boundary
 			float pad;
 
 			float2 Restitution;      // The coefficient of restitution (normal, tangential)
-
+		};
+		struct cbBoundary
+		{
+			int NumParticles;      // The number of particles
+			int NumPrimitives;     // The number of primitives
+			int SpatialDimensions; // The number of spatial dimensions
+			float ParticleRadius;  // The radius of volume that each particle represents
 		};
 		struct cbCull
 		{
-			v4 Geom[2]; // A plane, sphere, etc used to cull particles (set their positions to nan)
-			int Flags;   // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
+			v4 Geom[2];       // A plane, sphere, etc used to cull particles (set their positions to nan)
+			int Flags;        // [3:0] = 0: No culling, 1: Sphere, 2: Plane, 3: Box
+			int NumParticles; // The number of particles to test
 		};
 
 		// Create constant buffer data for the collision parameters
@@ -170,17 +190,25 @@ namespace pr::rdr12::compute::particle_collision
 				.SpatialDimensions = Config.SpatialDimensions,
 				.TimeStep = dt,
 				.ParticleRadius = radius,
-				.BoundaryThickness = Config.BoundaryThickness,
-				.BoundaryForce = Config.BoundaryForce,
 				.pad = 0,
 				.Restitution = Config.Restitution,
 			};
 		}
-		cbCull CullCBuf()
+		cbBoundary BoundaryCBuf(int count, float radius)
+		{
+			return cbBoundary{
+				.NumParticles = count,
+				.NumPrimitives = Config.NumPrimitives,
+				.SpatialDimensions = Config.SpatialDimensions,
+				.ParticleRadius = radius,
+			};
+		}
+		cbCull CullCBuf(int count)
 		{
 			return cbCull{
 				.Geom = { Config.Culling.Geom[0], Config.Culling.Geom[1] },
 				.Flags = static_cast<int>(Config.Culling.Mode) & (int)ECullMode::MASK,
+				.NumParticles = count,
 			};
 		}
 
@@ -199,69 +227,92 @@ namespace pr::rdr12::compute::particle_collision
 			// Integrate
 			{
 				auto bytecode = compiler.EntryPoint(L"Integrate").Compile();
-				m_integrate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
-					.U32<cbCollision>(EReg::Constants)
-					.U32<cbCull>(EReg::Cull)
+				m_cs_integrate.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32<cbCollision>(EReg::Sim)
 					.UAV(EReg::Particles)
 					.UAV(EReg::Dynamics)
 					.SRV(EReg::Primitives)
 					.Create(device, "ParticleCollision:IntegrateSig");
-				m_integrate.m_pso = ComputePSO(m_integrate.m_sig.get(), bytecode)
+				m_cs_integrate.m_pso = ComputePSO(m_cs_integrate.m_sig.get(), bytecode)
 					.Create(device, "ParticleCollision:IntegratePSO");
 			}
 
-			// Resting contact
+			// Boundaries
 			{
-				auto bytecode = compiler.EntryPoint(L"RestingContact").Compile();
-				m_resting_contact.m_sig = RootSig(ERootSigFlags::ComputeOnly)
-					.U32<cbCollision>(EReg::Constants)
+				auto bytecode = compiler.EntryPoint(L"DetectBoundaries").Compile();
+				m_cs_boundaries.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32<cbBoundary>(EReg::Bound)
 					.UAV(EReg::Particles)
 					.UAV(EReg::Dynamics)
 					.SRV(EReg::Primitives)
-					.Create(device, "ParticleCollision:RestingContactSig");
-				m_resting_contact.m_pso = ComputePSO(m_resting_contact.m_sig.get(), bytecode)
-					.Create(device, "ParticleCollision:RestingContactPSO");
+					.Create(device, "ParticleCollision:BoundariesSig");
+				m_cs_boundaries.m_pso = ComputePSO(m_cs_boundaries.m_sig.get(), bytecode)
+					.Create(device, "ParticleCollision:BoundariesPSO");
+			}
+
+			// Cull dead particles
+			{
+				auto bytecode = compiler.EntryPoint(L"CullDeadParticles").Compile();
+				m_cs_culldead.m_sig = RootSig(ERootSigFlags::ComputeOnly)
+					.U32<cbCull>(EReg::Cull)
+					.UAV(EReg::Particles)
+					.Create(device, "ParticleCollision:CullDeadSig");
+				m_cs_culldead.m_pso = ComputePSO(m_cs_culldead.m_sig.get(), bytecode)
+					.Create(device, "ParticleCollision:CullDeadPSO");
 			}
 		}
 
 		// Integrate the particle positions (with collision)
 		void DoIntegrate(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> positions, D3DPtr<ID3D12Resource> dynamics)
 		{
-			auto cb_params = CollisionCBuf(dt, count, radius);
-			auto cb_cull = CullCBuf();
+			auto cb_sim = CollisionCBuf(dt, count, radius);
 
 			job.m_barriers.Commit();
 
-			job.m_cmd_list.SetPipelineState(m_integrate.m_pso.get());
-			job.m_cmd_list.SetComputeRootSignature(m_integrate.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-			job.m_cmd_list.SetComputeRoot32BitConstants(1, cb_cull, 0);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, positions->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(3, dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(4, m_r_primitives->GetGPUVirtualAddress());
-			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+			job.m_cmd_list.SetPipelineState(m_cs_integrate.m_pso.get());
+			job.m_cmd_list.SetComputeRootSignature(m_cs_integrate.m_sig.get());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sim, 0);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.Dispatch(DispatchCount({ cb_sim.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(positions.get());
 			job.m_barriers.UAV(dynamics.get());
 		}
 
 		// Apply resting contact forces
-		void DoRestingContact(GraphicsJob& job, float dt, int count, float radius, D3DPtr<ID3D12Resource> positions, D3DPtr<ID3D12Resource> dynamics)
+		void DoDetectBoundaries(GraphicsJob& job, int count, float radius, D3DPtr<ID3D12Resource> positions, D3DPtr<ID3D12Resource> dynamics)
 		{
-			auto cb_params = CollisionCBuf(dt, count, radius);
+			auto cb_bound = BoundaryCBuf(count, radius);
 
 			job.m_barriers.Commit();
 
-			job.m_cmd_list.SetPipelineState(m_resting_contact.m_pso.get());
-			job.m_cmd_list.SetComputeRootSignature(m_resting_contact.m_sig.get());
-			job.m_cmd_list.SetComputeRoot32BitConstants(0, cb_params, 0);
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(1, positions->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootUnorderedAccessView(2, dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.SetComputeRootShaderResourceView(3, m_r_primitives->GetGPUVirtualAddress());
-			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+			job.m_cmd_list.SetPipelineState(m_cs_boundaries.m_pso.get());
+			job.m_cmd_list.SetComputeRootSignature(m_cs_boundaries.m_sig.get());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_bound, 0);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(dynamics->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootShaderResourceView(m_r_primitives->GetGPUVirtualAddress());
+			job.m_cmd_list.Dispatch(DispatchCount({ cb_bound.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
+
+			job.m_barriers.UAV(dynamics.get());
+		}
+
+		// Mark culled particles with NaN positions
+		void DoCullDeadParticles(GraphicsJob& job, int count, D3DPtr<ID3D12Resource> positions)
+		{
+			auto cb_cull = CullCBuf(count);
+
+			job.m_barriers.Commit();
+
+			job.m_cmd_list.SetPipelineState(m_cs_culldead.m_pso.get());
+			job.m_cmd_list.SetComputeRootSignature(m_cs_culldead.m_sig.get());
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_cull, 0);
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(positions->GetGPUVirtualAddress());
+			job.m_cmd_list.Dispatch(DispatchCount({ cb_cull.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
 
 			job.m_barriers.UAV(positions.get());
-			job.m_barriers.UAV(dynamics.get());
 		}
 	};
 }

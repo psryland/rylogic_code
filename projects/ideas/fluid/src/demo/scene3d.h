@@ -141,10 +141,8 @@ namespace pr::fluid
 					.col = v4::One(),
 				};
 				dynamics[idx] = fluid::Dynamics{
-					.accel = v3::Zero(),
-					.density = 0,
-					.vel = v.xyz,
-					.flags = 0,
+					.vel = v,
+					.accel = v4::Zero(),
 					.surface = v4{0,0,0,limits<float>::max()},
 				};
 				++idx;

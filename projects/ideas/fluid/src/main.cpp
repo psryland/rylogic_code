@@ -3,6 +3,7 @@
 #include "src/fluid_visualisation.h"
 #include "src/idemo_scene.h"
 #include "src/probe.h"
+#include "src/demo/tube2d.h"
 #include "src/demo/scene2d.h"
 #include "src/demo/scene3d.h"
 
@@ -13,6 +14,13 @@ using namespace pr::fluid;
 // Application window
 struct Main :Form, IProbeActions
 {
+	// Sim constants
+	inline static constexpr int MaxParticleCount = 10;
+	inline static constexpr float SimTimeStepSec = 0.01f;
+	inline static constexpr float ParticleRadius = 0.05f;
+	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
+	inline static constexpr iv2 WinSize = { 2048, 1600 };
+
 	enum { IDR_MAINFRAME = 100 };
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
@@ -23,12 +31,6 @@ struct Main :Form, IProbeActions
 		SingleStep,
 		FreeRun,
 	};
-
-	inline static constexpr int MaxParticleCount = 10000;
-	inline static constexpr float ParticleRadius = 0.05f;
-	inline static constexpr int GridCellCount = 65521;//1021;//65521;//1048573;//16777213;
-	inline static constexpr wchar_t const* ParticleLayout = L"struct Particle { float4 pos; float4 col; float4 vel; float3 acc; float mass; }";
-	inline static constexpr iv2 WinSize = { 2048, 1600 };
 
 	using rtc_time_t = std::chrono::high_resolution_clock::time_point;
 	using ema_t = maths::ExpMovingAvr<double>;
@@ -99,7 +101,7 @@ struct Main :Form, IProbeActions
 		, m_wnd(m_rdr, rdr12::WndSettings(CreateHandle(), true, m_rdr.Settings()).BackgroundColour(0xFFA0A080))
 		, m_scn(m_wnd)
 		, m_job(m_rdr.D3DDevice(), "Fluid", 0xFFA83250, 5)
-		, m_probe(m_rdr, this)
+		, m_probe(m_rdr, ParticleRadius, this)
 		, m_demo(CreateDemo())
 		, m_loop()
 		, m_fluid_sim(m_rdr)
@@ -124,7 +126,7 @@ struct Main :Form, IProbeActions
 		NextScene();
 
 		m_loop.AddMessageFilter(*this);
-		m_loop.AddLoop(10, false, [this](int64_t dt)
+		m_loop.AddLoop(static_cast<int>(SimTimeStepSec * 1000), false, [this](int64_t dt)
 		{
 			auto elapsed_s = dt * 0.001f;
 
@@ -197,6 +199,9 @@ struct Main :Form, IProbeActions
 		// Step the simulation
 		m_fluid_sim.Step(m_job, elapsed_s, read_back);
 
+		// Debugging
+		m_fluid_sim.Debugging(m_job, elapsed_s, m_probe.Data());
+
 		// Run the jobs
 		m_job.Run();
 
@@ -212,10 +217,9 @@ struct Main :Form, IProbeActions
 				for (int i = 0; i != isize(m_cpu_particles); ++i)
 				{
 					m_cpu_particles[i].pos = particles[i].pos;
-					m_cpu_particles[i].vel = dynamics[i].vel.w0();
+					m_cpu_particles[i].vel = dynamics[i].vel;
 					m_cpu_particles[i].acc = dynamics[i].accel.w0();
 					m_cpu_particles[i].surface = dynamics[i].surface;
-					m_cpu_particles[i].density = dynamics[i].density;
 				}
 			});
 		}
@@ -291,14 +295,14 @@ struct Main :Form, IProbeActions
 	// Tweak settings
 	void ApplyTweakables()
 	{
-		Tweakable<float, "Gravity"> Gravity = 0.1f;
+		Tweakable<v4, "Gravity"> Gravity = v4(0, -10, 0, 0);
 		Tweakable<float, "ForceScale"> ForceScale = 10.0f;
 		Tweakable<float, "ForceRange"> ForceRange = 1.0f;
 		Tweakable<float, "ForceBalance"> ForceBalance = 0.8f;
 		Tweakable<float, "ForceDip"> ForceDip = 0.05f;
 		Tweakable<float, "Viscosity"> Viscosity = 10.0f;
 		Tweakable<float, "ThermalDiffusion"> ThermalDiffusion = 0.01f;
-		m_fluid_sim.Config.Dyn.Gravity = v4(0, -9.8f, 0, 0) * Gravity;
+		m_fluid_sim.Config.Dyn.Gravity = Gravity;
 		m_fluid_sim.Config.Dyn.ForceScale = ForceScale;
 		m_fluid_sim.Config.Dyn.ForceRange = ForceRange;
 		m_fluid_sim.Config.Dyn.ForceBalance = ForceBalance;
@@ -307,11 +311,7 @@ struct Main :Form, IProbeActions
 		m_fluid_sim.Config.Dyn.ThermalDiffusion = ThermalDiffusion;
 
 		Tweakable<v2, "Restitution"> Restitution = v2{ 1.0f, 1.0f };
-		Tweakable<float, "BoundaryThickness"> BoundaryThickness = 0.01f;
-		Tweakable<float, "BoundaryForce"> BoundaryForce = 10.f;
 		m_fluid_sim.m_collision.Config.Restitution = Restitution;
-		m_fluid_sim.m_collision.Config.BoundaryThickness = BoundaryThickness;
-		m_fluid_sim.m_collision.Config.BoundaryForce = BoundaryForce;
 
 		Tweakable<int, "ColourScheme"> ColourScheme = 0;
 		Tweakable<v2, "ColourRange"> ColourRange = v2{ 0.0f, 1.0f };
@@ -336,7 +336,6 @@ struct Main :Form, IProbeActions
 		{
 			auto count = 0;
 			auto nearest = 0;
-			auto density = 0.0f;
 			
 			auto rad_sq = Sqr(m_probe.m_radius);
 			auto nearest_dist_sq = std::numeric_limits<float>::max();
@@ -351,12 +350,10 @@ struct Main :Form, IProbeActions
 				{
 					nearest = s_cast<int>(&particle - m_cpu_particles.data());
 					nearest_dist_sq = dist_sq;
-					density = particle.density;
 				}
 			}
 			m_title.append(std::format(" - Nearest: {}", nearest));
 			m_title.append(std::format(" - Count: {}", count));
-			m_title.append(std::format(" - Density: {}", density));
 		}
 		else
 		{
@@ -365,6 +362,7 @@ struct Main :Form, IProbeActions
 			m_title.append(std::format(" - Frame: {}", m_fluid_sim.m_frame));
 			m_title.append(std::format(" - PCount: {}", m_fluid_sim.Config.NumParticles));
 			m_title.append(std::format(" - Cam: {:.3f} {:.3f} {:.3f}  Dir: {:.3f} {:.3f} {:.3f}", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
+			m_title.append(std::format(" - NRG: {}", m_fluid_sim.Output.DebugResults().p0_energy));
 		}
 
 		SetWindowTextA(*this, m_title.c_str());
@@ -589,8 +587,9 @@ struct Main :Form, IProbeActions
 	static demo_scenes_t CreateDemo()
 	{
 		auto scenes = demo_scenes_t();
+		scenes.emplace_back(new Tube2d(MaxParticleCount, ParticleRadius));
+		//scenes.emplace_back(new Scene2d(MaxParticleCount));
 		//scenes.emplace_back(new Scene3d(MaxParticleCount));
-		scenes.emplace_back(new Scene2d(MaxParticleCount));
 		return scenes;
 	}
 

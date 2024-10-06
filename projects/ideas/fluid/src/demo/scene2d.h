@@ -126,10 +126,8 @@ namespace pr::fluid
 					.col = v4::One(),
 				};
 				dynamics[idx] = fluid::Dynamics{
-					.accel = v3::Zero(),
-					.density = 0,
-					.vel = v.xyz,
-					.flags = 0,
+					.vel = v,
+					.accel = v4::Zero(),
 					.surface = v4{0, 0, 0, limits<float>::max()},
 				};
 				++idx;
@@ -142,11 +140,11 @@ namespace pr::fluid
 			{
 				case EFillStyle::Point:
 				{
-					points(v4( -0.99f, -0.99f, 0, 1), v4(0.0f, 0, 0, 0));
+					points(v4(0, -0.99f, 0, 1), v4(0, 0, 0, 0));
 					for (int i = 0; i != isize(particles); ++i)
 					{
-						points(v4(-0.01f * (i + 1), 0, 0, 1), v4(+0.1f, 0, 0, 0));
-						points(v4(+0.01f * (i + 1), 0, 0, 1), v4(-0.1f, 0, 0, 0));
+						points(v4(-0.01f * (i + 1), -0.97f, 0, 1), v4(+0, 0, 0, 0));
+						points(v4(+0.01f * (i + 1), -0.97f, 0, 1), v4(-0, 0, 0, 0));
 					}
 
 					//for (int i = 0; i != isize(particles); ++i)

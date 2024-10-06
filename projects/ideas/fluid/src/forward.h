@@ -43,7 +43,6 @@ namespace pr::fluid
 		v4 vel;
 		v4 acc;
 		v4 surface;
-		float density;
 	};
 
 	using particles_t = std::vector<particle_t>;

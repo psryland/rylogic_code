@@ -7,6 +7,8 @@
 //  2. Build a histogram of positions per cell
 //  3. Sort the 'm_grid_hash' buffer by hash value so that all positions in the same cell are contiguous
 //  4. Create a lookup from cell hash to the start index of the cell in the sorted buffer
+#include "../particle_collision/particle.hlsli"
+#include "../spatial_partition/spatial_partition.hlsli"
 
 static const uint ThreadGroupSize = 1024;
 
@@ -27,8 +29,6 @@ cbuffer cbGridPartition : register(b0)
 	int pad;
 };
 
-#include "../particle_collision/particle.hlsli"
-
 // The positions to sort into the grid
 StructuredBuffer<PositionType> m_positions : register(t0);
 
@@ -43,8 +43,6 @@ RWStructuredBuffer<uint> m_idx_start : register(u2);
 
 // The number of positions for each cell hash (length CellCount)
 RWStructuredBuffer<uint> m_idx_count : register(u3);
-
-#include "spatial_partition.hlsli"
 
 // Reset the start/count arrays
 [numthreads(ThreadGroupSize, 1, 1)]

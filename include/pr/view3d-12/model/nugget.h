@@ -162,7 +162,7 @@ namespace pr::rdr12
 		NuggetDesc& tex_diffuse(Texture2DPtr tex)
 		{
 			m_tex_diffuse = tex;
-			return flags(ENuggetFlag::TexDiffuseHasAlpha, AllSet(tex->m_tflags, ETextureFlag::HasAlpha));
+			return flags(ENuggetFlag::TexDiffuseHasAlpha, AllSet(tex ? tex->m_tflags : ETextureFlag::None, ETextureFlag::HasAlpha));
 		}
 
 		// Set the sampler for the diffuse texture

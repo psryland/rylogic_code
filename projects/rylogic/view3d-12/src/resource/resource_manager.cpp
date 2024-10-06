@@ -167,7 +167,7 @@ namespace pr::rdr12
 				// Note: here 'desc.Data' is an array of mip-level-zero images.
 				// The span of images expected by 'UpdateSubresource' is for each mip level.
 				UpdateSubresourceScope map(*this, res.get(), i, 0, 1, desc.DataAlignment);
-				map.Write(desc.Data[i]);
+				map.Write(desc.Data[i], AllSet(desc.MiscFlags, ResDesc::EMiscFlags::PartialInitData));
 				map.Commit(std::nullopt);
 			}
 			

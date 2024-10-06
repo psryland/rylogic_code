@@ -7,6 +7,7 @@
 
 static const uint FNV_offset_basis32 = 2166136261U;
 static const uint FNV_prime32 = 16777619U;
+static const float tau = 6.28318530717958647693f;
 
 // Component sign (never zero) functions
 inline float sign_nz(float x)
@@ -217,25 +218,31 @@ inline uint Hash(int value, uint hash = FNV_offset_basis32)
 inline float RandomN(float2 seed)
 {
 	// float2(e^pi = 'Gelfond's constant), 2^sqrt(2) = 'Gelfond Schneider's constant)
-	float2 K1 = float2(23.14069263277926, 2.665144142690225);
+	const float2 K1 = float2(23.14069263277926, 2.665144142690225);
 	return 2.0f * frac(cos(dot(seed, K1)) * 12345.6789) - 1.0f;
 }
 
 // A random normalised direction vector on the interval (-1, +1)
-inline float2 Random2N(float2 seed)
+inline float4 Random2N(float2 seed)
 {
-	float x = RandomN(seed);
-	float y = RandomN(x);
-	return normalize(float2(x, y));
+	float t = RandomN(seed) * tau * 0.5f;
+	return float4(cos(t), sin(t), 0, 0);
+	//float x = RandomN(seed);
+	//float y = RandomN(x);
+	//return normalize(float2(x, y));
 }
 inline float4 Random3N(float2 seed)
 {
-	float x = RandomN(seed);
-	float y = RandomN(x);
-	float z = RandomN(y);
-	return normalize(float4(x, y, z, 0));
+	float t = RandomN(seed) * tau * 0.5f;
+	float z = RandomN(t);
+	float r = sqrt(1 - sqr(z));
+	return float4(r * cos(t), r * sin(t), z, 0);
+	//float x = RandomN(seed);
+	//float y = RandomN(x);
+	//float z = RandomN(y);
+	//return normalize(float4(x, y, z, 0));
 }
-inline float4 Random4N(float2 seed)
+inline float4 Random4(float2 seed)
 {
 	float x = RandomN(seed);
 	float y = RandomN(x);
@@ -290,6 +297,16 @@ inline row_major float4x4 InvertOrthonormal(row_major float4x4 mat)
 		-dot(mat._m10_m11_m12_m13, mat._m30_m31_m32_m33),
 		-dot(mat._m20_m21_m22_m23, mat._m30_m31_m32_m33),
 		1);
+}
+
+// Optimised conditional test. If all active threads in a wave have 'condition' equal
+// the wave will take only take one of the conditional branches
+inline bool WaveActiveOrThisThreadTrue(bool condition)
+{
+	if (WaveActiveAllEqual(condition))
+		return condition;
+
+	return condition;
 }
 
 #endif

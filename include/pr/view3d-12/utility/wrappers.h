@@ -485,6 +485,7 @@ namespace pr::rdr12
 		//  - Data within resources can use the 'DATA_PLACEMENT_ALIGNMENT' values.
 		//  - Size of resource heap must be at least 64K for single-textures and constant buffers
 		using clear_value_t = std::optional<D3D12_CLEAR_VALUE>;
+		enum class EMiscFlags { None = 0, PartialInitData = 1 << 0, _flags_enum = 0, };
 
 		int ElemStride;                     // Element stride
 		int DataAlignment;                  // The alignment that initialisation data should have.
@@ -493,6 +494,7 @@ namespace pr::rdr12
 		D3D12_HEAP_FLAGS HeapFlags;         // Properties
 		clear_value_t ClearValue;           // A clear value for the resource
 		D3D12_RESOURCE_STATES DefaultState; // The state the resource should be in between command list executions
+		EMiscFlags MiscFlags;               // Other flags
 
 		ResDesc()
 			: D3D12_RESOURCE_DESC()
@@ -503,6 +505,7 @@ namespace pr::rdr12
 			, HeapFlags(D3D12_HEAP_FLAG_NONE)
 			, ClearValue()
 			, DefaultState(D3D12_RESOURCE_STATE_COMMON)
+			, MiscFlags(EMiscFlags::None)
 		{}
 		ResDesc(ResDesc&& rhs) = default;
 		ResDesc(ResDesc const& rhs) = default;
@@ -540,11 +543,13 @@ namespace pr::rdr12
 			return *this;
 		}
 
-		ResDesc& init_data(Image data)
+		ResDesc& init_data(Image data, bool partial_init = false)
 		{
 			if (data.m_data.vptr != nullptr)
+			{
 				Data.push_back(data);
-
+				MiscFlags |= partial_init ? EMiscFlags::PartialInitData : EMiscFlags::None;
+			}
 			return *this;
 		}
 		ResDesc& clear(D3D12_CLEAR_VALUE clear)
@@ -622,7 +627,7 @@ namespace pr::rdr12
 				.res_alignment(D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 				.data_alignment(data_alignment)
 				.layout(D3D12_TEXTURE_LAYOUT_ROW_MAJOR) // required for DIMENSION_BUFFER types
-				.init_data(Image(init_data.data(), init_data.size() / element_stride, element_stride));
+				.init_data(Image(init_data.data(), init_data.size() / element_stride, element_stride), isize(init_data) < count * element_stride);
 		}
 		template <typename TElem> static ResDesc Buf(int64_t count, std::span<TElem const> init_data)
 		{
@@ -901,7 +906,7 @@ namespace pr::rdr12
 			AddressW = addrW;
 			MipLODBias = 0.0f;
 			MaxAnisotropy = 1;
-			ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+			ComparisonFunc = D3D12_COMPARISON_FUNC(0);
 			BorderColor[0] = 0.0f;
 			BorderColor[1] = 0.0f;
 			BorderColor[2] = 0.0f;

@@ -76,36 +76,36 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Async await notification</summary>
-		public async Task WaitAsync()
+		public async Task WaitAsync(CancellationToken token)
 		{
 			var mutex = this;
 			await Task.Run(() =>
 			{
 				lock (mutex)
 					Wait(mutex);
-			});
+			}, token);
 		}
 
 		/// <summary>Async await until 'condition' returns true</summary>
-		public async Task WaitAsync(Func<bool> condition)
+		public async Task WaitAsync(Func<bool> condition, CancellationToken token)
 		{
 			var mutex = this;
 			await Task.Run(() =>
 			{
 				lock (mutex)
 					Wait(mutex, condition);
-			});
+			}, token);
 		}
 
 		/// <summary>Async await until 'condition' returns true</summary>
-		public async Task WaitAsync(TimeSpan timeout, Func<bool> condition)
+		public async Task WaitAsync(TimeSpan timeout, Func<bool> condition, CancellationToken token)
 		{
 			var mutex = this;
 			await Task.Run(() =>
 			{
 				lock (mutex)
 					Wait(mutex, timeout, condition);
-			});
+			}, token);
 		}
 	}
 
@@ -354,7 +354,7 @@ namespace Rylogic.UnitTests
 				cv.NotifyOne();
 
 				// wait for the worker
-				await cv.WaitAsync(() => processed);
+				await cv.WaitAsync(() => processed, CancellationToken.None);
 
 				// "Back in main(), data = " << data << '\n';
 				Assert.Equal(data, "Changed data");
@@ -365,7 +365,7 @@ namespace Rylogic.UnitTests
 			async void WorkerThread()
 			{
 				// Wait until main() sends data
-				await cv.WaitAsync(() => ready);
+				await cv.WaitAsync(() => ready, CancellationToken.None);
 
 				// after the wait, we own the lock.
 				data = "Changed data";

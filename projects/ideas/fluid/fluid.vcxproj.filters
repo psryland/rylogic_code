@@ -25,6 +25,9 @@
     <ClInclude Include="src\demo\scene3d.h">
       <Filter>src\demo</Filter>
     </ClInclude>
+    <ClInclude Include="src\demo\tube2d.h">
+      <Filter>src\demo</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

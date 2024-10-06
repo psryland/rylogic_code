@@ -3,20 +3,6 @@
 #define SPATIAL_PARTITION_HLSLI
 #include "../common/utility.hlsli"
 
-#if 0 // Expected Buffers
-
-// The indices of particle positions sorted spatially
-RWStructuredBuffer<uint> m_spatial;
-
-// The lowest index (in m_spatial) for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_start;
-
-// The number of positions for each cell hash (length CellCount)
-RWStructuredBuffer<uint> m_idx_count;
-
-#endif
-
-
 // Convert a floating point position into a grid cell coordinate
 inline int3 GridCell(float4 position, uniform float grid_scale)
 {
@@ -39,9 +25,9 @@ inline uint CellHash(int3 grid, uniform uint cell_count)
 }
 
 // Return the index range for a given cell hash
-inline int2 IndexRange(uint cell_hash)
+inline int2 IndexRange(uint cell_hash, RWStructuredBuffer<uint> idx_start, RWStructuredBuffer<uint> idx_count)
 {
-	return int2(m_idx_start[cell_hash], m_idx_start[cell_hash] + m_idx_count[cell_hash]);
+	return int2(idx_start[cell_hash], idx_start[cell_hash] + idx_count[cell_hash]);
 }
 
 // A coroutine context for iterating over neighbouring particles
@@ -66,7 +52,7 @@ inline FindIter Find(float4 position, float4 radius, uniform float grid_scale, u
 
 // Advance the find iterator to the next cell. On return the 'idx_range' field contains the range
 // of indices in the spatially sorted index buffer.
-inline bool DoFind(inout FindIter iter, uniform uint cell_count)
+inline bool DoFind(inout FindIter iter, uniform uint cell_count, RWStructuredBuffer<uint> idx_start, RWStructuredBuffer<uint> idx_count)
 {
 	// Advance to the next cell
 	++iter.cell.x;
@@ -85,7 +71,7 @@ inline bool DoFind(inout FindIter iter, uniform uint cell_count)
 
 	// Get the range of indices in 'cell'
 	uint cell_hash = CellHash(iter.cell, cell_count);
-	iter.idx_range = IndexRange(cell_hash);
+	iter.idx_range = IndexRange(cell_hash, idx_start, idx_count);
 	return true;
 }
 

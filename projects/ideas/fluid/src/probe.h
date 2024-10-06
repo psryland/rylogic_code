@@ -38,9 +38,9 @@ namespace pr::fluid
 		float m_last_action_time;
 		float m_time;
 
-		Probe(rdr12::Renderer& rdr, IProbeActions* actions = nullptr)
+		Probe(rdr12::Renderer& rdr, float initial_radius, IProbeActions* actions = nullptr)
 			: m_position(0, 0, 0, 1)
-			, m_radius(0.1f)
+			, m_radius(initial_radius)
 			, m_sign()
 			, m_actions(actions)
 			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe { 1 }"))

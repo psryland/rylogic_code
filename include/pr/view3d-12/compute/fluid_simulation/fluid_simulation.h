@@ -32,19 +32,15 @@ namespace pr::rdr12::compute::fluid
 	};
 	struct Dynamics
 	{
-		v3 accel;
-		float density;
-		v3 vel;
-		int flags;
-		v4 surface;
+		v4 vel;     // Current velocity
+		v4 accel;   // Accumulated acceleration
+		v4 surface; // Nearby boundary surface
 
 		inline static constexpr wchar_t const* Layout =
 			L"struct DynamicsType "
 			L"{ "
-			L"	float3 accel; "
-			L"	float density; "
-			L"	float3 vel; "
-			L"	int flags; "
+			L"	float4 vel; "
+			L"	float4 accel; "
 			L"	float4 surface; "
 			L"}";
 	};
@@ -106,7 +102,8 @@ namespace pr::rdr12::compute::fluid
 			} Particles;
 			struct
 			{
-				v4 Gravity = { 0, -9.8f, 0, 0 }; // The acceleration due to gravity
+				//hack v4 Gravity = { 0, -9.8f, 0, 0 }; // The acceleration due to gravity
+				v4 Gravity = { 0, -10.0f, 0, 0 }; // The acceleration due to gravity
 				float ForceScale = 10.0f;        // The force scaling factor
 				float ForceRange = 1.0f;         // Controls the range between particles
 				float ForceBalance = 0.8f;       // The position of the transition from repulsive to attractive forces
@@ -126,11 +123,13 @@ namespace pr::rdr12::compute::fluid
 			{
 				int num_particles;
 				EWarning warnings;
+				float p0_energy;
 			};
 
 			GpuReadbackBuffer::Allocation m_particles;
 			GpuReadbackBuffer::Allocation m_dynamics;
 			GpuReadbackBuffer::Allocation m_cull_results;
+			GpuReadbackBuffer::Allocation m_debug_results;
 			int m_particle_buffer_size;
 
 			// The number of particles in the particle buffer (returned from Cull)
@@ -152,6 +151,14 @@ namespace pr::rdr12::compute::fluid
 
 				out(m_particles.ptr<Particle>() + start, m_dynamics.ptr<Dynamics>() + start);
 			}
+
+			// Return the GpuOutput object returned from the debugging call
+			GpuOutput const& DebugResults() const
+			{
+				static const GpuOutput s_zero = {};
+				auto ptr = m_debug_results.ptr<GpuOutput>();
+				return ptr ? *ptr : s_zero;
+			}
 		};
 
 		// Initialisation data
@@ -172,7 +179,6 @@ namespace pr::rdr12::compute::fluid
 		};
 
 		Renderer* m_rdr;                          // The renderer instance to use to run the compute shader
-		ComputeStep m_cs_measure_density;         // Update the particle densities
 		ComputeStep m_cs_apply_forces;            // Calculate the forces acting on each particle position
 		ComputeStep m_cs_apply_probe;             // Apply forces from the probe
 		ComputeStep m_cs_cull_particles;          // Remove particles below a plane
@@ -193,7 +199,6 @@ namespace pr::rdr12::compute::fluid
 
 		explicit FluidSimulation(Renderer& rdr)
 			: m_rdr(&rdr)
-			, m_cs_measure_density()
 			, m_cs_apply_forces()
 			, m_cs_apply_probe()
 			, m_cs_colour()
@@ -241,9 +246,6 @@ namespace pr::rdr12::compute::fluid
 			// Cull any particles that are initially out of bounds
 			CullParticles(job);
 
-			// Update the particle densities
-			//MeasureDensity(job, 0);
-
 			// Make the particle buffer a vertex buffer again
 			ParticleBufferAsUAV(job, false);
 
@@ -283,14 +285,12 @@ namespace pr::rdr12::compute::fluid
 			ApplyForces(job, elapsed_s);
 
 			// Integrate velocity and position (with collision)
-			m_collision.RestingContact(job, elapsed_s, Config.NumParticles, Config.Particles.Radius, m_r_particles, m_r_dynamics);
 			m_collision.Integrate(job, elapsed_s, Config.NumParticles, Config.Particles.Radius, m_r_particles, m_r_dynamics);
+			m_collision.DetectBoundaries(job, Config.NumParticles, Config.Particles.Radius, m_r_particles, m_r_dynamics);
+			m_collision.CullDeadParticles(job, Config.NumParticles, m_r_particles);
 
 			// Update the spatial partitioning of the particles
 			m_spatial.Update(job, Config.NumParticles, m_r_particles, false);
-
-			// Update the particle densities
-			//MeasureDensity(job, elapsed_s);
 
 			// Read back the particle and dynamics buffer
 			if (read_back)
@@ -426,7 +426,7 @@ namespace pr::rdr12::compute::fluid
 		}
 
 		// Run the debugging function
-		void Debugging(GpuJob& job, ProbeData const& probe)
+		void Debugging(GpuJob& job, float time_step, ProbeData const& probe)
 		{
 			if (Config.NumParticles == 0)
 				return;
@@ -435,7 +435,7 @@ namespace pr::rdr12::compute::fluid
 			ParticleBufferAsUAV(job, true);
 
 			// Apply the probe forces
-			DoDebugging(job, probe);
+			DoDebugging(job, time_step, probe);
 
 			// Make the particle buffer a vertex buffer again
 			ParticleBufferAsUAV(job, false);
@@ -620,21 +620,6 @@ namespace pr::rdr12::compute::fluid
 				.ShaderModel(L"cs_6_6")
 				.Optimise();
 
-			// Measure density
-			{
-				auto bytecode = compiler.EntryPoint(L"MeasureDensity").Compile();
-				m_cs_measure_density.m_sig = RootSig(ERootSigFlags::ComputeOnly)
-					.U32<cbFluidSim>(EReg::Fluid)
-					.UAV(EReg::Particles)
-					.UAV(EReg::Dynamics)
-					.UAV(EReg::Spatial)
-					.UAV(EReg::IdxStart)
-					.UAV(EReg::IdxCount)
-					.Create(device, "Fluid:MeasureDensitySig");
-				m_cs_measure_density.m_pso = ComputePSO(m_cs_measure_density.m_sig.get(), bytecode)
-					.Create(device, "Fluid:MeasureDensityPSO");
-			}
-
 			// Apply Forces
 			{
 				auto bytecode = compiler.EntryPoint(L"ApplyForces").Compile();
@@ -718,6 +703,7 @@ namespace pr::rdr12::compute::fluid
 					.UAV(EReg::Spatial)
 					.UAV(EReg::IdxStart)
 					.UAV(EReg::IdxCount)
+					.UAV(EReg::Output)
 					.Create(device, "Fluid:DebuggingSig");
 				m_cs_debugging.m_pso = ComputePSO(m_cs_debugging.m_sig.get(), bytecode)
 					.Create(device, "Fluid:DebuggingPSO");
@@ -751,31 +737,6 @@ namespace pr::rdr12::compute::fluid
 					.usage(EUsage::UnorderedAccess);
 				m_r_output = m_rdr->res().CreateResource(desc, "Fluid:Output");
 			}
-		}
-
-		// Update the density values of the particles
-		void MeasureDensity(GpuJob& job, float time_step)
-		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF3F75FF, "FluidSim::MeasureDensity");
-
-			auto cb_params = FluidSimCBuf(time_step);
-
-			job.m_barriers.Commit();
-		
-			job.m_cmd_list.SetPipelineState(m_cs_measure_density.m_pso.get());
-			job.m_cmd_list.SetComputeRootSignature(m_cs_measure_density.m_sig.get());
-			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
-			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
-			job.m_cmd_list.Dispatch(DispatchCount({ cb_params.NumParticles, 1, 1 }, { ThreadGroupSize, 1, 1 }));
-		
-			job.m_barriers.UAV(m_r_particles.get());
-			job.m_barriers.UAV(m_r_dynamics.get());
-
-			PIXEndEvent(job.m_cmd_list.get());
 		}
 
 		// Apply forces to each particle
@@ -888,7 +849,7 @@ namespace pr::rdr12::compute::fluid
 		// Create a map of some value over the map area
 		void DoGenerateMap(GpuJob& job, Texture2DPtr tex_map, MapData const& map_data, ColourData const& colour_data)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::ColourParticles");
+			PIXBeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::GenerateMap");
 
 			auto cb_map = MapCBuf(map_data, colour_data);
 
@@ -916,25 +877,38 @@ namespace pr::rdr12::compute::fluid
 		}
 
 		// Run the debugging function
-		void DoDebugging(GpuJob& job, ProbeData const& probe)
+		void DoDebugging(GpuJob& job, float time_step, ProbeData const& probe)
 		{
 			PIXBeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::Debugging");
 
-			auto cb_params = FluidSimCBuf(0);
+			auto cb_sim = FluidSimCBuf(time_step);
 			auto cb_probe = ProbeCBuf(probe);
 
 			job.m_barriers.Commit();
 
 			job.m_cmd_list.SetPipelineState(m_cs_debugging.m_pso.get());
 			job.m_cmd_list.SetComputeRootSignature(m_cs_debugging.m_sig.get());
-			job.m_cmd_list.AddComputeRoot32BitConstants(cb_params);
+			job.m_cmd_list.AddComputeRoot32BitConstants(cb_sim);
 			job.m_cmd_list.AddComputeRoot32BitConstants(cb_probe);
 			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_particles->GetGPUVirtualAddress());
 			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_dynamics->GetGPUVirtualAddress());
 			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_spatial->GetGPUVirtualAddress());
 			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_start->GetGPUVirtualAddress());
 			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_spatial.m_idx_count->GetGPUVirtualAddress());
+			job.m_cmd_list.AddComputeRootUnorderedAccessView(m_r_output->GetGPUVirtualAddress());
 			job.m_cmd_list.Dispatch(DispatchCount({ 1, 1, 1 }, { 1, 1, 1 }));
+
+			job.m_barriers.UAV(m_r_output.get());
+
+			// Read back the output
+			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+			job.m_barriers.Commit();
+			{
+				auto buf = job.m_readback.Alloc<OutputData>(1);
+				job.m_cmd_list.CopyBufferRegion(buf, m_r_output.get(), 0);
+				Output.m_debug_results = buf;
+			}
+			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 			PIXEndEvent(job.m_cmd_list.get());
 		}
