@@ -1304,7 +1304,7 @@ namespace pr
 			{
 				Check(m_obj != 0, "Failed to create solid brush");
 			}
-			Brush(Brush&& rhs)
+			Brush(Brush&& rhs) noexcept
 				:m_obj(rhs.m_obj)
 				,m_owned(rhs.m_owned)
 			{
@@ -1314,7 +1314,7 @@ namespace pr
 				:m_obj(rhs.m_obj)
 				,m_owned(false)
 			{}
-			Brush& operator =(Brush&& rhs)
+			Brush& operator =(Brush&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -1392,7 +1392,7 @@ namespace pr
 				,m_type(type)
 				,m_owned(owned)
 			{}
-			Image(Image&& rhs)
+			Image(Image&& rhs) noexcept
 				:m_obj(rhs.m_obj)
 				,m_type(rhs.m_type)
 				,m_owned(rhs.m_owned)
@@ -1404,7 +1404,7 @@ namespace pr
 				,m_type(rhs.m_type)
 				,m_owned(false)
 			{}
-			Image& operator = (Image&& rhs)
+			Image& operator = (Image&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
