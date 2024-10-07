@@ -2287,7 +2287,7 @@ namespace pr::storage::zip
 			// Functor for calculating the Adler32 checksum
 			struct AdlerChecksum
 			{
-				constexpr uint32_t AdlerMod = 65521;
+				inline static constexpr uint32_t AdlerMod = 65521;
 				uint32_t a, b;
 
 				AdlerChecksum()
