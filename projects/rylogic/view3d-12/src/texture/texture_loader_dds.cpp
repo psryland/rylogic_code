@@ -34,7 +34,7 @@ namespace pr::rdr12
 		// "DDS "
 		static uint32_t const Sentinal = 0x20534444;
 
-		enum class EHeaderFlags
+		enum class EHeaderFlags : uint32_t
 		{
 			PIXELFORMAT = 0x00000001, // DDSD_PIXELFORMAT 
 			HEIGHT      = 0x00000002, // DDSD_HEIGHT
@@ -47,7 +47,7 @@ namespace pr::rdr12
 			VOLUME      = 0x00800000, // DDSD_DEPTH
 			_flags_enum = 0,
 		};
-		enum class EPixelFormatFlags
+		enum class EPixelFormatFlags : uint32_t
 		{
 			ALPHAPIXELS = 0x00000001, // DDPF_ALPHAPIXELS
 			ALPHA       = 0x00000002, // DDPF_ALPHA
@@ -59,14 +59,14 @@ namespace pr::rdr12
 			LUMINANCEA  = 0x00020001, // DDPF_LUMINANCE | DDPF_ALPHAPIXELS
 			_flags_enum = 0,
 		};
-		enum class ECaps
+		enum class ECaps : uint32_t
 		{
 			CUBEMAP = 0x00000008, // DDSCAPS_COMPLEX
 			TEXTURE = 0x00001000, // DDSCAPS_TEXTURE
 			MIPMAP  = 0x00400008, // DDSCAPS_COMPLEX | DDSCAPS_MIPMAP
 			_flags_enum = 0,
 		};
-		enum class ECaps2
+		enum class ECaps2 : uint32_t
 		{
 			CUBEMAP = 0x00000200, // DDSCAPS2_CUBEMAP
 			CUBEMAP_POSITIVEX = 0x00000600, // DDSCAPS2_CUBEMAP | DDSCAPS2_CUBEMAP_POSITIVEX
@@ -132,7 +132,7 @@ namespace pr::rdr12
 	}
 
 	// Convert a DDS pixel format to a DXGI format
-	DXGI_FORMAT GetDXGIFormat(dds::PixelFormat const& ddpf)
+	static DXGI_FORMAT GetDXGIFormat(dds::PixelFormat const& ddpf)
 	{
 		auto IsBitmask = [&ddpf](uint32_t r, uint32_t g, uint32_t b, uint32_t a)
 		{
@@ -295,7 +295,7 @@ namespace pr::rdr12
 
 	// Load the DDS file data from 'filepath' into 'dds_data' and return pointers to the
 	// header and data + size. Also, performs validation on the file can contained data.
-	dds::Image LoadTextureDataFromFile(std::filesystem::path const& filepath)
+	static dds::Image LoadTextureDataFromFile(std::filesystem::path const& filepath)
 	{
 		using namespace std::literals;
 
@@ -349,11 +349,11 @@ namespace pr::rdr12
 		img.bits = std::span<uint8_t const>{ img.data.get() + offset, size - offset };
 
 		// Return the image
-		return std::move(img);
+		return img;
 	}
 
 	// Return an array of 'Image's and a resource description from DDS image data.
-	LoadedImageResult LoadDDS(dds::Image const& img, int mips, bool is_cube_map, int max_dimension)
+	static LoadedImageResult LoadDDS(dds::Image const& img, int mips, bool is_cube_map, int max_dimension)
 	{
 		auto resource_dimension = D3D12_RESOURCE_DIMENSION_UNKNOWN;
 		auto format = DXGI_FORMAT_UNKNOWN;

@@ -141,7 +141,7 @@ namespace pr::rdr12
 		auto has_init_data = !desc.Data.empty();
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
-		D3D12_RESOURCE_DESC rd = desc;
+		ResDesc rd = desc;
 		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			rd.Width *= desc.ElemStride;
 
@@ -679,29 +679,29 @@ namespace pr::rdr12
 			{
 				uint32_t const data[] = { 0xFF000000 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Black).name("#black");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Black).name("#black");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::White:
 			{
 				uint32_t const data[] = { 0xFFFFFFFF };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::White).name("#white");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::White).name("#white");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Gray:
 			{
 				uint32_t const data[] = { 0xFF808080 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Gray).name("#gray");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 1)).uri(EStockTexture::Gray).name("#gray");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker:
 			{
+				constexpr uint32_t X = 0xFFFFFFFF;
+				constexpr uint32_t O = 0x00000000;
 				uint32_t const data[] =
 				{
-					#define X 0xFFFFFFFF
-					#define O 0x00000000
 					X, X, O, O, X, X, O, O,
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
@@ -710,19 +710,17 @@ namespace pr::rdr12
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
 					O, O, X, X, O, O, X, X,
-					#undef X
-					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker).name("#checker");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker).name("#checker");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker2:
 			{
+				constexpr uint32_t X = 0xFFFFFFFF;
+				constexpr uint32_t O = 0xFFAAAAAA;
 				uint32_t const data[] =
 				{
-					#define X 0xFFFFFFFF
-					#define O 0xFFAAAAAA
 					X, X, O, O, X, X, O, O,
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
@@ -731,19 +729,17 @@ namespace pr::rdr12
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
 					O, O, X, X, O, O, X, X,
-					#undef X
-					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker2).name("#checker2");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker2).name("#checker2");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::Checker3:
 			{
+				constexpr uint32_t X = 0xFFEEEEEE;
+				constexpr uint32_t O = 0xFFFFFFFF;
 				uint32_t const data[] =
 				{
-					#define O 0xFFFFFFFF
-					#define X 0xFFEEEEEE
 					X, X, O, O, X, X, O, O,
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
@@ -752,11 +748,9 @@ namespace pr::rdr12
 					X, X, O, O, X, X, O, O,
 					O, O, X, X, O, O, X, X,
 					O, O, X, X, O, O, X, X,
-					#undef X
-					#undef O
 				};
 				auto src = Image(8, 8, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::Checker3).name("#checker3");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteDot:
@@ -776,7 +770,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteDot).has_alpha().name("#whitedot");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteDot).has_alpha().name("#whitedot");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSpot:
@@ -798,7 +792,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpot).has_alpha().name("#whitespot");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSpike:
@@ -828,7 +822,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpike).has_alpha().name("#whitespike");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSpike).has_alpha().name("#whitespike");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteSphere:
@@ -863,7 +857,7 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSphere).has_alpha(false).name("#whitesphere");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteSphere).has_alpha(false).name("#whitesphere");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::WhiteTriangle:
@@ -905,14 +899,14 @@ namespace pr::rdr12
 				}
 
 				auto src = Image(sz, sz, data.data(), DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteTriangle).has_alpha().name("#whitetriangle");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::WhiteTriangle).has_alpha().name("#whitetriangle");
 				return CreateTexture2D(tdesc);
 			}
 			case EStockTexture::EnvMapProjection:
 			{
 				uint32_t const data[] = { 0 };
 				auto src = Image(1, 1, data, DXGI_FORMAT_B8G8R8A8_UNORM);
-				auto tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::EnvMapProjection).name("#envmapproj");
+				TextureDesc tdesc = TextureDesc(AutoId, ResDesc::Tex2D(src, 0)).uri(EStockTexture::EnvMapProjection).name("#envmapproj");
 				return CreateTexture2D(tdesc);
 			}
 			default:
@@ -951,32 +945,32 @@ namespace pr::rdr12
 		{
 			case EStockSampler::PointClamp:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::PointClamp, SamDesc::PointClamp()).name("#pointclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::PointWrap:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::PointWrap, SamDesc::PointWrap()).name("#pointwrap");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearClamp:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::LinearClamp, SamDesc::LinearClamp()).name("#linearclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::LinearWrap:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::LinearWrap, SamDesc::LinearWrap()).name("#linearwrap");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicClamp:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::AnisotropicClamp, SamDesc::AnisotropicClamp()).name("#anisotropicclamp");
 				return GetSampler(sdesc);
 			}
 			case EStockSampler::AnisotropicWrap:
 			{
-				auto sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
+				SamplerDesc sdesc = SamplerDesc(EStockSampler::AnisotropicWrap, SamDesc::AnisotropicWrap()).name("#anisotropicwrap");
 				return GetSampler(sdesc);
 			}
 			default:

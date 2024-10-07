@@ -92,7 +92,7 @@ namespace keyspy
 			// Write 8 bits for the virtual key code
 			// 'vkCode - 1' = a value on the range [0,253]
 			// This leaves values 254 and 255 available for special purposes.
-			PutBits(p.vkCode - 1, 8);
+			PutBits(static_cast<int>(p.vkCode) - 1, 8);
 
 			// Check for 'Ctrl+V' or 'Shift+Ins', if the clipboard contains text, add the text
 

@@ -21,7 +21,7 @@ namespace pr::rdr12
 	struct LoadedImageResult
 	{
 		pr::vector<ImageWithData> images; // Each image is an array slice (not a mip map)
-		D3D12_RESOURCE_DESC desc;
+		D3D12_RESOURCE_DESC desc = {};
 	};
 
 	// True if 'data' points at DDS data (probably)

@@ -65,19 +65,17 @@ namespace pr
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
-	template <typename T, typename U>
+	template <BitField T, BitField U>
 	[[nodiscard]] constexpr bool AnySet(T value, U mask)
 	{
-		using UT = pr::underlying_type_t<T>;
-		return (static_cast<UT>(value) & static_cast<UT>(mask)) != 0;
+		return (static_cast<uint64_t>(value) & static_cast<uint64_t>(mask)) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
-	template <typename T, typename U>
+	template <BitField T, BitField U>
 	[[nodiscard]] constexpr bool AllSet(T value, U mask)
 	{
-		using UT = pr::underlying_type_t<T>;
-		return (static_cast<UT>(value) & static_cast<UT>(mask)) == static_cast<UT>(mask);
+		return (static_cast<uint64_t>(value) & static_cast<uint64_t>(mask)) == static_cast<uint64_t>(mask);
 	}
 
 	// Reverse the order of bits in 'v'
@@ -284,10 +282,10 @@ namespace pr
 	// 'hi' and 'lo' are zero-based bit indices.
 	// e.g. BitStuff(0b11111111, 6, 3) => 0b00001111 => 0b01111000
 	template <typename T> [[deprecated("Use PackBits")]] constexpr T BitStuff(unsigned long long value, int hi, int lo)
-    {
-	    unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
-	    return static_cast<T>((value & mask) << lo);
-    }
+	{
+		unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
+		return static_cast<T>((value & mask) << lo);
+	}
 
 	// Convert a string of 1s and 0s into a bitmask
 	template <typename T> inline T BitsFromString(char const* bits)

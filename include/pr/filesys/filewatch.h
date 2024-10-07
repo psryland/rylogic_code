@@ -54,7 +54,13 @@ namespace pr
 			pr::Guid             m_id;        // A user provided id used to identify groups of watched files
 			void*                m_user_data; // User data to provide in the callback
 		
-			File() = default;
+			File()
+				:m_filepath()
+				,m_time()
+				,m_onchanged()
+				,m_id()
+				,m_user_data()
+			{}
 			File(path const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 				:m_filepath(filepath)
 				,m_time(std::filesystem::last_write_time(filepath))

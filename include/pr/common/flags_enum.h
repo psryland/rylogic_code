@@ -33,23 +33,23 @@
 	// Define the bitwise operators
 	template <FlagsEnum TEnum> constexpr TEnum operator ~ (TEnum lhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(~static_cast<ut>(lhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(~static_cast<UT>(lhs));
 	}
 	template <FlagsEnum TEnum> constexpr TEnum operator | (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(ut(lhs) | ut(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) | static_cast<UT>(rhs));
 	}
 	template <FlagsEnum TEnum> constexpr TEnum operator & (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(ut(lhs) & ut(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) & static_cast<UT>(rhs));
 	}
 	template <FlagsEnum TEnum> constexpr TEnum operator ^ (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(ut(lhs) ^ ut(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) ^ static_cast<UT>(rhs));
 	}
 	template <FlagsEnum TEnum> constexpr TEnum& operator |= (TEnum& lhs, TEnum rhs)
 	{
@@ -65,13 +65,13 @@
 	}
 	template <FlagsEnum TEnum, typename T> constexpr TEnum operator << (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(ut(lhs) << rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) << rhs);
 	}
 	template <FlagsEnum TEnum, typename T> constexpr TEnum operator >> (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(ut(lhs) >> rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) >> rhs);
 	}
 	template <FlagsEnum TEnum, typename T> constexpr TEnum& operator <<= (TEnum& lhs, T rhs)
 	{
@@ -83,8 +83,8 @@
 	}
 	template <FlagsEnum TEnum, typename T> constexpr bool operator == (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return ut(lhs) == ut(rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<UT>(lhs) == static_cast<UT>(rhs);
 	}
 	template <FlagsEnum TEnum, typename T> constexpr bool operator == (T lhs, TEnum rhs)
 	{
@@ -110,33 +110,33 @@
 	}
 	template <ArithEnum TEnum> constexpr TEnum operator - (TEnum lhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(-static_cast<ut>(lhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(-static_cast<UT>(lhs));
 	}
 	template <ArithEnum TEnum> constexpr TEnum operator + (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) + static_cast<ut>(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) + static_cast<UT>(rhs));
 	}
 	template <ArithEnum TEnum> constexpr TEnum operator - (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) - static_cast<ut>(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) - static_cast<UT>(rhs));
 	}
 	template <ArithEnum TEnum> constexpr TEnum operator * (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) * static_cast<ut>(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) * static_cast<UT>(rhs));
 	}
 	template <ArithEnum TEnum> constexpr TEnum operator / (TEnum lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) / static_cast<ut>(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) / static_cast<UT>(rhs));
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator + (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) + rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) + rhs);
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator + (T lhs, TEnum rhs)
 	{
@@ -144,8 +144,8 @@
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator - (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) - rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) - rhs);
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator - (T lhs, TEnum rhs)
 	{
@@ -153,8 +153,8 @@
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator * (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) * rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) * rhs);
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator * (T lhs, TEnum rhs)
 	{
@@ -162,13 +162,13 @@
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator / (TEnum lhs, T rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(static_cast<ut>(lhs) / rhs);
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(static_cast<UT>(lhs) / rhs);
 	}
 	template <ArithEnum TEnum, typename T> constexpr TEnum operator / (T lhs, TEnum rhs)
 	{
-		using ut = typename std::underlying_type<TEnum>::type;
-		return TEnum(lhs / static_cast<ut>(rhs));
+		using UT = std::underlying_type_t<TEnum>;
+		return static_cast<TEnum>(lhs / static_cast<UT>(rhs));
 	}
 
 #endif

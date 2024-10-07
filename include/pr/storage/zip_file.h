@@ -3500,7 +3500,7 @@ namespace pr::storage::zip
 
 								size_t total = 0;
 								for (int i = max_bit_length; i > 0; i--)
-									total += bit_length_counts[i] << (max_bit_length - i);
+									total += static_cast<size_t>(bit_length_counts[i]) << (max_bit_length - i);
 
 								for (; total != (1ULL << max_bit_length); --total)
 								{
