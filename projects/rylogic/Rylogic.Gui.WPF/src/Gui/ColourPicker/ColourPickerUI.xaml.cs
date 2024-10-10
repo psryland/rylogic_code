@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using Rylogic.Gfx;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -27,6 +28,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private void Colour_Changed()
 		{
+			Suppress.Unused(Colour_Changed);
 			ColorChanged?.Invoke(this, new ColourWheel.ColourEventArgs(Colour));
 		}
 		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour), Colour32.White, Gui_.EDPFlags.TwoWay);

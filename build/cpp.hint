@@ -1,5 +1,7 @@
 // Hint files help the Visual Studio IDE interpret Visual C++ identifiers
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define assert(expression) ((void)0)
+#define assert(expression) (void)( (!!(expression)) || (_wassert(_CRT_WIDE(#expression), _CRT_WIDE(__FILE__), (unsigned)(__LINE__)), 0) )
 #define PR_RDR12_DEFINE_INSTANCE(name, fields) struct name { static constexpr int CompCount = 0 fields(PR_RDR12_INST_MEMBER_COUNT); static constexpr int CompCapacity = CompCount + pr::Pad<int>(sizeof(pr::rdr12::BaseInstance) + CompCount*sizeof(pr::rdr12::EInstComp), 16U); pr::rdr12::BaseInstance m_base; pr::rdr12::EInstComp m_cpt[CompCapacity]; fields(PR_RDR12_INST_MEMBERS) name() :m_base({CompCount}) ,m_cpt() fields(PR_RDR12_INST_INITIALISERS) { using namespace pr::rdr12; using ThisType = name; int i = 0; fields(PR_RDR12_INST_INIT_COMPONENTS) constexpr auto AlignCheck = []() { constexpr int Sizes[] = {fields(PR_RDR12_INST_COMPONENT_SIZES)}; int i = 0, ofs = PadTo<int>(sizeof(BaseInstance) + CompCount*sizeof(EInstComp), 16); fields(PR_RDR12_INST_ALIGNMENT_CHECK) return true; }; static_assert(AlignCheck(), "Member alignment issue"); static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member"); } }; static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");
 #define PR_INST(x) x(m4x4, m_i2w, rdr12::EInstComp::I2WTransform) x(rdr12::ModelPtr, m_model, rdr12::EInstComp::ModelPtr)

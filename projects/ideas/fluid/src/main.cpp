@@ -575,12 +575,8 @@ struct Main :Form, IProbeActions
 		m_fluid_vis.Init(MaxParticleCount, scene.LdrScene(), m_fluid_sim.m_r_particles);
 
 		// Set the initial camera position
-		auto cam = scene.Camera();
-		if (cam)
-		{
-			m_scn.m_cam = *cam;
-			m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
-		}
+		scene.Camera(m_scn.m_cam);
+		m_scn.m_cam.Aspect(m_scn.m_viewport.Aspect());
 	}
 
 	// Create the scenes of the demo

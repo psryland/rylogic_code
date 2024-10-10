@@ -12,6 +12,7 @@
 #include <chrono>
 #include <atomic>
 #include "pr/common/to.h"
+#include "pr/common/hresult.h"
 #include "pr/maths/conversion.h"
 
 namespace pr::tweakables
@@ -62,7 +63,7 @@ namespace pr::tweakables
 				if (s_issue != issue)
 				{
 					std::lock_guard<std::mutex> lock(Instance().m_mutex);
-					auto map = Instance().m_variables;
+					map_ptr_t map = Instance().m_variables;
 
 					// Read the value
 					auto it = map->find(S.value);
@@ -92,6 +93,7 @@ namespace pr::tweakables
 
 	private:
 
+		using path_t = std::filesystem::path;
 		using ftime_t = std::filesystem::file_time_type;
 		using timepoint_t = std::chrono::system_clock::time_point;
 		using map_t = std::unordered_map<std::string, std::string>;
@@ -154,7 +156,7 @@ namespace pr::tweakables
 		{
 			std::lock_guard<std::mutex> lock(m_mutex);
 
-			auto variables = m_variables;
+			map_ptr_t variables = m_variables;
 			if (!variables->contains(key))
 			{
 				(*variables)[key] = value;
@@ -214,11 +216,17 @@ namespace pr::tweakables
 		// Save the tweakables to file
 		void SaveVariables(map_t const& variables)
 		{
-			std::ofstream ofile(filepath);
-			std::vector<std::pair<std::string, std::string>> sorted(variables.begin(), variables.end());
-			std::sort(sorted.begin(), sorted.end());
-			for (auto const& [key, value] : sorted)
-				ofile << key << " = " << value << std::endl;
+			path_t tmp_filepath = path_t(filepath).concat(".tmp");
+			{
+				std::ofstream ofile(tmp_filepath);
+				std::vector<std::pair<std::string, std::string>> sorted(variables.begin(), variables.end());
+				std::sort(sorted.begin(), sorted.end());
+				for (auto const& [key, value] : sorted)
+					ofile << key << " = " << value << std::endl;
+			}
+			auto p0 = tmp_filepath.wstring();
+			auto p1 = filepath.wstring();
+			Check(MoveFileExW(p0.c_str(), p1.c_str(), MOVEFILE_REPLACE_EXISTING), HrMsg(GetLastError()));
 		}
 
 		#if PR_UNITTESTS
@@ -293,15 +301,16 @@ namespace pr::tweakables
 
 		if constexpr (Tweakables::Enable)
 		{
-			auto& tweakables = Tweakables::Instance();
-			auto variables = tweakables.m_variables;
-			(*variables)["MY_BOOL"] = "false";
-			(*variables)["MY_INT"] = "3";
-			(*variables)["MY_FLOAT"] = "-1.0";
-			(*variables)["MY_STRING"] = "world";
-			tweakables.SaveVariables(*variables);
+			auto issue = Tweakables::Instance().m_issue.load();
 
-			for (; variables == tweakables.m_variables; )
+			Tweakables::map_t variables = {};
+			variables["MY_BOOL"] = "false";
+			variables["MY_INT"] = "3";
+			variables["MY_FLOAT"] = "-1.0";
+			variables["MY_STRING"] = "world";
+			Tweakables::Instance().SaveVariables(variables);
+
+			for (; issue == Tweakables::Instance().m_issue; )
 				std::this_thread::sleep_for(Tweakables::poll_rate);
 
 			PR_EXPECT(my_bool == false);

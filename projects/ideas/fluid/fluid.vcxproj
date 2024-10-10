@@ -100,7 +100,7 @@
     <ResourceCompile Include="res\shaders.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cpp.hint" />
+    <None Include="..\..\..\build\cpp.hint" />
   </ItemGroup>
   <!--
   <Target Name="Deploy" AfterTargets="Build"

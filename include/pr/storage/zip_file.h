@@ -668,7 +668,7 @@ namespace pr::storage::zip
 		}
 		LDH LDirEntry(CDH const& cdh) const
 		{
-			LDH ldh;
+			LDH ldh = {};
 
 			// Read the local header from the archive source
 			m_read(*this, cdh.LocalHeaderOffset, &ldh, sizeof(ldh));
@@ -955,7 +955,7 @@ namespace pr::storage::zip
 			}
 			else
 			{
-				Deflate algo;
+				Deflate algo = {};
 
 				// Compress into a local buffer and periodically flush to the output
 				algo.Compress(buf.data(), buf.size(), [&](auto const& out)
@@ -1107,7 +1107,7 @@ namespace pr::storage::zip
 			if (level == ECompressionLevel::None)
 			{
 				// Read from the file in blocks
-				std::array<char, 4096> buf;
+				std::array<char, 4096> buf = {};
 				for (; src_file.good();)
 				{
 					auto n = src_file.read(buf.data(), buf.size()).gcount();
@@ -1121,7 +1121,7 @@ namespace pr::storage::zip
 			}
 			else
 			{
-				Deflate algo;
+				Deflate algo = {};
 				
 				src_file.seekg(0);
 				auto src = std::istream_iterator<uint8_t>(src_file);
@@ -1394,7 +1394,7 @@ namespace pr::storage::zip
 			// Search backwards from the end of the data
 			if (has_flag(m_flags, EZipFlags::ScanFromEnd))
 			{
-				std::array<uint8_t, 4096> buf;
+				std::array<uint8_t, 4096> buf = {};
 				for (uint32_t sig = 0;;)
 				{
 					// Read a chunk from the end of the archive
@@ -1427,28 +1427,28 @@ namespace pr::storage::zip
 					m_read(*this, ofs, &sig, sizeof(sig));
 					switch (sig)
 					{
-					default:
+						case LDH::Signature:
 						{
-							throw std::runtime_error("Corrupt zip archive. Record signature is invalid");
-						}
-					case LDH::Signature:
-						{
-							LDH ldh;
+							LDH ldh = {};
 							m_read(*this, ofs, &ldh, sizeof(ldh));
 							ofs += ldh.Size();
 							break;
 						}
-					case CDH::Signature:
+						case CDH::Signature:
 						{
-							CDH cdh;
+							CDH cdh = {};
 							m_read(*this, ofs, &cdh, sizeof(cdh));
 							ofs += cdh.Size();
 							break;
 						}
-					case ECD::Signature:
+						case ECD::Signature:
 						{
 							// Found it
 							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Corrupt zip archive. Record signature is invalid");
 						}
 					}
 					if (ofs >= archive_size)
@@ -1463,7 +1463,7 @@ namespace pr::storage::zip
 		void ReadCentralDirectory(int64_t archive_size)
 		{
 			// Read and verify the end of central directory record.
-			ECD ecd;
+			ECD ecd = {};
 			auto ofs = FindECDOffset(archive_size);
 			m_read(*this, ofs, &ecd, sizeof(ecd));
 			if (ecd.Sig != ECD::Signature)
@@ -1551,7 +1551,7 @@ namespace pr::storage::zip
 		int CalcAlignmentPadding() const
 		{
 			if (m_entry_alignment == 0) return 0;
-			auto n = static_cast<int>(m_cdir_offset & (m_entry_alignment - 1));
+			auto n = static_cast<int>(m_cdir_offset) & (m_entry_alignment - 1);
 			return (m_entry_alignment - n) & (m_entry_alignment - 1);
 		}
 
@@ -1611,7 +1611,7 @@ namespace pr::storage::zip
 			{
 				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
 				// because Deflate uses references to earlier bytes, up to an LZ dictionary size prior.
-				Deflate algo;
+				Deflate algo = {};
 				algo.Decompress(m_imem.data() + item_ofs, cdh.CompressedSize, [&](auto const& out)
 				{
 					// Check for overflow
@@ -1653,7 +1653,7 @@ namespace pr::storage::zip
 			if (cdh.Method == EMethod::None || has_flag(flags, EZipFlags::CompressedData))
 			{
 				// Zip is a file. Read chunks into a temporary buffer
-				std::array<uint8_t, 4096> buf;
+				std::array<uint8_t, 4096> buf = {};
 				for (size_t remaining = cdh.CompressedSize; remaining != 0;)
 				{
 					// Read chunk
@@ -1686,7 +1686,7 @@ namespace pr::storage::zip
 				m_istream.seekg(item_ofs);
 				auto src = std::istream_iterator<uint8_t>(m_istream);
 
-				Deflate algo;
+				Deflate algo = {};
 				algo.Decompress(src, cdh.CompressedSize, [&](auto const& out)
 				{
 					// Check for overflow
@@ -1872,7 +1872,7 @@ namespace pr::storage::zip
 			};
 
 			// Convert the time_t to a 'tm' in local time
-			struct tm tm;
+			struct tm tm = {};
 			MSDosTimestamp dos_timestamp = {};
 			if (LocalTime(time, tm))
 			{
@@ -1916,7 +1916,7 @@ namespace pr::storage::zip
 				throw std::runtime_error("Calculating CRC checksum for input file stream failed. Seek to start failed");
 
 			// Read from the file in blocks
-			std::array<char, 4096> buf;
+			std::array<char, 4096> buf = {};
 			for (; ifile.good();)
 			{
 				auto n = ifile.read(buf.data(), buf.size()).gcount();
@@ -2445,7 +2445,7 @@ namespace pr::storage::zip
 
 									// Read the length of the LZ encoded code size
 									auto len = "\03\03\013"[sym - 16] + GetBits<uint32_t>(src, "\02\03\07"[sym - 16]); // length + num_extra
-									memset(&bit_lengths[i], sym == 16 ? bit_lengths[i - 1] : 0, len);
+									memset(&bit_lengths[i], sym == 16 ? bit_lengths[s_cast<size_t>(i) - 1] : 0, len);
 									if ((i += len) > iend)
 										throw std::runtime_error("Dynamic Huffman table is corrupt.");
 								}
@@ -2505,8 +2505,8 @@ namespace pr::storage::zip
 				m_bit_buf = 0;
 				m_num_bits = 0;
 
-				LZDictionary dict;
-				LZBuffer lz_buffer;
+				LZDictionary dict = {};
+				LZBuffer lz_buffer = {};
 				SymCount lit_counts(LitTableSize);
 				SymCount dst_counts(DstTableSize);
 				SrcIter<Src> src(stream, length), src_end;
@@ -2708,7 +2708,7 @@ namespace pr::storage::zip
 				{
 					// Calculate the checksum on the source input
 					auto s = stream;
-					AdlerChecksum adler;
+					AdlerChecksum adler = {};
 					for (auto l = length; l-- != 0; ++s)
 						adler(*s);
 
@@ -3009,7 +3009,7 @@ namespace pr::storage::zip
 				std::array<T, 1 + sizeof(T) * 8> m_huffman_code;
 				int m_max_bit_length;
 
-				HuffCodeGen(span_t<int> bit_length_counts)
+				explicit HuffCodeGen(span_t<int const> bit_length_counts)
 					:m_huffman_code()
 					,m_max_bit_length(int(bit_length_counts.size()))
 				{
@@ -3302,7 +3302,7 @@ namespace pr::storage::zip
 					}
 
 					// Generate the lookup table and tree
-					HuffCodeGen<uint16_t> gen(span_t<int>(bit_length_counts.data(), max_bit_length + 1));
+					HuffCodeGen<uint16_t> gen({ bit_length_counts.data(), s_cast<size_t>(max_bit_length) + 1 });
 					int16_t tree_cur, tree_next = -1;
 					for (int sym_index = 0; sym_index != m_alphabet_count; ++sym_index)
 					{
@@ -3494,18 +3494,20 @@ namespace pr::storage::zip
 							// Limits canonical Huffman code table to codes with length <= 'max_bit_length'
 							if (len > 1)
 							{
+								size_t i = {}, iend = {};
+
 								// Count the number of codes with length > max_bit_length
-								for (int i = max_bit_length + 1, iend = int(bit_length_counts.size()); i != iend; ++i)
+								for (i = s_cast<size_t>(max_bit_length) + 1, iend = bit_length_counts.size(); i != iend; ++i)
 									bit_length_counts[max_bit_length] += bit_length_counts[i];
 
 								size_t total = 0;
-								for (int i = max_bit_length; i > 0; i--)
+								for (i = s_cast<size_t>(max_bit_length); i > 0; i--)
 									total += static_cast<size_t>(bit_length_counts[i]) << (max_bit_length - i);
 
 								for (; total != (1ULL << max_bit_length); --total)
 								{
 									bit_length_counts[max_bit_length]--;
-									for (int i = max_bit_length - 1; i > 0; i--)
+									for (i = s_cast<size_t>(max_bit_length) - 1; i > 0; i--)
 									{
 										if (bit_length_counts[i] == 0) continue;
 										bit_length_counts[i]--;
@@ -3517,7 +3519,7 @@ namespace pr::storage::zip
 
 							// Record the bit lengths for each the code sizes
 							for (int i = 0; i != max_bit_length; ++i)
-								for (int j = bit_length_counts[i+1]; j != 0; --j)
+								for (int j = bit_length_counts[s_cast<size_t>(i)+1]; j != 0; --j)
 									m_bit_lengths[syms[--len].m_index] = static_cast<uint8_t>(i + 1);
 
 							break;
@@ -3533,8 +3535,8 @@ namespace pr::storage::zip
 						}
 					}
 
-					// Generate the huffman codes
-					HuffCodeGen<uint16_t> gen(span_t<int>(bit_length_counts.data(), max_bit_length));
+					// Generate the Huffman codes
+					HuffCodeGen<uint16_t> gen({ bit_length_counts.data(), static_cast<size_t>(max_bit_length) });
 					for (int i = 0; i != m_alphabet_count; ++i)
 					{
 						if (m_bit_lengths[i] == 0) continue;
@@ -3597,10 +3599,10 @@ namespace pr::storage::zip
 				}
 
 				// Read and pop the lower 'n' bits
-				auto b = static_cast<TInt>(m_bit_buf & ((1 << n) - 1));
+				auto b = static_cast<TInt>(m_bit_buf) & ((static_cast<TInt>(1) << n) - 1);
 				m_bit_buf >>= n;
 				m_num_bits -= n;
-				return b;
+				return s_cast<TInt>(b);
 			}
 
 			// Write 'n' bits to the output stream, via 'm_bit_buf'
@@ -3792,7 +3794,7 @@ namespace pr::storage::zip
 						auto num_dist_codes = TrimCount(dst_table.m_bit_lengths, 1, 30);
 
 						// Collect the literals/lengths and distances into a single buffer
-						std::array<uint8_t, LitTableSize + DstTableSize> bit_lengths;
+						std::array<uint8_t, LitTableSize + DstTableSize> bit_lengths = {};
 						memcpy(&bit_lengths[0], &lit_table.m_bit_lengths[0], num_lit_codes);
 						memcpy(&bit_lengths[num_lit_codes], &dst_table.m_bit_lengths[0], num_dist_codes);
 
@@ -3803,7 +3805,7 @@ namespace pr::storage::zip
 						//  [17] = Repeat a value of 0 for 3 - 10 times, the next 3 bits indicate the length (+3). i.e. 0b000 = 3, .. 0b111 = 10
 						//  [18] = Repeat a value of 0 for 11 - 138 times, the next 7 bits indicate the length (+11). i.e. 0b0000000 = 11, .. 0b1111111 = 138
 						SymCount dyn_count(DynTableSize);
-						std::array<uint8_t, LitTableSize + DstTableSize> lz_buf; int lz_buf_count = 0;
+						std::array<uint8_t, LitTableSize + DstTableSize> lz_buf = {}; int lz_buf_count = 0;
 						for (int i = 0, iend = num_lit_codes + num_dist_codes; i != iend; )
 						{
 							auto bit_length = bit_lengths[i];

@@ -159,12 +159,12 @@ namespace pr::rdr12
 		}
 
 		// Bake a transform into the model
-		if (opts && opts->m_bake)
-			Impl::BakeTransform(cache, *opts->m_bake);
+		if (opts && opts->has(ModelGenerator::CreateOptions::EOptions::BakeTransform))
+			Impl::BakeTransform(cache, opts->m_bake);
 
 		// Generate normals
-		if (opts && opts->m_gen_normals)
-			Impl::GenerateNormals(cache, *opts->m_gen_normals);
+		if (opts && opts->has(ModelGenerator::CreateOptions::EOptions::NormalGeneration))
+			Impl::GenerateNormals(cache, opts->m_gen_normals);
 
 		// Create the model
 		ModelDesc mdesc(
@@ -313,7 +313,7 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(num_quads);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
-		auto t2s = opts && opts->m_t2s ? *opts->m_t2s : m4x4::Identity();
+		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
 		assert(vcount == isize(verts));
 
 		// Generate the geometry
@@ -336,7 +336,7 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
-		auto t2s = opts && opts->m_t2s ? *opts->m_t2s : m4x4::Identity();
+		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
@@ -358,7 +358,7 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
-		auto t2s = opts && opts->m_t2s ? *opts->m_t2s : m4x4::Identity();
+		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
@@ -789,7 +789,7 @@ namespace pr::rdr12
 	ModelPtr ModelGenerator::SkyboxGeosphere(Renderer& rdr, std::filesystem::path const& texture_path, float radius, int divisions, CreateOptions const* opts)
 	{
 		// One texture per nugget
-		auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+		TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
 		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
 		return SkyboxGeosphere(rdr, tex, radius, divisions, opts);
 	}
@@ -959,7 +959,7 @@ namespace pr::rdr12
 					BuildModelTree(tree, child, level + 1);
 			}
 
-			// Convert a p3d::Mesh into a rdr::Model
+			// Convert a 'p3d::Mesh' into a 'rdr::Model'
 			ModelPtr MeshToModel(p3d::Mesh const& mesh)
 			{
 				m_cache.Reset();
@@ -1273,7 +1273,7 @@ namespace pr::rdr12
 			.usage(EUsage::RenderTarget|EUsage::SimultaneousAccess)
 			.clear(format, To<D3DCOLORVALUE>(layout.m_bk_colour))
 			;
-		auto tdesc = TextureDesc(AutoId, td).has_alpha(has_alpha).name("text_quad");
+		TextureDesc tdesc = TextureDesc(AutoId, td).has_alpha(has_alpha).name("text_quad");
 		auto tex = rdr.res().CreateTexture2D(tdesc);
 
 		// Render the text using DWrite

@@ -13,7 +13,7 @@ namespace pr::fluid
 		virtual int SpatialDimensions() const = 0;
 
 		// Initial camera position
-		virtual std::optional<pr::Camera> Camera() const = 0;
+		virtual void Camera(pr::Camera& camera) const = 0;
 
 		// Returns initialisation data for the particle positions.
 		// Return empty() if the existing particle state is to be used.

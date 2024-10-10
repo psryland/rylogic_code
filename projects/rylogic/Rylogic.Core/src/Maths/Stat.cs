@@ -688,6 +688,13 @@ namespace Rylogic.Maths
 		}
 		IStatSingleVariable<double> IStatSingleVariable<double>.Add(double value) => Add(value);
 
+		/// <summary>Decay the average to zero over time</summary>
+		public void Decay(double rate, double period)
+		{
+			m_mean *= Math.Pow(rate, period);
+			m_var  *= Math.Pow(rate, period);
+		}
+
 		/// <summary></summary>
 		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}

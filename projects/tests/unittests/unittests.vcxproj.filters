@@ -1057,6 +1057,7 @@
   <ItemGroup>
     <None Include="pre_build.py" />
     <None Include="run_tests.py" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\..\include\pr\collision\_readme.txt">

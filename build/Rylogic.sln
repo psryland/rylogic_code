@@ -170,6 +170,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Solution", "_Solution", "{AFA77BCB-5D10-4184-A87F-A1126C465F4C}"
 	ProjectSection(SolutionItems) = preProject
 		..\.editorconfig = ..\.editorconfig
+		cpp.hint = cpp.hint
 		exclusions.dic = exclusions.dic
 		packages.config = packages.config
 		..\include\pr\rylogic.natstepfilter = ..\include\pr\rylogic.natstepfilter

@@ -72,58 +72,82 @@ namespace pr::rdr12
 		// Additional options for model creation
 		struct CreateOptions
 		{
+			enum class EOptions
+			{
+				None = 0,
+				BakeTransform = 1 << 0, // Bake the model transform into the vertices
+				Colours = 1 << 1,
+				DiffuseTexture = 1 << 2,
+				NormalGeneration = 1 << 3,
+				TextureToSurface = 1 << 4,
+
+				_flags_enum = 0,
+			};
+
+			// Transform the model verts by the given transform.
+			m4x4 m_bake = {};
+
 			// Per-vertex or per-object colour
 			std::span<Colour32 const> m_colours = {};
 
-			// Transform the model verts by the given transform.
-			std::optional<m4x4> m_bake = std::nullopt;
-
 			// Diffuse texture
-			Texture2DPtr m_tex_diffuse = nullptr;
+			Texture2DPtr m_tex_diffuse = {};
 
 			// Diffuse texture sampler
-			SamplerPtr m_sam_diffuse = nullptr;
+			SamplerPtr m_sam_diffuse = {};
 
 			// Texture to surface transform
-			std::optional<m4x4> m_t2s = std::nullopt;
+			m4x4 m_t2s = {};
 
 			// Algorithmically generate surface normals. Value is the smoothing angle.
-			std::optional<float> m_gen_normals = std::nullopt;
+			float m_gen_normals = {};
+
+			// Flags for set options
+			EOptions m_options = EOptions::None;
+			bool has(EOptions opt) const
+			{
+				return (m_options & opt) == opt;
+			}
 
 			CreateOptions& colours(std::span<Colour32 const> colours)
 			{
 				m_colours = colours;
+				m_options |= EOptions::Colours;
 				return *this;
 			}
 			CreateOptions& bake(m4x4 const& m)
 			{
 				m_bake = m;
+				m_options |= EOptions::BakeTransform;
 				return *this;
 			}
 			CreateOptions& bake(m4x4 const* m)
 			{
-				if (m) m_bake = *m;
+				if (m) bake(*m);
 				return *this;
 			}
 			CreateOptions& tex_diffuse(Texture2DPtr tex, SamplerPtr sam)
 			{
 				m_tex_diffuse = tex;
 				m_sam_diffuse = sam;
+				m_options |= EOptions::DiffuseTexture;
 				return *this;
 			}
 			CreateOptions& tex2surf(m4x4 const& t2s)
 			{
 				m_t2s = t2s;
+				m_options |= EOptions::TextureToSurface;
 				return *this;
 			}
 			CreateOptions& tex2surf(m4x4 const* t2s)
 			{
-				if (t2s) m_t2s = *t2s;
+				if (t2s) tex2surf(*t2s);
 				return *this;
 			}
 			CreateOptions& gen_normals(float angle)
 			{
 				m_gen_normals = angle;
+				m_options |= EOptions::NormalGeneration;
 				return *this;
 			}
 		};

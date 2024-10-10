@@ -76,12 +76,10 @@ namespace pr::fluid
 		}
 
 		// Initial camera position
-		std::optional<pr::Camera> Camera() const override
+		void Camera(pr::Camera& camera) const override
 		{
-			pr::Camera cam;
-			cam.LookAt(v4(1.0f, 1.2f, 1.0f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
-			cam.Align(v4::YAxis());
-			return cam;
+			camera.LookAt(v4(1.0f, 1.2f, 1.0f, 1), v4(0, 0.0f, 0, 1), v4(0, 1, 0, 0));
+			camera.Align(v4::YAxis());
 		}
 
 		// Return the visualisation scene
