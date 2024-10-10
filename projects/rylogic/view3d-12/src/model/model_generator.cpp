@@ -660,8 +660,9 @@ namespace pr::rdr12
 		// At each vertex, ori.z should be the tangent to the extrusion path.
 		auto ori = m4x4::Identity();
 		auto yaxis = Perpendicular(path[1] - path[0], v4::YAxis());
-		auto make_path = [&](int p, int pcount)
+		auto make_path = [&](int p_, int pcount_)
 		{
+			size_t p = p_, pcount = pcount_;
 			if (p == 0)
 			{
 				auto tang = path[1] - path[0];
@@ -817,7 +818,7 @@ namespace pr::rdr12
 	ModelPtr ModelGenerator::SkyboxFiveSidedCube(Renderer& rdr, std::filesystem::path const& texture_path, float radius, CreateOptions const* opts)
 	{
 		// One texture per nugget
-		auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+		TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
 		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
 		return SkyboxFiveSidedCube(rdr, tex, radius, opts);
 	}
@@ -864,7 +865,7 @@ namespace pr::rdr12
 			// Load the texture for this face of the sky box
 			tpath[ofs + 0] = face[0];
 			tpath[ofs + 1] = face[1];
-			auto desc = TextureDesc(AutoId, ResDesc()).name("skybox");
+			TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
 			tex[i++] = rdr.res().CreateTexture2D(tpath.c_str(), desc);
 		}
 
@@ -907,7 +908,7 @@ namespace pr::rdr12
 						if (tex.m_type != p3d::Texture::EType::Diffuse)
 							continue;
 						
-						auto desc = TextureDesc(AutoId, ResDesc()).has_alpha(AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha)).name(tex.m_filepath.c_str());
+						TextureDesc desc = TextureDesc(AutoId, ResDesc()).has_alpha(AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha)).name(tex.m_filepath.c_str());
 						m_tex_diffuse = m_rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
 						break;
 					}
@@ -999,7 +1000,7 @@ namespace pr::rdr12
 					irange.m_end = irange.m_beg + nug.icount();
 
 					// The basic nugget
-					auto nugget = NuggetDesc(nug.m_topo, nug.m_geom).vrange(vrange).irange(irange);
+					NuggetDesc nugget = NuggetDesc(nug.m_topo, nug.m_geom).vrange(vrange).irange(irange);
 
 					// Resolve the material
 					for (auto& m : m_mats)
@@ -1054,7 +1055,7 @@ namespace pr::rdr12
 				if (m_tex_diffuse == nullptr && !m_textures.empty())
 				{
 					auto& tex = m_textures[0];
-					auto desc = TextureDesc(AutoId, ResDesc()).name(tex.m_filepath.c_str());
+					TextureDesc desc = TextureDesc(AutoId, ResDesc()).name(tex.m_filepath.c_str());
 					m_tex_diffuse = rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
 
 					// todo
@@ -1268,7 +1269,7 @@ namespace pr::rdr12
 
 		// Create a texture large enough to contain the text, and render the text into it
 		constexpr auto format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		auto td = ResDesc::Tex2D(Image{ s_cast<int>(texture_size.x), s_cast<int>(texture_size.y), nullptr, format }, 1)
+		ResDesc td = ResDesc::Tex2D(Image{ s_cast<int>(texture_size.x), s_cast<int>(texture_size.y), nullptr, format }, 1)
 			.heap_flags(D3D12_HEAP_FLAG_SHARED)
 			.usage(EUsage::RenderTarget|EUsage::SimultaneousAccess)
 			.clear(format, To<D3DCOLORVALUE>(layout.m_bk_colour))
