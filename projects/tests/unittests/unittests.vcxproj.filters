@@ -1053,6 +1053,12 @@
     <ClInclude Include="..\..\..\include\pr\common\tweakables.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\coroutine.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\container\concurrent_queue.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

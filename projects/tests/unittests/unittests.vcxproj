@@ -94,6 +94,7 @@
     <ClInclude Include="..\..\..\include\pr\common\command_line.h" />
     <ClInclude Include="..\..\..\include\pr\common\compress.h" />
     <ClInclude Include="..\..\..\include\pr\common\console.h" />
+    <ClInclude Include="..\..\..\include\pr\common\coroutine.h" />
     <ClInclude Include="..\..\..\include\pr\common\crc.h" />
     <ClInclude Include="..\..\..\include\pr\common\d3dptr.h" />
     <ClInclude Include="..\..\..\include\pr\common\datetime.h" />
@@ -142,6 +143,7 @@
     <ClInclude Include="..\..\..\include\pr\common\unittests.h" />
     <ClInclude Include="..\..\..\include\pr\common\user_data.h" />
     <ClInclude Include="..\..\..\include\pr\common\value_ptr.h" />
+    <ClInclude Include="..\..\..\include\pr\container\concurrent_queue.h" />
     <ClInclude Include="..\..\..\include\pr\container\span.h" />
     <ClInclude Include="..\..\..\include\pr\container\chain.h" />
     <ClInclude Include="..\..\..\include\pr\container\deque.h" />
