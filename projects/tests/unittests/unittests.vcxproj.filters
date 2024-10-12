@@ -1059,6 +1059,9 @@
     <ClInclude Include="..\..\..\include\pr\container\concurrent_queue.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\common\cancel_token.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

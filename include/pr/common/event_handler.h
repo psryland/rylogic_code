@@ -170,7 +170,7 @@ namespace pr
 			:m_handlers()
 			,m_cs()
 		{}
-		EventHandler(EventHandler&& rhs)
+		EventHandler(EventHandler&& rhs) noexcept
 			:m_handlers()
 			,m_cs()
 		{
@@ -192,7 +192,7 @@ namespace pr
 			}
 			m_handlers = std::move(handlers);
 		}
-		EventHandler& operator=(EventHandler&& rhs)
+		EventHandler& operator=(EventHandler&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			HandlerCont handlers;

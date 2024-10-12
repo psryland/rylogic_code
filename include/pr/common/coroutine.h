@@ -1,8 +1,9 @@
 //************************************************************************
 // Coroutines
 //************************************************************************
-// Credit: 'Jeremyong'
-// Github: https://github.com/jeremyong/coop.git
+// Inspired by:
+//   Credit: 'Jeremyong'
+//   Github: https://github.com/jeremyong/coop.git
 
 #pragma once
 #include <cstdint>
@@ -13,11 +14,14 @@
 #include <atomic>
 #include <semaphore>
 #include <thread>
+#include <condition_variable>
 #include <coroutine>
 #include <source_location>
 #include <numbers>
 #include <format>
 #include <Windows.h>
+
+#include "pr/common/cancel_token.h"
 #include "pr/container/concurrent_queue.h"
 #include "pr/threads/name_thread.h"
 
@@ -348,6 +352,119 @@ namespace pr::coroutine
 		[[nodiscard]] promise_type& promise() const noexcept
 		{
 			return m_coroutine.promise();
+		}
+	};
+
+	// Return type for enumerable coroutines
+	template<typename T>
+	struct Generator
+	{
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+		struct promise_type
+		{
+			T m_data;
+			std::exception_ptr m_exception;
+ 
+			Generator get_return_object()
+			{
+				return Generator(handle_type::from_promise(*this));
+			}
+			std::suspend_always initial_suspend()
+			{
+				return {};
+			}
+			std::suspend_always final_suspend() noexcept
+			{
+				return {};
+			}
+			void unhandled_exception()
+			{
+				m_exception = std::current_exception();
+			}
+			template <std::convertible_to<T> From> std::suspend_always yield_value(From&& from)
+			{
+				m_data = std::forward<From>(from);
+				return {};
+			}
+			void return_void()
+			{
+			}
+		};
+ 
+		class iter
+		{
+			friend struct Generator;
+			handle_type m_handle;
+
+			iter(handle_type handle)
+				: m_handle(handle)
+			{
+				next();
+			}
+
+			// Continue the coroutine until done or the next co_yield
+			void next()
+			{
+				if (m_handle == nullptr)
+					return;
+
+				// Run the coroutine
+				m_handle();
+
+				// Propagate the coroutine exception in called context
+				if (m_handle.promise().m_exception)
+					std::rethrow_exception(m_handle.promise().m_exception);
+
+				// If the coroutine is finished, make the iter == end()
+				if (m_handle.done())
+					m_handle = nullptr;
+			}
+
+		public:
+
+			T const& operator *() const
+			{
+				return m_handle.promise().m_data;
+			}
+			iter& operator ++()
+			{
+				next();
+				return *this;
+			}
+
+			friend bool operator == (iter const& lhs, iter const& rhs)
+			{
+				// Only end iterators are equal, so both must be end iterators
+				return (lhs.m_handle == nullptr) && (rhs.m_handle == nullptr);
+			}
+			friend bool operator != (iter const& lhs, iter const& rhs)
+			{
+				return !(lhs == rhs);
+			}
+		};
+ 
+	private:
+
+		handle_type m_handle;
+
+	public:
+
+		Generator(handle_type h)
+			: m_handle(h)
+		{}
+		~Generator()
+		{
+			m_handle.destroy();
+		}
+
+		auto begin()
+		{
+			return iter{m_handle};
+		}
+		auto end()
+		{
+			return iter{nullptr};
 		}
 	};
 
@@ -801,6 +918,14 @@ namespace pr::coroutine
 		return awaiter_t{ Scheduler::instance(), cpu_mask, priority, source_location };
 	}
 
+	// Wait for all tasks to complete
+	template<typename... Tasks>
+	Task<void> WhenAll(Tasks&... tasks)
+	{
+		(co_await tasks, ...);
+		co_return;
+	}
+
 	// Inline implementation
 	namespace impl
 	{
@@ -814,45 +939,81 @@ namespace pr::coroutine
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::common
+namespace pr::coroutine
 {
-	namespace coroutine_tests
+	namespace tests
 	{
 		using millis = std::chrono::milliseconds;
 
-		coroutine::Task<int> Job0(millis busy_time)
+		Generator<int> Fibonacci(int n)
+		{
+			int a = 0, b = 1;
+			for (int i = 0; i < n; ++i)
+			{
+				co_yield a;
+
+				auto next = a + b;
+				a = b;
+				b = next;
+			}
+		}
+
+		Task<int> Job0(CancelToken cancel)
 		{
 			// Suspend execution of the function. The next line will run on a different thread
 			co_await coroutine::suspend();
 
-			// Get busy
-			std::this_thread::sleep_for(busy_time);
+			millis busy_time(10);
 
-			co_return 13;
-		}
-		coroutine::Task<> Job1()
-		{
-			auto task0 = Job0(millis(50));
-			auto task1 = Job0(millis(10));
-			auto task2 = Job0(millis(30));
+			int i = 0;
+			for (; !cancel.Wait(busy_time); ++i)
+			{}
 
-			co_await task2;
-			co_await task1;
-			co_await task0;
+			co_return i;
 		}
-		coroutine::Task<void, true> Main()
+		Task<int> Job1(CancelToken cancel)
 		{
-			co_await Job1();
-			co_return;
+			auto task0 = Job0(cancel);
+			auto task1 = Job0(cancel);
+			auto task2 = Job0(cancel);
+
+			co_await WhenAll(task0, task1, task2);
+			co_return *task0 + *task1 + *task2;
+		}
+		Task<int, true> Main(CancelToken cancel)
+		{
+			auto sum = co_await Job1(cancel);
+			co_return sum;
 		}
 	}
 
 	PRUnitTest(CoroutineTests)
 	{
-		using namespace coroutine_tests;
+		using namespace tests;
+		auto main_thread_id = std::this_thread::get_id();
 
-		auto job = Main();
-		job.join();
+		{
+			int fib[] = { 0, 1, 1, 2, 3, 5, 8, 13, 21, 34 }, i = 0;
+			for (auto f : Fibonacci(10))
+				PR_EXPECT(f == fib[i++]);
+		}
+
+		{
+			CancelTokenSource cts;
+			auto token = cts.Token();
+
+			auto job = Main(token);
+
+			// Block for a while
+			token.Wait(millis(100));
+			cts.Cancel();
+
+			job.join();
+
+			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
+			PR_EXPECT(*job > 0);
+		}
+
 	}
 }
 #endif

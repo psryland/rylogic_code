@@ -57,6 +57,7 @@
 #include "pr\common\bit_data.h"
 #include "pr\common\bstr_t.h"
 #include "pr\common\build_options.h"
+#include "pr\common\cancel_token.h"
 #include "pr\common\cast.h"
 #include "pr\common\clipboard.h"
 #include "pr\common\coalesce.h"
