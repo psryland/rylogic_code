@@ -355,6 +355,70 @@ namespace pr::coroutine
 		}
 	};
 
+	// Async task type
+	template <typename T = void>
+	struct Taskz
+	{
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		template <typename Data> struct promise_base
+		{
+			void return_value(T const& value) noexcept(std::is_nothrow_copy_assignable_v<T>)
+			{
+				m_data = value;
+			}
+			void return_value(T&& value) noexcept(std::is_nothrow_move_assignable_v<T>)
+			{
+				m_data = std::move(value);
+			}
+		};
+		template <> struct promise_base<void>
+		{
+			void return_void()
+			{
+			}
+		};
+		struct promise_type : promise_base<T>
+		{
+			using data_t = std::conditional_t<std::is_same_v<T, void>, std::byte, T>;
+
+			data_t m_data;
+			std::exception_ptr m_exception;
+ 
+			Taskz get_return_object()
+			{
+				return Taskz(handle_type::from_promise(*this));
+			}
+			std::suspend_always initial_suspend()
+			{
+				return {};
+			}
+			std::suspend_always final_suspend() noexcept
+			{
+				return {};
+			}
+			void unhandled_exception()
+			{
+				m_exception = std::current_exception();
+			}
+		};
+
+	private:
+
+		handle_type m_handle;
+
+	public:
+
+		Taskz(handle_type handle)
+			: m_handle(handle)
+		{}
+		~Taskz()
+		{
+			m_handle.destroy();
+		}
+	};
+
 	// Return type for enumerable coroutines
 	template<typename T>
 	struct Generator
@@ -450,8 +514,8 @@ namespace pr::coroutine
 
 	public:
 
-		Generator(handle_type h)
-			: m_handle(h)
+		Generator(handle_type handle)
+			: m_handle(handle)
 		{}
 		~Generator()
 		{
@@ -957,6 +1021,19 @@ namespace pr::coroutine
 				b = next;
 			}
 		}
+		Taskz<int> JobAsync(CancelToken cancel)
+		{
+			co_await std::suspend_always{};
+
+			millis busy_time(10);
+
+			int i = 0;
+			for (; !cancel.Wait(busy_time); ++i)
+			{}
+
+			co_return i;
+		}
+
 
 		Task<int> Job0(CancelToken cancel)
 		{
@@ -992,10 +1069,19 @@ namespace pr::coroutine
 		using namespace tests;
 		auto main_thread_id = std::this_thread::get_id();
 
+		// Generator test
 		{
 			int fib[] = { 0, 1, 1, 2, 3, 5, 8, 13, 21, 34 }, i = 0;
 			for (auto f : Fibonacci(10))
 				PR_EXPECT(f == fib[i++]);
+		}
+
+		// Awaitable test
+		{
+			auto r = JobAsync(cancel).Result();
+
+
+
 		}
 
 		{
