@@ -22,7 +22,7 @@ namespace pr::unittests::your::namespace
 //#include "src/unittests.h" // all tests
 //#include "pr/common/allocator.h"
 //#include "pr/common/bit_data.h"
-#include "pr/common/cancel_token.h"
+//#include "pr/common/cancel_token.h"
 //#include "pr/common/compress.h"
 #include "pr/common/coroutine.h"
 //#include "pr/common/event_handler.h"

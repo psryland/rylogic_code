@@ -12,6 +12,10 @@
 #include <mutex>
 #include <condition_variable>
 
+// Note:
+//  For simple use, there is std::stop_source
+//  You can't create linked stop sources though, or wait on them.
+
 namespace pr
 {
 	// Cancellation exception

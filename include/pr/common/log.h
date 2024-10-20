@@ -22,6 +22,8 @@
 #include <libloaderapi.h>
 #include <debugapi.h>
 
+#include "pr/gui/terminal_colours.h"
+
 // Notes:
 //  If you create a log function like this:
 //     inline Logger& Log() { static Logger s_log; return s_log; }
@@ -142,9 +144,16 @@ namespace pr::log
 		friend std::ostream& operator << (std::ostream& stream, Event const& ev)
 		{
 			char const* delim = "";
+			char const* colour =
+				ev.m_level == ELevel::Debug ? gui::TermColours::Gray :
+				ev.m_level == ELevel::Info ? gui::TermColours::White :
+				ev.m_level == ELevel::Warn ? gui::TermColours::Yellow :
+				ev.m_level == ELevel::Error ? gui::TermColours::Red :
+				"";
+
 			if (!ev.m_file.empty()) { stream << ev.m_file; delim = " "; }
 			if (ev.m_line != -1) { stream << "(" << ev.m_line << "):"; delim = " "; }
-			stream << std::format("{}{:8}|{}|{}|{}\n", delim, ev.m_context, ToString(ev.m_level), ToString(ev.m_timestamp), ev.m_msg);
+			stream << std::format("{}{:8}|{}{}{}|{}|{}\n", delim, ev.m_context, colour, ToString(ev.m_level), gui::TermColours::Reset, ToString(ev.m_timestamp), ev.m_msg);
 			return stream;
 		}
 		friend std::string ToString(Event const& ev)
