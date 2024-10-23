@@ -68,11 +68,13 @@ namespace Rylogic.Extn
 			var ty = obj.GetType();
 			if (ty.GetProperty(name, binding_flags) is PropertyInfo pi)
 			{
-				return (true, (T)pi.GetGetMethod().Invoke(obj, null));
+				var result = (T?)pi.GetGetMethod()?.Invoke(obj, null) ?? throw new NullReferenceException();
+				return (true, result);
 			}
 			if (ty.GetMethod(name, binding_flags) is MethodInfo mi)
 			{
-				return (true, (T)mi.Invoke(obj, null));
+				var result = (T?)mi.Invoke(obj, null) ?? throw new NullReferenceException();
+				return (true, result);
 			}
 			return (false, default!);
 		}
@@ -84,7 +86,8 @@ namespace Rylogic.Extn
 			var ty = obj.GetType();
 			if (ty.GetMethod(name, binding_flags) is MethodInfo mi)
 			{
-				return (true, (T)mi.Invoke(obj, null));
+				var result = (T?)mi.Invoke(obj, null) ?? throw new NullReferenceException();
+				return (true, result);
 			}
 			return (false, default!);
 		}

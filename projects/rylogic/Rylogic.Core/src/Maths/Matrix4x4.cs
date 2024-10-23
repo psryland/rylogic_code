@@ -39,7 +39,7 @@ namespace Rylogic.Maths
 			this.rot = rot;
 			this.pos = pos;
 		}
-		public m4x4(quat q, v4 pos) :this()
+		public m4x4(Quat q, v4 pos) :this()
 		{
 			this.rot = new m3x4(q);
 			this.pos = pos;
@@ -271,7 +271,7 @@ namespace Rylogic.Maths
 		{
 			return new m4x4(m3x4.Rotation(from, to), translation);
 		}
-		public static m4x4 Transform(quat rot, v4 translation)
+		public static m4x4 Transform(Quat rot, v4 translation)
 		{
 			return new m4x4(new m3x4(rot), translation);
 		}
@@ -703,7 +703,7 @@ namespace Rylogic.Maths
 			Debug.Assert(IsAffine(lhs));
 			Debug.Assert(IsAffine(rhs));
 
-			var q = Slerp(new quat(lhs.rot), new quat(rhs.rot), frac);
+			var q = Slerp(new Quat(lhs.rot), new Quat(rhs.rot), frac);
 			var p = Lerp(lhs.pos, rhs.pos, frac);
 			return new m4x4(q, p);
 		}
@@ -783,7 +783,7 @@ namespace Rylogic.UnitTests
 		public void CreateFrom2()
 		{
 			var m1 = m4x4.Transform(1.0f, 0.5f, 0.7f, v4.Origin);
-			var m2 = new m4x4(new quat(1.0f, 0.5f, 0.7f), v4.Origin);
+			var m2 = new m4x4(new Quat(1.0f, 0.5f, 0.7f), v4.Origin);
 			Assert.True(Math_.IsOrthonormal(m1));
 			Assert.True(Math_.IsOrthonormal(m2));
 			Assert.True(Math_.FEql(m1, m2));
@@ -792,7 +792,7 @@ namespace Rylogic.UnitTests
 			var ang = rng.FloatC(0.0f, 1.0f);
 			var axis = v4.Random3N(0.0f, rng);
 			m1 = m4x4.Transform(axis, ang, v4.Origin);
-			m2 = new m4x4(new quat(axis, ang), v4.Origin);
+			m2 = new m4x4(new Quat(axis, ang), v4.Origin);
 			Assert.True(Math_.IsOrthonormal(m1));
 			Assert.True(Math_.IsOrthonormal(m2));
 			Assert.True(Math_.FEql(m1, m2));

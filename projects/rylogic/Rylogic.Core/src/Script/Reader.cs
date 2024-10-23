@@ -560,26 +560,26 @@ namespace Rylogic.Script
 		}
 
 		/// <summary>Extract a quaternion from the source</summary>
-		public quat Quaternion()
+		public Quat Quaternion()
 		{
-			return Quaternion(out var quaternion) ? quaternion : quat.Identity;
+			return Quaternion(out var quaternion) ? quaternion : Quat.Identity;
 		}
-		public quat QuaternionS()
+		public Quat QuaternionS()
 		{
-			return QuaternionS(out var quaternion) ? quaternion : quat.Identity;
+			return QuaternionS(out var quaternion) ? quaternion : Quat.Identity;
 		}
-		public bool Quaternion(out quat quaternion)
+		public bool Quaternion(out Quat quaternion)
 		{
-			quaternion = quat.Identity;
+			quaternion = Quat.Identity;
 			if (Real(out var x)) quaternion.x = (float)x;
 			if (Real(out var y)) quaternion.y = (float)y;
 			if (Real(out var z)) quaternion.z = (float)z;
 			if (Real(out var w)) quaternion.w = (float)w;
 			return true;
 		}
-		public bool QuaternionS(out quat quaternion)
+		public bool QuaternionS(out Quat quaternion)
 		{
-			quaternion = quat.Identity;
+			quaternion = Quat.Identity;
 			return SectionStart() && Quaternion(out quaternion) && SectionEnd();
 		}
 
@@ -756,14 +756,14 @@ namespace Rylogic.Script
 					}
 				case "quat":
 					{
-						var q = new quat(Vector4S());
+						var q = new Quat(Vector4S());
 						p2w = m4x4.Transform(q, v4.Origin) * p2w;
 						break;
 					}
 				case "quatpos":
 					{
 						SectionStart();
-						var q = new quat(Vector4());
+						var q = new Quat(Vector4());
 						var p = Vector3(1.0f);
 						SectionEnd();
 						p2w = m4x4.Transform(q, p) * p2w;
@@ -984,7 +984,7 @@ namespace Rylogic.UnitTests
 			Assert.True(reader.NextKeyword(out kw)); Assert.Equal("Vector4", kw);
 			Assert.True(reader.Vector4(out var vec1)); Assert.Equal(new v4(4.0f, 3.0f, 2.0f, 1.0f), vec1);
 			Assert.True(reader.NextKeyword(out kw)); Assert.Equal("Quaternion", kw);
-			Assert.True(reader.Quaternion(out var quat0)); Assert.Equal(new quat(0.0f, -1.0f, -2.0f, -3.0f), quat0);
+			Assert.True(reader.Quaternion(out var quat0)); Assert.Equal(new Quat(0.0f, -1.0f, -2.0f, -3.0f), quat0);
 			Assert.True(reader.NextKeyword(out kw)); Assert.Equal("M3x3", kw);
 			Assert.True(reader.Matrix3x3(out var mat0)); Assert.Equal(m3x4.Identity, mat0);
 			Assert.True(reader.NextKeyword(out kw)); Assert.Equal("M4x4", kw);

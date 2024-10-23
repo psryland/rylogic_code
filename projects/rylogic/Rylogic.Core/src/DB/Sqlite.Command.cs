@@ -257,6 +257,7 @@ namespace Rylogic.Db
 			public bool AssertCorrectThread() => Connection.AssertCorrectThread();
 
 			#region IDbCommand
+			#pragma warning disable CS8769
 			string IDbCommand.CommandText
 			{
 				get => Sql[NextStmtIndex];
@@ -298,6 +299,7 @@ namespace Rylogic.Db
 				get => throw new NotImplementedException();
 				set => throw new NotImplementedException();
 			}
+			#pragma warning restore CS8769
 			#endregion
 		}
 	}

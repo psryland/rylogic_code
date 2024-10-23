@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 import Rylogic as Tools
 
 try:
-	#sys.argv=["", "P:\\pr\\projects\\rylogic\\Rylogic.Core\\bin\\Debug\\netstandard2.0\\Rylogic.Core.dll"]
+	#sys.argv=["", "E:/Rylogic/projects/rylogic/Rylogic.Core/bin/Debug/netstandard2.0/Rylogic.Core.dll"]
 	#print(str(sys.argv))
 	Tools.UnitTest(sys.argv[1], [], True)
 	pass

@@ -114,7 +114,7 @@ namespace Rylogic.Common
 		/// <summary>Get an element by tag and index</summary>
 		public Html this[string tag, int idx = 0]
 		{
-			get { return Children.Where(x => x.Tag == tag).Skip(idx).FirstOrDefault(); }
+			get { return Children.Where(x => x.Tag == tag).Skip(idx).FirstOrDefault() ?? throw new Exception($"Tag {tag} not found"); }
 		}
 
 		/// <summary>Enumerate the elements</summary>

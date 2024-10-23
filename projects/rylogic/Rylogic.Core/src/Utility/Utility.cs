@@ -823,31 +823,31 @@ namespace Rylogic.Utility
 			return true;
 		}
 
-		/// <summary>Execute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
-		public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
-		{
-			var r = default(TResult)!;
-			var ex = (Exception?)null;
-			using (var reset = new AutoResetEvent(false))
-			{
-				// Can't use the thread pool for this because we abort the thread
-				var thread = new Thread(() =>
-				{
-					try { r = proc(); }
-					catch (Exception e) { ex = e; }
-					reset.Set();
-				});
-				thread.Start();
-				if (!reset.WaitOne(duration))
-				{
-					thread.Abort();
-					throw new TimeoutException();
-				}
-			}
-			if (ex != null)
-				throw ex;
-			return r;
-		}
+		///// <summary>Execute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
+		//public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
+		//{
+		//	var r = default(TResult)!;
+		//	var ex = (Exception?)null;
+		//	using (var reset = new AutoResetEvent(false))
+		//	{
+		//		// Can't use the thread pool for this because we abort the thread
+		//		var thread = new Thread(() =>
+		//		{
+		//			try { r = proc(); }
+		//			catch (Exception e) { ex = e; }
+		//			reset.Set();
+		//		});
+		//		thread.Start();
+		//		if (!reset.WaitOne(duration))
+		//		{
+		//			thread.Abort();
+		//			throw new TimeoutException();
+		//		}
+		//	}
+		//	if (ex != null)
+		//		throw ex;
+		//	return r;
+		//}
 
 		/// <summary>Helper method for converting a filename extension to a mime type</summary>
 		public static string MimeFromExtn(string extn)
@@ -1251,23 +1251,23 @@ namespace Rylogic.Utility
 		private static ConstructorInfo? m_cons2;
 		private static ConstructorInfo? m_cons3;
 
-		/// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
-		public static byte[] ToBlob(T obj)
-		{
-			using (var ms = new MemoryStream())
-			{
-				new BinaryFormatter().Serialize(ms, obj);
-				return ms.ToArray();
-			}
-		}
+		///// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
+		//public static byte[] ToBlob(T obj)
+		//{
+		//	using (var ms = new MemoryStream())
+		//	{
+		//		new BinaryFormatter().Serialize(ms, obj);
+		//		return ms.ToArray();
+		//	}
+		//}
 
-		/// <summary>Deserialise 'blob' to an instance of 'T'</summary>
-		public static T FromBlob(byte[] blob)
-		{
-			using var ms = new MemoryStream(blob, false);
-			var obj = new BinaryFormatter().Deserialize(ms);
-			return (T)obj;
-		}
+		///// <summary>Deserialise 'blob' to an instance of 'T'</summary>
+		//public static T FromBlob(byte[] blob)
+		//{
+		//	using var ms = new MemoryStream(blob, false);
+		//	var obj = new BinaryFormatter().Deserialize(ms);
+		//	return (T)obj;
+		//}
 
 		/// <summary>
 		/// Serialise an instance of type 'T' to xml.
@@ -1288,11 +1288,9 @@ namespace Rylogic.Utility
 		/// <summary>Deserialise an instance of type 'T' from xml.</summary>
 		public static T FromXml(string xml)
 		{
-			using (var r = XmlReader.Create(new StringReader(xml)))
-			{
-				var s = new DataContractSerializer(typeof(T));
-				return (T)s.ReadObject(r);
-			}
+			using var r = XmlReader.Create(new StringReader(xml));
+			var s = new DataContractSerializer(typeof(T));
+			return (T?)s.ReadObject(r) ?? throw new NullReferenceException();
 		}
 	}
 
@@ -1411,19 +1409,19 @@ namespace Rylogic.UnitTests
 			Assert.Equal(x1.String, x2.String);
 			Assert.Equal(x1.Point, x2.Point);
 			Assert.Equal(x1.EEnum, x2.EEnum);
-			Assert.True(x1.Data.SequenceEqual(x2.Data));
+			Assert.True(x1.Data.SequenceEqual(x2.Data!));
 		}
-		[Test] public void ToFromBinary()
-		{
-			var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
-			var xml = Util<SerialisableType>.ToBlob(x1);
-			var x2 = Util<SerialisableType>.FromBlob(xml);
-			Assert.Equal(x1.Int, x2.Int);
-			Assert.Equal(x1.String, x2.String);
-			Assert.Equal(x1.Point, x2.Point);
-			Assert.Equal(x1.EEnum, x2.EEnum);
-			Assert.True(x1.Data.SequenceEqual(x2.Data));
-		}
+		//[Test] public void ToFromBinary()
+		//{
+		//	var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
+		//	var xml = Util<SerialisableType>.ToBlob(x1);
+		//	var x2 = Util<SerialisableType>.FromBlob(xml);
+		//	Assert.Equal(x1.Int, x2.Int);
+		//	Assert.Equal(x1.String, x2.String);
+		//	Assert.Equal(x1.Point, x2.Point);
+		//	Assert.Equal(x1.EEnum, x2.EEnum);
+		//	Assert.True(x1.Data.SequenceEqual(x2.Data));
+		//}
 		[Test] public void PrettySize()
 		{
 			Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };

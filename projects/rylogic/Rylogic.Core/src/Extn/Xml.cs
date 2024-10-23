@@ -369,7 +369,7 @@ namespace Rylogic.Extn
 				m_bind = new Dictionary<Type, AsFunc>();
 				this[typeof(XElement)] = (elem, type, ctor) =>
 				{
-					return elem.Elements().FirstOrDefault();
+					return elem.Elements().FirstOrDefault() ?? throw new NullReferenceException();
 				};
 				this[typeof(string)] = (elem, type, ctor) =>
 				{
@@ -937,7 +937,7 @@ namespace Rylogic.Extn
 				throw new Exception($"XML insert node. Index {index} out of range [0,{child_count}]");
 
 			if      (index == 0)           parent.AddFirst(child);
-			else if (index == child_count) parent.LastNode.AddAfterSelf(child);
+			else if (index == child_count) (parent.LastNode ?? throw new NullReferenceException()).AddAfterSelf(child);
 			else                           parent.Nodes().Skip(index).First().AddBeforeSelf(child);
 			return child;
 		}
@@ -1091,8 +1091,8 @@ namespace Rylogic.Extn
 			public Op(XElement elem)
 			{
 				OpType   = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
-				NodeType = Enum<XmlNodeType>.Parse((string)elem.Attribute(Attr.NodeType) ?? "element", ignore_case: true);
-				Name     = (string)elem.Attribute(Attr.Name) ?? string.Empty;
+				NodeType = Enum<XmlNodeType>.Parse((string?)elem.Attribute(Attr.NodeType) ?? "element", ignore_case: true);
+				Name     = (string?)elem.Attribute(Attr.Name) ?? string.Empty;
 				Index    = (int?)elem.Attribute(Attr.Idx) ?? 0;
 				Value    = (OpType == EOpType.Value || OpType == EOpType.Attr) && !elem.IsEmpty ? elem.Value : null; // Note: IsEmpty means <element/> => Value==null, Value=="" means <element></element>
 				FullName = MakeFullName(elem).ToString();
@@ -1111,11 +1111,10 @@ namespace Rylogic.Extn
 					var op = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
 					if (op == EOpType.Change || op == EOpType.Insert || op == EOpType.Remove)
 					{
-						var name = (string)elem.Attribute(Attr.Name);
-						if (name != null)
+						if (elem.Attribute(Attr.Name) is XAttribute name_attr)
 						{
 							if (sb.Length != 1) sb.Append("/");
-							sb.Append(name);
+							sb.Append(name_attr.Value);
 						}
 					}
 				}
@@ -1432,21 +1431,29 @@ namespace Rylogic.Extn
 				var op = new Op(op_elem);
 				switch (op.OpType)
 				{
-				// Replace the Value for the element
-				case EOpType.Value:
+					// Replace the Value for the element
+					case EOpType.Value:
 					{
+						if (op.Value is not string op_value)
+							throw new NullReferenceException($"op.Value operation must have a value. {op}");
+
 						// If 'tree' contains no 'XText' node
 						var child = op.FindChild(tree);
-						if      (child == null) tree.Insert(op.Index, new XText(op.Value));
-						else if (child is XText    xt) xt.Value = op.Value;
-						else if (child is XElement xe) xe.Value = op.Value;
-						else if (child is XComment xc) xc.Value = op.Value;
-						else throw new Exception($"Cannot change value on node type {child.NodeType}");
+						if (child == null)
+							tree.Insert(op.Index, new XText(op_value));
+						else if (child is XText xt)
+							xt.Value = op_value;
+						else if (child is XElement xe)
+							xe.Value = op_value;
+						else if (child is XComment xc)
+							xc.Value = op_value;
+						else
+							throw new Exception($"Cannot change value on node type {child.NodeType}");
 						break;
 					}
 
-				// 'Remove' the child node
-				case EOpType.Remove:
+					// 'Remove' the child node
+					case EOpType.Remove:
 					{
 						var child = op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
@@ -1456,8 +1463,8 @@ namespace Rylogic.Extn
 						break;
 					}
 
-				// 'Insert' an element at the given index position
-				case EOpType.Insert:
+					// 'Insert' an element at the given index position
+					case EOpType.Insert:
 					{
 						// Insert a new node, and apply any child operations to it
 						if (op.Index < 0 || op.Index > tree.ChildCount())
@@ -1465,15 +1472,15 @@ namespace Rylogic.Extn
 
 						switch (op.NodeType)
 						{
-						default:
-							throw new NotSupportedException($"XmlDiff insert node type {op.NodeType} has not been implemented");
-						case XmlNodeType.Element:
+							default:
+								throw new NotSupportedException($"XmlDiff insert node type {op.NodeType} has not been implemented");
+							case XmlNodeType.Element:
 							{
 								var node = (XContainer)tree.Insert(op.Index, new XElement(op.Name));
 								node.Patch(op_elem);
 								break;
 							}
-						case XmlNodeType.Comment:
+							case XmlNodeType.Comment:
 							{
 								var value = op_elem.Element(nameof(EOpType.Value)).As<string>();
 								var node = tree.Insert(op.Index, new XComment(value));
@@ -1483,8 +1490,8 @@ namespace Rylogic.Extn
 						break;
 					}
 
-				// 'Change' is a group of operations to apply to a child node
-				case EOpType.Change:
+					// 'Change' is a group of operations to apply to a child node
+					case EOpType.Change:
 					{
 						// Find the child node
 						var child = (XContainer?)op.FindChild(tree);
@@ -1495,8 +1502,8 @@ namespace Rylogic.Extn
 						break;
 					}
 
-				// Add, Replace, or Remove an attribute
-				case EOpType.Attr:
+					// Add, Replace, or Remove an attribute
+					case EOpType.Attr:
 					{
 						// SetAttributeValue 
 						((XElement)tree).SetAttributeValue(op.Name, op.Value);
@@ -1976,7 +1983,7 @@ namespace Rylogic.UnitTests
 					)
 				);
 
-			XElement root = xml.Root;
+			XElement root = xml.Root ?? throw new NullReferenceException("No Root element");
 			Assert.NotNull(root);
 			Assert.Equal(1, root.Element("a").As<int>());
 			Assert.Equal(2.0f, root.Element("b").As<float>());
@@ -1984,19 +1991,19 @@ namespace Rylogic.UnitTests
 			Assert.Equal(EEnum.Dog, root.Element("d").As<EEnum>());
 
 			var ints = new List<int>();
-			root.Element("e").As(ints, "i");
+			root.Element("e")?.As(ints, "i");
 			Assert.Equal(5, ints.Count);
 			for (int i = 0; i != 4; ++i)
 				Assert.Equal(i, ints[i]);
 
 			var chars = new List<char>();
-			root.Element("e").As(chars, "j");
+			root.Element("e")?.As(chars, "j");
 			Assert.Equal(5, chars.Count);
 			for (int j = 0; j != 4; ++j)
 				Assert.Equal((char)('a' + j), chars[j]);
 
 			ints.Clear();
-			root.Element("e").As(ints, "i", (lhs, rhs) => lhs == rhs);
+			root.Element("e")?.As(ints, "i", (lhs, rhs) => lhs == rhs);
 			Assert.Equal(4, ints.Count);
 			for (int i = 0; i != 4; ++i)
 				Assert.Equal(i, ints[i]);
@@ -2076,7 +2083,8 @@ namespace Rylogic.UnitTests
 					"<one/>" +
 				"</root>";
 			var xml = XDocument.Parse(src);
-			var cnt = xml.Root.Elements("one", "red").Count();
+			var root = xml.Root ?? throw new NullReferenceException("No Root element");
+			var cnt = root.Elements("one", "red").Count();
 			Assert.Equal(cnt, 4);
 		}
 		[Test]
@@ -2107,7 +2115,7 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml = XDocument.Parse(src).Root;
+			var xml = XDocument.Parse(src).Root ?? throw new NullReferenceException("No Root element");
 
 			var leaf_nodes = xml.LeafNodes().Select(x => x.GetType().Name).ToList();
 			Assert.True(leaf_nodes.SequenceEqual(new[] { "XText", "XElement", "XComment", "XElement", "XElement", "XElement", "XElement" }));
@@ -2231,9 +2239,9 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml0 = XDocument.Parse(xml0_src).Root;
-			var xml1 = XDocument.Parse(xml1_src).Root;
-			var xmlp = XDocument.Parse(xml_patch).Root;
+			var xml0 = XDocument.Parse(xml0_src).Root ?? throw new NullReferenceException();
+			var xml1 = XDocument.Parse(xml1_src).Root ?? throw new NullReferenceException();
+			var xmlp = XDocument.Parse(xml_patch).Root ?? throw new NullReferenceException();
 
 			// Find how xml0 is different from xml1
 			var patch = xml0.Diff(xml1);
@@ -2281,16 +2289,16 @@ namespace Rylogic.UnitTests
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
   <Change idx='1' name='one'>
-    <Value idx='0'>1</Value>
+	<Value idx='0'>1</Value>
   </Change>
   <Change idx='2' name='two'>
-    <Insert idx='1' node_type='Element' name='child'>
-      <Value idx='0'>c</Value>
-    </Insert>
+	<Insert idx='1' node_type='Element' name='child'>
+	  <Value idx='0'>c</Value>
+	</Insert>
   </Change>
   <Insert idx='4' node_type='Element' name='four'>
-    <Attr name='ty'>string</Attr>
-    <Value idx='0'>
+	<Attr name='ty'>string</Attr>
+	<Value idx='0'>
 		four
 	</Value>
   </Insert>
@@ -2316,10 +2324,10 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml0 = XDocument.Parse(xml0_src).Root;
-			var xml1 = XDocument.Parse(xml1_src).Root;
-			var xmlp = XDocument.Parse(xml_patch).Root;
-			var xmlr = XDocument.Parse(xml_result).Root;
+			var xml0 = XDocument.Parse(xml0_src).Root ?? throw new NullReferenceException();
+			var xml1 = XDocument.Parse(xml1_src).Root ?? throw new NullReferenceException();
+			var xmlp = XDocument.Parse(xml_patch).Root ?? throw new NullReferenceException();
+			var xmlr = XDocument.Parse(xml_result).Root ?? throw new NullReferenceException();
 
 			// Find how xml0 is different from xml1
 			var patch = xml0.Diff(xml1, XmlDiff.Mode.Merge);

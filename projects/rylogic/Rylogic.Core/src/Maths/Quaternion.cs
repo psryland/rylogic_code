@@ -16,7 +16,7 @@ namespace Rylogic.Maths
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
 	[DebuggerDisplay("{Description,nq}")]
-	public struct quat
+	public struct Quat
 	{
 		[FieldOffset( 0)] public float x;
 		[FieldOffset( 4)] public float y;
@@ -24,7 +24,7 @@ namespace Rylogic.Maths
 		[FieldOffset(12)] public float w;
 		[FieldOffset( 0)] public v4 xyzw; // (same name as the C++ version)
 
-		public quat(float x) 
+		public Quat(float x) 
 			:this()
 		{
 			this.x = x;
@@ -32,7 +32,7 @@ namespace Rylogic.Maths
 			this.z = x;
 			this.w = x;
 		}
-		public quat(float x, float y, float z, float w)
+		public Quat(float x, float y, float z, float w)
 			:this()
 		{
 			this.x = x;
@@ -40,14 +40,14 @@ namespace Rylogic.Maths
 			this.z = z;
 			this.w = w;
 		}
-		public quat(v4 vec)
+		public Quat(v4 vec)
 			:this()
 		{
 			this.xyzw = vec;
 		}
 
 		/// <summary>Create a quaternion from an axis and an angle</summary>
-		public quat(v4 axis, float angle)
+		public Quat(v4 axis, float angle)
 			:this()
 		{
 			var s = (float)Math.Sin(0.5 * angle);
@@ -58,7 +58,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a quaternion from Euler angles. Order is: roll, pitch, yaw (to match DirectX)</summary>
-		public quat(float pitch, float yaw, float roll)
+		public Quat(float pitch, float yaw, float roll)
 			:this()
 		{
 			// nicked from 'XMQuaternionRotationRollPitchYaw'
@@ -72,7 +72,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a quaternion from a rotation matrix</summary>
-		public quat(m3x4 m)
+		public Quat(m3x4 m)
 			:this()
 		{
 			Debug.Assert(Math_.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
@@ -112,7 +112,7 @@ namespace Rylogic.Maths
 		}
 	
 		/// <summary>Construct a quaternion representing a rotation from 'from' to 'to'</summary>
-		public quat(v4 from, v4 to)
+		public Quat(v4 from, v4 to)
 			:this()
 		{
 			var d = Math_.Dot(from.xyz, to.xyz); 
@@ -130,9 +130,9 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Reinterpret a vector as a quaternion</summary>
-		public static quat From(v4 vec)
+		public static Quat From(v4 vec)
 		{
-			return new quat(vec.x, vec.y, vec.z, vec.w);
+			return new Quat(vec.x, vec.y, vec.z, vec.w);
 		}
 
 		/// <summary>Get/Set components by index</summary>
@@ -217,91 +217,91 @@ namespace Rylogic.Maths
 		}
 
 		// Static types
-		public static quat Zero { get; } = new quat(0, 0, 0, 0);
-		public static quat Identity { get; } = new quat(0, 0, 0, 1);
+		public static Quat Zero { get; } = new Quat(0, 0, 0, 0);
+		public static Quat Identity { get; } = new Quat(0, 0, 0, 1);
 
 		/// <summary>Operators</summary>
-		public static quat operator + (quat q)
+		public static Quat operator + (Quat q)
 		{
 			return q;
 		}
-		public static quat operator - (quat q)
+		public static Quat operator - (Quat q)
 		{
-			return new quat(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
+			return new Quat(-q.x, -q.y, -q.z, -q.w); // Note: Not conjugate
 		}
-		public static quat operator ~ (quat q)
+		public static Quat operator ~ (Quat q)
 		{
-			return new quat(-q.x, -q.y, -q.z, q.w);
+			return new Quat(-q.x, -q.y, -q.z, q.w);
 		}
-		public static quat operator * (quat lhs, quat rhs)
+		public static Quat operator * (Quat lhs, Quat rhs)
 		{
 			// Quaternion multiply. Same semantics at matrix multiply
-			return new quat(
+			return new Quat(
 				lhs.w*rhs.x + lhs.x*rhs.w + lhs.y*rhs.z - lhs.z*rhs.y,
 				lhs.w*rhs.y - lhs.x*rhs.z + lhs.y*rhs.w + lhs.z*rhs.x,
 				lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w,
 				lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z);
 		}
-		public static v4 operator * (quat lhs, v4 rhs)
+		public static v4 operator * (Quat lhs, v4 rhs)
 		{
 			// Quaternion rotate. Same semantics at matrix multiply
 			return Math_.Rotate(lhs, rhs);
 		}
 
 		/// <summary>Component add</summary>
-		public static quat CompAdd(quat lhs, quat rhs)
+		public static Quat CompAdd(Quat lhs, Quat rhs)
 		{
-			return new quat(lhs.xyzw + rhs.xyzw);
+			return new Quat(lhs.xyzw + rhs.xyzw);
 		}
 
 		/// <summary>Component multiply</summary>
-		public quat CompMul(quat lhs, float rhs)
+		public Quat CompMul(Quat lhs, float rhs)
 		{
-			return new quat(lhs.xyzw * rhs);
+			return new Quat(lhs.xyzw * rhs);
 		}
-		public quat CompMul(quat lhs, double rhs)
+		public Quat CompMul(Quat lhs, double rhs)
 		{
 			return CompMul(lhs, (float)rhs);
 		}
-		public quat CompMul(quat lhs, quat rhs)
+		public Quat CompMul(Quat lhs, Quat rhs)
 		{
-			return new quat(lhs.xyzw * rhs.xyzw);
+			return new Quat(lhs.xyzw * rhs.xyzw);
 		}
 
 		#region Random
 
 		/// <summary>Construct a random quaternion rotation</summary>
-		public static quat Random(v4 axis, float min_angle, float max_angle, Random r)
+		public static Quat Random(v4 axis, float min_angle, float max_angle, Random r)
 		{
-			return new quat(axis, r.Float(min_angle, max_angle));
+			return new Quat(axis, r.Float(min_angle, max_angle));
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
-		public static quat Random(float min_angle, float max_angle, Random r)
+		public static Quat Random(float min_angle, float max_angle, Random r)
 		{
-			return new quat(v4.Random3N(0f, r), r.Float(min_angle, max_angle));
+			return new Quat(v4.Random3N(0f, r), r.Float(min_angle, max_angle));
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
-		public static quat Random(Random r)
+		public static Quat Random(Random r)
 		{
-			return new quat(v4.Random3N(0f, r), r.Float(0f, (float)Math_.Tau));
+			return new Quat(v4.Random3N(0f, r), r.Float(0f, (float)Math_.Tau));
 		}
 
 		#endregion
 
 		#region Equals
-		public static bool operator == (quat lhs, quat rhs)
+		public static bool operator == (Quat lhs, Quat rhs)
 		{
 			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
 		}
-		public static bool operator != (quat lhs, quat rhs)
+		public static bool operator != (Quat lhs, Quat rhs)
 		{
 			return !(lhs == rhs);
 		}
 		public override bool Equals(object? o)
 		{
-			return o is quat q && q == this;
+			return o is Quat q && q == this;
 		}
 		public override int GetHashCode()
 		{
@@ -316,41 +316,41 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal. Note: q == -q</summary>
-		public static bool FEqlRelative(quat lhs, quat rhs, float tol)
+		public static bool FEqlRelative(Quat lhs, Quat rhs, float tol)
 		{
 			return
 				FEqlRelative(lhs.xyzw, +rhs.xyzw, tol) ||
 				FEqlRelative(lhs.xyzw, -rhs.xyzw, tol);
 		}
-		public static bool FEql(quat lhs, quat rhs)
+		public static bool FEql(Quat lhs, Quat rhs)
 		{
 			return FEqlRelative(lhs, rhs, TinyF);
 		}
 
 		/// <summary>Return true if all components of 'vec' are finite</summary>
-		public static bool IsFinite(quat q)
+		public static bool IsFinite(Quat q)
 		{
 			return IsFinite(q.x) && IsFinite(q.y) && IsFinite(q.z) && IsFinite(q.w);
 		}
 
 		/// <summary>Return true if any components of 'vec' are NaN</summary>
-		public static bool IsNaN(quat q)
+		public static bool IsNaN(Quat q)
 		{
 			return IsNaN(q.x) || IsNaN(q.y) || IsNaN(q.z) || IsNaN(q.w);
 		}
 
 		/// <summary>Normalise a quaternion to unit length</summary>
-		public static quat Normalise(quat q)
+		public static Quat Normalise(Quat q)
 		{
-			return new quat(Normalise(q.xyzw));
+			return new Quat(Normalise(q.xyzw));
 		}
-		public static quat Normalise(quat q, quat def)
+		public static Quat Normalise(Quat q, Quat def)
 		{
-			return new quat(Normalise(q.xyzw, def.xyzw));
+			return new Quat(Normalise(q.xyzw, def.xyzw));
 		}
 
 		/// <summary>Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)</summary>
-		public static float CosAngle2(quat a, quat b)
+		public static float CosAngle2(Quat a, Quat b)
 		{
 			// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
 			// where operator * is a quaternion multiply. The 'w' component of a quaternion
@@ -361,14 +361,14 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the angle between two quaternions (in radians)</summary>
-		public static float Angle(quat a, quat b)
+		public static float Angle(Quat a, Quat b)
 		{
 			// q.w = Cos(theta/2)
 			return 0.5f * (float)Math.Acos(CosAngle2(a, b));
 		}
 
 		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
-		public static quat Scale(quat q, float frac)
+		public static Quat Scale(Quat q, float frac)
 		{
 			Debug.Assert(FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
 
@@ -382,7 +382,7 @@ namespace Rylogic.Maths
 			var a = frac * (float)Math.Acos(w);    // = scaled half angle
 			var sin_ha = (float)Math.Sin(a);
 			var cos_ha = (float)Math.Cos(a);
-			return new quat(
+			return new Quat(
 				q.x * sin_ha / s,
 				q.y * sin_ha / s,
 				q.z * sin_ha / s,
@@ -390,7 +390,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the axis and angle from a quaternion</summary>
-		public static void AxisAngle(quat quat, out v4 axis, out float angle)
+		public static void AxisAngle(Quat quat, out v4 axis, out float angle)
 		{
 			angle = (float)(2.0 * Math.Acos(quat.w));
 			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
@@ -400,7 +400,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
-		public static v4 EulerAngles(quat q)
+		public static v4 EulerAngles(Quat q)
 		{
 			// From Wikipedia
 			double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
@@ -412,7 +412,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Spherically interpolate between quaternions</summary>
-		public static quat Slerp(quat a, quat b, double frac)
+		public static Quat Slerp(Quat a, Quat b, double frac)
 		{
 			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
 			var cos_angle2 = CosAngle2(a, b);
@@ -425,17 +425,17 @@ namespace Rylogic.Maths
 				var scale0 = Math.Sin((1 - frac) * angle);
 				var scale1 = Math.Sin((frac) * angle);
 				var sin_angle = Math.Sin(angle);
-				return new quat((a.xyzw * (float)scale0 + b_.xyzw * (float)scale1) / (float)sin_angle);
+				return new Quat((a.xyzw * (float)scale0 + b_.xyzw * (float)scale1) / (float)sin_angle);
 			}
 			// "a" and "b" quaternions are very close, use linear interpolation
 			else
 			{
-				return Normalise(new quat(Lerp(a.xyzw, b_.xyzw, frac)));
+				return Normalise(new Quat(Lerp(a.xyzw, b_.xyzw, frac)));
 			}
 		}
 
 		/// <summary>Rotate a vector by a quaternion. This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'</summary>
-		public static v4 Rotate(quat lhs, v4 rhs)
+		public static v4 Rotate(Quat lhs, v4 rhs)
 		{
 			float xx = lhs.x * lhs.x, xy = lhs.x * lhs.y, xz = lhs.x * lhs.z, xw = lhs.x * lhs.w;
 			float yy = lhs.y * lhs.y, yz = lhs.y * lhs.z, yw = lhs.y * lhs.w;
@@ -452,7 +452,7 @@ namespace Rylogic.Maths
 		/// Return the average of a collection of rotations.
 		/// Note: this only really works if all the quaternions are relatively close together.
 		/// For two quaternions, prefer 'Slerp'</summary>
-		public static quat Average(IEnumerable<quat> rotations)
+		public static Quat Average(IEnumerable<Quat> rotations)
 		{
 			// Nicked from Unity3D
 			// This method is based on a simplified procedure described in this document:
@@ -461,7 +461,7 @@ namespace Rylogic.Maths
 			// Ensure the quaternions are in the same hemisphere (since q == -q)
 			var first = rotations.First();
 			var avr = Average(rotations.Select(q => Dot(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
-			return Normalise(new quat(avr));
+			return Normalise(new Quat(avr));
 		}
 	}
 }
@@ -523,12 +523,12 @@ namespace Rylogic.UnitTests
 		[Test] public void Average()
 		{
 			var rng = new Random(1);
-			var ideal_mean = new quat(Math_.Normalise(new v4(1,1,1,0)), 0.5f);
+			var ideal_mean = new Quat(Math_.Normalise(new v4(1,1,1,0)), 0.5f);
 			var actual_mean = Math_.Average(int_.Range(0, 1000).Select(i =>
 			{
 				var axis = Math_.Normalise(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
 				var angle = rng.FloatC(ideal_mean.Angle, 0.02f);
-				var q = new quat(axis, angle);
+				var q = new Quat(axis, angle);
 				return rng.Bool() ? q : -q;
 			}));
 			Assert.True(Math_.FEqlRelative(ideal_mean, actual_mean, 0.01f));

@@ -224,7 +224,6 @@ namespace Rylogic.UnitTests
 		public UnitTestException() :base() {}
 		public UnitTestException(string message) :base(message) {}
 		public UnitTestException(string message, Exception innerException) :base(message, innerException) {}
-		protected UnitTestException(SerializationInfo info, StreamingContext context) :base(info, context) {}
 	}
 
 	/// <summary>Assert functions</summary>
@@ -282,6 +281,7 @@ namespace Rylogic.UnitTests
 		public static void Equal<T>(IEnumerable<T>? expected, IEnumerable<T>? result)
 		{
 			if (ReferenceEquals(expected, result)) return;
+			if (expected == null || result == null) throw new UnitTestException(VSLink + "sequences are not equal");
 			if (expected.SequenceEqual(result)) return;
 			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  expected: {(expected != null ? string.Join(",", expected) : "null")}\r\n    result: {(result != null ? string.Join(",", result) : "null")}");
 		}

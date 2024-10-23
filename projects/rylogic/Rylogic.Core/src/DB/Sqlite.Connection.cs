@@ -280,6 +280,7 @@ namespace Rylogic.Db
 			}
 
 			#region IDbConnection
+			#pragma warning disable CS8769
 			string IDbConnection.ConnectionString
 			{
 				get => ConnectionString;
@@ -294,6 +295,7 @@ namespace Rylogic.Db
 			void IDbConnection.ChangeDatabase(string databaseName) => throw new NotImplementedException();
 			int IDbConnection.ConnectionTimeout => throw new NotImplementedException();
 			ConnectionState IDbConnection.State => throw new NotImplementedException();
+			#pragma warning restore CS8769
 			#endregion
 
 			/// <summary>A store of prepared statements</summary>

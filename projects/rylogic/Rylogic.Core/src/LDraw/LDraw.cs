@@ -253,7 +253,10 @@ namespace Rylogic.LDraw
 					{
 						Append("{");
 						foreach (var prop in part.GetType().AllProps(BindingFlags.Public | BindingFlags.Instance))
-							Append($"*{prop.Name} {{", prop.GetValue(part), "}} ");
+						{
+							if (prop is null || prop.GetValue(part) is not object val) continue;
+							Append($"*{prop.Name} {{", val, "}} ");
+						}
 						Append("}");
 						return this;
 					}

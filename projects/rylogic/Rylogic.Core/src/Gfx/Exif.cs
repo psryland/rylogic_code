@@ -963,10 +963,11 @@ namespace Rylogic.Gfx
 			// If the file contains an APP2 section, put the exif data (APP1) before it.
 			// Otherwise, put the exif data immediately after the SOI marker
 			var index = IndexJpg(src);
-			JpgSection jpg_section;
 			long insert_exif_offset = 2;
-			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP0)) != null) { insert_exif_offset = jpg_section.Offset + jpg_section.Size; }
-			if ((jpg_section = index.FirstOrDefault(x =>x.Marker == JpgMarker.APP2)) != null) { insert_exif_offset = jpg_section.Offset; }
+			if (index.FirstOrDefault(x => x.Marker == JpgMarker.APP0) is JpgSection jpg_section0)
+				insert_exif_offset = jpg_section0.Offset + jpg_section0.Size;
+			if (index.FirstOrDefault(x => x.Marker == JpgMarker.APP2) is JpgSection jpg_section1)
+				insert_exif_offset = jpg_section1.Offset;
 
 			using (var br = new BinaryReaderEx(src))
 			using (var bw = new BinaryWriterEx(dst))

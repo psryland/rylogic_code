@@ -1295,7 +1295,7 @@ namespace Rylogic.UnitTests
 			{
 				return Name == rhs.Name && Value == rhs.Value;
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				return obj is Custom rhs && Equals(rhs);
 			}
@@ -1424,7 +1424,7 @@ namespace Rylogic.UnitTests
 				if (Math.Abs(other.Double - Double) > double.Epsilon) return false;
 				return true;
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				return obj is Record1 rhs && Equals(rhs);
 			}

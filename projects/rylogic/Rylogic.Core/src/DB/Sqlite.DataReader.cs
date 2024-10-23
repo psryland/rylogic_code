@@ -206,20 +206,20 @@ namespace Rylogic.Db
 			public object this[string column] => Get<object>(ColumnIndex(column));
 
 			/// <inheritdoc/>
-			public long GetBytes(int i, long field_offset, byte[] buffer, int buffer_offset, int length)
+			public long GetBytes(int i, long field_offset, byte[]? buffer, int buffer_offset, int length)
 			{
 				NativeAPI.ColumnBlob(Stmt, i, out var ptr, out var len);
 				var count = Math.Max(0, Math.Min(len - (int)field_offset, length));
-				Marshal.Copy(ptr + (int)field_offset, buffer, buffer_offset, count);
+				Marshal.Copy(ptr + (int)field_offset, buffer!, buffer_offset, count);
 				return count;
 			}
 
 			/// <inheritdoc/>
-			public long GetChars(int i, long field_offset, char[] buffer, int buffer_offset, int length)
+			public long GetChars(int i, long field_offset, char[]? buffer, int buffer_offset, int length)
 			{
 				NativeAPI.ColumnBlob(Stmt, i, out var ptr, out var len);
 				var count = Math.Max(0, Math.Min((len - (int)field_offset) / Marshal.SizeOf<char>(), length));
-				Marshal.Copy(ptr + (int)field_offset, buffer, buffer_offset, count);
+				Marshal.Copy(ptr + (int)field_offset, buffer!, buffer_offset, count);
 				return count;
 			}
 

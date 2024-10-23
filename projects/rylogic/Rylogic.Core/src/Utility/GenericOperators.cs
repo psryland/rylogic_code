@@ -191,14 +191,14 @@ namespace Rylogic.Utility
 				if (typeof(T).IsPrimitive || typeof(T) == typeof(decimal))
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
-					var sqrt = typeof(Math).GetMethod(nameof(Math.Sqrt), new[] { typeof(double) });
+					var sqrt = typeof(Math).GetMethod(nameof(Math.Sqrt), new[] { typeof(double) }) ?? throw new NullReferenceException();
 					var body = Expression.ConvertChecked(Expression.Call(sqrt, Expression.ConvertChecked(paramA, typeof(double))), typeof(T));
 					m_sqrt = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
 				}
 				else if (typeof(T) == typeof(v4))
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
-					var sqrt = typeof(Math_).GetMethod(nameof(Math_.Sqrt), new[] { typeof(T) });
+					var sqrt = typeof(Math_).GetMethod(nameof(Math_.Sqrt), new[] { typeof(T) }) ?? throw new NullReferenceException();
 					var body = Expression.ConvertChecked(Expression.Call(sqrt, paramA), typeof(T));
 					m_sqrt = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
 				}

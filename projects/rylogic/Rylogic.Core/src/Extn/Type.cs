@@ -151,7 +151,8 @@ namespace Rylogic.Extn
 			static Assembly ResolveAssemblyCB(AssemblyName name)
 			{
 				// This is only called if 'name' specifies an assembly
-				var ass = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetName() == name && x.CodeBase == name.CodeBase);
+				var loaded = AppDomain.CurrentDomain.GetAssemblies();
+				var ass = loaded.FirstOrDefault(x => x.FullName == name.FullName);
 				if (ass == null) ass = AppDomain.CurrentDomain.Load(name);
 				if (ass == null) throw new TypeLoadException($"No assembly called {name.FullName} is currently loaded");
 				return ass;
@@ -217,7 +218,7 @@ namespace Rylogic.Extn
 		/// <summary>Find the backing field for an auto property</summary>
 		public static FieldInfo? BackingField(this PropertyInfo prop)
 		{
-			return prop.DeclaringType.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+			return prop.DeclaringType?.GetField($"<{prop.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
 		}
 
 		/// <summary>Find all types derived from this type</summary>
@@ -234,48 +235,51 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
-		public static Attribute FindAttribute(this Type type, Type attribute_type, bool inherit = true)
+		public static Attribute? FindAttribute(this Type type, Type attribute_type, bool inherit = true)
 		{
 			if (!attribute_type.Inherits(typeof(Attribute))) throw new Exception("Expected 'attribute_type' to be a subclass of 'Attribute'");
-			return type.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
+			var attrs = type.GetCustomAttributes(attribute_type, inherit).OfType<Attribute>();
+			return attrs.FirstOrDefault();
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
-		public static Attribute FindAttribute(this Assembly ass, Type attribute_type, bool inherit = true)
+		public static Attribute? FindAttribute(this Assembly ass, Type attribute_type, bool inherit = true)
 		{
 			if (!attribute_type.Inherits(typeof(Attribute))) throw new Exception("Expected 'attribute_type' to be a subclass of 'Attribute'");
-			return ass.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
+			var attrs = ass.GetCustomAttributes(attribute_type, inherit).OfType<Attribute>();
+			return attrs.FirstOrDefault();
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this method or null.</summary>
-		public static Attribute FindAttribute(this MethodInfo mi, Type attribute_type, bool inherit = true)
+		public static Attribute? FindAttribute(this MethodInfo mi, Type attribute_type, bool inherit = true)
 		{
 			if (!attribute_type.Inherits(typeof(Attribute))) throw new Exception("Expected 'attribute_type' to be a subclass of 'Attribute'");
-			return mi.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
+			var attrs = mi.GetCustomAttributes(attribute_type, inherit).OfType<Attribute>();
+			return attrs.FirstOrDefault();
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
-		public static T FindAttribute<T>(this Type type, bool inherit = true) where T:Attribute
+		public static T? FindAttribute<T>(this Type type, bool inherit = true) where T:Attribute
 		{
-			return (T)type.FindAttribute(typeof(T), inherit);
+			return (T?)type.FindAttribute(typeof(T), inherit);
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this assembly or null.</summary>
-		public static T FindAttribute<T>(this Assembly ass, bool inherit = true) where T:Attribute
+		public static T? FindAttribute<T>(this Assembly ass, bool inherit = true) where T:Attribute
 		{
-			return (T)ass.FindAttribute(typeof(T), inherit);
+			return (T?)ass.FindAttribute(typeof(T), inherit);
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
-		public static T FindAttribute<T>(this MethodInfo mi, bool inherit = true) where T:Attribute
+		public static T? FindAttribute<T>(this MethodInfo mi, bool inherit = true) where T:Attribute
 		{
-			return (T)mi.FindAttribute(typeof(T), inherit);
+			return (T?)mi.FindAttribute(typeof(T), inherit);
 		}
 
 		/// <summary>Returns an attribute associated with a member or null</summary>
-		public static T FindAttribute<T>(this MemberInfo mi, bool inherit = true) where T:Attribute
+		public static T? FindAttribute<T>(this MemberInfo mi, bool inherit = true) where T:Attribute
 		{
-			return (T)mi.GetCustomAttributes(typeof(T), inherit).FirstOrDefault();
+			return (T?)mi.GetCustomAttributes(typeof(T), inherit).FirstOrDefault();
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>

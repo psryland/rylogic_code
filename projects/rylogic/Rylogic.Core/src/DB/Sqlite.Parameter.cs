@@ -45,6 +45,7 @@ namespace Rylogic.Db
 			public string Desc => Value != null ? $"{Value.GetType().Name} {Name} = {Value}" : $"DBNull {Name} = null";
 
 			#region IDbDataParameter
+			#pragma warning disable CS8769
 			string IDataParameter.ParameterName
 			{
 				get => Name;
@@ -94,6 +95,7 @@ namespace Rylogic.Db
 				get => throw new NotImplementedException();
 				set => throw new NotImplementedException();
 			}
+			#pragma warning restore CS8769
 			#endregion
 		}
 
@@ -164,29 +166,30 @@ namespace Rylogic.Db
 			#region IDataParameterCollection
 			bool IList.IsFixedSize => false;
 			bool IList.IsReadOnly => false;
-			int IList.Add(object value)
+			int IList.Add(object? value)
 			{
-				var p = (Parameter)value;
+				if (value is not Parameter p) throw new NullReferenceException();
 				Add(p.Name, p.Value, p.Bind);
 				return m_parameters.Count - 1;
 			}
-			bool IList.Contains(object value)
+			bool IList.Contains(object? value)
 			{
-				var p = (Parameter)value;
+				if (value is not Parameter p) throw new NullReferenceException();
 				return Contains(p.Name);
 			}
-			int IList.IndexOf(object value)
+			int IList.IndexOf(object? value)
 			{
-				var p = (Parameter)value;
+				if (value is not Parameter p) throw new NullReferenceException();
 				return IndexOf(p.Name);
 			}
-			void IList.Insert(int index, object value)
+			void IList.Insert(int index, object? value)
 			{
-				m_parameters.Insert(index, (Parameter)value);
+				if (value is not Parameter p) throw new NullReferenceException();
+				m_parameters.Insert(index, p);
 			}
-			void IList.Remove(object value)
+			void IList.Remove(object? value)
 			{
-				var p = (Parameter)value;
+				if (value is not Parameter p) throw new NullReferenceException();
 				Remove(p.Name);
 			}
 			void IDataParameterCollection.RemoveAt(string name)
@@ -202,10 +205,10 @@ namespace Rylogic.Db
 				get => m_parameters[IndexOf(name)].Value!;
 				set => m_parameters[IndexOf(name)].Value = value;
 			}
-			object IList.this[int index]
+			object? IList.this[int index]
 			{
 				get => m_parameters[index];
-				set => m_parameters[index] = (Parameter)value;
+				set => m_parameters[index] = (Parameter?)value ?? throw new NullReferenceException();
 			}
 			void ICollection.CopyTo(Array array, int index)
 			{

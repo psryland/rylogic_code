@@ -140,7 +140,7 @@ namespace Rylogic.Streams
 			}
 		}
 
-		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
+		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
 		{
 			throw new NotImplementedException();
 			//var fs = FileStream(FileIndex(offset));
@@ -151,7 +151,7 @@ namespace Rylogic.Streams
 			throw new NotImplementedException();
 			//return base.EndRead(asyncResult);
 		}
-		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
+		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
 		{
 			throw new NotSupportedException();
 		}

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFrameworks>net8.0;net472</TargetFrameworks>
 		<RootNamespace>Rylogic</RootNamespace>
 		<StartupObject></StartupObject>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -38,8 +38,8 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
-		<PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
+		<PackageReference Include="System.Runtime.Loader"/>
 	</ItemGroup>
 
 	<!-- Post build -->
