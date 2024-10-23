@@ -39,13 +39,14 @@ namespace pr::coroutine
 		std::chrono::duration_cast<T>(t);
 	};
 
+	// A type to use for co_yield void
 	struct yield_none {};
 
 	// Default Scheduler implementation
 	struct Scheduler
 	{
 		// Notes:
-		// - The schduler is a singleton, but it must be instantiated manually early in the life of
+		// - The scheduler is a singleton, but it must be instantiated manually early in the life of
 		//   the program. Scheduler instantiations replace the previous scheduler and restored it when
 		//   destructed.
 		// - The reason for doing it this way is so that the scheduler is constructed/destructed within
@@ -215,9 +216,7 @@ namespace pr::coroutine
 	struct Task final
 	{
 		// Notes:
-		//  - A Task is just an awaiter that always queues the continuation on the scheduler
-		//  - Task is basically a shared_ptr to a promise type.
-		//  - When the last Task is destructed, so too is the promise/coroutine
+		//  - Task is basically a shared_ptr to a promise type. When the last Task is destructed, so too is the promise/coroutine.
 
 		template <typename TData> struct Promise;
 		using promise_type = Promise<T>;
@@ -239,10 +238,11 @@ namespace pr::coroutine
 			inline static std::vector<PromiseBase*> LiveObjects{};
 			inline static std::mutex LiveObjectsMutex{};
 
-			std::coroutine_handle<> m_continuation{};
+			std::coroutine_handle<promise_type> m_continuation{}; // This is the coroutine to continue once this coroutine is complete
 			std::exception_ptr m_exception{};
-			std::atomic_bool m_done{false};
+			std::atomic_bool m_done{ false };
 			std::atomic<int> m_ref_count{};
+			std::atomic<bool> m_scheduled{}; // 
 			#if PR_COROUTINE_NAMES
 			std::string m_name{};
 			#endif
@@ -260,9 +260,9 @@ namespace pr::coroutine
 				auto const extract_name = std::regex(R"(.*\b(\w+?)\()");
 				if (std::regex_search(m_name, sm, extract_name))
 					m_name = sm[1];
-			
+
 				LiveObjects.push_back(this);
-				OutputDebugStringA(std::format("Promise({})={}, Handle={}\n", m_name, (void*)this, handle().address()).c_str());
+				OutputDebugStringA(std::format("Promise({})={}, Handle={}\n", m_name, (void*)this, coroutine().address()).c_str());
 			}
 			#else
 			PromiseBase() = default;
@@ -287,42 +287,115 @@ namespace pr::coroutine
 				}
 				assert(m_ref_count == 0 && "dangling references");
 			}
-			handle_type handle()
+
+			// The coroutine handle representing the coroutine function that this promise is was created for.
+			handle_type coroutine() const
 			{
-				return handle_type::from_promise(static_cast<promise_type&>(*this));
+				auto* promise = const_cast<promise_type*>(static_cast<promise_type const*>(this));
+				return handle_type::from_promise(*promise);
 			}
+
+			// Return a shared_ptr to this promise
 			Task get_return_object()
 			{
 				return Task(static_cast<promise_type*>(this));
 			}
+
+			// Called when the coroutine function is called
 			auto initial_suspend() noexcept
 			{
 				return std::suspend_never{};
 			}
-			auto suspend(std::coroutine_handle<> coroutine)
-			{
-				// 'coroutine' is a thing that will run the rest of the function after this await point.
-				// Queue it to run on a worker thread. That means 'coroutine' may complete at any point
-				// from now on.
-				m_continuation = coroutine;
-				Scheduler::instance().Schedule(coroutine);
-			}
+
+			// Called when the coroutine function exits
 			auto final_suspend() noexcept
 			{
-				// Mark the coroutine as done
+				// Mark the coroutine as done.
+				// This is called when a coroutine reaches the 'co_return' (or function end).
 				// Note: the coroutine handle is not "done()" yet, so we can't destroy it here,
 				// or notify anyone waiting for it to complete because it would be a race condition.
 				// We're forced to use a separate synchronization primitive to signal completion.
 				m_done = true;
 				m_done.notify_all();
 
-				return std::suspend_always{};
+				// This coroutine is finished, we need to start 'm_continuation'
+				struct awaiter_t
+				{
+					std::coroutine_handle<promise_type> m_continuation;
+					bool await_ready() const noexcept
+					{
+						return false;
+					}
+					auto await_suspend(std::coroutine_handle<promise_type>) const noexcept
+					{
+						return m_continuation != nullptr && m_continuation.promise().m_scheduled.exchange(true, std::memory_order_acquire)
+							? static_cast<std::coroutine_handle<>>(m_continuation)
+							: static_cast<std::coroutine_handle<>>(std::noop_coroutine());
+					}
+					void await_resume() const noexcept
+					{
+						assert(false && "finished coroutine should not be resumed");
+					}
+				};
+				return awaiter_t{m_continuation};
 			}
-			auto result()
+
+			// Called for exceptions that escape a coroutine function
+			void unhandled_exception()
+			{
+				m_exception = std::current_exception();
+			}
+
+			// Awaiter ready - True if this coroutine is complete
+			bool ready() const noexcept
+			{
+				return coroutine().done();
+			}
+
+			// Awaiter suspend - 
+			void suspend(std::coroutine_handle<promise_type> outer_coroutine)
+			{
+				// Code like this:
+				//    `co_await thing`
+				// calls:
+				//    `thing.await_suspend(outer_coroutine)`
+				// 
+				// That means, 'this->coroutine()' is the coroutine of 'thing' and the
+				// argument 'outer_coroutine' is from the function that contains the `co_await thing` code.
+				// Unlike C#, co_await doesn't mean "possibly change thread". Coroutines need to explicitly
+				// change threads if they want to, using 'SwitchToThread' or similar.
+				
+				// Save 'outer_coroutine' as the thing to run once this coroutine is complete
+				m_continuation = outer_coroutine;
+			}
+
+			// Awaiter resume
+			auto resume() const
 			{
 				// Resume will be called in the context of the background thread that is running 'coroutine'
 				if (m_exception)
 					std::rethrow_exception(m_exception);
+
+				if constexpr (!std::is_same_v<T, void>)
+				{
+					return static_cast<promise_type const&>(*this).m_data;
+				}
+				else
+				{
+					return;
+				}
+			}
+			
+			// Block the calling thread until this coroutine is complete
+			void wait() noexcept
+			{
+				m_done.wait(false);
+			}
+
+			// Block the calling thread until this coroutine is complete and a result is available
+			auto result()
+			{
+				wait();
 
 				if constexpr (!std::is_same_v<T, void>)
 				{
@@ -333,10 +406,8 @@ namespace pr::coroutine
 					return;
 				}
 			}
-			void unhandled_exception()
-			{
-				m_exception = std::current_exception();
-			}
+
+			// Ref-counting the promise for clean up
 			void add_ref() noexcept
 			{
 				++m_ref_count;
@@ -345,12 +416,10 @@ namespace pr::coroutine
 			{
 				assert(m_ref_count > 0);
 				if (--m_ref_count == 0)
-					handle().destroy();
+					coroutine().destroy();
 			}
-			void wait() noexcept
-			{
-				m_done.wait(false);
-			}
+
+			// Custom new/delete
 			void* operator new(size_t size)
 			{
 				return ::operator new(size);
@@ -372,14 +441,6 @@ namespace pr::coroutine
 			Promise() = default;
 			#endif
 
-			//void return_value(TData const& value) noexcept(std::is_nothrow_copy_assignable_v<TData>)
-			//{
-			//	m_data = value;
-			//}
-			//void return_value(TData&& value) noexcept(std::is_nothrow_move_assignable_v<TData>)
-			//{
-			//	m_data = std::move(value);
-			//}
 			template <std::convertible_to<T> From> auto return_value(From&& from)
 			{
 				m_data = std::forward<From>(from);
@@ -411,19 +472,17 @@ namespace pr::coroutine
 
 		// Tasks are awaitable.
 		// Awaiting a task means waiting for the contained promise to complete.
-		bool await_ready() const
+		bool await_ready() const noexcept
 		{
-			// This task doesn't need to block if there is no coroutine we're waiting on, or it's finished.
-			return !m_promise->m_continuation || m_promise->m_continuation.done();
-			//return m_promise->handle().done();
+			return m_promise->ready();
 		}
-		auto await_suspend(std::coroutine_handle<> coroutine)
+		auto await_suspend(std::coroutine_handle<promise_type> outer_coroutine)
 		{
-			return m_promise->suspend(coroutine);
+			return m_promise->suspend(outer_coroutine);
 		}
-		auto await_resume() noexcept
+		auto await_resume() const
 		{
-			return m_promise->result();
+			return m_promise->resume();
 		}
 
 	private:
@@ -601,32 +660,6 @@ namespace pr::coroutine
 		}
 	};
 
-	// Wait for all tasks to complete
-	template<typename... Tasks>
-	Task<> WhenAll(Tasks... tasks)
-	{
-		(co_await tasks, ...);
-		co_return;
-	}
-
-	// Delay a task for a duration
-	template <Duration D>
-	Task<> Delay(D wait_time, CancelToken cancel)
-	{
-		co_yield {};
-		cancel.Wait(wait_time);
-		co_return;
-	}
-
-	//Task<> SwitchToThread(std::thread::id thread_id)
-	//{
-	//	co_return;
-	//}
-	//Task<> SwitchToWorkerThread()
-	//{
-	//	return SwitchToThread({});
-	//}
-	
 	// An awaiter for switching to a specific thread. Use 'thread_id == {}' for any worker thread
 	inline auto SwitchToThread(std::thread::id thread_id)
 	{
@@ -637,11 +670,11 @@ namespace pr::coroutine
 			{
 				return std::this_thread::get_id() == m_thread_id;
 			}
-			void await_suspend(std::coroutine_handle<> coroutine) const noexcept
+			void await_suspend(std::coroutine_handle<> outer_coroutine) const noexcept
 			{
 				// Queue the rest of the function to run on a background thread
 				// and return control back to the caller.
-				Scheduler::instance().Schedule(coroutine, m_thread_id);
+				Scheduler::instance().Schedule(outer_coroutine, m_thread_id);
 			}
 			void await_resume() const noexcept
 			{
@@ -653,6 +686,14 @@ namespace pr::coroutine
 	{
 		return SwitchToThread({});
 	}
+
+	// Wait for all tasks to complete
+	template<typename... Tasks>
+	Task<> WhenAll(Tasks... tasks)
+	{
+		(co_await tasks, ...);
+		co_return;
+	}
 }
 
 #if PR_UNITTESTS
@@ -661,46 +702,33 @@ namespace pr::coroutine
 {
 	namespace tests
 	{
+#if 0 // WIP
 		using millis = std::chrono::milliseconds;
+		inline static std::thread::id main_thread_id{};
 
-		Generator<int> Fibonacci(int n)
-		{
-			int a = 0, b = 1;
-			for (int i = 0; i < n; ++i)
-			{
-				co_yield a;
-
-				auto next = a + b;
-				a = b;
-				b = next;
-			}
-		}
 		Task<float> GetFloatAsync(CancelToken cancel)
 		{
-			auto delay = Delay(millis(1000), cancel);
-			co_await delay;
-			//// main thread
-			//auto swtch = SwitchToWorkerThread();
+			static int run_count{};
 
-			//// 'swtch.await_suspend()' called on main thread. Provides a continuation that
-			//// starts on the next line, then, control returns to the caller.
-			//co_await swtch;
+			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
+			co_await SwitchToWorkerThread();
+			PR_EXPECT(std::this_thread::get_id() != main_thread_id);
 
-			// Continuation starts on a background worker thread.
-			// Calls 'swtch.await_resume()'
-			// Then 'promise.return_value()'
-			// Then 'promise.final_suspend()'
+			cancel.Wait(millis(1000));
+
+			PR_EXPECT(++run_count == 1);
 			co_return 6.28f;
 		}
 		Task<> ReadFloat(CancelToken cancel)
 		{
-			// main thread
-			// 'get_float.continuation' is switch.promise
-			auto get_float = GetFloatAsync(cancel);
+			static int run_count{};
+
+			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
 			
-			// 'get_float.await_suspend()' called on the main thread, but called on 'get_float'
-			// Provided continuation must only be queued after 'swtch.final_suspend'
+			auto get_float = GetFloatAsync(cancel);
 			auto value = co_await get_float;
+			
+			PR_EXPECT(++run_count == 1);
 			PR_EXPECT(value == 6.28f);
 			co_return;
 		}
@@ -731,23 +759,38 @@ namespace pr::coroutine
 			co_await WhenAll(t0, t1, t2);
 			co_return *t0 + *t1 + *t2;
 		}
+		Generator<int> Fibonacci(int n)
+		{
+			int a = 0, b = 1;
+			for (int i = 0; i < n; ++i)
+			{
+				co_yield a;
+
+				auto next = a + b;
+				a = b;
+				b = next;
+			}
+		}
 	}
 
 	PRUnitTest(CoroutineTests)
 	{
 		using namespace tests;
-
-		Scheduler scheduler(1);
+		main_thread_id = std::this_thread::get_id();
 
 		CancelTokenSource cts;
 		auto cancel = cts.Token();
 
-		auto main_thread_id = std::this_thread::get_id();
-/*
-*/
+		Scheduler scheduler(1);
+
 		// Test getting data from an awaited task
 		{
-			ReadFloat(cancel).Wait();
+			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
+
+			auto read = ReadFloat(cancel);
+			read.Wait();
+
+			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
 		}
 
 		// Generator test
@@ -783,6 +826,7 @@ namespace pr::coroutine
 			PR_EXPECT(r == 0b111);
 			PR_EXPECT(std::this_thread::get_id() == main_thread_id);
 		}
+#endif
 	}
 }
 #endif

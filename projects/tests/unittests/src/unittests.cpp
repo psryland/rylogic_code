@@ -19,12 +19,12 @@ namespace pr::unittests::your::namespace
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
 #include "pr/common/unittests.h"
-//#include "src/unittests.h" // all tests
+#include "src/unittests.h" // all tests
 //#include "pr/common/allocator.h"
 //#include "pr/common/bit_data.h"
 //#include "pr/common/cancel_token.h"
 //#include "pr/common/compress.h"
-#include "pr/common/coroutine.h"
+//#include "pr/common/coroutine.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
 //#include "pr/common/flags_enum.h"
