@@ -213,7 +213,7 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
 
-// Enumerate the Guids of objects in the sources collection
+// Enumerate the GUIDs of objects in the sources collection
 VIEW3D_API void __stdcall View3D_SourceEnumGuids(view3d::EnumGuidsCB enum_guids_cb, void* ctx)
 {
 	try
@@ -339,7 +339,7 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, wchar_
 
 // Get/Set the dimensions of the render target
 // In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window, int& width, int& height)
+VIEW3D_API view3d::IVec2 __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window)
 {
 	try
 	{
@@ -347,20 +347,18 @@ VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window, 
 
 		DllLockGuard;
 		auto area = window->BackBufferSize();
-		width = area.x;
-		height = area.y;
-		return TRUE;
+		return To<view3d::IVec2>(area);
 	}
-	CatchAndReport(View3D_WindowBackBufferSizeGet, window, FALSE);
+	CatchAndReport(View3D_WindowBackBufferSizeGet, window, {});
 }
-VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, int width, int height)
+VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, view3d::IVec2 size)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->BackBufferSize(iv2{width, height});
+		window->BackBufferSize(To<iv2>(size));
 	}
 	CatchAndReport(View3D_WindowBackBufferSizeSet, window,);
 }
@@ -522,7 +520,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(view3d::Window window)
 	CatchAndReport(View3D_WindowRemoveAllObjects, window,);
 }
 
-// Enumerate the object collection guids associated with 'window'
+// Enumerate the object collection GUIDs associated with 'window'
 VIEW3D_API void __stdcall View3D_WindowEnumGuids(view3d::Window window, view3d::EnumGuidsCB enum_guids_cb, void* ctx)
 {
 	try
@@ -598,19 +596,6 @@ VIEW3D_API view3d::BBox __stdcall View3D_WindowSceneBounds(view3d::Window window
 	CatchAndReport(View3D_WindowSceneBounds, window, To<view3d::BBox>(pr::BBox::Unit()));
 }
 
-// Clear the 'invalidated' state of the window.
-VIEW3D_API void __stdcall View3D_Validate(view3d::Window window)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->Validate();
-	}
-	CatchAndReport(View3D_Validate, window, );
-}
-
 // Render the window
 VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
 {
@@ -622,6 +607,19 @@ VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
 		window->Render();
 	}
 	CatchAndReport(View3D_WindowRender, window,);
+}
+
+// Return the render target as a texture
+VIEW3D_API view3d::Texture __stdcall View3D_WindowRenderTargetGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->RenderTarget();
+	}
+	CatchAndReport(View3D_WindowRenderTargetGet, window, nullptr);
 }
 
 // Call InvalidateRect on the HWND associated with 'window'
@@ -659,6 +657,19 @@ VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(view3d::Window window, view
 			window->OnInvalidated -= {invalidated_cb, ctx};
 	}
 	CatchAndReport(View3D_WindowInvalidatedCB, window,);
+}
+
+// Clear the 'invalidated' state of the window.
+VIEW3D_API void __stdcall View3D_WindowValidate(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Validate();
+	}
+	CatchAndReport(View3D_Validate, window, );
 }
 
 // Get/Set the window background colour
@@ -704,7 +715,7 @@ VIEW3D_API void __stdcall View3D_WindowFillModeSet(view3d::Window window, view3d
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->FillMode(static_cast<pr::rdr12::EFillMode>(mode));
+		window->FillMode(static_cast<rdr12::EFillMode>(mode));
 	}
 	CatchAndReport(View3D_WindowFillModeSet, window,);
 }
@@ -728,7 +739,7 @@ VIEW3D_API void __stdcall View3D_WindowCullModeSet(view3d::Window window, view3d
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->CullMode(static_cast<pr::rdr12::ECullMode>(mode));
+		window->CullMode(static_cast<rdr12::ECullMode>(mode));
 	}
 	CatchAndReport(View3D_CullModeSet, window,);
 }
@@ -845,6 +856,30 @@ VIEW3D_API void __stdcall View3D_WindowEnvMapSet(view3d::Window window, view3d::
 		window->EnvMap(env_map);
 	}
 	CatchAndReport(View3D_WindowEnvMapSet, window, );
+}
+
+// Enable/Disable the depth buffer
+VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabledGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->DepthBufferEnabled();
+	}
+	CatchAndReport(View3D_DepthBufferEnabledGet, window, TRUE);
+}
+VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(pr::view3d::Window window, BOOL enabled)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->DepthBufferEnabled(enabled != 0);
+	}
+	CatchAndReport(View3D_DepthBufferEnabledSet, window,);
 }
 
 // Cast a ray into the scene, returning information about what it hit.
@@ -1057,7 +1092,7 @@ VIEW3D_API void __stdcall View3D_CameraAspectSet(view3d::Window window, float as
 	CatchAndReport(View3D_CameraAspectSet, window,);
 }
 
-// Get/Set both the X and Y fields of view (i.e. set the aspect ratio). Null fov means don't change the current value.
+// Get/Set both the X and Y fields of view (i.e. set the aspect ratio)
 VIEW3D_API view3d::Vec2 __stdcall View3D_CameraFovGet(view3d::Window window)
 {
 	try
@@ -1069,14 +1104,14 @@ VIEW3D_API view3d::Vec2 __stdcall View3D_CameraFovGet(view3d::Window window)
 	}
 	CatchAndReport(View3D_CameraFovSet, window, {});
 }
-VIEW3D_API void __stdcall View3D_CameraFovSet(view3d::Window window, float* fovX, float* fovY)
+VIEW3D_API void __stdcall View3D_CameraFovSet(view3d::Window window, view3d::Vec2 fov)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->Fov(fovX, fovY);
+		window->Fov(To<v2>(fov));
 	}
 	CatchAndReport(View3D_CameraFovSet, window,);
 }
@@ -1119,25 +1154,25 @@ VIEW3D_API void __stdcall View3D_CameraViewRectAtDistanceSet(view3d::Window wind
 }
 
 // Get/Set the near and far clip planes for the camera
-VIEW3D_API view3d::Vec2 __stdcall View3D_CameraClipPlanesGet(view3d::Window window, BOOL focus_relative)
+VIEW3D_API view3d::Vec2 __stdcall View3D_CameraClipPlanesGet(view3d::Window window, EClipPlanes flags)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<view3d::Vec2>(window->ClipPlanes(focus_relative != 0));
+		return To<view3d::Vec2>(window->ClipPlanes(flags));
 	}
 	CatchAndReport(View3D_CameraClipPlanesGet, window, {});
 }
-VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(view3d::Window window, float* near_, float* far_, BOOL focus_relative)
+VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(view3d::Window window, float near_, float far_, EClipPlanes flags)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->ClipPlanes(near_, far_, focus_relative != 0);
+		window->ClipPlanes(near_, far_, flags);
 	}
 	CatchAndReport(View3D_CameraClipPlanesSet, window,);
 }
@@ -1501,6 +1536,41 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* nam
 		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, id);
 	}
 	CatchAndReport(View3D_ObjectCreateP3D, , {});
+}
+
+// Create an ldr object using a callback to populate the model data.
+VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateWithCallback(char const* name, view3d::Colour colour, int vcount, int icount, int ncount, view3d::EditObjectCB edit_cb, void* ctx, GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreateByCallback(name, To<Colour32>(colour), vcount, icount, ncount, { edit_cb, ctx }, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreateWithCallback, , nullptr);
+}
+VIEW3D_API void __stdcall View3D_ObjectEdit(view3d::Object object, view3d::EditObjectCB edit_cb, void* ctx)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		Dll().ObjectEdit(object, { edit_cb, ctx });
+	}
+	CatchAndReport(View3D_ObjectEdit, , );
+}
+
+// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
+VIEW3D_API void __stdcall View3D_ObjectUpdate(view3d::Object object, wchar_t const* ldr_script, view3d::EUpdateObject flags)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("object is null");
+
+		DllLockGuard;
+		Dll().UpdateObject(object, ldr_script, static_cast<rdr12::EUpdateObject>(flags));
+	}
+	CatchAndReport(View3D_ObjectUpdate, ,);
 }
 
 // Delete an object, freeing its resources
@@ -2004,7 +2074,7 @@ VIEW3D_API void __stdcall View3D_ObjectNuggetTintSet(view3d::Object object, view
 
 // Create a texture from data in memory.
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
-// of the size appropriate for the given format. e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
+// of the size appropriate for the given format. 'e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8'
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
 VIEW3D_API view3d::Texture __stdcall View3D_TextureCreate(int width, int height, void const* data, size_t data_size, view3d::TextureOptions const& options)
 {
@@ -2014,7 +2084,6 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreate(int width, int height,
 		if (src.m_data != nullptr && src.m_pitch.y != s_cast<int>(data_size))
 			throw std::runtime_error("Incorrect data size provided");
 
-		//tdesc.SampleDesc = pr::rdr::MultiSamp(options.m_multisamp, 0U);
 		auto rdesc = ResDesc::Tex2D(src, s_cast<uint16_t>(options.m_mips), s_cast<EUsage>(options.m_usage))
 			.multisamp(options.m_multisamp)
 			.clear(options.m_clear_value);
@@ -2037,7 +2106,7 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreate(int width, int height,
 }
 
 // Create one of the stock textures
-VIEW3D_API view3d::Texture __stdcall View3D_TextureFromStock(view3d::EStockTexture stock_texture)
+VIEW3D_API view3d::Texture __stdcall View3D_TextureCreateStock(view3d::EStockTexture stock_texture)
 {
 	try
 	{
@@ -2045,7 +2114,7 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureFromStock(view3d::EStockTextu
 		auto tex = Dll().res().CreateTexture(static_cast<rdr12::EStockTexture>(stock_texture));
 		return tex.release();
 	}
-	CatchAndReport(View3D_TextureFromStock, , nullptr);
+	CatchAndReport(View3D_TextureCreateStock, , nullptr);
 }
 
 // Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
@@ -2114,6 +2183,60 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreate(view3d::SamplerOptions
 	CatchAndReport(View3D_TextureCreate, , nullptr);
 }
 
+// Create one of the stock samplers
+VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreateStock(view3d::EStockSampler stock_sampler)
+{
+	try
+	{
+		DllLockGuard;
+		auto sam = Dll().res().GetSampler(static_cast<rdr12::EStockSampler>(stock_sampler));
+		return sam.release();
+	}
+	CatchAndReport(View3D_SamplerCreateStock, , nullptr);
+}
+
+// Read the properties of an existing texture
+VIEW3D_API view3d::ImageInfo __stdcall View3D_TextureGetInfo(view3d::Texture tex)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+
+		auto desc = tex->TexDesc();
+		return view3d::ImageInfo{
+			.m_width = desc.Width,
+			.m_height = desc.Height,
+			.m_depth = desc.DepthOrArraySize,
+			.m_mips = desc.MipLevels,
+			.m_format = desc.Format,
+			.m_image_file_format = 0,
+		};
+	}
+	CatchAndReport(View3D_TextureGetInfo, , {});
+}
+
+// Read the properties of an image file
+VIEW3D_API view3d::EResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, ImageInfo& info)
+{
+	try
+	{
+		(void)tex_filepath,info;
+		//D3DXIMAGE_INFO tex_info;
+		//if (Failed(Dll().m_rdr.m_mat_mgr.TextureInfo(tex_filepath, tex_info)))
+		//	return EView3DResult::Failed;
+
+		//info.m_width             = tex_info.Width;
+		//info.m_height            = tex_info.Height;
+		//info.m_depth             = tex_info.Depth;
+		//info.m_mips              = tex_info.MipLevels;
+		//info.m_format            = tex_info.Format;
+		//info.m_image_file_format = tex_info.ImageFileFormat;
+		throw std::runtime_error("not implemented");
+		//return EView3DResult::Success;
+	}
+	CatchAndReport(View3D_TextureGetInfoFromFile, , view3d::EResult::Failed);
+}
+
 // Release a reference to a texture
 VIEW3D_API void __stdcall View3D_TextureRelease(view3d::Texture tex)
 {
@@ -2135,7 +2258,7 @@ VIEW3D_API void __stdcall View3D_CubeMapRelease(view3d::CubeMap tex)
 	}
 	CatchAndReport(View3D_CubeMapRelease, ,);
 }
-VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam)
+VIEW3D_API void __stdcall View3D_SamplerRelease(view3d::Sampler sam)
 {
 	try
 	{
@@ -2144,6 +2267,259 @@ VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam)
 		sam->Release();
 	}
 	CatchAndReport(View3D_SamplerRelease, ,);
+}
+
+// Resize this texture to 'size'
+VIEW3D_API void __stdcall View3D_TextureResize(view3d::Texture tex, uint64_t width, uint32_t height, uint16_t depth_or_array_len)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("Texture is null");
+
+		DllLockGuard;
+		tex->Resize(width, height, depth_or_array_len);
+	}
+	CatchAndReport(View3D_TextureResize, ,);
+}
+
+// Return the ref count of 'tex'
+VIEW3D_API ULONG __stdcall View3D_TextureRefCount(view3d::Texture tex)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		return tex->m_ref_count;
+	}
+	CatchAndReport(View3D_TextureRefCount, , 0);
+}
+
+// Get/Set the private data associated with 'guid' for 'tex'
+VIEW3D_API void __stdcall View3d_TexturePrivateDataGet(view3d::Texture tex, GUID const& guid, UINT& size, void* data)
+{
+	try
+	{
+		// 'size' should be the size of the data pointed to by 'data'
+		if (!tex) throw std::runtime_error("texture is null");
+		Check(tex->m_res->GetPrivateData(guid, &size, data));
+	}
+	CatchAndReport(View3d_TexturePrivateDataGet, ,);
+}
+VIEW3D_API void __stdcall View3d_TexturePrivateDataSet(view3d::Texture tex, GUID const& guid, UINT size, void const* data)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		Check(tex->m_res->SetPrivateData(guid, size, data));
+	}
+	CatchAndReport(View3d_TexturePrivateDataSet, ,);
+}
+VIEW3D_API void __stdcall View3d_TexturePrivateDataIFSet(view3d::Texture tex, GUID const& guid, IUnknown* pointer)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		Check(tex->m_res->SetPrivateDataInterface(guid, pointer));
+	}
+	CatchAndReport(View3d_TexturePrivateDataIFSet, ,);
+}
+
+// Resolve a MSAA texture into a non-MSAA texture
+VIEW3D_API void __stdcall View3D_TextureResolveAA(pr::view3d::Texture dst, pr::view3d::Texture src)
+{
+	try
+	{
+		if (!src) throw std::runtime_error("Source texture pointer is null");
+		if (!dst) throw std::runtime_error("Destination texture pointer is null");
+		
+		auto src_tdesc = src->TexDesc();
+		auto dst_tdesc = dst->TexDesc();
+		if (src_tdesc.Format != dst_tdesc.Format)
+			throw std::runtime_error("Source and destination textures must has the same format");
+
+		throw std::runtime_error("Not implemented");
+#if 0 //todo
+		Renderer::Lock lock(Dll().m_rdr);
+		lock.ImmediateDC()->ResolveSubresource(dst->m_res.get(), 0U, src->m_res.get(), 0U, src_tdesc.Format);
+#endif
+	}
+	CatchAndReport(View3D_TextureResolveAA, , );
+}
+
+// Gizmos *********************************
+
+// Create the 3D manipulation gizmo
+VIEW3D_API view3d::Gizmo __stdcall View3D_GizmoCreate(view3d::EGizmoMode mode, view3d::Mat4x4 const& o2w)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().GizmoCreate(static_cast<ELdrGizmoMode>(mode), To<m4x4>(o2w));
+	}
+	CatchAndReport(View3D_GizmoCreate, , nullptr);
+}
+
+// Delete a 3D manipulation gizmo
+VIEW3D_API void __stdcall View3D_GizmoDelete(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) return;
+		
+		DllLockGuard;
+		Dll().GizmoDelete(gizmo);
+	}
+	CatchAndReport(View3D_GizmoDelete, ,);
+}
+
+// Attach/Detach callbacks that are called when the gizmo moves
+VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(view3d::Gizmo gizmo, view3d::GizmoMovedCB cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		if (!cb) throw std::runtime_error("Callback function is null");
+		
+		// Cast the static function pointer from View3D types to ldr types
+		auto c = reinterpret_cast<void(__stdcall*)(void*, LdrGizmo*, ELdrGizmoState)>(cb);
+
+		DllLockGuard;
+		if (add)
+			gizmo->Manipulated += rdr12::GizmoMovedCB{ c, ctx };
+		else
+			gizmo->Manipulated -= rdr12::GizmoMovedCB{ c, ctx };
+	}
+	CatchAndReport(View3D_GizmoMovedCBSet, ,);
+}
+
+// Attach/Detach an object to the gizmo that will be moved as the gizmo moves
+VIEW3D_API void __stdcall View3D_GizmoAttach(view3d::Gizmo gizmo, view3d::Object obj)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		if (!obj) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		gizmo->Attach(obj->m_o2p);
+	}
+	CatchAndReport(View3D_GizmoAttach, ,);
+}
+VIEW3D_API void __stdcall View3D_GizmoDetach(view3d::Gizmo gizmo, view3d::Object obj)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+
+		DllLockGuard;
+		gizmo->Detach(obj->m_o2p);
+	}
+	CatchAndReport(View3D_GizmoDetach, ,);
+}
+
+// Get/Set the scale factor for the gizmo
+VIEW3D_API float __stdcall View3D_GizmoScaleGet(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+
+		DllLockGuard;
+		return gizmo->m_scale;
+	}
+	CatchAndReport(View3D_GizmoScaleGet, , 0.0f);
+}
+VIEW3D_API void __stdcall View3D_GizmoScaleSet(view3d::Gizmo gizmo, float scale)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+
+		DllLockGuard;
+		gizmo->m_scale = scale;
+	}
+	CatchAndReport(View3D_GizmoScaleSet, , );
+}
+
+// Get/Set the current mode of the gizmo
+VIEW3D_API view3d::EGizmoMode __stdcall View3D_GizmoModeGet(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		return static_cast<view3d::EGizmoMode>(gizmo->Mode());
+	}
+	CatchAndReport(View3D_GizmoModeGet, ,static_cast<view3d::EGizmoMode>(-1));
+}
+VIEW3D_API void __stdcall View3D_GizmoModeSet(view3d::Gizmo gizmo, view3d::EGizmoMode mode)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		gizmo->Mode(static_cast<ELdrGizmoMode>(mode));
+	}
+	CatchAndReport(View3D_GizmoModeSet, ,);
+}
+
+// Get/Set the object to world transform for the gizmo
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_GizmoO2WGet(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		return To<view3d::Mat4x4>(gizmo->O2W());
+	}
+	CatchAndReport(View3D_GizmoO2WGet, , view3d::Mat4x4{});
+}
+VIEW3D_API void __stdcall View3D_GizmoO2WSet(view3d::Gizmo gizmo, view3d::Mat4x4 const& o2w)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		gizmo->O2W(To<m4x4>(o2w));
+	}
+	CatchAndReport(View3D_GizmoO2WSet, ,);
+}
+
+// Get the offset transform that represents the difference between the gizmo's transform at the start of manipulation and now.
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_GizmoOffsetGet(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		return To<view3d::Mat4x4>(gizmo->Offset());
+	}
+	CatchAndReport(View3D_GizmoGetOffset, , view3d::Mat4x4{});
+}
+
+// Get/Set whether the gizmo is active to mouse interaction
+VIEW3D_API BOOL __stdcall View3D_GizmoEnabledGet(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		return gizmo->Enabled();
+	}
+	CatchAndReport(View3D_GizmoEnabled, ,FALSE);
+}
+VIEW3D_API void __stdcall View3D_GizmoEnabledSet(view3d::Gizmo gizmo, BOOL enabled)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		gizmo->Enabled(enabled != 0);
+	}
+	CatchAndReport(View3D_GizmoEnabledSet, ,);
+}
+
+// Returns true while manipulation is in progress
+VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(view3d::Gizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		return gizmo->Manipulating();
+	}
+	CatchAndReport(View3D_GizmoManipulating, ,FALSE);
 }
 
 // Diagnostics ****************************
@@ -2246,28 +2622,115 @@ VIEW3D_API void __stdcall View3D_DiagFillModePointsSizeSet(view3d::Window window
 
 // Miscellaneous **************************
 
-// Return true if the focus point is visible. Add/Remove the focus point to a window.
-VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(view3d::Window window)
+// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
+VIEW3D_API BOOL __stdcall View3D_StockObjectVisibleGet(view3d::Window window, view3d::EStockObject stock_objects)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->FocusPointVisible();
+		return window->StockObjectVisible(stock_objects);
 	}
-	CatchAndReport(View3D_FocusPointVisibleGet, window, false);
+	CatchAndReport(View3D_StockObjectVisibleGet, window, false);
 }
-VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(view3d::Window window, BOOL show)
+VIEW3D_API void __stdcall View3D_StockObjectVisibleSet(view3d::Window window, view3d::EStockObject stock_objects, BOOL show)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->FocusPointVisible(show != 0);
+		window->StockObjectVisible(stock_objects, show != 0);
 	}
-	CatchAndReport(View3D_FocusPointVisibleSet, window,);
+	CatchAndReport(View3D_StockObjectVisibleSet, window,);
+}
+
+// Get/Set the size of the focus point
+VIEW3D_API float __stdcall View3D_FocusPointSizeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->FocusPointSize();
+	}
+	CatchAndReport(View3D_FocusPointSizeGet, window, 0.0f);
+}
+VIEW3D_API void __stdcall View3D_FocusPointSizeSet(view3d::Window window, float size)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FocusPointSize(size);
+	}
+	CatchAndReport(View3D_FocusPointSizeSet, window,);
+}
+
+// Get/Set the size of the origin point
+VIEW3D_API float __stdcall View3D_OriginPointSizeGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->OriginPointSize();
+	}
+	CatchAndReport(View3D_OriginSizeGet, window, {});
+}
+VIEW3D_API void __stdcall View3D_OriginPointSizeSet(view3d::Window window, float size)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->OriginPointSize(size);
+	}
+	CatchAndReport(View3D_OriginSizeSet, window,);
+}
+
+// Get/Set the position and size of the selection box
+VIEW3D_API void __stdcall View3D_SelectionBoxGet(view3d::Window window, view3d::BBox& bbox, view3d::Mat4x4& o2w)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		auto [b, o] = window->SelectionBox();
+		bbox = To<view3d::BBox>(b);
+		o2w = To<view3d::Mat4x4>(m4x4(o, v4::Origin()));
+	}
+	CatchAndReport(View3D_SelectionBoxGet, window, );
+}
+VIEW3D_API void __stdcall View3D_SelectionBoxSet(view3d::Window window, view3d::BBox const& bbox, view3d::Mat4x4 const& o2w)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->SelectionBox(To<pr::BBox>(bbox), To<m4x4>(o2w).rot);
+	}
+	CatchAndReport(View3D_SelectionBoxSet, window, );
+}
+
+// Set the selection box to encompass all selected objects
+VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->SelectionBoxFitToSelected();
+	}
+	CatchAndReport(View3D_SelectionBoxFitToSelected, window, );
 }
 
 // Create/Delete the demo scene in the given window
@@ -2305,4 +2768,156 @@ VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
 	}
 	CatchAndReport(View3D_DemoSceneDelete,,);
+}
+
+// Return the example Ldr script as a BSTR
+VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
+{
+	try
+	{
+		DllLockGuard;
+		auto example = Widen(rdr12::CreateDemoScene());
+		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
+	}
+	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());
+}
+
+// Return the auto complete templates as a BSTR
+VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr()
+{
+	try
+	{
+		auto templates = Widen(rdr12::AutoCompleteTemplates());
+		return ::SysAllocStringLen(templates.c_str(), UINT(templates.size()));
+	}
+	CatchAndReport(View3D_AutoCompleteTemplatesBStr,,BSTR());
+}
+
+// Return the hierarchy "address" for a position in an ldr script file.
+// The format of the returned address is: "keyword.keyword.keyword...". e.g. Group.Box.O2W.Pos
+VIEW3D_API BSTR __stdcall View3D_ObjectAddressAt(wchar_t const* ldr_script, int64_t position)
+{
+	try
+	{
+		// 'script' should start from a root level position.
+		// 'position' should be relative to 'script'
+
+		script::StringSrc src({ ldr_script, static_cast<size_t>(position) });
+		auto address = script::Reader::AddressAt(src);
+		return ::SysAllocStringLen(address.c_str(), UINT(address.size()));
+	}
+	CatchAndReport(View3D_ObjectAddressAt, , BSTR());
+}
+
+// Parse a transform description using the Ldr script syntax
+VIEW3D_API view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
+{
+	try
+	{
+		script::StringSrc src(ldr_script);
+		script::Reader reader(src);
+		
+		m4x4 o2w;
+		reader.TransformS(o2w);
+		return To<view3d::Mat4x4>(o2w);
+	}
+	CatchAndReport(View3D_ParseLdrTransform, , To<view3d::Mat4x4>(m4x4::Identity()));
+}
+
+// Tools **********************************
+
+// Show/Hide the object manager tool
+VIEW3D_API BOOL __stdcall View3D_ObjectManagerVisibleGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->ObjectManagerVisible();
+	}
+	CatchAndReport(View3D_ObjectManagerVisibleGet, window, false);
+}
+VIEW3D_API void __stdcall View3D_ObjectManagerVisibleSet(pr::view3d::Window window, BOOL show)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ObjectManagerVisible(show != 0);
+	}
+	CatchAndReport(View3D_ObjectManagerVisibleSet, window,);
+}
+
+// Show/Hide the script editor tool
+VIEW3D_API BOOL __stdcall View3D_ScriptEditorVisibleGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->ScriptEditorVisible();
+	}
+	CatchAndReport(View3D_ScriptEditorVisibleGet, window, false);
+}
+VIEW3D_API void __stdcall View3D_ScriptEditorVisibleSet(pr::view3d::Window window, BOOL show)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->ScriptEditorVisible(show != 0);
+	}
+	CatchAndReport(View3D_ScriptEditorVisibleSet, window,);
+}
+
+// Show/Hide the measurement tool
+VIEW3D_API BOOL __stdcall View3D_MeasureToolVisibleGet(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->MeasureToolVisible();
+	}
+	CatchAndReport(View3D_MeasureToolVisibleGet, window, false);
+}
+VIEW3D_API void __stdcall View3D_MeasureToolVisibleSet(view3d::Window window, BOOL show)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->MeasureToolVisible(show != 0);
+	}
+	CatchAndReport(View3D_ShowMeasureTool, window,);
+}
+
+// Show/Hide the angle measurement tool
+VIEW3D_API BOOL __stdcall View3D_AngleToolVisibleGet(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->AngleToolVisible();
+	}
+	CatchAndReport(View3D_AngleToolVisibleGet, window, false);
+}
+VIEW3D_API void __stdcall View3D_AngleToolVisibleSet(pr::view3d::Window window, BOOL show)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->AngleToolVisible(show != 0);
+	}
+	CatchAndReport(View3D_AngleToolVisibleSet, window,);
 }

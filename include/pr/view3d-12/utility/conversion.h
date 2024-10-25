@@ -82,6 +82,22 @@ namespace pr
 		}
 	};
 
+	// iv2 / view3d::IVec2
+	template <> struct Convert<iv2, view3d::IVec2>
+	{
+		static iv2 To_(view3d::IVec2 const& v)
+		{
+			return iv2(v.x, v.y);
+		}
+	};
+	template <> struct Convert<view3d::IVec2, iv2>
+	{
+		static view3d::IVec2 To_(iv2 const& v)
+		{
+			return view3d::IVec2{v.x, v.y};
+		}
+	};
+
 	// v2 / view3d::Vec2
 	template <> struct Convert<v2, view3d::Vec2>
 	{

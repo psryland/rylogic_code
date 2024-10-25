@@ -1,11 +1,10 @@
-﻿//#define PR_VIEW3D_CREATE_STACKTRACE
+//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Windows.Threading;
 using Rylogic.Common;
@@ -15,38 +14,46 @@ using Rylogic.Maths;
 using Rylogic.Script;
 using Rylogic.Utility;
 using HContext = System.IntPtr;
-using HCubeMap = System.IntPtr;
 using HGizmo = System.IntPtr;
 using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
+using HCubeMap = System.IntPtr;
+using HSampler = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
 namespace Rylogic.Gfx
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
-	public sealed partial class View3d :IDisposable
+	public sealed partial class View3d : IDisposable
 	{
 		// Notes:
 		// - Each process should create a single View3d instance that is an isolated context.
 		// - Ldr objects are created and owned by the context.
 
 		#region Enumerations
-		public enum EResult
+		public enum EResult : int
 		{
 			Success,
 			Failed,
-			InvalidValue,
 		}
-		public enum ELogLevel
+		public enum EFillMode : int
 		{
-			Debug,
-			Info,
-			Warn,
-			Error,
+			Default = 0,
+			Points = 1,
+			Wireframe = 2, // D3D11_FILL_WIREFRAME
+			Solid = 3, // D3D11_FILL_SOLID
+			SolidWire = 4,
 		}
-		[Flags] public enum EGeom
+		public enum ECullMode : int
+		{
+			Default = 0,
+			None = 1, // D3D11_CULL_NONE
+			Front = 2, // D3D11_CULL_FRONT
+			Back = 3, // D3D11_CULL_BACK
+		}
+		[Flags] public enum EGeom : int
 		{
 			Unknown = 0,
 			Vert = 1 << 0,
@@ -54,7 +61,7 @@ namespace Rylogic.Gfx
 			Norm = 1 << 2,
 			Tex0 = 1 << 3,
 		}
-		public enum ETopo :uint
+		public enum ETopo : int
 		{
 			Undefined = 0,
 			PointList,
@@ -67,7 +74,7 @@ namespace Rylogic.Gfx
 			TriListAdj,
 			TriStripAdj,
 		}
-		[Flags] public enum ENuggetFlag :uint
+		[Flags] public enum ENuggetFlag : int
 		{
 			None = 0,
 
@@ -82,46 +89,15 @@ namespace Rylogic.Gfx
 
 			/// <summary>Excluded from shadow map render steps</summary>
 			ShadowCastExclude = 1 << 3,
-		}
-		public enum EShaderVS
-		{
-			Standard = 0,
-		}
-		public enum EShaderPS
-		{
-			Standard = 0,
-		}
-		public enum EShaderGS
-		{
-			Standard = 0,
 
-			// Point sprite params: *PointSize {w,h} *Depth {true|false}
-			PointSpritesGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineListGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineStripGS,
-
-			// Arrow params: *Size {size}
-			ArrowHeadGS,
+			/// <summary>
+			/// Can overlap with other nuggets.
+			/// Set this flag to true if you want to add a nugget that overlaps the range
+			/// of an existing nugget. For simple models, overlapping nugget ranges is
+			/// usually an error, but in advanced cases it isn't.</summary>
+			RangesCanOverlap = 1 << 5,
 		}
-		public enum EShaderCS
-		{
-			None = 0,
-		}
-		public enum ERenderStep :int
-		{
-			Invalid = 0,
-			ForwardRender,
-			GBuffer,
-			DSLighting,
-			ShadowMap,
-			RayCast,
-			_number_of,
-		};
-		public enum EStockTexture :int
+		public enum EStockTexture : int
 		{
 			Invalid = 0,
 			Black,
@@ -130,22 +106,245 @@ namespace Rylogic.Gfx
 			Checker,
 			Checker2,
 			Checker3,
+			WhiteDot,
 			WhiteSpot,
 			WhiteTriangle,
+			EnvMapProjection,
 		}
-		[Flags] public enum ECreateDeviceFlags :uint
+		public enum EStockSampler : int
 		{
-			D3D11_CREATE_DEVICE_SINGLETHREADED = 0x1,
-			D3D11_CREATE_DEVICE_DEBUG = 0x2,
-			D3D11_CREATE_DEVICE_SWITCH_TO_REF = 0x4,
-			D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS = 0x8,
-			D3D11_CREATE_DEVICE_BGRA_SUPPORT = 0x20,
-			D3D11_CREATE_DEVICE_DEBUGGABLE = 0x40,
-			D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY = 0x80,
-			D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT = 0x100,
-			D3D11_CREATE_DEVICE_VIDEO_SUPPORT = 0x800
+			Invalid = 0,
+			PointClamp,
+			PointWrap,
+			LinearClamp,
+			LinearWrap,
+			AnisotropicClamp,
+			AnisotropicWrap,
 		}
-		public enum EFormat :uint
+		public enum ELight : int
+		{
+			Ambient,
+			Directional,
+			Point,
+			Spot
+		}
+		public enum EAnimCommand : int
+		{
+			Reset, // Reset the 'time' value
+			Play,  // Run continuously using 'time' as the step size, or real time if 'time' == 0
+			Stop,  // Stop at the current time.
+			Step,  // Step by 'time' (can be positive or negative)
+		}
+		public enum EGizmoMode :int
+		{
+			Translate,
+			Rotate,
+			Scale,
+		}
+		public enum EGizmoState : int // ELdrGizmoEvent 
+		{
+			StartManip,
+			Moving,
+			Commit,
+			Revert,
+		}
+		[Flags] public enum EStockObject : int
+		{
+			None = 0,
+			FocusPoint = 1 << 0,
+			OriginPoint = 1 << 1,
+			SelectionBox = 1 << 2,
+			_flags_enum = 0,
+		};
+		[Flags] public enum ENavOp : int
+		{
+			None = 0,
+			Translate = 1 << 0,
+			Rotate = 1 << 1,
+			Zoom = 1 << 2,
+		}
+		[Flags] public enum ECameraLockMask : int
+		{
+			None = 0,
+			TransX = 1 << 0,
+			TransY = 1 << 1,
+			TransZ = 1 << 2,
+			RotX = 1 << 3,
+			RotY = 1 << 4,
+			RotZ = 1 << 5,
+			Zoom = 1 << 6,
+			CameraRelative = 1 << 7,
+			Translation = TransX | TransY | TransZ,
+			Rotation = RotX | RotY | RotZ,
+			All = (1 << 7) - 1, // Not including camera relative
+		}
+		[Flags] public enum EClipPlanes : int
+		{
+			None = 0,
+			Near = 1 << 0,
+			Far = 1 << 1,
+			CameraRelative = 1 << 2,
+			Both = Near | Far,
+			_flags_enum = 0,
+		}
+		public enum EColourOp : int
+		{
+			Overwrite,
+			Add,
+			Subtract,
+			Multiply,
+			Lerp,
+		}
+		[Flags] public enum ELdrFlags : int
+		{
+			None = 0,
+
+			/// <summary>The object is hidden</summary>
+			Hidden = 1 << 0,
+
+			/// <summary>The object is filled in wireframe mode</summary>
+			Wireframe = 1 << 1,
+
+			/// <summary>Render the object without testing against the depth buffer</summary>
+			NoZTest = 1 << 2,
+
+			/// <summary>Render the object without effecting the depth buffer</summary>
+			NoZWrite = 1 << 3,
+
+			/// <summary>The object has normals shown</summary>
+			Normals = 1 << 4,
+
+			/// <summary>The object to world transform is not an affine transform</summary>
+			NonAffine = 1 << 5,
+
+			/// <summary>Set when an object is selected. The meaning of 'selected' is up to the application</summary>
+			Selected = 1 << 8,
+
+			/// <summary>Doesn't contribute to the bounding box on an object.</summary>
+			BBoxExclude = 1 << 9,
+
+			/// <summary>Should not be included when determining the bounds of a scene.</summary>
+			SceneBoundsExclude = 1 << 10,
+
+			/// <summary>Ignored for hit test ray casts</summary>
+			HitTestExclude = 1 << 11,
+
+			/// <summary>Doesn't cast a shadow</summary>
+			ShadowCastExclude = 1 << 12,
+		}
+		[Flags] public enum EUpdateObject :int // Flags for partial update of a model
+		{
+			None         = 0,
+			Name         = 1 << 0,
+			Model        = 1 << 1,
+			Transform    = 1 << 2,
+			Children     = 1 << 3,
+			Colour       = 1 << 4,
+			ColourMask   = 1 << 5,
+			Reflectivity = 1 << 6,
+			Flags        = 1 << 7,
+			Animation    = 1 << 8,
+			All          = 0x1FF,
+			_flags_enum = 0,
+		}
+		public enum ESortGroup : int
+		{
+			Min = 0,               // The minimum sort group value
+			PreOpaques = 63,       // 
+			Default = 64,          // Make opaques the middle group
+			Skybox,                // Sky-box after opaques
+			PostOpaques,           // 
+			PreAlpha = Default + 16, // Last group before the alpha groups
+			AlphaBack,             // 
+			AlphaFront,            // 
+			PostAlpha,             // First group after the alpha groups
+			Max = 127,             // The maximum sort group value
+		}
+		public enum ESceneBounds : int
+		{
+			All,
+			Selected,
+			Visible,
+		}
+		public enum ESourcesChangedReason : int
+		{
+			NewData,
+			Reload,
+			Removal,
+		}
+		public enum ESceneChanged : int
+		{
+			ObjectsAdded,
+			ObjectsRemoved,
+			GizmoAdded,
+			GizmoRemoved,
+		}
+		[Flags] public enum EHitTestFlags : int
+		{
+			Faces = 1 << 0,
+			Edges = 1 << 1,
+			Verts = 1 << 2,
+		}
+		public enum ESnapType : int
+		{
+			NoSnap,
+			Vert,
+			Edge,
+			Face,
+			EdgeCentre,
+			FaceCentre,
+		}
+		[Flags] public enum ESettings : int
+		{
+			// Upper 2-bytes = category
+			// Lower 2-bytes = specific property that changed.
+			None = 0,
+
+			General                     = 1 << 16,
+			General_FocusPointVisible   = General | 1 << 0,
+			General_OriginPointVisible  = General | 1 << 1,
+			General_SelectionBoxVisible = General | 1 << 2,
+			General_FocusPointSize      = General | 1 << 3,
+			General_OriginPointSize     = General | 1 << 4,
+			General_SelectionBox        = General | 1 << 5,
+
+
+			Scene                  = 1 << 17,
+			Scene_BackgroundColour = Scene | 1 << 0,
+			Scene_Multisampling    = Scene | 1 << 1,
+			Scene_FilllMode        = Scene | 1 << 2,
+			Scene_CullMode         = Scene | 1 << 3,
+			Scene_Viewport         = Scene | 1 << 4,
+			Scene_EnvMap           = Scene | 1 << 5,
+
+			Camera              = 1 << 18,
+			Camera_Position     = Camera | 1 << 0,
+			Camera_FocusDist    = Camera | 1 << 1,
+			Camera_Orthographic = Camera | 1 << 2,
+			Camera_Aspect       = Camera | 1 << 3,
+			Camera_Fov          = Camera | 1 << 4,
+			Camera_ClipPlanes   = Camera | 1 << 5,
+			Camera_LockMask     = Camera | 1 << 6,
+			Camera_AlignAxis    = Camera | 1 << 7,
+
+			Lighting           = 1 << 19,
+			Lighting_Type      = Lighting | 1 << 0,
+			Lighting_Position  = Lighting | 1 << 1,
+			Lighting_Direction = Lighting | 1 << 2,
+			Lighting_Colour    = Lighting | 1 << 3,
+			Lighting_Range     = Lighting | 1 << 4,
+			Lighting_Shadows   = Lighting | 1 << 5,
+			Lighting_All       = Lighting | Lighting_Type | Lighting_Position | Lighting_Direction | Lighting_Colour | Lighting_Range | Lighting_Shadows,
+
+			Diagnostics                    = 1 << 20,
+			Diagnostics_BBoxesVisible      = Diagnostics | 1 << 0,
+			Diagnostics_NormalsLength      = Diagnostics | 1 << 1,
+			Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
+			Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
+		}
+		#endregion
+		#region D3D Enumerations
+		public enum EFormat : uint
 		{
 			DXGI_FORMAT_UNKNOWN = 0,
 			DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
@@ -265,283 +464,71 @@ namespace Rylogic.Gfx
 			DXGI_FORMAT_B4G4R4A4_UNORM = 115,
 			DXGI_FORMAT_FORCE_UINT = 0xffffffff
 		}
-		public enum EFilter :uint //D3D11_FILTER
+		[Flags] public enum EResFlags
 		{
-			D3D11_FILTER_MIN_MAG_MIP_POINT = 0,
-			D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
-			D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
-			D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
-			D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
-			D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
-			D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
-			D3D11_FILTER_MIN_MAG_MIP_LINEAR = 0x15,
-			D3D11_FILTER_ANISOTROPIC = 0x55,
-			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
-			D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
-			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
-			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
-			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
-			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
-			D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
-			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
-			D3D11_FILTER_COMPARISON_ANISOTROPIC = 0xd5,
-			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT = 0x100,
-			D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x101,
-			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x104,
-			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x105,
-			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x110,
-			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x111,
-			D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x114,
-			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR = 0x115,
-			D3D11_FILTER_MINIMUM_ANISOTROPIC = 0x155,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT = 0x180,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x181,
-			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x184,
-			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x185,
-			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x190,
-			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x191,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x194,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
-			D3D11_FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
+			D3D12_RESOURCE_FLAG_NONE = 0,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET = 0x1,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL = 0x2,
+			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS = 0x4,
+			D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE = 0x8,
+			D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER = 0x10,
+			D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x20,
+			D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY = 0x40,
+			D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY = 0x80,
+			D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE = 0x100
 		}
-		public enum EAddrMode :uint //D3D11_TEXTURE_ADDRESS_MODE
+		public enum EFilter : int
 		{
-			D3D11_TEXTURE_ADDRESS_WRAP = 1,
-			D3D11_TEXTURE_ADDRESS_MIRROR = 2,
-			D3D11_TEXTURE_ADDRESS_CLAMP = 3,
-			D3D11_TEXTURE_ADDRESS_BORDER = 4,
-			D3D11_TEXTURE_ADDRESS_MIRROR_ONCE = 5,
+			D3D12_FILTER_MIN_MAG_MIP_POINT = 0,
+			D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
+			D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
+			D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
+			D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
+			D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
+			D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR = 0x15,
+			D3D12_FILTER_ANISOTROPIC = 0x55,
+			D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
+			D3D12_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
+			D3D12_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
+			D3D12_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
+			D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
+			D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
+			D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
+			D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
+			D3D12_FILTER_COMPARISON_ANISOTROPIC = 0xd5,
+			D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT = 0x100,
+			D3D12_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x101,
+			D3D12_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x104,
+			D3D12_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x105,
+			D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x110,
+			D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x111,
+			D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x114,
+			D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR = 0x115,
+			D3D12_FILTER_MINIMUM_ANISOTROPIC = 0x155,
+			D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT = 0x180,
+			D3D12_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x181,
+			D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x184,
+			D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x185,
+			D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x190,
+			D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x191,
+			D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x194,
+			D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
+			D3D12_FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
 		}
-		[Flags] public enum EBindFlags :uint //D3D11_BIND_FLAG
+		public enum EAddrMode
 		{
-			NONE = 0,
-			D3D11_BIND_VERTEX_BUFFER = 0x1,
-			D3D11_BIND_INDEX_BUFFER = 0x2,
-			D3D11_BIND_CONSTANT_BUFFER = 0x4,
-			D3D11_BIND_SHADER_RESOURCE = 0x8,
-			D3D11_BIND_STREAM_OUTPUT = 0x10,
-			D3D11_BIND_RENDER_TARGET = 0x20,
-			D3D11_BIND_DEPTH_STENCIL = 0x40,
-			D3D11_BIND_UNORDERED_ACCESS = 0x80,
-			D3D11_BIND_DECODER = 0x200,
-			D3D11_BIND_VIDEO_ENCODER = 0x400
-		}
-		[Flags] public enum EResMiscFlags :uint//D3D11_RESOURCE_MISC_FLAG
-		{
-			NONE = 0,
-			D3D11_RESOURCE_MISC_GENERATE_MIPS = 0x1,
-			D3D11_RESOURCE_MISC_SHARED = 0x2,
-			D3D11_RESOURCE_MISC_TEXTURECUBE = 0x4,
-			D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10,
-			D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20,
-			D3D11_RESOURCE_MISC_BUFFER_STRUCTURED = 0x40,
-			D3D11_RESOURCE_MISC_RESOURCE_CLAMP = 0x80,
-			D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX = 0x100,
-			D3D11_RESOURCE_MISC_GDI_COMPATIBLE = 0x200,
-			D3D11_RESOURCE_MISC_SHARED_NTHANDLE = 0x800,
-			D3D11_RESOURCE_MISC_RESTRICTED_CONTENT = 0x1000,
-			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE = 0x2000,
-			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE_DRIVER = 0x4000,
-			D3D11_RESOURCE_MISC_GUARDED = 0x8000,
-			D3D11_RESOURCE_MISC_TILE_POOL = 0x20000,
-			D3D11_RESOURCE_MISC_TILED = 0x40000
-		}
-		public enum ELight
-		{
-			Ambient,
-			Directional,
-			Point,
-			Spot
-		}
-		public enum EAnimCommand
-		{
-			Reset, // Reset the the 'time' value
-			Play,  // Run continuously using 'time' as the step size, or real time if 'time' == 0
-			Stop,  // Stop at the current time.
-			Step,  // Step by 'time' (can be positive or negative)
-		}
-		public enum EFillMode
-		{
-			Default = 0,
-			Points = 1,
-			Wireframe = 2, // D3D11_FILL_WIREFRAME
-			Solid = 3, // D3D11_FILL_SOLID
-			SolidWire = 4,
-		}
-		public enum ECullMode
-		{
-			Default = 0,
-			None = 1, // D3D11_CULL_NONE
-			Front = 2, // D3D11_CULL_FRONT
-			Back = 3, // D3D11_CULL_BACK
-		}
-		[Flags] public enum ENavOp
-		{
-			None = 0,
-			Translate = 1 << 0,
-			Rotate = 1 << 1,
-			Zoom = 1 << 2,
-		}
-		public enum EColourOp
-		{
-			Overwrite,
-			Add,
-			Subtract,
-			Multiply,
-			Lerp,
-		}
-		[Flags] public enum ECameraLockMask
-		{
-			None = 0,
-			TransX = 1 << 0,
-			TransY = 1 << 1,
-			TransZ = 1 << 2,
-			RotX = 1 << 3,
-			RotY = 1 << 4,
-			RotZ = 1 << 5,
-			Zoom = 1 << 6,
-			CameraRelative = 1 << 7,
-			Translation = TransX | TransY | TransZ,
-			Rotation = RotX | RotY | RotZ,
-			All = (1 << 7) - 1, // Not including camera relative
-		}
-		[Flags] public enum EUpdateObject :uint // Flags for partial update of a model
-		{
-			None = 0U,
-			Name = 1 << 0,
-			Model = 1 << 1,
-			Transform = 1 << 2,
-			Children = 1 << 3,
-			Colour = 1 << 4,
-			ColourMask = 1 << 5,
-			Flags = 1 << 6,
-			Animation = 1 << 7,
-			All = Name | Model | Transform | Children | Colour | ColourMask | Flags | Animation,
-		}
-		[Flags] public enum EFlags // sync with 'EView3DFlags'
-		{
-			None = 0,
-
-			/// <summary>The object is hidden</summary>
-			Hidden = 1 << 0,
-
-			/// <summary>The object is filled in wireframe mode</summary>
-			Wireframe = 1 << 1,
-
-			/// <summary>Render the object without testing against the depth buffer</summary>
-			NoZTest = 1 << 2,
-
-			/// <summary>Render the object without effecting the depth buffer</summary>
-			NoZWrite = 1 << 3,
-
-			/// <summary>The object has normals shown</summary>
-			Normals = 1 << 4,
-
-			/// <summary>The object to world transform is not an affine transform</summary>
-			NonAffine = 1 << 5,
-
-			/// <summary>Set when an object is selected. The meaning of 'selected' is up to the application</summary>
-			Selected = 1 << 8,
-
-			/// <summary>Doesn't contribute to the bounding box on an object.</summary>
-			BBoxExclude = 1 << 9,
-
-			/// <summary>Should not be included when determining the bounds of a scene.</summary>
-			SceneBoundsExclude = 1 << 10,
-
-			/// <summary>Ignored for hit test ray casts</summary>
-			HitTestExclude = 1 << 11,
-
-			/// <summary>Doesn't cast a shadow</summary>
-			ShadowCastExclude = 1 << 12,
-		}
-		public enum ESortGroup :int
-		{
-			Min = 0,               // The minimum sort group value
-			PreOpaques = 63,       // 
-			Default = 64,          // Make opaques the middle group
-			Skybox,                // Sky-box after opaques
-			PostOpaques,           // 
-			PreAlpha = Default + 16, // Last group before the alpha groups
-			AlphaBack,             // 
-			AlphaFront,            // 
-			PostAlpha,             // First group after the alpha groups
-			Max = 127,             // The maximum sort group value
-		}
-		public enum ESceneBounds
-		{
-			All,
-			Selected,
-			Visible,
-		}
-		public enum ESourcesChangedReason
-		{
-			NewData,
-			Reload,
-		}
-		public enum ESceneChanged
-		{
-			ObjectsAdded,
-			ObjectsRemoved,
-			GizmoAdded,
-			GizmoRemoved,
-		}
-		[Flags] public enum EHitTestFlags
-		{
-			Faces = 1 << 0,
-			Edges = 1 << 1,
-			Verts = 1 << 2,
-		}
-		public enum ESnapType
-		{
-			NoSnap,
-			Vert,
-			Edge,
-			Face,
-			EdgeCentre,
-			FaceCentre,
-		}
-		[Flags] public enum ESettings :int
-		{
-			// Upper 2-bytes = category
-			// Lower 2-bytes = specific property that changed.
-			None = 0,
-
-			General = 1 << 16,
-			General_FocusPointVisible = General | 1 << 0,
-			General_OriginPointVisible = General | 1 << 1,
-			General_SelectionBoxVisible = General | 1 << 2,
-
-			Scene = 1 << 17,
-			Scene_BackgroundColour = Scene | 1 << 0,
-			Scene_Multisampling = Scene | 1 << 1,
-			Scene_FilllMode = Scene | 1 << 2,
-			Scene_CullMode = Scene | 1 << 3,
-			Scene_Viewport = Scene | 1 << 4,
-
-			Camera = 1 << 18,
-			Camera_Position = Camera | 1 << 0,
-			Camera_FocusDist = Camera | 1 << 1,
-			Camera_Orthographic = Camera | 1 << 2,
-			Camera_Aspect = Camera | 1 << 3,
-			Camera_Fov = Camera | 1 << 4,
-			Camera_ClipPlanes = Camera | 1 << 5,
-			Camera_LockMask = Camera | 1 << 6,
-			Camera_AlignAxis = Camera | 1 << 7,
-
-			Lighting = 1 << 19,
-			Lighting_All = Lighting | 1 << 0,
-
-			Diagnostics = 1 << 20,
-			Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
-			Diagnostics_NormalsLength = Diagnostics | 1 << 1,
-			Diagnostics_NormalsColour = Diagnostics | 1 << 2,
-			Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP = 1,
+			D3D12_TEXTURE_ADDRESS_MODE_MIRROR = 2,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP = 3,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER = 4,
+			D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE = 5
 		}
 		#endregion
 
-		#region Structs
+		#region Structures
 
+		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		public struct Vertex
 		{
@@ -558,20 +545,48 @@ namespace Rylogic.Gfx
 			public override readonly string ToString() { return $"V:<{m_pos}> C:<{m_col:X8}>"; }
 		}
 
+		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
+			/// <summary>Material diffuse texture</summary>
+			public HTexture m_diff_tex;
+
+			/// <summary>Shader overrides</summary>
+			public HSampler m_diff_sam;
+
+			/// <summary>Tint colour</summary>
+			public Colour32 m_tint;
+
+			/// <summary>How reflective this nugget is relative to the over all model</summary>
+			public float m_relative_reflectivity;
+
+			/// <summary>Create a material instance</summary>
+			public static Material New(Colour32? colour = null, HTexture? diff_tex = null, HSampler? diff_sam = null, float? relative_reflectivity = null)
+			{
+				return new Material
+				{
+					m_diff_tex = diff_tex ?? HTexture.Zero,
+					m_diff_sam = diff_sam ?? HSampler.Zero,
+					m_tint = colour ?? Colour32.White,
+					m_relative_reflectivity = relative_reflectivity ?? 1f,
+					//m_shader_map = shdr_map ?? ShaderMap.New();
+				};
+			}
+
+#if false
+
 			[DebuggerDisplay("{Description,nq}"), StructLayout(LayoutKind.Sequential)]
 			public struct ShaderSet
 			{
 				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderVS { public EShaderVS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				public struct ShaderVS { public EShaderVS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
 				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderGS { public EShaderGS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				public struct ShaderGS { public EShaderGS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
 				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderPS { public EShaderPS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				public struct ShaderPS { public EShaderPS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
 				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderCS { public EShaderCS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				public struct ShaderCS { public EShaderCS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
 
 				public ShaderVS m_vs;
 				public ShaderGS m_gs;
@@ -595,30 +610,6 @@ namespace Rylogic.Gfx
 				public ShaderSet[] m_rstep;
 			}
 
-			public static Material New()
-			{
-				return new Material(null);
-			}
-			public Material(Colour32? colour = null, HTexture? diff_tex = null, ShaderMap? shdr_map = null, float? relative_reflectivity = null)
-			{
-				m_diff_tex = diff_tex ?? HTexture.Zero;
-				m_shader_map = shdr_map ?? ShaderMap.New();
-				m_tint = colour ?? Colour32.White;
-				m_relative_reflectivity = relative_reflectivity ?? 1f;
-			}
-
-			/// <summary>Material diffuse texture</summary>
-			public HTexture m_diff_tex;
-
-			/// <summary>Shader overrides</summary>
-			public ShaderMap m_shader_map;
-
-			/// <summary>Tint colour</summary>
-			public Colour32 m_tint;
-
-			/// <summary>How reflective this nugget is relative to the over all model</summary>
-			public float m_relative_reflectivity;
-
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
 			public readonly void Use(ERenderStep rstep, EShaderVS shdr, string parms)
 			{
@@ -640,8 +631,10 @@ namespace Rylogic.Gfx
 				m_shader_map.m_rstep[(int)rstep].m_cs.shdr = shdr;
 				m_shader_map.m_rstep[(int)rstep].m_cs.parms = parms;
 			}
+#endif
 		}
 
+		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Nugget
 		{
@@ -649,192 +642,26 @@ namespace Rylogic.Gfx
 			public EGeom m_geom;
 			public ECullMode m_cull_mode;
 			public EFillMode m_fill_mode;
-			public uint m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public uint m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-			public ENuggetFlag m_nflags;   // Nugget flags (ENuggetFlag)
-			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
+			public int m_v0, m_v1;        // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public int m_i0, m_i1;        // Index buffer range. Set to 0,0 to mean the whole buffer
+			public ENuggetFlag m_nflags;  // Nugget flags (ENuggetFlag)
 			public Material m_mat;
 
-			public Nugget(ETopo topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, ENuggetFlag flags = ENuggetFlag.None, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
+			public static Nugget New(ETopo topo, EGeom geom, int v0 = 0, int v1 = 0, int i0 = 0, int i1 = 0, ENuggetFlag flags = ENuggetFlag.None, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
 			{
-				Debug.Assert(mat == null || mat.Value.m_shader_map.m_rstep != null, "Don't use default(Material)");
-				m_topo = topo;
-				m_geom = geom;
-				m_cull_mode = cull_mode;
-				m_fill_mode = fill_mode;
-				m_v0 = v0;
-				m_v1 = v1;
-				m_i0 = i0;
-				m_i1 = i1;
-				m_nflags = flags;
-				m_range_overlaps = range_overlaps;
-				m_mat = mat ?? new Material(null);
-			}
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
-		public readonly struct ImageInfo
-		{
-			public readonly uint Width;
-			public readonly uint Height;
-			public readonly uint Depth;
-			public readonly uint Mips;
-			public readonly EFormat Format; //DXGI_FORMAT
-			public readonly uint ImageFileFormat;//D3DXIMAGE_FILEFORMAT
-			public readonly float Aspect => (float)Width / Height;
-		}
-
-		public class TextureOptions
-		{
-			[StructLayout(LayoutKind.Sequential)]
-			public struct InteropData
-			{
-				public m4x4 T2S;
-				public EFormat Format;
-				public uint Mips;
-				public EFilter Filter;
-				public EAddrMode AddrU;
-				public EAddrMode AddrV;
-				public EBindFlags BindFlags;
-				public EResMiscFlags MiscFlags;
-				public uint MultiSamp;
-				public uint ColourKey;
-				public bool HasAlpha;
-				public bool GdiCompatible;
-				public string DbgName;
-			}
-			public InteropData Data;
-
-			public TextureOptions(
-				m4x4? t2s = null,
-				EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
-				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
-				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
-				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE,
-				EResMiscFlags misc_flags = EResMiscFlags.NONE,
-				uint msaa = 1U,
-				uint mips = 0U,
-				uint colour_key = 0U,
-				bool has_alpha = false,
-				string? dbg_name = null)
-			{
-				Data = new InteropData
+				return new Nugget
 				{
-					T2S = t2s ?? m4x4.Identity,
-					Format = format,
-					Mips = mips,
-					Filter = filter,
-					AddrU = addrU,
-					AddrV = addrV,
-					MultiSamp = msaa,
-					BindFlags = bind_flags,
-					MiscFlags = misc_flags,
-					ColourKey = colour_key,
-					HasAlpha = has_alpha,
-					DbgName = dbg_name ?? string.Empty,
-					GdiCompatible = false,
+					m_topo = topo,
+					m_geom = geom,
+					m_cull_mode = cull_mode,
+					m_fill_mode = fill_mode,
+					m_v0 = v0,
+					m_v1 = v1,
+					m_i0 = i0,
+					m_i1 = i1,
+					m_nflags = flags,
+					m_mat = mat ?? Material.New(),
 				};
-			}
-
-			public m4x4 T2S
-			{
-				get => Data.T2S;
-				set => Data.T2S = value;
-			}
-			public EFormat Format
-			{
-				get => Data.Format;
-				set => Data.Format = value;
-			}
-			public uint Mips
-			{
-				get => Data.Mips;
-				set => Data.Mips = value;
-			}
-			public EFilter Filter
-			{
-				get => Data.Filter;
-				set => Data.Filter = value;
-			}
-			public EAddrMode AddrU
-			{
-				get => Data.AddrU;
-				set => Data.AddrU = value;
-			}
-			public EAddrMode AddrV
-			{
-				get => Data.AddrV;
-				set => Data.AddrV = value;
-			}
-			public EBindFlags BindFlags
-			{
-				get => Data.BindFlags;
-				set => Data.BindFlags = value;
-			}
-			public EResMiscFlags MiscFlags
-			{
-				get => Data.MiscFlags;
-				set => Data.MiscFlags = value;
-			}
-			public uint MultiSamp
-			{
-				get => Data.MultiSamp;
-				set => Data.MultiSamp = Math.Max(1U, value);
-			}
-			public uint ColourKey
-			{
-				get => Data.ColourKey;
-				set => Data.ColourKey = value;
-			}
-			public bool HasAlpha
-			{
-				get => Data.HasAlpha;
-				set => Data.HasAlpha = value;
-			}
-			public bool GdiCompatible
-			{
-				get => (Data.MiscFlags & EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE) != 0;
-				set
-				{
-					if (value)
-					{
-						// Don't make GDI textures automatically 'HasAlpha'.
-						// Leave that decision to the caller.
-						Data.Format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
-						Data.BindFlags |= EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET;
-						Data.MiscFlags |= EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
-						Data.MultiSamp = 1U;
-						Data.Mips = 1U;
-					}
-					else
-					{
-						Data.MiscFlags &= ~EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
-					}
-				}
-			}
-			public string DbgName
-			{
-				get => Data.DbgName;
-				set => Data.DbgName = value ?? string.Empty;
-			}
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
-		public struct WindowOptions
-		{
-			public ReportErrorCB ErrorCB;
-			public IntPtr ErrorCBCtx;
-			public bool GdiCompatibleBackBuffer;
-			public int Multisampling;
-			public string DbgName;
-			public WindowOptions(ReportErrorCB error_cb, IntPtr error_cb_ctx, bool gdi_compatible_bb = false)
-			{
-				ErrorCB = error_cb;
-				ErrorCBCtx = error_cb_ctx;
-				GdiCompatibleBackBuffer = gdi_compatible_bb;
-				Multisampling = gdi_compatible_bb ? 1 : 4;
-				DbgName = string.Empty;
 			}
 		}
 
@@ -848,7 +675,7 @@ namespace Rylogic.Gfx
 			/// <summary>Direction, only valid for directional and spot lights</summary>
 			public v4 Direction;
 
-			/// <summary>Tbe light source type. One of ambient, directional, point, spot</summary>
+			/// <summary>The light source type. One of ambient, directional, point, spot</summary>
 			public ELight Type;
 
 			/// <summary>Ambient light colour</summary>
@@ -946,6 +773,74 @@ namespace Rylogic.Gfx
 			}
 		}
 
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct TextureOptions
+		{
+			public m4x4 T2S;
+			public EFormat Format;
+			public int Mips;
+			public EResFlags Usage;
+			public ClearValue ClearValue;
+			public int MultiSamp;
+			public uint ColourKey;
+			public bool HasAlpha;
+			public string DbgName;
+
+			public static TextureOptions New(m4x4? t2s = null, EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM, int mips = 0, EResFlags usage = EResFlags.D3D12_RESOURCE_FLAG_NONE, ClearValue clear_value = default, int msaa = 1, uint colour_key = 0U, bool has_alpha = false, string? dbg_name = null)
+			{
+				return new TextureOptions {
+					T2S = t2s ?? m4x4.Identity,
+					Format = format,
+					Mips = Math.Max(0, mips),
+					Usage = usage,
+					ClearValue = clear_value,
+					MultiSamp = Math.Max(1, msaa),
+					ColourKey = colour_key,
+					HasAlpha = has_alpha,
+					DbgName = dbg_name ?? string.Empty,
+				};
+			}
+		}
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+		public struct CubeMapOptions
+		{
+			public m4x4 m_cube2w;
+			[MarshalAs(UnmanagedType.LPStr)] public string m_dbg_name;
+		};
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct SamplerOptions
+		{
+			public EFilter m_filter;
+			public EAddrMode m_addrU;
+			public EAddrMode m_addrV;
+			public EAddrMode m_addrW;
+			[MarshalAs(UnmanagedType.LPStr)] public string m_dbg_name;
+		};
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WindowOptions
+		{
+			public ReportErrorCB ErrorCB;
+			public IntPtr ErrorCBCtx;
+			public bool GdiCompatibleBackBuffer;
+			public int Multisampling;
+			public string DbgName;
+			public WindowOptions(ReportErrorCB error_cb, IntPtr error_cb_ctx, bool gdi_compatible_bb = false)
+			{
+				ErrorCB = error_cb;
+				ErrorCBCtx = error_cb_ctx;
+				GdiCompatibleBackBuffer = gdi_compatible_bb;
+				Multisampling = gdi_compatible_bb ? 1 : 4;
+				DbgName = string.Empty;
+			}
+		}
+
 		/// <summary>A ray description for hit testing in a 3d scene</summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct HitTestRay
@@ -1019,22 +914,22 @@ namespace Rylogic.Gfx
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DIncludes
+		public struct Includes
 		{
 			/// <summary>
 			/// Create an includes object.
 			/// 'paths' should be null or a comma or semi colon separated list of directories
 			/// Remember module == IntPtr.Zero means "this" module</summary>
-			public View3DIncludes(string paths)
+			public Includes(string paths)
 				: this(paths, null)
 			{ }
-			public View3DIncludes(HMODULE module, IEnumerable<string> paths)
+			public Includes(HMODULE module, IEnumerable<string> paths)
 				: this(paths, new[] { module })
 			{ }
-			public View3DIncludes(IEnumerable<string> paths, IEnumerable<HMODULE> modules)
-				: this(paths != null ? string.Join(",", paths) : null, modules.Take(16).ToArray())
+			public Includes(IEnumerable<string> paths, IEnumerable<HMODULE> modules)
+				: this(string.Join(",", paths), modules.Take(16).ToArray())
 			{ }
-			public View3DIncludes(string? paths, HMODULE[]? modules)
+			public Includes(string paths, HMODULE[]? modules)
 			{
 				m_include_paths = paths;
 				m_modules = new HMODULE[16];
@@ -1048,13 +943,13 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>A comma or semicolon separated list of search directories</summary>
-			public string? IncludePaths
+			public string IncludePaths
 			{
 				readonly get => m_include_paths;
 				set => m_include_paths = value;
 			}
-			[MarshalAs(UnmanagedType.LPWStr)]
-			public string? m_include_paths;
+			[MarshalAs(UnmanagedType.LPStr)]
+			public string m_include_paths;
 
 			/// <summary>An array of binary modules that contain resources</summary>
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
@@ -1062,8 +957,9 @@ namespace Rylogic.Gfx
 			public readonly int m_module_count;
 		}
 
+		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public readonly struct View3DSceneChanged
+		public readonly struct SceneChanged
 		{
 			/// <summary>How the scene was changed</summary>
 			public readonly ESceneChanged ChangeType;
@@ -1078,43 +974,89 @@ namespace Rylogic.Gfx
 			private readonly HObject m_object;
 		}
 
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct AnimEvent
+		{
+			/// <summary>The state change type</summary>
+			public EAnimCommand m_command;
+
+			/// <summary>The current animation clock value</summary>
+			public double m_clock;
+		};
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ImageInfo
+		{
+			public ulong m_width;
+			public uint m_height;
+			public ushort m_depth;
+			public ushort m_mips;
+			public EFormat m_format;
+			public uint m_image_file_format; // D3DXIMAGE_FILEFORMAT
+		};
+		
+		#endregion
+		#region D3D Structures
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct DepthStencilValue
+		{
+			public float Depth;
+			public byte Stencil;
+		}
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Explicit)]
+		public struct ClearValue
+		{
+			[FieldOffset(0)] public EFormat Format;
+			[FieldOffset(4), MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)] public float[] Color;
+			[FieldOffset(4)] public DepthStencilValue DepthStencil;
+		}
+
 		#endregion
 
 		#region Callback Functions
 
 		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg, [MarshalAs(UnmanagedType.LPWStr)] string filepath, int line, long pos);
+		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPStr)] string msg, [MarshalAs(UnmanagedType.LPStr)] string filepath, int line, long pos);
 
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
 
-		/// <summary>Enumerate guids callback</summary>
-		public delegate bool EnumGuidsCB(IntPtr ctx, Guid guid);
+		/// <summary>Callback for progress updates during AddFile / Reload</summary>
+		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
+
+		/// <summary>Callback when the sources are reloaded</summary>
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
+
+		/// <summary>Enumerate GUIDs callback</summary>
+		public delegate bool EnumGuidsCB(IntPtr ctx, ref Guid guid);
 
 		/// <summary>Enumerate objects callback</summary>
 		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
-
-		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback for continuations after adding scripts/files</summary>
 		public delegate void OnAddCB(IntPtr ctx, ref Guid context_id, bool before);
 		public delegate void LoadScriptCompleteCB(Guid context_id, bool before);
 
-		/// <summary>Callback when the sources are reloaded</summary>
-		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
-
-		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
-		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args);
-
-		/// <summary>Callback notification of animation commands</summary>
-		public delegate void AnimationCB(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock);
-
 		/// <summary>Callback for when the window is invalidated</summary>
 		public delegate void InvalidatedCB(IntPtr ctx, HWindow wnd);
 
 		/// <summary>Called just prior to rendering</summary>
-		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
+		public delegate void RenderingCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
+		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, ref SceneChanged args);
+
+		/// <summary>Callback notification of animation commands</summary>
+		public delegate void AnimationCB(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock);
+
+		/// <summary>Callback notification of gizmo moved</summary>
+		public delegate void GizmoMovedCB(IntPtr ctx, HGizmo gizmo, EGizmoState state);
 
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
@@ -1141,7 +1083,6 @@ namespace Rylogic.Gfx
 			public Exception(string message) : this(message, EResult.Success) { }
 			public Exception(string message, EResult code) : base(message) { m_code = code; }
 			public Exception(string message, System.Exception innerException) : base(message, innerException) {}
-			protected Exception(SerializationInfo serializationInfo, StreamingContext streamingContext) {throw new NotImplementedException();}
 		}
 
 		private readonly List<Window> m_windows;          // Groups of objects to render
@@ -1155,19 +1096,17 @@ namespace Rylogic.Gfx
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
-		#if PR_VIEW3D_CREATE_STACKTRACE
+#if PR_VIEW3D_CREATE_STACKTRACE
 		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
-		#endif
-
-		/// <summary>Initialise with support for BGRA textures</summary>
-		public static ECreateDeviceFlags CreateDeviceFlags = ECreateDeviceFlags.D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+#endif
 
 		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
 		public static View3d Create()
 		{
-			#if PR_VIEW3D_CREATE_STACKTRACE
+#if PR_VIEW3D_CREATE_STACKTRACE
 			m_create_stacktraces.Add(new StackTrace(true));
-			#endif
+#endif
+
 			++m_ref_count;
 			return m_singleton ??= new View3d();
 		}
@@ -1190,7 +1129,7 @@ namespace Rylogic.Gfx
 			try
 			{
 				// Initialise view3d
-				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero, CreateDeviceFlags);
+				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero);
 				if (m_context == HContext.Zero) throw LastError ?? new Exception("Failed to initialised View3d");
 				void HandleError(IntPtr ctx, string msg, string filepath, int line, long pos)
 				{
@@ -1283,7 +1222,7 @@ namespace Rylogic.Gfx
 		}
 		public void Dispose()
 		{
-			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
+			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GCFinaliserThread");
 			if (--m_ref_count != 0)
 			{
 				Util.BreakIf(m_ref_count < 0);
@@ -1339,15 +1278,30 @@ namespace Rylogic.Gfx
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScript(string ldr_script, bool file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
+		public Guid LoadScriptFromString(string ldr_script, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
 		{
 			// Note: this method is asynchronous, it returns before objects have been added to the object manager
 			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
 			var ctx = context_id ?? Guid.NewGuid();
 			if (on_add != null) m_load_script_handlers.Add(on_add);
 			var on_add_ctx = on_add != null ? Marshal.GetFunctionPointerForDelegate(on_add) : IntPtr.Zero;
-			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
+			var inc = new Includes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
+			return View3D_LoadScriptFromString(ldr_script, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
+		}
+
+		/// <summary>
+		/// Add objects from an ldr file. This will create all objects declared in 'ldr_script'
+		/// with context id 'context_id' if given, otherwise an id will be created.
+		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
+		public Guid LoadScriptFromFile(string ldr_script_file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
+		{
+			// Note: this method is asynchronous, it returns before objects have been added to the object manager
+			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
+			var ctx = context_id ?? Guid.NewGuid();
+			if (on_add != null) m_load_script_handlers.Add(on_add);
+			var on_add_ctx = on_add != null ? Marshal.GetFunctionPointerForDelegate(on_add) : IntPtr.Zero;
+			var inc = new Includes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
+			return View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1368,7 +1322,7 @@ namespace Rylogic.Gfx
 		/// otherwise, disposing them will result in memory corruption</summary>
 		public void DeleteAllObjects()
 		{
-			View3D_ObjectsDeleteAll();
+			View3D_DeleteAllObjects();
 		}
 
 		/// <summary>Delete all objects, filtered by 'context_ids'</summary>
@@ -1376,7 +1330,7 @@ namespace Rylogic.Gfx
 		{
 			Debug.Assert(include_count + exclude_count == context_ids.Length);
 			using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-			View3D_ObjectsDeleteById(ids.Pointer, include_count, exclude_count);
+			View3D_DeleteById(ids.Pointer, include_count, exclude_count);
 		}
 
 		/// <summary>Release all objects not displayed in any windows (filtered by 'context_ids')</summary>
@@ -1384,7 +1338,7 @@ namespace Rylogic.Gfx
 		{
 			Debug.Assert(include_count + exclude_count == context_ids.Length);
 			using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-			View3D_ObjectsDeleteUnused(ids.Pointer, include_count, exclude_count);
+			View3D_DeleteUnused(ids.Pointer, include_count, exclude_count);
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
@@ -1393,14 +1347,15 @@ namespace Rylogic.Gfx
 			return View3D_ContextIdFromFilepath(filepath, out var id) ? id : (Guid?)null;
 		}
 
-		/// <summary>Enumerate the guids in the store</summary>
+		/// <summary>Enumerate the GUIDs in the store</summary>
 		public void EnumGuids(Action<Guid> cb)
 		{
 			EnumGuids(guid => { cb(guid); return true; });
 		}
 		public void EnumGuids(Func<Guid, bool> cb)
 		{
-			View3D_SourceEnumGuids((c, guid) => cb(guid), IntPtr.Zero);
+			EnumGuidsCB enum_guids_cb = (IntPtr ctx, ref Guid guid) => cb(guid);
+			View3D_SourceEnumGuids(enum_guids_cb, IntPtr.Zero);
 		}
 
 		/// <summary>Return the example Ldr script</summary>
@@ -1468,15 +1423,15 @@ namespace ldr
 			return View3D_ObjectAddressAt(ldr_script, position != -1 ? position : ldr_script.Length) ?? string.Empty;
 		}
 
-		/// <summary>Flush any pending commands to the graphics card</summary>
-		public static void Flush()
-		{
-			View3D_Flush();
-		}
+		///// <summary>Flush any pending commands to the graphics card</summary>
+		//public static void Flush()
+		//{
+		//	View3D_Flush();
+		//}
 
 		#region DLL extern functions
 
-		private const string Dll = "view3d";
+		private const string Dll = "view3d-12";
 
 		/// <summary>True if the view3d dll has been loaded</summary>
 		public static bool ModuleLoaded => m_module != IntPtr.Zero;
@@ -1493,126 +1448,559 @@ namespace ldr
 			return m_module != IntPtr.Zero;
 		}
 
-		// Context
+		// Dll Context ****************************
+
+		// Initialise calls are reference counted and must be matched with Shutdown calls
+		// 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
+		// Note: this function is not thread safe, avoid race calls
+		[DllImport(Dll)] private static extern HContext View3D_Initialise(ReportErrorCB global_error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void View3D_Shutdown(HContext context);
+
+		// This error callback is called for errors that are associated with the dll (rather than with a window).
+		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
+
+		// Set the callback for progress events when script sources are loaded or updated
+		[DllImport(Dll)] private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+
+		// Set the callback that is called when the sources are reloaded
+		[DllImport(Dll)] private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
+
+		// Add/Remove a callback for handling embedded code within scripts
+		[DllImport(Dll)] private static extern void View3D_EmbeddedCodeCBSet([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
+
+		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
+		[DllImport(Dll)] private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
+
+		// Data Sources ***************************
+
+		// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
+		[DllImport(Dll)] private static extern Guid View3D_LoadScriptFromString([MarshalAs(UnmanagedType.LPStr)] string ldr_script, ref Guid context_id, ref Includes includes, OnAddCB? on_add_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern Guid View3D_LoadScriptFromFile([MarshalAs(UnmanagedType.LPStr)] string ldr_file, ref Guid context_id, ref Includes includes, OnAddCB? on_add_cb, IntPtr ctx);
+		
+		// Delete all objects and object sources
+		[DllImport(Dll)] private static extern void View3D_DeleteAllObjects();
+		
+		// Delete all objects matching (or not matching) a context id
+		[DllImport(Dll)] private static extern void View3D_DeleteById(IntPtr context_ids, int include_count, int exclude_count);
+
+		// Delete all objects not displayed in any windows
+		[DllImport(Dll)] private static extern void View3D_DeleteUnused(IntPtr context_ids, int include_count, int exclude_count);
+
+		// Enumerate the GUIDs of objects in the sources collection
+		[DllImport(Dll)] private static extern void View3D_SourceEnumGuids(EnumGuidsCB enum_guids_cb, IntPtr ctx);
+
+		// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
+		[DllImport(Dll)] private static extern void View3D_ReloadScriptSources();
+
+		// Poll for changed script sources and reload any that have changed
+		[DllImport(Dll)] private static extern void View3D_CheckForChangedSources();
+
+		// Windows ********************************
+
+		// Create/Destroy a window
+		[DllImport(Dll)] private static extern HWindow View3D_WindowCreate(HWND hwnd, ref WindowOptions opts);
+		[DllImport(Dll)] private static extern void View3D_WindowDestroy(HWindow window);
+
+		// Add/Remove a window error callback. Note: The callback function can be called in a worker thread context.
+		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
+
+		// Get/Set the window settings (as ldr script string)
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPWStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPWStr)] string settings);
+
+		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
+		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+		[DllImport(Dll)] private static extern IVec2 View3D_WindowBackBufferSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowBackBufferSizeSet(HWindow window, IVec2 size);
+
+		// Get/Set the window viewport (and clipping area)
+		[DllImport(Dll)] private static extern Viewport View3D_WindowViewportGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowViewportSet(HWindow window, ref Viewport vp);
+
+		// Set a notification handler for when a window setting changes
+		[DllImport(Dll)] private static extern void View3D_WindowSettingsChangedCB(HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
+
+		// Add/Remove a callback that is called when the collection of objects associated with 'window' changes
+		[DllImport(Dll)] private static extern void View3D_WindowSceneChangedCB(HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
+
+		// Add/Remove a callback that is called just prior to rendering the window
+		[DllImport(Dll)] private static extern void View3D_WindowRenderingCB(HWindow window, RenderingCB rendering_cb, IntPtr ctx, bool add);
+
+		// Add/Remove an object to/from a window
+		[DllImport(Dll)] private static extern void View3D_WindowAddObject(HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern void View3D_WindowRemoveObject(HWindow window, HObject obj);
+
+		// Add/Remove a gizmo to/from a window
+		[DllImport(Dll)] private static extern void View3D_WindowAddGizmo(HWindow window, HGizmo giz);
+		[DllImport(Dll)] private static extern void View3D_WindowRemoveGizmo(HWindow window, HGizmo giz);
+
+		// Add/Remove objects by context id. This function can be used to add all objects either in, or not in 'context_ids'
+		[DllImport(Dll)] private static extern void View3D_WindowAddObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)] private static extern void View3D_WindowRemoveObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
+
+		// Remove all objects 'window'
+		[DllImport(Dll)] private static extern void View3D_WindowRemoveAllObjects(HWindow window);
+
+		// Enumerate the object collection GUIDs associated with 'window'
+		[DllImport(Dll)] private static extern void View3D_WindowEnumGuids(HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
+
+		// Enumerate the objects associated with 'window'
+		[DllImport(Dll)] private static extern void View3D_WindowEnumObjects(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void View3D_WindowEnumObjectsById(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, IntPtr context_ids, int include_count, int exclude_count);
+
+		// Return true if 'object' is among 'window's objects
+		[DllImport(Dll)] private static extern bool View3D_WindowHasObject(HWindow window, HObject obj, bool search_children);
+
+		// Return the number of objects assigned to 'window'
+		[DllImport(Dll)] private static extern int View3D_WindowObjectCount(HWindow window);
+
+		// Return the bounds of a scene
+		[DllImport(Dll)] private static extern BBox View3D_WindowSceneBounds(HWindow window, ESceneBounds bounds, int except_count, [MarshalAs(UnmanagedType.LPArray)] Guid[]? except);
+
+		// Render the window
+		[DllImport(Dll)] private static extern void View3D_WindowRender(HWindow window);
+
+		// Return the render target as a texture
+		[DllImport(Dll)] private static extern HTexture View3D_WindowRenderTargetGet(HWindow window);
+
+		// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
+		[DllImport(Dll)] private static extern void View3D_WindowInvalidate(HWindow window, bool erase);
+		[DllImport(Dll)] private static extern void View3D_WindowInvalidateRect(HWindow window, ref Win32.RECT rect, bool erase);
+
+		// Register a callback for when the window is invalidated. This can be used to render in response to invalidation, rather than rendering on a polling cycle.
+		[DllImport(Dll)] private static extern void View3D_WindowInvalidatedCB(HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
+
+		// Clear the 'invalidated' state of the window.
+		[DllImport(Dll)] private static extern void View3D_WindowValidate(HWindow window);
+
+		// Get/Set the window background colour
+		[DllImport(Dll)] private static extern uint View3D_WindowBackgroundColourGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowBackgroundColourSet(HWindow window, uint argb);
+
+		// Get/Set the fill mode for the window
+		[DllImport(Dll)] private static extern EFillMode View3D_WindowFillModeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowFillModeSet(HWindow window, EFillMode mode);
+
+		// Get/Set the cull mode for a faces in window
+		[DllImport(Dll)] private static extern ECullMode View3D_WindowCullModeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowCullModeSet(HWindow window, ECullMode mode);
+
+		// Get/Set the multi-sampling mode for a window
+		[DllImport(Dll)] private static extern int View3D_MultiSamplingGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_MultiSamplingSet(HWindow window, int multisampling);
+
+		// Control animation
+		[DllImport(Dll)] private static extern void View3D_WindowAnimControl(HWindow window, EAnimCommand command, double time_s);
+
+		// Get/Set the animation time
+		[DllImport(Dll)] private static extern bool View3D_WindowAnimating(HWindow window);
+		[DllImport(Dll)] private static extern double View3D_WindowAnimTimeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowAnimTimeSet(HWindow window, double time_s);
+
+		// Set the callback for animation events
+		[DllImport(Dll)] private static extern void View3D_WindowAnimEventCBSet(HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
+
+		// Return the DPI of the monitor that 'window' is displayed on
+		[DllImport(Dll)] private static extern v2 View3D_WindowDpiScale(HWindow window);
+
+		// Set the global environment map for the window
+		[DllImport(Dll)] private static extern void View3D_WindowEnvMapSet(HWindow window, CubeMap env_map);
+
+		// Enable/Disable the depth buffer
+		[DllImport(Dll)] private static extern bool View3D_DepthBufferEnabledGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DepthBufferEnabledSet(HWindow window, bool enabled);
+
+		// Cast a ray into the scene, returning information about what it hit.
+		[DllImport(Dll)] private static extern void View3D_WindowHitTestObjects(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] HObject[] objects, int object_count);
+		[DllImport(Dll)] private static extern void View3D_WindowHitTestByCtx(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
+
+		// Camera *********************************
+
+		// Position the camera and focus distance
+		[DllImport(Dll)] private static extern void View3D_CameraPositionSet(HWindow window, v4 position, v4 lookat, v4 up);
+
+		// Get/Set the current camera to world transform
+		[DllImport(Dll)] private static extern m4x4 View3D_CameraToWorldGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraToWorldSet(HWindow window, ref m4x4 c2w);
+
+		// Move the camera to a position that can see the whole scene. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+		[DllImport(Dll)] private static extern void View3D_ResetView(HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+
+		// Reset the camera to view a bbox. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
+		[DllImport(Dll)] private static extern void View3D_ResetViewBBox(HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+
+		// Enable/Disable orthographic projection
+		[DllImport(Dll)] private static extern bool View3D_CameraOrthographicGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraOrthographicSet(HWindow window, bool on);
+
+		// Get/Set the distance to the camera focus point
+		[DllImport(Dll)] private static extern float View3D_CameraFocusDistanceGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraFocusDistanceSet(HWindow window, float dist);
+
+		// Get/Set the camera focus point position
+		[DllImport(Dll)] private static extern v4 View3D_CameraFocusPointGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraFocusPointSet(HWindow window, v4 position);
+
+		// Get/Set the aspect ratio for the camera field of view
+		[DllImport(Dll)] private static extern float View3D_CameraAspectGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraAspectSet(HWindow window, float aspect);
+
+		// Get/Set both the X and Y fields of view (i.e. set the aspect ratio). Null fov means don't change the current value.
+		[DllImport(Dll)] private static extern v2 View3D_CameraFovGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraFovSet(HWindow window, v2 fov);
+
+		// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
+		[DllImport(Dll)] private static extern void View3D_CameraBalanceFov(HWindow window, float fov);
+
+		// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
+		[DllImport(Dll)] private static extern v2 View3D_CameraViewRectAtDistanceGet(HWindow window, float dist);
+		[DllImport(Dll)] private static extern void View3D_CameraViewRectAtDistanceSet(HWindow window, v2 rect, float focus_dist);
+
+		// Get/Set the near and far clip planes for the camera
+		[DllImport(Dll)] private static extern v2 View3D_CameraClipPlanesGet(HWindow window, EClipPlanes flags);
+		[DllImport(Dll)] private static extern void View3D_CameraClipPlanesSet(HWindow window, float near, float far, EClipPlanes flags);
+
+		// Get/Set the scene camera lock mask
+		[DllImport(Dll)] private static extern ECameraLockMask View3D_CameraLockMaskGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraLockMaskSet(HWindow window, ECameraLockMask mask);
+	
+		// Get/Set the camera align axis
+		[DllImport(Dll)] private static extern v4 View3D_CameraAlignAxisGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraAlignAxisSet(HWindow window, v4 axis);
+	
+		// Reset to the default zoom
+		[DllImport(Dll)] private static extern void View3D_CameraResetZoom(HWindow window);
+
+		// Get/Set the FOV zoom
+		[DllImport(Dll)] private static extern float View3D_CameraZoomGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_CameraZoomSet(HWindow window, float zoom);
+
+		// Commit the current O2W position as the reference position
+		[DllImport(Dll)] private static extern void View3D_CameraCommit(HWindow window);
+
+		// Navigation *****************************
+
+		// Direct movement of the camera
+		[DllImport(Dll)] private static extern bool View3D_Navigate(HWindow window, float dx, float dy, float dz);
+
+		// Move the scene camera using the mouse
+		[DllImport(Dll)] private static extern bool View3D_MouseNavigate(HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern bool View3D_MouseNavigateZ(HWindow window, v2 ss_point, float delta, bool along_ray);
+
+		// Convert an MK_ macro to a default navigation operation
+		[DllImport(Dll)] private static extern ENavOp View3D_MouseBtnToNavOp(EMouseBtns mk);
+
+		// Convert a point between 'window' screen space and normalised screen space
+		[DllImport(Dll)] private static extern v2 View3D_SSPointToNSSPoint(HWindow window, v2 screen);
+		[DllImport(Dll)] private static extern v2 View3D_NSSPointToSSPoint(HWindow window, v2 nss_point);
+
+		// Convert a point between world space and normalised screen space.
+		// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+		// The z component should be the world space distance from the camera
+		[DllImport(Dll)] private static extern v4 View3D_NSSPointToWSPoint(HWindow window, v4 screen);
+		[DllImport(Dll)] private static extern v4 View3D_WSPointToNSSPoint(HWindow window, v4 world);
+
+		// Return a point and direction in world space corresponding to a normalised screen space point.
+		// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+		// The z component should be the world space distance from the camera
+		[DllImport(Dll)] private static extern void View3D_NSSPointToWSRay(HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
+
+		// Lights *********************************
+
+		// Get/Set the properties of the global light
+		[DllImport(Dll)] private static extern LightInfo View3D_LightPropertiesGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_LightPropertiesSet(HWindow window, ref LightInfo light);
+	
+		// Set the global light source for a window
+		[DllImport(Dll)] private static extern void View3D_LightSource(HWindow window, v4 position, v4 direction, bool camera_relative);
+
+		// Objects ********************************
+
+		// Notes:
+		// 'name' parameter on object get/set functions:
+		//   If 'name' is null, then the state of the root object is returned
+		//   If 'name' begins with '#' then the remainder of the name is treated as a regular expression
+
+		// Create an object from provided buffers
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
+
+		// Create an graphics object from ldr script, either a string or a file 
+		[DllImport(Dll, CharSet = CharSet.Unicode)] private static extern HObject View3D_ObjectCreateLdrW([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref Includes includes);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateLdrA([MarshalAs(UnmanagedType.LPStr)] string ldr_script, bool file, ref Guid context_id, ref Includes includes);
+
+		// Load a p3d model file as a view3d object
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateP3DFile([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, [MarshalAs(UnmanagedType.LPStr)] string p3d_filepath, ref Guid context_id);
+
+		// Load a p3d model in memory as a view3d object
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateP3DStream([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int size, IntPtr p3d_data, ref Guid context_id);
+
+		// Create an ldr object using a callback to populate the model data.
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateWithCallback([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)] private static extern void View3D_ObjectEdit(HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+
+		// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
+		[DllImport(Dll)] private static extern void View3D_ObjectUpdate(HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
+
+		// Delete an object, freeing its resources
+		[DllImport(Dll)] private static extern void View3D_ObjectDelete(HObject obj);
+
+		// Create an instance of 'obj'
+		[DllImport(Dll)] private static extern HObject View3D_ObjectCreateInstance(HObject obj);
+
+		// Return the context id that this object belongs to
+		[DllImport(Dll)] private static extern Guid View3D_ObjectContextIdGet(HObject obj);
+
+		// Return the root object of 'object'(possibly itself)
+		[DllImport(Dll)] private static extern HObject View3D_ObjectGetRoot(HObject obj);
+
+		// Return the immediate parent of 'object'
+		[DllImport(Dll)] private static extern HObject View3D_ObjectGetParent(HObject obj);
+
+		// Return a child object of 'object'
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectGetChildByName(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
+		[DllImport(Dll)] private static extern HObject View3D_ObjectGetChildByIndex(HObject obj, int index);
+
+		// Return the number of child objects of 'object'
+		[DllImport(Dll)] private static extern int View3D_ObjectChildCount(HObject obj);
+
+		// Enumerate the child objects of 'object'. (Not recursive)
+		[DllImport(Dll)] private static extern void View3D_ObjectEnumChildren(HObject obj, EnumObjectsCB enum_objects_cb, IntPtr ctx);
+
+		// Get/Set the name of 'object'
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ObjectNameGetBStr(HObject obj);
+		[DllImport(Dll)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_ObjectNameGet(HObject obj);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectNameSet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
+
+		// Get the type of 'object'
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ObjectTypeGetBStr(HObject obj);
+		[DllImport(Dll, CharSet = CharSet.Ansi)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_ObjectTypeGet(HObject obj);
+
+		// Get/Set the current or base colour of an object(the first object to match 'name') (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectColourSet(HObject obj, uint colour, uint mask, [MarshalAs(UnmanagedType.LPStr)] string? name, EColourOp op, float op_value);
+
+		// Reset the object colour back to its default
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectResetColour(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the object's o2w transform
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ObjectO2WGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectO2WSet(HObject obj, ref m4x4 o2w, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the object to parent transform for an object.
+		// This is the object to world transform for objects without parents.
+		// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}".
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ObjectO2PGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Return the model space bounding box for 'object'
+		[DllImport(Dll)] private static extern BBox View3D_ObjectBBoxMS(HObject obj, bool include_children);
+
+		// Get/Set the object visibility. See LdrObject::Apply for docs on the format of 'name'
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern bool View3D_ObjectVisibilityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectVisibilitySet(HObject obj, bool visible, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set wireframe mode for an object (the first object to match 'name'). (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern bool View3D_ObjectWireframeGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectWireframeSet(HObject obj, bool wireframe, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the object flags. See LdrObject::Apply for docs on the format of 'name'
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern ELdrFlags View3D_ObjectFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectFlagsSet(HObject obj, ELdrFlags flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern float View3D_ObjectReflectivityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectReflectivitySet(HObject obj, float reflectivity, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the sort group for the object or its children. (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern ESortGroup View3D_ObjectSortGroupGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectSortGroupSet(HObject obj, ESortGroup group, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set 'show normals' mode for an object (the first object to match 'name') (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern bool View3D_ObjectNormalsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectNormalsSet(HObject obj, bool show, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Set the texture/sampler for all nuggets of 'object' or its children. (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectSetTexture(HObject obj, HTexture tex, [MarshalAs(UnmanagedType.LPStr)] string? name);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectSetSampler(HObject obj, HSampler sam, [MarshalAs(UnmanagedType.LPStr)] string? name);
+
+		// Get/Set the nugget flags on an object or its children (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern ENuggetFlag View3D_ObjectNuggetFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectNuggetFlagsSet(HObject obj, ENuggetFlag flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
+
+		// Get/Set the tint colour for a nugget within the model of an object or its children. (See LdrObject::Apply)
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern Colour32 View3D_ObjectNuggetTintGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectNuggetTintSet(HObject obj, Colour32 colour, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
+
+		// Materials ******************************
+
+		// Create a texture from data in memory.
+		// Set 'data' to nullptr to leave the texture uninitialised, if not null then data must point to width x height pixel data
+		// of the size appropriate for the given format. 'e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8'
+		// Note: careful with stride, 'data' is expected to have the appropriate stride for BytesPerPixel(format) * width
+		[DllImport(Dll)] private static extern HTexture View3D_TextureCreate(uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
+
+		// Create one of the stock textures
+		[DllImport(Dll)] private static extern HTexture View3D_TextureCreateStock(EStockTexture stock_texture);
+
+		// Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+		[DllImport(Dll)] private static extern HTexture View3D_TextureCreateFromUri([MarshalAs(UnmanagedType.LPStr)] string resource, uint width, uint height, ref TextureOptions options);
+
+		// Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+		[DllImport(Dll)] private static extern HCubeMap View3D_CubeMapCreateFromUri([MarshalAs(UnmanagedType.LPStr)] string resource, ref CubeMapOptions options);
+
+		// Create a texture sampler
+		[DllImport(Dll)] private static extern HSampler View3D_SamplerCreate(ref SamplerOptions options);
+
+		// Create one of the stock samplers
+		[DllImport(Dll)] private static extern HSampler View3D_SamplerCreateStock(EStockSampler stock_sampler);
+
+		// Read the properties of an existing texture
+		[DllImport(Dll)] private static extern ImageInfo View3D_TextureGetInfo(HTexture tex);
+		[DllImport(Dll)] private static extern EResult View3D_TextureGetInfoFromFile([MarshalAs(UnmanagedType.LPStr)] string tex_filepath, out ImageInfo info);
+
+		// Release a reference to a resources
+		[DllImport(Dll)] private static extern void View3D_TextureRelease(HTexture tex);
+		[DllImport(Dll)] private static extern void View3D_CubeMapRelease(HCubeMap tex);
+		[DllImport(Dll)] private static extern void View3D_SamplerRelease(HSampler sam);
+
+		// Resize this texture to 'size'
+		[DllImport(Dll)] private static extern void View3D_TextureResize(HTexture tex, ulong width, uint height, ushort depth_or_array_len);
+
+		// Return the ref count of 'tex'
+		[DllImport(Dll)] private static extern ulong View3D_TextureRefCount(HTexture tex);
+
+		// Get/Set the private data associated with 'guid' for 'tex'
+		[DllImport(Dll)] private static extern void View3d_TexturePrivateDataGet(HTexture tex, Guid guid, ref uint size, IntPtr data);
+		[DllImport(Dll)] private static extern void View3d_TexturePrivateDataSet(HTexture tex, Guid guid, uint size, IntPtr data);
+		[DllImport(Dll)] private static extern void View3d_TexturePrivateDataIFSet(HTexture tex, Guid guid, IntPtr pointer);
+
+		// Resolve a MSAA texture into a non-MSAA texture
+		[DllImport(Dll)] private static extern void View3D_TextureResolveAA(HTexture dst, HTexture src);
+
+		// Gizmos *********************************
+
+		// Create the 3D manipulation gizmo
+		[DllImport(Dll)] private static extern HGizmo View3D_GizmoCreate(Gizmo.EMode mode, ref m4x4 o2w);
+
+		// Delete a 3D manipulation gizmo
+		[DllImport(Dll)] private static extern void View3D_GizmoDelete(HGizmo gizmo);
+
+		// Attach/Detach callbacks that are called when the gizmo moves
+		[DllImport(Dll)] private static extern void View3D_GizmoMovedCBSet(HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx, bool add);
+
+		// Attach/Detach an object to the gizmo that will be moved as the gizmo moves
+		[DllImport(Dll)] private static extern void View3D_GizmoAttach(HGizmo gizmo, HObject obj);
+		[DllImport(Dll)] private static extern void View3D_GizmoDetach(HGizmo gizmo, HObject obj);
+
+		// Get/Set the scale factor for the gizmo
+		[DllImport(Dll)] private static extern float View3D_GizmoScaleGet(HGizmo gizmo);
+		[DllImport(Dll)] private static extern void View3D_GizmoScaleSet(HGizmo gizmo, float scale);
+
+		// Get/Set the current mode of the gizmo
+		[DllImport(Dll)] private static extern Gizmo.EMode View3D_GizmoModeGet(HGizmo gizmo);
+		[DllImport(Dll)] private static extern void View3D_GizmoModeSet(HGizmo gizmo, Gizmo.EMode mode);
+
+		// Get/Set the object to world transform for the gizmo
+		[DllImport(Dll)] private static extern m4x4 View3D_GizmoO2WGet(HGizmo gizmo);
+		[DllImport(Dll)] private static extern void View3D_GizmoO2WSet(HGizmo gizmo, ref m4x4 o2w);
+
+		// Get the offset transform that represents the difference between the gizmo's transform at the start of manipulation and now.
+		[DllImport(Dll)] private static extern m4x4 View3D_GizmoOffsetGet(HGizmo gizmo);
+
+		// Get/Set whether the gizmo is active to mouse interaction
+		[DllImport(Dll)] private static extern bool View3D_GizmoEnabledGet(HGizmo gizmo);
+		[DllImport(Dll)] private static extern void View3D_GizmoEnabledSet(HGizmo gizmo, bool enabled);
+
+		// Returns true while manipulation is in progress
+		[DllImport(Dll)] private static extern bool View3D_GizmoManipulating(HGizmo gizmo);
+
+		// Diagnostics ****************************
+
+		// Get/Set whether object bounding boxes are visible
+		[DllImport(Dll)] private static extern bool View3D_DiagBBoxesVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DiagBBoxesVisibleSet(HWindow window, bool visible);
+
+		// Get/Set the length of the vertex normals
+		[DllImport(Dll)] private static extern float View3D_DiagNormalsLengthGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DiagNormalsLengthSet(HWindow window, float length);
+
+		// Get/Set the colour of the vertex normals
+		[DllImport(Dll)] private static extern Colour32 View3D_DiagNormalsColourGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DiagNormalsColourSet(HWindow window, Colour32 colour);
+
+		[DllImport(Dll)] private static extern v2 View3D_DiagFillModePointsSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
+
+		// Miscellaneous **************************
+
+		// Return true if the focus point is visible. Add/Remove the focus point to a window.
+		[DllImport(Dll)] private static extern bool View3D_StockObjectVisibleGet(HWindow window, EStockObject stock_object);
+		[DllImport(Dll)] private static extern void View3D_StockObjectVisibleSet(HWindow window, EStockObject stock_object, bool show);
+
+		// Get/Set the size of the focus point
+		[DllImport(Dll)] private static extern float View3D_FocusPointSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_FocusPointSizeSet(HWindow window, float size);
+		
+		// Get/Set the size of the origin point
+		[DllImport(Dll)] private static extern float View3D_OriginPointSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_OriginPointSizeSet(HWindow window, float size);
+
+		// Get/Set the position and size of the selection box
+		[DllImport(Dll)] private static extern void View3D_SelectionBoxGet(HWindow window, out BBox box, out m4x4 o2w);
+		[DllImport(Dll)] private static extern void View3D_SelectionBoxSet(HWindow window, ref BBox box, ref m4x4 o2w);
+
+		// Set the selection box to encompass all selected objects
+		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
+
+		// Create/Delete the demo scene in the given window
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreate(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_DemoSceneDelete();
+
+		// Return the example Ldr script as a BSTR
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ExampleScriptBStr();
+
+		// Return the auto complete templates as a BSTR
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_AutoCompleteTemplatesBStr();
+
+		// Return the hierarchy "address" for a position in an ldr script file.
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ObjectAddressAt([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, long position);
+
+		// Parse a transform description using the Ldr script syntax
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ParseLdrTransform([MarshalAs(UnmanagedType.LPStr)] string ldr_script);
+
+		// Tools **********************************
+
+		// Show/Hide the object manager tool
+		[DllImport(Dll)] private static extern bool View3D_ObjectManagerVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_ObjectManagerVisibleSet(HWindow window, bool show);
+
+		// Show/Hide the script editor tool
+		[DllImport(Dll)] private static extern bool View3D_ScriptEditorVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_ScriptEditorVisibleSet(HWindow window, bool show);
+
+		// Show/Hide the measurement tool
+		[DllImport(Dll)] private static extern bool View3D_MeasureToolVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_MeasureToolVisibleSet(HWindow window, bool show);
+
+		// Show/Hide the angle measurement tool
+		[DllImport(Dll)] private static extern bool View3D_AngleToolVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_AngleToolVisibleSet(HWindow window, bool show);
+
+#if false
+
 		[DllImport(Dll)]
-		private static extern HContext View3D_Initialise(ReportErrorCB global_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
-		[DllImport(Dll)]
-		private static extern void View3D_Shutdown(HContext context);
-		[DllImport(Dll)]
-		private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_SourceEnumGuids(EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern Guid View3D_LoadScript([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern void View3D_ReloadScriptSources();
+		private static extern Guid View3D_LoadScript([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref Includes includes, OnAddCB? on_add_complete, IntPtr ctx);
 		[DllImport(Dll)]
 		private static extern void View3D_ObjectsDeleteAll();
 		[DllImport(Dll)]
 		private static extern void View3D_ObjectsDeleteById(IntPtr context_ids, int include_count, int exclude_count);
 		[DllImport(Dll)]
 		private static extern void View3D_ObjectsDeleteUnused(IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern void View3D_CheckForChangedSources();
-		[DllImport(Dll)]
-		private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_EmbeddedCodeCBSet([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 
-		// Windows
-		[DllImport(Dll)]
-		private static extern HWindow View3D_WindowCreate(HWND hwnd, ref WindowOptions opts);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowDestroy(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.LPWStr)]
-		private static extern string View3D_WindowSettingsGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPWStr)] string settings);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowSettingsChangedCB(HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowInvalidatedCB(HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowRenderingCB(HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowSceneChangedCB(HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAddObject(HWindow window, HObject obj);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowRemoveObject(HWindow window, HObject obj);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowRemoveAllObjects(HWindow window);
-		[DllImport(Dll)]
-		private static extern bool View3D_WindowHasObject(HWindow window, HObject obj, bool search_children);
-		[DllImport(Dll)]
-		private static extern int View3D_WindowObjectCount(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowEnumGuids(HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowEnumObjects(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowEnumObjectsById(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAddObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowRemoveObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAddGizmo(HWindow window, HGizmo giz);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowRemoveGizmo(HWindow window, HGizmo giz);
-		[DllImport(Dll)]
-		private static extern BBox View3D_WindowSceneBounds(HWindow window, ESceneBounds bounds, int except_count, Guid[]? except);
-		[DllImport(Dll)]
-		private static extern bool View3D_WindowAnimating(HWindow window);
-		[DllImport(Dll)]
-		private static extern double View3D_WindowAnimTimeGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAnimTimeSet(HWindow window, double time_s);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAnimControl(HWindow window, EAnimCommand command, double time_s);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowAnimEventCBSet(HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowHitTestObjects(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] HObject[] objects, int object_count);
-		[DllImport(Dll)]
-		private static extern void View3D_WindowHitTestByCtx(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern v2 View3D_WindowDpiScale(HWindow window);
 
 		// Camera
 		[DllImport(Dll)]
-		private static extern void View3D_CameraToWorldGet(HWindow window, out m4x4 c2w);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraToWorldSet(HWindow window, ref m4x4 c2w);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraPositionSet(HWindow window, v4 position, v4 lookat, v4 up);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraCommit(HWindow window);
-		[DllImport(Dll)]
-		private static extern bool View3D_CameraOrthographicGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraOrthographicSet(HWindow window, bool on);
-		[DllImport(Dll)]
-		private static extern float View3D_CameraFocusDistanceGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraFocusDistanceSet(HWindow window, float dist);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraFocusPointGet(HWindow window, out v4 position);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraFocusPointSet(HWindow window, v4 position);
-		[DllImport(Dll)]
 		private static extern void View3D_CameraViewRectSet(HWindow window, float width, float height, float dist);
-		[DllImport(Dll)]
-		private static extern float View3D_CameraAspectGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraAspectSet(HWindow window, float aspect);
 		[DllImport(Dll)]
 		private static extern float View3D_CameraFovXGet(HWindow window);
 		[DllImport(Dll)]
@@ -1622,189 +2010,19 @@ namespace ldr
 		[DllImport(Dll)]
 		private static extern void View3D_CameraFovYSet(HWindow window, float fovY);
 		[DllImport(Dll)]
-		private static extern void View3D_CameraFovSet(HWindow window, float fovX, float fovY);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraBalanceFov(HWindow window, float fov);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraClipPlanesGet(HWindow window, out float near, out float far, bool focus_relative);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraClipPlanesSet(HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)]
-		private static extern ECameraLockMask View3D_CameraLockMaskGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraLockMaskSet(HWindow window, ECameraLockMask mask);
-		[DllImport(Dll)]
-		private static extern v4 View3D_CameraAlignAxisGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraAlignAxisSet(HWindow window, v4 axis);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraResetZoom(HWindow window);
-		[DllImport(Dll)]
-		private static extern float View3D_CameraZoomGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraZoomSet(HWindow window, float zoom);
-		[DllImport(Dll)]
-		private static extern void View3D_ResetView(HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)]
-		private static extern void View3D_ResetViewBBox(HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)]
 		private static extern v2 View3D_ViewArea(HWindow window, float dist);
-		[DllImport(Dll)]
-		private static extern bool View3D_MouseNavigate(HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
-		[DllImport(Dll)]
-		private static extern bool View3D_MouseNavigateZ(HWindow window, v2 ss_point, float delta, bool along_ray);
-		[DllImport(Dll)]
-		private static extern bool View3D_Navigate(HWindow window, float dx, float dy, float dz);
-		[DllImport(Dll)]
-		private static extern v2 View3D_SSPointToNSSPoint(HWindow window, v2 screen);
-		[DllImport(Dll)]
-		private static extern v4 View3D_NSSPointToWSPoint(HWindow window, v4 screen);
-		[DllImport(Dll)]
-		private static extern v4 View3D_WSPointToNSSPoint(HWindow window, v4 world);
-		[DllImport(Dll)]
-		private static extern void View3D_NSSPointToWSRay(HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
-		[DllImport(Dll)]
-		private static extern ENavOp View3D_MouseBtnToNavOp(EMouseBtns mk);
 
 		// Lights
 		[DllImport(Dll)]
-		private static extern bool View3D_LightPropertiesGet(HWindow window, out LightInfo light);
-		[DllImport(Dll)]
-		private static extern void View3D_LightPropertiesSet(HWindow window, ref LightInfo light);
-		[DllImport(Dll)]
-		private static extern void View3D_LightSource(HWindow window, v4 position, v4 direction, bool camera_relative);
-		[DllImport(Dll)]
 		private static extern void View3D_LightShowDialog(HWindow window);
-
-		// Objects
-		[DllImport(Dll)]
-		private static extern Guid View3D_ObjectContextIdGet(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		private static extern HObject View3D_ObjectCreateLdr([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern HObject View3D_ObjectCreateP3DFile([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, [MarshalAs(UnmanagedType.LPWStr)] string p3d_filepath, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern HObject View3D_ObjectCreateP3DStream([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int size, IntPtr p3d_data, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern HObject View3D_ObjectCreateEditCB([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
-		[DllImport(Dll)]
-		private static extern HObject View3D_ObjectCreateInstance(HObject obj);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectUpdate(HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectEdit(HObject obj, EditObjectCB edit_cb, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectDelete(HObject obj);
-		[DllImport(Dll)]
-		private static extern HObject View3D_ObjectGetRoot(HObject obj);
-		[DllImport(Dll)]
-		private static extern HObject View3D_ObjectGetParent(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern HObject View3D_ObjectGetChildByName(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
-		[DllImport(Dll)]
-		private static extern HObject View3D_ObjectGetChildByIndex(HObject obj, int index);
-		[DllImport(Dll)]
-		private static extern int View3D_ObjectChildCount(HObject obj);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectEnumChildren(HObject obj, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string View3D_ObjectNameGetBStr(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectNameSet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string View3D_ObjectTypeGetBStr(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern m4x4 View3D_ObjectO2WGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectO2WSet(HObject obj, ref m4x4 o2w, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern m4x4 View3D_ObjectO2PGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern bool View3D_ObjectVisibilityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectVisibilitySet(HObject obj, bool visible, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern EFlags View3D_ObjectFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectFlagsSet(HObject obj, EFlags flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern ESortGroup View3D_ObjectSortGroupGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectSortGroupSet(HObject obj, ESortGroup group, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern ENuggetFlag View3D_ObjectNuggetFlagsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectNuggetFlagsSet(HObject obj, ENuggetFlag flags, bool state, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern Colour32 View3D_ObjectNuggetTintGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectNuggetTintSet(HObject obj, Colour32 colour, [MarshalAs(UnmanagedType.LPStr)] string? name, int index);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectColourSet(HObject obj, uint colour, uint mask, [MarshalAs(UnmanagedType.LPStr)] string? name, EColourOp op, float op_value);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern float View3D_ObjectReflectivityGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectReflectivitySet(HObject obj, float reflectivity, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern bool View3D_ObjectWireframeGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectWireframeSet(HObject obj, bool wireframe, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern bool View3D_ObjectNormalsGet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectNormalsSet(HObject obj, bool show, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectResetColour(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll, CharSet = CharSet.Ansi)]
-		private static extern void View3D_ObjectSetTexture(HObject obj, HTexture tex, [MarshalAs(UnmanagedType.LPStr)] string? name);
-		[DllImport(Dll)]
-		private static extern BBox View3D_ObjectBBoxMS(HObject obj, bool include_children);
 
 		// Materials
 		[DllImport(Dll)]
-		private static extern HTexture View3D_TextureFromStock(EStockTexture tex);
-		[DllImport(Dll)]
-		private static extern HTexture View3D_TextureCreate(uint width, uint height, IntPtr data, uint data_size, ref TextureOptions.InteropData options);
-		[DllImport(Dll)]
-		private static extern HTexture View3D_TextureCreateFromUri([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
-		[DllImport(Dll)]
-		private static extern HCubeMap View3D_CubeMapCreateFromUri([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
-		[DllImport(Dll)]
 		private static extern void View3D_TextureLoadSurface(HTexture tex, int level, [MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, Rectangle[]? dst_rect, Rectangle[]? src_rect, EFilter filter, uint colour_key);
-		[DllImport(Dll)]
-		private static extern void View3D_TextureRelease(HTexture tex);
-		[DllImport(Dll)]
-		private static extern void View3D_TextureGetInfo(HTexture tex, out ImageInfo info);
-		[DllImport(Dll)]
-		private static extern EResult View3D_TextureGetInfoFromFile([MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, out ImageInfo info);
-		[DllImport(Dll)]
-		private static extern void View3D_TextureSetFilterAndAddrMode(HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
 		[DllImport(Dll)]
 		private static extern IntPtr View3D_TextureGetDC(HTexture tex, bool discard);
 		[DllImport(Dll)]
 		private static extern void View3D_TextureReleaseDC(HTexture tex);
-		[DllImport(Dll)]
-		private static extern void View3D_TextureResize(HTexture tex, uint width, uint height, bool all_instances, bool preserve);
-		[DllImport(Dll)]
-		private static extern void View3d_TexturePrivateDataGet(HTexture tex, Guid guid, ref uint size, IntPtr data);
-		[DllImport(Dll)]
-		private static extern void View3d_TexturePrivateDataSet(HTexture tex, Guid guid, uint size, IntPtr data);
-		[DllImport(Dll)]
-		private static extern void View3d_TexturePrivateDataIFSet(HTexture tex, Guid guid, IntPtr pointer);
-		[DllImport(Dll)]
-		private static extern ulong View3D_TextureRefCount(HTexture tex);
-		[DllImport(Dll)]
-		private static extern HTexture View3D_TextureRenderTarget(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_TextureResolveAA(HTexture dst, HTexture src);
 		[DllImport(Dll)]
 		private static extern HTexture View3D_TextureFromShared(IntPtr shared_resource, ref TextureOptions.InteropData options);
 		[DllImport(Dll)]
@@ -1819,8 +2037,6 @@ namespace ldr
 		private static extern void View3D_Render(HWindow window);
 		[DllImport(Dll)]
 		private static extern void View3D_Present(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_Validate(HWindow window);
 		[DllImport(Dll)]
 		private static extern void View3D_RenderTargetRestore(HWindow window);
 		[DllImport(Dll)]
@@ -1845,70 +2061,8 @@ namespace ldr
 		private static extern uint View3D_BackgroundColourGet(HWindow window);
 		[DllImport(Dll)]
 		private static extern void View3D_BackgroundColourSet(HWindow window, uint aarrggbb);
-		[DllImport(Dll)]
-		private static extern int View3D_MultiSamplingGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_MultiSamplingSet(HWindow window, int multisampling);
-
-		// Tools
-		[DllImport(Dll)]
-		private static extern bool View3D_MeasureToolVisible(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_ShowMeasureTool(HWindow window, bool show);
-		[DllImport(Dll)]
-		private static extern bool View3D_AngleToolVisible(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_ShowAngleTool(HWindow window, bool show);
-
-		// Gizmos
-		[DllImport(Dll)]
-		private static extern HGizmo View3D_GizmoCreate(Gizmo.EMode mode, ref m4x4 o2w);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoDelete(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoMovedCBSet(HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx, bool add);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoAttach(HGizmo gizmo, HObject obj);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoDetach(HGizmo gizmo, HObject obj);
-		[DllImport(Dll)]
-		private static extern float View3D_GizmoScaleGet(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoScaleSet(HGizmo gizmo, float scale);
-		[DllImport(Dll)]
-		private static extern Gizmo.EMode View3D_GizmoGetMode(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoSetMode(HGizmo gizmo, Gizmo.EMode mode);
-		[DllImport(Dll)]
-		private static extern m4x4 View3D_GizmoGetO2W(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoSetO2W(HGizmo gizmo, ref m4x4 o2w);
-		[DllImport(Dll)]
-		private static extern m4x4 View3D_GizmoGetOffset(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern bool View3D_GizmoEnabled(HGizmo gizmo);
-		[DllImport(Dll)]
-		private static extern void View3D_GizmoSetEnabled(HGizmo gizmo, bool enabled);
-		[DllImport(Dll)]
-		private static extern bool View3D_GizmoManipulating(HGizmo gizmo);
 
 		// Diagnostics
-		[DllImport(Dll)]
-		private static extern bool View3D_DiagBBoxesVisibleGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DiagBBoxesVisibleSet(HWindow window, bool visible);
-		[DllImport(Dll)]
-		private static extern float View3D_DiagNormalsLengthGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DiagNormalsLengthSet(HWindow window, float length);
-		[DllImport(Dll)]
-		private static extern Colour32 View3D_DiagNormalsColourGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DiagNormalsColourSet(HWindow window, Colour32 colour);
-		[DllImport(Dll)]
-		private static extern v2 View3D_DiagFillModePointsSizeGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
 
 		// Miscellaneous
 		[DllImport(Dll)]
@@ -1916,53 +2070,17 @@ namespace ldr
 		[DllImport(Dll)]
 		private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code);
 		[DllImport(Dll)]
-		private static extern bool View3D_DepthBufferEnabledGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DepthBufferEnabledSet(HWindow window, bool enabled);
-		[DllImport(Dll)]
-		private static extern bool View3D_FocusPointVisibleGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_FocusPointVisibleSet(HWindow window, bool show);
-		[DllImport(Dll)]
-		private static extern void View3D_FocusPointSizeSet(HWindow window, float size);
-		[DllImport(Dll)]
-		private static extern bool View3D_OriginVisibleGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_OriginVisibleSet(HWindow window, bool show);
-		[DllImport(Dll)]
 		private static extern void View3D_OriginSizeSet(HWindow window, float size);
 		[DllImport(Dll)]
 		private static extern bool View3D_SelectionBoxVisibleGet(HWindow window);
 		[DllImport(Dll)]
 		private static extern void View3D_SelectionBoxVisibleSet(HWindow window, bool visible);
 		[DllImport(Dll)]
-		private static extern void View3D_SelectionBoxPosition(HWindow window, ref BBox box, ref m4x4 o2w);
-		[DllImport(Dll)]
-		private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
-		[DllImport(Dll)]
-		private static extern Guid View3D_DemoSceneCreate(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_DemoSceneDelete();
-		[DllImport(Dll)]
 		private static extern void View3D_DemoScriptShow(HWindow window);
 		[DllImport(Dll)]
 		private static extern void View3D_ObjectManagerShow(HWindow window, bool show);
 		[DllImport(Dll)]
-		private static extern m4x4 View3D_ParseLdrTransform([MarshalAs(UnmanagedType.LPWStr)] string ldr_script);
-		[DllImport(Dll)]
 		private static extern ulong View3D_RefCount(IntPtr pointer);
-
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string View3D_ObjectAddressAt([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, long position);
-
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string View3D_ExampleScriptBStr();
-
-		[DllImport(Dll, CharSet = CharSet.Unicode)]
-		[return: MarshalAs(UnmanagedType.BStr)]
-		private static extern string View3D_AutoCompleteTemplatesBStr();
 
 		[DllImport(Dll)]
 		private static extern HWND View3D_LdrEditorCreate(HWND parent);
@@ -1970,7 +2088,7 @@ namespace ldr
 		private static extern void View3D_LdrEditorDestroy(HWND hwnd);
 		[DllImport(Dll)]
 		private static extern void View3D_LdrEditorCtrlInit(HWND scintilla_control, bool dark);
-
-		#endregion
+#endif
+#endregion
 	}
 }

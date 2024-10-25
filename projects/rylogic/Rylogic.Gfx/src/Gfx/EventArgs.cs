@@ -72,7 +72,7 @@ namespace Rylogic.Gfx
 
 		public class SceneChangedEventArgs :EventArgs
 		{
-			public SceneChangedEventArgs(View3DSceneChanged args)
+			public SceneChangedEventArgs(SceneChanged args)
 			{
 				ChangeType = args.ChangeType;
 				ContextIds = args.ContextIds;

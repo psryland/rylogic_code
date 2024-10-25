@@ -25,6 +25,7 @@
 #include <optional>
 #include <functional>
 #include <filesystem>
+#include <source_location>
 #include <type_traits>
 #include <mutex>
 #include <condition_variable>

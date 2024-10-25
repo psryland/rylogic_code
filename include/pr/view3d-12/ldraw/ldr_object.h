@@ -227,10 +227,9 @@ namespace pr::rdr12
 	};
 
 	// Flags for partial update of a model
-	enum class EUpdateObject :unsigned int
+	enum class EUpdateObject :int
 	{
-		None         = 0U,
-		All          = ~0U,
+		None         = 0,
 		Name         = 1 << 0,
 		Model        = 1 << 1,
 		Transform    = 1 << 2,
@@ -240,6 +239,7 @@ namespace pr::rdr12
 		Reflectivity = 1 << 6,
 		Flags        = 1 << 7,
 		Animation    = 1 << 8,
+		All          = 0x1FF,
 		_flags_enum = 0,
 	};
 

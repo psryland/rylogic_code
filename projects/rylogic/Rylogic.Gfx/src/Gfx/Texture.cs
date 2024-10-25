@@ -25,7 +25,7 @@ namespace Rylogic.Gfx
 				Handle = handle;
 
 				if (Handle != IntPtr.Zero)
-					View3D_TextureGetInfo(Handle, out Info);
+					Info = View3D_TextureGetInfo(Handle);
 				else
 					Info = new ImageInfo();
 			}
@@ -40,14 +40,14 @@ namespace Rylogic.Gfx
 			public Texture(int width, int height, IntPtr data, uint data_size, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options.Data);
-				if (Handle == HTexture.Zero) throw new Exception($"Failed to create {width}x{height} texture");
+				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options);
+				if (Handle == HTexture.Zero)
+					throw new Exception($"Failed to create {width}x{height} texture");
 				
-				View3D_TextureGetInfo(Handle, out Info);
-				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
+				Info = View3D_TextureGetInfo(Handle);
 			}
 
-			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
+			/// <summary>Construct a texture from a resource (file, embedded resource, or stock asset)</summary>
 			public Texture(string resource)
 				:this(resource, 0, 0, new TextureOptions())
 			{}
@@ -60,12 +60,14 @@ namespace Rylogic.Gfx
 			public Texture(string resource, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options.Data);
-				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {resource}");
-				View3D_TextureGetInfo(Handle, out Info);
-				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
+				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				if (Handle == HTexture.Zero)
+					throw new Exception($"Failed to create texture from {resource}");
+
+				Info = View3D_TextureGetInfo(Handle);
 			}
-			
+
+			/// <inheritdoc/>
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
@@ -83,11 +85,11 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
 			public Size Size
 			{
-				get { return new Size((int)Info.Width, (int)Info.Height); }
+				get => new((int)Info.m_width, (int)Info.m_height);
 				set
 				{
 					if (Size == value) return;
-					Resize((uint)value.Width, (uint)value.Height, false, false);
+					Resize(value.Width, value.Height);
 				}
 			}
 
@@ -97,39 +99,35 @@ namespace Rylogic.Gfx
 			/// <summary>The current ref count of this texture</summary>
 			private ulong RefCount => View3D_TextureRefCount(Handle);
 
-			/// <summary>Resize the texture optionally preserving content</summary>
-			public void Resize(uint width, uint height, bool all_instances, bool preserve)
+			/// <summary>Resize the texture</summary>
+			public void Resize(int width, int height)
 			{
-				View3D_TextureResize(Handle, width, height, all_instances, preserve);
-				View3D_TextureGetInfo(Handle, out Info);
-			}
-			
-			/// <summary>Set the filtering and addressing modes to be used on the texture</summary>
-			public void SetFilterAndAddrMode(EFilter filter, EAddrMode addrU, EAddrMode addrV)
-			{
-				View3D_TextureSetFilterAndAddrMode(Handle, filter, addrU, addrV);
+				View3D_TextureResize(Handle, (ulong)width, (uint)height, 0);
+				Info = View3D_TextureGetInfo(Handle);
 			}
 
+#if false //todo
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level)
 			{
 				View3D_TextureLoadSurface(Handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
-				View3D_TextureGetInfo(Handle, out Info);
+				Info = View3D_TextureGetInfo(Handle);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, EFilter filter, uint colour_key)
 			{
 				View3D_TextureLoadSurface(Handle, level, tex_filepath, null, null, filter, colour_key);
-				View3D_TextureGetInfo(Handle, out Info);
+				Info = View3D_TextureGetInfo(Handle);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, Rectangle src_rect, Rectangle dst_rect, EFilter filter, uint colour_key)
 			{
 				View3D_TextureLoadSurface(Handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
-				View3D_TextureGetInfo(Handle, out Info);
+				Info = View3D_TextureGetInfo(Handle);
 			}
+#endif
 
 			/// <summary>Get/Set the private data of this texture by unique Id</summary>
 			public PrivateDataProxy PrivateData => new(this);
@@ -139,7 +137,7 @@ namespace Rylogic.Gfx
 			public static Texture FromStock(EStockTexture tex)
 			{
 				// Stock textures are not reference counted
-				return new Texture(View3D_TextureFromStock(tex), owned: false);
+				return new Texture(View3D_TextureCreateStock(tex), owned: false);
 			}
 
 			/// <summary>Return properties of the texture</summary>
@@ -159,13 +157,18 @@ namespace Rylogic.Gfx
 			/// <summary>Create a Texture instance from a shared d3d resource (created on a different d3d device)</summary>
 			public static Texture FromShared(IntPtr shared_resource, TextureOptions options)
 			{
+				throw new NotImplementedException();
+#if false // todo
 				// Not all of the texture options are used, just sampler description, has alpha, and dbg name
 				return new Texture(View3D_TextureFromShared(shared_resource, ref options.Data), owned:true);
+#endif
 			}
 
 			/// <summary>Create a render target texture based on a shared Dx9 texture</summary>
 			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options, out IntPtr shared_handle)
 			{
+				throw new NotImplementedException();
+#if false //todo
 				// Not all of the texture options are used, just format, sampler description, has alpha, and dbg name
 				if (hwnd == IntPtr.Zero)
 					throw new Exception("DirectX 9 requires a window handle");
@@ -176,6 +179,7 @@ namespace Rylogic.Gfx
 					throw new Exception("Failed to create DirectX 9 render target texture");
 
 				return new Texture(handle, owned: true);
+#endif
 			}
 			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options)
 			{
@@ -202,15 +206,21 @@ namespace Rylogic.Gfx
 				/// Note: if 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
 				public Lock(Texture tex, bool discard)
 				{
+					throw new NotImplementedException();
+#if false //todo
 					m_tex = tex.Handle;
 					var dc = View3D_TextureGetDC(m_tex, discard);
 					if (dc == IntPtr.Zero) throw new Exception("Failed to get Texture DC. Check the texture is a GdiCompatible texture");
 					Gfx = Graphics.FromHdc(dc);
 					Size = tex.Size;
+#endif
 				}
 				public void Dispose()
 				{
+					throw new NotImplementedException();
+#if false //todo
 					View3D_TextureReleaseDC(m_tex);
+#endif
 				}
 
 				/// <summary>GDI+ graphics interface</summary>
@@ -296,7 +306,7 @@ namespace Rylogic.Gfx
 				public static readonly Guid Surface0Pointer = new("6EE0154E-DEAD-4E2F-869B-E4D15CA29787");
 			}
 
-			#endregion
+#endregion
 
 			#region Equals
 			public static bool operator == (Texture? lhs, Texture? rhs)

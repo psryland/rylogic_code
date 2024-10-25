@@ -22,7 +22,7 @@ namespace pr::rdr12
 		D3DPtr<ID2D1Bitmap1>        m_d2d_target;    // D2D render target
 		D3D12_CPU_DESCRIPTOR_HANDLE m_rtv;           // The descriptor of the back buffer as a RTV
 		D3D12_CPU_DESCRIPTOR_HANDLE m_dsv;           // The descriptor of the back buffer as a DSV
-		MultiSamp                   m_multisamp;     // The multisampling mode of the back buffer
+		MultiSamp                   m_multisamp;     // The multi-sampling mode of the back buffer
 
 		BackBuffer()
 			: m_wnd()

@@ -12,8 +12,7 @@ namespace Rylogic.Gui.WPF
 			FocusDist = camera.FocusDist;
 			AlignAxis = camera.AlignAxis;
 			Aspect = camera.Aspect;
-			FovX = camera.FovX;
-			FovY = camera.FovY;
+			Fov = camera.Fov;
 			Orthographic = camera.Orthographic;
 		}
 
@@ -22,8 +21,7 @@ namespace Rylogic.Gui.WPF
 		public float FocusDist { get; private set; }
 		public v4 AlignAxis { get; private set; }
 		public float Aspect { get; private set; }
-		public float FovX { get; private set; }
-		public float FovY { get; private set; }
+		public v2 Fov { get; private set; }
 		public bool Orthographic { get; private set; }
 
 		public void Apply(View3d.Camera camera)
@@ -31,8 +29,7 @@ namespace Rylogic.Gui.WPF
 			camera.FocusDist = FocusDist;
 			camera.AlignAxis = AlignAxis;
 			camera.Aspect = Aspect;
-			camera.FovX = FovX;
-			camera.FovY = FovY;
+			camera.Fov = Fov;
 			camera.Orthographic = Orthographic;
 			camera.O2W = C2W;
 			camera.Commit();

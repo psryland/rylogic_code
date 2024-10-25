@@ -40,6 +40,10 @@ namespace pr::rdr12
 		, m_global_pso()
 		, m_main_thread_id(std::this_thread::get_id())
 		, m_invalidated(false)
+		, m_ui_object_manager()
+		, m_ui_script_editor()
+		, m_ui_measure_tool()
+		, m_ui_angle_tool()
 		, ReportError()
 		, OnSettingsChanged()
 		, OnInvalidated()
@@ -484,10 +488,10 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
-		// Make a copy of the guids
+		// Make a copy of the GUIDs
 		pr::vector<GUID> context_ids(std::begin(m_guids), std::end(m_guids));
 
-		// Remove the objects and guids
+		// Remove the objects and GUIDs
 		m_objects.clear();
 		m_guids.clear();
 
@@ -633,6 +637,12 @@ namespace pr::rdr12
 
 		// No longer invalidated
 		Validate();
+	}
+
+	// Get the render target texture
+	Texture2D* V3dWindow::RenderTarget()
+	{
+		throw std::runtime_error("Not implemented");
 	}
 
 	// Call InvalidateRect on the HWND associated with this window
@@ -872,11 +882,8 @@ namespace pr::rdr12
 			s_cast<float>(m_scene.m_cam.FovX()),
 			s_cast<float>(m_scene.m_cam.FovY()));
 	}
-	void V3dWindow::Fov(float* fovX, float* fovY)
+	void V3dWindow::Fov(v2 fov)
 	{
-		auto fov = Fov();
-		if (fovX != nullptr) fov.x = *fovX;
-		if (fovY != nullptr) fov.y = *fovY;
 		if (fov == Fov())
 			return;
 
@@ -910,19 +917,19 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the near and far clip planes for the camera
-	v2 V3dWindow::ClipPlanes(bool focus_relative) const
+	v2 V3dWindow::ClipPlanes(view3d::EClipPlanes flags) const
 	{
-		return m_scene.m_cam.ClipPlanes(focus_relative);
+		return m_scene.m_cam.ClipPlanes(AllSet(flags, view3d::EClipPlanes::CameraRelative));
 	}
-	void V3dWindow::ClipPlanes(float* near_, float* far_, bool focus_relative)
+	void V3dWindow::ClipPlanes(float near_, float far_, view3d::EClipPlanes flags)
 	{
-		auto cp = ClipPlanes(focus_relative);
-		if (near_ != nullptr) cp.x = *near_;
-		if (far_ != nullptr) cp.y = *far_;
-		if (ClipPlanes(focus_relative) == cp)
+		auto cp = ClipPlanes(flags);
+		if (AllSet(flags, view3d::EClipPlanes::Near)) cp.x = near_;
+		if (AllSet(flags, view3d::EClipPlanes::Far)) cp.y = far_;
+		if (ClipPlanes(flags) == cp)
 			return;
 
-		m_scene.m_cam.ClipPlanes(cp.x, cp.y, focus_relative);
+		m_scene.m_cam.ClipPlanes(cp.x, cp.y, AllSet(flags, view3d::EClipPlanes::CameraRelative));
 
 		OnSettingsChanged(this, view3d::ESettings::Camera_ClipPlanes);
 		Invalidate();
@@ -1033,6 +1040,17 @@ namespace pr::rdr12
 
 		OnSettingsChanged(this, view3d::ESettings::Scene_EnvMap);
 		Invalidate();
+	}
+
+	// Enable/Disable the depth buffer
+	bool V3dWindow::DepthBufferEnabled() const
+	{
+		auto depth = m_scene.m_pso.Find<EPipeState::DepthEnable>();
+		return depth != nullptr ? *depth : true;
+	}
+	void V3dWindow::DepthBufferEnabled(bool enabled)
+	{
+		m_scene.m_pso.Set<EPipeState::DepthEnable>(enabled ? TRUE : FALSE);
 	}
 
 	// Called when objects are added/removed from this window
@@ -1273,19 +1291,89 @@ namespace pr::rdr12
 		HitTest(rays, hits, snap_distance, flags, instances);
 	}
 
-	// Show/Hide the focus point
-	bool V3dWindow::FocusPointVisible() const
+	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
+	bool V3dWindow::StockObjectVisible(view3d::EStockObject stock_objects) const
 	{
-		return AllSet(m_visible_objects, EStockObject::FocusPoint);
+		return AllSet(m_visible_objects, stock_objects);
 	}
-	void V3dWindow::FocusPointVisible(bool vis)
+	void V3dWindow::StockObjectVisible(view3d::EStockObject stock_objects, bool vis)
 	{
-		if (FocusPointVisible() == vis)
+		if (StockObjectVisible(stock_objects) == vis)
 			return;
 
-		m_visible_objects = SetBits(m_visible_objects, EStockObject::FocusPoint, vis);
+		m_visible_objects = SetBits(m_visible_objects, stock_objects, vis);
 
-		OnSettingsChanged(this, view3d::ESettings::General_FocusPointVisible);
+		auto settings = view3d::ESettings::None;
+		if (AllSet(stock_objects, view3d::EStockObject::FocusPoint)) settings |= view3d::ESettings::General_FocusPointVisible;
+		if (AllSet(stock_objects, view3d::EStockObject::OriginPoint)) settings |= view3d::ESettings::General_OriginPointVisible;
+		if (AllSet(stock_objects, view3d::EStockObject::SelectionBox)) settings |= view3d::ESettings::General_SelectionBoxVisible;
+		OnSettingsChanged(this, settings);
+		Invalidate();
+	}
+
+	// Get/Set the size of the focus point
+	float V3dWindow::FocusPointSize() const
+	{
+		return m_focus_point.m_size;
+	}
+	void V3dWindow::FocusPointSize(float size)
+	{
+		if (FocusPointSize() == size)
+			return;
+
+		m_focus_point.m_size = size;
+
+		OnSettingsChanged(this, view3d::ESettings::General_FocusPointSize);
+		Invalidate();
+	}
+
+	// Get/Set the size of the origin point
+	float V3dWindow::OriginPointSize() const
+	{
+		return m_origin_point.m_size;
+	}
+	void V3dWindow::OriginPointSize(float size)
+	{
+		if (OriginPointSize() == size)
+			return;
+
+		m_origin_point.m_size = size;
+
+		OnSettingsChanged(this, view3d::ESettings::General_OriginPointSize);
+		Invalidate();
+	}
+
+	// Get/Set the position and size of the selection box. If 'bbox' is 'BBox::Reset()' the selection box is not shown
+	std::tuple<BBox, m3x4> V3dWindow::SelectionBox() const
+	{
+		if (m_selection_box.m_i2w.pos.w == 0)
+			return { BBox::Reset(), m3x4::Identity() };
+
+		auto const& i2w = m_selection_box.m_i2w;
+		auto bbox = BBox(i2w.pos, v4(Length(i2w.x), Length(i2w.y), Length(i2w.z), 0));
+		auto ori = m_selection_box.m_i2w.rot;
+		return { bbox, ori };
+
+	}
+	void V3dWindow::SelectionBox(BBox const& bbox, m3x4 const& ori)
+	{
+		auto [b, o] = SelectionBox();
+		if (b == bbox && o == ori)
+			return;
+
+		if (bbox == BBox::Reset())
+		{
+			// Flag to not include the selection box
+			m_selection_box.m_i2w.pos.w = 0;
+		}
+		else
+		{
+			m_selection_box.m_i2w =
+				m4x4(ori, v4::Origin()) *
+				m4x4::Scale(bbox.m_radius.x, bbox.m_radius.y, bbox.m_radius.z, bbox.m_centre);
+		}
+
+		OnSettingsChanged(this, view3d::ESettings::General_SelectionBox);
 		Invalidate();
 	}
 
@@ -1353,6 +1441,89 @@ namespace pr::rdr12
 		
 		OnSettingsChanged(this, view3d::ESettings::Diagnostics_FillModePointsSize);
 		Invalidate();
+	}
+
+	// Return the focus point of the camera in this draw set
+	static v4 __stdcall ReadPoint(void* ctx)
+	{
+		if (ctx == 0) return v4::Origin();
+		return static_cast<V3dWindow const*>(ctx)->m_scene.m_cam.FocusPoint();
+	}
+
+	// Show/Hide the object manager tool
+	bool V3dWindow::ObjectManagerVisible() const
+	{
+		return m_ui_object_manager != nullptr && m_ui_object_manager->Visible();
+
+	}
+	void V3dWindow::ObjectManagerVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (ObjectManagerVisible() == show)
+			return;
+
+		if (!m_ui_object_manager)
+			m_ui_object_manager.reset(new LdrObjectManagerUI(m_hwnd));
+		
+		m_ui_object_manager->Visible(show);
+	}
+
+	// Show/Hide the script editor tool
+	bool V3dWindow::ScriptEditorVisible() const
+	{
+		return m_ui_script_editor != nullptr && m_ui_script_editor->Visible();
+
+	}
+	void V3dWindow::ScriptEditorVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (ScriptEditorVisible() == show)
+			return;
+
+		if (!m_ui_script_editor)
+			m_ui_script_editor.reset(new LdrScriptEditorUI(m_hwnd));
+		
+		m_ui_script_editor->Visible(show);
+	}
+
+	// Show/Hide the measure tool
+	bool V3dWindow::MeasureToolVisible() const
+	{
+		return m_ui_measure_tool != nullptr && m_ui_measure_tool->Visible();
+
+	}
+	void V3dWindow::MeasureToolVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (MeasureToolVisible() == show)
+			return;
+
+		if (!m_ui_measure_tool)
+			m_ui_measure_tool.reset(new LdrMeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+		else
+			m_ui_measure_tool->SetReadPoint(&ReadPoint, this);
+		
+		m_ui_measure_tool->Visible(show);
+	}
+
+	// Show/Hide the angle measure tool
+	bool V3dWindow::AngleToolVisible() const
+	{
+		return m_ui_angle_tool != nullptr && m_ui_angle_tool->Visible();
+
+	}
+	void V3dWindow::AngleToolVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (AngleToolVisible() == show)
+			return;
+
+		if (!m_ui_angle_tool)
+			m_ui_angle_tool.reset(new LdrAngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+		else
+			m_ui_angle_tool->SetReadPoint(&ReadPoint, this);
+		
+		m_ui_angle_tool->Visible(show);
 	}
 
 	// Create stock models such as the focus point, origin, etc

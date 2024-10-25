@@ -93,6 +93,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\diagnostics.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\features.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pipe_state.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pix.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\shadow_caster.cpp" />
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\utility.cpp" />
   </ItemGroup>
@@ -147,6 +148,10 @@
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_gizmo.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_object.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_sources.h" />
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h" />
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h" />
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_object_manager.h" />
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_script_editor.h" />
     <ClInclude Include="..\include\pr\view3d-12\lighting\light.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\config.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\frame.h" />
@@ -207,6 +212,7 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\map_resource.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\pipe_state.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\pix.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\ray_cast.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\root_signature.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\shadow_caster.h" />
@@ -281,4 +287,5 @@
   Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="targets\WinPixEventRuntime.targets" />
+  <Import Project="targets\dxc.targets" />
 </Project>

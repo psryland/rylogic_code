@@ -377,7 +377,7 @@ namespace Rylogic.Gfx
 				if (m_gfx_hotspot0 == null)
 				{
 					var ldr = "*Point hotspot0 FF00FFFF { 0 0 0 *Size{20} *Style{Circle} *NoZTest *NoZWrite }";
-					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.EFlags.HitTestExclude };
+					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_hotspot0;
 			}
@@ -398,7 +398,7 @@ namespace Rylogic.Gfx
 				if (m_gfx_hotspot1 == null)
 				{
 					var ldr = "*Point hotspot1 FF00FFFF { 0 0 0 *Size{20} *Style{Circle}, *NoZTest }";
-					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.EFlags.HitTestExclude };
+					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_hotspot1;
 			}
@@ -461,7 +461,7 @@ namespace Rylogic.Gfx
 						$"	*o2w{{*m4x4{{{r2w}}}}}\n" +
 						$"}}");
 
-					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId) { Flags = View3d.EFlags.HitTestExclude };
+					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId) { Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_measure;
 			}

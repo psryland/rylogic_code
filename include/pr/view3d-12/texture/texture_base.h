@@ -71,6 +71,12 @@ namespace pr::rdr12
 		// A sort key component for this texture
 		SortKeyId SortId() const;
 
+		// Get the description of the texture resource
+		ResDesc TexDesc() const;
+
+		// Resize this texture to 'size'
+		void Resize(uint64_t width, uint32_t height, uint16_t depth_or_array_len);
+
 		// Return the shared handle associated with this texture
 		HANDLE SharedHandle() const;
 

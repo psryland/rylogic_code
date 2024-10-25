@@ -410,6 +410,153 @@ namespace pr::rdr12
 		return obj.get();
 	}
 
+	// Modify an ldr object using a callback to populate the model data.
+	static void __stdcall EditModel(Model* model, void* ctx, Renderer&)
+	{
+		using namespace pr::rdr12;
+
+		// Thread local storage for editing dynamic models
+		thread_local static pr::vector<view3d::Vertex> cache_vbuf;
+		thread_local static pr::vector<uint16_t>       cache_ibuf;
+		thread_local static pr::vector<view3d::Nugget> cache_nbuf;
+
+		if (!model)
+			throw std::runtime_error("model is null");
+
+		auto& vbuf = cache_vbuf;
+		auto& ibuf = cache_ibuf;
+		auto& nbuf = cache_nbuf;
+
+		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
+
+		// Create buffers to be filled by the user callback
+		// Note: We can't fill the buffers with the existing model data because that requires
+		// reading from video memory (slow, or not possible for some model types).
+		vbuf.resize(model->m_vcount);
+		ibuf.resize(model->m_icount);
+		nbuf.resize(1);
+
+		// If the model already has nuggets, initialise 'nbuf' with them
+		if (!model->m_nuggets.empty())
+		{
+			auto ValueOrDefault = [](auto* v, decltype(*v) d) -> decltype(*v) { return v ? *v : d; };
+
+			nbuf.resize(0);
+			for (auto& nug : model->m_nuggets)
+			{
+				nbuf.push_back(view3d::Nugget{
+					.m_topo = static_cast<view3d::ETopo>(nug.m_topo),
+					.m_geom = static_cast<view3d::EGeom>(nug.m_geom),
+					.m_cull_mode = static_cast<view3d::ECullMode>(ValueOrDefault(nug.m_pso.Find<EPipeState::CullMode>(), D3D12_CULL_MODE(0))),
+					.m_fill_mode = static_cast<view3d::EFillMode>(ValueOrDefault(nug.m_pso.Find<EPipeState::FillMode>(), D3D12_FILL_MODE(0))),
+					.m_v0 = s_cast<int>(nug.m_vrange.begin()),
+					.m_v1 = s_cast<int>(nug.m_vrange.end()),
+					.m_i0 = s_cast<int>(nug.m_irange.begin()),
+					.m_i1 = s_cast<int>(nug.m_irange.end()),
+					.m_nflags = static_cast<view3d::ENuggetFlag>(nug.m_nflags),
+					.m_mat = {
+						.m_tex_diffuse = nug.m_tex_diffuse.get(),
+						.m_sam_diffuse = nug.m_sam_diffuse.get(),
+						.m_tint = To<view3d::Colour>(nug.m_tint),
+						.m_relative_reflectivity = nug.m_relative_reflectivity,
+					},
+				});
+			}
+		}
+
+		// Get the user to generate/update the model
+		UINT32 new_vcount, new_icount, new_ncount;
+		edit_cb(
+			static_cast<uint32_t>(vbuf.size()),
+			static_cast<uint32_t>(ibuf.size()),
+			static_cast<uint32_t>(nbuf.size()),
+			vbuf.data(), ibuf.data(), nbuf.data(),
+			new_vcount, new_icount, new_ncount);
+
+		if (new_vcount > vbuf.size()) throw std::runtime_error("Dynamic model buffer overrun (vbuf)");
+		if (new_icount > ibuf.size()) throw std::runtime_error("Dynamic model buffer overrun (ibuf)");
+		if (new_ncount > nbuf.size()) throw std::runtime_error("Dynamic model buffer overrun (nbuf)");
+
+		#if 0 // todo
+		{// Lock and update the model
+			MLock mlock(model, EMap::WriteDiscard);
+			model->m_bbox.reset();
+
+			auto vin = vbuf.data();
+			auto iin = ibuf.data();
+
+			// Copy the model data into the model
+			auto vout = mlock.m_vlock.ptr<Vert>();
+			for (size_t i = 0; i != new_vcount; ++i, ++vin)
+			{
+				SetPCNT(*vout++, To<v4>(vin->pos), Colour(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
+				Grow(model->m_bbox, To<v4>(vin->pos));
+			}
+			auto iout = mlock.m_ilock.ptr<uint16_t>();
+			for (size_t i = 0; i != new_icount; ++i, ++iin)
+			{
+				*iout++ = *iin;
+			}
+		}
+		#endif
+
+		// Update the model nuggets
+		model->DeleteNuggets();
+		for (auto& nug : nbuf)
+		{
+			auto n = NuggetDesc{};
+			n.m_topo = static_cast<ETopo>(nug.m_topo);
+			n.m_geom = static_cast<EGeom>(nug.m_geom);
+			(void)n.m_shaders; // todo
+			if (nug.m_cull_mode != view3d::ECullMode::Default) n.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nug.m_cull_mode));
+			if (nug.m_fill_mode != view3d::EFillMode::Default) n.m_pso.Set<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nug.m_fill_mode));
+			n.m_tex_diffuse = Texture2DPtr(nug.m_mat.m_tex_diffuse, true);
+			n.m_sam_diffuse = SamplerPtr(nug.m_mat.m_sam_diffuse, true);
+			n.m_tint = To<Colour>(nug.m_mat.m_tint);
+			n.m_relative_reflectivity = nug.m_mat.m_relative_reflectivity;
+			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
+			n.m_vrange = Range{ s_cast<size_t>(nug.m_v0), s_cast<size_t>(nug.m_v1) };
+			n.m_irange = Range{ s_cast<size_t>(nug.m_i0), s_cast<size_t>(nug.m_i1) };
+			model->CreateNugget(n);
+		}
+
+		// Release memory after large allocations
+		if (vbuf.capacity() > 0x100000) vbuf.clear();
+		if (ibuf.capacity() > 0x100000) ibuf.clear();
+		if (nbuf.capacity() > 0x100000) nbuf.clear();
+	}
+	LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
+	{
+		auto attr = ObjectAttributes{ ELdrObject::Custom, name, colour };
+		auto obj = CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
+		if (obj)
+			m_sources.Add(obj);
+
+		return obj.get();
+	}
+	void Context::ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
+	{
+		// Remove the object from any windows it might be in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+
+		// Callback to edit the geometry
+		Edit(m_rdr, object, EditModel, &edit_cb);
+	}
+
+	// Update the model in an existing object
+	void Context::UpdateObject(LdrObject* object, wchar_t const* ldr_script, EUpdateObject flags)
+	{
+		// Remove the object from any windows it might be in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+
+		// Update the object model
+		script::StringSrc src(ldr_script);
+		script::Reader reader(src, false);
+		Update(m_rdr, object, reader, flags);
+	}
+
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)
 	{
@@ -471,7 +618,7 @@ namespace pr::rdr12
 		}
 	}
 
-	// Enumerate the Guids in the sources collection
+	// Enumerate the GUIDs in the sources collection
 	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
 		for (auto& src : m_sources.Sources())
@@ -479,6 +626,23 @@ namespace pr::rdr12
 				return;
 	}
 	
+	// Create a gizmo object and add it to the gizmo collection
+	LdrGizmo* Context::GizmoCreate(ELdrGizmoMode mode, m4x4 const& o2w)
+	{
+		return m_sources.CreateGizmo(mode, o2w);
+	}
+	
+	// Destroy a gizmo
+	void Context::GizmoDelete(LdrGizmo* gizmo)
+	{
+		// Remove the gizmo from any windows it's in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(gizmo);
+		
+		// Delete the gizmo from the sources
+		m_sources.RemoveGizmo(gizmo);
+	}
+
 	// Reload file sources
 	void Context::ReloadScriptSources()
 	{

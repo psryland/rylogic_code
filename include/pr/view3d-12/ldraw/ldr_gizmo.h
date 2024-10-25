@@ -32,7 +32,7 @@ namespace pr::rdr12
 		Scale,
 	};
 
-	using GizmoMovedCB = pr::StaticCB<void, LdrGizmo*, ELdrGizmoState>;
+	using GizmoMovedCB = StaticCB<void, LdrGizmo*, ELdrGizmoState>;
 
 	// Graphics and functionality for a manipulator gizmo.
 	struct alignas(16) LdrGizmo :RefCounted<LdrGizmo>

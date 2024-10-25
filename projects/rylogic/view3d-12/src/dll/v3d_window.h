@@ -8,6 +8,10 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/ray_cast.h"
+#include "pr/view3d-12/ldraw/ldr_ui_object_manager.h"
+#include "pr/view3d-12/ldraw/ldr_ui_script_editor.h"
+#include "pr/view3d-12/ldraw/ldr_ui_measure_tool.h"
+#include "pr/view3d-12/ldraw/ldr_ui_angle_tool.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -24,6 +28,10 @@ namespace pr::rdr12
 			std::atomic<seconds_t> m_clock;
 			AnimData() :m_thread() ,m_issue() ,m_clock() {}
 		};
+		using LdrObjectManagerUIPtr = std::unique_ptr<LdrObjectManagerUI>;
+		using ScriptEditorUIPtr = std::unique_ptr<LdrScriptEditorUI>;
+		using LdrMeasureUIPtr = std::unique_ptr<LdrMeasureUI>;
+		using LdrAngleUIPtr = std::unique_ptr<LdrAngleUI>;
 
 		// Renderer window/scene
 		Context* m_dll;   // The dll context
@@ -65,6 +73,12 @@ namespace pr::rdr12
 		std::thread::id      m_main_thread_id; // The thread that created this window
 		bool                 m_invalidated;    // True after Invalidate has been called but before Render has been called
 		
+		// UI Tools
+		LdrObjectManagerUIPtr m_ui_object_manager; // A UI for managing objects within the window
+		ScriptEditorUIPtr m_ui_script_editor;       // A UI for editing ldr scripts
+		LdrMeasureUIPtr m_ui_measure_tool;         // A UI for measuring distances between points within the 3d environment
+		LdrAngleUIPtr m_ui_angle_tool;             // A UI for measuring angles between points within the 3d environment
+
 		V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts);
 		V3dWindow(V3dWindow&&) = default;
 		V3dWindow(V3dWindow const&) = delete;
@@ -109,7 +123,7 @@ namespace pr::rdr12
 		view3d::Viewport Viewport() const;
 		void Viewport(view3d::Viewport const& vp);
 
-		// Enumerate the object collection guids associated with this window
+		// Enumerate the object collection GUIDs associated with this window
 		void EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb);
 
 		// Enumerate the objects associated with this window
@@ -145,6 +159,9 @@ namespace pr::rdr12
 
 		// Render this window into whatever render target is currently set
 		void Render();
+
+		// Get the render target texture
+		Texture2D* RenderTarget();
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);
@@ -203,7 +220,7 @@ namespace pr::rdr12
 
 		// Get/Set the camera field of view. null means don't change
 		v2 Fov() const;
-		void Fov(float* fovX, float* fovY);
+		void Fov(v2 fov);
 
 		// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
 		void BalanceFov(float fov);
@@ -213,8 +230,8 @@ namespace pr::rdr12
 		void ViewRectAtDistance(v2_cref rect, float focus_dist = 0);
 
 		// Get/Set the near and far clip planes for the camera
-		v2 ClipPlanes(bool focus_relative) const;
-		void ClipPlanes(float* near_, float* far_, bool focus_relative);
+		v2 ClipPlanes(view3d::EClipPlanes flags) const;
+		void ClipPlanes(float near_, float far_, view3d::EClipPlanes flags);
 
 		// Get/Set the scene camera lock mask
 		camera::ELockMask LockMask() const;
@@ -238,6 +255,10 @@ namespace pr::rdr12
 		// Get/Set the global environment map for this window
 		TextureCube* EnvMap() const;
 		void EnvMap(TextureCube* env_map);
+
+		// Enable/Disable the depth buffer
+		bool DepthBufferEnabled() const;
+		void DepthBufferEnabled(bool enabled);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
@@ -267,9 +288,21 @@ namespace pr::rdr12
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 	
-		// Show/Hide the focus point
-		bool FocusPointVisible() const;
-		void FocusPointVisible(bool vis);
+		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
+		bool StockObjectVisible(view3d::EStockObject stock_objects) const;
+		void StockObjectVisible(view3d::EStockObject stock_objects, bool vis);
+
+		// Get/Set the size of the focus point
+		float FocusPointSize() const;
+		void FocusPointSize(float size);
+
+		// Get/Set the size of the origin point
+		float OriginPointSize() const;
+		void OriginPointSize(float size);
+
+		// Get/Set the position and size of the selection box. If 'bbox' is 'BBox::Reset()' the selection box is not shown
+		std::tuple<BBox, m3x4> SelectionBox() const;
+		void SelectionBox(BBox const& bbox, m3x4 const& ori);
 
 		// Show/Hide the bounding boxes
 		bool BBoxesVisible() const;
@@ -287,6 +320,22 @@ namespace pr::rdr12
 		v2 FillModePointsSize() const;
 		void FillModePointsSize(v2 size);
 
+		// Show/Hide the object manager tool
+		bool ObjectManagerVisible() const;
+		void ObjectManagerVisible(bool show);
+
+		// Show/Hide the script editor tool
+		bool ScriptEditorVisible() const;
+		void ScriptEditorVisible(bool show);
+
+		// Show/Hide the measurement tool
+		bool MeasureToolVisible() const;
+		void MeasureToolVisible(bool show);
+
+		// Show/Hide the angle measurement tool
+		bool AngleToolVisible() const;
+		void AngleToolVisible(bool show);
+	
 	private:
 
 		// Create stock models such as the focus point, origin, etc

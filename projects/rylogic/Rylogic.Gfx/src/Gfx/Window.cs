@@ -25,7 +25,7 @@ namespace Rylogic.Gfx
 			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error call back)
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly InvalidatedCB m_invalidated_cb;    // A local reference to prevent the callback being garbage collected
-			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
+			private readonly RenderingCB m_render_cb;           // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
 
@@ -62,7 +62,7 @@ namespace Rylogic.Gfx
 
 				// Set up a callback for when the object store for this window changes
 				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
-				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
+				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref SceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
 
 				// Set up a callback for animation events
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = HandleAnimationEvent, IntPtr.Zero, true);
@@ -113,11 +113,11 @@ namespace Rylogic.Gfx
 			/// <summary>Triggers the 'OnInvalidated' event on the first call. Future calls are ignored until 'Present' or 'Validate' are called</summary>
 			public void Invalidate()
 			{
-				View3D_Invalidate(Handle, false);
+				View3D_WindowInvalidate(Handle, false);
 			}
 			public void Validate()
 			{
-				View3D_Validate(Handle);
+				View3D_WindowValidate(Handle);
 			}
 
 			/// <summary>The associated view3d object</summary>
@@ -233,10 +233,10 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget => new(View3D_TextureRenderTarget(Handle), owned:false);
+			public Texture RenderTarget => new(View3D_WindowRenderTargetGet(Handle), owned:false);
 
 			/// <summary>The size of the render target (in pixels)</summary>
-			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.Width, (int)info.Height) : Size.Empty;
+			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
 
 			/// <summary>The DPI of the monitor this window is on</summary>
 			public PointF DpiScale => View3D_WindowDpiScale(Handle).ToPointF();
@@ -248,14 +248,15 @@ namespace Rylogic.Gfx
 				set => View3D_WindowSettingsSet(Handle, value);
 			}
 
-			/// <summary>Enumerate the guids associated with this window</summary>
+			/// <summary>Enumerate the GUIDs associated with this window</summary>
 			public void EnumGuids(Action<Guid> cb)
 			{
 				EnumGuids(guid => { cb(guid); return true; });
 			}
 			public void EnumGuids(Func<Guid, bool> cb)
 			{
-				View3D_WindowEnumGuids(Handle, (c,guid) => cb(guid), IntPtr.Zero);
+				bool CB(IntPtr ctx, ref Guid guid) => cb(guid);
+				View3D_WindowEnumGuids(Handle, CB, IntPtr.Zero);
 			}
 
 			/// <summary>Enumerate the objects associated with this window</summary>
@@ -282,9 +283,9 @@ namespace Rylogic.Gfx
 			public void EnumObjects(Func<Object, bool> cb, Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				EnumObjectsCB enum_cb = (c,obj) => cb(new Object(obj));
+				bool enum_cb(nint c, nint obj) => cb(new Object(obj));
 				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
-				View3D_WindowEnumObjectsById(Handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
+				View3D_WindowEnumObjectsById(Handle, (EnumObjectsCB)enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Return the objects associated with this window</summary>
@@ -385,40 +386,43 @@ namespace Rylogic.Gfx
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{
-				get => View3D_FocusPointVisibleGet(Handle);
-				set => View3D_FocusPointVisibleSet(Handle, value);
-			}
-
-			/// <summary>Set the size of the focus point graphic</summary>
-			public float FocusPointSize
-			{
-				set => View3D_FocusPointSizeSet(Handle, value);
+				get => View3D_StockObjectVisibleGet(Handle, EStockObject.FocusPoint);
+				set => View3D_StockObjectVisibleSet(Handle, EStockObject.FocusPoint, value);
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
 			public bool OriginPointVisible
 			{
-				get => View3D_OriginVisibleGet(Handle);
-				set => View3D_OriginVisibleSet(Handle, value);
-			}
-
-			/// <summary>Set the size of the origin graphic</summary>
-			public float OriginPointSize
-			{
-				set => View3D_OriginSizeSet(Handle, value);
+				get => View3D_StockObjectVisibleGet(Handle, EStockObject.OriginPoint);
+				set => View3D_StockObjectVisibleSet(Handle, EStockObject.OriginPoint, value);
 			}
 
 			/// <summary>Get/Set whether the selection box is visible</summary>
 			public bool SelectionBoxVisible
 			{
-				get => View3D_SelectionBoxVisibleGet(Handle);
-				set => View3D_SelectionBoxVisibleSet(Handle, value);
+				get => View3D_StockObjectVisibleGet(Handle, EStockObject.SelectionBox);
+				set => View3D_StockObjectVisibleSet(Handle, EStockObject.SelectionBox, value);
+			}
+
+			/// <summary>Set the size of the focus point graphic</summary>
+			public float FocusPointSize
+			{
+				get => View3D_FocusPointSizeGet(Handle);
+				set => View3D_FocusPointSizeSet(Handle, value);
+			}
+
+			/// <summary>Set the size of the origin graphic</summary>
+			public float OriginPointSize
+			{
+				get => View3D_OriginPointSizeGet(Handle);
+				set => View3D_OriginPointSizeSet(Handle, value);
 			}
 
 			/// <summary>Set the position of the selection box</summary>
-			public void SelectionBoxPosition(BBox box, m4x4 o2w)
+			public (BBox, m4x4) SelectionBox
 			{
-				View3D_SelectionBoxPosition(Handle, ref box, ref o2w);
+				get { View3D_SelectionBoxGet(Handle, out var box, out var o2w); return (box, o2w); }
+				set => View3D_SelectionBoxSet(Handle, ref value.Item1, ref value.Item2);
 			}
 
 			/// <summary>Set the size and position of the selection box to bound the selected objects in this view</summary>
@@ -430,15 +434,15 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get => View3D_FillModeGet(Handle);
-				set => View3D_FillModeSet(Handle, value);
+				get => View3D_WindowFillModeGet(Handle);
+				set => View3D_WindowFillModeSet(Handle, value);
 			}
 
 			/// <summary>Get/Set the face culling mode</summary>
 			public ECullMode CullMode
 			{
-				get => View3D_CullModeGet(Handle);
-				set => View3D_CullModeSet(Handle, value);
+				get => View3D_WindowCullModeGet(Handle);
+				set => View3D_WindowCullModeSet(Handle, value);
 			}
 
 			/// <summary>Get/Set the multi-sampling level for the window</summary>
@@ -451,14 +455,15 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get => View3D_LightPropertiesGet(Handle, out var light) ? light : default;
+				get => View3D_LightPropertiesGet(Handle);
 				set => View3D_LightPropertiesSet(Handle, ref value);
 			}
 
 			/// <summary>Show the lighting dialog</summary>
 			public void ShowLightingDlg()
 			{
-				View3D_LightShowDialog(Handle);
+				throw new NotImplementedException();
+				//todo View3D_LightShowDialog(Handle);
 			}
 
 			/// <summary>Set the single light source</summary>
@@ -467,25 +472,39 @@ namespace Rylogic.Gfx
 				View3D_LightSource(Handle, position, direction, camera_relative);
 			}
 
+			/// <summary>Show/Hide the object manager tool</summary>
+			public bool ObjectManagerTool
+			{
+				get => View3D_ObjectManagerVisibleGet(Handle);
+				set => View3D_ObjectManagerVisibleSet(Handle, value);
+			}
+
+			/// <summary>Show/Hide the scripr editor tool</summary>
+			public bool ScriptTool
+			{
+				get => View3D_ScriptEditorVisibleGet(Handle);
+				set => View3D_ScriptEditorVisibleSet(Handle, value);
+			}
+
 			/// <summary>Show/Hide the measuring tool</summary>
 			public bool ShowMeasureTool
 			{
-				get => View3D_MeasureToolVisible(Handle);
-				set => View3D_ShowMeasureTool(Handle, value);
+				get => View3D_MeasureToolVisibleGet(Handle);
+				set => View3D_MeasureToolVisibleSet(Handle, value);
 			}
 
 			/// <summary>Show/Hide the angle tool</summary>
 			public bool ShowAngleTool
 			{
-				get => View3D_AngleToolVisible(Handle);
-				set => View3D_ShowAngleTool(Handle, value);
+				get => View3D_AngleToolVisibleGet(Handle);
+				set => View3D_AngleToolVisibleSet(Handle, value);
 			}
 
 			/// <summary>The background colour for the window</summary>
 			public Colour32 BackgroundColour
 			{
-				get => new(View3D_BackgroundColourGet(Handle));
-				set => View3D_BackgroundColourSet(Handle, value.ARGB);
+				get => new(View3D_WindowBackgroundColourGet(Handle));
+				set => View3D_WindowBackgroundColourSet(Handle, value.ARGB);
 			}
 
 			/// <summary>Get/Set the animation clock</summary>
@@ -507,13 +526,7 @@ namespace Rylogic.Gfx
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
-				View3D_Render(Handle);
-			}
-
-			/// <summary>Called to flip the back buffer to the screen after all windows have been rendered</summary>
-			public void Present()
-			{
-				View3D_Present(Handle);
+				View3D_WindowRender(Handle);
 			}
 
 			/// <summary>Get/Set the size of the backbuffer (in pixels)</summary>
@@ -524,22 +537,24 @@ namespace Rylogic.Gfx
 				{
 					// You might be after RenderTargetSize instead...
 					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
-					View3D_BackBufferSizeGet(Handle, out var w, out var h);
-					return new Size(w, h);
+					return View3D_WindowBackBufferSizeGet(Handle);
 				}
 				set
 				{
 					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
 					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid back buffer size");
 					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid back buffer size");
-					View3D_BackBufferSizeSet(Handle, value.Width, value.Height);
+					View3D_WindowBackBufferSizeSet(Handle, value);
 				}
 			}
 
 			/// <summary>Restore the render target as the main output</summary>
 			public void RestoreRT()
 			{
+				throw new NotImplementedException();
+#if false //todo
 				View3D_RenderTargetRestore(Handle);
+#endif
 			}
 
 			/// <summary>
@@ -549,19 +564,22 @@ namespace Rylogic.Gfx
 			/// a source and destination texture at the same time</summary>
 			public void SetRT(Texture? render_target, Texture? depth_buffer, bool is_new_main_rt)
 			{
+				throw new NotImplementedException();
+#if false //todo
 				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero, is_new_main_rt);
-			}
+#endif
+				}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport
 			{
-				get => View3D_Viewport(Handle);
+				get => View3D_WindowViewportGet(Handle);
 				set
 				{
 					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid viewport size");
 					Util.BreakIf(value.ScreenW == 0 || value.ScreenH == 0, "Invalid viewport size");
 					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid viewport size");
-					View3D_SetViewport(Handle, value);
+					View3D_WindowViewportSet(Handle, ref value);
 				}
 			}
 
@@ -584,7 +602,7 @@ namespace Rylogic.Gfx
 				// Notes:
 				//  - What does screen space mean if there is no back buffer?
 				//    For WPF, or other window-less modes of use, there is no back buffer. I'm assuming here that the render target
-				//    is the psuedo-back buffer. In the case were there is a back buffer but a temporary render target is in use, I'm
+				//    is the pseudo-back buffer. In the case were there is a back buffer but a temporary render target is in use, I'm
 				//    using the back buffer still as I'm assuming that is still the screen size.
 				//  - The render target dimension is in pixels however, and WPF uses device independent units (i.e. 96dpi).
 				//    So to return points in device-independent screen space, the render target size needs to be adjusted
@@ -643,12 +661,6 @@ namespace Rylogic.Gfx
 			public void ShowExampleScript()
 			{
 				View3D_DemoScriptShow(Handle);
-			}
-
-			/// <summary>Show/Hide the object manager UI</summary>
-			public void ShowObjectManager(bool show)
-			{
-				View3D_ObjectManagerShow(Handle, show);
 			}
 
 			/// <summary>Diagnostic settings</summary>

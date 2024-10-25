@@ -74,6 +74,13 @@ namespace pr::rdr12
 		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, std::optional<Guid const> context_id);
 		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, std::optional<Guid const> context_id);
 
+		// Modify an ldr object using a callback to populate the model data.
+		LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id);
+		void ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
+
+		// Update the model in an existing object
+		void UpdateObject(LdrObject* object, wchar_t const* ldr_script, EUpdateObject flags);
+
 		// Delete a single object
 		void DeleteObject(LdrObject* object);
 
@@ -86,8 +93,14 @@ namespace pr::rdr12
 		// Delete all objects not displayed in any windows
 		void DeleteUnused(Guid const* context_ids, int include_count, int exclude_count);
 
-		// Enumerate the Guids in the sources collection
+		// Enumerate the GUIDs in the sources collection
 		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
+
+		// Create a gizmo object and add it to the gizmo collection
+		LdrGizmo* GizmoCreate(ELdrGizmoMode mode, m4x4 const& o2w);
+
+		// Destroy a gizmo
+		void GizmoDelete(LdrGizmo* gizmo);
 		
 		// Reload file sources
 		void ReloadScriptSources();

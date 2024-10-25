@@ -1124,8 +1124,8 @@ namespace pr::ldr
 						});
 					}
 				default:
-                    {
-                    	throw std::runtime_error("Unknown point style");
+					{
+						throw std::runtime_error("Unknown point style");
 					}
 				}
 			}

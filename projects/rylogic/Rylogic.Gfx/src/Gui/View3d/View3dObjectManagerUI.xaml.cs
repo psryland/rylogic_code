@@ -109,7 +109,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Access to the object container</summary>
 		public IList<View3d.Object> Objects => ObjectManager.Objects;
-		public IEnumerable<View3d.Object> SelectedObjects => Objects.Where(x => Bit.AllSet(x.Flags, View3d.EFlags.Selected));
+		public IEnumerable<View3d.Object> SelectedObjects => Objects.Where(x => Bit.AllSet(x.Flags, View3d.ELdrFlags.Selected));
 
 		/// <summary>True if one or more objects is selected</summary>
 		public View3d.Object? FirstSelected => SelectedObjects.FirstOrDefault();
@@ -139,8 +139,8 @@ namespace Rylogic.Gui.WPF
 
 			foreach (var x in Objects)
 			{
-				var selected = x.Flags.HasFlag(View3d.EFlags.Selected);
-				var visible = x.Flags.HasFlag(View3d.EFlags.Hidden) == false;
+				var selected = x.Flags.HasFlag(View3d.ELdrFlags.Selected);
+				var visible = x.Flags.HasFlag(View3d.ELdrFlags.Hidden) == false;
 				var show = vis switch
 				{
 					ESetVisibleCmd.ShowAll => true,
@@ -153,7 +153,7 @@ namespace Rylogic.Gui.WPF
 					ESetVisibleCmd.ToggleOthers => selected ? visible : !visible,
 					_ => throw new Exception($"Unknown visibility command {vis}"),
 				};
-				x.FlagsSet(View3d.EFlags.Hidden, !show, string.Empty);
+				x.FlagsSet(View3d.ELdrFlags.Hidden, !show, string.Empty);
 			}
 
 			Invalidate();
@@ -167,8 +167,8 @@ namespace Rylogic.Gui.WPF
 			{
 				foreach (var x in SelectedObjects)
 				{
-					var wire = wireframe == +1 || (wireframe == 0 && !Bit.AllSet(x.Flags, View3d.EFlags.Wireframe));
-					x.FlagsSet(View3d.EFlags.Wireframe, wire, string.Empty);
+					var wire = wireframe == +1 || (wireframe == 0 && !Bit.AllSet(x.Flags, View3d.ELdrFlags.Wireframe));
+					x.FlagsSet(View3d.ELdrFlags.Wireframe, wire, string.Empty);
 				}
 				Invalidate();
 				return;
@@ -183,9 +183,9 @@ namespace Rylogic.Gui.WPF
 			if (parameter is SelectionChangedEventArgs args)
 			{
 				foreach (var x in args.RemovedItems.Cast<View3d.Object>())
-					x.Flags = Bit.SetBits(x.Flags, View3d.EFlags.Selected, false);
+					x.Flags = Bit.SetBits(x.Flags, View3d.ELdrFlags.Selected, false);
 				foreach (var x in args.AddedItems.Cast<View3d.Object>())
-					x.Flags = Bit.SetBits(x.Flags, View3d.EFlags.Selected, true);
+					x.Flags = Bit.SetBits(x.Flags, View3d.ELdrFlags.Selected, true);
 
 				Invalidate();
 			}
@@ -196,7 +196,7 @@ namespace Rylogic.Gui.WPF
 		private void InvertSelectionInternal()
 		{
 			foreach (var obj in Objects)
-				obj.Flags = Bit.SetBits(obj.Flags, View3d.EFlags.Selected, !obj.Flags.HasFlag(View3d.EFlags.Selected));
+				obj.Flags = Bit.SetBits(obj.Flags, View3d.ELdrFlags.Selected, !obj.Flags.HasFlag(View3d.ELdrFlags.Selected));
 		}
 
 		/// <summary>Toggle show normals mode on selected objects</summary>

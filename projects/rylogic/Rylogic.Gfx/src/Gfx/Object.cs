@@ -33,12 +33,12 @@ namespace Rylogic.Gfx
 			public Object(string ldr_script, bool file, Guid? context_id)
 				:this(ldr_script, file, context_id, null)
 			{}
-			public Object(string ldr_script, bool file, Guid? context_id, View3DIncludes? includes)
+			public Object(string ldr_script, bool file, Guid? context_id, Includes? includes)
 			{
 				Owned = true;
-				var inc = includes ?? new View3DIncludes();
+				var inc = includes ?? new Includes();
 				var ctx = context_id ?? Guid.NewGuid();
-				Handle = View3D_ObjectCreateLdr(ldr_script, file, ref ctx, ref inc);
+				Handle = View3D_ObjectCreateLdrW(ldr_script, file, ref ctx, ref inc);
 				if (Handle == HObject.Zero)
 					throw new Exception($"Failed to create object from script\r\n{ldr_script.Summary(100)}");
 			}
@@ -82,7 +82,7 @@ namespace Rylogic.Gfx
 			{
 				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
-				Handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
+				Handle = View3D_ObjectCreateWithCallback(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
 				if (Handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
 			}
 
@@ -169,12 +169,12 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get/Set the state flags for this object</summary>
-			public EFlags Flags
+			public ELdrFlags Flags
 			{
 				get => FlagsGet(string.Empty);
 				set
 				{
-					FlagsSet(~EFlags.None, false);
+					FlagsSet(~ELdrFlags.None, false);
 					FlagsSet(value, true);
 				}
 			}
@@ -390,11 +390,11 @@ namespace Rylogic.Gfx
 			/// <summary>
 			/// Get/Set the object flags
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
-			public EFlags FlagsGet(string? name = null)
+			public ELdrFlags FlagsGet(string? name = null)
 			{
 				return View3D_ObjectFlagsGet(Handle, name);
 			}
-			public void FlagsSet(EFlags flags, bool state, string? name = null)
+			public void FlagsSet(ELdrFlags flags, bool state, string? name = null)
 			{
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
 				NotifyPropertyChanged(nameof(Flags));

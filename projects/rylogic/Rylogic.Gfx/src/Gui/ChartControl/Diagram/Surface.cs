@@ -19,11 +19,11 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			sy = (int)Math.Max(1.0, sy + 0.5);
 			var opts = new View3d.TextureOptions
 			{
-				GdiCompatible = true,
 				DbgName = dbg_name ?? string.Empty,
-				AddrU = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
-				AddrV = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
 				ColourKey = 0,
+				//GdiCompatible = true,
+				//AddrU = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				//AddrV = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
 			};
 			Surf = new View3d.Texture(sx, sy, opts);// D3D11_FILTER_ANISOTROPIC});
 		}

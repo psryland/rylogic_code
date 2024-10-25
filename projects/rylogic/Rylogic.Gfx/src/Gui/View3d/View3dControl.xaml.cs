@@ -44,7 +44,7 @@ namespace Rylogic.Gui.WPF
 				Window = new View3d.Window(View3d, IntPtr.Zero);
 				Window.Error += (s,a) => OnReportError(new ReportErrorEventArgs(a.Message));
 				Camera.Lookat(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
-				Camera.ClipPlanes(0.01f, 1000f, true);
+				Camera.ClipPlanes(0.01f, 1000f, View3d.EClipPlanes.CameraRelative);
 
 				// Create a D3D11 off-screen render target image source
 				Source = D3DImage = new D3D11Image();
@@ -284,9 +284,9 @@ namespace Rylogic.Gui.WPF
 			get => D3DImage.MultiSampling;
 			set
 			{
-				// Since, in WPF, we're rendering to an off-screen render target, multisampling
-				// is done by changing the render target size, not the Dx11 multisampling settings.
-				// This means the normal View3d.Window multisampling setting isn't changed.
+				// Since, in WPF, we're rendering to an off-screen render target, multi-sampling
+				// is done by changing the render target size, not the Dx11 multi-sampling settings.
+				// This means the normal View3d.Window multi-sampling setting isn't changed.
 				D3DImage.MultiSampling = value;
 				NotifyPropertyChanged(nameof(MultiSampling));
 				NotifyPropertyChanged(nameof(Antialiasing));
@@ -545,7 +545,7 @@ namespace Rylogic.Gui.WPF
 		public void NotifyPropertyChanged(string prop_name)
 		{
 			// Note: Notify is called from the SettingsChanged handler, not when the property is changed
-			// because this catches all sources of a property changing, not just when it is explicity set.
+			// because this catches all sources of a property changing, not just when it is explicitly set.
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 

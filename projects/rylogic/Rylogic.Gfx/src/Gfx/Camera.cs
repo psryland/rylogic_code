@@ -30,7 +30,7 @@ namespace Rylogic.Gfx
 				node.Add2(nameof(FocusDist), FocusDist, false);
 				node.Add2(nameof(Orthographic), Orthographic, false);
 				node.Add2(nameof(Aspect), Aspect, false);
-				node.Add2(nameof(FovY), FovY, false);
+				node.Add2(nameof(Fov), Fov, false);
 				node.Add2(nameof(AlignAxis), AlignAxis, false);
 				return node;
 			}
@@ -40,7 +40,7 @@ namespace Rylogic.Gfx
 				FocusDist = node.Element(nameof(FocusDist)).As<float>(FocusDist);
 				Orthographic = node.Element(nameof(Orthographic)).As<bool>(Orthographic);
 				Aspect = node.Element(nameof(Aspect)).As<float>(Aspect);
-				FovY = node.Element(nameof(FovY)).As<float>(FovY);
+				Fov = node.Element(nameof(Fov)).As<v2>(Fov);
 				AlignAxis = node.Element(nameof(AlignAxis)).As<v4>(AlignAxis);
 				Commit();
 			}
@@ -48,7 +48,7 @@ namespace Rylogic.Gfx
 			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
 			public v2 ViewArea(float dist)
 			{
-				return View3D_ViewArea(m_window.Handle, dist);
+				return View3D_CameraViewRectAtDistanceGet(m_window.Handle, dist);
 			}
 			public v2 ViewArea()
 			{
@@ -80,35 +80,42 @@ namespace Rylogic.Gfx
 				}
 			}
 
-			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
-			public float FovX
+			/// <summary>Get/Set the camera field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
+			public v2 Fov
 			{
-				get => View3D_CameraFovXGet(m_window.Handle);
-				set
-				{
-					if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
-					View3D_CameraFovXSet(m_window.Handle, value);
-				}
+				get => View3D_CameraFovGet(m_window.Handle);
+				set => View3D_CameraFovSet(m_window.Handle, value);
 			}
+			
+			///// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
+			//public float FovX
+			//{
+			//	get => View3D_CameraFovXGet(m_window.Handle);
+			//	set
+			//	{
+			//		if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
+			//		View3D_CameraFovXSet(m_window.Handle, value);
+			//	}
+			//}
 
-			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
-			public float FovY
-			{
-				get => View3D_CameraFovYGet(m_window.Handle);
-				set
-				{
-					if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
-					View3D_CameraFovYSet(m_window.Handle, value);
-				}
-			}
+			///// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
+			//public float FovY
+			//{
+			//	get => View3D_CameraFovYGet(m_window.Handle);
+			//	set
+			//	{
+			//		if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
+			//		View3D_CameraFovYSet(m_window.Handle, value);
+			//	}
+			//}
 
-			/// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
-			public void SetFov(float fovX, float fovY)
-			{
-				if (fovX <= 0 || fovX > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
-				if (fovY <= 0 || fovY > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
-				View3D_CameraFovSet(m_window.Handle, fovX, fovY);
-			}
+			///// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
+			//public void SetFov(float fovX, float fovY)
+			//{
+			//	if (fovX <= 0 || fovX > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
+			//	if (fovY <= 0 || fovY > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
+			//	View3D_CameraFovSet(m_window.Handle, new v2(fovX, fovY));
+			//}
 
 			/// <summary>Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'</summary>
 			public void BalanceFov(float fov)
@@ -119,39 +126,39 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the camera near plane distance. Focus relative</summary>
 			public float NearPlane
 			{
-				get => ClipPlanes(true).Near;
-				set => ClipPlanes(value, FarPlane, true);
+				get => ClipPlanes(EClipPlanes.CameraRelative).Near;
+				set => ClipPlanes(value, FarPlane, EClipPlanes.CameraRelative);
 			}
 
 			/// <summary>Get/Set the camera far plane distance. Focus relative</summary>
 			public float FarPlane
 			{
-				get => ClipPlanes(true).Far;
-				set => ClipPlanes(NearPlane, value, true);
+				get => ClipPlanes(EClipPlanes.CameraRelative).Far;
+				set => ClipPlanes(NearPlane, value, EClipPlanes.CameraRelative);
 			}
 
 			/// <summary>Get/Set the camera clip plane distances</summary>
-			public (float Near, float Far) ClipPlanes(bool focus_relative)
+			public (float Near, float Far) ClipPlanes(EClipPlanes flags)
 			{
-				View3D_CameraClipPlanesGet(m_window.Handle, out var near, out var far, focus_relative);
-				return (near, far);
+				var clip_planes = View3D_CameraClipPlanesGet(m_window.Handle, flags);
+				return (clip_planes.x, clip_planes.y);
 			}
-			public void ClipPlanes(float near, float far, bool focus_relative)
+			public void ClipPlanes(float near, float far, EClipPlanes flags)
 			{
-				View3D_CameraClipPlanesSet(m_window.Handle, near, far, focus_relative);
+				View3D_CameraClipPlanesSet(m_window.Handle, near, far, flags);
 			}
 
 			// Get the normalized from the camera relative to the clip planes
 			public float NormalisedDistance(float dist_from_camera)
 			{
-				var (near, far) = ClipPlanes(false);
+				var (near, far) = ClipPlanes(EClipPlanes.None);
 				return (dist_from_camera - near) / (far - near);
 			}
 
 			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
 			public v4 FocusPoint
 			{
-				get { View3D_CameraFocusPointGet(m_window.Handle, out var pos); return pos; }
+				get => View3D_CameraFocusPointGet(m_window.Handle);
 				set => View3D_CameraFocusPointSet(m_window.Handle, value);
 			}
 
@@ -165,7 +172,7 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
 			public m4x4 O2W
 			{
-				get { View3D_CameraToWorldGet(m_window.Handle, out var c2w); return c2w; }
+				get => View3D_CameraToWorldGet(m_window.Handle);
 				set => View3D_CameraToWorldSet(m_window.Handle, ref value);
 			}
 			public m4x4 W2O => Math_.InvertFast(O2W);
@@ -191,9 +198,9 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Set the camera fields of view (H and V) and focus distance such that a rectangle (w/h) exactly fills the view</summary>
-			public void SetView(float width, float height, float dist)
+			public void SetView(v2 rect, float dist)
 			{
-				View3D_CameraViewRectSet(m_window.Handle, width, height, dist);
+				View3D_CameraViewRectAtDistanceSet(m_window.Handle, rect, dist);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>

@@ -111,53 +111,6 @@ namespace pr
 
 			_flags_enum = 0,
 		};
-		#if 0 //todo
-		enum class EView3DShaderVS :int
-		{
-			Standard = 0,
-		};
-		enum class EView3DShaderPS :int
-		{
-			Standard = 0,
-
-			// Radial fade params:
-			//  *Type {Spherical|Cylindrical}
-			//  *Radius {min,max}
-			//  *Centre {x,y,z} (optional, defaults to camera position)
-			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
-			RadialFadePS,
-		};
-		enum class EView3DShaderGS :int
-		{
-			Standard = 0,
-
-			// Point sprite params: *PointSize {w,h} *Depth {true|false}
-			PointSpritesGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineListGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineStripGS,
-
-			// Arrow params: *Size {size}
-			ArrowHeadGS,
-		};
-		enum class EView3DShaderCS :int
-		{
-			None = 0,
-		};
-		enum class EView3DRenderStep :int
-		{
-			Invalid = 0,
-			ForwardRender,
-			GBuffer,
-			DSLighting,
-			ShadowMap,
-			RayCast,
-			_number_of,
-		};
-		#endif
 		enum class EStockTexture :int // pr::rdr12::EStockTexture
 		{
 			Invalid = 0,
@@ -172,6 +125,16 @@ namespace pr
 			WhiteTriangle,
 			EnvMapProjection,
 		};
+		enum class EStockSampler : int // pr::rdr12::EStockSampler
+		{
+			Invalid = 0,
+			PointClamp,
+			PointWrap,
+			LinearClamp,
+			LinearWrap,
+			AnisotropicClamp,
+			AnisotropicWrap,
+		};
 		enum class ELight :int
 		{
 			Ambient,
@@ -181,48 +144,32 @@ namespace pr
 		};
 		enum class EAnimCommand : int
 		{
-			Reset, // Reset the the 'time' value
+			Reset, // Reset the 'time' value
 			Play,  // Run continuously using 'time' as the step size, or real time if 'time' == 0
 			Stop,  // Stop at the current time.
 			Step,  // Step by 'time' (can be positive or negative)
 		};
-		#if 0 // todo
-		enum class EView3DLogLevel :int
+		enum class EGizmoMode :int
 		{
-			Debug,
-			Info,
-			Warn,
-			Error,
+			Translate,
+			Rotate,
+			Scale,
 		};
-		enum class EView3DUpdateObject :unsigned int // Flags for partial update of a model
-		{
-			None         = 0U,
-			All          = ~0U,
-			Name         = 1 << 0,
-			Model        = 1 << 1,
-			Transform    = 1 << 2,
-			Children     = 1 << 3,
-			Colour       = 1 << 4,
-			ColourMask   = 1 << 5,
-			Reflectivity = 1 << 6,
-			Flags        = 1 << 7,
-			Animation    = 1 << 8,
-			_flags_enum = 0,
-		};
-		enum class EView3DGizmoState :int // ELdrGizmoEvent 
+		enum class EGizmoState :int // ELdrGizmoEvent 
 		{
 			StartManip,
 			Moving,
 			Commit,
 			Revert,
 		};
-		enum class EView3DGizmoMode :int
+		enum class EStockObject
 		{
-			Translate,
-			Rotate,
-			Scale,
+			None = 0,
+			FocusPoint = 1 << 0,
+			OriginPoint = 1 << 1,
+			SelectionBox = 1 << 2,
+			_flags_enum = 0,
 		};
-		#endif
 		enum class ENavOp :int // pr::camera::ENavOp
 		{
 			None      = 0,
@@ -242,7 +189,18 @@ namespace pr
 			RotZ           = 1 << 5,
 			Zoom           = 1 << 6,
 			CameraRelative = 1 << 7,
+			Translation    = TransX | TransY | TransZ,
+			Rotation       = RotX | RotY | RotZ,
 			All            = (1 << 7) - 1, // Not including camera relative
+		};
+		enum class EClipPlanes
+		{
+			None = 0,
+			Near = 1 << 0,
+			Far = 1 << 1,
+			CameraRelative = 1 << 2,
+			Both = Near | Far,
+			_flags_enum = 0,
 		};
 		enum class EColourOp :int // pr::rdr12::EColourOp
 		{
@@ -290,6 +248,21 @@ namespace pr
 			ShadowCastExclude = 1 << 12,
 
 			// Bitwise operators supported
+			_flags_enum = 0,
+		};
+		enum class EUpdateObject :int // Flags for partial update of a model
+		{
+			None         = 0,
+			Name         = 1 << 0,
+			Model        = 1 << 1,
+			Transform    = 1 << 2,
+			Children     = 1 << 3,
+			Colour       = 1 << 4,
+			ColourMask   = 1 << 5,
+			Reflectivity = 1 << 6,
+			Flags        = 1 << 7,
+			Animation    = 1 << 8,
+			All          = 0x1FF,
 			_flags_enum = 0,
 		};
 		enum class ESortGroup :int // pr::rdr12::ESortGroup
@@ -353,6 +326,9 @@ namespace pr
 			General_FocusPointVisible   = General | 1 << 0,
 			General_OriginPointVisible  = General | 1 << 1,
 			General_SelectionBoxVisible = General | 1 << 2,
+			General_FocusPointSize      = General | 1 << 3,
+			General_OriginPointSize     = General | 1 << 4,
+			General_SelectionBox        = General | 1 << 5,
 
 			Scene                  = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,
@@ -389,10 +365,68 @@ namespace pr
 
 			_flags_enum = 0,
 		};
+		#if 0 //todo
+		enum class EView3DShaderVS :int
+		{
+			Standard = 0,
+		};
+		enum class EView3DShaderPS :int
+		{
+			Standard = 0,
+
+			// Radial fade params:
+			//  *Type {Spherical|Cylindrical}
+			//  *Radius {min,max}
+			//  *Centre {x,y,z} (optional, defaults to camera position)
+			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
+			RadialFadePS,
+		};
+		enum class EView3DShaderGS :int
+		{
+			Standard = 0,
+
+			// Point sprite params: *PointSize {w,h} *Depth {true|false}
+			PointSpritesGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineListGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineStripGS,
+
+			// Arrow params: *Size {size}
+			ArrowHeadGS,
+		};
+		enum class EView3DShaderCS :int
+		{
+			None = 0,
+		};
+		enum class EView3DRenderStep :int
+		{
+			Invalid = 0,
+			ForwardRender,
+			GBuffer,
+			DSLighting,
+			ShadowMap,
+			RayCast,
+			_number_of,
+		};
+		enum class EView3DLogLevel :int
+		{
+			Debug,
+			Info,
+			Warn,
+			Error,
+		};
+		#endif
 		#pragma endregion
 
 		#pragma region Structures
 		using Colour = unsigned int;
+		struct IVec2
+		{
+			int x, y;
+		};
 		struct Vec2
 		{
 			float x, y;
@@ -468,17 +502,6 @@ namespace pr
 			BOOL m_cam_relative;
 			BOOL m_on;
 		};
-#if 0 // todo
-		struct View3DImageInfo
-		{
-			UINT32      m_width;
-			UINT32      m_height;
-			UINT32      m_depth;
-			UINT32      m_mips;
-			DXGI_FORMAT m_format;
-			UINT32      m_image_file_format;//D3DXIMAGE_FILEFORMAT
-		};
-		#endif
 		struct TextureOptions
 		{
 			Mat4x4               m_t2s;
@@ -512,22 +535,6 @@ namespace pr
 			int           m_multisampling;
 			char const*   m_dbg_name;
 		};
-		#if 0 // todo
-		struct View3DUpdateModelKeep
-		{
-			BOOL m_name;
-			BOOL m_transform;
-			BOOL m_context_id;
-			BOOL m_children;
-			BOOL m_colour;
-			BOOL m_colour_mask;
-			BOOL m_wireframe;
-			BOOL m_visibility;
-			BOOL m_animation;
-			BOOL m_step_data;
-			BOOL m_user_data;
-		};
-		#endif
 		struct HitTestRay
 		{
 			// The world space origin and direction of the ray (normalisation not required)
@@ -554,8 +561,8 @@ namespace pr
 		};
 		struct Viewport
 		{
-			float m_x;         // (x,y,x+width,y+width) is in backbuffer pixels, *NOT* window DIP.
-			float m_y;         // Typically the backbuffer is the same size as the true screen pixels
+			float m_x;         // (x,y,x+width,y+width) is in back buffer pixels, *NOT* window DIP.
+			float m_y;         // Typically the back buffer is the same size as the true screen pixels
 			float m_width;     // Typically the BB width
 			float m_height;    // Typically the BB height
 			float m_min_depth; // Typically 0.0f
@@ -592,42 +599,65 @@ namespace pr
 			// The current animation clock value
 			double m_clock;
 		};
+		struct ImageInfo
+		{
+			uint64_t    m_width;
+			uint32_t    m_height;
+			uint16_t    m_depth;
+			uint16_t    m_mips;
+			DXGI_FORMAT m_format;
+			uint32_t    m_image_file_format; // D3DXIMAGE_FILEFORMAT
+		};
+
+		#if 0 // todo
+		struct View3DUpdateModelKeep
+		{
+			BOOL m_name;
+			BOOL m_transform;
+			BOOL m_context_id;
+			BOOL m_children;
+			BOOL m_colour;
+			BOOL m_colour_mask;
+			BOOL m_wireframe;
+			BOOL m_visibility;
+			BOOL m_animation;
+			BOOL m_step_data;
+			BOOL m_user_data;
+		};
+		#endif
 		#pragma endregion
 
 		// Callbacks
-		using SettingsChangedCB     = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using AddFileProgressCB     = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
-		using SourcesChangedCB      = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
-		using EnumGuidsCB           = bool(__stdcall *)(void* ctx, GUID const& context_id);
-		using EnumObjectsCB         = bool(__stdcall *)(void* ctx, Object object);
-		using OnAddCB               = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
-		using InvalidatedCB         = void(__stdcall *)(void* ctx, Window window);
-		using RenderingCB           = void(__stdcall *)(void* ctx, Window window);
-		using SceneChangedCB        = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
-		using AnimationCB           = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
-		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
-
-
-		#if 0 // todo
-		using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmo gizmo, EView3DGizmoState state);
-		using View3D_EditObjectCB          = void (__stdcall *)(
-			void* ctx,             // User callback context pointer
-			UINT32 vcount,         // The maximum size of 'verts'
-			UINT32 icount,         // The maximum size of 'indices'
-			UINT32 ncount,         // The maximum size of 'nuggets'
-			View3DVertex* verts,   // The vert buffer to be filled
-			UINT16* indices,       // The index buffer to be filled
-			View3DNugget* nuggets, // The nugget buffer to be filled
-			UINT32& new_vcount,    // The number of verts in the updated model
-			UINT32& new_icount,    // The number indices in the updated model
-			UINT32& new_ncount);   // The number nuggets in the updated model
+		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
+		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
+		using SourcesChangedCB  = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
+		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
+		using OnAddCB           = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
+		using RenderingCB       = void(__stdcall *)(void* ctx, Window window);
+		using SceneChangedCB    = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
+		using AnimationCB       = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
+		using GizmoMovedCB      = void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state);
+		using EditObjectCB      = void (__stdcall *)(
+			void* ctx,           // User callback context pointer
+			UINT32 vcount,       // The maximum size of 'verts'
+			UINT32 icount,       // The maximum size of 'indices'
+			UINT32 ncount,       // The maximum size of 'nuggets'
+			Vertex* verts,       // The vert buffer to be filled
+			UINT16* indices,     // The index buffer to be filled
+			Nugget* nuggets,     // The nugget buffer to be filled
+			UINT32& new_vcount,  // The number of verts in the updated model
+			UINT32& new_icount,  // The number indices in the updated model
+			UINT32& new_ncount); // The number nuggets in the updated model
 		using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
 			void* ctx,              // User callback context pointer
 			wchar_t const* code,    // The source code from the embedded code block.
 			wchar_t const* support, // The support code from earlier embedded code blocks.
 			BSTR& result,           // The string result of running the source code (execution code blocks only)
 			BSTR& errors);          // Any errors in the compilation of the code
-	#endif
+
+		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
 	}
 }
 
@@ -696,8 +726,8 @@ extern "C"
 
 	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-	VIEW3D_API BOOL __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window, int& width, int& height);
-	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, int width, int height);
+	VIEW3D_API pr::view3d::IVec2 __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, pr::view3d::IVec2 size);
 
 	// Get/Set the window viewport (and clipping area)
 	VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window);
@@ -727,7 +757,7 @@ extern "C"
 	// Remove all objects 'window'
 	VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(pr::view3d::Window window);
 
-	// Enumerate the object collection guids associated with 'window'
+	// Enumerate the object collection GUIDs associated with 'window'
 	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
 
 	// Enumerate the objects associated with 'window'
@@ -746,8 +776,8 @@ extern "C"
 	// Render the window
 	VIEW3D_API void __stdcall View3D_WindowRender(pr::view3d::Window window);
 
-	// Clear the 'invalidated' state of the window.
-	VIEW3D_API void __stdcall View3D_Validate(pr::view3d::Window window);
+	// Return the render target as a texture
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_WindowRenderTargetGet(pr::view3d::Window window);
 
 	// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
 	VIEW3D_API void __stdcall View3D_WindowInvalidate(pr::view3d::Window window, BOOL erase);
@@ -755,6 +785,9 @@ extern "C"
 
 	// Register a callback for when the window is invalidated. This can be used to render in response to invalidation, rather than rendering on a polling cycle.
 	VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(pr::view3d::Window window, pr::view3d::InvalidatedCB invalidated_cb, void* ctx, BOOL add);
+
+	// Clear the 'invalidated' state of the window.
+	VIEW3D_API void __stdcall View3D_WindowValidate(pr::view3d::Window window);
 
 	// Get/Set the window background colour
 	VIEW3D_API unsigned int __stdcall View3D_WindowBackgroundColourGet(pr::view3d::Window window);
@@ -788,6 +821,10 @@ extern "C"
 
 	// Set the global environment map for the window
 	VIEW3D_API void __stdcall View3D_WindowEnvMapSet(pr::view3d::Window window, pr::view3d::CubeMap env_map);
+
+	// Enable/Disable the depth buffer
+	VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabledGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(pr::view3d::Window window, BOOL enabled);
 
 	// Cast a ray into the scene, returning information about what it hit.
 	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::Object const* objects, int object_count);
@@ -831,20 +868,20 @@ extern "C"
 	VIEW3D_API float __stdcall View3D_CameraAspectGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_CameraAspectSet(pr::view3d::Window window, float aspect);
 	
-	// Get/Set both the X and Y fields of view (i.e. set the aspect ratio). Null fov means don't change the current value.
+	// Get/Set both the X and Y fields of view (i.e. set the aspect ratio)
 	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_CameraFovGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_CameraFovSet(pr::view3d::Window window, float* fovX, float* fovY);
+	VIEW3D_API void __stdcall View3D_CameraFovSet(pr::view3d::Window window, pr::view3d::Vec2 fov);
 
 	// Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
 	VIEW3D_API void __stdcall View3D_CameraBalanceFov(pr::view3d::Window window, float fov);
 
 	// Get/Set (using fov and focus distance) the size of the perpendicular area visible to the camera at 'dist' (in world space). Use 'focus_dist != 0' to set a specific focus distance
 	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_CameraViewRectAtDistanceGet(pr::view3d::Window window, float dist);
-	VIEW3D_API void __stdcall View3D_CameraViewRectAtDistanceSet(pr::view3d::Window window, pr::view3d::Vec2, float focus_dist);
+	VIEW3D_API void __stdcall View3D_CameraViewRectAtDistanceSet(pr::view3d::Window window, pr::view3d::Vec2 rect, float focus_dist);
 
 	// Get/Set the near and far clip planes for the camera
-	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_CameraClipPlanesGet(pr::view3d::Window window, BOOL focus_relative);
-	VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(pr::view3d::Window window, float* near_, float* far_, BOOL focus_relative);
+	VIEW3D_API pr::view3d::Vec2 __stdcall View3D_CameraClipPlanesGet(pr::view3d::Window window, pr::view3d::EClipPlanes flags);
+	VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(pr::view3d::Window window, float near_, float far_, pr::view3d::EClipPlanes flags);
 
 	// Get/Set the scene camera lock mask
 	VIEW3D_API pr::view3d::ECameraLockMask __stdcall View3D_CameraLockMaskGet(pr::view3d::Window window);
@@ -923,6 +960,13 @@ extern "C"
 
 	// Load a p3d model in memory as a view3d object
 	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* name, pr::view3d::Colour colour, size_t size, void const* p3d_data, GUID const* context_id);
+
+	// Create an ldr object using a callback to populate the model data.
+	VIEW3D_API pr::view3d::Object __stdcall View3D_ObjectCreateWithCallback(char const* name, pr::view3d::Colour colour, int vcount, int icount, int ncount, pr::view3d::EditObjectCB edit_cb, void* ctx, GUID const& context_id);
+	VIEW3D_API void __stdcall View3D_ObjectEdit(pr::view3d::Object object, pr::view3d::EditObjectCB edit_cb, void* ctx);
+
+	// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
+	VIEW3D_API void __stdcall View3D_ObjectUpdate(pr::view3d::Object object, wchar_t const* ldr_script, pr::view3d::EUpdateObject flags);
 
 	// Delete an object, freeing its resources
 	VIEW3D_API void __stdcall View3D_ObjectDelete(pr::view3d::Object object);
@@ -1014,13 +1058,6 @@ extern "C"
 	VIEW3D_API pr::view3d::Colour __stdcall View3D_ObjectNuggetTintGet(pr::view3d::Object object, char const* name, int index);
 	VIEW3D_API void __stdcall View3D_ObjectNuggetTintSet(pr::view3d::Object object, pr::view3d::Colour colour, char const* name, int index);
 
-
-	#if 0 // todo
-	VIEW3D_API pr::view3d::Object      __stdcall View3D_ObjectCreateEditCB       (char const* name, pr::view3d::Colour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
-	VIEW3D_API void              __stdcall View3D_ObjectEdit               (pr::view3d::Object object, View3D_EditObjectCB edit_cb, void* ctx);
-	VIEW3D_API void              __stdcall View3D_ObjectUpdate             (pr::view3d::Object object, wchar_t const* ldr_script, EView3DUpdateObject flags);
-#endif
-
 	// Materials ******************************
 
 	// Create a texture from data in memory.
@@ -1041,48 +1078,76 @@ extern "C"
 	// Create a texture sampler
 	VIEW3D_API pr::view3d::Sampler __stdcall View3D_SamplerCreate(pr::view3d::SamplerOptions const& options);
 
+	// Create one of the stock samplers
+	VIEW3D_API pr::view3d::Sampler __stdcall View3D_SamplerCreateStock(pr::view3d::EStockSampler stock_sampler);
+
+	// Read the properties of an existing texture
+	VIEW3D_API pr::view3d::ImageInfo __stdcall View3D_TextureGetInfo(pr::view3d::Texture tex);
+	VIEW3D_API pr::view3d::EResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, pr::view3d::ImageInfo& info);
+
 	// Release a reference to a resources
 	VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex);
 	VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex);
 	VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam);
 
+	// Resize this texture to 'size'
+	VIEW3D_API void __stdcall View3D_TextureResize(pr::view3d::Texture tex, uint64_t width, uint32_t height, uint16_t depth_or_array_len);
+
+	// Return the ref count of 'tex'
+	VIEW3D_API ULONG __stdcall View3D_TextureRefCount(pr::view3d::Texture tex);
+
+	// Get/Set the private data associated with 'guid' for 'tex'
+	VIEW3D_API void __stdcall View3d_TexturePrivateDataGet(pr::view3d::Texture tex, GUID const& guid, UINT& size, void* data);
+	VIEW3D_API void __stdcall View3d_TexturePrivateDataSet(pr::view3d::Texture tex, GUID const& guid, UINT size, void const* data);
+	VIEW3D_API void __stdcall View3d_TexturePrivateDataIFSet(pr::view3d::Texture tex, GUID const& guid, IUnknown* pointer);
+
+	// Resolve a MSAA texture into a non-MSAA texture
+	VIEW3D_API void __stdcall View3D_TextureResolveAA(pr::view3d::Texture dst, pr::view3d::Texture src);
+
 #if 0
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (pr::view3d::Texture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, pr::view3d::Colour colour_key);
-	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (pr::view3d::Texture tex, View3DImageInfo& info);
-	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (wchar_t const* tex_filepath, View3DImageInfo& info);
-	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (pr::view3d::Texture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
 	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (pr::view3d::Texture tex, BOOL discard);
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (pr::view3d::Texture tex);
-	VIEW3D_API void          __stdcall View3D_TextureResize               (pr::view3d::Texture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataGet       (pr::view3d::Texture tex, GUID const& guid, UINT& size, void* data);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataSet       (pr::view3d::Texture tex, GUID const& guid, UINT size, void const* data);
-	VIEW3D_API void          __stdcall View3d_TexturePrivateDataIFSet     (pr::view3d::Texture tex, GUID const& guid, IUnknown* pointer);
-	VIEW3D_API ULONG         __stdcall View3D_TextureRefCount             (pr::view3d::Texture tex);
-	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureRenderTarget         (pr::view3d::Window window);
-	VIEW3D_API void          __stdcall View3D_TextureResolveAA            (pr::view3d::Texture dst, pr::view3d::Texture src);
 	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, pr::view3d::TextureOptions const& options);
 	VIEW3D_API pr::view3d::Texture __stdcall View3D_CreateDx9RenderTarget       (HWND hwnd, UINT width, UINT height, pr::view3d::TextureOptions const& options, HANDLE* shared_handle);
 #endif
 
 	// Gizmos *********************************
 
-#if 0
-	VIEW3D_API View3DGizmo      __stdcall View3D_GizmoCreate       (EView3DGizmoMode mode, View3DM4x4 const& o2w);
-	VIEW3D_API void             __stdcall View3D_GizmoDelete       (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoMovedCBSet   (View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx, BOOL add);
-	VIEW3D_API void             __stdcall View3D_GizmoAttach       (View3DGizmo gizmo, pr::view3d::Object obj);
-	VIEW3D_API void             __stdcall View3D_GizmoDetach       (View3DGizmo gizmo, pr::view3d::Object obj);
-	VIEW3D_API float            __stdcall View3D_GizmoScaleGet     (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoScaleSet     (View3DGizmo gizmo, float scale);
-	VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode      (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetMode      (View3DGizmo gizmo, EView3DGizmoMode mode);
-	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetO2W       (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetO2W       (View3DGizmo gizmo, View3DM4x4 const& o2w);
-	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetOffset    (View3DGizmo gizmo);
-	VIEW3D_API BOOL             __stdcall View3D_GizmoEnabled      (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetEnabled   (View3DGizmo gizmo, BOOL enabled);
-	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating (View3DGizmo gizmo);
-#endif
+	// Create the 3D manipulation gizmo
+	VIEW3D_API pr::view3d::Gizmo __stdcall View3D_GizmoCreate(pr::view3d::EGizmoMode mode, pr::view3d::Mat4x4 const& o2w);
+
+	// Delete a 3D manipulation gizmo
+	VIEW3D_API void __stdcall View3D_GizmoDelete(pr::view3d::Gizmo gizmo);
+
+	// Attach/Detach callbacks that are called when the gizmo moves
+	VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(pr::view3d::Gizmo gizmo, pr::view3d::GizmoMovedCB cb, void* ctx, BOOL add);
+
+	// Attach/Detach an object to the gizmo that will be moved as the gizmo moves
+	VIEW3D_API void __stdcall View3D_GizmoAttach(pr::view3d::Gizmo gizmo, pr::view3d::Object obj);
+	VIEW3D_API void __stdcall View3D_GizmoDetach(pr::view3d::Gizmo gizmo, pr::view3d::Object obj);
+
+	// Get/Set the scale factor for the gizmo
+	VIEW3D_API float __stdcall View3D_GizmoScaleGet(pr::view3d::Gizmo gizmo);
+	VIEW3D_API void __stdcall View3D_GizmoScaleSet(pr::view3d::Gizmo gizmo, float scale);
+
+	// Get/Set the current mode of the gizmo
+	VIEW3D_API pr::view3d::EGizmoMode __stdcall View3D_GizmoModeGet(pr::view3d::Gizmo gizmo);
+	VIEW3D_API void __stdcall View3D_GizmoModeSet(pr::view3d::Gizmo gizmo, pr::view3d::EGizmoMode mode);
+
+	// Get/Set the object to world transform for the gizmo
+	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_GizmoO2WGet(pr::view3d::Gizmo gizmo);
+	VIEW3D_API void __stdcall View3D_GizmoO2WSet(pr::view3d::Gizmo gizmo, pr::view3d::Mat4x4 const& o2w);
+
+	// Get the offset transform that represents the difference between the gizmo's transform at the start of manipulation and now.
+	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_GizmoOffsetGet(pr::view3d::Gizmo gizmo);
+
+	// Get/Set whether the gizmo is active to mouse interaction
+	VIEW3D_API BOOL __stdcall View3D_GizmoEnabledGet(pr::view3d::Gizmo gizmo);
+	VIEW3D_API void __stdcall View3D_GizmoEnabledSet(pr::view3d::Gizmo gizmo, BOOL enabled);
+
+	// Returns true while manipulation is in progress
+	VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(pr::view3d::Gizmo gizmo);
 
 	// Diagnostics ****************************
 
@@ -1103,44 +1168,65 @@ extern "C"
 
 	// Miscellaneous **************************
 
-	// Return true if the focus point is visible. Add/Remove the focus point to a window.
-	VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(pr::view3d::Window window, BOOL show);
+	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
+	VIEW3D_API BOOL __stdcall View3D_StockObjectVisibleGet(pr::view3d::Window window, pr::view3d::EStockObject stock_objects);
+	VIEW3D_API void __stdcall View3D_StockObjectVisibleSet(pr::view3d::Window window, pr::view3d::EStockObject stock_objects, BOOL show);
+
+	// Get/Set the size of the focus point
+	VIEW3D_API float __stdcall View3D_FocusPointSizeGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_FocusPointSizeSet(pr::view3d::Window window, float size);
+
+	// Get/Set the size of the origin point
+	VIEW3D_API float __stdcall View3D_OriginPointSizeGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_OriginPointSizeSet(pr::view3d::Window window, float size);
+
+	// Get/Set the position and size of the selection box
+	VIEW3D_API void __stdcall View3D_SelectionBoxGet(pr::view3d::Window window, pr::view3d::BBox& bbox, pr::view3d::Mat4x4& o2w);
+	VIEW3D_API void __stdcall View3D_SelectionBoxSet(pr::view3d::Window window, pr::view3d::BBox const& bbox, pr::view3d::Mat4x4 const& o2w);
+
+	// Set the selection box to encompass all selected objects
+	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
 
 	// Create/Delete the demo scene in the given window
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
 
+	// Return the example Ldr script as a BSTR
+	VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr();
+
+	// Return the auto complete templates as a BSTR
+	VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr();
+
+	// Return the hierarchy "address" for a position in an ldr script file.
+	VIEW3D_API BSTR __stdcall View3D_ObjectAddressAt(wchar_t const* ldr_script, int64_t position);
+
+	// Parse a transform description using the Ldr script syntax
+	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script);
+
 #if 0
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (pr::view3d::Window window, int key_code);
-	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (pr::view3d::Window window);
-	VIEW3D_API void       __stdcall View3D_DepthBufferEnabledSet    (pr::view3d::Window window, BOOL enabled);
-	VIEW3D_API void       __stdcall View3D_FocusPointSizeSet        (pr::view3d::Window window, float size);
-	VIEW3D_API BOOL       __stdcall View3D_OriginVisibleGet         (pr::view3d::Window window);
-	VIEW3D_API void       __stdcall View3D_OriginVisibleSet         (pr::view3d::Window window, BOOL show);
-	VIEW3D_API void       __stdcall View3D_OriginSizeSet            (pr::view3d::Window window, float size);
-	VIEW3D_API BOOL       __stdcall View3D_SelectionBoxVisibleGet   (pr::view3d::Window window);
-	VIEW3D_API void       __stdcall View3D_SelectionBoxVisibleSet   (pr::view3d::Window window, BOOL visible);
-	VIEW3D_API void       __stdcall View3D_SelectionBoxPosition     (pr::view3d::Window window, View3DBBox const& bbox, View3DM4x4 const& o2w);
-	VIEW3D_API void       __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
-	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
-	VIEW3D_API BSTR       __stdcall View3D_AutoCompleteTemplatesBStr();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (pr::view3d::Window window);
-	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (wchar_t const* ldr_script);
-	VIEW3D_API BSTR       __stdcall View3D_ObjectAddressAt          (wchar_t const* ldr_script, int64_t position);
 	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);
 #endif
 
 	// Tools **********************************
 
-#if 0
-	VIEW3D_API void __stdcall View3D_ObjectManagerShow        (pr::view3d::Window window, BOOL show);
-	VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible       (pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_ShowMeasureTool          (pr::view3d::Window window, BOOL show);
-	VIEW3D_API BOOL __stdcall View3D_AngleToolVisible         (pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_ShowAngleTool            (pr::view3d::Window window, BOOL show);
-#endif
+	// Show/Hide the object manager tool
+	VIEW3D_API BOOL __stdcall View3D_ObjectManagerVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_ObjectManagerVisibleSet(pr::view3d::Window window, BOOL show);
+
+	// Show/Hide the script editor tool
+	VIEW3D_API BOOL __stdcall View3D_ScriptEditorVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_ScriptEditorVisibleSet(pr::view3d::Window window, BOOL show);
+
+	// Show/Hide the measurement tool
+	VIEW3D_API BOOL __stdcall View3D_MeasureToolVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_MeasureToolVisibleSet(pr::view3d::Window window, BOOL show);
+
+	// Show/Hide the angle measurement tool
+	VIEW3D_API BOOL __stdcall View3D_AngleToolVisibleGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_AngleToolVisibleSet(pr::view3d::Window window, BOOL show);
 
 #if 0
 	// Ldr Editor Ctrl

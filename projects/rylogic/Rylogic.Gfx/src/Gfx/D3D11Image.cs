@@ -208,10 +208,10 @@ namespace Rylogic.Gfx
 
 			try
 			{
-				var opts = new View3d.TextureOptions(
+				var opts = View3d.TextureOptions.New(
 					format: View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
 					mips: 1,
-					bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET | View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,
+					//bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET | View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,
 					dbg_name: "D3D11Image RenderTarget FB");
 
 				// Create the Dx9 render target of the required size;
@@ -219,7 +219,7 @@ namespace Rylogic.Gfx
 				FrontBuffer = rt0;
 
 				// Add multi-sampling for the main render target
-				opts.MultiSamp = (uint)MultiSampling;
+				opts.MultiSamp = MultiSampling;
 				opts.DbgName = "D3D11Image RenderTarget BB";
 
 				// Create the Dx11 staging render target

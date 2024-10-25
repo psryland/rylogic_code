@@ -243,6 +243,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_raycast.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pix.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -610,6 +613,21 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\shaders\hlsl_proxy.h">
       <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\pix.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_object_manager.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_script_editor.h">
+      <Filter>src\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

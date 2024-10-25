@@ -124,6 +124,33 @@ namespace pr::rdr12
 		return m_mgr->rdr();
 	}
 
+	// A sort key component for this texture
+	SortKeyId TextureBase::SortId() const
+	{
+		return m_id % SortKey::MaxTextureId;
+	}
+
+	// Get the description of the texture resource
+	ResDesc TextureBase::TexDesc() const
+	{
+		auto desc = m_res->GetDesc();
+		return ResDesc{
+			{desc},
+		};
+	}
+
+	// Resize this texture to 'size'
+	void TextureBase::Resize(uint64_t width, uint32_t height, uint16_t depth_or_array_len)
+	{
+		PR_ASSERT(PR_DBG_RDR, width*height != 0, "Do not resize textures to 0x0");
+		
+		auto tdesc = m_res->GetDesc();
+		tdesc.Width = width;
+		tdesc.Height = height;
+		tdesc.DepthOrArraySize = depth_or_array_len;
+		throw std::runtime_error("Not implemented");
+	}
+
 	// Return the shared handle associated with this texture
 	HANDLE TextureBase::SharedHandle() const
 	{
@@ -132,12 +159,6 @@ namespace pr::rdr12
 		Check(m_res->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
 		Check(res->GetSharedHandle(&handle));
 		return handle;
-	}
-
-	// A sort key component for this texture
-	SortKeyId TextureBase::SortId() const
-	{
-		return m_id % SortKey::MaxTextureId;
 	}
 
 	// Ref counting clean up function

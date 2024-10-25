@@ -29,24 +29,23 @@ namespace Rylogic.Gfx
 				//	Info = new ImageInfo();
 			}
 
-			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
+			/// <summary>Construct a cube map texture from a resource (file, embedded resource, or stock asset)</summary>
 			public CubeMap(string resource)
-				: this(resource, 0, 0, new TextureOptions())
-			{ }
-			public CubeMap(string resource, TextureOptions options)
-				: this(resource, 0, 0, options)
-			{ }
-			public CubeMap(string resource, int width, int height)
-				: this(resource, width, height, new TextureOptions())
-			{ }
-			public CubeMap(string resource, int width, int height, TextureOptions options)
+				: this(resource, new CubeMapOptions())
+			{
+			}
+			public CubeMap(string resource, CubeMapOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_CubeMapCreateFromUri(resource, (uint)width, (uint)height, ref options.Data);
-				if (Handle == HCubeMap.Zero) throw new Exception($"Failed to create cube map texture from {resource}");
+				Handle = View3D_CubeMapCreateFromUri(resource, ref options);
+				if (Handle == HCubeMap.Zero)
+					throw new Exception($"Failed to create cube map texture from {resource}");
+
 				//View3D_TextureGetInfo(Handle, out Info);
-				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
+
+
+			/// <inheritdoc/>
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");

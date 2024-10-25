@@ -60,8 +60,8 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set whether the gizmo is looking for mouse interaction</summary>
 			public bool Enabled
 			{
-				get => View3D_GizmoEnabled(m_handle);
-				set => View3D_GizmoSetEnabled(m_handle, value);
+				get => View3D_GizmoEnabledGet(m_handle);
+				set => View3D_GizmoEnabledSet(m_handle, value);
 			}
 
 			/// <summary>True while manipulation is in progress</summary>
@@ -70,8 +70,8 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the mode of the gizmo between translate, rotate, scale</summary>
 			public EMode Mode
 			{
-				get => View3D_GizmoGetMode(m_handle);
-				set => View3D_GizmoSetMode(m_handle, value);
+				get => View3D_GizmoModeGet(m_handle);
+				set => View3D_GizmoModeSet(m_handle, value);
 			}
 
 			/// <summary>Get/Set the scale of the gizmo</summary>
@@ -84,14 +84,14 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the gizmo object to world transform (scale is allowed)</summary>
 			public m4x4 O2W
 			{
-				get => View3D_GizmoGetO2W(m_handle);
-				set => View3D_GizmoSetO2W(m_handle, ref value);
+				get => View3D_GizmoO2WGet(m_handle);
+				set => View3D_GizmoO2WSet(m_handle, ref value);
 			}
 
 			/// <summary>
 			/// Get the offset transform that represents the difference between the gizmo's
 			/// transform at the start of manipulation and now</summary>
-			public m4x4 Offset => View3D_GizmoGetOffset(m_handle);
+			public m4x4 Offset => View3D_GizmoOffsetGet(m_handle);
 
 			/// <summary>Raised whenever the gizmo is manipulated</summary>
 			public event EventHandler<MovedEventArgs>? Moved;

@@ -2,33 +2,37 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
   <PropertyGroup>
-    <PackageVersion>WinPixEventRuntime.1.0.231030001</PackageVersion>
+    <!-- 
+    <PixPackage>WinPixEventRuntime.1.0.231030001</PixPackage>
+    -->
+    <PixPackage>WinPixEventRuntime.1.0.240308001</PixPackage>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\Include\WinPixEventRuntime;
+        $(MSBuildThisFileDirectory)..\packages\$(PixPackage)\Include\WinPixEventRuntime;
         %(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>
-        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\bin\$(PlatformName);
+        $(MSBuildThisFileDirectory)..\packages\$(PixPackage)\bin\$(PlatformName);
         %(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
       <AdditionalDependencies>
-        WinPixEventRuntime.lib;
+        <!-- WinPixEventRuntime.lib; - Don't use the import library, dynamically load PIX instead -->
         %(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
-  <Target Name="Deploy-WinPixEventRuntime" AfterTargets="Build"
-    Inputs="$(MSBuildThisFileDirectory)../packages/$(PackageVersion)\bin\$(PlatformName)\WinPixEventRuntime.dll"
-    Outputs="$(TargetDir)WinPixEventRuntime.dll"
-    >
-    <Exec Command="py Copy.py $(MSBuildThisFileDirectory)../packages/$(PackageVersion)\bin\$(PlatformName)\WinPixEventRuntime.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\script\"/>
+  <Target Name="Deploy-WinPixEventRuntime"
+    AfterTargets="Build"
+    Inputs="$(MSBuildThisFileDirectory)../packages/$(PixPackage)\bin\$(PlatformName)\WinPixEventRuntime.dll"
+    Outputs="$(TargetDir)WinPixEventRuntime.dll">
+    <Exec Command="py Copy.py $(MSBuildThisFileDirectory)../packages/$(PixPackage)\bin\$(PlatformName)\WinPixEventRuntime.dll $(TargetDir) -OnlyIfNewer"
+      WorkingDirectory="$(SolutionDir)..\script\"/>
   </Target>
 
 </Project>

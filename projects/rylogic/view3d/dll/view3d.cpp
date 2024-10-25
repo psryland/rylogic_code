@@ -2738,7 +2738,7 @@ VIEW3D_API void __stdcall View3D_GizmoDelete(View3DGizmo gizmo)
 	CatchAndReport(View3D_GizmoDelete, ,);
 }
 
-// Attach?Detach callbacks that are called when the gizmo moves
+// Attach/Detach callbacks that are called when the gizmo moves
 VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx, BOOL add)
 {
 	try
