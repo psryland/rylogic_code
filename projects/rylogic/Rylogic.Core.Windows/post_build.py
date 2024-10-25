@@ -8,6 +8,7 @@ import Rylogic as Tools
 
 try:
 	#print(str(sys.argv))
+	sys.argv = ["", "E:/Rylogic/projects/rylogic/Rylogic.Core.Windows/bin/Debug/net8.0-windows/Rylogic.Core.Windows.dll"]
 	Tools.UnitTest(sys.argv[1], ["Rylogic.Core.dll"], True)
 
 except Exception as ex:

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Threading;
-using System.Xml.Linq;
 
 namespace Rylogic.INet
 {
@@ -12,8 +11,10 @@ namespace Rylogic.INet
 		/// <param name="url">The URL of the version xml file</param>
 		/// <param name="callback">A callback called (on success or failure) with the results of the version check</param>
 		/// <param name="proxy">An optional proxy server</param>
-		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy proxy)
+		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy? proxy)
 		{
+			throw new NotImplementedException();
+#if false
 			// Do the version check as a background task
 			void version_check(object? x)
 			{
@@ -79,6 +80,7 @@ namespace Rylogic.INet
 			var async_data = new CheckForUpdateAsyncData();
 			ThreadPool.QueueUserWorkItem(version_check, async_data);
 			return async_data;
+#endif
 		}
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback)
 		{
@@ -157,7 +159,7 @@ namespace Rylogic.INet
 			internal CheckForUpdateResult Result { get; } = new CheckForUpdateResult();
 
 			/// <summary>Any error that occurred during the update check</summary>
-			internal Exception? Error;
+			internal Exception? Error { get; set; }
 		}
 	}
 }

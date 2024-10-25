@@ -9,6 +9,7 @@
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12
 {
@@ -74,7 +75,7 @@ namespace pr::rdr12
 			DebugColour(m_list, pix_colour);
 
 			// The command list is open, so start the pix event
-			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
+			pix::BeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
 
 		CmdList(CmdList&& rhs) = default;
@@ -183,7 +184,7 @@ namespace pr::rdr12
 			{
 				RestoreResourceStateDefaults(*this);
 			}
-			PIXEndEvent(m_list.get());
+			pix::EndEvent(m_list.get());
 			m_list->Close();
 		}
 
@@ -203,7 +204,7 @@ namespace pr::rdr12
 			Check(m_list->Reset(m_cmd_allocator, pipeline_state));
 			m_res_state.Reset();
 
-			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
+			pix::BeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
 	
 	public : // Graphics

@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
 #include "pr/view3d-12/compute/compute_step.h"
@@ -12,7 +13,7 @@
 #include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/utility/root_signature.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
-#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12::compute::spatial_partition
 {
@@ -140,9 +141,9 @@ namespace pr::rdr12::compute::spatial_partition
 			if (count == 0)
 				return;
 			
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
 			DoUpdate(job, count, positions, readback);
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 	private:

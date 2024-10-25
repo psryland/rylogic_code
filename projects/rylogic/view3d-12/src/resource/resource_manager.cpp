@@ -22,6 +22,7 @@
 #include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/update_resource.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12
 {
@@ -107,7 +108,7 @@ namespace pr::rdr12
 		// Close the command list
 		m_gfx_cmd_list.Close();
 
-		PIXBeginEvent(rdr().GfxQueue(), s_cast<uint32_t>(EColours::LightGreen), L"ResourceManager Flush");
+		pix::BeginEvent(rdr().GfxQueue(), s_cast<uint32_t>(EColours::LightGreen), "ResourceManager Flush");
 
 		// Execute the command list
 		rdr().ExecuteGfxCommandLists({ m_gfx_cmd_list });
@@ -125,7 +126,7 @@ namespace pr::rdr12
 		if (flush == EGpuFlush::Block)
 			Wait(sync_point);
 
-		PIXEndEvent(rdr().GfxQueue());
+		pix::EndEvent(rdr().GfxQueue());
 		return sync_point;
 	}
 	void ResourceManager::Wait(uint64_t sync_point) const

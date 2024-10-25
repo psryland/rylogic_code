@@ -31,6 +31,7 @@
 #include "pr/view3d-12/compute/spatial_partition/spatial_partition.h"
 #include "pr/view3d-12/compute/particle_collision/particle_collision.h"
 #include "pr/view3d-12/compute/fluid_simulation/fluid_simulation.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::fluid
 {

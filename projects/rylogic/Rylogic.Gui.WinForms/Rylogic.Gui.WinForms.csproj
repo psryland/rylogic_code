@@ -8,6 +8,7 @@
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
 		<UseWindowsForms>True</UseWindowsForms>
 	</PropertyGroup>
 
@@ -19,9 +20,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>2.0.0</Version>
+		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -50,12 +51,13 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
-		<ProjectReference Include="../Rylogic.Scintilla/Rylogic.Scintilla.csproj" />
-		<ProjectReference Include="../Rylogic.View3d/Rylogic.View3d.csproj" />
+		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="..\Rylogic.Gfx\Rylogic.Gfx.csproj" />
+		<PackageReference Include="System.Resources.Extensions" />
 	</ItemGroup>
 	<ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
-		<PackageReference Include="WindowsBase" Version="4.6.1055" />
+		<PackageReference Include="WindowsBase" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="Rylogic.Gui.WinForms.runtimeconfig.json">

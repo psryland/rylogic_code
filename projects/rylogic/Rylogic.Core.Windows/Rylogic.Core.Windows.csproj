@@ -2,7 +2,7 @@
 	
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net472</TargetFrameworks>
 		<RootNamespace>Rylogic.Core.Windows</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
@@ -21,9 +21,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>2.0.0</Version>
+		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -38,18 +38,11 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
-		<PackageReference Include="System.Drawing.Primitives" Version="4.3.0" />
-		<PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+		<PackageReference Include="System.Drawing.Common" />
+		<PackageReference Include="System.Drawing.Primitives" />
+		<PackageReference Include="System.Reflection.Emit" />
+		<PackageReference Include="Microsoft.CSharp" />
 		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
-	</ItemGroup>
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
-		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-	</ItemGroup>
-	<ItemGroup>
-	  <None Update="Rylogic.Core.Windows.runtimeconfig.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
 	</ItemGroup>
 	
 	<!-- Post Build -->

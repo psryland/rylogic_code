@@ -10,6 +10,7 @@
 #include "pr/view3d-12/compute/compute_step.h"
 #include "pr/view3d-12/compute/spatial_partition/spatial_partition.h"
 #include "pr/view3d-12/compute/particle_collision/particle_collision.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12::compute::fluid
 {
@@ -343,7 +344,7 @@ namespace pr::rdr12::compute::fluid
 			if (count == 0)
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "FluidSim::ReadParticles");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "FluidSim::ReadParticles");
 
 			if (particles)
 			{
@@ -375,7 +376,7 @@ namespace pr::rdr12::compute::fluid
 				job.m_barriers.Commit();
 			}
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Write particles into the particle buffer
@@ -384,7 +385,7 @@ namespace pr::rdr12::compute::fluid
 			if (particles.empty() && dynamics.empty())
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "FluidSim::WriteParticles");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF4988F2, "FluidSim::WriteParticles");
 
 			if (!particles.empty())
 			{
@@ -416,7 +417,7 @@ namespace pr::rdr12::compute::fluid
 				job.m_barriers.Commit();
 			}
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Create a map of some value over the map area
@@ -742,7 +743,7 @@ namespace pr::rdr12::compute::fluid
 		// Apply forces to each particle
 		void ApplyForces(GpuJob& job, float time_step)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF3F75FF, "FluidSim::ApplyForces");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF3F75FF, "FluidSim::ApplyForces");
 
 			auto cb_params = FluidSimCBuf(time_step);
 
@@ -763,13 +764,13 @@ namespace pr::rdr12::compute::fluid
 			job.m_barriers.UAV(m_r_dynamics.get());
 			job.m_barriers.UAV(m_r_output.get());
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Apply probe forces to the particles
 		void ApplyProbe(GpuJob& job, ProbeData const& probe)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF4CFF4F, "FluidSim::ApplyProbe");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF4CFF4F, "FluidSim::ApplyProbe");
 
 			auto cb_probe = ProbeCBuf(probe);
 
@@ -785,13 +786,13 @@ namespace pr::rdr12::compute::fluid
 			job.m_barriers.UAV(m_r_particles.get());
 			job.m_barriers.UAV(m_r_dynamics.get());
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Cull particles that fall out of the world
 		void CullParticles(GpuJob& job)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF993020, "FluidSim::CullParticles");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF993020, "FluidSim::CullParticles");
 
 			auto cb_params = CullCBuf();
 
@@ -822,13 +823,13 @@ namespace pr::rdr12::compute::fluid
 			}
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Apply colours to the particles
 		void ColourParticles(GpuJob& job, ColourData const& colours)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFFB9BFF, "FluidSim::ColourParticles");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFFFB9BFF, "FluidSim::ColourParticles");
 
 			auto cb_colours = ColoursCBuf(colours);
 
@@ -843,13 +844,13 @@ namespace pr::rdr12::compute::fluid
 
 			job.m_barriers.UAV(m_r_particles.get());
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Create a map of some value over the map area
 		void DoGenerateMap(GpuJob& job, Texture2DPtr tex_map, MapData const& map_data, ColourData const& colour_data)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::GenerateMap");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::GenerateMap");
 
 			auto cb_map = MapCBuf(map_data, colour_data);
 
@@ -873,13 +874,13 @@ namespace pr::rdr12::compute::fluid
 
 			job.Run();
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Run the debugging function
 		void DoDebugging(GpuJob& job, float time_step, ProbeData const& probe)
 		{
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::Debugging");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFFF0FF56, "FluidSim::Debugging");
 
 			auto cb_sim = FluidSimCBuf(time_step);
 			auto cb_probe = ProbeCBuf(probe);
@@ -910,7 +911,7 @@ namespace pr::rdr12::compute::fluid
 			}
 			job.m_barriers.Transition(m_r_output.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 	};
 }

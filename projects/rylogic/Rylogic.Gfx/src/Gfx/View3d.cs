@@ -1252,6 +1252,7 @@ namespace Rylogic.Gfx
 						return string.Empty;
 					});
 
+#if false
 					try
 					{
 						// Create a runtime assembly from the embedded code
@@ -1270,6 +1271,8 @@ namespace Rylogic.Gfx
 						errors += "\r\nGenerated Code:\r\n" + src;
 					}
 					return true;
+#endif
+					throw new NotImplementedException();
 				}
 			}
 			catch
@@ -1423,7 +1426,7 @@ $@"//
 //Assembly: System.Xml.Linq.dll
 //Assembly: .\Rylogic.Core.dll
 //Assembly: .\Rylogic.Core.Windows.dll
-//Assembly: .\Rylogic.View3d.dll
+//Assembly: .\Rylogic.Gfx.dll
 using System;
 using System.Drawing;
 using System.IO;

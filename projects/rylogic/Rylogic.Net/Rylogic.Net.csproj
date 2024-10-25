@@ -1,15 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>net8.0;net472</TargetFrameworks>
 		<RootNamespace>Rylogic</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
-		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 
 	<!-- Assembly properties -->
@@ -20,9 +19,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>2.0.0</Version>
+		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -37,27 +36,17 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="System.Net.Http" Version="4.3.4" />
-		<PackageReference Include="System.Net.WebSockets.Client" Version="4.3.2" />
+		<PackageReference Include="Newtonsoft.Json" />
+		<PackageReference Include="System.Net.Http" />
+		<PackageReference Include="System.Net.Security" />
+		<PackageReference Include="System.Net.WebSockets.Client" />
 		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <None Update="Rylogic.Net.runtimeconfig.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
+		<None Update="Rylogic.Net.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
-	<!-- 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
-		--><!-- Using 3.2.1 because that the latest version used in powershell, needed to run the unit tests --><!--
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.2.1" />
-	</ItemGroup>
-	-->
-	<!-- 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.5.0" />
-	</ItemGroup>
-	-->
 
 	<!-- Post build -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">

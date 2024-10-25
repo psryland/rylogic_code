@@ -9,13 +9,14 @@
 
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/shaders/shader.h"
-#include "pr/view3d-12/utility/root_signature.h"
-#include "pr/view3d-12/utility/barrier_batch.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
 #include "pr/view3d-12/compute/compute_step.h"
-#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/utility/root_signature.h"
+#include "pr/view3d-12/utility/barrier_batch.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12::compute::gpu_radix_sort
 {
@@ -372,7 +373,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 		void Sort(CmdList& cmd_list) const
 		{
 			const auto thread_blocks = s_cast<uint32_t>(DispatchCount(s_cast<int>(m_size), m_tuning.partition_size));
-			PIXBeginEvent(cmd_list.get(), 0xFF90aa3f, "Gpu Radix Sort");
+			pix::BeginEvent(cmd_list.get(), 0xFF90aa3f, "Gpu Radix Sort");
 
 			// Reset the histogram
 			{
@@ -470,7 +471,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 				j = 1 - j;
 			}
 
-			PIXEndEvent(cmd_list.get());
+			pix::EndEvent(cmd_list.get());
 		}
 
 		// Initialise the payload buffer to incrementing indices.

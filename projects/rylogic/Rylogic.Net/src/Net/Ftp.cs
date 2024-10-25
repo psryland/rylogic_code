@@ -47,7 +47,10 @@ namespace Rylogic.Net
 		/// <summary>An event that is called to trace the behaviour of the ftp connection. Mainly for debugging</summary>
 		public event TraceEvent? TraceMessage;
 		public delegate void TraceEvent(string message, params object[] args);
-		private void Trace(Rylogic.Utility.Lazy<string> message, params object[] args) { if (TraceMessage != null) TraceMessage("[FTPConnection] " + message, args); }
+		private void Trace(Utility.Lazy<string> message, params object[] args)
+		{
+			TraceMessage?.Invoke("[FTPConnection] " + message, args);
+		}
 
 		/// <summary>The stream over which ftp commands are sent</summary>
 		private Stream? m_cmd;
@@ -526,7 +529,7 @@ namespace Rylogic.Net
 			public bool UseSSL = true;
 
 			/// <summary>The SSL protocols to support</summary>
-			public SslProtocols SSLProtocols = SslProtocols.Tls;
+			public SslProtocols SSLProtocols = SslProtocols.None;
 		}
 
 		/// <summary>The response message that acknowledges a command</summary>
@@ -551,9 +554,12 @@ namespace Rylogic.Net
 	public static class FTPUtil
 	{
 		/// <summary>Returns a string containing info about the certificate</summary>
-		public static string DumpInfo(this X509Certificate cert, bool verbose)
+		public static string DumpInfo(this X509Certificate? cert, bool verbose)
 		{
-			StringBuilder s = new StringBuilder().AppendFormat(
+			if (cert is null)
+				return "No certificate";
+
+			var s = new StringBuilder().AppendFormat(
 				"Certficate Information for: {0}\n"+
 				"Certificate Format: {1}\n"+
 				"Issuer Name: {2}\n"+

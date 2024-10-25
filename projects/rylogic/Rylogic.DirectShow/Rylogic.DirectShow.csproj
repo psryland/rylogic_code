@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net472</TargetFrameworks>
 		<RootNamespace>Rylogic.DirectShow</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -20,11 +20,11 @@
 		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>2.0.0</Version>
+		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
-	
+
 	<!-- Build Options -->
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE</DefineConstants>
@@ -34,17 +34,18 @@
 		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
-	
+
 	<!-- Dependencies -->
 	<ItemGroup>
-	  <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Drawing.Common" />
+		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <None Update="Rylogic.DirectShow.runtimeconfig.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
+		<None Update="Rylogic.DirectShow.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
-	
+
 	<!-- Post Build -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />

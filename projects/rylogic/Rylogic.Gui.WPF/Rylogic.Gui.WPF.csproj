@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net472</TargetFrameworks>
 		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
@@ -20,9 +20,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>2.0.0</Version>
+		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -54,8 +54,8 @@
 	<ItemGroup>
 		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
 		<ProjectReference Include="../Rylogic.Core.Windows/Rylogic.Core.Windows.csproj" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.2.0" />
-		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" />
+		<PackageReference Include="Microsoft.CSharp" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="Rylogic.Gui.WPF.runtimeconfig.json">

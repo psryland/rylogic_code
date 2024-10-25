@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata>
-		<id>Rylogic.View3d</id>
-		<version>1.1.0</version>
+		<id>Rylogic.Gfx</id>
+		<version>2.0.0</version>
 		<authors>Rylogic</authors>
 		<owners>Rylogic</owners>
 		<copyright>Copyright (c) Rylogic 2007</copyright>
@@ -16,15 +16,15 @@
 		</releaseNotes>
 		<tags>Rylogic View3d DirectX</tags>
 		<dependencies>
-			<dependency id="Rylogic.Core" version="1.1.0"/>
-			<dependency id="Rylogic.Core.Windows" version="1.1.0"/>
-			<dependency id="Rylogic.Gui.WPF" version="1.1.0"/>
+			<dependency id="Rylogic.Core" version="2.0.0"/>
+			<dependency id="Rylogic.Core.Windows" version="2.0.0"/>
+			<dependency id="Rylogic.Gui.WPF" version="2.0.0"/>
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="bin\release\net6.0-windows\Rylogic.View3d.dll" target="lib\net6.0-windows\Rylogic.View3d.dll" />
-		<file src="bin\release\net472\Rylogic.View3d.dll" target="lib\net472\Rylogic.View3d.dll" />
-		<file src="Rylogic.View3d.targets" target="build\Rylogic.View3d.targets" />
+		<file src="bin\Release\net8.0-windows\Rylogic.Gfx.dll" target="lib\net8.0-windows\Rylogic.Gfx.dll" />
+		<file src="bin\Release\net472\Rylogic.Gfx.dll" target="lib\net472\Rylogic.Gfx.dll" />
+		<file src="Rylogic.Gfx.targets" target="build\Rylogic.Gfx.targets" />
 		<file src="..\..\..\lib\x64\release\view3d.dll" target="build\x64\view3d.dll" />
 		<file src="..\..\..\lib\x86\release\view3d.dll" target="build\x86\view3d.dll" />
 		<file src="..\..\..\include\pr\license.txt" target="license.txt" />
