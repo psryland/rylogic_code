@@ -47,21 +47,21 @@ namespace pr::rdr12
 	// Texture base class
 	struct TextureBase :RefCounted<TextureBase>
 	{
-		ResourceManager*       m_mgr;    // The manager that created this texture
+		Renderer*              m_rdr;    // The renderer that owns this texture
 		D3DPtr<ID3D12Resource> m_res;    // The texture resource (possibly shared with other Texture instances)
 		Descriptor             m_srv;    // Shader resource view (if available)
 		Descriptor             m_uav;    // Unordered access view (if available)
 		Descriptor             m_rtv;    // Render target view (if available)
 		Descriptor             m_dsv;    // Depth stencil view (if available)
 		RdrId                  m_id;     // Id for this texture in the resource manager
-		RdrId                  m_uri;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
+		RdrId                  m_uri;    // An id identifying the source this texture was created from (needed when deleting the last ref to a DX tex)
 		iv3                    m_dim;    // The dimensions of the texture
 		ETextureFlag           m_tflags; // Flags for boolean properties of the texture
 		string32               m_name;   // Human readable id for the texture
 
-		TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
-		TextureBase(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc);
-		TextureBase(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc);
+		TextureBase(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc);
+		TextureBase(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc);
+		TextureBase(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc);
 		TextureBase(TextureBase&&) = delete;
 		TextureBase(TextureBase const&) = delete;
 		TextureBase& operator =(TextureBase&&) = delete;

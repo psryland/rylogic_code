@@ -2,105 +2,63 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "pr/view3d-12/resource/resource_manager.h"
-#include "pr/view3d-12/resource/image.h"
-#include "pr/view3d-12/resource/resource_state.h"
-#include "pr/view3d-12/resource/stock_resources.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/model_desc.h"
+#include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
 #include "pr/view3d-12/texture/texture_loader.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/sampler/sampler.h"
-#include "pr/view3d-12/model/vertex_layout.h"
-#include "pr/view3d-12/model/model_desc.h"
-#include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/model/model.h"
-#include "pr/view3d-12/utility/barrier_batch.h"
-#include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/utility/map_resource.h"
 #include "pr/view3d-12/utility/update_resource.h"
-#include "pr/view3d-12/utility/utility.h"
-#include "pr/view3d-12/utility/pix.h"
+//#include "pr/view3d-12/resource/image.h"
+//#include "pr/view3d-12/resource/resource_state.h"
+//#include "pr/view3d-12/utility/barrier_batch.h"
+//#include "pr/view3d-12/utility/wrappers.h"
+//#include "pr/view3d-12/utility/map_resource.h"
+//#include "pr/view3d-12/utility/utility.h"
+//#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12
 {
-	constexpr int HeapCapacityView = 12;
-
-	ResourceManager::ResourceManager(Renderer& rdr)
-		: m_mem_tracker()
-		, m_rdr(rdr)
+	ResourceFactory::ResourceFactory(Renderer& rdr)
+		: m_rdr(rdr)
 		, m_gsync(rdr.D3DDevice())
 		, m_keep_alive(m_gsync)
 		, m_gfx_cmd_alloc_pool(m_gsync)
-		, m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, "ResourceManager", EColours::LightGreen)
-		, m_heap_view(HeapCapacityView, m_gsync)
-		, m_heap_sampler(HeapCapacityView, m_gsync)
-		, m_lookup_res()
-		, m_lookup_tex()
-		, m_lookup_sam()
+		, m_gfx_cmd_list(rdr.D3DDevice(), m_gfx_cmd_alloc_pool.Get(), nullptr, "ResourceFactory", EColours::LightGreen)
 		, m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
-		, m_descriptor_store(rdr.D3DDevice())
 		, m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
-		, m_stock_textures()
-		, m_gdiplus()
-		, m_eh_resize()
-		, m_gdi_dc_ref_count()
 		, m_flush_required()
 	{
-		// Setup notification of sync points
-		m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
-		
-		// Create the stock textures
-		m_stock_textures.resize(EStockTexture_::NumberOf);
-		for (auto id : EStockTexture_::Members())
-		{
-			if (id == EStockTexture::Invalid) continue;
-			m_stock_textures[s_cast<int>(id)] = CreateTexture(id);
-		}
-
-		// Create the stock samplers
-		m_stock_samplers.resize(EStockSampler_::NumberOf);
-		for (auto id : EStockSampler_::Members())
-		{
-			if (id == EStockSampler::Invalid) continue;
-			m_stock_samplers[s_cast<int>(id)] = GetSampler(id);
-		}
-
+		//// Setup notification of sync points
+		//m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
+	}
+	ResourceFactory::~ResourceFactory()
+	{
 		// Wait till stock resources are created
 		FlushToGpu(EGpuFlush::Block);
 
-		#if 0 // todo
-		// Detect outstanding references to GDI device contexts
-		m_eh_resize = rdr().BackBufferSizeChanged += [this](Window&, BackBufferSizeChangedEventArgs const&)
-		{
-			assert("Outstanding DC references during resize" && m_gdi_dc_ref_count == 0);
-		};
-		#endif
-	}
-	ResourceManager::~ResourceManager()
-	{
-		// We're shutting down, keep alive be damned.
-		// Need to clear this before destructing the texture lookup map.
-		m_keep_alive.m_objects.clear();
-
-		// Stop polling 'm_gsync'
-		m_rdr.RemovePollCB({ &GpuSync::Poll, &m_gsync });
+		//// Stop polling 'm_gsync'
+		//m_rdr.RemovePollCB({ &GpuSync::Poll, &m_gsync });
 	}
 
 	// Renderer access
-	ID3D12Device4* ResourceManager::d3d() const
+	ID3D12Device4* ResourceFactory::d3d() const
 	{
 		return rdr().d3d();
 	}
-	Renderer& ResourceManager::rdr() const
+	Renderer& ResourceFactory::rdr() const
 	{
 		return m_rdr;
 	}
 
 	// Flush creation commands to the GPU. Returns the sync point for when they've been executed
-	uint64_t ResourceManager::FlushToGpu(EGpuFlush flush)
+	uint64_t ResourceFactory::FlushToGpu(EGpuFlush flush)
 	{
 		if (!m_flush_required || flush == EGpuFlush::DontFlush)
 			return m_gsync.LastAddedSyncPoint();
@@ -129,13 +87,13 @@ namespace pr::rdr12
 		pix::EndEvent(rdr().GfxQueue());
 		return sync_point;
 	}
-	void ResourceManager::Wait(uint64_t sync_point) const
+	void ResourceFactory::Wait(uint64_t sync_point) const
 	{
 		m_gsync.Wait(sync_point);
 	}
 
 	// Create and initialise a resource
-	D3DPtr<ID3D12Resource> ResourceManager::CreateResource(ResDesc const& desc, char const* name)
+	D3DPtr<ID3D12Resource> ResourceFactory::CreateResource(ResDesc const& desc, char const* name)
 	{
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
@@ -189,7 +147,7 @@ namespace pr::rdr12
 	}
 
 	// Create a model.
-	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc, D3DPtr<ID3D12Resource> vb, D3DPtr<ID3D12Resource> ib)
+	ModelPtr ResourceFactory::CreateModel(ModelDesc const& mdesc, D3DPtr<ID3D12Resource> vb, D3DPtr<ID3D12Resource> ib)
 	{
 		if (mdesc.m_vb.Width == 0)
 			throw std::runtime_error("Attempt to create 0-length model vertex buffer");
@@ -205,15 +163,15 @@ namespace pr::rdr12
 		SizeAndAlign16 istride(mdesc.m_ib.ElemStride, mdesc.m_ib.DataAlignment);
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(*this, s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), vstride, istride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
-		assert(m_mem_tracker.add(ptr.m_ptr));
+		ModelPtr ptr(rdr12::New<Model>(rdr(), s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), vstride, istride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		assert(m_rdr.mem_tracker().add(ptr.m_ptr));
 		return ptr;
 	}
-	ModelPtr ResourceManager::CreateModel(ModelDesc const& mdesc)
+	ModelPtr ResourceFactory::CreateModel(ModelDesc const& mdesc)
 	{
 		return CreateModel(mdesc, nullptr, nullptr);
 	}
-	ModelPtr ResourceManager::CreateModel(EStockModel id)
+	ModelPtr ResourceFactory::CreateModel(EStockModel id)
 	{
 		switch (id)
 		{
@@ -241,7 +199,7 @@ namespace pr::rdr12
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-				ptr->CreateNugget(nug);
+				ptr->CreateNugget(*this, nug);
 
 				return ptr;
 			}
@@ -266,7 +224,7 @@ namespace pr::rdr12
 				auto ptr = CreateModel(mdesc);
 
 				NuggetDesc nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
-				ptr->CreateNugget(nug);
+				ptr->CreateNugget(*this, nug);
 				return ptr;
 			}
 			case EStockModel::BBoxModel:
@@ -297,7 +255,7 @@ namespace pr::rdr12
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-				ptr->CreateNugget(nug);
+				ptr->CreateNugget(*this, nug);
 
 				return ptr;
 			}
@@ -368,7 +326,7 @@ namespace pr::rdr12
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert);
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::ShadowCastExclude, true);
-				ptr->CreateNugget(nug);
+				ptr->CreateNugget(*this, nug);
 
 				return ptr;
 			}
@@ -379,12 +337,17 @@ namespace pr::rdr12
 		}
 	}
 
-	// Create a new texture instance.
-	Texture2DPtr ResourceManager::CreateTexture2D(TextureDesc const& desc)
+	// Create a new nugget
+	Nugget* ResourceFactory::CreateNugget(NuggetDesc const& ndata, Model* model)
 	{
-		// Check whether 'id' already exists, if so, throw. Users should use FindTexture first.
-		if (desc.m_id != AutoId && m_lookup_tex.find(desc.m_id) != end(m_lookup_tex))
-			throw std::runtime_error(FmtS("Texture Id '%d' is already in use", desc.m_id));
+		auto ptr = rdr12::New<Nugget>(ndata, model);
+		assert(rdr().mem_tracker().add(ptr));
+		return ptr;
+	}
+
+	// Create a new texture instance.
+	Texture2DPtr ResourceFactory::CreateTexture2D(TextureDesc const& desc)
+	{
 		if (desc.m_tdesc.DepthOrArraySize != 1)
 			throw std::runtime_error("Expected a 2D texture");
 
@@ -393,17 +356,16 @@ namespace pr::rdr12
 		// If a uri is given, see if the DX resource already exists
 		if (desc.m_uri != 0)
 		{
-			auto iter = m_lookup_res.find(desc.m_uri);
-			if (iter == end(m_lookup_res))
+			ResourceStore::Access store(rdr());
+			res = store.FindRes(desc.m_uri);
+			if (res == nullptr)
 			{
 				// If not, create the resource and add it to the lookup
 				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
-				AddLookup(m_lookup_res, desc.m_uri, res.get());
-				iter = m_lookup_res.find(desc.m_uri);
+				store.Add(desc.m_uri, res.get());
 			}
-			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
 		// Otherwise, just create the texture
@@ -413,20 +375,21 @@ namespace pr::rdr12
 		}
 
 		// Allocate a new texture instance
-		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
-		assert(m_mem_tracker.add(inst.get()));
+		Texture2DPtr inst(rdr12::New<Texture2D>(rdr(), res.get(), desc), true);
+		assert(rdr().mem_tracker().add(inst.get()));
 		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
-		// Add the texture instance pointer (not ref counted) to the lookup table.
-		// The caller owns the texture, when released it will be removed from this lookup.
-		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return std::move(inst);
+		// Add the texture instance pointer (not ref counted) to the store.
+		// The caller owns the texture, when released it will be removed automatically.
+		{
+			ResourceStore::Access store(rdr());
+			store.Add(inst.get());
+		}
+
+		return inst;
 	}
-	Texture2DPtr ResourceManager::CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc_)
+	Texture2DPtr ResourceFactory::CreateTexture2D(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
-		// Check whether 'id' already exists, if so, throw.
-		if (desc_.m_id != AutoId && m_lookup_tex.find(desc_.m_id) != end(m_lookup_tex))
-			throw std::runtime_error(pr::FmtS("Texture Id '%d' already exists, use FindTexture", desc_.m_id));
 		if (resource_path.empty())
 			throw std::runtime_error("A resource path must be given");
 
@@ -447,7 +410,7 @@ namespace pr::rdr12
 			return CreateTexture(*stock);
 		}
 
-		// Create a texture from embedded resource
+		// Create a texture from embedded resource ("@<module>:<res_type>:<res_name>" means embedded resource)
 		else if (*resource_path.c_str() == '@')
 		{
 			auto uri = resource_path.wstring();
@@ -457,11 +420,13 @@ namespace pr::rdr12
 				desc.m_name = To<string32>(str::FindLastOf(uri.c_str(), L":"));
 
 			// Look for an existing Dx12 resource corresponding to the uri
-			auto iter = m_lookup_res.find(desc.m_uri);
-			if (iter == end(m_lookup_res))
+			ResourceStore::Access store(rdr());
+			res = store.FindRes(desc.m_uri);
+			if (res == nullptr)
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
-				HMODULE hmodule; wstring32 res_type, res_name;
+				HMODULE hmodule;
+				wstring32 res_type, res_name;
 				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
 
 				// Get the embedded resource
@@ -477,10 +442,8 @@ namespace pr::rdr12
 				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
-				AddLookup(m_lookup_res, desc.m_uri, res.get());
-				iter = m_lookup_res.find(desc.m_uri);
+				store.Add(desc.m_uri, res.get());
 			}
-			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
 		// Otherwise, create from a file on disk
@@ -495,19 +458,13 @@ namespace pr::rdr12
 				desc.m_name = To<string32>(filepath.filename().c_str());
 
 			// Look for an existing DX texture corresponding to the filepath
-			auto iter = m_lookup_res.find(desc.m_uri);
-			if (iter == end(m_lookup_res))
+			ResourceStore::Access store(rdr());
+			res = store.FindRes(desc.m_uri);
+			if (res == nullptr)
 			{
 				// If the texture filepath doesn't exist, use the resolve event
 				if (!exists(filepath))
-				{
-					auto args = ResolvePathArgs{filepath, false};
-					ResolveFilepath(*this, args);
-					if (!args.handled || !exists(args.filepath))
-						throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", filepath.string().c_str()));
-
-					filepath = std::move(args.filepath);
-				}
+					filepath = rdr().ResolvePath(filepath.string());
 
 				// Load the texture from disk
 				auto [images, tdesc] = LoadImageData(filepath, 1, true, 0, &rdr().Features());
@@ -518,32 +475,31 @@ namespace pr::rdr12
 				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
-				AddLookup(m_lookup_res, desc.m_uri, res.get());
-				iter = m_lookup_res.find(desc.m_uri);
+				store.Add(desc.m_uri, res.get());
 			}
-			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 	
 		// Allocate a new texture instance
-		Texture2DPtr inst(rdr12::New<Texture2D>(*this, res.get(), desc), true);
-		assert(m_mem_tracker.add(inst.get()));
+		Texture2DPtr inst(rdr12::New<Texture2D>(rdr(), res.get(), desc), true);
+		assert(rdr().mem_tracker().add(inst.get()));
 		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
-		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return std::move(inst);
+		{
+			ResourceStore::Access store(rdr());
+			store.Add(inst.get());
+		}
+
+		return inst;
 	}
-	TextureCubePtr ResourceManager::CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc_)
+	TextureCubePtr ResourceFactory::CreateTextureCube(std::filesystem::path const& resource_path, TextureDesc const& desc_)
 	{
 		// Notes:
 		//  - A cube map is an array of 6 2D textures.
 		//  - DDS image files contain all six faces in the single file. Other image types need to be loaded separately.
 		//  - 'resource_path' should contain '??' where the first '?' is the sign (+,-) and the second '?' is the axis (x,y,z)
 
-		// Check whether 'id' already exists, if so, throw.
-		if (desc_.m_id != AutoId && m_lookup_tex.find(desc_.m_id) != end(m_lookup_tex))
-			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", desc_.m_id));
 		if (resource_path.empty())
 			throw std::runtime_error("Resource path must be given");
 		
@@ -551,7 +507,7 @@ namespace pr::rdr12
 		D3DPtr<ID3D12Resource> res;
 		TextureDesc desc = desc_;
 
-		// Create a texture from embedded resources
+		// Create a texture from embedded resources ("@<module>:<res_type>:<res_name>")
 		if (resource_path.c_str()[0] == '@')
 		{
 			desc.m_uri = MakeId(resource_path.c_str());
@@ -559,11 +515,13 @@ namespace pr::rdr12
 				desc.m_name = To<string32>(str::FindLastOf(resource_path.c_str(), ":"));
 
 			// Look for an existing Dx12 resource corresponding to the uri
-			auto iter = m_lookup_res.find(desc.m_uri);
-			if (iter == end(m_lookup_res))
+			ResourceStore::Access store(rdr());
+			res = store.FindRes(desc.m_uri);
+			if (res == nullptr)
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
-				HMODULE hmodule; wstring32 res_type, res_name;
+				HMODULE hmodule;
+				wstring32 res_type, res_name;
 				ParseEmbeddedResourceUri(resource_path.wstring(), hmodule, res_type, res_name);
 
 				// The faces of the cube
@@ -597,10 +555,8 @@ namespace pr::rdr12
 				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
-				AddLookup(m_lookup_res, desc.m_uri, res.get());
-				iter = m_lookup_res.find(desc.m_uri);
+				store.Add(desc.m_uri, res.get());
 			}
-			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
 		// Otherwise, create from a file (or files) on disk
@@ -615,8 +571,9 @@ namespace pr::rdr12
 				desc.m_name = To<string32>(filepath.filename().c_str());
 
 			// Look for an existing DX texture corresponding to the filepath
-			auto iter = m_lookup_res.find(desc.m_uri);
-			if (iter == end(m_lookup_res))
+			ResourceStore::Access store(rdr());
+			res = store.FindRes(desc.m_uri);
+			if (res == nullptr)
 			{
 				auto res_name = filepath.string();
 
@@ -632,13 +589,13 @@ namespace pr::rdr12
 					{
 						res_name[idx + 0] = face[0];
 						res_name[idx + 1] = face[1];
-						source_images.push_back(ResolvePath(res_name));
+						source_images.push_back(rdr().ResolvePath(res_name));
 					}
 				}
 				else
 				{
 					// Otherwise, the filename is a single file (expect DDS file containing all six faces)
-					source_images.push_back(ResolvePath(res_name));
+					source_images.push_back(rdr().ResolvePath(res_name));
 				}
 
 				// Load the texture from disk (supports '??' in the filepath)
@@ -651,23 +608,25 @@ namespace pr::rdr12
 				res = CreateResource(desc.m_tdesc, desc.m_name.c_str());
 
 				// Record the uri for reuse
-				AddLookup(m_lookup_res, desc.m_uri, res.get());
-				iter = m_lookup_res.find(desc.m_uri);
+				store.Add(desc.m_uri, res.get());
 			}
-			res = D3DPtr<ID3D12Resource>(iter->second, true);
 		}
 
 		// Allocate a new texture instance
-		TextureCubePtr inst(rdr12::New<TextureCube>(*this, res.get(), desc), true);
-		assert(m_mem_tracker.add(inst.get()));
+		TextureCubePtr inst(rdr12::New<TextureCube>(rdr(), res.get(), desc), true);
+		assert(rdr().mem_tracker().add(inst.get()));
 		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add a pointer (not ref counted) to the texture instance to the lookup table.
 		// The caller owns the texture, when released it will be removed from this lookup.
-		AddLookup(m_lookup_tex, inst->m_id, inst.get());
-		return std::move(inst);
+		{
+			ResourceStore::Access store(rdr());
+			store.Add(inst.get());
+		}
+
+		return inst;
 	}
-	Texture2DPtr ResourceManager::CreateTexture(EStockTexture id)
+	Texture2DPtr ResourceFactory::CreateTexture(EStockTexture id)
 	{
 		// Note:
 		//  - Don't make "auto tdesc" into "auto& tdesc" inspite of the lint warning.
@@ -916,31 +875,36 @@ namespace pr::rdr12
 			}
 		}
 	}
-
+	
 	// Get or Create a new sampler instance.
-	SamplerPtr ResourceManager::GetSampler(SamplerDesc const& desc)
+	SamplerPtr ResourceFactory::GetSampler(SamplerDesc const& desc)
 	{
 		// Check whether 'id' already exists, if so, return it.
 		// There is no per-instance data in samplers, so they can be shared.
 		// So really 'CreateSampler' isn't quite right, it's more like 'GetOrCreateSampler'.
 		if (desc.m_id != AutoId)
 		{
-			auto iter = m_lookup_sam.find(desc.m_id);
-			if (iter != end(m_lookup_sam))
-				return SamplerPtr(iter->second, true);
+			ResourceStore::Access store(rdr());
+			auto res = store.FindSampler(desc.m_id);
+			if (res != nullptr)
+				return res;
 		}
 
 		// Allocate a new sampler instance
-		SamplerPtr inst(rdr12::New<Sampler>(*this, desc), true);
-		assert(m_mem_tracker.add(inst.get()));
+		SamplerPtr inst(rdr12::New<Sampler>(rdr(), desc), true);
+		assert(rdr().mem_tracker().add(inst.get()));
 		m_keep_alive.Add(inst, m_gsync.NextSyncPoint());
 
 		// Add the sampler instance pointer (not ref counted) to the lookup table.
 		// The caller owns the sampler, when released it will be removed from this lookup.
-		AddLookup(m_lookup_sam, inst->m_id, inst.get());
-		return std::move(inst);
+		{
+			ResourceStore::Access store(rdr());
+			store.Add(inst.get());
+		}
+
+		return inst;
 	}
-	SamplerPtr ResourceManager::GetSampler(EStockSampler id)
+	SamplerPtr ResourceFactory::GetSampler(EStockSampler id)
 	{
 		switch (id)
 		{
@@ -980,120 +944,44 @@ namespace pr::rdr12
 			}
 		}
 	}
-
-	// Stock resources
-	Texture2DPtr ResourceManager::StockTexture(EStockTexture id) const
-	{
-		return m_stock_textures[s_cast<int>(id)];
-	}
-	SamplerPtr ResourceManager::StockSampler(EStockSampler id) const
-	{
-		return m_stock_samplers[s_cast<int>(id)];
-	}
-
-	// Create a new nugget
-	Nugget* ResourceManager::CreateNugget(NuggetDesc const& ndata, Model* model)
-	{
-		auto ptr = rdr12::New<Nugget>(ndata, model);
-		assert(m_mem_tracker.add(ptr));
-		return ptr;
-	}
-
+	
 	// Create a texture that references a shared resource
-	Texture2DPtr ResourceManager::OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc)
+	Texture2DPtr ResourceFactory::OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc)
 	{
 		// Check whether 'id' already exists, if so, throw.
-		if (desc.m_id != AutoId && m_lookup_tex.find(desc.m_id) != std::end(m_lookup_tex))
-			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", desc.m_id));
 		if (desc.m_tdesc.DepthOrArraySize != 1)
 			throw std::runtime_error("Expected a 2D texture");
 
-		Texture2DPtr inst(rdr12::New<Texture2D>(*this, shared_handle, desc), true);
-		assert(m_mem_tracker.add(inst.get()));
+		Texture2DPtr inst(rdr12::New<Texture2D>(rdr(), shared_handle, desc), true);
+		assert(rdr().mem_tracker().add(inst.get()));
 
 		// Add the texture instance to the lookup table
-		AddLookup(m_lookup_tex, inst->m_id, inst.get());
+		{
+			ResourceStore::Access store(rdr());
+			store.Add(inst.get());
+		}
+
 		return inst;
 	}
 
-	// Use the 'ResolveFilepath' event to resolve a filepath
-	std::filesystem::path ResourceManager::ResolvePath(std::string_view path) const
+#if 0
+	ResourceManager::ResourceManager(Renderer& rdr)
+		: m_mem_tracker()
+		, m_eh_resize()
+		, m_gdi_dc_ref_count()
 	{
-		auto args = ResolvePathArgs{ .filepath = path, .handled = false };
-		if (!std::filesystem::exists(args.filepath))
+		
+
+
+		#if 0 // todo
+		// Detect outstanding references to GDI device contexts
+		m_eh_resize = rdr().BackBufferSizeChanged += [this](Window&, BackBufferSizeChangedEventArgs const&)
 		{
-			// If the texture filepath doesn't exist, use the resolve event
-			ResolveFilepath(*this, args);
-			if (!args.handled || !std::filesystem::exists(args.filepath))
-				throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", args.filepath.c_str()));
-		}
-		return std::move(args.filepath);
+			assert("Outstanding DC references during resize" && m_gdi_dc_ref_count == 0);
+		};
+		#endif
 	}
 
-	// Return a model to the allocator
-	void ResourceManager::Delete(Model* model)
-	{
-		if (model == nullptr)
-			return;
 
-		// Notify model deleted
-		ModelDeleted(*model);
-
-		assert(m_mem_tracker.remove(model));
-		rdr12::Delete<Model>(model);
-	}
-	
-	// Return a render nugget to the allocator
-	void ResourceManager::Delete(Nugget* nugget)
-	{
-		if (nugget == nullptr)
-			return;
-
-		assert(m_mem_tracker.remove(nugget));
-		rdr12::Delete<Nugget>(nugget);
-	}
-
-	// Return a texture to the allocator.
-	void ResourceManager::Delete(TextureBase* tex)
-	{
-		if (tex == nullptr)
-			return;
-
-		// Find 'tex' in the map of RdrIds to texture instances
-		// We'll remove this, but first use it as a non-const reference
-		auto iter = m_lookup_tex.find(tex->m_id);
-		assert("Texture not found" && iter != end(m_lookup_tex));
-
-		// If the DX texture will be released when we clean up this texture
-		// then check whether it is in the 'fname' lookup table and remove it if it is.
-		if (tex->m_uri != 0 && tex->m_res.RefCount() == 1)
-		{
-			// Remove the Dx resource from our lookup
-			auto jter = m_lookup_res.find(tex->m_uri);
-			if (jter != end(m_lookup_res))
-				m_lookup_res.erase(jter);
-		}
-
-		// Delete the texture and remove the entry from the RdrId lookup map
-		assert(m_mem_tracker.remove(iter->second));
-		rdr12::Delete<TextureBase>(iter->second);
-		m_lookup_tex.erase(iter);
-	}
-
-	// Return a sampler to the allocator.
-	void ResourceManager::Delete(Sampler* sam)
-	{
-		if (sam == nullptr)
-			return;
-
-		// Find 'sam' in the map of RdrIds to sampler instances
-		// We'll remove this, but first use it as a non-const reference
-		auto iter = m_lookup_sam.find(sam->m_id);
-		assert("Sampler not found" && iter != end(m_lookup_sam));
-
-		// Delete the texture and remove the entry from the RdrId lookup map
-		assert(m_mem_tracker.remove(iter->second));
-		rdr12::Delete<Sampler>(iter->second);
-		m_lookup_sam.erase(iter);
-	}
+#endif
 }

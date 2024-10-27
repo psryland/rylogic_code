@@ -87,7 +87,6 @@ namespace pr::rdr12
 
 		// Render access
 		Renderer& rdr() const;
-		ResourceManager& res() const;
 
 		// Raised whenever the gizmo is manipulated
 		MultiCast<GizmoMovedCB> Manipulated;

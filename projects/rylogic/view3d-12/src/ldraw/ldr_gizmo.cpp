@@ -5,7 +5,7 @@
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/scene/scene.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/nugget.h"
@@ -677,10 +677,6 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
-	ResourceManager& LdrGizmo::res() const
-	{
-		return rdr().res();
-	}
 
 	// Get/Set the mode the gizmo is in
 	bool LdrGizmo::Enabled() const
@@ -710,6 +706,7 @@ namespace pr::rdr12
 		if (m_mode == mode) return;
 		m_mode = mode;
 
+		ResourceFactory factory(rdr());
 		auto& data = GizmoModelData[int(mode)];
 
 		// Create the model
@@ -717,23 +714,23 @@ namespace pr::rdr12
 			ResDesc::VBuf<Vert>(data.vcount, data.vdata),
 			ResDesc::IBuf<uint16_t>(data.icount, data.idata),
 			*data.bbox, data.name);
-		m_gfx.m_model = res().CreateModel(mdesc);
+		m_gfx.m_model = factory.CreateModel(mdesc);
 
 		// Create render nuggets for the model.
 		// We render the gizmo in multiple passes because we
 		// need it to draw "through" other objects in the scene.
 		{
 			// On the first pass, draw after all opaques with inverted Z test
-			m_gfx.m_model->CreateNugget(
+			m_gfx.m_model->CreateNugget(factory,
 				NuggetDesc(ETopo::TriList, Vert::GeomMask)
 				.sort_key(ESortGroup::PostOpaques)
 				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)
 				.pso<EPipeState::DepthFunc>(D3D12_COMPARISON_FUNC_GREATER)
-				.tex_diffuse(res().StockTexture(EStockTexture::Gray)));
+				.tex_diffuse(rdr().store().StockTexture(EStockTexture::Gray)));
 		}
 		{
 			// On the second pass, draw the gizmo normally
-			m_gfx.m_model->CreateNugget(
+			m_gfx.m_model->CreateNugget(factory,
 				NuggetDesc(ETopo::TriList, Vert::GeomMask)
 				.sort_key(ESortGroup(int(ESortGroup::PostOpaques) + 1))
 				.pso<EPipeState::CullMode>(D3D12_CULL_MODE_BACK)

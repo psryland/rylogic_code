@@ -242,7 +242,6 @@ namespace pr::rdr12
 
 		// Renderer access
 		Renderer& rdr() const;
-		ResourceManager& res_mgr() const;
 
 		// The number of primitives in this nugget
 		size_t PrimCount() const;

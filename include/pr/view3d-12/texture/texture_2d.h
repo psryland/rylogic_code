@@ -13,9 +13,9 @@ namespace pr::rdr12
 	{
 		m4x4 m_t2s; // Texture to surface transform
 
-		Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
-		Texture2D(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc);
-		Texture2D(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc);
 
 		// Get/Release the DC (prefer the Gfx class for RAII)
 		// Note: Only works for textures created with GDI compatibility

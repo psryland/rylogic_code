@@ -98,10 +98,6 @@ namespace pr::rdr12
 	{
 		return m_dll->m_rdr;
 	}
-	ResourceManager& V3dWindow::res() const
-	{
-		return rdr().res();
-	}
 
 	// Get/Set the settings
 	wchar_t const* V3dWindow::Settings() const
@@ -1636,18 +1632,20 @@ namespace pr::rdr12
 	// Create stock models such as the focus point, origin, etc
 	void V3dWindow::CreateStockObjects()
 	{
+		ResourceFactory factory(rdr());
+
 		// Create the focus point/origin models
-		m_focus_point.m_model = res().CreateModel(EStockModel::Basis);
+		m_focus_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
 		m_focus_point.m_i2w = m4x4Identity;
 		m_focus_point.m_size = 1.0f;
-		m_origin_point.m_model = res().CreateModel(EStockModel::Basis);
+		m_origin_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
 		m_origin_point.m_i2w = m4x4Identity;
 		m_origin_point.m_size = 1.0f;
 
 		// Create the selection box model
-		m_selection_box.m_model = res().CreateModel(EStockModel::SelectionBox);
+		m_selection_box.m_model = factory.CreateModel(EStockModel::SelectionBox);
 		m_selection_box.m_tint = Colour32White;
 		m_selection_box.m_i2w = m4x4Identity;
 	}

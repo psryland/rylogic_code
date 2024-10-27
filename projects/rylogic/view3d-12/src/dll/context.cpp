@@ -501,6 +501,7 @@ namespace pr::rdr12
 		#endif
 
 		// Update the model nuggets
+		ResourceFactory factory(model->rdr());
 		model->DeleteNuggets();
 		for (auto& nug : nbuf)
 		{
@@ -517,7 +518,7 @@ namespace pr::rdr12
 			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
 			n.m_vrange = Range{ s_cast<size_t>(nug.m_v0), s_cast<size_t>(nug.m_v1) };
 			n.m_irange = Range{ s_cast<size_t>(nug.m_i0), s_cast<size_t>(nug.m_i1) };
-			model->CreateNugget(n);
+			model->CreateNugget(factory, n);
 		}
 
 		// Release memory after large allocations

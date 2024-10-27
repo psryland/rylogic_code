@@ -4,12 +4,13 @@
 //*********************************************
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 
 namespace pr::rdr12
 {
-	Model::Model(ResourceManager& mgr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
-		: m_mgr(&mgr)
+	Model::Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
+		: m_rdr(&rdr)
 		, m_vb(vb, true)
 		, m_ib(ib, true)
 		, m_vb_view({
@@ -43,31 +44,31 @@ namespace pr::rdr12
 	}
 
 	// Renderer access
-	Renderer& Model::rdr() const
+	Renderer const& Model::rdr() const
 	{
-		return m_mgr->rdr();
+		return *m_rdr;
 	}
-	ResourceManager& Model::res_mgr() const
+	Renderer& Model::rdr()
 	{
-		return *m_mgr;
+		return *m_rdr;
 	}
 	
 	// Allow update of the vertex/index buffers
-	UpdateSubresourceScope Model::UpdateVertices(Range vrange)
+	UpdateSubresourceScope Model::UpdateVertices(ResourceFactory& res, Range vrange)
 	{
 		if (vrange == Range::Reset()) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope(*m_mgr, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
+		return UpdateSubresourceScope(res, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
 	}
-	UpdateSubresourceScope Model::UpdateIndices(Range irange)
+	UpdateSubresourceScope Model::UpdateIndices(ResourceFactory& res, Range irange)
 	{
 		if (irange == Range::Reset()) irange = Range(0, m_icount);
-		return UpdateSubresourceScope(*m_mgr, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
+		return UpdateSubresourceScope(res, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
 	}
 
 	// Create a nugget from a range within this model
 	// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 	// Remember you might need to delete render nuggets first
-	void Model::CreateNugget(NuggetDesc const& nugget_data)
+	void Model::CreateNugget(ResourceFactory& res, NuggetDesc const& nugget_data)
 	{
 		auto ndata = NuggetDesc(nugget_data);
 
@@ -91,21 +92,23 @@ namespace pr::rdr12
 					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
 		#endif
 
-		auto nug = res_mgr().CreateNugget(ndata, this);
+		auto nug = res.CreateNugget(ndata, this);
 		m_nuggets.push_back(*nug);
 	}
 
 	// Clear the render nuggets for this model.
 	void Model::DeleteNuggets()
 	{
+		ResourceStore::Access store(rdr());
 		for (;!m_nuggets.empty();)
-			res_mgr().Delete(&m_nuggets.front());
+			store.Delete(&m_nuggets.front());
 	}
 
 	// Ref-counting clean up function
 	void Model::RefCountZero(RefCounted<Model>* doomed)
 	{
 		auto mdl = static_cast<Model*>(doomed);
-		mdl->res_mgr().Delete(mdl);
+		ResourceStore::Access store(mdl->rdr());
+		store.Delete(mdl);
 	}
 }

@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/texture/texture_2d.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/window.h"
@@ -11,16 +10,16 @@
 
 namespace pr::rdr12
 {
-	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
-		:TextureBase(mgr, res, desc)
+	Texture2D::Texture2D(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc)
+		:TextureBase(rdr, res, desc)
 		,m_t2s(m4x4::Identity())
 	{}
-	Texture2D::Texture2D(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc)
-		:TextureBase(mgr, shared_handle, desc)
+	Texture2D::Texture2D(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc)
+		:TextureBase(rdr, shared_handle, desc)
 		,m_t2s(m4x4::Identity())
 	{}
-	Texture2D::Texture2D(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc)
-		:TextureBase(mgr, shared_resource, desc)
+	Texture2D::Texture2D(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc)
+		:TextureBase(rdr, shared_resource, desc)
 		,m_t2s(m4x4::Identity())
 	{}
 

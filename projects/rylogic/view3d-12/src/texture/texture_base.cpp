@@ -4,7 +4,6 @@
 //*********************************************
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_desc.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/resource/descriptor_store.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/render/sortkey.h"
@@ -26,9 +25,9 @@ namespace pr::rdr12
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+	TextureBase::TextureBase(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc)
 		: RefCounted<TextureBase>()
-		, m_mgr(&mgr)
+		, m_rdr(&rdr)
 		, m_res(res, true)
 		, m_srv()
 		, m_uav()
@@ -40,7 +39,7 @@ namespace pr::rdr12
 		, m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
 		, m_name(desc.m_name)
 	{
-		auto device = m_mgr->d3d();
+		auto device = rdr.d3d();
 		auto tdesc = desc.m_tdesc;
 
 		// Create views for the texture
@@ -53,6 +52,7 @@ namespace pr::rdr12
 				throw std::runtime_error("Texture format is not supported as a shader resource view");
 
 			// Create the SRV
+			ResourceStore::Access store(rdr);
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
 				.Format = tdesc.Format,
 				.ViewDimension = desc.m_tdesc.SrvDimension(),
@@ -64,7 +64,7 @@ namespace pr::rdr12
 					.ResourceMinLODClamp = 0.f,
 				},
 			};
-			m_srv = m_mgr->m_descriptor_store.Create(res, srv_desc);
+			m_srv = store.Descriptors().Create(res, srv_desc);
 		}
 		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
 		{
@@ -77,6 +77,7 @@ namespace pr::rdr12
 				throw std::runtime_error("Texture format is not supported as a unordered access view");
 
 			// Create the UAV
+			ResourceStore::Access store(rdr);
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {
 				.Format = tdesc.Format,
 				.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D,
@@ -85,7 +86,7 @@ namespace pr::rdr12
 					.PlaneSlice = 0,
 				},
 			};
-			m_uav = m_mgr->m_descriptor_store.Create(res, uav_desc);
+			m_uav = store.Descriptors().Create(res, uav_desc);
 		}
 		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET))
 		{
@@ -95,11 +96,12 @@ namespace pr::rdr12
 				throw std::runtime_error("Texture format is not supported as a render target view");
 
 			// Create the RTV
+			ResourceStore::Access store(rdr);
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
 				.Format = tdesc.Format,
 				.ViewDimension = desc.m_tdesc.RtvDimension(),
 			};
-			m_rtv = m_mgr->m_descriptor_store.Create(res, rtv_desc);
+			m_rtv = store.Descriptors().Create(res, rtv_desc);
 		}
 		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
 		{
@@ -109,26 +111,27 @@ namespace pr::rdr12
 				throw std::runtime_error("Texture format is not supported as a depth stencil view");
 
 			// Create the DSV
+			ResourceStore::Access store(rdr);
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {
 				.Format = tdesc.Format,
 				.ViewDimension = desc.m_tdesc.DsvDimension(),
 				.Flags = D3D12_DSV_FLAGS::D3D12_DSV_FLAG_NONE,
 			};
-			m_dsv = m_mgr->m_descriptor_store.Create(res, dsv_desc);
+			m_dsv = store.Descriptors().Create(res, dsv_desc);
 		}
 	}
-	TextureBase::TextureBase(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc)
-		: TextureBase(mgr, static_cast<ID3D12Resource*>(nullptr), desc)
+	TextureBase::TextureBase(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc)
+		: TextureBase(rdr, static_cast<ID3D12Resource*>(nullptr), desc)
 	{
 		// Open the shared resource in our d3d device
 		D3DPtr<IUnknown> resource;
-		Check(mgr.d3d()->OpenSharedHandle(shared_handle, __uuidof(ID3D12Resource), (void**)&resource.m_ptr));
+		Check(rdr.d3d()->OpenSharedHandle(shared_handle, __uuidof(ID3D12Resource), (void**)&resource.m_ptr));
 
 		// Query the resource interface from the resource
 		Check(resource->QueryInterface(__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
 	}
-	TextureBase::TextureBase(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc)
-		: TextureBase(mgr, SharedHandleFromSharedResource(shared_resource), desc)
+	TextureBase::TextureBase(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc)
+		: TextureBase(rdr, SharedHandleFromSharedResource(shared_resource), desc)
 	{
 	}
 	TextureBase::~TextureBase()
@@ -136,18 +139,19 @@ namespace pr::rdr12
 		OnDestruction(*this, EmptyArgs());
 
 		// Release any views
-		if (m_srv)
-			m_mgr->m_descriptor_store.Release(m_srv);
-		if (m_uav)
-			m_mgr->m_descriptor_store.Release(m_uav);
-		if (m_rtv)
-			m_mgr->m_descriptor_store.Release(m_rtv);
+		{
+			ResourceStore::Access store(rdr());
+			if (m_srv) store.Descriptors().Release(m_srv);
+			if (m_uav) store.Descriptors().Release(m_uav);
+			if (m_rtv) store.Descriptors().Release(m_rtv);
+			if (m_dsv) store.Descriptors().Release(m_dsv);
+		}
 	}
 
 	// Access the renderer
 	Renderer& TextureBase::rdr() const
 	{
-		return m_mgr->rdr();
+		return *m_rdr;
 	}
 
 	// A sort key component for this texture
@@ -195,6 +199,7 @@ namespace pr::rdr12
 	}
 	void TextureBase::Delete()
 	{
-		m_mgr->Delete(this);
+		ResourceStore::Access store(rdr());
+		store.Delete(this);
 	}
 }

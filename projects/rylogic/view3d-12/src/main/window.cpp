@@ -220,10 +220,6 @@ namespace pr::rdr12
 	{
 		return *m_rdr;
 	}
-	ResourceManager& Window::res() const
-	{
-		return rdr().res();
-	}
 
 	// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 	v2 Window::Dpi() const
@@ -453,9 +449,6 @@ namespace pr::rdr12
 	Frame Window::NewFrame()
 	{
 		++m_frame_number;
-
-		// Flush any pending resource commands to the GPU
-		res().FlushToGpu(EGpuFlush::Async);
 
 		// Get the current swap chain back buffer
 		auto& bb_main = m_msaa_bb;

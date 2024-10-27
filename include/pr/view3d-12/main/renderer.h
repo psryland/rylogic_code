@@ -5,7 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/settings.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_store.h"
 #include "pr/view3d-12/utility/features.h"
 #include "pr/view3d-12/utility/eventargs.h"
 #include "pr/view3d-12/utility/cmd_list_collection.h"
@@ -22,6 +22,7 @@ namespace pr::rdr12
 
 		using TaskQueue = std::vector<std::future<void>>;
 		using PollCBList = std::vector<pr::StaticCB<void>>;
+		using AllocationsTracker = AllocationsTracker<void>;
 
 		// Renderer state
 		struct RdrState
@@ -52,8 +53,10 @@ namespace pr::rdr12
 		PollCBList           m_poll_callbacks;
 		HWND                 m_dummy_hwnd;
 		std::atomic_int      m_id32_src;
+		AllocationsTracker   m_mem_tracker;
 
-		ResourceManager m_res_mgr;
+		// Storage of resources
+		ResourceStore m_res_store;
 
 	public:
 
@@ -65,7 +68,8 @@ namespace pr::rdr12
 		// Access the renderer manager classes
 		ID3D12Device4* d3d() const;
 		Renderer& rdr();
-		ResourceManager& res();
+		ResourceStore& store();
+		AllocationsTracker& mem_tracker();
 
 		// Access the adapter that the device was created on
 		IDXGIAdapter* Adapter() const
@@ -143,10 +147,16 @@ namespace pr::rdr12
 		// Generate a unique Id on each call
 		int NewId32();
 
+		// Use the 'ResolveFilepath' event to resolve a filepath
+		std::filesystem::path ResolvePath(std::string_view path) const;
+
 		// Raised when a window resizes it's back buffer.
 		// This is provided on the renderer so that other managers can receive
 		// notification without having to sign up to every window that gets created.
 		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
+
+		// An event that is called to resolve file paths.
+		EventHandler<Renderer const&, ResolvePathArgs&, true> ResolveFilepath;
 
 		// Execute a list of graphics command lists. Allows syntax: ExecuteCommandLists({list, list_array, ...})
 		void ExecuteGfxCommandLists(GfxCmdListCollection cmd_lists) const

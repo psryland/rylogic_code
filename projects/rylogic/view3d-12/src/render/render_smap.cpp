@@ -79,8 +79,8 @@ namespace pr::rdr12
 		: RenderStep(Id, scene)
 		, m_shader(scene.d3d())
 		, m_cmd_list(scene.d3d(), nullptr, "RenderSmap", EColours::Yellow)
-		, m_default_tex(res().CreateTexture(EStockTexture::White))
-		, m_default_sam(res().GetSampler(EStockSampler::LinearClamp))
+		, m_default_tex(rdr().store().StockTexture(EStockTexture::White))
+		, m_default_sam(rdr().store().StockSampler(EStockSampler::LinearClamp))
 		, m_casters()
 		, m_smap_size(size)
 		, m_smap_format(format)
@@ -135,11 +135,12 @@ namespace pr::rdr12
 	// Add a shadow casting light source
 	void RenderSmap::AddLight(Light const& light)
 	{
+		ResourceFactory factory(rdr());
 		auto td = ResDesc::Tex2D(Image(m_smap_size, m_smap_size, nullptr, m_smap_format), 1, EUsage::RenderTarget)
 			.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 			.clear(m_smap_format, pr::Colour32Zero);
 		auto desc = TextureDesc(AutoId, td).name("Smap");
-		auto smap = res().CreateTexture2D(desc);
+		auto smap = factory.CreateTexture2D(desc);
 		m_casters.push_back(ShadowCaster(smap, light, m_smap_size));
 	}
 
@@ -152,7 +153,7 @@ namespace pr::rdr12
 
 		bool grow_bounds = true;
 
-		// Add a drawlist element for each nugget in the instance's model
+		// Add a draw list element for each nugget in the instance's model
 		drawlist.reserve(drawlist.size() + nuggets.size());
 		for (auto& nug : nuggets)
 		{
@@ -201,7 +202,7 @@ namespace pr::rdr12
 					break;
 				}
 
-				// Add an element to the drawlist
+				// Add an element to the draw list
 				DrawListElement dle = {
 					.m_sort_key = sk,
 					.m_nugget = &nug,

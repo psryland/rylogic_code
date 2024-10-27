@@ -32,7 +32,7 @@ namespace pr::rdr12
 		//    with front face culling, then another nugget for the whole model with back face culling.
 
 		// Fixed container of render steps. Doesn't really need to be fixed,
-		// but non-fixed means we need the pr::rdr::Allocator to construct it.
+		// but non-fixed means we need the Allocator to construct it.
 		// Conceptually, 'InstCont' should be an unordered_set, but using an array is way
 		// faster due to the lack of allocations. This means RemoveInstance is O(n) however.
 		using RenderStepCont = pr::vector<std::unique_ptr<RenderStep>, 16, true>;
@@ -57,10 +57,9 @@ namespace pr::rdr12
 		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
 		Window& wnd() const;
-		ResourceManager& res() const;
 
 		// Clear/Populate the drawlists for each render step.
-		// Drawlists can be used in two ways, one is to clear the draw sets with each frame
+		// Draw lists can be used in two ways, one is to clear the draw sets with each frame
 		// and rebuild them from scratch (useful for scenes that change frequently).
 		// The other is to NOT clear the draw sets and add/remove instances between frames.
 		void ClearDrawlists();
@@ -79,7 +78,7 @@ namespace pr::rdr12
 			ldr_obj->AddToScene(*this);
 		}
 
-		// Remove an instance from the drawlist
+		// Remove an instance from the draw list
 		template <InstanceType Inst>
 		void RemoveInstance(Inst const& inst)
 		{

@@ -63,7 +63,6 @@ namespace pr::rdr12
 		// Access the renderer manager classes
 		ID3D12Device4* d3d() const;
 		Renderer& rdr() const;
-		ResourceManager& res() const;
 
 		// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 		v2 Dpi() const;

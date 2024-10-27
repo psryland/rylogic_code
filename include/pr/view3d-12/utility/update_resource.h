@@ -5,7 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/wrappers.h"
@@ -43,26 +43,26 @@ namespace pr::rdr12
 		//        |  etc...
 		//        |
 		//    A Plane slice is for planar textures (like DXGI_FORMAT_NV12). Typical textures have only one plane.
-		//    An Array slice is for texture arrays (like cubemaps). Typical textures have only one array slice. 3D textures only have one array slice
+		//    An Array slice is for texture arrays (like cube maps). Typical textures have only one array slice. 3D textures only have one array slice
 		//  - It's too complicated to handle all possible resource types (arrays, mips, planes, etc), so this class only handles single images (1D, 2D, or 3D)
 		//    Array textures should use an UpdateSubresourceScope for each array slice.
 
 		using footprints_t = pr::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 16>;
 		using staging_t = GpuUploadBuffer::Allocation;
 
-		ResourceManager& m_res;          // The resource manager
+		ResourceFactory& m_res;          // The resource manager
 		ID3D12Resource*  m_dest;         // The destination resource to be updated
-		int              m_mip0, m_mipN; // The mipmap range to update. *Note* != the subresource index
+		int              m_mip0, m_mipN; // The mip-map range to update. *Note* != the subresource index
 		int              m_sub0;         // The subresource index of the 0th mip of the array slice
 		int              m_alignment;    // The alignment requirements of the data in the upload buffer
 		Box              m_range;        // The subrange to update within the resource (in elements not bytes (except for 1-D buffers), and always relative to mip 0)
-		footprints_t     m_layout;       // The memory layout of the subresources within 'm_dest' start at mip 'm_sub0'
+		footprints_t     m_layout;       // The memory layout of the sub-resources within 'm_dest' start at mip 'm_sub0'
 		staging_t        m_staging;      // The allocation within the upload buffer
 
-		UpdateSubresourceScope(ResourceManager& res, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
+		UpdateSubresourceScope(ResourceFactory& res, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
 			: UpdateSubresourceScope(res, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
 		{}
-		UpdateSubresourceScope(ResourceManager& res, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
+		UpdateSubresourceScope(ResourceFactory& res, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
 			: m_res(res)
 			, m_dest(dest)
 			, m_mip0(mip0)
@@ -99,7 +99,7 @@ namespace pr::rdr12
 			auto array_length = ddesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : ddesc.DepthOrArraySize;
 			m_sub0 = SubResIndex(0, ddesc.MipLevels, array_slice, array_length); // Subresource index of the array slice
 
-			// Get the size and footprints for copying subresources.
+			// Get the size and footprints for copying sub-resources.
 			m_layout.resize(m_mipN);
 			device->GetCopyableFootprints(&ddesc, m_sub0 + m_mip0, m_mipN, 0ULL, m_layout.data(), nullptr, nullptr, nullptr);
 
@@ -114,7 +114,7 @@ namespace pr::rdr12
 				total_size += footprint.RowPitch * size_at_mip.y * size_at_mip.z;
 			}
 
-			// Get a staging buffer big enough for all of the subresources.
+			// Get a staging buffer big enough for all of the sub-resources.
 			// The staging buffer is just big enough to contain the range to be updated, not the full resource.
 			// If 'dest' is a volume texture, and [first, range) is box within that texture, then the size of the
 			// staging buffer is just the size of the box + subsequent mip levels.
@@ -199,7 +199,7 @@ namespace pr::rdr12
 			{
 				auto const& image = images[i];                  // The initialisation data for the subresource at mip level 'm_mip0 + i'.
 				auto const& layout = m_layout[i];               // The dimensions of the subresource within 'm_dest' at 'sub0 + m_mip0 + i'.
-				auto size = m_range.size(m_mip0 + i);           // The size of the range to be updated (in both m_dest and m_staging) at 'm_mip0 + i'
+				auto size = m_range.size(m_mip0 + i);           // The size of the range to be updated (in both 'm_dest' and 'm_staging') at 'm_mip0 + i'
 				auto staging = m_staging.m_mem + layout.Offset; // The pointer to the start of the mip in staging buffer memory
 
 				if (!check_size(size.z, image.m_dim.z))

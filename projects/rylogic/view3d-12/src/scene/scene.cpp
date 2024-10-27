@@ -68,12 +68,8 @@ namespace pr::rdr12
 	{
 		return *m_wnd;
 	}
-	ResourceManager& Scene::res() const
-	{
-		return rdr().res();
-	}
 
-	// Reset the drawlist for each render step
+	// Reset the draw list for each render step
 	void Scene::ClearDrawlists()
 	{
 		m_instances.clear();
@@ -102,7 +98,7 @@ namespace pr::rdr12
 	}
 
 	// Add an instance. The instance must be resident for the entire time that it is
-	// in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
+	// in the draw list, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 	// This method will add the instance to all render steps for which the model has appropriate nuggets.
 	// Instances can be added to render steps directly if finer control is needed
 	void Scene::AddInstance(BaseInstance const& inst)

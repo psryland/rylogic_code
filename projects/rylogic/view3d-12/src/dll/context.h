@@ -38,7 +38,6 @@ namespace pr::rdr12
 		// Access functions
 		Context* This() { return this; }
 		Renderer& rdr() { return m_rdr; }
-		ResourceManager& res() { return rdr().res(); }
 
 		// Report an error handled at the DLL API layer
 		void ReportAPIError(char const* func_name, view3d::Window wnd, std::exception const* ex);

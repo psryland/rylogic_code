@@ -2132,7 +2132,8 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreate(int width, int height,
 			.name(options.m_dbg_name);
 
 		DllLockGuard;
-		auto tex = Dll().res().CreateTexture2D(tdesc);
+		ResourceFactory factory(Dll().m_rdr);
+		auto tex = factory.CreateTexture2D(tdesc);
 		tex->m_t2s = To<m4x4>(options.m_t2s);
 		tex->m_t2s =
 			IsAffine(tex->m_t2s) ? tex->m_t2s :
@@ -2151,7 +2152,8 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreateStock(view3d::EStockTex
 	try
 	{
 		DllLockGuard;
-		auto tex = Dll().res().CreateTexture(static_cast<rdr12::EStockTexture>(stock_texture));
+		ResourceFactory factory(Dll().m_rdr);
+		auto tex = factory.CreateTexture(static_cast<rdr12::EStockTexture>(stock_texture));
 		return tex.release();
 	}
 	CatchAndReport(View3D_TextureCreateStock, , nullptr);
@@ -2171,7 +2173,8 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreateFromUri(char const* res
 			.name(options.m_dbg_name);
 
 		DllLockGuard;
-		auto tex = Dll().res().CreateTexture2D(resource, tdesc);
+		ResourceFactory factory(Dll().m_rdr);
+		auto tex = factory.CreateTexture2D(resource, tdesc);
 		tex->m_t2s = To<m4x4>(options.m_t2s);
 		tex->m_t2s =
 			IsAffine(tex->m_t2s) ? tex->m_t2s :
@@ -2190,8 +2193,9 @@ VIEW3D_API view3d::CubeMap __stdcall View3D_CubeMapCreateFromUri(char const* res
 	try
 	{
 		DllLockGuard;
+		ResourceFactory factory(Dll().m_rdr);
 		auto tdesc = TextureDesc(rdr12::AutoId, ResDesc::TexCube({}));
-		auto tex = Dll().m_rdr.res().CreateTextureCube(resource, tdesc);
+		auto tex = factory.CreateTextureCube(resource, tdesc);
 
 		// Set the cube map to world transform
 		if (m4x4 cube2w; (cube2w = To<m4x4>(options.m_cube2w)) != m4x4::Zero())
@@ -2216,7 +2220,8 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreate(view3d::SamplerOptions
 			.name(options.m_dbg_name);
 
 		DllLockGuard;
-		auto sam = Dll().res().GetSampler(sdesc);
+		ResourceFactory factory(Dll().m_rdr);
+		auto sam = factory.GetSampler(sdesc);
 
 		// Rely on the caller for correct reference counting
 		return sam.release();
@@ -2230,7 +2235,8 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreateStock(view3d::EStockSam
 	try
 	{
 		DllLockGuard;
-		auto sam = Dll().res().GetSampler(static_cast<rdr12::EStockSampler>(stock_sampler));
+		ResourceFactory factory(Dll().m_rdr);
+		auto sam = factory.GetSampler(static_cast<rdr12::EStockSampler>(stock_sampler));
 		return sam.release();
 	}
 	CatchAndReport(View3D_SamplerCreateStock, , nullptr);
@@ -2704,8 +2710,10 @@ VIEW3D_API view3d::Texture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UIN
 
 		DllLockGuard;
 
+		ResourceFactory factory(Dll().m_rdr);
+		
 		// Create a Dx11 texture using the shared resource
-		auto t = Dll().m_rdr.res().OpenSharedTexture2D(handle, tdesc);
+		auto t = factory.OpenSharedTexture2D(handle, tdesc);
 
 		// Save the surface 0 pointer in the private data of the texture. (Adds a reference)
 		t->m_res->SetPrivateDataInterface(rdr12::Texture2D::Surface0Pointer, surf0.get());
@@ -2738,8 +2746,9 @@ VIEW3D_API view3d::Texture __stdcall View3D_CreateTextureFromSharedResource(IUnk
 			.name(options.m_dbg_name);
 
 		DllLockGuard;
-
-		auto t = Dll().m_rdr.res().OpenSharedTexture2D(shared_resource, tdesc);
+		
+		ResourceFactory factory(Dll().m_rdr);
+		auto t = factory.OpenSharedTexture2D(shared_resource, tdesc);
 		return t.release();
 	}
 	CatchAndReport(View3D_TextureFromExisting, , nullptr);

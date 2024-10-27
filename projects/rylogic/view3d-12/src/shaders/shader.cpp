@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/shaders/shader.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "view3d-12/src/shaders/common.h"
 
@@ -21,6 +20,7 @@ namespace pr::rdr12
 		// Hash all of the ByteCode pointers together for the sort id.
 		return SortKeyId(pr::hash::HashBytes32(&m_code, &m_code + 1) % SortKey::MaxShaderId);
 	}
+
 	// Config the shader.
 	void Shader::Setup(ID3D12GraphicsCommandList*, GpuUploadBuffer&, Scene const&, DrawListElement const*)
 	{

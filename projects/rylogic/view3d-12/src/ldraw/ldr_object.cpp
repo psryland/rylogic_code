@@ -11,7 +11,7 @@
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
@@ -22,6 +22,7 @@
 #include "pr/view3d-12/utility/pipe_state.h"
 #include "pr/view3d-12/utility/update_resource.h"
 #include "pr/view3d-12/utility/wrappers.h"
+#include "pr/view3d-12/compute/gpu_job.h"
 
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
@@ -159,15 +160,20 @@ namespace pr::rdr12
 	// Helper object for passing parameters between parsing functions
 	struct ParseParams
 	{
+		// Notes:
+		// - Ldr object can be created in a background thread. So there is a separate
+		//   command list.
 		using system_clock = std::chrono::system_clock;
-		using time_point   = std::chrono::time_point<system_clock>;
-		using FontStack    = pr::vector<Font>;
+		using time_point = std::chrono::time_point<system_clock>;
+		using FontStack = pr::vector<Font>;
+		using GpuJob = GpuJob<D3D12_COMMAND_LIST_TYPE_DIRECT>;
 
 		Renderer&       m_rdr;
 		Reader&         m_reader;
 		ParseResult&    m_result;
 		ObjectCont&     m_objects;
 		ModelCont&      m_models;
+		ResourceFactory m_factory;
 		Guid            m_context_id;
 		Cache           m_cache;
 		ELdrObject      m_type;
@@ -185,6 +191,7 @@ namespace pr::rdr12
 			,m_result(result)
 			,m_objects(result.m_objects)
 			,m_models(result.m_models)
+			,m_factory(rdr)
 			,m_context_id(context_id)
 			,m_cache()
 			,m_type(ELdrObject::Unknown)
@@ -202,6 +209,7 @@ namespace pr::rdr12
 			,m_result(p.m_result)
 			,m_objects(objects)
 			,m_models(p.m_models)
+			,m_factory(p.m_rdr)
 			,m_context_id(p.m_context_id)
 			,m_cache()
 			,m_type(ELdrObject::Unknown)
@@ -770,7 +778,7 @@ namespace pr::rdr12
 						try
 						{
 							auto desc = TextureDesc(AutoId, rdesc).has_alpha(has_alpha);
-							m_texture = p.m_rdr.res().CreateTexture2D(tex_resource, desc);
+							m_texture = p.m_factory.CreateTexture2D(tex_resource, desc);
 							m_texture->m_t2s = t2s;
 						}
 						catch (std::exception const& e)
@@ -782,7 +790,7 @@ namespace pr::rdr12
 						try
 						{
 							auto desc = SamplerDesc(sdesc.Id(), sdesc);
-							m_sampler = p.m_rdr.res().GetSampler(desc);
+							m_sampler = p.m_factory.GetSampler(desc);
 						}
 						catch(std::exception const& e)
 						{
@@ -980,7 +988,7 @@ namespace pr::rdr12
 				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
 				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
 				auto desc = TextureDesc(id, tdesc).name(name);
-				auto tex = p.m_rdr.res().CreateTexture2D(desc);
+				auto tex = p.m_factory.CreateTexture2D(desc);
 
 				(void)draw;
 				#if 0 //todo
@@ -1017,8 +1025,9 @@ namespace pr::rdr12
 					}
 					case EStyle::Circle:
 					{
+						ResourceStore::Access store(p.m_rdr);
 						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
-						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						return store.FindTexture<Texture2D>(id, [&]
 						{
 							auto w0 = sz.x * 0.5f;
 							auto h0 = sz.y * 0.5f;
@@ -1027,8 +1036,9 @@ namespace pr::rdr12
 					}
 					case EStyle::Triangle:
 					{
+						ResourceStore::Access store(p.m_rdr);
 						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
-						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						return store.FindTexture<Texture2D>(id, [&]
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
@@ -1050,8 +1060,9 @@ namespace pr::rdr12
 					}
 					case EStyle::Star:
 					{
+						ResourceStore::Access store(p.m_rdr);
 						auto id = pr::hash::HashArgs("PointStyleStar", sz);
-						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						return store.FindTexture<Texture2D>(id, [&]
 						{
 							D3DPtr<ID2D1PathGeometry> geom;
 							D3DPtr<ID2D1GeometrySink> sink;
@@ -1077,8 +1088,9 @@ namespace pr::rdr12
 					}
 					case EStyle::Annulus:
 					{
+						ResourceStore::Access store(p.m_rdr);
 						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
-						return p.m_rdr.res().FindTexture<Texture2D>(id, [&]
+						return store.FindTexture<Texture2D>(id, [&]
 						{
 							auto w0 = sz.x * 0.5f;
 							auto h0 = sz.y * 0.5f;
@@ -1311,7 +1323,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Points(p.m_rdr, m_verts, &opts);
+			obj->m_model = ModelGenerator::Points(p.m_factory, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use a geometry shader to draw points
@@ -1426,7 +1438,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
+			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1528,7 +1540,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
+			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1653,8 +1665,8 @@ namespace pr::rdr12
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
 			obj->m_model = line_strip
-				? ModelGenerator::LineStrip(p.m_rdr, int(m_verts.size() - 1), m_verts, &opts)
-				: ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
+				? ModelGenerator::LineStrip(p.m_factory, int(m_verts.size() - 1), m_verts, &opts)
+				: ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1750,7 +1762,7 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
+			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1847,7 +1859,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
+			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -1981,7 +1993,7 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
+			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -2136,7 +2148,7 @@ namespace pr::rdr12
 
 			// Create the model
 			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
-			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
+			obj->m_model = p.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
 			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
@@ -2156,7 +2168,7 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(nug);
+				obj->m_model->CreateNugget(p.m_factory, nug);
 			}
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + m_verts.size());
@@ -2168,7 +2180,7 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
-				obj->m_model->CreateNugget(nug);
+				obj->m_model->CreateNugget(p.m_factory, nug);
 			}
 			if (m_type & EArrowType::Fwd)
 			{
@@ -2181,7 +2193,7 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(nug);
+				obj->m_model->CreateNugget(p.m_factory, nug);
 			}
 		}
 	};
@@ -2241,7 +2253,7 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
+			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -2316,7 +2328,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts, &opts);
+			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
@@ -2391,7 +2403,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, &opts);
+			obj->m_model = ModelGenerator::Ellipse(p.m_factory, m_dim.x, m_dim.y, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2457,7 +2469,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Pie(p.m_rdr, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, &opts);
+			obj->m_model = ModelGenerator::Pie(p.m_factory, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2528,7 +2540,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, &opts);
+			obj->m_model = ModelGenerator::RoundedRectangle(p.m_factory, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2592,7 +2604,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Polygon(p.m_rdr, m_poly, m_solid, &opts);
+			obj->m_model = ModelGenerator::Polygon(p.m_factory, m_poly, m_solid, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2663,7 +2675,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
+			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2730,7 +2742,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
+			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2779,7 +2791,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_rdr, isize(m_verts) / 4, m_verts, &opts);
+			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2866,7 +2878,7 @@ namespace pr::rdr12
 
 			pr::v4 normal = m_axis.m_align;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::QuadStrip(p.m_rdr, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
+			obj->m_model = ModelGenerator::QuadStrip(p.m_factory, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2903,7 +2915,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Box(p.m_rdr, m_dim, &opts);
+			obj->m_model = ModelGenerator::Box(p.m_factory, m_dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -2956,7 +2968,7 @@ namespace pr::rdr12
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
 			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(b2w).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Box(p.m_rdr, dim, &opts);
+			obj->m_model = ModelGenerator::Box(p.m_factory, dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3007,7 +3019,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::BoxList(p.m_rdr, isize(m_location), m_location, m_dim, &opts);
+			obj->m_model = ModelGenerator::BoxList(p.m_factory, isize(m_location), m_location, m_dim, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3078,7 +3090,7 @@ namespace pr::rdr12
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, &opts);
+			obj->m_model = ModelGenerator::Boxes(p.m_factory, 1, m_pt, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3134,7 +3146,7 @@ namespace pr::rdr12
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Boxes(p.m_rdr, 1, m_pt, &opts);
+			obj->m_model = ModelGenerator::Boxes(p.m_factory, 1, m_pt, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3178,7 +3190,7 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Geosphere(p.m_rdr, m_dim, m_facets, &opts);
+			obj->m_model = ModelGenerator::Geosphere(p.m_factory, m_dim, m_facets, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3238,7 +3250,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
+			obj->m_model = ModelGenerator::Cylinder(p.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3305,7 +3317,7 @@ namespace pr::rdr12
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
+			obj->m_model = ModelGenerator::Cylinder(p.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3518,7 +3530,7 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Extrude(p.m_rdr, m_cs, m_verts, m_closed, m_cs_smooth, &opts);
+			obj->m_model = ModelGenerator::Extrude(p.m_factory, m_cs, m_verts, m_closed, m_cs_smooth, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3759,7 +3771,7 @@ namespace pr::rdr12
 				.colours(m_colours)
 				.normals(m_normals)
 				.tex(m_texs);
-			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
+			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3838,7 +3850,7 @@ namespace pr::rdr12
 				.colours(m_colours)
 				.normals(m_normals)
 				.tex(m_texs);
-			obj->m_model = ModelGenerator::Mesh(p.m_rdr, cdata);
+			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -4187,7 +4199,7 @@ namespace pr::rdr12
 			if (!verts.empty())
 			{
 				auto opts = ModelGenerator::CreateOptions().colours({&obj->m_base_colour, 1});
-				obj->m_model = ModelGenerator::LineStrip(p.m_rdr, isize(verts) - 1, verts, &opts);
+				obj->m_model = ModelGenerator::LineStrip(p.m_factory, isize(verts) - 1, verts, &opts);
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Use thick lines
@@ -4266,7 +4278,7 @@ namespace pr::rdr12
 				path(m_filepath.string() + ".textures"),
 				m_filepath.parent_path(),
 			};
-			AutoSub sub = p.m_rdr.res().ResolveFilepath += [&](auto&, ResolvePathArgs& args)
+			AutoSub sub = p.m_rdr.ResolveFilepath += [&](auto&, ResolvePathArgs& args)
 			{
 				// Look in a folder with the same name as the model
 				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
@@ -4278,7 +4290,7 @@ namespace pr::rdr12
 
 			// Create the models
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, p.m_rdr, *src, [&](ModelTree const& tree)
+			ModelGenerator::LoadModel(format, p.m_factory, *src, [&](ModelTree const& tree)
 				{
 					auto child = ModelTreeToLdr(tree, obj->m_context_id);
 					if (child != nullptr) obj->AddChild(child);
@@ -4566,7 +4578,7 @@ namespace pr::rdr12
 				BBox::Reset(), obj->TypeAndName().c_str());
 
 			// Create the model
-			obj->m_model = p.m_rdr.res().CreateModel(mdesc);
+			obj->m_model = p.m_factory.CreateModel(mdesc);
 
 			// Store the expression in the object user data
 			obj->m_user_data.get<eval::Expression>() = m_eq;
@@ -4694,7 +4706,9 @@ namespace pr::rdr12
 				n.m_irange = Range(0, count);
 				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.DeleteNuggets();
-				model.CreateNugget(n);
+
+				ResourceFactory factory(model.rdr());
+				model.CreateNugget(factory, n);
 			}
 		}
 		static void SurfacePlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
@@ -4720,8 +4734,9 @@ namespace pr::rdr12
 			assert(nv <= (int)model.m_vcount);
 			assert(ni <= (int)model.m_icount);
 
-			auto update_v = model.UpdateVertices();
-			auto update_i = model.UpdateIndices();
+			ResourceFactory factory(model.rdr());
+			auto update_v = model.UpdateVertices(factory);
+			auto update_i = model.UpdateIndices(factory);
 			auto vout = update_v.ptr<Vert>();
 			auto iout = update_i.ptr<uint32_t>();
 
@@ -4765,7 +4780,7 @@ namespace pr::rdr12
 			// Generate nuggets if initialising
 			if (init)
 			{
-				model.CreateNugget(NuggetDesc(ETopo::TriStrip, props.m_geom).vrange(Range(0, nv)).irange(Range(0, ni)).alpha_geom(extras.has_alpha()));
+				model.CreateNugget(factory, NuggetDesc(ETopo::TriStrip, props.m_geom).vrange(Range(0, nv)).irange(Range(0, ni)).alpha_geom(extras.has_alpha()));
 			}
 		}
 		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
@@ -5009,7 +5024,7 @@ namespace pr::rdr12
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator::Text(p.m_rdr, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
+			obj->m_model = ModelGenerator::Text(p.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Create the model
@@ -5050,7 +5065,7 @@ namespace pr::rdr12
 						auto viewarea_camera = main_camera.ViewRectAtDistance(fd);
 						auto viewarea_txtcam = text_camera.ViewRectAtDistance(fd);
 
-						// Scale the X,Y coords in camera space
+						// Scale the X,Y coordinates in camera space
 						auto pt_cs = w2c * ob.m_i2w.pos;
 						pt_cs.x *= viewarea_txtcam.x / viewarea_camera.x;
 						pt_cs.y *= viewarea_txtcam.y / viewarea_camera.y;
@@ -5142,7 +5157,7 @@ namespace pr::rdr12
 							throw std::runtime_error("Invalid viewport size");
 						#endif
 
-						// Convert the position givin in the ldr script as 2D screen space
+						// Convert the position given in the ldr script as 2D screen space
 						// Note: pt_ss.z should already be the normalised distance from the camera
 						auto pt_ss = ob.m_i2w.pos;
 						pt_ss.x *= 0.5f * ViewPortSize;
@@ -5436,7 +5451,8 @@ namespace pr::rdr12
 		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
 		// Create the model
-		obj->m_model = ModelGenerator::Mesh(rdr, cdata);
+		ResourceFactory factory(rdr);
+		obj->m_model = ModelGenerator::Mesh(factory, cdata);
 		obj->m_model->m_name = obj->TypeAndName();
 		return obj;
 	}
@@ -5447,8 +5463,9 @@ namespace pr::rdr12
 		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
 		// Create the model
+		ResourceFactory factory(rdr);
 		std::ifstream src(p3d_filepath, std::ios::binary);
-		ModelGenerator::LoadP3DModel(rdr, src, [&](ModelTree const& tree)
+		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
 				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
 				if (child != nullptr) obj->AddChild(child);
@@ -5462,8 +5479,9 @@ namespace pr::rdr12
 		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
 		// Create the model
+		ResourceFactory factory(rdr);
 		pr::mem_istream<char> src(p3d_data, size);
-		ModelGenerator::LoadP3DModel(rdr, src, [&](ModelTree const& tree)
+		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
 				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
 				if (child != nullptr) obj->AddChild(child);
@@ -5504,13 +5522,14 @@ namespace pr::rdr12
 		settings.m_ib.HeapProps = HeapProps::Upload();
 
 		// Create the model
-		obj->m_model = rdr.res().CreateModel(settings);
+		ResourceFactory factory(rdr);
+		obj->m_model = factory.CreateModel(settings);
 
 		// Create dummy nuggets
 		NuggetDesc nug(ETopo::PointList, EGeom::Vert);
 		nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::RangesCanOverlap, true);
 		for (int i = ncount; i-- != 0;)
-			obj->m_model->CreateNugget(nug);
+			obj->m_model->CreateNugget(factory, nug);
 
 		// Initialise it via the callback
 		edit_cb(obj->m_model.get(), ctx, rdr);
@@ -5713,7 +5732,7 @@ namespace pr::rdr12
 		// Allow the object to change it's transform just before rendering
 		OnAddToScene(*this, scene);
 
-		// Add the instance to the scene drawlist
+		// Add the instance to the scene draw list
 		if (m_model && !AllSet(flags, ELdrFlags::Hidden))
 		{
 			// Could add occlusion culling here...
@@ -5736,11 +5755,12 @@ namespace pr::rdr12
 		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
 		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
-		// Add the bbox instance to the scene drawlist
+		// Add the bbox instance to the scene draw list
 		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 		{
 			// Find the object to world for the bbox
-			m_bbox_instance.m_model = scene.res().CreateModel(EStockModel::BBoxModel);
+			ResourceFactory factory(scene.rdr());
+			m_bbox_instance.m_model = factory.CreateModel(EStockModel::BBoxModel);
 			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
 			scene.AddInstance(m_bbox_instance);
 		}

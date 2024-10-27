@@ -141,7 +141,7 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\render\render_step.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_manager.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_factory.cpp">
       <Filter>src\resource</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\rylogic\view3d-12\src\model\model.cpp">
@@ -246,6 +246,9 @@
     <ClCompile Include="..\projects\rylogic\view3d-12\src\utility\pix.cpp">
       <Filter>src\utility</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\rylogic\view3d-12\src\resource\resource_store.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d-12\main\config.h">
@@ -299,7 +302,7 @@
     <ClInclude Include="..\include\pr\view3d-12\model\nugget.h">
       <Filter>src\model</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d-12\resource\resource_manager.h">
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_factory.h">
       <Filter>src\resource</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\lookup.h">
@@ -634,6 +637,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d-12\utility\dx9_context.h">
       <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\resource\resource_store.h">
+      <Filter>src\resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

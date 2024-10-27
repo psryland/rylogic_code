@@ -141,7 +141,7 @@ namespace pr::rdr12
 	static constexpr RdrId AutoId = ~RdrId(); // A special value for automatically generating an Id
 	static constexpr RdrId InvalidId = RdrId();
 
-	// Enums
+	// Enumerations
 	using EGeom = pr::geometry::EGeom;
 	using ETopo = pr::geometry::ETopo;
 	using ETopoGroup = pr::geometry::ETopoGroup;
@@ -166,7 +166,8 @@ namespace pr::rdr12
 	struct SortKey;
 
 	// Resources
-	struct ResourceManager;
+	struct ResourceFactory;
+	struct ResourceStore;
 	struct ResDesc;
 	struct SamDesc;
 	
