@@ -163,8 +163,8 @@ namespace pr::rdr12
 		// Render this window into whatever render target is currently set
 		void Render();
 
-		// Flush the scene to the GPU
-		void Present();
+		// Wait for any previous frames to complete rendering within the GPU
+		void GSyncWait() const;
 
 		// Replace the swap chain buffers
 		void CustomSwapChain(std::span<BackBuffer> back_buffers);
@@ -172,7 +172,6 @@ namespace pr::rdr12
 
 		// Get/Set the render target for this window
 		rdr12::BackBuffer const& RenderTarget() const;
-		rdr12::BackBuffer RenderTarget(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms);
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);

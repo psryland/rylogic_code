@@ -117,7 +117,7 @@ namespace Rylogic.Gfx
 
 		public class MouseNavigateEventArgs :EventArgs
 		{
-			public MouseNavigateEventArgs(PointF point, EMouseBtns btns, ENavOp nav_op, bool nav_beg_or_end)
+			public MouseNavigateEventArgs(Point point, EMouseBtns btns, ENavOp nav_op, bool nav_beg_or_end)
 			{
 				ZNavigation = false;
 				Point = point;
@@ -126,7 +126,7 @@ namespace Rylogic.Gfx
 				NavBegOrEnd = nav_beg_or_end;
 				Handled = false;
 			}
-			public MouseNavigateEventArgs(PointF point, EMouseBtns btns, float delta, bool along_ray)
+			public MouseNavigateEventArgs(Point point, EMouseBtns btns, float delta, bool along_ray)
 			{
 				ZNavigation = true;
 				Point = point;
@@ -137,7 +137,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>The mouse pointer in client rect space</summary>
-			public PointF Point { get; private set; }
+			public Point Point { get; private set; }
 
 			/// <summary>The current state of the mouse buttons</summary>
 			public EMouseBtns Btns { get; private set; }

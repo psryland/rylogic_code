@@ -301,7 +301,7 @@ namespace Rylogic.Gui.WPF
 				if (Chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
 				{
 					// Get the point in 'scene' space
-					var scene_point = e.GetPosition(Chart.Scene).ToPointF();
+					var scene_point = e.GetPosition(Chart.Scene).ToPointI();
 					Chart.Scene.Window.MouseNavigate(scene_point, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 				}
 
@@ -365,7 +365,7 @@ namespace Rylogic.Gui.WPF
 				}
 				else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
-					Chart.Scene.Window.MouseNavigate(scene_point, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
+					Chart.Scene.Window.MouseNavigate(scene_point.ToPoint(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
 				Chart.SetRangeFromCamera();
 				Chart.Invalidate();
@@ -452,7 +452,7 @@ namespace Rylogic.Gui.WPF
 					else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
 					{
 						// For 3D scenes, left mouse rotates
-						Chart.Scene.Window.MouseNavigate(scene_point, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+						Chart.Scene.Window.MouseNavigate(scene_point.ToPoint(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 					}
 
 					e.Handled = args.Handled;
@@ -570,7 +570,7 @@ namespace Rylogic.Gui.WPF
 				if (!Chart.YAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.YAxis;
 
 				// Right mouse translates for 2D and 3D scene
-				var point_ss = e.GetPosition(Chart.Scene).ToPointF();
+				var point_ss = e.GetPosition(Chart.Scene).ToPointI();
 				Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
 
 				m_drag_state = EDragState.Start;
@@ -599,7 +599,7 @@ namespace Rylogic.Gui.WPF
 				// Change the cursor once dragging
 				Chart.Scene.Cursor = Cursors.SizeAll;
 
-				Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
+				Chart.Scene.Window.MouseNavigate(drop_loc.ToPoint(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
 				Chart.SetRangeFromCamera();
 				Chart.Invalidate();
 			}
@@ -631,7 +631,7 @@ namespace Rylogic.Gui.WPF
 					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.x = grab_loc.x;
 					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.y = grab_loc.y;
 
-					Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
+					Chart.Scene.Window.MouseNavigate(drop_loc.ToPoint(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
 					Chart.SetRangeFromCamera();
 					Chart.Invalidate();
 

@@ -137,7 +137,7 @@ namespace Rylogic.Gfx
 			/// 'nav_op' is the logical navigation operation to perform.
 			/// 'nav_beg_or_end' should be true on mouse button down or up, and false during mouse movement
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigate(PointF point, EMouseBtns btns, ENavOp nav_op, bool nav_beg_or_end)
+			public bool MouseNavigate(Point point, EMouseBtns btns, ENavOp nav_op, bool nav_beg_or_end)
 			{
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
@@ -155,7 +155,7 @@ namespace Rylogic.Gfx
 					return View3D_MouseNavigate(Handle, v2.From(args.Point), args.NavOp, args.NavBegOrEnd);
 				}
 			}
-			public bool MouseNavigate(PointF point, EMouseBtns btns, bool nav_beg_or_end)
+			public bool MouseNavigate(Point point, EMouseBtns btns, bool nav_beg_or_end)
 			{
 				var op = Camera.MouseBtnToNavOp(btns);
 				return MouseNavigate(point, btns, op, nav_beg_or_end);
@@ -168,7 +168,7 @@ namespace Rylogic.Gfx
 			/// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click)
 			/// 'along_ray' is true if the camera should move along a ray cast through 'point'
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigateZ(PointF point, EMouseBtns btns, float delta, bool along_ray)
+			public bool MouseNavigateZ(Point point, EMouseBtns btns, float delta, bool along_ray)
 			{
 				if (m_in_mouse_navigate != 0) return false;
 				using (Scope.Create(() => ++m_in_mouse_navigate, () => --m_in_mouse_navigate))
@@ -527,57 +527,26 @@ namespace Rylogic.Gfx
 				View3D_WindowRender(Handle);
 			}
 
-			/// <summary>Offload to the GPU</summary>
-			public void Present()
+			/// <summary>Wait for submitted commands to complete on the GPU</summary>
+			public void GSyncWait()
 			{
-				View3D_WindowPresent(Handle);
+				View3D_WindowGSyncWait(Handle);
 			}
 
-			/// <summary>Get/Set the size of the backbuffer (in pixels)</summary>
+			/// <summary>Get/Set the size of the swap chain back buffer (in pixels) (Note: *not* the MSAA back buffer)</summary>
 			[Browsable(false)]
 			public Size BackBufferSize
 			{
-				get
-				{
-					// You might be after RenderTargetSize instead...
-					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
-					return View3D_WindowBackBufferSizeGet(Handle);
-				}
-				set
-				{
-					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
-					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid back buffer size");
-					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid back buffer size");
-					View3D_WindowBackBufferSizeSet(Handle, value);
-				}
+				get => View3D_WindowBackBufferSizeGet(Handle);
+				set => View3D_WindowBackBufferSizeSet(Handle, value);
 			}
 
 			/// <summary>Replace the swap chain with 'swap_chain'</summary>
 			public void CustomSwapChain(Texture[] swap_chain)
 			{
-				View3D_WindowCustomSwapChain(Handle, swap_chain.Length, swap_chain.Select(x => x.Handle).ToArray());
+				var handles = swap_chain.Select(x => x.Handle).ToArray();
+				View3D_WindowCustomSwapChain(Handle, swap_chain.Length, handles);
 			}
-
-#if true // still needed?
-			/// <summary>Restore the render target as the main output</summary>
-			public void RestoreRT()
-			{
-				throw new NotImplementedException();
-#if false //todo
-				View3D_RenderTargetRestore(Handle);
-#endif
-			}
-
-			/// <summary>
-			/// Render the current scene into 'render_target'. If no 'depth_buffer' is given a temporary one will be created.
-			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
-			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
-			/// a source and destination texture at the same time</summary>
-			public void SetRT(Texture? render_target, Texture? depth_stencil, MultiSamp multisampling)
-			{
-				View3D_WindowRenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_stencil?.Handle ?? IntPtr.Zero, multisampling);
-			}
-#endif
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport

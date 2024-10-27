@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/utility/wrappers.h"
 
 namespace pr
 {

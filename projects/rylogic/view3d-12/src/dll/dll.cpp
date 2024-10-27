@@ -610,15 +610,15 @@ VIEW3D_API void __stdcall View3D_WindowRender(view3d::Window window)
 	CatchAndReport(View3D_WindowRender, window,);
 }
 
-// Finish rendering with a back buffer flip. If rendering to a texture, this does a d3ddevice->Flush instead
-VIEW3D_API void __stdcall View3D_WindowPresent(view3d::Window window)
+// Wait for any previous frames to complete rendering within the GPU
+VIEW3D_API void __stdcall View3D_WindowGSyncWait(view3d::Window window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->Present();
+		window->GSyncWait();
 	}
 	CatchAndReport(View3D_WindowPresent, window,);
 }
@@ -636,7 +636,7 @@ VIEW3D_API void __stdcall View3D_WindowCustomSwapChain(view3d::Window window, in
 	CatchAndReport(View3D_WindowCustomSwapChain, window, );
 }
 
-// Get/Set the back buffer (render target + depth stencil)
+// Get the MSAA back buffer (render target + depth stencil)
 VIEW3D_API view3d::BackBuffer __stdcall View3D_WindowRenderTargetGet(view3d::Window window)
 {
 	try
@@ -645,29 +645,20 @@ VIEW3D_API view3d::BackBuffer __stdcall View3D_WindowRenderTargetGet(view3d::Win
 
 		DllLockGuard;
 		auto& bb = window->RenderTarget();
+		auto sz = SIZE{};
+		if (bb.m_render_target)
+		{
+			auto desc = bb.m_render_target->GetDesc();
+			sz.cx = s_cast<int>(desc.Width);
+			sz.cy = s_cast<int>(desc.Height);
+		}
 		return view3d::BackBuffer{
 			.m_render_target = bb.m_render_target.get(),
 			.m_depth_stencil = bb.m_depth_stencil.get(),
+			.m_dim = sz,
 		};
 	}
 	CatchAndReport(View3D_WindowRenderTargetGet, window, {});
-}
-VIEW3D_API view3d::BackBuffer __stdcall View3D_WindowRenderTargetSet(view3d::Window window, view3d::Texture render_target, view3d::Texture depth_stencil, view3d::MultiSamp multisampling)
-{
-	try
-	{
-		if (window == nullptr) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		auto bb = window->RenderTarget(render_target, depth_stencil, rdr12::MultiSamp(multisampling.m_count, multisampling.m_quality));
-		auto desc = bb.m_render_target->GetDesc();
-		return view3d::BackBuffer{
-			.m_render_target = bb.m_render_target.get(),
-			.m_depth_stencil = bb.m_depth_stencil.get(),
-			.m_dim = { s_cast<int>(desc.Width), s_cast<int>(desc.Height) },
-		};
-	}
-	CatchAndReport(View3D_RenderTargetSet, window, {});
 }
 
 // Call InvalidateRect on the HWND associated with 'window'

@@ -14,10 +14,9 @@ namespace pr::rdr12
 		// Notes:
 		//  - The swap chain can contain multiple back buffers. There will be one of these per swap chain back buffer.
 		//  - When rendering to an off-screen target, create one of these to represent the render target.
-
 		Window*                     m_wnd;           // The owning window
-		uint64_t                    m_sync_point;    // The sync point of the last render to this back buffer
 		MultiSamp                   m_multisamp;     // The multi-sampling mode of the back buffer
+		mutable uint64_t            m_sync_point;    // The sync point of the last render to this back buffer
 		D3DPtr<ID3D12Resource>      m_render_target; // The back buffer render target
 		D3DPtr<ID3D12Resource>      m_depth_stencil; // The back buffer depth stencil
 		D3DPtr<ID2D1Bitmap1>        m_d2d_target;    // D2D render target
@@ -26,6 +25,9 @@ namespace pr::rdr12
 
 		BackBuffer();
 		BackBuffer(Window& wnd, MultiSamp ms, Texture2D* render_target = nullptr, Texture2D* depth_stencil = nullptr);
+
+		// An empty back buffer
+		static BackBuffer const& Null();
 
 		// Accessors
 		Renderer& rdr() const;

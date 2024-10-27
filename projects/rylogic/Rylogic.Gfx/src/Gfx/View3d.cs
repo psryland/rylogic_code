@@ -14,12 +14,12 @@ using Rylogic.Maths;
 using Rylogic.Script;
 using Rylogic.Utility;
 using HContext = System.IntPtr;
+using HCubeMap = System.IntPtr;
 using HGizmo = System.IntPtr;
 using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
-using HTexture = System.IntPtr;
-using HCubeMap = System.IntPtr;
 using HSampler = System.IntPtr;
+using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
@@ -1632,18 +1632,14 @@ namespace ldr
 		// Render the window
 		[DllImport(Dll)] private static extern void View3D_WindowRender(HWindow window);
 
-		// Finish rendering with a back buffer flip. If rendering to a texture, this does a d3ddevice->Flush instead
-		[DllImport(Dll)] private static extern void View3D_WindowPresent(HWindow window);
+		// Wait for any previous frames to complete rendering within the GPU
+		[DllImport(Dll)] private static extern void View3D_WindowGSyncWait(HWindow window);
 
 		// Replace the swap chain buffers with 'targets'
 		[DllImport(Dll)] private static extern void View3D_WindowCustomSwapChain(HWindow window, int count, [MarshalAs(UnmanagedType.LPArray)] HTexture[] targets);
 
-		//REMOVE THESE?
-		// Get/Set the back buffer (render target + depth stencil)
+		// Get the MSAA back buffer (render target + depth stencil)
 		[DllImport(Dll)] private static extern BackBuffer View3D_WindowRenderTargetGet(HWindow window);
-		[DllImport(Dll)] private static extern BackBuffer View3D_WindowRenderTargetSet(HWindow window, HTexture render_target, HTexture depth_stencil, MultiSamp multisampling);
-	
-		//[DllImport(Dll)] private static extern void View3D_RenderTargetRestore(HWindow window);
 
 		// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
 		[DllImport(Dll)] private static extern void View3D_WindowInvalidate(HWindow window, bool erase);

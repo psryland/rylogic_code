@@ -203,7 +203,7 @@ namespace Rylogic.Gui.WPF
 			{
 				// Translate the camera along a ray through 'point'
 				var scene_point = Gui_.MapPoint(this, Scene, client_point);
-				Scene.Window.MouseNavigateZ(scene_point.ToPointF(), args.ToMouseBtns(Keyboard.Modifiers), args.Delta, along_ray);
+				Scene.Window.MouseNavigateZ(scene_point.ToPointI(), args.ToMouseBtns(Keyboard.Modifiers), args.Delta, along_ray);
 				chg = nameof(SetRangeFromCamera);
 			}
 			

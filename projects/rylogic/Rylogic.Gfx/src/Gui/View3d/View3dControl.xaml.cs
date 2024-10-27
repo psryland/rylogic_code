@@ -47,7 +47,7 @@ namespace Rylogic.Gui.WPF
 				Camera.ClipPlanes(0.01f, 1000f, View3d.EClipPlanes.CameraRelative);
 
 				// Create a D3D11 off-screen render target image source
-				Source = D3DImage = new Gfx.D3DImage();
+				Source = D3DImage = new Gfx.D3DImage(IntPtr.Zero, Window.BackBuffer.Dim, Window.DpiScale, 4);
 
 				// Set defaults
 				BackgroundColour = Window.BackgroundColour;
@@ -227,10 +227,7 @@ namespace Rylogic.Gui.WPF
 		public View3d.Camera Camera => Window.Camera;
 
 		/// <summary>The D3D render target texture</summary>
-		public View3d.Texture? RenderTarget => D3DImage.BackBuffer?.RenderTarget;
-
-		/// <summary>The D3D depth stencil texture</summary>
-		public View3d.Texture? DepthStencil => D3DImage.BackBuffer?.DepthStencil;
+		public View3d.Texture? RenderTarget => D3DImage.FrontBuffer;
 
 		/// <summary>An interop object providing an off-screen render target</summary>
 		private Gfx.D3DImage D3DImage
@@ -243,7 +240,6 @@ namespace Rylogic.Gui.WPF
 				{
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
-					m_d3d_image.BackBufferChanged -= HandleBackBufferChanged;
 					m_d3d_image.FrontBufferChanged -= HandleFrontBufferChanged;
 					Util.Dispose(ref m_d3d_image!);
 				}
@@ -253,15 +249,13 @@ namespace Rylogic.Gui.WPF
 					Loaded += OnLoaded;
 					Unloaded += OnUnloaded;
 					m_d3d_image.FrontBufferChanged += HandleFrontBufferChanged;
-					m_d3d_image.BackBufferChanged += HandleBackBufferChanged;
 				}
 
 				void OnLoaded(object? sender, EventArgs arg)
 				{
 					// When the control is loaded, attach the main win.
 					// Detach when unloaded (not reliable though)
-					var win = System.Windows.Window.GetWindow(this);
-					D3DImage.WindowOwner = win != null ? new WindowInteropHelper(win).Handle : IntPtr.Zero;
+					D3DImage.WindowOwner = System.Windows.Window.GetWindow(this).Hwnd();
 					Invalidate();
 				}
 				void OnUnloaded(object? sender, EventArgs arg)
@@ -272,17 +266,14 @@ namespace Rylogic.Gui.WPF
 				void HandleFrontBufferChanged(object? sender, EventArgs arg)
 				{
 					if (m_d3d_image.FrontBuffer != null)
+					{
+						var bb_size = m_d3d_image.RequiredBackBufferSize;
 						Window.CustomSwapChain([m_d3d_image.FrontBuffer]);
+						Window.BackBufferSize = bb_size;
+						Window.Viewport = new(0, 0, bb_size.Width, bb_size.Height);
+					}
 					else
 						Window.CustomSwapChain([]);
-				}
-				void HandleBackBufferChanged(object? sender, EventArgs arg)
-				{
-					if (m_d3d_image.BackBuffer != null)
-						OnRenderTargetChanged();
-
-					var bb = D3DImage.BackBuffer;
-					Window.SetRT(bb?.RenderTarget, bb?.DepthStencil, bb?.MultiSampling ?? View3d.MultiSamp.New());
 				}
 			}
 		}
@@ -429,7 +420,7 @@ namespace Rylogic.Gui.WPF
 			{
 				Cursor = Cursors.SizeAll;
 				m_mouse_down_at = Environment.TickCount;
-				if (Window.MouseNavigate(e.GetPosition(this).ToPointF(), e.ToMouseBtns(), true))
+				if (Window.MouseNavigate(e.GetPosition(this).ToPointI(), e.ToMouseBtns(), true))
 					Invalidate();
 			}
 		}
@@ -439,7 +430,7 @@ namespace Rylogic.Gui.WPF
 			if (IsMouseCaptured)
 			{
 				Cursor = Cursors.Arrow;
-				if (Window.MouseNavigate(e.GetPosition(this).ToPointF(), e.ToMouseBtns(), View3d.ENavOp.None, true))
+				if (Window.MouseNavigate(e.GetPosition(this).ToPointI(), e.ToMouseBtns(), View3d.ENavOp.None, true))
 					Invalidate();
 
 				ReleaseMouseCapture();
@@ -464,14 +455,14 @@ namespace Rylogic.Gui.WPF
 			if (Window == null) return;
 			if (IsMouseCaptured)
 			{
-				if (Window.MouseNavigate(e.GetPosition(this).ToPointF(), e.ToMouseBtns(), false))
+				if (Window.MouseNavigate(e.GetPosition(this).ToPointI(), e.ToMouseBtns(), false))
 					Invalidate();
 			}
 		}
 		public void OnMouseWheel(object sender, MouseWheelEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.MouseNavigateZ(e.GetPosition(this).ToPointF(), e.ToMouseBtns(), e.Delta, true))
+			if (Window.MouseNavigateZ(e.GetPosition(this).ToPointI(), e.ToMouseBtns(), e.Delta, true))
 				Invalidate();
 		}
 		private int m_mouse_down_at;
@@ -514,7 +505,7 @@ namespace Rylogic.Gui.WPF
 			using var render_pending = Scope.Create(null, () => m_render_pending = false);
 
 			// Ignore renders until we have a non-zero size, and the D3DImage has a render target
-			if (RenderSize == Size.Empty || D3DImage?.BackBuffer == null || !D3DImage.IsFrontBufferAvailable)
+			if (RenderSize == Size.Empty || D3DImage.FrontBuffer == null || !D3DImage.IsFrontBufferAvailable)
 			{
 				// 'Validate' the window so that future Invalidate() calls trigger the call back.
 				Window?.Validate();
@@ -524,6 +515,7 @@ namespace Rylogic.Gui.WPF
 			// If the size has changed, update the back buffer
 			if (m_resized)
 			{
+				Window.GSyncWait();
 				D3DImage.SetRenderTargetSize(this, scale: ResolutionScale);
 				m_resized = false;
 			}
@@ -538,13 +530,11 @@ namespace Rylogic.Gui.WPF
 
 			// Render the scene into the render target texture
 			Window.Render();
+			Window.GSyncWait();
 
 			// Update the "front buffer" in the D3DImage
 			D3DImage.Flip();
 			//D3DImage.Save("P:\\dump\\d3dimage.png");
-
-			// Finish all gfx card operations
-			Window.Present();
 		}
 		private bool m_render_pending;
 

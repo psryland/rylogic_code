@@ -301,12 +301,18 @@ namespace pr::rdr12
 		m_rt_props.Color[1] = colour.g;
 		m_rt_props.Color[2] = colour.b;
 		m_rt_props.Color[3] = colour.a;
-		BackBufferSize(BackBufferSize(), true);
+
+		auto bb_size = BackBufferSize();
+		if (bb_size != iv2::Zero())
+			BackBufferSize(bb_size, true);
 	}
 
 	// Get/Set the size of the swap chain back buffer (basically the window size in pixels)
 	iv2 Window::BackBufferSize() const
 	{
+		if (BBCount() == 0)
+			return iv2::Zero();
+
 		auto rt = m_swap_bb[BBIndex()].m_render_target.get();
 		if (rt == nullptr)
 			return iv2::Zero();
@@ -431,7 +437,8 @@ namespace pr::rdr12
 		}
 
 		// Make sure the swap chain buffer index is within range
-		m_bb_index %= m_swap_bb.size();
+		if (!m_swap_bb.empty())
+			m_bb_index %= m_swap_bb.size();
 	}
 	void Window::CustomSwapChain(std::span<Texture2D*> back_buffers)
 	{
@@ -440,18 +447,6 @@ namespace pr::rdr12
 			bb[i] = BackBuffer(*this, MultiSamp(1, 0), back_buffers[i], nullptr);
 
 		CustomSwapChain(bb);
-	}
-
-	// Replace the main MSAA back-buffer with 'bb'. Returns the previous back buffer
-	BackBuffer Window::SetRT(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms)
-	{
-		return SetRT(BackBuffer(*this, ms, render_target, depth_stencil));
-	}
-	BackBuffer Window::SetRT(BackBuffer bb)
-	{
-		auto prev_bb = m_msaa_bb;
-		m_msaa_bb = bb;
-		return prev_bb;
 	}
 
 	// Start rendering a new frame. Returns an object that scenes can render into
@@ -464,7 +459,7 @@ namespace pr::rdr12
 
 		// Get the current swap chain back buffer
 		auto& bb_main = m_msaa_bb;
-		auto& bb_post = m_swap_bb[BBIndex()];
+		auto& bb_post = BBCount() != 0 ? m_swap_bb[BBIndex()] : BackBuffer::Null();
 
 		// Ensure the back buffer is available for rendering
 		m_gsync.Wait(bb_main.m_sync_point);
@@ -576,67 +571,48 @@ namespace pr::rdr12
 		if (m_swap_chain_dbg != nullptr)
 			m_swap_chain_dbg->Present(m_vsync, 0);
 
-		// If there is no swap chain, then we must be rendering to an off-screen texture.
-		// In that case, flush to the graphics card
-		if (m_swap_chain == nullptr)
+		// If there is no swap chain, then we must be using a custom swap chain. They can handle their own presentation.
+		if (m_swap_chain != nullptr)
 		{
-			#if 0 // todo
-			Renderer::Lock lock(*m_rdr);
-			auto dc = lock.ImmediateDC();
-
-			// Flush is asynchronous so it may return before the frame has been rendered.
-			// Call flush, then block until the GPU has finished processing all the commands.
-			dc->Flush();
-			for (;; std::this_thread::yield())
+			// Render to the display
+			// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
+			// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
+			// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
+			// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
+			// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
+			// the swap chain unable to relinquish full-screen mode.
+			// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
+			// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
+			auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
+			switch (res)
 			{
-				BOOL complete;
-				auto res = dc->GetData(m_query.get(), &complete, sizeof(complete), static_cast<D3D11_ASYNC_GETDATA_FLAG>(0));
-				if (res == S_OK) break;
-				if (res == S_FALSE) continue;
-				Check(res);
-			}
-			#endif
-			return;
-		}
-
-		// Render to the display
-		// IDXGISwapChain1::Present1 will inform you if your output window is entirely occluded via DXGI_STATUS_OCCLUDED.
-		// When this occurs, we recommended that your application go into standby mode (by calling IDXGISwapChain1::Present1
-		// with DXGI_PRESENT_TEST) since resources used to render the frame are wasted. Using DXGI_PRESENT_TEST will prevent
-		// any data from being presented while still performing the occlusion check. Once IDXGISwapChain1::Present1 returns
-		// S_OK, you should exit standby mode; do not use the return code to switch to standby mode as doing so can leave
-		// the swap chain unable to relinquish full-screen mode.
-		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
-		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
-		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
-		switch (res)
-		{
-			case S_OK:
-			{
-				m_idle = false;
-				break;
-			}
-			case DXGI_STATUS_OCCLUDED:
-			{
-				// This happens when the window is not visible on-screen, the app should go into idle mode
-				m_idle = true;
-				break;
-			}
-			case DXGI_ERROR_DEVICE_RESET:
-			{
-				// The device failed due to a badly formed command. This is a run-time issue;
-				// The application should destroy and recreate the device.
-				Check(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
-			}
-			case DXGI_ERROR_DEVICE_REMOVED:
-			{
-				// This happens in situations like, laptop undocked, or remote desktop connect etc.
-				// We'll just throw so the app can shutdown/reset/whatever
-				Check(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
-			}
-			default:
-			{
-				throw std::runtime_error("Unknown result from SwapChain::Present");
+				case S_OK:
+				{
+					m_idle = false;
+					break;
+				}
+				case DXGI_STATUS_OCCLUDED:
+				{
+					// This happens when the window is not visible on-screen, the app should go into idle mode
+					m_idle = true;
+					break;
+				}
+				case DXGI_ERROR_DEVICE_RESET:
+				{
+					// The device failed due to a badly formed command. This is a run-time issue;
+					// The application should destroy and recreate the device.
+					Check(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+				}
+				case DXGI_ERROR_DEVICE_REMOVED:
+				{
+					// This happens in situations like, laptop undocked, or remote desktop connect etc.
+					// We'll just throw so the app can shutdown/reset/whatever
+					Check(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown result from SwapChain::Present");
+				}
 			}
 		}
 

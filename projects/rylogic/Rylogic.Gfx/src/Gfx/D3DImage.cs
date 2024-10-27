@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Windows;
@@ -41,18 +42,23 @@ namespace Rylogic.Gfx
 		//     var height = Math.Max(1, (int)Math.Ceiling(image.Height * dpi_scale));
 		//     d3d_image.SetRenderTargetSize(width, height);
 		private const View3d.EFormat RenderTargetFormat = View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+		private System.Drawing.Size m_dim_pixels;
 
 		~D3DImage()
 		{
 			Dispose(false);
 		}
 		public D3DImage()
-			: this(96.0, 96.0)
+			: this(IntPtr.Zero, new(16, 16), new(1f, 1f))
 		{ }
-		public D3DImage(double dpiX, double dpiY, int? multi_sampling = null)
-			: base(dpiX, dpiY)
+		public D3DImage(IntPtr hwnd, System.Drawing.Size dim, PointF dpi_scale, int? multi_sampling = null)
+			: base(dpi_scale.X * 96.0, dpi_scale.Y * 96.0)
 		{
-			MultiSampling = multi_sampling ?? 4;
+			WindowOwner = hwnd; // Can be null
+			m_dim_pixels = dim;
+			m_multi_sampling.Count = multi_sampling ?? 4;
+			m_multi_sampling.Quality = View3d.MultiSamp.BestQuality(m_multi_sampling.Count, RenderTargetFormat);
+			TryCreateRenderTarget();
 		}
 		public void Dispose()
 		{
@@ -61,7 +67,6 @@ namespace Rylogic.Gfx
 		}
 		protected virtual void Dispose(bool _)
 		{
-			BackBuffer = null;
 			FrontBuffer = null;
 			WindowOwner = IntPtr.Zero;
 		}
@@ -83,7 +88,6 @@ namespace Rylogic.Gfx
 			{
 				// The window handle is changing. Tear-down Dx9
 				image.FrontBuffer = null;
-				image.BackBuffer = null;
 			}
 			if (args.NewValue is IntPtr new_hwnd && new_hwnd != IntPtr.Zero)
 			{
@@ -99,7 +103,9 @@ namespace Rylogic.Gfx
 			get => m_multi_sampling.Count;
 			set
 			{
-				if (Equals(m_multi_sampling, value)) return;
+				if (Equals(m_multi_sampling.Count, value))
+					return;
+
 				m_multi_sampling.Count = value;
 				m_multi_sampling.Quality = View3d.MultiSamp.BestQuality(value, RenderTargetFormat);
 				TryCreateRenderTarget();
@@ -108,9 +114,7 @@ namespace Rylogic.Gfx
 		private View3d.MultiSamp m_multi_sampling;
 
 		/// <summary>The DPI scaling when the RenderTarget was last resized</summary>
-		public Point DpiScale => new(m_dpi_scaleX, m_dpi_scaleY);
-		private double m_dpi_scaleX;
-		private double m_dpi_scaleY;
+		public PointF DpiScale => new(PixelWidth / (float)Width, PixelHeight / (float)Height);
 
 		/// <summary>The Dx9 render target that matches the area on screen</summary>
 		public View3d.Texture? FrontBuffer
@@ -146,60 +150,29 @@ namespace Rylogic.Gfx
 		/// <summary>Raised when the front buffer is changed</summary>
 		public event EventHandler? FrontBufferChanged;
 
-		/// <summary>The back buffer textures</summary>
-		public BB? BackBuffer
-		{
-			get => m_back_buffer;
-			set
-			{
-				if (m_back_buffer == value)
-					return;
-
-				Util.Dispose(ref m_back_buffer);
-				m_back_buffer = value;
-
-				// Notify of a new back buffer
-				BackBufferChanged?.Invoke(this, EventArgs.Empty);
-			}
-		}
-		private BB? m_back_buffer;
-		private int m_pixel_width = 16;
-		private int m_pixel_height = 16;
-
-		/// <summary>Raised when the render target changes</summary>
-		public event EventHandler? BackBufferChanged;
+		/// <summary>The size of the back buffer in pixels needed for MSAA and DPI</summary>
+		public System.Drawing.Size RequiredBackBufferSize => new(PixelWidth, PixelHeight);
 
 		/// <summary>Set the dimensions of the render target</summary>
-		public void SetRenderTargetSize(int pixel_width, int pixel_height, double dpi_scaleX, double dpi_scaleY)
+		public void SetRenderTargetSize(System.Drawing.Size dim_pixels, PointF dpi_scale)
 		{
-			// Cache these values so that the render target can be created at a later time.
-			m_pixel_width = pixel_width;
-			m_pixel_height = pixel_height;
-			m_dpi_scaleX = dpi_scaleX;
-			m_dpi_scaleY = dpi_scaleY;
-
 			// If the render target size has changed, recreate it
 			if (FrontBuffer == null ||
-				PixelWidth != m_pixel_width ||
-				PixelHeight != m_pixel_height)
+				PixelWidth != dim_pixels.Width ||
+				PixelHeight != dim_pixels.Height)
 				TryCreateRenderTarget();
 		}
 
 		/// <summary>Copy from the Render Target to the Front Buffer</summary>
 		public void Flip()
 		{
-			if (FrontBuffer == null || BackBuffer == null)
+			if (FrontBuffer == null)
 				return;
 
+			// Tell the 'ImageSource' what parts of the image are new (i.e. all of it)
+			// See the Docs for 'AddDirtyRect'. This is how to tell the D3DImage that the texture content has changed.
 			using (LockScope())
-			{
-				// Downscale from the render target to the front buffer
-				View3d.Texture.ResolveAA(FrontBuffer, BackBuffer.RenderTarget);
-				
-				// Tell the 'ImageSource' what parts of the image are new (i.e. all of it)
-				// See the Docs for 'AddDirtyRect'. This is how to tell the D3DImage that the texture content has changed.
-				AddDirtyRect(new Int32Rect(0, 0, m_pixel_width, m_pixel_height));
-			}
+				AddDirtyRect(new Int32Rect(0, 0, m_dim_pixels.Width, m_dim_pixels.Height));
 		}
 
 		/// <summary>RAII Scope for locking the d3d image</summary>
@@ -225,30 +198,7 @@ namespace Rylogic.Gfx
 					dbg_name: "D3DImage RenderTarget FB");
 
 				// Create the Dx9 render target of the required size;
-				var fb = View3d.Texture.Dx9RenderTarget(WindowOwner, m_pixel_width, m_pixel_height, opts);
-
-				FrontBuffer = fb;
-
-				// Notes:
-				// - We don't really need to set the back buffer in view3d-12 because the back buffer
-				//   is already an off-screen surface. All we need to do is replace the swap chain buffers
-				//   with 'FrontBuffer'. The swap chain buffers should be null because there is no HWND.
-
-				// Add multi-sampling for the main render target
-				opts.MultiSamp = m_multi_sampling;
-				opts.DbgName = "D3DImage RenderTarget BB";
-
-				// Create the Dx11 staging render target
-				var rt = new View3d.Texture(m_pixel_width, m_pixel_height, opts);
-
-				opts.Format = View3d.EFormat.DXGI_FORMAT_D32_FLOAT;
-				opts.ClearValue = View3d.ClearValue.New(View3d.EFormat.DXGI_FORMAT_D32_FLOAT);
-				opts.Usage = View3d.EResFlags.D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | View3d.EResFlags.D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-
-				// Create the Dx11 staging depth stencil
-				var ds = new View3d.Texture(m_pixel_width, m_pixel_height, opts);
-				
-				BackBuffer = new(rt, ds, opts.MultiSamp);
+				FrontBuffer = View3d.Texture.Dx9RenderTarget(WindowOwner, m_dim_pixels.Width, m_dim_pixels.Height, opts);
 			}
 			catch (Exception ex)
 			{
@@ -308,32 +258,6 @@ namespace Rylogic.Gfx
 						throw new NotSupportedException("Image format not supported");
 					}
 				}
-			}
-		}
-
-		/// <summary>Back-buffer, container render target and depth stencil</summary>
-		public class BB(View3d.Texture RenderTarget, View3d.Texture DepthStencil, View3d.MultiSamp MultiSampling) :IDisposable
-		{
-			public View3d.Texture RenderTarget = RenderTarget;
-			public View3d.Texture DepthStencil = DepthStencil;
-			public View3d.MultiSamp MultiSampling = MultiSampling;
-
-			public void Dispose()
-			{
-				Util.Dispose(ref RenderTarget!);
-				Util.Dispose(ref DepthStencil!);
-			}
-			public override bool Equals(object? obj)
-			{
-				return obj is BB bb && RenderTarget == bb.RenderTarget && DepthStencil == bb.DepthStencil && MultiSampling.Equals(bb.MultiSampling);
-			}
-			public override int GetHashCode()
-			{
-				return base.GetHashCode();
-			}
-			public override string? ToString()
-			{
-				return base.ToString();
 			}
 		}
 	}

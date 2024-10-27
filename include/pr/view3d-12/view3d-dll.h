@@ -784,17 +784,14 @@ extern "C"
 	// Render the window
 	VIEW3D_API void __stdcall View3D_WindowRender(pr::view3d::Window window);
 
-	// Push commands to the GPU
-	VIEW3D_API void __stdcall View3D_WindowPresent(pr::view3d::Window window);
+	// Wait for any previous frames to complete rendering within the GPU
+	VIEW3D_API void __stdcall View3D_WindowGSyncWait(pr::view3d::Window window);
 
 	// Replace the swap chain buffers
 	VIEW3D_API void __stdcall View3D_WindowCustomSwapChain(pr::view3d::Window window, int count, pr::view3d::Texture* targets);
 
-	// Get/Set the back buffer (render target + depth stencil)
+	// Get the MSAA back buffer (render target + depth stencil)
 	VIEW3D_API pr::view3d::BackBuffer __stdcall View3D_WindowRenderTargetGet(pr::view3d::Window window);
-	VIEW3D_API pr::view3d::BackBuffer __stdcall View3D_WindowRenderTargetSet(pr::view3d::Window window, pr::view3d::Texture render_target, pr::view3d::Texture depth_stencil, pr::view3d::MultiSamp multisampling);
-
-	//VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (pr::view3d::Window window);
 
 	// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
 	VIEW3D_API void __stdcall View3D_WindowInvalidate(pr::view3d::Window window, BOOL erase);

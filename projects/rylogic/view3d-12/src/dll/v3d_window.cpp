@@ -513,6 +513,15 @@ namespace pr::rdr12
 		// Reset the draw list
 		m_scene.ClearDrawlists();
 
+		// If the viewport is empty, nothing to draw.
+		// This is could be an error, but setting the viewport to empty could
+		// also be a way to stop rendering when a window is minimised, etc..
+		if (m_scene.m_viewport.AsIRect().Size() == iv2::Zero())
+		{
+			Validate();
+			return;
+		}
+
 		// Notify of a render about to happen
 		OnRendering(this);
 
@@ -638,19 +647,10 @@ namespace pr::rdr12
 		Validate();
 	}
 	
-	// Flush the scene to the GPU
-	void V3dWindow::Present()
+	// Wait for any previous frames to complete rendering within the GPU
+	void V3dWindow::GSyncWait() const
 	{
-		//// Wait for the previous frame to finish
-		//m_wnd.m_gsync.Wait();
-
-		//// Render the frame
-		//auto frame = m_wnd.NewFrame();
-		//m_scene.Render(frame);
-		//m_wnd.Present(frame, rdr12::EGpuFlush::Async);
-
-		//// No longer invalidated
-		//Validate();
+		m_wnd.m_gsync.Wait();
 	}
 
 	// Replace the swap chain buffers
@@ -667,10 +667,6 @@ namespace pr::rdr12
 	rdr12::BackBuffer const& V3dWindow::RenderTarget() const
 	{
 		return m_wnd.m_msaa_bb;
-	}
-	rdr12::BackBuffer V3dWindow::RenderTarget(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms)
-	{
-		return m_wnd.SetRT(render_target, depth_stencil, ms);
 	}
 
 	// Call InvalidateRect on the HWND associated with this window
@@ -1644,9 +1640,11 @@ namespace pr::rdr12
 		m_focus_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
 		m_focus_point.m_i2w = m4x4Identity;
+		m_focus_point.m_size = 1.0f;
 		m_origin_point.m_model = res().CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
 		m_origin_point.m_i2w = m4x4Identity;
+		m_origin_point.m_size = 1.0f;
 
 		// Create the selection box model
 		m_selection_box.m_model = res().CreateModel(EStockModel::SelectionBox);

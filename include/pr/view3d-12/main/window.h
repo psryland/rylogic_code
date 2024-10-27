@@ -91,10 +91,6 @@ namespace pr::rdr12
 		void CustomSwapChain(std::span<BackBuffer> back_buffers);
 		void CustomSwapChain(std::span<Texture2D*> back_buffers);
 
-		// Replace the main MSAA back-buffer with 'rt'. Returns the previous back buffer
-		BackBuffer SetRT(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms);
-		BackBuffer SetRT(BackBuffer bb);
-
 		// Start rendering a new frame. Returns an object that scenes can render into
 		Frame NewFrame();
 
