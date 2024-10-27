@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Str;
 using Rylogic.Utility;
 

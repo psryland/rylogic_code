@@ -1,4 +1,4 @@
-﻿//#define PR_VB_TRACE
+//#define PR_VB_TRACE
 using System;
 using System.ComponentModel;
 using System.Diagnostics;

@@ -17,23 +17,15 @@ namespace pr::rdr12
 
 		Window*                     m_wnd;           // The owning window
 		uint64_t                    m_sync_point;    // The sync point of the last render to this back buffer
+		MultiSamp                   m_multisamp;     // The multi-sampling mode of the back buffer
 		D3DPtr<ID3D12Resource>      m_render_target; // The back buffer render target
 		D3DPtr<ID3D12Resource>      m_depth_stencil; // The back buffer depth stencil
 		D3DPtr<ID2D1Bitmap1>        m_d2d_target;    // D2D render target
 		D3D12_CPU_DESCRIPTOR_HANDLE m_rtv;           // The descriptor of the back buffer as a RTV
 		D3D12_CPU_DESCRIPTOR_HANDLE m_dsv;           // The descriptor of the back buffer as a DSV
-		MultiSamp                   m_multisamp;     // The multi-sampling mode of the back buffer
 
-		BackBuffer()
-			: m_wnd()
-			, m_sync_point()
-			, m_render_target()
-			, m_depth_stencil()
-			, m_d2d_target()
-			, m_rtv()
-			, m_dsv()
-			, m_multisamp()
-		{}
+		BackBuffer();
+		BackBuffer(Window& wnd, MultiSamp ms, Texture2D* render_target = nullptr, Texture2D* depth_stencil = nullptr);
 
 		// Accessors
 		Renderer& rdr() const;

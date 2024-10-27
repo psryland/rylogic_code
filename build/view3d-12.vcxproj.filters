@@ -629,6 +629,12 @@
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_script_editor.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\lighting\light_ui.h">
+      <Filter>src\lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d-12\utility\dx9_context.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\rylogic\view3d-12\src\shaders\hlsl\screenspace\arrow_head.hlsl">

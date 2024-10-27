@@ -106,7 +106,7 @@ namespace LDraw.UI
 			// Load the asset file in a background thread
 			ThreadPool.QueueUserWorkItem(x =>
 			{
-				Model.View3d.LoadScript(Filepath, true, ContextId, include_paths, OnAdd);
+				Model.View3d.LoadScriptFromFile(Filepath, ContextId, include_paths, OnAdd);
 				void OnAdd(Guid id, bool before)
 				{
 					if (before)

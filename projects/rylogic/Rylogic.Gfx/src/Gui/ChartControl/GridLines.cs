@@ -118,7 +118,7 @@ namespace Rylogic.Gui.WPF
 				var icount = MaxLines * 2;
 				var ncount = 1;
 				var gfx = new View3d.Object(Name, 0xFFFFFFFF, vcount, icount, ncount, UpdateGfxCB, CtxId);
-				gfx.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZWrite | View3d.EFlags.ShadowCastExclude, true);
+				gfx.FlagsSet(View3d.ELdrFlags.SceneBoundsExclude | View3d.ELdrFlags.NoZWrite | View3d.ELdrFlags.ShadowCastExclude, true);
 				return gfx;
 			}
 
@@ -171,7 +171,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Grid nugget
-				nuggets[0] = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.ShadowCastExclude);
+				nuggets[0] = View3d.Nugget.New(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.ShadowCastExclude);
 				new_vcount = num_lines * 2;
 				new_icount = num_lines * 2;
 				new_ncount = 1;

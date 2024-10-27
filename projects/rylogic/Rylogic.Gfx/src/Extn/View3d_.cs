@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Interop;
-using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 
 namespace Rylogic.Extn
@@ -9,7 +8,7 @@ namespace Rylogic.Extn
 	public static class View3d_
 	{
 		/// <summary>Set the render target size of this D3D11Image from the given visual</summary>
-		public static void SetRenderTargetSize(this D3D11Image d3d_image, FrameworkElement element, double scale = 1)
+		public static void SetRenderTargetSize(this Gfx.D3DImage d3d_image, FrameworkElement element, double scale = 1)
 		{
 			// Ensure the Window that contains 'element' is also the owner of 'd3d_image'
 			d3d_image.WindowOwner = Window.GetWindow(element).Hwnd();

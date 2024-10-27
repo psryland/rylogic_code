@@ -477,6 +477,36 @@ namespace Rylogic.Gfx
 			D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY = 0x80,
 			D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE = 0x100
 		}
+		[Flags] public enum EResState : int
+		{
+			D3D12_RESOURCE_STATE_COMMON = 0,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER = 0x1,
+			D3D12_RESOURCE_STATE_INDEX_BUFFER = 0x2,
+			D3D12_RESOURCE_STATE_RENDER_TARGET = 0x4,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS = 0x8,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE = 0x10,
+			D3D12_RESOURCE_STATE_DEPTH_READ = 0x20,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE = 0x40,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE = 0x80,
+			D3D12_RESOURCE_STATE_STREAM_OUT = 0x100,
+			D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT = 0x200,
+			D3D12_RESOURCE_STATE_COPY_DEST = 0x400,
+			D3D12_RESOURCE_STATE_COPY_SOURCE = 0x800,
+			D3D12_RESOURCE_STATE_RESOLVE_DEST = 0x1000,
+			D3D12_RESOURCE_STATE_RESOLVE_SOURCE = 0x2000,
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x400000,
+			D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = 0x1000000,
+			D3D12_RESOURCE_STATE_GENERIC_READ = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE = (0x40 | 0x80),
+			D3D12_RESOURCE_STATE_PRESENT = 0,
+			D3D12_RESOURCE_STATE_PREDICATION = 0x200,
+			D3D12_RESOURCE_STATE_VIDEO_DECODE_READ = 0x10000,
+			D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE = 0x20000,
+			D3D12_RESOURCE_STATE_VIDEO_PROCESS_READ = 0x40000,
+			D3D12_RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000,
+			D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ = 0x200000,
+			D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE = 0x800000
+		}
 		public enum EFilter : int
 		{
 			D3D12_FILTER_MIN_MAG_MIP_POINT = 0,
@@ -773,6 +803,27 @@ namespace Rylogic.Gfx
 			}
 		}
 
+		/// <summary>Light source properties</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct MultiSamp // DXGI_SAMPLE_DESC
+		{
+			public int Count;
+			public int Quality;
+
+			public static MultiSamp New(int? count = null, int? quality = null)
+			{
+				return new MultiSamp
+				{
+					Count = count ?? 1,
+					Quality = quality ?? 0,
+				};
+			}
+			public static int BestQuality(int count, EFormat format)
+			{
+				return View3D_MSAAQuality(count, format);
+			}
+		}
+
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextureOptions
@@ -781,23 +832,26 @@ namespace Rylogic.Gfx
 			public EFormat Format;
 			public int Mips;
 			public EResFlags Usage;
+			public EResState State;
 			public ClearValue ClearValue;
-			public int MultiSamp;
+			public MultiSamp MultiSamp;
 			public uint ColourKey;
 			public bool HasAlpha;
 			public string DbgName;
 
-			public static TextureOptions New(m4x4? t2s = null, EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM, int mips = 0, EResFlags usage = EResFlags.D3D12_RESOURCE_FLAG_NONE, ClearValue clear_value = default, int msaa = 1, uint colour_key = 0U, bool has_alpha = false, string? dbg_name = null)
+			public static TextureOptions New(m4x4? t2s = null, EFormat? format = null, int? mips = null, EResFlags? usage = null, EResState? state = null, ClearValue? clear_value = null, MultiSamp? msaa = null, uint? colour_key = null, bool? has_alpha = null, string? dbg_name = null)
 			{
-				return new TextureOptions {
+				return new TextureOptions
+				{
 					T2S = t2s ?? m4x4.Identity,
-					Format = format,
-					Mips = Math.Max(0, mips),
-					Usage = usage,
-					ClearValue = clear_value,
-					MultiSamp = Math.Max(1, msaa),
-					ColourKey = colour_key,
-					HasAlpha = has_alpha,
+					Format = format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
+					Mips = mips ?? 0,
+					Usage = usage ?? EResFlags.D3D12_RESOURCE_FLAG_NONE,
+					State = state ?? EResState.D3D12_RESOURCE_STATE_COMMON,
+					ClearValue = clear_value ?? ClearValue.New(format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM),
+					MultiSamp = msaa ?? MultiSamp.New(),
+					ColourKey = colour_key ?? 0U,
+					HasAlpha = has_alpha ?? false,
 					DbgName = dbg_name ?? string.Empty,
 				};
 			}
@@ -989,12 +1043,21 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ImageInfo
 		{
-			public ulong m_width;
-			public uint m_height;
-			public ushort m_depth;
-			public ushort m_mips;
-			public EFormat m_format;
-			public uint m_image_file_format; // D3DXIMAGE_FILEFORMAT
+			public ulong Width;
+			public uint Height;
+			public ushort Depth;
+			public ushort Mips;
+			public EFormat Format;
+			public uint ImageFileFormat; // D3DXIMAGE_FILEFORMAT
+		};
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct BackBuffer
+		{
+			public IntPtr RenderTarget; // ID3D12Resource*
+			public IntPtr DepthStencil; // ID3D12Resource*
+			public Size Dim;
 		};
 		
 		#endregion
@@ -1013,8 +1076,17 @@ namespace Rylogic.Gfx
 		public struct ClearValue
 		{
 			[FieldOffset(0)] public EFormat Format;
-			[FieldOffset(4), MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)] public float[] Color;
+			[FieldOffset(4)] public Colour128 Colour;
 			[FieldOffset(4)] public DepthStencilValue DepthStencil;
+
+			public static ClearValue New(EFormat format, Colour128 colour = default)
+			{
+				return new ClearValue
+				{
+					Format = format,
+					Colour = colour,
+				};
+			}
 		}
 
 		#endregion
@@ -1510,8 +1582,8 @@ namespace ldr
 
 		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-		[DllImport(Dll)] private static extern IVec2 View3D_WindowBackBufferSizeGet(HWindow window);
-		[DllImport(Dll)] private static extern void View3D_WindowBackBufferSizeSet(HWindow window, IVec2 size);
+		[DllImport(Dll)] private static extern Size View3D_WindowBackBufferSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowBackBufferSizeSet(HWindow window, Size size);
 
 		// Get/Set the window viewport (and clipping area)
 		[DllImport(Dll)] private static extern Viewport View3D_WindowViewportGet(HWindow window);
@@ -1560,8 +1632,18 @@ namespace ldr
 		// Render the window
 		[DllImport(Dll)] private static extern void View3D_WindowRender(HWindow window);
 
-		// Return the render target as a texture
-		[DllImport(Dll)] private static extern HTexture View3D_WindowRenderTargetGet(HWindow window);
+		// Finish rendering with a back buffer flip. If rendering to a texture, this does a d3ddevice->Flush instead
+		[DllImport(Dll)] private static extern void View3D_WindowPresent(HWindow window);
+
+		// Replace the swap chain buffers with 'targets'
+		[DllImport(Dll)] private static extern void View3D_WindowCustomSwapChain(HWindow window, int count, [MarshalAs(UnmanagedType.LPArray)] HTexture[] targets);
+
+		//REMOVE THESE?
+		// Get/Set the back buffer (render target + depth stencil)
+		[DllImport(Dll)] private static extern BackBuffer View3D_WindowRenderTargetGet(HWindow window);
+		[DllImport(Dll)] private static extern BackBuffer View3D_WindowRenderTargetSet(HWindow window, HTexture render_target, HTexture depth_stencil, MultiSamp multisampling);
+	
+		//[DllImport(Dll)] private static extern void View3D_RenderTargetRestore(HWindow window);
 
 		// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
 		[DllImport(Dll)] private static extern void View3D_WindowInvalidate(HWindow window, bool erase);
@@ -1837,13 +1919,13 @@ namespace ldr
 		// Set 'data' to nullptr to leave the texture uninitialised, if not null then data must point to width x height pixel data
 		// of the size appropriate for the given format. 'e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8'
 		// Note: careful with stride, 'data' is expected to have the appropriate stride for BytesPerPixel(format) * width
-		[DllImport(Dll)] private static extern HTexture View3D_TextureCreate(uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture View3D_TextureCreate(int width, int height, IntPtr data, int data_size, ref TextureOptions options);
 
 		// Create one of the stock textures
 		[DllImport(Dll)] private static extern HTexture View3D_TextureCreateStock(EStockTexture stock_texture);
 
 		// Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
-		[DllImport(Dll)] private static extern HTexture View3D_TextureCreateFromUri([MarshalAs(UnmanagedType.LPStr)] string resource, uint width, uint height, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture View3D_TextureCreateFromUri([MarshalAs(UnmanagedType.LPStr)] string resource, int width, int height, ref TextureOptions options);
 
 		// Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
 		[DllImport(Dll)] private static extern HCubeMap View3D_CubeMapCreateFromUri([MarshalAs(UnmanagedType.LPStr)] string resource, ref CubeMapOptions options);
@@ -1932,6 +2014,15 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
 
 		// Miscellaneous **************************
+		
+		// Create a render target texture on a D3D9 device. Intended for WPF D3DImage
+		[DllImport(Dll)] private static extern HTexture View3D_CreateDx9RenderTarget(HWND hwnd, uint width, uint height, ref TextureOptions options, out IntPtr shared_handle);
+
+		// Create a Texture instance from a shared d3d resource (created on a different d3d device)
+		[DllImport(Dll)] private static extern HTexture View3D_CreateTextureFromSharedResource(IntPtr shared_resource, ref TextureOptions options);
+
+		// Return the supported MSAA quality for the given multi-sampling count
+		[DllImport(Dll)] private static extern int View3D_MSAAQuality(int count, EFormat format);
 
 		// Return true if the focus point is visible. Add/Remove the focus point to a window.
 		[DllImport(Dll)] private static extern bool View3D_StockObjectVisibleGet(HWindow window, EStockObject stock_object);
@@ -1955,6 +2046,9 @@ namespace ldr
 		// Create/Delete the demo scene in the given window
 		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreate(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_DemoSceneDelete();
+		
+		// Show a window containing the demo script
+		[DllImport(Dll)] private static extern void View3D_DemoScriptShow(HWindow window);
 
 		// Return the example Ldr script as a BSTR
 		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ExampleScriptBStr();
@@ -1967,6 +2061,12 @@ namespace ldr
 
 		// Parse a transform description using the Ldr script syntax
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern m4x4 View3D_ParseLdrTransform([MarshalAs(UnmanagedType.LPStr)] string ldr_script);
+
+		// Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
+		[DllImport(Dll)] private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code);
+
+		// Return the reference count of a COM interface
+		[DllImport(Dll)] private static extern ulong View3D_RefCount(IntPtr pointer);
 
 		// Tools **********************************
 
@@ -1986,35 +2086,16 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool View3D_AngleToolVisibleGet(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_AngleToolVisibleSet(HWindow window, bool show);
 
+		// Show/Hide the lighting controls UI
+		[DllImport(Dll)] private static extern void View3D_LightingControlsUI(HWindow window);
+
 #if false
-
-		[DllImport(Dll)]
-		private static extern Guid View3D_LoadScript([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref Includes includes, OnAddCB? on_add_complete, IntPtr ctx);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectsDeleteAll();
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectsDeleteById(IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectsDeleteUnused(IntPtr context_ids, int include_count, int exclude_count);
-
 
 		// Camera
 		[DllImport(Dll)]
 		private static extern void View3D_CameraViewRectSet(HWindow window, float width, float height, float dist);
 		[DllImport(Dll)]
-		private static extern float View3D_CameraFovXGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraFovXSet(HWindow window, float fovX);
-		[DllImport(Dll)]
-		private static extern float View3D_CameraFovYGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CameraFovYSet(HWindow window, float fovY);
-		[DllImport(Dll)]
 		private static extern v2 View3D_ViewArea(HWindow window, float dist);
-
-		// Lights
-		[DllImport(Dll)]
-		private static extern void View3D_LightShowDialog(HWindow window);
 
 		// Materials
 		[DllImport(Dll)]
@@ -2023,64 +2104,10 @@ namespace ldr
 		private static extern IntPtr View3D_TextureGetDC(HTexture tex, bool discard);
 		[DllImport(Dll)]
 		private static extern void View3D_TextureReleaseDC(HTexture tex);
-		[DllImport(Dll)]
-		private static extern HTexture View3D_TextureFromShared(IntPtr shared_resource, ref TextureOptions.InteropData options);
-		[DllImport(Dll)]
-		private static extern HTexture View3D_CreateDx9RenderTarget(HWND hwnd, uint width, uint height, ref TextureOptions.InteropData options, out IntPtr shared_handle);
-
-		// Rendering
-		[DllImport(Dll)]
-		private static extern void View3D_Invalidate(HWindow window, bool erase);
-		[DllImport(Dll)]
-		private static extern void View3D_InvalidateRect(HWindow window, ref Win32.RECT rect, bool erase);
-		[DllImport(Dll)]
-		private static extern void View3D_Render(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_Present(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_RenderTargetRestore(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_RenderTargetSet(HWindow window, HTexture render_target, HTexture depth_buffer, bool is_new_main_rt);
-		[DllImport(Dll)]
-		private static extern void View3D_BackBufferSizeGet(HWindow window, out int width, out int height);
-		[DllImport(Dll)]
-		private static extern void View3D_BackBufferSizeSet(HWindow window, int width, int height);
-		[DllImport(Dll)]
-		private static extern Viewport View3D_Viewport(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_SetViewport(HWindow window, Viewport vp);
-		[DllImport(Dll)]
-		private static extern EFillMode View3D_FillModeGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_FillModeSet(HWindow window, EFillMode mode);
-		[DllImport(Dll)]
-		private static extern ECullMode View3D_CullModeGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_CullModeSet(HWindow window, ECullMode mode);
-		[DllImport(Dll)]
-		private static extern uint View3D_BackgroundColourGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_BackgroundColourSet(HWindow window, uint aarrggbb);
-
-		// Diagnostics
 
 		// Miscellaneous
 		[DllImport(Dll)]
 		private static extern void View3D_Flush();
-		[DllImport(Dll)]
-		private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code);
-		[DllImport(Dll)]
-		private static extern void View3D_OriginSizeSet(HWindow window, float size);
-		[DllImport(Dll)]
-		private static extern bool View3D_SelectionBoxVisibleGet(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_SelectionBoxVisibleSet(HWindow window, bool visible);
-		[DllImport(Dll)]
-		private static extern void View3D_DemoScriptShow(HWindow window);
-		[DllImport(Dll)]
-		private static extern void View3D_ObjectManagerShow(HWindow window, bool show);
-		[DllImport(Dll)]
-		private static extern ulong View3D_RefCount(IntPtr pointer);
 
 		[DllImport(Dll)]
 		private static extern HWND View3D_LdrEditorCreate(HWND parent);

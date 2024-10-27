@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,6 +19,7 @@ using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF

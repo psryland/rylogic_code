@@ -8,6 +8,7 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/ray_cast.h"
+#include "pr/view3d-12/lighting/light_ui.h"
 #include "pr/view3d-12/ldraw/ldr_ui_object_manager.h"
 #include "pr/view3d-12/ldraw/ldr_ui_script_editor.h"
 #include "pr/view3d-12/ldraw/ldr_ui_measure_tool.h"
@@ -28,6 +29,7 @@ namespace pr::rdr12
 			std::atomic<seconds_t> m_clock;
 			AnimData() :m_thread() ,m_issue() ,m_clock() {}
 		};
+		using LightingUIPtr = std::unique_ptr<LightingUI>;
 		using LdrObjectManagerUIPtr = std::unique_ptr<LdrObjectManagerUI>;
 		using ScriptEditorUIPtr = std::unique_ptr<LdrScriptEditorUI>;
 		using LdrMeasureUIPtr = std::unique_ptr<LdrMeasureUI>;
@@ -74,8 +76,9 @@ namespace pr::rdr12
 		bool                 m_invalidated;    // True after Invalidate has been called but before Render has been called
 		
 		// UI Tools
+		LightingUIPtr m_ui_lighting;               // A UI for controlling the lighting of the scene
 		LdrObjectManagerUIPtr m_ui_object_manager; // A UI for managing objects within the window
-		ScriptEditorUIPtr m_ui_script_editor;       // A UI for editing ldr scripts
+		ScriptEditorUIPtr m_ui_script_editor;      // A UI for editing ldr scripts
 		LdrMeasureUIPtr m_ui_measure_tool;         // A UI for measuring distances between points within the 3d environment
 		LdrAngleUIPtr m_ui_angle_tool;             // A UI for measuring angles between points within the 3d environment
 
@@ -160,8 +163,16 @@ namespace pr::rdr12
 		// Render this window into whatever render target is currently set
 		void Render();
 
-		// Get the render target texture
-		Texture2D* RenderTarget();
+		// Flush the scene to the GPU
+		void Present();
+
+		// Replace the swap chain buffers
+		void CustomSwapChain(std::span<BackBuffer> back_buffers);
+		void CustomSwapChain(std::span<Texture2D*> back_buffers);
+
+		// Get/Set the render target for this window
+		rdr12::BackBuffer const& RenderTarget() const;
+		rdr12::BackBuffer RenderTarget(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms);
 
 		// Call InvalidateRect on the HWND associated with this window
 		void InvalidateRect(RECT const* rect, bool erase = false);
@@ -320,6 +331,12 @@ namespace pr::rdr12
 		v2 FillModePointsSize() const;
 		void FillModePointsSize(v2 size);
 
+		// Access the built-in script editor
+		LdrScriptEditorUI& EditorUI();
+
+		// Access the built-in lighting controls UI
+		LightingUI& LightingUI();
+
 		// Show/Hide the object manager tool
 		bool ObjectManagerVisible() const;
 		void ObjectManagerVisible(bool show);
@@ -335,7 +352,10 @@ namespace pr::rdr12
 		// Show/Hide the angle measurement tool
 		bool AngleToolVisible() const;
 		void AngleToolVisible(bool show);
-	
+
+		// Implements standard key bindings. Returns true if handled
+		bool TranslateKey(EKeyCodes key);
+
 	private:
 
 		// Create stock models such as the focus point, origin, etc

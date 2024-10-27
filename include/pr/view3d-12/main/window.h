@@ -37,12 +37,13 @@ namespace pr::rdr12
 		DXGI_SWAP_CHAIN_FLAG         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 		D3DPtr<IDXGISwapChain>       m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
 		D3DPtr<IDXGISwapChain3>      m_swap_chain;       // The swap chain bound to the window handle
-		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the swapchain
-		D3DPtr<ID3D12DescriptorHeap> m_dsv_heap;         // Depth stencil view descriptor for the swapchain
+		D3DPtr<ID3D12DescriptorHeap> m_rtv_heap;         // Render target view descriptors for the swap-chain
+		D3DPtr<ID3D12DescriptorHeap> m_dsv_heap;         // Depth stencil view descriptor for the swap-chain
 		D3DPtr<ID2D1DeviceContext>   m_d2d_dc;           // The device context for D2D
 		GpuSync                      m_gsync;            // GPU fence for frames
 		BackBuffers                  m_swap_bb;          // Back buffer render targets from the swap chain.
 		BackBuffer                   m_msaa_bb;          // The MSAA back buffer render target
+		int                          m_bb_index;         // The current back buffer index
 		RTProps                      m_rt_props;         // The properties of the MSAA back buffer
 		DSProps                      m_ds_props;         // The properties of the depth stencil buffer
 		GfxCmdAllocPool              m_cmd_alloc_pool;   // A pool of command allocators
@@ -85,6 +86,14 @@ namespace pr::rdr12
 		// Get/Set the multi sampling used. Changing the multi-sampling is like resizing the MSAA back buffer only.
 		MultiSamp MultiSampling() const;
 		void MultiSampling(MultiSamp ms);
+		
+		// Replace the swap chain buffers with new ones
+		void CustomSwapChain(std::span<BackBuffer> back_buffers);
+		void CustomSwapChain(std::span<Texture2D*> back_buffers);
+
+		// Replace the main MSAA back-buffer with 'rt'. Returns the previous back buffer
+		BackBuffer SetRT(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms);
+		BackBuffer SetRT(BackBuffer bb);
 
 		// Start rendering a new frame. Returns an object that scenes can render into
 		Frame NewFrame();
@@ -92,26 +101,17 @@ namespace pr::rdr12
 		// Present the frame to the display
 		void Present(Frame& frame, EGpuFlush flush = EGpuFlush::Async);
 
-	private:
+		// Create an MSAA render target and depth stencil
+		BackBuffer CreateRenderTarget(iv2 size, MultiSamp ms, ClearValue rt_clear, ClearValue ds_clear);
 
-		// Create the MSAA render target and depth stencil
-		void CreateMSAA(BackBuffer& bb, iv2 size, MultiSamp ms);
+	private:
 
 		// Create the swap chain back buffers
 		void CreateSwapChain(iv2 size);
 	};
 }
 
-		#if 0 // todo
-		// Binds the given render target and depth buffer views to the OM
-		void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv, bool is_new_main_rt);
-
-		// Render this window into 'render_target;
-		// 'render_target' is the texture that is rendered onto
-		// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
-		// 'is_new_main_rt' if true, makes the provided targets the main render target (those restored by RestoreRT)
-		void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer, bool is_new_main_rt);
-
+#if 0 // todo
 		// Draw text directly to the back buffer
 		void DrawString(wchar_t const* text, float x, float y);
 

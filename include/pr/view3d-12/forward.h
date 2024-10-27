@@ -110,6 +110,7 @@
 #include "pr/threads/name_thread.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/win32/win32.h"
+#include "pr/win32/key_codes.h"
 #include "pr/script/reader.h"
 
 namespace pr::rdr12

@@ -222,7 +222,7 @@ namespace Rylogic.Gui.WPF
 						//NotifyPropertyChanged(nameof(ChartBackground));
 						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
 
-						// Invalidate grid lines and crosshair because their colour depends on the background colour
+						// Invalidate grid lines and cross-hair because their colour depends on the background colour
 						XAxis.Gfx.Invalidate();
 						YAxis.Gfx.Invalidate();
 						if (ShowCrossHair)
@@ -372,15 +372,15 @@ namespace Rylogic.Gui.WPF
 		}
 		private RangeData m_range = null!;
 
-		/// <summary>Accessor to the current X axis</summary>
+		/// <summary>Access to the current X axis</summary>
 		public RangeData.Axis XAxis => Range.XAxis;
 		public AxisPanel XAxisPanel => m_xaxis_panel;
 
-		/// <summary>Accessor to the current Y axis</summary>
+		/// <summary>Access to the current Y axis</summary>
 		public RangeData.Axis YAxis => Range.YAxis;
 		public AxisPanel YAxisPanel => m_yaxis_panel;
 
-		/// <summary>Accessor to the current Y axis</summary>
+		/// <summary>Access to the current Y axis</summary>
 		public RangeData.Axis GetAxis(EAxis axis)
 		{
 			return
@@ -1208,9 +1208,9 @@ namespace Rylogic.Gui.WPF
 			// Move the camera in the camera Z axis direction so that the width/height at the
 			// focus distance matches the XAxis/YAxis range. Use the Fov that is closest to 90deg
 			//   Tan(FovX/2) = (XAxis.Span/2)/d  or  Tan(FovY/2) = (YAxis.Span/2)/d
-			var use_xaxis = Math_.Abs(Scene.Camera.FovX - Math_.TauBy4F) < Math_.Abs(Scene.Camera.FovY - Math_.TauBy4F);
+			var use_xaxis = Math_.Abs(Scene.Camera.Fov.x - Math_.TauBy4F) < Math_.Abs(Scene.Camera.Fov.y - Math_.TauBy4F);
 			var span = use_xaxis ? XAxis.Span : YAxis.Span;
-			var fov = use_xaxis ? Scene.Camera.FovX : Scene.Camera.FovY;
+			var fov = use_xaxis ? Scene.Camera.Fov.x : Scene.Camera.Fov.y;
 			fov = Math_.Clamp(fov, float.Epsilon, Math_.TauBy2F - float.Epsilon);
 			Scene.Camera.FocusDist = (float)(span / (2.0 * Math.Tan(fov / 2.0)));
 

@@ -26,24 +26,25 @@ namespace pr::rdr12
 	}
 
 	// Constructors
-	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc, D3D12_SRV_DIMENSION srv_dimension)
-		:RefCounted<TextureBase>()
-		,m_mgr(&mgr)
-		,m_res(res, true)
-		,m_srv()
-		,m_uav()
-		,m_rtv()
-		,m_id(desc.m_id == AutoId ? MakeId(this) : desc.m_id)
-		,m_uri(desc.m_uri)
-		,m_dim(s_cast<int>(desc.m_tdesc.Width), s_cast<int>(desc.m_tdesc.Height), s_cast<int>(desc.m_tdesc.DepthOrArraySize))
-		,m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
-		,m_name(desc.m_name)
+	TextureBase::TextureBase(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
+		: RefCounted<TextureBase>()
+		, m_mgr(&mgr)
+		, m_res(res, true)
+		, m_srv()
+		, m_uav()
+		, m_rtv()
+		, m_dsv()
+		, m_id(desc.m_id == AutoId ? MakeId(this) : desc.m_id)
+		, m_uri(desc.m_uri)
+		, m_dim(s_cast<int>(desc.m_tdesc.Width), s_cast<int>(desc.m_tdesc.Height), s_cast<int>(desc.m_tdesc.DepthOrArraySize))
+		, m_tflags(desc.m_has_alpha ? ETextureFlag::HasAlpha : ETextureFlag::None)
+		, m_name(desc.m_name)
 	{
 		auto device = m_mgr->d3d();
 		auto tdesc = desc.m_tdesc;
 
 		// Create views for the texture
-		if (!AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == false)
 		{
 			// Check the texture format is supported
 			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
@@ -54,7 +55,7 @@ namespace pr::rdr12
 			// Create the SRV
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {
 				.Format = tdesc.Format,
-				.ViewDimension = srv_dimension,
+				.ViewDimension = desc.m_tdesc.SrvDimension(),
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2D = {
 					.MostDetailedMip = 0,
@@ -96,14 +97,39 @@ namespace pr::rdr12
 			// Create the RTV
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {
 				.Format = tdesc.Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = {
-					.MipSlice = 0,
-					.PlaneSlice = 0,
-				},
+				.ViewDimension = desc.m_tdesc.RtvDimension(),
 			};
 			m_rtv = m_mgr->m_descriptor_store.Create(res, rtv_desc);
 		}
+		if (AllSet(tdesc.Flags, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+		{
+			D3D12_FEATURE_DATA_FORMAT_SUPPORT support = {tdesc.Format};
+			Check(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+			if (!AllSet(support.Support1, D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL))
+				throw std::runtime_error("Texture format is not supported as a depth stencil view");
+
+			// Create the DSV
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {
+				.Format = tdesc.Format,
+				.ViewDimension = desc.m_tdesc.DsvDimension(),
+				.Flags = D3D12_DSV_FLAGS::D3D12_DSV_FLAG_NONE,
+			};
+			m_dsv = m_mgr->m_descriptor_store.Create(res, dsv_desc);
+		}
+	}
+	TextureBase::TextureBase(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc)
+		: TextureBase(mgr, static_cast<ID3D12Resource*>(nullptr), desc)
+	{
+		// Open the shared resource in our d3d device
+		D3DPtr<IUnknown> resource;
+		Check(mgr.d3d()->OpenSharedHandle(shared_handle, __uuidof(ID3D12Resource), (void**)&resource.m_ptr));
+
+		// Query the resource interface from the resource
+		Check(resource->QueryInterface(__uuidof(ID3D12Resource), (void**)&m_res.m_ptr));
+	}
+	TextureBase::TextureBase(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc)
+		: TextureBase(mgr, SharedHandleFromSharedResource(shared_resource), desc)
+	{
 	}
 	TextureBase::~TextureBase()
 	{

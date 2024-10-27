@@ -6179,7 +6179,7 @@ namespace pr
 					PinWindow(true);
 			}
 
-			// Display as a modeless form, creating the window first if necessary
+			// Display as a mode-less form, creating the window first if necessary
 			virtual void Show(int show = SW_SHOW)
 			{
 				return ShowInternal(show);
@@ -6208,11 +6208,20 @@ namespace pr
 			}
 
 			// Get/Set whether the window closes or just hides when closed
-			bool HideOnClose() const { return cp().m_hide_on_close; }
-			void HideOnClose(bool enable) { cp().m_hide_on_close = enable; }
+			bool HideOnClose() const
+			{
+				return cp().m_hide_on_close;
+			}
+			void HideOnClose(bool enable)
+			{
+				cp().m_hide_on_close = enable;
+			}
 
 			// Get/Set whether the window is pinned to it's parent
-			bool PinWindow() const { return cp().m_pin_window; }
+			bool PinWindow() const
+			{
+				return cp().m_pin_window;
+			}
 			void PinWindow(bool pin)
 			{
 				assert("Pinned window does not have a parent" && (!pin || m_parent.hwnd() != nullptr));
@@ -6330,7 +6339,7 @@ namespace pr
 
 		protected:
 
-			// Display as a modeless form, creating the window first if necessary
+			// Display as a mode-less form, creating the window first if necessary
 			void ShowInternal(int show)
 			{
 				// If the window does not yet exist, create it

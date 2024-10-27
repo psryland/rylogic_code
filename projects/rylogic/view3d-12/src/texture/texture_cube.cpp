@@ -8,7 +8,7 @@
 namespace pr::rdr12
 {
 	TextureCube::TextureCube(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
-		:TextureBase(mgr, res, desc, D3D12_SRV_DIMENSION_TEXTURECUBE)
+		:TextureBase(mgr, res, desc)
 		,m_cube2w(m4x4::Identity())
 	{}
 }

@@ -288,7 +288,7 @@ namespace pr::rdr12
 			Count   = 1;
 			Quality = 0;
 		}
-		constexpr MultiSamp(uint32_t count, uint32_t quality = ~uint32_t())
+		constexpr MultiSamp(uint32_t count, uint32_t quality = ~0U)
 			:DXGI_SAMPLE_DESC()
 		{
 			Count = count;
@@ -485,7 +485,14 @@ namespace pr::rdr12
 		//  - Data within resources can use the 'DATA_PLACEMENT_ALIGNMENT' values.
 		//  - Size of resource heap must be at least 64K for single-textures and constant buffers
 		using clear_value_t = std::optional<D3D12_CLEAR_VALUE>;
-		enum class EMiscFlags { None = 0, PartialInitData = 1 << 0, _flags_enum = 0, };
+		enum class EMiscFlags
+		{
+			None = 0,
+			PartialInitData = 1 << 0,
+			CubeMap = 1 << 1,
+			RayTracingStruct = 1 << 2,
+			_flags_enum = 0,
+		};
 
 		int ElemStride;                     // Element stride
 		int DataAlignment;                  // The alignment that initialisation data should have.
@@ -583,9 +590,10 @@ namespace pr::rdr12
 			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
 			return *this;
 		}
-		ResDesc& multisamp(int samples)
+		ResDesc& misc_flags(EMiscFlags flags)
 		{
-			return multisamp(MultiSamp(s_cast<uint32_t>(samples)));
+			MiscFlags = flags;
+			return *this;
 		}
 		ResDesc& multisamp(MultiSamp sampling)
 		{
@@ -616,6 +624,103 @@ namespace pr::rdr12
 		{
 			DefaultState = default_state;
 			return *this;
+		}
+
+		D3D12_SRV_DIMENSION SrvDimension() const
+		{
+			switch (Dimension)
+			{
+				case D3D12_RESOURCE_DIMENSION_BUFFER:
+				{
+					return AllSet(MiscFlags, EMiscFlags::RayTracingStruct)
+						? D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE
+						: D3D12_SRV_DIMENSION_BUFFER;
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+				{
+					return DepthOrArraySize > 1
+						? D3D12_SRV_DIMENSION_TEXTURE1DARRAY
+						: D3D12_SRV_DIMENSION_TEXTURE1D;
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+				{
+					return AllSet(MiscFlags, EMiscFlags::CubeMap)
+						? D3D12_SRV_DIMENSION_TEXTURECUBE
+						: (DepthOrArraySize > 1
+							? (SampleDesc.Count == 1 ? D3D12_SRV_DIMENSION_TEXTURE2DARRAY : D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY)
+							: (SampleDesc.Count == 1 ? D3D12_SRV_DIMENSION_TEXTURE2D : D3D12_SRV_DIMENSION_TEXTURE2DMS));
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+				{
+					return AllSet(MiscFlags, EMiscFlags::CubeMap)
+						? D3D12_SRV_DIMENSION_TEXTURECUBEARRAY
+						: D3D12_SRV_DIMENSION_TEXTURE3D;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown resource dimension");
+				}
+			}
+		}
+		D3D12_RTV_DIMENSION RtvDimension() const
+		{
+			switch (Dimension)
+			{
+				case D3D12_RESOURCE_DIMENSION_BUFFER:
+				{
+					return D3D12_RTV_DIMENSION_BUFFER;
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+				{
+					return DepthOrArraySize > 1
+						? D3D12_RTV_DIMENSION_TEXTURE1DARRAY
+						: D3D12_RTV_DIMENSION_TEXTURE1D;
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+				{
+					return DepthOrArraySize > 1
+						? (SampleDesc.Count == 1 ? D3D12_RTV_DIMENSION_TEXTURE2DARRAY : D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY)
+						: (SampleDesc.Count == 1 ? D3D12_RTV_DIMENSION_TEXTURE2D : D3D12_RTV_DIMENSION_TEXTURE2DMS);
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+				{
+					return D3D12_RTV_DIMENSION_TEXTURE3D;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown resource dimension");
+				}
+			}
+		}
+		D3D12_DSV_DIMENSION DsvDimension() const
+		{
+			switch (Dimension)
+			{
+				case D3D12_RESOURCE_DIMENSION_BUFFER:
+				{
+					throw std::runtime_error("Depth stencils cannot be buffers");
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+				{
+					return DepthOrArraySize > 1
+						? D3D12_DSV_DIMENSION_TEXTURE1DARRAY
+						: D3D12_DSV_DIMENSION_TEXTURE1D;
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+				{
+					return DepthOrArraySize > 1
+						? (SampleDesc.Count == 1 ? D3D12_DSV_DIMENSION_TEXTURE2DARRAY : D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY)
+						: (SampleDesc.Count == 1 ? D3D12_DSV_DIMENSION_TEXTURE2D : D3D12_DSV_DIMENSION_TEXTURE2DMS);
+				}
+				case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+				{
+					throw std::runtime_error("Depth stencils cannot be 3D textures");
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown resource dimension");
+				}
+			}
 		}
 
 		// Generic buffer resource description
@@ -700,7 +805,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -710,7 +815,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				//.def_state(!AllSet(flags, EUsage::DenyShaderResource) ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON)
 				.init_data(data);
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -720,7 +825,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -728,9 +833,10 @@ namespace pr::rdr12
 			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 6, BytesPerPixel(data.m_format))
 				.mips(mips)
 				.usage(flags)
+				.misc_flags(EMiscFlags::CubeMap)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 

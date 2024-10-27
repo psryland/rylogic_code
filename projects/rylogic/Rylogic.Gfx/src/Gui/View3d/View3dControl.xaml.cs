@@ -47,7 +47,7 @@ namespace Rylogic.Gui.WPF
 				Camera.ClipPlanes(0.01f, 1000f, View3d.EClipPlanes.CameraRelative);
 
 				// Create a D3D11 off-screen render target image source
-				Source = D3DImage = new D3D11Image();
+				Source = D3DImage = new Gfx.D3DImage();
 
 				// Set defaults
 				BackgroundColour = Window.BackgroundColour;
@@ -150,6 +150,9 @@ namespace Rylogic.Gui.WPF
 				{
 					m_window.OnSettingsChanged += HandleSettingsChanged;
 					m_window.OnInvalidated += HandleInvalidated;
+				
+					// We might have missed the first invalidate message
+					m_render_pending = true;
 				}
 
 				// Handlers
@@ -224,10 +227,13 @@ namespace Rylogic.Gui.WPF
 		public View3d.Camera Camera => Window.Camera;
 
 		/// <summary>The D3D render target texture</summary>
-		public View3d.Texture? RenderTarget => D3DImage.RenderTarget;
+		public View3d.Texture? RenderTarget => D3DImage.BackBuffer?.RenderTarget;
+
+		/// <summary>The D3D depth stencil texture</summary>
+		public View3d.Texture? DepthStencil => D3DImage.BackBuffer?.DepthStencil;
 
 		/// <summary>An interop object providing an off-screen render target</summary>
-		private D3D11Image D3DImage
+		private Gfx.D3DImage D3DImage
 		{
 			get => m_d3d_image;
 			set
@@ -237,7 +243,8 @@ namespace Rylogic.Gui.WPF
 				{
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
-					m_d3d_image.RenderTargetChanged -= HandleRTChanged;
+					m_d3d_image.BackBufferChanged -= HandleBackBufferChanged;
+					m_d3d_image.FrontBufferChanged -= HandleFrontBufferChanged;
 					Util.Dispose(ref m_d3d_image!);
 				}
 				m_d3d_image = value;
@@ -245,7 +252,8 @@ namespace Rylogic.Gui.WPF
 				{
 					Loaded += OnLoaded;
 					Unloaded += OnUnloaded;
-					m_d3d_image.RenderTargetChanged += HandleRTChanged;
+					m_d3d_image.FrontBufferChanged += HandleFrontBufferChanged;
+					m_d3d_image.BackBufferChanged += HandleBackBufferChanged;
 				}
 
 				void OnLoaded(object? sender, EventArgs arg)
@@ -261,16 +269,24 @@ namespace Rylogic.Gui.WPF
 					// When the control is unloaded, detach the window
 					D3DImage.WindowOwner = IntPtr.Zero;
 				}
-				void HandleRTChanged(object? sender, EventArgs arg)
+				void HandleFrontBufferChanged(object? sender, EventArgs arg)
 				{
-					if (m_d3d_image.RenderTarget != null)
+					if (m_d3d_image.FrontBuffer != null)
+						Window.CustomSwapChain([m_d3d_image.FrontBuffer]);
+					else
+						Window.CustomSwapChain([]);
+				}
+				void HandleBackBufferChanged(object? sender, EventArgs arg)
+				{
+					if (m_d3d_image.BackBuffer != null)
 						OnRenderTargetChanged();
 
-					Window.SetRT(D3DImage.RenderTarget, null, true);
+					var bb = D3DImage.BackBuffer;
+					Window.SetRT(bb?.RenderTarget, bb?.DepthStencil, bb?.MultiSampling ?? View3d.MultiSamp.New());
 				}
 			}
 		}
-		private D3D11Image m_d3d_image = null!;
+		private Gfx.D3DImage m_d3d_image = null!;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
 		public void Invalidate()
@@ -498,7 +514,7 @@ namespace Rylogic.Gui.WPF
 			using var render_pending = Scope.Create(null, () => m_render_pending = false);
 
 			// Ignore renders until we have a non-zero size, and the D3DImage has a render target
-			if (RenderSize == Size.Empty || D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
+			if (RenderSize == Size.Empty || D3DImage?.BackBuffer == null || !D3DImage.IsFrontBufferAvailable)
 			{
 				// 'Validate' the window so that future Invalidate() calls trigger the call back.
 				Window?.Validate();
@@ -521,7 +537,6 @@ namespace Rylogic.Gui.WPF
 			catch (Exception ex) { OnReportError(new ReportErrorEventArgs($"Error during build scene: {ex.Message}")); }
 
 			// Render the scene into the render target texture
-			Window.RestoreRT();
 			Window.Render();
 
 			// Update the "front buffer" in the D3DImage

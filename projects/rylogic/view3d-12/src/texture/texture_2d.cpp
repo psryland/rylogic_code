@@ -12,7 +12,15 @@
 namespace pr::rdr12
 {
 	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
-		:TextureBase(mgr, res, desc, D3D12_SRV_DIMENSION_TEXTURE2D)
+		:TextureBase(mgr, res, desc)
+		,m_t2s(m4x4::Identity())
+	{}
+	Texture2D::Texture2D(ResourceManager& mgr, HANDLE shared_handle, TextureDesc const& desc)
+		:TextureBase(mgr, shared_handle, desc)
+		,m_t2s(m4x4::Identity())
+	{}
+	Texture2D::Texture2D(ResourceManager& mgr, IUnknown* shared_resource, TextureDesc const& desc)
+		:TextureBase(mgr, shared_resource, desc)
 		,m_t2s(m4x4::Identity())
 	{}
 
@@ -37,7 +45,7 @@ namespace pr::rdr12
 		// Note: the main RT must be restored once all ReleaseDC's have been called
 	}
 
-	#if 0
+	#if 0 //todo
 	// Get a d2d render target for the DXGI surface within this texture
 	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget(Window const* wnd)
 	{

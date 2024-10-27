@@ -30,6 +30,7 @@ namespace pr::rdr12
 		,m_gsync(rdr.D3DDevice())
 		,m_swap_bb(settings.m_buffer_count)
 		,m_msaa_bb()
+		,m_bb_index()
 		,m_rt_props(settings.m_mode.Format, settings.m_bkgd_colour)
 		,m_ds_props(settings.m_depth_format, 1.0f, 0)
 		,m_cmd_alloc_pool(m_gsync)
@@ -120,7 +121,7 @@ namespace pr::rdr12
 				// todo
 			}
 
-			// Create a CPU descriptor heap for the back buffers (swap chain buffers + MSAA RT).
+			// Create a descriptor heap for the back buffers (swap chain buffers + MSAA RT).
 			D3D12_DESCRIPTOR_HEAP_DESC rtv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 				.NumDescriptors = s_cast<UINT>(1 + m_swap_bb.size()),
@@ -128,7 +129,7 @@ namespace pr::rdr12
 			};
 			Check(device->CreateDescriptorHeap(&rtv_heap_desc, __uuidof(ID3D12DescriptorHeap), (void**)&m_rtv_heap.m_ptr));
 
-			// Create a CPU descriptor heap for the depth stencil
+			// Create a descriptor heap for the depth stencil
 			D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc = {
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 				.NumDescriptors = 1,
@@ -272,7 +273,7 @@ namespace pr::rdr12
 	// The current swap chain back buffer index
 	int Window::BBIndex() const
 	{
-		return m_swap_chain != nullptr ? m_swap_chain->GetCurrentBackBufferIndex() : 0;
+		return m_swap_chain != nullptr ? m_swap_chain->GetCurrentBackBufferIndex() : m_bb_index;
 	}
 	int Window::BBCount() const
 	{
@@ -360,7 +361,7 @@ namespace pr::rdr12
 		if (auto& bb = m_msaa_bb; true)
 		{
 			multisamp = multisamp != nullptr ? multisamp : &bb.m_multisamp;
-			CreateMSAA(bb, size, *multisamp);
+			bb = CreateRenderTarget(size, *multisamp, m_rt_props, m_ds_props);
 		}
 	}
 
@@ -404,8 +405,53 @@ namespace pr::rdr12
 		// Create MSAA render target
 		if (auto& bb = m_msaa_bb; true)
 		{
-			CreateMSAA(bb, size, ms);
+			bb = CreateRenderTarget(size, ms, m_rt_props, m_ds_props);
 		}
+	}
+	
+	// Replace the swap chain buffers with new ones
+	void Window::CustomSwapChain(std::span<BackBuffer> back_buffers)
+	{
+		// Release references to swap chain resources
+		for (auto& bb : m_swap_bb)
+		{
+			m_res_state.Forget(bb.m_render_target.get());
+			m_res_state.Forget(bb.m_depth_stencil.get());
+
+			bb.m_render_target = nullptr;
+			bb.m_depth_stencil = nullptr;
+			bb.m_d2d_target = nullptr;
+		}
+
+		// Copy the provided swap chain buffers
+		m_swap_bb.resize(back_buffers.size());
+		for (int i = 0; i != isize(m_swap_bb); ++i)
+		{
+			m_swap_bb[i] = back_buffers[i];
+		}
+
+		// Make sure the swap chain buffer index is within range
+		m_bb_index %= m_swap_bb.size();
+	}
+	void Window::CustomSwapChain(std::span<Texture2D*> back_buffers)
+	{
+		std::vector<BackBuffer> bb(back_buffers.size());
+		for (int i = 0; i != isize(back_buffers); ++i)
+			bb[i] = BackBuffer(*this, MultiSamp(1, 0), back_buffers[i], nullptr);
+
+		CustomSwapChain(bb);
+	}
+
+	// Replace the main MSAA back-buffer with 'bb'. Returns the previous back buffer
+	BackBuffer Window::SetRT(Texture2D* render_target, Texture2D* depth_stencil, MultiSamp ms)
+	{
+		return SetRT(BackBuffer(*this, ms, render_target, depth_stencil));
+	}
+	BackBuffer Window::SetRT(BackBuffer bb)
+	{
+		auto prev_bb = m_msaa_bb;
+		m_msaa_bb = bb;
+		return prev_bb;
 	}
 
 	// Start rendering a new frame. Returns an object that scenes can render into
@@ -462,7 +508,7 @@ namespace pr::rdr12
 				bb.Transition(bb_post.m_render_target.get(), D3D12_RESOURCE_STATE_RESOLVE_DEST);
 				bb.Commit();
 
-				// Resolve the msaa render target into the swap chain render target
+				// Resolve the MSAA render target into the swap chain render target
 				frame.m_resolve.ResolveSubresource(bb_post.m_render_target.get(), bb_main.m_render_target.get(), m_rt_props.Format);
 
 				// The swap chain render target goes to the 'render target' state
@@ -584,7 +630,7 @@ namespace pr::rdr12
 			}
 			case DXGI_ERROR_DEVICE_REMOVED:
 			{
-				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
+				// This happens in situations like, laptop undocked, or remote desktop connect etc.
 				// We'll just throw so the app can shutdown/reset/whatever
 				Check(rdr().D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
 			}
@@ -598,24 +644,23 @@ namespace pr::rdr12
 		auto sync_point = m_gsync.AddSyncPoint(rdr().GfxQueue());
 		frame.m_bb_main.m_sync_point = sync_point;
 		frame.m_bb_post.m_sync_point = sync_point;
+		++m_bb_index %= BBCount();
 
 		if (flush == EGpuFlush::Block)
 			m_gsync.Wait();
 	}
 
 	// Create the MSAA render target and depth stencil
-	void Window::CreateMSAA(BackBuffer& bb, iv2 size, MultiSamp ms)
+	BackBuffer Window::CreateRenderTarget(iv2 size, MultiSamp ms, ClearValue rt_clear, ClearValue ds_clear)
 	{
 		auto device = rdr().D3DDevice();
 
-		bb.m_wnd = this;
-		bb.m_sync_point = m_gsync.CompletedSyncPoint();
-		bb.m_multisamp = ms;
+		BackBuffer bb(*this, ms);
 
 		// Render target
-		auto rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_rt_props.Format }, 1U, EUsage::RenderTarget)
+		ResDesc rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, rt_clear.Format }, 1U, EUsage::RenderTarget)
 			.multisamp(ms)
-			.clear(m_rt_props);
+			.clear(rt_clear);
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
@@ -623,9 +668,9 @@ namespace pr::rdr12
 		DebugName(bb.m_render_target, "RenderTarget");
 
 		// Depth stencil
-		auto dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, m_ds_props.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
+		ResDesc dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, ds_clear.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
 			.multisamp(ms)
-			.clear(m_ds_props);
+			.clear(ds_clear);
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));
@@ -657,6 +702,8 @@ namespace pr::rdr12
 			.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS,
 		};
 		device->CreateDepthStencilView(bb.m_depth_stencil.get(), &dsvdesc, bb.m_dsv);
+
+		return bb;
 	}
 
 	// Create the swap chain back buffers

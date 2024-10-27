@@ -82,19 +82,19 @@ namespace pr
 		}
 	};
 
-	// iv2 / view3d::IVec2
-	template <> struct Convert<iv2, view3d::IVec2>
+	// iv2 / SIZE
+	template <> struct Convert<iv2, SIZE>
 	{
-		static iv2 To_(view3d::IVec2 const& v)
+		static iv2 To_(SIZE const& v)
 		{
-			return iv2(v.x, v.y);
+			return iv2(v.cx, v.cy);
 		}
 	};
-	template <> struct Convert<view3d::IVec2, iv2>
+	template <> struct Convert<SIZE, iv2>
 	{
-		static view3d::IVec2 To_(iv2 const& v)
+		static SIZE To_(iv2 const& v)
 		{
-			return view3d::IVec2{v.x, v.y};
+			return SIZE{v.x, v.y};
 		}
 	};
 
@@ -197,4 +197,21 @@ namespace pr
 			return s;
 		}
 	};
+
+	// rdr12::MultiSamp / view3d::MultiSamp
+	template <> struct Convert<rdr12::MultiSamp, view3d::MultiSamp>
+	{
+		static rdr12::MultiSamp To_(view3d::MultiSamp ms)
+		{
+			return { s_cast<uint32_t>(ms.m_count), s_cast<uint32_t>(ms.m_quality) };
+		}
+	};
+	template <> struct Convert<view3d::MultiSamp, rdr12::MultiSamp>
+	{
+		static view3d::MultiSamp To_(rdr12::MultiSamp ms)
+		{
+			return { s_cast<int>(ms.Count), s_cast<int>(ms.Quality) };
+		}
+	};
+	
 }

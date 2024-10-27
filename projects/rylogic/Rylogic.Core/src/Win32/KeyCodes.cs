@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Rylogic.Common
+namespace Rylogic.Interop.Win32
 {
 	[Flags]
 	public enum EKeyCodes
@@ -10,10 +10,10 @@ namespace Rylogic.Common
 		// - Compatible with System.Windows.Forms.Keys and native VK_ constants.
 		// - The VK_ values don't include definitions for Shift/Control/Alt > 0xFFFF
 
-		// The bitmask to extract a key code from a key value.
+		// The bit mask to extract a key code from a key value.
 		KeyCode = 65535,
 
-		// The bitmask to extract modifiers from a key value.
+		// The bit mask to extract modifiers from a key value.
 		Modifiers = -65536,
 
 		// No key pressed.
@@ -100,7 +100,7 @@ namespace Rylogic.Common
 		// The IME convert key.
 		IMEConvert = 28,
 
-		// The IME nonconvert key.
+		// The IME non-convert key.
 		IMENonconvert = 29,
 
 		// The IME accept key, replaces System.Windows.Forms.Keys.IMEAceept.

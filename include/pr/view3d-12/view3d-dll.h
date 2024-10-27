@@ -423,10 +423,6 @@ namespace pr
 
 		#pragma region Structures
 		using Colour = unsigned int;
-		struct IVec2
-		{
-			int x, y;
-		};
 		struct Vec2
 		{
 			float x, y;
@@ -485,6 +481,11 @@ namespace pr
 			ENuggetFlag m_nflags;         // Nugget flags
 			Material    m_mat;
 		};
+		struct MultiSamp
+		{
+			int m_count;
+			int m_quality;
+		};
 		struct Light
 		{
 			Vec4 m_position;
@@ -504,15 +505,16 @@ namespace pr
 		};
 		struct TextureOptions
 		{
-			Mat4x4               m_t2s;
-			DXGI_FORMAT          m_format;
-			int                  m_mips;
-			D3D12_RESOURCE_FLAGS m_usage;
-			D3D12_CLEAR_VALUE    m_clear_value;
-			int                  m_multisamp;
-			UINT                 m_colour_key;
-			BOOL                 m_has_alpha;
-			char const*          m_dbg_name;
+			Mat4x4                m_t2s;
+			DXGI_FORMAT           m_format;
+			int                   m_mips;
+			D3D12_RESOURCE_FLAGS  m_usage;
+			D3D12_RESOURCE_STATES m_resource_state;
+			D3D12_CLEAR_VALUE     m_clear_value;
+			MultiSamp             m_multisamp;
+			UINT                  m_colour_key;
+			BOOL                  m_has_alpha;
+			char const*           m_dbg_name;
 		};
 		struct CubeMapOptions
 		{
@@ -607,6 +609,12 @@ namespace pr
 			uint16_t    m_mips;
 			DXGI_FORMAT m_format;
 			uint32_t    m_image_file_format; // D3DXIMAGE_FILEFORMAT
+		};
+		struct BackBuffer
+		{
+			ID3D12Resource* m_render_target;
+			ID3D12Resource* m_depth_stencil;
+			SIZE m_dim;
 		};
 
 		#if 0 // todo
@@ -726,8 +734,8 @@ extern "C"
 
 	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-	VIEW3D_API pr::view3d::IVec2 __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, pr::view3d::IVec2 size);
+	VIEW3D_API SIZE __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, SIZE size);
 
 	// Get/Set the window viewport (and clipping area)
 	VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window);
@@ -776,12 +784,21 @@ extern "C"
 	// Render the window
 	VIEW3D_API void __stdcall View3D_WindowRender(pr::view3d::Window window);
 
-	// Return the render target as a texture
-	VIEW3D_API pr::view3d::Texture __stdcall View3D_WindowRenderTargetGet(pr::view3d::Window window);
+	// Push commands to the GPU
+	VIEW3D_API void __stdcall View3D_WindowPresent(pr::view3d::Window window);
+
+	// Replace the swap chain buffers
+	VIEW3D_API void __stdcall View3D_WindowCustomSwapChain(pr::view3d::Window window, int count, pr::view3d::Texture* targets);
+
+	// Get/Set the back buffer (render target + depth stencil)
+	VIEW3D_API pr::view3d::BackBuffer __stdcall View3D_WindowRenderTargetGet(pr::view3d::Window window);
+	VIEW3D_API pr::view3d::BackBuffer __stdcall View3D_WindowRenderTargetSet(pr::view3d::Window window, pr::view3d::Texture render_target, pr::view3d::Texture depth_stencil, pr::view3d::MultiSamp multisampling);
+
+	//VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (pr::view3d::Window window);
 
 	// Signal the window is invalidated. This does not automatically trigger rendering. Use InvalidatedCB.
 	VIEW3D_API void __stdcall View3D_WindowInvalidate(pr::view3d::Window window, BOOL erase);
-	VIEW3D_API void __stdcall View3D_WindowInvalidateRect(pr::view3d::Window window, RECT const* rect, BOOL erase);
+	VIEW3D_API void __stdcall View3D_WindowInvalidateRect(pr::view3d::Window window, RECT const& rect, BOOL erase);
 
 	// Register a callback for when the window is invalidated. This can be used to render in response to invalidation, rather than rendering on a polling cycle.
 	VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(pr::view3d::Window window, pr::view3d::InvalidatedCB invalidated_cb, void* ctx, BOOL add);
@@ -829,13 +846,6 @@ extern "C"
 	// Cast a ray into the scene, returning information about what it hit.
 	VIEW3D_API void __stdcall View3D_WindowHitTestObjects(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, pr::view3d::Object const* objects, int object_count);
 	VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(pr::view3d::Window window, pr::view3d::HitTestRay const* rays, pr::view3d::HitTestResult* hits, int ray_count, float snap_distance, pr::view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
-
-	#if 0
-	// Rendering
-	VIEW3D_API void            __stdcall View3D_Present                (pr::view3d::Window window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (pr::view3d::Window window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (pr::view3d::Window window, pr::view3d::Texture render_target, pr::view3d::Texture depth_buffer, BOOL is_new_main_rt);
-	#endif
 
 	// Camera *********************************
 
@@ -936,10 +946,6 @@ extern "C"
 	
 	// Set the global light source for a window
 	VIEW3D_API void __stdcall View3D_LightSource(pr::view3d::Window window, pr::view3d::Vec4 position, pr::view3d::Vec4 direction, BOOL camera_relative);
-
-	#if 0 // todo
-	VIEW3D_API void __stdcall View3D_LightShowDialog(pr::view3d::Window window);
-	#endif
 
 	// Objects ********************************
 
@@ -1108,8 +1114,6 @@ extern "C"
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (pr::view3d::Texture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, pr::view3d::Colour colour_key);
 	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (pr::view3d::Texture tex, BOOL discard);
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (pr::view3d::Texture tex);
-	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, pr::view3d::TextureOptions const& options);
-	VIEW3D_API pr::view3d::Texture __stdcall View3D_CreateDx9RenderTarget       (HWND hwnd, UINT width, UINT height, pr::view3d::TextureOptions const& options, HANDLE* shared_handle);
 #endif
 
 	// Gizmos *********************************
@@ -1168,6 +1172,15 @@ extern "C"
 
 	// Miscellaneous **************************
 
+	// Create a render target texture on a D3D9 device. Intended for WPF D3DImage
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UINT width, UINT height, pr::view3d::TextureOptions const& options, HANDLE* shared_handle);
+
+	// Create a Texture instance from a shared d3d resource (created on a different d3d device)
+	VIEW3D_API pr::view3d::Texture __stdcall View3D_CreateTextureFromSharedResource(IUnknown* shared_resource, pr::view3d::TextureOptions const& options);
+
+	// Return the supported MSAA quality for the given multi-sampling count
+	VIEW3D_API int __stdcall View3D_MSAAQuality(int count, DXGI_FORMAT format);
+
 	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 	VIEW3D_API BOOL __stdcall View3D_StockObjectVisibleGet(pr::view3d::Window window, pr::view3d::EStockObject stock_objects);
 	VIEW3D_API void __stdcall View3D_StockObjectVisibleSet(pr::view3d::Window window, pr::view3d::EStockObject stock_objects, BOOL show);
@@ -1191,6 +1204,9 @@ extern "C"
 	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
 
+	// Show a window containing the demo script
+	VIEW3D_API void __stdcall View3D_DemoScriptShow(pr::view3d::Window window);
+
 	// Return the example Ldr script as a BSTR
 	VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr();
 
@@ -1203,11 +1219,14 @@ extern "C"
 	// Parse a transform description using the Ldr script syntax
 	VIEW3D_API pr::view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script);
 
+	// Handle standard keyboard shortcuts. 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
+	VIEW3D_API BOOL __stdcall View3D_TranslateKey(pr::view3d::Window window, int key_code);
+
+	// Return the reference count of a COM interface
+	VIEW3D_API ULONG __stdcall View3D_RefCount(IUnknown* pointer);
+
 #if 0
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
-	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (pr::view3d::Window window, int key_code);
-	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (pr::view3d::Window window);
-	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);
 #endif
 
 	// Tools **********************************
@@ -1227,6 +1246,9 @@ extern "C"
 	// Show/Hide the angle measurement tool
 	VIEW3D_API BOOL __stdcall View3D_AngleToolVisibleGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_AngleToolVisibleSet(pr::view3d::Window window, BOOL show);
+
+	// Show/Hide the lighting controls UI
+	VIEW3D_API void __stdcall View3D_LightingControlsUI(pr::view3d::Window window, BOOL show);
 
 #if 0
 	// Ldr Editor Ctrl

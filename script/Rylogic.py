@@ -734,7 +734,7 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 		else:
 
 			# Using pythonnet
-			if True:
+			if False:
 				# Set the runtime to .net6 (or whatever is set int he runtime config)
 				import pythonnet, clr_loader
 				rt_config = Path(target_dir, f"{assembly_name}.runtimeconfig.json", check_exists=False)
@@ -756,25 +756,25 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 				pass
 
 			# Using powershell
-			if False:
+			if True:
 				#sys.path.append(UserVars.dotnet_dir)
-				#command = ( 
-				#	"& {\n" + 
-				#	f"    Set-Location {target_dir};\n" +
-				#	f"    $env:Path = '{UserVars.dotnet_dir};' + $env:Path;\n" + 
-				#	#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) + 
-				#	f"    Add-Type -AssemblyName '{assembly_filepath}';\n" + 
-				#	#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) +  
-				#	#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +  
-				#	f"    $result = [{assembly_name}.Program]::Main();\n" + 
-				#	f"    Exit $result;\n" + 
-				#	"}") 
+				command = ( 
+					"& {\n" + 
+					f"    Set-Location {target_dir};\n" +
+					#f"    $env:Path = '{UserVars.dotnet_dir};' + $env:Path;\n" + 
+					#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) + 
+					f"    Add-Type -AssemblyName '{assembly_filepath}';\n" + 
+					#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) +  
+					#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +  
+					f"    $result = [{assembly_name}.Program]::Main();\n" + 
+					f"    Exit $result;\n" + 
+					"}") 
 				#print(command) 
-				#res,outp = Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]) 
-				#sys.path.pop()
-				#print(outp) 
-				#if not res: 
-				#	raise Exception("   **** Unit tests failed ****   ") 
+				res,outp = Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]) 
+				sys.path.pop()
+				print(outp) 
+				if not res: 
+					raise Exception("   **** Unit tests failed ****   ") 
 				pass
 
 			# Using Csex

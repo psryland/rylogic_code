@@ -4,16 +4,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.InteropServices;
-using Rylogic.Attrib;
 using Rylogic.Common;
-using Rylogic.Extn.Windows;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using HWindow = System.IntPtr;
-using HObject = System.IntPtr;
 using HWND = System.IntPtr;
-using System.Linq;
 
 namespace Rylogic.Gfx
 {
@@ -233,10 +231,10 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget => new(View3D_WindowRenderTargetGet(Handle), owned:false);
+			public BackBuffer BackBuffer => View3D_WindowRenderTargetGet(Handle);
 
 			/// <summary>The size of the render target (in pixels)</summary>
-			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
+			public Size RenderTargetSize => BackBuffer.Dim;
 
 			/// <summary>The DPI of the monitor this window is on</summary>
 			public PointF DpiScale => View3D_WindowDpiScale(Handle).ToPointF();
@@ -529,6 +527,12 @@ namespace Rylogic.Gfx
 				View3D_WindowRender(Handle);
 			}
 
+			/// <summary>Offload to the GPU</summary>
+			public void Present()
+			{
+				View3D_WindowPresent(Handle);
+			}
+
 			/// <summary>Get/Set the size of the backbuffer (in pixels)</summary>
 			[Browsable(false)]
 			public Size BackBufferSize
@@ -548,6 +552,13 @@ namespace Rylogic.Gfx
 				}
 			}
 
+			/// <summary>Replace the swap chain with 'swap_chain'</summary>
+			public void CustomSwapChain(Texture[] swap_chain)
+			{
+				View3D_WindowCustomSwapChain(Handle, swap_chain.Length, swap_chain.Select(x => x.Handle).ToArray());
+			}
+
+#if true // still needed?
 			/// <summary>Restore the render target as the main output</summary>
 			public void RestoreRT()
 			{
@@ -562,13 +573,11 @@ namespace Rylogic.Gfx
 			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
 			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
 			/// a source and destination texture at the same time</summary>
-			public void SetRT(Texture? render_target, Texture? depth_buffer, bool is_new_main_rt)
+			public void SetRT(Texture? render_target, Texture? depth_stencil, MultiSamp multisampling)
 			{
-				throw new NotImplementedException();
-#if false //todo
-				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero, is_new_main_rt);
+				View3D_WindowRenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_stencil?.Handle ?? IntPtr.Zero, multisampling);
+			}
 #endif
-				}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport

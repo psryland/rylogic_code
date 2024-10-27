@@ -153,6 +153,7 @@
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_object_manager.h" />
     <ClInclude Include="..\include\pr\view3d-12\ldraw\ldr_ui_script_editor.h" />
     <ClInclude Include="..\include\pr\view3d-12\lighting\light.h" />
+    <ClInclude Include="..\include\pr\view3d-12\lighting\light_ui.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\config.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\frame.h" />
     <ClInclude Include="..\include\pr\view3d-12\main\renderer.h" />
@@ -205,6 +206,7 @@
     <ClInclude Include="..\include\pr\view3d-12\utility\cmd_list_collection.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\conversion.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\diagnostics.h" />
+    <ClInclude Include="..\include\pr\view3d-12\utility\dx9_context.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\eventargs.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\features.h" />
     <ClInclude Include="..\include\pr\view3d-12\utility\gpu_sync.h" />

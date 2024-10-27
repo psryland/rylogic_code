@@ -37,10 +37,10 @@ namespace Rylogic.Gfx
 			public Texture(int width, int height, TextureOptions options)
 				:this(width, height, IntPtr.Zero, 0, options)
 			{}
-			public Texture(int width, int height, IntPtr data, uint data_size, TextureOptions options)
+			public Texture(int width, int height, IntPtr data, int data_size, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options);
+				Handle = View3D_TextureCreate(width, height, data, data_size, ref options);
 				if (Handle == HTexture.Zero)
 					throw new Exception($"Failed to create {width}x{height} texture");
 				
@@ -60,7 +60,7 @@ namespace Rylogic.Gfx
 			public Texture(string resource, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				Handle = View3D_TextureCreateFromUri(resource, width, height, ref options);
 				if (Handle == HTexture.Zero)
 					throw new Exception($"Failed to create texture from {resource}");
 
@@ -85,7 +85,7 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
 			public Size Size
 			{
-				get => new((int)Info.m_width, (int)Info.m_height);
+				get => new((int)Info.Width, (int)Info.Height);
 				set
 				{
 					if (Size == value) return;
@@ -167,19 +167,16 @@ namespace Rylogic.Gfx
 			/// <summary>Create a render target texture based on a shared Dx9 texture</summary>
 			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options, out IntPtr shared_handle)
 			{
-				throw new NotImplementedException();
-#if false //todo
 				// Not all of the texture options are used, just format, sampler description, has alpha, and dbg name
 				if (hwnd == IntPtr.Zero)
 					throw new Exception("DirectX 9 requires a window handle");
 
 				// Try to create the texture. This can fail if the window handle is 'ready'
-				var handle = View3D_CreateDx9RenderTarget(hwnd, (uint)width, (uint)height, ref options.Data, out shared_handle);
+				var handle = View3D_CreateDx9RenderTarget(hwnd, (uint)width, (uint)height, ref options, out shared_handle);
 				if (handle == IntPtr.Zero)
 					throw new Exception("Failed to create DirectX 9 render target texture");
 
 				return new Texture(handle, owned: true);
-#endif
 			}
 			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options)
 			{
@@ -199,8 +196,9 @@ namespace Rylogic.Gfx
 			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
 			public sealed class Lock :IDisposable
 			{
+#if false //todo
 				private readonly HTexture m_tex;
-
+#endif
 				/// <summary>
 				/// Lock 'tex' making 'Gfx' available.
 				/// Note: if 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>

@@ -1,17 +1,16 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
-using Rylogic.Common;
-using Rylogic.Utility;
 using Microsoft.Win32.SafeHandles;
+using Rylogic.Extn;
+using Rylogic.Utility;
 using HDC = System.IntPtr;
+using HICON = System.IntPtr;
 using HRGN = System.IntPtr;
 using HWND = System.IntPtr;
-using HICON = System.IntPtr;
 using LPARAM = System.IntPtr;
 using WPARAM = System.IntPtr;
-using Rylogic.Extn;
-using System.ComponentModel;
 
 namespace Rylogic.Interop.Win32
 {

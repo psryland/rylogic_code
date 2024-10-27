@@ -390,7 +390,7 @@ namespace pr::rdr12
 
 		D3DPtr<ID3D12Resource> res;
 
-		// If a uri is given, see if the Dx resource already exists
+		// If a uri is given, see if the DX resource already exists
 		if (desc.m_uri != 0)
 		{
 			auto iter = m_lookup_res.find(desc.m_uri);
@@ -997,6 +997,23 @@ namespace pr::rdr12
 		auto ptr = rdr12::New<Nugget>(ndata, model);
 		assert(m_mem_tracker.add(ptr));
 		return ptr;
+	}
+
+	// Create a texture that references a shared resource
+	Texture2DPtr ResourceManager::OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc)
+	{
+		// Check whether 'id' already exists, if so, throw.
+		if (desc.m_id != AutoId && m_lookup_tex.find(desc.m_id) != std::end(m_lookup_tex))
+			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", desc.m_id));
+		if (desc.m_tdesc.DepthOrArraySize != 1)
+			throw std::runtime_error("Expected a 2D texture");
+
+		Texture2DPtr inst(rdr12::New<Texture2D>(*this, shared_handle, desc), true);
+		assert(m_mem_tracker.add(inst.get()));
+
+		// Add the texture instance to the lookup table
+		AddLookup(m_lookup_tex, inst->m_id, inst.get());
+		return inst;
 	}
 
 	// Use the 'ResolveFilepath' event to resolve a filepath

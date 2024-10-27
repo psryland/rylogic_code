@@ -125,6 +125,9 @@ namespace pr::rdr12
 		// Raised when a model is deleted
 		EventHandler<Model&, EmptyArgs const&, true> ModelDeleted;
 
+		// Create a texture that references a shared resource
+		Texture2DPtr OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc);
+
 	private:
 
 		friend struct Model;
