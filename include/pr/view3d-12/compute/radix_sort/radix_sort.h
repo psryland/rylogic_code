@@ -200,26 +200,30 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			}
 
 			// Create sort-size independent buffers
+			ResourceFactory factory(*m_rdr);
 			{
+
 				ResDesc desc = ResDesc::Buf<Key>(Radix * RadixPasses, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
-				m_global_histogram = m_rdr->res().CreateResource(desc, "RadixSort:histogram");
+				m_global_histogram = factory.CreateResource(desc, "RadixSort:histogram");
 			}
 			{
 				ResDesc desc = ResDesc::Buf<Key>(1, {}).def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS).usage(EUsage::UnorderedAccess);
-				m_error_count = m_rdr->res().CreateResource(desc, "RadixSort:error_count");
+				m_error_count = factory.CreateResource(desc, "RadixSort:error_count");
 			}
 		}
 
 		// Bind the given resources for sorting
 		void Bind(int64_t size, D3DPtr<ID3D12Resource> sort0, D3DPtr<ID3D12Resource> payload0)
 		{
+			ResourceFactory factory(*m_rdr);
+
 			{
 				ResDesc desc = ResDesc::Buf<Key>(size, {})
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 
 				m_sort[0] = sort0;
-				m_sort[1] = m_rdr->res().CreateResource(desc, "RadixSort:sort1");
+				m_sort[1] = factory.CreateResource(desc, "RadixSort:sort1");
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
@@ -228,7 +232,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 					.usage(EUsage::UnorderedAccess);
 
 				m_payload[0] = payload0;
-				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
+				m_payload[1] = factory.CreateResource(desc, "RadixSort:payload1");
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
@@ -236,7 +240,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 
-				m_pass_histogram = m_rdr->res().CreateResource(desc, "RadixSort:passHistBuffer");
+				m_pass_histogram = factory.CreateResource(desc, "RadixSort:passHistBuffer");
 			}
 
 			m_size = size;
@@ -248,13 +252,15 @@ namespace pr::rdr12::compute::gpu_radix_sort
 			if (size == m_size)
 				return;
 
+			ResourceFactory factory(*m_rdr);
+
 			{
 				ResDesc desc = ResDesc::Buf<Key>(size, {})
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 
-				m_sort[0] = m_rdr->res().CreateResource(desc, "RadixSort:sort0");
-				m_sort[1] = m_rdr->res().CreateResource(desc, "RadixSort:sort1");
+				m_sort[0] = factory.CreateResource(desc, "RadixSort:sort0");
+				m_sort[1] = factory.CreateResource(desc, "RadixSort:sort1");
 			}
 			{
 				using T = std::conditional_t<HasPayload, Value, int>;
@@ -262,8 +268,8 @@ namespace pr::rdr12::compute::gpu_radix_sort
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 
-				m_payload[0] = m_rdr->res().CreateResource(desc, "RadixSort:payload0");
-				m_payload[1] = m_rdr->res().CreateResource(desc, "RadixSort:payload1");
+				m_payload[0] = factory.CreateResource(desc, "RadixSort:payload0");
+				m_payload[1] = factory.CreateResource(desc, "RadixSort:payload1");
 			}
 			{
 				auto partitions = DispatchCount(s_cast<int>(size), m_tuning.partition_size);
@@ -271,7 +277,7 @@ namespace pr::rdr12::compute::gpu_radix_sort
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
 
-				m_pass_histogram = m_rdr->res().CreateResource(desc, "RadixSort:passHistBuffer");
+				m_pass_histogram = factory.CreateResource(desc, "RadixSort:passHistBuffer");
 			}
 
 			m_size = size;

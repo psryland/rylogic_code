@@ -14,6 +14,10 @@
 #include "pr/view3d-12/texture/texture_loader.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
 #include "pr/view3d-12/sampler/sampler.h"
+#include "pr/view3d-12/shaders/shader_forward.h"
+#include "pr/view3d-12/shaders/shader_point_sprites.h"
+#include "pr/view3d-12/shaders/shader_thick_line.h"
+#include "pr/view3d-12/shaders/shader_arrow_head.h"
 #include "pr/view3d-12/utility/update_resource.h"
 //#include "pr/view3d-12/resource/image.h"
 //#include "pr/view3d-12/resource/resource_state.h"
@@ -963,6 +967,62 @@ namespace pr::rdr12
 
 		return inst;
 	}
+	
+	// Create a shader
+	ShaderPtr ResourceFactory::CreateShader(EStockShader id, char const* config)
+	{
+		script::StringSrc src(config);
+		script::Reader reader(src);
+
+		switch (id)
+		{
+			// Radial fade params:
+			//  *Type {Spherical|Cylindrical}
+			//  *Radius {min,max}
+			//  *Centre {x,y,z} (optional, defaults to camera position)
+			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
+			case EStockShader::FwdRadialFadePS:
+			{
+				// todo
+				throw std::runtime_error("Not implemented");
+			}
+
+			// Point sprite params: *PointSize {w,h} *Depth {true|false}
+			case EStockShader::PointSpritesGS:
+			{
+				auto radius = reader.Keyword(L"Radius").Vector2S();
+				auto depth = reader.Keyword(L"Depth").BoolS();
+				return Shader::Create<shaders::PointSpriteGS>(radius, depth);
+			}
+
+			// Thick line params: *LineWidth {width}
+			case EStockShader::ThickLineListGS:
+			{
+				auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+				return Shader::Create<shaders::ThickLineListGS>(line_width);
+			}
+
+			// Thick line params: *LineWidth {width}
+			case EStockShader::ThickLineStripGS:
+			{
+				auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+				return Shader::Create<shaders::ThickLineStripGS>(line_width);
+			}
+
+			// Arrow params: *Size {size}
+			case EStockShader::ArrowHeadGS:
+			{
+				auto size = reader.Keyword(L"Size").RealS<float>();
+				return Shader::Create<shaders::ArrowHeadGS>(size);
+			}
+
+			default:
+			{
+				throw std::runtime_error("Unsupported stock shader type");
+			}
+		}
+	}
+}
 
 #if 0
 	ResourceManager::ResourceManager(Renderer& rdr)
@@ -984,4 +1044,3 @@ namespace pr::rdr12
 
 
 #endif
-}

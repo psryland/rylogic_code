@@ -2242,6 +2242,32 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreateStock(view3d::EStockSam
 	CatchAndReport(View3D_SamplerCreateStock, , nullptr);
 }
 
+// Create a shader
+VIEW3D_API view3d::Shader __stdcall View3D_ShaderCreate(view3d::ShaderOptions const&)
+{
+	try
+	{
+		// todo - create a compiled shader
+		return nullptr;
+	}
+	CatchAndReport(View3D_ShaderCreate, , nullptr);
+}
+
+// Create one of the stock shaders
+VIEW3D_API view3d::Shader __stdcall View3D_ShaderCreateStock(view3d::EStockShader stock_shader, char const* config)
+{
+	try
+	{
+		DllLockGuard;
+		ResourceFactory factory(Dll().m_rdr);
+		auto shdr = factory.CreateShader(static_cast<rdr12::EStockShader>(stock_shader), config);
+
+		// Rely on the caller for correct reference counting
+		return shdr.release();
+	}
+	CatchAndReport(View3D_ShaderCreate, , nullptr);
+}
+
 // Read the properties of an existing texture
 VIEW3D_API view3d::ImageInfo __stdcall View3D_TextureGetInfo(view3d::Texture tex)
 {
@@ -2314,6 +2340,16 @@ VIEW3D_API void __stdcall View3D_SamplerRelease(view3d::Sampler sam)
 		sam->Release();
 	}
 	CatchAndReport(View3D_SamplerRelease, ,);
+}
+VIEW3D_API void __stdcall View3D_ShaderRelease(pr::view3d::Shader shdr)
+{
+	try
+	{
+		// Release is idempotent
+		if (!shdr) return;
+		shdr->Release();
+	}
+	CatchAndReport(View3D_ShaderRelease, ,);
 }
 
 // Resize this texture to 'size'

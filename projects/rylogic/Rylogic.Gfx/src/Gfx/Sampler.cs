@@ -56,6 +56,12 @@ namespace Rylogic.Gfx
 				return new Sampler(View3D_SamplerCreateStock(sam), owned: false);
 			}
 
+			/// <summary>Implicit conversion to handle</summary>
+			public static implicit operator HSampler(Sampler sam)
+			{
+				return sam.Handle;
+			}
+
 			#region Equals
 			public static bool operator == (Sampler? lhs, Sampler? rhs)
 			{

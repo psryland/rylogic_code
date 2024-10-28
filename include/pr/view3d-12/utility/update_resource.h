@@ -50,7 +50,7 @@ namespace pr::rdr12
 		using footprints_t = pr::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT, 16>;
 		using staging_t = GpuUploadBuffer::Allocation;
 
-		ResourceFactory& m_res;          // The resource manager
+		ResourceFactory& m_factory;      // The resource manager
 		ID3D12Resource*  m_dest;         // The destination resource to be updated
 		int              m_mip0, m_mipN; // The mip-map range to update. *Note* != the subresource index
 		int              m_sub0;         // The subresource index of the 0th mip of the array slice
@@ -59,11 +59,11 @@ namespace pr::rdr12
 		footprints_t     m_layout;       // The memory layout of the sub-resources within 'm_dest' start at mip 'm_sub0'
 		staging_t        m_staging;      // The allocation within the upload buffer
 
-		UpdateSubresourceScope(ResourceFactory& res, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
-			: UpdateSubresourceScope(res, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
+		UpdateSubresourceScope(ResourceFactory& factory, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
+			: UpdateSubresourceScope(factory, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
 		{}
-		UpdateSubresourceScope(ResourceFactory& res, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
-			: m_res(res)
+		UpdateSubresourceScope(ResourceFactory& factory, ID3D12Resource* dest, int array_slice, int mip0, int mipN, int alignment, iv3 first = iv3::Zero(), iv3 range = iv3::Max())
+			: m_factory(factory)
 			, m_dest(dest)
 			, m_mip0(mip0)
 			, m_mipN(mipN)
@@ -73,7 +73,7 @@ namespace pr::rdr12
 			, m_layout()
 			, m_staging()
 		{
-			auto device = m_res.rdr().D3DDevice();
+			auto device = m_factory.rdr().D3DDevice();
 
 			// Check buffer types. Buffers don't have mip levels or array slices
 			auto ddesc = dest->GetDesc();
@@ -118,7 +118,7 @@ namespace pr::rdr12
 			// The staging buffer is just big enough to contain the range to be updated, not the full resource.
 			// If 'dest' is a volume texture, and [first, range) is box within that texture, then the size of the
 			// staging buffer is just the size of the box + subsequent mip levels.
-			m_staging = m_res.m_upload_buffer.Alloc(total_size, m_alignment);
+			m_staging = m_factory.m_upload_buffer.Alloc(total_size, m_alignment);
 
 			// 'GetCopyableFootprints' returns values relative to the start of the staging resource, but,
 			// 'staging' is an allocation *within* the staging resource, so we need to adjust the Offset values.
@@ -126,7 +126,7 @@ namespace pr::rdr12
 				m_layout[i].Offset += m_staging.m_ofs;
 		}
 		UpdateSubresourceScope(UpdateSubresourceScope&& rhs) noexcept
-			: m_res(rhs.m_res)
+			: m_factory(rhs.m_factory)
 			, m_dest(std::move(rhs.m_dest))
 			, m_mip0(rhs.m_mip0)
 			, m_mipN(rhs.m_mipN)
@@ -245,7 +245,7 @@ namespace pr::rdr12
 		// Set this to 'std::nullopt' to manage the resource state outside of this class.
 		void Commit(std::optional<D3D12_RESOURCE_STATES> final_state)
 		{
-			BarrierBatch barriers(m_res.m_gfx_cmd_list);
+			BarrierBatch barriers(m_factory.m_gfx_cmd_list);
 			auto ddesc = m_dest->GetDesc();
 
 			// Add the command to copy from the staging resource to the destination resource
@@ -256,7 +256,7 @@ namespace pr::rdr12
 
 				auto pos = m_range.pos(m_mip0);
 				auto size = m_range.size(m_mip0);
-				m_res.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_res, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
+				m_factory.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_res, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
 			}
 			else
 			{
@@ -280,7 +280,7 @@ namespace pr::rdr12
 						.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
 						.SubresourceIndex = s_cast<UINT>(m_sub0 + m_mip0 + i),
 					};
-					m_res.m_gfx_cmd_list.CopyTextureRegion(&dst, s_cast<UINT>(box.left), s_cast<UINT>(box.top), s_cast<UINT>(box.front), &src, &box);
+					m_factory.m_gfx_cmd_list.CopyTextureRegion(&dst, s_cast<UINT>(box.left), s_cast<UINT>(box.top), s_cast<UINT>(box.front), &src, &box);
 				}
 			}
 
@@ -292,7 +292,7 @@ namespace pr::rdr12
 			}
 
 			// Signal that the resource manager command list needs executing
-			m_res.m_flush_required = true;
+			m_factory.m_flush_required = true;
 		}
 
 		// Return the sub resource index for the given mip level, array slice, and plane slice

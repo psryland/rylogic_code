@@ -13,6 +13,8 @@
 
 // ** No dependencies except standard includes **
 #include <cstdint>
+#include <functional>
+#include <span>
 #include <windows.h>
 #include <d3d12.h>
 
@@ -28,6 +30,7 @@ namespace pr
 		struct Texture2D;
 		struct TextureCube;
 		struct Sampler;
+		struct Shader;
 	}
 
 	namespace view3d
@@ -38,6 +41,7 @@ namespace pr
 		using Texture = pr::rdr12::Texture2D*;
 		using CubeMap = pr::rdr12::TextureCube*;
 		using Sampler = pr::rdr12::Sampler*;
+		using Shader = pr::rdr12::Shader*;
 		using Window = rdr12::V3dWindow*;
 		using ReportErrorCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
 
@@ -83,6 +87,15 @@ namespace pr
 			LineStripAdj = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
 			TriListAdj   = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
 			TriStripAdj  = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+		};
+		enum class ERenderStep :int
+		{
+			Invalid = 0,
+			ForwardRender,
+			GBuffer,
+			DSLighting,
+			ShadowMap,
+			RayCast,
 		};
 		enum class ENuggetFlag :int // pr::rdr12::ENuggetFlag
 		{
@@ -134,6 +147,41 @@ namespace pr
 			LinearWrap,
 			AnisotropicClamp,
 			AnisotropicWrap,
+		};
+		enum class EStockShader : int // pr::rdr12::EStockShader
+		{
+			Invalid = 0,
+			Forward,
+			FwdShaderVS,
+			FwdShaderPS,
+
+			// Radial fade params:
+			//  *Type {Spherical|Cylindrical}
+			//  *Radius {min,max}
+			//  *Centre {x,y,z} (optional, defaults to camera position)
+			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
+			FwdRadialFadePS,
+
+			GBufferVS,
+			GBufferPS,
+			DSLightingVS,
+			DSLightingPS,
+			ShadowMapVS,
+			ShadowMapPS,
+
+			// Point sprite params: *PointSize {w,h} *Depth {true|false}
+			PointSpritesGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineListGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineStripGS,
+
+			// Arrow params: *Size {size}
+			ArrowHeadGS,
+
+			ShowNormalsGS,
 		};
 		enum class ELight :int
 		{
@@ -365,12 +413,13 @@ namespace pr
 
 			_flags_enum = 0,
 		};
-		#if 0 //todo
-		enum class EView3DShaderVS :int
+
+#if 0 //todo
+		enum class EShaderVS :int
 		{
 			Standard = 0,
 		};
-		enum class EView3DShaderPS :int
+		enum class EShaderPS :int
 		{
 			Standard = 0,
 
@@ -381,7 +430,7 @@ namespace pr
 			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
 			RadialFadePS,
 		};
-		enum class EView3DShaderGS :int
+		enum class EShaderGS :int
 		{
 			Standard = 0,
 
@@ -397,19 +446,9 @@ namespace pr
 			// Arrow params: *Size {size}
 			ArrowHeadGS,
 		};
-		enum class EView3DShaderCS :int
+		enum class EShaderCS :int
 		{
 			None = 0,
-		};
-		enum class EView3DRenderStep :int
-		{
-			Invalid = 0,
-			ForwardRender,
-			GBuffer,
-			DSLighting,
-			ShadowMap,
-			RayCast,
-			_number_of,
 		};
 		enum class EView3DLogLevel :int
 		{
@@ -440,6 +479,11 @@ namespace pr
 			Vec4 centre;
 			Vec4 radius;
 		};
+		struct VICount
+		{
+			int m_vcount;
+			int m_icount;
+		};
 		struct Vertex
 		{
 			Vec4 pos;
@@ -448,38 +492,35 @@ namespace pr
 			Colour col;
 			uint32_t pad;
 		};
-		struct Material
-		{
-#if 0 //todo
-			struct ShaderSet
-			{
-				struct { EView3DShaderVS shdr; char const* params; } m_vs;
-				struct { EView3DShaderGS shdr; char const* params; } m_gs;
-				struct { EView3DShaderPS shdr; char const* params; } m_ps;
-				struct { EView3DShaderCS shdr; char const* params; } m_cs;
-			};
-			struct ShaderMap
-			{
-				// The set of shaders for each render step
-				ShaderSet m_rstep[(int)EView3DRenderStep::_number_of];
-			};
-			ShaderMap     m_shader_map;
-#endif
-			Texture m_tex_diffuse;
-			Sampler m_sam_diffuse;
-			Colour  m_tint;
-			float   m_relative_reflectivity;
-		};
 		struct Nugget
 		{
-			ETopo       m_topo;
-			EGeom       m_geom;
-			ECullMode   m_cull_mode;
-			EFillMode   m_fill_mode;
-			int         m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			int         m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-			ENuggetFlag m_nflags;         // Nugget flags
-			Material    m_mat;
+			struct Shader
+			{
+				ERenderStep m_rdr_step;  // The render step that the shader applies to
+				view3d::Shader m_shader; // The shader instance to use
+			};
+			struct Shaders
+			{
+				Shader const* m_shaders; // An array of shader overrides
+				int m_count;               // The length of the array
+				std::span<Shader const> span() const
+				{
+					return { m_shaders, static_cast<size_t>(m_count) };
+				}
+			};
+
+			ETopo       m_topo;         // Model topology
+			EGeom       m_geom;         // Model geometry type
+			int         m_v0, m_v1;     // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			int         m_i0, m_i1;     // Index buffer range. Set to 0,0 to mean the whole buffer
+			Texture     m_tex_diffuse;  // Diffuse texture
+			Sampler     m_sam_diffuse;  // Sampler for the diffuse texture 
+			Shaders     m_shaders;      // Array of shader overrides
+			ENuggetFlag m_nflags;       // Nugget flags
+			ECullMode   m_cull_mode;    // Face culling mode
+			EFillMode   m_fill_mode;    // Model fill mode
+			Colour      m_tint;         // Tint colour
+			float       m_rel_reflec;   // How reflective this nugget is relative to the over all model;
 		};
 		struct MultiSamp
 		{
@@ -528,6 +569,10 @@ namespace pr
 			D3D12_TEXTURE_ADDRESS_MODE m_addrV;
 			D3D12_TEXTURE_ADDRESS_MODE m_addrW;
 			char const*                m_dbg_name;
+		};
+		struct ShaderOptions
+		{
+			// todo
 		};
 		struct WindowOptions
 		{
@@ -647,17 +692,13 @@ namespace pr
 		using SceneChangedCB    = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
 		using AnimationCB       = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
 		using GizmoMovedCB      = void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state);
-		using EditObjectCB      = void (__stdcall *)(
-			void* ctx,           // User callback context pointer
-			UINT32 vcount,       // The maximum size of 'verts'
-			UINT32 icount,       // The maximum size of 'indices'
-			UINT32 ncount,       // The maximum size of 'nuggets'
-			Vertex* verts,       // The vert buffer to be filled
-			UINT16* indices,     // The index buffer to be filled
-			Nugget* nuggets,     // The nugget buffer to be filled
-			UINT32& new_vcount,  // The number of verts in the updated model
-			UINT32& new_icount,  // The number indices in the updated model
-			UINT32& new_ncount); // The number nuggets in the updated model
+		using AddNuggetCB       = void(__stdcall *)(void* ctx, Nugget const& nugget);
+		using EditObjectCB = VICount(__stdcall *)(void* ctx,
+			int vcount,                                        // The maximum size of 'verts'
+			int icount,                                        // The maximum size of 'indices'
+			Vertex* verts,                                     // The vert buffer to be filled
+			uint16_t* indices,                                 // The index buffer to be filled
+			AddNuggetCB out_nugget, void* out_nugget_ctx);     // Callback for adding a nugget
 		using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
 			void* ctx,              // User callback context pointer
 			wchar_t const* code,    // The source code from the embedded code block.
@@ -710,7 +751,7 @@ extern "C"
 	// Delete all objects not displayed in any windows
 	VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int include_count, int exclude_count);
 
-	// Enumerate the Guids of objects in the sources collection
+	// Enumerate the GUIDs of objects in the sources collection
 	VIEW3D_API void __stdcall View3D_SourceEnumGuids(pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
 
 	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
@@ -1065,7 +1106,7 @@ extern "C"
 
 	// Create a texture from data in memory.
 	// Set 'data' to nullptr to leave the texture uninitialised, if not null then data must point to width x height pixel data
-	// of the size appropriate for the given format. e.g. uint32_t px_data[width * height] for D3DFMT_A8R8G8B8
+	// of the size appropriate for the given format. e.g. 'uint32_t px_data[width * height]' for D3DFMT_A8R8G8B8
 	// Note: careful with stride, 'data' is expected to have the appropriate stride for BytesPerPixel(format) * width
 	VIEW3D_API pr::view3d::Texture __stdcall View3D_TextureCreate(int width, int height, void const* data, size_t data_size, pr::view3d::TextureOptions const& options);
 
@@ -1084,6 +1125,12 @@ extern "C"
 	// Create one of the stock samplers
 	VIEW3D_API pr::view3d::Sampler __stdcall View3D_SamplerCreateStock(pr::view3d::EStockSampler stock_sampler);
 
+	// Create a shader
+	VIEW3D_API pr::view3d::Shader __stdcall View3D_ShaderCreate(pr::view3d::ShaderOptions const& options);
+
+	// Create one of the stock shaders
+	VIEW3D_API pr::view3d::Shader __stdcall View3D_ShaderCreateStock(pr::view3d::EStockShader stock_shader, char const* config);
+
 	// Read the properties of an existing texture
 	VIEW3D_API pr::view3d::ImageInfo __stdcall View3D_TextureGetInfo(pr::view3d::Texture tex);
 	VIEW3D_API pr::view3d::EResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, pr::view3d::ImageInfo& info);
@@ -1092,6 +1139,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_TextureRelease(pr::view3d::Texture tex);
 	VIEW3D_API void __stdcall View3D_CubeMapRelease(pr::view3d::CubeMap tex);
 	VIEW3D_API void __stdcall View3D_SamplerRelease(pr::view3d::Sampler sam);
+	VIEW3D_API void __stdcall View3D_ShaderRelease(pr::view3d::Shader shdr);
 
 	// Resize this texture to 'size'
 	VIEW3D_API void __stdcall View3D_TextureResize(pr::view3d::Texture tex, uint64_t width, uint32_t height, uint16_t depth_or_array_len);

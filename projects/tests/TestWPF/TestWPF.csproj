@@ -50,73 +50,85 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Content Include="..\..\..\lib\x64\debug\audio.dll">
+		<Content Include="..\..\..\lib\x64\debug\audio.dll" Condition="'$(Configuration)'=='Debug'">
 			<Link>lib\x64\debug\audio.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\..\..\lib\x86\debug\audio.dll">
-			<Link>lib\x86\debug\audio.dll</Link>
+		<Content Include="..\..\..\lib\x64\release\audio.dll" Condition="'$(Configuration)'=='Release'">
+			<Link>lib\x64\release\audio.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\..\..\lib\x64\release\audio.dll">
-			<Link>lib\x64\release\audio.dll</Link>
+
+		<Content Include="..\..\..\lib\x64\debug\scintilla.dll" Condition="'$(Configuration)'=='Debug'">
+			<Link>lib\x64\debug\scintilla.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\scintilla.dll" Condition="'$(Configuration)'=='Release'">
+			<Link>lib\x64\release\scintilla.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		
+		<Content Include="..\..\..\lib\x64\debug\sqlite3.dll" Condition="'$(Configuration)'=='Debug'">
+			<Link>lib\x64\debug\sqlite3.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\sqlite3.dll" Condition="'$(Configuration)'=='Release'">
+			<Link>lib\x64\release\sqlite3.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Include="..\..\..\lib\x64\debug\view3d.dll" Condition="'$(Configuration)'=='Debug'">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\view3d.dll" Condition="'$(Configuration)'=='Release'">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Include="..\..\..\lib\x64\debug\view3d-12.dll" Condition="'$(Configuration)'=='Debug'">
+			<Link>lib\x64\debug\view3d-12.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\view3d-12.dll" Condition="'$(Configuration)'=='Release'">
+			<Link>lib\x64\release\view3d-12.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<!--
+		<Content Include="..\..\..\lib\x86\debug\audio.dll">
+			<Link>lib\x86\debug\audio.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<Content Include="..\..\..\lib\x86\release\audio.dll">
 			<Link>lib\x86\release\audio.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-
-		<Content Include="..\..\..\lib\x64\debug\scintilla.dll">
-			<Link>lib\x64\debug\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 		<Content Include="..\..\..\lib\x86\debug\scintilla.dll">
 			<Link>lib\x86\debug\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\scintilla.dll">
-			<Link>lib\x64\release\scintilla.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<Content Include="..\..\..\lib\x86\release\scintilla.dll">
 			<Link>lib\x86\release\scintilla.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		
-		<Content Include="..\..\..\lib\x64\debug\sqlite3.dll">
-			<Link>lib\x64\debug\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 		<Content Include="..\..\..\lib\x86\debug\sqlite3.dll">
 			<Link>lib\x86\debug\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\sqlite3.dll">
-			<Link>lib\x64\release\sqlite3.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<Content Include="..\..\..\lib\x86\release\sqlite3.dll">
 			<Link>lib\x86\release\sqlite3.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-
-		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
-			<Link>lib\x64\debug\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
 			<Link>lib\x86\debug\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\view3d.dll">
-			<Link>lib\x64\release\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<Content Include="..\..\..\lib\x86\release\view3d.dll">
 			<Link>lib\x86\release\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		-->
 	</ItemGroup>
 
 </Project>

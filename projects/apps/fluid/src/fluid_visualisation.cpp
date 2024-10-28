@@ -17,19 +17,21 @@ namespace pr::fluid
 	{
 		// Create a texture for displaying a fluid property
 		{
+			ResourceFactory factory(rdr);
+
 			auto src = Image(4096, 4096, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM);
 			auto rdesc = ResDesc::Tex2D(src, 1).usage(EUsage::UnorderedAccess);
 			auto tdesc = TextureDesc(AutoId, rdesc).name("Fluid:Map");
-			m_tex_map = rdr.res().CreateTexture2D(tdesc);
+			m_tex_map = factory.CreateTexture2D(tdesc);
 
 			auto opts = ModelGenerator::CreateOptions().bake(m4x4::Translation(0,0,-0.001f));
-			m_gfx_map.m_model = ModelGenerator::Quad(rdr, AxisId::PosZ, { 0, 0 }, 2, 2, iv2::Zero(), &opts);
+			m_gfx_map.m_model = ModelGenerator::Quad(factory, AxisId::PosZ, { 0, 0 }, 2, 2, iv2::Zero(), &opts);
 			m_gfx_map.m_model->m_name = "Fluid:MapQuad";
 			m_gfx_map.m_i2w = m4x4::Identity();
 			
 			auto& nug = m_gfx_map.m_model->m_nuggets.front();
 			nug.m_tex_diffuse = m_tex_map;
-			nug.m_sam_diffuse = rdr.res().StockSampler(EStockSampler::PointClamp);
+			nug.m_sam_diffuse = rdr.store().StockSampler(EStockSampler::PointClamp);
 		}
 	}
 	FluidVisualisation::~FluidVisualisation()
@@ -41,6 +43,8 @@ namespace pr::fluid
 	// Reset the visualisation
 	void FluidVisualisation::Init(int particle_capacity, std::string_view ldr, D3DPtr<ID3D12Resource> particle_buffer)
 	{
+		ResourceFactory factory(*m_rdr);
+
 		// Create the visualisation scene
 		m_gfx_scene = rdr12::CreateLdr(*m_rdr, ldr);
 
@@ -49,10 +53,10 @@ namespace pr::fluid
 			auto vb = ResDesc::VBuf<Vert>(particle_buffer.get()).usage(EUsage::UnorderedAccess);
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
 			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
-			m_gfx_fluid.m_model = m_rdr->res().CreateModel(mdesc, particle_buffer, nullptr);
-			m_gfx_fluid.m_model->CreateNugget(NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+			m_gfx_fluid.m_model = factory.CreateModel(mdesc, particle_buffer, nullptr);
+			m_gfx_fluid.m_model->CreateNugget(factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 				.use_shader(ERenderStep::RenderForward, m_gs_points)
-				.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
+				.tex_diffuse(m_rdr->store().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
 				.irange(0, 0));
 			m_gfx_fluid.m_i2w = m4x4::Identity();
 		}
@@ -62,19 +66,20 @@ namespace pr::fluid
 			auto vb = ResDesc::VBuf<Vert>(3LL * particle_capacity, {});
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
 			auto mdesc = ModelDesc(vb, ib).name("Fluid:VectorField");
-			m_gfx_vector_field.m_model = m_rdr->res().CreateModel(mdesc);
-			m_gfx_vector_field.m_model->CreateNugget(NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
+			m_gfx_vector_field.m_model = factory.CreateModel(mdesc);
+			m_gfx_vector_field.m_model->CreateNugget(factory, NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
 			m_gfx_vector_field.m_i2w = m4x4::Identity();
 		}
 
 		// Make sure everything ready to go
-		m_rdr->res().FlushToGpu(EGpuFlush::Block);
+		factory.FlushToGpu(EGpuFlush::Block);
 	}
 
 	// Populate the vector field with
 	void FluidVisualisation::UpdateVectorField(std::span<particle_t const> particles, float particle_radius, float scale, int mode) const
 	{
-		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices();
+		ResourceFactory factory(*m_rdr);
+		UpdateSubresourceScope update = m_gfx_vector_field.m_model->UpdateVertices(factory);
 		auto* beg = update.ptr<Vert>();
 		auto* end = beg + m_gfx_vector_field.m_model->m_vcount;
 		memset(beg, 0, (end - beg) * sizeof(Vert));
@@ -101,7 +106,7 @@ namespace pr::fluid
 					ptr->m_diff = col;
 					++ptr;
 				}
-				m_gfx_vector_field.m_model->CreateNugget(
+				m_gfx_vector_field.m_model->CreateNugget(factory,
 					NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
 					.vrange(0, 2 * particles.size())
 					.irange(0, 0));
@@ -123,7 +128,7 @@ namespace pr::fluid
 					ptr->m_diff = col;
 					++ptr;
 				}
-				m_gfx_vector_field.m_model->CreateNugget(
+				m_gfx_vector_field.m_model->CreateNugget(factory,
 					NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
 					.vrange(0, 2 * particles.size())
 					.irange(0, 0));
@@ -157,13 +162,13 @@ namespace pr::fluid
 					ptr1->m_diff = col;
 					++ptr1;
 				}
-				m_gfx_vector_field.m_model->CreateNugget(
+				m_gfx_vector_field.m_model->CreateNugget(factory,
 					NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 					.use_shader(ERenderStep::RenderForward, m_gs_points)
-					.tex_diffuse(m_rdr->res().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
+					.tex_diffuse(m_rdr->store().StockTexture(EStockTexture::WhiteDot))//WhiteSphere))
 					.vrange(0, ptr0 - beg)
 					.irange(0, 0));
-				m_gfx_vector_field.m_model->CreateNugget(
+				m_gfx_vector_field.m_model->CreateNugget(factory,
 					NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr)
 					.vrange(ptr0 - beg, ptr1 - beg)
 					.irange(0, 0));

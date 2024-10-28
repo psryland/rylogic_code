@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
 	<PropertyGroup>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<UserSecretsId>dotnet-FroniusMonitor.Service-9D070EDA-30AF-460F-887D-946E49E0DD18</UserSecretsId>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>

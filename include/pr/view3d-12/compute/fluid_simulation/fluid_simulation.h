@@ -219,7 +219,7 @@ namespace pr::rdr12::compute::fluid
 		}
 
 		// Set the initial state of the simulation (spatial partition, colours, etc.)
-		void Init(GpuJob& job, Setup const& fs_setup, ParticleCollision::Setup const& pc_setup, SpatialPartition::Setup const& sp_setup, EGpuFlush flush = EGpuFlush::Block)
+		void Init(GpuJob& job, Setup const& fs_setup, ParticleCollision::Setup const& pc_setup, SpatialPartition::Setup const& sp_setup)
 		{
 			assert(fs_setup.valid());
 
@@ -230,13 +230,10 @@ namespace pr::rdr12::compute::fluid
 			CreateResourceBuffers(fs_setup);
 
 			// Reset the collision primitives
-			m_collision.Init(pc_setup, EGpuFlush::DontFlush);
+			m_collision.Init(pc_setup);
 
 			// Reset the spatial partitioning
-			m_spatial.Init(sp_setup, EGpuFlush::DontFlush);
-
-			// Ensure resources are created and initialised
-			m_rdr->res().FlushToGpu(flush);
+			m_spatial.Init(sp_setup);
 
 			// Make the particle buffer accessible in the compute shader
 			ParticleBufferAsUAV(job, true);
@@ -714,13 +711,14 @@ namespace pr::rdr12::compute::fluid
 		// Create the resource buffers
 		void CreateResourceBuffers(Setup const& setup)
 		{
+			ResourceFactory factory(*m_rdr);
 			m_capacity = setup.ParticleCapacity;
 
 			// Create the particle (vertex) buffer
 			{
 				ResDesc desc = ResDesc::VBuf<Particle>(setup.ParticleCapacity, setup.ParticleInitData)
 					.usage(EUsage::UnorderedAccess);
-				m_r_particles = m_rdr->res().CreateResource(desc, "Fluid:ParticlePositions");
+				m_r_particles = factory.CreateResource(desc, "Fluid:ParticlePositions");
 			}
 
 			// Create the particle dynamics buffer
@@ -728,7 +726,7 @@ namespace pr::rdr12::compute::fluid
 				ResDesc desc = ResDesc::Buf<Dynamics>(setup.ParticleCapacity, setup.DynamicsInitData)
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
-				m_r_dynamics = m_rdr->res().CreateResource(desc, "Fluid:ParticleDynamics");
+				m_r_dynamics = factory.CreateResource(desc, "Fluid:ParticleDynamics");
 			}
 
 			// Create the output buffer
@@ -736,7 +734,7 @@ namespace pr::rdr12::compute::fluid
 				ResDesc desc = ResDesc::Buf<OutputData>(1, {})
 					.def_state(D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 					.usage(EUsage::UnorderedAccess);
-				m_r_output = m_rdr->res().CreateResource(desc, "Fluid:Output");
+				m_r_output = factory.CreateResource(desc, "Fluid:Output");
 			}
 		}
 

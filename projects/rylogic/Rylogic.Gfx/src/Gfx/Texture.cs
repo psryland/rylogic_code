@@ -306,6 +306,12 @@ namespace Rylogic.Gfx
 
 #endregion
 
+			/// <summary>Implicit conversion to handle</summary>
+			public static implicit operator HTexture(Texture tex)
+			{
+				return tex.Handle;
+			}
+
 			#region Equals
 			public static bool operator == (Texture? lhs, Texture? rhs)
 			{

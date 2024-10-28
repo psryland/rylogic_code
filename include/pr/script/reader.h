@@ -483,31 +483,31 @@ namespace pr::script
 		}
 
 		// Extract a bool from the source.
-		template <typename TBool> TBool Bool()
+		bool Bool()
 		{
-			TBool bool_;
-			return Bool(bool_) ? bool_ : TBool{};
+			bool bool_;
+			return Bool(bool_) ? bool_ : false;
 		}
-		template <typename TBool> TBool BoolS()
+		bool BoolS()
 		{
-			TBool bool_;
-			return BoolS(bool_) ? bool_ : TBool{};
+			bool bool_;
+			return BoolS(bool_) ? bool_ : false;
 		}
-		template <typename TBool> bool Bool(TBool& bool_)
+		bool Bool(bool& bool_)
 		{
 			auto& src = m_pp;
 			return str::ExtractBool(bool_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "bool expected");
 		}
-		template <typename TBool> bool BoolS(TBool& bool_)
+		bool BoolS(bool& bool_)
 		{
 			return SectionStart() && Bool(bool_) && SectionEnd();
 		}
-		template <typename TBool> bool Bool(TBool* bools, size_t num_bools)
+		bool Bool(bool* bools, size_t num_bools)
 		{
 			for (; num_bools && Bool(*bools); --num_bools, ++bools) {}
 			return num_bools == 0;
 		}
-		template <typename TBool> bool BoolS(TBool* bools, size_t num_bools)
+		bool BoolS(bool* bools, size_t num_bools)
 		{
 			return SectionStart() && Bool(bools, num_bools) && SectionEnd();
 		}

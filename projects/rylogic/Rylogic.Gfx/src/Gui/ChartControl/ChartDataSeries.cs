@@ -47,6 +47,8 @@ namespace Rylogic.Gui.WPF
 		protected override void Dispose(bool _)
 		{
 			Cache = null!;
+			PointSprite = null!;
+			ThickLineList = null!;
 			base.Dispose(_);
 		}
 		public override XElement ToXml(XElement node)
@@ -57,7 +59,43 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Options for rendering this series</summary>
-		public OptionsData Options { get; set; }
+		public OptionsData Options
+		{
+			get => m_options;
+			set
+			{
+				if (m_options == value) return;
+				if (m_options != null)
+				{
+					m_options.SettingChange -= HandleSettingChange;
+				}
+				m_options = value;
+				if (m_options != null)
+				{
+					m_options.SettingChange += HandleSettingChange;
+				}
+
+				// Handler
+				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					switch (e.Key)
+					{
+						case nameof(Options.PointSize):
+						{
+							PointSprite = new View3d.Shader(View3d.EStockShader.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
+							break;
+						}
+						case nameof(Options.LineWidth):
+						{
+							ThickLineList = new View3d.Shader(View3d.EStockShader.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
+							break;
+						}
+					}
+				}
+			}
+		}
+		private OptionsData m_options = null!;
 
 		/// <summary>Gain access to the underlying data</summary>
 		public LockData Lock() => new(this);
@@ -164,7 +202,7 @@ namespace Rylogic.Gui.WPF
 			base.RemoveFromSceneCore(window);
 
 			// Remove all series data graphics
-			window.RemoveObjects(new[] { Id }, 1, 0);
+			window.RemoveObjects([Id], 1, 0);
 		}
 
 		/// <summary>Generate a piece of the graphics for 'x'</summary>
@@ -245,13 +283,11 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Create a nugget for the points using the sprite shader
-			{
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
-				mat.m_diff_sam = View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp).Handle;
-				//todo mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[0] = View3d.Nugget.New(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, mat:mat);
-			}
+			m_nbuf[0] = new(
+				View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0,
+				tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
+				sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+				shaders: [new(View3d.ERenderStep.ForwardRender, PointSprite)]);
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
@@ -287,20 +323,16 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Create a nugget for the list strip using the thick line shader
-			{
-				var mat = View3d.Material.New();
-				//todo mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
-				m_nbuf[0] = View3d.Nugget.New(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, mat:mat);
-			}
+			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr,
+				shaders:[new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
 			{
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
-				mat.m_diff_sam = View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp).Handle;
-				//todo mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[1] = View3d.Nugget.New(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, flags: View3d.ENuggetFlag.RangesCanOverlap, mat:mat);
+				m_nbuf[1] = new(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, flags: View3d.ENuggetFlag.RangesCanOverlap,
+					tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
+					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+					shaders: [new(View3d.ERenderStep.ForwardRender, PointSprite)]);
 			}
 
 			// Create the graphics
@@ -339,11 +371,8 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Create a nugget for the list strip using the thick line shader
-			{
-				var mat = View3d.Material.New();
-				//todo mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
-				m_nbuf[0] = View3d.Nugget.New(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, vert, 0, indx, View3d.ENuggetFlag.None, mat:mat);
-			}
+			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, vert, 0, indx, flags: View3d.ENuggetFlag.None,
+				shaders: [new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
@@ -353,10 +382,10 @@ namespace Rylogic.Gui.WPF
 				for (int i = 0, iend = n; i != iend; ++i)
 					m_ibuf[indx++] = (ushort)(i * 2);
 
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
-				//todo mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[1] = View3d.Nugget.New(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, vert, i0, indx, View3d.ENuggetFlag.None, mat:mat);
+				m_nbuf[1] = new(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, vert, i0, indx, flags: View3d.ENuggetFlag.None,
+					tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
+					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+					shaders:[new(View3d.ERenderStep.ForwardRender, PointSprite)]);
 			}
 
 			// Create the graphics
@@ -446,7 +475,7 @@ namespace Rylogic.Gui.WPF
 			int v0 = 0, v1 = vidx;
 			int i0 = 0, i1 = iidx;
 			var flags = col.A != 0xff ? View3d.ENuggetFlag.GeometryHasAlpha : View3d.ENuggetFlag.None;
-			m_nbuf[nidx++] = View3d.Nugget.New(View3d.ETopo.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, flags);
+			m_nbuf[nidx++] = new(View3d.ETopo.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, flags:flags);
 
 			// Add the bar 'tops'
 			if (Options.LinesOnBarPlot)
@@ -473,7 +502,7 @@ namespace Rylogic.Gui.WPF
 				// Create a nugget for the bar tops
 				v0 = v1; v1 += n * 2;
 				i0 = i1; i1 += n * 2;
-				m_nbuf[nidx++] = View3d.Nugget.New(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1);
+				m_nbuf[nidx++] = new(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1);
 			}
 
 			// Create the graphics
@@ -493,6 +522,32 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ChartGfxCache m_impl_cache = null!;
+
+		/// <summary>Point sprite shader</summary>
+		private View3d.Shader PointSprite
+		{
+			get => m_point_sprite;
+			set
+			{
+				if (m_point_sprite == value) return;
+				Util.Dispose(ref m_point_sprite!);
+				m_point_sprite = value;
+			}
+		}
+		private View3d.Shader m_point_sprite = null!;
+
+		/// <summary>Thick Line-List shader</summary>
+		private View3d.Shader ThickLineList
+		{
+			get => m_thick_line_list;
+			set
+			{
+				if (m_thick_line_list == value) return;
+				Util.Dispose(ref m_thick_line_list!);
+				m_thick_line_list = value;
+			}
+		}
+		private View3d.Shader m_thick_line_list = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString() => $"{Name} count={m_data.Count}";
@@ -566,7 +621,6 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Guess at whether double or long values are used</summary>
 			private string Description => $"{x} {y}";
-
 
 #if false // why did I do it this way?
 			// Notes:

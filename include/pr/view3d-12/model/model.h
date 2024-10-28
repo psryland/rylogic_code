@@ -47,13 +47,13 @@ namespace pr::rdr12
 		Renderer& rdr();
 
 		// Allow update of the vertex/index buffers
-		UpdateSubresourceScope UpdateVertices(ResourceFactory& res, Range vrange = Range::Reset());
-		UpdateSubresourceScope UpdateIndices(ResourceFactory& res, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateVertices(ResourceFactory& factory, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateIndices(ResourceFactory& factory, Range vrange = Range::Reset());
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
-		void CreateNugget(ResourceFactory& res, NuggetDesc const& props);
+		void CreateNugget(ResourceFactory& factory, NuggetDesc const& props);
 
 		// Call to release the nuggets that this model has been
 		// divided into. Nuggets are the contiguous sub groups

@@ -88,9 +88,10 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// (Re)Initialise the particle collision system
-		void Init(Setup const& setup, EGpuFlush flush = EGpuFlush::Block)
+		void Init(Setup const& setup)
 		{
 			assert(setup.valid());
+			ResourceFactory factory(*m_rdr);
 
 			// Save the config
 			Config = setup.Config;
@@ -101,11 +102,9 @@ namespace pr::rdr12::compute::particle_collision
 					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
 
-				m_r_primitives = m_rdr->res().CreateResource(desc, "ParticleCollision:Primitives");
+				m_r_primitives = factory.CreateResource(desc, "ParticleCollision:Primitives");
 				m_capacity = setup.PrimitiveCapacity;
 			}
-
-			m_rdr->res().FlushToGpu(flush);
 		}
 
 		// Integrate the particle positions (with collision)

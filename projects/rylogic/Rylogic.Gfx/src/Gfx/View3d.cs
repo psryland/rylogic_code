@@ -20,6 +20,7 @@ using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
 using HSampler = System.IntPtr;
 using HTexture = System.IntPtr;
+using HShader = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
@@ -97,6 +98,15 @@ namespace Rylogic.Gfx
 			/// usually an error, but in advanced cases it isn't.</summary>
 			RangesCanOverlap = 1 << 5,
 		}
+		public enum ERenderStep :int
+		{
+			Invalid = 0,
+			ForwardRender,
+			GBuffer,
+			DSLighting,
+			ShadowMap,
+			RayCast,
+		}
 		public enum EStockTexture : int
 		{
 			Invalid = 0,
@@ -120,6 +130,31 @@ namespace Rylogic.Gfx
 			LinearWrap,
 			AnisotropicClamp,
 			AnisotropicWrap,
+		}
+		public enum EStockShader : int
+		{
+			// Forward rendering shaders
+			StandardVS = 0,
+			StandardPS = 0,
+
+			// Radial fade params:
+			//  *Type {Spherical|Cylindrical}
+			//  *Radius {min,max}
+			//  *Centre {x,y,z} (optional, defaults to camera position)
+			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
+			RadialFadePS,
+
+			// Point sprite params: *PointSize {w,h} *Depth {true|false}
+			PointSpritesGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineListGS,
+
+			// Thick line params: *LineWidth {width}
+			ThickLineStripGS,
+
+			// Arrow params: *Size {size}
+			ArrowHeadGS,
 		}
 		public enum ELight : int
 		{
@@ -307,7 +342,6 @@ namespace Rylogic.Gfx
 			General_FocusPointSize      = General | 1 << 3,
 			General_OriginPointSize     = General | 1 << 4,
 			General_SelectionBox        = General | 1 << 5,
-
 
 			Scene                  = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,
@@ -559,7 +593,15 @@ namespace Rylogic.Gfx
 		#region Structures
 
 		/// <summary></summary>
-		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct VICount
+		{
+			public int m_vcount;
+			public int m_icount;
+		};
+
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Vertex
 		{
 			public v4 m_pos;
@@ -577,122 +619,48 @@ namespace Rylogic.Gfx
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct Material
+		public struct Nugget(
+			ETopo topo, EGeom geom,
+			int v0 = 0, int v1 = 0,
+			int i0 = 0, int i1 = 0,
+			HTexture? tex_diffuse = null,
+			HSampler? sam_diffuse = null,
+			IEnumerable<Nugget.Shader>? shaders = null,
+			ENuggetFlag? flags = null,
+			ECullMode? cull_mode = null,
+			EFillMode? fill_mode = null,
+			Colour32? tint = null,
+			float? rel_reflec = null)
 		{
-			/// <summary>Material diffuse texture</summary>
-			public HTexture m_diff_tex;
-
-			/// <summary>Shader overrides</summary>
-			public HSampler m_diff_sam;
-
-			/// <summary>Tint colour</summary>
-			public Colour32 m_tint;
-
-			/// <summary>How reflective this nugget is relative to the over all model</summary>
-			public float m_relative_reflectivity;
-
-			/// <summary>Create a material instance</summary>
-			public static Material New(Colour32? colour = null, HTexture? diff_tex = null, HSampler? diff_sam = null, float? relative_reflectivity = null)
+			[StructLayout(LayoutKind.Sequential)] public struct Shader(ERenderStep rdr_step, HShader shader)
 			{
-				return new Material
-				{
-					m_diff_tex = diff_tex ?? HTexture.Zero,
-					m_diff_sam = diff_sam ?? HSampler.Zero,
-					m_tint = colour ?? Colour32.White,
-					m_relative_reflectivity = relative_reflectivity ?? 1f,
-					//m_shader_map = shdr_map ?? ShaderMap.New();
-				};
+				public ERenderStep m_rdr_step = rdr_step;
+				public HShader m_shader = shader;
 			}
-
-#if false
-
-			[DebuggerDisplay("{Description,nq}"), StructLayout(LayoutKind.Sequential)]
-			public struct ShaderSet
+			[StructLayout(LayoutKind.Sequential)] public struct Shaders
 			{
-				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderVS { public EShaderVS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderGS { public EShaderGS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderPS { public EShaderPS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderCS { public EShaderCS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				[MarshalAs(UnmanagedType.LPArray)] public Shader[] m_shaders;
+				public int m_count;
 
-				public ShaderVS m_vs;
-				public ShaderGS m_gs;
-				public ShaderPS m_ps;
-				public ShaderCS m_cs;
-
-				/// <summary>Description</summary>
-				public readonly string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
-			}
-
-			[DebuggerDisplay("Smap"), StructLayout(LayoutKind.Sequential)]
-			public struct ShaderMap
-			{
-				public static ShaderMap New()
+				public Shaders(IEnumerable<Shader> shaders)
 				{
-					return new ShaderMap { m_rstep = Array_.New((int)ERenderStep._number_of, i => new ShaderSet()) };
+					m_shaders = shaders.ToArray();
+					m_count = m_shaders.Length;
 				}
-
-				/// <summary>Get the shader set for the given render step</summary>
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst = (int)ERenderStep._number_of)]
-				public ShaderSet[] m_rstep;
 			}
 
-			/// <summary>Set the shader to use along with the parameters it requires</summary>
-			public readonly void Use(ERenderStep rstep, EShaderVS shdr, string parms)
-			{
-				m_shader_map.m_rstep[(int)rstep].m_vs.shdr = shdr;
-				m_shader_map.m_rstep[(int)rstep].m_vs.parms = parms;
-			}
-			public readonly void Use(ERenderStep rstep, EShaderGS shdr, string parms)
-			{
-				m_shader_map.m_rstep[(int)rstep].m_gs.shdr = shdr;
-				m_shader_map.m_rstep[(int)rstep].m_gs.parms = parms;
-			}
-			public readonly void Use(ERenderStep rstep, EShaderPS shdr, string parms)
-			{
-				m_shader_map.m_rstep[(int)rstep].m_ps.shdr = shdr;
-				m_shader_map.m_rstep[(int)rstep].m_ps.parms = parms;
-			}
-			public readonly void Use(ERenderStep rstep, EShaderCS shdr, string parms)
-			{
-				m_shader_map.m_rstep[(int)rstep].m_cs.shdr = shdr;
-				m_shader_map.m_rstep[(int)rstep].m_cs.parms = parms;
-			}
-#endif
-		}
-
-		/// <summary></summary>
-		[StructLayout(LayoutKind.Sequential)]
-		public struct Nugget
-		{
-			public ETopo m_topo;
-			public EGeom m_geom;
-			public ECullMode m_cull_mode;
-			public EFillMode m_fill_mode;
-			public int m_v0, m_v1;        // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public int m_i0, m_i1;        // Index buffer range. Set to 0,0 to mean the whole buffer
-			public ENuggetFlag m_nflags;  // Nugget flags (ENuggetFlag)
-			public Material m_mat;
-
-			public static Nugget New(ETopo topo, EGeom geom, int v0 = 0, int v1 = 0, int i0 = 0, int i1 = 0, ENuggetFlag flags = ENuggetFlag.None, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
-			{
-				return new Nugget
-				{
-					m_topo = topo,
-					m_geom = geom,
-					m_cull_mode = cull_mode,
-					m_fill_mode = fill_mode,
-					m_v0 = v0,
-					m_v1 = v1,
-					m_i0 = i0,
-					m_i1 = i1,
-					m_nflags = flags,
-					m_mat = mat ?? Material.New(),
-				};
-			}
+			public ETopo m_topo           = topo;                                          // Model topology
+			public EGeom m_geom           = geom;                                          // Model geometry type
+			public int m_v0               = v0, m_v1 = v1;                                 // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public int m_i0               = i0, m_i1 = i1;                                 // Index buffer range. Set to 0,0 to mean the whole buffer
+			public HTexture m_tex_diffuse = tex_diffuse ?? IntPtr.Zero;                    // Diffuse texture
+			public HSampler m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;                    // Sampler for the diffuse texture
+			public Shaders m_shaders      = new Shaders(shaders ?? Array.Empty<Shader>()); // Shader overrides for this nugget
+			public ENuggetFlag m_nflags   = flags ?? ENuggetFlag.None;                     // Nugget flags (ENuggetFlag)
+			public ECullMode m_cull_mode  = cull_mode ?? ECullMode.Back;                   // Face culling mode
+			public EFillMode m_fill_mode  = fill_mode ?? EFillMode.Solid;                  // Model fill mode
+			public Colour32 m_tint        = tint ?? Colour32.White;                        // Tint colour
+			public float m_rel_reflec     = rel_reflec ?? 1f;                              // How reflective this nugget is relative to the over all model
 		}
 
 		/// <summary>Light source properties</summary>
@@ -805,19 +773,11 @@ namespace Rylogic.Gfx
 
 		/// <summary>Light source properties</summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct MultiSamp // DXGI_SAMPLE_DESC
+		public struct MultiSamp(int? count = null, int? quality = null) // DXGI_SAMPLE_DESC
 		{
-			public int Count;
-			public int Quality;
+			public int Count = count ?? 1;
+			public int Quality = quality ?? 0;
 
-			public static MultiSamp New(int? count = null, int? quality = null)
-			{
-				return new MultiSamp
-				{
-					Count = count ?? 1,
-					Quality = quality ?? 0,
-				};
-			}
 			public static int BestQuality(int count, EFormat format)
 			{
 				return View3D_MSAAQuality(count, format);
@@ -826,35 +786,28 @@ namespace Rylogic.Gfx
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct TextureOptions
+		public struct TextureOptions(
+			m4x4? t2s = null, 
+			EFormat? format = null, 
+			int? mips = null, 
+			EResFlags? usage = null, 
+			EResState? state = null, 
+			ClearValue? clear_value = null, 
+			MultiSamp? msaa = null, 
+			uint? colour_key = null, 
+			bool? has_alpha = null, 
+			string? dbg_name = null)
 		{
-			public m4x4 T2S;
-			public EFormat Format;
-			public int Mips;
-			public EResFlags Usage;
-			public EResState State;
-			public ClearValue ClearValue;
-			public MultiSamp MultiSamp;
-			public uint ColourKey;
-			public bool HasAlpha;
-			public string DbgName;
-
-			public static TextureOptions New(m4x4? t2s = null, EFormat? format = null, int? mips = null, EResFlags? usage = null, EResState? state = null, ClearValue? clear_value = null, MultiSamp? msaa = null, uint? colour_key = null, bool? has_alpha = null, string? dbg_name = null)
-			{
-				return new TextureOptions
-				{
-					T2S = t2s ?? m4x4.Identity,
-					Format = format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
-					Mips = mips ?? 0,
-					Usage = usage ?? EResFlags.D3D12_RESOURCE_FLAG_NONE,
-					State = state ?? EResState.D3D12_RESOURCE_STATE_COMMON,
-					ClearValue = clear_value ?? ClearValue.New(format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM),
-					MultiSamp = msaa ?? MultiSamp.New(),
-					ColourKey = colour_key ?? 0U,
-					HasAlpha = has_alpha ?? false,
-					DbgName = dbg_name ?? string.Empty,
-				};
-			}
+			public m4x4 T2S = t2s ?? m4x4.Identity;
+			public EFormat Format = format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
+			public int Mips = mips ?? 0;
+			public EResFlags Usage = usage ?? EResFlags.D3D12_RESOURCE_FLAG_NONE;
+			public EResState State = state ?? EResState.D3D12_RESOURCE_STATE_COMMON;
+			public ClearValue ClearValue = clear_value ?? new ClearValue(format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM);
+			public MultiSamp MultiSamp = msaa ?? new MultiSamp();
+			public uint ColourKey = colour_key ?? 0U;
+			public bool HasAlpha = has_alpha ?? false;
+			public string DbgName = dbg_name ?? string.Empty;
 		}
 
 		/// <summary></summary>
@@ -876,6 +829,13 @@ namespace Rylogic.Gfx
 			[MarshalAs(UnmanagedType.LPStr)] public string m_dbg_name;
 		};
 
+		/// <summary></summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct ShaderOptions
+		{
+			// todo
+		}
+		
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WindowOptions
@@ -1073,20 +1033,11 @@ namespace Rylogic.Gfx
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Explicit)]
-		public struct ClearValue
+		public struct ClearValue(EFormat format, Colour128 colour = default)
 		{
-			[FieldOffset(0)] public EFormat Format;
-			[FieldOffset(4)] public Colour128 Colour;
+			[FieldOffset(0)] public EFormat Format = format;
+			[FieldOffset(4)] public Colour128 Colour = colour;
 			[FieldOffset(4)] public DepthStencilValue DepthStencil;
-
-			public static ClearValue New(EFormat format, Colour128 colour = default)
-			{
-				return new ClearValue
-				{
-					Format = format,
-					Colour = colour,
-				};
-			}
 		}
 
 		#endregion
@@ -1130,12 +1081,15 @@ namespace Rylogic.Gfx
 		/// <summary>Callback notification of gizmo moved</summary>
 		public delegate void GizmoMovedCB(IntPtr ctx, HGizmo gizmo, EGizmoState state);
 
+		/// <summary>Callback for emitting nuggets during EditObject</summary>
+		public delegate void AddNuggetCB(IntPtr ctx, Nugget nugget);
+
 		/// <summary>Edit object callback</summary>
-		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
+		public delegate VICount EditObjectCB(IntPtr ctx,
+			int vcount, int icount,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)][In, Out] Vertex[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)][In, Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)][In, Out] Nugget[] nuggets,
-			out int new_vcount, out int new_icount, out int new_ncount);
+			AddNuggetCB out_nugget, IntPtr out_nugget_ctx);
 
 		/// <summary>Embedded code handler callback</summary>
 		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
@@ -1932,6 +1886,12 @@ namespace ldr
 		// Create one of the stock samplers
 		[DllImport(Dll)] private static extern HSampler View3D_SamplerCreateStock(EStockSampler stock_sampler);
 
+		// Create a shader
+		[DllImport(Dll)] private static extern HSampler View3D_ShaderCreate(ref ShaderOptions options);
+
+		// Create one of the stock shaders
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HSampler View3D_ShaderCreateStock(EStockShader stock_shader, [MarshalAs(UnmanagedType.LPStr)] string config);
+
 		// Read the properties of an existing texture
 		[DllImport(Dll)] private static extern ImageInfo View3D_TextureGetInfo(HTexture tex);
 		[DllImport(Dll)] private static extern EResult View3D_TextureGetInfoFromFile([MarshalAs(UnmanagedType.LPStr)] string tex_filepath, out ImageInfo info);
@@ -1940,6 +1900,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_TextureRelease(HTexture tex);
 		[DllImport(Dll)] private static extern void View3D_CubeMapRelease(HCubeMap tex);
 		[DllImport(Dll)] private static extern void View3D_SamplerRelease(HSampler sam);
+		[DllImport(Dll)] private static extern void View3D_ShaderRelease(HShader shdr);
 
 		// Resize this texture to 'size'
 		[DllImport(Dll)] private static extern void View3D_TextureResize(HTexture tex, ulong width, uint height, ushort depth_or_array_len);

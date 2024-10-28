@@ -54,21 +54,21 @@ namespace pr::rdr12
 	}
 	
 	// Allow update of the vertex/index buffers
-	UpdateSubresourceScope Model::UpdateVertices(ResourceFactory& res, Range vrange)
+	UpdateSubresourceScope Model::UpdateVertices(ResourceFactory& factory, Range vrange)
 	{
 		if (vrange == Range::Reset()) vrange = Range(0, m_vcount);
-		return UpdateSubresourceScope(res, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
+		return UpdateSubresourceScope(factory, m_vb.get(), m_vstride.align(), s_cast<int>(vrange.m_beg), s_cast<int>(vrange.size() * m_vstride.size()));
 	}
-	UpdateSubresourceScope Model::UpdateIndices(ResourceFactory& res, Range irange)
+	UpdateSubresourceScope Model::UpdateIndices(ResourceFactory& factory, Range irange)
 	{
 		if (irange == Range::Reset()) irange = Range(0, m_icount);
-		return UpdateSubresourceScope(res, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
+		return UpdateSubresourceScope(factory, m_ib.get(), m_istride.align(), s_cast<int>(irange.m_beg), s_cast<int>(irange.size() * m_istride.size()));
 	}
 
 	// Create a nugget from a range within this model
 	// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 	// Remember you might need to delete render nuggets first
-	void Model::CreateNugget(ResourceFactory& res, NuggetDesc const& nugget_data)
+	void Model::CreateNugget(ResourceFactory& factory, NuggetDesc const& nugget_data)
 	{
 		auto ndata = NuggetDesc(nugget_data);
 
@@ -92,7 +92,7 @@ namespace pr::rdr12
 					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
 		#endif
 
-		auto nug = res.CreateNugget(ndata, this);
+		auto nug = factory.CreateNugget(ndata, this);
 		m_nuggets.push_back(*nug);
 	}
 

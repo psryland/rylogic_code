@@ -45,11 +45,11 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Content Include="..\..\..\..\lib\x64\debug\view3d-12.dll">
+		<Content Include="..\..\..\..\lib\x64\debug\view3d-12.dll" Condition="'$(Configuration)'=='Debug'">
 			<Link>lib\x64\debug\view3d-12.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\..\..\..\lib\x64\release\view3d-12.dll">
+		<Content Include="..\..\..\..\lib\x64\release\view3d-12.dll" Condition="'$(Configuration)'=='Release'">
 			<Link>lib\x64\release\view3d-12.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>

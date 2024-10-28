@@ -65,7 +65,7 @@ namespace Rylogic.Gui.WinForms
 				m_window = new View3d.Window(m_view3d, Handle, dbg_name: "Diagram");
 				m_tools = new Tools();
 				m_camera = m_window.Camera;
-				m_camera.ClipPlanes(0.5f, 1.1f, true);
+				m_camera.ClipPlanes(0.5f, 1.1f, View3d.EClipPlanes.Both|View3d.EClipPlanes.CameraRelative);
 				m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 				m_window.FocusPointVisible = false;
 				m_window.OriginPointVisible = false;
@@ -271,7 +271,7 @@ namespace Rylogic.Gui.WinForms
 			// Add selection graphics if something is selected
 			if (AllowArranging && SelectionResizeable)
 			{
-				// Position the resizer tool above the other graphics
+				// Position the resizing tool above the other graphics
 				var z = HighestZ;
 				var bounds = BRect.Reset;
 				foreach (var elem in Selected.OfType<ResizeableElement>().Where(x => x.Resizeable))
@@ -281,14 +281,14 @@ namespace Rylogic.Gui.WinForms
 				}
 				m_tools.Resizer.ForEach(x => x.Update(bounds, z));
 
-				// Add the resizer tool
+				// Add the resizing tool
 				m_window.AddObjects(m_tools.Resizer);
 			}
 
 			// Render the diagram
-			m_window.RestoreRT();
+			//m_window.RestoreRT();
 			m_window.Render();
-			m_window.Present();
+			//m_window.Present();
 		}
 
 		/// <summary>Controls for how the diagram is rendered</summary>
@@ -361,8 +361,8 @@ namespace Rylogic.Gui.WinForms
 
 			if (reset_size)
 			{
-				float dist0 = 0.5f * bounds.SizeX / (float)Math.Tan(m_camera.FovX * 0.5f);
-				float dist1 = 0.5f * bounds.SizeY / (float)Math.Tan(m_camera.FovY * 0.5f);
+				float dist0 = 0.5f * bounds.SizeX / (float)Math.Tan(m_camera.Fov.x * 0.5f);
+				float dist1 = 0.5f * bounds.SizeY / (float)Math.Tan(m_camera.Fov.y * 0.5f);
 				m_camera.FocusDist = Math_.Max(dist0, dist1);
 			}
 			if (reset_position)
@@ -5116,7 +5116,7 @@ namespace Rylogic.Gui.WinForms
 				TextureScale = texture_scale;
 				sx = Math.Max(1, sx * TextureScale);
 				sy = Math.Max(1, sy * TextureScale);
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { GdiCompatible = true, DbgName = dbg_name });// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { /*GdiCompatible = true, */DbgName = dbg_name });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public Surface(XElement node)
 			{
@@ -5124,7 +5124,7 @@ namespace Rylogic.Gui.WinForms
 				var sz = node.Element(XmlTag.Size).As<v2>();
 				var sx = Math.Max(1, (int)(sz.x + 0.5f));
 				var sy = Math.Max(1, (int)(sz.y + 0.5f));
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { GdiCompatible = true });// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { /*GdiCompatible = true*/ });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
 			{

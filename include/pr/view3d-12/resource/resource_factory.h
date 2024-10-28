@@ -7,10 +7,11 @@
 #include "pr/view3d-12/resource/stock_resources.h"
 //#include "pr/view3d-12/resource/descriptor_store.h"
 //#include "pr/view3d-12/resource/resource_state_store.h"
-//#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 //#include "pr/view3d-12/resource/gpu_descriptor_heap.h"
+#include "pr/view3d-12/resource/gpu_transfer_buffer.h"
 #include "pr/view3d-12/resource/mipmap_generator.h"
-//#include "pr/view3d-12/utility/gpu_sync.h"
+#include "pr/view3d-12/shaders/stock_shaders.h"
+#include "pr/view3d-12/utility/gpu_sync.h"
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/keep_alive.h"
@@ -75,16 +76,20 @@ namespace pr::rdr12
 		// Create a texture that references a shared resource
 		Texture2DPtr OpenSharedTexture2D(HANDLE shared_handle, TextureDesc const& desc);
 
+		// Create a shader
+		ShaderPtr CreateShader(EStockShader id, char const* config);
+
 	private:
 
-		friend struct Shader;
 		friend struct UpdateSubresourceScope;
-
 	};
 
 #if 0
 	struct ResourceManager
 	{
+
+
+		friend struct Shader;
 		// Notes:
 		//  - The resource manager is used by all windows and scenes and therefore has it's own cmd allocator and list.
 		//  - When resources are created, the commands are added to the internal command list. Callers need to 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -123,7 +124,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Update the grid lines model</summary>
-			private void UpdateGfxCB(IntPtr ctx, int vcount, int icount, int ncount, View3d.Vertex[] verts, ushort[] indices, View3d.Nugget[] nuggets, out int new_vcount, out int new_icount, out int new_ncount)
+			private View3d.VICount UpdateGfxCB(IntPtr ctx, int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, View3d.AddNuggetCB out_nugget, IntPtr out_nugget_ctx)
 			{
 				// Create a model for the grid lines
 				// Need to allow for one step in either direction because we only create the grid lines
@@ -171,12 +172,11 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Grid nugget
-				nuggets[0] = View3d.Nugget.New(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.ShadowCastExclude);
-				new_vcount = num_lines * 2;
-				new_icount = num_lines * 2;
-				new_ncount = 1;
-
+				var nug = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.ShadowCastExclude);
+				out_nugget(out_nugget_ctx, nug);
+				
 				m_invalidated = false;
+				return new() { m_vcount = num_lines * 2, m_icount = num_lines * 2 };
 			}
 		}
 	}

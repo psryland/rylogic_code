@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<RootNamespace>CoinFlip.Model</RootNamespace>
 		<AssemblyName>CoinFlip.Model</AssemblyName>
 		<LangVersion>latest</LangVersion>

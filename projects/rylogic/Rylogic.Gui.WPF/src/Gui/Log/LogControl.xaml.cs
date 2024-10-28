@@ -694,7 +694,7 @@ namespace Rylogic.Gui.WPF
 			{
 				foreach (var col in Columns)
 				{
-					if (!(col.Header is string header)) continue;
+					if (col.Header is not string header) continue;
 					columns_node.Add2("Column", $"{header},{col.DisplayIndex},{col.Width},{col.Visibility}", false);
 				}
 			}

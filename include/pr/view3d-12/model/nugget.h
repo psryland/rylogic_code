@@ -19,25 +19,25 @@ namespace pr::rdr12
 {
 	// Notes:
 	//  - Shader/Nugget Requirements:
-	//    There is some data that is model specific and used by multiple shaders (e.g. topo, geom type, diffuse texture),
-	//     these data might as well be in the nuggets to prevent duplication in each shader.
+	//    There is some data that is model specific and used by multiple shaders (e.g. topology, geom type, diffuse texture),
+	//    these data might as well be in the nuggets to prevent duplication in each shader.
 	//    Usability requires that we can add a model (i.e. a collection of nuggets) to any/all render steps automatically.
 	//    Normally, render steps have a shader they want to use but sometimes we need to override the shader a render step uses.
 	//    We don't want to have to resolve the shaders per frame.
 	//
 	//  - Render Steps:
-	//    Nuggets may be referenced in the drawlists of several render steps. i.e. each render step has
-	//    its own drawlist, so the same nugget can be pointed to from multiple drawlists.
+	//    Nuggets may be referenced in the draw lists of several render steps. i.e. each render step has
+	//    its own draw list, so the same nugget can be pointed to from multiple draw lists.
 	//    This leads to the conclusion that a nugget shouldn't contain shader specific data (e.g. why should all nuggets have a
 	//    variable only used in one shader from one render step? This wouldn't scale as more shaders/render steps are added)
-	//    Shader derived objects are light weight instances of dx shaders. These shader instances contain per-nugget data
+	//    Shader derived objects are light weight instances of DX shaders. These shader instances contain per-nugget data
 	//    (such as line width, projection texture, etc). They can be duplicated as needed.
 	//    
-	//    Drawlist Sorting and sort keys:
-	//    Since there is a drawlist per render step, each nugget needs a sort key per drawlist. These are composed on demand
+	//    Draw list Sorting and sort keys:
+	//    Since there is a draw list per render step, each nugget needs a sort key per draw list. These are composed on demand
 	//    when the nuggets are added to the render steps:
 	//     - nugget sort key has sort group, alpha, and diff texture id set
-	//     - per render step (aka drawlist)
+	//     - per render step (aka draw list)
 	//       - hash the sort ids of all shaders together into a shader id and set that in the sort key
 	//       - apply sort key overrides from the owning instance (these are needed because the instance might tint with alpha)
 	//
@@ -88,17 +88,17 @@ namespace pr::rdr12
 		};
 		using shaders_t = pr::vector<shader_t, 4, false>;
 
-		ETopo           m_topo;                  // The primitive topology for this nugget
-		EGeom           m_geom;                  // The valid geometry components within this range
-		shaders_t       m_shaders;               // Override shaders
-		PipeStates      m_pso;                   // A collection of modifications to the pipeline state object description
-		Texture2DPtr    m_tex_diffuse;           // Diffuse texture
-		SamplerPtr      m_sam_diffuse;           // The sampler to use with the diffuse texture
-		RdrId           m_id;                    // An id to allow identification of procedurally added nuggets
-		Colour32        m_tint;                  // Per-nugget tint
-		SortKey         m_sort_key;              // A base sort key for this nugget
-		float           m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
-		ENuggetFlag     m_nflags;                // Flags for boolean properties of the nugget
+		ETopo           m_topo;        // The primitive topology for this nugget
+		EGeom           m_geom;        // The valid geometry components within this range
+		Texture2DPtr    m_tex_diffuse; // Diffuse texture
+		SamplerPtr      m_sam_diffuse; // The sampler to use with the diffuse texture
+		shaders_t       m_shaders;     // Override shaders
+		PipeStates      m_pso;         // A collection of modifications to the pipeline state object description
+		RdrId           m_id;          // An id to allow identification of procedurally added nuggets
+		ENuggetFlag     m_nflags;      // Flags for boolean properties of the nugget
+		Colour32        m_tint;        // Per-nugget tint
+		SortKey         m_sort_key;    // A base sort key for this nugget
+		float           m_rel_reflec;  // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 		// If the ranges are invalid, they are assumed to mean the entire model.
@@ -108,15 +108,15 @@ namespace pr::rdr12
 		NuggetDesc(ETopo topo = ETopo::Undefined, EGeom geom = EGeom::Invalid)
 			: m_topo(topo)
 			, m_geom(geom)
-			, m_shaders()
-			, m_pso()
 			, m_tex_diffuse()
 			, m_sam_diffuse()
+			, m_shaders()
+			, m_pso()
 			, m_id(AutoId)
+			, m_nflags(ENuggetFlag::None)
 			, m_tint(Colour32White)
 			, m_sort_key(ESortGroup::Default)
-			, m_relative_reflectivity(1)
-			, m_nflags(ENuggetFlag::None)
+			, m_rel_reflec(1)
 			, m_vrange(Range::Reset())
 			, m_irange(Range::Reset())
 		{}
@@ -221,9 +221,9 @@ namespace pr::rdr12
 		}
 
 		// Set the relative reflectivity for this nugget
-		NuggetDesc& relative_reflectivity(float reflectivity)
+		NuggetDesc& rel_reflec(float reflectivity)
 		{
-			m_relative_reflectivity = reflectivity;
+			m_rel_reflec = reflectivity;
 			return *this;
 		}
 	};

@@ -435,9 +435,9 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Render and present the scene</summary>
 		private void Render()
 		{
-			Window.RestoreRT();
+			//Window.RestoreRT();
 			Window.Render();
-			Window.Present();
+			//Window.Present();
 		}
 
 		#region Measurement UI

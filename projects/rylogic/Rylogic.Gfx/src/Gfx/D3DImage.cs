@@ -191,7 +191,7 @@ namespace Rylogic.Gfx
 
 			try
 			{
-				var opts = View3d.TextureOptions.New(
+				var opts = new View3d.TextureOptions(
 					format: RenderTargetFormat,
 					mips: 1,
 					usage: View3d.EResFlags.D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
