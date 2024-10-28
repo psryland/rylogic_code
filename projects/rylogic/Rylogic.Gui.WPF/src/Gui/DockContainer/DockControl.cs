@@ -576,8 +576,8 @@ namespace Rylogic.Gui.WPF
 			m_kb_focus = Owner.IsKeyboardFocusWithin ? Keyboard.FocusedElement : null;
 
 			// If focus is held by a child win32 control, record it
-			var hwnd = Win32.GetFocus();
-			m_win32_focus = Win32.IsChild(Owner.Hwnd(), hwnd) ? hwnd : IntPtr.Zero;
+			var hwnd = User32.GetFocus();
+			m_win32_focus = User32.IsChild(Owner.Hwnd(), hwnd) ? hwnd : IntPtr.Zero;
 		}
 		internal void RestoreFocus()
 		{
@@ -586,8 +586,8 @@ namespace Rylogic.Gui.WPF
 				Keyboard.Focus(m_kb_focus);
 
 			// Restore the win32 focus if the control is still a child of the WPF window
-			if (m_win32_focus != IntPtr.Zero && Win32.IsChild(Owner.Hwnd(), m_win32_focus))
-				Win32.SetFocus(m_win32_focus);
+			if (m_win32_focus != IntPtr.Zero && User32.IsChild(Owner.Hwnd(), m_win32_focus))
+				User32.SetFocus(m_win32_focus);
 
 			m_kb_focus = null;
 			m_win32_focus = IntPtr.Zero;

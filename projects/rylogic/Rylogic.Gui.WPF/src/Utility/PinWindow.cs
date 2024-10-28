@@ -275,7 +275,7 @@ namespace Rylogic.Gui.WPF
 			var pin_offset = PinOffset.Value;
 			var rect = PinTarget.WindowState != WindowState.Maximized || (PinWindow?.IsActive ?? true)
 				? new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight)
-				: Gui_.MonitorRect(Win32.MonitorFromWindow(m_pin_target_handle));
+				: Gui_.MonitorRect(User32.MonitorFromWindow(m_pin_target_handle));
 
 			var pt = PinSite switch
 			{
@@ -296,7 +296,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (PinTarget.WindowState == WindowState.Maximized)
 				{
-					var mon = Win32.MonitorFromWindow(m_pin_target_handle);
+					var mon = User32.MonitorFromWindow(m_pin_target_handle);
 					pt = Gui_.OnMonitor(mon, pt, PinWindow.RenderSize);
 				}
 				pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
@@ -338,11 +338,11 @@ namespace Rylogic.Gui.WPF
 					throw new Exception("The pinned window does not yet have a window handle");
 
 				// Get the system menu handle for the window
-				var sys_menu_handle = Win32.GetSystemMenu(m_pin_window_handle, false);
+				var sys_menu_handle = User32.GetSystemMenu(m_pin_window_handle, false);
 				
 				// Insert the 'Pin Window' option
-				Win32.InsertMenu(sys_menu_handle, 5, Win32.MF_BYPOSITION | Win32.MF_SEPARATOR, 0, string.Empty);
-				Win32.InsertMenu(sys_menu_handle, 6, Win32.MF_BYPOSITION | Win32.MF_STRING, MenuCmd_Pinned, "&Pin Window");
+				User32.InsertMenu(sys_menu_handle, 5, Win32.MF_BYPOSITION | Win32.MF_SEPARATOR, 0, string.Empty);
+				User32.InsertMenu(sys_menu_handle, 6, Win32.MF_BYPOSITION | Win32.MF_STRING, MenuCmd_Pinned, "&Pin Window");
 
 				// Set the checked state
 				UpdatePinMenuCheckState();
@@ -358,7 +358,7 @@ namespace Rylogic.Gui.WPF
 				src.RemoveHook(HandlePinMenuOption);
 
 				// Reset the system menu for the window
-				Win32.GetSystemMenu(m_pin_window_handle, true);
+				User32.GetSystemMenu(m_pin_window_handle, true);
 			}
 
 			// Handler
@@ -377,8 +377,8 @@ namespace Rylogic.Gui.WPF
 		private void UpdatePinMenuCheckState()
 		{
 			if (m_pin_window_handle == IntPtr.Zero) return;
-			var sys_menu_handle = Win32.GetSystemMenu(m_pin_window_handle, false);
-			Win32.CheckMenuItem(sys_menu_handle, MenuCmd_Pinned, Win32.MF_BYCOMMAND | (ActuallyPinned ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+			var sys_menu_handle = User32.GetSystemMenu(m_pin_window_handle, false);
+			User32.CheckMenuItem(sys_menu_handle, MenuCmd_Pinned, Win32.MF_BYCOMMAND | (ActuallyPinned ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
 		}
 
 		/// <summary>The command id for the Pin menu item</summary>

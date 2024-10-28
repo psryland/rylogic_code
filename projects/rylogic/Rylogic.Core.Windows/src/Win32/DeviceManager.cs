@@ -63,7 +63,7 @@ namespace Rylogic.Interop.Win32
 				class_guid = Guid.Empty,
 				name = string.Empty,
 			};
-			NotificationHandle = Win32.RegisterDeviceNotification(NotifyWnd.Handle, dbi, Win32.EDeviceNotifyFlags.WindowHandle|Win32.EDeviceNotifyFlags.AllInterface_Classes);
+			NotificationHandle = User32.RegisterDeviceNotification(NotifyWnd.Handle, dbi, Win32.EDeviceNotifyFlags.WindowHandle|Win32.EDeviceNotifyFlags.AllInterface_Classes);
 		}
 
 		/// <summary>Enumerate all devices in the given device class</summary>

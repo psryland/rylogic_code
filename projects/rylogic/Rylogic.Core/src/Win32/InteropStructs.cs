@@ -381,7 +381,7 @@ namespace Rylogic.Interop.Win32
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		private struct FLASHWINFO
+		public struct FLASHWINFO
 		{
 			/// <summary>The size of the structure in bytes.</summary>
 			public uint cbSize;

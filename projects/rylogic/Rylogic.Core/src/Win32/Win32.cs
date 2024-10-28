@@ -381,6 +381,10 @@ namespace Rylogic.Interop.Win32
 		public const uint WA_CLICKACTIVE = 2;
 		#endregion
 
+		#region Create Window
+		public const int CW_USEDEFAULT = unchecked((int)0x80000000);
+		#endregion
+
 		#region Mouse key MK_
 		// Key State Masks for Mouse Messages
 		public const int MK_LBUTTON = 0x0001;
@@ -1637,7 +1641,7 @@ namespace Rylogic.Interop.Win32
 				// This window is used to allow child windows to be created before the actual parent HWND is available.
 				// See ScintillaControl as an example.
 				if (m_proxy_parent_hwnd == IntPtr.Zero)
-					m_proxy_parent_hwnd = CreateWindow(0, "STATIC", string.Empty, 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+					m_proxy_parent_hwnd = User32.CreateWindow(0, "STATIC", string.Empty, 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 				return m_proxy_parent_hwnd;
 			}
 		}
@@ -1709,13 +1713,13 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Test the async state of a key</summary>
 		public static bool KeyDownAsync(EKeyCodes vkey)
 		{
-			return (GetAsyncKeyState(vkey) & 0x8000) != 0;
+			return (User32.GetAsyncKeyState(vkey) & 0x8000) != 0;
 		}
 
 		/// <summary>Test for key down using the key state for current message</summary>
 		public static bool KeyDown(EKeyCodes vkey)
 		{
-			return (GetKeyState(vkey) & 0x8000) != 0;
+			return (User32.GetKeyState(vkey) & 0x8000) != 0;
 		}
 
 		/// <summary>Detect a key press using its async state</summary>
@@ -1734,11 +1738,11 @@ namespace Rylogic.Interop.Win32
 		{
 			ch = '\0';
 			var keyboardState = new byte[256];
-			GetKeyboardState(keyboardState);
+			User32.GetKeyboardState(keyboardState);
 
-			var scan_code = MapVirtualKey((uint)vkey, MAPVK_VK_TO_VSC);
+			var scan_code = User32.MapVirtualKey((uint)vkey, MAPVK_VK_TO_VSC);
 			var sb = new StringBuilder(2);
-			var r = ToUnicode((uint)vkey, scan_code, keyboardState, sb, sb.Capacity, 0);
+			var r = User32.ToUnicode((uint)vkey, scan_code, keyboardState, sb, sb.Capacity, 0);
 			if (r == 1) ch = sb[0];
 			return r == 1;
 		}
@@ -1819,18 +1823,18 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Return the control under the screen space point</summary>
 		public static HWND ChildWindowFromPoint(HWND parent, Point pt, int cwp_flags)
 		{
-			return ChildWindowFromPointEx(parent, POINT.FromPoint(pt), cwp_flags);
+			return User32.ChildWindowFromPointEx(parent, POINT.FromPoint(pt), cwp_flags);
 		}
 
 		/// <summary>Centre a window to it's parent</summary>
 		public static bool CenterWindow(HWND hwnd, Rectangle scn)
 		{
-			var parent = GetParent(hwnd);
+			var parent = User32.GetParent(hwnd);
 			if (parent == IntPtr.Zero)
 				return false;
 
-			var wnd_rect = GetWindowRect(hwnd);
-			var parent_rect = GetWindowRect(parent);
+			var wnd_rect = User32.GetWindowRect(hwnd);
+			var parent_rect = User32.GetWindowRect(parent);
 
 			var w = wnd_rect.width;
 			var h = wnd_rect.height;
@@ -1844,19 +1848,19 @@ namespace Rylogic.Interop.Win32
 			if (x + w > scn.Right) x = scn.Right - w;
 			if (y + h > scn.Bottom) y = scn.Bottom - h;
 
-			return MoveWindow(hwnd, x, y, w, h, false);
+			return User32.MoveWindow(hwnd, x, y, w, h, false);
 		}
 
 		/// <summary>Set or clear window styles</summary>
 		public static void SetStyle(HWND hwnd, uint style, bool enabled)
 		{
-			var s = Win32.GetWindowLong(hwnd, Win32.GWL_STYLE);
-			Win32.SetWindowLong(hwnd, Win32.GWL_STYLE, Bit.SetBits(s, style, enabled));
+			var s = User32.GetWindowLong(hwnd, Win32.GWL_STYLE);
+			User32.SetWindowLong(hwnd, Win32.GWL_STYLE, Bit.SetBits(s, style, enabled));
 		}
 		public static void SetStyleEx(HWND hwnd, uint style, bool enabled)
 		{
-			var s = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
-			Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, Bit.SetBits(s, style, enabled));
+			var s = User32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
+			User32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, Bit.SetBits(s, style, enabled));
 		}
 
 		/// <summary>Get/Set scroll bar position</summary>
@@ -1864,7 +1868,7 @@ namespace Rylogic.Interop.Win32
 		{
 			SCROLLINFO info = SCROLLINFO.Default;
 			info.fMask = (int)ScrollInfoMask.SIF_POS;
-			GetScrollInfo(hWnd, nBar, ref info);
+			User32.GetScrollInfo(hWnd, nBar, ref info);
 			return info.nPos;
 		}
 		public static void SetScrollBarPos(IntPtr hWnd, int nBar, int nPos, bool bRedraw)
@@ -1872,7 +1876,7 @@ namespace Rylogic.Interop.Win32
 			SCROLLINFO info = SCROLLINFO.Default;
 			info.fMask = (int)ScrollInfoMask.SIF_POS;
 			info.nPos = nPos;
-			SetScrollInfo(hWnd, nBar, ref info, bRedraw);
+			User32.SetScrollInfo(hWnd, nBar, ref info, bRedraw);
 		}
 
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);

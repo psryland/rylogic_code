@@ -229,7 +229,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return the monitor rectangle (in DIP)</summary>
 		public static Rect MonitorRect(IntPtr monitor)
 		{
-			var mon = Win32.GetMonitorInfo(monitor);
+			var mon = User32.GetMonitorInfo(monitor);
 			var dip = 96.0 / Dpi.DpiForMonitor(monitor);
 			return new Rect(
 				mon.rcWork.left * dip,

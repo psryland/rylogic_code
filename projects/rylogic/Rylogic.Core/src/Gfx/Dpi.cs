@@ -46,8 +46,8 @@ namespace Rylogic.Gfx
 
 			return x;
 		}
-		public static int DpiForNearestMonitor(IntPtr hwnd) => DpiForMonitor(Win32.MonitorFromWindow(hwnd));
-		public static int DpiForNearestMonitor(int x, int y) => DpiForMonitor(Win32.MonitorFromPoint(x, y));
+		public static int DpiForNearestMonitor(IntPtr hwnd) => DpiForMonitor(User32.MonitorFromWindow(hwnd));
+		public static int DpiForNearestMonitor(int x, int y) => DpiForMonitor(User32.MonitorFromPoint(x, y));
 
 		/// <summary>Get the DPI setting for the whole desktop</summary>
 		public static int DpiForDesktop()
@@ -62,10 +62,10 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Return the monitor associated with the desktop window</summary>
-		public static IntPtr DesktopMonitor => Win32.MonitorFromWindow(Win32.GetDesktopWindow());
+		public static IntPtr DesktopMonitor => User32.MonitorFromWindow(User32.GetDesktopWindow());
 
 		/// <summary>Return the monitor associated with the shell window</summary>
-		public static IntPtr ShellMonitor => Win32.MonitorFromWindow(Win32.GetShellWindow());
+		public static IntPtr ShellMonitor => User32.MonitorFromWindow(User32.GetShellWindow());
 
 		#region D2D1 Interop
 

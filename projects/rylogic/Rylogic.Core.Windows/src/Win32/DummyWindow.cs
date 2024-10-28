@@ -22,7 +22,7 @@ namespace Rylogic.Interop.Win32
 			var atom = EnsureWndClassRegistered(HInstance);
 
 			using var pin = Marshal_.Pin(this, GCHandleType.Normal);
-			Handle = Win32.CreateWindow(0, atom, diag_name ?? string.Empty, 0, 0, 0, 1, 1, Win32.HWND_MESSAGE, IntPtr.Zero, HInstance, pin.Pointer);
+			Handle = User32.CreateWindow(0, atom, diag_name ?? string.Empty, 0, 0, 0, 1, 1, Win32.HWND_MESSAGE, IntPtr.Zero, HInstance, pin.Pointer);
 			if (Handle == IntPtr.Zero)
 				throw new Win32Exception();
 		}
@@ -40,7 +40,7 @@ namespace Rylogic.Interop.Win32
 				if (m_hwnd == value) return;
 				if (m_hwnd != IntPtr.Zero)
 				{
-					Win32.DestroyWindow(m_hwnd);
+					User32.DestroyWindow(m_hwnd);
 					m_wnd.Remove(m_hwnd);
 				}
 				m_hwnd = value;
@@ -58,11 +58,11 @@ namespace Rylogic.Interop.Win32
 		// Pump the message queue on this window. Returns false if WM_QUIT is received
 		public bool Pump()
 		{
-			for (; Win32.PeekMessage(out var msg, Handle, 0, 0, Win32.EPeekMessageFlags.Remove);)
+			for (; User32.PeekMessage(out var msg, Handle, 0, 0, Win32.EPeekMessageFlags.Remove);)
 			{
 				if (msg.message == Win32.WM_QUIT) return false;
-				Win32.TranslateMessage(ref msg);
-				Win32.DispatchMessage(ref msg);
+				User32.TranslateMessage(ref msg);
+				User32.DispatchMessage(ref msg);
 			}
 			return true;
 		}
@@ -70,15 +70,15 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Pump the message queue</summary>
 		public async void Run(CancellationToken shutdown)
 		{
-			using var quit = shutdown.Register(() => Win32.PostMessage(Handle, Win32.WM_QUIT, IntPtr.Zero, IntPtr.Zero));
+			using var quit = shutdown.Register(() => User32.PostMessage(Handle, Win32.WM_QUIT, IntPtr.Zero, IntPtr.Zero));
 			for (;;)
 			{
 				var msg = new Win32.Message { };
-				var res = await Task.Run(() => Win32.GetMessage(out msg, Handle, 0, 0));
+				var res = await Task.Run(() => User32.GetMessage(out msg, Handle, 0, 0));
 				if (res == -1) throw new Win32Exception("Dummy Window message queue error");
 				if (res == 0) return; // WM_QUIT
-				Win32.TranslateMessage(ref msg);
-				Win32.DispatchMessage(ref msg);
+				User32.TranslateMessage(ref msg);
+				User32.DispatchMessage(ref msg);
 			}
 		}
 
@@ -88,7 +88,7 @@ namespace Rylogic.Interop.Win32
 			var args = new WndProcEventArgs(hwnd, message, wparam, lparam);
 			Message?.Invoke(this, args);
 			return !args.Handled
-				? Win32.DefWindowProc(hwnd, message, wparam, lparam)
+				? User32.DefWindowProc(hwnd, message, wparam, lparam)
 				: IntPtr.Zero; // S_OK
 		}
 		private static IntPtr StaticWndProc(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
@@ -106,7 +106,7 @@ namespace Rylogic.Interop.Win32
 			}
 			return m_wnd.TryGetValue(hwnd, out var wnd)
 				? wnd.WndProc(hwnd, message, wparam, lparam)
-				: Win32.DefWindowProc(hwnd, message, wparam, lparam);
+				: User32.DefWindowProc(hwnd, message, wparam, lparam);
 		}
 		private static readonly Win32.WNDPROC m_static_wndproc = new(StaticWndProc);
 
@@ -114,7 +114,7 @@ namespace Rylogic.Interop.Win32
 		private static int EnsureWndClassRegistered(IntPtr hinstance)
 		{
 			// Window class is already registered?
-			if (Win32.GetClassInfo(HInstance, ClassName, out var atom) != null)
+			if (User32.GetClassInfo(HInstance, ClassName, out var atom) != null)
 				return atom;
 
 			// Register the window class
@@ -133,7 +133,7 @@ namespace Rylogic.Interop.Win32
 				lpszClassName = ClassName,
 			};
 
-			atom = Win32.RegisterClass(wc);
+			atom = User32.RegisterClass(wc);
 			return atom;
 		}
 	}
