@@ -18,9 +18,13 @@
       </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
+      <AdditionalLibraryDirectories>
+        ;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+        ;%(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
       <AdditionalDependencies>
-        onecore.lib;
-        %(AdditionalDependencies)
+        ;onecore.lib
+        ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
     <ResourceCompile>

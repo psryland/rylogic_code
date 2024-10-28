@@ -40,23 +40,26 @@
   <!-- Build options -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>
+        ;VIEW3D_EXPORTS
+        ;PR_MATHS_USE_DIRECTMATH=1
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
       <AdditionalIncludeDirectories>
-        $(ProjectDir)..\projects\rylogic;
-        $(ProjectDir)..\include;
-        $(ProjectDir)..\sdk\lua\lua\src;
-        %(AdditionalIncludeDirectories)
+        ;$(ProjectDir)..\projects\rylogic
+        ;$(ProjectDir)..\sdk\lua\lua\src
+        ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
       <AdditionalOptions>/Zm200 /bigobj $(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>
-        view3d-12-static.lib;
-        lua-static.lib;
-        strmiids.lib;
-        comctl32.lib;
-        dxcompiler.lib;
-        %(AdditionalDependencies)
+        ;view3d-12-static.lib
+        ;lua-static.lib
+        ;strmiids.lib
+        ;comctl32.lib
+        ;dxcompiler.lib
+        ;%(AdditionalDependencies)
       </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

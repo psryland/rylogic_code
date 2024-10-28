@@ -546,16 +546,16 @@ class CoinFlip(Managed):
 
 	def Deploy(self):
 		# Check versions
-		version = Tools.Extract(Tools.Path(self.proj_dir, "CoinFlip.UI\CoinFlip.UI.csproj"), r"<Version>(.*)</Version>").group(1)
+		version = Tools.Extract(Tools.Path(self.proj_dir, "CoinFlip.UI\\CoinFlip.UI.csproj"), r"<Version>(.*)</Version>").group(1)
 		print(f"Deploying CoinFlip Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = Tools.Path(UserVars.root, "bin/CoinFlip", check_exists=False)
+		self.bin_dir = Tools.Path(UserVars.root, "bin\\CoinFlip", check_exists=False)
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = Tools.Path(self.proj_dir, "CoinFlip.UI/bin/Release", self.frameworks[0])
+		target_dir = Tools.Path(self.proj_dir, "CoinFlip.UI\\bin\\Release", self.frameworks[0])
 		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.exe"), self.bin_dir)
 		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.dll"), self.bin_dir)
 		Tools.Copy(Tools.Path(target_dir, "CoinFlip.UI.runtimeconfig.json"), self.bin_dir)

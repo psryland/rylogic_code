@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build"
+  ToolsVersion="4.0"
+  xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <Import Project="root.props" />
 
@@ -14,22 +16,32 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>
-        ..\include;
-        ..\sdk;
-        %(AdditionalIncludeDirectories)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)sdk
+        ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>
+        ;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+        ;%(AdditionalLibraryDirectories)
+      </AdditionalLibraryDirectories>
+    </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>
-        ..\include;
-        ..\sdk;
-        %(AdditionalIncludeDirectories)
+        ;$(RylogicRoot)include
+        ;$(RylogicRoot)sdk
+        ;%(AdditionalIncludeDirectories)
       </AdditionalIncludeDirectories>
     </ResourceCompile>
   </ItemDefinitionGroup>
 
   <!-- Dependencies -->
-  <Target Name="Deploy" AfterTargets="Build">
-    <Exec Command="py script\DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)" WorkingDirectory="$(SolutionDir)..\"/>
+  <Target Name="Deploy"
+    AfterTargets="Build">
+    <Exec
+      Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)"
+      WorkingDirectory="$(RylogicRoot)"
+    />
   </Target>
 </Project>

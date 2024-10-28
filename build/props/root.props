@@ -54,7 +54,10 @@
       <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <ClCompile Condition="'$(Configuration)'!='Debug'">
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>
+        ;NDEBUG
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>Full</Optimization>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -65,10 +68,6 @@
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>
-        $(SolutionDir)..\lib\$(PlatformTarget)\$(Configuration);
-        %(AdditionalLibraryDirectories)
-      </AdditionalLibraryDirectories>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>

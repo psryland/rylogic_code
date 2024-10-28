@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Globals -->
-  <Import Project="$(MSBuildThisFileDirectory)\props\globals.props" />
+  <Import Project="props\globals.props" />
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
@@ -34,21 +34,40 @@
   Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="$(MSBuildThisFileDirectory)\props\tools.props" />
-  <Import Project="$(MSBuildThisFileDirectory)\props\lib.props" />
-  <Import Project="$(MSBuildThisFileDirectory)\props\fxc_build_rule.props" />
+  <Import Project="props\tools.props" />
+  <Import Project="props\lib.props" />
+  <Import Project="props\fxc_build_rule.props" />
   <!--
   Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;PR_DBG_RDR=1;USE_PIX%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;PR_RDR_RUNTIME_SHADERS=1
+        ;PR_LOGGING=1
+        ;PR_SUPPORT_D3D11_ERRORS=1
+        ;PR_VIEW3D_12=1
+        ;PR_DBG_RDR=1
+        ;USE_PIX%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)..\projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;PR_VIEW3D_12=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\projects\rylogic;$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;PR_RDR_RUNTIME_SHADERS=0
+        ;PR_LOGGING=1
+        ;PR_SUPPORT_D3D11_ERRORS=1
+        ;PR_VIEW3D_12=1
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)..\projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <!--
@@ -290,6 +309,6 @@
   <!--
   Targets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="$(MSBuildThisFileDirectory)\targets\WinPixEventRuntime.targets" />
-  <Import Project="$(MSBuildThisFileDirectory)\targets\dxc.targets" />
+  <Import Project="targets\WinPixEventRuntime.targets" />
+  <Import Project="targets\dxc.targets" />
 </Project>
