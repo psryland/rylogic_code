@@ -9,7 +9,7 @@ using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 
-namespace Rylogic.Db
+namespace Rylogic.DB
 {
 	public static partial class Sqlite
 	{
@@ -1267,7 +1267,7 @@ namespace Rylogic.UnitTests
 {
 	using System.IO;
 	using Common;
-	using Db;
+	using DB;
 
 	[TestFixture]
 	public class TestSqlite3

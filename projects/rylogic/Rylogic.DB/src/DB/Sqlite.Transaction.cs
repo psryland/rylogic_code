@@ -2,7 +2,7 @@
 using System.Data;
 using System.Diagnostics;
 
-namespace Rylogic.Db
+namespace Rylogic.DB
 {
 	public static partial class Sqlite
 	{

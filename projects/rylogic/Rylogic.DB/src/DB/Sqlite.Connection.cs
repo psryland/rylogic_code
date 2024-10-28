@@ -8,7 +8,7 @@ using System.Threading;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
-namespace Rylogic.Db
+namespace Rylogic.DB
 {
 	public static partial class Sqlite
 	{

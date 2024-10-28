@@ -6,7 +6,7 @@ using System.Linq;
 using Rylogic.Str;
 using Rylogic.Utility;
 
-namespace Rylogic.Db
+namespace Rylogic.DB
 {
 	public static partial class Sqlite
 	{

@@ -74,8 +74,8 @@ def SetupUserVars(workspace:str, name:str, ignore_missing:bool):
 	pwsh_path = CheckPath(pwsh7_path if os.path.exists(pwsh7_path) else pwsh1_path, "PowerShell")
 
 	# Pull Nuget if missing
-	getnuget_path = os.path.abspath(os.path.join(workspace, "tools", "nuget", "_get_nuget.py"))
-	subprocess.check_call(["python.exe", getnuget_path])
+	getnuget_path = os.path.abspath(os.path.join(workspace, "tools", "nuget", "_get.ps1"))
+	subprocess.check_call(["pwsh.exe", "-File", getnuget_path])
 	nuget_path0 = os.path.abspath(os.path.join(workspace, "tools", "nuget", "nuget.exe"))
 	nuget_path = CheckPath(
 		nuget_path0 if os.path.exists(nuget_path0) else

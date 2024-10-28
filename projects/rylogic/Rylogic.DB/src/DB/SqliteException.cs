@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace Rylogic.Db
+namespace Rylogic.DB
 {
 	/// <summary>An exception type specifically for sqlite exceptions</summary>
 	[Serializable]
