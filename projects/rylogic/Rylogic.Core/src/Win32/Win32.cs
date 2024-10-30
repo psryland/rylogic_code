@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -37,6 +36,1372 @@ namespace Rylogic.Interop.Win32
 		#endregion
 
 		#region Windows header constants
+
+		#region Child Window From Point
+		public const int CWP_ALL             = 0x0000; // Does not skip any child windows
+		public const int CWP_SKIPINVISIBLE   = 0x0001; // Skips invisible child windows
+		public const int CWP_SKIPDISABLED    = 0x0002; // Skips disabled child windows
+		public const int CWP_SKIPTRANSPARENT = 0x0004; // Skips transparent child windows
+		#endregion
+
+		#region Class styles CS_
+		public const int CS_BYTEALIGNCLIENT               = 0x00001000;
+		public const int CS_BYTEALIGNWINDOW               = 0x00002000;
+		public const int CS_CLASSDC                       = 0x00000040;
+		public const int CS_DBLCLKS                       = 0x00000008;
+		public const int CS_DROPSHADOW                    = 0x00020000;
+		public const int CS_GLOBALCLASS                   = 0x00004000;
+		public const int CS_HREDRAW                       = 0x00000002;
+		public const int CS_NOCLOSE                       = 0x00000200;
+		public const int CS_OWNDC                         = 0x00000020;
+		public const int CS_PARENTDC                      = 0x00000080;
+		public const int CS_SAVEBITS                      = 0x00000800;
+		public const int CS_VREDRAW                       = 0x00000001;
+		#endregion
+
+		#region Common Controls
+		public const int ICC_LISTVIEW_CLASSES   = 0x00000001; // listview, header
+		public const int ICC_TREEVIEW_CLASSES   = 0x00000002; // treeview, tooltips
+		public const int ICC_BAR_CLASSES        = 0x00000004; // toolbar, statusbar, trackbar, tooltips
+		public const int ICC_TAB_CLASSES        = 0x00000008; // tab, tooltips
+		public const int ICC_UPDOWN_CLASS       = 0x00000010; // updown
+		public const int ICC_PROGRESS_CLASS     = 0x00000020; // progress
+		public const int ICC_HOTKEY_CLASS       = 0x00000040; // hotkey
+		public const int ICC_ANIMATE_CLASS      = 0x00000080; // animate
+		public const int ICC_WIN95_CLASSES      = 0x000000FF;
+		public const int ICC_DATE_CLASSES       = 0x00000100; // month picker, date picker, time picker, updown
+		public const int ICC_USEREX_CLASSES     = 0x00000200; // comboex
+		public const int ICC_COOL_CLASSES       = 0x00000400; // rebar (coolbar) control
+		public const int ICC_INTERNET_CLASSES   = 0x00000800;
+		public const int ICC_PAGESCROLLER_CLASS = 0x00001000; // page scroller
+		public const int ICC_NATIVEFNTCTL_CLASS = 0x00002000; // native font control
+		public const int ICC_STANDARD_CLASSES   = 0x00004000;
+		public const int ICC_LINK_CLASS         = 0x00008000;
+		#endregion
+
+		#region Common Control Messages CCM_
+		public const uint CCM_FIRST               = 0x2000;    // Common control shared messages
+		public const uint CCM_LAST                = (CCM_FIRST + 0x200);
+		public const uint CCM_SETBKCOLOR          = (CCM_FIRST + 0x1); // lParam is bkColor
+		public const uint CCM_SETCOLORSCHEME      = (CCM_FIRST + 0x2); // lParam is color scheme
+		public const uint CCM_GETCOLORSCHEME      = (CCM_FIRST + 0x3); // fills in COLORSCHEME pointed to by lParam
+		public const uint CCM_GETDROPTARGET       = (CCM_FIRST + 0x4);
+		public const uint CCM_SETUNICODEFORMAT    = (CCM_FIRST + 0x5);
+		public const uint CCM_GETUNICODEFORMAT    = (CCM_FIRST + 0x6);
+		public const uint CCM_SETVERSION          = (CCM_FIRST + 0x7);
+		public const uint CCM_GETVERSION          = (CCM_FIRST + 0x8);
+		public const uint CCM_SETNOTIFYWINDOW     = (CCM_FIRST + 0x9); // wParam == hwndParent.
+		public const uint CCM_SETWINDOWTHEME      = (CCM_FIRST + 0xb);
+		public const uint CCM_DPISCALE            = (CCM_FIRST + 0xc); // wParam == Awareness
+		#endregion
+
+		#region ComboBox Messages
+		public const uint CB_GETEDITSEL            = 0x0140;
+		public const uint CB_LIMITTEXT             = 0x0141;
+		public const uint CB_SETEDITSEL            = 0x0142;
+		public const uint CB_ADDSTRING             = 0x0143;
+		public const uint CB_DELETESTRING          = 0x0144;
+		public const uint CB_DIR                   = 0x0145;
+		public const uint CB_GETCOUNT              = 0x0146;
+		public const uint CB_GETCURSEL             = 0x0147;
+		public const uint CB_GETLBTEXT             = 0x0148;
+		public const uint CB_GETLBTEXTLEN          = 0x0149;
+		public const uint CB_INSERTSTRING          = 0x014a;
+		public const uint CB_RESETCONTENT          = 0x014b;
+		public const uint CB_FINDSTRING            = 0x014c;
+		public const uint CB_SELECTSTRING          = 0x014d;
+		public const uint CB_SETCURSEL             = 0x014e;
+		public const uint CB_SHOWDROPDOWN          = 0x014f;
+		public const uint CB_GETITEMDATA           = 0x0150;
+		public const uint CB_SETITEMDATA           = 0x0151;
+		public const uint CB_GETDROPPEDCONTROLRECT = 0x0152;
+		public const uint CB_SETITEMHEIGHT         = 0x0153;
+		public const uint CB_GETITEMHEIGHT         = 0x0154;
+		public const uint CB_SETEXTENDEDUI         = 0x0155;
+		public const uint CB_GETEXTENDEDUI         = 0x0156;
+		public const uint CB_GETDROPPEDSTATE       = 0x0157;
+		public const uint CB_FINDSTRINGEXACT       = 0x0158;
+		public const uint CB_SETLOCALE             = 0x0159;
+		public const uint CB_GETLOCALE             = 0x015a;
+		public const uint CB_GETTOPINDEX           = 0x015b;
+		public const uint CB_SETTOPINDEX           = 0x015c;
+		public const uint CB_GETHORIZONTALEXTENT   = 0x015d;
+		public const uint CB_SETHORIZONTALEXTENT   = 0x015e;
+		public const uint CB_GETDROPPEDWIDTH       = 0x015f;
+		public const uint CB_SETDROPPEDWIDTH       = 0x0160;
+		public const uint CB_INITSTORAGE           = 0x0161;
+		public const uint CB_MSGMAX_OLD            = 0x0162;
+		public const uint CB_MULTIPLEADDSTRING     = 0x0163;
+		public const uint CB_GETCOMBOBOXINFO       = 0x0164;
+		public const uint CB_MSGMAX                = 0x0165;
+		#endregion
+		
+		#region Create Window
+		public const int CW_USEDEFAULT = unchecked((int)0x80000000);
+		#endregion
+
+		#region Device Changed event types DBT_
+		public enum EDeviceChangedEventType
+		{
+			/// <summary>DBT_DEVNODES_CHANGED - A device has been added to or removed from the system.</summary>
+			DevNodesChanged = 0x0007,
+
+			/// <summary>DBT_QUERYCHANGECONFIG - Permission is requested to change the current configuration(dock or undock).</summary>
+			QueryChangeConfig = 0x0017,
+
+			/// <summary>DBT_CONFIGCHANGED - The current configuration has changed, due to a dock or undock.</summary>
+			ConfigChanged = 0x0018,
+
+			/// <summary>DBT_CONFIGCHANGECANCELED - A request to change the current configuration(dock or undock) has been canceled.</summary>
+			ConfigChangeCanceled = 0x0019,
+
+			/// <summary>DBT_DEVICEARRIVAL - A device or piece of media has been inserted and is now available.</summary>
+			DeviceArrival = 0x8000,
+
+			/// <summary>DBT_DEVICEQUERYREMOVE - Permission is requested to remove a device or piece of media.Any application can deny this request and cancel the removal.</summary>
+			DeviceQueryRemove = 0x8001,
+
+			/// <summary>DBT_DEVICEQUERYREMOVEFAILED - A request to remove a device or piece of media has been canceled.</summary>
+			DeviceQueryRemoveFailed = 0x8002,
+
+			/// <summary>DBT_DEVICEREMOVEPENDING - A device or piece of media is about to be removed. Cannot be denied.</summary>
+			DeviceRemovePending = 0x8003,
+
+			/// <summary>DBT_DEVICEREMOVECOMPLETE - A device or piece of media has been removed.</summary>
+			DeviceRemoveComplete = 0x8004,
+
+			/// <summary>DBT_DEVICETYPESPECIFIC - A device-specific event has occurred.</summary>
+			DeviceTypeSpecific = 0x8005,
+
+			/// <summary>DBT_CUSTOMEVENT - A custom event has occurred.</summary>
+			CustomEvent = 0x8006,
+
+			/// <summary>DBT_USERDEFINED - The meaning of this message is user-defined.</summary>
+			UserDefined = 0xFFFF,
+		}
+		#endregion
+
+		#region Dialog Box Command IDs
+		public const int IDOK       = 1;
+		public const int IDCANCEL   = 2;
+		public const int IDABORT    = 3;
+		public const int IDRETRY    = 4;
+		public const int IDIGNORE   = 5;
+		public const int IDYES      = 6;
+		public const int IDNO       = 7;
+		public const int IDCLOSE    = 8;
+		public const int IDHELP     = 9;
+		public const int IDTRYAGAIN = 10;
+		public const int IDCONTINUE = 11;
+		public const int IDTIMEOUT  = 32000;
+		#endregion
+
+		#region Dialog get codes
+		public const int DLGC_WANTARROWS      = 0x0001; // Direction keys.
+		public const int DLGC_WANTTAB         = 0x0002; // TAB key.
+		public const int DLGC_WANTALLKEYS     = 0x0004; // All keyboard input.
+		public const int DLGC_WANTMESSAGE     = 0x0004; // All keyboard input (the application passes this message in the MSG structure to the control).
+		public const int DLGC_HASSETSEL       = 0x0008; // EM_SETSEL messages.
+		public const int DLGC_DEFPUSHBUTTON   = 0x0010; // Default push button.
+		public const int DLGC_UNDEFPUSHBUTTON = 0x0020; // Non-default push button.
+		public const int DLGC_RADIOBUTTON     = 0x0040; // Radio button.
+		public const int DLGC_WANTCHARS       = 0x0080; // WM_CHAR messages.
+		public const int DLGC_STATIC          = 0x0100; //Static control.
+		public const int DLGC_BUTTON          = 0x2000; // Button.
+		#endregion
+
+		#region Dialog Styles DS_
+		public const int DS_ABSALIGN      = 0x01;
+		public const int DS_SYSMODAL      = 0x02;
+		public const int DS_LOCALEDIT     = 0x20;/* 16-bit: Edit items get Local storage. 32-bit and up: meaningless. */
+		public const int DS_SETFONT       = 0x40;/* User specified font for Dlg controls */
+		public const int DS_MODALFRAME    = 0x80;/* Can be combined with WS_CAPTION  */
+		public const int DS_NOIDLEMSG     = 0x100;/* WM_ENTERIDLE message will not be sent */
+		public const int DS_SETFOREGROUND = 0x200;/* not in win3.1 */
+		public const int DS_3DLOOK        = 0x0004;
+		public const int DS_FIXEDSYS      = 0x0008;
+		public const int DS_NOFAILCREATE  = 0x0010;
+		public const int DS_CONTROL       = 0x0400;
+		public const int DS_CENTER        = 0x0800;
+		public const int DS_CENTERMOUSE   = 0x1000;
+		public const int DS_CONTEXTHELP   = 0x2000;
+		public const int DS_SHELLFONT     = DS_SETFONT | DS_FIXEDSYS;
+		public const int DS_USEPIXELS     = 0x8000;
+		#endregion
+
+		#region Edit Control
+		// Edit Control Styles
+		public const int ES_LEFT        = 0x0000;
+		public const int ES_CENTER      = 0x0001;
+		public const int ES_RIGHT       = 0x0002;
+		public const int ES_MULTILINE   = 0x0004;
+		public const int ES_UPPERCASE   = 0x0008;
+		public const int ES_LOWERCASE   = 0x0010;
+		public const int ES_PASSWORD    = 0x0020;
+		public const int ES_AUTOVSCROLL = 0x0040;
+		public const int ES_AUTOHSCROLL = 0x0080;
+		public const int ES_NOHIDESEL   = 0x0100;
+		public const int ES_OEMCONVERT  = 0x0400;
+		public const int ES_READONLY    = 0x0800;
+		public const int ES_WANTRETURN  = 0x1000;
+		public const int ES_NUMBER      = 0x2000;
+
+		// Edit Control Notification Codes
+		public const int EN_SETFOCUS     = 0x0100;
+		public const int EN_KILLFOCUS    = 0x0200;
+		public const int EN_CHANGE       = 0x0300;
+		public const int EN_UPDATE       = 0x0400;
+		public const int EN_ERRSPACE     = 0x0500;
+		public const int EN_MAXTEXT      = 0x0501;
+		public const int EN_HSCROLL      = 0x0601;
+		public const int EN_VSCROLL      = 0x0602;
+		public const int EN_ALIGN_LTR_EC = 0x0700;
+		public const int EN_ALIGN_RTL_EC = 0x0701;
+
+		// Edit control EM_SETMARGIN parameters
+		public const int EC_LEFTMARGIN  = 0x0001;
+		public const int EC_RIGHTMARGIN = 0x0002;
+		public const int EC_USEFONTINFO = 0xffff;
+
+		// Edit Control Messages
+		public const int EM_GETSEL               = 0x00B0;
+		public const int EM_SETSEL               = 0x00B1;
+		public const int EM_GETRECT              = 0x00B2;
+		public const int EM_SETRECT              = 0x00B3;
+		public const int EM_SETRECTNP            = 0x00B4;
+		public const int EM_SCROLL               = 0x00B5;
+		public const int EM_LINESCROLL           = 0x00B6;
+		public const int EM_SCROLLCARET          = 0x00B7;
+		public const int EM_GETMODIFY            = 0x00B8;
+		public const int EM_SETMODIFY            = 0x00B9;
+		public const int EM_GETLINECOUNT         = 0x00BA;
+		public const int EM_LINEINDEX            = 0x00BB;
+		public const int EM_SETHANDLE            = 0x00BC;
+		public const int EM_GETHANDLE            = 0x00BD;
+		public const int EM_GETTHUMB             = 0x00BE;
+		public const int EM_LINELENGTH           = 0x00C1;
+		public const int EM_REPLACESEL           = 0x00C2;
+		public const int EM_GETLINE              = 0x00C4;
+		public const int EM_LIMITTEXT            = 0x00C5;
+		public const int EM_CANUNDO              = 0x00C6;
+		public const int EM_UNDO                 = 0x00C7;
+		public const int EM_FMTLINES             = 0x00C8;
+		public const int EM_LINEFROMCHAR         = 0x00C9;
+		public const int EM_SETTABSTOPS          = 0x00CB;
+		public const int EM_SETPASSWORDCHAR      = 0x00CC;
+		public const int EM_EMPTYUNDOBUFFER      = 0x00CD;
+		public const int EM_GETFIRSTVISIBLELINE  = 0x00CE;
+		public const int EM_SETREADONLY          = 0x00CF;
+		public const int EM_SETWORDBREAKPROC     = 0x00D0;
+		public const int EM_GETWORDBREAKPROC     = 0x00D1;
+		public const int EM_GETPASSWORDCHAR      = 0x00D2;
+		public const int EM_SETMARGINS           = 0x00D3;
+		public const int EM_GETMARGINS           = 0x00D4;
+		public const int EM_SETLIMITTEXT         = EM_LIMITTEXT;//;win40 Name change 
+		public const int EM_GETLIMITTEXT         = 0x00D5;
+		public const int EM_POSFROMCHAR          = 0x00D6;
+		public const int EM_CHARFROMPOS          = 0x00D7;
+		public const int EM_SETIMESTATUS         = 0x00D8;
+		public const int EM_GETIMESTATUS         = 0x00D9;
+		public const int EM_FORMATRANGE          = (int)WM_USER + 57;
+
+		// EDITWORDBREAKPROC code values
+		public const int WB_LEFT        = 0;
+		public const int WB_RIGHT       = 1;
+		public const int WB_ISDELIMITER = 2;
+		#endregion
+
+		#region Execution State
+		[Flags] public enum ExecutionState :uint
+		{
+			EsAwaymodeRequired = 0x00000040,
+			EsContinuous = 0x80000000,
+			EsDisplayRequired = 0x00000002,
+			EsSystemRequired = 0x00000001
+		}
+		#endregion
+
+		#region GetAncestor GA_
+		public const int GA_PARENT    = 1;
+		public const int GA_ROOT      = 2;
+		public const int GA_ROOTOWNER = 3;
+		#endregion
+
+		#region Get Class Long Pointer GCLP_, GCL_
+		public const int GCW_ATOM           = -32; // Retrieves an ATOM value that uniquely identifies the window class. This is the same atom that the RegisterClassEx function returns.
+		public const int GCL_CBCLSEXTRA     = -20; // Retrieves the size, in bytes, of the extra memory associated with the class.
+		public const int GCL_CBWNDEXTRA     = -18; // Retrieves the size, in bytes, of the extra window memory associated with each window in the class. For information on how to access this memory, see GetWindowLongPtr.
+		public const int GCLP_HBRBACKGROUND = -10; // Retrieves a handle to the background brush associated with the class.
+		public const int GCLP_HCURSOR       = -12; // Retrieves a handle to the cursor associated with the class.
+		public const int GCLP_HICON         = -14; // Retrieves a handle to the icon associated with the class.
+		public const int GCLP_HICONSM       = -34; // Retrieves a handle to the small icon associated with the class.
+		public const int GCLP_HMODULE       = -16; // Retrieves a handle to the module that registered the class.
+		public const int GCLP_MENUNAME      =  -8; // Retrieves the pointer to the menu name string. The string identifies the menu resource associated with the class.
+		public const int GCL_STYLE          = -26; // Retrieves the window-class style bits.
+		public const int GCLP_WNDPROC       = -24; // Retrieves the address of the window procedure, or a handle representing the address of the window procedure. You must use the CallWindowProc function to call the window procedure.
+		#endregion
+
+		#region Get Window Long Pointer GWL_, GWLP_
+		public const int GWL_WNDPROC   = -4;
+		public const int GWL_HINSTANCE = -6;
+		public const int GWL_ID        = -12;
+		public const int GWL_STYLE     = -16;
+		public const int GWL_EXSTYLE   = -20;
+		public const int GWL_USERDATA  = -21;
+		public const int GWLP_WNDPROC    = -4;
+		public const int GWLP_HINSTANCE  = -6;
+		public const int GWLP_HWNDPARENT = -8;
+		public const int GWLP_USERDATA   = -21;
+		public const int GWLP_ID         = -12;
+		#endregion
+
+		#region Graphics modes GM_
+		public const int GM_COMPATIBLE                    = 1;
+		public const int GM_ADVANCED                      = 2;
+		#endregion
+
+		#region HitTest
+		public enum HitTest :int
+		{
+			HTBORDER      = 18, // In the border of a window that does not have a sizing border.
+			HTBOTTOM      = 15, // In the lower-horizontal border of a resizeable window (the user can click the mouse to resize the window vertically).
+			HTBOTTOMLEFT  = 16, // In the lower-left corner of a border of a resizeable window (the user can click the mouse to resize the window diagonally).
+			HTBOTTOMRIGHT = 17, // In the lower-right corner of a border of a resizeable window (the user can click the mouse to resize the window diagonally).
+			HTCAPTION     = 2,  // In a title bar.
+			HTCLIENT      = 1,  // In a client area.
+			HTCLOSE       = 20, // In a Close button.
+			HTERROR       = -2, // On the screen background or on a dividing line between windows (same as HTNOWHERE, except that the DefWindowProc function produces a system beep to indicate an error).
+			HTGROWBOX     = 4,  // In a size box (same as HTSIZE).
+			HTHELP        = 21, // In a Help button.
+			HTHSCROLL     = 6,  // In a horizontal scroll bar.
+			HTLEFT        = 10, // In the left border of a resizeable window (the user can click the mouse to resize the window horizontally).
+			HTMENU        = 5,  // In a menu.
+			HTMAXBUTTON   = 9,  // In a Maximize button.
+			HTMINBUTTON   = 8,  // In a Minimize button.
+			HTNOWHERE     = 0,  // On the screen background or on a dividing line between windows.
+			HTREDUCE      = 8,  // In a Minimize button.
+			HTRIGHT       = 11, // In the right border of a resizeable window (the user can click the mouse to resize the window horizontally).
+			HTSIZE        = 4,  // In a size box (same as HTGROWBOX).
+			HTSYSMENU     = 3,  // In a window menu or in a Close button in a child window.
+			HTTOP         = 12, // In the upper-horizontal border of a window.
+			HTTOPLEFT     = 13, // In the upper-left corner of a window border.
+			HTTOPRIGHT    = 14, // In the upper-right corner of a window border.
+			HTTRANSPARENT = -1, // In a window currently covered by another window in the same thread (the message will be sent to underlying windows in the same thread until one of them returns a code that is not HTTRANSPARENT).
+			HTVSCROLL     = 7,  // In the vertical scroll bar.
+			HTZOOM        = 9,  // In a Maximize button.
+		}
+		#endregion
+
+		#region HWND constants HWND_
+		public static readonly HWND HWND_TOP = new(0);
+		public static readonly HWND HWND_BOTTOM = new(1);
+		public static readonly HWND HWND_TOPMOST = new(-1);
+		public static readonly HWND HWND_NOTOPMOST = new(-2);
+		#endregion
+
+		#region IME
+		// bit field for conversion mode
+		[Flags] public enum EIME_CMODE
+		{
+			ALPHANUMERIC = 0x0000,
+			NATIVE = 0x0001,
+			CHINESE = NATIVE,
+			HANGUL = NATIVE,
+			JAPANESE = NATIVE,
+			KATAKANA = 0x0002,// only effect under IME_CMODE_NATIVE
+			LANGUAGE = 0x0003,
+			FULLSHAPE = 0x0008,
+			ROMAN = 0x0010,
+			CHARCODE = 0x0020,
+			HANJACONVERT = 0x0040,
+			NATIVESYMBOL = 0x0080,
+			HANGEUL = NATIVE, // IME_CMODE_HANGEUL is old name of IME_CMODE_HANGUL. It will be gone eventually.
+			SOFTKBD = 0x0080,
+			NOCONVERSION = 0x0100,
+			EUDC = 0x0200,
+			SYMBOL = 0x0400,
+			FIXED = 0x0800,
+		}
+
+		// bit field for sentence mode
+		[Flags] public enum EIME_SMODE
+		{
+			NONE = 0x0000,
+			PLAURALCLAUSE = 0x0001,
+			SINGLECONVERT = 0x0002,
+			AUTOMATIC = 0x0004,
+			PHRASEPREDICT = 0x0008,
+			CONVERSATION = 0x0010,
+			RESERVED = 0x0000F000,
+		}
+
+		// style of candidate
+		public enum EIME_CAND
+		{
+			UNKNOWN = 0x0000,
+			READ = 0x0001,
+			CODE = 0x0002,
+			MEANING = 0x0003,
+			RADICAL = 0x0004,
+			STROKE = 0x0005,
+		}
+
+		// wParam of report message WM_IME_NOTIFY
+		public enum EIME_Notification
+		{
+			IMN_CLOSESTATUSWINDOW = 0x0001,
+			IMN_OPENSTATUSWINDOW = 0x0002,
+			IMN_CHANGECANDIDATE = 0x0003,
+			IMN_CLOSECANDIDATE = 0x0004,
+			IMN_OPENCANDIDATE = 0x0005,
+			IMN_SETCONVERSIONMODE = 0x0006,
+			IMN_SETSENTENCEMODE = 0x0007,
+			IMN_SETOPENSTATUS = 0x0008,
+			IMN_SETCANDIDATEPOS = 0x0009,
+			IMN_SETCOMPOSITIONFONT = 0x000A,
+			IMN_SETCOMPOSITIONWINDOW = 0x000B,
+			IMN_SETSTATUSWINDOWPOS = 0x000C,
+			IMN_GUIDELINE = 0x000D,
+			IMN_PRIVATE = 0x000E,
+		}
+
+		// wParam of report message WM_IME_REQUEST
+		public enum EIME_Request
+		{
+			COMPOSITIONWINDOW = 0x0001,
+			CANDIDATEWINDOW = 0x0002,
+			COMPOSITIONFONT = 0x0003,
+			RECONVERTSTRING = 0x0004,
+			CONFIRMRECONVERTSTRING = 0x0005,
+			QUERYCHARPOSITION = 0x0006,
+			DOCUMENTFEED = 0x0007,
+		}
+
+		// wParam for WM_IME_CONTROL
+		public enum EIME_Control
+		{
+			GETCANDIDATEPOS             = 0x0007,
+			SETCANDIDATEPOS             = 0x0008,
+			GETCOMPOSITIONFONT          = 0x0009,
+			SETCOMPOSITIONFONT          = 0x000A,
+			GETCOMPOSITIONWINDOW        = 0x000B,
+			SETCOMPOSITIONWINDOW        = 0x000C,
+			GETSTATUSWINDOWPOS          = 0x000F,
+			SETSTATUSWINDOWPOS          = 0x0010,
+			CLOSESTATUSWINDOW           = 0x0021,
+			OPENSTATUSWINDOW            = 0x0022,
+		}
+
+		// dwAction for ImmNotifyIME
+		public enum EIMM_Notification
+		{
+			OPENCANDIDATE                = 0x0010,
+			CLOSECANDIDATE               = 0x0011,
+			SELECTCANDIDATESTR           = 0x0012,
+			CHANGECANDIDATELIST          = 0x0013,
+			FINALIZECONVERSIONRESULT     = 0x0014,
+			COMPOSITIONSTR               = 0x0015,
+			SETCANDIDATE_PAGESTART       = 0x0016,
+			SETCANDIDATE_PAGESIZE        = 0x0017,
+			IMEMENUSELECTED              = 0x0018,
+		}
+
+		// lParam for WM_IME_SETCONTEXT
+		[Flags] public enum EIME_SetContextFlags :ulong
+		{
+			SHOWUICANDIDATEWINDOW       = 0x00000001,
+			SHOWUICOMPOSITIONWINDOW     = 0x80000000,
+			SHOWUIGUIDELINE             = 0x40000000,
+			SHOWUIALLCANDIDATEWINDOW    = 0x0000000F,
+			SHOWUIALL                   = 0xC000000F,
+		}
+		#endregion
+
+		#region Known Folders
+		public enum FFFP_MODE
+		{
+			FFFP_EXACTMATCH,
+			FFFP_NEARESTPARENTMATCH
+		}
+
+		public enum KF_CATEGORY
+		{
+			VIRTUAL = 0x00000001,
+			FIXED   = 0x00000002,
+			COMMON  = 0x00000003,
+			PERUSER = 0x00000004
+		}
+
+		[Flags]
+		public enum KF_DEFINITION_FLAGS
+		{
+			KFDF_PERSONALIZE = 0x00000001,
+			KFDF_LOCAL_REDIRECT_ONLY = 0x00000002,
+			KFDF_ROAMABLE = 0x00000004,
+		}
+		#endregion
+
+		#region ListBox Messages
+		public const uint LB_ADDSTRING            = 0x0180;
+		public const uint LB_INSERTSTRING         = 0x0181;
+		public const uint LB_DELETESTRING         = 0x0182;
+		public const uint LB_SELITEMRANGEEX       = 0x0183;
+		public const uint LB_RESETCONTENT         = 0x0184;
+		public const uint LB_SETSEL               = 0x0185;
+		public const uint LB_SETCURSEL            = 0x0186;
+		public const uint LB_GETSEL               = 0x0187;
+		public const uint LB_GETCURSEL            = 0x0188;
+		public const uint LB_GETTEXT              = 0x0189;
+		public const uint LB_GETTEXTLEN           = 0x018A;
+		public const uint LB_GETCOUNT             = 0x018B;
+		public const uint LB_SELECTSTRING         = 0x018C;
+		public const uint LB_DIR                  = 0x018D;
+		public const uint LB_GETTOPINDEX          = 0x018E;
+		public const uint LB_FINDSTRING           = 0x018F;
+		public const uint LB_GETSELCOUNT          = 0x0190;
+		public const uint LB_GETSELITEMS          = 0x0191;
+		public const uint LB_SETTABSTOPS          = 0x0192;
+		public const uint LB_GETHORIZONTALEXTENT  = 0x0193;
+		public const uint LB_SETHORIZONTALEXTENT  = 0x0194;
+		public const uint LB_SETCOLUMNWIDTH       = 0x0195;
+		public const uint LB_ADDFILE              = 0x0196;
+		public const uint LB_SETTOPINDEX          = 0x0197;
+		public const uint LB_GETITEMRECT          = 0x0198;
+		public const uint LB_GETITEMDATA          = 0x0199;
+		public const uint LB_SETITEMDATA          = 0x019A;
+		public const uint LB_SELITEMRANGE         = 0x019B;
+		public const uint LB_SETANCHORINDEX       = 0x019C;
+		public const uint LB_GETANCHORINDEX       = 0x019D;
+		public const uint LB_SETCARETINDEX        = 0x019E;
+		public const uint LB_GETCARETINDEX        = 0x019F;
+		public const uint LB_SETITEMHEIGHT        = 0x01A0;
+		public const uint LB_GETITEMHEIGHT        = 0x01A1;
+		public const uint LB_FINDSTRINGEXACT      = 0x01A2;
+		public const uint LB_SETLOCALE            = 0x01A5;
+		public const uint LB_GETLOCALE            = 0x01A6;
+		public const uint LB_SETCOUNT             = 0x01A7;
+		public const uint LB_INITSTORAGE          = 0x01A8;
+		public const uint LB_ITEMFROMPOINT        = 0x01A9;
+		public const uint LB_GETLISTBOXINFO       = 0x01B2;
+		#endregion
+
+		#region ListView Control
+		public const uint LVN_ITEMCHANGING    = (LVN_FIRST-0 );
+		public const uint LVN_ITEMCHANGED     = (LVN_FIRST-1 );
+		public const uint LVN_INSERTITEM      = (LVN_FIRST-2 );
+		public const uint LVN_DELETEITEM      = (LVN_FIRST-3 );
+		public const uint LVN_DELETEALLITEMS  = (LVN_FIRST-4 );
+		public const uint LVN_BEGINLABELEDITA = (LVN_FIRST-5 );
+		public const uint LVN_BEGINLABELEDITW = (LVN_FIRST-75);
+		public const uint LVN_ENDLABELEDITA   = (LVN_FIRST-6 );
+		public const uint LVN_ENDLABELEDITW   = (LVN_FIRST-76);
+		public const uint LVN_COLUMNCLICK     = (LVN_FIRST-8 );
+		public const uint LVN_BEGINDRAG       = (LVN_FIRST-9 );
+		public const uint LVN_BEGINRDRAG      = (LVN_FIRST-11);
+		public const uint LVN_ODCACHEHINT     = (LVN_FIRST-13);
+		public const uint LVN_ODFINDITEMA     = (LVN_FIRST-52);
+		public const uint LVN_ODFINDITEMW     = (LVN_FIRST-79);
+		public const uint LVN_ITEMACTIVATE    = (LVN_FIRST-14);
+		public const uint LVN_ODSTATECHANGED  = (LVN_FIRST-15);
+		public const uint LVN_HOTTRACK        = (LVN_FIRST-21);
+		public const uint LVN_GETDISPINFOA    = (LVN_FIRST-50);
+		public const uint LVN_GETDISPINFOW    = (LVN_FIRST-77);
+		public const uint LVN_SETDISPINFOA    = (LVN_FIRST-51);
+		public const uint LVN_SETDISPINFOW    = (LVN_FIRST-78);
+		public const uint LVN_BEGINLABELEDIT  = LVN_BEGINLABELEDITW;
+		public const uint LVN_ENDLABELEDIT    = LVN_ENDLABELEDITW;
+		public const uint LVN_GETDISPINFO     = LVN_GETDISPINFOW;
+		public const uint LVN_SETDISPINFO     = LVN_SETDISPINFOW;
+		public const uint LVN_ODFINDITEM      = LVN_ODFINDITEMW;
+		#endregion
+
+		#region Mapping Modes MM_
+		public const int MM_TEXT                          = 1;
+		public const int MM_LOMETRIC                      = 2;
+		public const int MM_HIMETRIC                      = 3;
+		public const int MM_LOENGLISH                     = 4;
+		public const int MM_HIENGLISH                     = 5;
+		public const int MM_TWIPS                         = 6;
+		public const int MM_ISOTROPIC                     = 7;
+		public const int MM_ANISOTROPIC                   = 8;
+		#endregion
+
+		#region MAPKV - map virtual key
+		public const byte MAPVK_VK_TO_VSC = 0x0;
+		public const byte MAPVK_VSC_TO_VK = 0x1;
+		public const byte MAPVK_VK_TO_CHAR = 0x2;
+		public const byte MAPVK_VSC_TO_VK_EX = 0x3;
+		#endregion
+
+		#region Menu Flags MF_, MFT_, MFS_
+		public const int MF_INSERT           = 0x00000000;
+		public const int MF_CHANGE           = 0x00000080;
+		public const int MF_APPEND           = 0x00000100;
+		public const int MF_DELETE           = 0x00000200;
+		public const int MF_REMOVE           = 0x00001000;
+		public const int MF_BYCOMMAND        = 0x00000000;
+		public const int MF_BYPOSITION       = 0x00000400;
+		public const int MF_SEPARATOR        = 0x00000800;
+		public const int MF_ENABLED          = 0x00000000;
+		public const int MF_GRAYED           = 0x00000001;
+		public const int MF_DISABLED         = 0x00000002;
+		public const int MF_UNCHECKED        = 0x00000000;
+		public const int MF_CHECKED          = 0x00000008;
+		public const int MF_USECHECKBITMAPS  = 0x00000200;
+		public const int MF_STRING           = 0x00000000;
+		public const int MF_BITMAP           = 0x00000004;
+		public const int MF_OWNERDRAW        = 0x00000100;
+		public const int MF_POPUP            = 0x00000010;
+		public const int MF_MENUBARBREAK     = 0x00000020;
+		public const int MF_MENUBREAK        = 0x00000040;
+		public const int MF_UNHILITE         = 0x00000000;
+		public const int MF_HILITE           = 0x00000080;
+		public const int MF_DEFAULT          = 0x00001000;
+		public const int MF_SYSMENU          = 0x00002000;
+		public const int MF_HELP             = 0x00004000;
+		public const int MF_RIGHTJUSTIFY     = 0x00004000;
+		public const int MF_MOUSESELECT      = 0x00008000;
+		public const int MF_END              = 0x00000080;  /* Obsolete -- only used by old RES files */
+
+		public const int MFT_STRING          = MF_STRING;
+		public const int MFT_BITMAP          = MF_BITMAP;
+		public const int MFT_MENUBARBREAK    = MF_MENUBARBREAK;
+		public const int MFT_MENUBREAK       = MF_MENUBREAK;
+		public const int MFT_OWNERDRAW       = MF_OWNERDRAW;
+		public const int MFT_RADIOCHECK      = 0x00000200;
+		public const int MFT_SEPARATOR       = MF_SEPARATOR;
+		public const int MFT_RIGHTORDER      = 0x00002000;
+		public const int MFT_RIGHTJUSTIFY    = MF_RIGHTJUSTIFY;
+
+		public const int MFS_GRAYED          = 0x00000003;
+		public const int MFS_DISABLED        = MFS_GRAYED;
+		public const int MFS_CHECKED         = MF_CHECKED;
+		public const int MFS_HILITE          = MF_HILITE;
+		public const int MFS_ENABLED         = MF_ENABLED;
+		public const int MFS_UNCHECKED       = MF_UNCHECKED;
+		public const int MFS_UNHILITE        = MF_UNHILITE;
+		public const int MFS_DEFAULT         = MF_DEFAULT;
+		#endregion
+
+		#region Mouse key MK_
+		// Key State Masks for Mouse Messages
+		public const int MK_LBUTTON = 0x0001;
+		public const int MK_RBUTTON = 0x0002;
+		public const int MK_SHIFT = 0x0004;
+		public const int MK_CONTROL = 0x0008;
+		public const int MK_MBUTTON = 0x0010;
+		public const int MK_XBUTTON1 = 0x0020;
+		public const int MK_XBUTTON2 = 0x0040;
+		#endregion
+
+		#region NIN Notification Icon
+		/// <summary>
+		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
+		/// Send when a notify icon is activated with mouse or ENTER key. Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
+		public const int NIN_SELECT = WM_USER;
+
+		/// <summary>
+		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
+		/// Send when a notify icon is activated with SPACEBAR or ENTER key.
+		/// Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
+		public const int NIN_KEYSELECT = WM_USER + 1;
+
+		/// <summary>Sent when the balloon is shown (balloons are queued).</summary>
+		public const int NIN_BALLOONSHOW = WM_USER + 2;
+
+		/// <summary>
+		/// Sent when the balloon disappears. For example, when the icon is deleted.
+		/// This message is not sent if the balloon is dismissed because of a timeout or if the user clicks the mouse.
+		/// As of Windows 7, NIN_BALLOONHIDE is also sent when a notification with the NIIF_RESPECT_QUIET_TIME flag set attempts
+		/// to display during quiet time (a user's first hour on a new computer).In that case, the balloon is never displayed at all.</summary>
+		public const int NIN_BALLOONHIDE = WM_USER + 3;
+
+		/// <summary>Sent when the balloon is dismissed because of a timeout.</summary>
+		public const int NIN_BALLOONTIMEOUT = WM_USER + 4;
+
+		/// <summary>Sent when the balloon is dismissed because the user clicked the mouse.</summary>
+		public const int NIN_BALLOONUSERCLICK = WM_USER + 5;
+
+		/// <summary>Sent when the user hovers the cursor over an icon to indicate that the richer pop-up UI should be used in place of a standard textual tooltip.</summary>
+		public const int NIN_POPUPOPEN = WM_USER + 6;
+
+		/// <summary>Sent when a cursor no longer hovers over an icon to indicate that the rich pop-up UI should be closed.</summary>
+		public const int NIN_POPUPCLOSE = WM_USER + 7;
+		#endregion
+
+		#region Notification NF_,NFR_
+		public const int NFR_ANSI = 1;
+		public const int NFR_UNICODE = 2;
+		public const int NF_QUERY = 3;
+		public const int NF_REQUERY = 4;
+		#endregion
+
+		#region Notification Icon
+		public enum ENotifyIconVersion
+		{
+			/// <summary>Default behavior (legacy Win95). Expects a 'NotifyIconData' size of 488.</summary>
+			Win95 = 0x0,
+
+			/// <summary>Behavior representing Win2000 an higher. Expects a 'NotifyIconData' size of 504.</summary>
+			Win2000 = 0x3,
+
+			/// <summary>
+			/// Extended tooltip support, which is available for Vista and later.
+			/// Detailed information about what the different versions do, can be found
+			/// <a href="https://docs.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shell_notifyicona">here</a>
+			/// </summary>
+			Vista = 0x4,
+		}
+		public enum ENotifyCommand
+		{
+			/// <summary>The taskbar icon is being created.</summary>
+			Add = 0x00,
+
+			/// <summary>The settings of the taskbar icon are being updated.</summary>
+			Modify = 0x01,
+
+			/// <summary>The taskbar icon is deleted.</summary>
+			Delete = 0x02,
+
+			/// <summary>Focus is returned to the taskbar icon. Currently not in use.</summary>
+			SetFocus = 0x03,
+
+			/// <summary>
+			/// Shell32.dll version 5.0 and later only. Instructs the taskbar to behave according to the version number specified in the 
+			/// uVersion member of the structure pointed to by lpdata. This message allows you to specify whether you want the version
+			/// 5.0 behavior found on Microsoft Windows 2000 systems, or the behavior found on earlier Shell versions.
+			/// The default value for uVersion is zero, indicating that the original Windows 95 notify icon behavior should be used.</summary>
+			SetVersion = 0x04,
+		}
+		[Flags]
+		public enum ENotifyIconDataMembers :uint
+		{
+			/// <summary>The message ID is set.</summary>
+			Message = 0x01,
+
+			/// <summary>The notification icon is set.</summary>
+			Icon = 0x02,
+
+			/// <summary>The tooltip is set.</summary>
+			Tip = 0x04,
+
+			/// <summary>State information 'IconState' is set. This applies to both 'IconState' and 'StateMask'.</summary>
+			State = 0x08,
+
+			/// <summary>The balloon ToolTip is set. Accordingly, the following members are set: 'szInfo', 'szInfoTitle', 'BalloonFlags', 'VersionOrTimeout'</summary>
+			Info = 0x10,
+
+			/// <summary>Internal identifier is set. Reserved.</summary>
+			Guid = 0x20,
+
+			/// <summary>
+			/// Windows Vista (Shell32.dll version 6.0.6) and later. If the ToolTip cannot be displayed immediately, discard it.<br/>
+			/// Use this flag for ToolTips that represent real-time information which would be meaningless or misleading if displayed at a later time.
+			/// For example, a message that states "Your telephone is ringing."<br/> This modifies and must be combined with the <see cref="Info"/> flag.</summary>
+			Realtime = 0x40,
+
+			/// <summary>
+			/// Windows Vista (Shell32.dll version 6.0.6) and later. Use the standard ToolTip. Normally, when uVersion is set
+			/// to NOTIFYICON_VERSION_4, the standard ToolTip is replaced by the application-drawn pop-up user interface (UI).
+			/// If the application wants to show the standard tooltip in that case, regardless of whether the on-hover UI is showing,
+			/// it can specify NIF_SHOWTIP to indicate the standard tooltip should still be shown.<br/>
+			/// Note that the NIF_SHOWTIP flag is effective until the next call to Shell_NotifyIcon.</summary>
+			UseLegacyToolTips = 0x80
+		}
+		[Flags]
+		public enum EIconState :uint
+		{
+			/// <summary>The icon is visible.</summary>
+			Visible = 0x00,
+
+			/// <summary>Hide the icon.</summary>
+			Hidden = 0x01,
+
+			/// <summary>The icon is shared</summary>
+			Shared = 0x02, // currently not supported
+		}
+		public enum ENotifyIconBalloonFlags :uint
+		{
+			/// <summary>No icon is displayed.</summary>
+			None = 0x00,
+
+			/// <summary>An information icon is displayed.</summary>
+			Info = 0x01,
+
+			/// <summary>A warning icon is displayed.</summary>
+			Warning = 0x02,
+
+			/// <summary>An error icon is displayed.</summary>
+			Error = 0x03,
+
+			/// <summary>Windows XP Service Pack 2 (SP2) and later. Use a custom icon as the title icon.</summary>
+			User = 0x04,
+
+			/// <summary>Windows XP (Shell32.dll version 6.0) and later. Do not play the associated sound. Applies only to balloon ToolTips.</summary>
+			NoSound = 0x10,
+
+			/// <summary>
+			/// Windows Vista (Shell32.dll version 6.0.6) and later. The large version of the icon should be used as the balloon icon.
+			/// This corresponds to the icon with dimensions SM_CXICON x SM_CYICON. If this flag is not set, the icon with dimensions
+			/// XM_CXSMICON x SM_CYSMICON is used.<br/>
+			/// - This flag can be used with all stock icons.<br/>
+			/// - Applications that use older customized icons (NIIF_USER with hIcon) must
+			///   provide a new SM_CXICON x SM_CYICON version in the tray icon (hIcon). These
+			///   icons are scaled down when they are displayed in the System Tray or
+			///   System Control Area (SCA).<br/>
+			/// - New customized icons (NIIF_USER with hBalloonIcon) must supply an
+			///   SM_CXICON x SM_CYICON version in the supplied icon (hBalloonIcon).</summary>
+			LargeIcon = 0x20,
+
+			/// <summary>Windows 7 and later.</summary>
+			RespectQuietTime = 0x80
+		}
+		#endregion
+
+		#region Progress Bar
+		public const uint PBS_SMOOTH              = 0x01;
+		public const uint PBS_VERTICAL            = 0x04;
+		public const uint PBS_MARQUEE             = 0x08;
+		public const uint PBS_SMOOTHREVERSE       = 0x10;
+
+		public const uint PBM_SETRANGE            = (WM_USER+1);
+		public const uint PBM_SETPOS              = (WM_USER+2);
+		public const uint PBM_DELTAPOS            = (WM_USER+3);
+		public const uint PBM_SETSTEP             = (WM_USER+4);
+		public const uint PBM_STEPIT              = (WM_USER+5);
+		public const uint PBM_SETRANGE32          = (WM_USER+6);  // lParam = high, wParam = low
+
+		public const uint PBM_GETRANGE            = (WM_USER+7);    // wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
+		public const uint PBM_GETPOS              = (WM_USER+8);
+		public const uint PBM_SETBARCOLOR         = (WM_USER+9);    // lParam = bar color
+		public const uint PBM_SETMARQUEE          = (WM_USER+10);
+		public const uint PBM_GETSTEP             = (WM_USER+13);
+		public const uint PBM_GETBKCOLOR          = (WM_USER+14);
+		public const uint PBM_GETBARCOLOR         = (WM_USER+15);
+		public const uint PBM_SETSTATE            = (WM_USER+16); // wParam = PBST_[State] (NORMAL, ERROR, PAUSED)
+		public const uint PBM_GETSTATE            = (WM_USER+17);
+		public const uint PBM_SETBKCOLOR          = CCM_SETBKCOLOR; // lParam = bkColor
+
+		public const int PBST_NORMAL = 0x0001;
+		public const int PBST_ERROR  = 0x0002;
+		public const int PBST_PAUSED = 0x0003;
+		#endregion
+
+		#region Redraw Window RDW_
+		public const int RDW_INVALIDATE = 0x0001;
+		public const int RDW_INTERNALPAINT = 0x0002;
+		public const int RDW_ERASE = 0x0004;
+		public const int RDW_VALIDATE = 0x0008;
+		public const int RDW_NOINTERNALPAINT = 0x0010;
+		public const int RDW_NOERASE = 0x0020;
+		public const int RDW_NOCHILDREN = 0x0040;
+		public const int RDW_ALLCHILDREN = 0x0080;
+		public const int RDW_UPDATENOW = 0x0100;
+		public const int RDW_ERASENOW = 0x0200;
+		public const int RDW_FRAME = 0x0400;
+		public const int RDW_NOFRAME = 0x0800;
+		#endregion
+
+		#region Rich Edit Control
+		//public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
+		//public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
+		//public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
+		//public const uint EM_SCROLLCARET                  = (WM_USER + 49);
+		public const uint EM_CANPASTE                     = (WM_USER + 50);
+		public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
+		public const uint EM_EXGETSEL                     = (WM_USER + 52);
+		public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
+		public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
+		public const uint EM_EXSETSEL                     = (WM_USER + 55);
+		public const uint EM_FINDTEXT                     = (WM_USER + 56);
+		//public const uint EM_FORMATRANGE                  = (WM_USER + 57);
+		public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
+		public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
+		public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
+		public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
+		public const uint EM_GETSELTEXT                   = (WM_USER + 62);
+		public const uint EM_HIDESELECTION                = (WM_USER + 63);
+		public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
+		public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
+		public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
+		public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
+		public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
+		public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
+		public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
+		public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
+		public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
+		public const uint EM_STREAMIN                     = (WM_USER + 73);
+		public const uint EM_STREAMOUT                    = (WM_USER + 74);
+		public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
+		public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
+		public const uint EM_SETOPTIONS                   = (WM_USER + 77);
+		public const uint EM_GETOPTIONS                   = (WM_USER + 78);
+		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
+		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
+		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
+
+		// RichEdit 2.0 messages
+		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
+		public const uint EM_REDO                         = (WM_USER + 84);
+		public const uint EM_CANREDO                      = (WM_USER + 85);
+		public const uint EM_GETUNDONAME                  = (WM_USER + 86);
+		public const uint EM_GETREDONAME                  = (WM_USER + 87);
+		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
+		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
+		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+
+		public const uint EM_GETSCROLLPOS                 = (WM_USER + 221);
+		public const uint EM_SETSCROLLPOS                 = (WM_USER + 222);
+		#endregion
+
+		#region Scroll Bar SB_
+		public enum ScrollBarDirection
+		{
+			SB_HORZ = 0,
+			SB_VERT = 1,
+			SB_CTL = 2,
+			SB_BOTH = 3
+		}
+
+		// These are the same as System.Windows.Forms.ScrollEventType
+		public const int SB_LINEUP           = 0;
+		public const int SB_LINELEFT         = 0;
+		public const int SB_LINEDOWN         = 1;
+		public const int SB_LINERIGHT        = 1;
+		public const int SB_PAGEUP           = 2;
+		public const int SB_PAGELEFT         = 2;
+		public const int SB_PAGEDOWN         = 3;
+		public const int SB_PAGERIGHT        = 3;
+		public const int SB_THUMBPOSITION    = 4;
+		public const int SB_THUMBTRACK       = 5;
+		public const int SB_TOP              = 6;
+		public const int SB_LEFT             = 6;
+		public const int SB_BOTTOM           = 7;
+		public const int SB_RIGHT            = 7;
+		public const int SB_ENDSCROLL        = 8;
+		#endregion
+
+		#region Scroll info flags SIF_
+		public enum ScrollInfoMask :uint
+		{
+			SIF_RANGE = 0x1,
+			SIF_PAGE = 0x2,
+			SIF_POS = 0x4,
+			SIF_DISABLENOSCROLL = 0x8,
+			SIF_TRACKPOS = 0x10,
+			SIF_ALL = SIF_RANGE + SIF_PAGE + SIF_POS + SIF_TRACKPOS
+		}
+		#endregion
+
+		#region Set Window Position SWP_
+		public const int SWP_NOSIZE = 0x0001;
+		public const int SWP_NOMOVE = 0x0002;
+		public const int SWP_NOZORDER = 0x0004;
+		public const int SWP_NOREDRAW = 0x0008;
+		public const int SWP_NOACTIVATE = 0x0010;
+		public const int SWP_FRAMECHANGED = 0x0020;
+		public const int SWP_SHOWWINDOW = 0x0040;
+		public const int SWP_HIDEWINDOW = 0x0080;
+		public const int SWP_NOCOPYBITS = 0x0100;
+		public const int SWP_NOOWNERZORDER = 0x0200;
+		public const int SWP_NOSENDCHANGING = 0x0400;
+		public const int SWP_DRAWFRAME = SWP_FRAMECHANGED;
+		public const int SWP_NOREPOSITION = SWP_NOOWNERZORDER;
+		public const int SWP_DEFERERASE = 0x2000;
+		public const int SWP_ASYNCWINDOWPOS = 0x4000;
+		#endregion
+
+		#region Shell File Operations
+		// Shell File Operations
+		public const int FO_MOVE   = 0x0001;
+		public const int FO_COPY   = 0x0002;
+		public const int FO_DELETE = 0x0003;
+		public const int FO_RENAME = 0x0004;
+
+		// SHFILEOPSTRUCT.fFlags and IFileOperation::SetOperationFlags() flag values
+		public const int FOF_MULTIDESTFILES        = 0x0001;
+		public const int FOF_CONFIRMMOUSE          = 0x0002;
+		public const int FOF_SILENT                = 0x0004;  // don't display progress UI (confirm prompts may be displayed still)
+		public const int FOF_RENAMEONCOLLISION     = 0x0008;  // automatically rename the source files to avoid the collisions
+		public const int FOF_NOCONFIRMATION        = 0x0010;  // don't display confirmation UI, assume "yes" for cases that can be bypassed, "no" for those that can not
+		public const int FOF_WANTMAPPINGHANDLE     = 0x0020;  // Fill in SHFILEOPSTRUCT.hNameMappings.  Must be freed using SHFreeNameMappings
+		public const int FOF_ALLOWUNDO             = 0x0040;  // enable undo including Recycle behavior for IFileOperation::Delete()
+		public const int FOF_FILESONLY             = 0x0080;  // only operate on the files (non folders), both files and folders are assumed without this
+		public const int FOF_SIMPLEPROGRESS        = 0x0100;  // means don't show names of files
+		public const int FOF_NOCONFIRMMKDIR        = 0x0200;  // don't dispplay confirmatino UI before making any needed directories, assume "Yes" in these cases
+		public const int FOF_NOERRORUI             = 0x0400;  // don't put up error UI, other UI may be displayed, progress, confirmations
+		public const int FOF_NOCOPYSECURITYATTRIBS = 0x0800;  // dont copy file security attributes (ACLs)
+		public const int FOF_NORECURSION           = 0x1000;  // don't recurse into directories for operations that would recurse
+		public const int FOF_NO_CONNECTED_ELEMENTS = 0x2000;  // don't operate on connected elements ("xxx_files" folders that go with .htm files)
+		public const int FOF_WANTNUKEWARNING       = 0x4000;  // during delete operation, warn if object is being permanently destroyed instead of recycling (partially overrides FOF_NOCONFIRMATION)
+		public const int FOF_NORECURSEREPARSE      = 0x8000; // deprecated; the operations engine always does the right thing on FolderLink objects (symlinks, reparse points, folder shortcuts)
+		public const int FOF_NO_UI                 = (FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR); // don't display any UI at all
+
+		public enum FDAP
+		{
+			BOTTOM = 0x00000000,
+			TOP    = 0x00000001,
+		}
+		public enum FDE_SHAREVIOLATION_RESPONSE
+		{
+			FDESVR_DEFAULT = 0x00000000,
+			FDESVR_ACCEPT  = 0x00000001,
+			FDESVR_REFUSE  = 0x00000002
+		}
+		public enum FDE_OVERWRITE_RESPONSE
+		{
+			FDEOR_DEFAULT = 0x00000000,
+			FDEOR_ACCEPT  = 0x00000001,
+			FDEOR_REFUSE  = 0x00000002
+		}
+		public enum SIATTRIBFLAGS
+		{
+			AND       = 0x00000001 , // if multiple items and the attributes together.
+			OR        = 0x00000002 , // if multiple items or the attributes together.
+			APPCOMPAT = 0x00000003 , // Call GetAttributes directly on the ShellFolder for multiple attributes
+		}
+		public enum SIGDN :uint
+		{
+			NORMALDISPLAY               = 0x00000000, // SHGDN_NORMAL
+			PARENTRELATIVEPARSING       = 0x80018001, // SHGDN_INFOLDER | SHGDN_FORPARSING
+			DESKTOPABSOLUTEPARSING      = 0x80028000, // SHGDN_FORPARSING
+			PARENTRELATIVEEDITING       = 0x80031001, // SHGDN_INFOLDER | SHGDN_FOREDITING
+			DESKTOPABSOLUTEEDITING      = 0x8004c000, // SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
+			FILESYSPATH                 = 0x80058000, // SHGDN_FORPARSING
+			URL                         = 0x80068000, // SHGDN_FORPARSING
+			PARENTRELATIVEFORADDRESSBAR = 0x8007c001, // SHGDN_INFOLDER | SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
+			PARENTRELATIVE              = 0x80080001  // SHGDN_INFOLDER
+		}
+		[Flags] public enum FOS :uint
+		{
+			OVERWRITEPROMPT    = 0x00000002,
+			STRICTFILETYPES    = 0x00000004,
+			NOCHANGEDIR        = 0x00000008,
+			PICKFOLDERS        = 0x00000020,
+			FORCEFILESYSTEM    = 0x00000040, // Ensure that items returned are filesystem items.
+			ALLNONSTORAGEITEMS = 0x00000080, // Allow choosing items that have no storage.
+			NOVALIDATE         = 0x00000100,
+			ALLOWMULTISELECT   = 0x00000200,
+			PATHMUSTEXIST      = 0x00000800,
+			FILEMUSTEXIST      = 0x00001000,
+			CREATEPROMPT       = 0x00002000,
+			SHAREAWARE         = 0x00004000,
+			NOREADONLYRETURN   = 0x00008000,
+			NOTESTFILECREATE   = 0x00010000,
+			HIDEMRUPLACES      = 0x00020000,
+			HIDEPINNEDPLACES   = 0x00040000,
+			NODEREFERENCELINKS = 0x00100000,
+			DONTADDTORECENT    = 0x02000000,
+			FORCESHOWHIDDEN    = 0x10000000,
+			DEFAULTNOMINIMODE  = 0x20000000
+		}
+		public enum CDCONTROLSTATE
+		{
+			CDCS_INACTIVE = 0x00000000,
+			CDCS_ENABLED  = 0x00000001,
+			CDCS_VISIBLE  = 0x00000002
+		}
+		#endregion
+
+		#region Show Window SW_
+		public const int SW_HIDE = 0;
+		public const int SW_SHOWNORMAL = 1;
+		public const int SW_NORMAL = 1;
+		public const int SW_SHOWMINIMIZED = 2;
+		public const int SW_SHOWMAXIMIZED = 3;
+		public const int SW_MAXIMIZE = 3;
+		public const int SW_SHOWNOACTIVATE = 4;
+		public const int SW_SHOW = 5;
+		public const int SW_MINIMIZE = 6;
+		public const int SW_SHOWMINNOACTIVE = 7;
+		public const int SW_SHOWNA = 8;
+		public const int SW_RESTORE = 9;
+		public const int SW_SHOWDEFAULT = 10;
+		public const int SW_FORCEMINIMIZE = 11;
+		public const int SW_MAX = 11;
+
+		// WM_SHOWWINDOW message constants
+		public const int SW_PARENTCLOSING = 1;
+		public const int SW_OTHERZOOM = 2;
+		public const int SW_PARENTOPENING = 3;
+		public const int SW_OTHERUNZOOM = 4;
+		#endregion
+
+		#region System Metrics
+		public enum ESystemMetrics :int
+		{
+			SM_CXSCREEN = 0,      // The width of the screen of the primary display monitor, in pixels.This is the same value obtained by calling GetDeviceCaps as follows: GetDeviceCaps(hdcPrimaryMonitor, HORZRES).
+			SM_ARRANGE = 56,     // The flags that specify how the system arranged minimized windows. For more information, see the Remarks section in this topic.
+			SM_CLEANBOOT                   = 67,     // The value that specifies how the system is started: 0 Normal boot, 1 Fail-safe boot, 2 Fail-safe with network boot, A fail-safe boot (also called SafeBoot, Safe Mode, or Clean Boot) bypasses the user startup files.
+			SM_CMONITORS                   = 80,     // The number of display monitors on a desktop.For more information, see the Remarks section in this topic.
+			SM_CMOUSEBUTTONS               = 43,     // The number of buttons on a mouse, or zero if no mouse is installed.
+			SM_CONVERTIBLESLATEMODE        = 0x2003, // Reflects the state of the laptop or slate mode, 0 for Slate Mode and non-zero otherwise. When this system metric changes, the system sends a broadcast message via WM_SETTINGCHANGE with "ConvertibleSlateMode" in the LPARAM. Note that this system metric doesn't apply to desktop PCs. In that case, use GetAutoRotationState.
+			SM_CXBORDER                    = 5,      // The width of a window border, in pixels.This is equivalent to the SM_CXEDGE value for windows with the 3-D look.
+			SM_CXCURSOR                    = 13,     // The width of a cursor, in pixels.The system cannot create cursors of other sizes.
+			SM_CXDLGFRAME                  = 7,      // This value is the same as SM_CXFIXEDFRAME.
+			SM_CXDOUBLECLK                 = 36,     // The width of the rectangle around the location of a first click in a double-click sequence, in pixels.The second click must occur within the rectangle that is defined by SM_CXDOUBLECLK and SM_CYDOUBLECLK for the system to consider the two clicks a double-click.The two clicks must also occur within a specified time. To set the width of the double-click rectangle, call SystemParametersInfo with SPI_SETDOUBLECLKWIDTH.
+			SM_CXDRAG                      = 68,     // The number of pixels on either side of a mouse-down point that the mouse pointer can move before a drag operation begins.This allows the user to click and release the mouse button easily without unintentionally starting a drag operation. If this value is negative, it is subtracted from the left of the mouse-down point and added to the right of it.
+			SM_CXEDGE                      = 45,     // The width of a 3-D border, in pixels.This metric is the 3-D counterpart of SM_CXBORDER.
+			SM_CXFIXEDFRAME                = 7,      // The thickness of the frame around the perimeter of a window that has a caption but is not sizable, in pixels.SM_CXFIXEDFRAME is the height of the horizontal border, and SM_CYFIXEDFRAME is the width of the vertical border. This value is the same as SM_CXDLGFRAME.
+			SM_CXFOCUSBORDER               = 83,     // The width of the left and right edges of the focus rectangle that the DrawFocusRect draws. This value is in pixels. Windows 2000:  This value is not supported.
+			SM_CXFRAME                     = 32,     // This value is the same as SM_CXSIZEFRAME.
+			SM_CXFULLSCREEN                = 16,     // The width of the client area for a full-screen window on the primary display monitor, in pixels.To get the coordinates of the portion of the screen that is not obscured by the system taskbar or by application desktop toolbars, call the SystemParametersInfo function with the SPI_GETWORKAREA value.
+			SM_CXHSCROLL                   = 21,     // The width of the arrow bitmap on a horizontal scroll bar, in pixels.
+			SM_CXHTHUMB                    = 10,     // The width of the thumb box in a horizontal scroll bar, in pixels.
+			SM_CXICON                      = 11,     // The default width of an icon, in pixels.The LoadIcon function can load only icons with the dimensions that SM_CXICON and SM_CYICON specifies.
+			SM_CXICONSPACING               = 38,     // The width of a grid cell for items in large icon view, in pixels.Each item fits into a rectangle of size SM_CXICONSPACING by SM_CYICONSPACING when arranged.This value is always greater than or equal to SM_CXICON.
+			SM_CXMAXIMIZED                 = 61,     // The default width, in pixels, of a maximized top-level window on the primary display monitor.
+			SM_CXMAXTRACK                  = 59,     // The default maximum width of a window that has a caption and sizing borders, in pixels.This metric refers to the entire desktop.The user cannot drag the window frame to a size larger than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
+			SM_CXMENUCHECK                 = 71,     // The width of the default menu check-mark bitmap, in pixels.
+			SM_CXMENUSIZE                  = 54,     // The width of menu bar buttons, such as the child window close button that is used in the multiple document interface, in pixels.
+			SM_CXMIN                       = 28,     // The minimum width of a window, in pixels.
+			SM_CXMINIMIZED                 = 57,     // The width of a minimized window, in pixels.
+			SM_CXMINSPACING                = 47,     // The width of a grid cell for a minimized window, in pixels.Each minimized window fits into a rectangle this size when arranged.This value is always greater than or equal to SM_CXMINIMIZED.
+			SM_CXMINTRACK                  = 34,     // The minimum tracking width of a window, in pixels.The user cannot drag the window frame to a size smaller than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
+			SM_CXPADDEDBORDER              = 92,     // The amount of border padding for captioned windows, in pixels. Windows XP/2000:  This value is not supported.
+			SM_CXSIZE                      = 30,     // The width of a button in a window caption or title bar, in pixels.
+			SM_CXSIZEFRAME                 = 32,     // The thickness of the sizing border around the perimeter of a window that can be resized, in pixels.SM_CXSIZEFRAME is the width of the horizontal border, and SM_CYSIZEFRAME is the height of the vertical border. This value is the same as SM_CXFRAME.
+			SM_CXSMICON                    = 49,     // The recommended width of a small icon, in pixels.Small icons typically appear in window captions and in small icon view.
+			SM_CXSMSIZE                    = 52,     // The width of small caption buttons, in pixels.
+			SM_CXVIRTUALSCREEN             = 78,     // The width of the virtual screen, in pixels.The virtual screen is the bounding rectangle of all display monitors.The SM_XVIRTUALSCREEN metric is the coordinates for the left side of the virtual screen.
+			SM_CXVSCROLL                   = 2,      // The width of a vertical scroll bar, in pixels.
+			SM_CYBORDER                    = 6,      // The height of a window border, in pixels.This is equivalent to the SM_CYEDGE value for windows with the 3-D look.
+			SM_CYCAPTION                   = 4,      // The height of a caption area, in pixels.
+			SM_CYCURSOR                    = 14,     // The height of a cursor, in pixels.The system cannot create cursors of other sizes.
+			SM_CYDLGFRAME                  = 8,      // This value is the same as SM_CYFIXEDFRAME.
+			SM_CYDOUBLECLK                 = 37,     // The height of the rectangle around the location of a first click in a double-click sequence, in pixels.The second click must occur within the rectangle defined by SM_CXDOUBLECLK and SM_CYDOUBLECLK for the system to consider the two clicks a double-click.The two clicks must also occur within a specified time. To set the height of the double-click rectangle, call SystemParametersInfo with SPI_SETDOUBLECLKHEIGHT.
+			SM_CYDRAG                      = 69,     // The number of pixels above and below a mouse-down point that the mouse pointer can move before a drag operation begins.This allows the user to click and release the mouse button easily without unintentionally starting a drag operation. If this value is negative, it is subtracted from above the mouse-down point and added below it.
+			SM_CYEDGE                      = 46,     // The height of a 3-D border, in pixels.This is the 3-D counterpart of SM_CYBORDER.
+			SM_CYFIXEDFRAME                = 8,      // The thickness of the frame around the perimeter of a window that has a caption but is not sizable, in pixels.SM_CXFIXEDFRAME is the height of the horizontal border, and SM_CYFIXEDFRAME is the width of the vertical border. This value is the same as SM_CYDLGFRAME.
+			SM_CYFOCUSBORDER               = 84,     // The height of the top and bottom edges of the focus rectangle drawn by DrawFocusRect.This value is in pixels. Windows 2000:  This value is not supported.
+			SM_CYFRAME                     = 33,     // This value is the same as SM_CYSIZEFRAME.
+			SM_CYFULLSCREEN                = 17,     // The height of the client area for a full-screen window on the primary display monitor, in pixels.To get the coordinates of the portion of the screen not obscured by the system taskbar or by application desktop toolbars, call the SystemParametersInfo function with the SPI_GETWORKAREA value.
+			SM_CYHSCROLL                   = 3,      // The height of a horizontal scroll bar, in pixels.
+			SM_CYICON                      = 12,     // The default height of an icon, in pixels.The LoadIcon function can load only icons with the dimensions SM_CXICON and SM_CYICON.
+			SM_CYICONSPACING               = 39,     // The height of a grid cell for items in large icon view, in pixels.Each item fits into a rectangle of size SM_CXICONSPACING by SM_CYICONSPACING when arranged.This value is always greater than or equal to SM_CYICON.
+			SM_CYKANJIWINDOW               = 18,     // For double byte character set versions of the system, this is the height of the Kanji window at the bottom of the screen, in pixels.
+			SM_CYMAXIMIZED                 = 62,     // The default height, in pixels, of a maximized top-level window on the primary display monitor.
+			SM_CYMAXTRACK                  = 60,     // The default maximum height of a window that has a caption and sizing borders, in pixels.This metric refers to the entire desktop.The user cannot drag the window frame to a size larger than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
+			SM_CYMENU                      = 15,     // The height of a single-line menu bar, in pixels.
+			SM_CYMENUCHECK                 = 72,     // The height of the default menu check-mark bitmap, in pixels.
+			SM_CYMENUSIZE                  = 55,     // The height of menu bar buttons, such as the child window close button that is used in the multiple document interface, in pixels.
+			SM_CYMIN                       = 29,     // The minimum height of a window, in pixels.
+			SM_CYMINIMIZED                 = 58,     // The height of a minimized window, in pixels.
+			SM_CYMINSPACING                = 48,     // The height of a grid cell for a minimized window, in pixels.Each minimized window fits into a rectangle this size when arranged.This value is always greater than or equal to SM_CYMINIMIZED.
+			SM_CYMINTRACK                  = 35,     // The minimum tracking height of a window, in pixels.The user cannot drag the window frame to a size smaller than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
+			SM_CYSCREEN                    = 1,      // The height of the screen of the primary display monitor, in pixels.This is the same value obtained by calling GetDeviceCaps as follows: GetDeviceCaps(hdcPrimaryMonitor, VERTRES).
+			SM_CYSIZE                      = 31,     // The height of a button in a window caption or title bar, in pixels.
+			SM_CYSIZEFRAME                 = 33,     // The thickness of the sizing border around the perimeter of a window that can be resized, in pixels.SM_CXSIZEFRAME is the width of the horizontal border, and SM_CYSIZEFRAME is the height of the vertical border. This value is the same as SM_CYFRAME.
+			SM_CYSMCAPTION                 = 51,     // The height of a small caption, in pixels.
+			SM_CYSMICON                    = 50,     // The recommended height of a small icon, in pixels.Small icons typically appear in window captions and in small icon view.
+			SM_CYSMSIZE                    = 53,     // The height of small caption buttons, in pixels.
+			SM_CYVIRTUALSCREEN             = 79,     // The height of the virtual screen, in pixels.The virtual screen is the bounding rectangle of all display monitors.The SM_YVIRTUALSCREEN metric is the coordinates for the top of the virtual screen.
+			SM_CYVSCROLL                   = 20,     // The height of the arrow bitmap on a vertical scroll bar, in pixels.
+			SM_CYVTHUMB                    = 9,      // The height of the thumb box in a vertical scroll bar, in pixels.
+			SM_DBCSENABLED                 = 42,     // Nonzero if User32.dll supports DBCS; otherwise, 0.
+			SM_DEBUG                       = 22,     // Nonzero if the debug version of User.exe is installed; otherwise, 0.
+			SM_DIGITIZER                   = 94,     // Nonzero if the current operating system is Windows 7 or Windows Server 2008 R2 and the Tablet PC Input service is started; otherwise, 0. The return value is a bitmask that specifies the type of digitizer input supported by the device.For more information, see Remarks. Windows Server 2008, Windows Vista and Windows XP/2000:  This value is not supported.
+			SM_IMMENABLED                  = 82,     // Nonzero if Input Method Manager/Input Method Editor features are enabled; otherwise, 0. SM_IMMENABLED indicates whether the system is ready to use a Unicode-based IME on a Unicode application.To ensure that a language-dependent IME works, check SM_DBCSENABLED and the system ANSI code page. Otherwise the ANSI-to-Unicode conversion may not be performed correctly, or some components like fonts or registry settings may not be present.
+			SM_MAXIMUMTOUCHES              = 95,     // Nonzero if there are digitizers in the system; otherwise, 0. SM_MAXIMUMTOUCHES returns the aggregate maximum of the maximum number of contacts supported by every digitizer in the system.If the system has only single-touch digitizers, the return value is 1. If the system has multi-touch digitizers, the return value is the number of simultaneous contacts the hardware can provide. Windows Server 2008, Windows Vista and Windows XP/2000:  This value is not supported.
+			SM_MEDIACENTER                 = 87,     // Nonzero if the current operating system is the Windows XP, Media Center Edition, 0 if not.
+			SM_MENUDROPALIGNMENT           = 40,     // Nonzero if drop-down menus are right-aligned with the corresponding menu-bar item; 0 if the menus are left-aligned.
+			SM_MIDEASTENABLED              = 74,     // Nonzero if the system is enabled for Hebrew and Arabic languages, 0 if not.
+			SM_MOUSEPRESENT                = 19,     // Nonzero if a mouse is installed; otherwise, 0. This value is rarely zero, because of support for virtual mice and because some systems detect the presence of the port instead of the presence of a mouse.
+			SM_MOUSEHORIZONTALWHEELPRESENT = 91,     // Nonzero if a mouse with a horizontal scroll wheel is installed; otherwise 0.
+			SM_MOUSEWHEELPRESENT           = 75,     // Nonzero if a mouse with a vertical scroll wheel is installed; otherwise 0.
+			SM_NETWORK                     = 63,     // The least significant bit is set if a network is present; otherwise, it is cleared.The other bits are reserved for future use.
+			SM_PENWINDOWS                  = 41,     // Nonzero if the Microsoft Windows for Pen computing extensions are installed; zero otherwise.
+			SM_REMOTECONTROL               = 0x2001, // This system metric is used in a Terminal Services environment to determine if the current Terminal Server session is being remotely controlled.Its value is nonzero if the current session is remotely controlled; otherwise, 0. You can use terminal services management tools such as Terminal Services Manager(tsadmin.msc) and shadow.exe to control a remote session.When a session is being remotely controlled, another user can view the contents of that session and potentially interact with it.
+			SM_REMOTESESSION               = 0x1000, // This system metric is used in a Terminal Services environment. If the calling process is associated with a Terminal Services client session, the return value is nonzero.If the calling process is associated with the Terminal Services console session, the return value is 0. Windows Server 2003 and Windows XP:  The console session is not necessarily the physical console.For more information, see WTSGetActiveConsoleSessionId.
+			SM_SAMEDISPLAYFORMAT           = 81,     // Nonzero if all the display monitors have the same color format, otherwise, 0. Two displays can have the same bit depth, but different color formats. For example, the red, green, and blue pixels can be encoded with different numbers of bits, or those bits can be located in different places in a pixel color value.
+			SM_SECURE                      = 44,     // This system metric should be ignored; it always returns 0.
+			SM_SERVERR2                    = 89,     // The build number if the system is Windows Server 2003 R2; otherwise, 0.
+			SM_SHOWSOUNDS                  = 70,     // Nonzero if the user requires an application to present information visually in situations where it would otherwise present the information only in audible form; otherwise, 0.
+			SM_SHUTTINGDOWN                = 0x2000, // Nonzero if the current session is shutting down; otherwise, 0. Windows 2000:  This value is not supported.
+			SM_SLOWMACHINE                 = 73,     // Nonzero if the computer has a low-end (slow) processor; otherwise, 0.
+			SM_STARTER                     = 88,     // Nonzero if the current operating system is Windows 7 Starter Edition, Windows Vista Starter, or Windows XP Starter Edition; otherwise, 0.
+			SM_SWAPBUTTON                  = 23,     // Nonzero if the meanings of the left and right mouse buttons are swapped; otherwise, 0.
+			SM_SYSTEMDOCKED                = 0x2004, // Reflects the state of the docking mode, 0 for Undocked Mode and non-zero otherwise.When this system metric changes, the system sends a broadcast message via WM_SETTINGCHANGE with "SystemDockMode" in the LPARAM.
+			SM_TABLETPC                    = 86,     // Nonzero if the current operating system is the Windows XP Tablet PC edition or if the current operating system is Windows Vista or Windows 7 and the Tablet PC Input service is started; otherwise, 0. The SM_DIGITIZER setting indicates the type of digitizer input supported by a device running Windows 7 or Windows Server 2008 R2.For more information, see Remarks.
+			SM_XVIRTUALSCREEN              = 76,     // The coordinates for the left side of the virtual screen.The virtual screen is the bounding rectangle of all display monitors.The SM_CXVIRTUALSCREEN metric is the width of the virtual screen.
+			SM_YVIRTUALSCREEN              = 77,     // The coordinates for the top of the virtual screen.The virtual screen is the bounding rectangle of all display monitors.The SM_CYVIRTUALSCREEN metric is the height of the virtual screen.
+		}
+		#endregion
+
+		#region Text Mode TM_
+		public const int TM_PLAINTEXT       = 1;
+		public const int TM_RICHTEXT        = 2; // default behaviour
+		public const int TM_SINGLELEVELUNDO = 4;
+		public const int TM_MULTILEVELUNDO  = 8; // default behaviour
+		public const int TM_SINGLECODEPAGE  = 16;
+		public const int TM_MULTICODEPAGE   = 32; // default behaviour
+		#endregion
+
+		#region Virtual key VK_
+		// VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
+		// 0x40 : unassigned
+		// VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A)
+		public const byte VK_LBUTTON = 0x01;
+		public const byte VK_RBUTTON = 0x02;
+		public const byte VK_CANCEL = 0x03;
+		public const byte VK_MBUTTON = 0x04;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_XBUTTON1 = 0x05;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_XBUTTON2 = 0x06;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_BACK = 0x08;
+		public const byte VK_TAB = 0x09;
+		public const byte VK_CLEAR = 0x0C;
+		public const byte VK_RETURN = 0x0D;
+		public const byte VK_SHIFT = 0x10;
+		public const byte VK_CONTROL = 0x11;
+		public const byte VK_MENU = 0x12;
+		public const byte VK_PAUSE = 0x13;
+		public const byte VK_CAPITAL = 0x14;
+		public const byte VK_KANA = 0x15;
+		public const byte VK_HANGEUL = 0x15;  /* old name - should be here for compatibility */
+		public const byte VK_HANGUL = 0x15;
+		public const byte VK_JUNJA = 0x17;
+		public const byte VK_FINAL = 0x18;
+		public const byte VK_HANJA = 0x19;
+		public const byte VK_KANJI = 0x19;
+		public const byte VK_ESCAPE = 0x1B;
+		public const byte VK_CONVERT = 0x1C;
+		public const byte VK_NONCONVERT = 0x1D;
+		public const byte VK_ACCEPT = 0x1E;
+		public const byte VK_MODECHANGE = 0x1F;
+		public const byte VK_SPACE = 0x20;
+		public const byte VK_PRIOR = 0x21;
+		public const byte VK_NEXT = 0x22;
+		public const byte VK_END = 0x23;
+		public const byte VK_HOME = 0x24;
+		public const byte VK_LEFT = 0x25;
+		public const byte VK_UP = 0x26;
+		public const byte VK_RIGHT = 0x27;
+		public const byte VK_DOWN = 0x28;
+		public const byte VK_SELECT = 0x29;
+		public const byte VK_PRINT = 0x2A;
+		public const byte VK_EXECUTE = 0x2B;
+		public const byte VK_SNAPSHOT = 0x2C;
+		public const byte VK_INSERT = 0x2D;
+		public const byte VK_DELETE = 0x2E;
+		public const byte VK_HELP = 0x2F;
+		public const byte VK_LWIN = 0x5B;
+		public const byte VK_RWIN = 0x5C;
+		public const byte VK_APPS = 0x5D;
+		public const byte VK_SLEEP = 0x5F;
+		public const byte VK_NUMPAD0 = 0x60;
+		public const byte VK_NUMPAD1 = 0x61;
+		public const byte VK_NUMPAD2 = 0x62;
+		public const byte VK_NUMPAD3 = 0x63;
+		public const byte VK_NUMPAD4 = 0x64;
+		public const byte VK_NUMPAD5 = 0x65;
+		public const byte VK_NUMPAD6 = 0x66;
+		public const byte VK_NUMPAD7 = 0x67;
+		public const byte VK_NUMPAD8 = 0x68;
+		public const byte VK_NUMPAD9 = 0x69;
+		public const byte VK_MULTIPLY = 0x6A;
+		public const byte VK_ADD = 0x6B;
+		public const byte VK_SEPARATOR = 0x6C;
+		public const byte VK_SUBTRACT = 0x6D;
+		public const byte VK_DECIMAL = 0x6E;
+		public const byte VK_DIVIDE = 0x6F;
+		public const byte VK_F1 = 0x70;
+		public const byte VK_F2 = 0x71;
+		public const byte VK_F3 = 0x72;
+		public const byte VK_F4 = 0x73;
+		public const byte VK_F5 = 0x74;
+		public const byte VK_F6 = 0x75;
+		public const byte VK_F7 = 0x76;
+		public const byte VK_F8 = 0x77;
+		public const byte VK_F9 = 0x78;
+		public const byte VK_F10 = 0x79;
+		public const byte VK_F11 = 0x7A;
+		public const byte VK_F12 = 0x7B;
+		public const byte VK_F13 = 0x7C;
+		public const byte VK_F14 = 0x7D;
+		public const byte VK_F15 = 0x7E;
+		public const byte VK_F16 = 0x7F;
+		public const byte VK_F17 = 0x80;
+		public const byte VK_F18 = 0x81;
+		public const byte VK_F19 = 0x82;
+		public const byte VK_F20 = 0x83;
+		public const byte VK_F21 = 0x84;
+		public const byte VK_F22 = 0x85;
+		public const byte VK_F23 = 0x86;
+		public const byte VK_F24 = 0x87;
+		public const byte VK_NUMLOCK = 0x90;
+		public const byte VK_SCROLL = 0x91;
+		public const byte VK_OEM_NEC_EQUAL = 0x92;   // '=' key on numpad
+		public const byte VK_OEM_FJ_JISHO = 0x92;   // 'Dictionary' key
+		public const byte VK_OEM_FJ_MASSHOU = 0x93;   // 'Unregister word' key
+		public const byte VK_OEM_FJ_TOUROKU = 0x94;   // 'Register word' key
+		public const byte VK_OEM_FJ_LOYA = 0x95;   // 'Left OYAYUBI' key
+		public const byte VK_OEM_FJ_ROYA = 0x96;   // 'Right OYAYUBI' key
+		public const byte VK_LSHIFT = 0xA0;
+		public const byte VK_RSHIFT = 0xA1;
+		public const byte VK_LCONTROL = 0xA2;
+		public const byte VK_RCONTROL = 0xA3;
+		public const byte VK_LMENU = 0xA4;
+		public const byte VK_RMENU = 0xA5;
+		public const byte VK_BROWSER_BACK = 0xA6;
+		public const byte VK_BROWSER_FORWARD = 0xA7;
+		public const byte VK_BROWSER_REFRESH = 0xA8;
+		public const byte VK_BROWSER_STOP = 0xA9;
+		public const byte VK_BROWSER_SEARCH = 0xAA;
+		public const byte VK_BROWSER_FAVORITES = 0xAB;
+		public const byte VK_BROWSER_HOME = 0xAC;
+		public const byte VK_VOLUME_MUTE = 0xAD;
+		public const byte VK_VOLUME_DOWN = 0xAE;
+		public const byte VK_VOLUME_UP = 0xAF;
+		public const byte VK_MEDIA_NEXT_TRACK = 0xB0;
+		public const byte VK_MEDIA_PREV_TRACK = 0xB1;
+		public const byte VK_MEDIA_STOP = 0xB2;
+		public const byte VK_MEDIA_PLAY_PAUSE = 0xB3;
+		public const byte VK_LAUNCH_MAIL = 0xB4;
+		public const byte VK_LAUNCH_MEDIA_SELECT = 0xB5;
+		public const byte VK_LAUNCH_APP1 = 0xB6;
+		public const byte VK_LAUNCH_APP2 = 0xB7;
+		public const byte VK_OEM_1 = 0xBA;   // ';:' for US
+		public const byte VK_OEM_PLUS = 0xBB;   // '+' any country
+		public const byte VK_OEM_COMMA = 0xBC;   // ',' any country
+		public const byte VK_OEM_MINUS = 0xBD;   // '-' any country
+		public const byte VK_OEM_PERIOD = 0xBE;   // '.' any country
+		public const byte VK_OEM_2 = 0xBF;   // '/?' for US
+		public const byte VK_OEM_3 = 0xC0;   // '`~' for US
+		public const byte VK_OEM_4 = 0xDB;  //  '[{' for US
+		public const byte VK_OEM_5 = 0xDC;  //  '\|' for US
+		public const byte VK_OEM_6 = 0xDD;  //  ']}' for US
+		public const byte VK_OEM_7 = 0xDE;  //  ''"' for US
+		public const byte VK_OEM_8 = 0xDF;
+		public const byte VK_OEM_AX = 0xE1;  //  'AX' key on Japanese AX kbd
+		public const byte VK_OEM_102 = 0xE2;  //  "<>" or "\|" on RT 102-key kbd.
+		public const byte VK_ICO_HELP = 0xE3;  //  Help key on ICO
+		public const byte VK_ICO_00 = 0xE4;  //  00 key on ICO
+		public const byte VK_PROCESSKEY = 0xE5;
+		public const byte VK_ICO_CLEAR = 0xE6;
+		public const byte VK_PACKET = 0xE7;
+		public const byte VK_OEM_RESET = 0xE9;
+		public const byte VK_OEM_JUMP = 0xEA;
+		public const byte VK_OEM_PA1 = 0xEB;
+		public const byte VK_OEM_PA2 = 0xEC;
+		public const byte VK_OEM_PA3 = 0xED;
+		public const byte VK_OEM_WSCTRL = 0xEE;
+		public const byte VK_OEM_CUSEL = 0xEF;
+		public const byte VK_OEM_ATTN = 0xF0;
+		public const byte VK_OEM_FINISH = 0xF1;
+		public const byte VK_OEM_COPY = 0xF2;
+		public const byte VK_OEM_AUTO = 0xF3;
+		public const byte VK_OEM_ENLW = 0xF4;
+		public const byte VK_OEM_BACKTAB = 0xF5;
+		public const byte VK_ATTN = 0xF6;
+		public const byte VK_CRSEL = 0xF7;
+		public const byte VK_EXSEL = 0xF8;
+		public const byte VK_EREOF = 0xF9;
+		public const byte VK_PLAY = 0xFA;
+		public const byte VK_ZOOM = 0xFB;
+		public const byte VK_NONAME = 0xFC;
+		public const byte VK_PA1 = 0xFD;
+		public const byte VK_OEM_CLEAR = 0xFE;
+		#endregion
 
 		#region Windows Messages
 		public const int WM_NULL = 0x0000;
@@ -283,29 +1648,73 @@ namespace Rylogic.Interop.Win32
 		public const int WM_REFLECT = 0x2000;
 		public const int WM_APP = 0x8000;
 		public const int WM_USER = 0x0400;
+		#endregion
 
-		/// <summary>Convert a message constant to a string</summary>
-		public static string MsgIdToString(int msg_id)
-		{
-			if (!m_wm_name.TryGetValue(msg_id, out var name))
-			{
-				var fi = typeof(Win32).GetFields(BindingFlags.Public | BindingFlags.Static)
-					.Where(x => x.IsLiteral)
-					.Where(x => x.Name.StartsWith("WM_") || x.Name.StartsWith("EM_"))
-					.FirstOrDefault(x =>
-						{
-							var val = x.GetValue(null);
-							if (val is uint v0) return v0 == (uint)msg_id;
-							if (val is int v1) return v1 == msg_id;
-							return false;
-						});
+		#region windows message high WH_
+		public const int WH_MOUSE_LL = 14;
+		public const int WH_KEYBOARD_LL = 13;
+		public const int WH_MOUSE = 7;
+		public const int WH_KEYBOARD = 2;
+		#endregion
 
-				name = fi != null ? fi.Name : string.Empty;
-				m_wm_name.Add(msg_id, name);
-			}
-			return name;
-		}
-		private static Dictionary<int, string> m_wm_name = new();
+		#region Window Styles WS_
+		public const int WS_POPUP                         = unchecked((int)0x80000000); // The windows is a pop-up window. This style cannot be used with the WS_CHILD style.
+		public const int WS_CHILD                         = unchecked(0x40000000); // The window is a child window. A window with this style cannot have a menu bar. This style cannot be used with the WS_POPUP style.
+		public const int WS_CHILDWINDOW                   = unchecked(0x40000000); // Same as the WS_CHILD style.
+		public const int WS_ICONIC                        = unchecked(0x20000000); // The window is initially minimized. Same as the WS_MINIMIZE style.
+		public const int WS_MINIMIZE                      = unchecked(0x20000000); // The window is initially minimized. Same as the WS_ICONIC style.
+		public const int WS_VISIBLE                       = unchecked(0x10000000); // The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
+		public const int WS_DISABLED                      = unchecked(0x08000000); // The window is initially disabled. A disabled window cannot receive input from the user. To change this after a window has been created, use the EnableWindow function.
+		public const int WS_CLIPSIBLINGS                  = unchecked(0x04000000); // Clips child windows relative to each other; that is, when a particular child window receives a WM_PAINT message, the WS_CLIPSIBLINGS style clips all other overlapping child windows out of the region of the child window to be updated. If WS_CLIPSIBLINGS is not specified and child windows overlap, it is possible, when drawing within the client area of a child window, to draw within the client area of a neighboring child window.
+		public const int WS_CLIPCHILDREN                  = unchecked(0x02000000); // Excludes the area occupied by child windows when drawing occurs within the parent window. This style is used when creating the parent window.
+		public const int WS_MAXIMIZE                      = unchecked(0x01000000); // The window is initially maximized.
+		public const int WS_CAPTION                       = unchecked(0x00C00000); // The window has a title bar (includes the WS_BORDER style).
+		public const int WS_BORDER                        = unchecked(0x00800000); // The window has a thin-line border.
+		public const int WS_DLGFRAME                      = unchecked(0x00400000); // The window has a border of a style typically used with dialog boxes. A window with this style cannot have a title bar.
+		public const int WS_VSCROLL                       = unchecked(0x00200000); // The window has a vertical scroll bar.
+		public const int WS_HSCROLL                       = unchecked(0x00100000); // The window has a horizontal scroll bar.
+		public const int WS_SYSMENU                       = unchecked(0x00080000); // The window has a window menu on its title bar. The WS_CAPTION style must also be specified.
+		public const int WS_SIZEBOX                       = unchecked(0x00040000); // The window has a sizing border. Same as the WS_THICKFRAME style.
+		public const int WS_THICKFRAME                    = unchecked(0x00040000); // The window has a sizing border. Same as the WS_SIZEBOX style.
+		public const int WS_GROUP                         = unchecked(0x00020000); // The window is the first control of a group of controls. The group consists of this first control and all controls defined after it, up to the next control with the WS_GROUP style. The first control in each group usually has the WS_TABSTOP style so that the user can move from group to group. The user can subsequently change the keyboard focus from one control in the group to the next control in the group by using the direction keys. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function.
+		public const int WS_MINIMIZEBOX                   = unchecked(0x00020000); // The window has a minimize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
+		public const int WS_MAXIMIZEBOX                   = unchecked(0x00010000); // The window has a maximize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
+		public const int WS_TABSTOP                       = unchecked(0x00010000); // The window is a control that can receive the keyboard focus when the user presses the TAB key. Pressing the TAB key changes the keyboard focus to the next control with the WS_TABSTOP style. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function. For user-created windows and modeless dialogs to work with tab stops, alter the message loop to call the IsDialogMessage function.
+		public const int WS_TILED                         = unchecked(0x00000000); // The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_OVERLAPPED style.
+		public const int WS_OVERLAPPED                    = unchecked(0x00000000); // The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style.
+		public const int WS_POPUPWINDOW                   = unchecked(WS_POPUP | WS_BORDER | WS_SYSMENU); // The window is a pop-up window. The WS_CAPTION and WS_POPUPWINDOW styles must be combined to make the window menu visible.
+		public const int WS_TILEDWINDOW                   = unchecked(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // The window is an overlapped window. Same as the WS_OVERLAPPEDWINDOW style.
+		public const int WS_OVERLAPPEDWINDOW              = unchecked(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // The window is an overlapped window. Same as the WS_TILEDWINDOW style.
+		#endregion
+
+		#region Window Styles Extended WS_EX_ 
+		public const int WS_EX_DLGMODALFRAME              = 0x00000001;
+		public const int WS_EX_NOPARENTNOTIFY             = 0x00000004;
+		public const int WS_EX_TOPMOST                    = 0x00000008;
+		public const int WS_EX_ACCEPTFILES                = 0x00000010;
+		public const int WS_EX_TRANSPARENT                = 0x00000020;
+		public const int WS_EX_MDICHILD                   = 0x00000040;
+		public const int WS_EX_TOOLWINDOW                 = 0x00000080;
+		public const int WS_EX_WINDOWEDGE                 = 0x00000100;
+		public const int WS_EX_CLIENTEDGE                 = 0x00000200;
+		public const int WS_EX_CONTEXTHELP                = 0x00000400;
+		public const int WS_EX_RIGHT                      = 0x00001000;
+		public const int WS_EX_LEFT                       = 0x00000000;
+		public const int WS_EX_RTLREADING                 = 0x00002000;
+		public const int WS_EX_LTRREADING                 = 0x00000000;
+		public const int WS_EX_LEFTSCROLLBAR              = 0x00004000;
+		public const int WS_EX_RIGHTSCROLLBAR             = 0x00000000;
+		public const int WS_EX_CONTROLPARENT              = 0x00010000;
+		public const int WS_EX_STATICEDGE                 = 0x00020000;
+		public const int WS_EX_APPWINDOW                  = 0x00040000;
+		public const int WS_EX_OVERLAPPEDWINDOW           = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE;
+		public const int WS_EX_PALETTEWINDOW              = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
+		public const int WS_EX_LAYERED                    = 0x00080000;
+		public const int WS_EX_NOINHERITLAYOUT            = 0x00100000; // Disable inheritence of mirroring by children
+		public const int WS_EX_NOREDIRECTIONBITMAP        = 0x00200000;
+		public const int WS_EX_COMPOSITED                 = 0x02000000;
+		public const int WS_EX_LAYOUTRTL                  = 0x00400000;
+		public const int WS_EX_NOACTIVATE                 = 0x08000000;
 		#endregion
 
 		#region WM_NOTIFY codes
@@ -381,1175 +1790,6 @@ namespace Rylogic.Interop.Win32
 		public const uint WA_CLICKACTIVE = 2;
 		#endregion
 
-		#region Create Window
-		public const int CW_USEDEFAULT = unchecked((int)0x80000000);
-		#endregion
-
-		#region Mouse key MK_
-		// Key State Masks for Mouse Messages
-		public const int MK_LBUTTON = 0x0001;
-		public const int MK_RBUTTON = 0x0002;
-		public const int MK_SHIFT = 0x0004;
-		public const int MK_CONTROL = 0x0008;
-		public const int MK_MBUTTON = 0x0010;
-		public const int MK_XBUTTON1 = 0x0020;
-		public const int MK_XBUTTON2 = 0x0040;
-		#endregion
-
-		#region Show Window SW_
-		public const int SW_HIDE = 0;
-		public const int SW_SHOWNORMAL = 1;
-		public const int SW_NORMAL = 1;
-		public const int SW_SHOWMINIMIZED = 2;
-		public const int SW_SHOWMAXIMIZED = 3;
-		public const int SW_MAXIMIZE = 3;
-		public const int SW_SHOWNOACTIVATE = 4;
-		public const int SW_SHOW = 5;
-		public const int SW_MINIMIZE = 6;
-		public const int SW_SHOWMINNOACTIVE = 7;
-		public const int SW_SHOWNA = 8;
-		public const int SW_RESTORE = 9;
-		public const int SW_SHOWDEFAULT = 10;
-		public const int SW_FORCEMINIMIZE = 11;
-		public const int SW_MAX = 11;
-
-		// WM_SHOWWINDOW message constants
-		public const int SW_PARENTCLOSING = 1;
-		public const int SW_OTHERZOOM = 2;
-		public const int SW_PARENTOPENING = 3;
-		public const int SW_OTHERUNZOOM = 4;
-		#endregion
-
-		#region Set Window Position SWP_
-		public const int SWP_NOSIZE = 0x0001;
-		public const int SWP_NOMOVE = 0x0002;
-		public const int SWP_NOZORDER = 0x0004;
-		public const int SWP_NOREDRAW = 0x0008;
-		public const int SWP_NOACTIVATE = 0x0010;
-		public const int SWP_FRAMECHANGED = 0x0020;
-		public const int SWP_SHOWWINDOW = 0x0040;
-		public const int SWP_HIDEWINDOW = 0x0080;
-		public const int SWP_NOCOPYBITS = 0x0100;
-		public const int SWP_NOOWNERZORDER = 0x0200;
-		public const int SWP_NOSENDCHANGING = 0x0400;
-		public const int SWP_DRAWFRAME = SWP_FRAMECHANGED;
-		public const int SWP_NOREPOSITION = SWP_NOOWNERZORDER;
-		public const int SWP_DEFERERASE = 0x2000;
-		public const int SWP_ASYNCWINDOWPOS = 0x4000;
-		#endregion
-
-		#region Redraw Window RDW_
-		public const int RDW_INVALIDATE = 0x0001;
-		public const int RDW_INTERNALPAINT = 0x0002;
-		public const int RDW_ERASE = 0x0004;
-		public const int RDW_VALIDATE = 0x0008;
-		public const int RDW_NOINTERNALPAINT = 0x0010;
-		public const int RDW_NOERASE = 0x0020;
-		public const int RDW_NOCHILDREN = 0x0040;
-		public const int RDW_ALLCHILDREN = 0x0080;
-		public const int RDW_UPDATENOW = 0x0100;
-		public const int RDW_ERASENOW = 0x0200;
-		public const int RDW_FRAME = 0x0400;
-		public const int RDW_NOFRAME = 0x0800;
-		#endregion
-
-		#region HWND constants HWND_
-		public static readonly HWND HWND_TOP = new(0);
-		public static readonly HWND HWND_BOTTOM = new(1);
-		public static readonly HWND HWND_TOPMOST = new(-1);
-		public static readonly HWND HWND_NOTOPMOST = new(-2);
-		#endregion
-
-		#region NF_,NFR_
-		public const int NFR_ANSI = 1;
-		public const int NFR_UNICODE = 2;
-		public const int NF_QUERY = 3;
-		public const int NF_REQUERY = 4;
-		#endregion
-
-		#region windows message high WH_
-		public const int WH_MOUSE_LL = 14;
-		public const int WH_KEYBOARD_LL = 13;
-		public const int WH_MOUSE = 7;
-		public const int WH_KEYBOARD = 2;
-		#endregion
-
-		#region Virtual key VK_
-		// VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
-		// 0x40 : unassigned
-		// VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A)
-		public const byte VK_LBUTTON = 0x01;
-		public const byte VK_RBUTTON = 0x02;
-		public const byte VK_CANCEL = 0x03;
-		public const byte VK_MBUTTON = 0x04;    /* NOT contiguous with L & RBUTTON */
-		public const byte VK_XBUTTON1 = 0x05;    /* NOT contiguous with L & RBUTTON */
-		public const byte VK_XBUTTON2 = 0x06;    /* NOT contiguous with L & RBUTTON */
-		public const byte VK_BACK = 0x08;
-		public const byte VK_TAB = 0x09;
-		public const byte VK_CLEAR = 0x0C;
-		public const byte VK_RETURN = 0x0D;
-		public const byte VK_SHIFT = 0x10;
-		public const byte VK_CONTROL = 0x11;
-		public const byte VK_MENU = 0x12;
-		public const byte VK_PAUSE = 0x13;
-		public const byte VK_CAPITAL = 0x14;
-		public const byte VK_KANA = 0x15;
-		public const byte VK_HANGEUL = 0x15;  /* old name - should be here for compatibility */
-		public const byte VK_HANGUL = 0x15;
-		public const byte VK_JUNJA = 0x17;
-		public const byte VK_FINAL = 0x18;
-		public const byte VK_HANJA = 0x19;
-		public const byte VK_KANJI = 0x19;
-		public const byte VK_ESCAPE = 0x1B;
-		public const byte VK_CONVERT = 0x1C;
-		public const byte VK_NONCONVERT = 0x1D;
-		public const byte VK_ACCEPT = 0x1E;
-		public const byte VK_MODECHANGE = 0x1F;
-		public const byte VK_SPACE = 0x20;
-		public const byte VK_PRIOR = 0x21;
-		public const byte VK_NEXT = 0x22;
-		public const byte VK_END = 0x23;
-		public const byte VK_HOME = 0x24;
-		public const byte VK_LEFT = 0x25;
-		public const byte VK_UP = 0x26;
-		public const byte VK_RIGHT = 0x27;
-		public const byte VK_DOWN = 0x28;
-		public const byte VK_SELECT = 0x29;
-		public const byte VK_PRINT = 0x2A;
-		public const byte VK_EXECUTE = 0x2B;
-		public const byte VK_SNAPSHOT = 0x2C;
-		public const byte VK_INSERT = 0x2D;
-		public const byte VK_DELETE = 0x2E;
-		public const byte VK_HELP = 0x2F;
-		public const byte VK_LWIN = 0x5B;
-		public const byte VK_RWIN = 0x5C;
-		public const byte VK_APPS = 0x5D;
-		public const byte VK_SLEEP = 0x5F;
-		public const byte VK_NUMPAD0 = 0x60;
-		public const byte VK_NUMPAD1 = 0x61;
-		public const byte VK_NUMPAD2 = 0x62;
-		public const byte VK_NUMPAD3 = 0x63;
-		public const byte VK_NUMPAD4 = 0x64;
-		public const byte VK_NUMPAD5 = 0x65;
-		public const byte VK_NUMPAD6 = 0x66;
-		public const byte VK_NUMPAD7 = 0x67;
-		public const byte VK_NUMPAD8 = 0x68;
-		public const byte VK_NUMPAD9 = 0x69;
-		public const byte VK_MULTIPLY = 0x6A;
-		public const byte VK_ADD = 0x6B;
-		public const byte VK_SEPARATOR = 0x6C;
-		public const byte VK_SUBTRACT = 0x6D;
-		public const byte VK_DECIMAL = 0x6E;
-		public const byte VK_DIVIDE = 0x6F;
-		public const byte VK_F1 = 0x70;
-		public const byte VK_F2 = 0x71;
-		public const byte VK_F3 = 0x72;
-		public const byte VK_F4 = 0x73;
-		public const byte VK_F5 = 0x74;
-		public const byte VK_F6 = 0x75;
-		public const byte VK_F7 = 0x76;
-		public const byte VK_F8 = 0x77;
-		public const byte VK_F9 = 0x78;
-		public const byte VK_F10 = 0x79;
-		public const byte VK_F11 = 0x7A;
-		public const byte VK_F12 = 0x7B;
-		public const byte VK_F13 = 0x7C;
-		public const byte VK_F14 = 0x7D;
-		public const byte VK_F15 = 0x7E;
-		public const byte VK_F16 = 0x7F;
-		public const byte VK_F17 = 0x80;
-		public const byte VK_F18 = 0x81;
-		public const byte VK_F19 = 0x82;
-		public const byte VK_F20 = 0x83;
-		public const byte VK_F21 = 0x84;
-		public const byte VK_F22 = 0x85;
-		public const byte VK_F23 = 0x86;
-		public const byte VK_F24 = 0x87;
-		public const byte VK_NUMLOCK = 0x90;
-		public const byte VK_SCROLL = 0x91;
-		public const byte VK_OEM_NEC_EQUAL = 0x92;   // '=' key on numpad
-		public const byte VK_OEM_FJ_JISHO = 0x92;   // 'Dictionary' key
-		public const byte VK_OEM_FJ_MASSHOU = 0x93;   // 'Unregister word' key
-		public const byte VK_OEM_FJ_TOUROKU = 0x94;   // 'Register word' key
-		public const byte VK_OEM_FJ_LOYA = 0x95;   // 'Left OYAYUBI' key
-		public const byte VK_OEM_FJ_ROYA = 0x96;   // 'Right OYAYUBI' key
-		public const byte VK_LSHIFT = 0xA0;
-		public const byte VK_RSHIFT = 0xA1;
-		public const byte VK_LCONTROL = 0xA2;
-		public const byte VK_RCONTROL = 0xA3;
-		public const byte VK_LMENU = 0xA4;
-		public const byte VK_RMENU = 0xA5;
-		public const byte VK_BROWSER_BACK = 0xA6;
-		public const byte VK_BROWSER_FORWARD = 0xA7;
-		public const byte VK_BROWSER_REFRESH = 0xA8;
-		public const byte VK_BROWSER_STOP = 0xA9;
-		public const byte VK_BROWSER_SEARCH = 0xAA;
-		public const byte VK_BROWSER_FAVORITES = 0xAB;
-		public const byte VK_BROWSER_HOME = 0xAC;
-		public const byte VK_VOLUME_MUTE = 0xAD;
-		public const byte VK_VOLUME_DOWN = 0xAE;
-		public const byte VK_VOLUME_UP = 0xAF;
-		public const byte VK_MEDIA_NEXT_TRACK = 0xB0;
-		public const byte VK_MEDIA_PREV_TRACK = 0xB1;
-		public const byte VK_MEDIA_STOP = 0xB2;
-		public const byte VK_MEDIA_PLAY_PAUSE = 0xB3;
-		public const byte VK_LAUNCH_MAIL = 0xB4;
-		public const byte VK_LAUNCH_MEDIA_SELECT = 0xB5;
-		public const byte VK_LAUNCH_APP1 = 0xB6;
-		public const byte VK_LAUNCH_APP2 = 0xB7;
-		public const byte VK_OEM_1 = 0xBA;   // ';:' for US
-		public const byte VK_OEM_PLUS = 0xBB;   // '+' any country
-		public const byte VK_OEM_COMMA = 0xBC;   // ',' any country
-		public const byte VK_OEM_MINUS = 0xBD;   // '-' any country
-		public const byte VK_OEM_PERIOD = 0xBE;   // '.' any country
-		public const byte VK_OEM_2 = 0xBF;   // '/?' for US
-		public const byte VK_OEM_3 = 0xC0;   // '`~' for US
-		public const byte VK_OEM_4 = 0xDB;  //  '[{' for US
-		public const byte VK_OEM_5 = 0xDC;  //  '\|' for US
-		public const byte VK_OEM_6 = 0xDD;  //  ']}' for US
-		public const byte VK_OEM_7 = 0xDE;  //  ''"' for US
-		public const byte VK_OEM_8 = 0xDF;
-		public const byte VK_OEM_AX = 0xE1;  //  'AX' key on Japanese AX kbd
-		public const byte VK_OEM_102 = 0xE2;  //  "<>" or "\|" on RT 102-key kbd.
-		public const byte VK_ICO_HELP = 0xE3;  //  Help key on ICO
-		public const byte VK_ICO_00 = 0xE4;  //  00 key on ICO
-		public const byte VK_PROCESSKEY = 0xE5;
-		public const byte VK_ICO_CLEAR = 0xE6;
-		public const byte VK_PACKET = 0xE7;
-		public const byte VK_OEM_RESET = 0xE9;
-		public const byte VK_OEM_JUMP = 0xEA;
-		public const byte VK_OEM_PA1 = 0xEB;
-		public const byte VK_OEM_PA2 = 0xEC;
-		public const byte VK_OEM_PA3 = 0xED;
-		public const byte VK_OEM_WSCTRL = 0xEE;
-		public const byte VK_OEM_CUSEL = 0xEF;
-		public const byte VK_OEM_ATTN = 0xF0;
-		public const byte VK_OEM_FINISH = 0xF1;
-		public const byte VK_OEM_COPY = 0xF2;
-		public const byte VK_OEM_AUTO = 0xF3;
-		public const byte VK_OEM_ENLW = 0xF4;
-		public const byte VK_OEM_BACKTAB = 0xF5;
-		public const byte VK_ATTN = 0xF6;
-		public const byte VK_CRSEL = 0xF7;
-		public const byte VK_EXSEL = 0xF8;
-		public const byte VK_EREOF = 0xF9;
-		public const byte VK_PLAY = 0xFA;
-		public const byte VK_ZOOM = 0xFB;
-		public const byte VK_NONAME = 0xFC;
-		public const byte VK_PA1 = 0xFD;
-		public const byte VK_OEM_CLEAR = 0xFE;
-
-		#region MAPKV - map virtual key
-		public const byte MAPVK_VK_TO_VSC = 0x0;
-		public const byte MAPVK_VSC_TO_VK = 0x1;
-		public const byte MAPVK_VK_TO_CHAR = 0x2;
-		public const byte MAPVK_VSC_TO_VK_EX = 0x3;
-		#endregion
-
-		#endregion
-
-		#region IME
-
-		// bit field for conversion mode
-		[Flags] public enum EIME_CMODE
-		{
-			ALPHANUMERIC = 0x0000,
-			NATIVE = 0x0001,
-			CHINESE = NATIVE,
-			HANGUL = NATIVE,
-			JAPANESE = NATIVE,
-			KATAKANA = 0x0002,// only effect under IME_CMODE_NATIVE
-			LANGUAGE = 0x0003,
-			FULLSHAPE = 0x0008,
-			ROMAN = 0x0010,
-			CHARCODE = 0x0020,
-			HANJACONVERT = 0x0040,
-			NATIVESYMBOL = 0x0080,
-			HANGEUL = NATIVE, // IME_CMODE_HANGEUL is old name of IME_CMODE_HANGUL. It will be gone eventually.
-			SOFTKBD = 0x0080,
-			NOCONVERSION = 0x0100,
-			EUDC = 0x0200,
-			SYMBOL = 0x0400,
-			FIXED = 0x0800,
-		}
-
-		// bit field for sentence mode
-		[Flags] public enum EIME_SMODE
-		{
-			NONE = 0x0000,
-			PLAURALCLAUSE = 0x0001,
-			SINGLECONVERT = 0x0002,
-			AUTOMATIC = 0x0004,
-			PHRASEPREDICT = 0x0008,
-			CONVERSATION = 0x0010,
-			RESERVED = 0x0000F000,
-		}
-
-		// style of candidate
-		public enum EIME_CAND
-		{
-			UNKNOWN = 0x0000,
-			READ = 0x0001,
-			CODE = 0x0002,
-			MEANING = 0x0003,
-			RADICAL = 0x0004,
-			STROKE = 0x0005,
-		}
-
-		// wParam of report message WM_IME_NOTIFY
-		public enum EIME_Notification
-		{
-			IMN_CLOSESTATUSWINDOW = 0x0001,
-			IMN_OPENSTATUSWINDOW = 0x0002,
-			IMN_CHANGECANDIDATE = 0x0003,
-			IMN_CLOSECANDIDATE = 0x0004,
-			IMN_OPENCANDIDATE = 0x0005,
-			IMN_SETCONVERSIONMODE = 0x0006,
-			IMN_SETSENTENCEMODE = 0x0007,
-			IMN_SETOPENSTATUS = 0x0008,
-			IMN_SETCANDIDATEPOS = 0x0009,
-			IMN_SETCOMPOSITIONFONT = 0x000A,
-			IMN_SETCOMPOSITIONWINDOW = 0x000B,
-			IMN_SETSTATUSWINDOWPOS = 0x000C,
-			IMN_GUIDELINE = 0x000D,
-			IMN_PRIVATE = 0x000E,
-		}
-
-		// wParam of report message WM_IME_REQUEST
-		public enum EIME_Request
-		{
-			COMPOSITIONWINDOW = 0x0001,
-			CANDIDATEWINDOW = 0x0002,
-			COMPOSITIONFONT = 0x0003,
-			RECONVERTSTRING = 0x0004,
-			CONFIRMRECONVERTSTRING = 0x0005,
-			QUERYCHARPOSITION = 0x0006,
-			DOCUMENTFEED = 0x0007,
-		}
-
-		// wParam for WM_IME_CONTROL
-		public enum EIME_Control
-		{
-			GETCANDIDATEPOS             = 0x0007,
-			SETCANDIDATEPOS             = 0x0008,
-			GETCOMPOSITIONFONT          = 0x0009,
-			SETCOMPOSITIONFONT          = 0x000A,
-			GETCOMPOSITIONWINDOW        = 0x000B,
-			SETCOMPOSITIONWINDOW        = 0x000C,
-			GETSTATUSWINDOWPOS          = 0x000F,
-			SETSTATUSWINDOWPOS          = 0x0010,
-			CLOSESTATUSWINDOW           = 0x0021,
-			OPENSTATUSWINDOW            = 0x0022,
-		}
-
-		// dwAction for ImmNotifyIME
-		public enum EIMM_Notification
-		{
-			OPENCANDIDATE                = 0x0010,
-			CLOSECANDIDATE               = 0x0011,
-			SELECTCANDIDATESTR           = 0x0012,
-			CHANGECANDIDATELIST          = 0x0013,
-			FINALIZECONVERSIONRESULT     = 0x0014,
-			COMPOSITIONSTR               = 0x0015,
-			SETCANDIDATE_PAGESTART       = 0x0016,
-			SETCANDIDATE_PAGESIZE        = 0x0017,
-			IMEMENUSELECTED              = 0x0018,
-		}
-
-		// lParam for WM_IME_SETCONTEXT
-		[Flags] public enum EIME_SetContextFlags :ulong
-		{
-			SHOWUICANDIDATEWINDOW       = 0x00000001,
-			SHOWUICOMPOSITIONWINDOW     = 0x80000000,
-			SHOWUIGUIDELINE             = 0x40000000,
-			SHOWUIALLCANDIDATEWINDOW    = 0x0000000F,
-			SHOWUIALL                   = 0xC000000F,
-		}
-
-		#endregion
-
-		#region GWL_, GWLP_
-		public const int GWL_WNDPROC   = -4;
-		public const int GWL_HINSTANCE = -6;
-		public const int GWL_ID        = -12;
-		public const int GWL_STYLE     = -16;
-		public const int GWL_EXSTYLE   = -20;
-		public const int GWL_USERDATA  = -21;
-		public const int GWLP_WNDPROC    = -4;
-		public const int GWLP_HINSTANCE  = -6;
-		public const int GWLP_HWNDPARENT = -8;
-		public const int GWLP_USERDATA   = -21;
-		public const int GWLP_ID         = -12;
-		#endregion
-
-		#region Get Class Long Pointer GCLP_, GCL_
-		public const int GCW_ATOM           = -32; // Retrieves an ATOM value that uniquely identifies the window class. This is the same atom that the RegisterClassEx function returns.
-		public const int GCL_CBCLSEXTRA     = -20; // Retrieves the size, in bytes, of the extra memory associated with the class.
-		public const int GCL_CBWNDEXTRA     = -18; // Retrieves the size, in bytes, of the extra window memory associated with each window in the class. For information on how to access this memory, see GetWindowLongPtr.
-		public const int GCLP_HBRBACKGROUND = -10; // Retrieves a handle to the background brush associated with the class.
-		public const int GCLP_HCURSOR       = -12; // Retrieves a handle to the cursor associated with the class.
-		public const int GCLP_HICON         = -14; // Retrieves a handle to the icon associated with the class.
-		public const int GCLP_HICONSM       = -34; // Retrieves a handle to the small icon associated with the class.
-		public const int GCLP_HMODULE       = -16; // Retrieves a handle to the module that registered the class.
-		public const int GCLP_MENUNAME      =  -8; // Retrieves the pointer to the menu name string. The string identifies the menu resource associated with the class.
-		public const int GCL_STYLE          = -26; // Retrieves the window-class style bits.
-		public const int GCLP_WNDPROC       = -24; // Retrieves the address of the window procedure, or a handle representing the address of the window procedure. You must use the CallWindowProc function to call the window procedure.
-		#endregion
-
-		#region TM_
-		public const int TM_PLAINTEXT       = 1;
-		public const int TM_RICHTEXT        = 2; // default behaviour
-		public const int TM_SINGLELEVELUNDO = 4;
-		public const int TM_MULTILEVELUNDO  = 8; // default behaviour
-		public const int TM_SINGLECODEPAGE  = 16;
-		public const int TM_MULTICODEPAGE   = 32; // default behaviour
-		#endregion
-
-		#region GetAncestor GA_
-		public const int GA_PARENT    = 1;
-		public const int GA_ROOT      = 2;
-		public const int GA_ROOTOWNER = 3;
-		#endregion
-
-		#region Common Control Messages CCM_
-		public const uint CCM_FIRST               = 0x2000;    // Common control shared messages
-		public const uint CCM_LAST                = (CCM_FIRST + 0x200);
-		public const uint CCM_SETBKCOLOR          = (CCM_FIRST + 0x1); // lParam is bkColor
-		public const uint CCM_SETCOLORSCHEME      = (CCM_FIRST + 0x2); // lParam is color scheme
-		public const uint CCM_GETCOLORSCHEME      = (CCM_FIRST + 0x3); // fills in COLORSCHEME pointed to by lParam
-		public const uint CCM_GETDROPTARGET       = (CCM_FIRST + 0x4);
-		public const uint CCM_SETUNICODEFORMAT    = (CCM_FIRST + 0x5);
-		public const uint CCM_GETUNICODEFORMAT    = (CCM_FIRST + 0x6);
-		public const uint CCM_SETVERSION          = (CCM_FIRST + 0x7);
-		public const uint CCM_GETVERSION          = (CCM_FIRST + 0x8);
-		public const uint CCM_SETNOTIFYWINDOW     = (CCM_FIRST + 0x9); // wParam == hwndParent.
-		public const uint CCM_SETWINDOWTHEME      = (CCM_FIRST + 0xb);
-		public const uint CCM_DPISCALE            = (CCM_FIRST + 0xc); // wParam == Awareness
-		#endregion
-
-		#region Edit Control
-		// Edit Control Styles
-		public const int ES_LEFT        = 0x0000;
-		public const int ES_CENTER      = 0x0001;
-		public const int ES_RIGHT       = 0x0002;
-		public const int ES_MULTILINE   = 0x0004;
-		public const int ES_UPPERCASE   = 0x0008;
-		public const int ES_LOWERCASE   = 0x0010;
-		public const int ES_PASSWORD    = 0x0020;
-		public const int ES_AUTOVSCROLL = 0x0040;
-		public const int ES_AUTOHSCROLL = 0x0080;
-		public const int ES_NOHIDESEL   = 0x0100;
-		public const int ES_OEMCONVERT  = 0x0400;
-		public const int ES_READONLY    = 0x0800;
-		public const int ES_WANTRETURN  = 0x1000;
-		public const int ES_NUMBER      = 0x2000;
-
-		// Edit Control Notification Codes
-		public const int EN_SETFOCUS     = 0x0100;
-		public const int EN_KILLFOCUS    = 0x0200;
-		public const int EN_CHANGE       = 0x0300;
-		public const int EN_UPDATE       = 0x0400;
-		public const int EN_ERRSPACE     = 0x0500;
-		public const int EN_MAXTEXT      = 0x0501;
-		public const int EN_HSCROLL      = 0x0601;
-		public const int EN_VSCROLL      = 0x0602;
-		public const int EN_ALIGN_LTR_EC = 0x0700;
-		public const int EN_ALIGN_RTL_EC = 0x0701;
-
-		// Edit control EM_SETMARGIN parameters
-		public const int EC_LEFTMARGIN  = 0x0001;
-		public const int EC_RIGHTMARGIN = 0x0002;
-		public const int EC_USEFONTINFO = 0xffff;
-
-		// Edit Control Messages
-		public const int EM_GETSEL               = 0x00B0;
-		public const int EM_SETSEL               = 0x00B1;
-		public const int EM_GETRECT              = 0x00B2;
-		public const int EM_SETRECT              = 0x00B3;
-		public const int EM_SETRECTNP            = 0x00B4;
-		public const int EM_SCROLL               = 0x00B5;
-		public const int EM_LINESCROLL           = 0x00B6;
-		public const int EM_SCROLLCARET          = 0x00B7;
-		public const int EM_GETMODIFY            = 0x00B8;
-		public const int EM_SETMODIFY            = 0x00B9;
-		public const int EM_GETLINECOUNT         = 0x00BA;
-		public const int EM_LINEINDEX            = 0x00BB;
-		public const int EM_SETHANDLE            = 0x00BC;
-		public const int EM_GETHANDLE            = 0x00BD;
-		public const int EM_GETTHUMB             = 0x00BE;
-		public const int EM_LINELENGTH           = 0x00C1;
-		public const int EM_REPLACESEL           = 0x00C2;
-		public const int EM_GETLINE              = 0x00C4;
-		public const int EM_LIMITTEXT            = 0x00C5;
-		public const int EM_CANUNDO              = 0x00C6;
-		public const int EM_UNDO                 = 0x00C7;
-		public const int EM_FMTLINES             = 0x00C8;
-		public const int EM_LINEFROMCHAR         = 0x00C9;
-		public const int EM_SETTABSTOPS          = 0x00CB;
-		public const int EM_SETPASSWORDCHAR      = 0x00CC;
-		public const int EM_EMPTYUNDOBUFFER      = 0x00CD;
-		public const int EM_GETFIRSTVISIBLELINE  = 0x00CE;
-		public const int EM_SETREADONLY          = 0x00CF;
-		public const int EM_SETWORDBREAKPROC     = 0x00D0;
-		public const int EM_GETWORDBREAKPROC     = 0x00D1;
-		public const int EM_GETPASSWORDCHAR      = 0x00D2;
-		public const int EM_SETMARGINS           = 0x00D3;
-		public const int EM_GETMARGINS           = 0x00D4;
-		public const int EM_SETLIMITTEXT         = EM_LIMITTEXT;//;win40 Name change 
-		public const int EM_GETLIMITTEXT         = 0x00D5;
-		public const int EM_POSFROMCHAR          = 0x00D6;
-		public const int EM_CHARFROMPOS          = 0x00D7;
-		public const int EM_SETIMESTATUS         = 0x00D8;
-		public const int EM_GETIMESTATUS         = 0x00D9;
-		public const int EM_FORMATRANGE          = (int)WM_USER + 57;
-
-		// EDITWORDBREAKPROC code values
-		public const int WB_LEFT        = 0;
-		public const int WB_RIGHT       = 1;
-		public const int WB_ISDELIMITER = 2;
-		#endregion
-
-		#region Rich Edit Control
-		//public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
-		//public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
-		//public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
-		//public const uint EM_SCROLLCARET                  = (WM_USER + 49);
-		public const uint EM_CANPASTE                     = (WM_USER + 50);
-		public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
-		public const uint EM_EXGETSEL                     = (WM_USER + 52);
-		public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
-		public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
-		public const uint EM_EXSETSEL                     = (WM_USER + 55);
-		public const uint EM_FINDTEXT                     = (WM_USER + 56);
-		//public const uint EM_FORMATRANGE                  = (WM_USER + 57);
-		public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
-		public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
-		public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
-		public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
-		public const uint EM_GETSELTEXT                   = (WM_USER + 62);
-		public const uint EM_HIDESELECTION                = (WM_USER + 63);
-		public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
-		public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
-		public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
-		public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
-		public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
-		public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
-		public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
-		public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
-		public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
-		public const uint EM_STREAMIN                     = (WM_USER + 73);
-		public const uint EM_STREAMOUT                    = (WM_USER + 74);
-		public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
-		public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
-		public const uint EM_SETOPTIONS                   = (WM_USER + 77);
-		public const uint EM_GETOPTIONS                   = (WM_USER + 78);
-		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
-		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
-		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
-
-		// RichEdit 2.0 messages
-		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
-		public const uint EM_REDO                         = (WM_USER + 84);
-		public const uint EM_CANREDO                      = (WM_USER + 85);
-		public const uint EM_GETUNDONAME                  = (WM_USER + 86);
-		public const uint EM_GETREDONAME                  = (WM_USER + 87);
-		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
-		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
-		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
-
-		public const uint EM_GETSCROLLPOS                 = (WM_USER + 221);
-		public const uint EM_SETSCROLLPOS                 = (WM_USER + 222);
-		#endregion
-
-		#region ListBox Messages
-		public const uint LB_ADDSTRING            = 0x0180;
-		public const uint LB_INSERTSTRING         = 0x0181;
-		public const uint LB_DELETESTRING         = 0x0182;
-		public const uint LB_SELITEMRANGEEX       = 0x0183;
-		public const uint LB_RESETCONTENT         = 0x0184;
-		public const uint LB_SETSEL               = 0x0185;
-		public const uint LB_SETCURSEL            = 0x0186;
-		public const uint LB_GETSEL               = 0x0187;
-		public const uint LB_GETCURSEL            = 0x0188;
-		public const uint LB_GETTEXT              = 0x0189;
-		public const uint LB_GETTEXTLEN           = 0x018A;
-		public const uint LB_GETCOUNT             = 0x018B;
-		public const uint LB_SELECTSTRING         = 0x018C;
-		public const uint LB_DIR                  = 0x018D;
-		public const uint LB_GETTOPINDEX          = 0x018E;
-		public const uint LB_FINDSTRING           = 0x018F;
-		public const uint LB_GETSELCOUNT          = 0x0190;
-		public const uint LB_GETSELITEMS          = 0x0191;
-		public const uint LB_SETTABSTOPS          = 0x0192;
-		public const uint LB_GETHORIZONTALEXTENT  = 0x0193;
-		public const uint LB_SETHORIZONTALEXTENT  = 0x0194;
-		public const uint LB_SETCOLUMNWIDTH       = 0x0195;
-		public const uint LB_ADDFILE              = 0x0196;
-		public const uint LB_SETTOPINDEX          = 0x0197;
-		public const uint LB_GETITEMRECT          = 0x0198;
-		public const uint LB_GETITEMDATA          = 0x0199;
-		public const uint LB_SETITEMDATA          = 0x019A;
-		public const uint LB_SELITEMRANGE         = 0x019B;
-		public const uint LB_SETANCHORINDEX       = 0x019C;
-		public const uint LB_GETANCHORINDEX       = 0x019D;
-		public const uint LB_SETCARETINDEX        = 0x019E;
-		public const uint LB_GETCARETINDEX        = 0x019F;
-		public const uint LB_SETITEMHEIGHT        = 0x01A0;
-		public const uint LB_GETITEMHEIGHT        = 0x01A1;
-		public const uint LB_FINDSTRINGEXACT      = 0x01A2;
-		public const uint LB_SETLOCALE            = 0x01A5;
-		public const uint LB_GETLOCALE            = 0x01A6;
-		public const uint LB_SETCOUNT             = 0x01A7;
-		public const uint LB_INITSTORAGE          = 0x01A8;
-		public const uint LB_ITEMFROMPOINT        = 0x01A9;
-		public const uint LB_GETLISTBOXINFO       = 0x01B2;
-		#endregion
-
-		#region ComboBox Messages
-		public const uint CB_GETEDITSEL            = 0x0140;
-		public const uint CB_LIMITTEXT             = 0x0141;
-		public const uint CB_SETEDITSEL            = 0x0142;
-		public const uint CB_ADDSTRING             = 0x0143;
-		public const uint CB_DELETESTRING          = 0x0144;
-		public const uint CB_DIR                   = 0x0145;
-		public const uint CB_GETCOUNT              = 0x0146;
-		public const uint CB_GETCURSEL             = 0x0147;
-		public const uint CB_GETLBTEXT             = 0x0148;
-		public const uint CB_GETLBTEXTLEN          = 0x0149;
-		public const uint CB_INSERTSTRING          = 0x014a;
-		public const uint CB_RESETCONTENT          = 0x014b;
-		public const uint CB_FINDSTRING            = 0x014c;
-		public const uint CB_SELECTSTRING          = 0x014d;
-		public const uint CB_SETCURSEL             = 0x014e;
-		public const uint CB_SHOWDROPDOWN          = 0x014f;
-		public const uint CB_GETITEMDATA           = 0x0150;
-		public const uint CB_SETITEMDATA           = 0x0151;
-		public const uint CB_GETDROPPEDCONTROLRECT = 0x0152;
-		public const uint CB_SETITEMHEIGHT         = 0x0153;
-		public const uint CB_GETITEMHEIGHT         = 0x0154;
-		public const uint CB_SETEXTENDEDUI         = 0x0155;
-		public const uint CB_GETEXTENDEDUI         = 0x0156;
-		public const uint CB_GETDROPPEDSTATE       = 0x0157;
-		public const uint CB_FINDSTRINGEXACT       = 0x0158;
-		public const uint CB_SETLOCALE             = 0x0159;
-		public const uint CB_GETLOCALE             = 0x015a;
-		public const uint CB_GETTOPINDEX           = 0x015b;
-		public const uint CB_SETTOPINDEX           = 0x015c;
-		public const uint CB_GETHORIZONTALEXTENT   = 0x015d;
-		public const uint CB_SETHORIZONTALEXTENT   = 0x015e;
-		public const uint CB_GETDROPPEDWIDTH       = 0x015f;
-		public const uint CB_SETDROPPEDWIDTH       = 0x0160;
-		public const uint CB_INITSTORAGE           = 0x0161;
-		public const uint CB_MSGMAX_OLD            = 0x0162;
-		public const uint CB_MULTIPLEADDSTRING     = 0x0163;
-		public const uint CB_GETCOMBOBOXINFO       = 0x0164;
-		public const uint CB_MSGMAX                = 0x0165;
-		#endregion
-		
-		#region Progress Bar
-		public const uint PBS_SMOOTH              = 0x01;
-		public const uint PBS_VERTICAL            = 0x04;
-		public const uint PBS_MARQUEE             = 0x08;
-		public const uint PBS_SMOOTHREVERSE       = 0x10;
-
-		public const uint PBM_SETRANGE            = (WM_USER+1);
-		public const uint PBM_SETPOS              = (WM_USER+2);
-		public const uint PBM_DELTAPOS            = (WM_USER+3);
-		public const uint PBM_SETSTEP             = (WM_USER+4);
-		public const uint PBM_STEPIT              = (WM_USER+5);
-		public const uint PBM_SETRANGE32          = (WM_USER+6);  // lParam = high, wParam = low
-
-		public const uint PBM_GETRANGE            = (WM_USER+7);    // wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
-		public const uint PBM_GETPOS              = (WM_USER+8);
-		public const uint PBM_SETBARCOLOR         = (WM_USER+9);    // lParam = bar color
-		public const uint PBM_SETMARQUEE          = (WM_USER+10);
-		public const uint PBM_GETSTEP             = (WM_USER+13);
-		public const uint PBM_GETBKCOLOR          = (WM_USER+14);
-		public const uint PBM_GETBARCOLOR         = (WM_USER+15);
-		public const uint PBM_SETSTATE            = (WM_USER+16); // wParam = PBST_[State] (NORMAL, ERROR, PAUSED)
-		public const uint PBM_GETSTATE            = (WM_USER+17);
-		public const uint PBM_SETBKCOLOR          = CCM_SETBKCOLOR; // lParam = bkColor
-
-		public const int PBST_NORMAL = 0x0001;
-		public const int PBST_ERROR  = 0x0002;
-		public const int PBST_PAUSED = 0x0003;
-		#endregion
-
-		#region ListView Control
-		public const uint LVN_ITEMCHANGING    = (LVN_FIRST-0 );
-		public const uint LVN_ITEMCHANGED     = (LVN_FIRST-1 );
-		public const uint LVN_INSERTITEM      = (LVN_FIRST-2 );
-		public const uint LVN_DELETEITEM      = (LVN_FIRST-3 );
-		public const uint LVN_DELETEALLITEMS  = (LVN_FIRST-4 );
-		public const uint LVN_BEGINLABELEDITA = (LVN_FIRST-5 );
-		public const uint LVN_BEGINLABELEDITW = (LVN_FIRST-75);
-		public const uint LVN_ENDLABELEDITA   = (LVN_FIRST-6 );
-		public const uint LVN_ENDLABELEDITW   = (LVN_FIRST-76);
-		public const uint LVN_COLUMNCLICK     = (LVN_FIRST-8 );
-		public const uint LVN_BEGINDRAG       = (LVN_FIRST-9 );
-		public const uint LVN_BEGINRDRAG      = (LVN_FIRST-11);
-		public const uint LVN_ODCACHEHINT     = (LVN_FIRST-13);
-		public const uint LVN_ODFINDITEMA     = (LVN_FIRST-52);
-		public const uint LVN_ODFINDITEMW     = (LVN_FIRST-79);
-		public const uint LVN_ITEMACTIVATE    = (LVN_FIRST-14);
-		public const uint LVN_ODSTATECHANGED  = (LVN_FIRST-15);
-		public const uint LVN_HOTTRACK        = (LVN_FIRST-21);
-		public const uint LVN_GETDISPINFOA    = (LVN_FIRST-50);
-		public const uint LVN_GETDISPINFOW    = (LVN_FIRST-77);
-		public const uint LVN_SETDISPINFOA    = (LVN_FIRST-51);
-		public const uint LVN_SETDISPINFOW    = (LVN_FIRST-78);
-		public const uint LVN_BEGINLABELEDIT  = LVN_BEGINLABELEDITW;
-		public const uint LVN_ENDLABELEDIT    = LVN_ENDLABELEDITW;
-		public const uint LVN_GETDISPINFO     = LVN_GETDISPINFOW;
-		public const uint LVN_SETDISPINFO     = LVN_SETDISPINFOW;
-		public const uint LVN_ODFINDITEM      = LVN_ODFINDITEMW;
-		#endregion
-
-		#region Window Styles WS_
-		public const int WS_POPUP                         = unchecked((int)0x80000000); // The windows is a pop-up window. This style cannot be used with the WS_CHILD style.
-		public const int WS_CHILD                         = unchecked(0x40000000); // The window is a child window. A window with this style cannot have a menu bar. This style cannot be used with the WS_POPUP style.
-		public const int WS_CHILDWINDOW                   = unchecked(0x40000000); // Same as the WS_CHILD style.
-		public const int WS_ICONIC                        = unchecked(0x20000000); // The window is initially minimized. Same as the WS_MINIMIZE style.
-		public const int WS_MINIMIZE                      = unchecked(0x20000000); // The window is initially minimized. Same as the WS_ICONIC style.
-		public const int WS_VISIBLE                       = unchecked(0x10000000); // The window is initially visible. This style can be turned on and off by using the ShowWindow or SetWindowPos function.
-		public const int WS_DISABLED                      = unchecked(0x08000000); // The window is initially disabled. A disabled window cannot receive input from the user. To change this after a window has been created, use the EnableWindow function.
-		public const int WS_CLIPSIBLINGS                  = unchecked(0x04000000); // Clips child windows relative to each other; that is, when a particular child window receives a WM_PAINT message, the WS_CLIPSIBLINGS style clips all other overlapping child windows out of the region of the child window to be updated. If WS_CLIPSIBLINGS is not specified and child windows overlap, it is possible, when drawing within the client area of a child window, to draw within the client area of a neighboring child window.
-		public const int WS_CLIPCHILDREN                  = unchecked(0x02000000); // Excludes the area occupied by child windows when drawing occurs within the parent window. This style is used when creating the parent window.
-		public const int WS_MAXIMIZE                      = unchecked(0x01000000); // The window is initially maximized.
-		public const int WS_CAPTION                       = unchecked(0x00C00000); // The window has a title bar (includes the WS_BORDER style).
-		public const int WS_BORDER                        = unchecked(0x00800000); // The window has a thin-line border.
-		public const int WS_DLGFRAME                      = unchecked(0x00400000); // The window has a border of a style typically used with dialog boxes. A window with this style cannot have a title bar.
-		public const int WS_VSCROLL                       = unchecked(0x00200000); // The window has a vertical scroll bar.
-		public const int WS_HSCROLL                       = unchecked(0x00100000); // The window has a horizontal scroll bar.
-		public const int WS_SYSMENU                       = unchecked(0x00080000); // The window has a window menu on its title bar. The WS_CAPTION style must also be specified.
-		public const int WS_SIZEBOX                       = unchecked(0x00040000); // The window has a sizing border. Same as the WS_THICKFRAME style.
-		public const int WS_THICKFRAME                    = unchecked(0x00040000); // The window has a sizing border. Same as the WS_SIZEBOX style.
-		public const int WS_GROUP                         = unchecked(0x00020000); // The window is the first control of a group of controls. The group consists of this first control and all controls defined after it, up to the next control with the WS_GROUP style. The first control in each group usually has the WS_TABSTOP style so that the user can move from group to group. The user can subsequently change the keyboard focus from one control in the group to the next control in the group by using the direction keys. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function.
-		public const int WS_MINIMIZEBOX                   = unchecked(0x00020000); // The window has a minimize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
-		public const int WS_MAXIMIZEBOX                   = unchecked(0x00010000); // The window has a maximize button. Cannot be combined with the WS_EX_CONTEXTHELP style. The WS_SYSMENU style must also be specified.
-		public const int WS_TABSTOP                       = unchecked(0x00010000); // The window is a control that can receive the keyboard focus when the user presses the TAB key. Pressing the TAB key changes the keyboard focus to the next control with the WS_TABSTOP style. You can turn this style on and off to change dialog box navigation. To change this style after a window has been created, use the SetWindowLong function. For user-created windows and modeless dialogs to work with tab stops, alter the message loop to call the IsDialogMessage function.
-		public const int WS_TILED                         = unchecked(0x00000000); // The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_OVERLAPPED style.
-		public const int WS_OVERLAPPED                    = unchecked(0x00000000); // The window is an overlapped window. An overlapped window has a title bar and a border. Same as the WS_TILED style.
-		public const int WS_POPUPWINDOW                   = unchecked(WS_POPUP | WS_BORDER | WS_SYSMENU); // The window is a pop-up window. The WS_CAPTION and WS_POPUPWINDOW styles must be combined to make the window menu visible.
-		public const int WS_TILEDWINDOW                   = unchecked(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // The window is an overlapped window. Same as the WS_OVERLAPPEDWINDOW style.
-		public const int WS_OVERLAPPEDWINDOW              = unchecked(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // The window is an overlapped window. Same as the WS_TILEDWINDOW style.
-		#endregion
-
-		#region Extended window styles WS_EX_
-		public const int WS_EX_DLGMODALFRAME              = 0x00000001;
-		public const int WS_EX_NOPARENTNOTIFY             = 0x00000004;
-		public const int WS_EX_TOPMOST                    = 0x00000008;
-		public const int WS_EX_ACCEPTFILES                = 0x00000010;
-		public const int WS_EX_TRANSPARENT                = 0x00000020;
-		public const int WS_EX_MDICHILD                   = 0x00000040;
-		public const int WS_EX_TOOLWINDOW                 = 0x00000080;
-		public const int WS_EX_WINDOWEDGE                 = 0x00000100;
-		public const int WS_EX_CLIENTEDGE                 = 0x00000200;
-		public const int WS_EX_CONTEXTHELP                = 0x00000400;
-		public const int WS_EX_RIGHT                      = 0x00001000;
-		public const int WS_EX_LEFT                       = 0x00000000;
-		public const int WS_EX_RTLREADING                 = 0x00002000;
-		public const int WS_EX_LTRREADING                 = 0x00000000;
-		public const int WS_EX_LEFTSCROLLBAR              = 0x00004000;
-		public const int WS_EX_RIGHTSCROLLBAR             = 0x00000000;
-		public const int WS_EX_CONTROLPARENT              = 0x00010000;
-		public const int WS_EX_STATICEDGE                 = 0x00020000;
-		public const int WS_EX_APPWINDOW                  = 0x00040000;
-		public const int WS_EX_OVERLAPPEDWINDOW           = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE;
-		public const int WS_EX_PALETTEWINDOW              = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
-		public const int WS_EX_LAYERED                    = 0x00080000;
-		public const int WS_EX_NOINHERITLAYOUT            = 0x00100000; // Disable inheritence of mirroring by children
-		public const int WS_EX_NOREDIRECTIONBITMAP        = 0x00200000;
-		public const int WS_EX_COMPOSITED                 = 0x02000000;
-		public const int WS_EX_LAYOUTRTL                  = 0x00400000;
-		public const int WS_EX_NOACTIVATE                 = 0x08000000;
-		#endregion
-
-		#region Class styles CS_
-		public const int CS_BYTEALIGNCLIENT               = 0x00001000;
-		public const int CS_BYTEALIGNWINDOW               = 0x00002000;
-		public const int CS_CLASSDC                       = 0x00000040;
-		public const int CS_DBLCLKS                       = 0x00000008;
-		public const int CS_DROPSHADOW                    = 0x00020000;
-		public const int CS_GLOBALCLASS                   = 0x00004000;
-		public const int CS_HREDRAW                       = 0x00000002;
-		public const int CS_NOCLOSE                       = 0x00000200;
-		public const int CS_OWNDC                         = 0x00000020;
-		public const int CS_PARENTDC                      = 0x00000080;
-		public const int CS_SAVEBITS                      = 0x00000800;
-		public const int CS_VREDRAW                       = 0x00000001;
-		#endregion
-
-		#region Graphics modes GM_
-		public const int GM_COMPATIBLE                    = 1;
-		public const int GM_ADVANCED                      = 2;
-		#endregion
-
-		#region Mapping Modes MM_
-		public const int MM_TEXT                          = 1;
-		public const int MM_LOMETRIC                      = 2;
-		public const int MM_HIMETRIC                      = 3;
-		public const int MM_LOENGLISH                     = 4;
-		public const int MM_HIENGLISH                     = 5;
-		public const int MM_TWIPS                         = 6;
-		public const int MM_ISOTROPIC                     = 7;
-		public const int MM_ANISOTROPIC                   = 8;
-		#endregion
-
-		#region Menu Flags MF_, MFT_, MFS_
-		public const int MF_INSERT           = 0x00000000;
-		public const int MF_CHANGE           = 0x00000080;
-		public const int MF_APPEND           = 0x00000100;
-		public const int MF_DELETE           = 0x00000200;
-		public const int MF_REMOVE           = 0x00001000;
-		public const int MF_BYCOMMAND        = 0x00000000;
-		public const int MF_BYPOSITION       = 0x00000400;
-		public const int MF_SEPARATOR        = 0x00000800;
-		public const int MF_ENABLED          = 0x00000000;
-		public const int MF_GRAYED           = 0x00000001;
-		public const int MF_DISABLED         = 0x00000002;
-		public const int MF_UNCHECKED        = 0x00000000;
-		public const int MF_CHECKED          = 0x00000008;
-		public const int MF_USECHECKBITMAPS  = 0x00000200;
-		public const int MF_STRING           = 0x00000000;
-		public const int MF_BITMAP           = 0x00000004;
-		public const int MF_OWNERDRAW        = 0x00000100;
-		public const int MF_POPUP            = 0x00000010;
-		public const int MF_MENUBARBREAK     = 0x00000020;
-		public const int MF_MENUBREAK        = 0x00000040;
-		public const int MF_UNHILITE         = 0x00000000;
-		public const int MF_HILITE           = 0x00000080;
-		public const int MF_DEFAULT          = 0x00001000;
-		public const int MF_SYSMENU          = 0x00002000;
-		public const int MF_HELP             = 0x00004000;
-		public const int MF_RIGHTJUSTIFY     = 0x00004000;
-		public const int MF_MOUSESELECT      = 0x00008000;
-		public const int MF_END              = 0x00000080;  /* Obsolete -- only used by old RES files */
-
-		public const int MFT_STRING          = MF_STRING;
-		public const int MFT_BITMAP          = MF_BITMAP;
-		public const int MFT_MENUBARBREAK    = MF_MENUBARBREAK;
-		public const int MFT_MENUBREAK       = MF_MENUBREAK;
-		public const int MFT_OWNERDRAW       = MF_OWNERDRAW;
-		public const int MFT_RADIOCHECK      = 0x00000200;
-		public const int MFT_SEPARATOR       = MF_SEPARATOR;
-		public const int MFT_RIGHTORDER      = 0x00002000;
-		public const int MFT_RIGHTJUSTIFY    = MF_RIGHTJUSTIFY;
-
-		public const int MFS_GRAYED          = 0x00000003;
-		public const int MFS_DISABLED        = MFS_GRAYED;
-		public const int MFS_CHECKED         = MF_CHECKED;
-		public const int MFS_HILITE          = MF_HILITE;
-		public const int MFS_ENABLED         = MF_ENABLED;
-		public const int MFS_UNCHECKED       = MF_UNCHECKED;
-		public const int MFS_UNHILITE        = MF_UNHILITE;
-		public const int MFS_DEFAULT         = MF_DEFAULT;
-		#endregion
-
-		#region NIN Notification Icon
-		/// <summary>
-		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
-		/// Send when a notify icon is activated with mouse or ENTER key. Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
-		public const int NIN_SELECT = WM_USER;
-
-		/// <summary>
-		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
-		/// Send when a notify icon is activated with SPACEBAR or ENTER key.
-		/// Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
-		public const int NIN_KEYSELECT = WM_USER + 1;
-
-		/// <summary>Sent when the balloon is shown (balloons are queued).</summary>
-		public const int NIN_BALLOONSHOW = WM_USER + 2;
-
-		/// <summary>
-		/// Sent when the balloon disappears. For example, when the icon is deleted.
-		/// This message is not sent if the balloon is dismissed because of a timeout or if the user clicks the mouse.
-		/// As of Windows 7, NIN_BALLOONHIDE is also sent when a notification with the NIIF_RESPECT_QUIET_TIME flag set attempts
-		/// to display during quiet time (a user's first hour on a new computer).In that case, the balloon is never displayed at all.</summary>
-		public const int NIN_BALLOONHIDE = WM_USER + 3;
-
-		/// <summary>Sent when the balloon is dismissed because of a timeout.</summary>
-		public const int NIN_BALLOONTIMEOUT = WM_USER + 4;
-
-		/// <summary>Sent when the balloon is dismissed because the user clicked the mouse.</summary>
-		public const int NIN_BALLOONUSERCLICK = WM_USER + 5;
-
-		/// <summary>Sent when the user hovers the cursor over an icon to indicate that the richer pop-up UI should be used in place of a standard textual tooltip.</summary>
-		public const int NIN_POPUPOPEN = WM_USER + 6;
-
-		/// <summary>Sent when a cursor no longer hovers over an icon to indicate that the rich pop-up UI should be closed.</summary>
-		public const int NIN_POPUPCLOSE = WM_USER + 7;
-		#endregion
-
-		#region Scroll Bar SB_
-		public enum ScrollBarDirection
-		{
-			SB_HORZ = 0,
-			SB_VERT = 1,
-			SB_CTL = 2,
-			SB_BOTH = 3
-		}
-
-		// These are the same as System.Windows.Forms.ScrollEventType
-		public const int SB_LINEUP           = 0;
-		public const int SB_LINELEFT         = 0;
-		public const int SB_LINEDOWN         = 1;
-		public const int SB_LINERIGHT        = 1;
-		public const int SB_PAGEUP           = 2;
-		public const int SB_PAGELEFT         = 2;
-		public const int SB_PAGEDOWN         = 3;
-		public const int SB_PAGERIGHT        = 3;
-		public const int SB_THUMBPOSITION    = 4;
-		public const int SB_THUMBTRACK       = 5;
-		public const int SB_TOP              = 6;
-		public const int SB_LEFT             = 6;
-		public const int SB_BOTTOM           = 7;
-		public const int SB_RIGHT            = 7;
-		public const int SB_ENDSCROLL        = 8;
-		#endregion
-
-		#region Scroll info flags SIF_
-		public enum ScrollInfoMask :uint
-		{
-			SIF_RANGE = 0x1,
-			SIF_PAGE = 0x2,
-			SIF_POS = 0x4,
-			SIF_DISABLENOSCROLL = 0x8,
-			SIF_TRACKPOS = 0x10,
-			SIF_ALL = SIF_RANGE + SIF_PAGE + SIF_POS + SIF_TRACKPOS
-		}
-		#endregion
-
-		#region HitTest
-		public enum HitTest :int
-		{
-			HTBORDER      = 18, // In the border of a window that does not have a sizing border.
-			HTBOTTOM      = 15, // In the lower-horizontal border of a resizeable window (the user can click the mouse to resize the window vertically).
-			HTBOTTOMLEFT  = 16, // In the lower-left corner of a border of a resizeable window (the user can click the mouse to resize the window diagonally).
-			HTBOTTOMRIGHT = 17, // In the lower-right corner of a border of a resizeable window (the user can click the mouse to resize the window diagonally).
-			HTCAPTION     = 2,  // In a title bar.
-			HTCLIENT      = 1,  // In a client area.
-			HTCLOSE       = 20, // In a Close button.
-			HTERROR       = -2, // On the screen background or on a dividing line between windows (same as HTNOWHERE, except that the DefWindowProc function produces a system beep to indicate an error).
-			HTGROWBOX     = 4,  // In a size box (same as HTSIZE).
-			HTHELP        = 21, // In a Help button.
-			HTHSCROLL     = 6,  // In a horizontal scroll bar.
-			HTLEFT        = 10, // In the left border of a resizeable window (the user can click the mouse to resize the window horizontally).
-			HTMENU        = 5,  // In a menu.
-			HTMAXBUTTON   = 9,  // In a Maximize button.
-			HTMINBUTTON   = 8,  // In a Minimize button.
-			HTNOWHERE     = 0,  // On the screen background or on a dividing line between windows.
-			HTREDUCE      = 8,  // In a Minimize button.
-			HTRIGHT       = 11, // In the right border of a resizeable window (the user can click the mouse to resize the window horizontally).
-			HTSIZE        = 4,  // In a size box (same as HTGROWBOX).
-			HTSYSMENU     = 3,  // In a window menu or in a Close button in a child window.
-			HTTOP         = 12, // In the upper-horizontal border of a window.
-			HTTOPLEFT     = 13, // In the upper-left corner of a window border.
-			HTTOPRIGHT    = 14, // In the upper-right corner of a window border.
-			HTTRANSPARENT = -1, // In a window currently covered by another window in the same thread (the message will be sent to underlying windows in the same thread until one of them returns a code that is not HTTRANSPARENT).
-			HTVSCROLL     = 7,  // In the vertical scroll bar.
-			HTZOOM        = 9,  // In a Maximize button.
-		}
-		#endregion
-
-		#region Child Window From Point
-		public const int CWP_ALL             = 0x0000; // Does not skip any child windows
-		public const int CWP_SKIPINVISIBLE   = 0x0001; // Skips invisible child windows
-		public const int CWP_SKIPDISABLED    = 0x0002; // Skips disabled child windows
-		public const int CWP_SKIPTRANSPARENT = 0x0004; // Skips transparent child windows
-		#endregion
-
-		#region Dialog get codes
-		public const int DLGC_WANTARROWS      = 0x0001; // Direction keys.
-		public const int DLGC_WANTTAB         = 0x0002; // TAB key.
-		public const int DLGC_WANTALLKEYS     = 0x0004; // All keyboard input.
-		public const int DLGC_WANTMESSAGE     = 0x0004; // All keyboard input (the application passes this message in the MSG structure to the control).
-		public const int DLGC_HASSETSEL       = 0x0008; // EM_SETSEL messages.
-		public const int DLGC_DEFPUSHBUTTON   = 0x0010; // Default push button.
-		public const int DLGC_UNDEFPUSHBUTTON = 0x0020; // Non-default push button.
-		public const int DLGC_RADIOBUTTON     = 0x0040; // Radio button.
-		public const int DLGC_WANTCHARS       = 0x0080; // WM_CHAR messages.
-		public const int DLGC_STATIC          = 0x0100; //Static control.
-		public const int DLGC_BUTTON          = 0x2000; // Button.
-		#endregion
-
-		#region Known Folders
-		public enum FFFP_MODE
-		{
-			FFFP_EXACTMATCH,
-			FFFP_NEARESTPARENTMATCH
-		}
-
-		public enum KF_CATEGORY
-		{
-			VIRTUAL = 0x00000001,
-			FIXED   = 0x00000002,
-			COMMON  = 0x00000003,
-			PERUSER = 0x00000004
-		}
-
-		[Flags]
-		public enum KF_DEFINITION_FLAGS
-		{
-			KFDF_PERSONALIZE = 0x00000001,
-			KFDF_LOCAL_REDIRECT_ONLY = 0x00000002,
-			KFDF_ROAMABLE = 0x00000004,
-		}
-		#endregion
-
-		#region Execution State
-		[Flags]
-		public enum ExecutionState :uint
-		{
-			EsAwaymodeRequired = 0x00000040,
-			EsContinuous = 0x80000000,
-			EsDisplayRequired = 0x00000002,
-			EsSystemRequired = 0x00000001
-		}
-		#endregion
-
-		#region Device Changed event types DBT_
-		public enum EDeviceChangedEventType
-		{
-			/// <summary>DBT_DEVNODES_CHANGED - A device has been added to or removed from the system.</summary>
-			DevNodesChanged = 0x0007,
-
-			/// <summary>DBT_QUERYCHANGECONFIG - Permission is requested to change the current configuration(dock or undock).</summary>
-			QueryChangeConfig = 0x0017,
-
-			/// <summary>DBT_CONFIGCHANGED - The current configuration has changed, due to a dock or undock.</summary>
-			ConfigChanged = 0x0018,
-
-			/// <summary>DBT_CONFIGCHANGECANCELED - A request to change the current configuration(dock or undock) has been canceled.</summary>
-			ConfigChangeCanceled = 0x0019,
-
-			/// <summary>DBT_DEVICEARRIVAL - A device or piece of media has been inserted and is now available.</summary>
-			DeviceArrival = 0x8000,
-
-			/// <summary>DBT_DEVICEQUERYREMOVE - Permission is requested to remove a device or piece of media.Any application can deny this request and cancel the removal.</summary>
-			DeviceQueryRemove = 0x8001,
-
-			/// <summary>DBT_DEVICEQUERYREMOVEFAILED - A request to remove a device or piece of media has been canceled.</summary>
-			DeviceQueryRemoveFailed = 0x8002,
-
-			/// <summary>DBT_DEVICEREMOVEPENDING - A device or piece of media is about to be removed. Cannot be denied.</summary>
-			DeviceRemovePending = 0x8003,
-
-			/// <summary>DBT_DEVICEREMOVECOMPLETE - A device or piece of media has been removed.</summary>
-			DeviceRemoveComplete = 0x8004,
-
-			/// <summary>DBT_DEVICETYPESPECIFIC - A device-specific event has occurred.</summary>
-			DeviceTypeSpecific = 0x8005,
-
-			/// <summary>DBT_CUSTOMEVENT - A custom event has occurred.</summary>
-			CustomEvent = 0x8006,
-
-			/// <summary>DBT_USERDEFINED - The meaning of this message is user-defined.</summary>
-			UserDefined = 0xFFFF,
-		}
-		#endregion
-
-		#region System Metrics
-		public enum ESystemMetrics :int
-		{
-			SM_CXSCREEN = 0,      // The width of the screen of the primary display monitor, in pixels.This is the same value obtained by calling GetDeviceCaps as follows: GetDeviceCaps(hdcPrimaryMonitor, HORZRES).
-			SM_ARRANGE = 56,     // The flags that specify how the system arranged minimized windows. For more information, see the Remarks section in this topic.
-			SM_CLEANBOOT                   = 67,     // The value that specifies how the system is started: 0 Normal boot, 1 Fail-safe boot, 2 Fail-safe with network boot, A fail-safe boot (also called SafeBoot, Safe Mode, or Clean Boot) bypasses the user startup files.
-			SM_CMONITORS                   = 80,     // The number of display monitors on a desktop.For more information, see the Remarks section in this topic.
-			SM_CMOUSEBUTTONS               = 43,     // The number of buttons on a mouse, or zero if no mouse is installed.
-			SM_CONVERTIBLESLATEMODE        = 0x2003, // Reflects the state of the laptop or slate mode, 0 for Slate Mode and non-zero otherwise. When this system metric changes, the system sends a broadcast message via WM_SETTINGCHANGE with "ConvertibleSlateMode" in the LPARAM. Note that this system metric doesn't apply to desktop PCs. In that case, use GetAutoRotationState.
-			SM_CXBORDER                    = 5,      // The width of a window border, in pixels.This is equivalent to the SM_CXEDGE value for windows with the 3-D look.
-			SM_CXCURSOR                    = 13,     // The width of a cursor, in pixels.The system cannot create cursors of other sizes.
-			SM_CXDLGFRAME                  = 7,      // This value is the same as SM_CXFIXEDFRAME.
-			SM_CXDOUBLECLK                 = 36,     // The width of the rectangle around the location of a first click in a double-click sequence, in pixels.The second click must occur within the rectangle that is defined by SM_CXDOUBLECLK and SM_CYDOUBLECLK for the system to consider the two clicks a double-click.The two clicks must also occur within a specified time. To set the width of the double-click rectangle, call SystemParametersInfo with SPI_SETDOUBLECLKWIDTH.
-			SM_CXDRAG                      = 68,     // The number of pixels on either side of a mouse-down point that the mouse pointer can move before a drag operation begins.This allows the user to click and release the mouse button easily without unintentionally starting a drag operation. If this value is negative, it is subtracted from the left of the mouse-down point and added to the right of it.
-			SM_CXEDGE                      = 45,     // The width of a 3-D border, in pixels.This metric is the 3-D counterpart of SM_CXBORDER.
-			SM_CXFIXEDFRAME                = 7,      // The thickness of the frame around the perimeter of a window that has a caption but is not sizable, in pixels.SM_CXFIXEDFRAME is the height of the horizontal border, and SM_CYFIXEDFRAME is the width of the vertical border. This value is the same as SM_CXDLGFRAME.
-			SM_CXFOCUSBORDER               = 83,     // The width of the left and right edges of the focus rectangle that the DrawFocusRect draws. This value is in pixels. Windows 2000:  This value is not supported.
-			SM_CXFRAME                     = 32,     // This value is the same as SM_CXSIZEFRAME.
-			SM_CXFULLSCREEN                = 16,     // The width of the client area for a full-screen window on the primary display monitor, in pixels.To get the coordinates of the portion of the screen that is not obscured by the system taskbar or by application desktop toolbars, call the SystemParametersInfo function with the SPI_GETWORKAREA value.
-			SM_CXHSCROLL                   = 21,     // The width of the arrow bitmap on a horizontal scroll bar, in pixels.
-			SM_CXHTHUMB                    = 10,     // The width of the thumb box in a horizontal scroll bar, in pixels.
-			SM_CXICON                      = 11,     // The default width of an icon, in pixels.The LoadIcon function can load only icons with the dimensions that SM_CXICON and SM_CYICON specifies.
-			SM_CXICONSPACING               = 38,     // The width of a grid cell for items in large icon view, in pixels.Each item fits into a rectangle of size SM_CXICONSPACING by SM_CYICONSPACING when arranged.This value is always greater than or equal to SM_CXICON.
-			SM_CXMAXIMIZED                 = 61,     // The default width, in pixels, of a maximized top-level window on the primary display monitor.
-			SM_CXMAXTRACK                  = 59,     // The default maximum width of a window that has a caption and sizing borders, in pixels.This metric refers to the entire desktop.The user cannot drag the window frame to a size larger than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
-			SM_CXMENUCHECK                 = 71,     // The width of the default menu check-mark bitmap, in pixels.
-			SM_CXMENUSIZE                  = 54,     // The width of menu bar buttons, such as the child window close button that is used in the multiple document interface, in pixels.
-			SM_CXMIN                       = 28,     // The minimum width of a window, in pixels.
-			SM_CXMINIMIZED                 = 57,     // The width of a minimized window, in pixels.
-			SM_CXMINSPACING                = 47,     // The width of a grid cell for a minimized window, in pixels.Each minimized window fits into a rectangle this size when arranged.This value is always greater than or equal to SM_CXMINIMIZED.
-			SM_CXMINTRACK                  = 34,     // The minimum tracking width of a window, in pixels.The user cannot drag the window frame to a size smaller than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
-			SM_CXPADDEDBORDER              = 92,     // The amount of border padding for captioned windows, in pixels. Windows XP/2000:  This value is not supported.
-			SM_CXSIZE                      = 30,     // The width of a button in a window caption or title bar, in pixels.
-			SM_CXSIZEFRAME                 = 32,     // The thickness of the sizing border around the perimeter of a window that can be resized, in pixels.SM_CXSIZEFRAME is the width of the horizontal border, and SM_CYSIZEFRAME is the height of the vertical border. This value is the same as SM_CXFRAME.
-			SM_CXSMICON                    = 49,     // The recommended width of a small icon, in pixels.Small icons typically appear in window captions and in small icon view.
-			SM_CXSMSIZE                    = 52,     // The width of small caption buttons, in pixels.
-			SM_CXVIRTUALSCREEN             = 78,     // The width of the virtual screen, in pixels.The virtual screen is the bounding rectangle of all display monitors.The SM_XVIRTUALSCREEN metric is the coordinates for the left side of the virtual screen.
-			SM_CXVSCROLL                   = 2,      // The width of a vertical scroll bar, in pixels.
-			SM_CYBORDER                    = 6,      // The height of a window border, in pixels.This is equivalent to the SM_CYEDGE value for windows with the 3-D look.
-			SM_CYCAPTION                   = 4,      // The height of a caption area, in pixels.
-			SM_CYCURSOR                    = 14,     // The height of a cursor, in pixels.The system cannot create cursors of other sizes.
-			SM_CYDLGFRAME                  = 8,      // This value is the same as SM_CYFIXEDFRAME.
-			SM_CYDOUBLECLK                 = 37,     // The height of the rectangle around the location of a first click in a double-click sequence, in pixels.The second click must occur within the rectangle defined by SM_CXDOUBLECLK and SM_CYDOUBLECLK for the system to consider the two clicks a double-click.The two clicks must also occur within a specified time. To set the height of the double-click rectangle, call SystemParametersInfo with SPI_SETDOUBLECLKHEIGHT.
-			SM_CYDRAG                      = 69,     // The number of pixels above and below a mouse-down point that the mouse pointer can move before a drag operation begins.This allows the user to click and release the mouse button easily without unintentionally starting a drag operation. If this value is negative, it is subtracted from above the mouse-down point and added below it.
-			SM_CYEDGE                      = 46,     // The height of a 3-D border, in pixels.This is the 3-D counterpart of SM_CYBORDER.
-			SM_CYFIXEDFRAME                = 8,      // The thickness of the frame around the perimeter of a window that has a caption but is not sizable, in pixels.SM_CXFIXEDFRAME is the height of the horizontal border, and SM_CYFIXEDFRAME is the width of the vertical border. This value is the same as SM_CYDLGFRAME.
-			SM_CYFOCUSBORDER               = 84,     // The height of the top and bottom edges of the focus rectangle drawn by DrawFocusRect.This value is in pixels. Windows 2000:  This value is not supported.
-			SM_CYFRAME                     = 33,     // This value is the same as SM_CYSIZEFRAME.
-			SM_CYFULLSCREEN                = 17,     // The height of the client area for a full-screen window on the primary display monitor, in pixels.To get the coordinates of the portion of the screen not obscured by the system taskbar or by application desktop toolbars, call the SystemParametersInfo function with the SPI_GETWORKAREA value.
-			SM_CYHSCROLL                   = 3,      // The height of a horizontal scroll bar, in pixels.
-			SM_CYICON                      = 12,     // The default height of an icon, in pixels.The LoadIcon function can load only icons with the dimensions SM_CXICON and SM_CYICON.
-			SM_CYICONSPACING               = 39,     // The height of a grid cell for items in large icon view, in pixels.Each item fits into a rectangle of size SM_CXICONSPACING by SM_CYICONSPACING when arranged.This value is always greater than or equal to SM_CYICON.
-			SM_CYKANJIWINDOW               = 18,     // For double byte character set versions of the system, this is the height of the Kanji window at the bottom of the screen, in pixels.
-			SM_CYMAXIMIZED                 = 62,     // The default height, in pixels, of a maximized top-level window on the primary display monitor.
-			SM_CYMAXTRACK                  = 60,     // The default maximum height of a window that has a caption and sizing borders, in pixels.This metric refers to the entire desktop.The user cannot drag the window frame to a size larger than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
-			SM_CYMENU                      = 15,     // The height of a single-line menu bar, in pixels.
-			SM_CYMENUCHECK                 = 72,     // The height of the default menu check-mark bitmap, in pixels.
-			SM_CYMENUSIZE                  = 55,     // The height of menu bar buttons, such as the child window close button that is used in the multiple document interface, in pixels.
-			SM_CYMIN                       = 29,     // The minimum height of a window, in pixels.
-			SM_CYMINIMIZED                 = 58,     // The height of a minimized window, in pixels.
-			SM_CYMINSPACING                = 48,     // The height of a grid cell for a minimized window, in pixels.Each minimized window fits into a rectangle this size when arranged.This value is always greater than or equal to SM_CYMINIMIZED.
-			SM_CYMINTRACK                  = 35,     // The minimum tracking height of a window, in pixels.The user cannot drag the window frame to a size smaller than these dimensions. A window can override this value by processing the WM_GETMINMAXINFO message.
-			SM_CYSCREEN                    = 1,      // The height of the screen of the primary display monitor, in pixels.This is the same value obtained by calling GetDeviceCaps as follows: GetDeviceCaps(hdcPrimaryMonitor, VERTRES).
-			SM_CYSIZE                      = 31,     // The height of a button in a window caption or title bar, in pixels.
-			SM_CYSIZEFRAME                 = 33,     // The thickness of the sizing border around the perimeter of a window that can be resized, in pixels.SM_CXSIZEFRAME is the width of the horizontal border, and SM_CYSIZEFRAME is the height of the vertical border. This value is the same as SM_CYFRAME.
-			SM_CYSMCAPTION                 = 51,     // The height of a small caption, in pixels.
-			SM_CYSMICON                    = 50,     // The recommended height of a small icon, in pixels.Small icons typically appear in window captions and in small icon view.
-			SM_CYSMSIZE                    = 53,     // The height of small caption buttons, in pixels.
-			SM_CYVIRTUALSCREEN             = 79,     // The height of the virtual screen, in pixels.The virtual screen is the bounding rectangle of all display monitors.The SM_YVIRTUALSCREEN metric is the coordinates for the top of the virtual screen.
-			SM_CYVSCROLL                   = 20,     // The height of the arrow bitmap on a vertical scroll bar, in pixels.
-			SM_CYVTHUMB                    = 9,      // The height of the thumb box in a vertical scroll bar, in pixels.
-			SM_DBCSENABLED                 = 42,     // Nonzero if User32.dll supports DBCS; otherwise, 0.
-			SM_DEBUG                       = 22,     // Nonzero if the debug version of User.exe is installed; otherwise, 0.
-			SM_DIGITIZER                   = 94,     // Nonzero if the current operating system is Windows 7 or Windows Server 2008 R2 and the Tablet PC Input service is started; otherwise, 0. The return value is a bitmask that specifies the type of digitizer input supported by the device.For more information, see Remarks. Windows Server 2008, Windows Vista and Windows XP/2000:  This value is not supported.
-			SM_IMMENABLED                  = 82,     // Nonzero if Input Method Manager/Input Method Editor features are enabled; otherwise, 0. SM_IMMENABLED indicates whether the system is ready to use a Unicode-based IME on a Unicode application.To ensure that a language-dependent IME works, check SM_DBCSENABLED and the system ANSI code page. Otherwise the ANSI-to-Unicode conversion may not be performed correctly, or some components like fonts or registry settings may not be present.
-			SM_MAXIMUMTOUCHES              = 95,     // Nonzero if there are digitizers in the system; otherwise, 0. SM_MAXIMUMTOUCHES returns the aggregate maximum of the maximum number of contacts supported by every digitizer in the system.If the system has only single-touch digitizers, the return value is 1. If the system has multi-touch digitizers, the return value is the number of simultaneous contacts the hardware can provide. Windows Server 2008, Windows Vista and Windows XP/2000:  This value is not supported.
-			SM_MEDIACENTER                 = 87,     // Nonzero if the current operating system is the Windows XP, Media Center Edition, 0 if not.
-			SM_MENUDROPALIGNMENT           = 40,     // Nonzero if drop-down menus are right-aligned with the corresponding menu-bar item; 0 if the menus are left-aligned.
-			SM_MIDEASTENABLED              = 74,     // Nonzero if the system is enabled for Hebrew and Arabic languages, 0 if not.
-			SM_MOUSEPRESENT                = 19,     // Nonzero if a mouse is installed; otherwise, 0. This value is rarely zero, because of support for virtual mice and because some systems detect the presence of the port instead of the presence of a mouse.
-			SM_MOUSEHORIZONTALWHEELPRESENT = 91,     // Nonzero if a mouse with a horizontal scroll wheel is installed; otherwise 0.
-			SM_MOUSEWHEELPRESENT           = 75,     // Nonzero if a mouse with a vertical scroll wheel is installed; otherwise 0.
-			SM_NETWORK                     = 63,     // The least significant bit is set if a network is present; otherwise, it is cleared.The other bits are reserved for future use.
-			SM_PENWINDOWS                  = 41,     // Nonzero if the Microsoft Windows for Pen computing extensions are installed; zero otherwise.
-			SM_REMOTECONTROL               = 0x2001, // This system metric is used in a Terminal Services environment to determine if the current Terminal Server session is being remotely controlled.Its value is nonzero if the current session is remotely controlled; otherwise, 0. You can use terminal services management tools such as Terminal Services Manager(tsadmin.msc) and shadow.exe to control a remote session.When a session is being remotely controlled, another user can view the contents of that session and potentially interact with it.
-			SM_REMOTESESSION               = 0x1000, // This system metric is used in a Terminal Services environment. If the calling process is associated with a Terminal Services client session, the return value is nonzero.If the calling process is associated with the Terminal Services console session, the return value is 0. Windows Server 2003 and Windows XP:  The console session is not necessarily the physical console.For more information, see WTSGetActiveConsoleSessionId.
-			SM_SAMEDISPLAYFORMAT           = 81,     // Nonzero if all the display monitors have the same color format, otherwise, 0. Two displays can have the same bit depth, but different color formats. For example, the red, green, and blue pixels can be encoded with different numbers of bits, or those bits can be located in different places in a pixel color value.
-			SM_SECURE                      = 44,     // This system metric should be ignored; it always returns 0.
-			SM_SERVERR2                    = 89,     // The build number if the system is Windows Server 2003 R2; otherwise, 0.
-			SM_SHOWSOUNDS                  = 70,     // Nonzero if the user requires an application to present information visually in situations where it would otherwise present the information only in audible form; otherwise, 0.
-			SM_SHUTTINGDOWN                = 0x2000, // Nonzero if the current session is shutting down; otherwise, 0. Windows 2000:  This value is not supported.
-			SM_SLOWMACHINE                 = 73,     // Nonzero if the computer has a low-end (slow) processor; otherwise, 0.
-			SM_STARTER                     = 88,     // Nonzero if the current operating system is Windows 7 Starter Edition, Windows Vista Starter, or Windows XP Starter Edition; otherwise, 0.
-			SM_SWAPBUTTON                  = 23,     // Nonzero if the meanings of the left and right mouse buttons are swapped; otherwise, 0.
-			SM_SYSTEMDOCKED                = 0x2004, // Reflects the state of the docking mode, 0 for Undocked Mode and non-zero otherwise.When this system metric changes, the system sends a broadcast message via WM_SETTINGCHANGE with "SystemDockMode" in the LPARAM.
-			SM_TABLETPC                    = 86,     // Nonzero if the current operating system is the Windows XP Tablet PC edition or if the current operating system is Windows Vista or Windows 7 and the Tablet PC Input service is started; otherwise, 0. The SM_DIGITIZER setting indicates the type of digitizer input supported by a device running Windows 7 or Windows Server 2008 R2.For more information, see Remarks.
-			SM_XVIRTUALSCREEN              = 76,     // The coordinates for the left side of the virtual screen.The virtual screen is the bounding rectangle of all display monitors.The SM_CXVIRTUALSCREEN metric is the width of the virtual screen.
-			SM_YVIRTUALSCREEN              = 77,     // The coordinates for the top of the virtual screen.The virtual screen is the bounding rectangle of all display monitors.The SM_CYVIRTUALSCREEN metric is the height of the virtual screen.
-		}
-		#endregion
-
 		#endregion
 
 		/// <summary>Magic value used for message queue only windows</summary>
@@ -1557,118 +1797,6 @@ namespace Rylogic.Interop.Win32
 
 		/// <summary>INVALID_HANDLE_VALUE constant</summary>
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
-
-		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true, ELoadLibraryFlags flags = ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_USER_DIRS|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)
-		{
-			var searched = new List<string>();
-			var ass = Assembly.GetEntryAssembly();
-
-			// Substitute the platform and config
-			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
-			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
-			
-			// Try the working directory
-			if (dir.Length != 0)
-			{
-				// 'dir' should be '.' to get the current working directory
-				var working_dir = Path.GetFullPath(dir);
-				var dll_path = Path_.CombinePath(working_dir, dllname);
-				if (!searched.Contains(dll_path))
-				{
-					searched.Add(dll_path);
-					if (Path_.FileExists(dll_path))
-					{
-						// Add all directories in 'dir' to the search path
-						using var users_dirs = PushSearchPaths(dll_path, dir);
-						return TryLoad(dll_path, out load_error, flags);
-					}
-				}
-			}
-
-			// Try the EXE directory
-			if (ass != null)
-			{
-				var exe_path = ass.Location;
-				var exe_dir = Path_.Directory(exe_path);
-				var dll_path = Path_.CombinePath(exe_dir, dir, dllname);
-				if (!searched.Contains(dll_path))
-				{
-					searched.Add(dll_path);
-					if (Path_.FileExists(dll_path))
-					{
-						// Add all directories in 'dir' to the search path
-						using var users_dirs = PushSearchPaths(dll_path, dir);
-						return TryLoad(dll_path, out load_error, flags);
-					}
-				}
-			}
-
-			// Try the local directory
-			if (ass != null)
-			{
-				var exe_path = ass.Location;
-				var exe_dir = Path_.Directory(exe_path);
-				var dll_path = Path_.CombinePath(exe_dir, dllname);
-				if (!searched.Contains(dll_path))
-				{
-					searched.Add(dll_path);
-					if (Path_.FileExists(dll_path))
-					{
-						// Add all directories in 'dir' to the search path
-						using var users_dirs = PushSearchPaths(dll_path, dir);
-						return TryLoad(dll_path, out load_error, flags);
-					}
-				}
-			}
-
-			// Allow LoadDll to be called multiple times if needed
-			load_error = new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}");
-			return !throw_if_missing ? IntPtr.Zero : throw load_error;
-
-			// The path is found, attempt to load the dll
-			static HWND TryLoad(string path, out Exception? load_error, ELoadLibraryFlags flags)
-			{
-				load_error = null;
-
-				Debug.WriteLine($"Loading native dll '{path}'...");
-				var module = Kernel32.LoadLibraryEx(path, IntPtr.Zero, flags);
-				if (module != IntPtr.Zero)
-					return module;
-
-				var msg = GetLastErrorString();
-				load_error = new Exception(
-					$"Found dependent library '{path}' but it failed to load.\r\n" +
-					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n" +
-					$"Last Error: {msg}");
-				throw load_error;
-			}
-
-			// Push more search directories into the dll search path
-			static IDisposable PushSearchPaths(string dll_path, string dir)
-			{
-				// If the parent directories are: debug/release, x64/x86, or lib, add them to the search paths
-				return Scope.Create(() =>
-				{
-					var cookies = new List<IntPtr>();
-					var d = Path.GetDirectoryName(dll_path);
-					HashSet<string> parents = ["debug", "release", "x64", "x86", "lib"];
-					for (; d != null && parents.Contains(Path.GetFileName(d).ToLower()); d = Path.GetDirectoryName(d))
-					{
-						var cookie = Kernel32.AddDllDirectory(d);
-						if (cookie != IntPtr.Zero)
-							cookies.Add(cookie);
-					}
-
-					return cookies;
-				},
-				(cookies) =>
-				{
-					foreach (var cookie in cookies)
-						Kernel32.RemoveDllDirectory(cookie);
-				});
-			}
-		}
 
 		/// <summary>A lazy created HWND for a STATIC window</summary>
 		public static IntPtr ProxyParentHwnd
@@ -1722,13 +1850,13 @@ namespace Rylogic.Interop.Win32
 			return DateTimeOffset.FromFileTime(ft.value);
 		}
 
-		// System.Windows.Forms.EKeys is the same as the win32 VK_ macros
-		// System.Windows.Forms.MouseButtons *isn't* the same as MK_ macros however
-		// nor is System.Windows.Input.MouseButton
-
 		/// <summary>Convert WinForms MouseButtons to win32 MK_ macro values</summary>
 		public static int ToMKey(EMouseBtns btns)
 		{
+			// System.Windows.Forms.EKeys is the same as the win32 VK_ macros
+			// System.Windows.Forms.MouseButtons *isn't* the same as MK_ macros however
+			// nor is System.Windows.Input.MouseButton
+
 			var mk = 0;
 			if (btns.HasFlag(EMouseBtns.Left    )) mk |= MK_LBUTTON;
 			if (btns.HasFlag(EMouseBtns.Right   )) mk |= MK_RBUTTON;
@@ -1741,6 +1869,10 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Convert WParam to EKeyCodes</summary>
 		public static EKeyCodes ToVKey(IntPtr wparam)
 		{
+			// System.Windows.Forms.EKeys is the same as the win32 VK_ macros
+			// System.Windows.Forms.MouseButtons *isn't* the same as MK_ macros however
+			// nor is System.Windows.Input.MouseButton
+
 			var vk = (EKeyCodes)wparam;
 			if (KeyDown(EKeyCodes.ShiftKey)) vk |= EKeyCodes.Shift;
 			if (KeyDown(EKeyCodes.ControlKey)) vk |= EKeyCodes.Control;
@@ -1767,12 +1899,11 @@ namespace Rylogic.Interop.Win32
 			return true;
 		}
 
-		/// <summary>
-		/// Convert a 'Keys' key value to a UNICODE char using the keyboard state of the last message.
-		/// This can be called from WM_KEYDOWN to provide the actual character, instead of waiting for WM_CHAR
-		/// Returns true if 'vkey' can be converted and 'ch' is valid, false if not</summary>
+		/// <summary>Convert a 'Keys' key value to a UNICODE char using the keyboard state of the last message. Returns true if 'vkey' can be converted and 'ch' is valid, false if not</summary>
 		public static bool CharFromVKey(EKeyCodes vkey, out char ch)
 		{
+			// This can be called from WM_KEYDOWN to provide the actual character, instead of waiting for WM_CHAR
+
 			ch = '\0';
 			var keyboardState = new byte[256];
 			User32.GetKeyboardState(keyboardState);
@@ -1818,17 +1949,12 @@ namespace Rylogic.Interop.Win32
 		}
 
 		/// <summary>Convert the WParam from WM_MOUSEWHEEL to usable data</summary>
-		public struct WheelState
+		/// <remarks>Read the mouse wheel delta from a WParam</remarks>
+		public struct WheelState(uint wparam)
 		{
-			public short Delta;
-			public int MouseKey; // An MK_ value
+			public short Delta = (short)HiWord(wparam);
+			public int MouseKey = LoWord(wparam); // An MK_ value
 
-			/// <summary>Read the mouse wheel delta from a WParam</summary>
-			public WheelState(uint wparam)
-			{
-				Delta = (short)HiWord(wparam);
-				MouseKey = LoWord(wparam);
-			}
 			public WheelState(int wparam)
 				: this((uint)wparam)
 			{ }
@@ -1903,14 +2029,14 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Get/Set scroll bar position</summary>
 		public static int GetScrollBarPos(IntPtr hWnd, int nBar)
 		{
-			SCROLLINFO info = SCROLLINFO.Default;
+			var info = SCROLLINFO.Default;
 			info.fMask = (int)ScrollInfoMask.SIF_POS;
 			User32.GetScrollInfo(hWnd, nBar, ref info);
 			return info.nPos;
 		}
 		public static void SetScrollBarPos(IntPtr hWnd, int nBar, int nPos, bool bRedraw)
 		{
-			SCROLLINFO info = SCROLLINFO.Default;
+			var info = SCROLLINFO.Default;
 			info.fMask = (int)ScrollInfoMask.SIF_POS;
 			info.nPos = nPos;
 			User32.SetScrollInfo(hWnd, nBar, ref info, bRedraw);
@@ -1930,7 +2056,7 @@ namespace Rylogic.Interop.Win32
 					var msg_str = DebugMessage(hwnd, msg, wparam, lparam);
 					if (msg_str.HasValue())
 					{
-						for (int i = 1; i != m_wnd_proc_nest; ++i) Debug.Write("\t");
+						for (var i = 1; i != m_wnd_proc_nest; ++i) Debug.Write("\t");
 						Debug.WriteLine($"{m_msg_idx:d5}|{name}|{msg_str}");
 					}
 					if (m_msg_idx == 0)
@@ -1939,7 +2065,7 @@ namespace Rylogic.Interop.Win32
 			}
 			#endif
 		}
-		public static void WndProcDebug(ref Message m, string name)
+		public static void WndProcDebug(ref MESSAGE m, string name)
 		{
 			WndProcDebug(m.hwnd, (int)m.message, m.wparam, m.lparam, name);
 		}
@@ -1947,7 +2073,7 @@ namespace Rylogic.Interop.Win32
 		private static int m_msg_idx = 0;
 
 		/// <summary>Convert a wndproc message to a string</summary>
-		public static string DebugMessage(ref Message msg)
+		public static string DebugMessage(ref MESSAGE msg)
 		{
 			return DebugMessage(msg.hwnd, (int)msg.message, msg.wparam, msg.lparam);
 		}
@@ -2087,18 +2213,17 @@ namespace Rylogic.Interop.Win32
 				}
 				case WM_PARENTNOTIFY:
 				{
-					string details;
-					switch (LoWord(wparam))
+					var details = LoWord(wparam) switch
 					{
-						default: details = $"Unexpected event. {HiWord(wparam)}"; break;
-						case WM_CREATE: details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
-						case WM_DESTROY: details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
-						case WM_LBUTTONDOWN: details = $"LButton {LParamToPoint(lparam)}"; break;
-						case WM_MBUTTONDOWN: details = $"MButton {LParamToPoint(lparam)}"; break;
-						case WM_RBUTTONDOWN: details = $"RButton {LParamToPoint(lparam)}"; break;
-						case WM_XBUTTONDOWN: details = $"XButton btn:{HiWord(wparam)} {LParamToPoint(lparam)}"; break;
-						case WM_POINTERDOWN: details = $"Pointer Down ptr:{HiWord(wparam)}"; break;
-					}
+						WM_CREATE => $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}",
+						WM_DESTROY => $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}",
+						WM_LBUTTONDOWN => $"LButton {LParamToPoint(lparam)}",
+						WM_MBUTTONDOWN => $"MButton {LParamToPoint(lparam)}",
+						WM_RBUTTONDOWN => $"RButton {LParamToPoint(lparam)}",
+						WM_XBUTTONDOWN => $"XButton btn:{HiWord(wparam)} {LParamToPoint(lparam)}",
+						WM_POINTERDOWN => $"Pointer Down ptr:{HiWord(wparam)}",
+						_ => $"Unexpected event. {HiWord(wparam)}",
+					};
 					return $"{hdr} evt: {MsgIdToString((int)LoWord(wparam))} {details}";
 				}
 				case WM_SYSKEYDOWN:
@@ -2157,5 +2282,28 @@ namespace Rylogic.Interop.Win32
 					return "";//ignore
 			}
 		}
+
+		/// <summary>Convert a message constant to a string</summary>
+		public static string MsgIdToString(int msg_id)
+		{
+			if (!m_wm_name.TryGetValue(msg_id, out var name))
+			{
+				var fi = typeof(Win32).GetFields(BindingFlags.Public | BindingFlags.Static)
+					.Where(x => x.IsLiteral)
+					.Where(x => x.Name.StartsWith("WM_") || x.Name.StartsWith("EM_"))
+					.FirstOrDefault(x =>
+						{
+							var val = x.GetValue(null);
+							if (val is uint v0) return v0 == (uint)msg_id;
+							if (val is int v1) return v1 == msg_id;
+							return false;
+						});
+
+				name = fi != null ? fi.Name : string.Empty;
+				m_wm_name.Add(msg_id, name);
+			}
+			return name;
+		}
+		private static Dictionary<int, string> m_wm_name = [];
 	}
 }

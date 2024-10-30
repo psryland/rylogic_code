@@ -6,7 +6,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using System.Text;
 using HWND = System.IntPtr;
 
@@ -85,105 +84,6 @@ namespace Rylogic.Interop.Win32
 			++m_position; return m_position < m_wnds.Count;
 		}
 	}
-
-	public class Win32Window
-	{
-		public Win32Window(string window_class_name)
-		{
-			var hInstance = User32.GetModuleHandle(null);
-			User32.RegisterClass(new Win32.WNDCLASS
-			{
-				style = 0,
-				lpfnWndProc = WindowProcHandler,
-				hInstance = hInstance,
-				lpszClassName = window_class_name,
-			});
-
-			IntPtr hWnd = User32.CreateWindow(
-				0, window_class_name, "My Win32 Window",
-				Win32.WS_OVERLAPPEDWINDOW | Win32.WS_VISIBLE,
-				Win32.CW_USEDEFAULT, Win32.CW_USEDEFAULT, 800, 600,
-				IntPtr.Zero, IntPtr.Zero, hInstance, IntPtr.Zero);
-
-			if (hWnd == IntPtr.Zero)
-			{
-				Console.WriteLine("Failed to create window.");
-				return;
-			}
-
-			User32.ShowWindow(hWnd, Win32.SW_SHOW);
-
-			// Message loop
-			while (true) { }
-		}
-		
-		private IntPtr WindowProcHandler(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam)
-		{
-			if (msg == 0x0010) // WM_CLOSE
-			{
-				User32.DestroyWindow(hWnd);
-			}
-			return User32.DefWindowProc(hWnd, msg, wParam, lParam);
-		}
-
-		//// Import required Win32 functions
-		//[DllImport("user32.dll", SetLastError = true)]
-		//private static extern IntPtr CreateWindowEx(int exStyle, string className, string windowName, int style, int x, int y, int width, int height, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
-
-		//[DllImport("user32.dll", SetLastError = true)]
-		//private static extern bool DestroyWindow(IntPtr hWnd);
-
-		//[DllImport("user32.dll", SetLastError = true)]
-		//private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-		//[DllImport("user32.dll", SetLastError = true)]
-		//private static extern IntPtr DefWindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-
-		//[DllImport("user32.dll", SetLastError = true)]
-		//private static extern ushort RegisterClass(ref WNDCLASS lpWndClass);
-
-		//// Window procedure delegate
-		//private delegate IntPtr WindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-
-		//// Constants for window styles and messages
-		//private const int WS_OVERLAPPEDWINDOW = 0x00CF0000;
-		//private const int WS_VISIBLE = 0x10000000;
-		//private const int SW_SHOW = 5;
-		//private const int CW_USEDEFAULT = unchecked((int)0x80000000);
-
-		//// Window class structure
-		//[StructLayout(LayoutKind.Sequential)]
-		//private struct WNDCLASS
-		//{
-		//	public uint style;
-		//	public WindowProc lpfnWndProc;
-		//	public int cbClsExtra;
-		//	public int cbWndExtra;
-		//	public IntPtr hInstance;
-		//	public IntPtr hIcon;
-		//	public IntPtr hCursor;
-		//	public IntPtr hbrBackground;
-		//	public string lpszMenuName;
-		//	public string lpszClassName;
-		//}
-
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 	// Represents another window
 	// Wraps an HWND. Not using 'Window' as it conflicts with 'System.Windows.Window'

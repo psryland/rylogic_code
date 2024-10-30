@@ -12,11 +12,11 @@ namespace Rylogic.Gui.WPF.NotifyIcon
 
 		private WindowMessageSink()
 		{
-			Version = Shell32.ENotifyIconVersion.Win95;
+			Version = Win32.ENotifyIconVersion.Win95;
 			WindowId = "WPFTaskbarIcon_" + Guid.NewGuid();
 			HWnd = IntPtr.Zero;
 		}
-		public WindowMessageSink(Shell32.ENotifyIconVersion version = Shell32.ENotifyIconVersion.Win95)
+		public WindowMessageSink(Win32.ENotifyIconVersion version = Win32.ENotifyIconVersion.Win95)
 			:this()
 		{
 			Version = version;
@@ -77,7 +77,7 @@ namespace Rylogic.Gui.WPF.NotifyIcon
 		public bool IsDisposed { get; private set; }
 
 		/// <summary>The version of the underlying icon. Defines how incoming messages are interpreted.</summary>
-		public Shell32.ENotifyIconVersion Version { get; set; }
+		public Win32.ENotifyIconVersion Version { get; set; }
 
 		/// <summary>Raised if the task bar was created or restarted. Requires the task bar icon to be reset.</summary>
 		public event EventHandler? TaskbarCreated;

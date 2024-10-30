@@ -11,6 +11,7 @@ using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using Rylogic.Extn;
 using Rylogic.Gfx;
+using Rylogic.Gui.Native;
 using Rylogic.Gui.WPF;
 using Rylogic.Scintilla;
 
@@ -29,16 +30,16 @@ namespace TestWPF
 			InitializeComponent();
 			Things = new List<Thing>
 			{
-				new Thing("One"  ),
-				new Thing("Two"  ),
-				new Thing("Three"),
-				new Thing("Four" ),
-				new Thing("Five" ),
-				new Thing("Six"  ),
-				new Thing("Seven"),
-				new Thing("Eight"),
-				new Thing("Nine" ),
-				new Thing("Ten"  ),
+				new("One"  ),
+				new("Two"  ),
+				new("Three"),
+				new("Four" ),
+				new("Five" ),
+				new("Six"  ),
+				new("Seven"),
+				new("Eight"),
+				new("Nine" ),
+				new("Ten"  ),
 			};
 			ThingsView = new ListCollectionView(Things);
 
@@ -206,6 +207,14 @@ namespace TestWPF
 			{
 				new VT100UI().Show();
 			});
+			ShowWin32Window = Command.Create(this, () =>
+			{
+				var props = new Win32Window.Props{ Title = "Win32 Window" };
+				using var wnd = new Win32Window(props);
+				wnd.Show();
+				for (; wnd.Pump();)
+				{ }
+			});
 			Exit = Command.Create(this, Close);
 			DataContext = this;
 		}
@@ -241,6 +250,7 @@ namespace TestWPF
 		public Command ShowTreeGridUI { get; }
 		public Command ShowTreeViewMSUI { get; }
 		public Command ShowVT100UI { get; }
+		public Command ShowWin32Window { get; }
 		public Command Exit { get; }
 
 		/// <summary>Test collection</summary>

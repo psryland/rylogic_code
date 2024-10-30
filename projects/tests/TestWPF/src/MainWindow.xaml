@@ -7,8 +7,6 @@
 	Title="MainWindow" Height="350" Width="525"
 	WindowStartupLocation="Manual"
 	SizeToContent="Height"
-	Left="-800"
-	Top="100"
 	>
 	<Grid>
 		<Grid.RowDefinitions>
@@ -45,6 +43,7 @@
 				<MenuItem Header="_TreeViewMultiSelect" Command="{Binding ShowTreeViewMSUI}"/>
 				<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 				<MenuItem Header="_VT100 Terminal" Command="{Binding ShowVT100UI}"/>
+				<MenuItem Header="_Win32 Window" Command="{Binding ShowWin32Window}"/>
 			</MenuItem>
 			<MenuItem Header="_Dialogs">
 				<MenuItem Header="_Colour Picker UI" Command="{Binding ShowColourPicker}"/>

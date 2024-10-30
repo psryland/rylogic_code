@@ -24,9 +24,12 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "AppendMenuW", CharSet = CharSet.Unicode)]
 		private static extern bool AppendMenu_(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, [MarshalAs(UnmanagedType.LPWStr)] string lpNewItem);
 
-		[DllImport("user32.dll")]
-		public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
+		/// <summary></summary>
+		public static IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach) => AttachThreadInput_(idAttach, idAttachTo, fAttach);
+		[DllImport("user32.dll", EntryPoint = "AttachThreadInput")]
+		public static extern IntPtr AttachThreadInput_(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 
+		/// <summary></summary>
 		[DllImport("user32.dll")]
 		public static extern int CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
 
@@ -68,13 +71,15 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
 		public static extern bool DestroyIcon(HICON hicon);
 
-		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-		public static extern bool DestroyWindow(HWND hwnd);
+		/// <summary></summary>
+		public static bool DestroyWindow(HWND hwnd) => DestroyWindow_(hwnd);
+		[DllImport("user32.dll", EntryPoint = "DestroyWindow", CharSet = CharSet.Unicode)]
+		private static extern bool DestroyWindow_(HWND hwnd);
 
 		/// <summary></summary>
-		public static int DispatchMessage(ref Win32.Message msg) => DispatchMessage(ref msg);
+		public static int DispatchMessage(ref Win32.MESSAGE msg) => DispatchMessage_(ref msg);
 		[DllImport("user32.dll", EntryPoint = "DispatchMessageW", CharSet = CharSet.Unicode)]
-		private static extern int DispatchMessage_(ref Win32.Message lpMsg);
+		private static extern int DispatchMessage_(ref Win32.MESSAGE lpMsg);
 
 		/// <summary>Draw an icon into an HDC</summary>
 		public static void DrawIcon(HDC hDC, int X, int Y, HICON hIcon)
@@ -183,20 +188,15 @@ namespace Rylogic.Interop.Win32
 		public static extern short GetKeyState(EKeyCodes vKey);
 
 		/// <summary></summary>
-		public static int GetMessage(out Win32.Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax)
+		public static int GetMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax)
 		{
 			return GetMessage_(out msg, hWnd, messageFilterMin, messageFilterMax);
 		}
 		[DllImport("user32.dll", EntryPoint = "GetMessageW", CharSet = CharSet.Unicode)]
-		private static extern int GetMessage_(out Win32.Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax);
+		private static extern int GetMessage_(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax);
 
 		[DllImport("user32.dll")]
 		public static extern int GetMessageTime();
-
-		/// <summary></summary>
-		public static IntPtr GetModuleHandle(string? lpModuleName) => GetModuleHandle_(lpModuleName);
-		[DllImport("user32.dll", SetLastError = true)]
-		private static extern IntPtr GetModuleHandle_(string? lpModuleName);
 
 		/// <summary>Return info about the given monitor handle</summary>
 		public static Win32.MONITORINFOEX GetMonitorInfo(IntPtr hMonitor)
@@ -321,20 +321,22 @@ namespace Rylogic.Interop.Win32
 		public static extern bool MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
 
 		/// <summary></summary>
-		public static bool PeekMessage(out Win32.Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, Win32.EPeekMessageFlags flags)
+		public static bool PeekMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, Win32.EPeekMessageFlags flags)
 		{
 			return PeekMessage_(out msg, hWnd, messageFilterMin, messageFilterMax, (int)flags);
 		}
 		[DllImport("user32.dll", EntryPoint = "PeekMessageW", CharSet = CharSet.Unicode)]
-		private static extern bool PeekMessage_(out Win32.Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, int flags);
+		private static extern bool PeekMessage_(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, int flags);
 
 		/// <summary></summary>
-		public static bool PostMessage(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam)
-		{
-			return PostMessage_(hwnd, message, wparam, lparam);
-		}
+		public static bool PostMessage(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam) => PostMessage_(hwnd, message, wparam, lparam);
 		[DllImport("user32.dll", EntryPoint = "PostMessageW", CharSet = CharSet.Unicode)]
 		private static extern bool PostMessage_(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam);
+
+		/// <summary></summary>
+		public static int PostQuitMessage(int nExitCode) => PostQuitMessage_(nExitCode);
+		[DllImport("user32.dll", EntryPoint = "PostQuitMessage")]
+		private static extern int PostQuitMessage_(int nExitCode);
 
 		[DllImport("user32.dll", EntryPoint = "PostThreadMessage")]
 		public static extern int PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
@@ -463,7 +465,10 @@ namespace Rylogic.Interop.Win32
 		public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 4)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
 		[DllImport("user32.dll")]
-		public static extern bool TranslateMessage(ref Win32.Message lpMsg);
+		public static extern bool TranslateMessage(ref Win32.MESSAGE lpMsg);
+
+		[DllImport("user32.dll")]
+		public static extern bool UpdateWindow(HWND hWnd);
 
 		[DllImport("user32.dll")]
 		public static extern int UnhookWindowsHookEx(int idHook);

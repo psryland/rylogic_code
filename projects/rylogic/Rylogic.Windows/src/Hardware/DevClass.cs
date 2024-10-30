@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
-namespace Rylogic.Interop.Win32
+namespace Rylogic.Hardware
 {
 	/// <summary>Device manager device classes</summary>
 	[DebuggerDisplay("{Name,nq} - {Id,nq}")]

@@ -12,9 +12,11 @@ using Microsoft.Win32;
 using Microsoft.Win32.SafeHandles;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gui.Native;
+using Rylogic.Interop.Win32;
 using Rylogic.Windows.Extn;
 
-namespace Rylogic.Interop.Win32
+namespace Rylogic.Hardware
 {
 	/// <summary>Class for accessing hardware devices</summary>
 	public static class DeviceManager

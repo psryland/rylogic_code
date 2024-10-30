@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
-using Rylogic.Common;
 
 namespace Rylogic.Interop.Win32
 {
@@ -448,6 +447,21 @@ namespace Rylogic.Interop.Win32
 		private static extern bool FileTimeToSystemTime_([In] ref Win32.FILETIME ft, [Out] out Win32.SYSTEMTIME st);
 
 		/// <summary></summary>
+		public static SafeFindHandle FindFirstFile(string fileName, ref Win32.WIN32_FIND_DATA data) => FindFirstFile_(fileName, ref data);
+		[DllImport("kernel32.dll", EntryPoint = "FindFirstFile", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern SafeFindHandle FindFirstFile_(string fileName, ref Win32.WIN32_FIND_DATA data);
+
+		/// <summary></summary>
+		public static bool FindNextFile(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData) => FindNextFile_(hndFindFile, ref lpFindFileData);
+		[DllImport("kernel32.dll", EntryPoint = "FindNextFile", CharSet = CharSet.Auto, SetLastError = true)]
+		private static extern bool FindNextFile_(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData);
+
+		/// <summary></summary>
+		public static bool FindClose(IntPtr handle) => FindClose_(handle);
+		[DllImport("kernel32.dll", EntryPoint = "FindClose")]
+		private static extern bool FindClose_(IntPtr handle);
+
+		/// <summary></summary>
 		public static uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, ref IntPtr lpBuffer, uint nSize, IntPtr pArguments) => FormatMessage_(dwFlags, lpSource, dwMessageId, dwLanguageId, ref lpBuffer, nSize, pArguments);
 		[DllImport("kernel32.dll", EntryPoint = "FormatMessage", SetLastError = true)]
 		private static extern uint FormatMessage_(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, ref IntPtr lpBuffer, uint nSize, IntPtr pArguments);
@@ -466,6 +480,11 @@ namespace Rylogic.Interop.Win32
 		public static bool GetFileInformationByHandle(IntPtr hFile, out Win32.BY_HANDLE_FILE_INFORMATION lpFileInformation) => GetFileInformationByHandle_(hFile, out lpFileInformation);
 		[DllImport("kernel32.dll", EntryPoint = "GetFileInformationByHandle", SetLastError = true)]
 		private static extern bool GetFileInformationByHandle_(IntPtr hFile, out Win32.BY_HANDLE_FILE_INFORMATION lpFileInformation);
+		
+		/// <summary></summary>
+		public static IntPtr GetModuleHandle(string? lpModuleName) => GetModuleHandle_(lpModuleName);
+		[DllImport("Kernel32.dll", EntryPoint = "GetModuleHandleW", SetLastError = true)]
+		private static extern IntPtr GetModuleHandle_([MarshalAs(UnmanagedType.LPWStr)] string? lpModuleName);
 
 		/// <summary></summary>
 		public static IntPtr LoadLibrary(string path) => LoadLibrary_(path);
@@ -511,5 +530,12 @@ namespace Rylogic.Interop.Win32
 		public static bool WriteConsole(IntPtr hConsoleOutput, [MarshalAs(UnmanagedType.LPWStr)] string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved) => WriteConsole_(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, out lpNumberOfCharsWritten, lpReserved);
 		[DllImport("kernel32.dll", EntryPoint = "WriteConsoleW", SetLastError = true)]
 		private static extern bool WriteConsole_(IntPtr hConsoleOutput, [MarshalAs(UnmanagedType.LPWStr)] string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
+	}
+
+	/// <summary>Wraps a FindFirstFile handle.</summary>
+	public sealed class SafeFindHandle : SafeHandleZeroOrMinusOneIsInvalid
+	{
+		public SafeFindHandle() : base(true) { }
+		protected override bool ReleaseHandle() { return Kernel32.FindClose(handle); }
 	}
 }

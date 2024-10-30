@@ -65,7 +65,7 @@ namespace Rylogic.Windows
 			try
 			{
 				dialog = new NativeFileOpenDialog();
-				dialog.SetOptions(Shell32.FOS.PICKFOLDERS | Shell32.FOS.FORCEFILESYSTEM | Shell32.FOS.FILEMUSTEXIST | (CreateNewFolder ? Shell32.FOS.CREATEPROMPT : 0));
+				dialog.SetOptions(Win32.FOS.PICKFOLDERS | Win32.FOS.FORCEFILESYSTEM | Win32.FOS.FILEMUSTEXIST | (CreateNewFolder ? Win32.FOS.CREATEPROMPT : 0));
 				dialog.SetTitle(Title);
 				((IFileDialogCustomize)dialog).AddText(0, Description);
 
@@ -100,7 +100,7 @@ namespace Rylogic.Windows
 
 				// Get the selected path
 				dialog.GetResult(out var item);
-				item.GetDisplayName(Shell32.SIGDN.FILESYSPATH, out var selected_path);
+				item.GetDisplayName(Win32.SIGDN.FILESYSPATH, out var selected_path);
 				SelectedPath = selected_path;
 				return true;
 			}

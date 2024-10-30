@@ -11,7 +11,7 @@ namespace Rylogic.Interop.Win32
 		/// Specifies a raster-operation code. These codes define how the colour data for the
 		/// source rectangle is to be combined with the colour data for the destination
 		/// rectangle to achieve the final colour.</summary>
-		public enum TernaryRasterOperations :uint
+		public enum TernaryRasterOperations : uint
 		{
 			/// <summary>dest = source</summary>
 			SRCCOPY = 0x00CC0020,
@@ -41,7 +41,7 @@ namespace Rylogic.Interop.Win32
 			MERGEPAINT = 0x00BB0226,
 
 			/// <summary>dest = pattern</summary>
-			PATCOPY    = 0x00F00021,
+			PATCOPY = 0x00F00021,
 
 			/// <summary>dest = DPSnoo</summary>
 			PATPAINT = 0x00FB0A09,
@@ -68,16 +68,19 @@ namespace Rylogic.Interop.Win32
 		public static Scope SelectObjectScope(IntPtr hdc, IntPtr obj)
 		{
 			return Scope.Create<IntPtr>(
-				() => SelectObject(hdc, obj),
-				ob => SelectObject(hdc, ob));
-		} 
+				() => Gdi32.SelectObject(hdc, obj),
+				ob => Gdi32.SelectObject(hdc, ob));
+		}
+	}
 
-		[DllImport("gdi32.dll")]                              public static extern IntPtr CreateSolidBrush(uint color);
-		[DllImport("gdi32.dll")]                              public static extern int    SetGraphicsMode(HDC hdc, int iGraphicsMode);
-		[DllImport("gdi32.dll")]                              public static extern int    SetMapMode(HDC hdc, int fnMapMode);
-		[DllImport("gdi32.dll")]                              public static extern bool   SetWorldTransform(HDC hdc, ref XFORM lpXform);
-		[DllImport("gdi32.dll", EntryPoint = "SelectObject")] public static extern HDC    SelectObject(HDC hdc, IntPtr hgdiobj);
-		[DllImport("gdi32.dll")]                              public static extern bool   DeleteObject(HDC hObject);
-		[DllImport("gdi32.dll")]                              public static extern bool   PatBlt(HDC hdc, int nXLeft, int nYLeft, int nWidth, int nHeight, TernaryRasterOperations dwRop);
+	public static class Gdi32
+	{
+		[DllImport("gdi32.dll")] public static extern IntPtr CreateSolidBrush(uint color);
+		[DllImport("gdi32.dll")] public static extern int SetGraphicsMode(HDC hdc, int iGraphicsMode);
+		[DllImport("gdi32.dll")] public static extern int SetMapMode(HDC hdc, int fnMapMode);
+		[DllImport("gdi32.dll")] public static extern bool SetWorldTransform(HDC hdc, ref Win32.XFORM lpXform);
+		[DllImport("gdi32.dll", EntryPoint = "SelectObject")] public static extern HDC SelectObject(HDC hdc, IntPtr hgdiobj);
+		[DllImport("gdi32.dll")] public static extern bool DeleteObject(HDC hObject);
+		[DllImport("gdi32.dll")] public static extern bool PatBlt(HDC hdc, int nXLeft, int nYLeft, int nWidth, int nHeight, Win32.TernaryRasterOperations dwRop);
 	}
 }

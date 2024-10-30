@@ -18,6 +18,81 @@ namespace Rylogic.Windows
 {
 	public static class Shell
 	{
+		#region Enumerations
+		/// <summary></summary>
+		public enum EAbortIgnoreRetry
+		{
+			Abort  = 3, // = DialogResult.Abort
+			Retry  = 4, // = DialogResult.Retry
+			Ignore = 5, // = DialogResult.Ignore
+		}
+
+		/// <summary></summary>
+		[Flags]
+		public enum EDelTreeOpts
+		{
+			None = 0,
+
+			/// <summary>Delete the 'root' folder if set, otherwise just delete the contents of the root folder</summary>
+			DeleteRoot = 1 << 0,
+
+			/// <summary>Perform the delete even if there are files/directories in the root folder, otherwise throw if not empty</summary>
+			EvenIfNotEmpty = 1 << 1,
+
+			/// <summary>Delete only the files from the directory tree</summary>
+			FilesOnly = 1 << 2,
+		}
+
+		/// <summary>Flags for shell file operations</summary>
+		[Flags]
+		public enum EFileOpFlags
+		{
+			None = 0,
+
+			/// <summary>Don't display progress UI (confirm prompts may be displayed still)</summary>
+			Silent = Win32.FOF_SILENT,
+
+			/// <summary>Copy/Move multiple files to multiple locations</summary>
+			MultipleDstFiles = Win32.FOF_MULTIDESTFILES,
+
+			/// <summary>Automatically rename the source files to avoid the collisions</summary>
+			RenameOnCollision = Win32.FOF_RENAMEONCOLLISION,
+
+			/// <summary>Don't display confirmation UI, assume "yes" for cases that can be bypassed, "no" for those that can not</summary>
+			NoConfirmation = Win32.FOF_NOCONFIRMATION,
+
+			/// <summary>Enable undo including Recycle behaviour for IFileOperation::Delete()</summary>
+			AllowUndo = Win32.FOF_ALLOWUNDO,
+
+			/// <summary>Only operate on the files (non folders), both files and folders are assumed without this</summary>
+			FilesOnly = Win32.FOF_FILESONLY,
+
+			/// <summary>Means don't show names of files</summary>
+			SimpleProgress = Win32.FOF_SIMPLEPROGRESS,
+
+			/// <summary>Don't display confirmation UI before making any needed directories, assume "Yes" in these cases</summary>
+			NoConfirmMakeDir = Win32.FOF_NOCONFIRMMKDIR,
+
+			/// <summary>Don't put up error UI, other UI may be displayed, progress, confirmations</summary>
+			NoErrorUI = Win32.FOF_NOERRORUI,
+
+			/// <summary>Don't copy file security attributes (ACLs)</summary>
+			NoCopySecurityAttribs = Win32.FOF_NOCOPYSECURITYATTRIBS,
+
+			/// <summary>Don't recurse into directories for operations that would recurse</summary>
+			NoRecursion = Win32.FOF_NORECURSION,
+
+			/// <summary>Don't operate on connected elements ("xxx_files" folders that go with .htm files)</summary>
+			NoConnectedElements = Win32.FOF_NO_CONNECTED_ELEMENTS,
+
+			/// <summary>During delete operation, warn if object is being permanently destroyed instead of recycling (partially overrides FOF_NOCONFIRMATION)</summary>
+			WantNukeWarning = Win32.FOF_WANTNUKEWARNING,
+
+			/// <summary>Don't display any UI at all</summary>
+			NoUI = Win32.FOF_NO_UI,
+		}
+		#endregion
+
 		/// <summary>Returns the processes that have a lock on the specified files.</summary>
 		public static IEnumerable<Process> FileLockHolders(string[] filepaths)
 		{
@@ -274,25 +349,29 @@ namespace Rylogic.Windows
 			{
 				if (Environment.Is64BitProcess)
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW64();
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_COPY;
-					shf.pFrom = spin.Pointer;
-					shf.pTo   = dpin.Pointer;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.lpszProgressTitle = title;
+					var shf = new Win32.SHFILEOPSTRUCTW64
+					{
+						hwnd = hwnd,
+						wFunc = Win32.FO_COPY,
+						pFrom = spin.Pointer,
+						pTo = dpin.Pointer,
+						fFlags = unchecked((ushort)flags),
+						lpszProgressTitle = title
+					};
 					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 				else
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW32();
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_COPY;
-					shf.pFrom = spin.Pointer;
-					shf.pTo   = dpin.Pointer;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.lpszProgressTitle = title;
+					var shf = new Win32.SHFILEOPSTRUCTW32
+					{
+						hwnd = hwnd,
+						wFunc = Win32.FO_COPY,
+						pFrom = spin.Pointer,
+						pTo = dpin.Pointer,
+						fFlags = unchecked((ushort)flags),
+						lpszProgressTitle = title
+					};
 					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
@@ -328,33 +407,36 @@ namespace Rylogic.Windows
 			// Interop as a string causes the double null not to be copied
 			var srcs = Encoding.Unicode.GetBytes(string.Join("\0",src_list) + "\0\0");// ensure double null termination
 			var dsts = Encoding.Unicode.GetBytes(string.Join("\0",dst_list) + "\0\0");// ensure double null termination
-			using (var spin = new PinnedObject<byte[]>(srcs, GCHandleType.Pinned))
-			using (var dpin = new PinnedObject<byte[]>(dsts, GCHandleType.Pinned))
+			using var spin = new PinnedObject<byte[]>(srcs, GCHandleType.Pinned);
+			using var dpin = new PinnedObject<byte[]>(dsts, GCHandleType.Pinned);
+
+			if (Environment.Is64BitProcess)
 			{
-				if (Environment.Is64BitProcess)
+				var shf = new Win32.SHFILEOPSTRUCTW64
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW64();
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_MOVE;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.pFrom = spin.Pointer;
-					shf.pTo   = dpin.Pointer;
-					shf.lpszProgressTitle = title;
-					Shell32.SHFileOperationW(ref shf);
-					return shf.fAnyOperationsAborted == 0;
-				}
-				else
+					hwnd = hwnd,
+					wFunc = Win32.FO_MOVE,
+					fFlags = unchecked((ushort)flags),
+					pFrom = spin.Pointer,
+					pTo = dpin.Pointer,
+					lpszProgressTitle = title
+				};
+				Shell32.SHFileOperationW(ref shf);
+				return shf.fAnyOperationsAborted == 0;
+			}
+			else
+			{
+				var shf = new Win32.SHFILEOPSTRUCTW32
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW32();
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_MOVE;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.pFrom = spin.Pointer;
-					shf.pTo   = dpin.Pointer;
-					shf.lpszProgressTitle = title;
-					Shell32.SHFileOperationW(ref shf);
-					return shf.fAnyOperationsAborted == 0;
-				}
+					hwnd = hwnd,
+					wFunc = Win32.FO_MOVE,
+					fFlags = unchecked((ushort)flags),
+					pFrom = spin.Pointer,
+					pTo = dpin.Pointer,
+					lpszProgressTitle = title
+				};
+				Shell32.SHFileOperationW(ref shf);
+				return shf.fAnyOperationsAborted == 0;
 			}
 		}
 
@@ -368,29 +450,33 @@ namespace Rylogic.Windows
 			{
 				if (Environment.Is64BitProcess)
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW64(); 
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_DELETE;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.pFrom = spin.Pointer;
-					shf.lpszProgressTitle = title;
+					var shf = new Win32.SHFILEOPSTRUCTW64
+					{
+						hwnd = hwnd,
+						wFunc = Win32.FO_DELETE,
+						fFlags = unchecked((ushort)flags),
+						pFrom = spin.Pointer,
+						lpszProgressTitle = title
+					};
 					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 				else
 				{
-					var shf = new Shell32.SHFILEOPSTRUCTW32();
-					shf.hwnd = hwnd;
-					shf.wFunc = Shell32.FO_DELETE;
-					shf.fFlags = unchecked((ushort)flags);
-					shf.pFrom = spin.Pointer;
-					shf.lpszProgressTitle = title;
+					var shf = new Win32.SHFILEOPSTRUCTW32
+					{
+						hwnd = hwnd,
+						wFunc = Win32.FO_DELETE,
+						fFlags = unchecked((ushort)flags),
+						pFrom = spin.Pointer,
+						lpszProgressTitle = title
+					};
 					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 			}
 		}
-
+#if false
 		/// <summary>
 		/// Gets FileData for all files/directories in a directory that match a specific filter including all sub directories.
 		/// 'regex_filter' is a filter on the filename, not the full path</summary>
@@ -467,79 +553,6 @@ namespace Rylogic.Windows
 			}
 		}
 
-		/// <summary></summary>
-		public enum EAbortIgnoreRetry
-		{
-			Abort  = 3, // = DialogResult.Abort
-			Retry  = 4, // = DialogResult.Retry
-			Ignore = 5, // = DialogResult.Ignore
-		}
-
-		/// <summary></summary>
-		[Flags]
-		public enum EDelTreeOpts
-		{
-			None = 0,
-
-			/// <summary>Delete the 'root' folder if set, otherwise just delete the contents of the root folder</summary>
-			DeleteRoot = 1 << 0,
-
-			/// <summary>Perform the delete even if there are files/directories in the root folder, otherwise throw if not empty</summary>
-			EvenIfNotEmpty = 1 << 1,
-
-			/// <summary>Delete only the files from the directory tree</summary>
-			FilesOnly = 1 << 2,
-		}
-
-		/// <summary>Flags for shell file operations</summary>
-		[Flags]
-		public enum EFileOpFlags
-		{
-			None = 0,
-
-			/// <summary>Don't display progress UI (confirm prompts may be displayed still)</summary>
-			Silent = Shell32.FOF_SILENT,
-
-			/// <summary>Copy/Move multiple files to multiple locations</summary>
-			MultipleDstFiles = Shell32.FOF_MULTIDESTFILES,
-
-			/// <summary>Automatically rename the source files to avoid the collisions</summary>
-			RenameOnCollision = Shell32.FOF_RENAMEONCOLLISION,
-
-			/// <summary>Don't display confirmation UI, assume "yes" for cases that can be bypassed, "no" for those that can not</summary>
-			NoConfirmation = Shell32.FOF_NOCONFIRMATION,
-
-			/// <summary>Enable undo including Recycle behaviour for IFileOperation::Delete()</summary>
-			AllowUndo = Shell32.FOF_ALLOWUNDO,
-
-			/// <summary>Only operate on the files (non folders), both files and folders are assumed without this</summary>
-			FilesOnly = Shell32.FOF_FILESONLY,
-
-			/// <summary>Means don't show names of files</summary>
-			SimpleProgress = Shell32.FOF_SIMPLEPROGRESS,
-
-			/// <summary>Don't display confirmation UI before making any needed directories, assume "Yes" in these cases</summary>
-			NoConfirmMakeDir = Shell32.FOF_NOCONFIRMMKDIR,
-
-			/// <summary>Don't put up error UI, other UI may be displayed, progress, confirmations</summary>
-			NoErrorUI = Shell32.FOF_NOERRORUI,
-
-			/// <summary>Don't copy file security attributes (ACLs)</summary>
-			NoCopySecurityAttribs = Shell32.FOF_NOCOPYSECURITYATTRIBS,
-
-			/// <summary>Don't recurse into directories for operations that would recurse</summary>
-			NoRecursion = Shell32.FOF_NORECURSION,
-
-			/// <summary>Don't operate on connected elements ("xxx_files" folders that go with .htm files)</summary>
-			NoConnectedElements = Shell32.FOF_NO_CONNECTED_ELEMENTS,
-
-			/// <summary>During delete operation, warn if object is being permanently destroyed instead of recycling (partially overrides FOF_NOCONFIRMATION)</summary>
-			WantNukeWarning = Shell32.FOF_WANTNUKEWARNING,
-
-			/// <summary>Don't display any UI at all</summary>
-			NoUI = Shell32.FOF_NO_UI,
-		}
-
 		/// <summary>Contains information about a file</summary>
 		[Serializable]
 		[Obsolete("Use 'FileSystemInfo' instead")]
@@ -606,24 +619,7 @@ namespace Rylogic.Windows
 			/// <summary></summary>
 			public override string ToString() { return FullPath; }
 		}
-
-		/// <summary>Wraps a FindFirstFile handle.</summary>
-		private sealed class SafeFindHandle : SafeHandleZeroOrMinusOneIsInvalid
-		{
-			public SafeFindHandle() : base(true) { }
-			protected override bool ReleaseHandle() { return FindClose(handle); }
-		}
-
-		#region Interop
-		[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern SafeFindHandle FindFirstFile(string fileName, ref Win32.WIN32_FIND_DATA data);
-
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-		private static extern bool FindNextFile(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData);
-
-		[DllImport("kernel32.dll")]
-		private static extern bool FindClose(IntPtr handle);
-		#endregion
+#endif
 	}
 }
 

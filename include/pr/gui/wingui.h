@@ -6480,7 +6480,7 @@ namespace pr
 					}
 					case WM_CLOSE:
 					{
-						// If this form is running modally, reenable the parent
+						// If this form is running modally, re-enable the parent
 						auto parent = ::GetParent(m_hwnd);
 						if (m_modal && parent != nullptr)
 							::EnableWindow(parent, true);

@@ -5,8 +5,9 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Common;
+using Rylogic.Interop.Win32;
 
-namespace Rylogic.Interop.Win32
+namespace Rylogic.Gui.Native
 {
 	/// <summary>An invisible window used for receiving notification messages</summary>
 	public sealed class DummyWindow :IDisposable
@@ -73,7 +74,7 @@ namespace Rylogic.Interop.Win32
 			using var quit = shutdown.Register(() => User32.PostMessage(Handle, Win32.WM_QUIT, IntPtr.Zero, IntPtr.Zero));
 			for (;;)
 			{
-				var msg = new Win32.Message { };
+				var msg = new Win32.MESSAGE { };
 				var res = await Task.Run(() => User32.GetMessage(out msg, Handle, 0, 0));
 				if (res == -1) throw new Win32Exception("Dummy Window message queue error");
 				if (res == 0) return; // WM_QUIT

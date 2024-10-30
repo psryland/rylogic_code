@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Text;
+using Microsoft.SqlServer.Server;
+using Rylogic.Interop.Win32;
 
 namespace Rylogic.Common
 {
@@ -71,6 +74,7 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>Event args for message handlers</summary>
+	[DebuggerDisplay("Description,nq")]
 	public class WndProcEventArgs :EventArgs
 	{
 		public WndProcEventArgs(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
@@ -96,5 +100,8 @@ namespace Rylogic.Common
 
 		/// <summary>Message handled (prevents passing to DefWindowProc)</summary>
 		public bool Handled { get; set; }
+
+		/// <summary></summary>
+		public string Description => Win32.MsgIdToString(Message);
 	}
 }
