@@ -54,7 +54,7 @@ namespace Rylogic.TextAligner
 
 		/// <summary>
 		/// Routed event used to determine whether or not key input in the dialog should be handled by the dialog or by
-		/// the content of this page.  If this event is marked as handled, the keypress should be handled by the content,
+		/// the content of this page.  If this event is marked as handled, the key press should be handled by the content,
 		/// and DLGC_WANTALLKEYS will be returned from WM_GETDLGCODE.  If the event is not handled, then only arrow keys,
 		/// tabbing, and character input will be handled within this dialog page.</summary>
 		public static readonly RoutedEvent DialogKeyPendingEvent = EventManager.RegisterRoutedEvent("DialogKeyPending", RoutingStrategy.Bubble, typeof(EventHandler<DialogKeyEventArgs>), typeof(UIElementDialogPage));
@@ -194,12 +194,12 @@ namespace Rylogic.TextAligner
 			// From a given handle get the next focus element either forward or backward
 			internal static IntPtr GetNextFocusElement(IntPtr handle, bool forward)
 			{
-				var hDlg = Win32.GetAncestor(handle, Win32.GA_ROOT);
+				var hDlg = User32.GetAncestor(handle, Win32.GA_ROOT);
 				if (hDlg != IntPtr.Zero)
 				{
 					// Find the next dialog item in the parent dialog (searching in the correct direction)
 					// This can return IntPtr.Zero if there are no more items in that direction
-					return Win32.GetNextDlgTabItem(hDlg, handle, !forward);
+					return User32.GetNextDlgTabItem(hDlg, handle, !forward);
 				}
 				return IntPtr.Zero;
 			}
@@ -257,7 +257,7 @@ namespace Rylogic.TextAligner
 				{
 					// If we were able to find another control, send focus to it and inform
 					// WPF that we moved focus outside the HwndSource.
-					Win32.SetFocus(next_handle);
+					User32.SetFocus(next_handle);
 					return true;
 				}
 

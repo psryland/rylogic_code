@@ -21,7 +21,7 @@
 	<PropertyGroup>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<RylogicRoot>$(MSBuildThisFileDirectory)</RylogicRoot>

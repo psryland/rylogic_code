@@ -5,12 +5,9 @@ using Rylogic.Utility;
 
 namespace Rylogic.TextAligner
 {
-	public sealed class UnalignMenuCommand :BaseCommand
+	public sealed class UnalignMenuCommand(IPackage package, Guid cmd_set, int unalign_id)
+		: BaseCommand(package, cmd_set, unalign_id)
 	{
-		public UnalignMenuCommand(RylogicTextAlignerPackage package)
-			:base(package, PkgCmdIDList.cmdidUnalign)
-		{}
-
 		/// <summary>
 		/// This function is the callback used to execute a command when the a menu item is clicked.
 		/// See the Initialize method to see how the menu item is associated to this function using

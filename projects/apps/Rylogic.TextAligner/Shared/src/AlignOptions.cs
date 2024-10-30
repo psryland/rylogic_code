@@ -16,7 +16,7 @@ namespace Rylogic.TextAligner
 {
 	[ClassInterface(ClassInterfaceType.AutoDual)]
 	[Guid("C0392BF9-56C7-4D4E-9669-5C4B2B38366C")]
-	internal sealed class AlignOptions :UIElementDialogPage, INotifyPropertyChanged
+	public sealed class AlignOptions :UIElementDialogPage, INotifyPropertyChanged
 	{
 		public AlignOptions()
 			:base()

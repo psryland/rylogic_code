@@ -10,16 +10,6 @@ using Rylogic.Common;
 using Rylogic.Utility;
 
 [assembly: ComVisible(false)]
-[assembly: AssemblyTitle("Rylogic.TextAligner")]
-[assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Rylogic.TextAligner")]
-[assembly: AssemblyCopyright("")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
-[assembly: AssemblyVersion("1.11.7")]
-[assembly: AssemblyFileVersion("1.11.7")]
 
 namespace Rylogic.TextAligner
 {
@@ -33,7 +23,7 @@ namespace Rylogic.TextAligner
 	/// This package uses the helper classes defined inside the Managed Package Framework (MPF)
 	/// to do it: it derives from the Package class that provides the implementation of the
 	/// IVsPackage interface and uses the registration attributes defined in the framework to
-	/// register itself and its components with the shell. These attributes tell the pkgdef creation
+	/// register itself and its components with the shell. These attributes tell the 'pkgdef' creation
 	/// utility what data to put into .pkgdef file.
 	/// </para>
 	/// <para>
@@ -41,15 +31,15 @@ namespace Rylogic.TextAligner
 	/// </para>
 	/// </remarks>
 	[Guid(PackageGuidString)]
-	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]                   // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.11.7", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                   // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.12.0", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                    // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                           // This attribute is needed to let the shell know that this package exposes an options page.
 	[ProvideBindingPath]                                                                                        // Include the local directory when resolving dependent assemblies
-	public sealed class RylogicTextAlignerPackage : AsyncPackage, IOleCommandTarget
+	public sealed class RylogicTextAlignerPackage :Package, IOleCommandTarget, IPackage
 	{
 		/// <summary>Rylogic.TextAlignerPackage GUID string.</summary>
-		public const string PackageGuidString = "26C3C30A-6050-4CBF-860E-6C5590AF95EF";
+		public const string PackageGuidString = "DF402917-6013-40CA-A4C6-E1640DA86B90";
 
 		/// <summary>Singleton log instance</summary>
 		public Log Log { get; } = new Log();
@@ -58,10 +48,10 @@ namespace Rylogic.TextAligner
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
 		/// where you can put all the initialization code that rely on services provided by VisualStudio.
 		/// </summary>
-		/// <param name="cancellation_token">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
+		/// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
 		/// <param name="progress">A provider for progress updates.</param>
 		/// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-		protected override async Task InitializeAsync(CancellationToken cancellation_token, IProgress<ServiceProgressData> progress)
+		protected override void Initialize()
 		{
 			try
 			{
@@ -87,43 +77,40 @@ namespace Rylogic.TextAligner
 				// When initialized asynchronously, the current thread may be a background thread at this point.
 				// Do any initialization that requires the UI thread after switching to the UI thread.
 				//await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-				await base.InitializeAsync(cancellation_token, progress);
+				base.Initialize();
 
 				// Add our command handlers for menu
-				if (await GetServiceAsync<IMenuCommandService>(cancellation_token) is IMenuCommandService mcs)
+				if (GetService<IMenuCommandService>() is OleMenuCommandService mcs)
 				{
-					mcs.AddCommand(new AlignMenuCommand(this));
-					mcs.AddCommand(new UnalignMenuCommand(this));
-				}
-				else
-				{
-					Log.Write(ELogLevel.Warn, $"Menu Command Service is not OleMenuCommandService. Menu options not added");
+					mcs.AddCommand(new AlignMenuCommand(this, GuidList.CommandSet, PkgCmdIDList.Align));
+					mcs.AddCommand(new UnalignMenuCommand(this, GuidList.CommandSet, PkgCmdIDList.Unalign));
 				}
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Error, ex, "Error during Initialize");
+				Log.Write(Utility.ELogLevel.Error, ex, "Error during Initialize");
 				throw;
 			}
 		}
 
 		/// <summary>Return the VS service of type 'TService'</summary>
-		public async Task<object> GetServiceAsync<TService>(CancellationToken cancellation_token)
+		public object? GetService<TService>()
 		{
 			try
 			{
-				// Switches to the UI thread in order to consume some services used in command initialization
-				await JoinableTaskFactory.SwitchToMainThreadAsync(cancellation_token);
-
 				// Note: the return value of 'GetService' is not always cast-able to 'TService'
-				var service = await GetServiceAsync(typeof(TService));
-				return service;
+				ThreadHelper.ThrowIfNotOnUIThread();
+				return GetService(typeof(TService));
 			}
 			catch (Exception ex)
 			{
 				Log.Write(ELogLevel.Error, ex, "Error during GetService");
 				throw;
 			}
+		}
+		public Task<object?> GetServiceAsync<TService>(CancellationToken cancellation_token)
+		{
+			return Task.FromResult(GetService<TService>());
 		}
 
 		/// <summary>Return a dialog page</summary>
@@ -143,14 +130,14 @@ namespace Rylogic.TextAligner
 
 	static class PkgCmdIDList
 	{
-		public const int cmdidAlign = 0x100;
-		public const int cmdidUnalign = 0x101;
+		public const int Align = 0x100;
+		public const int Unalign = 0x101;
 	}
 
 	static class GuidList
 	{
-		public const string guidRylogicTextAlignerPkgString = "26C3C30A-6050-4CBF-860E-6C5590AF95EF";
-		public const string guidRylogicTextAlignerCmdSetString = "E695E21D-48BB-4B3E-B442-DF64253991A5";
-		public static readonly Guid guidRylogicTextAlignerCmdSet = new(guidRylogicTextAlignerCmdSetString);
+		//public const string GuidRylogicTextAlignerPkgString = "DF402917-6013-40CA-A4C6-E1640DA86B90";
+		public const string GuidRylogicTextAlignerCmdSetString = "E695E21D-48BB-4B3E-B442-DF64253991A5";
+		public static readonly Guid CommandSet = new(GuidRylogicTextAlignerCmdSetString);
 	}
 }
