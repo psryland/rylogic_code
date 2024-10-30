@@ -1,13 +1,11 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
-using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -37,12 +35,12 @@ namespace Rylogic.Gui.WinForms
 		/// in the call to InitiailizeComponent(). Leaving the StartPosition property
 		/// as WindowDefaultPosition should prevent the designer adding an explicit set
 		/// of the StartPosition property.</summary>
-		public ToolForm()                                     :this(null, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
-		public ToolForm(Control target)                       :this(target, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
-		public ToolForm(Control target, EPin pin)             :this(target, pin, Point.Empty, Size.Empty, false) {}
-		public ToolForm(Control target, EPin pin, Point ofs)  :this(target, pin, ofs, Size.Empty, false) {}
-		public ToolForm(Control target, Point ofs, Size size) :this(target, EPin.TopLeft, ofs, size, false) {}
-		public ToolForm(Control target, EPin pin, Point ofs, Size size, bool modal)
+		public ToolForm()                                      :this(null, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control? target)                       :this(target, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control? target, EPin pin)             :this(target, pin, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control? target, EPin pin, Point ofs)  :this(target, pin, ofs, Size.Empty, false) {}
+		public ToolForm(Control? target, Point ofs, Size size) :this(target, EPin.TopLeft, ofs, size, false) {}
+		public ToolForm(Control? target, EPin pin, Point ofs, Size size, bool modal)
 		{
 			m_ofs = ofs;
 			m_pin = pin;
@@ -76,9 +74,9 @@ namespace Rylogic.Gui.WinForms
 			base.OnHandleCreated(e);
 			
 			// Set up the pin menu
-			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
-			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
-			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
+			m_sys_menu_handle = User32.GetSystemMenu(Handle, false);
+			User32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
+			User32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
 			UpdatePinMenuCheckState();
 		}
 		protected override void OnLoad(EventArgs e)
@@ -178,7 +176,7 @@ namespace Rylogic.Gui.WinForms
 		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
 			// On closing, if non-modal just hide, otherwise remove the Move handler from the owner
- 			base.OnFormClosing(e);
+			base.OnFormClosing(e);
 			if (HideOnClose && e.CloseReason == CloseReason.UserClosing)
 			{
 				Hide();
@@ -189,7 +187,7 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnFormClosed(FormClosedEventArgs e)
 		{
- 			base.OnFormClosed(e);
+			base.OnFormClosed(e);
 			Owner = null;
 		}
 		protected override void OnControlAdded(ControlEventArgs e)
@@ -257,7 +255,7 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>Get/Set the child control on the owner form that this tool window is pinned to. If null, assumes the form itself</summary>
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public Control PinTarget
+		public Control? PinTarget
 		{
 			get { return m_pin_target; }
 			set
@@ -281,7 +279,7 @@ namespace Rylogic.Gui.WinForms
 				UpdateLocation();
 			}
 		}
-		private Control m_pin_target;
+		private Control? m_pin_target;
 
 		/// <summary>The offset of top-left corner of this form to the pin location on the parent form</summary>
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -323,7 +321,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Set the form opacity based on where the mouse is</summary>
-		private void HandleAutoFade(object sender = null, EventArgs args = null)
+		private void HandleAutoFade(object? sender = null, EventArgs? args = null)
 		{
 			if (!AutoFade)
 			{
@@ -361,22 +359,22 @@ namespace Rylogic.Gui.WinForms
 			}
 			UpdateLocation();
 		}
-		private Control m_top_level_control;
+		private Control? m_top_level_control;
 
 		/// <summary>Returns the bounds of the form/control that the tool is pinned to</summary>
 		protected Rectangle TargetFrame
 		{
 			get
 			{
-				Debug.Assert(PinTarget != null);
-				return PinTarget.TopLevelControl != null && PinTarget.TopLevelControl != PinTarget
-					? PinTarget.TopLevelControl.RectangleToScreen(PinTarget.Bounds)
-					: PinTarget.Bounds;
+				var pin_target = PinTarget ?? throw new NullReferenceException("Expected a pin target");
+				return pin_target.TopLevelControl != null && pin_target.TopLevelControl != pin_target
+					? pin_target.TopLevelControl.RectangleToScreen(pin_target.Bounds)
+					: pin_target.Bounds;
 			}
 		}
 
 		/// <summary>Records the current offset of this form from the owner form</summary>
-		protected void RecordOffset(object sender = null, EventArgs args = null)
+		protected void RecordOffset(object? sender = null, EventArgs? args = null)
 		{
 			if (Owner == null || !PinWindow) return;
 			var frame = TargetFrame;
@@ -396,7 +394,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Called to update the position relative to the owner form</summary>
-		protected void UpdateLocation(object sender = null, EventArgs args = null)
+		protected void UpdateLocation(object? sender = null, EventArgs? args = null)
 		{
 			if (Owner == null || !PinWindow) return;
 			var frame = TargetFrame;
@@ -419,7 +417,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Update the check mark next to the Pin Window menu option</summary>
 		private void UpdatePinMenuCheckState()
 		{
-			Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|(PinWindow ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+			User32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|(PinWindow ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
 		}
 
 		/// <summary>Snap to the parent window</summary>

@@ -4,17 +4,17 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Rylogic.Extn.Windows;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {
 	public class RecentFilesMenuItem : MenuItem
 	{
 		// Notes:
-		//  - This is a replacement for a menu item that handles a list of recent filepaths
+		//  - This is a replacement for a menu item that handles a list of recent file paths
 		// Usage:
 		// In your XAML file:
-		//  xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui"
+		//  'xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui"'
 		//  ...
 		//  <Menu>
 		//    <gui:RecentFilesMenuItem Header= "_Recent Files" Name="m_recent_files">

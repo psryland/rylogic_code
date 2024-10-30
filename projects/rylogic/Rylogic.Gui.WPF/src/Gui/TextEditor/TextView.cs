@@ -1,25 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Media.TextFormatting;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using Rylogic.Common;
-using Rylogic.Extn;
-using Rylogic.Extn.Windows;
-using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF.TextEditor
 {
@@ -28,7 +19,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 	{
 		// Notes:
 		//  - 'TextView' handles all rendering.
-		//  - Mapping Ypos (in DIP) to a document line requires generating visual lines
+		//  - Mapping Y-pos (in DIP) to a document line requires generating visual lines
 		//    for the whole document. 
 
 		static TextView()

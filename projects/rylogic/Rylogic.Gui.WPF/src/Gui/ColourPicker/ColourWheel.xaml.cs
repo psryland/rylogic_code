@@ -1,13 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Gfx;
 using Rylogic.Maths;
-using Size_ = Rylogic.Extn.Windows.Size_;
+using Size_ = Rylogic.Windows.Extn.Size_;
 
 namespace Rylogic.Gui.WPF
 {
@@ -319,7 +318,7 @@ namespace Rylogic.Gui.WPF
 				const int ColourCount = 60;
 				var points = new System.Drawing.PointF[ColourCount];
 				var colours = new System.Drawing.Color[ColourCount];
-				for (int i = 0; i != ColourCount; ++i)
+				for (var i = 0; i != ColourCount; ++i)
 				{
 					points[i] = new System.Drawing.PointF(
 						(float)(centre.X + radius * Math.Cos(i * Math_.Tau / ColourCount)),
@@ -395,10 +394,12 @@ namespace Rylogic.Gui.WPF
 				Math.Max(0, size.Width - (vertical ? 0 : slider_space)),
 				Math.Max(0, size.Height - (vertical ? slider_space : 0)));
 
-			var meas = new Measurements();
-			meas.Width = min;
-			meas.Height = min;
-			meas.Radius = Math.Max(0, min * 0.5 - p);
+			var meas = new Measurements
+			{
+				Width = min,
+				Height = min,
+				Radius = Math.Max(0, min * 0.5 - p)
+			};
 			meas.Centre = new Point(p + Math.Ceiling(meas.Radius), p + Math.Ceiling(meas.Radius));
 			meas.Wheel = new Rect(0, 0, meas.Centre.X * 2, meas.Centre.Y * 2);
 
@@ -494,15 +495,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#region EventArgs
-		public class ColourEventArgs : EventArgs
+		public class ColourEventArgs(Colour32 colour) : EventArgs
 		{
-			public ColourEventArgs(Colour32 colour)
-			{
-				Colour = colour;
-			}
-
 			/// <summary>The selected colour</summary>
-			public Colour32 Colour { get; }
+			public Colour32 Colour { get; } = colour;
 		}
 		#endregion
 	}

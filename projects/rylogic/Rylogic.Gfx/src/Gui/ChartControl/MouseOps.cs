@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Windows.Input;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {

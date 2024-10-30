@@ -68,7 +68,7 @@ namespace Rylogic.Utility
 		public static T?[]? DisposeAll<T>(T?[]? doomed) where T : class, IDisposable
 		{
 			if (doomed == null) return null;
-			for (int i = doomed.Length; i-- != 0; )
+			for (var i = doomed.Length; i-- != 0; )
 				Dispose(ref doomed[i]);
 
 			return null;
@@ -80,7 +80,7 @@ namespace Rylogic.Utility
 		{
 			// Pop each item from the collection and dispose it
 			if (doomed == null) return;
-			for (int i = doomed.Count; i-- != 0;)
+			for (var i = doomed.Count; i-- != 0;)
 			{
 				// We have to remove each item, because the list might be a binding list
 				// that performs some action when items are removed.
@@ -123,8 +123,8 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>True if the current thread is the 'main' thread</summary>
-		public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == m_main_thread_id;
-		private static readonly int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+		public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == MainThreadId;
+		private static readonly int MainThreadId = Thread.CurrentThread.ManagedThreadId;
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
 		public static bool IsGCFinalizerThread => Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId;
@@ -133,7 +133,7 @@ namespace Rylogic.Utility
 			get
 			{
 				// I have no idea why this doesn't work the first time.
-				for (int attempt = 0; attempt != 5 && GCThreadGrabber.m_gc_thread == null; ++attempt)
+				for (var attempt = 0; attempt != 5 && GCThreadGrabber.m_gc_thread == null; ++attempt)
 				{
 					// This doesn't work if called from the GC thread.
 					if (!IsMainThread)
@@ -208,7 +208,7 @@ namespace Rylogic.Utility
 						"Waiting for Debugger...";
 
 					// Default wait function
-					wait_cb = wait_cb ?? (_ =>
+					wait_cb ??= (_ =>
 					{
 						Thread.Sleep(10);
 						return true;
@@ -219,12 +219,14 @@ namespace Rylogic.Utility
 				}
 				catch { }
 			}));
-			t.SetApartmentState(ApartmentState.STA); // So 'wait_cb' can display a MsgBox
+			if (Platform.IsWindows())
+				t.SetApartmentState(ApartmentState.STA); // So 'wait_cb' can display a MsgBox
+
 			t.Start();
 			t.Join();
 
 			// Helper method for debugging (return false)
-			bool DebuggerAttached() => Debugger.IsAttached;
+			static bool DebuggerAttached() => Debugger.IsAttached;
 		}
 
 		/// <summary>__FILE__</summary>
@@ -266,7 +268,7 @@ namespace Rylogic.Utility
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
 		public static IEnumerable<T> Conv<T,U>(IEnumerable<U> collection, Func<U, T> conv)
 		{
-			foreach (U i in collection) yield return conv(i);
+			foreach (var i in collection) yield return conv(i);
 		}
 
 		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
@@ -294,8 +296,8 @@ namespace Rylogic.Utility
 			if (root_type.IsEnum)
 			{
 				// Parse string
-				if (value is string)
-					return Enum.Parse(root_type, (string)value, ignore_case);
+				if (value is string v)
+					return Enum.Parse(root_type, v, ignore_case);
 
 				// Convert from integral type
 				var enum_ty = Enum.GetUnderlyingType(root_type);
@@ -309,8 +311,8 @@ namespace Rylogic.Utility
 			// Convert to guid
 			if (root_type == typeof(Guid))
 			{
-				if (value is string) value = new Guid((string)value);
-				if (value is byte[]) value = new Guid((byte[])value);
+				if (value is string v) value = new Guid(v);
+				if (value is byte[] v1) value = new Guid(v1);
 				return Convert.ChangeType(value, root_type);
 			}
 
@@ -341,7 +343,7 @@ namespace Rylogic.Utility
 			where TKey : notnull
 		{
 			var dick = new Dictionary<TKey,TValue>();
-			for (int i = 0; i != count; ++i) dick.Add(key(i), value(i));
+			for (var i = 0; i != count; ++i) dick.Add(key(i), value(i));
 			return dick;
 		}
 
@@ -403,8 +405,7 @@ namespace Rylogic.Utility
 			var sz = Marshal.SizeOf(typeof(T));
 			using var ptr = Marshal_.Alloc(EHeap.HGlobal, sz);
 			Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
-			var strukt = Marshal.PtrToStructure<T>(ptr.Value.Ptr);
-			if (strukt == null) throw new Exception("FromBytes<T>: Failed to convert pointer");
+			var strukt = Marshal.PtrToStructure<T>(ptr.Value.Ptr) ?? throw new Exception("FromBytes<T>: Failed to convert pointer");
 			return strukt;
 		}
 
@@ -413,8 +414,7 @@ namespace Rylogic.Utility
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
-			var strukt = Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
-			if (strukt == null) throw new Exception("FromBytes<T>: Failed to convert pointer");
+			var strukt = Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject()) ?? throw new Exception("FromBytes<T>: Failed to convert pointer");
 			return strukt;
 		}
 
@@ -489,7 +489,7 @@ namespace Rylogic.Utility
 			else
 			{
 				var sb = new StringBuilder();
-				for (int i = 0; i != count; ++i)
+				for (var i = 0; i != count; ++i)
 				{
 					if (sb.Length != 0)
 						sb.Append((i % width) != 0 ? sep : line_sep);
@@ -533,7 +533,7 @@ namespace Rylogic.Utility
 				throw new ArgumentException("'history' must be an editable list");
 
 			// Remove any existing occurrences of 'item'
-			cmp = cmp ?? ((l, r) => Equals(l, r));
+			cmp ??= ((l, r) => Equals(l, r));
 			history.RemoveIf(i => cmp(i, item));
 
 			// Insert 'item' into the history
@@ -555,7 +555,7 @@ namespace Rylogic.Utility
 		public static T[] AddToHistoryList<T>(T[] history, T item, int max_history_length, int index = 0, Func<T,T,bool>? cmp = null)
 		{
 			// Convert the history to a list
-			var list = history?.ToList() ?? new List<T>();
+			var list = history?.ToList() ?? [];
 
 			// Add 'item' to the list
 			AddToHistoryList(list, item, max_history_length, index, cmp);
@@ -575,22 +575,13 @@ namespace Rylogic.Utility
 		{
 			if (ass == null) ass = Assembly.GetEntryAssembly();
 			if (ass == null) ass = Assembly.GetExecutingAssembly();
-			object[] attr = ass.GetCustomAttributes(typeof(T), false);
+			var attr = ass.GetCustomAttributes(typeof(T), false);
 			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
 			return (T)(attr[0]);
 		}
 
 		/// <summary>Return the main assembly for the currently running application</summary>
-		public static Assembly MainAssembly
-		{
-			get
-			{
-				var ass = (Assembly?)null;
-				if (ass == null) ass = Assembly.GetEntryAssembly();
-				if (ass == null) ass = Assembly.GetExecutingAssembly();
-				return ass;
-			}
-		}
+		public static Assembly MainAssembly => (Assembly?)null ?? Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 		public static string MainAssemblyName => MainAssembly?.GetName().Name ?? string.Empty;
 
 		/// <summary>Return the version number for an assembly</summary>
@@ -605,14 +596,14 @@ namespace Rylogic.Utility
 		}
 		public static string AppVersion => AssemblyVersion().ToString(3);
 
-		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
+		/// <summary>Returns the time stamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly? ass = null)
 		{
 			const int PeHeaderOffset = 60;
 			const int LinkerTimestampOffset = 8;
 
 			var b = new byte[2048];
-			ass = ass ?? MainAssembly;
+			ass ??= MainAssembly;
 			using (var s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
 				s.Read(b, 0, 2048);
 
@@ -690,11 +681,10 @@ namespace Rylogic.Utility
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{
-			ass = ass ?? Assembly.GetExecutingAssembly(); // this will look in Rylogic.Main.dll for resources.. probably not what's wanted
-			var stream = ass.GetManifestResourceStream(resource_name);
-			if (stream == null) throw new IOException("No resource with name "+resource_name+" found");
-			using (var src = new StreamReader(stream))
-				return src.ReadToEnd();
+			ass ??= Assembly.GetExecutingAssembly(); // this will look in Rylogic.Main.dll for resources.. probably not what's wanted
+			var stream = ass.GetManifestResourceStream(resource_name) ?? throw new IOException("No resource with name "+resource_name+" found");
+			using var src = new StreamReader(stream);
+			return src.ReadToEnd();
 		}
 
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
@@ -799,14 +789,6 @@ namespace Rylogic.Utility
 			var assembly_data = new Byte[stream.Length];
 			stream.Read(assembly_data, 0, assembly_data.Length);
 			return Assembly.Load(assembly_data);
-		}
-
-		/// <summary>Convert a Unix time (i.e. seconds past 1/1/1970) to a date time</summary>
-		[Obsolete] public static DateTime UnixTimeToDateTime(long milliseconds)
-		{
-			const long ticks_per_ms = 10000;
-			var time = DateTime_.UnixEpoch;
-			return time.AddTicks(milliseconds*ticks_per_ms);
 		}
 
 		/// <summary>Returns true if 'point' is more than 'dx' or 'dy' from 'ref_point'</summary>
@@ -1102,10 +1084,10 @@ namespace Rylogic.Utility
 		/// <param name="dp">The number of decimal places to use</param>
 		public static string PrettySize(long bytes, bool si, int dp)
 		{
-			int unit = si ? 1000 : 1024;
+			var unit = si ? 1000 : 1024;
 			if (bytes < unit) return bytes + (si ? "B" : "iB");
-			int exp = (int)(Math.Log(bytes) / Math.Log(unit));
-			char prefix = "KMGTPE"[exp-1];
+			var exp = (int)(Math.Log(bytes) / Math.Log(unit));
+			var prefix = "KMGTPE"[exp-1];
 			var fmt = "{0:N" + dp + "}{1}" + (si ? "B" : "iB");
 			return string.Format(fmt, bytes / Math.Pow(unit, exp), prefix);
 		}
@@ -1117,7 +1099,7 @@ namespace Rylogic.Utility
 
 			try
 			{
-				int midx = 0;
+				var midx = 0;
 				foreach (var m in Regex.Matches(str, pattern, opts).Cast<Match>())
 				{
 					sb.AppendLine($"Match: {midx++}");
@@ -1215,11 +1197,11 @@ namespace Rylogic.Utility
 			"Ulrick", "Vernon", "William", "Xavior", "Yvonne", "Zack",
 		};
 
-		#if DEBUG
+#if DEBUG
 		public const bool IsDebug = true;
-		#else
+#else
 		public const bool IsDebug = false;
-		#endif
+#endif
 	}
 
 	/// <summary>Type specific utility methods</summary>

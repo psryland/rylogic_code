@@ -2,28 +2,15 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0;net472</TargetFrameworks>
-		<RootNamespace>Rylogic</RootNamespace>
-		<StartupObject></StartupObject>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
-		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-		<LangVersion>latest</LangVersion>
-		<Nullable>Enable</Nullable>
+		<RootNamespace>Rylogic.DB</RootNamespace>
 	</PropertyGroup>
 
 	<!-- Assembly properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
-		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
-		<PackageIconUrl></PackageIconUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>2.0.0</Version>
-		<FileVersion>2.0.0</FileVersion>
-		<AssemblyVersion>2.0.0</AssemblyVersion>
+		<Version>$(RylogicLibraryVersion)</Version>
+		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
+		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -36,19 +23,26 @@
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
+	<!-- Native libraries -->
+	<ItemGroup>
+		<Content Include="Rylogic.DB.targets">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
 	<!-- Dependencies -->
 	<ItemGroup>
 		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
 	</ItemGroup>
+
+	<!-- Post build -->
 	<ItemGroup>
 		<None Update="Rylogic.DB.runtimeconfig.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
-
-	<!-- Post build -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />
+		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath) Rylogic.Core" />
 	</Target>
 
 </Project>

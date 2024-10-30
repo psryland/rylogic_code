@@ -8,7 +8,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Rylogic.Common;
-using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
@@ -46,13 +45,13 @@ namespace Rylogic.Gui.WPF
 
 			// Create the native scintilla window to fit within 'hwnd_parent'
 			var rect = Win32.RECT.FromLTRB(0, 0, 1, 1);
-			Hwnd = Win32.CreateWindow(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, rect.width, rect.height, Win32.ProxyParentHwnd, CtrlId, IntPtr.Zero, IntPtr.Zero);
+			Hwnd = User32.CreateWindow(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, rect.width, rect.height, Win32.ProxyParentHwnd, CtrlId, IntPtr.Zero, IntPtr.Zero);
 			if (Hwnd == IntPtr.Zero)
 				throw new Win32Exception(Win32.GetLastError(), $"Failed to create the scintilla native control. {Win32.GetLastErrorString()}");
 
 			// Get the function pointer for direct calling the WndProc (rather than windows messages)
-			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
-			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
+			var func = User32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
+			m_ptr = User32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
 			m_func = Marshal_.PtrToDelegate<Sci.SciFnDirect>(func) ?? throw new Exception("Failed to retrieve the direct call function");
 
 			// Reset the style
@@ -240,12 +239,12 @@ namespace Rylogic.Gui.WPF
 
 			// Re-parent the native control to 'parent_hwnd'
 			ParentHwnd = parent_hwnd.Handle;
-			if (Win32.SetParent(Hwnd, ParentHwnd) == IntPtr.Zero)
+			if (User32.SetParent(Hwnd, ParentHwnd) == IntPtr.Zero)
 				throw new Win32Exception(Win32.GetLastError(), "Failed to re-parent the native scintilla control");
 
 			// Resize to fit the parent
-			var parent_rect = Win32.GetClientRect(ParentHwnd);
-			Win32.MoveWindow(Hwnd, parent_rect.left, parent_rect.top, parent_rect.width, parent_rect.height, true);
+			var parent_rect = User32.GetClientRect(ParentHwnd);
+			User32.MoveWindow(Hwnd, parent_rect.left, parent_rect.top, parent_rect.width, parent_rect.height, true);
 
 			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
 			var parent_src = HwndSource.FromHwnd(ParentHwnd);
@@ -262,7 +261,7 @@ namespace Rylogic.Gui.WPF
 
 			m_func = null;
 			m_ptr = IntPtr.Zero;
-			Win32.DestroyWindow(hwnd.Handle);
+			User32.DestroyWindow(hwnd.Handle);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -278,7 +277,7 @@ namespace Rylogic.Gui.WPF
 					// This cannot be done in WndProc because navigation keys never make
 					// it to the native control.
 					var vk = (int)e.Key.ToKeyCode();
-					Win32.SendMessage(Hwnd, (uint)Win32.WM_KEYDOWN, vk, 1);
+					User32.SendMessage(Hwnd, (uint)Win32.WM_KEYDOWN, vk, 1);
 					e.Handled = true;
 					break;
 				}
@@ -306,7 +305,7 @@ namespace Rylogic.Gui.WPF
 		private void FocusHosted()
 		{
 			Keyboard.Focus(this);
-			Win32.SetFocus(Hwnd);
+			User32.SetFocus(Hwnd);
 		}
 
 		/// <summary>

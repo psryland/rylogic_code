@@ -5,22 +5,14 @@
 		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<RootNamespace>LDraw</RootNamespace>
 		<AssemblyName>LDraw</AssemblyName>
-		<LangVersion>latest</LangVersion>
-		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 
 	<!-- Assembly properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
 		<Description>3D Visualization tool created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
 		<Version>6.4.0</Version>
-		<FileVersion>6.4.0</FileVersion>
-		<AssemblyVersion>6.4.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Code -->
@@ -38,39 +30,13 @@
 	<!-- References -->
 	<ItemGroup>
 		<PackageReference Include="AvalonEdit" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
 	</ItemGroup>
 
 	<!-- Dependencies -->
-	<ItemGroup>
-		<Content Include="..\..\..\..\lib\x64\debug\view3d-12.dll">
-			<Link>lib\x64\debug\view3d-12.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\..\lib\x64\release\view3d-12.dll">
-			<Link>lib\x64\release\view3d-12.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\..\build\packages\Microsoft.Direct3D.DXC.1.8.2407.12\build\native\bin\x64\dxcompiler.dll">
-			<Link>lib\x64\dxcompiler.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-
-
-		<!--
-		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
-			<Link>lib\x86\debug\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\release\view3d.dll">
-			<Link>lib\x86\release\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		-->
-	</ItemGroup>
+	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.targets" />
 	
 	<!-- Post Build -->
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">

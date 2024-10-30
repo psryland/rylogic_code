@@ -6,7 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Rylogic.Extn.Windows;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {

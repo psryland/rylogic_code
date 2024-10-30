@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {

@@ -1,17 +1,15 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Threading;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {

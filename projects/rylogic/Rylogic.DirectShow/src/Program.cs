@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Rylogic.UnitTests;
 
-namespace Rylogic.Gfx
+namespace Rylogic.DirectShow
 {
 	public static class Program
 	{

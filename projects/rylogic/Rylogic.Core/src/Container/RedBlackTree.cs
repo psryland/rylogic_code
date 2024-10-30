@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net.Cache;
-using System.Text;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Rylogic.Extn;
 using Rylogic.PolyFill;
 using Rylogic.Utility;
@@ -542,7 +539,7 @@ namespace Rylogic.Container
 		[DebuggerDisplay("{Description,nq}")]
 		private class Stack<T>
 		{
-			private readonly List<T> m_list = new();
+			private readonly List<T> m_list = [];
 			[MaybeNull] public T Top  => m_list.Count != 0 ? m_list[m_list.Count + ~0] : default!;
 			public int Count          => m_list.Count;
 			public T Bottom           => m_list[0];
@@ -574,19 +571,13 @@ namespace Rylogic.UnitTests
 	public class TestRBTree
 	{
 		[DebuggerDisplay("{Description,nq}")]
-		class Sorta :RedBlack_.IAccessors<Sorta>
+		class Sorta(int i) : RedBlack_.IAccessors<Sorta>
 		{
-			public int m_value;
-			private RedBlack_.EColour m_colour;
+			public int m_value = i;
+			private RedBlack_.EColour m_colour = RedBlack_.EColour.Red;
 			private Sorta? m_left;
 			private Sorta? m_right;
 			private Sorta? m_parent;
-
-			public Sorta(int i)
-			{
-				m_value = i;
-				m_colour = RedBlack_.EColour.Red;
-			}
 
 			/// <inheritdoc/>
 			int RedBlack_.IAccessors<Sorta>.Compare(Sorta lhs, Sorta rhs) => lhs.m_value.CompareTo(rhs.m_value);
@@ -711,7 +702,7 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void Insert()
+		public static void Insert()
 		{
 			var root = RedBlack_.Build(new Sorta[] { 3 });
 			root = RedBlack_.Insert(root, 1); Sorta.CheckTree(root);
@@ -734,7 +725,7 @@ namespace Rylogic.UnitTests
 		{
 			var root = RedBlack_.Build<Sorta>(0);
 			var values = int_.Range(50).Select(i => ((i + 57) * 137) % 27).ToList();
-			for (int i = 0; i != values.Count; ++i)
+			for (var i = 0; i != values.Count; ++i)
 			{
 				root = RedBlack_.Insert(root, values[i]);
 				Sorta.CheckTree(root);
@@ -771,7 +762,7 @@ namespace Rylogic.UnitTests
 			var ordered = RedBlack_.EnumerateDF(root, +1).Select(x => x.m_value).ToList();
 			Assert.True(ordered.SequenceOrdered(ESequenceOrder.Increasing));
 
-			for (int i = 0; values.Count != 0;)
+			for (var i = 0; values.Count != 0;)
 			{
 				i = ((i + 57) * 137) % values.Count;
 				//if (i == 1) Debugger.Break();

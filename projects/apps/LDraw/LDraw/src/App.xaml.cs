@@ -2,11 +2,11 @@
 using System.Diagnostics;
 using System.Windows;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace LDraw
 {

@@ -5045,7 +5045,7 @@ namespace Rylogic.Gui.WinForms
 				}
 			}
 		}
-		private OptionsData m_options = null;
+		private OptionsData m_options = null!;
 
 		/// <summary>Gain access to the underlying data</summary>
 		public LockData Lock()
@@ -5373,11 +5373,11 @@ namespace Rylogic.Gui.WinForms
 			set
 			{
 				if (m_impl_cache == value) return;
-				Util.Dispose(ref m_impl_cache);
+				Util.Dispose(ref m_impl_cache!);
 				m_impl_cache = value;
 			}
 		}
-		private GfxCache m_impl_cache;
+		private GfxCache m_impl_cache = null!;
 
 		/// <summary>Point sprite shader</summary>
 		private View3d.Shader PointSprite
@@ -5386,11 +5386,11 @@ namespace Rylogic.Gui.WinForms
 			set
 			{
 				if (m_point_sprite == value) return;
-				Util.Dispose(ref m_point_sprite);
+				Util.Dispose(ref m_point_sprite!);
 				m_point_sprite = value;
 			}
 		}
-		private View3d.Shader m_point_sprite = null;
+		private View3d.Shader m_point_sprite = null!;
 
 		/// <summary>Thick Line-List shader</summary>
 		private View3d.Shader ThickLineList
@@ -5399,11 +5399,11 @@ namespace Rylogic.Gui.WinForms
 			set
 			{
 				if (m_thick_line_list == value) return;
-				Util.Dispose(ref m_thick_line_list);
+				Util.Dispose(ref m_thick_line_list!);
 				m_thick_line_list = value;
 			}
 		}
-		private View3d.Shader m_thick_line_list = null;
+		private View3d.Shader m_thick_line_list = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString()

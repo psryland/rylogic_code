@@ -24,7 +24,6 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "AppendMenuW", CharSet = CharSet.Unicode)]
 		private static extern bool AppendMenu_(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, [MarshalAs(UnmanagedType.LPWStr)] string lpNewItem);
 
-		#pragma warning disable CA1401 // P/Invokes should not be visible
 		[DllImport("user32.dll")]
 		public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 
@@ -350,7 +349,7 @@ namespace Rylogic.Interop.Win32
 		public static ushort RegisterClass(Win32.WNDCLASS wnd_class)
 		{
 			// RegisterClass only sets last error if there is an error
-			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			Kernel32.SetLastError(Win32.ERROR_SUCCESS);
 			var atom = RegisterClass_(ref wnd_class);
 			var err = Marshal.GetLastWin32Error();
 			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception();
@@ -359,7 +358,7 @@ namespace Rylogic.Interop.Win32
 		public static ushort RegisterClass(Win32.WNDCLASSEX wnd_class)
 		{
 			// RegisterClass only sets last error if there is an error
-			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			Kernel32.SetLastError(Win32.ERROR_SUCCESS);
 			var atom = RegisterClassEx_(ref wnd_class);
 			var err = Marshal.GetLastWin32Error();
 			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception(); 
@@ -495,11 +494,8 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
 		private static extern IntPtr SetWindowLongPtr64(HWND hWnd, int nIndex, IntPtr dwNewLong);
 
-
 		[DllImport("uxtheme.dll")]
 		public static extern int SetWindowTheme(IntPtr hWnd, [MarshalAs(UnmanagedType.LPWStr)] string appname, [MarshalAs(UnmanagedType.LPWStr)] string idlist);
-
-		#pragma warning restore CA1401 // P/Invokes should not be visible
 	}
 	
 	public static partial class Win32
@@ -602,7 +598,9 @@ namespace Rylogic.Interop.Win32
 
 			public DEV_BROADCAST_HDR hdr;
 			public Guid class_guid;
-			public string name
+
+			/// <summary></summary>
+			public string Name
 			{
 				get
 				{

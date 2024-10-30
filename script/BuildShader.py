@@ -15,7 +15,7 @@
 # Add 'obj' to the command line for a 'compiled shader object' file
 #  that can be used with the runtime shader support in the renderer.
 #
-import sys, os, tempfile
+import sys, os, tempfile, hashlib
 import Rylogic as Tools
 import UserVars
 
@@ -79,13 +79,16 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			shdr_name = m.group("name") + "_" + shdr
 			if trace: print("Building: " + shdr_name)
 
+			# Hash the full path to generate a unique temporary file name
+			hash = hashlib.md5(fullpath.encode()).hexdigest()
+
 			# Create temporary filepaths so that we only overwrite
 			# existing files if they've actually changed. Create temp
 			# files for each unique platform/config to allow parallel build
 			tempdir = os.path.join(tempfile.gettempdir(), platform, config)
-			filepath_h = os.path.join(tempdir, shdr_name + ".h")
-			filepath_cso = os.path.join(tempdir, shdr_name + ".cso")
-			filepath_pdb = os.path.join(tempdir, shdr_name + ".pdb")
+			filepath_h = os.path.join(tempdir, shdr_name + hash + ".h")
+			filepath_cso = os.path.join(tempdir, shdr_name + hash + ".cso")
+			filepath_pdb = os.path.join(tempdir, shdr_name + hash + ".pdb")
 
 			# Delete any potentially left over temporary output
 			os.makedirs(tempdir, exist_ok=True)

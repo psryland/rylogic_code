@@ -9,7 +9,7 @@ using System;
 
 namespace Rylogic.PolyFill //System.Diagnostics.CodeAnalysis
 {
-#if NETSTANDARD2_0 || NETCOREAPP2_0 || NETCOREAPP2_1 || NETCOREAPP2_2 || NET45 || NET451 || NET452 || NET461 || NET462 || NET47 || NET471 || NET472 || NET48 || NET6
+#if NETSTANDARD2_0 || NETCOREAPP2_0 || NETCOREAPP2_1 || NETCOREAPP2_2 || NET45 || NET451 || NET452 || NET461 || NET462 || NET47 || NET471 || NET472 || NET48 || NET481 || NET6
 	/// <summary>Specifies that null is allowed as an input even if the corresponding type disallows it.</summary>
 	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Property, Inherited = false)]
 	public sealed class AllowNullAttribute :Attribute

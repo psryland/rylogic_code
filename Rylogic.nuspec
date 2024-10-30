@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+	<metadata>
+		<id>Rylogic</id>
+		<version>2.0.0</version>
+		<authors>Rylogic</authors>
+		<owners>Rylogic</owners>
+		<copyright>Copyright (c) Rylogic 2007</copyright>
+		<license type="file">license.txt</license>
+		<projectUrl>http://www.rylogic.co.nz/rylogic.html</projectUrl>
+		<iconUrl>http://www.rylogic.co.nz/images/icon.png</iconUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</description>
+		<releaseNotes>
+			Rylogic Library service release
+		</releaseNotes>
+		<tags>Rylogic</tags>
+		<dependencies>
+		</dependencies>
+	</metadata>
+	<files>
+		<!-- Misc files -->
+		<file src="include\pr\license.txt" target="license.txt" />
+		<file src="build\props\**\*.*" target="build\props" />
+		<file src="build\targets\**\*.*" target="build\targets" />
+
+		<!-- Native projects -->
+		<file src="include\**\*.*" target="include" />
+		<file src="lib\**\*.*" target="lib" />
+		<file src="lib\x64\Release\*.dll" target="runtimes/win-x64/native" />
+
+		<!-- .NET projects -->
+		<file src="projects\rylogic\Rylogic.Core\bin\Release\net8.0\Rylogic.Core.dll" target="lib\net8.0\Rylogic.Core.dll" />
+		<file src="projects\rylogic\Rylogic.Core\bin\Release\net481\Rylogic.Core.dll" target="lib\net481\Rylogic.Core.dll" />
+
+		<file src="projects\rylogic\Rylogic.DB\bin\Release\net8.0\Rylogic.DB.dll" target="lib\net8.0\Rylogic.DB.dll" />
+		<file src="projects\rylogic\Rylogic.DB\bin\Release\net481\Rylogic.DB.dll" target="lib\net481\Rylogic.DB.dll" />
+		<file src="projects\rylogic\Rylogic.DB\Rylogic.DB.targets" target="lib\net481\Rylogic.DB.targets" />
+
+		<file src="projects\rylogic\Rylogic.DirectShow\bin\Release\net8.0\Rylogic.DirectShow.dll" target="lib\net8.0\Rylogic.DirectShow.dll" />
+		<file src="projects\rylogic\Rylogic.DirectShow\bin\Release\net481\Rylogic.DirectShow.dll" target="lib\net481\Rylogic.DirectShow.dll" />
+
+		<file src="projects\rylogic\Rylogic.Gfx\bin\Release\net8.0\Rylogic.Gfx.dll" target="lib\net8.0\Rylogic.Gfx.dll" />
+		<file src="projects\rylogic\Rylogic.Gfx\bin\Release\net481\Rylogic.Gfx.dll" target="lib\net481\Rylogic.Gfx.dll" />
+		<file src="projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.targets" target="lib\net481\Rylogic.Gfx.targets" />
+
+		<file src="projects\rylogic\Rylogic.Gui.WPF\bin\Release\net8.0\Rylogic.Gui.WPF.dll" target="lib\net8.0\Rylogic.Gui.WPF.dll" />
+		<file src="projects\rylogic\Rylogic.Gui.WPF\bin\Release\net481\Rylogic.Gui.WPF.dll" target="lib\net481\Rylogic.Gui.WPF.dll" />
+
+		<file src="projects\rylogic\Rylogic.Net\bin\Release\net8.0\Rylogic.Net.dll" target="lib\net8.0\Rylogic.Net.dll" />
+		<file src="projects\rylogic\Rylogic.Net\bin\Release\net481\Rylogic.Net.dll" target="lib\net481\Rylogic.Net.dll" />
+
+		<file src="projects\rylogic\Rylogic.Scintilla\bin\Release\net8.0\Rylogic.Scintilla.dll" target="lib\net8.0\Rylogic.Scintilla.dll" />
+		<file src="projects\rylogic\Rylogic.Scintilla\bin\Release\net481\Rylogic.Scintilla.dll" target="lib\net481\Rylogic.Scintilla.dll" />
+		<file src="projects\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.targets" target="lib\net481\Rylogic.Scintilla.targets" />
+
+		<file src="projects\rylogic\Rylogic.Windows\bin\Release\net8.0\Rylogic.Windows.dll" target="lib\net8.0\Rylogic.Windows.dll" />
+		<file src="projects\rylogic\Rylogic.Windows\bin\Release\net481\Rylogic.Windows.dll" target="lib\net481\Rylogic.Windows.dll" />
+
+	</files>
+</package>

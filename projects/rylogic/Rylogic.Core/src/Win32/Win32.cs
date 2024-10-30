@@ -295,8 +295,8 @@ namespace Rylogic.Interop.Win32
 					.FirstOrDefault(x =>
 						{
 							var val = x.GetValue(null);
-							if (val is uint) return (uint)val == (uint)msg_id;
-							if (val is int) return (int)val == msg_id;
+							if (val is uint v0) return v0 == (uint)msg_id;
+							if (val is int v1) return v1 == msg_id;
 							return false;
 						});
 
@@ -1559,7 +1559,7 @@ namespace Rylogic.Interop.Win32
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true, ELoadLibraryFlags flags = ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)
+		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true, ELoadLibraryFlags flags = ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_USER_DIRS|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)
 		{
 			var searched = new List<string>();
 			var ass = Assembly.GetEntryAssembly();
@@ -1578,7 +1578,11 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
+					{
+						// Add all directories in 'dir' to the search path
+						using var users_dirs = PushSearchPaths(dll_path, dir);
 						return TryLoad(dll_path, out load_error, flags);
+					}
 				}
 			}
 
@@ -1592,7 +1596,11 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
+					{
+						// Add all directories in 'dir' to the search path
+						using var users_dirs = PushSearchPaths(dll_path, dir);
 						return TryLoad(dll_path, out load_error, flags);
+					}
 				}
 			}
 
@@ -1606,7 +1614,11 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
+					{
+						// Add all directories in 'dir' to the search path
+						using var users_dirs = PushSearchPaths(dll_path, dir);
 						return TryLoad(dll_path, out load_error, flags);
+					}
 				}
 			}
 
@@ -1620,7 +1632,7 @@ namespace Rylogic.Interop.Win32
 				load_error = null;
 
 				Debug.WriteLine($"Loading native dll '{path}'...");
-				var module = LoadLibraryEx(path, IntPtr.Zero, flags);
+				var module = Kernel32.LoadLibraryEx(path, IntPtr.Zero, flags);
 				if (module != IntPtr.Zero)
 					return module;
 
@@ -1630,6 +1642,31 @@ namespace Rylogic.Interop.Win32
 					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n" +
 					$"Last Error: {msg}");
 				throw load_error;
+			}
+
+			// Push more search directories into the dll search path
+			static IDisposable PushSearchPaths(string dll_path, string dir)
+			{
+				// If the parent directories are: debug/release, x64/x86, or lib, add them to the search paths
+				return Scope.Create(() =>
+				{
+					var cookies = new List<IntPtr>();
+					var d = Path.GetDirectoryName(dll_path);
+					HashSet<string> parents = ["debug", "release", "x64", "x86", "lib"];
+					for (; d != null && parents.Contains(Path.GetFileName(d).ToLower()); d = Path.GetDirectoryName(d))
+					{
+						var cookie = Kernel32.AddDllDirectory(d);
+						if (cookie != IntPtr.Zero)
+							cookies.Add(cookie);
+					}
+
+					return cookies;
+				},
+				(cookies) =>
+				{
+					foreach (var cookie in cookies)
+						Kernel32.RemoveDllDirectory(cookie);
+				});
 			}
 		}
 
@@ -1679,7 +1716,7 @@ namespace Rylogic.Interop.Win32
 		public static DateTimeOffset ToDateTimeOffset(SYSTEMTIME st)
 		{
 			var ft = new FILETIME();
-			if (!SystemTimeToFileTime(ref st, out ft))
+			if (!Kernel32.SystemTimeToFileTime(ref st, out ft))
 				throw new Exception("Failed to convert system time to file time");
 
 			return DateTimeOffset.FromFileTime(ft.value);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Rylogic.Interop.Win32;
+using Rylogic.Utility;
 
 namespace Rylogic.Gfx
 {
@@ -25,8 +26,8 @@ namespace Rylogic.Gfx
 			// Notes:
 			//  - This should be the first method to use with fall-back to nearest monitor
 			// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdpiforwindow
-			var h = Win32.LoadLibrary("user32.dll");
-			var ptr = Win32.GetProcAddress(h, "GetDpiForWindow"); // Windows 10 1607
+			var h = Kernel32.LoadLibrary("user32.dll");
+			var ptr = Kernel32.GetProcAddress(h, "GetDpiForWindow"); // Windows 10 1607
 			return ptr != IntPtr.Zero
 				? Marshal.GetDelegateForFunctionPointer<GetDpiForWindowFn>(ptr)(hwnd)
 				: DpiForNearestMonitor(hwnd);
@@ -35,12 +36,12 @@ namespace Rylogic.Gfx
 		/// <summary>Get the DPI for a monitor</summary>
 		public static int DpiForMonitor(IntPtr monitor, EMonitorDpiType type = EMonitorDpiType.Effective)
 		{
-			var h = Win32.LoadLibrary("shcore.dll");
-			var ptr = Win32.GetProcAddress(h, "GetDpiForMonitor"); // Windows 8.1
+			var h = Kernel32.LoadLibrary("shcore.dll");
+			var ptr = Kernel32.GetProcAddress(h, "GetDpiForMonitor"); // Windows 8.1
 			if (ptr == IntPtr.Zero)
 				return DpiForDesktop();
 
-			var hr = Marshal.GetDelegateForFunctionPointer<GetDpiForMonitorFn>(ptr)(monitor, type, out int x, out int y);
+			var hr = Marshal.GetDelegateForFunctionPointer<GetDpiForMonitorFn>(ptr)(monitor, type, out var x, out var y);
 			if (hr < 0)
 				return DpiForDesktop();
 
@@ -52,11 +53,11 @@ namespace Rylogic.Gfx
 		/// <summary>Get the DPI setting for the whole desktop</summary>
 		public static int DpiForDesktop()
 		{
-			var hr = D2D1CreateFactory(D2D1_FACTORY_TYPE.SINGLE_THREADED, typeof(ID2D1Factory).GUID, IntPtr.Zero, out ID2D1Factory factory);
+			var hr = D2D1CreateFactory(D2D1_FACTORY_TYPE.SINGLE_THREADED, typeof(ID2D1Factory).GUID, IntPtr.Zero, out var factory);
 			if (hr < 0)
 				return 96; // we really hit the ground, don't know what to do next!
 
-			factory.GetDesktopDpi(out float x, out float y); // Windows 7
+			factory.GetDesktopDpi(out var x, out var y); // Windows 7
 			Marshal.ReleaseComObject(factory);
 			return (int)x;
 		}

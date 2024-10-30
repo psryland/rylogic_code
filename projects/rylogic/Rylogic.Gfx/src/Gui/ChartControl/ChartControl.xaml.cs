@@ -10,11 +10,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {
