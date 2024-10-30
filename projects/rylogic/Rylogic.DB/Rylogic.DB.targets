@@ -7,13 +7,17 @@ target directory.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup>
-		<Content Include="$(MSBuildThisFileDirectory)\x64\sqlite3.dll">
-			<Link>lib\x64\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<Content Include="$(RylogicRoot)lib\x64\debug\sqlite3.dll">
+			<Link>lib\x64\debug\sqlite3.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="$(MSBuildThisFileDirectory)\x86\sqlite3.dll">
+		<Content Include="$(RylogicRoot)lib\x64\release\sqlite3.dll">
+			<Link>lib\x64\release\sqlite3.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="$(RylogicRoot)lib\x86\release\sqlite3.dll">
 			<Link>lib\x86\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory Condition="exists('$(RylogicRoot)lib\x86\release\sqlite3.dll')">PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 </Project>

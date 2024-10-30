@@ -2,26 +2,18 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows</TargetFramework>
+		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<RootNamespace>TestWPF</RootNamespace>
 		<AssemblyName>TestWPF</AssemblyName>
-		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
-		<LangVersion>latest</LangVersion>
-		<Nullable>enable</Nullable>
+		<RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 	
 	<!-- Assembly properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
 		<Description>Test application</Description>
-		<Copyright>Copyright (c) Rylogic 2020</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>money.ico</ApplicationIcon>
 		<Version>1.0.0</Version>
-		<FileVersion>1.0.0</FileVersion>
-		<AssemblyVersion>1.0.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Code -->
@@ -42,93 +34,16 @@
 	
 	<!-- References -->
 	<ItemGroup>
-		<ProjectReference Include="..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
-		<ProjectReference Include="..\..\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
-		<ProjectReference Include="..\..\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.DB\Rylogic.DB.csproj" />
 	</ItemGroup>
 
 	<!-- Dependencies -->
-	<ItemGroup>
-		<Content Include="..\..\..\lib\x64\debug\audio.dll" Condition="'$(Configuration)'=='Debug'">
-			<Link>lib\x64\debug\audio.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\audio.dll" Condition="'$(Configuration)'=='Release'">
-			<Link>lib\x64\release\audio.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-		<Content Include="..\..\..\lib\x64\debug\scintilla.dll" Condition="'$(Configuration)'=='Debug'">
-			<Link>lib\x64\debug\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\scintilla.dll" Condition="'$(Configuration)'=='Release'">
-			<Link>lib\x64\release\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		
-		<Content Include="..\..\..\lib\x64\debug\sqlite3.dll" Condition="'$(Configuration)'=='Debug'">
-			<Link>lib\x64\debug\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\sqlite3.dll" Condition="'$(Configuration)'=='Release'">
-			<Link>lib\x64\release\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-		<Content Include="..\..\..\lib\x64\debug\view3d.dll" Condition="'$(Configuration)'=='Debug'">
-			<Link>lib\x64\debug\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\view3d.dll" Condition="'$(Configuration)'=='Release'">
-			<Link>lib\x64\release\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-		<Content Include="..\..\..\lib\x64\debug\view3d-12.dll" Condition="'$(Configuration)'=='Debug'">
-			<Link>lib\x64\debug\view3d-12.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\view3d-12.dll" Condition="'$(Configuration)'=='Release'">
-			<Link>lib\x64\release\view3d-12.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-		<!--
-		<Content Include="..\..\..\lib\x86\debug\audio.dll">
-			<Link>lib\x86\debug\audio.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\release\audio.dll">
-			<Link>lib\x86\release\audio.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\debug\scintilla.dll">
-			<Link>lib\x86\debug\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\release\scintilla.dll">
-			<Link>lib\x86\release\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\debug\sqlite3.dll">
-			<Link>lib\x86\debug\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\release\sqlite3.dll">
-			<Link>lib\x86\release\sqlite3.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
-			<Link>lib\x86\debug\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x86\release\view3d.dll">
-			<Link>lib\x86\release\view3d.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		-->
-	</ItemGroup>
+	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.DB\Rylogic.DB.targets" />
+	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.targets" />
+	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.targets" />
 
 </Project>

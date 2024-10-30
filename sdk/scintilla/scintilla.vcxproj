@@ -1,8 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <!-- Globals -->
   <Import Project="..\..\build\props\globals.props" />
+
+  <!-- Globals -->
 	<PropertyGroup Label="Globals">
     <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
     <RootNamespace>scintilla</RootNamespace>
@@ -34,7 +35,7 @@
   <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\build\props\dll.props" />
+  <Import Project="$(PropsPath)dll.props" />
 
   <!-- Build Options -->
   <ItemDefinitionGroup>
@@ -69,9 +70,6 @@
       <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent>
-      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
 
   <!-- Source -->
@@ -208,5 +206,6 @@
     <Text Include="License.txt" />
     <Text Include="version.txt" />
   </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
