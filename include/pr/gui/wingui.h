@@ -3903,11 +3903,11 @@ namespace pr
 			Brush           m_brush_back;      // Background colour brush
 			Rect            m_pos_offset;      // Distances from this control to the edges of the parent client area
 			bool            m_pos_ofs_suspend; // Disables the saving of the position offset when the control is moved
-			BtnDownMap      m_down_at;         // Button down timestamp
+			BtnDownMap      m_down_at;         // Button down time stamp
 			bool            m_handle_only;     // True if this object does not own 'm_hwnd'
 			HBITMAP         m_dbl_buffer;      // Non-null if the control is double buffered
 			WndClassEx      m_wci;             // Window class info
-			StdCallThunk    m_thunk;           // WndProc thunk, turns a __stdcall into a __thiscall
+			StdCallThunk    m_thunk;           // WndProc thunk, turns a '__stdcall' into a '__thiscall'
 			WNDPROC         m_oldproc;         // The window class default wndproc function
 			std::thread::id m_thread_id;       // The thread that this control was created on
 

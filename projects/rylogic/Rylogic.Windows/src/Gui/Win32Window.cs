@@ -11,6 +11,7 @@ using HMENU = System.IntPtr;
 using HINSTANCE = System.IntPtr;
 using System.Windows;
 using Rylogic.Attrib;
+using Rylogic.Windows.Gui;
 
 namespace Rylogic.Gui.Native
 {
@@ -160,8 +161,11 @@ namespace Rylogic.Gui.Native
 		/// <summary>Mapping from HWND to Win32Window instance</summary>
 		[ThreadStatic] private static Dictionary<HWND, Win32Window> m_wnd = new();
 
+		/// <summary>The GUI thread</summary>
+		private int m_main_thread_id = Environment.CurrentManagedThreadId;
+
 		/// <summary>Create a Win32Window instance</summary>
-		public Win32Window(Props? props = null, HWND? parent = null)
+		public Win32Window(MessageLoop? msg_loop = null, Props? props = null, HWND? parent = null)
 		{
 			// Get the instance handle for this process
 			var hInstance = Kernel32.GetModuleHandle(null);
@@ -170,6 +174,7 @@ namespace Rylogic.Gui.Native
 			var atom = EnsureWndClassRegistered(hInstance);
 
 			// Defaults
+			MsgLoop = msg_loop ?? new();
 			Properties = props ?? new();
 			parent ??= HWND.Zero;
 
@@ -188,7 +193,7 @@ namespace Rylogic.Gui.Native
 		public HWND Handle
 		{
 			get => m_hwnd;
-			set
+			private set
 			{
 				if (m_hwnd == value) return;
 				if (m_hwnd != HWND.Zero)
@@ -225,6 +230,9 @@ namespace Rylogic.Gui.Native
 			}
 		}
 
+		/// <summary>The loop for processing windows messages</summary>
+		public MessageLoop MsgLoop { get; }
+
 		/// <summary>WndProc hook</summary>
 		public event EventHandler<WndProcEventArgs>? Message;
 
@@ -236,39 +244,41 @@ namespace Rylogic.Gui.Native
 			User32.UpdateWindow(m_hwnd);
 		}
 
-		/// <summary>Pump the message queue until empty. Returns false if WM_QUIT is received</summary>
-		public bool Pump()
-		{
-			for (; User32.PeekMessage(out var msg, Handle, 0, 0, Win32.EPeekMessageFlags.Remove);)
-			{
-				if (msg.message == Win32.WM_QUIT)
-					return false;
+		///// <summary>Pump the message queue until empty. Returns false if WM_QUIT is received</summary>
+		//public bool Pump()
+		//{
+		//	for (; User32.PeekMessage(out var msg, Handle, 0, 0, Win32.EPeekMessageFlags.Remove);)
+		//	{
+		//		if (msg.message == Win32.WM_QUIT)
+		//			return false;
 
-				User32.TranslateMessage(ref msg);
-				User32.DispatchMessage(ref msg);
-			}
-			return true;
-		}
+		//		User32.TranslateMessage(ref msg);
+		//		User32.DispatchMessage(ref msg);
+		//	}
+		//	return true;
+		//}
 
-		/// <summary>Pump the message queue until shutdown</summary>
-		public async void Run(CancellationToken shutdown)
-		{
-			using var quit = shutdown.Register(() => User32.PostMessage(Handle, Win32.WM_QUIT, IntPtr.Zero, IntPtr.Zero));
-			for (;;)
-			{
-				var msg = new Win32.MESSAGE { };
-				var res = await Task.Run(() => User32.GetMessage(out msg, Handle, 0, 0));
-				if (res == -1) throw new Win32Exception("Dummy Window message queue error");
-				if (res == 0) return; // WM_QUIT
-				User32.TranslateMessage(ref msg);
-				User32.DispatchMessage(ref msg);
-			}
-		}
+		///// <summary>Pump the message queue until shutdown</summary>
+		//public async void Run(CancellationToken shutdown)
+		//{
+		//	using var quit = shutdown.Register(() => User32.PostMessage(Handle, Win32.WM_QUIT, IntPtr.Zero, IntPtr.Zero));
+		//	for (;;)
+		//	{
+		//		var msg = new Win32.MESSAGE { };
+		//		var res = await Task.Run(() => User32.GetMessage(out msg, Handle, 0, 0));
+		//		if (res == -1) throw new Win32Exception("Dummy Window message queue error");
+		//		if (res == 0) return; // WM_QUIT
+		//		User32.TranslateMessage(ref msg);
+		//		User32.DispatchMessage(ref msg);
+		//	}
+		//}
 
 		/// <summary>Instance wndproc</summary>
 		private IntPtr WndProc(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
 		{
 			var args = new WndProcEventArgs(hwnd, message, wparam, lparam);
+			if (Environment.CurrentManagedThreadId != m_main_thread_id)
+				throw new Exception("WndProc called on background thread");
 
 			// Custom message handling
 			Message?.Invoke(this, args);
@@ -358,6 +368,9 @@ namespace Rylogic.Gui.Native
 			return atom;
 		}
 	}
+
+
+
 }
 
 

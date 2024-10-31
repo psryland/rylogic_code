@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -181,6 +182,43 @@ namespace Rylogic.Interop.Win32
 		}
 		#endregion
 
+		#region Device Broadcast flags
+		public enum EDeviceBroadcaseType : uint
+		{
+			/// <summary>DBT_DEVTYP_OEM - OEM- or IHV-defined device type. This structure is a DEV_BROADCAST_OEM structure.</summary>
+			OEM = 0x00000000,
+
+			/// <summary>DBT_DEVTYP_VOLUME - Logical volume.This structure is a DEV_BROADCAST_VOLUME structure.</summary>
+			Volume = 0x00000002,
+
+			/// <summary>DBT_DEVTYP_PORT - Port device (serial or parallel). This structure is a DEV_BROADCAST_PORT structure.</summary>
+			Port = 0x00000003,
+
+			/// <summary>DBT_DEVTYP_DEVICEINTERFACE - Class of devices. This structure is a DEV_BROADCAST_DEVICEINTERFACE structure.</summary>
+			DeviceInterface = 0x00000005,
+
+			/// <summary>DBT_DEVTYP_HANDLE - File system handle. This structure is a DEV_BROADCAST_HANDLE structure.</summary>
+			Handle = 0x00000006,
+		}
+		#endregion
+
+		#region Device Notify flags
+		[Flags] public enum EDeviceNotifyFlags
+		{
+			/// <summary>DEVICE_NOTIFY_WINDOW_HANDLE - The hRecipient parameter is a window handle.</summary>
+			WindowHandle = 0x00000000,
+
+			/// <summary>DEVICE_NOTIFY_SERVICE_HANDLE - The hRecipient parameter is a service status handle.</summary>
+			ServiceHandle = 0x00000001,
+
+			/// <summary>
+			/// DEVICE_NOTIFY_ALL_INTERFACE_CLASSES - Notifies the recipient of device interface events for all
+			/// device interface classes (the 'dbcc_classguid' member is ignored). This value can be used only if the 
+			/// 'dbch_devicetype' member is 'DBT_DEVTYP_DEVICEINTERFACE'.</summary>
+			AllInterface_Classes = 0x00000004,
+		}
+		#endregion
+
 		#region Dialog Box Command IDs
 		public const int IDOK       = 1;
 		public const int IDCANCEL   = 2;
@@ -318,6 +356,29 @@ namespace Rylogic.Interop.Win32
 			EsContinuous = 0x80000000,
 			EsDisplayRequired = 0x00000002,
 			EsSystemRequired = 0x00000001
+		}
+		#endregion
+
+		#region Flash Window flags
+		[Flags] public enum EFlashWindowFlags : uint
+		{
+			/// <summary>Stop flashing. The system restores the window to its original state.</summary>
+			FLASHW_STOP = 0,
+
+			/// <summary>Flash the window caption.</summary>
+			FLASHW_CAPTION = 1,
+
+			/// <summary>Flash the task bar button.</summary>
+			FLASHW_TRAY = 2,
+
+			/// <summary>Flash both the window caption and task bar button. This is equivalent to setting the FLASHW_CAPTION | FLASHW_TRAY flags.</summary>
+			FLASHW_ALL = 3,
+
+			/// <summary>Flash continuously, until the FLASHW_STOP flag is set.</summary>
+			FLASHW_TIMER = 4,
+
+			/// <summary>Flash continuously until the window comes to the foreground.</summary>
+			FLASHW_TIMERNOFG = 12,
 		}
 		#endregion
 
@@ -683,6 +744,16 @@ namespace Rylogic.Interop.Win32
 		public const int MFS_DEFAULT         = MF_DEFAULT;
 		#endregion
 
+		#region Monitor From
+		/// <summary>Flags for the MonitorFromPoint function</summary>
+		public enum EMonitorFromFlags
+		{
+			DEFAULT_TO_NULL = 0x00000000,
+			DEFAULT_TO_PRIMARY = 0x00000001,
+			DEFAULT_TO_NEAREST = 0x00000002,
+		}
+		#endregion
+
 		#region Mouse key MK_
 		// Key State Masks for Mouse Messages
 		public const int MK_LBUTTON = 0x0001;
@@ -855,6 +926,46 @@ namespace Rylogic.Interop.Win32
 
 			/// <summary>Windows 7 and later.</summary>
 			RespectQuietTime = 0x80
+		}
+		#endregion
+
+		#region Query Status QS_
+		public const int QS_KEY              = 0x0001;
+		public const int QS_MOUSEMOVE        = 0x0002;
+		public const int QS_MOUSEBUTTON      = 0x0004;
+		public const int QS_POSTMESSAGE      = 0x0008;
+		public const int QS_TIMER            = 0x0010;
+		public const int QS_PAINT            = 0x0020;
+		public const int QS_SENDMESSAGE      = 0x0040;
+		public const int QS_HOTKEY           = 0x0080;
+		public const int QS_ALLPOSTMESSAGE   = 0x0100;
+		public const int QS_RAWINPUT         = 0x0400;
+		public const int QS_TOUCH            = 0x0800;
+		public const int QS_POINTER          = 0x1000;
+		public const int QS_MOUSE            = QS_MOUSEMOVE | QS_MOUSEBUTTON;
+		public const int QS_INPUT            = QS_MOUSE | QS_KEY | QS_RAWINPUT | QS_TOUCH | QS_POINTER;
+		public const int QS_ALLEVENTS        = QS_INPUT | QS_POSTMESSAGE | QS_TIMER | QS_PAINT | QS_HOTKEY;
+		public const int QS_ALLINPUT         = QS_INPUT | QS_POSTMESSAGE | QS_TIMER | QS_PAINT | QS_HOTKEY | QS_SENDMESSAGE;
+		#endregion
+
+		#region Peek Message PM_
+		public const int PM_NOREMOVE         = 0x0000;
+		public const int PM_REMOVE           = 0x0001;
+		public const int PM_NOYIELD          = 0x0002;
+		public const int PM_QS_INPUT         = QS_INPUT << 16;
+		public const int PM_QS_POSTMESSAGE   = (QS_POSTMESSAGE | QS_HOTKEY | QS_TIMER) << 16;
+		public const int PM_QS_PAINT         = QS_PAINT << 16;
+		public const int PM_QS_SENDMESSAGE   = QS_SENDMESSAGE << 16;
+		[Flags] public enum EPeekMessageFlags
+		{
+			/// <summary>PM_NOREMOVE - Messages are not removed from the queue after processing by PeekMessage.</summary>
+			NoRemove = PM_NOREMOVE,
+
+			/// <summary>PM_REMOVE - Messages are removed from the queue after processing by PeekMessage.</summary>
+			Remove = PM_REMOVE,
+
+			/// <summary>PM_NOYIELD - Prevents the system from releasing any thread that is waiting for the caller to go idle (see WaitForInputIdle). Combine this value with either PM_NOREMOVE or PM_REMOVE.</summary>
+			NoYield = PM_NOYIELD,
 		}
 		#endregion
 
@@ -1792,6 +1903,14 @@ namespace Rylogic.Interop.Win32
 
 		#endregion
 
+		#region Windows Callback Functions
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		public delegate IntPtr WNDPROC(HWND hwnd, int code, IntPtr wparam, IntPtr lparam);
+
+		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
+		public delegate bool EnumWindowsProc(HWND hwnd, int lParam);
+		#endregion
+
 		/// <summary>Magic value used for message queue only windows</summary>
 		public static readonly IntPtr HWND_MESSAGE = new(-3);
 
@@ -2018,7 +2137,8 @@ namespace Rylogic.Interop.Win32
 		public static void SetStyle(HWND hwnd, uint style, bool enabled)
 		{
 			var s = User32.GetWindowLong(hwnd, Win32.GWL_STYLE);
-			User32.SetWindowLong(hwnd, Win32.GWL_STYLE, Bit.SetBits(s, style, enabled));
+			var r = User32.SetWindowLong(hwnd, Win32.GWL_STYLE, Bit.SetBits(s, style, enabled));
+			if (r == 0) throw new Win32Exception();
 		}
 		public static void SetStyleEx(HWND hwnd, uint style, bool enabled)
 		{

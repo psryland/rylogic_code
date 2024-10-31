@@ -188,15 +188,14 @@ namespace Rylogic.Interop.Win32
 		public static extern short GetKeyState(EKeyCodes vKey);
 
 		/// <summary></summary>
-		public static int GetMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax)
-		{
-			return GetMessage_(out msg, hWnd, messageFilterMin, messageFilterMax);
-		}
+		public static int GetMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax) => GetMessage_(out msg, hWnd, messageFilterMin, messageFilterMax);
 		[DllImport("user32.dll", EntryPoint = "GetMessageW", CharSet = CharSet.Unicode)]
 		private static extern int GetMessage_(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax);
 
-		[DllImport("user32.dll")]
-		public static extern int GetMessageTime();
+		/// <summary></summary>
+		public static int GetMessageTime() => GetMessageTime_();
+		[DllImport("user32.dll", EntryPoint = "GetMessageTime")]
+		public static extern int GetMessageTime_();
 
 		/// <summary>Return info about the given monitor handle</summary>
 		public static Win32.MONITORINFOEX GetMonitorInfo(IntPtr hMonitor)
@@ -319,6 +318,11 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("user32.dll")]
 		public static extern bool MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
+
+		/// <summary></summary>
+		public static int MsgWaitForMultipleObjects(int nCount, [MarshalAs(UnmanagedType.LPArray)] IntPtr []? pHandles, bool fWaitAll, int dwMilliseconds, int dwWakeMask) => MsgWaitForMultipleObjects_(nCount, pHandles, fWaitAll, dwMilliseconds, dwWakeMask);
+		[DllImport("user32", EntryPoint = "MsgWaitForMultipleObjects")]
+		private static extern int MsgWaitForMultipleObjects_(int nCount, [MarshalAs(UnmanagedType.LPArray)] IntPtr []? pHandles, bool fWaitAll, int dwMilliseconds, int dwWakeMask);
 
 		/// <summary></summary>
 		public static bool PeekMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, Win32.EPeekMessageFlags flags)
@@ -501,139 +505,12 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("uxtheme.dll")]
 		public static extern int SetWindowTheme(IntPtr hWnd, [MarshalAs(UnmanagedType.LPWStr)] string appname, [MarshalAs(UnmanagedType.LPWStr)] string idlist);
-	}
-	
-	public static partial class Win32
-	{
-		[Flags]
-		public enum EPeekMessageFlags
-		{
-			/// <summary>PM_NOREMOVE - Messages are not removed from the queue after processing by PeekMessage.</summary>
-			NoRemove = 0x0000,
 
-			/// <summary>PM_REMOVE - Messages are removed from the queue after processing by PeekMessage.</summary>
-			Remove = 0x0001,
-
-			/// <summary>PM_NOYIELD - Prevents the system from releasing any thread that is waiting for the caller to go idle (see WaitForInputIdle). Combine this value with either PM_NOREMOVE or PM_REMOVE.</summary>
-			NoYield = 0x0002,
-		}
-
-		/// <summary></summary>
-		[Flags]
-		public enum EDeviceNotifyFlags
-		{
-			/// <summary>DEVICE_NOTIFY_WINDOW_HANDLE - The hRecipient parameter is a window handle.</summary>
-			WindowHandle = 0x00000000,
-
-			/// <summary>DEVICE_NOTIFY_SERVICE_HANDLE - The hRecipient parameter is a service status handle.</summary>
-			ServiceHandle = 0x00000001,
-
-			/// <summary>
-			/// DEVICE_NOTIFY_ALL_INTERFACE_CLASSES - Notifies the recipient of device interface events for all
-			/// device interface classes (the 'dbcc_classguid' member is ignored). This value can be used only if the 
-			/// 'dbch_devicetype' member is 'DBT_DEVTYP_DEVICEINTERFACE'.</summary>
-			AllInterface_Classes = 0x00000004,
-		}
-
-		/// <summary>DEV_BROADCAST_HDR structure types</summary>
-		public enum EDeviceBroadcaseType : uint
-		{
-			/// <summary>DBT_DEVTYP_OEM - OEM- or IHV-defined device type. This structure is a DEV_BROADCAST_OEM structure.</summary>
-			OEM = 0x00000000,
-
-			/// <summary>DBT_DEVTYP_VOLUME - Logical volume.This structure is a DEV_BROADCAST_VOLUME structure.</summary>
-			Volume = 0x00000002,
-
-			/// <summary>DBT_DEVTYP_PORT - Port device (serial or parallel). This structure is a DEV_BROADCAST_PORT structure.</summary>
-			Port = 0x00000003,
-
-			/// <summary>DBT_DEVTYP_DEVICEINTERFACE - Class of devices. This structure is a DEV_BROADCAST_DEVICEINTERFACE structure.</summary>
-			DeviceInterface = 0x00000005,
-
-			/// <summary>DBT_DEVTYP_HANDLE - File system handle. This structure is a DEV_BROADCAST_HANDLE structure.</summary>
-			Handle = 0x00000006,
-		}
-
-		/// <summary>Flags for the MonitorFromPoint function</summary>
-		public enum EMonitorFromFlags
-		{
-			DEFAULT_TO_NULL = 0x00000000,
-			DEFAULT_TO_PRIMARY = 0x00000001,
-			DEFAULT_TO_NEAREST = 0x00000002,
-		}
-
-		/// <summary></summary>
-		[Flags]
-		public enum EFlashWindowFlags : uint
-		{
-			/// <summary>Stop flashing. The system restores the window to its original state.</summary>
-			FLASHW_STOP = 0,
-
-			/// <summary>Flash the window caption.</summary>
-			FLASHW_CAPTION = 1,
-
-			/// <summary>Flash the taskbar button.</summary>
-			FLASHW_TRAY = 2,
-
-			/// <summary>Flash both the window caption and taskbar button. This is equivalent to setting the FLASHW_CAPTION | FLASHW_TRAY flags.</summary>
-			FLASHW_ALL = 3,
-
-			/// <summary>Flash continuously, until the FLASHW_STOP flag is set.</summary>
-			FLASHW_TIMER = 4,
-
-			/// <summary>Flash continuously until the window comes to the foreground.</summary>
-			FLASHW_TIMERNOFG = 12,
-		}
-
-		/// <summary></summary>
-		[StructLayout(LayoutKind.Sequential)]
-		public struct DEV_BROADCAST_HDR
-		{
-			/// <summary>
-			/// The size of this structure, in bytes. If this is a user-defined event, this member must be the size of
-			/// this header, plus the size of the variable-length data in the _DEV_BROADCAST_USERDEFINED structure.</summary>
-			public int dbch_size;
-			public EDeviceBroadcaseType dbch_devicetype;
-			public int dbch_reserved;
-		}
-		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-		public struct DEV_BROADCAST_DEVICEINTERFACE
-		{
-			private const int NameLen = 255;
-
-			public DEV_BROADCAST_HDR hdr;
-			public Guid class_guid;
-
-			/// <summary></summary>
-			public string Name
-			{
-				get
-				{
-					return name_?.IndexOf('\0') is int end && end != -1
-						? new string(name_, 0, end) : string.Empty;
-				}
-				set
-				{
-					name_ = new char[NameLen];
-					var len = Math.Min(value.Length, 255);
-					Array.Copy(value.ToCharArray(), name_, len);
-				}
-			}
-			[MarshalAs(UnmanagedType.ByValArray, SizeConst = NameLen)] private char[] name_;
-		}
-
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		public delegate IntPtr WNDPROC(HWND hwnd, int code, IntPtr wparam, IntPtr lparam);
-
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		public delegate bool EnumWindowsProc(HWND hwnd, int lParam);
-
+		
 		/// <summary>Return the DC for a window</summary>
-		public static Scope<IntPtr> WindowDC(HWND hwnd)
+		public static Scope WindowDC(HWND hwnd)
 		{
-			return Scope.Create(
-				() => User32.GetDC(hwnd),
-				dc => User32.ReleaseDC(hwnd, dc));
+			return Scope.Create(() => GetDC(hwnd), dc => ReleaseDC(hwnd, dc));
 		}
 	}
 

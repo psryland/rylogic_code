@@ -15,6 +15,8 @@ namespace Rylogic.Interop.Win32
 {
 	public static partial class Win32
 	{
+		#pragma warning disable IDE1006 // Naming Styles
+
 		[StructLayout(LayoutKind.Sequential)]
 		public struct BY_HANDLE_FILE_INFORMATION
 		{
@@ -93,6 +95,39 @@ namespace Rylogic.Interop.Win32
 			public POINT ptScreenPos;
 
 			public static CURSORINFO Default => new() { cbSize = (uint)Marshal.SizeOf(typeof(CURSORINFO)) };
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct DEV_BROADCAST_HDR
+		{
+			/// <summary>
+			/// The size of this structure, in bytes. If this is a user-defined event, this member must be the size of
+			/// this header, plus the size of the variable-length data in the _DEV_BROADCAST_USERDEFINED structure.</summary>
+			public int dbch_size;
+			public EDeviceBroadcaseType dbch_devicetype;
+			public int dbch_reserved;
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+		public struct DEV_BROADCAST_DEVICEINTERFACE
+		{
+			private const int NameLen = 255;
+
+			public DEV_BROADCAST_HDR hdr;
+			public Guid class_guid;
+
+			/// <summary></summary>
+			public string Name
+			{
+				readonly get => m_name != null && Array.IndexOf(m_name, '\0') is int end && end != -1 ? new string(m_name, 0, end) : string.Empty;
+				set
+				{
+					m_name = new char[NameLen];
+					var len = Math.Min(value.Length, 255);
+					Array.Copy(value.ToCharArray(), m_name, len);
+				}
+			}
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = NameLen)] private char[]? m_name;
 		}
 
 		[StructLayout(LayoutKind.Explicit)]
@@ -339,9 +374,9 @@ namespace Rylogic.Interop.Win32
 		{
 			public int X;
 			public int Y;
-			public static POINT FromPoint(Point pt)         { return new POINT{X=pt.X, Y=pt.Y}; }
-			public Point ToPoint()                          { return new Point(X, Y); }
-			public static implicit operator Point(POINT pt) { return pt.ToPoint(); }
+			public readonly Point ToPoint() => new(X, Y);
+			public static POINT FromPoint(Point pt) => new() { X = pt.X, Y = pt.Y };
+			public static implicit operator Point(POINT pt) => pt.ToPoint();
 		}
 
 		[StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -359,14 +394,14 @@ namespace Rylogic.Interop.Win32
 			public int right;
 			public int bottom;
 
-			public int width                                        { get { return right - left; } }
-			public int height                                       { get { return bottom - top; } }
+			public readonly int width => right - left;
+			public readonly int height => bottom - top;
 
-			public static RECT FromRectangle(Rectangle rect)        { return new RECT{left=rect.Left, top=rect.Top, right=rect.Right, bottom=rect.Bottom}; }
-			public Rectangle   ToRectangle()                        { return new Rectangle(left, top, width, height); }
-			public static RECT FromSize(Size size)                  { return new RECT{left=0, top=0, right=size.Width, bottom=size.Height}; }
-			public Size        ToSize()                             { return new Size(right - left, bottom - top); }
-			public static RECT FromLTRB(int l, int t, int r, int b) { return new RECT{left=l, top=t, right=r, bottom=b}; }
+			public readonly Size ToSize()                           => new(right - left, bottom - top);
+			public readonly Rectangle ToRectangle()                 => new(left, top, width, height);
+			public static RECT FromRectangle(Rectangle rect)        => new() { left = rect.Left, top = rect.Top, right = rect.Right, bottom = rect.Bottom };
+			public static RECT FromSize(Size size)                  => new() { left = 0, top = 0, right = size.Width, bottom = size.Height };
+			public static RECT FromLTRB(int l, int t, int r, int b) => new() { left = l, top = t, right = r, bottom = b };
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -430,7 +465,7 @@ namespace Rylogic.Interop.Win32
 
 			/// <summary>The buffer to receive the text</summary>
 			[MarshalAs(UnmanagedType.LPWStr)]
-			public string text = new string('\0', max - min); // Allocated by caller, zero terminated by RichEdit
+			public string text = new('\0', max - min); // Allocated by caller, zero terminated by RichEdit
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -464,35 +499,35 @@ namespace Rylogic.Interop.Win32
 			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)] public string cAlternateFileName;
 
 			/// <summary>The filename.extn of the file</summary>
-			public string FileName { get { return cFileName; } }
+			public readonly string FileName => cFileName;
 
 			/// <summary>Attributes of the file.</summary>
-			public FileAttributes Attributes { get { return dwFileAttributes; } }
+			public readonly FileAttributes Attributes => dwFileAttributes;
 
 			/// <summary>The file size</summary>
-			public long FileSize { get { return ToLong(nFileSizeHigh, nFileSizeLow); } }
+			public readonly long FileSize => ToLong(nFileSizeHigh, nFileSizeLow);
 
 			/// <summary>File creation time in local time</summary>
-			public DateTime CreationTime { get { return CreationTimeUtc.ToLocalTime(); } }
+			public readonly DateTime CreationTime => CreationTimeUtc.ToLocalTime();
 
 			/// <summary>File creation time in UTC</summary>
-			public DateTime CreationTimeUtc { get { return ToDateTime(ftCreationTime_dwHighDateTime, ftCreationTime_dwLowDateTime); } }
+			public readonly DateTime CreationTimeUtc => ToDateTime(ftCreationTime_dwHighDateTime, ftCreationTime_dwLowDateTime);
 
 			/// <summary>Gets the last access time in local time.</summary>
-			public DateTime LastAccessTime { get { return LastAccessTimeUtc.ToLocalTime(); } }
+			public readonly DateTime LastAccessTime => LastAccessTimeUtc.ToLocalTime();
 
 			/// <summary>File last access time in UTC</summary>
-			public DateTime LastAccessTimeUtc { get { return ToDateTime(ftLastAccessTime_dwHighDateTime, ftLastAccessTime_dwLowDateTime); } }
+			public readonly DateTime LastAccessTimeUtc => ToDateTime(ftLastAccessTime_dwHighDateTime, ftLastAccessTime_dwLowDateTime);
 
 			/// <summary>Gets the last access time in local time.</summary>
-			public DateTime LastWriteTime { get { return LastWriteTimeUtc.ToLocalTime(); } }
+			public readonly DateTime LastWriteTime => LastWriteTimeUtc.ToLocalTime();
 
 			/// <summary>File last write time in UTC</summary>
-			public DateTime LastWriteTimeUtc { get { return ToDateTime(ftLastWriteTime_dwHighDateTime, ftLastWriteTime_dwLowDateTime); } }
+			public readonly DateTime LastWriteTimeUtc => ToDateTime(ftLastWriteTime_dwHighDateTime, ftLastWriteTime_dwLowDateTime);
 
-			public override string ToString()                       { return cFileName; }
-			private static DateTime ToDateTime(uint high, uint low) { return DateTime.FromFileTimeUtc(ToLong(high,low)); }
-			private static long ToLong(uint high, uint low)         { return ((long)high << 0x20) | low; }
+			public override readonly string ToString() => cFileName;
+			private static DateTime ToDateTime(uint high, uint low) => DateTime.FromFileTimeUtc(ToLong(high, low));
+			private static long ToLong(uint high, uint low) => ((long)high << 0x20) | low;
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -537,5 +572,7 @@ namespace Rylogic.Interop.Win32
 			public float eDx;
 			public float eDy;
 		}
+
+		#pragma warning restore IDE1006 // Naming Styles
 	}
 }
