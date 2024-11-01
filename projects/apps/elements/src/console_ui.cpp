@@ -1,11 +1,11 @@
-#include "elements/stdafx.h"
-#include "elements/console_ui.h"
-#include "elements/game_instance.h"
-#include "elements/view_base.h"
-#include "elements/view_intro.h"
-#include "elements/view_home.h"
-#include "elements/view_lab.h"
-#include "elements/view_ship.h"
+#include "src/forward.h"
+#include "src/console_ui.h"
+#include "src/game_instance.h"
+#include "src/view_base.h"
+#include "src/view_intro.h"
+#include "src/view_home.h"
+#include "src/view_lab.h"
+#include "src/view_ship.h"
 
 using namespace pr::console;
 

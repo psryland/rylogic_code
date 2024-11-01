@@ -4,13 +4,13 @@
     <ClCompile Include="src\cam\cam.cpp">
       <Filter>src\cam</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\include\pr\app\entry_point.cpp">
+    <ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
       <Filter>pr\app</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\sdk\ogg\ogg.c">
+    <ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c">
       <Filter>sdk\ogg</Filter>
     </ClCompile>
     <ClCompile Include="src\ship\ship.cpp">
@@ -19,7 +19,7 @@
     <ClCompile Include="src\world\terrain.cpp">
       <Filter>src\world</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\sdk\vorbis\vorbis.c">
+    <ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c">
       <Filter>sdk</Filter>
     </ClCompile>
   </ItemGroup>
@@ -27,31 +27,31 @@
     <ClInclude Include="src\cam\cam.h">
       <Filter>src\cam</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\camera\camctrl_dinput_wasd.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\camera\camctrl_dinput_wasd.h">
       <Filter>pr\camera</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\camera\camera.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
       <Filter>pr\camera</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\app\default_setup.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\input\dinput.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h">
       <Filter>pr\input</Filter>
     </ClInclude>
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\app\forward.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h">
       <Filter>pr\app</Filter>
     </ClInclude>
     <ClInclude Include="src\main.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\app\main.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\app\main.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\audio\ogg\ogg_stream.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\audio\ogg\ogg_stream.h">
       <Filter>pr\audio</Filter>
     </ClInclude>
     <ClInclude Include="src\settings.h">
@@ -60,7 +60,7 @@
     <ClInclude Include="src\ship\ship.h">
       <Filter>src\ship</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\app\skybox.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h">
       <Filter>pr\app</Filter>
     </ClInclude>
     <ClInclude Include="src\world\terrain.h">
@@ -118,14 +118,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="pre_build.py" />
     <None Include="script\menu.ldr">
-      <Filter>res</Filter>
+      <Filter>data/menu</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\skybox\SkyBox-Clouds-Few-Noon.png">
-      <Filter>res</Filter>
+      <Filter>data\skybox</Filter>
     </Image>
   </ItemGroup>
 </Project>

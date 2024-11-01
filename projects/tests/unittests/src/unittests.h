@@ -328,7 +328,6 @@
 #include "pr\threads\name_thread.h"
 #include "pr\threads\pause_thread.h"
 #include "pr\threads\process.h"
-#include "pr\threads\sim_message_pump.h"
 #include "pr\threads\spin_lock.h"
 #include "pr\threads\synchronise.h"
 #include "pr\threads\thread_pool.h"

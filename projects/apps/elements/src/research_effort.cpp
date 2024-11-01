@@ -1,7 +1,7 @@
-#include "elements/stdafx.h"
-#include "elements/research_effort.h"
-#include "elements/game_constants.h"
-#include "elements/world_state.h"
+#include "src/forward.h"
+#include "src/research_effort.h"
+#include "src/game_constants.h"
+#include "src/world_state.h"
 
 namespace ele
 {

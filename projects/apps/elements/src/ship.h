@@ -1,8 +1,7 @@
 ﻿#pragma once
-
-#include "elements/forward.h"
-#include "elements/material.h"
-#include "elements/game_constants.h"
+#include "src/forward.h"
+#include "src/material.h"
+#include "src/game_constants.h"
 
 namespace ele
 {

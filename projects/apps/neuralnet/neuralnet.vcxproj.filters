@@ -7,8 +7,8 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\include\pr\neuralnet\forward.h" />
-    <ClInclude Include="..\..\..\include\pr\neuralnet\neuralnet.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\neuralnet\forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\neuralnet\neuralnet.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">

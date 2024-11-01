@@ -1,9 +1,9 @@
 <Project>
 	<!--
-	This is for all C# projects remember, not just library assemblies
+	This is for all C# and C++ projects remember, not just library assemblies
 	-->
 
-	<!-- Build Options -->
+	<!-- C# Build Options -->
 	<PropertyGroup>
 		<TargetFrameworks>net8.0;net481</TargetFrameworks>
 		<WarningsAsErrors>Nullable</WarningsAsErrors>
@@ -17,18 +17,27 @@
 		<Nullable>Enable</Nullable>
 	</PropertyGroup>
 
-	<!-- Assembly properties -->
+	<!-- C# Assembly properties -->
 	<PropertyGroup>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<RylogicLibraryVersion>2.0.0</RylogicLibraryVersion>
+	</PropertyGroup>
+
+	<!-- C++ Globals -->
+	<PropertyGroup>
+		<VCProjectVersion>16.0</VCProjectVersion>
+		<PlatformToolset>v143</PlatformToolset>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+
 		<RylogicRoot>$(MSBuildThisFileDirectory)</RylogicRoot>
 		<ScriptPath>$(MSBuildThisFileDirectory)script\</ScriptPath>
 		<PropsPath>$(MSBuildThisFileDirectory)build\props\</PropsPath>
+		<TargetsPath>$(MSBuildThisFileDirectory)build\targets\</TargetsPath>
 		<PackagesPath Condition=" '$(RestorePackagesPath)' == '' ">$(SolutionDir)packages\</PackagesPath>
-		<RylogicLibraryVersion>2.0.0</RylogicLibraryVersion>
 	</PropertyGroup>
 
 </Project>

@@ -1,14 +1,13 @@
 #pragma once
-
-#include "elements/forward.h"
-#include "elements/material.h"
+#include "src/forward.h"
+#include "src/material.h"
 
 namespace ele
 {
 	// A wrapper around the store of materials
 	struct Stockpile
 	{
-		typedef std::map<pr::hash::HashValue, Material> MatCont;
+		typedef std::map<pr::hash::HashValue32, Material> MatCont;
 		MatCont m_mats;
 
 		Stockpile();

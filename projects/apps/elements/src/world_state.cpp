@@ -1,6 +1,6 @@
-#include "elements/stdafx.h"
-#include "elements/world_state.h"
-#include "elements/game_constants.h"
+#include "src/forward.h"
+#include "src/world_state.h"
+#include "src/game_constants.h"
 
 namespace ele
 {

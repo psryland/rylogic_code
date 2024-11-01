@@ -1,10 +1,10 @@
-#include "elements/stdafx.h"
-#include "elements/lab.h"
-#include "elements/game_constants.h"
-#include "elements/bond.h"
-#include "elements/material.h"
-#include "elements/element.h"
-#include "elements/game_events.h"
+#include "src/forward.h"
+#include "src/lab.h"
+#include "src/game_constants.h"
+#include "src/bond.h"
+#include "src/material.h"
+#include "src/element.h"
+#include "src/game_events.h"
 
 namespace ele
 {

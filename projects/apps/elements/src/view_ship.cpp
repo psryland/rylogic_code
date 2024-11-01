@@ -1,7 +1,7 @@
-#include "elements/stdafx.h"
-#include "elements/view_ship.h"
-#include "elements/view_base.h"
-#include "elements/game_instance.h"
+#include "src/forward.h"
+#include "src/view_ship.h"
+#include "src/view_base.h"
+#include "src/game_instance.h"
 
 using namespace pr::console;
 

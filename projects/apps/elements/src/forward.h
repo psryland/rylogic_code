@@ -11,25 +11,29 @@
 // pr
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
+#include "pr/common/cast.h"
 #include "pr/common/console.h"
 #include "pr/common/datetime.h"
 #include "pr/common/si_units.h"
+#include "pr/common/hash.h"
+#include "pr/common/flags_enum.h"
 #include "pr/container/tri_table.h"
-#include "pr/crypt/hash.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
 #include "pr/macros/count_of.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/rand_vector.h"
+#include "pr/gui/sim_message_loop.h"
 #include "pr/str/to_string.h"
-#include "pr/threads/sim_message_pump.h"
 
 namespace ele
 {
-	typedef size_t atomic_number_t;
-	typedef double man_days_t;
-	typedef double man_power_t;
-	typedef std::vector<std::string> strvec_t;
+	using atomic_number_t = size_t;
+	using man_days_t = double;
+	using man_power_t = double;
+	using strvec_t = std::vector<std::string>;
+	using Console = pr::Console<char>;
+	using SimMsgLoop = pr::gui::SimMsgLoop;
+
 	const double seconds_per_day = 60.0*60.0*24.0;
 
 	struct GameInstance;
@@ -39,12 +43,12 @@ namespace ele
 	struct Ship;
 	struct ResearchEffort;
 
-	typedef std::vector<Element>         ElemCont;
-	typedef std::vector<Material>        MatCont;
-	typedef std::vector<Element*>        ElemPtrCont;
-	typedef std::vector<Element const*>  ElemCPtrCont;
-	typedef std::vector<Material*>       MatPtrCont;
-	typedef std::vector<Material const*> MatCPtrCont;
+	using ElemCont     = std::vector<Element>;
+	using MatCont      = std::vector<Material>;
+	using ElemPtrCont  = std::vector<Element*>;
+	using ElemCPtrCont = std::vector<Element const*>;
+	using MatPtrCont   = std::vector<Material*>;
+	using MatCPtrCont  = std::vector<Material const*>;
 
 	// An id for each view. These are only used by the view layer,
 	// the game instance does not have any concept of the 'current view'
@@ -67,8 +71,9 @@ namespace ele
 		x(BoilingPoint      ,= 1 << 4)\
 		x(ValenceElectrons  ,= 1 << 5)\
 		x(ElectroNegativity ,= 1 << 6)\
-		x(AtomicRadius      ,= 1 << 7)
-	PR_DEFINE_ENUM2_FLAGS(EElemProp, PR_ENUM);
+		x(AtomicRadius      ,= 1 << 7)\
+		x(_flags_enum       ,= 0)
+	PR_DEFINE_ENUM2(EElemProp, PR_ENUM);
 	#undef PR_ENUM
 
 	// Permutations

@@ -1,11 +1,10 @@
 #pragma once
-
-#include "elements/forward.h"
-#include "elements/game_constants.h"
-#include "elements/world_state.h"
-#include "elements/stockpile.h"
-#include "elements/lab.h"
-#include "elements/ship.h"
+#include "src/forward.h"
+#include "src/game_constants.h"
+#include "src/world_state.h"
+#include "src/stockpile.h"
+#include "src/lab.h"
+#include "src/ship.h"
 
 namespace ele
 {

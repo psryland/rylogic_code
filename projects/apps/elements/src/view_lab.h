@@ -1,9 +1,8 @@
 #pragma once
-
-#include "elements/forward.h"
-#include "elements/view_base.h"
-#include "elements/reaction.h"
-#include "elements/game_events.h"
+#include "src/forward.h"
+#include "src/view_base.h"
+#include "src/reaction.h"
+#include "src/game_events.h"
 
 namespace ele
 {

@@ -541,8 +541,8 @@ namespace pr::rdr12
 			auto aspect_v = float(m_scene.m_viewport.Width) / float(m_scene.m_viewport.Height);
 
 			// Create a camera with the same aspect as the viewport
+			auto v_camera = m_scene.m_cam;
 			auto& scene_cam = m_scene.m_cam;
-			auto v_camera = scene_cam;
 			auto fd = scene_cam.FocusDist();
 			v_camera.Aspect(aspect_v);
 

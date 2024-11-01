@@ -1,6 +1,6 @@
-#include "elements/stdafx.h"
-#include "elements/game_instance.h"
-#include "elements/console_ui.h"
+#include "src/forward.h"
+#include "src/game_instance.h"
+#include "src/console_ui.h"
 
 int main(int, char*[])
 {

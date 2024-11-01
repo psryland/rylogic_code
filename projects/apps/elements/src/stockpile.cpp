@@ -1,7 +1,7 @@
-#include "elements/stdafx.h"
-#include "elements/stockpile.h"
-#include "elements/material.h"
-#include "elements/game_constants.h"
+#include "src/forward.h"
+#include "src/stockpile.h"
+#include "src/material.h"
+#include "src/game_constants.h"
 
 namespace ele
 {

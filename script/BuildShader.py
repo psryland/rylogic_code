@@ -141,13 +141,13 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				
 				# Copy to target directory
 				if os.path.exists(filepath_h):
-					Tools.Copy(filepath_h, out_filepath_h)
+					Tools.Copy(filepath_h, out_filepath_h, full_paths=False)
 					os.remove(filepath_h)
 				if os.path.exists(filepath_cso):
-					Tools.Copy(filepath_cso, out_filepath_cso)
+					Tools.Copy(filepath_cso, out_filepath_cso, full_paths=False)
 					os.remove(filepath_cso)
 				if os.path.exists(filepath_pdb):
-					Tools.Copy(filepath_pdb, out_filepath_pdb)
+					Tools.Copy(filepath_pdb, out_filepath_pdb, full_paths=False)
 					os.remove(filepath_pdb)
 
 			else: # Generate preprocessed output
@@ -159,8 +159,6 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				# Pre process and clean
 				Tools.Exec([compiler, fullpath, "/P"+filepath_pp] + includes + defines + options)
 				Tools.Exec([os.path.join(UserVars.root, "bin", "textformatter.exe"), "-f", filepath_pp, "-newlines", "0", "1"])
-				if UserVars.textedit:
-					Tools.Exec([UserVars.textedit, filepath_pp])
 	return
 
 # Run as standalone script

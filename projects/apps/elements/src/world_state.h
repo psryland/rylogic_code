@@ -1,7 +1,6 @@
 ﻿#pragma once
-
-#include "elements/forward.h"
-#include "elements/research_effort.h"
+#include "src/forward.h"
+#include "src/research_effort.h"
 
 namespace ele
 {

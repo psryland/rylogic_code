@@ -1,8 +1,8 @@
-#include "elements/stdafx.h"
-#include "elements/reaction.h"
-#include "elements/material.h"
-#include "elements/Bond.h"
-#include "elements/lab.h"
+#include "src/forward.h"
+#include "src/reaction.h"
+#include "src/material.h"
+#include "src/Bond.h"
+#include "src/lab.h"
 
 namespace ele
 {

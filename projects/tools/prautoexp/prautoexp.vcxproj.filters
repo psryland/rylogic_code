@@ -24,13 +24,12 @@
     <ClInclude Include="src\reentry_guard.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\lua\lua.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
       <Filter>pr\lua</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="deploy_autoexp.py" />
-    <None Include="pre_build.py" />
+    <None Include="generate_def_file.py" />
     <None Include="src\prautoexp.def">
       <Filter>src</Filter>
     </None>

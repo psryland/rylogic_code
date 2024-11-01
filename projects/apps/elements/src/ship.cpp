@@ -1,5 +1,5 @@
-﻿#include "elements/stdafx.h"
-#include "elements/ship.h"
+﻿#include "src/forward.h"
+#include "src/ship.h"
 
 namespace ele
 {

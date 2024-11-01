@@ -1,8 +1,7 @@
 ﻿#pragma once
-
-#include "elements/forward.h"
-#include "elements/element.h"
-#include "elements/bond.h"
+#include "src/forward.h"
+#include "src/element.h"
+#include "src/bond.h"
 
 namespace ele
 {

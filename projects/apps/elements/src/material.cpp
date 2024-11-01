@@ -1,8 +1,8 @@
-#include "elements/stdafx.h"
-#include "elements/material.h"
-#include "elements/element.h"
-#include "elements/game_constants.h"
-#include "elements/lab.h"
+#include "src/forward.h"
+#include "src/material.h"
+#include "src/element.h"
+#include "src/game_constants.h"
+#include "src/lab.h"
 
 namespace ele
 {

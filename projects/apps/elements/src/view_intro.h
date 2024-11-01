@@ -1,13 +1,12 @@
 #pragma once
-
-#include "elements/forward.h"
-#include "elements/view_base.h"
+#include "src/forward.h"
+#include "src/view_base.h"
 
 namespace ele
 {
 	struct ViewIntro
 		:ViewBase
-		,pr::events::IRecv<pr::console::Evt_KeyDown>
+		,pr::events::IRecv<Console::Evt_KeyDown>
 	{
 		int           m_page;            // The page number of the intro
 		pr::seconds_t m_display_time;    // The length of time that the current page has been displayed for

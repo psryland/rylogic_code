@@ -1,6 +1,6 @@
-#include "elements/stdafx.h"
-#include "elements/view_base.h"
-#include "elements/game_instance.h"
+#include "src/forward.h"
+#include "src/view_base.h"
+#include "src/game_instance.h"
 
 using namespace pr::console;
 
@@ -55,7 +55,7 @@ namespace ele
 		if (option == "") Render();
 	}
 
-	void ViewBase::HandleKeyEvent(EView this_view, pr::console::Evt_KeyDown const& e)
+	void ViewBase::HandleKeyEvent(EView this_view, Console::Evt_KeyDown const& e)
 	{
 		if (e.m_key.wVirtualKeyCode == VK_ESCAPE && this_view != EView::Home)
 		{

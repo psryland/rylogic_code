@@ -10,10 +10,7 @@
 		Inputs="$(PackagesPath)$(DxcPackage)\build\native\bin\$(PlatformName)\dxcompiler.dll"
 		Outputs="$(TargetDir)dxcompiler.dll"
 	>
-		<Exec
-			Command="py Copy.py $(PackagesPath)$(DxcPackage)\build\native\bin\$(PlatformName)\dxcompiler.dll $(TargetDir) -OnlyIfNewer"
-			WorkingDirectory="$(ScriptPath)"
-		/>
+		<Exec Command="py $(ScriptPath)Copy.py $(PackagesPath)$(DxcPackage)\build\native\bin\$(PlatformName)\dxcompiler.dll $(TargetDir) -OnlyIfNewer" />
 	</Target>
 
 </Project>

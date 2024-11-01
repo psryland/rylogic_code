@@ -1,6 +1,6 @@
-﻿#include "elements/stdafx.h"
-#include "elements/view_intro.h"
-#include "elements/game_instance.h"
+﻿#include "src/forward.h"
+#include "src/view_intro.h"
+#include "src/game_instance.h"
 
 using namespace pr::console;
 

@@ -1,10 +1,9 @@
 #pragma once
-
-#include "elements/forward.h"
-#include "elements/bond.h"
-#include "elements/element.h"
-#include "elements/material.h"
-#include "elements/game_constants.h"
+#include "src/forward.h"
+#include "src/bond.h"
+#include "src/element.h"
+#include "src/material.h"
+#include "src/game_constants.h"
 
 namespace ele
 {
@@ -44,7 +43,7 @@ namespace ele
 	// The order of elem1/elem2 does not effect the index
 	inline size_t MaterialIndex(atomic_number_t elem1_atomic_number, atomic_number_t elem2_atomic_number)
 	{
-		return pr::tri_table::Index<pr::tri_table::Inclusive>(elem1_atomic_number - 1, elem2_atomic_number - 1);
+		return pr::tri_table::Index(pr::tri_table::EType::Inclusive, pr::s_cast<int>(elem1_atomic_number - 1), pr::s_cast<int>(elem2_atomic_number - 1));
 	}
 	inline size_t MaterialIndex(Element const& elem1, Element const& elem2)
 	{
@@ -54,7 +53,7 @@ namespace ele
 	// Generate the name of a material formed from the given elements
 	std::string MaterialName(Element elem1, size_t count1, Element elem2, size_t count2);
 
-	// Generate the symbollic name of a material formed from the given elements
+	// Generate the symbolic name of a material formed from the given elements
 	std::string MaterialSymName(Element elem1, size_t count1, Element elem2, size_t count2);
 
 	// Calculates a bond strength between the given elements

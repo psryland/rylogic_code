@@ -1,6 +1,5 @@
-#pragma once
-
-#include "elements/forward.h"
+﻿#pragma once
+#include "src/forward.h"
 
 namespace ele
 {
@@ -60,7 +59,7 @@ namespace ele
 		pr::metres_t m_star_distance;
 
 		// The acceleration due to the star's gravity at the given distance
-		pr::metres_p_sec�_t m_star_gravitational_acceleration;
+		pr::metres_p_sec²_t m_star_gravitational_acceleration;
 
 		// The speed required to escape the star
 		pr::metres_p_sec_t m_escape_velocity;
@@ -69,19 +68,19 @@ namespace ele
 		pr::kilograms_t m_average_passenger_weight;
 
 		// The space required by each passenger
-		pr::metres�_t m_average_passenger_personal_space;
+		pr::metres³_t m_average_passenger_personal_space;
 
 		// The space required by each passenger for life support systems etc
-		pr::metres�_t m_average_passenger_required_systems_volume;
+		pr::metres³_t m_average_passenger_required_systems_volume;
 
 		// The ships volume is this much bigger than it's contents
 		double m_ship_volume_scaler;
 
-		// A limit on the available resources, to be divided amoung the research efforts
+		// A limit on the available resources, to be divided among the research efforts
 		size_t m_total_man_power;
 
 		// How quickly the ship can be built
-		pr::metres�_p_day_t m_ship_construction_rate;
+		pr::metres³_p_day_t m_ship_construction_rate;
 
 		// The total man days needed to discover the star mass
 		man_days_t m_star_mass_discovery_effort;

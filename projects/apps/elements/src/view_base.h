@@ -1,6 +1,5 @@
 #pragma once
-
-#include "elements/forward.h"
+#include "src/forward.h"
 
 namespace ele
 {
@@ -29,7 +28,7 @@ namespace ele
 		void HandleOption(EView this_view, std::string option);
 
 		// Common handling of key events
-		void HandleKeyEvent(EView this_view, pr::console::Evt_KeyDown const& e);
+		void HandleKeyEvent(EView this_view, Console::Evt_KeyDown const& e);
 
 		PR_NO_COPY(ViewBase);
 	};

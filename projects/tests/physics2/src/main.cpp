@@ -1,5 +1,5 @@
-#include "physics2/src/forward.h"
-#include "physics2/src/body.h"
+#include "src/forward.h"
+#include "src/body.h"
 
 using namespace pr;
 using namespace pr::gui;

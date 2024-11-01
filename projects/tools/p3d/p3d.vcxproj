@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
 	<!-- Globals -->
-	<Import Project="..\..\..\build\props\globals.props" />
 	<PropertyGroup Label="Globals">
+		<ConfigurationType>Application</ConfigurationType>
 		<ProjectGuid>{55743CFA-06D2-43DB-8B86-A03CC46F0847}</ProjectGuid>
 		<RootNamespace>p3d</RootNamespace>
 		<ProjectName>p3d</ProjectName>
-		<ConfigurationType>Application</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configuration -->
@@ -32,14 +32,18 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="..\..\..\build\props\app.props" />
+	<Import Project="$(PropsPath)app.props" />
 
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
-			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
 		</ClCompile>
 		<Link>
 			<SubSystem>Console</SubSystem>
@@ -48,11 +52,11 @@
 
 	<!-- Source -->
 	<ItemGroup>
-		<ClInclude Include="..\..\..\include\pr\geometry\3ds.h" />
-		<ClInclude Include="..\..\..\include\pr\geometry\obj.h" />
-		<ClInclude Include="..\..\..\include\pr\geometry\p3d.h" />
-		<ClInclude Include="..\..\..\include\pr\geometry\stl.h" />
-		<ClInclude Include="..\..\..\include\pr\geometry\utility.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\obj.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
 		<ClCompile Include="src\main.cpp">
 			<PrecompiledHeader>Create</PrecompiledHeader>
 		</ClCompile>
@@ -65,8 +69,9 @@
 		<ClCompile Include="src\commands\model_io.cpp" />
 		<ClInclude Include="src\commands\remove_degenerates.h" />
 		<ClCompile Include="src\commands\remove_degenerates.cpp" />
-		<None Include="deploy_p3d.py" />
 		<None Include="example_script.ldr" />
 	</ItemGroup>
+
+	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

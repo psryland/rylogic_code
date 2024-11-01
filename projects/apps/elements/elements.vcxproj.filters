@@ -28,160 +28,160 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\elements\bond.h">
+    <ClInclude Include="src\bond.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\console_ui.h">
+    <ClInclude Include="src\console_ui.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\element.h">
+    <ClInclude Include="src\element.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\forward.h">
+    <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\game_constants.h">
+    <ClInclude Include="src\game_constants.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\game_events.h">
+    <ClInclude Include="src\game_events.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\game_instance.h">
+    <ClInclude Include="src\game_instance.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_base.h">
+    <ClInclude Include="src\view_base.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_home.h">
+    <ClInclude Include="src\view_home.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_intro.h">
+    <ClInclude Include="src\view_intro.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_lab.h">
+    <ClInclude Include="src\view_lab.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_prompt_box.h">
+    <ClInclude Include="src\view_prompt_box.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\view_ship.h">
+    <ClInclude Include="src\view_ship.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\world_state.h">
+    <ClInclude Include="src\world_state.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\stockpile.h">
+    <ClInclude Include="src\stockpile.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\ship.h">
+    <ClInclude Include="src\ship.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\research_effort.h">
+    <ClInclude Include="src\research_effort.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\reaction.h">
+    <ClInclude Include="src\reaction.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\lab.h">
+    <ClInclude Include="src\lab.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\material.h">
+    <ClInclude Include="src\material.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\console.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\console.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\datetime.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\datetime.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\event.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\event.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\events.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\events.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\fmt.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\fmt.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\macros\no_copy.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\macros\no_copy.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\si_units.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\si_units.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\storage\sqlite.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\sqlite.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\elements\stdafx.h">
+    <ClInclude Include="src\stdafx.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\str\tostring.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\str\tostring.h">
       <Filter>pr\str</Filter>
     </ClInclude>
-    <ClInclude Include="..\sdk\sqlite3\include\sqlite3.h">
+    <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\elements\console_ui.cpp">
+    <ClCompile Include="src\console_ui.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\element.cpp">
+    <ClCompile Include="src\element.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\game_instance.cpp">
+    <ClCompile Include="src\game_instance.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\lab.cpp">
+    <ClCompile Include="src\lab.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\main.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\game_constants.cpp">
+    <ClCompile Include="src\game_constants.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\material.cpp">
+    <ClCompile Include="src\material.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\reaction.cpp">
+    <ClCompile Include="src\reaction.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\research_effort.cpp">
+    <ClCompile Include="src\research_effort.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\ship.cpp">
+    <ClCompile Include="src\ship.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\stdafx.cpp">
+    <ClCompile Include="src\stdafx.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\stockpile.cpp">
+    <ClCompile Include="src\stockpile.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\view_base.cpp">
+    <ClCompile Include="src\view_base.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\view_home.cpp">
+    <ClCompile Include="src\view_home.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\view_intro.cpp">
+    <ClCompile Include="src\view_intro.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\view_lab.cpp">
+    <ClCompile Include="src\view_lab.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\view_ship.cpp">
+    <ClCompile Include="src\view_ship.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\world_state.cpp">
+    <ClCompile Include="src\world_state.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\sdk\sqlite3\src\sqlite3.c">
+    <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
       <Filter>sqlite</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\projects\elements\design.txt" />
+    <Text Include="src\design.txt" />
   </ItemGroup>
 </Project>

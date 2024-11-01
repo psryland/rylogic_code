@@ -28,31 +28,31 @@
     <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\colour_ctrl.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\colour_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\context_menu.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\context_menu.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\gdiplus.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\gdiplus.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\graph_ctrl.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\graph_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\progress_ui.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\progress_ui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\scintilla_ctrl.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\view3d_panel.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\view3d_panel.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\vt100.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\vt100.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
