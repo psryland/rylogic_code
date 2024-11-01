@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Dynamic;
-using System.Text;
-using Microsoft.SqlServer.Server;
 using Rylogic.Interop.Win32;
 
 namespace Rylogic.Common

@@ -835,23 +835,30 @@ namespace Rylogic.Gfx
 		{
 			// todo
 		}
-		
+
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WindowOptions
 		{
 			public ReportErrorCB ErrorCB;
 			public IntPtr ErrorCBCtx;
+			public Colour32 BackgroundColour;
 			public bool GdiCompatibleBackBuffer;
 			public int Multisampling;
 			public string DbgName;
-			public WindowOptions(ReportErrorCB error_cb, IntPtr error_cb_ctx, bool gdi_compatible_bb = false)
+
+			public static WindowOptions New(ReportErrorCB? error_cb = null, IntPtr? error_cb_ctx = null, Colour32? background_colour = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
 			{
-				ErrorCB = error_cb;
-				ErrorCBCtx = error_cb_ctx;
-				GdiCompatibleBackBuffer = gdi_compatible_bb;
-				Multisampling = gdi_compatible_bb ? 1 : 4;
-				DbgName = string.Empty;
+				static void ErrorSink(IntPtr ctx, string msg, string filepath, int line, long pos) => throw new Exception(msg);
+				return new()
+				{
+					ErrorCB = error_cb ?? ErrorSink,
+					ErrorCBCtx = error_cb_ctx ?? IntPtr.Zero,
+					BackgroundColour = background_colour ?? Colour32.Gray,
+					GdiCompatibleBackBuffer = gdi_compatible_bb ?? false,
+					Multisampling = (gdi_compatible_bb ?? false) ? 1 : 4,
+					DbgName = dbg_name ?? string.Empty,
+				};
 			}
 		}
 
@@ -1113,7 +1120,7 @@ namespace Rylogic.Gfx
 
 		private readonly List<Window> m_windows;          // Groups of objects to render
 		private readonly HContext m_context;              // Unique id per Initialise call
-		private readonly Dispatcher m_dispatcher;         // Thread marshaller
+		private readonly SynchronizationContext m_sync;   // Thread marshaller
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
 		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
@@ -1146,8 +1153,8 @@ namespace Rylogic.Gfx
 				throw new Exception("View3d.dll has not been loaded");
 
 			m_windows = new List<Window>();
-			m_dispatcher = Dispatcher.CurrentDispatcher;
-			m_thread_id = Thread.CurrentThread.ManagedThreadId;
+			m_sync = SynchronizationContext.Current ?? new SynchronizationContext();
+			m_thread_id = Environment.CurrentManagedThreadId;
 			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 			m_load_script_handlers = new List<LoadScriptCompleteCB>();
 			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
@@ -1161,7 +1168,7 @@ namespace Rylogic.Gfx
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
 					{
-						m_dispatcher.Invoke(m_error_cb, ctx, msg, filepath, line, pos);
+						m_sync.Send(_ => HandleError(ctx, msg, filepath, line, pos), null);
 						return;
 					}
 
@@ -1192,7 +1199,7 @@ namespace Rylogic.Gfx
 				void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, bool before)
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-						m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
+						m_sync.Post(_ => HandleSourcesChanged(ctx, reason, before), null);
 					else
 						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
 				}

@@ -27,19 +27,14 @@ namespace Rylogic.Gfx
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
 
-			public Window(View3d view, HWND hwnd, bool? gdi_compatible_backbuffer = null, int? multi_sampling = null, string? dbg_name = null)
+			public Window(View3d view, HWND hwnd, WindowOptions? opts = null)
 			{
 				View = view;
 				Hwnd = hwnd;
 				Diag = new Diagnostics(this);
-				m_opts = new WindowOptions
-				{
-					ErrorCB = HandleError,
-					ErrorCBCtx = IntPtr.Zero,
-					GdiCompatibleBackBuffer = gdi_compatible_backbuffer ?? false,
-					Multisampling = multi_sampling ?? 4,
-					DbgName = dbg_name ?? string.Empty,
-				};
+				m_opts = opts ?? WindowOptions.New();
+				m_opts.ErrorCB = HandleError;
+				m_opts.ErrorCBCtx = IntPtr.Zero;
 
 				// Create the window
 				Handle = View3D_WindowCreate(hwnd, ref m_opts);
@@ -107,6 +102,21 @@ namespace Rylogic.Gfx
 
 			/// <summary>Event notifying of state changes for animation</summary>
 			public event EventHandler<AnimationEventArgs>? OnAnimationEvent;
+
+			/// <summary>Respond to Win32 messages related to window resizing, minimising, etc</summary>
+			public void WndProcFilter(object? _, WndProcEventArgs args)
+			{
+				if (args.Hwnd != Hwnd)
+					throw new Exception("Window handle mismatch");
+
+				switch (args.Message)
+				{
+					case Win32.WM_WINDOWPOSCHANGING:
+					{
+						break;
+					}
+				}
+			}
 
 			/// <summary>Triggers the 'OnInvalidated' event on the first call. Future calls are ignored until 'Present' or 'Validate' are called</summary>
 			public void Invalidate()
@@ -201,7 +211,7 @@ namespace Rylogic.Gfx
 			/// <summary>Perform a hit test in the scene</summary>
 			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
 			{
-				return HitTest(ray, snap_distance, flags, new Guid[0], 0, 0);
+				return HitTest(ray, snap_distance, flags, [], 0, 0);
 			}
 			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, Guid[] guids, int include_count, int exclude_count)
 			{
@@ -272,7 +282,7 @@ namespace Rylogic.Gfx
 			}
 			public void EnumObjects(Func<Object, bool> cb, Guid context_id, bool all_except = false)
 			{
-				EnumObjects(cb, new [] { context_id }, all_except?0:1, all_except?1:0);
+				EnumObjects(cb, [context_id], all_except ? 0 : 1, all_except ? 1 : 0);
 			}
 			public void EnumObjects(Action<Object> cb, Guid[] context_ids, int include_count, int exclude_count)
 			{
@@ -293,7 +303,7 @@ namespace Rylogic.Gfx
 				{
 					var objs = new List<Object>();
 					EnumObjects(x => objs.Add(x));
-					return objs.ToArray();
+					return [.. objs];
 				}
 			}
 
@@ -316,7 +326,7 @@ namespace Rylogic.Gfx
 			/// <summary>Add multiple objects, filtered by 'context_ids</summary>
 			public void AddObjects(Guid context_id)
 			{
-				AddObjects(new[] { context_id }, 1, 0);
+				AddObjects([context_id], 1, 0);
 			}
 			public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{

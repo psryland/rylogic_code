@@ -5,7 +5,7 @@
 
 	<!-- C# Build Options -->
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net481</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net481</TargetFrameworks>
 		<WarningsAsErrors>Nullable</WarningsAsErrors>
 		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>

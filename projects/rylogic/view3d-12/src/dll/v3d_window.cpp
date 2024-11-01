@@ -15,6 +15,7 @@ namespace pr::rdr12
 	{
 		return WndSettings(hwnd, true, rsettings)
 			.DefaultOutput()
+			.BackgroundColour(opts.m_background_colour)
 			.MutliSampling(opts.m_multisampling)
 			.Name(opts.m_dbg_name)
 			;

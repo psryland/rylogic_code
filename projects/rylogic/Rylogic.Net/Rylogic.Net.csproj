@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0;net481</TargetFrameworks>
 		<RootNamespace>Rylogic.Net</RootNamespace>
 	</PropertyGroup>
 

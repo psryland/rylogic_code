@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0-windows;net481</TargetFrameworks>
 		<RootNamespace>Rylogic.DirectShow</RootNamespace>
 		<UseWpf>True</UseWpf>
 	</PropertyGroup>

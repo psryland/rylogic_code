@@ -75,7 +75,7 @@ namespace Rylogic.Windows.Gui
 	}
 
 	// Message loop that also manages and runs a priority queue of simulation loops 
-	public class SimMessageLoop(int max_loop_steps = 10) : MessageLoop
+	public class SimMessageLoop(int max_loop_steps) : MessageLoop
 	{
 		// Notes:
 		//  - A message loop designed for simulation applications
@@ -108,10 +108,15 @@ namespace Rylogic.Windows.Gui
 		private long m_last_step_loops = 0;            // The last time StepLoops was called.
 		private int m_max_loop_steps = max_loop_steps; // The maximum number of loops to step before checking for messages
 
-		/// <summary>Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate</summary>
-		public void AddLoop(int step_rate_ms, bool variable, StepFunc step)
+		public SimMessageLoop()
+			:this(10)
 		{
-			m_loop.Add(new Loop(step, step_rate_ms, variable));
+		}
+
+		/// <summary>Add a loop to be stepped by this simulation message pump. if 'variable' is true, 'step_rate_ms' means minimum step rate</summary>
+		public void AddLoop(float frame_rate, bool variable, StepFunc step)
+		{
+			m_loop.Add(new Loop(step, (int)(1000f / frame_rate), variable));
 			m_order.Add(m_loop.Count - 1);
 		}
 
