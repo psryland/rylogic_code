@@ -1,0 +1,83 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        //C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -NoExit -File "E:\ESP/Initialize-Idf.ps1" -IdfId esp-idf-1cf0f4ff0803381f9dcf309aec84f04b
+        { // OpenOCD
+            "label": "Start OpenOCD",
+            "type": "shell",
+            "command": "pwsh.exe",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                 "& { . \"${workspaceFolder:ESP}/frameworks/esp-idf-v5.2.2/export.ps1\"; Clear-Host; openocd -c 'set ESP_RTOS none' -f board/esp32s3-builtin.cfg; }",
+            ],
+            "group": {
+                "kind": "none",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        { // Build
+            "label": "Build",
+            "type": "shell",
+            "command": "cmd.exe",
+            "args": [
+                "/k",
+                "${workspaceFolder:ESP}/frameworks/esp-idf-v5.2.2/export.bat",
+                "&&",
+                "idf.py",
+                "build",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": true,
+                "revealProblems": "onProblem",
+                "clear": true
+            }
+        },
+        {
+            "label": "Flash",
+            "type": "process",
+            "command": "py idf.py",
+            "args": [
+                "flash"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            }
+        },
+        {
+            "label": "Monitor",
+            "type": "shell",
+            "command": "clear && idf.py monitor",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            }
+        }
+    ]
+}

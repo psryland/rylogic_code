@@ -31,55 +31,13 @@ built/
 Debug/
 Release/
 .vs/
-.vscode/
-.hg/
 .git/
-.svn/
 .metadata/
 .nuget/
 __pycache__/
-node_modules/
 packages/
 TestResults/
 media/
 thirdparty/
 symbol_cache/
-
-# Blender
-*.blend1
-/art/**/exported/
-
-**/hlsl/compiled/*
-**/RyLogViewer/Resources/*.html
-**/RyLogViewer/docs/*.html
-**/Rylobot/net/Data/*
-**/Rylobot/net/Model/*
-
-tools/wix/*
-!tools/wix/_get_wix.py
-tools/HxD/HxD.ini
-tools/GrepWin/grepwin.ini
-
-javascript/lib/
-javascript/*/dist/
-typescript/**/out/*
-
-android/*/.gradle/
-android/*/build/
-android/*/local.properties
-android/*/.jks
-android/*/.keystore
-
 script/UserVars.py
-RylogicRB.sln
-
-#usused   res/*.html
-#usused   build/*.ldr
-#usused   *Sample*
-#usused   *ReSharper*
-#usused   dlang/*
-#usused   ResEdit.layout
-#usused   tools/Compressonator/
-#usused   tools/ResEdit/ResEdit.xml
-#usused   projects/vs2012/pr_applog.log
-#usused   $RECYCLE.BIN*
