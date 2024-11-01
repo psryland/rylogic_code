@@ -33,19 +33,17 @@ class EProjects(Enum):
 	P3d = "P3d"
 	Rylogic = "Rylogic"
 	RylogicCore = "Rylogic.Core"
-	RylogicCoreWindows = "Rylogic.Core.Windows"
-	RylogicScintilla = "Rylogic.Scintilla"
-	RylogicView3d = "Rylogic.View3d"
-	RylogicGuiWinForms = "Rylogic.Gui.WinForms"
+	RylogicDB = "Rylogic.DB"
+	RylogicDirectShow = "Rylogic.DirectShow"
+	RylogicGfx = "Rylogic.Gfx"
 	RylogicGuiWPF = "Rylogic.Gui.WPF"
+	RylogicNet = "Rylogic.Net"
+	RylogicScintilla = "Rylogic.Scintilla"
+	RylogicWindows = "Rylogic.Windows"
 	Csex = "Csex"
 	LDraw = "LDraw"
 	RyLogViewer = "RyLogViewer"
-	CoinFlip = "CoinFlip"
-	SolarHotWater = "SolarHotWater"
-	TimeTracker = "TimeTracker"
 	RylogicTextAligner = "Rylogic.TextAligner"
-	Fishomatic = "Fishomatic"
 	AllNative = "AllNative"
 	AllManaged = "AllManaged"
 	All = "All"
@@ -70,7 +68,7 @@ def CleanDir(dir:str):
 	return
 
 # Ensure the directory 'dir' exists and is empty
-def CleanObj(dir:str, platforms:List[str]=None, configs:List[str]=None):
+def CleanObj(dir:str, platforms:List[str]=[], configs:List[str]=[]):
 	if not platforms and not configs:
 		CleanDir(dir)
 	else:
@@ -197,7 +195,7 @@ class Native(Common):
 		#self.proj_dir = Tools.Path(workspace, "projects", self.proj_name)
 		self.platforms = platforms if platforms else ["x64", "x86"]
 		self.configs = configs if configs else ["Release", "Debug"]
-		self.rylogic_sln = Tools.Path(workspace, "build/rylogic.sln")
+		self.rylogic_sln = Tools.Path(workspace, "rylogic.sln")
 		self.obj_dir = Tools.Path(workspace, "obj", UserVars.platform_toolset, check_exists=False)
 		os.makedirs(self.obj_dir, exist_ok=True)
 		return
@@ -304,7 +302,7 @@ class Managed(Common):
 		self.platforms = platforms if platforms else ["Any CPU"]
 		self.configs = configs if configs else ["Release", "Debug"]
 		#self.proj_dir = Tools.Path(workspace, "projects", self.proj_name)
-		self.rylogic_sln = Tools.Path(workspace, "build/rylogic.sln")
+		self.rylogic_sln = Tools.Path(workspace, "rylogic.sln")
 		self.requires_signing = True
 		return
 
@@ -341,49 +339,55 @@ class RylogicAssembly(Managed):
 # Rylogic.Core .NET assembly
 class RylogicCore(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Core", ["netstandard2.0"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Core", ["net8.0","net481"], workspace, platforms, configs)
 		return
 
-# Rylogic.Core.Windows .NET assembly
-class RylogicCoreWindows(RylogicAssembly):
+# Rylogic.DB .NET assembly
+class RylogicDB(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Core.Windows", ["net472", "net6.0-windows"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.DB", ["net8.0", "net481"], workspace, platforms, configs)
 		return
 
-# Rylogic.Net .NET assembly
-class RylogicNet(RylogicAssembly):
+# Rylogic.DirectShow .NET assembly
+class RylogicDirectShow(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Net", ["netstandard2.0"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.DirectShow", ["net8.0", "net481"], workspace, platforms, configs)
 		return
 
-# Rylogic.Scintilla .NET assembly
-class RylogicScintilla(RylogicAssembly):
+# Rylogic.Gfx .NET assembly
+class RylogicGfx(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Scintilla", ["net472", "net6.0-windows"], workspace, platforms, configs)
-		return
-
-# Rylogic.View3d .NET assembly
-class RylogicView3d(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "net6.0-windows"], workspace, platforms, configs)
-		return
-
-# Rylogic.Gui.WinForms .NET assembly
-class RylogicGuiWinForms(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Gfx", ["net8.0", "net481"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WPF .NET assembly
 class RylogicGuiWPF(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Gui.WPF", ["net472", "net6.0-windows"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Gui.WPF", ["net8.0-windows", "net481"], workspace, platforms, configs)
+		return
+
+# Rylogic.Net .NET assembly
+class RylogicNet(RylogicAssembly):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		RylogicAssembly.__init__(self, "Rylogic.Net", ["net8.0", "net481"], workspace, platforms, configs)
+		return
+
+# Rylogic.Scintilla .NET assembly
+class RylogicScintilla(RylogicAssembly):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		RylogicAssembly.__init__(self, "Rylogic.Scintilla", ["net8.0", "net481"], workspace, platforms, configs)
+		return
+
+# Rylogic.Windows .NET assembly
+class RylogicWindows(RylogicAssembly):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		RylogicAssembly.__init__(self, "Rylogic.Windows", ["net8.0-windows", "net481"], workspace, platforms, configs)
 		return
 
 # Csex
 class Csex(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "Csex", ["net6.0-windows"], workspace, platforms, configs)
+		Managed.__init__(self, "Csex", ["net8.0-windows"], workspace, platforms, configs)
 		self.proj_dir = Tools.Path(workspace, "projects\\tools", self.proj_name)
 		self.requires_signing = False
 		return
@@ -826,12 +830,13 @@ class Rylogic(Group):
 		self.requires_signing = True
 		self.items = [
 			RylogicCore       (workspace, platforms, configs),
-			RylogicCoreWindows(workspace, platforms, configs),
+			RylogicDB         (workspace, platforms, configs),
+			RylogicDirectShow (workspace, platforms, configs),
+			RylogicGfx        (workspace, platforms, configs),
+			RylogicGuiWPF     (workspace, platforms, configs),
 			RylogicNet        (workspace, platforms, configs),
 			RylogicScintilla  (workspace, platforms, configs),
-			RylogicView3d     (workspace, platforms, configs),
-			RylogicGuiWinForms(workspace, platforms, configs),
-			RylogicGuiWPF     (workspace, platforms, configs),
+			RylogicWindows    (workspace, platforms, configs),
 		]
 		return
 

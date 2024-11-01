@@ -1,60 +1,70 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
-  <Import Project="..\..\build\props\globals.props" />
 
-  <!-- Properties -->
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{F4A1B209-47CA-4F5D-A80E-87004C91D52E}</ProjectGuid>
-    <ProjectName>sqlite3</ProjectName>
-    <RootNamespace>sqlite</RootNamespace>
-    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-  </PropertyGroup>
+	<!-- Properties -->
+	<PropertyGroup Label="Globals">
+		<ConfigurationType>DynamicLibrary</ConfigurationType>
+		<ProjectGuid>{F4A1B209-47CA-4F5D-A80E-87004C91D52E}</ProjectGuid>
+		<ProjectName>sqlite3</ProjectName>
+		<RootNamespace>sqlite</RootNamespace>
+	</PropertyGroup>
 
-  <!-- Configurations -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
 
-  <!-- Property Sheets -->
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="$(PropsPath)dll.props" />
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)dll.props" />
 
-  <!-- Build Options -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_API=__declspec(dllexport);SQLITE_THREADSAFE=2;SQLITE_USE_URI;SQLITE_ENABLE_UNLOCK_NOTIFY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <WarningLevel>Level3</WarningLevel>
-    </ClCompile>
-  </ItemDefinitionGroup>
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PreprocessorDefinitions>
+				;_WINDLL
+				;_WINNT_VERSION=0x0603
+				;SQLITE_API=__declspec(dllexport)
+				;SQLITE_THREADSAFE=2
+				;SQLITE_USE_URI
+				;SQLITE_ENABLE_UNLOCK_NOTIFY
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+			<WarningLevel>Level3</WarningLevel>
+		</ClCompile>
+	</ItemDefinitionGroup>
 
-  <!-- Files -->
-  <ItemGroup>
-    <ClCompile Include="src\sqlite3.c">
-      <PreprocessorDefinitions>_WINDLL;_WINNT_VERSION=0x0603;SQLITE_WIN32_GETVERSIONEX=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClInclude Include="include\sqlite3.h" />
-    <ClInclude Include="include\sqlite3ext.h" />
-    <Text Include="readme.txt" />
-  </ItemGroup>
+	<!-- Files -->
+	<ItemGroup>
+		<ClCompile Include="src\sqlite3.c">
+			<PreprocessorDefinitions>
+				;_WINDLL
+				;_WINNT_VERSION=0x0603
+				;SQLITE_WIN32_GETVERSIONEX=0
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+		</ClCompile>
+		<ClInclude Include="include\sqlite3.h" />
+		<ClInclude Include="include\sqlite3ext.h" />
+		<Text Include="readme.txt" />
+	</ItemGroup>
 
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<!-- Targets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

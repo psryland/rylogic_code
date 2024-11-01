@@ -82,9 +82,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Scintilla", "projec
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SDK", "SDK", "{561F2606-1A71-4F2E-8206-862B18B8F7FC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\sdk\sqlite3\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "sdk\sqlite3\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Net", "projects\rylogic\Rylogic.Net\Rylogic.Net.csproj", "{761BF2C2-4403-4EAE-9332-2A0785BAC039}"
 EndProject
@@ -117,7 +117,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Gfx", "projects\ryl
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "..\sdk\lua\lua.vcxproj", "{8C08B476-AF59-47F4-8122-2E068D55066E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lua", "sdk\lua\lua.vcxproj", "{8C08B476-AF59-47F4-8122-2E068D55066E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Fluid", "Fluid", "{EBAC17A5-00F2-4520-BCF0-67C359925C57}"
 EndProject
