@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net6.0-windows</TargetFramework>
+		<TargetFramework>net8.0-windows</TargetFramework>
 		<RootNamespace>SolarHotWater</RootNamespace>
 		<AssemblyName>SolarHotWater.UI</AssemblyName>
 		<LangVersion>latest</LangVersion>

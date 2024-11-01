@@ -1,0 +1,70 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Globals -->
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{431CCC2C-4566-4C3E-8C12-EA8072E3A527}</ProjectGuid>
+		<ProjectName>audio.dll</ProjectName>
+		<TargetName>audio</TargetName>
+		<RootNamespace>Audio</RootNamespace>
+	    <ConfigurationType>DynamicLibrary</ConfigurationType>
+	</PropertyGroup>
+
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)tools.props" />
+	<Import Project="$(PropsPath)dll.props" />
+
+	<!-- Build options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PreprocessorDefinitions>
+				;AUDIO_EXPORTS
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>
+				;$(RylogicRoot)projects\rylogic
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalDependencies>
+				;audio.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\dll\audio.h" />
+		<ClCompile Include="$(RylogicRoot)projects\rylogic\audio\dll\audio.cpp" />
+		<ClInclude Include="$(RylogicRoot)projects\rylogic\audio\dll\context.h" />
+		<None Include="$(RylogicRoot)projects\rylogic\Rylogic.Windows\src\Audio\Audio.cs">
+			<ExcludedFromBuild>true</ExcludedFromBuild>
+		</None>
+	</ItemGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

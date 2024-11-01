@@ -472,7 +472,7 @@ namespace Rylogic.Common
 				if (nested is INotifyCollectionChanged notif)
 				{
 					notif.CollectionChanged += WeakRef.MakeWeak(HandleSettingCollectionChanged, h => notif.CollectionChanged -= h);
-					void HandleSettingCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+					void HandleSettingCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 					{
 						foreach (var set in e.OldItems<ISettingsSet>())
 							set.Parent = null;
@@ -995,7 +995,7 @@ namespace Rylogic.Common
 			XElement? elem = element;
 			foreach (var key in key_names)
 			{
-				elem = elem.Elements("setting").SingleOrDefault(x => x.Attribute("key").Value == key);
+				elem = elem.Elements("setting").SingleOrDefault(x => x.Attribute("key")?.Value == key);
 				if (elem == null) break;
 			}
 			return elem;
@@ -1015,8 +1015,8 @@ namespace Rylogic.Common
 				// If the children of 'e' have the special name '_' then 'e' is a list.
 				// Search the children of each list element.
 				var children = e.Elements("_").Any()
-					? e.Elements("_", "setting").Where(x => x.Attribute("key").Value == key_names[i])
-					: e.Elements("setting").Where(x => x.Attribute("key").Value == key_names[i]);
+					? e.Elements("_", "setting").Where(x => x.Attribute("key")?.Value == key_names[i])
+					: e.Elements("setting").Where(x => x.Attribute("key")?.Value == key_names[i]);
 
 				return i + 1 != key_names.Length
 					? children.SelectMany(x => ChildrenInternal(x, i + 1))
@@ -1118,8 +1118,8 @@ namespace Rylogic.Common
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-    using System.Collections.ObjectModel;
-    using Extn;
+	using System.Collections.ObjectModel;
+	using Extn;
 	using Rylogic.Container;
 
 	[TestFixture]

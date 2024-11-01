@@ -30,9 +30,9 @@ namespace Rylogic.Maths
 			this.y = y;
 			this.z = z;
 		}
-		public m3x4(quat quaternion) :this()
+		public m3x4(Quat quaternion) :this()
 		{
-			Debug.Assert(!Math_.FEql(quaternion, quat.Zero), "'quaternion' is a zero quaternion");
+			Debug.Assert(!Math_.FEql(quaternion, Quat.Zero), "'quaternion' is a zero quaternion");
 
 			var q = quaternion;
 			var q_lensq = q.LengthSq;
@@ -573,7 +573,7 @@ namespace Rylogic.Maths
 		/// <summary>Return possible Euler angles for the rotation matrix 'mat'</summary>
 		public static v4 EulerAngles(m3x4 mat)
 		{
-			var q = new quat(mat);
+			var q = new Quat(mat);
 			return EulerAngles(q);
 		}
 
@@ -597,13 +597,13 @@ namespace Rylogic.Maths
 		/// <summary>Spherically interpolate between two rotations</summary>
 		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, double frac)
 		{
-			return new m3x4(Slerp(new quat(lhs), new quat(rhs), frac));
+			return new m3x4(Slerp(new Quat(lhs), new Quat(rhs), frac));
 		}
 
 		/// <summary>Return the average of a collection of rotations transforms</summary>
 		public static m3x4 Average(IEnumerable<m3x4> a2b)
 		{
-			return new m3x4(Average(a2b.Select(x => new quat(x))));
+			return new m3x4(Average(a2b.Select(x => new Quat(x))));
 		}
 
 		/// <summary>Return the cross product matrix for 'vec'</summary>

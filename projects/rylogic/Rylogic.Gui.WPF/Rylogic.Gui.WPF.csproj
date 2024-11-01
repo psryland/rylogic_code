@@ -2,27 +2,17 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net481</TargetFrameworks>
 		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
-		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-		<LangVersion>latest</LangVersion>
-		<Nullable>Enable</Nullable>
 		<UseWpf>true</UseWpf>
 	</PropertyGroup>
 
 	<!-- Assembly Properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
-		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>$(RylogicLibraryVersion)</Version>
+		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
+		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -53,18 +43,18 @@
 	<!-- Dependencies -->
 	<ItemGroup>
 		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
-		<ProjectReference Include="../Rylogic.Core.Windows/Rylogic.Core.Windows.csproj" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.2.0" />
-		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+		<ProjectReference Include="../Rylogic.Windows/Rylogic.Windows.csproj" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" />
+		<PackageReference Include="Microsoft.CSharp" />
 	</ItemGroup>
+
+	<!-- Post Build -->
 	<ItemGroup>
 	  <None Update="Rylogic.Gui.WPF.runtimeconfig.json">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
-
-	<!-- Post Build -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />
+		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath) Rylogic.Core Rylogic.Windows" />
 	</Target>
 </Project>

@@ -1,0 +1,115 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Properties -->
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{3DD0D661-8EDD-4638-9ABB-A375B1D3A79F}</ProjectGuid>
+		<RootNamespace>elements</RootNamespace>
+		<ConfigurationType>Application</ConfigurationType>
+	</PropertyGroup>
+
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)app.props" />
+
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+			<AdditionalDependencies>
+				;view3d-static.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\common\console.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\common\datetime.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\common\event.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\common\events.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\common\fmt.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\common\si_units.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\macros\no_copy.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\storage\sqlite.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\str\tostring.h" />
+		<ClInclude Include="src\bond.h" />
+		<ClInclude Include="src\console_ui.h" />
+		<ClInclude Include="src\element.h" />
+		<ClInclude Include="src\game_events.h" />
+		<ClInclude Include="src\view_base.h" />
+		<ClInclude Include="src\lab.h" />
+		<ClInclude Include="src\reaction.h" />
+		<ClInclude Include="src\research_effort.h" />
+		<ClInclude Include="src\stockpile.h" />
+		<ClInclude Include="src\view_home.h" />
+		<ClInclude Include="src\view_intro.h" />
+		<ClInclude Include="src\view_lab.h" />
+		<ClInclude Include="src\view_prompt_box.h" />
+		<ClInclude Include="src\view_ship.h" />
+		<ClInclude Include="src\world_state.h" />
+		<ClInclude Include="src\material.h" />
+		<ClInclude Include="src\forward.h" />
+		<ClInclude Include="src\game_instance.h" />
+		<ClInclude Include="src\game_constants.h" />
+		<ClInclude Include="src\ship.h" />
+		<ClCompile Include="src\console_ui.cpp" />
+		<ClCompile Include="src\element.cpp" />
+		<ClCompile Include="src\game_instance.cpp" />
+		<ClCompile Include="src\lab.cpp" />
+		<ClCompile Include="src\main.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+		<ClCompile Include="src\game_constants.cpp" />
+		<ClCompile Include="src\material.cpp" />
+		<ClCompile Include="src\reaction.cpp" />
+		<ClCompile Include="src\research_effort.cpp" />
+		<ClCompile Include="src\ship.cpp" />
+		<ClCompile Include="src\stockpile.cpp" />
+		<ClCompile Include="src\view_base.cpp" />
+		<ClCompile Include="src\view_home.cpp" />
+		<ClCompile Include="src\view_intro.cpp" />
+		<ClCompile Include="src\view_lab.cpp" />
+		<ClCompile Include="src\view_ship.cpp" />
+		<ClCompile Include="src\world_state.cpp" />
+		<Text Include="src\design.txt" />
+	</ItemGroup>
+
+	<!-- Targets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

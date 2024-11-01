@@ -27,7 +27,7 @@ namespace Rylogic.Gui.WinForms
 	public static class Gui_
 	{
 		/// <summary>Show the folder browser dialog</summary>
-		public static DialogResult ShowDialog(this Core.Windows.OpenFolderUI dlg, IWin32Window owner)
+		public static DialogResult ShowDialog(this Windows.OpenFolderUI dlg, IWin32Window owner)
 		{
 			return dlg.ShowDialog(owner.Handle) ? DialogResult.OK : DialogResult.Cancel ;
 		}
@@ -36,22 +36,28 @@ namespace Rylogic.Gui.WinForms
 	/// <summary>General control extensions</summary>
 	public static class Control_
 	{
-		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>
-		public static T UserData<T>(this Control ctrl, Guid guid, Func<T> make = null)
-		{
-			var user = (object)default(T);
+		/// <summary>Singleton storing user data associated with a control/GUID</summary>
+		[ThreadStatic]
+		private static LazyDictionary<Control, Dictionary<Guid, object?>> m_ctrl_user_data = new();
 
+		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>
+		public static T? UserData<T>(this Control ctrl, Guid guid, Func<T?>? factory = null)
+		{
 			// Look for existing user data associated with 'guid'
 			var map = m_ctrl_user_data[ctrl];
-			if (map.TryGetValue(guid, out user))
-				return (T)user;
+			if (map.TryGetValue(guid, out var user_data))
+				return (T?)user_data;
 
 			// If not found, but a construction delegate is provided, create the user
 			// data, add it to the map, and return it
-			if (make != null)
-				map.Add(guid, user = make());
+			if (factory is not null)
+			{
+				var new_user_data = factory();
+				map.Add(guid, new_user_data);
+				return (T?)new_user_data;
+			}
 
-			return (T)user;
+			return default(T);
 		}
 
 		/// <summary>Set some user data for this control. Setting 'data' == null removes the user data associated with 'guid'</summary>
@@ -64,8 +70,7 @@ namespace Rylogic.Gui.WinForms
 			}
 			else
 			{
-				Dictionary<Guid,object> map;
-				if (m_ctrl_user_data.TryGetValue(ctrl, out map))
+				if (m_ctrl_user_data.TryGetValue(ctrl, out var map))
 				{
 					map.Remove(guid);
 					if (map.Count == 0)
@@ -73,8 +78,6 @@ namespace Rylogic.Gui.WinForms
 				}
 			}
 		}
-		[ThreadStatic]
-		private static LazyDictionary<Control, Dictionary<Guid, object>> m_ctrl_user_data = new LazyDictionary<Control,Dictionary<Guid,object>>();
 
 		/// <summary>Tests if this component is being used by the VS designer</summary>
 		public static bool IsInDesignMode<TComponent>(this TComponent c) where TComponent:Component
@@ -97,15 +100,15 @@ namespace Rylogic.Gui.WinForms
 		{
 			get
 			{
-				if (m_impl_DesignModeProp == null)
+				if (m_impl_design_mode_prop == null)
 				{
-					m_impl_DesignModeProp = typeof(Component).GetProperty("DesignMode", BindingFlags.NonPublic|BindingFlags.Instance);
-					if (m_impl_DesignModeProp == null) throw new Exception("Component.DesignMode property missing");
+					m_impl_design_mode_prop = typeof(Component).GetProperty("DesignMode", BindingFlags.NonPublic|BindingFlags.Instance);
+					if (m_impl_design_mode_prop == null) throw new Exception("Component.DesignMode property missing");
 				}
-				return m_impl_DesignModeProp;
+				return m_impl_design_mode_prop;
 			}
 		}
-		private static PropertyInfo m_impl_DesignModeProp;
+		private static PropertyInfo m_impl_design_mode_prop = null!;
 
 		/// <summary>Set control style on this control</summary>
 		public static void SetStyle(this Control ctrl, ControlStyles style, bool state)
@@ -173,13 +176,13 @@ namespace Rylogic.Gui.WinForms
 			return ctrl;
 		}
 
-		/// <summary>Get the tooltip associated with this control</summary>
+		/// <summary>Get the tool tip associated with this control</summary>
 		public static string ToolTip(this Control ctrl, ToolTip tt)
 		{
 			return tt.GetToolTip(ctrl);
 		}
 
-		/// <summary>Set the tooltip for this control</summary>
+		/// <summary>Set the tool tip for this control</summary>
 		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
 		{
 			tt.SetToolTip(ctrl, caption);
@@ -285,8 +288,8 @@ namespace Rylogic.Gui.WinForms
 		{
 			return ctrl.Handle == IntPtr.Zero ? new Scope { } :
 				Scope.Create(
-				() => Win32.LockWindowUpdate(ctrl.Handle),
-				() => Win32.LockWindowUpdate(IntPtr.Zero));
+				() => User32.LockWindowUpdate(ctrl.Handle),
+				() => User32.LockWindowUpdate(IntPtr.Zero));
 		}
 
 		/// <summary>Block redrawing of the control</summary>
@@ -294,12 +297,12 @@ namespace Rylogic.Gui.WinForms
 		{
 			return ctrl.Handle == IntPtr.Zero ? new Scope { } :
 				Scope.Create(
-				() => Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 0, 0),
+				() => User32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 0, 0),
 				() =>
 					{
-						Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 1, 0);
+						User32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 1, 0);
 						if (refresh_on_resume)
-							Win32.RedrawWindow(ctrl.Handle, IntPtr.Zero, IntPtr.Zero, (uint)(Win32.RDW_ERASE | Win32.RDW_FRAME | Win32.RDW_INVALIDATE | Win32.RDW_ALLCHILDREN));
+							User32.RedrawWindow(ctrl.Handle, IntPtr.Zero, IntPtr.Zero, (uint)(Win32.RDW_ERASE | Win32.RDW_FRAME | Win32.RDW_INVALIDATE | Win32.RDW_ALLCHILDREN));
 					});
 		}
 
@@ -312,20 +315,20 @@ namespace Rylogic.Gui.WinForms
 				Scope.Create(
 				() =>
 					{
-						Win32.SendMessage(ctrl.Handle, Win32.EM_GETSCROLLPOS, (IntPtr)0, ref scroll_pos);
-						event_mask = (int)Win32.SendMessage(ctrl.Handle, Win32.EM_GETEVENTMASK, 0, 0);
+						User32.SendMessage(ctrl.Handle, Win32.EM_GETSCROLLPOS, (IntPtr)0, ref scroll_pos);
+						event_mask = (int)User32.SendMessage(ctrl.Handle, Win32.EM_GETEVENTMASK, 0, 0);
 					},
 				() =>
 					{
-						Win32.SendMessage(ctrl.Handle, Win32.EM_SETSCROLLPOS, (IntPtr)0, ref scroll_pos);
-						Win32.SendMessage(ctrl.Handle, Win32.EM_SETEVENTMASK, 0, event_mask);
+						User32.SendMessage(ctrl.Handle, Win32.EM_SETSCROLLPOS, (IntPtr)0, ref scroll_pos);
+						User32.SendMessage(ctrl.Handle, Win32.EM_SETEVENTMASK, 0, event_mask);
 					});
 		}
 
 		/// <summary>Recursively calls 'GetChildAtPoint' until the control with no children at that point is found</summary>
 		public static Control GetChildAtScreenPointRec(this Control ctrl, Point screen_pt, GetChildAtPointSkip flags)
 		{
-			Control parent = null;
+			Control parent = null!;
 			for (var child = ctrl; child != null;)
 			{
 				parent = child;
@@ -343,15 +346,15 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Returns true if 'ClickThru' mode is enabled for this control</summary>
 		public static bool ClickThru(this Control ctrl)
 		{
-			var style = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
+			var style = User32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
 			return (style & Win32.WS_EX_TRANSPARENT) != 0;
 		}
 
 		/// <summary>Enable/Disable 'ClickThru' mode</summary>
 		public static void ClickThru(this Control ctrl, bool enabled)
 		{
-			var style = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
-			Win32.SetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE, enabled
+			var style = User32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
+			User32.SetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE, enabled
 				? Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, true)
 				: Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false));
 		}
@@ -396,7 +399,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Return the ScrollBars value that represents the current visibility of the scroll bars</summary>
 		public static ScrollBars ScrollBarVisibility(this Control ctrl)
 		{
-			var sty = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_STYLE);
+			var sty = User32.GetWindowLong(ctrl.Handle, Win32.GWL_STYLE);
 			var vis = ScrollBars.None;
 			if ((sty & Win32.WS_HSCROLL) != 0) vis |= ScrollBars.Horizontal;
 			if ((sty & Win32.WS_VSCROLL) != 0) vis |= ScrollBars.Vertical;
@@ -419,7 +422,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Return a form that wraps 'ctrl'</summary>
-		public static T FormWrap<T>(this Control ctrl, object[] args = null, string title = null, Icon icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null) where T:Form, new()
+		public static T FormWrap<T>(this Control ctrl, object[]? args = null, string? title = null, Icon? icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null) where T:Form, new()
 		{
 			var f = (T)Activator.CreateInstance(typeof(T), args);
 
@@ -464,7 +467,7 @@ namespace Rylogic.Gui.WinForms
 			f.Controls.Add(ctrl);
 			return f;
 		}
-		public static Form FormWrap(this Control ctrl, object[] args = null, string title = null, Icon icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null)
+		public static Form FormWrap(this Control ctrl, object[]? args = null, string? title = null, Icon? icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null)
 		{
 			return ctrl.FormWrap<Form>(args, title, icon, loc, sz, border, start_pos, show_in_taskbar);
 		}
@@ -567,8 +570,8 @@ namespace Rylogic.Gui.WinForms
 		public static bool ShowCaret(this TextBoxBase tb, bool show)
 		{
 			return show
-				? Win32.ShowCaret(tb.Handle) != 0
-				: Win32.HideCaret(tb.Handle) != 0;
+				? User32.ShowCaret(tb.Handle) != 0
+				: User32.HideCaret(tb.Handle) != 0;
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
@@ -613,10 +616,10 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>
 		/// Set the text box into a state indicating uninitialised, error, or success.
-		/// For tool tips, use string.Empty to clear the tooltip, otherwise it will be unchanged</summary>
-		public static void HintState(this Control ctrl, EHintState state, ToolTip tt = null 
+		/// For tool tips, use string.Empty to clear the tool tip, otherwise it will be unchanged</summary>
+		public static void HintState(this Control ctrl, EHintState state, ToolTip? tt = null 
 			,Color? success_col = null ,Color? error_col = null ,Color? uninit_col = null
-			,string success_tt = null  ,string error_tt = null  ,string uninit_tt = null)
+			,string? success_tt = null  ,string? error_tt = null  ,string? uninit_tt = null)
 		{
 			switch (state)
 			{
@@ -647,9 +650,9 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>
 		/// Set the text box into a state indicating uninitialised, error, or success.
 		/// Uninitialised state is inferred from success and no value in the text box</summary>
-		public static void HintState(this TextBoxBase tb, bool success, ToolTip tt = null 
+		public static void HintState(this TextBoxBase tb, bool success, ToolTip? tt = null 
 			,Color? success_col = null ,Color? error_col = null ,Color? uninit_col = null
-			,string success_tt = null  ,string error_tt = null  ,string uninit_tt = null)
+			,string? success_tt = null  ,string? error_tt = null  ,string? uninit_tt = null)
 		{
 			var state = 
 				(success && !tb.Text.HasValue()) ? EHintState.Uninitialised :
@@ -657,9 +660,9 @@ namespace Rylogic.Gui.WinForms
 				EHintState.Error;
 			tb.HintState(state, tt, success_col, error_col, uninit_col, success_tt, error_tt, uninit_tt);
 		}
-		public static void HintState(this ComboBox cb, bool success, ToolTip tt = null 
+		public static void HintState(this ComboBox cb, bool success, ToolTip? tt = null 
 			,Color? success_col = null ,Color? error_col = null ,Color? uninit_col = null
-			,string success_tt = null  ,string error_tt = null  ,string uninit_tt = null)
+			,string? success_tt = null  ,string? error_tt = null  ,string? uninit_tt = null)
 		{
 			var state = 
 				(success && !cb.Text.HasValue()) ? EHintState.Uninitialised :
@@ -693,7 +696,7 @@ namespace Rylogic.Gui.WinForms
 			// Notes: attach to 
 			//  cb.DropDown += (s,a) => cb.DropDownWidth = DropDownWidthAutoSize();
 
-			var mi = (MethodInfo)null;
+			var mi = (MethodInfo?)null;
 			return !cb.DisplayMember.HasValue()
 				? cb.DropDownWidthAutoSize(x => x.ToString())
 				: cb.DropDownWidthAutoSize(x =>
@@ -836,11 +839,11 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>
 		/// Return the node corresponding to the given path. Uses the tree's path separator as the delimiter.
 		/// If 'add_node' is given, child nodes are added where necessary.</summary>
-		public static TreeNode GetNode(this TreeView tree, string fullpath, Func<string,TreeNode> add_node = null)
+		public static TreeNode? GetNode(this TreeView tree, string fullpath, Func<string,TreeNode>? add_node = null)
 		{
 			var parts = fullpath.Split(new[]{tree.PathSeparator}, StringSplitOptions.RemoveEmptyEntries);
 
-			var node = (TreeNode)null;
+			var node = (TreeNode?)null;
 			var nodes = tree.Nodes;
 			foreach (var part in parts)
 			{
@@ -862,7 +865,7 @@ namespace Rylogic.Gui.WinForms
 		/// 'ignore_case' ignores case differences between the parts of 'fullpath' and the node.Name's.</summary>
 		public static void Expand(this TreeView tree, string fullpath)
 		{
-			tree.GetNode(fullpath).EnsureVisible();
+			tree.GetNode(fullpath)?.EnsureVisible();
 		}
 
 		/// <summary>Ensure the parents of this node are expanded</summary>
@@ -1025,7 +1028,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Set the colour of a progress bar. State = 1(green), 2(red), 3(yellow)</summary>
 		public static void BackColor(this ProgressBar pb, int state)
 		{
-			Win32.SendMessage(pb.Handle, 1040, (IntPtr)state, IntPtr.Zero);
+			User32.SendMessage(pb.Handle, 1040, (IntPtr)state, IntPtr.Zero);
 		}
 	}
 
@@ -1478,7 +1481,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			public DataGridView Grid;
-			public ColumnFiltersData ColumnFilters;
+			public ColumnFiltersData? ColumnFilters;
 			public bool InSetGridColumnSizes;
 			public bool FitColumnsPending;
 		}
@@ -1524,7 +1527,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
-		public static void ColumnVisibilityContextMenu(this DataGridView grid, Point location, Action<DataGridViewColumn> on_vis_changed = null)
+		public static void ColumnVisibilityContextMenu(this DataGridView grid, Point location, Action<DataGridViewColumn>? on_vis_changed = null)
 		{
 			var menu = new ContextMenuStrip();
 			foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
@@ -1860,7 +1863,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>
 		/// An event handler that resizes the columns in a grid to fill the available space, while preserving user column size changes.
 		/// Attach this handler to 'ColumnWidthChanged', 'RowHeadersWidthChanged', 'AutoSizeColumnsModeChanged', and 'SizeChanged'</summary>
-		public static void FitColumnsToDisplayWidth(object sender, EventArgs args = null)
+		public static void FitColumnsToDisplayWidth(object sender, EventArgs? args = null)
 		{
 			var grid = (DataGridView)sender;
 			var grid_state = GridState[grid];
@@ -1895,7 +1898,7 @@ namespace Rylogic.Gui.WinForms
 		/// An event handler that resizes the columns in a grid to fill the available space and
 		/// ensure each column does not wrap, while preserving user column size changes.
 		/// Attach this handler to 'ColumnWidthChanged', 'RowHeadersWidthChanged', 'AutoSizeColumnsModeChanged', and 'SizeChanged'</summary>
-		public static void FitColumnsWithNoLineWrap(object sender, EventArgs args = null)
+		public static void FitColumnsWithNoLineWrap(object sender, EventArgs? args = null)
 		{
 			var grid = (DataGridView)sender;
 			var grid_state = GridState[grid];
@@ -2111,21 +2114,21 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
-		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
+		public static DataGridViewRow? FirstSelectedRow(this DataGridView grid)
 		{
 			var i = grid.FirstSelectedRowIndex();
 			return i != -1 ? grid.Rows[i] : null;
 		}
 
 		/// <summary>Return the last selected row, regardless of multi-select grids</summary>
-		public static DataGridViewRow LastSelectedRow(this DataGridView grid)
+		public static DataGridViewRow? LastSelectedRow(this DataGridView grid)
 		{
 			var i = grid.LastSelectedRowIndex();
 			return i != -1 ? grid.Rows[i] : null;
 		}
 
 		/// <summary>Checks if the given column/row are within the grid and returns the associated column and cell</summary>
-		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn col, out DataGridViewCell cell)
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn? col, out DataGridViewCell? cell)
 		{
 			col = null; cell = null;
 			if (column_index < 0 || column_index >= grid.ColumnCount) return false;
@@ -2136,23 +2139,23 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Checks if the given column/row are within the grid and returns the associated column</summary>
-		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn col)
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn? col)
 		{
-			DataGridViewCell dummy;
+			DataGridViewCell? dummy;
 			return Within(grid, column_index, row_index, out col, out dummy);
 		}
 
 		/// <summary>Checks if the given column/row are within the grid and returns the associated cell</summary>
-		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewCell cell)
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewCell? cell)
 		{
-			DataGridViewColumn dummy;
+			DataGridViewColumn? dummy;
 			return Within(grid, column_index, row_index, out dummy, out cell);
 		}
 
 		/// <summary>Checks if the given column/row are within the grid</summary>
 		public static bool Within(this DataGridView grid, int column_index, int row_index)
 		{
-			DataGridViewCell dummy;
+			DataGridViewCell? dummy;
 			return Within(grid, column_index, row_index, out dummy);
 		}
 
@@ -2336,29 +2339,29 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			/// <summary>Get the hit header cell (or null)</summary>
-			public DataGridViewHeaderCell HeaderCell
+			public DataGridViewHeaderCell? HeaderCell
 			{
 				get { return RowIndex == -1 ? Grid.Columns[ColumnIndex].HeaderCell : null; }
 			}
 
 			/// <summary>Get the hit data cell (or null)</summary>
-			public DataGridViewCell Cell
+			public DataGridViewCell? Cell
 			{
 				get
 				{
-					DataGridViewCell cell;
+					DataGridViewCell? cell;
 					return Grid.Within(ColumnIndex, RowIndex, out cell) ? cell : null;
 				}
 			}
 
 			/// <summary>Get the hit Column (or null)</summary>
-			public DataGridViewColumn Column
+			public DataGridViewColumn? Column
 			{
 				get { return ColumnIndex >= 0 && ColumnIndex < Grid.ColumnCount ? Grid.Columns[ColumnIndex] : null; }
 			}
 
 			/// <summary>Get the hit row (or null)</summary>
-			public DataGridViewRow Row
+			public DataGridViewRow? Row
 			{
 				get { return RowIndex >= 0 && RowIndex < Grid.RowCount ? Grid.Rows[RowIndex] : null; }
 			}
@@ -2390,7 +2393,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			/// <summary>The grid that owns 'Row'</summary>
-			public System.Windows.Forms.DataGridView DataGridView => Row?.DataGridView;
+			public System.Windows.Forms.DataGridView? DataGridView => Row?.DataGridView;
 
 			/// <summary>The row being dragged</summary>
 			public DataGridViewRow Row { get; private set; }
@@ -2406,10 +2409,10 @@ namespace Rylogic.Gui.WinForms
 			public bool Dragging { get; set; }
 
 			/// <summary>A form used to indicate where the row will be inserted</summary>
-			public IndicatorCtrl Indicator { get; private set; }
+			public IndicatorCtrl? Indicator { get; private set; }
 			public class IndicatorCtrl :Form
 			{
-				public IndicatorCtrl(Form owner)
+				public IndicatorCtrl(Form? owner)
 				{
 					SetStyle(ControlStyles.Selectable, false);
 					FormBorderStyle = FormBorderStyle.None;
@@ -2555,8 +2558,11 @@ namespace Rylogic.Gui.WinForms
 			if (mode != DragDrop.EDrop.Drop)
 			{
 				// Ensure the indicator is visible
-				data.Indicator.Visible = true;
-				data.Indicator.Location = grid.PointToScreen(new Point(0, hit.InsertY));
+				if (data.Indicator != null)
+				{
+					data.Indicator.Visible = true;
+					data.Indicator.Location = grid.PointToScreen(new Point(0, hit.InsertY));
+				}
 
 				// Auto scroll when at the first or last displayed row
 				var idx = hit.InsertIndex;
@@ -2594,7 +2600,7 @@ namespace Rylogic.Gui.WinForms
 			private Dictionary<string, object> m_dgv_state;
 
 			/// <summary>The data source that the grid had before filters were used</summary>
-			private object m_original_src;
+			private object? m_original_src;
 
 			public ColumnFiltersData(DataGridView dgv)
 			{
@@ -2614,7 +2620,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				Enabled = false;
 				m_dgv.DataSourceChanged -= HandleDataSourceChanged;
-				m_header_cells = Util.DisposeAll(m_header_cells);
+				m_header_cells = Util.DisposeAll(m_header_cells)!;
 				BSFilter = null;
 			}
 
@@ -2623,17 +2629,17 @@ namespace Rylogic.Gui.WinForms
 			private FilterHeaderCell[] m_header_cells;
 
 			/// <summary>Contains a BindingSource<> (created from the given DGV) and creates 'Views' of the binding source based on filter predicates</summary>
-			private BindingSourceFilter BSFilter
+			private BindingSourceFilter? BSFilter
 			{
 				get { return m_impl_bs_filter; }
 				set
 				{
 					if (m_impl_bs_filter == value) return;
-					Util.Dispose(ref m_impl_bs_filter);
+					Util.Dispose(ref m_impl_bs_filter!);
 					m_impl_bs_filter = value;
 				}
 			}
-			private BindingSourceFilter m_impl_bs_filter;
+			private BindingSourceFilter? m_impl_bs_filter;
 			private class BindingSourceFilter :IDisposable
 			{
 				/// <summary>The bound data properties for the columns</summary>
@@ -2647,9 +2653,7 @@ namespace Rylogic.Gui.WinForms
 
 				public BindingSourceFilter(DataGridView dgv)
 				{
-					Debug.Assert(dgv.DataSource != null, "DGV requires a data source ");
-
-					var original_src = dgv.DataSource;
+					var original_src = dgv.DataSource ?? throw new NullReferenceException("DGV requires a data source ");
 					var orig_ty = original_src.GetType();
 
 					// Get the element properties for each column
@@ -2668,14 +2672,14 @@ namespace Rylogic.Gui.WinForms
 					var bs_ty = typeof(BindingSource<>).MakeGenericType(elem_ty);
 
 					// If the original source is a BindingSource<>, use it otherwise create a binding source with 'original_src' as it's data source
-					m_bs = orig_ty == bs_ty ? original_src : Activator.CreateInstance(bs_ty, original_src, (string)null);
+					m_bs = orig_ty == bs_ty ? original_src : Activator.CreateInstance(bs_ty, original_src, (string?)null);
 
 					// Get the CreateView method on the binding source
 					m_create_view = bs_ty.GetMethod(nameof(BindingSource<int>.CreateView), new[] { typeof(Func<,>).MakeGenericType(elem_ty, typeof(bool)) });
 				}
 				public void Dispose()
 				{
-					FilteredView = null;
+					FilteredView = null!;
 				}
 
 				/// <summary>The filtered view of the binding source</summary>
@@ -2689,7 +2693,7 @@ namespace Rylogic.Gui.WinForms
 						m_impl_view = value;
 					}
 				}
-				private object m_impl_view;
+				private object m_impl_view = null!;
 
 				/// <summary>Get the element type from 'original_src'</summary>
 				private Type GetElementType(object original_src)
@@ -2846,10 +2850,10 @@ namespace Rylogic.Gui.WinForms
 			private bool m_eat_lbuttonup;
 
 			/// <summary>Handle the filter string changing in one of the FilterHeaderCells</summary>
-			private void OnPatternChanged(object sender = null, EventArgs args = null)
+			private void OnPatternChanged(object? sender = null, EventArgs? args = null)
 			{
 				// If enabled, use the filtered binding source, otherwise use the original source
-				if (Enabled)
+				if (Enabled && BSFilter != null)
 				{
 					try
 					{
@@ -2889,7 +2893,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			/// <summary>If the data source on the DGV changes, we need to reset the BSFilter</summary>
-			private void HandleDataSourceChanged(object sender = null, EventArgs e = null)
+			private void HandleDataSourceChanged(object? sender = null, EventArgs? e = null)
 			{
 				// Remember, while filtering is enabled the DGV's data source will be 'm_bs.FilteredView'
 				if (BSFilter != null && m_dgv.DataSource == BSFilter.FilteredView)
@@ -2909,7 +2913,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				public const int FieldHeight = 18;
 
-				public FilterHeaderCell(ColumnFiltersData cfd, DataGridViewColumnHeaderCell header_cell, EventHandler on_pattern_changed = null)
+				public FilterHeaderCell(ColumnFiltersData cfd, DataGridViewColumnHeaderCell header_cell, EventHandler? on_pattern_changed = null)
 				{
 					OriginalHeaderCell = header_cell;
 					Pattern = new Pattern(EPattern.Substring, string.Empty) { IgnoreCase = true };
@@ -2934,7 +2938,7 @@ namespace Rylogic.Gui.WinForms
 				}
 				protected override void Dispose(bool disposing)
 				{
-					Pattern = null;
+					Pattern = null!;
 					Util.Dispose(EditCtrl);
 					base.Dispose(disposing);
 				}
@@ -2966,17 +2970,17 @@ namespace Rylogic.Gui.WinForms
 						}
 						HandlePatternChanged();
 
-						void HandlePatternChanged(object sender = null, EventArgs args = null)
+						void HandlePatternChanged(object? sender = null, EventArgs? args = null)
 						{
 							PatternChanged?.Invoke(this, EventArgs.Empty);
-							ToolTipText = Pattern != null && !Pattern.IsValid ? Pattern.ValidateExpr().Message : null;
+							ToolTipText = (Pattern != null && !Pattern.IsValid) ? Pattern.ValidateExpr()?.Message : null;
 						}
 					}
 				}
-				private Pattern m_pattern;
+				private Pattern m_pattern = null!;
 
 				/// <summary>Raised when the pattern expression changes</summary>
-				public event EventHandler PatternChanged;
+				public event EventHandler? PatternChanged;
 
 				/// <summary>The text box for the filter string in this cell</summary>
 				public TextBox FilterTextBox
@@ -3026,7 +3030,7 @@ namespace Rylogic.Gui.WinForms
 					}
 
 					/// <summary>The cell being edited</summary>
-					public FilterHeaderCell Cell
+					public FilterHeaderCell? Cell
 					{
 						get { return m_cell; }
 						set
@@ -3041,7 +3045,7 @@ namespace Rylogic.Gui.WinForms
 							m_cell = value;
 							if (m_cell != null)
 							{
-								TextBox.Text = m_cell.Pattern.Expr;
+								TextBox.Text = m_cell.Pattern?.Expr ?? string.Empty;
 								TextBox.TextChanged += HandleTextChanged;
 
 								// Position the control over the cell
@@ -3051,10 +3055,10 @@ namespace Rylogic.Gui.WinForms
 							}
 						}
 					}
-					private FilterHeaderCell m_cell;
+					private FilterHeaderCell? m_cell;
 
 					/// <summary>The data grid view that 'Cell' belongs to</summary>
-					public System.Windows.Forms.DataGridView DGV => Cell.DataGridView;
+					public System.Windows.Forms.DataGridView? DGV => Cell?.DataGridView;
 
 					/// <summary>Show the edit control within 'cell'</summary>
 					public void Show(FilterHeaderCell cell)
@@ -3149,7 +3153,7 @@ namespace Rylogic.Gui.WinForms
 		/// Get the column filters associated with this grid.
 		/// To remove column filters, just Dispose the returned instance.
 		/// Column filters are automatically disposed when the associated grid is disposed</summary>
-		public static ColumnFiltersData ColumnFilters(this DataGridView grid, bool create_if_necessary = false)
+		public static ColumnFiltersData? ColumnFilters(this DataGridView grid, bool create_if_necessary = false)
 		{
 			var grid_state = GridState[grid];
 			if (grid_state.ColumnFilters != null) return grid_state.ColumnFilters;
@@ -3198,7 +3202,7 @@ namespace Rylogic.Gui.WinForms
 				throw new ArgumentNullException("source","Source cannot be null");
 
 			var w = new WeakReference(source);
-			DataGridViewCellValueEventHandler handler = null;
+			DataGridViewCellValueEventHandler? handler = null;
 			handler = (sender,args) =>
 				{
 					var src = w.Target as IDGVVirtualDataSource;
@@ -3235,11 +3239,11 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Find the first sub-menu item with the given tags (depth first search)</summary>
-		public static ToolStripItem Find(this ToolStripItemCollection items, params string[] tags)
+		public static ToolStripItem? Find(this ToolStripItemCollection items, params string[] tags)
 		{
 			return Find(items, (IEnumerable<string>)tags);
 		}
-		public static ToolStripItem Find(this ToolStripItemCollection items, IEnumerable<string> tags)
+		public static ToolStripItem? Find(this ToolStripItemCollection items, IEnumerable<string> tags)
 		{
 			var tag = tags.FirstOrDefault();
 			if (tag == null)
@@ -3277,7 +3281,7 @@ namespace Rylogic.Gui.WinForms
 			items.Add(item);
 			return item;
 		}
-		public static ToolStripMenuItem Add2(this ToolStripItemCollection items, string text, Image image, EventHandler on_click)
+		public static ToolStripMenuItem Add2(this ToolStripItemCollection items, string text, Image? image, EventHandler on_click)
 		{
 			return Add2(items, new ToolStripMenuItem(text, image, on_click));
 		}
@@ -3413,7 +3417,7 @@ namespace Rylogic.Gui.WinForms
 		public static void AutoPersistLocations(this ToolStripContainer cont, ToolStripLocations locations, Action<ToolStripLocations> save)
 		{
 			// Save the layout for 'tsc'
-			Action<ToolStripContainer> persist_locations = tsc =>
+			Action<ToolStripContainer?> persist_locations = tsc =>
 			{
 				if (tsc == null || !tsc.Visible) return;
 				save?.Invoke(tsc.SaveLocations());
@@ -3422,8 +3426,8 @@ namespace Rylogic.Gui.WinForms
 			// A handler for saving the TSC layout after a tool strip has had it's location changed programmatically
 			EventHandler persist_after_location_changed = (s,a) =>
 			{
-				var strip = (ToolStrip)s;
-				var tsc = (ToolStripContainer)strip?.Parent?.Parent;
+				if (s is not ToolStrip strip) return;
+				var tsc = (ToolStripContainer?)strip.Parent?.Parent;
 				if (strip.IsCurrentlyDragging) return; // Don't persist locations during drag operations (the drag handler does that)
 				persist_locations(tsc);
 			};
@@ -3441,14 +3445,14 @@ namespace Rylogic.Gui.WinForms
 			// Attach a handler to watch for tool strips added or removed
 			cont.ControlAdded += (s,a) =>
 			{
-				var ts = a.Control as ToolStrip;
+				if (a.Control is not ToolStrip ts) return;
 				ts.LocationChanged += persist_after_location_changed;
 				ts.EndDrag += persist_after_location_changed;
 				persist_locations(s as ToolStripContainer);
 			};
 			cont.ControlRemoved += (s,a) =>
 			{
-				var ts = a.Control as ToolStrip;
+				if (a.Control is not ToolStrip ts) return;
 				ts.LocationChanged -= persist_after_location_changed;
 				ts.EndDrag -= persist_after_location_changed;
 				persist_locations(s as ToolStripContainer);
@@ -3527,7 +3531,7 @@ namespace Rylogic.Gui.WinForms
 			cb.SelectionStart = idx + text.Length;
 		}
 
-		/// <summary>Set the tooltip for this tool strip item</summary>
+		/// <summary>Set the tool tip for this tool strip item</summary>
 		public static void ToolTip(this ToolStripItem ctrl, ToolTip tt, string caption)
 		{
 			// Don't need 'tt', this method is just for consistency with the other overload
@@ -3579,36 +3583,36 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>
-		/// Set a label with text plus optional colours, detail tooltip, callback click handler, display time.
+		/// Set a label with text plus optional colours, detail tool tip, callback click handler, display time.
 		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
 		public static void SetStatusMessage(this Label status,
-			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
-			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
+			string? msg = null, string? tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler? on_click = null, int priority = 0, bool auto_hide = true)
 		{
 			if (status == null) return;
 			SetStatusMessageInternal(new StatusControl_Label(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
 		}
 
 		/// <summary>
-		/// Set a status label with text plus optional colours, detail tooltip, callback click handler, display time.
+		/// Set a status label with text plus optional colours, detail tool tip, callback click handler, display time.
 		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
 		public static void SetStatusMessage(this ToolStripStatusLabel status,
-			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
-			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
+			string? msg = null, string? tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler? on_click = null, int priority = 0, bool auto_hide = true)
 		{
 			if (status == null) return;
 			SetStatusMessageInternal(new StatusControl_ToolStripStatusLabel(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
-		public static void SetStatusMessageIdle(this Label status, string msg = null, Color? fr_color = null, Color? bk_color = null)
+		public static void SetStatusMessageIdle(this Label status, string? msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
 			if (status == null) return;
 			SetStatusMessageIdleInternal(new StatusControl_Label(status), msg, fr_color, bk_color);
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
-		public static void SetStatusMessageIdle(this ToolStripStatusLabel status, string msg = null, Color? fr_color = null, Color? bk_color = null)
+		public static void SetStatusMessageIdle(this ToolStripStatusLabel status, string? msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
 			if (status == null) return;
 			SetStatusMessageIdleInternal(new StatusControl_ToolStripStatusLabel(status), msg, fr_color, bk_color);
@@ -3680,9 +3684,9 @@ namespace Rylogic.Gui.WinForms
 			public Color m_idle_bk_colour;
 			public Color m_idle_fr_colour;
 			public int m_priority;
-			public Timer m_timer;
+			public Timer? m_timer;
 			public ToolTip m_tt;
-			public EventHandler m_on_click;
+			public EventHandler? m_on_click;
 
 			public StatusTagData(IStatusControl lbl)
 			{
@@ -3724,23 +3728,21 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>
-		/// Set the text of a control plus optional colours, detail tooltip, callback click handler, display time.
+		/// Set the text of a control plus optional colours, detail tool tip, callback click handler, display time.
 		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
 		private static void SetStatusMessageInternal(IStatusControl status,
-			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
-			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
+			string? msg = null, string? tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler? on_click = null, int priority = 0, bool auto_hide = true)
 		{
 			if (status == null)
 				return;
 
 			// Ensure the status has tag data
 			if (status.Tag == null)
-				new StatusTagData(status);
-			else if (!(status.Tag is StatusTagData))
-				throw new Exception("Tag property already used for non-status data");
+				status.Tag = new StatusTagData(status);
 
 			// Get the status data
-			var data = (StatusTagData)status.Tag;
+			var data = (status.Tag as StatusTagData) ?? throw new NullReferenceException("Tag property already used for non-status data");;
 
 			// Ignore the status if it has lower priority than the current
 			if (msg.HasValue() && priority < data.m_priority) return;
@@ -3788,7 +3790,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
-		private static void SetStatusMessageIdleInternal(IStatusControl status, string msg = null, Color? fr_color = null, Color? bk_color = null)
+		private static void SetStatusMessageIdleInternal(IStatusControl status, string? msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
 			if (status == null)
 				return;
@@ -3969,9 +3971,9 @@ namespace Rylogic.Gui.WinForms
 					var rdd = r as ToolStripDropDownItem;
 
 					// If one menu replaces the other, remove all items from the 'replacee'
-					if (l.MergeAction == MergeAction.Replace)
+					if (l.MergeAction == MergeAction.Replace && rdd != null)
 						rdd.DropDownItems.Clear();
-					if (r.MergeAction == MergeAction.Replace)
+					if (r.MergeAction == MergeAction.Replace && ldd != null)
 						ldd.DropDownItems.Clear();
 
 					// If one menu is marked with remove, then neither menu is added
@@ -4202,7 +4204,7 @@ namespace Rylogic.Gui.WinForms
 			m_right  = new ControlLocations(rhs.m_right);
 			m_bottom = new ControlLocations(rhs.m_bottom);
 		}
-		public ToolStripLocations(ToolStripContainer cont)
+		public ToolStripLocations(ToolStripContainer cont) :this()
 		{
 			Read(cont);
 		}
@@ -4273,7 +4275,7 @@ namespace Rylogic.Gui.WinForms
 	/// <summary>A helper object for use with Control.Tag</summary>
 	public class LoadSaveTag
 	{
-		public object OriginalTag;
+		public object? OriginalTag;
 		public bool Loading;
 	}
 }

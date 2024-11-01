@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -13,8 +12,8 @@ using System.Windows.Input;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Utility;
+using Rylogic.Windows.Extn;
 
 namespace Rylogic.Gui.WPF
 {

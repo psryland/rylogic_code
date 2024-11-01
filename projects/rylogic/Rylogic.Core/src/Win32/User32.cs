@@ -1,152 +1,21 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Text;
-using Rylogic.Common;
-using Rylogic.Utility;
 using Microsoft.Win32.SafeHandles;
+using Rylogic.Extn;
+using Rylogic.Utility;
 using HDC = System.IntPtr;
+using HICON = System.IntPtr;
 using HRGN = System.IntPtr;
 using HWND = System.IntPtr;
-using HICON = System.IntPtr;
 using LPARAM = System.IntPtr;
 using WPARAM = System.IntPtr;
-using Rylogic.Extn;
-using System.ComponentModel;
 
 namespace Rylogic.Interop.Win32
 {
-	public static partial class Win32
+	public static class User32
 	{
-		[Flags]
-		public enum EPeekMessageFlags
-		{
-			/// <summary>PM_NOREMOVE - Messages are not removed from the queue after processing by PeekMessage.</summary>
-			NoRemove = 0x0000,
-
-			/// <summary>PM_REMOVE - Messages are removed from the queue after processing by PeekMessage.</summary>
-			Remove = 0x0001,
-
-			/// <summary>PM_NOYIELD - Prevents the system from releasing any thread that is waiting for the caller to go idle (see WaitForInputIdle). Combine this value with either PM_NOREMOVE or PM_REMOVE.</summary>
-			NoYield = 0x0002,
-		}
-
-		/// <summary></summary>
-		[Flags]
-		public enum EDeviceNotifyFlags
-		{
-			/// <summary>DEVICE_NOTIFY_WINDOW_HANDLE - The hRecipient parameter is a window handle.</summary>
-			WindowHandle = 0x00000000,
-
-			/// <summary>DEVICE_NOTIFY_SERVICE_HANDLE - The hRecipient parameter is a service status handle.</summary>
-			ServiceHandle = 0x00000001,
-
-			/// <summary>
-			/// DEVICE_NOTIFY_ALL_INTERFACE_CLASSES - Notifies the recipient of device interface events for all
-			/// device interface classes (the 'dbcc_classguid' member is ignored). This value can be used only if the 
-			/// 'dbch_devicetype' member is 'DBT_DEVTYP_DEVICEINTERFACE'.</summary>
-			AllInterface_Classes = 0x00000004,
-		}
-
-		/// <summary>DEV_BROADCAST_HDR structure types</summary>
-		public enum EDeviceBroadcaseType :uint
-		{
-			/// <summary>DBT_DEVTYP_OEM - OEM- or IHV-defined device type. This structure is a DEV_BROADCAST_OEM structure.</summary>
-			OEM = 0x00000000,
-
-			/// <summary>DBT_DEVTYP_VOLUME - Logical volume.This structure is a DEV_BROADCAST_VOLUME structure.</summary>
-			Volume = 0x00000002,
-
-			/// <summary>DBT_DEVTYP_PORT - Port device (serial or parallel). This structure is a DEV_BROADCAST_PORT structure.</summary>
-			Port = 0x00000003,
-
-			/// <summary>DBT_DEVTYP_DEVICEINTERFACE - Class of devices. This structure is a DEV_BROADCAST_DEVICEINTERFACE structure.</summary>
-			DeviceInterface = 0x00000005,
-
-			/// <summary>DBT_DEVTYP_HANDLE - File system handle. This structure is a DEV_BROADCAST_HANDLE structure.</summary>
-			Handle = 0x00000006,
-		}
-
-		/// <summary>Flags for the MonitorFromPoint function</summary>
-		public enum EMonitorFromFlags
-		{
-			DEFAULT_TO_NULL = 0x00000000,
-			DEFAULT_TO_PRIMARY = 0x00000001,
-			DEFAULT_TO_NEAREST = 0x00000002,
-		}
-
-		/// <summary></summary>
-		[Flags]
-		public enum EFlashWindowFlags :uint
-		{
-			/// <summary>Stop flashing. The system restores the window to its original state.</summary>
-			FLASHW_STOP = 0,
-
-			/// <summary>Flash the window caption.</summary>
-			FLASHW_CAPTION = 1,
-
-			/// <summary>Flash the taskbar button.</summary>
-			FLASHW_TRAY = 2,
-
-			/// <summary>Flash both the window caption and taskbar button. This is equivalent to setting the FLASHW_CAPTION | FLASHW_TRAY flags.</summary>
-			FLASHW_ALL = 3,
-
-			/// <summary>Flash continuously, until the FLASHW_STOP flag is set.</summary>
-			FLASHW_TIMER = 4,
-
-			/// <summary>Flash continuously until the window comes to the foreground.</summary>
-			FLASHW_TIMERNOFG = 12,
-		}
-
-		/// <summary></summary>
-		[StructLayout(LayoutKind.Sequential)]
-		public struct DEV_BROADCAST_HDR
-		{
-			/// <summary>
-			/// The size of this structure, in bytes. If this is a user-defined event, this member must be the size of
-			/// this header, plus the size of the variable-length data in the _DEV_BROADCAST_USERDEFINED structure.</summary>
-			public int dbch_size;
-			public EDeviceBroadcaseType dbch_devicetype;
-			public int dbch_reserved;
-		}
-		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-		public struct DEV_BROADCAST_DEVICEINTERFACE
-		{
-			private const int NameLen = 255;
-
-			public DEV_BROADCAST_HDR hdr;
-			public Guid class_guid;
-			public string name
-			{
-				get
-				{
-					return name_?.IndexOf('\0') is int end && end != -1
-						? new string(name_, 0, end) : string.Empty;
-				}
-				set
-				{
-					name_ = new char[NameLen];
-					var len = Math.Min(value.Length, 255);
-					Array.Copy(value.ToCharArray(), name_, len);
-				}
-			}
-			[MarshalAs(UnmanagedType.ByValArray, SizeConst = NameLen)] private char[] name_;
-		}
-
-
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		public delegate IntPtr WNDPROC(HWND hwnd, int code, IntPtr wparam, IntPtr lparam);
-
-		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
-		public delegate bool EnumWindowsProc(HWND hwnd, int lParam);
-
-		/// <summary>Return the DC for a window</summary>
-		public static Scope<IntPtr> WindowDC(HWND hwnd)
-		{
-			return Scope.Create(
-				() => GetDC(hwnd),
-				dc => ReleaseDC(hwnd, dc));
-		}
-
 		/// <summary></summary>
 		public static bool AppendMenu(IntPtr hMenu, uint uFlags, int uIDNewItem, string lpNewItem) => AppendMenu_(hMenu, uFlags, uIDNewItem, lpNewItem);
 		public static bool AppendMenu(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, string lpNewItem) => AppendMenu_(hMenu, uFlags, uIDNewItem, lpNewItem);
@@ -155,10 +24,12 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "AppendMenuW", CharSet = CharSet.Unicode)]
 		private static extern bool AppendMenu_(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, [MarshalAs(UnmanagedType.LPWStr)] string lpNewItem);
 
-#pragma warning disable CA1401 // P/Invokes should not be visible
-		[DllImport("user32.dll")]
-		public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
+		/// <summary></summary>
+		public static IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach) => AttachThreadInput_(idAttach, idAttachTo, fAttach);
+		[DllImport("user32.dll", EntryPoint = "AttachThreadInput")]
+		public static extern IntPtr AttachThreadInput_(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 
+		/// <summary></summary>
 		[DllImport("user32.dll")]
 		public static extern int CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
 
@@ -166,13 +37,13 @@ namespace Rylogic.Interop.Win32
 		public static extern int CheckMenuItem(IntPtr hMenu, int uIDCheckItem, int uCheck);
 
 		[DllImport("user32.dll")]
-		public static extern HWND ChildWindowFromPointEx(HWND parent, POINT point, int flags);
+		public static extern HWND ChildWindowFromPointEx(HWND parent, Win32.POINT point, int flags);
 
 		[DllImport("user32.dll")]
-		public static extern bool ClientToScreen(HWND hwnd, ref POINT pt);
+		public static extern bool ClientToScreen(HWND hwnd, ref Win32.POINT pt);
 
 		[DllImport("user32.dll")]
-		public static extern IntPtr CreateIconIndirect(ref ICONINFO icon);
+		public static extern IntPtr CreateIconIndirect(ref Win32.ICONINFO icon);
 
 		[DllImport("user32.dll")]
 		public static extern IntPtr CreatePopupMenu();
@@ -200,13 +71,15 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
 		public static extern bool DestroyIcon(HICON hicon);
 
-		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-		public static extern bool DestroyWindow(HWND hwnd);
+		/// <summary></summary>
+		public static bool DestroyWindow(HWND hwnd) => DestroyWindow_(hwnd);
+		[DllImport("user32.dll", EntryPoint = "DestroyWindow", CharSet = CharSet.Unicode)]
+		private static extern bool DestroyWindow_(HWND hwnd);
 
 		/// <summary></summary>
-		public static int DispatchMessage(ref Message msg) => DispatchMessage(ref msg);
+		public static int DispatchMessage(ref Win32.MESSAGE msg) => DispatchMessage_(ref msg);
 		[DllImport("user32.dll", EntryPoint = "DispatchMessageW", CharSet = CharSet.Unicode)]
-		private static extern int DispatchMessage_(ref Message lpMsg);
+		private static extern int DispatchMessage_(ref Win32.MESSAGE lpMsg);
 
 		/// <summary>Draw an icon into an HDC</summary>
 		public static void DrawIcon(HDC hDC, int X, int Y, HICON hIcon)
@@ -218,14 +91,14 @@ namespace Rylogic.Interop.Win32
 		private static extern bool DrawIcon_(HDC hDC, int X, int Y, HICON hIcon);
 
 		[DllImport("user32.dll")]
-		public static extern int EnumWindows(EnumWindowsProc ewp, int lParam);
+		public static extern int EnumWindows(Win32.EnumWindowsProc ewp, int lParam);
 
 		/// <summary>Flash an application window</summary>
-		public static bool FlashWindow(HWND hwnd, EFlashWindowFlags flags, uint count = uint.MaxValue, uint flash_rate = 0)
+		public static bool FlashWindow(HWND hwnd, Win32.EFlashWindowFlags flags, uint count = uint.MaxValue, uint flash_rate = 0)
 		{
-			var info = new FLASHWINFO
+			var info = new Win32.FLASHWINFO
 			{
-				cbSize = (uint)Marshal.SizeOf<FLASHWINFO>(),
+				cbSize = (uint)Marshal.SizeOf<Win32.FLASHWINFO>(),
 				hwnd = hwnd,
 				dwFlags = (uint)flags,
 				uCount = count,
@@ -234,7 +107,7 @@ namespace Rylogic.Interop.Win32
 			return FlashWindowEx_(ref info);
 		}
 		[DllImport("user32.dll", EntryPoint = "FlashWindowEx")]
-		private static extern bool FlashWindowEx_(ref FLASHWINFO pwfi);
+		private static extern bool FlashWindowEx_(ref Win32.FLASHWINFO pwfi);
 
 		[DllImport("user32.dll")]
 		public static extern HWND GetAncestor(HWND hwnd, uint flags);
@@ -243,50 +116,50 @@ namespace Rylogic.Interop.Win32
 		public static extern short GetAsyncKeyState(EKeyCodes vKey);
 
 		[DllImport("user32.dll", SetLastError = true)]
-		public static extern bool GetCaretPos(ref POINT point);
+		public static extern bool GetCaretPos(ref Win32.POINT point);
 
 		/// <summary>Get the window class description for a window class name</summary>
 		/// <param name="hinstance">A handle to the instance of the application that created the class. To retrieve information about classes
 		/// defined by the system (such as buttons or list boxes),set this parameter to NULL.</param>
 		/// <param name="class_name">The name of the window class to look up</param>
 		/// <returns>Returns the window class data if the window class is registered</returns>
-		public static WNDCLASSEX? GetClassInfo(IntPtr hinstance, string class_name, out int atom)
+		public static Win32.WNDCLASSEX? GetClassInfo(IntPtr hinstance, string class_name, out int atom)
 		{
-			var wc = new WNDCLASSEX { cbSize = Marshal.SizeOf<WNDCLASSEX>() };
+			var wc = new Win32.WNDCLASSEX { cbSize = Marshal.SizeOf<Win32.WNDCLASSEX>() };
 			atom = GetClassInfoEx_(hinstance, class_name, ref wc);
-			return atom != 0 ? wc : (WNDCLASSEX?)null;
+			return atom != 0 ? wc : (Win32.WNDCLASSEX?)null;
 		}
 		[DllImport("user32.dll", EntryPoint = "GetClassInfoExW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern int GetClassInfoEx_(IntPtr hinstance, [MarshalAs(UnmanagedType.LPWStr)] string class_name, ref WNDCLASSEX lpwcx);
+		private static extern int GetClassInfoEx_(IntPtr hinstance, [MarshalAs(UnmanagedType.LPWStr)] string class_name, ref Win32.WNDCLASSEX lpwcx);
 
 		[DllImport("user32.dll", EntryPoint = "GetClassLongPtrW", SetLastError = true)]
 		public static extern IntPtr GetClassLongPtr(HWND hwnd, int index);
 
 		/// <summary></summary>
-		public static RECT GetClientRect(HWND hwnd)
+		public static Win32.RECT GetClientRect(HWND hwnd)
 		{
 			return GetClientRect_(hwnd, out var rect) ? rect : throw new Win32Exception("GetClientRect failed"); ;
 		}
 		[DllImport("user32.dll", EntryPoint = "GetClientRect")]
-		private static extern bool GetClientRect_(HWND hwnd, out RECT rect);
+		private static extern bool GetClientRect_(HWND hwnd, out Win32.RECT rect);
 
 		/// <summary>Return the mouse position in screen coordinates</summary>
-		public static POINT GetCursorPos()
+		public static Win32.POINT GetCursorPos()
 		{
 			return GetCursorPos_(out var pt) ? pt : throw new Win32Exception("GetCursorPos failed");
 		}
 		[DllImport("user32.dll", EntryPoint = "GetCursorPos")]
-		private static extern bool GetCursorPos_(out POINT lpPoint);
+		private static extern bool GetCursorPos_(out Win32.POINT lpPoint);
 
 		/// <summary>Return info about the current mouse cursor</summary>
-		public static CURSORINFO GetCursorInfo()
+		public static Win32.CURSORINFO GetCursorInfo()
 		{
-			var info = CURSORINFO.Default;
+			var info = Win32.CURSORINFO.Default;
 			GetCursorInfo_(ref info);
 			return info;
 		}
 		[DllImport("user32.dll", EntryPoint = "GetCursorInfo", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool GetCursorInfo_(ref CURSORINFO pci);
+		private static extern bool GetCursorInfo_(ref Win32.CURSORINFO pci);
 
 		[DllImport("user32.dll")]
 		public static extern IntPtr GetDC(HWND hwnd);
@@ -306,7 +179,7 @@ namespace Rylogic.Interop.Win32
 		public static extern HWND GetForegroundWindow();
 
 		[DllImport("user32.dll")]
-		public static extern bool GetIconInfo(IntPtr hIcon, ref ICONINFO pIconInfo);
+		public static extern bool GetIconInfo(IntPtr hIcon, ref Win32.ICONINFO pIconInfo);
 
 		[DllImport("user32.dll")]
 		public static extern int GetKeyboardState(byte[] pbKeyState);
@@ -315,24 +188,23 @@ namespace Rylogic.Interop.Win32
 		public static extern short GetKeyState(EKeyCodes vKey);
 
 		/// <summary></summary>
-		public static int GetMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax)
-		{
-			return GetMessage_(out msg, hWnd, messageFilterMin, messageFilterMax);
-		}
+		public static int GetMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax) => GetMessage_(out msg, hWnd, messageFilterMin, messageFilterMax);
 		[DllImport("user32.dll", EntryPoint = "GetMessageW", CharSet = CharSet.Unicode)]
-		private static extern int GetMessage_(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax);
+		private static extern int GetMessage_(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax);
 
-		[DllImport("user32.dll")]
-		public static extern int GetMessageTime();
+		/// <summary></summary>
+		public static int GetMessageTime() => GetMessageTime_();
+		[DllImport("user32.dll", EntryPoint = "GetMessageTime")]
+		public static extern int GetMessageTime_();
 
 		/// <summary>Return info about the given monitor handle</summary>
-		public static MONITORINFOEX GetMonitorInfo(IntPtr hMonitor)
+		public static Win32.MONITORINFOEX GetMonitorInfo(IntPtr hMonitor)
 		{
-			var info = new MONITORINFOEX { cbSize = (uint)Marshal.SizeOf<MONITORINFOEX>() };
+			var info = new Win32.MONITORINFOEX { cbSize = (uint)Marshal.SizeOf<Win32.MONITORINFOEX>() };
 			return GetMonitorInfoW_(hMonitor, ref info) ? info : throw new Win32Exception("Monitor info not available");
 		}
 		[DllImport("user32.dll", EntryPoint = "GetMonitorInfoW")]
-		private static extern bool GetMonitorInfoW_(IntPtr hMonitor, ref MONITORINFOEX info);
+		private static extern bool GetMonitorInfoW_(IntPtr hMonitor, ref Win32.MONITORINFOEX info);
 
 		/// <summary></summary>
 		[DllImport("user32.dll", ExactSpelling = true)]
@@ -342,7 +214,7 @@ namespace Rylogic.Interop.Win32
 		public static extern HWND GetParent(HWND hwnd);
 
 		[DllImport("user32.dll")]
-		public static extern bool GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
+		public static extern bool GetScrollInfo(HWND hwnd, int BarType, ref Win32.SCROLLINFO lpsi);
 
 		[DllImport("user32.dll")]
 		public static extern int GetScrollPos(HWND hWnd, int nBar);
@@ -356,7 +228,7 @@ namespace Rylogic.Interop.Win32
 		public static extern IntPtr GetSystemMenu(HWND hwnd, bool bRevert);
 
 		/// <summary>System metrics</summary>
-		public static int GetSystemMetrics(ESystemMetrics metric)
+		public static int GetSystemMetrics(Win32.ESystemMetrics metric)
 		{
 			return GetSystemMetrics_((int)metric);
 		}
@@ -376,12 +248,12 @@ namespace Rylogic.Interop.Win32
 		public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
 
 		/// <summary>Return the area of a window in screen space</summary>
-		public static RECT GetWindowRect(HWND hwnd)
+		public static Win32.RECT GetWindowRect(HWND hwnd)
 		{
 			return GetWindowRect_(hwnd, out var rect) ? rect : throw new Win32Exception("GetWindowRect failed");
 		}
 		[DllImport("user32.dll", EntryPoint = "GetWindowRect")]
-		private static extern bool GetWindowRect_(HWND hwnd, out RECT rect);
+		private static extern bool GetWindowRect_(HWND hwnd, out Win32.RECT rect);
 
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern int GetWindowText(HWND hwnd, StringBuilder title, int size);
@@ -429,18 +301,18 @@ namespace Rylogic.Interop.Win32
 		public static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
 		/// <summary>Return the monitor that contains the given point</summary>
-		public static IntPtr MonitorFromPoint(int x, int y, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint(new POINT { X = x, Y = y }, flags);
-		public static IntPtr MonitorFromPoint(POINT pt, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint_(pt, (int)flags);
+		public static IntPtr MonitorFromPoint(int x, int y, Win32.EMonitorFromFlags flags = Win32.EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint(new Win32.POINT { X = x, Y = y }, flags);
+		public static IntPtr MonitorFromPoint(Win32.POINT pt, Win32.EMonitorFromFlags flags = Win32.EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint_(pt, (int)flags);
 		[DllImport("user32", EntryPoint = "MonitorFromPoint")]
-		private static extern IntPtr MonitorFromPoint_(POINT pt, int flags);
+		private static extern IntPtr MonitorFromPoint_(Win32.POINT pt, int flags);
 
 		/// <summary>Return the monitor that contains the given rectangle</summary>
-		public static IntPtr MonitorFromRect(RECT rc, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromRect_(rc, (int)flags);
+		public static IntPtr MonitorFromRect(Win32.RECT rc, Win32.EMonitorFromFlags flags = Win32.EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromRect_(rc, (int)flags);
 		[DllImport("user32", EntryPoint = "MonitorFromRect")]
-		private static extern IntPtr MonitorFromRect_(RECT rc, int flags);
+		private static extern IntPtr MonitorFromRect_(Win32.RECT rc, int flags);
 
 		/// <summary>Return the monitor that contains the given window handle</summary>
-		public static IntPtr MonitorFromWindow(IntPtr hwnd, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromWindow_(hwnd, (int)flags);
+		public static IntPtr MonitorFromWindow(IntPtr hwnd, Win32.EMonitorFromFlags flags = Win32.EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromWindow_(hwnd, (int)flags);
 		[DllImport("user32", EntryPoint = "MonitorFromWindow")]
 		private static extern IntPtr MonitorFromWindow_(IntPtr hwnd, int flags);
 
@@ -448,71 +320,78 @@ namespace Rylogic.Interop.Win32
 		public static extern bool MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
 
 		/// <summary></summary>
-		public static bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, EPeekMessageFlags flags)
+		public static int MsgWaitForMultipleObjects(int nCount, [MarshalAs(UnmanagedType.LPArray)] IntPtr []? pHandles, bool fWaitAll, int dwMilliseconds, int dwWakeMask) => MsgWaitForMultipleObjects_(nCount, pHandles, fWaitAll, dwMilliseconds, dwWakeMask);
+		[DllImport("user32", EntryPoint = "MsgWaitForMultipleObjects")]
+		private static extern int MsgWaitForMultipleObjects_(int nCount, [MarshalAs(UnmanagedType.LPArray)] IntPtr []? pHandles, bool fWaitAll, int dwMilliseconds, int dwWakeMask);
+
+		/// <summary></summary>
+		public static bool PeekMessage(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, Win32.EPeekMessageFlags flags)
 		{
 			return PeekMessage_(out msg, hWnd, messageFilterMin, messageFilterMax, (int)flags);
 		}
 		[DllImport("user32.dll", EntryPoint = "PeekMessageW", CharSet = CharSet.Unicode)]
-		private static extern bool PeekMessage_(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, int flags);
+		private static extern bool PeekMessage_(out Win32.MESSAGE msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, int flags);
 
 		/// <summary></summary>
-		public static bool PostMessage(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam)
-		{
-			return PostMessage_(hwnd, message, wparam, lparam);
-		}
+		public static bool PostMessage(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam) => PostMessage_(hwnd, message, wparam, lparam);
 		[DllImport("user32.dll", EntryPoint = "PostMessageW", CharSet = CharSet.Unicode)]
 		private static extern bool PostMessage_(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam);
+
+		/// <summary></summary>
+		public static int PostQuitMessage(int nExitCode) => PostQuitMessage_(nExitCode);
+		[DllImport("user32.dll", EntryPoint = "PostQuitMessage")]
+		private static extern int PostQuitMessage_(int nExitCode);
 
 		[DllImport("user32.dll", EntryPoint = "PostThreadMessage")]
 		public static extern int PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
 
 		[DllImport("user32.dll")]
-		public static extern bool RedrawWindow(HWND hWnd, ref RECT lprcUpdate, HRGN hrgnUpdate, uint flags);
+		public static extern bool RedrawWindow(HWND hWnd, ref Win32.RECT lprcUpdate, HRGN hrgnUpdate, uint flags);
 		
 		[DllImport("user32.dll")]
 		public static extern bool RedrawWindow(HWND hWnd, IntPtr lprcUpdate, HRGN hrgnUpdate, uint flags);
 
 		/// <summary>Register a window class</summary>
-		public static ushort RegisterClass(WNDCLASS wnd_class)
+		public static ushort RegisterClass(Win32.WNDCLASS wnd_class)
 		{
 			// RegisterClass only sets last error if there is an error
-			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			Kernel32.SetLastError(Win32.ERROR_SUCCESS);
 			var atom = RegisterClass_(ref wnd_class);
 			var err = Marshal.GetLastWin32Error();
 			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception();
 			return atom;
 		}
-		public static ushort RegisterClass(WNDCLASSEX wnd_class)
+		public static ushort RegisterClass(Win32.WNDCLASSEX wnd_class)
 		{
 			// RegisterClass only sets last error if there is an error
-			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			Kernel32.SetLastError(Win32.ERROR_SUCCESS);
 			var atom = RegisterClassEx_(ref wnd_class);
 			var err = Marshal.GetLastWin32Error();
 			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception(); 
 			return atom;
 		}
 		[DllImport("user32.dll", EntryPoint = "RegisterClassW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern ushort RegisterClass_(ref WNDCLASS lpWndClass);
+		private static extern ushort RegisterClass_(ref Win32.WNDCLASS lpWndClass);
 		[DllImport("user32.dll", EntryPoint = "RegisterClassExW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern ushort RegisterClassEx_(ref WNDCLASSEX lpWndClass);
+		private static extern ushort RegisterClassEx_(ref Win32.WNDCLASSEX lpWndClass);
 
 		/// <summary>Registry for notifications about devices being adding/removed</summary>
-		public static SafeDevNotifyHandle RegisterDeviceNotification(IntPtr recipient, DEV_BROADCAST_HDR notificationFilter, EDeviceNotifyFlags flags)
+		public static SafeDevNotifyHandle RegisterDeviceNotification(IntPtr recipient, Win32.DEV_BROADCAST_HDR notificationFilter, Win32.EDeviceNotifyFlags flags)
 		{
 			// This function expects a contiguous struct with a 'DEV_BROADCAST_HDR'
 			// as the header. Create overloads for any new struct types.
 			var handle = RegisterDeviceNotification_(recipient, ref notificationFilter, (int)flags);
 			return new SafeDevNotifyHandle(handle, true);
 		}
-		public static SafeDevNotifyHandle RegisterDeviceNotification(IntPtr recipient, DEV_BROADCAST_DEVICEINTERFACE notificationFilter, EDeviceNotifyFlags flags)
+		public static SafeDevNotifyHandle RegisterDeviceNotification(IntPtr recipient, Win32.DEV_BROADCAST_DEVICEINTERFACE notificationFilter, Win32.EDeviceNotifyFlags flags)
 		{
 			var handle = RegisterDeviceNotification_(recipient, ref notificationFilter, (int)flags);
 			return new SafeDevNotifyHandle(handle, true);
 		}
 		[DllImport("user32.dll", EntryPoint = "RegisterDeviceNotificationW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern IntPtr RegisterDeviceNotification_(IntPtr recipient, ref DEV_BROADCAST_HDR filter, int flags);
+		private static extern IntPtr RegisterDeviceNotification_(IntPtr recipient, ref Win32.DEV_BROADCAST_HDR filter, int flags);
 		[DllImport("user32.dll", EntryPoint = "RegisterDeviceNotificationW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern IntPtr RegisterDeviceNotification_(IntPtr recipient, ref DEV_BROADCAST_DEVICEINTERFACE filter, int flags);
+		private static extern IntPtr RegisterDeviceNotification_(IntPtr recipient, ref Win32.DEV_BROADCAST_DEVICEINTERFACE filter, int flags);
 
 		[DllImport("user32.dll", EntryPoint = "RegisterWindowMessageW")]
 		public static extern uint RegisterWindowMessage([MarshalAs(UnmanagedType.LPWStr)] string lpString);
@@ -521,7 +400,7 @@ namespace Rylogic.Interop.Win32
 		public static extern bool ReleaseDC(HWND hWnd, IntPtr hDC);
 
 		[DllImport("user32.dll")]
-		public static extern bool ScreenToClient(HWND hwnd, ref POINT pt);
+		public static extern bool ScreenToClient(HWND hwnd, ref Win32.POINT pt);
 
 		[DllImport("user32.dll", EntryPoint = "SendMessage", SetLastError = true)]
 		public static extern IntPtr SendMessage(HWND hwnd, uint msg, int wparam, int lparam); // Don't return int, it truncates on 64bit
@@ -533,13 +412,13 @@ namespace Rylogic.Interop.Win32
 		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 
 		[DllImport("user32.dll", EntryPoint = "SendMessage", SetLastError = true)]
-		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);
+		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref Win32.POINT lparam);
 
 		[DllImport("user32.dll", EntryPoint = "SendMessage", SetLastError = true)]
-		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref RECT lparam);
+		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref Win32.RECT lparam);
 
 		[DllImport("user32.dll", EntryPoint = "SendMessage", SetLastError = true)]
-		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, out COMBOBOXINFO lparam);
+		public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, out Win32.COMBOBOXINFO lparam);
 
 		[DllImport("user32.dll")]
 		public static extern HWND SetActiveWindow(HWND hwnd);
@@ -560,13 +439,13 @@ namespace Rylogic.Interop.Win32
 		public static extern bool SetProcessDPIAware();
 
 		[DllImport("user32.dll")]
-		public static extern int SetScrollInfo(HWND hwnd, int fnBar, ref SCROLLINFO lpsi, bool fRedraw);
+		public static extern int SetScrollInfo(HWND hwnd, int fnBar, ref Win32.SCROLLINFO lpsi, bool fRedraw);
 
 		[DllImport("user32.dll")]
 		public static extern int SetScrollPos(HWND hWnd, int nBar, int nPos, bool bRedraw);
 
 		[DllImport("user32.dll")]
-		public static extern int SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, int dwThreadId);
+		public static extern int SetWindowsHookEx(int idHook, Win32.HookProc lpfn, IntPtr hMod, int dwThreadId);
 
 		[DllImport("user32.dll")]
 		public static extern int SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
@@ -590,7 +469,10 @@ namespace Rylogic.Interop.Win32
 		public static extern int ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex = 4)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
 
 		[DllImport("user32.dll")]
-		public static extern bool TranslateMessage(ref Message lpMsg);
+		public static extern bool TranslateMessage(ref Win32.MESSAGE lpMsg);
+
+		[DllImport("user32.dll")]
+		public static extern bool UpdateWindow(HWND hWnd);
 
 		[DllImport("user32.dll")]
 		public static extern int UnhookWindowsHookEx(int idHook);
@@ -601,13 +483,13 @@ namespace Rylogic.Interop.Win32
 		private static extern bool UnregisterDeviceNotification_(IntPtr handle);
 
 		[DllImport("user32.dll")]
-		public static extern HWND WindowFromPoint(POINT Point);
+		public static extern HWND WindowFromPoint(Win32.POINT Point);
 
 		[DllImport("user32.dll")]
 		public static extern bool ValidateRect(HWND hwnd, IntPtr lpRect);
 
 		[DllImport("user32.dll")]
-		public static extern bool ValidateRect(HWND hwnd, ref RECT lpRect);
+		public static extern bool ValidateRect(HWND hwnd, ref Win32.RECT lpRect);
 
 		// This static method is required because legacy OSes do not support SetWindowLongPtr 
 		public static IntPtr SetWindowLongPtr(HWND hWnd, int nIndex, IntPtr dwNewLong)
@@ -621,16 +503,20 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
 		private static extern IntPtr SetWindowLongPtr64(HWND hWnd, int nIndex, IntPtr dwNewLong);
 
-
 		[DllImport("uxtheme.dll")]
 		public static extern int SetWindowTheme(IntPtr hWnd, [MarshalAs(UnmanagedType.LPWStr)] string appname, [MarshalAs(UnmanagedType.LPWStr)] string idlist);
 
-		#pragma warning restore CA1401 // P/Invokes should not be visible
+		
+		/// <summary>Return the DC for a window</summary>
+		public static Scope WindowDC(HWND hwnd)
+		{
+			return Scope.Create(() => GetDC(hwnd), dc => ReleaseDC(hwnd, dc));
+		}
 	}
-	
+
 	public sealed class SafeDevNotifyHandle :SafeHandleZeroOrMinusOneIsInvalid
 	{
 		public SafeDevNotifyHandle(IntPtr handle, bool owns_handle) : base(owns_handle) => SetHandle(handle);
-		protected override bool ReleaseHandle() => Win32.UnregisterDeviceNotification(DangerousGetHandle());
+		protected override bool ReleaseHandle() => User32.UnregisterDeviceNotification(DangerousGetHandle());
 	}
 }

@@ -112,7 +112,7 @@ namespace pr::rdr12
 				env_mapped &&                                                            // There is an env map
 				AllSet(nug.m_geom, EGeom::Norm) &&                                       // The model contains normals
 				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity)) != nullptr && // The instance has a reflectivity value
-				*reflec * nug.m_relative_reflectivity != 0)                              // and the reflectivity isn't zero
+				*reflec * nug.m_rel_reflec != 0)                                         // and the reflectivity isn't zero
 				texture_flags |= shaders::TextureFlags_IsReflective;
 		}
 
@@ -175,7 +175,7 @@ namespace pr::rdr12
 	{
 		auto reflectivity = inst.find<float>(EInstComp::EnvMapReflectivity);
 		cb.m_env_reflectivity = reflectivity != nullptr
-			? *reflectivity * nug.m_relative_reflectivity
+			? *reflectivity * nug.m_rel_reflec
 			: 0.0f;
 	}
 

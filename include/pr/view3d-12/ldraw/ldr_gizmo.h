@@ -32,7 +32,7 @@ namespace pr::rdr12
 		Scale,
 	};
 
-	using GizmoMovedCB = pr::StaticCB<void, LdrGizmo*, ELdrGizmoState>;
+	using GizmoMovedCB = StaticCB<void, LdrGizmo*, ELdrGizmoState>;
 
 	// Graphics and functionality for a manipulator gizmo.
 	struct alignas(16) LdrGizmo :RefCounted<LdrGizmo>
@@ -87,7 +87,6 @@ namespace pr::rdr12
 
 		// Render access
 		Renderer& rdr() const;
-		ResourceManager& res() const;
 
 		// Raised whenever the gizmo is manipulated
 		MultiCast<GizmoMovedCB> Manipulated;

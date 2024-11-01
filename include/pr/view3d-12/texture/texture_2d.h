@@ -13,14 +13,16 @@ namespace pr::rdr12
 	{
 		m4x4 m_t2s; // Texture to surface transform
 
-		Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc);
+		Texture2D(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc);
 
 		// Get/Release the DC (prefer the Gfx class for RAII)
 		// Note: Only works for textures created with GDI compatibility
 		HDC GetDC(bool discard);
 		void ReleaseDC();
 
-		#if 0
+		#if 0 //todo
 		// Get a d2d render target for the DXGI surface within this texture.
 		// 'wnd' is optional, used to get the DPI scaling for the window that the render target is used in.
 		D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget(Window const* wnd = nullptr);
@@ -28,10 +30,13 @@ namespace pr::rdr12
 
 		// Get a D2D device context for drawing on this texture. Note: the texture must have
 		// been created with: EUsage::RenderTarget|EUsage::SimultaneousAccess and D3D12_HEAP_FLAG_SHARED
-		D2D1Context GetD2DeviceContext() { return D2D1Context(rdr(), m_res.get()); }
+		D2D1Context GetD2DeviceContext()
+		{
+			return D2D1Context(rdr(), m_res.get());
+		}
 
 		// Unique identifiers for data attached to the private data of this texture
-		static GUID const Surface0Pointer;
+		inline static GUID const Surface0Pointer = {0x6EE0154E, 0xDEAD, 0x4E2F, 0x86, 0x9B, 0xE4, 0xD1, 0x5C, 0xA2, 0x97, 0x87};
 
 		// A scope object for the device context
 		struct DC

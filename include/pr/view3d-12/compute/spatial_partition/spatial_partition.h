@@ -4,6 +4,8 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
 #include "pr/view3d-12/compute/compute_step.h"
@@ -12,7 +14,7 @@
 #include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/utility/root_signature.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
-#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12::compute::spatial_partition
 {
@@ -122,7 +124,7 @@ namespace pr::rdr12::compute::spatial_partition
 		}
 
 		// (Re)Initialise the spatial partitioning
-		void Init(Setup const& setup, EGpuFlush flush = EGpuFlush::Block)
+		void Init(Setup const& setup)
 		{
 			assert(setup.valid());
 
@@ -130,7 +132,6 @@ namespace pr::rdr12::compute::spatial_partition
 
 			CreateResourceBuffers();
 			Resize(setup.Capacity);
-			m_rdr->res().FlushToGpu(flush);
 		}
 
 		// Spatially partition the particles for faster locality testing
@@ -140,9 +141,9 @@ namespace pr::rdr12::compute::spatial_partition
 			if (count == 0)
 				return;
 			
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFFB36529, "SpatialPartition::Update");
 			DoUpdate(job, count, positions, readback);
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 	private:
@@ -230,11 +231,12 @@ namespace pr::rdr12::compute::spatial_partition
 		// Create resource buffers
 		void CreateResourceBuffers()
 		{
+			ResourceFactory factory(*m_rdr);
 			ResDesc desc = ResDesc::Buf<uint32_t>(Config.CellCount, {})
 				.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 				.usage(EUsage::UnorderedAccess);
-			m_idx_start = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxStart");
-			m_idx_count = m_rdr->res().CreateResource(desc, "SpatialPartition:IdxCount");
+			m_idx_start = factory.CreateResource(desc, "SpatialPartition:IdxStart");
+			m_idx_count = factory.CreateResource(desc, "SpatialPartition:IdxCount");
 		}
 
 		// Ensure the buffers are large enough to partition 'size' positions
@@ -243,12 +245,14 @@ namespace pr::rdr12::compute::spatial_partition
 			if (size <= m_size)
 				return;
 
+			ResourceFactory factory(*m_rdr);
+
 			// Grid hash
 			{
 				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
 					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
-				m_grid_hash = m_rdr->res().CreateResource(desc, "SpatialPartition:GridHash");
+				m_grid_hash = factory.CreateResource(desc, "SpatialPartition:GridHash");
 			}
 
 			// Position indices
@@ -256,7 +260,7 @@ namespace pr::rdr12::compute::spatial_partition
 				ResDesc desc = ResDesc::Buf<uint32_t>(size, {})
 					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
-				m_spatial = m_rdr->res().CreateResource(desc, "SpatialPartition:Spatial");
+				m_spatial = factory.CreateResource(desc, "SpatialPartition:Spatial");
 			}
 
 			// Resize the sorter

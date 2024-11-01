@@ -22,7 +22,7 @@ namespace pr::rdr12
 
 	// View3d Window ****************************
 	V3dWindow::V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts)
-		:m_dll(&context)
+		: m_dll(&context)
 		, m_hwnd(hwnd)
 		, m_wnd(context.m_rdr, ToWndSettings(hwnd, context.m_rdr.Settings(), opts))
 		, m_scene(m_wnd)
@@ -40,6 +40,11 @@ namespace pr::rdr12
 		, m_global_pso()
 		, m_main_thread_id(std::this_thread::get_id())
 		, m_invalidated(false)
+		, m_ui_lighting()
+		, m_ui_object_manager()
+		, m_ui_script_editor()
+		, m_ui_measure_tool()
+		, m_ui_angle_tool()
 		, ReportError()
 		, OnSettingsChanged()
 		, OnInvalidated()
@@ -92,10 +97,6 @@ namespace pr::rdr12
 	Renderer& V3dWindow::rdr() const
 	{
 		return m_dll->m_rdr;
-	}
-	ResourceManager& V3dWindow::res() const
-	{
-		return rdr().res();
 	}
 
 	// Get/Set the settings
@@ -189,7 +190,7 @@ namespace pr::rdr12
 		OnSettingsChanged(this, view3d::ESettings::Scene_Viewport);
 	}
 
-	// Enumerate the object collection guids associated with this window
+	// Enumerate the object collection GUIDs associated with this window
 	void V3dWindow::EnumGuids(StaticCB<bool, Guid const&> enum_guids_cb)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
@@ -484,10 +485,10 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
-		// Make a copy of the guids
+		// Make a copy of the GUIDs
 		pr::vector<GUID> context_ids(std::begin(m_guids), std::end(m_guids));
 
-		// Remove the objects and guids
+		// Remove the objects and GUIDs
 		m_objects.clear();
 		m_guids.clear();
 
@@ -505,8 +506,17 @@ namespace pr::rdr12
 
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
-		// Reset the drawlist
+		// Reset the draw list
 		m_scene.ClearDrawlists();
+
+		// If the viewport is empty, nothing to draw.
+		// This is could be an error, but setting the viewport to empty could
+		// also be a way to stop rendering when a window is minimised, etc..
+		if (m_scene.m_viewport.AsIRect().Size() == iv2::Zero())
+		{
+			Validate();
+			return;
+		}
 
 		// Notify of a render about to happen
 		OnRendering(this);
@@ -531,8 +541,8 @@ namespace pr::rdr12
 			auto aspect_v = float(m_scene.m_viewport.Width) / float(m_scene.m_viewport.Height);
 
 			// Create a camera with the same aspect as the viewport
+			auto v_camera = m_scene.m_cam;
 			auto& scene_cam = m_scene.m_cam;
-			auto v_camera = scene_cam;
 			auto fd = scene_cam.FocusDist();
 			v_camera.Aspect(aspect_v);
 
@@ -542,7 +552,7 @@ namespace pr::rdr12
 
 			if (AllSet(m_visible_objects, EStockObject::FocusPoint))
 			{
-				// Scale the camera space X,Y coords
+				// Scale the camera space X,Y coordinates
 				// Note: this cannot be added as a matrix to 'i2w' or 'c2s' because we're
 				// only scaling the instance position, not the whole instance geometry
 				auto pt_cs = scene_cam.WorldToCamera() * scene_cam.FocusPoint();
@@ -557,7 +567,7 @@ namespace pr::rdr12
 			}
 			if (AllSet(m_visible_objects, EStockObject::OriginPoint))
 			{
-				// Scale the camera space X,Y coords
+				// Scale the camera space X,Y coordinates
 				auto pt_cs = scene_cam.WorldToCamera() * v4Origin;
 				pt_cs.x *= viewarea_v.x / viewarea_c.x;
 				pt_cs.y *= viewarea_v.y / viewarea_c.y;
@@ -616,15 +626,13 @@ namespace pr::rdr12
 			giz->AddToScene(m_scene);
 		}
 
-#if 0
 		// Add the measure tool objects if the window is visible
-		if (m_measure_tool_ui != nullptr && LdrMeasureUI().Visible() && LdrMeasureUI().Gfx())
-			LdrMeasureUI().Gfx()->AddToScene(m_scene);
+		if (m_ui_measure_tool != nullptr && m_ui_measure_tool->Visible() && m_ui_measure_tool->Gfx())
+			m_ui_measure_tool->Gfx()->AddToScene(m_scene);
 
 		// Add the angle tool objects if the window is visible
-		if (m_angle_tool_ui != nullptr && LdrAngleUI().Visible() && LdrAngleUI().Gfx())
-			LdrAngleUI().Gfx()->AddToScene(m_scene);
-#endif
+		if (m_ui_angle_tool != nullptr && m_ui_angle_tool->Visible() && m_ui_angle_tool->Gfx())
+			m_ui_angle_tool->Gfx()->AddToScene(m_scene);
 
 		// Render the scene
 		auto frame = m_wnd.NewFrame();
@@ -633,6 +641,28 @@ namespace pr::rdr12
 
 		// No longer invalidated
 		Validate();
+	}
+	
+	// Wait for any previous frames to complete rendering within the GPU
+	void V3dWindow::GSyncWait() const
+	{
+		m_wnd.m_gsync.Wait();
+	}
+
+	// Replace the swap chain buffers
+	void V3dWindow::CustomSwapChain(std::span<BackBuffer> back_buffers)
+	{
+		m_wnd.CustomSwapChain(back_buffers);
+	}
+	void V3dWindow::CustomSwapChain(std::span<Texture2D*> back_buffers)
+	{
+		m_wnd.CustomSwapChain(back_buffers);
+	}
+
+	// Get/Set the render target for this window
+	rdr12::BackBuffer const& V3dWindow::RenderTarget() const
+	{
+		return m_wnd.m_msaa_bb;
 	}
 
 	// Call InvalidateRect on the HWND associated with this window
@@ -872,11 +902,8 @@ namespace pr::rdr12
 			s_cast<float>(m_scene.m_cam.FovX()),
 			s_cast<float>(m_scene.m_cam.FovY()));
 	}
-	void V3dWindow::Fov(float* fovX, float* fovY)
+	void V3dWindow::Fov(v2 fov)
 	{
-		auto fov = Fov();
-		if (fovX != nullptr) fov.x = *fovX;
-		if (fovY != nullptr) fov.y = *fovY;
 		if (fov == Fov())
 			return;
 
@@ -910,19 +937,19 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the near and far clip planes for the camera
-	v2 V3dWindow::ClipPlanes(bool focus_relative) const
+	v2 V3dWindow::ClipPlanes(view3d::EClipPlanes flags) const
 	{
-		return m_scene.m_cam.ClipPlanes(focus_relative);
+		return m_scene.m_cam.ClipPlanes(AllSet(flags, view3d::EClipPlanes::CameraRelative));
 	}
-	void V3dWindow::ClipPlanes(float* near_, float* far_, bool focus_relative)
+	void V3dWindow::ClipPlanes(float near_, float far_, view3d::EClipPlanes flags)
 	{
-		auto cp = ClipPlanes(focus_relative);
-		if (near_ != nullptr) cp.x = *near_;
-		if (far_ != nullptr) cp.y = *far_;
-		if (ClipPlanes(focus_relative) == cp)
+		auto cp = ClipPlanes(flags);
+		if (AllSet(flags, view3d::EClipPlanes::Near)) cp.x = near_;
+		if (AllSet(flags, view3d::EClipPlanes::Far)) cp.y = far_;
+		if (ClipPlanes(flags) == cp)
 			return;
 
-		m_scene.m_cam.ClipPlanes(cp.x, cp.y, focus_relative);
+		m_scene.m_cam.ClipPlanes(cp.x, cp.y, AllSet(flags, view3d::EClipPlanes::CameraRelative));
 
 		OnSettingsChanged(this, view3d::ESettings::Camera_ClipPlanes);
 		Invalidate();
@@ -1033,6 +1060,17 @@ namespace pr::rdr12
 
 		OnSettingsChanged(this, view3d::ESettings::Scene_EnvMap);
 		Invalidate();
+	}
+
+	// Enable/Disable the depth buffer
+	bool V3dWindow::DepthBufferEnabled() const
+	{
+		auto depth = m_scene.m_pso.Find<EPipeState::DepthEnable>();
+		return depth != nullptr ? *depth : true;
+	}
+	void V3dWindow::DepthBufferEnabled(bool enabled)
+	{
+		m_scene.m_pso.Set<EPipeState::DepthEnable>(enabled ? TRUE : FALSE);
 	}
 
 	// Called when objects are added/removed from this window
@@ -1273,19 +1311,89 @@ namespace pr::rdr12
 		HitTest(rays, hits, snap_distance, flags, instances);
 	}
 
-	// Show/Hide the focus point
-	bool V3dWindow::FocusPointVisible() const
+	// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
+	bool V3dWindow::StockObjectVisible(view3d::EStockObject stock_objects) const
 	{
-		return AllSet(m_visible_objects, EStockObject::FocusPoint);
+		return AllSet(m_visible_objects, stock_objects);
 	}
-	void V3dWindow::FocusPointVisible(bool vis)
+	void V3dWindow::StockObjectVisible(view3d::EStockObject stock_objects, bool vis)
 	{
-		if (FocusPointVisible() == vis)
+		if (StockObjectVisible(stock_objects) == vis)
 			return;
 
-		m_visible_objects = SetBits(m_visible_objects, EStockObject::FocusPoint, vis);
+		m_visible_objects = SetBits(m_visible_objects, stock_objects, vis);
 
-		OnSettingsChanged(this, view3d::ESettings::General_FocusPointVisible);
+		auto settings = view3d::ESettings::None;
+		if (AllSet(stock_objects, view3d::EStockObject::FocusPoint)) settings |= view3d::ESettings::General_FocusPointVisible;
+		if (AllSet(stock_objects, view3d::EStockObject::OriginPoint)) settings |= view3d::ESettings::General_OriginPointVisible;
+		if (AllSet(stock_objects, view3d::EStockObject::SelectionBox)) settings |= view3d::ESettings::General_SelectionBoxVisible;
+		OnSettingsChanged(this, settings);
+		Invalidate();
+	}
+
+	// Get/Set the size of the focus point
+	float V3dWindow::FocusPointSize() const
+	{
+		return m_focus_point.m_size;
+	}
+	void V3dWindow::FocusPointSize(float size)
+	{
+		if (FocusPointSize() == size)
+			return;
+
+		m_focus_point.m_size = size;
+
+		OnSettingsChanged(this, view3d::ESettings::General_FocusPointSize);
+		Invalidate();
+	}
+
+	// Get/Set the size of the origin point
+	float V3dWindow::OriginPointSize() const
+	{
+		return m_origin_point.m_size;
+	}
+	void V3dWindow::OriginPointSize(float size)
+	{
+		if (OriginPointSize() == size)
+			return;
+
+		m_origin_point.m_size = size;
+
+		OnSettingsChanged(this, view3d::ESettings::General_OriginPointSize);
+		Invalidate();
+	}
+
+	// Get/Set the position and size of the selection box. If 'bbox' is 'BBox::Reset()' the selection box is not shown
+	std::tuple<BBox, m3x4> V3dWindow::SelectionBox() const
+	{
+		if (m_selection_box.m_i2w.pos.w == 0)
+			return { BBox::Reset(), m3x4::Identity() };
+
+		auto const& i2w = m_selection_box.m_i2w;
+		auto bbox = BBox(i2w.pos, v4(Length(i2w.x), Length(i2w.y), Length(i2w.z), 0));
+		auto ori = m_selection_box.m_i2w.rot;
+		return { bbox, ori };
+
+	}
+	void V3dWindow::SelectionBox(BBox const& bbox, m3x4 const& ori)
+	{
+		auto [b, o] = SelectionBox();
+		if (b == bbox && o == ori)
+			return;
+
+		if (bbox == BBox::Reset())
+		{
+			// Flag to not include the selection box
+			m_selection_box.m_i2w.pos.w = 0;
+		}
+		else
+		{
+			m_selection_box.m_i2w =
+				m4x4(ori, v4::Origin()) *
+				m4x4::Scale(bbox.m_radius.x, bbox.m_radius.y, bbox.m_radius.z, bbox.m_centre);
+		}
+
+		OnSettingsChanged(this, view3d::ESettings::General_SelectionBox);
 		Invalidate();
 	}
 
@@ -1355,19 +1463,189 @@ namespace pr::rdr12
 		Invalidate();
 	}
 
+	// Access the built-in script editor
+	LdrScriptEditorUI& V3dWindow::EditorUI()
+	{
+		if (!m_ui_script_editor)
+			m_ui_script_editor.reset(new LdrScriptEditorUI(m_hwnd));
+
+		return *m_ui_script_editor;
+	}
+
+	// Access the built-in lighting controls UI
+	LightingUI& V3dWindow::LightingUI()
+	{
+		if (!m_ui_lighting)
+		{
+			m_ui_lighting.reset(new rdr12::LightingUI(m_hwnd, m_scene.m_global_light));
+			m_ui_lighting->HideOnClose(true);
+			m_ui_lighting->Commit += [&](rdr12::LightingUI&, Light const& light)
+			{
+				GlobalLight(light);
+			};
+			m_ui_lighting->Preview += [&](rdr12::LightingUI&, Light const& light)
+			{
+				auto prev = m_scene.m_global_light;
+				m_scene.m_global_light = light;
+
+				Render();
+
+				m_scene.m_global_light = prev;
+			};
+		}
+
+		return *m_ui_lighting;
+	}
+
+	// Return the focus point of the camera in this draw set
+	static v4 __stdcall ReadPoint(void* ctx)
+	{
+		if (ctx == 0) return v4::Origin();
+		return static_cast<V3dWindow const*>(ctx)->m_scene.m_cam.FocusPoint();
+	}
+
+	// Show/Hide the object manager tool
+	bool V3dWindow::ObjectManagerVisible() const
+	{
+		return m_ui_object_manager != nullptr && m_ui_object_manager->Visible();
+
+	}
+	void V3dWindow::ObjectManagerVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (ObjectManagerVisible() == show)
+			return;
+
+		if (!m_ui_object_manager)
+			m_ui_object_manager.reset(new LdrObjectManagerUI(m_hwnd));
+		
+		m_ui_object_manager->Visible(show);
+	}
+
+	// Show/Hide the script editor tool
+	bool V3dWindow::ScriptEditorVisible() const
+	{
+		return m_ui_script_editor != nullptr && m_ui_script_editor->Visible();
+
+	}
+	void V3dWindow::ScriptEditorVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (ScriptEditorVisible() == show)
+			return;
+
+		EditorUI().Visible(show);
+	}
+
+	// Show/Hide the measure tool
+	bool V3dWindow::MeasureToolVisible() const
+	{
+		return m_ui_measure_tool != nullptr && m_ui_measure_tool->Visible();
+
+	}
+	void V3dWindow::MeasureToolVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (MeasureToolVisible() == show)
+			return;
+
+		if (!m_ui_measure_tool)
+			m_ui_measure_tool.reset(new LdrMeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+		else
+			m_ui_measure_tool->SetReadPoint(&ReadPoint, this);
+		
+		m_ui_measure_tool->Visible(show);
+	}
+
+	// Show/Hide the angle measure tool
+	bool V3dWindow::AngleToolVisible() const
+	{
+		return m_ui_angle_tool != nullptr && m_ui_angle_tool->Visible();
+
+	}
+	void V3dWindow::AngleToolVisible(bool show)
+	{
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		if (AngleToolVisible() == show)
+			return;
+
+		if (!m_ui_angle_tool)
+			m_ui_angle_tool.reset(new LdrAngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+		else
+			m_ui_angle_tool->SetReadPoint(&ReadPoint, this);
+		
+		m_ui_angle_tool->Visible(show);
+	}
+
+	// Implements standard key bindings. Returns true if handled
+	bool V3dWindow::TranslateKey(EKeyCodes key)
+	{
+		// Notes:
+		//  - This method is intended as a simple default for key bindings. Applications should
+		//    probably not call this, but handled the keys bindings separately. This helps to show
+		//    the expected behaviour of some common bindings though.
+
+		auto code = key & EKeyCodes::KeyCode;
+		auto modifiers = key & EKeyCodes::Modifiers;
+		switch (code)
+		{
+			case EKeyCodes::F7:
+			{
+				auto up = LengthSq(m_scene.m_cam.Align()) > maths::tinyf ? m_scene.m_cam.Align() : v4::YAxis();
+				auto forward = up.z > up.y ? v4::YAxis() : -v4::ZAxis();
+
+				auto bounds =
+					AllSet(modifiers, EKeyCodes::Shift) ? view3d::ESceneBounds::Selected :
+					AllSet(modifiers, EKeyCodes::Control) ? view3d::ESceneBounds::Visible :
+					view3d::ESceneBounds::All;
+
+				ResetView(SceneBounds(bounds, 0, nullptr), forward, up, 0, true, true);
+				Invalidate();
+				return true;
+			}
+			case EKeyCodes::Space:
+			{
+				ObjectManagerVisible(true);
+				return true;
+			}
+			case EKeyCodes::W:
+			{
+				if (AllSet(modifiers, EKeyCodes::Control))
+				{
+					switch (FillMode())
+					{
+						case EFillMode::Default:
+						case EFillMode::Solid:     FillMode(EFillMode::Wireframe); break;
+						case EFillMode::Wireframe: FillMode(EFillMode::SolidWire); break;
+						case EFillMode::SolidWire: FillMode(EFillMode::Points); break;
+						case EFillMode::Points:    FillMode(EFillMode::Solid); break;
+						default: throw std::runtime_error("Unknown fill mode");
+					}
+					Invalidate();
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
 	// Create stock models such as the focus point, origin, etc
 	void V3dWindow::CreateStockObjects()
 	{
+		ResourceFactory factory(rdr());
+
 		// Create the focus point/origin models
-		m_focus_point.m_model = res().CreateModel(EStockModel::Basis);
+		m_focus_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_focus_point.m_tint = Colour32One;
 		m_focus_point.m_i2w = m4x4Identity;
-		m_origin_point.m_model = res().CreateModel(EStockModel::Basis);
+		m_focus_point.m_size = 1.0f;
+		m_origin_point.m_model = factory.CreateModel(EStockModel::Basis);
 		m_origin_point.m_tint = Colour32Gray;
 		m_origin_point.m_i2w = m4x4Identity;
+		m_origin_point.m_size = 1.0f;
 
 		// Create the selection box model
-		m_selection_box.m_model = res().CreateModel(EStockModel::SelectionBox);
+		m_selection_box.m_model = factory.CreateModel(EStockModel::SelectionBox);
 		m_selection_box.m_tint = Colour32White;
 		m_selection_box.m_i2w = m4x4Identity;
 	}

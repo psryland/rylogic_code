@@ -14,12 +14,17 @@
 #include <condition_variable>
 #include <concurrent_queue.h>
 
+#include "pr/threads/name_thread.h"
+
 namespace pr::threads
 {
 	class ThreadPool
 	{
-		std::vector<std::thread> m_threads;
-		concurrency::concurrent_queue<std::function<void()>> m_tasks;
+		using task_queue_t = concurrency::concurrent_queue<std::function<void()>>;
+		using thread_cont_t = std::vector<std::thread>;
+			
+		thread_cont_t m_threads;
+		task_queue_t m_tasks;
 		std::condition_variable m_cv_task_added;
 		std::condition_variable m_cv_task_complete;
 		std::atomic_int m_tasks_pending;
@@ -44,7 +49,10 @@ namespace pr::threads
 			m_shutdown = true;
 			m_cv_task_added.notify_all();
 			for (auto& thread : m_threads)
-				thread.join();
+			{
+				if (thread.joinable())
+					thread.join();
+			}
 		}
 
 		// The number of tasks currently queued (roughly)
@@ -72,6 +80,8 @@ namespace pr::threads
 
 		void ThreadMain()
 		{
+			SetCurrentThreadName("ThreadPool Worker");
+
 			for (std::function<void()> task;;)
 			{
 				// If there are no tasks, wait for a signal
@@ -85,6 +95,8 @@ namespace pr::threads
 				
 				// Execute the task
 				task();
+
+				// Grab the next task
 				--m_tasks_pending;
 				assert(m_tasks_pending >= 0);
 				m_cv_task_complete.notify_all();
@@ -104,7 +116,14 @@ namespace pr::threads
 		std::atomic_int count = 0;
 
 		for (int i = 0; i != 10; ++i)
-			pool.QueueTask([&] { ++count; std::this_thread::sleep_for(std::chrono::milliseconds(100)); ++count; });
+		{
+			pool.QueueTask([&]
+			{
+				++count;
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				++count;
+			});
+		}
 
 		pool.WaitAll();
 		PR_CHECK(count == 20, true);

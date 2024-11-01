@@ -20,10 +20,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\view3d\dll\view3d.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d\dll\view3d.h">
       <Filter>pr\view3d</Filter>
     </ClInclude>
   </ItemGroup>

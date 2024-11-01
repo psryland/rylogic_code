@@ -155,7 +155,7 @@ namespace pr::rdr12
 		// Points/Sprites *********************************************************************
 		// Generate a cloud of points from an array of points
 		// Supports optional colours (opts->m_colours), either, 0, 1, or num_points
-		static ModelPtr Points(Renderer& rdr, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr Points(ResourceFactory& factory, std::span<v4 const> points, CreateOptions const* opts = nullptr);
 
 		// Lines ******************************************************************************
 		// Generate a batch of lines.
@@ -163,64 +163,64 @@ namespace pr::rdr12
 		// 'points' is the input array of start and end points for lines.
 		// 'directions' is the vector from each point to the next.
 		// Supports optional colours (opts->m_colours), either, 0, 1, or num_lines * 2
-		static ModelPtr Lines(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
-		static ModelPtr LinesD(Renderer& rdr, int num_lines, std::span<v4 const> points, std::span<v4 const> directions, CreateOptions const* opts = nullptr);
-		static ModelPtr LineStrip(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr Lines(ResourceFactory& factory, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr LinesD(ResourceFactory& factory, int num_lines, std::span<v4 const> points, std::span<v4 const> directions, CreateOptions const* opts = nullptr);
+		static ModelPtr LineStrip(ResourceFactory& factory, int num_lines, std::span<v4 const> points, CreateOptions const* opts = nullptr);
 
 		// Quad *******************************************************************************
 		// Create a quad.
 		// Supports optional colours (opts->m_colours), either, 0, 1, or num_quads
-		static ModelPtr Quad(Renderer& rdr, CreateOptions const* opts = nullptr);
-		static ModelPtr Quad(Renderer& rdr, int num_quads, std::span<v4 const> verts, CreateOptions const* opts = nullptr);
-		static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
-		static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
-		static ModelPtr QuadStrip(Renderer& rdr, int num_quads, std::span<v4 const> verts, float width, std::span<v4 const> normals = {}, CreateOptions const* opts = nullptr);
-		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy, CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(ResourceFactory& factory, CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(ResourceFactory& factory, int num_quads, std::span<v4 const> verts, CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(ResourceFactory& factory, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
+		static ModelPtr Quad(ResourceFactory& factory, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2::Zero(), CreateOptions const* opts = nullptr);
+		static ModelPtr QuadStrip(ResourceFactory& factory, int num_quads, std::span<v4 const> verts, float width, std::span<v4 const> normals = {}, CreateOptions const* opts = nullptr);
+		static ModelPtr QuadPatch(ResourceFactory& factory, int dimx, int dimy, CreateOptions const* opts = nullptr);
 
 		// Shape2d ****************************************************************************
-		static ModelPtr Ellipse(Renderer& rdr, float dimx, float dimy, bool solid, int facets = 40, CreateOptions const* opts = nullptr);		
-		static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, CreateOptions const* opts = nullptr);
-		static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, CreateOptions const* opts = nullptr);
-		static ModelPtr Polygon(Renderer& rdr, std::span<v2 const> points, bool solid, CreateOptions const* opts = nullptr);
+		static ModelPtr Ellipse(ResourceFactory& factory, float dimx, float dimy, bool solid, int facets = 40, CreateOptions const* opts = nullptr);		
+		static ModelPtr Pie(ResourceFactory& factory, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, CreateOptions const* opts = nullptr);
+		static ModelPtr RoundedRectangle(ResourceFactory& factory, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, CreateOptions const* opts = nullptr);
+		static ModelPtr Polygon(ResourceFactory& factory, std::span<v2 const> points, bool solid, CreateOptions const* opts = nullptr);
 
 		// Boxes ******************************************************************************
-		static ModelPtr Box(Renderer& rdr, float rad, CreateOptions const* opts = nullptr);
-		static ModelPtr Box(Renderer& rdr, v4_cref rad, CreateOptions const* opts = nullptr);
-		static ModelPtr Boxes(Renderer& rdr, int num_boxes, std::span<v4 const> points, CreateOptions const* opts = nullptr);
-		static ModelPtr BoxList(Renderer& rdr, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts = nullptr);
+		static ModelPtr Box(ResourceFactory& factory, float rad, CreateOptions const* opts = nullptr);
+		static ModelPtr Box(ResourceFactory& factory, v4_cref rad, CreateOptions const* opts = nullptr);
+		static ModelPtr Boxes(ResourceFactory& factory, int num_boxes, std::span<v4 const> points, CreateOptions const* opts = nullptr);
+		static ModelPtr BoxList(ResourceFactory& factory, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts = nullptr);
 
 		// Sphere *****************************************************************************
-		static ModelPtr Geosphere(Renderer& rdr, float radius, int divisions = 3, CreateOptions const* opts = nullptr);
-		static ModelPtr Geosphere(Renderer& rdr, v4_cref radius, int divisions = 3, CreateOptions const* opts = nullptr);
-		static ModelPtr Sphere(Renderer& rdr, float radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
-		static ModelPtr Sphere(Renderer& rdr, v4 const& radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
+		static ModelPtr Geosphere(ResourceFactory& factory, float radius, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr Geosphere(ResourceFactory& factory, v4_cref radius, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr Sphere(ResourceFactory& factory, float radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
+		static ModelPtr Sphere(ResourceFactory& factory, v4 const& radius, int wedges = 20, int layers = 5, CreateOptions const* opts = nullptr);
 
 		// Cylinder ***************************************************************************
-		static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, int wedges = 20, int layers = 1, CreateOptions const* opts = nullptr);
+		static ModelPtr Cylinder(ResourceFactory& factory, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, int wedges = 20, int layers = 1, CreateOptions const* opts = nullptr);
 
 		// Extrude ****************************************************************************
-		static ModelPtr Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<v4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
-		static ModelPtr Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<m4x4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
+		static ModelPtr Extrude(ResourceFactory& factory, std::span<v2 const> cs, std::span<v4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
+		static ModelPtr Extrude(ResourceFactory& factory, std::span<v2 const> cs, std::span<m4x4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts = nullptr);
 
 		// Mesh *******************************************************************************
-		static ModelPtr Mesh(Renderer& rdr, MeshCreationData const& cdata, CreateOptions const* opts = nullptr);
+		static ModelPtr Mesh(ResourceFactory& factory, MeshCreationData const& cdata, CreateOptions const* opts = nullptr);
 
 		// SkyBox *****************************************************************************
-		static ModelPtr SkyboxGeosphere(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
-		static ModelPtr SkyboxGeosphere(Renderer& rdr, std::filesystem::path const& texture_path, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
-		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, Texture2DPtr sky_texture, float radius = 1.0f, CreateOptions const* opts = nullptr);
-		static ModelPtr SkyboxFiveSidedCube(Renderer& rdr, std::filesystem::path const& texture_path, float radius = 1.0f, CreateOptions const* opts = nullptr);
-		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, Texture2DPtr (&sky_texture)[6], float radius = 1.0f, CreateOptions const* opts = nullptr);
-		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, std::filesystem::path const& texture_path_pattern, float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxGeosphere(ResourceFactory& factory, Texture2DPtr sky_texture, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxGeosphere(ResourceFactory& factory, std::filesystem::path const& texture_path, float radius = 1.0f, int divisions = 3, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxFiveSidedCube(ResourceFactory& factory, Texture2DPtr sky_texture, float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxFiveSidedCube(ResourceFactory& factory, std::filesystem::path const& texture_path, float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxSixSidedCube(ResourceFactory& factory, Texture2DPtr (&sky_texture)[6], float radius = 1.0f, CreateOptions const* opts = nullptr);
+		static ModelPtr SkyboxSixSidedCube(ResourceFactory& factory, std::filesystem::path const& texture_path_pattern, float radius = 1.0f, CreateOptions const* opts = nullptr);
 
 		// ModelFile **************************************************************************
 		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
 		// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
 		using ModelOutFunc = std::function<bool(std::span<ModelTreeNode>)>;
-		static void LoadP3DModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void Load3DSModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadSTLModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
-		static void LoadModel(geometry::EModelFileFormat format, Renderer& rdr, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
+		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
 
 		// Text *******************************************************************************
 
@@ -316,14 +316,14 @@ namespace pr::rdr12
 		// 'formatting' defines regions in the text to apply formatting to.
 		// 'formatting_count' is the length of the 'formatting' array.
 		// 'layout' is global text layout information.
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
-		static ModelPtr Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(ResourceFactory& factory, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(ResourceFactory& factory, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(ResourceFactory& factory, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts = nullptr);
+		static ModelPtr Text(ResourceFactory& factory, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts = nullptr);
 
 		// Cache ****************************************************************************************
 
-			// Memory pooling for model buffers
+		// Memory pooling for model buffers
 		template <typename VertexType = Vert>
 		struct Cache
 		{

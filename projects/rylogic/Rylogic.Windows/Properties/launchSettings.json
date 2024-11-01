@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Rylogic.Core.Windows": {
+      "commandName": "Project",
+      "commandLineArgs": "pwsh.exe &{ Set-Location P:\\\\pr\\\\projects\\\\Rylogic.Core.Windows\\\\bin\\\\debug\\\\net8.0-windows; Add-Type -AssemblyName 'Rylogic.Core.Windows.dll'; $result = [Rylogic.Core.Windows.Program]::Main(); Exit $result; }",
+      "workingDirectory": "P:\\pr\\projects\\Rylogic.Core.Windows\\bin\\Debug\\net8.0-windows",
+      "hotReloadEnabled": false
+    }
+  }
+}

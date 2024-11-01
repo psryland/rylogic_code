@@ -26,7 +26,7 @@ namespace pr::rdr12
 		//    - Shade the scene using the smap
 		//  - Point:
 		//    - Create 6 perspective projections around the light.
-		//    - ?? Use a fibonacci sphere to map directions around the light to a 2D surface
+		//    - ?? Use a Fibonacci sphere to map directions around the light to a 2D surface
 		//    - ?? not sure
 		//  - LiSPSM:
 		//    - During the shadow map rendering pass, apply a perspective transform to the scene where the perspective
@@ -72,7 +72,10 @@ namespace pr::rdr12
 		void AddLight(Light const& light);
 
 		// The sources of light that cast shadows
-		CasterCont const& Casters() const { return m_casters; }
+		CasterCont const& Casters() const
+		{
+			return m_casters;
+		}
 
 	private:
 

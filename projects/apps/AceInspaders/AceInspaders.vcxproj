@@ -1,63 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
-  <!-- Properties -->
-  <Import Project="..\..\..\build\props\globals.props" />
+
+	<!-- Properties -->
 	<PropertyGroup Label="Globals">
-    <ProjectGuid>{6FA8C1C9-4F4B-4165-A0D8-2B837C64EF06}</ProjectGuid>
-    <RootNamespace>AceInspaders</RootNamespace>
-    <ConfigurationType>Application</ConfigurationType>
-  </PropertyGroup>
+		<ProjectGuid>{6FA8C1C9-4F4B-4165-A0D8-2B837C64EF06}</ProjectGuid>
+		<RootNamespace>AceInspaders</RootNamespace>
+		<ConfigurationType>Application</ConfigurationType>
+	</PropertyGroup>
 
-  <!-- Configurations -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
 
-  <!-- Property Sheets -->
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\..\build\props\app.props" />
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)app.props" />
 
-  <!-- Build Options -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions>PR_APP_MAIN_INCLUDE="src/ace_inspaders.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\..\include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>view3d-static.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration);</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PreprocessorDefinitions>
+				;PR_APP_MAIN_INCLUDE="src/ace_inspaders.h"
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalDependencies>
+				;view3d-static.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+			<AdditionalLibraryDirectories>
+				;$(RylogicRoot)lib
+				;$(PlatformTarget)$(Configuration)
+				;%(AdditionalLibraryDirectories)
+			</AdditionalLibraryDirectories>
+		</Link>
+	</ItemDefinitionGroup>
 
-  <!-- Files -->
-  <ItemGroup>
-    <ClCompile Include="..\..\..\include\pr\app\entry_point.cpp" />
-    <ClInclude Include="..\..\..\include\pr\app\default_setup.h" />
-    <ClInclude Include="..\..\..\include\pr\app\forward.h" />
-    <ClInclude Include="..\..\..\include\pr\app\main.h" />
-    <ClInclude Include="..\..\..\include\pr\app\main_ui.h" />
-    <ClInclude Include="..\..\..\include\pr\audio\waves\wave_file.h" />
-    <ClInclude Include="..\..\..\include\pr\gfx\onebit.h" />
-    <ClInclude Include="..\..\..\include\pr\gui\wingui.h" />
-    <ClInclude Include="src\space_invaders.h" />
-    <ClInclude Include="src\ace_inspaders.h" />
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<!-- Files -->
+	<ItemGroup>
+		<ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\main_ui.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\waves\wave_file.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\gfx\onebit.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
+		<ClInclude Include="src\space_invaders.h" />
+		<ClInclude Include="src\ace_inspaders.h" />
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

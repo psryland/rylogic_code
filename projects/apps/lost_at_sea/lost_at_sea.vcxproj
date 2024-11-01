@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Properties -->
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{A96E7D7B-6550-4F4D-A630-80712E25AB13}</ProjectGuid>
+		<RootNamespace>lost_at_sea</RootNamespace>
+		<ConfigurationType>Application</ConfigurationType>
+	</PropertyGroup>
+
+	<!-- Configuration -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)tools.props" />
+	<Import Project="$(PropsPath)app.props" />
+
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk\vorbis\include
+				;$(RylogicRoot)sdk\ogg\include
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Windows</SubSystem>
+			<AdditionalLibraryDirectories>
+				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+				;%(AdditionalLibraryDirectories)
+			</AdditionalLibraryDirectories>
+			<AdditionalDependencies>
+				;view3d-static.lib
+				;audio.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\app\default_setup.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\app\skybox.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\camera\camctrl_dinput_wasd.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\input\dinput.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\ogg\ogg_stream.h" />
+		<ClCompile Include="$(RylogicRoot)include\pr\app\entry_point.cpp">
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+		</ClCompile>
+		<ClCompile Include="$(RylogicRoot)sdk\ogg\ogg.c">
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+		</ClCompile>
+		<ClCompile Include="$(RylogicRoot)sdk\vorbis\vorbis.c">
+			<PrecompiledHeader>NotUsing</PrecompiledHeader>
+		</ClCompile>
+		<ClInclude Include="src\main.h" />
+		<ClCompile Include="src\main.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+		<ClInclude Include="src\cam\cam.h" />
+		<ClCompile Include="src\cam\cam.cpp" />
+		<ClInclude Include="src\forward.h" />
+		<ClInclude Include="src\settings.h" />
+		<ClInclude Include="src\ship\ship.h" />
+		<ClCompile Include="src\ship\ship.cpp" />
+		<ClInclude Include="src\world\terrain.h" />
+		<ClCompile Include="src\world\terrain.cpp" />
+		<ClInclude Include="src\util.h" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="data\menu\menu.ldr" >
+			<DeploymentContent>true</DeploymentContent>
+		</None>
+		<Image Include="data\skybox\SkyBox-Clouds-Few-Noon.png">
+			<DeploymentContent>true</DeploymentContent>
+		</Image>
+	</ItemGroup>
+
+	<!-- Targets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- <Import Project="$(SolutionDir)Directory.Build.props" /> -->
+
+	<!-- Globals -->
+	<PropertyGroup Label="Globals">
+		<ProjectName>audio</ProjectName>
+		<RootNamespace>pr::audio</RootNamespace>
+		<ProjectGuid>{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}</ProjectGuid>
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+	</PropertyGroup>
+
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)tools.props" />
+	<Import Project="$(PropsPath)lib.props" />
+
+	<!-- Build options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\audio.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\audio\audio_manager.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\config\config.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\directsound\player.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\directsound\sound.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\forward.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\midi\midi.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\sound\sound.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\synth\note.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\synth\synth.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\util\util.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\waves\wave_bank.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\audio\waves\wave_file.h" />
+		<ClInclude Include="config\config.cpp" />
+		<ClCompile Include="midi\midi.cpp" />
+		<ClCompile Include="sound\sound.cpp" />
+		<ClCompile Include="waves\wave_bank.cpp" />
+		<ClCompile Include="waves\wave_file.cpp" />
+		<ClCompile Include="audio\audio_manager.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

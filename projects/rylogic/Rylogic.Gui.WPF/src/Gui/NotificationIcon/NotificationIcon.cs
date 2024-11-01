@@ -42,7 +42,7 @@ namespace Rylogic.Gui.WPF
 		public NotificationIcon()
 		{
 			MessageSink = WPFUtil.IsDesignMode ? WindowMessageSink.CreateEmpty() : new WindowMessageSink();
-			IconData = Shell32.NOTIFYICONDATA.New(MessageSink.HWnd, WindowMessageSink.CallbackMessageId, Shell32.ENotifyIconVersion.Win95);
+			IconData = Win32.NOTIFYICONDATA.New(MessageSink.HWnd, WindowMessageSink.CallbackMessageId, Win32.ENotifyIconVersion.Win95);
 
 			// Commands
 			ShowCMenu = Command.Create(this, ShowCMenuInternal);
@@ -90,8 +90,8 @@ namespace Rylogic.Gui.WPF
 				{
 					lock (m_lock)
 					{
-						IconData.uFlags = Shell32.ENotifyIconDataMembers.Message;
-						Shell32.NotifyIcon(Shell32.ENotifyCommand.Delete, ref IconData);
+						IconData.uFlags = Win32.ENotifyIconDataMembers.Message;
+						Shell32.NotifyIcon(Win32.ENotifyCommand.Delete, ref IconData);
 						m_icon_created = false;
 					}
 				}
@@ -100,8 +100,8 @@ namespace Rylogic.Gui.WPF
 					lock (m_lock)
 					{
 						// Add the icon to the shell
-						IconData.uFlags = Shell32.ENotifyIconDataMembers.Message | Shell32.ENotifyIconDataMembers.Icon | Shell32.ENotifyIconDataMembers.Tip;
-						var status = Shell32.NotifyIcon(Shell32.ENotifyCommand.Add, ref IconData);
+						IconData.uFlags = Win32.ENotifyIconDataMembers.Message | Win32.ENotifyIconDataMembers.Icon | Win32.ENotifyIconDataMembers.Tip;
+						var status = Shell32.NotifyIcon(Win32.ENotifyCommand.Add, ref IconData);
 						if (!status)
 						{
 							// Couldn't create the icon - we can assume this is because explorer is not running (yet!)
@@ -112,14 +112,14 @@ namespace Rylogic.Gui.WPF
 						}
 
 						// Set to most recent version
-						IconData.VersionOrTimeout = (uint)Shell32.ENotifyIconVersion.Vista;
-						if (!Shell32.NotifyIcon(Shell32.ENotifyCommand.SetVersion, ref IconData))
+						IconData.VersionOrTimeout = (uint)Win32.ENotifyIconVersion.Vista;
+						if (!Shell32.NotifyIcon(Win32.ENotifyCommand.SetVersion, ref IconData))
 						{
-							IconData.VersionOrTimeout = (uint)Shell32.ENotifyIconVersion.Win2000;
-							if (!Shell32.NotifyIcon(Shell32.ENotifyCommand.SetVersion, ref IconData))
+							IconData.VersionOrTimeout = (uint)Win32.ENotifyIconVersion.Win2000;
+							if (!Shell32.NotifyIcon(Win32.ENotifyCommand.SetVersion, ref IconData))
 							{
-								IconData.VersionOrTimeout = (uint)Shell32.ENotifyIconVersion.Win95;
-								if (!Shell32.NotifyIcon(Shell32.ENotifyCommand.SetVersion, ref IconData))
+								IconData.VersionOrTimeout = (uint)Win32.ENotifyIconVersion.Win95;
+								if (!Shell32.NotifyIcon(Win32.ENotifyCommand.SetVersion, ref IconData))
 								{
 									throw new Win32Exception("Failed to set the notification icon version");
 								}
@@ -127,7 +127,7 @@ namespace Rylogic.Gui.WPF
 						}
 
 						// Set the version in the message sink
-						MessageSink.Version = (Shell32.ENotifyIconVersion)IconData.VersionOrTimeout;
+						MessageSink.Version = (Win32.ENotifyIconVersion)IconData.VersionOrTimeout;
 						m_icon_created = true;
 					}
 				}
@@ -135,7 +135,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_icon_created;
 
-		/// <summary>Window message handler for messages from the notificationn icon</summary>
+		/// <summary>Window message handler for messages from the notification icon</summary>
 		private WindowMessageSink MessageSink
 		{
 			get => m_message_sink;
@@ -197,7 +197,7 @@ namespace Rylogic.Gui.WPF
 		private WindowMessageSink m_message_sink = null!;
 
 		/// <summary>Represents the current icon data.</summary>
-		private Shell32.NOTIFYICONDATA IconData;
+		private Win32.NOTIFYICONDATA IconData;
 
 		/// <summary>
 		/// Gets or sets the icon to be displayed. This is not a dependency property. If you want to assign
@@ -211,8 +211,8 @@ namespace Rylogic.Gui.WPF
 				if (m_icon == value) return;
 				m_icon = value;
 				IconData.hIcon = m_icon?.Handle ?? IntPtr.Zero;
-				IconData.uFlags = Shell32.ENotifyIconDataMembers.Icon;
-				Shell32.NotifyIcon(Shell32.ENotifyCommand.Modify, ref IconData);
+				IconData.uFlags = Win32.ENotifyIconDataMembers.Icon;
+				Shell32.NotifyIcon(Win32.ENotifyCommand.Modify, ref IconData);
 			}
 		}
 		private System.Drawing.Icon? m_icon;
@@ -242,7 +242,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Resolves an image source and updates the <see cref="Icon" /> property accordingly.</summary>
 		[Category(CategoryName)]
-		[Description("Sets the displayed taskbar icon.")]
+		[Description("Sets the displayed task bar icon.")]
 		public ImageSource? IconSource
 		{
 			get => (ImageSource?)GetValue(IconSourceProperty);
@@ -256,7 +256,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty IconSourceProperty = Gui_.DPRegister<NotificationIcon>(nameof(IconSource), null, Gui_.EDPFlags.None);
 
-		/// <summary>A tooltip text that is being displayed if no custom <see cref="ToolTip"/> was set or if custom tooltips are not supported.</summary>
+		/// <summary>A tool tip text that is being displayed if no custom <see cref="ToolTip"/> was set or if custom tool tips are not supported.</summary>
 		[Category(CategoryName)]
 		[Description("Alternative to a fully blown ToolTip, which is only displayed on Vista and above.")]
 		public string ToolTipText
@@ -266,9 +266,9 @@ namespace Rylogic.Gui.WPF
 		}
 		private void ToolTipText_Changed(string new_value)
 		{
-			IconData.uFlags = Shell32.ENotifyIconDataMembers.Tip;
+			IconData.uFlags = Win32.ENotifyIconDataMembers.Tip;
 			IconData.szTip = new_value;
-			Shell32.NotifyIcon(Shell32.ENotifyCommand.Modify, ref IconData);
+			Shell32.NotifyIcon(Win32.ENotifyCommand.Modify, ref IconData);
 		}
 		public static readonly DependencyProperty ToolTipTextProperty = Gui_.DPRegister<NotificationIcon>(nameof(ToolTipText), string.Empty, Gui_.EDPFlags.None);
 

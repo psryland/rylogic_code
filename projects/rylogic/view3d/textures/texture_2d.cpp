@@ -106,7 +106,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11ShaderResourceView> srv;
 		if (src.m_pixels != nullptr)
 		{
-			DirectX::Image img;
+			DirectX::Image img = {};
 			img.width      = src.m_dim.x;
 			img.height     = src.m_dim.y;
 			img.format     = src.m_format;

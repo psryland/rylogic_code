@@ -64,7 +64,7 @@ namespace Rylogic.Crypt
 			
 			// Generate the signature
 			var buf = filebuf.Take(length).ToArray();
-			var sig = alg.SignData(buf, new SHA256CryptoServiceProvider());
+			var sig = alg.SignData(buf, SHA256.Create());
 			
 			// Append the signature to the end of the file
 			using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Write))
@@ -104,7 +104,7 @@ namespace Rylogic.Crypt
 			// Validate the signature
 			var buf = filebuf.Take(length).ToArray();
 			var sig = filebuf.Skip(length + SignatureId.Length).Take(key_size_bytes).ToArray();
-			bool valid = alg.VerifyData(buf, new SHA256CryptoServiceProvider(), sig);
+			bool valid = alg.VerifyData(buf, SHA256.Create(), sig);
 			
 			if (thrw && !valid) throw new VerificationException("File signature incorrect");
 			return valid;

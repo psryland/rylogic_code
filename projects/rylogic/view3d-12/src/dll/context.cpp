@@ -6,6 +6,7 @@
 #include "pr/view3d-12/ldraw/ldr_object.h"
 #include "pr/view3d-12/ldraw/ldr_gizmo.h"
 #include "pr/view3d-12/model/model_generator.h"
+#include "pr/view3d-12/model/vertex_layout.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/script/embedded_lua.h"
@@ -188,112 +189,21 @@ namespace pr::rdr12
 		for (auto const& nugget : nuggets)
 		{
 			// Create the renderer nugget
-			auto nug = NuggetDesc(static_cast<ETopo>(nugget.m_topo), static_cast<EGeom>(nugget.m_geom))
+			NuggetDesc nug = NuggetDesc(static_cast<ETopo>(nugget.m_topo), static_cast<EGeom>(nugget.m_geom))
 				.vrange(nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()))
 				.irange(nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size()));
 
 			//todo nug.m_shaders = nugget.m_mat.m_shader_map;
 			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.pso<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
 			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.pso<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
-			nug.tex_diffuse(Texture2DPtr(nugget.m_mat.m_tex_diffuse, true));
-			nug.sam_diffuse(SamplerPtr(nugget.m_mat.m_sam_diffuse, true));
+			nug.tex_diffuse(Texture2DPtr(nugget.m_tex_diffuse, true));
+			nug.sam_diffuse(SamplerPtr(nugget.m_sam_diffuse, true));
 			nug.flags(static_cast<ENuggetFlag>(nugget.m_nflags));
-			nug.relative_reflectivity(nugget.m_mat.m_relative_reflectivity);
-			nug.tint(nugget.m_mat.m_tint);
-		
-			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
-			{
-#if 0 // todo
-				auto& rstep0 = nugget.m_mat.m_shader_map.m_rstep[rs];
-				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
-				{// VS
-					switch (rstep0.m_vs.shdr)
-					{
-						case EView3DShaderVS::Standard: break;
-						default: throw std::runtime_error("Unknown vertex shader");
-					}
-				}
-				{// PS
-					switch (rstep0.m_ps.shdr)
-					{
-						case EView3DShaderPS::Standard: break;
-						case EView3DShaderPS::RadialFadePS:
-						{
-							Reader reader(rstep0.m_ps.params);
-							auto type = reader.Keyword(L"Type").EnumS<pr::rdr::ERadial>();
-							auto radius = reader.Keyword(L"Radius").Vector2S();
-							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : v4Zero;
-							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
-							auto id = pr::hash::HashArgs("RadialFadePS", centre, radius, type, focus_relative);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
-							shdr->m_fade_centre = centre;
-							shdr->m_fade_radius = radius;
-							shdr->m_fade_type = type;
-							shdr->m_focus_relative = focus_relative;
-							rstep1.m_ps = shdr;
-							break;
-						}
-						default: throw std::runtime_error("Unknown pixel shader");
-					}
-				}
-				{// GS
-					switch (rstep0.m_gs.shdr)
-					{
-						case EView3DShaderGS::Standard: break;
-						case EView3DShaderGS::PointSpritesGS:
-						{
-							Reader reader(rstep0.m_gs.params);
-							auto point_size = reader.Keyword(L"PointSize").Vector2S();
-							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
-							auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
-							shdr->m_size = point_size;
-							shdr->m_depth = depth;
-							rstep1.m_gs = shdr;
-							break;
-						}
-						case EView3DShaderGS::ThickLineListGS:
-						{
-							Reader reader(rstep0.m_gs.params);
-							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
-							auto id = pr::hash::HashArgs("ThickLineList", line_width);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
-							shdr->m_width = line_width;
-							rstep1.m_gs = shdr;
-							break;
-						}
-						case EView3DShaderGS::ThickLineStripGS:
-						{
-							Reader reader(rstep0.m_gs.params);
-							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
-							auto id = pr::hash::HashArgs("ThickLineStrip", line_width);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
-							shdr->m_width = line_width;
-							rstep1.m_gs = shdr;
-							break;
-						}
-						case EView3DShaderGS::ArrowHeadGS:
-						{
-							Reader reader(rstep0.m_gs.params);
-							auto size = reader.Keyword(L"Size").RealS<float>();
-							auto id = pr::hash::HashArgs("ArrowHead", size);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
-							shdr->m_size = size;
-							rstep1.m_gs = shdr;
-							break;
-						}
-						default: throw std::runtime_error("Unknown geometry shader");
-					}
-				}
-				{// CS
-					switch (rstep0.m_cs.shdr)
-					{
-						case EView3DShaderCS::None: break;
-						default: throw std::runtime_error("Unknown compute shader");
-					}
-				}
-#endif
-			}
+			nug.rel_reflec(nugget.m_rel_reflec);
+			nug.tint(nugget.m_tint);
+			for (auto const& shdr : std::span(nugget.m_shaders.m_shaders, nugget.m_shaders.m_count))
+				nug.use_shader(static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true));
+
 			ngt.push_back(nug);
 
 			// Sanity check the nugget
@@ -410,6 +320,153 @@ namespace pr::rdr12
 		return obj.get();
 	}
 
+	// Modify an ldr object using a callback to populate the model data.
+	static void __stdcall EditModel(Model* model, void* ctx, Renderer&)
+	{
+		using namespace pr::rdr12;
+
+		// Thread local storage for editing dynamic models
+		thread_local static pr::vector<view3d::Vertex>         cache_vbuf;
+		thread_local static pr::vector<uint16_t>               cache_ibuf;
+		thread_local static pr::vector<view3d::Nugget>         cache_nbuf;
+
+		if (!model)
+			throw std::runtime_error("model is null");
+
+		auto& vbuf = cache_vbuf;
+		auto& ibuf = cache_ibuf;
+		auto& nbuf = cache_nbuf;
+
+		// Create buffers to be filled by the user callback
+		// Note: We can't fill the buffers with the existing model data because that requires
+		// reading from video memory (slow, or not possible for some model types).
+		vbuf.resize(model->m_vcount);
+		ibuf.resize(model->m_icount);
+		nbuf.resize(0);
+
+#if 0
+		// If the model already has nuggets, initialise 'nbuf' with them
+		if (!model->m_nuggets.empty())
+		{
+			auto ValueOrDefault = [](auto* v, decltype(*v) d) -> decltype(*v) { return v ? *v : d; };
+
+			for (auto& nug : model->m_nuggets)
+			{
+				nbuf.push_back(view3d::Nugget{
+					.m_topo = static_cast<view3d::ETopo>(nug.m_topo),
+					.m_geom = static_cast<view3d::EGeom>(nug.m_geom),
+					.m_tex_diffuse = nug.m_tex_diffuse.get(),
+					.m_sam_diffuse = nug.m_sam_diffuse.get(),
+					.m_shaders = {.m_shaders = nug.m_shaders.data(), .m_count = isize(nug.m_shaders) },
+					.m_v0 = s_cast<int>(nug.m_vrange.begin()),
+					.m_v1 = s_cast<int>(nug.m_vrange.end()),
+					.m_i0 = s_cast<int>(nug.m_irange.begin()),
+					.m_i1 = s_cast<int>(nug.m_irange.end()),
+					.m_nflags = static_cast<view3d::ENuggetFlag>(nug.m_nflags),
+					.m_cull_mode = static_cast<view3d::ECullMode>(ValueOrDefault(nug.m_pso.Find<EPipeState::CullMode>(), D3D12_CULL_MODE(0))),
+					.m_fill_mode = static_cast<view3d::EFillMode>(ValueOrDefault(nug.m_pso.Find<EPipeState::FillMode>(), D3D12_FILL_MODE(0))),
+					.m_tint = To<view3d::Colour>(nug.m_tint),
+					.m_rel_reflec = nug.m_rel_reflec,
+
+				});
+			}
+		}
+#endif
+
+		// Get the user to generate/update the model
+		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
+		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(), [](void* ctx, view3d::Nugget const& n) { static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n); }, &nbuf);
+		if (new_vcount > isize(vbuf)) throw std::runtime_error("Dynamic model buffer overrun (v-buf)");
+		if (new_icount > isize(ibuf)) throw std::runtime_error("Dynamic model buffer overrun (i-buf)");
+
+		ResourceFactory factory(model->rdr());
+
+		{// Update the model geometry
+			auto update_v = model->UpdateVertices(factory, { 0, s_cast<size_t>(new_vcount) });
+			auto update_i = model->UpdateIndices(factory, { 0, s_cast<size_t>(new_icount) });
+			
+			model->m_bbox.reset();
+
+			auto vin = vbuf.data();
+			auto iin = ibuf.data();
+
+			// Copy the model data into the model
+			auto vout = update_v.ptr<Vert>();
+			for (size_t i = 0; i != new_vcount; ++i, ++vin)
+			{
+				SetPCNT(*vout++, To<v4>(vin->pos), Colour(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
+				Grow(model->m_bbox, To<v4>(vin->pos));
+			}
+			auto iout = update_v.ptr<uint16_t>();
+			for (size_t i = 0; i != new_icount; ++i, ++iin)
+			{
+				*iout++ = *iin;
+			}
+		}
+
+		// Update the model nuggets
+		model->DeleteNuggets();
+		for (auto& nug : nbuf)
+		{
+			auto n = NuggetDesc{};
+			n.m_topo = static_cast<ETopo>(nug.m_topo);
+			n.m_geom = static_cast<EGeom>(nug.m_geom);
+			n.m_tex_diffuse = Texture2DPtr(nug.m_tex_diffuse, true);
+			n.m_sam_diffuse = SamplerPtr(nug.m_sam_diffuse, true);
+
+			for (auto& shdr : nug.m_shaders.span())
+				n.m_shaders.push_back({ static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true) });
+
+			if (nug.m_cull_mode != view3d::ECullMode::Default)
+				n.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nug.m_cull_mode));
+			if (nug.m_fill_mode != view3d::EFillMode::Default)
+				n.m_pso.Set<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nug.m_fill_mode));
+
+			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
+			n.m_tint = To<Colour>(nug.m_tint);
+			n.m_rel_reflec = nug.m_rel_reflec;
+			n.m_vrange = Range{ s_cast<size_t>(nug.m_v0), s_cast<size_t>(nug.m_v1) };
+			n.m_irange = Range{ s_cast<size_t>(nug.m_i0), s_cast<size_t>(nug.m_i1) };
+			model->CreateNugget(factory, n);
+		}
+
+		// Release memory after large allocations
+		if (vbuf.capacity() > 0x100000) vbuf.clear();
+		if (ibuf.capacity() > 0x100000) ibuf.clear();
+		if (nbuf.capacity() > 0x100000) nbuf.clear();
+	}
+	LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
+	{
+		auto attr = ObjectAttributes{ ELdrObject::Custom, name, colour };
+		auto obj = CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
+		if (obj)
+			m_sources.Add(obj);
+
+		return obj.get();
+	}
+	void Context::ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
+	{
+		// Remove the object from any windows it might be in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+
+		// Callback to edit the geometry
+		Edit(m_rdr, object, EditModel, &edit_cb);
+	}
+
+	// Update the model in an existing object
+	void Context::UpdateObject(LdrObject* object, wchar_t const* ldr_script, EUpdateObject flags)
+	{
+		// Remove the object from any windows it might be in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(object);
+
+		// Update the object model
+		script::StringSrc src(ldr_script);
+		script::Reader reader(src, false);
+		Update(m_rdr, object, reader, flags);
+	}
+
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)
 	{
@@ -471,7 +528,7 @@ namespace pr::rdr12
 		}
 	}
 
-	// Enumerate the Guids in the sources collection
+	// Enumerate the GUIDs in the sources collection
 	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
 		for (auto& src : m_sources.Sources())
@@ -479,6 +536,23 @@ namespace pr::rdr12
 				return;
 	}
 	
+	// Create a gizmo object and add it to the gizmo collection
+	LdrGizmo* Context::GizmoCreate(ELdrGizmoMode mode, m4x4 const& o2w)
+	{
+		return m_sources.CreateGizmo(mode, o2w);
+	}
+	
+	// Destroy a gizmo
+	void Context::GizmoDelete(LdrGizmo* gizmo)
+	{
+		// Remove the gizmo from any windows it's in
+		for (auto& wnd : m_wnd_cont)
+			wnd->Remove(gizmo);
+		
+		// Delete the gizmo from the sources
+		m_sources.RemoveGizmo(gizmo);
+	}
+
 	// Reload file sources
 	void Context::ReloadScriptSources()
 	{

@@ -7,11 +7,11 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CustomBuild>
-      <Command>py $(ScriptPath)\BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ScriptPath)BuildShader.py %(FullPath) $(PlatformTarget) $(Configuration)</Command>
       <Message>
       </Message>
       <Outputs>%(RelativeDir)\..\compiled\$(Configuration)\%(Filename).built;%(Outputs)</Outputs>
-      <AdditionalInputs>$(ScriptPath)\BuildShader.py</AdditionalInputs>
+      <AdditionalInputs>$(ScriptPath)BuildShader.py</AdditionalInputs>
       <LinkObjects>false</LinkObjects>
     </CustomBuild>
   </ItemDefinitionGroup>

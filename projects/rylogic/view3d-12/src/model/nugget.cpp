@@ -4,7 +4,8 @@
 //*********************************************
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_store.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/utility/utility.h"
 
 namespace pr::rdr12
@@ -23,18 +24,15 @@ namespace pr::rdr12
 	Nugget::~Nugget()
 	{
 		// Clean up dependent nuggets
+		ResourceStore::Access store(rdr());
 		while (!m_nuggets.empty())
-			res_mgr().Delete(&m_nuggets.front());
+			store.Delete(&m_nuggets.front());
 	}
 
 	// Renderer access
 	Renderer& Nugget::rdr() const
 	{
 		return m_model->rdr();
-	}
-	ResourceManager& Nugget::res_mgr() const
-	{
-		return m_model->res_mgr();
 	}
 
 	// The number of primitives in this nugget
@@ -117,7 +115,9 @@ namespace pr::rdr12
 						.LogicOp = D3D12_LOGIC_OP_CLEAR,
 						.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 					});
-				m_nuggets.push_back(*m_model->res_mgr().CreateNugget(nug, m_model));
+		
+				ResourceFactory factory(rdr());
+				m_nuggets.push_back(*factory.CreateNugget(nug, m_model));
 			}
 		}
 	}
@@ -169,6 +169,7 @@ namespace pr::rdr12
 	// Delete this nugget, removing it from the owning model
 	void Nugget::Delete()
 	{
-		res_mgr().Delete(this);
+		ResourceStore::Access store(rdr());
+		store.Delete(this);
 	}
 }

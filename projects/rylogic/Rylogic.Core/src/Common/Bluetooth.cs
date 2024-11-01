@@ -493,7 +493,7 @@ namespace Rylogic.Common
 		public static void LoadDll()
 		{
 			if (ModuleLoaded) return;
-			m_module = Win32.LoadLibrary(Dll);
+			m_module = Kernel32.LoadLibrary(Dll);
 		}
 
 		/// <summary></summary>
@@ -696,24 +696,24 @@ namespace Rylogic.UnitTests
 	[TestFixture]
 	public class TestBluetooth
 	{
-		private readonly bool bt_available;
+		private readonly bool m_bt_available;
 		public TestBluetooth()
 		{
 			Bluetooth.LoadDll();
-			bt_available = Bluetooth.ModuleLoaded;
+			m_bt_available = Bluetooth.ModuleLoaded;
 		}
 
 		[Test]
 		public void BlueToothEnumRadios()
 		{
-			if (!bt_available) return;
+			if (!m_bt_available) return;
 			foreach (var radio in Bluetooth.Radios())
 				Assert.True(radio != null);
 		}
 		[Test]
 		public void BlueToothEnumDevices()
 		{
-			if (!bt_available) return;
+			if (!m_bt_available) return;
 			foreach (var device in Bluetooth.Devices())
 				Assert.True(device != null);
 		}

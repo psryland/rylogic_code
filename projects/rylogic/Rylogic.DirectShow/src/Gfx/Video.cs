@@ -7,7 +7,7 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Rylogic.DirectShow;
 
-namespace Rylogic.Graphix
+namespace Rylogic.Gfx
 {
 	public class Video :IDisposable
 	{

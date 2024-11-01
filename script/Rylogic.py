@@ -5,7 +5,7 @@ import sys, os, re, enum, time, shutil, glob, subprocess, threading, socket, cod
 import zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
-from typing import Callable, List
+from typing import Callable, List, Optional
 import UserVars
 
 # Support symlink on windows
@@ -64,7 +64,7 @@ def OnException(ex,enter_to_close=False, pause_time_seconds=0):
 	return
 
 # Path join/check
-def Path(*args, check_exists:bool = True, normalise:bool = True):
+def Path(*args, check_exists:bool = True, normalise:bool = True) -> str:
 	return UserVars.Path(*args, check_exists=check_exists, normalise=normalise)
 
 # Import a module with a given name from a file location
@@ -254,7 +254,7 @@ def DiffHash(src,dst,trace=False):
 	return False
 	
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_missing=False, quiet=False, filter:str=None, filter_flags=0, follow_symlinks=True):
+def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_missing=False, quiet=False, full_paths=True, filter:Optional[str]=None, filter_flags=0, follow_symlinks=True):
 
 	src_is_dir = src.endswith("/") or src.endswith("\\")
 	dst_is_dir = dst.endswith("/") or dst.endswith("\\")
@@ -318,7 +318,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_missing=F
 				continue
 
 			# Copy the file
-			if not quiet: print(s + " --> " + d)
+			if not quiet: print(s + " --> " + d) if full_paths else print(os.path.split(s)[1] + " --> " + os.path.split(d)[1])
 			shutil.copy2(s, d, follow_symlinks=follow_symlinks)
 
 	return
@@ -734,7 +734,7 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 		else:
 
 			# Using pythonnet
-			if True:
+			if False:
 				# Set the runtime to .net6 (or whatever is set int he runtime config)
 				import pythonnet, clr_loader
 				rt_config = Path(target_dir, f"{assembly_name}.runtimeconfig.json", check_exists=False)
@@ -756,25 +756,25 @@ def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
 				pass
 
 			# Using powershell
-			if False:
+			if True:
 				#sys.path.append(UserVars.dotnet_dir)
-				#command = ( 
-				#	"& {\n" + 
-				#	f"    Set-Location {target_dir};\n" +
-				#	f"    $env:Path = '{UserVars.dotnet_dir};' + $env:Path;\n" + 
-				#	#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) + 
-				#	f"    Add-Type -AssemblyName '{assembly_filepath}';\n" + 
-				#	#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) +  
-				#	#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +  
-				#	f"    $result = [{assembly_name}.Program]::Main();\n" + 
-				#	f"    Exit $result;\n" + 
-				#	"}") 
+				command = ( 
+					"& {\n" + 
+					f"    Set-Location {target_dir};\n" +
+					#f"    $env:Path = '{UserVars.dotnet_dir};' + $env:Path;\n" + 
+					#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) + 
+					f"    Add-Type -AssemblyName '{assembly_filepath}';\n" + 
+					#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) +  
+					#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +  
+					f"    $result = [{assembly_name}.Program]::Main();\n" + 
+					f"    Exit $result;\n" + 
+					"}") 
 				#print(command) 
-				#res,outp = Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]) 
-				#sys.path.pop()
-				#print(outp) 
-				#if not res: 
-				#	raise Exception("   **** Unit tests failed ****   ") 
+				res,outp = Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]) 
+				sys.path.pop()
+				print(outp) 
+				if not res: 
+					raise Exception("   **** Unit tests failed ****   ") 
 				pass
 
 			# Using Csex

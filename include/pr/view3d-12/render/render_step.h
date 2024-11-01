@@ -21,7 +21,7 @@ namespace pr::rdr12
 		using drawlist_t = pr::vector<DrawListElement, 1024, false, alignof(DrawListElement), Allocator<DrawListElement>>;
 		using dl_mutex_t = std::recursive_mutex;
 
-		// A lock context for the drawlist
+		// A lock context for the draw list
 		struct Lock :threads::Synchronise<RenderStep, std::recursive_mutex>
 		{
 			Lock(RenderStep const& rs)
@@ -39,13 +39,13 @@ namespace pr::rdr12
 
 		ERenderStep const  m_step_id;            // Derived type Id
 		Scene*             m_scene;              // The scene this render step is owned by
-		drawlist_t         m_drawlist;           // The drawlist for this render step. Access via 'Lock'
+		drawlist_t         m_drawlist;           // The draw list for this render step. Access via 'Lock'
 		bool               m_sort_needed;        // True when the list needs sorting
 		GpuUploadBuffer    m_cbuf_upload;        // Shared upload buffer for shaders to use to upload parameters
 		PipeStateDesc      m_default_pipe_state; // Default settings for the pipeline state
 		PipeStatePool      m_pipe_state_pool;    // Pool of pipeline state objects
 		AutoSub            m_evt_model_delete;   // Event subscription for model deleted notification
-		dl_mutex_t mutable m_mutex;              // Sync access to the drawlist
+		dl_mutex_t mutable m_mutex;              // Sync access to the draw list
 
 		RenderStep(ERenderStep id, Scene& scene);
 		RenderStep(RenderStep&&) = default;
@@ -59,17 +59,16 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 		Window& wnd() const;
 		Scene& scn() const;
-		ResourceManager& res() const;
 
-		// Reset the drawlist
+		// Reset the draw list
 		virtual void ClearDrawlist();
 
-		// Sort the drawlist based on sort key
+		// Sort the draw list based on sort key
 		void Sort();
 		void SortIfNeeded();
 
 		// Add an instance. The instance,model,and nuggets must be resident for the entire time
-		// that it is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
+		// that it is in the draw list, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 		template <InstanceType Inst>
 		void AddInstance(Inst const& inst)
 		{
@@ -83,7 +82,7 @@ namespace pr::rdr12
 			RemoveInstance(inst.m_base);
 		}
 
-		// Remove a batch of instances. Optimised by a single past through the drawlist
+		// Remove a batch of instances. Optimised by a single past through the draw list
 		void RemoveInstances(BaseInstance const** inst, std::size_t count);
 
 		// Perform the render step

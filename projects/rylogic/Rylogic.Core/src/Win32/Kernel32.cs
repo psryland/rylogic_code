@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
-using Rylogic.Common;
 
 namespace Rylogic.Interop.Win32
 {
@@ -60,92 +59,92 @@ namespace Rylogic.Interop.Win32
 		[Flags]
 		public enum EFileFlag :uint
 		{
-			NONE                  = 0,
-			READONLY              = 0x00000001,
-			HIDDEN                = 0x00000002,
-			SYSTEM                = 0x00000004,
-			DIRECTORY             = 0x00000010,
-			ARCHIVE               = 0x00000020,
-			DEVICE                = 0x00000040,
-			NORMAL                = 0x00000080,
-			TEMPORARY             = 0x00000100,
-			SPARSE_FILE           = 0x00000200,
-			REPARSE_POINT         = 0x00000400,
-			COMPRESSED            = 0x00000800,
-			OFFLINE               = 0x00001000,
-			NOT_CONTENT_INDEXED   = 0x00002000,
-			ENCRYPTED             = 0x00004000,
-			INTEGRITY_STREAM      = 0x00008000,
-			VIRTUAL               = 0x00010000,
-			NO_SCRUB_DATA         = 0x00020000,
-			EA                    = 0x00040000,
-			RECALL_ON_OPEN        = 0x00040000,
-			PINNED                = 0x00080000,
-			FIRST_PIPE_INSTANCE   = 0x00080000,
-			UNPINNED              = 0x00100000,
-			OPEN_NO_RECALL        = 0x00100000,
-			OPEN_REPARSE_POINT    = 0x00200000,
+			NONE = 0,
+			READONLY = 0x00000001,
+			HIDDEN = 0x00000002,
+			SYSTEM = 0x00000004,
+			DIRECTORY = 0x00000010,
+			ARCHIVE = 0x00000020,
+			DEVICE = 0x00000040,
+			NORMAL = 0x00000080,
+			TEMPORARY = 0x00000100,
+			SPARSE_FILE = 0x00000200,
+			REPARSE_POINT = 0x00000400,
+			COMPRESSED = 0x00000800,
+			OFFLINE = 0x00001000,
+			NOT_CONTENT_INDEXED = 0x00002000,
+			ENCRYPTED = 0x00004000,
+			INTEGRITY_STREAM = 0x00008000,
+			VIRTUAL = 0x00010000,
+			NO_SCRUB_DATA = 0x00020000,
+			EA = 0x00040000,
+			RECALL_ON_OPEN = 0x00040000,
+			PINNED = 0x00080000,
+			FIRST_PIPE_INSTANCE = 0x00080000,
+			UNPINNED = 0x00100000,
+			OPEN_NO_RECALL = 0x00100000,
+			OPEN_REPARSE_POINT = 0x00200000,
 			RECALL_ON_DATA_ACCESS = 0x00400000,
-			SESSION_AWARE         = 0x00800000,
-			POSIX_SEMANTICS       = 0x01000000,
-			BACKUP_SEMANTICS      = 0x02000000,
-			DELETE_ON_CLOSE       = 0x04000000,
-			SEQUENTIAL_SCAN       = 0x08000000,
-			RANDOM_ACCESS         = 0x10000000,
-			NO_BUFFERING          = 0x20000000,
-			OVERLAPPED            = 0x40000000,
-			WRITE_THROUGH         = 0x80000000,
+			SESSION_AWARE = 0x00800000,
+			POSIX_SEMANTICS = 0x01000000,
+			BACKUP_SEMANTICS = 0x02000000,
+			DELETE_ON_CLOSE = 0x04000000,
+			SEQUENTIAL_SCAN = 0x08000000,
+			RANDOM_ACCESS = 0x10000000,
+			NO_BUFFERING = 0x20000000,
+			OVERLAPPED = 0x40000000,
+			WRITE_THROUGH = 0x80000000,
 		}
 		[Flags]
 		public enum EFileFlagOther :uint
 		{
-			TREE_CONNECT_ATTRIBUTE_PRIVACY       = 0x00004000,
-			TREE_CONNECT_ATTRIBUTE_INTEGRITY     = 0x00008000,
-			TREE_CONNECT_ATTRIBUTE_GLOBAL        = 0x00000004,
-			TREE_CONNECT_ATTRIBUTE_PINNED        = 0x00000002,
-			FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL   = 0x20000000,
-			FILE_NOTIFY_CHANGE_FILE_NAME         = 0x00000001,
-			FILE_NOTIFY_CHANGE_DIR_NAME          = 0x00000002,
-			FILE_NOTIFY_CHANGE_ATTRIBUTES        = 0x00000004,
-			FILE_NOTIFY_CHANGE_SIZE              = 0x00000008,
-			FILE_NOTIFY_CHANGE_LAST_WRITE        = 0x00000010,
-			FILE_NOTIFY_CHANGE_LAST_ACCESS       = 0x00000020,
-			FILE_NOTIFY_CHANGE_CREATION          = 0x00000040,
-			FILE_NOTIFY_CHANGE_SECURITY          = 0x00000100,
-			FILE_ACTION_ADDED                    = 0x00000001,
-			FILE_ACTION_REMOVED                  = 0x00000002,
-			FILE_ACTION_MODIFIED                 = 0x00000003,
-			FILE_ACTION_RENAMED_OLD_NAME         = 0x00000004,
-			FILE_ACTION_RENAMED_NEW_NAME         = 0x00000005,
-			MAILSLOT_NO_MESSAGE                  = ~0x000000U,
-			MAILSLOT_WAIT_FOREVER                = ~0x000000U,
-			FILE_CASE_SENSITIVE_SEARCH           = 0x00000001,
-			FILE_CASE_PRESERVED_NAMES            = 0x00000002,
-			FILE_UNICODE_ON_DISK                 = 0x00000004,
-			FILE_PERSISTENT_ACLS                 = 0x00000008,
-			FILE_FILE_COMPRESSION                = 0x00000010,
-			FILE_VOLUME_QUOTAS                   = 0x00000020,
-			FILE_SUPPORTS_SPARSE_FILES           = 0x00000040,
-			FILE_SUPPORTS_REPARSE_POINTS         = 0x00000080,
-			FILE_SUPPORTS_REMOTE_STORAGE         = 0x00000100,
-			FILE_RETURNS_CLEANUP_RESULT_INFO     = 0x00000200,
-			FILE_SUPPORTS_POSIX_UNLINK_RENAME    = 0x00000400,
-			FILE_VOLUME_IS_COMPRESSED            = 0x00008000,
-			FILE_SUPPORTS_OBJECT_IDS             = 0x00010000,
-			FILE_SUPPORTS_ENCRYPTION             = 0x00020000,
-			FILE_NAMED_STREAMS                   = 0x00040000,
-			FILE_READ_ONLY_VOLUME                = 0x00080000,
-			FILE_SEQUENTIAL_WRITE_ONCE           = 0x00100000,
-			FILE_SUPPORTS_TRANSACTIONS           = 0x00200000,
-			FILE_SUPPORTS_HARD_LINKS             = 0x00400000,
-			FILE_SUPPORTS_EXTENDED_ATTRIBUTES    = 0x00800000,
-			FILE_SUPPORTS_OPEN_BY_FILE_ID        = 0x01000000,
-			FILE_SUPPORTS_USN_JOURNAL            = 0x02000000,
-			FILE_SUPPORTS_INTEGRITY_STREAMS      = 0x04000000,
-			FILE_SUPPORTS_BLOCK_REFCOUNTING      = 0x08000000,
-			FILE_SUPPORTS_SPARSE_VDL             = 0x10000000,
-			FILE_DAX_VOLUME                      = 0x20000000,
-			FILE_SUPPORTS_GHOSTING               = 0x40000000,
+			TREE_CONNECT_ATTRIBUTE_PRIVACY = 0x00004000,
+			TREE_CONNECT_ATTRIBUTE_INTEGRITY = 0x00008000,
+			TREE_CONNECT_ATTRIBUTE_GLOBAL = 0x00000004,
+			TREE_CONNECT_ATTRIBUTE_PINNED = 0x00000002,
+			FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL = 0x20000000,
+			FILE_NOTIFY_CHANGE_FILE_NAME = 0x00000001,
+			FILE_NOTIFY_CHANGE_DIR_NAME = 0x00000002,
+			FILE_NOTIFY_CHANGE_ATTRIBUTES = 0x00000004,
+			FILE_NOTIFY_CHANGE_SIZE = 0x00000008,
+			FILE_NOTIFY_CHANGE_LAST_WRITE = 0x00000010,
+			FILE_NOTIFY_CHANGE_LAST_ACCESS = 0x00000020,
+			FILE_NOTIFY_CHANGE_CREATION = 0x00000040,
+			FILE_NOTIFY_CHANGE_SECURITY = 0x00000100,
+			FILE_ACTION_ADDED = 0x00000001,
+			FILE_ACTION_REMOVED = 0x00000002,
+			FILE_ACTION_MODIFIED = 0x00000003,
+			FILE_ACTION_RENAMED_OLD_NAME = 0x00000004,
+			FILE_ACTION_RENAMED_NEW_NAME = 0x00000005,
+			MAILSLOT_NO_MESSAGE = ~0x000000U,
+			MAILSLOT_WAIT_FOREVER = ~0x000000U,
+			FILE_CASE_SENSITIVE_SEARCH = 0x00000001,
+			FILE_CASE_PRESERVED_NAMES = 0x00000002,
+			FILE_UNICODE_ON_DISK = 0x00000004,
+			FILE_PERSISTENT_ACLS = 0x00000008,
+			FILE_FILE_COMPRESSION = 0x00000010,
+			FILE_VOLUME_QUOTAS = 0x00000020,
+			FILE_SUPPORTS_SPARSE_FILES = 0x00000040,
+			FILE_SUPPORTS_REPARSE_POINTS = 0x00000080,
+			FILE_SUPPORTS_REMOTE_STORAGE = 0x00000100,
+			FILE_RETURNS_CLEANUP_RESULT_INFO = 0x00000200,
+			FILE_SUPPORTS_POSIX_UNLINK_RENAME = 0x00000400,
+			FILE_VOLUME_IS_COMPRESSED = 0x00008000,
+			FILE_SUPPORTS_OBJECT_IDS = 0x00010000,
+			FILE_SUPPORTS_ENCRYPTION = 0x00020000,
+			FILE_NAMED_STREAMS = 0x00040000,
+			FILE_READ_ONLY_VOLUME = 0x00080000,
+			FILE_SEQUENTIAL_WRITE_ONCE = 0x00100000,
+			FILE_SUPPORTS_TRANSACTIONS = 0x00200000,
+			FILE_SUPPORTS_HARD_LINKS = 0x00400000,
+			FILE_SUPPORTS_EXTENDED_ATTRIBUTES = 0x00800000,
+			FILE_SUPPORTS_OPEN_BY_FILE_ID = 0x01000000,
+			FILE_SUPPORTS_USN_JOURNAL = 0x02000000,
+			FILE_SUPPORTS_INTEGRITY_STREAMS = 0x04000000,
+			FILE_SUPPORTS_BLOCK_REFCOUNTING = 0x08000000,
+			FILE_SUPPORTS_SPARSE_VDL = 0x10000000,
+			FILE_DAX_VOLUME = 0x20000000,
+			FILE_SUPPORTS_GHOSTING = 0x40000000,
 		}
 		public enum EFileCreation
 		{
@@ -161,91 +160,91 @@ namespace Rylogic.Interop.Win32
 		public enum EDeviceType :int
 		{
 			// These are the 
-			BEEP                = 0x00000001,
-			CD_ROM              = 0x00000002,
-			CD_ROM_FILE_SYSTEM  = 0x00000003,
-			CONTROLLER          = 0x00000004,
-			DATALINK            = 0x00000005,
-			DFS                 = 0x00000006,
-			DISK                = 0x00000007,
-			DISK_FILE_SYSTEM    = 0x00000008,
-			FILE_SYSTEM         = 0x00000009,
-			INPORT_PORT         = 0x0000000a,
-			KEYBOARD            = 0x0000000b,
-			MAILSLOT            = 0x0000000c,
-			MIDI_IN             = 0x0000000d,
-			MIDI_OUT            = 0x0000000e,
-			MOUSE               = 0x0000000f,
-			MULTI_UNC_PROVIDER  = 0x00000010,
-			NAMED_PIPE          = 0x00000011,
-			NETWORK             = 0x00000012,
-			NETWORK_BROWSER     = 0x00000013,
+			BEEP = 0x00000001,
+			CD_ROM = 0x00000002,
+			CD_ROM_FILE_SYSTEM = 0x00000003,
+			CONTROLLER = 0x00000004,
+			DATALINK = 0x00000005,
+			DFS = 0x00000006,
+			DISK = 0x00000007,
+			DISK_FILE_SYSTEM = 0x00000008,
+			FILE_SYSTEM = 0x00000009,
+			INPORT_PORT = 0x0000000a,
+			KEYBOARD = 0x0000000b,
+			MAILSLOT = 0x0000000c,
+			MIDI_IN = 0x0000000d,
+			MIDI_OUT = 0x0000000e,
+			MOUSE = 0x0000000f,
+			MULTI_UNC_PROVIDER = 0x00000010,
+			NAMED_PIPE = 0x00000011,
+			NETWORK = 0x00000012,
+			NETWORK_BROWSER = 0x00000013,
 			NETWORK_FILE_SYSTEM = 0x00000014,
-			NULL                = 0x00000015,
-			PARALLEL_PORT       = 0x00000016,
-			PHYSICAL_NETCARD    = 0x00000017,
-			PRINTER             = 0x00000018,
-			SCANNER             = 0x00000019,
-			SERIAL_MOUSE_PORT   = 0x0000001a,
-			SERIAL_PORT         = 0x0000001b,
-			SCREEN              = 0x0000001c,
-			SOUND               = 0x0000001d,
-			STREAMS             = 0x0000001e,
-			TAPE                = 0x0000001f,
-			TAPE_FILE_SYSTEM    = 0x00000020,
-			TRANSPORT           = 0x00000021,
-			UNKNOWN             = 0x00000022,
-			VIDEO               = 0x00000023,
-			VIRTUAL_DISK        = 0x00000024,
-			WAVE_IN             = 0x00000025,
-			WAVE_OUT            = 0x00000026,
-			FIRE_8042_PORT      = 0x00000027,
-			NETWORK_REDIRECTOR  = 0x00000028,
-			BATTERY             = 0x00000029,
-			BUS_EXTENDER        = 0x0000002a,
-			MODEM               = 0x0000002b,
-			VDM                 = 0x0000002c,
-			MASS_STORAGE        = 0x0000002d,
-			SMB                 = 0x0000002e,
-			KS                  = 0x0000002f,
-			CHANGER             = 0x00000030,
-			SMARTCARD           = 0x00000031,
-			ACPI                = 0x00000032,
-			DVD                 = 0x00000033,
-			FULLSCREEN_VIDEO    = 0x00000034,
-			DFS_FILE_SYSTEM     = 0x00000035,
-			DFS_VOLUME          = 0x00000036,
-			SERENUM             = 0x00000037,
-			TERMSRV             = 0x00000038,
-			KSEC                = 0x00000039,
-			FIPS                = 0x0000003A,
-			INFINIBAND          = 0x0000003B,
-			VMBUS               = 0x0000003E,
-			CRYPT_PROVIDER      = 0x0000003F,
-			WPD                 = 0x00000040,
-			BLUETOOTH           = 0x00000041,
-			MT_COMPOSITE        = 0x00000042,
-			MT_TRANSPORT        = 0x00000043,
-			BIOMETRIC           = 0x00000044,
-			PMI                 = 0x00000045,
-			EHSTOR              = 0x00000046,
-			DEVAPI              = 0x00000047,
-			GPIO                = 0x00000048,
-			USBEX               = 0x00000049,
-			CONSOLE             = 0x00000050,
-			NFP                 = 0x00000051,
-			SYSENV              = 0x00000052,
-			VIRTUAL_BLOCK       = 0x00000053,
-			POINT_OF_SERVICE    = 0x00000054,
+			NULL = 0x00000015,
+			PARALLEL_PORT = 0x00000016,
+			PHYSICAL_NETCARD = 0x00000017,
+			PRINTER = 0x00000018,
+			SCANNER = 0x00000019,
+			SERIAL_MOUSE_PORT = 0x0000001a,
+			SERIAL_PORT = 0x0000001b,
+			SCREEN = 0x0000001c,
+			SOUND = 0x0000001d,
+			STREAMS = 0x0000001e,
+			TAPE = 0x0000001f,
+			TAPE_FILE_SYSTEM = 0x00000020,
+			TRANSPORT = 0x00000021,
+			UNKNOWN = 0x00000022,
+			VIDEO = 0x00000023,
+			VIRTUAL_DISK = 0x00000024,
+			WAVE_IN = 0x00000025,
+			WAVE_OUT = 0x00000026,
+			FIRE_8042_PORT = 0x00000027,
+			NETWORK_REDIRECTOR = 0x00000028,
+			BATTERY = 0x00000029,
+			BUS_EXTENDER = 0x0000002a,
+			MODEM = 0x0000002b,
+			VDM = 0x0000002c,
+			MASS_STORAGE = 0x0000002d,
+			SMB = 0x0000002e,
+			KS = 0x0000002f,
+			CHANGER = 0x00000030,
+			SMARTCARD = 0x00000031,
+			ACPI = 0x00000032,
+			DVD = 0x00000033,
+			FULLSCREEN_VIDEO = 0x00000034,
+			DFS_FILE_SYSTEM = 0x00000035,
+			DFS_VOLUME = 0x00000036,
+			SERENUM = 0x00000037,
+			TERMSRV = 0x00000038,
+			KSEC = 0x00000039,
+			FIPS = 0x0000003A,
+			INFINIBAND = 0x0000003B,
+			VMBUS = 0x0000003E,
+			CRYPT_PROVIDER = 0x0000003F,
+			WPD = 0x00000040,
+			BLUETOOTH = 0x00000041,
+			MT_COMPOSITE = 0x00000042,
+			MT_TRANSPORT = 0x00000043,
+			BIOMETRIC = 0x00000044,
+			PMI = 0x00000045,
+			EHSTOR = 0x00000046,
+			DEVAPI = 0x00000047,
+			GPIO = 0x00000048,
+			USBEX = 0x00000049,
+			CONSOLE = 0x00000050,
+			NFP = 0x00000051,
+			SYSENV = 0x00000052,
+			VIRTUAL_BLOCK = 0x00000053,
+			POINT_OF_SERVICE = 0x00000054,
 			STORAGE_REPLICATION = 0x00000055,
-			TRUST_ENV           = 0x00000056,
-			UCM                 = 0x00000057,
-			UCMTCPCI            = 0x00000058,
-			PERSISTENT_MEMORY   = 0x00000059,
-			NVDIMM              = 0x0000005a,
-			HOLOGRAPHIC         = 0x0000005b,
-			SDFXHCI             = 0x0000005c,
-			UCMUCSI             = 0x0000005d,
+			TRUST_ENV = 0x00000056,
+			UCM = 0x00000057,
+			UCMTCPCI = 0x00000058,
+			PERSISTENT_MEMORY = 0x00000059,
+			NVDIMM = 0x0000005a,
+			HOLOGRAPHIC = 0x0000005b,
+			SDFXHCI = 0x0000005c,
+			UCMUCSI = 0x0000005d,
 		}
 		public enum EDeviceIoMethod
 		{
@@ -381,18 +380,26 @@ namespace Rylogic.Interop.Win32
 			public uint reserved2;
 			public uint reserved3;
 		}
+	}
+
+	public static class Kernel32
+	{
+		/// <summary>Add a directory to the DLL search path</summary>
+		public static IntPtr AddDllDirectory(string new_directory) => AddDllDirectory_(new_directory);
+		[DllImport("kernel32.dll", EntryPoint = "AddDllDirectory", SetLastError = true)]
+		private static extern IntPtr AddDllDirectory_([MarshalAs(UnmanagedType.LPWStr)] string new_directory);
 
 		/// <summary>The native macros (CTL_CODE) used to encode commands passed to DeviceIoControl (see winioctl.h, bthioctl.h)</summary>
-		public static uint CtlCodeEncode(EDeviceType device_type, uint function, EDeviceIoMethod method, EDeviceAccess access)
+		public static uint CtlCodeEncode(Win32.EDeviceType device_type, uint function, Win32.EDeviceIoMethod method, Win32.EDeviceAccess access)
 		{
 			return ((uint)device_type << 16) | ((uint)access << 14) | (function << 2) | ((uint)method);
 		}
-		public static void CtlCodeDecode(uint code, out EDeviceType device_type, out uint function, out EDeviceIoMethod method, out EDeviceAccess access)
+		public static void CtlCodeDecode(uint code, out Win32.EDeviceType device_type, out uint function, out Win32.EDeviceIoMethod method, out Win32.EDeviceAccess access)
 		{
-			device_type = (EDeviceType)((code >> 16) & 0xFFFF);
-			access = (EDeviceAccess)((code >> 14) & 0x3);
+			device_type = (Win32.EDeviceType)((code >> 16) & 0xFFFF);
+			access = (Win32.EDeviceAccess)((code >> 14) & 0x3);
 			function = (code >> 2) & 0xFFF;
-			method = (EDeviceIoMethod)((code >> 0) & 0x3);
+			method = (Win32.EDeviceIoMethod)((code >> 0) & 0x3);
 		}
 
 		/// <summary></summary>
@@ -411,7 +418,7 @@ namespace Rylogic.Interop.Win32
 		private static extern bool CancelIo_(SafeFileHandle hDevice);
 
 		/// <summary></summary>
-		public static SafeFileHandle CreateFile(string file_name, EFileAccess dwDesiredAccess, EFileShare dwShareMode, IntPtr SecurityAttributes, EFileCreation dwCreationDisposition, EFileFlag dwFlagsAndAttributes, IntPtr hTemplateFile)
+		public static SafeFileHandle CreateFile(string file_name, Win32.EFileAccess dwDesiredAccess, Win32.EFileShare dwShareMode, IntPtr SecurityAttributes, Win32.EFileCreation dwCreationDisposition, Win32.EFileFlag dwFlagsAndAttributes, IntPtr hTemplateFile)
 		{
 			return CreateFile_(file_name, (uint)dwDesiredAccess, (uint)dwShareMode, SecurityAttributes, (uint)dwCreationDisposition, (uint)dwFlagsAndAttributes, hTemplateFile);
 		}
@@ -424,20 +431,35 @@ namespace Rylogic.Interop.Win32
 		private static extern SafeFileHandle CreateEvent_(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, [MarshalAs(UnmanagedType.LPWStr)] string? lpName);
 
 		/// <summary></summary>
-		public static bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, ref LE_SCAN_REQUEST ble_scan_request, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, NativeOverlapped? overlapped)
+		public static bool DeviceIoControl(SafeFileHandle hDevice, uint dwIoControlCode, ref Win32.LE_SCAN_REQUEST ble_scan_request, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, NativeOverlapped? overlapped)
 		{
 			var ovr = overlapped ?? new NativeOverlapped();
-			return DeviceIoControl_(hDevice, dwIoControlCode, ref ble_scan_request, (uint)Marshal.SizeOf<LE_SCAN_REQUEST>(), lpOutBuffer, nOutBufferSize, out lpBytesReturned, ref ovr);
+			return DeviceIoControl_(hDevice, dwIoControlCode, ref ble_scan_request, (uint)Marshal.SizeOf<Win32.LE_SCAN_REQUEST>(), lpOutBuffer, nOutBufferSize, out lpBytesReturned, ref ovr);
 		}
 		[DllImport("kernel32.dll", EntryPoint = "DeviceIoControl", SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool DeviceIoControl_(SafeFileHandle hDevice, uint dwIoControlCode, ref LE_SCAN_REQUEST lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, ref NativeOverlapped lpOverlapped);
+		private static extern bool DeviceIoControl_(SafeFileHandle hDevice, uint dwIoControlCode, ref Win32.LE_SCAN_REQUEST lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, ref NativeOverlapped lpOverlapped);
 		[DllImport("kernel32.dll", EntryPoint = "DeviceIoControl", SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern bool DeviceIoControl_(SafeFileHandle hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, ref NativeOverlapped lpOverlapped);
 
 		/// <summary></summary>
-		public static bool FileTimeToSystemTime(ref FILETIME ft, out SYSTEMTIME st) => FileTimeToSystemTime(ref ft, out st);
+		public static bool FileTimeToSystemTime(ref Win32.FILETIME ft, out Win32.SYSTEMTIME st) => FileTimeToSystemTime(ref ft, out st);
 		[DllImport("kernel32.dll", EntryPoint = "FileTimeToSystemTime", SetLastError = true)]
-		private static extern bool FileTimeToSystemTime_([In] ref FILETIME ft, [Out] out SYSTEMTIME st);
+		private static extern bool FileTimeToSystemTime_([In] ref Win32.FILETIME ft, [Out] out Win32.SYSTEMTIME st);
+
+		/// <summary></summary>
+		public static SafeFindHandle FindFirstFile(string fileName, ref Win32.WIN32_FIND_DATA data) => FindFirstFile_(fileName, ref data);
+		[DllImport("kernel32.dll", EntryPoint = "FindFirstFile", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern SafeFindHandle FindFirstFile_(string fileName, ref Win32.WIN32_FIND_DATA data);
+
+		/// <summary></summary>
+		public static bool FindNextFile(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData) => FindNextFile_(hndFindFile, ref lpFindFileData);
+		[DllImport("kernel32.dll", EntryPoint = "FindNextFile", CharSet = CharSet.Auto, SetLastError = true)]
+		private static extern bool FindNextFile_(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData);
+
+		/// <summary></summary>
+		public static bool FindClose(IntPtr handle) => FindClose_(handle);
+		[DllImport("kernel32.dll", EntryPoint = "FindClose")]
+		private static extern bool FindClose_(IntPtr handle);
 
 		/// <summary></summary>
 		public static uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, ref IntPtr lpBuffer, uint nSize, IntPtr pArguments) => FormatMessage_(dwFlags, lpSource, dwMessageId, dwLanguageId, ref lpBuffer, nSize, pArguments);
@@ -455,9 +477,14 @@ namespace Rylogic.Interop.Win32
 		private static extern bool FreeLibrary_(IntPtr module);
 
 		/// <summary></summary>
-		public static bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation) => GetFileInformationByHandle_(hFile, out lpFileInformation);
+		public static bool GetFileInformationByHandle(IntPtr hFile, out Win32.BY_HANDLE_FILE_INFORMATION lpFileInformation) => GetFileInformationByHandle_(hFile, out lpFileInformation);
 		[DllImport("kernel32.dll", EntryPoint = "GetFileInformationByHandle", SetLastError = true)]
-		private static extern bool GetFileInformationByHandle_(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+		private static extern bool GetFileInformationByHandle_(IntPtr hFile, out Win32.BY_HANDLE_FILE_INFORMATION lpFileInformation);
+		
+		/// <summary></summary>
+		public static IntPtr GetModuleHandle(string? lpModuleName) => GetModuleHandle_(lpModuleName);
+		[DllImport("Kernel32.dll", EntryPoint = "GetModuleHandleW", SetLastError = true)]
+		private static extern IntPtr GetModuleHandle_([MarshalAs(UnmanagedType.LPWStr)] string? lpModuleName);
 
 		/// <summary></summary>
 		public static IntPtr LoadLibrary(string path) => LoadLibrary_(path);
@@ -465,20 +492,22 @@ namespace Rylogic.Interop.Win32
 		private static extern IntPtr LoadLibrary_([MarshalAs(UnmanagedType.LPWStr)]string path);
 
 		/// <summary></summary>
-		public static IntPtr LoadLibraryEx(string path, IntPtr hFile, ELoadLibraryFlags flags) => LoadLibraryEx_(path, hFile, flags);
+		public static IntPtr LoadLibraryEx(string path, IntPtr hFile, Win32.ELoadLibraryFlags flags) => LoadLibraryEx_(path, hFile, flags);
 		[DllImport("Kernel32.dll", EntryPoint = "LoadLibraryExW", SetLastError = true)]
-		private static extern IntPtr LoadLibraryEx_([MarshalAs(UnmanagedType.LPWStr)] string path, IntPtr hFile, ELoadLibraryFlags flags);
+		private static extern IntPtr LoadLibraryEx_([MarshalAs(UnmanagedType.LPWStr)] string path, IntPtr hFile, Win32.ELoadLibraryFlags flags);
 
 		/// <summary></summary>
 		public static IntPtr GetProcAddress(IntPtr module, string proc_name) => GetProcAddress_(module, proc_name);
 		[DllImport("kernel32", EntryPoint = "GetProcAddress", SetLastError = true, CharSet = CharSet.Ansi)]
 		private static extern IntPtr GetProcAddress_(IntPtr hModule, string lpProcName);
 
+		/// <summary>Remove a DLL directory from the search path that was added using 'AddDllDirectory'</summary>
+		public static bool RemoveDllDirectory(IntPtr directory_cookie) => RemoveDllDirectory_(directory_cookie);
+		[DllImport("kernel32.dll", EntryPoint = "RemoveDllDirectory", SetLastError = true)]
+		private static extern bool RemoveDllDirectory_(IntPtr directory_cookie);
+
 		/// <summary></summary>
-		public static SafeFileHandle ReOpenFile(SafeFileHandle hOriginalFile, EFileAccess dwDesiredAccess, EFileShare dwShareMode, EFileFlag dwFlagsAndAttributes)
-		{
-			return ReOpenFile_(hOriginalFile, (uint)dwDesiredAccess, (uint)dwShareMode, (uint)dwFlagsAndAttributes);
-		}
+		public static SafeFileHandle ReOpenFile(SafeFileHandle hOriginalFile, Win32.EFileAccess dwDesiredAccess, Win32.EFileShare dwShareMode, Win32.EFileFlag dwFlagsAndAttributes) => ReOpenFile_(hOriginalFile, (uint)dwDesiredAccess, (uint)dwShareMode, (uint)dwFlagsAndAttributes);
 		[DllImport("kernel32.dll", EntryPoint = "ReOpenFile", SetLastError = true)]
 		private static extern SafeFileHandle ReOpenFile_(SafeFileHandle hOriginalFile, uint dwDesiredAccess, uint dwShareMode, uint dwFlagsAndAttributes);
 
@@ -488,18 +517,25 @@ namespace Rylogic.Interop.Win32
 		private static extern void SetLastError_(int err);
 
 		/// <summary></summary>
-		public static ExecutionState SetThreadExecutionState(ExecutionState esFlags) => SetThreadExecutionState_(esFlags);
+		public static Win32.ExecutionState SetThreadExecutionState(Win32.ExecutionState esFlags) => SetThreadExecutionState_(esFlags);
 		[DllImport("kernel32.dll", EntryPoint = "SetThreadExecutionState", SetLastError = true)]
-		private static extern ExecutionState SetThreadExecutionState_(ExecutionState esFlags);
+		private static extern Win32.ExecutionState SetThreadExecutionState_(Win32.ExecutionState esFlags);
 
 		/// <summary></summary>
-		public static bool SystemTimeToFileTime([In] ref SYSTEMTIME st, [Out] out FILETIME ft) => SystemTimeToFileTime_(ref st, out ft);
+		public static bool SystemTimeToFileTime([In] ref Win32.SYSTEMTIME st, [Out] out Win32.FILETIME ft) => SystemTimeToFileTime_(ref st, out ft);
 		[DllImport("kernel32.dll", EntryPoint = "SystemTimeToFileTime", SetLastError = true)]
-		private static extern bool SystemTimeToFileTime_([In] ref SYSTEMTIME st, [Out] out FILETIME ft);
+		private static extern bool SystemTimeToFileTime_([In] ref Win32.SYSTEMTIME st, [Out] out Win32.FILETIME ft);
 
 		/// <summary></summary>
 		public static bool WriteConsole(IntPtr hConsoleOutput, [MarshalAs(UnmanagedType.LPWStr)] string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved) => WriteConsole_(hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, out lpNumberOfCharsWritten, lpReserved);
 		[DllImport("kernel32.dll", EntryPoint = "WriteConsoleW", SetLastError = true)]
 		private static extern bool WriteConsole_(IntPtr hConsoleOutput, [MarshalAs(UnmanagedType.LPWStr)] string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
+	}
+
+	/// <summary>Wraps a FindFirstFile handle.</summary>
+	public sealed class SafeFindHandle : SafeHandleZeroOrMinusOneIsInvalid
+	{
+		public SafeFindHandle() : base(true) { }
+		protected override bool ReleaseHandle() { return Kernel32.FindClose(handle); }
 	}
 }

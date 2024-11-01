@@ -23,7 +23,7 @@ namespace pr::rdr12
 			_flags_enum = 0,
 		};
 
-		ResourceManager*         m_mgr;       // The manager that created this model
+		Renderer*                m_rdr;       // The renderer that owns this model
 		D3DPtr<ID3D12Resource>   m_vb;        // The vertex buffer
 		D3DPtr<ID3D12Resource>   m_ib;        // The index buffer
 		D3D12_VERTEX_BUFFER_VIEW m_vb_view;   // Buffer views for shader binding
@@ -37,23 +37,23 @@ namespace pr::rdr12
 		SizeAndAlign16           m_istride;   // The size and alignment (in bytes) of a single I-element
 		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
-		Model(ResourceManager& mgr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
+		Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
 		Model(Model const&) = delete;
 		Model& operator =(Model const&) = delete;
 		~Model();
 
 		// Renderer access
-		Renderer& rdr() const;
-		ResourceManager& res_mgr() const;
+		Renderer const& rdr() const;
+		Renderer& rdr();
 
 		// Allow update of the vertex/index buffers
-		UpdateSubresourceScope UpdateVertices(Range vrange = Range::Reset());
-		UpdateSubresourceScope UpdateIndices(Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateVertices(ResourceFactory& factory, Range vrange = Range::Reset());
+		UpdateSubresourceScope UpdateIndices(ResourceFactory& factory, Range vrange = Range::Reset());
 
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
-		void CreateNugget(NuggetDesc const& props);
+		void CreateNugget(ResourceFactory& factory, NuggetDesc const& props);
 
 		// Call to release the nuggets that this model has been
 		// divided into. Nuggets are the contiguous sub groups

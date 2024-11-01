@@ -558,7 +558,7 @@ namespace Rylogic.Gui.WinForms
 					var ldr =
 						"*Point hotspot0 FF00FFFF { 0 0 0 *Size{20} *Style{Circle}, *NoZTest }";
 
-					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId){ Flags = View3d.EFlags.HitTestExclude };
+					GfxHotSpot0 = new View3d.Object(ldr, false, CtxId){ Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_hotspot0;
 			}
@@ -581,7 +581,7 @@ namespace Rylogic.Gui.WinForms
 					var ldr =
 						"*Point hotspot1 FF00FFFF { 0 0 0 *Size{20} *Style{Circle}, *NoZTest }";
 
-					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId){ Flags = View3d.EFlags.HitTestExclude };
+					GfxHotSpot1 = new View3d.Object(ldr, false, CtxId){ Flags = View3d.ELdrFlags.HitTestExclude };
 				}
 				return m_gfx_hotspot1;
 			}
@@ -643,7 +643,7 @@ namespace Rylogic.Gui.WinForms
 						$"	*o2w{{*m4x4{{{r2w}}}}}\n"+
 						$"}}");
 
-					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId){ Flags = View3d.EFlags.HitTestExclude };
+					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId){ Flags = View3d.ELdrFlags.HitTestExclude };
 					m_gfx_measure_valid = true;
 				}
 				return m_gfx_measure;
@@ -812,7 +812,7 @@ namespace Rylogic.Gui.WinForms
 			// m_chk_point0
 			// 
 			this.m_chk_point0.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_chk_point0.Appearance = System.Windows.Forms.Appearance.Button;
 			this.m_chk_point0.Location = new System.Drawing.Point(3, 66);
 			this.m_chk_point0.Name = "m_chk_point0";
@@ -825,7 +825,7 @@ namespace Rylogic.Gui.WinForms
 			// m_chk_point1
 			// 
 			this.m_chk_point1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_chk_point1.Appearance = System.Windows.Forms.Appearance.Button;
 			this.m_chk_point1.Location = new System.Drawing.Point(124, 66);
 			this.m_chk_point1.Name = "m_chk_point1";
@@ -859,7 +859,7 @@ namespace Rylogic.Gui.WinForms
 			// m_panel0
 			// 
 			this.m_panel0.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_table0.SetColumnSpan(this.m_panel0, 2);
 			this.m_panel0.Controls.Add(this.m_panel_spot_colour);
 			this.m_panel0.Controls.Add(this.m_lbl_spot_colour);
@@ -894,8 +894,8 @@ namespace Rylogic.Gui.WinForms
 			// m_panel1
 			// 
 			this.m_panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_table0.SetColumnSpan(this.m_panel1, 2);
 			this.m_panel1.Controls.Add(this.m_cb_space);
 			this.m_panel1.Controls.Add(this.m_grid_measurement);
@@ -930,8 +930,8 @@ namespace Rylogic.Gui.WinForms
 			this.m_grid_measurement.AllowUserToDeleteRows = false;
 			this.m_grid_measurement.AllowUserToResizeRows = false;
 			this.m_grid_measurement.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+			| System.Windows.Forms.AnchorStyles.Left) 
+			| System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_measurement.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_measurement.BackgroundColor = System.Drawing.SystemColors.Window;
 			this.m_grid_measurement.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;

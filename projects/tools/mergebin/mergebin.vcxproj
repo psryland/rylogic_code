@@ -1,8 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	
+
 	<!-- Properties -->
-	<Import Project="..\..\..\build\props\globals.props" />
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}</ProjectGuid>
 		<RootNamespace>mergebin</RootNamespace>
@@ -32,14 +31,17 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="..\..\..\build\props\app.props" />
+	<Import Project="$(PropsPath)app.props" />
 	
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
-			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)../../../include</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+			</AdditionalIncludeDirectories>
 		</ClCompile>
 		<Link>
 			<SubSystem>Console</SubSystem>
@@ -58,5 +60,7 @@
 		<ClInclude Include="src/meta_data_tables.h" />
 		<ClInclude Include="src/table_data.h" />
 	</ItemGroup>
+
+	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -179,7 +179,7 @@ namespace Rylogic.Streams
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the read operation.</exception>
 		/// <filterpriority>2</filterpriority>
-		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
+		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
 		{
 			return m_stream.BeginRead(buffer, offset, count, callback, state);
 		}
@@ -216,7 +216,7 @@ namespace Rylogic.Streams
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the write operation.</exception>
 		/// <filterpriority>2</filterpriority>
-		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
+		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
 		{
 			return m_stream.BeginWrite(buffer, offset, count, callback, state);
 		}
@@ -346,9 +346,11 @@ namespace Rylogic.Streams
 		/// </returns>
 		/// <exception cref="T:System.Security.SecurityException">The immediate caller does not have infrastructure permission.</exception>
 		/// <filterpriority>2</filterpriority><PermissionSet><IPermission class="System.Security.Permissions.SecurityPermission, mscorlib, Version=2.0.3600.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" version="1" Flags="RemotingConfiguration, Infrastructure"/></PermissionSet>
-		public override object InitializeLifetimeService()
-		{
-			return m_stream.InitializeLifetimeService();
-		}
+		//#if !NET472
+		//public override object InitializeLifetimeService()
+		//{
+		//	return m_stream.InitializeLifetimeService();
+		//}
+		//#endif
 	}
 }

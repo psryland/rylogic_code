@@ -255,7 +255,7 @@ namespace view3d
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto point_size = reader.Keyword(L"PointSize").Vector2S();
-							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
+							auto depth = reader.Keyword(L"Depth").BoolS();
 							auto id = pr::hash::HashArgs("PointSprites", point_size, depth);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 							shdr->m_size = point_size;

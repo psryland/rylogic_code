@@ -10,7 +10,7 @@ import Rylogic, UserVars
 
 # Set this to false to disable running tests on compiling
 RunTests = True
-RunTests = False
+#RunTests = False
 
 try:
 	sys.argv = sys.argv if len(sys.argv) >= 2 else ["", "P:\\pr\\obj\\v142\\unittests\\x64\\Debug\\unittests.dll"] 

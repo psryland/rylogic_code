@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,6 +19,7 @@ using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -694,7 +694,7 @@ namespace Rylogic.Gui.WPF
 			{
 				foreach (var col in Columns)
 				{
-					if (!(col.Header is string header)) continue;
+					if (col.Header is not string header) continue;
 					columns_node.Add2("Column", $"{header},{col.DisplayIndex},{col.Width},{col.Visibility}", false);
 				}
 			}

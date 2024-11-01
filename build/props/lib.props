@@ -1,35 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ImportGroup Label="PropertySheets" />
-  <Import Project="root.props" />
-  
-  <!-- Properties -->
-  <PropertyGroup Label="Globals">
-    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-    <IntDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
-    <TargetExt>.lib</TargetExt>
-  </PropertyGroup>
+	<ImportGroup Label="PropertySheets" />
+	<Import Project="$(PropsPath)root.props" />
+	
+	<!-- Properties -->
+	<PropertyGroup Label="Globals">
+		<OutDir>$(RylogicRoot)obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+		<IntDir>$(RylogicRoot)obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+		<TargetExt>.lib</TargetExt>
+	</PropertyGroup>
 
-  <!-- Compiler flags -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>
-        ..\include;
-        ..\sdk;
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </ClCompile>
-    <ResourceCompile>
-      <AdditionalIncludeDirectories>
-        ..\include;
-        ..\sdk;
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </ResourceCompile>
-  </ItemDefinitionGroup>
+	<!-- Compiler flags -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<AdditionalIncludeDirectories>
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<ResourceCompile>
+			<AdditionalIncludeDirectories>
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ResourceCompile>
+	</ItemDefinitionGroup>
 
-  <!-- Dependencies -->
-  <Target Name="Deploy" AfterTargets="Build">
-    <Exec Command="py script\DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)" WorkingDirectory="$(SolutionDir)..\"/>
-  </Target>
+	<!-- Dependencies -->
+	<Target Name="Deploy" AfterTargets="Build">
+		<Exec
+			Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)"
+			WorkingDirectory="$(RylogicRoot)"
+		/>
+	</Target>
 </Project>

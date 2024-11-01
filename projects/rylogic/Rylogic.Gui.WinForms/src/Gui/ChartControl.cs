@@ -644,7 +644,7 @@ namespace Rylogic.Gui.WinForms
 
 			// Move the camera in the camera Z axis direction so that the width at the focus dist
 			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
-			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(Scene.Camera.FovX / 2.0)));
+			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(Scene.Camera.Fov.x / 2.0)));
 			c2w.pos = focus.w1 + Scene.Camera.FocusDist * c2w.z;
 
 			Scene.Camera.O2W = c2w;
@@ -963,7 +963,7 @@ namespace Rylogic.Gui.WinForms
 					};
 					Camera.Orthographic = true;
 					Camera.Lookat(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
-					Camera.ClipPlanes(0.01f, 1000f, true);
+					Camera.ClipPlanes(0.01f, 1000f, View3d.EClipPlanes.Both | View3d.EClipPlanes.CameraRelative);
 				}
 				catch
 				{
@@ -1066,7 +1066,7 @@ namespace Rylogic.Gui.WinForms
 			}
 			public void Present()
 			{
-				Window?.Present();
+				//Window?.Present();
 			}
 
 			/// <summary>Returns a point in chart space from a point in ChartPanel-client space.</summary>
@@ -2256,7 +2256,7 @@ namespace Rylogic.Gui.WinForms
 					// Grid nugget
 					nuggets[0] = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
 					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
-					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude|View3d.EFlags.NoZWrite, true);
+					gridlines.FlagsSet(View3d.ELdrFlags.SceneBoundsExclude|View3d.ELdrFlags.NoZWrite, true);
 					return gridlines;
 				}
 
@@ -4120,13 +4120,13 @@ namespace Rylogic.Gui.WinForms
 
 		#endregion
 
-		#region Show Value Tooltip
+		#region Show Value Tool tip
 
 		/// <summary>A tool tip to display the mouse location value</summary>
 		private HintBalloon m_tt_show_value;
 		private bool m_show_value;
 
-		/// <summary>Handle mouse move events while the tooltip is visible</summary>
+		/// <summary>Handle mouse move events while the tool tip is visible</summary>
 		private void OnMouseMoveTooltip(object sender, MouseEventArgs e)
 		{
 			SetValueToolTip(e.Location);
@@ -4312,7 +4312,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var ldr = new LdrBuilder().Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, v4.Origin).ToString();
 				var obj = new View3d.Object(ldr, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+				obj.FlagsSet(View3d.ELdrFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4330,9 +4330,9 @@ namespace Rylogic.Gui.WinForms
 			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber : View3d.Object
 			{
-				public ResizeGrabber(int corner) :base($"*Box resizer_{corner} {{5}}", false, Id, null)
+				public ResizeGrabber(int corner) :base($"*Box resize_{corner} {{5}}", false, Id, null)
 				{
-					FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+					FlagsSet(View3d.ELdrFlags.SceneBoundsExclude, true);
 					switch (corner)
 					{
 					case 0:
@@ -4418,7 +4418,7 @@ namespace Rylogic.Gui.WinForms
 					? new LdrBuilder().Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
 					: new LdrBuilder().Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+				obj.FlagsSet(View3d.ELdrFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4439,7 +4439,7 @@ namespace Rylogic.Gui.WinForms
 				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = new LdrBuilder().Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+				obj.FlagsSet(View3d.ELdrFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4997,6 +4997,8 @@ namespace Rylogic.Gui.WinForms
 		protected override void Dispose(bool disposing)
 		{
 			Cache = null;
+			PointSprite = null;
+			ThickLineList = null;
 			Util.Dispose(ref m_point_textures);
 			base.Dispose(disposing);
 		}
@@ -5007,7 +5009,43 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Options for rendering this series</summary>
-		public OptionsData Options { get; set; }
+		public OptionsData Options
+		{
+			get => m_options;
+			set
+			{
+				if (m_options == value) return;
+				if (m_options != null)
+				{
+					m_options.SettingChange -= HandleSettingChange;
+				}
+				m_options = value;
+				if (m_options != null)
+				{
+					m_options.SettingChange += HandleSettingChange;
+				}
+
+				// Handler
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					switch (e.Key)
+					{
+						case nameof(Options.PointSize):
+						{
+							PointSprite = new View3d.Shader(View3d.EStockShader.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
+							break;
+						}
+						case nameof(Options.LineWidth):
+						{
+							ThickLineList = new View3d.Shader(View3d.EStockShader.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
+							break;
+						}
+					}
+				}
+			}
+		}
+		private OptionsData m_options = null!;
 
 		/// <summary>Gain access to the underlying data</summary>
 		public LockData Lock()
@@ -5164,12 +5202,10 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			// Create a nugget for the points using the sprite shader
-			{
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[0] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, mat:mat);
-			}
+			m_nbuf[0] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 
+				tex_diffuse: m_point_textures[Options.PointStyle],
+				sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+				shaders: new[] { new View3d.Nugget.Shader(View3d.ERenderStep.ForwardRender, PointSprite) });
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
@@ -5205,19 +5241,16 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			// Create a nugget for the list strip using the thick line shader
-			{
-				var mat = View3d.Material.New();
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
-				m_nbuf[0] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, mat:mat);
-			}
+			m_nbuf[0] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 
+				shaders: new[] { new View3d.Nugget.Shader(View3d.ERenderStep.ForwardRender, ThickLineList) });
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
 			{
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[1] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, range_overlaps:true, mat:mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, flags:View3d.ENuggetFlag.RangesCanOverlap, 
+					tex_diffuse: m_point_textures[Options.PointStyle],
+					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+					shaders: new[] { new View3d.Nugget.Shader(View3d.ERenderStep.ForwardRender, PointSprite) });
 			}
 
 			// Create the graphics
@@ -5256,11 +5289,8 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			// Create a nugget for the list strip using the thick line shader
-			{
-				var mat = View3d.Material.New();
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
-				m_nbuf[0] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, mat:mat);
-			}
+			m_nbuf[0] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, vert, 0, indx, 
+				shaders: new[] { new View3d.Nugget.Shader(View3d.ERenderStep.ForwardRender, ThickLineList) });
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
@@ -5270,10 +5300,10 @@ namespace Rylogic.Gui.WinForms
 				for (int i = 0, iend = n; i != iend; ++i)
 					m_ibuf[indx++] = (ushort)(i * 2);
 			
-				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[1] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, mat:mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.ETopo.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, vert, i0, indx, 
+					tex_diffuse: m_point_textures[Options.PointStyle],
+					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
+					shaders: new[] { new View3d.Nugget.Shader(View3d.ERenderStep.ForwardRender, PointSprite) });
 			}
 
 			// Create the graphics
@@ -5326,7 +5356,7 @@ namespace Rylogic.Gui.WinForms
 				x_range.Grow(pt.xf);
 			}
 
-			// Create a nugget for the tri list
+			// Create a nugget for the triangle list
 			{
 				m_nbuf[0] = new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr);
 			}
@@ -5343,11 +5373,37 @@ namespace Rylogic.Gui.WinForms
 			set
 			{
 				if (m_impl_cache == value) return;
-				Util.Dispose(ref m_impl_cache);
+				Util.Dispose(ref m_impl_cache!);
 				m_impl_cache = value;
 			}
 		}
-		private GfxCache m_impl_cache;
+		private GfxCache m_impl_cache = null!;
+
+		/// <summary>Point sprite shader</summary>
+		private View3d.Shader PointSprite
+		{
+			get => m_point_sprite;
+			set
+			{
+				if (m_point_sprite == value) return;
+				Util.Dispose(ref m_point_sprite!);
+				m_point_sprite = value;
+			}
+		}
+		private View3d.Shader m_point_sprite = null!;
+
+		/// <summary>Thick Line-List shader</summary>
+		private View3d.Shader ThickLineList
+		{
+			get => m_thick_line_list;
+			set
+			{
+				if (m_thick_line_list == value) return;
+				Util.Dispose(ref m_thick_line_list!);
+				m_thick_line_list = value;
+			}
+		}
+		private View3d.Shader m_thick_line_list = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString()

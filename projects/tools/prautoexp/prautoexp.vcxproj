@@ -1,65 +1,75 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   
-  <!-- Properties -->
-  <Import Project="..\..\..\build\props\globals.props" />
+	<!-- Properties -->
 	<PropertyGroup Label="Globals">
-    <ProjectGuid>{76D773AE-90AE-4574-A99A-1A9C5B54077A}</ProjectGuid>
-    <RootNamespace>PRAutoExp</RootNamespace>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-  </PropertyGroup>
+		<ConfigurationType>DynamicLibrary</ConfigurationType>
+		<ProjectGuid>{76D773AE-90AE-4574-A99A-1A9C5B54077A}</ProjectGuid>
+		<RootNamespace>PRAutoExp</RootNamespace>
+	</PropertyGroup>
 
-  <!-- Configuration -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
+	<!-- Configuration -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
 
-  <!-- Property Sheets -->
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <Import Project="..\..\..\build\props\app.props" />
-  
-  <!-- Build Options -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\sdk</AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <ModuleDefinitionFile>src\prautoexp.def</ModuleDefinitionFile>
-      <AdditionalDependencies>lua-static.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\..\..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-    <PreBuildEvent>
-      <Command>py $(ProjectDir)pre_build.py</Command>
-    </PreBuildEvent>
-  </ItemDefinitionGroup>
-  
-  <!-- Files -->
-  <ItemGroup>
-    <ClInclude Include="..\..\..\include\pr\lua\lua.h" />
-    <ClInclude Include="src\reentry_guard.h" />
-    <ClInclude Include="src\dbg_helper.h" />
-    <ClCompile Include="src\expansions.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\prautoexp.def" />
-    <None Include="deploy_autoexp.py" />
-    <None Include="pre_build.py" />
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)app.props" />
+
+	<!-- Build Options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<ModuleDefinitionFile>src\prautoexp.def</ModuleDefinitionFile>
+			<AdditionalLibraryDirectories>
+				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
+				;%(AdditionalLibraryDirectories)
+			</AdditionalLibraryDirectories>
+			<AdditionalDependencies>
+				;lua-static.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+ 	<!-- Generate the dll 'def' file -->
+	<Target Name="GenerateDefFile" BeforeTargets="PrepareForBuild">
+		<Message Text="Generate def file..." />
+		<Exec Command="py &quot;$(ProjectDir)generate_def_file.py&quot;" />
+	</Target>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h" />
+		<ClInclude Include="src\reentry_guard.h" />
+		<ClInclude Include="src\dbg_helper.h" />
+		<ClCompile Include="src\expansions.cpp" />
+		<None Include="src\prautoexp.def" />
+	</ItemGroup>
+
+	<!-- Targets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

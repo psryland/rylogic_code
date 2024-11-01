@@ -26,16 +26,16 @@ namespace Rylogic.Interop.Win32
 			m_no_title = untitled;
 
 			// EnumWindows callback function
-			Win32.EnumWindows(ewp, 0);
+			User32.EnumWindows(ewp, 0);
 			bool ewp(HWND hwnd, int lParam)
 			{
-				if (m_invisible == false && !Win32.IsWindowVisible(hwnd))
+				if (m_invisible == false && !User32.IsWindowVisible(hwnd))
 					return true;
 
 				var title = new StringBuilder(256);
 				var module = new StringBuilder(256);
-				Win32.GetWindowModuleFileName(hwnd, module, 256);
-				Win32.GetWindowText(hwnd, title, 256);
+				User32.GetWindowModuleFileName(hwnd, module, 256);
+				User32.GetWindowText(hwnd, title, 256);
 
 				if (m_no_title == false && title.Length == 0)
 					return true;
@@ -50,13 +50,13 @@ namespace Rylogic.Interop.Win32
 		public static List<CWindow> GetWindowsByName(string name, bool partial)
 		{
 			List<CWindow> wnd = new List<CWindow>();
-			Win32.EnumWindows(ewp, 0);
+			User32.EnumWindows(ewp, 0);
 			bool ewp(HWND hwnd, int lParam)
 			{
 				var title = new StringBuilder(256);
 				var module = new StringBuilder(256);
-				Win32.GetWindowModuleFileName(hwnd, module, 256);
-				Win32.GetWindowText(hwnd, title, 256);
+				User32.GetWindowModuleFileName(hwnd, module, 256);
+				User32.GetWindowText(hwnd, title, 256);
 
 				string wnd_title = title.ToString();
 				bool match = (!partial && wnd_title == name) || (partial && wnd_title.Contains(name));
@@ -93,8 +93,8 @@ namespace Rylogic.Interop.Win32
 		{
 			var title = new StringBuilder(256);
 			var module = new StringBuilder(256);
-			Win32.GetWindowModuleFileName(hwnd, module, 256);
-			Win32.GetWindowText(hwnd, title, 256);
+			User32.GetWindowModuleFileName(hwnd, module, 256);
+			User32.GetWindowText(hwnd, title, 256);
 
 			Hwnd = hwnd;
 			Title = title.ToString();
@@ -114,7 +114,7 @@ namespace Rylogic.Interop.Win32
 		// Send a message to this window
 		public int SendMessage(uint msg, int wparam, int lparam)
 		{
-			return (int)Win32.SendMessage(Hwnd, msg, wparam, lparam);
+			return (int)User32.SendMessage(Hwnd, msg, wparam, lparam);
 		}
 
 		// Sets this Window Object's visibility
@@ -124,39 +124,39 @@ namespace Rylogic.Interop.Win32
 			set
 			{
 				if (value == m_visible) return;
-				Win32.ShowWindowAsync(Hwnd, value ? Win32.SW_SHOW : Win32.SW_HIDE);
+				User32.ShowWindowAsync(Hwnd, value ? Win32.SW_SHOW : Win32.SW_HIDE);
 				m_visible = value;
 			}
 		}
 		private bool m_visible = true;
 
 		// Return the client rectangle for the window
-		public Rectangle ClientRectangle => Win32.GetClientRect(Hwnd).ToRectangle();
+		public Rectangle ClientRectangle => User32.GetClientRect(Hwnd).ToRectangle();
 
 		// Return the screen rectangle for the window
-		public Rectangle WindowRectangle => Win32.GetWindowRect(Hwnd).ToRectangle();
+		public Rectangle WindowRectangle => User32.GetWindowRect(Hwnd).ToRectangle();
 
 		// Sets focus to this Window Object
 		public void Activate()
 		{
-			if (Hwnd == Win32.GetForegroundWindow())
+			if (Hwnd == User32.GetForegroundWindow())
 				return;
 
 			var proc_id = IntPtr.Zero;
-			var thread_id0 = Win32.GetWindowThreadProcessId(Win32.GetForegroundWindow(), ref proc_id);
-			var thread_id1 = Win32.GetWindowThreadProcessId(Hwnd, ref proc_id);
+			var thread_id0 = User32.GetWindowThreadProcessId(User32.GetForegroundWindow(), ref proc_id);
+			var thread_id1 = User32.GetWindowThreadProcessId(Hwnd, ref proc_id);
 			if (thread_id0 != thread_id1)
 			{
-				Win32.AttachThreadInput(thread_id0, thread_id1, 1);
-				Win32.SetForegroundWindow(Hwnd);
-				Win32.AttachThreadInput(thread_id0, thread_id1, 0);
+				User32.AttachThreadInput(thread_id0, thread_id1, 1);
+				User32.SetForegroundWindow(Hwnd);
+				User32.AttachThreadInput(thread_id0, thread_id1, 0);
 			}
 			else
 			{
-				Win32.SetForegroundWindow(Hwnd);
+				User32.SetForegroundWindow(Hwnd);
 			}
 
-			Win32.ShowWindowAsync(Hwnd, Win32.SW_SHOW);
+			User32.ShowWindowAsync(Hwnd, Win32.SW_SHOW);
 		}
 
 		// Return the title if it has one, if not return the process name

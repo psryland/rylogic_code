@@ -4,6 +4,7 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/compute_pso.h"
 #include "pr/view3d-12/compute/compute_step.h"
@@ -12,7 +13,7 @@
 #include "pr/view3d-12/shaders/shader_include_handler.h"
 #include "pr/view3d-12/utility/root_signature.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
-#include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12::compute::particle_collision
 {
@@ -87,9 +88,10 @@ namespace pr::rdr12::compute::particle_collision
 		}
 
 		// (Re)Initialise the particle collision system
-		void Init(Setup const& setup, EGpuFlush flush = EGpuFlush::Block)
+		void Init(Setup const& setup)
 		{
 			assert(setup.valid());
+			ResourceFactory factory(*m_rdr);
 
 			// Save the config
 			Config = setup.Config;
@@ -100,11 +102,9 @@ namespace pr::rdr12::compute::particle_collision
 					.def_state(D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
 					.usage(EUsage::UnorderedAccess);
 
-				m_r_primitives = m_rdr->res().CreateResource(desc, "ParticleCollision:Primitives");
+				m_r_primitives = factory.CreateResource(desc, "ParticleCollision:Primitives");
 				m_capacity = setup.PrimitiveCapacity;
 			}
-
-			m_rdr->res().FlushToGpu(flush);
 		}
 
 		// Integrate the particle positions (with collision)
@@ -113,9 +113,9 @@ namespace pr::rdr12::compute::particle_collision
 			if (count == 0)
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::Integrate");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::Integrate");
 			DoIntegrate(job, dt, count, radius, particles, dynamics);
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Find nearby surfaces for particles
@@ -124,9 +124,9 @@ namespace pr::rdr12::compute::particle_collision
 			if (count == 0)
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::DetectBoundaries");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::DetectBoundaries");
 			DoDetectBoundaries(job, count, radius, particles, dynamics);
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 		// Mark culled particles with NaN positions
@@ -135,9 +135,9 @@ namespace pr::rdr12::compute::particle_collision
 			if (count == 0)
 				return;
 
-			PIXBeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::CullDeadParticles");
+			pix::BeginEvent(job.m_cmd_list.get(), 0xFF209932, "ParticleCollision::CullDeadParticles");
 			DoCullDeadParticles(job, count, particles);
-			PIXEndEvent(job.m_cmd_list.get());
+			pix::EndEvent(job.m_cmd_list.get());
 		}
 
 	private:

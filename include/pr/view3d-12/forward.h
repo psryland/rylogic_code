@@ -25,6 +25,7 @@
 #include <optional>
 #include <functional>
 #include <filesystem>
+#include <source_location>
 #include <type_traits>
 #include <mutex>
 #include <condition_variable>
@@ -46,7 +47,6 @@
 #include <dxcapi.h>
 #include <d2d1_2.h>
 #include <dwrite_2.h>
-#include <pix3.h>
 
 #include "pr/macros/enum.h"
 #include "pr/meta/alignment_of.h"
@@ -85,7 +85,6 @@
 #include "pr/str/to_string.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
-//#include "pr/filesys/filesys.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
@@ -110,11 +109,9 @@
 #include "pr/threads/synchronise.h"
 #include "pr/threads/name_thread.h"
 #include "pr/gui/gdiplus.h"
-//#include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
-//#include "pr/win32/stackdump.h"
+#include "pr/win32/key_codes.h"
 #include "pr/script/reader.h"
-//#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::rdr12
 {
@@ -144,7 +141,7 @@ namespace pr::rdr12
 	static constexpr RdrId AutoId = ~RdrId(); // A special value for automatically generating an Id
 	static constexpr RdrId InvalidId = RdrId();
 
-	// Enums
+	// Enumerations
 	using EGeom = pr::geometry::EGeom;
 	using ETopo = pr::geometry::ETopo;
 	using ETopoGroup = pr::geometry::ETopoGroup;
@@ -169,7 +166,8 @@ namespace pr::rdr12
 	struct SortKey;
 
 	// Resources
-	struct ResourceManager;
+	struct ResourceFactory;
+	struct ResourceStore;
 	struct ResDesc;
 	struct SamDesc;
 	

@@ -3,10 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/model/model_generator.h"
-#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/model/model_tree.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
@@ -140,7 +139,7 @@ namespace pr::rdr12
 	// 'bake' is a transform to bake into the model
 	// 'gen_normals' generates normals for the model if >= 0f. Value is the threshold for smoothing (in rad)
 	template <typename VType>
-	static ModelPtr Create(Renderer& rdr, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const* opts)
+	static ModelPtr Create(ResourceFactory& factory, ModelGenerator::Cache<VType>& cache, ModelGenerator::CreateOptions const* opts)
 	{
 		// Sanity check 'cache'
 		assert(!cache.m_ncont.empty() && "No nuggets given");
@@ -171,7 +170,7 @@ namespace pr::rdr12
 			ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont),
 			ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont),
 			cache.m_bbox, cache.m_name.c_str());
-		auto model = rdr.res().CreateModel(mdesc);
+		auto model = factory.CreateModel(mdesc);
 
 		// Create the render nuggets
 		for (auto& nug : cache.m_ncont)
@@ -183,16 +182,16 @@ namespace pr::rdr12
 				if (nug.m_tex_diffuse == nullptr)
 					nug.m_tex_diffuse = opts && opts->m_tex_diffuse != nullptr
 						? opts->m_tex_diffuse
-						: rdr.res().StockTexture(EStockTexture::White);
+						: factory.rdr().store().StockTexture(EStockTexture::White);
 
 				if (nug.m_sam_diffuse == nullptr)
 					nug.m_sam_diffuse = opts && opts->m_sam_diffuse != nullptr
 						? opts->m_sam_diffuse
-						: rdr.res().StockSampler(EStockSampler::AnisotropicWrap);
+						: factory.rdr().store().StockSampler(EStockSampler::AnisotropicWrap);
 			}
 
 			// Create the nugget
-			model->CreateNugget(nug);
+			model->CreateNugget(factory, nug);
 		}
 
 		// Return the freshly minted model.
@@ -200,7 +199,7 @@ namespace pr::rdr12
 	}
 
 	// Points/Sprites *********************************************************************
-	ModelPtr ModelGenerator::Points(Renderer& rdr, std::span<v4 const> points, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Points(ResourceFactory& factory, std::span<v4 const> points, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PointSize(isize(points));
@@ -220,11 +219,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Lines ******************************************************************************
-	ModelPtr ModelGenerator::Lines(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Lines(ResourceFactory& factory, int num_lines, std::span<v4 const> points, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::LineSize(num_lines);
@@ -244,9 +243,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::LinesD(Renderer& rdr, int num_lines, std::span<v4 const> points, std::span<v4 const> directions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::LinesD(ResourceFactory& factory, int num_lines, std::span<v4 const> points, std::span<v4 const> directions, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::LineSize(num_lines);
@@ -267,9 +266,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::LineStrip(Renderer& rdr, int num_lines, std::span<v4 const> points, CreateOptions const* opts)
+	ModelPtr ModelGenerator::LineStrip(ResourceFactory& factory, int num_lines, std::span<v4 const> points, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::LineStripSize(num_lines);
@@ -299,16 +298,16 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Quad *******************************************************************************
-	ModelPtr ModelGenerator::Quad(Renderer& rdr, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Quad(ResourceFactory& factory, CreateOptions const* opts)
 	{
 		v4 const verts[] = { v4{-1,-1,0,1}, v4{+1,-1,0,1}, v4{-1,+1,0,1}, v4{+1,+1,0,1} };
-		return Quad(rdr, 1, { &verts[0], 4 }, opts);
+		return Quad(factory, 1, { &verts[0], 4 }, opts);
 	}
-	ModelPtr ModelGenerator::Quad(Renderer& rdr, int num_quads, std::span<v4 const> verts, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Quad(ResourceFactory& factory, int num_quads, std::span<v4 const> verts, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(num_quads);
@@ -329,9 +328,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Quad(ResourceFactory& factory, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(divisions);
@@ -351,9 +350,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Quad(ResourceFactory& factory, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadSize(divisions);
@@ -373,9 +372,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::QuadStrip(Renderer& rdr, int num_quads, std::span<v4 const> verts, float width, std::span<v4 const> normals, CreateOptions const* opts)
+	ModelPtr ModelGenerator::QuadStrip(ResourceFactory& factory, int num_quads, std::span<v4 const> verts, float width, std::span<v4 const> normals, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadStripSize(num_quads);
@@ -394,9 +393,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::QuadPatch(Renderer& rdr, int dimx, int dimy, CreateOptions const* opts)
+	ModelPtr ModelGenerator::QuadPatch(ResourceFactory& factory, int dimx, int dimy, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadPatchSize(dimx, dimy);
@@ -414,11 +413,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Shape2d ****************************************************************************
-	ModelPtr ModelGenerator::Ellipse(Renderer& rdr, float dimx, float dimy, bool solid, int facets, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Ellipse(ResourceFactory& factory, float dimx, float dimy, bool solid, int facets, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::EllipseSize(solid, facets);
@@ -437,9 +436,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Pie(ResourceFactory& factory, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PieSize(solid, ang0, ang1, facets);
@@ -458,9 +457,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets, CreateOptions const* opts)
+	ModelPtr ModelGenerator::RoundedRectangle(ResourceFactory& factory, float dimx, float dimy, float corner_radius, bool solid, int facets, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::RoundedRectangleSize(solid, corner_radius, facets);
@@ -479,9 +478,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Polygon(Renderer& rdr, std::span<v2 const> points, bool solid, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Polygon(ResourceFactory& factory, std::span<v2 const> points, bool solid, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PolygonSize(isize(points), solid);
@@ -500,15 +499,15 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Boxes ******************************************************************************
-	ModelPtr ModelGenerator::Box(Renderer& rdr, float rad, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Box(ResourceFactory& factory, float rad, CreateOptions const* opts)
 	{
-		return Box(rdr, v4(rad), opts);
+		return Box(factory, v4(rad), opts);
 	}
-	ModelPtr ModelGenerator::Box(Renderer& rdr, v4_cref rad, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Box(ResourceFactory& factory, v4_cref rad, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::BoxSize(1);
@@ -527,9 +526,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Boxes(Renderer& rdr, int num_boxes, std::span<v4 const> points, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Boxes(ResourceFactory& factory, int num_boxes, std::span<v4 const> points, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::BoxSize(num_boxes);
@@ -548,9 +547,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}	
-	ModelPtr ModelGenerator::BoxList(Renderer& rdr, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts)
+	ModelPtr ModelGenerator::BoxList(ResourceFactory& factory, int num_boxes, std::span<v4 const> positions, v4_cref rad, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::BoxSize(num_boxes);
@@ -569,15 +568,15 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Sphere *****************************************************************************
-	ModelPtr ModelGenerator::Geosphere(Renderer& rdr, float radius, int divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Geosphere(ResourceFactory& factory, float radius, int divisions, CreateOptions const* opts)
 	{
-		return Geosphere(rdr, v4(radius, radius, radius, 0.0f), divisions, opts);
+		return Geosphere(factory, v4(radius, radius, radius, 0.0f), divisions, opts);
 	}
-	ModelPtr ModelGenerator::Geosphere(Renderer& rdr, v4_cref radius, int divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Geosphere(ResourceFactory& factory, v4_cref radius, int divisions, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::GeosphereSize(divisions);
@@ -596,13 +595,13 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Sphere(Renderer& rdr, float radius, int wedges, int layers, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Sphere(ResourceFactory& factory, float radius, int wedges, int layers, CreateOptions const* opts)
 	{
-		return Sphere(rdr, v4{ radius, radius, radius, 0 }, wedges, layers, opts);
+		return Sphere(factory, v4{ radius, radius, radius, 0 }, wedges, layers, opts);
 	}
-	ModelPtr ModelGenerator::Sphere(Renderer& rdr, v4 const& radius, int wedges, int layers, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Sphere(ResourceFactory& factory, v4 const& radius, int wedges, int layers, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SphereSize(wedges, layers);
@@ -621,11 +620,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Cylinder ***************************************************************************
-	ModelPtr ModelGenerator::Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale, float yscale, int wedges, int layers, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Cylinder(ResourceFactory& factory, float radius0, float radius1, float height, float xscale, float yscale, int wedges, int layers, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::CylinderSize(wedges, layers);
@@ -644,11 +643,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Extrude ****************************************************************************
-	ModelPtr ModelGenerator::Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<v4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Extrude(ResourceFactory& factory, std::span<v2 const> cs, std::span<v4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts)
 	{
 		assert(isize(path) >= 2);
 
@@ -709,9 +708,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Extrude(Renderer& rdr, std::span<v2 const> cs, std::span<m4x4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Extrude(ResourceFactory& factory, std::span<v2 const> cs, std::span<m4x4 const> path, bool closed, bool smooth_cs, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::ExtrudeSize(isize(cs), isize(path), closed, smooth_cs);
@@ -733,11 +732,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// Mesh *******************************************************************************
-	ModelPtr ModelGenerator::Mesh(Renderer& rdr, MeshCreationData const& cdata, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Mesh(ResourceFactory& factory, MeshCreationData const& cdata, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::MeshSize(isize(cdata.m_verts), isize(cdata.m_indices));
@@ -762,11 +761,11 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
 
 	// SkyBox *****************************************************************************
-	ModelPtr ModelGenerator::SkyboxGeosphere(Renderer& rdr, Texture2DPtr sky_texture, float radius, int divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxGeosphere(ResourceFactory& factory, Texture2DPtr sky_texture, float radius, int divisions, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SkyboxGeosphereSize(divisions);
@@ -785,16 +784,16 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::SkyboxGeosphere(Renderer& rdr, std::filesystem::path const& texture_path, float radius, int divisions, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxGeosphere(ResourceFactory& factory, std::filesystem::path const& texture_path, float radius, int divisions, CreateOptions const* opts)
 	{
 		// One texture per nugget
 		TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
-		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
-		return SkyboxGeosphere(rdr, tex, radius, divisions, opts);
+		auto tex = factory.CreateTexture2D(texture_path, desc);
+		return SkyboxGeosphere(factory, tex, radius, divisions, opts);
 	}
-	ModelPtr ModelGenerator::SkyboxFiveSidedCube(Renderer& rdr, Texture2DPtr sky_texture, float radius, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxFiveSidedCube(ResourceFactory& factory, Texture2DPtr sky_texture, float radius, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SkyboxFiveSidedCubicDomeSize();
@@ -813,16 +812,16 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::SkyboxFiveSidedCube(Renderer& rdr, std::filesystem::path const& texture_path, float radius, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxFiveSidedCube(ResourceFactory& factory, std::filesystem::path const& texture_path, float radius, CreateOptions const* opts)
 	{
 		// One texture per nugget
 		TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
-		auto tex = rdr.res().CreateTexture2D(texture_path, desc);
-		return SkyboxFiveSidedCube(rdr, tex, radius, opts);
+		auto tex = factory.CreateTexture2D(texture_path, desc);
+		return SkyboxFiveSidedCube(factory, tex, radius, opts);
 	}
-	ModelPtr ModelGenerator::SkyboxSixSidedCube(Renderer& rdr, Texture2DPtr (&sky_texture)[6], float radius, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxSixSidedCube(ResourceFactory& factory, Texture2DPtr (&sky_texture)[6], float radius, CreateOptions const* opts)
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SkyboxSixSidedCubeSize();
@@ -850,9 +849,9 @@ namespace pr::rdr12
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::SkyboxSixSidedCube(Renderer& rdr, std::filesystem::path const& texture_path_pattern, float radius, CreateOptions const* opts)
+	ModelPtr ModelGenerator::SkyboxSixSidedCube(ResourceFactory& factory, std::filesystem::path const& texture_path_pattern, float radius, CreateOptions const* opts)
 	{
 		wstring256 tpath = texture_path_pattern.wstring();
 		auto ofs = tpath.find(L"??");
@@ -866,28 +865,28 @@ namespace pr::rdr12
 			tpath[ofs + 0] = face[0];
 			tpath[ofs + 1] = face[1];
 			TextureDesc desc = TextureDesc(AutoId, ResDesc()).name("skybox");
-			tex[i++] = rdr.res().CreateTexture2D(tpath.c_str(), desc);
+			tex[i++] = factory.CreateTexture2D(tpath.c_str(), desc);
 		}
 
-		return SkyboxSixSidedCube(rdr, tex, radius, opts);
+		return SkyboxSixSidedCube(factory, tex, radius, opts);
 	}
 
 	// ModelFile **************************************************************************
 	// Load a P3D model from a stream, emitting models for each mesh via 'out'.
 	// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
-	void ModelGenerator::LoadP3DModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
 		// Model output helpers
 		struct Mat :p3d::Material
 		{
-			Renderer& m_rdr;
+			ResourceFactory& m_factory;
 			mutable Texture2DPtr m_tex_diffuse;
 
-			Mat(Renderer& rdr, p3d::Material&& m)
+			Mat(ResourceFactory& factory, p3d::Material&& m)
 				:p3d::Material(std::forward<p3d::Material>(m))
-				,m_rdr(rdr)
+				,m_factory(factory)
 				,m_tex_diffuse()
 			{}
 
@@ -909,7 +908,7 @@ namespace pr::rdr12
 							continue;
 						
 						TextureDesc desc = TextureDesc(AutoId, ResDesc()).has_alpha(AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha)).name(tex.m_filepath.c_str());
-						m_tex_diffuse = m_rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
+						m_tex_diffuse = m_factory.CreateTexture2D(tex.m_filepath.c_str(), desc);
 						break;
 					}
 				}
@@ -923,14 +922,14 @@ namespace pr::rdr12
 			//    Create models for each and emit the tree structure of models
 			using MatCont = std::vector<Mat>;
 
-			Renderer& m_rdr;
+			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
 			ModelOutFunc m_out;
 			Cache<> m_cache;
 			MatCont m_mats;
 
-			ModelOut(Renderer& rdr, CreateOptions const* opts, ModelOutFunc out)
-				: m_rdr(rdr)
+			ModelOut(ResourceFactory& factory, CreateOptions const* opts, ModelOutFunc out)
+				: m_factory(factory)
 				, m_opts(opts)
 				, m_out(out)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
@@ -940,7 +939,7 @@ namespace pr::rdr12
 			// Functor called from 'ExtractMaterials'
 			bool operator ()(p3d::Material&& mat)
 			{
-				m_mats.push_back(Mat(m_rdr, std::forward<p3d::Material>(mat)));
+				m_mats.push_back(Mat(m_factory, std::forward<p3d::Material>(mat)));
 				return false;
 			}
 
@@ -1017,10 +1016,10 @@ namespace pr::rdr12
 				}
 
 				// Return the renderer model
-				return Create(m_rdr, m_cache, m_opts);
+				return Create(m_factory, m_cache, m_opts);
 			}
 		};
-		ModelOut model_out(rdr, opts, out);
+		ModelOut model_out(factory, opts, out);
 
 		// Material read from the p3d model, extended with associated renderer resources.
 		p3d::ExtractMaterials<std::istream, ModelOut&>(src, model_out);
@@ -1028,7 +1027,7 @@ namespace pr::rdr12
 		// Load each mesh in the P3D stream and emit it as a model
 		p3d::ExtractMeshes<std::istream, ModelOut&>(src, model_out);
 	}
-	void ModelGenerator::Load3DSModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
@@ -1040,7 +1039,7 @@ namespace pr::rdr12
 			Mat() {}
 			Mat(max_3ds::Material&& m)
 				:max_3ds::Material(std::forward<max_3ds::Material>(m))
-				,m_tex_diffuse()
+				, m_tex_diffuse()
 			{}
 
 			// The material base colour
@@ -1050,13 +1049,13 @@ namespace pr::rdr12
 			}
 
 			// The diffuse texture resolved to a renderer texture resource
-			Texture2DPtr TexDiffuse(Renderer& rdr) const
+			Texture2DPtr TexDiffuse(ResourceFactory& factory) const
 			{
 				if (m_tex_diffuse == nullptr && !m_textures.empty())
 				{
 					auto& tex = m_textures[0];
 					TextureDesc desc = TextureDesc(AutoId, ResDesc()).name(tex.m_filepath.c_str());
-					m_tex_diffuse = rdr.res().CreateTexture2D(tex.m_filepath.c_str(), desc);
+					m_tex_diffuse = factory.CreateTexture2D(tex.m_filepath.c_str(), desc);
 
 					// todo
 					//SamplerDesc sam_desc{
@@ -1072,60 +1071,60 @@ namespace pr::rdr12
 		max_3ds::ReadMaterials(src, [&](max_3ds::Material&& mat)
 		{
 			mats.emplace_back(std::forward<max_3ds::Material>(mat));
-			return false; 
+			return false;
 		});
 
 		// Load each mesh in the stream and emit it as a model
-		Cache cache{0, 0, 0, sizeof(uint16_t)};
+		Cache cache{ 0, 0, 0, sizeof(uint16_t) };
 		max_3ds::ReadObjects(src, [&](max_3ds::Object&& obj)
+		{
+			cache.Reset();
+
+			// Name/Bounding box
+			cache.m_name = obj.m_name;
+			cache.m_bbox = BBox::Reset();
+
+			// Populate 'cache' from the 3DS data
+			auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
 			{
-				cache.Reset();
+				Vert vert;
+				SetPCNT(vert, cache.m_bbox.Grow(p), c, n, t);
+				cache.m_vcont.push_back(vert);
+			};
+			auto iout = [&](uint16_t i0, uint16_t i1, uint16_t i2)
+			{
+				cache.m_icont.push_back<uint16_t>(i0);
+				cache.m_icont.push_back<uint16_t>(i1);
+				cache.m_icont.push_back<uint16_t>(i2);
+			};
+			auto nout = [&](ETopo topo, EGeom geom, Mat const& mat, Range vrange, Range irange)
+			{
+				cache.m_ncont.push_back(NuggetDesc(topo, geom)
+					.vrange(vrange)
+					.irange(irange)
+					.tex_diffuse(mat.TexDiffuse(factory))
+					.tint(mat.Tint())
+					.alpha_tint(mat.Tint().a != 0xff));
+			};
+			auto matlookup = [&](std::string const& name)
+			{
+				for (auto& mat : mats)
+				{
+					if (mat.m_name != name) continue;
+					return mat;
+				}
+				return Mat{};
+			};
+			max_3ds::CreateModel(obj, matlookup, vout, iout, nout);
 
-				// Name/Bounding box
-				cache.m_name = obj.m_name;
-				cache.m_bbox = BBox::Reset();
-
-				// Populate 'cache' from the 3DS data
-				auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
-				{
-					Vert vert;
-					SetPCNT(vert, cache.m_bbox.Grow(p), c, n, t);
-					cache.m_vcont.push_back(vert);
-				};
-				auto iout = [&](uint16_t i0, uint16_t i1, uint16_t i2)
-				{
-					cache.m_icont.push_back<uint16_t>(i0);
-					cache.m_icont.push_back<uint16_t>(i1);
-					cache.m_icont.push_back<uint16_t>(i2);
-				};
-				auto nout = [&](ETopo topo, EGeom geom, Mat const& mat, Range vrange, Range irange)
-				{
-					cache.m_ncont.push_back(NuggetDesc(topo, geom)
-						.vrange(vrange)
-						.irange(irange)
-						.tex_diffuse(mat.TexDiffuse(rdr))
-						.tint(mat.Tint())
-						.alpha_tint(mat.Tint().a != 0xff));
-				};
-				auto matlookup = [&](std::string const& name)
-				{
-					for (auto& mat : mats)
-					{
-						if (mat.m_name != name) continue;
-						return mat;
-					}
-					return Mat{};
-				};
-				max_3ds::CreateModel(obj, matlookup, vout, iout, nout);
-
-				// Emit the model. 'out' returns true to stop searching
-				// 3DS models cannot nest, so each 'Model Tree' is one root node only
-				auto model = Create(rdr, cache, opts);
-				auto tree = ModelTree{{model, obj.m_mesh.m_o2p, 0}};
-				return out(tree);
-			});
+			// Emit the model. 'out' returns true to stop searching
+			// 3DS models cannot nest, so each 'Model Tree' is one root node only
+			auto model = Create(factory, cache, opts);
+			auto tree = ModelTree{ {model, obj.m_mesh.m_o2p, 0} };
+			return out(tree);
+		});
 	}
-	void ModelGenerator::LoadSTLModel(Renderer& rdr, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	void ModelGenerator::LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
 	{
 		using namespace geometry;
 
@@ -1172,19 +1171,19 @@ namespace pr::rdr12
 
 				// Emit the model. 'out' returns true to stop searching
 				// 3DS models cannot nest, so each 'Model Tree' is one root node only
-				auto model = Create(rdr, cache, opts);
+				auto model = Create(factory, cache, opts);
 				auto tree = ModelTree{{model, m4x4::Identity(), 0}};
 				return out(tree);
 			});
 	}
-	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, Renderer& rdr, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
+	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
 	{
 		using namespace geometry;
 		switch (format)
 		{
-			case EModelFileFormat::P3D:    LoadP3DModel(rdr, src, mout, opts); break;
-			case EModelFileFormat::Max3DS: Load3DSModel(rdr, src, mout, opts); break;
-			case EModelFileFormat::STL:    LoadSTLModel(rdr, src, mout, opts); break;
+			case EModelFileFormat::P3D:    LoadP3DModel(factory, src, mout, opts); break;
+			case EModelFileFormat::Max3DS: Load3DSModel(factory, src, mout, opts); break;
+			case EModelFileFormat::STL:    LoadSTLModel(factory, src, mout, opts); break;
 			default: throw std::runtime_error("Unsupported model file format");
 		}
 	}
@@ -1197,7 +1196,7 @@ namespace pr::rdr12
 	// 'scale' controls the size of the output quad. Scale of 1 => 100pt = 1m
 	// 'axis_id' is the forward direction of the quad
 	// 'dim_out' is 'xy' = size of text in pixels, 'zw' = size of quad in pixels
-	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Text(ResourceFactory& factory, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts)
 	{
 		// Texture sizes are in physical pixels, but D2D operates in DIP so we need to determine
 		// the size in physical pixels on this device that correspond to the returned metrics.
@@ -1258,7 +1257,7 @@ namespace pr::rdr12
 
 		// DIP is defined as 1/96th of a logical inch (= 0.2645833 mm/px)
 		// Font size 12pt is 16px high = 4.233mm (1pt = 1/72th of an inch)
-		// Can choose the quat size arbitrarily so defaulting to 1pt = 1cm. 'scale' can be used to adjust this.
+		// Can choose the size arbitrarily so defaulting to 1pt = 1cm. 'scale' can be used to adjust this.
 		constexpr float pt_to_px = 96.0f / 72.0f;  // This is used to find the required texture size.
 		const float pt_to_m = 0.00828491f * scale; // This is used to create the quad as a multiple of the text size.
 
@@ -1275,7 +1274,7 @@ namespace pr::rdr12
 			.clear(format, To<D3DCOLORVALUE>(layout.m_bk_colour))
 			;
 		TextureDesc tdesc = TextureDesc(AutoId, td).has_alpha(has_alpha).name("text_quad");
-		auto tex = rdr.res().CreateTexture2D(tdesc);
+		auto tex = factory.CreateTexture2D(tdesc);
 
 		// Render the text using DWrite
 		{
@@ -1336,26 +1335,26 @@ namespace pr::rdr12
 		cache.m_ncont.push_back(
 			NuggetDesc(ETopo::TriList, props.m_geom & ~EGeom::Norm)
 			.tex_diffuse(tex)
-			.sam_diffuse(rdr.res().GetSampler(EStockSampler::AnisotropicClamp))
+			.sam_diffuse(factory.GetSampler(EStockSampler::AnisotropicClamp))
 			.alpha_geom(has_alpha));
 
 		cache.m_bbox = props.m_bbox;
 
 		// Create the model
-		return Create(rdr, cache, opts);
+		return Create(factory, cache, opts);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Text(ResourceFactory& factory, std::wstring_view text, std::span<TextFormat const> formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts)
 	{
 		v4 dim_out;
-		return Text(rdr, text, formatting, layout, scale, axis_id, dim_out, opts);
+		return Text(factory, text, formatting, layout, scale, axis_id, dim_out, opts);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Text(ResourceFactory& factory, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, v4& dim_out, CreateOptions const* opts)
 	{
-		return Text(rdr, text, { &formatting, 1 }, layout, scale, axis_id, dim_out, opts);
+		return Text(factory, text, { &formatting, 1 }, layout, scale, axis_id, dim_out, opts);
 	}
-	ModelPtr ModelGenerator::Text(Renderer& rdr, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts)
+	ModelPtr ModelGenerator::Text(ResourceFactory& factory, std::wstring_view text, TextFormat const& formatting, TextLayout const& layout, float scale, AxisId axis_id, CreateOptions const* opts)
 	{
 		v4 dim_out;
-		return Text(rdr, text, { &formatting, 1 }, layout, scale, axis_id, dim_out, opts);
+		return Text(factory, text, { &formatting, 1 }, layout, scale, axis_id, dim_out, opts);
 	}
 }

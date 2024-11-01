@@ -41,13 +41,13 @@
     <ClInclude Include="src\ui\main_ui.h">
       <Filter>src\ui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\common\hresult.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\common\hresult.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\container\suffix_array.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\storage\json.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\storage\json.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
     <ClInclude Include="src\settings.h">
@@ -57,7 +57,7 @@
     <ClInclude Include="src\index.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\threads\thread_pool.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\threads\thread_pool.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
     <ClInclude Include="src\ntfs.h">

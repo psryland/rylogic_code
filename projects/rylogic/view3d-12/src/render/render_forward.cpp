@@ -29,8 +29,8 @@ namespace pr::rdr12
 		: RenderStep(Id, scene)
 		, m_shader(scene.d3d())
 		, m_cmd_list(scene.d3d(), nullptr, "RenderForward", EColours::Blue)
-		, m_default_tex(res().CreateTexture(EStockTexture::White))
-		, m_default_sam(res().GetSampler(EStockSampler::LinearClamp))
+		, m_default_tex(rdr().store().StockTexture(EStockTexture::White))
+		, m_default_sam(rdr().store().StockSampler(EStockSampler::LinearClamp))
 	{
 		// Create the default PSO description
 		m_default_pipe_state = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
@@ -78,7 +78,7 @@ namespace pr::rdr12
 	// Add model nuggets to the draw list for this render step.
 	void RenderForward::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets, drawlist_t& drawlist)
 	{
-		// Add a drawlist element for each nugget in the instance's model
+		// Add a draw list element for each nugget in the instance's model
 		drawlist.reserve(drawlist.size() + nuggets.size());
 		for (auto& nug : nuggets)
 		{
@@ -117,7 +117,7 @@ namespace pr::rdr12
 					sk = SetBits(sk, SortKey::ShaderIdMask, shdr_id << SortKey::ShaderIdOfs);
 				}
 
-				// Add an element to the drawlist
+				// Add an element to the draw list
 				DrawListElement dle = {
 					.m_sort_key = sk,
 					.m_nugget = &nug,

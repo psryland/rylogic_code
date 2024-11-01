@@ -9,6 +9,7 @@
 #include "pr/view3d-12/utility/cmd_alloc.h"
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/utility.h"
+#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12
 {
@@ -74,16 +75,25 @@ namespace pr::rdr12
 			DebugColour(m_list, pix_colour);
 
 			// The command list is open, so start the pix event
-			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
+			pix::BeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
-
-		CmdList(CmdList&& rhs) = default;
-		CmdList(CmdList const&) = delete;
-		CmdList& operator =(CmdList&& rhs)
+		CmdList(CmdList&& rhs) noexcept
+			: m_list(std::move(rhs.m_list))
+			, m_cmd_allocator(std::move(m_cmd_allocator))
+			, m_thread_id(rhs.m_thread_id)
+			, m_res_state(std::move(rhs.m_res_state))
+			, m_pool(rhs.m_pool)
+			, m_root_sig_idx(rhs.m_root_sig_idx)
 		{
-			if (&rhs == this) return *this;
+			rhs.m_pool = nullptr;
+		}
+		CmdList(CmdList const&) = delete;
+		CmdList& operator =(CmdList&& rhs) noexcept
+		{
+			if (&rhs == this)
+				return *this;
 
-			// Return this to the pool before replacing it with 'rhs'
+			// Return 'this' to the pool before replacing it with 'rhs'
 			if (m_pool != nullptr && m_list != nullptr)
 				m_pool->Return(std::move(*this));
 
@@ -92,6 +102,9 @@ namespace pr::rdr12
 			m_cmd_allocator = std::move(rhs.m_cmd_allocator);
 			m_thread_id = std::move(rhs.m_thread_id);
 			m_pool = std::move(rhs.m_pool);
+
+			// Null out 'rhs'
+			rhs.m_pool = nullptr;
 			return *this;
 		}
 		CmdList& operator =(CmdList const&) = delete;
@@ -183,7 +196,7 @@ namespace pr::rdr12
 			{
 				RestoreResourceStateDefaults(*this);
 			}
-			PIXEndEvent(m_list.get());
+			pix::EndEvent(m_list.get());
 			m_list->Close();
 		}
 
@@ -203,7 +216,7 @@ namespace pr::rdr12
 			Check(m_list->Reset(m_cmd_allocator, pipeline_state));
 			m_res_state.Reset();
 
-			PIXBeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
+			pix::BeginEvent(m_list.get(), DebugColour(m_list).argb, DebugName(m_list));
 		}
 	
 	public : // Graphics

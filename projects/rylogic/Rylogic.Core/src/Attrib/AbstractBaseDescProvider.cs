@@ -16,7 +16,7 @@ namespace Rylogic.Attrib
 			:base(TypeDescriptor.GetProvider(typeof(TAbstract)))
 		{}
 
-		public override Type GetReflectionType(Type objectType, object instance)
+		public override Type GetReflectionType(Type objectType, object? instance)
 		{
 			if (objectType == typeof(TAbstract))
 				return typeof(TBase);
@@ -24,7 +24,7 @@ namespace Rylogic.Attrib
 			return base.GetReflectionType(objectType, instance);
 		}
 
-		public override object CreateInstance(IServiceProvider provider, Type objectType, Type[] argTypes, object[] args)
+		public override object? CreateInstance(IServiceProvider? provider, Type objectType, Type[]? argTypes, object?[]? args)
 		{
 			if (objectType == typeof(TAbstract))
 				objectType = typeof(TBase);

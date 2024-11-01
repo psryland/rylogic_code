@@ -33,19 +33,19 @@
     <ClInclude Include="src\commands\model_io.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\geometry\utility.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\geometry\obj.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\obj.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\geometry\stl.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\geometry\p3d.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\geometry\3ds.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
   </ItemGroup>

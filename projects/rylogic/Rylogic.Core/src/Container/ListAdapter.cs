@@ -68,7 +68,7 @@ namespace Rylogic.Container
 				if (m_source is INotifyCollectionChanged observable)
 				{
 					observable.CollectionChanged += WeakRef.MakeWeak(HandleSourceCollectionChanged, h => observable.CollectionChanged -= h);
-					void HandleSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => Refresh();
+					void HandleSourceCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => Refresh();
 				}
 			}
 		}

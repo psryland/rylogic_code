@@ -15,7 +15,7 @@
 # Add 'obj' to the command line for a 'compiled shader object' file
 #  that can be used with the runtime shader support in the renderer.
 #
-import sys, os, tempfile
+import sys, os, tempfile, hashlib
 import Rylogic as Tools
 import UserVars
 
@@ -79,13 +79,16 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			shdr_name = m.group("name") + "_" + shdr
 			if trace: print("Building: " + shdr_name)
 
+			# Hash the full path to generate a unique temporary file name
+			hash = hashlib.md5(fullpath.encode()).hexdigest()
+
 			# Create temporary filepaths so that we only overwrite
 			# existing files if they've actually changed. Create temp
 			# files for each unique platform/config to allow parallel build
 			tempdir = os.path.join(tempfile.gettempdir(), platform, config)
-			filepath_h = os.path.join(tempdir, shdr_name + ".h")
-			filepath_cso = os.path.join(tempdir, shdr_name + ".cso")
-			filepath_pdb = os.path.join(tempdir, shdr_name + ".pdb")
+			filepath_h = os.path.join(tempdir, shdr_name + hash + ".h")
+			filepath_cso = os.path.join(tempdir, shdr_name + hash + ".cso")
+			filepath_pdb = os.path.join(tempdir, shdr_name + hash + ".pdb")
 
 			# Delete any potentially left over temporary output
 			os.makedirs(tempdir, exist_ok=True)
@@ -138,13 +141,13 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				
 				# Copy to target directory
 				if os.path.exists(filepath_h):
-					Tools.Copy(filepath_h, out_filepath_h)
+					Tools.Copy(filepath_h, out_filepath_h, full_paths=False)
 					os.remove(filepath_h)
 				if os.path.exists(filepath_cso):
-					Tools.Copy(filepath_cso, out_filepath_cso)
+					Tools.Copy(filepath_cso, out_filepath_cso, full_paths=False)
 					os.remove(filepath_cso)
 				if os.path.exists(filepath_pdb):
-					Tools.Copy(filepath_pdb, out_filepath_pdb)
+					Tools.Copy(filepath_pdb, out_filepath_pdb, full_paths=False)
 					os.remove(filepath_pdb)
 
 			else: # Generate preprocessed output
@@ -156,8 +159,6 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				# Pre process and clean
 				Tools.Exec([compiler, fullpath, "/P"+filepath_pp] + includes + defines + options)
 				Tools.Exec([os.path.join(UserVars.root, "bin", "textformatter.exe"), "-f", filepath_pp, "-newlines", "0", "1"])
-				if UserVars.textedit:
-					Tools.Exec([UserVars.textedit, filepath_pp])
 	return
 
 # Run as standalone script

@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<RootNamespace>Rylogic.DB</RootNamespace>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<Version>$(RylogicLibraryVersion)</Version>
+		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
+		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Build Options -->
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<DefineConstants>RELEASE</DefineConstants>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
+		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+	</PropertyGroup>
+
+	<!-- Native libraries -->
+	<ItemGroup>
+		<Content Include="Rylogic.DB.targets">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
+	</ItemGroup>
+
+	<!-- Post build -->
+	<ItemGroup>
+		<None Update="Rylogic.DB.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath) Rylogic.Core" />
+	</Target>
+
+</Project>

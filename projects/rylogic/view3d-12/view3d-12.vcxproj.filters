@@ -1,0 +1,752 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="pr">
+      <UniqueIdentifier>{a82d68ab-e221-4aa7-b517-3cf2a55b6cbd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{00453e94-93b2-4eab-9f6c-15ba1d8ee736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\main">
+      <UniqueIdentifier>{46f549b6-8240-46ba-8c5a-0ade85d4b145}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\utility">
+      <UniqueIdentifier>{797d7894-b0d2-4f27-a30c-0c6f78c44c6c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\scene">
+      <UniqueIdentifier>{aa510495-67b8-4fe1-bf0c-7214e4b69a55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\render">
+      <UniqueIdentifier>{ac597ff1-2e33-460a-bbac-80053ef2b9b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\instance">
+      <UniqueIdentifier>{deef241b-8ae3-46a3-b080-6a21d843cb83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\model">
+      <UniqueIdentifier>{049df04a-922a-4b44-99d6-e97309b76b61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\resource">
+      <UniqueIdentifier>{2a2e0966-790a-413c-b7ec-fec7d858908f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders">
+      <UniqueIdentifier>{dad835e6-b7fe-4033-b22c-8ff869f9dfac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl">
+      <UniqueIdentifier>{2ebd7319-03f7-44ed-822f-3080da6ee019}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\screenspace">
+      <UniqueIdentifier>{b63d2c91-23d9-4279-ab1c-62966ca20e96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\common">
+      <UniqueIdentifier>{ee439197-4375-44fc-8e75-7de00570a104}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\compiled">
+      <UniqueIdentifier>{dfb1ad4f-6d3a-4e7b-8f39-4813f3b507b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\deferred">
+      <UniqueIdentifier>{b065db85-fa44-4c61-9c02-80af8d9bc692}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\dx9">
+      <UniqueIdentifier>{fdb0437a-1244-4473-ad06-5f3473157b72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\forward">
+      <UniqueIdentifier>{7aafe157-9267-4e98-ad2f-184c07463a33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\lighting">
+      <UniqueIdentifier>{cb36f77f-6783-4bbd-89d8-79e0bd2acbc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\shadow">
+      <UniqueIdentifier>{556626d4-43e9-4a74-8944-fe91fba7312d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\utility">
+      <UniqueIdentifier>{75312df4-3c8e-43ab-8941-f2aff981b3b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\texture">
+      <UniqueIdentifier>{7029f1f3-21a3-4092-8f81-a4ef26487871}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lighting">
+      <UniqueIdentifier>{19470125-330c-4491-b8e2-e8f0b77a8454}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\camera">
+      <UniqueIdentifier>{e25b9b5f-9711-45ba-96a9-b5542833427b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{0e3429e8-2a3e-40f0-9ab2-ae6e549326e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{f60423e8-d31e-4df5-a605-4b1a5d9548b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{3084a8ff-324f-442a-a0c7-30871fbea386}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\lua">
+      <UniqueIdentifier>{70902902-6d58-45fd-a4ee-625b91c76211}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\script">
+      <UniqueIdentifier>{f6499307-516f-40ce-bf6b-11d34fdeb5d7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\str">
+      <UniqueIdentifier>{ebe5bc70-cba6-4a04-becf-f57696d62c79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\win32">
+      <UniqueIdentifier>{11766335-6fa3-4771-a150-646adc041a6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{5112c3e1-8e59-46da-8491-12e35d7509ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\ldraw">
+      <UniqueIdentifier>{a9fc0979-5796-4338-a9f7-f09416328e59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\sampler">
+      <UniqueIdentifier>{e112c7e8-c0d7-484a-96df-7dda775a147a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute">
+      <UniqueIdentifier>{7879aee1-a75e-4190-8ecb-93b3852f0f87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute\particle_collision">
+      <UniqueIdentifier>{adf3bbd9-33d0-42a9-92b9-a813016c13b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute\spatial_partition">
+      <UniqueIdentifier>{05f79cfa-95c9-446b-a1d7-cc6a38a85b22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute\radix_sort">
+      <UniqueIdentifier>{aabdb3b0-f4c1-4521-a660-578985c964fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute\common">
+      <UniqueIdentifier>{6297f250-a5a9-4cbc-af95-591843cdd807}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\compute\fluid_simulation">
+      <UniqueIdentifier>{177ba44e-8001-4c51-a5bc-0cc299bbec5f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main\renderer.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main\window.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\features.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\utility.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\scene.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\scene_camera.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_step.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resource\resource_factory.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\model.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\texture_2d.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\texture_base.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\nugget.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lighting\light.cpp">
+      <Filter>src\lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_forward.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\back_buffer.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\diagnostics.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_point_sprites.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_forward.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_show_normals.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\pipe_state.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resource\descriptor_store.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\texture_cube.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\texture_loader_dds.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\texture_loader_wic.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldr_object.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\model_generator.cpp">
+      <Filter>src\model</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_thick_line.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_arrow_head.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldr_sources.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldr_gizmo.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldr_object_templates.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resource\mipmap_generator.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sampler\sampler.cpp">
+      <Filter>src\sampler</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_smap.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shaders\shader_smap.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\shadow_caster.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\cmd_list.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\texture\d2d_context.cpp">
+      <Filter>src\texture</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\render_raycast.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utility\pix.cpp">
+      <Filter>src\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="src\resource\resource_store.cpp">
+      <Filter>src\resource</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\utility.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\features.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\eventargs.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene_camera.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\render_step.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\instance\instance.h">
+      <Filter>src\instance</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\sortkey.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_factory.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\lookup.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\stock_resources.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\image.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\map_resource.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\gpu_sync.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_2d.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_base.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_desc.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shaders\common.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light.h">
+      <Filter>src\lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\stock_shaders.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_forward.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_registers.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\diagnostics.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_point_sprites.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_forward.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_show_normals.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_alloc.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pipe_state.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\conversion.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_cube.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_loader.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_descriptor_heap.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
+      <Filter>pr\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\forward.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\includes.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\location.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\macros.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\preprocessor.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script_core.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\token.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\tokeniser.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h">
+      <Filter>pr\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\str\extract.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\index_buffer.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_cylinder.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_extrude.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_line.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_point.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_quad.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_shape2d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_object.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_thick_line.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_arrow_head.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_sources.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_gizmo.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\mipmap_generator.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\keep_alive.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler.h">
+      <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler_desc.h">
+      <Filter>src\sampler</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_smap.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_smap.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\shadow_caster.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\frame.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\barrier_batch.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list_collection.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\d2d_context.h">
+      <Filter>src\texture</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\update_resource.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\render_raycast.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\ray_cast.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\root_signature.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_pso.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_step.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\gpu_job.h">
+      <Filter>src\compute</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_include_handler.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision_builder.h">
+      <Filter>src\compute\particle_collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.h">
+      <Filter>src\compute\particle_collision</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.h">
+      <Filter>src\compute\spatial_partition</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.h">
+      <Filter>src\compute\radix_sort</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.h">
+      <Filter>src\compute\fluid_simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\hlsl_proxy.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pix.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_object_manager.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_script_editor.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h">
+      <Filter>src\lighting</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\dx9_context.h">
+      <Filter>src\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_store.h">
+      <Filter>src\resource</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\forward\forward.hlsl">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\deferred\gbuffer.hlsl">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <None Include="src\shaders\hlsl\utility\env_map.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\forward\forward_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\common\functions.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\deferred\gbuffer.hlsli">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\common\geometry.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli">
+      <Filter>src\shaders\hlsl\lighting</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\types.hlsli">
+      <Filter>src\shaders\hlsl</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\common\vector.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
+    <CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli">
+      <Filter>src\compute\common</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli">
+      <Filter>src\compute\common</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli">
+      <Filter>src\compute\spatial_partition</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli">
+      <Filter>src\compute\particle_collision</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli">
+      <Filter>src\compute\particle_collision</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
+      <Filter>src\compute\radix_sort</Filter>
+    </FxCompile>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
+      <Filter>src\compute\spatial_partition</Filter>
+    </FxCompile>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
+      <Filter>src\compute\particle_collision</Filter>
+    </FxCompile>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
+      <Filter>src\compute\fluid_simulation</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc">
+      <Filter>src\compute</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

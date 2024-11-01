@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -12,8 +11,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Microsoft.Win32;
-using Rylogic.Core.Windows;
-using Rylogic.Extn.Windows;
+using Rylogic.Windows;
+using Rylogic.Windows.Extn;
 using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Utility;
@@ -58,7 +57,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The values of this dependency property should be saved or restored by journaling processes, or when navigating by Uniform resource identifiers (URIs).</summary>
 			Journal = FrameworkPropertyMetadataOptions.Journal,
 
-			/// <summary>The subproperties on the value of this dependency property do not affect any aspect of rendering.</summary>
+			/// <summary>The sub-properties on the value of this dependency property do not affect any aspect of rendering.</summary>
 			SubPropertiesDoNotAffectRender = FrameworkPropertyMetadataOptions.SubPropertiesDoNotAffectRender,
 		}
 
@@ -229,7 +228,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return the monitor rectangle (in DIP)</summary>
 		public static Rect MonitorRect(IntPtr monitor)
 		{
-			var mon = Win32.GetMonitorInfo(monitor);
+			var mon = User32.GetMonitorInfo(monitor);
 			var dip = 96.0 / Dpi.DpiForMonitor(monitor);
 			return new Rect(
 				mon.rcWork.left * dip,

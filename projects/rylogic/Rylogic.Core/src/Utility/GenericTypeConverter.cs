@@ -25,19 +25,19 @@ namespace Rylogic.Utility
 		{
 			return typeof(T).Name.Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.LowerCase, Str_.ESeparate.Add, " ", "");
 		}
-		public override bool GetPropertiesSupported(ITypeDescriptorContext context)
+		public override bool GetPropertiesSupported(ITypeDescriptorContext? context)
 		{
 			return true;
 		}
-		public override bool GetCreateInstanceSupported(ITypeDescriptorContext context)
+		public override bool GetCreateInstanceSupported(ITypeDescriptorContext? context)
 		{
 			return AllowCreateInstance;
 		}
-		public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes)
+		public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext? context, object value, Attribute[]? attributes)
 		{
 			return TypeDescriptor.GetProperties(value ,attributes);
 		}
-		public override object CreateInstance(ITypeDescriptorContext context, IDictionary values)
+		public override object CreateInstance(ITypeDescriptorContext? context, IDictionary values)
 		{
 			T t = new T();
 			foreach (var prop in typeof(T).GetProperties())
@@ -47,7 +47,7 @@ namespace Rylogic.Utility
 			}
 			return t;
 		}
-		public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+		public override object? ConvertTo(ITypeDescriptorContext? context, System.Globalization.CultureInfo? culture, object? value, Type destinationType)
 		{
 			return base.ConvertTo(context, culture, value, destinationType);
 		}

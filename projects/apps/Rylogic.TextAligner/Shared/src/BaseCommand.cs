@@ -11,14 +11,14 @@ namespace Rylogic.TextAligner
 	/// <summary>Base class for MenuCommands</summary>
 	public class BaseCommand :MenuCommand
 	{
-		public BaseCommand(RylogicTextAlignerPackage package, int cmd_id)
-			:base(RunCommand, new CommandID(GuidList.guidRylogicTextAlignerCmdSet, cmd_id))
+		public BaseCommand(IPackage package, Guid cmd_set, int cmd_id)
+			:base(RunCommand, new CommandID(cmd_set, cmd_id))
 		{
 			Package = package;
 		}
 
 		/// <summary>The owning package instance</summary>
-		protected RylogicTextAlignerPackage Package { get; private set; }
+		protected IPackage Package { get; private set; }
 
 		/// <summary></summary>
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD100:Avoid async void methods", Justification = "<Pending>")]

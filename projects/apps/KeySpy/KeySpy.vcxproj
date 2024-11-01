@@ -2,7 +2,6 @@
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Properties -->
-	<Import Project="..\..\..\build\props\globals.props" />
 	<PropertyGroup Label="Globals">
 		<ProjectGuid>{88D8BE21-D441-41B5-B9A2-705DFAEC2697}</ProjectGuid>
 		<RootNamespace>KeySpy</RootNamespace>
@@ -32,20 +31,31 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="..\..\..\build\props\tools.props" />
-	<Import Project="..\..\..\build\props\app.props" />
+	<Import Project="$(PropsPath)tools.props" />
+	<Import Project="$(PropsPath)app.props" />
 
 	<!-- Build Options -->
 	<ItemDefinitionGroup>
 		<ClCompile>
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
-			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\sdk;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>
+				;$(ProjectDir)
+				;$(RylogicRoot)include
+				;$(RylogicRoot)sdk
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
 		</ClCompile>
 		<Link>
 			<SubSystem>Windows</SubSystem>
-			<AdditionalLibraryDirectories>$(ProjectDir)..\..\..\sdk\quickmail\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-			<AdditionalDependencies>libquickmail.a;%(AdditionalDependencies)</AdditionalDependencies>
+			<AdditionalLibraryDirectories>
+				;$(RylogicRoot)sdk\quickmail\lib
+				;%(AdditionalLibraryDirectories)
+			</AdditionalLibraryDirectories>
+			<AdditionalDependencies>
+				;libquickmail.a
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
 		</Link>
 	</ItemDefinitionGroup>
 
@@ -57,5 +67,7 @@
 		<ClInclude Include="src\forward.h" />
 		<ClInclude Include="src\controls_ui.h" />
 	</ItemGroup>
+
+	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

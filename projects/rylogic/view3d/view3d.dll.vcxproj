@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Globals -->
+	<PropertyGroup>
+		<ProjectGuid>{363D015B-B545-4623-A5CE-61245C9BF1F8}</ProjectGuid>
+		<ProjectName>view3d.dll</ProjectName>
+		<TargetName>view3d</TargetName>
+		<RootNamespace>view3d</RootNamespace>
+		<ConfigurationType>DynamicLibrary</ConfigurationType>
+	</PropertyGroup>
+
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="$(PropsPath)tools.props" />
+	<Import Project="$(PropsPath)dll.props" />
+
+	<!-- Build options -->
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>
+				;VIEW3D_EXPORTS
+				;%(PreprocessorDefinitions)
+			</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>
+				;$(RylogicRoot)projects\rylogic
+				;$(RylogicRoot)sdk\lua\lua\src
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalDependencies>
+				;view3d-static.lib
+				;lua-static.lib
+				;strmiids.lib
+				;comctl32.lib
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d\dll\view3d.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d\dll\conversion.h" />
+		<ClInclude Include="dll\forward.h" />
+		<ClInclude Include="dll\window.h" />
+		<ClCompile Include="dll\window.cpp" />
+		<ClInclude Include="dll\context.h" />
+		<ClCompile Include="dll\context.cpp" />
+		<ClCompile Include="dll\view3d.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+			<AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+		</ClCompile>
+	</ItemGroup>
+
+	<!-- Targets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

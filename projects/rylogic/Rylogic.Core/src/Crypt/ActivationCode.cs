@@ -29,7 +29,7 @@ namespace Rylogic.Common
 			var user_data_bytes = Encoding.UTF8.GetBytes(user_details);
 
 			var rsa = RSAService(private_key);
-			var sig = rsa.SignData(user_data_bytes, new SHA1CryptoServiceProvider());
+			var sig = rsa.SignData(user_data_bytes, SHA1.Create());
 			return sig;
 		}
 
@@ -39,7 +39,7 @@ namespace Rylogic.Common
 			var user_data_bytes = Encoding.UTF8.GetBytes(user_details);
 
 			var rsa = RSAService(public_key);
-			bool valid = rsa.VerifyData(user_data_bytes, new SHA1CryptoServiceProvider(), signature);
+			bool valid = rsa.VerifyData(user_data_bytes, SHA1.Create(), signature);
 			return valid;
 		}
 	}

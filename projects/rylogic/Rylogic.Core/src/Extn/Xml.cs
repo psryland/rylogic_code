@@ -51,7 +51,7 @@ namespace Rylogic.Extn
 	/// <summary>XML helper methods</summary>
 	public static class Xml_
 	{
-		public static readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
+		public static readonly char[] WhiteSpace = [' ','\t','\r','\n','\v'];
 		public const string TypeAttr = "ty";
 
 		#region ToXml Binding
@@ -69,7 +69,7 @@ namespace Rylogic.Extn
 			private readonly Dictionary<Type, ToFunc> m_bind;
 			public ToBinding()
 			{
-				m_bind = new Dictionary<Type, ToFunc>();
+				m_bind = [];
 				this[typeof(XElement)] = (obj, node) =>
 				{
 					node.Add(obj);
@@ -279,11 +279,10 @@ namespace Rylogic.Extn
 			{
 				// Find the native method on the type
 				var type = obj.GetType();
-				var mi = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
-				if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
+				var mi = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc) ?? throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
 
 				// Replace the mapping with a call directly to that method
-				this[type] = (o, n) => (XElement?)mi.Invoke(o, new object[] { n }) ?? throw new Exception("ToXml method returned null");
+				this[type] = (o, n) => (XElement?)mi.Invoke(o, [n]) ?? throw new Exception("ToXml method returned null");
 				return this[type](obj, node);
 			}
 
@@ -293,8 +292,7 @@ namespace Rylogic.Extn
 				var type = obj.GetType();
 
 				// Look for the DataContract attribute
-				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-				if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
+				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault() ?? throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
 
 				// Find all fields and properties with the DataMember attribute
 				var members =
@@ -313,7 +311,7 @@ namespace Rylogic.Extn
 						var child = new XElement(name);
 
 						// Read the member to be written
-						object? val = 
+						var val = 
 							m.Member is PropertyInfo prop ? prop.GetValue(o, null) :
 							m.Member is FieldInfo field ? field.GetValue(o) :
 							null;
@@ -366,10 +364,10 @@ namespace Rylogic.Extn
 			private readonly Dictionary<Type, AsFunc> m_bind;
 			public AsBinding()
 			{
-				m_bind = new Dictionary<Type, AsFunc>();
+				m_bind = [];
 				this[typeof(XElement)] = (elem, type, ctor) =>
 				{
-					return elem.Elements().FirstOrDefault();
+					return elem.Elements().FirstOrDefault() ?? throw new NullReferenceException();
 				};
 				this[typeof(string)] = (elem, type, ctor) =>
 				{
@@ -471,7 +469,7 @@ namespace Rylogic.Extn
 					foreach (var li_elem in elem.Elements())
 					{
 						var li = li_elem.As(ty_args[0]);
-						mi_add.Invoke(list, new object?[] { li });
+						mi_add.Invoke(list, [li]);
 					}
 					return list;
 				};
@@ -484,7 +482,7 @@ namespace Rylogic.Extn
 					foreach (var li_elem in elem.Elements())
 					{
 						var li = li_elem.As(ty_args[0]);
-						mi_add.Invoke(list, new object?[] { li });
+						mi_add.Invoke(list, [li]);
 					}
 					return list;
 				};
@@ -499,7 +497,7 @@ namespace Rylogic.Extn
 					{
 						var key = kv_elem.Element("k").As(ty_args[0]);
 						var val = kv_elem.Element("v").As(ty_args[1]);
-						mi_add.Invoke(dic, new object?[] { key, val });
+						mi_add.Invoke(dic, [key, val]);
 					}
 					return dic;
 				};
@@ -514,7 +512,7 @@ namespace Rylogic.Extn
 					{
 						var key = kv_elem.Element("k").As(ty_args[0]);
 						var val = kv_elem.Element("v").As(ty_args[1]);
-						mi_add.Invoke(dic, new object?[] { key, val });
+						mi_add.Invoke(dic, [key, val]);
 					}
 					return dic;
 				};
@@ -527,7 +525,7 @@ namespace Rylogic.Extn
 					foreach (var si_elem in elem.Elements())
 					{
 						var si = si_elem.As(ty_args[0]);
-						mi_add.Invoke(set, new object?[] { si });
+						mi_add.Invoke(set, [si]);
 					}
 					return set;
 				};
@@ -644,7 +642,7 @@ namespace Rylogic.Extn
 					var array = Array.CreateInstance(ty_elem, children.Count);
 
 					// Note: the 'factory' must handle both the array type and the element types
-					for (int i = 0; i != children.Count; ++i)
+					for (var i = 0; i != children.Count; ++i)
 						array.SetValue(children[i].As(ty_elem, create), i);
 
 					return array;
@@ -654,15 +652,15 @@ namespace Rylogic.Extn
 				var lookup_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 
 				// Find the function that converts the string to 'type'
-				AsFunc? func = TryGetValue(lookup_type, out var f) ? f : null;
+				var func = TryGetValue(lookup_type, out var f) ? f : null;
 				for (;func == null;) // There is no 'As' binding for this type, try a few possibilities
 				{
 					// Try a constructor that takes a single XElement parameter. The constructor can be private, but not inherited
-					var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+					var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, [typeof(XElement)], null);
 					if (ctor != null) { func = this[type] = AsCtor; break; }
 
 					// Try a method called 'FromXml' that takes a single XElement parameter
-					var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+					var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, [typeof(XElement)], null);
 					if (method != null) { func = this[type] = AsFromXmlMethod; break; }
 
 					// Try DataContract binding
@@ -687,19 +685,17 @@ namespace Rylogic.Extn
 			/// <summary>An 'As' method that expects 'type' to have a constructor taking a single XElement argument</summary>
 			private object AsCtor(XElement elem, Type type, Func<Type,object> factory)
 			{
-				var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-				if (ctor == null) throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
+				var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, [typeof(XElement)], null) ?? throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
 
 				// Replace the mapping with a call that doesn't need to search for the constructor
-				this[type] = (e,t,i) => ctor.Invoke(new object[]{e});
+				this[type] = (e,t,i) => ctor.Invoke([e]);
 				return this[type](elem, type, factory);
 			}
 
 			/// <summary>An 'As' method that expects 'type' to have a method called 'FromXml' taking a single XElement argument</summary>
 			private object AsFromXmlMethod(XElement elem, Type type, Func<Type,object> factory)
 			{
-				var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-				if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
+				var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, [typeof(XElement)], null) ?? throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
 
 				// Replace the mapping with a call that doesn't need to search for the method
 				this[type] = (e,t,i) =>
@@ -707,7 +703,7 @@ namespace Rylogic.Extn
 					try
 					{
 						var obj = factory(type);
-						method.Invoke(obj, new object[] { e });
+						method.Invoke(obj, [e]);
 						return obj;
 					}
 					catch (TargetInvocationException ex) when (ex.InnerException != null)
@@ -722,8 +718,7 @@ namespace Rylogic.Extn
 			private object AsDataContract(XElement elem, Type type, Func<Type,object> factory)
 			{
 				// Look for the DataContract attribute
-				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-				if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
+				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault() ?? throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
 
 				// Find all fields and properties with the DataMember attribute
 				var members =
@@ -744,7 +739,7 @@ namespace Rylogic.Extn
 						throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
 
 					// Read nodes from the XML, and populate any members with matching names
-					object obj = new_inst(ty);
+					var obj = new_inst(ty);
 					foreach (var e in el.Elements())
 					{
 						// Look for the property or field by name
@@ -937,7 +932,7 @@ namespace Rylogic.Extn
 				throw new Exception($"XML insert node. Index {index} out of range [0,{child_count}]");
 
 			if      (index == 0)           parent.AddFirst(child);
-			else if (index == child_count) parent.LastNode.AddAfterSelf(child);
+			else if (index == child_count) (parent.LastNode ?? throw new NullReferenceException()).AddAfterSelf(child);
 			else                           parent.Nodes().Skip(index).First().AddBeforeSelf(child);
 			return child;
 		}
@@ -1091,8 +1086,8 @@ namespace Rylogic.Extn
 			public Op(XElement elem)
 			{
 				OpType   = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
-				NodeType = Enum<XmlNodeType>.Parse((string)elem.Attribute(Attr.NodeType) ?? "element", ignore_case: true);
-				Name     = (string)elem.Attribute(Attr.Name) ?? string.Empty;
+				NodeType = Enum<XmlNodeType>.Parse((string?)elem.Attribute(Attr.NodeType) ?? "element", ignore_case: true);
+				Name     = (string?)elem.Attribute(Attr.Name) ?? string.Empty;
 				Index    = (int?)elem.Attribute(Attr.Idx) ?? 0;
 				Value    = (OpType == EOpType.Value || OpType == EOpType.Attr) && !elem.IsEmpty ? elem.Value : null; // Note: IsEmpty means <element/> => Value==null, Value=="" means <element></element>
 				FullName = MakeFullName(elem).ToString();
@@ -1111,11 +1106,10 @@ namespace Rylogic.Extn
 					var op = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
 					if (op == EOpType.Change || op == EOpType.Insert || op == EOpType.Remove)
 					{
-						var name = (string)elem.Attribute(Attr.Name);
-						if (name != null)
+						if (elem.Attribute(Attr.Name) is XAttribute name_attr)
 						{
 							if (sb.Length != 1) sb.Append("/");
-							sb.Append(name);
+							sb.Append(name_attr.Value);
 						}
 					}
 				}
@@ -1375,7 +1369,7 @@ namespace Rylogic.Extn
 							return false;
 
 						// Both are XElements, but the names are different, not changeable
-						if (l is XElement && ((XElement)l).Name != ((XElement)r).Name)
+						if (l is XElement element && element.Name != ((XElement)r).Name)
 							return false;
 
 						// Same type => changeable
@@ -1432,32 +1426,39 @@ namespace Rylogic.Extn
 				var op = new Op(op_elem);
 				switch (op.OpType)
 				{
-				// Replace the Value for the element
-				case EOpType.Value:
+					// Replace the Value for the element
+					case EOpType.Value:
 					{
+						if (op.Value is not string op_value)
+							throw new NullReferenceException($"op.Value operation must have a value. {op}");
+
 						// If 'tree' contains no 'XText' node
 						var child = op.FindChild(tree);
-						if      (child == null) tree.Insert(op.Index, new XText(op.Value));
-						else if (child is XText    xt) xt.Value = op.Value;
-						else if (child is XElement xe) xe.Value = op.Value;
-						else if (child is XComment xc) xc.Value = op.Value;
-						else throw new Exception($"Cannot change value on node type {child.NodeType}");
+						if (child == null)
+							tree.Insert(op.Index, new XText(op_value));
+						else if (child is XText xt)
+							xt.Value = op_value;
+						else if (child is XElement xe)
+							xe.Value = op_value;
+						else if (child is XComment xc)
+							xc.Value = op_value;
+						else
+							throw new Exception($"Cannot change value on node type {child.NodeType}");
 						break;
 					}
 
-				// 'Remove' the child node
-				case EOpType.Remove:
+					// 'Remove' the child node
+					case EOpType.Remove:
 					{
 						var child = op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
 							throw new Exception($"Name mismatch for remove operation. Expected: {op.Name}  Actual: {xe.Name}");
-						if (child != null)
-							child.Remove();
+						child?.Remove();
 						break;
 					}
 
-				// 'Insert' an element at the given index position
-				case EOpType.Insert:
+					// 'Insert' an element at the given index position
+					case EOpType.Insert:
 					{
 						// Insert a new node, and apply any child operations to it
 						if (op.Index < 0 || op.Index > tree.ChildCount())
@@ -1465,15 +1466,15 @@ namespace Rylogic.Extn
 
 						switch (op.NodeType)
 						{
-						default:
-							throw new NotSupportedException($"XmlDiff insert node type {op.NodeType} has not been implemented");
-						case XmlNodeType.Element:
+							default:
+								throw new NotSupportedException($"XmlDiff insert node type {op.NodeType} has not been implemented");
+							case XmlNodeType.Element:
 							{
 								var node = (XContainer)tree.Insert(op.Index, new XElement(op.Name));
 								node.Patch(op_elem);
 								break;
 							}
-						case XmlNodeType.Comment:
+							case XmlNodeType.Comment:
 							{
 								var value = op_elem.Element(nameof(EOpType.Value)).As<string>();
 								var node = tree.Insert(op.Index, new XComment(value));
@@ -1483,20 +1484,19 @@ namespace Rylogic.Extn
 						break;
 					}
 
-				// 'Change' is a group of operations to apply to a child node
-				case EOpType.Change:
+					// 'Change' is a group of operations to apply to a child node
+					case EOpType.Change:
 					{
 						// Find the child node
 						var child = (XContainer?)op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
 							throw new Exception($"Name mismatch for change operation. Expected: {op.Name}  Actual: {xe.Name}");
-						if (child != null)
-							child.Patch(op_elem);
+						child?.Patch(op_elem);
 						break;
 					}
 
-				// Add, Replace, or Remove an attribute
-				case EOpType.Attr:
+					// Add, Replace, or Remove an attribute
+					case EOpType.Attr:
 					{
 						// SetAttributeValue 
 						((XElement)tree).SetAttributeValue(op.Name, op.Value);
@@ -1661,12 +1661,11 @@ namespace Rylogic.UnitTests
 
 		/// <summary>A custom DataContract type without a default constructor</summary>
 		[DataContract(Name = "ELEM2")]
-		internal class Elem2
+		internal class Elem2(int i, string? s)
 		{
-			[DataMember(Name = "eye")] public readonly int m_int;
-			[DataMember] public readonly string? m_string;
+			[DataMember(Name = "eye")] public readonly int m_int = i;
+			[DataMember] public readonly string? m_string = s;
 
-			public Elem2(int i, string? s) { m_int = i; m_string = s; }
 			public override string ToString() { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
 			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
 			private bool Equals(Elem2 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
@@ -1930,14 +1929,12 @@ namespace Rylogic.UnitTests
 
 			Xml_.Config.AnonymousTypesAsDictionary();
 
-			var OBJ0 = (IDictionary<string, object>?)node0.ToObject();
-			if (OBJ0 == null) throw new NullReferenceException();
+			var OBJ0 = (IDictionary<string, object>?)node0.ToObject() ?? throw new NullReferenceException();
 			Assert.Equal("one", OBJ0["One"]);
 			Assert.Equal(2    , OBJ0["Two"]);
 			Assert.Equal(6.28 , OBJ0["Three"]);
 
-			var OBJ1 = (object[]?)node1.ToObject();
-			if (OBJ1 == null) throw new NullReferenceException();
+			var OBJ1 = (object[]?)node1.ToObject() ?? throw new NullReferenceException();
 			Assert.Equal(3, OBJ1.Length);
 
 			Assert.Equal("one", ((IDictionary<string, object>)OBJ1[0])["One"]);
@@ -1976,7 +1973,7 @@ namespace Rylogic.UnitTests
 					)
 				);
 
-			XElement root = xml.Root;
+			var root = xml.Root ?? throw new NullReferenceException("No Root element");
 			Assert.NotNull(root);
 			Assert.Equal(1, root.Element("a").As<int>());
 			Assert.Equal(2.0f, root.Element("b").As<float>());
@@ -1984,21 +1981,21 @@ namespace Rylogic.UnitTests
 			Assert.Equal(EEnum.Dog, root.Element("d").As<EEnum>());
 
 			var ints = new List<int>();
-			root.Element("e").As(ints, "i");
+			root.Element("e")?.As(ints, "i");
 			Assert.Equal(5, ints.Count);
-			for (int i = 0; i != 4; ++i)
+			for (var i = 0; i != 4; ++i)
 				Assert.Equal(i, ints[i]);
 
 			var chars = new List<char>();
-			root.Element("e").As(chars, "j");
+			root.Element("e")?.As(chars, "j");
 			Assert.Equal(5, chars.Count);
-			for (int j = 0; j != 4; ++j)
+			for (var j = 0; j != 4; ++j)
 				Assert.Equal((char)('a' + j), chars[j]);
 
 			ints.Clear();
-			root.Element("e").As(ints, "i", (lhs, rhs) => lhs == rhs);
+			root.Element("e")?.As(ints, "i", (lhs, rhs) => lhs == rhs);
 			Assert.Equal(4, ints.Count);
-			for (int i = 0; i != 4; ++i)
+			for (var i = 0; i != 4; ++i)
 				Assert.Equal(i, ints[i]);
 		}
 		[Test]
@@ -2063,7 +2060,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void XmlElements()
 		{
-			const string src =
+			const string SRC =
 				"<root>" +
 					"<one>" +
 						"<red/>" +
@@ -2075,14 +2072,15 @@ namespace Rylogic.UnitTests
 					"</one>" +
 					"<one/>" +
 				"</root>";
-			var xml = XDocument.Parse(src);
-			var cnt = xml.Root.Elements("one", "red").Count();
+			var xml = XDocument.Parse(SRC);
+			var root = xml.Root ?? throw new NullReferenceException("No Root element");
+			var cnt = root.Elements("one", "red").Count();
 			Assert.Equal(cnt, 4);
 		}
 		[Test]
 		public void XmlEnumerateLeaves()
 		{
-			const string src =
+			const string SRC =
 			#region
 @"<root>
 	0
@@ -2107,7 +2105,7 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml = XDocument.Parse(src).Root;
+			var xml = XDocument.Parse(SRC).Root ?? throw new NullReferenceException("No Root element");
 
 			var leaf_nodes = xml.LeafNodes().Select(x => x.GetType().Name).ToList();
 			Assert.True(leaf_nodes.SequenceEqual(new[] { "XText", "XElement", "XComment", "XElement", "XElement", "XElement", "XElement" }));
@@ -2118,7 +2116,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void XmlDiffPatch0()
 		{
-			const string xml0_src =
+			const string XML0_SRC =
 			#region xml0
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2152,7 +2150,7 @@ namespace Rylogic.UnitTests
 	</removed>
 </root>";
 			#endregion
-			const string xml1_src =
+			const string XML1_SRC =
 			#region xml1
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2189,7 +2187,7 @@ namespace Rylogic.UnitTests
 	</unchanged0>
 </root>";
 			#endregion
-			const string xml_patch =
+			const string XML_PATCH =
 			#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2231,9 +2229,9 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml0 = XDocument.Parse(xml0_src).Root;
-			var xml1 = XDocument.Parse(xml1_src).Root;
-			var xmlp = XDocument.Parse(xml_patch).Root;
+			var xml0 = XDocument.Parse(XML0_SRC).Root ?? throw new NullReferenceException();
+			var xml1 = XDocument.Parse(XML1_SRC).Root ?? throw new NullReferenceException();
+			var xmlp = XDocument.Parse(XML_PATCH).Root ?? throw new NullReferenceException();
 
 			// Find how xml0 is different from xml1
 			var patch = xml0.Diff(xml1);
@@ -2248,7 +2246,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void XmlDiffPatch1()
 		{
-			const string xml0_src =
+			const string XML0_SRC =
 			#region xml0
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2263,7 +2261,7 @@ namespace Rylogic.UnitTests
 	</three>
 </root>";
 			#endregion
-			const string xml1_src =
+			const string XML1_SRC =
 			#region xml1
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2276,27 +2274,27 @@ namespace Rylogic.UnitTests
 	</four>
 </root>";
 			#endregion
-			const string xml_patch =
+			const string XML_PATCH =
 			#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
   <Change idx='1' name='one'>
-    <Value idx='0'>1</Value>
+	<Value idx='0'>1</Value>
   </Change>
   <Change idx='2' name='two'>
-    <Insert idx='1' node_type='Element' name='child'>
-      <Value idx='0'>c</Value>
-    </Insert>
+	<Insert idx='1' node_type='Element' name='child'>
+	  <Value idx='0'>c</Value>
+	</Insert>
   </Change>
   <Insert idx='4' node_type='Element' name='four'>
-    <Attr name='ty'>string</Attr>
-    <Value idx='0'>
+	<Attr name='ty'>string</Attr>
+	<Value idx='0'>
 		four
 	</Value>
   </Insert>
 </root>";
 			#endregion
-			const string xml_result =
+			const string XML_RESULT =
 			#region result
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
@@ -2316,10 +2314,10 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 
-			var xml0 = XDocument.Parse(xml0_src).Root;
-			var xml1 = XDocument.Parse(xml1_src).Root;
-			var xmlp = XDocument.Parse(xml_patch).Root;
-			var xmlr = XDocument.Parse(xml_result).Root;
+			var xml0 = XDocument.Parse(XML0_SRC).Root ?? throw new NullReferenceException();
+			var xml1 = XDocument.Parse(XML1_SRC).Root ?? throw new NullReferenceException();
+			var xmlp = XDocument.Parse(XML_PATCH).Root ?? throw new NullReferenceException();
+			var xmlr = XDocument.Parse(XML_RESULT).Root ?? throw new NullReferenceException();
 
 			// Find how xml0 is different from xml1
 			var patch = xml0.Diff(xml1, XmlDiff.Mode.Merge);

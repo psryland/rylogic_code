@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/texture/texture_2d.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/window.h"
@@ -11,8 +10,16 @@
 
 namespace pr::rdr12
 {
-	Texture2D::Texture2D(ResourceManager& mgr, ID3D12Resource* res, TextureDesc const& desc)
-		:TextureBase(mgr, res, desc, D3D12_SRV_DIMENSION_TEXTURE2D)
+	Texture2D::Texture2D(Renderer& rdr, ID3D12Resource* res, TextureDesc const& desc)
+		:TextureBase(rdr, res, desc)
+		,m_t2s(m4x4::Identity())
+	{}
+	Texture2D::Texture2D(Renderer& rdr, HANDLE shared_handle, TextureDesc const& desc)
+		:TextureBase(rdr, shared_handle, desc)
+		,m_t2s(m4x4::Identity())
+	{}
+	Texture2D::Texture2D(Renderer& rdr, IUnknown* shared_resource, TextureDesc const& desc)
+		:TextureBase(rdr, shared_resource, desc)
 		,m_t2s(m4x4::Identity())
 	{}
 
@@ -37,7 +44,7 @@ namespace pr::rdr12
 		// Note: the main RT must be restored once all ReleaseDC's have been called
 	}
 
-	#if 0
+	#if 0 //todo
 	// Get a d2d render target for the DXGI surface within this texture
 	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget(Window const* wnd)
 	{

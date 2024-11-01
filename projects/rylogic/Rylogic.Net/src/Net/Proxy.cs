@@ -2,9 +2,8 @@
 using System.Globalization;
 using System.IO;
 using System.Net;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 
 namespace Rylogic.Net
@@ -12,7 +11,7 @@ namespace Rylogic.Net
 	// Usage:
 	//  var proxy = Proxy.Create(EType.Http, "localhost", 6588);
 	//  var tcp = proxy.Connect("www.rylogic.co.nz", 80);
-	
+
 	/// <summary>Proxy base class</summary>
 	public abstract class Proxy
 	{
@@ -98,7 +97,7 @@ namespace Rylogic.Net
 			return async;
 		}
 
-		/// <summary>Cancels any asychronous operation that is currently active.</summary>
+		/// <summary>Cancels any asynchronous operation that is currently active.</summary>
 		public IAsyncResult Cancel(IAsyncResult ar)
 		{
 			ProxyAsyncData async = (ProxyAsyncData)ar;
@@ -141,7 +140,7 @@ namespace Rylogic.Net
 			for (int tick = 0; tick <= ProxyConnectTimeout && !stream.DataAvailable; Thread.Sleep(100), tick += 100) {}
 			if (!stream.DataAvailable)
 			{
-				var ep = (IPEndPoint)tcp.Client.RemoteEndPoint;
+				var ep = (IPEndPoint?)tcp.Client.RemoteEndPoint ?? throw new NullReferenceException();
 				string host = ep.Address.ToString();
 				string port = ep.Port.ToString(CultureInfo.InvariantCulture);
 				throw new ProxyException(string.Format("A timeout while connecting to proxy server {0}:{1}.", host, port));
@@ -867,8 +866,7 @@ namespace Rylogic.Net
 		/// <summary>Return the address type for a given host string</summary>
 		public static byte AddressType(string host)
 		{
-			IPAddress ip_addr;
-			if (!IPAddress.TryParse(host, out ip_addr))
+			if (!IPAddress.TryParse(host, out var ip_addr) || ip_addr is null)
 				return AddrtypeDomainName;
 				
 			switch (ip_addr.AddressFamily)
@@ -912,6 +910,5 @@ namespace Rylogic.Net
 		public ProxyException() {}
 		public ProxyException(string message) :base(message) {}
 		public ProxyException(string message, Exception inner_exception) :base(message, inner_exception) {}
-		protected ProxyException(SerializationInfo info, StreamingContext context) :base(info, context) {}
 	}
 }

@@ -4,11 +4,11 @@
 //*********************************************
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/main/config.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/resource/resource_state_store.h"
 #include "pr/view3d-12/resource/resource_state.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
+#include "pr/view3d-12/sampler/sampler.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -23,7 +23,7 @@ namespace pr::rdr12
 	// Useful reading: http://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx
 
 	// Registered windows message for BeginInvoke
-	static wchar_t const* BeginInvokeWndClassName = L"pr::rdr::BeginInvoke";
+	static wchar_t const* BeginInvokeWndClassName = L"pr::rdr12::BeginInvoke";
 
 	// WndProc for the dummy window used to implement BeginInvoke functionality
 	LRESULT __stdcall BeginInvokeWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -46,7 +46,7 @@ namespace pr::rdr12
 		return DefWindowProcW(hwnd, message, wparam, lparam);
 	}
 
-	// Create Dx interface pointers
+	// Create DX interface pointers
 	Renderer::RdrState::RdrState(RdrSettings const& settings)
 		:m_settings(settings)
 		,m_features()
@@ -72,10 +72,10 @@ namespace pr::rdr12
 			if (m_settings.m_adapter.ptr == nullptr)
 				throw std::runtime_error("No DirectX Adapter found that supports the requested feature level");
 
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceDebug, true);
 			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::DeviceGPUDebug, true);
-			//m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors, true);
-			//#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
+			m_settings.m_options = SetBits(m_settings.m_options, ERdrOptions::BreakOnErrors, true);
+			#pragma message(PR_LINK "WARNING: ************************************************** DeviceDebug enabled")
 
 			// Add the debug layer in debug mode. Note: this automatically disables multi-sampling as well.
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_options, ERdrOptions::DeviceDebug), "DeviceDebug is enabled");
@@ -250,7 +250,7 @@ namespace pr::rdr12
 		,m_poll_callbacks()
 		,m_dummy_hwnd()
 		,m_id32_src()
-		,m_res_mgr(rdr())
+		,m_res_store(rdr())
 	{
 		try
 		{
@@ -306,9 +306,13 @@ namespace pr::rdr12
 	{
 		return *this;
 	}
-	ResourceManager& Renderer::res()
+	ResourceStore& Renderer::store()
 	{
-		return m_res_mgr;
+		return m_res_store;
+	}
+	Renderer::AllocationsTracker& Renderer::mem_tracker()
+	{
+		return m_mem_tracker;
 	}
 
 	// Read access to the initialisation settings
@@ -359,6 +363,20 @@ namespace pr::rdr12
 	int Renderer::NewId32()
 	{
 		return ++m_id32_src;
+	}
+	
+	// Use the 'ResolveFilepath' event to resolve a filepath
+	std::filesystem::path Renderer::ResolvePath(std::string_view path) const
+	{
+		auto args = ResolvePathArgs{ .filepath = path, .handled = false };
+		if (!std::filesystem::exists(args.filepath))
+		{
+			// If the texture filepath doesn't exist, use the resolve event
+			ResolveFilepath(*this, args);
+			if (!args.handled || !std::filesystem::exists(args.filepath))
+				throw std::runtime_error(FmtS("Texture filepath '%s' does not exist", args.filepath.c_str()));
+		}
+		return std::move(args.filepath);
 	}
 
 	// Execute any pending tasks in the task queue

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<PropertyGroup>
+		<DxcPackage>Microsoft.Direct3D.DXC.1.8.2407.12</DxcPackage>
+	</PropertyGroup>
+
+	<Target Name="Deploy-DXC"
+		AfterTargets="Build"
+		Inputs="$(PackagesPath)$(DxcPackage)\build\native\bin\$(PlatformName)\dxcompiler.dll"
+		Outputs="$(TargetDir)dxcompiler.dll"
+	>
+		<Exec Command="py $(ScriptPath)Copy.py $(PackagesPath)$(DxcPackage)\build\native\bin\$(PlatformName)\dxcompiler.dll $(TargetDir) -OnlyIfNewer" />
+	</Target>
+
+</Project>

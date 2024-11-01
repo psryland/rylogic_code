@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
@@ -436,9 +435,9 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Render and present the scene</summary>
 		private void Render()
 		{
-			Window.RestoreRT();
+			//Window.RestoreRT();
 			Window.Render();
-			Window.Present();
+			//Window.Present();
 		}
 
 		#region Measurement UI

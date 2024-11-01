@@ -2,29 +2,19 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows;net481</TargetFrameworks>
 		<RootNamespace>Rylogic.DirectShow</RootNamespace>
-		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
-		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<LangVersion>latest</LangVersion>
-		<Nullable>Enable</Nullable>
 		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 
 	<!-- Assembly Properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
-		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.1.0</Version>
-		<FileVersion>1.1.0</FileVersion>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>$(RylogicLibraryVersion)</Version>
+		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
+		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
-	
+
 	<!-- Build Options -->
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE</DefineConstants>
@@ -34,19 +24,20 @@
 		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
-	
+
 	<!-- Dependencies -->
 	<ItemGroup>
-	  <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Drawing.Common" />
+		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-	  <None Update="Rylogic.DirectShow.runtimeconfig.json">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>
-	
+
 	<!-- Post Build -->
+	<ItemGroup>
+		<None Update="Rylogic.DirectShow.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />
+		<Exec Command="py $(ScriptPath)RunUnitTests.py $(TargetPath) Rylogic.Core" />
 	</Target>
 </Project>

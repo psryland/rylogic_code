@@ -46,168 +46,168 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\include\pr\gui\view3d_panel.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\view3d_panel.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\gui\wingui.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\view3d\view3d.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d\view3d.h">
       <Filter>pr\view3d</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\constants.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\constants.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\forward.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\forward.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\rigid_body\rigid_body.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\rigid_body\rigid_body.h">
       <Filter>pr\physics\rigid_body</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\physics.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\physics.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\shape\inertia.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\shape\mass.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_mass.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\shape\shape_builder.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\shape_builder.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\col_box_vs_box.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_box.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\col_box_vs_line.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_box_vs_line.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\col_sphere_vs_box.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_box.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\col_sphere_vs_sphere.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\collision.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\collision.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\penetration.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\penetration.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\ray.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\ray.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\ray_cast.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\ray_cast.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\ray_cast_result.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\ray_cast_result.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_array.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_array.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_box.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_box.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_line.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_line.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_polytope.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_polytope.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_sphere.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_sphere.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shape_triangle.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shape_triangle.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\shapes.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\shapes.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\support.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\support.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\maths.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\maths.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\matrix4x4.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix4x4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\spatial.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector2.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector2.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector3.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector3.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\vector4.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\vector4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\ldraw\ldr_helper.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_helper.h">
       <Filter>pr\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\ldraw\ldr_object.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_object.h">
       <Filter>pr\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\utility\ldraw.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\ldraw.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\collision\ldraw.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\collision\ldraw.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\integrator\integrator.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\integrator.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\integrator\jacobian.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\jacobian.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\broadphase\brute.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\broadphase\brute.h">
       <Filter>pr\physics\broadphase</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\integrator\impulse.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\impulse.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\integrator\contact.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\contact.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\shape\inertia_builder.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\shape\inertia_builder.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\material\material.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\material\material.h">
       <Filter>pr\physics\material</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\material\material_map.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\material\material_map.h">
       <Filter>pr\physics\material</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\integrator\engine.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\integrator\engine.h">
       <Filter>pr\physics\integrator</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\physics2\utility\misc.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\physics2\utility\misc.h">
       <Filter>pr\physics\utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\matrix6x8.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix6x8.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\maths\matrix3x4.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\maths\matrix3x4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-     <ClInclude Include="..\projects\tests\physics2\src\body.h">
+     <ClInclude Include="src\body.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\tests\physics2\src\forward.h">
+    <ClInclude Include="src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClCompile Include="..\projects\tests\physics2\src\main.cpp">
+    <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

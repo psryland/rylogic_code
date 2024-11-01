@@ -19,18 +19,18 @@ namespace pr::rdr12
 		using GfxCmdLists = pr::vector<ID3D12GraphicsCommandList*, 4, false>;
 
 		GfxCmdList m_prepare; // Commands before the first scene is rendered
-		GfxCmdList m_resolve; // Commands used to resolve the msaa buffer into the swap chain buffer
+		GfxCmdList m_resolve; // Commands used to resolve the MSAA buffer into the swap chain buffer
 		GfxCmdList m_present; // Commands after the last scene is rendered
 
-		GfxCmdLists m_main; // Command lists to execute before the msaa buffer is resolved
-		GfxCmdLists m_post; // Command lists to execute after the msaa buffer is resolved
+		GfxCmdLists m_main; // Command lists to execute before the MSAA buffer is resolved
+		GfxCmdLists m_post; // Command lists to execute after the MSAA buffer is resolved
 
-		BackBuffer& m_bb_main; // The back buffer to render the scene to that will be anti-aliased.
-		BackBuffer& m_bb_post; // The back buffer for post-processing effects (assume main has been rendered into post).
+		BackBuffer const& m_bb_main; // The back buffer to render the scene to that will be anti-aliased.
+		BackBuffer const& m_bb_post; // The back buffer for post-processing effects (assume main has been rendered into post).
 		
 		GfxCmdAllocPool& m_cmd_alloc_pool; // The command allocator pool to create allocators from
 
-		Frame(ID3D12Device4* device, BackBuffer& bb_main, BackBuffer& bb_post, GfxCmdAllocPool& cmd_alloc_pool)
+		Frame(ID3D12Device4* device, BackBuffer const& bb_main, BackBuffer const& bb_post, GfxCmdAllocPool& cmd_alloc_pool)
 			: m_prepare(device, cmd_alloc_pool.Get(), nullptr, "Prepare", EColours::Orange)
 			, m_resolve(device, cmd_alloc_pool.Get(), nullptr, "Resolve", EColours::Orange)
 			, m_present(device, cmd_alloc_pool.Get(), nullptr, "Present", EColours::Orange)

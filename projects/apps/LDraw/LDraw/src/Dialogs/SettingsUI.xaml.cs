@@ -4,9 +4,9 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using Rylogic.Common;
-using Rylogic.Core.Windows;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
+using Rylogic.Windows;
 
 namespace LDraw.Dialogs
 {

@@ -4,19 +4,20 @@
 //*********************************************
 #include "pr/view3d-12/sampler/sampler.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
-#include "pr/view3d-12/resource/resource_manager.h"
+#include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/descriptor_store.h"
 
 namespace pr::rdr12
 {
-	Sampler::Sampler(ResourceManager& mgr, SamplerDesc const& desc)
+	Sampler::Sampler(Renderer& rdr, SamplerDesc const& desc)
 		:RefCounted<Sampler>()
-		,m_mgr(&mgr)
+		,m_rdr(&rdr)
 		,m_id(desc.m_id == AutoId ? MakeId(this) : desc.m_id)
 		,m_samp()
 		,m_name(desc.m_name)
 	{
-		m_samp = m_mgr->m_descriptor_store.Create(desc.m_sdesc);
+		ResourceStore::Access store(rdr);
+		m_samp = store.Descriptors().Create(desc.m_sdesc);
 	}
 	Sampler::~Sampler()
 	{
@@ -24,13 +25,16 @@ namespace pr::rdr12
 
 		// Release the sampler resource
 		if (m_samp)
-			m_mgr->m_descriptor_store.Release(m_samp);
+		{
+			ResourceStore::Access store(rdr());
+			store.Descriptors().Release(m_samp);
+		}
 	}
 
 	// Access the renderer
 	Renderer& Sampler::rdr() const
 	{
-		return m_mgr->rdr();
+		return *m_rdr;
 	}
 
 	// Ref counting clean up function
@@ -41,6 +45,7 @@ namespace pr::rdr12
 	}
 	void Sampler::Delete()
 	{
-		m_mgr->Delete(this);
+		ResourceStore::Access store(rdr());
+		store.Delete(this);
 	}
 }

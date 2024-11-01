@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/utility/shadow_caster.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 #include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/scene/scene.h"
@@ -57,7 +56,7 @@ namespace pr::rdr12
 			auto lsp_bounds_cam = w2lsp * ws_bounds_cam;
 
 			// Create a frustum (i.e. projection) that maps the lsp scene bounds to the unit cube.
-			// The amount of perspective warp is controlled by offseting both zn and zf by a fixed amount.
+			// The amount of perspective warp is controlled by offsetting both zn and zf by a fixed amount.
 			// When the light is at 90 deg to the camera, the optimal zn value is: cam_zn + sqrt(cam_zn * cam_zf)
 			auto sz = Max(lsp_bounds_cam.SizeX(), lsp_bounds_cam.SizeY());
 			auto lsp = m4x4::ProjectionPerspective(sz, sz, s_cast<float>(lsp_zn), s_cast<float>(lsp_zn + 2.0f*lsp_dz), true);

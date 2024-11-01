@@ -4,7 +4,6 @@
 //*********************************************
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/barrier_batch.h"
-#include "pr/view3d-12/resource/resource_manager.h"
 
 namespace pr::rdr12
 {

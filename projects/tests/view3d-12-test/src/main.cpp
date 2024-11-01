@@ -107,7 +107,7 @@ struct Main :Form
 			auto dpi = GetDpiForWindow(*this);
 			auto w = s_cast<int>(rect.width() * dpi / 96.0);
 			auto h = s_cast<int>(rect.height() * dpi / 96.0);
-			View3D_WindowBackBufferSizeSet(m_win3d, w, h);
+			View3D_WindowBackBufferSizeSet(m_win3d, { w, h });
 			View3D_WindowViewportSet(m_win3d, view3d::Viewport{
 				.m_x = 0,
 				.m_y = 0,

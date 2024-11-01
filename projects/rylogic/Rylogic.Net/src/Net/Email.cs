@@ -61,7 +61,7 @@ namespace Rylogic.UnitTests
 
 			// Use 'JsonConvert.SerializeObject(body)'
 			//  or 'System.Web.Extensions.JavaScriptSerializer().Serialize'
-			var body = new
+			string body = new
 			{
 				personalizations = new[]
 				{
@@ -86,7 +86,7 @@ namespace Rylogic.UnitTests
 						value = "Howdy!",
 					},
 				}
-			}.ToString();
+			}.ToString() ?? throw new NullReferenceException();
 			var uri = "https://api.sendgrid.com/v3/mail/send";
 			var content = new StringContent(body, Encoding.UTF8, "application/json");
 			using (var res = await http.PostAsync(uri, content))

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using Rylogic.Extn.Windows;
+using Rylogic.Windows.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
@@ -27,7 +27,7 @@ namespace MeasureSchmitt
 			Zoom = 1.0;
 
 			// Update the view
-			View = CaptureScreen(ref Bmp!, new Rectangle(0, 0, 500, 500));
+			View = CaptureScreen(ref m_bmp!, new Rectangle(0, 0, 500, 500));
 
 			SetMeasurementMode = Command.Create(this, SetMeasurementModeInternal);
 			MovePosition0 = Command.Create(this, MovePosition0Internal);
@@ -96,15 +96,9 @@ namespace MeasureSchmitt
 			set
 			{
 				if (PeriodicRefresh == value) return;
-				if (m_timer != null)
-				{
-					m_timer.Stop();
-				}
+				m_timer?.Stop();
 				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background, HandleTick, Dispatcher.CurrentDispatcher) : null;
-				if (m_timer != null)
-				{
-					m_timer.Start();
-				}
+				m_timer?.Start();
 
 				// Handler
 				void HandleTick(object? sender, EventArgs e)
@@ -127,7 +121,7 @@ namespace MeasureSchmitt
 			}
 		}
 		private BitmapImage m_view = null!;
-		private Bitmap Bmp = null!;
+		private Bitmap m_bmp = null!;
 
 		/// <summary>First point of interest</summary>
 		public Vector Position0
@@ -147,10 +141,10 @@ namespace MeasureSchmitt
 		{
 			get
 			{
-				var sx = Win32.GetSystemMetrics(Win32.ESystemMetrics.SM_XVIRTUALSCREEN);
-				var sy = Win32.GetSystemMetrics(Win32.ESystemMetrics.SM_YVIRTUALSCREEN);
-				var sw = Win32.GetSystemMetrics(Win32.ESystemMetrics.SM_CXVIRTUALSCREEN);
-				var sh = Win32.GetSystemMetrics(Win32.ESystemMetrics.SM_CYVIRTUALSCREEN);
+				var sx = User32.GetSystemMetrics(Win32.ESystemMetrics.SM_XVIRTUALSCREEN);
+				var sy = User32.GetSystemMetrics(Win32.ESystemMetrics.SM_YVIRTUALSCREEN);
+				var sw = User32.GetSystemMetrics(Win32.ESystemMetrics.SM_CXVIRTUALSCREEN);
+				var sh = User32.GetSystemMetrics(Win32.ESystemMetrics.SM_CYVIRTUALSCREEN);
 
 				// Clamp the capture area to the virtual screen area
 				var size = m_image_view.DesiredSize;
@@ -162,8 +156,8 @@ namespace MeasureSchmitt
 
 				Vector ClampPoint(Vector pt)
 				{
-					pt.X = Math.Clamp(pt.X, sx + w / 2, sx + sw - w / 2);
-					pt.Y = Math.Clamp(pt.Y, sy + h / 2, sy + sh - h / 2);
+					pt.X = Math_.Clamp(pt.X, sx + w / 2, sx + sw - w / 2);
+					pt.Y = Math_.Clamp(pt.Y, sy + h / 2, sy + sh - h / 2);
 					return pt;
 				}
 
@@ -177,7 +171,7 @@ namespace MeasureSchmitt
 					case EMeasureMode.MousePosition:
 					{
 						// An area centred on the mouse
-						var p  = Win32.GetCursorPos();
+						var p  = User32.GetCursorPos();
 						var pt = ClampPoint(new Vector(p.X, p.Y));
 						rect = new Rect(pt.X - w / 2, pt.Y - h / 2, w, h);
 						break;
@@ -251,7 +245,7 @@ namespace MeasureSchmitt
 		{
 			m_measure_pending = false;
 			if (MeasureMode != EMeasureMode.None)
-				View = CaptureScreen(ref Bmp!, Area);
+				View = CaptureScreen(ref m_bmp!, Area);
 		}
 		private void SignalMeasure()
 		{
@@ -278,10 +272,10 @@ namespace MeasureSchmitt
 
 				// Add the mouse pointer to the graphics
 				const int CURSOR_SHOWING = 1;
-				var ci = Win32.GetCursorInfo();
+				var ci = User32.GetCursorInfo();
 				if (MouseVisible && ci.flags == CURSOR_SHOWING && area.Contains(new Rectangle(ci.ptScreenPos.X, ci.ptScreenPos.Y, (int)ci.cbSize, (int)ci.cbSize)))
 				{
-					Win32.DrawIcon(g.GetHdc(), ci.ptScreenPos.X - area.X, ci.ptScreenPos.Y - area.Y, ci.hCursor);
+					User32.DrawIcon(g.GetHdc(), ci.ptScreenPos.X - area.X, ci.ptScreenPos.Y - area.Y, ci.hCursor);
 					g.ReleaseHdc();
 				}
 

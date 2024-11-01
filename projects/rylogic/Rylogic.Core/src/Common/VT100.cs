@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Str;
 using Rylogic.Utility;
 
@@ -153,7 +154,7 @@ namespace Rylogic.Common
 		/// <summary>Per character style</summary>
 		public struct Style
 		{
-			private struct bits
+			private struct Bits
 			{
 				public const byte bold = 1 << 0;
 				public const byte uline = 1 << 1;
@@ -183,36 +184,36 @@ namespace Rylogic.Common
 			/// <summary>Get/Set build mode</summary>
 			public bool Bold
 			{
-				get { return get(bits.bold); }
-				set { set(bits.bold, value); }
+				get { return get(Bits.bold); }
+				set { set(Bits.bold, value); }
 			}
 
 			/// <summary>Get/Set underline mode</summary>
 			public bool Underline
 			{
-				get { return get(bits.uline); }
-				set { set(bits.uline, value); }
+				get { return get(Bits.uline); }
+				set { set(Bits.uline, value); }
 			}
 
 			/// <summary>Get/Set blink mode</summary>
 			public bool Blink
 			{
-				get { return get(bits.blink); }
-				set { set(bits.blink, value); }
+				get { return get(Bits.blink); }
+				set { set(Bits.blink, value); }
 			}
 
 			/// <summary>Get/Set Reverse video mode</summary>
 			public bool RevserseVideo
 			{
-				get { return get(bits.revs); }
-				set { set(bits.revs, value); }
+				get { return get(Bits.revs); }
+				set { set(Bits.revs, value); }
 			}
 
 			/// <summary>Get/Set concealed mode</summary>
 			public bool Concealed
 			{
-				get { return get(bits.conceal); }
-				set { set(bits.conceal, value); }
+				get { return get(Bits.conceal); }
+				set { set(Bits.conceal, value); }
 			}
 
 			/// <summary>Debug style</summary>

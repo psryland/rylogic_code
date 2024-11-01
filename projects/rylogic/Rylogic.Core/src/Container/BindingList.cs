@@ -56,7 +56,7 @@ namespace Rylogic.Container
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
 			ListChanged += InternalHandleListChanged;
-			void InternalHandleListChanged(object sender, ListChangedEventArgs a)
+			void InternalHandleListChanged(object? sender, ListChangedEventArgs a)
 			{
 				// Map ListChanged events to ListChanging events
 				if (a.ListChangedType == ListChangedType.Reset)

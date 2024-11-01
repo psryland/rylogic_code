@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -10,7 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
 using Rylogic.Common;
-using Rylogic.Core.Windows;
+using Rylogic.Windows;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF.Validators;
 using Rylogic.Utility;
@@ -72,7 +70,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath), string.Empty, Gui_.EDPFlags.TwoWay);
 
-		/// <summary>The allow missing filepaths</summary>
+		/// <summary>The allow missing file paths</summary>
 		public bool PathMustExist
 		{
 			get => (bool)GetValue(PathMustExistProperty);

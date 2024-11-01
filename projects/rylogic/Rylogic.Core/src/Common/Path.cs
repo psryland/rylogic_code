@@ -65,7 +65,7 @@ namespace Rylogic.Common
 		public static bool FileExists(string? filepath)
 		{
 			// Using 'FileInfo' because it checks security permissions as well
-			try { return filepath.HasValue() && new FileInfo(filepath).Exists; }
+			try { return filepath is not null && filepath.Length != 0 && new FileInfo(filepath).Exists; }
 			catch (UnauthorizedAccessException) { return true; }
 			catch { return false; }
 		}

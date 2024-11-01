@@ -1,34 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-  <PropertyGroup>
-    <PackageVersion>WinPixEventRuntime.1.0.231030001</PackageVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<PixPackage>WinPixEventRuntime.1.0.240308001</PixPackage>
+	</PropertyGroup>
 
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>
-        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\Include\WinPixEventRuntime;
-        %(AdditionalIncludeDirectories)
-      </AdditionalIncludeDirectories>
-    </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>
-        $(MSBuildThisFileDirectory)..\packages\$(PackageVersion)\bin\$(PlatformName);
-        %(AdditionalLibraryDirectories)
-      </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-        WinPixEventRuntime.lib;
-        %(AdditionalDependencies)
-      </AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<AdditionalIncludeDirectories>
+				;$(PackagesPath)$(PixPackage)\Include\WinPixEventRuntime
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<AdditionalLibraryDirectories>
+				;$(PackagesPath)$(PixPackage)\bin\$(PlatformName)
+				;%(AdditionalLibraryDirectories)
+			</AdditionalLibraryDirectories>
+			<AdditionalDependencies>
+				<!-- ;WinPixEventRuntime.lib - Don't use the import library, dynamically load PIX instead -->
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+		</Link>
+	</ItemDefinitionGroup>
 
-  <Target Name="Deploy-WinPixEventRuntime" AfterTargets="Build"
-    Inputs="$(MSBuildThisFileDirectory)../packages/$(PackageVersion)\bin\$(PlatformName)\WinPixEventRuntime.dll"
-    Outputs="$(TargetDir)WinPixEventRuntime.dll"
-    >
-    <Exec Command="py Copy.py $(MSBuildThisFileDirectory)../packages/$(PackageVersion)\bin\$(PlatformName)\WinPixEventRuntime.dll $(TargetDir) -OnlyIfNewer" WorkingDirectory="$(SolutionDir)..\script\"/>
-  </Target>
+	<Target Name="Deploy-WinPixEventRuntime" AfterTargets="Build"
+		Inputs="$(PackagesPath)$(PixPackage)\bin\$(PlatformName)\WinPixEventRuntime.dll"
+		Outputs="$(TargetDir)WinPixEventRuntime.dll">
+		<Exec Command="py $(ScriptPath)Copy.py $(PackagesPath)$(PixPackage)\bin\$(PlatformName)\WinPixEventRuntime.dll $(TargetDir) -OnlyIfNewer" />
+	</Target>
 
 </Project>

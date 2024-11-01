@@ -2,25 +2,17 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<RootNamespace>RyLogViewer</RootNamespace>
 		<AssemblyName>RyLogViewer.UI</AssemblyName>
-		<LangVersion>latest</LangVersion>
-		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 
 	<!-- Assembly properties -->
 	<PropertyGroup>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
 		<Description>A tool for viewing log files</Description>
-		<Copyright>Copyright (c) Rylogic 2007</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>RyLog.ico</ApplicationIcon>
-		<AssemblyVersion>2.0.0</AssemblyVersion>
-		<FileVersion>2.0.0</FileVersion>
-		<Version>2.0.0</Version>
+		<Version>2.0.1</Version>
 	</PropertyGroup>
 
 	<!-- Code -->
