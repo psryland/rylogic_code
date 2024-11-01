@@ -1120,6 +1120,29 @@ namespace Rylogic.Interop.Win32
 		public const int SWP_NOREPOSITION = SWP_NOOWNERZORDER;
 		public const int SWP_DEFERERASE = 0x2000;
 		public const int SWP_ASYNCWINDOWPOS = 0x4000;
+		[Flags] public enum EWindowPos :int
+		{
+			None = 0,
+			NoSize = SWP_NOSIZE,
+			NoMove = SWP_NOMOVE,
+			NoZorder = SWP_NOZORDER,
+			NoRedraw = SWP_NOREDRAW, // Note: this means "the system isn't going to redraw, so you have to"
+			NoActivate = SWP_NOACTIVATE,
+			FrameChanged = SWP_FRAMECHANGED,
+			ShowWindow = SWP_SHOWWINDOW,
+			HideWindow = SWP_HIDEWINDOW,
+			NoCopyBits = SWP_NOCOPYBITS,
+			NoOwnerZOrder = SWP_NOOWNERZORDER,
+			NoSendChanging = SWP_NOSENDCHANGING,
+			DrawFrame = SWP_DRAWFRAME,
+			NoReposition = SWP_NOREPOSITION,
+			DeferErase = SWP_DEFERERASE,
+			AsyncWindowpos = SWP_ASYNCWINDOWPOS,
+			NoClientSize = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
+			NoClientMove = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
+			StateChange = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
+			allow_bitops = 0,
+		}
 		#endregion
 
 		#region Shell File Operations
@@ -1969,6 +1992,14 @@ namespace Rylogic.Interop.Win32
 			return DateTimeOffset.FromFileTime(ft.value);
 		}
 
+		/// <summary>Convert a wparam into a mouse key (from the WM_LBUTTONDOWN event)</summary>
+		public static EMouseBtns ToMouseKey(IntPtr wparam)
+		{
+			var mk = unchecked((EMouseBtns)LoWord(wparam));
+			if (User32.GetKeyState(EKeyCodes.Menu) < 0) mk |= EMouseBtns.Alt;
+			return mk;
+		}
+
 		/// <summary>Convert WinForms MouseButtons to win32 MK_ macro values</summary>
 		public static int ToMKey(EMouseBtns btns)
 		{
@@ -1996,6 +2027,12 @@ namespace Rylogic.Interop.Win32
 			if (KeyDown(EKeyCodes.ShiftKey)) vk |= EKeyCodes.Shift;
 			if (KeyDown(EKeyCodes.ControlKey)) vk |= EKeyCodes.Control;
 			return vk;
+		}
+
+		/// <summary>Convert a wparam to a mouse wheel delta (WM_MOUSEWHEEL event)</summary>
+		public static short ToMouseWheelDelta(IntPtr wparam)
+		{
+			return unchecked((short)HiWord(wparam));
 		}
 
 		/// <summary>Test the async state of a key</summary>
@@ -2276,19 +2313,19 @@ namespace Rylogic.Interop.Win32
 						, wpos.x, wpos.y
 						, wpos.cx, wpos.cy
 						, wpos.hwndInsertAfter
-						, (wpos.flags & SWP_DRAWFRAME) != 0 ? "|SWP_DRAWFRAME" : ""
-						, (wpos.flags & SWP_FRAMECHANGED) != 0 ? "|SWP_FRAMECHANGED" : ""
-						, (wpos.flags & SWP_HIDEWINDOW) != 0 ? "|SWP_HIDEWINDOW" : ""
-						, (wpos.flags & SWP_NOACTIVATE) != 0 ? "|SWP_NOACTIVATE" : ""
-						, (wpos.flags & SWP_NOCOPYBITS) != 0 ? "|SWP_NOCOPYBITS" : ""
-						, (wpos.flags & SWP_NOMOVE) != 0 ? "|SWP_NOMOVE" : ""
-						, (wpos.flags & SWP_NOOWNERZORDER) != 0 ? "|SWP_NOOWNERZORDER" : ""
-						, (wpos.flags & SWP_NOREDRAW) != 0 ? "|SWP_NOREDRAW" : ""
-						, (wpos.flags & SWP_NOREPOSITION) != 0 ? "|SWP_NOREPOSITION" : ""
-						, (wpos.flags & SWP_NOSENDCHANGING) != 0 ? "|SWP_NOSENDCHANGING" : ""
-						, (wpos.flags & SWP_NOSIZE) != 0 ? "|SWP_NOSIZE" : ""
-						, (wpos.flags & SWP_NOZORDER) != 0 ? "|SWP_NOZORDER" : ""
-						, (wpos.flags & SWP_SHOWWINDOW) != 0 ? "|SWP_SHOWWINDOW" : "");
+						, wpos.flags.HasFlag(EWindowPos.DrawFrame) ? "|SWP_DRAWFRAME" : ""
+						, wpos.flags.HasFlag(EWindowPos.FrameChanged) ? "|SWP_FRAMECHANGED" : ""
+						, wpos.flags.HasFlag(EWindowPos.HideWindow) ? "|SWP_HIDEWINDOW" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoActivate) ? "|SWP_NOACTIVATE" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoCopyBits) ? "|SWP_NOCOPYBITS" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoMove) ? "|SWP_NOMOVE" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoOwnerZOrder) ? "|SWP_NOOWNERZORDER" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoRedraw) ? "|SWP_NOREDRAW" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoReposition) ? "|SWP_NOREPOSITION" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoSendChanging) ? "|SWP_NOSENDCHANGING" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoSize) ? "|SWP_NOSIZE" : ""
+						, wpos.flags.HasFlag(EWindowPos.NoZorder) ? "|SWP_NOZORDER" : ""
+						, wpos.flags.HasFlag(EWindowPos.ShowWindow) ? "|SWP_SHOWWINDOW" : "");
 				}
 				case WM_KILLFOCUS:
 				{

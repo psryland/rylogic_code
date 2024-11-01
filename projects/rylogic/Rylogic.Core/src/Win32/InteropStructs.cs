@@ -477,7 +477,7 @@ namespace Rylogic.Interop.Win32
 			public int  y;
 			public int  cx;
 			public int  cy;
-			public UINT flags;
+			public EWindowPos flags;
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto), BestFitMapping(false)]

@@ -23,7 +23,7 @@ namespace Rylogic.Windows.Gui
 	public class MessageLoop : IMessageFilter
 	{
 		/// <summary>The collection of message filters filtering messages in this loop</summary>
-		private List<IMessageFilter> m_filters = [];
+		private readonly List<IMessageFilter> m_filters = [];
 
 		public MessageLoop()
 		{
@@ -83,14 +83,14 @@ namespace Rylogic.Windows.Gui
 		public delegate void StepFunc(long elapsed_ms);
 
 		/// <summary>A loop represents a process that should be run at a given frame rate</summary>
-		public struct Loop(StepFunc step, int step_rate_ms, bool variable)
+		public class Loop(StepFunc step, int step_rate_ms, bool variable)
 		{
-			public StepFunc Step = step;                             // The function to step in the loop
-			public long Clock = 0;                                   // The time this loop was last stepped (in ms)
-			public int StepRateMS = step_rate_ms;                    // (Minimum) step rate
-			public bool IsVariable = variable;                       // Variable step rate
-			public Buf8 AvrStepTime = new();                         // Last 8 execution times of the loop (in ms, capped at 255)
-			public readonly long NextStepTime => Clock + StepRateMS; // The next time to run this loop
+			public StepFunc Step = step;                    // The function to step in the loop
+			public long Clock = 0;                          // The time this loop was last stepped (in ms)
+			public int StepRateMS = step_rate_ms;           // (Minimum) step rate
+			public bool IsVariable = variable;              // Variable step rate
+			public Buf8 AvrStepTime = new();                // Last 8 execution times of the loop (in ms, capped at 255)
+			public long NextStepTime => Clock + StepRateMS; // The next time to run this loop
 			public struct Buf8
 			{
 				public ulong u64;
@@ -102,11 +102,11 @@ namespace Rylogic.Windows.Gui
 		public class LoopCont : List<Loop> { };
 		public class LoopOrder : List<int> { };
 
-		private Stopwatch m_clock = new();
-		private LoopCont m_loop = [];                  // The loops to execute
-		private LoopOrder m_order = [];                // A priority queue of loops. The loop at position 0 is the next to be stepped
-		private long m_last_step_loops = 0;            // The last time StepLoops was called.
-		private int m_max_loop_steps = max_loop_steps; // The maximum number of loops to step before checking for messages
+		private readonly int m_max_loop_steps = max_loop_steps; // The maximum number of loops to step before checking for messages
+		private readonly Stopwatch m_clock = new();             // High performance clock
+		private readonly LoopCont m_loop = [];                  // The loops to execute
+		private readonly LoopOrder m_order = [];                // A priority queue of loops. The loop at position 0 is the next to be stepped
+		private long m_last_step_loops = 0;                     // The last time StepLoops was called.
 
 		public SimMessageLoop()
 			:this(10)
