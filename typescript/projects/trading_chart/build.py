@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, os, shutil, subprocess
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../script")))
 import UserVars
 
 root  = os.path.join(UserVars.root, "typescript")
