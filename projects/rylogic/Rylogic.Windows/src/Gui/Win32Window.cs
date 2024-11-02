@@ -39,7 +39,6 @@ namespace Rylogic.Gui.Native
 		LeftTopBottom = Left | Top | Bottom,
 		RightTopBottom = Right | Top | Bottom,
 		All = Left | Top | Right | Bottom,
-		allow_bitops = 0,
 	}
 
 	// Window docking
@@ -155,10 +154,11 @@ namespace Rylogic.Gui.Native
 		private const string ClassName = "Rylogic-Win32Window";
 
 		/// <summary>Mapping from HWND to Win32Window instance</summary>
-		[ThreadStatic] private static Dictionary<HWND, Win32Window<TMessageLoop>> m_wnd = new();
+		private static Dictionary<HWND, Win32Window<TMessageLoop>> HwndMap => m_wnd ??= [];
+		[ThreadStatic] private static Dictionary<HWND, Win32Window<TMessageLoop>>? m_wnd; // note: not use static initializers for thread local. Only the first thread to access will initialize it.
 
 		/// <summary>The GUI thread</summary>
-		private int m_main_thread_id = Environment.CurrentManagedThreadId;
+		private readonly int m_main_thread_id = Environment.CurrentManagedThreadId;
 
 		/// <summary>Create a Win32Window instance</summary>
 		public Win32Window(TMessageLoop? msg_loop = null, Props? props = null, HWND? parent = null)
@@ -195,12 +195,12 @@ namespace Rylogic.Gui.Native
 				if (m_hwnd != HWND.Zero)
 				{
 					User32.DestroyWindow(m_hwnd);
-					m_wnd.Remove(m_hwnd);
+					HwndMap.Remove(m_hwnd);
 				}
 				m_hwnd = value;
 				if (m_hwnd != HWND.Zero)
 				{
-					m_wnd[m_hwnd] = this;
+					HwndMap[m_hwnd] = this;
 				}
 			}
 		}
@@ -299,13 +299,13 @@ namespace Rylogic.Gui.Native
 				//var gc = GCHandle.FromIntPtr(lparam);
 				//var cp = Marshal.PtrToStructure<Win32.CREATESTRUCT>(lparam);
 				//var gc = GCHandle.FromIntPtr(cp.lpCreateParams);
-				//m_wnd.Add(hwnd, (DummyWindow?)gc.Target ?? throw new Exception("'this' pointer must be provided in CreateWindowEx"));
+				//HwndMap.Add(hwnd, (DummyWindow?)gc.Target ?? throw new Exception("'this' pointer must be provided in CreateWindowEx"));
 			}
-			return m_wnd.TryGetValue(hwnd, out var wnd)
+			return HwndMap.TryGetValue(hwnd, out var wnd)
 				? wnd.WndProc(hwnd, message, wparam, lparam)
 				: User32.DefWindowProc(hwnd, message, wparam, lparam);
 		}
-		private static readonly Win32.WNDPROC m_static_wndproc = new(StaticWndProc);
+		private static readonly Win32.WNDPROC s_static_wndproc = new(StaticWndProc);
 
 		/// <summary>Register this window class</summary>
 		private static int EnsureWndClassRegistered(HINSTANCE hInstance)
@@ -320,7 +320,7 @@ namespace Rylogic.Gui.Native
 			{
 				cbSize = Marshal.SizeOf<Win32.WNDCLASSEX>(),
 				style = 0,
-				lpfnWndProc = m_static_wndproc,
+				lpfnWndProc = s_static_wndproc,
 				cbClsExtra = 0,
 				cbWndExtra = 0,
 				hInstance = hInstance,
@@ -336,17 +336,3 @@ namespace Rylogic.Gui.Native
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

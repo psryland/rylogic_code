@@ -905,6 +905,7 @@ namespace Rylogic.Gfx
 			// Notes:
 			//  - The viewport is in "render target" space, so if the render target is a
 			//    different size to the target window, 'Width/Height' do not equal the window size.
+			//    The ScreenW/ScreenH fields are used to pass the size of the target window.
 			public float X;
 			public float Y;
 			public float Width;
@@ -917,7 +918,7 @@ namespace Rylogic.Gfx
 			public Viewport(float x, float y, float w, float h)
 				: this(x, y, w, h, (int)w, (int)h, 0f, 1f)
 			{ }
-			public Viewport(float x, float y, float w, float h, int sw, int sh, float min, float max)
+			public Viewport(float x, float y, float w, float h, int screen_w, int screen_h, float min, float max)
 			{
 				X = x;
 				Y = y;
@@ -925,8 +926,8 @@ namespace Rylogic.Gfx
 				Height = h;
 				DepthMin = min;
 				DepthMax = max;
-				ScreenW = sw;
-				ScreenH = sh;
+				ScreenW = screen_w;
+				ScreenH = screen_h;
 			}
 			public readonly float Aspect => Width / Height;
 			public readonly Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));

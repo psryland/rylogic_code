@@ -108,11 +108,64 @@ namespace Rylogic.Gfx
 			{
 				if (args.Hwnd != Hwnd)
 					throw new Exception("Window handle mismatch");
+				if (args.Handled)
+					return;
 
 				switch (args.Message)
 				{
-					case Win32.WM_WINDOWPOSCHANGING:
+					case Win32.WM_WINDOWPOSCHANGED:
 					{
+						var wp = Marshal.PtrToStructure<Win32.WINDOWPOS>(args.LParam);
+						if (!wp.flags.HasFlag(Win32.EWindowPos.NoSize))
+						{
+							var dpi = DpiScale;
+							var sz = new Size((int)(wp.cx * dpi.X), (int)(wp.cy * dpi.Y));
+							BackBufferSize = sz;
+							Viewport = new Viewport(0, 0, sz.Width, sz.Height, wp.cx, wp.cy, 0f, 1f);
+							Camera.Aspect = Viewport.Aspect;
+							Invalidate();
+
+							args.Handled = true;
+						}
+						break;
+					}
+					case Win32.WM_LBUTTONDOWN:
+					case Win32.WM_RBUTTONDOWN:
+					case Win32.WM_LBUTTONUP:
+					case Win32.WM_RBUTTONUP:
+					{
+						if (!DefaultNavigation)
+							break;
+
+						var pt = Win32.LParamToPoint(args.LParam);
+						var mk = Win32.ToMouseKey(args.WParam);
+						MouseNavigate(pt, mk, true);
+						args.Handled = true;
+						break;
+					}
+					case Win32.WM_MOUSEMOVE:
+					{
+						if (!DefaultNavigation)
+							break;
+
+						var pt = Win32.LParamToPoint(args.LParam);
+						var mk = Win32.ToMouseKey(args.WParam);
+						MouseNavigate(pt, mk, false);
+						args.Handled = true;
+						break;
+					}
+					case Win32.WM_MOUSEWHEEL:
+					{
+						if (!DefaultNavigation)
+							break;
+
+						var pt = Win32.POINT.FromPoint(Win32.LParamToPoint(args.LParam));
+						User32.ScreenToClient(Hwnd, ref pt);
+						var mk = Win32.ToMouseKey(args.WParam);
+						var delta = Win32.ToMouseWheelDelta(args.WParam);
+						
+						MouseNavigateZ(pt.ToPoint(), mk, delta, true);
+						args.Handled = true;
 						break;
 					}
 				}
@@ -139,6 +192,9 @@ namespace Rylogic.Gfx
 
 			/// <summary>Camera controls</summary>
 			public Camera Camera { get; }
+
+			/// <summary>Handle navigation in WndProcFilter</summary>
+			public bool DefaultNavigation { get; set; }
 
 			/// <summary>
 			/// Mouse navigation and/or object manipulation.

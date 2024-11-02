@@ -16,5 +16,6 @@ namespace Rylogic.Common
 		Middle   = 0x0010, // MK_MBUTTON 
 		XButton1 = 0x0020, // MK_XBUTTON1
 		XButton2 = 0x0040, // MK_XBUTTON2
+		Alt      = 0x0080, // There is no MK_ defined for alt, this is tested using GetKeyState
 	}
 }
