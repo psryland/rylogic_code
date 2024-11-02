@@ -41,9 +41,9 @@
 		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.DB\Rylogic.DB.csproj" />
 	</ItemGroup>
 
-	<!-- Dependencies -->
-	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.DB\Rylogic.DB.targets" />
-	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.targets" />
-	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.targets" />
+	<!-- Targets -->
+	<Import Project="$(TargetsPath)view3d-12.targets" />
+	<Import Project="$(TargetsPath)scintilla.targets" />
+	<Import Project="$(TargetsPath)sqlite3.targets" />
 
 </Project>

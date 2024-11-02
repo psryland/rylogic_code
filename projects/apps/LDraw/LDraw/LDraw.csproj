@@ -35,12 +35,12 @@
 		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
 	</ItemGroup>
 
-	<!-- Dependencies -->
-	<Import Project="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.targets" />
-	
 	<!-- Post Build -->
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-	  <Exec Command="py $(ProjectDir)update_syntax_rules.py" />
+		<Exec Command="py $(ProjectDir)update_syntax_rules.py" />
 	</Target>
+
+	<!-- Targets  -->
+	<Import Project="$(TargetsPath)view3d-12.targets" />
 
 </Project>
