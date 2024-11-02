@@ -296,7 +296,7 @@ namespace pr
 			Middle = MK_MBUTTON, // 0x0010
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
-			Alt = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
+			Alt = 0x0080,     // There is no MK_ defined for alt, this is tested using GetKeyState
 			allow_bitops = 0,
 		};
 

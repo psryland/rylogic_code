@@ -3,6 +3,7 @@
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/win32/windows_com.h"
+#include "pr/win32/win32.h"
 
 //#include "pr/view3d-12/view3d.h"
 #include "pr/view3d-12/view3d-dll.h"
@@ -11,6 +12,8 @@
 using namespace pr;
 using namespace pr::gui;
 using namespace pr::rdr12;
+
+std::filesystem::path const RylogicRoot = "E:\\Rylogic\\Code";
 
 // TODO:
 //  Finish the View3d API
@@ -34,6 +37,17 @@ struct Main :Form
 	{
 		std::cout << filepath << "(" << line << "): " << msg << std::endl;
 	}
+	static view3d::WindowOptions WndOptions(Main& main)
+	{
+		return {
+			.m_error_cb = ReportError,
+			.m_error_cb_ctx = &main,
+			.m_background_colour = 0xFF908080,
+			.m_allow_alt_enter = true,
+			.m_multisampling = 8,
+			.m_dbg_name = "TestWnd"
+		};
+	}
 
 	Main(HINSTANCE)
 		: Form(Params<>()
@@ -44,14 +58,14 @@ struct Main :Form
 			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
-		, m_win3d(View3D_WindowCreate(CreateHandle(), {.m_error_cb = ReportError, .m_error_cb_ctx = this, .m_multisampling = 8, .m_dbg_name = "TestWnd"}))
+		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
 		, m_obj0(View3D_ObjectCreateLdrA(
 			"*Box first_box_eva FF00FF00 { 1 2 3 }"
 			, false, nullptr, nullptr))
 		, m_obj1(View3D_ObjectCreateLdrA(
 			"*Sphere sever FF0080FF { 0.4 }"
 			, false, nullptr, nullptr))
-		, m_envmap(View3D_CubeMapCreateFromUri("E:/Rylogic/art/textures/cubemaps/hanger/hanger-??.jpg", {}))
+		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 	{
 		// Load script
 		auto ctx0 = View3D_LoadScriptFromString(
@@ -65,7 +79,6 @@ struct Main :Form
 			, nullptr, nullptr, nullptr, nullptr);
 
 		// Set up the scene
-		View3D_WindowBackgroundColourSet(m_win3d, 0xFF908080);
 		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	
 		// Cast shadows
@@ -129,8 +142,8 @@ struct Main :Form
 		{
 			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};
 			auto nav_op =
-				args.m_button == EMouseKey::Left ? view3d::ENavOp::Rotate :
-				args.m_button == EMouseKey::Right ? view3d::ENavOp::Translate :
+				AllSet(args.m_button, EMouseKey::Left) ? view3d::ENavOp::Rotate :
+				AllSet(args.m_button, EMouseKey::Right) ? view3d::ENavOp::Translate :
 				view3d::ENavOp::None;
 
 			View3D_MouseNavigate(m_win3d, pt, nav_op, TRUE);
@@ -143,8 +156,8 @@ struct Main :Form
 		{
 			view3d::Vec2 pt = {s_cast<float>(args.m_point.x), s_cast<float>(args.m_point.y)};
 			auto nav_op =
-				args.m_button == EMouseKey::Left ? view3d::ENavOp::Rotate :
-				args.m_button == EMouseKey::Right ? view3d::ENavOp::Translate :
+				AllSet(args.m_button, EMouseKey::Left) ? view3d::ENavOp::Rotate :
+				AllSet(args.m_button, EMouseKey::Right) ? view3d::ENavOp::Translate :
 				view3d::ENavOp::None;
 
 			View3D_MouseNavigate(m_win3d, pt, nav_op, FALSE);
@@ -173,10 +186,11 @@ struct Main :Form
 // Entry point
 int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 {
-	pr::InitCom com;
-
 	try
 	{
+		pr::InitCom com;
+		pr::win32::LoadDll<struct View3d>("view3d-12.dll");
+
 		Main main(hinstance);
 		main.Show();
 

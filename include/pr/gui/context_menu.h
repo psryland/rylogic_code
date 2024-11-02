@@ -630,7 +630,7 @@ namespace pr
 					static wchar_t const* class_name = L"pr::gui::cmenu";
 					WndClassEx wc(class_name);
 					if (wc.m_atom != 0)
-						return std::move(wc);
+						return wc;
 
 					// Subclass the dialog window class
 					::GetClassInfoExW(wc.hInstance, (LPCWSTR)WC_DIALOG, &wc);

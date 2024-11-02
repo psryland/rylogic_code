@@ -1224,6 +1224,16 @@ namespace pr::gui
 				:m_series(series)
 				,m_plot_area(plot_area)
 				,m_scale(scale)
+				,m_imin(i)
+				,m_imax(i)
+				,m_xmin()
+				,m_xmax()
+				,m_ymin()
+				,m_ymax()
+				,m_ylo()
+				,m_yhi()
+				,m_lhs()
+				,m_rhs()
 			{
 				// Get the data point
 				auto& gv0 = series[i];

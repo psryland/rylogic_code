@@ -27,7 +27,4 @@
       <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="post_build.py" />
-  </ItemGroup>
 </Project>

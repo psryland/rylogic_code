@@ -843,11 +843,12 @@ namespace Rylogic.Gfx
 			public ReportErrorCB ErrorCB;
 			public IntPtr ErrorCBCtx;
 			public Colour32 BackgroundColour;
+			public bool AllowAltEnter;
 			public bool GdiCompatibleBackBuffer;
 			public int Multisampling;
 			public string DbgName;
 
-			public static WindowOptions New(ReportErrorCB? error_cb = null, IntPtr? error_cb_ctx = null, Colour32? background_colour = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
+			public static WindowOptions New(ReportErrorCB? error_cb = null, IntPtr? error_cb_ctx = null, Colour32? background_colour = null, bool? allow_alt_enter = null, bool? gdi_compatible_bb = null, string? dbg_name = null)
 			{
 				static void ErrorSink(IntPtr ctx, string msg, string filepath, int line, long pos) => throw new Exception(msg);
 				return new()
@@ -855,6 +856,7 @@ namespace Rylogic.Gfx
 					ErrorCB = error_cb ?? ErrorSink,
 					ErrorCBCtx = error_cb_ctx ?? IntPtr.Zero,
 					BackgroundColour = background_colour ?? Colour32.Gray,
+					AllowAltEnter = allow_alt_enter ?? false,
 					GdiCompatibleBackBuffer = gdi_compatible_bb ?? false,
 					Multisampling = (gdi_compatible_bb ?? false) ? 1 : 4,
 					DbgName = dbg_name ?? string.Empty,

@@ -579,6 +579,7 @@ namespace pr
 			ReportErrorCB m_error_cb;
 			void*         m_error_cb_ctx;
 			Colour        m_background_colour;
+			BOOL          m_allow_alt_enter;
 			BOOL          m_gdi_compatible_backbuffer;
 			int           m_multisampling;
 			char const*   m_dbg_name;

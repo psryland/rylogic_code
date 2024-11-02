@@ -2164,11 +2164,11 @@ VIEW3D_API view3d::Texture __stdcall View3D_TextureCreateFromUri(char const* res
 {
 	try
 	{
-		auto rdesc = ResDesc::Tex2D(Image{width, height, nullptr, options.m_format})
+		ResDesc rdesc = ResDesc::Tex2D(Image{width, height, nullptr, options.m_format})
 			.multisamp(To<rdr12::MultiSamp>(options.m_multisamp))
 			.def_state(options.m_resource_state)
 			.clear(options.m_clear_value);
-		auto tdesc = TextureDesc(AutoId, rdesc)
+		TextureDesc tdesc = TextureDesc(AutoId, rdesc)
 			.has_alpha(options.m_has_alpha != 0)
 			.name(options.m_dbg_name);
 
@@ -2216,7 +2216,7 @@ VIEW3D_API view3d::Sampler __stdcall View3D_SamplerCreate(view3d::SamplerOptions
 	try
 	{
 		auto desc = SamDesc(options.m_addrU, options.m_addrV, options.m_addrW, options.m_filter);
-		auto sdesc = rdr12::SamplerDesc(AutoId, desc)
+		rdr12::SamplerDesc sdesc = rdr12::SamplerDesc(AutoId, desc)
 			.name(options.m_dbg_name);
 
 		DllLockGuard;

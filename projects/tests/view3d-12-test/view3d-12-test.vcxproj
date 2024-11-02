@@ -47,14 +47,17 @@
 		</ClCompile>
 		<Link>
 			<SubSystem>Windows</SubSystem>
-			<AdditionalDependencies>
-				;view3d-12.imp
-				;%(AdditionalDependencies)
-			</AdditionalDependencies>
 			<AdditionalLibraryDirectories>
 				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
 				;%(AdditionalLibraryDirectories)
 			</AdditionalLibraryDirectories>
+			<AdditionalDependencies>
+				;view3d-12.imp
+				;%(AdditionalDependencies)
+			</AdditionalDependencies>
+			<DelayLoadDLLs>
+				;view3d-12.dll
+			</DelayLoadDLLs>
 		</Link>
 	</ItemDefinitionGroup>
 	
@@ -69,4 +72,5 @@
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 	<Import Project="$(TargetsPath)view3d-12.targets" />
+
 </Project>

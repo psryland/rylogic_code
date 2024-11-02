@@ -152,6 +152,11 @@ namespace pr::rdr12
 			m_mode = mode;
 			return *this;
 		}
+		WndSettings& AllowAltEnter(bool allow)
+		{
+			m_allow_alt_enter = allow;
+			return *this;
+		}
 		WndSettings& Size(iv2 const& area)
 		{
 			Check(m_output.ptr != nullptr, "Set the output before setting the display mode");

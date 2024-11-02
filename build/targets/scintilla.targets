@@ -7,13 +7,26 @@ target directory.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup>
+
 		<Content Include="$(RylogicRoot)lib\x64\debug\scintilla.dll">
 			<Link>lib\x64\debug\scintilla.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
+
 		<Content Include="$(RylogicRoot)lib\x64\release\scintilla.dll">
 			<Link>lib\x64\release\scintilla.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
+
+		<Content Include="$(RylogicRoot)lib\x86\debug\scintilla.dll" Condition="exists('$(RylogicRoot)lib\x86\debug\scintilla.dll')">
+			<Link>lib\x86\debug\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Include="$(RylogicRoot)lib\x86\release\scintilla.dll" Condition="exists('$(RylogicRoot)lib\x86\release\scintilla.dll')">
+			<Link>lib\x86\release\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
 	</ItemGroup>
 </Project>

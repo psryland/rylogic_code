@@ -309,14 +309,14 @@ namespace LDraw.UI
 			var prompt = new PromptUI(Window.GetWindow(this))
 			{
 				Title = "Rename Scene",
-                Prompt = "Set the label for this scene",
-                Value = SceneName,
-                ShowWrapCheckbox = false,
+				Prompt = "Set the label for this scene",
+				Value = SceneName,
+				ShowWrapCheckbox = false,
 			};
-            if (prompt.ShowDialog() == true)
-            {
-                SceneName = prompt.Value;
-            }
+			if (prompt.ShowDialog() == true)
+			{
+				SceneName = prompt.Value;
+			}
 		}
 
 		/// <summary>Close and remove this scene</summary>
