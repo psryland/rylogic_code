@@ -3,11 +3,10 @@
 
 	<!-- Globals -->
 	<PropertyGroup Label="Globals">
-		<VCProjectVersion>16.0</VCProjectVersion>
+		<ConfigurationType>Application</ConfigurationType>
 		<ProjectGuid>{A34D76E2-52AC-4C2D-9873-7305977B7015}</ProjectGuid>
 		<RootNamespace>fluid</RootNamespace>
 		<ProjectName>fluid</ProjectName>
-		<ConfigurationType>Application</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->

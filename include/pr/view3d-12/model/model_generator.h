@@ -403,9 +403,9 @@ namespace pr::rdr12
 			}
 
 			// Container item counts
-			size_t VCount() const { return m_vcont.size(); }
-			size_t ICount() const { return m_icont.count(); }
-			size_t NCount() const { return m_ncont.size(); }
+			int64_t VCount() const { return isize(m_vcont); }
+			int64_t ICount() const { return s_cast<int64_t>(m_icont.count()); }
+			int64_t NCount() const { return isize(m_ncont); }
 
 			// Return the buffer format associated with the index stride
 			DXGI_FORMAT IdxFormat() const

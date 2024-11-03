@@ -33,7 +33,7 @@ namespace pr::rdr12
 	}
 
 	// Returns the number of primitives implied by an index count and geometry topology
-	size_t PrimCount(size_t icount, ETopo topo)
+	int64_t PrimCount(int64_t icount, ETopo topo)
 	{
 		// https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-primitive-topologies
 		switch (topo)
@@ -52,7 +52,7 @@ namespace pr::rdr12
 	}
 
 	// Returns the number of indices implied by a primitive count and geometry topology
-	size_t IndexCount(size_t pcount, ETopo topo)
+	int64_t IndexCount(int64_t pcount, ETopo topo)
 	{
 		if (pcount == 0) return 0;
 		switch (topo)

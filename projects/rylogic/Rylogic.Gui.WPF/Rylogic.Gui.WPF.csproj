@@ -10,8 +10,6 @@
 	<PropertyGroup>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<Version>$(RylogicLibraryVersion)</Version>
-		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
-		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -41,8 +39,8 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
-		<ProjectReference Include="../Rylogic.Windows/Rylogic.Windows.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects/rylogic/Rylogic.Core/Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects/rylogic/Rylogic.Windows/Rylogic.Windows.csproj" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" />
 		<PackageReference Include="Microsoft.CSharp" />
 	</ItemGroup>

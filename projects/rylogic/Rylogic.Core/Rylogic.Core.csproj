@@ -9,8 +9,6 @@
 	<PropertyGroup>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<Version>$(RylogicLibraryVersion)</Version>
-		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
-		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->

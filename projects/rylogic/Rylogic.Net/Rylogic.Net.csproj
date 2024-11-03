@@ -9,8 +9,6 @@
 	<PropertyGroup>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<Version>$(RylogicLibraryVersion)</Version>
-		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
-		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -29,7 +27,7 @@
 		<PackageReference Include="System.Net.Http" />
 		<PackageReference Include="System.Net.Security" />
 		<PackageReference Include="System.Net.WebSockets.Client" />
-		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
 
 	<!-- Post build -->

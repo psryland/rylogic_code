@@ -268,14 +268,14 @@ namespace pr::rdr12
 			if (nugget.m_irange.empty())
 			{
 				m_cmd_list.DrawInstanced(
-					nugget.m_vrange.size(), 1U,
-					nugget.m_vrange.m_beg, 0U);
+					s_cast<size_t>(nugget.m_vrange.size()), 1U,
+					s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
 			}
 			else
 			{
 				m_cmd_list.DrawIndexedInstanced(
-					nugget.m_irange.size(), 1U,
-					nugget.m_irange.m_beg, 0, 0U);
+					s_cast<size_t>(nugget.m_irange.size()), 1U,
+					s_cast<size_t>(nugget.m_irange.m_beg), 0, 0U);
 			}
 		}
 
@@ -293,8 +293,8 @@ namespace pr::rdr12
 			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
 
 			m_cmd_list.DrawIndexedInstanced(
-				nugget.m_irange.size(), 1U,
-				nugget.m_irange.m_beg, 0, 0U);
+				s_cast<size_t>(nugget.m_irange.size()), 1U,
+				s_cast<size_t>(nugget.m_irange.m_beg), 0, 0U);
 
 			// Restore it
 			desc.Apply(PSO<EPipeState::FillMode>(prev_fill_mode));
@@ -310,8 +310,8 @@ namespace pr::rdr12
 			m_cmd_list.SetPipelineState(m_pipe_state_pool.Get(desc));
 
 			m_cmd_list.DrawInstanced(
-				nugget.m_vrange.size(), 1U,
-				nugget.m_vrange.m_beg, 0U);
+				s_cast<size_t>(nugget.m_vrange.size()), 1U,
+				s_cast<size_t>(nugget.m_vrange.m_beg), 0U);
 		}
 	}
 }

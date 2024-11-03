@@ -10,8 +10,6 @@
 	<PropertyGroup>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<Version>$(RylogicLibraryVersion)</Version>
-		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
-		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -30,7 +28,7 @@
 		<PackageReference Include="System.Drawing.Primitives" />
 		<PackageReference Include="System.Reflection.Emit" />
 		<PackageReference Include="Microsoft.CSharp" />
-		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
 	
 	<!-- Post Build -->

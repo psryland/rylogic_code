@@ -239,10 +239,10 @@ namespace pr::rdr12
 	UINT MultisampleQualityLevels(ID3D12Device* device, DXGI_FORMAT format, UINT sample_count);
 
 	// Returns the number of primitives implied by an index count and geometry topology
-	size_t PrimCount(size_t icount, ETopo topo);
+	int64_t PrimCount(int64_t icount, ETopo topo);
 
 	// Returns the number of indices implied by a primitive count and geometry topology
-	size_t IndexCount(size_t pcount, ETopo topo);
+	int64_t IndexCount(int64_t pcount, ETopo topo);
 	
 	// True if 'fmt' is a compression image format
 	bool IsCompressed(DXGI_FORMAT fmt);

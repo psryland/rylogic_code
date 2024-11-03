@@ -9,8 +9,6 @@
 	<PropertyGroup>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<Version>$(RylogicLibraryVersion)</Version>
-		<FileVersion>$(RylogicLibraryVersion)</FileVersion>
-		<AssemblyVersion>$(RylogicLibraryVersion)</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -29,17 +27,10 @@
 		<Compile Include="$(RylogicRoot)sdk\scintilla\include\Scintilla.cs" Link="src\Scintilla\Scintilla.cs" />
 	</ItemGroup>
 
-	<!-- Native libraries -->
-	<ItemGroup>
-		<Content Include="Rylogic.Scintilla.targets">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-
 	<!-- Dependencies -->
 	<ItemGroup>
-		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
-		<ProjectReference Include="../Rylogic.Gui.WPF/Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
 	</ItemGroup>
 
 	<!-- Post Build -->

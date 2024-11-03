@@ -649,13 +649,13 @@ namespace pr::rdr12
 		// Save the pointer to where the RTV descriptor will be stored
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		rtv_handle.ptr += HeapIdxMsaaRtv * rtv_size;
+		rtv_handle.ptr += s_cast<size_t>(HeapIdxMsaaRtv * rtv_size);
 		bb.m_rtv = rtv_handle;
 
 		// Save the pointer to where the DSV descriptor will be stored
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = m_dsv_heap->GetCPUDescriptorHandleForHeapStart();
 		auto dsv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-		dsv_handle.ptr += HeapIdxMsaaDsv * dsv_size;
+		dsv_handle.ptr += s_cast<size_t>(HeapIdxMsaaDsv * dsv_size);
 		bb.m_dsv = dsv_handle;
 
 		// Create RTV for the MSAA render target
@@ -687,7 +687,7 @@ namespace pr::rdr12
 		// Get the pointer and item size of the RTV descriptor heap.
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
-		rtv_handle.ptr += HeapIdxSwapRtv * rtv_size;
+		rtv_handle.ptr += s_cast<size_t>(HeapIdxSwapRtv * rtv_size);
 
 		for (int i = 0; i != s_cast<int>(m_swap_bb.size()); ++i)
 		{
@@ -701,7 +701,7 @@ namespace pr::rdr12
 			DebugName(bb.m_render_target, FmtS("SwapChainRT-%d", i));
 
 			// Save the pointers to where the descriptors will be stored
-			bb.m_rtv = rtv_handle; rtv_handle.ptr += rtv_size; // one RTV for each back buffer
+			bb.m_rtv = rtv_handle; rtv_handle.ptr += s_cast<size_t>(rtv_size); // one RTV for each back buffer
 			bb.m_dsv = {};
 
 			// Create RTVs for the back buffer resources.

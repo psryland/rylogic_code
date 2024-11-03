@@ -319,8 +319,8 @@ namespace pr::rdr12
 	#define PR_RDR_INST(x) \
 		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
 		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
-		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes, align 8 */\
 	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
+		x(ModelPtr   ,m_model  ,EInstComp::ModelPtr           )/* 4 or 8 bytes, align 8 */\
 		x(Colour32   ,m_colour ,EInstComp::TintColour32       )/*      4 bytes, align 4 */\
 		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes, align 4 */\
 		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes, align 4 */\

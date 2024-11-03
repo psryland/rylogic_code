@@ -3,11 +3,11 @@
 
 	<!-- Globals -->
 	<PropertyGroup Label="Globals">
+		<ConfigurationType>DynamicLibrary</ConfigurationType>
 		<ProjectGuid>{FB13BA51-F847-4804-90A8-61AB789F4061}</ProjectGuid>
 		<ProjectName>view3d-12.dll</ProjectName>
 		<TargetName>view3d-12</TargetName>
 		<RootNamespace>View3d</RootNamespace>
-		<ConfigurationType>DynamicLibrary</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->
@@ -33,7 +33,6 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)tools.props" />
 	<Import Project="$(PropsPath)dll.props" />
 
 	<!-- Build options -->
@@ -85,7 +84,7 @@
 
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 	<Import Project="$(TargetsPath)dxc.targets" />
+	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 
 </Project>

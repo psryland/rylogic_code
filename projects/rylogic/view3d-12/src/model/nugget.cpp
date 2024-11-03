@@ -36,7 +36,7 @@ namespace pr::rdr12
 	}
 
 	// The number of primitives in this nugget
-	size_t Nugget::PrimCount() const
+	int64_t Nugget::PrimCount() const
 	{
 		return m_irange.empty()
 			? rdr12::PrimCount(m_vrange.size(), m_topo)

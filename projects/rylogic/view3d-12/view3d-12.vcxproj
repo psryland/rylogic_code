@@ -3,12 +3,11 @@
 
 	<!-- Globals -->
 	<PropertyGroup Label="Globals">
-		<VCProjectVersion>16.0</VCProjectVersion>
+		<ConfigurationType>StaticLibrary</ConfigurationType>
 		<ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
 		<RootNamespace>View3d</RootNamespace>
 		<ProjectName>view3d-12</ProjectName>
 		<TargetName>view3d-12-static</TargetName>
-		<ConfigurationType>StaticLibrary</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->
@@ -34,9 +33,8 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)tools.props" />
-	<Import Project="$(PropsPath)lib.props" />
 	<Import Project="$(PropsPath)fxc_build_rule.props" />
+	<Import Project="$(PropsPath)lib.props" />
 
 	<!-- Build options -->
 	<ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -47,7 +45,8 @@
 				;PR_SUPPORT_D3D11_ERRORS=1
 				;PR_VIEW3D_12=1
 				;PR_DBG_RDR=1
-				;USE_PIX%(PreprocessorDefinitions)
+				;USE_PIX
+				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
 			<AdditionalIncludeDirectories>
 				;$(RylogicRoot)projects\rylogic
@@ -55,7 +54,7 @@
 			</AdditionalIncludeDirectories>
 		</ClCompile>
 	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+	<ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
 		<ClCompile>
 			<PreprocessorDefinitions>
 				;PR_RDR_RUNTIME_SHADERS=0
@@ -70,8 +69,8 @@
 			</AdditionalIncludeDirectories>
 		</ClCompile>
 	</ItemDefinitionGroup>
-	<!--
-	Files -->
+
+	<!-- Files -->
 	<ItemGroup>
 		<ClCompile Include="src\ldraw\ldr_gizmo.cpp" />
 		<ClCompile Include="src\ldraw\ldr_object.cpp" />
@@ -306,9 +305,10 @@
 	<ItemGroup>
 		<ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />
 	</ItemGroup>
-	<!--
-	Targets -->
+
+	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 	<Import Project="$(TargetsPath)dxc.targets" />
+
 </Project>

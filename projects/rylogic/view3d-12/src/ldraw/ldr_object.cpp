@@ -3742,7 +3742,7 @@ namespace pr::rdr12
 			for (auto& nug : m_nuggets)
 			{
 				// Check the index range is valid
-				if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > m_verts.size())
+				if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > isize(m_verts))
 				{
 					p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
 					return;

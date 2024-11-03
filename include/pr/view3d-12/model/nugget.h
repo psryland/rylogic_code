@@ -244,7 +244,7 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 
 		// The number of primitives in this nugget
-		size_t PrimCount() const;
+		int64_t PrimCount() const;
 
 		// True if this nugget requires alpha blending
 		bool RequiresAlpha() const;

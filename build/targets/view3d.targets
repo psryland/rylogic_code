@@ -7,13 +7,16 @@ target directory.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup>
+
 		<Content Include="$(RylogicRoot)lib\x64\debug\view3d.dll">
 			<Link>lib\x64\debug\view3d.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
+
 		<Content Include="$(RylogicRoot)lib\x64\release\view3d.dll">
 			<Link>lib\x64\release\view3d.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
+
 	</ItemGroup>
 </Project>

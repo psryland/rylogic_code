@@ -120,7 +120,7 @@ namespace pr::rdr12
 	using float4_t = float[4];
 	using RdrId = std::uintptr_t;
 	using SortKeyId = uint16_t;
-	using Range = pr::Range<size_t>;
+	using Range = pr::Range<int64_t>;
 	using Handle = pr::win32::Handle;
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;

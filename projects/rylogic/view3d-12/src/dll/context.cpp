@@ -382,8 +382,8 @@ namespace pr::rdr12
 		ResourceFactory factory(model->rdr());
 
 		{// Update the model geometry
-			auto update_v = model->UpdateVertices(factory, { 0, s_cast<size_t>(new_vcount) });
-			auto update_i = model->UpdateIndices(factory, { 0, s_cast<size_t>(new_icount) });
+			auto update_v = model->UpdateVertices(factory, { 0, new_vcount });
+			auto update_i = model->UpdateIndices(factory, { 0, new_icount });
 			
 			model->m_bbox.reset();
 
@@ -425,8 +425,8 @@ namespace pr::rdr12
 			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
 			n.m_tint = To<Colour>(nug.m_tint);
 			n.m_rel_reflec = nug.m_rel_reflec;
-			n.m_vrange = Range{ s_cast<size_t>(nug.m_v0), s_cast<size_t>(nug.m_v1) };
-			n.m_irange = Range{ s_cast<size_t>(nug.m_i0), s_cast<size_t>(nug.m_i1) };
+			n.m_vrange = Range{ nug.m_v0, nug.m_v1 };
+			n.m_irange = Range{ nug.m_i0, nug.m_i1 };
 			model->CreateNugget(factory, n);
 		}
 
