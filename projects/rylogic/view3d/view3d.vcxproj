@@ -33,9 +33,8 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)tools.props" />
-	<Import Project="$(PropsPath)lib.props" />
 	<Import Project="$(PropsPath)fxc_build_rule.props" />
+	<Import Project="$(PropsPath)lib.props" />
 
 	<!-- Build options -->
 	<ItemDefinitionGroup>
