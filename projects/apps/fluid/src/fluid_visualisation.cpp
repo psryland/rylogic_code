@@ -189,7 +189,7 @@ namespace pr::fluid
 		if (AllSet(flags, EScene::Particles))
 		{
 			auto& nug = m_gfx_fluid.m_model->m_nuggets.front();
-			nug.m_vrange = { 0, size_t(particle_count) };
+			nug.m_vrange = { 0, particle_count };
 			scene.AddInstance(m_gfx_fluid);
 		}
 
@@ -197,7 +197,7 @@ namespace pr::fluid
 		if (AllSet(flags, EScene::VectorField))
 		{
 			auto& nug = m_gfx_fluid.m_model->m_nuggets.front();
-			nug.m_vrange = { 0, size_t(particle_count) };
+			nug.m_vrange = { 0, particle_count };
 			scene.AddInstance(m_gfx_vector_field);
 		}
 

@@ -42,5 +42,6 @@
 
 	<!-- Targets  -->
 	<Import Project="$(TargetsPath)view3d-12.targets" />
+	<Import Project="$(TargetsPath)dxc.targets" />
 
 </Project>
