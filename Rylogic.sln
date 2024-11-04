@@ -122,6 +122,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Fluid", "Fluid", "{EBAC17A5-00F2-4520-BCF0-67C359925C57}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fluid", "projects\apps\fluid\fluid.vcxproj", "{A34D76E2-52AC-4C2D-9873-7305977B7015}"
+	ProjectSection(ProjectDependencies) = postProject
+		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BlitzSearch", "BlitzSearch", "{B74AB22E-446D-47BC-89A3-9F2D9DF518C8}"
 EndProject

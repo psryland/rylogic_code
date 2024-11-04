@@ -32,7 +32,6 @@
 	<!-- Property Sheets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)tools.props" />
 	<Import Project="$(PropsPath)app.props" />
 
 	<!-- Build Options -->

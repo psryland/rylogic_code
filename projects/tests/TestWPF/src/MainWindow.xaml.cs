@@ -14,6 +14,7 @@ using Rylogic.Gfx;
 using Rylogic.Gui.Native;
 using Rylogic.Gui.WPF;
 using Rylogic.Scintilla;
+using Rylogic.Windows.Gui;
 
 namespace TestWPF
 {
@@ -209,8 +210,8 @@ namespace TestWPF
 			});
 			ShowWin32Window = Command.Create(this, () =>
 			{
-				var props = new Win32Window.Props{ Title = "Win32 Window" };
-				using var wnd = new Win32Window();
+				var props = new Win32Window<MessageLoop>.Props{ Title = "Win32 Window" };
+				using var wnd = new Win32Window<MessageLoop>();
 				wnd.Show();
 				wnd.MsgLoop.Run();
 			});
