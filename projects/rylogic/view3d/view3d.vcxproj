@@ -3,11 +3,11 @@
 
 	<!-- Globals -->
 	<PropertyGroup Label="Globals">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
 		<ProjectGuid>{0618738D-AEAB-4643-9953-BE49459BCBA1}</ProjectGuid>
 		<ProjectName>view3d</ProjectName>
 		<TargetName>view3d-static</TargetName>
 		<RootNamespace>pr::rdr</RootNamespace>
-		<ConfigurationType>StaticLibrary</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->

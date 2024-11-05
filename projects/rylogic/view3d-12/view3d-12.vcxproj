@@ -8,6 +8,7 @@
 		<RootNamespace>View3d</RootNamespace>
 		<ProjectName>view3d-12</ProjectName>
 		<TargetName>view3d-12-static</TargetName>
+		<ResolveNuGetPackages>false</ResolveNuGetPackages> 
 	</PropertyGroup>
 
 	<!-- Configurations -->

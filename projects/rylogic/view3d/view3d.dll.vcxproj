@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
 	<!-- Globals -->
-	<PropertyGroup>
+	<PropertyGroup Label="Globals">
+		<ConfigurationType>DynamicLibrary</ConfigurationType>
 		<ProjectGuid>{363D015B-B545-4623-A5CE-61245C9BF1F8}</ProjectGuid>
 		<ProjectName>view3d.dll</ProjectName>
 		<TargetName>view3d</TargetName>
 		<RootNamespace>view3d</RootNamespace>
-		<ConfigurationType>DynamicLibrary</ConfigurationType>
 	</PropertyGroup>
 
 	<!-- Configurations -->

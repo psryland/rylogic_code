@@ -20,6 +20,7 @@
 		<RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<RestorePackagesWithLockFile>False</RestorePackagesWithLockFile>
+		<RestorePackagesPath>$(PackagesPath)</RestorePackagesPath>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<LangVersion>latest</LangVersion>
 		<WarningLevel>7</WarningLevel>
@@ -43,14 +44,11 @@
 		<VCProjectVersion>16.0</VCProjectVersion>
 		<PlatformToolset>v143</PlatformToolset>
 		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+		<RestorePackagesPath>$(PackagesPath)</RestorePackagesPath>
 
 		<!-- Default build configuration -->
 		<PlatformTarget Condition=" '$(PlatformTarget)' == '' ">x64</PlatformTarget>
 		<ConfigurationName Condition=" '$(ConfigurationName)' == '' ">Debug</ConfigurationName>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<RestorePackagesPath>$(PackagesPath)</RestorePackagesPath>
 	</PropertyGroup>
 
 </Project>

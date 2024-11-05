@@ -8,6 +8,7 @@
 		<ProjectName>view3d-12.dll</ProjectName>
 		<TargetName>view3d-12</TargetName>
 		<RootNamespace>View3d</RootNamespace>
+		<ResolveNuGetPackages>false</ResolveNuGetPackages> 
 	</PropertyGroup>
 
 	<!-- Configurations -->
