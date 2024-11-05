@@ -1,4 +1,4 @@
-﻿# Rylogic user specific variables
+# Rylogic user specific variables
 # Make a copy of this file in the same directory and call it 'UserVars.py'
 # Then update the values to those appropriate for your PC
 # For any paths that don't apply, set to 'None'
@@ -38,7 +38,7 @@ version = 1
 root = Path(os.path.dirname(__file__), "..")
 
 # Location for temporary files
-dumpdir = Path("<DUMP_DIRECTORY>")
+dumpdir = Path("<DUMP_DIRECTORY>", check_exists=False)
 
 # The full path to the windows sdk and version
 # e.g. winsdkvers = "10.0.18362.0"
