@@ -7,6 +7,7 @@ target directory.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<ItemGroup>
+
 		<Content Include="$(RylogicRoot)lib\x64\debug\audio.dll">
 			<Link>lib\x64\debug\audio.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
@@ -15,5 +16,6 @@ target directory.
 			<Link>lib\x64\release\audio.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Release'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
+
 	</ItemGroup>
 </Project>

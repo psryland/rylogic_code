@@ -6,6 +6,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageVersion Include="WinPixEventRuntime" Version="1.0.240308001" />
 		<PackageReference Include="WinPixEventRuntime" targetFramework="native" />
 	</ItemGroup>
 

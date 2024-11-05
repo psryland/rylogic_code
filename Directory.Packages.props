@@ -21,8 +21,6 @@
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Net.WebSockets.Client" Version="4.3.2" />
     <PackageVersion Include="WindowsBase" Version="4.6.1055" />
-    <PackageVersion Include="Microsoft.Direct3D.DXC" Version="1.8.2407.12" />
-    <PackageVersion Include="WinPixEventRuntime" Version="1.0.240308001" />
   </ItemGroup>
   <ItemGroup Label="Rylogic Packages">
     <PackageVersion Include="Rylogic.Core" Version="2.0.0" />
