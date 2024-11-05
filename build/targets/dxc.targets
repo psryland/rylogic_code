@@ -6,8 +6,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Direct3D.DXC" />
 		<PackageVersion Include="Microsoft.Direct3D.DXC" version="1.8.2407.12"/>
-		<PackageReference Include="Microsoft.Direct3D.DXC" targetFramework="native" />
 	</ItemGroup>
 
 	<ItemGroup>

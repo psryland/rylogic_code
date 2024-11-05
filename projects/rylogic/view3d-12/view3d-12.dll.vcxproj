@@ -85,7 +85,7 @@
 
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<Import Project="$(TargetsPath)dxc.targets" />
 	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
+	<Import Project="$(TargetsPath)dxc.targets" />
 
 </Project>
