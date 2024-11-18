@@ -99,7 +99,7 @@ Example Use:
 #include <gdiplus.h>
 #include <tchar.h>
 
-#define PR_WNDPROCDEBUG 0
+constexpr bool PR_WNDPROCDEBUG = false;
 #if PR_WNDPROCDEBUG
 #pragma message("WARNING: **************************** WndProcDebug Enabled.")
 #include "pr/gui/messagemap_dbg.h"
@@ -478,6 +478,14 @@ namespace pr
 		{
 			auto r = static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs);
 			return static_cast<T>(r);
+		}
+		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T& operator |= (T& lhs, T rhs)
+		{
+			return lhs = lhs | rhs;
+		}
+		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T& operator &= (T& lhs, T rhs)
+		{
+			return lhs = lhs & rhs;
 		}
 
 		// Convert an error code into an error message
@@ -1166,7 +1174,7 @@ namespace pr
 					Italic    = 1 << 2,
 					Underline = 1 << 3,
 					StrikeOut = 1 << 4,
-					_flags_enum = 0,
+					allow_bitops = 0,
 				};
 
 				EMask m_modify = EMask::None;
@@ -2242,7 +2250,7 @@ namespace pr
 			static std::atomic_uint s_id = {};
 			auto id = s_id.load();
 			for (;!s_id.compare_exchange_weak(id, id + 1);) {}
-			return id + 1;
+			return static_cast<EventHandlerId>(id) + 1;
 		}
 
 		// Place-holder for events that take no arguments. (Makes the templating consistent)
@@ -2750,7 +2758,9 @@ namespace pr
 				// If not, it's probably due to a blocking windows message handler
 				for (auto const& loop : m_loop)
 				{
-					if (dt < loop.m_step_rate_ms * m_max_loop_steps) continue;
+					if (dt < static_cast<long long>(loop.m_step_rate_ms) * m_max_loop_steps)
+						continue;
+
 					//OutputDebugStringA(std::format("SimMessagePump: WARNING - {} ms between StepLoops() calls\n", dt).c_str());
 				}
 
@@ -4368,7 +4378,7 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				string s;
-				s.resize(::GetWindowTextLengthW(m_hwnd) + 1, 0);
+				s.resize(static_cast<size_t>(::GetWindowTextLengthW(m_hwnd)) + 1, 0);
 				if (!s.empty()) s.resize(::GetWindowTextW(m_hwnd, &s[0], int(s.size())));
 				return s;
 			}
@@ -5437,7 +5447,7 @@ namespace pr
 						drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
 						for (auto& path : drop.m_filepaths)
 						{
-							path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
+							path.resize(static_cast<size_t>(::DragQueryFileW(drop_info, i, 0, 0)) + 1, 0);
 							Check(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
 							++i;
 						}
@@ -5888,7 +5898,7 @@ namespace pr
 					return;
 
 				// Get the available area and this control's area relative to it (including margin).
-				auto p = parent_client;
+				Rect p = parent_client;
 				auto c = ParentRect().Adjust(cp().m_margin);
 				auto w = c.width();
 				auto h = c.height();
@@ -7529,7 +7539,7 @@ namespace pr
 			void ItemState(HITEM item, int state, int state_mask)
 			{
 				assert(::IsWindow(m_hwnd));
-				auto info = ItemInfo(item).state(state, state_mask);
+				ItemInfo info = ItemInfo(item).state(state, state_mask);
 				Check((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMSTATE, item, (LPARAM)&info), "Set list item state failed");
 			}
 
@@ -8301,7 +8311,7 @@ namespace pr
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
 
 				string s;
-				s.resize(LoWord(::SendMessageW(m_hwnd, SB_GETTEXTLENGTH, WPARAM(pane), LPARAM(0))) + 1, 0);
+				s.resize(static_cast<size_t>(LoWord(::SendMessageW(m_hwnd, SB_GETTEXTLENGTH, WPARAM(pane), LPARAM(0)))) + 1, 0);
 				if (!s.empty())
 				{
 					auto ret = DWORD(::SendMessageW(m_hwnd, SB_GETTEXT, WPARAM(pane), LPARAM(&s[0])));
@@ -8329,7 +8339,7 @@ namespace pr
 			void ResizeToParent(gui::Rect const& parent_client, bool repaint = false) override
 			{
 				// Ignore padding in the parent
-				auto rect = parent_client;
+				gui::Rect rect = parent_client;
 				if (m_parent.ctrl() != nullptr) rect = rect.Adjust(-m_parent->cp().m_padding);
 				Control::ResizeToParent(rect, repaint);
 			}
