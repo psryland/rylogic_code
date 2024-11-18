@@ -745,8 +745,8 @@ namespace pr
 		auto b = Mat4x4<S,A,B>::Identity(); // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
 		{
-			auto a_next = S(0.5) * (a + Invert(B));
-			auto b_next = S(0.5) * (b + Invert(A));
+			auto a_next = S(0.5) * (a + Invert(b));
+			auto b_next = S(0.5) * (b + Invert(a));
 			a = a_next;
 			b = b_next;
 		}

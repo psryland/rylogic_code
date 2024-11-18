@@ -35,21 +35,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="README.md"
-			Pack="true"
-			PackagePath="" />
+		<None Include="README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
 
 	<!-- References -->
 	<ItemGroup>
 		<ProjectReference Include="$(RylogicRoot)projects\apps\Rylogic.TextAligner\Shared\Rylogic.TextAligner.Shared.csproj" />
+		<PackageReference Include="MessagePack" />
 		<PackageReference Include="Microsoft.VSSDK.BuildTools">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 
-	<Target Name="GetVersion"
-		Returns="$(Version)" />
+	<Target Name="GetVersion" Returns="$(Version)" />
 
 </Project>

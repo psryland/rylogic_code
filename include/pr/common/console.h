@@ -492,16 +492,22 @@ namespace pr::console
 				switch (k.wVirtualKeyCode)
 				{
 					case VK_TAB:
+					{
 						OnTab(*this, Evt_Tab());
 						break;
+					}
 					case VK_RETURN:
-						OnLine(*this, Evt_Line<Char>(line.m_text));
+					{
+						OnLine(*this, Evt_Line(line.m_text));
 						line.reset();
 						break;
+					}
 					case VK_ESCAPE:
+					{
 						if (!line.empty()) line.reset();
 						else OnEscape(*this, Evt_Escape());
 						break;
+					}
 					case VK_BACK:    line.delback(ctrl); break;
 					case VK_DELETE:  line.delfwd(ctrl);  break;
 					case VK_LEFT:    line.left(ctrl);    break;
@@ -509,11 +515,13 @@ namespace pr::console
 					case VK_HOME:    line.home();        break;
 					case VK_END:     line.end();         break;
 					default:
+					{
 						if (k.wVirtualKeyCode >= VK_F1 && k.wVirtualKeyCode <= VK_F24)
 							OnFunctionKey(*this, Evt_FunctionKey(k.wVirtualKeyCode));
 						if (ch != 0)
 							line.write(ch);
 						break;
+					}
 				}
 			}
 		}
