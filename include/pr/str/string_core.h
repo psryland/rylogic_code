@@ -605,12 +605,14 @@ namespace pr
 		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
 		inline Char* End(Str&& str, size_t N)
 		{
-			return Begin(str) + std::min(N, Size(str));
+			auto ptr = Begin(str) + std::min(N, Size(str));
+			return ptr;
 		}
 		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
 		inline Char const* EndC(Str&& str, size_t N)
 		{
-			return Begin<Str const>(str) + std::min(N, Size(str));
+			auto ptr = Begin<Str const>(str) + std::min(N, Size(str));
+			return ptr;
 		}
 
 		#pragma endregion
@@ -1172,7 +1174,7 @@ namespace pr
 		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
 		inline Str2 SubStr(Str1 const& src, size_t offset, size_t count)
 		{
-			Str2 out;
+			Str2 out = {};
 			return SubStr(src, offset, count, out);
 		}
 

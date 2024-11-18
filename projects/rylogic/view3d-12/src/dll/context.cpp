@@ -27,7 +27,6 @@ namespace pr::rdr12
 		, OnAddFileProgress()
 		, OnSourcesChanged()
 	{
-		PR_ASSERT(PR_DBG, meta::is_aligned_to<16>(this), "dll data not aligned");
 		ReportError += global_error_cb;
 
 		// Hook up the sources events
@@ -258,7 +257,7 @@ namespace pr::rdr12
 		auto obj = Create(m_rdr, attr, cdata, context_id);
 	
 		// Add to the sources
-		if (obj)
+		if (obj != nullptr)
 			m_sources.Add(obj);
 
 		// Return the created object
@@ -439,7 +438,7 @@ namespace pr::rdr12
 	{
 		auto attr = ObjectAttributes{ ELdrObject::Custom, name, colour };
 		auto obj = CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
-		if (obj)
+		if (obj != nullptr)
 			m_sources.Add(obj);
 
 		return obj.get();

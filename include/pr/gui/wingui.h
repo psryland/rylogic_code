@@ -462,8 +462,8 @@ namespace pr
 		}
 
 		// Enum class operator | and &
-		template <typename U> static std::true_type  has_allow_bitops(decltype(U::allow_bitops)*);
-		template <typename>   static std::false_type has_allow_bitops(...);
+		template <typename U> static std::true_type  has_allow_bitops(decltype(U::allow_bitops)*) {};
+		template <typename>   static std::false_type has_allow_bitops(...) {};
 		template <typename T> constexpr bool has_allow_bitops_v = decltype(has_allow_bitops<T>(nullptr))::value;
 		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator ~ (T rhs)
 		{
@@ -1158,39 +1158,56 @@ namespace pr
 			};
 			struct Modify
 			{
-				std::optional<int> m_point_size = {};
-				std::optional<int> m_weight = {};
-				std::optional<bool> m_italic = {};
-				std::optional<bool> m_underline = {};
-				std::optional<bool> m_strikeout = {};
+				enum class EMask
+				{
+					None      = 0,
+					PointSize = 1 << 0,
+					Weight    = 1 << 1,
+					Italic    = 1 << 2,
+					Underline = 1 << 3,
+					StrikeOut = 1 << 4,
+					_flags_enum = 0,
+				};
+
+				EMask m_modify = EMask::None;
+				int m_point_size = {};
+				int m_weight = {};
+				bool m_italic = {};
+				bool m_underline = {};
+				bool m_strikeout = {};
 				HDC m_hdc = nullptr;
 
-				Modify& point_size(int ps)
+				Modify& point_size(int ps) noexcept
 				{
 					m_point_size = ps;
+					m_modify |= EMask::PointSize;
 					return *this;
 				}
-				Modify& weight(int w)
+				Modify& weight(int w) noexcept
 				{
 					m_weight = w;
+					m_modify |= EMask::Weight;
 					return *this;
 				}
-				Modify& italic(bool i)
+				Modify& italic(bool i) noexcept
 				{
 					m_italic = i;
+					m_modify |= EMask::Italic;
 					return *this;
 				}
-				Modify& underline(bool u)
+				Modify& underline(bool u) noexcept
 				{
 					m_underline = u;
+					m_modify |= EMask::Underline;
 					return *this;
 				}
-				Modify& strikeout(bool s)
+				Modify& strikeout(bool s) noexcept
 				{
 					m_strikeout = s;
+					m_modify |= EMask::StrikeOut;
 					return *this;
 				}
-				Modify& hdc(HDC hdc)
+				Modify& hdc(HDC hdc) noexcept
 				{
 					m_hdc = hdc;
 					return *this;
@@ -1229,33 +1246,33 @@ namespace pr
 				auto lf = LOGFONTW{};
 				GetObjectW(font, sizeof(LOGFONTW), &lf);
 
-				if (p.m_point_size)
+				if (AllSet(p.m_modify, Modify::EMask::PointSize))
 				{
 					// convert point_size to logical units based on hDC
 					auto client_dc = ClientDC(nullptr);
 					auto hdc_ = p.m_hdc ? p.m_hdc : client_dc.m_hdc;
-					auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), *p.m_point_size, 720)); // 72 points/inch, 10 'decipoints'/point
+					auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), p.m_point_size, 720)); // 72 points/inch, 10 'decipoints'/point
 					auto ptOrg = Point{};
 					::DPtoLP(hdc_, &pt, 1);
 					::DPtoLP(hdc_, &ptOrg, 1);
 					lf.lfHeight = -abs(pt.y - ptOrg.y);
 					lf.lfWeight = 0;
 				}
-				if (p.m_weight)
+				if (AllSet(p.m_modify, Modify::EMask::Weight))
 				{
-					lf.lfWeight = *p.m_weight;
+					lf.lfWeight = p.m_weight;
 				}
-				if (p.m_italic)
+				if (AllSet(p.m_modify, Modify::EMask::Italic))
 				{
-					lf.lfItalic = *p.m_italic;
+					lf.lfItalic = p.m_italic;
 				}
-				if (p.m_underline)
+				if (AllSet(p.m_modify, Modify::EMask::Underline))
 				{
-					lf.lfUnderline = *p.m_underline;
+					lf.lfUnderline = p.m_underline;
 				}
-				if (p.m_strikeout)
+				if (AllSet(p.m_modify, Modify::EMask::StrikeOut))
 				{
-					lf.lfStrikeOut = *p.m_strikeout;
+					lf.lfStrikeOut = p.m_strikeout;
 				}
 				m_obj = ::CreateFontIndirectW(&lf);
 				m_owned = true;

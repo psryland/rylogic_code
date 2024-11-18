@@ -422,7 +422,7 @@ namespace pr
 				handlers = m_handlers;
 			}
 			for (auto& h : handlers)
-				h.m_delegate(std::forward<Args>(args)...);
+				h.m_delegate(args...); // Can't std::forward rvalues in a loop.
 		}
 
 		// Boolean test for no assigned handlers

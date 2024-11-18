@@ -540,13 +540,13 @@ namespace pr::lua
 		return result;
 	}
 
-	// The lua wrapper object *************************************
+	// The Lua wrapper object *************************************
 	struct Lua
 	{
 		lua_State* m_state;
 		bool       m_owned;
 
-		// Create the lua state
+		// Create the Lua state
 		Lua()
 			:m_state(luaL_newstate())
 			, m_owned(true)
