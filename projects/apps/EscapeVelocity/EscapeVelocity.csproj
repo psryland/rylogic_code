@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>EscapeVelocity</RootNamespace>
 		<AssemblyName>EscapeVelocity</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -42,26 +42,26 @@
 	
 	<!-- References -->
 	<ItemGroup>
-		<ProjectReference Include="..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
 	</ItemGroup>
 	
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
+		<Content Include="$(RylogicRoot)lib\x64\debug\view3d.dll">
 			<Link>lib\x64\debug\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\..\..\lib\x64\release\view3d.dll">
+		<Content Include="$(RylogicRoot)lib\x64\release\view3d.dll">
 			<Link>lib\x64\release\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		<!--
-		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
+		<Content Include="$(RylogicRoot)lib\x86\debug\view3d.dll">
 			<Link>lib\x86\debug\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
-		<Content Include="..\..\..\lib\x86\release\view3d.dll">
+		<Content Include="$(RylogicRoot)lib\x86\release\view3d.dll">
 			<Link>lib\x86\release\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>

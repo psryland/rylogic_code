@@ -85,7 +85,10 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>SCI_EMPTYCATALOGUE;_CRT_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\include;..\src;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+        ;$(RylogicRoot)include
+        ;..\src
+      </AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>

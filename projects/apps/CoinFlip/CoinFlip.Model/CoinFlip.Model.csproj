@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>CoinFlip.Model</RootNamespace>
 		<AssemblyName>CoinFlip.Model</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -25,10 +25,10 @@
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.0.123" />
 		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.116" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-		<ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj" />
-		<ProjectReference Include="..\ExchApi.Binance\ExchApi.Binance.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\ExchApi.Common\ExchApi.Common.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\ExchApi.Binance\ExchApi.Binance.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -54,15 +54,15 @@
     <Compile Include="src\SettingsData.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
       <Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
       <Name>Rylogic.Gui.WPF</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CoinFlip.Model\CoinFlip.Model.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\CoinFlip.Model\CoinFlip.Model.csproj">
       <Project>{6a5ec05f-f738-4149-956b-df8eeca14dfc}</Project>
       <Name>CoinFlip.Model</Name>
     </ProjectReference>

@@ -50,7 +50,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>

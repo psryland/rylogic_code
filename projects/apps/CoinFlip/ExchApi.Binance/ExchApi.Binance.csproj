@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>ExchApi.Binance</RootNamespace>
 		<AssemblyName>ExchApi.Binance</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -24,8 +24,8 @@
 	<!-- References -->
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\ExchApi.Common\ExchApi.Common.csproj" />
 	</ItemGroup>
 
 </Project>

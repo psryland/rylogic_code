@@ -53,11 +53,11 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Rylogic.Core\Rylogic.Core.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\RyLogViewer.Extensions.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\apps\RyLogViewer-old\RyLogViewer.Extensions.csproj">
       <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
       <Name>RyLogViewer.Extensions</Name>
     </ProjectReference>

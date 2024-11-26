@@ -42,9 +42,9 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
-		<ProjectReference Include="..\Rylogic.Gfx\Rylogic.Gfx.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
 		<PackageReference Include="System.Resources.Extensions" />
 		<PackageReference Include="WindowsBase" Condition=" '$(TargetFramework)' == 'net481' "/>
 	</ItemGroup>

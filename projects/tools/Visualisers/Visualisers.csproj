@@ -53,11 +53,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
       <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
       <Name>Rylogic.Gui.WinForms</Name>
     </ProjectReference>

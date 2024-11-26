@@ -99,7 +99,7 @@ Example Use:
 #include <gdiplus.h>
 #include <tchar.h>
 
-constexpr bool PR_WNDPROCDEBUG = false;
+inline static constexpr bool PR_WNDPROCDEBUG = false;
 #if PR_WNDPROCDEBUG
 #pragma message("WARNING: **************************** WndProcDebug Enabled.")
 #include "pr/gui/messagemap_dbg.h"

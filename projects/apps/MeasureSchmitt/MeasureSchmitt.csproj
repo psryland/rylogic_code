@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>MeasureSchmitt</RootNamespace>
 		<AssemblyName>MeasureSchmitt</AssemblyName>
 		<UseWPF>true</UseWPF>

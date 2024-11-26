@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>Bot.Arbitrage</RootNamespace>
 		<AssemblyName>Bot.Arbitrage</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -25,9 +25,9 @@
 	<!-- References -->
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
-		<ProjectReference Include="..\CoinFlip.Model\CoinFlip.Model.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\CoinFlip.Model\CoinFlip.Model.csproj" />
 	</ItemGroup>
 
 	<!-- Post Build -->

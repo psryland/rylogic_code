@@ -42,7 +42,10 @@
 			<PrecompiledHeader>Use</PrecompiledHeader>
 			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
 			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>
+				;$(RylogicRoot)projects\rylogic
+				;%(AdditionalIncludeDirectories)
+			</AdditionalIncludeDirectories>
 		</ClCompile>
 	</ItemDefinitionGroup>
 

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>$(PrimaryTarget)</TargetFrameworks>
 		<RootNamespace>ExchApi.Common</RootNamespace>
 		<AssemblyName>ExchApi.Common</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -24,8 +24,8 @@
 	<!-- References -->
 	<ItemGroup>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\..\..\rylogic\Rylogic.Net\Rylogic.Net.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Net\Rylogic.Net.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -59,15 +59,15 @@
     <Compile Include="src\DomainObjects\TradeResult.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Rylogic.Net\Rylogic.Net.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Net\Rylogic.Net.csproj">
       <Project>{8ac9f403-cb1a-4e1f-bc05-6c3ceaad076b}</Project>
       <Name>Rylogic.Net</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj">
+    <ProjectReference Include="$(RylogicRoot)projects\apps\CoinFlip\ExchApi.Common\ExchApi.Common.csproj">
       <Project>{f99b8698-5a0e-4c57-a536-abbf4ed7cbb4}</Project>
       <Name>ExchApi.Common</Name>
     </ProjectReference>
