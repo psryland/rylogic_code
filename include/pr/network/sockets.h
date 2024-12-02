@@ -359,7 +359,7 @@ namespace pr::network
 						break;
 
 					case WSAEINPROGRESS: // A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
- 					case WSAENETDOWN:    // The network subsystem has failed.
+					case WSAENETDOWN:    // The network subsystem has failed.
 					case WSAEWOULDBLOCK:
 						std::this_thread::sleep_for(std::chrono::milliseconds(200));
 						continue; // retry
