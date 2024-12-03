@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -232,12 +232,18 @@ namespace Rylogic.Gui.Native
 		/// <summary>WndProc hook</summary>
 		public event EventHandler<WndProcEventArgs>? Message;
 
-		// Display as a non-modal window, creating the window first if necessary
+		/// <summary>Display as a non-modal window, creating the window first if necessary</summary>
 		public void Show(int show = Win32.SW_SHOW)
 		{
 			// Show the window, non-modally
 			User32.ShowWindow(Handle, show);
 			User32.UpdateWindow(m_hwnd);
+		}
+
+		/// <summary>Close the window</summary>
+		public void Close(int exit_code = 0)
+		{
+			User32.PostQuitMessage(exit_code);
 		}
 
 		/// <summary>Instance wndproc</summary>

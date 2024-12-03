@@ -80,7 +80,7 @@ namespace Rylogic.Windows.Gui
 		// Notes:
 		//  - A message loop designed for simulation applications
 		//    This loop sleeps the thread until the next frame is due or until messages arrive.
-		public delegate void StepFunc(long elapsed_ms);
+		public delegate void StepFunc(TimeSpan elapsed);
 
 		/// <summary>A loop represents a process that should be run at a given frame rate</summary>
 		public class Loop(StepFunc step, int step_rate_ms, bool variable)
@@ -184,7 +184,7 @@ namespace Rylogic.Windows.Gui
 
 				// Step the loop
 				var t0 = m_clock.ElapsedMilliseconds;
-				loop.Step(elapsed_ms);
+				loop.Step(TimeSpan.FromMilliseconds(elapsed_ms));
 				loop.Clock += elapsed_ms;
 				var t1 = m_clock.ElapsedMilliseconds - t0;
 				loop.AvrStepTime.Add((byte)Math.Min(255L, t1));

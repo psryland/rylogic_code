@@ -86,36 +86,6 @@ namespace Rylogic.Gfx
 				get => View3D_CameraFovGet(m_window.Handle);
 				set => View3D_CameraFovSet(m_window.Handle, value);
 			}
-			
-			///// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
-			//public float FovX
-			//{
-			//	get => View3D_CameraFovXGet(m_window.Handle);
-			//	set
-			//	{
-			//		if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
-			//		View3D_CameraFovXSet(m_window.Handle, value);
-			//	}
-			//}
-
-			///// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
-			//public float FovY
-			//{
-			//	get => View3D_CameraFovYGet(m_window.Handle);
-			//	set
-			//	{
-			//		if (value <= 0 || value > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
-			//		View3D_CameraFovYSet(m_window.Handle, value);
-			//	}
-			//}
-
-			///// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
-			//public void SetFov(float fovX, float fovY)
-			//{
-			//	if (fovX <= 0 || fovX > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovX must be < tau/2");
-			//	if (fovY <= 0 || fovY > Math_.TauBy2 - Math_.TinyF) throw new Exception("FovY must be < tau/2");
-			//	View3D_CameraFovSet(m_window.Handle, new v2(fovX, fovY));
-			//}
 
 			/// <summary>Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'</summary>
 			public void BalanceFov(float fov)
