@@ -352,9 +352,8 @@ void ApplyForces(uint3 dtid : SV_DispatchThreadID, uint3 gtid : SV_GroupThreadID
 	Particle target = GetParticle(dtid.x);
 	float4 rand_dir = RandomNWithDim(float2(dtid.x, Sim.RandomSeed), Sim.Dimensions);
 
-	// FLuids are incompressible so no matter what gravity force is applied,
-	// the distance between particles should be the same. Apply gravity first
-	// then inter-particle forces.	
+	// Fluids are incompressible so no matter what gravity force is applied, the distance between particles 
+	// in equilibrium should be the same. Apply gravity first then inter-particle forces and restitution.
 
 	// Apply gravity and thermal diffusion
 	target.acc = float4(0, 0, 0, 0);
