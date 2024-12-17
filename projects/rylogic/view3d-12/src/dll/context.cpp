@@ -9,7 +9,6 @@
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
-#include "pr/script/embedded_lua.h"
 
 // Include 'embedded_lua.h" in here so that additional include directories
 // are not needed for anyone including "pr/view3d-12/forward.h"
@@ -623,10 +622,6 @@ namespace pr::rdr12
 		};
 
 		auto hash = hash::HashICT(lang);
-
-		// Lua code
-		if (hash == hash::HashICT(L"Lua"))
-			return std::unique_ptr<script::EmbeddedLua>(new script::EmbeddedLua());
 
 		// Look for a code handler for this language
 		for (auto& emb : m_emb)

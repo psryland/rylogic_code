@@ -46,7 +46,6 @@
 			</PreprocessorDefinitions>
 			<AdditionalIncludeDirectories>
 				;$(RylogicRoot)projects\rylogic
-				;$(RylogicRoot)sdk\lua\lua\src
 				;%(AdditionalIncludeDirectories)
 			</AdditionalIncludeDirectories>
 			<AdditionalOptions>/Zm200 /bigobj $(AdditionalOptions)</AdditionalOptions>
@@ -54,7 +53,6 @@
 		<Link>
 			<AdditionalDependencies>
 				;view3d-12-static.lib
-				;lua-static.lib
 				;strmiids.lib
 				;comctl32.lib
 				;dxcompiler.lib
