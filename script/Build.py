@@ -419,14 +419,14 @@ class Csex(Managed):
 # LDraw
 class LDraw(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "LDraw", ["net6.0-windows"], workspace, platforms, configs)
-		self.proj_dir = Tools.Path(workspace, "projects/apps/LDraw", self.proj_name)
+		Managed.__init__(self, "LDraw", ["net9.0-windows"], workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, "projects/apps", self.proj_name)
 		self.platforms = ["x64"]
 		return
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\LDraw\\{self.proj_name}"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\{self.proj_name}"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):
