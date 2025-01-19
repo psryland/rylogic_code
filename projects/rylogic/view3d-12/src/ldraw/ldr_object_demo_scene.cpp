@@ -451,7 +451,7 @@ namespace pr::rdr12
 			"	#end\n"
 			#endif
 			"\n"
-			"	*Size {5}                  // Optional. Specify a size for the point\n"
+			"	*Size {5}                  // Optional. The size, in pixels, for the point\n"
 			"	*Style { Circle }          // Optional. One of: Square, Circle, Star, .. Requires 'Width'\n"
 			"	*Texture {\"#whitespot\"}    // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.\n"
 			"	*o2w{*pos{16 6 6}}\n"

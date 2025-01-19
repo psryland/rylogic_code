@@ -205,6 +205,13 @@ namespace pr::rdr12
 			auto tex = coalesce(FindDiffTexture(instance), nugget.m_tex_diffuse, m_default_tex);
 			auto srv_descriptor = wnd().m_heap_view.Add(tex->m_srv);
 			m_cmd_list.SetGraphicsRootDescriptorTable(shaders::fwd::ERootParam::DiffTexture, srv_descriptor);
+			#if PR_DBG_RDR
+			{
+				// Ensure the diffuse texture is in the correct state
+				auto state = m_cmd_list.ResState(tex->m_res.get()).Mip0State();
+				assert(AllSet(state, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE));
+			}
+			#endif
 
 			// Bind samplers to the pipeline
 			auto sam = coalesce(FindDiffTextureSampler(instance), nugget.m_sam_diffuse, m_default_sam);

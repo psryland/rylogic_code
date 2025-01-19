@@ -378,9 +378,9 @@ namespace pr::rdr12
 				, m_bbox(m_buffers.m_bbox)
 			{
 				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
-				m_vcont.resize(vcount);
-				m_icont.resize(size_t(icount) * idx_stride);
-				m_ncont.resize(ncount);
+				m_vcont.resize(vcount, {});
+				m_icont.resize(size_t(icount) * idx_stride, {});
+				m_ncont.resize(ncount, {});
 				m_icont.m_stride = idx_stride;
 				m_in_use = true;
 			}

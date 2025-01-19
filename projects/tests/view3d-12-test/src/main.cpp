@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
+#include "pr/ldraw/ldr_helper.h"
 #include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 
@@ -67,16 +68,21 @@ struct Main :Form
 			, false, nullptr, nullptr))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 	{
+		std::default_random_engine rng;
+		std::uniform_real_distribution dist(-10.0f, 10.0f);
+
+		auto builder = ldr::Builder();
+		//auto& points = builder.Point("points", 0xFF00FF00);
+		//points.size(10.0f);
+		//for (int i = 0; i != 10000; ++i) points.pt({ dist(rng), dist(rng), 0, 1 });
+		auto& spline = builder.Spline("spline");
+		spline.spline(v4{ 0, 0, 0, 1 }, v4{ -1, 1, 0, 1 }, v4{ -1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFF00FF00);
+		spline.spline(v4{ 0, 0, 0, 1 }, v4{ +1, 1, 0, 1 }, v4{ +1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFFFF0000);
+		spline.width(4);
+		spline.pos(v4{ 0, 10, 0, 1 });
+
 		// Load script
-		auto ctx0 = View3D_LoadScriptFromString(
-			"*Spline spline\n"
-			"{\n"
-			"	0 0 0  -1 1 0  -1 2 0  0 1.5 0 FF00FF00\n"
-			"	0 0 0  +1 1 0  +1 2 0  0 1.5 0 FFFF0000\n"
-			"	*Width { 4 }\n"
-			"	*o2w {*pos{0 10 0}}\n"
-			"}\n"
-			, nullptr, nullptr, nullptr, nullptr);
+		auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
 
 		// Set up the scene
 		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});

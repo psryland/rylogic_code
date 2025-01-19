@@ -1015,7 +1015,7 @@ namespace pr::rdr12
 			{
 				EStyle style = m_style;
 				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
+				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
 				switch (style)
 				{
 					case EStyle::Square:
@@ -1329,18 +1329,12 @@ namespace pr::rdr12
 			// Use a geometry shader to draw points
 			if (m_sprite.m_point_size != v2Zero)
 			{
-				// Get/Create an instance of the point sprites shader
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
+				auto gs_points = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
 
-				// Get/Create the point style texture
-				auto tex = m_sprite.PointStyleTexture(p);
-
-				// Update the nuggets
-				for (auto& nug : obj->m_model->m_nuggets)
-				{
-					nug.m_tex_diffuse = tex;
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
-				}
+				obj->m_model->DeleteNuggets();
+				obj->m_model->CreateNugget(p.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+					.use_shader(ERenderStep::RenderForward, gs_points)
+					.tex_diffuse(m_sprite.PointStyleTexture(p)));
 			}
 		}
 	};

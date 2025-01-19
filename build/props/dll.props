@@ -37,8 +37,7 @@
   </ItemDefinitionGroup>
 
   <!-- Dependencies -->
-  <Target Name="Deploy"
-    AfterTargets="Build">
+  <Target Name="Deploy" AfterTargets="Build">
     <Exec
       Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)"
       WorkingDirectory="$(RylogicRoot)"

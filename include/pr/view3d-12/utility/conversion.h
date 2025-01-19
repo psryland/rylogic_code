@@ -64,8 +64,9 @@ namespace pr
 			if (AllSet(v, D3D12_RESOURCE_STATE_UNORDERED_ACCESS))                 s.append(s.empty() ? "" : " | ").append("UNORDERED_ACCESS");
 			if (AllSet(v, D3D12_RESOURCE_STATE_DEPTH_WRITE))                      s.append(s.empty() ? "" : " | ").append("DEPTH_WRITE");
 			if (AllSet(v, D3D12_RESOURCE_STATE_DEPTH_READ))                       s.append(s.empty() ? "" : " | ").append("DEPTH_READ");
-			if (AllSet(v, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE))        s.append(s.empty() ? "" : " | ").append("NON_PIXEL_SHADER_RESOURCE");
-			if (AllSet(v, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE))            s.append(s.empty() ? "" : " | ").append("PIXEL_SHADER_RESOURCE");
+			if (AllSet(v, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE))              s.append(s.empty() ? "" : " | ").append("ALL_SHADER_RESOURCE");
+			else if (AllSet(v, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE))   s.append(s.empty() ? "" : " | ").append("NON_PIXEL_SHADER_RESOURCE");
+			else if (AllSet(v, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE))       s.append(s.empty() ? "" : " | ").append("PIXEL_SHADER_RESOURCE");
 			if (AllSet(v, D3D12_RESOURCE_STATE_STREAM_OUT))                       s.append(s.empty() ? "" : " | ").append("STREAM_OUT");
 			if (AllSet(v, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT))                s.append(s.empty() ? "" : " | ").append("INDIRECT_ARGUMENT");
 			if (AllSet(v, D3D12_RESOURCE_STATE_COPY_DEST))                        s.append(s.empty() ? "" : " | ").append("COPY_DEST");
@@ -75,7 +76,6 @@ namespace pr
 			if (AllSet(v, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE))s.append(s.empty() ? "" : " | ").append("RAYTRACING_ACCELERATION_STRUCTURE");
 			if (AllSet(v, D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE))              s.append(s.empty() ? "" : " | ").append("SHADING_RATE_SOURCE");
 			if (AllSet(v, D3D12_RESOURCE_STATE_GENERIC_READ))                     s.append(s.empty() ? "" : " | ").append("GENERIC_READ");
-			if (AllSet(v, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE))              s.append(s.empty() ? "" : " | ").append("ALL_SHADER_RESOURCE");
 			if (AllSet(v, D3D12_RESOURCE_STATE_PREDICATION))                      s.append(s.empty() ? "" : " | ").append("PREDICATION");
 			if (AllSet(v, D3D12_RESOURCE_STATE_VIDEO_DECODE_READ))                s.append(s.empty() ? "" : " | ").append("VIDEO_DECODE_READ");
 			if (AllSet(v, D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE))               s.append(s.empty() ? "" : " | ").append("VIDEO_DECODE_WRITE");

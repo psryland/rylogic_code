@@ -257,6 +257,13 @@ namespace pr::rdr12
 				auto pos = m_range.pos(m_mip0);
 				auto size = m_range.size(m_mip0);
 				m_factory.m_gfx_cmd_list.CopyBufferRegion(m_dest, s_cast<UINT64>(pos.x), m_staging.m_res, m_staging.m_ofs, s_cast<UINT64>(size.x) * 1);
+
+				// Transition the resource to the final state (if provided)
+				if (final_state)
+				{
+					barriers.Transition(m_dest, *final_state);
+					barriers.Commit();
+				}
 			}
 			else
 			{
@@ -264,8 +271,9 @@ namespace pr::rdr12
 				{
 					auto const& layout = m_layout[i];
 					auto box = m_range.mip(m_mip0 + i);
+					auto sub = s_cast<uint32_t>(m_sub0 + m_mip0 + i);
 
-					barriers.Transition(m_dest, D3D12_RESOURCE_STATE_COPY_DEST, s_cast<uint32_t>(m_sub0 + m_mip0 + i));
+					barriers.Transition(m_dest, D3D12_RESOURCE_STATE_COPY_DEST, sub);
 					barriers.Commit();
 
 					D3D12_TEXTURE_COPY_LOCATION src =
@@ -281,14 +289,14 @@ namespace pr::rdr12
 						.SubresourceIndex = s_cast<UINT>(m_sub0 + m_mip0 + i),
 					};
 					m_factory.m_gfx_cmd_list.CopyTextureRegion(&dst, s_cast<UINT>(box.left), s_cast<UINT>(box.top), s_cast<UINT>(box.front), &src, &box);
-				}
-			}
 
-			// Transition the resource to the final state (if provided)
-			if (final_state)
-			{
-				barriers.Transition(m_dest, *final_state);
-				barriers.Commit();
+					// Transition the resource to the final state (if provided)
+					if (final_state)
+					{
+						barriers.Transition(m_dest, *final_state, sub);
+						barriers.Commit();
+					}
+				}
 			}
 
 			// Signal that the resource manager command list needs executing

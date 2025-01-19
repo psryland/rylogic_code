@@ -628,6 +628,7 @@ namespace pr::ldr
 		struct LdrSphere;
 		struct LdrBox;
 		struct LdrCylinder;
+		struct LdrSpline;
 		struct LdrFrustum;
 
 		struct LdrObj
@@ -661,6 +662,7 @@ namespace pr::ldr
 			LdrSphere& Sphere(Name name = {}, Col colour = Col());
 			LdrBox& Box(Name name = {}, Col colour = Col());
 			LdrCylinder& Cylinder(Name name = {}, Col colour = Col());
+			LdrSpline& Spline(Name name = {}, Col colour = Col());
 			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
 
 			// Extension objects
@@ -861,7 +863,7 @@ namespace pr::ldr
 				return *this;
 			}
 
-			// Point size
+			// Point size (in pixels, because points are in screen space)
 			LdrPoint& size(float s)
 			{
 				m_size = s;
@@ -1220,6 +1222,60 @@ namespace pr::ldr
 				ldr::Append(str, "}\n");
 			}
 		};
+		struct LdrSpline :LdrBase<LdrSpline>
+		{
+			struct Bezier {
+				v4 pt0, pt1, pt2, pt3;
+				Col col;
+			};
+			pr::vector<Bezier> m_splines;
+			Width m_width;
+			bool m_has_colour;
+			
+			LdrSpline()
+				:m_splines()
+				,m_width()
+				,m_has_colour()
+			{}
+
+			// Spline width
+			LdrSpline& width(Width w)
+			{
+				m_width = w;
+				return *this;
+			}
+
+			// Add a spline piece
+			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Col colour)
+			{
+				spline(pt0, pt1, pt2, pt3);
+				m_splines.back().col = colour;
+				m_has_colour = true;
+				return *this;
+			}
+			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3)
+			{
+				assert(pt0.w == 1 && pt1.w == 1 && pt2.w == 1 && pt3.w == 1);
+				m_splines.push_back(Bezier{ pt0, pt1, pt2, pt3, {} });
+				return *this;
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				auto delim = m_splines.size() > 1 ? "\n" : "";
+				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, m_width, delim);
+				for (int i = 0, iend = (int)m_splines.size(); i != iend; ++i)
+				{
+					auto& bez = m_splines[i];
+					ldr::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
+					if (m_has_colour) ldr::Append(str, bez.col);
+					if ((i & 1) == 1) ldr::Append(str, delim);
+				}
+				NestedToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
 		struct LdrFrustum :LdrBase<LdrFrustum>
 		{
 			LdrFrustum()
@@ -1338,6 +1394,12 @@ namespace pr::ldr
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}
+		inline LdrPoint& LdrObj::Point(Name name, Col colour)
+		{
+			auto ptr = new LdrPoint;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
 		inline LdrLine& LdrObj::Line(Name name, Col colour)
 		{
 			auto ptr = new LdrLine;
@@ -1383,6 +1445,12 @@ namespace pr::ldr
 		inline LdrCylinder& LdrObj::Cylinder(Name name, Col colour)
 		{
 			auto ptr = new LdrCylinder;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrSpline& LdrObj::Spline(Name name, Col colour)
+		{
+			auto ptr = new LdrSpline;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).col(colour);
 		}

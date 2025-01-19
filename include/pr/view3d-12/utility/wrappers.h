@@ -805,17 +805,20 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc Tex2D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
 		{
+			// Notes:
+			// - Create textures in the 'D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE' state because they are typically
+			//   used for texturing in shaders. Other cases should be set explicitly by the caller.
 			return ResDesc(D3D12_RESOURCE_DIMENSION_TEXTURE2D, data.m_format, s_cast<uint64_t>(data.m_dim.x), s_cast<uint32_t>(data.m_dim.y), 1, BytesPerPixel(data.m_format))
 				.mips(mips)
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				//.def_state(!AllSet(flags, EUsage::DenyShaderResource) ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON)
+				.def_state(!AllSet(flags, EUsage::DenyShaderResource) ? D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COMMON)
 				.init_data(data);
 		}
 		static ResDesc Tex3D(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -825,7 +828,7 @@ namespace pr::rdr12
 				.usage(flags)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 		static ResDesc TexCube(Image data, uint16_t mips = 0, EUsage flags = EUsage::Default)
@@ -836,7 +839,7 @@ namespace pr::rdr12
 				.misc_flags(EMiscFlags::CubeMap)
 				.res_alignment(ResourceAlignment(data, flags))
 				.data_alignment(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)
-				//.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
+				.def_state(D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE)
 				.init_data(data);
 		}
 

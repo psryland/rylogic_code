@@ -174,39 +174,36 @@ namespace pr
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
-	template <std::integral T> constexpr T HighBit(T n)
+	template <std::unsigned_integral T> constexpr T HighBit(T n)
 	{
 		// Must be a faster way?
 		return T(1) << HighBitIndex(n);
 	}
 
 	// Returns true if 'n' is a exact power of two
-	template <typename T> constexpr bool IsPowerOfTwo(T n)
+	template <std::integral T> constexpr bool IsPowerOfTwo(T n)
 	{
 		// Zero is not a power of two because 2^n means "1 doubled n times". There is no number of times you can double 1 to get zero.
 		// Incidentally, this is why '2^0 == 1', "1 doubled no times" is still 1.
-		return ((n - 1) & n) == 0 && n != 0;
+		return (n & (n - 1)) == 0 && n != 0;
 	}
 
-	// Return the highest power of two that is less that 'n'
-	template <std::integral T> constexpr T PowerOfTwoLessThan(T n)
+	// Return the highest power of two that is <= 'n'
+	template <std::integral T> constexpr T PowerOfTwoLessEqualTo(T n)
 	{
-		// A bitmask containing just the highest bit is a power of two just less than 'n'
-		return HighBit<T>(n);
+		using U = std::make_unsigned_t<T>;
+
+		assert(n > 0);
+		return static_cast<T>(HighBit<U>(static_cast<U>(n)));
 	}
 
-	// Return the next highest power of two greater than 'n'
-	template <std::integral T> constexpr T PowerOfTwoGreaterThan(T n)
+	// Return the next highest power of two >= 'n'
+	template <std::integral T> constexpr T PowerOfTwoGreaterEqualTo(T n)
 	{
-		n--;
-		n |= n >> 1;
-		n |= n >> 2;
-		n |= n >> 4;
-		if constexpr (sizeof(T) > 1) n |= n >> 8;
-		if constexpr (sizeof(T) > 2) n |= n >> 16;
-		if constexpr (sizeof(T) > 4) n |= n >> 32;
-		n++;
-		return n;
+		using U = std::make_unsigned_t<T>;
+
+		assert(n >= 0 && n <= T(1) << (sizeof(T) * 8 - 1 - std::is_signed_v<T>)); // (1 << 31) is -1
+		return T(1) << std::bit_width<U>(static_cast<U>(n + (n == 0) - 1));
 	}
 
 	// Returns the number of set bits in 'n'
@@ -521,7 +518,7 @@ namespace pr::maths
 		}
 		{
 			char const* mask_str = "1111010100010";
-			auto mask = BitsFromString<short>(mask_str);
+			auto mask = BitsFromString<uint16_t>(mask_str);
 			PR_CHECK(mask, 7842);
 			PR_CHECK(HighBitIndex(mask), 12);
 			PR_CHECK(LowBitIndex(mask), 1);
@@ -538,10 +535,18 @@ namespace pr::maths
 			PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
 		}
 		{
-			PR_CHECK(PowerOfTwoGreaterThan(0x12345678), 0x20000000);
-			PR_CHECK(PowerOfTwoGreaterThan(0x9876543210UL), 0x10000000000UL);
-			PR_CHECK(PowerOfTwoGreaterThan(uint8_t(0x9a)), uint8_t(0x00));
-			PR_CHECK(PowerOfTwoGreaterThan(uint16_t(0x9a)), uint16_t(0x100));
+			PR_CHECK(PowerOfTwoLessEqualTo(1), 1);
+			PR_CHECK(PowerOfTwoLessEqualTo(256), 256);
+			PR_CHECK(PowerOfTwoLessEqualTo(255), 128);
+		}
+		{
+			PR_CHECK(PowerOfTwoGreaterEqualTo(0), 1);
+			PR_CHECK(PowerOfTwoGreaterEqualTo(256), 256);
+			PR_CHECK(PowerOfTwoGreaterEqualTo(0x12345678), 0x20000000);
+			PR_CHECK(PowerOfTwoGreaterEqualTo(0x7FFFFFFFU), 0x80000000U);
+			PR_CHECK(PowerOfTwoGreaterEqualTo(0x9876543210UL), 0x10000000000UL);
+			PR_CHECK(PowerOfTwoGreaterEqualTo(int16_t(0x9a)), int16_t(0x100));
+			PR_CHECK(PowerOfTwoGreaterEqualTo(uint16_t(0x9a)), uint16_t(0x100));
 		}
 		{
 			auto a = uint8_t(0b10110101);

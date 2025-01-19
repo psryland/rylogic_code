@@ -16,6 +16,8 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 	float w = m_size.x * 0.5f;
 	float h = m_size.y * 0.5f;
 
+	float4 ws_norm = m_cam.m_c2w[2];
+
 	// Output a camera facing quad: bottom to top 'S' order.
 	if (m_depth)
 	{
@@ -26,24 +28,28 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 		Out.ws_vert = In[0].ws_vert + (-radx - rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
 		Out.tex0.xy = float2(0,0);
+		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (+radx - rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
 		Out.tex0.xy = float2(1,0);
+		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (-radx + rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
 		Out.tex0.xy = float2(0,1);
+		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 		
 		Out = In[0];
 		Out.ws_vert = In[0].ws_vert + (+radx + rady);
 		Out.ss_vert = mul(Out.ws_vert, m_cam.m_w2s);
 		Out.tex0.xy = float2(1,1);
+		Out.ws_norm = ws_norm;
 		OutStream.Append(Out);
 	}
 	else
@@ -53,10 +59,28 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 		float2 rady = float2(0, h / m_screen_dim.y);
 
 		Out = In[0];
-		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx - rady) * In[0].ss_vert.w;  Out.tex0.xy = float2(0,0);  OutStream.Append(Out);
-		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx - rady) * In[0].ss_vert.w;  Out.tex0.xy = float2(1,0);  OutStream.Append(Out);
-		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx + rady) * In[0].ss_vert.w;  Out.tex0.xy = float2(0,1);  OutStream.Append(Out);
-		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx + rady) * In[0].ss_vert.w;  Out.tex0.xy = float2(1,1);  OutStream.Append(Out);
+		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx - rady) * In[0].ss_vert.w;
+		Out.tex0.xy = float2(0,0);
+		Out.ws_norm = ws_norm;
+		OutStream.Append(Out);
+
+		Out = In[0];
+		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx - rady) * In[0].ss_vert.w;
+		Out.tex0.xy = float2(1,0);
+		Out.ws_norm = ws_norm;
+		OutStream.Append(Out);
+
+		Out = In[0];
+		Out.ss_vert.xy = In[0].ss_vert.xy + (-radx + rady) * In[0].ss_vert.w;
+		Out.tex0.xy = float2(0,1);
+		Out.ws_norm = ws_norm;
+		OutStream.Append(Out);
+
+		Out = In[0];
+		Out.ss_vert.xy = In[0].ss_vert.xy + (+radx + rady) * In[0].ss_vert.w;
+		Out.tex0.xy = float2(1,1);
+		Out.ws_norm = ws_norm;
+		OutStream.Append(Out);
 	}
 	OutStream.RestartStrip();
 }

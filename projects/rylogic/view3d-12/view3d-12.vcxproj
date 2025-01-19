@@ -58,10 +58,10 @@
 	<ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
 		<ClCompile>
 			<PreprocessorDefinitions>
-				;PR_RDR_RUNTIME_SHADERS=0
 				;PR_LOGGING=1
-				;PR_SUPPORT_D3D11_ERRORS=1
 				;PR_VIEW3D_12=1
+				;PR_RDR_RUNTIME_SHADERS=0
+				;PR_SUPPORT_D3D11_ERRORS=1
 				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
 			<AdditionalIncludeDirectories>
