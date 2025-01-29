@@ -118,6 +118,7 @@
 #include "pr\container\chain.h"
 #include "pr\container\concurrent_queue.h"
 #include "pr\container\deque.h"
+#include "pr\container\dimension_index.h"
 #include "pr\container\kdtree.h"
 #include "pr\container\quadtree.h"
 #include "pr\container\queue.h"

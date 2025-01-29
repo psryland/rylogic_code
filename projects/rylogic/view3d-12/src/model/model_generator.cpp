@@ -204,15 +204,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PointSize(isize(points));
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
-		assert(vcount == isize(points));
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
-		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
+		Cache cache{ vcount, icount, 0, big_indices ? sizeof(uint32_t) : sizeof(uint16_t) };
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Points(points, colours,
 			[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::PointList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -228,15 +230,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::LineSize(num_lines);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
-		assert(vcount == isize(points));
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Lines(num_lines, points, colours,
 			[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::LineList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -250,16 +254,19 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::LineSize(num_lines);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 		assert(vcount == isize(points));
 		assert(vcount == isize(directions));
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::LinesD(num_lines, points.data(), directions.data(), colours,
 			[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 		
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::LineList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -279,19 +286,12 @@ namespace pr::rdr12
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, s_cast<int>(big_indices ? sizeof(uint32_t) : sizeof(uint16_t))};
 		auto vptr = cache.m_vcont.data();
-		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::LinesStrip(num_lines, points.data(), colours,
-			[&](v4_cref p, Colour32 c)
-			{
-				SetPC(*vptr++, p, Colour(c));
-			},
-			[&](int idx)
-			{
-				big_indices
-					? *iptr32++ = s_cast<uint32_t>(idx)
-					: *iptr16++ = s_cast<uint16_t>(idx);
-			});
+			[&](v4_cref p, Colour32 c) { SetPC(*vptr++, p, Colour(c)); },
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::LineStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -313,15 +313,18 @@ namespace pr::rdr12
 		auto [vcount, icount] = geometry::QuadSize(num_quads);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
 		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
+		auto big_indices = vcount > 0xFFFF;
 		assert(vcount == isize(verts));
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Quad(num_quads, verts.data(), colours, t2s,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -336,14 +339,17 @@ namespace pr::rdr12
 		auto [vcount, icount] = geometry::QuadSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
 		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2s,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -358,14 +364,17 @@ namespace pr::rdr12
 		auto [vcount, icount] = geometry::QuadSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
 		auto t2s = opts && opts->has(ModelGenerator::CreateOptions::EOptions::TextureToSurface) ? opts->m_t2s : m4x4::Identity();
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2s,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -379,14 +388,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadStripSize(num_quads);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::QuadStrip(num_quads, verts.data(), width, isize(normals), normals.data(), colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -399,14 +411,17 @@ namespace pr::rdr12
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::QuadPatchSize(dimx, dimy);
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::QuadPatch(dimx, dimy,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -422,14 +437,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::EllipseSize(solid, facets);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Ellipse(dimx, dimy, solid, facets, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -443,14 +461,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PieSize(solid, ang0, ang1, facets);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -464,14 +485,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::RoundedRectangleSize(solid, corner_radius, facets);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -485,14 +509,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::PolygonSize(isize(points), solid);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Polygon(points, solid, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(solid ? ETopo::TriList : ETopo::LineStrip, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -519,7 +546,8 @@ namespace pr::rdr12
 		auto iptr = cache.m_icont.data<uint16_t>();
 		auto props = geometry::Box(rad, m4x4::Identity(), colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -533,14 +561,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::BoxSize(num_boxes);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Boxes(num_boxes, points.data(), m4x4::Identity(), colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -554,14 +585,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::BoxSize(num_boxes);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::BoxList(num_boxes, positions.data(), rad, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -581,14 +615,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::GeosphereSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Geosphere(radius, divisions, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -606,14 +643,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SphereSize(wedges, layers);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache(vcount, icount, 0, 2);
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Sphere(radius, wedges, layers, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](size_t idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](size_t idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -629,14 +669,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::CylinderSize(wedges, layers);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -654,6 +697,7 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::ExtrudeSize(isize(cs), isize(path), closed, smooth_cs);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Convert a stream of points into a stream of transforms
 		// At each vertex, ori.z should be the tangent to the extrusion path.
@@ -698,10 +742,12 @@ namespace pr::rdr12
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Extrude(cs, make_path, isize(path), closed, smooth_cs, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -715,6 +761,7 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::ExtrudeSize(isize(cs), isize(path), closed, smooth_cs);
 		auto colours = opts ? opts->m_colours : std::span<Colour32 const>{};
+		auto big_indices = vcount > 0xFFFF;
 
 		// Path transform stream source
 		auto make_path = [&](int p, int) { return path[p]; };
@@ -722,10 +769,12 @@ namespace pr::rdr12
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Extrude(cs, make_path, isize(path), closed, smooth_cs, colours,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](size_t idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](size_t idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create a nugget
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha));
@@ -740,11 +789,13 @@ namespace pr::rdr12
 	{
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::MeshSize(isize(cdata.m_verts), isize(cdata.m_indices));
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::Mesh(
 			isize(cdata.m_verts),
 			isize(cdata.m_indices),
@@ -754,7 +805,8 @@ namespace pr::rdr12
 			isize(cdata.m_normals), cdata.m_normals.data(),
 			cdata.m_tex_coords.data(),
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](int idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Create the nuggets
 		cache.m_ncont.insert(cache.m_ncont.begin(), cdata.m_nuggets.begin(), cdata.m_nuggets.end());
@@ -770,14 +822,17 @@ namespace pr::rdr12
 		// Calculate the required buffer sizes
 		auto [vcount, icount] = geometry::SkyboxGeosphereSize(divisions);
 		auto colour = opts && !opts->m_colours.empty() ? opts->m_colours[0] : Colour32White;
+		auto big_indices = vcount > 0xFFFF;
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
-		auto iptr = cache.m_icont.data<uint16_t>();
+		auto iptr16 = cache.m_icont.data<uint16_t>();
+		auto iptr32 = cache.m_icont.data<uint32_t>();
 		auto props = geometry::SkyboxGeosphere(radius, divisions, colour,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
-			[&](size_t idx) { *iptr++ = s_cast<uint16_t>(idx); });
+			[&](size_t idx) { big_indices ? *iptr32++ = s_cast<uint32_t>(idx) : *iptr16++ = s_cast<uint16_t>(idx); }
+		);
 
 		// Model nugget properties for the sky box
 		cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, props.m_geom).alpha_geom(props.m_has_alpha).tex_diffuse(sky_texture).pso<EPipeState::CullMode>(D3D12_CULL_MODE_FRONT));
@@ -971,7 +1026,7 @@ namespace pr::rdr12
 				// Copy the verts
 				m_cache.m_vcont.resize(mesh.vcount());
 				auto vptr = m_cache.m_vcont.data();
-				for (auto mvert : mesh.fat_verts())
+				for (auto const& mvert : mesh.fat_verts())
 				{
 					SetPCNT(*vptr, GetP(mvert), GetC(mvert), GetN(mvert), GetT(mvert));
 					++vptr;
@@ -984,7 +1039,7 @@ namespace pr::rdr12
 				auto iptr = m_cache.m_icont.data<uint32_t>();
 				auto vrange = Range::Zero();
 				auto irange = Range::Zero();
-				for (auto& nug : mesh.nuggets())
+				for (auto const& nug : mesh.nuggets())
 				{
 					// Copy the indices
 					vrange = Range::Reset();
@@ -1149,22 +1204,22 @@ namespace pr::rdr12
 
 				// Copy nuggets
 				auto vcount = int(cache.m_vcont.size());
-				if (vcount < 0x10000)
-				{
-					// Use 16bit indices
-					cache.m_icont.m_stride = sizeof(uint16_t);
-					cache.m_icont.resize<uint16_t>(vcount);
-					auto ibuf = cache.m_icont.data<uint16_t>();
-					for (uint16_t i = 0; vcount-- != 0;)
-						*ibuf++ = i++;
-				}
-				else
+				if (vcount > 0xFFFF)
 				{
 					// Use 32bit indices
 					cache.m_icont.m_stride = sizeof(uint32_t);
 					cache.m_icont.resize<uint32_t>(vcount);
 					auto ibuf = cache.m_icont.data<uint32_t>();
 					for (uint32_t i = 0; vcount-- != 0;)
+						*ibuf++ = i++;
+				}
+				else
+				{
+					// Use 16bit indices
+					cache.m_icont.m_stride = sizeof(uint16_t);
+					cache.m_icont.resize<uint16_t>(vcount);
+					auto ibuf = cache.m_icont.data<uint16_t>();
+					for (uint16_t i = 0; vcount-- != 0;)
 						*ibuf++ = i++;
 				}
 				cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, EGeom::Vert|EGeom::Norm));

@@ -773,7 +773,7 @@ namespace pr::geometry::p3d
 		// RAII scope for the stream get pointer
 		static SavePos saveg(Stream& src)
 		{
-			return std::move(SavePos(src));
+			return SavePos(src);
 		}
 	};
 	#pragma endregion
@@ -871,7 +871,7 @@ namespace pr::geometry::p3d
 	// Preserve the stream get pointer
 	template <typename TSrc> typename traits<TSrc>::SavePos SaveG(TSrc& src)
 	{
-		return std::move(traits<TSrc>::saveg(src));
+		return traits<TSrc>::saveg(src);
 	}
 
 	// Chunk reading/searching function.
@@ -1720,7 +1720,7 @@ namespace pr::geometry::p3d
 			throw std::runtime_error("Stride value must be a multiple of the size of the input elements");
 
 		// Local buffer
-		TIn page[PageSizeBytes / sizeof(TIn)];
+		std::vector<TIn> page(PageSizeBytes / sizeof(TIn));
 		auto const page_max = PageSizeBytes / stride; // the number of whole elements that fit in 'page'
 		auto const elem_size = stride / sizeof(TIn);  // the element size in units of 'Tin'
 
@@ -1742,7 +1742,7 @@ namespace pr::geometry::p3d
 	{
 		TOut out;
 		Read(src, &out, 1);
-		return std::move(out);
+		return out;
 	}
 
 	// Read a string. 'src' is assumed to point to the start of a EChunkId::CStr chunk data
@@ -1755,7 +1755,7 @@ namespace pr::geometry::p3d
 		// Read the string data
 		TStr str(count, '\0');
 		Read(src, str.data(), str.size());
-		return std::move(str);
+		return str;
 	}
 
 	// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
@@ -1781,7 +1781,7 @@ namespace pr::geometry::p3d
 		// Texture flags
 		tex.m_flags = s_cast<Texture::EFlags>(Read<uint16_t>(src));
 
-		return std::move(tex);
+		return tex;
 	}
 
 	// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
@@ -1809,7 +1809,7 @@ namespace pr::geometry::p3d
 			}
 			return false;
 		});
-		return std::move(mat);
+		return mat;
 	}
 
 	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVerts chunk data
@@ -1855,7 +1855,7 @@ namespace pr::geometry::p3d
 			}
 		}
 
-		return std::move(cont);
+		return cont;
 	}
 
 	// Fill a container of colours. 'src' is assumed to point to the start of EChunkId::MeshColours chunk data
@@ -1896,7 +1896,7 @@ namespace pr::geometry::p3d
 			}
 		}
 
-		return std::move(cont);
+		return cont;
 	}
 
 	// Fill a container of normals. 'src' is assumed to point to the start of EChunkId::MeshNorms chunk data
@@ -1947,7 +1947,7 @@ namespace pr::geometry::p3d
 			}
 		}
 
-		return std::move(cont);
+		return cont;
 	}
 
 	// Fill a container of UVs. 'src' is assumed to point to the start of EChunkId::MeshUVs chunk data
@@ -1993,7 +1993,7 @@ namespace pr::geometry::p3d
 			}
 		}
 
-		return std::move(cont);
+		return cont;
 	}
 
 	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::Mesh?Idx chunk data
@@ -2089,7 +2089,7 @@ namespace pr::geometry::p3d
 			}
 		}
 
-		return std::move(cont);
+		return cont;
 	}
 
 	// Read a mesh nugget. 'src' is assumed to point to the start of EChunkId::MeshNugget chunk data
@@ -2126,7 +2126,7 @@ namespace pr::geometry::p3d
 				return false;
 			});
 
-		return std::move(nugget);
+		return nugget;
 	}
 
 	// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
@@ -2186,7 +2186,7 @@ namespace pr::geometry::p3d
 				}
 				return false;
 			});
-		return std::move(mesh);
+		return mesh;
 	}
 
 	// Fill a container of materials. 'src' is assumed to point to the start of EChunkId::Materials chunk data
@@ -2203,7 +2203,7 @@ namespace pr::geometry::p3d
 				}
 				return false;
 			});
-		return std::move(mats);
+		return mats;
 	}
 
 	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
@@ -2220,7 +2220,7 @@ namespace pr::geometry::p3d
 				}
 				return false;
 			});
-		return std::move(meshes);
+		return meshes;
 	}
 
 	// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
@@ -2244,7 +2244,7 @@ namespace pr::geometry::p3d
 				}
 				return false;
 			});
-		return std::move(scene);
+		return scene;
 	}
 
 	// Read a p3d::File into memory from an istream-like source. Uses forward iteration only.
@@ -2272,7 +2272,7 @@ namespace pr::geometry::p3d
 				return false;
 			});
 
-		return std::move(file);
+		return file;
 	}
 
 	#pragma endregion

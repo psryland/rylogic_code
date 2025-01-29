@@ -12,9 +12,10 @@
 #endif
 
 // ** No dependencies except standard includes **
+#include <span>
+#include <memory>
 #include <cstdint>
 #include <functional>
-#include <span>
 #include <windows.h>
 #include <d3d12.h>
 
@@ -42,7 +43,8 @@ namespace pr
 		using CubeMap = pr::rdr12::TextureCube*;
 		using Sampler = pr::rdr12::Sampler*;
 		using Shader = pr::rdr12::Shader*;
-		using Window = rdr12::V3dWindow*;
+		using Window = pr::rdr12::V3dWindow*;
+
 		using ReportErrorCB = void(__stdcall *)(void* ctx, char const* msg, char const* filepath, int line, int64_t pos);
 
 		#pragma region Enumerations
@@ -1303,4 +1305,29 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_LdrEditorDestroy         (HWND hwnd);
 	VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit        (HWND scintilla_control, BOOL dark);
 #endif
+}
+
+namespace pr::view3d
+{
+	namespace impl
+	{
+		struct Deleter
+		{
+			void operator()(Object p) noexcept { if (p) View3D_ObjectDelete(p); }
+			void operator()(Gizmo p) noexcept { if (p) View3D_GizmoDelete(p); }
+			void operator()(Texture p) noexcept { if (p) View3D_TextureRelease(p); }
+			void operator()(CubeMap p) noexcept { if (p) View3D_CubeMapRelease(p); }
+			void operator()(Sampler p) noexcept { if (p) View3D_SamplerRelease(p); }
+			void operator()(Shader p) noexcept { if (p) View3D_ShaderRelease(p); }
+			void operator()(Window p) noexcept { if (p) View3D_WindowDestroy(p); }
+		};
+	}
+
+	using ObjectPtr  = std::unique_ptr<pr::rdr12::LdrObject, impl::Deleter>;
+	using GizmoPtr   = std::unique_ptr<pr::rdr12::LdrGizmo, impl::Deleter>;
+	using TexturePtr = std::unique_ptr<pr::rdr12::Texture2D, impl::Deleter>;
+	using CubeMapPtr = std::unique_ptr<pr::rdr12::TextureCube, impl::Deleter>;
+	using SamplerPtr = std::unique_ptr<pr::rdr12::Sampler, impl::Deleter>;
+	using ShaderPtr  = std::unique_ptr<pr::rdr12::Shader, impl::Deleter>;
+	using WindowPtr  = std::unique_ptr<pr::rdr12::V3dWindow, impl::Deleter>;
 }

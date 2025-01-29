@@ -337,11 +337,11 @@ namespace pr::rdr12
 			// The cached buffers
 			struct alignas(16) Buffers
 			{
-				string32 m_name;  // Model name
-				VCont    m_vcont; // Model verts
-				ICont    m_icont; // Model faces/lines/points/etc
-				NCont    m_ncont; // Model nuggets
-				BBox     m_bbox;  // Model bounding box
+				string32 m_name;                 // Model name
+				VCont    m_vcont;                // Model verts
+				ICont    m_icont;                // Model faces/lines/points/etc
+				NCont    m_ncont;                // Model nuggets
+				BBox     m_bbox = BBox::Reset(); // Model bounding box
 			};
 			static Buffers& this_thread_instance()
 			{

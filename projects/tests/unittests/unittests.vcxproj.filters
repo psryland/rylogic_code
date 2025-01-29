@@ -1056,7 +1056,12 @@
     <ClInclude Include="$(RylogicRoot)include\pr\common\cancel_token.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
+      <Filter>sqlite3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

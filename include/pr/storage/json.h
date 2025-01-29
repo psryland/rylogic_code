@@ -296,6 +296,10 @@ namespace pr::json
 	{
 		return std::llround(to<double>());
 	}
+	template <> inline float Value::to<float>() const
+	{
+		return static_cast<float>(to<double>());
+	}
 	template <> inline int Value::to<int>() const
 	{
 		return static_cast<int>(to<int64_t>());

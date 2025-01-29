@@ -640,7 +640,7 @@ namespace pr::ldr
 			};
 			case EKeyword::RandColour:
 			{
-				obj->m_base_colour = pr::RandomRGB(g_rng());
+				obj->m_base_colour = pr::RandomRGB(g_rng(), 0.0f, 1.0f);
 				return true;
 			}
 			case EKeyword::Animation:

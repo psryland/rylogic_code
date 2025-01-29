@@ -6,6 +6,7 @@
 #include <string>
 #include <algorithm>
 #include <type_traits>
+#include <concepts>
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
 #include "pr/common/scope.h"
@@ -92,6 +93,19 @@ namespace pr::ldr
 		Solid() :m_solid(false) {}
 		Solid(bool s) : m_solid(s) {}
 	};
+	struct Depth
+	{
+		bool m_depth;
+		Depth() :m_depth(false) {}
+		Depth(bool d) : m_depth(d) {}
+	};
+	struct PointStyle
+	{
+		enum EStyle { Square, Circle, Triangle, Star, Annulus };
+		EStyle m_style;
+		PointStyle() :m_style() {}
+		PointStyle(EStyle s) : m_style(s) {}
+	};
 	enum class EArrowType
 	{
 		Fwd,
@@ -169,6 +183,11 @@ namespace pr::ldr
 		if (s.m_size == 0) return str;
 		return Append(str, "*Size {", s.m_size, "} ");
 	}
+	inline TStr& Append(TStr& str, Depth d)
+	{
+		if (d.m_depth == false) return str;
+		return Append(str, "*Depth ");
+	}
 	inline TStr& Append(TStr& str, Width w)
 	{
 		if (w.m_width == 0) return str;
@@ -190,11 +209,24 @@ namespace pr::ldr
 	}
 	inline TStr& Append(TStr& str, EArrowType ty)
 	{
-		switch (ty) {
-		default: throw std::runtime_error("Unknown arrow type");
+		switch (ty)
+		{
 		case EArrowType::Fwd:     return Append(str, "Fwd");
 		case EArrowType::Back:    return Append(str, "Back");
 		case EArrowType::FwdBack: return Append(str, "FwdBack");
+		default: throw std::runtime_error("Unknown arrow type");
+		}
+	}
+	inline TStr& Append(TStr& str, PointStyle style)
+	{
+		switch (style.m_style)
+		{
+			case PointStyle::EStyle::Square: return str;
+			case PointStyle::EStyle::Circle: return Append(str, "*Style {Circle}");
+			case PointStyle::EStyle::Triangle: return Append(str, "*Style {Triangle}");
+			case PointStyle::EStyle::Star: return Append(str, "*Style {Star}");
+			case PointStyle::EStyle::Annulus: return Append(str, "*Style {Annulus}");
+			default: throw std::runtime_error("Unknown arrow type");
 		}
 	}
 	inline TStr& Append(TStr& str, Colour32 c)
@@ -848,25 +880,53 @@ namespace pr::ldr
 		};
 		struct LdrPoint :LdrBase<LdrPoint>
 		{
-			std::vector<v4> m_points;
+			struct Point { v4 point; Col colour; };
+
+			std::vector<Point> m_points;
 			Size m_size;
+			Depth m_depth;
+			PointStyle m_style;
+			bool m_has_colours;
 
 			LdrPoint()
-				:m_size()
-				,m_points()
+				:m_points()
+				,m_size()
+				,m_style()
+				,m_has_colours()
 			{}
 
 			// Points
-			LdrPoint& pt(v4_cref pt)
+			LdrPoint& pt(v4_cref point, Col colour)
 			{
-				m_points.push_back(pt);
+				pt(point);
+				m_points.back().colour = colour;
+				m_has_colours = true;
+				return *this;
+			}
+			LdrPoint& pt(v4_cref point)
+			{
+				m_points.push_back({ point, {} });
 				return *this;
 			}
 
-			// Point size (in pixels, because points are in screen space)
+			// Point size (in pixels if depth == false, in world space if depth == true)
 			LdrPoint& size(float s)
 			{
 				m_size = s;
+				return *this;
+			}
+
+			// Points have depth
+			LdrPoint& depth(bool d)
+			{
+				m_depth = d;
+				return *this;
+			}
+
+			// Point style
+			LdrPoint& style(PointStyle s)
+			{
+				m_style = s;
 				return *this;
 			}
 
@@ -874,10 +934,11 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				auto delim = m_points.size() > 1 ? "\n" : "";
-				ldr::Append(str, "*Point", m_name, m_colour, "{", delim, m_size, delim);
+				ldr::Append(str, "*Point", m_name, m_colour, "{", delim, m_size, m_style, m_depth, delim);
 				for (auto& pt : m_points)
 				{
-					ldr::Append(str, pt.xyz);
+					ldr::Append(str, pt.point.xyz);
+					if (m_has_colours) ldr::Append(str, pt.colour);
 					ldr::Append(str, delim);
 				}
 				NestedToString(str);
@@ -886,14 +947,18 @@ namespace pr::ldr
 		};
 		struct LdrLine :LdrBase<LdrLine>
 		{
-			pr::vector<v4> m_points;
+			struct Line { v4 a, b; Col colour; };
+
+			pr::vector<Line> m_lines;
 			Width m_width;
 			bool m_strip;
+			bool m_has_colours;
 
 			LdrLine()
-				:m_strip()
+				:m_lines()
 				,m_width()
-				,m_points()
+				,m_strip()
+				,m_has_colours()
 			{}
 
 			// Line width
@@ -903,28 +968,44 @@ namespace pr::ldr
 				return *this;
 			}
 
-			// Line points
+			// Lines
+			LdrLine& line(v4_cref a, v4_cref b, Col colour)
+			{
+				line(a, b);
+				m_lines.back().colour = colour;
+				m_has_colours = true;
+				return *this;
+			}
 			LdrLine& line(v4_cref a, v4_cref b)
 			{
-				m_points.push_back(a);
-				m_points.push_back(b);
+				m_lines.push_back({ a, b, {} });
 				return *this;
 			}
 			LdrLine& lines(std::span<v4 const> verts, std::span<int const> indices)
 			{
-				for (auto& index : indices)
-					m_points.push_back(verts[index]);
+				assert((isize(indices) & 1) == 0);
+				for (int i = 0, iend = isize(indices); i != iend; i += 2)
+					line(verts[indices[i + 0]], verts[indices[i + 1]]);
 
 				return *this;
 			}
 
 			// Add points by callback function
-			template <typename EnumPts> requires (requires (EnumPts e) { e(std::declval<int>(), std::declval<v4&>()); })
-			LdrLine& pt(EnumPts points)
+			template <std::invocable<void(int, v4&, v4&)> EnumLines>
+			LdrLine& lines(EnumLines lines)
 			{
-				v4 x;
-				for (int i = 0; points(i++, x);)
-					m_points.push_back(x);
+				v4 a, b;
+				for (int i = 0; lines(i++, a, b);)
+					line(a, b);
+
+				return *this;
+			}
+			template <std::invocable<void(int, v4&, v4&, Col&)> EnumLines>
+			LdrLine& lines(EnumLines lines)
+			{
+				v4 a, b; Col c;
+				for (int i = 0; lines(i++, a, b, c);)
+					line(a, b, c);
 
 				return *this;
 			}
@@ -932,27 +1013,30 @@ namespace pr::ldr
 			// Line strip
 			LdrLine& strip(v4_cref start)
 			{
-				m_points.push_back(start);
+				line(start, start);
 				m_strip = true;
 				return *this;
 			}
 			LdrLine& line_to(v4_cref pt)
 			{
 				assert(m_strip);
-				m_points.push_back(pt);
+				line(pt, pt);
 				return *this;
 			}
 
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto ty = m_strip ? "*LineStrip" : "*Line";
-				auto delim = m_points.size() > 1 ? "\n" : "";
-				ldr::Append(str, ty, m_name, m_colour, "{", delim, m_width, delim);
-				for (int i = 0, iend = (int)m_points.size(); i != iend; ++i)
+				auto delim = m_lines.size() > 1 ? "\n" : "";
+
+				ldr::Append(str, m_strip ? "*LineStrip" : "*Line", m_name, m_colour, "{", delim, m_width, delim);
+				for (auto const& line : m_lines)
 				{
-					ldr::Append(str, m_points[i].xyz);
-					if ((i & 1) == 1) ldr::Append(str, delim);
+					ldr::Append(str, line.a.xyz);
+					if (!m_strip)
+						ldr::Append(str, line.b.xyz);
+
+					ldr::Append(str, delim);
 				}
 				NestedToString(str);
 				ldr::Append(str, "}\n");
@@ -1130,7 +1214,7 @@ namespace pr::ldr
 			// Create from bounding sphere
 			LdrSphere& bsphere(BSphere_cref bsphere)
 			{
-				if (bsphere == BSphereReset) return *this;
+				if (bsphere == BSphere::Reset()) return *this;
 				return r(bsphere.Radius()).pos(bsphere.Centre());
 			}
 
@@ -1265,12 +1349,11 @@ namespace pr::ldr
 			{
 				auto delim = m_splines.size() > 1 ? "\n" : "";
 				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, m_width, delim);
-				for (int i = 0, iend = (int)m_splines.size(); i != iend; ++i)
+				for (auto& bez : m_splines)
 				{
-					auto& bez = m_splines[i];
 					ldr::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
 					if (m_has_colour) ldr::Append(str, bez.col);
-					if ((i & 1) == 1) ldr::Append(str, delim);
+					ldr::Append(str, delim);
 				}
 				NestedToString(str);
 				ldr::Append(str, "}\n");

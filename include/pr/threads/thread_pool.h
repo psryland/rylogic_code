@@ -92,11 +92,11 @@ namespace pr::threads
 					if (m_shutdown)
 						return;
 				}
-				
+
 				// Execute the task
 				task();
 
-				// Grab the next task
+				// Signal task completed
 				--m_tasks_pending;
 				assert(m_tasks_pending >= 0);
 				m_cv_task_complete.notify_all();

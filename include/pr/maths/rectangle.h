@@ -186,6 +186,43 @@ namespace pr
 			m_max = rhs.m_max;
 			return *this;
 		}
+
+		#pragma region Operators
+		friend bool operator == (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+		friend bool operator != (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+		friend bool operator <  (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+		friend bool operator >  (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+		friend bool operator <= (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+		friend bool operator >= (Rectangle const& lhs, Rectangle const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+		friend Rectangle& operator += (Rectangle& lhs, Vec2 const& offset)
+		{
+			lhs.m_min += offset;
+			lhs.m_max += offset;
+			return lhs;
+		}
+		friend Rectangle& operator -= (Rectangle& lhs, Vec2 const& offset)
+		{
+			lhs.m_min -= offset;
+			lhs.m_max -= offset;
+			return lhs;
+		}
+		friend Rectangle operator + (Rectangle const& lhs, Vec2 const& offset)
+		{
+			auto f = lhs;
+			return f += offset;
+		}
+		friend Rectangle operator - (Rectangle const& lhs, Vec2 const& offset)
+		{
+			auto f = lhs;
+			return f -= offset;
+		}
+		friend bool FEql(Rectangle const& lhs, Rectangle const& rhs)
+		{
+			return
+				FEql2(lhs.m_min, rhs.m_min) &&
+				FEql2(lhs.m_max, rhs.m_max);
+		}
+		#pragma endregion
 	};
 
 	using FRect = Rectangle<Vec2<float, void>>;
@@ -198,43 +235,6 @@ namespace pr
 	static IRect const IRectZero  = {iv2Zero, iv2Zero};
 	static IRect const IRectReset = {iv2Max, -iv2Max};
 	static IRect const IRectUnit  = {iv2Zero, iv2One};
-	#pragma endregion
-
-	#pragma region Operators
-	template <typename V> inline bool operator == (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	template <typename V> inline bool operator != (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	template <typename V> inline bool operator <  (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	template <typename V> inline bool operator >  (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	template <typename V> inline bool operator <= (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	template <typename V> inline bool operator >= (Rectangle<V> const& lhs, Rectangle<V> const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	template <typename V> inline Rectangle<V>& operator += (Rectangle<V>& lhs, V const& offset)
-	{
-		lhs.m_min += offset;
-		lhs.m_max += offset;
-		return lhs;
-	}
-	template <typename V> inline Rectangle<V>& operator -= (Rectangle<V>& lhs, V const& offset)
-	{
-		lhs.m_min -= offset;
-		lhs.m_max -= offset;
-		return lhs;
-	}
-	template <typename V> inline Rectangle<V> operator + (Rectangle<V> const& lhs, V const& offset)
-	{
-		auto f = lhs;
-		return f += offset;
-	}
-	template <typename V> inline Rectangle<V> operator - (Rectangle<V> const& lhs, V const& offset)
-	{
-		auto f = lhs;
-		return f -= offset;
-	}
-	template <typename V> inline bool FEql(Rectangle<V> const& lhs, Rectangle<V> const& rhs)
-	{
-		return
-			FEql2(lhs.m_min, rhs.m_min) &&
-			FEql2(lhs.m_max, rhs.m_max);
-	}
 	#pragma endregion
 
 	#pragma region Functions

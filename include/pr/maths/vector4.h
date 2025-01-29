@@ -68,19 +68,19 @@ namespace pr
 			:Vec4(v[0], v[1], v[2], w_)
 		{
 		}
-		template <maths::Vector4 V> explicit Vec4(V const& v)
+		template <maths::Vector4 V> constexpr explicit Vec4(V const& v)
 			:Vec4(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), maths::comp<3>(v))
 		{
 		}
-		template <maths::Vector3 V> Vec4(V const& v, S w_)
+		template <maths::Vector3 V> constexpr Vec4(V const& v, S w_)
 			: Vec4(maths::comp<0>(v), maths::comp<1>(v), maths::comp<2>(v), w_)
 		{
 		}
-		template <maths::Vector2 V> Vec4(V const& v, S z_, S w_)
+		template <maths::Vector2 V> constexpr Vec4(V const& v, S z_, S w_)
 			: Vec4(maths::comp<0>(v), maths::comp<1>(v), z_, w_)
 		{
 		}
-		template <maths::Vector2 V> Vec4(V const& xy, V const& zw)
+		template <maths::Vector2 V> constexpr Vec4(V const& xy, V const& zw)
 			: Vec4(maths::comp<0>(xy), maths::comp<1>(xy), maths::comp<0>(zw), maths::comp<1>(zw))
 		{
 		}

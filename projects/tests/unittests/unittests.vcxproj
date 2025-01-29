@@ -75,6 +75,7 @@
 
 	<!-- Files -->
 	<ItemGroup>
+		<Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
 		<ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
 		<ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h" />
@@ -99,7 +100,6 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\collision\col_sphere_vs_sphere.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\collision\shape_triangle.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\collision\support.h" />
-		<Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
 		<ClInclude Include="$(RylogicRoot)include\pr\common\algorithm.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\common\alloca.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\common\allocator.h" />
@@ -163,20 +163,21 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\common\unittests.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\common\user_data.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\common\value_ptr.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\span.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\deque.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\vector.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\bit_array.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\byte_data.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\concurrent_queue.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\deque.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\quadtree.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\queue.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\segmented_list.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\span.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\stack.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\suffix_array.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\tri_table.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\container\vector.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\container\vector_map.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\crypt\blake2b.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\crypt\md5.h" />

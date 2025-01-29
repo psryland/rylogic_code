@@ -283,6 +283,10 @@ namespace pr
 		{
 			return Colour32(argb | 0xFF000000);
 		}
+		constexpr Colour32 alpha(float a_) const
+		{
+			return Colour32(r, g, b, uint8_t(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)));
+		}
 
 		// Operators
 		friend constexpr bool operator == (Colour32 lhs, Colour32 rhs)
@@ -470,16 +474,28 @@ namespace pr
 	}
 
 	// Create a random colour
-	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng, float a)
+	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng, float min_brightness, float a)
 	{
-		std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-		return Colour32(dist(rng), dist(rng), dist(rng), a);
+		std::uniform_real_distribution<float> component_dist(0.0f, 1.0f);
+		std::uniform_real_distribution<float> brightness_dist(min_brightness, 1.0f);
+		for (;;)
+		{
+			auto r = component_dist(rng);
+			auto g = component_dist(rng);
+			auto b = component_dist(rng);
+			auto len_sq = r * r + g * g + b * b;
+			if (len_sq > 1.0f)
+				continue;
+		
+			auto brightness = brightness_dist(rng);
+			auto scale = brightness / sqrt(len_sq);
+			return Colour32(r * scale, g * scale, b * scale, a);
+		}
 	}
-
-	// Create a random colour
-	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng)
+	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(int seed, float min_brightness, float a)
 	{
-		return RandomRGB(rng, 1.0f);
+		Rng rng(seed);
+		return RandomRGB(rng, min_brightness, a);
 	}
 
 	#pragma endregion
