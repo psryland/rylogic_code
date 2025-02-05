@@ -265,9 +265,12 @@ namespace Rylogic.Gui.WPF
 				{
 					if (m_d3d_image.FrontBuffer != null)
 					{
+						// Resize the back buffer before setting the swap chain.
+						// The back buffer size is determined from the swap chain render target size
+						// So setting the swap chain first means the back buffer doesn't update.
 						var bb_size = m_d3d_image.RequiredBackBufferSize;
-						Window.CustomSwapChain([m_d3d_image.FrontBuffer]);
 						Window.BackBufferSize = bb_size;
+						Window.CustomSwapChain([m_d3d_image.FrontBuffer]);
 						Window.Viewport = new(0, 0, bb_size.Width, bb_size.Height);
 					}
 					else
@@ -510,9 +513,10 @@ namespace Rylogic.Gui.WPF
 				return;
 			}
 
-			// If the size has changed, update the back buffer
+			// If the size has changed, create a new front buffer of the correct size
 			if (m_resized)
 			{
+				// The back-buffer updates whenever the front buffer changes
 				Window.GSyncWait();
 				D3DImage.SetRenderTargetSize(this, scale: ResolutionScale);
 				m_resized = false;

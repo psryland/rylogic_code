@@ -454,6 +454,16 @@ namespace pr::rdr12
 		auto& bb_main = m_msaa_bb;
 		auto& bb_post = BBCount() != 0 ? m_swap_bb[BBIndex()] : BackBuffer::Null();
 
+		#if PR_DBG_RDR
+		if (bb_post.m_render_target != nullptr)
+		{
+			// Check the back buffer and render target are the expected size
+			auto rt_desc = bb_main.m_render_target->GetDesc();
+			auto pt_desc = bb_post.m_render_target->GetDesc();
+			assert(rt_desc.Width == pt_desc.Width && rt_desc.Height == pt_desc.Height);
+		}
+		#endif
+
 		// Ensure the back buffer is available for rendering
 		m_gsync.Wait(bb_main.m_sync_point);
 		m_gsync.Wait(bb_post.m_sync_point);

@@ -159,7 +159,6 @@ namespace pr::rdr12
 		// Save the current camera aspect ratio
 		auto old_size = m_wnd.BackBufferSize();
 		auto old_aspect = m_scene.m_cam.Aspect();
-		auto scale = old_aspect * old_size.y / float(old_size.x);
 
 		// Resize the render target
 		m_wnd.BackBufferSize(sz, false);
@@ -167,6 +166,7 @@ namespace pr::rdr12
 		// Adjust the camera aspect ratio to preserve it
 		auto new_size = m_wnd.BackBufferSize();
 		auto new_aspect = (new_size.x == 0 || new_size.y == 0) ? 1.0f : new_size.x / float(new_size.y);
+		auto scale = old_size.x * old_size.y != 0 ? old_aspect * old_size.y / float(old_size.x) : 1.0f;
 		auto aspect = scale * new_aspect;
 		m_scene.m_cam.Aspect(aspect);
 	}

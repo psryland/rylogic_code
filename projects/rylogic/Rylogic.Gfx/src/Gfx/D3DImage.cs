@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using Rylogic.Common;
 using Rylogic.Utility;
+using Size = System.Drawing.Size;
 
 namespace Rylogic.Gfx
 {
@@ -42,7 +43,7 @@ namespace Rylogic.Gfx
 		//     var height = Math.Max(1, (int)Math.Ceiling(image.Height * dpi_scale));
 		//     d3d_image.SetRenderTargetSize(width, height);
 		private const View3d.EFormat RenderTargetFormat = View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
-		private System.Drawing.Size m_dim_pixels;
+		private Size m_dim_pixels;
 
 		~D3DImage()
 		{
@@ -51,14 +52,14 @@ namespace Rylogic.Gfx
 		public D3DImage()
 			: this(IntPtr.Zero, new(16, 16), new(1f, 1f))
 		{ }
-		public D3DImage(IntPtr hwnd, System.Drawing.Size dim, PointF dpi_scale, int? multi_sampling = null)
+		public D3DImage(IntPtr hwnd, Size dim, PointF dpi_scale, int? multi_sampling = null)
 			: base(dpi_scale.X * 96.0, dpi_scale.Y * 96.0)
 		{
-			WindowOwner = hwnd; // Can be null
 			m_dim_pixels = dim;
 			m_multi_sampling.Count = multi_sampling ?? 4;
 			m_multi_sampling.Quality = View3d.MultiSamp.BestQuality(m_multi_sampling.Count, RenderTargetFormat);
-			TryCreateRenderTarget();
+			WindowOwner = hwnd; // Can be null
+			TryCreateRenderTarget(m_dim_pixels);
 		}
 		public void Dispose()
 		{
@@ -92,7 +93,7 @@ namespace Rylogic.Gfx
 			if (args.NewValue is IntPtr new_hwnd && new_hwnd != IntPtr.Zero)
 			{
 				// A window handle has been assigned. Setup the Dx9 render target
-				image.TryCreateRenderTarget();
+				image.TryCreateRenderTarget(image.m_dim_pixels);
 			}
 		}
 		public static DependencyProperty WindowOwnerProperty = DependencyProperty.Register(nameof(WindowOwner), typeof(IntPtr), typeof(D3DImage), new UIPropertyMetadata(IntPtr.Zero, new PropertyChangedCallback(WindowOwnerChanged)));
@@ -108,7 +109,7 @@ namespace Rylogic.Gfx
 
 				m_multi_sampling.Count = value;
 				m_multi_sampling.Quality = View3d.MultiSamp.BestQuality(value, RenderTargetFormat);
-				TryCreateRenderTarget();
+				TryCreateRenderTarget(m_dim_pixels);
 			}
 		}
 		private View3d.MultiSamp m_multi_sampling;
@@ -151,16 +152,14 @@ namespace Rylogic.Gfx
 		public event EventHandler? FrontBufferChanged;
 
 		/// <summary>The size of the back buffer in pixels needed for MSAA and DPI</summary>
-		public System.Drawing.Size RequiredBackBufferSize => new(PixelWidth, PixelHeight);
+		public Size RequiredBackBufferSize => new(PixelWidth, PixelHeight);
 
 		/// <summary>Set the dimensions of the render target</summary>
-		public void SetRenderTargetSize(System.Drawing.Size dim_pixels, PointF dpi_scale)
+		public void SetRenderTargetSize(Size dim_pixels, PointF dpi_scale)
 		{
 			// If the render target size has changed, recreate it
-			if (FrontBuffer == null ||
-				PixelWidth != dim_pixels.Width ||
-				PixelHeight != dim_pixels.Height)
-				TryCreateRenderTarget();
+			if (FrontBuffer == null || PixelWidth != dim_pixels.Width || PixelHeight != dim_pixels.Height)
+				TryCreateRenderTarget(dim_pixels);
 		}
 
 		/// <summary>Copy from the Render Target to the Front Buffer</summary>
@@ -182,11 +181,11 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Create a new render target if possible</summary>
-		private void TryCreateRenderTarget()
+		private void TryCreateRenderTarget(Size dim_pixels)
 		{
 			// Cannot create the render target until a window handle
 			// has been assigned because Dx9 requires a window handle.
-			if (WindowOwner == IntPtr.Zero)
+			if (WindowOwner == IntPtr.Zero || dim_pixels == Size.Empty)
 				return;
 
 			try
@@ -198,7 +197,11 @@ namespace Rylogic.Gfx
 					dbg_name: "D3DImage RenderTarget FB");
 
 				// Create the Dx9 render target of the required size;
-				FrontBuffer = View3d.Texture.Dx9RenderTarget(WindowOwner, m_dim_pixels.Width, m_dim_pixels.Height, opts);
+				var new_rt = View3d.Texture.Dx9RenderTarget(WindowOwner, dim_pixels.Width, dim_pixels.Height, opts);
+
+				// Set the new front buffer size before changing 'FrontBuffer'
+				m_dim_pixels = dim_pixels;
+				FrontBuffer = new_rt;
 			}
 			catch (Exception ex)
 			{
