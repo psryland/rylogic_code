@@ -57,6 +57,8 @@ namespace pr::kdtree
 	struct KdTree
 	{
 		using EStrategy = kdtree::EStrategy;
+		static constexpr int Dimensions = Dim;
+
 		struct Neighbour
 		{
 			Item const* item;

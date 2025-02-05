@@ -374,7 +374,10 @@ namespace pr::rdr12
 
 		// Get the user to generate/update the model
 		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
-		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(), [](void* ctx, view3d::Nugget const& n) { static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n); }, &nbuf);
+		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(),
+			[](void* ctx, view3d::Nugget const& n) { static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n); }, &nbuf);
+
+		// Sanity check results
 		if (new_vcount > isize(vbuf)) throw std::runtime_error("Dynamic model buffer overrun (v-buf)");
 		if (new_icount > isize(ibuf)) throw std::runtime_error("Dynamic model buffer overrun (i-buf)");
 

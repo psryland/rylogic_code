@@ -6,7 +6,6 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
@@ -619,48 +618,79 @@ namespace Rylogic.Gfx
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct Nugget(
-			ETopo topo, EGeom geom,
-			int v0 = 0, int v1 = 0,
-			int i0 = 0, int i1 = 0,
-			HTexture? tex_diffuse = null,
-			HSampler? sam_diffuse = null,
-			IEnumerable<Nugget.Shader>? shaders = null,
-			ENuggetFlag? flags = null,
-			ECullMode? cull_mode = null,
-			EFillMode? fill_mode = null,
-			Colour32? tint = null,
-			float? rel_reflec = null)
+		public struct Nugget
 		{
+			public ETopo m_topo;           // Model topology
+			public EGeom m_geom;           // Model geometry type
+			public int m_v0, m_v1;         // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public int m_i0, m_i1;         // Index buffer range. Set to 0,0 to mean the whole buffer
+			public HTexture m_tex_diffuse; // Diffuse texture
+			public HSampler m_sam_diffuse; // Sampler for the diffuse texture
+			public Shaders m_shaders;      // Shader overrides for this nugget
+			public ENuggetFlag m_nflags;   // Nugget flags (ENuggetFlag)
+			public ECullMode m_cull_mode;  // Face culling mode
+			public EFillMode m_fill_mode;  // Model fill mode
+			public Colour32 m_tint;        // Tint colour
+			public float m_rel_reflec;     // How reflective this nugget is relative to the over all model
+
 			[StructLayout(LayoutKind.Sequential)] public struct Shader(ERenderStep rdr_step, HShader shader)
 			{
 				public ERenderStep m_rdr_step = rdr_step;
 				public HShader m_shader = shader;
 			}
-			[StructLayout(LayoutKind.Sequential)] public struct Shaders
+			[StructLayout(LayoutKind.Sequential)] public struct Shaders(IntPtr shaders, long count)
 			{
-				[MarshalAs(UnmanagedType.LPArray)] public Shader[] m_shaders;
-				public int m_count;
-
-				public Shaders(IEnumerable<Shader> shaders)
+				public IntPtr m_shaders = shaders;
+				public long m_count = count;
+			}
+			public class ShaderList : IDisposable
+			{
+				private readonly Shader[] m_shaders;
+				private readonly GCHandle m_gchandle;
+				public ShaderList(IEnumerable<Shader> shaders)
 				{
 					m_shaders = shaders.ToArray();
-					m_count = m_shaders.Length;
+					m_gchandle = GCHandle.Alloc(m_shaders, GCHandleType.Pinned);
+				}
+				public void Dispose()
+				{
+					if (m_gchandle.IsAllocated)
+						m_gchandle.Free();
+				}
+				public Shaders Pin()
+				{
+					return new Shaders(m_gchandle.AddrOfPinnedObject(), m_shaders.Length);
 				}
 			}
 
-			public ETopo m_topo           = topo;                                          // Model topology
-			public EGeom m_geom           = geom;                                          // Model geometry type
-			public int m_v0               = v0, m_v1 = v1;                                 // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public int m_i0               = i0, m_i1 = i1;                                 // Index buffer range. Set to 0,0 to mean the whole buffer
-			public HTexture m_tex_diffuse = tex_diffuse ?? IntPtr.Zero;                    // Diffuse texture
-			public HSampler m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;                    // Sampler for the diffuse texture
-			public Shaders m_shaders      = new Shaders(shaders ?? Array.Empty<Shader>()); // Shader overrides for this nugget
-			public ENuggetFlag m_nflags   = flags ?? ENuggetFlag.None;                     // Nugget flags (ENuggetFlag)
-			public ECullMode m_cull_mode  = cull_mode ?? ECullMode.Back;                   // Face culling mode
-			public EFillMode m_fill_mode  = fill_mode ?? EFillMode.Solid;                  // Model fill mode
-			public Colour32 m_tint        = tint ?? Colour32.White;                        // Tint colour
-			public float m_rel_reflec     = rel_reflec ?? 1f;                              // How reflective this nugget is relative to the over all model
+			public Nugget(
+				ETopo topo, EGeom geom,
+				int v0 = 0, int v1 = 0,
+				int i0 = 0, int i1 = 0,
+				HTexture? tex_diffuse = null,
+				HSampler? sam_diffuse = null,
+				ShaderList? shaders = null,
+				ENuggetFlag? flags = null,
+				ECullMode? cull_mode = null,
+				EFillMode? fill_mode = null,
+				Colour32? tint = null,
+				float? rel_reflec = null)
+			{
+				m_topo = topo;
+				m_geom = geom;
+				m_v0 = v0;
+				m_v1 = v1;
+				m_i0 = i0;
+				m_i1 = i1;
+				m_tex_diffuse = tex_diffuse ?? IntPtr.Zero;
+				m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;
+				m_shaders = shaders?.Pin() ?? new Shaders();
+				m_nflags = flags ?? ENuggetFlag.None;
+				m_cull_mode = cull_mode ?? ECullMode.Back;
+				m_fill_mode = fill_mode ?? EFillMode.Solid;
+				m_tint = tint ?? Colour32.White;
+				m_rel_reflec = rel_reflec ?? 1f;
+			}
 		}
 
 		/// <summary>Light source properties</summary>
@@ -1092,14 +1122,10 @@ namespace Rylogic.Gfx
 		public delegate void GizmoMovedCB(IntPtr ctx, HGizmo gizmo, EGizmoState state);
 
 		/// <summary>Callback for emitting nuggets during EditObject</summary>
-		public delegate void AddNuggetCB(IntPtr ctx, Nugget nugget);
+		public delegate void AddNuggetCB(ref Nugget nugget);
 
 		/// <summary>Edit object callback</summary>
-		public delegate VICount EditObjectCB(IntPtr ctx,
-			int vcount, int icount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)][In, Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)][In, Out] ushort[] indices,
-			AddNuggetCB out_nugget, IntPtr out_nugget_ctx);
+		public delegate VICount EditObjectCB(Span<Vertex> verts, Span<ushort> indices, AddNuggetCB out_nugget);
 
 		/// <summary>Embedded code handler callback</summary>
 		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
@@ -1777,8 +1803,10 @@ namespace ldr
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateP3DStream([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int size, IntPtr p3d_data, ref Guid context_id);
 
 		// Create an ldr object using a callback to populate the model data.
-		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateWithCallback([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
-		[DllImport(Dll)] private static extern void View3D_ObjectEdit(HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern HObject View3D_ObjectCreateWithCallback([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCBInternal edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)] private static extern void View3D_ObjectEdit(HObject obj, EditObjectCBInternal edit_cb, IntPtr ctx);
+		private delegate VICount EditObjectCBInternal(IntPtr ctx, int vcount, int icount, IntPtr vptr, IntPtr iptr, AddNuggetCBInternal out_nugget, IntPtr out_nugget_ctx);
+		private delegate void AddNuggetCBInternal(IntPtr ctx, ref Nugget nugget);
 
 		// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
 		[DllImport(Dll)] private static extern void View3D_ObjectUpdate(HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);

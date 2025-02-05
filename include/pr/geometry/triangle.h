@@ -162,7 +162,8 @@ namespace pr::geometry
 			auto count = isize(polygon);
 			if (count <  3) { return; }
 			if (count == 3) { faces_out(0,1,2); return; }
-			assert(PolygonArea(polygon) >= 0 && "Polygon winding order is incorrect");
+			if (PolygonArea(polygon) < 0)
+				throw std::runtime_error("Polygon winding order is incorrect");
 
 			#if LDR_OUTPUT
 			pr::ldr::LdrBuilder ldr;

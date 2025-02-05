@@ -2582,10 +2582,11 @@ namespace pr::rdr12
 				p.m_reader.Vector2(pt);
 				m_poly.push_back(pt);
 
-				// Look for the optional colour
+				// Look to see if optional colours are given
 				if (!m_per_vertex_colour)
 					m_per_vertex_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
 
+				// If we're expecting colours, read one
 				if (*m_per_vertex_colour)
 				{
 					Colour32 col;
@@ -2596,6 +2597,13 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
+			// Check the polygon winding order
+			if (geometry::PolygonArea(m_poly) < 0)
+			{
+				std::ranges::reverse(m_poly);
+				std::ranges::reverse(m_colours);
+			}
+
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
 			obj->m_model = ModelGenerator::Polygon(p.m_factory, m_poly, m_solid, &opts);

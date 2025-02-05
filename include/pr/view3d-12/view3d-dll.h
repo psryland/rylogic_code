@@ -504,7 +504,7 @@ namespace pr
 			struct Shaders
 			{
 				Shader const* m_shaders; // An array of shader overrides
-				int m_count;               // The length of the array
+				int64_t m_count;         // The length of the array (8 bytes for alignment)
 				std::span<Shader const> span() const
 				{
 					return { m_shaders, static_cast<size_t>(m_count) };
@@ -665,7 +665,6 @@ namespace pr
 			ID3D12Resource* m_depth_stencil;
 			SIZE m_dim;
 		};
-
 		#if 0 // todo
 		struct View3DUpdateModelKeep
 		{
@@ -687,17 +686,17 @@ namespace pr
 		// Callbacks
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
 		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
-		using SourcesChangedCB  = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
-		using EnumGuidsCB       = bool(__stdcall *)(void* ctx, GUID const& context_id);
-		using EnumObjectsCB     = bool(__stdcall *)(void* ctx, Object object);
-		using OnAddCB           = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
-		using InvalidatedCB     = void(__stdcall *)(void* ctx, Window window);
-		using RenderingCB       = void(__stdcall *)(void* ctx, Window window);
-		using SceneChangedCB    = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
-		using AnimationCB       = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
-		using GizmoMovedCB      = void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state);
-		using AddNuggetCB       = void(__stdcall *)(void* ctx, Nugget const& nugget);
-		using EditObjectCB = VICount(__stdcall *)(void* ctx,
+		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
+		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
+		using OnAddCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using InvalidatedCB = void(__stdcall *)(void* ctx, Window window);
+		using RenderingCB = void(__stdcall *)(void* ctx, Window window);
+		using SceneChangedCB = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
+		using AnimationCB = void(__stdcall *)(void* ctx, Window window, EAnimCommand command, double clock);
+		using GizmoMovedCB = void(__stdcall *)(void* ctx, Gizmo gizmo, EGizmoState state);
+		using AddNuggetCB = void(__stdcall*)(void* ctx, Nugget const& nugget);
+		using EditObjectCB = VICount(__stdcall*)(void* ctx,
 			int vcount,                                        // The maximum size of 'verts'
 			int icount,                                        // The maximum size of 'indices'
 			Vertex* verts,                                     // The vert buffer to be filled
@@ -709,7 +708,6 @@ namespace pr
 			wchar_t const* support, // The support code from earlier embedded code blocks.
 			BSTR& result,           // The string result of running the source code (execution code blocks only)
 			BSTR& errors);          // Any errors in the compilation of the code
-
 		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
 	}
 }
