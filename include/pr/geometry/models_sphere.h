@@ -55,10 +55,10 @@ namespace pr::geometry
 		struct CreateGeosphereData
 		{
 			TVertexLookupCont m_adjacent;
-			TVertCont*        m_vcont;
-			TFaceCont*        m_fcont;
-			v4                m_radius;
-			int               m_divisions;
+			TVertCont*        m_vcont = {};
+			TFaceCont*        m_fcont = {};
+			v4                m_radius = {};
+			int               m_divisions = {};
 		};
 
 		// Create a vertex and add it to the vertex container

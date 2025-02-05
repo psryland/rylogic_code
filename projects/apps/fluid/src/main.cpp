@@ -119,9 +119,6 @@ struct Main :Form, IProbeActions
 		Tweakables::filepath = "E:/Rylogic/Code/projects/apps/fluid/tweakables.ini";
 		ApplyTweakables();
 
-		//rdr12::FeatureSupport features(m_rdr.d3d());
-		//.Adapter();
-
 		// Load the next demo scene
 		NextScene();
 

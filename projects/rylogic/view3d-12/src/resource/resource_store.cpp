@@ -19,8 +19,6 @@ namespace pr::rdr12
 	ResourceStore::ResourceStore(Renderer& rdr)
 		: m_rdr(rdr)
 		, m_mutex()
-		//, m_heap_view(HeapCapacityView, m_gsync)
-		//, m_heap_sampler(HeapCapacityView, m_gsync)
 		, m_lookup_res()
 		, m_lookup_tex()
 		, m_lookup_sam()

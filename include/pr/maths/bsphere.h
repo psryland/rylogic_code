@@ -17,7 +17,7 @@ namespace pr
 		v4 m_ctr_rad; // x,y,z = position, 'w' = radius
 
 		BSphere() = default;
-		BSphere(v4 const& centre, float radius)
+		constexpr BSphere(v4 const& centre, float radius)
 			:m_ctr_rad(centre.xyz, radius)
 		{}
 
@@ -204,15 +204,23 @@ namespace pr
 			return BSphere(m * bsph.Centre(), bsph.m_ctr_rad.w);
 		}
 		#pragma endregion
+
+		// Constants
+		static constexpr BSphere Zero()
+		{
+			return { v4::Zero(), 0.0f };
+		}
+		static constexpr BSphere Unit()
+		{
+			return { v4::Origin(), 1.0f };
+		}
+		static constexpr BSphere Reset()
+		{
+			return { v4::Origin(), -1.0f };
+		}
 	};
 	static_assert(std::is_trivially_copyable_v<BSphere>, "Should be a pod type");
 	static_assert(std::alignment_of_v<BSphere> == 16, "Should be 16 byte aligned");
-
-	#pragma region Constants
-	static BSphere const BSphereZero  = {v4Zero, 0.0f};
-	static BSphere const BSphereUnit  = {v4Origin, 1.0f};
-	static BSphere const BSphereReset = {v4Origin, -1.0f};
-	#pragma endregion
 
 	#pragma region Functions
 
@@ -316,7 +324,7 @@ namespace pr::maths
 			{1, 0, 1, 1},
 			{1, 1, 0, 1},
 		};
-		auto bsph = BSphereReset;
+		auto bsph = BSphere::Reset();
 		for (auto& p : pt)
 			Grow(bsph, p);
 

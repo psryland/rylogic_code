@@ -416,6 +416,12 @@ namespace pr::rdr12
 
 		// Restores the resource state of resources used in this command list to their default state
 		friend void RestoreResourceStateDefaults(CmdList<D3D12_COMMAND_LIST_TYPE_DIRECT>& cmd_list);
+
+		// Return the debug name of this list
+		friend char const* DebugName(CmdList<ListType> const& cmd_list)
+		{
+			return DebugName(cmd_list.get());
+		}
 	};
 
 	// A pool of command lists

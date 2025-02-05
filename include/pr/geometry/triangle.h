@@ -4,6 +4,7 @@
 //********************************
 #pragma once
 #include <cassert>
+#include <concepts>
 #include "pr/maths/maths.h"
 #include "pr/common/algorithm.h"
 #include "pr/container/vector.h"
@@ -104,7 +105,7 @@ namespace pr::geometry
 	//  Since the polygon is given as a list of points, it's not possible
 	//  specify holes. Turn polygons with holes into a single continuous edge
 	//  by inserting degenerate edges from the holes to the split/merge vertices.
-	template <typename TOut> struct SeidelTriangulation
+	class SeidelTriangulation
 	{
 		// Using Seidel's algorithm
 		// Sweep the polygon over one axis (Y in this case).
@@ -126,7 +127,6 @@ namespace pr::geometry
 		//  to 'L', the polygon only intersects it twice.
 
 		using IdxCont = pr::vector<int>;
-		using Out = void(*)(int,int,int);
 		enum class EType { Left, Right, Start, End, Split, Merge, };
 
 		// The vertices of the polygon
@@ -141,21 +141,29 @@ namespace pr::geometry
 		// A lookup table from polygon index to sorted list index
 		IdxCont m_lookup;
 
-		// Callback function to output faces
-		TOut m_out;
+	public:
+
+		SeidelTriangulation()
+			: m_verts()
+			, m_idx()
+			, m_sorted()
+			, m_lookup()
+		{}
 
 		// Triangulate a 2d polygon
-		SeidelTriangulation(std::span<v2 const> polygon, TOut out)
-			:m_verts(polygon)
-			,m_idx(m_verts.size())
-			,m_sorted(m_idx.size())
-			,m_lookup(m_idx.size())
-			,m_out(out)
+		template <std::invocable<int,int,int> TFacesOut>
+		void Triangulate(std::span<v2 const> polygon, TFacesOut faces_out)
 		{
+			m_verts = polygon;
+			m_idx.resize(m_verts.size());
+			m_sorted.resize(m_idx.size());
+			m_lookup.resize(m_idx.size());
+
 			auto count = isize(polygon);
 			if (count <  3) { return; }
-			if (count == 3) { out(0,1,2); return; }
-			assert(PolygonArea(polygon) >= 0 && "Polygon winding order is incorrect");
+			if (count == 3) { faces_out(0,1,2); return; }
+			if (PolygonArea(polygon) < 0)
+				throw std::runtime_error("Polygon winding order is incorrect");
 
 			#if LDR_OUTPUT
 			pr::ldr::LdrBuilder ldr;
@@ -208,12 +216,15 @@ namespace pr::geometry
 			mt.push_back(0);
 
 			// Identify the monotone polygons in 'mt' (recursive)
-			FindMonotonePolygons(mt, 0, +1);
+			FindMonotonePolygons(mt, 0, +1, faces_out);
 		}
+	
+	private:
 
 		// Triangulate the monotone polygons in 'mt'
 		// This is a recursive function that removes indices from 'mt'. The number of indices removed is returned
-		int FindMonotonePolygons(IdxCont& mt, int first, int dir) const
+		template <std::invocable<int,int,int> TFacesOut>
+		int FindMonotonePolygons(IdxCont& mt, int first, int dir, TFacesOut faces_out) const
 		{
 			// Look for the end of the monotone polygon by searching for
 			// 'monotone[i]' == 'monotone[first]' (searching in 'dir' direction)
@@ -233,7 +244,7 @@ namespace pr::geometry
 					// of a "backward" monotone polygon (i.e. the previous occurrence of monotone[i]
 					// before i marks the start of the monotone polygon).
 					auto fwd = Bool2SignI(monotone[i] > monotone[i-dir]);
-					auto chg = FindMonotonePolygons(mt, i + (fwd == dir ? dir : 0), fwd);
+					auto chg = FindMonotonePolygons(mt, i + (fwd == dir ? dir : 0), fwd, faces_out);
 
 					// 'monotone' is invalidated when indices are removed, so recreate it.
 					monotone = MakeRing(mt.data(), mt.data() + mt.size());
@@ -246,12 +257,13 @@ namespace pr::geometry
 			assert(monotone[i] == monotone[first]);
 			auto s = dir > 0 ? first : i;
 			auto e = dir > 0 ? i : first;
-			return Triangulate(mt, s, e);
+			return Triangulate(mt, s, e, faces_out);
 		}
 
 		// Triangulate the monotone polygon in the range [first, last] of 'mt'
 		// and remove those indices from the container 'mt'
-		int Triangulate(IdxCont& mt, int first, int last) const
+		template <std::invocable<int,int,int> TFacesOut>
+		int Triangulate(IdxCont& mt, int first, int last, TFacesOut faces_out) const
 		{
 			// The indices of the monotone polygon
 			auto poly = MakeRing(mt.data() + first, mt.data() + last);
@@ -281,7 +293,7 @@ namespace pr::geometry
 					queue.insert(queue.begin(), poly[l--]);
 					for (auto i = int(queue.size()); i >= 3 && Convex(queue[0], queue[1], queue[2]); --i)
 					{
-						m_out(queue[0], queue[1], queue[2]);
+						faces_out(queue[0], queue[1], queue[2]);
 						queue.erase(queue.begin() + 1);
 					}
 				}
@@ -290,7 +302,7 @@ namespace pr::geometry
 					queue.insert(queue.end(), poly[r++]);
 					for (auto i = int(queue.size()); i >= 3 && Convex(queue[i-3], queue[i-2], queue[i-1]); --i)
 					{
-						m_out(queue[i-3], queue[i-2], queue[i-1]);
+						faces_out(queue[i-3], queue[i-2], queue[i-1]);
 						queue.erase(queue.begin() + (i-2));
 					}
 				}
@@ -362,9 +374,11 @@ namespace pr::geometry
 			return lhs.y != rhs.y ? lhs.y < rhs.y : lhs.x < rhs.x;
 		}
 	};
-	template <typename TOut> inline void TriangulatePolygon(std::span<v2 const> poly, TOut out)
+	template <std::invocable<int,int,int> TFacesOut>
+	inline void TriangulatePolygon(std::span<v2 const> poly, TFacesOut faces_out)
 	{
-		SeidelTriangulation<TOut>(poly, out);
+		SeidelTriangulation s;
+		s.Triangulate<TFacesOut>(poly, faces_out);
 	}
 }
 

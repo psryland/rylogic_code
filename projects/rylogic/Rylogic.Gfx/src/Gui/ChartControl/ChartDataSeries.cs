@@ -283,11 +283,12 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Create a nugget for the points using the sprite shader
+			using var shader_list = new View3d.Nugget.ShaderList([new(View3d.ERenderStep.ForwardRender, PointSprite)]);
 			m_nbuf[0] = new(
 				View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0,
 				tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
 				sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
-				shaders: [new(View3d.ERenderStep.ForwardRender, PointSprite)]);
+				shaders: shader_list);
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
@@ -322,9 +323,11 @@ namespace Rylogic.Gui.WPF
 				x_range.Grow(pt.x);
 			}
 
+			using var shaders0 = new View3d.Nugget.ShaderList([new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
+			using var shaders1 = new View3d.Nugget.ShaderList([new(View3d.ERenderStep.ForwardRender, PointSprite)]);
+
 			// Create a nugget for the list strip using the thick line shader
-			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr,
-				shaders:[new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
+			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, shaders:shaders0);
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
@@ -332,7 +335,7 @@ namespace Rylogic.Gui.WPF
 				m_nbuf[1] = new(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, flags: View3d.ENuggetFlag.RangesCanOverlap,
 					tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
 					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
-					shaders: [new(View3d.ERenderStep.ForwardRender, PointSprite)]);
+					shaders: shaders1);
 			}
 
 			// Create the graphics
@@ -370,9 +373,11 @@ namespace Rylogic.Gui.WPF
 				x_range.Grow(pt_l.x);
 			}
 
+			using var shaders0 = new View3d.Nugget.ShaderList([new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
+			using var shaders1 = new View3d.Nugget.ShaderList([new(View3d.ERenderStep.ForwardRender, PointSprite)]);
+
 			// Create a nugget for the list strip using the thick line shader
-			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, vert, 0, indx, flags: View3d.ENuggetFlag.None,
-				shaders: [new(View3d.ERenderStep.ForwardRender, ThickLineList)]);
+			m_nbuf[0] = new(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, vert, 0, indx, flags: View3d.ENuggetFlag.None, shaders: shaders0);
 
 			// Create a nugget for the points (if visible)
 			if (Options.PointsOnLinePlot)
@@ -385,7 +390,7 @@ namespace Rylogic.Gui.WPF
 				m_nbuf[1] = new(View3d.ETopo.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, vert, i0, indx, flags: View3d.ENuggetFlag.None,
 					tex_diffuse: View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle),
 					sam_diffuse: View3d.Sampler.FromStock(View3d.EStockSampler.LinearClamp),
-					shaders:[new(View3d.ERenderStep.ForwardRender, PointSprite)]);
+					shaders:shaders1);
 			}
 
 			// Create the graphics

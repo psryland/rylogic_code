@@ -276,8 +276,14 @@ namespace pr
 		#pragma endregion
 
 		// Constants
-		static constexpr BBox Unit() { return {v4{0, 0, 0, 1}, v4{0.5f, 0.5f, 0.5f, 0}}; }
-		static constexpr BBox Reset() { return {v4{0, 0, 0, 1}, v4{-1, -1, -1, 0}}; }
+		static constexpr BBox Unit()
+		{
+			return { v4{0, 0, 0, 1}, v4{0.5f, 0.5f, 0.5f, 0} };
+		}
+		static constexpr BBox Reset()
+		{
+			return { v4{0, 0, 0, 1}, v4{-1, -1, -1, 0} };
+		}
 
 		// Create a bounding box from lower/upper corners
 		static BBox Make(v4 const& lower, v4 const& upper)

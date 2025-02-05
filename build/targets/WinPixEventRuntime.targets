@@ -5,6 +5,7 @@
 		<PixPackagePath>$(PackagesPath)WinPixEventRuntime\1.0.240308001\</PixPackagePath>
 	</PropertyGroup>
 
+	<!-- Use `msbuild Rylogic.sln -restore` to restore packages. You'll probably need to do it manually -->
 	<ItemGroup>
 		<PackageReference Include="WinPixEventRuntime" />
 		<PackageVersion Include="WinPixEventRuntime" Version="1.0.240308001" />

@@ -82,7 +82,7 @@ namespace Rylogic.Gfx
 			{
 				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
-				Handle = View3D_ObjectCreateWithCallback(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
+				Handle = View3D_ObjectCreateWithCallback(name, colour, vcount, icount, ncount, new EditCB(edit_cb), IntPtr.Zero, ref ctx);
 				if (Handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
 			}
 
@@ -219,7 +219,7 @@ namespace Rylogic.Gfx
 			/// <summary>Modify the model of this object</summary>
 			public void Edit(EditObjectCB edit_cb)
 			{
-				View3D_ObjectEdit(Handle, edit_cb, IntPtr.Zero);
+				View3D_ObjectEdit(Handle, new EditCB(edit_cb), IntPtr.Zero);
 			}
 
 			/// <summary>Get/Set the object to parent transform of the root object</summary>
@@ -520,6 +520,30 @@ namespace Rylogic.Gfx
 
 			/// <summary>Raised when any object is changed</summary>
 			public static event PropertyChangedEventHandler? ObjectChanged;
+
+			/// <summary>Wrapper for converting EditObjectCB to EditObjectCBInternal</summary>
+			unsafe private class EditCB
+			{
+				private readonly EditObjectCB m_edit_cb;
+				private readonly EditObjectCBInternal m_callback;
+
+				public EditCB(EditObjectCB edit_cb)
+				{
+					m_edit_cb = edit_cb;
+					m_callback = EditObjectCallback;
+				}
+
+				public static implicit operator EditObjectCBInternal(EditCB cb) => cb.m_callback;
+				
+				public VICount EditObjectCallback(IntPtr ctx, int vcount, int icount, IntPtr vptr, IntPtr iptr, AddNuggetCBInternal out_nugget, IntPtr out_nugget_ctx)
+				{
+					// Convert IntPtr to a Span<Vertex> (direct memory access)
+					var verts = new Span<Vertex>((Vertex*)vptr, vcount);
+					var indices = new Span<ushort>((ushort*)iptr, icount);
+					void AddNugget(ref Nugget nug) => out_nugget(out_nugget_ctx, ref nug);
+					return m_edit_cb(verts, indices, AddNugget);
+				}
+			}
 
 			#region Equals
 			public static bool operator ==(Object? lhs, Object? rhs)

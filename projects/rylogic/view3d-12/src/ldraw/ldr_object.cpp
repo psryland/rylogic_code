@@ -569,7 +569,7 @@ namespace pr::rdr12
 			};
 			case EKeyword::RandColour:
 			{
-				obj->m_base_colour = pr::RandomRGB(g_rng());
+				obj->m_base_colour = pr::RandomRGB(g_rng(), 0.0f, 1.0f);
 				return true;
 			}
 			case EKeyword::Animation:
@@ -1015,7 +1015,7 @@ namespace pr::rdr12
 			{
 				EStyle style = m_style;
 				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
+				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
 				switch (style)
 				{
 					case EStyle::Square:
@@ -1329,18 +1329,12 @@ namespace pr::rdr12
 			// Use a geometry shader to draw points
 			if (m_sprite.m_point_size != v2Zero)
 			{
-				// Get/Create an instance of the point sprites shader
-				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
+				auto gs_points = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
 
-				// Get/Create the point style texture
-				auto tex = m_sprite.PointStyleTexture(p);
-
-				// Update the nuggets
-				for (auto& nug : obj->m_model->m_nuggets)
-				{
-					nug.m_tex_diffuse = tex;
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
-				}
+				obj->m_model->DeleteNuggets();
+				obj->m_model->CreateNugget(p.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+					.use_shader(ERenderStep::RenderForward, gs_points)
+					.tex_diffuse(m_sprite.PointStyleTexture(p)));
 			}
 		}
 	};
@@ -2588,10 +2582,11 @@ namespace pr::rdr12
 				p.m_reader.Vector2(pt);
 				m_poly.push_back(pt);
 
-				// Look for the optional colour
+				// Look to see if optional colours are given
 				if (!m_per_vertex_colour)
 					m_per_vertex_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
 
+				// If we're expecting colours, read one
 				if (*m_per_vertex_colour)
 				{
 					Colour32 col;
@@ -2602,6 +2597,13 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
+			// Check the polygon winding order
+			if (geometry::PolygonArea(m_poly) < 0)
+			{
+				std::ranges::reverse(m_poly);
+				std::ranges::reverse(m_colours);
+			}
+
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
 			obj->m_model = ModelGenerator::Polygon(p.m_factory, m_poly, m_solid, &opts);

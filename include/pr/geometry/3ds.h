@@ -258,7 +258,7 @@ namespace pr::geometry::max_3ds
 		{
 			TOut out;
 			Read(src, &out, 1);
-			return std::move(out);
+			return out;
 		}
 
 		// Generic chunk reading function

@@ -2737,7 +2737,7 @@ VIEW3D_API view3d::Texture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UIN
 			*shared_handle = handle;
 
 		// Create a texture description
-		ResDesc rdesc = ResDesc::Tex2D({}, s_cast<uint16_t>(options.m_mips), s_cast<EUsage>(options.m_usage))
+		ResDesc rdesc = ResDesc::Tex2D(Image{int(width), int(height)}, s_cast<uint16_t>(options.m_mips), s_cast<EUsage>(options.m_usage))
 			.multisamp(To<rdr12::MultiSamp>(options.m_multisamp))
 			.clear(options.m_clear_value);
 		TextureDesc tdesc = TextureDesc(rdr12::AutoId, rdesc)

@@ -91,6 +91,15 @@ namespace pr::tweakables
 			return changed;
 		}
 
+		// Block this thread until a change is detected
+		static void WaitForChange()
+		{
+			auto& this_ = Instance();
+
+			std::unique_lock<std::mutex> lock(this_.m_mutex);
+			this_.m_cv_changed.wait(lock);
+		}
+
 	private:
 
 		using path_t = std::filesystem::path;
@@ -98,6 +107,7 @@ namespace pr::tweakables
 		using timepoint_t = std::chrono::system_clock::time_point;
 		using map_t = std::unordered_map<std::string, std::string>;
 		using map_ptr_t = std::shared_ptr<map_t>;
+		using cv_t = std::condition_variable;
 		
 		std::thread m_thread;
 		std::atomic_bool m_shutdown;
@@ -105,6 +115,7 @@ namespace pr::tweakables
 		std::mutex m_mutex;
 		map_ptr_t m_variables;
 		ftime_t m_last_write_time;
+		cv_t m_cv_changed;
 
 		Tweakables()
 			:m_thread()
@@ -113,6 +124,7 @@ namespace pr::tweakables
 			,m_mutex()
 			,m_variables()
 			,m_last_write_time()
+			,m_cv_changed()
 		{
 			if constexpr (Enable)
 			{
@@ -149,6 +161,8 @@ namespace pr::tweakables
 			m_variables = variables;
 			m_last_write_time = last_write;
 			++m_issue;
+
+			m_cv_changed.notify_all();
 		}
 
 		// Ensure a tweakable value exists in the file

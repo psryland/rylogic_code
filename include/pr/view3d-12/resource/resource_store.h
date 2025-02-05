@@ -16,7 +16,7 @@ namespace pr::rdr12
 		// Notes:
 		// - The resource store is a thread synchronised database of models, textures, samplers, etc.
 		// - The resource store is unique and owned by the renderer instance.
-		// - The resource manager is an instance-able object that is used to create resources.
+		// - The resource factory is an instance-able object that is used to create resources.
 		//   It interacts with the resource store to store and retrieve resources.
 
 	private:
@@ -28,13 +28,9 @@ namespace pr::rdr12
 		using TextureLookup  = Lookup<RdrId, TextureBase*>;
 		using SamplerLookup  = Lookup<RdrId, Sampler*>;
 		using DxResLookup    = Lookup<RdrId, ID3D12Resource*>;
-		//using GpuViewHeap    = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>;
-		//using GpuSamplerHeap = GpuDescriptorHeap<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>;
 
 		Renderer&       m_rdr;              // The owning renderer instance
 		Mutex           m_mutex;            // Main mutex for store access
-		//GpuViewHeap     m_heap_view;        // GPU visible descriptor heap for CBV/SRV/UAV
-		//GpuSamplerHeap  m_heap_sampler;     // GPU visible descriptor heap for samplers
 		DxResLookup     m_lookup_res;       // A map from hash of resource URI to existing Dx12 resource pointer.
 		TextureLookup   m_lookup_tex;       // A map from texture id to existing texture instances.
 		SamplerLookup   m_lookup_sam;       // A map from sampler id to existing sampler instances.

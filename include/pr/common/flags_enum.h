@@ -184,7 +184,7 @@ namespace pr::common
 			One   = 1,
 			Two   = 2,
 		};
-		static_assert(is_flags_enum_v<NotFlags> == false, "");
+		static_assert(is_flags_enum_v<NotFlags> == false);
 			
 		enum class Flags
 		{
@@ -193,7 +193,7 @@ namespace pr::common
 
 			_flags_enum = 0,
 		};
-		static_assert(is_flags_enum_v<Flags> == true, "");
+		static_assert(is_flags_enum_v<Flags> == true);
 
 		enum class Numbers
 		{
@@ -206,7 +206,7 @@ namespace pr::common
 
 			_arith_enum = 0,
 		};
-		static_assert(is_arith_enum_v<Numbers> == true, "");
+		static_assert(is_arith_enum_v<Numbers> == true);
 	}
 	PRUnitTest(FlagsEnumTests)
 	{
@@ -221,38 +221,39 @@ namespace pr::common
 			auto c =  E::One ^ E::Two;
 			auto f = ~E::One;
 
-			PR_CHECK((int)a, 3);
-			PR_CHECK((int)b, 0);
-			PR_CHECK((int)c, 3);
-			PR_CHECK((int)f, -2);
+			PR_EXPECT((int)a == 3);
+			PR_EXPECT((int)b == 0);
+			PR_EXPECT((int)c == 3);
+			PR_EXPECT((int)f == -2);
 
 			a |= E::Two;
 			b &= E::Two;
 			c ^= E::Two;
 
-			PR_CHECK((int)a, 3);
-			PR_CHECK((int)b, 0);
-			PR_CHECK((int)c, 1);
+			PR_EXPECT((int)a == 3);
+			PR_EXPECT((int)b == 0);
+			PR_EXPECT((int)c == 1);
 		}
 
 		{// Arithmetic
 			using E = Numbers;
+			static_assert(is_arith_enum_v<E>);
 
-			PR_CHECK(+E::One == E::One, true);
-			PR_CHECK(-E::Two == E::MinusTwo, true);
+			PR_EXPECT(+E::One == E::One);
+			PR_EXPECT(-E::Two == E::MinusTwo);
 
-			PR_CHECK(E::One + E::Two == E::Three, true);
-			PR_CHECK(E::Six - E::Three == E::Three, true);
-			PR_CHECK(E::Two * E::Three == E::Six, true);
-			PR_CHECK(E::Six / E::Two == E::Three, true);
+			PR_EXPECT(E::One + E::Two == E::Three);
+			PR_EXPECT(E::Six - E::Three == E::Three);
+			PR_EXPECT(E::Two * E::Three == E::Six);
+			PR_EXPECT(E::Six / E::Two == E::Three);
 
-			PR_CHECK(-2 + E::Three == E::One, true);
-			PR_CHECK(E::Six - 5 == E::One, true);
-			PR_CHECK(1 - E::Zero == E::One, true);
-			PR_CHECK(E::MinusTwo * -3 == E::Six, true);
-			PR_CHECK(-1 * E::Two == E::MinusTwo, true);
-			PR_CHECK(E::Two / 2 == E::One, true);
-			PR_CHECK(6 / E::Two == E::Three, true);
+			PR_EXPECT(-2 + E::Three == E::One);
+			PR_EXPECT(E::Six - 5 == E::One);
+			PR_EXPECT(1 - E::Zero == E::One);
+			PR_EXPECT(E::MinusTwo * -3 == E::Six);
+			PR_EXPECT(-1 * E::Two == E::MinusTwo);
+			PR_EXPECT(E::Two / 2 == E::One);
+			PR_EXPECT(6 / E::Two == E::Three);
 		}
 	}
 }

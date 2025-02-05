@@ -19,13 +19,6 @@
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
 #include "pr/view3d-12/utility/update_resource.h"
-//#include "pr/view3d-12/resource/image.h"
-//#include "pr/view3d-12/resource/resource_state.h"
-//#include "pr/view3d-12/utility/barrier_batch.h"
-//#include "pr/view3d-12/utility/wrappers.h"
-//#include "pr/view3d-12/utility/map_resource.h"
-//#include "pr/view3d-12/utility/utility.h"
-//#include "pr/view3d-12/utility/pix.h"
 
 namespace pr::rdr12
 {
@@ -38,17 +31,11 @@ namespace pr::rdr12
 		, m_upload_buffer(m_gsync, 1ULL * 1024 * 1024)
 		, m_mipmap_gen(rdr, m_gsync, m_gfx_cmd_list)
 		, m_flush_required()
-	{
-		//// Setup notification of sync points
-		//m_rdr.AddPollCB({ &GpuSync::Poll, &m_gsync });
-	}
+	{}
 	ResourceFactory::~ResourceFactory()
 	{
 		// Wait till stock resources are created
 		FlushToGpu(EGpuFlush::Block);
-
-		//// Stop polling 'm_gsync'
-		//m_rdr.RemovePollCB({ &GpuSync::Poll, &m_gsync });
 	}
 
 	// Renderer access
@@ -112,12 +99,12 @@ namespace pr::rdr12
 		// Create in the COMMON state to prevent a D3D12 warning "Buffers are effectively created in state D3D12_RESOURCE_STATE_COMMON"
 		// COMMON state is implicitly promoted to the first state transition.
 		Check(device->CreateCommittedResource(
-			&desc.HeapProps, desc.HeapFlags, &rd, desc.DefaultState,
+			&desc.HeapProps, desc.HeapFlags, &rd, D3D12_RESOURCE_STATE_COMMON,
 			desc.ClearValue ? &*desc.ClearValue : nullptr,
 			__uuidof(ID3D12Resource), (void**)&res.m_ptr));
 
 		// Assume common state until the resource is initialised
-		DefaultResState(res.get(), desc.DefaultState);
+		DefaultResState(res.get(), D3D12_RESOURCE_STATE_COMMON);
 		DebugName(res, name);
 
 		// If initialisation data is provided, initialise using an UploadBuffer
@@ -131,7 +118,7 @@ namespace pr::rdr12
 				// The span of images expected by 'UpdateSubresource' is for each mip level.
 				UpdateSubresourceScope map(*this, res.get(), i, 0, 1, desc.DataAlignment);
 				map.Write(desc.Data[i], AllSet(desc.MiscFlags, ResDesc::EMiscFlags::PartialInitData));
-				map.Commit(std::nullopt);
+				map.Commit(desc.DefaultState);
 			}
 			
 			// Generate mip maps for the texture (if needed)
@@ -139,14 +126,17 @@ namespace pr::rdr12
 			// textures are created. Remember cmd-lists are executed serially.
 			if (desc.MipLevels != 1)
 				m_mipmap_gen.Generate(res.get());
-
-			// Transition the resource to the default state
-			BarrierBatch barriers(m_gfx_cmd_list);
-			barriers.Transition(res.get(), desc.DefaultState);
-			barriers.Commit();
-			m_flush_required = true;
 		}
 
+		// Set the true default state for the resource now that it's initialised
+		DefaultResState(res.get(), desc.DefaultState);
+
+		// Transition the resource to the default state
+		BarrierBatch barriers(m_gfx_cmd_list);
+		barriers.Transition(res.get(), desc.DefaultState);
+		barriers.Commit();
+
+		m_flush_required = true;
 		return res;
 	}
 
@@ -1023,24 +1013,3 @@ namespace pr::rdr12
 		}
 	}
 }
-
-#if 0
-	ResourceManager::ResourceManager(Renderer& rdr)
-		: m_mem_tracker()
-		, m_eh_resize()
-		, m_gdi_dc_ref_count()
-	{
-		
-
-
-		#if 0 // todo
-		// Detect outstanding references to GDI device contexts
-		m_eh_resize = rdr().BackBufferSizeChanged += [this](Window&, BackBufferSizeChangedEventArgs const&)
-		{
-			assert("Outstanding DC references during resize" && m_gdi_dc_ref_count == 0);
-		};
-		#endif
-	}
-
-
-#endif

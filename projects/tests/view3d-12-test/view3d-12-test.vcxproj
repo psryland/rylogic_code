@@ -47,7 +47,6 @@
 		<Link>
 			<SubSystem>Windows</SubSystem>
 			<AdditionalLibraryDirectories>
-				;$(RylogicRoot)lib\$(PlatformTarget)\$(Configuration)
 				;%(AdditionalLibraryDirectories)
 			</AdditionalLibraryDirectories>
 			<AdditionalDependencies>

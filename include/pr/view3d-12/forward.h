@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <regex>
 #include <optional>
+#include <ranges>
 #include <functional>
 #include <filesystem>
 #include <source_location>

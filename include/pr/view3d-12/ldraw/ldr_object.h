@@ -7,21 +7,6 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/instance/instance.h"
-//#include <string>
-//#include <regex>
-//#include "pr/macros/enum.h"
-//#include "pr/common/min_max_fix.h"
-//#include "pr/common/guid.h"
-//#include "pr/common/hash.h"
-//#include "pr/common/refcount.h"
-//#include "pr/common/refptr.h"
-//#include "pr/common/user_data.h"
-//#include "pr/common/flags_enum.h"
-//#include "pr/common/static_callback.h"
-//#include "pr/container/vector.h"
-//#include "pr/maths/maths.h"
-//#include "pr/str/string.h"
-//#include "pr/script/reader.h"
 
 namespace pr::rdr12
 {

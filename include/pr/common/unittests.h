@@ -31,7 +31,6 @@ namespace pr::unittests
 #include <filesystem>
 #include <algorithm>
 #include <functional>
-#include <memory>
 #include <random>
 #include <chrono>
 #include <cstdarg>

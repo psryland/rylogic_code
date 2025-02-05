@@ -640,7 +640,7 @@ namespace pr::ldr
 			};
 			case EKeyword::RandColour:
 			{
-				obj->m_base_colour = pr::RandomRGB(g_rng());
+				obj->m_base_colour = pr::RandomRGB(g_rng(), 0.0f, 1.0f);
 				return true;
 			}
 			case EKeyword::Animation:
@@ -1036,7 +1036,7 @@ namespace pr::ldr
 			{
 				EStyle style = m_style;
 				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
+				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
 				switch (style)
 				{
 				case EStyle::Square:

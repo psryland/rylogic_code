@@ -26,7 +26,7 @@ struct Body :physics::RigidBody
 					static std::default_random_engine rng;
 
 					std::string str;
-					ldr::RigidBody(str, "Body", RandomRGB(rng, 1.0f), *this);
+					ldr::RigidBody(str, "Body", RandomRGB(rng, 0.0f, 1.0f), *this);
 					m_gfx = View3D_ObjectCreateLdr(::pr::Widen(str).c_str(), false, nullptr, nullptr);
 				}
 				UpdateGfx();

@@ -2721,21 +2721,29 @@ namespace pr
 					// Step any pending loops and get the time till the next loop to be stepped.
 					auto timeout = StepLoops();
 
-					// Check for messages and pump any received until
-					::MsgWaitForMultipleObjects(0, 0, TRUE, timeout, QS_ALLPOSTMESSAGE|QS_ALLINPUT|QS_ALLEVENTS);
-					for (MSG msg = {}; ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
-					{
-						// Exit the message pump?
-						if (msg.message == WM_QUIT)
-							return static_cast<int>(msg.wParam);
-
-						// Pump the message
-						HandleMessage(msg);
-					}
+					// Pump any queued messages
+					auto exit_code = Pump(timeout);
+					if (exit_code)
+						return *exit_code;
 				}
 			}
 
-		private:
+			// Pump messages. Returns null or an exit code if a WM_QUIT message was pumped
+			std::optional<int> Pump(DWORD timeout_ms = 0)
+			{
+				// Check for messages and pump any received until
+				::MsgWaitForMultipleObjects(0, 0, TRUE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
+				for (MSG msg = {}; ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
+				{
+					// Exit the message pump?
+					if (msg.message == WM_QUIT)
+						return static_cast<int>(msg.wParam);
+
+					// Pump the message
+					HandleMessage(msg);
+				}
+				return std::nullopt;
+			}
 
 			// Return the running time since 'Run()' was called
 			int64_t Clock()

@@ -35,13 +35,9 @@ namespace pr::rdr12
 		// Resource usage barrier
 		BarrierBatch& Transition(ID3D12Resource const* resource, D3D12_RESOURCE_STATES state, uint32_t sub = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE)
 		{
+			// Note:
+			//  - For tracing, look in Commit
 			assert(resource != nullptr);
-
-			#if PR_DBG_RDR
-			//auto res_name = DebugName(resource);
-			//if (std::string_view(res_name) == "SpatialPartition:IdxCount")
-			//	PR_INFO(1, std::format("Resource '{}' -> {}", res_name, To<std::string>(state)).c_str());
-			#endif
 
 			// If the new transition takes all sub resources to 'state'...
 			if (sub == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
@@ -162,8 +158,33 @@ namespace pr::rdr12
 			// Apply the resource states from the transitions
 			for (auto& barrier : m_barriers)
 			{
-				if (barrier.Type != D3D12_RESOURCE_BARRIER_TYPE_TRANSITION) continue;
+				if (barrier.Type != D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+					continue;
+
+				// Get the current resource state
 				auto& res_state = m_cmd_list.ResState(barrier.Transition.pResource);
+				
+				// Trace state changes
+				#if 0 // Enable resource state tracing
+				{
+					auto res_name = DebugName(barrier.Transition.pResource);
+					auto cmd_name = DebugName(m_cmd_list);
+					auto sub = barrier.Transition.Subresource;
+					auto state0 = res_state[sub];
+					auto state1 = barrier.Transition.StateAfter;
+					if (std::string_view(res_name) == "#white")
+					{
+						PR_INFO(1, std::format("CmdList {} | Resource {}[{}] | {} -> {}", cmd_name, res_name, sub + 1, To<std::string>(state0), To<std::string>(state1)).c_str());
+						if (state1 == D3D12_RESOURCE_STATE_COMMON)
+						{
+							volatile int breakpoint_here = 0;
+							(void)breakpoint_here;
+						}
+					}
+				}
+				#endif
+
+				// Update the resource state record
 				res_state.Apply(barrier.Transition.StateAfter, barrier.Transition.Subresource);
 			}
 

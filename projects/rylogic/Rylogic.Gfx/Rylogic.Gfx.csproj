@@ -2,6 +2,7 @@
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<RootNamespace>Rylogic.Gfx</RootNamespace>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 
