@@ -139,7 +139,6 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h" />
