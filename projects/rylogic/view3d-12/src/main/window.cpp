@@ -147,19 +147,18 @@ namespace pr::rdr12
 			// In device debug mode, create a dummy swap chain so that the graphics debugging sees 'Present' calls allowing it to capture frames.
 			if (AllSet(rdr.Settings().m_options, ERdrOptions::DeviceDebug))
 			{
-				#if 0 // todo
-				DXGI_SWAP_CHAIN_DESC sd = {};
-				sd.BufferCount  = 1;
-				sd.BufferDesc   = DisplayMode(16,16);
-				sd.SampleDesc   = MultiSamp();
-				sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-				sd.OutputWindow = rdr.DummyHwnd();
-				sd.Windowed     = TRUE;
-				sd.SwapEffect   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-				sd.Flags        = s_cast<DXGI_SWAP_CHAIN_FLAG>(0);
-				Check(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, DebugName(m_swap_chain_dbg, FmtS("swap chain dbg")));
-				#endif
+				DXGI_SWAP_CHAIN_DESC sd = {
+					.BufferDesc = DisplayMode(16,16),
+					.SampleDesc = MultiSamp(),
+					.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+					.BufferCount = 2,
+					.OutputWindow = rdr.DummyHwnd(),
+					.Windowed = TRUE,
+					.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+					.Flags = s_cast<DXGI_SWAP_CHAIN_FLAG>(0),
+				};
+				Check(factory->CreateSwapChain(rdr.GfxQueue(), &sd, &m_swap_chain_dbg.m_ptr));
+				DebugName(m_swap_chain_dbg, FmtS("swap chain dbg"));
 			}
 
 			// Initialise the render target views
@@ -318,8 +317,8 @@ namespace pr::rdr12
 	void Window::BackBufferSize(iv2 size, bool force, MultiSamp const* multisamp)
 	{
 		// Notes:
-		//  - Resizing normally recreates the msaa target and the swap chain targets.
-		//    If a custom swap chain is used however, then only the msaa target is recreated.
+		//  - Resizing normally recreates the MSAA target and the swap chain targets.
+		//    If a custom swap chain is used however, then only the MSAA target is recreated.
 		//    It's up to the caller to ensure the custom swap chains are the correct size.
 		if (size.x <= 0 || size.y <= 0)
 			throw std::runtime_error("Back buffer size must be greater than zero");

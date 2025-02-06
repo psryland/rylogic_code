@@ -390,19 +390,22 @@ namespace pr::rdr12
 
 			auto vin = vbuf.data();
 			auto iin = ibuf.data();
+			auto vout = update_v.ptr<Vert>();
+			auto iout = update_i.ptr<uint16_t>();
 
 			// Copy the model data into the model
-			auto vout = update_v.ptr<Vert>();
 			for (size_t i = 0; i != new_vcount; ++i, ++vin)
 			{
 				SetPCNT(*vout++, To<v4>(vin->pos), Colour(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
 				Grow(model->m_bbox, To<v4>(vin->pos));
 			}
-			auto iout = update_v.ptr<uint16_t>();
 			for (size_t i = 0; i != new_icount; ++i, ++iin)
 			{
 				*iout++ = *iin;
 			}
+
+			update_v.Commit(D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+			update_i.Commit(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
 		// Update the model nuggets

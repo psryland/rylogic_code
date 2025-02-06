@@ -59,6 +59,7 @@ namespace pr::rdr12
 		footprints_t     m_layout;       // The memory layout of the sub-resources within 'm_dest' start at mip 'm_sub0'
 		staging_t        m_staging;      // The allocation within the upload buffer
 
+		// ** Remember to call Commit before the leaving the scope **
 		UpdateSubresourceScope(ResourceFactory& factory, ID3D12Resource* dest, int alignment, int first = 0, int range = limits<int>::max())
 			: UpdateSubresourceScope(factory, dest, 0, 0, 1, alignment, { first, 0, 0 }, { range, 1, 1 })
 		{}
@@ -116,7 +117,7 @@ namespace pr::rdr12
 
 			// Get a staging buffer big enough for all of the sub-resources.
 			// The staging buffer is just big enough to contain the range to be updated, not the full resource.
-			// If 'dest' is a volume texture, and [first, range) is box within that texture, then the size of the
+			// If 'dest' is a volume texture, and [first, range) is a box within that texture, then the size of the
 			// staging buffer is just the size of the box + subsequent mip levels.
 			m_staging = m_factory.m_upload_buffer.Alloc(total_size, m_alignment);
 

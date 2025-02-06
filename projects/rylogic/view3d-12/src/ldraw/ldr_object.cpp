@@ -5520,8 +5520,6 @@ namespace pr::rdr12
 			ResDesc::VBuf<Vert>(vcount, {}),
 			ResDesc::IBuf<uint16_t>(icount, {}),
 			BBox::Reset(), obj->TypeAndName().c_str());
-		settings.m_vb.HeapProps = HeapProps::Upload();
-		settings.m_ib.HeapProps = HeapProps::Upload();
 
 		// Create the model
 		ResourceFactory factory(rdr);
