@@ -87,8 +87,11 @@ namespace Rylogic.Gfx
 			/// <summary>Set if the tint colour contains alpha</summary>
 			TintHasAlpha = 1 << 2,
 
+			/// <summary>Set if the diffuse texture contains alpha (and we want alpha blending, not just thresholding)</summary>
+			TexDiffuseHasAlpha = 1 << 3,
+
 			/// <summary>Excluded from shadow map render steps</summary>
-			ShadowCastExclude = 1 << 3,
+			ShadowCastExclude = 1 << 4,
 
 			/// <summary>
 			/// Can overlap with other nuggets.
@@ -665,8 +668,8 @@ namespace Rylogic.Gfx
 
 			public Nugget(
 				ETopo topo, EGeom geom,
-				int v0 = 0, int v1 = 0,
-				int i0 = 0, int i1 = 0,
+				int v0 = 0, int v1 = -1,
+				int i0 = 0, int i1 = -1,
 				HTexture? tex_diffuse = null,
 				HSampler? sam_diffuse = null,
 				ShaderList? shaders = null,

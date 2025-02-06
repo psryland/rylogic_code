@@ -427,8 +427,8 @@ namespace pr::rdr12
 			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
 			n.m_tint = To<Colour>(nug.m_tint);
 			n.m_rel_reflec = nug.m_rel_reflec;
-			n.m_vrange = Range{ nug.m_v0, nug.m_v1 };
-			n.m_irange = Range{ nug.m_i0, nug.m_i1 };
+			n.m_vrange = nug.m_v0 <= nug.m_v1 ? Range{ nug.m_v0, nug.m_v1 } : Range{ 0, new_vcount };
+			n.m_irange = nug.m_i0 <= nug.m_i1 ? Range{ nug.m_i0, nug.m_i1 } : Range{ 0, new_icount };
 			model->CreateNugget(factory, n);
 		}
 

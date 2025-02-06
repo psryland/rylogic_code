@@ -49,7 +49,7 @@ namespace pr::rdr12
 
 	inline static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
 
-	// Flags for nuggets
+	// Flags for nuggets. (sync with View3d.cs ENuggetFlag)
 	enum class ENuggetFlag :int
 	{
 		None = 0,
