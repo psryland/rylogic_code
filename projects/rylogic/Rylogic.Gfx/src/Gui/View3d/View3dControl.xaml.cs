@@ -265,12 +265,8 @@ namespace Rylogic.Gui.WPF
 				{
 					if (m_d3d_image.FrontBuffer != null)
 					{
-						// Resize the back buffer before setting the swap chain.
-						// The back buffer size is determined from the swap chain render target size
-						// So setting the swap chain first means the back buffer doesn't update.
 						var bb_size = m_d3d_image.RequiredBackBufferSize;
-						Window.BackBufferSize = bb_size;
-						Window.CustomSwapChain([m_d3d_image.FrontBuffer]);
+						Window.CustomSwapChain([m_d3d_image.FrontBuffer]); // This updates the MSAA buffer too
 						Window.Viewport = new(0, 0, bb_size.Width, bb_size.Height);
 					}
 					else

@@ -689,8 +689,8 @@ namespace Rylogic.Gfx
 				m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;
 				m_shaders = shaders?.Pin() ?? new Shaders();
 				m_nflags = flags ?? ENuggetFlag.None;
-				m_cull_mode = cull_mode ?? ECullMode.Back;
-				m_fill_mode = fill_mode ?? EFillMode.Solid;
+				m_cull_mode = cull_mode ?? ECullMode.Default;
+				m_fill_mode = fill_mode ?? EFillMode.Default;
 				m_tint = tint ?? Colour32.White;
 				m_rel_reflec = rel_reflec ?? 1f;
 			}
@@ -1576,7 +1576,7 @@ namespace ldr
 		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
 		[DllImport(Dll)] private static extern Size View3D_WindowBackBufferSizeGet(HWindow window);
-		[DllImport(Dll)] private static extern void View3D_WindowBackBufferSizeSet(HWindow window, Size size);
+		[DllImport(Dll)] private static extern void View3D_WindowBackBufferSizeSet(HWindow window, Size size, bool force_recreate);
 
 		// Get/Set the window viewport (and clipping area)
 		[DllImport(Dll)] private static extern Viewport View3D_WindowViewportGet(HWindow window);

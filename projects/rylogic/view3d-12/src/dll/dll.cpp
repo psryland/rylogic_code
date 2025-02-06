@@ -352,14 +352,14 @@ VIEW3D_API SIZE __stdcall View3D_WindowBackBufferSizeGet(view3d::Window window)
 	}
 	CatchAndReport(View3D_WindowBackBufferSizeGet, window, {});
 }
-VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, SIZE size)
+VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(view3d::Window window, SIZE size, BOOL force_recreate)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->BackBufferSize(To<iv2>(size));
+		window->BackBufferSize(To<iv2>(size), force_recreate != 0);
 	}
 	CatchAndReport(View3D_WindowBackBufferSizeSet, window,);
 }

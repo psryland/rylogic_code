@@ -604,7 +604,13 @@ namespace Rylogic.Gfx
 			public Size BackBufferSize
 			{
 				get => View3D_WindowBackBufferSizeGet(Handle);
-				set => View3D_WindowBackBufferSizeSet(Handle, value);
+				set => View3D_WindowBackBufferSizeSet(Handle, value, false);
+			}
+
+			/// <summary>Force recreate the back buffer with the given size</summary>
+			public void RecreateBackBuffer(Size size)
+			{
+				View3D_WindowBackBufferSizeSet(Handle, size, true);
 			}
 
 			/// <summary>Replace the swap chain with 'swap_chain'</summary>

@@ -33,6 +33,7 @@ namespace pr::rdr12
 		Renderer& rdr() const;
 		Window& wnd() const;
 
+		iv2 rt_size() const;
 		float4_t const& rt_clear() const;
 		float ds_depth() const;
 		uint8_t ds_stencil() const;

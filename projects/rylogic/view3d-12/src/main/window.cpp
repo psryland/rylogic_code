@@ -118,7 +118,7 @@ namespace pr::rdr12
 			else
 			{
 				// Creating a 'Window' with hwnd == nullptr is allowed if you only want to render to off-screen render targets.
-				// todo
+				m_swap_bb.resize(0); // callers should use CustomSwapChain().
 			}
 
 			// Create a descriptor heap for the back buffers (swap chain buffers + MSAA RT).
@@ -292,32 +292,35 @@ namespace pr::rdr12
 		if (BkgdColour() == colour)
 			return;
 
-		// Need to recreate the render targets because the clear colour has changed
 		m_rt_props.Color[0] = colour.r;
 		m_rt_props.Color[1] = colour.g;
 		m_rt_props.Color[2] = colour.b;
 		m_rt_props.Color[3] = colour.a;
 
-		auto bb_size = BackBufferSize();
-		if (bb_size != iv2::Zero())
-			BackBufferSize(bb_size, true);
+		// Need to recreate the MSAA render target because the clear colour has changed
+		if (auto& bb = m_msaa_bb; true)
+		{
+			// Flush any GPU commands that are still in flight
+			auto queue = rdr().GfxQueue();
+			m_gsync.AddSyncPoint(queue);
+			m_gsync.Wait();
+
+			auto size = m_msaa_bb.rt_size();
+			bb = CreateRenderTarget(size, bb.m_multisamp, m_rt_props, m_ds_props);
+		}
 	}
 
 	// Get/Set the size of the swap chain back buffer (basically the window size in pixels)
 	iv2 Window::BackBufferSize() const
 	{
-		if (BBCount() == 0)
-			return iv2::Zero();
-
-		auto rt = m_swap_bb[BBIndex()].m_render_target.get();
-		if (rt == nullptr)
-			return iv2::Zero();
-
-		auto desc = rt->GetDesc();
-		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
+		return BBCount() != 0 ? m_swap_bb[BBIndex()].rt_size() : iv2::Zero();
 	}
 	void Window::BackBufferSize(iv2 size, bool force, MultiSamp const* multisamp)
 	{
+		// Notes:
+		//  - Resizing normally recreates the msaa target and the swap chain targets.
+		//    If a custom swap chain is used however, then only the msaa target is recreated.
+		//    It's up to the caller to ensure the custom swap chains are the correct size.
 		if (size.x <= 0 || size.y <= 0)
 			throw std::runtime_error("Back buffer size must be greater than zero");
 
@@ -325,13 +328,11 @@ namespace pr::rdr12
 		if (!force && BackBufferSize() == size)
 			return;
 
-		auto queue = rdr().GfxQueue();
-
 		// Flush any GPU commands that are still in flight
+		auto queue = rdr().GfxQueue();
 		m_gsync.AddSyncPoint(queue);
 		m_gsync.Wait();
 
-		// Release references to swap chain resources
 		for (auto& bb : m_swap_bb)
 		{
 			m_res_state.Forget(bb.m_render_target.get());
@@ -414,6 +415,8 @@ namespace pr::rdr12
 	// Replace the swap chain buffers with new ones
 	void Window::CustomSwapChain(std::span<BackBuffer> back_buffers)
 	{
+		auto old_size = BackBufferSize();
+
 		// Release references to swap chain resources
 		for (auto& bb : m_swap_bb)
 		{
@@ -425,6 +428,14 @@ namespace pr::rdr12
 			bb.m_d2d_target = nullptr;
 		}
 
+		// Need to resize the back buffer before assigning the custom swap chain
+		// because resizing may release the current swap chain buffers (if the size is different).
+		if (!back_buffers.empty())
+		{
+			auto new_size = back_buffers[0].rt_size();
+			BackBufferSize(new_size, false);
+		}
+
 		// Copy the provided swap chain buffers
 		m_swap_bb.resize(back_buffers.size());
 		for (int i = 0; i != isize(m_swap_bb); ++i)
@@ -434,7 +445,9 @@ namespace pr::rdr12
 
 		// Make sure the swap chain buffer index is within range
 		if (!m_swap_bb.empty())
+		{
 			m_bb_index %= m_swap_bb.size();
+		}
 	}
 	void Window::CustomSwapChain(std::span<Texture2D*> back_buffers)
 	{
@@ -692,14 +705,15 @@ namespace pr::rdr12
 
 		DXGI_SWAP_CHAIN_DESC scdesc = {};
 		Check(m_swap_chain->GetDesc(&scdesc));
-		Check(m_swap_chain->ResizeBuffers(s_cast<UINT>(m_swap_bb.size()), size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
+		Check(m_swap_chain->ResizeBuffers(scdesc.BufferCount, size.x, size.y, scdesc.BufferDesc.Format, scdesc.Flags));
 
 		// Get the pointer and item size of the RTV descriptor heap.
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = m_rtv_heap->GetCPUDescriptorHandleForHeapStart();
 		auto rtv_size = s_cast<int64_t>(device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV));
 		rtv_handle.ptr += s_cast<size_t>(HeapIdxSwapRtv * rtv_size);
 
-		for (int i = 0; i != s_cast<int>(m_swap_bb.size()); ++i)
+		m_swap_bb.resize(scdesc.BufferCount);
+		for (int i = 0; i != isize(m_swap_bb); ++i)
 		{
 			auto& bb = m_swap_bb[i];
 			bb.m_wnd = this;

@@ -778,7 +778,7 @@ extern "C"
 	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
 	VIEW3D_API SIZE __stdcall View3D_WindowBackBufferSizeGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, SIZE size);
+	VIEW3D_API void __stdcall View3D_WindowBackBufferSizeSet(pr::view3d::Window window, SIZE size, BOOL force_recreate);
 
 	// Get/Set the window viewport (and clipping area)
 	VIEW3D_API pr::view3d::Viewport __stdcall View3D_WindowViewportGet(pr::view3d::Window window);

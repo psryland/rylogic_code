@@ -119,7 +119,7 @@ namespace pr::rdr12
 
 		// Get/Set the back buffer size
 		iv2 BackBufferSize() const;
-		void BackBufferSize(iv2 sz);
+		void BackBufferSize(iv2 sz, bool force_recreate);
 
 		// Get/Set the window viewport
 		view3d::Viewport Viewport() const;

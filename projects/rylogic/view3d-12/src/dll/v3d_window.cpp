@@ -148,7 +148,7 @@ namespace pr::rdr12
 	{
 		return m_wnd.BackBufferSize();
 	}
-	void V3dWindow::BackBufferSize(iv2 sz)
+	void V3dWindow::BackBufferSize(iv2 sz, bool force_recreate)
 	{
 		if (sz.x < 0) sz.x = 0;
 		if (sz.y < 0) sz.y = 0;
@@ -161,7 +161,7 @@ namespace pr::rdr12
 		auto old_aspect = m_scene.m_cam.Aspect();
 
 		// Resize the render target
-		m_wnd.BackBufferSize(sz, false);
+		m_wnd.BackBufferSize(sz, force_recreate);
 
 		// Adjust the camera aspect ratio to preserve it
 		auto new_size = m_wnd.BackBufferSize();

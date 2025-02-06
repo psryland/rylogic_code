@@ -46,6 +46,15 @@ namespace pr::rdr12
 	{
 		return *m_wnd;
 	}
+
+	iv2 BackBuffer::rt_size() const
+	{
+		if (m_render_target == nullptr)
+			return iv2::Zero();
+
+		auto desc = m_render_target->GetDesc();
+		return iv2(s_cast<int>(desc.Width), s_cast<int>(desc.Height));
+	}
 	float4_t const& BackBuffer::rt_clear() const
 	{
 		return wnd().m_rt_props.Color;
