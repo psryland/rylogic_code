@@ -37,6 +37,7 @@ namespace LDraw.UI
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
 			SceneView.Scene.ContextMenu.DataContext = this;
+			SceneView.Scene.DefaultKeyboardShortcuts = true;
 			Links = new List<ChartLink>();
 
 			ClearScene = Command.Create(this, ClearSceneInternal);
