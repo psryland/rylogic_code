@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows;
 using System.Windows.Controls;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -368,9 +369,18 @@ namespace Rylogic.Gui.WPF
 				/// <summary>Return the position of the grid lines for this axis</summary>
 				public void GridLines(out double min, out double max, out double step)
 				{
-					var axis_length =
-						AxisType == EAxis.XAxis ? Chart.XAxisPanel.ActualWidth :
-						AxisType == EAxis.YAxis ? Chart.YAxisPanel.ActualHeight : 0.0;
+					var axis_length = AxisType switch
+					{
+						EAxis.XAxis =>
+							Chart.XAxisPanel.Visibility == Visibility.Visible
+							? Chart.XAxisPanel.ActualWidth
+							: Chart.Scene.ActualWidth,
+						EAxis.YAxis =>
+							Chart.YAxisPanel.Visibility == Visibility.Visible
+							? Chart.YAxisPanel.ActualHeight
+							: Chart.Scene.ActualHeight,
+						_ => 0.0,
+					};
 					var max_ticks = axis_length / Options.PixelsPerTick;
 
 					// Choose a step size that is a 'nice' size and that maximises the number of steps up to 'max_ticks'
