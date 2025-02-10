@@ -1062,6 +1062,9 @@
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite3</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\include\pr\filesys\file_snapshot.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />

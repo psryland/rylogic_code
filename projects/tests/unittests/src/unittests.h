@@ -138,6 +138,7 @@
 #include "pr\crypt\sha512.h"
 #include "pr\filesys\filesys.h"
 #include "pr\filesys\filewatch.h"
+#include "pr\filesys\file_snapshot.h"
 #include "pr\filesys\file_time.h"
 #include "pr\filesys\lock_file.h"
 #include "pr\geometry\3ds.h"

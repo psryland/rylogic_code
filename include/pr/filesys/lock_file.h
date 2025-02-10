@@ -25,7 +25,7 @@ namespace pr::filesys
 			auto max = static_cast<double>(max_attempts);
 			auto back_off = 2.0 * max_block_time_ms / (max * (1 + max));
 
-			auto fpath = filepath;
+			std::filesystem::path fpath = filepath;
 			fpath += L".locked";
 			for (auto a = 0; a != max_attempts; ++a)
 			{

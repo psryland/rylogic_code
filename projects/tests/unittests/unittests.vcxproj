@@ -187,6 +187,7 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\crypt\sha512.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\filesys\filesys.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\filesys\filewatch.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\filesys\file_snapshot.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\filesys\file_time.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\filesys\lock_file.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />

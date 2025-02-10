@@ -267,10 +267,13 @@ namespace Rylogic.Gui.WPF
 					{
 						var bb_size = m_d3d_image.RequiredBackBufferSize;
 						Window.CustomSwapChain([m_d3d_image.FrontBuffer]); // This updates the MSAA buffer too
-						Window.Viewport = new(0, 0, bb_size.Width, bb_size.Height);
 					}
 					else
+					{
 						Window.CustomSwapChain([]);
+					}
+
+					OnRenderTargetChanged();
 				}
 			}
 		}
@@ -479,7 +482,8 @@ namespace Rylogic.Gui.WPF
 				return;
 
 			// Set the viewport to match the render target size
-			Window.Viewport = new View3d.Viewport(0, 0,
+			Window.Viewport = new View3d.Viewport(
+				0, 0,
 				RenderTarget.Info.Width,
 				RenderTarget.Info.Height,
 				(int)Math.Floor(RenderSize.Width != 0 ? RenderSize.Width : RenderTarget.Info.Width),
@@ -487,7 +491,7 @@ namespace Rylogic.Gui.WPF
 				0f, 1f);
 
 			// Notify of a new render target. Don't directly subscribe to
-			// D3DImage.RenderTargetChanged because that will leak references.
+			// D3DImage.FrontBufferChanged because that will leak references.
 			RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 		}
 

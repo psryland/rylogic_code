@@ -939,28 +939,25 @@ namespace Rylogic.Gfx
 			//  - The viewport is in "render target" space, so if the render target is a
 			//    different size to the target window, 'Width/Height' do not equal the window size.
 			//    The ScreenW/ScreenH fields are used to pass the size of the target window.
-			public float X;
-			public float Y;
-			public float Width;
-			public float Height;
-			public float DepthMin;
-			public float DepthMax;
-			public int ScreenW;
-			public int ScreenH;
+			public float X;        // (x,y,x+width,y+width) is in back buffer pixels, *NOT* window DIP.
+			public float Y;        // Typically the back buffer is the same size as the true screen pixels
+			public float Width;    // Typically the BB width
+			public float Height;   // Typically the BB height
+			public float DepthMin; // Typically 0.0f
+			public float DepthMax; // Typically 1.0f
+			public int ScreenW;    // The screen width in DIP
+			public int ScreenH;    // The screen height in DIP
 
-			public Viewport(float x, float y, float w, float h)
-				: this(x, y, w, h, (int)w, (int)h, 0f, 1f)
-			{ }
-			public Viewport(float x, float y, float w, float h, int screen_w, int screen_h, float min, float max)
+			public Viewport(float x, float y, float w_px, float h_px, int screen_w_dip, int screen_h_dip, float min, float max)
 			{
 				X = x;
 				Y = y;
-				Width = w;
-				Height = h;
+				Width = w_px;
+				Height = h_px;
+				ScreenW = screen_w_dip;
+				ScreenH = screen_h_dip;
 				DepthMin = min;
 				DepthMax = max;
-				ScreenW = screen_w;
-				ScreenH = screen_h;
 			}
 			public readonly float Aspect => Width / Height;
 			public readonly Size ToSize() => new((int)Math.Round(Width), (int)Math.Round(Height));

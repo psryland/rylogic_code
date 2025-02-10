@@ -311,7 +311,7 @@ namespace pr::rdr12
 	struct Viewport :D3D12_VIEWPORT
 	{
 		// Notes:
-		//  - Viewports represent an area on the backbuffer, *not* the target HWND.
+		//  - Viewports represent an area on the back buffer, *not* the target HWND.
 		//  - Viewports are in render target space.
 		//    e.g.
 		//     x,y          = 0,0 (not -0.5f,-0.5f)

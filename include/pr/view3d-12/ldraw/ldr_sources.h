@@ -5,17 +5,6 @@
 // A container of Ldr script sources that can watch for external changes.
 #pragma once
 #include "pr/view3d-12/forward.h"
-//#include <string>
-//#include <string_view>
-//#include <sstream>
-//#include <unordered_map>
-//#include <unordered_set>
-//#include <filesystem>
-//#include <mutex>
-//#include "pr/common/guid.h"
-//#include "pr/container/vector.h"
-//#include "pr/script/forward.h"
-//#include "pr/threads/synchronise.h"
 
 namespace pr::rdr12
 {
@@ -40,7 +29,6 @@ namespace pr::rdr12
 		using GuidCont = pr::vector<Guid>;
 		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 		using OnAddCB = std::function<void(Guid const&, bool)>;
-		//using OnAddCB = pr::StaticCB<void, Guid const&, bool>;
 		using Location = pr::script::Loc;
 		using filepath_t = std::filesystem::path;
 		using Includes = pr::script::Includes;
@@ -173,7 +161,7 @@ namespace pr::rdr12
 		// Container of errors
 		using ErrorCont = pr::vector<ParseErrorEventArgs>;
 
-		// Container of filepaths
+		// Container of file paths
 		using PathsCont = pr::vector<filepath_t>;
 
 	private:

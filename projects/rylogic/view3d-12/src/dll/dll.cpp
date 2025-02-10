@@ -1330,7 +1330,7 @@ VIEW3D_API BOOL __stdcall View3D_Navigate(view3d::Window window, float dx, float
 }
 
 // General mouse navigation
-// 'ss_pos' is the mouse pointer position in 'window's screen space
+// 'ss_pos' is the mouse pointer position in 'window's screen space (i.e. relative to viewport's ScreenW/H)
 // 'nav_op' is the navigation type
 // 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
 // void OnMouseDown(UINT nFlags, CPoint point) { View3D_MouseNavigate(win, point, nav_op, TRUE); }
