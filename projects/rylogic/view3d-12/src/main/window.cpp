@@ -21,6 +21,7 @@ namespace pr::rdr12
 	Window::Window(Renderer& rdr, WndSettings const& settings)
 		:m_rdr(&rdr)
 		,m_hwnd(settings.m_hwnd)
+		,m_hwnd_dummy()
 		,m_swap_chain_flags(settings.m_swap_chain_flags)
 		,m_swap_chain_dbg()
 		,m_swap_chain()
@@ -152,7 +153,7 @@ namespace pr::rdr12
 					.SampleDesc = MultiSamp(),
 					.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 					.BufferCount = 2,
-					.OutputWindow = rdr.DummyHwnd(),
+					.OutputWindow = m_hwnd_dummy,
 					.Windowed = TRUE,
 					.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 					.Flags = s_cast<DXGI_SWAP_CHAIN_FLAG>(0),

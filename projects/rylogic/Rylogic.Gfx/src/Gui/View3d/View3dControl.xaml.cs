@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -321,16 +321,30 @@ namespace Rylogic.Gui.WPF
 			get => m_default_keyshortcuts;
 			set
 			{
-				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts))))
+				if (DefaultKeyboardShortcuts == value)
+					return;
+
+				if (m_default_keyshortcuts)
 				{
 					KeyDown -= HandleKeyDown;
-					if (!(m_default_keyshortcuts = value)) return;
+					PreviewKeyDown -= HandlePreviewKeyDown;
+				}
+				m_default_keyshortcuts = value;
+				if (m_default_keyshortcuts)
+				{
 					KeyDown += HandleKeyDown;
-
-					void HandleKeyDown(object sender, KeyEventArgs args)
-					{
-						args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
-					}
+					PreviewKeyDown += HandlePreviewKeyDown;
+				}
+				
+				NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts));
+				
+				void HandlePreviewKeyDown(object sender, KeyEventArgs args)
+				{
+					args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
+				}
+				void HandleKeyDown(object sender, KeyEventArgs args)
+				{
+					args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
 				}
 			}
 		}
@@ -342,18 +356,26 @@ namespace Rylogic.Gui.WPF
 			get => m_mouse_navigation;
 			set
 			{
-				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(MouseNavigation))))
+				if (MouseNavigation == value)
+					return;
+
+				if (m_mouse_navigation)
 				{
 					MouseDown -= OnMouseDown;
 					MouseUp -= OnMouseUp;
 					MouseMove -= OnMouseMove;
 					MouseWheel -= OnMouseWheel;
-					if (!(m_mouse_navigation = value)) return;
+				}
+				m_mouse_navigation = value;
+				if (m_mouse_navigation)
+				{
 					MouseWheel += OnMouseWheel;
 					MouseMove += OnMouseMove;
 					MouseUp += OnMouseUp;
 					MouseDown += OnMouseDown;
 				}
+
+				NotifyPropertyChanged(nameof(MouseNavigation));
 			}
 		}
 		private bool m_mouse_navigation;

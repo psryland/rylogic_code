@@ -13,32 +13,48 @@
 
 namespace pr
 {
+	// A basic wrapper of an HWND for a dummy window
 	struct DummyWindow
 	{
+	protected:
+
+		static inline wchar_t const* DummyWndClassName = L"Rylogic-DummyWindow";
+
 		HINSTANCE m_hinstance;
 		HWND m_hwnd;
 
-	private:
+		// WndProc for the dummy window
+		virtual LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+		{
+			WindowEventArgs args = {hwnd, message, wparam, lparam, false};
+			Message(*this, args);
 
-		static inline wchar_t const* DummyWndClassName = L"Rylogic-DummyWindow";
-		static UINT const WM_BeginInvoke = WM_USER + 0x1976;
-
-		using TaskQueue = std::vector<std::future<void>>;
-		std::mutex m_mutex_task_queue;
-		TaskQueue m_task_queue;
-		DWORD m_main_thread_id;
-		bool m_last_task;
+			return DefWindowProcW(hwnd, message, wparam, lparam);
+		}
+		static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+		{
+			DummyWindow* self;
+			if (message == WM_NCCREATE) 
+			{
+				auto cp = reinterpret_cast<LPCREATESTRUCT>(lparam);
+				self = reinterpret_cast<DummyWindow*>(cp->lpCreateParams);
+				SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(self));
+				self->m_hwnd = hwnd;
+			} 
+			else
+			{
+				self = reinterpret_cast<DummyWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+			}
+			return self
+				? self->WndProc(hwnd, message, wparam, lparam)
+				: DefWindowProcW(hwnd, message, wparam, lparam);
+		}
 
 	public:
 
 		DummyWindow(HINSTANCE hinstance = nullptr)
 			:m_hinstance(hinstance ? hinstance : GetModuleHandleW(nullptr))
 			,m_hwnd()
-			,m_mutex_task_queue()
-			,m_task_queue()
-			,m_main_thread_id(GetCurrentThreadId())
-			,m_last_task()
-		
 		{
 			try
 			{
@@ -76,6 +92,10 @@ namespace pr
 				throw;
 			}
 		}
+		DummyWindow(DummyWindow&&) = delete;
+		DummyWindow(DummyWindow const&) = delete;
+		DummyWindow& operator =(DummyWindow&&) = delete;
+		DummyWindow& operator =(DummyWindow const&) = delete;
 		~DummyWindow()
 		{
 			if (m_hwnd != nullptr)
@@ -84,11 +104,18 @@ namespace pr
 				m_hwnd = nullptr;
 			}
 
-			// Un-register the dummy window class
-			::UnregisterClassW(DummyWndClassName, m_hinstance);
+			// Don't unregister the dummy window class, there might be multiple dummy windows around
 		}
-		DummyWindow(DummyWindow const&) = delete;
-		DummyWindow& operator =(DummyWindow const&) = delete;
+
+		// Window handle access
+		HWND Hwnd() const
+		{
+			return m_hwnd;
+		}
+		operator HWND() const
+		{
+			return Hwnd();
+		}
 
 		// Pump the message queue on this window. Returns false if WM_QUIT is received
 		bool Pump()
@@ -103,10 +130,40 @@ namespace pr
 			return true;
 		}
 
-		/// <summary>Window message received</summary>
+		// Window message received
 		pr::EventHandler<DummyWindow&, WindowEventArgs&> Message;
+	};
 
-		// Pump the message queue for this window
+	// Dummy window with support for tasks
+	class SyncContext : public DummyWindow
+	{
+		static UINT const WM_BeginInvoke = WM_USER + 0x1976;
+		using TaskQueue = std::vector<std::future<void>>;
+
+		std::mutex m_mutex_task_queue;
+		TaskQueue m_task_queue;
+		DWORD m_main_thread_id;
+		bool m_last_task;
+
+	public:
+
+		SyncContext(HINSTANCE hinstance = nullptr)
+			: DummyWindow(hinstance)
+			, m_mutex_task_queue()
+			, m_task_queue()
+			, m_main_thread_id(GetCurrentThreadId())
+			, m_last_task()
+		{}
+		SyncContext(SyncContext&&) = delete;
+		SyncContext(SyncContext const&) = delete;
+		SyncContext& operator =(SyncContext&&) = delete;
+		SyncContext& operator =(SyncContext const&) = delete;
+		~SyncContext()
+		{
+			LastTask();
+		}
+
+		// Queue a task on the thread that calls 'RunTasks'
 		template <typename Func, typename... Args>
 		void BeginInvoke(Func&& func, Args&&... args)
 		{
@@ -118,7 +175,11 @@ namespace pr
 		{
 			{
 				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
-				if (m_last_task) return; // Don't add further tasks after 'LastTask' has been called.
+
+				// Don't add further tasks after 'LastTask' has been called.
+				if (m_last_task)
+					return;
+
 				m_task_queue.emplace_back(std::async(policy, func, args...));
 			}
 
@@ -182,45 +243,18 @@ namespace pr
 			RunTasks();
 		}
 
-	private:
+	protected:
 
 		// WndProc for the dummy window
-		LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+		LRESULT WndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) override
 		{
-			switch (message)
+			if (message == WM_BeginInvoke)
 			{
-				case WM_BeginInvoke:
-				{
-					auto& self = *reinterpret_cast<DummyWindow*>(wparam);
-					self.RunTasks();
-					break;
-				}
-				default:
-				{
-					WindowEventArgs args = {hwnd, message, wparam, lparam, false};
-					Message(*this, args);
-					break;
-				}
+				auto& self = *reinterpret_cast<SyncContext*>(wparam);
+				self.RunTasks();
+				return S_OK;
 			}
-			return DefWindowProcW(hwnd, message, wparam, lparam);
-		}
-		static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
-		{
-			DummyWindow* self;
-			if (message == WM_NCCREATE) 
-			{
-				auto cp = reinterpret_cast<LPCREATESTRUCT>(lparam);
-				self = reinterpret_cast<DummyWindow*>(cp->lpCreateParams);
-				SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(self));
-				self->m_hwnd = hwnd;
-			} 
-			else
-			{
-				self = reinterpret_cast<DummyWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-			}
-			return self
-				? self->WndProc(hwnd, message, wparam, lparam)
-				: DefWindowProcW(hwnd, message, wparam, lparam);
+			return DummyWindow::WndProc(hwnd, message, wparam, lparam);
 		}
 	};
 }
@@ -231,8 +265,8 @@ namespace pr::win32
 {
 	PRUnitTest(DummyWindowTests)
 	{
-		DummyWindow dw0;
-		DummyWindow dw1;
+		SyncContext dw0;
+		SyncContext dw1;
 	}
 }
 #endif

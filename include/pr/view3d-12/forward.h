@@ -112,6 +112,7 @@
 #include "pr/gui/gdiplus.h"
 #include "pr/win32/win32.h"
 #include "pr/win32/key_codes.h"
+#include "pr/win32/dummy_window.h"
 #include "pr/script/reader.h"
 #include "pr/script/embedded.h"
 

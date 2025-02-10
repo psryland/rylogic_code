@@ -542,10 +542,12 @@ namespace pr::rdr12
 			float const screen_fraction = 0.05f;
 			auto aspect_v = float(m_scene.m_viewport.Width) / float(m_scene.m_viewport.Height);
 
-			// Create a camera with the same aspect as the viewport
-			auto v_camera = m_scene.m_cam;
+			// Get the scene camera
 			auto& scene_cam = m_scene.m_cam;
 			auto fd = scene_cam.FocusDist();
+
+			// Create a camera with the same aspect as the viewport
+			auto v_camera = m_scene.m_cam;
 			v_camera.Aspect(aspect_v);
 
 			// Get the scaling factors from 'm_camera' to 'v_camera'
@@ -570,7 +572,7 @@ namespace pr::rdr12
 			if (AllSet(m_visible_objects, EStockObject::OriginPoint))
 			{
 				// Scale the camera space X,Y coordinates
-				auto pt_cs = scene_cam.WorldToCamera() * v4Origin;
+				auto pt_cs = scene_cam.WorldToCamera() * v4::Origin();
 				pt_cs.x *= viewarea_v.x / viewarea_c.x;
 				pt_cs.y *= viewarea_v.y / viewarea_c.y;
 				auto pt_ws = scene_cam.CameraToWorld() * pt_cs;

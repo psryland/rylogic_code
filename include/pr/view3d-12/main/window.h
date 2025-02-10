@@ -34,6 +34,7 @@ namespace pr::rdr12
 
 		Renderer*                    m_rdr;              // The owning renderer
 		HWND                         m_hwnd;             // The window handle this window is bound to
+		DummyWindow                  m_hwnd_dummy;       // A dummy window handle for debug and message queues
 		DXGI_SWAP_CHAIN_FLAG         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 		D3DPtr<IDXGISwapChain>       m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
 		D3DPtr<IDXGISwapChain3>      m_swap_chain;       // The swap chain bound to the window handle
