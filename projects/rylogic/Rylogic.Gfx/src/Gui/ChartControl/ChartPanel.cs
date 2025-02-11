@@ -32,17 +32,17 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		protected override void OnRenderTargetChanged()
 		{
 			base.OnRenderTargetChanged();
-			var chart = Chart;
-			if (chart != null)
-			{
-				// If the aspect is locked, resizing the render target zooms in/out.
-				// Otherwise, change the camera position so that the range is preserved.
-				if (chart.LockAspect)
-					chart.SetRangeFromCamera();
-				else
-					chart.SetCameraFromRange();
-				Invalidate();
-			}
+			if (Chart == null)
+				return;
+
+			// If the aspect is locked, resizing the render target zooms in/out.
+			// Otherwise, change the camera position so that the range is preserved.
+			if (Chart.LockAspect)
+				Chart.SetRangeFromCamera();
+			else
+				Chart.SetCameraFromRange();
+
+			Invalidate();
 		}
 
 		/// <inheritdoc/>

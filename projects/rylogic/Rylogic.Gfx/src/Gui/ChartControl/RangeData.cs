@@ -160,7 +160,7 @@ namespace Rylogic.Gui.WPF
 			}
 			private ChartMovedEventArgs? m_moved_args;
 
-			/// <summary>A axis on the chart (typically X or Y)</summary>
+			/// <summary>An axis on the chart (typically X or Y)</summary>
 			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
 			public sealed class Axis : IDisposable, INotifyPropertyChanged
 			{
