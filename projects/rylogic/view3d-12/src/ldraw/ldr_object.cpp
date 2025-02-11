@@ -1314,12 +1314,9 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Validate
-			if (m_verts.size() < 1)
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
+			// No points = no model
+			if (m_verts.empty())
 				return;
-			}
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1414,12 +1411,9 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Validate
+			// No points = no model
 			if (m_verts.size() < 2)
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
-			}
 
 			// Convert lines to dashed lines
 			if (m_dashed != v2XAxis)
@@ -1516,12 +1510,9 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Validate
+			// No points = no model
 			if (m_verts.size() < 2)
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
-			}
 
 			// Convert lines to dashed lines
 			if (m_dashed != v2XAxis)
@@ -1622,8 +1613,7 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Allow line strips to have 0 or 1 point because they are a created from
-			// lists of points and treating 0 or 1 as a special case is inconvenient
+			// No points = no model
 			if (m_verts.size() < 2)
 				return;
 
@@ -1732,12 +1722,9 @@ namespace pr::rdr12
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Validate
+			// No points = no model
 			if (m_verts.empty())
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
-			}
 
 			// Convert lines to dashed lines
 			if (m_dashed != v2XAxis)
