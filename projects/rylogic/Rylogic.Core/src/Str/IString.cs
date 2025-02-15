@@ -44,7 +44,8 @@ namespace Rylogic.Str
 		public IEnumerable<IString> Split(Func<IString, int, int> pred)
 		{
 			if (Length == 0) yield break;
-			for (int s = 0, e, end = Length;;)
+			int s = 0, e, end = Length;
+			for (;;)
 			{
 				int sep_len = 0;
 				for (e = s; e != end && (sep_len = pred(this,e)) < 0; ++e) {}

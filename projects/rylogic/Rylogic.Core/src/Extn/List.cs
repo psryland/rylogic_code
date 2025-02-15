@@ -365,7 +365,8 @@ namespace Rylogic.Extn
 			if (list.Count == 0)
 				yield break;
 
-			for (int s = 0, e, end = list.Count; ;)
+			int s = 0, e, end = list.Count;
+			for (;;)
 			{
 				// Find the next delimiter
 				var len = 0;
