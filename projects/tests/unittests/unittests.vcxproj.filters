@@ -129,6 +129,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\scatter.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
@@ -235,6 +238,9 @@
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\filewatch.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_snapshot.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\expr_eval.h">
@@ -1061,9 +1067,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite3</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\filesys\file_snapshot.h">
-      <Filter>pr\filesys</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

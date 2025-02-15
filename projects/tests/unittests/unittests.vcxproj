@@ -211,6 +211,7 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\point.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\reflect.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\geometry\scatter.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\tetramesh.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\triangle.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\geometry\unit_tests.h" />

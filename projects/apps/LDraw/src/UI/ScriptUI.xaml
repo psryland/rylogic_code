@@ -45,6 +45,7 @@
 		</ResourceDictionary>
 	</UserControl.Resources>
 
+	<!-- These are acting globally... they need to be only when the dockable has focus
 	<UserControl.InputBindings>
 		<KeyBinding Command="{Binding Render}" Key="F5"/>
 		<KeyBinding Command="{Binding SaveScript}" Key="S" Modifiers="Ctrl"/>
@@ -53,6 +54,7 @@
 		<KeyBinding Command="{Binding CommentOutSelection}" Key="K" Modifiers="Ctrl"/>
 		<KeyBinding Command="{Binding UncommentSelection}" Key="K" Modifiers="Shift+Ctrl"/>
 	</UserControl.InputBindings>
+	-->
 	
 	<Grid>
 		<Grid.RowDefinitions>
