@@ -59,6 +59,13 @@ namespace pr::log
 		TerminationSentinel,
 	};
 
+	// Log message behaviour
+	enum class EMode
+	{
+		Async,
+		Immediate,
+	};
+
 	// Timer
 	using RTC = std::chrono::high_resolution_clock;
 	inline std::string ToString(RTC::duration ts)
@@ -216,204 +223,256 @@ namespace pr::log
 		}
 	};
 
+	// Interface for a shared log context
+	struct IContext
+	{
+		// The time point when logging started
+		log::RTC::time_point const m_time_zero;
+
+		IContext()
+			: m_time_zero(log::RTC::now())
+		{
+		}
+
+		// Enable/Disable immediate mode.
+		// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+		// by the background thread. Useful when you want the log to be written in sync with debugging.
+		virtual void WriteMode(EMode mode) = 0;
+
+		// Queue a log event for writing to the log callback function
+		virtual void Enqueue(log::Event&& ev) = 0;
+
+		// Pull an event from the queue of log events
+		virtual bool Dequeue(log::Event& ev) = 0;
+
+		// Wait for all log events to be flushed (all at the time of calling)
+		virtual void Flush() {}
+	};
+
+	// Logger context. A single Context is shared by many instances of Logger
+	template <std::invocable<Event> OutputCB>
+	class Context : public IContext
+	{
+		friend struct Logger;
+			
+		// Producer/Consumer queue for log events
+		using log_queue_t = concurrency::concurrent_queue<log::Event>;
+
+		// Queue of log events to report
+		log_queue_t m_queue;
+
+		// A signal for when a log event is added to the queue
+		std::condition_variable m_cv_queue;
+		std::mutex m_mutex;
+			
+		// A signal for when a fence message is reached in the log
+		std::condition_variable m_cv_fence;
+		std::atomic_int m_fence;
+
+		// A callback function used in immediate mode
+		OutputCB m_output_cb;
+		EMode m_mode;
+
+		// The worker thread that forwards log events to the callback function
+		std::thread m_thread;
+
+		// Workaround for "this used in initializer list" warning
+		Context& this_() { return *this; }
+
+		// Thread entry point for consuming log events
+		template <std::invocable<Event> OutputCB>
+		static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size = 0)
+		{
+			using namespace std::chrono;
+			try
+			{
+				SetThreadName(L"pr::Logger::LogConsumerThread");
+
+				log::Event ev, prev;
+				for (;;)
+				{
+					// Wait for an event to arrive
+					{
+						std::unique_lock<std::mutex> lock(ctx.m_mutex);
+						ctx.m_cv_queue.wait(lock, [&] { return ctx.Dequeue(ev); });
+					}
+
+					// Is it the same as the prevent event
+					auto is_same = log::Event::Same(ev, prev);
+
+					// Same event as last time? add it to the batch
+					if (is_same && prev.m_occurrences < occurrences_batch_size)
+					{
+						++prev.m_occurrences;
+						prev.m_timestamp = ev.m_timestamp;
+						continue;
+					}
+
+					// Have events been batched? Report them now
+					if (prev.m_occurrences != 0)
+					{
+						log_cb(prev);
+						prev.m_occurrences = 0;
+					}
+
+					// Start of the next batch (and batching is enabled)? Add it to the batch
+					if (is_same && occurrences_batch_size != 0)
+					{
+						prev.m_occurrences = 1;
+						prev.m_timestamp = ev.m_timestamp;
+						continue;
+					}
+
+					// Control event?
+					switch (ev.m_event_type)
+					{
+						case log::EEventType::TerminationSentinel:
+						{
+							ctx.m_fence = ev.m_event_data;
+							ctx.m_cv_fence.notify_all();
+							return;
+						}
+						case log::EEventType::Fence:
+						{
+							ctx.m_fence = ev.m_event_data;
+							ctx.m_cv_fence.notify_all();
+							continue;
+						}
+						case log::EEventType::Normal:
+						{
+							// Log the event to the output
+							log_cb(ev);
+							prev = ev;
+							prev.m_occurrences = 0;
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Unknown control event type");
+						}
+					}
+				}
+			}
+			catch (...)
+			{
+				assert(!"Unknown exception in log thread");
+			}
+		}
+
+		// Set the name of the current thread
+		static void SetThreadName(wchar_t const* name)
+		{
+			// Call 'SetThreadDescription'. 'SetThreadDescription' only exists on >= Win10
+			if (auto kernal32 = ::LoadLibraryW(L"kernel32.dll"))
+			{
+				using GetCurrentThreadFn = HANDLE(__stdcall*)();
+				using SetThreadDescriptionFn = HRESULT(__stdcall*)(HANDLE hThread, PCWSTR lpThreadDescription);
+
+				auto SetThreadDescription = reinterpret_cast<SetThreadDescriptionFn>(GetProcAddress(kernal32, "SetThreadDescription"));
+				auto GetCurrentThread = reinterpret_cast<GetCurrentThreadFn>(GetProcAddress(kernal32, "GetCurrentThread"));
+				if (SetThreadDescription && GetCurrentThread)
+					SetThreadDescription(GetCurrentThread(), &name[0]);
+
+				::FreeLibrary(kernal32);
+				return;
+			}
+		}
+
+	public:
+
+		Context(OutputCB log_cb, EMode mode, int occurrences_batch_size)
+			: IContext()
+			, m_queue()
+			, m_cv_queue()
+			, m_cv_fence()
+			, m_mutex()
+			, m_fence()
+			, m_output_cb(log_cb)
+			, m_mode(mode)
+			, m_thread(LogConsumerThread<OutputCB>, std::ref(this_()), log_cb, occurrences_batch_size)
+		{}
+		~Context()
+		{
+			m_mode = EMode::Async;
+			Enqueue(log::Event(log::EEventType::TerminationSentinel));
+			if (m_thread.joinable())
+				m_thread.join();
+		}
+
+		// Enable/Disable immediate mode.
+		// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+		// by the background thread. Useful when you want the log to be written in sync with debugging.
+		void WriteMode(EMode mode) override
+		{
+			m_mode = mode;
+		}
+
+		// Queue a log event for writing to the log callback function
+		void Enqueue(log::Event&& ev) override
+		{
+			// Immediate mode?
+			if (m_mode == EMode::Immediate)
+			{
+				m_output_cb(ev);
+				return;
+			}
+
+			// Otherwise queue the log event for the background thread
+			m_queue.push(std::move(ev));
+			m_cv_queue.notify_all();
+		}
+
+		// Pull an event from the queue of log events
+		bool Dequeue(log::Event& ev) override
+		{
+			return m_queue.try_pop(ev);
+		}
+
+		// Wait for all log events to be flushed (all at the time of calling)
+		void Flush() override
+		{
+			auto fence = log::Event(log::EEventType::Fence);
+			m_queue.push(fence);
+
+			std::unique_lock<std::mutex> lock(m_mutex);
+			m_cv_fence.wait(lock, [&]{ return m_fence >= fence.m_event_data; });
+		}
+	};
+
+	// Null context for disabled logging
+	class NullContext : public IContext
+	{
+	public:
+
+		// Default for disabled logging
+		inline static std::shared_ptr<NullContext> const Instance = {};
+
+		// Enable/Disable immediate mode.
+		// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
+		// by the background thread. Useful when you want the log to be written in sync with debugging.
+		void WriteMode(EMode) override
+		{
+		}
+
+		// Queue a log event for writing to the log callback function
+		void Enqueue(log::Event&&) override
+		{
+		}
+
+		// Pull an event from the queue of log events
+		bool Dequeue(log::Event&) override
+		{
+			return false;
+		}
+	};
+
 	// Provides logging support
 	struct Logger
 	{
 		using OutputCB = std::function<void(log::Event const&)>;
 
-		// Logger context. A single Context is shared by many instances of Logger
-		class Context
-		{
-			friend struct Logger;
-			
-			// Producer/Consumer queue for log events
-			using log_queue_t = concurrency::concurrent_queue<log::Event>;
-
-			// The time point when logging started
-			log::RTC::time_point const m_time_zero;
-
-			// Queue of log events to report
-			log_queue_t m_queue;
-
-			// A signal for when a log event is added to the queue
-			std::condition_variable m_cv_queue;
-			std::mutex m_mutex;
-			
-			// A signal for when a fence message is reached in the log
-			std::condition_variable m_cv_fence;
-			std::atomic_int m_fence;
-
-			// A callback function used in immediate mode
-			OutputCB m_output_cb;
-			bool m_immediate;
-
-			// The worker thread that forwards log events to the callback function
-			std::thread m_thread;
-
-			// Workaround for "this used in initializer list" warning
-			Context& this_() { return *this; }
-
-			// Thread entry point for consuming log events
-			template <typename OutputCB>
-			static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size = 0)
-			{
-				using namespace std::chrono;
-				try
-				{
-					SetThreadName(L"pr::Logger::LogConsumerThread");
-
-					log::Event ev, prev;
-					for (;;)
-					{
-						// Wait for an event to arrive
-						{
-							std::unique_lock<std::mutex> lock(ctx.m_mutex);
-							ctx.m_cv_queue.wait(lock, [&] { return ctx.Dequeue(ev); });
-						}
-
-						// Is it the same as the prevent event
-						auto is_same = log::Event::Same(ev, prev);
-
-						// Same event as last time? add it to the batch
-						if (is_same && prev.m_occurrences < occurrences_batch_size)
-						{
-							++prev.m_occurrences;
-							prev.m_timestamp = ev.m_timestamp;
-							continue;
-						}
-
-						// Have events been batched? Report them now
-						if (prev.m_occurrences != 0)
-						{
-							log_cb(prev);
-							prev.m_occurrences = 0;
-						}
-
-						// Start of the next batch (and batching is enabled)? Add it to the batch
-						if (is_same && occurrences_batch_size != 0)
-						{
-							prev.m_occurrences = 1;
-							prev.m_timestamp = ev.m_timestamp;
-							continue;
-						}
-
-						// Control event?
-						switch (ev.m_event_type)
-						{
-							case log::EEventType::TerminationSentinel:
-							{
-								ctx.m_fence = ev.m_event_data;
-								ctx.m_cv_fence.notify_all();
-								return;
-							}
-							case log::EEventType::Fence:
-							{
-								ctx.m_fence = ev.m_event_data;
-								ctx.m_cv_fence.notify_all();
-								continue;
-							}
-							case log::EEventType::Normal:
-							{
-								// Log the event to the output
-								log_cb(ev);
-								prev = ev;
-								prev.m_occurrences = 0;
-								break;
-							}
-							default:
-							{
-								throw std::runtime_error("Unknown control event type");
-							}
-						}
-					}
-				}
-				catch (...)
-				{
-					assert(!"Unknown exception in log thread");
-				}
-			}
-
-			// Set the name of the current thread
-			static void SetThreadName(wchar_t const* name)
-			{
-				// Call 'SetThreadDescription'. 'SetThreadDescription' only exists on >= Win10
-				if (auto kernal32 = ::LoadLibraryW(L"kernel32.dll"))
-				{
-					using GetCurrentThreadFn = HANDLE(__stdcall*)();
-					using SetThreadDescriptionFn = HRESULT(__stdcall*)(HANDLE hThread, PCWSTR lpThreadDescription);
-
-					auto SetThreadDescription = reinterpret_cast<SetThreadDescriptionFn>(GetProcAddress(kernal32, "SetThreadDescription"));
-					auto GetCurrentThread = reinterpret_cast<GetCurrentThreadFn>(GetProcAddress(kernal32, "GetCurrentThread"));
-					if (SetThreadDescription && GetCurrentThread)
-						SetThreadDescription(GetCurrentThread(), &name[0]);
-
-					::FreeLibrary(kernal32);
-					return;
-				}
-			}
-		public:
-
-			Context(OutputCB log_cb, int occurrences_batch_size)
-				: m_time_zero(log::RTC::now())
-				, m_queue()
-				, m_cv_queue()
-				, m_cv_fence()
-				, m_mutex()
-				, m_fence()
-				, m_output_cb(log_cb)
-				, m_immediate()
-				, m_thread(LogConsumerThread<OutputCB>, std::ref(this_()), log_cb, occurrences_batch_size)
-			{}
-			~Context()
-			{
-				m_immediate = false;
-				Enqueue(log::Event(log::EEventType::TerminationSentinel));
-				if (m_thread.joinable())
-					m_thread.join();
-			}
-
-			// Enable/Disable immediate mode.
-			// In immediate mode, log events are written to 'log_cb' instead of being queued for processing
-			// by the background thread. Useful when you want the log to be written in sync with debugging.
-			void ImmediateWrite(bool enabled)
-			{
-				m_immediate = enabled;
-			}
-
-			// Queue a log event for writing to the log callback function
-			void Enqueue(log::Event&& ev)
-			{
-				// Immediate mode?
-				if (m_immediate)
-				{
-					m_output_cb(ev);
-					return;
-				}
-
-				// Otherwise queue the log event for the background thread
-				m_queue.push(std::move(ev));
-				m_cv_queue.notify_all();
-			}
-
-			// Pull an event from the queue of log events
-			bool Dequeue(log::Event& ev)
-			{
-				return m_queue.try_pop(ev);
-			}
-
-			// Wait for all log events to be flushed (all at the time of calling)
-			void Flush()
-			{
-				auto fence = log::Event(log::EEventType::Fence);
-				m_queue.push(fence);
-
-				std::unique_lock<std::mutex> lock(m_mutex);
-				m_cv_fence.wait(lock, [&]{ return m_fence >= fence.m_event_data; });
-			}
-		};
-
 		// The shared Context that this instance references
-		std::shared_ptr<Context> m_context;
+		std::shared_ptr<IContext> m_context;
 
 		// An id to use in log messages
 		std::string Tag;
@@ -421,14 +480,20 @@ namespace pr::log
 		// On/Off switch for logging
 		std::atomic_bool Enabled;
 
-		Logger(std::string_view tag, OutputCB log_cb, int occurrences_batch_size = 0)
-			:m_context(new Context(log_cb, occurrences_batch_size))
-			,Tag(tag)
-			,Enabled()
+		Logger()
+			: m_context(NullContext::Instance)
+			, Tag()
+			, Enabled()
+		{
+		}
+		Logger(std::string_view tag, OutputCB log_cb, EMode mode, int occurrences_batch_size = 0)
+			: m_context(new Context(log_cb, mode, occurrences_batch_size))
+			, Tag(tag)
+			, Enabled()
 		{
 			Enabled = true;
 		}
-		Logger(Logger const& rhs, std::string_view tag)
+		Logger(std::string_view tag, Logger const& rhs)
 			:m_context(rhs.m_context)
 			,Tag(tag)
 			,Enabled()
@@ -441,7 +506,7 @@ namespace pr::log
 		Logger& operator =(Logger const&) = delete;
 
 		// Access to the shared logger context
-		Context& SharedContext() const
+		IContext& SharedContext() const
 		{
 			return *m_context;
 		}
@@ -488,6 +553,13 @@ namespace pr::log
 	{
 		std::string str;
 
+		{// Null log instance
+			Logger log1;
+			Logger log2("test", log1);
+
+			log2.Write(ELevel::Debug, "event 1");
+			log2.Flush();
+		}
 		{// Single instance
 			str.resize(0);
 			Logger log("test", [&](Event const& ev)
@@ -495,7 +567,7 @@ namespace pr::log
 				std::stringstream s;
 				s << log::ToString(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << "," << ev.m_occurrences << std::endl;
 				str += s.str();
-			}, 0);
+			}, EMode::Async, 0);
 			log.Write(ELevel::Debug, "event 1");
 			log.Flush();
 			PR_EXPECT(str == "Debug,test: event 1,1\n");
@@ -507,8 +579,8 @@ namespace pr::log
 				std::stringstream s;
 				s << log::ToString(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << "," << ev.m_occurrences << std::endl;
 				str += s.str();
-			}, 0);
-			Logger log2(log1, "log2");
+			}, EMode::Async, 0);
+			Logger log2("log2", log1);
 
 			log1.Write(ELevel::Info, "event 1");
 			log2.Write(ELevel::Debug, "event 2");
