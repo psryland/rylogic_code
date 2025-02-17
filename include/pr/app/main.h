@@ -67,7 +67,7 @@ namespace pr::app
 		// Construct using a template set up object.
 		template <typename Setup>
 		Main(Setup setup, MainUI& ui)
-			:m_log(Derived::AppName(), LoggerOutput())
+			:m_log(Derived::AppName(), LoggerOutput(), log::EMode::Async)
 			,m_settings(setup.UserSettings())
 			,m_rdr(setup.RdrSettings())
 			,m_window(m_rdr, setup.RdrWindowSettings(ui))
