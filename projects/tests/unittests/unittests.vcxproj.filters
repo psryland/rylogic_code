@@ -807,6 +807,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h">
       <Filter>pr\network</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
