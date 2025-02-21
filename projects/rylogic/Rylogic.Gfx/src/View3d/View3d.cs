@@ -623,56 +623,35 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Nugget
 		{
+			[StructLayout(LayoutKind.Sequential)]
+			public struct Shader(ERenderStep rdr_step, HShader shader)
+			{
+				public HShader m_shader = shader;
+				public ERenderStep m_rdr_step = rdr_step;
+				public int pad;
+			}
+
 			public ETopo m_topo;           // Model topology
 			public EGeom m_geom;           // Model geometry type
-			public int m_v0, m_v1;         // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public int m_i0, m_i1;         // Index buffer range. Set to 0,0 to mean the whole buffer
+			public int m_v0, m_v1;         // Vertex buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
+			public int m_i0, m_i1;         // Index buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
 			public HTexture m_tex_diffuse; // Diffuse texture
 			public HSampler m_sam_diffuse; // Sampler for the diffuse texture
-			public Shaders m_shaders;      // Shader overrides for this nugget
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+			public Shader[] m_shaders;     // Shader overrides for this nugget
 			public ENuggetFlag m_nflags;   // Nugget flags (ENuggetFlag)
 			public ECullMode m_cull_mode;  // Face culling mode
 			public EFillMode m_fill_mode;  // Model fill mode
 			public Colour32 m_tint;        // Tint colour
 			public float m_rel_reflec;     // How reflective this nugget is relative to the over all model
 
-			[StructLayout(LayoutKind.Sequential)] public struct Shader(ERenderStep rdr_step, HShader shader)
-			{
-				public ERenderStep m_rdr_step = rdr_step;
-				public HShader m_shader = shader;
-			}
-			[StructLayout(LayoutKind.Sequential)] public struct Shaders(IntPtr shaders, long count)
-			{
-				public IntPtr m_shaders = shaders;
-				public long m_count = count;
-			}
-			public class ShaderList : IDisposable
-			{
-				private readonly Shader[] m_shaders;
-				private readonly GCHandle m_gchandle;
-				public ShaderList(IEnumerable<Shader> shaders)
-				{
-					m_shaders = shaders.ToArray();
-					m_gchandle = GCHandle.Alloc(m_shaders, GCHandleType.Pinned);
-				}
-				public void Dispose()
-				{
-					if (m_gchandle.IsAllocated)
-						m_gchandle.Free();
-				}
-				public Shaders Pin()
-				{
-					return new Shaders(m_gchandle.AddrOfPinnedObject(), m_shaders.Length);
-				}
-			}
-
 			public Nugget(
 				ETopo topo, EGeom geom,
-				int v0 = 0, int v1 = -1,
-				int i0 = 0, int i1 = -1,
+				int v0 = 0, int v1 = 0,
+				int i0 = 0, int i1 = 0,
 				HTexture? tex_diffuse = null,
 				HSampler? sam_diffuse = null,
-				ShaderList? shaders = null,
+				Shader[]? shaders = null,
 				ENuggetFlag? flags = null,
 				ECullMode? cull_mode = null,
 				EFillMode? fill_mode = null,
@@ -687,7 +666,7 @@ namespace Rylogic.Gfx
 				m_i1 = i1;
 				m_tex_diffuse = tex_diffuse ?? IntPtr.Zero;
 				m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;
-				m_shaders = shaders?.Pin() ?? new Shaders();
+				m_shaders = shaders ?? new Shader[8];
 				m_nflags = flags ?? ENuggetFlag.None;
 				m_cull_mode = cull_mode ?? ECullMode.Default;
 				m_fill_mode = fill_mode ?? EFillMode.Default;

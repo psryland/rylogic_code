@@ -1434,7 +1434,7 @@ namespace pr::rdr12
 			{
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -1533,7 +1533,7 @@ namespace pr::rdr12
 			{
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -1663,7 +1663,7 @@ namespace pr::rdr12
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
 					nug.m_topo = line_strip ? ETopo::LineStripAdj : ETopo::LineList;
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 				}
 			}
 		}
@@ -1752,7 +1752,7 @@ namespace pr::rdr12
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -1849,7 +1849,7 @@ namespace pr::rdr12
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -1984,7 +1984,7 @@ namespace pr::rdr12
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
 					nug.m_topo = ETopo::LineStripAdj;
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 				}
 			}
 		}
@@ -2145,7 +2145,7 @@ namespace pr::rdr12
 				NuggetDesc nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
+				nug.m_shaders.push_back({arw_shdr, ERenderStep::RenderForward});
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
@@ -2157,7 +2157,7 @@ namespace pr::rdr12
 				NuggetDesc nug;
 				nug.m_topo = ETopo::LineStrip;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_shaders.push_back({ERenderStep::RenderForward, m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr()});
+				nug.m_shaders.push_back({m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr(), ERenderStep::RenderForward});
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
@@ -2170,7 +2170,7 @@ namespace pr::rdr12
 				NuggetDesc nug;
 				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_shaders.push_back({ERenderStep::RenderForward, arw_shdr});
+				nug.m_shaders.push_back({arw_shdr, ERenderStep::RenderForward});
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
@@ -2243,7 +2243,7 @@ namespace pr::rdr12
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -2318,7 +2318,7 @@ namespace pr::rdr12
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+					nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 			}
 		}
 	};
@@ -4197,7 +4197,7 @@ namespace pr::rdr12
 					// Get or create an instance of the thick line shader
 					auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
 					for (auto& nug : obj->m_model->m_nuggets)
-						nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
+						nug.m_shaders.push_back({shdr, ERenderStep::RenderForward});
 				}
 			}
 		}
