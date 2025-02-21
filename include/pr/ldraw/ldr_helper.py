@@ -101,6 +101,13 @@ class _LdrObj:
 		with open(path, 'w') as f:
 			f.write(self.ToString())
 
+	# Stream over a network connection to LDraw
+	def Transmit(self, host: str = "localhost", port: int = 7614):
+		
+		# Protocol:
+		#  1b - 
+		return
+	
 	# Recursively serialise this object to string 'ldr'
 	def _Serialise(self, ldr: List[str]):
 		self._NestedSerialize(ldr)
@@ -274,7 +281,7 @@ class _LdrO2W:
 		return f'*O2W{{*M4x4{{{self.m_o2w}}}}}'
 
 # Tests ---------------------------------------------------
-if False:
+if True:
 	builder = LdrBuilder()
 	ldr_group = builder.Group("Group", 0xFF0000FF)
 	ldr_points = ldr_group.Points("Points", 0xFF00FF00)

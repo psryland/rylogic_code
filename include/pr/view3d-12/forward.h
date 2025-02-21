@@ -114,6 +114,7 @@
 #include "pr/win32/key_codes.h"
 #include "pr/win32/dummy_window.h"
 #include "pr/script/reader.h"
+#include "pr/script/byte_reader.h"
 #include "pr/script/embedded.h"
 
 namespace pr::rdr12

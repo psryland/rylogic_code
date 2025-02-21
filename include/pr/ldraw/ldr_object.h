@@ -20,6 +20,7 @@
 #include "pr/maths/maths.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
+#include "pr/script/byte_reader.h"
 #include "pr/view3d/instances/instance.h"
 #include "pr/view3d/models/model_generator.h"
 

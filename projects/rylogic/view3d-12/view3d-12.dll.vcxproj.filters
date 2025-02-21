@@ -21,6 +21,9 @@
     <ClInclude Include="src\dll\v3d_window.h">
       <Filter>src\dll</Filter>
     </ClInclude>
+    <ClInclude Include="src\dll\streaming.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dll\context.cpp">
@@ -32,8 +35,8 @@
     <ClCompile Include="src\dll\v3d_window.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClCompile Include="src\dll\streaming.cpp">
+      <Filter>src\dll</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

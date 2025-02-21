@@ -7,6 +7,7 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/instance/instance.h"
+#include "pr/view3d-12/ldraw/ldr.h"
 
 namespace pr::rdr12
 {
@@ -94,6 +95,7 @@ namespace pr::rdr12
 		x(Colour          ,= HashI("Colour"              ))\
 		x(ForeColour      ,= HashI("ForeColour"          ))\
 		x(BackColour      ,= HashI("BackColour"          ))\
+		x(PerItemColour   ,= HashI("PerItemColour"       ))\
 		x(Font            ,= HashI("Font"                ))\
 		x(Stretch         ,= HashI("Stretch"             ))\
 		x(Underline       ,= HashI("Underline"           ))\
@@ -106,7 +108,7 @@ namespace pr::rdr12
 		x(CornerRadius    ,= HashI("CornerRadius"        ))\
 		x(RandColour      ,= HashI("RandColour"          ))\
 		x(ColourMask      ,= HashI("ColourMask"          ))\
-		x(Reflectivity    ,=HashI("Reflectivity"        ))\
+		x(Reflectivity    ,= HashI("Reflectivity"        ))\
 		x(Animation       ,= HashI("Animation"           ))\
 		x(Style           ,= HashI("Style"               ))\
 		x(Format          ,= HashI("Format"              ))\
@@ -180,7 +182,8 @@ namespace pr::rdr12
 		x(NonAffine       ,= HashI("NonAffine"           ))\
 		x(Source          ,= HashI("Source"              ))\
 		x(Data            ,= HashI("Data"                ))\
-		x(Series          ,= HashI("Series"              ))
+		x(Series          ,= HashI("Series"              ))\
+		x(EndSentinel     ,= HashI("EndSentinel"         ))
 	PR_DEFINE_ENUM2(EKeyword, PR_ENUM_LDRKEYWORDS);
 	#pragma endregion
 
@@ -603,6 +606,19 @@ namespace pr::rdr12
 	// Returns 'true' to continue parsing, false to abort parsing.
 	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>;
 
+	// Callback function for editing a dynamic model
+	// This callback is intentionally low level, providing the whole model for editing.
+	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
+	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
+
+	// Parse ldr objects from binary data
+	// The binary format mainly follows the text format
+	ParseResult Parse(
+		Renderer& rdr,
+		std::span<uint8_t const> stream,
+		Guid const& context_id = GuidZero,
+		ParseProgressCB progress_cb = nullptr);
+
 	// Parse the ldr script in 'reader' adding the results to 'out'.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
@@ -637,11 +653,6 @@ namespace pr::rdr12
 		std::wstring_view ldr_script,           // The string containing the script
 		Guid const& context_id = GuidZero,      // The context id to assign to each created object
 		ParseProgressCB progress_cb = nullptr); // Progress callback
-
-	// Callback function for editing a dynamic model
-	// This callback is intentionally low level, providing the whole model for editing.
-	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
 
 	// Create an LDR object from a string
 	LdrObjectPtr CreateLdr(

@@ -26,24 +26,9 @@
 
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
+#include "pr/container/byte_data.h"
 #include "pr/script/forward.h"
 #include "pr/storage/csv.h"
-
-//#include <string>
-//#include <sstream>
-//#include <array>
-//#include <unordered_set>
-//#include <unordered_map>
-//#include <optional>
-//#include <mutex>
-//#include "pr/ldraw/ldr_object.h"
-//#include "pr/common/assert.h"
-//#include "pr/common/hash.h"
-//#include "pr/maths/maths.h"
-//#include "pr/geometry/intersect.h"
-//#include "pr/filesys/filesys.h"
-//#include "pr/str/extract.h"
-//#include "pr/view3d/renderer.h"
 
 using namespace pr::script;
 
@@ -165,15 +150,16 @@ namespace pr::rdr12
 		//   command list.
 		using system_clock = std::chrono::system_clock;
 		using time_point = std::chrono::time_point<system_clock>;
+		using ReportErrorCB = std::function<bool(script::EResult, Loc const&, std::string_view)>;
 		using FontStack = pr::vector<Font>;
 		using GpuJob = GpuJob<D3D12_COMMAND_LIST_TYPE_DIRECT>;
 
 		Renderer&       m_rdr;
-		Reader&         m_reader;
 		ParseResult&    m_result;
 		ObjectCont&     m_objects;
 		ModelCont&      m_models;
 		ResourceFactory m_factory;
+		ReportErrorCB   m_report_error;
 		Guid            m_context_id;
 		Cache           m_cache;
 		ELdrObject      m_type;
@@ -185,41 +171,41 @@ namespace pr::rdr12
 		EFlags          m_flags;
 		bool&           m_cancel;
 
-		ParseParams(Renderer& rdr, Reader& reader, ParseResult& result, Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
-			:m_rdr(rdr)
-			,m_reader(reader)
-			,m_result(result)
-			,m_objects(result.m_objects)
-			,m_models(result.m_models)
-			,m_factory(rdr)
-			,m_context_id(context_id)
-			,m_cache()
-			,m_type(ELdrObject::Unknown)
-			,m_parent()
-			,m_parent_creator()
-			,m_font(1)
-			,m_progress_cb(progress_cb)
-			,m_last_progress_update(system_clock::now())
-			,m_flags(EFlags::None)
-			,m_cancel(cancel)
+		ParseParams(Renderer& rdr, ParseResult& result, Guid const& context_id, ReportErrorCB error_cb, ParseProgressCB progress_cb, bool& cancel)
+			: m_rdr(rdr)
+			, m_result(result)
+			, m_objects(result.m_objects)
+			, m_models(result.m_models)
+			, m_factory(rdr)
+			, m_report_error(error_cb)
+			, m_context_id(context_id)
+			, m_cache()
+			, m_type(ELdrObject::Unknown)
+			, m_parent()
+			, m_parent_creator()
+			, m_font(1)
+			, m_progress_cb(progress_cb)
+			, m_last_progress_update(system_clock::now())
+			, m_flags(EFlags::None)
+			, m_cancel(cancel)
 		{}
 		ParseParams(ParseParams& p, ObjectCont& objects, LdrObject* parent, IObjectCreator* parent_creator)
-			:m_rdr(p.m_rdr)
-			,m_reader(p.m_reader)
-			,m_result(p.m_result)
-			,m_objects(objects)
-			,m_models(p.m_models)
-			,m_factory(p.m_rdr)
-			,m_context_id(p.m_context_id)
-			,m_cache()
-			,m_type(ELdrObject::Unknown)
-			,m_parent(parent)
-			,m_parent_creator(parent_creator)
-			,m_font(p.m_font)
-			,m_progress_cb(p.m_progress_cb)
-			,m_last_progress_update(p.m_last_progress_update)
-			,m_flags(p.m_flags)
-			,m_cancel(p.m_cancel)
+			: m_rdr(p.m_rdr)
+			, m_result(p.m_result)
+			, m_objects(objects)
+			, m_models(p.m_models)
+			, m_factory(p.m_rdr)
+			, m_report_error(p.m_report_error)
+			, m_context_id(p.m_context_id)
+			, m_cache()
+			, m_type(ELdrObject::Unknown)
+			, m_parent(parent)
+			, m_parent_creator(parent_creator)
+			, m_font(p.m_font)
+			, m_progress_cb(p.m_progress_cb)
+			, m_last_progress_update(p.m_last_progress_update)
+			, m_flags(p.m_flags)
+			, m_cancel(p.m_cancel)
 		{}
 		ParseParams(ParseParams&&) = delete;
 		ParseParams(ParseParams const&) = delete;
@@ -227,10 +213,10 @@ namespace pr::rdr12
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
-		void ReportError(EScriptResult result, std::string msg = {})
+		void ReportError(EScriptResult result, std::string_view msg, Loc const& loc)
 		{
 			if (msg.empty()) msg = EScriptResult_::ToStringA(result);
-			m_reader.ReportError(result, m_reader.Location(), msg);
+			m_report_error(result, loc, msg);
 		}
 
 		// Give a progress update
@@ -248,96 +234,108 @@ namespace pr::rdr12
 
 			// Call the callback with the freshly minted object.
 			// If the callback returns false, abort parsing.
-			m_cancel = !m_progress_cb(m_context_id, m_result, m_reader.Location(), false);
+			m_cancel = !m_progress_cb(m_context_id, m_result, Location(), false);
 			m_last_progress_update = system_clock::now();
 		}
 	};
 
 	// Forward declare the recursive object parsing function
-	bool ParseLdrObject(ELdrObject type, ParseParams& p);
+	template <typename TReader> bool ParseLdrObject(ELdrObject type, TReader& reader, ParseParams& p);
 
 	#pragma region Parse Common Elements
 
 	// Read the name, colour, and instance flag for an object
-	ObjectAttributes ParseAttributes(ParseParams& p)
+	template <typename TReader> ObjectAttributes ParseAttributes(TReader& reader, ParseParams& p)
 	{
 		ObjectAttributes attr;
 		attr.m_type = p.m_type;
 		attr.m_name = "";
-			
-		// Read the next tokens up to the section start
-		wstring32 tok0, tok1; auto count = 0;
-		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok0, L"{}"); ++count; }
-		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok1, L"{}"); ++count; }
-		if (!p.m_reader.IsSectionStart())
-			p.ReportError(EScriptResult::UnknownToken, "object attributes are invalid");
 
-		switch (count)
+		if constexpr (std::is_same_v<TReader, script::Reader>)
 		{
-			case 2:
+			// Read the next tokens up to the section start
+			auto count = 0;
+			wstring32 tok0, tok1;
+			if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
+			if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
+			if (!reader.IsSectionStart())
+				p.ReportError(EScriptResult::UnknownToken, "object attributes are invalid", reader.Location());
+
+			switch (count)
 			{
-				// Expect: *Type <name> <colour>
-				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-					p.ReportError(EScriptResult::TokenNotFound, "object name is invalid");
-				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-					p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
-				p.m_flags |= EFlags::ExplicitName;
-				p.m_flags |= EFlags::ExplicitColour;
-				break;
-			}
-			case 1:
-			{
-				// Expect: *Type <name>  or *Type <colour>
-				// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
-				if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
+				case 2:
 				{
-					attr.m_name = "";
-					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
-						p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
-	
-					p.m_flags |= EFlags::ExplicitColour;
-				}
-				else
-				{
-					attr.m_colour = 0xFFFFFFFF;
+					// Expect: *Type <name> <colour>
 					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
 						p.ReportError(EScriptResult::TokenNotFound, "object name is invalid");
-				
+					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
+						p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
 					p.m_flags |= EFlags::ExplicitName;
+					p.m_flags |= EFlags::ExplicitColour;
+					break;
 				}
-				break;
-			}
-			case 0:
-			{
-				attr.m_name = Enum<ELdrObject>::ToStringA(p.m_type);
-				attr.m_colour = 0xFFFFFFFF;
-				break;
+				case 1:
+				{
+					// Expect: *Type <name>  or *Type <colour>
+					// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
+					if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
+					{
+						attr.m_name = "";
+						if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
+							p.ReportError(EScriptResult::TokenNotFound, "object colour is invalid");
+
+						p.m_flags |= EFlags::ExplicitColour;
+					}
+					else
+					{
+						attr.m_colour = 0xFFFFFFFF;
+						if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
+							p.ReportError(EScriptResult::TokenNotFound, "object name is invalid");
+
+						p.m_flags |= EFlags::ExplicitName;
+					}
+					break;
+				}
+				case 0:
+				{
+					attr.m_name = Enum<ELdrObject>::ToStringA(p.m_type);
+					attr.m_colour = 0xFFFFFFFF;
+					break;
+				}
 			}
 		}
+		if constexpr (std::is_same_v<TReader, script::ByteReader>)
+		{
+			attr.m_name = reader.ShortString<string32>();
+			attr.m_colour = reader.Int<uint32_t>();
+			p.m_flags |= EFlags::ExplicitName;
+			p.m_flags |= EFlags::ExplicitColour;
+		}
+
 		return attr;
 	}
 
 	// Parse a camera description
-	void ParseCamera(ParseParams& p, ParseResult& out)
+	template <typename TReader> void ParseCamera(TReader& reader, ParseParams& p, ParseResult& out)
 	{
-		p.m_reader.SectionStart();
-		for (EKeyword kw; p.m_reader.NextKeywordH(kw);)
+		reader.SectionStart();
+		for (EKeyword kw; reader.NextKeywordH(kw);)
 		{
 			switch (kw)
 			{
 				case EKeyword::O2W:
 				{
-					auto c2w = pr::m4x4Identity;
-					p.m_reader.TransformS(c2w);
+					auto c2w = m4x4::Identity();
+					reader.TransformS(c2w);
 					out.m_cam.CameraToWorld(c2w);
 					out.m_cam_fields |= ECamField::C2W;
 					break;
 				}
 				case EKeyword::LookAt:
 				{
-					pr::v4 lookat;
-					p.m_reader.Vector3S(lookat, 1.0f);
-					pr::m4x4 c2w = out.m_cam.CameraToWorld();
+					v4 lookat;
+					reader.Vector3S(lookat, 1.0f);
+					m4x4 c2w = out.m_cam.CameraToWorld();
 					out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
 					out.m_cam_fields |= ECamField::C2W;
 					out.m_cam_fields |= ECamField::Focus;
@@ -346,7 +344,7 @@ namespace pr::rdr12
 				case EKeyword::Align:
 				{
 					pr::v4 align;
-					p.m_reader.Vector3S(align, 0.0f);
+					reader.Vector3S(align, 0.0f);
 					out.m_cam.Align(align);
 					out.m_cam_fields |= ECamField::Align;
 					break;
@@ -354,7 +352,7 @@ namespace pr::rdr12
 				case EKeyword::Aspect:
 				{
 					float aspect;
-					p.m_reader.RealS(aspect);
+					reader.RealS(aspect);
 					out.m_cam.Aspect(aspect);
 					out.m_cam_fields |= ECamField::Align;
 					break;
@@ -362,7 +360,7 @@ namespace pr::rdr12
 				case EKeyword::FovX:
 				{
 					float fovX;
-					p.m_reader.RealS(fovX);
+					reader.RealS(fovX);
 					out.m_cam.FovX(fovX);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
@@ -370,7 +368,7 @@ namespace pr::rdr12
 				case EKeyword::FovY:
 				{
 					float fovY;
-					p.m_reader.RealS(fovY);
+					reader.RealS(fovY);
 					out.m_cam.FovY(fovY);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
@@ -378,7 +376,7 @@ namespace pr::rdr12
 				case EKeyword::Fov:
 				{
 					float fov[2];
-					p.m_reader.RealS(fov, 2);
+					reader.RealS(fov, 2);
 					out.m_cam.Fov(fov[0], fov[1]);
 					out.m_cam_fields |= ECamField::Aspect;
 					out.m_cam_fields |= ECamField::FovY;
@@ -387,7 +385,7 @@ namespace pr::rdr12
 				case EKeyword::Near:
 				{
 					float near_;
-					p.m_reader.Real(near_);
+					reader.Real(near_);
 					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
@@ -395,7 +393,7 @@ namespace pr::rdr12
 				case EKeyword::Far:
 				{
 					float far_;
-					p.m_reader.Real(far_);
+					reader.Real(far_);
 					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
@@ -408,19 +406,17 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					p.ReportError(EScriptResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Camera", p.m_reader.LastKeyword().c_str()));
+					p.ReportError(EScriptResult::UnknownToken, std::format("Keyword '{}' is not valid within *Camera", ToString(kw)));
 					break;
 				}
 			}
 		}
-		p.m_reader.SectionEnd();
+		reader.SectionEnd();
 	}
 
 	// Parse a font description
-	void ParseFont(ParseParams& p, Font& font)
+	template <typename TReader> void ParseFont(TReader& reader, ParseParams& p, Font& font)
 	{
-		auto& reader = p.m_reader;
-
 		reader.SectionStart();
 		font.m_underline = false;
 		font.m_strikeout = false;
@@ -483,10 +479,8 @@ namespace pr::rdr12
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(ParseParams& p, Animation& anim)
+	template <typename TReader> void ParseAnimation(TReader& reader, ParseParams& p, Animation& anim)
 	{
-		auto& reader = p.m_reader;
-
 		reader.SectionStart();
 		for (EKeyword kw; reader.NextKeywordH(kw);)
 		{
@@ -539,10 +533,8 @@ namespace pr::rdr12
 	}
 
 	// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
-	bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
+	template <typename TReader> bool ParseProperties(TReader& reader, ParseParams& p, EKeyword kw, LdrObject* obj)
 	{
-		auto& reader = p.m_reader;
-
 		switch (kw)
 		{
 			case EKeyword::O2W:
@@ -713,9 +705,8 @@ namespace pr::rdr12
 				, m_sampler()
 				, m_def_sdesc(def_sdesc)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			template <typename TReader> bool ParseKeyword(TReader& reader, ParseParams& p, EKeyword kw)
 			{
-				auto& reader = p.m_reader;
 				switch (kw)
 				{
 					case EKeyword::Texture:
@@ -840,13 +831,13 @@ namespace pr::rdr12
 				,m_main_axis(main_axis)
 				,m_align(align)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			template <typename TReader> bool ParseKeyword(TReader& reader, ParseParams& p, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::AxisId:
 					{
-						p.m_reader.IntS(m_align.value, 10);
+						reader.IntS(m_align.value, 10);
 						if (AxisId::IsValid(m_align))
 						{
 							m_o2w = m4x4::Transform(m_main_axis, m_align, v4Origin);
@@ -885,29 +876,29 @@ namespace pr::rdr12
 		// Support for light sources that cast
 		struct CastingLight
 		{
-			bool ParseKeyword(ParseParams& p, Light& light, EKeyword kw)
+			template <typename TReader> bool ParseKeyword(TReader& reader, ParseParams& p, Light& light, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::Range:
 					{
-						p.m_reader.SectionStart();
-						p.m_reader.Real(light.m_range);
-						p.m_reader.Real(light.m_falloff);
-						p.m_reader.SectionEnd();
+						reader.SectionStart();
+						reader.Real(light.m_range);
+						reader.Real(light.m_falloff);
+						reader.SectionEnd();
 						return true;
 					}
 					case EKeyword::Specular:
 					{
-						p.m_reader.SectionStart();
-						p.m_reader.Int(light.m_specular.argb, 16);
-						p.m_reader.Real(light.m_specular_power);
-						p.m_reader.SectionEnd();
+						reader.SectionStart();
+						reader.Int(light.m_specular.argb, 16);
+						reader.Real(light.m_specular_power);
+						reader.SectionEnd();
 						return true;
 					}
 					case EKeyword::CastShadow:
 					{
-						p.m_reader.RealS(light.m_cast_shadow);
+						reader.RealS(light.m_cast_shadow);
 						return true;
 					}
 					default:
@@ -939,26 +930,27 @@ namespace pr::rdr12
 				,m_style(EStyle::Square)
 				,m_depth(false)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			template <typename TReader>
+			bool ParseKeyword(TReader& reader, ParseParams& p, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::Size:
 					{
 						// Allow one or two dimensions
-						p.m_reader.SectionStart();
-						p.m_reader.Real(m_point_size.x);
-						if (!p.m_reader.IsSectionEnd())
-							p.m_reader.Real(m_point_size.y);
+						reader.SectionStart();
+						reader.Real(m_point_size.x);
+						if (!reader.IsSectionEnd())
+							reader.Real(m_point_size.y);
 						else
 							m_point_size.y = m_point_size.x;
-						p.m_reader.SectionEnd();
+						reader.SectionEnd();
 						return true;
 					}
 					case EKeyword::Style:
 					{
 						string32 ident;
-						p.m_reader.IdentifierS(ident);
+						reader.IdentifierS(ident);
 						switch (HashI(ident.c_str()))
 						{
 							case HashI("square"):   m_style = EStyle::Square; break;
@@ -1120,13 +1112,13 @@ namespace pr::rdr12
 			BakeTransform(m4x4 const& o2w = m4x4::Zero())
 				:m_o2w(o2w)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			template <typename TReader> bool ParseKeyword(TReader& reader, ParseParams& p, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::BakeTransform:
 					{
-						p.m_reader.TransformS(m_o2w);
+						reader.TransformS(m_o2w);
 						return true;
 					}
 					default:
@@ -1151,13 +1143,13 @@ namespace pr::rdr12
 			GenNorms(float gen_normals = -1.0f)
 				:m_smoothing_angle(gen_normals)
 			{}
-			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			template <typename TReader> bool ParseKeyword(TReader& reader, ParseParams& p, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::GenerateNormals:
 					{
-						p.m_reader.RealS(m_smoothing_angle);
+						reader.RealS(m_smoothing_angle);
 						m_smoothing_angle = pr::DegreesToRadians(m_smoothing_angle);
 						return true;
 					}
@@ -1240,34 +1232,90 @@ namespace pr::rdr12
 	// Base class for all object creators
 	struct IObjectCreator
 	{
-		ParseParams& p;
+		ParseParams& m_pp;
+		LdrObject* m_obj;
 		VCont& m_verts;
 		ICont& m_indices;
 		NCont& m_normals;
 		CCont& m_colours;
 		TCont& m_texs;
 		GCont& m_nuggets;
+		Loc m_last_location;
 
-		IObjectCreator(ParseParams& p_)
-			:p(p_)
-			,m_verts  (p.m_cache.m_point)
-			,m_indices(p.m_cache.m_index)
-			,m_normals(p.m_cache.m_norms)
-			,m_colours(p.m_cache.m_color)
-			,m_texs   (p.m_cache.m_texts)
-			,m_nuggets(p.m_cache.m_nugts)
-		{}
+		template <typename TReader> IObjectCreator(TReader& reader, ParseParams& pp, LdrObject* obj)
+			: m_pp(pp)
+			, m_obj(obj)
+			, m_verts  (p.m_cache.m_point)
+			, m_indices(p.m_cache.m_index)
+			, m_normals(p.m_cache.m_norms)
+			, m_colours(p.m_cache.m_color)
+			, m_texs   (p.m_cache.m_texts)
+			, m_nuggets(p.m_cache.m_nugts)
+			, m_last_location(reader.Location())
+		{
+			Parse(reader);
+			m_last_location = reader.Location();
+		}
 		virtual ~IObjectCreator() = default;
-		virtual bool ParseKeyword(EKeyword)
+		void Parse(script::Reader& reader)
+		{
+			// Read the description of the model
+			reader.SectionStart();
+			for (; !m_pp.m_cancel && !reader.IsSectionEnd();)
+			{
+				// Check for incomplete script
+				if (reader.IsSourceEnd())
+				{
+					m_pp.ReportError(EScriptResult::UnexpectedEndOfFile, {}, reader.Location());
+					break;
+				}
+
+				// Handle keywords
+				if (reader.IsKeyword())
+				{
+					// The next script token is a keyword
+					auto kw = reader.NextKeywordH<EKeyword>();
+
+					// Let the object creator have the first go with the keyword
+					if (ParseKeyword(reader, kw))
+						continue;
+
+					// Is the keyword a common object property
+					if (ParseProperties(reader, m_pp, kw, m_obj))
+						continue;
+
+					// Recursively parse child objects
+					ParseParams pp(m_pp, m_obj->m_child, m_obj, this);
+					if (ParseLdrObject((ELdrObject)kw, reader, pp))
+						continue;
+
+					// Unknown token
+					m_pp.ReportError(EScriptResult::UnknownToken, "Unknown token", reader.Location());
+					continue;
+				}
+
+				// Not a keyword, let the subclass interpret it
+				ParseDescription(reader);
+			}
+			reader.SectionEnd();
+		}
+		void Parse(script::ByteReader& reader)
+		{
+			for (; !m_pp.m_cancel && !reader.IsSectionEnd(); )
+			{
+			}
+		}
+		template <typename TReader> bool ParseKeyword(TReader&, EKeyword)
 		{
 			return false;
 		}
-		virtual void Parse()
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.ReportError(EScriptResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str()));
+			m_pp.ReportError(EScriptResult::UnknownToken, std::format("Unknown token near '{}'", reader.LastKeyword()), reader.Location());
 		}
-		virtual void CreateModel(LdrObject*)
+		virtual ModelPtr CreateModel()
 		{
+			return nullptr;
 		}
 	};
 
@@ -1280,59 +1328,61 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 		creation::PointSprite m_sprite;
-		std::optional<bool> m_per_point_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(reader, pp)
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_sprite()
-			, m_per_point_colour()
+			, m_per_item_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
-			return
-				m_tex.ParseKeyword(p, kw) ||
-				m_sprite.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
-		}
-		void Parse() override
-		{
-			pr::v4 pt;
-			p.m_reader.Vector3(pt, 1.0f);
-			m_verts.push_back(pt);
-
-			// Look for the optional colour
-			if (!m_per_point_colour)
-				m_per_point_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-			if (*m_per_point_colour)
+			switch (kw)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_colours.push_back(col);
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						m_sprite.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		template <typename TReader> void ParseDescription(TReader& reader)
+		{
+			m_verts.push_back(reader.Vector3(1.0f));
+			if (m_per_item_colour)
+				m_colours.push_back(reader.Int<uint32_t>(16));
+		}
+		ModelPtr CreateModel() override
 		{
 			// No points = no model
 			if (m_verts.empty())
-				return;
+				return nullptr;
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Points(p.m_factory, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Points(m_pp.m_factory, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use a geometry shader to draw points
-			if (m_sprite.m_point_size != v2Zero)
+			if (m_sprite.m_point_size != v2::Zero())
 			{
 				auto gs_points = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
 
-				obj->m_model->DeleteNuggets();
-				obj->m_model->CreateNugget(p.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+				model->DeleteNuggets();
+				model->CreateNugget(m_pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 					.use_shader(ERenderStep::RenderForward, gs_points)
-					.tex_diffuse(m_sprite.PointStyleTexture(p)));
+					.tex_diffuse(m_sprite.PointStyleTexture(m_pp)));
 			}
+
+			return model;
 		}
 	};
 
@@ -1345,22 +1395,22 @@ namespace pr::rdr12
 	{
 		v2 m_dashed;
 		float m_line_width;
-		std::optional<bool> m_per_line_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_dashed(v2XAxis)
-			,m_line_width()
-			,m_per_line_colour()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(reader, pp)
+			, m_dashed(v2XAxis)
+			, m_line_width()
+			, m_per_item_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Param:
 				{
 					float t[2];
-					p.m_reader.RealS(t, 2);
+					reader.RealS(t, 2);
 					if (m_verts.size() < 2)
 					{
 						p.ReportError(EScriptResult::Failed, "No preceding line to apply parametric values to");
@@ -1375,48 +1425,47 @@ namespace pr::rdr12
 				}
 				case EKeyword::Dashed:
 				{
-					p.m_reader.Vector2S(m_dashed);
+					reader.Vector2S(m_dashed);
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					reader.RealS(m_line_width);
+					return true;
+				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
 					return true;
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader) 
 		{
-			pr::v4 p0, p1;
-			p.m_reader.Vector3(p0, 1.0f);
-			p.m_reader.Vector3(p1, 1.0f);
+			auto p0 = reader.Vector3(1.0f);
+			auto p1 = reader.Vector3(1.0f);
 			m_verts.push_back(p0);
 			m_verts.push_back(p1);
 
-			// Look for the optional colour
-			if (!m_per_line_colour)
-				m_per_line_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-			if (*m_per_line_colour)
+			if (m_per_line_colour)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
+				Colour32 col = reader.Int(16);
 				m_colours.push_back(col);
 				m_colours.push_back(col);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
-				return;
+				return nullptr;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2XAxis)
+			if (m_dashed != v2::XAxis())
 			{
 				// Convert each line segment to dashed lines
 				VCont verts;
@@ -1426,16 +1475,18 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
@@ -1444,22 +1495,22 @@ namespace pr::rdr12
 	{
 		v2 m_dashed;
 		float m_line_width;
-		std::optional<bool> m_per_line_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_dashed(v2XAxis)
-			,m_line_width()
-			,m_per_line_colour()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_dashed(v2::XAxis())
+			, m_line_width()
+			, m_per_item_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Param:
 				{
 					float t[2];
-					p.m_reader.RealS(t, 2);
+					reader.RealS(t, 2);
 					if (m_verts.size() < 2)
 					{
 						p.ReportError(EScriptResult::Failed, "No preceding line to apply parametric values to");
@@ -1474,48 +1525,48 @@ namespace pr::rdr12
 				}
 				case EKeyword::Dashed:
 				{
-					p.m_reader.Vector2S(m_dashed);
+					reader.Vector2S(m_dashed);
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					reader.RealS(m_line_width);
+					return true;
+				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
 					return true;
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader) 
 		{
-			pr::v4 p0, p1;
-			p.m_reader.Vector3(p0, 1.0f);
-			p.m_reader.Vector3(p1, 0.0f);
+			auto p0 = reader.Vector3(1.0f);
+			auto p1 = reader.Vector3(0.0f);
 			m_verts.push_back(p0);
 			m_verts.push_back(p0 + p1);
 
 			// Look for the optional colour
-			if (!m_per_line_colour)
-				m_per_line_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-			if (*m_per_line_colour)
+			if (m_per_line_colour)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
+				Colour32 col = reader.Int(col.argb, 16);
 				m_colours.push_back(col);
 				m_colours.push_back(col);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
-				return;
+				return nullptr;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2XAxis)
+			if (m_dashed != v2::XAxis())
 			{
 				// Convert each line segment to dashed lines
 				VCont verts;
@@ -1525,16 +1576,18 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
@@ -1543,24 +1596,20 @@ namespace pr::rdr12
 	{
 		v2 m_dashed;
 		float m_line_width;
-		std::optional<bool> m_per_vert_colour;
+		bool m_per_item_colour;
 		bool m_smooth;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_dashed(v2XAxis)
-			,m_line_width()
-			,m_per_vert_colour()
-			,m_smooth()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_dashed(v2::XAxis())
+			, m_line_width()
+			, m_per_vert_colour()
+			, m_smooth()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw) 
 		{
 			switch (kw)
 			{
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
 				case EKeyword::Param:
 				{
 					float t[2];
@@ -1592,30 +1641,34 @@ namespace pr::rdr12
 					p.m_reader.RealS(m_line_width);
 					return true;
 				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(reader, kw);
+				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader) 
 		{
-			pr::v4 pt;
-			p.m_reader.Vector3(pt, 1.0f);
+			auto pt = reader.Vector3(1.0f);
 			m_verts.push_back(pt);
 
 			// Look for the optional colour
-			if (!m_per_vert_colour)
-				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-			if (*m_per_vert_colour)
+			if (m_per_vert_colour)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
+				Colour32 col = reader.Int(col.argb, 16);
 				m_colours.push_back(col);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
-				return;
+				return nullptr;
 
 			// Smooth the points
 			if (m_smooth)
@@ -1630,7 +1683,7 @@ namespace pr::rdr12
 
 			// Convert lines to dashed lines
 			auto line_strip = true;
-			if (m_dashed != v2XAxis)
+			if (m_dashed != v2::XAxis())
 			{
 				// 'Dashing' a line turns it into a line list
 				VCont verts;
@@ -1648,10 +1701,10 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = line_strip
-				? ModelGenerator::LineStrip(p.m_factory, int(m_verts.size() - 1), m_verts, &opts)
-				: ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = line_strip
+				? ModelGenerator::LineStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, &opts)
+				: ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
@@ -1660,12 +1713,14 @@ namespace pr::rdr12
 					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_line_width))
 					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_line_width));
 
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 				{
 					nug.m_topo = line_strip ? ETopo::LineStripAdj : ETopo::LineList;
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 				}
 			}
+
+			return model;
 		}
 	};
 
@@ -1675,37 +1730,37 @@ namespace pr::rdr12
 		v2 m_dashed;
 		float m_line_width;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_dashed(v2XAxis)
-			,m_line_width()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_dashed(v2::XAxis())
+			, m_line_width()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw) 
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Dashed:
 				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Dashed:
-				{
-					p.m_reader.Vector2S(m_dashed);
+					m_dashed = reader.Vector2S();
 					return true;
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					m_line_width = reader.RealS();
 					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader) 
 		{
-			pr::v4 dim;
-			p.m_reader.Real(dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.Real(dim.y);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.Real(dim.z);
+			v4 dim;
+			reader.Real(dim.x);
+			if (reader.IsKeyword() || reader.IsSectionEnd()) dim.y = dim.x; else reader.Real(dim.y);
+			if (reader.IsKeyword() || reader.IsSectionEnd()) dim.z = dim.y; else reader.Real(dim.z);
 			dim *= 0.5f;
 
 			m_verts.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
@@ -1720,14 +1775,14 @@ namespace pr::rdr12
 			uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// No points = no model
 			if (m_verts.empty())
-				return;
+				return nullptr;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2XAxis)
+			if (m_dashed != v2::XAxis())
 			{
 				// Convert each line segment to dashed lines
 				VCont verts;
@@ -1743,17 +1798,19 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
@@ -1764,44 +1821,45 @@ namespace pr::rdr12
 		float m_line_width;
 		creation::MainAxis m_axis;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_dashed(v2XAxis)
-			,m_line_width()
-			,m_axis()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_dashed(v2::XAxis())
+			, m_line_width()
+			, m_axis()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::Dashed:
+				{
+					m_dashed = reader.Vector2S();
+					return true;
+				}
+				case EKeyword::Width:
+				{
+					m_line_width = reader.RealS();
+					return true;
+				}
+				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Dashed:
-				{
-					p.m_reader.Vector2S(m_dashed);
-					return true;
-				}
-			case EKeyword::Width:
-				{
-					p.m_reader.RealS(m_line_width);
-					return true;
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			pr::v2 dim, div;
-			p.m_reader.Vector2(dim);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
+			auto dim = reader.Vector2();
+
+			v2 div;
+			if (reader.IsKeyword() || reader.IsSectionEnd())
 				div = dim;
 			else
-				p.m_reader.Vector2(div);
+				div = reader.Vector2();
 
-			pr::v2 step = dim / div;
+			v2 step = dim / div;
 			for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
 			{
 				m_verts.push_back(v4(i, -dim.y / 2, 0, 1));
@@ -1813,17 +1871,14 @@ namespace pr::rdr12
 				m_verts.push_back(v4(dim.x / 2, i, 0, 1));
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.empty())
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
-				return;
-			}
+				return nullptr;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2XAxis)
+			if (m_dashed != v2::XAxis())
 			{
 				// Convert each line segment to dashed lines
 				VCont verts;
@@ -1840,78 +1895,78 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
 	// ELdrObject::Spline
 	template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreator
 	{
-		pr::vector<pr::Spline> m_splines;
+		pr::vector<Spline> m_splines;
 		CCont m_spline_colours;
 		float m_line_width;
-		std::optional<bool> m_per_segment_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_splines()
-			,m_spline_colours()
-			,m_line_width()
-			,m_per_segment_colour()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_splines()
+			, m_spline_colours()
+			, m_line_width()
+			, m_per_item_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					m_line_width = reader.RealS();
+					return true;
+				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
 					return true;
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			pr::Spline spline;
-			p.m_reader.Vector3(spline.x, 1.0f);
-			p.m_reader.Vector3(spline.y, 1.0f);
-			p.m_reader.Vector3(spline.z, 1.0f);
-			p.m_reader.Vector3(spline.w, 1.0f);
+			Spline spline;
+			spline.x = reader.Vector3(1.0f);
+			spline.y = reader.Vector3(1.0f);
+			spline.z = reader.Vector3(1.0f);
+			spline.w = reader.Vector3(1.0f);
 			m_splines.push_back(spline);
 
 			// Look for the optional colour
-			if (!m_per_segment_colour)
-				m_per_segment_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
 			if (m_per_segment_colour)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
+				Colour32 col = reader.Int(16);
 				m_spline_colours.push_back(col);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_splines.empty())
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
-				return;
-			}
+				return nullptr;
 
 			// Generate a line strip for all spline segments (separated using strip-cut indices)
 			auto seg = -1;
@@ -1923,13 +1978,13 @@ namespace pr::rdr12
 
 				// Generate points for the spline
 				raster.resize(0);
-				pr::Raster(spline, raster, 30);
+				Raster(spline, raster, 30);
 
 				// Check for 16-bit index overflow
 				if (m_verts.size() + raster.size() >= 0xFFFF)
 				{
-					p.ReportError(EScriptResult::Failed, FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
-					return;
+					m_pp.ReportError(EScriptResult::Failed, std::format("Spline object '{}' is too large (index count >= 0xffff)", m_obj->TypeAndName()), m_last_location);
+					return nullptr;
 				}
 
 				// Add the line strip to the geometry buffers
@@ -1955,7 +2010,7 @@ namespace pr::rdr12
 				}
 
 				// Colours
-				if (*m_per_segment_colour)
+				if (m_per_item_colour)
 				{
 					auto ibeg = m_colours.size();
 					m_colours.reserve(m_colours.size() + raster.size());
@@ -1974,19 +2029,21 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (thick)
 			{
 				auto shdr = Shader::Create<shaders::ThickLineStripGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 				{
 					nug.m_topo = ETopo::LineStripAdj;
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 				}
 			}
+
+			return model;
 		}
 	};
 
@@ -2004,23 +2061,23 @@ namespace pr::rdr12
 
 		EArrowType m_type;
 		float m_line_width;
-		std::optional<bool> m_per_vert_colour;
+		bool m_per_item_colour;
 		bool m_smooth;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_type(EArrowType::Invalid)
-			,m_line_width()
-			,m_per_vert_colour()
-			,m_smooth()
+		template <typename TReader> ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_type(EArrowType::Invalid)
+			, m_line_width()
+			, m_per_item_colour()
+			, m_smooth()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					m_line_width = reader.RealS();
 					return true;
 				}
 				case EKeyword::Smooth:
@@ -2028,52 +2085,42 @@ namespace pr::rdr12
 					m_smooth = true;
 					return true;
 				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
 				default:
 				{
-					return
-						IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
 			// Expect the arrow type first
 			if (m_type == EArrowType::Invalid)
 			{
 				string32 ty;
-				p.m_reader.Identifier(ty);
-				if      (pr::str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
-				else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
-				else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
-				else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-				else p.ReportError(EScriptResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack");
+				reader.Identifier(ty);
+				if      (str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
+				else if (str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
+				else if (str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
+				else if (str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
+				else m_pp.ReportError(EScriptResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack", reader.Location());
 			}
 			else
 			{
-				pr::v4 pt;
-				p.m_reader.Vector3(pt, 1.0f);
-				m_verts.push_back(pt);
-
-				// Look for the optional colour
-				if (!m_per_vert_colour)
-					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-				if (*m_per_vert_colour)
-				{
-					pr::Colour32 col;
-					p.m_reader.Int(col.argb, 16);
-					m_colours.push_back(col);
-				}
+				m_verts.push_back(reader.Vector3(1.0f));
+				if (m_per_vert_colour)
+					m_colours.push_back(reader.Int(16))
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() 
 		{
 			// Validate
 			if (m_verts.size() < 2)
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
-				return;
-			}
+				return nullptr;
 
 			// Convert the points into a spline if smooth is specified
 			if (m_smooth)
@@ -2086,10 +2133,10 @@ namespace pr::rdr12
 				});
 			}
 
-			pr::geometry::Props props;
+			geometry::Props props;
 
 			// Colour interpolation iterator
-			auto col = pr::CreateLerpRepeater(m_colours.data(), isize(m_colours), isize(m_verts), pr::Colour32White);
+			auto col = pr::CreateLerpRepeater(m_colours.data(), isize(m_colours), isize(m_verts), Colour32White);
 			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Model bounding box
@@ -2097,12 +2144,12 @@ namespace pr::rdr12
 
 			// Generate the model
 			// 'm_verts' should contain line strip data
-			ModelGenerator::Cache<> cache(int(m_verts.size() + 2), int(m_verts.size() + 2), 0, 2);
+			ModelGenerator::Cache<> cache(isize(m_verts) + 2, isize(m_verts) + 2, 0, 2);
 
 			auto v_in  = m_verts.data();
 			auto v_out = cache.m_vcont.data();
 			auto i_out = cache.m_icont.data<uint16_t>();
-			pr::Colour32 c = pr::Colour32White;
+			Colour32 c = Colour32White;
 			uint16_t index = 0;
 
 			// Add the back arrow head geometry (a point)
@@ -2128,8 +2175,8 @@ namespace pr::rdr12
 			}
 
 			// Create the model
-			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
-			obj->m_model = p.m_factory.CreateModel(mdesc);
+			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, m_obj->TypeAndName().c_str());
+			auto model = m_pp.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
 			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
@@ -2149,8 +2196,9 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(p.m_factory, nug);
+				model->CreateNugget(m_pp.m_factory, nug);
 			}
+			if (true)
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + m_verts.size());
 				irange = Range(irange.m_end, irange.m_end + m_verts.size());
@@ -2161,7 +2209,7 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
-				obj->m_model->CreateNugget(p.m_factory, nug);
+				model->CreateNugget(m_pp.m_factory, nug);
 			}
 			if (m_type & EArrowType::Fwd)
 			{
@@ -2174,8 +2222,10 @@ namespace pr::rdr12
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(p.m_factory, nug);
+				model->CreateNugget(m_pp.m_factory, nug);
 			}
+		
+			return model;
 		}
 	};
 
@@ -2184,47 +2234,42 @@ namespace pr::rdr12
 	{
 		float  m_line_width;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_line_width()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_line_width()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					m_line_width = reader.RealS();
 					return true;
 				}
 				default:
 				{
-					return
-						IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			pr::m4x4 basis;
-			p.m_reader.Matrix3x3(basis.rot);
+			auto basis = m4x4{ reader.Matrix3x3(), v4::Origin() };
 
-			pr::v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
-			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
+			v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
+			Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+			uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
 			m_colours.insert(m_colours.end(), col, col + _countof(col));
 			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.empty())
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
-				return;
-			}
+				return nullptr;
 
 			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
 
@@ -2234,17 +2279,19 @@ namespace pr::rdr12
 				.indices(m_indices)
 				.colours(m_colours)
 				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : m_obj->m_model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
@@ -2255,32 +2302,32 @@ namespace pr::rdr12
 		float m_scale;
 		bool m_rh;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_line_width()
-			,m_scale()
-			,m_rh(true)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_line_width()
+			, m_scale()
+			, m_rh(true)
 		{
-			pr::v4       pts[] = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
-			pr::Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
+			v4       pts[] = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
+			Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+			uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
 			m_colours.insert(m_colours.end(), col, col + _countof(col));
 			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_line_width);
+					m_line_width = reader.RealS();
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					p.m_reader.RealS(m_scale);
+					m_scale = reader.RealS();
 					return true;
 				}
 				case EKeyword::LeftHanded:
@@ -2290,11 +2337,11 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Scale doesn't use the *o2w scale because that is recursive
 			if (m_scale != 1.0f)
@@ -2309,17 +2356,19 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Lines(p.m_factory, int(m_verts.size() / 2), m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Lines(m_pp.m_factory, int(m_verts.size() / 2), m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
 				// Get or create an instance of the thick line shader
 				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
+				for (auto& nug : model->m_nuggets)
 					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+
+			return model;
 		}
 	};
 
@@ -2336,15 +2385,15 @@ namespace pr::rdr12
 		int m_facets;
 		bool m_solid;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_dim()
-			,m_facets(40)
-			,m_solid()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_dim()
+			, m_facets(40)
+			, m_solid()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
@@ -2355,37 +2404,38 @@ namespace pr::rdr12
 				}
 				case EKeyword::Facets:
 				{
-					p.m_reader.IntS(m_facets, 10);
+					m_facets = reader.IntS(10);
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
-				m_dim.y = m_dim.x;
+			auto dim = reader.Real();
+			if (reader.IsKeyword() || reader.IsSectionEnd())
+				m_dim.x = m_dim.y = dim;
 			else
-				p.m_reader.Real(m_dim.y);
+				m_dim = v2{ dim, reader.Real() };
 
 			if (Abs(m_dim) != m_dim)
 			{
-				p.ReportError(EScriptResult::InvalidValue, "Circle dimensions contain a negative value");
+				m_pp.ReportError(EScriptResult::InvalidValue, "Circle dimensions contain a negative value", reader.Location());
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Ellipse(p.m_factory, m_dim.x, m_dim.y, m_solid, m_facets, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Ellipse(m_pp.m_factory, m_dim.x, m_dim.y, m_solid, m_facets, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2400,17 +2450,17 @@ namespace pr::rdr12
 		int m_facets;
 		bool m_solid;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_scale(v2One)
-			,m_ang()
-			,m_rad()
-			,m_facets(40)
-			,m_solid()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_scale(v2One)
+			, m_ang()
+			, m_rad()
+			, m_facets(40)
+			, m_solid()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
@@ -2421,37 +2471,38 @@ namespace pr::rdr12
 				}
 				case EKeyword::Scale:
 				{
-					p.m_reader.Vector2S(m_scale);
+					m_scale = reader.Vector2S();
 					return true;
 				}
 				case EKeyword::Facets:
 				{
-					p.m_reader.IntS(m_facets, 10);
+					m_facets = reader.IntS(10);
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, p, kw) ||
+						m_tex.ParseKeyword(reader, p, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Vector2(m_ang);
-			p.m_reader.Vector2(m_rad);
+			m_ang = reader.Vector2();
+			m_rad = reader.Vector2();
 
-			m_ang.x = pr::DegreesToRadians(m_ang.x);
-			m_ang.y = pr::DegreesToRadians(m_ang.y);
+			m_ang.x = DegreesToRadians(m_ang.x);
+			m_ang.y = DegreesToRadians(m_ang.y);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Pie(p.m_factory, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Pie(m_pp.m_factory, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2465,27 +2516,27 @@ namespace pr::rdr12
 		int m_facets;
 		bool m_solid;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_dim()
-			,m_corner_radius()
-			,m_facets(40)
-			,m_solid()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_dim()
+			, m_corner_radius()
+			, m_facets(40)
+			, m_solid()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::CornerRadius:
 				{
-					p.m_reader.RealS(m_corner_radius);
+					m_corner_radius = reader.RealS();
 					return true;
 				}
 				case EKeyword::Facets:
 				{
-					p.m_reader.IntS(m_facets, 10);
+					m_facets = reader.IntS(10);
 					m_facets *= 4;
 					return true;
 				}
@@ -2497,32 +2548,32 @@ namespace pr::rdr12
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_dim.x);
+			auto dim = reader.Real();
 			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
-				m_dim.y = m_dim.x;
+				m_dim.x = m_dim.y = dim;
 			else
-				p.m_reader.Real(m_dim.y);
+				m_dim = v2{ dim, reader.Real() };
+
 			m_dim *= 0.5f;
 
 			if (Abs(m_dim) != m_dim)
-			{
-				p.ReportError(EScriptResult::InvalidValue, "Rect dimensions contain a negative value");
-			}
+				m_pp.ReportError(EScriptResult::InvalidValue, "Rect dimensions contain a negative value", reader.Location());
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::RoundedRectangle(p.m_factory, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::RoundedRectangle(m_pp.m_factory, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2532,18 +2583,18 @@ namespace pr::rdr12
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
 		pr::vector<v2> m_poly;
-		std::optional<bool> m_per_vertex_colour;
+		bool m_per_item_colour;
 		bool m_solid;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_poly()
-			,m_per_vertex_colour()
-			,m_solid()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_poly()
+			, m_per_item_colour()
+			, m_solid()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
@@ -2552,37 +2603,27 @@ namespace pr::rdr12
 					m_solid = true;
 					return true;
 				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			for (;p.m_reader.IsValue();)
-			{
-				v2 pt;
-				p.m_reader.Vector2(pt);
-				m_poly.push_back(pt);
-
-				// Look to see if optional colours are given
-				if (!m_per_vertex_colour)
-					m_per_vertex_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-
-				// If we're expecting colours, read one
-				if (*m_per_vertex_colour)
-				{
-					Colour32 col;
-					p.m_reader.Int(col.argb, 16);
-					m_colours.push_back(col);
-				}
-			}
+			m_poly.push_back(reader.Vector2());
+			if (m_per_item_colour)
+				m_colours.push_back(reader.Int<Colour32>(16));
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Check the polygon winding order
 			if (geometry::PolygonArea(m_poly) < 0)
@@ -2593,8 +2634,9 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Polygon(p.m_factory, m_poly, m_solid, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Polygon(m_pp.m_factory, m_poly, m_solid, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2607,38 +2649,48 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
-		std::optional<bool> m_per_vert_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_per_vert_colour()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_per_item_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
-			return
-				m_axis.ParseKeyword(p, kw) ||
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+			switch (kw)
+			{
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			v4 pt[3]; Colour32 col[3];
+			v4 pt[3] = {};
+			Colour32 col[3] = {};
 			for (int i = 0; i != 3; ++i)
 			{
-				p.m_reader.Vector3(pt[i], 1.0f);
-				if (!m_per_vert_colour)
-					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-				if (*m_per_vert_colour)
-					p.m_reader.Int(col[i].argb, 16);
+				pt[i] = reader.Vector3(1.0f);
+				if (m_per_item_colour)
+					col[i] = reader.Int(16);
 			}
 
 			m_verts.push_back(pt[0]);
 			m_verts.push_back(pt[1]);
 			m_verts.push_back(pt[2]);
 			m_verts.push_back(pt[2]); // create a degenerate
-			if (*m_per_vert_colour)
+			if (m_per_item_colour)
 			{
 				m_colours.push_back(col[0]);
 				m_colours.push_back(col[1]);
@@ -2646,14 +2698,11 @@ namespace pr::rdr12
 				m_colours.push_back(col[2]);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
-			{
-				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
-			}
 
 			// Apply the axis id rotation
 			if (m_axis.RotationNeeded())
@@ -2664,8 +2713,9 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Quad(m_pp.m_factory, isize(m_verts) / 4, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2674,31 +2724,41 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
-		std::optional<bool> m_per_vert_colour;
+		bool m_per_item_colour;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_per_vert_colour()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_per_vert_colour()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
-			return
-				m_axis.ParseKeyword(p, kw) ||
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+			switch (kw)
+			{
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			v4 pt[4]; Colour32 col[4];
+			v4 pt[4] = {};
+			Colour32 col[4] = {};
 			for (int i = 0; i != 4; ++i)
 			{
-				p.m_reader.Vector3(pt[i], 1.0f);
-				if (!m_per_vert_colour)
-					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-				if (*m_per_vert_colour)
-					p.m_reader.Int(col[i].argb, 16);
+				pt[i] = reader.Vector3(1.0f);
+				if (m_per_item_colour)
+					col[i] = reader.Int(16);
 			}
 
 			m_verts.push_back(pt[0]);
@@ -2713,14 +2773,11 @@ namespace pr::rdr12
 				m_colours.push_back(col[3]);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
-			{
-				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
-			}
 
 			// Apply the axis id rotation
 			if (m_axis.RotationNeeded())
@@ -2731,8 +2788,9 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Quad(m_pp.m_factory, isize(m_verts) / 4, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2741,23 +2799,22 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicWrap())
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicWrap())
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_tex.ParseKeyword(reader, m_pp, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			v4 pnt, fwd; float w, h;
-			p.m_reader.Vector3(pnt, 1.0f);
-			p.m_reader.Vector3(fwd, 0.0f);
-			p.m_reader.Real(w);
-			p.m_reader.Real(h);
+			auto pnt = reader.Vector3(1.0f);
+			auto fwd = reader.Vector3(0.0f);
+			auto w = reader.Real<float>();
+			auto h = reader.Real<float>();
 
 			fwd = Normalise(fwd);
 			auto up = Perpendicular(fwd);
@@ -2769,19 +2826,17 @@ namespace pr::rdr12
 			m_verts.push_back(pnt + up - left);
 			m_verts.push_back(pnt + up + left);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.empty() || (m_verts.size() % 4) != 0)
-			{
-				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
-			}
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(p.m_factory, isize(m_verts) / 4, m_verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Quad(m_pp.m_factory, isize(m_verts) / 4, m_verts, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2795,24 +2850,24 @@ namespace pr::rdr12
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
 		float m_width;
-		std::optional<bool> m_per_vert_colour;
+		bool m_per_item_colour;
 		bool m_smooth;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_width(10.0f)
-			,m_per_vert_colour()
-			,m_smooth(false)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_width(10.0f)
+			, m_per_vert_colour()
+			, m_smooth(false)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					p.m_reader.RealS(m_width);
+					m_width = reader.RealS();
 					return true;
 				}
 				case EKeyword::Smooth:
@@ -2820,39 +2875,31 @@ namespace pr::rdr12
 					m_smooth = true;
 					return true;
 				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			pr::v4 pt;
-			p.m_reader.Vector3(pt, 1.0f);
-			m_verts.push_back(pt);
-
-			if (!m_per_vert_colour)
-				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-			
-			if (*m_per_vert_colour)
-			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_colours.push_back(col);
-			}
+			m_verts.push_back(reader.Vector3(1.0f));
+			if (m_per_item_colour)
+				m_colours.push_back(reader.Int(16));
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.size() < 2)
-			{
-				p.ReportError(EScriptResult::Failed, "Object description incomplete");
 				return;
-			}
 
 			// Smooth the points
 			if (m_smooth)
@@ -2865,10 +2912,11 @@ namespace pr::rdr12
 				});
 			}
 
-			pr::v4 normal = m_axis.m_align;
+			v4 normal = m_axis.m_align;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::QuadStrip(p.m_factory, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::QuadStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, m_width, { &normal, 1 }, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2882,30 +2930,31 @@ namespace pr::rdr12
 		creation::Textured m_tex;
 		v4 m_dim;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_dim()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_dim()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_tex.ParseKeyword(reader, m_pp, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader) 
 		{
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x;
-			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.z); else m_dim.z = m_dim.y;
+			m_dim.x = reader.Real();
+			if (reader.IsValue()) m_dim.y = reader.Real(); else m_dim.y = m_dim.x;
+			if (reader.IsValue()) m_dim.z = reader.Real(); else m_dim.z = m_dim.y;
 			m_dim *= 0.5f;
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Box(p.m_factory, m_dim, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Box(m_pp.m_factory, m_dim, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2916,49 +2965,47 @@ namespace pr::rdr12
 		v4 m_pt0, m_pt1, m_up;
 		float m_width, m_height;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_pt0()
-			,m_pt1()
-			,m_up(v4YAxis)
-			,m_width(0.1f)
-			,m_height(0.1f)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_pt0()
+			, m_pt1()
+			, m_up(v4::YAxis())
+			, m_width(0.1f)
+			, m_height(0.1f)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Up:
 				{
-					p.m_reader.Vector3S(m_up, 0.0f);
+					m_up = reader.Vector3S(0.0f);
 					return true;
 				}
 				default:
 				{
 					return
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Vector3(m_pt0, 1.0f);
-			p.m_reader.Vector3(m_pt1, 1.0f);
-			p.m_reader.Real(m_width);
-			if (p.m_reader.IsValue())
-				p.m_reader.Real(m_height);
-			else
-				m_height = m_width;
+			m_pt0 = reader.Vector3(1.0f);
+			m_pt1 = reader.Vector3(1.0f);
+			m_width = reader.Real<float>();
+			m_height = reader.IsValue() ? reader.Real<float>() : m_width;
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
 			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(b2w).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Box(p.m_factory, dim, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Box(m_pp.m_factory, dim, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -2969,47 +3016,45 @@ namespace pr::rdr12
 		pr::vector<v4,16> m_location;
 		v4 m_dim;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_location()
-			,m_dim()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_location()
+			, m_dim()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_tex.ParseKeyword(reader, m_pp, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			v4 v;
-			p.m_reader.Vector3(v, 1.0f);
-			if (m_dim == pr::v4Zero)
+			auto v = reader.Vector3(1.0f);
+			if (m_dim == v4::Zero())
 				m_dim = v.w0();
 			else
 				m_location.push_back(v);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
-			if (m_dim == pr::v4Zero || m_location.size() == 0)
-			{
-				p.ReportError(EScriptResult::Failed, "BoxList object description incomplete");
+			if (m_dim == v4::Zero() || m_location.size() == 0)
 				return;
-			}
+
 			if (Abs(m_dim) != m_dim)
 			{
-				p.ReportError(EScriptResult::InvalidValue, "BoxList box dimensions contain a negative value");
-				return;
+				m_pp.ReportError(EScriptResult::InvalidValue, "BoxList box dimensions contain a negative value", m_last_location);
+				return nullptr;
 			}
 
 			m_dim *= 0.5f;
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::BoxList(p.m_factory, isize(m_location), m_location, m_dim, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::BoxList(m_pp.m_factory, isize(m_location), m_location, m_dim, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3018,48 +3063,48 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
-		pr::v4 m_pt[8];
+		v4 m_pt[8];
 		float m_width, m_height;
 		float m_near, m_far;
 		float m_view_plane;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_pt()
-			,m_width(1.0f)
-			,m_height(1.0f)
-			,m_near(0.0f)
-			,m_far(1.0f)
-			,m_view_plane(0.0f)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_pt()
+			, m_width(1.0f)
+			, m_height(1.0f)
+			, m_near(0.0f)
+			, m_far(1.0f)
+			, m_view_plane(0.0f)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::ViewPlaneZ:
 				{
-					p.m_reader.RealS(m_view_plane);
+					m_view_plane = reader.RealS();
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_width);
-			p.m_reader.Real(m_height);
-			p.m_reader.Real(m_near);
-			p.m_reader.Real(m_far);
+			m_width = reader.Real<float>();
+			m_height = reader.Real<float>();
+			m_near = reader.Real<float>();
+			m_far = reader.Real<float>();
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Construct pointing down -z, then rotate the points based on axis id.
 			// Do this because frustums are commonly used for camera views and cameras point down -z.
@@ -3079,8 +3124,9 @@ namespace pr::rdr12
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Boxes(p.m_factory, 1, m_pt, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Boxes(m_pp.m_factory, 1, m_pt, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3089,35 +3135,35 @@ namespace pr::rdr12
 	{
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
-		pr::v4 m_pt[8];
+		v4 m_pt[8];
 		float m_fovY, m_aspect;
 		float m_near, m_far;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_axis()
-			,m_pt()
-			,m_fovY(maths::tau_by_8f)
-			,m_aspect(1.0f)
-			,m_near(0.0f)
-			,m_far(1.0f)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_axis()
+			, m_pt()
+			, m_fovY(maths::tau_by_8f)
+			, m_aspect(1.0f)
+			, m_near(0.0f)
+			, m_far(1.0f)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_axis.ParseKeyword(p, kw) ||
-				m_tex.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_axis.ParseKeyword(reader, m_pp, kw) ||
+				m_tex.ParseKeyword(reader, m_pp, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_fovY);
-			p.m_reader.Real(m_aspect);
-			p.m_reader.Real(m_near);
-			p.m_reader.Real(m_far);
+			m_fovY = reader.Real<float>();
+			m_aspect = reader.Real<float>();
+			m_near = reader.Real<float>();
+			m_far = reader.Real<float>();
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Construct pointing down -z, then rotate the points based on axis id.
 			// Do this because frustums are commonly used for camera views and cameras point down -z.
@@ -3135,8 +3181,9 @@ namespace pr::rdr12
 			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Boxes(p.m_factory, 1, m_pt, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Boxes(m_pp.m_factory, 1, m_pt, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3147,40 +3194,41 @@ namespace pr::rdr12
 		v4 m_dim;
 		int m_facets;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicWrap())
-			,m_dim()
-			,m_facets(3)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicWrap())
+			, m_dim()
+			, m_facets(3)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Facets:
 				{
-					p.m_reader.IntS(m_facets, 10);
+					m_facets = reader.IntS(10);
 					return true;
 				}
 				default:
 				{
 					return
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x; 
-			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.z); else m_dim.z = m_dim.y; 
+			m_dim.x = reader.Real<float>();
+			if (reader.IsValue()) m_dim.y = reader.Real<float>(); else m_dim.y = m_dim.x; 
+			if (reader.IsValue()) m_dim.z = reader.Real<float>(); else m_dim.z = m_dim.y; 
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Geosphere(p.m_factory, m_dim, m_facets, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Geosphere(m_pp.m_factory, m_dim, m_facets, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3194,53 +3242,54 @@ namespace pr::rdr12
 		int m_layers;
 		int m_wedges;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_axis()
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_dim()
-			,m_scale(v2One)
-			,m_layers(1)
-			,m_wedges(20)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_axis()
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_dim()
+			, m_scale(v2::One())
+			, m_layers(1)
+			, m_wedges(20)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Facets:
 				{
 					int facets[2];
-					p.m_reader.IntS(facets, 2, 10);
+					reader.IntS(facets, 2, 10);
 					m_layers = facets[0];
 					m_wedges = facets[1];
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					p.m_reader.Vector2S(m_scale);
+					m_scale = reader.Vector2S();
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Real(m_dim.z);
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x;
+			m_dim.z = reader.Real<float>();
+			m_dim.x = reader.Real<float>();
+			m_dim.y = reader.IsValue() ? reader.Real<float>() : m_dim.x;
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Cylinder(p.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Cylinder(m_pp.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3254,47 +3303,46 @@ namespace pr::rdr12
 		int m_layers;
 		int m_wedges;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_axis()
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_dim()
-			,m_scale(v2One)
-			,m_layers(1)
-			,m_wedges(20)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_axis()
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_dim()
+			, m_scale(v2::One())
+			, m_layers(1)
+			, m_wedges(20)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Facets:
 				{
 					int facets[2];
-					p.m_reader.IntS(facets, 2, 10);
+					reader.IntS(facets, 2, 10);
 					m_layers = facets[0];
 					m_wedges = facets[1];
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					p.m_reader.Vector2S(m_scale);
+					m_scale = reader.Vector2S();
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			float h0, h1, a;
-			p.m_reader.Real(h0);
-			p.m_reader.Real(h1);
-			p.m_reader.Real(a);
+			auto h0 = reader.Real<float>();
+			auto h1 = reader.Real<float>();
+			auto a = reader.Real<float>();
 
 			a = DegreesToRadians(a);
 
@@ -3302,12 +3350,13 @@ namespace pr::rdr12
 			m_dim.x = h0 * Tan(a);
 			m_dim.y = h1 * Tan(a);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Cylinder(p.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Cylinder(m_pp.m_factory, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3326,35 +3375,34 @@ namespace pr::rdr12
 		pr::vector<v2> m_cs;    // 2d cross section
 		float m_radx, m_rady;   // X,Y radii for implicit cross sections
 		int m_cs_facets;        // The number of divisions for Round cross sections
-		std::optional<bool> m_per_vert_colour; // Colour per vertex
+		bool m_per_item_colour; // Colour per vertex
 		bool m_closed;          // True if the tube end caps should be filled in
 		bool m_cs_smooth;       // True if outward normals for the tube are smoothed
 		bool m_smooth;          // True if the extrusion path is smooth
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_type(Invalid)
-			,m_cs()
-			,m_radx()
-			,m_rady()
-			,m_cs_facets(20)
-			,m_per_vert_colour()
-			,m_closed(false)
-			,m_cs_smooth(false)
-			,m_smooth()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_type(Invalid)
+			, m_cs()
+			, m_radx()
+			, m_rady()
+			, m_cs_facets(20)
+			, m_per_item_colour()
+			, m_closed(false)
+			, m_cs_smooth(false)
+			, m_smooth()
 		{}
-		bool ParseKeyword(EKeyword kw)
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Style:
 				{
 					// Expect *Style { cross_section_type <data> }
-					p.m_reader.SectionStart();
+					reader.SectionStart();
 
 					// Determine the cross section type
-					string32 type;
-					p.m_reader.Identifier(type);
+					string32 type = reader.Identifier<string32>();
 					m_type =
 						str::EqualI(type, "Round") ? ECSType::Round :
 						str::EqualI(type, "Square") ? ECSType::Square :
@@ -3367,45 +3415,42 @@ namespace pr::rdr12
 						case ECSType::Round:
 						{
 							// Elliptical cross section, expect 1 or 2 radii to follow
-							p.m_reader.Real(m_radx);
-							if (p.m_reader.IsValue()) p.m_reader.Real(m_rady); else m_rady = m_radx;
+							m_radx = reader.Real<float>();
+							m_rady = reader.IsValue() ? reader.Real<float>() : m_radx;
 							m_cs_smooth = true;
 							break;
 						}
 						case ECSType::Square:
 						{
 							// Square cross section, expect 1 or 2 radii to follow
-							p.m_reader.Real(m_radx);
-							if (p.m_reader.IsValue()) p.m_reader.Real(m_rady); else m_rady = m_radx;
+							m_radx = reader.Real<float>();
+							m_rady = reader.IsValue() ? reader.Real<float>() : m_radx;
 							m_cs_smooth = false;
 							break;
 						}
 						case ECSType::CrossSection:
 						{
 							// Create the cross section, expect X,Y pairs
-							for (; p.m_reader.IsValue();)
-							{
-								v2 pt;
-								p.m_reader.Vector2(pt);
-								m_cs.push_back(pt);
-							}
+							for (; reader.IsValue();)
+								m_cs.push_back(reader.Vector2());
+
 							break;
 						}
 						default:
 						{
-							p.ReportError(EScriptResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
+							m_pp.ReportError(EScriptResult::UnknownValue, std::format("Cross Section type {} is not supported", type), reader.Location());
 							return false;
 						}
 					}
 
 					// Optional cross section parameters
-					for (EKeyword kw0; p.m_reader.NextKeywordH(kw0);)
+					for (EKeyword kw0; reader.NextKeywordH(kw0);)
 					{
 						switch (kw0)
 						{
 							case EKeyword::Facets:
 							{
-								p.m_reader.IntS(m_cs_facets, 10);
+								m_cs_facets = reader.IntS(10);
 								break;
 							}
 							case EKeyword::Smooth:
@@ -3415,13 +3460,13 @@ namespace pr::rdr12
 							}
 							default:
 							{
-								p.ReportError(EScriptResult::UnknownValue, FmtS("Unknown cross section parameter"));
+								m_pp.ReportError(EScriptResult::UnknownValue, "Unknown cross section parameter", reader.Location());
 								return false;
 							}
 						}
 					}
 
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Smooth:
@@ -3434,38 +3479,36 @@ namespace pr::rdr12
 					m_closed = true;
 					return true;
 				}
+				case EKeyword::PerItemColour:
+				{
+					m_per_item_colour = true;
+					return true;
+				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
 			// Parse the extrusion path
-			v4 pt; Colour32 col;
-			p.m_reader.Vector3(pt, 1.0f);
-			if (!m_per_vert_colour)
-				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
-			if (*m_per_vert_colour)
-				p.m_reader.Int(col.argb, 16);
+			auto pt = reader.Vector3(1.0f);
+			auto col = m_per_iterm_colour ? Colour32(reader.Int(16)) : Colour32White;
 				
 			// Ignore degenerates
 			if (m_verts.empty() || !FEql(m_verts.back(), pt))
 			{
 				m_verts.push_back(pt);
-				if (*m_per_vert_colour)
+				if (m_per_item_colour)
 					m_colours.push_back(col);
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// If no cross section or extrusion path is given
 			if (m_verts.empty())
-			{
-				p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
 				return;
-			}
 
 			// Create the cross section for implicit profiles
 			switch (m_type)
@@ -3489,19 +3532,19 @@ namespace pr::rdr12
 				{
 					if (m_cs.empty())
 					{
-						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
+						m_pp.ReportError(EScriptResult::Failed, std::format("Tube object '{}' description incomplete", m_obj->TypeAndName()), m_last_location);
 						return;
 					}
-					if (pr::geometry::PolygonArea(m_cs) < 0)
+					if (geometry::PolygonArea(m_cs) < 0)
 					{
-						p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
+						m_pp.ReportError(EScriptResult::Failed, std::format("Tube object '{}' cross section has a negative area (winding order is incorrect)", m_obj->TypeAndName()), m_last_location);
 						return;
 					}
 					break;
 				}
 				default:
 				{
-					p.ReportError(EScriptResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					m_pp.ReportError(EScriptResult::Failed, std::format("Tube object '{}' description incomplete. No style given.", m_obj->TypeAndName()), m_last_location);
 					return;
 				}
 			}
@@ -3519,8 +3562,9 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = ModelGenerator::Extrude(p.m_factory, m_cs, m_verts, m_closed, m_cs_smooth, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Extrude(m_pp.m_factory, m_cs, m_verts, m_closed, m_cs_smooth, &opts);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3530,65 +3574,57 @@ namespace pr::rdr12
 		creation::Textured m_tex;
 		creation::GenNorms m_gen_norms;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_gen_norms(-1.0f)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_gen_norms(-1.0f)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Verts:
 				{
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (pr::v4 v; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Vector3(v, 1.0f);
-						m_verts.push_back(v);
-						if (r % 500 == 0) p.ReportProgress();
+						m_verts.push_back(reader.Vector3(1.0f));
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Normals:
 				{
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (pr::v4 n; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Vector3(n, 0.0f);
-						m_normals.push_back(n);
-						if (r % 500 == 0) p.ReportProgress();
+						m_normals.push_back(reader.Vector3(0.0f));
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Colours:
 				{
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (pr::Colour32 c; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(c.argb, 16);
-						m_colours.push_back(c);
-						if (r % 500 == 0) p.ReportProgress();
+						m_colours.push_back(Colour(reader.Int<uint32_t>(16)));
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::TexCoords:
 				{
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (pr::v2 t; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Vector2(t);
-						m_texs.push_back(t);
-						if (r % 500 == 0) p.ReportProgress();
+						m_texs.push_back(reader.Vector2());
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Lines:
@@ -3603,18 +3639,17 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (uint16_t idx; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(idx, 10);
+						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
 
-						if (r % 500 == 0) p.ReportProgress();
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3633,18 +3668,17 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (uint16_t idx; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(idx, 10);
+						auto idx = reader.Int<uint16_t>(10);
 						m_indices.push_back(idx);
 						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
 
-						if (r % 500 == 0) p.ReportProgress();
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3660,11 +3694,11 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (uint16_t idx[4]; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1;!reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(idx, 4, 10);
+						uint16_t idx[4];
+						reader.Int(idx, 4, 10);
 						m_indices.push_back(idx[0]);
 						m_indices.push_back(idx[1]);
 						m_indices.push_back(idx[2]);
@@ -3684,9 +3718,9 @@ namespace pr::rdr12
 						nug.m_vrange.grow(idx[3]);
 						nug.m_irange.m_end += 12;
 
-						if (r % 500 == 0) p.ReportProgress();
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3694,38 +3728,38 @@ namespace pr::rdr12
 				default:
 				{
 					return
-						m_tex.ParseKeyword(p, kw) ||
-						m_gen_norms.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						m_gen_norms.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
 			// All fields are child keywords
-			p.ReportError(EScriptResult::UnknownValue, "Mesh object description invalid");
+			m_pp.ReportError(EScriptResult::UnknownValue, "Mesh object description invalid", reader.Location());
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_indices.empty() || m_verts.empty())
 			{
-				p.ReportError(EScriptResult::Failed, "Mesh object description incomplete");
+				m_pp.ReportError(EScriptResult::Failed, "Mesh object description incomplete", m_last_location);
 				return;
 			}
 			if (!m_colours.empty() && m_colours.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with colours require one colour per vertex. %d required, %d given.", isize(m_verts), isize(m_colours)));
+				m_pp.ReportError(EScriptResult::SyntaxError, std::format("Mesh objects with colours require one colour per vertex. {} required, {} given.", isize(m_verts), isize(m_colours)), m_last_location);
 				return;
 			}
 			if (!m_normals.empty() && m_normals.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with normals require one normal per vertex. %d required, %d given.", isize(m_verts), isize(m_normals)));
+				m_pp.ReportError(EScriptResult::SyntaxError, std::format("Mesh objects with normals require one normal per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)), m_last_location);
 				return;
 			}
 			if (!m_texs.empty() && m_texs.size() != m_verts.size())
 			{
-				p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh objects with texture coordinates require one coordinate per vertex. %d required, %d given.", isize(m_verts), isize(m_normals)));
+				m_pp.ReportError(EScriptResult::SyntaxError, std::format("Mesh objects with texture coordinates require one coordinate per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)), m_last_location);
 				return;
 			}
 			for (auto& nug : m_nuggets)
@@ -3733,7 +3767,7 @@ namespace pr::rdr12
 				// Check the index range is valid
 				if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > isize(m_verts))
 				{
-					p.ReportError(EScriptResult::SyntaxError, FmtS("Mesh object with face, line, or tetra section contains indices out of range (section index: %d).", int(&nug - &m_nuggets[0])));
+					m_pp.ReportError(EScriptResult::SyntaxError, std::format("Mesh object with face, line, or tetra section contains indices out of range (section index: {}).", int(&nug - &m_nuggets[0])), m_last_location);
 					return;
 				}
 
@@ -3750,7 +3784,7 @@ namespace pr::rdr12
 			}
 
 			// Generate normals if needed
-			m_gen_norms.Generate(p);
+			m_gen_norms.Generate(m_pp);
 
 			// Create the model
 			auto cdata = MeshCreationData()
@@ -3760,8 +3794,9 @@ namespace pr::rdr12
 				.colours(m_colours)
 				.normals(m_normals)
 				.tex(m_texs);
-			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3771,50 +3806,45 @@ namespace pr::rdr12
 		creation::Textured m_tex;
 		creation::GenNorms m_gen_norms;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_tex(SamDesc::AnisotropicClamp())
-			,m_gen_norms(0.0f)
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_tex(SamDesc::AnisotropicClamp())
+			, m_gen_norms(0.0f)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Verts:
 				{
-					int r = 1;
-					p.m_reader.SectionStart();
-					for (pr::v4 v; !p.m_reader.IsSectionEnd(); ++r)
+					reader.SectionStart();
+					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Vector3(v, 1.0f);
-						m_verts.push_back(v);
-						if (r % 500 == 0) p.ReportProgress();
+						m_verts.push_back(reader.Vector3(1.0f));
+						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				default:
 				{
 					return
-						m_tex.ParseKeyword(p, kw) ||
-						m_gen_norms.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						m_gen_norms.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
 			// All fields are child keywords
-			p.ReportError(EScriptResult::UnknownValue, "Convex hull object description invalid");
+			m_pp.ReportError(EScriptResult::UnknownValue, "Convex hull object description invalid", reader.Location());
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Validate
 			if (m_verts.size() < 2)
-			{
-				p.ReportError(EScriptResult::Failed, "Convex hull object description incomplete. At least 2 vertices required");
 				return;
-			}
 
 			// Allocate space for the face indices
 			m_indices.resize(6 * (m_verts.size() - 2));
@@ -3829,7 +3859,7 @@ namespace pr::rdr12
 			m_nuggets.push_back(NuggetDesc(ETopo::TriList, EGeom::Vert).tex_diffuse(m_tex.m_texture).sam_diffuse(m_tex.m_sampler));
 
 			// Generate normals if needed
-			m_gen_norms.Generate(p);
+			m_gen_norms.Generate(m_pp);
 
 			// Create the model
 			auto cdata = MeshCreationData()
@@ -3839,8 +3869,9 @@ namespace pr::rdr12
 				.colours(m_colours)
 				.normals(m_normals)
 				.tex(m_texs);
-			obj->m_model = ModelGenerator::Mesh(p.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
+			model->m_name = m_obj->TypeAndName();
+			return model;
 		}
 	};
 
@@ -3859,12 +3890,86 @@ namespace pr::rdr12
 		Index m_index;       // The offset into 'm_data' for the start if each row (if jagged) else empty.
 		iv2   m_dim;         // Table dimensions or bounds of the table dimensions.
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_data()
-			,m_index()
-			,m_dim()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_data()
+			, m_index()
+			, m_dim()
 		{}
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
+		{
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					// Create an adapter that makes the script reader look like a std::stream
+					struct StreamWrapper
+					{
+						Reader& m_reader; // The reader to adapt
+						std::wstring m_delims; // Preserve the delimiters
+
+						StreamWrapper(Reader& reader)
+							: m_reader(reader)
+							, m_delims(reader.Delimiters())
+						{
+							// Read up to the first non-delimiter. This is the start of the CSV data
+							m_reader.IsSectionEnd();
+
+							// Change the delimiters to suit CSV data
+							m_reader.Delimiters(L"");
+						}
+						~StreamWrapper()
+						{
+							// Restore the delimiters
+							m_reader.Delimiters(m_delims.c_str());
+						}
+						StreamWrapper(StreamWrapper const&) = delete;
+						StreamWrapper& operator =(StreamWrapper const&) = delete;
+						bool good() const
+						{
+							return !eof() && !bad();
+						}
+						bool eof() const
+						{
+							return m_reader.IsKeyword() || m_reader.IsSectionEnd();
+						}
+						bool bad() const
+						{
+							return m_reader.IsSourceEnd();
+						}
+						wchar_t peek()
+						{
+							return *m_reader.Source();
+						}
+						wchar_t get()
+						{
+							auto ch = peek();
+							++m_reader.Source();
+							return ch;
+						}
+					};
+					StreamWrapper wrap(reader);
+
+					// Data is literal data given in the script
+					reader.SectionStart();
+					ParseDataStream(wrap);
+					reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::Source:
+				{
+					// Source is a file containing data
+					auto filepath = reader.FilepathS();
+					std::ifstream file(filepath);
+					ParseDataStream(file);
+					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
+		}
 		template <typename Stream> void ParseDataStream(Stream& stream)
 		{
 			using namespace pr::csv;
@@ -3936,80 +4041,6 @@ namespace pr::rdr12
 			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
 			assert(m_index.empty() || m_index.back() == (int)m_data.size());
 		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					// Create an adapter that makes the script reader look like a std::stream
-					struct StreamWrapper
-					{
-						Reader& m_reader; // The reader to adapt
-						std::wstring m_delims; // Preserve the delimiters
-
-						StreamWrapper(Reader& reader)
-							:m_reader(reader)
-							, m_delims(reader.Delimiters())
-						{
-							// Read up to the first non-delimiter. This is the start of the CSV data
-							m_reader.IsSectionEnd();
-
-							// Change the delimiters to suit CSV data
-							m_reader.Delimiters(L"");
-						}
-						~StreamWrapper()
-						{
-							// Restore the delimiters
-							m_reader.Delimiters(m_delims.c_str());
-						}
-						StreamWrapper(StreamWrapper const&) = delete;
-						StreamWrapper& operator =(StreamWrapper const&) = delete;
-						bool good() const
-						{
-							return !eof() && !bad();
-						}
-						bool eof() const
-						{
-							return m_reader.IsKeyword() || m_reader.IsSectionEnd();
-						}
-						bool bad() const
-						{
-							return m_reader.IsSourceEnd();
-						}
-						wchar_t peek()
-						{
-							return *m_reader.Source();
-						}
-						wchar_t get()
-						{
-							auto ch = peek();
-							++m_reader.Source();
-							return ch;
-						}
-					};
-					StreamWrapper wrap(p.m_reader);
-
-					// Data is literal data given in the script
-					p.m_reader.SectionStart();
-					ParseDataStream(wrap);
-					p.m_reader.SectionEnd();
-					return true;
-				}
-				case EKeyword::Source:
-				{
-					// Source is a file containing data
-					auto filepath = p.m_reader.FilepathS();
-					std::ifstream file(filepath);
-					ParseDataStream(file);
-					return true;
-				}
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
-			}
-		}
 	};
 
 	// ELdrObject::Series
@@ -4065,24 +4096,55 @@ namespace pr::rdr12
 		pr::vector<DataIter> m_yiter;
 		float m_line_width;
 		
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_xaxis()
-			,m_yaxis()
-			,m_xiter()
-			,m_yiter()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_xaxis()
+			, m_yaxis()
+			, m_xiter()
+			, m_yiter()
 		{
 			// Find the ancestor chart creator
-			auto const* parent = p.m_parent_creator;
-			for (; parent != nullptr && parent->p.m_type != ELdrObject::Chart; parent = parent->p.m_parent_creator) {}
+			auto const* parent = m_pp.m_parent_creator;
+			for (; parent != nullptr && parent->m_pp.m_type != ELdrObject::Chart; parent = parent->m_pp.m_parent_creator) {}
 			if (parent != nullptr)
 			{
 				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
 			}
 			else
 			{
-				p.ReportError(EScriptResult::SyntaxError, "Series objects must be children of a Chart object");
+				m_pp.ReportError(EScriptResult::SyntaxError, "Series objects must be children of a Chart object", reader.Location());
 				throw std::runtime_error("Series objects must be children of a Chart object");
+			}
+		}
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
+		{
+			switch (kw)
+			{
+				case EKeyword::XAxis:
+				{
+					m_xaxis = eval::Compile(reader.StringS<std::string>());
+					for (auto& name : m_xaxis.m_arg_names)
+						m_xiter.push_back(DataIter{name, m_chart->m_dim});
+					
+					return true;
+				}
+				case EKeyword::YAxis:
+				{
+					m_yaxis = pr::eval::Compile(reader.StringS<std::string());
+					for (auto& name : m_yaxis.m_arg_names)
+						m_yiter.push_back(DataIter{name, m_chart->m_dim});
+
+					return true;
+				}
+				case EKeyword::Width:
+				{
+					m_line_width = reader.RealS<float>();
+					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(reader, kw);
+				}
 			}
 		}
 		double GetValue(DataIter const& iter, int i, bool& in_range) const
@@ -4104,61 +4166,22 @@ namespace pr::rdr12
 			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
 			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
 		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::XAxis:
-				{
-					std::string expr;
-					p.m_reader.StringS(expr);
-					m_xaxis = pr::eval::Compile(expr);
-					for (auto& name : m_xaxis.m_arg_names)
-						m_xiter.push_back(DataIter{name, m_chart->m_dim});
-					
-					return true;
-				}
-				case EKeyword::YAxis:
-				{
-					std::string expr;
-					p.m_reader.StringS(expr);
-					m_yaxis = pr::eval::Compile(expr);
-					for (auto& name : m_yaxis.m_arg_names)
-						m_yiter.push_back(DataIter{name, m_chart->m_dim});
-
-					return true;
-				}
-				case EKeyword::Width:
-				{
-					p.m_reader.RealS(m_line_width);
-					return true;
-				}
-				default:
-				{
-					return IObjectCreator::ParseKeyword(kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Determine the index of this series within the chart
 			int child_index = 0;
-			for (auto& child : p.m_parent->m_child)
+			for (auto& child : m_pp.m_parent->m_child)
 				child_index += int(child->m_type == ELdrObject::Series);
 
 			// Generate a name if none given
-			if (!AllSet(p.m_flags, EFlags::ExplicitName))
-			{
-				obj->m_name = FmtS("Series %d", child_index);
-			}
+			if (!AllSet(m_pp.m_flags, EFlags::ExplicitName))
+				m_obj->m_name = std::format("Series {}", child_index);
 
 			// Assign a colour if none given
-			if (!AllSet(p.m_flags, EFlags::ExplicitColour))
-			{
-				obj->m_base_colour = colours[child_index % _countof(colours)];
-			}
+			if (!AllSet(m_pp.m_flags, EFlags::ExplicitColour))
+				m_obj->m_base_colour = colours[child_index % _countof(colours)];
 
-			auto& verts = p.m_cache.m_point;
+			auto& verts = m_pp.m_cache.m_point;
 			verts.clear();
 
 			// Merge the args from both expressions
@@ -4185,21 +4208,23 @@ namespace pr::rdr12
 			}
 				
 			// Create a plot from the points
-			if (!verts.empty())
-			{
-				auto opts = ModelGenerator::CreateOptions().colours({&obj->m_base_colour, 1});
-				obj->m_model = ModelGenerator::LineStrip(p.m_factory, isize(verts) - 1, verts, &opts);
-				obj->m_model->m_name = obj->TypeAndName();
+			if (verts.empty())
+				return nullptr;
 
-				// Use thick lines
-				if (m_line_width > 1.0f)
-				{
-					// Get or create an instance of the thick line shader
-					auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-					for (auto& nug : obj->m_model->m_nuggets)
-						nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
-				}
+			auto opts = ModelGenerator::CreateOptions().colours({&m_obj->m_base_colour, 1});
+			auto model = ModelGenerator::LineStrip(m_pp.m_factory, isize(verts) - 1, verts, &opts);
+			model->m_name = m_obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width > 1.0f)
+			{
+				// Get or create an instance of the thick line shader
+				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
+				for (auto& nug : model->m_nuggets)
+					nug.m_shaders.push_back({ERenderStep::RenderForward, shdr});
 			}
+		
+			return model;
 		}
 	};
 
@@ -4211,26 +4236,26 @@ namespace pr::rdr12
 		creation::BakeTransform m_bake;
 		int m_part;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_filepath()
-			,m_bake()
-			,m_gen_norms()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_filepath()
+			, m_bake()
+			, m_gen_norms()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_bake.ParseKeyword(p, kw) ||
-				m_gen_norms.ParseKeyword(p, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_bake.ParseKeyword(reader, m_pp, kw) ||
+				m_gen_norms.ParseKeyword(reader, m_pp, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			std::wstring filepath;
-			p.m_reader.String(filepath);
-			m_filepath = filepath;
+			m_filepath = reader.String<std::wstring>();
+			auto src = reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
+			
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			using namespace pr::geometry;
 			using namespace std::filesystem;
@@ -4238,26 +4263,26 @@ namespace pr::rdr12
 			// Validate
 			if (m_filepath.empty())
 			{
-				p.ReportError(EScriptResult::Failed, "Model filepath not given");
-				return;
+				m_pp.ReportError(EScriptResult::Failed, "Model filepath not given", m_last_location);
+				return nullptr;
 			}
 
 			// Determine the format from the file extension
 			auto format = GetModelFormat(m_filepath);
 			if (format == EModelFileFormat::Unknown)
 			{
-				auto msg = Fmt("Model file '%S' is not supported.\nSupported Formats: ", m_filepath.c_str());
+				auto msg = std::format("Model file '{}' is not supported.\nSupported Formats: ", m_filepath.string());
 				for (auto f : Enum<EModelFileFormat>::Members()) msg.append(Enum<EModelFileFormat>::ToStringA(f)).append(" ");
-				p.ReportError(EScriptResult::Failed, msg.c_str());
+				m_pp.ReportError(EScriptResult::Failed, msg.c_str());
 				return;
 			}
 
 			// Ask the include handler to turn the filepath into a stream.
 			// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
-			auto src = p.m_reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
+			auto src = reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
 			if (!src || !*src)
 			{
-				p.ReportError(EScriptResult::Failed, FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
+				m_pp.ReportError(EScriptResult::Failed, std::format("Failed to open file stream '{}'", m_filepath.string()), m_last_location);
 				return;
 			}
 
@@ -4267,7 +4292,7 @@ namespace pr::rdr12
 				path(m_filepath.string() + ".textures"),
 				m_filepath.parent_path(),
 			};
-			AutoSub sub = p.m_rdr.ResolveFilepath += [&](auto&, ResolvePathArgs& args)
+			AutoSub sub = m_pp.m_rdr.ResolveFilepath += [&](auto&, ResolvePathArgs& args)
 			{
 				// Look in a folder with the same name as the model
 				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
@@ -4276,13 +4301,12 @@ namespace pr::rdr12
 				args.handled = true;
 			};
 
-
 			// Create the models
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
-			ModelGenerator::LoadModel(format, p.m_factory, *src, [&](ModelTree const& tree)
+			ModelGenerator::LoadModel(format, m_pp.m_factory, *src, [&](ModelTree const& tree)
 				{
-					auto child = ModelTreeToLdr(tree, obj->m_context_id);
-					if (child != nullptr) obj->AddChild(child);
+					auto child = ModelTreeToLdr(tree, m_obj->m_context_id);
+					if (child != nullptr) m_obj->AddChild(child);
 					return false;
 				}, &opts);
 		}
@@ -4329,9 +4353,9 @@ namespace pr::rdr12
 				ColourBands m_col;
 
 				Axis()
-					:m_min(maths::float_max)
-					,m_max(maths::float_lowest)
-					,m_col()
+					: m_min(maths::float_max)
+					, m_max(maths::float_lowest)
+					, m_col()
 				{}
 				bool limited() const
 				{
@@ -4373,7 +4397,7 @@ namespace pr::rdr12
 
 					return vc;
 				}
-				static Axis Parse(Reader& reader)
+				template <typename TReader> static Axis Parse(TReader& reader)
 				{
 					Axis axis;
 					reader.SectionStart();
@@ -4422,8 +4446,8 @@ namespace pr::rdr12
 			std::array<Axis, 3> m_axis;
 			float m_weight;
 			Extras()
-				:m_axis()
-				,m_weight(0.5f)
+				: m_axis()
+				, m_weight(0.5f)
 			{}
 			bool has_alpha() const
 			{
@@ -4463,92 +4487,90 @@ namespace pr::rdr12
 		int m_resolution;
 		Extras m_extras;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_eq()
-			,m_args()
-			,m_resolution(10000)
-			,m_extras()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_eq()
+			, m_args()
+			, m_resolution(10000)
+			, m_extras()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::Resolution:
 				{
-					p.m_reader.IntS(m_resolution, 10);
+					m_resolution = reader.IntS<int>(10);
 					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
 					return true;
 				}
 				case EKeyword::Param:
 				{
-					std::string name;
-					double value;
-					p.m_reader.SectionStart();
-					p.m_reader.String(name);
-					p.m_reader.Real(value);
-					p.m_reader.SectionEnd();
+					reader.SectionStart();
+					auto name = reader.String<std::string>();
+					auto value = reader.Real<double>();
+					reader.SectionEnd();
 					m_args.add(name, value);
 					return true;
 				}
 				case EKeyword::Weight:
 				{
-					p.m_reader.RealS(m_extras.m_weight);
+					m_extras.m_weight = reader.RealS<float>();
 					m_extras.m_weight = std::clamp(m_extras.m_weight, -1.0f, +1.0f);
 					return true;
 				}
 				case EKeyword::XAxis:
 				{
-					m_extras.m_axis[0] = Extras::Axis::Parse(p.m_reader);
+					m_extras.m_axis[0] = Extras::Axis::Parse(reader);
 					return true;
 				}
 				case EKeyword::YAxis:
 				{
-					m_extras.m_axis[1] = Extras::Axis::Parse(p.m_reader);
+					m_extras.m_axis[1] = Extras::Axis::Parse(reader);
 					return true;
 				}
 				case EKeyword::ZAxis:
 				{
-					m_extras.m_axis[2] = Extras::Axis::Parse(p.m_reader);
+					m_extras.m_axis[2] = Extras::Axis::Parse(reader);
 					return true;
 				}
 				default:
 				{
 					return
-						IObjectCreator::ParseKeyword(kw);
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			// Read the equation expression
-			std::wstring equation;
-			p.m_reader.String(equation);
-
 			// Compile the equation
-			try { m_eq = eval::Compile<wchar_t>(equation); }
+			try
+			{
+				auto equation = reader.String<std::wstring>();
+				m_eq = eval::Compile<wchar_t>(equation);
+			}
 			catch (std::exception const& ex)
 			{
-				p.ReportError(EScriptResult::ExpressionSyntaxError, Fmt("Equation expression is invalid: %s", ex.what()));
+				m_pp.ReportError(EScriptResult::ExpressionSyntaxError, std::format("Equation expression is invalid: {}", ex.what()), reader.Location());
 				return;
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			using namespace pr::geometry;
 
 			// Validate
 			if (!m_eq)
 			{
-				p.ReportError(EScriptResult::Failed, "Equation not given");
-				return;
+				m_pp.ReportError(EScriptResult::Failed, "Equation not given", m_last_location);
+				return nullptr;
 			}
 
 			// Apply any constants
 			m_eq.m_args.add(m_args);
 
 			// Update the model before each render so the range depends on the visible area at the focus point
-			obj->OnAddToScene += UpdateModel;
+			m_obj->OnAddToScene += UpdateModel;
 
 			// Choose suitable 'vcount, icount' based on the equation dimension and resolution
 			int vcount, icount, dim = m_eq.m_args.unassigned_count();
@@ -4557,22 +4579,23 @@ namespace pr::rdr12
 				case 1: vcount = icount = m_resolution; break;
 				case 2: vcount = m_resolution; icount = 2 * m_resolution; break;
 				case 3: vcount = icount = m_resolution; break;
-				default: throw std::runtime_error(Fmt("Unsupported equation dimension: %d", dim));
+				default: throw std::runtime_error(std::format("Unsupported equation dimension: {}", dim));
 			}
+
+			// Store the expression in the object user data
+			m_obj->m_user_data.get<eval::Expression>() = m_eq;
+			m_obj->m_user_data.get<Extras>() = m_extras;
+			m_obj->m_user_data.get<Cache>() = Cache{};
 
 			// Create buffers for a dynamic model
 			ModelDesc mdesc(
 				ResDesc::VBuf<Vert>(vcount, {}),
 				ResDesc::IBuf<uint32_t>(icount, {}),
-				BBox::Reset(), obj->TypeAndName().c_str());
+				BBox::Reset(), m_obj->TypeAndName().c_str());
 
 			// Create the model
-			obj->m_model = p.m_factory.CreateModel(mdesc);
-
-			// Store the expression in the object user data
-			obj->m_user_data.get<eval::Expression>() = m_eq;
-			obj->m_user_data.get<Extras>() = m_extras;
-			obj->m_user_data.get<Cache>() = Cache{};
+			auto model = m_pp.m_factory.CreateModel(mdesc);
+			return model;
 		}
 
 		// Generate the model based on the visible range
@@ -4789,27 +4812,27 @@ namespace pr::rdr12
 		creation::CastingLight m_cast;
 		Light m_light;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_cast()
-			,m_light()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_cast()
+			, m_light()
 		{
 			m_light.m_on = true;
 		}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_cast.ParseKeyword(p, m_light, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Vector3(m_light.m_direction, 0.0f);
+			m_light.m_direction = reader.Vector3(0.0f);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
+			m_obj->m_user_data.get<Light>() = m_light;
 		}
 	};
 
@@ -4819,27 +4842,28 @@ namespace pr::rdr12
 		creation::CastingLight m_cast;
 		Light m_light;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_cast()
-			,m_light()
+		template <typename TReader> ObjectCreator(TReader& reader, ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_cast()
+			, m_light()
 		{
 			m_light.m_on = true;
 		}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_cast.ParseKeyword(p, m_light, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Vector3(m_light.m_position, 1.0f);
+			m_light.m_position = reader.Vector3(1.0f);
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
+			m_obj->m_user_data.get<Light>() = m_light;
+			return nullptr;
 		}
 	};
 
@@ -4849,36 +4873,37 @@ namespace pr::rdr12
 		creation::CastingLight m_cast;
 		Light m_light;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_cast()
-			,m_light()
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_cast()
+			, m_light()
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			return
-				m_cast.ParseKeyword(p, m_light, kw) ||
-				IObjectCreator::ParseKeyword(kw);
+				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
+				IObjectCreator::ParseKeyword(reader, kw);
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			p.m_reader.Vector3(m_light.m_position, 1.0f);
-			p.m_reader.Vector3(m_light.m_direction, 0.0f);
-			p.m_reader.Real(m_light.m_inner_angle); // actually in degrees
-			p.m_reader.Real(m_light.m_outer_angle); // actually in degrees
+			m_light.m_position = reader.Vector3(1.0f);
+			m_light.m_direction = reader.Vector3(0.0f);
+			m_light.m_inner_angle = reader.Real<float>(); // actually in degrees
+			m_light.m_outer_angle = reader.Real<float>(); // actually in degrees
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
+			m_obj->m_user_data.get<Light>() = m_light;
+			return nullptr;
 		}
 	};
 
 	// ELdrObject::Group
 	template <> struct ObjectCreator<ELdrObject::Group> :IObjectCreator
 	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
 		{}
 	};
 
@@ -4900,23 +4925,21 @@ namespace pr::rdr12
 		TextLayout m_layout;
 		creation::MainAxis m_axis;
 
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
-			,m_text()
-			,m_type(EType::Full3D)
-			,m_fmt()
-			,m_layout()
-			,m_axis(AxisId::PosZ)
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_text()
+			, m_type(EType::Full3D)
+			, m_fmt()
+			, m_layout()
+			, m_axis(AxisId::PosZ)
 		{}
-		bool ParseKeyword(EKeyword kw) override
+		template <typename TReader> bool ParseKeyword(TReader& reader, EKeyword kw)
 		{
 			switch (kw)
 			{
 				case EKeyword::CString:
 				{
-					wstring256 text;
-					p.m_reader.CStringS(text);
-					m_text.append(text);
+					m_text.append(reader.CStringS<wstring256>());
 
 					// Record the formatting state
 					m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), p.m_font.back()));
@@ -4944,16 +4967,15 @@ namespace pr::rdr12
 				}
 				case EKeyword::BackColour:
 				{
-					p.m_reader.IntS(m_layout.m_bk_colour.argb, 16);
+					m_layout.m_bk_colour = Colour32(reader.IntS<uint32_t>(16));
 					return true;
 				}
 				case EKeyword::Format:
 				{
-					string32 ident;
-					p.m_reader.SectionStart();
+					reader.SectionStart();
 					for (; !p.m_reader.IsSectionEnd(); )
 					{
-						p.m_reader.Identifier(ident);
+						auto ident = reader.Identifier<string32>();
 						pr::transform(ident, [](char c) { return static_cast<char>(tolower(c)); });
 						switch (HashI(ident.c_str()))
 						{
@@ -4970,18 +4992,17 @@ namespace pr::rdr12
 							case HashI("emergencybreak"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK; break;
 						}
 					}
-					p.m_reader.SectionEnd();
+					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Anchor:
 				{
-					p.m_reader.Vector2S(m_layout.m_anchor);
+					m_layout.m_anchor = reader.Vector2S();
 					return true;
 				}
 				case EKeyword::Padding:
 				{
-					v4 padding;
-					p.m_reader.Vector4S(padding);
+					auto padding = reader.Vector4S();
 					m_layout.m_padding.left = padding.x;
 					m_layout.m_padding.top = padding.y;
 					m_layout.m_padding.right = padding.z;
@@ -4990,31 +5011,29 @@ namespace pr::rdr12
 				}
 				case EKeyword::Dim:
 				{
-					p.m_reader.Vector2S(m_layout.m_dim);
+					m_layout.m_dim = reader.Vector2S();
 					return true;
 				}
 				default:
 				{
 					return
-						m_axis.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void Parse() override
+		template <typename TReader> void ParseDescription(TReader& reader)
 		{
-			wstring256 text;
-			p.m_reader.String(text);
-			m_text.append(text);
+			m_text.append(reader.String<wstring256>());
 
 			// Record the formatting state
 			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), p.m_font.back()));
 		}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator::Text(p.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
-			obj->m_model->m_name = obj->TypeAndName();
+			auto model = ModelGenerator::Text(m_pp.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
+			model->m_name = m_obj->TypeAndName();
 
 			// Create the model
 			switch (m_type)
@@ -5029,10 +5048,10 @@ namespace pr::rdr12
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->Flags(ELdrFlags::SceneBoundsExclude, true, "");
+					m_obj->Flags(ELdrFlags::SceneBoundsExclude, true, "");
 
 					// Update the rendering 'i2w' transform on add-to-scene
-					obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
+					m_obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
 					{
 						// The size of the text texture is the text metrics size / 96.0.
 						auto c2w = scene.m_cam.CameraToWorld();
@@ -5071,7 +5090,7 @@ namespace pr::rdr12
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->Flags(
+					m_obj->Flags(
 						ELdrFlags::BBoxExclude |
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
@@ -5081,10 +5100,10 @@ namespace pr::rdr12
 					constexpr int ViewPortSize = 1024;
 
 					// Screen space uses a standard normalised orthographic projection
-					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
+					m_obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
 
 					// Update the rendering 'i2w' transform on add-to-scene
-					obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
+					m_obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
 					{
 						auto& main_camera = static_cast<Camera const&>(scene.m_cam);
 						auto c2w = main_camera.CameraToWorld();
@@ -5119,7 +5138,7 @@ namespace pr::rdr12
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->Flags(
+					m_obj->Flags(
 						ELdrFlags::BBoxExclude |
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
@@ -5129,10 +5148,10 @@ namespace pr::rdr12
 					constexpr int ViewPortSize = 1024;
 
 					// Screen space uses a standard normalised orthographic projection
-					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
+					m_obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
 
 					// Update the rendering 'i2w' transform on add-to-scene.
-					obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
+					m_obj->OnAddToScene += [](LdrObject& ob, Scene const& scene)
 					{
 						// The 'ob.m_i2w' is a normalised screen space position
 						// (-1,-1,-0) is the lower left corner on the near plane,
@@ -5165,7 +5184,7 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					throw std::runtime_error(FmtS("Unknown Text mode: %d", m_type));
+					throw std::runtime_error(std::format("Unknown Text mode: {}", m_type));
 				}
 			}
 		}
@@ -5174,112 +5193,70 @@ namespace pr::rdr12
 	// ELdrObject::Instance
 	template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
 	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreator(p)
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
 		{}
-		void CreateModel(LdrObject* obj) override
+		ModelPtr CreateModel() override
 		{
 			// Locate the model that this is an instance of
-			auto model_key = pr::hash::Hash(obj->m_name.c_str());
+			auto model_key = hash::Hash(m_obj->m_name.c_str());
 			auto mdl = p.m_models.find(model_key);
 			if (mdl == p.m_models.end())
 			{
-				p.ReportError(EScriptResult::UnknownValue, "Instance not found");
+				m_pp.ReportError(EScriptResult::UnknownValue, "Instance not found", m_last_location);
 				return;
 			}
-			obj->m_model = mdl->second;
+			return mdl->second;
 		}
 	};
 
 	#pragma endregion
 
 	// Parse an ldr object of type 'ShapeType'
-	template <ELdrObject ShapeType> void Parse(ParseParams& p)
+	template <ELdrObject ShapeType, typename TReader> void Parse(TReader& reader, ParseParams& pp)
 	{
 		// Notes:
 		//  - Not using an output iterator style callback because model
 		//    instancing relies on the map from object to model.
-		p.m_type = ShapeType;
+		pp.m_type = ShapeType;
 
 		// Read the object attributes: name, colour, instance
-		auto attr = ParseAttributes(p);
-		auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
+		auto attr = ParseAttributes(reader, pp);
+		auto obj  = LdrObjectPtr(new LdrObject(attr, pp.m_parent, pp.m_context_id), true);
 
 		// Push a font onto the font stack, so that fonts are scoped to object declarations
 		auto font_scope = Scope<void>(
-			[&]{ p.m_font.push_back(p.m_font.back()); },
-			[&]{ p.m_font.pop_back(); });
+			[&]{ pp.m_font.push_back(pp.m_font.back()); },
+			[&]{ pp.m_font.pop_back(); });
 
 		// Create an object creator for the given type
-		ObjectCreator<ShapeType> creator(p);
-
-		// Read the description of the model
-		p.m_reader.SectionStart();
-		for (;!p.m_cancel && !p.m_reader.IsSectionEnd();)
-		{
-			// Check for incomplete script
-			if (p.m_reader.IsSourceEnd())
-			{
-				p.ReportError(EScriptResult::UnexpectedEndOfFile);
-				break;
-			}
-
-			// Handle keywords
-			if (p.m_reader.IsKeyword())
-			{
-				// The next script token is a keyword
-				auto kw = p.m_reader.NextKeywordH<EKeyword>();
-
-				// Let the object creator have the first go with the keyword
-				if (creator.ParseKeyword(kw))
-					continue;
-
-				// Is the keyword a common object property
-				if (ParseProperties(p, kw, obj.get()))
-					continue;
-
-				// Recursively parse child objects
-				ParseParams pp(p, obj->m_child, obj.get(), &creator);
-				if (ParseLdrObject((ELdrObject)kw, pp))
-					continue;
-
-				// Unknown token
-				p.ReportError(EScriptResult::UnknownToken);
-				continue;
-			}
-
-			// Not a keyword, let the object creator interpret it
-			creator.Parse();
-		}
-		p.m_reader.SectionEnd();
-
-		// Create the model
-		creator.CreateModel(obj.get());
+		ObjectCreator<ShapeType> creator(reader, pp, obj.get());
+		obj->m_model = creator.CreateModel();
 
 		// Add the model and instance to the containers
-		p.m_models[pr::hash::Hash(obj->m_name.c_str())] = obj->m_model;
-		p.m_objects.push_back(obj);
+		pp.m_models[hash::Hash(obj->m_name.c_str())] = obj->m_model;
+		pp.m_objects.push_back(obj);
 
 		// Reset the memory pool for the next object
-		p.m_cache.Reset();
+		pp.m_cache.Reset();
 
 		// Report progress
-		p.ReportProgress();
+		pp.ReportProgress();
 	}
-	template <> void Parse<ELdrObject::Unknown>(ParseParams&) {}
-	template <> void Parse<ELdrObject::Custom>(ParseParams&) {}
+	template <typename TReader> void Parse<ELdrObject::Unknown>(TReader&, ParseParams&) {}
+	template <typename TReader> void Parse<ELdrObject::Custom>(TReader&, ParseParams&) {}
 
 	// Reads a single ldr object from a script adding object (+ children) to 'p.m_objects'.
 	// Returns true if an object was read or false if the next keyword is unrecognised
-	bool ParseLdrObject(ELdrObject type, ParseParams& p)
+	template <typename TReader> bool ParseLdrObject(ELdrObject type, TReader& reader, ParseParams& p)
 	{
 		// Save the current number of objects
-		auto object_count = p.m_objects.size();
+		auto object_count = isize(p.m_objects);
 
 		// Parse the object
 		switch (type)
 		{
-			#define PR_LDR_PARSE_IMPL(name, hash) case ELdrObject::name: Parse<ELdrObject::name>(p); break;
+			#define PR_LDR_PARSE_IMPL(name, hash) case ELdrObject::name: Parse<ELdrObject::name>(reader, p); break;
 			#define PR_LDR_PARSE(x) x(PR_LDR_PARSE_IMPL)
 			PR_LDR_PARSE(PR_ENUM_LDROBJECTS)
 			default: return false;
@@ -5288,39 +5265,40 @@ namespace pr::rdr12
 		// Apply properties to each object added
 		// This is done after objects are parsed so that recursive properties can be applied
 		assert("No object added, or objects removed, without Parse error" && p.m_objects.size() > object_count);
-		for (auto i = object_count, iend = p.m_objects.size(); i != iend; ++i)
+		for (auto i = object_count, iend = isize(p.m_objects); i != iend; ++i)
 			ApplyObjectState(p.m_objects[i].get());
 
 		return true;
 	}
 
-	// Reads all ldr objects from a script returning 'result'
+	// Reads all ldr objects from a script.
 	// 'add_cb' is 'bool function(int object_index, ParseResult& out, Location const& loc)'
-	template <typename AddCB>
-	void ParseLdrObjects(ParseParams& p, AddCB add_cb)
+	template <typename TReader, typename AddCB>
+	void ParseLdrObjects(TReader& reader, ParseParams& pp, AddCB add_cb)
 	{
-		// Ldr script is not case sensitive
-		p.m_reader.CaseSensitive(false);
+		// Ldr script text is not case sensitive
+		if constexpr (std::is_same_v<TReader, script::Reader>)
+			reader.CaseSensitive(false);
 
 		// Loop over keywords in the script
-		for (HashValue32 kw; !p.m_cancel && p.m_reader.NextKeywordH(kw);)
+		for (EKeyword kw; !pp.m_cancel && reader.NextKeywordH(kw);)
 		{
-			switch ((EKeyword)kw)
+			switch (kw)
 			{
 				case EKeyword::Camera:
 				{
 					// Camera position description
-					ParseCamera(p, p.m_result);
+					ParseCamera(reader, pp, pp.m_result);
 					break;
 				}
 				case EKeyword::Wireframe:
 				{
-					p.m_result.m_wireframe = true;
+					pp.m_result.m_wireframe = true;
 					break;
 				}
 				case EKeyword::Font:
 				{
-					ParseFont(p, p.m_font.back());
+					ParseFont(reader, pp, pp.m_font.back());
 					break;
 				}
 				case EKeyword::Lock:
@@ -5334,15 +5312,15 @@ namespace pr::rdr12
 				default:
 				{
 					// Save the current number of objects
-					auto object_count = isize(p.m_objects);
+					auto object_count = isize(pp.m_objects);
 
 					// Assume the keyword is an object and start parsing
-					if (!ParseLdrObject(static_cast<ELdrObject>(kw), p))
+					if (!ParseLdrObject(static_cast<ELdrObject>(kw), reader, pp))
 					{
-						p.ReportError(EScriptResult::UnknownToken, Fmt("Expected an object declaration"));
+						pp.ReportError(EScriptResult::UnknownToken, "Expected an object declaration");
 						break;
 					}
-					assert("Objects removed but 'ParseLdrObject' didn't fail" && isize(p.m_objects) > object_count);
+					assert("Objects removed but 'ParseLdrObject' didn't fail" && isize(pp.m_objects) > object_count);
 
 					// Call the callback with the freshly minted object.
 					add_cb(object_count);
@@ -5356,7 +5334,7 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult Parse(Renderer& rdr, pr::script::Reader& reader, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, script::Reader& reader, Guid const& context_id, ParseProgressCB progress_cb)
 	{
 		ParseResult out;
 
@@ -5378,8 +5356,38 @@ namespace pr::rdr12
 
 		// Parse the script
 		bool cancel = false;
-		ParseParams pp(rdr, reader, out, context_id, progress_cb, cancel);
-		ParseLdrObjects(pp, [&](int){});
+		ParseParams pp(rdr, out, context_id, reader.ReportError, progress_cb, cancel);
+		ParseLdrObjects(reader, pp, [&](int){});
+		return out;
+	}
+
+	// Parse ldr objects from binary data.
+	// The binary format mainly follows the text format
+	ParseResult Parse(Renderer& rdr, std::span<uint8_t const> stream, Guid const& context_id, ParseProgressCB progress_cb)
+	{
+		ParseResult out;
+
+		// Give initial and final progress updates
+		auto start_loc = 0LL;
+		auto exit = Scope<void>(
+			[&]
+			{
+				// Give an initial progress update
+				if (progress_cb != nullptr)
+					progress_cb(context_id, out, start_loc, false);
+			},
+			[&]
+			{
+				// Give a final progress update
+				if (progress_cb != nullptr)
+					progress_cb(context_id, out, start_loc, true);
+			});
+
+		// Parse the script
+		bool cancel = false;
+		ByteReader reader(stream);
+		ParseParams pp(rdr, out, context_id, reader.ReportError, progress_cb, cancel);
+		ParseLdrObjects(reader, pp, [&](int){});
 		return out;
 	}
 
@@ -5530,15 +5538,16 @@ namespace pr::rdr12
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-	void Update(Renderer& rdr, LdrObject* object, Reader& reader, EUpdateObject flags)
+	void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags)
 	{
+		bool cancel = false;
+
 		// Parsing parameters
 		ParseResult result;
-		bool cancel = false;
-		ParseParams pp(rdr, reader, result, object->m_context_id, nullptr, cancel);
+		ParseParams pp(rdr, result, object->m_context_id, reader.ReportError, nullptr, cancel);
 	
 		// Parse 'reader' for the new model
-		ParseLdrObjects(pp, [&](int object_index)
+		ParseLdrObjects(reader, pp, [&](int object_index)
 		{
 			// Want the first root level object
 			auto& rhs = result.m_objects[object_index];

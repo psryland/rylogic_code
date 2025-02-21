@@ -293,6 +293,7 @@
 #include "pr\physics2\utility\ldraw.h"
 #include "pr\physics2\utility\misc.h"
 #include "pr\script\buf.h"
+#include "pr\script\byte_reader.h"
 #include "pr\script\embedded.h"
 #include "pr\script\embedded_lua.h"
 #include "pr\script\fail_policy.h"

@@ -69,6 +69,13 @@ namespace pr::script
 			,ReportError(DefaultErrorHandler)
 		{}
 
+		// Allow override of error handling
+		std::function<bool(EResult, Loc const&, std::string_view)> ReportError;
+		static bool DefaultErrorHandler(EResult result, Loc const& loc, std::string_view msg)
+		{
+			throw ScriptException(result, loc, msg);
+		}
+
 		// Access the underlying source
 		Src const& Source() const noexcept
 		{
@@ -118,15 +125,9 @@ namespace pr::script
 		}
 
 		// Return the hash of a keyword using the current reader settings
-		static int StaticHashKeyword(wchar_t const* keyword, bool case_sensitive)
-		{
-			// This function can't have the same name as 'HashKeyword' because it causes a compiler error
-			auto const kw = case_sensitive ? pr::hash::Hash(keyword) : pr::hash::HashI(keyword);
-			return kw;
-		}
 		int HashKeyword(wchar_t const* keyword) const
 		{
-			return StaticHashKeyword(keyword, m_case_sensitive);
+			return script::HashKeyword(keyword, m_case_sensitive);
 		}
 
 		// Return true if the end of the source has been reached
@@ -841,73 +842,55 @@ namespace pr::script
 		// Extract a transform description accumulatively. 'o2w' should be a valid initial transform.
 		m4x4 Transform()
 		{
-			m4x4 o2w = m4x4Identity;
+			auto o2w = m4x4::Identity();
 			return Transform(o2w) ? o2w : m4x4{};
 		}
 		m4x4 TransformS()
 		{
-			m4x4 o2w = m4x4Identity;
+			auto o2w = m4x4::Identity();
 			return TransformS(o2w) ? o2w : m4x4{};
 		}
 		bool Transform(m4x4& o2w)
 		{
 			assert(IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it pre-multiplies the transform with the one read from the script");
-			auto p2w = m4x4Identity;
+			auto p2w = m4x4::Identity();
 			auto affine = IsAffine(o2w);
-			
-			// Tranform keywords
-			const int NonAffine      = HashKeyword(L"NonAffine"     );
-			const int M4x4           = HashKeyword(L"M4x4"          );
-			const int M3x3           = HashKeyword(L"M3x3"          );
-			const int Pos            = HashKeyword(L"Pos"           );
-			const int Align          = HashKeyword(L"Align"         );
-			const int Quat           = HashKeyword(L"Quat"          );
-			const int QuatPos        = HashKeyword(L"QuatPos"       );
-			const int Rand4x4        = HashKeyword(L"Rand4x4"       );
-			const int RandPos        = HashKeyword(L"RandPos"       );
-			const int RandOri        = HashKeyword(L"RandOri"       );
-			const int Euler          = HashKeyword(L"Euler"         );
-			const int Scale          = HashKeyword(L"Scale"         );
-			const int Transpose      = HashKeyword(L"Transpose"     );
-			const int Inverse        = HashKeyword(L"Inverse"       );
-			const int Normalise      = HashKeyword(L"Normalise"     );
-			const int Orthonormalise = HashKeyword(L"Orthonormalise");
-				
+
 			// Parse the transform
-			for (int kw; NextKeywordH(kw);)
+			for (ETransformKeyword kw; NextKeywordH(kw);)
 			{
-				if (kw == NonAffine)
+				if (kw == ETransformKeyword::NonAffine)
 				{
 					affine = false;
 					continue;
 				}
-				if (kw == M4x4)
+				if (kw == ETransformKeyword::M4x4)
 				{
-					auto m = m4x4Identity;
+					auto m = m4x4::Identity();
 					Matrix4x4S(m);
 					if (affine && m.w.w != 1)
 					{
-						ReportError(script::EResult::UnknownValue, Location(), "Specify 'NonAffine' if M4x4 is intentionally non-affine.");
+						ReportError(EResult::UnknownValue, Location(), "Specify 'NonAffine' if M4x4 is intentionally non-affine.");
 						break;
 					}
 					p2w = m * p2w;
 					continue;
 				}
-				if (kw == M3x3)
+				if (kw == ETransformKeyword::M3x3)
 				{
-					auto m = m4x4Identity;
+					auto m = m4x4::Identity();
 					Matrix3x3S(m.rot);
 					p2w = m * p2w;
 					continue;
 				}
-				if (kw == Pos)
+				if (kw == ETransformKeyword::Pos)
 				{
-					auto m = m4x4Identity;
+					auto m = m4x4::Identity();
 					Vector3S(m.pos, 1.0f);
 					p2w = m * p2w;
 					continue;
 				}
-				if (kw == Align)
+				if (kw == ETransformKeyword::Align)
 				{
 					int axis_id;
 					v4 direction;
@@ -917,23 +900,23 @@ namespace pr::script
 					SectionEnd();
 
 					v4 axis = AxisId(axis_id);
-					if (axis == v4Zero)
+					if (axis == v4::Zero())
 					{
-						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
+						ReportError(EResult::UnknownValue, Location(), "axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
 						break;
 					}
 
 					p2w = m4x4::Transform(axis, direction, v4Origin) * p2w;
 					continue;
 				}
-				if (kw == Quat)
+				if (kw == ETransformKeyword::Quat)
 				{
 					quat q;
 					Vector4S(q.xyzw);
 					p2w = m4x4::Transform(q, v4Origin) * p2w;
 					continue;
 				}
-				if (kw == QuatPos)
+				if (kw == ETransformKeyword::QuatPos)
 				{
 					v4 p;
 					quat q;
@@ -941,10 +924,10 @@ namespace pr::script
 					Vector4(q.xyzw);
 					Vector3(p, 1.0f);
 					SectionEnd();
-					p2w = m4x4::Transform(q, p.w1()) * p2w;
+					p2w = m4x4::Transform(q, p) * p2w;
 					continue;
 				}
-				if (kw == Rand4x4)
+				if (kw == ETransformKeyword::Rand4x4)
 				{
 					float radius;
 					v4 centre;
@@ -955,7 +938,7 @@ namespace pr::script
 					p2w = m4x4::Random(g_rng(), centre, radius) * p2w;
 					continue;
 				}
-				if (kw == RandPos)
+				if (kw == ETransformKeyword::RandPos)
 				{
 					float radius;
 					v4 centre;
@@ -966,20 +949,20 @@ namespace pr::script
 					p2w = m4x4::Translation(v4::Random(g_rng(), centre, radius, 1)) * p2w;
 					continue;
 				}
-				if (kw == RandOri)
+				if (kw == ETransformKeyword::RandOri)
 				{
 					auto m = m4x4(m3x4::Random(g_rng()), v4::Origin());
 					p2w = m * p2w;
 					continue;
 				}
-				if (kw == Euler)
+				if (kw == ETransformKeyword::Euler)
 				{
 					v4 angles;
 					Vector3S(angles, 0.0f);
 					p2w = m4x4::Transform(DegreesToRadians(angles.x), DegreesToRadians(angles.y), DegreesToRadians(angles.z), v4Origin) * p2w;
 					continue;
 				}
-				if (kw == Scale)
+				if (kw == ETransformKeyword::Scale)
 				{
 					v4 scale;
 					SectionStart();
@@ -997,24 +980,24 @@ namespace pr::script
 					p2w = m4x4::Scale(scale.x, scale.y, scale.z, v4Origin) * p2w;
 					continue;
 				}
-				if (kw == Transpose)
+				if (kw == ETransformKeyword::Transpose)
 				{
 					p2w = Transpose4x4(p2w);
 					continue;
 				}
-				if (kw == Inverse)
+				if (kw == ETransformKeyword::Inverse)
 				{
 					p2w = IsOrthonormal(p2w) ? InvertFast(p2w) : Invert(p2w);
 					continue;
 				}
-				if (kw == Normalise)
+				if (kw == ETransformKeyword::Normalise)
 				{
-					p2w.x = pr::Normalise(p2w.x);
-					p2w.y = pr::Normalise(p2w.y);
-					p2w.z = pr::Normalise(p2w.z);
+					p2w.x = Normalise(p2w.x);
+					p2w.y = Normalise(p2w.y);
+					p2w.z = Normalise(p2w.z);
 					continue;
 				}
-				if (kw == Orthonormalise)
+				if (kw == ETransformKeyword::Orthonormalise)
 				{
 					p2w = Orthonorm(p2w);
 					continue;
@@ -1077,13 +1060,6 @@ namespace pr::script
 		template <typename Type> bool ExtractS(Type& type)
 		{
 			return SectionStart() && ExtractS(type) && SectionEnd();
-		}
-
-		// Allow override of error handling
-		std::function<bool(EResult, Loc const&, std::string const&)> ReportError;
-		static bool DefaultErrorHandler(EResult result, Loc const& loc, std::string const& msg)
-		{
-			throw ScriptException(result, loc, msg);
 		}
 
 		// Return the hierarchy "address" for the position at the end of 'src'.

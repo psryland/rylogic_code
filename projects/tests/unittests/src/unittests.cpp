@@ -19,7 +19,8 @@ namespace pr::unittests::your::namespace
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
 #include "pr/common/unittests.h"
-#include "src/unittests.h" // all tests
+//#include "src/unittests.h" // all tests
+#include "pr/common/flags_enum.h" // This is often needed for single files
 //#include "pr/common/allocator.h"
 //#include "pr/common/bit_data.h"
 //#include "pr/common/cancel_token.h"
@@ -27,7 +28,6 @@ namespace pr::unittests::your::namespace
 //#include "pr/common/coroutine.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
-//#include "pr/common/flags_enum.h"
 //#include "pr/common/guid.h"
 //#include "pr/common/hash.h"
 //#include "pr/common/log.h"
@@ -89,10 +89,12 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
+//#include "pr/script/byte_reader.h"
 //#include "pr/threads/thread_pool.h"
 //#include "pr/network/pipe.h"
 //#include "pr/network/pipe2.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
+#include "pr/view3d-12/ldraw/ldr.h"
 
 // Export a function for executing the tests
 extern "C"

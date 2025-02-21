@@ -963,4 +963,11 @@ namespace pr::script
 		return src[i] != '\0';
 	}
 
+	// Generate the hash of a keyword
+	inline int HashKeyword(wchar_t const* keyword, bool case_sensitive)
+	{
+		// This function can't have the same name as 'HashKeyword' because it causes a compiler error
+		auto const kw = case_sensitive ? hash::Hash(keyword) : hash::HashI(keyword);
+		return kw;
+	}
 }

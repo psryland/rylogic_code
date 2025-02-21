@@ -226,7 +226,7 @@ struct enum_name##_\
 			enum_vals2(PR_ENUM_FIELDS2)\
 			enum_vals3(PR_ENUM_FIELDS3)\
 		};\
-		if (index < 0 || index >= NumberOf) throw std::exception("index out of range for enum "#enum_name);\
+		if (index < 0 || index >= NumberOf) throw std::runtime_error("index out of range for enum "#enum_name);\
 		return map[index];\
 	}\
 \
