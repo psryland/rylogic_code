@@ -189,17 +189,16 @@ namespace pr::rdr12
 			// Create the renderer nugget
 			NuggetDesc nug = NuggetDesc(static_cast<ETopo>(nugget.m_topo), static_cast<EGeom>(nugget.m_geom))
 				.vrange(nugget.m_v0 != nugget.m_v1 ? Range(nugget.m_v0, nugget.m_v1) : Range(0, verts.size()))
-				.irange(nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size()));
+				.irange(nugget.m_i0 != nugget.m_i1 ? Range(nugget.m_i0, nugget.m_i1) : Range(0, indices.size()))
+				.tex_diffuse(Texture2DPtr(nugget.m_tex_diffuse, true))
+				.sam_diffuse(SamplerPtr(nugget.m_sam_diffuse, true))
+				.flags(static_cast<ENuggetFlag>(nugget.m_nflags))
+				.rel_reflec(nugget.m_rel_reflec)
+				.tint(nugget.m_tint);
 
-			//todo nug.m_shaders = nugget.m_mat.m_shader_map;
 			if (nugget.m_cull_mode != view3d::ECullMode::Default) nug.pso<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nugget.m_cull_mode));
 			if (nugget.m_fill_mode != view3d::EFillMode::Default) nug.pso<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nugget.m_fill_mode));
-			nug.tex_diffuse(Texture2DPtr(nugget.m_tex_diffuse, true));
-			nug.sam_diffuse(SamplerPtr(nugget.m_sam_diffuse, true));
-			nug.flags(static_cast<ENuggetFlag>(nugget.m_nflags));
-			nug.rel_reflec(nugget.m_rel_reflec);
-			nug.tint(nugget.m_tint);
-			for (auto const& shdr : std::span(nugget.m_shaders.m_shaders, nugget.m_shaders.m_count))
+			for (auto const& shdr : nugget.shader_span())
 				nug.use_shader(static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true));
 
 			ngt.push_back(nug);
@@ -374,7 +373,10 @@ namespace pr::rdr12
 		// Get the user to generate/update the model
 		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
 		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(),
-			[](void* ctx, view3d::Nugget const& n) { static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n); }, &nbuf);
+			[](void* ctx, view3d::Nugget const& n)
+			{
+				static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n);
+			}, &nbuf);
 
 		// Sanity check results
 		if (new_vcount > isize(vbuf)) throw std::runtime_error("Dynamic model buffer overrun (v-buf)");
@@ -418,8 +420,8 @@ namespace pr::rdr12
 			n.m_tex_diffuse = Texture2DPtr(nug.m_tex_diffuse, true);
 			n.m_sam_diffuse = SamplerPtr(nug.m_sam_diffuse, true);
 
-			for (auto& shdr : nug.m_shaders.span())
-				n.m_shaders.push_back({ static_cast<ERenderStep>(shdr.m_rdr_step), ShaderPtr(shdr.m_shader, true) });
+			for (auto& shdr : nug.shader_span())
+				n.m_shaders.push_back({ ShaderPtr(shdr.m_shader, true), static_cast<ERenderStep>(shdr.m_rdr_step) });
 
 			if (nug.m_cull_mode != view3d::ECullMode::Default)
 				n.m_pso.Set<EPipeState::CullMode>(static_cast<D3D12_CULL_MODE>(nug.m_cull_mode));
@@ -427,10 +429,10 @@ namespace pr::rdr12
 				n.m_pso.Set<EPipeState::FillMode>(static_cast<D3D12_FILL_MODE>(nug.m_fill_mode));
 
 			n.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
-			n.m_tint = To<Colour>(nug.m_tint);
+			n.m_tint = nug.m_tint != 0 ? To<Colour>(nug.m_tint) : Colour32White;
 			n.m_rel_reflec = nug.m_rel_reflec;
-			n.m_vrange = nug.m_v0 <= nug.m_v1 ? Range{ nug.m_v0, nug.m_v1 } : Range{ 0, new_vcount };
-			n.m_irange = nug.m_i0 <= nug.m_i1 ? Range{ nug.m_i0, nug.m_i1 } : Range{ 0, new_icount };
+			n.m_vrange = nug.m_v0 < nug.m_v1 ? Range{ nug.m_v0, nug.m_v1 } : Range{ 0, new_vcount };
+			n.m_irange = nug.m_i0 < nug.m_i1 ? Range{ nug.m_i0, nug.m_i1 } : Range{ 0, new_icount };
 			model->CreateNugget(factory, n);
 		}
 

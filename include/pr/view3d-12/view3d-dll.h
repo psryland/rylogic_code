@@ -498,26 +498,24 @@ namespace pr
 		{
 			struct Shader
 			{
-				ERenderStep m_rdr_step;  // The render step that the shader applies to
 				view3d::Shader m_shader; // The shader instance to use
+				ERenderStep m_rdr_step;  // The render step that the shader applies to
+				int pad;
 			};
-			struct Shaders
+			std::span<Shader const> shader_span() const
 			{
-				Shader const* m_shaders; // An array of shader overrides
-				int64_t m_count;         // The length of the array (8 bytes for alignment)
-				std::span<Shader const> span() const
-				{
-					return { m_shaders, static_cast<size_t>(m_count) };
-				}
-			};
+				size_t count = 0;
+				for (; m_shaders[count].m_rdr_step != ERenderStep::Invalid; ++count) {}
+				return { m_shaders, count };
+			}
 
 			ETopo       m_topo;         // Model topology
 			EGeom       m_geom;         // Model geometry type
-			int         m_v0, m_v1;     // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			int         m_i0, m_i1;     // Index buffer range. Set to 0,0 to mean the whole buffer
+			int         m_v0, m_v1;     // Vertex buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
+			int         m_i0, m_i1;     // Index buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
 			Texture     m_tex_diffuse;  // Diffuse texture
 			Sampler     m_sam_diffuse;  // Sampler for the diffuse texture 
-			Shaders     m_shaders;      // Array of shader overrides
+			Shader      m_shaders[8];   // Array of shader overrides, lenght uses sentinel m_rdr_step == Invalid (0)
 			ENuggetFlag m_nflags;       // Nugget flags
 			ECullMode   m_cull_mode;    // Face culling mode
 			EFillMode   m_fill_mode;    // Model fill mode

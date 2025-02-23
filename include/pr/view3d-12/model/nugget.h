@@ -83,8 +83,9 @@ namespace pr::rdr12
 	{
 		using shader_t = struct
 		{
-			ERenderStep m_rdr_step; // The render step that the shader applies to.
 			ShaderPtr   m_shader;   // The override shader description.
+			ERenderStep m_rdr_step; // The render step that the shader applies to.
+			int pad;
 		};
 		using shaders_t = pr::vector<shader_t, 4, false>;
 
@@ -146,7 +147,7 @@ namespace pr::rdr12
 		// Add/overide a shader for this nugget
 		NuggetDesc& use_shader(ERenderStep step, ShaderPtr shader)
 		{
-			m_shaders.push_back({step, shader});
+			m_shaders.push_back({shader, step});
 			return *this;
 		}
 
