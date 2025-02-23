@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="sqlite3">
@@ -805,6 +805,9 @@
       <Filter>pr\crypt</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h">
       <Filter>pr\network</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">

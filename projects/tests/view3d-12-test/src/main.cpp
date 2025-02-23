@@ -16,6 +16,12 @@ using namespace pr::rdr12;
 
 std::filesystem::path const RylogicRoot = "E:\\Rylogic\\Code";
 
+enum class EStepMode
+{
+	Single,
+	Run,
+};
+
 // TODO:
 //  Finish the View3d API
 //  Ray cast/ Hit test support
@@ -32,6 +38,8 @@ struct Main :Form
 	view3d::Object m_obj0;
 	view3d::Object m_obj1;
 	view3d::CubeMap m_envmap;
+	EStepMode m_step_mode;
+	int m_pending_steps;
 	
 	// Error handler
 	static void __stdcall ReportError(void*, char const* msg, char const* filepath, int line, int64_t)
@@ -67,6 +75,8 @@ struct Main :Form
 			"*Sphere sever FF0080FF { 0.4 }"
 			, false, nullptr, nullptr))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
+		, m_step_mode(EStepMode::Single)
+		, m_pending_steps()
 	{
 		std::default_random_engine rng;
 		std::uniform_real_distribution dist(-10.0f, 10.0f);
@@ -181,9 +191,35 @@ struct Main :Form
 	void OnKey(KeyEventArgs& args) override
 	{
 		Form::OnKey(args);
-		if (!args.m_down && args.m_vk_key == VK_F7)
+		if (args.m_down)
+			return;
+
+		switch (args.m_vk_key)
 		{
-			View3D_ReloadScriptSources();
+			case VK_F7:
+			{
+				View3D_ReloadScriptSources();
+				args.m_handled = true;
+				break;
+			}
+			case 'R':
+			{
+				m_step_mode = EStepMode::Run;
+				args.m_handled = true;
+				break;
+			}
+			case 'T':
+			{
+				m_step_mode = EStepMode::Single;
+				args.m_handled = true;
+				break;
+			}
+			case VK_SPACE:
+			{
+				if (m_step_mode == EStepMode::Single)
+					++m_pending_steps;
+				break;
+			}
 		}
 	}
 
@@ -213,10 +249,6 @@ int __stdcall WinMain(HINSTANCE hinstance, HINSTANCE, LPTSTR, int)
 		
 			auto c2w = View3D_CameraToWorldGet(main.m_win3d);
 			SetWindowTextA(main, pr::FmtS("View3d 12 Test - Cam: %3.3f %3.3f %3.3f  Dir: %3.3f %3.3f %3.3f", c2w.w.x, c2w.w.y, c2w.w.z, -c2w.z.x, -c2w.z.y, -c2w.z.z));
-
-			//auto frame = main.m_wnd.RenderFrame();
-			//frame.Render(main.m_scn);
-			//frame.Present();
 			View3D_WindowRender(main.m_win3d);
 		});
 		return loop.Run();

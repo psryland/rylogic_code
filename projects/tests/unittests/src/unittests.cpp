@@ -90,6 +90,8 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
 //#include "pr/threads/thread_pool.h"
+//#include "pr/network/pipe.h"
+//#include "pr/network/pipe2.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests
