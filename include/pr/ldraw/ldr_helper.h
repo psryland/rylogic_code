@@ -23,7 +23,7 @@
 #include "pr/maths/spatial.h"
 #include "pr/maths/polynomial.h"
 #include "pr/geometry/closest_point.h"
-#include "pr/view3d-12/ldraw/ldr.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 
 namespace pr::ldr
 {
@@ -235,11 +235,11 @@ namespace pr::ldr
 	{
 		switch (style.m_style)
 		{
-			case PointStyle::EStyle::Square: return str;
-			case PointStyle::EStyle::Circle: return Append(str, "*Style {Circle}");
-			case PointStyle::EStyle::Triangle: return Append(str, "*Style {Triangle}");
-			case PointStyle::EStyle::Star: return Append(str, "*Style {Star}");
-			case PointStyle::EStyle::Annulus: return Append(str, "*Style {Annulus}");
+			case EPointStyle::Square: return str;
+			case EPointStyle::Circle: return Append(str, "*Style {Circle}");
+			case EPointStyle::Triangle: return Append(str, "*Style {Triangle}");
+			case EPointStyle::Star: return Append(str, "*Style {Star}");
+			case EPointStyle::Annulus: return Append(str, "*Style {Annulus}");
 			default: throw std::runtime_error("Unknown arrow type");
 		}
 	}
@@ -259,6 +259,10 @@ namespace pr::ldr
 	{
 		return AppendSpace(str).append(To<TStr>(v));
 	}
+	inline TStr& Append(TStr& str, m4x4 const& m)
+	{
+		return Append(str, m.x, m.y, m.z, m.w);
+	}
 	template <Scalar S> inline TStr& Append(TStr& str, Vec2<S,void> const& v)
 	{
 		return Append(AppendSpace(str), To<TStr>(v));
@@ -271,7 +275,7 @@ namespace pr::ldr
 	{
 		return Append(AppendSpace(str), To<TStr>(v));
 	}
-	inline TStr& Append(TStr& str, m4x4 const& m)
+	template <Scalar S> inline TStr& Append(TStr& str, Mat4x4<S,void, void> const& m)
 	{
 		return Append(str, m.x, m.y, m.z, m.w);
 	}
@@ -309,14 +313,12 @@ namespace pr::ldr
 	#pragma region Append Binary
 	inline TData& Append(TData& data, Name name)
 	{
-		using namespace ldraw;
-		Write(data, EKeyword::Name, [&](auto&) { data.push_back(name.m_name); });
+		ldraw::Write(data, pr::ldraw::EKeyword::Name, [&](auto&) { data.push_back(name.m_name); });
 		return data;
 	}
 	inline TData& Append(TData& data, Col colour)
 	{
-		using namespace ldraw;
-		Write(data, EKeyword::Colour, [&](auto&) { data.push_back(colour.m_ui); });
+		ldraw::Write(data, ldraw::EKeyword::Colour, [&](auto&) { data.push_back(colour.m_ui); });
 		return data;
 	}
 	inline TData& Append(TData& data, int i)
@@ -335,90 +337,87 @@ namespace pr::ldr
 	{
 		return data.push_back(f);
 	}
-	inline TData& Append(TData& data, v2 const& v)
-	{
-		return data.push_back(v);
-	}
-	inline TData& Append(TData& data, v3 const& v)
-	{
-		return data.push_back(v);
-	}
-	inline TData& Append(TData& data, v4 const& v)
-	{
-		return data.push_back(v);
-	}
 	inline TData& Append(TData& data, m4x4 const& m)
 	{
 		return data.push_back(m);
 	}
+	template <Scalar S> inline TData& Append(TData& data, Vec2<S,void> const& v)
+	{
+		return data.push_back(v);
+	}
+	template <Scalar S> inline TData& Append(TData& data, Vec3<S,void> const& v)
+	{
+		return data.push_back(v);
+	}
+	template <Scalar S> inline TData& Append(TData& data, Vec4<S,void> const& v)
+	{
+		return data.push_back(v);
+	}
+	template <Scalar S> inline TData& Append(TData& data, Mat4x4<S,void, void> const& m)
+	{
+		return Append(data, m.x, m.y, m.z, m.w);
+	}
 	inline TData& Append(TData& data, Size s)
 	{
-		using namespace ldraw;
 		if (s.m_size == 0) return data;
-		Write(data, EKeyword::Size, [&](auto&) { data.push_back(s.m_size); });
+		ldraw::Write(data, ldraw::EKeyword::Size, [&](auto&) { data.push_back(s.m_size); });
 		return data;
 	}
 	inline TData& Append(TData& data, Wireframe w)
 	{
-		using namespace ldraw;
 		if (!w.m_wire) return data;
-		Write(data, EKeyword::Wireframe, [](auto&) {});
+		ldraw::Write(data, ldraw::EKeyword::Wireframe);
 		return data;
 	}
 	inline TData& Append(TData& data, Solid s)
 	{
-		using namespace ldraw;
 		if (!s.m_solid) return data;
-		Write(data, EKeyword::Solid, [](auto&) {});
+		ldraw::Write(data, ldraw::EKeyword::Solid);
 		return data;
 	}
 	inline TData& Append(TData& data, Depth d)
 	{
-		using namespace ldraw;
 		if (d.m_depth == false) return data;
-		Write(data, EKeyword::Depth, [](auto&) {});
+		ldraw::Write(data, ldraw::EKeyword::Depth);
 		return data;
 	}
 	inline TData& Append(TData& data, Width w)
 	{
-		using namespace ldraw;
 		if (w.m_width == 0) return data;
-		Write(data, EKeyword::Width, [&](auto&) { data.push_back(w.m_width); });
+		ldraw::Write(data, ldraw::EKeyword::Width, [&](auto&) { data.push_back(w.m_width); });
 		return data;
 	}
 	inline TData& Append(TData& data, AxisId id)
 	{
-		using namespace ldraw;
-		Write(data, EKeyword::AxisId, [&](auto&) { data.push_back(int(id)); });
+		ldraw::Write(data, ldraw::EKeyword::AxisId, [&](auto&) { data.push_back(int(id)); });
 		return data;
 	}
 	inline TData& Append(TData& data, PointStyle style)
 	{
-		using namespace ldraw;
 		if (style.m_style == EPointStyle::Square) return data;
-		Write(data, EKeyword::Style, [&](auto&) { data.push_back(style.m_style); });
+		ldraw::Write(data, ldraw::EKeyword::Style, [&](auto&) { data.push_back(style.m_style); });
 		return data;
 	}
 	inline TData& Append(TData& data, O2W const& o2w)
 	{
-		using namespace ldraw;
 		if (o2w.m_mat == m4x4::Identity())
 			return data;
 
-		Write(data, EKeyword::O2W, [&](auto&)
+		ldraw::Write(data, ldraw::EKeyword::O2W, [&](auto&)
 		{
 			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
 			{
-				Write(data, EKeyword::Pos, [&](auto&) { Append(data, o2w.m_mat.pos.xyz); });
+				ldraw::Write(data, ldraw::EKeyword::Pos, [&](auto&) { Append(data, o2w.m_mat.pos.xyz); });
 			}
 			else
 			{
 				if (!IsAffine(o2w.m_mat))
-					Write(data, EKeyword::NonAffine, [](auto&) {});
+					ldraw::Write(data, ldraw::EKeyword::NonAffine);
 
-				Write(data, EKeyword::M4x4, [&](auto&) { Append(data, o2w.m_mat); });
+				ldraw::Write(data, ldraw::EKeyword::M4x4, [&](auto&) { Append(data, o2w.m_mat); });
 			}
 		});
+		return data;
 	}
 	template <typename Arg0, typename... Args> inline TData& Append(TData& data, Arg0 const& arg0, Args&&... args)
 	{
@@ -1110,7 +1109,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Point, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_size, m_style, m_depth);
@@ -1224,7 +1223,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, m_strip ? ldraw::EKeyword::LineStrip : ldraw::EKeyword::Line, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_width);
@@ -1284,7 +1283,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				assert((m_lines.size() & 1) == 0);
 				ldraw::Write(data, ldraw::EKeyword::LineD, [&](auto&)
 				{
@@ -1339,7 +1338,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Triangle, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1400,7 +1399,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Plane, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1435,7 +1434,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Circle, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1484,7 +1483,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Sphere, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1542,7 +1541,7 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1579,17 +1578,17 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBianry(byte_data>4>& data) const override
+			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Cylinder, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
 					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
 					{
-						ldr::Append(data, m_height, m_radius.xy, m_axis_id);
+						ldr::Append(data, m_height, m_radius, m_axis_id);
 					});
-					NestedToBinary(dat);
+					NestedToBinary(data);
 				});
 			}
 		};
@@ -1645,9 +1644,9 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBianry(byte_data<4>& data) const override
+			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace ldraw;
+				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Spline, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_width);

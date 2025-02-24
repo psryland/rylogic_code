@@ -343,6 +343,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d\textures\projected_texture.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\buf.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h" />
@@ -383,6 +384,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\win32\user_directories.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\windows_com.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h" />
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
       <WarningLevel>Level3</WarningLevel>
@@ -395,8 +397,6 @@
 			</PreprocessorDefinitions>
     </ClCompile>
     <ClCompile Include="src\unittests.cpp" />
-    <ClInclude Include="..\..\..\include\pr\script\byte_reader.h" />
-    <ClInclude Include="..\..\..\include\pr\view3d-12\ldraw\ldr.h" />
     <ClInclude Include="src\unittests.h" />
     <ClInclude Include="src\pp_output.h" />
     <None Include="cpp.hint" />

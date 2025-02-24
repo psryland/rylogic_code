@@ -290,7 +290,7 @@ namespace Rylogic.Gui.WPF
 				shaders: [new(View3d.ERenderStep.ForwardRender, PointSprite)]);
 
 			// Create the graphics
-			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, [.. m_vbuf], [.. m_ibuf], [.. m_nbuf], Id);
 			return new ChartGfxPiece(gfx, x_range);
 		}
 

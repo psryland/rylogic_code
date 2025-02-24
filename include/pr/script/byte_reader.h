@@ -39,16 +39,20 @@ namespace pr::script
 		std::byte const* m_ptr;            // The pointer into 'm_src' that advances
 		SectionStack m_sections;           // Stack of section ranges
 		Includes m_def_includes;           // Default Include support for referencing other files
+		MacroDB m_def_macros;              // Default Macro support
 		IIncludeHandler* const m_includes; // Include provider
+		IMacroHandler* const m_macros;     // Macros provider
 		int m_last_keyword;                //
 
 	public:
-		ByteReader(Src data, IIncludeHandler* inc = nullptr)
+		ByteReader(Src data, IIncludeHandler* inc = nullptr, IMacroHandler* const mac = nullptr)
 			: m_src(data)
 			, m_ptr(data.data())
 			, m_sections()
 			, m_def_includes()
+			, m_def_macros()
 			, m_includes(inc ? inc : &m_def_includes)
+			, m_macros(mac ? mac : &m_def_macros)
 			, m_last_keyword()
 			, ReportError(DefaultErrorHandler)
 		{
@@ -79,6 +83,12 @@ namespace pr::script
 			return *m_includes;
 		}
 
+		// Access the macro handler
+		IMacroHandler& Macros() const noexcept
+		{
+			return *m_macros;
+		}
+
 		// Return true if the end of the source has been reached
 		bool IsSourceEnd() const noexcept
 		{
@@ -95,12 +105,13 @@ namespace pr::script
 		// Returns true if the next byte is the start/end of a section
 		bool IsSectionStart() const
 		{
-			m_sections.back().
-			return m_ptr.as<char>() == '{';
+			throw std::runtime_error("not implemented");
+			//return m_ptr.as<char>() == '{';
 		}
 		bool IsSectionEnd()
 		{
-			return m_ptr.as<char>() == '}';
+			throw std::runtime_error("not implemented");
+			//return m_ptr.as<char>() == '}';
 		}
 
 		// Return true if the next token is not a keyword, the section end, or the end of the source
@@ -112,84 +123,157 @@ namespace pr::script
 		// Move to the start/end of a section and then one past it
 		bool SectionStart()
 		{
-			if (IsSectionStart()) { m_ptr.read<char>(); return true; }
-			return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
+			throw std::runtime_error("not implemented");
+			//if (IsSectionStart()) { m_ptr.read<char>(); return true; }
+			//return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
 		}
 		bool SectionEnd()
 		{
-			auto& src = m_pp;
-			if (IsSectionEnd()) { ++src; return true; }
-			return ReportError(EResult::TokenNotFound, Location(), "expected '}'");
+			throw std::runtime_error("not implemented");
+			//auto& src = m_pp;
+			//if (IsSectionEnd()) { ++src; return true; }
+			//return ReportError(EResult::TokenNotFound, Location(), "expected '}'");
 		}
 
 		// Read the next keyword from the stream
 		template <typename Enum> bool NextKeywordH(Enum& kw)
 		{
-			if (m_ptr) return false;
-			kw = read<Enum>();
-			return true;
+			(void)kw;
+			throw std::runtime_error("not implemented");
+			//if (m_ptr) return false;
+			//kw = read<Enum>();
+			//return true;
+		}
+
+		// The name of the last keyword read
+		std::string_view LastKeyword() const
+		{
+			return "not_implemented";
+		}
+
+		// Read an identifier from the source. An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
+		template <typename StrType> StrType Identifier()
+		{
+			StrType word;
+			return Identifier(word) ? word : StrType{};
+		}
+		template <typename StrType> StrType IdentifierS()
+		{
+			StrType word;
+			return IdentifierS(word) ? word : StrType{};
+		}
+		template <typename StrType> bool Identifier(StrType& word)
+		{
+			(void)word;
+			throw std::runtime_error("not implemented");
+			//auto& src = m_pp;
+			//str::Resize(word, 0);
+			//return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "{identifier} expected");
+		}
+		template <typename StrType> bool IdentifierS(StrType& word)
+		{
+			return SectionStart() && Identifier(word) && SectionEnd();
+		}
+
+		// Extract identifiers from the source separated by 'sep'
+		template <typename StrType> bool Identifiers(char, StrType& word)
+		{
+			(void)word;
+			throw std::runtime_error("not implemented");
+			//auto& src = m_pp;
+			//str::Resize(word, 0);
+			//return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "identifier expected");
+		}
+		template <typename StrType, typename... StrTypes> bool Identifiers(char sep, StrType& word, StrTypes&&... words)
+		{
+			(void)sep, word, words;
+			throw std::runtime_error("not implemented");
+			//auto& src = m_pp;
+			//str::Resize(word, 0);
+			//if (!str::ExtractIdentifier(word, src, m_delim.c_str())) return ReportError(EResult::TokenNotFound, Location(), "identifier expected");
+			//if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, Location(), "identifier separator expected");
+			//return Identifiers(sep, std::forward<StrTypes>(words)...);
+		}
+		template <typename StrType, typename... StrTypes> bool IdentifiersS(char sep, StrType& word, StrTypes&&... words)
+		{
+			return SectionStart() && Identifiers(sep,word,std::forward<StrTypes>(words)...) && SectionEnd();
 		}
 
 		// Extract a string with length <= 255
 		template <typename StrType> StrType ShortString()
 		{
-			auto len = m_ptr.read<uint8_t>();
-			auto str = &m_ptr.read<char>(len);
-			return StrType(str, str + len);
+			throw std::runtime_error("not implemented");
+			//auto len = m_ptr.read<uint8_t>();
+			//auto str = &m_ptr.read<char>(len);
+			//return StrType(str, str + len);
 		}
 		template <typename StrType> StrType LongString()
 		{
-			auto len = m_ptr.read<int>();
-			auto str = &m_ptr.read<char>(len);
-			return StrType(str, str + len);
+			throw std::runtime_error("not implemented");
+			//auto len = m_ptr.read<int>();
+			//auto str = &m_ptr.read<char>(len);
+			//return StrType(str, str + len);
 		}
 
 		// Extract a bool from the source.
 		bool Bool()
 		{
-			return m_ptr.read<uint8_t>() != 0;;
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<uint8_t>() != 0;;
 		}
 		void Bool(std::span<bool> bools)
 		{
-			auto ptr = &m_ptr.read<uint8_t>(isize(bools));
-			memcpy(bools.data(), ptr, sizeof(uint8_t) * bools.size());
+			(void)bools;
+			throw std::runtime_error("not implemented");
+			//auto ptr = &m_ptr.read<uint8_t>(isize(bools));
+			//memcpy(bools.data(), ptr, sizeof(uint8_t) * bools.size());
 		}
 
 		// Extract an integral type from the source.
 		template <typename TInt> TInt Int(int = 0)
 		{
-			return m_ptr.read<TInt>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<TInt>();
 		}
 		template <typename TInt> TInt IntS(int = 0)
 		{
-			return m_ptr.read<TInt>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<TInt>();
 		}
 		template <typename TInt> void Int(std::span<TInt> ints, int = 0)
 		{
-			auto ptr = &m_ptr.read<TInt>(isize(ints));
-			memcpy(ints.data(), ptr, sizeof(TInt) * ints.size());
+			(void)ints;
+			throw std::runtime_error("not implemented");
+			//auto ptr = &m_ptr.read<TInt>(isize(ints));
+			//memcpy(ints.data(), ptr, sizeof(TInt) * ints.size());
 		}
 
 		// Extract a real from the source.
 		template <typename TReal> TReal Real()
 		{
-			return m_ptr.read<TReal>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<TReal>();
 		}
 		template <typename TReal> void Real(std::span<TReal> reals)
 		{
-			auto* ptr = &m_ptr.read<TReal>(reals.size());
-			memcpy(reals.data(), ptr, reals.size() * sizeof(TReal));
+			(void)reals;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<TReal>(reals.size());
+			//memcpy(reals.data(), ptr, reals.size() * sizeof(TReal));
 		}
 
 		// Extract an enum value from the source.
 		template <typename TEnum> TEnum EnumValue()
 		{
-			return static_cast<TEnum>(m_ptr.read<TEnum>());
+			throw std::runtime_error("not implemented");
+			//return static_cast<TEnum>(m_ptr.read<TEnum>());
 		}
 		template <typename TEnum> void EnumValue(std::span<TEnum> enums)
 		{
-			auto ptr = &m_ptr.read<TEnum>(isize(enums));
-			memcpy(enums.data(), ptr, enums.size() * sizeof(TEnum));
+			(void)enums;
+			throw std::runtime_error("not implemented");
+			//auto ptr = &m_ptr.read<TEnum>(isize(enums));
+			//memcpy(enums.data(), ptr, enums.size() * sizeof(TEnum));
 		}
 
 		// Extract an enum identifier from the source.
@@ -217,105 +301,134 @@ namespace pr::script
 		// Extract a 2D real vector from the source
 		v2 Vector2()
 		{
-			return m_ptr.read<v2>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<v2>();
 		}
 		void Vector2(std::span<v2> vectors)
 		{
-			auto* ptr = &m_ptr.read<v2>(vectors.size());
-			memcpy(vectors.data(), ptr, vectors.size() * sizeof(v2));
+			(void)vectors;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<v2>(vectors.size());
+			//memcpy(vectors.data(), ptr, vectors.size() * sizeof(v2));
 		}
 
 		// Extract a 2D integer vector from the source
 		iv2 Vector2i()
 		{
-			return m_ptr.read<iv2>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<iv2>();
 		}
 		void Vector2i(std::span<iv2> vectors)
 		{
-			auto* ptr = &m_ptr.read<iv2>(vectors.size());
-			memcpy(vectors.data(), ptr, vectors.size() * sizeof(iv2));
+			(void)vectors;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<iv2>(vectors.size());
+			//memcpy(vectors.data(), ptr, vectors.size() * sizeof(iv2));
 		}
 
 		// Extract a 3D real vector from the source
 		v4 Vector3(float w)
 		{
-			return v4{ m_ptr.read<v3>(), w };
+			(void)w;
+			throw std::runtime_error("not implemented");
+			//return v4{ m_ptr.read<v3>(), w };
 		}
 		void Vector3(std::span<v4> vectors, float w)
 		{
-			auto* ptr = &m_ptr.read<v3>(vectors.size());
-			for (auto& v : vectors)
-				v = v4{ v, w };
+			(void)vectors,w;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<v3>(vectors.size());
+			//for (auto& v : vectors)
+			//	v = v4{ v, w };
 		}
 
 		// Extract a 3D integer vector from the source
 		iv4 Vector3i(int w)
 		{
-			auto v = m_ptr.read<iv3>();
-			return iv4{ v, w };
+			(void)w;
+			throw std::runtime_error("not implemented");
+			//auto v = m_ptr.read<iv3>();
+			//return iv4{ v, w };
 		}
 		void Vector3i(std::span<iv4> vectors, int w)
 		{
-			auto* ptr = &m_ptr.read<iv3>(vectors.size());
-			for (auto& v : vectors)
-				v = iv4{ v, w };
+			(void)vectors, w;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<iv3>(vectors.size());
+			//for (auto& v : vectors)
+			//	v = iv4{ v, w };
 		}
 
 		// Extract a 4D real vector from the source
 		v4 Vector4()
 		{
-			return m_ptr.read<v4>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<v4>();
 		}
 		void Vector4(std::span<v4> vectors)
 		{
-			auto* ptr = &m_ptr.read<v4>(vectors.size());
-			memcpy(vectors.data(), ptr, vectors.size() * sizeof(v4));
+			(void)vectors;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<v4>(vectors.size());
+			//memcpy(vectors.data(), ptr, vectors.size() * sizeof(v4));
 		}
 
 		// Extract a 4D integer vector from the source
 		iv4 Vector4i()
 		{
-			return m_ptr.read<iv4>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<iv4>();
 		}
 		void Vector4i(std::span<iv4> vectors)
 		{
-			auto* ptr = &m_ptr.read<iv4>(vectors.size());
-			memcpy(vectors.data(), ptr, vectors.size() * sizeof(iv4));
+			(void)vectors;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<iv4>(vectors.size());
+			//memcpy(vectors.data(), ptr, vectors.size() * sizeof(iv4));
 		}
 
 		// Extract a quaternion from the source
 		quat Quaternion()
 		{
-			return m_ptr.read<quat>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<quat>();
 		}
 		void Quaternion(std::span<quat> quaternions)
 		{
-			auto* ptr = &m_ptr.read<quat>(quaternions.size());
-			memcpy(quaternions.data(), ptr, quaternions.size() * sizeof(quat));
+			(void)quaternions;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<quat>(quaternions.size());
+			//memcpy(quaternions.data(), ptr, quaternions.size() * sizeof(quat));
 		}
 
 		// Extract a 3x3 matrix from the source
 		m3x4 Matrix3x3()
 		{
-			auto* ptr = &m_ptr.read<v3>(3);
-			return m3x4{ ptr[0].w0(), ptr[1].w0(), ptr[2].w0() };
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<v3>(3);
+			//return m3x4{ ptr[0].w0(), ptr[1].w0(), ptr[2].w0() };
 		}
 		void Matrix3x3(std::span<m3x4> transforms)
 		{
-			auto* ptr = &m_ptr.read<v3>(3 * transforms.size());
-			for (auto& t : transforms)
-				t = m3x4{ ptr[0].w0(), ptr[1].w0(), ptr[2].w0() };
+			(void)transforms;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<v3>(3 * transforms.size());
+			//for (auto& t : transforms)
+			//	t = m3x4{ ptr[0].w0(), ptr[1].w0(), ptr[2].w0() };
 		}
 
 		// Extract a 4x4 matrix from the source
 		m4x4 Matrix4x4()
 		{
-			return m_ptr.read<m4x4>();
+			throw std::runtime_error("not implemented");
+			//return m_ptr.read<m4x4>();
 		}
 		void Matrix4x4(std::span<m4x4> transforms)
 		{
-			auto* ptr = &m_ptr.read<m4x4>(transforms.size());
-			memcpy(transforms.data(), ptr, transforms.size() * sizeof(m4x4));
+			(void)transforms;
+			throw std::runtime_error("not implemented");
+			//auto* ptr = &m_ptr.read<m4x4>(transforms.size());
+			//memcpy(transforms.data(), ptr, transforms.size() * sizeof(m4x4));
 		}
 
 		// Extract a transform description accumulatively. 'o2w' should be a valid initial transform.

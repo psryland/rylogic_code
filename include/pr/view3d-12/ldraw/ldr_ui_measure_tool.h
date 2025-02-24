@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/ldraw/ldr_helper.h"
 #include "pr/gui/wingui.h"
 
 namespace pr::rdr12
@@ -105,14 +106,14 @@ namespace pr::rdr12
 				auto p0 = v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
 				auto p1 = v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
-				auto str = std::string{};
-				ldr::GroupStart(str, "Measurement");
-				ldr::Line(str, "dist", 0xFFFFFFFF, m_point0, m_point1);
-				ldr::Line(str, "distX", 0xFFFF0000, m_point0, p0);
-				ldr::Line(str, "distY", 0xFF00FF00, p0, p1);
-				ldr::Line(str, "distZ", 0xFF0000FF, p1, m_point1);
-				ldr::GroupEnd(str);
+				ldr::Builder ldr;
+				auto& group = ldr.Group("Measurement");
+				group.Line("dist", 0xFFFFFFFF).line(m_point0, m_point1);
+				group.Line("distX", 0xFFFF0000).line(m_point0, p0);
+				group.Line("distY", 0xFF00FF00).line(p0, p1);
+				group.Line("distZ", 0xFF0000FF).line(p1, m_point1);
 
+				auto str = ldr.ToString();
 				script::StringSrc src(str.c_str());
 				script::Reader rdr(src);
 				auto out = Parse(m_rdr, rdr, GfxContextId());

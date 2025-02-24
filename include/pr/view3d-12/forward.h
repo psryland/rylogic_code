@@ -87,6 +87,7 @@
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/filesys/filewatch.h"
+#include "pr/filesys/lock_file.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/distance.h"

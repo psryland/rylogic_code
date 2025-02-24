@@ -7,7 +7,7 @@
 #include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/instance/instance.h"
-#include "pr/view3d-12/ldraw/ldr.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 
 namespace pr::rdr12
 {
@@ -611,6 +611,7 @@ namespace pr::rdr12
 	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
 	using EditObjectCB = void(__stdcall *)(Model* model, void* ctx, Renderer& rdr);
 
+#if 0 // Todo
 	// Parse ldr objects from binary data
 	// The binary format mainly follows the text format
 	ParseResult Parse(
@@ -618,6 +619,7 @@ namespace pr::rdr12
 		std::span<uint8_t const> stream,
 		Guid const& context_id = GuidZero,
 		ParseProgressCB progress_cb = nullptr);
+#endif
 
 	// Parse the ldr script in 'reader' adding the results to 'out'.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.

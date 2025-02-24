@@ -30,9 +30,11 @@
 #include <list>
 #include <memory>
 #include <filesystem>
+#include <thread>
+
+// windows
 #include <guiddef.h>
 #include <cguid.h>
-#include <thread>
 
 // pr
 #include "pr/common/min_max_fix.h"

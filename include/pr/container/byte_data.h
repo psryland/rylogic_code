@@ -156,7 +156,7 @@ namespace pr
 		{
 			auto n = std::max<ptrdiff_t>(0, new_size - size());
 			resize(new_size);
-			memset(end() - n, fill, n);
+			memset(end() - n, static_cast<int>(fill), n);
 		}
 
 		// Pre-allocate space
@@ -236,6 +236,8 @@ namespace pr
 			// Notes:
 			//  Cannot add a template overload for inserting an array of 'Type' because
 			//  the method signature is ambiguous.
+			if (ofs < 0 || ofs > s_cast<ptrdiff_t>(m_size))
+				throw std::out_of_range("Offset position out of range");
 
 			// Insert from a sub range
 			if (inside(data.data()))
@@ -247,10 +249,9 @@ namespace pr
 				make_hole(ofs, data.size());
 
 				// Copy bytes from before and after the insertion point
-				auto ptr = m_ptr;
-				auto ins = ptr + ofs;
+				auto ins = m_ptr + ofs;
 				if (n != 0)
-					memcpy(ins, ptr + b, n);
+					memcpy(ins, m_ptr + b, n);
 				if (n != static_cast<ptrdiff_t>(data.size()))
 					memcpy(ins + n, ins + data.size(), data.size() - n);
 			}
@@ -263,6 +264,31 @@ namespace pr
 				memcpy(ins, data.data(), data.size());
 			}
 			m_size += data.size();
+		}
+
+		// Overwrite bytes at 'ofs'
+		void overwrite(ptrdiff_t ofs, std::span<value_type const> data)
+		{
+			if (ofs < 0 || ofs > s_cast<ptrdiff_t>(m_size))
+				throw std::out_of_range("Offset position out of range");
+
+			// Overwrite from a sub range
+			if (inside(data.data()))
+			{
+				// Record the offset into the buffer before resizing
+				auto b = data.data() - begin();
+				if (size() - ofs < data.size())
+					resize(ofs + data.size());
+
+				memmove(m_ptr + ofs, m_ptr + b, data.size());
+			}
+			else
+			{
+				if (size() - ofs < data.size())
+					resize(ofs + data.size());
+			
+				memcpy(m_ptr + ofs, data.data(), data.size());
+			}
 		}
 
 		// Return a pointer to the start of the contained range
@@ -616,7 +642,7 @@ namespace pr
 	// Append data to a byte container
 	template <typename T> inline bytes_t& AppendData(bytes_t& data, const T& object)
 	{
-		data.insert(data.end(), reinterpret_cast<const unsigned char*>(&object), reinterpret_cast<const unsigned char*>(&object + 1));
+		data.insert(data.end(), reinterpret_cast<std::byte const*>(&object), reinterpret_cast<std::byte const*>(&object + 1));
 		return data;
 	}
 	template <> inline bytes_t& AppendData(bytes_t& data, bytes_t const& more_data)
@@ -645,64 +671,64 @@ namespace pr::container
 	{
 		{ // Constructors
 			byte_data buf0;
-			PR_CHECK(buf0.data(), nullptr);
-			PR_CHECK(buf0.capacity(), 0U);
-			PR_CHECK(buf0.size(), 0U);
+			PR_EXPECT(buf0.data() == nullptr);
+			PR_EXPECT(buf0.capacity() == 0U);
+			PR_EXPECT(buf0.size() == 0U);
 
 			byte_data buf1;
 			buf1.push_back(0);
 			buf1.push_back(1);
 			buf1.push_back(2);
-			PR_CHECK(buf1.capacity<int>() >= 3U, true);
-			PR_CHECK(buf1.size<int>(), 3U);
-			PR_CHECK(buf1.at<int>(0), 0);
-			PR_CHECK(buf1.at<int>(1), 1);
-			PR_CHECK(buf1.at<int>(2), 2);
+			PR_EXPECT(buf1.capacity<int>() >= 3U);
+			PR_EXPECT(buf1.size<int>() == 3U);
+			PR_EXPECT(buf1.at<int>(0) == 0);
+			PR_EXPECT(buf1.at<int>(1) == 1);
+			PR_EXPECT(buf1.at<int>(2) == 2);
 
 			// Move constructor
 			byte_data buf2(std::move(buf1));
-			PR_CHECK(buf1.capacity<int>(), 0U);
-			PR_CHECK(buf2.capacity<int>() >= 3U, true);
-			PR_CHECK(buf1.size<int>(), 0U);
-			PR_CHECK(buf2.size<int>(), 3U);
-			PR_CHECK(buf2.at<int>(0), 0);
-			PR_CHECK(buf2.at<int>(1), 1);
-			PR_CHECK(buf2.at<int>(2), 2);
+			PR_EXPECT(buf1.capacity<int>() == 0U);
+			PR_EXPECT(buf2.capacity<int>() >= 3U);
+			PR_EXPECT(buf1.size<int>() == 0U);
+			PR_EXPECT(buf2.size<int>() == 3U);
+			PR_EXPECT(buf2.at<int>(0) == 0);
+			PR_EXPECT(buf2.at<int>(1) == 1);
+			PR_EXPECT(buf2.at<int>(2) == 2);
 
 			// Copy constructor
 			byte_data buf3(buf2);
-			PR_CHECK(buf2.capacity<int>() >= 3U, true);
-			PR_CHECK(buf3.capacity<int>(), buf2.capacity<int>());
-			PR_CHECK(buf3.size<int>(), buf2.size<int>());
-			PR_CHECK(buf3.at<int>(0), buf2.at<int>(0));
-			PR_CHECK(buf3.at<int>(1), buf2.at<int>(1));
-			PR_CHECK(buf3.at<int>(2), buf2.at<int>(2));
+			PR_EXPECT(buf2.capacity<int>() >= 3U);
+			PR_EXPECT(buf3.capacity<int>() == buf2.capacity<int>());
+			PR_EXPECT(buf3.size<int>() == buf2.size<int>());
+			PR_EXPECT(buf3.at<int>(0) == buf2.at<int>(0));
+			PR_EXPECT(buf3.at<int>(1) == buf2.at<int>(1));
+			PR_EXPECT(buf3.at<int>(2) == buf2.at<int>(2));
 		}
 		{ // Assignment
 			byte_data buf0;
 			buf0.push_back<short>(0);
 			buf0.push_back<short>(1);
 			buf0.push_back<short>(2);
-			PR_CHECK(buf0.capacity<short>() >= 3U, true);
-			PR_CHECK(buf0.size<short>(), 3U);
+			PR_EXPECT(buf0.capacity<short>() >= 3U);
+			PR_EXPECT(buf0.size<short>() == 3U);
 
 			byte_data buf1;
 			buf1 = buf0;
-			PR_CHECK(buf1.capacity<short>() >= 3U, true);
-			PR_CHECK(buf1.size<short>(), 3U);
-			PR_CHECK(buf1.at<short>(0), 0);
-			PR_CHECK(buf1.at<short>(1), 1);
-			PR_CHECK(buf1.at<short>(2), 2);
+			PR_EXPECT(buf1.capacity<short>() >= 3U);
+			PR_EXPECT(buf1.size<short>() == 3U);
+			PR_EXPECT(buf1.at<short>(0) == 0);
+			PR_EXPECT(buf1.at<short>(1) == 1);
+			PR_EXPECT(buf1.at<short>(2) == 2);
 
 			byte_data buf2;
 			buf2 = std::move(buf0);
-			PR_CHECK(buf0.capacity(), 0U);
-			PR_CHECK(buf2.capacity<short>() >= 3U, true);
-			PR_CHECK(buf0.size(), 0U);
-			PR_CHECK(buf2.size<short>(), 3U);
-			PR_CHECK(buf2.at<short>(0), 0);
-			PR_CHECK(buf2.at<short>(1), 1);
-			PR_CHECK(buf2.at<short>(2), 2);
+			PR_EXPECT(buf0.capacity() == 0U);
+			PR_EXPECT(buf2.capacity<short>() >= 3U);
+			PR_EXPECT(buf0.size() == 0U);
+			PR_EXPECT(buf2.size<short>() == 3U);
+			PR_EXPECT(buf2.at<short>(0) == 0);
+			PR_EXPECT(buf2.at<short>(1) == 1);
+			PR_EXPECT(buf2.at<short>(2) == 2);
 		}
 		{ // Methods
 			byte_data buf0;
@@ -712,67 +738,67 @@ namespace pr::container
 			buf0.push_back<int>(42);
 
 			// size/capacity
-			PR_CHECK(buf0.capacity() >= 8U, true);
-			PR_CHECK(buf0.size(), 8U);
+			PR_EXPECT(buf0.capacity() >= 8U);
+			PR_EXPECT(buf0.size() == 8U);
 
 			// clear
 			byte_data buf1 = buf0;
-			PR_CHECK(buf1.capacity(), buf0.capacity());
-			PR_CHECK(buf1.size(), buf0.size());
+			PR_EXPECT(buf1.capacity() == buf0.capacity());
+			PR_EXPECT(buf1.size() == buf0.size());
 			buf1.clear();
-			PR_CHECK(buf1.capacity(), 0U);
-			PR_CHECK(buf1.size(), 0U);
+			PR_EXPECT(buf1.capacity() == 0U);
+			PR_EXPECT(buf1.size() == 0U);
 
 			// empty
-			PR_CHECK(buf1.empty(), true);
+			PR_EXPECT(buf1.empty());
 
 			// resize
 			buf1 = buf0;
 			buf1.resize<int>(1);
-			PR_CHECK(buf1.capacity() >= 4U, true);
-			PR_CHECK(buf1.size(), 4U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), 0x55);
-			PR_CHECK(buf1.at<char>(2), 0x55);
-			PR_CHECK(buf1.at<char>(3), 'B');
+			PR_EXPECT(buf1.capacity() >= 4U);
+			PR_EXPECT(buf1.size() == 4U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == 0x55);
+			PR_EXPECT(buf1.at<char>(2) == 0x55);
+			PR_EXPECT(buf1.at<char>(3) == 'B');
 			buf1.resize<char>(3);
-			PR_CHECK(buf1.capacity() >= 3U, true);
-			PR_CHECK(buf1.size(), 3U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), 0x55);
-			PR_CHECK(buf1.at<char>(2), 0x55);
+			PR_EXPECT(buf1.capacity() >= 3U);
+			PR_EXPECT(buf1.size() == 3U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == 0x55);
+			PR_EXPECT(buf1.at<char>(2) == 0x55);
 			buf1.resize<char>(8, static_cast<char>(0xAA));
-			PR_CHECK(buf1.capacity() >= 8U, true);
-			PR_CHECK(buf1.size(), 8U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), static_cast<char>(0x55));
-			PR_CHECK(buf1.at<char>(2), static_cast<char>(0x55));
-			PR_CHECK(buf1.at<char>(3), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(4), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(5), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(6), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(7), static_cast<char>(0xAA));
+			PR_EXPECT(buf1.capacity() >= 8U);
+			PR_EXPECT(buf1.size() == 8U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == static_cast<char>(0x55));
+			PR_EXPECT(buf1.at<char>(2) == static_cast<char>(0x55));
+			PR_EXPECT(buf1.at<char>(3) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(4) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(5) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(6) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(7) == static_cast<char>(0xAA));
 
 			// reserve
 			buf1.reserve(16);
-			PR_CHECK(buf1.capacity() >= 16U, true);
+			PR_EXPECT(buf1.capacity() >= 16U);
 			buf1.reserve<int>(16);
-			PR_CHECK(buf1.capacity<int>() >= 16U, true);
-			PR_CHECK(buf1.capacity() >= 16U * sizeof(int), true);
+			PR_EXPECT(buf1.capacity<int>() >= 16U);
+			PR_EXPECT(buf1.capacity() >= 16U * sizeof(int));
 
 			// append
 			buf1 = buf0;
 			buf1.append(buf0);
-			PR_CHECK(buf1.size(), 2 * buf0.size());
+			PR_EXPECT(buf1.size() == 2 * buf0.size());
 			for (int i = 0, iend = int(buf1.size()); i != iend; ++i)
-				PR_CHECK(buf1[i], buf0[i % buf0.size()]);
+				PR_EXPECT(buf1[i] == buf0[i % buf0.size()]);
 			buf1.clear();
 			buf1.append({ 0, 1, 2, 3 });
-			PR_CHECK(buf1.size<int>(), 4U);
-			PR_CHECK(buf1.at<int>(0), 0);
-			PR_CHECK(buf1.at<int>(1), 1);
-			PR_CHECK(buf1.at<int>(2), 2);
-			PR_CHECK(buf1.at<int>(3), 3);
+			PR_EXPECT(buf1.size<int>() == 4U);
+			PR_EXPECT(buf1.at<int>(0) == 0);
+			PR_EXPECT(buf1.at<int>(1) == 1);
+			PR_EXPECT(buf1.at<int>(2) == 2);
+			PR_EXPECT(buf1.at<int>(3) == 3);
 			buf1.clear();
 			buf1.append(buf0.span().subspan(4, 4));
 			PR_EXPECT(buf1.size<int>() == 1U);
@@ -785,51 +811,63 @@ namespace pr::container
 			// insert
 			buf1 = buf0;
 			buf1.insert(1, buf0);
-			PR_CHECK(buf1.size(), 2 * buf0.size());
-			PR_CHECK(memcmp(&buf1[0], &buf0[0], 1), 0);
-			PR_CHECK(memcmp(&buf1[1], &buf0[0], buf0.size()), 0);
-			PR_CHECK(memcmp(&buf1[1+buf0.size()], &buf0[1], buf0.size()-1), 0);
+			PR_EXPECT(buf1.size() == 2 * buf0.size());
+			PR_EXPECT(memcmp(&buf1[0], &buf0[0], 1) == 0);
+			PR_EXPECT(memcmp(&buf1[1], &buf0[0], buf0.size()) == 0);
+			PR_EXPECT(memcmp(&buf1[1+buf0.size()], &buf0[1], buf0.size()-1) == 0);
 			buf1 = buf0;
 			buf1.insert(1, { buf1.data(), 3 }); // subrange insert
-			PR_CHECK(buf1.size(), buf0.size() + 3U);
-			PR_CHECK(buf1[0], buf0[0]);
-			PR_CHECK(buf1[1], buf0[0]);
-			PR_CHECK(buf1[2], buf0[1]);
-			PR_CHECK(buf1[3], buf0[2]);
-			PR_CHECK(buf1[4], buf0[1]);
-			PR_CHECK(buf1[5], buf0[2]);
+			PR_EXPECT(buf1.size() == buf0.size() + 3U);
+			PR_EXPECT(buf1[0] == buf0[0]);
+			PR_EXPECT(buf1[1] == buf0[0]);
+			PR_EXPECT(buf1[2] == buf0[1]);
+			PR_EXPECT(buf1[3] == buf0[2]);
+			PR_EXPECT(buf1[4] == buf0[1]);
+			PR_EXPECT(buf1[5] == buf0[2]);
 
 			// push_back
 			buf1 = buf0;
 			buf1.push_back<int>(123);
-			PR_CHECK(buf1.at<int>(0), 0x42555541);
-			PR_CHECK(buf1.at<int>(1), 42);
-			PR_CHECK(buf1.at<int>(2), 123);
+			PR_EXPECT(buf1.at<int>(0) == 0x42555541);
+			PR_EXPECT(buf1.at<int>(1) == 42);
+			PR_EXPECT(buf1.at<int>(2) == 123);
 			buf1.push_back({ buf1.data(), 4 });
-			PR_CHECK(buf1.at<int>(3), 0x42555541);
+			PR_EXPECT(buf1.at<int>(3) == 0x42555541);
+
+			// Overwrite
+			buf1 = buf0;
+			buf1.overwrite(2, buf0.span().subspan(0, 8));
+			PR_EXPECT(buf1.size() == 2 + buf0.size());
+			for (int i = 0; i != 2; ++i) { PR_EXPECT(buf1[i + 0] == buf0[i]); }
+			for (int i = 0; i != isize(buf0); ++i) { PR_EXPECT(buf1[i + 2] == buf0[i]); }
+			buf1 = buf0;
+			buf1.overwrite(6, buf1.span().subspan(0, 4)); // subrange overwrite
+			PR_EXPECT(buf1.size() == 10);
+			for (int i = 0; i != 6; ++i) { PR_EXPECT(buf1[i + 0] == buf0[i]); }
+			for (int i = 0; i != 4; ++i) { PR_EXPECT(buf1[i + 6] == buf0[i]); }
 		}
 		{ // Access
 			byte_data buf0;
 			buf0.append({0, 1, 2, 3});
-			PR_CHECK(buf0.size<int>(), 4U);
+			PR_EXPECT(buf0.size<int>() == 4U);
 			
 			// as
 			auto& arr0 = buf0.as<int[4]>();
-			PR_CHECK(arr0[0], 0);
-			PR_CHECK(arr0[1], 1);
-			PR_CHECK(arr0[2], 2);
-			PR_CHECK(arr0[3], 3);
+			PR_EXPECT(arr0[0] == 0);
+			PR_EXPECT(arr0[1] == 1);
+			PR_EXPECT(arr0[2] == 2);
+			PR_EXPECT(arr0[3] == 3);
 
 			// at_byte_ofs
 			auto v1 = buf0.at_byte_ofs<int>(2);
-			PR_CHECK(v1, 0x00010000);
+			PR_EXPECT(v1 == 0x00010000);
 
 			auto s = buf0.span<int>();
-			PR_CHECK(s.size(), 4U);
-			PR_CHECK(s[0], 0);
-			PR_CHECK(s[1], 1);
-			PR_CHECK(s[2], 2);
-			PR_CHECK(s[3], 3);
+			PR_EXPECT(s.size() == 4U);
+			PR_EXPECT(s[0] == 0);
+			PR_EXPECT(s[1] == 1);
+			PR_EXPECT(s[2] == 2);
+			PR_EXPECT(s[3] == 3);
 		}
 		{ // Stream
 			byte_data buf0;
@@ -839,10 +877,10 @@ namespace pr::container
 			buf0.push_back<int>(42);
 
 			size_t ofs = 0;
-			PR_CHECK(buf0.read<char>(ofs), 'A');
-			PR_CHECK(buf0.read<short>(ofs), 0x5555);
-			PR_CHECK(buf0.read<char>(ofs), 'B');
-			PR_CHECK(buf0.read<int>(ofs), 42);
+			PR_EXPECT(buf0.read<char>(ofs) == 'A');
+			PR_EXPECT(buf0.read<short>(ofs) == 0x5555);
+			PR_EXPECT(buf0.read<char>(ofs) == 'B');
+			PR_EXPECT(buf0.read<int>(ofs) == 42);
 		}
 	}
 }

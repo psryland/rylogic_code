@@ -21,6 +21,7 @@
 #include "pr/container/vector.h"
 #include "pr/container/kdtree.h"
 #include "pr/camera/camera.h"
+#include "pr/ldraw/ldr_helper.h"
 #include "pr/gui/wingui.h"
 #include "pr/win32/windows_com.h"
 

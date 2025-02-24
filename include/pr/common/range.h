@@ -278,7 +278,6 @@ namespace pr::common
 		static_assert(Range<int>::is_integral == true);
 		static_assert(Range<float>::is_integral == false);
 		static_assert(Range<char*>::is_integral == true);
-		static_assert(Range<v4>::is_integral == false);
 
 		{
 			using IRange = pr::Range<int>;

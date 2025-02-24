@@ -2,12 +2,14 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "pr/view3d-12/view3d-dll.h"
+#include <WinSock2.h>
 #include "view3d-12/src/dll/streaming.h"
+#include "pr/view3d-12/view3d-dll.h"
 #include "pr/network/tcpip.h"
 
 namespace pr::view3d
 {
+#if 0 // TODO - requires binary Ldraw script format
 	class LDrawServer
 	{
 		struct Connection
@@ -51,4 +53,5 @@ namespace pr::view3d
 			}
 		}
 	};
+#endif 
 }

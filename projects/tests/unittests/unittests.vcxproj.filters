@@ -1071,10 +1071,10 @@
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite3</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\script\byte_reader.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\pr\view3d-12\ldraw\ldr.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
       <Filter>pr\ldraw</Filter>
     </ClInclude>
   </ItemGroup>

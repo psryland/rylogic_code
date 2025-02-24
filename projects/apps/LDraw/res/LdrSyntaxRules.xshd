@@ -95,6 +95,7 @@
 			<Word>*Colour</Word>
 			<Word>*ForeColour</Word>
 			<Word>*BackColour</Word>
+			<Word>*PerItemColour</Word>
 			<Word>*Font</Word>
 			<Word>*Stretch</Word>
 			<Word>*Underline</Word>
@@ -182,6 +183,7 @@
 			<Word>*Source</Word>
 			<Word>*Data</Word>
 			<Word>*Series</Word>
+			<Word>*EndSentinel</Word>
 			<!-- ##AUTO-GENERATED## EKeyword End -->
 		</Keywords>
 

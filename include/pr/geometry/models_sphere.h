@@ -3,9 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-
 #include "pr/geometry/common.h"
-#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::geometry
 {
