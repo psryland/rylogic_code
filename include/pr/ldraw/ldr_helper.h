@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <type_traits>
 #include <concepts>
+#include <fstream>
+
 #include "pr/common/fmt.h"
+#include "pr/common/cast.h"
 #include "pr/common/assert.h"
 #include "pr/common/scope.h"
 #include "pr/container/byte_data.h"
@@ -30,6 +33,27 @@ namespace pr::ldr
 	using TStr = std::string;
 	using TData = byte_data<4>;
 	using Scope = pr::Scope<void>;
+
+	// Write the contents of 'ldr' to a file
+	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
+	{
+		if (ldr.empty()) return;
+		filesys::LockFile lock(filepath);
+		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf8, append);
+	}
+	inline void Write(std::wstring_view ldr, std::filesystem::path const& filepath, bool append = false)
+	{
+		if (ldr.empty()) return;
+		filesys::LockFile lock(filepath);
+		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
+	}
+	inline void Write(std::span<std::byte const> ldr, std::filesystem::path const& filepath, bool append = false)
+	{
+		if (ldr.empty()) return;
+		filesys::LockFile lock(filepath);
+		std::ofstream ofile(filepath, append ? std::ios::app : std::ios::out);
+		ofile.write(char_ptr(ldr.data()), ldr.size());
+	}
 
 	#pragma region Type Wrappers
 	enum class EArrowType : uint8_t
@@ -311,16 +335,6 @@ namespace pr::ldr
 	#pragma endregion
 
 	#pragma region Append Binary
-	inline TData& Append(TData& data, Name name)
-	{
-		ldraw::Write(data, pr::ldraw::EKeyword::Name, [&](auto&) { data.push_back(name.m_name); });
-		return data;
-	}
-	inline TData& Append(TData& data, Col colour)
-	{
-		ldraw::Write(data, ldraw::EKeyword::Colour, [&](auto&) { data.push_back(colour.m_ui); });
-		return data;
-	}
 	inline TData& Append(TData& data, int i)
 	{
 		return data.push_back(i);
@@ -357,10 +371,20 @@ namespace pr::ldr
 	{
 		return Append(data, m.x, m.y, m.z, m.w);
 	}
+	inline TData& Append(TData& data, Name name)
+	{
+		ldraw::Write(data, pr::ldraw::EKeyword::Name, name.m_name);
+		return data;
+	}
+	inline TData& Append(TData& data, Col colour)
+	{
+		ldraw::Write(data, ldraw::EKeyword::Colour, colour.m_ui);
+		return data;
+	}
 	inline TData& Append(TData& data, Size s)
 	{
 		if (s.m_size == 0) return data;
-		ldraw::Write(data, ldraw::EKeyword::Size, [&](auto&) { data.push_back(s.m_size); });
+		ldraw::Write(data, ldraw::EKeyword::Size, s.m_size);
 		return data;
 	}
 	inline TData& Append(TData& data, Wireframe w)
@@ -384,18 +408,18 @@ namespace pr::ldr
 	inline TData& Append(TData& data, Width w)
 	{
 		if (w.m_width == 0) return data;
-		ldraw::Write(data, ldraw::EKeyword::Width, [&](auto&) { data.push_back(w.m_width); });
+		ldraw::Write(data, ldraw::EKeyword::Width, w.m_width);
 		return data;
 	}
 	inline TData& Append(TData& data, AxisId id)
 	{
-		ldraw::Write(data, ldraw::EKeyword::AxisId, [&](auto&) { data.push_back(int(id)); });
+		ldraw::Write(data, ldraw::EKeyword::AxisId, int(id));
 		return data;
 	}
 	inline TData& Append(TData& data, PointStyle style)
 	{
 		if (style.m_style == EPointStyle::Square) return data;
-		ldraw::Write(data, ldraw::EKeyword::Style, [&](auto&) { data.push_back(style.m_style); });
+		ldraw::Write(data, ldraw::EKeyword::Style, style.m_style);
 		return data;
 	}
 	inline TData& Append(TData& data, O2W const& o2w)
@@ -407,14 +431,14 @@ namespace pr::ldr
 		{
 			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
 			{
-				ldraw::Write(data, ldraw::EKeyword::Pos, [&](auto&) { Append(data, o2w.m_mat.pos.xyz); });
+				ldraw::Write(data, ldraw::EKeyword::Pos, o2w.m_mat.pos.xyz);
 			}
 			else
 			{
 				if (!IsAffine(o2w.m_mat))
 					ldraw::Write(data, ldraw::EKeyword::NonAffine);
 
-				ldraw::Write(data, ldraw::EKeyword::M4x4, [&](auto&) { Append(data, o2w.m_mat); });
+				ldraw::Write(data, ldraw::EKeyword::M4x4, o2w.m_mat);
 			}
 		});
 		return data;
@@ -422,17 +446,13 @@ namespace pr::ldr
 	template <typename Arg0, typename... Args> inline TData& Append(TData& data, Arg0 const& arg0, Args&&... args)
 	{
 		Append(data, arg0);
-		return Append(data, std::forward<Args>(args)...);
+		(Append(data, args), ...);
+		return data;
 	}
 	#pragma endregion
 
 	#pragma region Deprecated Ldr Functions
-	inline void Write(TStr const& str, std::filesystem::path const& filepath, bool append = false)
-	{
-		if (str.size() == 0) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(str, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
-	}
+	#if 1 // todo - remove these
 	inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
 	{
 		assert(keyword[0] == '\0' || keyword[0] == '*');
@@ -749,6 +769,7 @@ namespace pr::ldr
 		Append(str, indices_per_prim >= 3 ? "*GenerateNormals\n" : "");
 		return Append(str, "}\n");
 	}
+	#endif
 	#pragma endregion
 
 	// Pretty format Ldraw script
@@ -779,7 +800,7 @@ namespace pr::ldr
 			}
 		}
 		return std::move(out);
-	};
+	}
 
 	// Ldr object fluent helper
 	namespace fluent
@@ -1019,28 +1040,6 @@ namespace pr::ldr
 			}
 		};
 
-		#if 0 // Needed?
-		struct LdrRawString :LdrObj
-		{
-			std::string m_str;
-			template <typename Arg0, typename... Args> 
-			LdrRawString(Arg0 const& arg0, Args&&... args)
-				:m_str()
-			{
-				ldr::Append(m_str, arg0, std::forward<Args>(args)...);
-			}
-
-			/// <inheritdoc/>
-			void ToString(std::string& str) const override
-			{
-				str.append(m_str);
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-
-			}
-		};
-		#endif
 		struct LdrPoint :LdrBase<LdrPoint>
 		{
 			struct Point { v4 point; Col colour; };
@@ -1760,6 +1759,38 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
+			void ToBinary(byte_data<4>& data) const override
+			{
+				using namespace pr::ldraw;
+				if (m_ortho)
+				{
+					ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
+					{
+						ldr::Append(data, m_name, m_colour);
+						ldraw::Write(data, ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.y - m_nf.x });
+						ldr::Append(data, O2W(v4{ 0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1 }));
+						NestedToBinary(data);
+					});
+				}
+				else if (m_wh != Vec2d<void>::Zero())
+				{
+					ldraw::Write(data, ldraw::EKeyword::FrustumWH, [&](auto&)
+					{
+						ldr::Append(data, m_name, m_colour);
+						ldraw::Write(data, ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.x, m_nf.y });
+						NestedToBinary(data);
+					});
+				}
+				else
+				{
+					ldraw::Write(data, ldraw::EKeyword::FrustumFA, [&](auto&)
+					{
+						ldr::Append(data, m_name, m_colour);
+						ldraw::Write(data, ldraw::EKeyword::Data, { RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y });
+						NestedToBinary(data);
+					});
+				}
+			}
 		};
 		struct LdrGroup :LdrBase<LdrGroup>
 		{
@@ -1770,6 +1801,15 @@ namespace pr::ldr
 				NestedToString(str);
 				for (;!str.empty() && str.back() == '\n';) str.pop_back();
 				ldr::Append(str, "\n}\n");
+			}
+			void ToBinary(byte_data<4>& data) const override
+			{
+				using namespace pr::ldraw;
+				ldraw::Write(data, ldraw::EKeyword::Group, [&](auto&)
+				{
+					ldr::Append(data, m_name, m_colour);
+					NestedToBinary(data);
+				});
 			}
 		};
 
@@ -1857,9 +1897,8 @@ namespace pr::ldr
 		#pragma endregion
 	}
 
-	struct Builder : fluent::LdrObj
-	{
-	};
+	// Fluent Ldraw script builder
+	using Builder = fluent::LdrObj;
 }
 
 #if PR_UNITTESTS

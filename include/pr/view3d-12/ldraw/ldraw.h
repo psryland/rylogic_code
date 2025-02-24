@@ -10,6 +10,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/hash.h"
 #include "pr/macros/enum.h"
+#include "pr/maths/maths.h"
 #include "pr/container/byte_data.h"
 
 // Plans:
@@ -277,17 +278,18 @@ namespace pr::ldraw
 	//  - To write out only part of a File, delete the parts in a temporary copy of the file.
 
 	// Types that can be serialized into the buffer
-	template <typename T, typename... Args>
-	concept PodType =
-		std::is_trivial_v<T> &&
-		std::is_standard_layout_v<T> &&
-		!std::is_invocable_v<T, Args...>;
-
-	template <typename T>
-	concept IterableType = requires(T t)
+	template <typename T> concept PrimitiveType = requires(T)
 	{
-		{ std::begin(t) } -> std::input_or_output_iterator;
-		{ std::end(t) } -> std::input_or_output_iterator;
+		std::is_integral_v<T> ||
+		std::is_floating_point_v<T> ||
+		std::is_enum_v<T> ||
+		maths::VecOrMatType<T>;
+	};
+	template <typename T> concept SpanType = requires(T t)
+	{
+		PrimitiveType<typename T::value_type>;
+		{ t.data() } -> std::same_as<typename T::value_type*>;
+		{ t.size() } -> std::same_as<std::size_t>;
 	};
 
 	// Write custom data within a section
@@ -317,16 +319,6 @@ namespace pr::ldraw
 		return Write(out, keyword, [](auto&) {});
 	}
 
-	// Write a single item
-	template <typename TOut> 
-	int64_t Write(TOut& out, EKeyword keyword, uint32_t item)
-	{
-		return Write(out, keyword, [&](auto&)
-		{
-			traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
-		});
-	}
-
 	// Write a string section
 	template <typename TOut>
 	int64_t Write(TOut& out, EKeyword keyword, std::string_view str)
@@ -337,28 +329,34 @@ namespace pr::ldraw
 		});
 	}
 
-	// Write a span of items
-	template <typename TOut, IterableType TIterable>
-	int64_t Write(TOut& out, EKeyword keyword, TIterable const& items)
+	// Write a single primitive type
+	template <typename TOut, PrimitiveType TItem, PrimitiveType... TItems> 
+	int64_t Write(TOut& out, EKeyword keyword, TItem item, TItems&&... items)
 	{
 		return Write(out, keyword, [&](auto&)
 		{
-			for (auto const& item : items)
-			{
-				static_assert(std::is_trivial_v<decltype(item)>);
-				traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
-			}
+			traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
+			(traits<TOut>::write(out, { byte_ptr(&items), sizeof(items) }), ...);
+		});
+	}
+
+	// Write a span of items
+	template <typename TOut, PrimitiveType TItem>
+	int64_t Write(TOut& out, EKeyword keyword, std::span<TItem const> span)
+	{
+		return Write(out, keyword, [&](auto&)
+		{
+			traits<TOut>::write(out, { byte_ptr(span.data()), span.size() * sizeof(TItem) });
 		});
 	}
 
 	// Write an immediate list of items
-	template <typename TOut, PodType TItem>
+	template <typename TOut, PrimitiveType TItem>
 	int64_t Write(TOut& out, EKeyword keyword, std::initializer_list<TItem const> items)
 	{
 		return Write(out, keyword, [&](auto&)
 		{
-			for (auto const& item : items)
-				traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
+			traits<TOut>::write(out, { byte_ptr(items.begin()), items.size() * sizeof(TItem) });
 		});
 	}
 

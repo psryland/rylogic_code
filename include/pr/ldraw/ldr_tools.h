@@ -8,6 +8,7 @@
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/ldraw/ldr_object.h"
+#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::ldr
 {
@@ -106,13 +107,13 @@ namespace pr::ldr
 				auto p0 = v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
 				auto p1 = v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
-				auto str = std::string{};
-				GroupStart(str, "Measurement");
-				Line(str, "dist", 0xFFFFFFFF, m_point0, m_point1);
-				Line(str, "distX", 0xFFFF0000, m_point0, p0);
-				Line(str, "distY", 0xFF00FF00, p0, p1);
-				Line(str, "distZ", 0xFF0000FF, p1, m_point1);
-				GroupEnd(str);
+				ldr::Builder ldr;
+				auto& group = ldr.Group("Measurement");
+				group.Line("dist", 0xFFFFFFFF).line(m_point0, m_point1);
+				group.Line("distX", 0xFFFF0000).line(m_point0, p0);
+				group.Line("distY", 0xFF00FF00).line(p0, p1);
+				group.Line("distZ", 0xFF0000FF).line(p1, m_point1);
+				auto str = ldr.ToString();
 
 				ParseResult out;
 				ParseString(m_rdr, str.c_str(), out, GfxContextId());
@@ -244,12 +245,12 @@ namespace pr::ldr
 			// Create graphics
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
-				std::string str;
-				GroupStart(str, "Angle");
-				Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
-				Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
-				Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
-				GroupEnd(str);
+				ldr::Builder ldr;
+				auto& group = ldr.Group("Angle");
+				group.Line("edge0", 0xFFFFFFFF).line(m_origin, m_point0);
+				group.Line("edge1", 0xFFFFFF00).line(m_origin, m_point1);
+				group.Line("edge2", 0xFF00FF00).line(m_point0, m_point1);
+				auto str = ldr.ToString();
 
 				ParseResult out;
 				ParseString(m_rdr, str.c_str(), out, GfxContextId());

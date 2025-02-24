@@ -157,37 +157,31 @@ struct Main
 							if (arg == arg_end || IsOption(*arg) || !str::ExtractIntC(m_verbosity, 10, arg->c_str()) || m_verbosity < 0 || m_verbosity > 3)
 								throw std::runtime_error("Verbosity level must be in the range [0..3]");
 
-							auto verb = ldr::Section(m_str, "*Verbosity");
-							ldr::Append(m_str, m_verbosity);
+							ldr::Append(m_str, "*Verbosity", "{", m_verbosity, "}\n");
 							break;
 						}
 						if (str::EqualI(option, "-fi"))
 						{
-							auto fi = ldr::Section(m_str, "*fi");
-							ldr::Append(m_str, ldr::Str(*arg++));
+							ldr::Append(m_str, "*fi", "{", ldr::Str(*arg++), "}\n");
 							break;
 						}
 						if (str::EqualI(option, "-fo"))
 						{
-							auto fo = ldr::Section(m_str, "*fo");
-							ldr::Append(m_str, ldr::Str(*arg++));
+							ldr::Append(m_str, "*fo", "{", ldr::Str(*arg++));
 							if (arg != arg_end)
 							{
 								if (false) {}
 								else if (str::EqualI(*arg, "code")) ldr::Append(m_str, "*Code");
 								else if (str::EqualI(*arg, "ldr" )) ldr::Append(m_str, "*Ldr");
-								else
-								{
-									auto flags = ldr::Section(m_str, "*Flags");
-									ldr::Append(m_str, ldr::Str(*arg++));
-								}
+								else ldr::Append(m_str, "*Flags", "{", ldr::Str(*arg++), "}\n");
 							}
+							ldr::Append(m_str, "}\n");
 							m_ends_with_fileout = true;
 							break;
 						}
 						if (str::EqualI(option, "-RemoveDegenerates"))
 						{
-							auto sec = ldr::Section(m_str, "*RemoveDegenerates");
+							ldr::Append(m_str, "*RemoveDegenerates", "{");
 							if (!IsOption(*arg))
 							{
 								int field = 0;
@@ -203,22 +197,23 @@ struct Main
 									}
 								});
 							}
+							ldr::Append(m_str, "}\n");
 							break;
 						}
 						if (str::EqualI(option, "-GenerateNormals"))
 						{
-							auto sec = ldr::Section(m_str, "*GenerateNormals");
+							ldr::Append(m_str, "*GenerateNormals", "{");
 							for (; arg != arg_end && !IsOption(*arg); ++arg)
 							{
 								if (int i; str::ExtractIntC(i, 10, arg->c_str())) { ldr::Append(m_str, "*SmoothingAngle {", i, "}"); continue; }
 								throw std::runtime_error(FmtS("GenerateNormals - unknown argument:  %s", arg->c_str()));
 							}
+							ldr::Append(m_str, "}\n");
 							break;
 						}
 						if (str::EqualI(option, "-Transform"))
 						{
-							auto sec = ldr::Section(m_str, "*Transform");
-							ldr::Append(m_str, *arg);
+							ldr::Append(m_str, "*Transform", "{", *arg, "}\n");
 							break;
 						}
 						if (str::EqualI(option, "--help"))
