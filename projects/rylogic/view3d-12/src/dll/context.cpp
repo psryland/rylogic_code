@@ -3,8 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/view3d-dll.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "view3d-12/src/dll/context.h"
@@ -250,7 +251,7 @@ namespace pr::rdr12
 		auto& ind = indices;
 
 		// Create the model
-		auto attr  = ObjectAttributes(ELdrObject::Custom, name, Colour32(colour));
+		auto attr  = ldraw::ObjectAttributes(ldraw::ELdrObject::Custom, name, Colour32(colour));
 		auto cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
 		auto obj = Create(m_rdr, attr, cdata, context_id);
 	
@@ -300,8 +301,8 @@ namespace pr::rdr12
 		auto id = context_id ? *context_id : GenerateGUID();
 
 		// Create an ldr object
-		ObjectAttributes attr(ELdrObject::Model, name, colour);
-		auto obj = CreateP3D(m_rdr, attr, p3d_filepath, id);
+		ldraw::ObjectAttributes attr(ldraw::ELdrObject::Model, name, colour);
+		auto obj = ldraw::CreateP3D(m_rdr, attr, p3d_filepath, id);
 		m_sources.Add(obj);
 		return obj.get();
 	}
@@ -311,7 +312,7 @@ namespace pr::rdr12
 		auto id = context_id ? *context_id : pr::GenerateGUID();
 
 		// Create an ldr object
-		ObjectAttributes attr(ELdrObject::Model, name, colour);
+		ldraw::ObjectAttributes attr(ldraw::ELdrObject::Model, name, colour);
 		auto obj = CreateP3D(m_rdr, attr, size, p3d_data, id);
 		m_sources.Add(obj);
 		return obj.get();
@@ -443,8 +444,8 @@ namespace pr::rdr12
 	}
 	LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
 	{
-		auto attr = ObjectAttributes{ ELdrObject::Custom, name, colour };
-		auto obj = CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
+		auto attr = ldraw::ObjectAttributes{ ldraw::ELdrObject::Custom, name, colour };
+		auto obj = ldraw::CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
 		if (obj != nullptr)
 			m_sources.Add(obj);
 
@@ -461,7 +462,7 @@ namespace pr::rdr12
 	}
 
 	// Update the model in an existing object
-	void Context::UpdateObject(LdrObject* object, wchar_t const* ldr_script, EUpdateObject flags)
+	void Context::UpdateObject(LdrObject* object, wchar_t const* ldr_script, ldraw::EUpdateObject flags)
 	{
 		// Remove the object from any windows it might be in
 		for (auto& wnd : m_wnd_cont)
@@ -470,7 +471,7 @@ namespace pr::rdr12
 		// Update the object model
 		script::StringSrc src(ldr_script);
 		script::Reader reader(src, false);
-		Update(m_rdr, object, reader, flags);
+		ldraw::Update(m_rdr, object, reader, flags);
 	}
 
 	// Delete a single object
@@ -543,7 +544,7 @@ namespace pr::rdr12
 	}
 	
 	// Create a gizmo object and add it to the gizmo collection
-	LdrGizmo* Context::GizmoCreate(ELdrGizmoMode mode, m4x4 const& o2w)
+	LdrGizmo* Context::GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w)
 	{
 		return m_sources.CreateGizmo(mode, o2w);
 	}

@@ -5,8 +5,10 @@
 // A container of Ldr script sources that can watch for external changes.
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// A collection of LDraw script sources
 	struct ScriptSources :IFileChangedHandler
@@ -29,7 +31,6 @@ namespace pr::rdr12
 		using GuidCont = pr::vector<Guid>;
 		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 		using OnAddCB = std::function<void(Guid const&, bool)>;
-		using Location = pr::script::Loc;
 		using filepath_t = std::filesystem::path;
 		using Includes = pr::script::Includes;
 		using EmbeddedCodeFactory = pr::script::EmbeddedCodeFactory;
@@ -239,7 +240,7 @@ namespace pr::rdr12
 		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
 
 		// Create a gizmo object and add it to the gizmo collection
-		LdrGizmo* CreateGizmo(ELdrGizmoMode mode, m4x4 const& o2w);
+		LdrGizmo* CreateGizmo(EGizmoMode mode, m4x4 const& o2w);
 
 		// Destroy a gizmo
 		void RemoveGizmo(LdrGizmo* gizmo);

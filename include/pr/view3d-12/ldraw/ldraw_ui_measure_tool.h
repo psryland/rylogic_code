@@ -4,14 +4,14 @@
 //***************************************************************************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/ldraw/ldr_helper.h"
 #include "pr/gui/wingui.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// A UI for measuring distances within a 3D environment
-	struct alignas(16) LdrMeasureUI :gui::Form
+	struct alignas(16) MeasureUI :gui::Form
 	{
 		// Callback function for reading a world space point
 		using ReadPointCB = v4(__stdcall*)(void* ctx);
@@ -34,12 +34,12 @@ namespace pr::rdr12
 
 	public:
 
-		LdrMeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
+		MeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
 			:Form(Params<>()
 				.parent(parent).name("ldr-measure-ui").title(L"Measure Distances")
 				.wh(300, 150).style_ex('+', WS_EX_TOOLWINDOW)
 				.hide_on_close(true).pin_window(true)
-				.wndclass(RegisterWndClass<LdrMeasureUI>()))
+				.wndclass(RegisterWndClass<MeasureUI>()))
 			, m_context_id(GenerateGUID())
 			, m_read_point_cb(read_point_cb)
 			, m_read_point_ctx(ctx)
@@ -52,8 +52,8 @@ namespace pr::rdr12
 			, m_point1(v4Origin)
 		{
 			CreateHandle();
-			m_btn_set0.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
-			m_btn_set1.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
+			m_btn_set0.Click += std::bind(&MeasureUI::HandleSetPoint, this, _1, _2);
+			m_btn_set1.Click += std::bind(&MeasureUI::HandleSetPoint, this, _1, _2);
 			UpdateMeasurementInfo();
 		}
 
@@ -115,8 +115,8 @@ namespace pr::rdr12
 
 				auto str = ldr.ToString();
 				script::StringSrc src(str.c_str());
-				script::Reader rdr(src);
-				auto out = Parse(m_rdr, rdr, GfxContextId());
+				script::Reader reader(src);
+				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())
 					m_gfx = out.m_objects.back();
 			}
@@ -146,8 +146,8 @@ namespace pr::rdr12
 		}
 
 		// Raised when the measurement data changes
-		// MeasurementChanged += [&](LdrMeasureUI&,EmptyArgs const&){}
-		gui::EventHandler<LdrMeasureUI&, gui::EmptyArgs const&> MeasurementChanged;
+		// MeasurementChanged += [&](MeasureUI&,EmptyArgs const&){}
+		gui::EventHandler<MeasureUI&, gui::EmptyArgs const&> MeasurementChanged;
 	};
 }
 

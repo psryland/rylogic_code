@@ -14,58 +14,56 @@
 #include "pr/container/byte_data.h"
 
 // Plans:
-// - Implement a Chunker-like format for ldr files
+// - Implement a Chunk-like format for ldr files
 //   Support reading binary ldr files using script::ByteReader or maybe this file
 //   Update LdrObject.h/cpp to use a reader that works with binary or text
 // - Make 'pr::ldraw' the new namespace, and deprecate 'pr::ldr'
-namespace pr::ldraw
+namespace pr::rdr12::ldraw
 {
 	// Keywords in ldraw script
 	#pragma region Ldr_Keywords
 	// This includes object types and field names because they need to have unique hashes
 	#define PR_ENUM_LDRAW_KEYWORDS(x)\
 		/* Object types */\
-		x(Arrow      ,= hash::HashICT("Arrow"     ))\
-		x(Bar        ,= hash::HashICT("Bar"       ))\
-		x(Box        ,= hash::HashICT("Box"       ))\
-		x(BoxList    ,= hash::HashICT("BoxList"   ))\
-		x(Chart      ,= hash::HashICT("Chart"     ))\
-		x(Circle     ,= hash::HashICT("Circle"    ))\
-		x(Cone       ,= hash::HashICT("Cone"      ))\
-		x(ConvexHull ,= hash::HashICT("ConvexHull"))\
-		x(CoordFrame ,= hash::HashICT("CoordFrame"))\
-		x(Custom     ,= hash::HashICT("Custom"    ))\
-		x(Cylinder   ,= hash::HashICT("Cylinder"  ))\
-		x(DirLight   ,= hash::HashICT("DirLight"  ))\
-		x(Equation   ,= hash::HashICT("Equation"  ))\
-		x(FrustumFA  ,= hash::HashICT("FrustumFA" ))\
-		x(FrustumWH  ,= hash::HashICT("FrustumWH" ))\
-		x(Grid       ,= hash::HashICT("Grid"      ))\
-		x(Group      ,= hash::HashICT("Group"     ))\
-		x(Instance   ,= hash::HashICT("Instance"  ))\
-		x(Line       ,= hash::HashICT("Line"      ))\
-		x(LineBox    ,= hash::HashICT("LineBox"   ))\
-		x(LineD      ,= hash::HashICT("LineD"     ))\
-		x(LineStrip  ,= hash::HashICT("LineStrip" ))\
-		x(Matrix3x3  ,= hash::HashICT("Matrix3x3" ))\
-		x(Mesh       ,= hash::HashICT("Mesh"      ))\
-		x(Model      ,= hash::HashICT("Model"     ))\
-		x(Pie        ,= hash::HashICT("Pie"       ))\
-		x(Plane      ,= hash::HashICT("Plane"     ))\
-		x(Point      ,= hash::HashICT("Point"     ))\
-		x(PointLight ,= hash::HashICT("PointLight"))\
-		x(Polygon    ,= hash::HashICT("Polygon"   ))\
-		x(Quad       ,= hash::HashICT("Quad"      ))\
-		x(Rect       ,= hash::HashICT("Rect"      ))\
-		x(Ribbon     ,= hash::HashICT("Ribbon"    ))\
-		x(Series     ,= hash::HashICT("Series"    ))\
-		x(Sphere     ,= hash::HashICT("Sphere"    ))\
-		x(Spline     ,= hash::HashICT("Spline"    ))\
-		x(SpotLight  ,= hash::HashICT("SpotLight" ))\
-		x(Text       ,= hash::HashICT("Text"      ))\
-		x(Triangle   ,= hash::HashICT("Triangle"  ))\
-		x(Tube       ,= hash::HashICT("Tube"      ))\
-		x(Unknown    ,= hash::HashICT("Unknown"   ))\
+		x(Arrow      ,= hash::HashICT("Arrow"      ))\
+		x(Bar        ,= hash::HashICT("Bar"        ))\
+		x(Box        ,= hash::HashICT("Box"        ))\
+		x(BoxList    ,= hash::HashICT("BoxList"    ))\
+		x(Chart      ,= hash::HashICT("Chart"      ))\
+		x(Circle     ,= hash::HashICT("Circle"     ))\
+		x(Cone       ,= hash::HashICT("Cone"       ))\
+		x(ConvexHull ,= hash::HashICT("ConvexHull" ))\
+		x(CoordFrame ,= hash::HashICT("CoordFrame" ))\
+		x(Custom     ,= hash::HashICT("Custom"     ))\
+		x(Cylinder   ,= hash::HashICT("Cylinder"   ))\
+		x(Equation   ,= hash::HashICT("Equation"   ))\
+		x(FrustumFA  ,= hash::HashICT("FrustumFA"  ))\
+		x(FrustumWH  ,= hash::HashICT("FrustumWH"  ))\
+		x(Grid       ,= hash::HashICT("Grid"       ))\
+		x(Group      ,= hash::HashICT("Group"      ))\
+		x(Instance   ,= hash::HashICT("Instance"   ))\
+		x(LightSource,= hash::HashICT("LightSource"))\
+		x(Line       ,= hash::HashICT("Line"       ))\
+		x(LineBox    ,= hash::HashICT("LineBox"    ))\
+		x(LineD      ,= hash::HashICT("LineD"      ))\
+		x(LineStrip  ,= hash::HashICT("LineStrip"  ))\
+		x(Matrix3x3  ,= hash::HashICT("Matrix3x3"  ))\
+		x(Mesh       ,= hash::HashICT("Mesh"       ))\
+		x(Model      ,= hash::HashICT("Model"      ))\
+		x(Pie        ,= hash::HashICT("Pie"        ))\
+		x(Plane      ,= hash::HashICT("Plane"      ))\
+		x(Point      ,= hash::HashICT("Point"      ))\
+		x(Polygon    ,= hash::HashICT("Polygon"    ))\
+		x(Quad       ,= hash::HashICT("Quad"       ))\
+		x(Rect       ,= hash::HashICT("Rect"       ))\
+		x(Ribbon     ,= hash::HashICT("Ribbon"     ))\
+		x(Series     ,= hash::HashICT("Series"     ))\
+		x(Sphere     ,= hash::HashICT("Sphere"     ))\
+		x(Spline     ,= hash::HashICT("Spline"     ))\
+		x(Text       ,= hash::HashICT("Text"       ))\
+		x(Triangle   ,= hash::HashICT("Triangle"   ))\
+		x(Tube       ,= hash::HashICT("Tube"       ))\
+		x(Unknown    ,= hash::HashICT("Unknown"    ))\
 		/* Field Names */\
 		x(Accel           ,= hash::HashICT("Accel"               ))\
 		x(Addr            ,= hash::HashICT("Addr"                ))\
@@ -89,10 +87,10 @@ namespace pr::ldraw
 		x(ColourMask      ,= hash::HashICT("ColourMask"          ))\
 		x(Colours         ,= hash::HashICT("Colours"             ))\
 		x(CornerRadius    ,= hash::HashICT("CornerRadius"        ))\
+		x(CrossSection    ,= hash::HashICT("CrossSection"        ))\
 		x(CString         ,= hash::HashICT("CString"             ))\
 		x(Dashed          ,= hash::HashICT("Dashed"              ))\
 		x(Data            ,= hash::HashICT("Data"                ))\
-		x(Delimiters      ,= hash::HashICT("Delimiters"          ))\
 		x(Depth           ,= hash::HashICT("Depth"               ))\
 		x(Dim             ,= hash::HashICT("Dim"                 ))\
 		x(Direction       ,= hash::HashICT("Direction"           ))\
@@ -101,6 +99,7 @@ namespace pr::ldraw
 		x(Faces           ,= hash::HashICT("Faces"               ))\
 		x(Facets          ,= hash::HashICT("Facets"              ))\
 		x(Far             ,= hash::HashICT("Far"                 ))\
+		x(FilePath        ,= hash::HashICT("FilePath"            ))\
 		x(Filter          ,= hash::HashICT("Filter"              ))\
 		x(Font            ,= hash::HashICT("Font"                ))\
 		x(ForeColour      ,= hash::HashICT("ForeColour"          ))\
@@ -115,7 +114,6 @@ namespace pr::ldraw
 		x(LeftHanded      ,= hash::HashICT("LeftHanded"          ))\
 		x(LineList        ,= hash::HashICT("LineList"            ))\
 		x(Lines           ,= hash::HashICT("Lines"               ))\
-		x(Lock            ,= hash::HashICT("Lock"                ))\
 		x(LookAt          ,= hash::HashICT("LookAt"              ))\
 		x(M3x3            ,= hash::HashICT("M3x3"                ))\
 		x(M4x4            ,= hash::HashICT("M4x4"                ))\
@@ -136,6 +134,7 @@ namespace pr::ldraw
 		x(Period          ,= hash::HashICT("Period"              ))\
 		x(PerItemColour   ,= hash::HashICT("PerItemColour"       ))\
 		x(Pos             ,= hash::HashICT("Pos"                 ))\
+		x(Position        ,= hash::HashICT("Position"            ))\
 		x(Quat            ,= hash::HashICT("Quat"                ))\
 		x(QuatPos         ,= hash::HashICT("QuatPos"             ))\
 		x(Rand4x4         ,= hash::HashICT("Rand4x4"             ))\
@@ -145,6 +144,7 @@ namespace pr::ldraw
 		x(Range           ,= hash::HashICT("Range"               ))\
 		x(Reflectivity    ,= hash::HashICT("Reflectivity"        ))\
 		x(Resolution      ,= hash::HashICT("Resolution"          ))\
+		x(Round           ,= hash::HashICT("Round"               ))\
 		x(Scale           ,= hash::HashICT("Scale"               ))\
 		x(ScreenSpace     ,= hash::HashICT("ScreenSpace"         ))\
 		x(Size            ,= hash::HashICT("Size"                ))\
@@ -152,6 +152,7 @@ namespace pr::ldraw
 		x(Solid           ,= hash::HashICT("Solid"               ))\
 		x(Source          ,= hash::HashICT("Source"              ))\
 		x(Specular        ,= hash::HashICT("Specular"            ))\
+		x(Square          ,= hash::HashICT("Square"              ))\
 		x(Step            ,= hash::HashICT("Step"                ))\
 		x(Stretch         ,= hash::HashICT("Stretch"             ))\
 		x(Strikeout       ,= hash::HashICT("Strikeout"           ))\
@@ -195,13 +196,13 @@ namespace pr::ldraw
 		x(CoordFrame ,= EKeyword::CoordFrame )\
 		x(Custom     ,= EKeyword::Custom     )\
 		x(Cylinder   ,= EKeyword::Cylinder   )\
-		x(DirLight   ,= EKeyword::DirLight   )\
 		x(Equation   ,= EKeyword::Equation   )\
 		x(FrustumFA  ,= EKeyword::FrustumFA  )\
 		x(FrustumWH  ,= EKeyword::FrustumWH  )\
 		x(Grid       ,= EKeyword::Grid       )\
 		x(Group      ,= EKeyword::Group      )\
 		x(Instance   ,= EKeyword::Instance   )\
+		x(LightSource,= EKeyword::LightSource)\
 		x(Line       ,= EKeyword::Line       )\
 		x(LineBox    ,= EKeyword::LineBox    )\
 		x(LineD      ,= EKeyword::LineD      )\
@@ -212,7 +213,6 @@ namespace pr::ldraw
 		x(Pie        ,= EKeyword::Pie        )\
 		x(Plane      ,= EKeyword::Plane      )\
 		x(Point      ,= EKeyword::Point      )\
-		x(PointLight ,= EKeyword::PointLight )\
 		x(Polygon    ,= EKeyword::Polygon    )\
 		x(Quad       ,= EKeyword::Quad       )\
 		x(Rect       ,= EKeyword::Rect       )\
@@ -220,12 +220,11 @@ namespace pr::ldraw
 		x(Series     ,= EKeyword::Series     )\
 		x(Sphere     ,= EKeyword::Sphere     )\
 		x(Spline     ,= EKeyword::Spline     )\
-		x(SpotLight  ,= EKeyword::SpotLight  )\
 		x(Text       ,= EKeyword::Text       )\
 		x(Triangle   ,= EKeyword::Triangle   )\
 		x(Tube       ,= EKeyword::Tube       )\
 		x(Unknown    ,= EKeyword::Unknown    )
-	PR_DEFINE_ENUM2(EObject, PR_ENUM_LDRAW_OBJECTS);
+	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM_LDRAW_OBJECTS);
 	#pragma endregion
 
 	// The section header
@@ -369,7 +368,7 @@ namespace pr::ldraw
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/maths.h"
-namespace pr::ldraw
+namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LdrawBinaryTests)
 	{

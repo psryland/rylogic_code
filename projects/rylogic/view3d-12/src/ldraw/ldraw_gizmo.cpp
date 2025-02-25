@@ -2,7 +2,7 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/resource/resource_factory.h"
@@ -12,7 +12,7 @@
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	#pragma region Gizmo Model Data
 	struct GizmoData
@@ -648,11 +648,11 @@ namespace pr::rdr12
 	};
 	#pragma endregion
 
-	LdrGizmo::LdrGizmo(Renderer& rdr, ELdrGizmoMode mode, m4x4 const& o2w)
+	LdrGizmo::LdrGizmo(Renderer& rdr, EGizmoMode mode, m4x4 const& o2w)
 		:m_attached_ref()
 		,m_attached_ptr()
 		,m_rdr(&rdr)
-		,m_mode(static_cast<ELdrGizmoMode>(-1))
+		,m_mode(static_cast<EGizmoMode>(-1))
 		,m_gfx()
 		,m_scale(1.0f)
 		,m_offset(m4x4Identity)
@@ -696,11 +696,11 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the mode the gizmo is in
-	ELdrGizmoMode LdrGizmo::Mode() const
+	EGizmoMode LdrGizmo::Mode() const
 	{
 		return m_mode;
 	}
-	void LdrGizmo::Mode(ELdrGizmoMode mode)
+	void LdrGizmo::Mode(EGizmoMode mode)
 	{
 		using namespace pr::geometry;
 		if (m_mode == mode) return;
@@ -805,7 +805,7 @@ namespace pr::rdr12
 
 		// Call after reverting transforms so that callee's can Detach() after
 		// their transforms have been changed (if they decided to Attach on StartManip)
-		Manipulated(this, ELdrGizmoState::Revert);
+		Manipulated(this, EGizmoState::Revert);
 	}
 
 	// Set the ref matrices equal to the controlled matrices
@@ -813,7 +813,7 @@ namespace pr::rdr12
 	{
 		// Scale is a special case for the gizmo, we don't want to actually
 		// scale the gizmo, so restore the transform before committing
-		if (Mode() != ELdrGizmoMode::Scale)
+		if (Mode() != EGizmoMode::Scale)
 			m_attached_ref[0] = *m_attached_ptr[0];
 		else
 			*m_attached_ptr[0] = m_attached_ref[0];
@@ -826,7 +826,7 @@ namespace pr::rdr12
 
 		// Call after committing transforms so that callee's can Detach() after
 		// their transforms have been changed (if they decided to Attach on StartManip)
-		Manipulated(this, ELdrGizmoState::Commit);
+		Manipulated(this, EGizmoState::Commit);
 	}
 
 	// Returns the transform offset between the position when
@@ -862,7 +862,7 @@ namespace pr::rdr12
 				{
 					// Send the initial moving event before 'Reference' so that watchers
 					// can attach themselves to the gizmo for the duration of the manipulation
-					Manipulated(this, ELdrGizmoState::StartManip);
+					Manipulated(this, EGizmoState::StartManip);
 
 					Reference(nss_point);
 					m_component = hit;
@@ -890,13 +890,13 @@ namespace pr::rdr12
 		{
 			switch (m_mode)
 			{
-				case ELdrGizmoMode::Translate: DoTranslation(camera, nss_point); break;
-				case ELdrGizmoMode::Rotate:    DoRotation(camera, nss_point); break;
-				case ELdrGizmoMode::Scale:     DoScale(camera, nss_point); break;
-				default: throw std::exception("Unknown gizmo mode");
+				case EGizmoMode::Translate: DoTranslation(camera, nss_point); break;
+				case EGizmoMode::Rotate:    DoRotation(camera, nss_point); break;
+				case EGizmoMode::Scale:     DoScale(camera, nss_point); break;
+				default: throw std::runtime_error("Unknown gizmo mode");
 			}
 
-			Manipulated(this, ELdrGizmoState::Moving);
+			Manipulated(this, EGizmoState::Moving);
 			return true;
 		}
 
@@ -931,8 +931,8 @@ namespace pr::rdr12
 		// Since the ray is in gizmo space, we're testing against the X,Y,Z unit basis axes
 		switch (m_mode)
 		{
-			case ELdrGizmoMode::Translate:
-			case ELdrGizmoMode::Scale:
+			case EGizmoMode::Translate:
+			case EGizmoMode::Scale:
 			{
 				float const threshold_sq = Sqr(0.25f);
 				float const t_min = 0.05f, t_max = 0.85f;
@@ -960,7 +960,7 @@ namespace pr::rdr12
 				}
 				break;
 			}
-			case ELdrGizmoMode::Rotate:
+			case EGizmoMode::Rotate:
 			{
 				float t, t_min = pr::maths::float_max;
 

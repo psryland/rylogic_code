@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="pr">
@@ -195,7 +195,7 @@
     <ClCompile Include="src\texture\texture_loader_wic.cpp">
       <Filter>src\texture</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldr_object.cpp">
+    <ClCompile Include="src\ldraw\ldraw_object.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\model\model_generator.cpp">
@@ -207,10 +207,10 @@
     <ClCompile Include="src\shaders\shader_arrow_head.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldr_sources.cpp">
+    <ClCompile Include="src\ldraw\ldraw_sources.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldr_gizmo.cpp">
+    <ClCompile Include="src\ldraw\ldraw_gizmo.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp">
@@ -248,6 +248,9 @@
     </ClCompile>
     <ClCompile Include="src\resource\resource_store.cpp">
       <Filter>src\resource</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldraw_parsing.cpp">
+      <Filter>src\ldraw</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -401,9 +404,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer.h">
       <Filter>src\resource</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h">
-      <Filter>pr\lua</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h">
       <Filter>pr\script</Filter>
     </ClInclude>
@@ -515,7 +515,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_object.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h">
@@ -530,10 +530,10 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_arrow_head.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_sources.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_sources.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_gizmo.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\mipmap_generator.h">
@@ -620,16 +620,16 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pix.h">
       <Filter>src\utility</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_angle_tool.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_measure_tool.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_object_manager.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_object_manager.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_script_editor.h">
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_script_editor.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h">
@@ -640,6 +640,12 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_store.h">
       <Filter>src\resource</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+      <Filter>src\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include <vector>
 #include <memory>
 #include <istream>
@@ -21,6 +19,12 @@
 #include "pr/script/forward.h"
 #include "pr/script/fail_policy.h"
 #include "pr/script/location.h"
+
+// Note:
+//  A newer version of this is in 'pr/filesys/resolve_path.h'
+//  It is not dependent on 'pr/script'
+// TODO:
+//  Should refactor 'script' to use the independent version.
 
 namespace pr::script
 {

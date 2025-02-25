@@ -1,44 +1,36 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/scene/scene.h"
-#include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/compute/gpu_job.h"
+#include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/model_desc.h"
-#include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/model/model_generator.h"
+#include "pr/view3d-12/model/model_tree.h"
+#include "pr/view3d-12/model/nugget.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "pr/view3d-12/resource/resource_factory.h"
-#include "pr/view3d-12/texture/texture_desc.h"
 #include "pr/view3d-12/sampler/sampler_desc.h"
+#include "pr/view3d-12/scene/scene.h"
+#include "pr/view3d-12/shaders/shader_arrow_head.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_thick_line.h"
-#include "pr/view3d-12/shaders/shader_arrow_head.h"
-#include "pr/view3d-12/lighting/light.h"
-#include "pr/view3d-12/utility/diagnostics.h"
-#include "pr/view3d-12/utility/pipe_state.h"
-#include "pr/view3d-12/utility/update_resource.h"
-#include "pr/view3d-12/utility/wrappers.h"
-#include "pr/view3d-12/compute/gpu_job.h"
+#include "pr/view3d-12/texture/texture_desc.h"
 
+#include "pr/str/extract.h"
 #include "pr/maths/frustum.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/container/byte_data.h"
 #include "pr/script/forward.h"
 #include "pr/storage/csv.h"
 
-using namespace pr::script;
-
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Notes:
-	//  - Handling Errors:
-	//    For parsing or logical errors (e.g. negative widths, etc) use pp.ReportError(EResult, msg)
-	//    then return gracefully or continue with a valid value. The ReportError function may not
-	//    throw in which case parsing will need to continue with sane values.
+	//  - Error Handling:
+	//    Don't assume the report error callback will throw, try to continue or fail gracefully.
 
 	using Guid = pr::Guid;
 	using VCont = pr::vector<v4>;
@@ -48,9 +40,6 @@ namespace pr::rdr12
 	using TCont = pr::vector<v2>;
 	using GCont = pr::vector<NuggetDesc>;
 	using ModelCont = ParseResult::ModelLookup;
-	using EScriptResult = pr::script::EResult;
-	using EScriptResult_ = pr::script::EResult_;
-	using TReader = pr::script::Reader;
 	using Font = ModelGenerator::Font;
 	using TextFormat = ModelGenerator::TextFormat;
 	using TextLayout = ModelGenerator::TextLayout;
@@ -151,7 +140,6 @@ namespace pr::rdr12
 		//   command list.
 		using system_clock = std::chrono::system_clock;
 		using time_point = std::chrono::time_point<system_clock>;
-		using ReportErrorCB = std::function<bool(script::EResult, Loc const&, std::string_view)>;
 		using FontStack = pr::vector<Font>;
 		using GpuJob = GpuJob<D3D12_COMMAND_LIST_TYPE_DIRECT>;
 
@@ -214,10 +202,13 @@ namespace pr::rdr12
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
-		void ReportError(EScriptResult result, Loc const& loc, std::string_view msg)
+		void ReportError(EParseError code, Location const& loc, std::string_view msg)
 		{
-			if (msg.empty()) msg = EScriptResult_::ToStringA(result);
-			m_report_error(result, loc, msg);
+			if (m_report_error == nullptr)
+				return;
+
+			//if (msg.empty()) msg = To<std::string>::ToStringA(result);
+			m_report_error(code, loc, msg);
 		}
 
 		// Give a progress update
@@ -240,91 +231,54 @@ namespace pr::rdr12
 		}
 	};
 
+	// Info on a texture in an ldr object
+	struct TextureInfo
+	{
+		m4x4 m_t2s = m4x4::Identity();
+		std::filesystem::path m_filepath = {"#white"};
+		TextureDesc m_tdesc = {};
+		SamDesc m_sdesc = {};
+		bool m_has_alpha = false;
+	};
+
 	// Forward declare the recursive object parsing function
-	bool ParseLdrObject(ELdrObject type, TReader& reader, ParseParams& pp);
+	bool ParseLdrObject(ELdrObject type, IReader& reader, ParseParams& pp);
 
 	#pragma region Parse Common Elements
 
 	// Read the name, colour, and instance flag for an object
-	ObjectAttributes ParseAttributes(TReader& reader, ParseParams& pp)
+	ObjectAttributes ParseAttributes(IReader& reader, ParseParams& pp)
 	{
 		ObjectAttributes attr;
 		attr.m_type = pp.m_type;
 		attr.m_name = "";
 
-		// Read the next tokens up to the section start
-		auto count = 0;
-		wstring32 tok0, tok1;
-		if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
-		if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
-		if (!reader.IsSectionStart())
-			pp.ReportError(EScriptResult::UnknownToken, reader.Location(), "object attributes are invalid");
+		if (reader.FindKeyword(EKeyword::Name))
+			attr.m_name = reader.Identifier();
+		if (reader.FindKeyword(EKeyword::Colour))
+			attr.m_colour = s_cast<uint32_t>(reader.Int(sizeof(uint32_t), 16));
 
-		switch (count)
-		{
-			case 2:
-			{
-				// Expect: *Type <name> <colour>
-				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-					pp.ReportError(EScriptResult::TokenNotFound, reader.Location(), "object name is invalid");
-				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-					pp.ReportError(EScriptResult::TokenNotFound, reader.Location(), "object colour is invalid");
-				pp.m_flags |= EFlags::ExplicitName;
-				pp.m_flags |= EFlags::ExplicitColour;
-				break;
-			}
-			case 1:
-			{
-				// Expect: *Type <name>  or *Type <colour>
-				// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
-				if (tok0.size() == 8 && pr::all(tok0, std::iswxdigit))
-				{
-					attr.m_name = "";
-					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
-						pp.ReportError(EScriptResult::TokenNotFound, reader.Location(), "object colour is invalid");
-
-					pp.m_flags |= EFlags::ExplicitColour;
-				}
-				else
-				{
-					attr.m_colour = 0xFFFFFFFF;
-					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-						pp.ReportError(EScriptResult::TokenNotFound, reader.Location(), "object name is invalid");
-
-					pp.m_flags |= EFlags::ExplicitName;
-				}
-				break;
-			}
-			case 0:
-			{
-				attr.m_name = Enum<ELdrObject>::ToStringA(pp.m_type);
-				attr.m_colour = 0xFFFFFFFF;
-				break;
-			}
-		}
 		return attr;
 	}
 
 	// Parse a camera description
-	void ParseCamera(TReader& reader, ParseParams& pp, ParseResult& out)
+	void ParseCamera(IReader& reader, ParseParams& pp, ParseResult& out)
 	{
-		reader.SectionStart();
-		for (EKeyword kw; reader.NextKeywordH(kw);)
+		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
 			{
 				case EKeyword::O2W:
 				{
 					auto c2w = m4x4::Identity();
-					reader.TransformS(c2w);
+					reader.Transform(c2w);
 					out.m_cam.CameraToWorld(c2w);
 					out.m_cam_fields |= ECamField::C2W;
 					break;
 				}
 				case EKeyword::LookAt:
 				{
-					v4 lookat;
-					reader.Vector3S(lookat, 1.0f);
+					auto lookat = reader.Vector3f().w1();
 					m4x4 c2w = out.m_cam.CameraToWorld();
 					out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
 					out.m_cam_fields |= ECamField::C2W;
@@ -333,57 +287,50 @@ namespace pr::rdr12
 				}
 				case EKeyword::Align:
 				{
-					v4 align;
-					reader.Vector3S(align, 0.0f);
+					auto align = reader.Vector3f().w0();
 					out.m_cam.Align(align);
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
 				case EKeyword::Aspect:
 				{
-					float aspect;
-					reader.RealS(aspect);
+					auto aspect = reader.Real<float>();
 					out.m_cam.Aspect(aspect);
 					out.m_cam_fields |= ECamField::Align;
 					break;
 				}
 				case EKeyword::FovX:
 				{
-					float fovX;
-					reader.RealS(fovX);
+					auto fovX = reader.Real<float>();
 					out.m_cam.FovX(fovX);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
 				case EKeyword::FovY:
 				{
-					float fovY;
-					reader.RealS(fovY);
+					auto fovY = reader.Real<float>();
 					out.m_cam.FovY(fovY);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
 				case EKeyword::Fov:
 				{
-					float fov[2];
-					reader.RealS(fov, 2);
-					out.m_cam.Fov(fov[0], fov[1]);
+					auto fov = reader.Vector2f();
+					out.m_cam.Fov(fov.x, fov.y);
 					out.m_cam_fields |= ECamField::Aspect;
 					out.m_cam_fields |= ECamField::FovY;
 					break;
 				}
 				case EKeyword::Near:
 				{
-					float near_;
-					reader.Real(near_);
+					auto near_ = reader.Real<float>();
 					out.m_cam.Near(near_, true);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
 				case EKeyword::Far:
 				{
-					float far_;
-					reader.Real(far_);
+					auto far_ = reader.Real<float>();
 					out.m_cam.Far(far_, true);
 					out.m_cam_fields |= ECamField::Far;
 					break;
@@ -396,47 +343,45 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("Keyword '{}' is not valid within *Camera", ToString(kw)));
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Camera", EKeyword_::ToStringA(kw)));
 					break;
 				}
 			}
 		}
-		reader.SectionEnd();
 	}
 
 	// Parse a font description
-	void ParseFont(TReader& reader, ParseParams& pp, Font& font)
+	void ParseFont(IReader& reader, ParseParams& pp, Font& font)
 	{
-		reader.SectionStart();
 		font.m_underline = false;
 		font.m_strikeout = false;
-		for (EKeyword kw; reader.NextKeywordH(kw);)
+		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
 			{
 				case EKeyword::Name:
 				{
-					reader.StringS(font.m_name);
+					font.m_name = Widen(reader.String());
 					break;
 				}
 				case EKeyword::Size:
 				{
-					reader.RealS(font.m_size);
+					font.m_size = reader.Real<float>();
 					break;
 				}
 				case EKeyword::Colour:
 				{
-					reader.IntS(font.m_colour.argb, 16);
+					font.m_colour = reader.Int<uint32_t>(16);
 					break;
 				}
 				case EKeyword::Weight:
 				{
-					reader.IntS(font.m_weight, 10);
+					font.m_weight = s_cast<DWRITE_FONT_WEIGHT>(reader.Int<int>(10));
 					break;
 				}
 				case EKeyword::Style:
 				{
-					auto ident = reader.IdentifierS<string32>();
+					auto ident = reader.Identifier();
 					if (str::EqualI(ident, "normal")) font.m_style = DWRITE_FONT_STYLE_NORMAL;
 					if (str::EqualI(ident, "italic")) font.m_style = DWRITE_FONT_STYLE_ITALIC;
 					if (str::EqualI(ident, "oblique")) font.m_style = DWRITE_FONT_STYLE_OBLIQUE;
@@ -444,7 +389,7 @@ namespace pr::rdr12
 				}
 				case EKeyword::Stretch:
 				{
-					reader.IntS<DWRITE_FONT_STRETCH>(font.m_stretch, 10);
+					font.m_stretch = s_cast<DWRITE_FONT_STRETCH>(reader.Int<int>(10));
 					break;
 				}
 				case EKeyword::Underline:
@@ -459,27 +404,23 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					std::string keyword = Narrow(reader.LastKeyword());
-					pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("Keyword '{}' is not valid within *Font", keyword));
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Font", EKeyword_::ToStringA(kw)));
 					break;
 				}
 			}
 		}
-		reader.SectionEnd();
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(TReader& reader, ParseParams& pp, Animation& anim)
+	void ParseAnimation(IReader& reader, ParseParams& pp, Animation& anim)
 	{
-		reader.SectionStart();
-		for (EKeyword kw; reader.NextKeywordH(kw);)
+		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
 			{
 				case EKeyword::Style:
 				{
-					char style[50];
-					reader.Identifier(style);
+					auto style = reader.Identifier();
 					if (str::EqualI(style, "NoAnimation")) anim.m_style = EAnimStyle::NoAnimation;
 					else if (str::EqualI(style, "Once")) anim.m_style = EAnimStyle::Once;
 					else if (str::EqualI(style, "Repeat")) anim.m_style = EAnimStyle::Repeat;
@@ -489,65 +430,108 @@ namespace pr::rdr12
 				}
 				case EKeyword::Period:
 				{
-					reader.RealS(anim.m_period);
+					anim.m_period = reader.Real<float>();
 					break;
 				}
 				case EKeyword::Velocity:
 				{
-					reader.Vector3S(anim.m_vel, 0.0f);
+					anim.m_vel = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::Accel:
 				{
-					reader.Vector3S(anim.m_acc, 0.0f);
+					anim.m_acc = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::AngVelocity:
 				{
-					reader.Vector3S(anim.m_avel, 0.0f);
+					anim.m_avel = reader.Vector3f().w0();
 					break;
 				}
 				case EKeyword::AngAccel:
 				{
-					reader.Vector3S(anim.m_aacc, 0.0f);
+					anim.m_aacc = reader.Vector3f().w0();
 					break;
 				}
 				default:
 				{
-					auto keyword = Narrow(reader.LastKeyword());
-					pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("Keyword '{}' is not valid within *Animation", keyword));
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Animation", EKeyword_::ToStringA(kw)));
 					break;
 				}
 			}
 		}
-		reader.SectionEnd();
+	}
+	
+	// Parse a texture description
+	void ParseTexture(IReader& reader, ParseParams& pp, TextureInfo& tex)
+	{
+		for (EKeyword kw; reader.NextKeyword(kw);)
+		{
+			switch (kw)
+			{
+				case EKeyword::FilePath:
+				{
+					tex.m_filepath = reader.String().c_str();
+					break;
+				}
+				case EKeyword::O2W:
+				{
+					reader.Transform(tex.m_t2s);
+					break;
+				}
+				case EKeyword::Addr:
+				{
+					auto addrU = reader.Identifier(true);
+					auto addrV = reader.Identifier(true);
+					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrU.c_str(), false));
+					tex.m_sdesc.AddressV = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrV.c_str(), false));
+					break;
+				}
+				case EKeyword::Filter:
+				{
+					auto fltr = reader.Identifier();
+					tex.m_sdesc.Filter = s_cast<D3D12_FILTER>(EFilter_::Parse(fltr.c_str(), false));
+					break;
+				}
+				case EKeyword::Alpha:
+				{
+					tex.m_has_alpha = true;
+					break;
+				}
+				default:
+				{
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Texture", EKeyword_::ToStringA(kw)));
+					break;
+				}
+			}
+		}
 	}
 
 	// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
-	bool ParseProperties(TReader& reader, ParseParams& pp, EKeyword kw, LdrObject* obj)
+	bool ParseProperties(IReader& reader, ParseParams& pp, EKeyword kw, LdrObject* obj)
 	{
 		switch (kw)
 		{
 			case EKeyword::O2W:
 			case EKeyword::Txfm:
 			{
-				reader.TransformS(obj->m_o2p);
+				reader.Transform(obj->m_o2p);
 				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
 				return true;
 			}
 			case EKeyword::Colour:
 			{
-				reader.IntS(obj->m_base_colour.argb, 16);
+				obj->m_base_colour = reader.Int<uint32_t>(16);
 				return true;
 			}
 			case EKeyword::ColourMask:
 			{
-				reader.IntS(obj->m_colour_mask, 16);
+				obj->m_colour_mask = reader.Int<uint32_t>(16);
 				return true;
 			}
 			case EKeyword::Reflectivity:
 			{
-				reader.RealS(obj->m_env);
+				obj->m_env = reader.Real<float>();
 				return true;
 			};
 			case EKeyword::RandColour:
@@ -557,6 +541,7 @@ namespace pr::rdr12
 			}
 			case EKeyword::Animation:
 			{
+				auto section = reader.SectionScope();
 				ParseAnimation(reader, pp, obj->m_anim);
 				return true;
 			}
@@ -588,10 +573,14 @@ namespace pr::rdr12
 			}
 			case EKeyword::Font:
 			{
+				auto section = reader.SectionScope();
 				ParseFont(reader, pp, pp.m_font.back());
 				return true;
 			}
-			default: return false;
+			default:
+			{
+				return false;
+			}
 		}
 	}
 
@@ -635,49 +624,6 @@ namespace pr::rdr12
 			obj->ScreenSpace(true);
 	}
 
-	// Convert a line strip into a line list of "dash" line segments
-	void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
-	{
-		assert(isize(in) >= 2);
-
-		// Turn the sequence of line segments into a single dashed line
-		auto t = 0.0f;
-		for (int i = 1, iend = isize(in); i != iend; ++i)
-		{
-			auto d = in[i] - in[i-1];
-			auto len = Length(d);
-
-			// Emit dashes over the length of the line segment
-			for (;t < len; t += dash.x + dash.y)
-			{
-				out.push_back(in[i-1] + d * Clamp(t         , 0.0f, len) / len);
-				out.push_back(in[i-1] + d * Clamp(t + dash.x, 0.0f, len) / len);
-			}
-			t -= len + dash.x + dash.y;
-		}
-	}
-
-	// Convert a line list into a list of "dash" line segments
-	void DashLineList(VCont const& in, VCont& out, v2 const& dash)
-	{
-		assert(isize(in) >= 2 && int(in.size() & 1) == 0);
-
-		// Turn the line list 'in' into dashed lines
-		// Turn the sequence of line segments into a single dashed line
-		for (int i = 0, iend = isize(in); i != iend; i += 2)
-		{
-			auto d  = in[i+1] - in[i];
-			auto len = Length(d);
-
-			// Emit dashes over the length of the line segment
-			for (auto t = 0.0f; t < len; t += dash.x + dash.y)
-			{
-				out.push_back(in[i] + d * Clamp(t, 0.0f, len) / len);
-				out.push_back(in[i] + d * Clamp(t + dash.x, 0.0f, len) / len);
-			}
-		}
-	}
-
 	#pragma endregion
 
 	#pragma region Object modifiers
@@ -696,98 +642,43 @@ namespace pr::rdr12
 				, m_sampler()
 				, m_def_sdesc(def_sdesc)
 			{}
-			bool ParseKeyword(TReader& reader, ParseParams& pp, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::Texture:
 					{
-						std::wstring tex_resource = L"#white";
-						auto t2s = m4x4::Identity();
-						bool has_alpha = false;
-						auto rdesc = ResDesc();
-						auto sdesc = m_def_sdesc;
-
-						reader.SectionStart();
-						while (!reader.IsSectionEnd())
-						{
-							if (reader.IsKeyword())
-							{
-								switch (reader.NextKeywordH<EKeyword>())
-								{
-									case EKeyword::O2W:
-									{
-										reader.TransformS(t2s);
-										break;
-									}
-									case EKeyword::Addr:
-									{
-										char word[20];
-										reader.SectionStart();
-										reader.Identifier(word); sdesc.AddressU = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-										reader.Identifier(word); sdesc.AddressV = (D3D12_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-										reader.SectionEnd();
-										break;
-									}
-									case EKeyword::Filter:
-									{
-										char word[20];
-										reader.SectionStart();
-										reader.Identifier(word); sdesc.Filter = (D3D12_FILTER)Enum<EFilter>::Parse(word, false);
-										reader.SectionEnd();
-										break;
-									}
-									case EKeyword::Alpha:
-									{
-										has_alpha = true;
-										break;
-									}
-									default:
-									{
-										auto keyword = Narrow(reader.LastKeyword());
-										pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("Keyword '{}' is not valid within *Texture", keyword));
-										break;
-									}
-								}
-							}
-							else
-							{
-								reader.String(tex_resource);
-							}
-						}
-						reader.SectionEnd();
+						TextureInfo tex_info;
+						auto section = reader.SectionScope();
+						ParseTexture(reader, pp, tex_info);
 
 						// Create the texture
 						try
 						{
-							auto desc = TextureDesc(AutoId, rdesc).has_alpha(has_alpha);
-							m_texture = pp.m_factory.CreateTexture2D(tex_resource, desc);
-							m_texture->m_t2s = t2s;
+							auto desc = TextureDesc(AutoId, {}).has_alpha(tex_info.m_has_alpha);
+							m_texture = pp.m_factory.CreateTexture2D(tex_info.m_filepath, tex_info.m_tdesc);
+							m_texture->m_t2s = tex_info.m_t2s;
 						}
 						catch (std::exception const& e)
 						{
-							pp.ReportError(EScriptResult::ValueNotFound, reader.Location(), std::format("Failed to create texture {}\n{}", Narrow(tex_resource), e.what()));
+							pp.ReportError(EParseError::NotFound, reader.Loc(), std::format("Failed to create texture {}\n{}", tex_info.m_filepath.string(), e.what()));
 						}
 
 						// Create the sampler
 						try
 						{
-							auto desc = SamplerDesc(sdesc.Id(), sdesc);
+							auto desc = SamplerDesc(tex_info.m_sdesc.Id(), tex_info.m_sdesc);
 							m_sampler = pp.m_factory.GetSampler(desc);
 						}
 						catch(std::exception const& e)
 						{
-							pp.ReportError(EScriptResult::ValueNotFound, reader.Location(), std::format("Failed to create sampler for texture {}\n{}", Narrow(tex_resource), e.what()));
+							pp.ReportError(EParseError::NotFound, reader.Loc(), std::format("Failed to create sampler for texture {}\n{}", tex_info.m_filepath.string(), e.what()));
 						}
 						return true;
 					}
 					case EKeyword::Video:
 					{
-						std::string filepath;
-						reader.SectionStart();
-						reader.String(filepath);
-						reader.SectionEnd();
-
+						auto filepath = reader.String();
 						if (!filepath.empty())
 						{
 							//todo
@@ -823,20 +714,20 @@ namespace pr::rdr12
 				,m_main_axis(main_axis)
 				,m_align(align)
 			{}
-			bool ParseKeyword(TReader& reader, ParseParams& pp, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::AxisId:
 					{
-						reader.IntS(m_align.value, 10);
+						m_align.value = reader.Int<int>(10);
 						if (AxisId::IsValid(m_align))
 						{
-							m_o2w = m4x4::Transform(m_main_axis, m_align, v4Origin);
+							m_o2w = m4x4::Transform(m_main_axis, m_align, v4::Origin());
 							return true;
 						}
 
-						pp.ReportError(EScriptResult::InvalidValue, reader.Location(), "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
+						pp.ReportError(EParseError::InvalidValue, reader.Loc(), "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
 						return false;
 					}
 					default:
@@ -863,34 +754,40 @@ namespace pr::rdr12
 			{
 				return RotationNeeded() ? &m_o2w : nullptr;
 			}
+
+			// Apply main axis transform
+			void Apply(std::span<v4> verts)
+			{
+				if (m_main_axis == m_align)
+					return;
+
+				for (auto& v : verts)
+					v = m_o2w * v;
+			}
 		};
 
 		// Support for light sources that cast
 		struct CastingLight
 		{
-			bool ParseKeyword(TReader& reader, ParseParams&, Light& light, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams&, Light& light, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::Range:
 					{
-						reader.SectionStart();
-						reader.Real(light.m_range);
-						reader.Real(light.m_falloff);
-						reader.SectionEnd();
+						light.m_range = reader.Real<float>();
+						light.m_falloff = reader.Real<float>();
 						return true;
 					}
 					case EKeyword::Specular:
 					{
-						reader.SectionStart();
-						reader.Int(light.m_specular.argb, 16);
-						reader.Real(light.m_specular_power);
-						reader.SectionEnd();
+						light.m_specular = reader.Int<uint32_t>(16);
+						light.m_specular_power = reader.Real<float>();
 						return true;
 					}
 					case EKeyword::CastShadow:
 					{
-						reader.RealS(light.m_cast_shadow);
+						light.m_cast_shadow = reader.Real<float>();
 						return true;
 					}
 					default:
@@ -918,31 +815,22 @@ namespace pr::rdr12
 			bool   m_depth;
 
 			PointSprite()
-				:m_point_size()
-				,m_style(EStyle::Square)
-				,m_depth(false)
+				: m_point_size()
+				, m_style(EStyle::Square)
+				, m_depth(false)
 			{}
-			template <typename TReader>
-			bool ParseKeyword(TReader& reader, ParseParams& pp, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::Size:
 					{
-						// Allow one or two dimensions
-						reader.SectionStart();
-						reader.Real(m_point_size.x);
-						if (!reader.IsSectionEnd())
-							reader.Real(m_point_size.y);
-						else
-							m_point_size.y = m_point_size.x;
-						reader.SectionEnd();
+						m_point_size = reader.Vector2f();
 						return true;
 					}
 					case EKeyword::Style:
 					{
-						string32 ident;
-						reader.IdentifierS(ident);
+						auto ident = reader.Identifier();
 						switch (HashI(ident.c_str()))
 						{
 							case HashI("square"):   m_style = EStyle::Square; break;
@@ -950,7 +838,7 @@ namespace pr::rdr12
 							case HashI("triangle"): m_style = EStyle::Triangle; break;
 							case HashI("star"):     m_style = EStyle::Star; break;
 							case HashI("annulus"):  m_style = EStyle::Annulus; break;
-							default: pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("'{}' is not a valid point sprite style", ident)); break;
+							default: pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("'{}' is not a valid point sprite style", ident)); break;
 						}
 						return true;
 					}
@@ -965,6 +853,7 @@ namespace pr::rdr12
 					}
 				}
 			}
+			
 			template <typename TDrawOnIt>
 			Texture2DPtr CreatePointStyleTexture(ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
 			{
@@ -1104,13 +993,13 @@ namespace pr::rdr12
 			BakeTransform(m4x4 const& o2w = m4x4::Zero())
 				:m_o2w(o2w)
 			{}
-			bool ParseKeyword(TReader& reader, ParseParams&, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::BakeTransform:
 					{
-						reader.TransformS(m_o2w);
+						reader.Transform(m_o2w);
 						return true;
 					}
 					default:
@@ -1135,13 +1024,13 @@ namespace pr::rdr12
 			GenNorms(float gen_normals = -1.0f)
 				:m_smoothing_angle(gen_normals)
 			{}
-			bool ParseKeyword(TReader& reader, ParseParams&, EKeyword kw)
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
 			{
 				switch (kw)
 				{
 					case EKeyword::GenerateNormals:
 					{
-						reader.RealS(m_smoothing_angle);
+						m_smoothing_angle = reader.Real<float>();
 						m_smoothing_angle = pr::DegreesToRadians(m_smoothing_angle);
 						return true;
 					}
@@ -1215,6 +1104,177 @@ namespace pr::rdr12
 				return m_smoothing_angle >= 0;
 			}
 		};
+
+		// Support for smoothed lines
+		struct SmoothLine
+		{
+			bool m_smooth;
+			SmoothLine()
+				: m_smooth()
+			{}
+			bool ParseKeyword(IReader&, ParseParams&, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Smooth:
+					{
+						m_smooth = true;
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			void Apply(VCont& verts)
+			{
+				if (!m_smooth)
+					return;
+
+				VCont out;
+				std::swap(out, verts);
+				Smooth(out, Spline::ETopo::Continuous3, [&](auto points, auto)
+				{
+					verts.insert(verts.end(), points.begin(), points.end());
+				});
+			}
+		};
+
+		// Support for parametric ranges
+		struct Parametrics
+		{
+			pr::vector<int> m_index;
+			pr::vector<v2> m_para;
+			Parametrics()
+				: m_index()
+				, m_para()
+			{}
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Param:
+					{
+						// Expect tuples of (item index, [t0, t1])
+						for (; !reader.IsSectionEnd(); )
+						{
+							auto idx = reader.Int<int>();
+							auto para = reader.Vector2f();
+							m_index.push_back(idx);
+							m_para.push_back(para);
+						}
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			void Apply(std::span<v4> verts, ParseParams& pp, Location const& loc)
+			{
+				for (int i = 0, iend = isize(m_index); i != iend; ++i)
+				{
+					if (i * 2 >= iend)
+						pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", i, iend/2));
+
+					auto const& para = m_para[i];
+					auto& p0 = verts[i * 2 + 0];
+					auto& p1 = verts[i * 2 + 1];
+					auto dir = p1 - p0;
+					auto pt = p0;
+					p0 = pt + para.x * dir;
+					p1 = pt + para.y * dir;
+				}
+			}
+		};
+
+		// Support for dashed lines
+		struct DashedLines
+		{
+			v2 m_dash;
+
+			DashedLines()
+				: m_dash({ 1,0 })
+			{}
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Dashed:
+					{
+						m_dash = reader.Vector2f();
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			void Apply(VCont& verts, bool& is_line_list)
+			{
+				if (m_dash == v2(1, 0))
+					return;
+
+				// Convert each line segment to dashed lines
+				VCont out;
+				std::swap(out, verts);
+				if (is_line_list)
+					DashLineList(out, verts, m_dash);
+				else
+					DashLineStrip(out, verts, m_dash);
+
+				// Conversion to dashes turns the buffer into a line list
+				is_line_list = true;
+			}
+
+		private:
+
+			// Convert a line strip into a line list of "dash" line segments
+			void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
+			{
+				assert(isize(in) >= 2);
+
+				// Turn the sequence of line segments into a single dashed line
+				auto t = 0.0f;
+				for (int i = 1, iend = isize(in); i != iend; ++i)
+				{
+					auto d = in[i] - in[i - 1];
+					auto len = Length(d);
+
+					// Emit dashes over the length of the line segment
+					for (; t < len; t += dash.x + dash.y)
+					{
+						out.push_back(in[i - 1] + d * Clamp(t, 0.0f, len) / len);
+						out.push_back(in[i - 1] + d * Clamp(t + dash.x, 0.0f, len) / len);
+					}
+					t -= len + dash.x + dash.y;
+				}
+			}
+
+			// Convert a line list into a list of "dash" line segments
+			void DashLineList(VCont const& in, VCont& out, v2 const& dash)
+			{
+				assert(isize(in) >= 2 && (isize(in) & 1) == 0);
+
+				// Turn the line list 'in' into dashed lines
+				// Turn the sequence of line segments into a single dashed line
+				for (int i = 0, iend = isize(in); i != iend; i += 2)
+				{
+					auto d = in[i + 1] - in[i];
+					auto len = Length(d);
+
+					// Emit dashes over the length of the line segment
+					for (auto t = 0.0f; t < len; t += dash.x + dash.y)
+					{
+						out.push_back(in[i] + d * Clamp(t, 0.0f, len) / len);
+						out.push_back(in[i] + d * Clamp(t + dash.x, 0.0f, len) / len);
+					}
+				}
+			}
+		};
 	}
 
 	#pragma endregion
@@ -1231,7 +1291,6 @@ namespace pr::rdr12
 		CCont& m_colours;
 		TCont& m_texs;
 		GCont& m_nuggets;
-		Loc m_last_location;
 
 		IObjectCreator(ParseParams& pp)
 			: m_pp(pp)
@@ -1241,79 +1300,53 @@ namespace pr::rdr12
 			, m_colours(pp.m_cache.m_color)
 			, m_texs   (pp.m_cache.m_texts)
 			, m_nuggets(pp.m_cache.m_nugts)
-			, m_last_location()
 		{}
 		virtual ~IObjectCreator() = default;
 
 		// Create an LdrObject from 'reader'
-		LdrObjectPtr Parse(TReader& reader)
+		LdrObjectPtr Parse(IReader& reader)
 		{
 			// Notes:
 			//  - Not using an output iterator style callback because model
 			//    instancing relies on the map from object to model.
+			auto start_location = reader.Loc();
+			auto section = reader.SectionScope();
 
 			// Read the object attributes: name, colour, instance
 			auto attr = ParseAttributes(reader, m_pp);
 			auto obj = LdrObjectPtr(new LdrObject(attr, m_pp.m_parent, m_pp.m_context_id), true);
 
 			// Read the description of the model
-			reader.SectionStart();
-			for (; !m_pp.m_cancel && !reader.IsSectionEnd();)
+			for (EKeyword kw; !m_pp.m_cancel && reader.NextKeyword(kw);)
 			{
-				// Check for incomplete script
-				if (reader.IsSourceEnd())
-				{
-					m_pp.ReportError(EScriptResult::UnexpectedEndOfFile, reader.Location(), {});
-					break;
-				}
-
-				// Handle keywords
-				if (reader.IsKeyword())
-				{
-					// The next script token is a keyword
-					auto kw = reader.NextKeywordH<EKeyword>();
-
-					// Let the object creator have the first go with the keyword
-					if (ParseKeyword(reader, kw))
-						continue;
-
-					// Is the keyword a common object property
-					if (ParseProperties(reader, m_pp, kw, obj.get()))
-						continue;
-
-					// Recursively parse child objects
-					ParseParams pp(m_pp, obj->m_child, obj.get(), this);
-					if (ParseLdrObject((ELdrObject)kw, reader, pp))
-						continue;
-
-					// Unknown token
-					m_pp.ReportError(EScriptResult::UnknownToken, reader.Location(), "Unknown token");
+				// Let the object creator have the first go with the keyword
+				if (ParseKeyword(reader, kw))
 					continue;
-				}
 
-				// Not a keyword, let the subclass interpret it
-				ParseDescription(reader);
+				// Is the keyword a common object property?
+				if (ParseProperties(reader, m_pp, kw, obj.get()))
+					continue;
+
+				// Recursively parse child objects
+				ParseParams pp(m_pp, obj->m_child, obj.get(), this);
+				if (ParseLdrObject((ELdrObject)kw, reader, pp))
+					continue;
+
+				// Unknown token
+				m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unknown keyword");
+				continue;
 			}
-			reader.SectionEnd();
-
-			// Record the end of the object description
-			m_last_location = reader.Location();
 
 			// Complete the model for 'm_obj'
-			CreateModel(obj.get());
+			CreateModel(obj.get(), start_location);
 
 			return obj;
 		}
-		virtual bool ParseKeyword(TReader&, EKeyword)
+		virtual bool ParseKeyword(IReader&, EKeyword)
 		{
 			return false;
 		}
-		virtual void ParseDescription(TReader& reader)
-		{
-			std::string keyword = Narrow(reader.LastKeyword());
-			m_pp.ReportError(EScriptResult::UnknownToken, reader.Location(), std::format("Unknown token near '{}'", keyword));
-		}
-		virtual void CreateModel(LdrObject*)
+		virtual void CreateModel(LdrObject*, Location const&)
 		{
 			// Don't return a model from this method, because the overrides are also configuring 'obj'
 			// It's doesn't make sense to separate this from the returned model.
@@ -1337,10 +1370,20 @@ namespace pr::rdr12
 			, m_sprite()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					for (; !reader.IsSectionEnd();)
+					{
+						m_verts.push_back(reader.Vector3f().w1());
+						if (m_per_item_colour)
+							m_colours.push_back(reader.Int<uint32_t>(16));
+					}
+					return true;
+				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -1355,13 +1398,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_verts.push_back(reader.Vector3(1.0f));
-			if (m_per_item_colour)
-				m_colours.push_back(reader.Int<uint32_t>(16));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// No points = no model
 			if (m_verts.empty())
@@ -1392,44 +1429,39 @@ namespace pr::rdr12
 	// ELdrObject::Line
 	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreator
 	{
-		v2 m_dashed;
+		creation::Parametrics m_parametric;
+		creation::DashedLines m_dashed;
 		float m_line_width;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_dashed(v2::XAxis())
+			, m_parametric()
+			, m_dashed()
 			, m_line_width()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Param:
+				case EKeyword::Data:
 				{
-					float t[2];
-					reader.RealS(t, 2);
-					if (m_verts.size() < 2)
+					auto p0 = reader.Vector3f().w1();
+					auto p1 = reader.Vector3f().w1();
+					m_verts.push_back(p0);
+					m_verts.push_back(p1);
+					if (m_per_item_colour)
 					{
-						m_pp.ReportError(EScriptResult::Failed, reader.Location(), "No preceding line to apply parametric values to");
+						Colour32 col = reader.Int<uint32_t>(16);
+						m_colours.push_back(col);
+						m_colours.push_back(col);
 					}
-					auto& p0 = m_verts[m_verts.size() - 2];
-					auto& p1 = m_verts[m_verts.size() - 1];
-					auto dir = p1 - p0;
-					auto pt = p0;
-					p0 = pt + t[0] * dir;
-					p1 = pt + t[1] * dir;
-					return true;
-				}
-				case EKeyword::Dashed:
-				{
-					reader.Vector2S(m_dashed);
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					reader.RealS(m_line_width);
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -1439,38 +1471,25 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_parametric.ParseKeyword(reader, m_pp, kw) ||
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override 
-		{
-			auto p0 = reader.Vector3(1.0f);
-			auto p1 = reader.Vector3(1.0f);
-			m_verts.push_back(p0);
-			m_verts.push_back(p1);
-
-			if (m_per_item_colour)
-			{
-				Colour32 col = reader.Int<uint32_t>(16);
-				m_colours.push_back(col);
-				m_colours.push_back(col);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
 				return;
 
+			// Clip lines to parametric values
+			m_parametric.Apply(m_verts, m_pp, loc);
+
 			// Convert lines to dashed lines
-			if (m_dashed != v2::XAxis())
-			{
-				// Convert each line segment to dashed lines
-				VCont verts;
-				std::swap(verts, m_verts);
-				DashLineList(verts, m_verts, m_dashed);
-			}
+			bool is_line_list = true;
+			m_dashed.Apply(m_verts, is_line_list);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1490,44 +1509,39 @@ namespace pr::rdr12
 	// ELdrObject::LineD
 	template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreator
 	{
-		v2 m_dashed;
+		creation::Parametrics m_parametric;
+		creation::DashedLines m_dashed;
 		float m_line_width;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_dashed(v2::XAxis())
+			, m_parametric()
+			, m_dashed()
 			, m_line_width()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Param:
+				case EKeyword::Data:
 				{
-					float t[2];
-					reader.RealS(t, 2);
-					if (m_verts.size() < 2)
+					auto p0 = reader.Vector3f().w1();
+					auto p1 = reader.Vector3f().w0();
+					m_verts.push_back(p0);
+					m_verts.push_back(p0 + p1);
+					if (m_per_item_colour)
 					{
-						m_pp.ReportError(EScriptResult::Failed, reader.Location(), "No preceding line to apply parametric values to");
+						Colour32 col = reader.Int<uint32_t>(16);
+						m_colours.push_back(col);
+						m_colours.push_back(col);
 					}
-					auto& p0 = m_verts[m_verts.size() - 2];
-					auto& p1 = m_verts[m_verts.size() - 1];
-					auto dir = p1 - p0;
-					auto pt = p0;
-					p0 = pt + t[0] * dir;
-					p1 = pt + t[1] * dir;
-					return true;
-				}
-				case EKeyword::Dashed:
-				{
-					reader.Vector2S(m_dashed);
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					reader.RealS(m_line_width);
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -1537,39 +1551,25 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_parametric.ParseKeyword(reader, m_pp, kw) ||
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override 
-		{
-			auto p0 = reader.Vector3(1.0f);
-			auto p1 = reader.Vector3(0.0f);
-			m_verts.push_back(p0);
-			m_verts.push_back(p0 + p1);
-
-			// Look for the optional colour
-			if (m_per_item_colour)
-			{
-				Colour32 col = reader.Int(col.argb, 16);
-				m_colours.push_back(col);
-				m_colours.push_back(col);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
 				return;
 
+			// Clip lines to parametric values
+			m_parametric.Apply(m_verts, m_pp, loc);
+
 			// Convert lines to dashed lines
-			if (m_dashed != v2::XAxis())
-			{
-				// Convert each line segment to dashed lines
-				VCont verts;
-				std::swap(verts, m_verts);
-				DashLineList(verts, m_verts, m_dashed);
-			}
+			bool is_line_list = true;
+			m_dashed.Apply(m_verts, is_line_list);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1589,36 +1589,31 @@ namespace pr::rdr12
 	// ELdrObject::LineStrip
 	template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreator
 	{
-		v2 m_dashed;
+		creation::DashedLines m_dashed;
 		float m_line_width;
 		bool m_per_item_colour;
 		bool m_smooth;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_dashed(v2::XAxis())
+			, m_dashed()
 			, m_line_width()
 			, m_per_item_colour()
 			, m_smooth()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override 
+		bool ParseKeyword(IReader& reader, EKeyword kw) override 
 		{
 			switch (kw)
 			{
-				case EKeyword::Param:
+				case EKeyword::Data:
 				{
-					float t[2];
-					reader.RealS(t, 2);
-					if (m_verts.size() < 2)
+					auto pt = reader.Vector3f().w1();
+					m_verts.push_back(pt);
+					if (m_per_item_colour)
 					{
-						m_pp.ReportError(EScriptResult::Failed, reader.Location(), "No preceding line to apply parametric values to");
+						Colour32 col = reader.Int<uint32_t>(16);
+						m_colours.push_back(col);
 					}
-					auto& p0 = m_verts[m_verts.size() - 2];
-					auto& p1 = m_verts[m_verts.size() - 1];
-					auto dir = p1 - p0;
-					auto pt = p0;
-					p0 = pt + t[0] * dir;
-					p1 = pt + t[1] * dir;
 					return true;
 				}
 				case EKeyword::Smooth:
@@ -1626,14 +1621,9 @@ namespace pr::rdr12
 					m_smooth = true;
 					return true;
 				}
-				case EKeyword::Dashed:
-				{
-					m_dashed = reader.Vector2S();
-					return true;
-				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -1643,23 +1633,13 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override 
-		{
-			auto pt = reader.Vector3(1.0f);
-			m_verts.push_back(pt);
-
-			// Look for the optional colour
-			if (m_per_item_colour)
-			{
-				Colour32 col = reader.Int(col.argb, 16);
-				m_colours.push_back(col);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
@@ -1677,18 +1657,11 @@ namespace pr::rdr12
 			}
 
 			// Convert lines to dashed lines
-			auto line_strip = true;
-			if (m_dashed != v2::XAxis())
-			{
-				// 'Dashing' a line turns it into a line list
-				VCont verts;
-				std::swap(verts, m_verts);
-				DashLineStrip(verts, m_verts, m_dashed);
-				line_strip = false;
-			}
+			auto is_line_list = false;
+			m_dashed.Apply(m_verts, is_line_list);
 
 			// The thick line strip shader uses LineAdj which requires an extra first and last vert
-			if (line_strip && m_line_width != 0.0f)
+			if (!is_line_list && m_line_width != 0.0f)
 			{
 				m_verts.insert(std::begin(m_verts), m_verts.front());
 				m_verts.insert(std::end(m_verts), m_verts.back());
@@ -1696,21 +1669,21 @@ namespace pr::rdr12
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
-			obj->m_model = line_strip
-				? ModelGenerator::LineStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, &opts)
-				: ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts);
+			obj->m_model = is_line_list
+				? ModelGenerator::Lines(m_pp.m_factory, isize(m_verts) / 2, m_verts, &opts)
+				: ModelGenerator::LineStrip(m_pp.m_factory, isize(m_verts) - 1, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
-				auto shdr = line_strip
-					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_line_width))
-					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_line_width));
+				auto shdr = is_line_list
+					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_line_width))
+					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_line_width));
 
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
-					nug.m_topo = line_strip ? ETopo::LineStripAdj : ETopo::LineList;
+					nug.m_topo = is_line_list ? ETopo::LineList : ETopo::LineStripAdj;
 					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
 				}
 			}
@@ -1720,68 +1693,60 @@ namespace pr::rdr12
 	// ELdrObject::LineBox
 	template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreator
 	{
-		v2 m_dashed;
+		creation::DashedLines m_dashed;
 		float m_line_width;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_dashed(v2::XAxis())
+			, m_dashed()
 			, m_line_width()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override 
+		bool ParseKeyword(IReader& reader, EKeyword kw) override 
 		{
 			switch (kw)
 			{
-				case EKeyword::Dashed:
+				case EKeyword::Data:
 				{
-					m_dashed = reader.Vector2S();
+					auto dim = v4(reader.Real<float>()).w0();
+					if (!reader.IsSectionEnd()) dim.y = reader.Real<float>();
+					if (!reader.IsSectionEnd()) dim.z = reader.Real<float>();
+					dim *= 0.5f;
+
+					m_verts.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
+					m_verts.push_back(v4(+dim.x, -dim.y, -dim.z, 1.0f));
+					m_verts.push_back(v4(+dim.x, +dim.y, -dim.z, 1.0f));
+					m_verts.push_back(v4(-dim.x, +dim.y, -dim.z, 1.0f));
+					m_verts.push_back(v4(-dim.x, -dim.y, +dim.z, 1.0f));
+					m_verts.push_back(v4(+dim.x, -dim.y, +dim.z, 1.0f));
+					m_verts.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
+					m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
+
+					uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+					m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override 
-		{
-			v4 dim;
-			reader.Real(dim.x);
-			if (reader.IsKeyword() || reader.IsSectionEnd()) dim.y = dim.x; else reader.Real(dim.y);
-			if (reader.IsKeyword() || reader.IsSectionEnd()) dim.z = dim.y; else reader.Real(dim.z);
-			dim *= 0.5f;
-
-			m_verts.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
-			m_verts.push_back(v4(+dim.x, -dim.y, -dim.z, 1.0f));
-			m_verts.push_back(v4(+dim.x, +dim.y, -dim.z, 1.0f));
-			m_verts.push_back(v4(-dim.x, +dim.y, -dim.z, 1.0f));
-			m_verts.push_back(v4(-dim.x, -dim.y, +dim.z, 1.0f));
-			m_verts.push_back(v4(+dim.x, -dim.y, +dim.z, 1.0f));
-			m_verts.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
-			m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
-
-			uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// No points = no model
 			if (m_verts.empty())
 				return;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2::XAxis())
-			{
-				// Convert each line segment to dashed lines
-				VCont verts;
-				std::swap(verts, m_verts);
-				DashLineList(verts, m_verts, m_dashed);
-			}
+			auto is_line_list = true;
+			m_dashed.Apply(m_verts, is_line_list);
 
 			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
 
@@ -1808,81 +1773,64 @@ namespace pr::rdr12
 	// ELdrObject::Grid
 	template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreator
 	{
-		v2 m_dashed;
-		float m_line_width;
+		creation::DashedLines m_dashed;
 		creation::MainAxis m_axis;
+		float m_line_width;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_dashed(v2::XAxis())
-			, m_line_width()
+			, m_dashed()
 			, m_axis()
+			, m_line_width()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Dashed:
+				case EKeyword::Data:
 				{
-					m_dashed = reader.Vector2S();
+					auto dim = reader.Vector2f();
+					auto div = reader.Vector2f();
+
+					auto step = dim / div;
+					for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
+					{
+						m_verts.push_back(v4(i, -dim.y / 2, 0, 1));
+						m_verts.push_back(v4(i, dim.y / 2, 0, 1));
+					}
+					for (float i = -dim.y / 2; i <= dim.y / 2; i += step.y)
+					{
+						m_verts.push_back(v4(-dim.x / 2, i, 0, 1));
+						m_verts.push_back(v4(dim.x / 2, i, 0, 1));
+					}
 					return true;
 				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				default:
 				{
 					return
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						m_axis.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto dim = reader.Vector2();
-
-			v2 div;
-			if (reader.IsKeyword() || reader.IsSectionEnd())
-				div = dim;
-			else
-				div = reader.Vector2();
-
-			v2 step = dim / div;
-			for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
-			{
-				m_verts.push_back(v4(i, -dim.y / 2, 0, 1));
-				m_verts.push_back(v4(i, dim.y / 2, 0, 1));
-			}
-			for (float i = -dim.y / 2; i <= dim.y / 2; i += step.y)
-			{
-				m_verts.push_back(v4(-dim.x / 2, i, 0, 1));
-				m_verts.push_back(v4(dim.x / 2, i, 0, 1));
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_verts.empty())
 				return;
 
 			// Convert lines to dashed lines
-			if (m_dashed != v2::XAxis())
-			{
-				// Convert each line segment to dashed lines
-				VCont verts;
-				std::swap(verts, m_verts);
-				DashLineList(verts, m_verts, m_dashed);
-			}
+			auto is_line_list = true;
+			m_dashed.Apply(m_verts, is_line_list);
 
 			// Apply main axis transform
-			if (m_axis.O2WPtr() != nullptr)
-			{
-				for (auto& v : m_verts)
-					v = *m_axis.O2WPtr() * v;
-			}
+			m_axis.Apply(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -1915,13 +1863,28 @@ namespace pr::rdr12
 			, m_line_width()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					Spline spline;
+					spline.x = reader.Vector3f().w1();
+					spline.y = reader.Vector3f().w1();
+					spline.z = reader.Vector3f().w1();
+					spline.w = reader.Vector3f().w1();
+					m_splines.push_back(spline);
+					if (m_per_item_colour)
+					{
+						Colour32 col = reader.Int<uint32_t>(16);
+						m_spline_colours.push_back(col);
+					}
+					return true;
+				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -1935,23 +1898,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			Spline spline;
-			spline.x = reader.Vector3(1.0f);
-			spline.y = reader.Vector3(1.0f);
-			spline.z = reader.Vector3(1.0f);
-			spline.w = reader.Vector3(1.0f);
-			m_splines.push_back(spline);
-
-			// Look for the optional colour
-			if (m_per_item_colour)
-			{
-				Colour32 col = reader.Int<uint32_t>(16);
-				m_spline_colours.push_back(col);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// Validate
 			if (m_splines.empty())
@@ -1972,7 +1919,7 @@ namespace pr::rdr12
 				// Check for 16-bit index overflow
 				if (m_verts.size() + raster.size() >= 0xFFFF)
 				{
-					m_pp.ReportError(EScriptResult::Failed, m_last_location, std::format("Spline object '{}' is too large (index count >= 0xffff)", obj->TypeAndName()));
+					m_pp.ReportError(EParseError::TooLarge, loc, std::format("Spline object '{}' is too large (index count >= 0xffff)", obj->TypeAndName()));
 					return;
 				}
 
@@ -2049,7 +1996,7 @@ namespace pr::rdr12
 		EArrowType m_type;
 		float m_line_width;
 		bool m_per_item_colour;
-		bool m_smooth;
+		creation::SmoothLine m_smooth;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
@@ -2058,18 +2005,33 @@ namespace pr::rdr12
 			, m_per_item_colour()
 			, m_smooth()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Width:
+				case EKeyword::Data:
 				{
-					m_line_width = reader.RealS<float>();
+					// Expect the arrow type first
+					if (m_type == EArrowType::Invalid)
+					{
+						auto ty = reader.Identifier();
+						if (str::EqualNI(ty, "Line")) m_type = EArrowType::Line;
+						else if (str::EqualNI(ty, "Fwd")) m_type = EArrowType::Fwd;
+						else if (str::EqualNI(ty, "Back")) m_type = EArrowType::Back;
+						else if (str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
+						else m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), "arrow type must one of Line, Fwd, Back, FwdBack");
+					}
+					else
+					{
+						m_verts.push_back(reader.Vector3f().w1());
+						if (m_per_item_colour)
+							m_colours.push_back(reader.Int<uint32_t>(16));
+					}
 					return true;
 				}
-				case EKeyword::Smooth:
+				case EKeyword::Width:
 				{
-					m_smooth = true;
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -2079,47 +2041,22 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_smooth.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			// Expect the arrow type first
-			if (m_type == EArrowType::Invalid)
-			{
-				string32 ty;
-				reader.Identifier(ty);
-				if      (str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
-				else if (str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
-				else if (str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
-				else if (str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-				else m_pp.ReportError(EScriptResult::UnknownValue, reader.Location(), "arrow type must one of Line, Fwd, Back, FwdBack");
-			}
-			else
-			{
-				m_verts.push_back(reader.Vector3(1.0f));
-				if (m_per_item_colour)
-					m_colours.push_back(reader.Int<uint32_t>(16));
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_verts.size() < 2)
 				return;
 
 			// Convert the points into a spline if smooth is specified
-			if (m_smooth)
-			{
-				VCont verts;
-				std::swap(verts, m_verts);
-				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
-				{
-					m_verts.insert(m_verts.end(), points.begin(), points.end());
-				});
-			}
+			m_smooth.Apply(m_verts);
 
+			// Geometry properties
 			geometry::Props props;
 
 			// Colour interpolation iterator
@@ -2217,19 +2154,32 @@ namespace pr::rdr12
 	// ELdrObject::Matrix3x3
 	template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreator
 	{
-		float  m_line_width;
+		float m_line_width;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_line_width()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					auto basis = m4x4{ reader.Matrix3x3(), v4::Origin() };
+
+					v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
+					Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+					uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
+
+					m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
+					m_colours.insert(m_colours.end(), col, col + _countof(col));
+					m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
+					return true;
+				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				default:
@@ -2238,19 +2188,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto basis = m4x4{ reader.Matrix3x3(), v4::Origin() };
-
-			v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
-			Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-			uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
-
-			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
-			m_colours.insert(m_colours.end(), col, col + _countof(col));
-			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_verts.empty())
@@ -2299,18 +2237,18 @@ namespace pr::rdr12
 			m_colours.insert(m_colours.end(), col, col + _countof(col));
 			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 		}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					m_scale = reader.RealS<float>();
+					m_scale = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::LeftHanded:
@@ -2324,7 +2262,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Scale doesn't use the *o2w scale because that is recursive
 			if (m_scale != 1.0f)
@@ -2374,10 +2312,22 @@ namespace pr::rdr12
 			, m_facets(40)
 			, m_solid()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
+					if (Abs(m_dim) != m_dim)
+					{
+						m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), "Circle dimensions contain a negative value");
+						m_dim = Abs(m_dim);
+					}
+
+					return true;
+				}
 				case EKeyword::Solid:
 				{
 					m_solid = true;
@@ -2385,7 +2335,7 @@ namespace pr::rdr12
 				}
 				case EKeyword::Facets:
 				{
-					m_facets = reader.IntS<int>(10);
+					m_facets = reader.Int<int>(10);
 					return true;
 				}
 				default:
@@ -2397,20 +2347,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto dim = reader.Real<float>();
-			if (reader.IsKeyword() || reader.IsSectionEnd())
-				m_dim.x = m_dim.y = dim;
-			else
-				m_dim = v2{ dim, reader.Real<float>() };
-
-			if (Abs(m_dim) != m_dim)
-			{
-				m_pp.ReportError(EScriptResult::InvalidValue, reader.Location(), "Circle dimensions contain a negative value");
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2440,10 +2377,18 @@ namespace pr::rdr12
 			, m_facets(40)
 			, m_solid()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_ang = reader.Vector2f();
+					m_rad = reader.Vector2f();
+					m_ang.x = DegreesToRadians(m_ang.x);
+					m_ang.y = DegreesToRadians(m_ang.y);
+					return true;
+				}
 				case EKeyword::Solid:
 				{
 					m_solid = true;
@@ -2451,12 +2396,12 @@ namespace pr::rdr12
 				}
 				case EKeyword::Scale:
 				{
-					m_scale = reader.Vector2S();
+					m_scale = reader.Vector2f();
 					return true;
 				}
 				case EKeyword::Facets:
 				{
-					m_facets = reader.IntS<int>(10);
+					m_facets = reader.Int<int>(10);
 					return true;
 				}
 				default:
@@ -2468,15 +2413,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_ang = reader.Vector2();
-			m_rad = reader.Vector2();
-
-			m_ang.x = DegreesToRadians(m_ang.x);
-			m_ang.y = DegreesToRadians(m_ang.y);
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2504,18 +2441,31 @@ namespace pr::rdr12
 			, m_facets(40)
 			, m_solid()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
+					m_dim *= 0.5f;
+
+					if (Abs(m_dim) != m_dim)
+					{
+						m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), "Rect dimensions contain a negative value");
+						m_dim = Abs(m_dim);
+					}
+					return true;
+				}
 				case EKeyword::CornerRadius:
 				{
-					m_corner_radius = reader.RealS<float>();
+					m_corner_radius = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::Facets:
 				{
-					m_facets = reader.IntS<int>(10);
+					m_facets = reader.Int<int>(10);
 					m_facets *= 4;
 					return true;
 				}
@@ -2533,20 +2483,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto dim = reader.Real<float>();
-			if (reader.IsKeyword() || reader.IsSectionEnd())
-				m_dim.x = m_dim.y = dim;
-			else
-				m_dim = v2{ dim, reader.Real<float>() };
-
-			m_dim *= 0.5f;
-
-			if (Abs(m_dim) != m_dim)
-				m_pp.ReportError(EScriptResult::InvalidValue, reader.Location(), "Rect dimensions contain a negative value");
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2572,10 +2509,20 @@ namespace pr::rdr12
 			, m_per_item_colour()
 			, m_solid()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					for (; !reader.IsSectionEnd(); )
+					{
+						m_poly.push_back(reader.Vector2f());
+						if (m_per_item_colour)
+							m_colours.push_back(reader.Int<uint32_t>(16));
+					}
+					return true;
+				}
 				case EKeyword::Solid:
 				{
 					m_solid = true;
@@ -2595,13 +2542,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_poly.push_back(reader.Vector2());
-			if (m_per_item_colour)
-				m_colours.push_back(reader.Int<uint32_t>(16));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Check the polygon winding order
 			if (geometry::PolygonArea(m_poly) < 0)
@@ -2634,10 +2575,34 @@ namespace pr::rdr12
 			, m_axis()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					v4 pt[3] = {};
+					Colour32 col[3] = {};
+					for (int i = 0; i != 3; ++i)
+					{
+						pt[i] = reader.Vector3f().w1();
+						if (m_per_item_colour)
+							col[i] = reader.Int<uint32_t>(16);
+					}
+
+					m_verts.push_back(pt[0]);
+					m_verts.push_back(pt[1]);
+					m_verts.push_back(pt[2]);
+					m_verts.push_back(pt[2]); // create a degenerate
+					if (m_per_item_colour)
+					{
+						m_colours.push_back(col[0]);
+						m_colours.push_back(col[1]);
+						m_colours.push_back(col[2]);
+						m_colours.push_back(col[2]);
+					}
+					return true;
+				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -2652,41 +2617,14 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			v4 pt[3] = {};
-			Colour32 col[3] = {};
-			for (int i = 0; i != 3; ++i)
-			{
-				pt[i] = reader.Vector3(1.0f);
-				if (m_per_item_colour)
-					col[i] = reader.Int<uint32_t>(16);
-			}
-
-			m_verts.push_back(pt[0]);
-			m_verts.push_back(pt[1]);
-			m_verts.push_back(pt[2]);
-			m_verts.push_back(pt[2]); // create a degenerate
-			if (m_per_item_colour)
-			{
-				m_colours.push_back(col[0]);
-				m_colours.push_back(col[1]);
-				m_colours.push_back(col[2]);
-				m_colours.push_back(col[2]);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
-			if (m_verts.empty() || (m_verts.size() % 4) != 0)
+			if (m_verts.empty() || (isize(m_verts) % 4) != 0)
 				return;
 
 			// Apply the axis id rotation
-			if (m_axis.RotationNeeded())
-			{
-				for (auto& pt : m_verts)
-					pt = m_axis.O2W() * pt;
-			}
+			m_axis.Apply(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2708,10 +2646,34 @@ namespace pr::rdr12
 			, m_axis()
 			, m_per_item_colour()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					v4 pt[4] = {};
+					Colour32 col[4] = {};
+					for (int i = 0; i != 4; ++i)
+					{
+						pt[i] = reader.Vector3f().w1();
+						if (m_per_item_colour)
+							col[i] = reader.Int<uint32_t>(16);
+					}
+
+					m_verts.push_back(pt[0]);
+					m_verts.push_back(pt[1]);
+					m_verts.push_back(pt[2]);
+					m_verts.push_back(pt[3]);
+					if (m_per_item_colour)
+					{
+						m_colours.push_back(col[0]);
+						m_colours.push_back(col[1]);
+						m_colours.push_back(col[2]);
+						m_colours.push_back(col[3]);
+					}
+					return true;
+				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -2726,41 +2688,15 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			v4 pt[4] = {};
-			Colour32 col[4] = {};
-			for (int i = 0; i != 4; ++i)
-			{
-				pt[i] = reader.Vector3(1.0f);
-				if (m_per_item_colour)
-					col[i] = reader.Int<uint32_t>(16);
-			}
-
-			m_verts.push_back(pt[0]);
-			m_verts.push_back(pt[1]);
-			m_verts.push_back(pt[2]);
-			m_verts.push_back(pt[3]);
-			if (m_per_item_colour)
-			{
-				m_colours.push_back(col[0]);
-				m_colours.push_back(col[1]);
-				m_colours.push_back(col[2]);
-				m_colours.push_back(col[3]);
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
-			if (m_verts.empty() || (m_verts.size() % 4) != 0)
+			if (m_verts.empty() || (isize(m_verts) % 4) != 0)
 				return;
 
-			// Apply the axis id rotation
-			if (m_axis.RotationNeeded())
-			{
-				for (auto& pt : m_verts)
-					pt = m_axis.O2W() * pt;
-			}
+			// Already done in 'bake()'?
+			//// Apply the axis id rotation
+			//m_axis.Apply(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2778,33 +2714,40 @@ namespace pr::rdr12
 			: IObjectCreator(pp)
 			, m_tex(SamDesc::AnisotropicWrap())
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
-			return
-				m_tex.ParseKeyword(reader, m_pp, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
-		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto pnt = reader.Vector3(1.0f);
-			auto fwd = reader.Vector3(0.0f);
-			auto w = reader.Real<float>();
-			auto h = reader.Real<float>();
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					auto pnt = reader.Vector3f().w1();
+					auto fwd = reader.Vector3f().w0();
+					auto w = reader.Real<float>();
+					auto h = reader.Real<float>();
 
-			fwd = Normalise(fwd);
-			auto up = Perpendicular(fwd);
-			auto left = Cross3(up, fwd);
-			up *= h * 0.5f;
-			left *= w * 0.5f;
-			m_verts.push_back(pnt - up - left);
-			m_verts.push_back(pnt - up + left);
-			m_verts.push_back(pnt + up - left);
-			m_verts.push_back(pnt + up + left);
+					fwd = Normalise(fwd);
+					auto up = Perpendicular(fwd);
+					auto left = Cross3(up, fwd);
+					up *= h * 0.5f;
+					left *= w * 0.5f;
+					m_verts.push_back(pnt - up - left);
+					m_verts.push_back(pnt - up + left);
+					m_verts.push_back(pnt + up - left);
+					m_verts.push_back(pnt + up + left);
+					return true;
+				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
-			if (m_verts.empty() || (m_verts.size() % 4) != 0)
+			if (m_verts.empty() || (isize(m_verts) % 4) != 0)
 				return;
 
 			// Create the model
@@ -2823,30 +2766,32 @@ namespace pr::rdr12
 
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
+		creation::SmoothLine m_smooth;
 		float m_width;
 		bool m_per_item_colour;
-		bool m_smooth;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_axis()
+			, m_smooth()
 			, m_width(10.0f)
 			, m_per_item_colour()
-			, m_smooth(false)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Width:
+				case EKeyword::Data:
 				{
-					m_width = reader.RealS<float>();
+					m_verts.push_back(reader.Vector3f().w1());
+					if (m_per_item_colour)
+						m_colours.push_back(reader.Int<uint32_t>(16));
 					return true;
 				}
-				case EKeyword::Smooth:
+				case EKeyword::Width:
 				{
-					m_smooth = true;
+					m_width = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::PerItemColour:
@@ -2857,34 +2802,21 @@ namespace pr::rdr12
 				default:
 				{
 					return
+						m_smooth.ParseKeyword(reader, m_pp, kw) ||
 						m_axis.ParseKeyword(reader, m_pp, kw) ||
 						m_tex.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_verts.push_back(reader.Vector3(1.0f));
-			if (m_per_item_colour)
-				m_colours.push_back(reader.Int<uint32_t>(16));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
-			if (m_verts.size() < 2)
+			if (isize(m_verts) < 2)
 				return;
 
 			// Smooth the points
-			if (m_smooth)
-			{
-				VCont verts;
-				std::swap(verts, m_verts);
-				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
-				{
-					m_verts.insert(m_verts.end(), points.begin(), points.end());
-				});
-			}
+			m_smooth.Apply(m_verts);
 
 			v4 normal = m_axis.m_align;
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2908,20 +2840,27 @@ namespace pr::rdr12
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_dim()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
-			return
-				m_tex.ParseKeyword(reader, m_pp, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
+					m_dim.z = reader.IsSectionEnd() ? m_dim.y : reader.Real<float>();
+					m_dim *= 0.5f;
+					return true;
+				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_dim.x = reader.Real<float>();
-			if (reader.IsValue()) m_dim.y = reader.Real<float>(); else m_dim.y = m_dim.x;
-			if (reader.IsValue()) m_dim.z = reader.Real<float>(); else m_dim.z = m_dim.y;
-			m_dim *= 0.5f;
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2946,13 +2885,21 @@ namespace pr::rdr12
 			, m_width(0.1f)
 			, m_height(0.1f)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_pt0 = reader.Vector3f().w1();
+					m_pt1 = reader.Vector3f().w1();
+					m_width = reader.Real<float>();
+					m_height = reader.IsSectionEnd() ? m_width : reader.Real<float>();
+					return true;
+				}
 				case EKeyword::Up:
 				{
-					m_up = reader.Vector3S(0.0f);
+					m_up = reader.Vector3f().w0();
 					return true;
 				}
 				default:
@@ -2963,14 +2910,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_pt0 = reader.Vector3(1.0f);
-			m_pt1 = reader.Vector3(1.0f);
-			m_width = reader.Real<float>();
-			m_height = reader.IsValue() ? reader.Real<float>() : m_width;
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
 			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
@@ -2993,30 +2933,36 @@ namespace pr::rdr12
 			, m_location()
 			, m_dim()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
-			return
-				m_tex.ParseKeyword(reader, m_pp, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					m_dim = reader.Vector3f().w0();
+					for (; !reader.IsSectionEnd(); )
+						m_location.push_back(reader.Vector3f().w1());
+
+					return true;
+				}
+				default:
+				{
+					return
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto v = reader.Vector3(1.0f);
-			if (m_dim == v4::Zero())
-				m_dim = v.w0();
-			else
-				m_location.push_back(v);
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// Validate
-			if (m_dim == v4::Zero() || m_location.size() == 0)
+			if (m_dim == v4::Zero() || m_location.empty())
 				return;
 
 			if (Abs(m_dim) != m_dim)
 			{
-				m_pp.ReportError(EScriptResult::InvalidValue, m_last_location, "BoxList box dimensions contain a negative value");
-				return;
+				m_pp.ReportError(EParseError::InvalidValue, loc, "BoxList box dimensions contain a negative value");
+				m_dim = Abs(m_dim);
 			}
 
 			m_dim *= 0.5f;
@@ -3049,13 +2995,21 @@ namespace pr::rdr12
 			, m_far(1.0f)
 			, m_view_plane(0.0f)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_width = reader.Real<float>();
+					m_height = reader.Real<float>();
+					m_near = reader.Real<float>();
+					m_far = reader.Real<float>();
+					return true;
+				}
 				case EKeyword::ViewPlaneZ:
 				{
-					m_view_plane = reader.RealS<float>();
+					m_view_plane = reader.Real<float>();
 					return true;
 				}
 				default:
@@ -3067,14 +3021,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_width = reader.Real<float>();
-			m_height = reader.Real<float>();
-			m_near = reader.Real<float>();
-			m_far = reader.Real<float>();
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Construct pointing down -z, then rotate the points based on axis id.
 			// Do this because frustums are commonly used for camera views and cameras point down -z.
@@ -3118,21 +3065,28 @@ namespace pr::rdr12
 			, m_near(0.0f)
 			, m_far(1.0f)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
-			return
-				m_axis.ParseKeyword(reader, m_pp, kw) ||
-				m_tex.ParseKeyword(reader, m_pp, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					m_fovY = reader.Real<float>();
+					m_aspect = reader.Real<float>();
+					m_near = reader.Real<float>();
+					m_far = reader.Real<float>();
+					return true;
+				}
+				default:
+				{
+					return
+						m_axis.ParseKeyword(reader, m_pp, kw) ||
+						m_tex.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_fovY = reader.Real<float>();
-			m_aspect = reader.Real<float>();
-			m_near = reader.Real<float>();
-			m_far = reader.Real<float>();
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Construct pointing down -z, then rotate the points based on axis id.
 			// Do this because frustums are commonly used for camera views and cameras point down -z.
@@ -3168,13 +3122,20 @@ namespace pr::rdr12
 			, m_dim()
 			, m_facets(3)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
+					m_dim.z = reader.IsSectionEnd() ? m_dim.y : reader.Real<float>();
+					return true;
+				}
 				case EKeyword::Facets:
 				{
-					m_facets = reader.IntS<int>(10);
+					m_facets = reader.Int<int>(10);
 					return true;
 				}
 				default:
@@ -3185,13 +3146,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_dim.x = reader.Real<float>();
-			if (reader.IsValue()) m_dim.y = reader.Real<float>(); else m_dim.y = m_dim.x; 
-			if (reader.IsValue()) m_dim.z = reader.Real<float>(); else m_dim.z = m_dim.y; 
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
 			obj->m_model = ModelGenerator::Geosphere(m_pp.m_factory, m_dim, m_facets, &opts);
@@ -3218,21 +3173,27 @@ namespace pr::rdr12
 			, m_layers(1)
 			, m_wedges(20)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					m_dim.z = reader.Real<float>();
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.IsSectionEnd() ? m_dim.x : reader.Real<float>();
+					return true;
+				}
 				case EKeyword::Facets:
 				{
-					int facets[2];
-					reader.IntS(facets, 2, 10);
-					m_layers = facets[0];
-					m_wedges = facets[1];
+					auto facets = reader.Vector2i(10);
+					m_layers = facets.x;
+					m_wedges = facets.y;
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					m_scale = reader.Vector2S();
+					m_scale = reader.Vector2f();
 					return true;
 				}
 				default:
@@ -3244,13 +3205,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_dim.z = reader.Real<float>();
-			m_dim.x = reader.Real<float>();
-			m_dim.y = reader.IsValue() ? reader.Real<float>() : m_dim.x;
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -3278,21 +3233,33 @@ namespace pr::rdr12
 			, m_layers(1)
 			, m_wedges(20)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					auto h0 = reader.Real<float>();
+					auto h1 = reader.Real<float>();
+					auto a = reader.Real<float>();
+
+					a = DegreesToRadians(a);
+
+					m_dim.z = h1 - h0;
+					m_dim.x = h0 * Tan(a);
+					m_dim.y = h1 * Tan(a);
+					return true;
+				}
 				case EKeyword::Facets:
 				{
-					int facets[2];
-					reader.IntS(facets, 2, 10);
-					m_layers = facets[0];
-					m_wedges = facets[1];
+					auto facets = reader.Vector2i(10);
+					m_layers = facets.x;
+					m_wedges = facets.y;
 					return true;
 				}
 				case EKeyword::Scale:
 				{
-					m_scale = reader.Vector2S();
+					m_scale = reader.Vector2f();
 					return true;
 				}
 				default:
@@ -3304,19 +3271,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto h0 = reader.Real<float>();
-			auto h1 = reader.Real<float>();
-			auto a = reader.Real<float>();
-
-			a = DegreesToRadians(a);
-
-			m_dim.z = h1 - h0;
-			m_dim.x = h0 * Tan(a);
-			m_dim.y = h1 * Tan(a);
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -3328,115 +3283,58 @@ namespace pr::rdr12
 	// ELdrObject::Tube
 	template <> struct ObjectCreator<ELdrObject::Tube> :IObjectCreator
 	{
-		enum ECSType
+		enum class ECSType
 		{
 			Invalid,
 			Round,
 			Square,
-			CrossSection,
+			Polygon,
 		};
 
-		ECSType m_type;         // Cross section type
-		pr::vector<v2> m_cs;    // 2d cross section
-		float m_radx, m_rady;   // X,Y radii for implicit cross sections
-		int m_cs_facets;        // The number of divisions for Round cross sections
-		bool m_per_item_colour; // Colour per vertex
-		bool m_closed;          // True if the tube end caps should be filled in
-		bool m_cs_smooth;       // True if outward normals for the tube are smoothed
-		bool m_smooth;          // True if the extrusion path is smooth
+		pr::vector<v2> m_cs;           // 2d cross section
+		v2 m_radius;                   // X,Y radii for implicit cross sections
+		ECSType m_cs_type;             // Cross section type
+		int m_cs_facets;               // The number of divisions for Round cross sections
+		bool m_cs_smooth;              // True if outward normals for the tube are smoothed
+		bool m_per_item_colour;        // Colour per vertex
+		bool m_closed;                 // True if the tube end caps should be filled in
+		creation::SmoothLine m_smooth; // True if the extrusion path is smooth
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_type(Invalid)
 			, m_cs()
-			, m_radx()
-			, m_rady()
+			, m_radius()
+			, m_cs_type(ECSType::Invalid)
 			, m_cs_facets(20)
+			, m_cs_smooth(false)
 			, m_per_item_colour()
 			, m_closed(false)
-			, m_cs_smooth(false)
 			, m_smooth()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Style:
+				case EKeyword::Data:
 				{
-					// Expect *Style { cross_section_type <data> }
-					reader.SectionStart();
+					// Parse the extrusion path
+					auto pt = reader.Vector3f().w1();
+					auto col = m_per_item_colour ? Colour32(reader.Int<uint32_t>(16)) : Colour32White;
 
-					// Determine the cross section type
-					string32 type = reader.Identifier<string32>();
-					m_type =
-						str::EqualI(type, "Round") ? ECSType::Round :
-						str::EqualI(type, "Square") ? ECSType::Square :
-						str::EqualI(type, "CrossSection") ? ECSType::CrossSection :
-						ECSType::Invalid;
-
-					// Create the cross section profile based on the style
-					switch (m_type)
+					// Ignore degenerates
+					if (m_verts.empty() || !FEql(m_verts.back(), pt))
 					{
-						case ECSType::Round:
-						{
-							// Elliptical cross section, expect 1 or 2 radii to follow
-							m_radx = reader.Real<float>();
-							m_rady = reader.IsValue() ? reader.Real<float>() : m_radx;
-							m_cs_smooth = true;
-							break;
-						}
-						case ECSType::Square:
-						{
-							// Square cross section, expect 1 or 2 radii to follow
-							m_radx = reader.Real<float>();
-							m_rady = reader.IsValue() ? reader.Real<float>() : m_radx;
-							m_cs_smooth = false;
-							break;
-						}
-						case ECSType::CrossSection:
-						{
-							// Create the cross section, expect X,Y pairs
-							for (; reader.IsValue();)
-								m_cs.push_back(reader.Vector2());
-
-							break;
-						}
-						default:
-						{
-							m_pp.ReportError(EScriptResult::UnknownValue, reader.Location(), std::format("Cross Section type {} is not supported", type));
-							return false;
-						}
+						m_verts.push_back(pt);
+						if (m_per_item_colour)
+							m_colours.push_back(col);
 					}
 
-					// Optional cross section parameters
-					for (EKeyword kw0; reader.NextKeywordH(kw0);)
-					{
-						switch (kw0)
-						{
-							case EKeyword::Facets:
-							{
-								m_cs_facets = reader.IntS<int>(10);
-								break;
-							}
-							case EKeyword::Smooth:
-							{
-								m_cs_smooth = true;
-								break;
-							}
-							default:
-							{
-								m_pp.ReportError(EScriptResult::UnknownValue, reader.Location(), "Unknown cross section parameter");
-								return false;
-							}
-						}
-					}
-
-					reader.SectionEnd();
 					return true;
 				}
-				case EKeyword::Smooth:
+				case EKeyword::CrossSection:
 				{
-					m_smooth = true;
+					auto section = reader.SectionScope();
+					ParseCrossSection(reader);
 					return true;
 				}
 				case EKeyword::Closed:
@@ -3451,79 +3349,112 @@ namespace pr::rdr12
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_smooth.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
+		void ParseCrossSection(IReader& reader)
 		{
-			// Parse the extrusion path
-			auto pt = reader.Vector3(1.0f);
-			auto col = m_per_item_colour ? Colour32(reader.Int<uint32_t>(16)) : Colour32White;
-				
-			// Ignore degenerates
-			if (m_verts.empty() || !FEql(m_verts.back(), pt))
+			for (EKeyword kw; reader.NextKeyword(kw);)
 			{
-				m_verts.push_back(pt);
-				if (m_per_item_colour)
-					m_colours.push_back(col);
+				switch (kw)
+				{
+					case EKeyword::Round:
+					{
+						// Elliptical cross section, expect 1 or 2 radii to follow
+						m_radius.x = reader.Real<float>();
+						m_radius.y = reader.IsSectionEnd() ? m_radius.x : reader.Real<float>();
+						m_cs_smooth = true;
+						m_cs_type = ECSType::Round;
+						break;
+					}
+					case EKeyword::Square:
+					{
+						// Square cross section, expect 1 or 2 radii to follow
+						m_radius.x = reader.Real<float>();
+						m_radius.y = reader.IsSectionEnd() ? m_radius.x : reader.Real<float>();
+						m_cs_smooth = false;
+						m_cs_type = ECSType::Square;
+						break;
+					}
+					case EKeyword::Polygon:
+					{
+						// Create the cross section, expect X,Y pairs
+						for (; !reader.IsSectionEnd();)
+							m_cs.push_back(reader.Vector2f());
+
+						m_cs_type = ECSType::Polygon;
+						break;
+					}
+					case EKeyword::Facets:
+					{
+						m_cs_facets = reader.Int<int>(10);
+						break;
+					}
+					case EKeyword::Smooth:
+					{
+						m_cs_smooth = true;
+						break;
+					}
+					default:
+					{
+						m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), std::format("Cross Section keyword {} is not supported", EKeyword_::ToStringA(kw)));
+						break;
+					}
+				}
 			}
 		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// If no cross section or extrusion path is given
 			if (m_verts.empty())
 				return;
 
 			// Create the cross section for implicit profiles
-			switch (m_type)
+			switch (m_cs_type)
 			{
 				case ECSType::Round:
 				{
 					for (auto i = 0; i != m_cs_facets; ++i)
-						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
+						m_cs.push_back(v2(
+							m_radius.x * Cos(float(maths::tau) * i / m_cs_facets),
+							m_radius.y * Sin(float(maths::tau) * i / m_cs_facets)));
 					break;
 				}
 				case ECSType::Square:
 				{
 					// Create the cross section
-					m_cs.push_back(v2(-m_radx, -m_rady));
-					m_cs.push_back(v2(+m_radx, -m_rady));
-					m_cs.push_back(v2(+m_radx, +m_rady));
-					m_cs.push_back(v2(-m_radx, +m_rady));
+					m_cs.push_back(v2(-m_radius.x, -m_radius.y));
+					m_cs.push_back(v2(+m_radius.x, -m_radius.y));
+					m_cs.push_back(v2(+m_radius.x, +m_radius.y));
+					m_cs.push_back(v2(-m_radius.x, +m_radius.y));
 					break;
 				}
-				case ECSType::CrossSection:
+				case ECSType::Polygon:
 				{
 					if (m_cs.empty())
 					{
-						m_pp.ReportError(EScriptResult::Failed, m_last_location, std::format("Tube object '{}' description incomplete", obj->TypeAndName()));
+						m_pp.ReportError(EParseError::DataMissing, loc, std::format("Tube object '{}' description incomplete", obj->TypeAndName()));
 						return;
 					}
+
+					// Ensure a positive area
 					if (geometry::PolygonArea(m_cs) < 0)
-					{
-						m_pp.ReportError(EScriptResult::Failed, m_last_location, std::format("Tube object '{}' cross section has a negative area (winding order is incorrect)", obj->TypeAndName()));
-						return;
-					}
+						std::reverse(std::begin(m_cs), std::end(m_cs));
+
 					break;
 				}
 				default:
 				{
-					m_pp.ReportError(EScriptResult::Failed, m_last_location, std::format("Tube object '{}' description incomplete. No style given.", obj->TypeAndName()));
+					m_pp.ReportError(EParseError::DataMissing, loc, std::format("Tube object '{}' description incomplete. No style given.", obj->TypeAndName()));
 					return;
 				}
 			}
 
 			// Smooth the tube centre line
-			if (m_smooth)
-			{
-				VCont verts;
-				std::swap(verts, m_verts);
-				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
-				{
-					m_verts.insert(m_verts.end(), points.begin(), points.end());
-				});
-			}
+			m_smooth.Apply(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours);
@@ -3543,52 +3474,44 @@ namespace pr::rdr12
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_gen_norms(-1.0f)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
 				case EKeyword::Verts:
 				{
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						m_verts.push_back(reader.Vector3(1.0f));
+						m_verts.push_back(reader.Vector3f().w1());
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Normals:
 				{
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						m_normals.push_back(reader.Vector3(0.0f));
+						m_normals.push_back(reader.Vector3f().w0());
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Colours:
 				{
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
 						m_colours.push_back(Colour(reader.Int<uint32_t>(16)));
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::TexCoords:
 				{
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						m_texs.push_back(reader.Vector2());
+						m_texs.push_back(reader.Vector2f());
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 					return true;
 				}
 				case EKeyword::Lines:
@@ -3603,7 +3526,6 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
 						auto idx = reader.Int<uint16_t>(10);
@@ -3613,7 +3535,6 @@ namespace pr::rdr12
 
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3632,7 +3553,6 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
 						auto idx = reader.Int<uint16_t>(10);
@@ -3642,7 +3562,6 @@ namespace pr::rdr12
 
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3658,11 +3577,14 @@ namespace pr::rdr12
 						.tex_diffuse(m_tex.m_texture)
 						.sam_diffuse(m_tex.m_sampler);
 
-					reader.SectionStart();
 					for (int r = 1;!reader.IsSectionEnd(); ++r)
 					{
-						uint16_t idx[4];
-						reader.Int(idx, 4, 10);
+						uint16_t const idx[] = {
+							reader.Int<uint16_t>(10),
+							reader.Int<uint16_t>(10),
+							reader.Int<uint16_t>(10),
+							reader.Int<uint16_t>(10),
+						};
 						m_indices.push_back(idx[0]);
 						m_indices.push_back(idx[1]);
 						m_indices.push_back(idx[2]);
@@ -3684,7 +3606,6 @@ namespace pr::rdr12
 
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 
 					m_nuggets.push_back(nug);
 					return true;
@@ -3698,32 +3619,27 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			// All fields are child keywords
-			m_pp.ReportError(EScriptResult::UnknownValue, reader.Location(), "Mesh object description invalid");
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// Validate
 			if (m_indices.empty() || m_verts.empty())
 			{
-				m_pp.ReportError(EScriptResult::Failed, m_last_location, "Mesh object description incomplete");
+				m_pp.ReportError(EParseError::DataMissing, loc, "Mesh object description incomplete");
 				return;
 			}
 			if (!m_colours.empty() && m_colours.size() != m_verts.size())
 			{
-				m_pp.ReportError(EScriptResult::SyntaxError, m_last_location, std::format("Mesh objects with colours require one colour per vertex. {} required, {} given.", isize(m_verts), isize(m_colours)));
+				m_pp.ReportError(EParseError::DataMissing, loc, std::format("Mesh objects with colours require one colour per vertex. {} required, {} given.", isize(m_verts), isize(m_colours)));
 				return;
 			}
 			if (!m_normals.empty() && m_normals.size() != m_verts.size())
 			{
-				m_pp.ReportError(EScriptResult::SyntaxError, m_last_location, std::format("Mesh objects with normals require one normal per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)));
+				m_pp.ReportError(EParseError::DataMissing, loc, std::format("Mesh objects with normals require one normal per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)));
 				return;
 			}
 			if (!m_texs.empty() && m_texs.size() != m_verts.size())
 			{
-				m_pp.ReportError(EScriptResult::SyntaxError, m_last_location, std::format("Mesh objects with texture coordinates require one coordinate per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)));
+				m_pp.ReportError(EParseError::DataMissing, loc, std::format("Mesh objects with texture coordinates require one coordinate per vertex. {} required, {} given.", isize(m_verts), isize(m_normals)));
 				return;
 			}
 			for (auto& nug : m_nuggets)
@@ -3731,7 +3647,7 @@ namespace pr::rdr12
 				// Check the index range is valid
 				if (nug.m_vrange.m_beg < 0 || nug.m_vrange.m_end > isize(m_verts))
 				{
-					m_pp.ReportError(EScriptResult::SyntaxError, m_last_location, std::format("Mesh object with face, line, or tetra section contains indices out of range (section index: {}).", int(&nug - &m_nuggets[0])));
+					m_pp.ReportError(EParseError::InvalidValue, loc, std::format("Mesh object with face, line, or tetra section contains indices out of range (section index: {}).", int(&nug - &m_nuggets[0])));
 					return;
 				}
 
@@ -3774,19 +3690,17 @@ namespace pr::rdr12
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_gen_norms(0.0f)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
 				case EKeyword::Verts:
 				{
-					reader.SectionStart();
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						m_verts.push_back(reader.Vector3(1.0f));
+						m_verts.push_back(reader.Vector3f().w1());
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
-					reader.SectionEnd();
 					return true;
 				}
 				default:
@@ -3798,12 +3712,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			// All fields are child keywords
-			m_pp.ReportError(EScriptResult::UnknownValue, reader.Location(), "Convex hull object description invalid");
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Validate
 			if (m_verts.size() < 2)
@@ -3850,7 +3759,7 @@ namespace pr::rdr12
 
 		Table m_data;        // A 2D table of data (row major, i.e. rows are contiguous)
 		Index m_index;       // The offset into 'm_data' for the start if each row (if jagged) else empty.
-		iv2   m_dim;         // Table dimensions or bounds of the table dimensions.
+		iv2   m_dim;         // Table dimensions (columns, rows) or bounds of the table dimensions.
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
@@ -3858,70 +3767,31 @@ namespace pr::rdr12
 			, m_index()
 			, m_dim()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
 				case EKeyword::Data:
 				{
-					// Create an adapter that makes the script reader look like a std::stream
-					struct StreamWrapper
+					// Expect the first value to be the number of columns
+					auto column_count = reader.Int<int>(10);
+
+					// Read data till the end of the section
+					for (; !reader.IsSectionEnd();)
 					{
-						Reader& m_reader; // The reader to adapt
-						std::wstring m_delims; // Preserve the delimiters
+						auto value = reader.Real<double>();
+						m_data.push_back(value);
+					}
 
-						StreamWrapper(Reader& reader)
-							: m_reader(reader)
-							, m_delims(reader.Delimiters())
-						{
-							// Read up to the first non-delimiter. This is the start of the CSV data
-							m_reader.IsSectionEnd();
-
-							// Change the delimiters to suit CSV data
-							m_reader.Delimiters(L"");
-						}
-						~StreamWrapper()
-						{
-							// Restore the delimiters
-							m_reader.Delimiters(m_delims.c_str());
-						}
-						StreamWrapper(StreamWrapper const&) = delete;
-						StreamWrapper& operator =(StreamWrapper const&) = delete;
-						bool good() const
-						{
-							return !eof() && !bad();
-						}
-						bool eof() const
-						{
-							return m_reader.IsKeyword() || m_reader.IsSectionEnd();
-						}
-						bool bad() const
-						{
-							return m_reader.IsSourceEnd();
-						}
-						wchar_t peek()
-						{
-							return *m_reader.Source();
-						}
-						wchar_t get()
-						{
-							auto ch = peek();
-							++m_reader.Source();
-							return ch;
-						}
-					};
-					StreamWrapper wrap(reader);
-
-					// Data is literal data given in the script
-					reader.SectionStart();
-					ParseDataStream(wrap);
-					reader.SectionEnd();
+					// Expect a rectangular block of data
+					m_dim = { column_count, (isize(m_data) + column_count - 1) / column_count };
+					m_index.resize(0);
 					return true;
 				}
 				case EKeyword::Source:
 				{
 					// Source is a file containing data
-					auto filepath = reader.FilepathS();
+					auto filepath = reader.String();
 					std::ifstream file(filepath);
 					ParseDataStream(file);
 					return true;
@@ -3939,7 +3809,7 @@ namespace pr::rdr12
 
 			m_data.clear();
 			m_index.clear();
-			m_dim = iv2Zero;
+			m_dim = iv2::Zero();
 
 			// Read CSV data up to the section close
 			m_data.reserve(100); Loc loc;
@@ -4003,6 +3873,11 @@ namespace pr::rdr12
 			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
 			assert(m_index.empty() || m_index.back() == (int)m_data.size());
 		}
+		void CreateModel(LdrObject*, Location const&) override
+		{
+			// The chart does not contain a model. Instead, nested 'Series'
+			// objects form the models, based on the data in this object.
+		}
 	};
 
 	// ELdrObject::Series
@@ -4065,27 +3940,14 @@ namespace pr::rdr12
 			, m_xiter()
 			, m_yiter()
 			, m_line_width()
-		{
-			// Find the ancestor chart creator
-			auto const* parent = m_pp.m_parent_creator;
-			for (; parent != nullptr && parent->m_pp.m_type != ELdrObject::Chart; parent = parent->m_pp.m_parent_creator) {}
-			if (parent != nullptr)
-			{
-				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
-			}
-			else
-			{
-				m_pp.ReportError(EScriptResult::SyntaxError, {}, "Series objects must be children of a Chart object");
-				throw std::runtime_error("Series objects must be children of a Chart object");
-			}
-		}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		{}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
 				case EKeyword::XAxis:
 				{
-					m_xaxis = eval::Compile(reader.StringS<std::string>());
+					m_xaxis = eval::Compile(reader.String());
 					for (auto& name : m_xaxis.m_arg_names)
 						m_xiter.push_back(DataIter{name, m_chart->m_dim});
 					
@@ -4093,7 +3955,7 @@ namespace pr::rdr12
 				}
 				case EKeyword::YAxis:
 				{
-					m_yaxis = pr::eval::Compile(reader.StringS<std::string>());
+					m_yaxis = eval::Compile(reader.String());
 					for (auto& name : m_yaxis.m_arg_names)
 						m_yiter.push_back(DataIter{name, m_chart->m_dim});
 
@@ -4101,7 +3963,7 @@ namespace pr::rdr12
 				}
 				case EKeyword::Width:
 				{
-					m_line_width = reader.RealS<float>();
+					m_line_width = reader.Real<float>();
 					return true;
 				}
 				default:
@@ -4129,8 +3991,19 @@ namespace pr::rdr12
 			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
 			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
 		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
+			// Find the ancestor chart creator
+			auto const* parent = m_pp.m_parent_creator;
+			for (; parent != nullptr && parent->m_pp.m_type != ELdrObject::Chart; parent = parent->m_pp.m_parent_creator) {}
+			if (parent == nullptr)
+			{
+				m_pp.ReportError(EParseError::NotFound, loc, "Series objects must be children of a Chart object");
+				return;
+			}
+			
+			m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
+			
 			// Determine the index of this series within the chart
 			int child_index = 0;
 			for (auto& child : m_pp.m_parent->m_child)
@@ -4204,21 +4077,27 @@ namespace pr::rdr12
 			, m_gen_norms()
 			, m_bake()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
-			return
-				m_bake.ParseKeyword(reader, m_pp, kw) ||
-				m_gen_norms.ParseKeyword(reader, m_pp, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
+			switch (kw)
+			{
+				case EKeyword::FilePath:
+				{
+					// Ask the include handler to turn the filepath into a stream.
+					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
+					m_filepath = reader.String().c_str();
+					m_file_stream = reader.OpenStream(m_filepath);
+				}
+				default:
+				{
+					return
+						m_bake.ParseKeyword(reader, m_pp, kw) ||
+						m_gen_norms.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			// Ask the include handler to turn the filepath into a stream.
-			// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
-			m_filepath = reader.String<std::wstring>();
-			m_file_stream = reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			using namespace pr::geometry;
 			using namespace std::filesystem;
@@ -4226,12 +4105,12 @@ namespace pr::rdr12
 			// Validate
 			if (m_filepath.empty())
 			{
-				m_pp.ReportError(EScriptResult::Failed, m_last_location, "Model filepath not given");
+				m_pp.ReportError(EParseError::DataMissing, loc, "Model filepath not given");
 				return;
 			}
 			if (!m_file_stream)
 			{
-				m_pp.ReportError(EScriptResult::Failed, m_last_location, "Failed to open the model file");
+				m_pp.ReportError(EParseError::NotFound, loc, "Failed to open the model file");
 				return;
 			}
 
@@ -4241,7 +4120,7 @@ namespace pr::rdr12
 			{
 				auto msg = std::format("Model file '{}' is not supported.\nSupported Formats: ", m_filepath.string());
 				for (auto f : Enum<EModelFileFormat>::Members()) msg.append(Enum<EModelFileFormat>::ToStringA(f)).append(" ");
-				m_pp.ReportError(EScriptResult::Failed, m_last_location, msg);
+				m_pp.ReportError(EParseError::InvalidValue, loc, msg);
 				return;
 			}
 
@@ -4300,107 +4179,104 @@ namespace pr::rdr12
 	// ELdrObject::Equation
 	template <> struct ObjectCreator<ELdrObject::Equation> :IObjectCreator
 	{
+		using VCPair = struct { float m_value; Colour32 m_colour; };
+		using ColourBands = pr::vector<VCPair>;
+
+		// An axis for the space that the equation is plotted in
+		struct Axis
+		{
+			float m_min;
+			float m_max;
+			ColourBands m_col;
+
+			Axis()
+				: m_min(maths::float_max)
+				, m_max(maths::float_lowest)
+				, m_col()
+			{
+			}
+			bool limited() const
+			{
+				return m_min <= m_max;
+			}
+			float centre() const
+			{
+				return (m_min + m_max) * 0.5f;
+			}
+			float radius() const
+			{
+				return Abs(m_max - m_min) * 0.5f;
+			}
+			VCPair clamp(float value) const
+			{
+				VCPair vc = { value, Colour32White };
+
+				// Clamp the range
+				if (m_min <= m_max)
+				{
+					vc.m_value = Clamp(value, m_min, m_max);
+					if (vc.m_value != value)
+						vc.m_colour.a = 0;
+				}
+
+				// Interpolate the colour
+				if (!m_col.empty() && vc.m_value == value)
+				{
+					int i = 0, iend = static_cast<int>(m_col.size());
+					for (; i != iend && vc.m_value >= m_col[i].m_value; ++i) {}
+					if (i == 0)
+						vc.m_colour = m_col.front().m_colour;
+					else if (i == iend)
+						vc.m_colour = m_col.back().m_colour;
+					else
+					{
+						auto f = Frac(m_col[i - 1].m_value, vc.m_value, m_col[i].m_value);
+						vc.m_colour = Lerp(m_col[i - 1].m_colour, m_col[i].m_colour, f);
+					}
+				}
+
+				return vc;
+			}
+			static Axis Parse(IReader& reader, ParseParams& pp)
+			{
+				Axis axis;
+				for (EKeyword kw; !reader.NextKeyword(kw); )
+				{
+					switch (kw)
+					{
+						case EKeyword::Range:
+						{
+							axis.m_min = reader.Real<float>();
+							axis.m_max = reader.Real<float>();
+							break;
+						}
+						case EKeyword::Colours:
+						{
+							for (; !reader.IsSectionEnd(); )
+							{
+								VCPair vcpair = {
+									.m_value = reader.Real<float>(),
+									.m_colour = reader.Int<uint32_t>(16),
+								};
+								axis.m_col.push_back(vcpair);
+							}
+							sort(axis.m_col, [](auto& l, auto& r) { return l.m_value < r.m_value; });
+							break;
+						}
+						default:
+						{
+							pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("Keyword '{}' is not valid within *Axis", EKeyword_::ToStringA(kw)));
+							break;
+						}
+					}
+				}
+				return axis;
+			}
+		};
+
+		// Data stored in the object's user data to help with plotting
 		struct Extras
 		{
-			using VCPair = struct { float m_value; Colour32 m_colour; };
-			using ColourBands = pr::vector<VCPair>;
-			struct Axis
-			{
-				float m_min;
-				float m_max;
-				ColourBands m_col;
-
-				Axis()
-					: m_min(maths::float_max)
-					, m_max(maths::float_lowest)
-					, m_col()
-				{}
-				bool limited() const
-				{
-					return m_min <= m_max;
-				}
-				float centre() const
-				{
-					return (m_min + m_max) * 0.5f;
-				}
-				float radius() const
-				{
-					return Abs(m_max - m_min) * 0.5f;
-				}
-				VCPair clamp(float value) const
-				{
-					VCPair vc = {value, Colour32White};
-
-					// Clamp the range
-					if (m_min <= m_max)
-					{
-						vc.m_value = Clamp(value, m_min, m_max);
-						if (vc.m_value != value)
-							vc.m_colour.a = 0;
-					}
-
-					// Interpolate the colour
-					if (!m_col.empty() && vc.m_value == value)
-					{
-						int i = 0, iend = static_cast<int>(m_col.size());
-						for (; i != iend && vc.m_value >= m_col[i].m_value; ++i) {}
-						if      (i ==    0) vc.m_colour = m_col.front().m_colour;
-						else if (i == iend) vc.m_colour = m_col.back().m_colour;
-						else
-						{
-							auto f = Frac(m_col[i - 1].m_value, vc.m_value, m_col[i].m_value);
-							vc.m_colour = Lerp(m_col[i - 1].m_colour, m_col[i].m_colour, f);
-						}
-					}
-
-					return vc;
-				}
-				static Axis Parse(TReader& reader)
-				{
-					Axis axis;
-					reader.SectionStart();
-					for (; !reader.IsSectionEnd(); )
-					{
-						if (!reader.IsKeyword())
-						{
-							reader.Real(axis.m_min);
-							reader.Real(axis.m_max);
-						}
-						else
-						{
-							auto kw = reader.NextKeywordH<EKeyword>();
-							switch (kw)
-							{
-							case EKeyword::Range:
-								{
-									reader.SectionStart();
-									reader.Real(axis.m_min);
-									reader.Real(axis.m_max);
-									reader.SectionEnd();
-									break;
-								}
-							case EKeyword::Colours:
-								{
-									reader.SectionStart();
-									for (; !reader.IsSectionEnd(); )
-									{
-										VCPair vcpair;
-										reader.Real(vcpair.m_value);
-										reader.Int(vcpair.m_colour.argb, 16);
-										axis.m_col.push_back(vcpair);
-									}
-									reader.SectionEnd();
-									sort(axis.m_col, [](auto& l, auto& r) { return l.m_value < r.m_value; });
-									break;
-								}
-							}
-						}
-					}
-					reader.SectionEnd();
-					return axis;
-				}
-			};
-
 			std::array<Axis, 3> m_axis;
 			float m_weight;
 			Extras()
@@ -4431,10 +4307,11 @@ namespace pr::rdr12
 				return range;
 			}
 		};
+
+		// Used to prevent unnecessary recreations of the equation model
 		struct Cache
 		{
 			BBox m_range; // The last size of the rendered equation
-
 			Cache()
 				:m_range(BBox::Reset())
 			{}
@@ -4452,75 +4329,75 @@ namespace pr::rdr12
 			, m_resolution(10000)
 			, m_extras()
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					// Compile the equation
+					try
+					{
+						auto equation = reader.String();
+						m_eq = eval::Compile(equation);
+					}
+					catch (std::exception const& ex)
+					{
+						m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), std::format("Equation expression is invalid: {}", ex.what()));
+						return true;
+					}
+				}
 				case EKeyword::Resolution:
 				{
-					m_resolution = reader.IntS<int>(10);
+					m_resolution = reader.Int<int>(10);
 					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
 					return true;
 				}
 				case EKeyword::Param:
 				{
-					reader.SectionStart();
-					auto name = reader.String<std::string>();
+					auto variable = reader.String();
 					auto value = reader.Real<double>();
-					reader.SectionEnd();
-					m_args.add(name, value);
+					m_args.add(variable, value);
 					return true;
 				}
 				case EKeyword::Weight:
 				{
-					m_extras.m_weight = reader.RealS<float>();
+					m_extras.m_weight = reader.Real<float>();
 					m_extras.m_weight = std::clamp(m_extras.m_weight, -1.0f, +1.0f);
 					return true;
 				}
 				case EKeyword::XAxis:
 				{
-					m_extras.m_axis[0] = Extras::Axis::Parse(reader);
+					auto section = reader.SectionScope();
+					m_extras.m_axis[0] = Axis::Parse(reader, m_pp);
 					return true;
 				}
 				case EKeyword::YAxis:
 				{
-					m_extras.m_axis[1] = Extras::Axis::Parse(reader);
+					auto section = reader.SectionScope();
+					m_extras.m_axis[1] = Axis::Parse(reader, m_pp);
 					return true;
 				}
 				case EKeyword::ZAxis:
 				{
-					m_extras.m_axis[2] = Extras::Axis::Parse(reader);
+					auto section = reader.SectionScope();
+					m_extras.m_axis[2] = Axis::Parse(reader, m_pp);
 					return true;
 				}
 				default:
 				{
-					return
-						IObjectCreator::ParseKeyword(reader, kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			// Compile the equation
-			try
-			{
-				auto equation = reader.String<std::wstring>();
-				m_eq = eval::Compile<wchar_t>(equation);
-			}
-			catch (std::exception const& ex)
-			{
-				m_pp.ReportError(EScriptResult::ExpressionSyntaxError, reader.Location(), std::format("Equation expression is invalid: {}", ex.what()));
-				return;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			using namespace pr::geometry;
 
 			// Validate
 			if (!m_eq)
 			{
-				m_pp.ReportError(EScriptResult::Failed, m_last_location, "Equation not given");
+				m_pp.ReportError(EParseError::DataMissing, loc, "Equation not given");
 				return;
 			}
 
@@ -4764,103 +4641,72 @@ namespace pr::rdr12
 
 	#pragma region Special Objects
 
-	// ELdrObject::DirLight
-	template <> struct ObjectCreator<ELdrObject::DirLight> :IObjectCreator
-	{
-		creation::CastingLight m_cast;
-		Light m_light;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_cast()
-			, m_light()
-		{
-			m_light.m_on = true;
-		}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
-		{
-			return
-				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
-		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_light.m_direction = reader.Vector3(0.0f);
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
-		}
-	};
-
-	// ELdrObject::PointLight
-	template <> struct ObjectCreator<ELdrObject::PointLight> :IObjectCreator
-	{
-		creation::CastingLight m_cast;
-		Light m_light;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_cast()
-			, m_light()
-		{
-			m_light.m_on = true;
-		}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
-		{
-			return
-				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
-		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_light.m_position = reader.Vector3(1.0f);
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
-		}
-	};
-
-	// ELdrObject::SpotLight
-	template <> struct ObjectCreator<ELdrObject::SpotLight> :IObjectCreator
-	{
-		creation::CastingLight m_cast;
-		Light m_light;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_cast()
-			, m_light()
-		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
-		{
-			return
-				m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
-				IObjectCreator::ParseKeyword(reader, kw);
-		}
-		void ParseDescription(TReader& reader) override
-		{
-			m_light.m_position = reader.Vector3(1.0f);
-			m_light.m_direction = reader.Vector3(0.0f);
-			m_light.m_inner_angle = reader.Real<float>(); // actually in degrees
-			m_light.m_outer_angle = reader.Real<float>(); // actually in degrees
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
-		}
-	};
-
 	// ELdrObject::Group
 	template <> struct ObjectCreator<ELdrObject::Group> :IObjectCreator
 	{
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 		{}
+	};
+
+	// ELdrObject::LightSource
+	template <> struct ObjectCreator<ELdrObject::LightSource> :IObjectCreator
+	{
+		creation::CastingLight m_cast;
+		Light m_light;
+
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_cast()
+			, m_light()
+		{
+			m_light.m_on = true;
+		}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
+		{
+			switch (kw)
+			{
+				case EKeyword::Style:
+				{
+					auto ident = reader.Identifier();
+					switch (HashI(ident.c_str()))
+					{
+						case HashI("Directional"): m_light.m_type = ELight::Directional; break;
+						case HashI("Point"): m_light.m_type = ELight::Point; break;
+						case HashI("Spot"): m_light.m_type = ELight::Spot; break;
+						default: m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), std::format("{} is an unknown light type", ident));
+					}
+					return true;
+				}
+				case EKeyword::Direction:
+				{
+					m_light.m_direction = reader.Vector3f().w0();
+					return true;
+				}
+				case EKeyword::Position:
+				{
+					m_light.m_position = reader.Vector3f().w1();
+					return true;
+				}
+				case EKeyword::Cone:
+				{
+					m_light.m_inner_angle = reader.Real<float>(); // actually in degrees
+					m_light.m_outer_angle = reader.Real<float>(); // actually in degrees
+					return true;
+				}
+				default:
+				{
+					return
+						m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj, Location const&) override
+		{
+			// Assign the light data as user data
+			obj->m_user_data.get<Light>() = m_light;
+		}
 	};
 
 	// ELdrObject::Text
@@ -4875,7 +4721,7 @@ namespace pr::rdr12
 		};
 		using TextFmtCont = pr::vector<TextFormat>;
 
-		wstring256 m_text;
+		wstring32 m_text;
 		EType m_type;
 		TextFmtCont m_fmt;
 		TextLayout m_layout;
@@ -4889,14 +4735,23 @@ namespace pr::rdr12
 			, m_layout()
 			, m_axis(AxisId::PosZ)
 		{}
-		bool ParseKeyword(TReader& reader, EKeyword kw) override
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
+				case EKeyword::Data:
+				{
+					auto text = reader.String();
+					m_text.append(Widen(text));
+
+					// Record the formatting state
+					m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), m_pp.m_font.back()));
+					return true;
+				}
 				case EKeyword::CString:
 				{
-					auto text = reader.CStringS<wstring256>();
-					m_text.append(text);
+					auto text = reader.CString();
+					m_text.append(Widen(text));
 
 					// Record the formatting state
 					m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), m_pp.m_font.back()));
@@ -4924,42 +4779,47 @@ namespace pr::rdr12
 				}
 				case EKeyword::BackColour:
 				{
-					m_layout.m_bk_colour = Colour32(reader.IntS<uint32_t>(16));
+					m_layout.m_bk_colour = reader.Int<uint32_t>(16);
 					return true;
 				}
 				case EKeyword::Format:
 				{
-					reader.SectionStart();
-					for (; !reader.IsSectionEnd(); )
+					auto ident = reader.Identifier();
+					switch (HashI(ident.c_str()))
 					{
-						auto ident = reader.Identifier<string32>();
-						pr::transform(ident, [](char c) { return static_cast<char>(tolower(c)); });
-						switch (HashI(ident.c_str()))
-						{
-							case HashI("Left"          ): m_layout.m_align_h       = DWRITE_TEXT_ALIGNMENT_LEADING; break;
-							case HashI("CentreH"       ): m_layout.m_align_h       = DWRITE_TEXT_ALIGNMENT_CENTER; break;
-							case HashI("Right"         ): m_layout.m_align_h       = DWRITE_TEXT_ALIGNMENT_TRAILING; break;
-							case HashI("Top"           ): m_layout.m_align_v       = DWRITE_PARAGRAPH_ALIGNMENT_NEAR; break;
-							case HashI("CentreV"       ): m_layout.m_align_v       = DWRITE_PARAGRAPH_ALIGNMENT_CENTER; break;
-							case HashI("bottom"        ): m_layout.m_align_v       = DWRITE_PARAGRAPH_ALIGNMENT_FAR; break;
-							case HashI("Wrap"          ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP; break;
-							case HashI("NoWrap"        ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_NO_WRAP; break;
-							case HashI("WholeWord"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD; break;
-							case HashI("Character"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER; break;
-							case HashI("EmergencyBreak"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK; break;
-						}
+						case HashI("Left"): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_LEADING; break;
+						case HashI("CentreH"): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_CENTER; break;
+						case HashI("Right"): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_TRAILING; break;
+						default: m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("{} is not a valid horizontal alignment value", ident));
 					}
-					reader.SectionEnd();
+					ident = reader.Identifier();
+					switch (HashI(ident.c_str()))
+					{
+						case HashI("Top"): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_NEAR; break;
+						case HashI("CentreV"): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_CENTER; break;
+						case HashI("bottom"): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_FAR; break;
+						default: m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("{} is not a valid vertical alignment value", ident));
+					}
+					ident = reader.Identifier();
+					switch (HashI(ident.c_str()))
+					{
+						case HashI("Wrap"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP; break;
+						case HashI("NoWrap"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_NO_WRAP; break;
+						case HashI("WholeWord"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD; break;
+						case HashI("Character"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER; break;
+						case HashI("EmergencyBreak"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK; break;
+						default: m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("{} is not a valid word wrapping value", ident));
+					}
 					return true;
 				}
 				case EKeyword::Anchor:
 				{
-					m_layout.m_anchor = reader.Vector2S();
+					m_layout.m_anchor = reader.Vector2f();
 					return true;
 				}
 				case EKeyword::Padding:
 				{
-					auto padding = reader.Vector4S();
+					auto padding = reader.Vector4f();
 					m_layout.m_padding.left = padding.x;
 					m_layout.m_padding.top = padding.y;
 					m_layout.m_padding.right = padding.z;
@@ -4968,7 +4828,7 @@ namespace pr::rdr12
 				}
 				case EKeyword::Dim:
 				{
-					m_layout.m_dim = reader.Vector2S();
+					m_layout.m_dim = reader.Vector2f();
 					return true;
 				}
 				default:
@@ -4979,15 +4839,7 @@ namespace pr::rdr12
 				}
 			}
 		}
-		void ParseDescription(TReader& reader) override
-		{
-			auto text = reader.String<wstring256>();
-			m_text.append(text);
-
-			// Record the formatting state
-			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), isize(text), m_pp.m_font.back()));
-		}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Create a quad containing the text
 			obj->m_model = ModelGenerator::Text(m_pp.m_factory, m_text, m_fmt, m_layout, 1.0, m_axis.m_align);
@@ -5154,14 +5006,14 @@ namespace pr::rdr12
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 		{}
-		void CreateModel(LdrObject* obj) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// Locate the model that this is an instance of
 			auto model_key = hash::Hash(obj->m_name.c_str());
 			auto mdl = m_pp.m_models.find(model_key);
 			if (mdl == m_pp.m_models.end())
 			{
-				m_pp.ReportError(EScriptResult::UnknownValue, m_last_location, "Instance not found");
+				m_pp.ReportError(EParseError::NotFound, loc, "Model not found. Can't create an instance.");
 				return;
 			}
 			obj->m_model = mdl->second;
@@ -5188,7 +5040,7 @@ namespace pr::rdr12
 
 	// Reads a single ldr object from a script adding object (+ children) to 'pp.m_objects'.
 	// Returns true if an object was read or false if the next keyword is unrecognised
-	bool ParseLdrObject(ELdrObject type, TReader& reader, ParseParams& pp)
+	bool ParseLdrObject(ELdrObject type, IReader& reader, ParseParams& pp)
 	{
 		// Push a font onto the font stack, so that fonts are scoped to object declarations
 		auto font_scope = Scope<void>(
@@ -5208,7 +5060,7 @@ namespace pr::rdr12
 					break;\
 				}
 			#define PR_LDR_PARSE(x) x(PR_LDR_PARSE_IMPL)
-			PR_LDR_PARSE(PR_ENUM_LDROBJECTS)
+			PR_LDR_PARSE(PR_ENUM_LDRAW_OBJECTS)
 			default: return false;
 		}
 
@@ -5231,20 +5083,18 @@ namespace pr::rdr12
 
 	// Reads all ldr objects from a script.
 	// 'add_cb' is 'bool function(int object_index, ParseResult& out, Location const& loc)'
-	template <typename TReader, typename AddCB>
-	void ParseLdrObjects(TReader& reader, ParseParams& pp, AddCB add_cb)
+	template <typename AddCB>
+	void ParseLdrObjects(IReader& reader, ParseParams& pp, AddCB add_cb)
 	{
-		// Ldr script text is not case sensitive
-		reader.CaseSensitive(false);
-
 		// Loop over keywords in the script
-		for (EKeyword kw; !pp.m_cancel && reader.NextKeywordH(kw);)
+		for (EKeyword kw; !pp.m_cancel && reader.NextKeyword(kw);)
 		{
 			switch (kw)
 			{
 				case EKeyword::Camera:
 				{
 					// Camera position description
+					auto section = reader.SectionScope();
 					ParseCamera(reader, pp, pp.m_result);
 					break;
 				}
@@ -5255,15 +5105,8 @@ namespace pr::rdr12
 				}
 				case EKeyword::Font:
 				{
+					auto section = reader.SectionScope();
 					ParseFont(reader, pp, pp.m_font.back());
-					break;
-				}
-				case EKeyword::Lock:
-				{
-					break;
-				}
-				case EKeyword::Delimiters:
-				{
 					break;
 				}
 				default:
@@ -5274,9 +5117,10 @@ namespace pr::rdr12
 					// Assume the keyword is an object and start parsing
 					if (!ParseLdrObject(static_cast<ELdrObject>(kw), reader, pp))
 					{
-						pp.ReportError(EScriptResult::UnknownToken, reader.Location(), "Expected an object declaration");
+						pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Expected an object declaration");
 						break;
 					}
+
 					assert("Objects removed but 'ParseLdrObject' didn't fail" && isize(pp.m_objects) > object_count);
 
 					// Call the callback with the freshly minted object.
@@ -5291,43 +5135,9 @@ namespace pr::rdr12
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult Parse(Renderer& rdr, script::Reader& reader, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, IReader& reader, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
 		ParseResult out;
-
-		// Give initial and final progress updates
-		auto start_loc = reader.Location();
-		auto exit = Scope<void>(
-			[&]
-			{
-				// Give an initial progress update
-				if (progress_cb != nullptr)
-					progress_cb(context_id, out, start_loc, false);
-			},
-			[&]
-			{
-				// Give a final progress update
-				if (progress_cb != nullptr)
-					progress_cb(context_id, out, start_loc, true);
-			});
-
-		// Parse the script
-		bool cancel = false;
-		ParseParams pp(rdr, out, context_id, reader.ReportError, progress_cb, cancel);
-		ParseLdrObjects(reader, pp, [&](int){});
-		return out;
-	}
-
-#if 0 // Plan - Change the ldr format so that a common reader can be used for text or binary
-	// Parse ldr objects from binary data.
-	// The binary format mainly follows the text format
-	ParseResult Parse(Renderer& rdr, std::span<std::byte const> stream, Guid const& context_id, ParseProgressCB progress_cb)
-	{
-		ParseResult out;
-
-		bool cancel = false;
-		ByteReader reader(stream);
-		ParseParams pp(rdr, out, context_id, reader.ReportError, progress_cb, cancel);
 
 		// Give initial and final progress updates
 		auto exit = Scope<void>(
@@ -5335,30 +5145,37 @@ namespace pr::rdr12
 			{
 				// Give an initial progress update
 				if (progress_cb != nullptr)
-					progress_cb(context_id, out, reader.Location(), false);
+					progress_cb(context_id, out, reader.Loc(), false);
 			},
 			[&]
 			{
 				// Give a final progress update
 				if (progress_cb != nullptr)
-					progress_cb(context_id, out, reader.Location(), true);
+					progress_cb(context_id, out, reader.Loc(), true);
 			});
 
 		// Parse the script
+		bool cancel = false;
+		ParseParams pp(rdr, out, context_id, report_error_cb, progress_cb, cancel);
 		ParseLdrObjects(reader, pp, [&](int){});
 		return out;
 	}
-#endif
+
+#if 1 // Todo - provide implementations of 'IReader' to make these functions unnecessary
 
 	// Parse ldr script from a text file.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult ParseFile(Renderer& rdr, std::filesystem::path filename, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult ParseFile(Renderer& rdr, std::filesystem::path filename, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
+#if 0
 		script::FileSrc src(filename);
 		script::Reader reader(src);
 		return Parse(rdr, reader, context_id, progress_cb);
+#endif
+		(void)rdr, filename, context_id, report_error_cb, progress_cb;
+		throw std::runtime_error("not implemented");
 	}
 
 	// Parse ldr script from a string
@@ -5366,26 +5183,31 @@ namespace pr::rdr12
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
 	template <typename Char>
-	ParseResult ParseString(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult ParseString(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
+#if 0
 		script::StringSrc src(ldr_script);
 		script::Reader reader(src);
-		return Parse(rdr, reader, context_id, progress_cb);
+		return Parse(rdr, reader, context_id, report_error_cb, progress_cb);
+#endif
+		(void)rdr, ldr_script, context_id, report_error_cb, progress_cb;
+		throw std::runtime_error("not implemented");
 	}
-	ParseResult ParseString(Renderer& rdr, std::string_view ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult ParseString(Renderer& rdr, std::string_view ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
-		return ParseString<char>(rdr, ldr_script, context_id, progress_cb);
+		return ParseString<char>(rdr, ldr_script, context_id, report_error_cb, progress_cb);
 	}
-	ParseResult ParseString(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id, ParseProgressCB progress_cb)
+	ParseResult ParseString(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
-		return ParseString<wchar_t>(rdr, ldr_script, context_id, progress_cb);
+		return ParseString<wchar_t>(rdr, ldr_script, context_id, report_error_cb, progress_cb);
 	}
+#endif
 
 	// Create a single LDR object from a string
 	template <typename Char>
 	LdrObjectPtr CreateLdr(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id)
 	{
-		auto result = ParseString(rdr, ldr_script, context_id);
+		auto result = ParseString<Char>(rdr, ldr_script, context_id, nullptr, nullptr);
 		if (result.m_objects.empty())
 			throw std::runtime_error("No objects created");
 		if (result.m_objects.size() > 1)
@@ -5436,7 +5258,7 @@ namespace pr::rdr12
 
 		// Create the model
 		ResourceFactory factory(rdr);
-		pr::mem_istream<char> src(p3d_data, size);
+		mem_istream<char> src(p3d_data, size);
 		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
 				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
@@ -5497,13 +5319,13 @@ namespace pr::rdr12
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-	void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags)
+	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
 	{
 		bool cancel = false;
 
 		// Parsing parameters
 		ParseResult result;
-		ParseParams pp(rdr, result, object->m_context_id, reader.ReportError, nullptr, cancel);
+		ParseParams pp(rdr, result, object->m_context_id, report_error_cb, progress_cb, cancel);
 	
 		// Parse 'reader' for the new model
 		ParseLdrObjects(reader, pp, [&](int object_index)
@@ -5585,663 +5407,149 @@ namespace pr::rdr12
 		erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
 	}
 
-	// LdrObject ***********************************
+	// IReader ------------------------------------------------------------------------------------
 
-	#pragma region LdrObject
-
-	#if PR_DBG
-	#define PR_LDR_CALLSTACKS 0
-	struct LeakedLdrObjects
+	// Reads a transform accumulatively. 'o2w' must be a valid initial transform
+	m4x4& IReader::Transform(m4x4& o2w)
 	{
-		std::unordered_set<LdrObject const*> m_ldr_objects;
-		std::string m_call_stacks;
-		std::mutex m_mutex;
-			
-		LeakedLdrObjects()
-			:m_ldr_objects()
-			,m_mutex()
-		{}
-		~LeakedLdrObjects()
-		{
-			if (m_ldr_objects.empty()) return;
+		assert(IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it pre-multiplies the transform with the one read from the script");
 
-			size_t const msg_max_len = 1000;
-			std::string msg = "Leaked LdrObjects detected:\n";
-			for (auto ldr : m_ldr_objects)
+		auto p2w = m4x4::Identity();
+		auto affine = IsAffine(o2w);
+
+		// Parse the transform
+		for (EKeyword kw; NextKeyword(kw);)
+		{
+			switch (kw)
 			{
-				msg.append(ldr->TypeAndName()).append("\n");
-				if (msg.size() > msg_max_len)
+				case EKeyword::NonAffine:
 				{
-					msg.resize(msg_max_len - 3);
-					msg.append("...");
+					affine = false;
 					break;
 				}
+				case EKeyword::M4x4:
+				{
+					auto m = Matrix4x4();
+					if (affine && m.w.w != 1)
+						throw std::runtime_error("Specify 'NonAffine' if M4x4 is intentionally non-affine.");
+
+					p2w = m * p2w;
+					break;
+				}
+				case EKeyword::M3x3:
+				{
+					auto m = m4x4{ Matrix3x3(), v4::Origin() };
+					p2w = m * p2w;
+					break;
+				}
+				case EKeyword::Pos:
+				{
+					auto m = m4x4{ m3x4::Identity(), Vector3f().w1() };
+					p2w = m * p2w;
+					break;
+				}
+				case EKeyword::Align:
+				{
+					auto axis_id = Int<int>(10);
+					auto direction = Vector3f().w0();
+
+					v4 axis = AxisId(axis_id);
+					if (axis == v4::Zero())
+						throw std::runtime_error("axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
+
+					p2w = m4x4::Transform(axis, direction, v4::Origin()) * p2w;
+					break;
+				}
+				case EKeyword::Quat:
+				{
+					auto q = quat{ Vector4f() };
+					p2w = m4x4::Transform(q, v4::Origin()) * p2w;
+					break;
+				}
+				case EKeyword::QuatPos:
+				{
+					auto q = quat{ Vector4f() };
+					auto p = Vector3f().w1();
+					p2w = m4x4::Transform(q, p) * p2w;
+					break;
+				}
+				case EKeyword::Rand4x4:
+				{
+					auto centre = Vector3f().w1();
+					auto radius = Real<float>();
+					p2w = m4x4::Random(g_rng(), centre, radius) * p2w;
+					break;
+				}
+				case EKeyword::RandPos:
+				{
+					auto centre = Vector3f().w1();
+					auto radius = Real<float>();
+					p2w = m4x4::Translation(v4::Random(g_rng(), centre, radius, 1)) * p2w;
+					break;
+				}
+				case EKeyword::RandOri:
+				{
+					auto m = m4x4(m3x4::Random(g_rng()), v4::Origin());
+					p2w = m * p2w;
+					break;
+				}
+				case EKeyword::Euler:
+				{
+					auto angles = Vector3f().w0();
+					p2w = m4x4::Transform(DegreesToRadians(angles.x), DegreesToRadians(angles.y), DegreesToRadians(angles.z), v4::Origin()) * p2w;
+					break;
+				}
+				case EKeyword::Scale:
+				{
+					v4 scale = {};
+					scale.x = Real<float>();
+					scale.y = IsSectionEnd() ? scale.x : Real<float>();
+					scale.z = IsSectionEnd() ? scale.y : Real<float>();
+					p2w = m4x4::Scale(scale.x, scale.y, scale.z, v4::Origin()) * p2w;
+					break;
+				}
+				case EKeyword::Transpose:
+				{
+					p2w = Transpose4x4(p2w);
+					break;
+				}
+				case EKeyword::Inverse:
+				{
+					p2w = IsOrthonormal(p2w) ? InvertFast(p2w) : Invert(p2w);
+					break;
+				}
+				case EKeyword::Normalise:
+				{
+					p2w.x = Normalise(p2w.x);
+					p2w.y = Normalise(p2w.y);
+					p2w.z = Normalise(p2w.z);
+					break;
+				}
+				case EKeyword::Orthonormalise:
+				{
+					p2w = Orthonorm(p2w);
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error(std::format("{} is not a valid Transform keyword", EKeyword_::ToStringA(kw)));
+				}
 			}
-
-			PR_ASSERT(1, m_ldr_objects.empty(), msg.c_str());
-		}
-		void add(LdrObject const* ldr)
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			m_ldr_objects.insert(ldr);
-		}
-		void remove(LdrObject const* ldr)
-		{
-			#if PR_LDR_CALLSTACKS
-			#pragma message(PR_LINK "WARNING: ************************************************** PR_LDR_CALLSTACKS enabled")
-			m_call_stacks.append(FmtS("[%p] %s\n", ldr, ldr->TypeAndName().c_str()));
-			pr::DumpStack([&](auto& sym, auto& file, int line){ m_call_stacks.append(FmtS("%s(%d): %s\n", file.c_str(), line, sym.c_str()));}, 2U, 50U);
-			m_call_stacks.append("\n");
-			#endif
-
-			std::lock_guard<std::mutex> lock(m_mutex);
-			m_ldr_objects.erase(ldr);
-		}
-	} g_ldr_object_tracker;
-	#endif
-
-	LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id)
-		:RdrInstance()
-		,m_o2p(m4x4Identity)
-		,m_type(attr.m_type)
-		,m_parent(parent)
-		,m_child()
-		,m_name(attr.m_name)
-		,m_context_id(context_id)
-		,m_base_colour(attr.m_colour)
-		,m_colour_mask()
-		,m_anim()
-		,m_bbox_instance()
-		,m_screen_space()
-		,m_ldr_flags(ELdrFlags::None)
-		,m_user_data()
-	{
-		m_i2w = m4x4Identity;
-		m_colour = m_base_colour;
-		PR_EXPAND(PR_DBG, g_ldr_object_tracker.add(this));
-	}
-	LdrObject::~LdrObject()
-	{
-		PR_EXPAND(PR_DBG, g_ldr_object_tracker.remove(this));
-	}
-
-	// Return the declaration name of this object
-	string32 LdrObject::TypeAndName() const
-	{
-		return string32(Enum<ELdrObject>::ToStringA(m_type)) + " " + m_name;
-	}
-
-	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
-	{
-		// Set the instance to world.
-		// Take a copy in case the 'OnAddToScene' event changes it.
-		// We want parenting to be unaffected by the event handlers.
-		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
-		m_i2w = i2w;
-
-		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
-
-		// Allow the object to change it's transform just before rendering
-		OnAddToScene(*this, scene);
-
-		// Add the instance to the scene draw list
-		if (m_model && !AllSet(flags, ELdrFlags::Hidden))
-		{
-			// Could add occlusion culling here...
-			scene.AddInstance(*this);
 		}
 
-		// Rinse and repeat for all children
-		for (auto& child : m_child)
-			child->AddToScene(scene, time_s, &i2w, flags);
-	}
-
-	// Recursively add this object using 'bbox_model' instead of its
-	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
-	{
-		// Set the instance to world for this object
-		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
-
-		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
-		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
-
-		// Add the bbox instance to the scene draw list
-		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
-		{
-			// Find the object to world for the bbox
-			ResourceFactory factory(scene.rdr());
-			m_bbox_instance.m_model = factory.CreateModel(EStockModel::BBoxModel);
-			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
-			scene.AddInstance(m_bbox_instance);
-		}
-
-		// Rinse and repeat for all children
-		for (auto& child : m_child)
-			child->AddBBoxToScene(scene, time_s, &i2w, flags);
-	}
-
-	// Get the first child object of this object that matches 'name' (see Apply)
-	LdrObject* LdrObject::Child(char const* name) const
-	{
-		LdrObject* obj = nullptr;
-		Apply([&](LdrObject* o){ obj = o; return false; }, name);
-		return obj;
-	}
-	LdrObject* LdrObject::Child(int index) const
-	{
-		if (index < 0 || index >= isize(m_child)) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, isize(m_child)));
-		return m_child[index].get();
-	}
-
-	// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
-	m4x4 LdrObject::O2W(char const* name) const
-	{
-		auto obj = Child(name);
-		if (obj == nullptr)
-			return m4x4Identity;
-
-		// Combine parent transforms back to the root
-		auto o2w = obj->m_o2p;
-		for (auto p = obj->m_parent; p != nullptr; p = p->m_parent)
-			o2w = p->m_o2p * o2w;
-
+		// Pre-multiply the object to world transform
+		o2w = p2w * o2w;
 		return o2w;
 	}
-	void LdrObject::O2W(m4x4 const& o2w, char const* name)
+
+	// Reads a C-style string
+	string32 IReader::CString(bool has_length)
 	{
-		Apply([&](LdrObject* o)
-		{
-			o->m_o2p = o->m_parent ? InvertFast(o->m_parent->O2W()) * o2w : o2w;
-			assert(FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
-			return true;
-		}, name);
+		string32 out = {};
+		auto string = String(has_length);
+		if (!str::ExtractStringC<string32, char const*, char>(out, string.c_str(), '\\', nullptr, nullptr))
+			throw std::runtime_error("");
+
+		return out;
 	}
-
-	// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
-	m4x4 LdrObject::O2P(char const* name) const
-	{
-		auto obj = Child(name);
-		return obj ? obj->m_o2p : m4x4Identity;
-	}
-	void LdrObject::O2P(m4x4 const& o2p, char const* name)
-	{
-		Apply([&](LdrObject* o)
-		{
-			assert(FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
-			assert(IsFinite(o2p) && "Invalid instance transform");
-			o->m_o2p = o2p;
-			return true;
-		}, name);
-	}
-
-	// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
-	bool LdrObject::Visible(char const* name) const
-	{
-		auto obj = Child(name);
-		return obj ? !AllSet(obj->m_ldr_flags, ELdrFlags::Hidden) : false;
-	}
-	void LdrObject::Visible(bool visible, char const* name)
-	{
-		Flags(ELdrFlags::Hidden, !visible, name);
-	}
-
-	// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
-	bool LdrObject::Wireframe(char const* name) const
-	{
-		auto obj = Child(name);
-		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Wireframe) : false;
-	}
-	void LdrObject::Wireframe(bool wireframe, char const* name)
-	{
-		Flags(ELdrFlags::Wireframe, wireframe, name);
-	}
-	
-	// Get/Set the visibility of normals for this object or child objects matching 'name' (see Apply)
-	bool LdrObject::Normals(char const* name) const
-	{
-		auto obj = Child(name);
-		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Normals) : false;
-	}
-	void LdrObject::Normals(bool show, char const* name)
-	{
-		Flags(ELdrFlags::Normals, show, name);
-	}
-	
-	// Get/Set screen space rendering mode for this object and all child objects
-	bool LdrObject::ScreenSpace() const
-	{
-		auto obj = Child("");
-		return obj ? static_cast<bool>(obj->m_screen_space) : false;
-	}
-	void LdrObject::ScreenSpace(bool screen_space)
-	{
-		Apply([=](LdrObject* o)
-		{
-			if (screen_space)
-			{
-				static constexpr int ViewPortSize = 2;
-
-				// Do not include in scene bounds calculations because we're scaling
-				// this model at a point that the bounding box calculation can't see.
-				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, true);
-
-				// Update the rendering 'i2w' transform on add-to-scene.
-				o->m_screen_space = o->OnAddToScene += [](LdrObject& ob, Scene const& scene)
-				{
-					// The 'ob.m_i2w' is a normalised screen space position
-					// (-1,-1,-0) is the lower left corner on the near plane,
-					// (+1,+1,-1) is the upper right corner on the far plane.
-					auto w = float(scene.m_viewport.Width);
-					auto h = float(scene.m_viewport.Height);
-					auto c2w = scene.m_cam.CameraToWorld();
-
-					// Screen space uses a standard normalised orthographic projection
-					ob.m_c2s = w >= h
-						? m4x4::ProjectionOrthographic(float(ViewPortSize) * w / h, float(ViewPortSize), -0.01f, 1.01f, true)
-						: m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize) * h / w, -0.01f, 1.01f, true);
-
-					// Scale the object to normalised screen space
-					auto scale = w >= h
-						? m4x4::Scale(0.5f * ViewPortSize * (w/h), 0.5f * ViewPortSize, 1, v4Origin)
-						: m4x4::Scale(0.5f * ViewPortSize, 0.5f * ViewPortSize * (h/w), 1, v4Origin);
-
-					// Scale the X,Y position so that positions are still in normalised screen space
-					ob.m_i2w.pos.x *= w >= h ? (w/h) : 1.0f;
-					ob.m_i2w.pos.y *= w >= h ? 1.0f : (h/w);
-			
-					// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
-					ob.m_i2w = c2w * ob.m_i2w * scale;
-				};
-			}
-			else
-			{
-				o->m_c2s = m4x4Zero;
-				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, false);
-				o->OnAddToScene -= o->m_screen_space;
-			}
-			return true;
-		}, "");
-	}
-
-	// Get/Set meta behaviour flags for this object or child objects matching 'name' (see Apply)
-	ELdrFlags LdrObject::Flags(char const* name) const
-	{
-		// Mainly used to allow non-user objects to be added to a scene
-		// and not affect the bounding box of the scene
-		auto obj = Child(name);
-		return obj ? obj->m_ldr_flags : ELdrFlags::None;
-	}
-	void LdrObject::Flags(ELdrFlags flags, bool state, char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			// Apply flag changes
-			o->m_ldr_flags = SetBits(o->m_ldr_flags, flags, state);
-
-			// Hidden
-			if (o->m_model != nullptr)
-			{
-				// Even though Ldraw doesn't add instances that are hidden,
-				// set the visibility flags on the nuggets for consistency.
-				auto hidden = AllSet(o->m_ldr_flags, ELdrFlags::Hidden);
-				for (auto& nug : o->m_model->m_nuggets)
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::Hidden, hidden);
-			}
-
-			// Wireframe
-			if (AllSet(o->m_ldr_flags, ELdrFlags::Wireframe))
-			{
-				o->m_pso.Set<EPipeState::FillMode>(D3D12_FILL_MODE_WIREFRAME);
-			}
-			else
-			{
-				o->m_pso.Clear<EPipeState::FillMode>();
-			}
-
-			// No Z Test
-			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZTest))
-			{
-				// Don't test against Z, and draw above all objects
-				o->m_pso.Set<EPipeState::DepthEnable>(FALSE);
-				o->m_sko.Group(ESortGroup::PostAlpha);
-			}
-			else
-			{
-				o->m_pso.Set<EPipeState::DepthEnable>(TRUE);
-				o->m_sko = SKOverride();
-			}
-
-			// If NoZWrite
-			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZWrite))
-			{
-				// Don't write to Z and draw behind all objects
-				o->m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ZERO);
-				o->m_sko.Group(ESortGroup::PreOpaques);
-			}
-			else
-			{
-				o->m_pso.Set<EPipeState::DepthWriteMask>(D3D12_DEPTH_WRITE_MASK_ALL);
-				o->m_sko = SKOverride();
-			}
-
-			// Normals
-			if (o->m_model != nullptr)
-			{
-				auto show_normals = AllSet(o->m_ldr_flags, ELdrFlags::Normals);
-				ShowNormals(o->m_model.get(), show_normals);
-			}
-
-			// Shadow cast
-			{
-				auto vampire = AllSet(o->m_ldr_flags, ELdrFlags::ShadowCastExclude);
-				o->m_iflags = SetBits(o->m_iflags, EInstFlag::ShadowCastExclude, vampire);
-			}
-
-			// Non-Affine
-			{
-				auto non_affine = AllSet(o->m_ldr_flags, ELdrFlags::NonAffine);
-				o->m_iflags = SetBits(o->m_iflags, EInstFlag::NonAffine, non_affine);
-			}
-
-			return true;
-		}, name);
-	}
-
-	// Get/Set the render group for this object or child objects matching 'name' (see Apply)
-	ESortGroup LdrObject::SortGroup(char const* name) const
-	{
-		auto obj = Child(name);
-		return obj ? obj->m_sko.Group() : ESortGroup::Default;
-	}
-	void LdrObject::SortGroup(ESortGroup grp, char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			o->m_sko.Group(grp);
-			return true;
-		}, name);
-	}
-
-	// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
-	ENuggetFlag LdrObject::NuggetFlags(char const* name, int index) const
-	{
-		auto obj = Child(name);
-		if (obj == nullptr || obj->m_model == nullptr)
-			return ENuggetFlag::None;
-
-		if (index >= static_cast<int>(obj->m_model->m_nuggets.size()))
-			throw std::runtime_error("nugget index out of range");
-
-		auto nug = obj->m_model->m_nuggets.begin();
-		for (int i = 0; i != index; ++i, ++nug) {}
-		return nug->m_nflags;
-	}
-	void LdrObject::NuggetFlags(ENuggetFlag flags, bool state, char const* name, int index)
-	{
-		Apply([=](LdrObject* obj)
-		{
-			if (obj->m_model != nullptr)
-			{
-				auto nug = obj->m_model->m_nuggets.begin();
-				for (int i = 0; i != index; ++i, ++nug) {}
-				nug->m_nflags = SetBits(nug->m_nflags, flags, state);
-			}
-			return true;
-		}, name);
-	}
-
-	// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
-	Colour32 LdrObject::NuggetTint(char const* name, int index) const
-	{
-		auto obj = Child(name);
-		if (obj == nullptr || obj->m_model == nullptr)
-			return Colour32White;
-
-		if (index >= static_cast<int>(obj->m_model->m_nuggets.size()))
-			throw std::runtime_error("nugget index out of range");
-
-		auto nug = obj->m_model->m_nuggets.begin();
-		for (int i = 0; i != index; ++i, ++nug) {}
-		return nug->m_tint;
-	}
-	void LdrObject::NuggetTint(Colour32 tint, char const* name, int index)
-	{
-		Apply([=](LdrObject* obj)
-		{
-			if (obj->m_model != nullptr)
-			{
-				auto nug = obj->m_model->m_nuggets.begin();
-				for (int i = 0; i != index; ++i, ++nug) {}
-				nug->m_tint = tint;
-			}
-			return true;
-		}, name);
-	}
-
-	// Get/Set the colour of this object or child objects matching 'name' (see Apply)
-	// For 'Get', the colour of the first object to match 'name' is returned
-	// For 'Set', the object base colour is not changed, only the tint colour = tint
-	Colour32 LdrObject::Colour(bool base_colour, char const* name) const
-	{
-		Colour32 col;
-		Apply([&](LdrObject const* o)
-		{
-			col = base_colour ? o->m_base_colour : o->m_colour;
-			return false; // stop at the first match
-		}, name);
-		return col;
-	}
-	void LdrObject::Colour(Colour32 colour, uint32_t mask, char const* name, EColourOp op, float op_value)
-	{
-		Apply([=](LdrObject* o)
-			{
-				switch (op)
-				{
-					case EColourOp::Overwrite:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
-						break;
-					case EColourOp::Add:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
-						break;
-					case EColourOp::Subtract:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour - colour).argb);
-						break;
-					case EColourOp::Multiply:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour * colour).argb);
-						break;
-					case EColourOp::Lerp:
-						o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, Lerp(o->m_base_colour, colour, op_value).argb);
-						break;
-				}
-				if (o->m_model == nullptr)
-					return true;
-
-				auto tint_has_alpha = HasAlpha(o->m_colour);
-				for (auto& nug : o->m_model->m_nuggets)
-				{
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
-					nug.UpdateAlphaStates();
-				}
-
-				return true;
-			}, name);
-	}
-
-	// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
-	void LdrObject::ResetColour(char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			o->m_colour = o->m_base_colour;
-			if (o->m_model == nullptr) return true;
-
-			auto has_alpha = HasAlpha(o->m_colour);
-			for (auto& nug : o->m_model->m_nuggets)
-			{
-				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, has_alpha);
-				nug.UpdateAlphaStates();
-			}
-
-			return true;
-		}, name);
-	}
-
-	// Get/Set the reflectivity of this object or child objects matching 'name' (see Apply)
-	float LdrObject::Reflectivity(char const* name) const
-	{
-		float env;
-		Apply([&](LdrObject const* o)
-		{
-			env = o->m_env;
-			return false; // stop at the first match
-		}, name);
-		return env;
-	}
-	void LdrObject::Reflectivity(float reflectivity, char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			o->m_env = reflectivity;
-			return true;
-		}, name);
-	}
-
-	// Set the texture on this object or child objects matching 'name' (see Apply).
-	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
-	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
-	void LdrObject::SetTexture(Texture2D* tex, char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			if (o->m_model == nullptr) return true;
-			for (auto& nug : o->m_model->m_nuggets)
-			{
-				nug.m_tex_diffuse = Texture2DPtr(tex, true);
-				nug.UpdateAlphaStates();
-			}
-
-			return true;
-		}, name);
-	}
-
-	// Set the sampler on the nuggets of this object or child objects matching 'name' (see Apply).
-	// Note for 'difference-mode' drawlist management: if the object is currently in one or more drawlists
-	// (i.e. added to a scene) it will need to be removed and re-added so that the sort order is correct.
-	void LdrObject::SetSampler(Sampler* sam, char const* name)
-	{
-		Apply([=](LdrObject* o)
-		{
-			if (o->m_model == nullptr) return true;
-			for (auto& nug : o->m_model->m_nuggets)
-			{
-				nug.m_sam_diffuse = SamplerPtr(sam, true);
-			}
-
-			return true;
-		}, name);
-	}
-	// Return the bounding box for this object in model space
-	// To convert this to parent space multiply by 'm_o2p'
-	// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-	BBox LdrObject::BBoxMS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s, m4x4 const* p2w_, ELdrFlags parent_flags) const
-	{
-		auto& p2w = p2w_ ? *p2w_ : m4x4::Identity();
-		auto i2w = p2w * m_anim.Step(time_s);
-
-		// Combine recursive flags
-		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
-
-		// Start with the bbox for this object
-		auto bbox = BBox::Reset();
-		if (m_model != nullptr && !AnySet(flags, ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
-		{
-			if (m_model->m_bbox.valid())
-			{
-				if (IsAffine(i2w))
-					Grow(bbox, i2w * m_model->m_bbox);
-				else
-					Grow(bbox, MulNonAffine(i2w, m_model->m_bbox));
-			}
-		}
-		if (include_children) // Add the bounding boxes of the children
-		{
-			for (auto& child : m_child)
-			{
-				auto c2w = i2w * child->m_o2p;
-				auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w, flags);
-				if (cbbox.valid()) Grow(bbox, cbbox);
-			}
-		}
-		return bbox;
-	}
-	BBox LdrObject::BBoxMS(bool include_children) const
-	{
-		return BBoxMS(include_children, [](LdrObject const&){ return true; });
-	}
-
-	// Return the bounding box for this object in world space.
-	// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
-	// If not then, then the returned bbox will be transformed to the top level object space
-	BBox LdrObject::BBoxWS(bool include_children, std::function<bool(LdrObject const&)> pred, float time_s) const
-	{
-		// Get the combined o2w transform;
-		m4x4 o2w = m_o2p;
-		for (LdrObject* parent = m_parent; parent; parent = parent->m_parent)
-			o2w = parent->m_o2p * parent->m_anim.Step(time_s) * o2w;
-
-		return BBoxMS(include_children, pred, time_s, &o2w);
-	}
-	BBox LdrObject::BBoxWS(bool include_children) const
-	{
-		return BBoxWS(include_children, [](LdrObject const&){ return true; });
-	}
-
-	// Add/Remove 'child' as a child of this object
-	void LdrObject::AddChild(LdrObjectPtr& child)
-	{
-		PR_ASSERT(PR_DBG, child->m_parent != this, "child is already a child of this object");
-		PR_ASSERT(PR_DBG, child->m_parent == nullptr, "child already has a parent");
-		child->m_parent = this;
-		m_child.push_back(child);
-	}
-	LdrObjectPtr LdrObject::RemoveChild(LdrObjectPtr& child)
-	{
-		PR_ASSERT(PR_DBG, child->m_parent == this, "child is not a child of this object");
-		auto idx = index_of(m_child, child);
-		return RemoveChild(idx);
-	}
-	LdrObjectPtr LdrObject::RemoveChild(size_t i)
-	{
-		PR_ASSERT(PR_DBG, i >= 0 && i < m_child.size(), "child index out of range");
-		auto child = m_child[i];
-		m_child.erase(std::begin(m_child) + i);
-		child->m_parent = nullptr;
-		return child;
-	}
-	void LdrObject::RemoveAllChildren()
-	{
-		while (!m_child.empty())
-			RemoveChild(0);
-	}
-
-	// Called when there are no more references to this object
-	void LdrObject::RefCountZero(RefCount<LdrObject>* doomed)
-	{
-		delete static_cast<LdrObject*>(doomed);
-	}
-	long LdrObject::AddRef() const
-	{
-		return RefCount<LdrObject>::AddRef();
-	}
-	long LdrObject::Release() const
-	{
-		return RefCount<LdrObject>::Release();
-	}
-
-	#pragma endregion
 }

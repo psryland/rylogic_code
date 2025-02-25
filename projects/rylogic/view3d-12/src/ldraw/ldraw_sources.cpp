@@ -2,13 +2,15 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "pr/view3d-12/ldraw/ldr_sources.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_sources.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/main/renderer.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Sources *************************************
 	
@@ -126,7 +128,7 @@ namespace pr::rdr12
 		// Remove the object from the source it belongs to
 		auto& src = m_srcs[id];
 		auto count = src.m_objects.size();
-		rdr12::Remove(src.m_objects, object);
+		ldraw::Remove(src.m_objects, object);
 
 		// Notify of the object container change
 		if (src.m_objects.size() != count)
@@ -454,7 +456,7 @@ namespace pr::rdr12
 	};
 
 	// Create a gizmo object and add it to the gizmo collection
-	LdrGizmo* ScriptSources::CreateGizmo(ELdrGizmoMode mode, m4x4 const& o2w)
+	LdrGizmo* ScriptSources::CreateGizmo(EGizmoMode mode, m4x4 const& o2w)
 	{
 		LdrGizmoPtr giz(new LdrGizmo(rdr(), mode, o2w), true);
 		m_gizmos.push_back(giz);

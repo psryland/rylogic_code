@@ -5,7 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/ldraw/ldr_sources.h"
+#include "pr/view3d-12/ldraw/ldraw_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -18,6 +18,7 @@ namespace pr::rdr12
 		using WindowCont = std::vector<V3dWindow*>;
 		using EmbCodeCBCont = std::vector<EmbCodeCB>;
 		using IEmbeddedCode = pr::script::IEmbeddedCode;
+		using ScriptSources = pr::rdr12::ldraw::ScriptSources;
 
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
@@ -78,7 +79,7 @@ namespace pr::rdr12
 		void ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
 
 		// Update the model in an existing object
-		void UpdateObject(LdrObject* object, wchar_t const* ldr_script, EUpdateObject flags);
+		void UpdateObject(LdrObject* object, wchar_t const* ldr_script, ldraw::EUpdateObject flags);
 
 		// Delete a single object
 		void DeleteObject(LdrObject* object);
@@ -96,7 +97,7 @@ namespace pr::rdr12
 		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
 
 		// Create a gizmo object and add it to the gizmo collection
-		LdrGizmo* GizmoCreate(ELdrGizmoMode mode, m4x4 const& o2w);
+		LdrGizmo* GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w);
 
 		// Destroy a gizmo
 		void GizmoDelete(LdrGizmo* gizmo);

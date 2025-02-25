@@ -11,7 +11,7 @@
 #include "pr/view3d-12/utility/wrappers.h"
 #include "pr/view3d-12/utility/cmd_list.h"
 #include "pr/view3d-12/utility/ray_cast.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
 
 namespace pr::rdr12
 {

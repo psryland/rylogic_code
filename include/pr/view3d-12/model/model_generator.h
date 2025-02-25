@@ -227,7 +227,7 @@ namespace pr::rdr12
 		// A Direct2D font description
 		struct Font
 		{
-			wstring32           m_name;   // Font family name
+			wstring32           m_name;   // Font family name (D2D requires wchar_t)
 			float               m_size;   // in points (1 pt = 1/72.272 inches = 0.35145mm)
 			Colour32            m_colour; // Fore colour for the text
 			DWRITE_FONT_WEIGHT  m_weight; // boldness

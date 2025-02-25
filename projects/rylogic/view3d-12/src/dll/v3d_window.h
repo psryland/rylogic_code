@@ -9,10 +9,10 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/ray_cast.h"
 #include "pr/view3d-12/lighting/light_ui.h"
-#include "pr/view3d-12/ldraw/ldr_ui_object_manager.h"
-#include "pr/view3d-12/ldraw/ldr_ui_script_editor.h"
-#include "pr/view3d-12/ldraw/ldr_ui_measure_tool.h"
-#include "pr/view3d-12/ldraw/ldr_ui_angle_tool.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_object_manager.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_script_editor.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_measure_tool.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_angle_tool.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -30,10 +30,10 @@ namespace pr::rdr12
 			AnimData() :m_thread() ,m_issue() ,m_clock() {}
 		};
 		using LightingUIPtr = std::unique_ptr<LightingUI>;
-		using LdrObjectManagerUIPtr = std::unique_ptr<LdrObjectManagerUI>;
-		using ScriptEditorUIPtr = std::unique_ptr<LdrScriptEditorUI>;
-		using LdrMeasureUIPtr = std::unique_ptr<LdrMeasureUI>;
-		using LdrAngleUIPtr = std::unique_ptr<LdrAngleUI>;
+		using LdrObjectManagerUIPtr = std::unique_ptr<ldraw::ObjectManagerUI>;
+		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
+		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
+		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
 
 		// Renderer window/scene
 		Context* m_dll;   // The dll context
@@ -330,7 +330,7 @@ namespace pr::rdr12
 		void FillModePointsSize(v2 size);
 
 		// Access the built-in script editor
-		LdrScriptEditorUI& EditorUI();
+		ldraw::ScriptEditorUI& EditorUI();
 
 		// Access the built-in lighting controls UI
 		LightingUI& LightingUI();

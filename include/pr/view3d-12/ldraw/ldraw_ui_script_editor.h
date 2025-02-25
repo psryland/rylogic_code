@@ -7,10 +7,10 @@
 #include "pr/gui/wingui.h"
 #include "pr/gui/scintilla_ctrl.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Script editor interface
-	struct LdrScriptEditorUI :pr::gui::Form
+	struct ScriptEditorUI :pr::gui::Form
 	{
 		pr::gui::ScintillaCtrl m_edit;
 		pr::gui::Button m_btn_render;
@@ -24,14 +24,14 @@ namespace pr::rdr12
 		};
 
 		// This code expects the scintilla.dll to be loaded already
-		LdrScriptEditorUI(HWND parent)
+		ScriptEditorUI(HWND parent)
 			:Form(Params<>()
 				.name("ldr-script-editor").title(L"Script Editor").wh(430, 380).start_pos(EStartPosition::CentreParent)
 				.menu({{L"&File", pr::gui::Menu(pr::gui::Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {pr::gui::MenuItem::Separator}, {L"&Close", IDCANCEL}})}})
 				.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
 				.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
 				.parent(parent).hide_on_close(true).pin_window(true).visible(false)
-				.wndclass(RegisterWndClass<LdrScriptEditorUI>()))
+				.wndclass(RegisterWndClass<ScriptEditorUI>()))
 			,m_edit      (pr::gui::ScintillaCtrl::Params<>().parent(this_).name("edit"      ).wh(Fill,Fill).margin(3,3,3,32).anchor(EAnchor::All))
 			,m_btn_close (pr::gui::Button       ::Params<>().parent(this_).name("btn-close" ).xy(-1, -1).text(L"&Close"      ).anchor(EAnchor::BottomRight))
 			,m_btn_render(pr::gui::Button       ::Params<>().parent(this_).name("btn-render").xy(+1, -1).text(L"&Render (F5)").anchor(EAnchor::BottomLeft))
@@ -62,7 +62,7 @@ namespace pr::rdr12
 		}
 
 		// An event raised when the render button is clicked
-		pr::gui::EventHandler<LdrScriptEditorUI&, std::wstring const&> Render;
+		pr::gui::EventHandler<ScriptEditorUI&, std::wstring const&> Render;
 
 		// Get/Set the utf-8 text in the dialog
 		virtual std::string Text() const

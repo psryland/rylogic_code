@@ -8,6 +8,7 @@
 #include "pr/script/script_core.h"
 #include "pr/script/filter.h"
 #include "pr/script/includes.h"
+#include "pr/script/macros.h"
 #include "pr/script/fail_policy.h"
 
 namespace pr::script

@@ -73,11 +73,12 @@
 
 	<!-- Files -->
 	<ItemGroup>
-		<ClCompile Include="src\ldraw\ldr_gizmo.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object_templates.cpp" />
-		<ClCompile Include="src\ldraw\ldr_sources.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_object.cpp" />
+    <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp" />
+    <ClCompile Include="src\ldraw\ldr_object_templates.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_sources.cpp" />
 		<ClCompile Include="src\lighting\light.cpp" />
 		<ClCompile Include="src\main\renderer.cpp" />
 		<ClCompile Include="src\main\window.cpp" />
@@ -164,13 +165,13 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\forward.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\instance\instance.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_gizmo.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_object.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_sources.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_object_manager.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_script_editor.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_sources.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_angle_tool.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_measure_tool.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_object_manager.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_script_editor.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h" />
@@ -243,6 +244,8 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />

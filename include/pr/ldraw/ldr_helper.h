@@ -33,6 +33,7 @@ namespace pr::ldr
 	using TStr = std::string;
 	using TData = byte_data<4>;
 	using Scope = pr::Scope<void>;
+	namespace ldraw = pr::rdr12::ldraw;
 
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
@@ -373,7 +374,7 @@ namespace pr::ldr
 	}
 	inline TData& Append(TData& data, Name name)
 	{
-		ldraw::Write(data, pr::ldraw::EKeyword::Name, name.m_name);
+		ldraw::Write(data, ldraw::EKeyword::Name, name.m_name);
 		return data;
 	}
 	inline TData& Append(TData& data, Col colour)
@@ -1108,7 +1109,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Point, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_size, m_style, m_depth);
@@ -1222,7 +1222,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, m_strip ? ldraw::EKeyword::LineStrip : ldraw::EKeyword::Line, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_width);
@@ -1282,7 +1281,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				assert((m_lines.size() & 1) == 0);
 				ldraw::Write(data, ldraw::EKeyword::LineD, [&](auto&)
 				{
@@ -1337,7 +1335,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Triangle, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1398,7 +1395,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Plane, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1433,7 +1429,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Circle, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1482,7 +1477,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Sphere, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1540,7 +1534,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1579,7 +1572,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Cylinder, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);
@@ -1645,7 +1637,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Spline, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour, m_width);
@@ -1761,7 +1752,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				if (m_ortho)
 				{
 					ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
@@ -1804,7 +1794,6 @@ namespace pr::ldr
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				using namespace pr::ldraw;
 				ldraw::Write(data, ldraw::EKeyword::Group, [&](auto&)
 				{
 					ldr::Append(data, m_name, m_colour);

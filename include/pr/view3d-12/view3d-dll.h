@@ -26,19 +26,23 @@ namespace pr
 	{
 		struct Context;
 		struct V3dWindow;
-		struct LdrObject;
-		struct LdrGizmo;
 		struct Texture2D;
 		struct TextureCube;
 		struct Sampler;
 		struct Shader;
+
+		namespace ldraw
+		{
+			struct LdrObject;
+			struct LdrGizmo;
+		}
 	}
 
 	namespace view3d
 	{
 		using DllHandle = unsigned char const*;
-		using Object = pr::rdr12::LdrObject*;
-		using Gizmo = pr::rdr12::LdrGizmo*;
+		using Object = pr::rdr12::ldraw::LdrObject*;
+		using Gizmo = pr::rdr12::ldraw::LdrGizmo*;
 		using Texture = pr::rdr12::Texture2D*;
 		using CubeMap = pr::rdr12::TextureCube*;
 		using Sampler = pr::rdr12::Sampler*;
@@ -1319,8 +1323,8 @@ namespace pr::view3d
 		};
 	}
 
-	using ObjectPtr  = std::unique_ptr<pr::rdr12::LdrObject, impl::Deleter>;
-	using GizmoPtr   = std::unique_ptr<pr::rdr12::LdrGizmo, impl::Deleter>;
+	using ObjectPtr  = std::unique_ptr<pr::rdr12::ldraw::LdrObject, impl::Deleter>;
+	using GizmoPtr   = std::unique_ptr<pr::rdr12::ldraw::LdrGizmo, impl::Deleter>;
 	using TexturePtr = std::unique_ptr<pr::rdr12::Texture2D, impl::Deleter>;
 	using CubeMapPtr = std::unique_ptr<pr::rdr12::TextureCube, impl::Deleter>;
 	using SamplerPtr = std::unique_ptr<pr::rdr12::Sampler, impl::Deleter>;

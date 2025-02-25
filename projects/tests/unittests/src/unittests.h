@@ -141,6 +141,7 @@
 #include "pr\filesys\file_snapshot.h"
 #include "pr\filesys\file_time.h"
 #include "pr\filesys\lock_file.h"
+#include "pr\filesys\resolve_path.h"
 #include "pr\geometry\3ds.h"
 #include "pr\geometry\closest_point.h"
 #include "pr\geometry\common.h"
