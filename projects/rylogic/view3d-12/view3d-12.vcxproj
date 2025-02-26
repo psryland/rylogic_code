@@ -75,6 +75,8 @@
 	<ItemGroup>
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
     <ClCompile Include="src\ldraw\ldraw_object.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_serialiser_binary.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
     <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp" />
     <ClCompile Include="src\ldraw\ldr_object_templates.cpp" />
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
@@ -246,6 +248,8 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />

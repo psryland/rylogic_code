@@ -252,6 +252,12 @@
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
+    <ClCompile Include="src\ldraw\ldraw_serialiser_binary.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h">
@@ -645,6 +651,12 @@
       <Filter>src\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
