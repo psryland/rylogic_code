@@ -16,8 +16,11 @@ namespace pr::unittests::your::namespace
 #endif
 */
 
-// For faster build times, comment out the 'all headers' include
-// and just include the header you care about
+// Notes:
+//  - For faster build times, comment out the "all-headers" include and just include the header you care about
+//  - Avoid including extra stuff in the #if PR_UNITTESTS blocks. For standard headers add them to 'unittests.h'
+//    For pr headers, consider putting the unit test in a different file to avoid additional dependencies
+
 #include "pr/common/unittests.h"
 //#include "src/unittests.h" // all tests
 #include "pr/common/flags_enum.h" // This is often needed for single files
@@ -32,6 +35,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/common/hash.h"
 //#include "pr/common/log.h"
 //#include "pr/common/tweakables.h"
+#include "pr/common/memstream.h"
 //#include "pr/container/bit_array.h"
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"

@@ -27,6 +27,7 @@ namespace pr::unittests
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <filesystem>
 #include <algorithm>

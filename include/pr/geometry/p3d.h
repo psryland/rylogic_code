@@ -2535,9 +2535,7 @@ namespace pr::geometry::p3d
 }
 
 #if PR_UNITTESTS
-#include <fstream>
 #include "pr/common/unittests.h"
-#include "pr/view3d/renderer.h"
 namespace pr::geometry
 {
 	PRUnitTest(P3dTests)

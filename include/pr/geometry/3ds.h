@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-
 #include <string>
 #include <iostream>
 #include <deque>
@@ -752,9 +751,7 @@ namespace pr::geometry::max_3ds
 }
 
 #if PR_UNITTESTS
-#include <fstream>
 #include "pr/common/unittests.h"
-#include "pr/view3d/renderer.h"
 namespace pr::geometry
 {
 	PRUnitTest(Geometry3dsTests)

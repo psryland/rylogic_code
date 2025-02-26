@@ -125,6 +125,7 @@ namespace pr
 		static_assert(sizeof(char_type) == sizeof(uint8_t));
 
 		// Callback signature. Returns the number of characters successfully read/written.
+		// Note: 'ofs' is in units of 'char_type', *not* 'Elem'.
 		using write_t = std::streamsize (*)(void*, off_type ofs, char_type const* bytes, std::streamsize count);
 		using read_t  = std::streamsize (*)(void*, off_type ofs, char_type* bytes, std::streamsize count);
 
@@ -195,11 +196,11 @@ namespace pr
 
 			// If 'c' matches the previous char, then put back succeeds
 			if (char_type ch; m_read(m_ctx, pos_type(m_gpos - 1), &ch, 1) == 1 && traits_type::to_int_type(ch) == c)
-				return m_gpos -= 1, ch;
+				return m_gpos -= 1, traits_type::to_int_type(ch);
 			
 			// If overwriting the input sequence with 'c' succeeds, then put back succeeds
 			if (char_type ch = traits_type::to_char_type(c); m_write != nullptr && m_write(m_ctx, pos_type(m_gpos - 1), &ch, 1) == 1)
-				return m_gpos -= 1, ch; 
+				return m_gpos -= 1, traits_type::to_int_type(ch); 
 			
 			return traits_type::eof();
 		}
@@ -242,7 +243,7 @@ namespace pr
 			if (which & std::ios_base::out)
 			{
 				// Fill to the required size
-				for (; m_ppos < pos && overflow(0) != traits_type::eof();) {}
+				for (; m_end < pos && overflow(0) != traits_type::eof(); ++m_end) {}
 				m_ppos = clamp(pos, 0, m_end);;
 				return pos_type(m_ppos);
 			}
@@ -273,46 +274,49 @@ namespace pr
 		}
 	};
 
-	// An istream wrapper around an immutable buffer
+	// An 'istream' wrapper around an immutable buffer. Use 'Elem == char' for 'std::isteam'
 	template<typename Elem = uint8_t>
 	struct mem_istream :public std::basic_istream<Elem>
 	{
 		using base_t = typename std::basic_istream<Elem>;
 		using char_type = typename base_t::char_type;
 
-		view_streambuf<Elem> buf;
+		view_streambuf<Elem> m_buf;
+
 		mem_istream(void const* data, std::size_t size)
-			:base_t(&buf)
-			,buf(data, size)
+			:base_t(&m_buf)
+			,m_buf(data, size)
 		{}
 
 		mem_istream& read(char_type* src, std::streamsize count)
 		{
+			// Don't convert to std::span, the api needs to match 'std::istream'
 			auto& base = *static_cast<base_t*>(this);
 			base.read(reinterpret_cast<char_type*>(src), count);
 			return *this;
 		}
 	};
 
-	// An ostream wrapper around a user provided container
-	template <typename Container = std::vector<uint8_t>>
-	struct mem_ostream :public std::basic_ostream<uint8_t>
+	// An 'ostream' wrapper around a user provided container.  Use 'Elem == char' for 'std::osteam'
+	template <typename Elem = uint8_t, typename Container = std::vector<Elem>>
+	struct mem_ostream :public std::basic_ostream<Elem>
 	{
-		using base_t = typename std::basic_ostream<uint8_t>;
+		using base_t = typename std::basic_ostream<Elem>;
 		using value_type = typename Container::value_type;
 		using char_type = typename base_t::char_type;
 
-		callback_streambuf<char_type> buf;
-		Container& data;
+		callback_streambuf<char_type> m_buf;
+		Container& m_data;
 
 		mem_ostream(Container& data)
-			:base_t(&buf)
-			,buf(nullptr, write, This())
-			,data(data)
+			: base_t(&m_buf)
+			, m_buf(nullptr, write, This())
+			, m_data(data)
 		{}
 
 		mem_ostream& write(char_type const* src, std::streamsize count)
 		{
+			// Don't convert to std::span, the api needs to match 'std::ostream'
 			auto& base = *static_cast<base_t*>(this);
 			base.write(reinterpret_cast<char_type const*>(src), count);
 			return *this;
@@ -333,8 +337,13 @@ namespace pr
 		static std::streamsize write(void* ctx, std::streambuf::off_type ofs, char_type const* bytes, std::streamsize count)
 		{
 			auto& me = *static_cast<mem_ostream*>(ctx);
-			me.data.resize(std::max(me.data.size(), size_to_count(size_t(ofs + count))));
-			std::memcpy(reinterpret_cast<char_type*>(me.data.data()) + ofs, bytes, static_cast<size_t>(count));
+
+			// Make space in 'm_data'
+			auto required = size_to_count(static_cast<size_t>(ofs + count));
+			auto new_count = std::max(me.m_data.size(), required);
+			me.m_data.resize(new_count);
+
+			std::memcpy(reinterpret_cast<char_type*>(me.m_data.data()) + ofs, bytes, static_cast<size_t>(count));
 			return count;
 		}
 	};
@@ -346,54 +355,61 @@ namespace pr::common
 {
 	PRUnitTest(MemStreamTests)
 	{
-		{ // mem_istream
+		{ //' mem_istream
 			int data[] = { 1, 2, 3 };
 			pr::mem_istream<char> strm(data, sizeof(data));
-			PR_CHECK(!!strm, true);
+			PR_EXPECT(!!strm);
 
 			int out[3];
 			strm.read((char*)out, sizeof(int) * 3);
-			PR_CHECK(memcmp(data, out, sizeof(int) * 3) == 0, true);
+			PR_EXPECT(memcmp(data, out, sizeof(int) * 3) == 0);
 
 			strm.seekg(0);
-			PR_CHECK(!!strm, true);
+			PR_EXPECT(!!strm);
 
 			strm.read((char*)out, sizeof(int) * 3);
-			PR_CHECK(memcmp(data, out, sizeof(int) * 3) == 0, true);
+			PR_EXPECT(memcmp(data, out, sizeof(int) * 3) == 0);
 
 			size_t pos = (size_t)strm.tellg();
-			PR_CHECK(pos, sizeof(int) * 3);
+			PR_EXPECT(pos == sizeof(int) * 3);
 
 			strm.seekg(4);
 			strm.read((char*)out, sizeof(int) * 1);
-			PR_CHECK(memcmp(&data[1], out, sizeof(int) * 1) == 0, true);
+			PR_EXPECT(memcmp(&data[1], out, sizeof(int) * 1) == 0);
 
 			pos = (size_t)strm.tellg();
-			PR_CHECK(pos, sizeof(int) * 2);
+			PR_EXPECT(pos == sizeof(int) * 2);
 		}
-		{ // mem_ostream
+		{ //' mem_ostream
 			uint8_t src[] = { 1,1,1,1, 2,2,2,2, 3,3,3,3, 4,4,4,4 };
 			int expected[] = { 0x01010101, 0x02020202, 0x03030303, 0x04040404 };
 
 			std::vector<int> data;
 			pr::mem_ostream strm(data);
 		
-			strm.write(&src[0], 12);
-			PR_CHECK(data.size(), 3U);
-			PR_CHECK(memcmp(data.data(), &expected[0], sizeof(int) * 3) == 0, true);
+			strm.write(&src[0], 8);
+			PR_EXPECT(data.size() == 2U);
+			PR_EXPECT(memcmp(data.data(), &expected[0], sizeof(int) * 2) == 0);
+
+			strm.write(&src[8], 4);
+			PR_EXPECT(data.size() == 3U);
+			PR_EXPECT(memcmp(data.data(), &expected[0], sizeof(int) * 3) == 0);
 
 			strm.seekp(0);
-			strm.write(&src[0] + 4, 12);
-			PR_CHECK(data.size(), 3U);
-			PR_CHECK(memcmp(data.data(), &expected[1], sizeof(int) * 3) == 0, true);
+			strm.write(&src[4], 12);
+			PR_EXPECT(data.size() == 3U);
+			PR_EXPECT(memcmp(data.data(), &expected[1], sizeof(int) * 3) == 0);
 
+			strm.seekp(8);
+			strm.write(&src[8], 8);
 			strm.seekp(0);
-			strm.write(&src[0], 16);
-			PR_CHECK(data.size(), 4U);
-			PR_CHECK(memcmp(data.data(), &expected[0], sizeof(int) * 4) == 0, true);
+			strm.write(&src[0], 8);
+			PR_EXPECT(data.size() == 4U);
+			PR_EXPECT(memcmp(data.data(), &expected[0], sizeof(int) * 4) == 0);
 
+			strm.seekp(16);
 			size_t pos = (size_t)strm.tellp();
-			PR_CHECK(pos, 16U);
+			PR_EXPECT(pos == 16U);
 		}
 	}
 }
