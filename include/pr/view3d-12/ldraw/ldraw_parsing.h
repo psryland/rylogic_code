@@ -12,6 +12,7 @@ namespace pr::rdr12::ldraw
 	// Error codes for parsing failures
 	enum class EParseError
 	{
+		UnknownError,
 		UnknownKeyword,
 		NotFound,
 		InvalidValue,
@@ -23,6 +24,7 @@ namespace pr::rdr12::ldraw
 	{
 		switch (code)
 		{
+			case EParseError::UnknownError: return "Unknown error";
 			case EParseError::UnknownKeyword: return "Unknown Keyword";
 			case EParseError::NotFound: return "Item not found";
 			case EParseError::InvalidValue: return "Value is invalid";
@@ -48,6 +50,33 @@ namespace pr::rdr12::ldraw
 		int m_line;
 	};
 
+	// The results of parsing ldr script
+	struct ParseResult
+	{
+		using ModelLookup = std::unordered_map<size_t, ModelPtr>;
+
+		ObjectCont  m_objects;    // Reference to the objects container to fill
+		ModelLookup m_models;     // A lookup map for models based on hashed object name
+		Camera      m_cam;        // Camera description has been read
+		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
+		bool        m_wireframe;  // True if '*Wireframe' was read in the script
+
+		ParseResult()
+			: m_objects()
+			, m_models()
+			, m_cam()
+			, m_cam_fields()
+			, m_wireframe()
+		{
+		}
+	};
+
+	// Callback function type used during script parsing
+	// 'bool function(Guid context_id, ParseResult& out, Location const& loc, bool complete)'
+	// Returns 'true' to continue parsing, false to abort parsing.
+	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>;
+	using ReportErrorCB = StaticCB<void, EParseError, Location const&, std::string_view>;
+
 	// Interface for parsing Ldraw script data
 	struct IReader
 	{
@@ -56,9 +85,25 @@ namespace pr::rdr12::ldraw
 		// - Each section has a keyword identifier
 		// - Sections either contain data, or nested sections, not both
 		// - FindKeyword is not supported because this requires random access.
-		//   The reader is intended to handled streamed data.
+		//   The reader is intended to handle streamed data.
+		// - Don't assume that 'ReportError' throws an exception.
 
+		IReader(ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
+			: ReportError(report_error_cb)
+			, Progress(progress_cb)
+			, PathResolver(resolver)
+		{
+		}
 		virtual ~IReader() = default;
+
+		// Error handling
+		ReportErrorCB ReportError;
+
+		// Progress handling
+		ParseProgressCB Progress;
+
+		// Path resolver
+		IPathResolver const& PathResolver;
 
 		// Get/Set the current location in the source
 		virtual Location const& Loc() const = 0;
@@ -69,8 +114,7 @@ namespace pr::rdr12::ldraw
 		// Leave the current nested section
 		virtual void PopSection() = 0;
 
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
+		// Get the next keyword within the current section. Returns false if at the end of the section
 		virtual bool NextKeyword(EKeyword& kw) = 0;
 
 		// True when the current position has reached the end of the current section
@@ -91,7 +135,8 @@ namespace pr::rdr12::ldraw
 			auto len = 0ULL;
 			static auto IsIdentifier = [](char c, bool first) { return c == '_' || (first ? isalpha(c) : isalnum(c)); };
 			for (; len != s.size() && IsIdentifier(s[len], len == 0); ++len) {}
-			return len == s.size() ? s : throw std::runtime_error("Invalid characters in identifier");
+			if (len != s.size()) ReportError(EParseError::InvalidValue, Loc(), "Invalid characters in identifier");
+			return s;
 		}
 
 		// Read a string from the current section
@@ -160,11 +205,6 @@ namespace pr::rdr12::ldraw
 		// Reads a C-style string
 		string32 CString(bool has_length = false);
 
-		// Open a byte stream corresponding to 'path'
-		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) = 0;
-
-	protected:
-
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
@@ -177,33 +217,6 @@ namespace pr::rdr12::ldraw
 		virtual double RealImpl(int byte_count) = 0;
 	};
 
-	// The results of parsing ldr script
-	struct ParseResult
-	{
-		using ModelLookup = std::unordered_map<size_t, ModelPtr>;
-
-		ObjectCont  m_objects;    // Reference to the objects container to fill
-		ModelLookup m_models;     // A lookup map for models based on hashed object name
-		Camera      m_cam;        // Camera description has been read
-		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
-		bool        m_wireframe;  // True if '*Wireframe' was read in the script
-
-		ParseResult()
-			: m_objects()
-			, m_models()
-			, m_cam()
-			, m_cam_fields()
-			, m_wireframe()
-		{
-		}
-	};
-
-	// Callback function type used during script parsing
-	// 'bool function(Guid context_id, ParseResult& out, Location const& loc, bool complete)'
-	// Returns 'true' to continue parsing, false to abort parsing.
-	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>;
-	using ReportErrorCB = StaticCB<void, EParseError, Location const&, std::string_view>;
-
 	// Parse the ldr script in 'reader' adding the results to 'out'.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
@@ -211,11 +224,9 @@ namespace pr::rdr12::ldraw
 	ParseResult Parse(
 		Renderer& rdr,                           // The renderer to create models for
 		IReader& reader,                         // The source of the script
-		Guid const& context_id = GuidZero,       // The context id to assign to each created object
-		ReportErrorCB report_error_cb = nullptr, // Error reporting
-		ParseProgressCB progress_cb = nullptr);  // Progress callback
+		Guid const& context_id = GuidZero);      // The context id to assign to each created object
 
-#if 1 // Todo - provide implementations of 'IReader' to make these functions unnecessary
+#if 0 // Todo - provide implementations of 'IReader' to make these functions unnecessary
 
 	inline ParseResult Parse(
 		Renderer& rdr,                           // The renderer to create models for
@@ -308,9 +319,9 @@ namespace pr::rdr12::ldraw
 	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx);
 
 	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags, ReportErrorCB report_error_cb, ParseProgressCB progress_cb);
+	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags);
 
-#if 1
+#if 0
 	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
 	inline void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags = EUpdateObject::All)
 	{

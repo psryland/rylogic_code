@@ -7,6 +7,8 @@
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/main/renderer.h"
 
@@ -15,12 +17,12 @@ namespace pr::rdr12::ldraw
 	// Sources *************************************
 	
 	ScriptSources::Source::Source()
-		:Source(GuidZero, "", EEncoding::auto_detect, Includes())
+		:Source(GuidZero, "", EEncoding::auto_detect, PathResolver::Instance())
 	{}
 	ScriptSources::Source::Source(Guid const& context_id)
-		:Source(context_id, "", EEncoding::auto_detect, Includes())
+		:Source(context_id, "", EEncoding::auto_detect, PathResolver::Instance())
 	{}
-	ScriptSources::Source::Source(Guid const& context_id, filepath_t const& filepath, EEncoding enc, Includes const& includes)
+	ScriptSources::Source::Source(Guid const& context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes)
 		:m_context_id(context_id)
 		,m_filepath(filepath.lexically_normal())
 		,m_encoding(enc)
@@ -38,14 +40,13 @@ namespace pr::rdr12::ldraw
 
 	// ScriptSources *******************************
 
-	ScriptSources::ScriptSources(Renderer& rdr, EmbeddedCodeFactory emb_factory)
-		:m_srcs()
-		,m_gizmos()
-		,m_rdr(&rdr)
-		,m_emb_factory(emb_factory)
-		,m_loading()
-		,m_watcher()
-		,m_main_thread_id(std::this_thread::get_id())
+	ScriptSources::ScriptSources(Renderer& rdr)
+		: m_srcs()
+		, m_gizmos()
+		, m_rdr(&rdr)
+		, m_loading()
+		, m_watcher()
+		, m_main_thread_id(std::this_thread::get_id())
 	{
 		// Handle notification of changed files from the watcher.
 		// 'OnFilesChanged' is raised before any of the 'FileWatch_OnFileChanged'
@@ -79,7 +80,7 @@ namespace pr::rdr12::ldraw
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
-		// Make a copy of the Guids removed
+		// Make a copy of the GUIDs removed
 		GuidCont guids;
 		for (auto& src : m_srcs)
 			guids.push_back(src.first);
@@ -249,17 +250,18 @@ namespace pr::rdr12::ldraw
 	// Parse file containing ldr script.
 	// This function can be called from any thread and may be called concurrently by multiple threads.
 	// Returns the GUID of the context that the objects were added to.
-	Guid ScriptSources::AddFile(std::filesystem::path script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add) // worker thread context
+	Guid ScriptSources::AddFile(std::filesystem::path script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add) // worker thread context
 	{
 		// Note: when called from a worker thread, this function returns after objects have
 		// been created, but before they've been added to the main 'm_srcs' collection.
 		// The 'on_add' callback function should be used as a continuation function.
-		using namespace pr::script;
 
 		// Create a source object use for refreshing objects from the source
 		auto context = context_id ? *context_id : GenerateGUID();
 		auto filepath = filepath_t(script).lexically_normal();
-		auto extn = filepath.extension();
+		auto extn = filepath.extension().string();
+
+		// A script source
 		Source source(context, filepath, enc, includes);
 
 		// Monitor the files that get included so we can watch them for changes
@@ -267,20 +269,10 @@ namespace pr::rdr12::ldraw
 		source.m_includes.FileOpened = [&](auto&, filepath_t const& fp)
 		{
 			// Add the directory of the included file to the paths
-			source.m_includes.AddSearchPath(fp.parent_path());
+			source.m_includes.LocalDir(fp.parent_path());
 			filepaths.push_back(fp.lexically_normal());
 		};
 		source.m_includes.FileOpened(source.m_includes, filepath);
-
-		// Callback function for 'Parse'
-		auto AddFileProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>(
-			[](void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete) -> bool
-			{
-				auto& ss = *static_cast<ScriptSources*>(ctx);
-				AddFileProgressEventArgs args(context_id, out, loc, complete);
-				ss.OnAddFileProgress(ss, args);
-				return !args.m_cancel;
-			}, this);
 
 		// Parse the contents of the script
 		ParseResult out;
@@ -288,47 +280,77 @@ namespace pr::rdr12::ldraw
 		#pragma region Parse
 		try
 		{
-			if (str::EqualI(extn.c_str(), ".p3d") ||
-				str::EqualI(extn.c_str(), ".stl") ||
-				str::EqualI(extn.c_str(), ".3ds"))
-			{
-				// P3D = My custom binary model file format
-				// STL = "StereoLithography" model files (binary and text)
-				StringSrc src(FmtS(L"*Model {\"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
-				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				out = Parse(*m_rdr, reader, context, AddFileProgressCB);
-			}
-			else if (str::EqualI(extn.c_str(), ".csv"))
-			{
-				// CSV data, create a chart to graph the data
-				StringSrc src(FmtS(L"*Chart {3 #include \"%s\"}", filepath.c_str()), StringSrc::EFlags::BufferLocally);
-				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				out = Parse(*m_rdr, reader, context, AddFileProgressCB);
-			}
-			else if (str::EqualI(extn.c_str(), ".lua"))
-			{
-				// Lua script that generates ldr script
-				//m_lua_src.Add(fpath.c_str());
-			}
-			else // Assume an ldr script file
-			{
-				// Use a lock file to synchronise access to 'filepath'
-				filesys::LockFile lock(filepath, 10, 5000);
+			// Callback functions for 'Parse'
+			static StaticCB<void, EParseError, Location const&, std::string_view> ReportErrorCB = {
+				[](void* ctx, EParseError err, Location const& loc, std::string_view msg) -> void
+				{
+					auto& errors = *static_cast<ErrorCont*>(ctx);
+					ParseErrorEventArgs args(msg, err, loc);
+					errors.push_back(std::move(args));
+				}, &errors };
+			static StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool> AddFileProgressCB = {
+				[](void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete) -> bool
+				{
+					auto& ss = *static_cast<ScriptSources*>(ctx);
+					AddFileProgressEventArgs args(context_id, out, loc, complete);
+					ss.OnAddFileProgress(ss, args);
+					return !args.m_cancel;
+				}, this };
 
-				// Parse the ldr script file
-				FileSrc src(filepath, 0, enc);
-				Reader reader(src, false, &source.m_includes, m_emb_factory);
-				out = Parse(*m_rdr, reader, context, AddFileProgressCB);
+			// Handle based on file extension
+			switch (HashI(extn.c_str()))
+			{
+				case HashI(".ldr"):
+				{
+					// LDR = Text ldr script file
+					filesys::LockFile lock(filepath, 10, 5000);
+
+					// Parse the ldr script file
+					std::ifstream src(filepath);
+					ldraw::TextReader reader(src, enc, filepath, ReportErrorCB, AddFileProgressCB, includes);
+					out = Parse(rdr(), reader, context);
+					break;
+				}
+				case HashI(".bdr"):
+				{
+					// BDR = Binary ldr script file
+					filesys::LockFile lock(filepath, 10, 5000);
+
+					// Parse the ldr script file
+					std::ifstream src(filepath, std::ios::binary);
+					ldraw::BinaryReader reader(src, filepath, ReportErrorCB, AddFileProgressCB, includes);
+					out = Parse(rdr(), reader, context);
+					break;
+				}
+				case HashI(".p3d"):
+				case HashI(".stl"):
+				case HashI(".3ds"):
+				{
+					// P3D = My custom binary model file format
+					// STL = "StereoLithography" model files (binary and text)
+					std::istringstream src(std::format("*Model {{\"{}\"}}", filepath.string()));
+					ldraw::TextReader reader(src, EEncoding::utf8, {}, ReportErrorCB, AddFileProgressCB, includes);
+					out = Parse(rdr(), reader, context);
+					break;
+				}
+				case HashI(".csv"):
+				{
+					// CSV data, create a chart to graph the data
+					std::istringstream src(std::format("*Chart {{3 #include \"{}\"}}", filepath.string()));
+					ldraw::TextReader reader(src, EEncoding::utf8, {}, ReportErrorCB, AddFileProgressCB, includes);
+					out = Parse(rdr(), reader, context);
+					break;
+				}
+				default:
+				{
+					// Unknown file type
+					throw std::runtime_error(std::format("Unknown file type: {}", extn));
+				}
 			}
-		}
-		catch (ScriptException const& ex)
-		{
-			ParseErrorEventArgs args(ex);
-			errors.push_back(std::move(args));
 		}
 		catch (std::exception const& ex)
 		{
-			ParseErrorEventArgs args(Widen(ex.what()), script::EResult::Failed, Loc());
+			ParseErrorEventArgs args(ex.what(), ldraw::EParseError::UnknownError, {});
 			errors.push_back(std::move(args));
 		}
 		#pragma endregion
@@ -342,7 +364,7 @@ namespace pr::rdr12::ldraw
 	// This function can be called from any thread and may be called concurrently by multiple threads.
 	// Returns the GUID of the context that the objects were added to.
 	template <typename Char>
-	Guid ScriptSources::AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add) // worker thread context
+	Guid ScriptSources::AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add) // worker thread context
 	{
 		// Note: when called from a worker thread, this function returns after objects have
 		// been created, but before they've been added to the main 'm_srcs' collection.
@@ -398,8 +420,8 @@ namespace pr::rdr12::ldraw
 		MergeResults(std::move(source), std::move(out), std::move(filepaths), std::move(errors), context, reason, on_add);
 		return context;
 	}
-	template Guid ScriptSources::AddString<wchar_t>(std::wstring_view script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
-	template Guid ScriptSources::AddString<char>(std::string_view script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
+	template Guid ScriptSources::AddString<wchar_t>(std::wstring_view script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add);
+	template Guid ScriptSources::AddString<char>(std::string_view script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add);
 
 	// Merge the results
 	void ScriptSources::MergeResults(Source&& source, ParseResult&& out, PathsCont&& filepaths, ErrorCont&& errors, Guid context, EReason reason, OnAddCB on_add) noexcept // main thread context
@@ -407,7 +429,7 @@ namespace pr::rdr12::ldraw
 		// Marshal to the main thread if this is a worker thread context
 		if (std::this_thread::get_id() != m_main_thread_id)
 		{
-			// There is no way to declare std::function as noexcept, so as a workaround, make it a captured variable.
+			// There is no way to declare std::function as 'noexcept', so as a workaround, make it a captured variable.
 			auto merge = [this, on_add](Source&& source, ParseResult&& out, PathsCont&& filepaths, ErrorCont&& errors, Guid context, EReason reason) mutable noexcept
 			{
 				try { MergeResults(std::move(source), std::move(out), std::move(filepaths), std::move(errors), context, reason, on_add); }

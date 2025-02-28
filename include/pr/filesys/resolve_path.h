@@ -66,17 +66,24 @@ namespace pr::filesys
 		}
 
 		// Resolve an include into a full path.
-		virtual std::filesystem::path ResolvePath(std::filesystem::path const& include, EFlags flags) = 0;
+		virtual std::filesystem::path ResolvePath(std::filesystem::path const& include, EFlags flags) const = 0;
 
 		// Open 'path' as a binary stream
-		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path, EFlags flags) = 0;
+		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path, EFlags flags) const = 0;
 	};
 
 	// A path resolver that doesn't handle any paths.
 	struct NoIncludes :IPathResolver
 	{
+		// Const default instance
+		static NoIncludes const& Instance()
+		{
+			static NoIncludes s_instance;
+			return s_instance;
+		}
+
 		// Resolve an include into a full path
-		std::filesystem::path ResolvePath(std::filesystem::path const&, EFlags flags) override
+		std::filesystem::path ResolvePath(std::filesystem::path const&, EFlags flags) const override
 		{
 			// Ignore if missing includes flagged
 			if (AllSet(flags, EFlags::IgnoreMissing))
@@ -86,7 +93,7 @@ namespace pr::filesys
 		}
 
 		// Open 'include' as an ASCII stream
-		std::unique_ptr<std::istream> OpenStream(std::filesystem::path const&, EFlags flags) override
+		std::unique_ptr<std::istream> OpenStream(std::filesystem::path const&, EFlags flags) const override
 		{
 			// Ignore if missing includes flagged
 			if (AllSet(flags, EFlags::IgnoreMissing))
@@ -99,9 +106,22 @@ namespace pr::filesys
 	// A path resolver that tries to open data from resources, search paths, or a string table
 	struct PathResolver :IPathResolver
 	{
-		using paths_t = std::vector<std::filesystem::path>;
+		// Notes:
+		//  - Opening a file often means the LocalDir is set to the directory of the file.
+		//    Callers should do this via a non-const reference to this, rather than all the resolve
+		//    methods being non-const. Changing 'LocalDir' could cause race conditions, so the caller
+		//    needs to manage changing it.
+		using path_t = std::filesystem::path;
+		using paths_t = std::vector<path_t>;
 		using modules_t = std::vector<HMODULE>;
 		using strtable_t = std::unordered_map<std::string, std::string>;
+
+		// Const default instance
+		static PathResolver const& Instance()
+		{
+			static PathResolver s_instance;
+			return s_instance;
+		}
 
 	private:
 
@@ -118,7 +138,7 @@ namespace pr::filesys
 		strtable_t m_strtab;
 
 		// The current 'local' directory
-		std::filesystem::path m_local_dir;
+		path_t m_local_dir;
 
 	public:
 
@@ -153,7 +173,7 @@ namespace pr::filesys
 		PathResolver& operator=(PathResolver const&) = default;
 
 		// Raised whenever a file is opened
-		EventHandler<PathResolver&, std::filesystem::path const&, true> FileOpened;
+		EventHandler<PathResolver const&, std::filesystem::path const&, true> FileOpened;
 
 		// Get/Set the locations to look for includes
 		ESources Sources() const
@@ -252,7 +272,7 @@ namespace pr::filesys
 		}
 
 		// Resolve an include into a full path. Use 'EFlags::IncludeLocalDir' for (#include "file" vs. #include <file>).
-		std::filesystem::path ResolvePath(std::filesystem::path const& include, EFlags flags) override
+		std::filesystem::path ResolvePath(std::filesystem::path const& include, EFlags flags) const override
 		{
 			// Search files regardless of 'm_types' since this function is specifically for resolving filepaths
 			std::filesystem::path fullpath;
@@ -273,7 +293,7 @@ namespace pr::filesys
 		}
 
 		// Open 'path' as a binary stream
-		std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& include, EFlags flags) override
+		std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& include, EFlags flags) const override
 		{
 			// Try file includes
 			std::filesystem::path fullpath;
@@ -295,11 +315,11 @@ namespace pr::filesys
 			}
 
 			// Try the string table
-			strtable_t* strtab;
+			strtable_t const* strtab;
 			auto tag = include.string();
 			if (AllSet(m_sources, ESources::Strings) && ResolveStringInclude(tag, strtab))
 			{
-				auto const& str = (*strtab)[tag];
+				auto const& str = (*strtab).at(tag);
 				return std::unique_ptr<std::istringstream>(new std::istringstream(str));
 			}
 
@@ -317,7 +337,7 @@ namespace pr::filesys
 	private:
 
 		// Resolve an include into a full path
-		bool ResolveFileInclude(std::filesystem::path const& include, std::filesystem::path const* local_dir, std::filesystem::path& result, paths_t& searched_paths)
+		bool ResolveFileInclude(std::filesystem::path const& include, std::filesystem::path const* local_dir, std::filesystem::path& result, paths_t& searched_paths) const 
 		{
 			result.clear();
 
@@ -332,7 +352,7 @@ namespace pr::filesys
 		}
 
 		// Resolve an include from the available modules
-		bool ResolveResourceInclude(std::wstring_view id, bool binary, HMODULE& module)
+		bool ResolveResourceInclude(std::wstring_view id, bool binary, HMODULE& module) const
 		{
 			for (auto m : m_modules)
 			{
@@ -344,7 +364,7 @@ namespace pr::filesys
 		}
 
 		// Resolve an include into a string that is in the string table
-		bool ResolveStringInclude(std::string const& tag, strtable_t*& strtab)
+		bool ResolveStringInclude(std::string const& tag, strtable_t const*& strtab) const
 		{
 			// Future version may have multiple string tables
 			strtab = m_strtab.find(tag) != std::end(m_strtab) ? &m_strtab : nullptr;

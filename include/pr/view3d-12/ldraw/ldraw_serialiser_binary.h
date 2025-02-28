@@ -157,8 +157,9 @@ namespace pr::rdr12::ldraw
 		SectionStack m_section;      // A stack of section headers. back() == top == current section.
 		mutable Location m_location; // Source location description
 
-		explicit BinaryReader(std::istream& src, std::filesystem::path src_filepath = {})
-			: m_src(src)
+		explicit BinaryReader(std::istream& src, std::filesystem::path src_filepath = {}, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
+			: IReader(report_error_cb, progress_cb, resolver)
+			, m_src(src)
 			, m_pos()
 			, m_section({ {0, std::numeric_limits<int64_t>::max()} })
 			, m_location({ src_filepath })
@@ -234,18 +235,12 @@ namespace pr::rdr12::ldraw
 			return m_pos == m_section.back().m_end;
 		}
 
-		// Open a byte stream corresponding to 'path'
-		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) override
-		{
-			(void)path;
-			throw std::runtime_error("not implemented");
-		}
-
-		using IReader::String;
-		using IReader::Int;
-		using IReader::Real;
-
-	protected:
+		//// Open a byte stream corresponding to 'path'
+		//virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) override
+		//{
+		//	(void)path;
+		//	throw std::runtime_error("not implemented");
+		//}
 		
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.

@@ -9,56 +9,65 @@
 
 namespace pr::rdr12::ldraw
 {
-	#pragma region Read
-
-#if 0 // TODO
 	struct TextReader : IReader
 	{
+		std::unique_ptr<IReader> m_impl;
+
+		TextReader(std::istream& src, EEncoding enc = EEncoding::utf8, std::filesystem::path src_filepath = {}, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance());
+		TextReader(TextReader&&) = delete;
+		TextReader(TextReader const&) = delete;
+		TextReader& operator=(TextReader&&) = delete;
+		TextReader& operator=(TextReader const&) = delete;
+
 		// Return the current location in the source
-		virtual Location Loc() const = 0;
+		virtual Location const& Loc() const override
+		{
+			return m_impl->Loc();
+		}
 
 		// Move into a nested section
-		virtual void PushSection() = 0;
+		virtual void PushSection() override
+		{
+			m_impl->PushSection();
+		}
 
 		// Leave the current nested section
-		virtual void PopSection() = 0;
+		virtual void PopSection() override
+		{
+			m_impl->PopSection();
+		}
 
 		// Get the next keyword within the current section.
 		// Returns false if at the end of the section
-		virtual bool NextKeyword(ldraw::EKeyword& kw) = 0;
-
-		// Search the current section, from the current position, for the given keyword.
-		// Does not affect the 'current' position used by 'NextKeyword'
-		virtual bool FindKeyword(ldraw::EKeyword kw) = 0;
+		virtual bool NextKeyword(ldraw::EKeyword& kw) override
+		{
+			return m_impl->NextKeyword(kw);
+		}
 
 		// True when the current position has reached the end of the current section
-		virtual bool IsSectionEnd() = 0;
+		virtual bool IsSectionEnd() override
+		{
+			return m_impl->IsSectionEnd();
+		}
 
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 String(bool has_length = false) = 0;
+		virtual string32 StringImpl(bool has_length = false) override
+		{
+			return m_impl->StringImpl(has_length);
+		}
 
 		// Read an integral value from the current section
-		virtual int64_t Int(int byte_count, int radix) = 0;
+		virtual int64_t IntImpl(int byte_count, int radix) override
+		{
+			return m_impl->IntImpl(byte_count, radix);
+		}
 
 		// Read a floating point value from the current section
-		virtual double Real(int byte_count) = 0;
-
-		// Open a byte stream corresponding to 'path'
-		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) = 0;
+		virtual double RealImpl(int byte_count) override
+		{
+			return m_impl->RealImpl(byte_count);
+		}
 	};
-#endif
-	#pragma endregion
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include "pr/maths/maths.h"
-namespace pr::rdr12::ldraw
-{
-	PRUnitTest(LDrawTextSerialiserTests)
-	{
-	}
-}
-#endif

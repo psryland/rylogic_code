@@ -1294,7 +1294,7 @@ namespace pr::rdr12::ldraw
 		virtual ~IObjectCreator() = default;
 
 		// Create an LdrObject from 'reader'
-		LdrObjectPtr Parse(IReader& reader)
+		virtual LdrObjectPtr Parse(IReader& reader)
 		{
 			// Notes:
 			//  - Not using an output iterator style callback because model
@@ -3924,12 +3924,29 @@ namespace pr::rdr12::ldraw
 		
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
+			, m_chart()
 			, m_xaxis()
 			, m_yaxis()
 			, m_xiter()
 			, m_yiter()
 			, m_line_width()
 		{}
+		LdrObjectPtr Parse(IReader& reader) override
+		{
+			// Find the ancestor chart creator
+			for (auto const* parent = m_pp.m_parent_creator; parent; parent = parent->m_pp.m_parent_creator)
+			{
+				if (parent->m_pp.m_type != ELdrObject::Chart) continue;
+				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
+				break;
+			}
+			if (!m_chart)
+			{
+				m_pp.ReportError(EParseError::NotFound, {}, "Series objects must be children of a Chart object");
+				return nullptr; // Not possible to carry on without a chart
+			}
+			return IObjectCreator::Parse(reader);
+		}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
@@ -3961,38 +3978,8 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		}
-		double GetValue(DataIter const& iter, int i, bool& in_range) const
-		{
-			// Points outside the data set are considered zeros
-			auto idx = iter.m_idx0 + i * iter.m_step;
-			auto is_within = idx.x >= 0 && idx.x < iter.m_max.x && idx.y >= 0 && idx.y < iter.m_max.y;
-			if (!is_within)
-				return 0.0;
-
-			// 'iter' still points to valid data
-			in_range |= true;
-
-			// Not jagged
-			if (m_chart->m_index.empty())
-				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
-
-			// If 'm_data' is a jagged array, get the number of values on the current row
-			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
-			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
-		}
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
-			// Find the ancestor chart creator
-			auto const* parent = m_pp.m_parent_creator;
-			for (; parent != nullptr && parent->m_pp.m_type != ELdrObject::Chart; parent = parent->m_pp.m_parent_creator) {}
-			if (parent == nullptr)
-			{
-				m_pp.ReportError(EParseError::NotFound, loc, "Series objects must be children of a Chart object");
-				return;
-			}
-			
-			m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
-			
 			// Determine the index of this series within the chart
 			int child_index = 0;
 			for (auto& child : m_pp.m_parent->m_child)
@@ -4049,6 +4036,25 @@ namespace pr::rdr12::ldraw
 					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
 			}
 		}
+		double GetValue(DataIter const& iter, int i, bool& in_range) const
+		{
+			// Points outside the data set are considered zeros
+			auto idx = iter.m_idx0 + i * iter.m_step;
+			auto is_within = idx.x >= 0 && idx.x < iter.m_max.x && idx.y >= 0 && idx.y < iter.m_max.y;
+			if (!is_within)
+				return 0.0;
+
+			// 'iter' still points to valid data
+			in_range |= true;
+
+			// Not jagged
+			if (m_chart->m_index.empty())
+				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
+
+			// If 'm_data' is a jagged array, get the number of values on the current row
+			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
+			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
+		}
 	};
 
 	// ELdrObject::Model
@@ -4075,7 +4081,8 @@ namespace pr::rdr12::ldraw
 					// Ask the include handler to turn the filepath into a stream.
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 					m_filepath = reader.String<std::filesystem::path>();
-					m_file_stream = reader.OpenStream(m_filepath);
+					m_file_stream = reader.PathResolver.OpenStream(m_filepath, IPathResolver::EFlags::Binary);
+					break;
 				}
 				default:
 				{
@@ -5124,33 +5131,23 @@ namespace pr::rdr12::ldraw
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult Parse(Renderer& rdr, IReader& reader, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, IReader& reader, Guid const& context_id)
 	{
 		ParseResult out;
 
 		// Give initial and final progress updates
 		auto exit = Scope<void>(
-			[&]
-			{
-				// Give an initial progress update
-				if (progress_cb != nullptr)
-					progress_cb(context_id, out, reader.Loc(), false);
-			},
-			[&]
-			{
-				// Give a final progress update
-				if (progress_cb != nullptr)
-					progress_cb(context_id, out, reader.Loc(), true);
-			});
+			[&] { reader.Progress(context_id, out, reader.Loc(), false); }, // Give an initial progress update
+			[&] { reader.Progress(context_id, out, reader.Loc(), true); }); // Give a final progress update
 
 		// Parse the script
 		bool cancel = false;
-		ParseParams pp(rdr, out, context_id, report_error_cb, progress_cb, cancel);
+		ParseParams pp(rdr, out, context_id, reader.ReportError, reader.Progress, cancel);
 		ParseLdrObjects(reader, pp, [&](int){});
 		return out;
 	}
 
-#if 1 // Todo - provide implementations of 'IReader' to make these functions unnecessary
+#if 0 // Todo - provide implementations of 'IReader' to make these functions unnecessary
 
 	// Parse ldr script from a text file.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
@@ -5190,7 +5187,6 @@ namespace pr::rdr12::ldraw
 	{
 		return ParseString<wchar_t>(rdr, ldr_script, context_id, report_error_cb, progress_cb);
 	}
-#endif
 
 	// Create a single LDR object from a string
 	template <typename Char>
@@ -5211,6 +5207,7 @@ namespace pr::rdr12::ldraw
 	{
 		return CreateLdr<wchar_t>(rdr, ldr_script, context_id);
 	}
+#endif
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(Renderer& rdr, ELdrObject type, MeshCreationData const& cdata, Guid const& context_id)

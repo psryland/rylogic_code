@@ -32,8 +32,6 @@ namespace pr::rdr12::ldraw
 		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 		using OnAddCB = std::function<void(Guid const&, bool)>;
 		using filepath_t = std::filesystem::path;
-		using Includes = pr::script::Includes;
-		using EmbeddedCodeFactory = pr::script::EmbeddedCodeFactory;
 
 		// Reasons for changes to the sources collection
 		enum class EReason
@@ -51,17 +49,17 @@ namespace pr::rdr12::ldraw
 		// An Ldr script source
 		struct Source
 		{
-			ObjectCont m_objects;    // Objects created by this source
-			Guid       m_context_id; // Id for the group of files that this object is part of
-			filepath_t m_filepath;   // The filepath of the source (if there is one)
-			EEncoding  m_encoding;   // The file encoding
-			Includes   m_includes;   // Include paths to use with this file
-			Camera     m_cam;        // Camera properties associated with this source
-			ECamField  m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
+			ObjectCont   m_objects;    // Objects created by this source
+			Guid         m_context_id; // Id for the group of files that this object is part of
+			filepath_t   m_filepath;   // The filepath of the source (if there is one)
+			EEncoding    m_encoding;   // The file encoding
+			PathResolver m_includes;   // Include paths to use with this file
+			Camera       m_cam;        // Camera properties associated with this source
+			ECamField    m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
 
 			Source();
 			Source(Guid const& context_id);
-			Source(Guid const& context_id, filepath_t const& filepath, EEncoding enc, Includes const& includes);
+			Source(Guid const& context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes);
 			Source(Source&&) = default;
 			Source(Source const&) = default;
 			Source& operator=(Source&&) = default;
@@ -96,24 +94,21 @@ namespace pr::rdr12::ldraw
 		struct ParseErrorEventArgs
 		{
 			// Error message
-			std::wstring m_msg;
+			std::string m_msg;
 
 			// Script error code
-			script::EResult m_result;
+			ldraw::EParseError m_code;
 
 			// The filepath of the source that contains the error (if there is one)
-			script::Loc m_loc;
+			ldraw::Location m_loc;
 
 			ParseErrorEventArgs()
-				:ParseErrorEventArgs(L"", script::EResult::Success, {})
+				:ParseErrorEventArgs({}, ldraw::EParseError::UnknownError, {})
 			{}
-			ParseErrorEventArgs(std::wstring_view msg, script::EResult result, script::Loc const& loc)
+			ParseErrorEventArgs(std::string_view msg, ldraw::EParseError code, ldraw::Location const& loc)
 				:m_msg(msg)
-				,m_result(result)
+				,m_code(code)
 				,m_loc(loc)
-			{}
-			explicit ParseErrorEventArgs(script::ScriptException const& ex)
-				:ParseErrorEventArgs(pr::Widen(ex.what()), ex.m_result, ex.m_loc)
 			{}
 		};
 
@@ -170,14 +165,13 @@ namespace pr::rdr12::ldraw
 		SourceCont          m_srcs;           // The sources of ldr script
 		GizmoCont           m_gizmos;         // The created ldr gizmos
 		Renderer*           m_rdr;            // Renderer used to create models
-		EmbeddedCodeFactory m_emb_factory;    // Embedded code handler factory
 		GuidSet             m_loading;        // File group ids in the process of being reloaded
 		FileWatch           m_watcher;        // The watcher of files
 		std::thread::id     m_main_thread_id; // The main thread id
 
 	public:
 
-		ScriptSources(Renderer& rdr, EmbeddedCodeFactory emb_factory);
+		explicit ScriptSources(Renderer& rdr);
 
 		// Renderer access
 		Renderer& rdr() const;
@@ -231,13 +225,13 @@ namespace pr::rdr12::ldraw
 		// Parse file containing ldr script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
-		Guid AddFile(std::filesystem::path script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
+		Guid AddFile(std::filesystem::path script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add);
 
 		// Parse a string containing ldr script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		template <typename Char>
-		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, Includes const& includes, OnAddCB on_add);
+		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, std::optional<Guid> context_id, PathResolver const& includes, OnAddCB on_add);
 
 		// Create a gizmo object and add it to the gizmo collection
 		LdrGizmo* CreateGizmo(EGizmoMode mode, m4x4 const& o2w);

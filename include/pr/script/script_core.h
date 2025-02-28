@@ -686,6 +686,52 @@ namespace pr::script
 		}
 	};
 
+	// An 'istream' source
+	struct StreamSrc :Src
+	{
+	protected:
+
+		// The open stream
+		std::istream& m_stream;
+
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
+		{
+			auto ch = m_stream.get();
+			return m_stream.good() ? ch : EOS;
+		}
+
+	public:
+
+		StreamSrc(std::istream& stream, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:StreamSrc(stream, 0, enc, loc)
+		{}
+		StreamSrc(std::istream& stream, std::streamsize ofs, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:StreamSrc(stream, ofs, -1, enc, loc)
+		{}
+		StreamSrc(std::istream& istream, std::streamsize ofs, int64_t limit, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:Src(enc, loc)
+			,m_stream(istream)
+		{
+			if (ofs != 0)
+				m_stream.seekg(ofs);
+			if (limit >= 0)
+				Limit(limit);
+		}
+
+		// Get/Set the read position in the file
+		int64_t Position() const
+		{
+			auto ofs = m_stream.tellg();
+			return static_cast<int64_t>(ofs);
+		}
+		int64_t Position(int64_t pos)
+		{
+			m_stream.seekg(s_cast<std::streamoff>(pos), std::ios::beg);
+			return Position();
+		}
+	};
+
 	// Call '++src' until 'pred' returns false.
 	// 'eat_initial' and 'eat_final' are the number of characters to consume before
 	// applying the predicate 'pred' and the number to consume after 'pred' returns false.
@@ -734,6 +780,20 @@ namespace pr::script
 		for (bool esc = true; *src != '\0' && (esc || *src != quote); esc = !esc && *src == '\\', ++src) {}
 		if (*src != quote)
 			throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
+
+		++src;
+	}
+	template <typename TSrc> inline void EatSection(TSrc& src, Loc const& loc = Loc())
+	{
+		// Don't call this unless 'src' is pointing at a '{'
+		for (int nest = 1; *src;)
+		{
+			if (*src == L'\"') { EatLiteral(src, loc); continue; }
+			nest += (*src == L'{') ? 1 : 0;
+			nest -= (*src == L'}') ? 1 : 0;
+			if (nest == 0) break;
+			++src;
+		}
 
 		++src;
 	}

@@ -19,6 +19,8 @@
 #include <list>
 #include <new>
 #include <memory>
+#include <sstream>
+#include <fstream>
 #include <unordered_map>
 #include <algorithm>
 #include <regex>
@@ -81,6 +83,7 @@
 #include "pr/container/vector.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/filesys/lock_file.h"
+#include "pr/filesys/resolve_path.h"
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/distance.h"
@@ -106,9 +109,6 @@
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/meta/alignment_of.h"
-#include "pr/script/byte_reader.h"
-#include "pr/script/embedded.h"
-#include "pr/script/reader.h"
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
@@ -130,6 +130,8 @@ namespace pr::rdr12
 	using HashValue32 = pr::hash::HashValue32;
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
+	using IPathResolver = pr::filesys::IPathResolver;
+	using PathResolver = pr::filesys::PathResolver;
 	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
