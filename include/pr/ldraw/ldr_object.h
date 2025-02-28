@@ -24,6 +24,10 @@
 #include "pr/view3d/instances/instance.h"
 #include "pr/view3d/models/model_generator.h"
 
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
 namespace pr::ldr
 {
 	// Forwards

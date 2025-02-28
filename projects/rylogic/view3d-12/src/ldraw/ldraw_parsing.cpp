@@ -246,21 +246,6 @@ namespace pr::rdr12::ldraw
 
 	#pragma region Parse Common Elements
 
-	// Read the name, colour, and instance flag for an object
-	ObjectAttributes ParseAttributes(IReader& reader, ParseParams& pp)
-	{
-		ObjectAttributes attr;
-		attr.m_type = pp.m_type;
-		attr.m_name = "";
-
-		if (reader.FindKeyword(EKeyword::Name))
-			attr.m_name = reader.Identifier();
-		if (reader.FindKeyword(EKeyword::Colour))
-			attr.m_colour = s_cast<uint32_t>(reader.Int(sizeof(uint32_t), 16));
-
-		return attr;
-	}
-
 	// Parse a camera description
 	void ParseCamera(IReader& reader, ParseParams& pp, ParseResult& out)
 	{
@@ -361,7 +346,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Name:
 				{
-					font.m_name = Widen(reader.String());
+					font.m_name = Widen(reader.String<string32>());
 					break;
 				}
 				case EKeyword::Size:
@@ -471,7 +456,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::FilePath:
 				{
-					tex.m_filepath = reader.String().c_str();
+					tex.m_filepath = reader.String<std::filesystem::path>();
 					break;
 				}
 				case EKeyword::O2W:
@@ -512,6 +497,11 @@ namespace pr::rdr12::ldraw
 	{
 		switch (kw)
 		{
+			case EKeyword::Name:
+			{
+				obj->m_name = reader.Identifier();
+				return true;
+			}
 			case EKeyword::O2W:
 			case EKeyword::Txfm:
 			{
@@ -678,7 +668,7 @@ namespace pr::rdr12::ldraw
 					}
 					case EKeyword::Video:
 					{
-						auto filepath = reader.String();
+						auto filepath = reader.String<string32>();
 						if (!filepath.empty())
 						{
 							//todo
@@ -1313,8 +1303,7 @@ namespace pr::rdr12::ldraw
 			auto section = reader.SectionScope();
 
 			// Read the object attributes: name, colour, instance
-			auto attr = ParseAttributes(reader, m_pp);
-			auto obj = LdrObjectPtr(new LdrObject(attr, m_pp.m_parent, m_pp.m_context_id), true);
+			auto obj = LdrObjectPtr(new LdrObject(m_pp.m_type, m_pp.m_parent, m_pp.m_context_id), true);
 
 			// Read the description of the model
 			for (EKeyword kw; !m_pp.m_cancel && reader.NextKeyword(kw);)
@@ -3791,7 +3780,7 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Source:
 				{
 					// Source is a file containing data
-					auto filepath = reader.String();
+					auto filepath = reader.String<std::filesystem::path>();
 					std::ifstream file(filepath);
 					ParseDataStream(file);
 					return true;
@@ -3947,7 +3936,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::XAxis:
 				{
-					m_xaxis = eval::Compile(reader.String());
+					m_xaxis = eval::Compile(reader.String<string32>());
 					for (auto& name : m_xaxis.m_arg_names)
 						m_xiter.push_back(DataIter{name, m_chart->m_dim});
 					
@@ -3955,7 +3944,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::YAxis:
 				{
-					m_yaxis = eval::Compile(reader.String());
+					m_yaxis = eval::Compile(reader.String<string32>());
 					for (auto& name : m_yaxis.m_arg_names)
 						m_yiter.push_back(DataIter{name, m_chart->m_dim});
 
@@ -4085,7 +4074,7 @@ namespace pr::rdr12::ldraw
 				{
 					// Ask the include handler to turn the filepath into a stream.
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
-					m_filepath = reader.String().c_str();
+					m_filepath = reader.String<std::filesystem::path>();
 					m_file_stream = reader.OpenStream(m_filepath);
 				}
 				default:
@@ -4160,8 +4149,8 @@ namespace pr::rdr12::ldraw
 					stack.pop_back();
 
 				// Create an LdrObject for each model
-				ObjectAttributes attr{ELdrObject::Model, node.m_model->m_name.c_str()};
-				LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+				LdrObjectPtr obj(new LdrObject(ELdrObject::Model, nullptr, context_id), true);
+				obj->m_name = node.m_model->m_name;
 				obj->m_model = node.m_model;
 				obj->m_o2p = node.m_o2p;
 
@@ -4338,7 +4327,7 @@ namespace pr::rdr12::ldraw
 					// Compile the equation
 					try
 					{
-						auto equation = reader.String();
+						auto equation = reader.String<string32>();
 						m_eq = eval::Compile(equation);
 					}
 					catch (std::exception const& ex)
@@ -4355,7 +4344,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Param:
 				{
-					auto variable = reader.String();
+					auto variable = reader.String<string32>();
 					auto value = reader.Real<double>();
 					m_args.add(variable, value);
 					return true;
@@ -4741,7 +4730,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					auto text = reader.String();
+					auto text = reader.String<string32>();
 					m_text.append(Widen(text));
 
 					// Record the formatting state
@@ -5224,9 +5213,9 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Create an ldr object from creation data.
-	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, Guid const& context_id)
+	LdrObjectPtr Create(Renderer& rdr, ELdrObject type, MeshCreationData const& cdata, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create the model
 		ResourceFactory factory(rdr);
@@ -5236,9 +5225,9 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Create an ldr object from a p3d model.
-	LdrObjectPtr CreateP3D(Renderer& rdr, ObjectAttributes attr, std::filesystem::path const& p3d_filepath, Guid const& context_id)
+	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, std::filesystem::path const& p3d_filepath, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create the model
 		ResourceFactory factory(rdr);
@@ -5252,9 +5241,9 @@ namespace pr::rdr12::ldraw
 
 		return obj;
 	}
-	LdrObjectPtr CreateP3D(Renderer& rdr, ObjectAttributes attr, size_t size, void const* p3d_data, Guid const& context_id)
+	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, size_t size, void const* p3d_data, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create the model
 		ResourceFactory factory(rdr);
@@ -5272,11 +5261,12 @@ namespace pr::rdr12::ldraw
 	// Create an instance of an existing ldr object.
 	LdrObjectPtr CreateInstance(LdrObject const* existing)
 	{
-		ObjectAttributes attr(existing->m_type, existing->m_name.c_str(), existing->m_base_colour);
-		LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id), true);
+		LdrObjectPtr obj(new LdrObject(existing->m_type, nullptr, existing->m_context_id), true);
 
 		// Use the same model
 		obj->m_model = existing->m_model;
+		obj->m_name = existing->m_name;
+		obj->m_base_colour = existing->m_base_colour;
 
 		// Recursively create instances of the child objects
 		for (auto& child : existing->m_child)
@@ -5287,9 +5277,9 @@ namespace pr::rdr12::ldraw
 
 	// Create an ldr object using a callback to populate the model data.
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
-	LdrObjectPtr CreateEditCB(Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
+	LdrObjectPtr CreateEditCB(Renderer& rdr, ELdrObject type, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
 	{
-		LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
+		LdrObjectPtr obj(new LdrObject(type, 0, context_id), true);
 
 		// Create buffers for a dynamic model
 		ModelDesc settings(
@@ -5546,7 +5536,7 @@ namespace pr::rdr12::ldraw
 	string32 IReader::CString(bool has_length)
 	{
 		string32 out = {};
-		auto string = String(has_length);
+		auto string = String<string32>(has_length);
 		if (!str::ExtractStringC<string32, char const*, char>(out, string.c_str(), '\\', nullptr, nullptr))
 			throw std::runtime_error("");
 

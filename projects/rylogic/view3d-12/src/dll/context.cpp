@@ -33,8 +33,8 @@ namespace pr::rdr12
 		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
 		{
 			auto context_id = args.m_context_id;
-			auto filepath = args.m_loc.Filepath().generic_string();
-			auto file_offset = s_cast<int64_t>(args.m_loc.Pos());
+			auto filepath = args.m_loc.m_filepath.generic_string();
+			auto file_offset = s_cast<int64_t>(args.m_loc.m_offset);
 			BOOL complete = args.m_complete;
 			BOOL cancel = false;
 			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, cancel);
@@ -251,13 +251,13 @@ namespace pr::rdr12
 		auto& ind = indices;
 
 		// Create the model
-		auto attr  = ldraw::ObjectAttributes(ldraw::ELdrObject::Custom, name, Colour32(colour));
 		auto cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
-		auto obj = Create(m_rdr, attr, cdata, context_id);
-	
+		auto obj = Create(m_rdr, ldraw::ELdrObject::Custom, cdata, context_id);
+
 		// Add to the sources
-		if (obj != nullptr)
-			m_sources.Add(obj);
+		obj->m_name = name;
+		obj->m_base_colour = colour;
+		m_sources.Add(obj);
 
 		// Return the created object
 		return obj.get();
@@ -301,8 +301,9 @@ namespace pr::rdr12
 		auto id = context_id ? *context_id : GenerateGUID();
 
 		// Create an ldr object
-		ldraw::ObjectAttributes attr(ldraw::ELdrObject::Model, name, colour);
-		auto obj = ldraw::CreateP3D(m_rdr, attr, p3d_filepath, id);
+		auto obj = ldraw::CreateP3D(m_rdr, ldraw::ELdrObject::Model, p3d_filepath, id);
+		obj->m_name = name;
+		obj->m_base_colour = colour;
 		m_sources.Add(obj);
 		return obj.get();
 	}
@@ -312,8 +313,9 @@ namespace pr::rdr12
 		auto id = context_id ? *context_id : pr::GenerateGUID();
 
 		// Create an ldr object
-		ldraw::ObjectAttributes attr(ldraw::ELdrObject::Model, name, colour);
-		auto obj = CreateP3D(m_rdr, attr, size, p3d_data, id);
+		auto obj = CreateP3D(m_rdr, ldraw::ELdrObject::Model, size, p3d_data, id);
+		obj->m_name = name;
+		obj->m_base_colour = colour;
 		m_sources.Add(obj);
 		return obj.get();
 	}
@@ -444,11 +446,10 @@ namespace pr::rdr12
 	}
 	LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
 	{
-		auto attr = ldraw::ObjectAttributes{ ldraw::ELdrObject::Custom, name, colour };
-		auto obj = ldraw::CreateEditCB(m_rdr, attr, vcount, icount, ncount, EditModel, &edit_cb, context_id);
-		if (obj != nullptr)
-			m_sources.Add(obj);
-
+		auto obj = ldraw::CreateEditCB(m_rdr, ldraw::ELdrObject::Custom, vcount, icount, ncount, EditModel, &edit_cb, context_id);
+		obj->m_name = name;
+		obj->m_base_colour = colour;
+		m_sources.Add(obj);
 		return obj.get();
 	}
 	void Context::ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)

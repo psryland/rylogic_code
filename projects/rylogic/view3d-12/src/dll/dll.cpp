@@ -23,8 +23,9 @@
 #include "pr/view3d-12/utility/dx9_context.h"
 #include "pr/view3d-12/utility/conversion.h"
 #include "pr/view3d-12/utility/utility.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
@@ -197,8 +198,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GU
 	{
 		// Concurrent entry is allowed
 		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
-		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
+		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
 }
@@ -208,8 +209,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	{
 		// Concurrent entry is allowed
 		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
-		ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, id, GetIncludes(includes), on_add_cb ? on_add : (ScriptSources::OnAddCB)nullptr);
+		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
+		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
@@ -1607,7 +1608,7 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(view3d::Object object, wchar_t con
 		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
-		Dll().UpdateObject(object, ldr_script, static_cast<rdr12::EUpdateObject>(flags));
+		Dll().UpdateObject(object, ldr_script, static_cast<rdr12::ldraw::EUpdateObject>(flags));
 	}
 	CatchAndReport(View3D_ObjectUpdate, ,);
 }
@@ -1770,7 +1771,7 @@ VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(view3d::Object object)
 	try
 	{
 		DllLockGuard;
-		auto name = pr::Enum<ELdrObject>::ToStringW(object->m_type);
+		auto name = pr::Enum<rdr12::ldraw::ELdrObject>::ToStringW(object->m_type);
 		return ::SysAllocStringLen(name, UINT(wcslen(name)));
 	}
 	CatchAndReport(View3D_ObjectTypeGetBStr, , BSTR());
@@ -1780,7 +1781,7 @@ VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(view3d::Object object)
 	try
 	{
 		DllLockGuard;
-		return Enum<ELdrObject>::ToStringA(object->m_type);
+		return Enum<rdr12::ldraw::ELdrObject>::ToStringA(object->m_type);
 	}
 	CatchAndReport(View3D_ObjectTypeGet, , nullptr);
 }
@@ -1804,7 +1805,7 @@ VIEW3D_API void __stdcall View3D_ObjectColourSet(view3d::Object object, view3d::
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		object->Colour(Colour32(colour), mask, name, static_cast<rdr12::EColourOp>(op), op_value);
+		object->Colour(Colour32(colour), mask, name, static_cast<rdr12::ldraw::EColourOp>(op), op_value);
 	}
 	CatchAndReport(View3D_ObjectColourSet, ,);
 }
@@ -1959,7 +1960,7 @@ VIEW3D_API void __stdcall View3D_ObjectFlagsSet(view3d::Object object, view3d::E
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		object->Flags(static_cast<rdr12::ELdrFlags>(flags), state != 0, name);
+		object->Flags(static_cast<rdr12::ldraw::ELdrFlags>(flags), state != 0, name);
 	}
 	CatchAndReport(View3D_ObjectFlagsSet, ,);
 }
@@ -2436,7 +2437,7 @@ VIEW3D_API view3d::Gizmo __stdcall View3D_GizmoCreate(view3d::EGizmoMode mode, v
 	try
 	{
 		DllLockGuard;
-		return Dll().GizmoCreate(static_cast<ELdrGizmoMode>(mode), To<m4x4>(o2w));
+		return Dll().GizmoCreate(static_cast<rdr12::ldraw::EGizmoMode>(mode), To<m4x4>(o2w));
 	}
 	CatchAndReport(View3D_GizmoCreate, , nullptr);
 }
@@ -2463,13 +2464,13 @@ VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(view3d::Gizmo gizmo, view3d::Gi
 		if (!cb) throw std::runtime_error("Callback function is null");
 		
 		// Cast the static function pointer from View3D types to ldr types
-		auto c = reinterpret_cast<void(__stdcall*)(void*, LdrGizmo*, ELdrGizmoState)>(cb);
+		auto c = reinterpret_cast<void(__stdcall*)(void*, LdrGizmo*, rdr12::ldraw::EGizmoState)>(cb);
 
 		DllLockGuard;
 		if (add)
-			gizmo->Manipulated += rdr12::GizmoMovedCB{ c, ctx };
+			gizmo->Manipulated += rdr12::ldraw::GizmoMovedCB{ c, ctx };
 		else
-			gizmo->Manipulated -= rdr12::GizmoMovedCB{ c, ctx };
+			gizmo->Manipulated -= rdr12::ldraw::GizmoMovedCB{ c, ctx };
 	}
 	CatchAndReport(View3D_GizmoMovedCBSet, ,);
 }
@@ -2538,7 +2539,7 @@ VIEW3D_API void __stdcall View3D_GizmoModeSet(view3d::Gizmo gizmo, view3d::EGizm
 	try
 	{
 		if (!gizmo) throw std::runtime_error("Gizmo is null");
-		gizmo->Mode(static_cast<ELdrGizmoMode>(mode));
+		gizmo->Mode(static_cast<rdr12::ldraw::EGizmoMode>(mode));
 	}
 	CatchAndReport(View3D_GizmoModeSet, ,);
 }
@@ -2921,7 +2922,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
 		if (!window) throw std::runtime_error("window is null");
 
 		// Get the string of all ldr objects
-		auto scene = rdr12::CreateDemoScene();
+		auto scene = rdr12::ldraw::CreateDemoScene();
 
 		DllLockGuard;
 
@@ -2959,7 +2960,7 @@ VIEW3D_API void __stdcall View3D_DemoScriptShow(view3d::Window window)
 
 		DllLockGuard;
 		
-		auto example = CreateDemoScene();
+		auto example = rdr12::ldraw::CreateDemoScene();
 		window->EditorUI().Show();
 		window->EditorUI().Text(example.c_str());
 	}
@@ -2972,7 +2973,7 @@ VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
 	try
 	{
 		DllLockGuard;
-		auto example = Widen(rdr12::CreateDemoScene());
+		auto example = Widen(rdr12::ldraw::CreateDemoScene());
 		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
 	}
 	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());
@@ -2983,7 +2984,7 @@ VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr()
 {
 	try
 	{
-		auto templates = Widen(rdr12::AutoCompleteTemplates());
+		auto templates = Widen(rdr12::ldraw::AutoCompleteTemplates());
 		return ::SysAllocStringLen(templates.c_str(), UINT(templates.size()));
 	}
 	CatchAndReport(View3D_AutoCompleteTemplatesBStr,,BSTR());

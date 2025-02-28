@@ -19,6 +19,10 @@
 #include "pr/ldraw/ldr_gizmo.h"
 #include "pr/threads/synchronise.h"
 
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
 namespace pr::ldr
 {
 	// A collection of LDraw script sources

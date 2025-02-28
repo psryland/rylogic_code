@@ -55,10 +55,13 @@ namespace pr::rdr12::ldraw
 		// - A nested tree of sections.
 		// - Each section has a keyword identifier
 		// - Sections either contain data, or nested sections, not both
+		// - FindKeyword is not supported because this requires random access.
+		//   The reader is intended to handled streamed data.
+
 		virtual ~IReader() = default;
 
-		// Return the current location in the source
-		virtual Location Loc() const = 0;
+		// Get/Set the current location in the source
+		virtual Location const& Loc() const = 0;
 
 		// Move into a nested section
 		virtual void PushSection() = 0;
@@ -68,25 +71,10 @@ namespace pr::rdr12::ldraw
 
 		// Get the next keyword within the current section.
 		// Returns false if at the end of the section
-		virtual bool NextKeyword(ldraw::EKeyword& kw) = 0;
-
-		// Search the current section, from the current position, for the given keyword.
-		// Does not affect the 'current' position used by 'NextKeyword'
-		virtual bool FindKeyword(ldraw::EKeyword kw) = 0;
+		virtual bool NextKeyword(EKeyword& kw) = 0;
 
 		// True when the current position has reached the end of the current section
 		virtual bool IsSectionEnd() = 0;
-
-		// Read a utf8 string from the current section.
-		// If 'has_length' is false, assume the whole section is the string.
-		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 String(bool has_length = false) = 0;
-
-		// Read an integral value from the current section
-		virtual int64_t Int(int byte_count, int radix) = 0;
-
-		// Read a floating point value from the current section
-		virtual double Real(int byte_count) = 0;
 
 		// RAII section scope. Use this if a section contains nested keywords
 		Scope<void> SectionScope()
@@ -99,23 +87,33 @@ namespace pr::rdr12::ldraw
 		// Read an identifier from the current section
 		string32 Identifier(bool has_length = false)
 		{
-			auto s = String(has_length);
+			auto s = StringImpl(has_length);
 			auto len = 0ULL;
 			static auto IsIdentifier = [](char c, bool first) { return c == '_' || (first ? isalpha(c) : isalnum(c)); };
 			for (; len != s.size() && IsIdentifier(s[len], len == 0); ++len) {}
 			return len == s.size() ? s : throw std::runtime_error("Invalid characters in identifier");
 		}
 
+		// Read a string from the current section
+		template <typename StrType> StrType String(bool has_length = false)
+		{
+			auto s = StringImpl(has_length);
+			if constexpr (std::is_same_v<StrType, string32>)
+				return s;
+			else
+				return StrType(std::begin(s), std::end(s));
+		}
+
 		// Read an integer value
 		template <std::integral IntType> IntType Int(int radix = 10)
 		{
-			return static_cast<IntType>(Int(sizeof(IntType), radix));
+			return static_cast<IntType>(IntImpl(sizeof(IntType), radix));
 		}
 
 		// Read a floating point value
 		template <std::floating_point FloatType> FloatType Real()
 		{
-			return static_cast<FloatType>(Real(sizeof(FloatType)));
+			return static_cast<FloatType>(RealImpl(sizeof(FloatType)));
 		}
 
 		// Read floating point vectors
@@ -164,6 +162,19 @@ namespace pr::rdr12::ldraw
 
 		// Open a byte stream corresponding to 'path'
 		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) = 0;
+
+	protected:
+
+		// Read a utf8 string from the current section.
+		// If 'has_length' is false, assume the whole section is the string.
+		// If 'has_length' is true, assume the string is prefixed by its length.
+		virtual string32 StringImpl(bool has_length = false) = 0;
+
+		// Read an integral value from the current section
+		virtual int64_t IntImpl(int byte_count, int radix) = 0;
+
+		// Read a floating point value from the current section
+		virtual double RealImpl(int byte_count) = 0;
 	};
 
 	// The results of parsing ldr script
@@ -260,19 +271,19 @@ namespace pr::rdr12::ldraw
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(
 		Renderer& rdr,                      // The reader to create models for
-		ObjectAttributes attr,              // Object attributes to use with the created object
+		ELdrObject type,                    // Object type
 		MeshCreationData const& cdata,      // Model creation data
 		Guid const& context_id = GuidZero); // The context id to assign to the object
 
 	// Create an ldr object from a p3d model.
 	LdrObjectPtr CreateP3D(
 		Renderer& rdr,                             // The reader to create models for
-		ObjectAttributes attr,                     // Object attributes to use with the created object
+		ELdrObject type,                           // Object type
 		std::filesystem::path const& p3d_filepath, // Model filepath
 		Guid const& context_id = GuidZero);        // The context id to assign to the object
 	LdrObjectPtr CreateP3D(
 		Renderer& rdr,                      // The reader to create models for
-		ObjectAttributes attr,              // Object attributes to use with the created object
+		ELdrObject type,                    // Object type
 		size_t size,                        // The length of the data pointed to by 'p3d_data'
 		void const* p3d_data,               // The p3d data
 		Guid const& context_id = GuidZero); // The context id to assign to the object
@@ -285,7 +296,7 @@ namespace pr::rdr12::ldraw
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 	LdrObjectPtr CreateEditCB(
 		Renderer& rdr,                      // The reader to create models for
-		ObjectAttributes attr,              // Object attributes to use with the created object
+		ELdrObject type,                    // Object type
 		int vcount,                         // The number of verts to create the model with
 		int icount,                         // The number of indices to create the model with
 		int ncount,                         // The number of nuggets to create the model with
@@ -297,7 +308,16 @@ namespace pr::rdr12::ldraw
 	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx);
 
 	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-	void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags = EUpdateObject::All);
+	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags, ReportErrorCB report_error_cb, ParseProgressCB progress_cb);
+
+#if 1
+	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
+	inline void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags = EUpdateObject::All)
+	{
+		(void)rdr, object, reader, flags;
+		throw std::runtime_error("not implemented");
+	}
+#endif
 
 	// Remove all objects from 'objects' that have a context id matching one in 'incl' and not in 'excl'
 	// If 'incl' is empty, all are assumed included. If 'excl' is empty, none are assumed excluded.

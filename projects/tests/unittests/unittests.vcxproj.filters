@@ -113,6 +113,9 @@
     <Filter Include="pr\physics\utility">
       <UniqueIdentifier>{77a87cc7-6474-41ea-8c71-3957fa41da22}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\view3d-12">
+      <UniqueIdentifier>{3a9cadb5-54de-4e6d-ad89-a66d5b97dff0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
@@ -1077,14 +1080,20 @@
     <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+    <ClInclude Include="..\..\..\include\pr\ldraw\ldraw_helper.h">
       <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+      <Filter>pr\view3d-12</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="pre_build.py" />
     <None Include="run_tests.py" />
     <None Include="cpp.hint" />
+    <None Include="..\..\..\include\pr\ldraw\ldraw_helper.py">
+      <Filter>pr\ldraw</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">

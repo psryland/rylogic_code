@@ -1,0 +1,397 @@
+//**********************************
+// Ldr Binary Script
+//  Copyright (c) Rylogic Ltd 2025
+//**********************************
+
+#define FNV_offset_basis32 2166136261U
+#define FNV_prime32 16777619U
+uint Hash32CT(uint ch, uint h)
+{
+	return (h ^ ch) * FNV_prime32;
+}
+uint HashICT(const char str[])
+{
+	local uint h = FNV_offset_basis32;
+	local int i, iend = Strlen(str);	
+	for (i = 0; i != iend; ++i)
+		h = Hash32CT((uint)ToLower(str[i]), h);
+	return h;
+}
+
+
+enum <uint> EKeyword
+{
+	Arrow           = HashICT("Arrow"),
+	Bar             = HashICT("Bar"),
+	Box             = HashICT("Box"),
+	BoxList         = HashICT("BoxList"),
+	Chart           = HashICT("Chart"),
+	Circle          = HashICT("Circle"),
+	Cone            = HashICT("Cone"),
+	ConvexHull      = HashICT("ConvexHull"),
+	CoordFrame      = HashICT("CoordFrame"),
+	Custom          = HashICT("Custom"),
+	Cylinder        = HashICT("Cylinder"),
+	Equation        = HashICT("Equation"),
+	FrustumFA       = HashICT("FrustumFA"),
+	FrustumWH       = HashICT("FrustumWH"),
+	Grid            = HashICT("Grid"),
+	Group           = HashICT("Group"),
+	Instance        = HashICT("Instance"),
+	LightSource     = HashICT("LightSource"),
+	Line            = HashICT("Line"),
+	LineBox         = HashICT("LineBox"),
+	LineD           = HashICT("LineD"),
+	LineStrip       = HashICT("LineStrip"),
+	Matrix3x3       = HashICT("Matrix3x3"),
+	Mesh            = HashICT("Mesh"),
+	Model           = HashICT("Model"),
+	Pie             = HashICT("Pie"),
+	Plane           = HashICT("Plane"),
+	Point           = HashICT("Point"),
+	Polygon         = HashICT("Polygon"),
+	Quad            = HashICT("Quad"),
+	Rect            = HashICT("Rect"),
+	Ribbon          = HashICT("Ribbon"),
+	Series          = HashICT("Series"),
+	Sphere          = HashICT("Sphere"),
+	Spline          = HashICT("Spline"),
+	Text            = HashICT("Text"),
+	Triangle        = HashICT("Triangle"),
+	Tube            = HashICT("Tube"),
+	Unknown         = HashICT("Unknown"),
+	/* Field Names */
+	Accel           = HashICT("Accel"),
+	Addr            = HashICT("Addr"),
+	Align           = HashICT("Align"),
+	Alpha           = HashICT("Alpha"),
+	Anchor          = HashICT("Anchor"),
+	AngAccel        = HashICT("AngAccel"),
+	AngVelocity     = HashICT("AngVelocity"),
+	Animation       = HashICT("Animation"),
+	Aspect          = HashICT("Aspect"),
+	Axis            = HashICT("Axis"),
+	AxisId          = HashICT("AxisId"),
+	BackColour      = HashICT("BackColour"),
+	BakeTransform   = HashICT("BakeTransform"),
+	Billboard       = HashICT("Billboard"),
+	Billboard3D     = HashICT("Billboard3D"),
+	Camera          = HashICT("Camera"),
+	CastShadow      = HashICT("CastShadow"),
+	Closed          = HashICT("Closed"),
+	Colour          = HashICT("Colour"),
+	ColourMask      = HashICT("ColourMask"),
+	Colours         = HashICT("Colours"),
+	CornerRadius    = HashICT("CornerRadius"),
+	CrossSection    = HashICT("CrossSection"),
+	CString         = HashICT("CString"),
+	Dashed          = HashICT("Dashed"),
+	Data            = HashICT("Data"),
+	Depth           = HashICT("Depth"),
+	Dim             = HashICT("Dim"),
+	Direction       = HashICT("Direction"),
+	Divisions       = HashICT("Divisions"),
+	Euler           = HashICT("Euler"),
+	Faces           = HashICT("Faces"),
+	Facets          = HashICT("Facets"),
+	Far             = HashICT("Far"),
+	FilePath        = HashICT("FilePath"),
+	Filter          = HashICT("Filter"),
+	Font            = HashICT("Font"),
+	ForeColour      = HashICT("ForeColour"),
+	Format          = HashICT("Format"),
+	Fov             = HashICT("Fov"),
+	FovX            = HashICT("FovX"),
+	FovY            = HashICT("FovY"),
+	GenerateNormals = HashICT("GenerateNormals"),
+	Hidden          = HashICT("Hidden"),
+	Inverse         = HashICT("Inverse"),
+	Layers          = HashICT("Layers"),
+	LeftHanded      = HashICT("LeftHanded"),
+	LineList        = HashICT("LineList"),
+	Lines           = HashICT("Lines"),
+	LookAt          = HashICT("LookAt"),
+	M3x3            = HashICT("M3x3"),
+	M4x4            = HashICT("M4x4"),
+	Name            = HashICT("Name"),
+	Near            = HashICT("Near"),
+	NewLine         = HashICT("NewLine"),
+	NonAffine       = HashICT("NonAffine"),
+	Normalise       = HashICT("Normalise"),
+	Normals         = HashICT("Normals"),
+	NoZTest         = HashICT("NoZTest"),
+	NoZWrite        = HashICT("NoZWrite"),
+	O2W             = HashICT("O2W"),
+	Orthographic    = HashICT("Orthographic"),
+	Orthonormalise  = HashICT("Orthonormalise"),
+	Padding         = HashICT("Padding"),
+	Param           = HashICT("Param"),
+	Part            = HashICT("Part"),
+	Period          = HashICT("Period"),
+	PerItemColour   = HashICT("PerItemColour"),
+	Pos             = HashICT("Pos"),
+	Position        = HashICT("Position"),
+	Quat            = HashICT("Quat"),
+	QuatPos         = HashICT("QuatPos"),
+	Rand4x4         = HashICT("Rand4x4"),
+	RandColour      = HashICT("RandColour"),
+	RandOri         = HashICT("RandOri"),
+	RandPos         = HashICT("RandPos"),
+	Range           = HashICT("Range"),
+	Reflectivity    = HashICT("Reflectivity"),
+	Resolution      = HashICT("Resolution"),
+	Round           = HashICT("Round"),
+	Scale           = HashICT("Scale"),
+	ScreenSpace     = HashICT("ScreenSpace"),
+	Size            = HashICT("Size"),
+	Smooth          = HashICT("Smooth"),
+	Solid           = HashICT("Solid"),
+	Source          = HashICT("Source"),
+	Specular        = HashICT("Specular"),
+	Square          = HashICT("Square"),
+	Step            = HashICT("Step"),
+	Stretch         = HashICT("Stretch"),
+	Strikeout       = HashICT("Strikeout"),
+	Style           = HashICT("Style"),
+	Tetra           = HashICT("Tetra"),
+	TexCoords       = HashICT("TexCoords"),
+	TextLayout      = HashICT("TextLayout"),
+	Texture         = HashICT("Texture"),
+	Transpose       = HashICT("Transpose"),
+	TriList         = HashICT("TriList"),
+	TriStrip        = HashICT("TriStrip"),
+	Txfm            = HashICT("Txfm"),
+	Underline       = HashICT("Underline"),
+	Up              = HashICT("Up"),
+	Velocity        = HashICT("Velocity"),
+	Verts           = HashICT("Verts"),
+	Video           = HashICT("Video"),
+	ViewPlaneZ      = HashICT("ViewPlaneZ"),
+	Wedges          = HashICT("Wedges"),
+	Weight          = HashICT("Weight"),
+	Width           = HashICT("Width"),
+	Wireframe       = HashICT("Wireframe"),
+	XAxis           = HashICT("XAxis"),
+	XColumn         = HashICT("XColumn"),
+	YAxis           = HashICT("YAxis"),
+	ZAxis           = HashICT("ZAxis"),
+};
+
+void Sections(uint end);
+
+// Sections that contain data only
+struct DataSection
+{
+	local int64 fpos = FTell();
+
+	// The hash of the keyword (4-bytes)
+	EKeyword m_keyword;
+
+	// The length of the section in bytes (excluding the header size)
+	int m_size;
+
+	// The payload of this section
+	byte m_data[m_size];
+
+	FSeek(fpos + 8 + m_size);
+};
+
+// Sections that contain nested sections
+struct NestedSection
+{
+	local int64 fpos = FTell();
+
+	// The hash of the keyword (4-bytes)
+	EKeyword m_keyword;
+
+	// The length of the section in bytes (excluding the header size)
+	int m_size;
+
+	Sections(fpos + 8 + m_size);
+
+	FSeek(fpos + 8 + m_size);
+};
+
+
+void Sections(uint end)
+{
+	local EKeyword kw;
+
+	while (FTell() < end)
+	{
+		kw = (EKeyword)ReadUInt(FTell());
+		switch (kw)
+		{
+			case Arrow:
+			case Bar:
+			case Box:
+			case BoxList:
+			case Chart:
+			case Circle:
+			case Cone:
+			case ConvexHull:
+			case CoordFrame:
+			case Custom:
+			case Cylinder:
+			case Equation:
+			case FrustumFA:
+			case FrustumWH:
+			case Grid:
+			case Group:
+			case Instance:
+			case LightSource:
+			case Line:
+			case LineBox:
+			case LineD:
+			case LineStrip:
+			case Matrix3x3:
+			case Mesh:
+			case Model:
+			case Pie:
+			case Plane:
+			case Point:
+			case Polygon:
+			case Quad:
+			case Rect:
+			case Ribbon:
+			case Series:
+			case Sphere:
+			case Spline:
+			case Text:
+			case Triangle:
+			case Tube:
+			case Unknown:
+			{
+				NestedSection object <name=EnumToString(this.m_keyword)>;
+				break;
+			}
+	
+			// Field Names
+			case Accel:
+			case Addr:
+			case Align:
+			case Alpha:
+			case Anchor:
+			case AngAccel:
+			case AngVelocity:
+			case Animation:
+			case Aspect:
+			case Axis:
+			case AxisId:
+			case BackColour:
+			case BakeTransform:
+			case Billboard:
+			case Billboard3D:
+			case Camera:
+			case CastShadow:
+			case Closed:
+			case Colour:
+			case ColourMask:
+			case Colours:
+			case CornerRadius:
+			case CrossSection:
+			case CString:
+			case Dashed:
+			case Data:
+			case Depth:
+			case Dim:
+			case Direction:
+			case Divisions:
+			case Euler:
+			case Faces:
+			case Facets:
+			case Far:
+			case FilePath:
+			case Filter:
+			case Font:
+			case ForeColour:
+			case Format:
+			case Fov:
+			case FovX:
+			case FovY:
+			case GenerateNormals:
+			case Hidden:
+			case Inverse:
+			case Layers:
+			case LeftHanded:
+			case LineList:
+			case Lines:
+			case LookAt:
+			case M3x3:
+			case M4x4:
+			case Name:
+			case Near:
+			case NewLine:
+			case NonAffine:
+			case Normalise:
+			case Normals:
+			case NoZTest:
+			case NoZWrite:
+			case O2W:
+			case Orthographic:
+			case Orthonormalise:
+			case Padding:
+			case Param:
+			case Part:
+			case Period:
+			case PerItemColour:
+			case Pos:
+			case Position:
+			case Quat:
+			case QuatPos:
+			case Rand4x4:
+			case RandColour:
+			case RandOri:
+			case RandPos:
+			case Range:
+			case Reflectivity:
+			case Resolution:
+			case Round:
+			case Scale:
+			case ScreenSpace:
+			case Size:
+			case Smooth:
+			case Solid:
+			case Source:
+			case Specular:
+			case Square:
+			case Step:
+			case Stretch:
+			case Strikeout:
+			case Style:
+			case Tetra:
+			case TexCoords:
+			case TextLayout:
+			case Texture:
+			case Transpose:
+			case TriList:
+			case TriStrip:
+			case Txfm:
+			case Underline:
+			case Up:
+			case Velocity:
+			case Verts:
+			case Video:
+			case ViewPlaneZ:
+			case Wedges:
+			case Weight:
+			case Width:
+			case Wireframe:
+			case XAxis:
+			case XColumn:
+			case YAxis:
+			case ZAxis:
+			{
+				DataSection data <name=EnumToString(this.m_keyword)>;
+				break;
+			}
+			default:
+			{
+				DataSection unknown <name=EnumToString(this.m_keyword)>;
+				break;
+			}
+		}
+	}
+}
+
+Sections(FileSize());

@@ -26,14 +26,17 @@
 #include "pr/maths/spatial.h"
 #include "pr/maths/polynomial.h"
 #include "pr/geometry/closest_point.h"
-#include "pr/view3d-12/ldraw/ldraw.h"
 
+// NOTE: Deprecated - use "ldraw_helper.h"
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
+// Plan: Convert this to pr::ldraw namespace and rename to 'ldraw_helper.h'
 namespace pr::ldr
 {
 	using TStr = std::string;
-	using TData = byte_data<4>;
 	using Scope = pr::Scope<void>;
-	namespace ldraw = pr::rdr12::ldraw;
 
 	// Write the contents of 'ldr' to a file
 	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
@@ -47,13 +50,6 @@ namespace pr::ldr
 		if (ldr.empty()) return;
 		filesys::LockFile lock(filepath);
 		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
-	}
-	inline void Write(std::span<std::byte const> ldr, std::filesystem::path const& filepath, bool append = false)
-	{
-		if (ldr.empty()) return;
-		filesys::LockFile lock(filepath);
-		std::ofstream ofile(filepath, append ? std::ios::app : std::ios::out);
-		ofile.write(char_ptr(ldr.data()), ldr.size());
 	}
 
 	#pragma region Type Wrappers
@@ -332,123 +328,6 @@ namespace pr::ldr
 		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
 		str.append(" ");
 		return str;
-	}
-	#pragma endregion
-
-	#pragma region Append Binary
-	inline TData& Append(TData& data, int i)
-	{
-		return data.push_back(i);
-	}
-	inline TData& Append(TData& data, long i)
-	{
-		return data.push_back(i);
-	}
-	inline TData& Append(TData& data, float f)
-	{
-		return data.push_back(f);
-	}
-	inline TData& Append(TData& data, double f)
-	{
-		return data.push_back(f);
-	}
-	inline TData& Append(TData& data, m4x4 const& m)
-	{
-		return data.push_back(m);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec2<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec3<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec4<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Mat4x4<S,void, void> const& m)
-	{
-		return Append(data, m.x, m.y, m.z, m.w);
-	}
-	inline TData& Append(TData& data, Name name)
-	{
-		ldraw::Write(data, ldraw::EKeyword::Name, name.m_name);
-		return data;
-	}
-	inline TData& Append(TData& data, Col colour)
-	{
-		ldraw::Write(data, ldraw::EKeyword::Colour, colour.m_ui);
-		return data;
-	}
-	inline TData& Append(TData& data, Size s)
-	{
-		if (s.m_size == 0) return data;
-		ldraw::Write(data, ldraw::EKeyword::Size, s.m_size);
-		return data;
-	}
-	inline TData& Append(TData& data, Wireframe w)
-	{
-		if (!w.m_wire) return data;
-		ldraw::Write(data, ldraw::EKeyword::Wireframe);
-		return data;
-	}
-	inline TData& Append(TData& data, Solid s)
-	{
-		if (!s.m_solid) return data;
-		ldraw::Write(data, ldraw::EKeyword::Solid);
-		return data;
-	}
-	inline TData& Append(TData& data, Depth d)
-	{
-		if (d.m_depth == false) return data;
-		ldraw::Write(data, ldraw::EKeyword::Depth);
-		return data;
-	}
-	inline TData& Append(TData& data, Width w)
-	{
-		if (w.m_width == 0) return data;
-		ldraw::Write(data, ldraw::EKeyword::Width, w.m_width);
-		return data;
-	}
-	inline TData& Append(TData& data, AxisId id)
-	{
-		ldraw::Write(data, ldraw::EKeyword::AxisId, int(id));
-		return data;
-	}
-	inline TData& Append(TData& data, PointStyle style)
-	{
-		if (style.m_style == EPointStyle::Square) return data;
-		ldraw::Write(data, ldraw::EKeyword::Style, style.m_style);
-		return data;
-	}
-	inline TData& Append(TData& data, O2W const& o2w)
-	{
-		if (o2w.m_mat == m4x4::Identity())
-			return data;
-
-		ldraw::Write(data, ldraw::EKeyword::O2W, [&](auto&)
-		{
-			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
-			{
-				ldraw::Write(data, ldraw::EKeyword::Pos, o2w.m_mat.pos.xyz);
-			}
-			else
-			{
-				if (!IsAffine(o2w.m_mat))
-					ldraw::Write(data, ldraw::EKeyword::NonAffine);
-
-				ldraw::Write(data, ldraw::EKeyword::M4x4, o2w.m_mat);
-			}
-		});
-		return data;
-	}
-	template <typename Arg0, typename... Args> inline TData& Append(TData& data, Arg0 const& arg0, Args&&... args)
-	{
-		Append(data, arg0);
-		(Append(data, args), ...);
-		return data;
 	}
 	#pragma endregion
 
@@ -878,28 +757,11 @@ namespace pr::ldr
 				NestedToString(str);
 			}
 
-			// Serialise the ldr script to binary
-			byte_data<4> ToBinary() const
-			{
-				byte_data<4> data;
-				ToBinary(data);
-				return data;
-			}
-			virtual void ToBinary(byte_data<4>& data) const
-			{
-				NestedToBinary(data);
-			}
-
 			// Write nested objects to 'str'
 			virtual void NestedToString(std::string& str) const
 			{
 				for (auto& obj : m_objects)
 					obj->ToString(str);
-			}
-			virtual void NestedToBinary(byte_data<4>& data) const
-			{
-				for (auto& obj : m_objects)
-					obj->ToBinary(data);
 			}
 
 			// Reset the builder
@@ -1034,11 +896,6 @@ namespace pr::ldr
 				LdrObj::NestedToString(str);
 				ldr::Append(str, Wireframe(m_wire), Solid(m_solid), O2W(m_o2w));
 			}
-			void NestedToBinary(byte_data<4>& data) const override
-			{
-				LdrObj::NestedToBinary(data);
-				ldr::Append(data, Wireframe(m_wire), Solid(m_solid), O2W(m_o2w));
-			}
 		};
 
 		struct LdrPoint :LdrBase<LdrPoint>
@@ -1106,22 +963,6 @@ namespace pr::ldr
 				}
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Point, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour, m_size, m_style, m_depth);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						for (auto& pt : m_points)
-						{
-							ldr::Append(data, pt.point.xyz);
-							if (m_has_colours) ldr::Append(data, pt.colour);
-						}
-					});
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrLine :LdrBase<LdrLine>
@@ -1220,23 +1061,6 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, m_strip ? ldraw::EKeyword::LineStrip : ldraw::EKeyword::Line, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour, m_width);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						for (auto const& line : m_lines)
-						{
-							ldr::Append(data, line.a.xyz);
-							if (!m_strip) continue;
-							ldr::Append(data, line.b.xyz);
-						}
-						NestedToBinary(data);
-					});
-				});
-			}
 		};
 		struct LdrLineD :LdrBase<LdrLineD>
 		{
@@ -1279,20 +1103,6 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				assert((m_lines.size() & 1) == 0);
-				ldraw::Write(data, ldraw::EKeyword::LineD, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour, m_width);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						for (int i = 0, iend = isize(m_lines); i != iend; i += 2)
-							ldr::Append(data, m_lines[i + 0].xyz, m_lines[i + 1].xyz);
-					});
-					NestedToBinary(data);
-				});
-			}
 		};
 		struct LdrTriangle :LdrBase<LdrTriangle>
 		{
@@ -1332,19 +1142,6 @@ namespace pr::ldr
 				}
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Triangle, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						for (int i = 0, iend = isize(m_points); i != iend; ++i)
-							ldr::Append(data, m_points[i].xyz);
-					});
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrPlane :LdrBase<LdrPlane>
@@ -1393,18 +1190,6 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Plane, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldr::Append(data, m_position.xyz, m_direction.xyz, m_wh);
-					});
-					NestedToBinary(data);
-				});
-			}
 		};
 		struct LdrCircle :LdrBase<LdrCircle>
 		{
@@ -1426,18 +1211,6 @@ namespace pr::ldr
 				ldr::Append(str, "*Circle", m_name, m_colour, "{", m_radius, m_axis_id);
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Circle, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldr::Append(data, m_radius, m_axis_id);
-					});
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrSphere :LdrBase<LdrSphere>
@@ -1474,15 +1247,6 @@ namespace pr::ldr
 					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x, m_radius.y, m_radius.z);
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Sphere, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&) { ldr::Append(data, m_radius.xyz); });
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrBox :LdrBase<LdrBox>
@@ -1532,15 +1296,6 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&) { ldr::Append(data, m_dim.xyz); });
-					NestedToBinary(data);
-				});
-			}
 		};
 		struct LdrCylinder :LdrBase<LdrCylinder>
 		{
@@ -1569,18 +1324,6 @@ namespace pr::ldr
 				ldr::Append(str, "*Cylinder", m_name, m_colour, "{", m_height, m_radius.x, m_radius.y, m_axis_id);
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Cylinder, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldr::Append(data, m_height, m_radius, m_axis_id);
-					});
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrSpline :LdrBase<LdrSpline>
@@ -1634,22 +1377,6 @@ namespace pr::ldr
 				}
 				NestedToString(str);
 				ldr::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Spline, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour, m_width);
-					ldraw::Write(data, ldraw::EKeyword::Data, [&](auto&)
-					{
-						for (auto& bez : m_splines)
-						{
-							ldr::Append(data, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
-							if (m_has_colour) ldr::Append(data, bez.col);
-						}
-					});
-					NestedToBinary(data);
-				});
 			}
 		};
 		struct LdrFrustum :LdrBase<LdrFrustum>
@@ -1750,37 +1477,6 @@ namespace pr::ldr
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				if (m_ortho)
-				{
-					ldraw::Write(data, ldraw::EKeyword::Box, [&](auto&)
-					{
-						ldr::Append(data, m_name, m_colour);
-						ldraw::Write(data, ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.y - m_nf.x });
-						ldr::Append(data, O2W(v4{ 0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1 }));
-						NestedToBinary(data);
-					});
-				}
-				else if (m_wh != Vec2d<void>::Zero())
-				{
-					ldraw::Write(data, ldraw::EKeyword::FrustumWH, [&](auto&)
-					{
-						ldr::Append(data, m_name, m_colour);
-						ldraw::Write(data, ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.x, m_nf.y });
-						NestedToBinary(data);
-					});
-				}
-				else
-				{
-					ldraw::Write(data, ldraw::EKeyword::FrustumFA, [&](auto&)
-					{
-						ldr::Append(data, m_name, m_colour);
-						ldraw::Write(data, ldraw::EKeyword::Data, { RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y });
-						NestedToBinary(data);
-					});
-				}
-			}
 		};
 		struct LdrGroup :LdrBase<LdrGroup>
 		{
@@ -1791,14 +1487,6 @@ namespace pr::ldr
 				NestedToString(str);
 				for (;!str.empty() && str.back() == '\n';) str.pop_back();
 				ldr::Append(str, "\n}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				ldraw::Write(data, ldraw::EKeyword::Group, [&](auto&)
-				{
-					ldr::Append(data, m_name, m_colour);
-					NestedToBinary(data);
-				});
 			}
 		};
 
@@ -1930,20 +1618,6 @@ namespace pr::ldr
 			PR_CHECK(str, "*LineD lined ff00ff00 {\n\n0 0 0 1 0 0 \n0 0 0 0 0 1 \n}\n");
 			str.resize(0);
 		}
-	}
-	PRUnitTest(LdrHelperBinaryTests)
-	{
-		ldr::Builder builder;
-		auto& group = builder.Group("TestGroup", 0xFF112233);
-		auto& points = group.Point("TestPoints", 0xFF00FF00).size(5.0f);
-		for (int i = 0; i != 10; ++i)
-		{
-			points.pt(v4{ i, 0, 0, 1 });
-			points.pt(v4{ i, i, 0, 1 });
-			points.pt(v4{ 0, i, 0, 1 });
-		}
-
-		auto ldr = builder.ToBinary();
 	}
 }
 #endif

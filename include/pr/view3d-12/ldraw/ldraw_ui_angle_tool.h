@@ -5,6 +5,8 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/ldraw/ldraw_helper.h"
 #include "pr/gui/wingui.h"
 
 namespace pr::rdr12::ldraw
@@ -108,12 +110,12 @@ namespace pr::rdr12::ldraw
 			// Create graphics
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
-				auto str = std::string{};
-				ldr::GroupStart(str, "Angle");
-				ldr::Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
-				ldr::Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
-				ldr::Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
-				ldr::GroupEnd(str);
+				pr::ldraw::Builder ldr;
+				auto& group = ldr.Group("Angle");
+				group.Line("edge0", 0xFFFFFFFF).line(m_origin, m_point0);
+				group.Line("edge1", 0xFFFFFF00).line(m_origin, m_point1);
+				group.Line("edge2", 0xFF00FF00).line(m_point0, m_point1);
+				auto str = ldr.ToString();
 
 				script::StringSrc src(str.c_str());
 				script::Reader rdr(src);

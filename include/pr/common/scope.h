@@ -21,7 +21,7 @@ namespace pr
 		//  - It is possible to implement this with templates and not std::function but it makes the return
 		//    impossible to name.
 		using doit_t = std::function<State()>;
-		using undo_t = std::function<void(State)>;
+		using undo_t = std::function<void(State const&)>;
 		using state_t = State;
 
 		state_t m_state;

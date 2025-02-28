@@ -98,7 +98,8 @@ namespace pr::unittests::your::namespace
 //#include "pr/network/pipe.h"
 //#include "pr/network/pipe2.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
-#include "pr/view3d-12/ldraw/ldraw.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+//#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 
 // Export a function for executing the tests
 extern "C"

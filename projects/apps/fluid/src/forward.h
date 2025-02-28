@@ -26,7 +26,8 @@
 #include "pr/win32/windows_com.h"
 
 #include "pr/view3d-12/view3d.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/compute/radix_sort/radix_sort.h"
 #include "pr/view3d-12/compute/spatial_partition/spatial_partition.h"

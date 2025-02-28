@@ -106,7 +106,6 @@ namespace pr
 		return N;
 	}
 
-
 	// Int sizeof
 	template <typename T> inline int isizeof()
 	{

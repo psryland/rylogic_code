@@ -10,6 +10,10 @@
 #include "pr/ldraw/ldr_object.h"
 #include "pr/ldraw/ldr_helper.h"
 
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
 namespace pr::ldr
 {
 	// Callback function for reading a world space point

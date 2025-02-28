@@ -75,10 +75,9 @@
 	<ItemGroup>
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
     <ClCompile Include="src\ldraw\ldraw_object.cpp" />
-    <ClCompile Include="src\ldraw\ldraw_serialiser_binary.cpp" />
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
-    <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp" />
-    <ClCompile Include="src\ldraw\ldr_object_templates.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_object_demo_scene.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_object_templates.cpp" />
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
     <ClCompile Include="src\ldraw\ldraw_sources.cpp" />
 		<ClCompile Include="src\lighting\light.cpp" />

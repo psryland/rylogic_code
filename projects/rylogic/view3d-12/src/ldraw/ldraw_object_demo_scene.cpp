@@ -4,7 +4,7 @@
 //***************************************************************************************************
 #include <string>
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Generate a scene that demos the supported object types and modifiers.
 	std::string CreateDemoScene()

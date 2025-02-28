@@ -5,7 +5,8 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
-#include "pr/ldraw/ldr_helper.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/ldraw/ldraw_helper.h"
 #include "pr/gui/wingui.h"
 
 namespace pr::rdr12::ldraw
@@ -106,7 +107,7 @@ namespace pr::rdr12::ldraw
 				auto p0 = v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
 				auto p1 = v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
-				ldr::Builder ldr;
+				pr::ldraw::Builder ldr;
 				auto& group = ldr.Group("Measurement");
 				group.Line("dist", 0xFFFFFFFF).line(m_point0, m_point1);
 				group.Line("distX", 0xFFFF0000).line(m_point0, p0);

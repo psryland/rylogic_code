@@ -179,6 +179,7 @@
 #include "pr\hardware\cpuinfo.h"
 #include "pr\hardware\find_bt_device.h"
 #include "pr\input\dinput.h"
+#include "pr\ldraw\ldraw_helper.h"
 #include "pr\ldraw\ldr_gizmo.h"
 #include "pr\ldraw\ldr_helper.h"
 #include "pr\ldraw\ldr_object.h"

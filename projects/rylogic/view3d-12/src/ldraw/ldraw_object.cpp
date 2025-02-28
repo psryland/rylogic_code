@@ -63,23 +63,23 @@ namespace pr::rdr12::ldraw
 	} g_ldr_object_tracker;
 	#endif
 
-	LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id)
-		:RdrInstance()
-		,m_o2p(m4x4Identity)
-		,m_type(attr.m_type)
-		,m_parent(parent)
-		,m_child()
-		,m_name(attr.m_name)
-		,m_context_id(context_id)
-		,m_base_colour(attr.m_colour)
-		,m_colour_mask()
-		,m_anim()
-		,m_bbox_instance()
-		,m_screen_space()
-		,m_ldr_flags(ELdrFlags::None)
-		,m_user_data()
+	LdrObject::LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id)
+		: RdrInstance()
+		, m_o2p(m4x4Identity)
+		, m_type(type)
+		, m_parent(parent)
+		, m_child()
+		, m_name()
+		, m_context_id(context_id)
+		, m_base_colour(Colour32White)
+		, m_colour_mask()
+		, m_anim()
+		, m_bbox_instance()
+		, m_screen_space()
+		, m_ldr_flags(ELdrFlags::None)
+		, m_user_data()
 	{
-		m_i2w = m4x4Identity;
+		m_i2w = m4x4::Identity();
 		m_colour = m_base_colour;
 		PR_EXPAND(PR_DBG, g_ldr_object_tracker.add(this));
 	}

@@ -3,8 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "view3d-12/src/dll/v3d_window.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "view3d-12/src/dll/context.h"
 
@@ -271,7 +271,7 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		std::span<GUID const> except_arr(except, except_count);
-		auto pred = [](LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude); };
 
 		BBox bbox;
 		switch (bounds)
@@ -299,7 +299,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (!AllSet(obj->m_ldr_flags, ELdrFlags::Selected)) continue;
+					if (!AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -311,7 +311,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden)) continue;
+					if (AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -391,47 +391,47 @@ namespace pr::rdr12
 				m_objects.insert(obj.get());
 
 			// Apply camera settings from this source
-			if (src.m_cam_fields != ECamField::None)
+			if (src.m_cam_fields != ldraw::ECamField::None)
 			{
 				auto& cam = src.m_cam;
 				auto changed = view3d::ESettings::Camera;
-				if (AllSet(src.m_cam_fields, ECamField::C2W))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::C2W))
 				{
 					m_scene.m_cam.CameraToWorld(cam.CameraToWorld());
 					changed |= view3d::ESettings::Camera_Position;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Focus))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Focus))
 				{
 					m_scene.m_cam.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
 					changed |= view3d::ESettings::Camera_Position;
 					changed |= view3d::ESettings::Camera_FocusDist;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Align))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Align))
 				{
 					m_scene.m_cam.Align(cam.Align());
 					changed |= view3d::ESettings::Camera_AlignAxis;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Aspect))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Aspect))
 				{
 					m_scene.m_cam.Aspect(cam.Aspect());
 					changed |= view3d::ESettings::Camera_Aspect;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::FovY))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::FovY))
 				{
 					m_scene.m_cam.FovY(cam.FovY());
 					changed |= view3d::ESettings::Camera_Fov;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Near))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Near))
 				{
 					m_scene.m_cam.Near(cam.Near(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Far))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Far))
 				{
 					m_scene.m_cam.Far(cam.Far(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Ortho))
+				if (AllSet(src.m_cam_fields, ldraw::ECamField::Ortho))
 				{
 					m_scene.m_cam.Orthographic(cam.Orthographic());
 					changed |= view3d::ESettings::Camera_Orthographic;
@@ -620,7 +620,7 @@ namespace pr::rdr12
 			obj->AddToScene(m_scene, anim_time);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
-			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
+			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
 				obj->AddBBoxToScene(m_scene, anim_time);
 		}
 
@@ -1117,7 +1117,7 @@ namespace pr::rdr12
 		{
 			obj->Apply([&](LdrObject const* c)
 			{
-				if (!AllSet(c->m_ldr_flags, ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
+				if (!AllSet(c->m_ldr_flags, ldraw::ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -1272,7 +1272,7 @@ namespace pr::rdr12
 				return true;
 
 			// Not visible to hit tests, keep looking
-			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
+			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
 				return true;
 
 			// The intercepts are already sorted from nearest to furtherest.
@@ -1468,10 +1468,10 @@ namespace pr::rdr12
 	}
 
 	// Access the built-in script editor
-	LdrScriptEditorUI& V3dWindow::EditorUI()
+	ldraw::ScriptEditorUI& V3dWindow::EditorUI()
 	{
 		if (!m_ui_script_editor)
-			m_ui_script_editor.reset(new LdrScriptEditorUI(m_hwnd));
+			m_ui_script_editor.reset(new ldraw::ScriptEditorUI(m_hwnd));
 
 		return *m_ui_script_editor;
 	}
@@ -1521,7 +1521,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_object_manager)
-			m_ui_object_manager.reset(new LdrObjectManagerUI(m_hwnd));
+			m_ui_object_manager.reset(new ldraw::ObjectManagerUI(m_hwnd));
 		
 		m_ui_object_manager->Visible(show);
 	}
@@ -1554,7 +1554,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_measure_tool)
-			m_ui_measure_tool.reset(new LdrMeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_measure_tool.reset(new ldraw::MeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
 		else
 			m_ui_measure_tool->SetReadPoint(&ReadPoint, this);
 		
@@ -1574,7 +1574,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_angle_tool)
-			m_ui_angle_tool.reset(new LdrAngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_angle_tool.reset(new ldraw::AngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
 		else
 			m_ui_angle_tool->SetReadPoint(&ReadPoint, this);
 		

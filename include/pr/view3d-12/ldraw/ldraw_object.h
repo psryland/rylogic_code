@@ -4,10 +4,10 @@
 //*********************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
+#include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/model.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -103,19 +103,6 @@ namespace pr::rdr12::ldraw
 		Subtract,
 		Multiply,
 		Lerp,
-	};
-
-	// Attributes (with defaults) for an LdrObject
-	struct ObjectAttributes
-	{
-		ELdrObject m_type;     // Object type
-		string32   m_name;     // Name of the object
-		Colour32   m_colour;   // Base colour of the object
-
-		ObjectAttributes() :m_type(ELdrObject::Unknown) ,m_name("unnamed") ,m_colour(Colour32White) {}
-		ObjectAttributes(ELdrObject type) :m_type(type), m_name("unnamed") ,m_colour(Colour32White) {}
-		ObjectAttributes(ELdrObject type, char const* name) :m_type(type), m_name(name) ,m_colour(Colour32White) {}
-		ObjectAttributes(ELdrObject type, char const* name, Colour32 colour) :m_type(type), m_name(name) ,m_colour(colour) {}
 	};
 
 	// Info on how to animate a ldr object
@@ -224,7 +211,7 @@ namespace pr::rdr12::ldraw
 		ELdrFlags    m_ldr_flags;     // Property flags controlling meta behaviour of the object
 		UserData     m_user_data;     // User data
 
-		LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id);
+		LdrObject(ELdrObject type, LdrObject* parent, Guid const& context_id);
 		~LdrObject();
 
 		// Return the type and name of this object

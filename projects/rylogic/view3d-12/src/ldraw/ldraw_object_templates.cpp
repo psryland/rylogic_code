@@ -48,7 +48,7 @@
 // Templates can contain comments, but comments must not contain: {}[]()<>|*@$
 #include <string>
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Return the auto completion templates
 	std::string AutoCompleteTemplates()

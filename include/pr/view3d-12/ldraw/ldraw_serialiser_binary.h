@@ -10,13 +10,11 @@
 namespace pr::rdr12::ldraw
 {
 	// Types that can be serialized into the buffer
-	template <typename T> concept PrimitiveType = requires(T)
-	{
+	template <typename T> concept PrimitiveType =
 		std::is_integral_v<T> ||
-			std::is_floating_point_v<T> ||
-			std::is_enum_v<T> ||
-			maths::VecOrMatType<T>;
-	};
+		std::is_floating_point_v<T> ||
+		std::is_enum_v<T> ||
+		maths::VecOrMatType<T>;
 	template <typename T> concept SpanType = requires(T t)
 	{
 		PrimitiveType<typename T::value_type>;
@@ -25,12 +23,12 @@ namespace pr::rdr12::ldraw
 	};
 
 	// The section header
-	struct Section
+	struct SectionHeader
 	{
 		// The hash of the keyword (4-bytes)
 		EKeyword m_keyword;
 
-		// The length of the section in bytes (including the header size)
+		// The length of the section in bytes (excluding the header size)
 		int m_size;
 	};
 
@@ -67,42 +65,48 @@ namespace pr::rdr12::ldraw
 	};
 	#pragma endregion
 
-	struct ByteWriter
+	#pragma region Static Tests
+	namespace static_tests
 	{
-		// Notes:
-		//  - Each Write function returns the size (in bytes) added to 'out'
-		//  - To write out only part of a File, delete the parts in a temporary copy of the file.
+		static_assert(std::is_integral_v<decltype("HELLO")> == false);
+		static_assert(std::is_floating_point_v<decltype("HELLO")> == false);
+		static_assert(std::is_enum_v<decltype("HELLO")> == false);
+		static_assert(maths::VecOrMatType<decltype("HELLO")> == false);
+		static_assert(PrimitiveType<decltype("HELLO")> == false);
+	}
+	#pragma endregion
 
+	struct BinaryWriter
+	{
 		// Write custom data within a section
 		template <typename TOut, std::invocable<TOut&> AddBodyFn>
-		static int64_t Write(TOut& out, EKeyword keyword, AddBodyFn body_cb)
+		static void Write(TOut& out, EKeyword keyword, AddBodyFn body_cb)
 		{
 			// Record the write pointer position
 			auto ofs = traits<TOut>::tellp(out);
 
 			// Write a dummy header
-			Section header = { .m_keyword = keyword };
+			SectionHeader header = { .m_keyword = keyword };
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) });
 
 			// Write the section body
 			body_cb(out);
 
 			// Update the header with the correct size
-			header.m_size = s_cast<int>(traits<TOut>::tellp(out) - ofs);
+			header.m_size = s_cast<int>(traits<TOut>::tellp(out) - ofs - sizeof(header));
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) }, ofs);
-			return header.m_size;
 		}
 
 		// Write an empty section
 		template <typename TOut>
-		static int64_t Write(TOut& out, EKeyword keyword)
+		static void Write(TOut& out, EKeyword keyword)
 		{
 			return Write(out, keyword, [](auto&) {});
 		}
 
 		// Write a string section
 		template <typename TOut>
-		static int64_t Write(TOut& out, EKeyword keyword, std::string_view str)
+		static void Write(TOut& out, EKeyword keyword, std::string_view str)
 		{
 			return Write(out, keyword, [&](auto&)
 			{
@@ -112,7 +116,7 @@ namespace pr::rdr12::ldraw
 
 		// Write a single primitive type
 		template <typename TOut, PrimitiveType TItem, PrimitiveType... TItems>
-		static int64_t Write(TOut& out, EKeyword keyword, TItem item, TItems&&... items)
+		static void Write(TOut& out, EKeyword keyword, TItem item, TItems&&... items)
 		{
 			return Write(out, keyword, [&](auto&)
 			{
@@ -123,7 +127,7 @@ namespace pr::rdr12::ldraw
 
 		// Write a span of items
 		template <typename TOut, PrimitiveType TItem>
-		static int64_t Write(TOut& out, EKeyword keyword, std::span<TItem const> span)
+		static void Write(TOut& out, EKeyword keyword, std::span<TItem const> span)
 		{
 			return Write(out, keyword, [&](auto&)
 			{
@@ -133,7 +137,7 @@ namespace pr::rdr12::ldraw
 
 		// Write an immediate list of items
 		template <typename TOut, PrimitiveType TItem>
-		static int64_t Write(TOut& out, EKeyword keyword, std::initializer_list<TItem const> items)
+		static void Write(TOut& out, EKeyword keyword, std::initializer_list<TItem const> items)
 		{
 			return Write(out, keyword, [&](auto&)
 			{
@@ -142,69 +146,265 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
-	struct ByteReader : IReader
+	struct BinaryReader : IReader
 	{
-		using Section = struct { int64_t beg, end; }; // byte offsets from 'Src.begin()'
-		using SectionStack = pr::vector<Section>;
+		// Byte offsets from the start of the stream for the range of the data in the current section (excludes the header)
+		using SectionSpan = struct { int64_t m_beg, m_end; };
+		using SectionStack = pr::vector<SectionSpan>;
 
-		std::istream& m_src;
-		SectionStack m_section;
-		std::filesystem::path m_src_filepath;
+		std::istream& m_src;         // The input byte stream
+		int64_t m_pos;               // The number of bytes read from the stream so far, or the index of the next byte to read (same thing)
+		SectionStack m_section;      // A stack of section headers. back() == top == current section.
+		mutable Location m_location; // Source location description
 
-		ByteReader(std::istream& src, std::filesystem::path src_filepath = {});
+		explicit BinaryReader(std::istream& src, std::filesystem::path src_filepath = {})
+			: m_src(src)
+			, m_pos()
+			, m_section({ {0, std::numeric_limits<int64_t>::max()} })
+			, m_location({ src_filepath })
+		{
+			PushSection();
+		}
+		BinaryReader(BinaryReader&&) = delete;
+		BinaryReader(BinaryReader const&) = delete;
+		BinaryReader& operator=(BinaryReader&&) = delete;
+		BinaryReader& operator=(BinaryReader const&) = delete;
 
 		// Return the current location in the source
-		virtual Location Loc() const override;
+		virtual Location const& Loc() const override
+		{
+			m_location.m_offset = m_pos;
+			return m_location;
+		}
 
 		// Move into a nested section
-		virtual void PushSection() override;
+		virtual void PushSection() override
+		{
+			// The current top of the stack becomes the parent
+			m_section.push_back({ m_pos, m_pos });
+		}
 
 		// Leave the current nested section
-		virtual void PopSection() override;
+		virtual void PopSection() override
+		{
+			m_section.pop_back();
+
+			// Should always have the dummy "global" parent section and a 'current' section
+			assert(m_section.size() >= 2);
+		}
 
 		// Get the next keyword within the current section.
 		// Returns false if at the end of the section
-		virtual bool NextKeyword(ldraw::EKeyword& kw) override;
+		virtual bool NextKeyword(EKeyword& kw) override
+		{
+			// Out of data
+			if (m_src.eof())
+				return false;
 
-		// Search the current section, from the current position, for the given keyword.
-		// Does not affect the 'current' position used by 'NextKeyword'
-		virtual bool FindKeyword(ldraw::EKeyword kw) override;
+			// The top of the stack is the last section read at the current nesting level
+			// The next on the stack is the parent level.
+			auto& last = m_section[m_section.size() - 1];
+			auto& parent = m_section[m_section.size() - 2];
+
+			// Seek to the end of the current section.
+			m_src.seekg(last.m_end - m_pos, std::ios::cur);
+			m_pos = last.m_end;
+
+			// If this is the end of the parent section then there are no more sections at this level.
+			if (m_pos == parent.m_end)
+				return false;
+
+			// Read the next section header at this level
+			//SectionHeader header = {
+			//	.m_keyword = static_cast<EKeyword>(Int(4)),
+			//	.m_size = static_cast<int>(Int(4)),
+			//};
+			SectionHeader header;
+			Read(&header, sizeof(header));
+			kw = header.m_keyword;
+
+			// Replace the top of the stack
+			m_section.back() = { m_pos, m_pos + header.m_size };
+			return true;
+		}
 
 		// True when the current position has reached the end of the current section
-		virtual bool IsSectionEnd() override;
+		virtual bool IsSectionEnd() override
+		{
+			return m_pos == m_section.back().m_end;
+		}
 
+		// Open a byte stream corresponding to 'path'
+		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) override
+		{
+			(void)path;
+			throw std::runtime_error("not implemented");
+		}
+
+		using IReader::String;
+		using IReader::Int;
+		using IReader::Real;
+
+	protected:
+		
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 String(bool has_length = false) override;
+		virtual string32 StringImpl(bool has_length = false) override
+		{
+			if (has_length)
+			{
+				size_t length = {};
+
+				// Read the default 16-bit length
+				uint16_t len16;
+				Read(&len16, sizeof(len16));
+				len16 = len16;
+
+				// Only 15 bits are used
+				length = len16 & 0x7FFF;
+
+				// Use the high bit to indicate 31-bit length
+				if (AllSet(len16, 0x8000))
+				{
+					Read(&len16, sizeof(len16));
+					len16 = len16;
+					length = (length << 16) | len16;
+				}
+
+				// Read the string 
+				string32 str(length, 0);
+				Read(str.data(), str.size());
+				return str;
+			}
+			else
+			{
+				// Assume the remainder of the section is the string
+				auto& header = m_section.back();
+				string32 str(header.m_end - m_pos, 0);
+				Read(str.data(), str.size());
+				return str;
+			}
+		}
 
 		// Read an integral value from the current section
-		virtual int64_t Int(int byte_count, int radix) override;
+		virtual int64_t IntImpl(int byte_count, int = 0) override
+		{
+			switch (byte_count)
+			{
+				case 1: { int8_t v; Read(&v, sizeof(v)); return v; }
+				case 2: { int16_t v; Read(&v, sizeof(v)); return v; }
+				case 4: { int32_t v; Read(&v, sizeof(v)); return v; }
+				case 8: { int64_t v; Read(&v, sizeof(v)); return v; }
+				default: throw std::runtime_error("Invalid byte count");
+			}
+		}
 
 		// Read a floating point value from the current section
-		virtual double Real(int byte_count) override;
+		virtual double RealImpl(int byte_count) override
+		{
+			auto value = IntImpl(byte_count, 0);
+			switch (byte_count)
+			{
+				case 2: return reinterpret_cast<half_t const&>(value);
+				case 4: return reinterpret_cast<float const&>(value);
+				case 8: return reinterpret_cast<double const&>(value);
+				default: throw std::runtime_error("Invalid byte count");
+			}
+		}
 
-		// Open a byte stream corresponding to 'path'
-		virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) override;
+	private:
+
+		// Read 'size' bytes into 'buf'
+		void Read(void* buf, int64_t size)
+		{
+			if (!m_src.read(char_ptr(buf), s_cast<size_t>(size)).good())
+				throw std::runtime_error("Read failed");
+
+			m_pos += size;
+		}
 	};
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/common/memstream.h"
 #include "pr/maths/maths.h"
 namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LDrawBinarySerialiserTests)
 	{
-		byte_data<4> data;
-		Write(data, EKeyword::Point, [](auto& data)
+		std::vector<char> data;
+
+		pr::mem_ostream<char> strm(data);
+		BinaryWriter::Write(strm, EKeyword::Point, [&](auto&)
 		{
-			Write(data, EKeyword::Name, "TestPoints");
-			Write(data, EKeyword::Colour, 0xFF00FF00);
-			Write(data, EKeyword::Data, { v4(1,1,1,1), v4(2,2,2,1), v4(3,3,3,1) });
+			BinaryWriter::Write(strm, EKeyword::Name, "TestPoints");
+			BinaryWriter::Write(strm, EKeyword::Colour, 0xFF00FF00);
+			BinaryWriter::Write(strm, EKeyword::Data, { v3(1,1,1), v3(2,2,2), v3(3,3,3) });
+			BinaryWriter::Write(strm, EKeyword::Line, [&](auto&)
+			{
+				BinaryWriter::Write(strm, EKeyword::Name, "TestLines");
+				BinaryWriter::Write(strm, EKeyword::Colour, 0xFF0000FF);
+				BinaryWriter::Write(strm, EKeyword::Data, v3(-1,-1,0), v3(1,1,0), v3(-1,1,0), v3(1,-1,0));
+			});
+			BinaryWriter::Write(strm, EKeyword::Sphere, [&](auto&)
+			{
+				BinaryWriter::Write(strm, EKeyword::Name, "TestSphere");
+				BinaryWriter::Write(strm, EKeyword::Colour, 0xFFFF0000);
+				BinaryWriter::Write(strm, EKeyword::Data, 1.0f);
+			});
 		});
 
+		PR_EXPECT(data.size() != 0);
 
+		#if 0
+		{
+			std::ofstream ofile(temp_dir / "ldraw_test.lbr", std::ios::binary);
+			ofile.write(data.data(), data.size());
+		}
+		#endif
+
+		pr::mem_istream<char> src(data.data(), data.size());
+		BinaryReader reader(src);
+
+		PR_EXPECT(reader.Loc().m_offset == 0);
+		
+		EKeyword kw;
+		PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Point);
+		{
+			auto points = reader.SectionScope();
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Name);
+			PR_EXPECT(reader.Identifier() == "TestPoints");
+
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Colour);
+			PR_EXPECT(reader.Int<uint32_t>() == 0xFF00FF00);
+
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Data);
+			PR_EXPECT(reader.Vector3f().w1() == v4(1,1,1,1));
+			PR_EXPECT(reader.Vector3f().w1() == v4(2,2,2,1));
+			PR_EXPECT(reader.Vector3f().w1() == v4(3,3,3,1));
+
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Line); // Skip Line
+			
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Sphere);
+			{
+				auto sphere = reader.SectionScope();
+				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Name);
+				PR_EXPECT(reader.Identifier() == "TestSphere");
+
+				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Colour);
+				PR_EXPECT(reader.Int<uint32_t>() == 0xFFFF0000);
+
+				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Data);
+				PR_EXPECT(reader.Real<float>() == 1.0f);
+			}
+
+			PR_EXPECT(!reader.NextKeyword(kw));
+			PR_EXPECT(reader.IsSectionEnd());
+		}
+
+		PR_EXPECT(reader.Loc().m_offset == isize(data));
 	}
 }
 #endif

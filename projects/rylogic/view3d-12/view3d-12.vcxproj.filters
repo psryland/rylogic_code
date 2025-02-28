@@ -213,10 +213,10 @@
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp">
+    <ClCompile Include="src\ldraw\ldraw_object_demo_scene.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldr_object_templates.cpp">
+    <ClCompile Include="src\ldraw\ldraw_object_templates.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\resource\mipmap_generator.cpp">
@@ -250,9 +250,6 @@
       <Filter>src\resource</Filter>
     </ClCompile>
     <ClCompile Include="src\ldraw\ldraw_parsing.cpp">
-      <Filter>src\ldraw</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_serialiser_binary.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp">
