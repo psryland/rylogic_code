@@ -26,6 +26,8 @@
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
 #include "pr/view3d-12/ldraw/ldraw_sources.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "view3d-12/src/dll/dll_forward.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
@@ -149,17 +151,6 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(view3d::SourcesChangedCB so
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
 
-// Add/Remove a callback for handling embedded code within scripts
-VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(char const* lang, view3d::EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add)
-{
-	try
-	{
-		DllLockGuard;
-		Dll().SetEmbeddedCodeHandler(lang, { embedded_code_cb, ctx }, add != 0);
-	}
-	CatchAndReport(View3D_EmbeddedCodeCBSet, , );
-}
-
 // Return the context id for objects created from 'filepath' (if filepath is an existing source)
 VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id)
 {
@@ -176,12 +167,12 @@ VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUI
 // Data Sources ***************************
 
 // Create an include handler that can load from directories or embedded resources
-static script::Includes GetIncludes(view3d::Includes const* includes)
+static PathResolver GetIncludes(view3d::Includes const* includes)
 {
 	if (includes == nullptr)
-		return script::Includes{};
+		return {};
 
-	script::Includes inc;
+	PathResolver inc;
 	if (includes->m_include_paths != nullptr)
 		inc.SearchPathList(includes->m_include_paths);
 
@@ -197,9 +188,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GU
 	try
 	{
 		// Concurrent entry is allowed
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
+		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
 }
@@ -208,9 +198,8 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	try
 	{
 		// Concurrent entry is allowed
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
+		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
 	}
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
@@ -320,16 +309,16 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 }
 
 // Get/Set the window settings (as ldr script string)
-VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(view3d::Window window)
+VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(view3d::Window window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 		return window->Settings();
 	}
-	CatchAndReport(View3D_WindowSettingsGet, window, L"");
+	CatchAndReport(View3D_WindowSettingsGet, window, "");
 }
-VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, wchar_t const* settings)
+VIEW3D_API void __stdcall View3D_WindowSettingsSet(view3d::Window window, char const* settings)
 {
 	try
 	{
@@ -1535,9 +1524,8 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrW(wchar_t const* ldr_s
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf16_le;
-		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, id, includes);
+		return Dll().ObjectCreateLdr<wchar_t>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1547,9 +1535,8 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateLdrA(char const* ldr_scri
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
 		auto enc = is_file ? EEncoding::auto_detect : EEncoding::utf8;
-		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, id, includes);
+		return Dll().ObjectCreateLdr<char>(ldr_script, is_file, enc, context_id, includes);
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1560,8 +1547,7 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DFile(char const* name,
 	try
 	{
 		DllLockGuard;
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
-		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, id);
+		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, context_id);
 	}
 	CatchAndReport(View3D_ObjectCreateP3D, , {});
 }
@@ -1572,8 +1558,7 @@ VIEW3D_API view3d::Object __stdcall View3D_ObjectCreateP3DStream(char const* nam
 	try
 	{
 		DllLockGuard;
-		auto id = context_id ? *context_id : std::optional<Guid const>(std::nullopt);
-		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, id);
+		return Dll().ObjectCreateP3D(name, colour, { byte_ptr(p3d_data), size } , context_id);
 	}
 	CatchAndReport(View3D_ObjectCreateP3D, , {});
 }
@@ -1608,7 +1593,7 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(view3d::Object object, wchar_t con
 		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
-		Dll().UpdateObject(object, ldr_script, static_cast<rdr12::ldraw::EUpdateObject>(flags));
+		Dll().UpdateObject(object, std::wstring_view{ ldr_script }, static_cast<rdr12::ldraw::EUpdateObject>(flags));
 	}
 	CatchAndReport(View3D_ObjectUpdate, ,);
 }
@@ -2927,7 +2912,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
 		DllLockGuard;
 
 		// Add the demo objects to the sources
-		Dll().LoadScriptString(std::string_view(scene), EEncoding::utf8, Context::GuidDemoSceneObjects, script::Includes(), [=](Guid const& id, bool before)
+		Dll().LoadScriptString(std::string_view(scene), EEncoding::utf8, &Context::GuidDemoSceneObjects, PathResolver{}, [=](Guid const& id, bool before)
 		{
 			if (before)
 				window->Remove(&id, 1, 0);
@@ -2998,10 +2983,49 @@ VIEW3D_API BSTR __stdcall View3D_ObjectAddressAt(wchar_t const* ldr_script, int6
 	{
 		// 'script' should start from a root level position.
 		// 'position' should be relative to 'script'
+		//
+		// The format of the returned address is: "keyword.keyword.keyword..."
+		// e.g. example
+		//   *Group { *Width {1} *Smooth *Box
+		//   {
+		//       *other {}
+		//       /* *something { */
+		//       // *something {
+		//       "my { string"
+		//       *o2w { *pos { <-- Address should be: Group.Box.o2w.pos
 
-		script::StringSrc src({ ldr_script, static_cast<size_t>(position) });
-		auto address = script::Reader::AddressAt(src);
-		return ::SysAllocStringLen(address.c_str(), UINT(address.size()));
+		std::wstringstream src({ ldr_script, ldr_script + position });
+		rdr12::ldraw::TextReader reader(src, {});
+
+		std::wstring path;
+		try
+		{
+			for (rdr12::ldraw::EKeyword kw; !reader.IsSourceEnd(); )
+			{
+				// Find the next keyword in the current scope
+				if (reader.NextKeyword(kw))
+				{
+					// Add to the path while within this section
+					path.append(path.empty() ? L"" : L".").append(rdr12::ldraw::EKeyword_::ToStringW(kw));
+					reader.PushSection();
+				}
+				if (reader.IsSectionEnd())
+				{
+					// If we've reached the end of the scope, pop that last keyword
+					// from the path since 'position' is not within this scope.
+					for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
+					if (!path.empty()) path.pop_back();
+					reader.PopSection();
+				}
+			}
+		}
+		catch (std::exception const&)
+		{
+			// If the script contains errors, we can't be sure that 'path' is correct.
+			// Return an empty path, rather than hoping that the path is right.
+			path.resize(0);
+		}
+		return ::SysAllocStringLen(path.c_str(), UINT(path.size()));
 	}
 	CatchAndReport(View3D_ObjectAddressAt, , BSTR());
 }
@@ -3011,11 +3035,11 @@ VIEW3D_API view3d::Mat4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_scr
 {
 	try
 	{
-		script::StringSrc src(ldr_script);
-		script::Reader reader(src);
+		mem_istream<char> src(ldr_script);
+		rdr12::ldraw::TextReader reader(src, {});
 		
-		m4x4 o2w;
-		reader.TransformS(o2w);
+		auto o2w = m4x4::Identity();
+		reader.Transform(o2w);
 		return To<view3d::Mat4x4>(o2w);
 	}
 	CatchAndReport(View3D_ParseLdrTransform, , To<view3d::Mat4x4>(m4x4::Identity()));

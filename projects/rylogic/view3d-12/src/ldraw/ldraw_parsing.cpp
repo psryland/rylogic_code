@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/model/model.h"
@@ -136,8 +138,7 @@ namespace pr::rdr12::ldraw
 	struct ParseParams
 	{
 		// Notes:
-		// - Ldr object can be created in a background thread. So there is a separate
-		//   command list.
+		// - Ldr object can be created in a background thread. So there is a separate command list.
 		using system_clock = std::chrono::system_clock;
 		using time_point = std::chrono::time_point<system_clock>;
 		using FontStack = pr::vector<Font>;
@@ -366,7 +367,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Style:
 				{
-					auto ident = reader.Identifier();
+					auto ident = reader.Identifier<string32>();
 					if (str::EqualI(ident, "normal")) font.m_style = DWRITE_FONT_STYLE_NORMAL;
 					if (str::EqualI(ident, "italic")) font.m_style = DWRITE_FONT_STYLE_ITALIC;
 					if (str::EqualI(ident, "oblique")) font.m_style = DWRITE_FONT_STYLE_OBLIQUE;
@@ -405,7 +406,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Style:
 				{
-					auto style = reader.Identifier();
+					auto style = reader.Identifier<string32>();
 					if (str::EqualI(style, "NoAnimation")) anim.m_style = EAnimStyle::NoAnimation;
 					else if (str::EqualI(style, "Once")) anim.m_style = EAnimStyle::Once;
 					else if (str::EqualI(style, "Repeat")) anim.m_style = EAnimStyle::Repeat;
@@ -466,15 +467,15 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Addr:
 				{
-					auto addrU = reader.Identifier(true);
-					auto addrV = reader.Identifier(true);
+					auto addrU = reader.Identifier<string32>(true);
+					auto addrV = reader.Identifier<string32>(true);
 					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrU.c_str(), false));
 					tex.m_sdesc.AddressV = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrV.c_str(), false));
 					break;
 				}
 				case EKeyword::Filter:
 				{
-					auto fltr = reader.Identifier();
+					auto fltr = reader.Identifier<string32>();
 					tex.m_sdesc.Filter = s_cast<D3D12_FILTER>(EFilter_::Parse(fltr.c_str(), false));
 					break;
 				}
@@ -499,7 +500,7 @@ namespace pr::rdr12::ldraw
 		{
 			case EKeyword::Name:
 			{
-				obj->m_name = reader.Identifier();
+				obj->m_name = reader.Identifier<string32>();
 				return true;
 			}
 			case EKeyword::O2W:
@@ -820,7 +821,7 @@ namespace pr::rdr12::ldraw
 					}
 					case EKeyword::Style:
 					{
-						auto ident = reader.Identifier();
+						auto ident = reader.Identifier<string32>();
 						switch (HashI(ident.c_str()))
 						{
 							case HashI("square"):   m_style = EStyle::Square; break;
@@ -2003,7 +2004,7 @@ namespace pr::rdr12::ldraw
 					// Expect the arrow type first
 					if (m_type == EArrowType::Invalid)
 					{
-						auto ty = reader.Identifier();
+						auto ty = reader.Identifier<string32>();
 						if (str::EqualNI(ty, "Line")) m_type = EArrowType::Line;
 						else if (str::EqualNI(ty, "Fwd")) m_type = EArrowType::Fwd;
 						else if (str::EqualNI(ty, "Back")) m_type = EArrowType::Back;
@@ -3978,7 +3979,7 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			// Determine the index of this series within the chart
 			int child_index = 0;
@@ -4082,7 +4083,7 @@ namespace pr::rdr12::ldraw
 					// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 					m_filepath = reader.String<std::filesystem::path>();
 					m_file_stream = reader.PathResolver.OpenStream(m_filepath, IPathResolver::EFlags::Binary);
-					break;
+					return true;
 				}
 				default:
 				{
@@ -4340,8 +4341,8 @@ namespace pr::rdr12::ldraw
 					catch (std::exception const& ex)
 					{
 						m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), std::format("Equation expression is invalid: {}", ex.what()));
-						return true;
 					}
+					return true;
 				}
 				case EKeyword::Resolution:
 				{
@@ -4664,7 +4665,7 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Style:
 				{
-					auto ident = reader.Identifier();
+					auto ident = reader.Identifier<string32>();
 					switch (HashI(ident.c_str()))
 					{
 						case HashI("Directional"): m_light.m_type = ELight::Directional; break;
@@ -4780,7 +4781,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Format:
 				{
-					auto ident = reader.Identifier();
+					auto ident = reader.Identifier<string32>();
 					switch (HashI(ident.c_str()))
 					{
 						case HashI("Left"): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_LEADING; break;
@@ -4788,7 +4789,7 @@ namespace pr::rdr12::ldraw
 						case HashI("Right"): m_layout.m_align_h = DWRITE_TEXT_ALIGNMENT_TRAILING; break;
 						default: m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("{} is not a valid horizontal alignment value", ident));
 					}
-					ident = reader.Identifier();
+					ident = reader.Identifier<string32>();
 					switch (HashI(ident.c_str()))
 					{
 						case HashI("Top"): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_NEAR; break;
@@ -4796,7 +4797,7 @@ namespace pr::rdr12::ldraw
 						case HashI("bottom"): m_layout.m_align_v = DWRITE_PARAGRAPH_ALIGNMENT_FAR; break;
 						default: m_pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("{} is not a valid vertical alignment value", ident));
 					}
-					ident = reader.Identifier();
+					ident = reader.Identifier<string32>();
 					switch (HashI(ident.c_str()))
 					{
 						case HashI("Wrap"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WRAP; break;
@@ -5146,68 +5147,34 @@ namespace pr::rdr12::ldraw
 		ParseLdrObjects(reader, pp, [&](int){});
 		return out;
 	}
-
-#if 0 // Todo - provide implementations of 'IReader' to make these functions unnecessary
-
-	// Parse ldr script from a text file.
-	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
-	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
-	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult ParseFile(Renderer& rdr, std::filesystem::path filename, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, std::string_view ldr_script, Guid const& context_id)
 	{
-#if 0
-		script::FileSrc src(filename);
-		script::Reader reader(src);
-		return Parse(rdr, reader, context_id, progress_cb);
-#endif
-		(void)rdr, filename, context_id, report_error_cb, progress_cb;
-		throw std::runtime_error("not implemented");
+		mem_istream<char> src{ ldr_script };
+		rdr12::ldraw::TextReader reader(src, {});
+		return Parse(rdr, reader, context_id);
 	}
-
-	// Parse ldr script from a string
-	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
-	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
-	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	template <typename Char>
-	ParseResult ParseString(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
+	ParseResult Parse(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id)
 	{
-#if 0
-		script::StringSrc src(ldr_script);
-		script::Reader reader(src);
-		return Parse(rdr, reader, context_id, report_error_cb, progress_cb);
-#endif
-		(void)rdr, ldr_script, context_id, report_error_cb, progress_cb;
-		throw std::runtime_error("not implemented");
+		mem_istream<wchar_t> src{ ldr_script };
+		rdr12::ldraw::TextReader reader(src, {});
+		return Parse(rdr, reader, context_id);
 	}
-	ParseResult ParseString(Renderer& rdr, std::string_view ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
+	ParseResult ParseFile(Renderer& rdr, std::filesystem::path ldr_filepath, Guid const& context_id)
 	{
-		return ParseString<char>(rdr, ldr_script, context_id, report_error_cb, progress_cb);
+		if (ldr_filepath.extension() == ".ldr")
+		{
+			std::ifstream src{ ldr_filepath };
+			rdr12::ldraw::TextReader reader(src, ldr_filepath);
+			return Parse(rdr, reader, context_id);
+		}
+		if (ldr_filepath.extension() == ".bdr")
+		{
+			std::ifstream src{ ldr_filepath, std::ios::binary };
+			rdr12::ldraw::BinaryReader reader(src, ldr_filepath);
+			return Parse(rdr, reader, context_id);
+		}
+		return {};
 	}
-	ParseResult ParseString(Renderer& rdr, std::wstring_view ldr_script, Guid const& context_id, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
-	{
-		return ParseString<wchar_t>(rdr, ldr_script, context_id, report_error_cb, progress_cb);
-	}
-
-	// Create a single LDR object from a string
-	template <typename Char>
-	LdrObjectPtr CreateLdr(Renderer& rdr, std::basic_string_view<Char> ldr_script, Guid const& context_id)
-	{
-		auto result = ParseString<Char>(rdr, ldr_script, context_id, nullptr, nullptr);
-		if (result.m_objects.empty())
-			throw std::runtime_error("No objects created");
-		if (result.m_objects.size() > 1)
-			throw std::runtime_error("Multiple objects created");
-		return result.m_objects[0];
-	}
-	LdrObjectPtr CreateLdr(Renderer& rdr, std::string_view ldr_script, Guid const& context_id)
-	{
-		return CreateLdr<char>(rdr, ldr_script, context_id);
-	}
-	LdrObjectPtr CreateLdr(Renderer & rdr, std::wstring_view ldr_script, Guid const& context_id)
-	{
-		return CreateLdr<wchar_t>(rdr, ldr_script, context_id);
-	}
-#endif
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(Renderer& rdr, ELdrObject type, MeshCreationData const& cdata, Guid const& context_id)
@@ -5238,13 +5205,13 @@ namespace pr::rdr12::ldraw
 
 		return obj;
 	}
-	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, size_t size, void const* p3d_data, Guid const& context_id)
+	LdrObjectPtr CreateP3D(Renderer& rdr, ELdrObject type, std::span<std::byte const> p3d_data, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(type, nullptr, context_id), true);
 
 		// Create the model
 		ResourceFactory factory(rdr);
-		mem_istream<char> src(p3d_data, size);
+		mem_istream<char> src(p3d_data.data(), p3d_data.size());
 		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
 				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
@@ -5306,13 +5273,13 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags, ReportErrorCB report_error_cb, ParseProgressCB progress_cb)
+	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags)
 	{
 		bool cancel = false;
 
 		// Parsing parameters
 		ParseResult result;
-		ParseParams pp(rdr, result, object->m_context_id, report_error_cb, progress_cb, cancel);
+		ParseParams pp(rdr, result, object->m_context_id, reader.ReportError, reader.Progress, cancel);
 	
 		// Parse 'reader' for the new model
 		ParseLdrObjects(reader, pp, [&](int object_index)

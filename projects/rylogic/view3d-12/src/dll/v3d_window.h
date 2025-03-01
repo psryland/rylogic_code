@@ -68,12 +68,12 @@ namespace pr::rdr12
 		EStockObject  m_visible_objects; // Visible stock objects
 
 		// Misc
-		mutable std::wstring m_settings;       // Window settings
-		AnimData             m_anim_data;      // Animation time in seconds
-		mutable pr::BBox     m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
-		PipeStates           m_global_pso;     // Global pipe state overrides
-		std::thread::id      m_main_thread_id; // The thread that created this window
-		bool                 m_invalidated;    // True after Invalidate has been called but before Render has been called
+		mutable std::string m_settings;       // Window settings
+		AnimData            m_anim_data;      // Animation time in seconds
+		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
+		PipeStates          m_global_pso;     // Global pipe state overrides
+		std::thread::id     m_main_thread_id; // The thread that created this window
+		bool                m_invalidated;    // True after Invalidate has been called but before Render has been called
 		
 		// UI Tools
 		LightingUIPtr m_ui_lighting;               // A UI for controlling the lighting of the scene
@@ -111,8 +111,8 @@ namespace pr::rdr12
 		MultiCast<StaticCB<view3d::AnimationCB>, true> OnAnimationEvent;
 
 		// Get/Set the settings
-		wchar_t const* Settings() const;
-		void Settings(wchar_t const* settings);
+		char const* Settings() const;
+		void Settings(char const* settings);
 
 		// The DPI of the monitor that this window is displayed on
 		v2 Dpi() const;

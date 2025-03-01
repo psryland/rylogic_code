@@ -189,25 +189,6 @@
 				</Grid>
 			</TabItem>
 
-			<!-- Embedded Code -->
-			<TabItem
-				Header="Embedded C#"
-				>
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="*"/>
-					</Grid.RowDefinitions>
-				
-					<!-- Editor -->
-					<avalon:TextEditor
-						Grid.Row="0"
-						FontFamily="{Binding Model.Settings.FontName, FallbackValue=Consolas}"
-						SyntaxHighlighting="C#"
-						ShowLineNumbers="True"
-						Name="m_editor_cs_boilerplate"
-						/>
-				</Grid>
-			</TabItem>
 		</TabControl>
 
 		<!-- Buttons -->

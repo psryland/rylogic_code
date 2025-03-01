@@ -18,6 +18,7 @@
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "pr/view3d-12/shaders/shader_thick_line.h"
 #include "pr/view3d-12/shaders/shader_arrow_head.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/utility/update_resource.h"
 
 namespace pr::rdr12
@@ -961,8 +962,9 @@ namespace pr::rdr12
 	// Create a shader
 	ShaderPtr ResourceFactory::CreateShader(EStockShader id, char const* config)
 	{
-		script::StringSrc src(config);
-		script::Reader reader(src);
+		// Parse the config string
+		mem_istream<char> src(config);
+		rdr12::ldraw::TextReader reader(src, {});
 
 		switch (id)
 		{
@@ -980,29 +982,56 @@ namespace pr::rdr12
 			// Point sprite params: *PointSize {w,h} *Depth {true|false}
 			case EStockShader::PointSpritesGS:
 			{
-				auto radius = reader.Keyword(L"Radius").Vector2S();
-				auto depth = reader.Keyword(L"Depth").BoolS();
+				v2 radius = { 1,1 };
+				bool depth = false;
+				for (int kw; reader.NextKeyword(kw);) switch (kw)
+				{
+					case rdr12::ldraw::HashI("PointSize"):
+						radius = reader.Vector2f();
+						break;
+					case rdr12::ldraw::HashI("Depth"):
+						depth = reader.Bool();
+						break;
+				}
 				return Shader::Create<shaders::PointSpriteGS>(radius, depth);
 			}
 
 			// Thick line params: *LineWidth {width}
 			case EStockShader::ThickLineListGS:
 			{
-				auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+				auto line_width = 0.0f;
+				for (int kw; reader.NextKeyword(kw);) switch (kw)
+				{
+					case rdr12::ldraw::HashI("LineWidth"):
+						line_width = reader.Real<float>();
+						break;
+				}
 				return Shader::Create<shaders::ThickLineListGS>(line_width);
 			}
 
 			// Thick line params: *LineWidth {width}
 			case EStockShader::ThickLineStripGS:
 			{
-				auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+				auto line_width = 0.0f;
+				for (int kw; reader.NextKeyword(kw);) switch (kw)
+				{
+					case rdr12::ldraw::HashI("LineWidth"):
+						line_width = reader.Real<float>();
+						break;
+				}
 				return Shader::Create<shaders::ThickLineStripGS>(line_width);
 			}
 
 			// Arrow params: *Size {size}
 			case EStockShader::ArrowHeadGS:
 			{
-				auto size = reader.Keyword(L"Size").RealS<float>();
+				auto size = 0.0f;
+				for (int kw; reader.NextKeyword(kw);) switch (kw)
+				{
+					case rdr12::ldraw::HashI("Size"):
+						size = reader.Real<float>();
+						break;
+				}
 				return Shader::Create<shaders::ArrowHeadGS>(size);
 			}
 

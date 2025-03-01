@@ -8,6 +8,7 @@
 #include <span>
 #include <concepts>
 #include <initializer_list>
+#include <sstream>
 #include <malloc.h>
 #include <intrin.h>
 
@@ -69,8 +70,8 @@ namespace pr
 			:byte_data()
 		{
 			// Example use:
-			//   std::ifstream infile(filepath, std::ios::binary);
-			//   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
+			//'   std::ifstream infile(filepath, std::ios::binary);
+			//'   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
 			static_assert(std::is_trivially_copyable_v<Type>);
 			for (; first != last; ++first)
 				push_back<Type>(*first);
@@ -629,7 +630,7 @@ namespace pr
 			}
 		}
 
-		// Convertable to const
+		// Convertible to const
 		operator byte_data_cptr() const
 		{
 			return byte_data_cptr({ m_beg, static_cast<size_t>(m_end - m_beg) });

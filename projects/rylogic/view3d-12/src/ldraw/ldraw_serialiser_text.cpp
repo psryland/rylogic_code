@@ -7,21 +7,22 @@
 
 namespace pr::rdr12::ldraw
 {
+	template <typename Char>
 	struct TextReaderImpl : IReader
 	{
-		script::StreamSrc m_src;
+		script::StreamSrc<Char> m_src;
 		script::Preprocessor m_pp;
 		mutable Location m_location;
 		string32 m_keyword;
-		string32 m_delim;
+		wstring32 m_delim;
 
-		TextReaderImpl(std::istream& src, EEncoding enc, std::filesystem::path src_filepath, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
+		TextReaderImpl(std::basic_istream<Char>& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
 			: IReader(report_error_cb, progress_cb, resolver)
 			, m_src(src, enc, script::Loc(src_filepath))
 			, m_pp(m_src)
 			, m_location()
 			, m_keyword()
-			, m_delim(" \t\r\n\v,;")
+			, m_delim(L" \t\r\n\v,;")
 		{
 		}
 		
@@ -55,30 +56,6 @@ namespace pr::rdr12::ldraw
 
 			++m_pp;
 		}
-		
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
-		virtual bool NextKeyword(ldraw::EKeyword& kw) override
-		{
-			for (;*m_pp && *m_pp != '}' && *m_pp != '*';)
-			{
-				if (*m_pp == '\"') { script::EatLiteral(m_pp, m_pp.Location()); continue; }
-				if (*m_pp == '{')  { script::EatSection(m_pp, m_pp.Location()); continue; }
-				++m_pp;
-			}
-			if (*m_pp == '*') ++m_pp; else return false;
-			m_keyword.resize(0);
-			if (!str::ExtractIdentifier(m_keyword, m_pp, m_delim.c_str())) return false;
-			str::LowerCase(m_keyword);
-			return true;
-		}
-
-		// Returns true if the next non-whitespace character is the start/end of a section
-		bool IsSectionStart()
-		{
-			EatDelimiters(m_pp, m_delim.c_str());
-			return *m_pp == '{';
-		}
 
 		// True when the current position has reached the end of the current section
 		virtual bool IsSectionEnd() override
@@ -87,17 +64,45 @@ namespace pr::rdr12::ldraw
 			return *m_pp == '}';
 		}
 
+		// True when the source is exhausted
+		virtual bool IsSourceEnd() override
+		{
+			EatDelimiters(m_pp, m_delim.c_str());
+			return *m_pp == 0;
+		}
+		
+		// Get the next keyword within the current section.
+		// Returns false if at the end of the section
+		virtual bool NextKeywordImpl(int& kw) override
+		{
+			for (;*m_pp && *m_pp != '}' && *m_pp != '*';)
+			{
+				if (*m_pp == '\"') { script::EatLiteral(m_pp, m_pp.Location()); continue; }
+				if (*m_pp == '{')  { script::EatSection(m_pp, m_pp.Location()); continue; }
+				++m_pp;
+			}
+			if (*m_pp == '*') ++m_pp; else return false;
+			
+			wstring32 keyword;
+			if (!str::ExtractIdentifier(keyword, m_pp, m_delim.c_str())) return false;
+			str::LowerCase(keyword);
+
+			m_keyword = Narrow(keyword);
+			kw = HashI(m_keyword.c_str());
+			return true;
+		}
+
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
 		virtual string32 StringImpl(bool) override
 		{
-			string32 str;
+			wstring32 str;
 			if (!str::ExtractString(str, m_pp, m_delim.c_str()))
 				throw std::runtime_error("string expected");
 		
 			str::ProcessIndentedNewlines(str);
-			return str;
+			return Narrow(str);
 		}
 
 		// Read an integral value from the current section
@@ -111,7 +116,7 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read a floating point value from the current section
-		virtual double RealImpl(int byte_count) override
+		virtual double RealImpl(int) override
 		{
 			double real_;
 			if (!str::ExtractReal(real_, m_pp, m_delim.c_str()))
@@ -119,12 +124,24 @@ namespace pr::rdr12::ldraw
 
 			return real_;
 		}
+
+		// Read a boolean value from the current section
+		virtual bool BoolImpl() override
+		{
+			bool bool_;
+			if (!str::ExtractBool(bool_, m_pp, m_delim.c_str()))
+				throw std::runtime_error("boolean value expected");
+
+			return bool_;
+		}
 	};
 
 	// --------------------------------------------------------------------------------------------
 
-	TextReader::TextReader(std::istream& src, EEncoding enc, std::filesystem::path src_filepath, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
-		: m_impl(new TextReaderImpl(src, enc, src_filepath, report_error_cb, progress_cb, resolver))
-	{
-	}
+	TextReader::TextReader(std::istream& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
+		: m_impl(new TextReaderImpl(src, src_filepath, enc, report_error_cb, progress_cb, resolver))
+	{}
+	TextReader::TextReader(std::wistream& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
+		: m_impl(new TextReaderImpl(src, src_filepath, enc, report_error_cb, progress_cb, resolver))
+	{}
 }

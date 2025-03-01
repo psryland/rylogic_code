@@ -22,8 +22,8 @@ namespace pr::unittests::your::namespace
 //    For pr headers, consider putting the unit test in a different file to avoid additional dependencies
 
 #include "pr/common/unittests.h"
-//#include "src/unittests.h" // all tests
-#include "pr/common/flags_enum.h" // This is often needed for single files
+#include "src/unittests.h" // all tests
+//#include "pr/common/flags_enum.h" // This is often needed for single files
 //#include "pr/common/allocator.h"
 //#include "pr/common/bit_data.h"
 //#include "pr/common/cancel_token.h"
@@ -35,7 +35,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/common/hash.h"
 //#include "pr/common/log.h"
 //#include "pr/common/tweakables.h"
-#include "pr/common/memstream.h"
+//#include "pr/common/memstream.h"
 //#include "pr/container/bit_array.h"
 //#include "pr/container/vector.h"
 //#include "pr/container/byte_data.h"
@@ -98,7 +98,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/network/pipe.h"
 //#include "pr/network/pipe2.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
-#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+//#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 //#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 
 // Export a function for executing the tests

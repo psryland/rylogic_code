@@ -142,7 +142,10 @@ namespace pr::filesys
 
 	public:
 
-		explicit PathResolver(ESources sources = ESources::All)
+		PathResolver()
+			: PathResolver(ESources::All)
+		{}
+		explicit PathResolver(ESources sources)
 			: m_sources(sources)
 			, m_paths()
 			, m_modules()
@@ -286,7 +289,7 @@ namespace pr::filesys
 				return {};
 
 			// Raise an include missing error
-			auto msg = std::format("Failed to resolve include '%s'", include);
+			auto msg = std::format("Failed to resolve include '{}'", include.string());
 			if (!searched_paths.empty()) msg.append("\n\nNot found in these search paths:");
 			for (auto& path : searched_paths) msg.append("\n").append(path.string());
 			throw std::runtime_error(msg);
@@ -328,7 +331,7 @@ namespace pr::filesys
 				return std::unique_ptr<std::istringstream>(new std::istringstream(""));
 
 			// Raise an include missing error
-			auto msg = std::format("Failed to open include stream '%s'", include);
+			auto msg = std::format("Failed to open include stream '{}'", include.string());
 			if (!searched_paths.empty()) msg.append("\n\nNot found in these search paths:");
 			for (auto& path : searched_paths) msg.append("\n").append(path.string());
 			throw std::runtime_error(msg);

@@ -22,7 +22,7 @@ namespace pr::script
 		//  - The stream operates on single characters so they have to be a fixed width.
 		//    Use wchar_t so that most characters are covered, any beyond that will have
 		//    to be treated as encoding errors.
-		//  - Src can also wrap another stream, 
+		//  - Src can also wrap another stream.
 
 		static int const EOS = -1; // end of stream
 		static int64_t const AllData = std::numeric_limits<int64_t>::max();
@@ -687,12 +687,13 @@ namespace pr::script
 	};
 
 	// An 'istream' source
+	template <typename Char>
 	struct StreamSrc :Src
 	{
 	protected:
 
 		// The open stream
-		std::istream& m_stream;
+		std::basic_istream<Char>& m_stream;
 
 		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
 		int Read() override
@@ -703,13 +704,13 @@ namespace pr::script
 
 	public:
 
-		StreamSrc(std::istream& stream, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+		StreamSrc(std::basic_istream<Char>& stream, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
 			:StreamSrc(stream, 0, enc, loc)
 		{}
-		StreamSrc(std::istream& stream, std::streamsize ofs, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+		StreamSrc(std::basic_istream<Char>& stream, std::streamsize ofs, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
 			:StreamSrc(stream, ofs, -1, enc, loc)
 		{}
-		StreamSrc(std::istream& istream, std::streamsize ofs, int64_t limit, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+		StreamSrc(std::basic_istream<Char>& istream, std::streamsize ofs, int64_t limit, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
 			:Src(enc, loc)
 			,m_stream(istream)
 		{

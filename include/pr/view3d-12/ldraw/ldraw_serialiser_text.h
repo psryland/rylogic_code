@@ -13,7 +13,8 @@ namespace pr::rdr12::ldraw
 	{
 		std::unique_ptr<IReader> m_impl;
 
-		TextReader(std::istream& src, EEncoding enc = EEncoding::utf8, std::filesystem::path src_filepath = {}, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance());
+		TextReader(std::istream& src, std::filesystem::path src_filepath, EEncoding enc = EEncoding::utf8, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = NoIncludes::Instance());
+		TextReader(std::wistream& src, std::filesystem::path src_filepath, EEncoding enc = EEncoding::utf16_le, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = NoIncludes::Instance());
 		TextReader(TextReader&&) = delete;
 		TextReader(TextReader const&) = delete;
 		TextReader& operator=(TextReader&&) = delete;
@@ -37,17 +38,23 @@ namespace pr::rdr12::ldraw
 			m_impl->PopSection();
 		}
 
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
-		virtual bool NextKeyword(ldraw::EKeyword& kw) override
-		{
-			return m_impl->NextKeyword(kw);
-		}
-
 		// True when the current position has reached the end of the current section
 		virtual bool IsSectionEnd() override
 		{
 			return m_impl->IsSectionEnd();
+		}
+
+		// True when the source is exhausted
+		virtual bool IsSourceEnd() override
+		{
+			return m_impl->IsSourceEnd();
+		}
+
+		// Get the next keyword within the current section.
+		// Returns false if at the end of the section
+		virtual bool NextKeywordImpl(int& kw) override
+		{
+			return m_impl->NextKeywordImpl(kw);
 		}
 
 		// Read a utf8 string from the current section.
@@ -68,6 +75,12 @@ namespace pr::rdr12::ldraw
 		virtual double RealImpl(int byte_count) override
 		{
 			return m_impl->RealImpl(byte_count);
+		}
+
+		// Read a boolean value from the current section
+		virtual bool BoolImpl() override
+		{
+			return m_impl->BoolImpl();
 		}
 	};
 }

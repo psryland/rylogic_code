@@ -1076,7 +1076,7 @@ namespace pr::script
 			//       *o2w { *pos { <-- Address should be: Group.Box.o2w.pos
 			// Notes:
 			//  - Use Src::Limit() to set the maximum number of characters to read from 'src'.
-			//    This allows for utf-8 rather than the underlying available data.
+			//    This allows for UTF8 rather than the underlying available data.
 
 			// Use a case sensitive reader so that the reported address matches the case.
 			NoIncludes inc;

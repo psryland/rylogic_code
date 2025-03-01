@@ -519,7 +519,7 @@ namespace pr
 			int         m_i0, m_i1;     // Index buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
 			Texture     m_tex_diffuse;  // Diffuse texture
 			Sampler     m_sam_diffuse;  // Sampler for the diffuse texture 
-			Shader      m_shaders[8];   // Array of shader overrides, lenght uses sentinel m_rdr_step == Invalid (0)
+			Shader      m_shaders[8];   // Array of shader overrides, length uses sentinel 'm_rdr_step == Invalid (0)'
 			ENuggetFlag m_nflags;       // Nugget flags
 			ECullMode   m_cull_mode;    // Face culling mode
 			EFillMode   m_fill_mode;    // Model fill mode
@@ -704,13 +704,6 @@ namespace pr
 			Vertex* verts,                                     // The vert buffer to be filled
 			uint16_t* indices,                                 // The index buffer to be filled
 			AddNuggetCB out_nugget, void* out_nugget_ctx);     // Callback for adding a nugget
-		using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
-			void* ctx,              // User callback context pointer
-			wchar_t const* code,    // The source code from the embedded code block.
-			wchar_t const* support, // The support code from earlier embedded code blocks.
-			BSTR& result,           // The string result of running the source code (execution code blocks only)
-			BSTR& errors);          // Any errors in the compilation of the code
-		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
 	}
 }
 
@@ -733,9 +726,6 @@ extern "C"
 	
 	// Set the callback that is called when the sources are reloaded
 	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-
-	// Add/Remove a callback for handling embedded code within scripts
-	VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(char const* lang, pr::view3d::EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
 
 	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 	VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id);
@@ -774,8 +764,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Get/Set the window settings (as ldr script string)
-	VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, wchar_t const* settings);
+	VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, char const* settings);
 
 	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.

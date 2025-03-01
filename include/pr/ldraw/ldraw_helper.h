@@ -1571,7 +1571,7 @@ namespace pr::ldraw
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::ldr
+namespace pr::ldraw
 {
 	PRUnitTest(LdrHelperTextTests)
 	{
@@ -1612,14 +1612,15 @@ namespace pr::ldr
 	}
 	PRUnitTest(LdrHelperBinaryTests)
 	{
-		ldr::Builder builder;
+		ldraw::Builder builder;
 		auto& group = builder.Group("TestGroup", 0xFF112233);
 		auto& points = group.Point("TestPoints", 0xFF00FF00).size(5.0f);
 		for (int i = 0; i != 10; ++i)
 		{
-			points.pt(v4{ i, 0, 0, 1 });
-			points.pt(v4{ i, i, 0, 1 });
-			points.pt(v4{ 0, i, 0, 1 });
+			auto f = i * 1.f;
+			points.pt(v4{ f, 0, 0.0f, 1.0f });
+			points.pt(v4{ f, f, 0.0f, 1.0f });
+			points.pt(v4{ 0, f, 0.0f, 1.0f });
 		}
 
 		auto ldr = builder.ToBinary();

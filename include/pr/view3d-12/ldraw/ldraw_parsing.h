@@ -35,12 +35,6 @@ namespace pr::rdr12::ldraw
 		}
 	}
 
-	// Map the compile time hash function to this namespace
-	constexpr HashValue32 HashI(char const* str)
-	{
-		return hash::HashICT(str);
-	}
-
 	// A location in a source file
 	struct Location
 	{
@@ -69,6 +63,14 @@ namespace pr::rdr12::ldraw
 			, m_wireframe()
 		{
 		}
+		size_t count() const
+		{
+			return m_objects.size();
+		}
+		LdrObjectPtr operator[](size_t index) const
+		{
+			return m_objects[index];
+		}
 	};
 
 	// Callback function type used during script parsing
@@ -87,7 +89,12 @@ namespace pr::rdr12::ldraw
 		// - FindKeyword is not supported because this requires random access.
 		//   The reader is intended to handle streamed data.
 		// - Don't assume that 'ReportError' throws an exception.
-
+		// - Style suggestion:
+		//    for (int kw; reader.NextKeyword(kw);) switch (kw)
+		//    {
+		//        case rdr12::ldraw::HashI("Radius"): radius = reader.Vector2f(); break;
+		//        case rdr12::ldraw::HashI("Depth"): depth = reader.Int<int>() != 0; break;
+		//    }
 		IReader(ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
 			: ReportError(report_error_cb)
 			, Progress(progress_cb)
@@ -114,11 +121,11 @@ namespace pr::rdr12::ldraw
 		// Leave the current nested section
 		virtual void PopSection() = 0;
 
-		// Get the next keyword within the current section. Returns false if at the end of the section
-		virtual bool NextKeyword(EKeyword& kw) = 0;
-
 		// True when the current position has reached the end of the current section
 		virtual bool IsSectionEnd() = 0;
+
+		// True when the source is exhausted
+		virtual bool IsSourceEnd() = 0;
 
 		// RAII section scope. Use this if a section contains nested keywords
 		Scope<void> SectionScope()
@@ -128,15 +135,27 @@ namespace pr::rdr12::ldraw
 				[this] { PopSection(); });
 		}
 
+		// Get the next keyword within the current section. Returns false if at the end of the section
+		template <typename TKeyword> bool NextKeyword(TKeyword& kw)
+		{
+			auto kw_int = 0;
+			if (!NextKeywordImpl(kw_int)) return false;
+			kw = static_cast<TKeyword>(kw_int);
+			return true;
+		}
+
 		// Read an identifier from the current section
-		string32 Identifier(bool has_length = false)
+		template <typename StrType> StrType Identifier(bool has_length = false)
 		{
 			auto s = StringImpl(has_length);
 			auto len = 0ULL;
 			static auto IsIdentifier = [](char c, bool first) { return c == '_' || (first ? isalpha(c) : isalnum(c)); };
 			for (; len != s.size() && IsIdentifier(s[len], len == 0); ++len) {}
 			if (len != s.size()) ReportError(EParseError::InvalidValue, Loc(), "Invalid characters in identifier");
-			return s;
+			if constexpr (std::is_same_v<StrType, string32>)
+				return s;
+			else
+				return StrType(std::begin(s), std::begin(s) + len);
 		}
 
 		// Read a string from the current section
@@ -159,6 +178,26 @@ namespace pr::rdr12::ldraw
 		template <std::floating_point FloatType> FloatType Real()
 		{
 			return static_cast<FloatType>(RealImpl(sizeof(FloatType)));
+		}
+
+		// Read an enumeration identifier
+		template <ReflectedEnum TEnum> TEnum EnumIdent(bool has_length = false)
+		{
+			auto ident = Identifier<string32>(has_length);
+			return Enum<TEnum>::Parse(ident.c_str());
+		}
+
+		// Read an enumeration value as type 'TEnum'
+		template <typename TEnum> requires std::is_enum_v<TEnum> TEnum EnumValue()
+		{
+			auto value = IntImpl(sizeof(TEnum));
+			return static_cast<TEnum>(value);
+		}
+
+		// Read a boolean value
+		bool Bool()
+		{
+			return BoolImpl();
 		}
 
 		// Read floating point vectors
@@ -205,6 +244,9 @@ namespace pr::rdr12::ldraw
 		// Reads a C-style string
 		string32 CString(bool has_length = false);
 
+		// Get the next keyword within the current section. Returns false if at the end of the section
+		virtual bool NextKeywordImpl(int& kw) = 0;
+
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
@@ -215,6 +257,9 @@ namespace pr::rdr12::ldraw
 
 		// Read a floating point value from the current section
 		virtual double RealImpl(int byte_count) = 0;
+
+		// Read a boolean value from the current section
+		virtual bool BoolImpl() = 0;
 	};
 
 	// Parse the ldr script in 'reader' adding the results to 'out'.
@@ -222,62 +267,21 @@ namespace pr::rdr12::ldraw
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// life-times of the script reader, the parse output, and the 'store' container it refers to.
 	ParseResult Parse(
-		Renderer& rdr,                           // The renderer to create models for
-		IReader& reader,                         // The source of the script
-		Guid const& context_id = GuidZero);      // The context id to assign to each created object
-
-#if 0 // Todo - provide implementations of 'IReader' to make these functions unnecessary
-
-	inline ParseResult Parse(
-		Renderer& rdr,                           // The renderer to create models for
-		script::Reader& reader,                  // The source of the script
-		Guid const& context_id = GuidZero,       // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr)   // Progress callback
-	{
-		(void)rdr, reader, context_id, progress_cb;
-		throw std::runtime_error("not implemented");
-	}
-
-	// Parse ldr script from a text file.
-	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
-	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
-	// life-times of the script reader, the parse output, and the 'store' container it refers to.
+		Renderer& rdr,                      // The renderer to create models for
+		IReader& reader,                    // The source of the script
+		Guid const& context_id = GuidZero); // The context id to assign to each created object
+	ParseResult Parse(
+		Renderer& rdr,                      // The renderer to create models for
+		std::string_view ldr_script,        // The source of the script
+		Guid const& context_id = GuidZero); // The context id to assign to each created object
+	ParseResult Parse(
+		Renderer& rdr,                      // The renderer to create models for
+		std::wstring_view ldr_script,       // The source of the script
+		Guid const& context_id = GuidZero); // The context id to assign to each created object
 	ParseResult ParseFile(
-		Renderer& rdr,                          // The renderer to create models for
-		std::filesystem::path filename,         // The file containing the ldr script
-		Guid const& context_id = GuidZero,      // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr); // Progress callback
-
-	// Parse ldr script from a string
-	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
-	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
-	// life-times of the script reader, the parse output, and the 'store' container it refers to.
-	ParseResult ParseString(
-		Renderer& rdr,                          // The reader to create models for
-		std::string_view ldr_script,            // The string containing the script
-		Guid const& context_id = GuidZero,      // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr); // Progress callback
-	ParseResult ParseString(
-		Renderer& rdr,                          // The reader to create models for
-		std::wstring_view ldr_script,           // The string containing the script
-		Guid const& context_id = GuidZero,      // The context id to assign to each created object
-		ParseProgressCB progress_cb = nullptr); // Progress callback
-#endif
-
-	// Callback function for editing a dynamic model
-	// This callback is intentionally low level, providing the whole model for editing.
-	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-	using EditObjectCB = void(__stdcall*)(Model* model, void* ctx, Renderer& rdr);
-
-	// Create an LDR object from a string
-	LdrObjectPtr CreateLdr(
-		Renderer& rdr,                      // The reader to create models for
-		std::string_view ldr_script,        // The string containing the script
-		Guid const& context_id = GuidZero); // The context id to assign to the object
-	LdrObjectPtr CreateLdr(
-		Renderer& rdr,                      // The reader to create models for
-		std::wstring_view ldr_script,       // The string containing the script
-		Guid const& context_id = GuidZero); // The context id to assign to the object
+		Renderer& rdr,                      // The renderer to create models for
+		std::filesystem::path ldr_filepath, // The source of the script
+		Guid const& context_id = GuidZero); // The context id to assign to each created object
 
 	// Create an ldr object from creation data.
 	LdrObjectPtr Create(
@@ -293,15 +297,19 @@ namespace pr::rdr12::ldraw
 		std::filesystem::path const& p3d_filepath, // Model filepath
 		Guid const& context_id = GuidZero);        // The context id to assign to the object
 	LdrObjectPtr CreateP3D(
-		Renderer& rdr,                      // The reader to create models for
-		ELdrObject type,                    // Object type
-		size_t size,                        // The length of the data pointed to by 'p3d_data'
-		void const* p3d_data,               // The p3d data
-		Guid const& context_id = GuidZero); // The context id to assign to the object
+		Renderer& rdr,                       // The reader to create models for
+		ELdrObject type,                     // Object type
+		std::span<std::byte const> p3d_data, // The length of the data pointed to by 'p3d_data'
+		Guid const& context_id = GuidZero);  // The context id to assign to the object
 
 	// Create an instance of an existing ldr object.
 	LdrObjectPtr CreateInstance(
 		LdrObject const* existing);         // The existing object whose model the instance will use.
+
+	// Callback function for editing a dynamic model
+	// This callback is intentionally low level, providing the whole model for editing.
+	// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
+	using EditObjectCB = void(__stdcall*)(Model* model, void* ctx, Renderer& rdr);
 
 	// Create an ldr object using a callback to populate the model data.
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
@@ -320,15 +328,6 @@ namespace pr::rdr12::ldraw
 
 	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
 	void Update(Renderer& rdr, LdrObject* object, IReader& reader, EUpdateObject flags);
-
-#if 0
-	// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-	inline void Update(Renderer& rdr, LdrObject* object, script::Reader& reader, EUpdateObject flags = EUpdateObject::All)
-	{
-		(void)rdr, object, reader, flags;
-		throw std::runtime_error("not implemented");
-	}
-#endif
 
 	// Remove all objects from 'objects' that have a context id matching one in 'incl' and not in 'excl'
 	// If 'incl' is empty, all are assumed included. If 'excl' is empty, none are assumed excluded.

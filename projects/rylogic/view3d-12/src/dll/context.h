@@ -12,12 +12,8 @@ namespace pr::rdr12
 {
 	struct Context
 	{
-		struct EmbCodeCB { int m_lang; StaticCB<view3d::EmbeddedCodeHandlerCB> m_cb; };
-
 		using InitSet = std::unordered_set<view3d::DllHandle>;
 		using WindowCont = std::vector<V3dWindow*>;
-		using EmbCodeCBCont = std::vector<EmbCodeCB>;
-		using IEmbeddedCode = pr::script::IEmbeddedCode;
 		using ScriptSources = pr::rdr12::ldraw::ScriptSources;
 
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
@@ -26,7 +22,6 @@ namespace pr::rdr12
 		WindowCont           m_wnd_cont;        // The created windows
 		ScriptSources        m_sources;         // A container of Ldr objects and a file watcher
 		InitSet              m_inits;           // A unique id assigned to each Initialise call
-		EmbCodeCBCont        m_emb;             // Embedded code execution callbacks
 		std::recursive_mutex m_mutex;
 
 		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb);
@@ -56,30 +51,31 @@ namespace pr::rdr12
 		// Event raised when the script sources are updated
 		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> OnSourcesChanged;
 
-		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
-		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+		// Load/Add ldr objects from a script file. Returns the Guid of the context that the objects were added to.
+		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 
 		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		template <typename Char>
-		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 
 		// Create an object from geometry
 		LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);
 
 		// Load/Add ldr objects and return the first object from the script
 		template <typename Char>
-		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
+		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
 		// Create an LdrObject from the p3d model
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, std::optional<Guid const> context_id);
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, std::optional<Guid const> context_id);
+		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id);
+		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id);
 
 		// Modify an ldr object using a callback to populate the model data.
 		LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id);
 		void ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
 
 		// Update the model in an existing object
-		void UpdateObject(LdrObject* object, wchar_t const* ldr_script, ldraw::EUpdateObject flags);
+		template <typename Char>
+		void UpdateObject(LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags);
 
 		// Delete a single object
 		void DeleteObject(LdrObject* object);
@@ -107,12 +103,6 @@ namespace pr::rdr12
 
 		// Poll for changed script source files, and reload any that have changed
 		void CheckForChangedSources();
-
-		// Create an embedded code handler for the given language
-		std::unique_ptr<IEmbeddedCode> CreateCodeHandler(wchar_t const* lang);
-
-		// Add an embedded code handler for 'lang'
-		void SetEmbeddedCodeHandler(char const* lang, StaticCB<view3d::EmbeddedCodeHandlerCB> embedded_code_cb, bool add);
 
 		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 		Guid const* ContextIdFromFilepath(char const* filepath) const;

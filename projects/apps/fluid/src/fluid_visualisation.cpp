@@ -46,7 +46,7 @@ namespace pr::fluid
 		ResourceFactory factory(*m_rdr);
 
 		// Create the visualisation scene
-		m_gfx_scene = rdr12::ldraw::CreateLdr(*m_rdr, ldr);
+		m_gfx_scene = rdr12::ldraw::Parse(*m_rdr, ldr)[0];
 
 		// Create a dynamic model for the fluid particles (using the particle buffer)
 		{

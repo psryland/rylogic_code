@@ -3,25 +3,22 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/view3d-dll.h"
-#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
-
-// Include 'embedded_lua.h" in here so that additional include directories
-// are not needed for anyone including "pr/view3d-12/forward.h"
 
 namespace pr::rdr12
 {
 	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb)
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
 		, m_wnd_cont()
-		, m_sources(m_rdr, [this](auto lang) { return CreateCodeHandler(lang); })
+		, m_sources(m_rdr)
 		, m_inits()
-		, m_emb()
 		, m_mutex()
 		, ReportError()
 		, OnAddFileProgress()
@@ -75,7 +72,7 @@ namespace pr::rdr12
 				{
 					for (auto& wnd : m_wnd_cont)
 					{
-						wnd->Add(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
+						wnd->Add(args.m_context_ids.data(), isize(args.m_context_ids), 0);
 						wnd->Invalidate();
 					}
 					break;
@@ -91,11 +88,8 @@ namespace pr::rdr12
 		};
 		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)
 		{
-			auto msg = Narrow(args.m_msg);
-			auto filepath = args.m_loc.Filepath().generic_string();
-			auto line = s_cast<int>(args.m_loc.Line());
-			auto pos = s_cast<int64_t>(args.m_loc.Pos());
-			ReportError(msg.c_str(), filepath.c_str(), line, pos);
+			auto filepath = args.m_loc.m_filepath.generic_string();
+			ReportError(args.m_msg.c_str(), filepath.c_str(), args.m_loc.m_line, args.m_loc.m_offset);
 		};
 	}
 	Context::~Context()
@@ -146,10 +140,10 @@ namespace pr::rdr12
 		delete window;
 	}
 
-	// Create a script include handler that can load from directories or embedded resources.
-	script::Includes IncludeHandler(view3d::Includes const* includes)
+	// Create an include handler that can load from directories or embedded resources.
+	PathResolver IncludeHandler(view3d::Includes const* includes)
 	{
-		script::Includes inc;
+		PathResolver inc;
 		if (includes != nullptr)
 		{
 			if (includes->m_include_paths != nullptr)
@@ -161,20 +155,20 @@ namespace pr::rdr12
 		return std::move(inc);
 	}
 
-	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	// Load/Add ldr objects from a script file. Returns the Guid of the context that the objects were added to.
+	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
 		return m_sources.AddFile(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 	template <typename Char>
-	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
 		return m_sources.AddString(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
-	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
-	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, std::optional<Guid const> context_id, script::Includes const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 
 	// Create an object from geometry
 	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
@@ -265,7 +259,7 @@ namespace pr::rdr12
 
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
-	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes)
+	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)
 	{
 		// Get the context id for this script
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -280,9 +274,9 @@ namespace pr::rdr12
 
 		// Load the ldr script
 		if (file)
-			LoadScriptFile(ldr_script, enc, id, include_handler, nullptr);
+			LoadScriptFile(ldr_script, enc, &id, include_handler, nullptr);
 		else
-			LoadScriptString(ldr_script, enc, id, include_handler, nullptr);
+			LoadScriptString(ldr_script, enc, &id, include_handler, nullptr);
 
 		// Return the first object, expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context.
@@ -291,11 +285,11 @@ namespace pr::rdr12
 			? iter->second.m_objects[count].get()
 			: nullptr;
 	}
-	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
-	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, std::optional<Guid const> context_id, view3d::Includes const* includes);
+	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
 	// Create an LdrObject from the p3d model
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, std::optional<Guid const> context_id)
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -307,13 +301,13 @@ namespace pr::rdr12
 		m_sources.Add(obj);
 		return obj.get();
 	}
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, std::optional<Guid const> context_id)
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : pr::GenerateGUID();
 
 		// Create an ldr object
-		auto obj = CreateP3D(m_rdr, ldraw::ELdrObject::Model, size, p3d_data, id);
+		auto obj = rdr12::ldraw::CreateP3D(m_rdr, ldraw::ELdrObject::Model, p3d_data, id);
 		obj->m_name = name;
 		obj->m_base_colour = colour;
 		m_sources.Add(obj);
@@ -463,18 +457,21 @@ namespace pr::rdr12
 	}
 
 	// Update the model in an existing object
-	void Context::UpdateObject(LdrObject* object, wchar_t const* ldr_script, ldraw::EUpdateObject flags)
+	template <typename Char>
+	void Context::UpdateObject(LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags)
 	{
 		// Remove the object from any windows it might be in
 		for (auto& wnd : m_wnd_cont)
 			wnd->Remove(object);
 
 		// Update the object model
-		script::StringSrc src(ldr_script);
-		script::Reader reader(src, false);
+		mem_istream<Char> src{ ldr_script, 0 };
+		rdr12::ldraw::TextReader reader(src, {});
 		ldraw::Update(m_rdr, object, reader, flags);
 	}
-
+	template void Context::UpdateObject<wchar_t>(LdrObject* object, std::wstring_view, ldraw::EUpdateObject flags);
+	template void Context::UpdateObject<char>(LdrObject* object, std::string_view, ldraw::EUpdateObject flags);
+	
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)
 	{
@@ -571,85 +568,6 @@ namespace pr::rdr12
 	void Context::CheckForChangedSources()
 	{
 		m_sources.RefreshChangedFiles();
-	}
-
-	// Create an embedded code handler for the given language
-	std::unique_ptr<Context::IEmbeddedCode> Context::CreateCodeHandler(wchar_t const* lang)
-	{
-		// Embedded code handler that buffers support code and forwards to a provided code handler function
-		struct EmbeddedCode :IEmbeddedCode
-		{
-			using EmbeddedCodeHandlerCB = StaticCB<view3d::EmbeddedCodeHandlerCB>;
-
-			std::wstring m_lang;
-			std::wstring m_code;
-			std::wstring m_support;
-			EmbeddedCodeHandlerCB m_handler;
-			
-			EmbeddedCode(wchar_t const* lang, EmbeddedCodeHandlerCB handler)
-				:m_lang(lang)
-				,m_code()
-				,m_support()
-				,m_handler(handler)
-			{}
-
-			// The language code that this handler is for
-			wchar_t const* Lang() const override
-			{
-				return m_lang.c_str();
-			}
-
-			// A handler function for executing embedded code
-			// 'code' is the code source
-			// 'support' is true if the code is support code
-			// 'result' is the output of the code after execution, converted to a string.
-			// Return true, if the code was executed successfully, false if not handled.
-			// If the code can be handled but has errors, throw 'std::exception's.
-			bool Execute(wchar_t const* code, bool support, script::string_t& result) override
-			{
-				if (support)
-				{
-					// Accumulate support code
-					m_support.append(code);
-				}
-				else
-				{
-					// Return false if the handler did not handle the given code
-					BSTR_t res, err;
-					if (m_handler(code, m_support.c_str(), res, err) == 0)
-						return false;
-
-					// If errors are reported, raise them as an exception
-					if (err != nullptr)
-						throw std::runtime_error(Narrow(err.wstr()));
-
-					// Add the string result to 'result'
-					if (res != nullptr)
-						result.assign(res, res.size());
-				}
-				return true;
-			}
-		};
-
-		auto hash = hash::HashICT(lang);
-
-		// Look for a code handler for this language
-		for (auto& emb : m_emb)
-		{
-			if (emb.m_lang != hash) continue;
-			return std::unique_ptr<EmbeddedCode>(new EmbeddedCode(lang, emb.m_cb));
-		}
-
-		// No code handler found, unsupported
-		throw std::runtime_error(FmtS("Unsupported embedded code language: %S", lang));
-	}
-
-	// Add an embedded code handler for 'lang'
-	void Context::SetEmbeddedCodeHandler(char const* lang, StaticCB<view3d::EmbeddedCodeHandlerCB> embedded_code_cb, bool add)
-	{
-		auto hash = hash::HashICT(lang);
-		pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
-		if (add) m_emb.push_back(EmbCodeCB{hash, embedded_code_cb});
 	}
 
 	// Return the context id for objects created from 'filepath' (if filepath is an existing source)

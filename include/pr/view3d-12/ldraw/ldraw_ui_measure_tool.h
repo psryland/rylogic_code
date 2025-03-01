@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/ldraw/ldraw_helper.h"
 #include "pr/gui/wingui.h"
 
@@ -113,10 +114,10 @@ namespace pr::rdr12::ldraw
 				group.Line("distX", 0xFFFF0000).line(m_point0, p0);
 				group.Line("distY", 0xFF00FF00).line(p0, p1);
 				group.Line("distZ", 0xFF0000FF).line(p1, m_point1);
+				auto data = ldr.ToBinary();
 
-				auto str = ldr.ToString();
-				script::StringSrc src(str.c_str());
-				script::Reader reader(src);
+				mem_istream<char> src{data.span<char>()};
+				rdr12::ldraw::BinaryReader reader(src, {});
 				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())
 					m_gfx = out.m_objects.back();

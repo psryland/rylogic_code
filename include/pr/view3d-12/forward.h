@@ -132,6 +132,7 @@ namespace pr::rdr12
 	using time_point_t = std::chrono::system_clock::time_point;
 	using IPathResolver = pr::filesys::IPathResolver;
 	using PathResolver = pr::filesys::PathResolver;
+	using NoIncludes = pr::filesys::NoIncludes;
 	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;

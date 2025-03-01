@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -24,7 +22,6 @@ namespace LDraw
 			CheckForChangesPollPeriodS = 1.0;
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
-			EmbeddedCSharpBoilerPlate = View3d.EmbeddedCSharpBoilerPlateDefault;
 			SceneState = new List<SceneStateData>();
 			UILayout = null;
 
@@ -97,13 +94,6 @@ namespace LDraw
 		{
 			get => get<string[]>(nameof(IncludePaths));
 			set => set(nameof(IncludePaths), value);
-		}
-
-		/// <summary>Boilerplate code for embedded C# in ldr script files</summary>
-		public string EmbeddedCSharpBoilerPlate
-		{
-			get => get<string>(nameof(EmbeddedCSharpBoilerPlate));
-			set => set(nameof(EmbeddedCSharpBoilerPlate), value);
 		}
 
 		/// <summary>Per Scene settings</summary>

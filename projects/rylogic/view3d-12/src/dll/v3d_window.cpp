@@ -5,6 +5,7 @@
 #include "view3d-12/src/dll/v3d_window.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "view3d-12/src/dll/context.h"
 
@@ -102,37 +103,26 @@ namespace pr::rdr12
 	}
 
 	// Get/Set the settings
-	wchar_t const* V3dWindow::Settings() const
+	char const* V3dWindow::Settings() const
 	{
-		std::wstringstream out;
+		std::stringstream out;
 		out << "*Light {\n" << m_scene.m_global_light.Settings() << "}\n";
 		m_settings = out.str();
 		return m_settings.c_str();
 	}
-	void V3dWindow::Settings(wchar_t const* settings)
+	void V3dWindow::Settings(char const* settings)
 	{
-		using namespace pr::script;
-		using namespace pr::str;
-
 		// Parse the settings
-		StringSrc src(settings);
-		Reader reader(src);
-		for (string_t kw; reader.NextKeywordS(kw);)
+		mem_istream<char> src(settings);
+		rdr12::ldraw::TextReader reader(src, {});
+		for (int kw; reader.NextKeyword(kw);) switch (kw)
 		{
-			if (EqualI(kw, "SceneSettings"))
+			case rdr12::ldraw::HashI("Light"):
 			{
-				pr::string<> desc;
-				reader.Section(desc, false);
-				//window->m_obj_cont_ui.Settings(desc.c_str());
-				continue;
-			}
-			if (EqualI(kw, "Light"))
-			{
-				std::wstring desc;
-				reader.Section(desc, false);
+				auto desc = reader.String<std::string>();
 				m_scene.m_global_light.Settings(desc);
 				OnSettingsChanged(this, view3d::ESettings::Lighting_All);
-				continue;
+				break;
 			}
 		}
 	}

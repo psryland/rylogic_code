@@ -2,9 +2,7 @@
 // Resource
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************************************************
-
 #pragma once
-
 #include <streambuf>
 #include <iostream>
 #include <type_traits>
@@ -12,7 +10,12 @@
 
 namespace pr
 {
-	// See: http://www.cplusplus.com/reference/streambuf/basic_streambuf/
+	// Notes:
+	//  - Input streams like 'istringstream' make a copy of the data they're reading from.
+	//    'mem_istream' uses 'view_streambuf' to read directly from the data avoiding the copy.
+	//  - Output streams contain the buffer they write to and have to be copied out.
+	//    'mem_ostream' avoids this by allowing the caller to provide the buffer.
+	//  - See: http://www.cplusplus.com/reference/streambuf/basic_streambuf/
 
 	// A stream buffer that wraps a constant buffer of bytes
 	template <typename Elem>
@@ -287,7 +290,14 @@ namespace pr
 			:base_t(&m_buf)
 			,m_buf(data, size)
 		{}
-
+		mem_istream(std::span<Elem const> view)
+			:mem_istream(view.data(), view.size())
+		{
+		}
+		mem_istream(std::basic_string_view<Elem> view, int = 0) // use to disambiguate from 'span'
+			:mem_istream(view.data(), view.size())
+		{
+		}
 		mem_istream& read(char_type* src, std::streamsize count)
 		{
 			// Don't convert to std::span, the api needs to match 'std::istream'

@@ -43,7 +43,7 @@ namespace pr::fluid
 			, m_radius(initial_radius)
 			, m_sign()
 			, m_actions(actions)
-			, m_gfx(rdr12::ldraw::CreateLdr(rdr, "*Sphere probe { 1 }"))
+			, m_gfx(rdr12::ldraw::Parse(rdr, "*Sphere probe { 1 }")[0])
 			, m_mode(EProbeMode::None)
 			, m_last_action_time()
 			, m_time()

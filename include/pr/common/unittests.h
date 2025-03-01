@@ -41,12 +41,12 @@ namespace pr::unittests
 // Optionally use Microsoft's C++ unit test framework
 #define USE_MS_UNITTESTS 0 // Set this to 0 when compiling as an executable
 #if USE_MS_UNITTESTS
-	#pragma message ("Using MS Unitest Framework")
+	//#pragma message ("Using MS Unit Test Framework")
 	#include <SDKDDKVer.h>
 	#include "CppUnitTest.h"
 	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #else
-	#pragma message ("Using Rylogic Unitest Framework")
+	//#pragma message ("Using Rylogic Unit Test Framework")
 	#define TEST_CLASS(testname) class testname
 	#define TEST_METHOD(testmethod) void unused()
 	#define ONLY_USED_AT_NAMESPACE_SCOPE namespace ___CUT___ {extern int YOU_CAN_ONLY_DEFINE_TEST_CLASS_AT_NAMESPACE_SCOPE;}
@@ -259,7 +259,7 @@ namespace pr::unittests
 					test.m_func();
 					auto t1 = high_resolution_clock::now();
 
-					if (wordy) TestFramework::out() << std::format("success. ({:6} tests in {:8.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1-t0).count());
+					if (wordy) TestFramework::out() << std::format("success. ({:10} tests in {:10.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1-t0).count());
 					++passed;
 				}
 				catch (std::exception const& e)
@@ -272,7 +272,7 @@ namespace pr::unittests
 
 			// Print the results
 			if (failed == 0)
-				TestFramework::out() << std::format(" **** UnitTest results: All {} tests passed. (taking {:8.3f} ms) ****\n", (failed+passed), 0.001 * duration_cast<microseconds>(T1-T0).count());
+				TestFramework::out() << std::format(" **** UnitTest results: All {} tests passed. (taking {:1.3f} ms) ****\n", (failed+passed), 0.001 * duration_cast<microseconds>(T1-T0).count());
 			else
 				TestFramework::out() << std::format(" **** UnitTest results: {} of {} failed. ****\n", failed, failed+passed);
 

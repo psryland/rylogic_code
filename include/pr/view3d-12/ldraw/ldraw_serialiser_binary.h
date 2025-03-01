@@ -14,6 +14,7 @@ namespace pr::rdr12::ldraw
 		std::is_integral_v<T> ||
 		std::is_floating_point_v<T> ||
 		std::is_enum_v<T> ||
+		std::is_same_v<T, bool> ||
 		maths::VecOrMatType<T>;
 	template <typename T> concept SpanType = requires(T t)
 	{
@@ -118,10 +119,22 @@ namespace pr::rdr12::ldraw
 		template <typename TOut, PrimitiveType TItem, PrimitiveType... TItems>
 		static void Write(TOut& out, EKeyword keyword, TItem item, TItems&&... items)
 		{
+			static auto DoWrite = [](TOut& out, TItem item)
+			{
+				if constexpr (std::is_same_v<TItem, bool>)
+				{
+					uint8_t b = item ? 1 : 0;
+					traits<TOut>::write(out, { byte_ptr(&b), 1 });
+				}
+				else
+				{
+					traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
+				}
+			};
 			return Write(out, keyword, [&](auto&)
 			{
-				traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
-				(traits<TOut>::write(out, { byte_ptr(&items), sizeof(items) }), ...);
+				DoWrite(out, item);
+				(DoWrite(out, items), ...);
 			});
 		}
 
@@ -151,13 +164,14 @@ namespace pr::rdr12::ldraw
 		// Byte offsets from the start of the stream for the range of the data in the current section (excludes the header)
 		using SectionSpan = struct { int64_t m_beg, m_end; };
 		using SectionStack = pr::vector<SectionSpan>;
+		using istream_t = std::basic_istream<char>; // 'char' to support ifstream
 
-		std::istream& m_src;         // The input byte stream
+		istream_t& m_src;         // The input byte stream
 		int64_t m_pos;               // The number of bytes read from the stream so far, or the index of the next byte to read (same thing)
 		SectionStack m_section;      // A stack of section headers. back() == top == current section.
 		mutable Location m_location; // Source location description
 
-		explicit BinaryReader(std::istream& src, std::filesystem::path src_filepath = {}, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
+		BinaryReader(istream_t& src, std::filesystem::path src_filepath, ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
 			: IReader(report_error_cb, progress_cb, resolver)
 			, m_src(src)
 			, m_pos()
@@ -194,9 +208,21 @@ namespace pr::rdr12::ldraw
 			assert(m_section.size() >= 2);
 		}
 
+		// True when the current position has reached the end of the current section
+		virtual bool IsSectionEnd() override
+		{
+			return m_pos == m_section.back().m_end;
+		}
+
+		// True when the source is exhausted
+		virtual bool IsSourceEnd() override
+		{
+			return m_src.eof();
+		}
+
 		// Get the next keyword within the current section.
 		// Returns false if at the end of the section
-		virtual bool NextKeyword(EKeyword& kw) override
+		virtual bool NextKeywordImpl(int& kw) override
 		{
 			// Out of data
 			if (m_src.eof())
@@ -216,32 +242,15 @@ namespace pr::rdr12::ldraw
 				return false;
 
 			// Read the next section header at this level
-			//SectionHeader header = {
-			//	.m_keyword = static_cast<EKeyword>(Int(4)),
-			//	.m_size = static_cast<int>(Int(4)),
-			//};
 			SectionHeader header;
 			Read(&header, sizeof(header));
-			kw = header.m_keyword;
+			kw = static_cast<int>(header.m_keyword);
 
 			// Replace the top of the stack
 			m_section.back() = { m_pos, m_pos + header.m_size };
 			return true;
 		}
 
-		// True when the current position has reached the end of the current section
-		virtual bool IsSectionEnd() override
-		{
-			return m_pos == m_section.back().m_end;
-		}
-
-		//// Open a byte stream corresponding to 'path'
-		//virtual std::unique_ptr<std::istream> OpenStream(std::filesystem::path const& path) override
-		//{
-		//	(void)path;
-		//	throw std::runtime_error("not implemented");
-		//}
-		
 		// Read a utf8 string from the current section.
 		// If 'has_length' is false, assume the whole section is the string.
 		// If 'has_length' is true, assume the string is prefixed by its length.
@@ -307,6 +316,12 @@ namespace pr::rdr12::ldraw
 				default: throw std::runtime_error("Invalid byte count");
 			}
 		}
+		
+		// Read a boolean value from the current section
+		virtual bool BoolImpl() override
+		{
+			return IntImpl(1, 0) != 0;
+		}
 
 	private:
 
@@ -360,8 +375,8 @@ namespace pr::rdr12::ldraw
 		}
 		#endif
 
-		pr::mem_istream<char> src(data.data(), data.size());
-		BinaryReader reader(src);
+		mem_istream<char> src(data);
+		BinaryReader reader(src, {});
 
 		PR_EXPECT(reader.Loc().m_offset == 0);
 		
@@ -370,7 +385,7 @@ namespace pr::rdr12::ldraw
 		{
 			auto points = reader.SectionScope();
 			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Name);
-			PR_EXPECT(reader.Identifier() == "TestPoints");
+			PR_EXPECT(reader.Identifier<string32>() == "TestPoints");
 
 			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Colour);
 			PR_EXPECT(reader.Int<uint32_t>() == 0xFF00FF00);
@@ -386,7 +401,7 @@ namespace pr::rdr12::ldraw
 			{
 				auto sphere = reader.SectionScope();
 				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Name);
-				PR_EXPECT(reader.Identifier() == "TestSphere");
+				PR_EXPECT(reader.Identifier<string32>() == "TestSphere");
 
 				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Colour);
 				PR_EXPECT(reader.Int<uint32_t>() == 0xFFFF0000);

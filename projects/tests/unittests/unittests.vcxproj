@@ -403,7 +403,7 @@
     <ClInclude Include="src\unittests.h" />
     <ClInclude Include="src\pp_output.h" />
     <None Include="cpp.hint" />
-    <None Include="pre_build.py" />
+    <None Include="harvest_files.py" />
     <None Include="run_tests.py" />
   </ItemGroup>
   <!-- Run unit tests -->
