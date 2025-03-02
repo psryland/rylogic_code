@@ -1,0 +1,33 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "LDraw Script",
+	"scopeName": "source.ldr",
+
+	"patterns": [
+		{
+			"match": "\\*(.+?)\\b",
+			"name": "keyword.other.mylang"
+		},
+		{
+			"match": "(#include|#if|#elif|#else|#endif|#ifdef|#ifndef|#define|#undef)\\b",
+			"name": "keyword.control.mylang"
+		},
+		{
+			"match": "\"(?:[^\"\\\\]|\\\\.)*\"",
+			"name": "string.quoted.double.mylang"
+		},
+		{
+			"match": "\\b[0-9]+\\b",
+			"name": "constant.numeric.mylang"
+		},
+		{
+			"begin": "/\\*",
+			"end": "\\*/",
+			"name": "comment.block.mylang"
+		},
+		{
+		  "match": "//.*$",
+		  "name": "comment.line.mylang"
+		}
+	]
+}
