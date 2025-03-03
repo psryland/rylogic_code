@@ -343,9 +343,7 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read a utf8 string from the current section.
-		// If 'has_length' is false, assume the whole section is the string, otherwise, assume the string is prefixed by its length.
-		// 'pred' is a predicate for characters that belong to the string
-		virtual string32 StringImpl() override
+		virtual string32 StringImpl(char) override
 		{
 			auto length = ReadLengthBytes();
 

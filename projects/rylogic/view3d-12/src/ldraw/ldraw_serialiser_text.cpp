@@ -176,14 +176,14 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Read a UTF-8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-	string32 TextReader::StringImpl()
+	string32 TextReader::StringImpl(char escape_char)
 	{
 		auto& pp = as<script::Preprocessor>(m_pp);
 		m_nest_level += *pp == '{';
 		pp += *pp == '{';
 
 		wstring32 str = {};
-		if (!str::ExtractString(str, pp, m_delim.c_str()))
+		if (!str::ExtractString(str, pp, wchar_t(escape_char), nullptr, m_delim.c_str()))
 			ReportError(EParseError::InvalidValue, Loc(), "string expected");
 		
 		str::ProcessIndentedNewlines(str);

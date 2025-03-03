@@ -1002,7 +1002,9 @@ namespace pr::rdr12
 		//  - There isn't a logical "default" sampler choice. Using invalid values in the default
 		//    constructor to force instances to set their own values.
 		
-		SamDesc() :SamDesc(s_cast<D3D12_TEXTURE_ADDRESS_MODE>(0), D3D12_FILTER_MIN_MAG_MIP_POINT) {}
+		SamDesc()
+			:SamDesc(s_cast<D3D12_TEXTURE_ADDRESS_MODE>(0), D3D12_FILTER_MIN_MAG_MIP_POINT)
+		{}
 		SamDesc(D3D12_TEXTURE_ADDRESS_MODE addr, D3D12_FILTER filter)
 			:SamDesc(addr, addr, addr, filter)
 		{}

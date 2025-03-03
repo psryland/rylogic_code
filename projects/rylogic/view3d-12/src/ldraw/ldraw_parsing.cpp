@@ -238,7 +238,7 @@ namespace pr::rdr12::ldraw
 		m4x4 m_t2s = m4x4::Identity();
 		std::filesystem::path m_filepath = {"#white"};
 		TextureDesc m_tdesc = {};
-		SamDesc m_sdesc = {};
+		SamDesc m_sdesc = {SamDesc::LinearWrap()};
 		bool m_has_alpha = false;
 	};
 
@@ -2740,9 +2740,12 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					m_verts.push_back(reader.Vector3f().w1());
-					if (m_per_item_colour)
-						m_colours.push_back(reader.Int<uint32_t>(16));
+					for (; !reader.IsSectionEnd();)
+					{
+						m_verts.push_back(reader.Vector3f().w1());
+						if (m_per_item_colour)
+							m_colours.push_back(reader.Int<uint32_t>(16));
+					}
 					return true;
 				}
 				case EKeyword::Width:
@@ -4726,7 +4729,7 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::CString:
 				{
-					auto text = reader.CString();
+					auto text = reader.String<string32>('\\');
 					m_text.append(Widen(text));
 
 					// Record the formatting state
@@ -5490,16 +5493,5 @@ namespace pr::rdr12::ldraw
 		// Pre-multiply the object to world transform
 		o2w = p2w * o2w;
 		return o2w;
-	}
-
-	// Reads a C-style string
-	string32 IReader::CString()
-	{
-		string32 out = {};
-		auto string = String<string32>();
-		if (!str::ExtractStringC<string32, char const*, char>(out, string.c_str(), '\\', nullptr, nullptr))
-			ReportError(EParseError::InvalidValue, Loc(), "C-style string expected");
-
-		return out;
 	}
 }

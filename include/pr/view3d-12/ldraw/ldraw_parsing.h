@@ -162,9 +162,9 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read a string from the current section
-		template <typename StrType> StrType String()
+		template <typename StrType> StrType String(char escape_char = 0)
 		{
-			auto s = StringImpl();
+			auto s = StringImpl(escape_char);
 			if constexpr (std::is_same_v<StrType, string32>)
 				return s;
 			else
@@ -247,9 +247,6 @@ namespace pr::rdr12::ldraw
 		// Reads a transform accumulatively. 'o2w' must be a valid initial transform
 		m4x4& Transform(m4x4& o2w);
 
-		// Reads a C-style string
-		string32 CString();
-
 		// Get the next keyword within the current section. Returns false if at the end of the section
 		virtual bool NextKeywordImpl(int& kw) = 0;
 
@@ -257,7 +254,7 @@ namespace pr::rdr12::ldraw
 		virtual string32 IdentifierImpl() = 0;
 
 		// Read a utf8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 StringImpl() = 0;
+		virtual string32 StringImpl(char escape_char = 0) = 0;
 
 		// Read an integral value from the current section
 		virtual int64_t IntImpl(int byte_count, int radix) = 0;

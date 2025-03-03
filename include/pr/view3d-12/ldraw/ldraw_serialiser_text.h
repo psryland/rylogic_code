@@ -275,7 +275,7 @@ namespace pr::rdr12::ldraw
 		virtual string32 IdentifierImpl() override;
 
 		// Read a utf8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
-		virtual string32 StringImpl() override;
+		virtual string32 StringImpl(char escape_char) override;
 
 		// Read an integral value from the current section
 		virtual int64_t IntImpl(int byte_count, int radix) override;
