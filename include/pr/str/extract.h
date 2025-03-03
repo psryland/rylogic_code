@@ -408,16 +408,16 @@ namespace pr::str
 	{
 		delim = Delim(delim);
 
+		// Find the first non-delimiter
+		if (!AdvanceToNonDelim(src, delim))
+			return false;
+
 		// Set the accepted quote characters
 		if (quotes == nullptr)
 		{
 			static Char const default_quotes[] = {'\"', '\'', 0};
 			quotes = default_quotes;
 		}
-
-		// Find the first non-delimiter
-		if (!AdvanceToNonDelim(src, delim))
-			return false;
 
 		// If the next character is not an acceptable quote, then this isn't a string
 		auto quote = *src;
@@ -679,9 +679,9 @@ namespace pr::str
 	template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractEnum(TEnum& enum_, Ptr& src, Char const* delim = nullptr)
 	{
-		decltype(*src) val[512] = {};
+		Char val[512] = {};
 		if (!ExtractIdentifier(val, src, delim)) return false;
-		return Enum<TEnum>::TryParse(enum_, val, false);
+		return Enum<TEnum>::TryParse(enum_, std::basic_string_view<Char>{ &val[0] }, false);
 	}
 	template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractEnumC(TEnum& enum_, Ptr src, Char const* delim = nullptr)

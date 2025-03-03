@@ -1,300 +1,238 @@
-//***************************************************************************************************
-// Ldr Object
-//  Copyright (c) Rylogic Ltd 2009
-//***************************************************************************************************
-#include <string>
+//********************************************
+// LDraw Demo Scene
+//  Copyright (c) Rylogic Ltd 2002
+//********************************************
+//
+//  Syntax:
+//    LDraw script (.ldr) expects keywords to be preceded by a '*' character.
+//    The syntax that follows the keyword depends on the particular keyword.
+//    Braces, { and }, are used to define Sections which control the nesting of
+//    data, and allow the parser to skip unrecognised blocks in the script.
+//    The parser supports a C-Style preprocessor to allow macro substitutions.
+//    Keywords are not case sensitive.
+//
+//  Summary:
+//		*Keyword                    - keywords are identified by '*' characters
+//		{// Section begin           - nesting of objects within sections implies parenting
+//			// Line comment         - single line comments
+//			/* Block comment */     - block comments
+//			#eval{1+2}              - macro expression evaluation
+//		}// Section end
+//
+//		C-style preprocessing
+//		  #include "include_file"   - include other script files
+//		  #define MACRO subst_text  - define text substitution macros
+//		MACRO                       - macro substitution
+//		  #undef MACRO              - un-defining of macros
+//		  #ifdef MACRO              - nestable preprocessor controlled sections
+//		  #elif MACRO
+//		     #ifndef MACRO
+//		     #endif
+//		  #else
+//		  #endif
+//		  #lit
+//		  	literal text
+//		  #end
+//
+//  Definitions:
+//    context_id - this is a GUID used to identify a source of objects. It allows
+//        objects to be added/removed/refreshed in discrete sets.
+//    axis_id - is an integer describing an axis number. It must be one
+//        of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3 corresponding to \xc2\xb1""X, \xc2\xb1""Y, \xc2\xb1""Z respectively.
+//    [field] - fields in square brackets mean optional fields.
+//
+//  Object Description format:
+//       *ObjectType [name] [colour]
+//       {
+//          ...
+//       }
+//    The name and colour parameters are optional and have defaults of:
+//       name     = <ObjectType>
+//       colour   = FFFFFFFF
 
-namespace pr::rdr12::ldraw
+// Global flags, commands, includes, cameras, and lights
+// Allow missing includes to be ignored and not cause errors\n
+#ignore_missing "on"
+#include "missing_file.ldr"
+
+// Add an explicit dependency on another file. This is basically the same as an #include except
+// the dependent file contents are not added to the script. This is useful for triggering an auto refresh.
+#depend "trigger_update.txt"
+
+// Minimal Example.
+*Box minimal_example FFFF00FF // Object type, name, colour. Name and colour are optional.
 {
-	// Generate a scene that demos the supported object types and modifiers.
-	std::string CreateDemoScene()
+	*Data {1}    // Object specific data. In this case, a cube with side-length = 1
+}
+
+// Object transforms.
+// An example of applying a transform to an object.
+*Box transforms_example FF00FF00
+{
+	*Data {1 2 1}
+	*o2w
 	{
-		std::string str;
-		str.reserve(4096);
-		str.append(""
-			// Intro and definitions
-			"//********************************************\n"
-			"// LineDrawer demo scene\n"
-			"//  Copyright (c) Rylogic Ltd 2002\n"
-			"//********************************************\n"
-			"//\n"
-			"//  Syntax:\n"
-			"//    LDraw script (.ldr) expects keywords to be preceeded by a '*' character.\n"
-			"//    The syntax that follows the keyword depends on the particular keyword.\n"
-			"//    Braces, { and }, are used to define Sections which control the nesting of\n"
-			"//    data, and allow the parser to skip unrecognised blocks in the script.\n"
-			"//    The parser supports a C-Style preprocessor to allow macro substitutions.\n"
-			"//    Keywords are not case sensitive.\n"
-			"//\n"
-			"//  Summary:\n"
-			"//		*Keyword                    - keywords are identified by '*' characters\n"
-			"//		{// Section begin           - nesting of objects within sections implies parenting\n"
-			"//			// Line comment         - single line comments\n"
-			"//			/* Block comment */     - block comments\n"
-			"//			#eval{1+2}              - macro expression evaluation\n"
-			"//		}// Section end\n"
-			"//\n"
-			"//		C-style preprocessing\n"
-			"//		#include \"include_file\"     - include other script files\n"
-			"//		#define MACRO subst_text    - define text substitution macros\n"
-			"//		MACRO                       - macro substitution\n"
-			"//		#undef MACRO                - un-defining of macros\n"
-			"//		#ifdef MACRO                - nestable preprocessor controlled sections\n"
-			"//		#elif MACRO\n"
-			"//			#ifndef MACRO\n"
-			"//			#endif\n"
-			"//		#else\n"
-			"//		#endif\n"
-			"//		#lit\n"
-			"//			literal text\n"
-			"//		#end\n"
-			"//\n"
-			"//  Definitions:\n"
-			"//    ctx_id - this is a GUID used to identify a source of objects. It allows\n"
-			"//             objects to be added/removed/refreshed in discrete sets.\n"
-			"//    axis_id - is an integer describing an axis number. It must be one\n"
-			"//              of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3 corresponding to \xc2\xb1""X, \xc2\xb1""Y, \xc2\xb1""Z respectively.\n"
-			"//    [field] - fields in square brackets mean optional fields.\n"
-			"//\n"
-			"//  Object Description format:\n"
-			"//       *ObjectType [name] [colour]\n"
-			"//       {\n"
-			"//          ...\n"
-			"//       }\n"
-			"//    The name and colour parameters are optional and have defaults of:\n"
-			"//       name     = 'ObjectType'\n"
-			"//       colour   = FFFFFFFF\n"
-			"\n"
+		// All objects have an implicit object-to-parent transform that is identity.
+		// Successive 'o2w' sections pre-multiply this transform for the object.
+		// Fields within the 'o2w' section are applied in the order they are declared.
 
-			// Global flags, commands, includes, cameras, and lights
-			"// Allow missing includes to be ignored and not cause errors\n"
-			"#ignore_missing \"on\"\n"
-			"#include \"missing_file.ldr\"\n"
-			"\n"
-			"// Add an explicit dependency on another file. This is basically the same as an #include except\n"
-			"// the dependent file contents are not added to the script. This is useful for triggering an auto refresh.\n"
-			"#depend \"trigger_update.txt\"\n"
-			"\n"
-			"// A camera section must be at the top level in the script.\n"
-			"// Camera descriptions raise an event immediately after being parsed.\n"
-			"// The application handles this event to set the camera position.\n"
-			"*Camera\n"
-			"{\n"
-			"	// Note: order is important. Camera properties are set in the order declared\n"
-			"	*o2w {*pos{0 30 35}}        // Camera position/orientation within the scene\n"
-			"	*LookAt {0 0 0}           // Optional. Point the camera at {x,y,z} from where it currently is. Sets the focus distance\n"
-			"	*Align {0 1 0}            // Optional. Lock the camera's up axis to  {x,y,z}\n"
-			"	//*Aspect {1.0}           // Optional. Aspect ratio (w/h). FovY is unchanged, FovX is changed. Default is 1\n"
-			"	//*FovX {45}              // Optional. X field of view (deg). Y field of view is determined by aspect ratio\n"
-			"	//*FovY {45}              // Optional. Y field of view (deg). X field of view is determined by aspect ratio (default 45 deg)\n"
-			"	//*Fov {45 45}            // Optional. {Horizontal,Vertical} field of view (deg). Implies aspect ratio.\n"
-			"	//*Near {0.01}            // Optional. Near clip plane distance\n"
-			"	//*Far {100.0}            // Optional. Far clip plane distance\n"
-			"	//*Orthographic           // Optional. Use an orthographic projection rather than perspective\n"
-			"}\n"
-			"// Light sources can be top level objects, children of other objects, or contain child objects.\n"
-			"// In some ways they are like a *Group object, they have no geometry of their own but can contain\n"
-			"// objects with geometry.\n"
-			"*DirLight sun FFFF00         // Colour attribute is the colour of the light source\n"
-			"{\n"
-			"	0 -1 -0.3                 // Direction dx,dy,dz (doesn't need to be normalised)\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	*CastShadow {10}          // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w {*pos{5 5 5}}        // Position/orientation of the object\n"
-			"}\n"
-			"*PointLight glow FF00FF\n"
-			"{\n"
-			"	5 5 5                     // Position x,y,z\n"
-			"	*Range {100 0}            // Optional. {range, falloff}. Default is infinite\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	//*CastShadow {10}        // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w{*pos{5 5 5}}\n"
-			"}\n"
-			"*SpotLight spot 00FFFF\n"
-			"{\n"
-			"	3 5 4                     // Position x,y,z\n"
-			"	-1 -1 -1                  // Direction dx,dy,dz (doesn't need to be normalised)\n"
-			"	30 60                     // Inner angle (deg), Outer angle (deg)\n"
-			"	*Range {100 0}            // Optional. {range, falloff}. Default is infinite\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	//*CastShadow {10}        // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w{*pos{5 5 5}}         // Position and orientation (directional lights shine down -z)\n"
-			"}\n"
-			"\n"
+		// An empty 'o2w' is equivalent to an identity transform
+		//*NonAffine {}                               // Indicates the given transform is intentionally non-affine
+		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}    // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major
+		*M3x3 {1 0 0  0 1 0  0 0 1}                   // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major
+		//*Rand4x4 {0 1 0 2}                          // {cx cy cz r} - centre position, radius. Random orientation
+		//*RandPos {0 1 0 2}                          // {cx cy cz r} - centre position, radius
+		//*RandOri {}                                 // Randomises the orientation of the current transform
+		*Align {3 0 1 0}                              // {axis_id dx dy dz } - direction vector, and axis id to align to that direction
+		//*LookAt {0 0 0}                             // {x y z } - look at point
+		*Quat {0 #eval{sin(pi/2)} 0 #eval{cos(pi/2)}} // {x y z s} - quaternion
+		*QuatPos {0 1 0 0  1 -1 3}                    // {q.x q.y q.z q.s p.x p.y p.z} - quaternion position
+		*Scale {1 1.2 1}                              // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values
+		*Normalise {}                                 // Normalises the lengths of the vectors of the current transform
+		*Orthonormalise {}                            // Normalises the lengths and makes orthogonal the vectors of the current transform
+		*Transpose {} *Transpose {}                   // Transposes the current transform
+		*Inverse {} *Inverse {}                       // Inverts the current transform
+		*Euler {55 30 60}                             // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw
+		*Pos {-2.5 4 -0.8}                            // {x y z}
+	}
+}
 
-			// Minimal example
-			"// Basic minimal object example:\n"
-			"*Box {1}\n"
-			"\n"
+// Object modifiers.
+// There are a number of object modifiers that can be used to
+// control the colour, texture, visibility, and animation of objects.
+// These modifiers can be applied to any object (except where noted).
+*Cone modifiers_example 80FFFFFF
+{
+	*Data {2 0 55}             // See *Cone example below for parameter meaning
+	*AxisId {1}                // Axis to align the cone to. One of: X = \xc2\xb1""1, Y = \xc2\xb1""2, Z = \xc2\xb1""3
+	*Colour {FFFF00FF}         // Override the base colour of the model
+	*ColourMask {FF000000}     // applies: 'child.colour = (obj.base_colour & mask) | (child.base_colour & ~mask)' to all children recursively
+	*Reflectivity {0.3}        // Reflectivity (used with environment mapping)
+	*RandColour {}             // Apply a random colour to this object
+	//*Hidden {}               // Object is created in an invisible state
+	//*Wireframe {}            // Object is created with wireframe fill mode
+	//*Font {...}              // A font to apply to this an all child objects. See Text example below
+	*Animation                 // Add simple animation to this object
+	{
+		*Style {Continuous}    // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
+		*Period { 1.6 }        // The period of the animation in seconds
+		*Velocity { 0 0 0 }    // Linear velocity vector in m/s
+		//*Accel {0 -3 0}      // Linear acceleration vector in m/s^2
+		*AngVelocity { 1 0 0 } // Angular velocity vector in rad/s
+		//*AngAccel {0 0 0}    // Angular acceleration vector in rad/s^2
+	}
+	*Texture                   // Texture (only supported on some object types)
+	{
+		*FilePath {"#checker"} // Texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)
+		*Addr {Wrap Wrap}      // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce
+		*Filter {Linear}       // Optional filtering of the texture. Options: Point, Linear, Anisotropic
+		*Alpha {}              // Optional. Indicates the texture contains alpha pixels
+		*o2w                   // Optional 3d texture coord transform
+		{
+			*Scale {2 2 2}
+			*Euler {0 0 45}
+		}
+	}
+	*o2w
+	{
+		*euler {0 0 90}
+		*pos {15 7 -10}
+	}
+	//*NoZTest {}     // Don't depth-text
+	//*NoZWrite {}    // Don't write to the Z buffer
+	//*ScreenSpace {} // The object's '*o2w' transform is interpreted as a screen space position/orientation
+	// Screen space coordinates are in the volume:
+	//    (-1,-1, 0) = bottom, left, near plane
+	//    (+1,+1,-1) = top, right, far plane
+}
 
-			// Object transforms
-			"// An example of applying a transform to an object.\n"
-			"*Box transforms_example FF00FF00\n"
-			"{\n"
-			"	1 2 1\n"
-			"	*o2w\n"
-			"	{\n"
-			"		// All objects have an implicit object-to-parent transform that is identity.\n"
-			"		// Successive 'o2w' sections pre-multiply this transform for the object.\n"
-			"		// Fields within the 'o2w' section are applied in the order they are declared.\n"
-			"\n"
-			"		// An empty 'o2w' is equivalent to an identity transform\n"
-			"		//*NonAffine                                  // Indicates the given transform is intentionally non-affine\n"
-			"		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}    // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major\n"
-			"		*M3x3 {1 0 0  0 1 0  0 0 1}                   // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major\n"
-			"		//*Rand4x4 {0 1 0 2}                          // {cx cy cz r} - centre position, radius. Random orientation\n"
-			"		//*RandPos {0 1 0 2}                          // {cx cy cz r} - centre position, radius\n"
-			"		//*RandOri                                    // Randomises the orientation of the current transform\n"
-			"		*Align {3 0 1 0}                              // {axis_id dx dy dz } - direction vector, and axis id to align to that direction\n"
-			"		*Quat {0 #eval{sin(pi/2)} 0 #eval{cos(pi/2)}} // {x y z s} - quaternion\n"
-			"		*QuatPos {0 1 0 0  1 -1 3}                    // {q.x q.y q.z q.s p.x p.y p.z} - quaternion position\n"
-			"		*Scale {1 1.2 1}                              // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values\n"
-			"		*Normalise                                    // Normalises the lengths of the vectors of the current transform\n"
-			"		*Orthonormalise                               // Normalises the lengths and makes orthogonal the vectors of the current transform\n"
-			"		*Transpose *Transpose                         // Transposes the current transform\n"
-			"		*Inverse *Inverse                             // Inverts the current transform\n"
-			"		*Euler {55 30 60}                             // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw\n"
-			"		*Pos {-2.5 4 -0.8}                            // {x y z}\n"
-			"	}\n"
-			"}\n"
-			"\n"
+// Object Nesting.
+// Nested objects are in the space of their parent so a parent transform is applied to all children.
+*Sphere nesting0 A0FFFF00
+{
+	*Data {0.8 1.4 0.5}
+	*o2w {*pos {0 5 -7}}
+	*ColourMask { FF000000 } // This colour mask is applied to all child recursively
+	*Sphere nested1 FF00FFFF
+	{
+		*Data {0.8 1.4 0.5}
+		*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}
+		*Sphere nested2 FF00FFFF
+		{
+			*Data {0.8 1.4 0.5}
+			*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}
+			*Sphere nested3 FF00FFFF
+			{
+				*Data {0.8 1.4 0.5}
+				*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}
+				*Sphere nested4 FF00FFFF
+				{
+					*Data {0.8 1.4 0.5}
+					*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}
+					*Sphere nested5 FF00FFFF
+					{
+						*Data {0.8 1.4 0.5}
+						*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}
+					}
+				}
+			}
+		}
+	}
+}
 
-			// Object modifiers
-			"// There are a number of object modifiers that can be used to\n"
-			"// control the colour, texture, visibility, and animation of objects.\n"
-			"// These modifiers can be applied to any object (except where noted).\n"
-			"*Cone modifiers_example 80FFFFFF\n"
-			"{\n"
-			"	2 0 55\n"
-			"	*AxisId {1}\n"
-			"	*Colour {FFFF00FF}         // Override the base colour of the model\n"
-			"	*ColourMask {FF000000}     // applies: 'child.colour = (obj.base_colour & mask) | (child.base_colour & ~mask)' to all children recursively\n"
-			"	*Reflectivity {0.3}        // Reflectivity (used with environment mapping)\n"
-			"	*RandColour                // Apply a random colour to this object\n"
-			"	//*Hidden                  // Object is created in an invisible state\n"
-			"	//*Wireframe               // Object is created with wireframe fill mode\n"
-			"	*Animation                 // Add simple animation to this object\n"
-			"	{\n"
-			"		*Style Continuous      // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong\n"
-			"		*Period { 1.6 }        // The period of the animation in seconds\n"
-			"		*Velocity { 0 0 0 }    // Linear velocity vector in m/s\n"
-			"		*AngVelocity { 1 0 0 } // Angular velocity vector in rad/s\n"
-			"	}\n"
-			"	*Texture                 // Texture (only supported on some object types)\n"
-			"	{\n"
-			"		\"#checker\"          // texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)\n"
-			"		*Addr {Wrap Wrap}   // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce\n"
-			"		*Filter {Linear}    // Optional filtering of the texture. Options: Point, Linear, Anisotropic\n"
-			"		*Alpha              // Optional. Indicates the texture contains alpha pixels\n"
-			"		*o2w                // Optional 3d texture coord transform\n"
-			"		{\n"
-			"			*Scale{2 2 2}\n"
-			"			*Euler{0 0 45}\n"
-			"		}\n"
-			"	}\n"
-			"	*o2w\n"
-			"	{\n"
-			"		*euler{0 0 90}\n"
-			"		*pos{15 7 -10}\n"
-			"	}\n"
-			"	//*ScreenSpace    // The object's '*o2w' transform is interpreted as a screen space position/orientation\n"
-			"	                  // Screen space coordinates are in the volume:\n"
-			"	                  //  (-1,-1, 0) = bottom, left, near plane\n"
-			"	                  //  (+1,+1,-1) = top, right, far plane\n"
-			"	//*NoZWrite       // Don't write to the Z buffer\n"
-			"	//*NoZTest        // Don't depth-text\n"
-			"}\n"
-			"\n"
+// Groups.
+// Groups are a special object type that doesn't contain geometry
+// but has a coordinate space and child objects.
+*Group group
+{
+	//*Wireframe {}    // Object modifiers applied to groups are applied recursively to children within the group
+	*Cylinder barrel FFE0A060
+	{
+		*Data {3 1}
+		*AxisId{+2}
+	}
+	*Sphere bullet FF0000FF
+	{
+		*Data {0.7}
+		*Animation
+		{
+			*Style {Repeat}    // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong
+			*Period {3}        // The period of the animation in seconds
+			*Velocity {0 10 0} // Linear velocity vector in m/s
+			*Accel {0 -3 0}
+		}
+		*o2w{*pos{0 0 0}}
+	}
+	*Box box FF00FF00 { *Data{1 1 3} *o2w{*pos{0 -1.0 0}}}
+	*Box box FF00FF00 { *Data{3 1 1} *o2w{*pos{0 -1.0 0}}}
+	*o2w {*pos{-10 1.5 -5}}
+}
 
-			// Instancing
-			"// Model Instancing.\n"
-			"// An instance can be created from any previously defined object.\n"
-			"// The instance will share the renderable model from the object it is an instance of.\n"
-			"// Note that properties of the object are not inherited by the instance.\n"
-			"*Cylinder instancing_example FF0000FF\n"
-			"{\n"
-			"	// 'false' in the object declaration means this model will be created\n"
-			"	// in memory only and not displayed. It can be used for instancing still.\n"
-			"	2 0.5\n"
-			"	*AxisId {+2}\n"
-			"	*RandColour // Note: this will not be inherited by the instances\n"
-			"	*Hidden // Don't show this instance\n"
-			"}\n"
-			"*Instance instancing_example FFFF0000   // The name indicates which model to instance\n"
-			"{\n"
-			"	*o2w {*Pos {15 1 -10}}\n"
-			"}\n"
-			"*Instance instancing_example FF0000FF\n"
-			"{\n"
-			"	*o2w {*Pos {15 3 -10}}\n"
-			"}\n"
-			"*Instance instancing_example FF00FF00\n"
-			"{\n"
-			"	*o2w {*Pos {15 5 -10}}\n"
-			"}\n"
-			"\n"
+// Model Instancing.
+// An instance can be created from any previously defined object.
+// The instance will share the renderable model from the object it is an instance of.
+// Note that object modifiers of the object are not inherited by the instance.
+*Cylinder instancing_example FF0000FF
+{
+	*Data {2 0.5}
+	*AxisId {+2}
+	*RandColour {} // Note: this will not be inherited by the instances
+	*Hidden {}     // Don't show this instance
+}
+*Instance instancing_example FFFF0000 // The name indicates which model to instance
+{
+	*o2w {*Pos {15 1 -10}}
+}
+*Instance instancing_example FF0000FF
+{
+	*o2w {*Pos {15 3 -10}}
+}
+*Instance instancing_example FF00FF00
+{
+	*o2w {*Pos {15 5 -10}}
+}
 
-			// Nesting
-			"// Object Nesting.\n"
-			"// Nested objects are in the space of their parent so a parent transform is applied to all children.\n"
-			"*Sphere nesting0 A0FFFF00\n"
-			"{\n"
-			"	0.8 1.4 0.5\n"
-			"	*o2w {*pos {0 5 -7}}\n"
-			"	*ColourMask { FF000000 }                 // This colour mask is applied to all child recursively\n"
-			"	*Sphere nested1 FF00FFFF\n"
-			"	{\n"
-			"		0.8 1.4 0.5\n"
-			"		*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}\n"
-			"		*Sphere nested2 FF00FFFF\n"
-			"		{\n"
-			"			0.8 1.4 0.5\n"
-			"			*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}\n"
-			"			*Sphere nested3 FF00FFFF\n"
-			"			{\n"
-			"				0.8 1.4 0.5\n"
-			"				*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}\n"
-			"				*Sphere nested4 FF00FFFF\n"
-			"				{\n"
-			"					0.8 1.4 0.5\n"
-			"					*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}\n"
-			"					*Sphere nested5 FF00FFFF\n"
-			"					{\n"
-			"						0.8 1.4 0.5\n"
-			"						*o2w {*pos {0 1.4 0} *euler{0 0 60} *pos {0 -1.4 0}}\n"
-			"					}\n"
-			"				}\n"
-			"			}\n"
-			"		}\n"
-			"	}\n"
-			"}\n"
-			"\n"
-
-			// Group
-			"// Groups are a special object type that doesn't contain geometry\n"
-			"// but has a coordinate space and child objects.\n"
-			"*Group group\n"
-			"{\n"
-			"	//*Wireframe     // Object modifiers applied to groups are applied recursively to children within the group\n"
-			"	*Cylinder barrel FFE0A060 { 3 1 *AxisId{+2}}\n"
-			"	*Sphere bullet FF0000FF\n"
-			"	{\n"
-			"		0.7\n"
-			"		*Animation\n"
-			"		{\n"
-			"			*Style Repeat          // Animation style, one of: NoAnimation, Once, Repeat, Continuous, PingPong\n"
-			"			*Period { 3 }        // The period of the animation in seconds\n"
-			"			*Velocity { 0 10 0 }    // Linear velocity vector in m/s\n"
-			"			*Accel {0 -3 0}\n"
-			"		}\n"
-			"		*o2w{*pos{0 0 0}}\n"
-			"	}\n"
-			"	*Box box FF00FF00 { 1 1 3 *o2w{*pos{0 -1.0 0}}}\n"
-			"	*Box box FF00FF00 { 3 1 1 *o2w{*pos{0 -1.0 0}}}\n"
-			"	*o2w {*pos{-10 1.5 -5}}\n"
-			"}\n"
-			"\n"
-
+#if 0
 			// Text
 			"// Text objects are textured quads that contain GDI text.\n"
 			"// There is support for screen space, billboard, and full 3D text objects.\n"
@@ -413,14 +351,14 @@ namespace pr::rdr12::ldraw
 			"	*o2w {*scale{8} *pos{0 7 -20} }\n"
 			"}\n"
 			"\n"
+#endif
 
-			// Objects
-			"// ************************************************************************************\n"
-			"// Objects\n"
-			"// ************************************************************************************\n"
-			"// Below is an example of every supported object type with notes on their syntax.\n"
-			"\n"
+// ************************************************************************************
+// Objects
+// ************************************************************************************
+// Below is an example of every supported object type with notes on their syntax.
 
+#if 0
 			// Point sprites
 			"// Points ***********************************************\n"
 			"\n"
@@ -429,25 +367,6 @@ namespace pr::rdr12::ldraw
 			"{\n"
 			"	*PerItemColour\n"
 			"	0 0 0 FFFFFF00  // x y z point positions\n"
-			#if 0
-			"\n"
-			"	// Using embedded C# to generate points\n"
-			"	#embedded(CSharp)\n"
-			"	var rng = new Random();\n"
-			"	for (int i = 0; i != 1000; ++i)\n"
-			"	{\n"
-			"		var t = (float)(rng.NextDouble());\n"
-			"		var p = 3f * t * v4.Random3N(1,rng);\n"
-			"		var c = \n"
-			"			t < 0.2f ? Colour32.LerpA(Colour32.White, Colour32.Yellow, Math_.Frac(0.0, t, 0.2)) :\n"
-			"			t < 0.5f ? Colour32.LerpA(Colour32.Yellow, Colour32.Red, Math_.Frac(0.2, t, 0.5)) :\n"
-			"			t < 1.0f ? Colour32.LerpA(Colour32.Red, 0x00FF0000, Math_.Frac(0.5, t, 1.0)) :\n"
-			"			Colour32.Transparent;\n"
-			"		Out.AppendLine(p.ToString3() + \" \" + c.ToString());\n"
-			"	}\n"
-			"	#end\n"
-			#endif
-			"\n"
 			"	*Size {5}                  // Optional. The size, in pixels, for the point\n"
 			"	*Style { Circle }          // Optional. One of: Square, Circle, Star, .. Requires 'Width'\n"
 			"	*Texture {\"#whitespot\"}    // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.\n"
@@ -573,17 +492,24 @@ namespace pr::rdr12::ldraw
 			"	*o2w {*pos{15 3 3}}\n"
 			"}\n"
 			"\n"
+#endif 
 
-			// 2D Shapes
-			"// 2D Shapes ***********************************************\n"
-			"*Plane ground FFFFE8A0\n"
-			"{\n"
-			"	0 0 0\n"
-			"	0 1 0\n"
-			"	40 40\n"
-			"	*Texture {\"#checker3\" *Addr{Wrap Wrap} *o2w {*Scale{10 10 1}}}\n"
-			"}\n"
-			"\n"
+// 2D Shapes ***********************************************
+
+// An "infinite" plane.
+*Plane ground FFFFE8A0
+{
+	*Data {40 40} // Width, height. Quad position is 0,0,0 and normal is Z axis. Use *o2w to position and orient the plane
+	*AxisId {+2}  // Optional. Axis to align the plane to. One of: X = \xc2\xb1""1, Y = \xc2\xb1""2, Z = \xc2\xb1""3
+	*Texture      // Optional. Planes can have a texture applied. See 'object_modifiers' example above
+	{
+		*FilePath {"#checker3"}
+		*Addr {Wrap Wrap}
+		*o2w {*Scale{10 10 1}}
+	}
+}
+
+#if 0
 			"// A circle or ellipse\n"
 			"*Circle circle\n"
 			"{\n"
@@ -1148,8 +1074,38 @@ namespace pr::rdr12::ldraw
 			"	*o2w{*scale{0.5} *euler{-90 0 0 } *pos{15 1.1 3}}\n"
 			"}\n"
 			"\n"
-		);
 
-		return str;
-	}
+#endif
+
+// A camera section must be at the top level in the script.
+// Camera descriptions raise an event immediately after being parsed.
+// The application handles this event to set the camera position.
+*Camera
+{
+	// Note: order is important. Camera properties are set in the order declared
+	*o2w {*pos{0 30 35}}      // Camera position/orientation within the scene
+	*LookAt {0 0 0}           // Optional. Point the camera at {x,y,z} from where it currently is. Sets the focus distance
+	*Align {0 1 0}            // Optional. Lock the camera's up axis to  {x,y,z}
+	//*Aspect {1.0}           // Optional. Aspect ratio (w/h). FovY is unchanged, FovX is changed. Default is 1
+	//*FovX {45}              // Optional. X field of view (deg). Y field of view is determined by aspect ratio
+	//*FovY {45}              // Optional. Y field of view (deg). X field of view is determined by aspect ratio (default 45 deg)
+	//*Fov {45 45}            // Optional. {Horizontal,Vertical} field of view (deg). Implies aspect ratio.
+	//*Near {0.01}            // Optional. Near clip plane distance
+	//*Far {100.0}            // Optional. Far clip plane distance
+	//*Orthographic           // Optional. Use an orthographic projection rather than perspective
+}
+
+// Light sources can be top level objects, children of other objects, or contain child objects.
+// In some ways they are like a *Group object, they have no geometry of their own but can contain
+// objects with geometry.
+*LightSource sun FFFFFF00     // Colour attribute is the colour of the light source
+{
+	*Style {Directional}      // One of: Directional, Point, Spot
+	*Ambient {FF101010 }      // Optional. Ambient colour
+	*Diffuse {FF404040 }      // Optional. Diffuse colour
+	*Specular {FFFFFFFF 1000} // Optional. Specular colour and power
+	*Range {100 0}            // Optional. range, falloff. Default is infinite.
+	*Cone {30 60}             // Optional. Inner angle (deg), Outer angle (deg). Only for spot lights
+	*CastShadow {10}          // Optional. range. Shadows are cast from this light source out to this range
+	*o2w {*pos{5 5 5}}        // Position/orientation of the light. Directional lights shine down -z
 }

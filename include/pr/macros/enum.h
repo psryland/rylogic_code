@@ -158,26 +158,15 @@ struct enum_name##_\
 			return false;\
 		}\
 	}\
-	template <typename Char> static bool TryParse(enum_name& e, std::basic_string<Char> const& name, bool match_case = true)\
-	{\
-		return TryParse(e, std::basic_string_view<Char>(name), match_case);\
-	}\
-	template <typename Char> static bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
-	{\
-		return TryParse(e, std::basic_string_view<Char>(name), match_case);\
-	}\
-	template <typename Char> static std::optional<enum_name> TryParse(std::basic_string_view<Char> name, bool match_case = true)\
+	static std::optional<enum_name> TryParse(std::string_view name, bool match_case = true)\
 	{\
 		enum_name e;\
-		return TryParse(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
+		return TryParse<char>(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
 	}\
-	template <typename Char> static std::optional<enum_name> TryParse(std::basic_string<Char> const& name, bool match_case = true)\
+	static std::optional<enum_name> TryParse(std::wstring_view name, bool match_case = true)\
 	{\
-		return TryParse(std::basic_string_view<Char>(name), match_case);\
-	}\
-	template <typename Char> static std::optional<enum_name> TryParse(Char const* name, bool match_case = true)\
-	{\
-		return TryParse(std::basic_string_view<Char>(name), match_case);\
+		enum_name e;\
+		return TryParse<wchar_t>(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
 	}\
 \
 	/* Convert a string into it's enum value*/ \
@@ -187,13 +176,13 @@ struct enum_name##_\
 		if (TryParse(r, name, match_case)) return r;\
 		throw std::exception("Parse failed, no matching value in enum "#enum_name);\
 	}\
-	template <typename Char> static enum_name Parse(std::basic_string<Char> const& name, bool match_case = true)\
+	static enum_name Parse(std::string_view name, bool match_case = true)\
 	{\
-		return Parse(std::basic_string_view<Char>(name), match_case);\
+		return Parse<char>(name, match_case);\
 	}\
-	template <typename Char> static enum_name Parse(Char const* name, bool match_case = true)\
+	static enum_name Parse(std::wstring_view name, bool match_case = true)\
 	{\
-		return Parse(std::basic_string_view<Char>(name), match_case);\
+		return Parse<wchar_t>(name, match_case);\
 	}\
 \
 	/* Returns true if 'val' is convertible to one of the values in this enum */ \

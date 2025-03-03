@@ -1,8 +1,8 @@
 //********************************
-// Ldraw Binary Script file format
+// Ldraw Script keywords
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
-// Binary 3d model format
+
 #pragma once
 #include "pr/view3d-12/forward.h"
 
@@ -63,6 +63,7 @@ namespace pr::rdr12::ldraw
 		x(Addr            ,= HashI("Addr"                ))\
 		x(Align           ,= HashI("Align"               ))\
 		x(Alpha           ,= HashI("Alpha"               ))\
+		x(Ambient         ,= HashI("Ambient"             ))\
 		x(Anchor          ,= HashI("Anchor"              ))\
 		x(AngAccel        ,= HashI("AngAccel"            ))\
 		x(AngVelocity     ,= HashI("AngVelocity"         ))\
@@ -86,6 +87,7 @@ namespace pr::rdr12::ldraw
 		x(Dashed          ,= HashI("Dashed"              ))\
 		x(Data            ,= HashI("Data"                ))\
 		x(Depth           ,= HashI("Depth"               ))\
+		x(Diffuse         ,= HashI("Diffuse"             ))\
 		x(Dim             ,= HashI("Dim"                 ))\
 		x(Direction       ,= HashI("Direction"           ))\
 		x(Divisions       ,= HashI("Divisions"           ))\
@@ -220,4 +222,149 @@ namespace pr::rdr12::ldraw
 		x(Unknown    ,= EKeyword::Unknown    )
 	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM_LDRAW_OBJECTS);
 	#pragma endregion
+
+	// Camera fields
+	enum class ECamField
+	{
+		None    = 0,
+		C2W     = 1 << 0,
+		Focus   = 1 << 1,
+		Align   = 1 << 2,
+		Aspect  = 1 << 3,
+		FovY    = 1 << 4,
+		Near    = 1 << 5,
+		Far     = 1 << 6,
+		Ortho   = 1 << 7,
+		_flags_enum = 0,
+	};
+
+	// Simple animation styles
+	enum class EAnimStyle
+	{
+		NoAnimation,
+		Once,
+		Repeat,
+		Continuous,
+		PingPong,
+	};
+
+	// Flags for partial update of a model
+	enum class EUpdateObject :int
+	{
+		None         = 0,
+		Name         = 1 << 0,
+		Model        = 1 << 1,
+		Transform    = 1 << 2,
+		Children     = 1 << 3,
+		Colour       = 1 << 4,
+		ColourMask   = 1 << 5,
+		Reflectivity = 1 << 6,
+		Flags        = 1 << 7,
+		Animation    = 1 << 8,
+		All          = 0x1FF,
+		_flags_enum = 0,
+	};
+
+	// Flags for extra behaviour of an object
+	enum class ELdrFlags
+	{
+		None = 0,
+
+		// The object is hidden
+		Hidden = 1 << 0,
+
+		// The object is filled in wireframe mode
+		Wireframe = 1 << 1,
+
+		// Render the object without testing against the depth buffer
+		NoZTest = 1 << 2,
+
+		// Render the object without effecting the depth buffer
+		NoZWrite = 1 << 3,
+
+		// The object has normals shown
+		Normals = 1 << 4,
+
+		// The object to world transform is not an affine transform
+		NonAffine = 1 << 5,
+
+		// Set when an instance is "selected". The meaning of 'selected' is up to the application
+		Selected = 1 << 8,
+
+		// Doesn't contribute to the bounding box
+		BBoxExclude = 1 << 9,
+
+		// Should not be included when determining the bounds of a scene.
+		SceneBoundsExclude = 1 << 10,
+
+		// Ignored for hit test ray casts
+		HitTestExclude = 1 << 11,
+
+		// Doesn't cast a shadow
+		ShadowCastExclude = 1 << 12,
+
+		// Bitwise operators
+		_flags_enum = 0,
+	};
+
+	// Colour blend operations
+	enum class EColourOp
+	{
+		Overwrite,
+		Add,
+		Subtract,
+		Multiply,
+		Lerp,
+	};
+
+	// Info on how to animate a ldr object
+	struct Animation
+	{
+		EAnimStyle m_style;
+		float      m_period; // Seconds
+		v4         m_vel;    // Linear velocity of the animation in m/s
+		v4         m_acc;    // Linear velocity of the animation in m/s
+		v4         m_avel;   // Angular velocity of the animation in rad/s
+		v4         m_aacc;   // Angular velocity of the animation in rad/s
+
+		Animation()
+			:m_style(EAnimStyle::NoAnimation)
+			,m_period(1.0f)
+			,m_vel(v4Zero)
+			,m_acc(v4Zero)
+			,m_avel(v4Zero)
+			,m_aacc(v4Zero)
+		{}
+
+		// Return a transform representing the offset
+		// added by this object at time 'time_s'
+		m4x4 Step(float time_s) const
+		{
+			auto t = 0.0f;
+			switch (m_style)
+			{
+			default: throw std::exception("Unknown animation style");
+			case EAnimStyle::NoAnimation:
+				return m4x4Identity;
+			case EAnimStyle::Once:
+				t = time_s < m_period ? time_s : m_period;
+				break;
+			case EAnimStyle::Repeat:
+				t = Fmod(time_s, m_period);
+				break;
+			case EAnimStyle::Continuous:
+				t = time_s;
+				break;
+			case EAnimStyle::PingPong:
+				t = Fmod(time_s, 2.0f*m_period) >= m_period
+					? m_period - Fmod(time_s, m_period)
+					: Fmod(time_s, m_period);
+				break;
+			}
+
+			auto l = 0.5f*m_acc*Sqr(t) + m_vel*t + v4Origin;
+			auto a = 0.5f*m_aacc*Sqr(t) + m_avel*t;
+			return m4x4::Transform(a, l);
+		}
+	};
 }

@@ -7,141 +7,242 @@
 
 namespace pr::rdr12::ldraw
 {
-	template <typename Char>
-	struct TextReaderImpl : IReader
+	// Convert opaque storage to a typed reference
+	template <typename T, int N, typename B = std::conditional_t<std::is_const_v<T>, std::byte const, std::byte>>
+	inline T& as(B (&storage)[N])
 	{
-		script::StreamSrc<Char> m_src;
-		script::Preprocessor m_pp;
-		mutable Location m_location;
-		string32 m_keyword;
-		wstring32 m_delim;
+		static_assert(sizeof(T) <= sizeof(storage));
+		return reinterpret_cast<T&>(storage);
+	}
 
-		TextReaderImpl(std::basic_istream<Char>& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
-			: IReader(report_error_cb, progress_cb, resolver)
-			, m_src(src, enc, script::Loc(src_filepath))
-			, m_pp(m_src)
-			, m_location()
-			, m_keyword()
-			, m_delim(L" \t\r\n\v,;")
-		{
-		}
-		
-		// Return the current location in the source
-		virtual Location const& Loc() const override
-		{
-			auto loc = m_pp.Location();
-			m_location.m_filepath = loc.Filepath();
-			m_location.m_column = loc.Col();
-			m_location.m_line = loc.Line();
-			m_location.m_offset = loc.Pos();
-			return m_location;
-		}
+	TextReader::TextReader(std::istream& stream, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
+		: IReader(report_error_cb, progress_cb, resolver)
+		, m_src()
+		, m_pp()
+		, m_location()
+		, m_keyword()
+		, m_delim(L" \t\r\n\v,;")
+		, m_section_level()
+		, m_nest_level()
+	{
+		static_assert(sizeof(m_src) >= sizeof(script::StreamSrc<char>));
+		static_assert(sizeof(m_pp) >= sizeof(script::Preprocessor));
+		new (m_src) script::StreamSrc<char>(stream, enc, script::Loc(src_filepath));
+		new (m_pp) script::Preprocessor(as<script::Src>(m_src), nullptr, nullptr, nullptr);
+	}
+	TextReader::TextReader(std::wistream& stream, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
+		: IReader(report_error_cb, progress_cb, resolver)
+		, m_src()
+		, m_pp()
+		, m_location()
+		, m_keyword()
+		, m_delim(L" \t\r\n\v,;")
+	{
+		static_assert(sizeof(m_src) >= sizeof(script::StreamSrc<wchar_t>));
+		static_assert(sizeof(m_pp) >= sizeof(script::Preprocessor));
+		new (m_src) script::StreamSrc<wchar_t>(stream, enc, script::Loc(src_filepath));
+		new (m_pp) script::Preprocessor(as<script::Src>(m_src), nullptr, nullptr, nullptr);
+	}
+	TextReader::~TextReader()
+	{
+		as<script::Preprocessor>(m_pp).~Preprocessor();
+		as<script::Src>(m_src).~Src();
+	}
 
-		// Move into a nested section
-		virtual void PushSection() override
-		{
-			script::EatDelimiters(m_pp, m_delim.c_str());
-			if (*m_pp != '{')
-				throw std::runtime_error("section start expected");
+	// Return the current location in the source
+	Location const& TextReader::Loc() const
+	{
+		auto loc = as<script::Preprocessor const>(m_pp).Location();
+		m_location.m_filepath = loc.Filepath();
+		m_location.m_column = loc.Col();
+		m_location.m_line = loc.Line();
+		m_location.m_offset = loc.Pos();
+		return m_location;
+	}
 
-			++m_pp;
-		}
-		
-		// Leave the current nested section
-		virtual void PopSection() override
+	// Move into a nested section
+	void TextReader::PushSection()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		script::EatDelimiters(pp, m_delim.c_str());
+		if (*pp != '{')
 		{
-			script::EatDelimiters(m_pp, m_delim.c_str());
-			if (*m_pp != '}')
-				throw std::runtime_error("section end expected");
+			ReportError(EParseError::NotFound, Loc(), "section start expected");
+			return;
+		}
+		++m_section_level;
+		++m_nest_level;
+		++pp;
+	}
 
-			++m_pp;
+	// Leave the current nested section
+	void TextReader::PopSection()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		script::EatDelimiters(pp, m_delim.c_str());
+		if (*pp != '}')
+		{
+			ReportError(EParseError::NotFound, Loc(), "section end expected");
+			return;
 		}
+		--m_section_level;
+		--m_nest_level;
+		++pp;
+	}
 
-		// True when the current position has reached the end of the current section
-		virtual bool IsSectionEnd() override
-		{
-			EatDelimiters(m_pp, m_delim.c_str());
-			return *m_pp == '}';
-		}
+	// True when the current position has reached the end of the current section
+	bool TextReader::IsSectionEnd()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		script::EatDelimiters(pp, m_delim.c_str());
+		return *pp == '}';
+	}
 
-		// True when the source is exhausted
-		virtual bool IsSourceEnd() override
+	// True when the source is exhausted
+	bool TextReader::IsSourceEnd()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		EatDelimiters(pp, m_delim.c_str());
+		return *pp == 0;
+	}
+
+	// Get the next keyword within the current section.
+	// Returns false if at the end of the section
+	bool TextReader::NextKeywordImpl(int& kw)
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+
+		// Skip to the next keyword, but don't go beyond the current section level.
+		for (;*pp && *pp != '*';)
 		{
-			EatDelimiters(m_pp, m_delim.c_str());
-			return *m_pp == 0;
+			if (*pp == '\"') { script::EatLiteral(pp, pp.Location()); continue; }
+			if (*pp == '{')  { script::EatSection(pp, pp.Location()); continue; }
+			if (*pp == '}')  { if (m_nest_level > m_section_level) --m_nest_level; else break; }
+			++pp;
 		}
-		
-		// Get the next keyword within the current section.
-		// Returns false if at the end of the section
-		virtual bool NextKeywordImpl(int& kw) override
-		{
-			for (;*m_pp && *m_pp != '}' && *m_pp != '*';)
-			{
-				if (*m_pp == '\"') { script::EatLiteral(m_pp, m_pp.Location()); continue; }
-				if (*m_pp == '{')  { script::EatSection(m_pp, m_pp.Location()); continue; }
-				++m_pp;
-			}
-			if (*m_pp == '*') ++m_pp; else return false;
+		if (*pp == '*') ++pp; else return false;
 			
-			wstring32 keyword;
-			if (!str::ExtractIdentifier(keyword, m_pp, m_delim.c_str())) return false;
-			str::LowerCase(keyword);
+		// Read the keyword
+		wstring32 keyword;
+		if (!str::ExtractIdentifier(keyword, pp, m_delim.c_str())) return false;
 
-			m_keyword = Narrow(keyword);
-			kw = HashI(m_keyword.c_str());
-			return true;
-		}
+		// Convert the keyword to an integer
+		m_keyword = Narrow(keyword);
+		kw = HashI(m_keyword.c_str());
 
-		// Read a utf8 string from the current section.
-		// If 'has_length' is false, assume the whole section is the string.
-		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 StringImpl(bool) override
-		{
-			wstring32 str;
-			if (!str::ExtractString(str, m_pp, m_delim.c_str()))
-				throw std::runtime_error("string expected");
+		// Handle an optional name and colour after the keyword
+		wstring32 tokens[2]; int tcount = 0;
+		script::EatDelimiters(pp, m_delim.c_str());
+		if (*pp != '{') tcount += str::ExtractToken(tokens[0], pp, m_delim.c_str()) ? 1 : 0;
+		script::EatDelimiters(pp, m_delim.c_str());
+		if (*pp != '{') tcount += str::ExtractToken(tokens[1], pp, m_delim.c_str()) ? 1 : 0;
+		script::EatDelimiters(pp, m_delim.c_str());
+		if (*pp != '{')
+			ReportError(EParseError::UnexpectedToken, Loc(), "expected '{'");
 		
-			str::ProcessIndentedNewlines(str);
-			return Narrow(str);
-		}
-
-		// Read an integral value from the current section
-		virtual int64_t IntImpl(int, int radix) override
+		// Insert pseudo tokens for name and colour
+		pp.Buffer(0, 1);
+		for (; tcount--; )
 		{
-			int64_t int_;
-			if (!str::ExtractInt(int_, radix, m_pp, m_delim.c_str()))
-				throw std::runtime_error("integer value expected");
+			auto& tok = tokens[tcount];
 
-			return int_;
+			// colour
+			if (tok.size() == 8 && all(tok, std::iswxdigit))
+				pp.Buffer().insert(1ULL, tok.insert(0, L"*Colour {").append(L"}"));
+			
+			// name
+			else if (!tok.empty() && all(tok, [](auto ch) { return std::iswalnum(ch) || ch == '_'; }))
+				pp.Buffer().insert(1ULL, tok.insert(0, L"*Name {").append(L"}"));
 		}
 
-		// Read a floating point value from the current section
-		virtual double RealImpl(int) override
-		{
-			double real_;
-			if (!str::ExtractReal(real_, m_pp, m_delim.c_str()))
-				throw std::runtime_error("real value expected");
+		// At this stage we don't know if the following '{...}' is a data section or nested section.
+		// Increment/decrement 'm_nest_level' whenever a '{' or '}' is consumed.
+		// Increment/decrement 'm_section_level' whenever PushSection or PopSection is called.
+		return true;
+	}
 
-			return real_;
-		}
+	// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
+	string32 TextReader::IdentifierImpl()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
 
-		// Read a boolean value from the current section
-		virtual bool BoolImpl() override
-		{
-			bool bool_;
-			if (!str::ExtractBool(bool_, m_pp, m_delim.c_str()))
-				throw std::runtime_error("boolean value expected");
+		wstring32 str = {};
+		if (!str::ExtractIdentifier(str, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "identifier expected");
 
-			return bool_;
-		}
-	};
+		return Narrow(str);
+	}
 
-	// --------------------------------------------------------------------------------------------
+	// Read a UTF-8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
+	string32 TextReader::StringImpl()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
 
-	TextReader::TextReader(std::istream& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
-		: m_impl(new TextReaderImpl(src, src_filepath, enc, report_error_cb, progress_cb, resolver))
-	{}
-	TextReader::TextReader(std::wistream& src, std::filesystem::path src_filepath, EEncoding enc, ReportErrorCB report_error_cb, ParseProgressCB progress_cb, IPathResolver const& resolver)
-		: m_impl(new TextReaderImpl(src, src_filepath, enc, report_error_cb, progress_cb, resolver))
-	{}
+		wstring32 str = {};
+		if (!str::ExtractString(str, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "string expected");
+		
+		str::ProcessIndentedNewlines(str);
+		return Narrow(str);
+	}
+
+	// Read an integral value from the current section
+	int64_t TextReader::IntImpl(int, int radix)
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
+
+		int64_t int_ = {};
+		if (!str::ExtractInt(int_, radix, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "integer value expected");
+
+		return int_;
+	}
+
+	// Read a floating point value from the current section
+	double TextReader::RealImpl(int)
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
+
+		double real_ = {};
+		if (!str::ExtractReal(real_, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "real value expected");
+
+		return real_;
+	}
+
+	// Read an enum value from the current section
+	int64_t TextReader::EnumImpl(int, ParseEnumIdentCB parse)
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
+
+		string32 ident = {};
+		if (!str::ExtractIdentifier(ident, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "enum identifier value expected");
+
+		return parse(ident);
+	}
+
+	// Read a boolean value from the current section
+	bool TextReader::BoolImpl()
+	{
+		auto& pp = as<script::Preprocessor>(m_pp);
+		m_nest_level += *pp == '{';
+		pp += *pp == '{';
+
+		bool bool_ = {};
+		if (!str::ExtractBool(bool_, pp, m_delim.c_str()))
+			ReportError(EParseError::InvalidValue, Loc(), "boolean value expected");
+
+		return bool_;
+	}
 }

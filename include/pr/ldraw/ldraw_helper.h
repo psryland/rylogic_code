@@ -14,6 +14,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/scope.h"
 #include "pr/container/byte_data.h"
+#include "pr/container/vector.h"
 #include "pr/gfx/colour.h"
 #include "pr/str/to_string.h"
 #include "pr/str/string.h"
@@ -26,10 +27,11 @@
 #include "pr/maths/spatial.h"
 #include "pr/maths/polynomial.h"
 #include "pr/geometry/closest_point.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 
 // Plan: Convert this to pr::ldraw namespace and rename to 'ldraw_helper.h'
-namespace pr::ldraw
+namespace pr::rdr12::ldraw
 {
 	using TStr = std::string;
 	using TData = pr::byte_data<4>;
@@ -56,405 +58,8 @@ namespace pr::ldraw
 		ofile.write(char_ptr(ldr.data()), ldr.size());
 	}
 
-	#pragma region Type Wrappers
-	enum class EArrowType : uint8_t
-	{
-		Fwd,
-		Back,
-		FwdBack,
-	};
-	enum class EPointStyle : uint8_t
-	{
-		Square,
-		Circle,
-		Triangle,
-		Star,
-		Annulus,
-	};
-
-	struct Str
-	{
-		std::string m_str;
-		Str(std::string const& str) :m_str(str) {}
-		Str(std::wstring const& str) :m_str(Narrow(str)) {}
-	};
-	struct Pos
-	{
-		v4 m_pos;
-		Pos(v4 const& pos) :m_pos(pos) {}
-		Pos(m4x4 const& mat) :m_pos(mat.pos) {}
-	};
-	struct O2W
-	{
-		m4x4 m_mat;
-		O2W() :m_mat(m4x4Identity) {}
-		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
-		O2W(m4x4 const& mat) :m_mat(mat) {}
-	};
-	struct Name
-	{
-		std::string m_name;
-		Name() :m_name() {}
-		Name(std::string_view str) :m_name(str) {}
-		Name(std::wstring_view str) :m_name(Narrow(str)) {}
-		template <int N> Name(char const (&str)[N]) :m_name(str) {}
-		template <int N> Name(wchar_t const (&str)[N]) :m_name(Narrow(str)) {}
-	};
-	struct Col
-	{
-		union {
-		Colour32 m_col;
-		unsigned int m_ui;
-		};
-		Col() :Col(0xFFFFFFFF) {}
-		Col(Colour32 c) :m_col(c) {}
-		Col(unsigned int ui) :m_ui(ui) {}
-	};
-	struct Size
-	{
-		float m_size;
-		Size() :m_size(0) {}
-		Size(float size) :m_size(size) {}
-		Size(int size) :m_size(float(size)) {}
-	};
-	struct Width
-	{
-		float m_width;
-		Width() :m_width(0) {}
-		Width(float w) :m_width(w) {}
-		Width(int w) :m_width(float(w)) {}
-	};
-	struct Wireframe
-	{
-		bool m_wire;
-		Wireframe() :m_wire(false) {}
-		Wireframe(bool w) :m_wire(w) {}
-	};
-	struct Solid
-	{
-		bool m_solid;
-		Solid() :m_solid(false) {}
-		Solid(bool s) : m_solid(s) {}
-	};
-	struct Depth
-	{
-		bool m_depth;
-		Depth() :m_depth(false) {}
-		Depth(bool d) : m_depth(d) {}
-	};
-	struct PointStyle
-	{
-		EPointStyle m_style;
-		PointStyle() :m_style() {}
-		PointStyle(EPointStyle s) : m_style(s) {}
-	};
-	#pragma endregion
-
-	#pragma region Append Text
-
-	// Forward declarations
-	template <typename Arg0, typename... Args> TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args);
-	TStr& AppendSpace(TStr& str);
-
-	// See unit tests for example.
-	// This only works when the overloads of Append have only two parameters.
-	// For complex types, either create a struct like O2W above, or a different named function
-	template <typename Type> inline TStr& Append(TStr& str, Type)
-	{
-		// Note: if you hit this error, it's probably because Append(str, ???) is being
-		// called where ??? is a type not handled by the overloads of Append.
-		// Also watch out for the error being a typedef of a common type,
-		// e.g. I've seen 'Type=std::ios_base::openmode' as an error, but really it was
-		// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
-		static_assert(dependent_false<Type>, "no overload for 'Type'");
-	}
-	inline TStr& Append(TStr& str, std::string_view s)
-	{
-		if (s.empty()) return str;
-		if (*s.data() != '}' && *s.data() != ')') AppendSpace(str);
-		str.append(s);
-		return str;
-	}
-	inline TStr& Append(TStr& str, char const* s)
-	{
-		return Append(str, std::string_view(s));
-	}
-	inline TStr& Append(TStr& str, std::string const& s)
-	{
-		return Append(str, std::string_view(s));
-	}
-	inline TStr& Append(TStr& str, std::wstring const& s)
-	{
-		return Append(str, Narrow(s));
-	}
-	inline TStr& Append(TStr& str, Str const& s)
-	{
-		return Append(str, str::Quotes(s.m_str, true));
-	}
-	inline TStr& Append(TStr& str, int i)
-	{
-		return AppendSpace(str).append(To<TStr>(i));
-	}
-	inline TStr& Append(TStr& str, long i)
-	{
-		return AppendSpace(str).append(To<TStr>(i));
-	}
-	inline TStr& Append(TStr& str, float f)
-	{
-		return AppendSpace(str).append(To<TStr>(f));
-	}
-	inline TStr& Append(TStr& str, double f)
-	{
-		return AppendSpace(str).append(To<TStr>(f));
-	}
-	inline TStr& Append(TStr& str, Name n)
-	{
-		if (n.m_name.empty()) return str;
-		return AppendSpace(str).append(n.m_name);
-	}
-	inline TStr& Append(TStr& str, Col c)
-	{
-		if (c.m_ui == 0xFFFFFFFF) return str;
-		return AppendSpace(str).append(To<TStr>(c.m_col));
-	}
-	inline TStr& Append(TStr& str, Size s)
-	{
-		if (s.m_size == 0) return str;
-		return Append(str, "*Size {", s.m_size, "} ");
-	}
-	inline TStr& Append(TStr& str, Depth d)
-	{
-		if (d.m_depth == false) return str;
-		return Append(str, "*Depth ");
-	}
-	inline TStr& Append(TStr& str, Width w)
-	{
-		if (w.m_width == 0) return str;
-		return Append(str, "*Width {", w.m_width, "} ");
-	}
-	inline TStr& Append(TStr& str, Wireframe w)
-	{
-		if (!w.m_wire) return str;
-		return Append(str, "*Wireframe");
-	}
-	inline TStr& Append(TStr& str, Solid s)
-	{
-		if (!s.m_solid) return str;
-		return Append(str, "*Solid");
-	}
-	inline TStr& Append(TStr& str, AxisId id)
-	{
-		return Append(str, "*AxisId {", int(id), "} ");
-	}
-	inline TStr& Append(TStr& str, EArrowType ty)
-	{
-		switch (ty)
-		{
-		case EArrowType::Fwd:     return Append(str, "Fwd");
-		case EArrowType::Back:    return Append(str, "Back");
-		case EArrowType::FwdBack: return Append(str, "FwdBack");
-		default: throw std::runtime_error("Unknown arrow type");
-		}
-	}
-	inline TStr& Append(TStr& str, PointStyle style)
-	{
-		switch (style.m_style)
-		{
-			case EPointStyle::Square: return str;
-			case EPointStyle::Circle: return Append(str, "*Style {Circle}");
-			case EPointStyle::Triangle: return Append(str, "*Style {Triangle}");
-			case EPointStyle::Star: return Append(str, "*Style {Star}");
-			case EPointStyle::Annulus: return Append(str, "*Style {Annulus}");
-			default: throw std::runtime_error("Unknown arrow type");
-		}
-	}
-	inline TStr& Append(TStr& str, Colour32 c)
-	{
-		return Append(str, Col(c));
-	}
-	inline TStr& Append(TStr& str, v2 const& v)
-	{
-		return AppendSpace(str).append(To<TStr>(v));
-	}
-	inline TStr& Append(TStr& str, v3 const& v)
-	{
-		return AppendSpace(str).append(To<TStr>(v));
-	}
-	inline TStr& Append(TStr& str, v4 const& v)
-	{
-		return AppendSpace(str).append(To<TStr>(v));
-	}
-	inline TStr& Append(TStr& str, m4x4 const& m)
-	{
-		return Append(str, m.x, m.y, m.z, m.w);
-	}
-	template <Scalar S> inline TStr& Append(TStr& str, Vec2<S,void> const& v)
-	{
-		return Append(AppendSpace(str), To<TStr>(v));
-	}
-	template <Scalar S> inline TStr& Append(TStr& str, Vec3<S,void> const& v)
-	{
-		return Append(AppendSpace(str), To<TStr>(v));
-	}
-	template <Scalar S> inline TStr& Append(TStr& str, Vec4<S,void> const& v)
-	{
-		return Append(AppendSpace(str), To<TStr>(v));
-	}
-	template <Scalar S> inline TStr& Append(TStr& str, Mat4x4<S,void, void> const& m)
-	{
-		return Append(str, m.x, m.y, m.z, m.w);
-	}
-	inline TStr& Append(TStr& str, Pos const& p)
-	{
-		if (p.m_pos == v4Origin)
-			return str;
-		else
-			return Append(AppendSpace(str), "*o2w{*pos{",p.m_pos.xyz,"}}");
-	}
-	inline TStr& Append(TStr& str, O2W const& o2w)
-	{
-		if (o2w.m_mat == m4x4Identity)
-			return str;
-		if (o2w.m_mat.rot == m3x4Identity && o2w.m_mat.pos.w == 1)
-			return Append(AppendSpace(str), "*o2w{*pos{", o2w.m_mat.pos.xyz, "}}");
-
-		auto affine = !IsAffine(o2w.m_mat) ? "*NonAffine": "";
-		return Append(AppendSpace(str), "*o2w{", affine, "*m4x4{", o2w.m_mat, "}}");
-	}
-	template <typename Arg0, typename... Args> inline TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args)
-	{
-		Append(str, arg0);
-		return Append(str, std::forward<Args>(args)...);
-	}
-	inline TStr& AppendSpace(TStr& str)
-	{
-		TStr::value_type ch;
-		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
-		str.append(" ");
-		return str;
-	}
-	#pragma endregion
-
-	#pragma region Append Binary
-	inline TData& Append(TData& data, int i)
-	{
-		return data.push_back(i);
-	}
-	inline TData& Append(TData& data, long i)
-	{
-		return data.push_back(i);
-	}
-	inline TData& Append(TData& data, float f)
-	{
-		return data.push_back(f);
-	}
-	inline TData& Append(TData& data, double f)
-	{
-		return data.push_back(f);
-	}
-	inline TData& Append(TData& data, m4x4 const& m)
-	{
-		return data.push_back(m);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec2<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec3<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Vec4<S,void> const& v)
-	{
-		return data.push_back(v);
-	}
-	template <Scalar S> inline TData& Append(TData& data, Mat4x4<S,void, void> const& m)
-	{
-		return Append(data, m.x, m.y, m.z, m.w);
-	}
-	inline TData& Append(TData& data, Name name)
-	{
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Name, name.m_name);
-		return data;
-	}
-	inline TData& Append(TData& data, Col colour)
-	{
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Colour, colour.m_ui);
-		return data;
-	}
-	inline TData& Append(TData& data, Size s)
-	{
-		if (s.m_size == 0) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Size, s.m_size);
-		return data;
-	}
-	inline TData& Append(TData& data, Wireframe w)
-	{
-		if (!w.m_wire) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Wireframe);
-		return data;
-	}
-	inline TData& Append(TData& data, Solid s)
-	{
-		if (!s.m_solid) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Solid);
-		return data;
-	}
-	inline TData& Append(TData& data, Depth d)
-	{
-		if (d.m_depth == false) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Depth);
-		return data;
-	}
-	inline TData& Append(TData& data, Width w)
-	{
-		if (w.m_width == 0) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Width, w.m_width);
-		return data;
-	}
-	inline TData& Append(TData& data, AxisId id)
-	{
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::AxisId, int(id));
-		return data;
-	}
-	inline TData& Append(TData& data, PointStyle style)
-	{
-		if (style.m_style == EPointStyle::Square) return data;
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Style, style.m_style);
-		return data;
-	}
-	inline TData& Append(TData& data, O2W const& o2w)
-	{
-		if (o2w.m_mat == m4x4::Identity())
-			return data;
-
-		rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::O2W, [&](auto&)
-		{
-			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
-			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Pos, o2w.m_mat.pos.xyz);
-			}
-			else
-			{
-				if (!IsAffine(o2w.m_mat))
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::NonAffine);
-
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::M4x4, o2w.m_mat);
-			}
-		});
-		return data;
-	}
-	template <typename Arg0, typename... Args> inline TData& Append(TData& data, Arg0 const& arg0, Args&&... args)
-	{
-		Append(data, arg0);
-		(Append(data, args), ...);
-		return data;
-	}
-	#pragma endregion
-
 	// Pretty format Ldraw script
-	template <typename TStr>
-	TStr FormatScript(TStr const& str)
+	template <typename TStr> TStr FormatScript(TStr const& str)
 	{
 		TStr out;
 		out.reserve(str.size());
@@ -534,7 +139,7 @@ namespace pr::ldraw
 			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
 
 			// Extension objects
-			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj, LdrCustom>>>
+			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
 			LdrCustom& Custom(std::string_view name = "", Col colour = Col())
 			{
 				auto ptr = new LdrCustom;
@@ -546,10 +151,11 @@ namespace pr::ldraw
 			LdrObj& WrapAsGroup(Name name = {}, Col colour = Col());
 
 			// Serialise the ldr script to a string
-			std::string ToString() const
+			std::string ToString(bool pretty) const
 			{
 				std::string str;
 				ToString(str);
+				if (pretty) str = FormatScript(str);
 				return str;
 			}
 			virtual void ToString(std::string& str) const
@@ -613,7 +219,7 @@ namespace pr::ldraw
 			LdrBase()
 				: m_name()
 				, m_colour()
-				, m_o2w(m4x4Identity)
+				, m_o2w(m4x4::Identity())
 				, m_wire()
 				, m_axis_id(AxisId::PosZ)
 				, m_solid()
@@ -662,23 +268,23 @@ namespace pr::ldraw
 			}
 			Derived& o2w(m3x4 const& rot, v4 const& pos)
 			{
-				m_o2w = m4x4{ rot, pos } * m_o2w;
+				m_o2w.m_mat = m4x4{ rot, pos } * m_o2w.m_mat;
 				return static_cast<Derived&>(*this);
 			}
 			Derived& o2w(m4x4 const& o2w)
 			{
-				m_o2w = o2w * m_o2w;
+				m_o2w.m_mat = o2w * m_o2w.m_mat;
 				return static_cast<Derived&>(*this);
 			}
-			m4x4 m_o2w;
+			O2W m_o2w;
 
 			// Wire frame
 			Derived& wireframe(bool w = true)
 			{
-				m_wire = w;
+				m_wire.m_wire = w;
 				return static_cast<Derived&>(*this);
 			}
-			bool m_wire;
+			Wireframe m_wire;
 
 			// Axis id
 			Derived& axis(AxisId axis_id)
@@ -691,10 +297,10 @@ namespace pr::ldraw
 			// Solid
 			Derived& solid(bool s = true)
 			{
-				m_solid = s;
+				m_solid.m_solid = s;
 				return static_cast<Derived&>(*this);
 			}
-			bool m_solid;
+			Solid m_solid;
 
 			// Copy all modifiers from another object
 			template <typename D> Derived& modifiers(LdrBase<D> const& rhs)
@@ -711,12 +317,12 @@ namespace pr::ldraw
 			void NestedToString(std::string& str) const override
 			{
 				LdrObj::NestedToString(str);
-				ldraw::Append(str, Wireframe(m_wire), Solid(m_solid), O2W(m_o2w));
+				TextWriter::Append(str, m_wire, m_solid, m_o2w);
 			}
 			void NestedToBinary(byte_data<4>& data) const override
 			{
 				LdrObj::NestedToBinary(data);
-				ldraw::Append(data, Wireframe(m_wire), Solid(m_solid), O2W(m_o2w));
+				BinaryWriter::Append(data, m_wire, m_solid, m_o2w);
 			}
 		};
 
@@ -775,28 +381,31 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto delim = m_points.size() > 1 ? "\n" : "";
-				ldraw::Append(str, "*Point", m_name, m_colour, "{", delim, m_size, m_style, m_depth, delim);
-				for (auto& pt : m_points)
+				TextWriter::Write(str, EKeyword::Point, m_name, m_colour, [&]
 				{
-					ldraw::Append(str, pt.point.xyz);
-					if (m_has_colours) ldraw::Append(str, pt.colour);
-					ldraw::Append(str, delim);
-				}
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Point, [&](auto&)
-				{
-					ldraw::Append(data, m_name, m_colour, m_size, m_style, m_depth);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
+					TextWriter::Append(str, m_size, m_style, m_depth);
+					TextWriter::Write(str, EKeyword::Data, [&]
 					{
 						for (auto& pt : m_points)
 						{
-							ldraw::Append(data, pt.point.xyz);
-							if (m_has_colours) ldraw::Append(data, pt.colour);
+							TextWriter::Append(str, pt.point.xyz);
+							if (m_has_colours) TextWriter::Append(str, pt.colour);
+						}
+						NestedToString(str);
+					});
+				});
+			}
+			void ToBinary(byte_data<4>& data) const override
+			{
+				BinaryWriter::Write(data, EKeyword::Point, [&]
+				{
+					BinaryWriter::Append(data, m_name, m_colour, m_size, m_style, m_depth);
+					BinaryWriter::Write(data, EKeyword::Data, [&]
+					{
+						for (auto& pt : m_points)
+						{
+							BinaryWriter::Append(data, pt.point.xyz);
+							if (m_has_colours) BinaryWriter::Append(data, pt.colour);
 						}
 					});
 					NestedToBinary(data);
@@ -885,32 +494,31 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto delim = m_lines.size() > 1 ? "\n" : "";
-
-				ldraw::Append(str, m_strip ? "*LineStrip" : "*Line", m_name, m_colour, "{", delim, m_width, delim);
-				for (auto const& line : m_lines)
+				TextWriter::Write(str, m_strip ? EKeyword::LineStrip : EKeyword::Line, m_name, m_colour, [&]
 				{
-					ldraw::Append(str, line.a.xyz);
-					if (!m_strip)
-						ldraw::Append(str, line.b.xyz);
-
-					ldraw::Append(str, delim);
-				}
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				rdr12::ldraw::BinaryWriter::Write(data, m_strip ? rdr12::ldraw::EKeyword::LineStrip : rdr12::ldraw::EKeyword::Line, [&](auto&)
-				{
-					ldraw::Append(data, m_name, m_colour, m_width);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
+					TextWriter::Append(str, m_width);
+					TextWriter::Write(str, EKeyword::Data, [&]
 					{
 						for (auto const& line : m_lines)
 						{
-							ldraw::Append(data, line.a.xyz);
-							if (!m_strip) continue;
-							ldraw::Append(data, line.b.xyz);
+							TextWriter::Append(str, line.a.xyz);
+							if (!m_strip) TextWriter::Append(str, line.b.xyz);
+						}
+					});
+					NestedToString(str);
+				});
+			}
+			void ToBinary(byte_data<4>& data) const override
+			{
+				BinaryWriter::Write(data, m_strip ? EKeyword::LineStrip : EKeyword::Line, [&]
+				{
+					BinaryWriter::Append(data, m_name, m_colour, m_width);
+					BinaryWriter::Write(data, EKeyword::Data, [&]
+					{
+						for (auto const& line : m_lines)
+						{
+							BinaryWriter::Append(data, line.a.xyz);
+							if (!m_strip) BinaryWriter::Append(data, line.b.xyz);
 						}
 						NestedToBinary(data);
 					});
@@ -945,29 +553,29 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				assert((m_lines.size() & 1) == 0);
-				auto const delim = m_lines.size() > 1 ? "\n" : "";
-				ldraw::Append(str, "*LineD", m_name, m_colour, "{", delim, m_width, delim);
-				for (int i = 0, iend = isize(m_lines); i != iend; i += 2)
+				TextWriter::Write(str, EKeyword::LineD, m_name, m_colour, [&]
 				{
-					ldraw::Append(str
-						,m_lines[i + 0].xyz
-						,m_lines[i + 1].xyz
-						, delim);
-				}
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+					TextWriter::Append(str, m_width);
+					TextWriter::Write(str, EKeyword::Data, [&]
+					{
+						for (int i = 0, iend = isize(m_lines); i != iend; i += 2)
+						{
+							TextWriter::Append(str, m_lines[i + 0].xyz, m_lines[i + 1].xyz);
+							//if (pretty) TextWriter::Append(str, "\n");
+						}
+					});
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				assert((m_lines.size() & 1) == 0);
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::LineD, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::LineD, [&]
 				{
-					ldraw::Append(data, m_name, m_colour, m_width);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
+					BinaryWriter::Append(data, m_name, m_colour, m_width);
+					BinaryWriter::Write(data, EKeyword::Data, [&]
 					{
 						for (int i = 0, iend = isize(m_lines); i != iend; i += 2)
-							ldraw::Append(data, m_lines[i + 0].xyz, m_lines[i + 1].xyz);
+							BinaryWriter::Append(data, m_lines[i + 0].xyz, m_lines[i + 1].xyz);
 					});
 					NestedToBinary(data);
 				});
@@ -1002,25 +610,28 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto delim = m_points.size() > 3 ? "\n" : "";
-				ldraw::Append(str, "*Triangle", m_name, m_colour, "{", delim);
-				for (int i = 0, iend = (int)m_points.size(); i != iend; ++i)
+				TextWriter::Write(str, EKeyword::Triangle, m_name, m_colour, [&]
 				{
-					ldraw::Append(str, m_points[i].xyz);
-					if ((i & 3) == 3) ldraw::Append(str, delim);
-				}
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+					TextWriter::Write(str, EKeyword::Data, [&]
+					{
+						for (int i = 0, iend = isize(m_points); i != iend; ++i)
+						{
+							TextWriter::Append(str, m_points[i].xyz);
+							//if (pretty && (i & 3) == 3) TextWriter::Append(str, "\n");
+						}
+					});
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Triangle, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Triangle, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, [&]
 					{
 						for (int i = 0, iend = isize(m_points); i != iend; ++i)
-							ldraw::Append(data, m_points[i].xyz);
+							BinaryWriter::Append(data, m_points[i].xyz);
 					});
 					NestedToBinary(data);
 				});
@@ -1068,19 +679,18 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				ldraw::Append(str, "*Plane", m_name, m_colour, "{", m_position.xyz, m_direction.xyz, m_wh);
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				TextWriter::Write(str, EKeyword::Plane, m_name, m_colour, [&]
+				{
+					TextWriter::Write(str, EKeyword::Data, m_position.xyz, m_direction.xyz, m_wh);
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Plane, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Plane, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldraw::Append(data, m_position.xyz, m_direction.xyz, m_wh);
-					});
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, m_position.xyz, m_direction.xyz, m_wh);
 					NestedToBinary(data);
 				});
 			}
@@ -1102,19 +712,18 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				ldraw::Append(str, "*Circle", m_name, m_colour, "{", m_radius, m_axis_id);
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				TextWriter::Write(str, EKeyword::Circle, m_name, m_colour, [&]
+				{
+					TextWriter::Write(str, EKeyword::Data, m_radius, m_axis_id);
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Circle, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Circle, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldraw::Append(data, m_radius, m_axis_id);
-					});
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, m_radius, m_axis_id);
 					NestedToBinary(data);
 				});
 			}
@@ -1147,19 +756,19 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				if (m_radius.x == m_radius.y && m_radius.x == m_radius.z)
-					ldraw::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x);
-				else
-					ldraw::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x, m_radius.y, m_radius.z);
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				TextWriter::Write(str, EKeyword::Sphere, m_name, m_colour, [&]
+				{
+					TextWriter::Write(str, EKeyword::Data, m_radius.xyz);
+					NestedToString(str);
+				});
+				
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Sphere, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Sphere, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&) { ldraw::Append(data, m_radius.xyz); });
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, m_radius.xyz);
 					NestedToBinary(data);
 				});
 			}
@@ -1207,16 +816,18 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				ldraw::Append(str, "*Box", m_name, m_colour, "{", m_dim.xyz);
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				TextWriter::Write(str, EKeyword::Box, m_name, m_colour, [&]
+				{
+					TextWriter::Write(str, EKeyword::Data, m_dim.xyz);
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Box, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Box, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&) { ldraw::Append(data, m_dim.xyz); });
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, m_dim.xyz);
 					NestedToBinary(data);
 				});
 			}
@@ -1245,19 +856,18 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				ldraw::Append(str, "*Cylinder", m_name, m_colour, "{", m_height, m_radius.x, m_radius.y, m_axis_id);
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				TextWriter::Write(str, EKeyword::Cylinder, m_name, m_colour, [&]
+				{
+					TextWriter::Write(str, EKeyword::Data, m_height, m_radius.x, m_radius.y, m_axis_id);
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Cylinder, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Cylinder, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
-					{
-						ldraw::Append(data, m_height, m_radius, m_axis_id);
-					});
+					BinaryWriter::Append(data, m_name, m_colour);
+					BinaryWriter::Write(data, EKeyword::Data, m_height, m_radius, m_axis_id);
 					NestedToBinary(data);
 				});
 			}
@@ -1303,28 +913,31 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				auto delim = m_splines.size() > 1 ? "\n" : "";
-				ldraw::Append(str, "*Spline", m_name, m_colour, "{", delim, m_width, delim);
-				for (auto& bez : m_splines)
+				TextWriter::Write(str, EKeyword::Spline, m_name, m_colour, [&]
 				{
-					ldraw::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
-					if (m_has_colour) ldraw::Append(str, bez.col);
-					ldraw::Append(str, delim);
-				}
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
-			}
-			void ToBinary(byte_data<4>& data) const override
-			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Spline, [&](auto&)
-				{
-					ldraw::Append(data, m_name, m_colour, m_width);
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, [&](auto&)
+					TextWriter::Append(str, m_width);
+					TextWriter::Write(str, EKeyword::Data, [&]
 					{
 						for (auto& bez : m_splines)
 						{
-							ldraw::Append(data, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
-							if (m_has_colour) ldraw::Append(data, bez.col);
+							TextWriter::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
+							if (m_has_colour) TextWriter::Append(str, bez.col);
+						}
+					});
+					NestedToString(str);
+				});
+			}
+			void ToBinary(byte_data<4>& data) const override
+			{
+				BinaryWriter::Write(data, EKeyword::Spline, [&]
+				{
+					BinaryWriter::Append(data, m_name, m_colour, m_width);
+					BinaryWriter::Write(data, EKeyword::Data, [&]
+					{
+						for (auto& bez : m_splines)
+						{
+							BinaryWriter::Append(data, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
+							if (m_has_colour) BinaryWriter::Append(data, bez.col);
 						}
 					});
 					NestedToBinary(data);
@@ -1420,42 +1033,58 @@ namespace pr::ldraw
 			void ToString(std::string& str) const override
 			{
 				if (m_ortho)
-					ldraw::Append(str, "*Box", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.y - m_nf.x, O2W(v4{0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1}));
+				{
+					TextWriter::Write(str, EKeyword::Box, m_name, m_colour, [&]
+					{
+						TextWriter::Write(str, EKeyword::Data, m_wh.x, m_wh.y, m_nf.y - m_nf.x);
+						TextWriter::Append(str, O2W{ v4{ 0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1 } });
+						NestedToString(str);
+					});
+				}
 				else if (m_wh != Vec2d<void>::Zero())
-					ldraw::Append(str, "*FrustumWH", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.x, m_nf.y);
+				{
+					TextWriter::Write(str, EKeyword::FrustumWH, m_name, m_colour, [&]
+					{
+						TextWriter::Write(str, EKeyword::Data, m_wh.x, m_wh.y, m_nf.x, m_nf.y);
+						NestedToString(str);
+					});
+				}
 				else
-					ldraw::Append(str, "*FrustumFA", m_name, m_colour, "{", RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
-
-				NestedToString(str);
-				ldraw::Append(str, "}\n");
+				{
+					TextWriter::Write(str, EKeyword::FrustumFA, m_name, m_colour, [&]
+					{
+						TextWriter::Write(str, EKeyword::Data, RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
+						NestedToString(str);
+					});
+				}
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
 				if (m_ortho)
 				{
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Box, [&](auto&)
+					BinaryWriter::Write(data, EKeyword::Box, [&]
 					{
-						ldraw::Append(data, m_name, m_colour);
-						rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.y - m_nf.x });
-						ldraw::Append(data, O2W(v4{ 0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1 }));
+						BinaryWriter::Append(data, m_name, m_colour);
+						BinaryWriter::Write(data, EKeyword::Data, m_wh.x, m_wh.y, m_nf.y - m_nf.x);
+						BinaryWriter::Append(data, O2W(v4{ 0, 0, -0.5f * s_cast<float>(m_nf.x + m_nf.y), 1 }));
 						NestedToBinary(data);
 					});
 				}
 				else if (m_wh != Vec2d<void>::Zero())
 				{
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::FrustumWH, [&](auto&)
+					BinaryWriter::Write(data, EKeyword::FrustumWH, [&]
 					{
-						ldraw::Append(data, m_name, m_colour);
-						rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, { m_wh.x, m_wh.y, m_nf.x, m_nf.y });
+						BinaryWriter::Append(data, m_name, m_colour);
+						BinaryWriter::Write(data, EKeyword::Data, m_wh.x, m_wh.y, m_nf.x, m_nf.y);
 						NestedToBinary(data);
 					});
 				}
 				else
 				{
-					rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::FrustumFA, [&](auto&)
+					BinaryWriter::Write(data, EKeyword::FrustumFA, [&]
 					{
-						ldraw::Append(data, m_name, m_colour);
-						rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Data, { RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y });
+						BinaryWriter::Append(data, m_name, m_colour);
+						BinaryWriter::Write(data, EKeyword::Data, RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
 						NestedToBinary(data);
 					});
 				}
@@ -1466,16 +1095,16 @@ namespace pr::ldraw
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				ldraw::Append(str, "*Group", m_name, m_colour, "{\n");
-				NestedToString(str);
-				for (;!str.empty() && str.back() == '\n';) str.pop_back();
-				ldraw::Append(str, "\n}\n");
+				TextWriter::Write(str, EKeyword::Group, m_name, m_colour, [&]
+				{
+					NestedToString(str);
+				});
 			}
 			void ToBinary(byte_data<4>& data) const override
 			{
-				rdr12::ldraw::BinaryWriter::Write(data, rdr12::ldraw::EKeyword::Group, [&](auto&)
+				BinaryWriter::Write(data, EKeyword::Group, [&]
 				{
-					ldraw::Append(data, m_name, m_colour);
+					BinaryWriter::Append(data, m_name, m_colour);
 					NestedToBinary(data);
 				});
 			}
@@ -1571,48 +1200,32 @@ namespace pr::ldraw
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr::ldraw
+namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LdrHelperTextTests)
 	{
-		std::string str;
-
-		Append(str,"*Box b",Colour32Green,"{",v3(1.0f,2.0f,3.0f),O2W(m4x4::Identity()),"}");
-		PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
-		str.resize(0);
-
-		Append(str,"*Box b",Colour32Red,"{",1.5f,O2W(v4ZAxis.w1()),"}");
-		PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
-		str.resize(0);
-
 		{
 			Builder L;
 			L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
-			L.ToString(str);
-
-			PR_CHECK(str, "*Box b ff00ff00 {1 1 1}\n");
-			str.resize(0);
+			auto str = L.ToString(false);
+			PR_EXPECT(str::Equal(str, "*Box b ff00ff00 {*Data {1 1 1}}"));
 		}
 		{
 			Builder L;
 			L.Triangle().name("tri").col(0xFFFF0000).pt(v4(0,0,0,1), v4(1,0,0,1), v4(0,1,0,1));
-			L.ToString(str);
-			
-			PR_CHECK(str, "*Triangle tri ffff0000 {0 0 0 1 0 0 0 1 0}\n");
-			str.resize(0);
+			auto str = L.ToString(false);
+			PR_EXPECT(str::Equal(str, "*Triangle tri ffff0000 {*Data {0 0 0 1 0 0 0 1 0}}"));
 		}
 		{
 			Builder L;
 			L.LineD().name("lined").col(0xFF00FF00).add(v4(0,0,0,1), v4(1,0,0,1)).add(v4(0,0,0,1), v4(0,0,1,1));
-			L.ToString(str);
-			
-			PR_CHECK(str, "*LineD lined ff00ff00 {\n\n0 0 0 1 0 0 \n0 0 0 0 0 1 \n}\n");
-			str.resize(0);
+			auto str = L.ToString(true);
+			PR_EXPECT(str::Equal(str, "*LineD lined ff00ff00 {\n\t*Data {\n\t\t0 0 0 1 0 0 0 0 0 0 0 1\n\t}\n}"));
 		}
 	}
 	PRUnitTest(LdrHelperBinaryTests)
 	{
-		ldraw::Builder builder;
+		Builder builder;
 		auto& group = builder.Group("TestGroup", 0xFF112233);
 		auto& points = group.Point("TestPoints", 0xFF00FF00).size(5.0f);
 		for (int i = 0; i != 10; ++i)

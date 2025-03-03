@@ -9,7 +9,7 @@
 			"name": "keyword.other.mylang"
 		},
 		{
-			"match": "(#include|#if|#elif|#else|#endif|#ifdef|#ifndef|#define|#undef)\\b",
+			"match": "(#include|#if|#elif|#else|#endif|#ifdef|#ifndef|#define|#undef|#ignore_missing|#depend)\\b",
 			"name": "keyword.control.mylang"
 		},
 		{

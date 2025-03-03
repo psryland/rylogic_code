@@ -111,7 +111,7 @@ namespace pr::rdr12::ldraw
 			// Create graphics
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
-				pr::ldraw::Builder ldr;
+				Builder ldr;
 				auto& group = ldr.Group("Angle");
 				group.Line("edge0", 0xFFFFFFFF).line(m_origin, m_point0);
 				group.Line("edge1", 0xFFFFFF00).line(m_origin, m_point1);
@@ -119,7 +119,7 @@ namespace pr::rdr12::ldraw
 				auto data = ldr.ToBinary();
 
 				mem_istream<char> src{ data };
-				rdr12::ldraw::BinaryReader reader(src, {});
+				BinaryReader reader(src, {});
 				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())
 					m_gfx = out.m_objects.back();

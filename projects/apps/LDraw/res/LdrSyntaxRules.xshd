@@ -111,6 +111,7 @@
 			<Word>*Addr</Word>
 			<Word>*Align</Word>
 			<Word>*Alpha</Word>
+			<Word>*Ambient</Word>
 			<Word>*Anchor</Word>
 			<Word>*AngAccel</Word>
 			<Word>*AngVelocity</Word>
@@ -134,6 +135,7 @@
 			<Word>*Dashed</Word>
 			<Word>*Data</Word>
 			<Word>*Depth</Word>
+			<Word>*Diffuse</Word>
 			<Word>*Dim</Word>
 			<Word>*Direction</Word>
 			<Word>*Divisions</Word>

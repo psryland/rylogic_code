@@ -108,7 +108,7 @@ namespace pr::rdr12::ldraw
 				auto p0 = v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
 				auto p1 = v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
-				pr::ldraw::Builder ldr;
+				Builder ldr;
 				auto& group = ldr.Group("Measurement");
 				group.Line("dist", 0xFFFFFFFF).line(m_point0, m_point1);
 				group.Line("distX", 0xFFFF0000).line(m_point0, p0);
@@ -117,7 +117,7 @@ namespace pr::rdr12::ldraw
 				auto data = ldr.ToBinary();
 
 				mem_istream<char> src{data.span<char>()};
-				rdr12::ldraw::BinaryReader reader(src, {});
+				BinaryReader reader(src, {});
 				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())
 					m_gfx = out.m_objects.back();

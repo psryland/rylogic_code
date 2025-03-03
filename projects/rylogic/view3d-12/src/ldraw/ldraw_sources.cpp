@@ -281,14 +281,14 @@ namespace pr::rdr12::ldraw
 		try
 		{
 			// Callback functions for 'Parse'
-			static StaticCB<void, EParseError, Location const&, std::string_view> ReportErrorCB = {
+			StaticCB<void, EParseError, Location const&, std::string_view> ReportErrorCB = {
 				[](void* ctx, EParseError err, Location const& loc, std::string_view msg) -> void
 				{
 					auto& errors = *static_cast<ErrorCont*>(ctx);
 					ParseErrorEventArgs args(msg, err, loc);
 					errors.push_back(std::move(args));
 				}, &errors };
-			static StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool> ProgressCB = {
+			StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool> ProgressCB = {
 				[](void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete) -> bool
 				{
 					auto& ss = *static_cast<ScriptSources*>(ctx);
@@ -395,14 +395,14 @@ namespace pr::rdr12::ldraw
 		try
 		{
 			// Callback function for 'Parse'
-			static StaticCB<void, EParseError, Location const&, std::string_view> ReportErrorCB = {
+			StaticCB<void, EParseError, Location const&, std::string_view> ReportErrorCB = {
 				[](void* ctx, EParseError err, Location const& loc, std::string_view msg) -> void
 				{
 					auto& errors = *static_cast<ErrorCont*>(ctx);
 					ParseErrorEventArgs args(msg, err, loc);
 					errors.push_back(std::move(args));
 				}, &errors };
-			static StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool> ProgressCB = {
+			StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool> ProgressCB = {
 				[](void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete) -> bool
 				{
 					auto& ss = *static_cast<ScriptSources*>(ctx);

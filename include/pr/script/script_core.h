@@ -787,7 +787,10 @@ namespace pr::script
 	template <typename TSrc> inline void EatSection(TSrc& src, Loc const& loc = Loc())
 	{
 		// Don't call this unless 'src' is pointing at a '{'
-		for (int nest = 1; *src;)
+		if (*src != '{')
+			throw ScriptException(EResult::TokenNotFound, loc, Fmt("Expected to the start of a section block, but the next character is %c", *src));
+
+		for (int nest = 0; *src;)
 		{
 			if (*src == L'\"') { EatLiteral(src, loc); continue; }
 			nest += (*src == L'{') ? 1 : 0;
@@ -795,6 +798,9 @@ namespace pr::script
 			if (nest == 0) break;
 			++src;
 		}
+
+		if (*src != '}')
+			throw ScriptException(EResult::TokenNotFound, loc, "Incomplete section block");
 
 		++src;
 	}

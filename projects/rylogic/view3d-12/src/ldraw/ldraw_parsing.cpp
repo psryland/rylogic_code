@@ -250,6 +250,7 @@ namespace pr::rdr12::ldraw
 	// Parse a camera description
 	void ParseCamera(IReader& reader, ParseParams& pp, ParseResult& out)
 	{
+		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
@@ -341,6 +342,7 @@ namespace pr::rdr12::ldraw
 	{
 		font.m_underline = false;
 		font.m_strikeout = false;
+		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
@@ -400,6 +402,7 @@ namespace pr::rdr12::ldraw
 	// Parse a simple animation description
 	void ParseAnimation(IReader& reader, ParseParams& pp, Animation& anim)
 	{
+		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
@@ -451,6 +454,7 @@ namespace pr::rdr12::ldraw
 	// Parse a texture description
 	void ParseTexture(IReader& reader, ParseParams& pp, TextureInfo& tex)
 	{
+		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
 			switch (kw)
@@ -467,16 +471,14 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Addr:
 				{
-					auto addrU = reader.Identifier<string32>(true);
-					auto addrV = reader.Identifier<string32>(true);
-					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrU.c_str(), false));
-					tex.m_sdesc.AddressV = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(ETexAddrMode_::Parse(addrV.c_str(), false));
+					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
+					tex.m_sdesc.AddressV = reader.IsSectionEnd() ? tex.m_sdesc.AddressU : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
+					tex.m_sdesc.AddressW = reader.IsSectionEnd() ? tex.m_sdesc.AddressV : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
 					break;
 				}
 				case EKeyword::Filter:
 				{
-					auto fltr = reader.Identifier<string32>();
-					tex.m_sdesc.Filter = s_cast<D3D12_FILTER>(EFilter_::Parse(fltr.c_str(), false));
+					tex.m_sdesc.Filter = s_cast<D3D12_FILTER>(reader.Enum<EFilter>());
 					break;
 				}
 				case EKeyword::Alpha:
@@ -530,9 +532,13 @@ namespace pr::rdr12::ldraw
 				obj->m_base_colour = RandomRGB(g_rng(), 0.5f, 1.0f);
 				return true;
 			}
+			case EKeyword::Font:
+			{
+				ParseFont(reader, pp, pp.m_font.back());
+				return true;
+			}
 			case EKeyword::Animation:
 			{
-				auto section = reader.SectionScope();
 				ParseAnimation(reader, pp, obj->m_anim);
 				return true;
 			}
@@ -560,12 +566,6 @@ namespace pr::rdr12::ldraw
 			{
 				// Use a magic number to signal screen space mode to the ApplyState function
 				obj->m_screen_space = Sub((multicast::IMultiCast*)1, 0);
-				return true;
-			}
-			case EKeyword::Font:
-			{
-				auto section = reader.SectionScope();
-				ParseFont(reader, pp, pp.m_font.back());
 				return true;
 			}
 			default:
@@ -640,7 +640,6 @@ namespace pr::rdr12::ldraw
 					case EKeyword::Texture:
 					{
 						TextureInfo tex_info;
-						auto section = reader.SectionScope();
 						ParseTexture(reader, pp, tex_info);
 
 						// Create the texture
@@ -754,38 +753,6 @@ namespace pr::rdr12::ldraw
 
 				for (auto& v : verts)
 					v = m_o2w * v;
-			}
-		};
-
-		// Support for light sources that cast
-		struct CastingLight
-		{
-			bool ParseKeyword(IReader& reader, ParseParams&, Light& light, EKeyword kw)
-			{
-				switch (kw)
-				{
-					case EKeyword::Range:
-					{
-						light.m_range = reader.Real<float>();
-						light.m_falloff = reader.Real<float>();
-						return true;
-					}
-					case EKeyword::Specular:
-					{
-						light.m_specular = reader.Int<uint32_t>(16);
-						light.m_specular_power = reader.Real<float>();
-						return true;
-					}
-					case EKeyword::CastShadow:
-					{
-						light.m_cast_shadow = reader.Real<float>();
-						return true;
-					}
-					default:
-					{
-						return false;
-					}
-				}
 			}
 		};
 
@@ -2699,10 +2666,13 @@ namespace pr::rdr12::ldraw
 	template <> struct ObjectCreator<ELdrObject::Plane> :IObjectCreator
 	{
 		creation::Textured m_tex;
+		creation::MainAxis m_axis_id;
+		v2 m_dim;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_tex(SamDesc::AnisotropicWrap())
+			, m_dim()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -2710,25 +2680,15 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					auto pnt = reader.Vector3f().w1();
-					auto fwd = reader.Vector3f().w0();
-					auto w = reader.Real<float>();
-					auto h = reader.Real<float>();
-
-					fwd = Normalise(fwd);
-					auto up = Perpendicular(fwd);
-					auto left = Cross3(up, fwd);
-					up *= h * 0.5f;
-					left *= w * 0.5f;
-					m_verts.push_back(pnt - up - left);
-					m_verts.push_back(pnt - up + left);
-					m_verts.push_back(pnt + up - left);
-					m_verts.push_back(pnt + up + left);
+					m_dim.x = reader.Real<float>();
+					m_dim.y = reader.Real<float>();
+					m_dim *= 0.5f;
 					return true;
 				}
 				default:
 				{
 					return
+						m_axis_id.ParseKeyword(reader, m_pp, kw) ||
 						m_tex.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
@@ -2736,13 +2696,19 @@ namespace pr::rdr12::ldraw
 		}
 		void CreateModel(LdrObject* obj, Location const&) override
 		{
-			// Validate
-			if (m_verts.empty() || (isize(m_verts) % 4) != 0)
+			if (m_dim == v2::Zero())
 				return;
 
+			v4 verts[4] = {
+				v4{-m_dim.x, -m_dim.y, 0, 1},
+				v4{+m_dim.x, -m_dim.y, 0, 1},
+				v4{-m_dim.x, +m_dim.y, 0, 1},
+				v4{+m_dim.x, +m_dim.y, 0, 1},
+			};
+
 			// Create the model
-			auto opts = ModelGenerator::CreateOptions().colours(m_colours).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
-			obj->m_model = ModelGenerator::Quad(m_pp.m_factory, isize(m_verts) / 4, m_verts, &opts);
+			auto opts = ModelGenerator::CreateOptions().bake(m_axis_id.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
+			obj->m_model = ModelGenerator::Quad(m_pp.m_factory, 1, verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -4649,12 +4615,10 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::LightSource
 	template <> struct ObjectCreator<ELdrObject::LightSource> :IObjectCreator
 	{
-		creation::CastingLight m_cast;
 		Light m_light;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_cast()
 			, m_light()
 		{
 			m_light.m_on = true;
@@ -4675,27 +4639,42 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Direction:
+				case EKeyword::Ambient:
 				{
-					m_light.m_direction = reader.Vector3f().w0();
+					m_light.m_ambient = reader.Int<uint32_t>(16);
+					return true;				
+				}
+				case EKeyword::Diffuse:
+				{
+					m_light.m_diffuse = reader.Int<uint32_t>(16);
 					return true;
 				}
-				case EKeyword::Position:
+				case EKeyword::Specular:
 				{
-					m_light.m_position = reader.Vector3f().w1();
+					m_light.m_specular = reader.Int<uint32_t>(16);
+					m_light.m_specular_power = reader.Real<float>();
+					return true;
+				}
+				case EKeyword::Range:
+				{
+					m_light.m_range = reader.Real<float>();
+					m_light.m_falloff = reader.Real<float>();
 					return true;
 				}
 				case EKeyword::Cone:
 				{
-					m_light.m_inner_angle = reader.Real<float>(); // actually in degrees
-					m_light.m_outer_angle = reader.Real<float>(); // actually in degrees
+					m_light.m_inner_angle = reader.Real<float>(); // in degrees
+					m_light.m_outer_angle = reader.Real<float>(); // in degrees
+					return true;
+				}
+				case EKeyword::CastShadow:
+				{
+					m_light.m_cast_shadow = reader.Real<float>();
 					return true;
 				}
 				default:
 				{
-					return
-						m_cast.ParseKeyword(reader, m_pp, m_light, kw) ||
-						IObjectCreator::ParseKeyword(reader, kw);
+					return IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
@@ -5091,7 +5070,6 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Camera:
 				{
 					// Camera position description
-					auto section = reader.SectionScope();
 					ParseCamera(reader, pp, pp.m_result);
 					break;
 				}
@@ -5102,7 +5080,6 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Font:
 				{
-					auto section = reader.SectionScope();
 					ParseFont(reader, pp, pp.m_font.back());
 					break;
 				}
@@ -5138,8 +5115,8 @@ namespace pr::rdr12::ldraw
 
 		// Give initial and final progress updates
 		auto exit = Scope<void>(
-			[&] { reader.Progress(context_id, out, reader.Loc(), false); }, // Give an initial progress update
-			[&] { reader.Progress(context_id, out, reader.Loc(), true); }); // Give a final progress update
+			[&] { !reader.Progress || reader.Progress(context_id, out, reader.Loc(), false); }, // Give an initial progress update
+			[&] { !reader.Progress || reader.Progress(context_id, out, reader.Loc(), true); }); // Give a final progress update
 
 		// Parse the script
 		bool cancel = false;
@@ -5370,23 +5347,21 @@ namespace pr::rdr12::ldraw
 
 		auto p2w = m4x4::Identity();
 		auto affine = IsAffine(o2w);
+		auto section = SectionScope();
 
 		// Parse the transform
 		for (EKeyword kw; NextKeyword(kw);)
 		{
 			switch (kw)
 			{
-				case EKeyword::NonAffine:
-				{
-					affine = false;
-					break;
-				}
 				case EKeyword::M4x4:
 				{
 					auto m = Matrix4x4();
 					if (affine && m.w.w != 1)
-						throw std::runtime_error("Specify 'NonAffine' if M4x4 is intentionally non-affine.");
-
+					{
+						ReportError(EParseError::InvalidValue, Loc(), "Specify 'NonAffine' if M4x4 is intentionally non-affine.");
+						m = m4x4::Identity();
+					}
 					p2w = m * p2w;
 					break;
 				}
@@ -5409,9 +5384,18 @@ namespace pr::rdr12::ldraw
 
 					v4 axis = AxisId(axis_id);
 					if (axis == v4::Zero())
-						throw std::runtime_error("axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
+					{
+						ReportError(EParseError::InvalidValue, Loc(), "axis_id must one of \xc2\xb1""1, \xc2\xb1""2, \xc2\xb1""3");
+						axis = v4::ZAxis();
+					}
 
 					p2w = m4x4::Transform(axis, direction, v4::Origin()) * p2w;
+					break;
+				}
+				case EKeyword::LookAt:
+				{
+					auto point = Vector3f().w1();
+					p2w = m4x4::LookAt(o2w.pos, point, o2w.y) * p2w;
 					break;
 				}
 				case EKeyword::Quat:
@@ -5484,11 +5468,23 @@ namespace pr::rdr12::ldraw
 					p2w = Orthonorm(p2w);
 					break;
 				}
+				case EKeyword::NonAffine:
+				{
+					affine = false;
+					break;
+				}
 				default:
 				{
-					throw std::runtime_error(std::format("{} is not a valid Transform keyword", EKeyword_::ToStringA(kw)));
+					ReportError(EParseError::UnexpectedToken, Loc(), std::format("{} is not a valid Transform keyword", EKeyword_::ToStringA(kw)));
+					break;
 				}
 			}
+		}
+		
+		if (affine && !IsAffine(p2w))
+		{
+			ReportError(EParseError::UnexpectedToken, Loc(), "Transform is not affine. If non-affine is intended, use *NonAffine {}");
+			p2w = m4x4::Identity();
 		}
 
 		// Pre-multiply the object to world transform
@@ -5497,12 +5493,12 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Reads a C-style string
-	string32 IReader::CString(bool has_length)
+	string32 IReader::CString()
 	{
 		string32 out = {};
-		auto string = String<string32>(has_length);
+		auto string = String<string32>();
 		if (!str::ExtractStringC<string32, char const*, char>(out, string.c_str(), '\\', nullptr, nullptr))
-			throw std::runtime_error("");
+			ReportError(EParseError::InvalidValue, Loc(), "C-style string expected");
 
 		return out;
 	}

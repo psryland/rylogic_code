@@ -309,11 +309,8 @@ namespace pr::rdr12::ldraw
 			// Hidden
 			if (o->m_model != nullptr)
 			{
-				// Even though Ldraw doesn't add instances that are hidden,
-				// set the visibility flags on the nuggets for consistency.
-				auto hidden = AllSet(o->m_ldr_flags, ELdrFlags::Hidden);
-				for (auto& nug : o->m_model->m_nuggets)
-					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::Hidden, hidden);
+				// Ldraw doesn't add instances that are hidden. Don't set the nugget's
+				// hidden flag, because hidden Ldraw objects may still be instanced.
 			}
 
 			// Wireframe

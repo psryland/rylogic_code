@@ -226,11 +226,12 @@ namespace pr
 	};
 
 	// Vec8
-	template <typename Char, Scalar S, typename T>
-	struct Convert<std::basic_string<Char>, Vec8<S, T>>
+	template <StringTypeDynamic Str, Scalar S, typename T>
+	struct Convert<Str, Vec8<S, T>>
 	{
-		static std::basic_string<Char> To_(Vec8<S, T> const& x)
+		static Str To_(Vec8<S, T> const& x)
 		{
+			using Char = typename string_traits<Str>::value_type;
 			if constexpr (std::is_same_v<Char, char>)
 				return std::format("{} {} {} {}  {} {} {} {}", x.ang.x, x.ang.y, x.ang.z, x.ang.w, x.lin.x, x.lin.y, x.lin.z, x.lin.w);
 			else if constexpr (std::is_same_v<Char, wchar_t>)
@@ -288,14 +289,15 @@ namespace pr
 	};
 
 	// Mat2x2
-	template <typename Char, Scalar S, typename A, typename B>
-	struct Convert<std::basic_string<Char>, Mat2x2<S,A,B>>
+	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
+	struct Convert<Str, Mat2x2<S,A,B>>
 	{
-		static std::basic_string<Char> To_(Mat2x2<S,A,B> const& x)
+		static Str To_(Mat2x2<S,A,B> const& x)
 		{
+			using Char = typename string_traits<Str>::value_type;
 			return
-				To<std::basic_string<Char>>(x.x) + Char(' ') +
-				To<std::basic_string<Char>>(x.y);
+				To<Str>(x.x) + Char(' ') +
+				To<Str>(x.y);
 		}
 	};
 	template <Scalar S, typename A, typename B, typename TFrom>
@@ -324,15 +326,16 @@ namespace pr
 	};
 
 	// Mat3x4
-	template <typename Char, Scalar S, typename A, typename B>
-	struct Convert<std::basic_string<Char>, Mat3x4<S, A, B>>
+	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
+	struct Convert<Str, Mat3x4<S, A, B>>
 	{
-		static std::basic_string<Char> To_(Mat3x4<S, A, B> const& x)
+		static Str To_(Mat3x4<S, A, B> const& x)
 		{
+			using Char = typename string_traits<Str>::value_type;
 			return
-				To<std::basic_string<Char>>(x.x) + Char(' ') +
-				To<std::basic_string<Char>>(x.y) + Char(' ') +
-				To<std::basic_string<Char>>(x.z);
+				To<Str>(x.x) + Char(' ') +
+				To<Str>(x.y) + Char(' ') +
+				To<Str>(x.z);
 		}
 	};
 	template <Scalar S, typename A, typename B, typename TFrom>
@@ -363,16 +366,17 @@ namespace pr
 	};
 
 	// Mat4x4
-	template <typename Char, Scalar S, typename A, typename B>
-	struct Convert<std::basic_string<Char>, Mat4x4<S, A, B>>
+	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
+	struct Convert<Str, Mat4x4<S, A, B>>
 	{
-		static std::basic_string<Char> To_(Mat4x4<S, A, B> const& x)
+		static Str To_(Mat4x4<S, A, B> const& x)
 		{
+			using Char = typename string_traits<Str>::value_type;
 			return
-				To<std::basic_string<Char>>(x.x) + Char(' ') +
-				To<std::basic_string<Char>>(x.y) + Char(' ') +
-				To<std::basic_string<Char>>(x.z) + Char(' ') +
-				To<std::basic_string<Char>>(x.w);
+				To<Str>(x.x) + Char(' ') +
+				To<Str>(x.y) + Char(' ') +
+				To<Str>(x.z) + Char(' ') +
+				To<Str>(x.w);
 		}
 	};
 	template <Scalar S, typename A, typename B, typename TFrom>
@@ -405,18 +409,19 @@ namespace pr
 	};
 
 	// Mat6x8
-	template <typename Char, Scalar S, typename A, typename B>
-	struct Convert<std::basic_string<Char>, Mat6x8<S, A, B>>
+	template <StringTypeDynamic Str, Scalar S, typename A, typename B>
+	struct Convert<Str, Mat6x8<S, A, B>>
 	{
-		static std::basic_string<Char> To_(Mat6x8<S, A, B> const& x)
+		static Str To_(Mat6x8<S, A, B> const& x)
 		{
+			using Char = typename string_traits<Str>::value_type;
 			return
-				To<std::basic_string<Char>>(x[0]) + Char(' ') +
-				To<std::basic_string<Char>>(x[1]) + Char(' ') +
-				To<std::basic_string<Char>>(x[2]) + Char(' ') +
-				To<std::basic_string<Char>>(x[3]) + Char(' ') +
-				To<std::basic_string<Char>>(x[4]) + Char(' ') +
-				To<std::basic_string<Char>>(x[5]);
+				To<Str>(x[0]) + Char(' ') +
+				To<Str>(x[1]) + Char(' ') +
+				To<Str>(x[2]) + Char(' ') +
+				To<Str>(x[3]) + Char(' ') +
+				To<Str>(x[4]) + Char(' ') +
+				To<Str>(x[5]);
 		}
 	};
 	template <Scalar S, typename A, typename B, typename TFrom>

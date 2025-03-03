@@ -6,23 +6,10 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser.h"
 
 namespace pr::rdr12::ldraw
 {
-	// Types that can be serialized into the buffer
-	template <typename T> concept PrimitiveType =
-		std::is_integral_v<T> ||
-		std::is_floating_point_v<T> ||
-		std::is_enum_v<T> ||
-		std::is_same_v<T, bool> ||
-		maths::VecOrMatType<T>;
-	template <typename T> concept SpanType = requires(T t)
-	{
-		PrimitiveType<typename T::value_type>;
-		{ t.data() } -> std::same_as<typename T::value_type*>;
-		{ t.size() } -> std::same_as<std::size_t>;
-	};
-
 	// The section header
 	struct SectionHeader
 	{
@@ -33,54 +20,197 @@ namespace pr::rdr12::ldraw
 		int m_size;
 	};
 
-	#pragma region Traits
-	template <typename TOut> struct traits
-	{
-		static int64_t tellp(TOut& out)
-		{
-			return out.tellp();
-		}
-		static TOut& write(TOut& out, std::span<std::byte const> data, int64_t ofs = -1)
-		{
-			if (ofs != -1)
-				out.seekp(ofs).write(char_ptr(data.data()), data.size()).seekp(0, std::ios::end);
-			else
-				out.write(char_ptr(data.data()), data.size());
-			return out;
-		}
-	};
-	template <> struct traits<byte_data<4>>
-	{
-		static int64_t tellp(byte_data<4>& out)
-		{
-			return out.size();
-		}
-		static byte_data<4>& write(byte_data<4>& out, std::span<std::byte const> data, int64_t ofs = -1)
-		{
-			if (ofs != -1)
-				out.overwrite(ofs, data);
-			else
-				out.append(data);
-			return out;
-		}
-	};
-	#pragma endregion
-
-	#pragma region Static Tests
-	namespace static_tests
-	{
-		static_assert(std::is_integral_v<decltype("HELLO")> == false);
-		static_assert(std::is_floating_point_v<decltype("HELLO")> == false);
-		static_assert(std::is_enum_v<decltype("HELLO")> == false);
-		static_assert(maths::VecOrMatType<decltype("HELLO")> == false);
-		static_assert(PrimitiveType<decltype("HELLO")> == false);
-	}
-	#pragma endregion
-
 	struct BinaryWriter
 	{
+		template <typename TOut, typename Type> static void Append(TOut& out, Type)
+		{
+			// Note: if you hit this error, it's probably because Append(out, ???) is being
+			// called where ??? is a type not handled by the overloads of Append.
+			// Also watch out for the error being a typedef of a common type,
+			// e.g. I've seen 'Type=std::ios_base::openmode' as an error, but really it was
+			// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
+			static_assert(dependent_false<Type>, "no overload for 'Type'");
+		}
+		template <typename TOut> static void Append(TOut& out, std::string_view str)
+		{
+			traits<TOut>::write(out, { byte_ptr(str.data()), str.size() });
+		}
+		template <typename TOut> static void Append(TOut& out, char const* s)
+		{
+			Append(out, std::string_view{ s });
+		}
+		template <typename TOut> static void Append(TOut& out, bool b)
+		{
+			uint8_t bool_ = b ? 1 : 0;
+			traits<TOut>::write(out, { byte_ptr(&bool_), sizeof(bool_) });
+		}
+		template <typename TOut> static void Append(TOut& out, int i)
+		{
+			traits<TOut>::write(out, { byte_ptr(&i), sizeof(i) });
+		}
+		template <typename TOut> static void Append(TOut& out, long l)
+		{
+			traits<TOut>::write(out, { byte_ptr(&l), sizeof(l) });
+		}
+		template <typename TOut> static void Append(TOut& out, float f)
+		{
+			traits<TOut>::write(out, { byte_ptr(&f), sizeof(f) });
+		}
+		template <typename TOut> static void Append(TOut& out, double f)
+		{
+			traits<TOut>::write(out, { byte_ptr(&f), sizeof(f) });
+		}
+		template <typename TOut> static void Append(TOut& out, uint32_t u)
+		{
+			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
+		}
+		template <typename TOut> static void Append(TOut& out, v2 v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut> static void Append(TOut& out, v3 v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut> static void Append(TOut& out, v4 v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut> static void Append(TOut& out, m4x4 m)
+		{
+			traits<TOut>::write(out, { byte_ptr(&m), sizeof(m) });
+		}
+		template <typename TOut, Scalar S> static void Append(TOut& out, Vec2<S, void> v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut, Scalar S> static void Append(TOut& out, Vec3<S, void> v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut, Scalar S> static void Append(TOut& out, Vec4<S, void> v)
+		{
+			traits<TOut>::write(out, { byte_ptr(&v), sizeof(v) });
+		}
+		template <typename TOut, Scalar S> static void Append(TOut& out, Mat4x4<S, void, void> m)
+		{
+			traits<TOut>::write(out, { byte_ptr(&m), sizeof(m) });
+		}
+		template <typename TOut> static void Append(TOut& out, VariableInt var_int)
+		{
+			// Variable sized int, write 6 bits at a time: xx444444 33333322 22221111 11000000
+			uint8_t bits[5] = {}; int i = 5;
+			for (int val = var_int.m_value; val != 0 && i-- != 0; val >>= 6)
+				bits[i] = static_cast<uint8_t>(0x80 | (val & 0b00111111));
+
+			traits<TOut>::write(out, { byte_ptr(&bits[0] + i), static_cast<size_t>(5 - i) });
+		}
+		template <typename TOut> static void Append(TOut& out, StringWithLength str)
+		{
+			Append(out, VariableInt{ isize(str.m_value) });
+			Append(out, str.m_value);
+		}
+		template <typename TOut> static void Append(TOut& out, Name n)
+		{
+			if (n.m_name.empty()) return;
+			Write(out, EKeyword::Name, n.m_name);
+		}
+		template <typename TOut> static void Append(TOut& out, Col c)
+		{
+			if (c.m_ui == 0xFFFFFFFF) return;
+			Write(out, EKeyword::Colour, c.m_col.argb);
+		}
+		template <typename TOut> static void Append(TOut& out, Size s)
+		{
+			if (s.m_size == 0) return;
+			Write(out, EKeyword::Size, s.m_size);
+		}
+		template <typename TOut> static void Append(TOut& out, Depth d)
+		{
+			if (d.m_depth == false) return;
+			Write(out, EKeyword::Depth);
+		}
+		template <typename TOut> static void Append(TOut& out, Width w)
+		{
+			if (w.m_width == 0) return;
+			Write(out, EKeyword::Width, w.m_width);
+		}
+		template <typename TOut> static void Append(TOut& out, Wireframe w)
+		{
+			if (!w.m_wire) return;
+			Write(out, EKeyword::Wireframe);
+		}
+		template <typename TOut> static void Append(TOut& out, Solid s)
+		{
+			if (!s.m_solid) return;
+			Write(out, EKeyword::Solid);
+		}
+		template <typename TOut> static void Append(TOut& out, AxisId id)
+		{
+			Write(out, EKeyword::AxisId, static_cast<int>(id));
+		}
+		template <typename TOut> static void Append(TOut& out, EArrowType ty)
+		{
+			switch (ty)
+			{
+				case EArrowType::Fwd:     Append(out, "Fwd");
+				case EArrowType::Back:    Append(out, "Back");
+				case EArrowType::FwdBack: Append(out, "FwdBack");
+				default: throw std::runtime_error("Unknown arrow type");
+			}
+		}
+		template <typename TOut> static void Append(TOut& out, PointStyle style)
+		{
+			switch (style.m_style)
+			{
+				case EPointStyle::Square:  return;
+				case EPointStyle::Circle:   Write(out, EKeyword::Style, "Circle");
+				case EPointStyle::Triangle: Write(out, EKeyword::Style, "Triangle");
+				case EPointStyle::Star:     Write(out, EKeyword::Style, "Star");
+				case EPointStyle::Annulus:  Write(out, EKeyword::Style, "Annulus");
+				default: throw std::runtime_error("Unknown arrow type");
+			}
+		}
+		template <typename TOut> static void Append(TOut& out, Colour32 c)
+		{
+			Append(out, c.argb);
+		}
+		template <typename TOut> static void Append(TOut& out, Pos p)
+		{
+			if (p.m_pos == v4::Origin()) return;
+			Write(out, EKeyword::O2W, [&]
+			{
+				Write(out, EKeyword::Pos, p.m_pos.xyz);
+			});
+		}
+		template <typename TOut> static void Append(TOut& out, O2W o2w)
+		{
+			if (o2w.m_mat == m4x4::Identity())
+				return;
+
+			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
+				return Write(out, EKeyword::O2W, [&]
+				{
+					Write(out, EKeyword::Pos, o2w.m_mat.pos.xyz);
+				});
+
+			Write(out, EKeyword::O2W, [&]
+			{
+				if (!IsAffine(o2w.m_mat)) Write(out, EKeyword::NonAffine);
+				Write(out, EKeyword::M4x4, o2w.m_mat);
+			});
+		}
+		template <typename TOut, PrimitiveSpanType TSpan> static void Append(TOut& out, TSpan span)
+		{
+			traits<TOut>::write(out, { byte_ptr(span.data()), span.size() * sizeof(typename TSpan::value_type) });
+		}
+		template <typename TOut, typename... TItems> static void Append(TOut& out, TItems&&... items)
+		{
+			(Append(out, std::forward<TItems>(items)), ...);
+		}
+
 		// Write custom data within a section
-		template <typename TOut, std::invocable<TOut&> AddBodyFn>
+		template <typename TOut, std::invocable<> AddBodyFn>
 		static void Write(TOut& out, EKeyword keyword, AddBodyFn body_cb)
 		{
 			// Record the write pointer position
@@ -91,70 +221,20 @@ namespace pr::rdr12::ldraw
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) });
 
 			// Write the section body
-			body_cb(out);
+			body_cb();
 
 			// Update the header with the correct size
 			header.m_size = s_cast<int>(traits<TOut>::tellp(out) - ofs - sizeof(header));
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) }, ofs);
 		}
 
-		// Write an empty section
-		template <typename TOut>
-		static void Write(TOut& out, EKeyword keyword)
-		{
-			return Write(out, keyword, [](auto&) {});
-		}
-
-		// Write a string section
-		template <typename TOut>
-		static void Write(TOut& out, EKeyword keyword, std::string_view str)
-		{
-			return Write(out, keyword, [&](auto&)
-			{
-				traits<TOut>::write(out, { byte_ptr(str.data()), str.size() });
-			});
-		}
-
 		// Write a single primitive type
-		template <typename TOut, PrimitiveType TItem, PrimitiveType... TItems>
-		static void Write(TOut& out, EKeyword keyword, TItem item, TItems&&... items)
+		template <typename TOut, typename... TItem> requires (!std::is_invocable_v<TItem> && ...)
+		static void Write(TOut& out, EKeyword keyword, TItem&&... items)
 		{
-			static auto DoWrite = [](TOut& out, TItem item)
+			return Write(out, keyword, [&]
 			{
-				if constexpr (std::is_same_v<TItem, bool>)
-				{
-					uint8_t b = item ? 1 : 0;
-					traits<TOut>::write(out, { byte_ptr(&b), 1 });
-				}
-				else
-				{
-					traits<TOut>::write(out, { byte_ptr(&item), sizeof(item) });
-				}
-			};
-			return Write(out, keyword, [&](auto&)
-			{
-				DoWrite(out, item);
-				(DoWrite(out, items), ...);
-			});
-		}
-
-		// Write a span of items
-		template <typename TOut, PrimitiveType TItem>
-		static void Write(TOut& out, EKeyword keyword, std::span<TItem const> span)
-		{
-			return Write(out, keyword, [&](auto&)
-			{
-				traits<TOut>::write(out, { byte_ptr(span.data()), span.size() * sizeof(TItem) });
-			});
-		}
-
-		// Write an immediate list of items
-		template <typename TOut, PrimitiveType TItem>
-		static void Write(TOut& out, EKeyword keyword, std::initializer_list<TItem const> items)
-		{
-			return Write(out, keyword, [&](auto&)
-			{
-				traits<TOut>::write(out, { byte_ptr(items.begin()), items.size() * sizeof(TItem) });
+				(Append(out, std::forward<TItem>(items)), ...);
 			});
 		}
 	};
@@ -250,45 +330,29 @@ namespace pr::rdr12::ldraw
 			m_section.back() = { m_pos, m_pos + header.m_size };
 			return true;
 		}
+		
+		// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
+		virtual string32 IdentifierImpl() override
+		{
+			auto length = ReadLengthBytes();
+
+			// Read the string 
+			string32 str(length, 0);
+			Read(str.data(), str.size());
+			return str;
+		}
 
 		// Read a utf8 string from the current section.
-		// If 'has_length' is false, assume the whole section is the string.
-		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 StringImpl(bool has_length = false) override
+		// If 'has_length' is false, assume the whole section is the string, otherwise, assume the string is prefixed by its length.
+		// 'pred' is a predicate for characters that belong to the string
+		virtual string32 StringImpl() override
 		{
-			if (has_length)
-			{
-				size_t length = {};
+			auto length = ReadLengthBytes();
 
-				// Read the default 16-bit length
-				uint16_t len16;
-				Read(&len16, sizeof(len16));
-				len16 = len16;
-
-				// Only 15 bits are used
-				length = len16 & 0x7FFF;
-
-				// Use the high bit to indicate 31-bit length
-				if (AllSet(len16, 0x8000))
-				{
-					Read(&len16, sizeof(len16));
-					len16 = len16;
-					length = (length << 16) | len16;
-				}
-
-				// Read the string 
-				string32 str(length, 0);
-				Read(str.data(), str.size());
-				return str;
-			}
-			else
-			{
-				// Assume the remainder of the section is the string
-				auto& header = m_section.back();
-				string32 str(header.m_end - m_pos, 0);
-				Read(str.data(), str.size());
-				return str;
-			}
+			// Read the string 
+			string32 str(length, 0);
+			Read(str.data(), str.size());
+			return str;
 		}
 
 		// Read an integral value from the current section
@@ -317,6 +381,12 @@ namespace pr::rdr12::ldraw
 			}
 		}
 		
+		// Read an enum value from the current section
+		virtual int64_t EnumImpl(int byte_count, ParseEnumIdentCB) override
+		{
+			return IntImpl(byte_count);
+		}
+
 		// Read a boolean value from the current section
 		virtual bool BoolImpl() override
 		{
@@ -329,17 +399,42 @@ namespace pr::rdr12::ldraw
 		void Read(void* buf, int64_t size)
 		{
 			if (!m_src.read(char_ptr(buf), s_cast<size_t>(size)).good())
-				throw std::runtime_error("Read failed");
-
+			{
+				ReportError(EParseError::DataMissing, Loc(), "Read failed");
+				memset(buf, 0, size);
+			}
 			m_pos += size;
+		}
+
+		// Read bytes with pattern '10xxxxxx'. These are invalid UTF-8 characters which I'm using for length information
+		size_t ReadLengthBytes()
+		{
+			size_t length = 0;
+			for (;;)
+			{
+				auto ch = m_src.peek();
+				if (ch == std::char_traits<char>::eof() || (ch & 0xC0) != 0x80)
+					break;
+
+				length = (length << 6) + (ch & 0b00111111);
+				m_src.read(char_ptr(&ch), 1);
+				++m_pos;
+			}
+
+			// If length is zero, infer the length from the section length
+			if (length == 0)
+			{
+				auto& header = m_section.back();
+				length = header.m_end - m_pos;
+			}
+
+			return length;
 		}
 	};
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/common/memstream.h"
-#include "pr/maths/maths.h"
 namespace pr::rdr12::ldraw
 {
 	PRUnitTest(LDrawBinarySerialiserTests)
@@ -347,28 +442,33 @@ namespace pr::rdr12::ldraw
 		std::vector<char> data;
 
 		pr::mem_ostream<char> strm(data);
-		BinaryWriter::Write(strm, EKeyword::Point, [&](auto&)
+		BinaryWriter::Write(strm, EKeyword::Point, [&]
 		{
 			BinaryWriter::Write(strm, EKeyword::Name, "TestPoints");
 			BinaryWriter::Write(strm, EKeyword::Colour, 0xFF00FF00);
-			BinaryWriter::Write(strm, EKeyword::Data, { v3(1,1,1), v3(2,2,2), v3(3,3,3) });
-			BinaryWriter::Write(strm, EKeyword::Line, [&](auto&)
+			BinaryWriter::Write(strm, EKeyword::Data, v3(1,1,1), v3(2,2,2), v3(3,3,3));
+			BinaryWriter::Write(strm, EKeyword::Line, [&]
 			{
 				BinaryWriter::Write(strm, EKeyword::Name, "TestLines");
 				BinaryWriter::Write(strm, EKeyword::Colour, 0xFF0000FF);
 				BinaryWriter::Write(strm, EKeyword::Data, v3(-1,-1,0), v3(1,1,0), v3(-1,1,0), v3(1,-1,0));
 			});
-			BinaryWriter::Write(strm, EKeyword::Sphere, [&](auto&)
+			BinaryWriter::Write(strm, EKeyword::Sphere, [&]
 			{
 				BinaryWriter::Write(strm, EKeyword::Name, "TestSphere");
 				BinaryWriter::Write(strm, EKeyword::Colour, 0xFFFF0000);
 				BinaryWriter::Write(strm, EKeyword::Data, 1.0f);
 			});
+			BinaryWriter::Write(strm, EKeyword::Custom, [&]
+			{
+				std::string_view s = "ShortString";
+				BinaryWriter::Write(strm, EKeyword::Name, StringWithLength{ s }, StringWithLength{ s });
+			});
 		});
 
 		PR_EXPECT(data.size() != 0);
 
-		#if 0
+		#if 1
 		{
 			std::ofstream ofile(temp_dir / "ldraw_test.lbr", std::ios::binary);
 			ofile.write(data.data(), data.size());
@@ -408,6 +508,14 @@ namespace pr::rdr12::ldraw
 
 				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Data);
 				PR_EXPECT(reader.Real<float>() == 1.0f);
+			}
+
+			PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Custom);
+			{
+				auto sphere = reader.SectionScope();
+				PR_EXPECT(reader.NextKeyword(kw) && kw == EKeyword::Name);
+				PR_EXPECT(reader.String<string32>() == "ShortString");
+				PR_EXPECT(reader.String<string32>() == "ShortString");
 			}
 
 			PR_EXPECT(!reader.NextKeyword(kw));

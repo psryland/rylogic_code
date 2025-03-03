@@ -397,7 +397,7 @@ namespace pr::rdr12
 		// The code that loads these models doesn't need to handle strings such as '#white' as a special case
 		if (*resource_path.c_str() == '#')
 		{
-			auto stock = Enum<EStockTexture>::TryParse(resource_path.c_str() + 1, false);
+			auto stock = Enum<EStockTexture>::TryParse(std::wstring_view{ resource_path.c_str() + 1 }, false);
 			if (!stock)
 				throw std::runtime_error(Fmt("Unknown stock texture name: %s", resource_path.string().c_str() + 1));
 

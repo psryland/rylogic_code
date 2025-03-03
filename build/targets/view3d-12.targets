@@ -19,4 +19,21 @@ target directory.
 		</Content>
 
 	</ItemGroup>
+
+	<!-- Add a dependency on the dll -->
+	<ItemGroup>
+		<CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
+			<Message />
+			<FileType>Document</FileType>
+			<Outputs>$(OutDir)\view3d-12-debug-dependency</Outputs>
+			<Command>echo. > $(OutDir)\view3d-12-debug-dependency</Command>
+		</CustomBuild>
+		<CustomBuild Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
+			<Message />
+			<FileType>Document</FileType>
+			<Outputs>$(OutDir)\view3d-12-release-dependency</Outputs>
+			<Command>echo. > $(OutDir)\view3d-12-release-dependency</Command>
+		</CustomBuild>
+	</ItemGroup>
+
 </Project>

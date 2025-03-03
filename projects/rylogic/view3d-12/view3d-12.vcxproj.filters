@@ -213,7 +213,7 @@
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_object_demo_scene.cpp">
+    <ClCompile Include="src\ldraw\ldraw_demo_scene.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\ldraw\ldraw_object_templates.cpp">
@@ -656,6 +656,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -743,6 +746,9 @@
     </None>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli">
       <Filter>src\compute\particle_collision</Filter>
+    </None>
+    <None Include="src\ldraw\ldraw_demo_scene.ldr">
+      <Filter>src\ldraw</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

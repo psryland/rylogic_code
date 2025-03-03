@@ -225,9 +225,9 @@ namespace pr::script
 		void SearchPathList(std::string_view paths)
 		{
 			m_paths.resize(0);
-			str::Split<std::string_view>(paths, ",;\n", [&](auto& p, size_t s, size_t e, int)
+			str::Split<std::string_view>(paths, ",;\n", [&](std::string_view sub, int)
 			{
-				m_paths.push_back(p.substr(s, e - s));
+				m_paths.push_back(sub);
 			});
 
 			if (!m_paths.empty())

@@ -146,7 +146,7 @@ namespace pr::settings
 		if constexpr (pr::is_reflected_enum_v<TEnum>)
 		{
 			std::string ident;
-			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
+			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, std::string_view{ ident }, false);
 		}
 		else
 		{

@@ -19,6 +19,7 @@ namespace pr::rdr12::ldraw
 		IndexOutOfRange,
 		TooLarge,
 		DataMissing,
+		UnexpectedToken,
 	};
 	constexpr std::string_view ToString(EParseError code)
 	{
@@ -31,6 +32,7 @@ namespace pr::rdr12::ldraw
 			case EParseError::IndexOutOfRange: return "Index out of range";
 			case EParseError::TooLarge: return "Object data size is too large";
 			case EParseError::DataMissing: return "Data is missing";
+			case EParseError::UnexpectedToken: return "Unexpected token";
 			default: throw std::runtime_error("Unknown error code");
 		}
 	}
@@ -78,6 +80,7 @@ namespace pr::rdr12::ldraw
 	// Returns 'true' to continue parsing, false to abort parsing.
 	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>;
 	using ReportErrorCB = StaticCB<void, EParseError, Location const&, std::string_view>;
+	using ParseEnumIdentCB = int64_t(*)(std::string_view);
 
 	// Interface for parsing Ldraw script data
 	struct IReader
@@ -89,6 +92,10 @@ namespace pr::rdr12::ldraw
 		// - FindKeyword is not supported because this requires random access.
 		//   The reader is intended to handle streamed data.
 		// - Don't assume that 'ReportError' throws an exception.
+		// - Strings/Identifiers:
+		//    Strings are UTF8, that means a first byte with '10xxxxxx' is invalid.
+		//    This can be used for string length. Each '10xxxxxx' contributes 6 bits to the string length.
+		//    The first byte that doesn't match this pattern is the first UTF-8 character code.
 		// - Style suggestion:
 		//    for (int kw; reader.NextKeyword(kw);) switch (kw)
 		//    {
@@ -96,8 +103,8 @@ namespace pr::rdr12::ldraw
 		//        case rdr12::ldraw::HashI("Depth"): depth = reader.Int<int>() != 0; break;
 		//    }
 		IReader(ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
-			: ReportError(report_error_cb)
-			, Progress(progress_cb)
+			: ReportError(report_error_cb ? report_error_cb : &ReportErrorDefaultCB)
+			, Progress(progress_cb ? progress_cb : &ParseProgressDefaultCB)
 			, PathResolver(resolver)
 		{
 		}
@@ -145,23 +152,19 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read an identifier from the current section
-		template <typename StrType> StrType Identifier(bool has_length = false)
+		template <typename StrType> StrType Identifier()
 		{
-			auto s = StringImpl(has_length);
-			auto len = 0ULL;
-			static auto IsIdentifier = [](char c, bool first) { return c == '_' || (first ? isalpha(c) : isalnum(c)); };
-			for (; len != s.size() && IsIdentifier(s[len], len == 0); ++len) {}
-			if (len != s.size()) ReportError(EParseError::InvalidValue, Loc(), "Invalid characters in identifier");
+			auto s = IdentifierImpl();
 			if constexpr (std::is_same_v<StrType, string32>)
 				return s;
 			else
-				return StrType(std::begin(s), std::begin(s) + len);
+				return StrType(std::begin(s), std::end(s));
 		}
 
 		// Read a string from the current section
-		template <typename StrType> StrType String(bool has_length = false)
+		template <typename StrType> StrType String()
 		{
-			auto s = StringImpl(has_length);
+			auto s = StringImpl();
 			if constexpr (std::is_same_v<StrType, string32>)
 				return s;
 			else
@@ -180,18 +183,21 @@ namespace pr::rdr12::ldraw
 			return static_cast<FloatType>(RealImpl(sizeof(FloatType)));
 		}
 
-		// Read an enumeration identifier
-		template <ReflectedEnum TEnum> TEnum EnumIdent(bool has_length = false)
-		{
-			auto ident = Identifier<string32>(has_length);
-			return Enum<TEnum>::Parse(ident.c_str());
-		}
-
 		// Read an enumeration value as type 'TEnum'
-		template <typename TEnum> requires std::is_enum_v<TEnum> TEnum EnumValue()
+		template <typename TEnum> requires std::is_enum_v<TEnum> TEnum Enum()
 		{
-			auto value = IntImpl(sizeof(TEnum));
-			return static_cast<TEnum>(value);
+			if constexpr (ReflectedEnum<TEnum>)
+			{
+				static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::Enum<TEnum>::Parse(str, false)); };
+				auto value = EnumImpl(sizeof(TEnum), parse);
+				return static_cast<TEnum>(value);
+			}
+			else
+			{
+				static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::To<TEnum>(str)); };
+				auto value = EnumImpl(sizeof(TEnum), parse);
+				return static_cast<TEnum>(value);
+			}
 		}
 
 		// Read a boolean value
@@ -203,54 +209,55 @@ namespace pr::rdr12::ldraw
 		// Read floating point vectors
 		v2 Vector2f()
 		{
-			return v2(Real<float>(), Real<float>());
+			return v2{ Real<float>(), Real<float>() };
 		}
 		v3 Vector3f()
 		{
-			return v3(Real<float>(), Real<float>(), Real<float>());
+			return v3{ Real<float>(), Real<float>(), Real<float>() };
 		}
 		v4 Vector4f()
 		{
-			return v4(Real<float>(), Real<float>(), Real<float>(), Real<float>());
+			return v4{ Real<float>(), Real<float>(), Real<float>(), Real<float>() }; // Note; brace initializer guarantees call order
 		}
 
 		// Read integer vectors
 		iv2 Vector2i(int radix = 10)
 		{
-			return iv2(Int<int>(radix), Int<int>(radix));
+			return iv2{ Int<int>(radix), Int<int>(radix) };
 		}
 		iv3 Vector3i(int radix = 10)
 		{
-			return iv3(Int<int>(radix), Int<int>(radix), Int<int>(radix));
+			return iv3{ Int<int>(radix), Int<int>(radix), Int<int>(radix) };
 		}
 		iv4 Vector4i(int radix = 10)
 		{
-			return iv4(Int<int>(radix), Int<int>(radix), Int<int>(radix), Int<int>(radix));
+			return iv4{ Int<int>(radix), Int<int>(radix), Int<int>(radix), Int<int>(radix) };
 		}
 
 		// Read matrix types
 		m3x4 Matrix3x3()
 		{
-			return m3x4(Vector3f().w0(), Vector3f().w0(), Vector3f().w0());
+			return m3x4{ Vector3f().w0(), Vector3f().w0(), Vector3f().w0() };
 		}
 		m4x4 Matrix4x4()
 		{
-			return m4x4(Vector4f(), Vector4f(), Vector4f(), Vector4f());
+			return m4x4{ Vector4f(), Vector4f(), Vector4f(), Vector4f() };
 		}
 
 		// Reads a transform accumulatively. 'o2w' must be a valid initial transform
 		m4x4& Transform(m4x4& o2w);
 
 		// Reads a C-style string
-		string32 CString(bool has_length = false);
+		string32 CString();
 
 		// Get the next keyword within the current section. Returns false if at the end of the section
 		virtual bool NextKeywordImpl(int& kw) = 0;
 
-		// Read a utf8 string from the current section.
-		// If 'has_length' is false, assume the whole section is the string.
-		// If 'has_length' is true, assume the string is prefixed by its length.
-		virtual string32 StringImpl(bool has_length = false) = 0;
+		// Read an identifier from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
+		virtual string32 IdentifierImpl() = 0;
+
+		// Read a utf8 string from the current section. Leading '10xxxxxx' bytes are the length (in bytes). Default length is the full section
+		virtual string32 StringImpl() = 0;
 
 		// Read an integral value from the current section
 		virtual int64_t IntImpl(int byte_count, int radix) = 0;
@@ -258,8 +265,15 @@ namespace pr::rdr12::ldraw
 		// Read a floating point value from the current section
 		virtual double RealImpl(int byte_count) = 0;
 
+		// Read an enum value from the current section. Text readers will read an identifier and use 'parse'. Binary reader will read an integer value.
+		virtual int64_t EnumImpl(int byte_count, ParseEnumIdentCB parse) = 0;
+
 		// Read a boolean value from the current section
 		virtual bool BoolImpl() = 0;
+
+		// Defaults for callbacks
+		static bool ParseProgressDefaultCB(void*, Guid const&, ParseResult const&, Location const&, bool) { return true; }
+		static void ReportErrorDefaultCB(void*, EParseError, Location const&, std::string_view) {}
 	};
 
 	// Parse the ldr script in 'reader' adding the results to 'out'.

@@ -9,8 +9,8 @@
 namespace pr::rdr12
 {
 	Light::Light()
-		:m_position(v4Origin)
-		,m_direction(-0.577350f, -0.577350f, -0.577350f, 0.0f)
+		:m_position(v4::Origin())
+		,m_direction(0, 0, -1, 0)
 		,m_type(ELight::Directional)
 		,m_ambient(0.25f, 0.25f, 0.25f, 0.0f)
 		,m_diffuse(0.25f, 0.25f, 0.25f, 1.0f)
@@ -133,7 +133,7 @@ namespace pr::rdr12
 			{
 				case ELightKW::Pos:  light.m_position = reader.Vector3f().w1(); break;
 				case ELightKW::Dir:  light.m_direction = reader.Vector3f().w0(); break;
-				case ELightKW::Type: light.m_type = reader.EnumIdent<ELight>(); break;
+				case ELightKW::Type: light.m_type = reader.Enum<ELight>(); break;
 				case ELightKW::Amb:  light.m_ambient = reader.Int<uint32_t>(16); break;
 				case ELightKW::Diff: light.m_diffuse = reader.Int<uint32_t>(16); break;
 				case ELightKW::Spec: light.m_specular = reader.Int<uint32_t>(16); break;

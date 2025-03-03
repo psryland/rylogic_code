@@ -504,17 +504,17 @@ namespace pr::str
 			int i;
 
 			std::vector<std::string> abuf;
-			Split(astr, L",", [&](char const* s, size_t i, size_t iend, int)
+			Split(astr, L",", [&](auto sub, int)
 				{
-					abuf.push_back(std::string(s+i, s+iend));
+					abuf.push_back(std::string(sub));
 				});
 			i = 0; for (auto& s : abuf)
 				PR_CHECK(Equal(s, res[i++]), true);
 
 			std::vector<std::wstring> wbuf;
-			Split(wstr, ",", [&](wchar_t const* s, size_t i, size_t iend, int)
+			Split(wstr, ",", [&](auto sub, int)
 				{
-					wbuf.push_back(std::wstring(s+i, s+iend));
+					wbuf.push_back(std::wstring(sub));
 				});
 			i = 0; for (auto& s : wbuf)
 				PR_CHECK(Equal(s, res[i++]), true);

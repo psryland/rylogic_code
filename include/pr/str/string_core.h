@@ -10,11 +10,11 @@
 // guarantee that the entire buffer is filled by the string, the null terminator
 // may be midway through the buffer
 #pragma once
-
 #include <cuchar>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <concepts>
 #include <functional>
 #include <type_traits>
 #include <locale>
@@ -1186,19 +1186,21 @@ namespace pr
 		// 'out' should have the signature out(tstr1 const& s, int i, int j, int n)
 		// where [i,j) is the range in 's' containing the substring. 'n' is the index of the output subrange.
 		// Returns the number of sub strings found.
-		template <typename Str, typename Char, typename OutCB, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Char, std::invocable<std::basic_string_view<typename string_traits<Str>::value_type>, int> OutCB>
 		inline int Split(Str const& str, Char const* delims, OutCB out)
 		{
+			using StrView = std::basic_string_view<typename string_traits<Str>::value_type>;
+
 			int i = 0, j = 0, jend = static_cast<int>(Size(str)), n = 0;
 			for (; j != jend; ++j)
 			{
 				if (*FindChar(delims, str[j]) == 0) continue;
-				out(str, i, j, n++);
+				out(StrView{ &str[i], s_cast<size_t>(j - i) }, n++);
 				i = j + 1;
 			}
 			if (i != j)
 			{
-				out(str, i, j, n++);
+				out(StrView{ &str[i], s_cast<size_t>(j - i) }, n++);
 			}
 			return n;
 		}

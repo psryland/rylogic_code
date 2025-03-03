@@ -171,13 +171,20 @@ namespace pr::ldr
 		str.append(s);
 		return str;
 	}
+	inline TStr& Append(TStr& str, std::wstring_view s)
+	{
+		if (s.empty()) return str;
+		if (*s.data() != '}' && *s.data() != ')') AppendSpace(str);
+		str.append(Narrow(s));
+		return str;
+	}
 	inline TStr& Append(TStr& str, char const* s)
 	{
-		return Append(str, std::string_view(s));
+		return Append(str, std::string_view{ s });
 	}
 	inline TStr& Append(TStr& str, std::string const& s)
 	{
-		return Append(str, std::string_view(s));
+		return Append(str, std::string_view{ s });
 	}
 	inline TStr& Append(TStr& str, std::wstring const& s)
 	{
@@ -734,7 +741,7 @@ namespace pr::ldr
 			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
 
 			// Extension objects
-			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj, LdrCustom>>>
+			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
 			LdrCustom& Custom(std::string_view name = "", Col colour = Col())
 			{
 				auto ptr = new LdrCustom;
@@ -1368,13 +1375,14 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				auto delim = m_splines.size() > 1 ? "\n" : "";
-				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, m_width, delim);
+				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, "*Data", delim, "{");
 				for (auto& bez : m_splines)
 				{
 					ldr::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
 					if (m_has_colour) ldr::Append(str, bez.col);
 					ldr::Append(str, delim);
 				}
+				ldr::Append(str, "}", delim, m_width, delim);
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
