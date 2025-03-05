@@ -199,8 +199,8 @@ namespace pr::rdr12
 			ngt.push_back(nug);
 
 			// Sanity check the nugget
-			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && int(nug.m_vrange.end()) <= verts.size(), "Invalid nugget V-range");
-			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && int(nug.m_irange.end()) <= indices.size(), "Invalid nugget I-range");
+			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && nug.m_vrange.end() <= isize(verts), "Invalid nugget V-range");
+			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && nug.m_irange.end() <= isize(indices), "Invalid nugget I-range");
 
 			// Union of geometry data type
 			geom |= nug.m_geom;
@@ -210,7 +210,7 @@ namespace pr::rdr12
 		pr::vector<v4> pos;
 		{
 			pos.resize(verts.size());
-			for (auto i = 0; i != verts.size(); ++i)
+			for (int i = 0, iend = isize(verts); i != iend; ++i)
 				pos[i] = To<v4>(verts[i].pos);
 		}
 
@@ -219,7 +219,7 @@ namespace pr::rdr12
 		if (AllSet(geom, EGeom::Colr))
 		{
 			col.resize(verts.size());
-			for (auto i = 0; i != verts.size(); ++i)
+			for (int i = 0, iend = isize(verts); i != iend; ++i)
 				col[i] = verts[i].col;
 		}
 
@@ -228,7 +228,7 @@ namespace pr::rdr12
 		if (AllSet(geom, EGeom::Norm))
 		{
 			nrm.resize(verts.size());
-			for (auto i = 0; i != verts.size(); ++i)
+			for (int i = 0, iend = isize(verts); i != iend; ++i)
 				nrm[i] = To<v4>(verts[i].norm);
 		}
 
@@ -237,7 +237,7 @@ namespace pr::rdr12
 		if (AllSet(geom, EGeom::Tex0))
 		{
 			tex.resize(verts.size());
-			for (auto i = 0; i != verts.size(); ++i)
+			for (int i = 0, iend = isize(verts); i != iend; ++i)
 				tex[i] = To<v2>(verts[i].tex);
 		}
 
@@ -334,8 +334,8 @@ namespace pr::rdr12
 		// Create buffers to be filled by the user callback
 		// Note: We can't fill the buffers with the existing model data because that requires
 		// reading from video memory (slow, or not possible for some model types).
-		vbuf.resize(model->m_vcount);
-		ibuf.resize(model->m_icount);
+		vbuf.resize(s_cast<size_t>(model->m_vcount));
+		ibuf.resize(s_cast<size_t>(model->m_icount));
 		nbuf.resize(0);
 
 #if 0
@@ -393,12 +393,12 @@ namespace pr::rdr12
 			auto iout = update_i.ptr<uint16_t>();
 
 			// Copy the model data into the model
-			for (size_t i = 0; i != new_vcount; ++i, ++vin)
+			for (int i = 0; i != new_vcount; ++i, ++vin)
 			{
 				SetPCNT(*vout++, To<v4>(vin->pos), Colour(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
 				Grow(model->m_bbox, To<v4>(vin->pos));
 			}
-			for (size_t i = 0; i != new_icount; ++i, ++iin)
+			for (int i = 0; i != new_icount; ++i, ++iin)
 			{
 				*iout++ = *iin;
 			}

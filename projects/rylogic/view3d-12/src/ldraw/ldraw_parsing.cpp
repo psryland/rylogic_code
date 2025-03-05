@@ -1030,7 +1030,7 @@ namespace pr::rdr12::ldraw
 					if (nug.m_irange != Range::Reset())
 					{
 						iptr += nug.m_irange.begin();
-						icount = nug.m_irange.size();
+						icount = s_cast<size_t>(nug.m_irange.size());
 					}
 
 					// Not sure if this works... needs testing
@@ -3888,7 +3888,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
 					{
-						if (!HasAlpha(m_colours[m_indices[i]])) continue;
+						if (!HasAlpha(m_colours[m_indices[s_cast<size_t>(i)]])) continue;
 						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, true);
 						break;
 					}

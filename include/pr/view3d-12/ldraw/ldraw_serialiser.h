@@ -162,7 +162,7 @@ namespace pr::rdr12::ldraw
 		static byte_data<4>& write(byte_data<4>& out, std::span<std::byte const> data, int64_t ofs = -1)
 		{
 			if (ofs != -1)
-				out.overwrite(ofs, data);
+				out.overwrite(s_cast<ptrdiff_t>(ofs), data);
 			else
 				out.append(data);
 			return out;

@@ -103,8 +103,8 @@ namespace pr::rdr12::ldraw
 		//        case rdr12::ldraw::HashI("Depth"): depth = reader.Int<int>() != 0; break;
 		//    }
 		IReader(ReportErrorCB report_error_cb = nullptr, ParseProgressCB progress_cb = nullptr, IPathResolver const& resolver = PathResolver::Instance())
-			: ReportError(report_error_cb ? report_error_cb : &ReportErrorDefaultCB)
-			, Progress(progress_cb ? progress_cb : &ParseProgressDefaultCB)
+			: ReportError(!!report_error_cb ? report_error_cb : ReportErrorCB{ &ReportErrorDefaultCB, nullptr })
+			, Progress(!!progress_cb ? progress_cb : ParseProgressCB{ &ParseProgressDefaultCB, nullptr })
 			, PathResolver(resolver)
 		{
 		}
@@ -266,8 +266,8 @@ namespace pr::rdr12::ldraw
 		virtual bool BoolImpl() = 0;
 
 		// Defaults for callbacks
-		static bool ParseProgressDefaultCB(void*, Guid const&, ParseResult const&, Location const&, bool) { return true; }
-		static void ReportErrorDefaultCB(void*, EParseError, Location const&, std::string_view) {}
+		static bool __stdcall ParseProgressDefaultCB(void*, Guid const&, ParseResult const&, Location const&, bool) { return true; }
+		static void __stdcall ReportErrorDefaultCB(void*, EParseError, Location const&, std::string_view) {}
 	};
 
 	// Parse the ldr script in 'reader' adding the results to 'out'.

@@ -35,6 +35,7 @@
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
 	<Import Project="$(PropsPath)fxc_build_rule.props" />
+	<Import Project="$(PropsPath)python_script.props" />
 	<Import Project="$(PropsPath)lib.props" />
 
 	<!-- Build options -->
@@ -77,7 +78,7 @@
 		<ClCompile Include="src\ldraw\ldraw_object.cpp" />
 		<ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
 		<ClCompile Include="src\ldraw\ldraw_demo_scene.cpp" />
-    <ClCompile Include="src\ldraw\ldraw_templates.cpp" />
+		<ClCompile Include="src\ldraw\ldraw_templates.cpp" />
 		<ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
 		<ClCompile Include="src\ldraw\ldraw_sources.cpp" />
 		<ClCompile Include="src\lighting\light.cpp" />
@@ -249,15 +250,16 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />
 		<ClInclude Include="src\shaders\common.h" />
 	</ItemGroup>
 	<ItemGroup>
-    <None Include="src\shaders\hlsl\types.hlsli" />
+		<None Include="src\shaders\hlsl\types.hlsli" />
 		<None Include="src\shaders\hlsl\common\functions.hlsli" />
 		<None Include="src\shaders\hlsl\common\geometry.hlsli" />
 		<None Include="src\shaders\hlsl\common\vector.hlsli" />
@@ -282,17 +284,16 @@
 		<CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
 		<CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
 		<CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="src\ldraw\ldraw_demo_scene.ldr">
-      <Message />
-      <FileType>Document</FileType>
-      <Outputs>src\ldraw\ldraw_demo_scene.cpp</Outputs>
-      <AdditionalInputs>src\ldraw\ldraw_demo_scene.ldr;$(ScriptPath)EmbedFile.py</AdditionalInputs>
-      <Command>python $(ScriptPath)EmbedFile.py DEMO_SCENE src\ldraw\ldraw_demo_scene.ldr src\ldraw\ldraw_demo_scene.cpp</Command>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="src\ldraw\ldraw_demo_scene.ldr" />
+		<PyScript Include="src\ldraw\ldraw_demo_scene.ldr">
+			<Generator>$(ScriptPath)EmbedFile.py</Generator>
+			<Args>DEMO_SCENE $(ProjectDir)src\ldraw\ldraw_demo_scene.ldr $(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Args>
+			<Outputs>$(OutDir)ldraw_demo_scene.cpp.embedded</Outputs>
+		</PyScript>
+	</ItemGroup>
+	<ItemGroup>
 		<FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
 			<EntryPointName>ApplyForces</EntryPointName>
 			<ShaderType>Compute</ShaderType>
@@ -326,5 +327,5 @@
 	<!-- Targets -->
 	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
-  <Import Project="$(TargetsPath)dxc.targets" />
+	<Import Project="$(TargetsPath)dxc.targets" />
 </Project>

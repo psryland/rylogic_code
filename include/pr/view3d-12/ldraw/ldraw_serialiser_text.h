@@ -236,8 +236,8 @@ namespace pr::rdr12::ldraw
 
 	struct TextReader : IReader
 	{
-		alignas(16) std::byte m_src[208];
-		alignas(16) std::byte m_pp[880];
+		alignas(8) std::byte m_src[208];
+		alignas(8) std::byte m_pp[880];
 		mutable Location m_location;
 		string32 m_keyword;
 		wstring32 m_delim;

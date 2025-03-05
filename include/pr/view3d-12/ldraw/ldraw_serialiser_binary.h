@@ -399,7 +399,7 @@ namespace pr::rdr12::ldraw
 			if (!m_src.read(char_ptr(buf), s_cast<size_t>(size)).good())
 			{
 				ReportError(EParseError::DataMissing, Loc(), "Read failed");
-				memset(buf, 0, size);
+				memset(buf, 0, s_cast<size_t>(size));
 			}
 			m_pos += size;
 		}
@@ -423,7 +423,7 @@ namespace pr::rdr12::ldraw
 			if (length == 0)
 			{
 				auto& header = m_section.back();
-				length = header.m_end - m_pos;
+				length = s_cast<size_t>(header.m_end - m_pos);
 			}
 
 			return length;

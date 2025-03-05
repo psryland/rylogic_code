@@ -8,8 +8,6 @@
 #include <type_traits>
 #include <concepts>
 #include <fstream>
-
-#include "pr/common/fmt.h"
 #include "pr/common/cast.h"
 #include "pr/common/assert.h"
 #include "pr/common/scope.h"
@@ -27,6 +25,7 @@
 #include "pr/maths/spatial.h"
 #include "pr/maths/polynomial.h"
 #include "pr/geometry/closest_point.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 
