@@ -304,11 +304,34 @@ namespace pr::rdr12::ldraw
 				{
 					// LDR = Text ldr script file
 					filesys::LockFile lock(filepath, 10, 5000);
+					
+					if (enc == EEncoding::auto_detect)
+						enc = filesys::DetectFileEncoding(filepath);
 
 					// Parse the ldr script file
-					std::ifstream src(filepath);
-					ldraw::TextReader reader(src, filepath, enc, ReportErrorCB, ProgressCB, includes);
-					out = Parse(rdr(), reader, context);
+					switch (enc)
+					{
+						case EEncoding::utf16_le:
+						case EEncoding::utf16_be:
+						{
+							std::wifstream src(filepath);
+							ldraw::TextReader reader(src, filepath, enc, ReportErrorCB, ProgressCB, includes);
+							out = Parse(rdr(), reader, context);
+							break;
+						}
+						case EEncoding::ascii:
+						case EEncoding::utf8:
+						{
+							std::ifstream src(filepath);
+							ldraw::TextReader reader(src, filepath, enc, ReportErrorCB, ProgressCB, includes);
+							out = Parse(rdr(), reader, context);
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error(std::format("Unsupported file encoding: {}", int(enc)));
+						}
+					}
 					break;
 				}
 				case HashI(".bdr"):
