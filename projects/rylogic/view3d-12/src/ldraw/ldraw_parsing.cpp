@@ -1102,6 +1102,45 @@ namespace pr::rdr12::ldraw
 			}
 		};
 
+		// Support for think lines
+		struct ThickLine
+		{
+			float m_width;
+			ThickLine()
+				: m_width()
+			{}
+			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Width:
+					{
+						m_width = reader.Real<float>();
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			void Apply(LdrObject* obj, bool is_line_list)
+			{
+				if (m_width == 0.0f)
+					return;
+
+				auto shdr = is_line_list
+					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_width))
+					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_width));
+
+				for (auto& nug : obj->m_model->m_nuggets)
+				{
+					nug.m_topo = is_line_list ? ETopo::LineList : ETopo::LineStripAdj;
+					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
+				}
+			}
+		};
+
 		// Support for parametric ranges
 		struct Parametrics
 		{
@@ -1145,19 +1184,19 @@ namespace pr::rdr12::ldraw
 				m_index.push_back(idx);
 				m_para.push_back(para);
 			}
-			void Apply(std::span<v4> verts, bool line_strip, ParseParams& pp, Location const& loc)
+			void Apply(bool is_line_list, std::span<v4> verts, ParseParams& pp, Location const& loc)
 			{
 				for (int i = 0, iend = isize(m_index); i != iend; ++i)
 				{
 					auto idx = m_index[i];
 					auto para = m_para[i];
-					if (line_strip)
+					if (is_line_list)
 					{
-						if (idx >= isize(verts) - 1)
-							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) - 1));
+						if (idx >= isize(verts) / 2)
+							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) / 2));
 
-						auto& p0 = verts[idx + 0];
-						auto& p1 = verts[idx + 1];
+						auto& p0 = verts[idx * 2 + 0];
+						auto& p1 = verts[idx * 2 + 1];
 						auto dir = p1 - p0;
 						auto pt = p0;
 						p0 = pt + para.x * dir;
@@ -1165,11 +1204,11 @@ namespace pr::rdr12::ldraw
 					}
 					else
 					{
-						if (idx >= isize(verts) / 2)
-							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) / 2));
+						if (idx >= isize(verts) - 1)
+							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) - 1));
 
-						auto& p0 = verts[idx * 2 + 0];
-						auto& p1 = verts[idx * 2 + 1];
+						auto& p0 = verts[idx + 0];
+						auto& p1 = verts[idx + 1];
 						auto dir = p1 - p0;
 						auto pt = p0;
 						p0 = pt + para.x * dir;
@@ -1419,14 +1458,14 @@ namespace pr::rdr12::ldraw
 	{
 		creation::Parametrics m_parametric;
 		creation::DashedLines m_dashed;
-		float m_line_width;
+		creation::ThickLine m_thick;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_parametric()
 			, m_dashed()
-			, m_line_width()
+			, m_thick()
 			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
@@ -1455,11 +1494,6 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -1468,6 +1502,7 @@ namespace pr::rdr12::ldraw
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
 						m_parametric.ParseKeyword(reader, m_pp, kw) ||
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
@@ -1481,7 +1516,7 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Clip lines to parametric values
-			m_parametric.Apply(m_verts, false, m_pp, loc);
+			m_parametric.Apply(true, m_verts, m_pp, loc);
 
 			// Convert lines to dashed lines
 			bool is_line_list = true;
@@ -1493,12 +1528,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-			}
+			m_thick.Apply(obj, is_line_list);
 		}
 	};
 
@@ -1507,14 +1537,14 @@ namespace pr::rdr12::ldraw
 	{
 		creation::Parametrics m_parametric;
 		creation::DashedLines m_dashed;
-		float m_line_width;
+		creation::ThickLine m_thick;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_parametric()
 			, m_dashed()
-			, m_line_width()
+			, m_thick()
 			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
@@ -1543,11 +1573,6 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -1556,6 +1581,7 @@ namespace pr::rdr12::ldraw
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
 						m_parametric.ParseKeyword(reader, m_pp, kw) ||
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
@@ -1569,7 +1595,7 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Clip lines to parametric values
-			m_parametric.Apply(m_verts, false, m_pp, loc);
+			m_parametric.Apply(true, m_verts, m_pp, loc);
 
 			// Convert lines to dashed lines
 			bool is_line_list = true;
@@ -1581,12 +1607,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-			}
+			m_thick.Apply(obj, is_line_list);
 		}
 	};
 
@@ -1595,17 +1616,17 @@ namespace pr::rdr12::ldraw
 	{
 		creation::DashedLines m_dashed;
 		creation::Parametrics m_parametric;
-		float m_line_width;
+		creation::SmoothLine m_smooth;
+		creation::ThickLine m_thick;
 		bool m_per_item_colour;
-		bool m_smooth;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_dashed()
 			, m_parametric()
-			, m_line_width()
-			, m_per_item_colour()
 			, m_smooth()
+			, m_thick()
+			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override 
 		{
@@ -1625,16 +1646,6 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Smooth:
-				{
-					m_smooth = true;
-					return true;
-				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -1643,6 +1654,8 @@ namespace pr::rdr12::ldraw
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
+						m_smooth.ParseKeyword(reader, m_pp, kw) ||
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						m_parametric.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
@@ -1656,25 +1669,17 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Clip lines to parametric values
-			m_parametric.Apply(m_verts, true, m_pp, loc);
+			m_parametric.Apply(false, m_verts, m_pp, loc);
 
 			// Smooth the points
-			if (m_smooth)
-			{
-				VCont verts;
-				std::swap(verts, m_verts);
-				Smooth(verts, Spline::ETopo::Continuous3, [&](auto points, auto)
-				{
-					m_verts.insert(m_verts.end(), points.begin(), points.end());
-				});
-			}
+			m_smooth.Apply(m_verts);
 
 			// Convert lines to dashed lines
 			auto is_line_list = false;
 			m_dashed.Apply(m_verts, is_line_list);
 
 			// The thick line strip shader uses LineAdj which requires an extra first and last vert
-			if (!is_line_list && m_line_width != 0.0f)
+			if (!is_line_list && m_thick.m_width != 0.0f)
 			{
 				m_verts.insert(std::begin(m_verts), m_verts.front());
 				m_verts.insert(std::end(m_verts), m_verts.back());
@@ -1688,18 +1693,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				auto shdr = is_line_list
-					? static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineListGS>(m_line_width))
-					: static_cast<ShaderPtr>(Shader::Create<shaders::ThickLineStripGS>(m_line_width));
-
-				for (auto& nug : obj->m_model->m_nuggets)
-				{
-					nug.m_topo = is_line_list ? ETopo::LineList : ETopo::LineStripAdj;
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-				}
-			}
+			m_thick.Apply(obj, is_line_list);
 		}
 	};
 
@@ -1707,12 +1701,12 @@ namespace pr::rdr12::ldraw
 	template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreator
 	{
 		creation::DashedLines m_dashed;
-		float m_line_width;
+		creation::ThickLine m_thick;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_dashed()
-			, m_line_width()
+			, m_thick()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override 
 		{
@@ -1738,14 +1732,10 @@ namespace pr::rdr12::ldraw
 					m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
@@ -1773,13 +1763,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				// Get or create an instance of the thick line shader
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-			}
+			m_thick.Apply(obj, is_line_list);
 		}
 	};
 
@@ -1788,13 +1772,13 @@ namespace pr::rdr12::ldraw
 	{
 		creation::DashedLines m_dashed;
 		creation::MainAxis m_axis;
-		float m_line_width;
+		creation::ThickLine m_thick;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_dashed()
 			, m_axis()
-			, m_line_width()
+			, m_thick()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -1818,14 +1802,10 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
 						m_axis.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
@@ -1851,13 +1831,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				// Get or create an instance of the thick line shader
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-			}
+			m_thick.Apply(obj, is_line_list);
 		}
 	};
 
@@ -1866,14 +1840,14 @@ namespace pr::rdr12::ldraw
 	{
 		pr::vector<Spline> m_splines;
 		CCont m_spline_colours;
-		float m_line_width;
+		creation::ThickLine m_thick;
 		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_splines()
 			, m_spline_colours()
-			, m_line_width()
+			, m_thick()
 			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
@@ -1898,11 +1872,6 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -1910,7 +1879,9 @@ namespace pr::rdr12::ldraw
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
@@ -1922,7 +1893,7 @@ namespace pr::rdr12::ldraw
 
 			// Generate a line strip for all spline segments (separated using strip-cut indices)
 			auto seg = -1;
-			auto thick = m_line_width != 0.0f;
+			auto thick = m_thick.m_width != 0.0f;
 			pr::vector<v4, 30, true> raster;
 			for (auto& spline : m_splines)
 			{
@@ -1956,7 +1927,7 @@ namespace pr::rdr12::ldraw
 						m_indices.push_back_fast(vert++);
 
 					if (thick)
-						m_indices.push_back_fast(vert);
+						m_indices.push_back_fast(vert - 1);
 
 					m_indices.push_back_fast(uint16_t(-1)); // strip-cut
 				}
@@ -1985,15 +1956,7 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (thick)
-			{
-				auto shdr = Shader::Create<shaders::ThickLineStripGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-				{
-					nug.m_topo = ETopo::LineStripAdj;
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-				}
-			}
+			m_thick.Apply(obj, false);
 		}
 	};
 
@@ -2001,16 +1964,16 @@ namespace pr::rdr12::ldraw
 	template <> struct ObjectCreator<ELdrObject::Arrow> :IObjectCreator
 	{
 		EArrowType m_type;
-		float m_line_width;
-		bool m_per_item_colour;
 		creation::SmoothLine m_smooth;
+		creation::ThickLine m_thick;
+		bool m_per_item_colour;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_type(EArrowType::Fwd)
-			, m_line_width()
-			, m_per_item_colour()
 			, m_smooth()
+			, m_thick()
+			, m_per_item_colour()
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -2031,11 +1994,6 @@ namespace pr::rdr12::ldraw
 					}
 					return true;
 				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::PerItemColour:
 				{
 					m_per_item_colour = true;
@@ -2044,6 +2002,7 @@ namespace pr::rdr12::ldraw
 				default:
 				{
 					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
 						m_smooth.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
@@ -2105,8 +2064,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
-			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-			auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(m_line_width*2);
+			auto thk_shdr = Shader::Create<shaders::ThickLineListGS>(m_thick.m_width);
+			auto arw_shdr = Shader::Create<shaders::ArrowHeadGS>(m_thick.m_width*2);
 
 			// Create nuggets
 			Range vrange(0,0);
@@ -2134,7 +2093,7 @@ namespace pr::rdr12::ldraw
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
-				if (m_line_width != 0) nug.m_shaders.push_back({ thk_shdr, ERenderStep::RenderForward });
+				if (m_thick.m_width != 0) nug.m_shaders.push_back({ thk_shdr, ERenderStep::RenderForward });
 				obj->m_model->CreateNugget(m_pp.m_factory, nug);
 			}
 			if (AllSet(m_type, EArrowType::Fwd))
@@ -2156,13 +2115,13 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::CoordFrame
 	template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreator
 	{
-		float m_line_width;
+		creation::ThickLine m_thick;
 		float m_scale;
 		bool m_rh;
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_line_width()
+			, m_thick()
 			, m_scale()
 			, m_rh(true)
 		{
@@ -2174,11 +2133,6 @@ namespace pr::rdr12::ldraw
 		{
 			switch (kw)
 			{
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
 				case EKeyword::Scale:
 				{
 					m_scale = reader.Real<float>();
@@ -2191,7 +2145,9 @@ namespace pr::rdr12::ldraw
 				}
 				default:
 				{
-					return IObjectCreator::ParseKeyword(reader, kw);
+					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
@@ -2214,13 +2170,346 @@ namespace pr::rdr12::ldraw
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
-			if (m_line_width != 0.0f)
+			m_thick.Apply(obj, true);
+		}
+	};
+
+	// ELdrObject::Chart
+	template <> struct ObjectCreator<ELdrObject::Chart> :IObjectCreator
+	{
+		// Notes:
+		//  - 'm_data' may be a fully populated NxM table, or a jagged array.
+		//  - If jagged, then 'm_index' will be non-empty and 'm_dim' will be the bounding dimensions of the table.
+		//  - If non-jagged, then 'm_index' will be empty, and 'm_dim' represents the dimensions of the table.
+
+		using Index = std::vector<int>;         // The index for accessing rows in the data table
+		using Table = std::vector<double>;      // The source data loaded into memory
+
+		Table m_data;        // A 2D table of data (row major, i.e. rows are contiguous)
+		Index m_index;       // The offset into 'm_data' for the start if each row (if jagged) else empty.
+		iv2   m_dim;         // Table dimensions (columns, rows) or bounds of the table dimensions.
+
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_data()
+			, m_index()
+			, m_dim()
+		{}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
+		{
+			switch (kw)
 			{
-				// Get or create an instance of the thick line shader
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
+				case EKeyword::Dim:
+				{
+					m_dim.x = reader.Int<int>(10);
+					m_dim.y = reader.IsSectionEnd() ? 0 : reader.Int<int>(10);
+					return true;
+				}
+				case EKeyword::Data:
+				{
+					// Read data till the end of the section
+					for (; !reader.IsSectionEnd();)
+					{
+						auto value = reader.Real<double>();
+						m_data.push_back(value);
+					}
+					
+					// Infer the data dimensions if not given
+					if (m_dim.x == 0) m_dim.x = 1;
+					if (m_dim.y == 0) m_dim.y = (isize(m_data) + m_dim.x - 1) / m_dim.x;
+
+					// Immediate data is not jagged.
+					m_index.resize(0);
+					return true;
+				}
+				case EKeyword::FilePath:
+				{
+					// Source is a file containing data
+					auto filepath = reader.String<std::filesystem::path>();
+					std::ifstream file(filepath);
+					ParseDataStream(file);
+					return true;
+				}
+				default:
+				{
+					return IObjectCreator::ParseKeyword(reader, kw);
+				}
 			}
+		}
+		template <typename Stream> void ParseDataStream(Stream& stream)
+		{
+			using namespace pr::csv;
+			using namespace pr::str;
+
+			m_data.clear();
+			m_index.clear();
+			m_dim = iv2::Zero();
+
+			// Read CSV data up to the section close
+			m_data.reserve(100); Loc loc;
+			for (Row row; Read(stream, row, loc); row.resize(0))
+			{
+				// Trim trailing empty values and empty rows
+				if (row.size() == 1 && Trim(row[0], IsWhiteSpace<wchar_t>, false, true).empty())
+					row.pop_back();
+				if (!row.empty() && Trim(row.back(), IsWhiteSpace<wchar_t>, false, true).empty())
+					row.pop_back();
+				if (row.empty())
+					continue;
+
+				// Convert the row to values. Stop at the first element that fails to parse as a value
+				auto row_count = 0;
+				for (auto& item : row)
+				{
+					double value;
+					if (!ExtractRealC(value, item.c_str())) break;
+					m_data.push_back(value);
+					++row_count;
+				}
+
+				// Skip rows with no data
+				if (row_count == 0)
+					continue;
+
+				// Assume the table is non-jagged until we find a different number of items in a row
+				if (!m_index.empty()) // Table is jagged already
+				{
+					m_index.push_back(m_index.back() + row_count);
+					m_dim.x = max(m_dim.x, row_count);
+					m_dim.y++;
+				}
+				else if (m_dim.x == row_count) // Table is not jagged (yet), row length is the same
+				{
+					m_dim.y++;
+				}
+				else if (m_dim.x == 0) // Table is empty, set the row length
+				{
+					m_dim.x = row_count;
+					m_dim.y = 1;
+				}
+				else // Row length has changed, convert to jagged
+				{
+					m_index.reserve(m_dim.y + 1);
+
+					// Fill 'm_index' with rows of length 'm_dim.x'
+					m_index.push_back(0);
+					for (int i = 0; i != m_dim.y; ++i)
+						m_index.push_back(m_index.back() + m_dim.x);
+
+					m_index.push_back(m_index.back() + row_count);
+					m_dim.x = max(m_dim.x, row_count);
+					m_dim.y++;
+				}
+			}
+			
+			// If this is jagged data, then 'm_index' should have 'm_dim.y + 1' items
+			// with the last value == to the number of elements in the data table.
+			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
+			assert(m_index.empty() || m_index.back() == (int)m_data.size());
+		}
+		void CreateModel(LdrObject*, Location const&) override
+		{
+			// The chart does not contain a model. Instead, nested 'Series'
+			// objects form the models, based on the data in this object.
+		}
+	};
+
+	// ELdrObject::Series
+	template <> struct ObjectCreator<ELdrObject::Series> :IObjectCreator
+	{
+		struct DataIter
+		{
+			eval::IdentHash m_arghash; // The hash of the argument name
+			iv2 m_idx0;                // The virtual coordinate of the iterator position
+			iv2 m_step;                // The amount to advance 'idx' by with each iteration
+			iv2 m_max;                 // Where iteration stops.
+
+			DataIter(std::string const& name, iv2 max)
+			{
+				// Convert a name like "C32" or "R21" into an iterator into 'm_data'
+				if (name.size() < 2)
+					throw std::runtime_error(Fmt("Invalid series data references: '%s'", name.c_str()));
+			
+				bool is_column = name[0] == 'c' || name[0] == 'C';
+				if (name[0] != 'c' && name[0] != 'C' && name[0] != 'r' && name[0] != 'R')
+					throw std::runtime_error(Fmt("Series data reference should start with 'C' or 'R': '%s'", name.c_str()));
+			
+				int idx = 0;
+				if (!str::ExtractIntC(idx, 10, name.c_str() + 1))
+					throw std::runtime_error(Fmt("Series data references should contain an index: '%s'", name.c_str()));
+
+				m_arghash = eval::hashname(name);
+				m_idx0 = is_column ? iv2{idx, 0} : iv2{0, idx};
+				m_step = is_column ? iv2{0, 1} : iv2{1, 0};
+				m_max = max; //todo
+			}
+		};
+
+		// Default colours to use for each series
+		static inline Colour32 const colours[] =
+		{
+			0xFF70ad47, 0xFF4472c4, 0xFFed7d31,
+			0xFF264478, 0xFF9e480e, 0xFFffc000,
+			0xFF9e480e, 0xFF636363,
+
+			//0xFF0000FF, 0xFF00FF00, 0xFFFF0000,
+			//0xFF0000A0, 0xFF00A000, 0xFFA00000,
+			//0xFF000080, 0xFF008000, 0xFF800000,
+			//0xFF00FFFF, 0xFFFFFF00, 0xFFFF00FF,
+			//0xFF00A0A0, 0xFFA0A000, 0xFFA000A0,
+			//0xFF008080, 0xFF808000, 0xFF800080,
+		};
+
+		ObjectCreator<ELdrObject::Chart> const* m_chart;
+		eval::Expression m_xaxis;
+		eval::Expression m_yaxis;
+		pr::vector<DataIter> m_xiter;
+		pr::vector<DataIter> m_yiter;
+		creation::ThickLine m_thick;
+		creation::DashedLines m_dashed;
+		creation::SmoothLine m_smooth;
+		
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+			, m_chart()
+			, m_xaxis()
+			, m_yaxis()
+			, m_xiter()
+			, m_yiter()
+			, m_thick()
+			, m_dashed()
+			, m_smooth()
+		{}
+		LdrObjectPtr Parse(IReader& reader) override
+		{
+			// Find the ancestor chart creator
+			for (auto const* parent = m_pp.m_parent_creator; parent; parent = parent->m_pp.m_parent_creator)
+			{
+				if (parent->m_pp.m_type != ELdrObject::Chart) continue;
+				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
+				break;
+			}
+			if (!m_chart)
+			{
+				m_pp.ReportError(EParseError::NotFound, {}, "Series objects must be children of a Chart object");
+				return nullptr; // Not possible to carry on without a chart
+			}
+			return IObjectCreator::Parse(reader);
+		}
+		bool ParseKeyword(IReader& reader, EKeyword kw) override
+		{
+			switch (kw)
+			{
+				case EKeyword::XAxis:
+				{
+					m_xaxis = eval::Compile(reader.String<string32>());
+					for (auto& name : m_xaxis.m_arg_names)
+						m_xiter.push_back(DataIter{name, m_chart->m_dim});
+					
+					return true;
+				}
+				case EKeyword::YAxis:
+				{
+					m_yaxis = eval::Compile(reader.String<string32>());
+					for (auto& name : m_yaxis.m_arg_names)
+						m_yiter.push_back(DataIter{name, m_chart->m_dim});
+
+					return true;
+				}
+				default:
+				{
+					return
+						m_thick.ParseKeyword(reader, m_pp, kw) ||
+						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						m_smooth.ParseKeyword(reader, m_pp, kw) ||
+						IObjectCreator::ParseKeyword(reader, kw);
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj, Location const&) override
+		{
+			// Determine the index of this series within the chart
+			int child_index = 0;
+			for (auto& child : m_pp.m_parent->m_child)
+				child_index += int(child->m_type == ELdrObject::Series);
+
+			// Generate a name if none given
+			if (!AllSet(m_pp.m_flags, EFlags::ExplicitName))
+				obj->m_name = std::format("Series {}", child_index);
+
+			// Assign a colour if none given
+			if (!AllSet(m_pp.m_flags, EFlags::ExplicitColour))
+				obj->m_base_colour = colours[child_index % _countof(colours)];
+
+			auto& verts = m_pp.m_cache.m_point;
+			verts.clear();
+
+			// Merge the args from both expressions
+			auto args = eval::ArgSet{};
+			args.add(m_xaxis.m_args);
+			args.add(m_yaxis.m_args);
+
+			// Iterate over the data points
+			for (int i = 0;;++i)
+			{
+				// Initialise the expression arguments for 'i'
+				bool in_range = false;
+				for (auto& iter : m_xiter)
+					args.set(iter.m_arghash, GetValue(iter, i, in_range));
+				for (auto& iter : m_yiter)
+					args.set(iter.m_arghash, GetValue(iter, i, in_range));
+				if (!in_range)
+					break;
+
+				// Evaluate the data point at 'i'
+				auto x = m_xaxis(args);
+				auto y = m_yaxis(args);
+				verts.push_back(v4{static_cast<float>(x.db()), static_cast<float>(y.db()), 0, 1});
+			}
+				
+			// Create a plot from the points
+			if (verts.empty())
+				return;
+
+			// Convert the points into a spline if smooth is specified
+			m_smooth.Apply(verts);
+
+			// Convert lines to dashed lines
+			bool is_line_list = false;
+			m_dashed.Apply(verts, is_line_list);
+
+			// The thick line strip shader uses LineAdj which requires an extra first and last vert
+			if (!is_line_list && m_thick.m_width != 0.0f)
+			{
+				verts.insert(std::begin(verts), verts.front());
+				verts.insert(std::end(verts), verts.back());
+			}
+
+			auto opts = ModelGenerator::CreateOptions().colours({&obj->m_base_colour, 1});
+			obj->m_model = ModelGenerator::LineStrip(m_pp.m_factory, isize(verts) - 1, verts, &opts);
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			m_thick.Apply(obj, is_line_list);
+		}
+		double GetValue(DataIter const& iter, int i, bool& in_range) const
+		{
+			// Points outside the data set are considered zeros
+			auto idx = iter.m_idx0 + i * iter.m_step;
+			auto is_within = idx.x >= 0 && idx.x < iter.m_max.x && idx.y >= 0 && idx.y < iter.m_max.y;
+			if (!is_within)
+				return 0.0;
+
+			// 'iter' still points to valid data
+			in_range |= true;
+
+			// Not jagged
+			if (m_chart->m_index.empty())
+				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
+
+			// If 'm_data' is a jagged array, get the number of values on the current row
+			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
+			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
 		}
 	};
 
@@ -2514,25 +2803,28 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					v4 pt[3] = {};
-					Colour32 col[3] = {};
-					for (int i = 0; i != 3; ++i)
+					for (; !reader.IsSectionEnd();)
 					{
-						pt[i] = reader.Vector3f().w1();
-						if (m_per_item_colour)
-							col[i] = reader.Int<uint32_t>(16);
-					}
+						v4 pt[3] = {};
+						Colour32 col[3] = {};
+						for (int i = 0; i != 3; ++i)
+						{
+							pt[i] = reader.Vector3f().w1();
+							if (m_per_item_colour)
+								col[i] = reader.Int<uint32_t>(16);
+						}
 
-					m_verts.push_back(pt[0]);
-					m_verts.push_back(pt[1]);
-					m_verts.push_back(pt[2]);
-					m_verts.push_back(pt[2]); // create a degenerate
-					if (m_per_item_colour)
-					{
-						m_colours.push_back(col[0]);
-						m_colours.push_back(col[1]);
-						m_colours.push_back(col[2]);
-						m_colours.push_back(col[2]);
+						m_verts.push_back(pt[0]);
+						m_verts.push_back(pt[1]);
+						m_verts.push_back(pt[2]);
+						m_verts.push_back(pt[2]); // create a degenerate
+						if (m_per_item_colour)
+						{
+							m_colours.push_back(col[0]);
+							m_colours.push_back(col[1]);
+							m_colours.push_back(col[2]);
+							m_colours.push_back(col[2]);
+						}
 					}
 					return true;
 				}
@@ -2585,25 +2877,28 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					v4 pt[4] = {};
-					Colour32 col[4] = {};
-					for (int i = 0; i != 4; ++i)
+					for (; !reader.IsSectionEnd();)
 					{
-						pt[i] = reader.Vector3f().w1();
-						if (m_per_item_colour)
-							col[i] = reader.Int<uint32_t>(16);
-					}
+						v4 pt[4] = {};
+						Colour32 col[4] = {};
+						for (int i = 0; i != 4; ++i)
+						{
+							pt[i] = reader.Vector3f().w1();
+							if (m_per_item_colour)
+								col[i] = reader.Int<uint32_t>(16);
+						}
 
-					m_verts.push_back(pt[0]);
-					m_verts.push_back(pt[1]);
-					m_verts.push_back(pt[2]);
-					m_verts.push_back(pt[3]);
-					if (m_per_item_colour)
-					{
-						m_colours.push_back(col[0]);
-						m_colours.push_back(col[1]);
-						m_colours.push_back(col[2]);
-						m_colours.push_back(col[3]);
+						m_verts.push_back(pt[0]);
+						m_verts.push_back(pt[1]);
+						m_verts.push_back(pt[2]);
+						m_verts.push_back(pt[3]);
+						if (m_per_item_colour)
+						{
+							m_colours.push_back(col[0]);
+							m_colours.push_back(col[1]);
+							m_colours.push_back(col[2]);
+							m_colours.push_back(col[3]);
+						}
 					}
 					return true;
 				}
@@ -2626,10 +2921,6 @@ namespace pr::rdr12::ldraw
 			// Validate
 			if (m_verts.empty() || (isize(m_verts) % 4) != 0)
 				return;
-
-			// Already done in 'bake()'?
-			//// Apply the axis id rotation
-			//m_axis.Apply(m_verts);
 
 			// Create the model
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_axis.O2WPtr()).tex_diffuse(m_tex.m_texture, m_tex.m_sampler);
@@ -2866,15 +3157,19 @@ namespace pr::rdr12::ldraw
 			: IObjectCreator(pp)
 			, m_tex(SamDesc::AnisotropicClamp())
 			, m_location()
-			, m_dim()
+			, m_dim(1.0f)
 		{}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
 			switch (kw)
 			{
-				case EKeyword::Data:
+				case EKeyword::Dim:
 				{
 					m_dim = reader.Vector3f().w0();
+					return true;
+				}
+				case EKeyword::Data:
+				{
 					for (; !reader.IsSectionEnd(); )
 						m_location.push_back(reader.Vector3f().w1());
 
@@ -3238,8 +3533,8 @@ namespace pr::rdr12::ldraw
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_cs()
-			, m_radius()
-			, m_cs_type(ECSType::Invalid)
+			, m_radius(1.0f)
+			, m_cs_type(ECSType::Square)
 			, m_cs_facets(20)
 			, m_cs_smooth(false)
 			, m_per_item_colour()
@@ -3680,328 +3975,6 @@ namespace pr::rdr12::ldraw
 				.tex(m_texs);
 			obj->m_model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Chart
-	template <> struct ObjectCreator<ELdrObject::Chart> :IObjectCreator
-	{
-		// Notes:
-		//  - 'm_data' may be a fully populated NxM table, or a jagged array.
-		//  - If jagged, then 'm_index' will be non-empty and 'm_dim' will be the bounding dimensions of the table.
-		//  - If non-jagged, then 'm_index' will be empty, and 'm_dim' represents the dimensions of the table.
-
-		using Index = std::vector<int>;         // The index for accessing rows in the data table
-		using Table = std::vector<double>;      // The source data loaded into memory
-
-		Table m_data;        // A 2D table of data (row major, i.e. rows are contiguous)
-		Index m_index;       // The offset into 'm_data' for the start if each row (if jagged) else empty.
-		iv2   m_dim;         // Table dimensions (columns, rows) or bounds of the table dimensions.
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_data()
-			, m_index()
-			, m_dim()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					// Expect the first value to be the number of columns
-					auto column_count = reader.Int<int>(10);
-
-					// Read data till the end of the section
-					for (; !reader.IsSectionEnd();)
-					{
-						auto value = reader.Real<double>();
-						m_data.push_back(value);
-					}
-
-					// Expect a rectangular block of data
-					m_dim = { column_count, (isize(m_data) + column_count - 1) / column_count };
-					m_index.resize(0);
-					return true;
-				}
-				case EKeyword::FilePath:
-				{
-					// Source is a file containing data
-					auto filepath = reader.String<std::filesystem::path>();
-					std::ifstream file(filepath);
-					ParseDataStream(file);
-					return true;
-				}
-				default:
-				{
-					return IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		template <typename Stream> void ParseDataStream(Stream& stream)
-		{
-			using namespace pr::csv;
-			using namespace pr::str;
-
-			m_data.clear();
-			m_index.clear();
-			m_dim = iv2::Zero();
-
-			// Read CSV data up to the section close
-			m_data.reserve(100); Loc loc;
-			for (Row row; Read(stream, row, loc); row.resize(0))
-			{
-				// Trim trailing empty values and empty rows
-				if (row.size() == 1 && Trim(row[0], IsWhiteSpace<wchar_t>, false, true).empty())
-					row.pop_back();
-				if (!row.empty() && Trim(row.back(), IsWhiteSpace<wchar_t>, false, true).empty())
-					row.pop_back();
-				if (row.empty())
-					continue;
-
-				// Convert the row to values. Stop at the first element that fails to parse as a value
-				auto row_count = 0;
-				for (auto& item : row)
-				{
-					double value;
-					if (!ExtractRealC(value, item.c_str())) break;
-					m_data.push_back(value);
-					++row_count;
-				}
-
-				// Skip rows with no data
-				if (row_count == 0)
-					continue;
-
-				// Assume the table is non-jagged until we find a different number of items in a row
-				if (!m_index.empty()) // Table is jagged already
-				{
-					m_index.push_back(m_index.back() + row_count);
-					m_dim.x = max(m_dim.x, row_count);
-					m_dim.y++;
-				}
-				else if (m_dim.x == row_count) // Table is not jagged (yet), row length is the same
-				{
-					m_dim.y++;
-				}
-				else if (m_dim.x == 0) // Table is empty, set the row length
-				{
-					m_dim.x = row_count;
-					m_dim.y = 1;
-				}
-				else // Row length has changed, convert to jagged
-				{
-					m_index.reserve(m_dim.y + 1);
-
-					// Fill 'm_index' with rows of length 'm_dim.x'
-					m_index.push_back(0);
-					for (int i = 0; i != m_dim.y; ++i)
-						m_index.push_back(m_index.back() + m_dim.x);
-
-					m_index.push_back(m_index.back() + row_count);
-					m_dim.x = max(m_dim.x, row_count);
-					m_dim.y++;
-				}
-			}
-			
-			// If this is jagged data, then 'm_index' should have 'm_dim.y + 1' items
-			// with the last value == to the number of elements in the data table.
-			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
-			assert(m_index.empty() || m_index.back() == (int)m_data.size());
-		}
-		void CreateModel(LdrObject*, Location const&) override
-		{
-			// The chart does not contain a model. Instead, nested 'Series'
-			// objects form the models, based on the data in this object.
-		}
-	};
-
-	// ELdrObject::Series
-	template <> struct ObjectCreator<ELdrObject::Series> :IObjectCreator
-	{
-		struct DataIter
-		{
-			eval::IdentHash m_arghash; // The hash of the argument name
-			iv2 m_idx0;                // The virtual coordinate of the iterator position
-			iv2 m_step;                // The amount to advance 'idx' by with each iteration
-			iv2 m_max;                 // Where iteration stops.
-
-			DataIter(std::string const& name, iv2 max)
-			{
-				// Convert a name like "C32" or "R21" into an iterator into 'm_data'
-				if (name.size() < 2)
-					throw std::runtime_error(Fmt("Invalid series data references: '%s'", name.c_str()));
-			
-				bool is_column = name[0] == 'c' || name[0] == 'C';
-				if (name[0] != 'c' && name[0] != 'C' && name[0] != 'r' && name[0] != 'R')
-					throw std::runtime_error(Fmt("Series data reference should start with 'C' or 'R': '%s'", name.c_str()));
-			
-				int idx = 0;
-				if (!str::ExtractIntC(idx, 10, name.c_str() + 1))
-					throw std::runtime_error(Fmt("Series data references should contain an index: '%s'", name.c_str()));
-
-				m_arghash = eval::hashname(name);
-				m_idx0 = is_column ? iv2{idx, 0} : iv2{0, idx};
-				m_step = is_column ? iv2{0, 1} : iv2{1, 0};
-				m_max = max; //todo
-			}
-		};
-
-		// Default colours to use for each series
-		static inline Colour32 const colours[] =
-		{
-			0xFF70ad47, 0xFF4472c4, 0xFFed7d31,
-			0xFF264478, 0xFF9e480e, 0xFFffc000,
-			0xFF9e480e, 0xFF636363,
-
-			//0xFF0000FF, 0xFF00FF00, 0xFFFF0000,
-			//0xFF0000A0, 0xFF00A000, 0xFFA00000,
-			//0xFF000080, 0xFF008000, 0xFF800000,
-			//0xFF00FFFF, 0xFFFFFF00, 0xFFFF00FF,
-			//0xFF00A0A0, 0xFFA0A000, 0xFFA000A0,
-			//0xFF008080, 0xFF808000, 0xFF800080,
-		};
-
-		ObjectCreator<ELdrObject::Chart> const* m_chart;
-		eval::Expression m_xaxis;
-		eval::Expression m_yaxis;
-		pr::vector<DataIter> m_xiter;
-		pr::vector<DataIter> m_yiter;
-		float m_line_width;
-		
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_chart()
-			, m_xaxis()
-			, m_yaxis()
-			, m_xiter()
-			, m_yiter()
-			, m_line_width()
-		{}
-		LdrObjectPtr Parse(IReader& reader) override
-		{
-			// Find the ancestor chart creator
-			for (auto const* parent = m_pp.m_parent_creator; parent; parent = parent->m_pp.m_parent_creator)
-			{
-				if (parent->m_pp.m_type != ELdrObject::Chart) continue;
-				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
-				break;
-			}
-			if (!m_chart)
-			{
-				m_pp.ReportError(EParseError::NotFound, {}, "Series objects must be children of a Chart object");
-				return nullptr; // Not possible to carry on without a chart
-			}
-			return IObjectCreator::Parse(reader);
-		}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::XAxis:
-				{
-					m_xaxis = eval::Compile(reader.String<string32>());
-					for (auto& name : m_xaxis.m_arg_names)
-						m_xiter.push_back(DataIter{name, m_chart->m_dim});
-					
-					return true;
-				}
-				case EKeyword::YAxis:
-				{
-					m_yaxis = eval::Compile(reader.String<string32>());
-					for (auto& name : m_yaxis.m_arg_names)
-						m_yiter.push_back(DataIter{name, m_chart->m_dim});
-
-					return true;
-				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
-				default:
-				{
-					return IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const&) override
-		{
-			// Determine the index of this series within the chart
-			int child_index = 0;
-			for (auto& child : m_pp.m_parent->m_child)
-				child_index += int(child->m_type == ELdrObject::Series);
-
-			// Generate a name if none given
-			if (!AllSet(m_pp.m_flags, EFlags::ExplicitName))
-				obj->m_name = std::format("Series {}", child_index);
-
-			// Assign a colour if none given
-			if (!AllSet(m_pp.m_flags, EFlags::ExplicitColour))
-				obj->m_base_colour = colours[child_index % _countof(colours)];
-
-			auto& verts = m_pp.m_cache.m_point;
-			verts.clear();
-
-			// Merge the args from both expressions
-			auto args = eval::ArgSet{};
-			args.add(m_xaxis.m_args);
-			args.add(m_yaxis.m_args);
-
-			// Iterate over the data points
-			for (int i = 0;;++i)
-			{
-				// Initialise the expression arguments for 'i'
-				bool in_range = false;
-				for (auto& iter : m_xiter)
-					args.set(iter.m_arghash, GetValue(iter, i, in_range));
-				for (auto& iter : m_yiter)
-					args.set(iter.m_arghash, GetValue(iter, i, in_range));
-				if (!in_range)
-					break;
-
-				// Evaluate the data point at 'i'
-				auto x = m_xaxis(args);
-				auto y = m_yaxis(args);
-				verts.push_back(v4{static_cast<float>(x.db()), static_cast<float>(y.db()), 0, 1});
-			}
-				
-			// Create a plot from the points
-			if (verts.empty())
-				return;
-
-			auto opts = ModelGenerator::CreateOptions().colours({&obj->m_base_colour, 1});
-			obj->m_model = ModelGenerator::LineStrip(m_pp.m_factory, isize(verts) - 1, verts, &opts);
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_line_width > 1.0f)
-			{
-				// Get or create an instance of the thick line shader
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
-			}
-		}
-		double GetValue(DataIter const& iter, int i, bool& in_range) const
-		{
-			// Points outside the data set are considered zeros
-			auto idx = iter.m_idx0 + i * iter.m_step;
-			auto is_within = idx.x >= 0 && idx.x < iter.m_max.x && idx.y >= 0 && idx.y < iter.m_max.y;
-			if (!is_within)
-				return 0.0;
-
-			// 'iter' still points to valid data
-			in_range |= true;
-
-			// Not jagged
-			if (m_chart->m_index.empty())
-				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
-
-			// If 'm_data' is a jagged array, get the number of values on the current row
-			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
-			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
 		}
 	};
 

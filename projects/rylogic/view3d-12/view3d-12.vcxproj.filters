@@ -216,7 +216,7 @@
     <ClCompile Include="src\ldraw\ldraw_demo_scene.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_object_templates.cpp">
+    <ClCompile Include="src\ldraw\ldraw_templates.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
     <ClCompile Include="src\resource\mipmap_generator.cpp">
@@ -733,6 +733,7 @@
     <CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl">
       <Filter>src\shaders\hlsl\utility</Filter>
     </CustomBuild>
+    <CustomBuild Include="src\ldraw\ldraw_demo_scene.ldr" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli">
@@ -749,9 +750,6 @@
     </None>
     <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli">
       <Filter>src\compute\particle_collision</Filter>
-    </None>
-    <None Include="src\ldraw\ldraw_demo_scene.ldr">
-      <Filter>src\ldraw</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

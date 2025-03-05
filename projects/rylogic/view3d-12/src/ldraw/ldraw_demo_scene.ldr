@@ -240,13 +240,14 @@
 // All fields are optional, replacing the default if given.
 *Font
 {
-	*Name {"tahoma"}   // Font name
-	*Size {18}         // Font size (in points)
-	*Weight {300}      // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
-	*Style {Normal}    // Style. One of: Normal Italic Oblique
-	*Stretch {5}       // Stretch. 1 = condensed, 5 = normal, 9 = expanded
-	//*Underline {}    // Underlined text
-	//*Strikeout {}    // Strikethrough text
+	*Name {"tahoma"}     // Font name
+	*Size {18}           // Font size (in points)
+	//*Colour {FF0000FF} // Font colour
+	*Weight {300}        // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
+	*Style {Normal}      // Style. One of: Normal Italic Oblique
+	*Stretch {5}         // Stretch. 1 = condensed, 5 = normal, 9 = expanded
+	//*Underline {}      // Underlined text
+	//*Strikeout {}      // Strikethrough text
 }
 
 // Screen space text.
@@ -397,9 +398,9 @@
 		+0.18176337 -0.24681160 -0.12977648 1 FFA7D8AE
 		+0.38887858 +0.24615003 +0.06563436 1 FFB9BA96
 	}
-	*Size {5}               // Optional. Specify a size for the point
-	*Style { Circle }       // Optional. One of: Square, Circle, Star, .. Requires 'Width'
-	*Texture {"#whitespot"} // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.
+	*Size {5 5}             // Optional. {width, [height]} Specify a size for the point
+	*Style {Circle}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'
+	*Texture { *FilePath {"#whitespot"}} // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.
 	*o2w{*pos{16 6 6}}
 }
 
@@ -408,7 +409,7 @@
 // Line modifiers:
 //   *Width {w} - Render the lines with the thickness 'w' specified (in pixels).
 //   *Param {t0 t1} - Clip/Extend the previous line to the parametric values given.
-//   *dashed {on off} - Convert the line to a dashed line with dashes of length 'on' and gaps of length 'off'.
+//   *Dashed {on off} - Convert the line to a dashed line with dashes of length 'on' and gaps of length 'off'.
 //   For objects that support optional colours, all or none of the points/lines/segments must have colours.
 
 // A model containing an arbitrary list of line segments
@@ -724,10 +725,9 @@
 // A list of boxes all with the same dimensions at the given locations
 *BoxList box_stack
 {
+	*Dim {+0.4 0.2 0.5} // Box dimensions: width, height, depth.
 	*Data
 	{
-		// Box dimensions: width, height, depth.
-		+0.4 0.2 0.5
 		// locations: x,y,z
 		-1.0 0.0 0.0
 		-0.5 0.0 0.0
@@ -1111,12 +1111,13 @@
 	// Reference an external file containing CSV data
 	// *FilePath {"my_data.csv"}
 
+	// The dimensions of the data
+	*Dim {3} // {columns, [rows]}. Optional if 'FilePath' is used.
+
 	// Or embed the data directly in the script
 	*Data
 	{
-		// First value is the number of columns
-		3
-		// Remaining data can be layed out in any way
+		// Data values. Can be layed out in any way
 		0.0,  1.0,  0.0,
 		0.5,  1.2,  0.3,
 		1.0,  0.2,  0.9,
@@ -1132,12 +1133,14 @@
 		*XAxis {"C0"}            // Expression for the X values
 		*YAxis {"abs(C2 - C1)"}  // Expression for the Y values
 		*Width {7}               // Optional. A width for the lines
+		*Dashed {0.1 0.1}        // Optional. Dashed line pattern
 	}
 	*Series plot2 FFA000E0 // Colour is auto assigned if not given
 	{
 		*XAxis {"C1"}
 		*YAxis {"sin(C2) + 0.1*C0)"}
 		*Width {5}
+		*Smooth {} // Optional. Smooth the line
 	}
 	*o2w{*pos{15 0 10}}
 }
@@ -1198,11 +1201,14 @@
 *LightSource sun FFFFFF00     // Colour attribute is the colour of the light source
 {
 	*Style {Directional}      // One of: Directional, Point, Spot
-	*Ambient {FF101010 }      // Optional. Ambient colour
-	*Diffuse {FF404040 }      // Optional. Diffuse colour
+	*Ambient {FF101010}       // Optional. Ambient colour
+	*Diffuse {FF404040}       // Optional. Diffuse colour
 	*Specular {FFFFFFFF 1000} // Optional. Specular colour and power
 	*Range {100 0}            // Optional. range, falloff. Default is infinite.
 	*Cone {30 60}             // Optional. Inner angle (deg), Outer angle (deg). Only for spot lights
 	*CastShadow {10}          // Optional. range. Shadows are cast from this light source out to this range
 	*o2w {*pos{5 5 5}}        // Position/orientation of the light. Directional lights shine down -z
 }
+
+// A global setting to draw everything in wireframe mode
+//*Wireframe {}
