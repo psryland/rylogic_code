@@ -250,16 +250,14 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />
 		<ClInclude Include="src\shaders\common.h" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Include="src\ldraw\ldraw_demo_scene.ldr">
-			<FileType>Document</FileType>
-		</None>
-		<None Include="src\shaders\hlsl\types.hlsli" />
+    <None Include="src\shaders\hlsl\types.hlsli" />
 		<None Include="src\shaders\hlsl\common\functions.hlsli" />
 		<None Include="src\shaders\hlsl\common\geometry.hlsli" />
 		<None Include="src\shaders\hlsl\common\vector.hlsli" />
@@ -286,7 +284,7 @@
 		<CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
+    <CustomBuild Include="src\ldraw\ldraw_demo_scene.ldr">
       <Message />
       <FileType>Document</FileType>
       <Outputs>src\ldraw\ldraw_demo_scene.cpp</Outputs>

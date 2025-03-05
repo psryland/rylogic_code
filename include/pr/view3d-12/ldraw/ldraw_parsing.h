@@ -184,20 +184,17 @@ namespace pr::rdr12::ldraw
 		}
 
 		// Read an enumeration value as type 'TEnum'
-		template <typename TEnum> requires std::is_enum_v<TEnum> TEnum Enum()
+		template <ReflectedEnum TEnum> TEnum Enum()
 		{
-			if constexpr (ReflectedEnum<TEnum>)
-			{
-				static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::Enum<TEnum>::Parse(str, false)); };
-				auto value = EnumImpl(sizeof(TEnum), parse);
-				return static_cast<TEnum>(value);
-			}
-			else
-			{
-				static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::To<TEnum>(str)); };
-				auto value = EnumImpl(sizeof(TEnum), parse);
-				return static_cast<TEnum>(value);
-			}
+			static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::Enum<TEnum>::Parse(str, false)); };
+			auto value = EnumImpl(sizeof(TEnum), parse);
+			return static_cast<TEnum>(value);
+		}
+		template <typename TEnum> requires (requires (TEnum t) { To<TEnum>(std::declval<std::string_view>()) -> TEnum; }) TEnum Enum()
+		{
+			static ParseEnumIdentCB parse = [](std::string_view str) { return static_cast<int64_t>(pr::To<TEnum>(str)); };
+			auto value = EnumImpl(sizeof(TEnum), parse);
+			return static_cast<TEnum>(value);
 		}
 
 		// Read a boolean value

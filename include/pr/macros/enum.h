@@ -263,7 +263,7 @@ template <typename Char> inline std::basic_istream<Char>& operator >> (std::basi
 enum_name##_ pr_reflected_enum_metadata(enum_name);\
 /* end of enum macro */
 
-// Meta data type accessor - generic case
+// Meta data type access - generic case
 void pr_reflected_enum_metadata(...);
 
 // Declares an enum where values are implicit, 'enum_vals' should be a macro with one parameter; id

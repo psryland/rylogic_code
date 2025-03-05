@@ -6,33 +6,22 @@ copy-if-newer content to the project which copies them to the build
 target directory.
 -->
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	<ItemGroup>
-
-		<Content Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
-			<Link>lib\x64\debug\view3d-12.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-		<Content Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
-			<Link>lib\x64\release\view3d-12.dll</Link>
-			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
-		</Content>
-
-	</ItemGroup>
 
 	<!-- Add a dependency on the dll -->
 	<ItemGroup>
 		<CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
 			<Message />
 			<FileType>Document</FileType>
-			<Outputs>$(OutDir)\view3d-12-debug-dependency</Outputs>
-			<Command>echo. > $(OutDir)\view3d-12-debug-dependency</Command>
+			<Link>$(RylogicRoot)lib\x64\debug\view3d-12.dll</Link>
+			<Outputs>$(OutDir)lib\x64\debug\view3d-12.dll</Outputs>
+			<Command Condition="'$(Configuration)'=='Debug'">copy $(RylogicRoot)lib\x64\debug\view3d-12.dll $(OutDir)lib\x64\debug\view3d-12.dll</Command>
 		</CustomBuild>
 		<CustomBuild Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
 			<Message />
 			<FileType>Document</FileType>
-			<Outputs>$(OutDir)\view3d-12-release-dependency</Outputs>
-			<Command>echo. > $(OutDir)\view3d-12-release-dependency</Command>
+			<Link>$(RylogicRoot)lib\x64\release\view3d-12.dll</Link>
+			<Outputs>$(OutDir)lib\x64\release\view3d-12.dll</Outputs>
+			<Command Condition="'$(Configuration)'!='Debug'">copy $(RylogicRoot)lib\x64\release\view3d-12.dll $(OutDir)lib\x64\release\view3d-12.dll</Command>
 		</CustomBuild>
 	</ItemGroup>
 

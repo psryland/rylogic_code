@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/view3d-12/compute/gpu_job.h"
@@ -503,6 +504,13 @@ namespace pr::rdr12::ldraw
 			case EKeyword::Name:
 			{
 				obj->m_name = reader.Identifier<string32>();
+				pp.m_flags = SetBits(pp.m_flags, EFlags::ExplicitName, true);
+				return true;
+			}
+			case EKeyword::Colour:
+			{
+				obj->m_base_colour = reader.Int<uint32_t>(16);
+				pp.m_flags = SetBits(pp.m_flags, EFlags::ExplicitColour, true);
 				return true;
 			}
 			case EKeyword::O2W:
@@ -510,11 +518,6 @@ namespace pr::rdr12::ldraw
 			{
 				reader.Transform(obj->m_o2p);
 				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
-				return true;
-			}
-			case EKeyword::Colour:
-			{
-				obj->m_base_colour = reader.Int<uint32_t>(16);
 				return true;
 			}
 			case EKeyword::ColourMask:
@@ -1104,23 +1107,30 @@ namespace pr::rdr12::ldraw
 		{
 			pr::vector<int> m_index;
 			pr::vector<v2> m_para;
+			bool m_per_item_parametrics;
+
 			Parametrics()
 				: m_index()
 				, m_para()
+				, m_per_item_parametrics()
 			{}
 			bool ParseKeyword(IReader& reader, ParseParams&, EKeyword kw)
 			{
 				switch (kw)
 				{
-					case EKeyword::Param:
+					case EKeyword::PerItemParametrics:
+					{
+						m_per_item_parametrics = true;
+						return true;
+					}
+					case EKeyword::Parametrics:
 					{
 						// Expect tuples of (item index, [t0, t1])
 						for (; !reader.IsSectionEnd(); )
 						{
 							auto idx = reader.Int<int>();
 							auto para = reader.Vector2f();
-							m_index.push_back(idx);
-							m_para.push_back(para);
+							Add(idx, para);
 						}
 						return true;
 					}
@@ -1130,20 +1140,41 @@ namespace pr::rdr12::ldraw
 					}
 				}
 			}
-			void Apply(std::span<v4> verts, ParseParams& pp, Location const& loc)
+			void Add(int idx, v2 para)
+			{
+				m_index.push_back(idx);
+				m_para.push_back(para);
+			}
+			void Apply(std::span<v4> verts, bool line_strip, ParseParams& pp, Location const& loc)
 			{
 				for (int i = 0, iend = isize(m_index); i != iend; ++i)
 				{
-					if (i * 2 >= iend)
-						pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", i, iend/2));
+					auto idx = m_index[i];
+					auto para = m_para[i];
+					if (line_strip)
+					{
+						if (idx >= isize(verts) - 1)
+							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) - 1));
 
-					auto const& para = m_para[i];
-					auto& p0 = verts[i * 2 + 0];
-					auto& p1 = verts[i * 2 + 1];
-					auto dir = p1 - p0;
-					auto pt = p0;
-					p0 = pt + para.x * dir;
-					p1 = pt + para.y * dir;
+						auto& p0 = verts[idx + 0];
+						auto& p1 = verts[idx + 1];
+						auto dir = p1 - p0;
+						auto pt = p0;
+						p0 = pt + para.x * dir;
+						p1 = pt + para.y * dir;
+					}
+					else
+					{
+						if (idx >= isize(verts) / 2)
+							pp.ReportError(EParseError::IndexOutOfRange, loc, std::format("Index {} is out of range (max={})", idx, isize(verts) / 2));
+
+						auto& p0 = verts[idx * 2 + 0];
+						auto& p1 = verts[idx * 2 + 1];
+						auto dir = p1 - p0;
+						auto pt = p0;
+						p0 = pt + para.x * dir;
+						p1 = pt + para.y * dir;
+					}
 				}
 			}
 		};
@@ -1404,15 +1435,23 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					auto p0 = reader.Vector3f().w1();
-					auto p1 = reader.Vector3f().w1();
-					m_verts.push_back(p0);
-					m_verts.push_back(p1);
-					if (m_per_item_colour)
+					for (; !reader.IsSectionEnd();)
 					{
-						Colour32 col = reader.Int<uint32_t>(16);
-						m_colours.push_back(col);
-						m_colours.push_back(col);
+						auto p0 = reader.Vector3f().w1();
+						auto p1 = reader.Vector3f().w1();
+						m_verts.push_back(p0);
+						m_verts.push_back(p1);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts) / 2 - 1, para);
+						}
 					}
 					return true;
 				}
@@ -1442,7 +1481,7 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Clip lines to parametric values
-			m_parametric.Apply(m_verts, m_pp, loc);
+			m_parametric.Apply(m_verts, false, m_pp, loc);
 
 			// Convert lines to dashed lines
 			bool is_line_list = true;
@@ -1484,15 +1523,23 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					auto p0 = reader.Vector3f().w1();
-					auto p1 = reader.Vector3f().w0();
-					m_verts.push_back(p0);
-					m_verts.push_back(p0 + p1);
-					if (m_per_item_colour)
+					for (; !reader.IsSectionEnd();)
 					{
-						Colour32 col = reader.Int<uint32_t>(16);
-						m_colours.push_back(col);
-						m_colours.push_back(col);
+						auto p0 = reader.Vector3f().w1();
+						auto p1 = reader.Vector3f().w0();
+						m_verts.push_back(p0);
+						m_verts.push_back(p0 + p1);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+							m_colours.push_back(col);
+						}
+						if (m_parametric.m_per_item_parametrics)
+						{
+							auto para = reader.Vector2f();
+							m_parametric.Add(isize(m_verts) / 2 - 1, para);
+						}
 					}
 					return true;
 				}
@@ -1522,7 +1569,7 @@ namespace pr::rdr12::ldraw
 				return;
 
 			// Clip lines to parametric values
-			m_parametric.Apply(m_verts, m_pp, loc);
+			m_parametric.Apply(m_verts, false, m_pp, loc);
 
 			// Convert lines to dashed lines
 			bool is_line_list = true;
@@ -1547,6 +1594,7 @@ namespace pr::rdr12::ldraw
 	template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreator
 	{
 		creation::DashedLines m_dashed;
+		creation::Parametrics m_parametric;
 		float m_line_width;
 		bool m_per_item_colour;
 		bool m_smooth;
@@ -1554,6 +1602,7 @@ namespace pr::rdr12::ldraw
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
 			, m_dashed()
+			, m_parametric()
 			, m_line_width()
 			, m_per_item_colour()
 			, m_smooth()
@@ -1564,12 +1613,15 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					auto pt = reader.Vector3f().w1();
-					m_verts.push_back(pt);
-					if (m_per_item_colour)
+					for (; !reader.IsSectionEnd();)
 					{
-						Colour32 col = reader.Int<uint32_t>(16);
-						m_colours.push_back(col);
+						auto pt = reader.Vector3f().w1();
+						m_verts.push_back(pt);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_colours.push_back(col);
+						}
 					}
 					return true;
 				}
@@ -1592,15 +1644,19 @@ namespace pr::rdr12::ldraw
 				{
 					return
 						m_dashed.ParseKeyword(reader, m_pp, kw) ||
+						m_parametric.ParseKeyword(reader, m_pp, kw) ||
 						IObjectCreator::ParseKeyword(reader, kw);
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj, Location const&) override
+		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// No points = no model
 			if (m_verts.size() < 2)
 				return;
+
+			// Clip lines to parametric values
+			m_parametric.Apply(m_verts, true, m_pp, loc);
 
 			// Smooth the points
 			if (m_smooth)
@@ -1826,16 +1882,19 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
-					Spline spline;
-					spline.x = reader.Vector3f().w1();
-					spline.y = reader.Vector3f().w1();
-					spline.z = reader.Vector3f().w1();
-					spline.w = reader.Vector3f().w1();
-					m_splines.push_back(spline);
-					if (m_per_item_colour)
+					for (; !reader.IsSectionEnd(); )
 					{
-						Colour32 col = reader.Int<uint32_t>(16);
-						m_spline_colours.push_back(col);
+						Spline spline;
+						spline.x = reader.Vector3f().w1();
+						spline.y = reader.Vector3f().w1();
+						spline.z = reader.Vector3f().w1();
+						spline.w = reader.Vector3f().w1();
+						m_splines.push_back(spline);
+						if (m_per_item_colour)
+						{
+							Colour32 col = reader.Int<uint32_t>(16);
+							m_spline_colours.push_back(col);
+						}
 					}
 					return true;
 				}
@@ -1941,15 +2000,6 @@ namespace pr::rdr12::ldraw
 	// ELdrObject::Arrow
 	template <> struct ObjectCreator<ELdrObject::Arrow> :IObjectCreator
 	{
-		enum EArrowType
-		{
-			Invalid = -1,
-			Line = 0,
-			Fwd = 1 << 0,
-			Back = 1 << 1,
-			FwdBack = Fwd | Back
-		};
-
 		EArrowType m_type;
 		float m_line_width;
 		bool m_per_item_colour;
@@ -1957,7 +2007,7 @@ namespace pr::rdr12::ldraw
 
 		ObjectCreator(ParseParams& pp)
 			: IObjectCreator(pp)
-			, m_type(EArrowType::Invalid)
+			, m_type(EArrowType::Fwd)
 			, m_line_width()
 			, m_per_item_colour()
 			, m_smooth()
@@ -1966,19 +2016,14 @@ namespace pr::rdr12::ldraw
 		{
 			switch (kw)
 			{
+				case EKeyword::Style:
+				{
+					m_type = reader.Enum<EArrowType>();
+					return true;
+				}
 				case EKeyword::Data:
 				{
-					// Expect the arrow type first
-					if (m_type == EArrowType::Invalid)
-					{
-						auto ty = reader.Identifier<string32>();
-						if (str::EqualNI(ty, "Line")) m_type = EArrowType::Line;
-						else if (str::EqualNI(ty, "Fwd")) m_type = EArrowType::Fwd;
-						else if (str::EqualNI(ty, "Back")) m_type = EArrowType::Back;
-						else if (str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-						else m_pp.ReportError(EParseError::InvalidValue, reader.Loc(), "arrow type must one of Line, Fwd, Back, FwdBack");
-					}
-					else
+					for (; !reader.IsSectionEnd();)
 					{
 						m_verts.push_back(reader.Vector3f().w1());
 						if (m_per_item_colour)
@@ -2034,7 +2079,7 @@ namespace pr::rdr12::ldraw
 			uint16_t index = 0;
 
 			// Add the back arrow head geometry (a point)
-			if (m_type & EArrowType::Back)
+			if (AllSet(m_type, EArrowType::Back))
 			{
 				SetPCN(*v_out++, *v_in, Colour(*col), pr::Normalise(*v_in - *(v_in+1)));
 				*i_out++ = index++;
@@ -2048,7 +2093,7 @@ namespace pr::rdr12::ldraw
 			}
 			
 			// Add the forward arrow head geometry (a point)
-			if (m_type & EArrowType::Fwd)
+			if (AllSet(m_type, EArrowType::Fwd))
 			{
 				--v_in;
 				SetPCN(*v_out++, *v_in, Colour(c), pr::Normalise(*v_in - *(v_in-1)));
@@ -2066,7 +2111,7 @@ namespace pr::rdr12::ldraw
 			// Create nuggets
 			Range vrange(0,0);
 			Range irange(0,0);
-			if (m_type & EArrowType::Back)
+			if (AllSet(m_type, EArrowType::Back))
 			{
 				vrange = Range(0, 1);
 				irange = Range(0, 1);
@@ -2092,7 +2137,7 @@ namespace pr::rdr12::ldraw
 				if (m_line_width != 0) nug.m_shaders.push_back({ thk_shdr, ERenderStep::RenderForward });
 				obj->m_model->CreateNugget(m_pp.m_factory, nug);
 			}
-			if (m_type & EArrowType::Fwd)
+			if (AllSet(m_type, EArrowType::Fwd))
 			{
 				vrange = Range(vrange.m_end, vrange.m_end + 1);
 				irange = Range(irange.m_end, irange.m_end + 1);
@@ -2104,71 +2149,6 @@ namespace pr::rdr12::ldraw
 				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
 				nug.m_shaders.push_back({ arw_shdr, ERenderStep::RenderForward });
 				obj->m_model->CreateNugget(m_pp.m_factory, nug);
-			}
-		}
-	};
-
-	// ELdrObject::Matrix3x3
-	template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreator
-	{
-		float m_line_width;
-
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-			, m_line_width()
-		{}
-		bool ParseKeyword(IReader& reader, EKeyword kw) override
-		{
-			switch (kw)
-			{
-				case EKeyword::Data:
-				{
-					auto basis = m4x4{ reader.Matrix3x3(), v4::Origin() };
-
-					v4       pts[] = { v4::Origin(), basis.x.w1(), v4::Origin(), basis.y.w1(), v4::Origin(), basis.z.w1() };
-					Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-					uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
-
-					m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
-					m_colours.insert(m_colours.end(), col, col + _countof(col));
-					m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
-					return true;
-				}
-				case EKeyword::Width:
-				{
-					m_line_width = reader.Real<float>();
-					return true;
-				}
-				default:
-				{
-					return IObjectCreator::ParseKeyword(reader, kw);
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj, Location const&) override
-		{
-			// Validate
-			if (m_verts.empty())
-				return;
-
-			m_nuggets.push_back(NuggetDesc(ETopo::LineList, EGeom::Vert|EGeom::Colr));
-
-			// Create the model
-			auto cdata = MeshCreationData()
-				.verts(m_verts)
-				.indices(m_indices)
-				.colours(m_colours)
-				.nuggets(m_nuggets);
-			obj->m_model = ModelGenerator::Mesh(m_pp.m_factory, cdata);
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Use thick lines
-			if (m_line_width != 0.0f)
-			{
-				// Get or create an instance of the thick line shader
-				auto shdr = Shader::Create<shaders::ThickLineListGS>(m_line_width);
-				for (auto& nug : obj->m_model->m_nuggets)
-					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
 			}
 		}
 	};
@@ -2186,13 +2166,9 @@ namespace pr::rdr12::ldraw
 			, m_scale()
 			, m_rh(true)
 		{
-			v4       pts[] = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
-			Colour32 col[] = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
-			uint16_t idx[] = { 0, 1, 2, 3, 4, 5 };
-
-			m_verts.insert(m_verts.end(), pts, pts + _countof(pts));
-			m_colours.insert(m_colours.end(), col, col + _countof(col));
-			m_indices.insert(m_indices.end(), idx, idx + _countof(idx));
+			m_verts = { v4::Origin(), v4::XAxis().w1(), v4::Origin(), v4::YAxis().w1(), v4::Origin(), v4::ZAxis().w1() };
+			m_colours = { Colour32Red, Colour32Red, Colour32Green, Colour32Green, Colour32Blue, Colour32Blue };
+			m_indices = { 0, 1, 2, 3, 4, 5 };
 		}
 		bool ParseKeyword(IReader& reader, EKeyword kw) override
 		{
@@ -3277,22 +3253,23 @@ namespace pr::rdr12::ldraw
 				case EKeyword::Data:
 				{
 					// Parse the extrusion path
-					auto pt = reader.Vector3f().w1();
-					auto col = m_per_item_colour ? Colour32(reader.Int<uint32_t>(16)) : Colour32White;
-
-					// Ignore degenerates
-					if (m_verts.empty() || !FEql(m_verts.back(), pt))
+					for (; !reader.IsSectionEnd();)
 					{
-						m_verts.push_back(pt);
-						if (m_per_item_colour)
-							m_colours.push_back(col);
-					}
+						auto pt = reader.Vector3f().w1();
+						auto col = m_per_item_colour ? Colour32(reader.Int<uint32_t>(16)) : Colour32White;
 
+						// Ignore degenerates
+						if (m_verts.empty() || !FEql(m_verts.back(), pt))
+						{
+							m_verts.push_back(pt);
+							if (m_per_item_colour)
+								m_colours.push_back(col);
+						}
+					}
 					return true;
 				}
 				case EKeyword::CrossSection:
 				{
-					auto section = reader.SectionScope();
 					ParseCrossSection(reader);
 					return true;
 				}
@@ -3316,6 +3293,7 @@ namespace pr::rdr12::ldraw
 		}
 		void ParseCrossSection(IReader& reader)
 		{
+			auto section = reader.SectionScope();
 			for (EKeyword kw; reader.NextKeyword(kw);)
 			{
 				switch (kw)
@@ -3368,7 +3346,7 @@ namespace pr::rdr12::ldraw
 		void CreateModel(LdrObject* obj, Location const& loc) override
 		{
 			// If no cross section or extrusion path is given
-			if (m_verts.empty())
+			if (isize(m_verts) < 2)
 				return;
 
 			// Create the cross section for implicit profiles
@@ -3747,7 +3725,7 @@ namespace pr::rdr12::ldraw
 					m_index.resize(0);
 					return true;
 				}
-				case EKeyword::Source:
+				case EKeyword::FilePath:
 				{
 					// Source is a file containing data
 					auto filepath = reader.String<std::filesystem::path>();
@@ -4070,10 +4048,7 @@ namespace pr::rdr12::ldraw
 
 			// Validate
 			if (m_filepath.empty())
-			{
-				m_pp.ReportError(EParseError::DataMissing, loc, "Model filepath not given");
 				return;
-			}
 			if (!m_file_stream)
 			{
 				m_pp.ReportError(EParseError::NotFound, loc, "Failed to open the model file");
@@ -4206,7 +4181,8 @@ namespace pr::rdr12::ldraw
 			static Axis Parse(IReader& reader, ParseParams& pp)
 			{
 				Axis axis;
-				for (EKeyword kw; !reader.NextKeyword(kw); )
+				auto section = reader.SectionScope();
+				for (EKeyword kw; reader.NextKeyword(kw); )
 				{
 					switch (kw)
 					{
@@ -4334,19 +4310,16 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::XAxis:
 				{
-					auto section = reader.SectionScope();
 					m_extras.m_axis[0] = Axis::Parse(reader, m_pp);
 					return true;
 				}
 				case EKeyword::YAxis:
 				{
-					auto section = reader.SectionScope();
 					m_extras.m_axis[1] = Axis::Parse(reader, m_pp);
 					return true;
 				}
 				case EKeyword::ZAxis:
 				{
-					auto section = reader.SectionScope();
 					m_extras.m_axis[2] = Axis::Parse(reader, m_pp);
 					return true;
 				}
@@ -4356,16 +4329,13 @@ namespace pr::rdr12::ldraw
 				}
 			}
 		}
-		void CreateModel(LdrObject* obj, Location const& loc) override
+		void CreateModel(LdrObject* obj, Location const&) override
 		{
 			using namespace pr::geometry;
 
 			// Validate
 			if (!m_eq)
-			{
-				m_pp.ReportError(EParseError::DataMissing, loc, "Equation not given");
 				return;
-			}
 
 			// Apply any constants
 			m_eq.m_args.add(m_args);

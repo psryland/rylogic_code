@@ -14,7 +14,7 @@
 //  __3_|_X_|_X_|_X_    |
 //  __4_|_X_|_X_|_X_|_X_|
 //
-// Lower triangular inclusive:
+// Lower triangular inclusive table:
 //  ____|_0_|_1_|_2_|_3_|_4_|
 //  __0_|_+_                |
 //  __1_|_X_|_+_            |
@@ -26,14 +26,14 @@
 //  It's not possible to have an upper triangular table 'Index' function without
 //  knowing the dimension of the table. This is why only lower triangular is supported.
 //  i.e.,
-//   Upper triangular exclusive:
+//   Upper triangular exclusive table:
 //   ____|_1_|_2_|_3_|_4_|
 //   __0_|_X_|_X_|_X_|_X_|
 //   __1_|   |_X_|_X_|_X_|
 //   __2_|       |_X_|_X_|
 //   __3_|           |_X_|
 //   
-//   Upper triangular inclusive:
+//   Upper triangular inclusive table:
 //   ____|_0_|_1_|_2_|_3_|_4_|
 //   __0_|_+_|_X_|_X_|_X_|_X_|
 //   __1_|   |_+_|_X_|_X_|_X_|
@@ -41,7 +41,8 @@
 //   __2_|           |_+_|_X_|
 //   __4_|               |_+_|
 //
-//  To convert upper triangular to lower triangular up need to transpose the data when creating the table
+// To convert an upper triangular table to a lower triangular table
+// you need to transpose the data when creating the table.
 
 #pragma once
 #include <cstdint>
@@ -51,41 +52,45 @@ namespace pr::tri_table
 	enum class EType : int { Inclusive = 1, Exclusive = -1 }; 
 
 	// Returns the required array size for a 'num_elements' tri-table
-	constexpr size_t Size(EType type, int num_elements)
+	constexpr size_t Size(EType type, size_t num_elements)
 	{
-		return type == EType::Inclusive
-			? num_elements * (num_elements + 1) / 2
-			: num_elements * (num_elements - 1) / 2;
+		return num_elements * (num_elements + int(type)) / 2;
 	}
 
 	// Returns the square dimension of the tri-table. (i.e. the inverse of the 'Size' function)
 	inline int Dimension(EType type, size_t array_size)
 	{
-		// Si = n(n+1)/2
+		// Size (inclusive) = Si = n(n+1)/2
 		//   => n^2 + n - 2Si = 0
 		//   => n = (-1 + sqrt(1 + 8Si)) / 2
-		// Se = n(n-1)/2
+		// Size (exclusive) = Se = n(n-1)/2
 		//   => n^2 - n - 2Se = 0
 		//   => n = (+1 + sqrt(1 + 8Se)) / 2
-		if (array_size == 0)
-			return 0; // special case for exclusive
-
-		// waiting for compile-time sqrt to make this function constexpr
-		constexpr auto Sqrt = [](size_t i) { return static_cast<int>(sqrt(i)); };
-		auto num_elements = (-int(type) + Sqrt(1 + 8 * array_size)) / 2;
-		return static_cast<int>(num_elements);
+		if (array_size == 0) return 0; // special case for exclusive
+		return static_cast<int>(std::floor((-int(type) + std::sqrt(1 + 8 * array_size)) / 2.0));
 	}
 
 	// Returns the index into a tri-table array for the element (a,b)|(b,a)
 	constexpr int Index(EType type, int indexA, int indexB)
 	{
-		//if constexpr (!std::is_constant_evaluated())
-		//{
-		//	assert(type != EType::Inclusive || indexA != indexB);
-		//}
 		return (indexA < indexB)
 			? indexB * (indexB + int(type)) / 2 + indexA
 			: indexA * (indexA + int(type)) / 2 + indexB;
+	}
+
+	// Inverse of the 'Index' function. Get the indices A and B for a given table index
+	inline std::pair<int, int> FromIndex(EType type, int index)
+	{
+		int indexL, indexS; // large, small
+
+		// Solve for indexL using the quadratic formula
+		indexL = static_cast<int>(std::floor((-int(type) + std::sqrt(1 + 8 * index)) / 2.0));
+
+		// Compute the remainder to find the smaller index
+		auto triangularL = (indexL * (indexL + int(type))) / 2;
+		indexS = index - triangularL;
+
+		return { indexS, indexL };
 	}
 
 	// Type for using statements
@@ -104,6 +109,11 @@ namespace pr::tri_table
 		static constexpr int Index(int indexA, int indexB)
 		{
 			return tri_table::Index(Type, indexA, indexB);
+		}
+
+		static constexpr std::pair<int, int> FromIndex(int index)
+		{
+			return tri_table::FromIndex(Type, index);
 		}
 	};
 }
@@ -156,6 +166,22 @@ namespace pr::common
 			PR_EXPECT(ET::Dimension(ET::Size(i)) == i);
 		}
 		
+		// Round-trip Index and A/B
+		for (int a = 0; a != 1000; ++a)
+		{
+			for (int b = 0; b != 1000; ++b)
+			{
+				auto index_i = IT::Index(a, b);
+				auto index_e = ET::Index(a, b);
+
+				auto [a_i, b_i] = IT::FromIndex(index_i);
+				auto [a_e, b_e] = ET::FromIndex(index_e);
+
+				PR_EXPECT(IT::Index(a_i, b_i) == index_i);
+				PR_EXPECT(ET::Index(a_e, b_e) == index_e);
+			}
+		}
+
 		// Last index + 1 == table size
 		static_assert(IT::Index(2, 2) + 1 == static_cast<int>(IT::Size(3)));
 		static_assert(ET::Index(2, 1) + 1 == static_cast<int>(ET::Size(3)));

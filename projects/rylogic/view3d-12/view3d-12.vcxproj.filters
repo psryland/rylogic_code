@@ -659,6 +659,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl">
