@@ -15,6 +15,13 @@ using Rylogic.Utility;
 
 namespace LDraw
 {
+	public enum EStreamingState
+	{
+		Disconnected,
+		Listening,
+		Connected,
+	};
+
 	public partial class MainWindow :Window, INotifyPropertyChanged
 	{
 		public MainWindow(Model model)
@@ -29,6 +36,7 @@ namespace LDraw
 			OpenFile = Command.Create(this, OpenFileInternal);
 			SaveFile = Command.Create(this, SaveFileInternal);
 			SaveFileAs = Command.Create(this, SaveFileAsInternal);
+			ToggleStreaming = Command.Create(this, ToggleStreamingInternal);
 			ShowPreferences = Command.Create(this, ShowPreferencesInternal);
 			ShowExampleScript = Command.Create(this, ShowExampleScriptInternal);
 			ShowAbout = Command.Create(this, ShowAboutInternal);
@@ -180,6 +188,41 @@ namespace LDraw
 		}
 		private string? m_status_message;
 
+		/// <summary>The text description of the streaming state</summary>
+		public EStreamingState StreamingState
+		{
+			get => m_streaming_state;
+			set
+			{
+				if (StreamingState == value) return;
+				switch (value)
+				{
+					case EStreamingState.Disconnected:
+					{
+						// TODO: Disconnect
+						break;
+					}
+					case EStreamingState.Listening:
+					{
+						// TODO: Start listening
+						break;
+					}
+					case EStreamingState.Connected:
+					{
+						// TODO: nothing...
+						break;
+					}
+					default:
+					{
+						throw new Exception($"Unknown streaming state: {value}");
+					}
+				}
+				m_streaming_state = value;
+				NotifyPropertyChanged(nameof(StreamingState));
+			}
+		}
+		private EStreamingState m_streaming_state;
+
 		/// <summary>Non-null while script parsing is in progress</summary>
 		public ParsingProgressData? ParsingProgress => Model.ParsingProgress;
 
@@ -329,7 +372,14 @@ namespace LDraw
 			script.SaveFile(null);
 		}
 
-		/// <summary>Show application perferences</summary>
+		/// <summary>Enable/Disable listening for streaming connections</summary>
+		public Command ToggleStreaming { get; }
+		private void ToggleStreamingInternal()
+		{
+			StreamingState = StreamingState == EStreamingState.Disconnected ? EStreamingState.Listening : EStreamingState.Disconnected;
+		}
+
+		/// <summary>Show application preferences</summary>
 		public Command ShowPreferences { get; }
 		private void ShowPreferencesInternal()
 		{

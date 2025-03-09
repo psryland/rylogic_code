@@ -1026,11 +1026,11 @@ namespace pr::rdr12::ldraw
 
 					// The number of indices in this nugget
 					auto iptr = indices.data();
-					auto icount = indices.size();
+					auto icount = isize(indices);
 					if (nug.m_irange != Range::Reset())
 					{
 						iptr += nug.m_irange.begin();
-						icount = s_cast<size_t>(nug.m_irange.size());
+						icount = isize(nug.m_irange);
 					}
 
 					// Not sure if this works... needs testing

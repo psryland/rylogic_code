@@ -66,7 +66,7 @@ namespace pr::rdr12
 		{
 			assert((irange.size() % 3) == 0);
 			auto ibuf = cache.m_icont.data<IType>();
-			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
+			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
 				std::swap(ibuf[i + 1], ibuf[i + 2]);
 		}
 
@@ -76,7 +76,7 @@ namespace pr::rdr12
 		{
 			assert((irange.size() % 2) == 0);
 			auto ibuf = cache.m_icont.data<IType>();
-			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
+			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
 				std::swap(ibuf[i + 0], ibuf[i + 1]);
 		}
 
@@ -86,7 +86,7 @@ namespace pr::rdr12
 		{
 			auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 			geometry::GenerateNormals(
-				irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
+				isize(irange), ibuf, gen_normals, isize(cache.m_vcont),
 				[&](IType idx)
 				{
 					return GetP(cache.m_vcont[idx]);

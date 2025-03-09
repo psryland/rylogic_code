@@ -22,6 +22,7 @@ namespace LDraw
 			CheckForChangesPollPeriodS = 1.0;
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
+			StreamingPort = 1976;
 			SceneState = new List<SceneStateData>();
 			UILayout = null;
 
@@ -94,6 +95,13 @@ namespace LDraw
 		{
 			get => get<string[]>(nameof(IncludePaths));
 			set => set(nameof(IncludePaths), value);
+		}
+
+		/// <summary>The port to listen to for incoming streaming connections</summary>
+		public int StreamingPort
+		{
+			get => get<int>(nameof(StreamingPort));
+			set => set(nameof(StreamingPort), value);
 		}
 
 		/// <summary>Per Scene settings</summary>
