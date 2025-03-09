@@ -270,6 +270,17 @@ VIEW3D_API void __stdcall View3D_CheckForChangedSources()
 	CatchAndReport(View3D_CheckForChangedSources,,);
 }
 
+// Enable/Disable streaming script sources.
+VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().StreamingEnable(enable != 0, port);
+	}
+	CatchAndReport(View3D_CheckForChangedSources,,);
+}
+
 // Windows ********************************
 
 // Create/Destroy a window

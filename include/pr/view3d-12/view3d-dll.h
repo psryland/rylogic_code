@@ -754,6 +754,9 @@ extern "C"
 	// Poll for changed script sources and reload any that have changed
 	VIEW3D_API void __stdcall View3D_CheckForChangedSources();
 
+	// Enable/Disable streaming script sources.
+	VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port);
+
 	// Windows ********************************
 
 	// Create/Destroy a window
