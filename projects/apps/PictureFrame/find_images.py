@@ -36,7 +36,7 @@ print("Saving...")
 
 # Write the image list to the file
 image_list_fullpath = config['ImageList']
-with open(image_list_fullpath, 'w') as file:
+with open(image_list_fullpath, 'w', encoding="utf-8") as file:
 	for image_fullpath in image_list:
 
 		# Make relative to the root path

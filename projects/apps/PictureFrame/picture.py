@@ -1,4 +1,4 @@
-import os, json, cv2
+import os, json, cv2, fnmatch
 
 # Load the config
 config_file = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -21,7 +21,7 @@ with open(image_list_fullpath, "r", encoding="utf-8") as file:
 
 # Create fullscreen window
 WindowName = "Picture Frame"
-cv2.namedWindow(WindowName)#, cv2.WND_PROP_FULLSCREEN)
+cv2.namedWindow(WindowName, cv2.WND_PROP_FULLSCREEN)
 #cv2.setWindowProperty(WindowName, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 # Get window size (returns [x, y, width, height])
@@ -34,10 +34,8 @@ while True:
 		if not os.path.exists(image_fullpath):
 			continue
 
-		_, extn = os.path.split(image_fullpath)
-
 		# Display image if it is an image file
-		if extn.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+		if fnmatch.fnmatch(image_fullpath, config['ImagePatterns']):
 
 			# Load the image
 			image = cv2.imread(image_fullpath)
@@ -52,10 +50,11 @@ while True:
 			cv2.imshow(WindowName, resized_image)
 
 		# Display video if it is a video file
-		elif extn.lower().endswith(('.mp4', '.avi', '.mov')):
+		elif fnmatch.fnmatch(image_fullpath, config['VideoPatterns']):
 
 			# Load the video
 			video = cv2.VideoCapture(image_fullpath)
+			fps = video.get(cv2.CAP_PROP_FPS)
 
 			# Play the video
 			while video.isOpened():
