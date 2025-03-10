@@ -1180,11 +1180,11 @@ namespace pr::ldr
 
 					// The number of indices in this nugget
 					auto iptr = indices.data();
-					auto icount = indices.size();
+					auto icount = isize(indices);
 					if (!nug.m_irange.empty())
 					{
 						iptr += nug.m_irange.begin();
-						icount = nug.m_irange.size();
+						icount = isize(nug.m_irange);
 					}
 
 					// Not sure if this works... needs testing

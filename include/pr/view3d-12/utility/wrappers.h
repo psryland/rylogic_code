@@ -550,6 +550,18 @@ namespace pr::rdr12
 			return *this;
 		}
 
+		// Sanity check resource settings
+		bool Check() const
+		{
+			if (Width < 1 || Height < 1 || DepthOrArraySize < 1)
+				return false;
+
+			if (AnySet(Flags, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) && Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+				return false;
+
+			return true;
+		}
+
 		ResDesc& init_data(Image data, bool partial_init = false)
 		{
 			if (data.m_data.vptr != nullptr)
@@ -588,6 +600,8 @@ namespace pr::rdr12
 		ResDesc& usage(EUsage usage)
 		{
 			Flags = s_cast<D3D12_RESOURCE_FLAGS>(usage);
+			if (AnySet(Flags, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+				Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 			return *this;
 		}
 		ResDesc& misc_flags(EMiscFlags flags)

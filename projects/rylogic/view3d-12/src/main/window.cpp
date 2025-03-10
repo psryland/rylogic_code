@@ -653,6 +653,7 @@ namespace pr::rdr12
 		ResDesc rtdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, rt_clear.Format }, 1U, EUsage::RenderTarget)
 			.multisamp(ms)
 			.clear(rt_clear);
+		assert(rtdesc.Check());
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &rtdesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
 			&*rtdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_render_target.m_ptr));
@@ -663,6 +664,7 @@ namespace pr::rdr12
 		ResDesc dsdesc = ResDesc::Tex2D(Image{ size.x, size.y, nullptr, ds_clear.Format }, 1U, EUsage::DepthStencil | EUsage::DenyShaderResource)
 			.multisamp(ms)
 			.clear(ds_clear);
+		assert(dsdesc.Check());
 		Check(device->CreateCommittedResource(
 			&HeapProps::Default(), D3D12_HEAP_FLAG_NONE, &dsdesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
 			&*dsdesc.ClearValue, __uuidof(ID3D12Resource), (void**)&bb.m_depth_stencil.m_ptr));

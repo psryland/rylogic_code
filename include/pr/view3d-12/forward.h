@@ -39,6 +39,7 @@
 #include <intrin.h>
 #include <malloc.h>
 #include <sdkddkver.h>
+#include <winsock2.h>
 #include <windows.h>
 #include <dxgi.h>
 #include <dxgidebug.h>
@@ -109,6 +110,7 @@
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/meta/alignment_of.h"
+#include "pr/network/winsock.h"
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
