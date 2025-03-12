@@ -251,8 +251,9 @@ namespace pr::unittests
 					if (wordy) TestFramework::out() << std::format("{}{}", test.m_name, std::string(40 - strlen(test.m_name), '.'));
 
 					// Clean the test's temp dir
-					std::filesystem::remove_all(test.m_temp_dir);
-					std::filesystem::create_directories(test.m_temp_dir);
+					std::error_code err;
+					std::filesystem::remove_all(test.m_temp_dir, err);
+					std::filesystem::create_directories(test.m_temp_dir, err);
 			
 					// Run the test
 					auto t0 = high_resolution_clock::now();

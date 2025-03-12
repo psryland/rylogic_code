@@ -416,7 +416,7 @@ namespace pr::rdr12::ldraw
 			"}\n"
 			"*Cone [<name>] [<colour>]\n"
 			"{\n"
-			"	*Data {<tip_to_top> <tip_to_base> <solid_angle>}\n"
+			"	*Data {<solid_angle> <tip_to_top> <tip_to_base>}\n"
 			"	[*Facets {<layers>, <wedges>}]\n"
 			"	[*Scale {<sx> <sy>}]\n"
 			"	[@AxisId]\n"

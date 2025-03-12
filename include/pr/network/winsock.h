@@ -1,5 +1,5 @@
 ﻿//*****************************************
-// Winsock
+// WinSock
 //	Copyright (c) Rylogic 2019
 //*****************************************
 #pragma once
@@ -19,7 +19,7 @@
 
 namespace pr::network
 {
-	// This is a wrapper of the winsock dll. An instance of this object should have the scope of all network activity
+	// This is a wrapper of the 'winsock' dll. An instance of this object should have the scope of all network activity
 	struct Winsock :WSADATA
 	{
 		Winsock(int major = 2, int minor = 2) :WSADATA()
@@ -41,13 +41,19 @@ namespace pr::network
 	{
 		SOCKET m_socket;
 
+		Socket()
+			:m_socket(INVALID_SOCKET)
+		{}
+		Socket(SOCKET s)
+			:m_socket(s)
+		{}
 		Socket(int af, int type, int protocol)
 			:m_socket(::socket(af, type, protocol))
 		{}
 		Socket(Socket&& rhs) noexcept
-			:m_socket(rhs.m_socket)
+			:m_socket(INVALID_SOCKET)
 		{
-			rhs.m_socket = INVALID_SOCKET;
+			std::swap(m_socket, rhs.m_socket);
 		}
 		Socket(Socket const&) = delete;
 		Socket& operator =(Socket&& rhs) noexcept
@@ -58,15 +64,35 @@ namespace pr::network
 			return *this;
 		}
 		Socket& operator = (Socket const&) = delete;
+		Socket& operator=(nullptr_t)
+		{
+			this->~Socket();
+			m_socket = INVALID_SOCKET;
+			return *this;
+		}
 		~Socket()
 		{
 			if (m_socket != INVALID_SOCKET)
-				closesocket(m_socket);
-		}
-	
+			{
+				::shutdown(m_socket, SD_BOTH);
+				::closesocket(m_socket);
+			}
+		}	
 		operator SOCKET() const
 		{
 			return m_socket;
+		}
+		explicit operator bool() const
+		{
+			return m_socket != INVALID_SOCKET;
+		}
+		friend bool operator == (Socket const& lhs, nullptr_t)
+		{
+			return lhs.m_socket == INVALID_SOCKET;
+		}
+		friend bool operator != (Socket const& lhs, nullptr_t)
+		{
+			return !(lhs == nullptr);
 		}
 	};
 
@@ -195,7 +221,7 @@ namespace pr::network
 	struct AddrInfo
 	{
 		// Wraps a call to 'getaddrinfo' and 'freeaddrinfo'
-		// returning an iterable collection of address infos
+		// returning a collection of address infos
 		struct AddrIter
 		{
 			ADDRINFOA* m_ptr;
@@ -264,7 +290,7 @@ namespace pr::network
 	// 'service' can be a string representation of a port number or
 	// a service name like 'http', 'https', or something listed in
 	// %WINDIR%\system32\drivers\etc\services
-	inline SOCKADDR_IN GetAddress(std::string_view ip, std::string_view service)
+	inline sockaddr_in GetAddress(std::string_view ip, std::string_view service)
 	{
 		for (auto& i : AddrInfo(ip, service))
 		{
@@ -281,18 +307,34 @@ namespace pr::network
 	}
 
 	// Convert an ip and port to a socket address
-	inline SOCKADDR_IN GetAddress(std::string_view ip, uint16_t port)
+	inline sockaddr_in GetAddress(std::string_view ip, uint16_t port)
 	{
 		return GetAddress(ip, std::to_string(port));
 	}
 
 	// Get the address bound to 'socket'. This can be used when 'connect' is called without
 	// calling 'bind' to retrieve the local address assigned by the system.
-	inline sockaddr GetSockName(SOCKET socket)
+	template <typename SockAddrType = sockaddr_in>
+	inline SockAddrType GetSockName(SOCKET socket)
 	{
-		sockaddr addr;
+		SockAddrType addr;
 		int addr_size = sizeof(addr);
-		Check(::getsockname(socket, &addr, &addr_size));
+		Check(::getsockname(socket, reinterpret_cast<sockaddr*>(&addr), &addr_size));
+		Check(addr_size == sizeof(addr));
 		return addr;
 	}
+
+	// Return the IP address associated with a socket address
+	inline std::string GetIPAddress(sockaddr_in const& addr)
+	{
+		char ip[INET_ADDRSTRLEN];
+		return ::inet_ntop(AF_INET, &addr.sin_addr, ip, _countof(ip));
+	}
+
+	// Return the Port associated with a socket address
+	inline uint16_t GetPort(sockaddr_in const& addr)
+	{
+		return ntohs(addr.sin_port);
+	}
+
 }

@@ -35,6 +35,10 @@ namespace pr::rdr12::ldraw
 		{
 			traits<TOut>::write(out, { byte_ptr(str.data()), str.size() });
 		}
+		template <typename TOut> static void Append(TOut& out, std::string&& s)
+		{
+			Append(out, std::string_view{ s });
+		}
 		template <typename TOut> static void Append(TOut& out, char const* s)
 		{
 			Append(out, std::string_view{ s });
@@ -63,6 +67,10 @@ namespace pr::rdr12::ldraw
 		template <typename TOut> static void Append(TOut& out, uint32_t u)
 		{
 			traits<TOut>::write(out, { byte_ptr(&u), sizeof(u) });
+		}
+		template <typename TOut> static void Append(TOut& out, Colour32 c)
+		{
+			Append(out, c.argb);
 		}
 		template <typename TOut> static void Append(TOut& out, v2 v)
 		{
@@ -96,6 +104,22 @@ namespace pr::rdr12::ldraw
 		{
 			traits<TOut>::write(out, { byte_ptr(&m), sizeof(m) });
 		}
+		template <typename TOut> static void Append(TOut& out, EArrowType type)
+		{
+			Append(out, s_cast<int>(type));
+		}
+		template <typename TOut> static void Append(TOut& out, ETexAddrMode addr)
+		{
+			Append(out, s_cast<int>(addr));
+		}
+		template <typename TOut> static void Append(TOut& out, EFilter filter)
+		{
+			Append(out, s_cast<int>(filter));
+		}
+		template <typename TOut> static void Append(TOut& out, EPointStyle style)
+		{
+			Append(out, s_cast<int>(style));
+		}
 		template <typename TOut> static void Append(TOut& out, VariableInt var_int)
 		{
 			// Variable sized int, write 6 bits at a time: xx444444 33333322 22221111 11000000
@@ -125,15 +149,35 @@ namespace pr::rdr12::ldraw
 			if (s.m_size == 0) return;
 			Write(out, EKeyword::Size, s.m_size);
 		}
-		template <typename TOut> static void Append(TOut& out, Depth d)
+		template <typename TOut> static void Append(TOut& out, Size2 s)
 		{
-			if (d.m_depth == false) return;
-			Write(out, EKeyword::Depth);
+			if (s.m_size == v2::Zero()) return;
+			Write(out, EKeyword::Size, s.m_size);
 		}
 		template <typename TOut> static void Append(TOut& out, Width w)
 		{
 			if (w.m_width == 0) return;
 			Write(out, EKeyword::Width, w.m_width);
+		}
+		template <typename TOut> static void Append(TOut& out, Scale2 s)
+		{
+			if (s.m_scale == v2::One()) return;
+			Write(out, EKeyword::Scale, s.m_scale);
+		}
+		template <typename TOut> static void Append(TOut& out, Scale3 s)
+		{
+			if (s.m_scale == v3::One()) return;
+			Write(out, EKeyword::Scale, s.m_scale);
+		}
+		template <typename TOut> static void Append(TOut& out, PerItemColour c)
+		{
+			if (!c.m_per_item_colour) return;
+			Write(out, EKeyword::PerItemColour);
+		}
+		template <typename TOut> static void Append(TOut& out, Depth d)
+		{
+			if (d.m_depth == false) return;
+			Write(out, EKeyword::Depth);
 		}
 		template <typename TOut> static void Append(TOut& out, Wireframe w)
 		{
@@ -145,35 +189,14 @@ namespace pr::rdr12::ldraw
 			if (!s.m_solid) return;
 			Write(out, EKeyword::Solid);
 		}
+		template <typename TOut> static void Append(TOut& out, Alpha a)
+		{
+			if (!a.m_has_alpha) return;
+			Write(out, EKeyword::Alpha);
+		}
 		template <typename TOut> static void Append(TOut& out, AxisId id)
 		{
 			Write(out, EKeyword::AxisId, static_cast<int>(id));
-		}
-		template <typename TOut> static void Append(TOut& out, EArrowType ty)
-		{
-			switch (ty)
-			{
-				case EArrowType::Fwd:     Append(out, "Fwd");
-				case EArrowType::Back:    Append(out, "Back");
-				case EArrowType::FwdBack: Append(out, "FwdBack");
-				default: throw std::runtime_error("Unknown arrow type");
-			}
-		}
-		template <typename TOut> static void Append(TOut& out, PointStyle style)
-		{
-			switch (style.m_style)
-			{
-				case EPointStyle::Square:  return;
-				case EPointStyle::Circle:   Write(out, EKeyword::Style, "Circle");
-				case EPointStyle::Triangle: Write(out, EKeyword::Style, "Triangle");
-				case EPointStyle::Star:     Write(out, EKeyword::Style, "Star");
-				case EPointStyle::Annulus:  Write(out, EKeyword::Style, "Annulus");
-				default: throw std::runtime_error("Unknown arrow type");
-			}
-		}
-		template <typename TOut> static void Append(TOut& out, Colour32 c)
-		{
-			Append(out, c.argb);
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{
@@ -190,9 +213,9 @@ namespace pr::rdr12::ldraw
 
 			if (o2w.m_mat.rot == m3x4::Identity() && o2w.m_mat.pos.w == 1)
 				return Write(out, EKeyword::O2W, [&]
-				{
-					Write(out, EKeyword::Pos, o2w.m_mat.pos.xyz);
-				});
+					{
+						Write(out, EKeyword::Pos, o2w.m_mat.pos.xyz);
+					});
 
 			Write(out, EKeyword::O2W, [&]
 			{
@@ -211,7 +234,7 @@ namespace pr::rdr12::ldraw
 
 		// Write custom data within a section
 		template <typename TOut, std::invocable<> AddBodyFn>
-		static void Write(TOut& out, EKeyword keyword, AddBodyFn body_cb)
+		static void Write(TOut& out, EKeyword keyword, Name name, Col colour, AddBodyFn body_cb)
 		{
 			// Record the write pointer position
 			auto ofs = traits<TOut>::tellp(out);
@@ -220,6 +243,10 @@ namespace pr::rdr12::ldraw
 			SectionHeader header = { .m_keyword = keyword };
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) });
 
+			// Optional name/colour
+			Append(out, name);
+			Append(out, colour);
+
 			// Write the section body
 			body_cb();
 
@@ -227,12 +254,25 @@ namespace pr::rdr12::ldraw
 			header.m_size = s_cast<int>(traits<TOut>::tellp(out) - ofs - sizeof(header));
 			traits<TOut>::write(out, { byte_ptr(&header), sizeof(header) }, ofs);
 		}
+		template <typename TOut, std::invocable AddBodyFn>
+		static void Write(TOut& out, EKeyword keyword, AddBodyFn body_cb)
+		{
+			Write(out, keyword, {}, {}, body_cb);
+		}
 
 		// Write a single primitive type
 		template <typename TOut, typename... TItem> requires (!std::is_invocable_v<TItem> && ...)
+		static void Write(TOut& out, EKeyword keyword, Name name, Col colour, TItem&&... items)
+		{
+			return Write(out, keyword, name, colour, [&]
+			{
+				(Append(out, std::forward<TItem>(items)), ...);
+			});
+		}
+		template <typename TOut, typename... TItem> requires (!std::is_invocable_v<TItem> && ...)
 		static void Write(TOut& out, EKeyword keyword, TItem&&... items)
 		{
-			return Write(out, keyword, [&]
+			return Write(out, keyword, {}, {}, [&]
 			{
 				(Append(out, std::forward<TItem>(items)), ...);
 			});
@@ -314,11 +354,11 @@ namespace pr::rdr12::ldraw
 			auto& parent = m_section[m_section.size() - 2];
 
 			// Seek to the end of the current section.
-			m_src.seekg(last.m_end - m_pos, std::ios::cur);
+			m_src.seekg(last.m_end - m_pos, std::ios::cur).peek(); // Peek to test for EOF
 			m_pos = last.m_end;
 
 			// If this is the end of the parent section then there are no more sections at this level.
-			if (m_pos == parent.m_end)
+			if (m_pos == parent.m_end || m_src.eof())
 				return false;
 
 			// Read the next section header at this level

@@ -118,6 +118,9 @@
     <Filter Include="src\compute\fluid_simulation">
       <UniqueIdentifier>{177ba44e-8001-4c51-a5bc-0cc299bbec5f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\streaming">
+      <UniqueIdentifier>{5c34bfa5-14bf-4f53-adaa-ae34e4b0d3f3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\renderer.cpp">
@@ -254,6 +257,12 @@
     </ClCompile>
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp">
       <Filter>src\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="src\streaming\stream_sources.cpp">
+      <Filter>src\streaming</Filter>
+    </ClCompile>
+    <ClCompile Include="src\streaming\stream_source.cpp">
+      <Filter>src\streaming</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -533,9 +542,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_arrow_head.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_sources.h">
-      <Filter>src\ldraw</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
@@ -662,7 +668,16 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h">
+    <ClInclude Include="src\streaming\stream_sources.h">
+      <Filter>src\streaming</Filter>
+    </ClInclude>
+    <ClInclude Include="src\streaming\stream_source.h">
+      <Filter>src\streaming</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\ldraw_sources.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
@@ -754,6 +769,9 @@
       <Filter>src\compute\particle_collision</Filter>
     </None>
     <None Include="src\ldraw\ldraw_demo_scene.ldr">
+      <Filter>src\ldraw</Filter>
+    </None>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py">
       <Filter>src\ldraw</Filter>
     </None>
   </ItemGroup>

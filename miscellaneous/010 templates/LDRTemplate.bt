@@ -18,6 +18,9 @@ uint HashICT(const char str[])
 	return h;
 }
 
+struct float2 { float x, y; };
+struct float3 { float x, y, z; };
+struct float4 { float x, y, z, w; };
 
 enum <uint> EKeyword
 {
@@ -191,7 +194,24 @@ struct DataSection
 	int m_size;
 
 	// The payload of this section
-	byte m_data[m_size];
+    switch (m_keyword)
+    {
+        case Name:
+        {
+            char m_name[m_size];
+            break;
+        }
+        case Colour:
+        {
+            uint32 m_colour <format=hex>;
+            break;
+        }
+        default:
+    	{
+            byte m_data[m_size];
+            break;
+        }
+    }
 
 	FSeek(fpos + 8 + m_size);
 };

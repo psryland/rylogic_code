@@ -18,6 +18,7 @@ namespace pr::rdr12
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
 		, m_wnd_cont()
 		, m_sources(m_rdr)
+		, m_streams(m_rdr)
 		, m_inits()
 		, m_mutex()
 		, ReportError()
@@ -169,6 +170,21 @@ namespace pr::rdr12
 	}
 	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+	
+	// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
+	Guid Context::LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add)
+	{
+		return m_sources.AddBinary(data, ScriptSources::EReason::NewData, context_id, on_add);
+	}
+
+	// Enable/Disable streaming script sources.
+	void Context::StreamingEnable(bool enabled, uint16_t port)
+	{
+		if (enabled)
+			m_streams.AllowConnections(port);
+		else
+			m_streams.StopConnections();
+	}
 
 	// Create an object from geometry
 	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
@@ -245,7 +261,7 @@ namespace pr::rdr12
 		auto& ind = indices;
 
 		// Create the model
-		auto cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
+		MeshCreationData cdata = MeshCreationData().verts(pos).indices(ind).nuggets(ngt).colours(col).normals(nrm).tex(tex);
 		auto obj = Create(m_rdr, ldraw::ELdrObject::Custom, cdata, context_id);
 
 		// Add to the sources

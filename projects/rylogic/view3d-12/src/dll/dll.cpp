@@ -25,9 +25,10 @@
 #include "pr/view3d-12/utility/utility.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_gizmo.h"
-#include "pr/view3d-12/ldraw/ldraw_sources.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "view3d-12/src/ldraw/ldraw_sources.h"
+#include "view3d-12/src/streaming/stream_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
@@ -276,9 +277,13 @@ VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port)
 	try
 	{
 		DllLockGuard;
-		return Dll().StreamingEnable(enable != 0, port);
+
+		if ((port & 0xFFFF) != port)
+			throw std::runtime_error("Invalid port for ldraw streaming");
+
+		return Dll().StreamingEnable(enable != 0, s_cast<uint16_t>(port));
 	}
-	CatchAndReport(View3D_CheckForChangedSources,,);
+	CatchAndReport(View3D_StreamingEnable,,);
 }
 
 // Windows ********************************
@@ -2911,14 +2916,14 @@ VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(view3d::Window window
 }
 
 // Create/Delete the demo scene in the given window
-VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
+VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(view3d::Window window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		// Get the string of all ldr objects
-		auto scene = rdr12::ldraw::CreateDemoScene();
+		auto scene = rdr12::ldraw::CreateDemoSceneText();
 
 		DllLockGuard;
 
@@ -2930,12 +2935,37 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(view3d::Window window)
 			else
 				window->Add(&id, 1, 0);
 		});
-
-		// Position the camera to look at the scene
-		//todo View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);
 		return Context::GuidDemoSceneObjects;
 	}
-	CatchAndReport(View3D_DemoSceneCreate, window, Context::GuidDemoSceneObjects);
+	CatchAndReport(View3D_DemoSceneCreateText, window, Context::GuidDemoSceneObjects);
+}
+VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// Get the string of all ldr objects
+		auto scene = rdr12::ldraw::CreateDemoSceneBinary();
+		#if 1
+		{
+			std::ofstream file("E:/Dump/ldraw/demo_scene_binary.bdr", std::ios::binary);
+			file.write(scene.data<char>(), scene.size<char>());
+		}
+		#endif
+
+		DllLockGuard;
+
+		Dll().LoadScriptBinary(scene, &Context::GuidDemoSceneObjects, [=](Guid const& id, bool before)
+		{
+			if (before)
+				window->Remove(&id, 1, 0);
+			else
+				window->Add(&id, 1, 0);
+		});
+		return Context::GuidDemoSceneObjects;
+	}
+	CatchAndReport(View3D_DemoSceneCreateBinary, window, Context::GuidDemoSceneObjects);
 }
 VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 {
@@ -2956,7 +2986,7 @@ VIEW3D_API void __stdcall View3D_DemoScriptShow(view3d::Window window)
 
 		DllLockGuard;
 		
-		auto example = rdr12::ldraw::CreateDemoScene();
+		auto example = rdr12::ldraw::CreateDemoSceneText();
 		window->EditorUI().Show();
 		window->EditorUI().Text(example.c_str());
 	}
@@ -2969,7 +2999,7 @@ VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
 	try
 	{
 		DllLockGuard;
-		auto example = Widen(rdr12::ldraw::CreateDemoScene());
+		auto example = Widen(rdr12::ldraw::CreateDemoSceneText());
 		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
 	}
 	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());

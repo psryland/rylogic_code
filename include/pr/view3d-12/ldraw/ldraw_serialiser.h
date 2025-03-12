@@ -72,6 +72,13 @@ namespace pr::rdr12::ldraw
 		Size(float size) :m_size(size) {}
 		Size(int size) :m_size(float(size)) {}
 	};
+	struct Size2
+	{
+		v2 m_size;
+		Size2() :m_size() {}
+		Size2(v2 size) :m_size(size) {}
+		Size2(iv2 size) :m_size(float(size.x), float(size.y)) {}
+	};
 	struct Width
 	{
 		float m_width;
@@ -79,11 +86,36 @@ namespace pr::rdr12::ldraw
 		Width(float w) :m_width(w) {}
 		Width(int w) :m_width(float(w)) {}
 	};
+	struct Scale2
+	{
+		v2 m_scale;
+		Scale2() : m_scale(v2::One()) {}
+		Scale2(v2 scale) : m_scale(scale) {}
+	};
+	struct Scale3
+	{
+		v3 m_scale;
+		Scale3() : m_scale(v3::One()) {}
+		Scale3(v3 scale) : m_scale(scale) {}
+	};
+	struct PerItemColour
+	{
+		bool m_per_item_colour;
+		PerItemColour() : m_per_item_colour() {}
+		PerItemColour(bool has_colours) : m_per_item_colour(has_colours) {}
+		operator bool() const { return m_per_item_colour; }
+	};
 	struct Wireframe
 	{
 		bool m_wire;
 		Wireframe() :m_wire(false) {}
 		Wireframe(bool w) :m_wire(w) {}
+	};
+	struct Alpha
+	{
+		bool m_has_alpha;
+		Alpha() :m_has_alpha(false) {}
+		Alpha(bool a) : m_has_alpha(a) {}
 	};
 	struct Solid
 	{
@@ -96,12 +128,6 @@ namespace pr::rdr12::ldraw
 		bool m_depth;
 		Depth() :m_depth(false) {}
 		Depth(bool d) : m_depth(d) {}
-	};
-	struct PointStyle
-	{
-		EPointStyle m_style;
-		PointStyle() :m_style() {}
-		PointStyle(EPointStyle s) : m_style(s) {}
 	};
 	struct VariableInt
 	{

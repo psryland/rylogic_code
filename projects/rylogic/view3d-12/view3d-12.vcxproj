@@ -106,6 +106,8 @@
 		<ClCompile Include="src\shaders\shader_show_normals.cpp" />
 		<ClCompile Include="src\shaders\shader_smap.cpp" />
 		<ClCompile Include="src\shaders\shader_thick_line.cpp" />
+		<ClCompile Include="src\streaming\stream_source.cpp" />
+		<ClCompile Include="src\streaming\stream_sources.cpp" />
 		<ClCompile Include="src\texture\d2d_context.cpp" />
 		<ClCompile Include="src\texture\texture_2d.cpp" />
 		<ClCompile Include="src\texture\texture_base.cpp" />
@@ -252,13 +254,17 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
+    <ClInclude Include="src\ldraw\ldraw_sources.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />
 		<ClInclude Include="src\shaders\common.h" />
+		<ClInclude Include="src\streaming\stream_source.h" />
+		<ClInclude Include="src\streaming\stream_sources.h" />
 	</ItemGroup>
 	<ItemGroup>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py" />
 		<None Include="src\shaders\hlsl\types.hlsli" />
 		<None Include="src\shaders\hlsl\common\functions.hlsli" />
 		<None Include="src\shaders\hlsl\common\geometry.hlsli" />

@@ -222,16 +222,21 @@ namespace pr::rdr12::ldraw
 		// Add an object created externally
 		void Add(LdrObjectPtr object, EReason reason = EReason::NewData);
 
-		// Parse file containing ldr script.
+		// Parse file containing ldraw script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		Guid AddFile(std::filesystem::path script, EEncoding enc, EReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
 
-		// Parse a string containing ldr script.
+		// Parse a string containing ldraw script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		template <typename Char>
 		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, EReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
+
+		// Parse binary data containing ldraw script
+		// This function can be called from any thread and may be called concurrently by multiple threads.
+		// Returns the GUID of the context that the objects were added to.
+		Guid AddBinary(std::span<std::byte const> data, EReason reason, Guid const* context_id, OnAddCB on_add);
 
 		// Create a gizmo object and add it to the gizmo collection
 		LdrGizmo* CreateGizmo(EGizmoMode mode, m4x4 const& o2w);

@@ -164,7 +164,7 @@ namespace pr::rdr12::ldraw
 		// Read a string from the current section
 		template <typename StrType> StrType String(char escape_char = 0)
 		{
-			auto s = StringImpl(escape_char);
+			auto s = str::Quotes(StringImpl(escape_char), false);
 			if constexpr (std::is_same_v<StrType, string32>)
 				return s;
 			else
@@ -346,7 +346,8 @@ namespace pr::rdr12::ldraw
 	void Remove(ObjectCont& objects, LdrObject* obj);
 
 	// Generate a scene that demos the supported object types and modifiers.
-	std::string CreateDemoScene();
+	std::string CreateDemoSceneText();
+	pr::byte_data<> CreateDemoSceneBinary();
 
 	// Return the auto completion templates
 	std::string AutoCompleteTemplates();

@@ -1886,7 +1886,8 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
 
 		// Create/Delete the demo scene in the given window
-		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreate(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateText(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateBinary(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_DemoSceneDelete();
 		
 		// Show a window containing the demo script

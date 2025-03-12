@@ -173,7 +173,7 @@ namespace pr::rdr12::ldraw
 		x(XColumn           ,= HashI("XColumn"           ))\
 		x(YAxis             ,= HashI("YAxis"             ))\
 		x(ZAxis             ,= HashI("ZAxis"             ))
-	PR_DEFINE_ENUM2(EKeyword , PR_ENUM_LDRAW_KEYWORDS);
+	PR_DEFINE_ENUM2_BASE(EKeyword , PR_ENUM_LDRAW_KEYWORDS, int);
 	#pragma endregion
 
 	// An enum of just the object types
@@ -217,7 +217,7 @@ namespace pr::rdr12::ldraw
 		x(Triangle   ,= EKeyword::Triangle   )\
 		x(Tube       ,= EKeyword::Tube       )\
 		x(Unknown    ,= EKeyword::Unknown    )
-	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM_LDRAW_OBJECTS);
+	PR_DEFINE_ENUM2_BASE(ELdrObject, PR_ENUM_LDRAW_OBJECTS, int);
 	#pragma endregion
 
 	// Camera fields

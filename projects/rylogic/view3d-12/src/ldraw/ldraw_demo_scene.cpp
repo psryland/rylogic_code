@@ -2,12 +2,13 @@
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
-#include <string>
+#include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/ldraw/ldraw_helper.h"
 
 namespace pr::rdr12::ldraw
 {
 	// Generate a scene that demos the supported object types and modifiers.
-	std::string CreateDemoScene()
+	std::string CreateDemoSceneText()
 	{
 		std::string str;
 		str.reserve(4096);
@@ -119,7 +120,7 @@ namespace pr::rdr12::ldraw
 			"// These modifiers can be applied to any object (except where noted).\n"
 			"*Cone modifiers_example 80FFFFFF\n"
 			"{\n"
-			"	*Data {2 0 55}             // See *Cone example below for parameter meaning\n"
+			"	*Data {55 0 2}             // See *Cone example below for parameter meaning\n"
 			"	*AxisId {1}                // Axis to align the cone to. One of: X = \\xc2\\xb1\"\"1, Y = \\xc2\\xb1\"\"2, Z = \\xc2\\xb1\"\"3\n"
 			"	*Colour {FFFF00FF}         // Override the base colour of the model\n"
 			"	*ColourMask {FF000000}     // applies: 'child.colour = (obj.base_colour & mask) | (child.base_colour & ~mask)' to all children recursively\n"
@@ -398,21 +399,21 @@ namespace pr::rdr12::ldraw
 			"	*Data\n"
 			"	{\n"
 			"		// {x y z, [colour]} point positions\n"
-			"		-0.32182515 -0.11282351 -0.33979280 1 FF8DFD8F\n"
-			"		-0.09884672 +0.20496936 -0.11294128 1 FF84BDF2\n"
-			"		+0.32952994 +0.12638773 -0.16279069 1 FFA1B6C5\n"
-			"		-0.28267866 +0.12046398 +0.37289724 1 FFB3DFE2\n"
-			"		+0.07734887 -0.30069580 +0.15674202 1 FFFCE3E9\n"
-			"		+0.14382900 +0.27675366 -0.35658675 1 FFE09789\n"
-			"		+0.29473856 -0.11315139 +0.27820430 1 FF90D0C8\n"
-			"		-0.04522936 -0.41357175 +0.00881479 1 FFC283AF\n"
-			"		+0.28132004 +0.22615014 +0.31323278 1 FFCAA0EA\n"
-			"		-0.09371998 +0.09980434 +0.18248796 1 FFE7AF98\n"
-			"		-0.02596593 +0.18868162 -0.19324471 1 FFD7D8DB\n"
-			"		+0.36394337 -0.21930681 -0.05467778 1 FFF4B2AC\n"
-			"		+0.14113660 +0.45059928 +0.13722318 1 FFCED899\n"
-			"		+0.18176337 -0.24681160 -0.12977648 1 FFA7D8AE\n"
-			"		+0.38887858 +0.24615003 +0.06563436 1 FFB9BA96\n"
+			"		-0.32182515 -0.11282351 -0.33979280 FF8DFD8F\n"
+			"		-0.09884672 +0.20496936 -0.11294128 FF84BDF2\n"
+			"		+0.32952994 +0.12638773 -0.16279069 FFA1B6C5\n"
+			"		-0.28267866 +0.12046398 +0.37289724 FFB3DFE2\n"
+			"		+0.07734887 -0.30069580 +0.15674202 FFFCE3E9\n"
+			"		+0.14382900 +0.27675366 -0.35658675 FFE09789\n"
+			"		+0.29473856 -0.11315139 +0.27820430 FF90D0C8\n"
+			"		-0.04522936 -0.41357175 +0.00881479 FFC283AF\n"
+			"		+0.28132004 +0.22615014 +0.31323278 FFCAA0EA\n"
+			"		-0.09371998 +0.09980434 +0.18248796 FFE7AF98\n"
+			"		-0.02596593 +0.18868162 -0.19324471 FFD7D8DB\n"
+			"		+0.36394337 -0.21930681 -0.05467778 FFF4B2AC\n"
+			"		+0.14113660 +0.45059928 +0.13722318 FFCED899\n"
+			"		+0.18176337 -0.24681160 -0.12977648 FFA7D8AE\n"
+			"		+0.38887858 +0.24615003 +0.06563436 FFB9BA96\n"
 			"	}\n"
 			"	*Size {5 5}             // Optional. {width, [height]} Specify a size for the point\n"
 			"	*Style {Circle}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'\n"
@@ -817,40 +818,35 @@ namespace pr::rdr12::ldraw
 			"	*o2w{*pos{-10 6.2 8}}\n"
 			"}\n"
 			"\n"
-			"// A cylinder given by axis number, height, and radius\n"
-			"*Group cylinder\n"
+			"// A cylinder given by height, and radii\n"
+			"*Cylinder cylinder\n"
 			"{\n"
-			"	*Cylinder\n"
-			"	{\n"
-			"		*Data {2 0.5}                      // {height, radius}\n"
-			"		*AxisId {2}                        // Optional. Major axis: \\xc2\\xb1\"\"1 = \\xc2\\xb1\"\"x, \\xc2\\xb1\"\"2 = \\xc2\\xb1\"\"y, \\xc2\\xb1\"\"3 = \\xc2\\xb1\"\"z (default +3)\n"
-			"		*Facets {3 50}                     // Optional. layers, wedges. controls the faceting of the cylinder\n"
-			"		*Texture {*FilePath {\"#checker3\"}} // Optional texture\n"
-			"		*RandColour {}\n"
-			"		*o2w{*euler{20 0 0}}\n"
-			"	}\n"
+			"	*Data {2 0.5}                      // {height, radius}\n"
+			"	*AxisId {2}                        // Optional. Major axis: \\xc2\\xb1\"\"1 = \\xc2\\xb1\"\"x, \\xc2\\xb1\"\"2 = \\xc2\\xb1\"\"y, \\xc2\\xb1\"\"3 = \\xc2\\xb1\"\"z (default +3)\n"
+			"	*Facets {3 50}                     // Optional. layers, wedges. controls the faceting of the cylinder\n"
+			"	*Scale {1 1}                       // Optional. X,Y scale factors for creating ovoid cylinders\n"
+			"	*Texture {*FilePath {\"#checker3\"}} // Optional texture\n"
+			"	*RandColour {}\n"
 			"	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}\n"
-			"	*o2w{*pos{-14 1.1 10}}\n"
+			"	*o2w{*euler{20 0 0} *pos{-14 1.1 10}}\n"
 			"}\n"
-			"*Group cylinder2\n"
+			"*Cylinder cone\n"
 			"{\n"
-			"	*Cylinder\n"
-			"	{\n"
-			"		{2 0.5 0}                          // {height, base radius, tip radius}.\n"
-			"		*AxisId {2}                        // Optional. Major axis: \\xc2\\xb1\"\"1 = \\xc2\\xb1\"\"x, \\xc2\\xb1\"\"2 = \\xc2\\xb1\"\"y, \\xc2\\xb1\"\"3 = \\xc2\\xb1\"\"z (default +3)\n"
-			"		*Facets {3 50}                     // Optional. layers, wedges. controls the faceting of the cylinder\n"
-			"		*Texture {*FilePath {\"#checker3\"}} // Optional texture\n"
-			"		*RandColour {}\n"
-			"		*o2w{*euler{-20 0 0}}\n"
-			"	}\n"
+			"	{2 0.5 0}                          // {height, base radius, tip radius}.\n"
+			"	*AxisId {2}                        // Optional. Major axis: \\xc2\\xb1\"\"1 = \\xc2\\xb1\"\"x, \\xc2\\xb1\"\"2 = \\xc2\\xb1\"\"y, \\xc2\\xb1\"\"3 = \\xc2\\xb1\"\"z (default +3)\n"
+			"	*Facets {3 50}                     // Optional. layers, wedges. controls the faceting of the cylinder\n"
+			"	*Scale {0.9 1.1}                   // Optional. X,Y scale factors for creating ovoid cylinders\n"
+			"	*Texture {*FilePath {\"#checker3\"}} // Optional texture\n"
+			"	*RandColour {}\n"
 			"	*Animation {*Style {Continuous} *Period {1.6} *AngVelocity {0 +1 0}}\n"
-			"	*o2w{*pos{-14 3.3 10}}\n"
+			"	*o2w{*euler{-20 0 0} *pos{-14 3.3 10}}\n"
 			"}\n"
 			"\n"
-			"// A cone given by axis number, two heights, and solid angle\n"
+			"// A cone given by a solid angle and two heights\n"
 			"*Cone cone FF00FFFF\n"
 			"{\n"
-			"	*Data {0.3 2.0 25}                 // {tip-to-top distance, tip-to-base distance, solid angle(deg)}.\n"
+			"	// Note this is similar to a cylinder, but described using solid angle and distances from the cone tip.\n"
+			"	*Data {25 0.3 2.0}                 // {solid angle(deg), tip-to-top distance, tip-to-base distance}.\n"
 			"	*AxisId {2}                        // Optional. Major axis: \\xc2\\xb1\"\"1 = \\xc2\\xb1\"\"x, \\xc2\\xb1\"\"2 = \\xc2\\xb1\"\"y, \\xc2\\xb1\"\"3 = \\xc2\\xb1\"\"z (default +3)\n"
 			"	*Facets {3,50}                     // Optional. layers, wedges. controls the faceting of the cylinder\n"
 			"	*Scale {1 1}                       // Optional. X,Y scale factors\n"
@@ -1232,5 +1228,57 @@ namespace pr::rdr12::ldraw
 		);
 
 		return str;
+	}
+
+	// Generate a binary scene that demos the supported object types and modifiers
+	pr::byte_data<> CreateDemoSceneBinary()
+	{
+		ldraw::Builder ldr;
+
+		// Minimal example
+		{
+			ldr.Box("minimal_example", 0xFFFF00FF)
+				.dim(1);
+		}
+
+		// Transforms example
+		{
+			ldr.Box("transforms_example", 0xFF00FF00)
+				.dim(1, 2, 1)
+				.ori(v4::YAxis(), AxisId::PosZ)
+				.euler(55.0f, 30.0f, 60.0f)
+				.pos(-2.5f, 4.0f, -0.8f)
+				;
+		}
+
+		// Modifiers example
+		{
+			ldr.Cone("modifiers_example", 0x80FFFFFF)
+				.angle(55.0f).height(2)
+				.euler(0, 0, 90)
+				.pos(15, 7, -10);
+		}
+
+		// An "infinite" plane.
+		{
+			ldr.Plane("ground", 0xFFFFE8A0)
+				.wh(40, 40)
+				.axis(AxisId::PosY)
+				.texture()
+					.path("#checker3")
+					.addr(ETexAddrMode::Wrap, ETexAddrMode::Wrap)
+					.t2s(m4x4::Scale(10, 10, 1, v4::Origin()))
+				//*Texture      // Optional. Planes can have a texture applied. See 'object_modifiers' example above
+				//{
+				//	*FilePath {"#checker3"}
+				//	*Addr {Wrap Wrap}
+				//	*o2w {*Scale{10 10 1}}
+				//}
+				;
+		}
+
+
+
+		return ldr.ToBinary();
 	}
 }

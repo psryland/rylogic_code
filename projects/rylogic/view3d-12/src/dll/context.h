@@ -5,7 +5,8 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
-#include "pr/view3d-12/ldraw/ldraw_sources.h"
+#include "view3d-12/src/ldraw/ldraw_sources.h"
+#include "view3d-12/src/streaming/stream_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -15,13 +16,15 @@ namespace pr::rdr12
 		using InitSet = std::unordered_set<view3d::DllHandle>;
 		using WindowCont = std::vector<V3dWindow*>;
 		using ScriptSources = pr::rdr12::ldraw::ScriptSources;
+		using StreamSources = pr::rdr12::StreamSources;
 
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
-		Renderer             m_rdr;             // The renderer
-		WindowCont           m_wnd_cont;        // The created windows
-		ScriptSources        m_sources;         // A container of Ldr objects and a file watcher
-		InitSet              m_inits;           // A unique id assigned to each Initialise call
+		Renderer             m_rdr;      // The renderer
+		WindowCont           m_wnd_cont; // The created windows
+		ScriptSources        m_sources;  // A container of Ldr objects and a file watcher
+		StreamSources        m_streams;  // A container of streaming connections
+		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;
 
 		Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb);
@@ -51,12 +54,18 @@ namespace pr::rdr12
 		// Event raised when the script sources are updated
 		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> OnSourcesChanged;
 
-		// Load/Add ldr objects from a script file. Returns the Guid of the context that the objects were added to.
+		// Load/Add ldraw objects from a script file. Returns the Guid of the context that the objects were added to.
 		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 
-		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
+		// Load/Add ldraw objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		template <typename Char>
 		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+
+		// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
+		Guid LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add);
+
+		// Enable/Disable streaming script sources.
+		void StreamingEnable(bool enabled, uint16_t port);
 
 		// Create an object from geometry
 		LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);

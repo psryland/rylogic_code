@@ -68,6 +68,7 @@
 #include "pr/common/guid.h"
 #include "pr/common/hash.h"
 #include "pr/common/hresult.h"
+#include "pr/common/memstream.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/range.h"
 #include "pr/common/refcount.h"
@@ -111,6 +112,7 @@
 #include "pr/maths/maths.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/network/winsock.h"
+#include "pr/network/sockets.h"
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
@@ -129,6 +131,7 @@ namespace pr::rdr12
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<int64_t>;
 	using Handle = pr::win32::Handle;
+	using Winsock = pr::network::Winsock;
 	using HashValue32 = pr::hash::HashValue32;
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
@@ -344,7 +347,7 @@ namespace pr::rdr12
 		x(Wireframe ,= D3D12_FILL_MODE::D3D12_FILL_MODE_WIREFRAME)\
 		x(Solid     ,= D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID)\
 		x(SolidWire ,= 4)
-	PR_DEFINE_ENUM2(EFillMode , PR_ENUM);
+	PR_DEFINE_ENUM2(EFillMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// ECullMode

@@ -190,6 +190,14 @@ namespace pr::rdr12
 		Check(res->GetSharedHandle(&handle));
 		return handle;
 	}
+	
+	// Get the DXGI surface within this texture
+	D3DPtr<IDXGISurface> TextureBase::GetSurface()
+	{
+		D3DPtr<IDXGISurface> surf;
+		Check(m_res->QueryInterface(&surf.m_ptr));
+		return surf;
+	}
 
 	// Ref counting clean up function
 	void TextureBase::RefCountZero(RefCounted<TextureBase>* doomed)

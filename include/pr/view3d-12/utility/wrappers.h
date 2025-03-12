@@ -614,9 +614,9 @@ namespace pr::rdr12
 			SampleDesc = sampling;
 			return *this;
 		}
-		ResDesc& heap_flags(D3D12_HEAP_FLAGS flags)
+		ResDesc& heap_flags(D3D12_HEAP_FLAGS flags, bool add = true)
 		{
-			HeapFlags = flags;
+			HeapFlags = SetBits(HeapFlags, flags, add);
 			return *this;
 		}
 		ResDesc& layout(D3D12_TEXTURE_LAYOUT tex_layout)

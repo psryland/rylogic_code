@@ -759,193 +759,6 @@ namespace pr::rdr12::ldraw
 			}
 		};
 
-		// Support for point sprites
-		struct PointSprite
-		{
-			enum class EStyle
-			{
-				Square,
-				Circle,
-				Triangle,
-				Star,
-				Annulus,
-			};
-
-			v2     m_point_size;
-			EStyle m_style;
-			bool   m_depth;
-
-			PointSprite()
-				: m_point_size()
-				, m_style(EStyle::Square)
-				, m_depth(false)
-			{}
-			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
-			{
-				switch (kw)
-				{
-					case EKeyword::Size:
-					{
-						m_point_size = reader.Vector2f();
-						return true;
-					}
-					case EKeyword::Style:
-					{
-						auto ident = reader.Identifier<string32>();
-						switch (HashI(ident.c_str()))
-						{
-							case HashI("square"):   m_style = EStyle::Square; break;
-							case HashI("circle"):   m_style = EStyle::Circle; break;
-							case HashI("triangle"): m_style = EStyle::Triangle; break;
-							case HashI("star"):     m_style = EStyle::Star; break;
-							case HashI("annulus"):  m_style = EStyle::Annulus; break;
-							default: pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("'{}' is not a valid point sprite style", ident)); break;
-						}
-						return true;
-					}
-					case EKeyword::Depth:
-					{
-						m_depth = true;
-						return true;
-					}
-					default:
-					{
-						return false;
-					}
-				}
-			}
-			
-			template <typename TDrawOnIt>
-			Texture2DPtr CreatePointStyleTexture(ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
-			{
-				// Create a texture large enough to contain the text, and render the text into it
-				//'SamDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
-				auto tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget);
-				auto desc = TextureDesc(id, tdesc).name(name);
-				auto tex = pp.m_factory.CreateTexture2D(desc);
-
-				(void)draw;
-				#if 0 //todo
-				// Get a D2D device context to draw on
-				auto dc = tex->GetD2DeviceContext();
-
-				// Create the brushes
-				D3DPtr<ID2D1SolidColorBrush> fr_brush;
-				D3DPtr<ID2D1SolidColorBrush> bk_brush;
-				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
-				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
-				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
-
-				// Draw the spot
-				dc->BeginDraw();
-				dc->Clear(&bk);
-				draw(dc, fr_brush.get(), bk_brush.get());
-				pr::Check(dc->EndDraw());
-				#endif
-				return tex;
-			}
-			Texture2DPtr PointStyleTexture(ParseParams& pp)
-			{
-				EStyle style = m_style;
-				iv2 size = To<iv2>(m_point_size);
-				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
-				switch (style)
-				{
-					case EStyle::Square:
-					{
-						// No texture needed for square style
-						return nullptr;
-					}
-					case EStyle::Circle:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = pr::hash::HashArgs("PointStyleCircle", sz);
-						return store.FindTexture<Texture2D>(id, [&]
-						{
-							auto w0 = sz.x * 0.5f;
-							auto h0 = sz.y * 0.5f;
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({ {w0, h0}, w0, h0 }, fr); });
-						});
-					}
-					case EStyle::Triangle:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = pr::hash::HashArgs("PointStyleTriangle", sz);
-						return store.FindTexture<Texture2D>(id, [&]
-						{
-							D3DPtr<ID2D1PathGeometry> geom;
-							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Check(geom->Open(&sink.m_ptr));
-
-							auto w0 = 1.0f * sz.x;
-							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
-							auto h1 = 0.5f * (sz.y - h0);
-
-							sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
-							sink->AddLine({ 0.0f * w0, h1 });
-							sink->AddLine({ 0.5f * w0, h0 + h1 });
-							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Check(sink->Close());
-
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-						});
-					}
-					case EStyle::Star:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = pr::hash::HashArgs("PointStyleStar", sz);
-						return store.FindTexture<Texture2D>(id, [&]
-						{
-							D3DPtr<ID2D1PathGeometry> geom;
-							D3DPtr<ID2D1GeometrySink> sink;
-							pr::Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-							pr::Check(geom->Open(&sink.m_ptr));
-
-							auto w0 = 1.0f * sz.x;
-							auto h0 = 1.0f * sz.y;
-
-							sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
-							sink->AddLine({ 0.4f * w0, 0.4f * h0 });
-							sink->AddLine({ 0.0f * w0, 0.5f * h0 });
-							sink->AddLine({ 0.4f * w0, 0.6f * h0 });
-							sink->AddLine({ 0.5f * w0, 1.0f * h0 });
-							sink->AddLine({ 0.6f * w0, 0.6f * h0 });
-							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
-							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
-							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-							pr::Check(sink->Close());
-
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
-						});
-					}
-					case EStyle::Annulus:
-					{
-						ResourceStore::Access store(pp.m_rdr);
-						auto id = pr::hash::HashArgs("PointStyleAnnulus", sz);
-						return store.FindTexture<Texture2D>(id, [&]
-						{
-							auto w0 = sz.x * 0.5f;
-							auto h0 = sz.y * 0.5f;
-							auto w1 = sz.x * 0.4f;
-							auto h1 = sz.y * 0.4f;
-							return CreatePointStyleTexture(pp, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
-							{
-								dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-								dc->FillEllipse({ {w0, h0}, w0, h0 }, fr);
-								dc->FillEllipse({ {w0, h0}, w1, h1 }, bk);
-							});
-						});
-					}
-					default:
-					{
-						throw std::runtime_error("Unknown point style");
-					}
-				}
-			}
-		};
-
 		// Support baked in transforms
 		struct BakeTransform
 		{
@@ -1137,6 +950,191 @@ namespace pr::rdr12::ldraw
 				{
 					nug.m_topo = is_line_list ? ETopo::LineList : ETopo::LineStripAdj;
 					nug.m_shaders.push_back({ shdr, ERenderStep::RenderForward });
+				}
+			}
+		};
+
+		// Support for point sprites
+		struct PointSprite
+		{
+			v2 m_point_size;
+			EPointStyle m_style;
+			bool m_depth;
+
+			PointSprite()
+				: m_point_size()
+				, m_style(EPointStyle::Square)
+				, m_depth(false)
+			{}
+			bool ParseKeyword(IReader& reader, ParseParams& pp, EKeyword kw)
+			{
+				switch (kw)
+				{
+					case EKeyword::Size:
+					{
+						m_point_size = reader.Vector2f();
+						return true;
+					}
+					case EKeyword::Style:
+					{
+						auto ident = reader.Identifier<string32>();
+						switch (HashI(ident.c_str()))
+						{
+							case HashI("Square"):   m_style = EPointStyle::Square; break;
+							case HashI("Circle"):   m_style = EPointStyle::Circle; break;
+							case HashI("Triangle"): m_style = EPointStyle::Triangle; break;
+							case HashI("Star"):     m_style = EPointStyle::Star; break;
+							case HashI("Annulus"):  m_style = EPointStyle::Annulus; break;
+							default: pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), std::format("'{}' is not a valid point sprite style", ident)); break;
+						}
+						return true;
+					}
+					case EKeyword::Depth:
+					{
+						m_depth = true;
+						return true;
+					}
+					default:
+					{
+						return false;
+					}
+				}
+			}
+			void Apply(LdrObject* obj, ParseParams& pp)
+			{
+				if (m_point_size == v2::Zero())
+					return;
+
+				auto shdr = Shader::Create<shaders::PointSpriteGS>(m_point_size, m_depth);
+
+				obj->m_model->DeleteNuggets();
+				obj->m_model->CreateNugget(pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
+					.use_shader(ERenderStep::RenderForward, shdr)
+					.tex_diffuse(PointStyleTexture(pp)));
+			}
+
+			template <typename TDrawOnIt>
+			Texture2DPtr CreatePointStyleTexture(ParseParams& pp, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
+			{
+				ResDesc tdesc = ResDesc::Tex2D(Image(sz.x, sz.y, nullptr, DXGI_FORMAT_B8G8R8A8_UNORM), 1, EUsage::RenderTarget | EUsage::SimultaneousAccess).heap_flags(D3D12_HEAP_FLAG_SHARED);
+				TextureDesc desc = TextureDesc(id, tdesc).name(name);
+				auto tex = pp.m_factory.CreateTexture2D(desc);
+
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+
+				// Create the brushes
+				D3DPtr<ID2D1SolidColorBrush> fr_brush;
+				D3DPtr<ID2D1SolidColorBrush> bk_brush;
+				auto fr = D3DCOLORVALUE{1.f, 1.f, 1.f, 1.f};
+				auto bk = D3DCOLORVALUE{0.f, 0.f, 0.f, 0.f};
+				Check(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				Check(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+
+				// Draw the spot
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				draw(dc, fr_brush.get(), bk_brush.get());
+				Check(dc->EndDraw());
+				return tex;
+			}
+			Texture2DPtr PointStyleTexture(ParseParams& pp)
+			{
+				EPointStyle style = m_style;
+				iv2 size = To<iv2>(m_point_size);
+				iv2 sz(PowerOfTwoGreaterEqualTo(size.x), PowerOfTwoGreaterEqualTo(size.y));
+				switch (style)
+				{
+					case EPointStyle::Square:
+					{
+						// No texture needed for square style
+						return nullptr;
+					}
+					case EPointStyle::Circle:
+					{
+						ResourceStore::Access store(pp.m_rdr);
+						auto id = hash::HashArgs("PointStyleCircle", sz);
+						return store.FindTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleCircle", [=](auto& dc, auto fr, auto) { dc->FillEllipse({ {w0, h0}, w0, h0 }, fr); });
+						});
+					}
+					case EPointStyle::Triangle:
+					{
+						ResourceStore::Access store(pp.m_rdr);
+						auto id = hash::HashArgs("PointStyleTriangle", sz);
+						return store.FindTexture<Texture2D>(id, [&]
+						{
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							Check(geom->Open(&sink.m_ptr));
+
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 0.5f * sz.y * (float)tan(DegreesToRadians(60.0f));
+							auto h1 = 0.5f * (sz.y - h0);
+
+							sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.0f * w0, h1 });
+							sink->AddLine({ 0.5f * w0, h0 + h1 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							Check(sink->Close());
+
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleTriangle", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
+					}
+					case EPointStyle::Star:
+					{
+						ResourceStore::Access store(pp.m_rdr);
+						auto id = hash::HashArgs("PointStyleStar", sz);
+						return store.FindTexture<Texture2D>(id, [&]
+						{
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							Check(pp.m_rdr.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							Check(geom->Open(&sink.m_ptr));
+
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 1.0f * sz.y;
+
+							sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.4f * w0, 0.4f * h0 });
+							sink->AddLine({ 0.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.4f * w0, 0.6f * h0 });
+							sink->AddLine({ 0.5f * w0, 1.0f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.6f * h0 });
+							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							Check(sink->Close());
+
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleStar", [=](auto& dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
+					}
+					case EPointStyle::Annulus:
+					{
+						ResourceStore::Access store(pp.m_rdr);
+						auto id = hash::HashArgs("PointStyleAnnulus", sz);
+						return store.FindTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							auto w1 = sz.x * 0.4f;
+							auto h1 = sz.y * 0.4f;
+							return CreatePointStyleTexture(pp, id, sz, "PointStyleAnnulus", [=](auto& dc, auto fr, auto bk)
+							{
+								dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+								dc->FillEllipse({ {w0, h0}, w0, h0 }, fr);
+								dc->FillEllipse({ {w0, h0}, w1, h1 }, bk);
+							});
+						});
+					}
+					default:
+					{
+						throw std::runtime_error("Unknown point style");
+					}
 				}
 			}
 		};
@@ -1436,16 +1434,8 @@ namespace pr::rdr12::ldraw
 			obj->m_model = ModelGenerator::Points(m_pp.m_factory, m_verts, &opts);
 			obj->m_model->m_name = obj->TypeAndName();
 
-			// Use a geometry shader to draw points
-			if (m_sprite.m_point_size != v2::Zero())
-			{
-				auto gs_points = Shader::Create<shaders::PointSpriteGS>(m_sprite.m_point_size, m_sprite.m_depth);
-
-				obj->m_model->DeleteNuggets();
-				obj->m_model->CreateNugget(m_pp.m_factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
-					.use_shader(ERenderStep::RenderForward, gs_points)
-					.tex_diffuse(m_sprite.PointStyleTexture(m_pp)));
-			}
+			// USe Point sprites
+			m_sprite.Apply(obj, m_pp);
 		}
 	};
 
@@ -3469,9 +3459,9 @@ namespace pr::rdr12::ldraw
 			{
 				case EKeyword::Data:
 				{
+					auto a = reader.Real<float>();
 					auto h0 = reader.Real<float>();
 					auto h1 = reader.Real<float>();
-					auto a = reader.Real<float>();
 
 					a = DegreesToRadians(a);
 

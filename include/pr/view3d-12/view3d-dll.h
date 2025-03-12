@@ -1243,7 +1243,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
 
 	// Create/Delete the demo scene in the given window
-	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(pr::view3d::Window window);
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
 
 	// Show a window containing the demo script

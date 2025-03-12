@@ -2,12 +2,12 @@
 #include <windows.h>
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
-#include "pr/ldraw/ldr_helper.h"
 #include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 
 //#include "pr/view3d-12/view3d.h"
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/ldraw/ldraw_helper.h"
 #include "pr/view3d-12/utility/conversion.h"
 
 using namespace pr;
@@ -82,6 +82,12 @@ struct Main :Form
 		std::default_random_engine rng;
 		std::uniform_real_distribution dist(-10.0f, 10.0f);
 
+		auto builder = ldraw::Builder();
+		auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
+		for (int i = 0; i != 100; ++i)
+			pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
+		m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
+
 		//auto builder = ldr::Builder();
 		//auto& points = builder.Point("points", 0xFF00FF00);
 		//points.size(10.0f);
@@ -107,10 +113,11 @@ struct Main :Form
 		View3D_LightPropertiesSet(m_win3d, light);
 
 		// Add objects to the scene
-		//View3D_WindowAddObject(m_win3d, m_obj0);
+		View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
 		//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
-		View3D_DemoSceneCreate(m_win3d);
+		//View3D_DemoSceneCreateText(m_win3d);
+		//View3D_DemoSceneCreateBinary(m_win3d);
 
 		// EnvMap
 		View3D_WindowEnvMapSet(m_win3d, m_envmap);
@@ -119,6 +126,9 @@ struct Main :Form
 				View3D_ObjectReflectivitySet(obj, 0.2f, "");
 				return true;
 			}, nullptr);
+
+		// Streaming
+		View3D_StreamingEnable(true, 1976);
 	}
 	~Main()
 	{
