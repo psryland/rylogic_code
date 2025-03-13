@@ -289,6 +289,10 @@ namespace pr
 						alloc_traits::construct(alloc, first++, *src++);
 				}
 			}
+			static void copy_constr(allocator_type& alloc, Type* first, Type const& src)
+			{
+				copy_constr(alloc, first, &src, 1);
+			}
 			static void move_constr(allocator_type& alloc, Type* first, Type* src, size_type count)
 			{
 				if constexpr (type_is_pod_v)
@@ -301,6 +305,10 @@ namespace pr
 					for (; count--;)
 						alloc_traits::construct(alloc, first++, std::move(*src++));
 				}
+			}
+			static void move_constr(allocator_type& alloc, Type* first, Type&& src)
+			{
+				move_constr(alloc, first, &src, 1);
 			}
 			static void copy_assign(Type* first, Type const* src, size_type count)
 			{
@@ -939,29 +947,35 @@ namespace pr
 		}
 
 		// insert [first, lastt) at pos
-		template <typename iter> void insert(const_iterator pos, iter first, iter lastt)
+		template <typename iter>
+		iterator insert(const_iterator pos, iter first, iter lastt)
 		{
-			if (first == lastt)
-				return;
-
-			// assert(first <= lastt && "lastt must follow first"); <- Can't assume 'first' and 'lastt' define operators < or -
+			// Note: Can't assume 'first' and 'lastt' define operators < or -.
+			constexpr auto is_rvalue = std::is_rvalue_reference_v<decltype(*first)>;
 			assert(begin() <= pos && pos <= end() && "pos must be within the array");
-			assert(!inside(&*first) && "Cannot insert a subrange because iterators are invalidated after the allocation grows");
+			//assert(first <= lastt && "lastt must follow first");
+			//assert(!inside(&*std::as_const<iter>(first)) && "Cannot insert a subrange because iterators are invalidated after the allocation grows");
 
 			auto ofs = pos - begin();
-			auto old_count = static_cast<ptrdiff_t>(m_count);
+			auto old_count = m_count;
+
 			for (; first != lastt; ++first, ++m_count)
 			{
 				ensure_space(m_count + 1, true);
-				traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
+				if constexpr (is_rvalue)
+					traits::move_constr(alloc(), m_ptr + m_count, *first);
+				else
+					traits::copy_constr(alloc(), m_ptr + m_count, *first);
 			}
 
-			if (ofs != old_count)
+			if (ofs != static_cast<ptrdiff_t>(old_count) && old_count != m_count)
 			{
 				reverse(m_ptr + ofs, m_ptr + old_count);
 				reverse(m_ptr + old_count, m_ptr + m_count);
 				reverse(m_ptr + ofs, m_ptr + m_count);
 			}
+
+			return begin() + ofs;
 		}
 
 		// erase element at pos
@@ -1311,7 +1325,7 @@ namespace pr::container
 			virtual ~Type()
 			{
 				--object_count;
-				PR_CHECK(ptr.m_ptr == &Single::instance(), true); // destructing an invalid Type
+				PR_EXPECT(ptr.m_ptr == &Single::instance()); // destructing an invalid Type
 				val = 0xdddddddd;
 			}
 			friend bool operator == (Type const& lhs, Type const& rhs)
@@ -1336,12 +1350,12 @@ namespace pr::container
 			NonCopyable(NonCopyable&& rhs) noexcept
 				:Type(std::move(rhs))
 			{}
+			NonCopyable(NonCopyable const&) = delete;
 			NonCopyable& operator = (NonCopyable&& rhs) noexcept
 			{
 				Type::operator=(std::move(rhs));
 				return *this;
 			}
-			NonCopyable(NonCopyable const&) = delete;
 			NonCopyable& operator = (NonCopyable const&) = delete;
 		};
 		static_assert(std::is_move_constructible<NonCopyable>::value);
@@ -1361,8 +1375,8 @@ namespace pr::container
 			{}
 			~Check()
 			{
-				PR_CHECK(object_count, m_count);
-				PR_CHECK(Single::instance().m_ref_count, m_refs);
+				PR_EXPECT(object_count == m_count);
+				PR_EXPECT(Single::instance().m_ref_count == m_refs);
 			}
 		};
 
@@ -1383,41 +1397,41 @@ namespace pr::container
 				Check chk;
 				{
 					Array0 arr;
-					PR_CHECK(arr.empty(), true);
-					PR_CHECK(arr.size(), 0U);
+					PR_EXPECT(arr.empty());
+					PR_EXPECT(arr.size() == 0U);
 				}
 			}{
 				Check chk;
 				{
 					Array1 arr(15);
-					PR_CHECK(!arr.empty(), true);
-					PR_CHECK(arr.size(), 15U);
+					PR_EXPECT(!arr.empty());
+					PR_EXPECT(arr.size() == 15U);
 				}
 			}{
 				Check chk;
 				{
 					Array0 arr(5U, 3);
-					PR_CHECK(arr.size(), 5U);
+					PR_EXPECT(arr.size() == 5U);
 					for (int i = 0; i != 5; ++i)
-						PR_CHECK(arr[i].val, 3);
+						PR_EXPECT(arr[i].val == 3);
 				}
 			}{
 				Check chk;
 				{
 					Array0 arr0(5U,3);
 					Array1 arr1(arr0);
-					PR_CHECK(arr1.size(), arr0.size());
+					PR_EXPECT(arr1.size() == arr0.size());
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr1[i].val, arr0[i].val);
+						PR_EXPECT(arr1[i].val == arr0[i].val);
 				}
 			}{
 				Check chk;
 				{
 					std::vector<Type> vec0(4U, Type(6));
 					Array0 arr1(vec0);
-					PR_CHECK(arr1.size(), vec0.size());
+					PR_EXPECT(arr1.size() == vec0.size());
 					for (int i = 0; i != int(vec0.size()); ++i)
-						PR_CHECK(arr1[i].val, vec0[i]);
+						PR_EXPECT(arr1[i].val == vec0[i]);
 				}
 			}
 		}
@@ -1426,15 +1440,15 @@ namespace pr::container
 			{
 				Array0 arr0;
 				arr0.assign(3U, 5);
-				PR_CHECK(arr0.size(), 3U);
+				PR_EXPECT(arr0.size() == 3U);
 				for (int i = 0; i != 3; ++i)
-					PR_CHECK(arr0[i].val, 5);
+					PR_EXPECT(arr0[i].val == 5);
 
 				Array1 arr1;
 				arr1.assign(&ints[0], &ints[8]);
-				PR_CHECK(arr1.size(), 8U);
+				PR_EXPECT(arr1.size() == 8U);
 				for (int i = 0; i != 8; ++i)
-					PR_CHECK(arr1[i].val, ints[i].val);
+					PR_EXPECT(arr1[i].val == ints[i].val);
 			}
 		}
 		{//Clear
@@ -1443,7 +1457,7 @@ namespace pr::container
 				{// Basic clear
 					Array0 arr0(ints.begin(), ints.end());
 					arr0.clear();
-					PR_CHECK(arr0.empty(), true);
+					PR_EXPECT(arr0.empty());
 				}
 			}{
 				Check chk;
@@ -1451,7 +1465,7 @@ namespace pr::container
 					Array2 arr0;
 					for (auto i : ints) arr0.emplace_back(i.val);
 					arr0.clear();
-					PR_CHECK(arr0.empty(), true);
+					PR_EXPECT(arr0.empty());
 				}
 			}
 		}
@@ -1462,28 +1476,28 @@ namespace pr::container
 					Array0 arr0(ints.begin(), ints.begin() + 8);
 					Array0::const_iterator b = arr0.begin();
 					arr0.erase(b + 3, b + 5);
-					PR_CHECK(arr0.size(), 6U);
-					for (int i = 0; i != 3; ++i) PR_CHECK(arr0[i].val, ints[i]  .val);
-					for (int i = 3; i != 6; ++i) PR_CHECK(arr0[i].val, ints[i+2].val);
+					PR_EXPECT(arr0.size() == 6U);
+					for (int i = 0; i != 3; ++i) PR_EXPECT(arr0[i].val == ints[i]  .val);
+					for (int i = 3; i != 6; ++i) PR_EXPECT(arr0[i].val == ints[i+2].val);
 				}
 			}{
 				Check chk;
 				{// Erase single, stable order
 					Array1 arr1(ints.begin(), ints.begin() + 4);
 					arr1.erase(arr1.begin() + 2);
-					PR_CHECK(arr1.size(), 3U);
-					for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, ints[i]  .val);
-					for (int i = 2; i != 3; ++i) PR_CHECK(arr1[i].val, ints[i+1].val);
+					PR_EXPECT(arr1.size() == 3U);
+					for (int i = 0; i != 2; ++i) PR_EXPECT(arr1[i].val == ints[i]  .val);
+					for (int i = 2; i != 3; ++i) PR_EXPECT(arr1[i].val == ints[i+1].val);
 				}
 			}{
 				Check chk;
 				{// Erase single, unstable order
 					Array0 arr2(ints.begin(), ints.begin() + 5);
 					arr2.erase_fast(arr2.begin() + 2);
-					PR_CHECK(arr2.size(), 4U);
-					for (int i = 0; i != 2; ++i) PR_CHECK(arr2[i].val, ints[i].val);
-					PR_CHECK(arr2[2].val, ints[4].val);
-					for (int i = 3; i != 4; ++i) PR_CHECK(arr2[i].val, ints[i].val);
+					PR_EXPECT(arr2.size() == 4U);
+					for (int i = 0; i != 2; ++i) PR_EXPECT(arr2[i].val == ints[i].val);
+					PR_EXPECT(arr2[2].val == ints[4].val);
+					for (int i = 3; i != 4; ++i) PR_EXPECT(arr2[i].val == ints[i].val);
 				}
 			}{
 				Check chk;
@@ -1496,17 +1510,17 @@ namespace pr::container
 					arr0.emplace_back(4);
 
 					arr0.erase(std::begin(arr0) + 1);
-					PR_CHECK(arr0.size(), 4U);
-					PR_CHECK(arr0[0].val, 0);
-					PR_CHECK(arr0[1].val, 2);
-					PR_CHECK(arr0[2].val, 3);
-					PR_CHECK(arr0[3].val, 4);
+					PR_EXPECT(arr0.size() == 4U);
+					PR_EXPECT(arr0[0].val == 0);
+					PR_EXPECT(arr0[1].val == 2);
+					PR_EXPECT(arr0[2].val == 3);
+					PR_EXPECT(arr0[3].val == 4);
 
 					arr0.erase_fast(std::begin(arr0) + 1);
-					PR_CHECK(arr0.size(), 3U);
-					PR_CHECK(arr0[0].val, 0);
-					PR_CHECK(arr0[1].val, 4);
-					PR_CHECK(arr0[2].val, 3);
+					PR_EXPECT(arr0.size() == 3U);
+					PR_EXPECT(arr0[0].val == 0);
+					PR_EXPECT(arr0[1].val == 4);
+					PR_EXPECT(arr0[2].val == 3);
 				}
 			}{
 				Check chk;
@@ -1519,10 +1533,10 @@ namespace pr::container
 					arr1.emplace_back(4);
 
 					arr1.erase(std::begin(arr1) + 1, std::begin(arr1) + 3);
-					PR_CHECK(arr1.size(), 3U);
-					PR_CHECK(arr1[0].val, 0);
-					PR_CHECK(arr1[1].val, 3);
-					PR_CHECK(arr1[2].val, 4);
+					PR_EXPECT(arr1.size() == 3U);
+					PR_EXPECT(arr1[0].val == 0);
+					PR_EXPECT(arr1[1].val == 3);
+					PR_EXPECT(arr1[2].val == 4);
 				}
 			}{
 				Check chk;
@@ -1537,12 +1551,12 @@ namespace pr::container
 					arr2.emplace_back(6);
 
 					arr2.erase_fast(std::begin(arr2) + 1, std::begin(arr2) + 3);
-					PR_CHECK(arr2.size(), 5U);
-					PR_CHECK(arr2[0].val, 0);
-					PR_CHECK(arr2[1].val, 5);
-					PR_CHECK(arr2[2].val, 6);
-					PR_CHECK(arr2[3].val, 3);
-					PR_CHECK(arr2[4].val, 4);
+					PR_EXPECT(arr2.size() == 5U);
+					PR_EXPECT(arr2[0].val == 0);
+					PR_EXPECT(arr2[1].val == 5);
+					PR_EXPECT(arr2[2].val == 6);
+					PR_EXPECT(arr2[3].val == 3);
+					PR_EXPECT(arr2[4].val == 4);
 				}
 			}
 		}
@@ -1552,19 +1566,19 @@ namespace pr::container
 				{
 					Array0 arr0;
 					arr0.insert(arr0.end(), 4U, 9);
-					PR_CHECK(arr0.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
 					for (int i = 0; i != 4; ++i)
-						PR_CHECK(arr0[i].val, 9);
+						PR_EXPECT(arr0[i].val == 9);
 				}
 			}{
 				Check chk;
 				{
 					Array1 arr1(4U, 6);
 					arr1.insert(arr1.begin() + 2, &ints[2], &ints[7]);
-					PR_CHECK(arr1.size(), 9U);
-					for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, 6);
-					for (int i = 2; i != 7; ++i) PR_CHECK(arr1[i].val, ints[i].val);
-					for (int i = 7; i != 9; ++i) PR_CHECK(arr1[i].val, 6);
+					PR_EXPECT(arr1.size() == 9U);
+					for (int i = 0; i != 2; ++i) PR_EXPECT(arr1[i].val == 6);
+					for (int i = 2; i != 7; ++i) PR_EXPECT(arr1[i].val == ints[i].val);
+					for (int i = 7; i != 9; ++i) PR_EXPECT(arr1[i].val == 6);
 				}
 			}{
 				Check chk;
@@ -1574,12 +1588,33 @@ namespace pr::container
 					arr1.push_back(1);
 					arr1.push_back(2);
 					arr1.insert(arr1.begin() + 1, 3U, arr1[2]);
-					PR_CHECK(arr1[0].val, 0);
-					PR_CHECK(arr1[1].val, 2);
-					PR_CHECK(arr1[2].val, 2);
-					PR_CHECK(arr1[3].val, 2);
-					PR_CHECK(arr1[4].val, 1);
-					PR_CHECK(arr1[5].val, 2);
+					PR_EXPECT(arr1[0].val == 0);
+					PR_EXPECT(arr1[1].val == 2);
+					PR_EXPECT(arr1[2].val == 2);
+					PR_EXPECT(arr1[3].val == 2);
+					PR_EXPECT(arr1[4].val == 1);
+					PR_EXPECT(arr1[5].val == 2);
+				}
+			}{
+				Check chk;
+				{ // Insert move iterators
+					Array2 arr1;
+					arr1.push_back(0);
+					arr1.push_back(1);
+					arr1.push_back(5);
+					Array2 arr2;
+					arr2.push_back(2);
+					arr2.push_back(3);
+					arr2.push_back(4);
+					arr1.insert(arr1.begin() + 2,
+						std::move_iterator{ std::begin(arr2) },
+						std::move_iterator{ std::end(arr2) });
+					PR_EXPECT(arr1[0] == 0);
+					PR_EXPECT(arr1[1] == 1);
+					PR_EXPECT(arr1[2] == 2);
+					PR_EXPECT(arr1[3] == 3);
+					PR_EXPECT(arr1[4] == 4);
+					PR_EXPECT(arr1[5] == 5);
 				}
 			}
 		}
@@ -1590,9 +1625,9 @@ namespace pr::container
 					Array0 arr;
 					arr.insert(arr.begin(), &ints[0], &ints[4]);
 					arr.pop_back();
-					PR_CHECK(arr.size(), 3U);
+					PR_EXPECT(arr.size() == 3U);
 					for (int i = 0; i != 3; ++i)
-						PR_CHECK(arr[i].val, ints[i].val);
+						PR_EXPECT(arr[i].val == ints[i].val);
 				}
 			}{
 				Check chk;
@@ -1602,7 +1637,7 @@ namespace pr::container
 					for (int i = 0; i != 4; ++i) arr.push_back_fast(i);
 					for (int i = 4; i != 9; ++i) arr.push_back(i);
 					for (int i = 0; i != 9; ++i)
-						PR_CHECK(arr[i].val, ints[i].val);
+						PR_EXPECT(arr[i].val == ints[i].val);
 				}
 			}{
 				Check chk;
@@ -1610,15 +1645,15 @@ namespace pr::container
 					Array1 arr;
 					arr.insert(arr.begin(), &ints[0], &ints[4]);
 					arr.resize(3);
-					PR_CHECK(arr.size(), 3U);
+					PR_EXPECT(arr.size() == 3U);
 					for (int i = 0; i != 3; ++i)
-						PR_CHECK(arr[i].val, ints[i].val);
+						PR_EXPECT(arr[i].val == ints[i].val);
 					arr.resize(6);
-					PR_CHECK(arr.size(), 6U);
+					PR_EXPECT(arr.size() == 6U);
 					for (int i = 0; i != 3; ++i)
-						PR_CHECK(arr[i].val, ints[i].val);
+						PR_EXPECT(arr[i].val == ints[i].val);
 					for (int i = 3; i != 6; ++i)
-						PR_CHECK(arr[i].val, 0);
+						PR_EXPECT(arr[i].val == 0);
 				}
 			}
 		}
@@ -1629,10 +1664,10 @@ namespace pr::container
 					Array0 arr0(4U, 1);
 					Array0 arr1(3U, 2);
 					arr1 = arr0;
-					PR_CHECK(arr0.size(), 4U);
-					PR_CHECK(arr1.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
+					PR_EXPECT(arr1.size() == 4U);
 					for (int i = 0; i != 4; ++i)
-						PR_CHECK(arr1[i].val, arr0[i].val);
+						PR_EXPECT(arr1[i].val == arr0[i].val);
 				}
 			}/*{ // Use std::span
 				Check chk;
@@ -1640,19 +1675,19 @@ namespace pr::container
 					Array0 arr0(4U, 1);
 					Array1 arr2;
 					arr2 = arr0;
-					PR_CHECK(arr0.size(), 4U);
-					PR_CHECK(arr2.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
+					PR_EXPECT(arr2.size() == 4U);
 					for (int i = 0; i != 4; ++i)
-						PR_CHECK(arr2[i].val, arr0[i].val);
+						PR_EXPECT(arr2[i].val == arr0[i].val);
 
 					struct L
 					{
 						static std::vector<Type> Conv(std::vector<Type> v) { return v; }
 					};
 					std::vector<Type> vec0 = L::Conv(arr0);
-					PR_CHECK(vec0.size(), 4U);
+					PR_EXPECT(vec0.size() == 4U);
 					for (int i = 0; i != 4; ++i)
-						PR_CHECK(vec0[i].val, arr0[i].val);
+						PR_EXPECT(vec0[i].val == arr0[i].val);
 				}
 			}*/
 		}
@@ -1663,12 +1698,12 @@ namespace pr::container
 					Array0 arr0;
 					arr0.reserve(100);
 					for (int i = 0; i != 50; ++i) arr0.push_back(i);
-					PR_CHECK(arr0.capacity(), 100U);
+					PR_EXPECT(arr0.capacity() == 100U);
 					arr0.shrink_to_fit();
-					PR_CHECK(arr0.capacity(), 50U);
+					PR_EXPECT(arr0.capacity() == 50U);
 					arr0.resize(1);
 					arr0.shrink_to_fit();
-					PR_CHECK(arr0.capacity(), (size_t)arr0.local_count_v);
+					PR_EXPECT(arr0.capacity() == (size_t)arr0.local_count_v);
 				}
 			}
 		}
@@ -1681,9 +1716,9 @@ namespace pr::container
 						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
 						arr0 = arr1;
 					}
-					PR_CHECK(arr0.size(), 10U);
+					PR_EXPECT(arr0.size() == 10U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}
 		}
@@ -1697,9 +1732,9 @@ namespace pr::container
 						Array0 arr1 = {0,1,2,3,4,5,6};
 						arr0 = std::move(arr1);
 					}
-					PR_CHECK(arr0.size(), 7U);
+					PR_EXPECT(arr0.size() == 7U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1710,9 +1745,9 @@ namespace pr::container
 						Array0 arr1 = {0,1,2,3};
 						arr0 = std::move(arr1);
 					}
-					PR_CHECK(arr0.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1723,9 +1758,9 @@ namespace pr::container
 						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
 						arr0 = std::move(arr1);
 					}
-					PR_CHECK(arr0.size(), 10U);
+					PR_EXPECT(arr0.size() == 10U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1736,9 +1771,9 @@ namespace pr::container
 						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
 						arr0 = std::move(arr1);
 					}
-					PR_CHECK(arr0.size(), 10U);
+					PR_EXPECT(arr0.size() == 10U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}
 		}
@@ -1753,9 +1788,9 @@ namespace pr::container
 					arr0.emplace_back(3);
 					arr0.emplace_back(4);
 
-					PR_CHECK(arr0.size(), 5U);
+					PR_EXPECT(arr0.size() == 5U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1768,9 +1803,9 @@ namespace pr::container
 					arr1.emplace(arr1.begin(), 0);
 					arr0 = std::move(arr1);
 
-					PR_CHECK(arr0.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1784,9 +1819,9 @@ namespace pr::container
 					arr1.emplace(arr1.begin(), 0);
 					arr0 = std::move(arr1);
 
-					PR_CHECK(arr0.size(), 4U);
+					PR_EXPECT(arr0.size() == 4U);
 					for (int i = 0; i != int(arr0.size()); ++i)
-						PR_CHECK(arr0[i].val, i);
+						PR_EXPECT(arr0[i].val == i);
 				}
 			}{
 				Check chk;
@@ -1807,15 +1842,15 @@ namespace pr::container
 					NonCopyable ins3(300);
 					arr0.insert(arr0.end(), std::move(ins3));
 
-					PR_CHECK(arr0.size(), 8U);
-					PR_CHECK(arr0[0].val, 200);
-					PR_CHECK(arr0[1].val, 0);
-					PR_CHECK(arr0[2].val, 1);
-					PR_CHECK(arr0[3].val, 100);
-					PR_CHECK(arr0[4].val, 2);
-					PR_CHECK(arr0[5].val, 3);
-					PR_CHECK(arr0[6].val, 4);
-					PR_CHECK(arr0[7].val, 300);
+					PR_EXPECT(arr0.size() == 8U);
+					PR_EXPECT(arr0[0].val == 200);
+					PR_EXPECT(arr0[1].val == 0);
+					PR_EXPECT(arr0[2].val == 1);
+					PR_EXPECT(arr0[3].val == 100);
+					PR_EXPECT(arr0[4].val == 2);
+					PR_EXPECT(arr0[5].val == 3);
+					PR_EXPECT(arr0[6].val == 4);
+					PR_EXPECT(arr0[7].val == 300);
 				}
 			}
 		}
@@ -1823,10 +1858,10 @@ namespace pr::container
 			pr::vector<Type, 0, false> arr0;
 			for (int i = 0; i != 10; ++i)
 				arr0.push_back(Type(i));
-			PR_CHECK(arr0.ssize() == 10, true);
+			PR_EXPECT(arr0.ssize() == 10);
 			for (int i = 0; i != 10; ++i)
 				arr0.pop_back();
-			PR_CHECK(arr0.ssize() == 0, true);
+			PR_EXPECT(arr0.ssize() == 0);
 		}
 	}
 }

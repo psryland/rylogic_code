@@ -133,7 +133,7 @@ namespace pr
 
 		if (static_cast<long long>(result) >= 0) return true;
 		Reason() = ToString<Result>(result);
-		std::cerr << Reason();
+		// std::cerr << Reason(); <- Caller's choice to output.
 		return false;
 	}
 	template <> inline bool Succeeded(__int64 result)
@@ -152,7 +152,7 @@ namespace pr
 	{
 		if (result) return true;
 		Reason() = "false returned";
-		std::cerr << Reason();
+		// std::cerr << Reason(); <- Caller's choice to output.
 		return false;
 	}
 	template <typename Result> inline bool Failed(Result result)
