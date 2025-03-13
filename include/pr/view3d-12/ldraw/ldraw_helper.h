@@ -199,25 +199,33 @@ namespace pr::rdr12::ldraw
 				, m_colour()
 				, m_o2w(m4x4::Identity())
 				, m_wire()
-				, m_axis_id(AxisId::PosZ)
+				, m_axis_id(AxisId::None)
 				, m_solid()
 			{}
 
 			// Object name
-			Derived& name(Name name)
+			Derived& name(Name n)
 			{
-				m_name = name;
+				m_name = n;
 				return static_cast<Derived&>(*this);
 			}
 			Name m_name;
 
 			// Object colour
-			Derived& col(Col colour)
+			Derived& colour(Col c)
 			{
-				m_colour = colour;
+				m_colour = c;
+				m_colour.m_kw = EKeyword::Colour;
+				return static_cast<Derived&>(*this);
+			}
+			Derived& colour_mask(Col c)
+			{
+				m_colour_mask = c;
+				m_colour_mask.m_kw = EKeyword::ColourMask;
 				return static_cast<Derived&>(*this);
 			}
 			Col m_colour;
+			Col m_colour_mask;
 
 			// Object to world transform
 			Derived& o2w(m4x4 const& o2w)
@@ -258,9 +266,12 @@ namespace pr::rdr12::ldraw
 			{
 				return o2w(m4x4::Transform(q, v4::Origin()));
 			}
-			Derived& euler(float pitch, float yaw, float roll)
+			Derived& euler(float pitch_deg, float yaw_deg, float roll_deg)
 			{
-				return ori(m3x4::Rotation(pitch, yaw, roll));
+				return ori(m3x4::Rotation(
+					DegreesToRadians(pitch_deg),
+					DegreesToRadians(yaw_deg),
+					DegreesToRadians(roll_deg)));
 			}
 			O2W m_o2w;
 
@@ -315,7 +326,7 @@ namespace pr::rdr12::ldraw
 			template <WriterType Writer, typename TOut>
 			void WriteTo(TOut& out) const
 			{
-				Writer::Append(out, m_wire, m_solid, m_o2w);
+				Writer::Append(out, m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
 				LdrObj::WriteTo(out);
 			}
 		};
@@ -623,7 +634,7 @@ namespace pr::rdr12::ldraw
 				m_tris.push_back({ a, b, c });
 				return *this;
 			}
-			LdrTriangle& pt(v4 const* verts, std::span<int const> faces)
+			LdrTriangle& tris(v4 const* verts, std::span<int const> faces)
 			{
 				assert((isize(faces) % 3) == 0);
 				for (int const* i = faces.data(), *iend = i + faces.size(); i < iend; i += 3)
@@ -729,7 +740,7 @@ namespace pr::rdr12::ldraw
 			{
 				Writer::Write(out, EKeyword::Circle, m_name, m_colour, [&]
 				{
-					Writer::Write(out, EKeyword::Data, m_radius, m_axis_id);
+					Writer::Write(out, EKeyword::Data, m_radius);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}
@@ -743,13 +754,13 @@ namespace pr::rdr12::ldraw
 			{}
 
 			// Radius
-			LdrSphere& r(float radius)
+			LdrSphere& radius(float r)
 			{
-				return r(radius, radius, radius);
+				return radius({ r, r, r, 0 });
 			}
-			LdrSphere& r(float radius_x, float radius_y, float radius_z)
+			LdrSphere& radius(v4 r)
 			{
-				m_radius = v4{radius_x, radius_y, radius_z, 0};
+				m_radius = r;
 				return *this;
 			}
 
@@ -757,7 +768,7 @@ namespace pr::rdr12::ldraw
 			LdrSphere& bsphere(BSphere_cref bsphere)
 			{
 				if (bsphere == BSphere::Reset()) return *this;
-				return r(bsphere.Radius()).pos(bsphere.Centre());
+				return radius(bsphere.Radius()).pos(bsphere.Centre());
 			}
 
 			// Write to 'out'
@@ -835,11 +846,11 @@ namespace pr::rdr12::ldraw
 			{}
 
 			// Height/Radius
-			LdrCylinder& hr(float height, float radius)
+			LdrCylinder& cylinder(float height, float radius)
 			{
-				return hr(height, radius, radius);
+				return cylinder(height, radius, radius);
 			}
-			LdrCylinder& hr(float height, float radius_base, float radius_tip)
+			LdrCylinder& cylinder(float height, float radius_base, float radius_tip)
 			{
 				m_height = height;
 				m_radius = v2{ radius_base, radius_tip };
@@ -860,7 +871,7 @@ namespace pr::rdr12::ldraw
 				Writer::Write(out, EKeyword::Cylinder, m_name, m_colour, [&]
 				{
 					Writer::Write(out, EKeyword::Data, m_height, m_radius.x, m_radius.y);
-					Writer::Append(out, m_axis_id, m_scale);
+					Writer::Append(out, m_scale);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}
@@ -908,7 +919,7 @@ namespace pr::rdr12::ldraw
 				Writer::Write(out, EKeyword::Cone, m_name, m_colour, [&]
 				{
 					Writer::Write(out, EKeyword::Data, m_angle, m_distance.x, m_distance.y);
-					Writer::Append(out, m_axis_id, m_scale);
+					Writer::Append(out, m_scale);
 					LdrBase::WriteTo<Writer>(out);
 				});
 			}
@@ -1108,86 +1119,86 @@ namespace pr::rdr12::ldraw
 		{
 			auto ptr = new LdrGroup;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrPoint& LdrObj::Point(Name name, Col colour)
 		{
 			auto ptr = new LdrPoint;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrLine& LdrObj::Line(Name name, Col colour)
 		{
 			auto ptr = new LdrLine;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrLineD& LdrObj::LineD(Name name, Col colour)
 		{
 			auto ptr = new LdrLineD;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrTriangle& LdrObj::Triangle(Name name, Col colour)
 		{
 			auto ptr = new LdrTriangle;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrPlane& LdrObj::Plane(Name name, Col colour)
 		{
 			auto ptr = new LdrPlane;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrCircle& LdrObj::Circle(Name name, Col colour)
 		{
 			auto ptr = new LdrCircle;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrSphere& LdrObj::Sphere(Name name, Col colour)
 		{
 			auto ptr = new LdrSphere;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrBox& LdrObj::Box(Name name, Col colour)
 		{
 			auto ptr = new LdrBox;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrCylinder& LdrObj::Cylinder(Name name, Col colour)
 		{
 			auto ptr = new LdrCylinder;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrCone& LdrObj::Cone(Name name, Col colour)
 		{
 			auto ptr = new LdrCone;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrSpline& LdrObj::Spline(Name name, Col colour)
 		{
 			auto ptr = new LdrSpline;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrFrustum& LdrObj::Frustum(Name name, Col colour)
 		{
 			auto ptr = new LdrFrustum;
 			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).col(colour);
+			return (*ptr).name(name).colour(colour);
 		}
 		inline LdrObj& LdrObj::WrapAsGroup(Name name, Col colour)
 		{
 			auto ptr = new LdrGroup;
 			swap(m_objects, ptr->m_objects);
 			m_objects.emplace_back(ptr);
-			(*ptr).name(name).col(colour);
+			(*ptr).name(name).colour(colour);
 			return *this;
 		}
 		#pragma endregion
@@ -1207,19 +1218,19 @@ namespace pr::rdr12::ldraw
 			Builder L;
 			L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4::Identity());
 			auto str = L.ToString(false);
-			PR_EXPECT(str::Equal(str, "*Box b ff00ff00 {*Data {1 1 1}}"));
+			PR_EXPECT(str::Equal(str, "*Box b FF00FF00 {*Data {1 1 1}}"));
 		}
 		{
 			Builder L;
-			L.Triangle().name("tri").col(0xFFFF0000).tri(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }, v4{ 0, 1, 0, 1 });
+			L.Triangle().name("tri").colour(0xFFFF0000).tri(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }, v4{ 0, 1, 0, 1 });
 			auto str = L.ToString(false);
-			PR_EXPECT(str::Equal(str, "*Triangle tri ffff0000 {*Data {0 0 0 1 0 0 0 1 0}}"));
+			PR_EXPECT(str::Equal(str, "*Triangle tri FFFF0000 {*Data {0 0 0 1 0 0 0 1 0}}"));
 		}
 		{
 			Builder L;
-			L.LineD().name("lined").col(0xFF00FF00).line(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }).line(v4{ 0, 0, 0, 1 }, v4{ 0, 0, 1, 1 });
+			L.LineD().name("lined").colour(0xFF00FF00).line(v4{ 0,0,0,1 }, v4{ 1, 0, 0, 1 }).line(v4{ 0, 0, 0, 1 }, v4{ 0, 0, 1, 1 });
 			auto str = L.ToString(true);
-			PR_EXPECT(str::Equal(str, "*LineD lined ff00ff00 {\n\t*Data {\n\t\t0 0 0 1 0 0 0 0 0 0 0 1\n\t}\n}"));
+			PR_EXPECT(str::Equal(str, "*LineD lined FF00FF00 {\n\t*Data {\n\t\t0 0 0 1 0 0 0 0 0 0 0 1\n\t}\n}"));
 		}
 	}
 	PRUnitTest(LdrHelperBinaryTests)

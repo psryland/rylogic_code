@@ -82,11 +82,11 @@ struct Main :Form
 		std::default_random_engine rng;
 		std::uniform_real_distribution dist(-10.0f, 10.0f);
 
-		auto builder = ldraw::Builder();
-		auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
-		for (int i = 0; i != 100; ++i)
-			pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
-		m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
+		//auto builder = ldraw::Builder();
+		//auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
+		//for (int i = 0; i != 100; ++i)
+		//	pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
+		//m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
 
 		//auto builder = ldr::Builder();
 		//auto& points = builder.Point("points", 0xFF00FF00);
@@ -113,7 +113,7 @@ struct Main :Form
 		View3D_LightPropertiesSet(m_win3d, light);
 
 		// Add objects to the scene
-		View3D_WindowAddObject(m_win3d, m_obj0);
+		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
 		//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
 		//View3D_DemoSceneCreateText(m_win3d);

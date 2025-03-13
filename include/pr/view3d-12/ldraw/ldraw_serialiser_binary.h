@@ -141,8 +141,8 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, Col c)
 		{
-			if (c.m_ui == 0xFFFFFFFF) return;
-			Write(out, EKeyword::Colour, c.m_col.argb);
+			if (c.m_col.argb == 0xFFFFFFFF) return;
+			Write(out, c.m_kw, c.m_col.argb);
 		}
 		template <typename TOut> static void Append(TOut& out, Size s)
 		{
@@ -196,7 +196,8 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, AxisId id)
 		{
-			Write(out, EKeyword::AxisId, static_cast<int>(id));
+			if (id.value == AxisId::None) return;
+			Write(out, EKeyword::AxisId, id.value);
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{

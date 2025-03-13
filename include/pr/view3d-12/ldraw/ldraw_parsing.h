@@ -57,22 +57,11 @@ namespace pr::rdr12::ldraw
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
 
-		ParseResult()
-			: m_objects()
-			, m_models()
-			, m_cam()
-			, m_cam_fields()
-			, m_wireframe()
-		{
-		}
-		size_t count() const
-		{
-			return m_objects.size();
-		}
-		LdrObjectPtr operator[](size_t index) const
-		{
-			return m_objects[index];
-		}
+		ParseResult();
+		void reset();
+		size_t count() const;
+		LdrObjectPtr operator[](size_t index) const;
+		ParseResult& operator += (ParseResult&& rhs);
 	};
 
 	// Callback function type used during script parsing
@@ -344,6 +333,9 @@ namespace pr::rdr12::ldraw
 
 	// Remove 'obj' from 'objects'
 	void Remove(ObjectCont& objects, LdrObject* obj);
+
+	// Copy properties from 'src' to 'out' based on 'fields'
+	void CopyCamera(Camera const& src, ECamField fields, Camera& out);
 
 	// Generate a scene that demos the supported object types and modifiers.
 	std::string CreateDemoSceneText();

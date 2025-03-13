@@ -254,8 +254,8 @@
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
 		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
-    <ClInclude Include="src\ldraw\ldraw_sources.h" />
+		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
+		<ClInclude Include="src\ldraw\ldraw_sources.h" />
 		<ClInclude Include="src\render\render_forward.h" />
 		<ClInclude Include="src\render\render_raycast.h" />
 		<ClInclude Include="src\render\render_smap.h" />
@@ -296,6 +296,7 @@
 		<PyScript Include="src\ldraw\ldraw_demo_scene.ldr">
 			<Generator>$(ScriptPath)EmbedFile.py</Generator>
 			<Args>DEMO_SCENE $(ProjectDir)src\ldraw\ldraw_demo_scene.ldr $(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Args>
+			<AdditionalInputs>$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr</AdditionalInputs>
 			<Outputs>$(OutDir)ldraw_demo_scene.cpp.embedded</Outputs>
 		</PyScript>
 	</ItemGroup>

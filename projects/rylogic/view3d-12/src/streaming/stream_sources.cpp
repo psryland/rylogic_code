@@ -31,6 +31,7 @@ namespace pr::rdr12
 		m_listen_port = listen_port;
 		m_listen_thread = std::jthread([this, listen_port]()
 		{
+			threads::SetCurrentThreadName("Stream Sources Listen Thread");
 			enum class EState { Disconnected, Idle, Listening, Broken } state = EState::Disconnected;
 
 			// Check for client connections to the server and dump old connections
@@ -104,9 +105,10 @@ namespace pr::rdr12
 								network::Check(client != INVALID_SOCKET, "Accepting connection failed");
 
 								// Add this connection as a new source
+								std::unique_ptr<StreamSource> source{ new StreamSource(m_rdr, std::move(client), client_addr) };
 								{
 									std::unique_lock<std::mutex> lock(m_mutex);
-									m_sources.push_back(StreamSource{m_rdr, client});
+									m_sources.push_back(std::move(source));
 								}
 							}
 
@@ -114,8 +116,11 @@ namespace pr::rdr12
 							{
 								// Remove dead sockets from the container
 								std::unique_lock<std::mutex> lock(m_mutex);
-								auto end = std::remove_if(std::begin(m_sources), std::end(m_sources), [](auto& s) { return s.m_socket == nullptr; });
-								m_sources.erase(end, std::end(m_sources));
+								auto end = std::remove_if(std::begin(m_sources), std::end(m_sources), [](auto& s) { return s->m_socket == nullptr; });
+								if (end != std::end(m_sources))
+								{
+									m_sources.erase(end, std::end(m_sources));
+								}
 							}
 							break;
 						}

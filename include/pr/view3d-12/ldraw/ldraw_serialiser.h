@@ -4,6 +4,7 @@
 //********************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 
 namespace pr::rdr12::ldraw
 {	
@@ -42,7 +43,7 @@ namespace pr::rdr12::ldraw
 	struct O2W
 	{
 		m4x4 m_mat;
-		O2W() :m_mat(m4x4Identity) {}
+		O2W() :m_mat(m4x4::Identity()) {}
 		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
 		O2W(m4x4 const& mat) :m_mat(mat) {}
 	};
@@ -57,13 +58,12 @@ namespace pr::rdr12::ldraw
 	};
 	struct Col
 	{
-		union {
 		Colour32 m_col;
-		unsigned int m_ui;
-		};
-		Col() :Col(0xFFFFFFFF) {}
-		Col(Colour32 c) :m_col(c) {}
-		Col(unsigned int ui) :m_ui(ui) {}
+		EKeyword m_kw;
+		Col() : m_col(0xFFFFFFFF), m_kw(EKeyword::Colour) {}
+		Col(Colour32 c) :m_col(c), m_kw(EKeyword::Colour) {}
+		Col(uint32_t argb) :m_col(argb), m_kw(EKeyword::Colour) {}
+		Col(Colour32 c, EKeyword kw) :m_col(c), m_kw(kw) {}
 	};
 	struct Size
 	{
@@ -105,6 +105,12 @@ namespace pr::rdr12::ldraw
 		PerItemColour(bool has_colours) : m_per_item_colour(has_colours) {}
 		operator bool() const { return m_per_item_colour; }
 	};
+	struct Depth
+	{
+		bool m_depth;
+		Depth() :m_depth(false) {}
+		Depth(bool d) : m_depth(d) {}
+	};
 	struct Wireframe
 	{
 		bool m_wire;
@@ -122,12 +128,6 @@ namespace pr::rdr12::ldraw
 		bool m_solid;
 		Solid() :m_solid(false) {}
 		Solid(bool s) : m_solid(s) {}
-	};
-	struct Depth
-	{
-		bool m_depth;
-		Depth() :m_depth(false) {}
-		Depth(bool d) : m_depth(d) {}
 	};
 	struct VariableInt
 	{

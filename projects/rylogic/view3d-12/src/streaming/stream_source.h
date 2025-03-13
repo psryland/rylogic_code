@@ -18,7 +18,7 @@ namespace pr::rdr12
 		std::mutex   m_mutex;      // For synchronising access to 'm_objects'
 
 		StreamSource();
-		StreamSource(Renderer* rdr, SOCKET socket);
+		StreamSource(Renderer* rdr, Socket&& socket, sockaddr_in addr);
 		StreamSource(StreamSource&& rhs) noexcept;
 		StreamSource(StreamSource const&) = delete;
 		StreamSource& operator =(StreamSource&& rhs) noexcept;

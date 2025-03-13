@@ -415,8 +415,8 @@ namespace pr::rdr12::ldraw
 			"		+0.18176337 -0.24681160 -0.12977648 FFA7D8AE\n"
 			"		+0.38887858 +0.24615003 +0.06563436 FFB9BA96\n"
 			"	}\n"
-			"	*Size {5 5}             // Optional. {width, [height]} Specify a size for the point\n"
-			"	*Style {Circle}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'\n"
+			"	*Size {40 40}             // Optional. {width, [height]} Specify a size for the point\n"
+			"	*Style {Star}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'\n"
 			"	*Texture { *FilePath {\"#whitespot\"}} // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.\n"
 			"	*o2w{*pos{16 6 6}}\n"
 			"}\n"
@@ -1255,8 +1255,21 @@ namespace pr::rdr12::ldraw
 		{
 			ldr.Cone("modifiers_example", 0x80FFFFFF)
 				.angle(55.0f).height(2)
+				.axis(AxisId::PosX)
+				.colour(0xFFFF00FF)
+				.colour_mask(0xFF000000)
 				.euler(0, 0, 90)
 				.pos(15, 7, -10);
+		}
+
+		// Nesting
+		{
+			ldr.Sphere("nesting0", 0xA0FFFF00).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 5, -7, 1 }).colour_mask(0xFF000000)
+				.Sphere("nested1", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 })
+				.Sphere("nested2", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 })
+				.Sphere("nested3", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 })
+				.Sphere("nested4", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 })
+				.Sphere("nested5", 0xFF00FFFF).radius({ 0.8f, 1.4f, 0.5f, 0 }).pos({ 0, 1.4f, 0, 1 }).euler(0, 0, 60).pos({ 0, -1.4f, 0, 1 });
 		}
 
 		// An "infinite" plane.
@@ -1267,14 +1280,7 @@ namespace pr::rdr12::ldraw
 				.texture()
 					.path("#checker3")
 					.addr(ETexAddrMode::Wrap, ETexAddrMode::Wrap)
-					.t2s(m4x4::Scale(10, 10, 1, v4::Origin()))
-				//*Texture      // Optional. Planes can have a texture applied. See 'object_modifiers' example above
-				//{
-				//	*FilePath {"#checker3"}
-				//	*Addr {Wrap Wrap}
-				//	*o2w {*Scale{10 10 1}}
-				//}
-				;
+					.t2s(m4x4::Scale(10, 10, 1, v4::Origin()));
 		}
 
 

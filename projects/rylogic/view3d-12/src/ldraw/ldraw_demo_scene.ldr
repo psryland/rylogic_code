@@ -398,8 +398,8 @@
 		+0.18176337 -0.24681160 -0.12977648 FFA7D8AE
 		+0.38887858 +0.24615003 +0.06563436 FFB9BA96
 	}
-	*Size {5 5}             // Optional. {width, [height]} Specify a size for the point
-	*Style {Circle}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'
+	*Size {40 40}             // Optional. {width, [height]} Specify a size for the point
+	*Style {Star}         // Optional. One of: Square, Circle, Triangle, Star, Annulus. Requires 'Width'
 	*Texture { *FilePath {"#whitespot"}} // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.
 	*o2w{*pos{16 6 6}}
 }

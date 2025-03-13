@@ -16,7 +16,7 @@ namespace pr::rdr12
 		//    New connections are assigned a GUID and added as a source.
 		//  - A source is bound to a Window using commands sent over the socket.
 		//  - Not using 'ServerSocket' because I want to control the client instances
-		using SourceCont = std::vector<StreamSource>;
+		using SourceCont = std::vector<std::unique_ptr<StreamSource>>;
 
 	private:
 

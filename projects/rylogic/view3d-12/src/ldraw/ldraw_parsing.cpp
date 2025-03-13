@@ -5274,6 +5274,27 @@ namespace pr::rdr12::ldraw
 		erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
 	}
 
+	// Copy properties from 'src' to 'out' based on 'fields'
+	void CopyCamera(Camera const& src, ECamField fields, Camera& out)
+	{
+		if (AllSet(fields, ECamField::C2W))
+			out.CameraToWorld(src.CameraToWorld());
+		if (AllSet(fields, ECamField::Focus))
+			out.FocusDist(src.FocusDist());
+		if (AllSet(fields, ECamField::Align))
+			out.Align(src.Align());
+		if (AllSet(fields, ECamField::Aspect))
+			out.Aspect(src.Aspect());
+		if (AllSet(fields, ECamField::FovY))
+			out.FovY(src.FovY());
+		if (AllSet(fields, ECamField::Near))
+			out.Near(true, src.Near(true));
+		if (AllSet(fields, ECamField::Far))
+			out.Far(true, src.Far(true));
+		if (AllSet(fields, ECamField::Ortho))
+			out.Orthographic(src.Orthographic());
+	}
+
 	// IReader ------------------------------------------------------------------------------------
 
 	// Reads a transform accumulatively. 'o2w' must be a valid initial transform
@@ -5426,5 +5447,47 @@ namespace pr::rdr12::ldraw
 		// Pre-multiply the object to world transform
 		o2w = p2w * o2w;
 		return o2w;
+	}
+
+	// ParseResult ------------------------------------------------------------------------------------
+
+	ParseResult::ParseResult()
+		: m_objects()
+		, m_models()
+		, m_cam()
+		, m_cam_fields()
+		, m_wireframe()
+	{
+	}
+	void ParseResult::reset()
+	{
+		m_objects.resize(0);
+		m_models.clear();
+		m_cam = {};
+		m_cam_fields = {};
+		m_wireframe = {};
+	}
+	size_t ParseResult::count() const
+	{
+		return m_objects.size();
+	}
+	LdrObjectPtr ParseResult::operator[](size_t index) const
+	{
+		return m_objects[index];
+	}
+	ParseResult& ParseResult::operator += (ParseResult&& rhs)
+	{
+		m_objects.insert(m_objects.end(),
+			std::move_iterator{ rhs.m_objects.begin() },
+			std::move_iterator{ rhs.m_objects.end() });
+			
+		for (auto& p : rhs.m_models)
+			m_models[p.first] = p.second;
+
+		CopyCamera(rhs.m_cam, rhs.m_cam_fields, m_cam);
+		
+		m_wireframe |= rhs.m_wireframe;
+
+		return *this;
 	}
 }

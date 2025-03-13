@@ -163,12 +163,12 @@ namespace pr::rdr12::ldraw
 		template <typename TOut> static void Append(TOut& out, Name n)
 		{
 			if (n.m_name.empty()) return;
-			Append(out, std::string_view{ n.m_name });
+			Write(out, EKeyword::Name, n.m_name);
 		}
 		template <typename TOut> static void Append(TOut& out, Col c)
 		{
-			if (c.m_ui == 0xFFFFFFFF) return;
-			Append(out, To<string32>(c.m_col));
+			if (c.m_col.argb == 0xFFFFFFFF) return;
+			return Write(out, c.m_kw, c.m_col);
 		}
 		template <typename TOut> static void Append(TOut& out, Size s)
 		{
@@ -222,7 +222,8 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, AxisId id)
 		{
-			Write(out, EKeyword::AxisId, static_cast<int>(id));
+			if (id.value == AxisId::None) return;
+			Write(out, EKeyword::AxisId, id.value);
 		}
 		template <typename TOut> static void Append(TOut& out, Pos p)
 		{
@@ -263,8 +264,10 @@ namespace pr::rdr12::ldraw
 			traits<TOut>::append(out, EKeyword_::ToStringA(keyword));
 
 			// Optional name/colour
-			Append(out, name);
-			Append(out, colour);
+			if (!name.m_name.empty())
+				Append(out, std::string_view{ name.m_name });
+			if (colour.m_col != Colour32White)
+				Append(out, colour.m_col);
 
 			// Section start
 			traits<TOut>::append(out, " {");

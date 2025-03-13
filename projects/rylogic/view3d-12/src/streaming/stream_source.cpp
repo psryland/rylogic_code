@@ -16,22 +16,21 @@ namespace pr::rdr12
 		, m_thread()
 		, m_mutex()
 	{}
-	StreamSource::StreamSource(Renderer* rdr, SOCKET socket)
-		: m_socket(socket)
+	StreamSource::StreamSource(Renderer* rdr, Socket&& socket, sockaddr_in addr)
+		: m_socket(std::move(socket))
 		, m_context_id(GenerateGUID())
 		, m_objects()
 		, m_thread()
 		, m_mutex()
 	{
+		auto address = std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr));
+
 		// Start a thread to receive incoming data
-		m_thread = std::jthread([this, rdr, socket]()
+		m_thread = std::jthread([this, rdr, address]()
 		{
+			threads::SetCurrentThreadName(address);
 			try
 			{
-				auto addr = network::GetSockName(socket);
-				auto address = std::filesystem::path(std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr)));
-
-				ldraw::ParseResult out;
 				//ldraw::ErrorCont errors;
 		
 				// Callback functions for 'Parse'
@@ -59,64 +58,73 @@ namespace pr::rdr12
 				for (int bytes_read = 0; !m_thread.get_stop_token().stop_requested();)
 				{
 					// Timeout on select means no more data is available.
-					if (!network::SelectToRecv(socket, 100))
+					if (!network::SelectToRecv(m_socket, 100))
 						continue;
 
-					int read = ::recv(socket, buffer.data<char>() + bytes_read, s_cast<int>(buffer.size<char>() - bytes_read), 0);
+					// Read into '&buffer[bytes_read]'.
+					// Reading zero bytes indicates the socket has been closed gracefully.
+					int read = ::recv(m_socket, buffer.data<char>() + bytes_read, s_cast<int>(buffer.size<char>() - bytes_read), 0);
 					network::Check(read == 0 || read != SOCKET_ERROR);
-					if (read == 0) // Reading zero bytes indicates the socket has been closed gracefully
+					if (read == 0)
 						break;
 
 					bytes_read += read;
 
-					// All received data should start with an ldraw::SectionHeader. If not, flush the data
-					if (bytes_read < sizeof(ldraw::SectionHeader))
-						continue;
-
-					// Parse the data by sections
-					int consumed = 0;
-					for (;;)
+					// Parse the data by batches of sections. Find the range of whole sections to consume.
+					int consume = 0;
+					for (; bytes_read - consume >= sizeof(ldraw::SectionHeader);)
 					{
-						auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(consumed));
+						auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(consume));
 
 						// If the first 4 bytes are not a keyword, then flush the buffer
 						if (!ldraw::EKeyword_::IsValue(s_cast<int>(header.m_keyword)))
 						{
-							consumed = bytes_read;
+							bytes_read = 0;
+							consume = 0;
 							break;
 						}
 
 						// The next 4 bytes should be the section size in bytes (excluding the header)
-						// If there's not enough data yet, keep waiting
-						auto required = header.m_size + sizeof(ldraw::SectionHeader);
-						if (bytes_read < required)
+						auto required = s_cast<int>(header.m_size + sizeof(ldraw::SectionHeader));
+						if (consume + required > bytes_read)
 						{
-							// Make sure the buffer is big enough
-							buffer.resize(std::max(buffer.size(), required));
+							// We can only use up to 'consume' bytes
 							break;
 						}
 
-						// We have a complete section, parse it!
-						pr::mem_istream<char> strm(&header, required);
-						ldraw::BinaryReader reader(strm, address, ReportErrorCB, ProgressCB);
-						out = ldraw::Parse(*rdr, reader, m_context_id);
+						// The next section is complete, include it for consumption
+						consume += required;
 					}
 
-					// Remove the consumed part of the buffer
-					if (consumed == bytes_read)
+					// If there are sections to consume, do that
+					if (consume != 0)
 					{
-						bytes_read = 0;
+						pr::mem_istream<char> strm(buffer.data(), consume);
+						ldraw::BinaryReader reader(strm, address, ReportErrorCB, ProgressCB);
+						ldraw::ParseResult out = ldraw::Parse(*rdr, reader, m_context_id);
+
+						// TODO< DO something with 'out'
+
+						// Move any remaining data to the front
+						memmove(buffer.data(), buffer.data() + consume, bytes_read - consume);
+						bytes_read -= consume;
 					}
-					else
+
+					// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
+					else if (bytes_read >= sizeof(ldraw::SectionHeader))
 					{
-						memmove(buffer.data(), buffer.data() + consumed, bytes_read - consumed);
-						bytes_read -= consumed;
+						auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(0));
+						auto required = header.m_size + sizeof(ldraw::SectionHeader);
+
+						// If there's not enough data yet, keep waiting. Make sure the buffer is big enough
+						buffer.resize(std::max(buffer.size(), required));
 					}
 				}
 			}
-			catch (std::exception const&)
+			catch (std::exception const& ex)
 			{
 				// log?
+				OutputDebugStringA(ex.what());
 			}
 			
 			// Make this source as invalid
@@ -124,28 +132,23 @@ namespace pr::rdr12
 		});
 	}
 	StreamSource::StreamSource(StreamSource&& rhs) noexcept
-		: m_objects(std::move(rhs.m_objects))
-		, m_context_id(std::move(rhs.m_context_id))
-		, m_socket(std::move(rhs.m_socket))
-		, m_thread(std::move(rhs.m_thread))
+		: m_objects()
+		, m_context_id()
+		, m_socket()
+		, m_thread()
 	{
-		// Clear the source from the original
-		rhs.m_socket = nullptr;
-		rhs.m_thread = std::jthread();
+		std::swap(m_objects, rhs.m_objects);
+		std::swap(m_context_id, rhs.m_context_id);
+		std::swap(m_socket, rhs.m_socket);
+		std::swap(m_thread, rhs.m_thread);
 	}
 	StreamSource& StreamSource::operator =(StreamSource&& rhs) noexcept
 	{
-		if (this != &rhs)
-		{
-			m_objects = std::move(rhs.m_objects);
-			m_context_id = std::move(rhs.m_context_id);
-			m_socket = std::move(rhs.m_socket);
-			m_thread = std::move(rhs.m_thread);
-
-			// Clear the source from the original
-			rhs.m_socket = nullptr;
-			rhs.m_thread = std::jthread();
-		}
+		if (this == &rhs) return *this;
+		std::swap(m_objects, rhs.m_objects);
+		std::swap(m_context_id, rhs.m_context_id);
+		std::swap(m_socket, rhs.m_socket);
+		std::swap(m_thread, rhs.m_thread);
 		return *this;
 	}
 	StreamSource::~StreamSource()
