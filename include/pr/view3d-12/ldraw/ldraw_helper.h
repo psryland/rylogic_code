@@ -4,6 +4,7 @@
 //************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"

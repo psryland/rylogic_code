@@ -6,6 +6,7 @@
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/ldraw/ldraw.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_commands.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -50,9 +51,11 @@ namespace pr::rdr12::ldraw
 	struct ParseResult
 	{
 		using ModelLookup = std::unordered_map<size_t, ModelPtr>;
+		using CommandCont = pr::vector<Command>;
 
 		ObjectCont  m_objects;    // Reference to the objects container to fill
 		ModelLookup m_models;     // A lookup map for models based on hashed object name
+		CommandCont m_commands;   // Ldraw commands (todo: replace 'm_cam' with these)
 		Camera      m_cam;        // Camera description has been read
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
@@ -62,6 +65,54 @@ namespace pr::rdr12::ldraw
 		size_t count() const;
 		LdrObjectPtr operator[](size_t index) const;
 		ParseResult& operator += (ParseResult&& rhs);
+	};
+
+	// Progress update event args
+	struct ParseProgressEventArgs :CancelEventArgs
+	{
+		// The context id for the source
+		Guid m_context_id;
+
+		// The parse result that objects are being added to
+		ParseResult const* m_result;
+
+		// The current location in the source
+		Location m_loc;
+
+		// True if parsing is complete (i.e. last update notification)
+		bool m_complete;
+
+		ParseProgressEventArgs(Guid const& context_id, ParseResult const& result, Location const& loc, bool complete)
+			:m_context_id(context_id)
+			, m_result(&result)
+			, m_loc(loc)
+			, m_complete(complete)
+		{
+		}
+	};
+
+	// Parse error event args
+	struct ParseErrorEventArgs
+	{
+		// Error message
+		std::string m_msg;
+
+		// Script error code
+		ldraw::EParseError m_code;
+
+		// The filepath of the source that contains the error (if there is one)
+		ldraw::Location m_loc;
+
+		ParseErrorEventArgs()
+			:ParseErrorEventArgs({}, ldraw::EParseError::UnknownError, {})
+		{
+		}
+		ParseErrorEventArgs(std::string_view msg, ldraw::EParseError code, ldraw::Location const& loc)
+			:m_msg(msg)
+			, m_code(code)
+			, m_loc(loc)
+		{
+		}
 	};
 
 	// Callback function type used during script parsing

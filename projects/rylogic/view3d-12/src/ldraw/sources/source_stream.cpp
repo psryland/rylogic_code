@@ -2,24 +2,16 @@
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
-#include "view3d-12/src/streaming/stream_source.h"
+#include "view3d-12/src/ldraw/sources/source_stream.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
-	StreamSource::StreamSource()
-		: m_socket()
-		, m_context_id(GuidZero)
-		, m_objects()
-		, m_thread()
-		, m_mutex()
-	{}
-	StreamSource::StreamSource(Renderer* rdr, Socket&& socket, sockaddr_in addr)
-		: m_socket(std::move(socket))
-		, m_context_id(GenerateGUID())
-		, m_objects()
+	SourceStream::SourceStream(Guid const* context_id, Renderer* rdr, Socket&& socket, sockaddr_in addr)
+		: SourceBase(context_id)
+		, m_socket(std::move(socket))
 		, m_thread()
 		, m_mutex()
 	{
@@ -31,30 +23,8 @@ namespace pr::rdr12
 			threads::SetCurrentThreadName(address);
 			try
 			{
-				//ldraw::ErrorCont errors;
-		
-				// Callback functions for 'Parse'
-				StaticCB<void, ldraw::EParseError, ldraw::Location const&, std::string_view> ReportErrorCB = {
-					[](void* ctx, ldraw::EParseError err, ldraw::Location const& loc, std::string_view msg) -> void
-					{
-						(void)ctx, err, loc, msg;
-						//auto& errors = *static_cast<ErrorCont*>(ctx);
-						//ParseErrorEventArgs args(msg, err, loc);
-						//errors.push_back(std::move(args));
-					}, nullptr };
-				StaticCB<bool, Guid const&, ldraw::ParseResult const&, ldraw::Location const&, bool> ProgressCB = {
-					[](void* ctx, Guid const& context_id, ldraw::ParseResult const& out, ldraw::Location const& loc, bool complete) -> bool
-					{
-						(void)ctx, context_id, out, loc, complete;
-						//auto& ss = *static_cast<ScriptSources*>(ctx);
-						//AddFileProgressEventArgs args(context_id, out, loc, complete);
-						//ss.OnAddFileProgress(ss, args);
-						//return !args.m_cancel;
-						return true;
-					}, nullptr };
-
 				// Consume data from the socket
-				pr::byte_data buffer(65536);
+				byte_data<4> buffer(65536);
 				for (int bytes_read = 0; !m_thread.get_stop_token().stop_requested();)
 				{
 					// Timeout on select means no more data is available.
@@ -99,11 +69,15 @@ namespace pr::rdr12
 					// If there are sections to consume, do that
 					if (consume != 0)
 					{
-						pr::mem_istream<char> strm(buffer.data(), consume);
-						ldraw::BinaryReader reader(strm, address, ReportErrorCB, ProgressCB);
-						ldraw::ParseResult out = ldraw::Parse(*rdr, reader, m_context_id);
+						mem_istream<char> strm(buffer.data(), consume);
+						BinaryReader reader(strm, address, { OnReportError, this }, { OnProgress, this });
+						auto out = ldraw::Parse(*rdr, reader, m_context_id);
 
-						// TODO< DO something with 'out'
+						rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+						{
+							m_output += std::move(out);
+							ProcessCommands();
+						});
 
 						// Move any remaining data to the front
 						memmove(buffer.data(), buffer.data() + consume, bytes_read - consume);
@@ -131,31 +105,37 @@ namespace pr::rdr12
 			m_socket = nullptr;
 		});
 	}
-	StreamSource::StreamSource(StreamSource&& rhs) noexcept
-		: m_objects()
-		, m_context_id()
+	SourceStream::SourceStream(SourceStream&& rhs) noexcept
+		: SourceBase(rhs)
 		, m_socket()
 		, m_thread()
 	{
-		std::swap(m_objects, rhs.m_objects);
-		std::swap(m_context_id, rhs.m_context_id);
 		std::swap(m_socket, rhs.m_socket);
 		std::swap(m_thread, rhs.m_thread);
 	}
-	StreamSource& StreamSource::operator =(StreamSource&& rhs) noexcept
+	SourceStream& SourceStream::operator =(SourceStream&& rhs) noexcept
 	{
 		if (this == &rhs) return *this;
-		std::swap(m_objects, rhs.m_objects);
-		std::swap(m_context_id, rhs.m_context_id);
+		SourceBase::operator=(rhs);
 		std::swap(m_socket, rhs.m_socket);
 		std::swap(m_thread, rhs.m_thread);
 		return *this;
 	}
-	StreamSource::~StreamSource()
+	SourceStream::~SourceStream()
 	{
 		// Stop the thread
 		m_thread.request_stop();
 		if (m_thread.joinable())
 			m_thread.join();
+	}
+
+	// Process any commands received
+	void SourceStream::ProcessCommands()
+	{
+		for (auto& cmd : m_output.m_commands)
+		{
+			(void)cmd;
+		}
+		m_output.m_commands.resize(0);
 	}
 }

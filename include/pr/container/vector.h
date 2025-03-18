@@ -246,7 +246,7 @@ namespace pr
 
 		inline static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
 		inline static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
-		inline static constexpr int  type_alignment_v   = Alignment;
+		inline static constexpr int  type_alignment_v   = std::max(Alignment, int(alignof(Type*)));
 		inline static constexpr int  local_count_v      = LocalCount;
 
 		struct traits
@@ -380,18 +380,18 @@ namespace pr
 
 		using local_store_t = struct alignas(type_alignment_v)
 		{
-			std::byte _[local_count_v != 0 ? sizeof(Type) : sizeof(Type*)];
+			std::byte _[std::max<size_t>({ type_alignment_v, sizeof(Type*), local_count_v * sizeof(Type) })];
 		};
 		static_assert((std::alignment_of_v<local_store_t> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
 
-		local_store_t m_local[std::max(local_count_v, 1)]; // Local cache for small arrays
-		union {                                            // Union of types for debugging
-		Type      (*m_data)[local_count_v];                // Debugging helper for viewing the data as an array
-		Type*       m_ptr;                                 // Pointer to the array of data
-		};                                                 //
-		size_type m_capacity;                              // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
-		size_type m_count;                                 // The number of used elements in the array
-		allocator_type m_alloc;                            // The memory allocator
+		local_store_t m_local;              // Local cache for small arrays
+		union {                             // Union of types for debugging
+		Type      (*m_data)[local_count_v]; // Debugging helper for viewing the data as an array
+		Type*       m_ptr;                  // Pointer to the array of data
+		};                                  //
+		size_type m_capacity;               // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
+		size_type m_count;                  // The number of used elements in the array
+		allocator_type m_alloc;             // The memory allocator
 
 		// Any combination of type, local count, fixed, alignment, and allocator is a friend
 		template <class T, int L, bool F, int A, class C> friend class vector;
@@ -405,11 +405,11 @@ namespace pr
 		// return a pointer to the local buffer
 		Type const* local_ptr() const
 		{
-			return reinterpret_cast<Type const*>(&m_local[0]);
+			return reinterpret_cast<Type const*>(&m_local);
 		}
 		Type* local_ptr()
 		{
-			return reinterpret_cast<Type*>(&m_local[0]);
+			return reinterpret_cast<Type*>(&m_local);
 		}
 
 		// return true if 'm_ptr' points to our local buffer

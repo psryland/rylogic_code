@@ -65,6 +65,11 @@ namespace pr
 		{
 			resize(initial_size_in_bytes);
 		}
+		explicit byte_data(std::span<std::byte const> data)
+			:byte_data()
+		{
+			append(data);
+		}
 		template <typename citer, typename Type = std::iterator_traits<citer>::value_type>
 		byte_data(citer first, citer last)
 			:byte_data()

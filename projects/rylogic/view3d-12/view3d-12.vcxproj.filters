@@ -118,8 +118,8 @@
     <Filter Include="src\compute\fluid_simulation">
       <UniqueIdentifier>{177ba44e-8001-4c51-a5bc-0cc299bbec5f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\streaming">
-      <UniqueIdentifier>{5c34bfa5-14bf-4f53-adaa-ae34e4b0d3f3}</UniqueIdentifier>
+    <Filter Include="src\ldraw\sources">
+      <UniqueIdentifier>{d5915355-6c2b-4712-b923-fa18e551af3e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -210,9 +210,6 @@
     <ClCompile Include="src\shaders\shader_arrow_head.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_sources.cpp">
-      <Filter>src\ldraw</Filter>
-    </ClCompile>
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
@@ -258,11 +255,23 @@
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp">
       <Filter>src\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="src\streaming\stream_sources.cpp">
-      <Filter>src\streaming</Filter>
+    <ClCompile Include="src\ldraw\sources\ldraw_sources.cpp">
+      <Filter>src\ldraw\sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\streaming\stream_source.cpp">
-      <Filter>src\streaming</Filter>
+    <ClCompile Include="src\ldraw\sources\source_stream.cpp">
+      <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\sources\source_string.cpp">
+      <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\sources\source_file.cpp">
+      <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\sources\source_base.cpp">
+      <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ldraw\sources\source_binary.cpp">
+      <Filter>src\ldraw\sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -668,17 +677,29 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="src\streaming\stream_sources.h">
-      <Filter>src\streaming</Filter>
-    </ClInclude>
-    <ClInclude Include="src\streaming\stream_source.h">
-      <Filter>src\streaming</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ldraw\ldraw_sources.h">
-      <Filter>src\ldraw</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h">
       <Filter>src\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\ldraw_sources.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\source_stream.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\source_file.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\source_base.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\source_string.h">
+      <Filter>src\ldraw\sources</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ldraw\sources\source_binary.h">
+      <Filter>src\ldraw\sources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

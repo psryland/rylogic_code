@@ -369,59 +369,59 @@ namespace pr::rdr12
 
 		pr::vector<Guid> new_guids;
 		auto old_count = m_objects.size();
-		for (auto& src_iter : m_dll->m_sources.Sources())
+		for (auto& srcs : m_dll->m_sources.Sources())
 		{
-			auto& src = src_iter.second;
-			if (!IncludeFilter(src.m_context_id, context_ids, include_count, exclude_count))
+			auto& src = srcs.second;
+			if (!IncludeFilter(src->m_context_id, context_ids, include_count, exclude_count))
 				continue;
 
 			// Add objects from this source
-			new_guids.push_back(src.m_context_id);
-			for (auto& obj : src.m_objects)
+			new_guids.push_back(src->m_context_id);
+			for (auto& obj : src->m_output.m_objects)
 				m_objects.insert(obj.get());
 
 			// Apply camera settings from this source
-			if (src.m_cam_fields != ldraw::ECamField::None)
+			if (src->m_output.m_cam_fields != ldraw::ECamField::None)
 			{
-				auto& cam = src.m_cam;
+				auto& cam = src->m_output.m_cam;
 				auto changed = view3d::ESettings::Camera;
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::C2W))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::C2W))
 				{
 					m_scene.m_cam.CameraToWorld(cam.CameraToWorld());
 					changed |= view3d::ESettings::Camera_Position;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Focus))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Focus))
 				{
 					m_scene.m_cam.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
 					changed |= view3d::ESettings::Camera_Position;
 					changed |= view3d::ESettings::Camera_FocusDist;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Align))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Align))
 				{
 					m_scene.m_cam.Align(cam.Align());
 					changed |= view3d::ESettings::Camera_AlignAxis;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Aspect))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Aspect))
 				{
 					m_scene.m_cam.Aspect(cam.Aspect());
 					changed |= view3d::ESettings::Camera_Aspect;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::FovY))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::FovY))
 				{
 					m_scene.m_cam.FovY(cam.FovY());
 					changed |= view3d::ESettings::Camera_Fov;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Near))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Near))
 				{
 					m_scene.m_cam.Near(cam.Near(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Far))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Far))
 				{
 					m_scene.m_cam.Far(cam.Far(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ldraw::ECamField::Ortho))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Ortho))
 				{
 					m_scene.m_cam.Orthographic(cam.Orthographic());
 					changed |= view3d::ESettings::Camera_Orthographic;

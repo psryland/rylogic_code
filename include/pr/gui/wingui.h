@@ -2731,9 +2731,11 @@ namespace pr
 			// Pump messages. Returns null or an exit code if a WM_QUIT message was pumped
 			std::optional<int> Pump(DWORD timeout_ms = 0)
 			{
+				MSG msg = {};
+
 				// Check for messages and pump any received until
-				::MsgWaitForMultipleObjects(0, 0, TRUE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
-				for (MSG msg = {}; ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
+				::MsgWaitForMultipleObjects(0, nullptr, TRUE, timeout_ms, QS_ALLPOSTMESSAGE | QS_ALLINPUT | QS_ALLEVENTS);
+				for (int max_messages = 1000; max_messages-- != 0 && ::PeekMessageW(&msg, 0, 0, 0, PM_REMOVE); )
 				{
 					// Exit the message pump?
 					if (msg.message == WM_QUIT)

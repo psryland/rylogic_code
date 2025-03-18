@@ -27,6 +27,7 @@
 #include <optional>
 #include <ranges>
 #include <functional>
+#include <execution>
 #include <filesystem>
 #include <source_location>
 #include <type_traits>

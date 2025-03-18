@@ -13,9 +13,8 @@ namespace pr::rdr12::ldraw
 		return static_cast<T>(hash::HashICT(str));
 	}
 
-	// Keywords in ldraw script
+	// Keywords in ldraw script. This includes object types and field names because they need to have unique hashes
 	#pragma region Ldr_Keywords
-	// This includes object types and field names because they need to have unique hashes
 	#define PR_ENUM_LDRAW_KEYWORDS(x)\
 		x(Accel             ,= HashI("Accel"             ))\
 		x(Addr              ,= HashI("Addr"              ))\
@@ -45,6 +44,7 @@ namespace pr::rdr12::ldraw
 		x(Colour            ,= HashI("Colour"            ))\
 		x(ColourMask        ,= HashI("ColourMask"        ))\
 		x(Colours           ,= HashI("Colours"           ))\
+		x(Command           ,= HashI("Command"           ))\
 		x(Cone              ,= HashI("Cone"              ))\
 		x(ConvexHull        ,= HashI("ConvexHull"        ))\
 		x(CoordFrame        ,= HashI("CoordFrame"        ))\
@@ -173,7 +173,7 @@ namespace pr::rdr12::ldraw
 		x(XColumn           ,= HashI("XColumn"           ))\
 		x(YAxis             ,= HashI("YAxis"             ))\
 		x(ZAxis             ,= HashI("ZAxis"             ))
-	PR_DEFINE_ENUM2_BASE(EKeyword , PR_ENUM_LDRAW_KEYWORDS, int);
+	PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int);
 	#pragma endregion
 
 	// An enum of just the object types
@@ -185,6 +185,7 @@ namespace pr::rdr12::ldraw
 		x(BoxList    ,= EKeyword::BoxList    )\
 		x(Chart      ,= EKeyword::Chart      )\
 		x(Circle     ,= EKeyword::Circle     )\
+		x(Command    ,= EKeyword::Command    )\
 		x(Cone       ,= EKeyword::Cone       )\
 		x(ConvexHull ,= EKeyword::ConvexHull )\
 		x(CoordFrame ,= EKeyword::CoordFrame )\
@@ -223,15 +224,15 @@ namespace pr::rdr12::ldraw
 	// Camera fields
 	enum class ECamField
 	{
-		None    = 0,
-		C2W     = 1 << 0,
-		Focus   = 1 << 1,
-		Align   = 1 << 2,
-		Aspect  = 1 << 3,
-		FovY    = 1 << 4,
-		Near    = 1 << 5,
-		Far     = 1 << 6,
-		Ortho   = 1 << 7,
+		None = 0,
+		C2W = 1 << 0,
+		Focus = 1 << 1,
+		Align = 1 << 2,
+		Aspect = 1 << 3,
+		FovY = 1 << 4,
+		Near = 1 << 5,
+		Far = 1 << 6,
+		Ortho = 1 << 7,
 		_flags_enum = 0,
 	};
 
@@ -248,17 +249,17 @@ namespace pr::rdr12::ldraw
 	// Flags for partial update of a model
 	enum class EUpdateObject :int
 	{
-		None         = 0,
-		Name         = 1 << 0,
-		Model        = 1 << 1,
-		Transform    = 1 << 2,
-		Children     = 1 << 3,
-		Colour       = 1 << 4,
-		ColourMask   = 1 << 5,
+		None = 0,
+		Name = 1 << 0,
+		Model = 1 << 1,
+		Transform = 1 << 2,
+		Children = 1 << 3,
+		Colour = 1 << 4,
+		ColourMask = 1 << 5,
 		Reflectivity = 1 << 6,
-		Flags        = 1 << 7,
-		Animation    = 1 << 8,
-		All          = 0x1FF,
+		Flags = 1 << 7,
+		Animation = 1 << 8,
+		All = 0x1FF,
 		_flags_enum = 0,
 	};
 
@@ -325,13 +326,14 @@ namespace pr::rdr12::ldraw
 		v4         m_aacc;   // Angular velocity of the animation in rad/s
 
 		Animation()
-			:m_style(EAnimStyle::NoAnimation)
-			,m_period(1.0f)
-			,m_vel(v4Zero)
-			,m_acc(v4Zero)
-			,m_avel(v4Zero)
-			,m_aacc(v4Zero)
-		{}
+			: m_style(EAnimStyle::NoAnimation)
+			, m_period(1.0f)
+			, m_vel(v4Zero)
+			, m_acc(v4Zero)
+			, m_avel(v4Zero)
+			, m_aacc(v4Zero)
+		{
+		}
 
 		// Return a transform representing the offset
 		// added by this object at time 'time_s'
@@ -340,27 +342,38 @@ namespace pr::rdr12::ldraw
 			auto t = 0.0f;
 			switch (m_style)
 			{
-			default: throw std::exception("Unknown animation style");
-			case EAnimStyle::NoAnimation:
-				return m4x4Identity;
-			case EAnimStyle::Once:
-				t = time_s < m_period ? time_s : m_period;
-				break;
-			case EAnimStyle::Repeat:
-				t = Fmod(time_s, m_period);
-				break;
-			case EAnimStyle::Continuous:
-				t = time_s;
-				break;
-			case EAnimStyle::PingPong:
-				t = Fmod(time_s, 2.0f*m_period) >= m_period
-					? m_period - Fmod(time_s, m_period)
-					: Fmod(time_s, m_period);
-				break;
+				case EAnimStyle::NoAnimation:
+				{
+					return m4x4::Identity();
+				}
+				case EAnimStyle::Once:
+				{
+					t = time_s < m_period ? time_s : m_period;
+					break;
+				}
+				case EAnimStyle::Repeat:
+				{
+					t = Fmod(time_s, m_period);
+					break;
+				}
+				case EAnimStyle::Continuous:
+				{
+					t = time_s;
+					break;
+				}
+				case EAnimStyle::PingPong:
+				{
+					t = Fmod(time_s, 2.0f * m_period) >= m_period ? m_period - Fmod(time_s, m_period) : Fmod(time_s, m_period);
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Unknown animation style");
+				}
 			}
 
-			auto l = 0.5f*m_acc*Sqr(t) + m_vel*t + v4Origin;
-			auto a = 0.5f*m_aacc*Sqr(t) + m_avel*t;
+			auto l = 0.5f * m_acc * Sqr(t) + m_vel * t + v4::Origin();
+			auto a = 0.5f * m_aacc * Sqr(t) + m_avel * t;
 			return m4x4::Transform(a, l);
 		}
 	};

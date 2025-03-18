@@ -18,7 +18,6 @@ namespace pr::rdr12
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
 		, m_wnd_cont()
 		, m_sources(m_rdr)
-		, m_streams(m_rdr)
 		, m_inits()
 		, m_mutex()
 		, ReportError()
@@ -28,7 +27,7 @@ namespace pr::rdr12
 		ReportError += global_error_cb;
 
 		// Hook up the sources events
-		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
+		m_sources.OnAddFileProgress += [&](ScriptSources&, ldraw::ParseProgressEventArgs& args)
 		{
 			auto context_id = args.m_context_id;
 			auto filepath = args.m_loc.m_filepath.generic_string();
@@ -42,16 +41,16 @@ namespace pr::rdr12
 		{
 			OnSourcesChanged(view3d::ESourcesChangedReason::Reload, true);
 		};
-		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
+		m_sources.OnSourceRemoved += [&](ScriptSources&, ldraw::SourceRemovedEventArgs const& args)
 		{
-			auto reload = args.m_reason == ScriptSources::EReason::Reload;
+			auto reload = args.m_reason == ldraw::ESourceChangeReason::Reload;
 
 			// When a source is about to be removed, remove it's objects from the windows.
 			// If this is a reload, save a reference to the removed objects so we know what to reload.
 			for (auto& wnd : m_wnd_cont)
 				wnd->Remove(&args.m_context_id, 1, false, reload);
 		};
-		m_sources.OnStoreChange += [&](ScriptSources&, ScriptSources::StoreChangeEventArgs const& args)
+		m_sources.OnStoreChange += [&](ScriptSources&, ldraw::StoreChangeEventArgs const& args)
 		{
 			if (args.m_before)
 				return;
@@ -59,17 +58,17 @@ namespace pr::rdr12
 			switch (args.m_reason)
 			{
 				// On NewData, do nothing. Callers will add objects to windows as they see fit.
-				case ScriptSources::EReason::NewData:
+				case ldraw::ESourceChangeReason::NewData:
 				{
 					break;
 				}
 				// On Removal, do nothing. Removed objects should already have been removed from the windows.
-				case ScriptSources::EReason::Removal:
+				case ldraw::ESourceChangeReason::Removal:
 				{
 					break;
 				}
 				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
-				case ScriptSources::EReason::Reload:
+				case ldraw::ESourceChangeReason::Reload:
 				{
 					for (auto& wnd : m_wnd_cont)
 					{
@@ -87,7 +86,7 @@ namespace pr::rdr12
 			// Notify of updated sources
 			OnSourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
 		};
-		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)
+		m_sources.OnError += [&](ScriptSources&, ldraw::ParseErrorEventArgs const& args)
 		{
 			auto filepath = args.m_loc.m_filepath.generic_string();
 			ReportError(args.m_msg.c_str(), filepath.c_str(), args.m_loc.m_line, args.m_loc.m_offset);
@@ -159,14 +158,14 @@ namespace pr::rdr12
 	// Load/Add ldr objects from a script file. Returns the Guid of the context that the objects were added to.
 	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
-		return m_sources.AddFile(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
+		return m_sources.AddFile(ldr_script, enc, ldraw::ESourceChangeReason::NewData, context_id, includes, on_add);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 	template <typename Char>
 	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
 	{
-		return m_sources.AddString(ldr_script, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
+		return m_sources.AddString(ldr_script, enc, ldraw::ESourceChangeReason::NewData, context_id, includes, on_add);
 	}
 	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
@@ -174,16 +173,16 @@ namespace pr::rdr12
 	// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
 	Guid Context::LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add)
 	{
-		return m_sources.AddBinary(data, ScriptSources::EReason::NewData, context_id, on_add);
+		return m_sources.AddBinary(data, ldraw::ESourceChangeReason::NewData, context_id, on_add);
 	}
 
 	// Enable/Disable streaming script sources.
 	void Context::StreamingEnable(bool enabled, uint16_t port)
 	{
 		if (enabled)
-			m_streams.AllowConnections(port);
+			m_sources.AllowConnections(port);
 		else
-			m_streams.StopConnections();
+			m_sources.StopConnections();
 	}
 
 	// Create an object from geometry
@@ -286,7 +285,7 @@ namespace pr::rdr12
 		// Record how many objects there are already for the context id (if it exists)
 		auto& srcs = m_sources.Sources();
 		auto iter = srcs.find(id);
-		auto count = iter != end(srcs) ? iter->second.m_objects.size() : 0U;
+		auto count = iter != end(srcs) ? iter->second->m_output.m_objects.size() : 0U;
 
 		// Load the ldr script
 		if (file)
@@ -297,8 +296,8 @@ namespace pr::rdr12
 		// Return the first object, expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context.
 		iter = srcs.find(id);
-		return iter != std::end(srcs) && iter->second.m_objects.size() > count
-			? iter->second.m_objects[count].get()
+		return iter != std::end(srcs) && iter->second->m_output.m_objects.size() > count
+			? iter->second->m_output.m_objects[count].get()
 			: nullptr;
 	}
 	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
@@ -545,7 +544,7 @@ namespace pr::rdr12
 		if (!unused.empty())
 		{
 			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
-			m_sources.Remove(ids.data(), s_cast<int>(ids.ssize()), 0, ScriptSources::EReason::Removal);
+			m_sources.Remove(ids.data(), s_cast<int>(ids.ssize()), 0, ldraw::ESourceChangeReason::Removal);
 		}
 	}
 
@@ -553,7 +552,7 @@ namespace pr::rdr12
 	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
 		for (auto& src : m_sources.Sources())
-			if (!enum_guids_cb(src.second.m_context_id))
+			if (!enum_guids_cb(src.second->m_context_id))
 				return;
 	}
 	
@@ -574,10 +573,10 @@ namespace pr::rdr12
 		m_sources.RemoveGizmo(gizmo);
 	}
 
-	// Reload file sources
+	// Reload sources
 	void Context::ReloadScriptSources()
 	{
-		m_sources.ReloadFiles();
+		m_sources.Reload();
 	}
 	
 	// Poll for changed script source files, and reload any that have changed

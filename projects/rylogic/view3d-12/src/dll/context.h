@@ -5,8 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
-#include "view3d-12/src/ldraw/ldraw_sources.h"
-#include "view3d-12/src/streaming/stream_sources.h"
+#include "view3d-12/src/ldraw/sources/ldraw_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
 namespace pr::rdr12
@@ -16,14 +15,12 @@ namespace pr::rdr12
 		using InitSet = std::unordered_set<view3d::DllHandle>;
 		using WindowCont = std::vector<V3dWindow*>;
 		using ScriptSources = pr::rdr12::ldraw::ScriptSources;
-		using StreamSources = pr::rdr12::StreamSources;
 
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 		Renderer             m_rdr;      // The renderer
 		WindowCont           m_wnd_cont; // The created windows
 		ScriptSources        m_sources;  // A container of Ldr objects and a file watcher
-		StreamSources        m_streams;  // A container of streaming connections
 		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;
 

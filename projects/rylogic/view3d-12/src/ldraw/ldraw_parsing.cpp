@@ -4948,6 +4948,14 @@ namespace pr::rdr12::ldraw
 		{}
 	};
 
+	// ELdrObject::Command
+	template <> struct ObjectCreator<ELdrObject::Command> : IObjectCreator
+	{
+		ObjectCreator(ParseParams& pp)
+			: IObjectCreator(pp)
+		{}
+	};
+
 	#pragma endregion
 
 	// Reads a single ldr object from a script adding object (+ children) to 'pp.m_objects'.

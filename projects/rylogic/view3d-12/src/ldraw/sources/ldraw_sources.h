@@ -1,0 +1,203 @@
+﻿//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
+// A container of Ldr script sources that can watch for external changes.
+#pragma once
+#include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "view3d-12/src/ldraw/sources/source_base.h"
+
+namespace pr::rdr12::ldraw
+{
+	// Reasons for changes to the sources collection
+	enum class ESourceChangeReason
+	{
+		// AddScript/AddFile has been called
+		NewData,
+
+		// Data has been refreshed from the sources
+		Reload,
+
+		// Objects have been removed
+		Removal,
+	};
+
+	// Store change event args
+	struct StoreChangeEventArgs
+	{
+		// The origin of the object container change
+		ESourceChangeReason m_reason;
+
+		// The context ids that changed
+		std::span<Guid const> m_context_ids;
+
+		// Contains the results of parsing including the object container that the objects where added to
+		ParseResult const* m_result;
+
+		// True if this event is just prior to the changes being made to the store
+		bool m_before;
+
+		StoreChangeEventArgs(ESourceChangeReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
+			: m_reason(why)
+			, m_context_ids(context_ids)
+			, m_result(result)
+			, m_before(before)
+		{
+		}
+	};
+
+	// Source (context id) removed event args
+	struct SourceRemovedEventArgs
+	{
+		// The Guid of the source to be removed
+		Guid m_context_id;
+
+		// The origin of the object container change
+		ESourceChangeReason m_reason;
+
+		SourceRemovedEventArgs(Guid context_id, ESourceChangeReason reason)
+			: m_context_id(context_id)
+			, m_reason(reason)
+		{
+		}
+	};
+
+	// A collection of LDraw script sources
+	struct ScriptSources :IFileChangedHandler
+	{
+		// Notes:
+		//  - A collection of sources of ldr objects.
+		//  - Typically ldraw sources are files, but string sources and stream sources are
+		//    also supported.
+		//  - This class maintains a map from context ids to a collection of sources.
+		//  - All sources have a unique context id. When reloaded, objects previously
+		//    associated with that file context id are removed. String scripts have a user
+		//    provided id. String scripts are not reloaded because they shouldn't change
+		//    externally. Callers should manage the removal of objects associated with string
+		//    script sources.
+		//  - This class manages the file watching/reload mechanism because when an included
+		//    file changes, and reload of the root file is needed, even if unchanged.
+		//  - If a file in a context id set has changed, an event is raised allowing the
+		//    change to be ignored. The event args contain the context id and list of
+		//    associated files.
+
+		using GuidCont = pr::vector<Guid>;
+		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
+		using OnAddCB = std::function<void(Guid const&, bool)>;
+		using filepath_t = std::filesystem::path;
+
+		// A container that doesn't invalidate on add/remove is needed because
+		// the file watcher contains a pointer into the 'Source' objects.
+		using SourceCont = std::unordered_map<Guid, std::unique_ptr<SourceBase>>;
+
+		// Container of errors
+		using ErrorCont = pr::vector<ParseErrorEventArgs>;
+
+	private:
+
+		SourceCont      m_srcs;           // The sources of ldr script
+		GizmoCont       m_gizmos;         // The created ldr gizmos
+		Renderer*       m_rdr;            // Renderer used to create models
+		Winsock         m_winsock;        // The 'winsock' instance we're bound to
+		GuidSet         m_loading;        // File group ids in the process of being reloaded
+		FileWatch       m_watcher;        // The watcher of files
+		std::jthread    m_listen_thread;  // Thread that listens for incoming connections
+		std::thread::id m_main_thread_id; // The main thread id
+		uint16_t        m_listen_port;    // The port we're listening on
+
+	public:
+
+		explicit ScriptSources(Renderer& rdr);
+		~ScriptSources();
+
+		// Renderer access
+		Renderer& rdr() const;
+
+		// The ldr script sources
+		SourceCont const& Sources() const;
+
+		// The store of gizmos
+		GizmoCont const& Gizmos() const;
+
+		// Parse error event.
+		EventHandler<ScriptSources&, ParseErrorEventArgs const&, true> OnError;
+
+		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+		EventHandler<ScriptSources&, EmptyArgs const&, true> OnReload;
+
+		// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
+		EventHandler<ScriptSources&, ParseProgressEventArgs&, true> OnAddFileProgress;
+
+		// Store change event. Called before and after a change to the collection of objects in the store.
+		EventHandler<ScriptSources&, StoreChangeEventArgs&, true> OnStoreChange;
+
+		// Source removed event (i.e. objects deleted by Id)
+		EventHandler<ScriptSources&, SourceRemovedEventArgs const&, true> OnSourceRemoved;
+
+		// Remove all objects and sources
+		void ClearAll();
+
+		//// Remove all file sources
+		//void ClearFiles();
+
+		// Remove a single object from the object container
+		void Remove(LdrObject* object, ESourceChangeReason reason = ESourceChangeReason::Removal);
+
+		// Remove all objects associated with 'context_ids'
+		void Remove(Guid const* context_ids, int include_count, int exclude_count, ESourceChangeReason reason = ESourceChangeReason::Removal);
+		void Remove(Guid const& context_id, ESourceChangeReason reason = ESourceChangeReason::Removal);
+
+		//// Remove a file source
+		//void RemoveFile(filepath_t const& filepath, ESourceChangeReason reason = ESourceChangeReason::Removal);
+
+		// Reload all sources
+		void Reload();
+
+		// Check all file sources for modifications and reload any that have changed
+		void RefreshChangedFiles();
+
+		// Add an object created externally
+		Guid Add(LdrObjectPtr object, ESourceChangeReason reason = ESourceChangeReason::NewData);
+
+		// Parse a string containing ldraw script.
+		// This function can be called from any thread and may be called concurrently by multiple threads.
+		// Returns the GUID of the context that the objects were added to.
+		template <typename Char>
+		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, ESourceChangeReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
+
+		// Parse file containing ldraw script.
+		// This function can be called from any thread and may be called concurrently by multiple threads.
+		// Returns the GUID of the context that the objects were added to.
+		Guid AddFile(std::filesystem::path script, EEncoding enc, ESourceChangeReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
+
+		// Parse binary data containing ldraw script
+		// This function can be called from any thread and may be called concurrently by multiple threads.
+		// Returns the GUID of the context that the objects were added to.
+		Guid AddBinary(std::span<std::byte const> data, ESourceChangeReason reason, Guid const* context_id, OnAddCB on_add);
+
+		// Allow connections on 'port'
+		void AllowConnections(uint16_t listen_port);
+
+		// Close all connections and stop listening
+		void StopConnections();
+
+		// Create a gizmo object and add it to the gizmo collection
+		LdrGizmo* CreateGizmo(EGizmoMode mode, m4x4 const& o2w);
+
+		// Destroy a gizmo
+		void RemoveGizmo(LdrGizmo* gizmo);
+
+		// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
+		Guid const* ContextIdFromFilepath(filepath_t const& filepath) const;
+
+		// Merge a script source with the existing sources collection. Returns the context id of the source that was merged
+		Guid Merge(std::unique_ptr<SourceBase>&& source, ESourceChangeReason reason, OnAddCB on_add);
+
+	private:
+
+		// 'filepath' is the name of the changed file
+		void FileWatch_OnFileChanged(wchar_t const*, Guid const& context_id, void*, bool&);
+	};
+}
