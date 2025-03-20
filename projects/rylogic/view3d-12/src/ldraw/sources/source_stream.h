@@ -22,8 +22,5 @@ namespace pr::rdr12::ldraw
 		SourceStream& operator =(SourceStream&& rhs) noexcept;
 		SourceStream& operator =(SourceStream const&) = delete;
 		~SourceStream();
-
-		// Process any commands received
-		void ProcessCommands();
 	};
 }

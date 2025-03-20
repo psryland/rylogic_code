@@ -100,7 +100,9 @@ struct Main :Form
 
 		// Load script
 		//auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
-
+		auto s = "*Box {*Data{1 2 3}} *Commands {*Data {AddToScene 0}}";
+		auto ctx0 = View3D_LoadScriptFromString(s, nullptr, nullptr, nullptr, nullptr);
+		
 		// Set up the scene
 		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	

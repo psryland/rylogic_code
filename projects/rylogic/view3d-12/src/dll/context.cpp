@@ -16,85 +16,19 @@ namespace pr::rdr12
 {
 	Context::Context(HINSTANCE instance, StaticCB<view3d::ReportErrorCB> global_error_cb)
 		: m_rdr(RdrSettings(instance).DebugLayer(PR_DBG_RDR).DefaultAdapter())
-		, m_wnd_cont()
-		, m_sources(m_rdr)
+		, m_windows()
+		, m_sources(m_rdr, *this)
 		, m_inits()
 		, m_mutex()
 		, ReportError()
-		, OnAddFileProgress()
-		, OnSourcesChanged()
+		, ParsingProgress()
+		, SourcesChanged()
 	{
 		ReportError += global_error_cb;
-
-		// Hook up the sources events
-		m_sources.OnAddFileProgress += [&](ScriptSources&, ldraw::ParseProgressEventArgs& args)
-		{
-			auto context_id = args.m_context_id;
-			auto filepath = args.m_loc.m_filepath.generic_string();
-			auto file_offset = s_cast<int64_t>(args.m_loc.m_offset);
-			BOOL complete = args.m_complete;
-			BOOL cancel = false;
-			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, cancel);
-			args.m_cancel = cancel != 0;
-		};
-		m_sources.OnReload += [&](ScriptSources&, EmptyArgs const&)
-		{
-			OnSourcesChanged(view3d::ESourcesChangedReason::Reload, true);
-		};
-		m_sources.OnSourceRemoved += [&](ScriptSources&, ldraw::SourceRemovedEventArgs const& args)
-		{
-			auto reload = args.m_reason == ldraw::ESourceChangeReason::Reload;
-
-			// When a source is about to be removed, remove it's objects from the windows.
-			// If this is a reload, save a reference to the removed objects so we know what to reload.
-			for (auto& wnd : m_wnd_cont)
-				wnd->Remove(&args.m_context_id, 1, false, reload);
-		};
-		m_sources.OnStoreChange += [&](ScriptSources&, ldraw::StoreChangeEventArgs const& args)
-		{
-			if (args.m_before)
-				return;
-
-			switch (args.m_reason)
-			{
-				// On NewData, do nothing. Callers will add objects to windows as they see fit.
-				case ldraw::ESourceChangeReason::NewData:
-				{
-					break;
-				}
-				// On Removal, do nothing. Removed objects should already have been removed from the windows.
-				case ldraw::ESourceChangeReason::Removal:
-				{
-					break;
-				}
-				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
-				case ldraw::ESourceChangeReason::Reload:
-				{
-					for (auto& wnd : m_wnd_cont)
-					{
-						wnd->Add(args.m_context_ids.data(), isize(args.m_context_ids), 0);
-						wnd->Invalidate();
-					}
-					break;
-				}
-				default:
-				{
-					throw std::runtime_error("Unknown store changed reason");
-				}
-			}
-
-			// Notify of updated sources
-			OnSourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
-		};
-		m_sources.OnError += [&](ScriptSources&, ldraw::ParseErrorEventArgs const& args)
-		{
-			auto filepath = args.m_loc.m_filepath.generic_string();
-			ReportError(args.m_msg.c_str(), filepath.c_str(), args.m_loc.m_line, args.m_loc.m_offset);
-		};
 	}
 	Context::~Context()
 	{
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			delete wnd;
 	}
 
@@ -120,7 +54,7 @@ namespace pr::rdr12
 		try
 		{
 			V3dWindow* win;
-			m_wnd_cont.push_back(win = new V3dWindow(hwnd, *this, opts));
+			m_windows.push_back(win = new V3dWindow(rdr(), hwnd, opts));
 			return win;
 		}
 		catch (std::exception const& e)
@@ -136,7 +70,7 @@ namespace pr::rdr12
 	}
 	void Context::WindowDestroy(V3dWindow* window)
 	{
-		erase_first(m_wnd_cont, [=](auto& wnd){ return wnd == window; });
+		erase_first(m_windows, [=](auto& wnd) { return wnd == window; });
 		delete window;
 	}
 
@@ -169,7 +103,7 @@ namespace pr::rdr12
 	}
 	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
 	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
-	
+
 	// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
 	Guid Context::LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add)
 	{
@@ -386,9 +320,9 @@ namespace pr::rdr12
 		auto& edit_cb = *static_cast<StaticCB<view3d::EditObjectCB>*>(ctx);
 		auto [new_vcount, new_icount] = edit_cb(isize(vbuf), isize(ibuf), vbuf.data(), ibuf.data(),
 			[](void* ctx, view3d::Nugget const& n)
-			{
-				static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n);
-			}, &nbuf);
+		{
+			static_cast<pr::vector<view3d::Nugget>*>(ctx)->push_back(n);
+		}, &nbuf);
 
 		// Sanity check results
 		if (new_vcount > isize(vbuf)) throw std::runtime_error("Dynamic model buffer overrun (v-buf)");
@@ -399,7 +333,7 @@ namespace pr::rdr12
 		{// Update the model geometry
 			auto update_v = model->UpdateVertices(factory, { 0, new_vcount });
 			auto update_i = model->UpdateIndices(factory, { 0, new_icount });
-			
+
 			model->m_bbox.reset();
 
 			auto vin = vbuf.data();
@@ -464,7 +398,7 @@ namespace pr::rdr12
 	void Context::ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
 	{
 		// Remove the object from any windows it might be in
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			wnd->Remove(object);
 
 		// Callback to edit the geometry
@@ -476,7 +410,7 @@ namespace pr::rdr12
 	void Context::UpdateObject(LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags)
 	{
 		// Remove the object from any windows it might be in
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			wnd->Remove(object);
 
 		// Update the object model
@@ -486,14 +420,14 @@ namespace pr::rdr12
 	}
 	template void Context::UpdateObject<wchar_t>(LdrObject* object, std::wstring_view, ldraw::EUpdateObject flags);
 	template void Context::UpdateObject<char>(LdrObject* object, std::string_view, ldraw::EUpdateObject flags);
-	
+
 	// Delete a single object
 	void Context::DeleteObject(LdrObject* object)
 	{
 		// Remove the object from any windows it's in
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			wnd->Remove(object);
-		
+
 		// Delete the object from the object container
 		m_sources.Remove(object);
 	}
@@ -502,26 +436,26 @@ namespace pr::rdr12
 	void Context::DeleteAllObjects()
 	{
 		// Remove the objects from any windows they're in
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			wnd->RemoveAllObjects();
-		
+
 		// Clear the object container. The unique pointers should delete the objects
 		m_sources.ClearAll();
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count)
+	void Context::DeleteAllObjectsById(std::span<Guid const> include, std::span<Guid const> exclude)
 	{
 		// Remove objects from any windows they might be assigned to
-		for (auto& wnd : m_wnd_cont)
-			wnd->Remove(context_ids, include_count, exclude_count, false);
+		for (auto& wnd : m_windows)
+			wnd->Remove(include, exclude, false);
 
 		// Remove sources that match the given set of context ids to delete
-		m_sources.Remove(context_ids, include_count, exclude_count);
+		m_sources.Remove(include, exclude);
 	}
 
 	// Delete all objects not displayed in any windows
-	void Context::DeleteUnused(Guid const* context_ids, int include_count, int exclude_count)
+	void Context::DeleteUnused(std::span<Guid const> include, std::span<Guid const> exclude)
 	{
 		// Build a set of context ids, included in 'context_ids', and not used in any windows
 		GuidSet unused;
@@ -529,12 +463,12 @@ namespace pr::rdr12
 		// Initialise 'unused' with all context ids (filtered by 'context_ids')
 		for (auto& src : m_sources.Sources())
 		{
-			if (!IncludeFilter(src.first, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(src.first, include, exclude)) continue;
 			unused.insert(src.first);
 		}
 
 		// Remove those that are used in the windows
-		for (auto& wnd :m_wnd_cont)
+		for (auto& wnd : m_windows)
 		{
 			for (auto& id : wnd->m_guids)
 				unused.erase(id);
@@ -544,7 +478,7 @@ namespace pr::rdr12
 		if (!unused.empty())
 		{
 			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
-			m_sources.Remove(ids.data(), s_cast<int>(ids.ssize()), 0, ldraw::ESourceChangeReason::Removal);
+			m_sources.Remove(ids, {}, ldraw::ESourceChangeReason::Removal);
 		}
 	}
 
@@ -555,20 +489,20 @@ namespace pr::rdr12
 			if (!enum_guids_cb(src.second->m_context_id))
 				return;
 	}
-	
+
 	// Create a gizmo object and add it to the gizmo collection
 	LdrGizmo* Context::GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w)
 	{
 		return m_sources.CreateGizmo(mode, o2w);
 	}
-	
+
 	// Destroy a gizmo
 	void Context::GizmoDelete(LdrGizmo* gizmo)
 	{
 		// Remove the gizmo from any windows it's in
-		for (auto& wnd : m_wnd_cont)
+		for (auto& wnd : m_windows)
 			wnd->Remove(gizmo);
-		
+
 		// Delete the gizmo from the sources
 		m_sources.RemoveGizmo(gizmo);
 	}
@@ -578,7 +512,7 @@ namespace pr::rdr12
 	{
 		m_sources.Reload();
 	}
-	
+
 	// Poll for changed script source files, and reload any that have changed
 	void Context::CheckForChangedSources()
 	{
@@ -589,5 +523,85 @@ namespace pr::rdr12
 	Guid const* Context::ContextIdFromFilepath(char const* filepath) const
 	{
 		return m_sources.ContextIdFromFilepath(filepath);
+	}
+
+	// Parse error event.
+	void Context::OnError(ldraw::ParseErrorEventArgs const& args)
+	{
+		auto filepath = args.m_loc.m_filepath.generic_string();
+		ReportError(args.m_msg.c_str(), filepath.c_str(), args.m_loc.m_line, args.m_loc.m_offset);
+	}
+
+	// An event raised during parsing. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
+	void Context::OnParsingProgress(ldraw::ParsingProgressEventArgs& args)
+	{
+		auto context_id = args.m_context_id;
+		auto filepath = args.m_loc.m_filepath.generic_string();
+		auto file_offset = s_cast<int64_t>(args.m_loc.m_offset);
+		BOOL complete = args.m_complete;
+		BOOL cancel = false;
+		ParsingProgress(context_id, filepath.c_str(), file_offset, complete, cancel);
+		args.m_cancel = cancel != 0;
+	}
+
+	// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+	void Context::OnReload()
+	{
+		SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
+	}
+
+	// Store change event. Called before and after a change to the collection of objects in the store.
+	void Context::OnStoreChange(ldraw::StoreChangeEventArgs& args)
+	{
+		if (args.m_before)
+			return;
+
+		switch (args.m_reason)
+		{
+			case ldraw::ESourceChangeReason::NewData:
+			{
+				// On NewData, do nothing. Callers will add objects to windows as they see fit.
+				break;
+			}
+			case ldraw::ESourceChangeReason::Removal:
+			{
+				// On Removal, do nothing. Removed objects should already have been removed from the windows.
+				break;
+			}
+			case ldraw::ESourceChangeReason::Reload:
+			{
+				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
+				for (auto& wnd : m_windows)
+				{
+					wnd->Add(m_sources.Sources(), args.m_context_ids, {});
+					wnd->Invalidate();
+				}
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown store changed reason");
+			}
+		}
+
+		// Notify of updated sources
+		SourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
+	}
+
+	// Source removed event (i.e. objects deleted by Id)
+	void Context::OnSourceRemoved(ldraw::SourceRemovedEventArgs const& args)
+	{
+		auto reload = args.m_reason == ldraw::ESourceChangeReason::Reload;
+
+		// When a source is about to be removed, remove it's objects from the windows.
+		// If this is a reload, save a reference to the removed objects so we know what to reload.
+		for (auto& wnd : m_windows)
+			wnd->Remove({ &args.m_context_id, 1 }, {}, reload);
+	}
+
+	// Process any received commands in the source
+	void Context::OnHandleCommands(ldraw::SourceBase& source)
+	{
+		ldraw::ExecuteCommands(source, *this);
 	}
 }

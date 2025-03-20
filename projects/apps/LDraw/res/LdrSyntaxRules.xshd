@@ -26,7 +26,6 @@
 			<Word>*BoxList</Word>
 			<Word>*Chart</Word>
 			<Word>*Circle</Word>
-			<Word>*Command</Word>
 			<Word>*Cone</Word>
 			<Word>*ConvexHull</Word>
 			<Word>*CoordFrame</Word>
@@ -96,7 +95,7 @@
 			<Word>*Colour</Word>
 			<Word>*ColourMask</Word>
 			<Word>*Colours</Word>
-			<Word>*Command</Word>
+			<Word>*Commands</Word>
 			<Word>*Cone</Word>
 			<Word>*ConvexHull</Word>
 			<Word>*CoordFrame</Word>

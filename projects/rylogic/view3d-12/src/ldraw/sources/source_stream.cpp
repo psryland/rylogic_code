@@ -76,7 +76,6 @@ namespace pr::rdr12::ldraw
 						rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
 						{
 							m_output += std::move(out);
-							ProcessCommands();
 						});
 
 						// Move any remaining data to the front
@@ -127,15 +126,5 @@ namespace pr::rdr12::ldraw
 		m_thread.request_stop();
 		if (m_thread.joinable())
 			m_thread.join();
-	}
-
-	// Process any commands received
-	void SourceStream::ProcessCommands()
-	{
-		for (auto& cmd : m_output.m_commands)
-		{
-			(void)cmd;
-		}
-		m_output.m_commands.resize(0);
 	}
 }

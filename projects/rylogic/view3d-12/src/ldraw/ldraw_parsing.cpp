@@ -6,6 +6,7 @@
 #include "pr/view3d-12/ldraw/ldraw_serialiser.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/model/model.h"
@@ -247,6 +248,53 @@ namespace pr::rdr12::ldraw
 	bool ParseLdrObject(ELdrObject type, IReader& reader, ParseParams& pp);
 
 	#pragma region Parse Common Elements
+
+	// Parse a single commands
+	ldraw::Command ParseCommand(ECommandId id, IReader& reader, ParseParams& pp)
+	{
+		switch (id)
+		{
+			#define PR_LDRAW_PARSE_CMDS_IMPL(name, hash)\
+			case ECommandId::name:\
+			{\
+				return CommandHandler<ECommandId::name>::Parse(reader);\
+			}
+			#define PR_LDRAW_PARSE_CMDS(x) x(PR_LDRAW_PARSE_CMDS_IMPL)
+			PR_LDRAW_PARSE_CMDS(PR_ENUM_LDRAW_COMMANDS)
+			default:
+			{
+				pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unsupported command");
+				return { ECommandId::Invalid, {} };
+			}
+		}
+	}
+
+	// Parse command blocks
+	void ParseCommands(IReader& reader, ParseParams& pp, ParseResult& out)
+	{
+		// Parse a command block
+		auto start_location = reader.Loc();
+		auto section = reader.SectionScope();
+		for (EKeyword kw; reader.NextKeyword(kw);)
+		{
+			switch (kw)
+			{
+				case EKeyword::Data:
+				{
+					auto id = reader.Enum<ECommandId>();
+					auto cmd = ParseCommand(id, reader, pp);
+					if (cmd.m_id != ECommandId::Invalid)
+						out.m_commands.push_back(cmd);
+					break;
+				}
+				default:
+				{
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unknown keyword in Command block");
+					continue;
+				}
+			}
+		}
+	}
 
 	// Parse a camera description
 	void ParseCamera(IReader& reader, ParseParams& pp, ParseResult& out)
@@ -4948,14 +4996,6 @@ namespace pr::rdr12::ldraw
 		{}
 	};
 
-	// ELdrObject::Command
-	template <> struct ObjectCreator<ELdrObject::Command> : IObjectCreator
-	{
-		ObjectCreator(ParseParams& pp)
-			: IObjectCreator(pp)
-		{}
-	};
-
 	#pragma endregion
 
 	// Reads a single ldr object from a script adding object (+ children) to 'pp.m_objects'.
@@ -4971,7 +5011,7 @@ namespace pr::rdr12::ldraw
 		LdrObjectPtr obj = {};
 		switch (type)
 		{
-			#define PR_LDR_PARSE_IMPL(name, hash)\
+			#define PR_LDRAW_PARSE_OBJS_IMPL(name, hash)\
 				case ELdrObject::name:\
 				{\
 					pp.m_type = ELdrObject::name;\
@@ -4979,18 +5019,22 @@ namespace pr::rdr12::ldraw
 					obj = creator.Parse(reader);\
 					break;\
 				}
-			#define PR_LDR_PARSE(x) x(PR_LDR_PARSE_IMPL)
-			PR_LDR_PARSE(PR_ENUM_LDRAW_OBJECTS)
+			#define PR_LDRAW_PARSE_OBJS(x) x(PR_LDRAW_PARSE_OBJS_IMPL)
+			PR_LDRAW_PARSE_OBJS(PR_ENUM_LDRAW_OBJECTS)
 			default: return false;
 		}
 
-		// Apply properties to the object
-		// This is done after objects are parsed so that recursive properties can be applied
-		ApplyObjectState(obj.get());
-		
-		// Add the model and instance to the containers
-		pp.m_models[hash::Hash(obj->m_name.c_str())] = obj->m_model;
-		pp.m_objects.push_back(obj);
+		// If an object was created add it to the parse results
+		if (obj != nullptr)
+		{
+			// Apply properties to the object
+			// This is done after objects are parsed so that recursive properties can be applied
+			ApplyObjectState(obj.get());
+
+			// Add the model and instance to the containers
+			pp.m_models[hash::Hash(obj->m_name.c_str())] = obj->m_model;
+			pp.m_objects.push_back(obj);
+		}
 
 		// Reset the memory pool for the next object
 		pp.m_cache.Reset();
@@ -5011,9 +5055,13 @@ namespace pr::rdr12::ldraw
 		{
 			switch (kw)
 			{
+				case EKeyword::Commands:
+				{
+					ParseCommands(reader, pp, pp.m_result);
+					break;
+				}
 				case EKeyword::Camera:
 				{
-					// Camera position description
 					ParseCamera(reader, pp, pp.m_result);
 					break;
 				}
@@ -5491,6 +5539,10 @@ namespace pr::rdr12::ldraw
 			
 		for (auto& p : rhs.m_models)
 			m_models[p.first] = p.second;
+
+		m_commands.insert(m_commands.end(),
+			std::move_iterator{ rhs.m_commands.begin() },
+			std::move_iterator{ rhs.m_commands.end() });
 
 		CopyCamera(rhs.m_cam, rhs.m_cam_fields, m_cam);
 		

@@ -11,7 +11,7 @@ namespace pr::rdr12::ldraw
 		, m_context_id(context_id ? *context_id : GenerateGUID())
 		, m_filepaths()
 		, m_errors()
-		, OnParseProgress()
+		, ParsingProgress()
 	{}
 
 	// Construct a new instance of the source (if possible)
@@ -51,8 +51,8 @@ namespace pr::rdr12::ldraw
 	bool __stdcall SourceBase::OnProgress(void* ctx, Guid const& context_id, ParseResult const& out, Location const& loc, bool complete)
 	{
 		auto this_ = static_cast<SourceBase*>(ctx);
-		ParseProgressEventArgs args{ context_id, out, loc, complete };
-		this_->OnParseProgress(*this_, args);
+		ParsingProgressEventArgs args{ context_id, out, loc, complete };
+		this_->ParsingProgress(*this_, args);
 		return !args.m_cancel;
 	}
 }

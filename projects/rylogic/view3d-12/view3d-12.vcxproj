@@ -79,6 +79,7 @@
   Files
   -->
   <ItemGroup>
+    <ClCompile Include="src\ldraw\ldraw_commands.cpp" />
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
     <ClCompile Include="src\ldraw\ldraw_object.cpp" />
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />

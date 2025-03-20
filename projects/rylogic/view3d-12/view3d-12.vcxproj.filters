@@ -273,6 +273,9 @@
     <ClCompile Include="src\ldraw\sources\source_binary.cpp">
       <Filter>src\ldraw\sources</Filter>
     </ClCompile>
+    <ClCompile Include="src\ldraw\ldraw_commands.cpp">
+      <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h">

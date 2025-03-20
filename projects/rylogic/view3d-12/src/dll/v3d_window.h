@@ -14,6 +14,7 @@
 #include "pr/view3d-12/ldraw/ldraw_ui_measure_tool.h"
 #include "pr/view3d-12/ldraw/ldraw_ui_angle_tool.h"
 #include "view3d-12/src/dll/dll_forward.h"
+#include "view3d-12/src/ldraw/sources/ldraw_sources.h"
 
 namespace pr::rdr12
 {
@@ -36,15 +37,15 @@ namespace pr::rdr12
 		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
 
 		// Renderer window/scene
-		Context* m_dll;   // The dll context
-		HWND     m_hwnd;  // The associated Win32 window handle
-		Window   m_wnd;   // The renderer window
-		Scene    m_scene; // Use one scene for the window
+		Renderer* m_rdr; // The main renderer
+		HWND m_hwnd;     // The associated Win32 window handle
+		Window m_wnd;    // The renderer window
+		Scene m_scene;   // Use one scene for the window
 
 		// Objects
 		ObjectSet m_objects; // References to objects to draw (note: objects are owned by the context, not the window)
-		GizmoSet  m_gizmos;  // References to gizmos to draw (note: objects are owned by the context, not the window)
-		GuidSet   m_guids;   // The context ids added to this window
+		GizmoSet m_gizmos;   // References to gizmos to draw (note: objects are owned by the context, not the window)
+		GuidSet m_guids;     // The context ids added to this window
 
 		// Stock objects
 		#define PR_RDR_INST(x)\
@@ -82,7 +83,7 @@ namespace pr::rdr12
 		LdrMeasureUIPtr m_ui_measure_tool;         // A UI for measuring distances between points within the 3d environment
 		LdrAngleUIPtr m_ui_angle_tool;             // A UI for measuring angles between points within the 3d environment
 
-		V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts);
+		V3dWindow(Renderer& rdr, HWND hwnd, view3d::WindowOptions const& opts);
 		V3dWindow(V3dWindow&&) = default;
 		V3dWindow(V3dWindow const&) = delete;
 		V3dWindow& operator=(V3dWindow&&) = default;
@@ -130,7 +131,7 @@ namespace pr::rdr12
 
 		// Enumerate the objects associated with this window
 		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
-		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count);
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude);
 
 		// Return true if 'object' is part of this scene
 		bool Has(LdrObject const* object, bool search_children) const;
@@ -151,10 +152,10 @@ namespace pr::rdr12
 		// Add/Remove a gizmo to/from this window
 		void Add(LdrGizmo* gizmo);
 		void Remove(LdrGizmo* gizmo);
-	
+
 		// Add/Remove all objects to this window with the given context ids (or not with)
-		void Add(GUID const* context_ids, int include_count, int exclude_count);
-		void Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids = false);
+		void Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude);
+		void Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids = false);
 
 		// Remove all objects from this scene
 		void RemoveAllObjects();
@@ -295,7 +296,7 @@ namespace pr::rdr12
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude);
 	
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 		bool StockObjectVisible(view3d::EStockObject stock_objects) const;

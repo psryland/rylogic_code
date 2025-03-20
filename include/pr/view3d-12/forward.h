@@ -261,6 +261,11 @@ namespace pr::rdr12
 		using ObjectCont = pr::vector<LdrObjectPtr, 8>;
 		using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
 		enum class EGizmoMode :int;
+		struct Location;
+		struct SourceBase;
+		struct ScriptSources;
+		struct ParseResult;
+		struct IReader;
 	}
 	using LdrObject = ldraw::LdrObject;
 	using LdrGizmo = ldraw::LdrGizmo;
@@ -272,9 +277,6 @@ namespace pr::rdr12
 	// Dll
 	struct Context;
 	struct V3dWindow;
-	struct ParseResult;
-	struct ObjectAttributes;
-	struct ScriptSources;
 	enum class ECamField :int;
 
 	// Event args

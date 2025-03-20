@@ -380,4 +380,6 @@ dotnet_naming_style.non_public_members.required_suffix =
 dotnet_naming_style.non_public_members.word_separator = _
 dotnet_naming_style.non_public_members.capitalization = all_lower
 csharp_prefer_static_anonymous_function = true:suggestion
+csharp_prefer_system_threading_lock = true:suggestion
+csharp_style_prefer_unbound_generic_type_in_nameof = true:suggestion
 

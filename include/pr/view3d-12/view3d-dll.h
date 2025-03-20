@@ -687,7 +687,7 @@ namespace pr
 
 		// Callbacks
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
+		using ParsingProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
 		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
 		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
@@ -722,7 +722,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Set the callback for progress events when script sources are loaded or updated
-	VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(pr::view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(pr::view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add);
 	
 	// Set the callback that is called when the sources are reloaded
 	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);

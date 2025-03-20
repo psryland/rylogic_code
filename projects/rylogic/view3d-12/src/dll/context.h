@@ -10,7 +10,7 @@
 
 namespace pr::rdr12
 {
-	struct Context
+	struct Context : ldraw::ISourceEvents
 	{
 		using InitSet = std::unordered_set<view3d::DllHandle>;
 		using WindowCont = std::vector<V3dWindow*>;
@@ -19,7 +19,7 @@ namespace pr::rdr12
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 		Renderer             m_rdr;      // The renderer
-		WindowCont           m_wnd_cont; // The created windows
+		WindowCont           m_windows; // The created windows
 		ScriptSources        m_sources;  // A container of Ldr objects and a file watcher
 		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;
@@ -46,10 +46,10 @@ namespace pr::rdr12
 		MultiCast<StaticCB<view3d::ReportErrorCB>, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
-		MultiCast<StaticCB<view3d::AddFileProgressCB>, true> OnAddFileProgress;
+		MultiCast<StaticCB<view3d::ParsingProgressCB>, true> ParsingProgress;
 
 		// Event raised when the script sources are updated
-		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> OnSourcesChanged;
+		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> SourcesChanged;
 
 		// Load/Add ldraw objects from a script file. Returns the Guid of the context that the objects were added to.
 		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
@@ -90,10 +90,10 @@ namespace pr::rdr12
 		void DeleteAllObjects();
 
 		// Delete all objects with matching ids
-		void DeleteAllObjectsById(Guid const* context_ids, int include_count, int exclude_count);
+		void DeleteAllObjectsById(std::span<Guid const> include, std::span<Guid const> exclude);
 		
 		// Delete all objects not displayed in any windows
-		void DeleteUnused(Guid const* context_ids, int include_count, int exclude_count);
+		void DeleteUnused(std::span<Guid const> include, std::span<Guid const> exclude);
 
 		// Enumerate the GUIDs in the sources collection
 		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
@@ -112,5 +112,25 @@ namespace pr::rdr12
 
 		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 		Guid const* ContextIdFromFilepath(char const* filepath) const;
+
+protected:
+
+		// Parse error event.
+		void OnError(ldraw::ParseErrorEventArgs const&) override;
+
+		// An event raised during parsing. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
+		void OnParsingProgress(ldraw::ParsingProgressEventArgs&) override;
+
+		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+		void OnReload() override;
+
+		// Store change event. Called before and after a change to the collection of objects in the store.
+		void OnStoreChange(ldraw::StoreChangeEventArgs&) override;
+
+		// Source removed event (i.e. objects deleted by Id)
+		void OnSourceRemoved(ldraw::SourceRemovedEventArgs const&) override;
+		
+		// Process any received commands in the source
+		void OnHandleCommands(ldraw::SourceBase& source) override;
 	};
 }

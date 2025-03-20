@@ -52,7 +52,7 @@ enum <uint> EKeyword
 	Colour = HashI("Colour"),
 	ColourMask = HashI("ColourMask"),
 	Colours = HashI("Colours"),
-	Command = HashI("Command"),
+	Commands = HashI("Commands"),
 	Cone = HashI("Cone"),
 	ConvexHull = HashI("ConvexHull"),
 	CoordFrame = HashI("CoordFrame"),
@@ -252,7 +252,7 @@ void Sections(uint end)
 			case BoxList:
 			case Chart:
 			case Circle:
-            case Command:
+            case Commands:
 			case Cone:
 			case ConvexHull:
 			case CoordFrame:

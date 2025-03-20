@@ -24,10 +24,10 @@ namespace pr::rdr12
 	}
 
 	// View3d Window ****************************
-	V3dWindow::V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts)
-		: m_dll(&context)
+	V3dWindow::V3dWindow(Renderer& rdr, HWND hwnd, view3d::WindowOptions const& opts)
+		: m_rdr(&rdr)
 		, m_hwnd(hwnd)
-		, m_wnd(context.m_rdr, ToWndSettings(hwnd, context.m_rdr.Settings(), opts))
+		, m_wnd(*m_rdr, ToWndSettings(hwnd, m_rdr->Settings(), opts))
 		, m_scene(m_wnd)
 		, m_objects()
 		, m_gizmos()
@@ -99,7 +99,7 @@ namespace pr::rdr12
 	// Renderer access
 	Renderer& V3dWindow::rdr() const
 	{
-		return m_dll->m_rdr;
+		return *m_rdr;
 	}
 
 	// Get/Set the settings
@@ -203,12 +203,12 @@ namespace pr::rdr12
 			break;
 		}
 	}
-	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& object : m_objects)
 		{
-			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(object->m_context_id, include, exclude)) continue;
 			if (enum_objects_cb(object)) continue;
 			break;
 		}
@@ -363,16 +363,16 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
-	void V3dWindow::Add(GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
 		pr::vector<Guid> new_guids;
 		auto old_count = m_objects.size();
-		for (auto& srcs : m_dll->m_sources.Sources())
+		for (auto& srcs : sources)
 		{
 			auto& src = srcs.second;
-			if (!IncludeFilter(src->m_context_id, context_ids, include_count, exclude_count))
+			if (!IncludeFilter(src->m_context_id, include, exclude))
 				continue;
 
 			// Add objects from this source
@@ -438,7 +438,7 @@ namespace pr::rdr12
 			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids.data(), int(new_guids.size()), nullptr);
 		}
 	}
-	void V3dWindow::Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids)
+	void V3dWindow::Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -446,7 +446,7 @@ namespace pr::rdr12
 		GuidSet removed;
 		for (auto& id : m_guids)
 		{
-			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(id, include, exclude)) continue;
 			removed.insert(id);
 		}
 
@@ -454,7 +454,7 @@ namespace pr::rdr12
 		{
 			// Remove objects in the 'remove' set
 			auto old_count = m_objects.size();
-			pr::erase_if(m_objects, [&](auto* obj) { return removed.count(obj->m_context_id); });
+			erase_if(m_objects, [&](auto* obj) { return removed.count(obj->m_context_id); });
 
 			// Remove context ids
 			if (!keep_context_ids)
@@ -1292,14 +1292,14 @@ namespace pr::rdr12
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
+			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
@@ -1544,7 +1544,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_measure_tool)
-			m_ui_measure_tool.reset(new ldraw::MeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_measure_tool.reset(new ldraw::MeasureUI(m_hwnd, &ReadPoint, this, rdr()));
 		else
 			m_ui_measure_tool->SetReadPoint(&ReadPoint, this);
 		
@@ -1564,7 +1564,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_angle_tool)
-			m_ui_angle_tool.reset(new ldraw::AngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_angle_tool.reset(new ldraw::AngleUI(m_hwnd, &ReadPoint, this, rdr()));
 		else
 			m_ui_angle_tool->SetReadPoint(&ReadPoint, this);
 		

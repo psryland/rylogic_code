@@ -1225,10 +1225,20 @@ namespace pr::rdr12::ldraw
 			"// A global setting to draw everything in wireframe mode\n"
 			"//*Wireframe {}\n"
 			"\n"
-			"*Command\n"
+			"// Commands are defined in batches. Each batch is a set of commands that are executed in order.\n"
+			"*Commands\n"
 			"{\n"
-			"	*Name {AddToScene}\n"
+			"	// <command-id> <value> <value> <value> ... (depending on the command)\n"
+			"	*Data {Render 0}\n"
+			"\n"
+			"	// Commands:\n"
+			"	//  *Data {AddToScene <scene-id>} - Add all objects created by this source to a scene with the given id.\n"
+			"	//  *Data {CameraToWorld <scene-id> <o2w>} - Update the camera to world transform for the given scene id.\n"
+			"	//  *Data {CameraPosition <scene-id> <pos>} - Update the camera position for the given scene id.\n"
+			"	//  *Data {ObjectToWorld <object-name> <o2w>} - Update the object to world transform for the given object name.\n"
+			"	//  *Data {Render <scene-id>} - Force a render of the given scene id.\n"
 			"}\n"
+			"\n"
 			// AUTO-GENERATED-DEMOSCENE-END
 		);
 

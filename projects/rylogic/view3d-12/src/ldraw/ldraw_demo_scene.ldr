@@ -1208,7 +1208,17 @@
 // A global setting to draw everything in wireframe mode
 //*Wireframe {}
 
-*Command
+// Commands are defined in batches. Each batch is a set of commands that are executed in order.
+*Commands
 {
-	*Name {AddToScene}
+	// <command-id> <value> <value> <value> ... (depending on the command)
+	*Data {Render 0}
+
+	// Commands:
+	//  *Data {AddToScene <scene-id>} - Add all objects created by this source to a scene with the given id.
+	//  *Data {CameraToWorld <scene-id> <o2w>} - Update the camera to world transform for the given scene id.
+	//  *Data {CameraPosition <scene-id> <pos>} - Update the camera position for the given scene id.
+	//  *Data {ObjectToWorld <object-name> <o2w>} - Update the object to world transform for the given object name.
+	//  *Data {Render <scene-id>} - Force a render of the given scene id.
 }
+

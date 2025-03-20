@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import sys, os, re, struct
-from typing import List, NamedTuple, Optional, SupportsIndex
+from typing import List, NamedTuple, Optional, Tuple
 from enum import Enum
 
 # Binary packing helper
@@ -107,6 +107,28 @@ def HashI(s: str):
 	for c in s.lower(): h = 0xFFFFFFFF & ((h ^ ord(c)) * _FNV_prime32)
 	return h
 
+# Pretty format Ldraw script
+def FormatScript(s: str, indent_str: str = '\t') -> str:
+	out = []
+	indent = 0
+	for c in s:
+		if c == '{':
+			indent += 1
+			out.append(c)
+			out.append('\n')
+			out.append(indent * indent_str)
+		elif c == '}':
+			indent -= 1
+			out.append('\n')
+			out.append(indent * indent_str)
+			out.append(c)
+			out.append('\n')
+			out.append(indent * indent_str)
+		else:
+			out.append(c)
+
+	return ''.join(out)
+
 # Ldraw keyword values
 class EKeyword(Enum):
 	# AUTO-GENERATED-KEYWORDS-BEGIN
@@ -138,7 +160,7 @@ class EKeyword(Enum):
 	Colour = HashI("Colour")
 	ColourMask = HashI("ColourMask")
 	Colours = HashI("Colours")
-	Command = HashI("Command")
+	Commands = HashI("Commands")
 	Cone = HashI("Cone")
 	ConvexHull = HashI("ConvexHull")
 	CoordFrame = HashI("CoordFrame")
@@ -278,8 +300,10 @@ class ECommandId(Enum):
 	# AUTO-GENERATED-COMMANDS-BEGIN
 	Invalid = HashI("Invalid")
 	AddToScene = HashI("AddToScene")
-	Camera = HashI("Camera")
-	Transform = HashI("Transform")
+	CameraToWorld = HashI("CameraToWorld")
+	CameraPosition = HashI("CameraPosition")
+	ObjectToWorld = HashI("ObjectToWorld")
+	Render = HashI("Render")
 	# AUTO-GENERATED-COMMANDS-END
 	def __int__(self):
 		return self.value
@@ -549,7 +573,7 @@ class _LdrObj:
 		self.m_objects.append(poly)
 		return poly.name(name).col(Col(colour))
 	def Command(self):
-		cmd = LdrCommand()
+		cmd = LdrCommands()
 		self.m_objects.append(cmd)
 		return cmd
 
@@ -705,24 +729,20 @@ class LdrGroup(_LdrBase):
 		base = super()
 		_Write(out, EKeyword.Group, self.m_name, self.m_colour, lambda: base._WriteTo(out))
 
-class LdrCommand(_LdrBase):
+class LdrCommands(_LdrBase):
 	def __init__(self):
 		super().__init__()
-		self.m_id: ECommandId = ECommandId.Invalid
-		self.m_data: bytes = bytes()
+		self.m_cmds :List[Tuple[ECommandId, List[int|float|str]]] = []
 
 	def add_to_scene(self, scene_id: int):
-		self.m_id = ECommandId.AddToScene
-		self.m_data = struct.pack('<I', scene_id)
+		self.m_cmds.append((ECommandId.AddToScene, [scene_id]))
 		return self
 	
 	def _WriteTo(self, out: List[str]|bytearray):
-		_Write(out, EKeyword.Command, self.m_name, self.m_colour, lambda: (
-			_Write(out, EKeyword.Name, self.m_id),
-			_Write(out, EKeyword.Data, lambda: (
-				_Append(out, self.m_data)
-			)),
-		))
+		def WriteCmds():
+			for cmd in self.m_cmds:
+				_Write(out, EKeyword.Data, cmd[0], *cmd[1])
+		_Write(out, EKeyword.Commands, self.m_name, self.m_colour, WriteCmds)
 
 class LdrBuilder(_LdrObj):
 	def __init__(self):
@@ -740,7 +760,7 @@ __all__ = [
 	'LdrBox',
 	'LdrPolygon',
 	'LdrGroup',
-	'LdrCommand',
+	'LdrCommands',
 	'LdrBuilder',
 ]
 
@@ -754,9 +774,14 @@ def Tests():
 	ldr_points.pt(Vec3(1, 1, 1), 0xFF00FF00)
 	ldr_points.pt(Vec3(2, 2, 2), 0xFFFF0000)
 	ldr_group.pos(Vec3(1,1,1))
-	builder.Command().add_to_scene(0)
-	print(builder.ToString())
+	ldr_cmd = builder.Command()
+	ldr_cmd.add_to_scene(0)
+	ldr_cmd.add_to_scene(1)
+	ldr_cmd.add_to_scene(2)
+	s = builder.ToString()
+	#s = FormatScript(s, indent_str='    ')
 	b = builder.ToBytes()
+	print(s)
 	with open("E:/Dump/Ldraw/test.bdr", "wb") as f:
 		f.write(b)
 

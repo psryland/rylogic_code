@@ -68,7 +68,7 @@ namespace pr::rdr12::ldraw
 	};
 
 	// Progress update event args
-	struct ParseProgressEventArgs :CancelEventArgs
+	struct ParsingProgressEventArgs :CancelEventArgs
 	{
 		// The context id for the source
 		Guid m_context_id;
@@ -82,7 +82,7 @@ namespace pr::rdr12::ldraw
 		// True if parsing is complete (i.e. last update notification)
 		bool m_complete;
 
-		ParseProgressEventArgs(Guid const& context_id, ParseResult const& result, Location const& loc, bool complete)
+		ParsingProgressEventArgs(Guid const& context_id, ParseResult const& result, Location const& loc, bool complete)
 			:m_context_id(context_id)
 			, m_result(&result)
 			, m_loc(loc)

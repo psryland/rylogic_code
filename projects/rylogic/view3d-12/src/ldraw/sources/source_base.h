@@ -28,7 +28,7 @@ namespace pr::rdr12::ldraw
 		SourceBase& operator=(SourceBase const&) = default;
 
 		// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
-		EventHandler<SourceBase&, ParseProgressEventArgs&, true> OnParseProgress;
+		EventHandler<SourceBase&, ParsingProgressEventArgs&, true> ParsingProgress;
 
 		// Construct a new instance of the source (if possible)
 		virtual std::unique_ptr<SourceBase> Clone();

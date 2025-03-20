@@ -11,6 +11,10 @@
 
 namespace pr::rdr12::ldraw
 {
+	// A container that doesn't invalidate on add/remove is needed because
+	// the file watcher contains a pointer into the 'Source' objects.
+	using SourceCont = std::unordered_map<Guid, std::unique_ptr<SourceBase>>;
+
 	// Reasons for changes to the sources collection
 	enum class ESourceChangeReason
 	{
@@ -64,6 +68,30 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
+	// Interface for handling source events
+	struct ISourceEvents
+	{
+		virtual ~ISourceEvents() = default;
+
+		// Parse error event.
+		virtual void OnError(ParseErrorEventArgs const&) = 0;
+
+		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+		virtual void OnReload() = 0;
+
+		// An event raised during parsing. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
+		virtual void OnParsingProgress(ParsingProgressEventArgs&) = 0;
+
+		// Store change event. Called before and after a change to the collection of objects in the store.
+		virtual void OnStoreChange(StoreChangeEventArgs&) = 0;
+
+		// Source removed event (i.e. objects deleted by Id)
+		virtual void OnSourceRemoved(SourceRemovedEventArgs const&) = 0;
+
+		// Process any received commands in the source. All commands are expected to be processed
+		virtual void OnHandleCommands(SourceBase& source) = 0;
+	};
+
 	// A collection of LDraw script sources
 	struct ScriptSources :IFileChangedHandler
 	{
@@ -88,18 +116,12 @@ namespace pr::rdr12::ldraw
 		using OnAddCB = std::function<void(Guid const&, bool)>;
 		using filepath_t = std::filesystem::path;
 
-		// A container that doesn't invalidate on add/remove is needed because
-		// the file watcher contains a pointer into the 'Source' objects.
-		using SourceCont = std::unordered_map<Guid, std::unique_ptr<SourceBase>>;
-
-		// Container of errors
-		using ErrorCont = pr::vector<ParseErrorEventArgs>;
-
 	private:
 
 		SourceCont      m_srcs;           // The sources of ldr script
 		GizmoCont       m_gizmos;         // The created ldr gizmos
 		Renderer*       m_rdr;            // Renderer used to create models
+		ISourceEvents*  m_events;         // Event handler
 		Winsock         m_winsock;        // The 'winsock' instance we're bound to
 		GuidSet         m_loading;        // File group ids in the process of being reloaded
 		FileWatch       m_watcher;        // The watcher of files
@@ -109,7 +131,7 @@ namespace pr::rdr12::ldraw
 
 	public:
 
-		explicit ScriptSources(Renderer& rdr);
+		explicit ScriptSources(Renderer& rdr, ISourceEvents& events);
 		~ScriptSources();
 
 		// Renderer access
@@ -121,36 +143,15 @@ namespace pr::rdr12::ldraw
 		// The store of gizmos
 		GizmoCont const& Gizmos() const;
 
-		// Parse error event.
-		EventHandler<ScriptSources&, ParseErrorEventArgs const&, true> OnError;
-
-		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-		EventHandler<ScriptSources&, EmptyArgs const&, true> OnReload;
-
-		// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
-		EventHandler<ScriptSources&, ParseProgressEventArgs&, true> OnAddFileProgress;
-
-		// Store change event. Called before and after a change to the collection of objects in the store.
-		EventHandler<ScriptSources&, StoreChangeEventArgs&, true> OnStoreChange;
-
-		// Source removed event (i.e. objects deleted by Id)
-		EventHandler<ScriptSources&, SourceRemovedEventArgs const&, true> OnSourceRemoved;
-
 		// Remove all objects and sources
 		void ClearAll();
-
-		//// Remove all file sources
-		//void ClearFiles();
 
 		// Remove a single object from the object container
 		void Remove(LdrObject* object, ESourceChangeReason reason = ESourceChangeReason::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(Guid const* context_ids, int include_count, int exclude_count, ESourceChangeReason reason = ESourceChangeReason::Removal);
+		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, ESourceChangeReason reason = ESourceChangeReason::Removal);
 		void Remove(Guid const& context_id, ESourceChangeReason reason = ESourceChangeReason::Removal);
-
-		//// Remove a file source
-		//void RemoveFile(filepath_t const& filepath, ESourceChangeReason reason = ESourceChangeReason::Removal);
 
 		// Reload all sources
 		void Reload();

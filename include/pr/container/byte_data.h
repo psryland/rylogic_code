@@ -65,7 +65,13 @@ namespace pr
 		{
 			resize(initial_size_in_bytes);
 		}
-		explicit byte_data(std::span<std::byte const> data)
+		byte_data(std::span<std::byte const> data)
+			:byte_data()
+		{
+			append(data);
+		}
+		template <typename Type> requires std::is_trivially_copyable_v<Type>
+		byte_data(std::span<Type const> data)
 			:byte_data()
 		{
 			append(data);

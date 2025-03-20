@@ -1070,7 +1070,7 @@ namespace Rylogic.Gfx
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
 
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
+		public delegate void ParsingProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
@@ -1124,7 +1124,7 @@ namespace Rylogic.Gfx
 		private readonly SynchronizationContext m_sync;   // Thread marshaller
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
-		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
+		private ParsingProgressCB m_add_file_progress_cb; // Reference to callback
 		private OnAddCB m_on_add_cb;                      // Reference to callback
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
@@ -1175,7 +1175,7 @@ namespace Rylogic.Gfx
 				}
 
 				// Sign up for progress reports
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
 				void HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
 				{
 					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
@@ -1219,7 +1219,7 @@ namespace Rylogic.Gfx
 			if (m_singleton != null)
 			{
 				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
 				while (m_windows.Count != 0)
@@ -1372,7 +1372,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Set the callback for progress events when script sources are loaded or updated
-		[DllImport(Dll)] private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void View3D_ParsingProgressCBSet(ParsingProgressCB progress_cb, IntPtr ctx, bool add);
 
 		// Set the callback that is called when the sources are reloaded
 		[DllImport(Dll)] private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);

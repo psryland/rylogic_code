@@ -125,15 +125,15 @@ VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb
 }
 
 // Set the callback for progress events when script sources are loaded or updated
-VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add)
 {
 	try
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnAddFileProgress += {progress_cb, ctx};
+			Dll().ParsingProgress += {progress_cb, ctx};
 		else
-			Dll().OnAddFileProgress -= {progress_cb, ctx};
+			Dll().ParsingProgress -= {progress_cb, ctx};
 	}
 	CatchAndReport(View3D_AddFileProgressCBSet,,);
 }
@@ -145,9 +145,9 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(view3d::SourcesChangedCB so
 	{
 		DllLockGuard;
 		if (add)
-			Dll().OnSourcesChanged += {sources_changed_cb, ctx};
+			Dll().SourcesChanged += {sources_changed_cb, ctx};
 		else
-			Dll().OnSourcesChanged -= {sources_changed_cb, ctx};
+			Dll().SourcesChanged -= {sources_changed_cb, ctx};
 	}
 	CatchAndReport(View3D_SourcesChangedCBSet,,);
 }
@@ -244,7 +244,7 @@ VIEW3D_API void __stdcall View3D_DeleteById(GUID const* context_ids, int include
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(context_ids, include_count, exclude_count);
+		Dll().DeleteAllObjectsById({ context_ids, s_cast<size_t>(include_count) }, { context_ids + include_count, s_cast<size_t>(exclude_count) });
 	}
 	CatchAndReport(View3D_DeleteById, ,);
 }
@@ -255,7 +255,7 @@ VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int inclu
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteUnused(context_ids, include_count, exclude_count);
+		Dll().DeleteUnused({ context_ids, s_cast<size_t>(include_count) }, { context_ids + include_count, s_cast<size_t>(exclude_count) });
 	}
 	CatchAndReport(View3D_DeleteUnused, ,);
 }
@@ -498,7 +498,9 @@ VIEW3D_API void __stdcall View3D_WindowAddObjectsById(view3d::Window window, GUI
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->Add(context_ids, include_count, exclude_count);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
+		window->Add(Dll().m_sources.Sources(), include, exclude);
 	}
 	CatchAndReport(View3D_WindowAddObjectsById, window,);
 }
@@ -509,7 +511,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(view3d::Window window, 
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->Remove(context_ids, include_count, exclude_count, false);
+		window->Remove({ context_ids, s_cast<size_t>(include_count) }, { context_ids + include_count, s_cast<size_t>(exclude_count) }, false);
 	}
 	CatchAndReport(View3D_WindowRemoveObjectsById, window,);
 }
@@ -559,7 +561,9 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(view3d::Window window, vi
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->EnumObjects({ enum_objects_cb, ctx }, context_ids, include_count, exclude_count);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
+		window->EnumObjects({ enum_objects_cb, ctx }, include, exclude);
 	}
 	CatchAndReport(View3D_WindowEnumObjectsById, window, );
 }
@@ -970,7 +974,9 @@ VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(view3d::Window window, view3
 		// to allow continuous hit-testing during constant rendering.
 
 		DllLockGuard;
-		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, context_ids, include_count, exclude_count);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
+		window->HitTest({ rays, s_cast<size_t>(ray_count) }, { hits, s_cast<size_t>(ray_count) }, snap_distance, flags, include, exclude);
 	}
 	CatchAndReport(View3D_WindowHitTestByCtx, window, );
 }
@@ -2931,9 +2937,9 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(view3d::Window window)
 		Dll().LoadScriptString(std::string_view(scene), EEncoding::utf8, &Context::GuidDemoSceneObjects, PathResolver{}, [=](Guid const& id, bool before)
 		{
 			if (before)
-				window->Remove(&id, 1, 0);
+				window->Remove({ &id, 1 }, {});
 			else
-				window->Add(&id, 1, 0);
+				window->Add(Dll().m_sources.Sources(), { &id, 1 }, {});
 		});
 		return Context::GuidDemoSceneObjects;
 	}
@@ -2947,7 +2953,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(view3d::Window window)
 
 		// Get the string of all ldr objects
 		auto scene = rdr12::ldraw::CreateDemoSceneBinary();
-		#if 1
+		#if 0
 		{
 			std::ofstream file("E:/Dump/ldraw/demo_scene_binary.bdr", std::ios::binary);
 			file.write(scene.data<char>(), scene.size<char>());
@@ -2959,9 +2965,9 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(view3d::Window window)
 		Dll().LoadScriptBinary(scene, &Context::GuidDemoSceneObjects, [=](Guid const& id, bool before)
 		{
 			if (before)
-				window->Remove(&id, 1, 0);
+				window->Remove({ &id, 1 }, {});
 			else
-				window->Add(&id, 1, 0);
+				window->Add(Dll().m_sources.Sources(), { &id, 1 }, {});
 		});
 		return Context::GuidDemoSceneObjects;
 	}
@@ -2972,7 +2978,7 @@ VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
+		Dll().DeleteAllObjectsById({ &Context::GuidDemoSceneObjects, 1 }, {});
 	}
 	CatchAndReport(View3D_DemoSceneDelete,,);
 }

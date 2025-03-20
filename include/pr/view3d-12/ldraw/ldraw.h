@@ -44,7 +44,7 @@ namespace pr::rdr12::ldraw
 		x(Colour            ,= HashI("Colour"            ))\
 		x(ColourMask        ,= HashI("ColourMask"        ))\
 		x(Colours           ,= HashI("Colours"           ))\
-		x(Command           ,= HashI("Command"           ))\
+		x(Commands          ,= HashI("Commands"          ))\
 		x(Cone              ,= HashI("Cone"              ))\
 		x(ConvexHull        ,= HashI("ConvexHull"        ))\
 		x(CoordFrame        ,= HashI("CoordFrame"        ))\
@@ -185,7 +185,6 @@ namespace pr::rdr12::ldraw
 		x(BoxList    ,= EKeyword::BoxList    )\
 		x(Chart      ,= EKeyword::Chart      )\
 		x(Circle     ,= EKeyword::Circle     )\
-		x(Command    ,= EKeyword::Command    )\
 		x(Cone       ,= EKeyword::Cone       )\
 		x(ConvexHull ,= EKeyword::ConvexHull )\
 		x(CoordFrame ,= EKeyword::CoordFrame )\

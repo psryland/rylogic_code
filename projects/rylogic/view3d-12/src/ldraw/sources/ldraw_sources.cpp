@@ -19,10 +19,11 @@
 
 namespace pr::rdr12::ldraw
 {
-	ScriptSources::ScriptSources(Renderer& rdr)
+	ScriptSources::ScriptSources(Renderer& rdr, ISourceEvents& events)
 		: m_srcs()
 		, m_gizmos()
 		, m_rdr(&rdr)
+		, m_events(&events)
 		, m_winsock()
 		, m_loading()
 		, m_watcher()
@@ -33,9 +34,9 @@ namespace pr::rdr12::ldraw
 		// Handle notification of changed files from the watcher.
 		// 'OnFilesChanged' is raised before any of the 'FileWatch_OnFileChanged'
 		// callbacks are made. So this notifies of the reload before anything starts changing.
-		m_watcher.OnFilesChanged += [&](FileWatch&, FileWatch::FileCont&)
+		m_watcher.OnFilesChanged += [this](FileWatch&, FileWatch::FileCont&) mutable
 		{
-			OnReload(*this, EmptyArgs());
+			m_events->OnReload();
 		};
 	}
 	ScriptSources::~ScriptSources()
@@ -50,7 +51,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// The ldr script sources
-	ScriptSources::SourceCont const& ScriptSources::Sources() const
+	SourceCont const& ScriptSources::Sources() const
 	{
 		return m_srcs;
 	}
@@ -77,37 +78,8 @@ namespace pr::rdr12::ldraw
 
 		// Notify of the object container change
 		StoreChangeEventArgs args(ESourceChangeReason::Removal, guids, nullptr, false);
-		OnStoreChange(*this, args);
+		m_events->OnStoreChange(args);
 	}
-
-#if 0
-	// Remove all file sources
-	void ScriptSources::ClearFiles()
-	{
-		throw std::runtime_error("not implemented");
-		assert(std::this_thread::get_id() == m_main_thread_id);
-
-		// Notify of the delete of each file source
-		GuidCont guids;
-		for (auto& src : m_srcs)
-		{
-			if (!src.second.IsFile()) continue;
-			OnSourceRemoved(*this, SourceRemovedEventArgs(src.first, ESourceChangeReason::Removal));
-			guids.push_back(src.first);
-		}
-
-		// Remove all file sources
-		for (auto& id : guids)
-			m_srcs.erase(id);
-
-		// Remove watcher references
-		m_watcher.RemoveAll();
-
-		// Notify of the object container change
-		StoreChangeEventArgs args(ESourceChangeReason::Removal, guids, nullptr, false);
-		OnStoreChange(*this, args);
-	}
-#endif
 
 	// Remove a single object from the object container
 	void ScriptSources::Remove(LdrObject* object, ESourceChangeReason reason)
@@ -124,7 +96,7 @@ namespace pr::rdr12::ldraw
 		if (src->m_output.m_objects.size() != count)
 		{
 			StoreChangeEventArgs args{ reason, std::initializer_list<Guid const>(&id, &id + 1), nullptr, false };
-			OnStoreChange(*this, args);
+			m_events->OnStoreChange(args);
 		}
 
 		// If that was the last object for the source, remove the source too
@@ -133,7 +105,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Remove all objects associated with 'context_ids'
-	void ScriptSources::Remove(Guid const* context_ids, int include_count, int exclude_count, ESourceChangeReason reason)
+	void ScriptSources::Remove(std::span<Guid const> include, std::span<Guid const> exclude, ESourceChangeReason reason)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -142,7 +114,7 @@ namespace pr::rdr12::ldraw
 		for (auto& src : m_srcs)
 		{
 			auto id = src.second->m_context_id;
-			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(id, include, exclude)) continue;
 			removed.push_back(id);
 		}
 
@@ -150,7 +122,7 @@ namespace pr::rdr12::ldraw
 		for (auto& id : removed)
 		{
 			// Notify of objects about to be deleted
-			OnSourceRemoved(*this, SourceRemovedEventArgs(id, reason));
+			m_events->OnSourceRemoved(SourceRemovedEventArgs{ id, reason });
 
 			// Delete any associated files and watches
 			m_watcher.RemoveAll(id);
@@ -163,26 +135,13 @@ namespace pr::rdr12::ldraw
 		if (!removed.empty())
 		{
 			StoreChangeEventArgs args{ reason, removed, nullptr, false };
-			OnStoreChange(*this, args);
+			m_events->OnStoreChange(args);
 		}
 	}
 	void ScriptSources::Remove(Guid const& context_id, ESourceChangeReason reason)
 	{
-		Remove(&context_id, 1, 0, reason);
+		Remove({ &context_id, 1 }, {}, reason);
 	}
-
-#if 0
-	// Remove a file source
-	void ScriptSources::RemoveFile(filepath_t const& filepath, ESourceChangeReason reason)
-	{
-		assert(std::this_thread::get_id() == m_main_thread_id);
-
-		// Remove the objects created 'filepath'
-		auto context_id = ContextIdFromFilepath(filepath);
-		if (context_id != nullptr)
-			Remove(*context_id, reason);
-	}
-#endif
 
 	// Reload all sources
 	void ScriptSources::Reload()
@@ -190,40 +149,13 @@ namespace pr::rdr12::ldraw
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
 		// Notify reloading
-		OnReload(*this, EmptyArgs());
+		m_events->OnReload();
 
 		// Reload each source in a background thread
 		std::for_each(std::execution::par_unseq, std::begin(m_srcs), std::end(m_srcs), [this](auto& src)
 		{
 			src.second->Reload(rdr());
 		});
-
-
-#if 0
-		// Make a copy of the sources container
-		auto srcs = m_srcs;
-
-		// Add each file again (asynchronously)
-		for (auto const& src : srcs)
-		{
-			// Skip files that are in the process of loading
-			if (m_loading.find(src.second.m_context_id) != std::end(m_loading))
-				continue;
-
-			m_loading.insert(src.second.m_context_id);
-
-			// Fire off a worker thread to reload the file.
-			Source file = src.second;
-			std::thread([=]
-			{
-				AddFile(file.m_filepath, file.m_encoding, ESourceChangeReason::Reload, &file.m_context_id, file.m_includes, [&](Guid const& id, bool before) noexcept
-				{
-					if (!before) return;
-					Remove(id, ESourceChangeReason::Reload);
-				});
-			}).detach();
-		}
-#endif
 	}
 
 	// Check all file sources for modifications and reload any that have changed
@@ -246,7 +178,7 @@ namespace pr::rdr12::ldraw
 
 		// Notify of the object container change
 		StoreChangeEventArgs args(reason, { &context_id, 1 }, nullptr, false);
-		OnStoreChange(*this, args);
+		m_events->OnStoreChange(args);
 
 		return context_id;
 	}
@@ -314,7 +246,7 @@ namespace pr::rdr12::ldraw
 
 		// Notify of the store about to change
 		StoreChangeEventArgs args0{ reason, { &context_id, 1 }, &source->m_output, true };
-		OnStoreChange(*this, args0);
+		m_events->OnStoreChange(args0);
 		if (on_add)
 			on_add(context_id, true);
 
@@ -324,7 +256,7 @@ namespace pr::rdr12::ldraw
 
 		// Notify of any errors that occurred
 		for (auto& err : source->m_errors)
-			OnError(*this, err);
+			m_events->OnError(err);
 
 		// Update the store (invalidating 'source')
 		auto& src = m_srcs[context_id];
@@ -335,9 +267,13 @@ namespace pr::rdr12::ldraw
 
 		// Notify of the store change
 		StoreChangeEventArgs args1{ reason, { &context_id, 1 }, &src->m_output, false };
-		OnStoreChange(*this, args1);
+		m_events->OnStoreChange(args1);
 		if (on_add)
 			on_add(context_id, false);
+
+		// Process any commands
+		if (!src->m_output.m_commands.empty())
+			m_events->OnHandleCommands(*src);
 
 		return context_id;
 	}
