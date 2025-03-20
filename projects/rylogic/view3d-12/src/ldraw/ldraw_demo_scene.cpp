@@ -14,7 +14,7 @@ namespace pr::rdr12::ldraw
 		str.reserve(4096);
 		str.append(
 
-			// AUTO_GENERATED-DEMO_SCENE-BEGIN
+			// AUTO-GENERATED-DEMOSCENE-BEGIN
 			"//********************************************\n"
 			"// LDraw Demo Scene\n"
 			"//  Copyright (c) Rylogic Ltd 2002\n"
@@ -1224,7 +1224,12 @@ namespace pr::rdr12::ldraw
 			"\n"
 			"// A global setting to draw everything in wireframe mode\n"
 			"//*Wireframe {}\n"
-			// AUTO_GENERATED-DEMO_SCENE-END
+			"\n"
+			"*Command\n"
+			"{\n"
+			"	*Name {AddToScene}\n"
+			"}\n"
+			// AUTO-GENERATED-DEMOSCENE-END
 		);
 
 		return str;

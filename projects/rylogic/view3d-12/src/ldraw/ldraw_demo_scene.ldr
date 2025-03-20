@@ -1207,3 +1207,8 @@
 
 // A global setting to draw everything in wireframe mode
 //*Wireframe {}
+
+*Command
+{
+	*Name {AddToScene}
+}

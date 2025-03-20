@@ -14,43 +14,64 @@ def _Pack(obj) -> bytes:
 		return obj
 	if hasattr(obj, '__pack__'):
 		return obj.__pack__()
+	if isinstance(obj, int):
+		return struct.pack('<I', obj)
+	if isinstance(obj, float):
+		return struct.pack('<f', obj)
 	if isinstance(obj, Enum):
 		return struct.pack('<I', obj.value)
 	if isinstance(obj, str):
 		return obj.encode('utf-8')
-	if isinstance(obj, (list, tuple)):
+	if isinstance(obj, list):
 		return b''.join([_Pack(i) for i in obj])
+	raise TypeError(f"Unsupported type: {type(obj)}")
+
+# String packing helper
+def _Str(obj) -> str:
+	if callable(obj):
+		result = obj()
+		if not isinstance(result, str): raise TypeError(f"Unsupported callable return type: {type(result)}")
+		return result
+	if isinstance(obj, str):
+		return obj
+	if isinstance(obj, Enum) and not isinstance(obj, EKeyword):
+		return obj.name
+	if isinstance(obj, (bytes, bytearray)):
+		return ''.join([f"{i:02X}" for i in obj])
+	if isinstance(obj, list):
+		return ' '.join([_Str(i) for i in obj])
+	if hasattr(obj, '__str__'):
+		return str(obj)
 	raise TypeError(f"Unsupported type: {type(obj)}")
 
 # Append a list of arguments to 'ldr'
 def _Append(out: List[str]|bytearray, *args):
 	if isinstance(out, bytearray):
 		for a in args:
-			abytes =\
-				bytes() if not a else\
-				a if isinstance(a, bytes) else\
-				_Pack(a)
+			abytes = bytes() if a is None else _Pack(a)
 			if not abytes: continue
 			out.extend(abytes)
 	elif isinstance(out, list):
 		for a in args:
-			astr =\
-				'' if not a else\
-				a if isinstance(a, str) else\
-				a.name if isinstance(a, Enum) else\
-				' '.join([str(i) for i in a]) if isinstance(a, (list, tuple)) else\
-				str(a)
+			astr = '' if a is None else _Str(a)
 			if not astr: continue
 			last = out[-1][-1] if len(out) != 0 and len(out[-1]) != 0 else None
-			if last and not last.isspace() and last != '{' and last != '}': out.append(' ')
+			out.append(' ' if last and not last.isspace() and last != '{' and astr[0] != '}' else '')
 			out.append(astr)
 
 # Write a ldraw block to 'out'
 def _Write(out: List[str]|bytearray, keyword: 'EKeyword', *args):
 	if isinstance(out, bytearray):
 		ofs = len(out)
-		out.extend(struct.pack('<I', keyword.value))
-		out.extend(struct.pack('<I', 0))
+		_Append(out, keyword)
+		_Append(out, 0)
+
+		# if len(args) != 0 and isinstance(args[0], _LdrName):
+		# 	if args[0].m_name: _Append(out, args[0].m_name)
+		# 	args = args[1:]
+		# if len(args) != 0 and isinstance(args[0], _LdrColour):
+		# 	if args[0].m_colour.argb != 0xFFFFFFFF: _Append(out, args[0].m_colour)
+		# 	args = args[1:]
 
 		for a in args:
 			if callable(a):
@@ -61,33 +82,33 @@ def _Write(out: List[str]|bytearray, keyword: 'EKeyword', *args):
 		size = len(out) - ofs - 8
 		out[ofs+4:ofs+8] = struct.pack('<I', size)
 	if isinstance(out, list):
-		out.append(f"*{keyword.name}")
+		_Append(out, keyword)
 
-		if len(args) != 0 and isinstance(args[0], _LdrName) and args[0].m_name:
-			_Append(out, args[0].m_name)
+		if len(args) != 0 and isinstance(args[0], _LdrName):
+			if args[0].m_name: _Append(out, args[0].m_name)
 			args = args[1:]
-		if len(args) != 0 and isinstance(args[0], _LdrColour) and args[0].m_colour != 0xFFFFFFFF:
-			_Append(out, f"{args[0].m_colour:X}")
+		if len(args) != 0 and isinstance(args[0], _LdrColour):
+			if args[0].m_colour.argb != 0xFFFFFFFF: _Append(out, args[0].m_colour)
 			args = args[1:]
 
-		out.append(' {')
+		_Append(out, '{')
 		for a in args:
 			if callable(a):
 				a()
 			else:
 				_Append(out, a)
-		out.append('}')
+		_Append(out, '}')
+
+# Hash a string to a constant value
+def HashI(s: str):
+	_FNV_offset_basis32 = 2166136261
+	_FNV_prime32 = 16777619
+	h = _FNV_offset_basis32
+	for c in s.lower(): h = 0xFFFFFFFF & ((h ^ ord(c)) * _FNV_prime32)
+	return h
 
 # Ldraw keyword values
 class EKeyword(Enum):
-	@staticmethod
-	def HashI(s: str):
-		_FNV_offset_basis32 = 2166136261
-		_FNV_prime32 = 16777619
-		h = _FNV_offset_basis32
-		for c in s.lower(): h = 0xFFFFFFFF & ((h ^ ord(c)) * _FNV_prime32)
-		return h
-
 	# AUTO-GENERATED-KEYWORDS-BEGIN
 	Accel = HashI("Accel")
 	Addr = HashI("Addr")
@@ -247,6 +268,25 @@ class EKeyword(Enum):
 	YAxis = HashI("YAxis")
 	ZAxis = HashI("ZAxis")
 	# AUTO-GENERATED-KEYWORDS-END
+	def __int__(self):
+		return self.value
+	def __str__(self):
+		return f"*{self.name}"
+	def __pack__(self):
+		return struct.pack('<I', self.value)
+class ECommandId(Enum):
+	# AUTO-GENERATED-COMMANDS-BEGIN
+	Invalid = HashI("Invalid")
+	AddToScene = HashI("AddToScene")
+	Camera = HashI("Camera")
+	Transform = HashI("Transform")
+	# AUTO-GENERATED-COMMANDS-END
+	def __int__(self):
+		return self.value
+	def __str__(self):
+		return self.name
+	def __pack__(self):
+		return struct.pack('<I', self.value)
 
 # Primitive types ------------------------------------------
 class EPointStyle(Enum):
@@ -255,6 +295,12 @@ class EPointStyle(Enum):
 	Triangle = 2
 	Star = 3
 	Annulus = 4
+class Col(NamedTuple):
+	argb: int = 0xFFFFFFFF
+	def __str__(self):
+		return f'{self.argb:08X}'
+	def __pack__(self):
+		return struct.pack("<I", self.argb)
 class Vec2(NamedTuple):
 	x: float
 	y: float
@@ -395,31 +441,41 @@ class _LdrName:
 		super().__init__()
 		self.m_name = name
 	def __str__(self):
-		return f'*{EKeyword.Name.name} {{{self.m_name}}}' if self.m_name else ''
+		return f'{EKeyword.Name} {{{self.m_name}}}' if self.m_name else ''
 	def __pack__(self):
 		return (struct.pack('<II', EKeyword.Name.value, len(self.m_name)) + self.m_name.encode('utf-8')) if self.m_name else bytes()
 class _LdrColour:
-	def __init__(self, colour: int=0xFFFFFFFF):
+	def __init__(self, colour: Col = Col()):
 		super().__init__()
 		self.m_colour = colour
 	def __str__(self):
-		return f'{self.m_colour:X}' if self.m_colour != 0xFFFFFFFF else ''
+		return f'{EKeyword.Colour} {{{self.m_colour.argb:08X}}}' if self.m_colour.argb != 0xFFFFFFFF else ''
 	def __pack__(self):
-		return struct.pack('<III', EKeyword.Colour.value, 4, self.m_colour) if self.m_colour != 0xFFFFFFFF else bytes()
+		return struct.pack('<III', EKeyword.Colour.value, 4, self.m_colour.argb) if self.m_colour.argb != 0xFFFFFFFF else bytes()
 class _LdrSize:
 	def __init__(self, size: float=0):
 		super().__init__()
 		self.m_size = size
 	def __str__(self):
-		return f'*{EKeyword.Size.name} {{{self.m_size}}}' if self.m_size != 0 else ''
+		return f'{EKeyword.Size} {{{self.m_size}}}' if self.m_size != 0 else ''
 	def __pack__(self):
 		return struct.pack('<III', EKeyword.Size.value, 4, self.m_size) if self.m_size != 0 else bytes()
+class _LdrPerItemColour:
+	def __init__(self, per_item_colour: bool=False):
+		super().__init__()
+		self.m_per_item_colour = per_item_colour
+	def __bool__(self):
+		return self.m_per_item_colour
+	def __str__(self):
+		return f'{EKeyword.PerItemColour} {{}}' if self.m_per_item_colour else ''
+	def __pack__(self):
+		return struct.pack('<II', EKeyword.PerItemColour.value, 0) if self.m_per_item_colour else bytes()
 class _LdrDepth:
 	def __init__(self, depth: bool=False):
 		super().__init__()
 		self.m_depth = depth
 	def __str__(self):
-		return f'*{EKeyword.Depth.name} {{}}' if self.m_depth else ''
+		return f'{EKeyword.Depth} {{}}' if self.m_depth else ''
 	def __pack__(self):
 		return struct.pack('<II', EKeyword.Depth.value, 0) if self.m_depth else bytes()
 class _LdrWireframe:
@@ -427,7 +483,7 @@ class _LdrWireframe:
 		super().__init__()
 		self.m_wire = wire
 	def __str__(self):
-		return f'*{EKeyword.Wireframe.name} {{}}' if self.m_wire else ''
+		return f'{EKeyword.Wireframe} {{}}' if self.m_wire else ''
 	def __pack__(self):
 		return struct.pack('<II', EKeyword.Wireframe.value, 0) if self.m_wire else bytes()
 class _LdrSolid:
@@ -435,9 +491,17 @@ class _LdrSolid:
 		super().__init__()
 		self.m_solid = solid
 	def __str__(self):
-		return f'*{EKeyword.Solid.name} {{}}' if self.m_solid else ''
+		return f'{EKeyword.Solid} {{}}' if self.m_solid else ''
 	def __pack__(self):
 		return struct.pack('<II', EKeyword.Solid.value, 0) if self.m_solid else bytes()
+class _LdrAxisId:
+	def __init__(self, axis_id: int=0):
+		super().__init__()
+		self.m_axis_id = axis_id
+	def __str__(self):
+		return f'{EKeyword.AxisId} {{{self.m_axis_id}}}' if self.m_axis_id != 0 else ''
+	def __pack__(self):
+		return struct.pack('<III', EKeyword.AxisId.value, 4, self.m_axis_id) if self.m_axis_id != 0 else bytes()
 class _LdrPos:
 	def __init__(self, xyz: Optional[Vec3]=None):
 		super().__init__()
@@ -445,7 +509,7 @@ class _LdrPos:
 	def __str__(self):
 		if not self.m_pos: return ''
 		if self.m_pos.is_zero(): return ''
-		return f'*{EKeyword.O2W.name} {{*{EKeyword.Pos.name} {{{self.m_pos}}}}}'
+		return f'{EKeyword.O2W} {{{EKeyword.Pos} {{{self.m_pos}}}}}'
 	def __pack__(self):
 		if not self.m_pos: return bytes()
 		if self.m_pos.is_zero(): return bytes()
@@ -459,8 +523,8 @@ class _LdrO2W:
 	def __str__(self):
 		if not self.m_o2w: return ''
 		if self.m_o2w.is_identity(): return ''
-		if self.m_o2w.is_translation(): return f'*{EKeyword.O2W.name} {{*{EKeyword.Pos.name} {{{self.m_o2w.w.xyz}}}}}'
-		return f'*{EKeyword.O2W.name} {{*{EKeyword.M4x4.name} {{{self.m_o2w}}}}}'
+		if self.m_o2w.is_translation(): return f'{EKeyword.O2W} {{{EKeyword.Pos} {{{self.m_o2w.w.xyz}}}}}'
+		return f'{EKeyword.O2W} {{{EKeyword.M4x4} {{{self.m_o2w}}}}}'
 	def __pack__(self):
 		if not self.m_o2w: return bytes()
 		if self.m_o2w.is_identity(): return bytes()
@@ -475,15 +539,19 @@ class _LdrObj:
 	def Group(self, name: str = '', colour: int = 0xFFFFFFFF):
 		grp = LdrGroup()
 		self.m_objects.append(grp)
-		return grp.name(name).col(colour)
+		return grp.name(name).col(Col(colour))
 	def Points(self, name: str = '', colour: int = 0xFFFFFFFF):
 		pts = LdrPoint()
 		self.m_objects.append(pts)
-		return pts.name(name).col(colour)
+		return pts.name(name).col(Col(colour))
 	def Polygon(self, name: str = '', colour: int = 0xFFFFFFFF):
 		poly = LdrPolygon()
 		self.m_objects.append(poly)
-		return poly.name(name).col(colour)
+		return poly.name(name).col(Col(colour))
+	def Command(self):
+		cmd = LdrCommand()
+		self.m_objects.append(cmd)
+		return cmd
 
 	# Serialise to a string
 	def ToString(self) -> str:
@@ -507,6 +575,7 @@ class _LdrBase(_LdrObj):
 		super().__init__()
 		self.m_name :_LdrName = _LdrName()
 		self.m_o2w :_LdrO2W = _LdrO2W()
+		self.m_axis_id :_LdrAxisId = _LdrAxisId()
 		self.m_colour :_LdrColour = _LdrColour()
 		self.m_wire :_LdrWireframe = _LdrWireframe()
 		self.m_solid :_LdrSolid = _LdrSolid()
@@ -515,7 +584,7 @@ class _LdrBase(_LdrObj):
 		self.m_name = _LdrName(name)
 		return self
 
-	def col(self, colour: int):
+	def col(self, colour: Col):
 		self.m_colour = _LdrColour(colour)
 		return self
 
@@ -532,22 +601,25 @@ class _LdrBase(_LdrObj):
 		return self
 
 	def _WriteTo(self, out: List[str]|bytearray):
-		_Append(out, self.m_wire, self.m_solid, self.m_o2w)
+		_Append(out, self.m_axis_id, self.m_wire, self.m_solid, self.m_o2w)
 		super()._WriteTo(out)
 
 class LdrPoint(_LdrBase):
 	def __init__(self):
 		super().__init__()
 		self.m_points: List[Vec3] = []
-		self.m_colours: List[int] = []
-		self.m_per_item_colours: bool = False
+		self.m_colours: List[Col] = []
+		self.m_per_item_colours: _LdrPerItemColour = _LdrPerItemColour()
 		self.m_style: EPointStyle = EPointStyle.Square
 		self.m_size: _LdrSize = _LdrSize()
 		self.m_depth: _LdrDepth = _LdrDepth()
 
-	def pt(self, xyz: Vec3, colour: int=0):
+	def pt(self, xyz: Vec3, colour: Optional[int]=None):
 		self.m_points.append(xyz)
-		if colour: self.m_colours.append(colour)
+		if colour is not None:
+			self.m_colours.append(Col(colour))
+		elif self.m_per_item_colours:
+			self.m_colours.append(Col())
 		return self
 
 	def style(self, style: EPointStyle):
@@ -601,14 +673,29 @@ class LdrPolygon(_LdrBase):
 	def __init__(self):
 		super().__init__()
 		self.m_points: List[Vec2] = []
+		self.m_colours: List[Col] = []
+		self.m_per_item_colour: _LdrPerItemColour = _LdrPerItemColour()
 
-	def pt(self, xy: Vec2):
+	def pt(self, xy: Vec2, colour: Optional[Col] = None):
 		self.m_points.append(xy)
+		if colour:
+			self.m_colours.append(colour)
+		elif self.m_per_item_colour:
+			self.m_colours.append(Col())
 		return self
 
 	def solid(self, solid: bool=True):
 		self.m_solid = _LdrSolid(solid)
 		return self
+
+	def _WriteTo(self, out: List[str]|bytearray):
+		base = super()
+		_Write(out, EKeyword.Polygon, self.m_name, self.m_colour, lambda: (
+			_Write(out, EKeyword.Data, lambda: (
+				_Append(out, zip(self.m_points, self.m_colours) if self.m_per_item_colour else self.m_points)
+			)),
+			base._WriteTo(out)
+		))
 
 class LdrGroup(_LdrBase):
 	def __init__(self):
@@ -618,19 +705,42 @@ class LdrGroup(_LdrBase):
 		base = super()
 		_Write(out, EKeyword.Group, self.m_name, self.m_colour, lambda: base._WriteTo(out))
 
+class LdrCommand(_LdrBase):
+	def __init__(self):
+		super().__init__()
+		self.m_id: ECommandId = ECommandId.Invalid
+		self.m_data: bytes = bytes()
+
+	def add_to_scene(self, scene_id: int):
+		self.m_id = ECommandId.AddToScene
+		self.m_data = struct.pack('<I', scene_id)
+		return self
+	
+	def _WriteTo(self, out: List[str]|bytearray):
+		_Write(out, EKeyword.Command, self.m_name, self.m_colour, lambda: (
+			_Write(out, EKeyword.Name, self.m_id),
+			_Write(out, EKeyword.Data, lambda: (
+				_Append(out, self.m_data)
+			)),
+		))
+
 class LdrBuilder(_LdrObj):
 	def __init__(self):
 		super().__init__()
 
 # Exports -------------------------------------------------
 __all__ = [
+	'Col',
 	'Vec2',
 	'Vec3',
 	'Vec4',
 	'Mat3',
 	'Mat4',
 	'LdrPoint',
+	'LdrBox',
+	'LdrPolygon',
 	'LdrGroup',
+	'LdrCommand',
 	'LdrBuilder',
 ]
 
@@ -644,66 +754,10 @@ def Tests():
 	ldr_points.pt(Vec3(1, 1, 1), 0xFF00FF00)
 	ldr_points.pt(Vec3(2, 2, 2), 0xFFFF0000)
 	ldr_group.pos(Vec3(1,1,1))
+	builder.Command().add_to_scene(0)
 	print(builder.ToString())
 	b = builder.ToBytes()
 	with open("E:/Dump/Ldraw/test.bdr", "wb") as f:
 		f.write(b)
 
-# UpdateKeywords ---------------------------------------------------
-def UpdateKeywords():
-	src_tag_begin = "#define PR_ENUM_LDRAW_KEYWORDS(x)"
-	src_tag_end = "PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int)"
-	dst_tag_begin = "# AUTO-GENERATED-KEYWORDS-BEGIN"
-	dst_tag_end = "# AUTO-GENERATED-KEYWORDS-END"
-
-	# Convert from *.h to *.py
-	def Transform(line: str) -> str:
-		return re.sub(r"\s*x\((.*?)\s*,\s*=\s*HashI\(\s*(.*?)\s*\)\).*", r"	\1 = HashI(\2)\n", line.strip())
-
-	embed = []
-
-	# Find the lines to embed between the src tags
-	src = os.path.join(os.path.dirname(__file__), "ldraw.h")
-	with open(src, "r") as file:
-		within_tags = False
-		for line in file:
-			if src_tag_begin in line:
-				within_tags = True
-				continue
-			if src_tag_end in line:
-				within_tags = False
-				break
-			if within_tags:
-				embed.append(line)
-
-	lines = []
-
-	# Read the dst file and embed the lines between the dst tags
-	dst = os.path.join(os.path.dirname(__file__), "ldraw_helper.py")
-	with open(dst, "r") as file:
-		within_tags = False
-		first = True
-		for line in file:
-			if dst_tag_begin in line and first:
-				within_tags = True
-				lines.append(line)
-				lines.extend([Transform(l) for l in embed])
-				first = False
-				continue
-			if dst_tag_end in line:
-				within_tags = False
-				lines.append(line)
-				continue
-			if not within_tags:
-				lines.append(line)
-
-	# Update the file
-	with open(dst, "w") as file:
-		for l in lines:
-			file.write(l)
-
-# Main entry point
-if __name__ == "__main__":
-	if len(sys.argv) > 1:
-		if sys.argv[1] in globals():
-			globals()[sys.argv[1]]()
+Tests()

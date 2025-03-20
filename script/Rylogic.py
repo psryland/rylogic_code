@@ -6,6 +6,7 @@ import zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 from typing import Callable, List, Optional
+from pathlib import Path as path
 import UserVars
 
 # Support symlink on windows
@@ -512,6 +513,56 @@ def UpdateTaggedSection(filepath:str, tag_beg:str, tag_end:str, repl:str):
 	# Replace the tagged section in 'filepath'
 	UpdateFile(filepath, pat, section, re.S)
 	return
+
+# Replace a block of lines within a file from lines from another file
+# If 'src_tag_begin' and 'src_tag_end' are None, the entire file is used
+# If 'dst_tag_begin' and 'dst_tag_end' are None, the entire file is replaced
+# 'transform' has a signature of: "transform(line) -> line". Result should have no trailing newline or leading whitespace
+def ReplaceSection(src_file: path, dst_file: path, src_tag_begin: Optional[str], src_tag_end: Optional[str], dst_tag_begin: Optional[str], dst_tag_end: Optional[str], transform: Callable[[str], str]) -> None:
+
+	if not os.path.exists(src_file):
+		raise FileNotFoundError(f"Cannot read section in '{src_file}'.")
+	if not os.path.exists(dst_file):
+		raise FileNotFoundError(f"Cannot update section in '{dst_file}'.")
+
+	embed = []
+	lines = []
+	indent = ""
+
+	# Find the lines to embed between the src tags
+	with open(src_file, "r") as file:
+		within_tags = src_tag_begin is None and src_tag_end is None
+		for line in file:
+			if src_tag_begin is not None and src_tag_begin in line:
+				within_tags = True
+				continue
+			if src_tag_end is not None and src_tag_end in line:
+				within_tags = False
+				break
+			if within_tags:
+				embed.append(line)
+
+	# Read the dst file and embed the lines between the dst tags
+	with open(dst_file, "r") as file:
+		within_tags = dst_tag_begin is None and dst_tag_end is None
+		for line in file:
+			if dst_tag_begin is not None and dst_tag_begin in line:
+				within_tags = True
+				indent = line[:line.find(dst_tag_begin)]
+				lines.append(line)
+				lines.extend([f"{indent}{transform(l)}" for l in embed])
+				continue
+			if dst_tag_end is not None and dst_tag_end in line:
+				within_tags = False
+				lines.append(line)
+				continue
+			if not within_tags:
+				lines.append(line)
+
+	# Update the dst file
+	with open(dst_file, "w") as file:
+		for l in lines:
+			file.write(l)
 
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
@@ -1074,6 +1125,12 @@ if __name__ == "__main__":
 	try:
 		UnitTest("P:\\pr\\projects\\rylogic\\Rylogic.Core\\bin\\debug\\netstandard2.0\\Rylogic.Core.dll")
 		#UnitTest("P:\\pr\\projects\\Rylogic.Core.Windows\\bin\\debug\\net6.0-windows\\Rylogic.Core.Windows.dll", ["Rylogic.Core.dll"])
+
+		# This is how to run a function from the command line
+		if len(sys.argv) > 1:
+			if sys.argv[1] in globals():
+				globals()[sys.argv[1]](sys.argv[2:])
+
 		pass
 	except KeyboardInterrupt:
 		pass

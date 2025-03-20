@@ -275,6 +275,8 @@
     <ClInclude Include="src\shaders\common.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="auto_gen.py" />
+    <None Include="src\ldraw\ldraw_demo_scene.ldr" />
     <None Include="src\shaders\hlsl\types.hlsli" />
     <None Include="src\shaders\hlsl\common\functions.hlsli" />
     <None Include="src\shaders\hlsl\common\geometry.hlsli" />
@@ -287,6 +289,7 @@
     <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\env_map.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
@@ -301,25 +304,26 @@
     <CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
     <CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
+  <!--
+  AutoGen
+  -->
   <ItemGroup>
-    <None Include="src\ldraw\ldraw_demo_scene.ldr" />
-    <PyScript Include="src\ldraw\ldraw_demo_scene.ldr">
-      <Generator>$(ScriptPath)EmbedFile.py</Generator>
-      <Args>DEMO_SCENE $(ProjectDir)src\ldraw\ldraw_demo_scene.ldr $(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Args>
-      <AdditionalInputs>$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr</AdditionalInputs>
-      <Outputs>$(OutDir)ldraw_demo_scene.cpp.embedded</Outputs>
-    </PyScript>
-    <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py" />
-    <PyScript Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py">
-      <Generator>$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py</Generator>
-      <Args>UpdateKeywords</Args>
+    <PyScript Include="$(ProjectDir)auto_gen.py">
+      <Generator>$(ProjectDir)auto_gen.py</Generator>
+      <Args>$(RylogicRoot)</Args>
       <AdditionalInputs>
-        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py
+        ;$(ProjectDir)auto_gen.py
+        ;$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr
         ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h 
+        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h 
+        ;$(RylogicRoot)script\Rylogic.py
       </AdditionalInputs>
-      <Outputs>$(OutDir)ldraw_helper.py.embedded</Outputs>
+      <Outputs>$(OutDir)auto_gen.py.pyscript</Outputs>
     </PyScript>
   </ItemGroup>
+  <!--
+  Shaders
+  -->
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <EntryPointName>ApplyForces</EntryPointName>

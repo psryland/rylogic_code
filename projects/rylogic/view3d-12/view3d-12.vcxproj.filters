@@ -795,6 +795,7 @@
     <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py">
       <Filter>src\ldraw</Filter>
     </None>
+    <None Include="auto_gen.py" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">

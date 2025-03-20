@@ -37,6 +37,8 @@ namespace pr::rdr12::ldraw
 		, m_location()
 		, m_keyword()
 		, m_delim(L" \t\r\n\v,;")
+		, m_section_level()
+		, m_nest_level()
 	{
 		static_assert(sizeof(m_src) >= sizeof(script::StreamSrc<wchar_t>));
 		static_assert(sizeof(m_pp) >= sizeof(script::Preprocessor));
