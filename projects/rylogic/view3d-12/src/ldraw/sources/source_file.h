@@ -18,7 +18,7 @@ namespace pr::rdr12::ldraw
 		SourceFile(Guid const* context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes);
 
 		// Construct a new instance of the source (if possible)
-		std::unique_ptr<SourceBase> Clone() override;
+		std::shared_ptr<SourceBase> Clone() override;
 
 	protected:
 

@@ -90,24 +90,24 @@ namespace pr::rdr12
 	}
 
 	// Load/Add ldr objects from a script file. Returns the Guid of the context that the objects were added to.
-	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	Guid Context::LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete) // worker thread context
 	{
-		return m_sources.AddFile(ldr_script, enc, ldraw::ESourceChangeReason::NewData, context_id, includes, on_add);
+		return m_sources.AddFile(ldr_script, enc, context_id, includes, add_complete);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
 	template <typename Char>
-	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add) // worker thread context
+	Guid Context::LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete) // worker thread context
 	{
-		return m_sources.AddString(ldr_script, enc, ldraw::ESourceChangeReason::NewData, context_id, includes, on_add);
+		return m_sources.AddString(ldr_script, enc, context_id, includes, add_complete);
 	}
-	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
-	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+	template Guid Context::LoadScriptString<wchar_t>(std::wstring_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete);
+	template Guid Context::LoadScriptString<char>(std::string_view ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete);
 
 	// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
-	Guid Context::LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add)
+	Guid Context::LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ldraw::AddCompleteCB add_complete)
 	{
-		return m_sources.AddBinary(data, ldraw::ESourceChangeReason::NewData, context_id, on_add);
+		return m_sources.AddBinary(data, context_id, add_complete);
 	}
 
 	// Enable/Disable streaming script sources.
@@ -120,7 +120,7 @@ namespace pr::rdr12
 	}
 
 	// Create an object from geometry
-	LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
+	ldraw::LdrObject* Context::ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id)
 	{
 		using namespace pr::script;
 
@@ -208,7 +208,7 @@ namespace pr::rdr12
 
 	// Load/Add ldr objects and return the first object from the script
 	template <typename Char>
-	LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)
+	ldraw::LdrObject* Context::ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes)
 	{
 		// Get the context id for this script
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -234,11 +234,11 @@ namespace pr::rdr12
 			? iter->second->m_output.m_objects[count].get()
 			: nullptr;
 	}
-	template LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
-	template LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+	template ldraw::LdrObject* Context::ObjectCreateLdr<wchar_t>(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+	template ldraw::LdrObject* Context::ObjectCreateLdr<char>(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
 	// Create an LdrObject from the p3d model
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
+	ldraw::LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : GenerateGUID();
@@ -250,7 +250,7 @@ namespace pr::rdr12
 		m_sources.Add(obj);
 		return obj.get();
 	}
-	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id)
+	ldraw::LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id)
 	{
 		// Get the context id
 		auto id = context_id ? *context_id : pr::GenerateGUID();
@@ -387,7 +387,7 @@ namespace pr::rdr12
 		if (ibuf.capacity() > 0x100000) ibuf.clear();
 		if (nbuf.capacity() > 0x100000) nbuf.clear();
 	}
-	LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
+	ldraw::LdrObject* Context::ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id)
 	{
 		auto obj = ldraw::CreateEditCB(m_rdr, ldraw::ELdrObject::Custom, vcount, icount, ncount, EditModel, &edit_cb, context_id);
 		obj->m_name = name;
@@ -395,7 +395,7 @@ namespace pr::rdr12
 		m_sources.Add(obj);
 		return obj.get();
 	}
-	void Context::ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
+	void Context::ObjectEdit(ldraw::LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb)
 	{
 		// Remove the object from any windows it might be in
 		for (auto& wnd : m_windows)
@@ -407,7 +407,7 @@ namespace pr::rdr12
 
 	// Update the model in an existing object
 	template <typename Char>
-	void Context::UpdateObject(LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags)
+	void Context::UpdateObject(ldraw::LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags)
 	{
 		// Remove the object from any windows it might be in
 		for (auto& wnd : m_windows)
@@ -418,11 +418,11 @@ namespace pr::rdr12
 		rdr12::ldraw::TextReader reader(src, {});
 		ldraw::Update(m_rdr, object, reader, flags);
 	}
-	template void Context::UpdateObject<wchar_t>(LdrObject* object, std::wstring_view, ldraw::EUpdateObject flags);
-	template void Context::UpdateObject<char>(LdrObject* object, std::string_view, ldraw::EUpdateObject flags);
+	template void Context::UpdateObject<wchar_t>(ldraw::LdrObject* object, std::wstring_view, ldraw::EUpdateObject flags);
+	template void Context::UpdateObject<char>(ldraw::LdrObject* object, std::string_view, ldraw::EUpdateObject flags);
 
 	// Delete a single object
-	void Context::DeleteObject(LdrObject* object)
+	void Context::DeleteObject(ldraw::LdrObject* object)
 	{
 		// Remove the object from any windows it's in
 		for (auto& wnd : m_windows)
@@ -478,7 +478,7 @@ namespace pr::rdr12
 		if (!unused.empty())
 		{
 			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
-			m_sources.Remove(ids, {}, ldraw::ESourceChangeReason::Removal);
+			m_sources.Remove(ids, {}, ldraw::EDataChangeReason::Removal);
 		}
 	}
 
@@ -491,13 +491,13 @@ namespace pr::rdr12
 	}
 
 	// Create a gizmo object and add it to the gizmo collection
-	LdrGizmo* Context::GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w)
+	ldraw::LdrGizmo* Context::GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w)
 	{
 		return m_sources.CreateGizmo(mode, o2w);
 	}
 
 	// Destroy a gizmo
-	void Context::GizmoDelete(LdrGizmo* gizmo)
+	void Context::GizmoDelete(ldraw::LdrGizmo* gizmo)
 	{
 		// Remove the gizmo from any windows it's in
 		for (auto& wnd : m_windows)
@@ -551,24 +551,24 @@ namespace pr::rdr12
 	}
 
 	// Store change event. Called before and after a change to the collection of objects in the store.
-	void Context::OnStoreChange(ldraw::StoreChangeEventArgs& args)
+	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
 	{
 		if (args.m_before)
 			return;
 
 		switch (args.m_reason)
 		{
-			case ldraw::ESourceChangeReason::NewData:
+			case ldraw::EDataChangeReason::NewData:
 			{
 				// On NewData, do nothing. Callers will add objects to windows as they see fit.
 				break;
 			}
-			case ldraw::ESourceChangeReason::Removal:
+			case ldraw::EDataChangeReason::Removal:
 			{
 				// On Removal, do nothing. Removed objects should already have been removed from the windows.
 				break;
 			}
-			case ldraw::ESourceChangeReason::Reload:
+			case ldraw::EDataChangeReason::Reload:
 			{
 				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
 				for (auto& wnd : m_windows)
@@ -591,7 +591,7 @@ namespace pr::rdr12
 	// Source removed event (i.e. objects deleted by Id)
 	void Context::OnSourceRemoved(ldraw::SourceRemovedEventArgs const& args)
 	{
-		auto reload = args.m_reason == ldraw::ESourceChangeReason::Reload;
+		auto reload = args.m_reason == ldraw::EDataChangeReason::Reload;
 
 		// When a source is about to be removed, remove it's objects from the windows.
 		// If this is a reload, save a reference to the removed objects so we know what to reload.

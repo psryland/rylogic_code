@@ -117,6 +117,7 @@
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
+#include "pr/script/script.h"
 #include "pr/threads/name_thread.h"
 #include "pr/threads/synchronise.h"
 #include "pr/win32/dummy_window.h"
@@ -267,12 +268,6 @@ namespace pr::rdr12
 		struct ParseResult;
 		struct IReader;
 	}
-	using LdrObject = ldraw::LdrObject;
-	using LdrGizmo = ldraw::LdrGizmo;
-	using LdrObjectPtr = ldraw::LdrObjectPtr;
-	using LdrGizmoPtr = ldraw::LdrGizmoPtr;
-	using ObjectCont = ldraw::ObjectCont;
-	using GizmoCont = ldraw::GizmoCont;
 
 	// Dll
 	struct Context;

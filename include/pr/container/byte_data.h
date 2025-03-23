@@ -28,6 +28,8 @@ namespace pr
 			value_type* m_ptr;
 
 			// Debugging helper pointers
+			char*    m_str;
+			wchar_t* m_wstr;
 			uint8_t  (*m_u8)[128];
 			uint16_t (*m_u16)[64];
 			uint32_t (*m_u32)[32];

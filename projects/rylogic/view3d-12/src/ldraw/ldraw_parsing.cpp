@@ -254,13 +254,32 @@ namespace pr::rdr12::ldraw
 	{
 		switch (id)
 		{
-			#define PR_LDRAW_PARSE_CMDS_IMPL(name, hash)\
-			case ECommandId::name:\
-			{\
-				return CommandHandler<ECommandId::name>::Parse(reader);\
+			case ECommandId::Invalid:
+			{
+				return { ECommandId::Invalid, {} };
 			}
-			#define PR_LDRAW_PARSE_CMDS(x) x(PR_LDRAW_PARSE_CMDS_IMPL)
-			PR_LDRAW_PARSE_CMDS(PR_ENUM_LDRAW_COMMANDS)
+			case ECommandId::AddToScene:
+			{
+				auto scene_id = reader.Int<int>();
+				return { ECommandId::AddToScene, std::span<int const>{&scene_id, 1} };
+			}
+			case ECommandId::CameraToWorld:
+			{
+				return { ECommandId::Invalid, {} };
+			}
+			case ECommandId::CameraPosition:
+			{
+				return { ECommandId::Invalid, {} };
+			}
+			case ECommandId::ObjectToWorld:
+			{
+				return { ECommandId::Invalid, {} };
+			}
+			case ECommandId::Render:
+			{
+				auto scene_id = reader.Int<int>();
+				return { ECommandId::Render, std::span<int const>{&scene_id, 1} };
+			}
 			default:
 			{
 				pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unsupported command");

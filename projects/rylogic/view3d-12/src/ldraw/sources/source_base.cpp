@@ -15,19 +15,18 @@ namespace pr::rdr12::ldraw
 	{}
 
 	// Construct a new instance of the source (if possible)
-	std::unique_ptr<SourceBase> SourceBase::Clone()
+	std::shared_ptr<SourceBase> SourceBase::Clone()
 	{
 		return nullptr;
 	}
 
 	// Parse the contents of the script
-	void SourceBase::Reload(Renderer& rdr)
+	void SourceBase::Load(Renderer& rdr, NewDataEventArgs args)
 	{
 		try
 		{
-			m_errors.resize(0);
-			m_filepaths.resize(0);
 			m_output = ReadSource(rdr);
+			NewData(shared_from_this(), args);
 		}
 		catch (std::exception const& ex)
 		{
@@ -39,7 +38,7 @@ namespace pr::rdr12::ldraw
 	// Regenerate the output from the source
 	ParseResult SourceBase::ReadSource(Renderer&)
 	{
-		return m_output;
+		return std::move(m_output);
 	}
 
 	// Callbacks for parsing

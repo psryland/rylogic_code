@@ -466,7 +466,7 @@ namespace pr::script
 	{
 		// Note:
 		//  - StringSrc only returns bytes so should *NOT* use the 'already_decoded' encoding.
-		//  - A useful techique is to default construct a StringSrc then push text into its buffer.
+		//  - A useful technique is to default construct a StringSrc then push text into its buffer.
 		//    When the buffer is empty, 'Read()' will return EOS. Technically, the same would work
 		//    with 'NullSrc', but that's likely to be confusing.
 		//  - StringSrc has a copy constructor, but it can't have 'start'/'count' parameters because

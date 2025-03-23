@@ -14,14 +14,17 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Construct a new instance of the source (if possible)
-	std::unique_ptr<SourceBase> SourceBinary::Clone()
+	std::shared_ptr<SourceBase> SourceBinary::Clone()
 	{
-		return std::unique_ptr<SourceBinary>(new SourceBinary{ &m_context_id, m_script });
+		return std::shared_ptr<SourceBinary>(new SourceBinary{ &m_context_id, m_script });
 	}
 
 	// Regenerate the output from the source
 	ParseResult SourceBinary::ReadSource(Renderer& rdr)
 	{
+		m_errors.resize(0);
+		m_filepaths.resize(0);
+
 		mem_istream<char> src{ m_script.data(), m_script.size() };
 		BinaryReader reader(src, {}, { OnReportError, this }, { OnProgress, this });
 		return Parse(rdr, reader, m_context_id);

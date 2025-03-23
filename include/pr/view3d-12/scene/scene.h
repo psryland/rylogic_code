@@ -73,7 +73,7 @@ namespace pr::rdr12
 		{
 			AddInstance(inst.m_base);
 		}
-		void AddInstance(LdrObjectPtr ldr_obj)
+		void AddInstance(ldraw::LdrObjectPtr ldr_obj)
 		{
 			ldr_obj->AddToScene(*this);
 		}

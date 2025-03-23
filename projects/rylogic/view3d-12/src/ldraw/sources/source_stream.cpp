@@ -4,6 +4,7 @@
 //*********************************************
 #include "view3d-12/src/ldraw/sources/source_stream.h"
 #include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
 
@@ -11,16 +12,17 @@ namespace pr::rdr12::ldraw
 {
 	SourceStream::SourceStream(Guid const* context_id, Renderer* rdr, Socket&& socket, sockaddr_in addr)
 		: SourceBase(context_id)
+		, m_rdr(rdr)
 		, m_socket(std::move(socket))
+		, m_address(std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr)))
 		, m_thread()
 		, m_mutex()
+		, m_mode(EMode::Text)
 	{
-		auto address = std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr));
-
 		// Start a thread to receive incoming data
-		m_thread = std::jthread([this, rdr, address]()
+		m_thread = std::jthread([this]()
 		{
-			threads::SetCurrentThreadName(address);
+			threads::SetCurrentThreadName(m_address);
 			try
 			{
 				// Consume data from the socket
@@ -41,56 +43,24 @@ namespace pr::rdr12::ldraw
 					bytes_read += read;
 
 					// Parse the data by batches of sections. Find the range of whole sections to consume.
-					int consume = 0;
-					for (; bytes_read - consume >= sizeof(ldraw::SectionHeader);)
+					auto [consumed, required] =
+						m_mode == EMode::Text ? ConsumeText(buffer, bytes_read) :
+						m_mode == EMode::Binary ? ConsumeBinary(buffer, bytes_read) :
+						throw std::runtime_error("Unsupported format");
+
+					// If sections where consumed, remove the data from 'buffer'
+					if (consumed != 0)
 					{
-						auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(consume));
-
-						// If the first 4 bytes are not a keyword, then flush the buffer
-						if (!ldraw::EKeyword_::IsValue(s_cast<int>(header.m_keyword)))
-						{
-							bytes_read = 0;
-							consume = 0;
-							break;
-						}
-
-						// The next 4 bytes should be the section size in bytes (excluding the header)
-						auto required = s_cast<int>(header.m_size + sizeof(ldraw::SectionHeader));
-						if (consume + required > bytes_read)
-						{
-							// We can only use up to 'consume' bytes
-							break;
-						}
-
-						// The next section is complete, include it for consumption
-						consume += required;
-					}
-
-					// If there are sections to consume, do that
-					if (consume != 0)
-					{
-						mem_istream<char> strm(buffer.data(), consume);
-						BinaryReader reader(strm, address, { OnReportError, this }, { OnProgress, this });
-						auto out = ldraw::Parse(*rdr, reader, m_context_id);
-
-						rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
-						{
-							m_output += std::move(out);
-						});
-
 						// Move any remaining data to the front
-						memmove(buffer.data(), buffer.data() + consume, bytes_read - consume);
-						bytes_read -= consume;
+						memmove(buffer.data(), buffer.data() + consumed, s_cast<size_t>(bytes_read - consumed));
+						bytes_read -= consumed;
 					}
 
 					// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
 					else if (bytes_read >= sizeof(ldraw::SectionHeader))
 					{
-						auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(0));
-						auto required = header.m_size + sizeof(ldraw::SectionHeader);
-
 						// If there's not enough data yet, keep waiting. Make sure the buffer is big enough
-						buffer.resize(std::max(buffer.size(), required));
+						buffer.resize(std::max(buffer.size(), s_cast<size_t>(required)));
 					}
 				}
 			}
@@ -106,18 +76,26 @@ namespace pr::rdr12::ldraw
 	}
 	SourceStream::SourceStream(SourceStream&& rhs) noexcept
 		: SourceBase(rhs)
+		, m_rdr(rhs.m_rdr)
 		, m_socket()
+		, m_address()
 		, m_thread()
+		, m_mutex()
+		, m_mode(rhs.m_mode)
 	{
 		std::swap(m_socket, rhs.m_socket);
+		std::swap(m_address, rhs.m_address);
 		std::swap(m_thread, rhs.m_thread);
 	}
 	SourceStream& SourceStream::operator =(SourceStream&& rhs) noexcept
 	{
 		if (this == &rhs) return *this;
 		SourceBase::operator=(rhs);
+		std::swap(m_rdr, rhs.m_rdr);
 		std::swap(m_socket, rhs.m_socket);
+		std::swap(m_address, rhs.m_address);
 		std::swap(m_thread, rhs.m_thread);
+		std::swap(m_mode, rhs.m_mode);
 		return *this;
 	}
 	SourceStream::~SourceStream()
@@ -126,5 +104,118 @@ namespace pr::rdr12::ldraw
 		m_thread.request_stop();
 		if (m_thread.joinable())
 			m_thread.join();
+	}
+
+	// Receive binary ldraw script. Returns the number of bytes consumed
+	std::tuple<int,int> SourceStream::ConsumeBinary(byte_data<4>& buffer, int& bytes_read)
+	{
+		int consume = 0;
+		int required = 0;
+
+		// Find the range of complete sections that can be consumed
+		for (; bytes_read - consume >= int(sizeof(ldraw::SectionHeader));)
+		{
+			auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(consume));
+
+			// If the first 4 bytes are not a keyword, then flush the buffer
+			if (!ldraw::EKeyword_::IsValue(s_cast<int>(header.m_keyword)))
+			{
+				bytes_read = 0;
+				consume = 0;
+				break;
+			}
+
+			// The next 4 bytes should be the section size in bytes (excluding the header)
+			auto size = s_cast<int>(header.m_size + sizeof(ldraw::SectionHeader));
+			if (consume + size > bytes_read)
+			{
+				// We can only use up to 'consume' bytes
+				break;
+			}
+
+			// The next section is complete, include it for consumption
+			consume += size;
+		}
+
+		// If there are sections to consume, do so
+		if (consume != 0)
+		{
+			mem_istream<char> strm(buffer.data(), consume);
+			BinaryReader reader(strm, m_address, { OnReportError, this }, { OnProgress, this });
+			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
+
+			m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+			{
+				m_output += std::move(out);
+				NewData(shared_from_this(), { EDataChangeReason::NewData, nullptr });
+			});
+		}
+
+		// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
+		else if (bytes_read >= sizeof(ldraw::SectionHeader))
+		{
+			auto const& header = buffer.at_byte_ofs<ldraw::SectionHeader>(s_cast<size_t>(0));
+			required = header.m_size + sizeof(ldraw::SectionHeader);
+		}
+
+		return { consume, required };
+	}
+
+	// Receive text ldraw script
+	std::tuple<int,int> SourceStream::ConsumeText(byte_data<4>& buffer, int& bytes_read)
+	{
+		int consume = 0;
+		int required = 0;
+
+		// Find the range of complete sections that can be consumed
+		for (; bytes_read - consume > 0;)
+		{
+			script::StringSrc src({ &buffer.at_byte_ofs<char const>(consume), s_cast<size_t>(bytes_read - consume) });
+			auto remaining0 = src.size_in_bytes();
+
+			str::AdvanceToNonDelim(src);
+
+			// Expect to start with a keyword, if not then flush the buffer
+			string32 id; std::optional<EKeyword> kw;
+			if (*src != '*' || !str::ExtractIdentifier(id, ++src) || !(kw = ldraw::EKeyword_::TryParse(id, false)))
+			{
+				bytes_read = 0;
+				consume = 0;
+				break;
+			}
+
+			// Scan forward to the '{' character then see if a complete section is within the buffer
+			StringProxyForLength<wchar_t> section;
+			if (!str::Advance(src, [](auto ch) { return ch != '{'; }) || !str::ExtractSection(section, src))
+			{
+				// We can only use up to 'consume' bytes
+				break;
+			}
+
+			// The next section is complete, include it for consumption
+			consume += s_cast<int>(remaining0 - src.size_in_bytes());
+		}
+
+		// If there are sections to consume, do so
+		if (consume != 0)
+		{
+			mem_istream<char> strm(buffer.data(), consume);
+			TextReader reader(strm, m_address, EEncoding::utf8, { OnReportError, this }, { OnProgress, this });
+			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
+
+			m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+			{
+				m_output += std::move(out);
+				NewData(shared_from_this(), { EDataChangeReason::NewData, nullptr });
+			});
+		}
+
+		// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
+		else if (bytes_read == isize(buffer))
+		{
+			required = 2 * isize(buffer);
+		}
+
+		return { consume, required };
 	}
 }

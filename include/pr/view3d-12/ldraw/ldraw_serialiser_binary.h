@@ -131,7 +131,7 @@ namespace pr::rdr12::ldraw
 		}
 		template <typename TOut> static void Append(TOut& out, StringWithLength str)
 		{
-			Append(out, VariableInt{ isize(str.m_value) });
+			Append(out, VariableInt{ isize(str.m_value) }); // length in bytes, not utf8 codes
 			Append(out, str.m_value);
 		}
 		template <typename TOut> static void Append(TOut& out, Name n)

@@ -4,26 +4,27 @@
 //*********************************************
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 #include "view3d-12/src/ldraw/sources/ldraw_sources.h"
 
 namespace pr::rdr12::ldraw
 {
-	Command CommandHandler<ECommandId::Invalid>::Parse(IReader&)
+	template <ECommandId Id>
+	struct CommandHandler
 	{
-		return { ECommandId::Invalid, {} };
-	}
-	void CommandHandler<ECommandId::Invalid>::Execute(Command&, SourceBase&, Context&)
+		static void Execute(Command&, SourceBase&, Context&);
+	};
+	template <> struct CommandHandler<ECommandId::Invalid>
+	{
+		static void Execute(Command&, SourceBase&, Context&)
 	{
 	}
-	
-	Command CommandHandler<ECommandId::AddToScene>::Parse(IReader& reader)
+	};
+	template <> struct CommandHandler<ECommandId::AddToScene>
 	{
-		auto scene_id = reader.Int<int>();
-		return { ECommandId::AddToScene, std::span<int const>{&scene_id, 1} };
-	}
-	void CommandHandler<ECommandId::AddToScene>::Execute(Command& cmd, SourceBase& source, Context& context)
+		static void Execute(Command& cmd, SourceBase& source, Context& context)
 	{
 		// Look for the window to add objects to
 		auto scene_id = cmd.m_data.as<int>();
@@ -35,47 +36,39 @@ namespace pr::rdr12::ldraw
 		for (auto& obj : source.m_output.m_objects)
 			window.Add(obj.get());
 	}
-	
-	Command CommandHandler<ECommandId::CameraToWorld>::Parse(IReader&)
+	};
+	template <> struct CommandHandler<ECommandId::CameraToWorld>
 	{
-		return { ECommandId::Invalid, {} };
-	}
-	void CommandHandler<ECommandId::CameraToWorld>::Execute(Command&, SourceBase&, Context&)
+		static void Execute(Command&, SourceBase&, Context&)
 	{
 	}
+	};
+	template <> struct CommandHandler<ECommandId::CameraPosition>
+	{
+		static void Execute(Command&, SourceBase&, Context&)
+	{
+	}
+	};
+	template <> struct CommandHandler<ECommandId::ObjectToWorld>
+	{
+		static void Execute(Command&, SourceBase&, Context&)
+	{
+	}
+	};
+	template <> struct CommandHandler<ECommandId::Render>
+	{
+		static void Execute(Command& cmd, SourceBase&, Context& context)
+		{
+			// Look for the window to render
+			auto scene_id = cmd.m_data.as<int>();
+			if (scene_id < 0 || scene_id >= isize(context.m_windows))
+				return;
 
-	Command CommandHandler<ECommandId::CameraPosition>::Parse(IReader&)
-	{
-		return { ECommandId::Invalid, {} };
-	}
-	void CommandHandler<ECommandId::CameraPosition>::Execute(Command&, SourceBase&, Context&)
-	{
-	}
-
-	Command CommandHandler<ECommandId::ObjectToWorld>::Parse(IReader&)
-	{
-		return { ECommandId::Invalid, {} };
-	}
-	void CommandHandler<ECommandId::ObjectToWorld>::Execute(Command&, SourceBase&, Context&)
-	{
-	}
-
-	Command CommandHandler<ECommandId::Render>::Parse(IReader& reader)
-	{
-		auto scene_id = reader.Int<int>();
-		return { ECommandId::Render, std::span<int const>{&scene_id, 1} };
-	}
-	void CommandHandler<ECommandId::Render>::Execute(Command& cmd, SourceBase&, Context& context)
-	{
-		// Look for the window to render
-		auto scene_id = cmd.m_data.as<int>();
-		if (scene_id < 0 || scene_id >= isize(context.m_windows))
-			return;
-
-		// Render the window
-		auto& window = *context.m_windows[scene_id];
-		window.Render();
-	}
+			// Render the window
+			auto& window = *context.m_windows[scene_id];
+			window.Render();
+		}
+	};
 
 	// Process an ldraw command
 	void ExecuteCommands(SourceBase& source, Context& context)

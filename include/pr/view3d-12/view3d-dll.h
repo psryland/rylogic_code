@@ -691,7 +691,7 @@ namespace pr
 		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
 		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
-		using OnAddCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using AddCompleteCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 		using InvalidatedCB = void(__stdcall *)(void* ctx, Window window);
 		using RenderingCB = void(__stdcall *)(void* ctx, Window window);
 		using SceneChangedCB = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
@@ -733,8 +733,8 @@ extern "C"
 	// Data Sources ***************************
 
 	// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
 
 	// Delete all objects and object sources
 	VIEW3D_API void __stdcall View3D_DeleteAllObjects();

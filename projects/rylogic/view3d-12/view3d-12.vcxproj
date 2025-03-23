@@ -79,7 +79,6 @@
   Files
   -->
   <ItemGroup>
-    <ClCompile Include="src\ldraw\ldraw_commands.cpp" />
     <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
     <ClCompile Include="src\ldraw\ldraw_object.cpp" />
     <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
@@ -178,7 +177,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\instance\instance.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />

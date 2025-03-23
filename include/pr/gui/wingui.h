@@ -501,18 +501,18 @@ namespace pr
 		// Test an HRESULT and throw on error
 		inline void Check(HRESULT result, std::string message)
 		{
-			if (SUCCEEDED(result)) return;
+			if (SUCCEEDED(result)) [[likely]] return;
 			throw std::runtime_error(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
 		}
 		inline void Check(BOOL result, std::string message)
 		{
-			if (result != 0) return;
+			if (result != 0) [[likely]] return;
 			auto hr = HRESULT(GetLastError());
 			Check(SUCCEEDED(hr) ? E_FAIL : hr, message);
 		}
 		inline void Check(gdi::Status result, std::string message)
 		{
-			if (result == gdi::Status::Ok) return;
+			if (result == gdi::Status::Ok) [[likely]] return;
 			throw std::runtime_error(message.c_str());
 		}
 
@@ -1734,8 +1734,10 @@ namespace pr
 			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773236(v=vs.85).aspx
 			void Text(HDC hdc, int part_id, int state_id, LPCWSTR text, int count, DWORD flags, RECT* rect, DTTOPTS const* opts)
 			{
-				Check(m_htheme != nullptr, "Themes not available");
-				Check(::DrawThemeTextEx(m_htheme, hdc, part_id, state_id, text, count, flags, rect, opts), "Draw theme text failed");
+				if (m_htheme != nullptr) [[likely]]
+					Check(::DrawThemeTextEx(m_htheme, hdc, part_id, state_id, text, count, flags, rect, opts), "Draw theme text failed");
+				else
+					Check(false, "Themes not available");
 			}
 
 			// 'hdc' = what to draw on
@@ -1744,16 +1746,20 @@ namespace pr
 			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773233(v=vs.85).aspx
 			void Bkgd(HDC hdc, int part_id, int state_id, RECT const* rect, DTBGOPTS const* opts) const
 			{
-				Check(m_htheme != nullptr, "Themes not available");
-				Check(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
+				if (m_htheme != nullptr) [[likely]]
+					Check(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
+				else
+					Check(false, "Themes not available");
 			}
 
 			// Retrieves the size of the content area for the background defined by the visual style.
 			Rect BkgdContentRect(HDC hdc, int part_id, int state_id, RECT const* bounding_rect)
 			{
 				Rect res;
-				Check(m_htheme != nullptr, "Themes not available");
-				Check(::GetThemeBackgroundContentRect(m_htheme, hdc, part_id, state_id, bounding_rect, &res), "Get themed background content rect failed");
+				if (m_htheme != nullptr) [[likely]]
+					Check(::GetThemeBackgroundContentRect(m_htheme, hdc, part_id, state_id, bounding_rect, &res), "Get themed background content rect failed");
+				else
+					Check(false, "Themes not available");
 				return res;
 			}
 		};

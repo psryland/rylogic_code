@@ -5,6 +5,7 @@
 #pragma once
 #include "pr/view3d-12/forward.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
 #include "view3d-12/src/ldraw/sources/ldraw_sources.h"
 #include "view3d-12/src/dll/dll_forward.h"
 
@@ -52,39 +53,39 @@ namespace pr::rdr12
 		MultiCast<StaticCB<view3d::SourcesChangedCB>, true> SourcesChanged;
 
 		// Load/Add ldraw objects from a script file. Returns the Guid of the context that the objects were added to.
-		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+		Guid LoadScriptFile(std::filesystem::path ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete);
 
 		// Load/Add ldraw objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		template <typename Char>
-		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ScriptSources::OnAddCB on_add);
+		Guid LoadScriptString(std::basic_string_view<Char> ldr_script, EEncoding enc, Guid const* context_id, PathResolver const& includes, ldraw::AddCompleteCB add_complete);
 
 		// Load/Add ldraw objects from binary data. Returns the Guid of the context that the objects were added to.
-		Guid LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ScriptSources::OnAddCB on_add);
+		Guid LoadScriptBinary(std::span<std::byte const> data, Guid const* context_id, ldraw::AddCompleteCB add_complete);
 
 		// Enable/Disable streaming script sources.
 		void StreamingEnable(bool enabled, uint16_t port);
 
 		// Create an object from geometry
-		LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);
+		ldraw::LdrObject* ObjectCreate(char const* name, Colour32 colour, std::span<view3d::Vertex const> verts, std::span<uint16_t const> indices, std::span<view3d::Nugget const> nuggets, Guid const& context_id);
 
 		// Load/Add ldr objects and return the first object from the script
 		template <typename Char>
-		LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
+		ldraw::LdrObject* ObjectCreateLdr(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, Guid const* context_id, view3d::Includes const* includes);
 
 		// Create an LdrObject from the p3d model
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id);
-		LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id);
+		ldraw::LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, Guid const* context_id);
+		ldraw::LdrObject* ObjectCreateP3D(char const* name, Colour32 colour, std::span<std::byte const> p3d_data, Guid const* context_id);
 
 		// Modify an ldr object using a callback to populate the model data.
-		LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id);
-		void ObjectEdit(LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
+		ldraw::LdrObject* ObjectCreateByCallback(char const* name, Colour32 colour, int vcount, int icount, int ncount, StaticCB<view3d::EditObjectCB> edit_cb, Guid const& context_id);
+		void ObjectEdit(ldraw::LdrObject* object, StaticCB<view3d::EditObjectCB> edit_cb);
 
 		// Update the model in an existing object
 		template <typename Char>
-		void UpdateObject(LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags);
+		void UpdateObject(ldraw::LdrObject* object, std::basic_string_view<Char> ldr_script, ldraw::EUpdateObject flags);
 
 		// Delete a single object
-		void DeleteObject(LdrObject* object);
+		void DeleteObject(ldraw::LdrObject* object);
 
 		// Delete all objects
 		void DeleteAllObjects();
@@ -99,10 +100,10 @@ namespace pr::rdr12
 		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
 
 		// Create a gizmo object and add it to the gizmo collection
-		LdrGizmo* GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w);
+		ldraw::LdrGizmo* GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w);
 
 		// Destroy a gizmo
-		void GizmoDelete(LdrGizmo* gizmo);
+		void GizmoDelete(ldraw::LdrGizmo* gizmo);
 		
 		// Reload file sources
 		void ReloadScriptSources();
@@ -125,7 +126,7 @@ protected:
 		void OnReload() override;
 
 		// Store change event. Called before and after a change to the collection of objects in the store.
-		void OnStoreChange(ldraw::StoreChangeEventArgs&) override;
+		void OnStoreChange(ldraw::StoreChangeEventArgs const&) override;
 
 		// Source removed event (i.e. objects deleted by Id)
 		void OnSourceRemoved(ldraw::SourceRemovedEventArgs const&) override;

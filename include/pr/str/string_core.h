@@ -231,8 +231,17 @@ namespace pr
 	template <> struct is_char<char32_t> :std::true_type {};
 	template <typename T> constexpr bool is_char_v = is_char<std::decay_t<T>>::value;
 
+	// Concepts
+	template <typename Ty> concept CharType = is_char_v<Ty>;
+
+	// Checks
+	static_assert(is_char_v<char>);
+	static_assert(is_char_v<wchar_t>);
+	static_assert(is_char_v<char16_t>);
+	static_assert(!is_char_v<double>);
+
 	// Casting helper to catch overflow when casting from wide to narrow characters
-	template <typename Char1, typename Char2, typename = std::enable_if_t<is_char_v<Char1> && is_char_v<Char2>>>
+	template <CharType Char1, CharType Char2>
 	inline Char1 char_cast(Char2 ch)
 	{
 		assert(static_cast<Char2>(static_cast<Char1>(ch)) == ch && "Character value overflow in cast");
@@ -414,8 +423,11 @@ namespace pr
 	struct string_traits<TStr&> :string_traits<std::remove_reference_t<TStr>>
 	{};
 
+	template <typename T> concept MarkedAsString = requires(T) { typename T::is_pr_string_compatible; };
+
 	// Is string type
 	template <typename Ty> struct is_string :std::false_type {};
+	template <MarkedAsString Ty> struct is_string<Ty> : std::true_type {};
 	template <typename Char> struct is_string<Char*> : is_char<Char> {};
 	template <typename Char> struct is_string<Char const*> : is_char<Char> {};
 	template <typename Char> struct is_string<std::basic_string_view<Char>> : is_char<Char> {};
@@ -520,7 +532,7 @@ namespace pr
 		}
 
 		// 'sprintf' accepting any char type
-		template <typename Char1, typename Char2>
+		template <CharType Char1, CharType Char2>
 		inline int sprintf(Char1* buf, size_t buf_size_in_words, Char2 const* format, ...)
 		{
 			va_list arg_list;
@@ -534,19 +546,19 @@ namespace pr
 
 		#pragma region Character classes
 
-		template <typename Char> inline bool IsNewLine(Char ch)                 { return ch == '\n'; }
-		template <typename Char> inline bool IsLineSpace(Char ch)               { return ch == ' ' || ch == '\t' || ch == '\r'; }
-		template <typename Char> inline bool IsWhiteSpace(Char ch)              { return IsLineSpace(ch) || IsNewLine(ch) || ch == '\v' || ch == '\f'; }
-		template <typename Char> inline bool IsDecDigit(Char ch)                { return (ch >= '0' && ch <= '9'); }
-		template <typename Char> inline bool IsBinDigit(Char ch)                { return (ch >= '0' && ch <= '1'); }
-		template <typename Char> inline bool IsOctDigit(Char ch)                { return (ch >= '0' && ch <= '7'); }
-		template <typename Char> inline bool IsHexDigit(Char ch)                { return IsDecDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
-		template <typename Char> inline bool IsDigit(Char ch)                   { return IsDecDigit(ch); }
-		template <typename Char> inline bool IsAlpha(Char ch)                   { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
-		template <typename Char> inline bool IsIdentifier(Char ch, bool first)  { return ch == '_' || IsAlpha(ch) || (!first && IsDigit(ch)); }
+		template <CharType Char> inline bool IsNewLine(Char ch)                 { return ch == '\n'; }
+		template <CharType Char> inline bool IsLineSpace(Char ch)               { return ch == ' ' || ch == '\t' || ch == '\r'; }
+		template <CharType Char> inline bool IsWhiteSpace(Char ch)              { return IsLineSpace(ch) || IsNewLine(ch) || ch == '\v' || ch == '\f'; }
+		template <CharType Char> inline bool IsDecDigit(Char ch)                { return (ch >= '0' && ch <= '9'); }
+		template <CharType Char> inline bool IsBinDigit(Char ch)                { return (ch >= '0' && ch <= '1'); }
+		template <CharType Char> inline bool IsOctDigit(Char ch)                { return (ch >= '0' && ch <= '7'); }
+		template <CharType Char> inline bool IsHexDigit(Char ch)                { return IsDecDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F'); }
+		template <CharType Char> inline bool IsDigit(Char ch)                   { return IsDecDigit(ch); }
+		template <CharType Char> inline bool IsAlpha(Char ch)                   { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'); }
+		template <CharType Char> inline bool IsIdentifier(Char ch, bool first)  { return ch == '_' || IsAlpha(ch) || (!first && IsDigit(ch)); }
 
 		// Return a pointer to delimiters, either the ones provided or the default ones
-		template <typename Char>
+		template <CharType Char>
 		inline Char const* Delim(Char const* delim = nullptr)
 		{
 			static Char const default_delim[] = {' ', '\t', '\n', '\r', 0};
@@ -558,14 +570,14 @@ namespace pr
 		#pragma region Size
 
 		// Return true if 'str' is an empty string
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline bool Empty(Str const& str)
 		{
 			return string_traits<Str const>::empty(str);
 		}
 
 		// Return the size of the string, excluding the null terminator (same as 'strlen'). Not necessarily the length of a multibyte encoded string
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline size_t Size(Str const& str)
 		{
 			return string_traits<Str const>::size(str);
@@ -576,39 +588,39 @@ namespace pr
 		#pragma region Range
 
 		// Return a pointer to the start of the string
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* Begin(Str&& str)
 		{
 			// Compile error: "'return': cannot convert from 'const char *' to 'Char *'" means
 			// the string_traits<Str>::value_type is missing a 'const'
 			return string_traits<Str>::ptr(str);
 		}
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char const* BeginC(Str&& str)
 		{
 			return Begin<Str const>(str);
 		}
 
 		// Return a pointer to the end of the string
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* End(Str&& str)
 		{
 			return Begin(str) + Size(str);
 		}
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char const* EndC(Str&& str)
 		{
 			return End<Str const>(str);
 		}
 
 		// Return a pointer to the 'N'th character or the end of the string, whichever is less
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* End(Str&& str, size_t N)
 		{
 			auto ptr = Begin(str) + std::min(N, Size(str));
 			return ptr;
 		}
-		template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char = typename string_traits<Str>::value_type>
 		inline Char const* EndC(Str&& str, size_t N)
 		{
 			auto ptr = Begin<Str const>(str) + std::min(N, Size(str));
@@ -633,19 +645,19 @@ namespace pr
 		}
 
 		// Return true if str1 and str2 are equal
-		template <typename Str1, typename Str2, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2, typename Pred>
 		inline bool Equal(Str1 const& str1, Str2 const& str2, Pred pred)
 		{
 			return Equal(Begin(str1), End(str1), Begin(str2), End(str2), pred);
 		}
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline bool Equal(Str1 const& str1, Str2 const& str2)
 		{
 			return Equal(Begin(str1), End(str1), Begin(str2), End(str2));
 		}
 
 		// Return true if str1 and str2 are equal
-		template <typename Char1, typename Char2, typename Pred>
+		template <CharType Char1, CharType Char2, typename Pred>
 		inline bool Equal(Char1 const* str1, Char2 const* str2, Pred pred)
 		{
 			auto i = Begin(str1);
@@ -653,7 +665,7 @@ namespace pr
 			for (; *i != 0 && *j != 0 && pred(*i, *j); ++i, ++j) {}
 			return *i == 0 && *j == 0;
 		}
-		template <typename Char1, typename Char2>
+		template <CharType Char1, CharType Char2>
 		inline bool Equal(Char1 const* str1, Char2 const* str2)
 		{
 			return Equal(str1, str2, [](auto l, auto r) { return l == r; });
@@ -689,7 +701,7 @@ namespace pr
 		}
 
 		// Return true if lhs and rhs are equal, ignoring case
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline bool EqualI(Str1 const& str1, Str2 const& str2)
 		{
 			return EqualI(Begin(str1), End(str1), Begin(str2), End(str2));
@@ -710,17 +722,17 @@ namespace pr
 		#pragma region EqualN
 
 		// Return true if lhs and rhs are equal, up to the given length
-		template <typename Str1, typename Str2, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2, typename Pred>
 		inline bool EqualN(Str1 const& str1, Str2 const& str2, size_t length, Pred pred)
 		{
 			return Equal(Begin(str1), End(str1, length), Begin(str2), End(str2, length), pred);
 		}
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline bool EqualN(Str1 const& str1, Str2 const& str2, size_t length)
 		{
 			return Equal(Begin(str1), End(str1, length), Begin(str2), End(str2, length));
 		}
-		template <typename Char1, typename Char2, typename Pred>
+		template <CharType Char1, CharType Char2, typename Pred>
 		inline bool EqualN(Char1 const* str1, Char2 const* str2, size_t length, Pred pred)
 		{
 			auto i = Begin(str1);
@@ -742,7 +754,7 @@ namespace pr
 		#pragma region EqualNI
 
 		// Return true if lhs and rhs are equal, up to the given length
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline bool EqualNI(Str1 const& str1, Str2 const& str2, size_t length)
 		{
 			using Char1 = typename string_traits<Str1 const>::value_type;
@@ -755,7 +767,7 @@ namespace pr
 					return l == r; 
 				});
 		}
-		template <typename Str, typename Char, int N, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char, int N>
 		inline bool EqualNI(Str const& str, Char const (&str2)[N])
 		{
 			return EqualNI(str, str2, N);
@@ -774,7 +786,7 @@ namespace pr
 		#pragma region FindChar
 
 		// Return a pointer to the first occurrence of 'ch' in a string
-		template <typename Str1, typename Char2, typename Char1 = typename string_traits<Str1>::value_type, typename = std::enable_if_t<is_string_v<Str1>>>
+		template <StringType Str1, CharType Char2, CharType Char1 = typename string_traits<Str1>::value_type>
 		inline Char1* FindChar(Str1&& str, Char2 ch)
 		{
 			if constexpr (string_traits<Str1>::null_terminated)
@@ -793,7 +805,7 @@ namespace pr
 		}
 
 		// Return a pointer to the first occurrence of 'ch' in a string or the string null terminator or the 'length' character
-		template <typename Str1, typename Char2, typename Char1 = typename string_traits<Str1>::value_type, typename = std::enable_if_t<is_string_v<Str1>>>
+		template <StringType Str1, CharType Char2, CharType Char1 = typename string_traits<Str1>::value_type>
 		inline Char1* FindChar(Str1&& str, Char2 ch, size_t length)
 		{
 			if constexpr (string_traits<Str1>::null_terminated)
@@ -817,7 +829,7 @@ namespace pr
 
 		// Find the sub string 'what' in the given range of characters.
 		// Returns an iterator to the sub string or to the end of the range.
-		template <typename Iter, typename Str, typename Pred, typename = std::enable_if_t<is_string_v<Str>>>
+		template <typename Iter, StringType Str, typename Pred>
 		inline Iter FindStr(Iter first, Iter last, Str const& what, Pred pred)
 		{
 			if (Empty(what)) return last;
@@ -829,7 +841,7 @@ namespace pr
 
 			return last;
 		}
-		template <typename Iter, typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <typename Iter, StringType Str>
 		inline Iter FindStr(Iter first, Iter last, Str const& what)
 		{
 			return FindStr(first, last, what, [](auto i, auto iend, auto j, auto jend)
@@ -840,7 +852,7 @@ namespace pr
 
 		// Find the sub string 'what' in the given range of characters.
 		// Returns an iterator to the sub string or to the end of the range.
-		template <typename Str1, typename Str2, typename Char1 = typename string_traits<Str1>::value_type, typename = std::enable_if_t<is_string_v<Str1>>>
+		template <StringType Str1, StringType Str2, CharType Char1 = typename string_traits<Str1>::value_type>
 		inline Char1* FindStr(Str1&& str, Str2 const& what)
 		{
 			return FindStr(Begin(str), End(str), what);
@@ -848,7 +860,7 @@ namespace pr
 
 		// Find the sub string 'what' in the range of characters provided (no case).
 		// Returns an iterator to the sub string or to the end of the range.
-		template <typename Iter, typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <typename Iter, StringType Str>
 		inline Iter FindStrI(Iter first, Iter last, Str const& what)
 		{
 			return FindStr(first, last, what, [](auto i, auto iend, auto j, auto jend)
@@ -856,7 +868,7 @@ namespace pr
 				return EqualI(i, iend, j, jend);
 			});
 		}
-		template <typename Str1, typename Str2, typename Char = typename string_traits<Str1>::value_type, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2, CharType Char = typename string_traits<Str1>::value_type>
 		inline Char* FindStrI(Str1&& str, Str2 const& what)
 		{
 			return FindStrI(Begin(str), End(str), what);
@@ -875,14 +887,14 @@ namespace pr
 		}
 
 		// Returns a pointer to the first character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the end of the string or &str[offset+count]
-		template <typename Str, typename Pred, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* FindFirst(Str&& str, size_t offset, size_t count, Pred pred)
 		{
 			return FindFirst(Begin(str) + offset, End(str, offset + count), pred);
 		}
 
 		// Returns a pointer to the first character in 'str' that satisfies 'pred', or a pointer to the end of the string
-		template <typename Str, typename Pred, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* FindFirst(Str&& str, Pred pred)
 		{
 			return FindFirst(str, 0, ~size_t(), pred);
@@ -897,39 +909,39 @@ namespace pr
 		}
 
 		// Returns a pointer to *one past* the last character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the beginning of the string or &str[offset]
-		template <typename Str, typename Pred, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* FindLast(Str&& str, size_t offset, size_t count, Pred pred)
 		{
 			return FindLast(Begin(str) + offset, End(str, offset + count), pred);
 		}
 
 		// Returns a pointer to *one past* the last character in 'str' that satisfies 'pred', or a pointer to the beginning of the string
-		template <typename Str, typename Pred, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred, CharType Char = typename string_traits<Str>::value_type>
 		inline Char* FindLast(Str&& str, Pred pred)
 		{
 			return FindLast(str, 0, ~size_t(), pred);
 		}
 
 		// Find the first occurrence of one of the chars in 'delim'
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline Iter FindFirstOf(Iter beg, Iter end, Char const* delim)
 		{
 			for (; beg != end && *FindChar(delim, *beg) == 0; ++beg) {}
 			return beg;
 		}
-		template <typename Str, typename Char1, typename Char2 = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char1, CharType Char2 = typename string_traits<Str>::value_type>
 		inline Char2* FindFirstOf(Str&& str, Char1 const* delim)
 		{
 			return FindFirstOf(Begin(str), End(str), delim);
 		}
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline size_t FindFirstOfAdv(Iter& str, Char const* delim)
 		{
 			auto count = size_t();
 			for (; *str && *FindChar(delim, *str) == 0; ++str, ++count) {}
 			return count;
 		}
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline size_t FindFirstOfAdv(Iter& str, Iter end, Char const* delim)
 		{
 			auto count = size_t();
@@ -938,38 +950,38 @@ namespace pr
 		}
 
 		// Return a pointer to *one past* the last occurrence of one of the chars in 'delim'. Intended to be use with FindFirstOf to for a range
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline Iter FindLastOf(Iter beg, Iter end, Char const* delim)
 		{
 			for (; end != beg && *FindChar(delim, *(end-1)) == 0; --end) {}
 			return end;
 		}
-		template <typename Str, typename Char1, typename Char2 = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char1, CharType Char2 = typename string_traits<Str>::value_type>
 		inline Char2* FindLastOf(Str&& str, Char1 const* delim)
 		{
 			return FindLastOf(Begin(str), End(str), delim);
 		}
 
 		// Find the first character not in the set 'delim'
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline Iter FindFirstNotOf(Iter beg, Iter end, Char const* delim)
 		{
 			for (; beg != end && *FindChar(delim, *beg) != 0; ++beg) {}
 			return beg;
 		}
-		template <typename Str, typename Char1, typename Char2 = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char1, CharType Char2 = typename string_traits<Str>::value_type>
 		inline Char2* FindFirstNotOf(Str&& str, Char1 const* delim)
 		{
 			return FindFirstNotOf(Begin(str), End(str), delim);
 		}
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline size_t FindFirstNotOfAdv(Iter& str, Char const* delim)
 		{
 			auto count = size_t();
 			for (; *str && *FindChar(delim, *str) != 0; ++str, ++count) {}
 			return count;
 		}
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline size_t FindFirstNotOfAdv(Iter& str, Iter end, Char const* delim)
 		{
 			auto count = size_t();
@@ -978,13 +990,13 @@ namespace pr
 		}
 
 		// Return a pointer to *one past* the last character not in the set 'delim'
-		template <typename Iter, typename Char>
+		template <typename Iter, CharType Char>
 		inline Iter FindLastNotOf(Iter beg, Iter end, Char const* delim)
 		{
 			for (; end != beg && *FindChar(delim, *(end-1)) != 0; --end) {}
 			return end;
 		}
-		template <typename Str, typename Char1, typename Char2 = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char1, CharType Char2 = typename string_traits<Str>::value_type>
 		inline Char2* FindLastNotOf(Str&& str, Char1 const* delim)
 		{
 			return FindLastNotOf(Begin(str), End(str), delim);
@@ -995,12 +1007,12 @@ namespace pr
 		#pragma region Resize
 
 		// Resize a string. For pointers to fixed buffers, it's the callers responsibility to ensure sufficient space
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline void Resize(Str&& str, size_t new_size)
 		{
 			string_traits<Str>::resize(str, new_size);
 		}
-		template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char>
 		inline void Resize(Str&& str, size_t new_size, Char const ch)
 		{
 			auto current_size = Size(str);
@@ -1018,14 +1030,14 @@ namespace pr
 		// Append a char to the end of 'str'
 		// 'len' is an optimisation for pointer-like strings so that Size() doesn't need to be called for each Append
 		// Returns 'str' for method chaining
-		template <typename Str1, typename Char2, typename = std::enable_if_t<is_string_v<Str1> && is_char_v<Char2>>>
+		template <StringType Str1, CharType Char2>
 		inline Str1&& Append(Str1&& str, Char2 ch, size_t& len)
 		{
 			Resize(str, len+1);
 			str[len++] = char_cast<typename string_traits<Str1>::value_type>(ch);
 			return std::forward<Str1>(str);
 		}
-		template <typename Str1, typename Char2, typename = std::enable_if_t<is_string_v<Str1> && is_char_v<Char2>>>
+		template <StringType Str1, CharType Char2>
 		inline Str1&& Append(Str1&& str, Char2 ch)
 		{
 			auto len = Size(str);
@@ -1035,7 +1047,7 @@ namespace pr
 		// Append a string to the end of 'str'
 		// 'len' is an optimisation for pointer-like strings so that Size() doesn't need to be called for each Append
 		// Returns 'str' for method chaining
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline Str1&& Append(Str1&& str, Str2 const& s, size_t& len)
 		{
 			auto count = Size(s);
@@ -1046,7 +1058,7 @@ namespace pr
 
 			return std::forward<Str1>(str);
 		}
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline Str1&& Append(Str1&& str, Str2 const& s)
 		{
 			auto len = Size(str);
@@ -1063,7 +1075,7 @@ namespace pr
 		// 'count' is the maximum number of characters to copy. The capacity of dest *must* be >= offset + count
 		// 'first','last' the range of characters to assign to 'dest'
 		// On return, dest will be resized to 'offset + min(count, last-first)'.
-		template <typename Str, typename Iter, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Iter>
 		inline Str&& Assign(Str&& dest, size_t offset, size_t count, Iter first, Iter last)
 		{
 			// The number of characters to be copied to 'dest', clamped by 'count'
@@ -1078,14 +1090,14 @@ namespace pr
 
 			return std::forward<Str>(dest);
 		}
-		template <typename Str, typename Iter, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Iter>
 		inline Str&& Assign(Str&& dest, Iter first, Iter last)
 		{
 			return Assign(dest, 0, size_t(last - first), first, last);
 		}
 
 		// Assign a null terminated string to 'dest'
-		template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char>
 		inline Str&& Assign(Str&& dest, size_t offset, size_t count, Char const* first)
 		{
 			Resize(dest, offset);
@@ -1094,7 +1106,7 @@ namespace pr
 
 			return std::forward<Str>(dest);
 		}
-		template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char>
 		inline Str&& Assign(Str&& dest, Char const* first)
 		{
 			return Assign(dest, 0, ~size_t(), first);
@@ -1105,7 +1117,7 @@ namespace pr
 		#pragma region Upper Case
 
 		// Convert a string to upper case
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline Str& UpperCase(Str& str)
 		{
 			using traits = string_traits<Str>;
@@ -1117,13 +1129,13 @@ namespace pr
 
 			return str;
 		}
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline Str UpperCaseC(Str const& str)
 		{
 			auto s = str;
 			return UpperCase(s);
 		}
-		template <typename Char>
+		template <CharType Char>
 		inline std::basic_string<Char> UpperCaseC(Char const* str)
 		{
 			auto s = std::basic_string<Char>(str);
@@ -1135,7 +1147,7 @@ namespace pr
 		#pragma region Lower Case
 
 		// Convert a string to lower case
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline Str& LowerCase(Str& str)
 		{
 			using traits = string_traits<Str>;
@@ -1147,13 +1159,13 @@ namespace pr
 
 			return str;
 		}
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		inline Str LowerCaseC(Str const& str)
 		{
 			auto s = str;
 			return LowerCase(s);
 		}
-		template <typename Char>
+		template <CharType Char>
 		inline std::basic_string<Char> LowerCaseC(Char const* str)
 		{
 			auto s = std::basic_string<Char>(str);
@@ -1165,13 +1177,13 @@ namespace pr
 		#pragma region SubStr
 
 		// Copy a substring from within 'src' to 'out'
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline Str2& SubStr(Str1 const& src, size_t offset, size_t count, Str2& out)
 		{
 			auto s = Begin(src) + offset;
 			return Assign(out, 0, count, s, s + count);
 		}
-		template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+		template <StringType Str1, StringType Str2>
 		inline Str2 SubStr(Str1 const& src, size_t offset, size_t count)
 		{
 			Str2 out = {};
@@ -1186,7 +1198,7 @@ namespace pr
 		// 'out' should have the signature out(tstr1 const& s, int i, int j, int n)
 		// where [i,j) is the range in 's' containing the substring. 'n' is the index of the output subrange.
 		// Returns the number of sub strings found.
-		template <StringType Str, typename Char, std::invocable<std::basic_string_view<typename string_traits<Str>::value_type>, int> OutCB>
+		template <StringType Str, CharType Char, std::invocable<std::basic_string_view<typename string_traits<Str>::value_type>, int> OutCB>
 		inline int Split(Str const& str, Char const* delims, OutCB out)
 		{
 			using StrView = std::basic_string_view<typename string_traits<Str>::value_type>;
@@ -1213,7 +1225,7 @@ namespace pr
 		// 'str' is the string to be trimmed
 		// 'pred' should return true if the character should be trimmed
 		// Returns 'str' for method chaining
-		template <typename Str, typename Pred, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred>
 		inline Str& Trim(Str& str, Pred pred, bool front, bool back)
 		{
 			auto beg = Begin(str);
@@ -1227,18 +1239,13 @@ namespace pr
 			Resize(str, out - beg);
 			return str;
 		}
-		template <typename Str, typename Pred, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, typename Pred>
 		inline Str Trim(Str const& str, Pred pred, bool front, bool back)
 		{
 			auto s = str;
 			return Trim(s, pred, front, back);
 		}
-		template <typename Char, typename Pred>
-		inline Char* Trim(Char* str, Pred pred, bool front, bool back)
-		{
-			return Trim<Char*,Pred,Char>(str, pred, front, back);
-		}
-		template <typename Char, typename Pred>
+		template <CharType Char, typename Pred>
 		inline std::basic_string<Char> Trim(Char const* str, Pred pred, bool front, bool back)
 		{
 			auto s = std::basic_string<Char>(str);
@@ -1247,23 +1254,18 @@ namespace pr
 		
 		// Trim leading or trailing characters in 'chars' from 'str'.
 		// Returns 'str' for method chaining
-		template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char>
 		inline Str& TrimChars(Str& str, Char const* chars, bool front, bool back)
 		{
 			return Trim(str, [&](auto ch){ return *FindChar(chars, ch) != 0; }, front, back);
 		}
-		template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str, CharType Char>
 		inline Str TrimChars(Str const& str, Char const* chars, bool front, bool back)
 		{
 			auto s = str;
 			return TrimChars(s, chars, front, back);
 		}
-		template <typename Char1, typename Char2>
-		inline Char1* TrimChars(Char1* str, Char2 const* chars, bool front, bool back)
-		{
-			return TrimChars<Char1*, Char2, Char1>(str, chars, front, back);
-		}
-		template <typename Char1, typename Char2>
+		template <CharType Char1, CharType Char2>
 		inline std::basic_string<Char1> TrimChars(Char1 const* str, Char2 const* chars, bool front, bool back)
 		{
 			auto s = std::basic_string<Char1>(str);

@@ -33,7 +33,7 @@ namespace pr::fluid
 		float m_radius;
 		float m_sign;
 		IProbeActions* m_actions;
-		rdr12::LdrObjectPtr m_gfx;
+		rdr12::ldraw::LdrObjectPtr m_gfx;
 		EProbeMode m_mode;
 		float m_last_action_time;
 		float m_time;

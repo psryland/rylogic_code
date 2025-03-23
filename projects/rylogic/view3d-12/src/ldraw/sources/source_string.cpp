@@ -25,15 +25,17 @@ namespace pr::rdr12::ldraw
 
 	// Construct a new instance of the source (if possible)
 	template <typename Char>
-	std::unique_ptr<SourceBase> SourceString<Char>::Clone()
+	std::shared_ptr<SourceBase> SourceString<Char>::Clone()
 	{
-		return std::unique_ptr<SourceString<Char>>(new SourceString{ &m_context_id, m_script, m_encoding, m_includes });
+		return std::shared_ptr<SourceString<Char>>(new SourceString{ &m_context_id, m_script, m_encoding, m_includes });
 	}
 
 	// Regenerate the output from the source
 	template <typename Char>
 	ParseResult SourceString<Char>::ReadSource(Renderer& rdr)
 	{
+		m_errors.resize(0);
+		m_filepaths.resize(0);
 		m_includes.LocalDir("");
 
 		mem_istream<Char> src{ m_script, 0 };

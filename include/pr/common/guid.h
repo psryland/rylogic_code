@@ -37,7 +37,7 @@ namespace pr
 	// The namespace for ISO OIDs (from RFC 4122, Appendix C).
 	constexpr Guid GuidIsoOidNamespace = { 0x6ba7b812, 0x9dad, 0x11d1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8 };
 
-	// Guids from names
+	// GUIDs from names
 	enum class EGuidVersion { MD5Hashing = 3, SHA1Hashing = 5 };
 
 	// Create a new GUID
@@ -87,11 +87,7 @@ namespace pr
 		// Compute the hash of the name space ID concatenated with the name (step 4)
 		switch (version)
 		{
-		default:
-			{
-				throw std::exception("Unknown name Guid version");
-			}
-		case EGuidVersion::MD5Hashing:
+			case EGuidVersion::MD5Hashing:
 			{
 				pr::hash::MD5 md5;
 				md5.Add(namespace_bytes, namespace_bytes_len);
@@ -102,7 +98,7 @@ namespace pr
 				memcpy(&new_guid, &hash[0], 16);
 				break;
 			}
-		case EGuidVersion::SHA1Hashing:
+			case EGuidVersion::SHA1Hashing:
 			{
 				pr::hash::SHA1 sha1;
 				sha1.Update(namespace_bytes, namespace_bytes_len);
@@ -112,6 +108,10 @@ namespace pr
 				// Most bytes from the hash are copied straight to the bytes of the new GUID (steps 5-7, 9, 11-12)
 				memcpy(&new_guid, &hash[0], 16);
 				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown name Guid version");
 			}
 		}
 

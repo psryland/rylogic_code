@@ -273,9 +273,6 @@
     <ClCompile Include="src\ldraw\sources\source_binary.cpp">
       <Filter>src\ldraw\sources</Filter>
     </ClCompile>
-    <ClCompile Include="src\ldraw\ldraw_commands.cpp">
-      <Filter>src\ldraw\sources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h">
@@ -682,9 +679,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h">
       <Filter>src\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h">
-      <Filter>src\ldraw\sources</Filter>
     </ClInclude>
     <ClInclude Include="src\ldraw\sources\ldraw_sources.h">
       <Filter>src\ldraw\sources</Filter>

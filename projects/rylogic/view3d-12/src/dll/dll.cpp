@@ -184,23 +184,29 @@ static PathResolver GetIncludes(view3d::Includes const* includes)
 }
 
 // Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
-VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, view3d::Includes const* includes, view3d::OnAddCB on_add_cb, void* ctx)
+VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, view3d::Includes const* includes, view3d::AddCompleteCB on_add_cb, void* ctx)
 {
 	try
 	{
 		// Concurrent entry is allowed
-		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
+		rdr12::ldraw::AddCompleteCB on_add = on_add_cb
+			? rdr12::ldraw::AddCompleteCB{ [=](Guid const& g, bool b) { on_add_cb(ctx, g, b); } }
+			: static_cast<rdr12::ldraw::AddCompleteCB>(nullptr);
+
+		return Dll().LoadScriptString(std::string_view(ldr_script), EEncoding::utf8, context_id, GetIncludes(includes), on_add);
 	}
 	CatchAndReport(View3D_LoadScriptFromString, (view3d::Window)nullptr, GuidZero);
 }
-VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, view3d::Includes const* includes, view3d::OnAddCB on_add_cb, void* ctx)
+VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, view3d::Includes const* includes, view3d::AddCompleteCB on_add_cb, void* ctx)
 {
 	try
 	{
 		// Concurrent entry is allowed
-		rdr12::ldraw::ScriptSources::OnAddCB on_add = [=](Guid const& id, bool before) { on_add_cb(ctx, id, before); };
-		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, context_id, GetIncludes(includes), on_add_cb ? on_add : (rdr12::ldraw::ScriptSources::OnAddCB)nullptr);
+		rdr12::ldraw::AddCompleteCB on_add = on_add_cb
+			? rdr12::ldraw::AddCompleteCB{ [=](Guid const& g, bool b) { on_add_cb(ctx, g, b); } }
+			: static_cast<rdr12::ldraw::AddCompleteCB>(nullptr);
+
+		return Dll().LoadScriptFile(std::filesystem::path(ldr_file), EEncoding::auto_detect, context_id, GetIncludes(includes), on_add);
 	}
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
@@ -1908,7 +1914,7 @@ VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(view3d::Object object, char
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		return const_cast<LdrObject const*>(object)->Visible(name);
+		return const_cast<ldraw::LdrObject const*>(object)->Visible(name);
 	}
 	CatchAndReport(View3D_ObjectGetVisibility, ,FALSE);
 }
@@ -1932,7 +1938,7 @@ VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(view3d::Object object, char 
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		return const_cast<LdrObject const*>(object)->Wireframe(name);
+		return const_cast<ldraw::LdrObject const*>(object)->Wireframe(name);
 	}
 	CatchAndReport(View3D_ObjectWireframeGet, , FALSE);
 }
@@ -2028,7 +2034,7 @@ VIEW3D_API BOOL __stdcall View3D_ObjectNormalsGet(view3d::Object object, char co
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		return const_cast<LdrObject const*>(object)->Normals(name);
+		return const_cast<ldraw::LdrObject const*>(object)->Normals(name);
 	}
 	CatchAndReport(View3D_ObjectNormalsGet, , FALSE);
 }
@@ -2471,7 +2477,7 @@ VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(view3d::Gizmo gizmo, view3d::Gi
 		if (!cb) throw std::runtime_error("Callback function is null");
 		
 		// Cast the static function pointer from View3D types to ldr types
-		auto c = reinterpret_cast<void(__stdcall*)(void*, LdrGizmo*, rdr12::ldraw::EGizmoState)>(cb);
+		auto c = reinterpret_cast<void(__stdcall*)(void*, ldraw::LdrGizmo*, rdr12::ldraw::EGizmoState)>(cb);
 
 		DllLockGuard;
 		if (add)

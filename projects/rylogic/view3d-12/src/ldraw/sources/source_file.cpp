@@ -9,12 +9,18 @@
 
 namespace pr::rdr12::ldraw
 {
+	static Guid const LdrawSourceFileNS = { 0xA9C66A7D, 0xD1F3, 0x4CFA, 0x84, 0xE0, 0xCF, 0x99, 0x12, 0xB3, 0x18, 0x9D };
+
 	SourceFile::SourceFile(Guid const* context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes)
 		: SourceBase(context_id)
 		, m_filepath(filepath.lexically_normal())
 		, m_includes(includes)
 		, m_encoding(enc != EEncoding::auto_detect ? enc : filesys::DetectFileEncoding(m_filepath))
 	{
+		// Generate the GUID from the filepath
+		if (!context_id)
+			m_context_id = GenerateGUID(LdrawSourceFileNS, filepath.lexically_normal().string().c_str());
+
 		m_includes.FileOpened = [this](auto&, filepath_t const& fp)
 		{
 			// Add the directory of the included file to the paths
@@ -24,9 +30,9 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Construct a new instance of the source (if possible)
-	std::unique_ptr<SourceBase> SourceFile::Clone()
+	std::shared_ptr<SourceBase> SourceFile::Clone()
 	{
-		return std::unique_ptr<SourceFile>(new SourceFile{ &m_context_id, m_filepath, m_encoding, m_includes });
+		return std::shared_ptr<SourceFile>(new SourceFile{ &m_context_id, m_filepath, m_encoding, m_includes });
 	}
 
 	// Regenerate the output from the source
@@ -34,6 +40,9 @@ namespace pr::rdr12::ldraw
 	{
 		if (!std::filesystem::exists(m_filepath))
 			return {};
+
+		m_errors.resize(0);
+		m_filepaths.resize(0);
 
 		m_includes.LocalDir("");
 		m_includes.FileOpened(m_includes, m_filepath);

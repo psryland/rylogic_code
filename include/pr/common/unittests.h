@@ -64,11 +64,15 @@ namespace pr::unittests
 		char const* m_name;
 		TestFunc    m_func;
 		std::filesystem::path m_temp_dir;
+		char const* m_file;
+		int m_line;
 
-		UnitTestItem(char const* name, TestFunc func, std::filesystem::path const& temp_dir)
+		UnitTestItem(char const* name, TestFunc func, std::filesystem::path const& temp_dir, char const* file, int line)
 			: m_name(name)
 			, m_func(func)
 			, m_temp_dir(temp_dir)
+			, m_file(file)
+			, m_line(line)
 		{}
 		friend bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs)
 		{
@@ -265,7 +269,7 @@ namespace pr::unittests
 				}
 				catch (std::exception const& e)
 				{
-					TestFramework::out() << std::format("{} failed\n   {}\n", test.m_name, e.what());
+					TestFramework::out() << std::format("{}({}): {} failed\n   {}\n", test.m_file, test.m_line, test.m_name, e.what());
 					++failed;
 				}
 			}
@@ -369,7 +373,9 @@ namespace pr::unittests
 		}\
 		template <typename T> static void test();\
 	};\
-	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, &testname::func, testname::temp_dir));\
+	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(\
+		pr::unittests::UnitTestItem{ #testname, &testname::func, testname::temp_dir, __FILE__, __LINE__ }\
+	);\
 	template <typename T> void testname::test()
 
 #define PR_EXPECT(expr)\

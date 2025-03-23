@@ -16,7 +16,7 @@ namespace pr::rdr12::ldraw
 		SourceBinary(Guid const* context_id, std::span<std::byte const> data);
 
 		// Construct a new instance of the source (if possible)
-		std::unique_ptr<SourceBase> Clone() override;
+		std::shared_ptr<SourceBase> Clone() override;
 
 	protected:
 

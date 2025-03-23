@@ -134,8 +134,8 @@ namespace pr::rdr12
 		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude);
 
 		// Return true if 'object' is part of this scene
-		bool Has(LdrObject const* object, bool search_children) const;
-		bool Has(LdrGizmo const* gizmo) const;
+		bool Has(ldraw::LdrObject const* object, bool search_children) const;
+		bool Has(ldraw::LdrGizmo const* gizmo) const;
 
 		// Return the number of objects or object groups in this scene
 		int ObjectCount() const;
@@ -146,12 +146,12 @@ namespace pr::rdr12
 		BBox SceneBounds(view3d::ESceneBounds bounds, int except_count, GUID const* except) const;
 
 		// Add/Remove an object to/from this window
-		void Add(LdrObject* object);
-		void Remove(LdrObject* object);
+		void Add(ldraw::LdrObject* object);
+		void Remove(ldraw::LdrObject* object);
 
 		// Add/Remove a gizmo to/from this window
-		void Add(LdrGizmo* gizmo);
-		void Remove(LdrGizmo* gizmo);
+		void Add(ldraw::LdrGizmo* gizmo);
+		void Remove(ldraw::LdrGizmo* gizmo);
 
 		// Add/Remove all objects to this window with the given context ids (or not with)
 		void Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude);
@@ -271,7 +271,7 @@ namespace pr::rdr12
 		void DepthBufferEnabled(bool enabled);
 
 		// Called when objects are added/removed from this window
-		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
+		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, ldraw::LdrObject* object);
 
 		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
 		void SetSelectionBox(BBox const& bbox, m3x4 const& ori = m3x4::Identity());
@@ -295,7 +295,7 @@ namespace pr::rdr12
 
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count);
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude);
 	
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)

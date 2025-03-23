@@ -8,7 +8,7 @@
 
 namespace pr::rdr12::ldraw
 {
-#define PR_ENUM_LDRAW_COMMANDS(x)\
+	#define PR_ENUM_LDRAW_COMMANDS(x)\
 		x(Invalid       , = HashI("Invalid"       ))\
 		x(AddToScene    , = HashI("AddToScene"    )) /* <scene-id> */\
 		x(CameraToWorld , = HashI("CameraToWorld" )) /* <scene-id> <o2w> */\
@@ -23,17 +23,6 @@ namespace pr::rdr12::ldraw
 		ECommandId m_id;
 		byte_data<4> m_data;
 	};
-
-	// Parse/Execute commands
-	template <ECommandId Id> struct CommandHandler {};
-	#define PR_LDRAW_COMMANDS_IMPL(name, hash)\
-	template <> struct CommandHandler<ECommandId::name>\
-	{\
-		static Command Parse(IReader& reader);\
-		static void Execute(Command&, SourceBase&, Context&);\
-	};
-	PR_ENUM_LDRAW_COMMANDS(PR_LDRAW_COMMANDS_IMPL)
-	#undef PR_LDRAW_COMMANDS_IMPL
 
 	// Process an ldraw command
 	void ExecuteCommands(SourceBase& source, Context& context);

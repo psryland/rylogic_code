@@ -13,26 +13,13 @@ namespace pr::rdr12::ldraw
 {
 	// A container that doesn't invalidate on add/remove is needed because
 	// the file watcher contains a pointer into the 'Source' objects.
-	using SourceCont = std::unordered_map<Guid, std::unique_ptr<SourceBase>>;
-
-	// Reasons for changes to the sources collection
-	enum class ESourceChangeReason
-	{
-		// AddScript/AddFile has been called
-		NewData,
-
-		// Data has been refreshed from the sources
-		Reload,
-
-		// Objects have been removed
-		Removal,
-	};
+	using SourceCont = std::unordered_map<Guid, std::shared_ptr<SourceBase>>;
 
 	// Store change event args
 	struct StoreChangeEventArgs
 	{
-		// The origin of the object container change
-		ESourceChangeReason m_reason;
+		// The origin of the data change
+		EDataChangeReason m_reason;
 
 		// The context ids that changed
 		std::span<Guid const> m_context_ids;
@@ -43,7 +30,7 @@ namespace pr::rdr12::ldraw
 		// True if this event is just prior to the changes being made to the store
 		bool m_before;
 
-		StoreChangeEventArgs(ESourceChangeReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
+		StoreChangeEventArgs(EDataChangeReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
 			: m_reason(why)
 			, m_context_ids(context_ids)
 			, m_result(result)
@@ -59,9 +46,9 @@ namespace pr::rdr12::ldraw
 		Guid m_context_id;
 
 		// The origin of the object container change
-		ESourceChangeReason m_reason;
+		EDataChangeReason m_reason;
 
-		SourceRemovedEventArgs(Guid context_id, ESourceChangeReason reason)
+		SourceRemovedEventArgs(Guid context_id, EDataChangeReason reason)
 			: m_context_id(context_id)
 			, m_reason(reason)
 		{
@@ -83,7 +70,7 @@ namespace pr::rdr12::ldraw
 		virtual void OnParsingProgress(ParsingProgressEventArgs&) = 0;
 
 		// Store change event. Called before and after a change to the collection of objects in the store.
-		virtual void OnStoreChange(StoreChangeEventArgs&) = 0;
+		virtual void OnStoreChange(StoreChangeEventArgs const&) = 0;
 
 		// Source removed event (i.e. objects deleted by Id)
 		virtual void OnSourceRemoved(SourceRemovedEventArgs const&) = 0;
@@ -113,7 +100,6 @@ namespace pr::rdr12::ldraw
 
 		using GuidCont = pr::vector<Guid>;
 		using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
-		using OnAddCB = std::function<void(Guid const&, bool)>;
 		using filepath_t = std::filesystem::path;
 
 	private:
@@ -123,7 +109,7 @@ namespace pr::rdr12::ldraw
 		Renderer*       m_rdr;            // Renderer used to create models
 		ISourceEvents*  m_events;         // Event handler
 		Winsock         m_winsock;        // The 'winsock' instance we're bound to
-		GuidSet         m_loading;        // File group ids in the process of being reloaded
+		GuidSet         m_loading;        // Context ids in the process of being loaded
 		FileWatch       m_watcher;        // The watcher of files
 		std::jthread    m_listen_thread;  // Thread that listens for incoming connections
 		std::thread::id m_main_thread_id; // The main thread id
@@ -147,11 +133,11 @@ namespace pr::rdr12::ldraw
 		void ClearAll();
 
 		// Remove a single object from the object container
-		void Remove(LdrObject* object, ESourceChangeReason reason = ESourceChangeReason::Removal);
+		void Remove(LdrObject* object, EDataChangeReason reason = EDataChangeReason::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, ESourceChangeReason reason = ESourceChangeReason::Removal);
-		void Remove(Guid const& context_id, ESourceChangeReason reason = ESourceChangeReason::Removal);
+		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangeReason reason = EDataChangeReason::Removal);
+		void Remove(Guid const& context_id, EDataChangeReason reason = EDataChangeReason::Removal);
 
 		// Reload all sources
 		void Reload();
@@ -160,23 +146,23 @@ namespace pr::rdr12::ldraw
 		void RefreshChangedFiles();
 
 		// Add an object created externally
-		Guid Add(LdrObjectPtr object, ESourceChangeReason reason = ESourceChangeReason::NewData);
+		Guid Add(LdrObjectPtr object);
 
 		// Parse a string containing ldraw script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
 		template <typename Char>
-		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, ESourceChangeReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
+		Guid AddString(std::basic_string_view<Char> script, EEncoding enc, Guid const* context_id, PathResolver const& includes, AddCompleteCB add_complete);
 
 		// Parse file containing ldraw script.
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
-		Guid AddFile(std::filesystem::path script, EEncoding enc, ESourceChangeReason reason, Guid const* context_id, PathResolver const& includes, OnAddCB on_add);
+		Guid AddFile(std::filesystem::path script, EEncoding enc, Guid const* context_id, PathResolver const& includes, AddCompleteCB add_complete);
 
 		// Parse binary data containing ldraw script
 		// This function can be called from any thread and may be called concurrently by multiple threads.
 		// Returns the GUID of the context that the objects were added to.
-		Guid AddBinary(std::span<std::byte const> data, ESourceChangeReason reason, Guid const* context_id, OnAddCB on_add);
+		Guid AddBinary(std::span<std::byte const> data, Guid const* context_id, AddCompleteCB add_complete);
 
 		// Allow connections on 'port'
 		void AllowConnections(uint16_t listen_port);
@@ -193,12 +179,12 @@ namespace pr::rdr12::ldraw
 		// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
 		Guid const* ContextIdFromFilepath(filepath_t const& filepath) const;
 
-		// Merge a script source with the existing sources collection. Returns the context id of the source that was merged
-		Guid Merge(std::unique_ptr<SourceBase>&& source, ESourceChangeReason reason, OnAddCB on_add);
-
 	private:
 
 		// 'filepath' is the name of the changed file
 		void FileWatch_OnFileChanged(wchar_t const*, Guid const& context_id, void*, bool&);
+
+		// Handler for when new data is received from a source
+		void NewDataHandler(std::shared_ptr<SourceBase> src, NewDataEventArgs args);
 	};
 }

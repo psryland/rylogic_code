@@ -215,7 +215,7 @@ namespace pr::rdr12
 	}
 
 	// Return true if 'object' is part of this scene
-	bool V3dWindow::Has(LdrObject const* object, bool search_children) const
+	bool V3dWindow::Has(ldraw::LdrObject const* object, bool search_children) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -229,7 +229,7 @@ namespace pr::rdr12
 		}
 		return false;
 	}
-	bool V3dWindow::Has(LdrGizmo const* gizmo) const
+	bool V3dWindow::Has(ldraw::LdrGizmo const* gizmo) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& giz : m_gizmos)
@@ -261,7 +261,7 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		std::span<GUID const> except_arr(except, except_count);
-		auto pred = [](LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](ldraw::LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude); };
 
 		BBox bbox;
 		switch (bounds)
@@ -318,7 +318,7 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove an object to this window
-	void V3dWindow::Add(LdrObject* object)
+	void V3dWindow::Add(ldraw::LdrObject* object)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_objects.find(object);
@@ -329,7 +329,7 @@ namespace pr::rdr12
 			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, &object->m_context_id, 1, object);
 		}
 	}
-	void V3dWindow::Remove(LdrObject* object)
+	void V3dWindow::Remove(ldraw::LdrObject* object)
 	{
 		// 'm_guids' may be out of date now, but it doesn't really matter.
 		// It's used to track the groups of objects added to the window.
@@ -346,7 +346,7 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove a gizmo to this window
-	void V3dWindow::Add(LdrGizmo* gizmo)
+	void V3dWindow::Add(ldraw::LdrGizmo* gizmo)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_gizmos.find(gizmo);
@@ -356,7 +356,7 @@ namespace pr::rdr12
 			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, nullptr, 0, nullptr); // todo, overload and pass 'gizmo' out
 		}
 	}
-	void V3dWindow::Remove(LdrGizmo* gizmo)
+	void V3dWindow::Remove(ldraw::LdrGizmo* gizmo)
 	{
 		m_gizmos.erase(gizmo);
 		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, nullptr, 0, nullptr);
@@ -1068,9 +1068,9 @@ namespace pr::rdr12
 	}
 
 	// Called when objects are added/removed from this window
-	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object)
+	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, ldraw::LdrObject* object)
 	{
-		// Reset the drawlists so that removed objects are no longer in the drawlist
+		// Reset the draw lists so that removed objects are no longer in the draw list
 		if (change_type == view3d::ESceneChanged::ObjectsRemoved)
 			m_scene.ClearDrawlists();
 
@@ -1105,7 +1105,7 @@ namespace pr::rdr12
 		auto bbox = BBox::Reset();
 		for (auto& obj : m_objects)
 		{
-			obj->Apply([&](LdrObject const* c)
+			obj->Apply([&](ldraw::LdrObject const* c)
 			{
 				if (!AllSet(c->m_ldr_flags, ldraw::ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
 					return true;
@@ -1254,7 +1254,7 @@ namespace pr::rdr12
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
-			auto ldr_obj = cast<LdrObject>(hit.m_instance);
+			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
 
 			// Not an object in this scene, keep looking
 			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
@@ -1279,7 +1279,7 @@ namespace pr::rdr12
 			return false;
 		});
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count)
 	{
 		// Create an instances function based on the given list of objects
 		auto beg = &objects[0];
@@ -1299,7 +1299,7 @@ namespace pr::rdr12
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
+			for (; beg != end && !IncludeFilter(cast<ldraw::LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);

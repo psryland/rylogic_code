@@ -9,9 +9,40 @@
 
 namespace pr::rdr12::ldraw
 {
-	// An Ldr script SourceBase
-	struct SourceBase
+	// Callback after data has been added to the store
+	using AddCompleteCB = std::function<void(Guid const&, bool)>;
+
+	// The initiating reason for a new data event
+	enum class EDataChangeReason
 	{
+		// New objects have been added
+		NewData,
+
+		// Data has been refreshed from the source
+		Reload,
+
+		// Objects have been removed
+		Removal,
+	};
+	
+	// Event args for the SourceBase NewData event
+	struct NewDataEventArgs
+	{
+		// The initiating reason for this event
+		EDataChangeReason m_reason;
+
+		// Called after data has been added to the store
+		AddCompleteCB m_add_complete;
+	};
+
+	// An Ldr script SourceBase
+	struct SourceBase : std::enable_shared_from_this<SourceBase>
+	{
+		// Notes:
+		//  - Sources are containers of LdrObjects associated with a GUID context id.
+		//  - Sources do their parsing an a background thread, returning a new 'ParseResult' object.
+		//  - Sources fire the 'NewData' event when new data is ready (e.g. after a Reload)
+
 		using filepath_t = std::filesystem::path;
 		using PathsCont = pr::vector<filepath_t>;
 		using ErrorCont = pr::vector<ParseErrorEventArgs>;
@@ -27,14 +58,17 @@ namespace pr::rdr12::ldraw
 		SourceBase& operator=(SourceBase&&) = default;
 		SourceBase& operator=(SourceBase const&) = default;
 
-		// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
+		// An event raised during parsing.
 		EventHandler<SourceBase&, ParsingProgressEventArgs&, true> ParsingProgress;
 
+		// An event raised when this source has new data to add
+		EventHandler<std::shared_ptr<SourceBase>, NewDataEventArgs const&, true> NewData;
+
 		// Construct a new instance of the source (if possible)
-		virtual std::unique_ptr<SourceBase> Clone();
+		virtual std::shared_ptr<SourceBase> Clone();
 
 		// Parse the contents of the script
-		void Reload(Renderer& rdr);
+		void Load(Renderer& rdr, NewDataEventArgs args);
 
 	protected:
 
