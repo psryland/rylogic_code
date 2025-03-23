@@ -1,4 +1,4 @@
-name: CI
+name: Py-Rylogic CI
 
 on:
   push:
