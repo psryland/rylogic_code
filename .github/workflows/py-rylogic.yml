@@ -24,13 +24,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install pytest
-
-      - name: Install editable package
-        run: pip install -e .
-
-      - name: Verify pytest installation
-        run: python -m pytest --version
+        run: pip install .[dev]
 
       - name: Run tests
         run: pytest
