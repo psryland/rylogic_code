@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
-import sys, os, re, struct
-from typing import List, NamedTuple, Optional, Tuple
+import struct
+from .colour import Colour32
+from .vector import Vec2, Vec3, Vec4, Mat4
+from .bbox import BBox
+from .variable_int import VariableInt
+from typing import List, Optional, Tuple
 from enum import Enum
 
 # Binary packing helper
@@ -319,146 +323,15 @@ class EPointStyle(Enum):
 	Triangle = 2
 	Star = 3
 	Annulus = 4
-class Col(NamedTuple):
-	argb: int = 0xFFFFFFFF
+class StringWithLength:
+	def __init__(self, string: str=''):
+		self.m_string = string
 	def __str__(self):
-		return f'{self.argb:08X}'
+		return self.m_string
 	def __pack__(self):
-		return struct.pack("<I", self.argb)
-class Vec2(NamedTuple):
-	x: float
-	y: float
-	def vec3(self, z: float=0):
-		return Vec3(self.x, self.y, z)
-	def w0(self, z: float=0):
-		return Vec4(self.x, self.y, z, 0)
-	def w1(self, z: float=0):
-		return Vec4(self.x, self.y, z, 1)
-	def __add__(self, other) -> 'Vec2':
-		if isinstance(other, Vec2):
-			return Vec2(self.x + other.x, self.y + other.y)
-		elif isinstance(other, (int, float)):
-			return Vec2(self.x + other, self.y + other)
-		else:
-			raise TypeError(f"Unsupported type for addition: {type(other)}")
-	def __mul__(self, other) -> 'Vec2':
-		if isinstance(other, Vec2):
-			return Vec2(self.x * other.x, self.y * other.y)
-		elif isinstance(other, (int, float)):
-			return Vec2(self.x * other, self.y * other)
-		else:
-			raise TypeError(f"Unsupported type for multiplication: {type(other)}")
-	def __str__(self):
-		return f'{self.x} {self.y}'
-	def __pack__(self):
-		return struct.pack("ff", self.x, self.y)
-class Vec3(NamedTuple):
-	x: float
-	y: float
-	z: float
-	def w0(self):
-		return Vec4(self.x, self.y, self.z, 0)
-	def w1(self):
-		return Vec4(self.x, self.y, self.z, 1)
-	def is_zero(self):
-		return all(v == 0 for v in self)
-	def __add__(self, other) -> 'Vec3':
-		if isinstance(other, Vec3):
-			return Vec3(self.x + other.x, self.y + other.y, self.z + other.z)
-		elif isinstance(other, (int, float)):
-			return Vec3(self.x + other, self.y + other, self.z + other)
-		else:
-			raise TypeError(f"Unsupported type for addition: {type(other)}")
-	def __mul__(self, other) -> 'Vec3':
-		if isinstance(other, Vec3):
-			return Vec3(self.x * other.x, self.y * other.y, self.z * other.z)
-		elif isinstance(other, (int, float)):
-			return Vec3(self.x * other, self.y * other, self.z * other)
-		else:
-			raise TypeError(f"Unsupported type for multiplication: {type(other)}")
-	def __rmul__(self, value) -> 'Vec3':
-		return self.__mul__(value)
-	def __str__(self):
-		return f'{self.x} {self.y} {self.z}'
-	def __pack__(self):
-		return struct.pack("fff", self.x, self.y, self.z)
-class Vec4(NamedTuple):
-	x: float
-	y: float
-	z: float
-	w: float
-	def w0(self):
-		return Vec4(self.x, self.y, self.z, 0)
-	def w1(self):
-		return Vec4(self.x, self.y, self.z, 1)
-	@property
-	def xyz(self):
-		return Vec3(self.x, self.y, self.z)
-	def is_zero(self):
-		return all(v == 0 for v in self)
-	def is_origin(self):
-		return all(v == 0 for v in self[:3]) and self.w == 1
-	def __add__(self, other) -> 'Vec4':
-		if isinstance(other, Vec4):
-			return Vec4(self.x + other.x, self.y + other.y, self.z + other.z, self.w + other.w)
-		elif isinstance(other, (int, float)):
-			return Vec4(self.x + other, self.y + other, self.z + other, self.w + other)
-		else:
-			raise TypeError(f"Unsupported type for addition: {type(other)}")
-	def __mul__(self, other) -> 'Vec4':
-		if isinstance(other, Vec4):
-			return Vec4(self.x * other.x, self.y * other.y, self.z * other.z, self.w * other.w)
-		elif isinstance(other, (int, float)):
-			return Vec4(self.x * other, self.y * other, self.z * other, self.w * other)
-		else:
-			raise TypeError(f"Unsupported type for multiplication: {type(other)}")
-	def __str__(self):
-		return f'{self.x} {self.y} {self.z} {self.w}'
-	def __pack__(self):
-		return struct.pack("ffff", self.x, self.y, self.z, self.w)
-class Mat3(NamedTuple):
-	x: Vec3
-	y: Vec3
-	z: Vec3
-	def mat4(self):
-		return Mat4(self.x.w0(), self.y.w0(), self.z.w0(), Vec4(0, 0, 0, 1))
-	def is_identity(self):
-		return self == Mat3(Vec3(1,0,0), Vec3(0,1,0), Vec3(0,0,1))
-	def __str__(self):
-		return f'{str(self.x)} {str(self.y)} {str(self.z)}'
-	def __pack__(self):
-		return _Pack(self.x) + _Pack(self.y) + _Pack(self.z)
-class Mat4(NamedTuple):
-	x: Vec4
-	y: Vec4
-	z: Vec4
-	w: Vec4
-	@property
-	def xyz(self):
-		return Mat3(self.x, self.y, self.z)
-	def rot(self):
-		return Mat3(self.x.xyz, self.y.xyz, self.z.xyz)
-	def is_identity(self):
-		return self == Mat4(Vec4(1,0,0,0), Vec4(0,1,0,0), Vec4(0,0,1,0), Vec4(0,0,0,1))
-	def is_translation(self):
-		return self.xyz.is_identity() and self.w.w == 1
-	def is_affine(self):
-		return self.x.w == 0 and self.y.w == 0 and self.z.w == 0 and self.w.w == 1
-	def __str__(self):
-		return f'{str(self.x)} {str(self.y)} {str(self.z)} {str(self.w)}'
-	def __pack__(self):
-		return _Pack(self.x) + _Pack(self.y) + _Pack(self.z) + _Pack(self.w)
-class BBox(NamedTuple):
-	centre: Vec3
-	radius: Vec3
-	@staticmethod
-	def Reset() -> 'BBox':
-		return BBox(Vec3(0,0,0), Vec3(-1,-1,-1))
-	def __str__(self):
-		return f'{str(self.centre)} {str(self.radius)}'
-	def __pack__(self):
-		return _Pack(self.centre) + _Pack(self.radius)
-	
+		strbytes = self.m_string.encode('utf-8')
+		return VariableInt(len(strbytes)).__pack__() + strbytes
+
 # Implementation ------------------------------------------
 class _LdrName:
 	def __init__(self, name: str = ''):
@@ -469,7 +342,7 @@ class _LdrName:
 	def __pack__(self):
 		return (struct.pack('<II', EKeyword.Name.value, len(self.m_name)) + self.m_name.encode('utf-8')) if self.m_name else bytes()
 class _LdrColour:
-	def __init__(self, colour: Col = Col()):
+	def __init__(self, colour: Colour32 = Colour32()):
 		super().__init__()
 		self.m_colour = colour
 	def __str__(self):
@@ -559,23 +432,31 @@ class _LdrObj:
 	def __init__(self):
 		self.m_objects :List['_LdrObj'] = []
 
+	# Remove all children
+	def reset(self):
+		self.m_objects = []
+
 	# Child objects
 	def Group(self, name: str = '', colour: int = 0xFFFFFFFF):
-		grp = LdrGroup()
-		self.m_objects.append(grp)
-		return grp.name(name).col(Col(colour))
+		child = LdrGroup()
+		self.m_objects.append(child)
+		return child.name(name).col(Colour32(colour))
 	def Points(self, name: str = '', colour: int = 0xFFFFFFFF):
-		pts = LdrPoint()
-		self.m_objects.append(pts)
-		return pts.name(name).col(Col(colour))
+		child = LdrPoint()
+		self.m_objects.append(child)
+		return child.name(name).col(Colour32(colour))
+	def Box(self, name: str = '', colour: int = 0xFFFFFFFF):
+		child = LdrBox()
+		self.m_objects.append(child)
+		return child.name(name).col(Colour32(colour))
 	def Polygon(self, name: str = '', colour: int = 0xFFFFFFFF):
-		poly = LdrPolygon()
-		self.m_objects.append(poly)
-		return poly.name(name).col(Col(colour))
+		child = LdrPolygon()
+		self.m_objects.append(child)
+		return child.name(name).col(Colour32(colour))
 	def Command(self):
-		cmd = LdrCommands()
-		self.m_objects.append(cmd)
-		return cmd
+		child = LdrCommands()
+		self.m_objects.append(child)
+		return child
 
 	# Serialise to a string
 	def ToString(self) -> str:
@@ -608,7 +489,7 @@ class _LdrBase(_LdrObj):
 		self.m_name = _LdrName(name)
 		return self
 
-	def col(self, colour: Col):
+	def col(self, colour: Colour32):
 		self.m_colour = _LdrColour(colour)
 		return self
 
@@ -632,7 +513,7 @@ class LdrPoint(_LdrBase):
 	def __init__(self):
 		super().__init__()
 		self.m_points: List[Vec3] = []
-		self.m_colours: List[Col] = []
+		self.m_colours: List[Colour32] = []
 		self.m_per_item_colours: _LdrPerItemColour = _LdrPerItemColour()
 		self.m_style: EPointStyle = EPointStyle.Square
 		self.m_size: _LdrSize = _LdrSize()
@@ -641,9 +522,9 @@ class LdrPoint(_LdrBase):
 	def pt(self, xyz: Vec3, colour: Optional[int]=None):
 		self.m_points.append(xyz)
 		if colour is not None:
-			self.m_colours.append(Col(colour))
+			self.m_colours.append(Colour32(colour))
 		elif self.m_per_item_colours:
-			self.m_colours.append(Col())
+			self.m_colours.append(Colour32())
 		return self
 
 	def style(self, style: EPointStyle):
@@ -697,15 +578,15 @@ class LdrPolygon(_LdrBase):
 	def __init__(self):
 		super().__init__()
 		self.m_points: List[Vec2] = []
-		self.m_colours: List[Col] = []
+		self.m_colours: List[Colour32] = []
 		self.m_per_item_colour: _LdrPerItemColour = _LdrPerItemColour()
 
-	def pt(self, xy: Vec2, colour: Optional[Col] = None):
+	def pt(self, xy: Vec2, colour: Optional[Colour32] = None):
 		self.m_points.append(xy)
 		if colour:
 			self.m_colours.append(colour)
 		elif self.m_per_item_colour:
-			self.m_colours.append(Col())
+			self.m_colours.append(Colour32())
 		return self
 
 	def solid(self, solid: bool=True):
@@ -732,57 +613,23 @@ class LdrGroup(_LdrBase):
 class LdrCommands(_LdrBase):
 	def __init__(self):
 		super().__init__()
-		self.m_cmds :List[Tuple[ECommandId, List[int|float|str]]] = []
+		self.m_cmds :List[Tuple[ECommandId, List[int|float|StringWithLength|Vec2|Vec3|Vec4|Mat4|Mat4]]] = []
 
 	def add_to_scene(self, scene_id: int):
 		self.m_cmds.append((ECommandId.AddToScene, [scene_id]))
 		return self
-	
+
+	def transform_object(self, object_name: str, o2w: Mat4):
+		self.m_cmds.append((ECommandId.ObjectToWorld, [StringWithLength(object_name), o2w]))
+		return self
+
 	def _WriteTo(self, out: List[str]|bytearray):
 		def WriteCmds():
 			for cmd in self.m_cmds:
 				_Write(out, EKeyword.Data, cmd[0], *cmd[1])
 		_Write(out, EKeyword.Commands, self.m_name, self.m_colour, WriteCmds)
 
-class LdrBuilder(_LdrObj):
+class Builder(_LdrObj):
 	def __init__(self):
 		super().__init__()
 
-# Exports -------------------------------------------------
-__all__ = [
-	'Col',
-	'Vec2',
-	'Vec3',
-	'Vec4',
-	'Mat3',
-	'Mat4',
-	'LdrPoint',
-	'LdrBox',
-	'LdrPolygon',
-	'LdrGroup',
-	'LdrCommands',
-	'LdrBuilder',
-]
-
-# Tests ---------------------------------------------------
-def Tests():
-	builder = LdrBuilder()
-	ldr_group = builder.Group("MyGroup", 0xFF0000FF)
-	ldr_points = ldr_group.Points("MyPoints", 0xFF00FF00)
-	ldr_points.style(EPointStyle.Circle)
-	ldr_points.pt(Vec3(0, 0, 0), 0xFF0000FF)
-	ldr_points.pt(Vec3(1, 1, 1), 0xFF00FF00)
-	ldr_points.pt(Vec3(2, 2, 2), 0xFFFF0000)
-	ldr_group.pos(Vec3(1,1,1))
-	ldr_cmd = builder.Command()
-	ldr_cmd.add_to_scene(0)
-	ldr_cmd.add_to_scene(1)
-	ldr_cmd.add_to_scene(2)
-	s = builder.ToString()
-	#s = FormatScript(s, indent_str='    ')
-	b = builder.ToBytes()
-	print(s)
-	with open("E:/Dump/Ldraw/test.bdr", "wb") as f:
-		f.write(b)
-
-Tests()
