@@ -2,15 +2,17 @@
 // Ldr Object Manager
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
-
 #pragma once
-
 #include <set>
 #include <memory>
 #include "pr/common/event_handler.h"
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/ldraw/ldr_object.h"
+
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
 
 namespace pr::ldr
 {

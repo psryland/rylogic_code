@@ -1,0 +1,37 @@
+{
+  "name": "ldraw-script",
+  "displayName": "LDraw Script",
+  "description": "Language support for LDraw Script",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.97.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "ldr",
+      "aliases": ["LDraw Script", "ldr"],
+      "extensions": [".ldr"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "ldr",
+      "scopeName": "source.ldr",
+      "path": "./syntaxes/ldr.tmLanguage.json"
+    }]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psryland/rylogic_code.git"
+  },
+  "files": [
+    "syntaxes/ldr.tmLanguage.json",
+    "language-configuration.json",
+    "package.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE.md"
+  ]
+}

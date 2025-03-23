@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <type_traits>
+#include <format>
 #include <utility>
 #include <cwchar>
 #include <cassert>
@@ -1711,6 +1712,31 @@ namespace std
 				hash = size_t(c) + hash * prime;
 
 			return hash;
+		}
+	};
+
+	// Specialise std::format
+	template <typename T, int L, bool F, typename A>
+	struct formatter<pr::string<T, L, F, A>>
+	{
+		// Define the parse function to handle optional format specifiers  
+		constexpr auto parse(std::format_parse_context& ctx)
+		{
+			// Parse the format string (if any). We can ignore it for this simple example.
+			auto it = ctx.begin();
+			auto end = ctx.end();
+			if (it != end && *it != '}') {
+				throw std::format_error("Invalid format specifier for pr::string");
+			}
+			return it;
+		}
+
+		// Define the format function to define how to format a Point
+		template <typename FormatContext>
+		auto format(pr::string<T,L,F,A> const& str, FormatContext& ctx) const
+		{
+			// Use ctx.out() to write the formatted string to the output iterator  
+			return std::format_to(ctx.out(), "{}", str.c_str());
 		}
 	};
 }

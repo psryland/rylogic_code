@@ -202,7 +202,7 @@ namespace pr::rdr12
 		void RunOnMainThread(Func&& func, Args&&... args)
 		{
 			static_assert(noexcept(func(std::forward<Args>(args)...)), "func should be noexcept");
-			RunOnMainThread(std::launch::deferred, func, std::forward<Args>(args)...);
+			RunOnMainThread(std::launch::deferred, std::move(func), std::forward<Args>(args)...);
 		}
 
 		// Execute any pending tasks in the task queue

@@ -19,6 +19,10 @@
 #include "pr/ldraw/ldr_gizmo.h"
 #include "pr/threads/synchronise.h"
 
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
 namespace pr::ldr
 {
 	// A collection of LDraw script sources
@@ -322,13 +326,15 @@ namespace pr::ldr
 		void Remove(Guid const* context_ids, int include_count, int exclude_count, EReason reason = EReason::Removal)
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);
+			auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+			auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
 
 			// Build the set of ids to remove
 			GuidCont removed;
 			for (auto& src : m_srcs)
 			{
 				auto id = src.second.m_context_id;
-				if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+				if (!IncludeFilter(id, include, exclude)) continue;
 				removed.push_back(id);
 			}
 

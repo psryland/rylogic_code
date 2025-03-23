@@ -2,12 +2,12 @@
 #include <windows.h>
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
-#include "pr/ldraw/ldr_helper.h"
 #include "pr/win32/windows_com.h"
 #include "pr/win32/win32.h"
 
 //#include "pr/view3d-12/view3d.h"
 #include "pr/view3d-12/view3d-dll.h"
+#include "pr/view3d-12/ldraw/ldraw_helper.h"
 #include "pr/view3d-12/utility/conversion.h"
 
 using namespace pr;
@@ -23,7 +23,6 @@ enum class EStepMode
 };
 
 // TODO:
-//  Finish the View3d API
 //  Ray cast/ Hit test support
 
 // Application window
@@ -68,12 +67,14 @@ struct Main :Form
 			.wndclass(RegisterWndClass<Main>()))
 		, m_view3d(View3D_Initialise(ReportError, this))
 		, m_win3d(View3D_WindowCreate(CreateHandle(), WndOptions(*this)))
-		, m_obj0(View3D_ObjectCreateLdrA(
-			"*Box first_box_eva FF00FF00 { 1 2 3 }"
-			, false, nullptr, nullptr))
-		, m_obj1(View3D_ObjectCreateLdrA(
-			"*Sphere sever FF0080FF { 0.4 }"
-			, false, nullptr, nullptr))
+		, m_obj0()
+			//View3D_ObjectCreateLdrA(
+			//"*Box first_box_eva FF00FF00 { *Data {1 2 3} }"
+			//, false, nullptr, nullptr))
+		, m_obj1()
+			//View3D_ObjectCreateLdrA(
+			//"*Sphere sever FF0080FF { *Data {0.4} }"
+			//, false, nullptr, nullptr))
 		, m_envmap(View3D_CubeMapCreateFromUri((RylogicRoot / "art/textures/cubemaps/hanger/hanger-??.jpg").string().c_str(), {}))
 		, m_step_mode(EStepMode::Single)
 		, m_pending_steps()
@@ -81,19 +82,27 @@ struct Main :Form
 		std::default_random_engine rng;
 		std::uniform_real_distribution dist(-10.0f, 10.0f);
 
-		auto builder = ldr::Builder();
+		//auto builder = ldraw::Builder();
+		//auto& pts = builder.Point("pts", 0xFF00FF00).size({ 40, 40 }).style(ldraw::EPointStyle::Star);
+		//for (int i = 0; i != 100; ++i)
+		//	pts.pt(v3::Random(rng, v3::Zero(), 0.5f).w1());
+		//m_obj0 = View3D_ObjectCreateLdrA(builder.ToString(true).c_str(), false, nullptr, nullptr);
+
+		//auto builder = ldr::Builder();
 		//auto& points = builder.Point("points", 0xFF00FF00);
 		//points.size(10.0f);
 		//for (int i = 0; i != 10000; ++i) points.pt({ dist(rng), dist(rng), 0, 1 });
-		auto& spline = builder.Spline("spline");
-		spline.spline(v4{ 0, 0, 0, 1 }, v4{ -1, 1, 0, 1 }, v4{ -1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFF00FF00);
-		spline.spline(v4{ 0, 0, 0, 1 }, v4{ +1, 1, 0, 1 }, v4{ +1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFFFF0000);
-		spline.width(4);
-		spline.pos(v4{ 0, 10, 0, 1 });
+		//auto& spline = builder.Spline("spline");
+		//spline.spline(v4{ 0, 0, 0, 1 }, v4{ -1, 1, 0, 1 }, v4{ -1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFF00FF00);
+		//spline.spline(v4{ 0, 0, 0, 1 }, v4{ +1, 1, 0, 1 }, v4{ +1, 2, 0, 1 }, v4{ 0, 1.5f, 0, 1 }, 0xFFFF0000);
+		//spline.width(4);
+		//spline.pos(v4{ 0, 10, 0, 1 });
 
 		// Load script
-		auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
-
+		//auto ctx0 = View3D_LoadScriptFromString(builder.ToString().c_str(), nullptr, nullptr, nullptr, nullptr);
+		//auto s = "*Box {*Data{1 2 3}} *Commands {*Data {AddToScene 0}}";
+		//auto ctx0 = View3D_LoadScriptFromString(s, nullptr, nullptr, nullptr, nullptr);
+		
 		// Set up the scene
 		View3D_CameraPositionSet(m_win3d, {0, +35, +40, 1}, {0, 0, 0, 1}, {0, 1, 0, 0});
 	
@@ -108,8 +117,9 @@ struct Main :Form
 		// Add objects to the scene
 		//View3D_WindowAddObject(m_win3d, m_obj0);
 		//View3D_WindowAddObject(m_win3d, m_obj1);
-		View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
-		View3D_DemoSceneCreate(m_win3d);
+		//View3D_WindowAddObjectsById(m_win3d, &ctx0, 1, 0);
+		//View3D_DemoSceneCreateText(m_win3d);
+		//View3D_DemoSceneCreateBinary(m_win3d);
 
 		// EnvMap
 		View3D_WindowEnvMapSet(m_win3d, m_envmap);
@@ -118,6 +128,9 @@ struct Main :Form
 				View3D_ObjectReflectivitySet(obj, 0.2f, "");
 				return true;
 			}, nullptr);
+
+		// Streaming
+		View3D_StreamingEnable(true, 1976);
 	}
 	~Main()
 	{

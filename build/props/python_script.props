@@ -1,0 +1,57 @@
+<!--
+  Enables 'PyScript' as a build action.
+  
+  The PyScript build action is made available in the project by adding this to your project file
+  "<Import Project="$(PropsPath)python_script.props" />".
+
+  Example usage:
+  <None Include="src\ldraw\ldraw_demo_scene.ldr" /> This is needed because I can't get it to work from in here
+  <PyScript Include="src\ldraw\ldraw_demo_scene.ldr">
+    <Generator>$(ScriptPath)EmbedFile.py</Generator>
+    <Args>DEMO_SCENE $(ProjectDir)src\ldraw\ldraw_demo_scene.ldr $(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Args>
+    <Outputs>$(OutDir)ldraw_demo_scene.cpp.embedded</Outputs>
+    <Message>Embedding ldraw_demo_scene.ldr</Message>
+  </PyScript>
+-->
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Add PyScript as a Build Action -->
+	<ItemGroup>
+		<AvailableItemName Include="PyScript" />
+	</ItemGroup>
+
+	<!-- Target for building content using a python script -->
+	<Target Name="PyScriptTarget"
+			BeforeTargets="ClCompile" 
+			Inputs="@(PyScript);%(PyScript.Generator);%(PyScript.Fullpath);%(PyScript.AdditionalInputs)"
+			Outputs="@(PyScript->'$(OutDir)%(Filename)%(Extension).pyscripttarget')"
+	>
+		<!-- Testing
+		<Message Importance="high" Text="PyScript Items: @(PyScript)" />
+		<Exec Command="echo %(PyScript.Identity)" />
+		-->
+
+		<!-- Show the message if there is one-->
+		<Exec
+			Command="echo %(PyScript.Message)"
+			Condition="'%(PyScript.Message)' != ''"
+		/>
+
+		<!-- Execute the python script on the file -->
+		<Exec
+			Command="python &quot;%(PyScript.Generator)&quot; %(PyScript.Args)"
+			ContinueOnError="ErrorAndContinue"
+		/>
+
+		<!-- Create the dummy output file to prevent always building -->
+		<Exec
+			Command="echo. > @(PyScript->'$(OutDir)%(Filename)%(Extension).pyscripttarget')"
+		/>
+	</Target>
+
+	<!-- Hook the custom target into the build pipeline -->  
+	<PropertyGroup>  
+		<BuildDependsOn>$(BuildDependsOn);PyScriptTarget</BuildDependsOn>  
+	</PropertyGroup>
+	
+</Project>

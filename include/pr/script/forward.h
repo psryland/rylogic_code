@@ -217,6 +217,27 @@ namespace pr::script
 		x(WStringLiteral)\
 		x(Integral      )\
 		x(FloatingPoint )
-	PR_DEFINE_ENUM1(EConstant, PR_ENUM); 
+	PR_DEFINE_ENUM1(EConstant, PR_ENUM);
+	#undef PR_ENUM
+
+	// Transform keywords
+	#define PR_ENUM(x)\
+		x(NonAffine      ,= pr::hash::HashICT("NonAffine"     ))\
+		x(M4x4           ,= pr::hash::HashICT("M4x4"          ))\
+		x(M3x3           ,= pr::hash::HashICT("M3x3"          ))\
+		x(Pos            ,= pr::hash::HashICT("Pos"           ))\
+		x(Align          ,= pr::hash::HashICT("Align"         ))\
+		x(Quat           ,= pr::hash::HashICT("Quat"          ))\
+		x(QuatPos        ,= pr::hash::HashICT("QuatPos"       ))\
+		x(Rand4x4        ,= pr::hash::HashICT("Rand4x4"       ))\
+		x(RandPos        ,= pr::hash::HashICT("RandPos"       ))\
+		x(RandOri        ,= pr::hash::HashICT("RandOri"       ))\
+		x(Euler          ,= pr::hash::HashICT("Euler"         ))\
+		x(Scale          ,= pr::hash::HashICT("Scale"         ))\
+		x(Transpose      ,= pr::hash::HashICT("Transpose"     ))\
+		x(Inverse        ,= pr::hash::HashICT("Inverse"       ))\
+		x(Normalise      ,= pr::hash::HashICT("Normalise"     ))\
+		x(Orthonormalise ,= pr::hash::HashICT("Orthonormalise"))
+	PR_DEFINE_ENUM2(ETransformKeyword, PR_ENUM);
 	#undef PR_ENUM
 }

@@ -109,9 +109,10 @@ namespace pr
 
 	// Forward declare the ToString function
 	// Here 'Result' is expected to be an enum error code
-	template <typename Result> std::string ToString(Result result)
+	template <typename Result> std::string ToString(Result)
 	{
-		static_assert(sizeof(Result) != 0, "ToString not implementated for this Result type");
+		static_assert(sizeof(Result) != 0, "ToString not implemented for this Result type");
+		throw std::runtime_error("ToString not implemented for this Result type");
 	}
 	template <> inline std::string ToString(HResult result)
 	{
@@ -132,7 +133,7 @@ namespace pr
 
 		if (static_cast<long long>(result) >= 0) return true;
 		Reason() = ToString<Result>(result);
-		std::cerr << Reason();
+		// std::cerr << Reason(); <- Caller's choice to output.
 		return false;
 	}
 	template <> inline bool Succeeded(__int64 result)
@@ -151,7 +152,7 @@ namespace pr
 	{
 		if (result) return true;
 		Reason() = "false returned";
-		std::cerr << Reason();
+		// std::cerr << Reason(); <- Caller's choice to output.
 		return false;
 	}
 	template <typename Result> inline bool Failed(Result result)

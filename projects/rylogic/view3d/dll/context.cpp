@@ -429,13 +429,16 @@ namespace view3d
 	// Delete all objects not displayed in any windows
 	void Context::DeleteUnused(GUID const* context_ids, int include_count, int exclude_count)
 	{
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
+
 		// Build a set of context ids, included in 'context_ids', and not used in any windows
 		GuidSet unused;
 
 		// Initialise 'unused' with all context ids (filtered by 'context_ids')
 		for (auto& src : m_sources.Sources())
 		{
-			if (!pr::IncludeFilter(src.first, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(src.first, include, exclude)) continue;
 			unused.insert(src.first);
 		}
 

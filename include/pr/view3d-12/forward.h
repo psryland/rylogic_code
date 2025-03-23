@@ -19,12 +19,15 @@
 #include <list>
 #include <new>
 #include <memory>
+#include <sstream>
+#include <fstream>
 #include <unordered_map>
 #include <algorithm>
 #include <regex>
 #include <optional>
 #include <ranges>
 #include <functional>
+#include <execution>
 #include <filesystem>
 #include <source_location>
 #include <type_traits>
@@ -37,6 +40,7 @@
 #include <intrin.h>
 #include <malloc.h>
 #include <sdkddkver.h>
+#include <winsock2.h>
 #include <windows.h>
 #include <dxgi.h>
 #include <dxgidebug.h>
@@ -49,72 +53,76 @@
 #include <d2d1_2.h>
 #include <dwrite_2.h>
 
-#include "pr/macros/enum.h"
-#include "pr/meta/alignment_of.h"
-#include "pr/common/min_max_fix.h"
-#include "pr/common/build_options.h"
-#include "pr/common/assert.h"
-#include "pr/common/guid.h"
-#include "pr/common/hresult.h"
-#include "pr/common/fmt.h"
-#include "pr/common/cast.h"
-#include "pr/common/coalesce.h"
-#include "pr/common/flags_enum.h"
-#include "pr/common/refcount.h"
-#include "pr/common/refptr.h"
-#include "pr/common/d3dptr.h"
+#include "pr/camera/camera.h"
+#include "pr/common/algorithm.h"
 #include "pr/common/alloca.h"
 #include "pr/common/allocator.h"
-#include "pr/common/range.h"
-#include "pr/common/hash.h"
-#include "pr/common/to.h"
-#include "pr/common/scope.h"
-#include "pr/common/algorithm.h"
-#include "pr/common/user_data.h"
-#include "pr/common/event_handler.h"
-#include "pr/common/static_callback.h"
+#include "pr/common/assert.h"
 #include "pr/common/bstr_t.h"
+#include "pr/common/build_options.h"
+#include "pr/common/cast.h"
+#include "pr/common/coalesce.h"
+#include "pr/common/d3dptr.h"
+#include "pr/common/event_handler.h"
+#include "pr/common/flags_enum.h"
+#include "pr/common/fmt.h"
+#include "pr/common/guid.h"
+#include "pr/common/hash.h"
+#include "pr/common/hresult.h"
+#include "pr/common/memstream.h"
+#include "pr/common/min_max_fix.h"
+#include "pr/common/range.h"
+#include "pr/common/refcount.h"
+#include "pr/common/refptr.h"
 #include "pr/common/resource.h"
-#include "pr/container/ring.h"
-#include "pr/container/chain.h"
-#include "pr/container/vector.h"
-#include "pr/container/deque.h"
+#include "pr/common/scope.h"
+#include "pr/common/static_callback.h"
+#include "pr/common/to.h"
+#include "pr/common/user_data.h"
 #include "pr/container/byte_data.h"
-#include "pr/camera/camera.h"
+#include "pr/container/chain.h"
+#include "pr/container/deque.h"
+#include "pr/container/ring.h"
+#include "pr/container/vector.h"
+#include "pr/filesys/filewatch.h"
+#include "pr/filesys/lock_file.h"
+#include "pr/filesys/resolve_path.h"
+#include "pr/geometry/3ds.h"
+#include "pr/geometry/common.h"
+#include "pr/geometry/distance.h"
+#include "pr/geometry/index_buffer.h"
+#include "pr/geometry/intersect.h"
+#include "pr/geometry/model_file.h"
+#include "pr/geometry/models_box.h"
+#include "pr/geometry/models_cylinder.h"
+#include "pr/geometry/models_extrude.h"
+#include "pr/geometry/models_line.h"
+#include "pr/geometry/models_mesh.h"
+#include "pr/geometry/models_point.h"
+#include "pr/geometry/models_quad.h"
+#include "pr/geometry/models_shape2d.h"
+#include "pr/geometry/models_skybox.h"
+#include "pr/geometry/models_sphere.h"
+#include "pr/geometry/p3d.h"
+#include "pr/geometry/triangle.h"
+#include "pr/geometry/utility.h"
+#include "pr/gfx/colour.h"
+#include "pr/gui/gdiplus.h"
+#include "pr/macros/enum.h"
+#include "pr/maths/bit_fields.h"
+#include "pr/maths/maths.h"
+#include "pr/meta/alignment_of.h"
+#include "pr/network/winsock.h"
+#include "pr/network/sockets.h"
 #include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
-#include "pr/maths/maths.h"
-#include "pr/maths/bit_fields.h"
-#include "pr/filesys/filewatch.h"
-#include "pr/gfx/colour.h"
-#include "pr/geometry/common.h"
-#include "pr/geometry/distance.h"
-#include "pr/geometry/intersect.h"
-#include "pr/geometry/index_buffer.h"
-#include "pr/geometry/models_point.h"
-#include "pr/geometry/models_line.h"
-#include "pr/geometry/models_quad.h"
-#include "pr/geometry/models_shape2d.h"
-#include "pr/geometry/models_box.h"
-#include "pr/geometry/models_sphere.h"
-#include "pr/geometry/models_cylinder.h"
-#include "pr/geometry/models_extrude.h"
-#include "pr/geometry/models_mesh.h"
-#include "pr/geometry/models_skybox.h"
-#include "pr/geometry/p3d.h"
-#include "pr/geometry/3ds.h"
-#include "pr/geometry/triangle.h"
-#include "pr/geometry/model_file.h"
-#include "pr/geometry/utility.h"
-#include "pr/threads/synchronise.h"
+#include "pr/script/script.h"
 #include "pr/threads/name_thread.h"
-#include "pr/gui/gdiplus.h"
-#include "pr/win32/win32.h"
-#include "pr/win32/key_codes.h"
+#include "pr/threads/synchronise.h"
 #include "pr/win32/dummy_window.h"
-#include "pr/script/reader.h"
-#include "pr/script/embedded.h"
+#include "pr/win32/key_codes.h"
+#include "pr/win32/win32.h"
 
 namespace pr::rdr12
 {
@@ -125,8 +133,13 @@ namespace pr::rdr12
 	using SortKeyId = uint16_t;
 	using Range = pr::Range<int64_t>;
 	using Handle = pr::win32::Handle;
+	using Winsock = pr::network::Winsock;
+	using HashValue32 = pr::hash::HashValue32;
 	using seconds_t = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t = std::chrono::system_clock::time_point;
+	using IPathResolver = pr::filesys::IPathResolver;
+	using PathResolver = pr::filesys::PathResolver;
+	using NoIncludes = pr::filesys::NoIncludes;
 	template <typename T> using Scope = pr::Scope<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
@@ -239,20 +252,27 @@ namespace pr::rdr12
 	struct FeatureSupport;
 	struct GpuSync;
 	
+	// LDraw
+	namespace ldraw
+	{
+		struct LdrObject;
+		struct LdrGizmo;
+		using LdrObjectPtr = RefPtr<LdrObject>;
+		using LdrGizmoPtr = RefPtr<LdrGizmo>;
+		using ObjectCont = pr::vector<LdrObjectPtr, 8>;
+		using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
+		enum class EGizmoMode :int;
+		struct Location;
+		struct SourceBase;
+		struct ScriptSources;
+		struct ParseResult;
+		struct IReader;
+	}
+
 	// Dll
 	struct Context;
 	struct V3dWindow;
-	struct LdrObject;
-	struct LdrGizmo;
-	struct ParseResult;
-	struct ObjectAttributes;
-	struct ScriptSources;
 	enum class ECamField :int;
-	enum class ELdrGizmoMode :int;
-	using LdrObjectPtr = RefPtr<LdrObject>;
-	using LdrGizmoPtr = RefPtr<LdrGizmo>;
-	using ObjectCont = pr::vector<LdrObjectPtr, 8>;
-	using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
 
 	// Event args
 	struct ResolvePathArgs;
@@ -325,7 +345,7 @@ namespace pr::rdr12
 		x(Wireframe ,= D3D12_FILL_MODE::D3D12_FILL_MODE_WIREFRAME)\
 		x(Solid     ,= D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID)\
 		x(SolidWire ,= 4)
-	PR_DEFINE_ENUM2(EFillMode , PR_ENUM);
+	PR_DEFINE_ENUM2(EFillMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// ECullMode

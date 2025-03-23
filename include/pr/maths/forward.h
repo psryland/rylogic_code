@@ -160,6 +160,9 @@ namespace pr
 		template <typename M> concept MatrixFP = MatrixX<M> && std::floating_point<vec_comp_t<M>>;
 		template <typename M> concept MatrixIg = MatrixX<M> && std::integral<vec_comp_t<M>>;
 
+		// Concepts for all math types
+		template <typename T> concept VecOrMatType = VectorX<T> || MatrixX<T>;
+
 		#pragma region Traits
 		template <Scalar S, int N> struct is_vec<S[N]>
 		{

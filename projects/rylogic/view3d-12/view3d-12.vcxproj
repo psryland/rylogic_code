@@ -1,314 +1,362 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<!-- Globals -->
-	<PropertyGroup Label="Globals">
-		<ConfigurationType>StaticLibrary</ConfigurationType>
-		<ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
-		<RootNamespace>View3d</RootNamespace>
-		<ProjectName>view3d-12</ProjectName>
-		<TargetName>view3d-12-static</TargetName>
-		<ResolveNuGetPackages>false</ResolveNuGetPackages> 
-	</PropertyGroup>
-
-	<!-- Configurations -->
-	<ItemGroup Label="ProjectConfigurations">
-		<ProjectConfiguration Include="Debug|Win32">
-			<Configuration>Debug</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Debug|x64">
-			<Configuration>Debug</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|Win32">
-			<Configuration>Release</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|x64">
-			<Configuration>Release</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-	</ItemGroup>
-
-	<!-- Property Sheets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)fxc_build_rule.props" />
-	<Import Project="$(PropsPath)lib.props" />
-
-	<!-- Build options -->
-	<ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
-		<ClCompile>
-			<PreprocessorDefinitions>
-				;PR_RDR_RUNTIME_SHADERS=1
-				;PR_LOGGING=1
-				;PR_SUPPORT_D3D11_ERRORS=1
-				;PR_VIEW3D_12=1
-				;PR_DBG_RDR=1
-				;USE_PIX
-				;%(PreprocessorDefinitions)
-			</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>
-				;$(RylogicRoot)projects\rylogic
-				;%(AdditionalIncludeDirectories)
-			</AdditionalIncludeDirectories>
-		</ClCompile>
-	</ItemDefinitionGroup>
-	<ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
-		<ClCompile>
-			<PreprocessorDefinitions>
-				;PR_LOGGING=1
-				;PR_VIEW3D_12=1
-				;PR_RDR_RUNTIME_SHADERS=0
-				;PR_SUPPORT_D3D11_ERRORS=1
-				;%(PreprocessorDefinitions)
-			</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>
-				;$(RylogicRoot)projects\rylogic
-				;%(AdditionalIncludeDirectories)
-			</AdditionalIncludeDirectories>
-		</ClCompile>
-	</ItemDefinitionGroup>
-
-	<!-- Files -->
-	<ItemGroup>
-		<ClCompile Include="src\ldraw\ldr_gizmo.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object_demo_scene.cpp" />
-		<ClCompile Include="src\ldraw\ldr_object_templates.cpp" />
-		<ClCompile Include="src\ldraw\ldr_sources.cpp" />
-		<ClCompile Include="src\lighting\light.cpp" />
-		<ClCompile Include="src\main\renderer.cpp" />
-		<ClCompile Include="src\main\window.cpp" />
-		<ClCompile Include="src\model\model.cpp" />
-		<ClCompile Include="src\model\model_generator.cpp" />
-		<ClCompile Include="src\model\nugget.cpp" />
-		<ClCompile Include="src\render\back_buffer.cpp" />
-		<ClCompile Include="src\render\render_forward.cpp" />
-		<ClCompile Include="src\render\render_raycast.cpp" />
-		<ClCompile Include="src\render\render_smap.cpp" />
-		<ClCompile Include="src\render\render_step.cpp" />
-		<ClCompile Include="src\resource\descriptor_store.cpp" />
-		<ClCompile Include="src\resource\mipmap_generator.cpp" />
-		<ClCompile Include="src\resource\resource_factory.cpp" />
-		<ClCompile Include="src\resource\resource_store.cpp" />
-		<ClCompile Include="src\sampler\sampler.cpp" />
-		<ClCompile Include="src\scene\scene.cpp" />
-		<ClCompile Include="src\scene\scene_camera.cpp" />
-		<ClCompile Include="src\shaders\shader.cpp" />
-		<ClCompile Include="src\shaders\shader_arrow_head.cpp" />
-		<ClCompile Include="src\shaders\shader_forward.cpp" />
-		<ClCompile Include="src\shaders\shader_point_sprites.cpp" />
-		<ClCompile Include="src\shaders\shader_show_normals.cpp" />
-		<ClCompile Include="src\shaders\shader_smap.cpp" />
-		<ClCompile Include="src\shaders\shader_thick_line.cpp" />
-		<ClCompile Include="src\texture\d2d_context.cpp" />
-		<ClCompile Include="src\texture\texture_2d.cpp" />
-		<ClCompile Include="src\texture\texture_base.cpp" />
-		<ClCompile Include="src\texture\texture_cube.cpp" />
-		<ClCompile Include="src\texture\texture_loader_dds.cpp" />
-		<ClCompile Include="src\texture\texture_loader_wic.cpp" />
-		<ClCompile Include="src\utility\cmd_list.cpp" />
-		<ClCompile Include="src\utility\diagnostics.cpp" />
-		<ClCompile Include="src\utility\features.cpp" />
-		<ClCompile Include="src\utility\pipe_state.cpp" />
-		<ClCompile Include="src\utility\pix.cpp" />
-		<ClCompile Include="src\utility\shadow_caster.cpp" />
-		<ClCompile Include="src\utility\utility.cpp" />
-	</ItemGroup>
-	<ItemGroup>
-		<ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\index_buffer.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_cylinder.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_extrude.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_line.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_point.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_quad.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_shape2d.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\filter.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\forward.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\includes.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\location.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\macros.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\preprocessor.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\reader.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\script.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\script_core.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\token.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\script\tokeniser.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\str\extract.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_pso.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_step.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\gpu_job.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision_builder.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\forward.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\instance\instance.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_gizmo.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_object.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_sources.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_angle_tool.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_measure_tool.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_object_manager.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldr_ui_script_editor.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\frame.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\render_step.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\sortkey.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor_store.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\image.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\mipmap_generator.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_factory.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state_store.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_store.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\stock_resources.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler_desc.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene_camera.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\hlsl_proxy.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_arrow_head.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_forward.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_include_handler.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_point_sprites.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_registers.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_show_normals.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_smap.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_thick_line.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\stock_shaders.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\d2d_context.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_2d.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_base.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_cube.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_desc.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_loader.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\barrier_batch.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_alloc.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list_collection.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\conversion.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\diagnostics.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\dx9_context.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\eventargs.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\features.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\gpu_sync.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\keep_alive.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\lookup.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\map_resource.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pipe_state.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pix.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\ray_cast.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\root_signature.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\shadow_caster.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\update_resource.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\utility.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
-		<ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
-		<ClInclude Include="src\render\render_forward.h" />
-		<ClInclude Include="src\render\render_raycast.h" />
-		<ClInclude Include="src\render\render_smap.h" />
-		<ClInclude Include="src\shaders\common.h" />
-	</ItemGroup>
-	<ItemGroup>
-		<None Include="src\shaders\hlsl\types.hlsli" />
-		<None Include="src\shaders\hlsl\common\functions.hlsli" />
-		<None Include="src\shaders\hlsl\common\geometry.hlsli" />
-		<None Include="src\shaders\hlsl\common\vector.hlsli" />
-		<None Include="src\shaders\hlsl\deferred\gbuffer.hlsli" />
-		<None Include="src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
-		<None Include="src\shaders\hlsl\forward\forward_cbuf.hlsli" />
-		<None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli" />
-		<None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli" />
-		<None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
-		<None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
-		<None Include="src\shaders\hlsl\utility\env_map.hlsli" />
-	</ItemGroup>
-	<ItemGroup>
-		<CustomBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\deferred\gbuffer.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\forward\forward.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
-		<CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
-	</ItemGroup>
-	<ItemGroup>
-		<FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
-			<EntryPointName>ApplyForces</EntryPointName>
-			<ShaderType>Compute</ShaderType>
-			<ShaderModel>6.6</ShaderModel>
-		</FxCompile>
-		<None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
-		<None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
-		<FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
-			<EntryPointName>Integrate</EntryPointName>
-			<ShaderType>Compute</ShaderType>
-			<ShaderModel>6.6</ShaderModel>
-		</FxCompile>
-		<FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
-			<EntryPointName>SweepDown</EntryPointName>
-			<ShaderType>Compute</ShaderType>
-			<ShaderModel>6.6</ShaderModel>
-		</FxCompile>
-		<None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
-		<FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
-			<EntryPointName>BuildLookup</EntryPointName>
-			<ShaderType>Compute</ShaderType>
-			<ShaderModel>6.6</ShaderModel>
-		</FxCompile>
-		<None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli" />
-		<None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli" />
-	</ItemGroup>
-	<ItemGroup>
-		<ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />
-	</ItemGroup>
-
-	<!-- Targets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-	<Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
-	<Import Project="$(TargetsPath)dxc.targets" />
-
+  <!--
+  Globals
+  -->
+  <PropertyGroup Label="Globals">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ProjectGuid>{0A6CC9E3-76D2-4F4E-A193-1A816D24A555}</ProjectGuid>
+    <RootNamespace>View3d</RootNamespace>
+    <ProjectName>view3d-12</ProjectName>
+    <TargetName>view3d-12-static</TargetName>
+    <ResolveNuGetPackages>false</ResolveNuGetPackages>
+  </PropertyGroup>
+  <!--
+  Configurations
+  -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!--
+  Property Sheets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)fxc_build_rule.props" />
+  <Import Project="$(PropsPath)python_script.props" />
+  <Import Project="$(PropsPath)lib.props" />
+  <!--
+  Build options
+  -->
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>
+        ;PR_RDR_RUNTIME_SHADERS=1
+        ;PR_LOGGING=1
+        ;PR_SUPPORT_D3D11_ERRORS=1
+        ;PR_VIEW3D_12=1
+        ;PR_DBG_RDR=1
+        ;USE_PIX
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'!='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>
+        ;PR_LOGGING=1
+        ;PR_VIEW3D_12=1
+        ;PR_RDR_RUNTIME_SHADERS=0
+        ;PR_SUPPORT_D3D11_ERRORS=1
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+        ;$(RylogicRoot)projects\rylogic
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <!--
+  Files
+  -->
+  <ItemGroup>
+    <ClCompile Include="src\ldraw\ldraw_gizmo.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_object.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_serialiser_text.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_demo_scene.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_templates.cpp" />
+    <ClCompile Include="src\ldraw\ldraw_parsing.cpp" />
+    <ClCompile Include="src\ldraw\sources\ldraw_sources.cpp" />
+    <ClCompile Include="src\ldraw\sources\source_base.cpp" />
+    <ClCompile Include="src\ldraw\sources\source_binary.cpp" />
+    <ClCompile Include="src\ldraw\sources\source_file.cpp" />
+    <ClCompile Include="src\ldraw\sources\source_stream.cpp" />
+    <ClCompile Include="src\ldraw\sources\source_string.cpp" />
+    <ClCompile Include="src\lighting\light.cpp" />
+    <ClCompile Include="src\main\renderer.cpp" />
+    <ClCompile Include="src\main\window.cpp" />
+    <ClCompile Include="src\model\model.cpp" />
+    <ClCompile Include="src\model\model_generator.cpp" />
+    <ClCompile Include="src\model\nugget.cpp" />
+    <ClCompile Include="src\render\back_buffer.cpp" />
+    <ClCompile Include="src\render\render_forward.cpp" />
+    <ClCompile Include="src\render\render_raycast.cpp" />
+    <ClCompile Include="src\render\render_smap.cpp" />
+    <ClCompile Include="src\render\render_step.cpp" />
+    <ClCompile Include="src\resource\descriptor_store.cpp" />
+    <ClCompile Include="src\resource\mipmap_generator.cpp" />
+    <ClCompile Include="src\resource\resource_factory.cpp" />
+    <ClCompile Include="src\resource\resource_store.cpp" />
+    <ClCompile Include="src\sampler\sampler.cpp" />
+    <ClCompile Include="src\scene\scene.cpp" />
+    <ClCompile Include="src\scene\scene_camera.cpp" />
+    <ClCompile Include="src\shaders\shader.cpp" />
+    <ClCompile Include="src\shaders\shader_arrow_head.cpp" />
+    <ClCompile Include="src\shaders\shader_forward.cpp" />
+    <ClCompile Include="src\shaders\shader_point_sprites.cpp" />
+    <ClCompile Include="src\shaders\shader_show_normals.cpp" />
+    <ClCompile Include="src\shaders\shader_smap.cpp" />
+    <ClCompile Include="src\shaders\shader_thick_line.cpp" />
+    <ClCompile Include="src\texture\d2d_context.cpp" />
+    <ClCompile Include="src\texture\texture_2d.cpp" />
+    <ClCompile Include="src\texture\texture_base.cpp" />
+    <ClCompile Include="src\texture\texture_cube.cpp" />
+    <ClCompile Include="src\texture\texture_loader_dds.cpp" />
+    <ClCompile Include="src\texture\texture_loader_wic.cpp" />
+    <ClCompile Include="src\utility\cmd_list.cpp" />
+    <ClCompile Include="src\utility\diagnostics.cpp" />
+    <ClCompile Include="src\utility\features.cpp" />
+    <ClCompile Include="src\utility\pipe_state.cpp" />
+    <ClCompile Include="src\utility\pix.cpp" />
+    <ClCompile Include="src\utility\shadow_caster.cpp" />
+    <ClCompile Include="src\utility\utility.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\index_buffer.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_cylinder.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_extrude.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_line.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_point.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_quad.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_shape2d.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\fail_policy.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\includes.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\location.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\macros.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\preprocessor.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\reader.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\script_core.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\token.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\tokeniser.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\str\extract.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_pso.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\compute_step.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\gpu_job.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision_builder.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\instance\instance.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_conversion.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_gizmo.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_object.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_parsing.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_text.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_angle_tool.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_measure_tool.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_object_manager.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_ui_script_editor.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\lighting\light_ui.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\config.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\frame.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\render_step.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\sortkey.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_transfer_buffer.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\descriptor_store.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\gpu_descriptor_heap.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\image.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\mipmap_generator.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_factory.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_state_store.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\resource_store.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\resource\stock_resources.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\sampler\sampler_desc.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\scene\scene_camera.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\hlsl_proxy.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_arrow_head.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_forward.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_include_handler.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_point_sprites.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_registers.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_show_normals.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_smap.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_thick_line.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\stock_shaders.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\d2d_context.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_2d.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_base.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_cube.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_desc.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\texture\texture_loader.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\barrier_batch.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_alloc.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\cmd_list_collection.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\conversion.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\diagnostics.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\dx9_context.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\eventargs.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\features.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\gpu_sync.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\keep_alive.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\lookup.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\map_resource.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pipe_state.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\pix.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\ray_cast.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\root_signature.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\shadow_caster.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\update_resource.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\utility.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\utility\wrappers.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
+    <ClInclude Include="src\ldraw\sources\source_binary.h" />
+    <ClInclude Include="src\ldraw\sources\source_file.h" />
+    <ClInclude Include="src\ldraw\sources\ldraw_sources.h" />
+    <ClInclude Include="src\ldraw\sources\source_base.h" />
+    <ClInclude Include="src\ldraw\sources\source_stream.h" />
+    <ClInclude Include="src\ldraw\sources\source_string.h" />
+    <ClInclude Include="src\render\render_forward.h" />
+    <ClInclude Include="src\render\render_raycast.h" />
+    <ClInclude Include="src\render\render_smap.h" />
+    <ClInclude Include="src\shaders\common.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="auto_gen.py" />
+    <None Include="src\ldraw\ldraw_demo_scene.ldr" />
+    <None Include="src\shaders\hlsl\types.hlsli" />
+    <None Include="src\shaders\hlsl\common\functions.hlsli" />
+    <None Include="src\shaders\hlsl\common\geometry.hlsli" />
+    <None Include="src\shaders\hlsl\common\vector.hlsli" />
+    <None Include="src\shaders\hlsl\deferred\gbuffer.hlsli" />
+    <None Include="src\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\forward\forward_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli" />
+    <None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli" />
+    <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\utility\env_map.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_helper.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\deferred\gbuffer.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\forward\forward.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
+    <CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
+  </ItemGroup>
+  <!--
+  AutoGen
+  -->
+  <ItemGroup>
+    <PyScript Include="$(ProjectDir)auto_gen.py">
+      <Generator>$(ProjectDir)auto_gen.py</Generator>
+      <Args>$(RylogicRoot)</Args>
+      <AdditionalInputs>
+        ;$(ProjectDir)auto_gen.py
+        ;$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr
+        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h 
+        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h 
+        ;$(RylogicRoot)script\Rylogic.py
+      </AdditionalInputs>
+      <Outputs>$(OutDir)auto_gen.py.pyscript</Outputs>
+    </PyScript>
+  </ItemGroup>
+  <!--
+  Shaders
+  -->
+  <ItemGroup>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
+      <EntryPointName>ApplyForces</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\collision.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle.hlsli" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\particle_collision\particle_collision.hlsl">
+      <EntryPointName>Integrate</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
+      <EntryPointName>SweepDown</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsli" />
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\spatial_partition\spatial_partition.hlsl">
+      <EntryPointName>BuildLookup</EntryPointName>
+      <ShaderType>Compute</ShaderType>
+      <ShaderModel>6.6</ShaderModel>
+    </FxCompile>
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\geometry.hlsli" />
+    <None Include="$(RylogicRoot)include\pr\view3d-12\compute\common\utility.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />
+  </ItemGroup>
+  <!--
+  Targets
+  -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
+  <Import Project="$(TargetsPath)dxc.targets" />
 </Project>

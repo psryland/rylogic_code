@@ -25,7 +25,7 @@ namespace pr::fluid
 
 		rdr12::Renderer* m_rdr;
 		rdr12::Scene* m_scn;
-		rdr12::LdrObjectPtr m_gfx_scene;
+		rdr12::ldraw::LdrObjectPtr m_gfx_scene;
 		rdr12::Texture2DPtr m_tex_map;
 		PointShaderPtr m_gs_points;
 		Instance m_gfx_fluid;

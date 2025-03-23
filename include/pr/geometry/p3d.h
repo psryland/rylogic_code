@@ -2051,12 +2051,12 @@ namespace pr::geometry::p3d
 
 				// Read compressed indices into a local buffer
 				byte_data<> buf(len);
-				Read(src, buf.data(), buf.size());
+				Read(src, buf.data<uint8_t>(), buf.size<uint8_t>());
 
 				// Decompress from 'buf' into 'cont'
 				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
 				int64_t prev = 0;
-				auto const* p = buf.data();
+				auto const* p = buf.data<uint8_t>();
 				auto const* pend = p + buf.size();
 				for (; p != pend && cont.count() != count; ++p)
 				{
@@ -2072,7 +2072,7 @@ namespace pr::geometry::p3d
 
 					// Get the index value from the delta (only works for little endian!)
 					auto idx = prev + delta;
-					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
+					cont.push_back({ byte_ptr(&idx), stride });
 
 					prev += delta;
 				}
@@ -2535,9 +2535,7 @@ namespace pr::geometry::p3d
 }
 
 #if PR_UNITTESTS
-#include <fstream>
 #include "pr/common/unittests.h"
-#include "pr/view3d/renderer.h"
 namespace pr::geometry
 {
 	PRUnitTest(P3dTests)

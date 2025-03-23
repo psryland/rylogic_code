@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -24,7 +22,7 @@ namespace LDraw
 			CheckForChangesPollPeriodS = 1.0;
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
-			EmbeddedCSharpBoilerPlate = View3d.EmbeddedCSharpBoilerPlateDefault;
+			StreamingPort = 1976;
 			SceneState = new List<SceneStateData>();
 			UILayout = null;
 
@@ -99,11 +97,11 @@ namespace LDraw
 			set => set(nameof(IncludePaths), value);
 		}
 
-		/// <summary>Boilerplate code for embedded C# in ldr script files</summary>
-		public string EmbeddedCSharpBoilerPlate
+		/// <summary>The port to listen to for incoming streaming connections</summary>
+		public int StreamingPort
 		{
-			get => get<string>(nameof(EmbeddedCSharpBoilerPlate));
-			set => set(nameof(EmbeddedCSharpBoilerPlate), value);
+			get => get<int>(nameof(StreamingPort));
+			set => set(nameof(StreamingPort), value);
 		}
 
 		/// <summary>Per Scene settings</summary>

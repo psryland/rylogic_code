@@ -1,48 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
-	<!-- Properties -->
-	<PropertyGroup Label="Globals">
-		<ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
-		<RootNamespace>unittests</RootNamespace>
-		<ConfigurationType>Application</ConfigurationType>
-	</PropertyGroup>
-
-	<!-- Configuration -->
-	<ItemGroup Label="ProjectConfigurations">
-		<ProjectConfiguration Include="Debug|Win32">
-			<Configuration>Debug</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Debug|x64">
-			<Configuration>Debug</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|Win32">
-			<Configuration>Release</Configuration>
-			<Platform>Win32</Platform>
-		</ProjectConfiguration>
-		<ProjectConfiguration Include="Release|x64">
-			<Configuration>Release</Configuration>
-			<Platform>x64</Platform>
-		</ProjectConfiguration>
-	</ItemGroup>
-
-	<!-- Property Sheets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-	<Import Project="$(PropsPath)app.props" />
-
-	<!-- Build Options -->
-	<ItemDefinitionGroup>
-		<ClCompile>
-			<PreprocessorDefinitions>
+  <!-- Properties -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
+    <RootNamespace>unittests</RootNamespace>
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <!-- Configuration -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Property Sheets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(PropsPath)app.props" />
+  <!-- Build Options -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>
 				;PR_UNITTESTS=1
 				;PR_MATHS_USE_DIRECTMATH=1
 				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
-			<AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-			<AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>
 				;$(ProjectDir)
 				;$(RylogicRoot)include
 				;$(RylogicRoot)sdk
@@ -64,19 +60,17 @@
 				;lua-static.lib
 				;%(AdditionalDependencies)
 			</AdditionalDependencies>
-		</Link>
-	</ItemDefinitionGroup>
-
-	<!-- Find unit tests -->
-	<Target Name="HarvestFiles" BeforeTargets="PrepareForBuild">
-		<Message Importance="high" Text="Harvesting files..." />
-		<Exec Command="py &quot;$(ProjectDir)harvest_files.py&quot; $(PlatformTarget) $(Configuration)" />
-	</Target>
-
-	<!-- Files -->
-	<ItemGroup>
-		<Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
-		<ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- Find unit tests -->
+  <Target Name="HarvestFiles" BeforeTargets="PrepareForBuild">
+    <Message Importance="high" Text="Harvesting files..." />
+    <Exec Command="py &quot;$(ProjectDir)harvest_files.py&quot; $(PlatformTarget) $(Configuration)" />
+  </Target>
+  <!-- Files -->
+  <ItemGroup>
+    <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt" />
+    <ClCompile Include="$(RylogicRoot)include\pr\crypt\monocypher.c" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\forward.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\gimble.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\app\main.h" />
@@ -172,6 +166,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\kdtree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\quadtree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\queue.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\container\ring_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\segmented_list.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\span.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\stack.h" />
@@ -190,6 +185,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_snapshot.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_time.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\lock_file.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\resolve_path.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\closest_point.h" />
@@ -253,6 +249,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_script_editor_dlg.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_sources.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldr_tools.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\lua\lua.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\macros\align.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\macros\auto_do.h" />
@@ -349,6 +346,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d\textures\projected_texture.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\buf.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\embedded.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\embedded_lua.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\script\filter.h" />
@@ -389,6 +387,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\win32\user_directories.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\win32.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\win32\windows_com.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h" />
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h" />
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
       <WarningLevel>Level3</WarningLevel>
@@ -400,19 +399,18 @@
 				;%(PreprocessorDefinitions)
 			</PreprocessorDefinitions>
     </ClCompile>
+    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
     <ClCompile Include="src\unittests.cpp" />
     <ClInclude Include="src\unittests.h" />
     <ClInclude Include="src\pp_output.h" />
     <None Include="cpp.hint" />
-		<None Include="pre_build.py" />
-		<None Include="run_tests.py" />
-	</ItemGroup>
-
-	<!-- Run unit tests -->
-	<Target Name="RunUnitTests" AfterTargets="Build">
-		<Exec Command="py $(ProjectDir)run_tests.py $(TargetPath)" />
-	</Target>
-
-	<!-- Targets -->
-	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+    <None Include="harvest_files.py" />
+    <None Include="run_tests.py" />
+  </ItemGroup>
+  <!-- Run unit tests -->
+  <Target Name="RunUnitTests" AfterTargets="Build">
+    <Exec Command="py $(ProjectDir)run_tests.py $(TargetPath)" />
+  </Target>
+  <!-- Targets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

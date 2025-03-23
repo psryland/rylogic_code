@@ -44,26 +44,21 @@ namespace pr::rdr12
 		// Note: the main RT must be restored once all ReleaseDC's have been called
 	}
 
-	#if 0 //todo
 	// Get a d2d render target for the DXGI surface within this texture
 	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget(Window const* wnd)
 	{
 		auto surf = GetSurface();
 
 		// Create render target properties
-		Renderer::Lock lock(m_mgr->rdr()); 
 		auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-		auto dpi = wnd ? wnd->Dpi() : m_mgr->rdr().SystemDpi();
+		auto dpi = wnd ? wnd->Dpi() : rdr().SystemDpi();
 		props.dpiX = dpi.x;
 		props.dpiY = dpi.y;
 
 		// Create a D2D render target which can draw into our off screen D3D surface.
 		D3DPtr<ID2D1RenderTarget> rt;
-		auto d2dfactory = lock.D2DFactory();
-		pr::Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
+		auto d2dfactory = rdr().D2DFactory();
+		Check(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
 		return rt;
 	}
-
-	#endif
-
 }

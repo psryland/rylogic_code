@@ -83,6 +83,9 @@ namespace pr::rdr12
 		// Return the shared handle associated with this texture
 		HANDLE SharedHandle() const;
 
+		// Get the DXGI surface within this texture
+		D3DPtr<IDXGISurface> GetSurface();
+
 		// Delegates to call when the texture is destructed
 		// WARNING: Don't add lambdas that capture a ref counted pointer to the texture
 		// or the texture will never get destructed, since the ref will never hit zero.

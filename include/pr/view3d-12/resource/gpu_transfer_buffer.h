@@ -63,6 +63,7 @@ namespace pr::rdr12
 			{
 				HeapProps heap_props(HeapType);
 				auto& desc = ResDesc::Buf(size, 1, {}, alignment).def_state(D3D12_RESOURCE_STATE_GENERIC_READ);
+				assert(desc.Check());
 				Check(device->CreateCommittedResource(
 					&heap_props, D3D12_HEAP_FLAG_NONE,
 					&desc, D3D12_RESOURCE_STATE_COMMON, nullptr,

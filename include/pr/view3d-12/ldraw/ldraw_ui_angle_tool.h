@@ -4,13 +4,16 @@
 //***************************************************************************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_helper.h"
 #include "pr/gui/wingui.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// A UI for measuring angles within a 3D environment
-	struct alignas(16) LdrAngleUI :gui::Form
+	struct alignas(16) AngleUI :gui::Form
 	{
 		// Callback function for reading a world space point
 		using ReadPointCB = v4(__stdcall*)(void* ctx);
@@ -35,12 +38,12 @@ namespace pr::rdr12
 
 	public:
 
-		LdrAngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
+		AngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
 			:Form(Params<>()
 				.parent(parent).name("ldr-angle-ui").title(L"Measure Angles")
 				.wh(220, 186).style_ex('+', WS_EX_TOOLWINDOW)
 				.hide_on_close(true).pin_window(true)
-				.wndclass(RegisterWndClass<LdrAngleUI>()))
+				.wndclass(RegisterWndClass<AngleUI>()))
 			, m_context_id(GenerateGUID())
 			, m_read_point_cb(read_point_cb)
 			, m_read_point_ctx(ctx)
@@ -55,9 +58,9 @@ namespace pr::rdr12
 			, m_point1(v4Origin)
 		{
 			CreateHandle();
-			m_btn_orig.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
-			m_btn_set0.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
-			m_btn_set1.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
+			m_btn_orig.Click += std::bind(&AngleUI::HandleSetPoint, this, _1, _2);
+			m_btn_set0.Click += std::bind(&AngleUI::HandleSetPoint, this, _1, _2);
+			m_btn_set1.Click += std::bind(&AngleUI::HandleSetPoint, this, _1, _2);
 			UpdateMeasurementInfo();
 		}
 
@@ -108,16 +111,16 @@ namespace pr::rdr12
 			// Create graphics
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
-				auto str = std::string{};
-				ldr::GroupStart(str, "Angle");
-				ldr::Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
-				ldr::Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
-				ldr::Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
-				ldr::GroupEnd(str);
+				Builder ldr;
+				auto& group = ldr.Group("Angle");
+				group.Line("edge0", 0xFFFFFFFF).line(m_origin, m_point0);
+				group.Line("edge1", 0xFFFFFF00).line(m_origin, m_point1);
+				group.Line("edge2", 0xFF00FF00).line(m_point0, m_point1);
+				auto data = ldr.ToBinary();
 
-				script::StringSrc src(str.c_str());
-				script::Reader rdr(src);
-				auto out = Parse(m_rdr, rdr, GfxContextId());
+				mem_istream<char> src{ data };
+				BinaryReader reader(src, {});
+				auto out = Parse(m_rdr, reader, GfxContextId());
 				if (!out.m_objects.empty())
 					m_gfx = out.m_objects.back();
 			}
@@ -145,8 +148,8 @@ namespace pr::rdr12
 		}
 
 		// Raised when the measurement data changes
-		// MeasurementChanged += [&](LdrAngleUI&,EmptyArgs const&){}
-		gui::EventHandler<LdrAngleUI&, gui::EmptyArgs const&> MeasurementChanged;
+		// MeasurementChanged += [&](AngleUI&,EmptyArgs const&){}
+		gui::EventHandler<AngleUI&, gui::EmptyArgs const&> MeasurementChanged;
 	};
 }
 

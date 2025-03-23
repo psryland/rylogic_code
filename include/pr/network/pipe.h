@@ -47,6 +47,7 @@ namespace pr
 			std::chrono::milliseconds ReadTimeout{ 10 };
 			std::chrono::milliseconds WriteTimeout{ 0 };
 			std::chrono::milliseconds WaitForServerAvailabilityTimeout{ 5000 };
+			std::function<void(std::exception const&, DWORD)> OnPipeError{};
 		} m_options;
 
 		static std::string MakeName(std::string_view name)
@@ -119,7 +120,9 @@ namespace pr
 				catch (std::exception const& ex)
 				{
 					m_last_error = GetLastError();
-					OutputDebugStringA(std::format("Pipe connection error: {} - {}", m_last_error, ex.what()).c_str());
+					if (m_options.OnPipeError)
+						m_options.OnPipeError(ex, m_last_error);
+
 					state = EState::Disconnected;
 					cv_notify.notify_all();
 				}
@@ -226,7 +229,7 @@ namespace pr
 					if (m_last_error == ERROR_PIPE_CONNECTED)
 						return;
 			
-					// The connection is in progress, wait for it to commplete
+					// The connection is in progress, wait for it to complete
 					if (m_last_error == ERROR_IO_PENDING)
 					{
 						auto r = ::WaitForSingleObject(ovrlap.hEvent, INFINITE);

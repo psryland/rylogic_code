@@ -166,10 +166,10 @@ namespace pr::maths
 		// Create a quadratic from 3 points
 		static Quadratic FromPoints(v2 a, v2 b, v2 c)
 		{
-			//' Aa.x2 + Ba.x + C = a.y
-			//' Ab.x2 + Bb.x + C = a.y
-			//' Ac.x2 + Bc.x + C = a.y
-			//' => Ax = y
+			//'   a.y = A(a.x)² + B(a.x) + C
+			//'   b.y = A(b.x)² + B(b.x) + C
+			//'   c.y = A(c.x)² + B(c.x) + C
+			//' => y = Ax where
 			//' A = |a.x² a.x 1| x = |A| y = |a.y|
 			//'     |b.x² b.x 1|     |B|     |b.y|
 			//'     |c.x² c.x 1|     |C|     |c.y|

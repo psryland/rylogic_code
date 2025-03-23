@@ -1070,7 +1070,7 @@ namespace Rylogic.Gfx
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
 
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
+		public delegate void ParsingProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
@@ -1106,13 +1106,6 @@ namespace Rylogic.Gfx
 		/// <summary>Edit object callback</summary>
 		public delegate VICount EditObjectCB(Span<Vertex> verts, Span<ushort> indices, AddNuggetCB out_nugget);
 
-		/// <summary>Embedded code handler callback</summary>
-		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
-			[MarshalAs(UnmanagedType.LPWStr)] string code,
-			[MarshalAs(UnmanagedType.LPWStr)] string support,
-			[MarshalAs(UnmanagedType.BStr)] out string? result,
-			[MarshalAs(UnmanagedType.BStr)] out string? errors);
-
 		#endregion
 
 		[Serializable]
@@ -1131,10 +1124,9 @@ namespace Rylogic.Gfx
 		private readonly SynchronizationContext m_sync;   // Thread marshaller
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
-		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
+		private ParsingProgressCB m_add_file_progress_cb; // Reference to callback
 		private OnAddCB m_on_add_cb;                      // Reference to callback
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
-		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
 #if PR_VIEW3D_CREATE_STACKTRACE
@@ -1163,9 +1155,7 @@ namespace Rylogic.Gfx
 			m_windows = new List<Window>();
 			m_sync = SynchronizationContext.Current ?? new SynchronizationContext();
 			m_thread_id = Environment.CurrentManagedThreadId;
-			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 			m_load_script_handlers = new List<LoadScriptCompleteCB>();
-			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
 
 			try
 			{
@@ -1185,7 +1175,7 @@ namespace Rylogic.Gfx
 				}
 
 				// Sign up for progress reports
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
 				void HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
 				{
 					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
@@ -1211,49 +1201,6 @@ namespace Rylogic.Gfx
 					else
 						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
 				}
-
-				// Add a C# code handler
-				SetEmbeddedCodeHandler("CSharp", HandleEmbeddedCSharp);
-				bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string? result, out string? errors) // worker thread context
-				{
-					// This function may be called simultaneously in multiple threads
-					result = null;
-					errors = null;
-
-					// Create the source code to build
-					var src = TemplateReplacer.Process(new StringSrc(EmbeddedCSharpBoilerPlate), @"(?<indent>[ \t]*)<<<(?<section>.*?)>>>", (tr, match) =>
-					{
-						var indent = match.Result("${indent}");
-						var section = match.Groups["section"];
-						if (section.Success && section.Value == "support")
-							tr.PushSource(new AddIndents(new StringSrc(support), indent, true));
-						if (section.Success && section.Value == "code")
-							tr.PushSource(new AddIndents(new StringSrc(code), indent, true));
-						return string.Empty;
-					});
-
-#if false
-					try
-					{
-						// Create a runtime assembly from the embedded code
-						using var ass = RuntimeAssembly.Compile(src, new[] { Util.ResolveAppPath() });
-						using var inst = ass.New("ldr.Main");
-						result = inst.Invoke<string>("Execute");
-					}
-					catch (CompileException ex)
-					{
-						errors = ex.ErrorReport();
-						errors += "\r\nGenerated Code:\r\n" + src;
-					}
-					catch (Exception ex)
-					{
-						errors = ex.Message;
-						errors += "\r\nGenerated Code:\r\n" + src;
-					}
-					return true;
-#endif
-					throw new NotImplementedException();
-				}
 			}
 			catch
 			{
@@ -1271,12 +1218,8 @@ namespace Rylogic.Gfx
 			}
 			if (m_singleton != null)
 			{
-				// Unsubscribe
-				foreach (var emb in m_embedded_code_handlers)
-					View3D_EmbeddedCodeCBSet(emb.Key, emb.Value, IntPtr.Zero, false);
-
 				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
 				while (m_windows.Count != 0)
@@ -1299,21 +1242,6 @@ namespace Rylogic.Gfx
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
 		public event EventHandler<SourcesChangedEventArgs>? OnSourcesChanged;
-
-		/// <summary>Install/Remove an embedded code handler for language 'lang'</summary>
-		public void SetEmbeddedCodeHandler(string lang, EmbeddedCodeHandlerCB handler)
-		{
-			if (handler != null)
-			{
-				m_embedded_code_handlers[lang] = handler;
-				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, true);
-			}
-			else if (m_embedded_code_handlers.TryGetValue(lang, out handler!))
-			{
-				m_embedded_code_handlers.Remove(lang);
-				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, false);
-			}
-		}
 
 		/// <summary>
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
@@ -1405,57 +1333,6 @@ namespace Rylogic.Gfx
 		/// <summary>Template descriptions for auto complete of LDraw script</summary>
 		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
 
-		/// <summary>Boilerplate C# code used for embedded C#</summary>
-		public string EmbeddedCSharpBoilerPlate { get; set; }
-		public static string EmbeddedCSharpBoilerPlateDefault =>
-		#region Embedded C# Source
-$@"//
-//Assembly: netstandard.dll
-//Assembly: System.dll
-//Assembly: System.Drawing.dll
-//Assembly: System.IO.dll
-//Assembly: System.Linq.dll
-//Assembly: System.Runtime.dll
-//Assembly: System.Runtime.Extensions.dll
-//Assembly: System.ValueTuple.dll
-//Assembly: System.Xml.dll
-//Assembly: System.Xml.Linq.dll
-//Assembly: .\Rylogic.Core.dll
-//Assembly: .\Rylogic.Core.Windows.dll
-//Assembly: .\Rylogic.Gfx.dll
-using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Linq;
-using Rylogic.Common;
-using Rylogic.Container;
-using Rylogic.Extn;
-using Rylogic.Gfx;
-using Rylogic.LDraw;
-using Rylogic.Maths;
-using Rylogic.Utility;
-
-namespace ldr
-{{
-	public class Main
-	{{
-		private StringBuilder Out = new StringBuilder();
-		<<<support>>>
-
-		public string Execute()
-		{{
-			<<<code>>>
-			return Out.ToString();
-		}}
-	}}
-}}
-";
-		#endregion
-
 		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
 		public static string AddressAt(string ldr_script, long position = -1)
 		{
@@ -1463,12 +1340,6 @@ namespace ldr
 			// 'position' should be relative to 'script'
 			return View3D_ObjectAddressAt(ldr_script, position != -1 ? position : ldr_script.Length) ?? string.Empty;
 		}
-
-		///// <summary>Flush any pending commands to the graphics card</summary>
-		//public static void Flush()
-		//{
-		//	View3D_Flush();
-		//}
 
 		#region DLL extern functions
 
@@ -1501,13 +1372,10 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Set the callback for progress events when script sources are loaded or updated
-		[DllImport(Dll)] private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void View3D_ParsingProgressCBSet(ParsingProgressCB progress_cb, IntPtr ctx, bool add);
 
 		// Set the callback that is called when the sources are reloaded
 		[DllImport(Dll)] private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-
-		// Add/Remove a callback for handling embedded code within scripts
-		[DllImport(Dll)] private static extern void View3D_EmbeddedCodeCBSet([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
 
 		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 		[DllImport(Dll)] private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
@@ -1546,8 +1414,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Get/Set the window settings (as ldr script string)
-		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPWStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
-		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPWStr)] string settings);
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPStr)] string settings);
 
 		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
@@ -2018,7 +1886,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
 
 		// Create/Delete the demo scene in the given window
-		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreate(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateText(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateBinary(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_DemoSceneDelete();
 		
 		// Show a window containing the demo script

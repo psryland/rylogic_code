@@ -26,19 +26,23 @@ namespace pr
 	{
 		struct Context;
 		struct V3dWindow;
-		struct LdrObject;
-		struct LdrGizmo;
 		struct Texture2D;
 		struct TextureCube;
 		struct Sampler;
 		struct Shader;
+
+		namespace ldraw
+		{
+			struct LdrObject;
+			struct LdrGizmo;
+		}
 	}
 
 	namespace view3d
 	{
 		using DllHandle = unsigned char const*;
-		using Object = pr::rdr12::LdrObject*;
-		using Gizmo = pr::rdr12::LdrGizmo*;
+		using Object = pr::rdr12::ldraw::LdrObject*;
+		using Gizmo = pr::rdr12::ldraw::LdrGizmo*;
 		using Texture = pr::rdr12::Texture2D*;
 		using CubeMap = pr::rdr12::TextureCube*;
 		using Sampler = pr::rdr12::Sampler*;
@@ -515,7 +519,7 @@ namespace pr
 			int         m_i0, m_i1;     // Index buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
 			Texture     m_tex_diffuse;  // Diffuse texture
 			Sampler     m_sam_diffuse;  // Sampler for the diffuse texture 
-			Shader      m_shaders[8];   // Array of shader overrides, lenght uses sentinel m_rdr_step == Invalid (0)
+			Shader      m_shaders[8];   // Array of shader overrides, length uses sentinel 'm_rdr_step == Invalid (0)'
 			ENuggetFlag m_nflags;       // Nugget flags
 			ECullMode   m_cull_mode;    // Face culling mode
 			EFillMode   m_fill_mode;    // Model fill mode
@@ -683,11 +687,11 @@ namespace pr
 
 		// Callbacks
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
-		using AddFileProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
+		using ParsingProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
 		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
 		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
-		using OnAddCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
+		using AddCompleteCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 		using InvalidatedCB = void(__stdcall *)(void* ctx, Window window);
 		using RenderingCB = void(__stdcall *)(void* ctx, Window window);
 		using SceneChangedCB = void(__stdcall *)(void* ctx, Window window, SceneChanged const&);
@@ -700,13 +704,6 @@ namespace pr
 			Vertex* verts,                                     // The vert buffer to be filled
 			uint16_t* indices,                                 // The index buffer to be filled
 			AddNuggetCB out_nugget, void* out_nugget_ctx);     // Callback for adding a nugget
-		using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
-			void* ctx,              // User callback context pointer
-			wchar_t const* code,    // The source code from the embedded code block.
-			wchar_t const* support, // The support code from earlier embedded code blocks.
-			BSTR& result,           // The string result of running the source code (execution code blocks only)
-			BSTR& errors);          // Any errors in the compilation of the code
-		using EmbeddedCodeHandlerCB = bool(__stdcall *)(void* ctx, wchar_t const*, wchar_t const*, BSTR&, BSTR&);
 	}
 }
 
@@ -725,13 +722,10 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Set the callback for progress events when script sources are loaded or updated
-	VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(pr::view3d::AddFileProgressCB progress_cb, void* ctx, BOOL add);
+	VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(pr::view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add);
 	
 	// Set the callback that is called when the sources are reloaded
 	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-
-	// Add/Remove a callback for handling embedded code within scripts
-	VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(char const* lang, pr::view3d::EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
 
 	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 	VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id);
@@ -739,8 +733,8 @@ extern "C"
 	// Data Sources ***************************
 
 	// Add an ldr script source. This will create all objects with context id 'context_id' (if given, otherwise an id will be created). Concurrent calls are thread safe.
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
-	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::OnAddCB on_add_cb, void* ctx);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromString(char const* ldr_script, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
+	VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID const* context_id, pr::view3d::Includes const* includes, pr::view3d::AddCompleteCB on_add_cb, void* ctx);
 
 	// Delete all objects and object sources
 	VIEW3D_API void __stdcall View3D_DeleteAllObjects();
@@ -760,6 +754,9 @@ extern "C"
 	// Poll for changed script sources and reload any that have changed
 	VIEW3D_API void __stdcall View3D_CheckForChangedSources();
 
+	// Enable/Disable streaming script sources.
+	VIEW3D_API void __stdcall View3D_StreamingEnable(BOOL enable, int port);
+
 	// Windows ********************************
 
 	// Create/Destroy a window
@@ -770,8 +767,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Get/Set the window settings (as ldr script string)
-	VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
-	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, wchar_t const* settings);
+	VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
+	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, char const* settings);
 
 	// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 	// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
@@ -1246,7 +1243,8 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(pr::view3d::Window window);
 
 	// Create/Delete the demo scene in the given window
-	VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(pr::view3d::Window window);
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateText(pr::view3d::Window window);
+	VIEW3D_API GUID __stdcall View3D_DemoSceneCreateBinary(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_DemoSceneDelete();
 
 	// Show a window containing the demo script
@@ -1319,8 +1317,8 @@ namespace pr::view3d
 		};
 	}
 
-	using ObjectPtr  = std::unique_ptr<pr::rdr12::LdrObject, impl::Deleter>;
-	using GizmoPtr   = std::unique_ptr<pr::rdr12::LdrGizmo, impl::Deleter>;
+	using ObjectPtr  = std::unique_ptr<pr::rdr12::ldraw::LdrObject, impl::Deleter>;
+	using GizmoPtr   = std::unique_ptr<pr::rdr12::ldraw::LdrGizmo, impl::Deleter>;
 	using TexturePtr = std::unique_ptr<pr::rdr12::Texture2D, impl::Deleter>;
 	using CubeMapPtr = std::unique_ptr<pr::rdr12::TextureCube, impl::Deleter>;
 	using SamplerPtr = std::unique_ptr<pr::rdr12::Sampler, impl::Deleter>;

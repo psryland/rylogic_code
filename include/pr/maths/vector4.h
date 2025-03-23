@@ -47,14 +47,14 @@ namespace pr
 		// Construct
 		Vec4() = default;
 		constexpr explicit Vec4(S x_)
-			:x(x_)
+			: x(x_)
 			, y(x_)
 			, z(x_)
 			, w(x_)
 		{
 		}
 		constexpr Vec4(S x_, S y_, S z_, S w_)
-			:x(x_)
+			: x(x_)
 			, y(y_)
 			, z(z_)
 			, w(w_)

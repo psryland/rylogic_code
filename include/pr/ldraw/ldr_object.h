@@ -20,8 +20,13 @@
 #include "pr/maths/maths.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
+#include "pr/script/byte_reader.h"
 #include "pr/view3d/instances/instance.h"
 #include "pr/view3d/models/model_generator.h"
+
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
 
 namespace pr::ldr
 {

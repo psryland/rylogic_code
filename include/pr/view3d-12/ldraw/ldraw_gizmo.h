@@ -13,10 +13,10 @@
 #include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/utility/pipe_state.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Manipulation states
-	enum class ELdrGizmoState
+	enum class EGizmoState
 	{
 		StartManip,
 		Moving,
@@ -25,14 +25,14 @@ namespace pr::rdr12
 	};
 
 	// The manipulation mode for a gizmo
-	enum class ELdrGizmoMode
+	enum class EGizmoMode
 	{
 		Translate,
 		Rotate,
 		Scale,
 	};
 
-	using GizmoMovedCB = StaticCB<void, LdrGizmo*, ELdrGizmoState>;
+	using GizmoMovedCB = StaticCB<void, LdrGizmo*, EGizmoState>;
 
 	// Graphics and functionality for a manipulator gizmo.
 	struct alignas(16) LdrGizmo :RefCounted<LdrGizmo>
@@ -63,27 +63,27 @@ namespace pr::rdr12
 			{}
 		};
 
-		M4x4RefCont   m_attached_ref; // A reference matrix for each attachee
-		AttacheeCont  m_attached_ptr; // Pointers to the transform of the attachee object
-		Renderer*     m_rdr;          // The renderer, used to create the gizmo graphics
-		ELdrGizmoMode m_mode;         // The mode the gizmo is in
-		Gfx           m_gfx;          // The graphics object for the gizmo
-		float         m_scale;        // Scale factor for the gizmo
-		m4x4          m_offset;       // The world-space offset transform between when manipulation began and now
-		v2            m_ref_pt;       // The normalised screen space location of where manipulation began
-		Colour32      m_col_hover;    // The colour the component axis has doing hover
-		Colour32      m_col_manip;    // The colour the component axis has doing manipulation
-		EComponent    m_last_hit;     // The axis component last hit with the mouse
-		EComponent    m_component;    // The axis component being manipulated
-		bool          m_manipulating; // True while a manipulation is in progress
-		bool          m_impl_enabled; // True if this gizmo should respond to mouse interaction
+		M4x4RefCont  m_attached_ref; // A reference matrix for each attachee
+		AttacheeCont m_attached_ptr; // Pointers to the transform of the attachee object
+		Renderer*    m_rdr;          // The renderer, used to create the gizmo graphics
+		EGizmoMode   m_mode;         // The mode the gizmo is in
+		Gfx          m_gfx;          // The graphics object for the gizmo
+		float        m_scale;        // Scale factor for the gizmo
+		m4x4         m_offset;       // The world-space offset transform between when manipulation began and now
+		v2           m_ref_pt;       // The normalised screen space location of where manipulation began
+		Colour32     m_col_hover;    // The colour the component axis has doing hover
+		Colour32     m_col_manip;    // The colour the component axis has doing manipulation
+		EComponent   m_last_hit;     // The axis component last hit with the mouse
+		EComponent   m_component;    // The axis component being manipulated
+		bool         m_manipulating; // True while a manipulation is in progress
+		bool         m_impl_enabled; // True if this gizmo should respond to mouse interaction
 
 		// Create a manipulator gizmo
 		// 'camera' is needed so that we can perform ray casts into the scene
 		// to check for intersection with the gizmo.
 		// 'rdr' is used to create the graphics for the gizmo
 		// 'mode' is the initial mode for the gizmo
-		LdrGizmo(Renderer& rdr, ELdrGizmoMode mode, m4x4 const& o2w);
+		LdrGizmo(Renderer& rdr, EGizmoMode mode, m4x4 const& o2w);
 
 		// Render access
 		Renderer& rdr() const;
@@ -99,8 +99,8 @@ namespace pr::rdr12
 		bool Manipulating() const;
 
 		// Get/Set the mode the gizmo is in
-		ELdrGizmoMode Mode() const;
-		void Mode(ELdrGizmoMode mode);
+		EGizmoMode Mode() const;
+		void Mode(EGizmoMode mode);
 
 		// Get/Set the gizmo object to world transform (scale is allowed)
 		m4x4 const& O2W() const;

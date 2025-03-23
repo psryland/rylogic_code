@@ -7,6 +7,9 @@
     <Filter Include="src\dll">
       <UniqueIdentifier>{937a9d21-db03-4070-9c0b-db1c016e8f16}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\ldraw">
+      <UniqueIdentifier>{7291dbc8-1cbc-48d3-bd01-59d2f1e781c0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\view3d-dll.h">
@@ -21,6 +24,9 @@
     <ClInclude Include="src\dll\v3d_window.h">
       <Filter>src\dll</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dll\context.cpp">
@@ -32,8 +38,8 @@
     <ClCompile Include="src\dll\v3d_window.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClCompile Include="src\ldraw\ldraw_commands.cpp">
+      <Filter>src\ldraw</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

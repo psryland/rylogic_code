@@ -4,18 +4,18 @@
 //***************************************************************************************************
 #pragma once
 #include "pr/view3d-12/forward.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/gui/wingui.h"
 
-namespace pr::rdr12
+namespace pr::rdr12::ldraw
 {
 	// Forwards
-	class LdrObjectManagerUI;
+	class ObjectManagerUI;
 
 	// User interface for managing LdrObjects
 	// LdrObject is completely unaware that this class exists.
 	// Note: this object does not add references to LdrObjects
-	class LdrObjectManagerUI :public pr::gui::Form
+	class ObjectManagerUI :public pr::gui::Form
 	{
 		pr::gui::StatusBar m_status;
 		pr::gui::Button    m_btn_expand;
@@ -59,7 +59,7 @@ namespace pr::rdr12
 		enum { ID_BTN_EXPAND = 100, ID_BTN_COLLAPSE, ID_BTN_FILTER, ID_TB_FILTER };
 		static Params<> Params(HWND parent)
 		{
-			return Form::Params<>().wndclass(RegisterWndClass<LdrObjectManagerUI>())
+			return Form::Params<>().wndclass(RegisterWndClass<ObjectManagerUI>())
 				.name("ldr-object-manager").title(L"Scene Object Manager").wh(430, 380)
 				.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
 				.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
@@ -69,7 +69,7 @@ namespace pr::rdr12
 
 	public:
 
-		LdrObjectManagerUI(HWND parent)
+		ObjectManagerUI(HWND parent)
 			:Form(Params(parent))
 			,m_status      (pr::gui::StatusBar::Params<>().parent(this_         ).name("status"      ).xy(0,-1).wh(Fill,pr::gui::StatusBar::DefH).dock(EDock::Bottom))
 			,m_btn_expand  (pr::gui::Button   ::Params<>().parent(this_         ).name("btn-expand"  ).id(ID_BTN_EXPAND).xy(0,0).wh(20,20).text(L"+").margin(2).anchor(EAnchor::TopLeft))
@@ -92,8 +92,8 @@ namespace pr::rdr12
 			m_list.InsertColumn((int)EColumn::Volume   , pr::gui::ListView::ColumnInfo(L"Volume"     ).width(100));
 			m_list.InsertColumn((int)EColumn::CtxtId   , pr::gui::ListView::ColumnInfo(L"CtxtId"     ).width(100));
 		}
-		LdrObjectManagerUI(LdrObjectManagerUI const&) = delete;
-		LdrObjectManagerUI& operator=(LdrObjectManagerUI const&) = delete;
+		ObjectManagerUI(ObjectManagerUI const&) = delete;
+		ObjectManagerUI& operator=(ObjectManagerUI const&) = delete;
 
 		// Get/Set settings for the object manager window
 		std::string Settings() const
@@ -157,14 +157,14 @@ namespace pr::rdr12
 		enum class ETriState { Off, On, Toggle };
 
 		// Event fired from the UI when the selected object changes
-		EventHandler<LdrObjectManagerUI&, EmptyArgs const&> SelectionChanged;
+		EventHandler<ObjectManagerUI&, EmptyArgs const&> SelectionChanged;
 
 		// Called when one or more objects have changed state
 		// The LdrObject is the object that has changed. If null, then more than one object has changed
-		EventHandler<LdrObjectManagerUI&, LdrObject*> Refresh;
+		EventHandler<ObjectManagerUI&, LdrObject*> Refresh;
 
 		// Raised whenever settings have changed
-		EventHandler<LdrObjectManagerUI&, EmptyArgs const&> SettingsChanged;
+		EventHandler<ObjectManagerUI&, EmptyArgs const&> SettingsChanged;
 
 	private:
 

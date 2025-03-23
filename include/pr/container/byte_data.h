@@ -1,14 +1,16 @@
-﻿//******************************************
+//******************************************
 // byte_data
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <span>
+#include <concepts>
 #include <initializer_list>
+#include <sstream>
 #include <malloc.h>
 #include <intrin.h>
-#include "pr/container/span.h"
 
 namespace pr
 {
@@ -20,12 +22,14 @@ namespace pr
 	// constructors/destructors/etc to be called on types you add to this container.
 	template <int Alignment = 4> struct byte_data
 	{
-		using value_type = uint8_t;
+		using value_type = std::byte;
 		union
 		{
-			void* m_ptr;
+			value_type* m_ptr;
 
 			// Debugging helper pointers
+			char*    m_str;
+			wchar_t* m_wstr;
 			uint8_t  (*m_u8)[128];
 			uint16_t (*m_u16)[64];
 			uint32_t (*m_u32)[32];
@@ -35,13 +39,13 @@ namespace pr
 		size_t m_capacity;
 
 		byte_data()
-			:m_ptr(0)
+			: m_ptr(nullptr)
 			, m_size(0)
 			, m_capacity(0)
 		{
 		}
 		byte_data(byte_data&& rhs) noexcept
-			:m_ptr(rhs.m_ptr)
+			: m_ptr(rhs.m_ptr)
 			, m_size(rhs.m_size)
 			, m_capacity(rhs.m_capacity)
 		{
@@ -50,7 +54,7 @@ namespace pr
 			rhs.m_capacity = 0;
 		}
 		byte_data(byte_data const& rhs)
-			:m_ptr(0)
+			: m_ptr(nullptr)
 			, m_size(0)
 			, m_capacity(0)
 		{
@@ -63,13 +67,24 @@ namespace pr
 		{
 			resize(initial_size_in_bytes);
 		}
+		byte_data(std::span<std::byte const> data)
+			:byte_data()
+		{
+			append(data);
+		}
+		template <typename Type> requires std::is_trivially_copyable_v<Type>
+		byte_data(std::span<Type const> data)
+			:byte_data()
+		{
+			append(data);
+		}
 		template <typename citer, typename Type = std::iterator_traits<citer>::value_type>
 		byte_data(citer first, citer last)
 			:byte_data()
 		{
 			// Example use:
-			//   std::ifstream infile(filepath, std::ios::binary);
-			//   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
+			//'   std::ifstream infile(filepath, std::ios::binary);
+			//'   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
 			static_assert(std::is_trivially_copyable_v<Type>);
 			for (; first != last; ++first)
 				push_back<Type>(*first);
@@ -155,7 +170,7 @@ namespace pr
 		{
 			auto n = std::max<ptrdiff_t>(0, new_size - size());
 			resize(new_size);
-			memset(end() - n, fill, n);
+			memset(end() - n, static_cast<int>(fill), n);
 		}
 
 		// Pre-allocate space
@@ -171,108 +186,141 @@ namespace pr
 				set_capacity(new_capacity);
 		}
 
+		// Add 'type' to the end of the container
+		byte_data& push_back(std::span<value_type const> data)
+		{
+			// Copying from a sub range, allow for invalidation on resize
+			if (inside(data.data()))
+			{
+				auto ofs = data.data() - begin();
+
+				ensure_capacity(m_size + data.size());
+				memcpy(m_ptr + m_size, m_ptr + ofs, data.size());
+				m_size += data.size();
+			}
+			else
+			{
+				ensure_capacity(m_size + data.size());
+				memcpy(m_ptr + m_size, data.data(), data.size());
+				m_size += data.size();
+			}
+			return *this;
+		}
+		byte_data& push_back(std::string_view str)
+		{
+			return push_back({ byte_ptr(str.data()), str.size() });
+		}
+		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& push_back(Type const& type)
+		{
+			// No 'std::span<Type const>' overload because it's ambiguous with this method
+			return push_back({ byte_ptr(&type), sizeof(Type) });
+		}
+		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& push_back()
+		{
+			return push_back<Type>(Type{});
+		}
+
 		// Append the contents of 'rhs' to this container
-		void append(byte_data const& rhs)
+		byte_data& append(byte_data const& rhs)
 		{
-			push_back(rhs.data(), rhs.size());
+			push_back(rhs);
+			return *this;
 		}
-		template <typename Type> void append(Type const& rhs)
+		byte_data& append(std::span<value_type const> data)
 		{
-			static_assert(std::is_trivially_copyable_v<Type>);
-			push_back<Type>(rhs);
+			push_back(data);
+			return *this;
 		}
-		template <typename Type> void append(Type const* data, size_t count)
+		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& append(std::span<Type const> data)
 		{
-			static_assert(std::is_trivially_copyable_v<Type>);
-			push_back(data, count * sizeof(Type));
+			// No overload for 'Type const&' because it's ambiguous with this method
+			push_back({ byte_ptr(data.data()), data.size() * sizeof(Type) });
+			return *this;
 		}
-		template <typename Type> void append(std::initializer_list<Type> items)
+		template <typename Type> requires std::is_trivially_copyable_v<Type> byte_data& append(std::initializer_list<Type const> data)
 		{
-			static_assert(std::is_trivially_copyable_v<Type>);
-			push_back(items.begin(), items.size() * sizeof(Type));
+			auto count = static_cast<size_t>(data.end() - data.begin());
+			push_back({ byte_ptr(data.begin()), count * sizeof(Type) });
+			return *this;
 		}
 
 		// Insert bytes into this container
-		void insert(ptrdiff_t ofs, void const* data, size_t size)
+		void insert(ptrdiff_t ofs, std::span<value_type const> data)
 		{
 			// Notes:
 			//  Cannot add a template overload for inserting an array of 'Type' because
 			//  the method signature is ambiguous.
+			if (ofs < 0 || ofs > s_cast<ptrdiff_t>(m_size))
+				throw std::out_of_range("Offset position out of range");
 
 			// Insert from a sub range
-			if (inside(data))
+			if (inside(data.data()))
 			{
 				// The sub range may span the insertion point
-				auto b = byte_ptr(data) - begin(); // The offset to the start of the sub range
-				auto n = std::clamp<ptrdiff_t>(ofs - b, 0, size); // The number of bytes before the insertion point
+				auto b = data.data() - begin(); // The offset to the start of the sub range
+				auto n = std::clamp<ptrdiff_t>(ofs - b, 0, data.size()); // The number of bytes before the insertion point
 
-				make_hole(ofs, size);
+				make_hole(ofs, data.size());
 
 				// Copy bytes from before and after the insertion point
-				auto ptr = byte_ptr(m_ptr);
-				auto ins = ptr + ofs;
+				auto ins = m_ptr + ofs;
 				if (n != 0)
-					memcpy(ins, ptr + b, n);
-				if (n != static_cast<ptrdiff_t>(size))
-					memcpy(ins + n, ins + size, size - n);
+					memcpy(ins, m_ptr + b, n);
+				if (n != static_cast<ptrdiff_t>(data.size()))
+					memcpy(ins + n, ins + data.size(), data.size() - n);
 			}
 			else
 			{
-				make_hole(ofs, size);
+				make_hole(ofs, data.size());
 
 				// Insert the bytes from 'data'
-				auto ins = byte_ptr(m_ptr) + ofs;
-				memcpy(ins, data, size);
+				auto ins = m_ptr + ofs;
+				memcpy(ins, data.data(), data.size());
 			}
-			m_size += size;
+			m_size += data.size();
 		}
 
-		// Add 'type' to the end of the container
-		template <typename Type> void push_back()
+		// Overwrite bytes at 'ofs'
+		void overwrite(ptrdiff_t ofs, std::span<value_type const> data)
 		{
-			static_assert(std::is_trivially_copyable_v<Type>);
-			push_back(Type());
-		}
-		template <typename Type> void push_back(Type const& type)
-		{
-			static_assert(std::is_trivially_copyable_v<Type>);
-			push_back(&type, sizeof(type));
-		}
-		void push_back(void const* data, size_t size)
-		{
-			// Copying from a sub range
-			if (inside(data))
+			if (ofs < 0 || ofs > s_cast<ptrdiff_t>(m_size))
+				throw std::out_of_range("Offset position out of range");
+
+			// Overwrite from a sub range
+			if (inside(data.data()))
 			{
-				auto ofs = byte_ptr(data) - begin();
+				// Record the offset into the buffer before resizing
+				auto b = data.data() - begin();
+				if (size() - ofs < data.size())
+					resize(ofs + data.size());
 
-				ensure_capacity(m_size + size);
-				memcpy(byte_ptr(m_ptr) + m_size, byte_ptr(m_ptr) + ofs, size);
-				m_size += size;
+				memmove(m_ptr + ofs, m_ptr + b, data.size());
 			}
 			else
 			{
-				ensure_capacity(m_size + size);
-				memcpy(byte_ptr(m_ptr) + m_size, data, size);
-				m_size += size;
+				if (size() - ofs < data.size())
+					resize(ofs + data.size());
+			
+				memcpy(m_ptr + ofs, data.data(), data.size());
 			}
 		}
 
 		// Return a pointer to the start of the contained range
 		template <typename Type> Type const* begin() const
 		{
-			return static_cast<Type const*>(m_ptr);
+			return reinterpret_cast<Type const*>(m_ptr);
 		}
 		template <typename Type> Type* begin()
 		{
-			return static_cast<Type*>(m_ptr);
+			return reinterpret_cast<Type*>(m_ptr);
 		}
 		value_type const* begin() const
 		{
-			return static_cast<value_type const*>(m_ptr);
+			return reinterpret_cast<value_type const*>(m_ptr);
 		}
 		value_type* begin()
 		{
-			return static_cast<value_type*>(m_ptr);
+			return reinterpret_cast<value_type*>(m_ptr);
 		}
 
 		// Return a pointer to the end of the contained range
@@ -296,11 +344,11 @@ namespace pr
 		// Return a const pointer to the start of the contained range
 		template <typename Type> Type const* cbegin() const
 		{
-			return static_cast<Type const*>(m_ptr);
+			return reinterpret_cast<Type const*>(m_ptr);
 		}
 		value_type const* cbegin() const
 		{
-			return static_cast<value_type const*>(m_ptr);
+			return reinterpret_cast<value_type const*>(m_ptr);
 		}
 
 		// Return a const pointer to the end of the contained range
@@ -352,11 +400,11 @@ namespace pr
 		// Return a reference to 'Type' at a byte offset into the container
 		template <typename Type> Type const& at_byte_ofs(size_t byte_ofs) const
 		{
-			return *reinterpret_cast<Type const*>(byte_ptr(m_ptr) + byte_ofs);
+			return *reinterpret_cast<Type const*>(m_ptr + byte_ofs);
 		}
 		template <typename Type> Type& at_byte_ofs(size_t byte_ofs)
 		{
-			return *reinterpret_cast<Type*>(byte_ptr(m_ptr) + byte_ofs);
+			return *reinterpret_cast<Type*>(m_ptr + byte_ofs);
 		}
 
 		// Array access to bytes
@@ -398,6 +446,14 @@ namespace pr
 		}
 
 		// Façade access
+		std::span<value_type const> span() const
+		{
+			return { m_ptr, m_size };
+		}
+		std::span<value_type> span()
+		{
+			return { m_ptr, m_size };
+		}
 		template <typename Type> std::span<Type const> span() const
 		{
 			return std::span<Type const>(data<Type>(), size<Type>());
@@ -405,10 +461,6 @@ namespace pr
 		template <typename Type> std::span<Type> span()
 		{
 			return std::span<Type>(data<Type>(), size<Type>());
-		}
-		template <typename Type> std::span<Type const> cspan()
-		{
-			return std::as_const(*this).span();
 		}
 
 		// Streaming access
@@ -427,7 +479,7 @@ namespace pr
 		{
 			return span<Type const>();
 		}
-		operator std::span<std::byte const>() const
+		operator std::span<value_type const>() const
 		{
 			return span<std::byte const>();
 		}
@@ -445,21 +497,20 @@ namespace pr
 		}
 
 		// Test a pointer for being within the data range of this container
-		bool inside(void const* ptr) const
+		bool inside(value_type const* ptr) const
 		{
 			// A block of memory should not partially span our internal allocation.
 			// That would be undefined behaviour
-			auto p = byte_ptr(ptr);
-			return p >= begin() && p < end();
+			return ptr >= begin() && ptr < end();
 		}
 
 		// Make a hole at 'ofs' of size 'size'
 		void make_hole(ptrdiff_t ofs, size_t size)
 		{
 			ensure_capacity(m_size + size);
-			auto ins = byte_ptr(m_ptr) + ofs; // The insertion point of the hole
-			auto rem = m_size - ofs;          // The number of remaining bytes after 'ofs'
-			memmove(ins + size, ins, rem);    // Move the bytes after the insertion point to the end
+			auto ins = m_ptr + ofs;        // The insertion point of the hole
+			auto rem = m_size - ofs;       // The number of remaining bytes after 'ofs'
+			memmove(ins + size, ins, rem); // Move the bytes after the insertion point to the end
 		}
 
 		// Grow the allocation to at least 'required_size'
@@ -482,15 +533,16 @@ namespace pr
 				return;
 
 			// Allocate a new buffer with the desired capacity
-			void* ptr = nullptr;
+			value_type* ptr = nullptr;
 			if (new_capacity != 0)
 			{
-				ptr = _aligned_malloc(new_capacity, Alignment);
+				ptr = static_cast<value_type*>(_aligned_malloc(new_capacity, Alignment));
 				if (ptr == nullptr)
 					throw std::bad_alloc();
 
 				// Copy the current buffer contents to the new location
-				memcpy(ptr, m_ptr, new_size);
+				if (m_ptr != nullptr)
+					memcpy(ptr, m_ptr, new_size);
 			}
 
 			// Release the old buffer
@@ -514,51 +566,62 @@ namespace pr
 	// An pointer for moving over bytes interpreted as other types
 	struct byte_data_cptr
 	{
-		uint8_t const* m_beg;
-		uint8_t const* m_end;
+		using value_type = std::byte;
+		value_type const* m_beg;
+		value_type const* m_end;
 		
 		byte_data_cptr()
-			:byte_data_cptr(nullptr, nullptr)
+			: byte_data_cptr(std::span<value_type>{})
 		{}
-		template <int N> byte_data_cptr(uint8_t const (&data)[N])
-			:byte_data_cptr(&data[0], &data[0] + N)
+		template <int N> byte_data_cptr(value_type const (&data)[N])
+			: byte_data_cptr(&data[0], &data[0] + N)
 		{}
-		byte_data_cptr(void const* beg, void const* end)
-			:m_beg(static_cast<uint8_t const*>(beg))
-			,m_end(static_cast<uint8_t const*>(end))
+		byte_data_cptr(std::span<value_type const> data)
+			: m_beg(data.data())
+			, m_end(data.data() + data.size())
 		{}
 
 		// Interpret the current 'm_beg' pointer as 'Type'
 		template <typename Type> Type const& as() const
 		{
+			if (m_beg + sizeof(Type) > m_end)
+				throw std::out_of_range("buffer overrun");
+
 			return *reinterpret_cast<Type const*>(m_beg);
 		}
 		
 		// Advance the pointer by the size of 'Type'
-		template <typename Type> Type const& read()
+		template <typename Type> Type const& read(int count = 1)
 		{
-			if (m_beg >= m_end)
+			if (m_beg + count * sizeof(Type) > m_end)
 				throw std::out_of_range("buffer overrun");
 
 			auto& r = as<Type>();
-			m_beg += sizeof(Type);
+			m_beg += count * sizeof(Type);
 			return r;
+		}
+
+		// True where there is data left
+		explicit operator bool() const
+		{
+			return m_beg != m_end;
 		}
 	};
 	struct byte_data_mptr
 	{
-		uint8_t* m_beg;
-		uint8_t* m_end;
+		using value_type = std::byte;
+		value_type* m_beg;
+		value_type* m_end;
 		
 		byte_data_mptr()
-			:byte_data_mptr(nullptr, nullptr)
+			:byte_data_mptr(std::span<value_type>{})
 		{}
-		template <int N> byte_data_mptr(uint8_t (&data)[N])
-			:byte_data_mptr(&data[0], &data[0] + N)
+		template <int N> byte_data_mptr(value_type (&data)[N])
+			: byte_data_mptr(&data[0], &data[0] + N)
 		{}
-		byte_data_mptr(void* beg, void* end)
-			:m_beg(static_cast<uint8_t*>(beg))
-			,m_end(static_cast<uint8_t*>(end))
+		byte_data_mptr(std::span<value_type> data)
+			: m_beg(data.data())
+			, m_end(data.data() + data.size())
 		{}
 
 		// Interpret the current 'm_beg' pointer as 'Type'
@@ -568,29 +631,32 @@ namespace pr
 		}
 		
 		// Advance the pointer by the size of 'Type'
-		template <typename Type> void write(Type const& value)
+		template <typename Type> void write(Type const& value, int count = 1)
 		{
-			if (m_beg >= m_end)
+			if (m_beg + count * sizeof(Type) >m_end)
 				throw std::out_of_range("buffer overrun");
 
-			as<Type>() = value;
-			m_beg += sizeof(Type);
+			for (; count-- != 0;)
+			{
+				as<Type>() = value;
+				m_beg += sizeof(Type);
+			}
 		}
 
-		// Convertable to const
+		// Convertible to const
 		operator byte_data_cptr() const
 		{
-			return byte_data_cptr(m_beg, m_end);
+			return byte_data_cptr({ m_beg, static_cast<size_t>(m_end - m_beg) });
 		}
 	};
 
 	// Handy typedef of a vector of bytes
-	using bytes_t = std::vector<unsigned char>;
+	using bytes_t = std::vector<std::byte>;
 
 	// Append data to a byte container
 	template <typename T> inline bytes_t& AppendData(bytes_t& data, const T& object)
 	{
-		data.insert(data.end(), reinterpret_cast<const unsigned char*>(&object), reinterpret_cast<const unsigned char*>(&object + 1));
+		data.insert(data.end(), reinterpret_cast<std::byte const*>(&object), reinterpret_cast<std::byte const*>(&object + 1));
 		return data;
 	}
 	template <> inline bytes_t& AppendData(bytes_t& data, bytes_t const& more_data)
@@ -598,15 +664,9 @@ namespace pr
 		data.insert(data.end(), more_data.begin(), more_data.end());
 		return data;
 	}
-	inline bytes_t& AppendData(bytes_t& data, void const* begin, void const* end)
+	inline bytes_t& AppendData(bytes_t& data, std::span<std::byte const> more_data)
 	{
-		data.insert(data.end(), static_cast<const unsigned char*>(begin), static_cast<const unsigned char*>(end));
-		return data;
-	}
-	inline bytes_t& AppendData(bytes_t& data, void const* buffer, size_t buffer_size)
-	{
-		auto p = static_cast<unsigned char const*>(buffer);
-		data.insert(data.end(), p, p + buffer_size);
+		data.insert(std::end(data), more_data.begin(), more_data.end());
 		return data;
 	}
 
@@ -625,64 +685,64 @@ namespace pr::container
 	{
 		{ // Constructors
 			byte_data buf0;
-			PR_CHECK(buf0.data(), nullptr);
-			PR_CHECK(buf0.capacity(), 0U);
-			PR_CHECK(buf0.size(), 0U);
+			PR_EXPECT(buf0.data() == nullptr);
+			PR_EXPECT(buf0.capacity() == 0U);
+			PR_EXPECT(buf0.size() == 0U);
 
 			byte_data buf1;
 			buf1.push_back(0);
 			buf1.push_back(1);
 			buf1.push_back(2);
-			PR_CHECK(buf1.capacity<int>() >= 3U, true);
-			PR_CHECK(buf1.size<int>(), 3U);
-			PR_CHECK(buf1.at<int>(0), 0);
-			PR_CHECK(buf1.at<int>(1), 1);
-			PR_CHECK(buf1.at<int>(2), 2);
+			PR_EXPECT(buf1.capacity<int>() >= 3U);
+			PR_EXPECT(buf1.size<int>() == 3U);
+			PR_EXPECT(buf1.at<int>(0) == 0);
+			PR_EXPECT(buf1.at<int>(1) == 1);
+			PR_EXPECT(buf1.at<int>(2) == 2);
 
 			// Move constructor
 			byte_data buf2(std::move(buf1));
-			PR_CHECK(buf1.capacity<int>(), 0U);
-			PR_CHECK(buf2.capacity<int>() >= 3U, true);
-			PR_CHECK(buf1.size<int>(), 0U);
-			PR_CHECK(buf2.size<int>(), 3U);
-			PR_CHECK(buf2.at<int>(0), 0);
-			PR_CHECK(buf2.at<int>(1), 1);
-			PR_CHECK(buf2.at<int>(2), 2);
+			PR_EXPECT(buf1.capacity<int>() == 0U);
+			PR_EXPECT(buf2.capacity<int>() >= 3U);
+			PR_EXPECT(buf1.size<int>() == 0U);
+			PR_EXPECT(buf2.size<int>() == 3U);
+			PR_EXPECT(buf2.at<int>(0) == 0);
+			PR_EXPECT(buf2.at<int>(1) == 1);
+			PR_EXPECT(buf2.at<int>(2) == 2);
 
 			// Copy constructor
 			byte_data buf3(buf2);
-			PR_CHECK(buf2.capacity<int>() >= 3U, true);
-			PR_CHECK(buf3.capacity<int>(), buf2.capacity<int>());
-			PR_CHECK(buf3.size<int>(), buf2.size<int>());
-			PR_CHECK(buf3.at<int>(0), buf2.at<int>(0));
-			PR_CHECK(buf3.at<int>(1), buf2.at<int>(1));
-			PR_CHECK(buf3.at<int>(2), buf2.at<int>(2));
+			PR_EXPECT(buf2.capacity<int>() >= 3U);
+			PR_EXPECT(buf3.capacity<int>() == buf2.capacity<int>());
+			PR_EXPECT(buf3.size<int>() == buf2.size<int>());
+			PR_EXPECT(buf3.at<int>(0) == buf2.at<int>(0));
+			PR_EXPECT(buf3.at<int>(1) == buf2.at<int>(1));
+			PR_EXPECT(buf3.at<int>(2) == buf2.at<int>(2));
 		}
 		{ // Assignment
 			byte_data buf0;
 			buf0.push_back<short>(0);
 			buf0.push_back<short>(1);
 			buf0.push_back<short>(2);
-			PR_CHECK(buf0.capacity<short>() >= 3U, true);
-			PR_CHECK(buf0.size<short>(), 3U);
+			PR_EXPECT(buf0.capacity<short>() >= 3U);
+			PR_EXPECT(buf0.size<short>() == 3U);
 
 			byte_data buf1;
 			buf1 = buf0;
-			PR_CHECK(buf1.capacity<short>() >= 3U, true);
-			PR_CHECK(buf1.size<short>(), 3U);
-			PR_CHECK(buf1.at<short>(0), 0);
-			PR_CHECK(buf1.at<short>(1), 1);
-			PR_CHECK(buf1.at<short>(2), 2);
+			PR_EXPECT(buf1.capacity<short>() >= 3U);
+			PR_EXPECT(buf1.size<short>() == 3U);
+			PR_EXPECT(buf1.at<short>(0) == 0);
+			PR_EXPECT(buf1.at<short>(1) == 1);
+			PR_EXPECT(buf1.at<short>(2) == 2);
 
 			byte_data buf2;
 			buf2 = std::move(buf0);
-			PR_CHECK(buf0.capacity(), 0U);
-			PR_CHECK(buf2.capacity<short>() >= 3U, true);
-			PR_CHECK(buf0.size(), 0U);
-			PR_CHECK(buf2.size<short>(), 3U);
-			PR_CHECK(buf2.at<short>(0), 0);
-			PR_CHECK(buf2.at<short>(1), 1);
-			PR_CHECK(buf2.at<short>(2), 2);
+			PR_EXPECT(buf0.capacity() == 0U);
+			PR_EXPECT(buf2.capacity<short>() >= 3U);
+			PR_EXPECT(buf0.size() == 0U);
+			PR_EXPECT(buf2.size<short>() == 3U);
+			PR_EXPECT(buf2.at<short>(0) == 0);
+			PR_EXPECT(buf2.at<short>(1) == 1);
+			PR_EXPECT(buf2.at<short>(2) == 2);
 		}
 		{ // Methods
 			byte_data buf0;
@@ -692,123 +752,136 @@ namespace pr::container
 			buf0.push_back<int>(42);
 
 			// size/capacity
-			PR_CHECK(buf0.capacity() >= 8U, true);
-			PR_CHECK(buf0.size(), 8U);
+			PR_EXPECT(buf0.capacity() >= 8U);
+			PR_EXPECT(buf0.size() == 8U);
 
 			// clear
 			byte_data buf1 = buf0;
-			PR_CHECK(buf1.capacity(), buf0.capacity());
-			PR_CHECK(buf1.size(), buf0.size());
+			PR_EXPECT(buf1.capacity() == buf0.capacity());
+			PR_EXPECT(buf1.size() == buf0.size());
 			buf1.clear();
-			PR_CHECK(buf1.capacity(), 0U);
-			PR_CHECK(buf1.size(), 0U);
+			PR_EXPECT(buf1.capacity() == 0U);
+			PR_EXPECT(buf1.size() == 0U);
 
 			// empty
-			PR_CHECK(buf1.empty(), true);
+			PR_EXPECT(buf1.empty());
 
 			// resize
 			buf1 = buf0;
 			buf1.resize<int>(1);
-			PR_CHECK(buf1.capacity() >= 4U, true);
-			PR_CHECK(buf1.size(), 4U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), 0x55);
-			PR_CHECK(buf1.at<char>(2), 0x55);
-			PR_CHECK(buf1.at<char>(3), 'B');
+			PR_EXPECT(buf1.capacity() >= 4U);
+			PR_EXPECT(buf1.size() == 4U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == 0x55);
+			PR_EXPECT(buf1.at<char>(2) == 0x55);
+			PR_EXPECT(buf1.at<char>(3) == 'B');
 			buf1.resize<char>(3);
-			PR_CHECK(buf1.capacity() >= 3U, true);
-			PR_CHECK(buf1.size(), 3U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), 0x55);
-			PR_CHECK(buf1.at<char>(2), 0x55);
+			PR_EXPECT(buf1.capacity() >= 3U);
+			PR_EXPECT(buf1.size() == 3U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == 0x55);
+			PR_EXPECT(buf1.at<char>(2) == 0x55);
 			buf1.resize<char>(8, static_cast<char>(0xAA));
-			PR_CHECK(buf1.capacity() >= 8U, true);
-			PR_CHECK(buf1.size(), 8U);
-			PR_CHECK(buf1.at<char>(0), 'A');
-			PR_CHECK(buf1.at<char>(1), static_cast<char>(0x55));
-			PR_CHECK(buf1.at<char>(2), static_cast<char>(0x55));
-			PR_CHECK(buf1.at<char>(3), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(4), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(5), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(6), static_cast<char>(0xAA));
-			PR_CHECK(buf1.at<char>(7), static_cast<char>(0xAA));
+			PR_EXPECT(buf1.capacity() >= 8U);
+			PR_EXPECT(buf1.size() == 8U);
+			PR_EXPECT(buf1.at<char>(0) == 'A');
+			PR_EXPECT(buf1.at<char>(1) == static_cast<char>(0x55));
+			PR_EXPECT(buf1.at<char>(2) == static_cast<char>(0x55));
+			PR_EXPECT(buf1.at<char>(3) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(4) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(5) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(6) == static_cast<char>(0xAA));
+			PR_EXPECT(buf1.at<char>(7) == static_cast<char>(0xAA));
 
 			// reserve
 			buf1.reserve(16);
-			PR_CHECK(buf1.capacity() >= 16U, true);
+			PR_EXPECT(buf1.capacity() >= 16U);
 			buf1.reserve<int>(16);
-			PR_CHECK(buf1.capacity<int>() >= 16U, true);
-			PR_CHECK(buf1.capacity() >= 16U * sizeof(int), true);
+			PR_EXPECT(buf1.capacity<int>() >= 16U);
+			PR_EXPECT(buf1.capacity() >= 16U * sizeof(int));
 
 			// append
 			buf1 = buf0;
 			buf1.append(buf0);
-			PR_CHECK(buf1.size(), 2 * buf0.size());
+			PR_EXPECT(buf1.size() == 2 * buf0.size());
 			for (int i = 0, iend = int(buf1.size()); i != iend; ++i)
-				PR_CHECK(buf1[i], buf0[i % buf0.size()]);
+				PR_EXPECT(buf1[i] == buf0[i % buf0.size()]);
 			buf1.clear();
-			buf1.append({0, 1, 2, 3});
-			PR_CHECK(buf1.size<int>(), 4U);
-			PR_CHECK(buf1.at<int>(0), 0);
-			PR_CHECK(buf1.at<int>(1), 1);
-			PR_CHECK(buf1.at<int>(2), 2);
-			PR_CHECK(buf1.at<int>(3), 3);
+			buf1.append({ 0, 1, 2, 3 });
+			PR_EXPECT(buf1.size<int>() == 4U);
+			PR_EXPECT(buf1.at<int>(0) == 0);
+			PR_EXPECT(buf1.at<int>(1) == 1);
+			PR_EXPECT(buf1.at<int>(2) == 2);
+			PR_EXPECT(buf1.at<int>(3) == 3);
 			buf1.clear();
-			buf1.append(buf0.data() + 4, 4);
-			PR_CHECK(buf1.size<int>(), 1U);
-			PR_CHECK(buf1.at<uint8_t>(0), 42);
-			PR_CHECK(buf1.at<uint8_t>(1), 0);
-			PR_CHECK(buf1.at<uint8_t>(2), 0);
-			PR_CHECK(buf1.at<uint8_t>(3), 0);
+			buf1.append(buf0.span().subspan(4, 4));
+			PR_EXPECT(buf1.size<int>() == 1U);
+			PR_EXPECT(buf1.at<uint8_t>(0) == 42);
+			PR_EXPECT(buf1.at<uint8_t>(1) == 0);
+			PR_EXPECT(buf1.at<uint8_t>(2) == 0);
+			PR_EXPECT(buf1.at<uint8_t>(3) == 0);
+			PR_EXPECT(buf1.at<int>(0) == 42);
 			
 			// insert
 			buf1 = buf0;
-			buf1.insert(1, buf0.data(), buf0.size());
-			PR_CHECK(buf1.size(), 2 * buf0.size());
-			PR_CHECK(memcmp(&buf1[0], &buf0[0], 1), 0);
-			PR_CHECK(memcmp(&buf1[1], &buf0[0], buf0.size()), 0);
-			PR_CHECK(memcmp(&buf1[1+buf0.size()], &buf0[1], buf0.size()-1), 0);
+			buf1.insert(1, buf0);
+			PR_EXPECT(buf1.size() == 2 * buf0.size());
+			PR_EXPECT(memcmp(&buf1[0], &buf0[0], 1) == 0);
+			PR_EXPECT(memcmp(&buf1[1], &buf0[0], buf0.size()) == 0);
+			PR_EXPECT(memcmp(&buf1[1+buf0.size()], &buf0[1], buf0.size()-1) == 0);
 			buf1 = buf0;
-			buf1.insert(1, buf1.data(), 3); // subrange insert
-			PR_CHECK(buf1.size(), buf0.size() + 3U);
-			PR_CHECK(buf1[0], buf0[0]);
-			PR_CHECK(buf1[1], buf0[0]);
-			PR_CHECK(buf1[2], buf0[1]);
-			PR_CHECK(buf1[3], buf0[2]);
-			PR_CHECK(buf1[4], buf0[1]);
-			PR_CHECK(buf1[5], buf0[2]);
+			buf1.insert(1, { buf1.data(), 3 }); // subrange insert
+			PR_EXPECT(buf1.size() == buf0.size() + 3U);
+			PR_EXPECT(buf1[0] == buf0[0]);
+			PR_EXPECT(buf1[1] == buf0[0]);
+			PR_EXPECT(buf1[2] == buf0[1]);
+			PR_EXPECT(buf1[3] == buf0[2]);
+			PR_EXPECT(buf1[4] == buf0[1]);
+			PR_EXPECT(buf1[5] == buf0[2]);
 
 			// push_back
 			buf1 = buf0;
 			buf1.push_back<int>(123);
-			PR_CHECK(buf1.at<int>(0), 0x42555541);
-			PR_CHECK(buf1.at<int>(1), 42);
-			PR_CHECK(buf1.at<int>(2), 123);
-			buf1.push_back(buf1.data(), 4);
-			PR_CHECK(buf1.at<int>(3), 0x42555541);
+			PR_EXPECT(buf1.at<int>(0) == 0x42555541);
+			PR_EXPECT(buf1.at<int>(1) == 42);
+			PR_EXPECT(buf1.at<int>(2) == 123);
+			buf1.push_back({ buf1.data(), 4 });
+			PR_EXPECT(buf1.at<int>(3) == 0x42555541);
+
+			// Overwrite
+			buf1 = buf0;
+			buf1.overwrite(2, buf0.span().subspan(0, 8));
+			PR_EXPECT(buf1.size() == 2 + buf0.size());
+			for (int i = 0; i != 2; ++i) { PR_EXPECT(buf1[i + 0] == buf0[i]); }
+			for (int i = 0; i != isize(buf0); ++i) { PR_EXPECT(buf1[i + 2] == buf0[i]); }
+			buf1 = buf0;
+			buf1.overwrite(6, buf1.span().subspan(0, 4)); // subrange overwrite
+			PR_EXPECT(buf1.size() == 10);
+			for (int i = 0; i != 6; ++i) { PR_EXPECT(buf1[i + 0] == buf0[i]); }
+			for (int i = 0; i != 4; ++i) { PR_EXPECT(buf1[i + 6] == buf0[i]); }
 		}
 		{ // Access
 			byte_data buf0;
 			buf0.append({0, 1, 2, 3});
-			PR_CHECK(buf0.size<int>(), 4U);
+			PR_EXPECT(buf0.size<int>() == 4U);
 			
 			// as
 			auto& arr0 = buf0.as<int[4]>();
-			PR_CHECK(arr0[0], 0);
-			PR_CHECK(arr0[1], 1);
-			PR_CHECK(arr0[2], 2);
-			PR_CHECK(arr0[3], 3);
+			PR_EXPECT(arr0[0] == 0);
+			PR_EXPECT(arr0[1] == 1);
+			PR_EXPECT(arr0[2] == 2);
+			PR_EXPECT(arr0[3] == 3);
 
 			// at_byte_ofs
 			auto v1 = buf0.at_byte_ofs<int>(2);
-			PR_CHECK(v1, 0x00010000);
+			PR_EXPECT(v1 == 0x00010000);
 
 			auto s = buf0.span<int>();
-			PR_CHECK(s.size(), 4U);
-			PR_CHECK(s[0], 0);
-			PR_CHECK(s[1], 1);
-			PR_CHECK(s[2], 2);
-			PR_CHECK(s[3], 3);
+			PR_EXPECT(s.size() == 4U);
+			PR_EXPECT(s[0] == 0);
+			PR_EXPECT(s[1] == 1);
+			PR_EXPECT(s[2] == 2);
+			PR_EXPECT(s[3] == 3);
 		}
 		{ // Stream
 			byte_data buf0;
@@ -818,10 +891,10 @@ namespace pr::container
 			buf0.push_back<int>(42);
 
 			size_t ofs = 0;
-			PR_CHECK(buf0.read<char>(ofs), 'A');
-			PR_CHECK(buf0.read<short>(ofs), 0x5555);
-			PR_CHECK(buf0.read<char>(ofs), 'B');
-			PR_CHECK(buf0.read<int>(ofs), 42);
+			PR_EXPECT(buf0.read<char>(ofs) == 'A');
+			PR_EXPECT(buf0.read<short>(ofs) == 0x5555);
+			PR_EXPECT(buf0.read<char>(ofs) == 'B');
+			PR_EXPECT(buf0.read<int>(ofs) == 42);
 		}
 	}
 }

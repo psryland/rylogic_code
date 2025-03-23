@@ -35,7 +35,7 @@
 		<ProjectReference Include="$(RylogicRoot)projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj" />
 	</ItemGroup>
 
-	<!-- Post Build -->
+	<!-- Pre Build -->
 	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
 		<Exec Command="py $(ProjectDir)update_syntax_rules.py" />
 	</Target>

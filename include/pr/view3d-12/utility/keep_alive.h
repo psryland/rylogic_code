@@ -31,10 +31,11 @@ namespace pr::rdr12
 		explicit KeepAlive(GpuSync& gsync)
 			:m_objects()
 			,m_gsync(gsync)
-			,m_ev_sweep(m_gsync.SyncPointCompleted += std::bind(&KeepAlive::Sweep, this, _1, _2))
+			,m_ev_sweep(m_gsync.SyncPointCompleted += std::bind(&KeepAlive::Sweep, this_ptr(), _1, _2))
 		{}
 		KeepAlive(KeepAlive const&) = delete;
 		KeepAlive& operator = (KeepAlive const&) = delete;
+		KeepAlive* this_ptr() { return this; }
 
 		// Add an object to be kept alive until 'sync_point' is reached
 		template <RefCountedType T> void Add(D3DPtr<T> obj, uint64_t sync_point)

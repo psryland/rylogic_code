@@ -3,10 +3,13 @@
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
 #pragma once
-
 #include <stdio.h>
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
+
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
 
 // 'vec4_t' should be typedef'd to the vector type before including this header
 // pr/maths/maths.h does not define a vector type for C
