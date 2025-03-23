@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pip install pytest
 
+      - name: Install editable package
+        run: pip install -e .
+
       - name: Verify pytest installation
         run: python -m pytest --version
 
