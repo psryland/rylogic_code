@@ -9,6 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: projects/rylogic/py-rylogic
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,12 +23,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      #- name: Install dependencies
-      #  run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install pytest
 
       - name: Verify pytest installation
         run: python -m pytest --version
 
       - name: Run tests
         run: pytest
+
+      - name: Build
+        run: python -m build
         
