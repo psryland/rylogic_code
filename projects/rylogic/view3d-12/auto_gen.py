@@ -43,7 +43,7 @@ def AutoGen():
 	# Update the keywords in 'ldraw_helper.py'
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw.h",
-		root_dir / "include/pr/view3d-12/ldraw/ldraw_helper.py",
+		root_dir / "projects/rylogic/py-rylogic/rylogic/ldraw.py",
 		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
 		"PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int)",
 		"# AUTO-GENERATED-KEYWORDS-BEGIN",
@@ -53,7 +53,7 @@ def AutoGen():
 	# Update the commands in 'ldraw_helper.py'
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw_commands.h",
-		root_dir / "include/pr/view3d-12/ldraw/ldraw_helper.py",
+		root_dir / "projects/rylogic/py-rylogic/rylogic/ldraw.py",
 		"#define PR_ENUM_LDRAW_COMMANDS(x)",
 		"PR_DEFINE_ENUM2_BASE(ECommandId, PR_ENUM_LDRAW_COMMANDS, int)",
 		"# AUTO-GENERATED-COMMANDS-BEGIN",

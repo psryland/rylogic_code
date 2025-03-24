@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import unittest
-from rylogic.ldraw import *
+from rylogic.ldraw.ldraw import *
 
 class TestLDraw(unittest.TestCase):
 	def test_ldraw(self):
@@ -15,6 +15,6 @@ class TestLDraw(unittest.TestCase):
 		ldr_group.pos(Vec3(1,1,1))
 		ldr_cmd = builder.Command()
 		ldr_cmd.add_to_scene(0)
-		ldr_cmd.transform_object('MyPoints', Mat4())
+		ldr_cmd.transform_object('MyPoints', Mat4.Identity())
 		s = builder.ToString()
 		b = builder.ToBytes()

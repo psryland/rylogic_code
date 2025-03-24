@@ -3,6 +3,10 @@
 		{
 			"name": "Rylogic",
 			"path": "."
+		},
+		{
+			"name": "Dump",
+			"path": "../../Dump"
 		}
 	],
 	"settings": {

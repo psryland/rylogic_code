@@ -36,5 +36,5 @@ Upload to PyPI
 
 ```python -m twine upload dist/*```
 
-You'll need your account user/pass
-
+You'll need an API token
+Remember to clean `dist/` first

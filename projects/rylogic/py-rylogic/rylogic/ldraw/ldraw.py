@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import struct
-from .colour import Colour32
-from .vector import Vec2, Vec3, Vec4, Mat4
-from .bbox import BBox
-from .variable_int import VariableInt
+from ..gfx.colour import Colour32
+from ..math.vector import Vec2, Vec3, Vec4, Mat4
+from ..math.bbox import BBox
+from ..math.variable_int import VariableInt
 from typing import List, Optional, Tuple
 from enum import Enum
 
@@ -326,6 +326,8 @@ class EPointStyle(Enum):
 class StringWithLength:
 	def __init__(self, string: str=''):
 		self.m_string = string
+	def __repr__(self):
+		return str(self)
 	def __str__(self):
 		return self.m_string
 	def __pack__(self):
@@ -337,6 +339,8 @@ class _LdrName:
 	def __init__(self, name: str = ''):
 		super().__init__()
 		self.m_name = name
+	def __repr__(self):
+		return self.m_name
 	def __str__(self):
 		return f'{EKeyword.Name} {{{self.m_name}}}' if self.m_name else ''
 	def __pack__(self):
@@ -345,6 +349,8 @@ class _LdrColour:
 	def __init__(self, colour: Colour32 = Colour32()):
 		super().__init__()
 		self.m_colour = colour
+	def __repr__(self):
+		return self.m_colour.__repr___()
 	def __str__(self):
 		return f'{EKeyword.Colour} {{{self.m_colour.argb:08X}}}' if self.m_colour.argb != 0xFFFFFFFF else ''
 	def __pack__(self):
@@ -353,6 +359,8 @@ class _LdrSize:
 	def __init__(self, size: float=0):
 		super().__init__()
 		self.m_size = size
+	def __repr__(self):
+		return self.m_size
 	def __str__(self):
 		return f'{EKeyword.Size} {{{self.m_size}}}' if self.m_size != 0 else ''
 	def __pack__(self):
@@ -363,6 +371,8 @@ class _LdrPerItemColour:
 		self.m_per_item_colour = per_item_colour
 	def __bool__(self):
 		return self.m_per_item_colour
+	def __repr__(self):
+		return self.m_per_item_colour
 	def __str__(self):
 		return f'{EKeyword.PerItemColour} {{}}' if self.m_per_item_colour else ''
 	def __pack__(self):
@@ -371,6 +381,8 @@ class _LdrDepth:
 	def __init__(self, depth: bool=False):
 		super().__init__()
 		self.m_depth = depth
+	def __repr__(self):
+		return self.m_depth
 	def __str__(self):
 		return f'{EKeyword.Depth} {{}}' if self.m_depth else ''
 	def __pack__(self):
@@ -379,6 +391,8 @@ class _LdrWireframe:
 	def __init__(self, wire: bool=False):
 		super().__init__()
 		self.m_wire = wire
+	def __repr__(self):
+		return self.m_wire
 	def __str__(self):
 		return f'{EKeyword.Wireframe} {{}}' if self.m_wire else ''
 	def __pack__(self):
@@ -387,6 +401,8 @@ class _LdrSolid:
 	def __init__(self, solid: bool=False):
 		super().__init__()
 		self.m_solid = solid
+	def __repr__(self):
+		return self.m_solid
 	def __str__(self):
 		return f'{EKeyword.Solid} {{}}' if self.m_solid else ''
 	def __pack__(self):
@@ -395,6 +411,8 @@ class _LdrAxisId:
 	def __init__(self, axis_id: int=0):
 		super().__init__()
 		self.m_axis_id = axis_id
+	def __repr__(self):
+		return self.m_axis_id
 	def __str__(self):
 		return f'{EKeyword.AxisId} {{{self.m_axis_id}}}' if self.m_axis_id != 0 else ''
 	def __pack__(self):
@@ -403,13 +421,15 @@ class _LdrPos:
 	def __init__(self, xyz: Optional[Vec3]=None):
 		super().__init__()
 		self.m_pos = xyz
+	def __repr__(self):
+		return self.m_pos
 	def __str__(self):
 		if not self.m_pos: return ''
-		if self.m_pos.is_zero(): return ''
+		if self.m_pos == Vec3.Zero: return ''
 		return f'{EKeyword.O2W} {{{EKeyword.Pos} {{{self.m_pos}}}}}'
 	def __pack__(self):
 		if not self.m_pos: return bytes()
-		if self.m_pos.is_zero(): return bytes()
+		if self.m_pos == Vec3.Zero: return bytes()
 		return struct.pack('<IIIIfff', EKeyword.O2W.value, 20, EKeyword.Pos.value, 12, self.m_pos.x, self.m_pos.y, self.m_pos.z)
 class _LdrO2W:
 	def __init__(self, o2w: Optional[Mat4]=None, pos:Optional[Vec3]=None):
@@ -417,15 +437,17 @@ class _LdrO2W:
 		self.m_o2w = None
 		if o2w: self.m_o2w = o2w
 		if pos: self.m_o2w = Mat4(Vec4(1,0,0,0), Vec4(0,1,0,0), Vec4(0,0,1,0), pos.w1())
+	def __repr__(self):
+		return self.m_o2w
 	def __str__(self):
 		if not self.m_o2w: return ''
-		if self.m_o2w.is_identity(): return ''
-		if self.m_o2w.is_translation(): return f'{EKeyword.O2W} {{{EKeyword.Pos} {{{self.m_o2w.w.xyz}}}}}'
+		if self.m_o2w.is_identity: return ''
+		if self.m_o2w.is_translation: return f'{EKeyword.O2W} {{{EKeyword.Pos} {{{self.m_o2w.w.xyz}}}}}'
 		return f'{EKeyword.O2W} {{{EKeyword.M4x4} {{{self.m_o2w}}}}}'
 	def __pack__(self):
 		if not self.m_o2w: return bytes()
-		if self.m_o2w.is_identity(): return bytes()
-		if self.m_o2w.is_translation(): return struct.pack('<IIIIfff', EKeyword.O2W.value, 20, EKeyword.Pos.value, 12, self.m_o2w.w.x, self.m_o2w.w.y, self.m_o2w.w.z)
+		if self.m_o2w.is_identity: return bytes()
+		if self.m_o2w.is_translation: return struct.pack('<IIIIfff', EKeyword.O2W.value, 20, EKeyword.Pos.value, 12, self.m_o2w.w.x, self.m_o2w.w.y, self.m_o2w.w.z)
 		return struct.pack('<IIII', EKeyword.O2W.value, 72, EKeyword.M4x4.value, 64) + _Pack(self.m_o2w)
 
 class _LdrObj:
