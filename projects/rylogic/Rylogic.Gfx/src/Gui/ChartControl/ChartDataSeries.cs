@@ -574,6 +574,14 @@ namespace Rylogic.Gui.WPF
 			XRealYReal = XReal | YReal,
 		}
 
+		/// <summary>Point styles</summary>
+		public enum EPointStyle
+		{
+			Square = View3d.EStockTexture.White,
+			Circle = View3d.EStockTexture.WhiteSpot,
+			Triangle = View3d.EStockTexture.WhiteTriangle,
+		}
+
 		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>
 		[DebuggerDisplay("{Description,nq}")]
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]

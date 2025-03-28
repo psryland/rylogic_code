@@ -539,9 +539,9 @@ namespace pr::rdr12::ldraw
 				}
 				case EKeyword::Addr:
 				{
-					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
-					tex.m_sdesc.AddressV = reader.IsSectionEnd() ? tex.m_sdesc.AddressU : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
-					tex.m_sdesc.AddressW = reader.IsSectionEnd() ? tex.m_sdesc.AddressV : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<ETexAddrMode>());
+					tex.m_sdesc.AddressU = s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<EAddrMode>());
+					tex.m_sdesc.AddressV = reader.IsSectionEnd() ? tex.m_sdesc.AddressU : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<EAddrMode>());
+					tex.m_sdesc.AddressW = reader.IsSectionEnd() ? tex.m_sdesc.AddressV : s_cast<D3D12_TEXTURE_ADDRESS_MODE>(reader.Enum<EAddrMode>());
 					break;
 				}
 				case EKeyword::Filter:

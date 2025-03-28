@@ -125,7 +125,7 @@ VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(view3d::ReportErrorCB error_cb
 }
 
 // Set the callback for progress events when script sources are loaded or updated
-VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_ParsingProgressCBSet(view3d::ParsingProgressCB progress_cb, void* ctx, BOOL add)
 {
 	try
 	{
@@ -135,7 +135,7 @@ VIEW3D_API void __stdcall View3D_AddFileProgressCBSet(view3d::ParsingProgressCB 
 		else
 			Dll().ParsingProgress -= {progress_cb, ctx};
 	}
-	CatchAndReport(View3D_AddFileProgressCBSet,,);
+	CatchAndReport(View3D_ParsingProgressCBSet,,);
 }
 
 // Set the callback that is called when the sources are reloaded

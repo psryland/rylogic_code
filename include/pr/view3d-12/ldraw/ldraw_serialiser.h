@@ -7,27 +7,7 @@
 #include "pr/view3d-12/ldraw/ldraw.h"
 
 namespace pr::rdr12::ldraw
-{	
-	// Arrow styles
-	#define PR_ENUM(x)\
-		x(Line        ,= 0)\
-		x(Fwd         ,= 1 << 0)\
-		x(Back        ,= 1 << 1)\
-		x(FwdBack     ,= Fwd | Back)\
-		x(_flags_enum ,= 0xFF)
-	PR_DEFINE_ENUM2_BASE(EArrowType, PR_ENUM, uint8_t);
-	#undef PR_ENUM
-
-	// Point styles
-	#define PR_ENUM(x)\
-		x(Square)\
-		x(Circle)\
-		x(Triangle)\
-		x(Star)\
-		x(Annulus)
-	PR_DEFINE_ENUM1_BASE(EPointStyle, PR_ENUM, uint8_t);
-	#undef PR_ENUM
-
+{
 	struct Str
 	{
 		std::string m_str;

@@ -104,17 +104,17 @@ namespace pr::rdr12::ldraw
 		{
 			traits<TOut>::write(out, { byte_ptr(&m), sizeof(m) });
 		}
-		template <typename TOut> static void Append(TOut& out, EArrowType type)
-		{
-			Append(out, s_cast<int>(type));
-		}
-		template <typename TOut> static void Append(TOut& out, ETexAddrMode addr)
+		template <typename TOut> static void Append(TOut& out, EAddrMode addr)
 		{
 			Append(out, s_cast<int>(addr));
 		}
 		template <typename TOut> static void Append(TOut& out, EFilter filter)
 		{
 			Append(out, s_cast<int>(filter));
+		}
+		template <typename TOut> static void Append(TOut& out, EArrowType type)
+		{
+			Append(out, s_cast<int>(type));
 		}
 		template <typename TOut> static void Append(TOut& out, EPointStyle style)
 		{

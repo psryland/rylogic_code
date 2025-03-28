@@ -112,15 +112,15 @@ namespace pr::rdr12::ldraw
 				default: throw std::runtime_error("Unknown arrow type");
 			}
 		}
-		template <typename TOut> static void Append(TOut& out, ETexAddrMode addr)
+		template <typename TOut> static void Append(TOut& out, EAddrMode addr)
 		{
 			switch (addr)
 			{
-				case ETexAddrMode::Wrap:       return Append(out, "Wrap");
-				case ETexAddrMode::Mirror:     return Append(out, "Mirror");
-				case ETexAddrMode::Clamp:      return Append(out, "Clamp");
-				case ETexAddrMode::Border:     return Append(out, "Border");
-				case ETexAddrMode::MirrorOnce: return Append(out, "MirrorOnce");
+				case EAddrMode::Wrap:       return Append(out, "Wrap");
+				case EAddrMode::Mirror:     return Append(out, "Mirror");
+				case EAddrMode::Clamp:      return Append(out, "Clamp");
+				case EAddrMode::Border:     return Append(out, "Border");
+				case EAddrMode::MirrorOnce: return Append(out, "MirrorOnce");
 				default: throw std::runtime_error("Unknown texture addressing mode");
 			}
 		}

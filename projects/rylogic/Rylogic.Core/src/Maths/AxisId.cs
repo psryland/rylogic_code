@@ -5,6 +5,7 @@ namespace Rylogic.Maths
 {
 	public enum EAxisId
 	{
+		None = 0,
 		[Desc("+X Axis")] PosX = +1,
 		[Desc("-X Axis")] NegX = -1,
 		[Desc("+Y Axis")] PosY = +2,

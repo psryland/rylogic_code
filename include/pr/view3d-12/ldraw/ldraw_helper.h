@@ -219,13 +219,15 @@ namespace pr::rdr12::ldraw
 				m_colour.m_kw = EKeyword::Colour;
 				return static_cast<Derived&>(*this);
 			}
+			Col m_colour;
+
+			// Object colour mask
 			Derived& colour_mask(Col c)
 			{
 				m_colour_mask = c;
 				m_colour_mask.m_kw = EKeyword::ColourMask;
 				return static_cast<Derived&>(*this);
 			}
-			Col m_colour;
 			Col m_colour_mask;
 
 			// Object to world transform
@@ -336,7 +338,7 @@ namespace pr::rdr12::ldraw
 		struct LdrTexture
 		{
 			std::filesystem::path m_filepath;
-			ETexAddrMode m_addr[2];
+			EAddrMode m_addr[2];
 			EFilter m_filter;
 			Alpha m_has_alpha;
 			O2W m_t2s;
@@ -358,7 +360,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Addressing mode
-			LdrTexture& addr(ETexAddrMode addrU, ETexAddrMode addrV)
+			LdrTexture& addr(EAddrMode addrU, EAddrMode addrV)
 			{
 				m_addr[0] = addrU;
 				m_addr[1] = addrV;
@@ -557,6 +559,26 @@ namespace pr::rdr12::ldraw
 				line(pt, pt);
 				return *this;
 			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::Line, m_name, m_colour, [&]
+				{
+					Writer::Append(out, m_width, m_per_item_colour);
+					Writer::Write(out, EKeyword::Data, [&]
+					{
+						for (auto& line : m_lines)
+						{
+							Writer::Append(out, line.a.xyz, line.b.xyz);
+							if (m_per_item_colour)
+								Writer::Append(out, line.col);
+						}
+					});
+					LdrBase::WriteTo<Writer>(out);
+				});
+			}
 		};
 		struct LdrLineD :LdrBase<LdrLineD>
 		{
@@ -665,32 +687,18 @@ namespace pr::rdr12::ldraw
 		};
 		struct LdrPlane :LdrBase<LdrPlane>
 		{
-			v4 m_position;
-			v4 m_direction;
 			v2 m_wh;
 			LdrTexture m_tex;
 
 			LdrPlane()
-				: m_position(v4::Origin())
-				, m_direction(v4::ZAxis())
-				, m_wh(1,1)
+				: m_wh(1,1)
 				, m_tex()
 			{}
 
 			LdrPlane& plane(v4_cref p)
 			{
-				m_position = (p.xyz * -p.w).w1();
-				m_direction = Normalise(p.xyz.w0());
-				return *this;
-			}
-			LdrPlane& pos(v4_cref position)
-			{
-				m_position = position;
-				return *this;
-			}
-			LdrPlane& dir(v4_cref direction)
-			{
-				m_direction = direction;
+				pos((p.xyz * -p.w).w1());
+				ori(Normalise(p.xyz.w0()), AxisId::PosZ);
 				return *this;
 			}
 			LdrPlane& wh(float width, float height)

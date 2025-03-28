@@ -20,6 +20,871 @@ using Rylogic.Utility;
 
 namespace Rylogic.LDraw
 {
+	public class LdrObj
+	{
+		private List<LdrObj> m_objects = [];
+
+		/// <summary>Create child object</summary>
+		public LdrGroup Group(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrGroup();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrPoint Point(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrPoint();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrLine Line(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrLine();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrLineD LineD(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrLineD();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrTriangle Triangle(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrTriangle();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrPlane Plane(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrPlane();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrCircle Circle(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrCircle();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrSphere Sphere(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrSphere();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrBox Box(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrBox();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrCylinder Cylinder(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrCylinder();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrCone Cone(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrCone();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrSpline Spline(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrSpline();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrFrustum Frustum(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrFrustum();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+
+		/// <summary>Serialise to ldraw script</summary>
+		public override string ToString()
+		{
+			var res = new TextWriter();
+			WriteTo(res);
+			return res.ToString();
+		}
+
+		/// <summary>Serialise to ldraw binary</summary>
+		public MemoryStream ToBinary()
+		{
+			var res = new BinaryWriter();
+			WriteTo(res);
+			return res.ToBinary();
+		}
+
+		/// <summary>Serialise to 'res'</summary>
+		public virtual void WriteTo(IWriter res)
+		{
+			foreach (var obj in m_objects)
+				obj.WriteTo(res);
+		}
+	}
+	public class LdrBase<TDerived> : LdrObj where TDerived : LdrBase<TDerived>
+	{
+		/// <summary>Object name</summary>
+		public TDerived name(Serialiser.Name name)
+		{
+			m_name = name;
+			return (TDerived)this;
+		}
+		protected Serialiser.Name m_name;
+
+		/// <summary>Object colour</summary>
+		public TDerived colour(Serialiser.Colour colour)
+		{
+			m_colour = colour;
+			return (TDerived)this;
+		}
+		protected Serialiser.Colour m_colour;
+
+		/// <summary>Object colour mask</summary>
+		public TDerived colour_mask(Serialiser.Colour colour)
+		{
+			m_colour_mask = colour;
+			m_colour_mask.m_kw = EKeyword.ColourMask;
+			return (TDerived)this;
+		}
+		protected Serialiser.Colour m_colour_mask;
+
+		/// <summary>Object to world transform</summary>
+		public TDerived o2w(m4x4 o2w)
+		{
+			m_o2w.m_mat = o2w * m_o2w.m_mat;
+			return (TDerived)this;
+		}
+		public TDerived o2w(m3x4 rot, v4 pos)
+		{
+			m_o2w.m_mat = new m4x4(rot, pos) * m_o2w.m_mat;
+			return (TDerived)this;
+		}
+		public TDerived ori(v4 dir, AxisId axis)
+		{
+			return ori(m3x4.Rotation(axis.Axis, dir));
+		}
+		public TDerived ori(m3x4 rot)
+		{
+			return o2w(rot, v4.Origin);
+		}
+		public TDerived pos(float x, float y, float z)
+		{
+			return o2w(m4x4.Translation(x, y, z));
+		}
+		public TDerived pos(v4 pos)
+		{
+			return o2w(m4x4.Translation(pos));
+		}
+		public TDerived scale(float s)
+		{
+			return scale(s, s, s);
+		}
+		public TDerived scale(float sx, float sy, float sz)
+		{
+			return ori(m3x4.Scale(sx, sy, sz));
+		}
+		public TDerived quat(Quat q)
+		{
+			return o2w(m4x4.Transform(q, v4.Origin));
+		}
+		public TDerived euler(float pitch_deg, float yaw_deg, float roll_deg)
+		{
+			return ori(m3x4.Rotation(
+				Math_.DegreesToRadians(pitch_deg),
+				Math_.DegreesToRadians(yaw_deg),
+				Math_.DegreesToRadians(roll_deg)));
+		}
+		protected readonly Serialiser.O2W m_o2w = new();
+
+		/// <summary>Wire frame</summary>
+		public TDerived wireframe(bool w = true)
+		{
+			m_wire = w;
+			return (TDerived)this;
+		}
+		protected Serialiser.Wireframe m_wire;
+
+		/// <summary>Axis Id</summary>
+		public TDerived axis(AxisId axis_id)
+		{
+			m_axis_id = axis_id;
+			return (TDerived)this;
+		}
+		protected AxisId m_axis_id;
+
+		/// <summary>Solid</summary>
+		public TDerived solid(bool solid)
+		{
+			m_solid = solid;
+			return (TDerived)this;
+		}
+		protected Serialiser.Solid m_solid;
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter writer)
+		{
+			writer.Append(m_axis_id, m_wire, m_solid, m_colour_mask, m_o2w);
+			base.WriteTo(writer);
+		}
+	}
+
+	// Modifiers
+	public class LdrTexture
+	{
+		private string m_filepath = string.Empty;
+		private View3d.EAddrMode[] m_addr = [View3d.EAddrMode.Wrap, View3d.EAddrMode.Wrap];
+		private View3d.EFilter m_filter = View3d.EFilter.Linear;
+		private Serialiser.Alpha m_has_alpha = new();
+		private Serialiser.O2W m_t2s = new();
+
+		// Texture filepath
+		public LdrTexture path(string filepath)
+		{
+			m_filepath = filepath;
+			return this;
+		}
+
+		// Addressing mode
+		public LdrTexture addr(View3d.EAddrMode addrU, View3d.EAddrMode addrV)
+		{
+			m_addr[0] = addrU;
+			m_addr[1] = addrV;
+			return this;
+		}
+
+		// Filtering mode
+		public LdrTexture filter(View3d.EFilter filter)
+		{
+			m_filter = filter;
+			return this;
+		}
+
+		// Texture to surface transform
+		public LdrTexture t2s(Serialiser.O2W t2s)
+		{
+			m_t2s = t2s;
+			return this;
+		}
+
+		// Has alpha flag
+		public LdrTexture alpha(Serialiser.Alpha has_alpha)
+		{
+			m_has_alpha = has_alpha;
+			return this;
+		}
+
+		// Write to 'out'
+		public void WriteTo(IWriter res)
+		{
+			if (m_filepath.Length == 0) return;
+			res.Write(EKeyword.Texture, () =>
+			{
+				res.Write(EKeyword.FilePath, "\"", m_filepath, "\"");
+				res.Write(EKeyword.Addr, m_addr[0], m_addr[1]);
+				res.Write(EKeyword.Filter, m_filter);
+				res.Append(m_has_alpha);
+				res.Append(m_t2s);
+			});
+		}
+	}
+
+	// Object types
+	public class LdrPoint : LdrBase<LdrPoint>
+	{
+		private class Pt { public v4 pt; public Colour32 col; };
+		private readonly List<Pt> m_points = [];
+		private Serialiser.Size2 m_size = new();
+		private Serialiser.Depth m_depth = new();
+		private EPointStyle m_style = EPointStyle.Square;
+		private Serialiser.PerItemColour m_per_item_colour = new();
+
+		// Points
+		public LdrPoint pt(v4 point, Colour32 colour)
+		{
+			pt(point);
+			m_points.Last().col = colour;
+			m_per_item_colour = true;
+			return this;
+		}
+		public LdrPoint pt(v4 point)
+		{
+			m_points.Add(new Pt { pt = point, col = Colour32.White });
+			return this;
+		}
+
+		// Point size (in pixels if depth == false, in world space if depth == true)
+		public LdrPoint size(float s)
+		{
+			m_size = new v2(s);
+			return this;
+		}
+		public LdrPoint size(v2 s)
+		{
+			m_size = s;
+			return this;
+		}
+
+		// Points have depth
+		public LdrPoint depth(bool d)
+		{
+			m_depth = d;
+			return this;
+		}
+
+		// Point style
+		public LdrPoint style(EPointStyle s)
+		{
+			m_style = s;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Point, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Style, m_style);
+				res.Append(m_size, m_depth, m_per_item_colour);
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var point in m_points)
+					{
+						res.Append(point.pt.xyz);
+						if (m_per_item_colour)
+							res.Append(point.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrLine : LdrBase<LdrLine>
+	{
+		private class Ln { public v4 a, b; public Colour32 col; };
+		private readonly List<Ln> m_lines = [];
+		private Serialiser.Width m_width = new();
+		private bool m_strip = false;
+		private Serialiser.PerItemColour m_per_item_colour = new();
+
+		public delegate bool EnumLines(int i, out v4 a, out v4 b, out Colour32? c);
+
+		// Line width
+		public LdrLine width(Serialiser.Width w)
+		{
+			m_width = w;
+			return this;
+		}
+
+		// Lines
+		public LdrLine line(v4 a, v4 b, Colour32? colour = null)
+		{
+			m_lines.Add(new Ln{ a = a, b = b, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
+			return this;
+		}
+		public LdrLine lines(Span<v4> verts, Span<int> indices)
+		{
+			Debug.Assert((indices.Length % 2) == 0);
+			for (int i = 0; i < indices.Length; i += 2)
+				line(verts[indices[i+0]], verts[indices[i+1]]);
+
+			return this;
+		}
+
+		// Add points by callback function
+		public LdrLine lines(EnumLines lines)
+		{
+			for (var i = 0; lines(i++, out var a, out var b, out var c);)
+				line(a, b);
+
+			return this;
+		}
+
+		// Line strip
+		public LdrLine strip(v4 start)
+		{
+			line(start, start);
+			m_strip = true;
+			return this;
+		}
+		public LdrLine line_to(v4 pt)
+		{
+			Debug.Assert(m_strip);
+			line(pt, pt);
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Line, m_name, m_colour, () =>
+			{
+				res.Append(m_width, m_per_item_colour);
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var line in m_lines)
+					{
+						res.Append(line.a.xyz, line.b.xyz);
+						if (m_per_item_colour)
+							res.Append(line.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrLineD : LdrBase<LdrLineD>
+	{
+		private struct Ln { public v4 pt, dir; public Colour32 col; };
+		private readonly List<Ln> m_lines = [];
+		private Serialiser.PerItemColour m_per_item_colour = new();
+		private Serialiser.Width m_width = new();
+
+		// Line width
+		public LdrLineD width(Serialiser.Width w)
+		{
+			m_width = w;
+			return this;
+		}
+
+		// Line points
+		public LdrLineD line(v4 pt, v4 dir, Colour32? colour = null)
+		{
+			m_lines.Add(new Ln{ pt = pt, dir = dir, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.LineD, m_name, m_colour, () =>
+			{
+				res.Append(m_width, m_per_item_colour);
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var line in m_lines)
+					{
+						res.Append(line.pt.xyz, line.dir.xyz);
+						if (m_per_item_colour)
+							res.Append(line.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrTriangle : LdrBase<LdrTriangle>
+	{
+		private struct Tri { public v4 a, b, c; public Colour32 col; };
+		private readonly List<Tri> m_tris = [];
+		private Serialiser.PerItemColour m_per_item_colour = new();
+
+		public LdrTriangle tri(v4 a, v4 b, v4 c, Colour32? colour = null)
+		{
+			m_tris.Add(new Tri{ a = a, b = b, c = c, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
+			return this;
+		}
+		public LdrTriangle tris(Span<v4> verts, Span<int> faces)
+		{
+			Debug.Assert((faces.Length % 3) == 0);
+			for (int i = 0; i < faces.Length; i += 3)
+				tri(verts[faces[i+0]], verts[faces[i+1]], verts[faces[i+2]]);
+
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Triangle, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var tri in m_tris)
+					{
+						res.Append(tri.a.xyz, tri.b.xyz, tri.c.xyz);
+						if (m_per_item_colour)
+							res.Append(tri.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrPlane : LdrBase<LdrPlane>
+	{
+		private v4 m_position = v4.Origin;
+		private v4 m_direction = v4.ZAxis;
+		private v2 m_wh = new(1,1);
+		private LdrTexture m_tex = new();
+
+		public LdrPlane plane(v4 p)
+		{
+			pos((p.xyz * -p.w).w1);
+			ori(Math_.Normalise(p.xyz.w0), EAxisId.PosZ);
+			return this;
+		}
+		public LdrPlane wh(float width, float height)
+		{
+			m_wh = new(width, height);
+			return this;
+		}
+		public LdrPlane wh(v2 wh)
+		{
+			m_wh = wh;
+			return this;
+		}
+
+		public LdrTexture texture()
+		{
+			return m_tex;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Plane, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_wh);
+				m_tex.WriteTo(res);
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrCircle : LdrBase<LdrCircle>
+	{
+		private float m_radius = 1.0f;
+
+		public LdrCircle radius(float r)
+		{
+			m_radius = r;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Circle, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_radius);
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrSphere : LdrBase<LdrSphere>
+	{
+		private v4 m_radius = new(1.0f);
+
+		// Radius
+		public LdrSphere radius(float r)
+		{
+			return radius(new v4(r));
+		}
+		public LdrSphere radius(v4 r)
+		{
+			m_radius = r;
+			return this;
+		}
+
+		// Create from bounding sphere
+		public LdrSphere bsphere(BSphere bsphere)
+		{
+			if (bsphere == BSphere.Reset) return this;
+			return radius(bsphere.Radius).pos(bsphere.Centre);
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Sphere, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_radius.xyz);
+				base.WriteTo(res);
+			});
+		}
+
+	}
+	public class LdrBox : LdrBase<LdrBox>
+	{
+		private v4 m_dim;
+
+		public LdrBox dim(float dim)
+		{
+			m_dim = new v4(dim);
+			return this;
+		}
+		
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Box, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_dim.xyz);
+				base.WriteTo(res);
+			});
+		}
+
+	}
+	public class LdrCylinder : LdrBase<LdrCylinder>
+	{
+		private v2 m_radius = new(0.5f);
+		private Serialiser.Scale2 m_scale = new();
+		private float m_height = 1.0f;
+
+		// Height/Radius
+		public LdrCylinder cylinder(float height, float radius)
+		{
+			return cylinder(height, radius, radius);
+		}
+		public LdrCylinder cylinder(float height, float radius_base, float radius_tip)
+		{
+			m_radius = new v2(radius_base, radius_tip);
+			m_height = height;
+			return this;
+		}
+
+		// Scale
+		public LdrCylinder scale(Serialiser.Scale2 scale)
+		{
+			m_scale = scale;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Cylinder, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_height, m_radius.x, m_radius.y);
+				res.Append(m_scale);
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrCone : LdrBase<LdrCone>
+	{
+		private v2 m_distance = new(0f, 1f);
+		private Serialiser.Scale2 m_scale = new();
+		private float m_angle = 45.0f;
+
+		// Height/Radius
+		public LdrCone angle(float solid_angle_deg)
+		{
+			m_angle = solid_angle_deg;
+			return this;
+		}
+		public LdrCone height(float height)
+		{
+			m_distance = new v2(m_distance.x, m_distance.x + height);
+			return this;
+		}
+		public LdrCone dist(float dist0, float dist1)
+		{
+			m_distance = new v2(dist0, dist1);
+			return this;
+		}
+
+		// Scale
+		public LdrCone scale(Serialiser.Scale2 scale)
+		{
+			m_scale = scale;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Cone, m_name, m_colour, () =>
+			{
+				res.Write(EKeyword.Data, m_angle, m_distance.x, m_distance.y);
+				res.Append(m_scale);
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrSpline : LdrBase<LdrSpline>
+	{
+		private struct Bezier
+		{
+			public v4 pt0, pt1, pt2, pt3;
+			public Colour32 col;
+		};
+
+		private readonly List<Bezier> m_splines = [];
+		private Serialiser.Width m_width = new();
+		private Serialiser.PerItemColour m_per_item_colour = new();
+			
+		// Spline width
+		public LdrSpline width(Serialiser.Width w)
+		{
+			m_width = w;
+			return this;
+		}
+
+		// Add a spline piece
+		public LdrSpline spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Colour32? colour = null)
+		{
+			Debug.Assert(pt0.w == 1 && pt1.w == 1 && pt2.w == 1 && pt3.w == 1);
+			m_splines.Add(new Bezier{ pt0 = pt0, pt1 = pt1, pt2 = pt2, pt3 = pt3, col = colour ?? Colour32.White });
+			m_per_item_colour |= colour != null;
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Spline, m_name, m_colour, () =>
+			{
+				res.Append(m_width, m_per_item_colour);
+				res.Write(EKeyword.Data, () =>
+				{
+					foreach (var bez in m_splines)
+					{
+						res.Append(bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
+						if (m_per_item_colour)
+							res.Append(bez.col);
+					}
+				});
+				base.WriteTo(res);
+			});
+		}
+	}
+	public class LdrFrustum : LdrBase<LdrFrustum>
+	{
+		private v2 m_wh = new(1f, 1f);
+		private v2 m_nf = new(0.1f, 2f);
+		private float m_fovY = Math_.TauBy4F;
+		private float m_aspect = 1f;
+		private bool m_ortho = false;
+
+		// Orthographic
+		public LdrFrustum ortho(bool ortho = true)
+		{
+			m_ortho = ortho;
+			return this;
+		}
+
+		// Near/Far
+		public LdrFrustum nf(float n, float f)
+		{
+			m_nf = new v2(n, f);
+			return this;
+		}
+		public LdrFrustum nf(v2 nf_)
+		{
+			return nf(nf_.x, nf_.y);
+		}
+
+		// Frustum dimensions
+		public LdrFrustum wh(float w, float h)
+		{
+			m_wh = new v2(w, h);
+			m_fovY = 0;
+			m_aspect = 0;
+			return this;
+		}
+		public LdrFrustum wh(v2 sz)
+		{
+			return wh(sz.x, sz.y);
+		}
+
+		// Frustum angles
+		public LdrFrustum fov(float fovY, float aspect)
+		{
+			m_ortho = false;
+			m_wh = v2.Zero;
+			m_fovY = fovY;
+			m_aspect = aspect;
+			return this;
+		}
+
+		//// From maths frustum
+		//public LdrFrustum frustum(Frustum const& f)
+		//{
+		//	return nf(0, f.zfar()).fov(f.fovY(), f.aspect());
+		//}
+
+		// From projection matrix
+		public LdrFrustum proj(m4x4 c2s)
+		{
+			if (c2s.w.w == 1) // If orthographic
+			{
+				var rh = -Math_.Sign(c2s.z.z);
+				var zn = Math_.Div(c2s.w.z, c2s.z.z, 0.0f);
+				var zf = Math_.Div(zn * (c2s.w.z - rh), c2s.w.z, 1.0f);
+				var w = 2.0f / c2s.x.x;
+				var h = 2.0f / c2s.y.y;
+				return ortho(true).nf(zn, zf).wh(w,h);
+			}
+			else // Otherwise perspective
+			{
+				var rh = -Math_.Sign(c2s.z.w);
+				var zn = rh * c2s.w.z / c2s.z.z;
+				var zf = Math_.Div(zn * c2s.z.z, (rh + c2s.z.z), zn * 1000.0f);
+				var w = 2.0f * zn / c2s.x.x;
+				var h = 2.0f * zn / c2s.y.y;
+				return ortho(false).nf(zn, zf).wh(w, h);
+			}
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			if (m_ortho)
+			{
+				res.Write(EKeyword.Box, m_name, m_colour, () =>
+				{
+					res.Write(EKeyword.Data, m_wh.x, m_wh.y, m_nf.y - m_nf.x);
+					res.Append(new Serialiser.O2W(new v4(0, 0, -0.5f * (float)(m_nf.x + m_nf.y), 1)));
+					base.WriteTo(res);
+				});
+			}
+			else if (m_wh != v2.Zero)
+			{
+				res.Write(EKeyword.FrustumWH, m_name, m_colour, () =>
+				{
+					res.Write(EKeyword.Data, m_wh.x, m_wh.y, m_nf.x, m_nf.y);
+					base.WriteTo(res);
+				});
+			}
+			else
+			{
+				res.Write(EKeyword.FrustumFA, m_name, m_colour, () =>
+				{
+					res.Write(EKeyword.Data, Math_.RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
+					base.WriteTo(res);
+				});
+			}
+		}
+
+	}
+	public class LdrGroup : LdrBase<LdrGroup>
+	{
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Group, m_name, m_colour, () =>
+			{
+				base.WriteTo(res);
+			});
+		}
+	}
+
+	// Ldraw object fluent helper
+	public class Builder : LdrObj
+	{
+	}
+
+	// DEPRECATED 
+	#region DEPRECATED 
 	public static class Ldr
 	{
 		// Notes:
@@ -726,9 +1591,42 @@ namespace Rylogic.LDraw
 			return m_builder.Append("}\n");
 		}
 	}
+	#endregion
 }
 
 #if PR_UNITTESTS
+namespace Rylogic.UnitTests
+{
+	[TestFixture]
+	public class TestLdrawBuilderText
+	{
+		[Test]
+		public void TestTextBox()
+		{
+			var builder = new LDraw.Builder();
+			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
+			var str = builder.ToString();
+			Assert.Equal(str, "*Box b FF00FF00 {*Data {1 1 1}}");
+		}
+	}
+
+	[TestFixture]
+	public class TestLdrawBulderBinary
+	{
+		[Test]
+		public void TestTextBox()
+		{
+			var builder = new LDraw.Builder();
+			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
+			var mem = builder.ToBinary().ToArray();
+
+			using var ofile = File.Create("E:/Dump/LDraw/test.bdr");
+			ofile.Write(mem, 0, mem.Length);
+		}
+	}
+}
+
+#region DEPRECATED
 namespace Rylogic.UnitTests
 {
 	using LDraw;
@@ -754,4 +1652,5 @@ namespace Rylogic.UnitTests
 		}
 	}
 }
+#endregion
 #endif

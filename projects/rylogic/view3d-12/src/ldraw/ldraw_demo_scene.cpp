@@ -1294,7 +1294,7 @@ namespace pr::rdr12::ldraw
 				.axis(AxisId::PosY)
 				.texture()
 					.path("#checker3")
-					.addr(ETexAddrMode::Wrap, ETexAddrMode::Wrap)
+					.addr(EAddrMode::Wrap, EAddrMode::Wrap)
 					.t2s(m4x4::Scale(10, 10, 1, v4::Origin()));
 		}
 

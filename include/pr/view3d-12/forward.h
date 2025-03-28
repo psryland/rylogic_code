@@ -314,14 +314,14 @@ namespace pr::rdr12
 	PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
 	#undef PR_ENUM
 
-	// ETexAddrMode
+	// EAddrMode
 	#define PR_ENUM(x)\
 		x(Wrap       ,= D3D12_TEXTURE_ADDRESS_MODE_WRAP)\
 		x(Mirror     ,= D3D12_TEXTURE_ADDRESS_MODE_MIRROR)\
 		x(Clamp      ,= D3D12_TEXTURE_ADDRESS_MODE_CLAMP)\
 		x(Border     ,= D3D12_TEXTURE_ADDRESS_MODE_BORDER)\
 		x(MirrorOnce ,= D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE)
-	PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
+	PR_DEFINE_ENUM2(EAddrMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// EFilter - MinMagMip
