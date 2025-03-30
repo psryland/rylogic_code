@@ -85,6 +85,7 @@
 			<Word>*Bar</Word>
 			<Word>*Billboard</Word>
 			<Word>*Billboard3D</Word>
+			<Word>*BinaryStream</Word>
 			<Word>*Box</Word>
 			<Word>*BoxList</Word>
 			<Word>*Camera</Word>
@@ -202,6 +203,7 @@
 			<Word>*TexCoords</Word>
 			<Word>*Text</Word>
 			<Word>*TextLayout</Word>
+			<Word>*TextStream</Word>
 			<Word>*Texture</Word>
 			<Word>*Transpose</Word>
 			<Word>*Triangle</Word>

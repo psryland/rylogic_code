@@ -26,13 +26,7 @@ namespace Rylogic.Maths
 		public EAxisId Id
 		{
 			get => m_id;
-			set
-			{
-				if (Math.Abs((int)value) < 1 || Math.Abs((int)value) > 3)
-					throw new Exception("Invalid axis id. Must one of ±1, ±2, ±3 corresponding to ±X, ±Y, ±Z respectively");
-
-				m_id = value;
-			}
+			set => m_id = Math.Abs((int)value) <= 3 ? value : throw new Exception("Invalid axis id. Must one of 0, ±1, ±2, ±3 corresponding to None, ±X, ±Y, ±Z respectively");
 		}
 		private EAxisId m_id;
 
@@ -43,13 +37,13 @@ namespace Rylogic.Maths
 			{
 				switch (Id)
 				{
-				default: throw new Exception($"{Id} is not a valid axis id");
 				case EAxisId.PosX: return v4.XAxis;
 				case EAxisId.NegX: return v4.XAxis;
 				case EAxisId.PosY: return v4.YAxis;
 				case EAxisId.NegY: return v4.YAxis;
 				case EAxisId.PosZ: return v4.ZAxis;
 				case EAxisId.NegZ: return v4.ZAxis;
+				default: throw new Exception($"{Id} is not a valid axis id");
 				}
 			}
 			set

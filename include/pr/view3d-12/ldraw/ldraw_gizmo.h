@@ -42,14 +42,17 @@ namespace pr::rdr12::ldraw
 		using AttacheeCont = pr::vector<m4x4*>;
 
 		// Graphics instance for the gizmo
-		#define PR_RDR_INST(x)\
+		struct RdrInstance
+		{
+			#define PR_RDR_INST(x)\
 			x(m4x4       ,m_i2w   ,EInstComp::I2WTransform   )\
 			x(PipeStates ,m_pso   ,EInstComp::PipeStates     )\
 			x(ModelPtr   ,m_model ,EInstComp::ModelPtr       )\
 			x(Colour32   ,m_colour,EInstComp::TintColour32   )\
 			x(SKOverride ,m_sko   ,EInstComp::SortkeyOverride)
-		PR_RDR12_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
-		#undef PR_RDR_INST
+			PR_RDR12_INSTANCE_MEMBERS(RdrInstance, PR_RDR_INST);
+			#undef PR_RDR_INST
+		};
 
 		struct alignas(16) Gfx
 		{
@@ -137,7 +140,7 @@ namespace pr::rdr12::ldraw
 		EComponent HitTest(Camera& camera, v2 const& nss_point);
 
 		// Resets the other axes to the base colour and sets 'cp' to 'colour'
-		void SetAxisColour(EComponent cp, Colour const& colour = ColourZero);
+		void SetAxisColour(EComponent cp, pr::Colour const& colour = ColourZero);
 
 		// Add this gizmo to a scene
 		void AddToScene(Scene& scene);

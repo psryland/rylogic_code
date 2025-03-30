@@ -50,8 +50,9 @@ namespace pr
 	}
 	#pragma endregion
 
-	#pragma region Predefined Windows Colours
-	#define PR_ENUM(x)\
+	enum class EColours : uint32_t
+	{
+		#define PR_ENUM(x)\
 		x(AliceBlue            , = 0xFFF0F8FF)\
 		x(AntiqueWhite         , = 0xFFFAEBD7)\
 		x(Aquamarine           , = 0xFF7FFFD4)\
@@ -71,8 +72,8 @@ namespace pr
 		x(CornflowerBlue       , = 0xFF6495ED)\
 		x(Cornsilk             , = 0xFFFFF8DC)\
 		x(Crimson              , = 0xFFDC143C)\
-		x(Cyan                 , = 0xFF00FFFF)/* also Aqua
-*/		x(DarkBlue             , = 0xFF00008B)\
+		x(Cyan                 , = 0xFF00FFFF)/* also Aqua*/\
+		x(DarkBlue             , = 0xFF00008B)\
 		x(DarkCyan             , = 0xFF008B8B)\
 		x(DarkGoldenrod        , = 0xFFB8860B)\
 		x(DarkGrey             , = 0xFFA9A9A9)\
@@ -129,8 +130,8 @@ namespace pr
 		x(Lime                 , = 0xFF00FF00)\
 		x(LimeGreen            , = 0xFF32CD32)\
 		x(Linen                , = 0xFFFAF0E6)\
-		x(Magenta              , = 0xFFFF00FF)/* also Fuchsia
-*/		x(Maroon               , = 0xFF800000)\
+		x(Magenta              , = 0xFFFF00FF)/* also Fuchsia*/\
+		x(Maroon               , = 0xFF800000)\
 		x(MediumAquamarine     , = 0xFF66CDAA)\
 		x(MediumBlue           , = 0xFF0000CD)\
 		x(MediumOrchid         , = 0xFFBA55D3)\
@@ -190,9 +191,10 @@ namespace pr
 		x(WhiteSmoke           , = 0xFFF5F5F5)\
 		x(Yellow               , = 0xFFFFFF00)\
 		x(YellowGreen          , = 0xFF9ACD32)
-	PR_DEFINE_ENUM2_BASE(EColours, PR_ENUM, uint32_t);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EColours, PR_ENUM);
 	#undef PR_ENUM
-	#pragma endregion
 
 	#pragma region Colour32
 

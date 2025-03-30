@@ -14,23 +14,31 @@ namespace pr::rdr12::ldraw
 	#pragma region Instance Types
 
 	// An instance type for line drawer stock objects
-	#define PR_RDR_INST(x)\
+	struct StockInstance
+	{
+		#define PR_RDR_INST(x)\
 		x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 		x(ModelPtr ,m_model ,EInstComp::ModelPtr    )
-	PR_RDR12_DEFINE_INSTANCE(StockInstance, PR_RDR_INST);
-	#undef PR_RDR_INST
+		PR_RDR12_INSTANCE_MEMBERS(StockInstance, PR_RDR_INST);
+		#undef PR_RDR_INST
+	};
 
 	// An instance type for object bounding boxes
-	#define PR_RDR_INST(x)\
+	struct BBoxInstance
+	{
+		#define PR_RDR_INST(x)\
 		x(m4x4     ,m_i2w   ,EInstComp::I2WTransform   )\
 		x(ModelPtr ,m_model ,EInstComp::ModelPtr       )
-	PR_RDR12_DEFINE_INSTANCE(BBoxInstance, PR_RDR_INST);
-	#undef PR_RDR_INST
+		PR_RDR12_INSTANCE_MEMBERS(BBoxInstance, PR_RDR_INST);
+		#undef PR_RDR_INST
+	};
 
 	// An instance for passing to the renderer
 	// A renderer instance type for the body
 	// Note: don't use 'm_i2w' to control the object transform, use m_o2p in the LdrObject instead
-	#define PR_RDR_INST(x) \
+	struct RdrInstance
+	{
+		#define PR_RDR_INST(x) \
 		x(m4x4       ,m_i2w    ,EInstComp::I2WTransform       )/*     16 bytes, align 16 */\
 		x(m4x4       ,m_c2s    ,EInstComp::C2SOptional        )/*     16 bytes, align 16 */\
 	 	x(PipeStates ,m_pso    ,EInstComp::PipeStates         )/*    104 bytes, align 8 */\
@@ -39,8 +47,9 @@ namespace pr::rdr12::ldraw
 		x(float      ,m_env    ,EInstComp::EnvMapReflectivity )/*      4 bytes, align 4 */\
 		x(EInstFlag  ,m_iflags ,EInstComp::Flags              )/*      4 bytes, align 4 */\
 		x(SKOverride ,m_sko    ,EInstComp::SortkeyOverride    )/*      8 bytes, align 4 */
-	PR_RDR12_DEFINE_INSTANCE(RdrInstance , PR_RDR_INST);
-	#undef PR_RDR_INST
+		PR_RDR12_INSTANCE_MEMBERS(RdrInstance , PR_RDR_INST);
+		#undef PR_RDR_INST
+	};
 
 	#pragma endregion
 

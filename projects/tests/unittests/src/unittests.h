@@ -245,6 +245,7 @@
 #include "pr\meta\is_pointer.h"
 #include "pr\meta\is_prime.h"
 #include "pr\meta\min_max.h"
+#include "pr\meta\nameof.h"
 #include "pr\meta\not.h"
 #include "pr\meta\or.h"
 #include "pr\meta\prime_gtreq.h"

@@ -46,8 +46,9 @@ namespace pr::ldr
 		return hash::HashICT(str);
 	}
 
-	#pragma region Ldr object types
-	#define PR_ENUM_LDROBJECTS(x)\
+	enum class ELdrObject
+	{
+		#define PR_ENUM_LDROBJECTS(x)\
 		x(Unknown    ,= HashI("Unknown"   ))\
 		x(Point      ,= HashI("Point"     ))\
 		x(Line       ,= HashI("Line"      ))\
@@ -89,11 +90,13 @@ namespace pr::ldr
 		x(PointLight ,= HashI("PointLight"))\
 		x(SpotLight  ,= HashI("SpotLight" ))\
 		x(Custom     ,= HashI("Custom"    ))
-	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM_LDROBJECTS);
-	#pragma endregion
+		PR_ENUM_MEMBERS2(PR_ENUM_LDROBJECTS)
+	};
+	PR_ENUM_REFLECTION2(ELdrObject, PR_ENUM_LDROBJECTS);
 
-	#pragma region Ldr script keywords
-	#define PR_ENUM_LDRKEYWORDS(x)\
+	enum class EKeyword
+	{
+		#define PR_ENUM_LDRKEYWORDS(x)\
 		x(Name            ,= HashI("Name"                ))\
 		x(Txfm            ,= HashI("Txfm"                ))\
 		x(O2W             ,= HashI("O2W"                 ))\
@@ -206,8 +209,9 @@ namespace pr::ldr
 		x(Source          ,= HashI("Source"              ))\
 		x(Data            ,= HashI("Data"                ))\
 		x(Series          ,= HashI("Series"              ))
-	PR_DEFINE_ENUM2(EKeyword, PR_ENUM_LDRKEYWORDS);
-	#pragma endregion
+		PR_ENUM_MEMBERS2(PR_ENUM_LDRKEYWORDS)
+	};
+	PR_ENUM_REFLECTION2(EKeyword, PR_ENUM_LDRKEYWORDS);
 
 	#pragma region Enums
 

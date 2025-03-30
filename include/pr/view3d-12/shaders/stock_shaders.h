@@ -7,7 +7,9 @@
 
 namespace pr::rdr12
 {
-	#define PR_ENUM(x) \
+	enum class EStockShader : RdrId
+	{
+		#define PR_ENUM(x)\
 		x(Invalid         , = InvalidId)\
 		x(Forward         ,)\
 		x(FwdShaderVS     ,)\
@@ -24,6 +26,8 @@ namespace pr::rdr12
 		x(ThickLineStripGS,)\
 		x(ArrowHeadGS     ,)\
 		x(ShowNormalsGS   ,)
-	PR_DEFINE_ENUM2_BASE(EStockShader, PR_ENUM, RdrId);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EStockShader, PR_ENUM);
 	#undef PR_ENUM
 }

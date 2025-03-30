@@ -13,12 +13,16 @@
 namespace pr::geometry
 {
 	// Supported model file formats
-	#define PR_ENUM(x)\
+	enum class EModelFileFormat
+	{
+		#define PR_ENUM(x)\
 		x(Unknown , ""    , = 0) /**/\
 		x(P3D     , ".p3d",    ) /* PR3D */\
 		x(Max3DS  , ".3ds",    ) /* 3D Studio Max */\
 		x(STL     , ".stl",    ) /* Stereolithography CAD model */
-	PR_DEFINE_ENUM3(EModelFileFormat, PR_ENUM);
+		PR_ENUM_MEMBERS3(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION3(EModelFileFormat, PR_ENUM);
 	#undef PR_ENUM
 		
 	// Determine the model file format from the filepath

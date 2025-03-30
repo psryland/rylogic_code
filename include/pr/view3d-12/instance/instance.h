@@ -293,27 +293,26 @@ namespace pr::rdr12
 
 	// Use this to define class types that are compatible with the renderer
 	// Example:
-	//  #define PR_RDR_INST(x)\
+	//  struct MyInstanceType
+	//  {
+	//     #define PR_RDR_INST(x)\
 	//     x(pr::rdr12::ModelPtr ,m_model  ,pr::rdr12::EInstComp::ModelPtr)\
 	//     x(pr::Colour32        ,m_colour ,pr::rdr12::EInstComp::TintColour32)
-	//  PR_RDR_DEFINE_INSTANCE(name, PR_RDR_INST)
-	//  #undef PR_RDR_INST
+	//     PR_RDR12_INSTANCE_MEMBERS(PR_RDR_INST);
+	//     #undef PR_RDR_INST
+	//  };
+	#pragma region Instance Type Generator
 
-	// Macro instance generator functions
-	#define PR_RDR12_INST_INITIALISERS(ty,nm,em)      ,nm()
-	#define PR_RDR12_INST_MEMBER_COUNT(ty,nm,em)      + 1
+	#pragma region Macro Helpers
 	#define PR_RDR12_INST_MEMBERS(ty,nm,em)           ty nm;
+	#define PR_RDR12_INST_MEMBER_COUNT(ty,nm,em)      + 1
+	#define PR_RDR12_INST_INITIALISERS(ty,nm,em)      ,nm()
 	#define PR_RDR12_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
 	#define PR_RDR12_INST_COMPONENT_SIZES(ty,nm,em)   SizeOf(em),
 	#define PR_RDR12_INST_ALIGNMENT_CHECK(ty,nm,em)   if (offsetof(ThisType, nm) == ofs) { ofs += Sizes[i++]; } else { return false; }
+	#pragma endregion
 
-	// Notes:
-	//  - Be careful with alignment of members, esp. m4x4's
-	//  - Instance lifetimes are controlled by the caller. The renderer only uses pointers.
-	//  - Standard is layout is required though for accessing members.
-	#define PR_RDR12_DEFINE_INSTANCE(name, fields)\
-	struct name\
-	{\
+	#define PR_RDR12_INSTANCE_MEMBERS(name, fields)\
 		static constexpr int CompCount = 0 fields(PR_RDR12_INST_MEMBER_COUNT);\
 		static constexpr int CompCapacity = CompCount + pr::Pad<int>(sizeof(pr::rdr12::BaseInstance) + CompCount*sizeof(pr::rdr12::EInstComp), 16U);\
 		pr::rdr12::BaseInstance m_base;\
@@ -338,50 +337,7 @@ namespace pr::rdr12
 			};\
 			static_assert(AlignCheck(), "Member alignment issue");\
 			static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
-		}\
-	};\
-	static_assert(std::is_standard_layout_v<name>, "Instance type must have standard layout");
+		}
+
+	#pragma endregion
 }
-
-/*
-struct Test
-{
-	pr::rdr12::BaseInstance m_base;
-	pr::rdr12::EInstComp m_cpt[3 + pr::Pad<size_t>(sizeof(pr::rdr12::BaseInstance) + 3, 16U)];
-	pr::rdr12::ModelPtr m_model;
-	pr::Colour32 m_colour;
-	pr::m4x4 m_i2w;
-
-	Test()
-		:m_base({ 3 })
-		,m_cpt()
-		,m_model()
-		,m_colour()
-		,m_i2w()
-	{
-		using namespace pr::rdr12;
-		using ThisType = Test;
-		int i = 0;
-		m_cpt[i++] = EInstComp::ModelPtr;
-		m_cpt[i++] = EInstComp::TintColour32;
-		m_cpt[i++] = EInstComp::I2WTransform;
-		static_assert(offsetof(Test, m_base) == 0, "'m_base' must be be the first member");
-		
-		constexpr auto AlignCheck = []()
-		{
-			constexpr int Sizes[] = {
-				pr::rdr12::SizeOf(EInstComp::ModelPtr),
-				pr::rdr12::SizeOf(EInstComp::TintColour32),
-				pr::rdr12::SizeOf(EInstComp::I2WTransform),
-			};
-
-			int i = 0, ofs = pr::PadTo<int>(sizeof(BaseInstance) + 3 * sizeof(EInstComp), 16);
-			if (offsetof(ThisType, m_model ) == ofs) { ofs += Sizes[i++]; } else return false;
-			if (offsetof(ThisType, m_colour) == ofs) { ofs += Sizes[i++]; } else return false;
-			if (offsetof(ThisType, m_i2w   ) == ofs) { ofs += Sizes[i++]; } else return false;
-			return true;
-		};
-		static_assert(AlignCheck(), "Member alignment issue");
-	}
-};
-*/

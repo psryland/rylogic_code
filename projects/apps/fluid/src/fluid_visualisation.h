@@ -16,11 +16,14 @@ namespace pr::fluid
 
 	struct FluidVisualisation
 	{
-		#define PR_INST(x)\
+		struct Instance
+		{
+			#define PR_INST(x)\
 			x(m4x4, m_i2w, rdr12::EInstComp::I2WTransform)\
 			x(rdr12::ModelPtr, m_model, rdr12::EInstComp::ModelPtr)
-		PR_RDR12_DEFINE_INSTANCE(Instance, PR_INST)
-		#undef PR_INST
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_INST);
+			#undef PR_INST
+		};
 		using PointShaderPtr = rdr12::RefPtr<rdr12::shaders::PointSpriteGS>;
 
 		rdr12::Renderer* m_rdr;

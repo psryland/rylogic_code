@@ -59,7 +59,7 @@ namespace pr
 			, m_capacity(0)
 		{
 			set_capacity(rhs.m_capacity);
-			memcpy(m_ptr, rhs.m_ptr, rhs.m_size);
+			if (m_ptr && rhs.m_ptr) memcpy(m_ptr, rhs.m_ptr, rhs.m_size);
 			m_size = rhs.m_size;
 		}
 		explicit byte_data(size_t initial_size_in_bytes)
@@ -184,6 +184,14 @@ namespace pr
 			// Don't use ensure_capacity because the caller is specifically setting the capacity
 			if (new_capacity > m_capacity)
 				set_capacity(new_capacity);
+		}
+
+		// Grow the container so that the size is a multiple of 'alignment'
+		void pad_to(int alignment)
+		{
+			auto rem = size() % alignment;
+			if (rem != 0)
+				resize(size() + (alignment - rem));
 		}
 
 		// Add 'type' to the end of the container
@@ -601,7 +609,15 @@ namespace pr
 			return r;
 		}
 
-		// True where there is data left
+		// Read bytes to align to 'alignment'
+		void align_to(int alignment)
+		{
+			auto rem = (m_beg - (value_type const*)0) % alignment;
+			if (rem != 0)
+				read<std::byte>(static_cast<int>(alignment - rem));
+		}
+
+		// True while there is data left
 		explicit operator bool() const
 		{
 			return m_beg != m_end;
@@ -641,6 +657,14 @@ namespace pr
 				as<Type>() = value;
 				m_beg += sizeof(Type);
 			}
+		}
+
+		// Read bytes to align to 'alignment'
+		void align_to(int alignment)
+		{
+			auto rem = (m_beg - (value_type const*)0) % alignment;
+			if (rem != 0)
+				write<std::byte>({}, static_cast<int>(alignment - rem));
 		}
 
 		// Convertible to const
@@ -799,6 +823,15 @@ namespace pr::container
 			buf1.reserve<int>(16);
 			PR_EXPECT(buf1.capacity<int>() >= 16U);
 			PR_EXPECT(buf1.capacity() >= 16U * sizeof(int));
+
+			// align_to
+			buf1.resize(21);
+			PR_EXPECT(buf1.size() == 21);
+			buf1.align_to(16);
+			PR_EXPECT(buf1.size() == 32);
+			buf1.resize(0);
+			buf1.align_to(4);
+			PR_EXPECT(buf1.size() == 0);
 
 			// append
 			buf1 = buf0;

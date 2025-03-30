@@ -24,178 +24,197 @@ struct float4 { float x, y, z, w; };
 enum <uint> EKeyword
 {
 	// AUTO-GENERATED-KEYWORDS-BEGIN
-	Accel = 1776272131,
-	Addr = 2198485072,
-	Align = 4150770452,
-	Alpha = 3816748683,
-	Ambient = 769453643,
-	Anchor = 533762434,
-	AngAccel = 3071695581,
-	AngVelocity = 1983444818,
-	Animation = 2445809997,
-	Arrow = 2356777612,
-	Aspect = 1748891881,
-	Axis = 3519141186,
-	AxisId = 2821469089,
-	BackColour = 2053203692,
-	BakeTransform = 2581247370,
-	Bar = 1223118472,
-	Billboard = 1807119378,
-	Billboard3D = 1749199635,
-	Box = 1183214608,
-	BoxList = 482966660,
-	Camera = 3903947748,
-	CastShadow = 3434545796,
-	Chart = 2010726315,
-	Circle = 1808893457,
-	Closed = 1049176709,
-	Colour = 2107742061,
-	ColourMask = 3850257753,
-	Colours = 160985048,
-	Commands = 3210495811,
-	Cone = 3447874744,
-	ConvexHull = 4030846017,
-	CoordFrame = 1340586631,
-	CornerRadius = 146205564,
-	CrossSection = 3855968132,
-	CString = 3696377867,
-	Custom = 1273586436,
-	Cylinder = 73734935,
-	Dashed = 3417589530,
-	Data = 1633640165,
-	Depth = 1932164280,
-	Diffuse = 2847039405,
-	Dim = 3559743841,
-	Direction = 112172600,
-	Divisions = 3522697911,
-	Equation = 3405427779,
-	Euler = 3721396176,
-	Faces = 2129157485,
-	Facets = 2746758633,
-	Far = 233523716,
-	FilePath = 3517686034,
-	Filter = 3604239663,
-	Font = 94814486,
-	ForeColour = 566537511,
-	Format = 3077150512,
-	Fov = 3569098554,
-	FovX = 3833825642,
-	FovY = 109444487,
-	FrustumFA = 4132698078,
-	FrustumWH = 2043318120,
-	GenerateNormals = 3435554780,
-	Grid = 2444955561,
-	Group = 585446986,
-	Hidden = 217111265,
-	Instance = 3849372400,
-	Inverse = 1751982803,
-	Layers = 351688103,
-	LeftHanded = 1198476718,
-	LightSource = 8129848,
-	Line = 2258880063,
-	LineBox = 3413563278,
-	LineD = 2305486881,
-	LineList = 392567511,
-	Lines = 261427482,
-	LineStrip = 846688391,
-	LookAt = 4115870691,
-	M3x3 = 1629634014,
-	M4x4 = 3571029766,
-	Mesh = 841695258,
-	Model = 4177044552,
-	Name = 904194284,
-	Near = 2282790839,
-	NewLine = 175167211,
-	NonAffine = 2843478707,
-	Normalise = 3552115793,
-	Normals = 3081570275,
-	NoZTest = 2216324274,
-	NoZWrite = 4229908471,
-	O2W = 2652027601,
-	Orthographic = 3706095883,
-	Orthonormalise = 568525649,
-	Padding = 244087260,
-	Param = 3268730128,
-	Parametrics = 3196483018,
-	Part = 3767037922,
-	Period = 3523750322,
-	PerItemColour = 1664324363,
-	PerItemParametrics = 1273718588,
-	Pie = 2304688277,
-	Plane = 1880625333,
-	Point = 3758757417,
-	Polygon = 2189689745,
-	Pos = 1668956049,
-	Position = 544900312,
-	Quad = 1051923940,
-	Quat = 3733679956,
-	QuatPos = 3432165810,
-	Rand4x4 = 1093289272,
-	RandColour = 3295180552,
-	RandOri = 1510902700,
-	RandPos = 1423107706,
-	Range = 2207617840,
-	Rect = 1579467807,
-	Reflectivity = 4254610627,
-	Resolution = 1647930679,
-	Ribbon = 3885545905,
-	Round = 3017993275,
-	Scale = 1428222601,
-	ScreenSpace = 268929993,
-	Series = 4082978870,
-	Size = 133542970,
-	Smooth = 1779894359,
-	Solid = 162487746,
-	Source = 1518791278,
-	Specular = 1117514438,
-	Sphere = 1734936622,
-	Spline = 4057807962,
-	Square = 1972133964,
-	Step = 1358202807,
-	Stretch = 3227819128,
-	Strikeout = 473419545,
-	Style = 3687063676,
-	Tetra = 1746501091,
-	TexCoords = 459107654,
-	Text = 764158836,
-	TextLayout = 2095266270,
-	Texture = 1281751746,
-	Transpose = 3584171558,
-	Triangle = 4064242629,
-	TriList = 407772856,
-	TriStrip = 1825250206,
-	Tube = 1811807431,
-	Txfm = 2790714414,
-	Underline = 908250695,
-	Unknown = 1679964129,
-	Up = 52501126,
-	Velocity = 3133171344,
-	Verts = 1315828595,
-	Video = 474428842,
-	ViewPlaneZ = 2718244470,
-	Wedges = 2258899714,
-	Weight = 2659322209,
-	Width = 4087841383,
-	Wireframe = 759880933,
-	XAxis = 2624028016,
-	XColumn = 1419399477,
-	YAxis = 456612421,
-	ZAxis = 3555790074,
-	// AUTO-GENERATED-KEYWORDS-END
+	Accel = 3784776339,
+	Addr = 1087856498,
+	Align = 1613521886,
+	Alpha = 1569418667,
+	Ambient = 479609067,
+	Anchor = 1122880180,
+	AngAccel = 801436173,
+	AngVelocity = 2226367268,
+	Animation = 3779456605,
+	Arrow = 2220107398,
+	Aspect = 2929999953,
+	Axis = 1831579124,
+	AxisId = 1558262649,
+	BackColour = 1583172070,
+	BakeTransform = 3697187404,
+	Bar = 1991736602,
+	Billboard = 3842439780,
+	Billboard3D = 3185018435,
+	BinaryStream = 1110191492,
+	Box = 1892056626,
+	BoxList = 282663022,
+	Camera = 2663290958,
+	CastShadow = 3890809582,
+	Chart = 1487494731,
+	Circle = 673280137,
+	Closed = 3958264005,
+	Colour = 33939709,
+	ColourMask = 1664250849,
+	Colours = 3175120778,
+	Commands = 3062934995,
+	Cone = 3711978346,
+	ConvexHull = 1990998937,
+	CoordFrame = 3958982335,
+	CornerRadius = 2396916310,
+	CrossSection = 3755993582,
+	CString = 2719639595,
+	Custom = 542584942,
+	Cylinder = 2904473583,
+	Dashed = 4029489596,
+	Data = 3631407781,
+	Depth = 4269121258,
+	Diffuse = 1416505917,
+	Dim = 3496118841,
+	Direction = 3748513642,
+	Divisions = 555458703,
+	Equation = 2486886355,
+	Euler = 1180123250,
+	Faces = 455960701,
+	Facets = 3463018577,
+	Far = 3170376174,
+	FilePath = 1962937316,
+	Filter = 3353438327,
+	Font = 659427984,
+	ForeColour = 3815865055,
+	Format = 3114108242,
+	Fov = 2968750556,
+	FovX = 862039340,
+	FovY = 878816959,
+	FrustumFA = 3281884904,
+	FrustumWH = 3334630522,
+	GenerateNormals = 750341558,
+	Grid = 2944866961,
+	Group = 1605967500,
+	Hidden = 4128829753,
+	Instance = 193386898,
+	Inverse = 2986472067,
+	Layers = 2411172191,
+	LeftHanded = 1992685208,
+	LightSource = 2597226090,
+	Line = 400234023,
+	LineBox = 3297263992,
+	LineD = 3504606073,
+	LineList = 419493935,
+	Lines = 3789825596,
+	LineStrip = 4082781759,
+	LookAt = 3951693683,
+	M3x3 = 1709156072,
+	M4x4 = 3279345952,
+	Mesh = 2701180604,
+	Model = 2961925722,
+	Name = 2369371622,
+	Near = 1425233679,
+	NewLine = 4281549323,
+	NonAffine = 3876544483,
+	Normalise = 4066511049,
+	Normals = 247908339,
+	NoZTest = 329427844,
+	NoZWrite = 1339143375,
+	O2W = 2877203913,
+	Orthographic = 3824181163,
+	Orthonormalise = 2850748489,
+	Padding = 2157316278,
+	Param = 1309554226,
+	Parametrics = 4148475404,
+	Part = 2088252948,
+	Period = 2580104964,
+	PerItemColour = 1734234667,
+	PerItemParametrics = 2079701142,
+	Pie = 1782644405,
+	Plane = 3435855957,
+	Point = 414084241,
+	Polygon = 85768329,
+	Pos = 1412654217,
+	Position = 2471448074,
+	Quad = 1738228046,
+	Quat = 1469786142,
+	QuatPos = 1842422916,
+	Rand4x4 = 1326225514,
+	RandColour = 1796074266,
+	RandOri = 55550374,
+	RandPos = 4225427356,
+	Range = 4208725202,
+	Rect = 3940830471,
+	Reflectivity = 3111471187,
+	Resolution = 488725647,
+	Ribbon = 1119144745,
+	Round = 1326178875,
+	Scale = 2190941297,
+	ScreenSpace = 3267318065,
+	Series = 3703783856,
+	Size = 597743964,
+	Smooth = 24442543,
+	Solid = 2973793012,
+	Source = 466561496,
+	Specular = 3195258592,
+	Sphere = 2950268184,
+	Spline = 1222691708,
+	Square = 3031831110,
+	Step = 3343129103,
+	Stretch = 3542801962,
+	Strikeout = 3261692833,
+	Style = 2888859350,
+	Tetra = 1647597299,
+	TexCoords = 536531680,
+	Text = 3185987134,
+	TextLayout = 2881593448,
+	TextStream = 998584670,
+	Texture = 1013213428,
+	Transpose = 3224470464,
+	Triangle = 84037765,
+	TriList = 3668920810,
+	TriStrip = 1312470952,
+	Tube = 1747223167,
+	Txfm = 2438414104,
+	Underline = 3850515583,
+	Unknown = 2608177081,
+	Up = 1128467232,
+	Velocity = 846470194,
+	Verts = 3167497763,
+	Video = 3472427884,
+	ViewPlaneZ = 458706800,
+	Wedges = 451463732,
+	Weight = 1352703673,
+	Width = 2508680735,
+	Wireframe = 305834533,
+	XAxis = 3274667154,
+	XColumn = 3953029077,
+	YAxis = 1077811589,
+	ZAxis = 3837765916,
+    // AUTO-GENERATED-KEYWORDS-END
+};
+enum <uint> ECommandId
+{
+	// AUTO-GENERATED-COMMANDS-BEGIN
+	Invalid = 3419534640,
+	AddToScene = 3734185163,
+	CameraToWorld = 1798355577,
+	CameraPosition = 109155401,
+	ObjectToWorld = 1059927965,
+	Render = 4009327117,
+    // AUTO-GENERATED-COMMANDS-END
 };
 
-void Sections(uint end);
+void Sections(uint end, EKeyword parent);
 
-// Sections that contain data only
-struct DataSection
+// Sections that contain nested sections
+struct Section_Nested
 {
 	local int64 fpos = FTell();
+	EKeyword m_keyword; // The hash of the keyword (4-bytes)
+	int m_size;	        // The length of the section in bytes (excluding the header size)
+	Sections(fpos + 8 + m_size, m_keyword);
+	FSeek(fpos + 8 + m_size);
+};
 
-	// The hash of the keyword (4-bytes)
-	EKeyword m_keyword;
-
-	// The length of the section in bytes (excluding the header size)
-	int m_size;
+// Sections that contain data only
+struct Section_Data
+{
+	local int64 fpos = FTell();
+	EKeyword m_keyword; // The hash of the keyword (4-bytes)
+	int m_size;	        // The length of the section in bytes (excluding the header size)
 
 	// The payload of this section
     switch (m_keyword)
@@ -210,6 +229,14 @@ struct DataSection
             uint32 m_colour <format=hex>;
             break;
         }
+        //case Data:
+        //{
+        //    if (parent == Commands)
+        //        ECommandId m_command_id;
+        //    else
+        //        byte m_data[m_size];
+        //    break;
+        //}
         default:
     	{
             byte m_data[m_size];
@@ -220,24 +247,21 @@ struct DataSection
 	FSeek(fpos + 8 + m_size);
 };
 
-// Sections that contain nested sections
-struct NestedSection
+
+// Section nested function
+void SectionNested(EKeyword keyword, EKeyword parent)
 {
-	local int64 fpos = FTell();
+    Section_Nested object <name=EnumToString(this.m_keyword)>;
+}
 
-	// The hash of the keyword (4-bytes)
-	EKeyword m_keyword;
+// Section Data function
+void SectionData(EKeyword keyword, EKeyword parent)
+{
+	Section_Data data <name=EnumToString(this.m_keyword)>;
+}
 
-	// The length of the section in bytes (excluding the header size)
-	int m_size;
-
-	Sections(fpos + 8 + m_size);
-
-	FSeek(fpos + 8 + m_size);
-};
-
-
-void Sections(uint end)
+// Recursive Sections function
+void Sections(uint end, EKeyword parent)
 {
 	local EKeyword kw;
 
@@ -252,7 +276,7 @@ void Sections(uint end)
 			case BoxList:
 			case Chart:
 			case Circle:
-            case Commands:
+			case Commands:
 			case Cone:
 			case ConvexHull:
 			case CoordFrame:
@@ -286,7 +310,7 @@ void Sections(uint end)
 			case Tube:
 			case Unknown:
 			{
-				NestedSection object <name=EnumToString(this.m_keyword)>;
+				SectionNested(kw, parent);
 				break;
 			}
 	
@@ -405,17 +429,13 @@ void Sections(uint end)
 			case XColumn:
 			case YAxis:
 			case ZAxis:
-			{
-				DataSection data <name=EnumToString(this.m_keyword)>;
-				break;
-			}
 			default:
 			{
-				DataSection unknown <name=EnumToString(this.m_keyword)>;
+                SectionData(kw, parent);
 				break;
 			}
 		}
 	}
 }
 
-Sections(FileSize());
+Sections(FileSize(), 0);

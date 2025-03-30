@@ -43,7 +43,9 @@ namespace pr::script
 	using InComment = str::InComment;
 
 	// Script result codes
-	#define PR_ENUM(x)\
+	enum class EResult
+	{
+		#define PR_ENUM(x)\
 		x(Success                       )\
 		x(Failed                        )\
 		x(FileNotFound                  )\
@@ -73,22 +75,30 @@ namespace pr::script
 		x(UnknownKeyword                )\
 		x(UnknownToken                  )\
 		x(UnknownValue                  )
-	PR_DEFINE_ENUM1(EResult, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EResult, PR_ENUM);
 	#undef PR_ENUM
 
 	// Script token types
-	#define PR_ENUM(x)\
+	enum class EToken
+	{
+		#define PR_ENUM(x)\
 		x(Invalid    ) /* Unknown */\
 		x(EndOfStream) /* The end of the input stream */\
 		x(Identifier ) /* An identifier */\
 		x(Keyword    ) /* A script keyword */\
-		x(Symbol     ) /* An operator or punctuator, e.g *, ->, +, ;, {, }, etc */\
+		x(Symbol     ) /* An operator or punctuation, e.g *, ->, +, ;, {, }, etc */\
 		x(Constant   ) /* A literal constant  */
-	PR_DEFINE_ENUM1(EToken, PR_ENUM); 
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EToken, PR_ENUM);
 	#undef PR_ENUM
 
 	// C/C++ keywords
-	#define PR_ENUM(x)\
+	enum class EKeyword
+	{
+		#define PR_ENUM(x)\
 		x(Invalid      ,""              ,= pr::hash::HashCT(""             ))\
 		x(Auto         ,"auto"          ,= pr::hash::HashCT("auto"         ))\
 		x(Double       ,"double"        ,= pr::hash::HashCT("double"       ))\
@@ -123,11 +133,15 @@ namespace pr::script
 		x(If           ,"if"            ,= pr::hash::HashCT("if"           ))\
 		x(Static       ,"static"        ,= pr::hash::HashCT("static"       ))\
 		x(StaticAssert ,"static_assert" ,= pr::hash::HashCT("static_assert"))
-	PR_DEFINE_ENUM3(EKeyword, PR_ENUM); 
+		PR_ENUM_MEMBERS3(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION3(EKeyword, PR_ENUM);
 	#undef PR_ENUM
 
 	// Preprocessor keywords
-	#define PR_ENUM(x)\
+	enum class EPPKeyword
+	{
+		#define PR_ENUM(x)\
 		x(Invalid       ,""               ,= pr::hash::HashCT(""              ))\
 		x(Include       ,"include"        ,= pr::hash::HashCT("include"       ))\
 		x(IncludePath   ,"include_path"   ,= pr::hash::HashCT("include_path"  ))\
@@ -151,11 +165,15 @@ namespace pr::script
 		x(Eval          ,"eval"           ,= pr::hash::HashCT("eval"          ))\
 		x(Lit           ,"lit"            ,= pr::hash::HashCT("lit"           ))\
 		x(Embedded      ,"embedded"       ,= pr::hash::HashCT("embedded"      ))
-	PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
+		PR_ENUM_MEMBERS3(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION3(EPPKeyword, PR_ENUM);
 	#undef PR_ENUM
 
 	// Symbol characters
-	#define PR_ENUM(x)\
+	enum class ESymbol
+	{
+		#define PR_ENUM(x)\
 		x(Invalid        ,""    ,=   0 )\
 		x(WhiteSpace     ," "   ,= ' ' )\
 		x(NewLine        ,"\n"  ,= '\n')\
@@ -207,21 +225,29 @@ namespace pr::script
 		x(DivAssign      ,"/="  ,= 146 )\
 		x(ModAssign      ,"%="  ,= 147 )\
 		x(Ellipsis       ,"..." ,= 148 )
-	PR_DEFINE_ENUM3(ESymbol, PR_ENUM);
+		PR_ENUM_MEMBERS3(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION3(ESymbol, PR_ENUM);
 	#undef PR_ENUM
 
 	// Constant literals
-	#define PR_ENUM(x)\
+	enum class EConstant
+	{
+		#define PR_ENUM(x)\
 		x(Invalid       )\
 		x(StringLiteral )\
 		x(WStringLiteral)\
 		x(Integral      )\
 		x(FloatingPoint )
-	PR_DEFINE_ENUM1(EConstant, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EConstant, PR_ENUM);
 	#undef PR_ENUM
 
 	// Transform keywords
-	#define PR_ENUM(x)\
+	enum class ETransformKeyword
+	{
+		#define PR_ENUM(x)\
 		x(NonAffine      ,= pr::hash::HashICT("NonAffine"     ))\
 		x(M4x4           ,= pr::hash::HashICT("M4x4"          ))\
 		x(M3x3           ,= pr::hash::HashICT("M3x3"          ))\
@@ -238,6 +264,8 @@ namespace pr::script
 		x(Inverse        ,= pr::hash::HashICT("Inverse"       ))\
 		x(Normalise      ,= pr::hash::HashICT("Normalise"     ))\
 		x(Orthonormalise ,= pr::hash::HashICT("Orthonormalise"))
-	PR_DEFINE_ENUM2(ETransformKeyword, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ETransformKeyword, PR_ENUM);
 	#undef PR_ENUM
 }

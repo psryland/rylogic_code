@@ -7,12 +7,14 @@
 
 namespace las
 {
-	#define LAS_SETTING(x) \
+	struct Settings : pr::SettingsBase<Settings>
+	{
+		#define PR_SETTINGS(x) \
 		x(std::string ,Version     ,AppVersionA() ,"Application version number")\
 		x(bool        ,FullScreen  ,false         ,"Full screen mode enabled"  )\
 		x(int         ,XResolution ,1024          ,"Screen X resolution"       )\
 		x(int         ,YResolution ,768           ,"Screen Y resolution"       )
-	
-	PR_DEFINE_SETTINGS(Settings, LAS_SETTING);
-	#undef LAS_SETTING
+		PR_SETTINGS_MEMBERS(Settings, PR_SETTINGS);
+		#undef PR_SETTINGS
+	};
 }

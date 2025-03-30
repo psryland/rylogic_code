@@ -18,13 +18,16 @@ struct Main :Form
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
-	//// Declare an instance type
-	//#define PR_RDR_INST(x)\
+	// Declare an instance type
+	//struct Instance
+	//{
+	//	#define PR_RDR_INST(x)\
 	//	x(m4x4, m_i2w, EInstComp::I2WTransform)\
 	//	x(ModelPtr, m_model, EInstComp::ModelPtr)\
 	//	x(Colour32, m_tint, EInstComp::TintColour32)
-	//PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST)
-	//#undef PR_RDR_INST
+	//	PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST);
+	//	#undef PR_RDR_INST
+	//};
 
 	View3DContext m_view3d;
 	View3DWindow m_win3d;

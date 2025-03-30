@@ -31,6 +31,7 @@
 #include <filesystem>
 #include <source_location>
 #include <type_traits>
+#include <variant>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
@@ -112,6 +113,7 @@
 #include "pr/maths/bit_fields.h"
 #include "pr/maths/maths.h"
 #include "pr/meta/alignment_of.h"
+#include "pr/meta/nameof.h"
 #include "pr/network/winsock.h"
 #include "pr/network/sockets.h"
 #include "pr/str/char8.h"
@@ -282,14 +284,20 @@ namespace pr::rdr12
 	using InvokeFunc = void (__stdcall *)(void* ctx);
 
 	// EResult
-	#define PR_ENUM(x)\
+	enum class EResult : uint32_t
+	{
+		#define PR_ENUM(x)\
 		x(Success       ,= 0         )\
 		x(Failed        ,= 0x80000000)\
 		x(InvalidValue  ,)
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EResult, PR_ENUM);
+	#undef PR_ENUM
 	
 	// Render steps
-	#undef PR_ENUM
+	enum class ERenderStep
+	{
 		#define PR_ENUM(x)\
 		x(Invalid        , = InvalidId)\
 		x(RenderForward  ,)\
@@ -297,11 +305,15 @@ namespace pr::rdr12
 		x(DSLighting     ,)\
 		x(ShadowMap      ,)\
 		x(RayCast        ,)
-	PR_DEFINE_ENUM2(ERenderStep, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ERenderStep, PR_ENUM);
 	#undef PR_ENUM
 
 	// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
-	#define PR_ENUM(x)\
+	enum class EShaderType
+	{
+		#define PR_ENUM(x)\
 		x(Invalid ,= 0)\
 		x(VS      ,= 1 << 0)\
 		x(PS      ,= 1 << 1)\
@@ -311,21 +323,29 @@ namespace pr::rdr12
 		x(DS      ,= 1 << 5)\
 		x(All     ,= ~0)\
 		x(_flags_enum, = 0x7FFFFFFF)
-	PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EShaderType, PR_ENUM);
 	#undef PR_ENUM
 
 	// EAddrMode
-	#define PR_ENUM(x)\
+	enum class EAddrMode
+	{
+		#define PR_ENUM(x)\
 		x(Wrap       ,= D3D12_TEXTURE_ADDRESS_MODE_WRAP)\
 		x(Mirror     ,= D3D12_TEXTURE_ADDRESS_MODE_MIRROR)\
 		x(Clamp      ,= D3D12_TEXTURE_ADDRESS_MODE_CLAMP)\
 		x(Border     ,= D3D12_TEXTURE_ADDRESS_MODE_BORDER)\
 		x(MirrorOnce ,= D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE)
-	PR_DEFINE_ENUM2(EAddrMode, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EAddrMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// EFilter - MinMagMip
-	#define PR_ENUM(x)\
+	enum class EFilter
+	{
+		#define PR_ENUM(x)\
 		x(Point             ,= D3D12_FILTER_MIN_MAG_MIP_POINT)\
 		x(PointPointLinear  ,= D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
 		x(PointLinearPoint  ,= D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
@@ -335,57 +355,83 @@ namespace pr::rdr12
 		x(LinearLinearPoint ,= D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
 		x(Linear            ,= D3D12_FILTER_MIN_MAG_MIP_LINEAR)\
 		x(Anisotropic       ,= D3D12_FILTER_ANISOTROPIC)
-	PR_DEFINE_ENUM2(EFilter, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EFilter, PR_ENUM);
 	#undef PR_ENUM
 
 	// EFillMode
-	#define PR_ENUM(x)\
+	enum class EFillMode
+	{
+		#define PR_ENUM(x)\
 		x(Default   ,= 0)\
 		x(Points    ,= 1)\
 		x(Wireframe ,= D3D12_FILL_MODE::D3D12_FILL_MODE_WIREFRAME)\
 		x(Solid     ,= D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID)\
 		x(SolidWire ,= 4)
-	PR_DEFINE_ENUM2(EFillMode, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EFillMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// ECullMode
-	#define PR_ENUM(x)\
+	enum class ECullMode
+	{
+		#define PR_ENUM(x)\
 		x(Default ,= 0)\
 		x(None    ,= D3D12_CULL_MODE::D3D12_CULL_MODE_NONE)\
 		x(Front   ,= D3D12_CULL_MODE::D3D12_CULL_MODE_FRONT)\
 		x(Back    ,= D3D12_CULL_MODE::D3D12_CULL_MODE_BACK)
-	PR_DEFINE_ENUM2(ECullMode , PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ECullMode , PR_ENUM);
 	#undef PR_ENUM
 
 	// ELight
-	#define PR_ENUM(x)\
+	enum class ELight
+	{
+		#define PR_ENUM(x)\
 		x(Ambient    )\
 		x(Directional)\
 		x(Point      )\
 		x(Spot       )
-	PR_DEFINE_ENUM1(ELight, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(ELight, PR_ENUM);
 	#undef PR_ENUM
 
 	// EEye
-	#define PR_ENUM(x)\
+	enum class EEye
+	{
+		#define PR_ENUM(x)\
 		x(Left )\
 		x(Right)
-	PR_DEFINE_ENUM1(EEye, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EEye, PR_ENUM);
 	#undef PR_ENUM
 
 	// ERadial
-	#define PR_ENUM(x)\
+	enum class ERadial
+	{
+		#define PR_ENUM(x)\
 		x(Spherical)\
 		x(Cylindrical)
-	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 
-	// EGpulush
-	#define PR_ENUM(x)\
+	// EGpuFlush
+	enum class EGpuFlush
+	{
+		#define PR_ENUM(x)\
 		x(DontFlush)\
 		x(Async)\
 		x(Block)
-	PR_DEFINE_ENUM1(EGpuFlush, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EGpuFlush, PR_ENUM);
 	#undef PR_ENUM
 
 	// Instances
