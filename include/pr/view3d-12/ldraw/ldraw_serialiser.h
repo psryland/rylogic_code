@@ -36,14 +36,14 @@ namespace pr::rdr12::ldraw
 		template <int N> Name(char const (&str)[N]) :m_name(str) {}
 		template <int N> Name(wchar_t const (&str)[N]) :m_name(Narrow(str)) {}
 	};
-	struct Col
+	struct Colour
 	{
-		Colour32 m_col;
+		Colour32 m_colour;
 		EKeyword m_kw;
-		Col() : m_col(0xFFFFFFFF), m_kw(EKeyword::Colour) {}
-		Col(Colour32 c) :m_col(c), m_kw(EKeyword::Colour) {}
-		Col(uint32_t argb) :m_col(argb), m_kw(EKeyword::Colour) {}
-		Col(Colour32 c, EKeyword kw) :m_col(c), m_kw(kw) {}
+		Colour() : m_colour(0xFFFFFFFF), m_kw(EKeyword::Colour) {}
+		Colour(Colour32 c) :m_colour(c), m_kw(EKeyword::Colour) {}
+		Colour(uint32_t argb) :m_colour(argb), m_kw(EKeyword::Colour) {}
+		Colour(Colour32 c, EKeyword kw) :m_colour(c), m_kw(kw) {}
 	};
 	struct Size
 	{

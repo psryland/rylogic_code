@@ -51,11 +51,11 @@ namespace pr::rdr12::ldraw
 	struct ParseResult
 	{
 		using ModelLookup = std::unordered_map<size_t, ModelPtr>;
-		using CommandCont = pr::vector<Command>;
+		using CommandBuf = pr::byte_data<16>;
 
 		ObjectCont  m_objects;    // Reference to the objects container to fill
 		ModelLookup m_models;     // A lookup map for models based on hashed object name
-		CommandCont m_commands;   // Ldraw commands (todo: replace 'm_cam' with these)
+		CommandBuf  m_commands;   // A buffer of Ldraw commands (todo: replace 'm_cam' with these)
 		Camera      m_cam;        // Camera description has been read
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
@@ -65,6 +65,7 @@ namespace pr::rdr12::ldraw
 		size_t count() const;
 		LdrObjectPtr operator[](size_t index) const;
 		ParseResult& operator += (ParseResult&& rhs);
+		explicit operator bool() const;
 	};
 
 	// Progress update event args

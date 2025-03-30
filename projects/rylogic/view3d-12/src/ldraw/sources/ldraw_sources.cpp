@@ -77,11 +77,11 @@ namespace pr::rdr12::ldraw
 		m_watcher.RemoveAll();
 
 		// Notify of the object container change
-		m_events->OnStoreChange({EDataChangeReason::Removal, guids, nullptr, false});
+		m_events->OnStoreChange({EDataChangedReason::Removal, guids, nullptr, false});
 	}
 
-	// Remove a single object from the object container
-	void ScriptSources::Remove(LdrObject* object, EDataChangeReason reason)
+	// Remove a single object from the store
+	void ScriptSources::Remove(LdrObject* object, EDataChangedReason reason)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto id = object->m_context_id;
@@ -101,7 +101,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Remove all objects associated with 'context_ids'
-	void ScriptSources::Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangeReason reason)
+	void ScriptSources::Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangedReason reason)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -133,7 +133,7 @@ namespace pr::rdr12::ldraw
 			m_events->OnStoreChange({ reason, removed, nullptr, false });
 		}
 	}
-	void ScriptSources::Remove(Guid const& context_id, EDataChangeReason reason)
+	void ScriptSources::Remove(Guid const& context_id, EDataChangedReason reason)
 	{
 		Remove({ &context_id, 1 }, {}, reason);
 	}
@@ -150,7 +150,7 @@ namespace pr::rdr12::ldraw
 		std::for_each(std::execution::par_unseq, std::begin(m_srcs), std::end(m_srcs), [this](auto& pair)
 		{
 			SourceBase& src = *pair.second;
-			src.Load(rdr(), { EDataChangeReason::Reload, nullptr });
+			src.Load(rdr(), EDataChangedReason::Reload, nullptr);
 		});
 	}
 
@@ -164,8 +164,8 @@ namespace pr::rdr12::ldraw
 	Guid ScriptSources::Add(LdrObjectPtr object)
 	{
 		auto src = std::shared_ptr<SourceBase>(new SourceBase{ &object->m_context_id });
-		src->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-		src->Load(rdr(), { EDataChangeReason::NewData, nullptr });
+		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+		src->Load(rdr(), EDataChangedReason::NewData, nullptr);
 		return src->m_context_id;
 	}
 
@@ -179,8 +179,8 @@ namespace pr::rdr12::ldraw
 		// been created, but before they've been added to the main 'm_srcs' collection.
 		// The 'on_add' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceString<Char>>(new SourceString<Char>(context_id, script, enc, includes));
-		src->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-		src->Load(rdr(), { EDataChangeReason::NewData, add_complete });
+		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
 		return src->m_context_id;
 	}
 	template Guid ScriptSources::AddString<wchar_t>(std::wstring_view script, EEncoding enc, Guid const* context_id, PathResolver const& includes, AddCompleteCB add_complete);
@@ -195,8 +195,8 @@ namespace pr::rdr12::ldraw
 		// been created, but before they've been added to the main 'm_srcs' collection.
 		// The 'on_add' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceFile>(new SourceFile{ context_id, filepath, enc, includes });
-		src->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-		src->Load(rdr(), { EDataChangeReason::NewData, add_complete });
+		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
 		return src->m_context_id;
 	}
 
@@ -209,8 +209,8 @@ namespace pr::rdr12::ldraw
 		// been created, but before they've been added to the main 'm_srcs' collection.
 		// The 'on_add' callback function should be used as a continuation function.
 		auto src = std::shared_ptr<SourceBinary>(new SourceBinary{ context_id, data });
-		src->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-		src->Load(rdr(), { EDataChangeReason::NewData, add_complete });
+		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+		src->Load(rdr(), EDataChangedReason::NewData, add_complete);
 		return src->m_context_id;
 	}
 
@@ -301,8 +301,8 @@ namespace pr::rdr12::ldraw
 
 								// Add this connection as a new source
 								auto src = std::shared_ptr<SourceStream>(new SourceStream{ nullptr, &rdr(), std::move(client), client_addr });
-								src->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-								src->Load(rdr(), { EDataChangeReason::NewData, nullptr });
+								src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+								src->Load(rdr(), EDataChangedReason::NewData, nullptr);
 							}
 							break;
 						}
@@ -414,20 +414,20 @@ namespace pr::rdr12::ldraw
 		{
 			// Note: if loading a file fails, don't use 'MarkAsChanged' to trigger another load
 			// attempt. Doing so results in an infinite loop trying to load a broken file.
-			clone->NewData += std::bind(&ScriptSources::NewDataHandler, this, _1, _2);
-			clone->Load(rdr(), { EDataChangeReason::Reload, nullptr });
+			clone->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
+			clone->Load(rdr(), EDataChangedReason::Reload, nullptr);
 		}).detach();
 	}
 
 	// Handler for when new data is received from a source
-	void ScriptSources::NewDataHandler(std::shared_ptr<SourceBase> source, NewDataEventArgs args)
+	void ScriptSources::SourceNotifyHandler(std::shared_ptr<SourceBase> source, NotifyEventArgs const& args)
 	{
 		// Marshal to the main thread
 		if (std::this_thread::get_id() != m_main_thread_id)
 		{
-			return rdr().RunOnMainThread([this, source, args]() mutable noexcept
+			return rdr().RunOnMainThread([this, source, args = args]() mutable noexcept
 			{
-				NewDataHandler(source, args);
+				SourceNotifyHandler(source, args);
 			});
 		}
 
@@ -435,35 +435,54 @@ namespace pr::rdr12::ldraw
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto context_id = source->m_context_id;
 
-		// Don't remove previous objects associated with 'context',
-		// leave that to the caller via the 'on_add' callback.  ?? TODO or not?
-		m_loading.erase(context_id);
+		switch (args.m_reason)
+		{
+			case ENotifyReason::LoadComplete:
+			{
+				// Remove 'context_id' from the "currently loading" set.
+				// Don't remove previous objects associated with 'context',
+				// leave that to the caller via the 'on_add' callback.  ?? TODO or not?
+				m_loading.erase(context_id);
 
-		// Notify of the store about to change
-		m_events->OnStoreChange({ args.m_reason, { &context_id, 1 }, &source->m_output, true });
-		if (args.m_add_complete) args.m_add_complete(context_id, true);
+				// Notify of the store about to change
+				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &source->m_output, true });
+				if (args.m_add_complete) args.m_add_complete(context_id, true);
 
-		// Add any dependent files to the file watcher
-		for (auto& fp : source->m_filepaths)
-			m_watcher.Add(fp.c_str(), this, context_id);
+				// Add any dependent files to the file watcher
+				for (auto& fp : source->m_filepaths)
+					m_watcher.Add(fp.c_str(), this, context_id);
 
-		// Notify of any errors that occurred
-		for (auto& err : source->m_errors)
-			m_events->OnError(err);
+				// Notify of any errors that occurred
+				for (auto& err : source->m_errors)
+					m_events->OnError(err);
 
-		// Update the store
-		auto& src = m_srcs[context_id];
-		if (src == nullptr)
-			src = source;
-		else if (src != source)
-			src->m_output += std::move(source->m_output);
+				// Update the store
+				auto& src = m_srcs[context_id];
+				if (src == nullptr)
+					src = source;
+				else if (src != source)
+					src->m_output += std::move(source->m_output);
 
-		// Notify of the store change
-		m_events->OnStoreChange({ args.m_reason, { &context_id, 1 }, &src->m_output, false });
-		if (args.m_add_complete) args.m_add_complete(context_id, false);
+				// Notify of the store change
+				m_events->OnStoreChange({ args.m_trigger, { &context_id, 1 }, &src->m_output, false });
+				if (args.m_add_complete) args.m_add_complete(context_id, false);
 
-		// Process any commands
-		if (!src->m_output.m_commands.empty())
-			m_events->OnHandleCommands(*src);
+				// Process any commands
+				if (!src->m_output.m_commands.empty())
+					m_events->OnHandleCommands(*src);
+
+				break;
+			}
+			case ENotifyReason::Disconnected:
+			{
+				// 'source' has disconnected.
+				Remove(source->m_context_id);
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown notify reason");
+			}
+		}
 	}
 }

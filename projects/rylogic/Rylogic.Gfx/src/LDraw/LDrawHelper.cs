@@ -24,13 +24,13 @@ namespace Rylogic.LDraw
 	{
 		private List<LdrObj> m_objects = [];
 
-		/// <summary>Create child object</summary>
-		public LdrGroup Group(Serialiser.Name name, Serialiser.Colour colour)
+		/// <summary>Clear</summary>
+		public void Reset()
 		{
-			var child = new LdrGroup();
-			m_objects.Add(child);
-			return child.name(name).colour(colour);
+			m_objects.Clear();
 		}
+
+		/// <summary>Create child object</summary>
 		public LdrPoint Point(Serialiser.Name name, Serialiser.Colour colour)
 		{
 			var child = new LdrPoint();
@@ -103,6 +103,30 @@ namespace Rylogic.LDraw
 			m_objects.Add(child);
 			return child.name(name).colour(colour);
 		}
+		public LdrGroup Group(Serialiser.Name name, Serialiser.Colour colour)
+		{
+			var child = new LdrGroup();
+			m_objects.Add(child);
+			return child.name(name).colour(colour);
+		}
+		public LdrCommands Command()
+		{
+			var child = new LdrCommands();
+			m_objects.Add(child);
+			return child;
+		}
+		public LdrBinaryStream BinaryStream()
+		{
+			var child = new LdrBinaryStream();
+			m_objects.Add(child);
+			return child;
+		}
+		public LdrTextStream TextStream()
+		{
+			var child = new LdrTextStream();
+			m_objects.Add(child);
+			return child;
+		}
 
 		/// <summary>Serialise to ldraw script</summary>
 		public override string ToString()
@@ -110,6 +134,14 @@ namespace Rylogic.LDraw
 			var res = new TextWriter();
 			WriteTo(res);
 			return res.ToString();
+		}
+
+		/// <summary>Serialise to ldraw text</summary>
+		public MemoryStream ToText()
+		{
+			var res = new TextWriter();
+			WriteTo(res);
+			return res.ToText();
 		}
 
 		/// <summary>Serialise to ldraw binary</summary>
@@ -129,13 +161,20 @@ namespace Rylogic.LDraw
 	}
 	public class LdrBase<TDerived> : LdrObj where TDerived : LdrBase<TDerived>
 	{
+		protected Serialiser.Name m_name = new();
+		protected Serialiser.Colour m_colour = new();
+		protected Serialiser.Colour m_colour_mask = new();
+		protected Serialiser.O2W m_o2w = new();
+		protected Serialiser.Wireframe m_wire = new();
+		protected Serialiser.AxisId m_axis_id = new();
+		protected Serialiser.Solid m_solid = new();
+
 		/// <summary>Object name</summary>
 		public TDerived name(Serialiser.Name name)
 		{
 			m_name = name;
 			return (TDerived)this;
 		}
-		protected Serialiser.Name m_name;
 
 		/// <summary>Object colour</summary>
 		public TDerived colour(Serialiser.Colour colour)
@@ -143,7 +182,6 @@ namespace Rylogic.LDraw
 			m_colour = colour;
 			return (TDerived)this;
 		}
-		protected Serialiser.Colour m_colour;
 
 		/// <summary>Object colour mask</summary>
 		public TDerived colour_mask(Serialiser.Colour colour)
@@ -152,7 +190,6 @@ namespace Rylogic.LDraw
 			m_colour_mask.m_kw = EKeyword.ColourMask;
 			return (TDerived)this;
 		}
-		protected Serialiser.Colour m_colour_mask;
 
 		/// <summary>Object to world transform</summary>
 		public TDerived o2w(m4x4 o2w)
@@ -162,8 +199,7 @@ namespace Rylogic.LDraw
 		}
 		public TDerived o2w(m3x4 rot, v4 pos)
 		{
-			m_o2w.m_mat = new m4x4(rot, pos) * m_o2w.m_mat;
-			return (TDerived)this;
+			return o2w(new m4x4(rot, pos));
 		}
 		public TDerived ori(v4 dir, AxisId axis)
 		{
@@ -200,7 +236,6 @@ namespace Rylogic.LDraw
 				Math_.DegreesToRadians(yaw_deg),
 				Math_.DegreesToRadians(roll_deg)));
 		}
-		protected readonly Serialiser.O2W m_o2w = new();
 
 		/// <summary>Wire frame</summary>
 		public TDerived wireframe(bool w = true)
@@ -208,7 +243,6 @@ namespace Rylogic.LDraw
 			m_wire = w;
 			return (TDerived)this;
 		}
-		protected Serialiser.Wireframe m_wire;
 
 		/// <summary>Axis Id</summary>
 		public TDerived axis(AxisId axis_id)
@@ -216,7 +250,6 @@ namespace Rylogic.LDraw
 			m_axis_id = axis_id;
 			return (TDerived)this;
 		}
-		protected AxisId m_axis_id;
 
 		/// <summary>Solid</summary>
 		public TDerived solid(bool solid)
@@ -224,7 +257,6 @@ namespace Rylogic.LDraw
 			m_solid = solid;
 			return (TDerived)this;
 		}
-		protected Serialiser.Solid m_solid;
 
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter writer)
@@ -614,14 +646,38 @@ namespace Rylogic.LDraw
 	}
 	public class LdrBox : LdrBase<LdrBox>
 	{
-		private v4 m_dim;
+		private v4 m_dim = new(0.5f);
 
-		public LdrBox dim(float dim)
+		// Box dimensions
+		public LdrBox radii(float radii)
 		{
-			m_dim = new v4(dim);
+			return dim(radii * 2);
+		}
+		public LdrBox radii(v4 radii)
+		{
+			return dim(radii * 2);
+		}
+		public LdrBox dim(float d)
+		{
+			return dim(d, d, d);
+		}
+		public LdrBox dim(float sx, float sy, float sz)
+		{
+			return dim(new v4(sx, sy, sz, 0));
+		}
+		public LdrBox dim(v4 dim)
+		{
+			m_dim = new v4(dim.x, dim.y, dim.z, 0);
 			return this;
 		}
-		
+
+		// Create from bounding box
+		public LdrBox bbox(BBox bbox)
+		{
+			if (bbox == BBox.Reset) return this;
+			return dim(2 * bbox.Radius).pos(bbox.Centre);
+		}
+
 		/// <inheritdoc/>
 		public override void WriteTo(IWriter res)
 		{
@@ -631,7 +687,6 @@ namespace Rylogic.LDraw
 				base.WriteTo(res);
 			});
 		}
-
 	}
 	public class LdrCylinder : LdrBase<LdrCylinder>
 	{
@@ -875,6 +930,71 @@ namespace Rylogic.LDraw
 			{
 				base.WriteTo(res);
 			});
+		}
+	}
+	public class LdrCommands : LdrBase<LdrCommands>
+	{
+		private struct Cmd
+		{
+			public ECommandId m_id;
+			public List<object> m_params;
+		}
+
+		private readonly List<Cmd> m_cmds = [];
+
+		// Add objects created by this script to scene 'scene_id'
+		public LdrCommands add_to_scene(int scene_id)
+		{
+			m_cmds.Add(new Cmd{ m_id = ECommandId.AddToScene, m_params = [scene_id] });
+			return this;
+		}
+
+		// Apply a transform to an object with the given name
+		public LdrCommands object_transform(string object_name, m4x4 o2w)
+		{
+			m_cmds.Add(new Cmd{ m_id = ECommandId.ObjectToWorld, m_params = [new Serialiser.StringWithLength(object_name), o2w] });
+			return this;
+		}
+
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.Commands, () =>
+			{
+				foreach (var cmd in m_cmds)
+				{
+					res.Write(EKeyword.Data, () =>
+					{
+						res.Append((int)cmd.m_id);
+						foreach (var p in cmd.m_params)
+						{
+							if (p is bool   bool_ ) { res.Append(bool_ ); continue; }
+							if (p is int    int_  ) { res.Append(int_  ); continue; }
+							if (p is float  float_) { res.Append(float_); continue; }
+							if (p is Serialiser.StringWithLength str_  ) { res.Append(str_  ); continue; }
+							if (p is v2     v2_   ) { res.Append(v2_   ); continue; }
+							if (p is v4     v4_   ) { res.Append(v4_   ); continue; }
+							if (p is m4x4   m4_   ) { res.Append(m4_   ); continue; }
+						}
+					});
+				}
+			});
+		}
+	}
+	public class LdrBinaryStream : LdrBase<LdrBinaryStream>
+	{
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.BinaryStream);
+		}
+	}
+	public class LdrTextStream : LdrBase<LdrTextStream>
+	{
+		/// <inheritdoc/>
+		public override void WriteTo(IWriter res)
+		{
+			res.Write(EKeyword.TextStream);
 		}
 	}
 
@@ -1619,9 +1739,25 @@ namespace Rylogic.UnitTests
 			var builder = new LDraw.Builder();
 			builder.Box("b", 0xFF00FF00).dim(1).o2w(m4x4.Identity);
 			var mem = builder.ToBinary().ToArray();
+			Assert.Equal(mem.Length, 49);
+		}
 
-			using var ofile = File.Create("E:/Dump/LDraw/test.bdr");
-			ofile.Write(mem, 0, mem.Length);
+		[Test]
+		public void TestCommands()
+		{
+			var builder = new LDraw.Builder();
+			builder.Box("b", 0xFF00FF00).dim(1);
+			builder.Command()
+				.add_to_scene(0)
+				.object_transform("b", m4x4.Transform(v4.ZAxis, 0.3f, v4.Origin));
+			var mem = builder.ToBinary();
+
+			#if false
+			{
+				using var ofile = File.Create("E:/Dump/LDraw/test.bdr");
+				mem.CopyTo(ofile);
+			}
+			#endif
 		}
 	}
 }

@@ -177,6 +177,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NeuralNet", "NeuralNet", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "neuralnet", "projects\apps\neuralnet\neuralnet.vcxproj", "{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		script\UserVars.csx = script\UserVars.csx
+		script\UserVars.py = script\UserVars.py
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1022,6 +1028,7 @@ Global
 		{A96E7D7B-6550-4F4D-A630-80712E25AB13} = {97D7F88E-2CD0-4F77-93A7-BFE93C34E13D}
 		{8481DF42-91AA-44A3-AF06-64079B7CA26B} = {BBF63BD1-EC12-4D64-8D81-B32217DD3BE9}
 		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2} = {8481DF42-91AA-44A3-AF06-64079B7CA26B}
+		{02EA681E-C7D8-13C7-8484-4AC65E1B71E8} = {F53CDE7D-1807-461E-B4F7-6AFFC43D1154}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7DD34DBC-7EE6-40E2-8641-CDA6D05E7838}

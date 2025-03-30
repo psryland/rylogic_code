@@ -326,7 +326,7 @@ namespace pr::rdr12
 		{
 			m_objects.insert(iter, object);
 			m_guids.insert(object->m_context_id);
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, &object->m_context_id, 1, object);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, { &object->m_context_id, 1 }, object);
 		}
 	}
 	void V3dWindow::Remove(ldraw::LdrObject* object)
@@ -342,7 +342,7 @@ namespace pr::rdr12
 
 		// Notify if changed
 		if (m_objects.size() != count)
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, { &object->m_context_id, 1 }, object);
 	}
 
 	// Add/Remove a gizmo to this window
@@ -353,13 +353,13 @@ namespace pr::rdr12
 		if (iter == std::end(m_gizmos))
 		{
 			m_gizmos.insert(iter, gizmo);
-			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, nullptr, 0, nullptr); // todo, overload and pass 'gizmo' out
+			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, {}, nullptr); // todo, overload and pass 'gizmo' out
 		}
 	}
 	void V3dWindow::Remove(ldraw::LdrGizmo* gizmo)
 	{
 		m_gizmos.erase(gizmo);
-		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, nullptr, 0, nullptr);
+		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, {}, nullptr);
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
@@ -435,7 +435,7 @@ namespace pr::rdr12
 		if (m_objects.size() != old_count)
 		{
 			m_guids.insert(std::begin(new_guids), std::end(new_guids));
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids.data(), int(new_guids.size()), nullptr);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids, nullptr);
 		}
 	}
 	void V3dWindow::Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids)
@@ -467,7 +467,7 @@ namespace pr::rdr12
 			if (m_objects.size() != old_count)
 			{
 				pr::vector<Guid> guids(std::begin(removed), std::end(removed));
-				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids.data(), int(guids.size()), nullptr);
+				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids, nullptr);
 			}
 		}
 	}
@@ -485,7 +485,7 @@ namespace pr::rdr12
 		m_guids.clear();
 
 		// Notify that the scene has changed
-		ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, context_ids.data(), int(context_ids.size()), nullptr);
+		ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, context_ids, nullptr);
 	}
 
 	// Render this window into whatever render target is currently set
@@ -1068,17 +1068,22 @@ namespace pr::rdr12
 	}
 
 	// Called when objects are added/removed from this window
-	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, ldraw::LdrObject* object)
+	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object)
 	{
 		// Reset the draw lists so that removed objects are no longer in the draw list
 		if (change_type == view3d::ESceneChanged::ObjectsRemoved)
+		{
+			// Objects are being removed, make sure they're not in the drawlist
+			// for this window and that the graphics card is not still using them.
 			m_scene.ClearDrawlists();
+			m_wnd.m_gsync.Wait();
+		}
 
 		// Invalidate cached members
 		m_bbox_scene = BBox::Reset();
 
 		// Notify scene changed
-		view3d::SceneChanged args = {change_type, context_ids, count, object};
+		view3d::SceneChanged args = {change_type, context_ids.data(), s_cast<int>(context_ids.size()), object};
 		OnSceneChanged(this, args);
 	}
 

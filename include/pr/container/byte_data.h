@@ -827,10 +827,10 @@ namespace pr::container
 			// align_to
 			buf1.resize(21);
 			PR_EXPECT(buf1.size() == 21);
-			buf1.align_to(16);
+			buf1.pad_to(16);
 			PR_EXPECT(buf1.size() == 32);
 			buf1.resize(0);
-			buf1.align_to(4);
+			buf1.pad_to(4);
 			PR_EXPECT(buf1.size() == 0);
 
 			// append

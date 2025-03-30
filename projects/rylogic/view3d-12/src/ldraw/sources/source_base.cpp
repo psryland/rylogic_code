@@ -21,12 +21,12 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Parse the contents of the script
-	void SourceBase::Load(Renderer& rdr, NewDataEventArgs args)
+	void SourceBase::Load(Renderer& rdr, EDataChangedReason trigger, AddCompleteCB add_complete_cb)
 	{
 		try
 		{
 			m_output = ReadSource(rdr);
-			NewData(shared_from_this(), args);
+			Notify(shared_from_this(), { ENotifyReason::LoadComplete, trigger, add_complete_cb });
 		}
 		catch (std::exception const& ex)
 		{

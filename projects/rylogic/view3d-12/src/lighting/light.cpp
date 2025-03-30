@@ -78,7 +78,9 @@ namespace pr::rdr12
 		}
 	}
 
-	#define PR_ENUM(x)\
+	enum class ELightKW
+	{
+		#define PR_ENUM(x)\
 		x(Pos  ,= rdr12::ldraw::HashI("Pos" ))\
 		x(Dir  ,= rdr12::ldraw::HashI("Dir" ))\
 		x(Type ,= rdr12::ldraw::HashI("Type"))\
@@ -93,7 +95,9 @@ namespace pr::rdr12
 		x(Shdw ,= rdr12::ldraw::HashI("Shdw"))\
 		x(On   ,= rdr12::ldraw::HashI("On"  ))\
 		x(CRel ,= rdr12::ldraw::HashI("CRel"))
-	PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ELightKW, PR_ENUM);
 	#undef PR_ENUM
 
 	// Get/Set light settings

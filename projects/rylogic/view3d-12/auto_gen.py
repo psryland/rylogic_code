@@ -21,6 +21,9 @@ def HashI(s: str):
 	for c in s.lower(): h = 0xFFFFFFFF & ((h ^ ord(c)) * _FNV_prime32)
 	return h
 
+if HashI("Box") != 1892056626:
+	raise RuntimeError("HashI() function is not working as expected")
+
 # Convert from a line of text to a C++ string literal
 def TransformToCppString(line: str) -> str:
 	line = line.replace('\\', '\\\\')
@@ -30,17 +33,17 @@ def TransformToCppString(line: str) -> str:
 
 # Convert from C++ code macro to C# literal
 def TransformEnumLineToCSharp(line: str) -> str:
-	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*(.*?)\s*\)\).*", line.strip())
+	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*\"(.*?)\"\s*\)\).*", line.strip())
 	return f"{m[1]} = unchecked((int){HashI(m[2])}),\n" if m else line.strip()
 
 # Convert from C++ code macro to python
 def TransformEnumLineToPython(line: str) -> str:
-	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*(.*?)\s*\)\).*", line.strip())
+	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*\"(.*?)\"\s*\)\).*", line.strip())
 	return f"{m[1]} = {HashI(m[2])}\n" if m else line.strip()
 
 # Convert from C++ code macro to C++
 def TransformEnumLineTo010Template(line: str) -> str:
-	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*(.*?)\s*\)\).*", line.strip())
+	m = re.match(r"\s*x\(\s*(.*?)\s*,\s*=\s*HashI\(\s*\"(.*?)\"\s*\)\).*", line.strip())
 	return f"{m[1]} = {HashI(m[2])},\n" if m else line.strip()
 
 # Do the auto gen
@@ -55,44 +58,58 @@ def AutoGen():
 		"// AUTO-GENERATED-DEMOSCENE-END",
 		TransformToCppString)
 
-	# Update the keywords in 'LDraw.cs'
+	# Update 'LDraw.cs'
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw.h",
 		root_dir / "projects/rylogic/Rylogic.Gfx/src/LDraw/LDraw.cs",
 		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
 		"// AUTO-GENERATED-KEYWORDS-BEGIN",
 		"// AUTO-GENERATED-KEYWORDS-END",
 		TransformEnumLineToCSharp)
+	Tools.ReplaceSection(
+		root_dir / "include/pr/view3d-12/ldraw/ldraw_commands.h",
+		root_dir / "projects/rylogic/Rylogic.Gfx/src/LDraw/LDraw.cs",
+		"#define PR_ENUM_LDRAW_COMMANDS(x)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
+		"// AUTO-GENERATED-COMMANDS-BEGIN",
+		"// AUTO-GENERATED-COMMANDS-END",
+		TransformEnumLineToCSharp)
 
-	# Update the keywords in 'ldraw_helper.py'
+	# Update 'ldraw.py'
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw.h",
 		root_dir / "projects/rylogic/py-rylogic/rylogic/ldraw/ldraw.py",
 		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
 		"# AUTO-GENERATED-KEYWORDS-BEGIN",
 		"# AUTO-GENERATED-KEYWORDS-END",
 		TransformEnumLineToPython)
-
-	# Update the commands in 'ldraw_helper.py'
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw_commands.h",
 		root_dir / "projects/rylogic/py-rylogic/rylogic/ldraw/ldraw.py",
 		"#define PR_ENUM_LDRAW_COMMANDS(x)",
-		"PR_DEFINE_ENUM2_BASE(ECommandId, PR_ENUM_LDRAW_COMMANDS, int)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
 		"# AUTO-GENERATED-COMMANDS-BEGIN",
 		"# AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineToPython)
-	
+
 	# Update keywords in LDRTemplate.bt
 	Tools.ReplaceSection(
 		root_dir / "include/pr/view3d-12/ldraw/ldraw.h",
 		root_dir / "miscellaneous/010 templates/LDRTemplate.bt",
 		"#define PR_ENUM_LDRAW_KEYWORDS(x)",
-		"PR_DEFINE_ENUM2_BASE(EKeyword, PR_ENUM_LDRAW_KEYWORDS, int)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_KEYWORDS)",
 		"// AUTO-GENERATED-KEYWORDS-BEGIN",
 		"// AUTO-GENERATED-KEYWORDS-END",
+		TransformEnumLineTo010Template)
+	Tools.ReplaceSection(
+		root_dir / "include/pr/view3d-12/ldraw/ldraw_commands.h",
+		root_dir / "miscellaneous/010 templates/LDRTemplate.bt",
+		"#define PR_ENUM_LDRAW_COMMANDS(x)",
+		"PR_ENUM_MEMBERS2(PR_ENUM_LDRAW_COMMANDS)",
+		"// AUTO-GENERATED-COMMANDS-BEGIN",
+		"// AUTO-GENERATED-COMMANDS-END",
 		TransformEnumLineTo010Template)
 
 AutoGen()

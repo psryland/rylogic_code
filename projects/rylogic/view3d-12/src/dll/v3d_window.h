@@ -48,20 +48,26 @@ namespace pr::rdr12
 		GuidSet m_guids;     // The context ids added to this window
 
 		// Stock objects
-		#define PR_RDR_INST(x)\
+		struct Instance
+		{
+			#define PR_RDR_INST(x)\
 			x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)\
 			x(Colour32 ,m_tint  ,EInstComp::TintColour32)
-		PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST) // An instance type for other models used in LDraw
-		#undef PR_RDR_INST
-		#define PR_RDR_INST(x)\
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST); // An instance type for other models used in LDraw
+			#undef PR_RDR_INST
+		};
+		struct PointInstance
+		{
+			#define PR_RDR_INST(x)\
 			x(m4x4     ,m_c2s   ,EInstComp::C2STransform)\
 			x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)\
 			x(Colour32 ,m_tint  ,EInstComp::TintColour32)\
 			x(float    ,m_size  ,EInstComp::Float1)
-		PR_RDR12_DEFINE_INSTANCE(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
-		#undef PR_RDR_INST
+			PR_RDR12_INSTANCE_MEMBERS(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
+			#undef PR_RDR_INST
+		};
 		PointInstance m_focus_point;     // Focus point graphics
 		PointInstance m_origin_point;    // Origin point graphics
 		Instance      m_bbox_model;      // Bounding box graphics
@@ -271,7 +277,7 @@ namespace pr::rdr12
 		void DepthBufferEnabled(bool enabled);
 
 		// Called when objects are added/removed from this window
-		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, ldraw::LdrObject* object);
+		void ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object);
 
 		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
 		void SetSelectionBox(BBox const& bbox, m3x4 const& ori = m3x4::Identity());

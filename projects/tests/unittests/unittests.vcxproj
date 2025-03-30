@@ -312,6 +312,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\meta\gcf.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\meta\if.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\meta\min_max.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\meta\not.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\meta\or.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\meta\remove_pointer.h" />
@@ -402,7 +403,6 @@
     <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
     <ClCompile Include="src\unittests.cpp" />
     <ClInclude Include="src\unittests.h" />
-    <ClInclude Include="src\pp_output.h" />
     <None Include="cpp.hint" />
     <None Include="harvest_files.py" />
     <None Include="run_tests.py" />

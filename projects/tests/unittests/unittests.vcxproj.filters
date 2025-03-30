@@ -138,6 +138,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\algorithm.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -854,9 +857,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pp_output.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\unittests.h">
       <Filter>src</Filter>

@@ -665,6 +665,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h">
+      <Filter>src\ldraw</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_serialiser_binary.h">
       <Filter>src\ldraw</Filter>
     </ClInclude>

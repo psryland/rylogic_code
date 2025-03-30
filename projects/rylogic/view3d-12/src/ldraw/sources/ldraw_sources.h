@@ -19,7 +19,7 @@ namespace pr::rdr12::ldraw
 	struct StoreChangeEventArgs
 	{
 		// The origin of the data change
-		EDataChangeReason m_reason;
+		EDataChangedReason m_reason;
 
 		// The context ids that changed
 		std::span<Guid const> m_context_ids;
@@ -30,7 +30,7 @@ namespace pr::rdr12::ldraw
 		// True if this event is just prior to the changes being made to the store
 		bool m_before;
 
-		StoreChangeEventArgs(EDataChangeReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
+		StoreChangeEventArgs(EDataChangedReason why, std::span<Guid const> context_ids, ParseResult const* result, bool before)
 			: m_reason(why)
 			, m_context_ids(context_ids)
 			, m_result(result)
@@ -46,9 +46,9 @@ namespace pr::rdr12::ldraw
 		Guid m_context_id;
 
 		// The origin of the object container change
-		EDataChangeReason m_reason;
+		EDataChangedReason m_reason;
 
-		SourceRemovedEventArgs(Guid context_id, EDataChangeReason reason)
+		SourceRemovedEventArgs(Guid context_id, EDataChangedReason reason)
 			: m_context_id(context_id)
 			, m_reason(reason)
 		{
@@ -133,11 +133,11 @@ namespace pr::rdr12::ldraw
 		void ClearAll();
 
 		// Remove a single object from the object container
-		void Remove(LdrObject* object, EDataChangeReason reason = EDataChangeReason::Removal);
+		void Remove(LdrObject* object, EDataChangedReason reason = EDataChangedReason::Removal);
 
 		// Remove all objects associated with 'context_ids'
-		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangeReason reason = EDataChangeReason::Removal);
-		void Remove(Guid const& context_id, EDataChangeReason reason = EDataChangeReason::Removal);
+		void Remove(std::span<Guid const> include, std::span<Guid const> exclude, EDataChangedReason reason = EDataChangedReason::Removal);
+		void Remove(Guid const& context_id, EDataChangedReason reason = EDataChangedReason::Removal);
 
 		// Reload all sources
 		void Reload();
@@ -185,6 +185,6 @@ namespace pr::rdr12::ldraw
 		void FileWatch_OnFileChanged(wchar_t const*, Guid const& context_id, void*, bool&);
 
 		// Handler for when new data is received from a source
-		void NewDataHandler(std::shared_ptr<SourceBase> src, NewDataEventArgs args);
+		void SourceNotifyHandler(std::shared_ptr<SourceBase> src, NotifyEventArgs const& args);
 	};
 }

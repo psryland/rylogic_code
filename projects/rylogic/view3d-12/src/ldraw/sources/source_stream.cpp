@@ -57,7 +57,7 @@ namespace pr::rdr12::ldraw
 					}
 
 					// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
-					else if (bytes_read >= sizeof(ldraw::SectionHeader))
+					else if (required > isize(buffer))
 					{
 						// If there's not enough data yet, keep waiting. Make sure the buffer is big enough
 						buffer.resize(std::max(buffer.size(), s_cast<size_t>(required)));
@@ -69,9 +69,12 @@ namespace pr::rdr12::ldraw
 				// log?
 				OutputDebugStringA(ex.what());
 			}
-			
+
 			// Make this source as invalid
 			m_socket = nullptr;
+
+			// Signal that the connection was lost
+			Notify(shared_from_this(), { ENotifyReason::Disconnected, {}, nullptr });
 		});
 	}
 	SourceStream::SourceStream(SourceStream&& rhs) noexcept
@@ -135,6 +138,14 @@ namespace pr::rdr12::ldraw
 
 			// The next section is complete, include it for consumption
 			consume += size;
+
+			// The TextStream command interrupts consuming data
+			// because the following data is expected to be in binary mode
+			if (header.m_keyword == EKeyword::TextStream)
+			{
+				m_mode = EMode::Text;
+				break;
+			}
 		}
 
 		// If there are sections to consume, do so
@@ -143,12 +154,14 @@ namespace pr::rdr12::ldraw
 			mem_istream<char> strm(buffer.data(), consume);
 			BinaryReader reader(strm, m_address, { OnReportError, this }, { OnProgress, this });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
-
-			m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+			if (out)
 			{
-				m_output += std::move(out);
-				NewData(shared_from_this(), { EDataChangeReason::NewData, nullptr });
-			});
+				m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+				{
+					m_output += std::move(out);
+					Notify(shared_from_this(), { ENotifyReason::LoadComplete, EDataChangedReason::NewData, nullptr });
+				});
+			}
 		}
 
 		// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid
@@ -194,6 +207,14 @@ namespace pr::rdr12::ldraw
 
 			// The next section is complete, include it for consumption
 			consume += s_cast<int>(remaining0 - src.size_in_bytes());
+
+			// The BinaryStream command interrupts consuming data
+			// because the following data is expected to be in binary mode
+			if (*kw == EKeyword::BinaryStream)
+			{
+				m_mode = EMode::Binary;
+				break;
+			}
 		}
 
 		// If there are sections to consume, do so
@@ -202,12 +223,14 @@ namespace pr::rdr12::ldraw
 			mem_istream<char> strm(buffer.data(), consume);
 			TextReader reader(strm, m_address, EEncoding::utf8, { OnReportError, this }, { OnProgress, this });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
-
-			m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+			if (out)
 			{
-				m_output += std::move(out);
-				NewData(shared_from_this(), { EDataChangeReason::NewData, nullptr });
-			});
+				m_rdr->RunOnMainThread([this, out = std::move(out)]() mutable noexcept
+				{
+					m_output += std::move(out);
+					Notify(shared_from_this(), { ENotifyReason::LoadComplete, EDataChangedReason::NewData, nullptr });
+				});
+			}
 		}
 
 		// Otherwise, if 0 bytes can be consumed, check the buffer is big enough and the partial data is not invalid

@@ -478,7 +478,7 @@ namespace pr::rdr12
 		if (!unused.empty())
 		{
 			pr::vector<Guid> ids(std::begin(unused), std::end(unused));
-			m_sources.Remove(ids, {}, ldraw::EDataChangeReason::Removal);
+			m_sources.Remove(ids, {});
 		}
 	}
 
@@ -556,26 +556,30 @@ namespace pr::rdr12
 		if (args.m_before)
 			return;
 
+		view3d::ESourcesChangedReason reason = {};
 		switch (args.m_reason)
 		{
-			case ldraw::EDataChangeReason::NewData:
+			case ldraw::EDataChangedReason::NewData:
 			{
 				// On NewData, do nothing. Callers will add objects to windows as they see fit.
+				reason = view3d::ESourcesChangedReason::NewData;
 				break;
 			}
-			case ldraw::EDataChangeReason::Removal:
+			case ldraw::EDataChangedReason::Reload:
 			{
-				// On Removal, do nothing. Removed objects should already have been removed from the windows.
-				break;
-			}
-			case ldraw::EDataChangeReason::Reload:
-			{
-				// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
+				// On Reload, for each object currently in a window and in the set of affected context ids, remove and re-add.
 				for (auto& wnd : m_windows)
 				{
 					wnd->Add(m_sources.Sources(), args.m_context_ids, {});
 					wnd->Invalidate();
 				}
+				reason = view3d::ESourcesChangedReason::Reload;
+				break;
+			}
+			case ldraw::EDataChangedReason::Removal:
+			{
+				// On Removal, do nothing. Removed objects should already have been removed from the windows.
+				reason = view3d::ESourcesChangedReason::Removal;
 				break;
 			}
 			default:
@@ -585,13 +589,13 @@ namespace pr::rdr12
 		}
 
 		// Notify of updated sources
-		SourcesChanged(static_cast<view3d::ESourcesChangedReason>(args.m_reason), false);
+		SourcesChanged(reason, false);
 	}
 
 	// Source removed event (i.e. objects deleted by Id)
 	void Context::OnSourceRemoved(ldraw::SourceRemovedEventArgs const& args)
 	{
-		auto reload = args.m_reason == ldraw::EDataChangeReason::Reload;
+		auto reload = args.m_reason == ldraw::EDataChangedReason::Reload;
 
 		// When a source is about to be removed, remove it's objects from the windows.
 		// If this is a reload, save a reference to the removed objects so we know what to reload.
@@ -602,6 +606,89 @@ namespace pr::rdr12
 	// Process any received commands in the source
 	void Context::OnHandleCommands(ldraw::SourceBase& source)
 	{
-		ldraw::ExecuteCommands(source, *this);
+		using namespace ldraw;
+
+		byte_data_cptr ptr(source.m_output.m_commands);
+		for (; ptr; )
+		{
+			try
+			{
+				// Process the command
+				switch (ptr.as<ldraw::ECommandId>())
+				{
+					case ECommandId::Invalid:
+					{
+						ptr.read<Command_Invalid>();
+						break;
+					}
+					case ECommandId::AddToScene:
+					{
+						auto const& cmd = ptr.read<Command_AddToScene>();
+
+						// Look for the window to add objects to. Ignore windows out of range
+						if (cmd.m_scene_id < 0 || cmd.m_scene_id >= isize(m_windows))
+							break;
+
+						// Add all objects from 'source' to 'window'
+						auto& window = *m_windows[cmd.m_scene_id];
+						for (auto& obj : source.m_output.m_objects)
+							window.Add(obj.get());
+
+						break;
+					}
+					case ECommandId::CameraToWorld:
+					{
+						throw std::runtime_error("not implemented");
+					}
+					case ECommandId::CameraPosition:
+					{
+						throw std::runtime_error("not implemented");
+					}
+					case ECommandId::ObjectToWorld:
+					{
+						// TODO: Support 'Parent.Child.Child' syntax
+						auto const& cmd = ptr.read<Command_ObjectToWorld>();
+						auto target = string32(cmd.m_object_name);
+
+						// Find the first object matching 'cmd.m_object_name' (in 'source.m_context')
+						auto iter = std::ranges::find_if(source.m_output.m_objects, [&target](LdrObjectPtr& ptr)
+						{
+							return ptr->m_name == target;
+						});
+						if (iter == std::end(source.m_output.m_objects))
+							break;
+
+						// Update the object to world transform for the object
+						(*iter)->O2W(cmd.m_o2w);
+						break;
+					}
+					case ECommandId::Render:
+					{
+						auto const& cmd = ptr.read<Command_Render>();
+
+						// Look for the window to add objects to. Ignore windows out of range
+						if (cmd.m_scene_id < 0 || cmd.m_scene_id >= isize(m_windows))
+							break;
+
+						// Render the window
+						auto& window = *m_windows[cmd.m_scene_id];
+						window.Render();
+						break;
+					}
+					default:
+					{
+						assert(false); // to trap them here
+						std::runtime_error("Unsupported command");
+					}
+				}
+			}
+			catch (std::exception const& ex)
+			{
+				ReportError(std::format("Command Error: {}", ex.what()).c_str(), "", 0, 0);
+			}
+		}
+
+		// All commands have been executed
+		source.m_output.m_commands.resize(0);
 	}
 }

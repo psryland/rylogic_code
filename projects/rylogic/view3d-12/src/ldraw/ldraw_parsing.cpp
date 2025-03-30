@@ -249,45 +249,6 @@ namespace pr::rdr12::ldraw
 
 	#pragma region Parse Common Elements
 
-	// Parse a single commands
-	ldraw::Command ParseCommand(ECommandId id, IReader& reader, ParseParams& pp)
-	{
-		switch (id)
-		{
-			case ECommandId::Invalid:
-			{
-				return { ECommandId::Invalid, {} };
-			}
-			case ECommandId::AddToScene:
-			{
-				auto scene_id = reader.Int<int>();
-				return { ECommandId::AddToScene, std::span<int const>{&scene_id, 1} };
-			}
-			case ECommandId::CameraToWorld:
-			{
-				return { ECommandId::Invalid, {} };
-			}
-			case ECommandId::CameraPosition:
-			{
-				return { ECommandId::Invalid, {} };
-			}
-			case ECommandId::ObjectToWorld:
-			{
-				return { ECommandId::Invalid, {} };
-			}
-			case ECommandId::Render:
-			{
-				auto scene_id = reader.Int<int>();
-				return { ECommandId::Render, std::span<int const>{&scene_id, 1} };
-			}
-			default:
-			{
-				pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unsupported command");
-				return { ECommandId::Invalid, {} };
-			}
-		}
-	}
-
 	// Parse command blocks
 	void ParseCommands(IReader& reader, ParseParams& pp, ParseResult& out)
 	{
@@ -296,20 +257,71 @@ namespace pr::rdr12::ldraw
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
 		{
-			switch (kw)
+			if (kw != EKeyword::Data)
 			{
-				case EKeyword::Data:
+				pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unknown keyword in Command block");
+				continue;
+			}
+
+			out.m_commands.pad_to(16);
+
+			// Read the command id, then parse the associated command
+			auto id = reader.Enum<ECommandId>();
+			switch (id)
+			{
+				case ECommandId::Invalid:
 				{
-					auto id = reader.Enum<ECommandId>();
-					auto cmd = ParseCommand(id, reader, pp);
-					if (cmd.m_id != ECommandId::Invalid)
-						out.m_commands.push_back(cmd);
+					break;
+				}
+				case ECommandId::AddToScene:
+				{
+					out.m_commands.push_back(Command_AddToScene{
+						.m_id = id,
+						.m_scene_id = reader.Int<int>(),
+					});
+					break;
+				}
+				case ECommandId::CameraToWorld:
+				{
+					out.m_commands.push_back(Command_CameraToWorld{
+						.m_id = id,
+						.m_c2w = reader.Matrix4x4(),
+					});
+					break;
+				}
+				case ECommandId::CameraPosition:
+				{
+					out.m_commands.push_back(Command_CameraPosition{
+						.m_id = id,
+						.m_pos = reader.Vector3f().w1(),
+					});
+					break;
+				}
+				case ECommandId::ObjectToWorld:
+				{
+					auto cmd = Command_ObjectToWorld{
+						.m_id = id,
+						.m_object_name = {},
+						.m_o2w = {},
+					};
+					auto obj_name = reader.Identifier<string32>();
+					memcpy(&cmd.m_object_name[0], obj_name.c_str(), std::min(_countof(cmd.m_object_name) - 1, obj_name.size()));
+					cmd.m_o2w = reader.Matrix4x4();
+					out.m_commands.push_back(cmd);
+					break;
+				}
+				case ECommandId::Render:
+				{
+					out.m_commands.push_back(Command_Render{
+						.m_id = id,
+						.m_scene_id = reader.Int<int>(),
+					});
 					break;
 				}
 				default:
 				{
-					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unknown keyword in Command block");
-					continue;
+					pp.ReportError(EParseError::UnknownKeyword, reader.Loc(), "Unsupported command");
+					break;
 				}
 			}
 		}
@@ -2097,14 +2109,14 @@ namespace pr::rdr12::ldraw
 			// Add the back arrow head geometry (a point)
 			if (AllSet(m_type, EArrowType::Back))
 			{
-				SetPCN(*v_out++, *v_in, Colour(*col), pr::Normalise(*v_in - *(v_in+1)));
+				SetPCN(*v_out++, *v_in, pr::Colour(*col), pr::Normalise(*v_in - *(v_in+1)));
 				*i_out++ = index++;
 			}
 
 			// Add the line strip
 			for (std::size_t i = 0, iend = m_verts.size(); i != iend; ++i)
 			{
-				SetPC(*v_out++, bb(*v_in++), Colour(c = cc(*col++)));
+				SetPC(*v_out++, bb(*v_in++), pr::Colour(c = cc(*col++)));
 				*i_out++ = index++;
 			}
 			
@@ -2112,7 +2124,7 @@ namespace pr::rdr12::ldraw
 			if (AllSet(m_type, EArrowType::Fwd))
 			{
 				--v_in;
-				SetPCN(*v_out++, *v_in, Colour(c), pr::Normalise(*v_in - *(v_in-1)));
+				SetPCN(*v_out++, *v_in, pr::Colour(c), pr::Normalise(*v_in - *(v_in-1)));
 				*i_out++ = index++;
 			}
 
@@ -3789,7 +3801,7 @@ namespace pr::rdr12::ldraw
 				{
 					for (int r = 1; !reader.IsSectionEnd(); ++r)
 					{
-						m_colours.push_back(Colour(reader.Int<uint32_t>(16)));
+						m_colours.push_back(pr::Colour(reader.Int<uint32_t>(16)));
 						if (r % 500 == 0) m_pp.ReportProgress();
 					}
 					return true;
@@ -4578,7 +4590,7 @@ namespace pr::rdr12::ldraw
 					auto n = Cross(v4(2 * dx, 0, h.y - h.x, 0), v4(0, 2 * dy, h.w - h.z, 0));
 					auto norm = Normalise(n, v4::Zero());
 
-					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), Colour(col), norm, v2::Zero());
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), pr::Colour(col), norm, v2::Zero());
 				},
 				[&](auto idx)
 				{
@@ -5559,14 +5571,16 @@ namespace pr::rdr12::ldraw
 		for (auto& p : rhs.m_models)
 			m_models[p.first] = p.second;
 
-		m_commands.insert(m_commands.end(),
-			std::move_iterator{ rhs.m_commands.begin() },
-			std::move_iterator{ rhs.m_commands.end() });
+		m_commands.append(rhs.m_commands);
 
 		CopyCamera(rhs.m_cam, rhs.m_cam_fields, m_cam);
 		
 		m_wireframe |= rhs.m_wireframe;
 
 		return *this;
+	}
+	ParseResult::operator bool() const
+	{
+		return !m_objects.empty() || !m_models.empty() || !m_commands.empty();
 	}
 }

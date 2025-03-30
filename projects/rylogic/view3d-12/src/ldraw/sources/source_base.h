@@ -12,30 +12,45 @@ namespace pr::rdr12::ldraw
 	// Callback after data has been added to the store
 	using AddCompleteCB = std::function<void(Guid const&, bool)>;
 
-	// The initiating reason for a new data event
-	enum class EDataChangeReason
+	// Reasons that data in the store has changed
+	enum class EDataChangedReason
 	{
-		// New objects have been added
+		None,
+
+		// New objects have been added to the store
 		NewData,
 
-		// Data has been refreshed from the source
+		// Data has been refreshed from the sources
 		Reload,
 
-		// Objects have been removed
+		// Objects have been removed from the store
 		Removal,
 	};
-	
-	// Event args for the SourceBase NewData event
-	struct NewDataEventArgs
+
+	// The initiating reason for a notify event
+	enum class ENotifyReason
+	{
+		// 'Load' was called, so new data is ready
+		LoadComplete,
+
+		// The source has disconnected
+		Disconnected,
+	};
+
+	// Event args for the SourceBase Notify event
+	struct NotifyEventArgs
 	{
 		// The initiating reason for this event
-		EDataChangeReason m_reason;
+		ENotifyReason m_reason;
+
+		// The trigger that initiated a Load call
+		EDataChangedReason m_trigger;
 
 		// Called after data has been added to the store
 		AddCompleteCB m_add_complete;
 	};
 
-	// An Ldr script SourceBase
+	// Base class for a source of LDraw objects
 	struct SourceBase : std::enable_shared_from_this<SourceBase>
 	{
 		// Notes:
@@ -61,14 +76,14 @@ namespace pr::rdr12::ldraw
 		// An event raised during parsing.
 		EventHandler<SourceBase&, ParsingProgressEventArgs&, true> ParsingProgress;
 
-		// An event raised when this source has new data to add
-		EventHandler<std::shared_ptr<SourceBase>, NewDataEventArgs const&, true> NewData;
+		// An event raised when something happens with this source (e.g, has new data, disconnected, etc)
+		EventHandler<std::shared_ptr<SourceBase>, NotifyEventArgs const&, true> Notify;
 
 		// Construct a new instance of the source (if possible)
 		virtual std::shared_ptr<SourceBase> Clone();
 
 		// Parse the contents of the script
-		void Load(Renderer& rdr, NewDataEventArgs args);
+		void Load(Renderer& rdr, EDataChangedReason trigger, AddCompleteCB add_complete_cb);
 
 	protected:
 

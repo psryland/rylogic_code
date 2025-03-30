@@ -139,10 +139,10 @@ namespace pr::rdr12::ldraw
 			if (n.m_name.empty()) return;
 			Write(out, EKeyword::Name, n.m_name);
 		}
-		template <typename TOut> static void Append(TOut& out, Col c)
+		template <typename TOut> static void Append(TOut& out, Colour c)
 		{
-			if (c.m_col.argb == 0xFFFFFFFF) return;
-			Write(out, c.m_kw, c.m_col.argb);
+			if (c.m_colour.argb == 0xFFFFFFFF) return;
+			Write(out, c.m_kw, c.m_colour.argb);
 		}
 		template <typename TOut> static void Append(TOut& out, Size s)
 		{
@@ -235,7 +235,7 @@ namespace pr::rdr12::ldraw
 
 		// Write custom data within a section
 		template <typename TOut, std::invocable<> AddBodyFn>
-		static void Write(TOut& out, EKeyword keyword, Name name, Col colour, AddBodyFn body_cb)
+		static void Write(TOut& out, EKeyword keyword, Name name, Colour colour, AddBodyFn body_cb)
 		{
 			// Record the write pointer position
 			auto ofs = traits<TOut>::tellp(out);
@@ -263,7 +263,7 @@ namespace pr::rdr12::ldraw
 
 		// Write a single primitive type
 		template <typename TOut, typename... TItem> requires (!std::is_invocable_v<TItem> && ...)
-		static void Write(TOut& out, EKeyword keyword, Name name, Col colour, TItem&&... items)
+		static void Write(TOut& out, EKeyword keyword, Name name, Colour colour, TItem&&... items)
 		{
 			return Write(out, keyword, name, colour, [&]
 			{

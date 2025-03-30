@@ -77,8 +77,6 @@ namespace pr::rdr12::ldraw
 		static_assert(WriterType<TextWriter>);
 		static_assert(WriterType<BinaryWriter>);
 
-		struct LdrRawString;
-		struct LdrGroup;
 		struct LdrPoint;
 		struct LdrLine;
 		struct LdrLineD;
@@ -91,6 +89,10 @@ namespace pr::rdr12::ldraw
 		struct LdrCone;
 		struct LdrSpline;
 		struct LdrFrustum;
+		struct LdrGroup;
+		struct LdrCommands;
+		struct LdrBinaryStream;
+		struct LdrTextStream;
 
 		struct LdrObj
 		{
@@ -106,30 +108,25 @@ namespace pr::rdr12::ldraw
 			LdrObj& operator=(LdrObj const&) = delete;
 			virtual ~LdrObj() = default;
 
-			//template <typename Arg0, typename... Args>
-			//LdrObj& Append(Arg0 const& arg0, Args&&... args)
-			//{
-			//	auto ptr = new LdrRawString(arg0, std::forward<Args>(args)...);
-			//	m_objects.emplace_back(ptr);
-			//	return *this;
-			//}
-			LdrGroup& Group(Name name = {}, Col colour = Col());
-			LdrPoint& Point(Name name = {}, Col colour = Col());
-			LdrLine& Line(Name name = {}, Col colour = Col());
-			LdrLineD& LineD(Name name = {}, Col colour = Col());
-			LdrTriangle& Triangle(Name name = {}, Col colour = Col());
-			LdrPlane& Plane(Name name = {}, Col colour = Col());
-			LdrCircle& Circle(Name name = {}, Col colour = Col());
-			LdrSphere& Sphere(Name name = {}, Col colour = Col());
-			LdrBox& Box(Name name = {}, Col colour = Col());
-			LdrCylinder& Cylinder(Name name = {}, Col colour = Col());
-			LdrCone& Cone(Name name = {}, Col colour = Col());
-			LdrSpline& Spline(Name name = {}, Col colour = Col());
-			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
+			// Object types
+			LdrPoint& Point(Name name = {}, Colour colour = Colour());
+			LdrLine& Line(Name name = {}, Colour colour = Colour());
+			LdrLineD& LineD(Name name = {}, Colour colour = Colour());
+			LdrTriangle& Triangle(Name name = {}, Colour colour = Colour());
+			LdrPlane& Plane(Name name = {}, Colour colour = Colour());
+			LdrCircle& Circle(Name name = {}, Colour colour = Colour());
+			LdrSphere& Sphere(Name name = {}, Colour colour = Colour());
+			LdrBox& Box(Name name = {}, Colour colour = Colour());
+			LdrCylinder& Cylinder(Name name = {}, Colour colour = Colour());
+			LdrCone& Cone(Name name = {}, Colour colour = Colour());
+			LdrSpline& Spline(Name name = {}, Colour colour = Colour());
+			LdrFrustum& Frustum(Name name = {}, Colour colour = Colour());
+			LdrGroup& Group(Name name = {}, Colour colour = Colour());
+			LdrCommands& Command(Name name = {}, Colour colour = Colour());
 
 			// Extension objects
 			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
-			LdrCustom& Custom(std::string_view name = "", Col colour = Col())
+			LdrCustom& Custom(std::string_view name = "", Colour colour = Colour())
 			{
 				auto ptr = new LdrCustom;
 				m_objects.emplace_back(ptr);
@@ -137,7 +134,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Wrap all objects into a group
-			LdrObj& WrapAsGroup(Name name = {}, Col colour = Col());
+			LdrObj& WrapAsGroup(Name name = {}, Colour colour = Colour());
+
+			// Switch data stream modes
+			LdrObj& BinaryStream();
+			LdrObj& TextStream();
 
 			// Serialise the ldr script to a string
 			std::string ToString(bool pretty) const
@@ -213,22 +214,22 @@ namespace pr::rdr12::ldraw
 			Name m_name;
 
 			// Object colour
-			Derived& colour(Col c)
+			Derived& colour(Colour c)
 			{
 				m_colour = c;
 				m_colour.m_kw = EKeyword::Colour;
 				return static_cast<Derived&>(*this);
 			}
-			Col m_colour;
+			Colour m_colour;
 
 			// Object colour mask
-			Derived& colour_mask(Col c)
+			Derived& colour_mask(Colour c)
 			{
 				m_colour_mask = c;
 				m_colour_mask.m_kw = EKeyword::ColourMask;
 				return static_cast<Derived&>(*this);
 			}
-			Col m_colour_mask;
+			Colour m_colour_mask;
 
 			// Object to world transform
 			Derived& o2w(m4x4 const& o2w)
@@ -407,7 +408,7 @@ namespace pr::rdr12::ldraw
 		// Object types
 		struct LdrPoint :LdrBase<LdrPoint>
 		{
-			struct Point { v4 pt; Col col; };
+			struct Point { v4 pt; Colour col; };
 			std::vector<Point> m_points;
 			Size2 m_size;
 			Depth m_depth;
@@ -422,7 +423,7 @@ namespace pr::rdr12::ldraw
 			{}
 
 			// Points
-			LdrPoint& pt(v4_cref point, Col colour)
+			LdrPoint& pt(v4_cref point, Colour colour)
 			{
 				pt(point);
 				m_points.back().col = colour;
@@ -484,7 +485,7 @@ namespace pr::rdr12::ldraw
 		};
 		struct LdrLine :LdrBase<LdrLine>
 		{
-			struct Line { v4 a, b; Col col; };
+			struct Line { v4 a, b; Colour col; };
 			pr::vector<Line> m_lines;
 			Width m_width;
 			bool m_strip;
@@ -505,7 +506,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Lines
-			LdrLine& line(v4_cref a, v4_cref b, Col colour)
+			LdrLine& line(v4_cref a, v4_cref b, Colour colour)
 			{
 				line(a, b);
 				m_lines.back().col = colour;
@@ -536,10 +537,10 @@ namespace pr::rdr12::ldraw
 
 				return *this;
 			}
-			template <std::invocable<void(int, v4&, v4&, Col&)> EnumLines>
+			template <std::invocable<void(int, v4&, v4&, Colour&)> EnumLines>
 			LdrLine& lines(EnumLines lines)
 			{
-				v4 a, b; Col c;
+				v4 a, b; Colour c;
 				for (int i = 0; lines(i++, a, b, c);)
 					line(a, b, c);
 
@@ -938,7 +939,7 @@ namespace pr::rdr12::ldraw
 			struct Bezier
 			{
 				v4 pt0, pt1, pt2, pt3;
-				Col col;
+				Colour col;
 			};
 
 			pr::vector<Bezier> m_splines;
@@ -959,7 +960,7 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Add a spline piece
-			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Col colour)
+			LdrSpline& spline(v4 pt0, v4 pt1, v4 pt2, v4 pt3, Colour colour)
 			{
 				spline(pt0, pt1, pt2, pt3);
 				m_splines.back().col = colour;
@@ -1122,92 +1123,181 @@ namespace pr::rdr12::ldraw
 				});
 			}
 		};
+		struct LdrCommands :LdrBase<LdrCommands>
+		{
+			using variant_t = std::variant<bool, int, float, StringWithLength, v2, v4, m4x4>;
+			using params_t = pr::vector<variant_t, 4>;
+			using cmd_t = struct Cmd
+			{
+				ECommandId m_id;
+				params_t m_params;
+			};
+
+			pr::vector<cmd_t> m_cmds;
+
+			// Add objects created by this script to scene 'scene_id'
+			LdrCommands& add_to_scene(int scene_id)
+			{
+				m_cmds.push_back({ ECommandId::AddToScene, {scene_id} });
+				return *this;
+			}
+
+			// Apply a transform to an object with the given name
+			LdrCommands& object_transform(std::string_view object_name, m4x4 const& o2w)
+			{
+				m_cmds.push_back({ ECommandId::ObjectToWorld, { StringWithLength(object_name), o2w } });
+				return *this;
+			}
+
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				using nstr_t = StringWithLength;
+				Writer::Write(out, EKeyword::Commands, [&]
+				{
+					for (auto& cmd : m_cmds)
+					{
+						Writer::Write(out, EKeyword::Data, [&]
+						{
+							Writer::Append(out, (int)cmd.m_id);
+							for (auto& p : cmd.m_params)
+							{
+								if (auto* param = std::get_if<bool  >(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<int   >(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<float >(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<nstr_t>(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<v2    >(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<v4    >(&p)) { Writer::Append(out, *param); continue; }
+								if (auto* param = std::get_if<m4x4  >(&p)) { Writer::Append(out, *param); continue; }
+							}
+						});
+					}
+				});
+			}
+		};
+		struct LdrBinaryStream :LdrBase<LdrBinaryStream>
+		{
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::BinaryStream);
+			}
+		};
+		struct LdrTextStream :LdrBase<LdrTextStream>
+		{
+			// Write to 'out'
+			template <WriterType Writer, typename TOut>
+			void WriteTo(TOut& out) const
+			{
+				Writer::Write(out, EKeyword::TextStream);
+			}
+		};
 
 		#pragma region LdrObj::Implementation
-		inline LdrGroup& LdrObj::Group(Name name, Col colour)
-		{
-			auto ptr = new LdrGroup;
-			m_objects.emplace_back(ptr);
-			return (*ptr).name(name).colour(colour);
-		}
-		inline LdrPoint& LdrObj::Point(Name name, Col colour)
+		inline LdrPoint& LdrObj::Point(Name name, Colour colour)
 		{
 			auto ptr = new LdrPoint;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrLine& LdrObj::Line(Name name, Col colour)
+		inline LdrLine& LdrObj::Line(Name name, Colour colour)
 		{
 			auto ptr = new LdrLine;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrLineD& LdrObj::LineD(Name name, Col colour)
+		inline LdrLineD& LdrObj::LineD(Name name, Colour colour)
 		{
 			auto ptr = new LdrLineD;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrTriangle& LdrObj::Triangle(Name name, Col colour)
+		inline LdrTriangle& LdrObj::Triangle(Name name, Colour colour)
 		{
 			auto ptr = new LdrTriangle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrPlane& LdrObj::Plane(Name name, Col colour)
+		inline LdrPlane& LdrObj::Plane(Name name, Colour colour)
 		{
 			auto ptr = new LdrPlane;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCircle& LdrObj::Circle(Name name, Col colour)
+		inline LdrCircle& LdrObj::Circle(Name name, Colour colour)
 		{
 			auto ptr = new LdrCircle;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrSphere& LdrObj::Sphere(Name name, Col colour)
+		inline LdrSphere& LdrObj::Sphere(Name name, Colour colour)
 		{
 			auto ptr = new LdrSphere;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrBox& LdrObj::Box(Name name, Col colour)
+		inline LdrBox& LdrObj::Box(Name name, Colour colour)
 		{
 			auto ptr = new LdrBox;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCylinder& LdrObj::Cylinder(Name name, Col colour)
+		inline LdrCylinder& LdrObj::Cylinder(Name name, Colour colour)
 		{
 			auto ptr = new LdrCylinder;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrCone& LdrObj::Cone(Name name, Col colour)
+		inline LdrCone& LdrObj::Cone(Name name, Colour colour)
 		{
 			auto ptr = new LdrCone;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrSpline& LdrObj::Spline(Name name, Col colour)
+		inline LdrSpline& LdrObj::Spline(Name name, Colour colour)
 		{
 			auto ptr = new LdrSpline;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrFrustum& LdrObj::Frustum(Name name, Col colour)
+		inline LdrFrustum& LdrObj::Frustum(Name name, Colour colour)
 		{
 			auto ptr = new LdrFrustum;
 			m_objects.emplace_back(ptr);
 			return (*ptr).name(name).colour(colour);
 		}
-		inline LdrObj& LdrObj::WrapAsGroup(Name name, Col colour)
+		inline LdrGroup& LdrObj::Group(Name name, Colour colour)
+		{
+			auto ptr = new LdrGroup;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrCommands& LdrObj::Command(Name name, Colour colour)
+		{
+			auto ptr = new LdrCommands;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).colour(colour);
+		}
+		inline LdrObj& LdrObj::WrapAsGroup(Name name, Colour colour)
 		{
 			auto ptr = new LdrGroup;
 			swap(m_objects, ptr->m_objects);
 			m_objects.emplace_back(ptr);
 			(*ptr).name(name).colour(colour);
+			return *this;
+		}
+		inline LdrObj& LdrObj::BinaryStream()
+		{
+			auto ptr = new LdrBinaryStream;
+			m_objects.emplace_back(ptr);
+			return *this;
+		}
+		inline LdrObj& LdrObj::TextStream()
+		{
+			auto ptr = new LdrTextStream;
+			m_objects.emplace_back(ptr);
 			return *this;
 		}
 		#pragma endregion
