@@ -1,13 +1,16 @@
 import os, json, fnmatch
+from pathlib import Path
+
+root_dir = Path(__file__).resolve(strict=True).parent
 
 # Load the config
-config_file = os.path.join(os.path.dirname(__file__), 'config.json')
-with open(config_file) as file:
+config_file = root_dir / 'config.json'
+with open(config_file, "r", encoding='utf-8') as file:
 	config = json.load(file)
 
 # Get the image root path
-root_path = config["RootPath"]
-if not os.path.exists(root_path):
+root_path = Path(config["RootPath"])
+if not root_path.exists():
 	raise FileNotFoundError(f"Root path {root_path} does not exist")
 
 patterns = config['ImagePatterns'] + config['VideoPatterns']
@@ -36,7 +39,7 @@ print("Saving...")
 
 # Write the image list to the file
 image_list_fullpath = config['ImageList']
-with open(image_list_fullpath, 'w') as file:
+with open(image_list_fullpath, 'w', encoding='utf-8') as file:
 	for image_fullpath in image_list:
 
 		# Make relative to the root path
