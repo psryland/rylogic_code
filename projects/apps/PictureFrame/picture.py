@@ -1,15 +1,24 @@
+# Requires:
+#  pip install python-vlc
+#  pip install pywin32
+#
+# Compile to exe with:
+# - pip install pyinstaller
+# - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\pyinstaller --onefile --noconsole .\picture.py
 # How to profile:
 # - python -m cProfile -o profile.out picture.py
 # - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\snakeviz.exe profile.out
 
-import os, json, time, cv2
-import tkinter as Tk
-from PIL import Image, ImageTk
+import sys, os, json, platform
 from pathlib import Path
+import tkinter as Tk
+import vlc
 
 class PictureFrame:
 	def __init__(self):
-		self.root_dir = Path(__file__).resolve(strict=True).parent
+		# Get the current directory
+		project_dir = Path(__file__).resolve().parent
+		self.root_dir = project_dir
 
 		# Load the config
 		config_file = self.root_dir / "config.json"
@@ -28,10 +37,14 @@ class PictureFrame:
 
 		# Load the image list
 		with open(image_list_fullpath, "r", encoding="utf-8") as file:
-			self.image_list = file.readlines()
+			self.image_list = [line for line in file.readlines() if line.startswith("#") == 0]
 
 		# Position in the image list
 		self.image_index = -1
+
+		# Create a vlc player
+		self.vlc = vlc.Instance()
+		self.player = self.vlc.media_player_new()
 
 		# Create fullscreen window
 		self.window = Tk.Tk()
@@ -39,20 +52,38 @@ class PictureFrame:
 		self.window.geometry("800x600")  # Set initial size
 		#self.window.attributes("-fullscreen", True)  # Fullscreen mode
 		self.window.bind("<Escape>", lambda e: self.window.quit())  # Exit on ESC key
-		self.window.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))  # Left mouse button click 
+		#self.window.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))
 
-		# Create a 'label' to show the image in
-		self.bb = Tk.Label(self.window, bg="black")
+		# Create a panel for images and video
+		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
+		#self.bb.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))
 
-		# A button options
-		self.button_menu = Tk.Button(self.window, text="...", bg="black", fg="white", border=0, command=self._ShowMenu)
-		
+		# Set the video output to the Tkinter window
+		if platform.system() == 'Windows':
+			self.player.set_hwnd(self.bb.winfo_id())
+			## Set the window to be transparent to mouse events
+			#import win32gui, win32con
+			#hwnd = win32gui.GetWindow(self.player.get_hwnd(), win32con.GW_CHILD)
+			#ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+			#win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style | win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT)
+		elif platform.system() == 'Linux':
+			self.player.set_xwindow(self.bb.winfo_id())
+		elif platform.system() == 'Darwin':  # macOS
+			self.player.set_nsobject(self.bb.winfo_id())
+
+		# Transparent overlay for events
+		#self.overlay = Tk.Frame(self.bb, bg="", borderwidth=0, highlightthickness=0)
+		#self.overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+		#self.overlay.lift()
+		#self.overlay.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))
+
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 16))
 
-		# Last frame time
-		self.last = 0.0
+		# A button to show the options menu
+		self.button_menu = Tk.Button(self.window, text="...", bg="black", fg="white", border=0, command=self._ShowMenu)
+
 		self.ui_visible = False
 		return
 
@@ -93,51 +124,35 @@ class PictureFrame:
 		return
 
 	def _ShowImage(self, image_fullpath):
-		# Load the image
-		image = cv2.imread(image_fullpath)
-		if image is None:
+		def Stop():
+			self.player.stop()
+			self.player.set_media(None)
 			self.window.after(1, self._NextImage)
-			return
 
-		self._Render(image)
-
-		delay_ms = 1000 * int(self.config['DisplayPeriodSeconds'])
-		self.window.after(delay_ms, self._NextImage)
+		image = self.vlc.media_new(image_fullpath)
+		self.player.set_media(image)
+		self.player.play()
+		self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		return
 
 	def _ShowVideo(self, video_fullpath):
-
-		# Load the video
-		video = cv2.VideoCapture(video_fullpath)
-		if not video.isOpened():
-			video.release()
+		def Stop():
+			if self.player.is_playing():
+				self.window.after(500, Stop)
+				return
+			self.player.stop()
+			self.player.set_media(None)
 			self.window.after(1, self._NextImage)
 			return
-			
-		# Get the native frame rate
-		fps = video.get(cv2.CAP_PROP_FPS)
-		sec_per_frame = 1 / fps if fps > 0 else 0.025  # Fallback to 25ms if FPS is unknown
-		self.last = time.perf_counter()
 
-		# Play the video
-		def DisplayFrame():
-			ret, frame = video.read()
-			if not ret:
-				video.release()
-				self.window.after(1, self._NextImage)
-				return
-
-			# Show the frame
-			self._Render(frame, spf=sec_per_frame)
-			self.window.after(1, DisplayFrame)
-
-		DisplayFrame()
+		video = self.vlc.media_new(video_fullpath)
+		self.player.set_media(video)
+		self.player.play()
+		self.window.after(500, Stop)
 		return
 
 	def _MouseHandler(self, event, x, y, flags, param):
-		"""Handle mouse events."""
-
-		if event.type == Tk.EventType.ButtonPress:  # Left mouse button
+		if event.type == Tk.EventType.ButtonPress:
 			self.ui_visible = not self.ui_visible
 
 			# Show other UI elements
@@ -150,27 +165,6 @@ class PictureFrame:
 				self.label_filepath.place_forget()
 				self.button_menu.place_forget()
 		return
-	
-	def _Render(self, image, spf=None):
-		# Resize image while maintaining aspect ratio
-		ih, iw = image.shape[:2]
-		sh, sw = self.bb.winfo_height(), self.bb.winfo_width()
-		resized_image = cv2.resize(image, self._Scale(iw, ih, sw, sh), interpolation=cv2.INTER_AREA)
-
-		# Convert the image to RGB format for Tkinter
-		resized_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB)
-		resized_image = Image.fromarray(resized_image)
-		resized_image = ImageTk.PhotoImage(image=resized_image)
-
-		# Limit the frame rate
-		if spf is not None:
-			elapsed = time.perf_counter() - self.last
-			if elapsed < spf: time.sleep(spf - elapsed)
-
-		# Show the image
-		self.bb.imgtk = resized_image
-		self.bb.configure(image=resized_image)
-		self.last = time.perf_counter()
 
 	def _ShowMenu(self):
 		pass
