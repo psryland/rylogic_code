@@ -13,6 +13,9 @@
     <Filter Include="pr\gui">
       <UniqueIdentifier>{3bb34c24-2632-4e3b-93b5-a86007b8566a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="deps">
+      <UniqueIdentifier>{2b1b76e5-4fc2-4f01-9496-49da6eb89637}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -26,5 +29,13 @@
     <ClInclude Include="$(RylogicRoot)include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
+      <Filter>deps</Filter>
+    </CustomBuild>
+    <CustomBuild Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
+      <Filter>deps</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

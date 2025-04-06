@@ -26,7 +26,7 @@ namespace Rylogic.UnitTests
 		
 	public class UnitTest
 	{
-		#if PR_UNITTESTS
+#if PR_UNITTESTS
 		public const bool TestsEnabled = true;
 #else
 		public const bool TestsEnabled = false;

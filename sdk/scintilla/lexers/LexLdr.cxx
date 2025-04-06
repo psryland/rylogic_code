@@ -168,7 +168,7 @@ namespace
 
 					// When the text matches the keyword, go back to the default state
 					ELdrObject ldr;
-					if (pr::Enum<ELdrObject>::TryParse(ldr, p, false))
+					if (pr::Enum<ELdrObject>::TryParse(ldr, std::string_view{ p }, false))
 					{
 						sc.ChangeState(SCE_LDR_OBJECT);
 						sc.SetState(SCE_LDR_DEFAULT);
@@ -176,7 +176,7 @@ namespace
 						break;
 					}
 					pr::ldr::EKeyword kw;
-					if (pr::Enum<pr::ldr::EKeyword>::TryParse(kw, p, false))
+					if (pr::Enum<pr::ldr::EKeyword>::TryParse(kw, std::string_view{ p }, false))
 					{
 						sc.ChangeState(SCE_LDR_KEYWORD);
 						sc.SetState(SCE_LDR_DEFAULT);
@@ -194,7 +194,7 @@ namespace
 
 					// When the text matches the keyword, go back to the default state
 					EPPKeyword kw;
-					if (pr::Enum<EPPKeyword>::TryParse(kw, p))
+					if (pr::Enum<EPPKeyword>::TryParse(kw, std::string_view{ p }))
 					{
 						sc.ChangeState(SCE_LDR_PREPROC);
 						sc.SetState(SCE_LDR_DEFAULT);

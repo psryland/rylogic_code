@@ -22,11 +22,9 @@ namespace pr::rdr12
 		HDC GetDC(bool discard);
 		void ReleaseDC();
 
-		#if 0 //todo
 		// Get a d2d render target for the DXGI surface within this texture.
 		// 'wnd' is optional, used to get the DPI scaling for the window that the render target is used in.
 		D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget(Window const* wnd = nullptr);
-		#endif
 
 		// Get a D2D device context for drawing on this texture. Note: the texture must have
 		// been created with: EUsage::RenderTarget|EUsage::SimultaneousAccess and D3D12_HEAP_FLAG_SHARED

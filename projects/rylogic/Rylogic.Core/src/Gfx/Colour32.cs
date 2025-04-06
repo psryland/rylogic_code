@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using Rylogic.Extn;
 using Rylogic.Maths;
 
@@ -178,8 +179,8 @@ namespace Rylogic.Gfx
 		#region Parse
 		public static Colour32 Parse(string s, int radix = 16)
 		{
-			return TryParse(s, out var col, radix) ? col
-				: throw new FormatException($"String '{s}' is not a valid colour");
+			return TryParse(s, out var col, radix) ? col :
+				throw new FormatException($"String '{s}' is not a valid colour");
 		}
 		public static bool TryParse(string s, out Colour32 col, int radix = 16)
 		{

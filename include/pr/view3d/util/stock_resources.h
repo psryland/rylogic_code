@@ -7,17 +7,23 @@
 
 namespace pr::rdr
 {
-	#define PR_ENUM(x)\
+	enum class ERenderStep
+	{
+		#define PR_ENUM(x)\
 		x(Invalid       , = InvalidId)\
 		x(ForwardRender ,)\
 		x(GBuffer       ,)\
 		x(DSLighting    ,)\
 		x(ShadowMap     ,)\
 		x(RayCast       ,)
-	PR_DEFINE_ENUM2(ERenderStep, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ERenderStep, PR_ENUM);
 	#undef PR_ENUM
 
-	#define PR_ENUM(x) \
+	enum class EStockTexture : RdrId
+	{
+		#define PR_ENUM(x) \
 		x(Invalid  ,= InvalidId)\
 		x(Black        ,)\
 		x(White        ,)\
@@ -28,10 +34,14 @@ namespace pr::rdr
 		x(WhiteSpot    ,)\
 		x(WhiteTriangle,)\
 		x(EnvMapProjection,)
-	PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EStockTexture, PR_ENUM);
 	#undef PR_ENUM
 
-	#define PR_ENUM(x) \
+	enum class EStockShader : RdrId
+	{
+		#define PR_ENUM(x) \
 		x(Invalid         , = InvalidId)\
 		x(FwdShaderVS     ,)\
 		x(FwdShaderPS     ,)\
@@ -47,6 +57,8 @@ namespace pr::rdr
 		x(ThickLineStripGS,)\
 		x(ArrowHeadGS     ,)\
 		x(ShowNormalsGS   ,)
-	PR_DEFINE_ENUM2_BASE(EStockShader, PR_ENUM, RdrId);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EStockShader, PR_ENUM);
 	#undef PR_ENUM
 }

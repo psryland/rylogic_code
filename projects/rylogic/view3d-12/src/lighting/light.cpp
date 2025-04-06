@@ -3,12 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/ldraw/ldraw.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 
 namespace pr::rdr12
 {
 	Light::Light()
-		:m_position(v4Origin)
-		,m_direction(-0.577350f, -0.577350f, -0.577350f, 0.0f)
+		:m_position(v4::Origin())
+		,m_direction(0, 0, -1, 0)
 		,m_type(ELight::Directional)
 		,m_ambient(0.25f, 0.25f, 0.25f, 0.0f)
 		,m_diffuse(0.25f, 0.25f, 0.25f, 1.0f)
@@ -41,14 +43,14 @@ namespace pr::rdr12
 	{
 		auto pos = m_cam_relative ? c2w * m_position : m_position;
 		auto dir = m_cam_relative ? c2w * m_direction : m_direction;
-		auto preferred_up = m_cam_relative ? c2w.y : v4YAxis;
+		auto preferred_up = m_cam_relative ? c2w.y : v4::YAxis();
 		centre_dist = centre_dist != 0 ? centre_dist : 1.0f;
 		switch (m_type)
 		{
 			case ELight::Directional: return m4x4::LookAt(centre - centre_dist * dir, centre, Perpendicular(dir, preferred_up));
 			case ELight::Point:       return m4x4::LookAt(pos, centre, Perpendicular(centre - pos, preferred_up));
 			case ELight::Spot:        return m4x4::LookAt(pos, centre, Perpendicular(centre - pos, preferred_up));
-			default:                  return m4x4Identity;
+			default:                  return m4x4::Identity();
 		}
 	}
 
@@ -76,28 +78,32 @@ namespace pr::rdr12
 		}
 	}
 
-	#define PR_ENUM(x)\
-		x(Pos  ,= pr::hash::HashICT(L"Pos" ))\
-		x(Dir  ,= pr::hash::HashICT(L"Dir" ))\
-		x(Type ,= pr::hash::HashICT(L"Type"))\
-		x(Amb  ,= pr::hash::HashICT(L"Amb" ))\
-		x(Diff ,= pr::hash::HashICT(L"Diff"))\
-		x(Spec ,= pr::hash::HashICT(L"Spec"))\
-		x(SPwr ,= pr::hash::HashICT(L"SPwr"))\
-		x(Ang0 ,= pr::hash::HashICT(L"Ang0"))\
-		x(Ang1 ,= pr::hash::HashICT(L"Ang1"))\
-		x(Rng  ,= pr::hash::HashICT(L"Rng" ))\
-		x(FOff ,= pr::hash::HashICT(L"FOff"))\
-		x(Shdw ,= pr::hash::HashICT(L"Shdw"))\
-		x(On   ,= pr::hash::HashICT(L"On"  ))\
-		x(CRel ,= pr::hash::HashICT(L"CRel"))
-	PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
+	enum class ELightKW
+	{
+		#define PR_ENUM(x)\
+		x(Pos  ,= rdr12::ldraw::HashI("Pos" ))\
+		x(Dir  ,= rdr12::ldraw::HashI("Dir" ))\
+		x(Type ,= rdr12::ldraw::HashI("Type"))\
+		x(Amb  ,= rdr12::ldraw::HashI("Amb" ))\
+		x(Diff ,= rdr12::ldraw::HashI("Diff"))\
+		x(Spec ,= rdr12::ldraw::HashI("Spec"))\
+		x(SPwr ,= rdr12::ldraw::HashI("SPwr"))\
+		x(Ang0 ,= rdr12::ldraw::HashI("Ang0"))\
+		x(Ang1 ,= rdr12::ldraw::HashI("Ang1"))\
+		x(Rng  ,= rdr12::ldraw::HashI("Rng" ))\
+		x(FOff ,= rdr12::ldraw::HashI("FOff"))\
+		x(Shdw ,= rdr12::ldraw::HashI("Shdw"))\
+		x(On   ,= rdr12::ldraw::HashI("On"  ))\
+		x(CRel ,= rdr12::ldraw::HashI("CRel"))
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ELightKW, PR_ENUM);
 	#undef PR_ENUM
 
 	// Get/Set light settings
-	std::wstring Light::Settings() const
+	std::string Light::Settings() const
 	{
-		std::wstringstream out;
+		std::stringstream out;
 		out << "  *" << ELightKW::Pos  << "{" << m_position.xyz << "}\n"
 			<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz << "}\n"
 			<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
@@ -117,42 +123,36 @@ namespace pr::rdr12
 			;
 		return out.str();
 	}
-	void Light::Settings(std::wstring_view settings)
+	void Light::Settings(std::string_view settings)
 	{
-		using namespace pr::script;
 		try
 		{
 			// Parse the settings for light, if no errors are found update *this
 			Light light;
 
 			// Parse the settings
-			StringSrc src(settings);
-			Reader reader(src, false);
-
-			ELightKW kw;
-			while (reader.NextKeywordH(kw))
+			mem_istream<char> src(settings);
+			ldraw::TextReader reader(src, {});
+			for (ELightKW kw; reader.NextKeyword(kw); ) switch (kw)
 			{
-				switch (kw)
-				{
-					case ELightKW::Pos:  reader.Vector3S(light.m_position, 1.0f); break;
-					case ELightKW::Dir:  reader.Vector3S(light.m_direction, 0.0f); break;
-					case ELightKW::Type: reader.EnumS(light.m_type); break;
-					case ELightKW::Amb:  reader.IntS(light.m_ambient.argb, 16); break;
-					case ELightKW::Diff: reader.IntS(light.m_diffuse.argb, 16); break;
-					case ELightKW::Spec: reader.IntS(light.m_specular.argb, 16); break;
-					case ELightKW::SPwr: reader.RealS(light.m_specular_power); break;
-					case ELightKW::Ang0: reader.RealS(light.m_inner_angle); break;
-					case ELightKW::Ang1: reader.RealS(light.m_outer_angle); break;
-					case ELightKW::Rng:  reader.RealS(light.m_range); break;
-					case ELightKW::FOff: reader.RealS(light.m_falloff); break;
-					case ELightKW::Shdw: reader.RealS(light.m_cast_shadow); break;
-					case ELightKW::On:   reader.BoolS(light.m_on); break;
-					case ELightKW::CRel: reader.BoolS(light.m_cam_relative); break;
-				}
+				case ELightKW::Pos:  light.m_position = reader.Vector3f().w1(); break;
+				case ELightKW::Dir:  light.m_direction = reader.Vector3f().w0(); break;
+				case ELightKW::Type: light.m_type = reader.Enum<ELight>(); break;
+				case ELightKW::Amb:  light.m_ambient = reader.Int<uint32_t>(16); break;
+				case ELightKW::Diff: light.m_diffuse = reader.Int<uint32_t>(16); break;
+				case ELightKW::Spec: light.m_specular = reader.Int<uint32_t>(16); break;
+				case ELightKW::SPwr: light.m_specular_power = reader.Real<float>(); break;
+				case ELightKW::Ang0: light.m_inner_angle = reader.Real<float>(); break;
+				case ELightKW::Ang1: light.m_outer_angle = reader.Real<float>(); break;
+				case ELightKW::Rng:  light.m_range = reader.Real<float>(); break;
+				case ELightKW::FOff: light.m_falloff = reader.Real<float>(); break;
+				case ELightKW::Shdw: light.m_cast_shadow = reader.Real<float>(); break;
+				case ELightKW::On:   light.m_on = reader.Bool(); break;
+				case ELightKW::CRel: light.m_cam_relative = reader.Bool(); break;
 			}
 			*this = light;
 		}
-		catch (ScriptException const& e)
+		catch (std::exception const& e)
 		{
 			throw std::invalid_argument(e.what());
 		}

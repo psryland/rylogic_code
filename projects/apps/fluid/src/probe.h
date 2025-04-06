@@ -33,7 +33,7 @@ namespace pr::fluid
 		float m_radius;
 		float m_sign;
 		IProbeActions* m_actions;
-		rdr12::LdrObjectPtr m_gfx;
+		rdr12::ldraw::LdrObjectPtr m_gfx;
 		EProbeMode m_mode;
 		float m_last_action_time;
 		float m_time;
@@ -43,7 +43,7 @@ namespace pr::fluid
 			, m_radius(initial_radius)
 			, m_sign()
 			, m_actions(actions)
-			, m_gfx(rdr12::CreateLdr(rdr, "*Sphere probe { 1 }"))
+			, m_gfx(rdr12::ldraw::Parse(rdr, "*Sphere probe { 1 }")[0])
 			, m_mode(EProbeMode::None)
 			, m_last_action_time()
 			, m_time()

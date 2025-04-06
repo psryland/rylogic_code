@@ -1095,7 +1095,7 @@ namespace pr::console
 			,m_console_created(false)
 			,m_double_buffered(false)
 			,m_focused_pad()
-			,m_line(*this)
+			,m_line(*this_ptr())
 		{
 			// I can't figure this console redirecting stuff out. It seems sometimes you need
 			// to call 'RedirectIOToConsole()', other times that doesn't work but 'ReopenStdio()'
@@ -1119,6 +1119,10 @@ namespace pr::console
 		~Console()
 		{
 			Close();
+		}
+		Console* this_ptr()
+		{
+			return this;
 		}
 
 		// Attach to an existing console window

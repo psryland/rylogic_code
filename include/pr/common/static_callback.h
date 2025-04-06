@@ -27,19 +27,19 @@ namespace pr
 		void* m_ctx;
 
 		StaticCB()
-			:StaticCB(nullptr)
+			: StaticCB(nullptr)
 		{
 		}
 		StaticCB(nullptr_t)
-			:StaticCB(nullptr, nullptr)
+			: StaticCB(nullptr, nullptr)
 		{
 		}
 		StaticCB(func_t cb)
-			:StaticCB(cb, nullptr)
+			: StaticCB(cb, nullptr)
 		{
 		}
 		StaticCB(func_t cb, void* ctx)
-			:m_cb(cb)
+			: m_cb(cb)
 			, m_ctx(ctx)
 		{
 		}

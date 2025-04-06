@@ -1,0 +1,125 @@
+//*********************************************
+// View 3d
+//  Copyright (c) Rylogic Ltd 2022
+//*********************************************
+#include "view3d-12/src/ldraw/sources/source_file.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
+#include "pr/view3d-12/ldraw/ldraw_parsing.h"
+
+namespace pr::rdr12::ldraw
+{
+	static Guid const LdrawSourceFileNS = { 0xA9C66A7D, 0xD1F3, 0x4CFA, 0x84, 0xE0, 0xCF, 0x99, 0x12, 0xB3, 0x18, 0x9D };
+
+	SourceFile::SourceFile(Guid const* context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes)
+		: SourceBase(context_id)
+		, m_filepath(filepath.lexically_normal())
+		, m_includes(includes)
+		, m_encoding(enc != EEncoding::auto_detect ? enc : filesys::DetectFileEncoding(m_filepath))
+	{
+		// Generate the GUID from the filepath
+		if (!context_id)
+			m_context_id = GenerateGUID(LdrawSourceFileNS, filepath.lexically_normal().string().c_str());
+
+		m_includes.FileOpened = [this](auto&, filepath_t const& fp)
+		{
+			// Add the directory of the included file to the paths
+			m_includes.LocalDir(fp.parent_path());
+			m_filepaths.push_back(fp.lexically_normal());
+		};
+	}
+
+	// Construct a new instance of the source (if possible)
+	std::shared_ptr<SourceBase> SourceFile::Clone()
+	{
+		return std::shared_ptr<SourceFile>(new SourceFile{ &m_context_id, m_filepath, m_encoding, m_includes });
+	}
+
+	// Regenerate the output from the source
+	ParseResult SourceFile::ReadSource(Renderer& rdr)
+	{
+		if (!std::filesystem::exists(m_filepath))
+			return {};
+
+		m_errors.resize(0);
+		m_filepaths.resize(0);
+
+		m_includes.LocalDir("");
+		m_includes.FileOpened(m_includes, m_filepath);
+
+		// Handle based on file extension
+		auto extn = m_filepath.extension().string();
+		switch (HashI(extn.c_str()))
+		{
+			// LDR = Text ldr script file
+			case HashI(".ldr"):
+			{
+				filesys::LockFile lock(m_filepath, 10, 5000);
+
+				// Parse the ldr script text file
+				switch (m_encoding)
+				{
+					case EEncoding::utf16_le:
+					case EEncoding::utf16_be:
+					{
+						std::wifstream src(m_filepath);
+						TextReader reader(src, m_filepath, m_encoding, { OnReportError, this }, { OnProgress, this }, m_includes);
+						return Parse(rdr, reader, m_context_id);
+					}
+					case EEncoding::ascii:
+					case EEncoding::utf8:
+					{
+						std::ifstream src(m_filepath);
+						TextReader reader(src, m_filepath, m_encoding, { OnReportError, this }, { OnProgress, this }, m_includes);
+						return Parse(rdr, reader, m_context_id);
+					}
+					default:
+					{
+						throw std::runtime_error(std::format("Unsupported file encoding: {}", int(m_encoding)));
+					}
+				}
+			}
+
+			// BDR = Binary ldr script file
+			case HashI(".bdr"):
+			{
+				filesys::LockFile lock(m_filepath, 10, 5000);
+
+				// Parse the ldr script file
+				std::ifstream src(m_filepath, std::ios::binary);
+				ldraw::BinaryReader reader(src, m_filepath, { OnReportError, this }, { OnProgress, this }, m_includes);
+				return Parse(rdr, reader, m_context_id);
+			}
+
+			// P3D = My custom binary model file format
+			// STL = "StereoLithography" model files (binary and text)
+			// 3DS = 3D Studio Max model files (binary and text)
+			case HashI(".p3d"):
+			case HashI(".stl"):
+			case HashI(".3ds"):
+			{
+				auto ldr_script = std::format("*Model {{ *FilePath {{\"{}\"}} }}", m_filepath.string());
+
+				mem_istream<char> src{ ldr_script, 0 };
+				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);
+				return Parse(rdr, reader, m_context_id);
+			}
+
+			// CSV data, create a chart to graph the data
+			case HashI(".csv"):
+			{
+				auto ldr_script = std::format("*Chart {{ *FilePath {{\"{}\"}} }}", m_filepath.string());
+
+				mem_istream<char> src{ ldr_script, 0 };
+				TextReader reader(src, {}, EEncoding::utf8, { OnReportError, this }, { OnProgress, this }, m_includes);
+				return Parse(rdr, reader, m_context_id);
+			}
+
+			// Unknown file type
+			default:
+			{
+				throw std::runtime_error(std::format("Unknown file type: {}", extn));
+			}
+		}
+	}
+}

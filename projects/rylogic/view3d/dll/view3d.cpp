@@ -43,8 +43,8 @@ BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD ul_reason_for_call, LPVOID)
 #pragma managed(pop)
 #endif
 
-static Context* g_ctx = nullptr;
-static Context& Dll()
+static view3d::Context* g_ctx = nullptr;
+static view3d::Context& Dll()
 {
 	if (g_ctx) return *g_ctx;
 	throw std::runtime_error("View3d not initialised");
@@ -66,7 +66,7 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, { global_error_cb, ctx }, device_flags);
+			g_ctx = new view3d::Context(g_hInstance, { global_error_cb, ctx }, device_flags);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -1452,9 +1452,9 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateEditCB(char const* name, Vi
 	try
 	{
 		DllLockGuard;
-		Context::ObjectEditCBData cbdata = {edit_cb, ctx};
+		view3d::Context::ObjectEditCBData cbdata = {edit_cb, ctx};
 		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
-		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, Context::ObjectEditCB, &cbdata, context_id);
+		auto obj = pr::ldr::CreateEditCB(Dll().m_rdr, attr, vcount, icount, ncount, view3d::Context::ObjectEditCB, &cbdata, context_id);
 		if (obj)
 			Dll().m_sources.Add(obj);
 
@@ -3179,7 +3179,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(View3DWindow window)
 		DllLockGuard;
 		return Dll().CreateDemoScene(window);
 	}
-	CatchAndReport(View3D_DemoSceneCreate, window, Context::GuidDemoSceneObjects);
+	CatchAndReport(View3D_DemoSceneCreate, window, view3d::Context::GuidDemoSceneObjects);
 }
 
 // Delete all objects belonging to the demo scene
@@ -3188,7 +3188,7 @@ VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
+		Dll().DeleteAllObjectsById(&view3d::Context::GuidDemoSceneObjects, 1, 0);
 	}
 	CatchAndReport(View3D_DemoSceneDelete,,);
 }

@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-
 #include <string>
 #include <iostream>
 #include <deque>
@@ -29,7 +28,9 @@ namespace pr::geometry::max_3ds
 	using u64 = uint64_t; static_assert(sizeof(u64) == 8);
 
 	#pragma region Chunk Ids
-	#define PR_ENUM(x)\
+	enum class EChunkId :u16
+	{
+		#define PR_ENUM(x)\
 		x(Null                      ,= 0x0000) /* Null chunk id */\
 		x(ColorF                    ,= 0x0010) /* float red, grn, blu */\
 		x(Color24                   ,= 0x0011) /* char red, grn, blu */\
@@ -142,9 +143,10 @@ namespace pr::geometry::max_3ds
 		x(MatMapCOL2                ,= 0xA362) /* */\
 		x(MatMapRCOL                ,= 0xA364) /* */\
 		x(MatMapGCOL                ,= 0xA366) /* */\
-		x(MatMapBCOL                ,= 0xA368) /* */\
-
-	PR_DEFINE_ENUM2_BASE(EChunkId, PR_ENUM, u16);
+		x(MatMapBCOL                ,= 0xA368) /* */
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EChunkId, PR_ENUM);
 	#undef PR_ENUM
 	#pragma endregion
 
@@ -752,9 +754,7 @@ namespace pr::geometry::max_3ds
 }
 
 #if PR_UNITTESTS
-#include <fstream>
 #include "pr/common/unittests.h"
-#include "pr/view3d/renderer.h"
 namespace pr::geometry
 {
 	PRUnitTest(Geometry3dsTests)

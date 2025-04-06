@@ -673,7 +673,7 @@ namespace Rylogic.Gfx
 			/// <summary>Handy method for creating random objects</summary>
 			public Guid CreateDemoScene()
 			{
-				return View3D_DemoSceneCreate(Handle);
+				return View3D_DemoSceneCreateText(Handle);
 
 #if false
 				{// Create an object using ldr script

@@ -38,11 +38,11 @@ namespace pr
 			:m_ul(u)
 			,m_type(EType::UInt)
 		{}
-		explicit Number(char const* expr, char** end = nullptr, int radix = 0)
+		explicit Number(char const* expr, char const** end = nullptr, int radix = 0)
 		{
 			*this = From(expr, end, radix);
 		}
-		explicit Number(wchar_t const* expr, wchar_t** end = nullptr, int radix = 0)
+		explicit Number(wchar_t const* expr, wchar_t const** end = nullptr, int radix = 0)
 		{
 			*this = From(expr, end, radix);
 		}
@@ -113,7 +113,7 @@ namespace pr
 		#pragma endregion
 
 		// Read a value (greedily) from 'expr'
-		template <typename Char> static Number From(Char const* expr, Char** end = nullptr, int radix = 0)
+		template <typename Char> static Number From(Char const* expr, Char const** end = nullptr, int radix = 0)
 		{
 			using traits = traits_base<Char>;
 

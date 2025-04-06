@@ -502,93 +502,66 @@ namespace Rylogic.Gfx
 		}
 		[Flags] public enum EResFlags
 		{
-			D3D12_RESOURCE_FLAG_NONE = 0,
-			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET = 0x1,
-			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL = 0x2,
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS = 0x4,
-			D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE = 0x8,
-			D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER = 0x10,
-			D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS = 0x20,
-			D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY = 0x40,
-			D3D12_RESOURCE_FLAG_VIDEO_ENCODE_REFERENCE_ONLY = 0x80,
-			D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE = 0x100
+			None = 0,
+			AllowRenderTarget = 0x1,
+			AllowDepthStencil = 0x2,
+			AllowUnorderedAccess = 0x4,
+			DenyShaderResource = 0x8,
+			AllowCrossAdapter = 0x10,
+			AllowSimultaneousAccess = 0x20,
+			VideoDecodeReferenceOnly = 0x40,
+			VideoEncodeReferenceOnly = 0x80,
+			RaytracingAccelerationStructure = 0x100
 		}
 		[Flags] public enum EResState : int
 		{
-			D3D12_RESOURCE_STATE_COMMON = 0,
-			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER = 0x1,
-			D3D12_RESOURCE_STATE_INDEX_BUFFER = 0x2,
-			D3D12_RESOURCE_STATE_RENDER_TARGET = 0x4,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS = 0x8,
-			D3D12_RESOURCE_STATE_DEPTH_WRITE = 0x10,
-			D3D12_RESOURCE_STATE_DEPTH_READ = 0x20,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE = 0x40,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE = 0x80,
-			D3D12_RESOURCE_STATE_STREAM_OUT = 0x100,
-			D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT = 0x200,
-			D3D12_RESOURCE_STATE_COPY_DEST = 0x400,
-			D3D12_RESOURCE_STATE_COPY_SOURCE = 0x800,
-			D3D12_RESOURCE_STATE_RESOLVE_DEST = 0x1000,
-			D3D12_RESOURCE_STATE_RESOLVE_SOURCE = 0x2000,
-			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 0x400000,
-			D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE = 0x1000000,
-			D3D12_RESOURCE_STATE_GENERIC_READ = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
-			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE = (0x40 | 0x80),
-			D3D12_RESOURCE_STATE_PRESENT = 0,
-			D3D12_RESOURCE_STATE_PREDICATION = 0x200,
-			D3D12_RESOURCE_STATE_VIDEO_DECODE_READ = 0x10000,
-			D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE = 0x20000,
-			D3D12_RESOURCE_STATE_VIDEO_PROCESS_READ = 0x40000,
-			D3D12_RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000,
-			D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ = 0x200000,
-			D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE = 0x800000
+			Common = 0,
+			VertexAndConstantBuffer = 0x1,
+			IndexBuffer = 0x2,
+			RenderTarget = 0x4,
+			UnorderedAccess = 0x8,
+			DepthWrite = 0x10,
+			DepthRead = 0x20,
+			NonPixelShaderResource = 0x40,
+			PixelShaderResource = 0x80,
+			StreamOut = 0x100,
+			IndirectArgument = 0x200,
+			CopyDest = 0x400,
+			CopySource = 0x800,
+			ResolveDest = 0x1000,
+			ResolveSource = 0x2000,
+			RaytracingAccelerationStructure = 0x400000,
+			ShadingRateSource = 0x1000000,
+			GenericRead = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
+			AllShaderResource = (0x40 | 0x80),
+			Present = 0,
+			Predication = 0x200,
+			VideoDecodeRead = 0x10000,
+			VideoDecodeWrite = 0x20000,
+			VideoProcessRead = 0x40000,
+			VideoProcessWrite = 0x80000,
+			VideoEncodeRead = 0x200000,
+			VideoEncodeWrite = 0x800000
 		}
 		public enum EFilter : int
 		{
-			D3D12_FILTER_MIN_MAG_MIP_POINT = 0,
-			D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
-			D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
-			D3D12_FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
-			D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
-			D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
-			D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
-			D3D12_FILTER_MIN_MAG_MIP_LINEAR = 0x15,
-			D3D12_FILTER_ANISOTROPIC = 0x55,
-			D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
-			D3D12_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
-			D3D12_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
-			D3D12_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
-			D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
-			D3D12_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
-			D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
-			D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
-			D3D12_FILTER_COMPARISON_ANISOTROPIC = 0xd5,
-			D3D12_FILTER_MINIMUM_MIN_MAG_MIP_POINT = 0x100,
-			D3D12_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x101,
-			D3D12_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x104,
-			D3D12_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x105,
-			D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x110,
-			D3D12_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x111,
-			D3D12_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x114,
-			D3D12_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR = 0x115,
-			D3D12_FILTER_MINIMUM_ANISOTROPIC = 0x155,
-			D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_POINT = 0x180,
-			D3D12_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x181,
-			D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x184,
-			D3D12_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x185,
-			D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x190,
-			D3D12_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x191,
-			D3D12_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x194,
-			D3D12_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
-			D3D12_FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
+			Point             = 0,
+			PointPointLinear  = 0x1,
+			PointLinearPoint  = 0x4,
+			PointLinearLinear = 0x5,
+			LinearPointPoint  = 0x10,
+			LinearPointLinear = 0x11,
+			LinearLinearPoint = 0x14,
+			Linear            = 0x15,
+			Anisotropic       = 0x55,
 		}
 		public enum EAddrMode
 		{
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP = 1,
-			D3D12_TEXTURE_ADDRESS_MODE_MIRROR = 2,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP = 3,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER = 4,
-			D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE = 5
+			Wrap = 1,
+			Mirror = 2,
+			Clamp = 3,
+			Border = 4,
+			MirrorOnce = 5,
 		}
 		#endregion
 
@@ -623,56 +596,35 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Nugget
 		{
+			[StructLayout(LayoutKind.Sequential)]
+			public struct Shader(ERenderStep rdr_step, HShader shader)
+			{
+				public HShader m_shader = shader;
+				public ERenderStep m_rdr_step = rdr_step;
+				public int pad;
+			}
+
 			public ETopo m_topo;           // Model topology
 			public EGeom m_geom;           // Model geometry type
-			public int m_v0, m_v1;         // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public int m_i0, m_i1;         // Index buffer range. Set to 0,0 to mean the whole buffer
+			public int m_v0, m_v1;         // Vertex buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
+			public int m_i0, m_i1;         // Index buffer range. Set to 0,0 to mean the whole buffer. Use 1,1 if you want to say 0-span
 			public HTexture m_tex_diffuse; // Diffuse texture
 			public HSampler m_sam_diffuse; // Sampler for the diffuse texture
-			public Shaders m_shaders;      // Shader overrides for this nugget
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+			public Shader[] m_shaders;     // Shader overrides for this nugget
 			public ENuggetFlag m_nflags;   // Nugget flags (ENuggetFlag)
 			public ECullMode m_cull_mode;  // Face culling mode
 			public EFillMode m_fill_mode;  // Model fill mode
 			public Colour32 m_tint;        // Tint colour
 			public float m_rel_reflec;     // How reflective this nugget is relative to the over all model
 
-			[StructLayout(LayoutKind.Sequential)] public struct Shader(ERenderStep rdr_step, HShader shader)
-			{
-				public ERenderStep m_rdr_step = rdr_step;
-				public HShader m_shader = shader;
-			}
-			[StructLayout(LayoutKind.Sequential)] public struct Shaders(IntPtr shaders, long count)
-			{
-				public IntPtr m_shaders = shaders;
-				public long m_count = count;
-			}
-			public class ShaderList : IDisposable
-			{
-				private readonly Shader[] m_shaders;
-				private readonly GCHandle m_gchandle;
-				public ShaderList(IEnumerable<Shader> shaders)
-				{
-					m_shaders = shaders.ToArray();
-					m_gchandle = GCHandle.Alloc(m_shaders, GCHandleType.Pinned);
-				}
-				public void Dispose()
-				{
-					if (m_gchandle.IsAllocated)
-						m_gchandle.Free();
-				}
-				public Shaders Pin()
-				{
-					return new Shaders(m_gchandle.AddrOfPinnedObject(), m_shaders.Length);
-				}
-			}
-
 			public Nugget(
 				ETopo topo, EGeom geom,
-				int v0 = 0, int v1 = -1,
-				int i0 = 0, int i1 = -1,
+				int v0 = 0, int v1 = 0,
+				int i0 = 0, int i1 = 0,
 				HTexture? tex_diffuse = null,
 				HSampler? sam_diffuse = null,
-				ShaderList? shaders = null,
+				Shader[]? shaders = null,
 				ENuggetFlag? flags = null,
 				ECullMode? cull_mode = null,
 				EFillMode? fill_mode = null,
@@ -687,7 +639,7 @@ namespace Rylogic.Gfx
 				m_i1 = i1;
 				m_tex_diffuse = tex_diffuse ?? IntPtr.Zero;
 				m_sam_diffuse = sam_diffuse ?? IntPtr.Zero;
-				m_shaders = shaders?.Pin() ?? new Shaders();
+				m_shaders = shaders ?? new Shader[8];
 				m_nflags = flags ?? ENuggetFlag.None;
 				m_cull_mode = cull_mode ?? ECullMode.Default;
 				m_fill_mode = fill_mode ?? EFillMode.Default;
@@ -834,8 +786,8 @@ namespace Rylogic.Gfx
 			public m4x4 T2S = t2s ?? m4x4.Identity;
 			public EFormat Format = format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
 			public int Mips = mips ?? 0;
-			public EResFlags Usage = usage ?? EResFlags.D3D12_RESOURCE_FLAG_NONE;
-			public EResState State = state ?? EResState.D3D12_RESOURCE_STATE_COMMON;
+			public EResFlags Usage = usage ?? EResFlags.None;
+			public EResState State = state ?? EResState.Common;
 			public ClearValue ClearValue = clear_value ?? new ClearValue(format ?? EFormat.DXGI_FORMAT_R8G8B8A8_UNORM);
 			public MultiSamp MultiSamp = msaa ?? new MultiSamp();
 			public uint ColourKey = colour_key ?? 0U;
@@ -1091,7 +1043,7 @@ namespace Rylogic.Gfx
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
 
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
+		public delegate void ParsingProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
@@ -1127,13 +1079,6 @@ namespace Rylogic.Gfx
 		/// <summary>Edit object callback</summary>
 		public delegate VICount EditObjectCB(Span<Vertex> verts, Span<ushort> indices, AddNuggetCB out_nugget);
 
-		/// <summary>Embedded code handler callback</summary>
-		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
-			[MarshalAs(UnmanagedType.LPWStr)] string code,
-			[MarshalAs(UnmanagedType.LPWStr)] string support,
-			[MarshalAs(UnmanagedType.BStr)] out string? result,
-			[MarshalAs(UnmanagedType.BStr)] out string? errors);
-
 		#endregion
 
 		[Serializable]
@@ -1152,10 +1097,9 @@ namespace Rylogic.Gfx
 		private readonly SynchronizationContext m_sync;   // Thread marshaller
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
-		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
+		private ParsingProgressCB m_add_file_progress_cb; // Reference to callback
 		private OnAddCB m_on_add_cb;                      // Reference to callback
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
-		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
 #if PR_VIEW3D_CREATE_STACKTRACE
@@ -1184,9 +1128,7 @@ namespace Rylogic.Gfx
 			m_windows = new List<Window>();
 			m_sync = SynchronizationContext.Current ?? new SynchronizationContext();
 			m_thread_id = Environment.CurrentManagedThreadId;
-			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 			m_load_script_handlers = new List<LoadScriptCompleteCB>();
-			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
 
 			try
 			{
@@ -1206,7 +1148,7 @@ namespace Rylogic.Gfx
 				}
 
 				// Sign up for progress reports
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
 				void HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
 				{
 					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
@@ -1232,49 +1174,6 @@ namespace Rylogic.Gfx
 					else
 						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
 				}
-
-				// Add a C# code handler
-				SetEmbeddedCodeHandler("CSharp", HandleEmbeddedCSharp);
-				bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string? result, out string? errors) // worker thread context
-				{
-					// This function may be called simultaneously in multiple threads
-					result = null;
-					errors = null;
-
-					// Create the source code to build
-					var src = TemplateReplacer.Process(new StringSrc(EmbeddedCSharpBoilerPlate), @"(?<indent>[ \t]*)<<<(?<section>.*?)>>>", (tr, match) =>
-					{
-						var indent = match.Result("${indent}");
-						var section = match.Groups["section"];
-						if (section.Success && section.Value == "support")
-							tr.PushSource(new AddIndents(new StringSrc(support), indent, true));
-						if (section.Success && section.Value == "code")
-							tr.PushSource(new AddIndents(new StringSrc(code), indent, true));
-						return string.Empty;
-					});
-
-#if false
-					try
-					{
-						// Create a runtime assembly from the embedded code
-						using var ass = RuntimeAssembly.Compile(src, new[] { Util.ResolveAppPath() });
-						using var inst = ass.New("ldr.Main");
-						result = inst.Invoke<string>("Execute");
-					}
-					catch (CompileException ex)
-					{
-						errors = ex.ErrorReport();
-						errors += "\r\nGenerated Code:\r\n" + src;
-					}
-					catch (Exception ex)
-					{
-						errors = ex.Message;
-						errors += "\r\nGenerated Code:\r\n" + src;
-					}
-					return true;
-#endif
-					throw new NotImplementedException();
-				}
 			}
 			catch
 			{
@@ -1292,12 +1191,8 @@ namespace Rylogic.Gfx
 			}
 			if (m_singleton != null)
 			{
-				// Unsubscribe
-				foreach (var emb in m_embedded_code_handlers)
-					View3D_EmbeddedCodeCBSet(emb.Key, emb.Value, IntPtr.Zero, false);
-
 				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
-				View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+				View3D_ParsingProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
 				while (m_windows.Count != 0)
@@ -1320,21 +1215,6 @@ namespace Rylogic.Gfx
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
 		public event EventHandler<SourcesChangedEventArgs>? OnSourcesChanged;
-
-		/// <summary>Install/Remove an embedded code handler for language 'lang'</summary>
-		public void SetEmbeddedCodeHandler(string lang, EmbeddedCodeHandlerCB handler)
-		{
-			if (handler != null)
-			{
-				m_embedded_code_handlers[lang] = handler;
-				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, true);
-			}
-			else if (m_embedded_code_handlers.TryGetValue(lang, out handler!))
-			{
-				m_embedded_code_handlers.Remove(lang);
-				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, false);
-			}
-		}
 
 		/// <summary>
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
@@ -1426,57 +1306,6 @@ namespace Rylogic.Gfx
 		/// <summary>Template descriptions for auto complete of LDraw script</summary>
 		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
 
-		/// <summary>Boilerplate C# code used for embedded C#</summary>
-		public string EmbeddedCSharpBoilerPlate { get; set; }
-		public static string EmbeddedCSharpBoilerPlateDefault =>
-		#region Embedded C# Source
-$@"//
-//Assembly: netstandard.dll
-//Assembly: System.dll
-//Assembly: System.Drawing.dll
-//Assembly: System.IO.dll
-//Assembly: System.Linq.dll
-//Assembly: System.Runtime.dll
-//Assembly: System.Runtime.Extensions.dll
-//Assembly: System.ValueTuple.dll
-//Assembly: System.Xml.dll
-//Assembly: System.Xml.Linq.dll
-//Assembly: .\Rylogic.Core.dll
-//Assembly: .\Rylogic.Core.Windows.dll
-//Assembly: .\Rylogic.Gfx.dll
-using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Linq;
-using Rylogic.Common;
-using Rylogic.Container;
-using Rylogic.Extn;
-using Rylogic.Gfx;
-using Rylogic.LDraw;
-using Rylogic.Maths;
-using Rylogic.Utility;
-
-namespace ldr
-{{
-	public class Main
-	{{
-		private StringBuilder Out = new StringBuilder();
-		<<<support>>>
-
-		public string Execute()
-		{{
-			<<<code>>>
-			return Out.ToString();
-		}}
-	}}
-}}
-";
-		#endregion
-
 		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
 		public static string AddressAt(string ldr_script, long position = -1)
 		{
@@ -1484,12 +1313,6 @@ namespace ldr
 			// 'position' should be relative to 'script'
 			return View3D_ObjectAddressAt(ldr_script, position != -1 ? position : ldr_script.Length) ?? string.Empty;
 		}
-
-		///// <summary>Flush any pending commands to the graphics card</summary>
-		//public static void Flush()
-		//{
-		//	View3D_Flush();
-		//}
 
 		#region DLL extern functions
 
@@ -1522,13 +1345,10 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Set the callback for progress events when script sources are loaded or updated
-		[DllImport(Dll)] private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void View3D_ParsingProgressCBSet(ParsingProgressCB progress_cb, IntPtr ctx, bool add);
 
 		// Set the callback that is called when the sources are reloaded
 		[DllImport(Dll)] private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-
-		// Add/Remove a callback for handling embedded code within scripts
-		[DllImport(Dll)] private static extern void View3D_EmbeddedCodeCBSet([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
 
 		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
 		[DllImport(Dll)] private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
@@ -1567,8 +1387,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Get/Set the window settings (as ldr script string)
-		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPWStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
-		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPWStr)] string settings);
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
+		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPStr)] string settings);
 
 		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
@@ -2039,7 +1859,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
 
 		// Create/Delete the demo scene in the given window
-		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreate(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateText(HWindow window);
+		[DllImport(Dll)] private static extern Guid View3D_DemoSceneCreateBinary(HWindow window);
 		[DllImport(Dll)] private static extern void View3D_DemoSceneDelete();
 		
 		// Show a window containing the demo script

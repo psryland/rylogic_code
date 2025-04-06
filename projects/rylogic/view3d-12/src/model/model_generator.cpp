@@ -66,7 +66,7 @@ namespace pr::rdr12
 		{
 			assert((irange.size() % 3) == 0);
 			auto ibuf = cache.m_icont.data<IType>();
-			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
+			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
 				std::swap(ibuf[i + 1], ibuf[i + 2]);
 		}
 
@@ -76,7 +76,7 @@ namespace pr::rdr12
 		{
 			assert((irange.size() % 2) == 0);
 			auto ibuf = cache.m_icont.data<IType>();
-			for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
+			for (int64_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
 				std::swap(ibuf[i + 0], ibuf[i + 1]);
 		}
 
@@ -86,7 +86,7 @@ namespace pr::rdr12
 		{
 			auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 			geometry::GenerateNormals(
-				irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
+				isize(irange), ibuf, gen_normals, isize(cache.m_vcont),
 				[&](IType idx)
 				{
 					return GetP(cache.m_vcont[idx]);
@@ -1319,7 +1319,7 @@ namespace pr::rdr12
 		// Determine the required texture size. This is controlled by the font size only.
 		// DWrite draws in absolute pixels so there is no point in trying to scale the texture.
 		auto text_size = dip_size;
-		auto texture_size = Ceil(text_size * pt_to_px);
+		auto texture_size = Max(Ceil(text_size * pt_to_px), { 1, 1 });
 
 		// Create a texture large enough to contain the text, and render the text into it
 		constexpr auto format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -1376,13 +1376,13 @@ namespace pr::rdr12
 		dim_out = v4(text_size, texture_size);
 
 		// Set the texture coordinates to match the text metrics and the quad size
-		auto t2q = m4x4::Scale(text_size.x/texture_size.x, text_size.y/texture_size.y, 1.0f, v4Origin) * m4x4(v4XAxis, -v4YAxis, v4ZAxis, v4(0, 1, 0, 1));
+		auto t2q = m4x4::Scale(text_size.x/texture_size.x, text_size.y/texture_size.y, 1.0f, v4::Origin()) * m4x4(v4::XAxis(), -v4::YAxis(), v4::ZAxis(), v4(0, 1, 0, 1));
 
 		// Generate the geometry
 		Cache cache{vcount, icount, 0, sizeof(uint16_t)};
 		auto vptr = cache.m_vcont.data();
 		auto iptr = cache.m_icont.data<uint16_t>();
-		auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x * pt_to_m, text_size.y * pt_to_m, iv2Zero, Colour32White, t2q,
+		auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x * pt_to_m, text_size.y * pt_to_m, iv2::Zero(), Colour32White, t2q,
 			[&](v4_cref p, Colour32 c, v4_cref n, v2_cref t) { SetPCNT(*vptr++, p, Colour(c), n, t); },
 			[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 

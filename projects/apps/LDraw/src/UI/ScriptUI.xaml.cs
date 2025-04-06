@@ -592,18 +592,25 @@ namespace LDraw.UI
 			// Load the script file in a background thread
 			ThreadPool.QueueUserWorkItem(x =>
 			{
-				if (selection == null)
-					Model.View3d.LoadScriptFromFile(Filepath, ContextId, include_paths, OnAdd);
-				else
-					Model.View3d.LoadScriptFromString(selection, ContextId, include_paths, OnAdd);
-
-				void OnAdd(Guid id, bool before)
+				try
 				{
-					if (before)
-						Model.Clear(scenes, id);
+					if (selection == null)
+						Model.View3d.LoadScriptFromFile(Filepath, ContextId, include_paths, OnAdd);
 					else
-						Model.AddObjects(scenes, id);
+						Model.View3d.LoadScriptFromString(selection, ContextId, include_paths, OnAdd);
 
+					void OnAdd(Guid id, bool before)
+					{
+						if (before)
+							Model.Clear(scenes, id);
+						else
+							Model.AddObjects(scenes, id);
+
+						RefreshErrorMarkers();
+					}
+				}
+				catch (Exception)
+				{
 					RefreshErrorMarkers();
 				}
 			});

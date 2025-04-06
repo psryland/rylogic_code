@@ -35,8 +35,8 @@ namespace pr::rdr12
 		m4x4 ProjectionFOV(float zn, float zf, float aspect, float fovY, float focus_dist) const;
 
 		// Get/Set light settings - throws Exception<HRESULT> if the settings are invalid
-		std::wstring Settings() const;
-		void Settings(std::wstring_view settings);
+		std::string Settings() const;
+		void Settings(std::string_view settings);
 
 		// Operators
 		friend bool operator == (Light const& lhs, Light const& rhs)

@@ -27,6 +27,7 @@ namespace pr::unittests
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <vector>
 #include <filesystem>
 #include <algorithm>
@@ -35,16 +36,17 @@ namespace pr::unittests
 #include <chrono>
 #include <cstdarg>
 #include <locale>
+#include <format>
 
 // Optionally use Microsoft's C++ unit test framework
 #define USE_MS_UNITTESTS 0 // Set this to 0 when compiling as an executable
 #if USE_MS_UNITTESTS
-	#pragma message ("Using MS Unitest Framework")
+	//#pragma message ("Using MS Unit Test Framework")
 	#include <SDKDDKVer.h>
 	#include "CppUnitTest.h"
 	using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 #else
-	#pragma message ("Using Rylogic Unitest Framework")
+	//#pragma message ("Using Rylogic Unit Test Framework")
 	#define TEST_CLASS(testname) class testname
 	#define TEST_METHOD(testmethod) void unused()
 	#define ONLY_USED_AT_NAMESPACE_SCOPE namespace ___CUT___ {extern int YOU_CAN_ONLY_DEFINE_TEST_CLASS_AT_NAMESPACE_SCOPE;}
@@ -61,9 +63,16 @@ namespace pr::unittests
 	{
 		char const* m_name;
 		TestFunc    m_func;
-		UnitTestItem(char const* name, TestFunc func)
-			:m_name(name)
+		std::filesystem::path m_temp_dir;
+		char const* m_file;
+		int m_line;
+
+		UnitTestItem(char const* name, TestFunc func, std::filesystem::path const& temp_dir, char const* file, int line)
+			: m_name(name)
 			, m_func(func)
+			, m_temp_dir(temp_dir)
+			, m_file(file)
+			, m_line(line)
 		{}
 		friend bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs)
 		{
@@ -243,18 +252,24 @@ namespace pr::unittests
 				TestFramework::TestCount = 0;
 				try
 				{
-					if (wordy) TestFramework::out() << test.m_name << std::string(40 - strlen(test.m_name), '.').c_str();
+					if (wordy) TestFramework::out() << std::format("{}{}", test.m_name, std::string(40 - strlen(test.m_name), '.'));
 
+					// Clean the test's temp dir
+					std::error_code err;
+					std::filesystem::remove_all(test.m_temp_dir, err);
+					std::filesystem::create_directories(test.m_temp_dir, err);
+			
+					// Run the test
 					auto t0 = high_resolution_clock::now();
 					test.m_func();
 					auto t1 = high_resolution_clock::now();
 
-					if (wordy) TestFramework::out() << "success. (" << TestFramework::TestCount << " tests in " << duration_cast<microseconds>(t1-t0).count() << "ms)" << std::endl;
+					if (wordy) TestFramework::out() << std::format("success. ({:10} tests in {:10.3f} ms)\n", TestFramework::TestCount, 0.001 * duration_cast<microseconds>(t1-t0).count());
 					++passed;
 				}
 				catch (std::exception const& e)
 				{
-					TestFramework::out() << test.m_name << " failed:" << std::endl << e.what() << std::endl;
+					TestFramework::out() << std::format("{}({}): {} failed\n   {}\n", test.m_file, test.m_line, test.m_name, e.what());
 					++failed;
 				}
 			}
@@ -262,9 +277,9 @@ namespace pr::unittests
 
 			// Print the results
 			if (failed == 0)
-				TestFramework::out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count()*0.001f << "ms) ****" << std::endl;
+				TestFramework::out() << std::format(" **** UnitTest results: All {} tests passed. (taking {:1.3f} ms) ****\n", (failed+passed), 0.001 * duration_cast<microseconds>(T1-T0).count());
 			else
-				TestFramework::out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
+				TestFramework::out() << std::format(" **** UnitTest results: {} of {} failed. ****\n", failed, failed+passed);
 
 			return failed == 0 ? 0 : -1;
 		}
@@ -348,8 +363,6 @@ namespace pr::unittests
 		TEST_METHOD(UnitTest) { func(); }\
 		static void func()\
 		{\
-			std::filesystem::remove_all(temp_dir);\
-			std::filesystem::create_directories(temp_dir);\
 			tests<##__VA_ARGS__>();\
 		}\
 		template <typename T = void, typename... Args> static void tests()\
@@ -360,7 +373,9 @@ namespace pr::unittests
 		}\
 		template <typename T> static void test();\
 	};\
-	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(pr::unittests::UnitTestItem(#testname, &testname::func));\
+	static bool s_unittest_##testname = pr::unittests::TestFramework::AddTest(\
+		pr::unittests::UnitTestItem{ #testname, &testname::func, testname::temp_dir, __FILE__, __LINE__ }\
+	);\
 	template <typename T> void testname::test()
 
 #define PR_EXPECT(expr)\

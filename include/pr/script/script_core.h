@@ -22,7 +22,7 @@ namespace pr::script
 		//  - The stream operates on single characters so they have to be a fixed width.
 		//    Use wchar_t so that most characters are covered, any beyond that will have
 		//    to be treated as encoding errors.
-		//  - Src can also wrap another stream, 
+		//  - Src can also wrap another stream.
 
 		static int const EOS = -1; // end of stream
 		static int64_t const AllData = std::numeric_limits<int64_t>::max();
@@ -466,7 +466,7 @@ namespace pr::script
 	{
 		// Note:
 		//  - StringSrc only returns bytes so should *NOT* use the 'already_decoded' encoding.
-		//  - A useful techique is to default construct a StringSrc then push text into its buffer.
+		//  - A useful technique is to default construct a StringSrc then push text into its buffer.
 		//    When the buffer is empty, 'Read()' will return EOS. Technically, the same would work
 		//    with 'NullSrc', but that's likely to be confusing.
 		//  - StringSrc has a copy constructor, but it can't have 'start'/'count' parameters because
@@ -686,6 +686,53 @@ namespace pr::script
 		}
 	};
 
+	// An 'istream' source
+	template <typename Char>
+	struct StreamSrc :Src
+	{
+	protected:
+
+		// The open stream
+		std::basic_istream<Char>& m_stream;
+
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
+		{
+			auto ch = m_stream.get();
+			return m_stream.good() ? ch : EOS;
+		}
+
+	public:
+
+		StreamSrc(std::basic_istream<Char>& stream, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:StreamSrc(stream, 0, enc, loc)
+		{}
+		StreamSrc(std::basic_istream<Char>& stream, std::streamsize ofs, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:StreamSrc(stream, ofs, -1, enc, loc)
+		{}
+		StreamSrc(std::basic_istream<Char>& istream, std::streamsize ofs, int64_t limit, EEncoding enc = EEncoding::utf8, Loc const& loc = {})
+			:Src(enc, loc)
+			,m_stream(istream)
+		{
+			if (ofs != 0)
+				m_stream.seekg(ofs);
+			if (limit >= 0)
+				Limit(limit);
+		}
+
+		// Get/Set the read position in the file
+		int64_t Position() const
+		{
+			auto ofs = m_stream.tellg();
+			return static_cast<int64_t>(ofs);
+		}
+		int64_t Position(int64_t pos)
+		{
+			m_stream.seekg(s_cast<std::streamoff>(pos), std::ios::beg);
+			return Position();
+		}
+	};
+
 	// Call '++src' until 'pred' returns false.
 	// 'eat_initial' and 'eat_final' are the number of characters to consume before
 	// applying the predicate 'pred' and the number to consume after 'pred' returns false.
@@ -734,6 +781,26 @@ namespace pr::script
 		for (bool esc = true; *src != '\0' && (esc || *src != quote); esc = !esc && *src == '\\', ++src) {}
 		if (*src != quote)
 			throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
+
+		++src;
+	}
+	template <typename TSrc> inline void EatSection(TSrc& src, Loc const& loc = Loc())
+	{
+		// Don't call this unless 'src' is pointing at a '{'
+		if (*src != '{')
+			throw ScriptException(EResult::TokenNotFound, loc, Fmt("Expected to the start of a section block, but the next character is %c", *src));
+
+		for (int nest = 0; *src;)
+		{
+			if (*src == L'\"') { EatLiteral(src, loc); continue; }
+			nest += (*src == L'{') ? 1 : 0;
+			nest -= (*src == L'}') ? 1 : 0;
+			if (nest == 0) break;
+			++src;
+		}
+
+		if (*src != '}')
+			throw ScriptException(EResult::TokenNotFound, loc, "Incomplete section block");
 
 		++src;
 	}
@@ -963,4 +1030,11 @@ namespace pr::script
 		return src[i] != '\0';
 	}
 
+	// Generate the hash of a keyword
+	inline int HashKeyword(wchar_t const* keyword, bool case_sensitive)
+	{
+		// This function can't have the same name as 'HashKeyword' because it causes a compiler error
+		auto const kw = case_sensitive ? hash::Hash(keyword) : hash::HashI(keyword);
+		return kw;
+	}
 }

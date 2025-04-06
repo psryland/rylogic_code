@@ -20,12 +20,6 @@ namespace LDraw.Dialogs
 			Settings = settings;
 
 			AvailableFonts = CollectionViewSource.GetDefaultView(Fonts.SystemFontFamilies);
-			
-			m_editor_cs_boilerplate.Text = Settings.EmbeddedCSharpBoilerPlate;
-			m_editor_cs_boilerplate.TextArea.LostKeyboardFocus += delegate
-			{
-				Settings.EmbeddedCSharpBoilerPlate = m_editor_cs_boilerplate.Text;
-			};
 
 			Accept = Command.Create(this, AcceptInternal);
 			AddIncludePath = Command.Create(this, AddIncludePathInternal);
@@ -42,13 +36,6 @@ namespace LDraw.Dialogs
 
 		/// <summary>Available fonts</summary>
 		public ICollectionView AvailableFonts { get; }
-
-		/// <summary>Embedded C# boiler plate code</summary>
-		public string EmbeddedCSharpBoilerPlate
-		{
-			get => Settings.EmbeddedCSharpBoilerPlate;
-			set => Settings.EmbeddedCSharpBoilerPlate = value;
-		}
 
 		/// <summary>Close the dialog</summary>
 		public Command Accept { get; }

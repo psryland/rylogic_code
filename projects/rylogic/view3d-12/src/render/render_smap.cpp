@@ -26,15 +26,18 @@
 namespace pr::rdr12
 {
 	// An instance for a quad that displays a texture for debugging it's content
-	#define PR_RDR_INST(x)\
+	struct DebugQuadInstance
+	{
+		#define PR_RDR_INST(x)\
 		x(m4x4, m_i2w, EInstComp::I2WTransform)\
 		x(m4x4, m_c2s, EInstComp::C2STransform)\
 		x(ModelPtr, m_model, EInstComp::ModelPtr)\
 		x(Texture2DPtr, m_tex_diffuse, EInstComp::DiffTexture)\
 		x(SamplerPtr, m_sam_diffuse, EInstComp::DiffTextureSampler)\
 		x(EInstFlag, m_flags, EInstComp::Flags)
-	PR_RDR12_DEFINE_INSTANCE(DebugQuadInstance, PR_RDR_INST);
-	#undef PR_RDR_INST
+		PR_RDR12_INSTANCE_MEMBERS(DebugQuadInstance, PR_RDR_INST);
+		#undef PR_RDR_INST
+	};
 
 	struct DebugQuad :DebugQuadInstance
 	{

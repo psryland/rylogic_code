@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=75.0", "wheel", "twine"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rylogic"
+version = "0.1.1"
+authors = [
+    {name = "Paul Ryland", email = "support@rylogic.co.nz"}
+]
+description = "Python bindings for the Rylogic library"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.6"
+keywords = ["rylogic", "python", "bindings"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+]
+[project.urls]
+"Homepage" = "https://github.com/psryland/rylogic_code"
+"Bug Tracker" = "https://github.com/psryland/rylogic_code/issues"
+
+# If you have dependencies, add them here
+[project.optional-dependencies]
+dev = ["pytest"]

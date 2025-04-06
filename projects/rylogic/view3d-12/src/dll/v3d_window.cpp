@@ -3,8 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "view3d-12/src/dll/v3d_window.h"
-#include "pr/view3d-12/ldraw/ldr_object.h"
-#include "pr/view3d-12/ldraw/ldr_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_object.h"
+#include "pr/view3d-12/ldraw/ldraw_gizmo.h"
+#include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/shaders/shader_point_sprites.h"
 #include "view3d-12/src/dll/context.h"
 
@@ -23,10 +24,10 @@ namespace pr::rdr12
 	}
 
 	// View3d Window ****************************
-	V3dWindow::V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts)
-		: m_dll(&context)
+	V3dWindow::V3dWindow(Renderer& rdr, HWND hwnd, view3d::WindowOptions const& opts)
+		: m_rdr(&rdr)
 		, m_hwnd(hwnd)
-		, m_wnd(context.m_rdr, ToWndSettings(hwnd, context.m_rdr.Settings(), opts))
+		, m_wnd(*m_rdr, ToWndSettings(hwnd, m_rdr->Settings(), opts))
 		, m_scene(m_wnd)
 		, m_objects()
 		, m_gizmos()
@@ -98,41 +99,30 @@ namespace pr::rdr12
 	// Renderer access
 	Renderer& V3dWindow::rdr() const
 	{
-		return m_dll->m_rdr;
+		return *m_rdr;
 	}
 
 	// Get/Set the settings
-	wchar_t const* V3dWindow::Settings() const
+	char const* V3dWindow::Settings() const
 	{
-		std::wstringstream out;
+		std::stringstream out;
 		out << "*Light {\n" << m_scene.m_global_light.Settings() << "}\n";
 		m_settings = out.str();
 		return m_settings.c_str();
 	}
-	void V3dWindow::Settings(wchar_t const* settings)
+	void V3dWindow::Settings(char const* settings)
 	{
-		using namespace pr::script;
-		using namespace pr::str;
-
 		// Parse the settings
-		StringSrc src(settings);
-		Reader reader(src);
-		for (string_t kw; reader.NextKeywordS(kw);)
+		mem_istream<char> src(settings);
+		rdr12::ldraw::TextReader reader(src, {});
+		for (int kw; reader.NextKeyword(kw);) switch (kw)
 		{
-			if (EqualI(kw, "SceneSettings"))
+			case rdr12::ldraw::HashI("Light"):
 			{
-				pr::string<> desc;
-				reader.Section(desc, false);
-				//window->m_obj_cont_ui.Settings(desc.c_str());
-				continue;
-			}
-			if (EqualI(kw, "Light"))
-			{
-				std::wstring desc;
-				reader.Section(desc, false);
+				auto desc = reader.String<std::string>();
 				m_scene.m_global_light.Settings(desc);
 				OnSettingsChanged(this, view3d::ESettings::Lighting_All);
-				continue;
+				break;
 			}
 		}
 	}
@@ -213,19 +203,19 @@ namespace pr::rdr12
 			break;
 		}
 	}
-	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& object : m_objects)
 		{
-			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(object->m_context_id, include, exclude)) continue;
 			if (enum_objects_cb(object)) continue;
 			break;
 		}
 	}
 
 	// Return true if 'object' is part of this scene
-	bool V3dWindow::Has(LdrObject const* object, bool search_children) const
+	bool V3dWindow::Has(ldraw::LdrObject const* object, bool search_children) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -239,7 +229,7 @@ namespace pr::rdr12
 		}
 		return false;
 	}
-	bool V3dWindow::Has(LdrGizmo const* gizmo) const
+	bool V3dWindow::Has(ldraw::LdrGizmo const* gizmo) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& giz : m_gizmos)
@@ -271,7 +261,7 @@ namespace pr::rdr12
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		std::span<GUID const> except_arr(except, except_count);
-		auto pred = [](LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](ldraw::LdrObject const& ob) { return !AllSet(ob.m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude); };
 
 		BBox bbox;
 		switch (bounds)
@@ -299,7 +289,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (!AllSet(obj->m_ldr_flags, ELdrFlags::Selected)) continue;
+					if (!AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -311,7 +301,7 @@ namespace pr::rdr12
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden)) continue;
+					if (AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -328,7 +318,7 @@ namespace pr::rdr12
 	}
 
 	// Add/Remove an object to this window
-	void V3dWindow::Add(LdrObject* object)
+	void V3dWindow::Add(ldraw::LdrObject* object)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_objects.find(object);
@@ -336,10 +326,10 @@ namespace pr::rdr12
 		{
 			m_objects.insert(iter, object);
 			m_guids.insert(object->m_context_id);
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, &object->m_context_id, 1, object);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, { &object->m_context_id, 1 }, object);
 		}
 	}
-	void V3dWindow::Remove(LdrObject* object)
+	void V3dWindow::Remove(ldraw::LdrObject* object)
 	{
 		// 'm_guids' may be out of date now, but it doesn't really matter.
 		// It's used to track the groups of objects added to the window.
@@ -352,86 +342,86 @@ namespace pr::rdr12
 
 		// Notify if changed
 		if (m_objects.size() != count)
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, { &object->m_context_id, 1 }, object);
 	}
 
 	// Add/Remove a gizmo to this window
-	void V3dWindow::Add(LdrGizmo* gizmo)
+	void V3dWindow::Add(ldraw::LdrGizmo* gizmo)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_gizmos.find(gizmo);
 		if (iter == std::end(m_gizmos))
 		{
 			m_gizmos.insert(iter, gizmo);
-			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, nullptr, 0, nullptr); // todo, overload and pass 'gizmo' out
+			ObjectContainerChanged(view3d::ESceneChanged::GizmoAdded, {}, nullptr); // todo, overload and pass 'gizmo' out
 		}
 	}
-	void V3dWindow::Remove(LdrGizmo* gizmo)
+	void V3dWindow::Remove(ldraw::LdrGizmo* gizmo)
 	{
 		m_gizmos.erase(gizmo);
-		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, nullptr, 0, nullptr);
+		ObjectContainerChanged(view3d::ESceneChanged::GizmoRemoved, {}, nullptr);
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
-	void V3dWindow::Add(GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
 		pr::vector<Guid> new_guids;
 		auto old_count = m_objects.size();
-		for (auto& src_iter : m_dll->m_sources.Sources())
+		for (auto& srcs : sources)
 		{
-			auto& src = src_iter.second;
-			if (!IncludeFilter(src.m_context_id, context_ids, include_count, exclude_count))
+			auto& src = srcs.second;
+			if (!IncludeFilter(src->m_context_id, include, exclude))
 				continue;
 
 			// Add objects from this source
-			new_guids.push_back(src.m_context_id);
-			for (auto& obj : src.m_objects)
+			new_guids.push_back(src->m_context_id);
+			for (auto& obj : src->m_output.m_objects)
 				m_objects.insert(obj.get());
 
 			// Apply camera settings from this source
-			if (src.m_cam_fields != ECamField::None)
+			if (src->m_output.m_cam_fields != ldraw::ECamField::None)
 			{
-				auto& cam = src.m_cam;
+				auto& cam = src->m_output.m_cam;
 				auto changed = view3d::ESettings::Camera;
-				if (AllSet(src.m_cam_fields, ECamField::C2W))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::C2W))
 				{
 					m_scene.m_cam.CameraToWorld(cam.CameraToWorld());
 					changed |= view3d::ESettings::Camera_Position;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Focus))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Focus))
 				{
 					m_scene.m_cam.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
 					changed |= view3d::ESettings::Camera_Position;
 					changed |= view3d::ESettings::Camera_FocusDist;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Align))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Align))
 				{
 					m_scene.m_cam.Align(cam.Align());
 					changed |= view3d::ESettings::Camera_AlignAxis;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Aspect))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Aspect))
 				{
 					m_scene.m_cam.Aspect(cam.Aspect());
 					changed |= view3d::ESettings::Camera_Aspect;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::FovY))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::FovY))
 				{
 					m_scene.m_cam.FovY(cam.FovY());
 					changed |= view3d::ESettings::Camera_Fov;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Near))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Near))
 				{
 					m_scene.m_cam.Near(cam.Near(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Far))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Far))
 				{
 					m_scene.m_cam.Far(cam.Far(true), true);
 					changed |= view3d::ESettings::Camera_ClipPlanes;
 				}
-				if (AllSet(src.m_cam_fields, ECamField::Ortho))
+				if (AllSet(src->m_output.m_cam_fields, ldraw::ECamField::Ortho))
 				{
 					m_scene.m_cam.Orthographic(cam.Orthographic());
 					changed |= view3d::ESettings::Camera_Orthographic;
@@ -445,10 +435,10 @@ namespace pr::rdr12
 		if (m_objects.size() != old_count)
 		{
 			m_guids.insert(std::begin(new_guids), std::end(new_guids));
-			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids.data(), int(new_guids.size()), nullptr);
+			ObjectContainerChanged(view3d::ESceneChanged::ObjectsAdded, new_guids, nullptr);
 		}
 	}
-	void V3dWindow::Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids)
+	void V3dWindow::Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -456,7 +446,7 @@ namespace pr::rdr12
 		GuidSet removed;
 		for (auto& id : m_guids)
 		{
-			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(id, include, exclude)) continue;
 			removed.insert(id);
 		}
 
@@ -464,7 +454,7 @@ namespace pr::rdr12
 		{
 			// Remove objects in the 'remove' set
 			auto old_count = m_objects.size();
-			pr::erase_if(m_objects, [&](auto* obj) { return removed.count(obj->m_context_id); });
+			erase_if(m_objects, [&](auto* obj) { return removed.count(obj->m_context_id); });
 
 			// Remove context ids
 			if (!keep_context_ids)
@@ -477,7 +467,7 @@ namespace pr::rdr12
 			if (m_objects.size() != old_count)
 			{
 				pr::vector<Guid> guids(std::begin(removed), std::end(removed));
-				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids.data(), int(guids.size()), nullptr);
+				ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, guids, nullptr);
 			}
 		}
 	}
@@ -495,7 +485,7 @@ namespace pr::rdr12
 		m_guids.clear();
 
 		// Notify that the scene has changed
-		ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, context_ids.data(), int(context_ids.size()), nullptr);
+		ObjectContainerChanged(view3d::ESceneChanged::ObjectsRemoved, context_ids, nullptr);
 	}
 
 	// Render this window into whatever render target is currently set
@@ -620,7 +610,7 @@ namespace pr::rdr12
 			obj->AddToScene(m_scene, anim_time);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
-			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
+			if (m_wnd.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
 				obj->AddBBoxToScene(m_scene, anim_time);
 		}
 
@@ -1078,17 +1068,22 @@ namespace pr::rdr12
 	}
 
 	// Called when objects are added/removed from this window
-	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object)
+	void V3dWindow::ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object)
 	{
-		// Reset the drawlists so that removed objects are no longer in the drawlist
+		// Reset the draw lists so that removed objects are no longer in the draw list
 		if (change_type == view3d::ESceneChanged::ObjectsRemoved)
+		{
+			// Objects are being removed, make sure they're not in the drawlist
+			// for this window and that the graphics card is not still using them.
 			m_scene.ClearDrawlists();
+			m_wnd.m_gsync.Wait();
+		}
 
 		// Invalidate cached members
 		m_bbox_scene = BBox::Reset();
 
 		// Notify scene changed
-		view3d::SceneChanged args = {change_type, context_ids, count, object};
+		view3d::SceneChanged args = {change_type, context_ids.data(), s_cast<int>(context_ids.size()), object};
 		OnSceneChanged(this, args);
 	}
 
@@ -1115,9 +1110,9 @@ namespace pr::rdr12
 		auto bbox = BBox::Reset();
 		for (auto& obj : m_objects)
 		{
-			obj->Apply([&](LdrObject const* c)
+			obj->Apply([&](ldraw::LdrObject const* c)
 			{
-				if (!AllSet(c->m_ldr_flags, ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
+				if (!AllSet(c->m_ldr_flags, ldraw::ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ldraw::ELdrFlags::SceneBoundsExclude))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -1264,7 +1259,7 @@ namespace pr::rdr12
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
-			auto ldr_obj = cast<LdrObject>(hit.m_instance);
+			auto ldr_obj = cast<ldraw::LdrObject>(hit.m_instance);
 
 			// Not an object in this scene, keep looking
 			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
@@ -1272,7 +1267,7 @@ namespace pr::rdr12
 				return true;
 
 			// Not visible to hit tests, keep looking
-			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
+			if (AllSet(ldr_obj->Flags(), ldraw::ELdrFlags::HitTestExclude))
 				return true;
 
 			// The intercepts are already sorted from nearest to furtherest.
@@ -1289,7 +1284,7 @@ namespace pr::rdr12
 			return false;
 		});
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count)
 	{
 		// Create an instances function based on the given list of objects
 		auto beg = &objects[0];
@@ -1302,14 +1297,14 @@ namespace pr::rdr12
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
 	}
-	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+	void V3dWindow::HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude)
 	{
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
+			for (; beg != end && !IncludeFilter(cast<ldraw::LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, snap_distance, flags, instances);
@@ -1468,10 +1463,10 @@ namespace pr::rdr12
 	}
 
 	// Access the built-in script editor
-	LdrScriptEditorUI& V3dWindow::EditorUI()
+	ldraw::ScriptEditorUI& V3dWindow::EditorUI()
 	{
 		if (!m_ui_script_editor)
-			m_ui_script_editor.reset(new LdrScriptEditorUI(m_hwnd));
+			m_ui_script_editor.reset(new ldraw::ScriptEditorUI(m_hwnd));
 
 		return *m_ui_script_editor;
 	}
@@ -1521,7 +1516,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_object_manager)
-			m_ui_object_manager.reset(new LdrObjectManagerUI(m_hwnd));
+			m_ui_object_manager.reset(new ldraw::ObjectManagerUI(m_hwnd));
 		
 		m_ui_object_manager->Visible(show);
 	}
@@ -1554,7 +1549,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_measure_tool)
-			m_ui_measure_tool.reset(new LdrMeasureUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_measure_tool.reset(new ldraw::MeasureUI(m_hwnd, &ReadPoint, this, rdr()));
 		else
 			m_ui_measure_tool->SetReadPoint(&ReadPoint, this);
 		
@@ -1574,7 +1569,7 @@ namespace pr::rdr12
 			return;
 
 		if (!m_ui_angle_tool)
-			m_ui_angle_tool.reset(new LdrAngleUI(m_hwnd, &ReadPoint, this, m_dll->m_rdr));
+			m_ui_angle_tool.reset(new ldraw::AngleUI(m_hwnd, &ReadPoint, this, rdr()));
 		else
 			m_ui_angle_tool->SetReadPoint(&ReadPoint, this);
 		

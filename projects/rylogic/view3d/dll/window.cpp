@@ -402,9 +402,11 @@ namespace view3d
 	void Window::EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
 		for (auto& object : m_objects)
 		{
-			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(object->m_context_id, include, exclude)) continue;
 			if (enum_objects_cb(ctx, object)) continue;
 			break;
 		}
@@ -475,13 +477,15 @@ namespace view3d
 	void Window::AddObjectsById(GUID const* context_ids, int include_count, int exclude_count)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
 
 		GuidCont new_guids;
 		auto old_count = m_objects.size();
 		for (auto& src_iter : m_dll->m_sources.Sources())
 		{
 			auto& src = src_iter.second;
-			if (!IncludeFilter(src.m_context_id, context_ids, include_count, exclude_count))
+			if (!IncludeFilter(src.m_context_id, include, exclude))
 				continue;
 
 			// Add objects from this source
@@ -550,12 +554,14 @@ namespace view3d
 	void Window::RemoveObjectsById(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
 
 		// Create a set of ids to remove
 		GuidSet removed;
 		for (auto& id : m_guids)
 		{
-			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			if (!IncludeFilter(id, include, exclude)) continue;
 			removed.insert(id);
 		}
 
@@ -1089,12 +1095,15 @@ namespace view3d
 	}
 	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
 	{
+		auto include = std::span<GUID const>{ context_ids, s_cast<size_t>(include_count) };
+		auto exclude = std::span<GUID const>{ context_ids + include_count, s_cast<size_t>(exclude_count) };
+
 		// Create an instances function based on the context ids
 		auto beg = std::begin(m_scene.m_instances);
 		auto end = std::end(m_scene.m_instances);
 		auto instances = [&]() -> BaseInstance const*
 		{
-			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
+			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, include, exclude); ++beg) {}
 			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, ray_count, snap_distance, flags, instances);

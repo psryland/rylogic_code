@@ -222,8 +222,12 @@ namespace pr
 		}
 
 		// Raise the event notifying subscribed observers
-		void operator()(Sender& s, Args const& a) const
+		void operator()(Sender s, Args a) const
 		{
+			// Note:
+			//  - 's' is not 'Sender&' here because it can be a smart pointer or something else.
+			//  - Callers should declare the template as EventHandler<MyType&, EmptyArgs const&> if references are wanted
+
 			// Take a copy in case handlers are changed by handlers
 			HandlerCont handlers;
 			{
@@ -233,7 +237,7 @@ namespace pr
 			for (auto& h : handlers)
 				h.m_delegate(s, a);
 		}
-		void operator()(Sender& s) const
+		void operator()(Sender s) const
 		{
 			(*this)(s, Args{});
 		}

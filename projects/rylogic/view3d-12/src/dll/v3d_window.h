@@ -9,11 +9,12 @@
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/ray_cast.h"
 #include "pr/view3d-12/lighting/light_ui.h"
-#include "pr/view3d-12/ldraw/ldr_ui_object_manager.h"
-#include "pr/view3d-12/ldraw/ldr_ui_script_editor.h"
-#include "pr/view3d-12/ldraw/ldr_ui_measure_tool.h"
-#include "pr/view3d-12/ldraw/ldr_ui_angle_tool.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_object_manager.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_script_editor.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_measure_tool.h"
+#include "pr/view3d-12/ldraw/ldraw_ui_angle_tool.h"
 #include "view3d-12/src/dll/dll_forward.h"
+#include "view3d-12/src/ldraw/sources/ldraw_sources.h"
 
 namespace pr::rdr12
 {
@@ -30,37 +31,43 @@ namespace pr::rdr12
 			AnimData() :m_thread() ,m_issue() ,m_clock() {}
 		};
 		using LightingUIPtr = std::unique_ptr<LightingUI>;
-		using LdrObjectManagerUIPtr = std::unique_ptr<LdrObjectManagerUI>;
-		using ScriptEditorUIPtr = std::unique_ptr<LdrScriptEditorUI>;
-		using LdrMeasureUIPtr = std::unique_ptr<LdrMeasureUI>;
-		using LdrAngleUIPtr = std::unique_ptr<LdrAngleUI>;
+		using LdrObjectManagerUIPtr = std::unique_ptr<ldraw::ObjectManagerUI>;
+		using ScriptEditorUIPtr = std::unique_ptr<ldraw::ScriptEditorUI>;
+		using LdrMeasureUIPtr = std::unique_ptr<ldraw::MeasureUI>;
+		using LdrAngleUIPtr = std::unique_ptr<ldraw::AngleUI>;
 
 		// Renderer window/scene
-		Context* m_dll;   // The dll context
-		HWND     m_hwnd;  // The associated Win32 window handle
-		Window   m_wnd;   // The renderer window
-		Scene    m_scene; // Use one scene for the window
+		Renderer* m_rdr; // The main renderer
+		HWND m_hwnd;     // The associated Win32 window handle
+		Window m_wnd;    // The renderer window
+		Scene m_scene;   // Use one scene for the window
 
 		// Objects
 		ObjectSet m_objects; // References to objects to draw (note: objects are owned by the context, not the window)
-		GizmoSet  m_gizmos;  // References to gizmos to draw (note: objects are owned by the context, not the window)
-		GuidSet   m_guids;   // The context ids added to this window
+		GizmoSet m_gizmos;   // References to gizmos to draw (note: objects are owned by the context, not the window)
+		GuidSet m_guids;     // The context ids added to this window
 
 		// Stock objects
-		#define PR_RDR_INST(x)\
+		struct Instance
+		{
+			#define PR_RDR_INST(x)\
 			x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)\
 			x(Colour32 ,m_tint  ,EInstComp::TintColour32)
-		PR_RDR12_DEFINE_INSTANCE(Instance, PR_RDR_INST) // An instance type for other models used in LDraw
-		#undef PR_RDR_INST
-		#define PR_RDR_INST(x)\
+			PR_RDR12_INSTANCE_MEMBERS(Instance, PR_RDR_INST); // An instance type for other models used in LDraw
+			#undef PR_RDR_INST
+		};
+		struct PointInstance
+		{
+			#define PR_RDR_INST(x)\
 			x(m4x4     ,m_c2s   ,EInstComp::C2STransform)\
 			x(m4x4     ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)\
 			x(Colour32 ,m_tint  ,EInstComp::TintColour32)\
 			x(float    ,m_size  ,EInstComp::Float1)
-		PR_RDR12_DEFINE_INSTANCE(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
-		#undef PR_RDR_INST
+			PR_RDR12_INSTANCE_MEMBERS(PointInstance, PR_RDR_INST) // An instance type for the focus point and origin point models
+			#undef PR_RDR_INST
+		};
 		PointInstance m_focus_point;     // Focus point graphics
 		PointInstance m_origin_point;    // Origin point graphics
 		Instance      m_bbox_model;      // Bounding box graphics
@@ -68,12 +75,12 @@ namespace pr::rdr12
 		EStockObject  m_visible_objects; // Visible stock objects
 
 		// Misc
-		mutable std::wstring m_settings;       // Window settings
-		AnimData             m_anim_data;      // Animation time in seconds
-		mutable pr::BBox     m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
-		PipeStates           m_global_pso;     // Global pipe state overrides
-		std::thread::id      m_main_thread_id; // The thread that created this window
-		bool                 m_invalidated;    // True after Invalidate has been called but before Render has been called
+		mutable std::string m_settings;       // Window settings
+		AnimData            m_anim_data;      // Animation time in seconds
+		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
+		PipeStates          m_global_pso;     // Global pipe state overrides
+		std::thread::id     m_main_thread_id; // The thread that created this window
+		bool                m_invalidated;    // True after Invalidate has been called but before Render has been called
 		
 		// UI Tools
 		LightingUIPtr m_ui_lighting;               // A UI for controlling the lighting of the scene
@@ -82,7 +89,7 @@ namespace pr::rdr12
 		LdrMeasureUIPtr m_ui_measure_tool;         // A UI for measuring distances between points within the 3d environment
 		LdrAngleUIPtr m_ui_angle_tool;             // A UI for measuring angles between points within the 3d environment
 
-		V3dWindow(HWND hwnd, Context& context, view3d::WindowOptions const& opts);
+		V3dWindow(Renderer& rdr, HWND hwnd, view3d::WindowOptions const& opts);
 		V3dWindow(V3dWindow&&) = default;
 		V3dWindow(V3dWindow const&) = delete;
 		V3dWindow& operator=(V3dWindow&&) = default;
@@ -111,8 +118,8 @@ namespace pr::rdr12
 		MultiCast<StaticCB<view3d::AnimationCB>, true> OnAnimationEvent;
 
 		// Get/Set the settings
-		wchar_t const* Settings() const;
-		void Settings(wchar_t const* settings);
+		char const* Settings() const;
+		void Settings(char const* settings);
 
 		// The DPI of the monitor that this window is displayed on
 		v2 Dpi() const;
@@ -130,11 +137,11 @@ namespace pr::rdr12
 
 		// Enumerate the objects associated with this window
 		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb);
-		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, GUID const* context_ids, int include_count, int exclude_count);
+		void EnumObjects(StaticCB<bool, view3d::Object> enum_objects_cb, std::span<GUID const> include, std::span<GUID const> exclude);
 
 		// Return true if 'object' is part of this scene
-		bool Has(LdrObject const* object, bool search_children) const;
-		bool Has(LdrGizmo const* gizmo) const;
+		bool Has(ldraw::LdrObject const* object, bool search_children) const;
+		bool Has(ldraw::LdrGizmo const* gizmo) const;
 
 		// Return the number of objects or object groups in this scene
 		int ObjectCount() const;
@@ -145,16 +152,16 @@ namespace pr::rdr12
 		BBox SceneBounds(view3d::ESceneBounds bounds, int except_count, GUID const* except) const;
 
 		// Add/Remove an object to/from this window
-		void Add(LdrObject* object);
-		void Remove(LdrObject* object);
+		void Add(ldraw::LdrObject* object);
+		void Remove(ldraw::LdrObject* object);
 
 		// Add/Remove a gizmo to/from this window
-		void Add(LdrGizmo* gizmo);
-		void Remove(LdrGizmo* gizmo);
-	
+		void Add(ldraw::LdrGizmo* gizmo);
+		void Remove(ldraw::LdrGizmo* gizmo);
+
 		// Add/Remove all objects to this window with the given context ids (or not with)
-		void Add(GUID const* context_ids, int include_count, int exclude_count);
-		void Remove(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids = false);
+		void Add(ldraw::SourceCont const& sources, std::span<GUID const> include, std::span<GUID const> exclude);
+		void Remove(std::span<GUID const> include, std::span<GUID const> exclude, bool keep_context_ids = false);
 
 		// Remove all objects from this scene
 		void RemoveAllObjects();
@@ -270,7 +277,7 @@ namespace pr::rdr12
 		void DepthBufferEnabled(bool enabled);
 
 		// Called when objects are added/removed from this window
-		void ObjectContainerChanged(view3d::ESceneChanged change_type, GUID const* context_ids, int count, LdrObject* object);
+		void ObjectContainerChanged(view3d::ESceneChanged change_type, std::span<GUID const> context_ids, ldraw::LdrObject* object);
 
 		// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
 		void SetSelectionBox(BBox const& bbox, m3x4 const& ori = m3x4::Identity());
@@ -294,8 +301,8 @@ namespace pr::rdr12
 
 		// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, RayCastInstancesCB instances);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, LdrObject const* const* objects, int object_count);
-		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, ldraw::LdrObject const* const* objects, int object_count);
+		void HitTest(std::span<view3d::HitTestRay const> rays, std::span<view3d::HitTestResult> hits, float snap_distance, view3d::EHitTestFlags flags, std::span<GUID const> include, std::span<GUID const> exclude);
 	
 		// Get/Set the visibility of one or more stock objects (focus point, origin, selection box, etc)
 		bool StockObjectVisible(view3d::EStockObject stock_objects) const;
@@ -330,7 +337,7 @@ namespace pr::rdr12
 		void FillModePointsSize(v2 size);
 
 		// Access the built-in script editor
-		LdrScriptEditorUI& EditorUI();
+		ldraw::ScriptEditorUI& EditorUI();
 
 		// Access the built-in lighting controls UI
 		LightingUI& LightingUI();

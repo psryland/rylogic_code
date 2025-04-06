@@ -39,7 +39,7 @@
   <!-- Dependencies -->
   <Target Name="Deploy" AfterTargets="Build">
     <Exec
-      Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(ConfigurationName)"
+      Command="py $(ScriptPath)DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)"
       WorkingDirectory="$(RylogicRoot)"
     />
   </Target>

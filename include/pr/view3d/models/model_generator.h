@@ -361,7 +361,7 @@ namespace pr::rdr
 			{
 				auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 				geometry::GenerateNormals(
-					irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
+					isize(irange), ibuf, gen_normals, isize(cache.m_vcont),
 					[&](int idx)
 					{
 						return GetP(cache.m_vcont[idx]);

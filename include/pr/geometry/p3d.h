@@ -56,35 +56,36 @@ namespace pr::geometry::p3d
 	static constexpr uint32_t NoIndex = ~0U;
 	ChunkIndex const& NullChunk();
 
-	#pragma region Chunk Ids
-	#define PR_ENUM(x)\
-	x(Null                  ,= 0x00000000)/* Null chunk                                                                                      */\
-	x(Str                   ,= 0x00000001)/* utf-8 string (u32 length, length * [u8])                                                        */\
-	x(Main                  ,= 0x44335250)/* PR3D File type indicator                                                                        */\
-	x(FileVersion           ,= 0x00000100)/* ├─ File Version                                                                                 */\
-	x(Scene                 ,= 0x00001000)/* └─ Scene                                                                                        */\
-	x(Materials             ,= 0x00002000)/*    ├─ Materials                                                                                 */\
-	x(Material              ,= 0x00002100)/*    │  └─ Material                                                                               */\
-	x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
-	x(Texture               ,= 0x00002120)/*    │     └─ Texture (Str filepath, u8 type, u8 addr_mode, u16 flags)                            */\
-	x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
-	x(Mesh                  ,= 0x00003100)/*       ├─ Mesh (can be nested)                                                                   */\
-	x(MeshName              ,= 0x00003101)/*       │  ├─ Name (cstr)                                                                         */\
-	x(MeshBBox              ,= 0x00003102)/*       │  ├─ Bounding box (BBox)                                                                 */\
-	x(MeshTransform         ,= 0x00003103)/*       │  ├─ Mesh to Parent Transform (m4x4)                                                     */\
-	x(MeshVerts             ,= 0x00003300)/*       │  ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshNorms             ,= 0x00003310)/*       │  ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshColours           ,= 0x00003320)/*       │  ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshUVs               ,= 0x00003330)/*       │  ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
-	x(MeshNugget            ,= 0x00004000)/*       │  └─ Nugget (topo, geom)                                                                 */\
-	x(MeshMatId             ,= 0x00004001)/*       │     ├─ Material id (cstr)                                                               */\
-	x(MeshVIdx              ,= 0x00004010)/*       │     └─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
-	x(MeshInstance          ,= 0x00003050)/*       └─ MeshInstance (can be nested), contains mesh name, o2p transform chunk                  */\
-
-	PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
+	enum class EChunkId
+	{
+		#define PR_ENUM(x)\
+		x(Null                  ,= 0x00000000)/* Null chunk                                                                                      */\
+		x(Str                   ,= 0x00000001)/* utf-8 string (u32 length, length * [u8])                                                        */\
+		x(Main                  ,= 0x44335250)/* PR3D File type indicator                                                                        */\
+		x(FileVersion           ,= 0x00000100)/* ├─ File Version                                                                                 */\
+		x(Scene                 ,= 0x00001000)/* └─ Scene                                                                                        */\
+		x(Materials             ,= 0x00002000)/*    ├─ Materials                                                                                 */\
+		x(Material              ,= 0x00002100)/*    │  └─ Material                                                                               */\
+		x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
+		x(Texture               ,= 0x00002120)/*    │     └─ Texture (Str filepath, u8 type, u8 addr_mode, u16 flags)                            */\
+		x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
+		x(Mesh                  ,= 0x00003100)/*       ├─ Mesh (can be nested)                                                                   */\
+		x(MeshName              ,= 0x00003101)/*       │  ├─ Name (cstr)                                                                         */\
+		x(MeshBBox              ,= 0x00003102)/*       │  ├─ Bounding box (BBox)                                                                 */\
+		x(MeshTransform         ,= 0x00003103)/*       │  ├─ Mesh to Parent Transform (m4x4)                                                     */\
+		x(MeshVerts             ,= 0x00003300)/*       │  ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])              */\
+		x(MeshNorms             ,= 0x00003310)/*       │  ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
+		x(MeshColours           ,= 0x00003320)/*       │  ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
+		x(MeshUVs               ,= 0x00003330)/*       │  ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
+		x(MeshNugget            ,= 0x00004000)/*       │  └─ Nugget (topo, geom)                                                                 */\
+		x(MeshMatId             ,= 0x00004001)/*       │     ├─ Material id (cstr)                                                               */\
+		x(MeshVIdx              ,= 0x00004010)/*       │     └─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
+		x(MeshInstance          ,= 0x00003050)/*       └─ MeshInstance (can be nested), contains mesh name, o2p transform chunk                  */
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EChunkId, PR_ENUM);
 	static_assert(sizeof(EChunkId) == sizeof(uint32_t), "Chunk Ids must be 4 bytes");
 	#undef PR_ENUM
-	#pragma endregion
 
 	#pragma region Flags
 	namespace Flags
@@ -2051,12 +2052,12 @@ namespace pr::geometry::p3d
 
 				// Read compressed indices into a local buffer
 				byte_data<> buf(len);
-				Read(src, buf.data(), buf.size());
+				Read(src, buf.data<uint8_t>(), buf.size<uint8_t>());
 
 				// Decompress from 'buf' into 'cont'
 				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
 				int64_t prev = 0;
-				auto const* p = buf.data();
+				auto const* p = buf.data<uint8_t>();
 				auto const* pend = p + buf.size();
 				for (; p != pend && cont.count() != count; ++p)
 				{
@@ -2072,7 +2073,7 @@ namespace pr::geometry::p3d
 
 					// Get the index value from the delta (only works for little endian!)
 					auto idx = prev + delta;
-					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
+					cont.push_back({ byte_ptr(&idx), stride });
 
 					prev += delta;
 				}
@@ -2535,9 +2536,7 @@ namespace pr::geometry::p3d
 }
 
 #if PR_UNITTESTS
-#include <fstream>
 #include "pr/common/unittests.h"
-#include "pr/view3d/renderer.h"
 namespace pr::geometry
 {
 	PRUnitTest(P3dTests)

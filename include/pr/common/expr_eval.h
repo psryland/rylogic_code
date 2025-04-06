@@ -1935,8 +1935,8 @@ namespace pr::eval
 					auto name = Narrow(ident.str_view());
 					auto hash = hashname(name);
 					auto nue = !compiled.m_args.contains(hash);
-					compiled.m_op.append(tok);
-					compiled.m_op.append(hash);
+					compiled.m_op.push_back(tok);
+					compiled.m_op.push_back(hash);
 					compiled.m_args.add(name);
 					if (nue) compiled.m_arg_names.push_back(std::move(name));
 					break;
@@ -1945,11 +1945,11 @@ namespace pr::eval
 				{
 					// Manually serialise 'val' to avoid structure padding being added to the CodeBuf.
 					// Could make this a function, but it's only used in a couple of places and I don't
-					// want to polute the 'eval' namespace.
-					compiled.m_op.append(tok);
-					compiled.m_op.append(val.m_ty);
-					val.m_ty == Val::EType::Intg ? compiled.m_op.append(val.m_ll) :
-						val.m_ty == Val::EType::Real ? compiled.m_op.append(val.m_db) :
+					// want to pollute the 'eval' namespace.
+					compiled.m_op.push_back(tok);
+					compiled.m_op.push_back(val.m_ty);
+					val.m_ty == Val::EType::Intg ? compiled.m_op.push_back(val.m_ll) :
+						val.m_ty == Val::EType::Real ? compiled.m_op.push_back(val.m_db) :
 						throw std::runtime_error("Invalid literal value");
 					break;
 				}
@@ -1960,7 +1960,7 @@ namespace pr::eval
 				case ETok::Mod:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 					break;
 				}
 				case ETok::UnaryPlus:
@@ -1969,7 +1969,7 @@ namespace pr::eval
 				case ETok::Comp:
 				{
 					if (!Compile(expr, compiled, tok, false)) return false;
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 					break;
 				}
 				case ETok::LogOR:
@@ -1982,7 +1982,7 @@ namespace pr::eval
 				case ETok::LogGT:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 					break;
 				}
 				case ETok::BitOR:
@@ -1992,7 +1992,7 @@ namespace pr::eval
 				case ETok::RightShift:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 					break;
 				}
 				case ETok::Ceil:
@@ -2025,7 +2025,7 @@ namespace pr::eval
 				case ETok::Rad:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 					break;
 				}
 				case ETok::Hash:
@@ -2040,9 +2040,9 @@ namespace pr::eval
 					if (*expr == '"') ++expr; else return false;
 
 					auto hash = static_cast<long long>(hash::HashCT(str.data(), str.data() + str.size()));
-					compiled.m_op.append(ETok::Value);
-					compiled.m_op.append(Val::EType::Intg);
-					compiled.m_op.append(hash);
+					compiled.m_op.push_back(ETok::Value);
+					compiled.m_op.push_back(Val::EType::Intg);
+					compiled.m_op.push_back(hash);
 					break;
 				}
 				case ETok::Comma:
@@ -2069,12 +2069,12 @@ namespace pr::eval
 
 					// Add the 'If' token which is basically a branch-if-zero instruction. i.e.
 					// if the previous value is zero, branch past the 'if' body.
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 
 					// Record the location of the branch offset so it can be updated
 					// and write a dummy branch offset in the meantime.
 					auto ofs0 = compiled.m_op.size();
-					compiled.m_op.append(0);
+					compiled.m_op.push_back(0);
 
 					// Compile the 'if' body
 					if (!Compile(expr, compiled, ETok::If))
@@ -2089,12 +2089,12 @@ namespace pr::eval
 				{
 					// Add the 'Else' token which is basically a branch-always instruction.
 					// Executing an 'If' statement will jump over this instruction so that the else statement is executed.
-					compiled.m_op.append(tok);
+					compiled.m_op.push_back(tok);
 
 					// Record the location of the branch offset so it can be updated
 					// and write a dummy branch offset in the meantime.
 					auto ofs0 = compiled.m_op.size();
-					compiled.m_op.append(0);
+					compiled.m_op.push_back(0);
 
 					// Compile the else body
 					if (!Compile(expr, compiled, ETok::Else))

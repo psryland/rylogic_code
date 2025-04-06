@@ -6,7 +6,7 @@
 # Use:
 #   harvest_files.py $(PlatformTarget) $(Configuration)
 
-import sys, os, tempfile
+import sys, os, tempfile, re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../script")))
 import Rylogic, UserVars
 
@@ -20,22 +20,22 @@ try:
 		UserVars.root + "\\include"
 	]
 	exclude = [
-		"pr/geometry/mesh_tools.h",
-		"pr/gui/",
-		"pr/image/",
-		"pr/ldraw/ldr_helper_c.h",
-		"pr/ldraw/ldr_ode.h",
-		"pr/macros/on_exit.h",
-		"pr/maths/pr_to_ode.h",
-		"pr/physics/",
-		"pr/sound/",
-		"pr/storage/xfile/",
-		"pr/storage/zip/",
-		"pr/script_old/",
-		"pr/terrain/",
-		"pr/collision/todo/",
-		"pr/collision/builder/",
-		"pr/view3d-12/",
+		r"pr/app/",
+		r"pr/geometry/mesh_tools\.h",
+		r"pr/gui/",
+		r"pr/image/",
+		r"pr/ldraw/ldr_.*\.h",
+		r"pr/macros/on_exit\.h",
+		r"pr/maths/pr_to_ode\.h",
+		r"pr/physics/",
+		r"pr/sound/",
+		r"pr/storage/xfile/",
+		r"pr/storage/zip/",
+		r"pr/script_old/",
+		r"pr/terrain/",
+		r"pr/collision/todo/",
+		r"pr/collision/builder/",
+		r"pr/view3d/",
 	]
 
 	# generate a file that includes all headers
@@ -53,8 +53,9 @@ try:
 			for file in Rylogic.EnumFiles(sd):
 				file = file.lower().replace("\\","/")
 				if os.path.splitext(file)[1] != ".h": continue
-				if any([True for excl in exclude if file.find(excl) != -1]): continue
+				if any([re.search(pattern, file) for pattern in exclude]): continue
 				outf.write(f"#include \"{os.path.relpath(file, sd)}\"\n")
+
 
 	# swap the tmp file with the file if difference
 	# This sometimes fails because 'VS intellisense' (vcpkgsrv.exe) holds a lock on the source file

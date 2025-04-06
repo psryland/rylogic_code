@@ -129,8 +129,10 @@ namespace pr::rdr12
 	}
 	std::vector<uint8_t> ShaderCompiler::Compile()
 	{
+		#if _DEBUG
 		DebugInfo().Arg(L"-WX").Optimise(false).PDBOutput(L"E:\\Dump\\Symbols");
 		#pragma message(PR_LINK "WARNING: ************************************************** Debug Shader Compiling enabled")
+		#endif
 
 		m_args.clear();
 		m_args.push_back(m_ep.c_str());

@@ -29,6 +29,9 @@
 #include <knownfolders.h>
 #include <shlobj.h>
 
+#include "pr/common/hresult.h"
+#include "pr/str/string_core.h"
+
 namespace pr::win32
 {
 	// "Type traits" for win32 API functions

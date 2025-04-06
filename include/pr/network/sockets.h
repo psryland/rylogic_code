@@ -1,4 +1,4 @@
-﻿//*****************************************
+//*****************************************
 // Sockets
 //	Copyright (c) Rylogic 2019
 //*****************************************
@@ -6,10 +6,10 @@
 #include <span>
 #include <mutex>
 #include <thread>
-#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <optional>
+#include <stop_token>
 #include <cstdint>
 #include <cassert>
 #include "winsock.h"
@@ -24,7 +24,7 @@ namespace pr::network
 		return u.max_packet_size;
 	}
 
-	// Convert a time in milliseconds to a timeval
+	// Convert a time in milliseconds to a 'timeval'
 	inline timeval TimeVal(long timeout_ms)
 	{
 		return timeval {
@@ -129,7 +129,7 @@ namespace pr::network
 		return true;
 	}
 
-	// Receive a stream of data (i.e., repeatedly call recv until all data is received)
+	// Receive a stream of data (i.e., repeatedly call 'recv' until all data is received)
 	inline bool RecvStream(SOCKET socket, std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = ~0, std::optional<SOCKADDR_IN> addr = std::nullopt)
 	{
 		auto buf = reinterpret_cast<char*>(data.data());
@@ -168,18 +168,16 @@ namespace pr::network
 	{
 	protected:
 
-		using SocketCont = std::vector<SOCKET>;
-		using Lock = std::unique_lock<std::mutex>;
+		using SocketCont = std::vector<Socket>;
 		using ConnectionCB = std::function<void(SOCKET, sockaddr_in const*)>;
-
-		Winsock const&          m_winsock;         // The winsock instance we're bound to
-		SOCKET                  m_listen_socket;   // The socket we're listen for incoming connections on
+	
+		Winsock const&          m_winsock;         // The 'winsock' instance we're bound to
+		Socket                  m_listen_socket;   // The socket we're listen for incoming connections on
 		uint16_t                m_listen_port;     // The port we're listening on
-		int                     m_max_connections; // The maximum number of clients we'll accept connections from
-		std::thread             m_listen_thread;   // Thread that listens for incoming connections
+		std::jthread            m_listen_thread;   // Thread that listens for incoming connections
 		std::condition_variable m_cv_run_server;   // Sync
 		std::condition_variable m_cv_clients;      // Sync
-		std::atomic_bool        m_run_server;      // True while the server should run
+		std::stop_source        m_shutdown;        // Async shutdown token
 		mutable std::mutex      m_mutex;           // Synchronise access to the clients list
 		SocketCont              m_clients;         // The connected clients
 
@@ -187,13 +185,12 @@ namespace pr::network
 
 		ServerSocket(Winsock const& winsock)
 			: m_winsock(winsock)
-			, m_listen_socket(INVALID_SOCKET)
+			, m_listen_socket()
 			, m_listen_port()
-			, m_max_connections()
 			, m_listen_thread()
 			, m_cv_run_server()
 			, m_cv_clients()
-			, m_run_server(false)
+			, m_shutdown()
 			, m_mutex()
 			, m_clients()
 		{}
@@ -209,7 +206,7 @@ namespace pr::network
 		// True if the server is listening for connections
 		bool Listening() const
 		{
-			return m_run_server;
+			return !m_shutdown.stop_requested();
 		}
 
 		// The port we're listening on
@@ -223,29 +220,23 @@ namespace pr::network
 		{
 			StopConnections();
 
-			// If this fails with WSAEACCESS, it's probably because the firewall is blocking it
-			m_listen_port = listen_port;
-			m_max_connections = max_connections;
-			m_listen_socket = CreateListenSocket(m_listen_port);
-
 			// Start the thread for incoming connections
-			m_run_server = true;
-			m_listen_thread = std::thread([this](ConnectionCB connect_cb)
+			m_listen_port = listen_port;
+			m_listen_thread = std::jthread([this, max_connections, connect_cb]()
 			{
 				try
 				{
-					ListenThread(connect_cb);
+					ListenThread(max_connections, connect_cb);
 				}
 				catch (std::exception const& ex)
 				{
-					assert(false && ex.what());
-					(void)ex;
+					assert(false && ex.what()); (void)ex;
 				}
 				catch (...)
 				{
-					assert(false && "Unhandled exception in tcp listen thread");
+					assert(false && "Unhandled exception in TCP listen thread");
 				}
-			}, connect_cb);
+			});
 		}
 		void AllowConnections(uint16_t listen_port, int max_connections = SOMAXCONN)
 		{
@@ -255,8 +246,8 @@ namespace pr::network
 		// Block until 'client_count' connections have been made
 		bool WaitForClients(size_t client_count, int timeout_ms = ~0)
 		{
-			Lock lock(m_mutex);
-			return (timeout_ms != ~0)
+			std::unique_lock<std::mutex> lock(m_mutex);
+			return timeout_ms != ~0
 				? m_cv_clients.wait_for(lock, std::chrono::milliseconds(timeout_ms), [&]{ return m_clients.size() >= client_count; })
 				: (m_cv_clients.wait(lock, [&] { return m_clients.size() >= client_count; }), true);
 		}
@@ -264,43 +255,36 @@ namespace pr::network
 		// Stop accepting incoming connections
 		void StopConnections()
 		{
-			if (m_listen_socket == INVALID_SOCKET)
+			if (!m_listen_socket)
 				return;
 
 			// Stop the incoming connections thread
-			m_run_server = false;
+			m_shutdown.request_stop();
 			m_cv_run_server.notify_all();
 			if (m_listen_thread.joinable())
 				m_listen_thread.join();
 
-			{// Shutdown the listen socket
-				::shutdown(m_listen_socket, SD_BOTH);
-				::closesocket(m_listen_socket);
-				m_listen_socket = INVALID_SOCKET;
-			}
+			// Shutdown the listen socket
+			m_listen_socket = nullptr;
 
-			{// Shutdown all client connections
-				Lock lock(m_mutex);
-				for (auto& client : m_clients)
-				{
-					::shutdown(client, SD_BOTH);
-					::closesocket(client);
-				}
+			// Shutdown all client connections
+			{
+				std::unique_lock<std::mutex> lock(m_mutex);
 				m_clients.resize(0);
 			}
 		}
 
 		// Return the number of connected clients
-		size_t ClientCount() const
+		int ClientCount() const
 		{
-			Lock lock(m_mutex);
-			return m_clients.size();
+			std::unique_lock<std::mutex> lock(m_mutex);
+			return static_cast<int>(m_clients.size());
 		}
 
 		// Send data to all clients
 		bool SendStream(std::span<uint8_t const> data, int timeout_ms = ~0)
 		{
-			Lock lock(m_mutex);
+			std::unique_lock<std::mutex> lock(m_mutex);
 
 			// Send the data to each client
 			bool all_sent = true;
@@ -316,7 +300,7 @@ namespace pr::network
 		// Throws if a connection was aborted, or had a problem.
 		bool RecvStream(std::span<uint8_t> data, size_t& bytes_read, int timeout_ms = 0, SOCKET* out_client = nullptr)
 		{
-			Lock lock(m_mutex);
+			std::unique_lock<std::mutex> lock(m_mutex);
 
 			// Attempt to read from all clients
 			for (auto& client : m_clients)
@@ -333,73 +317,98 @@ namespace pr::network
 		}
 
 	private:
-			
+
 		// Thread for listening for incoming connections
-		void ListenThread(ConnectionCB connect_cb)
+		void ListenThread(int max_connections, ConnectionCB connect_cb)
 		{
-			assert(m_listen_socket != INVALID_SOCKET && "Socket not initialised");
+			enum class EState { Disconnected, Idle, Listening, Broken } state = EState::Disconnected;
 
 			// Track the number of clients
-			size_t client_count = 0;
-			{
-				Lock lock(m_mutex);
-				client_count = m_clients.size();
-			}
+			auto client_count = ClientCount();
 
 			// Check for client connections to the server and dump old connections
-			for (bool listening = false; m_run_server;)
+			for (; !m_shutdown.stop_requested();)
 			{
-				// Set 'm_listen_socket' to listen for incoming connections mode
-				if (!listening && ::listen(m_listen_socket, m_max_connections) == SOCKET_ERROR)
-				{
-					auto code = WSAGetLastError();
-					switch (code)
-					{
-					case WSAEISCONN:     // The socket is already connected.
-						break;
-
-					case WSAEINPROGRESS: // A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
-					case WSAENETDOWN:    // The network subsystem has failed.
-					case WSAEWOULDBLOCK:
-						std::this_thread::sleep_for(std::chrono::milliseconds(200));
-						continue; // retry
-
-					default:
-						Throw(code);
-						break;
-					}
-				}
-				listening = true;
-
+				// Don't exit the thread unless 'm_run_server' is false.
+				// Try to handle re-connections, and other errors gracefully.
 				try
 				{
-					// Wait for new connections
-					if (client_count < size_t(m_max_connections))
-						client_count += WaitForConnections(100, connect_cb);
-					else
-						std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					switch (state)
+					{
+						case EState::Disconnected:
+						{
+							// Create the listen socket. If this fails with WSAEACCESS, it's probably because the firewall is blocking it
+							m_listen_socket = CreateListenSocket(m_listen_port);
+							state = EState::Idle;
+							break;
+						}
+						case EState::Idle:
+						{
+							// Start listening for incoming connections
+							auto result = ::listen(m_listen_socket, max_connections);
+							if (result != SOCKET_ERROR || WSAGetLastError() == WSAEISCONN) // No error, or already connected
+							{
+								state = EState::Listening;
+								break;
+							}
 
-					// Remove dead connections
-					client_count -= RemoveDeadConnections(connect_cb);
-				}
-				catch (std::exception const&)
-				{
-					auto code = WSAGetLastError();
-					switch (code) {
-					case WSAENETDOWN:
-					case WSAECONNRESET:
-					case WSAEWOULDBLOCK:
-						listening = false;
-						break; // retry to listen
-					default: throw;
+							// Listen failed, check the error code
+							auto code = WSAGetLastError();
+							switch (code)
+							{
+								case WSAEINPROGRESS: // A blocking Windows Sockets 1.1 call is in progress, or the service provider is still processing a callback function.
+								case WSAENETDOWN:    // The network subsystem has failed.
+								case WSAEWOULDBLOCK:
+								{
+									// Retry after a delay
+									std::this_thread::sleep_for(std::chrono::milliseconds(200));
+									break;
+								}
+								default:
+								{
+									// Some other error
+									Throw(code);
+									break;
+								}
+							}
+							break;
+						}
+						case EState::Listening:
+						{
+							// Wait for new connections
+							if (client_count < max_connections)
+								client_count += WaitForConnections(100, connect_cb);
+							else
+								std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+							// Remove dead connections
+							client_count -= RemoveDeadConnections(connect_cb);
+							break;
+						}
+						case EState::Broken:
+						{
+							// Clean up the broken socket
+							StopConnections();
+							state = EState::Disconnected;
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Unknown state");
+						}
 					}
+				}
+				catch (std::exception const& ex)
+				{
+					assert(false && ex.what()); (void)ex;
+					state = EState::Broken;
 				}
 			}
 		}
 
 		// Block for up to 'timeout_ms' waiting for incoming connections
 		// Returns the number of new clients added (0 or 1)
-		size_t WaitForConnections(int timeout_ms, ConnectionCB connect_cb)
+		int WaitForConnections(int timeout_ms, ConnectionCB connect_cb)
 		{
 			// Test for the listen socket being readable (meaning incoming connection request)
 			if (!SelectToRecv(m_listen_socket, timeout_ms))
@@ -412,8 +421,11 @@ namespace pr::network
 			Check(client != INVALID_SOCKET, "Accepting connection failed");
 
 			// Add 'client'
-			Lock lock(m_mutex);
-			m_clients.push_back(client);
+			{
+				std::unique_lock<std::mutex> lock(m_mutex);
+				m_clients.push_back(client);
+			}
+
 			m_cv_clients.notify_all();
 
 			// Notify connect
@@ -425,9 +437,9 @@ namespace pr::network
 
 		// Looks for dead connections and removes them from m_clients
 		// Returns the number removed
-		size_t RemoveDeadConnections(ConnectionCB connect_cb)
+		int RemoveDeadConnections(ConnectionCB connect_cb)
 		{
-			Lock lock(m_mutex); // Lock access to 'clients'
+			std::unique_lock<std::mutex> lock(m_mutex); // Lock access to 'clients'
 
 			// Shutdown closed client sockets
 			int dropped = 0;
@@ -464,9 +476,7 @@ namespace pr::network
 							connect_cb(client, nullptr);
 
 						// Close the client socket
-						::shutdown(client, SD_BOTH);
-						::closesocket(client);
-						client = INVALID_SOCKET;
+						client = nullptr;
 						++dropped;
 						break;
 					}
@@ -479,14 +489,14 @@ namespace pr::network
 			}
 
 			// Remove dead sockets from the container
-			auto end = std::remove_if(std::begin(m_clients), std::end(m_clients), [=](SOCKET s){ return s == INVALID_SOCKET; });
+			auto end = std::remove_if(std::begin(m_clients), std::end(m_clients), [](auto& s){ return s == nullptr; });
 			m_clients.erase(end, std::end(m_clients));
 			m_cv_clients.notify_all();
 			return dropped;
 		}
 
 		// Create m_listen_socket to use for listening on
-		virtual SOCKET CreateListenSocket(int port) = 0;
+		virtual Socket CreateListenSocket(int port) = 0;
 	};
 
 	// Base class for a socket connection with client behaviour
@@ -494,15 +504,15 @@ namespace pr::network
 	{
 	protected:
 
-		Winsock const& m_winsock;         // The winsock instance we're bound to
-		SOCKET         m_socket;          // The socket we've connected to the host with
-		uint16_t       m_port;            // The port we're connected to
+		Winsock const& m_winsock; // The 'winsock' instance we're bound to
+		Socket         m_socket;  // The socket we've connected to the host with
+		uint16_t       m_port;    // The port we're connected to
 
 	public:
 
 		explicit ClientSocket(Winsock const& winsock)
 			:m_winsock(winsock)
-			,m_socket(INVALID_SOCKET)
+			,m_socket()
 			,m_port()
 		{}
 		ClientSocket(ClientSocket&&) = default;
@@ -517,18 +527,13 @@ namespace pr::network
 		// Close the socket
 		void Close()
 		{
-			if (m_socket == INVALID_SOCKET)
-				return;
-
-			::shutdown(m_socket, SD_BOTH);
-			::closesocket(m_socket);
-			m_socket = INVALID_SOCKET;
+			m_socket == nullptr;
 		}
 
 		// True if the socket handle "looks" valid
 		bool IsValid() const
 		{
-			return m_socket != INVALID_SOCKET;
+			return m_socket != nullptr;
 		}
 
 		// Send/Recv data to/from the host

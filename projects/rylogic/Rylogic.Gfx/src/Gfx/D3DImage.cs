@@ -193,7 +193,7 @@ namespace Rylogic.Gfx
 				var opts = new View3d.TextureOptions(
 					format: RenderTargetFormat,
 					mips: 1,
-					usage: View3d.EResFlags.D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+					usage: View3d.EResFlags.AllowRenderTarget,
 					dbg_name: "D3DImage RenderTarget FB");
 
 				// Create the Dx9 render target of the required size;

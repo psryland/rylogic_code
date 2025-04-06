@@ -755,6 +755,7 @@ namespace pr::script
 				auto beg = ptr;
 
 				// Found the start of an identifier, see if it's a macro identifier
+				tag.resize(0); // reuse
 				str::ExtractIdentifier(tag, ptr);
 
 				// Find the macro?
