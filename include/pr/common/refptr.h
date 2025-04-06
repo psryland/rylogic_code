@@ -49,11 +49,10 @@ namespace pr
 	template <typename T>
 	struct RefPtr
 	{
-		using element_type = T; // Same as std::unique_ptr<>::element_type
-
 		// Notes:
-		//  - Can't use a concept for 'T' because that means RefPtr can't be defined using forward
-		//    declared types. 
+		//  - Can't use a concept for 'T' because that means RefPtr can't be defined using forward declared types. 
+
+		using element_type = T; // Same as std::unique_ptr<>::element_type
 		mutable T* m_ptr;
 
 		// Default Construct

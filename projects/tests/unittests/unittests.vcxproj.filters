@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="sqlite3">
@@ -113,6 +113,9 @@
     <Filter Include="pr\physics\utility">
       <UniqueIdentifier>{77a87cc7-6474-41ea-8c71-3957fa41da22}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\view3d-12">
+      <UniqueIdentifier>{3a9cadb5-54de-4e6d-ad89-a66d5b97dff0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(RylogicRoot)sdk\sqlite3\src\sqlite3.c">
@@ -133,6 +136,9 @@
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\meta\abs.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\meta\nameof.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\algorithm.h">
@@ -241,6 +247,15 @@
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_snapshot.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_time.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\lock_file.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\filesys\resolve_path.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\common\expr_eval.h">
@@ -807,6 +822,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\network\pipe.h">
       <Filter>pr\network</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\network\pipe2.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_mesh.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
@@ -839,9 +857,6 @@
     </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\maths\spatial.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pp_output.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="src\unittests.h">
       <Filter>src</Filter>
@@ -969,12 +984,6 @@
     <ClInclude Include="$(RylogicRoot)include\pr\script\buf.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\filesys\file_time.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
-    <ClInclude Include="$(RylogicRoot)include\pr\filesys\lock_file.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d\renderer.h">
       <Filter>pr\view3d</Filter>
     </ClInclude>
@@ -1065,14 +1074,25 @@
     <ClInclude Include="$(RylogicRoot)include\pr\container\dimension_index.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\container\ring_buffer.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite3</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\script\byte_reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h">
+      <Filter>pr\view3d-12</Filter>
+    </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="pre_build.py" />
     <None Include="run_tests.py" />
     <None Include="cpp.hint" />
+    <None Include="$(RylogicRoot)include\pr\ldraw\ldraw_helper.py" />
+    <None Include="harvest_files.py" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(RylogicRoot)include\pr\collision\_readme.txt">

@@ -203,10 +203,10 @@ namespace pr::network
 		TServices m_services;
 
 		// Create m_listen_socket to use for listening on
-		virtual SOCKET CreateListenSocket(int) override
+		virtual Socket CreateListenSocket(int) override
 		{
 			// Create the listen socket using the RFCOMM protocol
-			auto socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
+			auto socket = Socket(::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM));
 			if (socket == INVALID_SOCKET)
 				Check(WSAGetLastError());
 

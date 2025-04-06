@@ -39,19 +39,22 @@ namespace pr::script
 	public:
 
 		Loc()
-			:Loc(std::filesystem::path())
+			: Loc(std::filesystem::path())
 		{}
 		explicit Loc(std::filesystem::path const& filepath)
-			:Loc(filepath, 0, 0, 1, 1, true)
+			: Loc(filepath, 0, 0, 1, 1, true)
+		{}
+		Loc(std::filesystem::path const& filepath, std::streamoff pos)
+			: Loc(filepath, pos, 0, 1, 1, true)
 		{}
 		Loc(std::filesystem::path const& filepath, std::streamoff pos, std::streamoff line_pos, int line, int col, bool lc_valid, int tab_size = DefTabSize)
-			:m_filepath(filepath)
-			,m_pos(pos)
-			,m_line_pos(line_pos)
-			,m_line(std::max(line, 1))
-			,m_col(std::max(col, 1))
-			,m_tab_size(tab_size)
-			,m_lc_valid(lc_valid)
+			: m_filepath(filepath)
+			, m_pos(pos)
+			, m_line_pos(line_pos)
+			, m_line(std::max(line, 1))
+			, m_col(std::max(col, 1))
+			, m_tab_size(tab_size)
+			, m_lc_valid(lc_valid)
 		{
 			assert("Line index should be natural number, 1-based" && line >= 1);
 			assert("Column index should be natural number, 1-based" && col >= 1);

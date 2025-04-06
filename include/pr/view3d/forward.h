@@ -122,7 +122,7 @@ namespace pr::rdr
 	using wstring32 = pr::string<wchar_t, 32>;
 	using wstring256 = pr::string<wchar_t, 256>;
 
-	static Range const RangeZero = {0, 0};
+	static Range const RangeZero = { 0, 0 };
 	static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
 	static RdrId const InvalidId = RdrId();
 
@@ -206,19 +206,25 @@ namespace pr::rdr
 	class RasterStateManager;
 	struct Lock;
 	struct MLock;
-	using InvokeFunc = void (__stdcall *)(void* ctx);
+	using InvokeFunc = void(__stdcall*)(void* ctx);
 	using ResolvePathArgs = struct { std::filesystem::path filepath; bool handled; };
 
 	// EResult
-	#define PR_ENUM(x)\
+	enum class EResult : uint32_t
+	{
+		#define PR_ENUM(x)\
 		x(Success       ,= 0         )\
 		x(Failed        ,= 0x80000000)\
 		x(InvalidValue  ,)
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EResult, PR_ENUM)
 	#undef PR_ENUM
 
 	// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
-	#define PR_ENUM(x)\
+	enum class EShaderType
+	{
+		#define PR_ENUM(x)\
 		x(Invalid ,= 0)\
 		x(VS      ,= 1 << 0)\
 		x(PS      ,= 1 << 1)\
@@ -228,21 +234,29 @@ namespace pr::rdr
 		x(DS      ,= 1 << 5)\
 		x(All     ,= ~0)\
 		x(_flags_enum, = 0x7fffffff)
-	PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EShaderType, PR_ENUM);
 	#undef PR_ENUM
 
 	// ETexAddrMode
-	#define PR_ENUM(x)\
+	enum class ETexAddrMode
+	{
+		#define PR_ENUM(x)\
 		x(Wrap       ,= D3D11_TEXTURE_ADDRESS_WRAP)\
 		x(Mirror     ,= D3D11_TEXTURE_ADDRESS_MIRROR)\
 		x(Clamp      ,= D3D11_TEXTURE_ADDRESS_CLAMP)\
 		x(Border     ,= D3D11_TEXTURE_ADDRESS_BORDER)\
 		x(MirrorOnce ,= D3D11_TEXTURE_ADDRESS_MIRROR_ONCE)
-	PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ETexAddrMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// EFilter - MinMagMip
-	#define PR_ENUM(x)\
+	enum class EFilter
+	{
+		#define PR_ENUM(x)\
 		x(Point             ,= D3D11_FILTER_MIN_MAG_MIP_POINT)\
 		x(PointPointLinear  ,= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
 		x(PointLinearPoint  ,= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
@@ -252,48 +266,70 @@ namespace pr::rdr
 		x(LinearLinearPoint ,= D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
 		x(Linear            ,= D3D11_FILTER_MIN_MAG_MIP_LINEAR)\
 		x(Anisotropic       ,= D3D11_FILTER_ANISOTROPIC)
-	PR_DEFINE_ENUM2(EFilter, PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EFilter, PR_ENUM);
 	#undef PR_ENUM
 
 	// EFillMode
-	#define PR_ENUM(x)\
+	enum class EFillMode
+	{
+		#define PR_ENUM(x)\
 		x(Default   ,= 0)\
 		x(Points    ,= 1)\
 		x(Wireframe ,= D3D11_FILL_WIREFRAME)\
 		x(Solid     ,= D3D11_FILL_SOLID)\
 		x(SolidWire ,= 4)
-	PR_DEFINE_ENUM2(EFillMode , PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EFillMode , PR_ENUM);
 	#undef PR_ENUM
 
 	// ECullMode
-	#define PR_ENUM(x)\
+	enum class ECullMode
+	{
+		#define PR_ENUM(x)\
 		x(Default ,= 0)\
 		x(None    ,= D3D11_CULL_NONE)\
 		x(Front   ,= D3D11_CULL_FRONT)\
 		x(Back    ,= D3D11_CULL_BACK)
-	PR_DEFINE_ENUM2(ECullMode , PR_ENUM);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(ECullMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// ELight
-	#define PR_ENUM(x)\
+	enum class ELight
+	{
+		#define PR_ENUM(x)\
 		x(Ambient    )\
 		x(Directional)\
 		x(Point      )\
 		x(Spot       )
-	PR_DEFINE_ENUM1(ELight, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(ELight, PR_ENUM);
 	#undef PR_ENUM
 
 	// EEye
-	#define PR_ENUM(x)\
+	enum class EEye
+	{
+		#define PR_ENUM(x)\
 		x(Left )\
 		x(Right)
-	PR_DEFINE_ENUM1(EEye, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(EEye, PR_ENUM);
 	#undef PR_ENUM
 
 	// ERadial
-	#define PR_ENUM(x)\
+	enum class ERadial
+	{
+		#define PR_ENUM(x)\
 		x(Spherical)\
 		x(Cylindrical)
-	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
+		PR_ENUM_MEMBERS1(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 }

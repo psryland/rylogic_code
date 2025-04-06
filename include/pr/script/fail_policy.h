@@ -14,13 +14,13 @@ namespace pr::script
 		EResult m_result;
 		Loc m_loc;
 
-		ScriptException(EResult result, Loc const& loc, std::string msg)
-			:std::runtime_error(msg)
-			,m_result(result)
-			,m_loc(loc)
+		ScriptException(EResult result, Loc const& loc, std::string_view msg)
+			: std::runtime_error(std::string(msg))
+			, m_result(result)
+			, m_loc(loc)
 		{}
-		ScriptException(EResult result, Loc const& loc, std::wstring msg)
-			:ScriptException(result, loc, Narrow(msg))
+		ScriptException(EResult result, Loc const& loc, std::wstring_view msg)
+			: ScriptException(result, loc, Narrow(msg))
 		{}
 		std::string Message() const
 		{

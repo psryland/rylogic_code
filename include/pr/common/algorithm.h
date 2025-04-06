@@ -457,32 +457,31 @@ namespace pr
 		}
 	}
 
-	// Returns true if 'item' is in the "include" set described by the range 'items'
-	// '[            0, include_count)' = the range explicitly included
-	// '[include_count, exclude_count)' = the range explicitly excluded
-	template <typename T> inline bool IncludeFilter(T const& item, T const* items, int include_count, int exclude_count)
+	// Returns true if 'item' is in the "include" set implied by the ranges 'include' and 'exclude'
+	template <typename T>
+	bool IncludeFilter(T const& item, std::span<T const> include, std::span<T const> exclude)
 	{
-		auto idx = index_of(std::span(items, include_count + exclude_count), item);
-		int b = 0, m = include_count, e = include_count + exclude_count;
-		
+		auto idx_i = s_cast<size_t>(index_of(include, item));
+		auto idx_e = s_cast<size_t>(index_of(exclude, item));
+
 		// Include if in the include range
-		if (include_count != 0 && (idx >= b && idx < m))
+		if (!include.empty() && idx_i != include.size())
 			return true;
 
 		// Exclude if in the exclude range
-		if (exclude_count != 0 && idx >= m && idx < e)
+		if (!exclude.empty() && idx_e != exclude.size())
 			return false;
 
 		// If only excludes have been given and not found in the exclude range, assume included
-		if (include_count == 0 && exclude_count != 0)
+		if (include.empty() && !exclude.empty())
 			return true;
 
 		// If only includes have been given and not found in the include range, assume excluded
-		if (include_count != 0 && exclude_count == 0)
+		if (exclude.empty() && !include.empty())
 			return false;
 
 		// If no includes or excludes, assume included
-		if (include_count == 0 && exclude_count == 0)
+		if (include.empty() && exclude.empty())
 			return true;
 
 		// Includes and excludes have been given, but 'item' is not in either range.

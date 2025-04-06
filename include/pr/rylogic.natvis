@@ -219,6 +219,7 @@ old:
 		<DisplayString>{m_cols}x{m_rows} {m_data,36}</DisplayString>
 	</Type>
 	<Type Name="pr::Quat">
+		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
 		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_Quaternion"></DisplayString>
 		-->

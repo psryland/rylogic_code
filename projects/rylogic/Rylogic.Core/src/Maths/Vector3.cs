@@ -13,7 +13,7 @@ namespace Rylogic.Maths
 {
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{Description,nq")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct v3
 	{
 		[FieldOffset(0)] public float x;
@@ -107,6 +107,9 @@ namespace Rylogic.Maths
 		{
 			return new double[] { p.x, p.y, p.z };
 		}
+		
+		public v4 w0 => new(x, y, z, 0);
+		public v4 w1 => new(x, y, z, 1);
 
 		// Static v3 types
 		public readonly static v3 Zero = new(0f, 0f, 0f);

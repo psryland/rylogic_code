@@ -30,9 +30,11 @@
 #include <list>
 #include <memory>
 #include <filesystem>
+#include <thread>
+
+// windows
 #include <guiddef.h>
 #include <cguid.h>
-#include <thread>
 
 // pr
 #include "pr/common/min_max_fix.h"
@@ -63,13 +65,17 @@
 
 namespace pr::app
 {
-	#define PR_ENUM(x)\
+	enum class EResult :uint32_t
+	{
+		#define PR_ENUM(x)\
 		x(Success           ,= 0          )\
 		x(Failed            ,= 0x80000000 )\
 		x(StartupFailed     ,             )\
 		x(SettingsNotFound  ,             )\
 		x(SettingsOutOfDate ,             )
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint32_t);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EResult, PR_ENUM);
 	#undef PR_ENUM
 
 	using Renderer = pr::rdr::Renderer;

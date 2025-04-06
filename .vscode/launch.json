@@ -1,6 +1,16 @@
 {
   "version": "0.2.0",
   "configurations": [
- 
+    {
+      "name": "Launch",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "dotnet-script.exe",
+      "args": ["${file}"],
+      "cwd": "${workspaceRoot}",
+      "preLaunchTask": "",
+      "env": {},
+      "externalConsole": false
+    },
   ]
 }

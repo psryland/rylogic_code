@@ -64,6 +64,7 @@ namespace pr::rdr12
 			// Rotate, scale, and shift the unit cube so that it is viewed from the light.
 			auto ls_bounds = MulNonAffine(lsp, lsp_bounds_cam);
 			{
+				#if PR_DBG_SMAP
 				ldr::Builder B;
 				auto& g = B.Group("ls");
 				for (auto& p : Corners(lsp_bounds_cam))
@@ -74,6 +75,7 @@ namespace pr::rdr12
 					g.Sphere("p", 0xFFFFFFFF).r(0.05f).pos(v);
 				}
 				B.Write("P:\\dump\\smap_lispsm.ldr");
+				#endif
 			}
 
 

@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include <string>
 #include <sstream>
 #include <vector>
@@ -19,10 +18,10 @@ namespace pr::network
 	class TcpServer :private ServerSocket
 	{
 		// Create m_listen_socket to use for listening on
-		virtual SOCKET CreateListenSocket(int port) override
+		virtual Socket CreateListenSocket(int port) override
 		{
 			// Create the listen socket
-			auto socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			auto socket = Socket(::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
 			if (socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 

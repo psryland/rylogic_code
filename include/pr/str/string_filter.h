@@ -83,7 +83,7 @@ namespace pr::str
 
 		// Consider the next character in the stream 'ch'.
 		// Returns true if currently within a string/character literal
-		template <typename Char>
+		template <CharType Char>
 		bool WithinLiteral(Char ch) noexcept
 		{
 			if (m_in_literal_state)
@@ -266,7 +266,7 @@ namespace pr::str
 	};
 
 	// A helper class for escaping a string to a C-string
-	template <typename Char>
+	template <CharType Char>
 	struct Escape
 	{
 		// 'Char' is assumed to be a multi-byte encoding, either utf-8 (char8_t or char) or utf-16 (char16_t or wchar)
@@ -286,7 +286,7 @@ namespace pr::str
 		{}
 
 		// Append characters to 'out' after translating escape sequences
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		void Translate(char_t ch, Str& out, size_t& len)
 		{
 			switch (ch)
@@ -348,7 +348,7 @@ namespace pr::str
 				}
 			}
 		}
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		void Translate(Char ch, Str& out)
 		{
 			auto len = Size(out);
@@ -357,7 +357,7 @@ namespace pr::str
 	};
 
 	// A helper class for translating a C-string to unescaped characters
-	template <typename Char>
+	template <CharType Char>
 	struct Unescape
 	{
 		// 'Char' is assumed to be a multi-byte encoding, either utf-8 (char8_t or char) or utf-16 (char16_t or wchar)
@@ -386,7 +386,7 @@ namespace pr::str
 		}
 
 		// Append characters to 'out' after translating escape sequences
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		void Translate(char_t ch, Str& out, size_t& len)
 		{
 			for (; m_escape; )
@@ -502,7 +502,7 @@ namespace pr::str
 			else
 				Append(out, ch, len);
 		}
-		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+		template <StringType Str>
 		void Translate(char_t ch, Str& out)
 		{
 			auto len = Size(out);

@@ -59,13 +59,17 @@ namespace las
 	using namespace pr::gui;
 	using namespace pr::app;
 
-	#define PR_ENUM(x) \
+	enum class EResult : UINT
+	{
+		#define PR_ENUM(x) \
 		x(Success             ,= 0         )\
 		x(Failed              ,= 0x80000000)\
 		x(StartupFailed       ,            )\
 		x(SettingsPathNotFound,            )\
 		x(SettingsOutOfDate   ,            )
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, UINT);
+		PR_ENUM_MEMBERS2(PR_ENUM)
+	};
+	PR_ENUM_REFLECTION2(EResult, PR_ENUM);
 	#undef PR_ENUM
 
 	using Exception = pr::Exception<EResult>;

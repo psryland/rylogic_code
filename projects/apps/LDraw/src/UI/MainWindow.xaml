@@ -1,4 +1,4 @@
-﻿<Window
+<Window
 	x:Class="LDraw.MainWindow"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -93,6 +93,27 @@
 				Margin="3,0,3,0"
 				/>
 
+			<!-- Streaming Port -->
+			<StatusBarItem
+				VerticalAlignment="Center"
+				Margin="3,0,3,0"
+			>
+				<Grid
+					>
+					<ToggleButton
+						Command="{Binding ToggleStreaming}"
+						Content="{Binding StreamingState, Converter={conv:EnumSelect}, ConverterParameter='Disconnected:Enable Streaming|Listening:Listening|Connected:Connected', Mode=OneWay}"
+						IsChecked="{Binding StreamingState, Converter={conv:EnumSelect}, ConverterParameter='Disconnected:False|Listening:True|Connected:True', Mode=OneWay}"
+						Background="{Binding StreamingState, Converter={conv:EnumSelect}, ConverterParameter='Disconnected:LightGray|Listening:Yellow|Connected:Green', Mode=OneWay}"
+						VerticalAlignment="Center"
+						BorderThickness="0"
+						MinHeight="16"
+						MinWidth="50"
+						Padding="3"
+					/>
+				</Grid>
+			</StatusBarItem>
+			
 			<!-- Progress bar -->
 			<StatusBarItem
 				Visibility="{Binding ParsingProgress, Converter={conv:NullToHidden}}"

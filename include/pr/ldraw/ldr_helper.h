@@ -7,9 +7,13 @@
 #include <algorithm>
 #include <type_traits>
 #include <concepts>
+#include <fstream>
+
 #include "pr/common/fmt.h"
+#include "pr/common/cast.h"
 #include "pr/common/assert.h"
 #include "pr/common/scope.h"
+#include "pr/container/byte_data.h"
 #include "pr/gfx/colour.h"
 #include "pr/str/to_string.h"
 #include "pr/str/string.h"
@@ -23,12 +27,47 @@
 #include "pr/maths/polynomial.h"
 #include "pr/geometry/closest_point.h"
 
+// NOTE: Deprecated - use "ldraw_helper.h"
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
+
+// Plan: Convert this to pr::ldraw namespace and rename to 'ldraw_helper.h'
 namespace pr::ldr
 {
 	using TStr = std::string;
 	using Scope = pr::Scope<void>;
 
-	#pragma region Append
+	// Write the contents of 'ldr' to a file
+	inline void Write(std::string_view ldr, std::filesystem::path const& filepath, bool append = false)
+	{
+		if (ldr.empty()) return;
+		filesys::LockFile lock(filepath);
+		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf8, append);
+	}
+	inline void Write(std::wstring_view ldr, std::filesystem::path const& filepath, bool append = false)
+	{
+		if (ldr.empty()) return;
+		filesys::LockFile lock(filepath);
+		filesys::BufferToFile(ldr, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
+	}
+
+	#pragma region Type Wrappers
+	enum class EArrowType : uint8_t
+	{
+		Fwd,
+		Back,
+		FwdBack,
+	};
+	enum class EPointStyle : uint8_t
+	{
+		Square,
+		Circle,
+		Triangle,
+		Star,
+		Annulus,
+	};
+
 	struct Str
 	{
 		std::string m_str;
@@ -101,17 +140,13 @@ namespace pr::ldr
 	};
 	struct PointStyle
 	{
-		enum EStyle { Square, Circle, Triangle, Star, Annulus };
-		EStyle m_style;
+		EPointStyle m_style;
 		PointStyle() :m_style() {}
-		PointStyle(EStyle s) : m_style(s) {}
+		PointStyle(EPointStyle s) : m_style(s) {}
 	};
-	enum class EArrowType
-	{
-		Fwd,
-		Back,
-		FwdBack,
-	};
+	#pragma endregion
+
+	#pragma region Append Text
 
 	// Forward declarations
 	template <typename Arg0, typename... Args> TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args);
@@ -136,13 +171,20 @@ namespace pr::ldr
 		str.append(s);
 		return str;
 	}
+	inline TStr& Append(TStr& str, std::wstring_view s)
+	{
+		if (s.empty()) return str;
+		if (*s.data() != '}' && *s.data() != ')') AppendSpace(str);
+		str.append(Narrow(s));
+		return str;
+	}
 	inline TStr& Append(TStr& str, char const* s)
 	{
-		return Append(str, std::string_view(s));
+		return Append(str, std::string_view{ s });
 	}
 	inline TStr& Append(TStr& str, std::string const& s)
 	{
-		return Append(str, std::string_view(s));
+		return Append(str, std::string_view{ s });
 	}
 	inline TStr& Append(TStr& str, std::wstring const& s)
 	{
@@ -221,11 +263,11 @@ namespace pr::ldr
 	{
 		switch (style.m_style)
 		{
-			case PointStyle::EStyle::Square: return str;
-			case PointStyle::EStyle::Circle: return Append(str, "*Style {Circle}");
-			case PointStyle::EStyle::Triangle: return Append(str, "*Style {Triangle}");
-			case PointStyle::EStyle::Star: return Append(str, "*Style {Star}");
-			case PointStyle::EStyle::Annulus: return Append(str, "*Style {Annulus}");
+			case EPointStyle::Square: return str;
+			case EPointStyle::Circle: return Append(str, "*Style {Circle}");
+			case EPointStyle::Triangle: return Append(str, "*Style {Triangle}");
+			case EPointStyle::Star: return Append(str, "*Style {Star}");
+			case EPointStyle::Annulus: return Append(str, "*Style {Annulus}");
 			default: throw std::runtime_error("Unknown arrow type");
 		}
 	}
@@ -245,6 +287,10 @@ namespace pr::ldr
 	{
 		return AppendSpace(str).append(To<TStr>(v));
 	}
+	inline TStr& Append(TStr& str, m4x4 const& m)
+	{
+		return Append(str, m.x, m.y, m.z, m.w);
+	}
 	template <Scalar S> inline TStr& Append(TStr& str, Vec2<S,void> const& v)
 	{
 		return Append(AppendSpace(str), To<TStr>(v));
@@ -257,8 +303,7 @@ namespace pr::ldr
 	{
 		return Append(AppendSpace(str), To<TStr>(v));
 	}
-
-	inline TStr& Append(TStr& str, m4x4 const& m)
+	template <Scalar S> inline TStr& Append(TStr& str, Mat4x4<S,void, void> const& m)
 	{
 		return Append(str, m.x, m.y, m.z, m.w);
 	}
@@ -293,12 +338,8 @@ namespace pr::ldr
 	}
 	#pragma endregion
 
-	inline void Write(TStr const& str, std::filesystem::path const& filepath, bool append = false)
-	{
-		if (str.size() == 0) return;
-		filesys::LockFile lock(filepath);
-		filesys::BufferToFile(str, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
-	}
+	#pragma region Deprecated Ldr Functions
+	#if 1 // todo - remove these
 	inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
 	{
 		assert(keyword[0] == '\0' || keyword[0] == '*');
@@ -615,6 +656,8 @@ namespace pr::ldr
 		Append(str, indices_per_prim >= 3 ? "*GenerateNormals\n" : "");
 		return Append(str, "}\n");
 	}
+	#endif
+	#pragma endregion
 
 	// Pretty format Ldraw script
 	template <typename TStr>
@@ -644,7 +687,7 @@ namespace pr::ldr
 			}
 		}
 		return std::move(out);
-	};
+	}
 
 	// Ldr object fluent helper
 	namespace fluent
@@ -698,8 +741,8 @@ namespace pr::ldr
 			LdrFrustum& Frustum(Name name = {}, Col colour = Col());
 
 			// Extension objects
-			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj, LdrCustom>>>
-			LdrCustom& Add(std::string_view name = "", Col colour = Col())
+			template <typename LdrCustom> requires std::is_base_of_v<LdrObj, LdrCustom>
+			LdrCustom& Custom(std::string_view name = "", Col colour = Col())
 			{
 				auto ptr = new LdrCustom;
 				m_objects.emplace_back(ptr);
@@ -724,8 +767,8 @@ namespace pr::ldr
 			// Write nested objects to 'str'
 			virtual void NestedToString(std::string& str) const
 			{
-				for (auto& s : m_objects)
-					s->ToString(str);
+				for (auto& obj : m_objects)
+					obj->ToString(str);
 			}
 
 			// Reset the builder
@@ -862,22 +905,6 @@ namespace pr::ldr
 			}
 		};
 
-		struct LdrRawString :LdrObj
-		{
-			std::string m_str;
-			template <typename Arg0, typename... Args> 
-			LdrRawString(Arg0 const& arg0, Args&&... args)
-				:m_str()
-			{
-				ldr::Append(m_str, arg0, std::forward<Args>(args)...);
-			}
-
-			/// <inheritdoc/>
-			void ToString(std::string& str) const override
-			{
-				str.append(m_str);
-			}
-		};
 		struct LdrPoint :LdrBase<LdrPoint>
 		{
 			struct Point { v4 point; Col colour; };
@@ -1348,13 +1375,14 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				auto delim = m_splines.size() > 1 ? "\n" : "";
-				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, m_width, delim);
+				ldr::Append(str, "*Spline", m_name, m_colour, "{", delim, "*Data", delim, "{");
 				for (auto& bez : m_splines)
 				{
 					ldr::Append(str, bez.pt0.xyz, bez.pt1.xyz, bez.pt2.xyz, bez.pt3.xyz);
 					if (m_has_colour) ldr::Append(str, bez.col);
 					ldr::Append(str, delim);
 				}
+				ldr::Append(str, "}", delim, m_width, delim);
 				NestedToString(str);
 				ldr::Append(str, "}\n");
 			}
@@ -1554,16 +1582,15 @@ namespace pr::ldr
 		#pragma endregion
 	}
 
-	struct Builder : fluent::LdrObj
-	{
-	};
+	// Fluent Ldraw script builder
+	using Builder = fluent::LdrObj;
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 namespace pr::ldr
 {
-	PRUnitTest(LdrHelperTests)
+	PRUnitTest(LdrHelperTextTests)
 	{
 		std::string str;
 

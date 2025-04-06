@@ -3,11 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
 #pragma once
-
 #include <memory>
 #include <functional>
 #include "pr/gui/wingui.h"
 #include "pr/gui/scintilla_ctrl.h"
+
+#if PR_VIEW3D_12
+#error "Should only be used in View3D 11 projects"
+#endif
 
 namespace pr
 {

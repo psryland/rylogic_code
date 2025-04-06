@@ -5,15 +5,16 @@
 // Usage:
 // #include "pr/storage/settings.h"
 //
-// #define PR_SETTING(x)\
-//   x(type, name, default_value, hash-value, description)\
-//   x(type, name, default_value, hash-value, description)\
-//   x(type, name, default_value, hash-value, description)
-// PR_DEFINE_SETTINGS(MySettings, PR_SETTING);
-// #undef PR_SETTING
-
+//  struct MySettings : SettingsBase<MySettings>
+//  {
+//      #define PR_SETTING(x)\
+//      x(type, name, default_value, hash-value, description)\
+//      x(type, name, default_value, hash-value, description)\
+//      x(type, name, default_value, hash-value, description)
+//      PR_SETTINGS_MEMBERS(MySettings, PR_SETTING);
+//      #undef PR_SETTING
+//  };
 #pragma once
-
 #include <string>
 #include <filesystem>
 #include <type_traits>
@@ -146,7 +147,7 @@ namespace pr::settings
 		if constexpr (pr::is_reflected_enum_v<TEnum>)
 		{
 			std::string ident;
-			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
+			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, std::string_view{ ident }, false);
 		}
 		else
 		{
@@ -305,44 +306,46 @@ namespace pr
 			return pr::hash::Hash(settings.c_str());
 		}
 	};
-}
 
-#define PR_SETTINGS_INSTANTIATE(type, name, default_value, description)   type m_##name;
-#define PR_SETTINGS_CONSTRUCT(type, name, default_value, description)     ,m_##name(default_value)
-#define PR_SETTINGS_ENUM(type, name, default_value, description)          name = pr::hash::HashCT(#name),
-#define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, description) case name: return #name;
-#define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, description) case name: return L#name;
-#define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, description)   name,
-#define PR_SETTINGS_COUNT(type, name, default_value, description)         +1
-#define PR_SETTINGS_READ(type, name, default_value, description)          case name: return pr::settings::Read(reader, m_##name);
-#define PR_SETTINGS_WRITE(type, name, default_value, description)         case name: out << '*' << #name << " {" << pr::settings::Write(m_##name) << "}" << (""description[0]?" // "description:"") << "\r\n"; break;
+	// Settings generator.
+	#pragma region Settings Generator
 
-#define PR_DEFINE_SETTINGS(settings_name, x)\
-	struct settings_name :pr::SettingsBase<settings_name>\
-	{\
+	#pragma region Helper Macros
+	#define PR_SETTINGS_INSTANTIATE(type, name, default_value, description)   type m_##name;
+	#define PR_SETTINGS_CONSTRUCT(type, name, default_value, description)     ,m_##name(default_value)
+	#define PR_SETTINGS_ENUM(type, name, default_value, description)          name = pr::hash::HashCT(#name),
+	#define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, description) case name: return #name;
+	#define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, description) case name: return L#name;
+	#define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, description)   name,
+	#define PR_SETTINGS_COUNT(type, name, default_value, description)         +1
+	#define PR_SETTINGS_READ(type, name, default_value, description)          case name: return pr::settings::Read(reader, m_##name);
+	#define PR_SETTINGS_WRITE(type, name, default_value, description)         case name: out << '*' << #name << " {" << pr::settings::Write(m_##name) << "}" << (""description[0]?" // "description:"") << "\r\n"; break;
+	#pragma endregion
+
+	#define PR_SETTINGS_MEMBERS(settings_name, fields)\
 		/* Members */\
-		x(PR_SETTINGS_INSTANTIATE)\
-\
+		fields(PR_SETTINGS_INSTANTIATE)\
+		\
 		/* Setting names and hash values*/\
-		static constexpr int NumberOf = 0 x(PR_SETTINGS_COUNT);\
-		enum Enum_ { x(PR_SETTINGS_ENUM) };\
-\
+		static constexpr int NumberOf = 0 fields(PR_SETTINGS_COUNT);\
+		enum Enum_ { fields(PR_SETTINGS_ENUM) };\
+		\
 		settings_name(std::filesystem::path const& filepath = L"", bool load = false)\
 			:SettingsBase(filepath)\
-			x(PR_SETTINGS_CONSTRUCT)\
+			fields(PR_SETTINGS_CONSTRUCT)\
 		{\
 			if (load && !m_filepath.empty())\
 				Load(m_filepath);\
 			else\
 				m_crc = Crc(Export());\
 		}\
-\
+		\
 		/* Enum to string*/\
 		static char const* NameA(Enum_ setting)\
 		{\
 			switch (setting)\
 			{\
-				x(PR_SETTINGS_ENUM_TOSTRINGA)\
+				fields(PR_SETTINGS_ENUM_TOSTRINGA)\
 				default: return pr::FmtS("Unknown setting. Hash value = %d", setting);\
 			};\
 		}\
@@ -350,42 +353,44 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-				x(PR_SETTINGS_ENUM_TOSTRINGW)\
+				fields(PR_SETTINGS_ENUM_TOSTRINGW)\
 				default: return pr::FmtS(L"Unknown setting. Hash value = %d", setting);\
 			};\
 		}\
-\
+		\
 		/* Enum by index */\
 		static Enum_ ByIndex(int i)\
 		{\
-			static settings_name::Enum_ const map[] = { x(PR_SETTINGS_ENUM_FIELDS) };\
+			static settings_name::Enum_ const map[] = { fields(PR_SETTINGS_ENUM_FIELDS) };\
 			if (i < 0 || i >= NumberOf) throw std::runtime_error("index out of range for setting in "#settings_name);\
 			return map[i];\
 		}\
-\
+		\
 	private:\
 		friend struct pr::SettingsBase<settings_name>;\
-\
+		\
 		/* Read the value of 'setting' from 'reader' */\
 		bool Read(pr::script::Reader& reader, Enum_ setting)\
 		{\
 			switch (setting)\
 			{\
-				x(PR_SETTINGS_READ)\
+				fields(PR_SETTINGS_READ)\
 				default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); return false;\
 			}\
 		}\
-\
+		\
 		/* Write the value of 'setting' to 'out' */\
 		void Write(std::stringstream& out, Enum_ setting) const\
 		{\
 			switch (setting)\
 			{\
-				x(PR_SETTINGS_WRITE)\
+				fields(PR_SETTINGS_WRITE)\
 				default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); break;\
 			}\
-		}\
-	};
+		}
+	
+	#pragma endregion
+}
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -395,11 +400,15 @@ namespace pr::storage
 	namespace unittests::settings
 	{
 		// pr enum
-		#define PR_ENUM(x)\
+		enum class Enum1
+		{
+			#define PR_ENUM(x)\
 			x(One)\
 			x(Two)\
 			x(Three)
-		PR_DEFINE_ENUM1(Enum1, PR_ENUM);
+			PR_ENUM_MEMBERS1(PR_ENUM)
+		};
+		PR_ENUM_REFLECTION1(Enum1, PR_ENUM);
 		#undef PR_ENUM
 
 		// standard enum
@@ -410,8 +419,9 @@ namespace pr::storage
 			Free,
 		};
 
-		//x(type, name, default_value, description)
-		#define PR_SETTING(x)\
+		struct Settings :SettingsBase<Settings>
+		{
+			#define PR_SETTINGS(x)\
 			x(int          , count    , 2                 , "")\
 			x(float        , scale    , 3.14f             , "")\
 			x(unsigned int , mask     , 0xABCU            , "")\
@@ -421,8 +431,9 @@ namespace pr::storage
 			x(std::string  , name     , "hello settings"  , "")\
 			x(Enum1        , emun     , Enum1::Two        , "")\
 			x(Enum2        , emun2    , Enum2::Free       , "")
-		PR_DEFINE_SETTINGS(Settings, PR_SETTING);
-		#undef PR_SETTING
+			PR_SETTINGS_MEMBERS(Settings, PR_SETTINGS);
+			#undef PR_SETTINGS
+		};
 	}
 
 	PRUnitTest(SettingsTests)

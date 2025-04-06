@@ -534,8 +534,8 @@ namespace pr::ldr
 					{
 						char word[20];
 						reader.SectionStart();
-						reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+						reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode_::Parse(std::string_view{ &word[0] }, false);
+						reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode_::Parse(std::string_view{ &word[0] }, false);
 						reader.SectionEnd();
 						break;
 					}
@@ -543,7 +543,7 @@ namespace pr::ldr
 					{
 						char word[20];
 						reader.SectionStart();
-						reader.Identifier(word); sam.Filter = (D3D11_FILTER)Enum<EFilter>::Parse(word, false);
+						reader.Identifier(word); sam.Filter = (D3D11_FILTER)Enum<EFilter>::Parse(std::string_view{ &word[0] }, false);
 						reader.SectionEnd();
 						break;
 					}
@@ -1180,11 +1180,11 @@ namespace pr::ldr
 
 					// The number of indices in this nugget
 					auto iptr = indices.data();
-					auto icount = indices.size();
+					auto icount = isize(indices);
 					if (!nug.m_irange.empty())
 					{
 						iptr += nug.m_irange.begin();
-						icount = nug.m_irange.size();
+						icount = isize(nug.m_irange);
 					}
 
 					// Not sure if this works... needs testing

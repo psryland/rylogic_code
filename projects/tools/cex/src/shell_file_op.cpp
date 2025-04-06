@@ -71,7 +71,7 @@ R"(Shell File Operation : Perform a file operation using the windows explorer sh
 			{
 				var.clear();
 				std::vector<std::string> paths;
-				pr::str::Split(arg, ",", [&](auto const& arg, size_t i, size_t iend, int){ paths.push_back(arg.substr(i, iend-i)); });
+				pr::str::Split(arg, ",", [&](auto sub, int){ paths.push_back(std::string(sub)); });
 				for (auto const& p : paths) var.append(std::filesystem::absolute(p).string()).push_back('\0');
 				var.push_back('\0');
 				return &var[0];
@@ -80,7 +80,7 @@ R"(Shell File Operation : Perform a file operation using the windows explorer sh
 			{
 				var = 0;
 				std::vector<std::string> flags;
-				pr::str::Split(arg, ",", [&](std::string const& arg, size_t i, size_t iend, int){ flags.push_back(arg.substr(i,iend-i)); });
+				pr::str::Split(arg, ",", [&](auto sub, int){ flags.push_back(std::string(sub)); });
 				for (std::vector<std::string>::const_iterator i = flags.begin(), iend = flags.end(); i != iend; ++i)
 				{
 					if (pr::str::EqualI(*i, "AllowUndo"             )) { var |= FOF_ALLOWUNDO;             continue; }

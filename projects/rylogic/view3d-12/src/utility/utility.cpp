@@ -480,7 +480,7 @@ namespace pr::rdr12
 	iv2 MipDimensions(iv2 size, size_t levels)
 	{
 		PR_ASSERT(PR_DBG_RDR, levels > 0, "A specific mip level must be given");
-		PR_ASSERT(PR_DBG_RDR, levels <= MipCount(size), "The number of mip levels provided exceeds the expected number for this texture dimension");
+		PR_ASSERT(PR_DBG_RDR, s_cast<int>(levels) <= MipCount(size), "The number of mip levels provided exceeds the expected number for this texture dimension");
 		for (;levels-- != 0;)
 		{
 			size.x = std::max(size.x/2, 1);
@@ -494,7 +494,7 @@ namespace pr::rdr12
 	// Note, size.x should be the pitch rather than width of the texture
 	size_t MipChainSize(iv2 size, size_t levels)
 	{
-		PR_ASSERT(PR_DBG_RDR, levels <= MipCount(size), "Number of mip levels provided exceeds the expected number for this texture dimension");
+		PR_ASSERT(PR_DBG_RDR, s_cast<int>(levels) <= MipCount(size), "Number of mip levels provided exceeds the expected number for this texture dimension");
 
 		if (levels == 0)
 			levels = MipCount(size);

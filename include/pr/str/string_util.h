@@ -11,21 +11,89 @@
 // may be midway through the buffer
 
 #pragma once
-
 #include <cmath>
 #include "pr/str/string_core.h"
 #include "pr/str/string_filter.h"
 
+namespace pr
+{
+	// A string-like object compatible with Append string functions for measuring a string length
+	template <CharType Char>
+	struct StringProxyForLength
+	{
+		using is_pr_string_compatible = std::true_type;
+		using value_type = Char;
+
+		size_t m_len;
+		Char m_ch[2];
+
+		StringProxyForLength()
+			: m_len()
+			, m_ch()
+		{}
+		Char const* c_str() const
+		{
+			return &m_ch[0];
+		}
+		Char& operator[](size_t)
+		{
+			return m_ch[0];
+		}
+		bool empty() const
+		{
+			return size() == 0;
+		}
+		size_t size() const
+		{
+			return m_len;
+		}
+		void resize(size_t new_size)
+		{
+			m_len = new_size;
+		}
+		void push_back(Char)
+		{
+			++m_len;
+		}
+	};
+	template <CharType Char> struct string_traits<StringProxyForLength<Char>>
+	{
+		using value_type = Char;
+		using string_type = StringProxyForLength<Char>;
+		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
+
+		static value_type const* c_str(string_type const& str) { return str.c_str(); }
+		static value_type const* ptr(string_type const& str)   = delete;//{ return str.data(); }
+		static value_type* ptr(string_type& str)               = delete;//{ return str.data(); }
+		static size_t size(string_type const& str)             { return str.size(); }
+		static bool empty(string_type const& str)              { return str.empty(); }
+		static void resize(string_type& str, size_t n)         { str.resize(n); }  // note: does not guarantee to fill for all string types
+	};
+	template <CharType Char> struct string_traits<StringProxyForLength<Char> const>
+	{
+		using value_type = Char const;
+		using string_type = StringProxyForLength<Char> const;
+		static bool const null_terminated = true;
+		static bool const dynamic_size = true;
+
+		static value_type const* c_str(string_type const& str) { return str.c_str(); }
+		static value_type const* ptr(string_type const& str)   = delete;//{ return str.data(); }
+		static size_t size(string_type const& str)             { return str.size(); }
+		static bool empty(string_type const& str)              { return str.empty(); }
+		static void resize(string_type& str, size_t n)         { str.resize(n); }  // note: does not guarantee to fill for all string types
+	};
+}
 namespace pr::str
 {
 	// Ensure 'str' has a newline character at its end
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str& EnsureNewline(Str& str)
 	{
 		if (!Empty(str) && *(End(str) - 1) != '\n') Append(str, '\n');
 		return str;
 	}
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str EnsureNewline(Str const& str)
 	{
 		auto s = str;
@@ -33,19 +101,19 @@ namespace pr::str
 	}
 
 	// Return true if 'src' contains 'what'
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline bool Contains(Str1 const& str, Str2 const& what)
 	{
 		return FindStr(Begin(str), End(str), what) != End(str);
 	}
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline bool ContainsI(Str1 const& str, Str2 const& what)
 	{
 		return FindStrI(Begin(str), End(str), what) != End(str);
 	}
 
 	// Returns 0 if equal, -1 if lhs < rhs, or +1 if lhs > rhs
-	template <typename Str1, typename Str2, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2, typename Pred>
 	inline int Compare(Str1 const& lhs, Str2 const& rhs, Pred pred)
 	{
 		auto l = Begin(lhs); auto lend = End(lhs);
@@ -58,7 +126,7 @@ namespace pr::str
 		}
 		return (r == rend) - (l == lend);
 	}
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline int Compare(Str1 const& lhs, Str2 const& rhs)
 	{
 		return Compare(lhs, rhs, [](auto lhs, auto rhs)
@@ -66,7 +134,7 @@ namespace pr::str
 			return (lhs > rhs) - (rhs > lhs);
 		});
 	}
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline int CompareI(Str1 const& lhs, Str2 const& rhs)
 	{
 		return Compare(lhs, rhs, [](auto lhs, auto rhs)
@@ -78,7 +146,7 @@ namespace pr::str
 	}
 
 	// Return the number of occurrences of 'what' in 'str'
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline size_t Count(Str1 const& str, Str2 const& what)
 	{
 		auto count = 0;
@@ -91,7 +159,7 @@ namespace pr::str
 
 	// Replace blocks of delimiter characters with a single delimiter 'ws_char'
 	// 'preserve_newlines' if true, and '\n' is a delimiter, then a newline is added if 1 or more '\n' characters are found in a block
-	template <typename Str1, typename Char, typename = std::enable_if_t<is_string_v<Str1>>>
+	template <StringType Str1, CharType Char>
 	void CompressDelimiters(Str1& str, Char const* delim, Char ws_char, bool preserve_newlines)
 	{
 		auto beg = Begin(str);
@@ -118,14 +186,14 @@ namespace pr::str
 		// Shrink the string
 		Resize(str, size_t(out - Begin(str)));
 	}
-	template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str, CharType Char>
 	inline void CompressDelimiters(Str& str, Char ws_char, bool preserve_newlines)
 	{
 		return CompressDelimiters(str, Delim<Char>(nullptr), ws_char, preserve_newlines);
 	}
 
 	// Convert a string to tokens, returning each token via 'token_cb'. Sig: token_cb(char const* s, char const* e);
-	template <typename Str, typename TokenCB, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str, typename TokenCB, CharType Char>
 	void TokeniseCB(Str const& str, TokenCB token_cb, Char const* delim, bool remove_quotes = true)
 	{
 		auto s = BeginC(str);
@@ -158,7 +226,7 @@ namespace pr::str
 			}
 		}
 	}
-	template <typename Str, typename StrCont, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str, typename StrCont, CharType Char>
 	void Tokenise(Str const& str, StrCont& tokens, Char const* delim, bool remove_quotes = true)
 	{
 		using StrOut = typename StrCont::value_type;
@@ -174,7 +242,7 @@ namespace pr::str
 	}
 
 	// Strip blocks or lines from a string. Pass empty strings to ignore those pattern types.
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	Str& Strip(Str& str, std::wstring_view block_beg, std::wstring_view block_end, std::wstring_view line, std::wstring_view line_end = L"\n")
 	{
 		if (Empty(str))
@@ -197,7 +265,7 @@ namespace pr::str
 	}
 
 	// Strip C++ style comments from a string
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str& StripCppComments(Str& str)
 	{
 		return Strip(str, L"/*", L"*/", L"//", L"\n");
@@ -205,7 +273,7 @@ namespace pr::str
 
 	// Replace instances of 'what' with 'with' in-place
 	// Returns the number of instances of 'what' that where replaced
-	template <typename Str1, typename Str2, typename Str3, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3, typename Pred>
 	size_t Replace(Str1& str, Str2 const& what, Str3 const& with, Pred cmp)
 	{
 		if (Empty(str))
@@ -254,7 +322,7 @@ namespace pr::str
 		}
 		return count;
 	}
-	template <typename Str1, typename Str2, typename Str3, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3, typename Pred>
 	size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with, Pred cmp)
 	{
 		Assign(dst, BeginC(src), EndC(src));
@@ -262,13 +330,13 @@ namespace pr::str
 	}
 
 	// Replace all instances of 'what' with 'with' (case sensitive)
-	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3>
 	size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
 	{
 		using Char1 = typename string_traits<Str1>::value_type;
 		return Replace(str, what, with, EqualN<Char1 const*, Str2>);
 	}
-	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3>
 	size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 	{
 		using Char1 = typename string_traits<Str1>::value_type;
@@ -277,13 +345,13 @@ namespace pr::str
 	}
 
 	// Replace all instances of 'what' with 'with' (case insensitive)
-	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3>
 	size_t ReplaceI(Str1& str, Str2 const& what, Str3 const& with)
 	{
 		using Char1 = typename string_traits<Str1>::value_type;
 		return Replace(str, what, with, EqualNI<Char1 const*, Str2>);
 	}
-	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
+	template <StringType Str1, StringType Str2, StringType Str3>
 	size_t ReplaceI(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 	{
 		using Char1 = typename string_traits<Str1>::value_type;
@@ -292,7 +360,7 @@ namespace pr::str
 	}
 
 	// Convert a normal string into a C-style string
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str StringToCString(Str const& src)
 	{
 		if (Empty(src))
@@ -308,7 +376,7 @@ namespace pr::str
 	}
 
 	// Convert a C-style string into a normal string
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str CStringToString(Str const& src)
 	{
 		using traits = string_traits<Str>;
@@ -329,7 +397,7 @@ namespace pr::str
 	// Look for 'identifier' within the range [ofs, ofs+count) of 'src'.
 	// Returns the index of it's position or ofs+count if not found.
 	// Identifier will be a complete identifier based on the character class IsIdentifier()
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
 	{
 		auto beg = Begin(src) + ofs;
@@ -358,12 +426,12 @@ namespace pr::str
 		}
 		return ofs + count;
 	}
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs)
 	{
 		return FindIdentifier(src, identifier, ofs, Size(src) - ofs);
 	}
-	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	template <StringType Str1, StringType Str2>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier)
 	{
 		return FindIdentifier(src, identifier, 0);
@@ -373,7 +441,7 @@ namespace pr::str
 	// Returns the range of the next identifier, or an empty range if no more identifiers are found.
 	namespace impl
 	{
-		template <typename Char>
+		template <CharType Char>
 		std::basic_string_view<Char> NextIdentifier(std::basic_string_view<Char> src, size_t ofs, size_t count)
 		{
 			count = std::min(count, src.size() - ofs);
@@ -417,7 +485,7 @@ namespace pr::str
 	}
 
 	// Add/Remove quotes from a string if it doesn't already have them
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str& Quotes(Str& str, bool add)
 	{
 		size_t i, len = Size(str);
@@ -437,7 +505,7 @@ namespace pr::str
 		}
 		return str;
 	}
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	inline Str Quotes(Str const& str, bool add)
 	{
 		Str s(str);
@@ -448,7 +516,7 @@ namespace pr::str
 	// 'bytes' - the input data size
 	// 'si' - true to use 1000bytes = 1kb, false for 1024bytes = 1kb
 	// 'dp' - number of decimal places to use
-	template <typename Str = std::string, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str = std::string>
 	Str PrettyBytes(long long bytes, bool si, int dp)
 	{
 		using Char = typename string_traits<Str>::value_type;
@@ -483,7 +551,7 @@ namespace pr::str
 	// 'decade' is the power of 10 to round to
 	// 'dp' is the number of decimal places to write
 	// 'sep' is the separator character to use
-	template <typename Str = std::string, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str = std::string>
 	Str PrettyNumber(double num, long decade, int dp, char sep = ',')
 	{
 		using Char = typename string_traits<Str>::value_type;
@@ -531,7 +599,7 @@ namespace pr::str
 	}
 
 	// Remove leading white space and trailing tabs around '\n' characters.
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	template <StringType Str>
 	Str& ProcessIndentedNewlines(Str& str)
 	{
 		// Allow new lines in simple strings. 

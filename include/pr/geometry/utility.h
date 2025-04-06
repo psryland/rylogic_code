@@ -318,7 +318,7 @@ namespace pr::geometry
 		std::is_invocable_v<TVertOut, int, int, v4 const&> &&
 		std::is_invocable_v<TIdxOut, int, int, int>
 	)
-	void GenerateNormals(size_t num_indices, TIdxCIter indices, float smoothing_angle, size_t new_vidx, TGetV getv, TVertOut vout, TIdxOut iout)
+	void GenerateNormals(int num_indices, TIdxCIter indices, float smoothing_angle, int new_vidx, TGetV getv, TVertOut vout, TIdxOut iout)
 	{
 		// Notes:
 		// - Can't weld verts because that would destroy distinct texture

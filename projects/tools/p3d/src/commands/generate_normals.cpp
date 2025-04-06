@@ -15,10 +15,10 @@ void DoGenNorms(p3d::Mesh& mesh, float smoothing_angle, p3d::Nugget& nug, VIdx* 
 {
 	// Generate the normals
 	GenerateNormals(
-		nug.icount(),
+		s_cast<int>(nug.icount()),
 		iptr,
 		DegreesToRadians(smoothing_angle),
-		mesh.vcount(),
+		s_cast<int>(mesh.vcount()),
 		[&](int idx) // getv()
 		{
 			return mesh.m_vert[idx];

@@ -128,7 +128,7 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 	poly.set(vert_count, face_count, helper.m_data.size(), shape_to_model, material_id, flags);
 
 	// Add the verts
-	uint8_t* ptr = &helper.m_data[sizeof(ShapePolytope)];
+	uint8_t* ptr = reinterpret_cast<uint8_t*>(&helper.m_data[sizeof(ShapePolytope)]);
 	memcpy(ptr, verts, vert_count*sizeof(v4));
 	ptr += vert_count*sizeof(v4);
 

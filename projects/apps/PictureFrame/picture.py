@@ -62,72 +62,95 @@ class PictureFrame:
 		# Set the video output to the Tkinter window
 		if platform.system() == 'Windows':
 			self.player.set_hwnd(self.bb.winfo_id())
-			## Set the window to be transparent to mouse events
-			#import win32gui, win32con
-			#hwnd = win32gui.GetWindow(self.player.get_hwnd(), win32con.GW_CHILD)
-			#ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-			#win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style | win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT)
 		elif platform.system() == 'Linux':
 			self.player.set_xwindow(self.bb.winfo_id())
 		elif platform.system() == 'Darwin':  # macOS
 			self.player.set_nsobject(self.bb.winfo_id())
 
 		# Transparent overlay for events
-		#self.overlay = Tk.Frame(self.bb, bg="", borderwidth=0, highlightthickness=0)
-		#self.overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+		self.overlay = Tk.Frame(self.bb, bg="", borderwidth=0, highlightthickness=0)
+		self.overlay.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))
+		self.overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
 		#self.overlay.lift()
-		#self.overlay.bind("<Button-1>", lambda e: self._MouseHandler(e, e.x, e.y, None, None))
 
 		# Create a text label to show the file path
-		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 16))
+		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
 
 		# A button to show the options menu
 		self.button_menu = Tk.Button(self.window, text="...", bg="black", fg="white", border=0, command=self._ShowMenu)
 
-		self.ui_visible = False
+		# Next and previous buttons
+		self.button_next = Tk.Button(self.window, text=">", bg="black", fg="white", font=("Arial", 20), border=0, command=self._NextImage)
+		self.button_prev = Tk.Button(self.window, text="<", bg="black", fg="white", font=("Arial", 20), border=0, command=self._PrevImage)
+
+		self.ui_visible = True
+		self._UpdateUI()
 		return
 
 	def Run(self):
 		self._NextImage()
 		self.window.mainloop()
 
+	def _PrevImage(self):
+		# Get the prev image/video to display
+		for i in range(len(self.image_list)):
+			self.image_index = (self.image_index + len(self.image_list) - 1) % len(self.image_list)
+			relpath = self.image_list[self.image_index].strip()
+			fullpath = (self.root_path / relpath).resolve()
+			if fullpath.exists():
+				self._DisplayMedia(relpath, fullpath)
+				return
+
+		raise FileNotFoundError(f"No images found")
+	
 	def _NextImage(self):
-		# Check if the window is still open
+		# Get the next image/video to display
+		for i in range(len(self.image_list)):
+			self.image_index = (self.image_index + 1) % len(self.image_list)
+			relpath = self.image_list[self.image_index].strip()
+			fullpath = (self.root_path / relpath).resolve()
+			if fullpath.exists():
+				self._DisplayMedia(relpath, fullpath)
+				return
+		
+		raise FileNotFoundError(f"No images found")
+
+	def _DisplayMedia(self, relpath, fullpath):
+		# Wait for the window to be viewable
 		if self.bb.winfo_viewable() == 0:
-			self.window.after(100, self._NextImage)
+			self.window.after(100, self._DisplayMedia, relpath, fullpath)
 			return
 
-		# Get the next image/video to display
-		while True:
-			self.image_index = (self.image_index + 1) % len(self.image_list)
-			image_relpath = self.image_list[self.image_index].strip()
-			image_fullpath = (self.root_path / image_relpath).resolve()
-			if image_fullpath.exists():
-				break
+		# Stop an existing media
+		if self.player.is_playing():
+			self.player.stop()
+			self.player.set_media(None)
+
+		# Next/Prev image should ensure the image exists
+		if not fullpath.exists():
+			raise FileNotFoundError(f"Image {fullpath} does not exist")
 
 		# Set the filepath label text
-		self.label_filepath.configure(text=image_relpath)
+		self.label_filepath.configure(text=relpath)
 
 		# Add the image to the displayed image log
-		self._LogDisplayedImage(image_fullpath)
+		self._LogDisplayed(fullpath)
 
 		# Determine the file type
-		_, extn = os.path.split(image_fullpath)
+		_, extn = os.path.split(fullpath)
 
 		# Display image if it is an image file
 		if extn.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-			self._ShowImage(image_fullpath)
+			self._ShowImage(fullpath)
 		elif extn.lower().endswith(('.mp4', '.avi', '.mov')):
-			self._ShowVideo(image_fullpath)
+			self._ShowVideo(fullpath)
 		else:
-			self.window.after(1, self._NextImage)
+			self.window.after(10, self._NextImage)
 		return
 
 	def _ShowImage(self, image_fullpath):
 		def Stop():
-			self.player.stop()
-			self.player.set_media(None)
-			self.window.after(1, self._NextImage)
+			self.window.after(10, self._NextImage)
 
 		image = self.vlc.media_new(image_fullpath)
 		self.player.set_media(image)
@@ -139,11 +162,8 @@ class PictureFrame:
 		def Stop():
 			if self.player.is_playing():
 				self.window.after(500, Stop)
-				return
-			self.player.stop()
-			self.player.set_media(None)
-			self.window.after(1, self._NextImage)
-			return
+			else:
+				self.window.after(10, self._NextImage)
 
 		video = self.vlc.media_new(video_fullpath)
 		self.player.set_media(video)
@@ -151,25 +171,33 @@ class PictureFrame:
 		self.window.after(500, Stop)
 		return
 
+	def _UpdateUI(self):
+		# Show other UI elements
+		if self.ui_visible:
+			btn_width = 30
+			sw = self.window.winfo_width()
+			self.label_filepath.place(anchor="sw", relx=0.0, rely=1.0, width=sw - btn_width, height=30)
+			self.button_menu.place(anchor="se", relx=1.0, rely=1.0, width=btn_width, height=30)
+			self.button_next.place(anchor="e", relx=0.99, rely=0.5, width=btn_width, height=btn_width)
+			self.button_prev.place(anchor="w", relx=0.01, rely=0.5, width=btn_width, height=btn_width)
+		else:
+			self.label_filepath.place_forget()
+			self.button_menu.place_forget()
+			self.button_next.place_forget()
+			self.button_prev.place_forget()
+		return
+
 	def _MouseHandler(self, event, x, y, flags, param):
 		if event.type == Tk.EventType.ButtonPress:
 			self.ui_visible = not self.ui_visible
-
-			# Show other UI elements
-			if self.ui_visible:
-				btn_width = 30
-				sw = self.window.winfo_width()
-				self.label_filepath.place(anchor="sw", relx=0.0, rely=1.0, width=sw - btn_width, height=30)
-				self.button_menu.place(anchor="se", relx=1.0, rely=1.0, width=btn_width, height=30)
-			else:
-				self.label_filepath.place_forget()
-				self.button_menu.place_forget()
+			self._UpdateUI()
 		return
 
 	def _ShowMenu(self):
-		pass
+		
+		return
 
-	def _LogDisplayedImage(self, image_fullpath):
+	def _LogDisplayed(self, fullpath):
 		log_filepath = self.config['DisplayedImageLog']
 		if log_filepath is None:
 			return
@@ -186,7 +214,7 @@ class PictureFrame:
 
 		# Append the new image to the log file
 		with open(log_filepath, 'a', encoding='utf-8') as file:
-			file.write(f"{image_fullpath}\n")
+			file.write(f"{fullpath}\n")
 
 		return
 
