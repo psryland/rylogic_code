@@ -15,7 +15,6 @@ namespace pr::rdr12::ldraw
 
 		Renderer*    m_rdr;     // The owning renderer
 		Socket       m_socket;  // A non-owning reference to the network connection
-		std::string  m_address; // The address of the connected client
 		std::jthread m_thread;  // Thread that receives data from the socket
 		std::mutex   m_mutex;   // For synchronising access to 'm_output'
 		EMode        m_mode;    // The format of the data to expect

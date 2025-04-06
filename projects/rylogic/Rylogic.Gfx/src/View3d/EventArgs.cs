@@ -31,9 +31,9 @@ namespace Rylogic.Gfx
 			public long FileOffset { get; }
 		}
 
-		public class AddFileProgressEventArgs :CancelEventArgs
+		public class ParsingProgressEventArgs :CancelEventArgs
 		{
-			public AddFileProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)
+			public ParsingProgressEventArgs(Guid context_id, string filepath, long file_offset, bool complete)
 			{
 				ContextId = context_id;
 				Filepath = filepath;

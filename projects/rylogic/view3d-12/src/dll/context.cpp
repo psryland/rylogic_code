@@ -482,12 +482,31 @@ namespace pr::rdr12
 		}
 	}
 
-	// Enumerate the GUIDs in the sources collection
-	void Context::SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb)
+	// Enumerate all sources in the store
+	void Context::EnumSources(StaticCB<bool, GUID const&> enum_guids_cb)
 	{
-		for (auto& src : m_sources.Sources())
-			if (!enum_guids_cb(src.second->m_context_id))
+		for (auto& pair : m_sources.Sources())
+		{
+			auto& src = pair.second;
+			if (!enum_guids_cb(src->m_context_id))
 				return;
+		}
+	}
+	
+	// Return details about a source
+	view3d::SourceInfo Context::SourceInfo(Guid const& context_id)
+	{
+		auto srcs = m_sources.Sources();
+		auto iter = srcs.find(context_id);
+		if (iter == std::end(srcs))
+			return {};
+
+		auto const& src = *iter->second;
+		return view3d::SourceInfo {
+			.m_name = src.m_name.c_str(),
+			.m_context_id = context_id,
+			.m_object_count = isize(src.m_output.m_objects)
+		};
 	}
 
 	// Create a gizmo object and add it to the gizmo collection
@@ -519,12 +538,6 @@ namespace pr::rdr12
 		m_sources.RefreshChangedFiles();
 	}
 
-	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
-	Guid const* Context::ContextIdFromFilepath(char const* filepath) const
-	{
-		return m_sources.ContextIdFromFilepath(filepath);
-	}
-
 	// Parse error event.
 	void Context::OnError(ldraw::ParseErrorEventArgs const& args)
 	{
@@ -553,9 +566,6 @@ namespace pr::rdr12
 	// Store change event. Called before and after a change to the collection of objects in the store.
 	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
 	{
-		if (args.m_before)
-			return;
-
 		view3d::ESourcesChangedReason reason = {};
 		switch (args.m_reason)
 		{
@@ -567,10 +577,16 @@ namespace pr::rdr12
 			}
 			case ldraw::EDataChangedReason::Reload:
 			{
-				// On Reload, for each object currently in a window and in the set of affected context ids, remove and re-add.
 				for (auto& wnd : m_windows)
 				{
-					wnd->Add(m_sources.Sources(), args.m_context_ids, {});
+					// When a source is about to be reloaded, remove it's objects from the windows, but keep the context ids so we know what to reload.
+					if (args.m_before)
+						wnd->Remove(args.m_context_ids, {}, true);
+
+					// After reload, re-add all objects from the context ids
+					else
+						wnd->Add(m_sources.Sources(), args.m_context_ids, {});
+
 					wnd->Invalidate();
 				}
 				reason = view3d::ESourcesChangedReason::Reload;
@@ -578,7 +594,12 @@ namespace pr::rdr12
 			}
 			case ldraw::EDataChangedReason::Removal:
 			{
-				// On Removal, do nothing. Removed objects should already have been removed from the windows.
+				// When a source is about to be removed, remove it's objects from the windows.
+				if (args.m_before)
+				{
+					for (auto& wnd : m_windows)
+						wnd->Remove(args.m_context_ids, {}, false);
+				}
 				reason = view3d::ESourcesChangedReason::Removal;
 				break;
 			}
@@ -589,18 +610,7 @@ namespace pr::rdr12
 		}
 
 		// Notify of updated sources
-		SourcesChanged(reason, false);
-	}
-
-	// Source removed event (i.e. objects deleted by Id)
-	void Context::OnSourceRemoved(ldraw::SourceRemovedEventArgs const& args)
-	{
-		auto reload = args.m_reason == ldraw::EDataChangedReason::Reload;
-
-		// When a source is about to be removed, remove it's objects from the windows.
-		// If this is a reload, save a reference to the removed objects so we know what to reload.
-		for (auto& wnd : m_windows)
-			wnd->Remove({ &args.m_context_id, 1 }, {}, reload);
+		SourcesChanged(reason, args.m_before);
 	}
 
 	// Process any received commands in the source

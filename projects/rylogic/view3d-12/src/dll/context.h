@@ -96,8 +96,11 @@ namespace pr::rdr12
 		// Delete all objects not displayed in any windows
 		void DeleteUnused(std::span<Guid const> include, std::span<Guid const> exclude);
 
-		// Enumerate the GUIDs in the sources collection
-		void SourceEnumGuids(StaticCB<bool, GUID const&> enum_guids_cb);
+		// Enumerate all sources in the store
+		void EnumSources(StaticCB<bool, Guid const&> enum_guids_cb);
+
+		// Return details about a source
+		view3d::SourceInfo SourceInfo(Guid const& context_id);
 
 		// Create a gizmo object and add it to the gizmo collection
 		ldraw::LdrGizmo* GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w);
@@ -110,9 +113,6 @@ namespace pr::rdr12
 
 		// Poll for changed script source files, and reload any that have changed
 		void CheckForChangedSources();
-
-		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
-		Guid const* ContextIdFromFilepath(char const* filepath) const;
 
 protected:
 
@@ -128,9 +128,6 @@ protected:
 		// Store change event. Called before and after a change to the collection of objects in the store.
 		void OnStoreChange(ldraw::StoreChangeEventArgs const&) override;
 
-		// Source removed event (i.e. objects deleted by Id)
-		void OnSourceRemoved(ldraw::SourceRemovedEventArgs const&) override;
-		
 		// Process any received commands in the source
 		void OnHandleCommands(ldraw::SourceBase& source) override;
 	};

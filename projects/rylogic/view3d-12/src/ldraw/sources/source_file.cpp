@@ -9,17 +9,14 @@
 
 namespace pr::rdr12::ldraw
 {
-	static Guid const LdrawSourceFileNS = { 0xA9C66A7D, 0xD1F3, 0x4CFA, 0x84, 0xE0, 0xCF, 0x99, 0x12, 0xB3, 0x18, 0x9D };
-
 	SourceFile::SourceFile(Guid const* context_id, filepath_t const& filepath, EEncoding enc, PathResolver const& includes)
 		: SourceBase(context_id)
 		, m_filepath(filepath.lexically_normal())
 		, m_includes(includes)
 		, m_encoding(enc != EEncoding::auto_detect ? enc : filesys::DetectFileEncoding(m_filepath))
 	{
-		// Generate the GUID from the filepath
-		if (!context_id)
-			m_context_id = GenerateGUID(LdrawSourceFileNS, filepath.lexically_normal().string().c_str());
+		m_name = m_filepath.filename().string();
+		m_context_id = context_id ? *context_id : ContextIdFromFilepath(m_filepath);
 
 		m_includes.FileOpened = [this](auto&, filepath_t const& fp)
 		{

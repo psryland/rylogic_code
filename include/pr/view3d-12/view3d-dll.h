@@ -419,51 +419,6 @@ namespace pr
 
 			_flags_enum = 0,
 		};
-
-#if 0 //todo
-		enum class EShaderVS :int
-		{
-			Standard = 0,
-		};
-		enum class EShaderPS :int
-		{
-			Standard = 0,
-
-			// Radial fade params:
-			//  *Type {Spherical|Cylindrical}
-			//  *Radius {min,max}
-			//  *Centre {x,y,z} (optional, defaults to camera position)
-			//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
-			RadialFadePS,
-		};
-		enum class EShaderGS :int
-		{
-			Standard = 0,
-
-			// Point sprite params: *PointSize {w,h} *Depth {true|false}
-			PointSpritesGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineListGS,
-
-			// Thick line params: *LineWidth {width}
-			ThickLineStripGS,
-
-			// Arrow params: *Size {size}
-			ArrowHeadGS,
-		};
-		enum class EShaderCS :int
-		{
-			None = 0,
-		};
-		enum class EView3DLogLevel :int
-		{
-			Debug,
-			Info,
-			Warn,
-			Error,
-		};
-		#endif
 		#pragma endregion
 
 		#pragma region Structures
@@ -667,22 +622,17 @@ namespace pr
 			ID3D12Resource* m_depth_stencil;
 			SIZE m_dim;
 		};
-		#if 0 // todo
-		struct View3DUpdateModelKeep
+		struct SourceInfo
 		{
-			BOOL m_name;
-			BOOL m_transform;
-			BOOL m_context_id;
-			BOOL m_children;
-			BOOL m_colour;
-			BOOL m_colour_mask;
-			BOOL m_wireframe;
-			BOOL m_visibility;
-			BOOL m_animation;
-			BOOL m_step_data;
-			BOOL m_user_data;
+			// The name of the source
+			char const* m_name;
+
+			// The context id associated with the source
+			GUID m_context_id;
+
+			// The number of objects in this source
+			int m_object_count;
 		};
-		#endif
 		#pragma endregion
 
 		// Callbacks
@@ -728,7 +678,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(pr::view3d::SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
 
 	// Return the context id for objects created from 'filepath' (if filepath is an existing source)
-	VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id);
+	VIEW3D_API GUID __stdcall View3D_ContextIdFromFilepath(char const* filepath);
 
 	// Data Sources ***************************
 
@@ -745,8 +695,11 @@ extern "C"
 	// Delete all objects not displayed in any windows
 	VIEW3D_API void __stdcall View3D_DeleteUnused(GUID const* context_ids, int include_count, int exclude_count);
 
-	// Enumerate the GUIDs of objects in the sources collection
-	VIEW3D_API void __stdcall View3D_SourceEnumGuids(pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
+	// Enumerate all sources in the store
+	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb, void* ctx);
+
+	// Get information about a source
+	VIEW3D_API pr::view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id);
 
 	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 	VIEW3D_API void __stdcall View3D_ReloadScriptSources();
@@ -803,7 +756,7 @@ extern "C"
 	// Remove all objects 'window'
 	VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(pr::view3d::Window window);
 
-	// Enumerate the object collection GUIDs associated with 'window'
+	// Enumerate the GUIDs associated with 'window'
 	VIEW3D_API void __stdcall View3D_WindowEnumGuids(pr::view3d::Window window, pr::view3d::EnumGuidsCB enum_guids_cb, void* ctx);
 
 	// Enumerate the objects associated with 'window'

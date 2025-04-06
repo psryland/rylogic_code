@@ -14,15 +14,16 @@ namespace pr::rdr12::ldraw
 		: SourceBase(context_id)
 		, m_rdr(rdr)
 		, m_socket(std::move(socket))
-		, m_address(std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr)))
 		, m_thread()
 		, m_mutex()
 		, m_mode(EMode::Text)
 	{
+		m_name = std::format("{}:{}", network::GetIPAddress(addr), network::GetPort(addr));
+
 		// Start a thread to receive incoming data
 		m_thread = std::jthread([this]()
 		{
-			threads::SetCurrentThreadName(m_address);
+			threads::SetCurrentThreadName(m_name);
 			try
 			{
 				// Consume data from the socket
@@ -81,13 +82,11 @@ namespace pr::rdr12::ldraw
 		: SourceBase(rhs)
 		, m_rdr(rhs.m_rdr)
 		, m_socket()
-		, m_address()
 		, m_thread()
 		, m_mutex()
 		, m_mode(rhs.m_mode)
 	{
 		std::swap(m_socket, rhs.m_socket);
-		std::swap(m_address, rhs.m_address);
 		std::swap(m_thread, rhs.m_thread);
 	}
 	SourceStream& SourceStream::operator =(SourceStream&& rhs) noexcept
@@ -96,7 +95,6 @@ namespace pr::rdr12::ldraw
 		SourceBase::operator=(rhs);
 		std::swap(m_rdr, rhs.m_rdr);
 		std::swap(m_socket, rhs.m_socket);
-		std::swap(m_address, rhs.m_address);
 		std::swap(m_thread, rhs.m_thread);
 		std::swap(m_mode, rhs.m_mode);
 		return *this;
@@ -152,7 +150,7 @@ namespace pr::rdr12::ldraw
 		if (consume != 0)
 		{
 			mem_istream<char> strm(buffer.data(), consume);
-			BinaryReader reader(strm, m_address, { OnReportError, this }, { OnProgress, this });
+			BinaryReader reader(strm, m_name.c_str(), { OnReportError, this }, { OnProgress, this });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{
@@ -221,7 +219,7 @@ namespace pr::rdr12::ldraw
 		if (consume != 0)
 		{
 			mem_istream<char> strm(buffer.data(), consume);
-			TextReader reader(strm, m_address, EEncoding::utf8, { OnReportError, this }, { OnProgress, this });
+			TextReader reader(strm, m_name.c_str(), EEncoding::utf8, { OnReportError, this }, { OnProgress, this });
 			auto out = ldraw::Parse(*m_rdr, reader, m_context_id);
 			if (out)
 			{

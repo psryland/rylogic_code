@@ -28,6 +28,7 @@
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/ldraw/ldraw_serialiser_binary.h"
 #include "view3d-12/src/ldraw/sources/ldraw_sources.h"
+#include "view3d-12/src/ldraw/sources/source_base.h"
 #include "view3d-12/src/ldraw/sources/source_stream.h"
 #include "view3d-12/src/dll/dll_forward.h"
 #include "view3d-12/src/dll/context.h"
@@ -153,16 +154,14 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(view3d::SourcesChangedCB so
 }
 
 // Return the context id for objects created from 'filepath' (if filepath is an existing source)
-VIEW3D_API BOOL __stdcall View3D_ContextIdFromFilepath(char const* filepath, GUID& id)
+VIEW3D_API GUID __stdcall View3D_ContextIdFromFilepath(char const* filepath)
 {
 	try
 	{
 		DllLockGuard;
-		auto guid = Dll().ContextIdFromFilepath(filepath);
-		id = guid ? *guid : GuidZero;
-		return guid != nullptr;
+		return rdr12::ldraw::ContextIdFromFilepath(filepath);
 	}
-	CatchAndReport(View3D_ContextIdFromFilepath,,FALSE);
+	CatchAndReport(View3D_ContextIdFromFilepath,,GuidZero);
 }
 
 // Data Sources ***************************
@@ -211,15 +210,26 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptFromFile(char const* ldr_file, GUID c
 	CatchAndReport(View3D_LoadScriptFromFile, (view3d::Window)nullptr, GuidZero);
 }
 
-// Enumerate the GUIDs of objects in the sources collection
-VIEW3D_API void __stdcall View3D_SourceEnumGuids(view3d::EnumGuidsCB enum_guids_cb, void* ctx)
+// Enumerate all sources in the store
+VIEW3D_API void __stdcall View3D_EnumSources(view3d::EnumGuidsCB enum_guids_cb, void* ctx)
 {
 	try
 	{
 		DllLockGuard;
-		Dll().SourceEnumGuids({ enum_guids_cb, ctx });
+		Dll().EnumSources({ enum_guids_cb, ctx });
 	}
-	CatchAndReport(View3D_SourceEnumGuids,, );
+	CatchAndReport(View3D_EnumSources,, );
+}
+
+// Get information about a source
+VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().SourceInfo(context_id);
+	}
+	CatchAndReport(View3D_SourceInfo, , {});
 }
 
 // Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
@@ -535,7 +545,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(view3d::Window window)
 	CatchAndReport(View3D_WindowRemoveAllObjects, window,);
 }
 
-// Enumerate the object collection GUIDs associated with 'window'
+// Enumerate the GUIDs associated with 'window'
 VIEW3D_API void __stdcall View3D_WindowEnumGuids(view3d::Window window, view3d::EnumGuidsCB enum_guids_cb, void* ctx)
 {
 	try

@@ -114,12 +114,15 @@ namespace pr::rdr12::ldraw
 			removed.push_back(id);
 		}
 
+		// Notify of the object container about to change
+		if (!removed.empty())
+		{
+			m_events->OnStoreChange({ reason, removed, nullptr, true });
+		}
+
 		// Remove the sources
 		for (auto& id : removed)
 		{
-			// Notify of objects about to be deleted
-			m_events->OnSourceRemoved({ id, reason });
-
 			// Delete any associated files and watches
 			m_watcher.RemoveAll(id);
 
@@ -365,27 +368,6 @@ namespace pr::rdr12::ldraw
 	{
 		// Delete the gizmo from the gizmo container (removing the last reference)
 		erase_first(m_gizmos, [&](LdrGizmoPtr const& p){ return p.m_ptr == gizmo; });
-	}
-
-	// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
-	Guid const* ScriptSources::ContextIdFromFilepath(filepath_t const& filepath) const
-	{
-		assert(std::this_thread::get_id() == m_main_thread_id);
-
-		// Find the corresponding source in the sources collection
-		auto fpath = filepath.lexically_normal();
-		auto iter = find_if(m_srcs, [=](auto const& pair)
-		{
-			SourceBase const& src = *pair.second;
-
-			// Find the source where the first filepath matches 'filepath'
-			if (src.m_filepaths.empty())
-				return false;
-			
-			return filesys::Equal(fpath, src.m_filepaths[0], true);
-		});
-
-		return iter != std::end(m_srcs) ? &iter->second->m_context_id : nullptr;
 	}
 
 	// 'filepath' is the name of the changed file

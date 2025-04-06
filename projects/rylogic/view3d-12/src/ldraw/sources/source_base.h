@@ -62,6 +62,7 @@ namespace pr::rdr12::ldraw
 		using PathsCont = pr::vector<filepath_t>;
 		using ErrorCont = pr::vector<ParseErrorEventArgs>;
 
+		string32    m_name;       // A name associated with this source
 		ParseResult m_output;     // Objects created by this source
 		Guid        m_context_id; // Id for the group of files that this object is part of
 		PathsCont   m_filepaths;  // Dependent files of this source
@@ -72,6 +73,7 @@ namespace pr::rdr12::ldraw
 		SourceBase(SourceBase const&) = default;
 		SourceBase& operator=(SourceBase&&) = default;
 		SourceBase& operator=(SourceBase const&) = default;
+		virtual ~SourceBase() = default;
 
 		// An event raised during parsing.
 		EventHandler<SourceBase&, ParsingProgressEventArgs&, true> ParsingProgress;
@@ -94,5 +96,8 @@ namespace pr::rdr12::ldraw
 		// Regenerate the output from the source
 		virtual ParseResult ReadSource(Renderer& rdr);
 	};
+
+	// Create a stable Guid from a filepath
+	Guid ContextIdFromFilepath(std::filesystem::path const& filepath);
 }
 

@@ -933,7 +933,7 @@ namespace Rylogic.Gfx
 				: this(paths, new[] { module })
 			{ }
 			public Includes(IEnumerable<string> paths, IEnumerable<HMODULE> modules)
-				: this(string.Join(",", paths), modules.Take(16).ToArray())
+				: this(string.Join(",", paths), [.. modules.Take(16)])
 			{ }
 			public Includes(string paths, HMODULE[]? modules)
 			{
@@ -989,7 +989,7 @@ namespace Rylogic.Gfx
 
 			/// <summary>The current animation clock value</summary>
 			public double m_clock;
-		};
+		}
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
@@ -1001,7 +1001,7 @@ namespace Rylogic.Gfx
 			public ushort Mips;
 			public EFormat Format;
 			public uint ImageFileFormat; // D3DXIMAGE_FILEFORMAT
-		};
+		}
 
 		/// <summary></summary>
 		[StructLayout(LayoutKind.Sequential)]
@@ -1010,7 +1010,36 @@ namespace Rylogic.Gfx
 			public IntPtr RenderTarget; // ID3D12Resource*
 			public IntPtr DepthStencil; // ID3D12Resource*
 			public Size Dim;
-		};
+		}
+
+		/// <summary>Information about a source</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct SourceInfo
+		{
+			/// <summary>Friendly name for the source</summary>
+			public string Name;
+
+			/// <summary>Context id for the source</summary>
+			public Guid ContextId;
+
+			/// <summary>The number of object in this source</summary>
+			public int ObjectCount;
+
+			internal SourceInfo(Interop interop)
+			{
+				Name = Marshal_.PtrToStringUTF8(interop.m_name);
+				ContextId = interop.m_context_id;
+				ObjectCount = interop.m_object_count;
+			}
+
+			[StructLayout(LayoutKind.Sequential)]
+			internal struct Interop
+			{
+				public IntPtr m_name;
+				public Guid m_context_id;
+				public int m_object_count;
+			}
+		}
 		
 		#endregion
 		#region D3D Structures
@@ -1097,8 +1126,8 @@ namespace Rylogic.Gfx
 		private readonly SynchronizationContext m_sync;   // Thread marshaller
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
-		private ParsingProgressCB m_add_file_progress_cb; // Reference to callback
-		private OnAddCB m_on_add_cb;                      // Reference to callback
+		private ParsingProgressCB m_parsing_progress_cb; // Reference to callback
+		private OnAddCB m_add_complete_cb;                      // Reference to callback
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
@@ -1128,7 +1157,7 @@ namespace Rylogic.Gfx
 			m_windows = new List<Window>();
 			m_sync = SynchronizationContext.Current ?? new SynchronizationContext();
 			m_thread_id = Environment.CurrentManagedThreadId;
-			m_load_script_handlers = new List<LoadScriptCompleteCB>();
+			m_load_script_handlers = [];
 
 			try
 			{
@@ -1148,16 +1177,16 @@ namespace Rylogic.Gfx
 				}
 
 				// Sign up for progress reports
-				View3D_ParsingProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
-				void HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
+				View3D_ParsingProgressCBSet(m_parsing_progress_cb = HandleParsingProgress, IntPtr.Zero, true);
+				void HandleParsingProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
 				{
-					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
-					AddFileProgress?.Invoke(this, args);
+					var args = new ParsingProgressEventArgs(context_id, filepath, foffset, complete);
+					ParsingProgress?.Invoke(this, args);
 					cancel = args.Cancel;
 				}
 
 				// Load script 'OnAdd' callbacks
-				m_on_add_cb = HandleLoadScript;
+				m_add_complete_cb = HandleLoadScript;
 				void HandleLoadScript(IntPtr ctx, ref Guid context_id, bool before)
 				{
 					var cb = ctx != IntPtr.Zero ? Marshal.GetDelegateForFunctionPointer<LoadScriptCompleteCB>(ctx) : null;
@@ -1192,7 +1221,7 @@ namespace Rylogic.Gfx
 			if (m_singleton != null)
 			{
 				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
-				View3D_ParsingProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+				View3D_ParsingProgressCBSet(m_parsing_progress_cb, IntPtr.Zero, false);
 				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
 				while (m_windows.Count != 0)
@@ -1211,7 +1240,7 @@ namespace Rylogic.Gfx
 		public event EventHandler<ErrorEventArgs>? Error;
 
 		/// <summary>Progress update when a file is being parsed</summary>
-		public event EventHandler<AddFileProgressEventArgs>? AddFileProgress;
+		public event EventHandler<ParsingProgressEventArgs>? ParsingProgress;
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
 		public event EventHandler<SourcesChangedEventArgs>? OnSourcesChanged;
@@ -1220,30 +1249,30 @@ namespace Rylogic.Gfx
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScriptFromString(string ldr_script, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
+		public Guid LoadScriptFromString(string ldr_script, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
 		{
 			// Note: this method is asynchronous, it returns before objects have been added to the object manager
 			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
 			var ctx = context_id ?? Guid.NewGuid();
-			if (on_add != null) m_load_script_handlers.Add(on_add);
-			var on_add_ctx = on_add != null ? Marshal.GetFunctionPointerForDelegate(on_add) : IntPtr.Zero;
-			var inc = new Includes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScriptFromString(ldr_script, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
+			if (add_completed != null) m_load_script_handlers.Add(add_completed);
+			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
+			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
+			return View3D_LoadScriptFromString(ldr_script, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
 		}
 
 		/// <summary>
 		/// Add objects from an ldr file. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScriptFromFile(string ldr_script_file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
+		public Guid LoadScriptFromFile(string ldr_script_file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
 		{
-			// Note: this method is asynchronous, it returns before objects have been added to the object manager
-			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
-			var ctx = context_id ?? Guid.NewGuid();
-			if (on_add != null) m_load_script_handlers.Add(on_add);
-			var on_add_ctx = on_add != null ? Marshal.GetFunctionPointerForDelegate(on_add) : IntPtr.Zero;
-			var inc = new Includes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
+			// Note: this method is asynchronous, it returns before objects have been added to the store in view3d.
+			// The 'add_completed' callback should be used to add objects to windows once they are available.
+			var ctx = context_id ?? View3D_ContextIdFromFilepath(ldr_script_file);
+			if (add_completed != null) m_load_script_handlers.Add(add_completed);
+			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
+			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
+			return View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1284,20 +1313,26 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
-		public Guid? ContextIdFromFilepath(string filepath)
+		public static Guid ContextIdFromFilepath(string filepath)
 		{
-			return View3D_ContextIdFromFilepath(filepath, out var id) ? id : (Guid?)null;
+			return View3D_ContextIdFromFilepath(filepath);
 		}
 
-		/// <summary>Enumerate the GUIDs in the store</summary>
-		public void EnumGuids(Action<Guid> cb)
+		/// <summary>Enumerate the sources in the store</summary>
+		public void EnumSources(Action<Guid> cb)
 		{
-			EnumGuids(guid => { cb(guid); return true; });
+			EnumSources(guid => { cb(guid); return true; });
 		}
-		public void EnumGuids(Func<Guid, bool> cb)
+		public void EnumSources(Func<Guid, bool> cb)
 		{
-			EnumGuidsCB enum_guids_cb = (IntPtr ctx, ref Guid guid) => cb(guid);
-			View3D_SourceEnumGuids(enum_guids_cb, IntPtr.Zero);
+			EnumGuidsCB enum_cb = (IntPtr ctx, ref Guid guid) => cb(guid);
+			View3D_EnumSources(enum_cb, IntPtr.Zero);
+		}
+
+		/// <summary>Return info about a source given by context id</summary>
+		public SourceInfo SourceInformation(Guid context_id)
+		{
+			return new SourceInfo(View3D_SourceInfo(ref context_id));
 		}
 
 		/// <summary>Return the example Ldr script</summary>
@@ -1351,7 +1386,7 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
 
 		// Return the context id for objects created from 'filepath' (if filepath is an existing source)
-		[DllImport(Dll)] private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
+		[DllImport(Dll)] private static extern Guid View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPStr)] string filepath);
 
 		// Data Sources ***************************
 
@@ -1368,8 +1403,11 @@ namespace Rylogic.Gfx
 		// Delete all objects not displayed in any windows
 		[DllImport(Dll)] private static extern void View3D_DeleteUnused(IntPtr context_ids, int include_count, int exclude_count);
 
-		// Enumerate the GUIDs of objects in the sources collection
-		[DllImport(Dll)] private static extern void View3D_SourceEnumGuids(EnumGuidsCB enum_guids_cb, IntPtr ctx);
+		// Enumerate all sources in the store
+		[DllImport(Dll)] private static extern void View3D_EnumSources(EnumGuidsCB enum_guids_cb, IntPtr ctx);
+
+		// Get information about a source
+		[DllImport(Dll)] private static extern SourceInfo.Interop View3D_SourceInfo(ref Guid context_id);
 
 		// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 		[DllImport(Dll)] private static extern void View3D_ReloadScriptSources();
@@ -1423,7 +1461,7 @@ namespace Rylogic.Gfx
 		// Remove all objects 'window'
 		[DllImport(Dll)] private static extern void View3D_WindowRemoveAllObjects(HWindow window);
 
-		// Enumerate the object collection GUIDs associated with 'window'
+		// Enumerate the sources associated with 'window'
 		[DllImport(Dll)] private static extern void View3D_WindowEnumGuids(HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
 
 		// Enumerate the objects associated with 'window'

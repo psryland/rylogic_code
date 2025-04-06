@@ -39,22 +39,6 @@ namespace pr::rdr12::ldraw
 		}
 	};
 
-	// Source (context id) removed event args
-	struct SourceRemovedEventArgs
-	{
-		// The Guid of the source to be removed
-		Guid m_context_id;
-
-		// The origin of the object container change
-		EDataChangedReason m_reason;
-
-		SourceRemovedEventArgs(Guid context_id, EDataChangedReason reason)
-			: m_context_id(context_id)
-			, m_reason(reason)
-		{
-		}
-	};
-
 	// Interface for handling source events
 	struct ISourceEvents
 	{
@@ -71,9 +55,6 @@ namespace pr::rdr12::ldraw
 
 		// Store change event. Called before and after a change to the collection of objects in the store.
 		virtual void OnStoreChange(StoreChangeEventArgs const&) = 0;
-
-		// Source removed event (i.e. objects deleted by Id)
-		virtual void OnSourceRemoved(SourceRemovedEventArgs const&) = 0;
 
 		// Process any received commands in the source. All commands are expected to be processed
 		virtual void OnHandleCommands(SourceBase& source) = 0;
@@ -175,9 +156,6 @@ namespace pr::rdr12::ldraw
 
 		// Destroy a gizmo
 		void RemoveGizmo(LdrGizmo* gizmo);
-
-		// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
-		Guid const* ContextIdFromFilepath(filepath_t const& filepath) const;
 
 	private:
 
