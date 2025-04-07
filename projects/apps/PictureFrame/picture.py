@@ -237,7 +237,7 @@ class PictureFrame:
 		def Stop():
 			if issue_number != self.issue_number: return
 			self._StopMedia()
-			self.window.after(10, self._NextImage)
+			self.window.after(100, self._NextImage)
 			return
 
 		image = self.vlc.media_new(image_fullpath)
@@ -267,6 +267,8 @@ class PictureFrame:
 	def _StopMedia(self):
 		if self.player.is_playing():
 			self.player.stop()
+			self.window.after(100, self._StopMedia)
+			return
 
 		old_media = self.player.get_media()
 		self.player.set_media(None)
