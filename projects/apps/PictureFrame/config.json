@@ -1,15 +1,20 @@
 {
-	"DisplayPeriodSeconds": 5,
-	"RootPath": "/mnt/ZDrive/Pictures/Albums",
-	"ImageList": "./image_list.txt",
-	"DisplayedImageLog": "./displayed_image_log.txt",
-	"ImagePatterns": [
-		"*.jpg",
-		"*.png"
-	],
-	"VideoPatterns": [
-		"*.mp4",
-		"*.avi",
-		"*.mov"
-	]
+    "DisplayPeriodSeconds": 1,
+    "FullScreen": false,
+    "ShowImageInfo": false,
+    "ImageRoot": "Z:\\Pictures\\Albums",
+    "ImageRoot-Linux": "Z:\\Pictures\\Albums",
+    "ImageRoot-Windows": "/mnt/ZDrive/Pictures/Albums",
+    "ImageList": "./image_list.txt",
+    "IgnorePatterns": "./ignore_patterns.txt",
+    "DisplayedImageLog": "./displayed_image_log.txt",
+    "ImagePatterns": [
+        "*.jpg",
+        "*.png"
+    ],
+    "VideoPatterns": [
+        "*.mp4",
+        "*.avi",
+        "*.mov"
+    ]
 }
