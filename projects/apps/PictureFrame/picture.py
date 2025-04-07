@@ -85,11 +85,11 @@ class PictureFrame:
 			border=0, borderwidth=0, highlightthickness=0,
 			command=self._ChangeDisplayRate)
 
-		self.options_dontshowagain.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
-		self.options_showhidefilepath.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
-		self.options_shuffle.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
-		self.options_fullscreen.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
-		self.options_displayrate.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
+		self.options_dontshowagain.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=5)
+		self.options_showhidefilepath.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=5)
+		self.options_shuffle.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=5)
+		self.options_fullscreen.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=5)
+		self.options_displayrate.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=5)
 
 		# No images text
 		self.no_images_label = Tk.Label(self.window, text="No images found", bg="black", fg="white", font=("Arial", 20))
