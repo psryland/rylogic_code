@@ -59,11 +59,31 @@ class PictureFrame:
 
 		# Options menu
 		self.options_panel = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
-		self.options_dontshowagain = Tk.Button(self.options_panel, text="Don't Show This Again", bg="black", fg="white", border=0, command=self._DontShowAgain)
-		self.options_showhidefilepath = Tk.Button(self.options_panel, text="Show/Hide Filepath", bg="black", fg="white", border=0, command=self._ToggleShowFilePath)
-		self.options_shuffle = Tk.Button(self.options_panel, text="Shuffle", bg="black", fg="white", border=0, command=self._Shuffle)
-		self.options_fullscreen = Tk.Button(self.options_panel, text="FullScreen", bg="black", fg="white", border=0, command=self._FullScreen)
-		self.options_displayrate = Tk.Scale(self.options_panel, from_=1, to=60, orient=Tk.HORIZONTAL, label="Display Rate", bg="black", fg="white", border=0, borderwidth=0, highlightthickness=0, command=self._ChangeDisplayRate)
+		self.options_dontshowagain = Tk.Button(
+			self.options_panel,
+			text="Don't Show This Again", bg="black", fg="white",
+			border=0, borderwidth=0, highlightthickness=0,
+			command=self._DontShowAgain)
+		self.options_showhidefilepath = Tk.Button(
+			self.options_panel,
+			text="Show/Hide Filepath", bg="black", fg="white",
+			border=0, borderwidth=0, highlightthickness=0,
+			command=self._ToggleShowFilePath)
+		self.options_shuffle = Tk.Button(
+			self.options_panel,
+			text="Shuffle", bg="black", fg="white",
+			border=0, borderwidth=0, highlightthickness=0,
+			command=self._Shuffle)
+		self.options_fullscreen = Tk.Button(
+			self.options_panel,
+			text="FullScreen", bg="black", fg="white",
+			border=0, borderwidth=0, highlightthickness=0,
+			command=self._FullScreen)
+		self.options_displayrate = Tk.Scale(
+			self.options_panel, from_=1, to=60, orient=Tk.HORIZONTAL,
+			label="Display Rate", bg="black", fg="white",
+			border=0, borderwidth=0, highlightthickness=0,
+			command=self._ChangeDisplayRate)
 
 		self.options_dontshowagain.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
 		self.options_showhidefilepath.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
