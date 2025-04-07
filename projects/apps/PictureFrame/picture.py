@@ -24,7 +24,7 @@ class PictureFrame:
 		self.config = self._LoadConfig()
 
 		# Get the image root path
-		self.image_dir = Path(self.config["ImageRoot"])
+		self.image_dir = Path(self.config[f"ImageRoot-{platform.system()}"])
 		if not self.image_dir.exists():
 			raise FileNotFoundError(f"Image root path {self.image_dir} does not exist")
 
@@ -303,7 +303,7 @@ class PictureFrame:
 
 	# Log the displayed image to a file
 	def _LogDisplayed(self, fullpath):
-		log_filepath = self.root / self.config['DisplayedImageLog']
+		log_filepath = self.root_dir / self.config['DisplayedImageLog']
 		if log_filepath is None:
 			return
 		
