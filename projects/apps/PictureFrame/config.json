@@ -1,8 +1,8 @@
 {
 	"DisplayPeriodSeconds": 5,
-	"RootPath": "//192.168.100.154/ZDrive/Pictures/Albums",
-	"ImageList": "E:/Rylogic/Code/projects/apps/PictureFrame/image_list.txt",
-	"DisplayedImageLog": "E:/Rylogic/Code/projects/apps/PictureFrame/displayed_image_log.txt",
+	"RootPath": "/mnt/ZDrive/Pictures/Albums",
+	"ImageList": "./image_list.txt",
+	"DisplayedImageLog": "./displayed_image_log.txt",
 	"ImagePatterns": [
 		"*.jpg",
 		"*.png"

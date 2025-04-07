@@ -43,7 +43,7 @@ class PictureFrame:
 		self.image_index = -1
 
 		# Create a vlc player
-		self.vlc = vlc.Instance()
+		self.vlc = vlc.Instance("--no-xlib")
 		self.player = self.vlc.media_player_new()
 
 		# Create fullscreen window
