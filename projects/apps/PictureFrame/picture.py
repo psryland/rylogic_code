@@ -40,14 +40,12 @@ class PictureFrame:
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
 		
 		# Create a vlc player and set the video output to the Tkinter window
-		self.vlc = vlc.Instance("--no-xlib")
+		self.vlc = vlc.Instance("--no-xlib", "--no-video-title-show", "--quiet", "--verbose=2")
+		# def vlc_log_handler(data, level, ctx, fmt, args):
+		# 	print(f"[VLC] {fmt % args}")
+		# self.vlc.log_unset()
+		# self.vlc.log_set(vlc_log_handler, None)
 		self.player = self.vlc.media_player_new()
-		if platform.system() == 'Windows':
-			self.player.set_hwnd(self.bb.winfo_id())
-		elif platform.system() == 'Linux':
-			self.player.set_xwindow(self.bb.winfo_id())
-		elif platform.system() == 'Darwin':  # macOS
-			self.player.set_nsobject(self.bb.winfo_id())
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -64,10 +62,13 @@ class PictureFrame:
 		self.options_dontshowagain = Tk.Button(self.options_panel, text="Don't Show This Again", bg="black", fg="white", border=0, command=self._DontShowAgain)
 		self.options_showhidefilepath = Tk.Button(self.options_panel, text="Show/Hide Filepath", bg="black", fg="white", border=0, command=self._ToggleShowFilePath)
 		self.options_shuffle = Tk.Button(self.options_panel, text="Shuffle", bg="black", fg="white", border=0, command=self._Shuffle)
+		self.options_fullscreen = Tk.Button(self.options_panel, text="FullScreen", bg="black", fg="white", border=0, command=self._FullScreen)
 		self.options_displayrate = Tk.Scale(self.options_panel, from_=1, to=60, orient=Tk.HORIZONTAL, label="Display Rate", bg="black", fg="white", border=0, borderwidth=0, highlightthickness=0, command=self._ChangeDisplayRate)
+
 		self.options_dontshowagain.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
 		self.options_showhidefilepath.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
 		self.options_shuffle.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
+		self.options_fullscreen.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
 		self.options_displayrate.pack(side=Tk.TOP, fill=Tk.X, padx=5, pady=10)
 
 		# No images text
@@ -118,8 +119,25 @@ class PictureFrame:
 
 		self._UpdateUI()
 
-		# Start displaying
-		self._NextImage()
+		# Wait for the window to be viewable
+		def WaitTillShown():
+			if self.bb.winfo_viewable() == 0:
+				self.window.after(500, WaitTillShown)
+				return
+
+			# Bind VLC to the window handle
+			if platform.system() == 'Windows':
+				self.player.set_hwnd(self.bb.winfo_id())
+			elif platform.system() == 'Linux':
+				self.player.set_xwindow(self.bb.winfo_id())
+			elif platform.system() == 'Darwin':  # macOS
+				self.player.set_nsobject(self.bb.winfo_id())
+
+			# Start displaying images
+			self._NextImage()
+			return
+		
+		WaitTillShown()
 		self.window.mainloop()
 
 	# Current image relative path (or None)
@@ -163,15 +181,8 @@ class PictureFrame:
 		if issue_number != self.issue_number:
 			return
 
-		# Wait for the window to be viewable
-		if self.bb.winfo_viewable() == 0:
-			self.window.after(500, self._DisplayMedia, fullpath, relpath, issue_number)
-			return
-
 		# Stop any existing media
-		if self.player.is_playing():
-			self.player.stop()
-			self.player.set_media(None)
+		self._StopMedia()
 
 		# Set the filepath label text
 		self.label_filepath.configure(text=relpath)
@@ -186,14 +197,18 @@ class PictureFrame:
 		self._LogDisplayed(fullpath)
 
 		# Determine the file type
-		_, extn = os.path.split(fullpath)
+		extn = fullpath.suffix.lower()
 
 		# Display image if it is an image file
-		if extn.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-			self._ShowImage(fullpath, issue_number)
-		elif extn.lower().endswith(('.mp4', '.avi', '.mov')):
-			self._ShowVideo(fullpath, issue_number)
-		else:
+		try:
+			if extn in ['.png', '.jpg', '.jpeg', '.bmp']:
+				self._ShowImage(fullpath, issue_number)
+			elif extn in ['.mp4', '.avi', '.mov']:
+				self._ShowVideo(fullpath, issue_number)
+			else:
+				self.window.after(100, self._NextImage)
+		except Exception as e:
+			print(f"Error displaying image {fullpath}: {e}")
 			self.window.after(100, self._NextImage)
 		return
 
@@ -201,8 +216,7 @@ class PictureFrame:
 	def _ShowImage(self, image_fullpath, issue_number):
 		def Stop():
 			if issue_number != self.issue_number: return
-			self.player.stop()
-			self.player.set_media(None)
+			self._StopMedia()
 			self.window.after(10, self._NextImage)
 			return
 
@@ -219,7 +233,7 @@ class PictureFrame:
 			if self.player.is_playing():
 				self.window.after(500, Stop)
 			else:
-				self.player.set_media(None)
+				self._StopMedia()
 				self.window.after(10, self._NextImage)
 			return
 
@@ -227,6 +241,17 @@ class PictureFrame:
 		self.player.set_media(video)
 		self.player.play()
 		self.window.after(500, Stop)
+		return
+
+	# Stop and clean up any media
+	def _StopMedia(self):
+		if self.player.is_playing():
+			self.player.stop()
+
+		old_media = self.player.get_media()
+		self.player.set_media(None)
+		if old_media is not None:
+			old_media.release()
 		return
 
 	# Show/Hide UI elements
@@ -260,8 +285,11 @@ class PictureFrame:
 			# Update button states
 			btn_state = "normal" if have_image else "disabled"
 			self.options_dontshowagain.config(state=btn_state)
-			self.options_showhidefilepath.config(state=btn_state)
+			self.options_showhidefilepath.config(text="Hide Filepath" if bool(self.config["ShowImageInfo"]) else "Show Filepath", state=btn_state)
 			self.options_shuffle.config(state=btn_state)
+			self.options_fullscreen.config(text="Exit FullScreen" if bool(self.config["FullScreen"]) else "FullScreen")
+			self.options_displayrate.config(state=btn_state)
+			self.options_displayrate.set(self.config['DisplayPeriodSeconds'])
 		else:
 			self.options_panel.place_forget()
 
@@ -275,7 +303,7 @@ class PictureFrame:
 
 	# Log the displayed image to a file
 	def _LogDisplayed(self, fullpath):
-		log_filepath = self.config['DisplayedImageLog']
+		log_filepath = self.root / self.config['DisplayedImageLog']
 		if log_filepath is None:
 			return
 		
@@ -299,6 +327,16 @@ class PictureFrame:
 	def _ToggleShowFilePath(self):
 		self.config["ShowImageInfo"] = not bool(self.config["ShowImageInfo"])
 		self._SaveConfig()
+
+		self._UpdateUI()
+		return
+
+	# Toggle the fullscreen setting
+	def _FullScreen(self):
+		self.config["FullScreen"] = not bool(self.config["FullScreen"])
+		self._SaveConfig()
+
+		self.window.attributes("-fullscreen", bool(self.config['FullScreen']))
 		self._UpdateUI()
 		return
 
