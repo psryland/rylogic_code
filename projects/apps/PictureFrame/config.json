@@ -4,7 +4,7 @@
     "DisplayPeriodSeconds": 8,
     "ImageRoot-Windows": "Z:\\Pictures\\Albums",
     "ImageRoot-Linux": "/mnt/ZDrive/Pictures/Albums",
-    "ImageList": "./image_list.txt",
+    "ImageList": "./image_list_test.txt",
     "IgnorePatterns": "./ignore_patterns.txt",
     "DisplayedImageLog": "./displayed_image_log.txt",
     "ImagePatterns": [
