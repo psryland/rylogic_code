@@ -1,6 +1,5 @@
 # Requires:
 #  pip install python-vlc
-#  pip install pywin32
 #
 # Compile to exe with:
 # - pip install pyinstaller
