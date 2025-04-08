@@ -41,10 +41,6 @@ class PictureFrame:
 		
 		# Create a vlc player and set the video output to the Tkinter window
 		self.vlc = vlc.Instance("--no-xlib", "--no-video-title-show", "--quiet", "--verbose=2")
-		# def vlc_log_handler(data, level, ctx, fmt, args):
-		# 	print(f"[VLC] {fmt % args}")
-		# self.vlc.log_unset()
-		# self.vlc.log_set(vlc_log_handler, None)
 		self.player = self.vlc.media_player_new()
 
 		# Create a text label to show the file path
@@ -469,9 +465,10 @@ class PictureFrame:
 		print(f"done. Ignore list: {ignore_patterns_fullpath}")
 		return
 
-#sys.argv = [sys.argv[0], "--scan"]  # For testing only
-pic = PictureFrame()
-if len(sys.argv) > 1 and sys.argv[1] == "--scan":
-	pic.Scan()
-else:
-	pic.Run()
+if __name__ == "__main__":
+	#sys.argv = [sys.argv[0], "--scan"]  # For testing only
+	pic = PictureFrame()
+	if len(sys.argv) > 1 and sys.argv[1] == "--scan":
+		pic.Scan()
+	else:
+		pic.Run()
