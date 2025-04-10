@@ -1,7 +1,7 @@
 {
     "FullScreen": false,
-    "ShowImageInfo": false,
-    "DisplayPeriodSeconds": 8,
+    "ShowImageInfo": true,
+    "DisplayPeriodSeconds": 10,
     "ImageRoot-Windows": "Z:\\Pictures\\Albums",
     "ImageRoot-Linux": "/mnt/ZDrive/Pictures/Albums",
     "ImageList": "./image_list_test.txt",

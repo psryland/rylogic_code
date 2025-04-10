@@ -270,8 +270,6 @@ class PictureFrame:
 		if threading.current_thread() != threading.main_thread():
 			raise Exception("ReleaseMedia called from non-main thread")
 
-		print("Stopping media...")
-
 		# If currently playing, call stop and wait for the media to be released
 		# VLC does not raise the 'Stopped' event unless it was playing, but it's not safe to
 		# release the media until the 'Stopped' event is received.
@@ -287,13 +285,13 @@ class PictureFrame:
 	# Event called from VLC when the media stops
 	def _OnStopped(self, event):
 		# It's only safe to release media when stopped or end-reached is received, not before.
-		self.window.after(1, self._ReleaseMedia)
+		self.window.after(100, self._ReleaseMedia)
 		return
 
 	# Event called from VLC when the media reaches the end
 	def _OnEndReached(self, event):
 		# It's only safe to release media when stopped or end-reached is received, not before.
-		self.window.after(1, self._ReleaseMedia)
+		self.window.after(100, self._ReleaseMedia)
 		return
 
 	# Delete 'self.media'
