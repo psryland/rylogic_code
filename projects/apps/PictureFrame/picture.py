@@ -33,6 +33,7 @@ class PictureFrame:
 		self.window.geometry("800x600")  # Set initial size
 		self.window.attributes("-fullscreen", bool(self.config['FullScreen']))
 		self.window.bind("<Escape>", lambda e: self.window.quit())  # Exit on ESC key
+		self.window.bind("<Configure>", lambda e: self._UpdateUI())
 		
 		# Create a backbuffer for images and video
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
@@ -91,6 +92,7 @@ class PictureFrame:
 
 		self.image_list = []
 		self.image_index = -1
+		self.media = None
 		self.ui_visible = False
 		self.issue_number = 0
 		return
@@ -235,9 +237,10 @@ class PictureFrame:
 			self.window.after(100, self._NextImage)
 			return
 
-		image = self.vlc.media_new(image_fullpath)
-		self.player.set_media(image)
-		self.player.play()
+		if self.media is not None: raise Exception("Media is not None")
+		self.media = self.vlc.media_new(image_fullpath)
+		self.player.set_media(self.media)
+		#self.player.play()
 		self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		return
 
@@ -252,9 +255,10 @@ class PictureFrame:
 				self.window.after(10, self._NextImage)
 			return
 
-		video = self.vlc.media_new(video_fullpath)
-		self.player.set_media(video)
-		self.player.play()
+		if self.media is not None: raise Exception("Media is not None")
+		self.media = self.vlc.media_new(video_fullpath)
+		self.player.set_media(self.media)
+		#self.player.play()
 		self.window.after(500, Stop)
 		return
 
@@ -265,10 +269,9 @@ class PictureFrame:
 			self.window.after(100, self._StopMedia)
 			return
 
-		old_media = self.player.get_media()
 		self.player.set_media(None)
-		if old_media is not None:
-			old_media.release()
+		if self.media is not None: self.media.release()
+		self.media = None
 		return
 
 	# Show/Hide UI elements
@@ -354,7 +357,7 @@ class PictureFrame:
 		self._SaveConfig()
 
 		self.window.attributes("-fullscreen", bool(self.config['FullScreen']))
-		self._UpdateUI()
+		self.window.after(10, self._UpdateUI)
 		return
 
 	# Set the display rate
@@ -365,7 +368,6 @@ class PictureFrame:
 
 	# Stop an image from being displayed again
 	def _DontShowAgain(self):
-		
 		# Add the current image to the ignore list
 		current_relpath = self.image_list[self.image_index].strip()
 
