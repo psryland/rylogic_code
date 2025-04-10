@@ -8,7 +8,7 @@
 # - python -m cProfile -o profile.out picture.py
 # - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\snakeviz.exe profile.out
 
-import sys, os, json, platform, fnmatch, random, pathspec
+import sys, os, json, platform, fnmatch, random, pathspec, threading
 from pathlib import Path
 import tkinter as Tk
 import vlc
@@ -42,6 +42,9 @@ class PictureFrame:
 		# Create a vlc player and set the video output to the Tkinter window
 		self.vlc = vlc.Instance("--no-xlib", "--no-video-title-show", "--quiet", "--verbose=2")
 		self.player = self.vlc.media_player_new()
+		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerStopped, self._OnStopped)
+		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._OnEndReached)
+		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerEncounteredError, self._OnErrorEncountered)
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -234,13 +237,13 @@ class PictureFrame:
 		def Stop():
 			if issue_number != self.issue_number: return
 			self._StopMedia()
-			self.window.after(100, self._NextImage)
+			self._NextImage()
 			return
 
 		if self.media is not None: raise Exception("Media is not None")
 		self.media = self.vlc.media_new(image_fullpath)
 		self.player.set_media(self.media)
-		#self.player.play()
+		self.player.play()
 		self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		return
 
@@ -250,28 +253,67 @@ class PictureFrame:
 			if issue_number != self.issue_number: return
 			if self.player.is_playing():
 				self.window.after(500, Stop)
-			else:
-				self._StopMedia()
-				self.window.after(10, self._NextImage)
+				return
+			self._StopMedia()
+			self._NextImage()
 			return
 
 		if self.media is not None: raise Exception("Media is not None")
 		self.media = self.vlc.media_new(video_fullpath)
 		self.player.set_media(self.media)
-		#self.player.play()
+		self.player.play()
 		self.window.after(500, Stop)
 		return
 
 	# Stop and clean up any media
 	def _StopMedia(self):
+		if threading.current_thread() != threading.main_thread():
+			raise Exception("ReleaseMedia called from non-main thread")
+
+		print("Stopping media...")
+
+		# If currently playing, call stop and wait for the media to be released
+		# VLC does not raise the 'Stopped' event unless it was playing, but it's not safe to
+		# release the media until the 'Stopped' event is received.
 		if self.player.is_playing():
 			self.player.stop()
-			self.window.after(100, self._StopMedia)
-			return
 
+		# Wait for the media player to finish using the media
+		while self.media is not None:
+			self.window.update()
+
+		return
+
+	# Event called from VLC when the media stops
+	def _OnStopped(self, event):
+		# It's only safe to release media when stopped or end-reached is received, not before.
+		self.window.after(1, self._ReleaseMedia)
+		return
+
+	# Event called from VLC when the media reaches the end
+	def _OnEndReached(self, event):
+		# It's only safe to release media when stopped or end-reached is received, not before.
+		self.window.after(1, self._ReleaseMedia)
+		return
+
+	# Delete 'self.media'
+	def _ReleaseMedia(self):
+		# This is an absolute minefield. Releasing media will crash VLC if not done properly,
+		# Unfortunately, the API doesn't provide a simple way to check for "safe to release".
+		if threading.current_thread() != threading.main_thread():
+			raise Exception("ReleaseMedia called from non-main thread")
+		
+		print("Releasing media...")
 		self.player.set_media(None)
 		if self.media is not None: self.media.release()
 		self.media = None
+		return
+
+	# VLC reported error
+	def _OnErrorEncountered(self, event):
+		print(f"Recved ErrorEncountered: {event}")
+		self._StopMedia()
+		self._NextImage()
 		return
 
 	# Show/Hide UI elements
