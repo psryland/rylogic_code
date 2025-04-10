@@ -301,7 +301,6 @@ class PictureFrame:
 		if threading.current_thread() != threading.main_thread():
 			raise Exception("ReleaseMedia called from non-main thread")
 		
-		print("Releasing media...")
 		self.player.set_media(None)
 		if self.media is not None: self.media.release()
 		self.media = None
