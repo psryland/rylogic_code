@@ -1,5 +1,6 @@
 # Requires:
-#  pip install python-vlc
+#  sudo apt install mpv
+#  pip install python-mpv
 #
 # Compile to exe with:
 # - pip install pyinstaller
@@ -11,7 +12,7 @@
 import sys, os, json, platform, fnmatch, random, pathspec, threading
 from pathlib import Path
 import tkinter as Tk
-import vlc
+import mpv
 
 class PictureFrame:
 	def __init__(self):
@@ -38,13 +39,10 @@ class PictureFrame:
 		# Create a backbuffer for images and video
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
-		
+		self.bb.bind("<Button-1>", lambda e: self._ShowOverlays())
+
 		# Create a vlc player and set the video output to the Tkinter window
-		self.vlc = vlc.Instance("--no-xlib", "--no-video-title-show", "--quiet", "--verbose=2")
-		self.player = self.vlc.media_player_new()
-		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerStopped, self._OnStopped)
-		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerEndReached, self._OnEndReached)
-		self.player.event_manager().event_attach(vlc.EventType.MediaPlayerEncounteredError, self._OnErrorEncountered)
+		self.player = mpv.MPV(wid=str(self.bb.winfo_id()), input_default_bindings=True, input_vo_keyboard=True, ytdl=False, osc=False, hwdec='auto', image_display_duration=60)
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -95,8 +93,8 @@ class PictureFrame:
 
 		self.image_list = []
 		self.image_index = -1
-		self.media = None
 		self.ui_visible = False
+		self.menu_visible = False
 		self.issue_number = 0
 		return
 
@@ -137,6 +135,7 @@ class PictureFrame:
 		self.image_list = self._LoadImageList()
 		self._Shuffle()
 
+		# Init the UI
 		self._UpdateUI()
 
 		# Wait for the window to be viewable
@@ -144,14 +143,6 @@ class PictureFrame:
 			if self.bb.winfo_viewable() == 0:
 				self.window.after(500, WaitTillShown)
 				return
-
-			# Bind VLC to the window handle
-			if platform.system() == 'Windows':
-				self.player.set_hwnd(self.bb.winfo_id())
-			elif platform.system() == 'Linux':
-				self.player.set_xwindow(self.bb.winfo_id())
-			elif platform.system() == 'Darwin':  # macOS
-				self.player.set_nsobject(self.bb.winfo_id())
 
 			# Start displaying images
 			self._NextImage()
@@ -240,10 +231,7 @@ class PictureFrame:
 			self._NextImage()
 			return
 
-		if self.media is not None: raise Exception("Media is not None")
-		self.media = self.vlc.media_new(image_fullpath)
-		self.player.set_media(self.media)
-		self.player.play()
+		self.player.play(str(image_fullpath))
 		self.window.after(1000 * int(self.config['DisplayPeriodSeconds']), Stop)
 		return
 
@@ -251,17 +239,14 @@ class PictureFrame:
 	def _ShowVideo(self, video_fullpath, issue_number):
 		def Stop():
 			if issue_number != self.issue_number: return
-			if self.player.is_playing():
+			if self.player.eof_reached == False:
 				self.window.after(500, Stop)
 				return
 			self._StopMedia()
 			self._NextImage()
 			return
 
-		if self.media is not None: raise Exception("Media is not None")
-		self.media = self.vlc.media_new(video_fullpath)
-		self.player.set_media(self.media)
-		self.player.play()
+		self.player.play(str(video_fullpath))
 		self.window.after(500, Stop)
 		return
 
@@ -270,47 +255,7 @@ class PictureFrame:
 		if threading.current_thread() != threading.main_thread():
 			raise Exception("ReleaseMedia called from non-main thread")
 
-		# If currently playing, call stop and wait for the media to be released
-		# VLC does not raise the 'Stopped' event unless it was playing, but it's not safe to
-		# release the media until the 'Stopped' event is received.
-		if self.player.is_playing():
-			self.player.stop()
-
-		# Wait for the media player to finish using the media
-		while self.media is not None:
-			self.window.update()
-
-		return
-
-	# Event called from VLC when the media stops
-	def _OnStopped(self, event):
-		# It's only safe to release media when stopped or end-reached is received, not before.
-		self.window.after(100, self._ReleaseMedia)
-		return
-
-	# Event called from VLC when the media reaches the end
-	def _OnEndReached(self, event):
-		# It's only safe to release media when stopped or end-reached is received, not before.
-		self.window.after(100, self._ReleaseMedia)
-		return
-
-	# Delete 'self.media'
-	def _ReleaseMedia(self):
-		# This is an absolute minefield. Releasing media will crash VLC if not done properly,
-		# Unfortunately, the API doesn't provide a simple way to check for "safe to release".
-		if threading.current_thread() != threading.main_thread():
-			raise Exception("ReleaseMedia called from non-main thread")
-		
-		self.player.set_media(None)
-		if self.media is not None: self.media.release()
-		self.media = None
-		return
-
-	# VLC reported error
-	def _OnErrorEncountered(self, event):
-		print(f"Recved ErrorEncountered: {event}")
-		self._StopMedia()
-		self._NextImage()
+		self.player.stop()
 		return
 
 	# Show/Hide UI elements
@@ -337,7 +282,7 @@ class PictureFrame:
 			self.button_prev.place_forget()
 
 		# Display the options menu
-		if self.ui_visible:
+		if self.menu_visible:
 			x,y = self.button_menu.winfo_x(), self.button_menu.winfo_y()
 			self.options_panel.place(anchor="se", x = x + self.button_menu.winfo_width(), y = y)
 
@@ -354,9 +299,16 @@ class PictureFrame:
 
 		return
 
+	# Show the forward/backward buttons
+	def _ShowOverlays(self):
+		self.ui_visible = not self.ui_visible
+		self._UpdateUI()
+		return
+	
 	# Show the options menu
 	def _ShowMenu(self):
-		self.ui_visible = not self.ui_visible
+		self.menu_visible = not self.menu_visible
+		self.ui_visible = self.menu_visible
 		self._UpdateUI()
 		return
 
