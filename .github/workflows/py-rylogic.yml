@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pip install .[dev]
 
+      - name: Install build tool
+        run: pip install build
+
       - name: Run tests
         run: pytest
 
