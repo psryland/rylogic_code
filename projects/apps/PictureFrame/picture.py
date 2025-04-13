@@ -2,6 +2,13 @@
 #  sudo apt install mpv
 #  pip install python-mpv
 #
+# On RPi,
+#   Use ~/.config/mpv/mpv.conf:
+#    vo=gpu
+#    hwdec=v4l2m2m
+#    x11-bypass-compositor=yes
+#  Make sure raspi-config->Advanced->Wayland is se to x11
+#
 # Compile to exe with:
 # - pip install pyinstaller
 # - C:\Users\paulryland\AppData\Roaming\Python\Python311\Scripts\pyinstaller --onefile --noconsole .\picture.py
@@ -31,15 +38,15 @@ class PictureFrame:
 		# Create a tk window
 		self.window = Tk.Tk()
 		self.window.title("Picture Frame")
-		self.window.geometry("800x600")  # Set initial size
+		self.window.geometry("1024x768")  # Set initial size
 		self.window.attributes("-fullscreen", bool(self.config['FullScreen']))
-		self.window.bind("<Escape>", lambda e: self.window.quit())  # Exit on ESC key
+		self.window.bind("<Escape>", lambda e: self._Shutdown())  # Exit on ESC key
 		self.window.bind("<Configure>", lambda e: self._UpdateUI())
-		
+
 		# Create a backbuffer for images and video
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
-		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
 		self.bb.bind("<Button-1>", lambda e: self._ShowOverlays())
+		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
 
 		# Create a vlc player and set the video output to the Tkinter window
 		self.player = mpv.MPV(
@@ -49,7 +56,6 @@ class PictureFrame:
 			input_vo_keyboard=True,
 			ytdl=False,
 			osc=False,
-			hwdec='auto',
 			image_display_duration=60
 		)
 
@@ -137,7 +143,7 @@ class PictureFrame:
 
 		self._SaveImageList(image_list)
 		return
-	
+
 	# Run the main loop
 	def Run(self):
 		# Load the image list
@@ -156,7 +162,7 @@ class PictureFrame:
 			# Start displaying images
 			self._NextImage()
 			return
-		
+
 		WaitTillShown()
 		self.window.mainloop()
 
@@ -164,7 +170,7 @@ class PictureFrame:
 	@property
 	def CurrentImageRelpath(self):
 		return self.image_list[self.image_index].strip() if self.image_index >= 0 and self.image_index < len(self.image_list) else None
-	
+
 	# Display the next image
 	def _NextImage(self):
 		self.issue_number += 1
@@ -183,7 +189,7 @@ class PictureFrame:
 	def _FindMedia(self, increment):
 		# Limit the search to test every image in the list
 		for i in range(len(self.image_list)):
-			
+
 			# Increment the image index
 			self.image_index = (self.image_index + len(self.image_list) + increment) % len(self.image_list)
 
@@ -313,7 +319,7 @@ class PictureFrame:
 		self.ui_visible = not self.ui_visible
 		self._UpdateUI()
 		return
-	
+
 	# Show the options menu
 	def _ShowMenu(self):
 		self.menu_visible = not self.menu_visible
@@ -326,7 +332,7 @@ class PictureFrame:
 		log_filepath = self.root_dir / self.config['DisplayedImageLog']
 		if log_filepath is None:
 			return
-		
+
 		# If the log file is larger than 1MB, keep the last 1000 lines
 		if os.path.exists(log_filepath) and os.path.getsize(log_filepath) > 1024 * 1024:
 			with open(log_filepath, 'r', encoding='utf-8') as file:
@@ -442,14 +448,14 @@ class PictureFrame:
 		ignore_patterns_fullpath = self.root_dir / self.config['IgnorePatterns']
 		if not ignore_patterns_fullpath.exists():
 			return []
-		
+
 		# Load the ignore list
 		with open(ignore_patterns_fullpath, "r", encoding="utf-8") as file:
 			ignore_patterns = [line.strip() for line in file.readlines() if not line.startswith("#")]
 
 		# Use: spec = pathspec.PathSpec.from_lines('gitwildmatch', ignore_patterns)
 		return ignore_patterns
-	
+
 	# Save the list of images to ignore
 	def _SaveIgnorePatterns(self, ignore_patterns):
 		print("Saving ignore patterns...", end="")
@@ -464,6 +470,11 @@ class PictureFrame:
 				file.write(f"{pattern}\n")
 
 		print(f"done. Ignore list: {ignore_patterns_fullpath}")
+		return
+
+	def _Shutdown(self):
+		self._StopMedia()
+		self.window.quit()
 		return
 
 if __name__ == "__main__":
