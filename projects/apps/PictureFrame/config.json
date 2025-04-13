@@ -1,6 +1,6 @@
 {
     "FullScreen": false,
-    "ShowImageInfo": true,
+    "ShowImageInfo": false,
     "DisplayPeriodSeconds": 10,
     "ImageRoot-Windows": "Z:\\Pictures\\Albums",
     "ImageRoot-Linux": "/mnt/ZDrive/Pictures/Albums",

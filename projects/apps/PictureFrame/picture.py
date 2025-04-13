@@ -42,7 +42,16 @@ class PictureFrame:
 		self.bb.bind("<Button-1>", lambda e: self._ShowOverlays())
 
 		# Create a vlc player and set the video output to the Tkinter window
-		self.player = mpv.MPV(wid=str(self.bb.winfo_id()), input_default_bindings=True, input_vo_keyboard=True, ytdl=False, osc=False, hwdec='auto', image_display_duration=60)
+		self.player = mpv.MPV(
+			wid=str(self.bb.winfo_id()),
+			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
+			input_default_bindings=True,
+			input_vo_keyboard=True,
+			ytdl=False,
+			osc=False,
+			hwdec='auto',
+			image_display_duration=60
+		)
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
