@@ -278,6 +278,12 @@ class PictureFrame:
 		sw = self.window.winfo_width()
 		btn_width = 30
 
+		# Show/hide the mouse
+		if self.ui_visible:
+			self.window.config(cursor="arrow")
+		else:
+			self.window.config(cursor="none")
+
 		# Menu button is always visible
 		self.button_menu.place(anchor="se", relx=1.0, rely=1.0, width=btn_width, height=30)
 
@@ -331,6 +337,10 @@ class PictureFrame:
 		log_filepath = self.root_dir / self.config['DisplayedImageLog']
 		if log_filepath is None:
 			return
+
+		# Show displayed images in the terminal
+		if bool(self.config["LogToTerminal"]):
+			print(f"   {fullpath}")
 
 		# If the log file is larger than 1MB, keep the last 1000 lines
 		if os.path.exists(log_filepath) and os.path.getsize(log_filepath) > 1024 * 1024:
