@@ -26,6 +26,11 @@ class PictureFrame:
 		# Get the current directory
 		project_dir = Path(__file__).resolve().parent
 		self.root_dir = project_dir
+		self.image_list = []
+		self.image_index = -1
+		self.ui_visible = False
+		self.menu_visible = False
+		self.issue_number = 0
 
 		# Load the config
 		self.config = self._LoadConfig()
@@ -45,19 +50,8 @@ class PictureFrame:
 
 		# Create a backbuffer for images and video
 		self.bb = Tk.Frame(self.window, bg="black", borderwidth=0, highlightthickness=0)
-		self.bb.bind("<Button-1>", lambda e: self._ShowOverlays())
+		self.bb.bind("<Button-1>", self._ShowOverlays)
 		self.bb.pack(side=Tk.TOP, fill=Tk.BOTH, expand=True)
-
-		# Create a vlc player and set the video output to the Tkinter window
-		self.player = mpv.MPV(
-			wid=str(self.bb.winfo_id()),
-			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
-			input_default_bindings=True,
-			input_vo_keyboard=True,
-			ytdl=False,
-			osc=False,
-			image_display_duration=60
-		)
 
 		# Create a text label to show the file path
 		self.label_filepath = Tk.Label(self.window, text="", bg="black", fg="white", font=("Arial", 12))
@@ -106,11 +100,16 @@ class PictureFrame:
 		# No images text
 		self.no_images_label = Tk.Label(self.window, text="No images found", bg="black", fg="white", font=("Arial", 20))
 
-		self.image_list = []
-		self.image_index = -1
-		self.ui_visible = False
-		self.menu_visible = False
-		self.issue_number = 0
+		# Create a vlc player and set the video output to the Tkinter window
+		self.player = mpv.MPV(
+			wid=str(self.bb.winfo_id()),
+			vf='scale=w=1920:h=1080:force_original_aspect_ratio=decrease',
+			input_default_bindings=True,
+			input_vo_keyboard=True,
+			ytdl=False,
+			osc=True,
+			image_display_duration=60
+		)
 		return
 
 	# Scan for images and videos
@@ -315,7 +314,7 @@ class PictureFrame:
 		return
 
 	# Show the forward/backward buttons
-	def _ShowOverlays(self):
+	def _ShowOverlays(self, event=None):
 		self.ui_visible = not self.ui_visible
 		self._UpdateUI()
 		return
