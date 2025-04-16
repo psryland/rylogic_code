@@ -22,10 +22,10 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       # Build C++ projects using MSBuild
-      #- name: Build C++ Projects
-      #  run: |
-      #    msbuild projects/rylogic/view3d-12/view3d-12.vcxproj /p:Configuration=Release
-      #    msbuild projects/rylogic/view3d-12/view3d-12.dll.vcxproj /p:Configuration=Release
+      - name: Build C++ Projects
+        run: |
+          msbuild projects/rylogic/view3d-12/view3d-12.vcxproj /p:Configuration=Release
+          msbuild projects/rylogic/view3d-12/view3d-12.dll.vcxproj /p:Configuration=Release
 
       # Set up .NET SDK
       - name: Set up .NET SDK
