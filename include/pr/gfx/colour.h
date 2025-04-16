@@ -742,6 +742,7 @@ namespace pr
 	#pragma endregion
 
 	#pragma region Functions
+
 	// Colour FEql
 	inline bool pr_vectorcall FEqlRelative(Colour_cref lhs, Colour_cref rhs, float tol)
 	{
@@ -786,6 +787,33 @@ namespace pr
 		return v / Length4(v);
 		#endif
 	}
+
+	// Create a colour from a black body radiation temperature
+	Colour FromTemperature(float kelvin)
+	{
+		kelvin = Clamp(kelvin, 1000.0f, 15000.0f);
+
+		// Approximate Planckian locus in CIE 1960 UCS
+		auto u = (0.860117757f + 1.54118254e-4f * kelvin + 1.28641212e-7f * Sqr(kelvin)) / (1.0f + 8.42420235e-4f * kelvin + 7.08145163e-7f * Sqr(kelvin));
+		auto v = (0.317398726f + 4.22806245e-5f * kelvin + 4.20481691e-8f * Sqr(kelvin)) / (1.0f - 2.89741816e-5f * kelvin + 1.61456053e-7f * Sqr(kelvin));
+
+		auto x = 3.0f * u / (2.0f * u - 8.0f * v + 4.0f);
+		auto y = 2.0f * v / (2.0f * u - 8.0f * v + 4.0f);
+		auto z = 1.0f - x - y;
+
+		auto Y = 1.0f;
+		auto X = Y / y * x;
+		auto Z = Y / y * z;
+
+		// XYZ to RGB with BT.709 primaries
+		auto R = +3.2404542f * X + -1.5371385f * Y + -0.4985314f * Z;
+		auto G = -0.9692660f * X + +1.8760108f * Y + +0.0415560f * Z;
+		auto B = +0.0556434f * X + -0.2040259f * Y + +1.0572252f * Z;
+
+		// The XYZ to RGB transform can result in negative values, so we need to clamp here.
+		return Colour(Max(0.0f, R), Max(0.0f, G), Max(0.0f, B), 1.0f);
+	}
+
 	#pragma endregion
 
 	#pragma endregion
