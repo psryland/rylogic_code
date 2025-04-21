@@ -21,12 +21,6 @@ jobs:
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      # Build C++ projects using MSBuild
-      - name: Build C++ Projects
-        run: |
-          msbuild projects/rylogic/view3d-12/view3d-12.vcxproj /p:Configuration=Release
-          msbuild projects/rylogic/view3d-12/view3d-12.dll.vcxproj /p:Configuration=Release
-
       # Set up .NET SDK
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v3
@@ -37,8 +31,14 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      # Build the solution
-      - name: Build solution
+      # Build C++ projects using MSBuild
+      - name: Build C++ Projects
+        run: |
+          msbuild projects/rylogic/view3d-12/view3d-12.vcxproj /p:Configuration=Release
+          msbuild projects/rylogic/view3d-12/view3d-12.dll.vcxproj /p:Configuration=Release
+
+      # Build the Rylogic Assemblies
+      - name: Build Rylogic Assemblies
         run: |
           dotnet build projects/rylogic/Rylogic.Core/Rylogic.Core.csproj --configuration Release --no-restore
           dotnet build projects/rylogic/Rylogic.DB/Rylogic.DB.csproj --configuration Release --no-restore

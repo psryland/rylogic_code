@@ -9,7 +9,23 @@
       "args": ["${file}"],
       "cwd": "${workspaceRoot}",
       "preLaunchTask": "",
-      "env": {},
+      "console": "internalConsole",
+      "logging": {  
+        "trace": false, // Disable trace-level logging
+        "moduleLoad": false,
+        "consoleUsageMessage": false,
+        "diagnosticsLog": {
+            "startDebuggingTracing": false,
+            "dispatcherMessages": "none",
+            "debugEngineAPITracing": "none",
+            "debugRuntimeEventTracing": false,
+            "expressionEvaluationTracing": false,
+            "protocolMessages": false // Disable engine-level logs  
+          }
+      },  
+      "env": {  
+        //"DOTNET_StartupHook_Disable": "1" // Suppress runtime startup hooks  
+      },
       "externalConsole": false
     },
   ]

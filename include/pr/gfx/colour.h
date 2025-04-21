@@ -789,7 +789,7 @@ namespace pr
 	}
 
 	// Create a colour from a black body radiation temperature
-	Colour FromTemperature(float kelvin)
+	inline Colour FromTemperature(float kelvin)
 	{
 		kelvin = Clamp(kelvin, 1000.0f, 15000.0f);
 

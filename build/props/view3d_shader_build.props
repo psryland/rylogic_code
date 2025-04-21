@@ -1,0 +1,28 @@
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<ItemGroup>
+		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml"/>
+		<AvailableItemName Include="View3dShaderBuild">
+			<Targets>View3dShaderBuildTarget</Targets>
+		</AvailableItemName>
+	</ItemGroup>
+
+	<!-- Custom Target for Building Shaders -->  
+	<Target
+		Name="View3dShaderBuildTarget"
+		BeforeTargets="CLCompile"
+		Inputs="@(View3dShaderBuild);$(ScriptPath)BuildShader.csx"
+		Outputs="@(View3dShaderBuild->'$(ProjectDir)src\shaders\hlsl\compiled\$(Configuration)\%(Filename).built')"
+	>
+		<Exec
+			Command="dotnet-script.exe $(ScriptPath)BuildShader.csx %(View3dShaderBuild.FullPath) $(PlatformTarget) $(Configuration)"
+			ContinueOnError="ErrorAndContinue"
+		/>
+	</Target>
+
+	<!-- Hook the custom target into the build pipeline -->  
+	<PropertyGroup>
+		<BuildDependsOn>$(BuildDependsOn);View3dShaderBuildTarget</BuildDependsOn>
+	</PropertyGroup>
+
+</Project>

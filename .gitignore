@@ -42,3 +42,5 @@ media/
 thirdparty/
 symbol_cache/
 script/UserVars.py
+script/UserVars.json
+

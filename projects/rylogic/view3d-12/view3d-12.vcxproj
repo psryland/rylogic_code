@@ -38,7 +38,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(PropsPath)fxc_build_rule.props" />
-  <Import Project="$(PropsPath)python_script.props" />
+  <Import Project="$(PropsPath)view3d_shader_build.props" />
+  <Import Project="$(PropsPath)csharp_script.props" />
   <Import Project="$(PropsPath)lib.props" />
   <!--
   Build options
@@ -274,9 +275,10 @@
     <ClInclude Include="src\render\render_smap.h" />
     <ClInclude Include="src\shaders\common.h" />
   </ItemGroup>
+  <!--
+  Shaders
+  -->
   <ItemGroup>
-    <None Include="auto_gen.py" />
-    <None Include="src\ldraw\ldraw_demo_scene.ldr" />
     <None Include="src\shaders\hlsl\types.hlsli" />
     <None Include="src\shaders\hlsl\common\functions.hlsli" />
     <None Include="src\shaders\hlsl\common\geometry.hlsli" />
@@ -289,42 +291,20 @@
     <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\env_map.hlsli" />
+    <View3dShaderBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\deferred\gbuffer.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\forward\forward.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
+    <View3dShaderBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\deferred\gbuffer.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\shadow\shadow_map.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\forward\forward.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\utility\ray_cast.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\screenspace\arrow_head.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\screenspace\point_sprites.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_list.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\utility\show_normals.hlsl" />
-    <CustomBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
-  </ItemGroup>
-  <!--
-  AutoGen
-  -->
-  <ItemGroup>
-    <PyScript Include="$(ProjectDir)auto_gen.py">
-      <Generator>$(ProjectDir)auto_gen.py</Generator>
-      <Args>$(RylogicRoot)</Args>
-      <AdditionalInputs>
-        ;$(ProjectDir)auto_gen.py
-        ;$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr
-        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h 
-        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h 
-        ;$(RylogicRoot)script\Rylogic.py
-      </AdditionalInputs>
-      <Outputs>$(OutDir)auto_gen.py.pyscript</Outputs>
-    </PyScript>
-  </ItemGroup>
-  <!--
-  Shaders
-  -->
-  <ItemGroup>
-    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
+      <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <EntryPointName>ApplyForces</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
@@ -352,6 +332,22 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc" />
+  </ItemGroup>
+  <!--
+  AutoGen
+  -->
+  <ItemGroup>
+    <None Include="src\ldraw\ldraw_demo_scene.ldr" />
+    <CSharpScript Include="auto_gen.csx">
+      <Generator>$(ProjectDir)auto_gen.csx</Generator>
+      <Args>$(RylogicRoot)</Args>
+      <AdditionalInputs>
+        ;$(ProjectDir)src\ldraw\ldraw_demo_scene.ldr
+        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw.h 
+        ;$(RylogicRoot)include\pr\view3d-12\ldraw\ldraw_commands.h 
+      </AdditionalInputs>
+      <MarkerOutputFile>$(OutDir)auto_gen.py.pyscript</MarkerOutputFile>
+    </CSharpScript>
   </ItemGroup>
   <!--
   Targets

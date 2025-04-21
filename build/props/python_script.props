@@ -11,6 +11,7 @@
     <Args>DEMO_SCENE $(ProjectDir)src\ldraw\ldraw_demo_scene.ldr $(ProjectDir)src\ldraw\ldraw_demo_scene.cpp</Args>
     <Outputs>$(OutDir)ldraw_demo_scene.cpp.embedded</Outputs>
     <Message>Embedding ldraw_demo_scene.ldr</Message>
+	<MarkerOutputFile>ldraw_demo_scene.cpp.embedded</MarkerOutputFile>
   </PyScript>
 -->
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -22,9 +23,9 @@
 
 	<!-- Target for building content using a python script -->
 	<Target Name="PyScriptTarget"
-			BeforeTargets="ClCompile" 
+			BeforeTargets="ClCompile"
 			Inputs="@(PyScript);%(PyScript.Generator);%(PyScript.Fullpath);%(PyScript.AdditionalInputs)"
-			Outputs="@(PyScript->'$(OutDir)%(Filename)%(Extension).pyscripttarget')"
+			Outputs="%(MarkerOutputFile);%(PyScript.Outputs)"
 	>
 		<!-- Testing
 		<Message Importance="high" Text="PyScript Items: @(PyScript)" />
@@ -45,7 +46,8 @@
 
 		<!-- Create the dummy output file to prevent always building -->
 		<Exec
-			Command="echo. > @(PyScript->'$(OutDir)%(Filename)%(Extension).pyscripttarget')"
+			Command="echo. > %(PyScript.MarkerOutputFile)"
+			Condition="'%(PyScript.MarkerOutputFile)' != ''"
 		/>
 	</Target>
 

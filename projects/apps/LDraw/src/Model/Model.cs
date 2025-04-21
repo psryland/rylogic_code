@@ -52,7 +52,7 @@ namespace LDraw
 				if (m_view3d == value) return;
 				if (m_view3d != null)
 				{
-					m_view3d.AddFileProgress -= HandleAddFileProgress;
+					m_view3d.ParsingProgress -= HandleParsingProgress;
 					m_view3d.OnSourcesChanged -= HandleSourcesChanged;
 					m_view3d.Error -= ReportError;
 					Util.Dispose(ref m_view3d!);
@@ -62,7 +62,7 @@ namespace LDraw
 				{
 					m_view3d.Error += ReportError;
 					m_view3d.OnSourcesChanged += HandleSourcesChanged;
-					m_view3d.AddFileProgress += HandleAddFileProgress;
+					m_view3d.ParsingProgress += HandleParsingProgress;
 				}
 
 				// Handlers
@@ -84,12 +84,12 @@ namespace LDraw
 				//		foreach (var scene in Scenes)
 				//			scene.SceneView.AutoRange();
 				}
-				void HandleAddFileProgress(object? sender, View3d.AddFileProgressEventArgs e) // worker thread context
+				void HandleParsingProgress(object? sender, View3d.ParsingProgressEventArgs e) // worker thread context
 				{
 					// Marshal to the main thread and update progress
 					Sync.Post(x =>
 					{
-						var args = (View3d.AddFileProgressEventArgs)x!;
+						var args = (View3d.ParsingProgressEventArgs)x!;
 						ParsingProgress ??= new ParsingProgressData(args.ContextId);
 
 						// Only update with info from the same file

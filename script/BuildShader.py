@@ -15,6 +15,8 @@
 # Add 'obj' to the command line for a 'compiled shader object' file
 #  that can be used with the runtime shader support in the renderer.
 #
+# DEPRECATED: Use the C# script instead
+#
 import sys, os, tempfile, hashlib
 import Rylogic as Tools
 import UserVars
