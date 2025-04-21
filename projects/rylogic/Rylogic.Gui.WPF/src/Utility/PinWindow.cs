@@ -44,7 +44,7 @@ namespace Rylogic.Gui.WPF
 		//    private PinData PinState { get; }
 		//
 
-		public PinData(Window window, EPin pin_site = EPin.Centre, bool pinned = true)
+		public PinData(Window window, EPin pin_site, bool pinned)
 		{
 			m_pin_window = null!;
 			PinSite = pin_site;

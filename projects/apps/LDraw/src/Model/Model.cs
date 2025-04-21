@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -19,16 +18,16 @@ namespace LDraw
 {
 	public sealed class Model :IDisposable
 	{
-		public Model(string[] args)
+		public Model(StartupOptions options)
 		{
+			StartupOptions = options;
 			Sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context available");
 			View3d = View3d.Create();
-			StartupOptions = new StartupOptions(args);
 			Settings = new SettingsData(StartupOptions.SettingsPath);
 			FileWatchTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
-			Scenes = new ObservableCollection<SceneUI>();
-			Scripts = new ObservableCollection<ScriptUI>();
-			Assets = new ObservableCollection<AssetUI>();
+			Sources = [];
+			Scenes = [];
+			Scripts = [];
 
 			// Ensure the temporary script directory exists
 			Path_.CreateDirs(TempScriptDirectory);
@@ -39,6 +38,9 @@ namespace LDraw
 			View3d = null!;
 			GC.SuppressFinalize(this);
 		}
+
+		/// <summary>Parsed command line options</summary>
+		public StartupOptions StartupOptions { get; }
 
 		/// <summary>The main thread synchronisation context</summary>
 		private SynchronizationContext Sync { get; }
@@ -72,17 +74,25 @@ namespace LDraw
 				}
 				void HandleSourcesChanged(object? sender, View3d.SourcesChangedEventArgs e)
 				{
-				// This implements auto range on load... but sources can change for reasons that don't require
-				// an auto range (e.g. measure tool graphics).
+					// Refresh the collection of sources
+					if (e.After)
+					{
+						Dictionary<Guid, Source> sources = [];
+						m_view3d.EnumSources(guid => sources.Add(guid, new Source(guid, this)));
+						Sources.SyncStable(sources.Values, (l, r) => l.ContextId == r.ContextId, (s, i) => s);
+						SourcesChanged?.Invoke(this, EventArgs.Empty);
+					}
+					// This implements auto range on load... but sources can change for reasons that don't require
+					// an auto range (e.g. measure tool graphics).
 
-				//	// Just prior to reloading sources
-				//	if (e.Before && Settings.ClearErrorLogOnReload)
-				//		Log.Clear();
-				//	
-				//	// After a source change, reset
-				//	if (e.After && Settings.ResetOnLoad)
-				//		foreach (var scene in Scenes)
-				//			scene.SceneView.AutoRange();
+					//	// Just prior to reloading sources
+					//	if (e.Before && Settings.ClearErrorLogOnReload)
+					//		Log.Clear();
+					//	
+					//	// After a source change, reset
+					//	if (e.After && Settings.ResetOnLoad)
+					//		foreach (var scene in Scenes)
+					//			scene.SceneView.AutoRange();
 				}
 				void HandleParsingProgress(object? sender, View3d.ParsingProgressEventArgs e) // worker thread context
 				{
@@ -110,9 +120,6 @@ namespace LDraw
 			}
 		}
 		private View3d m_view3d = null!;
-
-		/// <summary>Parsed command line options</summary>
-		public StartupOptions StartupOptions { get; }
 
 		/// <summary>Application settings</summary>
 		public SettingsData Settings
@@ -148,14 +155,45 @@ namespace LDraw
 		}
 		private SettingsData m_settings = null!;
 
+		/// <summary>The collection of current Ldraw object sources</summary>
+		public List<Source> Sources { get; }
+
+		/// <summary>Notification when the collection of sources changes</summary>
+		public event EventHandler? SourcesChanged;
+
+		/// <summary>Add a file ldraw source</summary>
+		public void AddFileSource(string filepath)
+		{
+			View3d.LoadScriptFromFile(filepath);
+				/*
+				// Notify
+				Model.NotifyFileOpening(filepath);
+
+				var script = (ScriptUI?)null;
+				var name = Path_.FileName(filepath);
+
+				// Open script files in an editor
+				if (Path_.Extn(filepath).ToLower() == ".ldr")
+				{
+					script = Model.Scripts.Add2(new ScriptUI(Model, name, filepath, Guid.NewGuid()));
+					if (scenes != null) script.Context.SelectedScenes = scenes;
+					m_dc.Add(script, EDockSite.Left);
+				}
+				// Open non-script files directly into the selected scenes
+				else
+				{
+					var asset = Model.Assets.Add2(new AssetUI(Model, name, filepath, Guid.NewGuid()));
+					if (scenes != null) asset.Context.SelectedScenes = scenes;
+				}
+				return script;
+				*/
+		}
+
 		/// <summary>The scene instances</summary>
 		public ObservableCollection<SceneUI> Scenes { get; }
 
 		/// <summary>The script instances</summary>
 		public ObservableCollection<ScriptUI> Scripts { get; }
-
-		/// <summary>The asset instances</summary>
-		public ObservableCollection<AssetUI> Assets { get; }
 
 		/// <summary>Notify of a file about to be opened</summary>
 		public event EventHandler<ValueEventArgs<string>>? FileOpening;
@@ -298,13 +336,13 @@ namespace LDraw
 		/// <summary>Clear all instances from one or more scenes</summary>
 		public void Clear(IEnumerable<SceneUI> scenes)
 		{
-			Clear(scenes, Array.Empty<Guid>(), 0, 0);
+			Clear(scenes, [], 0, 0);
 		}
 
 		/// <summary>Clear instances from one or more scenes</summary>
 		public void Clear(SceneUI scene) => Clear(new[] { scene });
-		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, new[] { context_id }, 1, 0);
-		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, new[] { context_id }, 1, 0);
+		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, [context_id], 1, 0);
+		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, [context_id], 1, 0);
 		public void Clear(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Remove objects from the scenes
@@ -323,8 +361,8 @@ namespace LDraw
 		}
 
 		// Add objects associated with 'id' to the scenes
-		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, new[] { context_id }, 1, 0);
-		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, new[] { context_id }, 1, 0);
+		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, [context_id], 1, 0);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, [context_id], 1, 0);
 		public void AddObjects(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Add the objects from 'id' this scene.
@@ -358,7 +396,7 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>The filepaths of existing temporary scripts</summary>
+		/// <summary>The file paths of existing temporary scripts</summary>
 		public IEnumerable<FileSystemInfo> TemporaryScripts()
 		{
 			// Treat anything in the temporary script directory as a temporary script
@@ -399,8 +437,8 @@ namespace LDraw
 
 		/// <summary></summary>
 		public static readonly string SupportedFilesFilter = Util.FileDialogFilter(
-			"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
-			"Ldr Script", "*.ldr",
+			"Supported Files", "*.ldr", "*.bdr", "*.p3d", "*.3ds", "*.stl", "*.csv",
+			"Ldr Script", "*.ldr", "*.bdr",
 			"Binary Model File", "*.p3d",
 			"3D Studio Max Model File", "*.3ds",
 			"STL CAD Model File", "*.stl",

@@ -1,0 +1,65 @@
+﻿<UserControl
+	x:Class="LDraw.UI.SceneSelectorUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:LDraw.UI"
+	mc:Ignorable="d" 
+	d:DesignHeight="32"
+	d:DesignWidth="200"
+>
+	<!-- Combo of available scenes -->
+	<DockPanel
+		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=local:SceneSelectorUI}}"
+		d:DataContext="{d:DesignInstance Type=local:SceneSelectorUI, IsDesignTimeCreatable=True}"
+		ToolBar.OverflowMode="Never"
+	>
+		<ToggleButton
+			DockPanel.Dock="Right"
+			VerticalAlignment="Center"
+			BorderThickness="0"
+			Background="Transparent"
+			Foreground="Gray"
+			MinWidth="16"
+			Content="▼"
+			x:Name="m_btn_toggle_scene_select"
+		/>
+		<TextBlock
+			Text="{Binding SelectedScenesDescription}"
+			VerticalAlignment="Center"
+			Background="White"
+			MinWidth="80"
+			Margin="3"
+			x:Name="m_tb_selected_scenes"
+		/>
+		<Popup
+			Placement="Bottom"
+			PlacementTarget="{Binding ElementName=m_tb_selected_scenes}"
+			IsOpen="{Binding IsChecked, ElementName=m_btn_toggle_scene_select}"
+			StaysOpen="False"
+			PopupAnimation="Fade"
+			x:Name="m_popup_scene_list"
+		>
+			<ListBox
+				ItemsSource="{Binding SelectableScenesView}"
+				SelectedItem="{Binding SelectableScenesView/, Mode=TwoWay}"
+				ItemContainerStyle="{StaticResource NoPaddingListBoxItem}"
+			>
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<CheckBox
+							Content="{Binding Name}"
+							IsChecked="{Binding Selected}"
+							VerticalContentAlignment="Center"
+							VerticalAlignment="Center"
+							Background="White"
+							MinWidth="100"
+							MinHeight="24"
+						/>
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+		</Popup>
+	</DockPanel>
+</UserControl>

@@ -23,7 +23,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			Content = new DockPanel { LastChildFill = true };
 
 			DockContainer = dc;
-			PinState = new PinData(this, EPin.Centre);
+			PinState = new PinData(this, EPin.Centre, pinned: false);
 			Root = new Branch(dc, DockSizeData.Quarters);
 
 			SizeChanged += delegate { DockContainer.NotifyLayoutChanged(); };

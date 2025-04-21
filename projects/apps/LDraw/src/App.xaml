@@ -42,6 +42,15 @@
 				<Setter Property="HorizontalContentAlignment" Value="Left" />
 				<Setter Property="VerticalContentAlignment" Value="Center" />
 			</Style>
+
+			<!-- No-Padding List Box style -->
+			<Style x:Key="NoPaddingListBoxItem" TargetType="ListBoxItem">
+				<Setter Property="BorderThickness" Value="0"/>
+				<Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+				<Setter Property="VerticalContentAlignment" Value="Stretch"/>
+				<Setter Property="Padding" Value="0"/>
+				<Setter Property="Margin" Value="0"/>
+			</Style>
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

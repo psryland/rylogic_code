@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.IO;
@@ -9,7 +8,6 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -23,7 +21,6 @@ using ICSharpCode.AvalonEdit.Folding;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Indentation;
-using ICSharpCode.AvalonEdit.Rendering;
 using ICSharpCode.AvalonEdit.Search;
 using Microsoft.Win32;
 using Rylogic.Common;
@@ -70,7 +67,7 @@ namespace LDraw.UI
 				DestroyOnClose = true,
 			};
 			LastUpdateTime = TimeSpan.Zero;
-			Context = new Context(model, name, context_id);
+			Source = new Source(context_id, model);
 			LdrAutoComplete = new View3d.AutoComplete();
 			Filepath = filepath;
 			Editor = m_editor;
@@ -97,11 +94,10 @@ namespace LDraw.UI
 		public void Dispose()
 		{
 			// Remove objects from all scenes
-			Context.SelectedScenes = Array.Empty<SceneUI>();
 			Model.Scripts.Remove(this);
 
 			Editor = null!;
-			Context = null!;
+			Source = null!;
 			DockControl = null!;
 			GC.SuppressFinalize(this);
 		}
@@ -145,32 +141,31 @@ namespace LDraw.UI
 		}
 		private DockControl m_dock_control = null!;
 
-		/// <summary>The context id and scenes that associated objects are added to</summary>
-		public Context Context
+		/// <summary>The Ldraw source this script represents</summary>
+		public Source Source
 		{
-			get => m_context;
+			get => m_source;
 			private set
 			{
-				if (m_context == value) return;
-				if (m_context != null)
+				if (m_source == value) return;
+				if (m_source != null)
 				{
 					Log.EntriesChanged -= HandleLogEntriesChanged;
-					m_context.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_context!);
+					m_source.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref m_source!);
 				}
-				m_context = value;
-				if (m_context != null)
+				m_source = value;
+				if (m_source != null)
 				{
-					m_context.PropertyChanged += HandlePropertyChanged;
+					m_source.PropertyChanged += HandlePropertyChanged;
 					Log.EntriesChanged += HandleLogEntriesChanged;
 				}
 
-				// Handlers
 				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(Context.Name):
+						case nameof(Source.Name):
 						{
 							// Update the tab text
 							if (DockControl != null)
@@ -187,19 +182,19 @@ namespace LDraw.UI
 				}
 			}
 		}
-		private Context m_context = null!;
+		private Source m_source = null!;
 
 		/// <summary>Auto complete provider for LDraw script</summary>
 		private View3d.AutoComplete LdrAutoComplete { get; }
 
 		/// <summary>App logic</summary>
-		public Model Model => Context.Model;
+		private Model Model => Source.Model;
 
 		/// <summary>The name assigned to this script UI</summary>
-		public string ScriptName => Context.Name;
+		public string ScriptName => Source.Name;
 
 		/// <summary>Context id for objects created by this scene</summary>
-		public Guid ContextId => Context.ContextId;
+		public Guid ContextId => Source.ContextId;
 
 		/// <summary>The filepath for this script</summary>
 		public string Filepath
@@ -217,7 +212,7 @@ namespace LDraw.UI
 
 				// Update the script name if it hasn't been changed by the user
 				if (update_name)
-					Context.Name = Path_.FileName(m_filepath);
+					Source.Name = Path_.FileName(m_filepath);
 
 				DockControl.TabToolTip = m_filepath;
 			}
@@ -585,7 +580,7 @@ namespace LDraw.UI
 			LastUpdateTime = Log.Elapsed;
 			Log.Clear(x => Path_.Compare(x.File, Filepath) == 0);
 
-			var scenes = Context.SelectedScenes.ToArray();
+			var scenes = Source.SelectedScenes.ToArray();
 			var include_paths = Model.Settings.IncludePaths;
 			var selection = Editor.SelectionLength != 0 ? Editor.TextArea.Selection.GetText() : null;
 
@@ -802,7 +797,7 @@ namespace LDraw.UI
 			if (SaveNeeded)
 				SaveFile();
 
-			var scenes = Context.SelectedScenes.ToArray();
+			var scenes = Source.SelectedScenes.ToArray();
 			if (scenes.Length == 0)
 				return;
 
@@ -820,7 +815,7 @@ namespace LDraw.UI
 		public Command RemoveObjects { get; }
 		private void RemoveObjectsInternal()
 		{
-			var scenes = Context.SelectedScenes.ToArray();
+			var scenes = Source.SelectedScenes.ToArray();
 			if (scenes.Length == 0) return;
 			Model.Clear(scenes, ContextId);
 		}
@@ -879,10 +874,7 @@ namespace LDraw.UI
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>Character class for Ldr Object types</summary>
 		private static bool IsLdrObjectTypeChar(char ch)

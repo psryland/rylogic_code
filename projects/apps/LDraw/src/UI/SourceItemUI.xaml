@@ -1,0 +1,71 @@
+﻿<UserControl
+	x:Class="LDraw.UI.SourceItemUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:LDraw.UI"
+	mc:Ignorable="d" 
+	d:DesignHeight="36"
+	d:DesignWidth="300"
+	HorizontalAlignment="Stretch"
+	Background="BlanchedAlmond"
+	VerticalAlignment="Top"
+>
+	<WrapPanel
+		Orientation="Horizontal"
+		Margin="0"
+	>
+		<!-- Source Name -->
+		<TextBox
+			Text="{Binding Source.Name, Mode=OneWay}"
+			ToolTip="{Binding Filepath}"
+			VerticalAlignment="Center"
+			BorderBrush="#DDD"
+			BorderThickness="0"
+			Background="White"
+			IsReadOnly="True"
+			Padding="2"
+			Margin="3"
+		/>
+
+		<!-- Show in Scenes -->
+		<local:SceneSelectorUI
+			AvailableScenes="{Binding Source.AvailableScenes}"
+			SelectedScenes="{Binding Source.SelectedScenes}"
+		/>
+
+		<!-- Render Button -->
+		<Button
+			ToolTip="Display this script in the selected scene. [F5]"
+			Command="{Binding Render}"
+			IsEnabled="{Binding Context.CanRender}"
+			VerticalAlignment="Center"
+			Background="Transparent"
+			BorderThickness="0"
+		>
+			<Image
+				Source="{StaticResource display}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				MaxHeight="28"
+			/>
+		</Button>
+
+		<!-- Remove script from scene -->
+		<Button
+			ToolTip="Remove script objects from the selected scene. [Ctrl+D]"
+			Command="{Binding RemoveObjects}"
+			IsEnabled="{Binding Context.CanRender}"
+			VerticalAlignment="Center"
+			Background="Transparent"
+			BorderThickness="0"
+		>
+			<Image
+				Source="{StaticResource bin}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				MaxHeight="28"
+			/>
+		</Button>
+
+	</WrapPanel>
+</UserControl>

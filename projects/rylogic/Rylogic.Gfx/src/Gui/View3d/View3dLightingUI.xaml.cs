@@ -16,7 +16,7 @@ namespace Rylogic.Gui.WPF
 			m_window = window;
 
 			Light = new View3d.Light(m_window.LightProperties);
-			PinState = new PinData(this, EPin.Centre);
+			PinState = new PinData(this, EPin.Centre, pinned: false);
 
 			SetAmbientColour = Command.Create(this, SetAmbientColourInternal);
 			SetDiffuseColour = Command.Create(this, SetDiffuseColourInternal);
