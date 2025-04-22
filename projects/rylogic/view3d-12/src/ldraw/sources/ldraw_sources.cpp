@@ -167,6 +167,7 @@ namespace pr::rdr12::ldraw
 	Guid ScriptSources::Add(LdrObjectPtr object)
 	{
 		auto src = std::shared_ptr<SourceBase>(new SourceBase{ &object->m_context_id });
+		src->m_output.m_objects.push_back(object);
 		src->Notify += std::bind(&ScriptSources::SourceNotifyHandler, this, _1, _2);
 		src->Load(rdr(), EDataChangedReason::NewData, nullptr);
 		return src->m_context_id;

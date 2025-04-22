@@ -111,7 +111,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.DirectShow", "proje
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Gfx", "projects\rylogic\Rylogic.Gfx\Rylogic.Gfx.csproj", "{88B5A2C0-78C9-4DFB-8B6D-373F53FBD1BE}"
 	ProjectSection(ProjectDependencies) = postProject
-		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 		{FB13BA51-F847-4804-90A8-61AB789F4061} = {FB13BA51-F847-4804-90A8-61AB789F4061}
 	EndProjectSection
 EndProject
