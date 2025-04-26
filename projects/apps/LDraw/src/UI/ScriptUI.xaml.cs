@@ -36,6 +36,8 @@ namespace LDraw.UI
 	public sealed partial class ScriptUI :UserControl, IDockable, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
+		//  - A script editor is used to edit existing script files.
+
 		//  - All scripts are created with an associated file. New scripts start with a
 		//    temporary script filepath and get saved to a new location by the user.
 		//  - The Scenes collection view uses a wrapper around SceneUI because Combobox.ItemsSource
@@ -55,21 +57,19 @@ namespace LDraw.UI
 			HighlightingManager.Instance.RegisterHighlighting("Ldr", new[] { ".ldr" }, syntax_rules);
 
 		}
-		public ScriptUI(Model model, string name, string filepath, Guid context_id)
+		public ScriptUI(Source source)
 		{
 			InitializeComponent();
-			DockControl = new DockControl(this, $"Script-{context_id}")
+			Source = source;
+			DockControl = new DockControl(this, $"Script-{source.ContextId}")
 			{
 				ShowTitle = false,
-				TabText = name,
-				TabToolTip = filepath,
+				TabText = ScriptName,
+				TabToolTip = FilePath,
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
-			LastUpdateTime = TimeSpan.Zero;
-			Source = new Source(context_id, model);
 			LdrAutoComplete = new View3d.AutoComplete();
-			Filepath = filepath;
 			Editor = m_editor;
 
 			Render = Command.Create(this, RenderInternal);
@@ -80,16 +80,12 @@ namespace LDraw.UI
 			CommentOutSelection = Command.Create(this, CommentOutSelectionInternal);
 			UncommentSelection = Command.Create(this, UncommentSelectionInternal);
 
-			// If the temporary script exists, load it
-			if (Path_.FileExists(Filepath))
-				LoadFile();
-
 			DataContext = this;
 		}
 		protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnPreviewGotKeyboardFocus(e);
-			CheckForChangedScript();
+			//CheckForChangedScript();
 		}
 		public void Dispose()
 		{
@@ -134,8 +130,8 @@ namespace LDraw.UI
 				}
 				void HandleSavingLayout(object? sender, DockContainerSavingLayoutEventArgs e)
 				{
-					if (!Model.IsTempScriptFilepath(Filepath))
-						e.Node.Add2(nameof(Filepath), Filepath, false);
+					//if (!Model.IsTempScriptFilepath(Filepath))
+					//	e.Node.Add2(nameof(Filepath), Filepath, false);
 				}
 			}
 		}
@@ -193,33 +189,36 @@ namespace LDraw.UI
 		/// <summary>The name assigned to this script UI</summary>
 		public string ScriptName => Source.Name;
 
+		/// <summary>The filepath associated with the source</summary>
+		public string FilePath => Source.FilePath;
+
 		/// <summary>Context id for objects created by this scene</summary>
 		public Guid ContextId => Source.ContextId;
 
-		/// <summary>The filepath for this script</summary>
-		public string Filepath
-		{
-			get => m_filepath;
-			set
-			{
-				if (m_filepath == value) return;
+		///// <summary>The filepath for this script</summary>
+		//public string Filepath
+		//{
+		//	get => m_filepath;
+		//	set
+		//	{
+		//		if (m_filepath == value) return;
 
-				// Update the ScriptName if the new filepath isn't a temp script, and the old name was not set by the user
-				var update_name = !Model.IsTempScriptFilepath(value) && (Model.IsGeneratedScriptName(ScriptName) || ScriptName == Path_.FileTitle(m_filepath));
+		//		// Update the ScriptName if the new filepath isn't a temp script, and the old name was not set by the user
+		//		var update_name = !Model.IsTempScriptFilepath(value) && (Model.IsGeneratedScriptName(ScriptName) || ScriptName == Path_.FileTitle(m_filepath));
 
-				// Set the new filepath
-				m_filepath = value;
+		//		// Set the new filepath
+		//		m_filepath = value;
 
-				// Update the script name if it hasn't been changed by the user
-				if (update_name)
-					Source.Name = Path_.FileName(m_filepath);
+		//		// Update the script name if it hasn't been changed by the user
+		//		if (update_name)
+		//			Source.Name = Path_.FileName(m_filepath);
 
-				DockControl.TabToolTip = m_filepath;
-			}
-		}
-		private FileInfo? FileInfo => Path_.FileExists(Filepath) ? new FileInfo(Filepath) : null;
-		private string m_filepath = null!;
-		private FileInfo? m_last_fileinfo;
+		//		DockControl.TabToolTip = m_filepath;
+		//	}
+		//}
+		//private FileInfo? FileInfo => Path_.FileExists(Filepath) ? new FileInfo(Filepath) : null;
+		//private string m_filepath = null!;
+		//private FileInfo? m_last_fileinfo;
 
 		/// <summary>The text editor control</summary>
 		public TextEditor Editor
@@ -574,43 +573,43 @@ namespace LDraw.UI
 			}
 		}
 
-		/// <summary>Update the objects associated with 'ContextId' within View3D's object store</summary>
-		private void UpdateObjects()
-		{
-			LastUpdateTime = Log.Elapsed;
-			Log.Clear(x => Path_.Compare(x.File, Filepath) == 0);
+		///// <summary>Update the objects associated with 'ContextId' within View3D's object store</summary>
+		//private void UpdateObjects()
+		//{
+		//	LastUpdateTime = Log.Elapsed;
+		//	Log.Clear(x => Path_.Compare(x.File, Filepath) == 0);
 
-			var scenes = Source.SelectedScenes.ToArray();
-			var include_paths = Model.Settings.IncludePaths;
-			var selection = Editor.SelectionLength != 0 ? Editor.TextArea.Selection.GetText() : null;
+		//	var scenes = Source.SelectedScenes.ToArray();
+		//	var include_paths = Model.Settings.IncludePaths;
+		//	var selection = Editor.SelectionLength != 0 ? Editor.TextArea.Selection.GetText() : null;
 
-			// Load the script file in a background thread
-			ThreadPool.QueueUserWorkItem(x =>
-			{
-				try
-				{
-					if (selection == null)
-						Model.View3d.LoadScriptFromFile(Filepath, ContextId, include_paths, OnAdd);
-					else
-						Model.View3d.LoadScriptFromString(selection, ContextId, include_paths, OnAdd);
+		//	// Load the script file in a background thread
+		//	ThreadPool.QueueUserWorkItem(x =>
+		//	{
+		//		try
+		//		{
+		//			if (selection == null)
+		//				Model.View3d.LoadScriptFromFile(Filepath, ContextId, include_paths, OnAdd);
+		//			else
+		//				Model.View3d.LoadScriptFromString(selection, ContextId, include_paths, OnAdd);
 
-					void OnAdd(Guid id, bool before)
-					{
-						if (before)
-							Model.Clear(scenes, id);
-						else
-							Model.AddObjects(scenes, id);
+		//			void OnAdd(Guid id, bool before)
+		//			{
+		//				if (before)
+		//					Model.Clear(scenes, id);
+		//				else
+		//					Model.AddObjects(scenes, id);
 
-						RefreshErrorMarkers();
-					}
-				}
-				catch (Exception)
-				{
-					RefreshErrorMarkers();
-				}
-			});
-		}
-		private TimeSpan LastUpdateTime;
+		//				RefreshErrorMarkers();
+		//			}
+		//		}
+		//		catch (Exception)
+		//		{
+		//			RefreshErrorMarkers();
+		//		}
+		//	});
+		//}
+		//private TimeSpan LastUpdateTime;
 
 		/// <summary>Return the tab context menu</summary>
 		private ContextMenu TabCMenu()
@@ -620,156 +619,157 @@ namespace LDraw.UI
 			return cmenu;
 		}
 
-		/// <summary>Load script from a file</summary>
-		public void LoadFile(string? filepath = null)
-		{
-			// Prompt for a filepath if not given
-			if (filepath == null || filepath.Length == 0)
-			{
-				var dlg = new OpenFileDialog { Title = "Load Script", Filter = Model.EditableFilesFilter };
-				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
-				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
-			}
-			if (!File.Exists(filepath))
-			{
-				throw new FileNotFoundException("Load script file failed", filepath);
-			}
+		///// <summary>Load script from a file</summary>
+		//public void LoadFile(string? filepath = null)
+		//{
+		//	// Prompt for a filepath if not given
+		//	if (filepath == null || filepath.Length == 0)
+		//	{
+		//		var dlg = new OpenFileDialog { Title = "Load Script", Filter = Model.EditableFilesFilter };
+		//		if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
+		//		filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
+		//	}
+		//	if (!File.Exists(filepath))
+		//	{
+		//		throw new FileNotFoundException("Load script file failed", filepath);
+		//	}
 
-			// Load the file into the editor
-			Editor.Text = File.ReadAllText(filepath);
+		//	// Load the file into the editor
+		//	Editor.Text = File.ReadAllText(filepath);
 
-			// Save the filepath
-			Filepath = filepath;
+		//	// Save the filepath
+		//	Filepath = filepath;
 
-			// Record the file state when last loaded
-			m_last_fileinfo = FileInfo;
+		//	// Record the file state when last loaded
+		//	m_last_fileinfo = FileInfo;
 
-			// Sync'd with disk
-			SaveNeeded = false;
-		}
-		public void LoadFile()
-		{
-			LoadFile(Filepath);
-		}
+		//	// Sync'd with disk
+		//	SaveNeeded = false;
+		//}
+		//public void LoadFile()
+		//{
+		//	LoadFile(Filepath);
+		//}
 
 		/// <summary>Save the script in this editor to a file</summary>
 		public void SaveFile(string? filepath = null)
 		{
-			// Prompt for a filepath if not given
-			if (filepath == null || filepath.Length == 0)
-			{
-				var dlg = new SaveFileDialog { Title = "Save Script", Filter = Model.EditableFilesFilter };
-				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
-				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
-			}
+			//// Prompt for a filepath if not given
+			//if (filepath == null || filepath.Length == 0)
+			//{
+			//	var dlg = new SaveFileDialog { Title = "Save Script", Filter = Model.EditableFilesFilter };
+			//	if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
+			//	filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
+			//}
 
-			// Save the file from the editor
-			File.WriteAllText(filepath, Editor.Text);
+			//// Save the file from the editor
+			//File.WriteAllText(filepath, Editor.Text);
 
-			// Save the filepath
-			Filepath = filepath;
+			//// Save the filepath
+			//Filepath = filepath;
 
-			// Record the file state when last saved
-			m_last_fileinfo = FileInfo;
+			//// Record the file state when last saved
+			//m_last_fileinfo = FileInfo;
 
-			// Sync'd with disk
-			SaveNeeded = false;
+			//// Sync'd with disk
+			//SaveNeeded = false;
 		}
 		public void SaveFile()
 		{
-			SaveFile(Filepath);
+			SaveFile(FilePath);
 		}
 
-		/// <summary>Test the script file for external changes</summary>
-		public void CheckForChangedScript()
-		{
-			// If this script has never been saved, no changes
-			if (!File.Exists(Filepath))
-				return;
+		///// <summary>Test the script file for external changes</summary>
+		//public void CheckForChangedScript()
+		//{
+		//	// If this script has never been saved, no changes
+		//	if (!File.Exists(Filepath))
+		//		return;
 
-			// Look for changes
-			var fileinfo = FileInfo;
-			if (m_last_fileinfo != null && fileinfo != null &&
-				((m_last_fileinfo.LastWriteTimeUtc == fileinfo.LastWriteTimeUtc) ||
-				(m_last_fileinfo.Length == fileinfo.Length && Editor.Text == File.ReadAllText(Filepath))))
-			{
-				m_last_fileinfo = fileinfo;
-				return;
-			}
+		//	// Look for changes
+		//	var fileinfo = FileInfo;
+		//	if (m_last_fileinfo != null && fileinfo != null &&
+		//		((m_last_fileinfo.LastWriteTimeUtc == fileinfo.LastWriteTimeUtc) ||
+		//		(m_last_fileinfo.Length == fileinfo.Length && Editor.Text == File.ReadAllText(Filepath))))
+		//	{
+		//		m_last_fileinfo = fileinfo;
+		//		return;
+		//	}
 
-			// The file has changed. Prompt if needed.
-			if (SaveNeeded)
-			{
-				var dlg = new MsgBox(Window.GetWindow(this),
-					$"{Path_.FileName(Filepath)} has changed on disk.\n" +
-					$"\n" +
-					$"'Overwrite' = save and replace the version on disk.\n" +
-					$"'Discard' = discard local changes and reload from disk.\n" +
-					$"'Ignore' = continue with the local version without saving.\n",
-					"Script Changed on Disk", MsgBox.EButtons.OverwriteDiscardIgnore);
-				dlg.ShowDialog();
-				switch (dlg.Result)
-				{
-				case MsgBox.EResult.Overwrite:
-					SaveFile(Filepath);
-					break;
-				case MsgBox.EResult.Discard:
-					LoadFile(Filepath);
-					break;
-				case MsgBox.EResult.Ignore:
-					m_last_fileinfo = fileinfo;
-					SaveNeeded = true;
-					break;
-				default:
-					throw new Exception($"{dlg.Result} unexpected");
-				}
-			}
-			else if (!(Model.Settings.ReloadChangedScripts is bool reload))
-			{
-				var dlg = new MsgBox(Window.GetWindow(this),
-					$"'{Filepath}' has changed on disk.\n" +
-					$"\n" +
-					$"'Reload' = reload the script from disk.\n" +
-					$"'Ignore' = continue with the local version.\n",
-					"Script Changed on Disk", MsgBox.EButtons.ReloadIgnore)
-				{ ShowAlwaysCheckbox = true };
-				dlg.ShowDialog();
-				switch (dlg.Result)
-				{
-				case MsgBox.EResult.Reload:
-					LoadFile(Filepath);
-					if (dlg.Always) Model.Settings.ReloadChangedScripts = true;
-					break;
-				case MsgBox.EResult.Ignore:
-					if (dlg.Always) Model.Settings.ReloadChangedScripts = false;
-					m_last_fileinfo = fileinfo;
-					SaveNeeded = true;
-					break;
-				default:
-					throw new Exception($"{dlg.Result} unexpected");
-				}
-			}
-			else if (reload)
-			{
-				LoadFile(Filepath);
-			}
-		}
+		//	// The file has changed. Prompt if needed.
+		//	if (SaveNeeded)
+		//	{
+		//		var dlg = new MsgBox(Window.GetWindow(this),
+		//			$"{Path_.FileName(Filepath)} has changed on disk.\n" +
+		//			$"\n" +
+		//			$"'Overwrite' = save and replace the version on disk.\n" +
+		//			$"'Discard' = discard local changes and reload from disk.\n" +
+		//			$"'Ignore' = continue with the local version without saving.\n",
+		//			"Script Changed on Disk", MsgBox.EButtons.OverwriteDiscardIgnore);
+		//		dlg.ShowDialog();
+		//		switch (dlg.Result)
+		//		{
+		//		case MsgBox.EResult.Overwrite:
+		//			SaveFile(Filepath);
+		//			break;
+		//		case MsgBox.EResult.Discard:
+		//			LoadFile(Filepath);
+		//			break;
+		//		case MsgBox.EResult.Ignore:
+		//			m_last_fileinfo = fileinfo;
+		//			SaveNeeded = true;
+		//			break;
+		//		default:
+		//			throw new Exception($"{dlg.Result} unexpected");
+		//		}
+		//	}
+		//	else if (!(Model.Settings.ReloadChangedScripts is bool reload))
+		//	{
+		//		var dlg = new MsgBox(Window.GetWindow(this),
+		//			$"'{Filepath}' has changed on disk.\n" +
+		//			$"\n" +
+		//			$"'Reload' = reload the script from disk.\n" +
+		//			$"'Ignore' = continue with the local version.\n",
+		//			"Script Changed on Disk", MsgBox.EButtons.ReloadIgnore)
+		//		{ ShowAlwaysCheckbox = true };
+		//		dlg.ShowDialog();
+		//		switch (dlg.Result)
+		//		{
+		//		case MsgBox.EResult.Reload:
+		//			LoadFile(Filepath);
+		//			if (dlg.Always) Model.Settings.ReloadChangedScripts = true;
+		//			break;
+		//		case MsgBox.EResult.Ignore:
+		//			if (dlg.Always) Model.Settings.ReloadChangedScripts = false;
+		//			m_last_fileinfo = fileinfo;
+		//			SaveNeeded = true;
+		//			break;
+		//		default:
+		//			throw new Exception($"{dlg.Result} unexpected");
+		//		}
+		//	}
+		//	else if (reload)
+		//	{
+		//		LoadFile(Filepath);
+		//	}
+		//}
 
 		/// <summary>Update the error markers into this script</summary>
 		private void RefreshErrorMarkers()
 		{
-			m_text_marker_service.RemoveAll(_ => true);
-			foreach (var le in Log.Entries)
-			{
-				if (Path_.Compare(le.File, Filepath) != 0) continue;
-				if (le.Elapsed < LastUpdateTime) continue;
-
-				var line = Editor.Document.GetLineByNumber(le.Line);
-				var marker = m_text_marker_service.Create(line.Offset, line.Length);
-				marker.MarkerTypes = ETextMarkerTypes.SquigglyUnderline | ETextMarkerTypes.LineInScrollBar;
-				marker.MarkerColor = Colors.Red;
-				marker.ToolTip = le.Message;
-			}
+			// TODO: Build in background and update error markers in real time
+			//m_text_marker_service.RemoveAll(_ => true);
+			//foreach (var le in Log.Entries)
+			//{
+			//	if (Path_.Compare(le.File, FilePath) != 0) continue;
+			//	if (le.Elapsed < LastUpdateTime) continue;
+			//
+			//	var line = Editor.Document.GetLineByNumber(le.Line);
+			//	var marker = m_text_marker_service.Create(line.Offset, line.Length);
+			//	marker.MarkerTypes = ETextMarkerTypes.SquigglyUnderline | ETextMarkerTypes.LineInScrollBar;
+			//	marker.MarkerColor = Colors.Red;
+			//	marker.ToolTip = le.Message;
+			//}
 		}
 
 		/// <summary>True if the script has been edited without being saved</summary>
@@ -801,7 +801,7 @@ namespace LDraw.UI
 			if (scenes.Length == 0)
 				return;
 
-			UpdateObjects();
+			//UpdateObjects();
 		}
 
 		/// <summary>Save the contents of the script to file</summary>

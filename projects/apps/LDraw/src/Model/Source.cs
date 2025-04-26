@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using LDraw.UI;
+using Rylogic.Gfx;
 
 namespace LDraw
 {
@@ -12,10 +13,10 @@ namespace LDraw
 		//  - Model for an LDraw source
 		//  - View component is the 'SourceItemUI'
 
-		public Source(Guid context_id, Model model)
+		public Source(Model model, View3d.Source source)
 		{
-			ContextId = context_id;
 			Model = model;
+			View3dSource = source;
 			SelectedScenes = model.Scenes.Count != 0 ? [model.Scenes[0]] : [];
 		}
 		public void Dispose()
@@ -24,6 +25,7 @@ namespace LDraw
 		//	SelectedScenes = Array.Empty<SceneUI>();
 
 			Model = null!;
+			View3dSource = null!;
 			GC.SuppressFinalize(this);
 		}
 
@@ -36,23 +38,14 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.SourcesChanged -= HandleSourcesChanged;
 					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
 					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
-					m_model.SourcesChanged += HandleSourcesChanged;
 				}
 
-				void HandleSourcesChanged(object? sender, EventArgs args)
-				{
-					var info = Model.View3d.SourceInformation(ContextId);
-
-					Name = info.Name;
-					ObjectCount = info.ObjectCount;
-				}
 				void HandleScenesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 				{
 					NotifyPropertyChanged(nameof(AvailableScenes));
@@ -61,34 +54,53 @@ namespace LDraw
 		}
 		private Model m_model = null!;
 
+		/// <summary>The native LDraw source</summary>
+		private View3d.Source View3dSource
+		{
+			get => m_source;
+			set
+			{
+				if (m_source == value) return;
+				if (m_source != null)
+				{
+					m_source.PropertyChanged -= HandleSourcePropertyChanged;
+				}
+				m_source = value;
+				if (m_source != null)
+				{
+					m_source.PropertyChanged += HandleSourcePropertyChanged;
+				}
+			
+				void HandleSourcePropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					if (e.PropertyName != null)
+						NotifyPropertyChanged(e.PropertyName);
+				}
+			}
+		}
+		private View3d.Source m_source = null!;
+
 		/// <summary>The context id associated with the source</summary>
-		public Guid ContextId { get; }
+		public Guid ContextId => View3dSource.ContextId;
 
 		/// <summary>The name of the source</summary>
 		public string Name
 		{
-			get => m_name;
-			set
-			{
-				if (m_name == value) return;
-				m_name = value;
-				NotifyPropertyChanged(nameof(Name));
-			}
+			get => View3dSource.Name;
+			set => View3dSource.Name = value;
 		}
-		private string m_name = string.Empty;
+
+		/// <summary>The filepath associated with the source</summary>
+		public string FilePath
+		{
+			get => View3dSource?.FilePath ?? string.Empty;
+		}
 
 		/// <summary>The number of objects in this source</summary>
 		public int ObjectCount
 		{
-			get => m_object_count;
-			set
-			{
-				if (m_object_count == value) return;
-				m_object_count = value;
-				NotifyPropertyChanged(nameof(ObjectCount));
-			}
+			get => View3dSource.ObjectCount;
 		}
-		private int m_object_count = 0;
 		
 		/// <summary>True if there is a scene to render to</summary>
 		public bool CanRender => SelectedScenes.Count != 0;
@@ -98,6 +110,12 @@ namespace LDraw
 
 		/// <summary>The available scenes to render this source in</summary>
 		public ObservableCollection<SceneUI> AvailableScenes => Model.Scenes;
+
+		/// <summary>Remove this source</summary>
+		public void Remove()
+		{
+			View3dSource.Remove();
+		}
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

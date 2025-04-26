@@ -627,6 +627,9 @@ namespace pr
 			// The name of the source
 			char const* m_name;
 
+			// The file associated with the source (can be null)
+			wchar_t const* m_filepath;
+
 			// The context id associated with the source
 			GUID m_context_id;
 
@@ -698,8 +701,16 @@ extern "C"
 	// Enumerate all sources in the store
 	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb, void* ctx);
 
+	// Delete all objects and remove the source associated with 'context_id'
+	VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id);
+
 	// Get information about a source
 	VIEW3D_API pr::view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id);
+
+	// Get/Set the name of a source
+	VIEW3D_API BSTR __stdcall View3D_SourceNameGetBStr(GUID const& context_id);
+	VIEW3D_API char const* __stdcall View3D_SourceNameGet(GUID const& context_id);
+	VIEW3D_API void __stdcall View3D_SourceNameSet(GUID const& context_id, char const* name);
 
 	// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 	VIEW3D_API void __stdcall View3D_ReloadScriptSources();
@@ -720,6 +731,7 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_WindowErrorCBSet(pr::view3d::Window window, pr::view3d::ReportErrorCB error_cb, void* ctx, BOOL add);
 
 	// Get/Set the window settings (as ldr script string)
+	VIEW3D_API BSTR __stdcall View3D_WindowSettingsGetBStr(pr::view3d::Window window);
 	VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(pr::view3d::Window window);
 	VIEW3D_API void __stdcall View3D_WindowSettingsSet(pr::view3d::Window window, char const* settings);
 

@@ -78,7 +78,7 @@ namespace LDraw
 					if (e.After)
 					{
 						Dictionary<Guid, Source> sources = [];
-						m_view3d.EnumSources(guid => sources.Add(guid, new Source(guid, this)));
+						m_view3d.EnumSources(src => sources.Add(src.ContextId, new Source(this, src)));
 						Sources.SyncStable(sources.Values, (l, r) => l.ContextId == r.ContextId, (s, i) => s);
 						SourcesChanged?.Invoke(this, EventArgs.Empty);
 					}
@@ -157,37 +157,7 @@ namespace LDraw
 
 		/// <summary>The collection of current Ldraw object sources</summary>
 		public List<Source> Sources { get; }
-
-		/// <summary>Notification when the collection of sources changes</summary>
 		public event EventHandler? SourcesChanged;
-
-		/// <summary>Add a file ldraw source</summary>
-		public void AddFileSource(string filepath)
-		{
-			View3d.LoadScriptFromFile(filepath);
-				/*
-				// Notify
-				Model.NotifyFileOpening(filepath);
-
-				var script = (ScriptUI?)null;
-				var name = Path_.FileName(filepath);
-
-				// Open script files in an editor
-				if (Path_.Extn(filepath).ToLower() == ".ldr")
-				{
-					script = Model.Scripts.Add2(new ScriptUI(Model, name, filepath, Guid.NewGuid()));
-					if (scenes != null) script.Context.SelectedScenes = scenes;
-					m_dc.Add(script, EDockSite.Left);
-				}
-				// Open non-script files directly into the selected scenes
-				else
-				{
-					var asset = Model.Assets.Add2(new AssetUI(Model, name, filepath, Guid.NewGuid()));
-					if (scenes != null) asset.Context.SelectedScenes = scenes;
-				}
-				return script;
-				*/
-		}
 
 		/// <summary>The scene instances</summary>
 		public ObservableCollection<SceneUI> Scenes { get; }
@@ -197,10 +167,7 @@ namespace LDraw
 
 		/// <summary>Notify of a file about to be opened</summary>
 		public event EventHandler<ValueEventArgs<string>>? FileOpening;
-		public void NotifyFileOpening(string filepath)
-		{
-			FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
-		}
+		public void NotifyFileOpening(string filepath) => FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
 
 		/// <summary>Progress updates for parsing. Null while not parsing</summary>
 		public ParsingProgressData? ParsingProgress
@@ -241,11 +208,12 @@ namespace LDraw
 				{
 					try
 					{
-						foreach (var script in Scripts)
-							script.CheckForChangedScript();
-
-						if (Settings.AutoRefresh)
-							m_view3d.CheckForChangedSources();
+						//TODO: This should be done by the native code right?
+						//foreach (var script in Scripts)
+						//	script.CheckForChangedScript();
+						//
+						//if (Settings.AutoRefresh)
+						//	m_view3d.CheckForChangedSources();
 					}
 					catch (Exception ex)
 					{
@@ -256,12 +224,20 @@ namespace LDraw
 		}
 		private DispatcherTimer m_file_watch_timer = null!;
 
+		/// <summary>Add a file ldraw source</summary>
+		public Source? AddFileSource(string filepath)
+		{
+			NotifyFileOpening(filepath);
+			var src = View3d.LoadScriptFromFile(filepath);
+			return Sources.Add2(new Source(this, src));
+		}
+
 		/// <summary>Return a generated name for a new scene UI</summary>
 		public string GenerateSceneName()
 		{
 			for (; ; )
 			{
-				var name = $"{UITag.Scene}{++m_scene_number}";
+				var name = $"{UITag.Scene}-{++m_scene_number}";
 				if (!Scenes.Any(x => string.Compare(x.SceneName, name, true) == 0))
 					return name;
 			}
@@ -273,54 +249,72 @@ namespace LDraw
 		{
 			for (; ; )
 			{
-				var name = $"{UITag.Script}{++m_script_number}";
+				var name = $"{UITag.Script}-{++m_script_number}";
 				if (!Scripts.Any(x => string.Compare(x.ScriptName, name, true) == 0))
 					return name;
 			}
 		}
 		private int m_script_number;
 
-		/// <summary>Return the full filepath for a temporary script file</summary>
-		public string GenerateTempScriptFilepath(out Guid context_id)
+		/// <summary>Create an empty script and return its filepath</summary>
+		public string CreateNewScriptFile()
 		{
-			context_id = Guid.NewGuid();
-			var filename = $"{UITag.Script}-{context_id}.ldr";
-			var filepath = Path_.CombinePath(TempScriptDirectory, filename);
-			return IsTempScriptFilepath(filepath) ? filepath : throw new Exception("Temp script filepath generation is incorrect");
+			var script_name = GenerateScriptName();
+			var filepath = Path_.CombinePath(TempScriptDirectory, script_name);
+			File.AppendText(filepath).Dispose();
+			return filepath;
 		}
 
-		/// <summary>True if 'name' is a generated scene name</summary>
-		public bool IsGeneratedSceneName(string name)
+		/// <summary>Open a ldr script text file in a script window</summary>
+		public ScriptUI? OpenInEditor(Source src)
 		{
-			var generated_name_pattern = $@"{UITag.Scene}\d*";
-			return Regex.IsMatch(name, generated_name_pattern);
+			if (src.FilePath.Length == 0)
+				return null;
+
+			return Scripts.Add2(new ScriptUI(src));
 		}
 
-		/// <summary>True if 'name' is a generated script name</summary>
-		public bool IsGeneratedScriptName(string name)
-		{
-			var generated_name_pattern = $@"{UITag.Script}\d*";
-			return Regex.IsMatch(name, generated_name_pattern);
-		}
+		///// <summary>Return the full filepath for a temporary script file</summary>
+		//public string GenerateTempScriptFilepath(out Guid context_id)
+		//{
+		//	context_id = Guid.NewGuid();
+		//	var filename = $"{UITag.Script}-{context_id}.ldr";
+		//	var filepath = Path_.CombinePath(TempScriptDirectory, filename);
+		//	return IsTempScriptFilepath(filepath) ? filepath : throw new Exception("Temp script filepath generation is incorrect");
+		//}
 
-		/// <summary>True if filepath is a temporary script filepath</summary>
-		public bool IsTempScriptFilepath(string filepath)
-		{
-			var temp_script_pattern = $@"^{UITag.Script}[-]{Guid_.RegexPattern}\.ldr$";
-			return
-				Path_.Compare(Path_.Directory(filepath), TempScriptDirectory) == 0 &&
-				Regex.IsMatch(Path_.FileName(filepath), temp_script_pattern);
-		}
+		///// <summary>True if 'name' is a generated scene name</summary>
+		//public bool IsGeneratedSceneName(string name)
+		//{
+		//	var generated_name_pattern = $@"{UITag.Scene}\d*";
+		//	return Regex.IsMatch(name, generated_name_pattern);
+		//}
 
-		/// <summary>Extract the Guid from the temporary script filepath</summary>
-		public Guid TempScriptFilepathToGuid(string filepath)
-		{
-			if (!IsTempScriptFilepath(filepath))
-				throw new Exception($"'{filepath}' in not a valid temporary script filepath");
+		///// <summary>True if 'name' is a generated script name</summary>
+		//public bool IsGeneratedScriptName(string name)
+		//{
+		//	var generated_name_pattern = $@"{UITag.Script}\d*";
+		//	return Regex.IsMatch(name, generated_name_pattern);
+		//}
 
-			var m = Regex.Match(Path_.FileName(filepath), Guid_.RegexPattern);
-			return new Guid(m.Groups[1].Value);
-		}
+		///// <summary>True if filepath is a temporary script filepath</summary>
+		//public bool IsTempScriptFilepath(string filepath)
+		//{
+		//	var temp_script_pattern = $@"^{UITag.Script}[-]{Guid_.RegexPattern}\.ldr$";
+		//	return
+		//		Path_.Compare(Path_.Directory(filepath), TempScriptDirectory) == 0 &&
+		//		Regex.IsMatch(Path_.FileName(filepath), temp_script_pattern);
+		//}
+
+		///// <summary>Extract the Guid from the temporary script filepath</summary>
+		//public Guid TempScriptFilepathToGuid(string filepath)
+		//{
+		//	if (!IsTempScriptFilepath(filepath))
+		//		throw new Exception($"'{filepath}' in not a valid temporary script filepath");
+
+		//	var m = Regex.Match(Path_.FileName(filepath), Guid_.RegexPattern);
+		//	return new Guid(m.Groups[1].Value);
+		//}
 
 		/// <summary>Clear all instances from all scenes</summary>
 		public void Clear()
@@ -379,29 +373,36 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>Delete temporary scripts that are not currently open</summary>
-		public void CleanTemporaryScripts()
-		{
-			// The filenames of temporary scripts that are currently open
-			var currently_open = Scripts
-				.Where(x => IsTempScriptFilepath(x.Filepath))
-				.Select(x => Path_.FileName(x.Filepath))
-				.ToHashSet(0);
+		///// <summary>Delete temporary scripts that are not currently open</summary>
+		//public void CleanTemporaryScripts()
+		//{
+		//	// The filenames of temporary scripts that are currently open
+		//	var currently_open = Scripts
+		//		.Where(x => IsTempScriptFilepath(x.Filepath))
+		//		.Select(x => Path_.FileName(x.Filepath))
+		//		.ToHashSet(0);
 
-			// Delete temporary scripts that aren't in 'currently_open'
-			foreach (var file in TemporaryScripts())
-			{
-				if (currently_open.Contains(file.Name)) continue;
-				file.Delete();
-			}
-		}
+		//	// Delete temporary scripts that aren't in 'currently_open'
+		//	foreach (var file in TemporaryScripts())
+		//	{
+		//		if (currently_open.Contains(file.Name)) continue;
+		//		file.Delete();
+		//	}
+		//}
 
 		/// <summary>The file paths of existing temporary scripts</summary>
 		public IEnumerable<FileSystemInfo> TemporaryScripts()
 		{
 			// Treat anything in the temporary script directory as a temporary script
 			foreach (var file in Path_.EnumFileSystem(TempScriptDirectory, SearchOption.TopDirectoryOnly, exclude: FileAttributes.Directory))
+			{
+				// Filter out files that aren't ldr script
+				var temp_script_pattern = $@"^{UITag.Script}[-].*\.ldr$";
+				if (!Regex.IsMatch(file.FullName, temp_script_pattern))
+					continue;
+
 				yield return file;
+			}
 		}
 
 		/// <summary>Return a collection of scenes to add objects to</summary>

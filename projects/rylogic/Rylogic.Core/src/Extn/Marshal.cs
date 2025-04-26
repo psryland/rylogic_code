@@ -173,6 +173,30 @@ namespace Rylogic.Common
 			return PtrToStringUTF8(ptr, len);
 		}
 
+		/// <summary>Interpret an (unmanaged) utf16 string pointer to a C# string</summary>
+		public static string PtrToStringUTF16(IntPtr ptr, int length)
+		{
+			if (ptr == IntPtr.Zero)
+				return null!;
+
+			#if NETCOREAPP3_1_OR_GREATER
+			return Marshal.PtrToStringUni(ptr, length);
+			#else
+			var bytes = new byte[2 * length];
+			Marshal.Copy(ptr, bytes, 0, length);
+			return Encoding.Unicode.GetString(bytes);
+			#endif
+		}
+		public static string PtrToStringUTF16(IntPtr ptr)
+		{
+			if (ptr == IntPtr.Zero)
+				return null!;
+
+			// Read up to the null character
+			int len = 0;  for (; Marshal.ReadInt16(ptr, len) != 0; ++len) { }
+			return PtrToStringUTF16(ptr, len);
+		}
+
 		/// <summary>Inverse of PtrToStringUTF8</summary>
 		public static PinnedObject<byte[]> StringToPtrUTF8(string str)
 		{

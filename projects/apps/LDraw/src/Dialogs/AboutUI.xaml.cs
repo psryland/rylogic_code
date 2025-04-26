@@ -18,13 +18,13 @@ namespace LDraw.Dialogs
 			DataContext = this;
 
 			var anim = $"*Animation {{ *Style PlayContinuous *Period {{1}} *AngVelocity {{ 1 1 1 }} }}";
-			var id = m_view.View3d.LoadScriptFromString(
+			var src = m_view.View3d.LoadScriptFromString(
 				$"*Sphere s FF0000FF {{ 0.6 }}\n" +
 				$"*Box b0 FFFF0000 {{ 1.003 {anim} }}\n" +
 				$"*Box b1 FF00FF00 {{ 1.002 {anim} }}\n" +
 				$"*Box b2 FF0000FF {{ 1.001 {anim} }}\n");
 
-			m_view.Window.AddObjects(id);
+			m_view.Window.AddObjects(src.ContextId);
 			m_view.Window.SetLightSource(v4.Origin, new v4(-1, -1, -2, 0), true);
 			m_view.Camera.SetPosition(new v4(2, 2, 2, 1));
 			Closed += delegate

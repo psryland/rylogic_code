@@ -57,7 +57,7 @@ namespace LDraw
 		private void HandleLogEntryDoubleClick(object? sender, LogControl.LogEntryDoubleClickEventArgs e)
 		{
 			// Find the script associated with the file, bring it into view, and scroll to the associated line
-			var script = Model.Scripts.FirstOrDefault(x => Path_.Compare(e.Entry.File, x.Filepath) == 0);
+			var script = Model.Scripts.FirstOrDefault(x => Path_.Compare(e.Entry.File, x.FilePath) == 0);
 			if (script == null)
 				return;
 

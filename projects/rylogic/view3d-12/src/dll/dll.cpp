@@ -221,6 +221,17 @@ VIEW3D_API void __stdcall View3D_EnumSources(view3d::EnumGuidsCB enum_guids_cb, 
 	CatchAndReport(View3D_EnumSources,, );
 }
 
+// Delete all objects and remove the source associated with 'context_id'
+VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().DeleteAllObjectsById({ &context_id, 1 }, {});
+	}
+	CatchAndReport(View3D_SourceDelete, , );
+}
+
 // Get information about a source
 VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id)
 {
@@ -230,6 +241,37 @@ VIEW3D_API view3d::SourceInfo __stdcall View3D_SourceInfo(GUID const& context_id
 		return Dll().SourceInfo(context_id);
 	}
 	CatchAndReport(View3D_SourceInfo, , {});
+}
+
+// Get/Set the name of a source
+VIEW3D_API BSTR View3D_SourceNameGetBStr(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		auto const& src_name = Dll().SourceName(context_id);
+		auto name = Widen(src_name);
+		return ::SysAllocStringLen(name.c_str(), UINT(name.size()));
+	}
+	CatchAndReport(View3D_SourceNameGetBStr, , {});
+}
+VIEW3D_API char const* __stdcall View3D_SourceNameGet(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().SourceName(context_id).c_str();
+	}
+	CatchAndReport(View3D_SourceNameGet, , {});
+}
+VIEW3D_API void __stdcall View3D_SourceNameSet(GUID const& context_id, char const* name)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().SourceName(context_id, name);
+	}
+	CatchAndReport(View3D_SourceNameSet,,);
 }
 
 // Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
@@ -341,6 +383,16 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(view3d::Window window, view3d:
 }
 
 // Get/Set the window settings (as ldr script string)
+VIEW3D_API BSTR __stdcall View3D_WindowSettingsGetBStr(pr::view3d::Window window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		auto settings = Widen(window->Settings());
+		return ::SysAllocStringLen(settings.c_str(), UINT(settings.size()));
+	}
+	CatchAndReport(View3D_WindowSettingsGetBStr, , {});
+}
 VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(view3d::Window window)
 {
 	try

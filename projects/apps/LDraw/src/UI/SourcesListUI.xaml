@@ -18,6 +18,11 @@
 				Header="Add Source..."
 				Command="{Binding AddSource}"
 			/>
+			<MenuItem
+				Header="Edit..."
+				Command="{Binding OpenInEditor}"
+				IsEnabled="{Binding OpenInEditor.Available}"
+			/>
 		</ContextMenu>
 	</UserControl.Resources>
 	<ListBox

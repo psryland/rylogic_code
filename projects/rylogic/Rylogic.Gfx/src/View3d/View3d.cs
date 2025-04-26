@@ -1019,6 +1019,9 @@ namespace Rylogic.Gfx
 			/// <summary>Friendly name for the source</summary>
 			public string Name;
 
+			/// <summary>The filepath associated with the source</summary>
+			public string? FilePath;
+
 			/// <summary>Context id for the source</summary>
 			public Guid ContextId;
 
@@ -1028,6 +1031,7 @@ namespace Rylogic.Gfx
 			internal SourceInfo(Interop interop)
 			{
 				Name = Marshal_.PtrToStringUTF8(interop.m_name);
+				FilePath = Marshal_.PtrToStringUTF16(interop.m_filepath);
 				ContextId = interop.m_context_id;
 				ObjectCount = interop.m_object_count;
 			}
@@ -1035,7 +1039,8 @@ namespace Rylogic.Gfx
 			[StructLayout(LayoutKind.Sequential)]
 			internal struct Interop
 			{
-				public IntPtr m_name;
+				public IntPtr m_name; // char*
+				public IntPtr m_filepath; // wchar_t*
 				public Guid m_context_id;
 				public int m_object_count;
 			}
@@ -1249,7 +1254,7 @@ namespace Rylogic.Gfx
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScriptFromString(string ldr_script, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
+		public Source LoadScriptFromString(string ldr_script, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
 		{
 			// Note: this method is asynchronous, it returns before objects have been added to the object manager
 			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
@@ -1257,14 +1262,15 @@ namespace Rylogic.Gfx
 			if (add_completed != null) m_load_script_handlers.Add(add_completed);
 			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
 			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
-			return View3D_LoadScriptFromString(ldr_script, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
+			ctx = View3D_LoadScriptFromString(ldr_script, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
+			return new Source(ctx);
 		}
 
 		/// <summary>
 		/// Add objects from an ldr file. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScriptFromFile(string ldr_script_file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
+		public Source LoadScriptFromFile(string ldr_script_file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? add_completed = null)
 		{
 			// Note: this method is asynchronous, it returns before objects have been added to the store in view3d.
 			// The 'add_completed' callback should be used to add objects to windows once they are available.
@@ -1272,7 +1278,8 @@ namespace Rylogic.Gfx
 			if (add_completed != null) m_load_script_handlers.Add(add_completed);
 			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
 			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
-			return View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
+			ctx = View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
+			return new Source(ctx);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1319,13 +1326,13 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Enumerate the sources in the store</summary>
-		public void EnumSources(Action<Guid> cb)
+		public void EnumSources(Action<Source> cb)
 		{
-			EnumSources(guid => { cb(guid); return true; });
+			EnumSources(src => { cb(src); return true; });
 		}
-		public void EnumSources(Func<Guid, bool> cb)
+		public void EnumSources(Func<Source, bool> cb)
 		{
-			EnumGuidsCB enum_cb = (IntPtr ctx, ref Guid guid) => cb(guid);
+			EnumGuidsCB enum_cb = (IntPtr ctx, ref Guid guid) => cb(new Source(guid));
 			View3D_EnumSources(enum_cb, IntPtr.Zero);
 		}
 
@@ -1406,8 +1413,15 @@ namespace Rylogic.Gfx
 		// Enumerate all sources in the store
 		[DllImport(Dll)] private static extern void View3D_EnumSources(EnumGuidsCB enum_guids_cb, IntPtr ctx);
 
+		// Delete all objects and remove the source associated with 'context_id'
+		[DllImport(Dll)] private static extern void View3D_SourceDelete(ref Guid context_id);
+
 		// Get information about a source
 		[DllImport(Dll)] private static extern SourceInfo.Interop View3D_SourceInfo(ref Guid context_id);
+
+		// Get/Set the name of a source
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_SourceNameGetBStr(ref Guid context_id);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_SourceNameSet(ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string name);
 
 		// Reload script sources. This will delete all objects associated with the script sources then reload the files creating new objects with the same context ids.
 		[DllImport(Dll)] private static extern void View3D_ReloadScriptSources();
@@ -1425,8 +1439,8 @@ namespace Rylogic.Gfx
 		[DllImport(Dll)] private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
 
 		// Get/Set the window settings (as ldr script string)
-		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_WindowSettingsGet(HWindow window);
-		[DllImport(Dll)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPStr)] string settings);
+		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_WindowSettingsGetBStr(HWindow window);
+		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPStr)] string settings);
 
 		// Get/Set the dimensions of the render target. Note: Not equal to window size for non-96 dpi screens!
 		// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
@@ -1696,12 +1710,10 @@ namespace Rylogic.Gfx
 
 		// Get/Set the name of 'object'
 		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ObjectNameGetBStr(HObject obj);
-		[DllImport(Dll)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_ObjectNameGet(HObject obj);
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern void View3D_ObjectNameSet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
 
 		// Get the type of 'object'
 		[DllImport(Dll, CharSet = CharSet.Unicode)][return: MarshalAs(UnmanagedType.BStr)] private static extern string View3D_ObjectTypeGetBStr(HObject obj);
-		[DllImport(Dll, CharSet = CharSet.Ansi)][return: MarshalAs(UnmanagedType.LPStr)] private static extern string View3D_ObjectTypeGet(HObject obj);
 
 		// Get/Set the current or base colour of an object(the first object to match 'name') (See LdrObject::Apply)
 		[DllImport(Dll, CharSet = CharSet.Ansi)] private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, [MarshalAs(UnmanagedType.LPStr)] string? name);

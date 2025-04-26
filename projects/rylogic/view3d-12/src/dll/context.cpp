@@ -9,6 +9,8 @@
 #include "pr/view3d-12/ldraw/ldraw_serialiser_text.h"
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "view3d-12/src/ldraw/sources/source_base.h"
+#include "view3d-12/src/ldraw/sources/source_file.h"
 #include "view3d-12/src/dll/context.h"
 #include "view3d-12/src/dll/v3d_window.h"
 
@@ -496,17 +498,35 @@ namespace pr::rdr12
 	// Return details about a source
 	view3d::SourceInfo Context::SourceInfo(Guid const& context_id)
 	{
-		auto srcs = m_sources.Sources();
-		auto iter = srcs.find(context_id);
-		if (iter == std::end(srcs))
+		auto* src = FindSource(context_id);
+		if (src == nullptr)
 			return {};
 
-		auto const& src = *iter->second;
+		auto filepath = (wchar_t const*)nullptr;
+		if (auto const* file_src = dynamic_cast<ldraw::SourceFile const*>(src))
+			filepath = file_src->m_filepath.c_str();
+
 		return view3d::SourceInfo {
-			.m_name = src.m_name.c_str(),
+			.m_name = src->m_name.c_str(),
+			.m_filepath = filepath,
 			.m_context_id = context_id,
-			.m_object_count = isize(src.m_output.m_objects)
+			.m_object_count = isize(src->m_output.m_objects)
 		};
+	}
+
+	// Get/Set the name of a source
+	string32 const& Context::SourceName(Guid const& context_id)
+	{
+		if (auto* src = FindSource(context_id))
+			return src->m_name;
+
+		static string32 const null_name = {};
+		return null_name;
+	}
+	void Context::SourceName(Guid const& context_id, std::string_view name)
+	{
+		if (auto* src = FindSource(context_id))
+			src->m_name = name;
 	}
 
 	// Create a gizmo object and add it to the gizmo collection
@@ -536,6 +556,20 @@ namespace pr::rdr12
 	void Context::CheckForChangedSources()
 	{
 		m_sources.RefreshChangedFiles();
+	}
+
+	// Find the source associated with a context id
+	ldraw::SourceBase const* Context::FindSource(Guid const& context_id) const
+	{
+		auto const& srcs = m_sources.Sources();
+		auto iter = srcs.find(context_id);
+		return iter != std::end(srcs) ? iter->second.get() : nullptr;
+	}
+	ldraw::SourceBase* Context::FindSource(Guid const& context_id)
+	{
+		auto& srcs = m_sources.Sources();
+		auto iter = srcs.find(context_id);
+		return iter != std::end(srcs) ? iter->second.get() : nullptr;
 	}
 
 	// Parse error event.

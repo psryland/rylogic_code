@@ -24,6 +24,7 @@ namespace LDraw.UI
 			Sources = new ListCollectionView(new List<SourceItemUI>());
 
 			AddSource = Command.Create(this, AddSourceInternal);
+			OpenInEditor = Command.Create(this, OpenInEditorInternal, OpenInEditorAvailable);
 			DataContext = this;
 		}
 		public void Dispose()
@@ -68,6 +69,7 @@ namespace LDraw.UI
 					var source_list = (List<SourceItemUI>)Sources.SourceCollection;
 					source_list.SyncStable(Model.Sources, (l,r) => l.ContextId == r.Source.ContextId, (s,i) => new SourceItemUI(s));
 					NotifyPropertyChanged(nameof(Sources));
+					Sources.Refresh();
 				}
 			}
 		}
@@ -77,7 +79,7 @@ namespace LDraw.UI
 		public ICollectionView Sources { get; }
 
 		/// <summary></summary>
-		public Command AddSource{ get; }
+		public Command AddSource { get; }
 		private void AddSourceInternal()
 		{
 			try
@@ -87,6 +89,24 @@ namespace LDraw.UI
 			{
 			}
 			//LoadFile();
+		}
+
+		/// <summary>Open the selected source in an editor (if possible)</summary>
+		public Command OpenInEditor { get; }
+		private bool OpenInEditorAvailable()
+		{
+			return
+				Sources.CurrentItem is SourceItemUI item &&
+				item.CanEdit();
+		}
+		private void OpenInEditorInternal()
+		{
+			try
+			{
+			}
+			catch (Exception)
+			{
+			}
 		}
 
 		/// <inheritdoc/>

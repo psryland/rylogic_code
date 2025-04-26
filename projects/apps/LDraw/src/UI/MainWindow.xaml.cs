@@ -49,7 +49,6 @@ namespace LDraw
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			Model.CleanTemporaryScripts();
 			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
 			m_dc.Dispose();
 			Model = null!;
@@ -78,14 +77,6 @@ namespace LDraw
 				// Add each file as a source
 				foreach (var file in files)
 					AddFileSource(file, scenes);
-
-				//// Open each dropped file
-				//foreach (var file in files)
-				//{
-				//	var script = OpenFileCore(file, scenes);
-				//	if (script != null)
-				//		script.Render.Execute();
-				//}
 
 				e.Handled = true;
 			}
@@ -229,18 +220,6 @@ namespace LDraw
 			// Set options
 			m_dc.Options.AlwaysShowTabs = true;
 
-			// Load temporary scripts
-			foreach (var file in Model.TemporaryScripts())
-			{
-				// Ignore files with unrecognised names
-				if (!Model.IsTempScriptFilepath(file.FullName))
-					continue;
-
-				var context_id = Model.TempScriptFilepathToGuid(file.FullName);
-				var script = Model.Scripts.Add2(new ScriptUI(Model, Model.GenerateScriptName(), file.FullName, context_id));
-				m_dc.Add(script, EDockSite.Left);
-			}
-
 			// Add a log window
 			var log = new LogUI(Model);
 			m_dc.Add(log, EDockSite.Right).IsAutoHide = true;
@@ -279,42 +258,8 @@ namespace LDraw
 			Model.Settings.UILayout = m_dc.SaveLayout();
 		}
 
-		/// <summary>Add a new file to the sources collection</summary>
-		//private void AddSourceCore(string? filepath = null, IList<SceneUI>? scenes = null)
-		//{
-		//	try
-		//	{
-		//		// Prompt for a filepath if none provided
-		//		if (filepath == null || filepath.Length == 0)
-		//		{
-		//			var dlg = new OpenFileDialog { Title = "Open an Ldraw Script file", Filter = Model.SupportedFilesFilter };
-		//			if (dlg.ShowDialog(App.Current.MainWindow) != true)
-		//				return;
-					
-		//			filepath = dlg.FileName ?? throw new FileNotFoundException($"A invalid filepath was selected");
-		//		}
-
-		//		// If the file doesn't exist reject it
-		//		if (!Path_.FileExists(filepath))
-		//			throw new FileNotFoundException($"File '{filepath}' does not exist");
-
-		//		// Notify
-		//		Model.NotifyFileOpening(filepath);
-
-		//		// Create a UI element for the source
-		//		var name = Path_.FileName(filepath);
-		//		var source = new SourceItemUI(Model, name, filepath, Guid.NewGuid());
-		//		Model.Sources.Add(source);
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		Log.Write(ELogLevel.Info, ex, "File open failed.", filepath ?? string.Empty, 0);
-		//		MsgBox.Show(this, $"File open failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
-		//	}
-		//}
-
 		/// <summary>Add a file source</summary>
-		private void AddFileSource(string? filepath = null, IList<SceneUI>? scenes = null)
+		private Source? AddFileSource(string? filepath, IList<SceneUI>? scenes = null)
 		{
 			try
 			{
@@ -323,7 +268,7 @@ namespace LDraw
 				{
 					var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Model.SupportedFilesFilter };
 					if (dlg.ShowDialog(App.Current.MainWindow) != true)
-						return;
+						return null;
 					
 					filepath = dlg.FileName ?? throw new FileNotFoundException($"A invalid filepath was selected");
 				}
@@ -332,12 +277,14 @@ namespace LDraw
 				if (!Path_.FileExists(filepath))
 					throw new FileNotFoundException($"File '{filepath}' does not exist");
 
-				Model.AddFileSource(filepath);
+				// Add the file as a new source
+				return Model.AddFileSource(filepath);
 			}
 			catch (Exception ex)
 			{
 				Log.Write(ELogLevel.Info, ex, "Add file failed.", filepath ?? string.Empty, 0);
 				MsgBox.Show(this, $"Add file failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+				return null;
 			}
 		}
 
@@ -345,32 +292,55 @@ namespace LDraw
 		public Command NewScript { get; }
 		private void NewScriptInternal()
 		{
-			var name = Model.GenerateScriptName();
-			var filepath = Model.GenerateTempScriptFilepath(out var context_id);
-			var script = Model.Scripts.Add2(new ScriptUI(Model, name, filepath, context_id));
-			m_dc.Add(script, EDockSite.Left).IsFloating = true;
+			try
+			{
+				// Create a new script file
+				var filepath = Model.CreateNewScriptFile();
+				var src = AddFileSource(filepath) ?? throw new Exception("Failed to an empty script file");
+
+				// Open it in an editor
+				var ui = Model.OpenInEditor(src) ?? throw new Exception("Failed to open the editor for the new script file");
+
+				// Display the editor
+				m_dc.Add(ui, EDockSite.Left).IsFloating = true;
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Create new script failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Create new script failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
 		}
 
 		/// <summary>Add a new Scene to the view</summary>
 		public Command NewScene { get; }
 		private void NewSceneInternal()
 		{
-			var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
-			m_dc.Add(scene, EDockSite.Centre);
+			try
+			{
+				var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
+				m_dc.Add(scene, EDockSite.Centre);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Create new scene failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Create new scene failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
 		}
 
 		/// <summary>Open a file</summary>
 		public Command OpenFile { get; }
 		private void OpenFileInternal()
 		{
-			AddFileSource();
+			AddFileSource(null);
 		}
 
 		/// <summary>Save the currently focused script</summary>
 		public Command SaveFile { get; }
 		private void SaveFileInternal()
 		{
-			if (m_dc.ActiveDockable is not ScriptUI script) return;
+			if (m_dc.ActiveDockable is not ScriptUI script)
+				return;
+
 			script.SaveFile();
 		}
 
@@ -378,7 +348,9 @@ namespace LDraw
 		public Command SaveFileAs { get; }
 		private void SaveFileAsInternal()
 		{
-			if (m_dc.ActiveDockable is not ScriptUI script) return;
+			if (m_dc.ActiveDockable is not ScriptUI script)
+				return;
+
 			script.SaveFile(null);
 		}
 

@@ -46,10 +46,21 @@ namespace LDraw.UI
 			get => (IList<SceneUI>)GetValue(SelectedScenesProperty) ?? [];
 			set => SetValue(SelectedScenesProperty, value);
 		}
-		private void SelectedScenes_Changed()
+		private void SelectedScenes_Changed(IList<SceneUI> nue, IList<SceneUI> old)
 		{
-			SelectedScenes ??= [];
+			if (old is INotifyCollectionChanged old_ncc)
+				old_ncc.CollectionChanged -= HandleCollectionChanged;
+			if (nue is INotifyCollectionChanged nue_ncc)
+				nue_ncc.CollectionChanged += HandleCollectionChanged;
+
+			HandleCollectionChanged(null, default!);
 			NotifyPropertyChanged(nameof(SelectedScenes));
+
+			void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+			{
+				SelectableScenesView.Refresh();
+				NotifyPropertyChanged(nameof(SelectedScenesDescription));
+			}
 		}
 		public static readonly DependencyProperty SelectedScenesProperty = Gui_.DPRegister<SceneSelectorUI>(nameof(SelectedScenes), null, Gui_.EDPFlags.None);
 
@@ -61,14 +72,14 @@ namespace LDraw.UI
 		}
 		private void AvailableScenes_Changed(IReadOnlyList<SceneUI> nue, IReadOnlyList<SceneUI> old)
 		{
-			if (old is INotifyCollectionChanged ncc_old)
-			{
-				ncc_old.CollectionChanged -= HandleCollectionChanged;
-			}
-			if (nue is INotifyCollectionChanged ncc_nue)
-			{
-				ncc_nue.CollectionChanged += HandleCollectionChanged;
-			}
+			if (old is INotifyCollectionChanged old_ncc)
+				old_ncc.CollectionChanged -= HandleCollectionChanged;
+			if (nue is INotifyCollectionChanged nue_ncc)
+				nue_ncc.CollectionChanged += HandleCollectionChanged;
+
+			HandleCollectionChanged(null, default!);
+			NotifyPropertyChanged(nameof(AvailableScenes));
+
 			void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 			{
 				if (AvailableScenes is not null)
@@ -79,8 +90,6 @@ namespace LDraw.UI
 				}
 				NotifyPropertyChanged(nameof(SelectedScenesDescription));
 			}
-			HandleCollectionChanged(null, default!);
-			NotifyPropertyChanged(nameof(AvailableScenes));
 		}
 		public static readonly DependencyProperty AvailableScenesProperty = Gui_.DPRegister<SceneSelectorUI>(nameof(AvailableScenes), null, Gui_.EDPFlags.None);
 		

@@ -16,6 +16,7 @@
 		ToolBar.OverflowMode="Never"
 	>
 		<ToggleButton
+			x:Name="m_btn_toggle_scene_select"
 			DockPanel.Dock="Right"
 			VerticalAlignment="Center"
 			BorderThickness="0"
@@ -23,23 +24,23 @@
 			Foreground="Gray"
 			MinWidth="16"
 			Content="▼"
-			x:Name="m_btn_toggle_scene_select"
 		/>
 		<TextBlock
+			x:Name="m_tb_selected_scenes"
 			Text="{Binding SelectedScenesDescription}"
 			VerticalAlignment="Center"
 			Background="White"
-			MinWidth="80"
+			MinWidth="60"
+			MaxWidth="100"
 			Margin="3"
-			x:Name="m_tb_selected_scenes"
 		/>
 		<Popup
+			x:Name="m_popup_scene_list"
 			Placement="Bottom"
 			PlacementTarget="{Binding ElementName=m_tb_selected_scenes}"
 			IsOpen="{Binding IsChecked, ElementName=m_btn_toggle_scene_select}"
 			StaysOpen="False"
 			PopupAnimation="Fade"
-			x:Name="m_popup_scene_list"
 		>
 			<ListBox
 				ItemsSource="{Binding SelectableScenesView}"

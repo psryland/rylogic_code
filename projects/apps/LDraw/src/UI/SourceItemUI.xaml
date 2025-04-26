@@ -12,49 +12,38 @@
 	Background="BlanchedAlmond"
 	VerticalAlignment="Top"
 >
-	<WrapPanel
-		Orientation="Horizontal"
-		Margin="0"
-	>
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+		
 		<!-- Source Name -->
-		<TextBox
+		<TextBlock
+			Grid.Column="0"
 			Text="{Binding Source.Name, Mode=OneWay}"
 			ToolTip="{Binding Filepath}"
 			VerticalAlignment="Center"
-			BorderBrush="#DDD"
-			BorderThickness="0"
-			Background="White"
-			IsReadOnly="True"
+			HorizontalAlignment="Stretch"
+			Background="Transparent"
 			Padding="2"
 			Margin="3"
 		/>
 
 		<!-- Show in Scenes -->
 		<local:SceneSelectorUI
+			Grid.Column="1"
 			AvailableScenes="{Binding Source.AvailableScenes}"
 			SelectedScenes="{Binding Source.SelectedScenes}"
 		/>
 
-		<!-- Render Button -->
-		<Button
-			ToolTip="Display this script in the selected scene. [F5]"
-			Command="{Binding Render}"
-			IsEnabled="{Binding Context.CanRender}"
-			VerticalAlignment="Center"
-			Background="Transparent"
-			BorderThickness="0"
-		>
-			<Image
-				Source="{StaticResource display}"
-				RenderOptions.BitmapScalingMode="HighQuality"
-				MaxHeight="28"
-			/>
-		</Button>
-
 		<!-- Remove script from scene -->
 		<Button
-			ToolTip="Remove script objects from the selected scene. [Ctrl+D]"
-			Command="{Binding RemoveObjects}"
+			Grid.Column="3"
+			ToolTip="Remove this source. [Ctrl+D]"
+			Command="{Binding RemoveSource}"
 			IsEnabled="{Binding Context.CanRender}"
 			VerticalAlignment="Center"
 			Background="Transparent"
@@ -63,9 +52,9 @@
 			<Image
 				Source="{StaticResource bin}"
 				RenderOptions.BitmapScalingMode="HighQuality"
-				MaxHeight="28"
+				MaxHeight="22"
 			/>
 		</Button>
 
-	</WrapPanel>
+	</Grid>
 </UserControl>

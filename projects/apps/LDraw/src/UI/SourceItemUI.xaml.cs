@@ -1,18 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Rylogic.Gui.WPF;
+using Rylogic.Utility;
 
 namespace LDraw.UI
 {
@@ -22,6 +13,8 @@ namespace LDraw.UI
 		{
 			InitializeComponent();
 			Source = source;
+
+			RemoveSource = Command.Create(this, RemoveSourceInternal);
 			DataContext = this;
 		}
 		public void Dispose()
@@ -42,6 +35,23 @@ namespace LDraw.UI
 
 		/// <summary>App logic</summary>
 		//todo private Model Model => Context.Model;
+
+		public bool CanEdit() => false; //todo: needs an associated text file
+
+		/// <summary>Remove this source from the Model</summary>
+		public Command RemoveSource { get; }
+		private void RemoveSourceInternal()
+		{
+			try
+			{
+				Source.Remove();
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Error removing source", string.Empty, 0);
+				MsgBox.Show(Window.GetWindow(this), $"Error removing source.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
+		}
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

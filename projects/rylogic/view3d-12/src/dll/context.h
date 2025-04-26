@@ -102,6 +102,10 @@ namespace pr::rdr12
 		// Return details about a source
 		view3d::SourceInfo SourceInfo(Guid const& context_id);
 
+		// Get/Set the name of a source
+		string32 const& SourceName(Guid const& context_id);
+		void SourceName(Guid const& context_id, std::string_view name);
+
 		// Create a gizmo object and add it to the gizmo collection
 		ldraw::LdrGizmo* GizmoCreate(ldraw::EGizmoMode mode, m4x4 const& o2w);
 
@@ -114,7 +118,11 @@ namespace pr::rdr12
 		// Poll for changed script source files, and reload any that have changed
 		void CheckForChangedSources();
 
-protected:
+	protected:
+
+		// Find the source associated with a context id
+		ldraw::SourceBase const* FindSource(Guid const& context_id) const;
+		ldraw::SourceBase* FindSource(Guid const& context_id);
 
 		// Parse error event.
 		void OnError(ldraw::ParseErrorEventArgs const&) override;
