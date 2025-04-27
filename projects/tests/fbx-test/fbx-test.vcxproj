@@ -54,6 +54,7 @@
       ;%(AdditionalIncludeDirectories)
     </AdditionalIncludeDirectories>
     <PreprocessorDefinitions>
+      ;FBXSDK_SHARED
       ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
       ;%(PreprocessorDefinitions)
     </PreprocessorDefinitions>
@@ -61,7 +62,7 @@
   <Link>
     <SubSystem>Console</SubSystem>
     <AdditionalLibraryDirectories>
-        ;$(SDKPath)fbx/fbx/lib/x64/$(Configuration)/
+        ;$(SDKPath)fbx/fbx/lib/$(Platform)/$(Configuration)/
         ;%(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
     <AdditionalDependencies>
@@ -71,7 +72,7 @@
         ;%(AdditionalDependencies)
       </AdditionalDependencies>
     <DelayLoadDLLs>
-      ;libfbxsdk.dll
+      ;%(DelayLoadDLLs)
     </DelayLoadDLLs>
   </Link>
   </ItemDefinitionGroup>
@@ -79,18 +80,18 @@
   Files
   -->
   <ItemGroup>
-  <ClCompile Include="src\fbx.cpp" />
-  <ClCompile Include="src\main.cpp" />
+    <ClInclude Include="src\fbx.h" />
+    <ClCompile Include="src\fbx.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-  <DependencyLink Include="$(SDKPath)fbx\fbx\lib\x64\$(Configuration)\libfbxsdk.dll" />
-  </ItemGroup>
-  <ItemGroup>
-  <ClInclude Include="src\fbx.h" />
+    <DependencyLink
+      Include="$(SDKPath)fbx\fbx\lib\$(Platform)\$(Configuration)\libfbxsdk.dll"
+      OutDir="$(OutDir)"
+    />
   </ItemGroup>
   <!--
   Targets
   -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="$(TargetsPath)WinPixEventRuntime.targets" />
 </Project>

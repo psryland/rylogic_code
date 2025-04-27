@@ -49,7 +49,7 @@ namespace pr::win32
 		// ReplaceFile
 		static bool FileReplace(char const* replacee, char const* replacer)
 		{
-			return ::ReplaceFileA(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
+			return ::ReplaceFileA(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH | REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
 		}
 
 		// GetWindowTextLength
@@ -77,7 +77,7 @@ namespace pr::win32
 		// ReplaceFile
 		static bool FileReplace(wchar_t const* replacee, wchar_t const* replacer)
 		{
-			return ::ReplaceFileW(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
+			return ::ReplaceFileW(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH | REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0;
 		}
 
 		// GetWindowTextLength
@@ -109,10 +109,12 @@ namespace pr::win32
 
 		Handle() noexcept
 			:m_handle(nullptr)
-		{}
+		{
+		}
 		Handle(HANDLE h) noexcept
 			:m_handle(h)
-		{}
+		{
+		}
 		operator HANDLE() const noexcept
 		{
 			return m_handle.get();
@@ -183,7 +185,7 @@ namespace pr::win32
 	inline Handle FileOpen(std::filesystem::path const& filepath, DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwCreationDisposition, DWORD dwAttributes = FILE_ATTRIBUTE_NORMAL, DWORD dwFlags = 0)
 	{
 		// Note: don't throw on errors in this function. Leave that to the caller
-			
+
 		// Use LoadLibrary if you want to use CreateFile2 as it doesn't exist on Win7
 		//#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 		//CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {sizeof(CREATEFILE2_EXTENDED_PARAMETERS)};
@@ -225,7 +227,7 @@ namespace pr::win32
 	inline HMODULE GetCurrentModule()
 	{
 		static_assert(_WIN32_WINNT >= _WIN32_WINNT_WINXP, "XP and above only");
-		return Win32<wchar_t>::ModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)GetCurrentModule);
+		return Win32<wchar_t>::ModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)GetCurrentModule);
 	}
 
 	// Return the window text for a window (sends WM_GETTEXTLENGTH and WM_GETTEXT)
@@ -279,15 +281,15 @@ namespace pr::win32
 		using namespace std::filesystem;
 
 		// Determine the directory we're running in
-		auto module_path       = ModuleFileName();
-		auto module_dir        = module_path.parent_path();
-		auto module_ftitle     = module_path.stem();
+		auto module_path = ModuleFileName();
+		auto module_dir = module_path.parent_path();
+		auto module_ftitle = module_path.stem();
 		auto settings_filename = module_ftitle.replace_extension(L".cfg");
 
 		// Does the file 'portable' exist? If so, return a filepath in the same dir as the module
 		if (portable || exists(module_dir / L"portable"))
 			return module_dir / settings_filename; // turn .\path\module.exe into .\path\module.cfg for settings
-		
+
 		// Otherwise, return a filepath in the local app data for the current user
 		path local_app_data;
 		if (Succeeded(FolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, local_app_data)))
@@ -296,7 +298,7 @@ namespace pr::win32
 			else                local_app_data = local_app_data / subdir;
 			return local_app_data / settings_filename;
 		}
-		
+
 		// Return a filepath in the local directory
 		return module_path / settings_filename;
 	}
@@ -308,7 +310,7 @@ namespace pr::win32
 		struct Data
 		{
 			HWND                    m_hwnd;
-			Char const*             m_title;
+			Char const* m_title;
 			size_t                  m_title_len;
 			bool                    m_partial;
 			std::basic_string<Char> m_name;
@@ -330,7 +332,7 @@ namespace pr::win32
 				return false;
 			}
 		};
-		Data data = {0, title, char_traits<Char>::length(title), partial};
+		Data data = { 0, title, char_traits<Char>::length(title), partial };
 		EnumWindows(CallBacks::EnumWindowsProc, (LPARAM)&data);
 		return data.m_hwnd;
 	}
@@ -360,18 +362,18 @@ namespace pr::win32
 			L"";
 
 		// NDEBUG is unreliable. Seems it's not always defined in release
-		#if defined(_DEBUG) || defined(DEBUG)
+#if defined(_DEBUG) || defined(DEBUG)
 		constexpr wchar_t const* config = L"debug";
-		#else
+#else
 		constexpr wchar_t const* config = L"release";
-		#endif
+#endif
 
 		std::string searched;
 
 		// Try the lib folder. Load the appropriate dll for the platform
 		impl::replace(dir, L"$(platform)", platform);
 		impl::replace(dir, L"$(config)", config);
-			
+
 		auto exe_dir = ExeDir();
 		struct PushSearchPaths
 		{
@@ -403,7 +405,7 @@ namespace pr::win32
 		auto dllpath = exe_dir / dir / dllname;
 		if (exists(dllpath))
 		{
-			PushSearchPaths users_dirs{dllpath};
+			PushSearchPaths users_dirs{ dllpath };
 			library = ::LoadLibraryW(dllpath.c_str());
 			if (library != nullptr)
 				return library;
@@ -417,7 +419,7 @@ namespace pr::win32
 		dllpath = exe_dir / dllname;
 		if (exists(dllpath))
 		{
-			PushSearchPaths users_dirs{dllpath};
+			PushSearchPaths users_dirs{ dllpath };
 			library = ::LoadLibraryW(dllpath.c_str());
 			if (library != nullptr)
 				return library;

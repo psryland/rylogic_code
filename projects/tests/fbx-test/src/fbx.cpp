@@ -198,30 +198,30 @@ namespace pr::fbx
 		if (m_importer->IsFBX())
 		{
 			// From this point, it is possible to access animation stack information without the expense of loading the entire file.
-			//FBXSDK_printf("Animation Stack Information\n");
+			//m_out << "Animation Stack Information\n";
 
 			//auto lAnimStackCount = m_importer->GetAnimStackCount();
 
-			//FBXSDK_printf("    Number of Animation Stacks: %d\n", lAnimStackCount);
-			//FBXSDK_printf("    Current Animation Stack: \"%s\"\n", lImporter->GetActiveAnimStackName().Buffer());
-			//FBXSDK_printf("\n");
+			//m_out << "    Number of Animation Stacks: %d\n", lAnimStackCount;
+			//m_out << "    Current Animation Stack: \"%s\"\n", lImporter->GetActiveAnimStackName().Buffer();
+			//m_out << "\n";
 
 			//for (int i = 0; i < lAnimStackCount; i++)
 			//{
 			//	FbxTakeInfo* lTakeInfo = lImporter->GetTakeInfo(i);
 
-			//	FBXSDK_printf("    Animation Stack %d\n", i);
-			//	FBXSDK_printf("         Name: \"%s\"\n", lTakeInfo->mName.Buffer());
-			//	FBXSDK_printf("         Description: \"%s\"\n", lTakeInfo->mDescription.Buffer());
+			//	m_out << "    Animation Stack %d\n", i;
+			//	m_out << "         Name: \"%s\"\n", lTakeInfo->mName.Buffer();
+			//	m_out << "         Description: \"%s\"\n", lTakeInfo->mDescription.Buffer();
 
 			//	// Change the value of the import name if the animation stack should be imported 
 			//	// under a different name.
-			//	FBXSDK_printf("         Import Name: \"%s\"\n", lTakeInfo->mImportName.Buffer());
+			//	m_out << "         Import Name: \"%s\"\n", lTakeInfo->mImportName.Buffer();
 
 			//	// Set the value of the import state to false if the animation stack should be not
 			//	// be imported. 
-			//	FBXSDK_printf("         Import State: %s\n", lTakeInfo->mSelect ? "true" : "false");
-			//	FBXSDK_printf("\n");
+			//	m_out << "         Import State: %s\n", lTakeInfo->mSelect ? "true" : "false";
+			//	m_out << "\n";
 			//}
 
 			//// Set the import states. By default, the import states are always set to 
@@ -271,23 +271,27 @@ namespace pr::fbx
 				{
 					switch (node.GetNodeAttribute()->GetAttributeType())
 					{
-#if 0
 						case FbxNodeAttribute::eMarker:
-							DisplayMarker(pNode);
+						{
+							WriteMarker(node);
 							break;
-
+						}
 						case FbxNodeAttribute::eSkeleton:
-							DisplaySkeleton(pNode);
+						{
+							WriteSkeleton(node);
 							break;
-
+						}
 						case FbxNodeAttribute::eMesh:
-							DisplayMesh(pNode);
+						{
+							WriteMesh(node);
 							break;
-
+						}
 						case FbxNodeAttribute::eNurbs:
-							DisplayNurb(pNode);
+						{
+							WriteNurb(node);
 							break;
-
+						}
+#if 0
 						case FbxNodeAttribute::ePatch:
 							DisplayPatch(pNode);
 							break;
@@ -315,15 +319,212 @@ namespace pr::fbx
 
 				// ??
 				WriteUserProperties(node);
-#if 0
-				DisplayTarget(pNode);
-				DisplayPivotsAndLimits(pNode);
-				DisplayTransformPropagation(pNode);
-				DisplayGeometricTransform(pNode);
-#endif
+				WriteTarget(node);
+				WritePivotsAndLimits(node);
+				WriteTransformPropagation(node);
+				WriteGeometricTransform(node);
+
 				// Recurse
 				for (int i = 0; i != node.GetChildCount(); ++i)
 					Write(*node.GetChild(i));
+			}
+			void WriteMarker(FbxNode const& node)
+			{
+				auto const& marker = *static_cast<FbxMarker const*>(node.GetNodeAttribute());
+
+				m_out << "Marker Name: " << node.GetName();
+				WriteMetaDataConnections(marker);
+
+				// Type
+				m_out << "    Marker Type: ";
+				switch (marker.GetType())
+				{
+					case FbxMarker::eStandard:   m_out << "Standard";    break;
+					case FbxMarker::eOptical:    m_out << "Optical";     break;
+					case FbxMarker::eEffectorIK: m_out << "IK Effector"; break;
+					case FbxMarker::eEffectorFK: m_out << "FK Effector"; break;
+				}
+
+				// Look
+				m_out << "    Marker Look: ";
+				switch (marker.Look.Get())
+				{
+					default: break;
+					case FbxMarker::eCube:        m_out << "Cube";        break;
+					case FbxMarker::eHardCross:   m_out << "Hard Cross";  break;
+					case FbxMarker::eLightCross:  m_out << "Light Cross"; break;
+					case FbxMarker::eSphere:      m_out << "Sphere";      break;
+				}
+
+				// Size
+				m_out << "    Size: " << marker.Size.Get();
+
+				// Color
+				FbxDouble3 c = marker.Color.Get();
+				FbxColor color(c[0], c[1], c[2]);
+				WriteColor("    Color: ", color);
+
+				// IKPivot
+				Write3DVector("    IKPivot: ", marker.IKPivot.Get());
+			}
+			void WriteSkeleton(FbxNode const& node)
+			{
+				auto const& lSkeleton = *static_cast<FbxSkeleton const*>(node.GetNodeAttribute());
+
+				m_out << "Skeleton Name: " << node.GetName() << "\n";
+				WriteMetaDataConnections(lSkeleton);
+
+				const char* lSkeletonTypes[] = { "Root", "Limb", "Limb Node", "Effector" };
+				m_out << "    Type: " << lSkeletonTypes[lSkeleton.GetSkeletonType()] << "\n";
+
+				switch (lSkeleton.GetSkeletonType())
+				{
+					case FbxSkeleton::eLimb:
+					{
+						WriteDouble("    Limb Length: ", lSkeleton.LimbLength.Get());
+						break;
+					}
+					case FbxSkeleton::eLimbNode:
+					{
+						WriteDouble("    Limb Node Size: ", lSkeleton.Size.Get());
+						break;
+					}
+					case FbxSkeleton::eRoot:
+					{
+						WriteDouble("    Limb Root Size: ", lSkeleton.Size.Get());
+						break;
+					}
+				}
+				WriteColor("    Color: ", lSkeleton.GetLimbNodeColor());
+			}
+			void WriteMesh(FbxNode const& node)
+			{
+				auto const& lMesh = *static_cast<FbxMesh const*>(node.GetNodeAttribute());
+
+				m_out << "Mesh Name: " << node.GetName() << "\n";
+				WriteMetaDataConnections(lMesh);
+				#if 0
+				WriteControlsPoints(lMesh);
+				WritePolygons(lMesh);
+				WriteMaterialMapping(lMesh);
+				WriteMaterial(lMesh);
+				WriteTexture(lMesh);
+				WriteMaterialConnections(lMesh);
+				WriteLink(lMesh);
+				WriteShape(lMesh);
+				WriteCache(lMesh);
+				#endif
+			}
+			void WriteNurb(FbxNode const& node)
+			{
+				auto const& lNurbs = *static_cast<FbxNurbs const*>(node.GetNodeAttribute());
+				int i;
+
+				DisplayString("Nurb Name: ", (char*)pNode->GetName());
+				DisplayMetaDataConnections(lNurbs);
+
+				const char* lSurfaceModes[] = { "Raw", "Low No Normals", "Low", "High No Normals", "High" };
+
+				DisplayString("    Surface Mode: ", lSurfaceModes[lNurbs->GetSurfaceMode()]);
+
+				int lControlPointsCount = lNurbs->GetControlPointsCount();
+				FbxVector4* lControlPoints = lNurbs->GetControlPoints();
+
+				for (i = 0; i < lControlPointsCount; i++)
+				{
+					DisplayInt("    Control Point ", i);
+					Display3DVector("        Coordinates: ", lControlPoints[i]);
+					DisplayDouble("        Weight: ", lControlPoints[i][3]);
+				}
+
+				const char* lNurbTypes[] = { "Periodic", "Closed", "Open" };
+
+				DisplayString("    Nurb U Type: ", lNurbTypes[lNurbs->GetNurbsUType()]);
+				DisplayInt("    U Count: ", lNurbs->GetUCount());
+				DisplayString("    Nurb V Type: ", lNurbTypes[lNurbs->GetNurbsVType()]);
+				DisplayInt("    V Count: ", lNurbs->GetVCount());
+				DisplayInt("    U Order: ", lNurbs->GetUOrder());
+				DisplayInt("    V Order: ", lNurbs->GetVOrder());
+				DisplayInt("    U Step: ", lNurbs->GetUStep());
+				DisplayInt("    V Step: ", lNurbs->GetVStep());
+
+				FbxString lString;
+				int lUKnotCount = lNurbs->GetUKnotCount();
+				int lVKnotCount = lNurbs->GetVKnotCount();
+				int lUMultiplicityCount = lNurbs->GetUCount();
+				int lVMultiplicityCount = lNurbs->GetVCount();
+				double* lUKnotVector = lNurbs->GetUKnotVector();
+				double* lVKnotVector = lNurbs->GetVKnotVector();
+				int* lUMultiplicityVector = lNurbs->GetUMultiplicityVector();
+				int* lVMultiplicityVector = lNurbs->GetVMultiplicityVector();
+
+				lString = "    U Knot Vector: ";
+
+				for (i = 0; i < lUKnotCount; i++)
+				{
+					lString += (float)lUKnotVector[i];
+
+					if (i < lUKnotCount - 1)
+					{
+						lString += ", ";
+					}
+				}
+
+				lString += "\n";
+				FBXSDK_printf(lString);
+
+				lString = "    V Knot Vector: ";
+
+				for (i = 0; i < lVKnotCount; i++)
+				{
+					lString += (float)lVKnotVector[i];
+
+					if (i < lVKnotCount - 1)
+					{
+						lString += ", ";
+					}
+				}
+
+				lString += "\n";
+				FBXSDK_printf(lString);
+
+				lString = "    U Multiplicity Vector: ";
+
+				for (i = 0; i < lUMultiplicityCount; i++)
+				{
+					lString += lUMultiplicityVector[i];
+
+					if (i < lUMultiplicityCount - 1)
+					{
+						lString += ", ";
+					}
+				}
+
+				lString += "\n";
+				FBXSDK_printf(lString);
+
+				lString = "    V Multiplicity Vector: ";
+
+				for (i = 0; i < lVMultiplicityCount; i++)
+				{
+					lString += lVMultiplicityVector[i];
+
+					if (i < lVMultiplicityCount - 1)
+					{
+						lString += ", ";
+					}
+				}
+
+				lString += "\n";
+				FBXSDK_printf(lString);
+
+				DisplayString("");
+
+				DisplayTexture(lNurbs);
+				DisplayMaterial(lNurbs);
+				DisplayLink(lNurbs);
+				DisplayShape(lNurbs);
+				DisplayCache(lNurbs);
 			}
 			void WriteUserProperties(fbxsdk::FbxObject const& node)
 			{
@@ -373,19 +574,257 @@ namespace pr::fbx
 						}
 						default:
 						{
-#if 0
 							if (prop.GetPropertyDataType().Is(fbxsdk::FbxColor3DT) || prop.GetPropertyDataType().Is(fbxsdk::FbxColor4DT))
 							{
 								auto rgba = prop.Get<FbxColor>();
 								m_out << std::format("            Default Value: R={}, G={}, B={}, A={}", rgba.mRed, rgba.mGreen, rgba.mBlue, rgba.mAlpha) << "\n";
 								break;
 							}
+#if 0
 #endif
 							m_out << "            Default Value: UNIDENTIFIED" << "\n";
 							break;
 						}
 					}
 				}
+			}
+			void WriteTarget(FbxNode const& node)
+			{
+				if (node.GetTarget() != nullptr)
+				{
+					m_out << "    Target Name: " << node.GetTarget()->GetName() << "\n";
+				}
+			}
+			void WritePivotsAndLimits(FbxNode const& node)
+			{
+				FbxVector4 lTmpVector;
+
+				// Pivots
+				m_out << "    Pivot Information\n";
+
+				FbxNode::EPivotState pivot_state;
+				node.GetPivotState(FbxNode::eSourcePivot, pivot_state);
+				m_out << std::format("        Pivot State: {}\n", pivot_state == FbxNode::ePivotActive ? "Active" : "Reference");
+
+				lTmpVector = node.GetPreRotation(FbxNode::eSourcePivot);
+				m_out << std::format("        Pre-Rotation: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				lTmpVector = node.GetPostRotation(FbxNode::eSourcePivot);
+				m_out << std::format("        Post-Rotation: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				lTmpVector = node.GetRotationPivot(FbxNode::eSourcePivot);
+				m_out << std::format("        Rotation Pivot: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				lTmpVector = node.GetRotationOffset(FbxNode::eSourcePivot);
+				m_out << std::format("        Rotation Offset: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				lTmpVector = node.GetScalingPivot(FbxNode::eSourcePivot);
+				m_out << std::format("        Scaling Pivot: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				lTmpVector = node.GetScalingOffset(FbxNode::eSourcePivot);
+				m_out << std::format("        Scaling Offset: {} {} {}\n", lTmpVector[0], lTmpVector[1], lTmpVector[2]);
+
+				// Limits
+				bool		lIsActive, lMinXActive, lMinYActive, lMinZActive;
+				bool		lMaxXActive, lMaxYActive, lMaxZActive;
+				FbxDouble3	lMinValues, lMaxValues;
+
+				m_out << "    Limits Information\n";
+
+				lIsActive = node.TranslationActive;
+				lMinXActive = node.TranslationMinX;
+				lMinYActive = node.TranslationMinY;
+				lMinZActive = node.TranslationMinZ;
+				lMaxXActive = node.TranslationMaxX;
+				lMaxYActive = node.TranslationMaxY;
+				lMaxZActive = node.TranslationMaxZ;
+				lMinValues = node.TranslationMin;
+				lMaxValues = node.TranslationMax;
+
+				m_out << "        Translation limits: " << (lIsActive ? "Active" : "Inactive") << "\n";
+				m_out << "            X\n";
+				m_out << "                Min Limit: " << (lMinXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[0] << "\n";
+				m_out << "                Max Limit: " << (lMaxXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[0] << "\n";
+				m_out << "            Y\n";
+				m_out << "                Min Limit: " << (lMinYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[1] << "\n";
+				m_out << "                Max Limit: " << (lMaxYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[1] << "\n";
+				m_out << "            Z\n";
+				m_out << "                Min Limit: " << (lMinZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[2] << "\n";
+				m_out << "                Max Limit: " << (lMaxZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[2] << "\n";
+
+				lIsActive = node.RotationActive;
+				lMinXActive = node.RotationMinX;
+				lMinYActive = node.RotationMinY;
+				lMinZActive = node.RotationMinZ;
+				lMaxXActive = node.RotationMaxX;
+				lMaxYActive = node.RotationMaxY;
+				lMaxZActive = node.RotationMaxZ;
+				lMinValues = node.RotationMin;
+				lMaxValues = node.RotationMax;
+
+				m_out << "        Rotation limits: " << (lIsActive ? "Active" : "Inactive") << "\n";
+				m_out << "            X\n";
+				m_out << "                Min Limit: " <<  (lMinXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[0] << "\n";
+				m_out << "                Max Limit: " << (lMaxXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[0] << "\n";
+				m_out << "            Y\n";
+				m_out << "                Min Limit: " << (lMinYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[1] << "\n";
+				m_out << "                Max Limit: " << (lMaxYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[1] << "\n";
+				m_out << "            Z\n";
+				m_out << "                Min Limit: " << (lMinZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[2] << "\n";
+				m_out << "                Max Limit: " << (lMaxZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[2] << "\n";
+
+				lIsActive = node.ScalingActive;
+				lMinXActive = node.ScalingMinX;
+				lMinYActive = node.ScalingMinY;
+				lMinZActive = node.ScalingMinZ;
+				lMaxXActive = node.ScalingMaxX;
+				lMaxYActive = node.ScalingMaxY;
+				lMaxZActive = node.ScalingMaxZ;
+				lMinValues = node.ScalingMin;
+				lMaxValues = node.ScalingMax;
+
+				m_out << "        Scaling limits: " << (lIsActive ? "Active" : "Inactive") << "\n";
+				m_out << "            X\n";
+				m_out << "                Min Limit: " << (lMinXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[0] << "\n";
+				m_out << "                Max Limit: " << (lMaxXActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[0] << "\n";
+				m_out << "            Y\n";
+				m_out << "                Min Limit: " << (lMinYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[1] << "\n";
+				m_out << "                Max Limit: " << (lMaxYActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[1] << "\n";
+				m_out << "            Z\n";
+				m_out << "                Min Limit: " << (lMinZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Min Limit Value: " << lMinValues[2] << "\n";
+				m_out << "                Max Limit: " << (lMaxZActive ? "Active" : "Inactive") << "\n";
+				m_out << "                Max Limit Value: " << lMaxValues[2] << "\n";
+			}
+			void WriteTransformPropagation(FbxNode const& node)
+			{
+				m_out << "    Transformation Propagation\n";
+
+				// Rotation Space
+				FbxEuler::EOrder order;
+				node.GetRotationOrder(FbxNode::eSourcePivot, order);
+
+				m_out << "        Rotation Space: ";
+				switch (order)
+				{
+					case FbxEuler::eOrderXYZ: m_out << "Euler XYZ\n"; break;
+					case FbxEuler::eOrderXZY: m_out << "Euler XZY\n"; break;
+					case FbxEuler::eOrderYZX: m_out << "Euler YZX\n"; break;
+					case FbxEuler::eOrderYXZ: m_out << "Euler YXZ\n"; break;
+					case FbxEuler::eOrderZXY: m_out << "Euler ZXY\n"; break;
+					case FbxEuler::eOrderZYX: m_out << "Euler ZYX\n"; break;
+					case FbxEuler::eOrderSphericXYZ: m_out << "Spheric XYZ\n"; break;
+					default: m_out << "UNKNOWN ORDER\n"; break;
+				}
+
+				// Use the Rotation space only for the limits
+				// (keep using eEulerXYZ for the rest)
+				m_out << std::format("        Use the Rotation Space for Limit specification only: {}\n", node.GetUseRotationSpaceForLimitOnly(FbxNode::eSourcePivot) ? "Yes" : "No");
+
+				// Inherit Type
+				FbxTransform::EInheritType inherit_type;
+				node.GetTransformationInheritType(inherit_type);
+
+				m_out << "        Transformation Inheritance: ";
+				switch (inherit_type)
+				{
+					case FbxTransform::eInheritRrSs: m_out << "RrSs\n"; break;
+					case FbxTransform::eInheritRSrs: m_out << "RSrs\n"; break;
+					case FbxTransform::eInheritRrs: m_out << "Rrs\n"; break;
+				}
+			}
+			void WriteGeometricTransform(FbxNode const& node)
+			{
+				m_out << "    Geometric Transformations\n";
+
+				auto xyz = node.GetGeometricTranslation(FbxNode::eSourcePivot);
+				m_out << std::format("        Translation: {} {} {}\n", xyz[0], xyz[1], xyz[2]);
+
+				auto rot = node.GetGeometricRotation(FbxNode::eSourcePivot);
+				m_out << std::format("        Rotation:    {} {} {}\n", rot[0], rot[1], rot[2]);
+
+				auto scl = node.GetGeometricScaling(FbxNode::eSourcePivot);
+				m_out << std::format("        Scaling:     {} {} {}\n", scl[0], scl[1], scl[2]);
+			}
+			void WriteMetaDataConnections(FbxObject const& node)
+			{
+				int nbMetaData = node.GetSrcObjectCount<FbxObjectMetaData>();
+				if (nbMetaData > 0)
+					WriteString("    MetaData connections ");
+
+				for (int i = 0; i < nbMetaData; i++)
+				{
+					FbxObjectMetaData* metaData = node.GetSrcObject<FbxObjectMetaData>(i);
+					WriteString("        Name: ", metaData->GetName());
+				}
+			}
+			void WriteString(char const* pHeader, char const* pValue = "", char const* pSuffix = "")
+			{
+				m_out << pHeader << pValue << pSuffix << "\n";
+			}
+			void WriteBool(const char* pHeader, bool pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << (pValue ? "true" : "false") << pSuffix << "\n";
+			}
+			void WriteInt(const char* pHeader, int pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << pValue << pSuffix << "\n";
+			}
+			void WriteDouble(const char* pHeader, double pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << FloatClamp(pValue) << pSuffix << "\n";
+			}
+			void Write2DVector(const char* pHeader, FbxVector2 pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << pSuffix << "\n";
+			}
+			void Write3DVector(const char* pHeader, FbxVector4 pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << ", " << FloatClamp(pValue[2]) << pSuffix << "\n";
+			}
+			void Write4DVector(const char* pHeader, FbxVector4 pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << ", " << FloatClamp(pValue[2]) << ", " << FloatClamp(pValue[3]) << pSuffix << "\n";
+			}
+			void WriteColor(const char* pHeader, FbxPropertyT<FbxDouble3> pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader;
+				//lString += (float) pValue.mRed;
+				//lString += (double)pValue.GetArrayItem(0);
+				m_out << " (red), ";
+				//lString += (float) pValue.mGreen;
+				//lString += (double)pValue.GetArrayItem(1);
+				m_out << " (green), ";
+				//lString += (float) pValue.mBlue;
+				//lString += (double)pValue.GetArrayItem(2);
+				m_out << " (blue)" << pSuffix << "\n";
+			}
+			void WriteColor(const char* pHeader, FbxColor pValue, const char* pSuffix = "")
+			{
+				m_out << pHeader << (float)pValue.mRed << " (red), " << (float)pValue.mGreen << " (green), " << (float)pValue.mBlue << " (blue)" << pSuffix << "\n";
+			}
+			double FloatClamp(double f)
+			{
+				return
+					f >= +HUGE_VAL ? +std::numeric_limits<double>::infinity() :
+					f <= -HUGE_VAL ? -std::numeric_limits<double>::infinity() :
+					f;
 			}
 		};
 

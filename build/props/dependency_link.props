@@ -7,30 +7,23 @@
 		</AvailableItemName>
 	</ItemGroup>
 
-	<!-- Custom Target for Building Shaders -->  
+	<!-- Custom Target for DLL Dependencies -->
 	<Target
 		Name="DependencyLinkTarget"
 		AfterTargets="Link"
 		Inputs="@(DependencyLink)"
-		Outputs="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\%(Filename)%(Extension)')"
+		Outputs="%(DependencyLink.OutDir)%(Filename)%(Extension)"
 	>
+		<!--
+		Outputs="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\%(Filename)%(Extension)')"
+		-->
 		<Copy
 			SourceFiles="@(DependencyLink)"
-			DestinationFolder="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\')"
+			DestinationFolder="%(DependencyLink.OutDir)"
 			SkipUnchangedFiles="true"
 			Condition="exists('@(DependencyLink)')"
 			ContinueOnError="ErrorAndContinue"
 		/>
-		<!--
-		<MakeDir
-			Directories="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\')"
-		/>
-		<Exec
-			Command="copy @(DependencyLink) @(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\%(Filename)%(Extension)')"
-			Condition="exists('@(DependencyLink)')"
-			ContinueOnError="ErrorAndContinue"
-		/>
-		-->
 	</Target>
 
 	<!-- Hook the custom target into the build pipeline -->  
