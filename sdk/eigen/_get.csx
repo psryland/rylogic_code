@@ -32,6 +32,20 @@ if (!Directory.Exists(SDKDir))
 	{
 		Console.WriteLine($"Error: {ex.Message}");
 	}
+
+	// Switch to the 3.4 branch
+	proc.StartInfo.FileName = "git.exe";
+	proc.StartInfo.Arguments = $"checkout 3.4";
+	proc.StartInfo.WorkingDirectory = SDKDir;
+	try
+	{
+		proc.Start();
+		proc.WaitForExit();
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"Error: {ex.Message}");
+	}
 }
 
 // Returns the directory of *this* file
