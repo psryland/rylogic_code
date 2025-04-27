@@ -20,7 +20,7 @@ static string SDKDir = Path.Join(ThisDir, "fbx");
 if (!File.Exists(SDKFilePath))
 {
 	// Download the file
-	using var client = new HttpClient();
+	using var client = new HttpClient{Timeout = TimeSpan.FromMinutes(10)};
 	using var response = client.GetAsync(url).Result;
 	using var stream = response.Content.ReadAsStreamAsync().Result;
 	using var fileStream = File.Create(SDKFilePath);
@@ -31,6 +31,7 @@ if (!File.Exists(SDKFilePath))
 if (!Directory.Exists(SDKDir))
 {
 	Directory.CreateDirectory(SDKDir);
+
 	var proc = new Process();
 	proc.StartInfo.FileName = SDKFilePath;
 	proc.StartInfo.Arguments = $"/S /D={SDKDir}";
@@ -44,6 +45,7 @@ if (!Directory.Exists(SDKDir))
 	}
 	catch (Exception ex)
 	{
+		// This can fail if 'admin' can't see the drive
 		Console.WriteLine($"Error: {ex.Message}");
 	}
 }
