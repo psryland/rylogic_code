@@ -1,5 +1,5 @@
 #include <iostream>
-#include <eigen/Eigen/Core>
+//#include <eigen/Eigen/Core>
 #include "src/fbx.h"
 #include "pr/win32/win32.h"
 
@@ -68,7 +68,7 @@ int main()
 	fbx::Manager fbx;
 	fbx::Settings settings(fbx);
 	fbx::Importer imp(fbx, settings);
-	auto scene = imp.Import("C:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx");
+	auto scene = imp.Import("E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx");
 	WriteContent(scene, std::cout);
 	return 0;
 }

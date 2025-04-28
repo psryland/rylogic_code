@@ -255,6 +255,30 @@ namespace pr::fbx
 
 	// Debug -----------------------------------------------------------------------------------------
 
+	inline double FloatClamp(double f)
+	{
+		return
+			f >= +HUGE_VAL ? +std::numeric_limits<double>::infinity() :
+			f <= -HUGE_VAL ? -std::numeric_limits<double>::infinity() :
+			f;
+	}
+	std::ostream& operator << (std::ostream& out, fbxsdk::FbxVector2 const& vec)
+	{
+		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]);
+	}
+	std::ostream& operator << (std::ostream& out, fbxsdk::FbxVector4 const& vec)
+	{
+		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]) << ", " << FloatClamp(vec[3]);
+	}
+	std::ostream& operator << (std::ostream& out, fbxsdk::FbxDouble3 const& vec)
+	{
+		return out << FloatClamp(vec[0]) << ", " << FloatClamp(vec[1]) << ", " << FloatClamp(vec[2]);
+	}
+	std::ostream& operator << (std::ostream& out, fbxsdk::FbxColor const& col)
+	{
+		return out << "R=" << (float)col.mRed << ", G=" << (float)col.mGreen << ", B=" << (float)col.mBlue << ", A=" << col.mAlpha << "\n";
+	}
+
 	void WriteContent(Scene const& scene, std::ostream& out)
 	{
 		struct Writer
@@ -332,17 +356,17 @@ namespace pr::fbx
 			{
 				auto const& marker = *static_cast<FbxMarker const*>(node.GetNodeAttribute());
 
-				m_out << "Marker Name: " << node.GetName();
+				m_out << "Marker Name: " << node.GetName() << "\n";
 				WriteMetaDataConnections(marker);
 
 				// Type
 				m_out << "    Marker Type: ";
 				switch (marker.GetType())
 				{
-					case FbxMarker::eStandard:   m_out << "Standard";    break;
-					case FbxMarker::eOptical:    m_out << "Optical";     break;
-					case FbxMarker::eEffectorIK: m_out << "IK Effector"; break;
-					case FbxMarker::eEffectorFK: m_out << "FK Effector"; break;
+					case FbxMarker::eStandard:   m_out << "Standard\n";    break;
+					case FbxMarker::eOptical:    m_out << "Optical\n";     break;
+					case FbxMarker::eEffectorIK: m_out << "IK Effector\n"; break;
+					case FbxMarker::eEffectorFK: m_out << "FK Effector\n"; break;
 				}
 
 				// Look
@@ -350,52 +374,52 @@ namespace pr::fbx
 				switch (marker.Look.Get())
 				{
 					default: break;
-					case FbxMarker::eCube:        m_out << "Cube";        break;
-					case FbxMarker::eHardCross:   m_out << "Hard Cross";  break;
-					case FbxMarker::eLightCross:  m_out << "Light Cross"; break;
-					case FbxMarker::eSphere:      m_out << "Sphere";      break;
+					case FbxMarker::eCube:        m_out << "Cube\n";        break;
+					case FbxMarker::eHardCross:   m_out << "Hard Cross\n";  break;
+					case FbxMarker::eLightCross:  m_out << "Light Cross\n"; break;
+					case FbxMarker::eSphere:      m_out << "Sphere\n";      break;
 				}
 
 				// Size
-				m_out << "    Size: " << marker.Size.Get();
+				m_out << "    Size: " << marker.Size.Get() << "\n";
 
 				// Color
 				FbxDouble3 c = marker.Color.Get();
 				FbxColor color(c[0], c[1], c[2]);
-				WriteColor("    Color: ", color);
+				m_out << "    Color: " << color << "\n";
 
 				// IKPivot
-				Write3DVector("    IKPivot: ", marker.IKPivot.Get());
+				m_out << "    IKPivot: " << marker.IKPivot.Get() << "\n";
 			}
 			void WriteSkeleton(FbxNode const& node)
 			{
-				auto const& lSkeleton = *static_cast<FbxSkeleton const*>(node.GetNodeAttribute());
+				auto const& skel = *static_cast<FbxSkeleton const*>(node.GetNodeAttribute());
 
-				m_out << "Skeleton Name: " << node.GetName() << "\n";
-				WriteMetaDataConnections(lSkeleton);
+				m_out << "Skeleton Name: " << skel.GetName() << "\n";
+				WriteMetaDataConnections(skel);
 
-				const char* lSkeletonTypes[] = { "Root", "Limb", "Limb Node", "Effector" };
-				m_out << "    Type: " << lSkeletonTypes[lSkeleton.GetSkeletonType()] << "\n";
+				const char* skel_types[] = { "Root", "Limb", "Limb Node", "Effector" };
+				m_out << "    Type: " << skel_types[skel.GetSkeletonType()] << "\n";
 
-				switch (lSkeleton.GetSkeletonType())
+				switch (skel.GetSkeletonType())
 				{
 					case FbxSkeleton::eLimb:
 					{
-						WriteDouble("    Limb Length: ", lSkeleton.LimbLength.Get());
+						m_out << "    Limb Length: " << FloatClamp(skel.LimbLength.Get()) << "\n";
 						break;
 					}
 					case FbxSkeleton::eLimbNode:
 					{
-						WriteDouble("    Limb Node Size: ", lSkeleton.Size.Get());
+						m_out << "    Limb Node Size: " << FloatClamp(skel.Size.Get()) << "\n";
 						break;
 					}
 					case FbxSkeleton::eRoot:
 					{
-						WriteDouble("    Limb Root Size: ", lSkeleton.Size.Get());
+						m_out << "    Limb Root Size: " << FloatClamp(skel.Size.Get()) << "\n";
 						break;
 					}
 				}
-				WriteColor("    Color: ", lSkeleton.GetLimbNodeColor());
+				m_out << "    Color: " << skel.GetLimbNodeColor() << "\n";
 			}
 			void WriteMesh(FbxNode const& node)
 			{
@@ -417,114 +441,78 @@ namespace pr::fbx
 			}
 			void WriteNurb(FbxNode const& node)
 			{
-				auto const& lNurbs = *static_cast<FbxNurbs const*>(node.GetNodeAttribute());
-				int i;
+				auto const& nurbs = *static_cast<FbxNurbs const*>(node.GetNodeAttribute());
 
-				DisplayString("Nurb Name: ", (char*)pNode->GetName());
-				DisplayMetaDataConnections(lNurbs);
+				m_out << "Nurb Name: " << node.GetName() << "\n";
+				WriteMetaDataConnections(nurbs);
 
-				const char* lSurfaceModes[] = { "Raw", "Low No Normals", "Low", "High No Normals", "High" };
+				const char* modes[] = { "Raw", "Low No Normals", "Low", "High No Normals", "High" };
+				m_out << "    Surface Mode: " << modes[nurbs.GetSurfaceMode()] << "\n";
 
-				DisplayString("    Surface Mode: ", lSurfaceModes[lNurbs->GetSurfaceMode()]);
+				auto lControlPointsCount = nurbs.GetControlPointsCount();
+				auto lControlPoints = nurbs.GetControlPoints();
 
-				int lControlPointsCount = lNurbs->GetControlPointsCount();
-				FbxVector4* lControlPoints = lNurbs->GetControlPoints();
-
-				for (i = 0; i < lControlPointsCount; i++)
+				for (int i = 0; i != lControlPointsCount; ++i)
 				{
-					DisplayInt("    Control Point ", i);
-					Display3DVector("        Coordinates: ", lControlPoints[i]);
-					DisplayDouble("        Weight: ", lControlPoints[i][3]);
+					m_out << "    Control Point " << i << "\n";
+					m_out << "        Coordinates: " << lControlPoints[i] << "\n";
+					m_out << "        Weight: " << lControlPoints[i][3] << "\n";
 				}
 
-				const char* lNurbTypes[] = { "Periodic", "Closed", "Open" };
+				const char* nurb_types[] = { "Periodic", "Closed", "Open" };
 
-				DisplayString("    Nurb U Type: ", lNurbTypes[lNurbs->GetNurbsUType()]);
-				DisplayInt("    U Count: ", lNurbs->GetUCount());
-				DisplayString("    Nurb V Type: ", lNurbTypes[lNurbs->GetNurbsVType()]);
-				DisplayInt("    V Count: ", lNurbs->GetVCount());
-				DisplayInt("    U Order: ", lNurbs->GetUOrder());
-				DisplayInt("    V Order: ", lNurbs->GetVOrder());
-				DisplayInt("    U Step: ", lNurbs->GetUStep());
-				DisplayInt("    V Step: ", lNurbs->GetVStep());
+				m_out << "    Nurb U Type: " << nurb_types[nurbs.GetNurbsUType()] << "\n";
+				m_out << "    U Count: " << nurbs.GetUCount() << "\n";
+				m_out << "    Nurb V Type: " << nurb_types[nurbs.GetNurbsVType()] << "\n";
+				m_out << "    V Count: " << nurbs.GetVCount() << "\n";
+				m_out << "    U Order: " << nurbs.GetUOrder() << "\n";
+				m_out << "    V Order: " << nurbs.GetVOrder() << "\n";
+				m_out << "    U Step: " << nurbs.GetUStep() << "\n";
+				m_out << "    V Step: " << nurbs.GetVStep() << "\n";
 
 				FbxString lString;
-				int lUKnotCount = lNurbs->GetUKnotCount();
-				int lVKnotCount = lNurbs->GetVKnotCount();
-				int lUMultiplicityCount = lNurbs->GetUCount();
-				int lVMultiplicityCount = lNurbs->GetVCount();
-				double* lUKnotVector = lNurbs->GetUKnotVector();
-				double* lVKnotVector = lNurbs->GetVKnotVector();
-				int* lUMultiplicityVector = lNurbs->GetUMultiplicityVector();
-				int* lVMultiplicityVector = lNurbs->GetVMultiplicityVector();
+				double* lUKnotVector = nurbs.GetUKnotVector();
+				double* lVKnotVector = nurbs.GetVKnotVector();
+				int* lUMultiplicityVector = nurbs.GetUMultiplicityVector();
+				int* lVMultiplicityVector = nurbs.GetVMultiplicityVector();
 
-				lString = "    U Knot Vector: ";
-
-				for (i = 0; i < lUKnotCount; i++)
+				m_out << "    U Knot Vector: ";
+				for (int i = 0, lUKnotCount = nurbs.GetUKnotCount(); i != lUKnotCount; ++i)
 				{
-					lString += (float)lUKnotVector[i];
-
-					if (i < lUKnotCount - 1)
-					{
-						lString += ", ";
-					}
+					if (i != 0) m_out << ", ";
+					m_out << (float)lUKnotVector[i];
 				}
-
-				lString += "\n";
-				FBXSDK_printf(lString);
-
-				lString = "    V Knot Vector: ";
-
-				for (i = 0; i < lVKnotCount; i++)
+				m_out << "\n";
+				m_out << "    V Knot Vector: ";
+				for (int i = 0, lVKnotCount = nurbs.GetVKnotCount(); i != lVKnotCount; ++i)
 				{
-					lString += (float)lVKnotVector[i];
-
-					if (i < lVKnotCount - 1)
-					{
-						lString += ", ";
-					}
+					if (i != 0) m_out << ", ";
+					m_out << (float)lVKnotVector[i];
 				}
-
-				lString += "\n";
-				FBXSDK_printf(lString);
-
-				lString = "    U Multiplicity Vector: ";
-
-				for (i = 0; i < lUMultiplicityCount; i++)
+				m_out << "\n";
+				m_out << "    U Multiplicity Vector: ";
+				for (int i = 0, lUMultiplicityCount = nurbs.GetUCount(); i != lUMultiplicityCount; ++i)
 				{
-					lString += lUMultiplicityVector[i];
-
-					if (i < lUMultiplicityCount - 1)
-					{
-						lString += ", ";
-					}
+					if (i != 0) m_out << ", ";
+					m_out << lUMultiplicityVector[i];
 				}
-
-				lString += "\n";
-				FBXSDK_printf(lString);
-
-				lString = "    V Multiplicity Vector: ";
-
-				for (i = 0; i < lVMultiplicityCount; i++)
+				m_out << "\n";
+				m_out << "    V Multiplicity Vector: ";
+				for (int i = 0, lVMultiplicityCount = nurbs.GetVCount(); i != lVMultiplicityCount; ++i)
 				{
-					lString += lVMultiplicityVector[i];
-
-					if (i < lVMultiplicityCount - 1)
-					{
-						lString += ", ";
-					}
+					if (i != 0) m_out << ", ";
+					m_out << lVMultiplicityVector[i];
 				}
+				m_out << "\n";
+				m_out << "\n";
 
-				lString += "\n";
-				FBXSDK_printf(lString);
-
-				DisplayString("");
-
-				DisplayTexture(lNurbs);
-				DisplayMaterial(lNurbs);
-				DisplayLink(lNurbs);
-				DisplayShape(lNurbs);
-				DisplayCache(lNurbs);
+#if 0
+				WriteTexture(nurbs);
+				WriteMaterial(nurbs);
+				WriteLink(nurbs);
+				WriteShape(nurbs);
+				WriteCache(nurbs);
+#endif
 			}
 			void WriteUserProperties(fbxsdk::FbxObject const& node)
 			{
@@ -766,65 +754,75 @@ namespace pr::fbx
 			{
 				int nbMetaData = node.GetSrcObjectCount<FbxObjectMetaData>();
 				if (nbMetaData > 0)
-					WriteString("    MetaData connections ");
+					m_out << "    MetaData connections " << "\n";
 
 				for (int i = 0; i < nbMetaData; i++)
 				{
 					FbxObjectMetaData* metaData = node.GetSrcObject<FbxObjectMetaData>(i);
-					WriteString("        Name: ", metaData->GetName());
+					m_out << "        Name: " << metaData->GetName() << "\n";
 				}
 			}
-			void WriteString(char const* pHeader, char const* pValue = "", char const* pSuffix = "")
+			void WriteTextureInfo(FbxTexture const& pTexture, int pBlendMode)
 			{
-				m_out << pHeader << pValue << pSuffix << "\n";
-			}
-			void WriteBool(const char* pHeader, bool pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << (pValue ? "true" : "false") << pSuffix << "\n";
-			}
-			void WriteInt(const char* pHeader, int pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << pValue << pSuffix << "\n";
-			}
-			void WriteDouble(const char* pHeader, double pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << FloatClamp(pValue) << pSuffix << "\n";
-			}
-			void Write2DVector(const char* pHeader, FbxVector2 pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << pSuffix << "\n";
-			}
-			void Write3DVector(const char* pHeader, FbxVector4 pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << ", " << FloatClamp(pValue[2]) << pSuffix << "\n";
-			}
-			void Write4DVector(const char* pHeader, FbxVector4 pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << FloatClamp(pValue[0]) << ", " << FloatClamp(pValue[1]) << ", " << FloatClamp(pValue[2]) << ", " << FloatClamp(pValue[3]) << pSuffix << "\n";
-			}
-			void WriteColor(const char* pHeader, FbxPropertyT<FbxDouble3> pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader;
-				//lString += (float) pValue.mRed;
-				//lString += (double)pValue.GetArrayItem(0);
-				m_out << " (red), ";
-				//lString += (float) pValue.mGreen;
-				//lString += (double)pValue.GetArrayItem(1);
-				m_out << " (green), ";
-				//lString += (float) pValue.mBlue;
-				//lString += (double)pValue.GetArrayItem(2);
-				m_out << " (blue)" << pSuffix << "\n";
-			}
-			void WriteColor(const char* pHeader, FbxColor pValue, const char* pSuffix = "")
-			{
-				m_out << pHeader << (float)pValue.mRed << " (red), " << (float)pValue.mGreen << " (green), " << (float)pValue.mBlue << " (blue)" << pSuffix << "\n";
-			}
-			double FloatClamp(double f)
-			{
-				return
-					f >= +HUGE_VAL ? +std::numeric_limits<double>::infinity() :
-					f <= -HUGE_VAL ? -std::numeric_limits<double>::infinity() :
-					f;
+				FbxFileTexture const* lFileTexture = FbxCast<FbxFileTexture>(&pTexture);
+				FbxProceduralTexture const* lProceduralTexture = FbxCast<FbxProceduralTexture>(&pTexture);
+
+				m_out << "            Name: \"" << pTexture.GetName() << "\"\n";
+				if (lFileTexture)
+				{
+					m_out << "            Type: File Texture" << "\n";
+					m_out << "            File Name: \"" << lFileTexture->GetFileName() << "\"\n";
+				}
+				else if (lProceduralTexture)
+				{
+					m_out << "            Type: Procedural Texture" << "\n";
+				}
+				m_out << "            Scale U: " << pTexture.GetScaleU() << "\n";
+				m_out << "            Scale V: " << pTexture.GetScaleV() << "\n";
+				m_out << "            Translation U: " << pTexture.GetTranslationU() << "\n";
+				m_out << "            Translation V: " << pTexture.GetTranslationV() << "\n";
+				m_out << "            Swap UV: " << pTexture.GetSwapUV() << "\n";
+				m_out << "            Rotation U: " << pTexture.GetRotationU() << "\n";
+				m_out << "            Rotation V: " << pTexture.GetRotationV() << "\n";
+				m_out << "            Rotation W: " << pTexture.GetRotationW() << "\n";
+
+				const char* lAlphaSources[] = { "None", "RGB Intensity", "Black" };
+				m_out << "            Alpha Source: " << lAlphaSources[pTexture.GetAlphaSource()] << "\n";
+				m_out << "            Cropping Left: " << pTexture.GetCroppingLeft() << "\n";
+				m_out << "            Cropping Top: " << pTexture.GetCroppingTop() << "\n";
+				m_out << "            Cropping Right: " << pTexture.GetCroppingRight() << "\n";
+				m_out << "            Cropping Bottom: " << pTexture.GetCroppingBottom() << "\n";
+
+				const char* lMappingTypes[] = { "Null", "Planar", "Spherical", "Cylindrical", "Box", "Face", "UV", "Environment" };
+				m_out << "            Mapping Type: " << lMappingTypes[pTexture.GetMappingType()] << "\n";
+
+				if (pTexture.GetMappingType() == FbxTexture::ePlanar)
+				{
+					const char* lPlanarMappingNormals[] = { "X", "Y", "Z" };
+					m_out << "            Planar Mapping Normal: " << lPlanarMappingNormals[pTexture.GetPlanarMappingNormal()] << "\n";
+				}
+
+				const char* lBlendModes[] = {
+					"Translucent", "Additive", "Modulate", "Modulate2", "Over", "Normal", "Dissolve", "Darken", "ColorBurn", "LinearBurn",
+					"DarkerColor", "Lighten", "Screen", "ColorDodge", "LinearDodge", "LighterColor", "SoftLight", "HardLight", "VividLight",
+					"LinearLight", "PinLight", "HardMix", "Difference", "Exclusion", "Substract", "Divide", "Hue", "Saturation", "Color",
+					"Luminosity", "Overlay"
+				};
+
+				if (pBlendMode >= 0)
+					m_out << "            Blend Mode: " << lBlendModes[pBlendMode] << "\n";
+				
+				m_out << "            Alpha: " << pTexture.GetDefaultAlpha() << "\n";
+
+				if (lFileTexture)
+				{
+					const char* lMaterialUses[] = { "Model Material", "Default Material" };
+					m_out << "            Material Use: " << lMaterialUses[lFileTexture->GetMaterialUse()] << "\n";
+				}
+
+				const char* pTextureUses[] = { "Standard", "Shadow Map", "Light Map", "Spherical Reflexion Map", "Sphere Reflexion Map", "Bump Normal Map" };
+				m_out << "            Texture Use: " << pTextureUses[pTexture.GetTextureUse()] << "\n";
+				m_out << "\n";
 			}
 		};
 

@@ -7,6 +7,13 @@
 		</AvailableItemName>
 	</ItemGroup>
 
+	<!-- Define the DependencyLink item type defaults -->
+	<ItemDefinitionGroup>
+		<DependencyLink>
+			<OutDir>$(OutDir)lib\$(Platform)\$(Configuration)\</OutDir>
+		</DependencyLink>
+	</ItemDefinitionGroup>
+
 	<!-- Custom Target for DLL Dependencies -->
 	<Target
 		Name="DependencyLinkTarget"

@@ -7,7 +7,7 @@
 #    vo=gpu
 #    hwdec=v4l2m2m
 #    x11-bypass-compositor=yes
-#  Make sure raspi-config->Advanced->Wayland is se to x11
+#  Make sure raspi-config->Advanced->Wayland is set to x11
 #
 # Compile to exe with:
 # - pip install pyinstaller

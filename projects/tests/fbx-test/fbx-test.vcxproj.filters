@@ -17,13 +17,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <DependencyLink Include="$(SDKPath)fbx\fbx\lib\x64\$(Configuration)\libfbxsdk.dll">
-      <Filter>lib</Filter>
-    </DependencyLink>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\fbx.h">
       <Filter>src</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <DependencyLink Include="$(SDKPath)fbx\fbx\lib\$(Platform)\$(Configuration)\libfbxsdk.dll">
+      <Filter>lib</Filter>
+    </DependencyLink>
   </ItemGroup>
 </Project>
