@@ -1,0 +1,222 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.2 Binary Template
+//
+//      File: FBX.bt
+//   Authors: Fred31 (Pavel Sokov)
+//   Version: 0.1
+//   Purpose: Reading binary .fbx (FilmBox) files structure.
+//  Category: CAD
+// File Mask: *.fbx
+//  ID Bytes: 4B 61 79 64 61 72 61 20 46 42 58 20 42 69 6E 61 72 79 20 20 00 1A 00  
+//   History: 
+//   0.1   2021-08-10 Pavel Sokov: Initial version.
+//------------------------------------------------
+
+
+// Endian
+LittleEndian();
+
+// Structs
+typedef ubyte u1;
+typedef ushort u2;
+typedef uint32 u4;
+typedef uint64 u8;
+
+typedef byte i1;
+typedef short i2;
+typedef int32 i4;
+typedef int64 i8;
+
+typedef float f4;
+typedef double f8;
+
+
+// Property
+typedef struct {
+    u4 len;
+    u4 encoding;
+    u4 compressedLen;
+} PropertyArray;
+
+
+typedef enum <char> {
+    BOOLEAN_t = 'C',
+    INT16_t = 'Y',
+    INT32_t = 'I',
+    INT64_t = 'L',
+    FLOAT32_t = 'F',
+    FLOAT64_t = 'D',
+
+    FLOAT32_a = 'f',
+    FLOAT64_a = 'd',
+    INT64_a = 'l',
+    INT32_a = 'i',
+    BOOLEAN_a = 'b',
+
+    STRING_t = 'S',
+    RAW_t = 'R'
+} TypeCode;
+
+
+typedef struct {
+    TypeCode type;
+
+    switch (type) {
+        // Primitive Types //
+        case BOOLEAN_t:
+            u1 n;
+            break;
+
+        case INT16_t:
+            i2 n;
+            break;
+
+        case INT32_t:
+            i4 n;
+            break;
+
+        case INT64_t:
+            i8 n;
+            break;
+
+        case FLOAT32_t:
+            f4 n;
+            break;
+
+        case FLOAT64_t:
+            f8 n;
+            break;
+
+        // Array Types //
+        case BOOLEAN_a:
+            PropertyArray array;
+            if (array.encoding != 1) { u1 items[array.len]; } else { u1 compressed[array.compressedLen]; };
+            break;
+
+        case INT32_a:
+            PropertyArray array;
+            if (array.encoding != 1) { i4 items[array.len]; } else { u1 compressed[array.compressedLen]; };
+            break;
+
+        case INT64_a:
+            PropertyArray array;
+            if (array.encoding != 1) { i8 items[array.len]; } else { u1 compressed[array.compressedLen]; };
+            break;
+
+        case FLOAT32_a:
+            PropertyArray array;
+            if (array.encoding != 1) { f4 items[array.len]; } else { u1 compressed[array.compressedLen]; };
+            break;
+
+        case FLOAT64_a:
+            PropertyArray array;
+            if (array.encoding != 1) { f8 items[array.len]; } else { u1 compressed[array.compressedLen]; };
+            break;
+
+        // Special Types //
+        case STRING_t:
+            u4 len;
+            char str[len];
+            break;
+
+        case RAW_t:
+            u4 len;
+            u1 raw[len];
+            break;
+
+        default:
+            Warning("Unknown PropertyRecord typeCode!\n");
+            Exit(1);
+    };
+} NodeProperty <read=NodePropertyRead>;
+
+
+string NodePropertyRead (NodeProperty &v) {
+    local string s;
+
+    switch (v.type) {
+        case BOOLEAN_t:
+        case INT16_t:
+        case INT32_t:
+        case INT64_t:
+            SPrintf(s, "%d", v.n);
+            break;
+
+        case FLOAT32_t:
+        case FLOAT64_t:
+            SPrintf(s, "%f", v.n);
+            break;
+
+        case BOOLEAN_a:
+        case INT32_a:
+        case INT64_a:
+        case FLOAT32_a:
+        case FLOAT64_a:
+            SPrintf(s, "Length: %d, Encoding: %d", v.array.len, v.array.encoding);
+            break;
+
+        case STRING_t:
+            if (v.len > 0) {
+                SPrintf(s, "%s", v.str);
+            } else {
+                SPrintf(s, "");
+            };
+            break;
+
+        case RAW_t:
+            SPrintf(s, "%d", v.len);
+            break;
+    };
+
+    return s;
+};
+
+
+// Node
+struct Node;
+
+
+typedef struct {
+    u4 endOffset;
+    u4 propsNum;
+    u4 propsLen;
+
+    u1 nameLen;
+    char name[nameLen];
+
+    NodeProperty props[propsNum]<optimize=false>;
+
+    if (FTell() < endOffset) {
+        do {
+            Node sub;
+        } while (sub.endOffset != 0);
+    };
+} Node <read=NodeRead, optimize=false>;
+
+
+string NodeRead (Node &v) {
+    local string s;
+    
+    if (v.nameLen > 0) {
+        SPrintf(s, "%s", v.name);
+        return s;
+    } else {
+        return "NULL";
+    };
+};
+
+
+// File
+struct {
+    char magic[23];
+    uint32 version;
+
+    if (magic != "Kaydara FBX Binary  ") {
+        Warning("Bad FBX file!");
+        Exit(1);
+    };
+
+    do {
+        Node node;
+    } while (node.endOffset != 0);
+} fbx;

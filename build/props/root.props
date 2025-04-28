@@ -6,6 +6,12 @@
   <PropertyGroup Label="Globals">
     <TargetPlatform>$(Platform)</TargetPlatform>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == '' ">
+    <Configuration>Debug</Configuration>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == '' ">
+    <Platform>x64</Platform>
+  </PropertyGroup>
 
   <!-- Compiler flags -->
   <ItemDefinitionGroup>
@@ -27,7 +33,7 @@
       <DisableSpecificWarnings>4351;4355;5105</DisableSpecificWarnings>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zm200 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <WarningLevel>Level4</WarningLevel>
       <StringPooling>true</StringPooling>
       <OpenMPSupport>true</OpenMPSupport>
@@ -103,4 +109,7 @@
       <EnvironmentVariable>true</EnvironmentVariable>
     </BuildMacro>
   </ItemGroup>
+
+   <Import Project="$(PropsPath)dependency_link.props" />
+
 </Project>

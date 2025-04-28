@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--Copyright, Microsoft Corporation, All rights reserved.-->
+<ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+	<Rule
+		Name="DependencyLink"
+		PageTemplate="tool"
+		DisplayName="Dependency Link"
+		SwitchPrefix=""
+		Order="300"
+	>
+		<Rule.Categories>
+			<Category Name="General" DisplayName="General" />
+		</Rule.Categories>
+
+		<Rule.DataSource>
+			<DataSource Persistence="ProjectFile" ItemType="DependencyLink" Label="" HasConfigurationCondition="true" />
+		</Rule.DataSource>
+	</Rule>
+
+	<ItemType
+		Name="DependencyLink"
+		DisplayName="Dependency Link"
+	/>
+	<FileExtension
+		Name="*.dll"
+		ContentType="DependencyLink"
+	/>
+	<ContentType
+		Name="DependencyLink"
+		DisplayName="Dependency Link"
+		ItemType="DependencyLink"
+	/>
+
+</ProjectSchemaDefinitions>
