@@ -193,7 +193,7 @@ namespace Rylogic.Common
 				return null!;
 
 			// Read up to the null character
-			int len = 0;  for (; Marshal.ReadInt16(ptr, len) != 0; ++len) { }
+			int len = 0;  for (; Marshal.ReadInt16(ptr, 2*len) != 0; ++len) { }
 			return PtrToStringUTF16(ptr, len);
 		}
 

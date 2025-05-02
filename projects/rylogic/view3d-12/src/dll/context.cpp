@@ -502,15 +502,20 @@ namespace pr::rdr12
 		if (src == nullptr)
 			return {};
 
+		auto text_format = false;
 		auto filepath = (wchar_t const*)nullptr;
 		if (auto const* file_src = dynamic_cast<ldraw::SourceFile const*>(src))
+		{
 			filepath = file_src->m_filepath.c_str();
+			text_format = file_src->m_text_format;
+		}
 
-		return view3d::SourceInfo {
+		return view3d::SourceInfo{
 			.m_name = src->m_name.c_str(),
 			.m_filepath = filepath,
 			.m_context_id = context_id,
-			.m_object_count = isize(src->m_output.m_objects)
+			.m_object_count = isize(src->m_output.m_objects),
+			.m_text_format = text_format ? 1 : 0,
 		};
 	}
 

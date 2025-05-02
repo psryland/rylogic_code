@@ -1013,8 +1013,7 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Information about a source</summary>
-		[StructLayout(LayoutKind.Sequential)]
-		public struct SourceInfo
+		public class SourceInfo
 		{
 			/// <summary>Friendly name for the source</summary>
 			public string Name;
@@ -1028,12 +1027,16 @@ namespace Rylogic.Gfx
 			/// <summary>The number of object in this source</summary>
 			public int ObjectCount;
 
+			/// <summary>True if the source is a text format, false if binary</summary>
+			public bool TextFormat;
+
 			internal SourceInfo(Interop interop)
 			{
 				Name = Marshal_.PtrToStringUTF8(interop.m_name);
 				FilePath = Marshal_.PtrToStringUTF16(interop.m_filepath);
 				ContextId = interop.m_context_id;
 				ObjectCount = interop.m_object_count;
+				TextFormat = interop.m_text_format != 0;
 			}
 
 			[StructLayout(LayoutKind.Sequential)]
@@ -1043,6 +1046,7 @@ namespace Rylogic.Gfx
 				public IntPtr m_filepath; // wchar_t*
 				public Guid m_context_id;
 				public int m_object_count;
+				public int m_text_format;
 			}
 		}
 		

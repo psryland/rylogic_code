@@ -29,16 +29,10 @@ namespace Rylogic.Gfx
 				}
 			}
 
-			/// <summary>The number of objects associated with this source</summary>
-			public int ObjectCount
+			/// <summary>Source info</summary>
+			public SourceInfo Info
 			{
-				get => new SourceInfo(View3D_SourceInfo(ref m_context_id)).ObjectCount;
-			}
-
-			/// <summary>The filepath associated with this source (or null)</summary>
-			public string? FilePath
-			{
-				get => new SourceInfo(View3D_SourceInfo(ref m_context_id)).FilePath;
+				get => new SourceInfo(View3D_SourceInfo(ref m_context_id));
 			}
 
 			/// <summary>Remove and clean up this data source</summary>

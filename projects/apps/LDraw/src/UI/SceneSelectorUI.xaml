@@ -42,12 +42,12 @@
 			StaysOpen="False"
 			PopupAnimation="Fade"
 		>
-			<ListBox
+			<ListView
 				ItemsSource="{Binding SelectableScenesView}"
 				SelectedItem="{Binding SelectableScenesView/, Mode=TwoWay}"
-				ItemContainerStyle="{StaticResource NoPaddingListBoxItem}"
+				ItemContainerStyle="{StaticResource NoPaddingListViewItem}"
 			>
-				<ListBox.ItemTemplate>
+				<ListView.ItemTemplate>
 					<DataTemplate>
 						<CheckBox
 							Content="{Binding Name}"
@@ -59,8 +59,8 @@
 							MinHeight="24"
 						/>
 					</DataTemplate>
-				</ListBox.ItemTemplate>
-			</ListBox>
+				</ListView.ItemTemplate>
+			</ListView>
 		</Popup>
 	</DockPanel>
 </UserControl>

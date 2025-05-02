@@ -258,15 +258,33 @@ namespace LDraw
 			Model.Settings.UILayout = m_dc.SaveLayout();
 		}
 
+		/// <summary>Open 'source' in a script editor</summary>
+		public void OpenInEditor(Source source)
+		{
+			try
+			{
+				// Open 'source' in an editor window
+				var ui = Model.OpenInEditor(source) ?? throw new Exception("Failed to open the editor for the new script file");
+
+				// Display the editor
+				m_dc.Add(ui, EDockSite.Left).IsFloating = true;
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Opening source in editor failed.", string.Empty, 0);
+				MsgBox.Show(this, $"Opening source in editor failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
+		}
+
 		/// <summary>Add a file source</summary>
-		private Source? AddFileSource(string? filepath, IList<SceneUI>? scenes = null)
+		public Source? AddFileSource(string? filepath, IList<SceneUI>? scenes = null)
 		{
 			try
 			{
 				// Prompt for a filepath if none provided
 				if (filepath == null || filepath.Length == 0)
 				{
-					var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Model.SupportedFilesFilter };
+					var dlg = new OpenFileDialog { Title = "Open an Ldraw supported file", Filter = Model.SupportedFilesFilter };
 					if (dlg.ShowDialog(App.Current.MainWindow) != true)
 						return null;
 					
@@ -278,12 +296,14 @@ namespace LDraw
 					throw new FileNotFoundException($"File '{filepath}' does not exist");
 
 				// Add the file as a new source
-				return Model.AddFileSource(filepath);
+				var src = Model.AddFileSource(filepath);
+				src.SelectedScenes.AddRange(scenes ?? []);
+				return src;
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "Add file failed.", filepath ?? string.Empty, 0);
-				MsgBox.Show(this, $"Add file failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+				Log.Write(ELogLevel.Info, ex, "Add file source failed.", filepath ?? string.Empty, 0);
+				MsgBox.Show(Owner, $"Add file source failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 				return null;
 			}
 		}

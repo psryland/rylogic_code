@@ -225,7 +225,7 @@ namespace LDraw
 		private DispatcherTimer m_file_watch_timer = null!;
 
 		/// <summary>Add a file ldraw source</summary>
-		public Source? AddFileSource(string filepath)
+		public Source AddFileSource(string filepath)
 		{
 			NotifyFileOpening(filepath);
 			var src = View3d.LoadScriptFromFile(filepath);
@@ -271,6 +271,14 @@ namespace LDraw
 			if (src.FilePath.Length == 0)
 				return null;
 
+			// See if there is already a script with this source
+			foreach (var script in Scripts)
+			{
+				if (script.Source.ContextId == src.ContextId)
+					return script;
+			}
+
+			// Otherwise, create a new one
 			return Scripts.Add2(new ScriptUI(src));
 		}
 

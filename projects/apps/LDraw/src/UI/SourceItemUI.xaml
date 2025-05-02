@@ -24,7 +24,7 @@
 		<TextBlock
 			Grid.Column="0"
 			Text="{Binding Source.Name, Mode=OneWay}"
-			ToolTip="{Binding Filepath}"
+			ToolTip="{Binding Source.FilePath}"
 			VerticalAlignment="Center"
 			HorizontalAlignment="Stretch"
 			Background="Transparent"
@@ -44,7 +44,7 @@
 			Grid.Column="3"
 			ToolTip="Remove this source. [Ctrl+D]"
 			Command="{Binding RemoveSource}"
-			IsEnabled="{Binding Context.CanRender}"
+			IsEnabled="{Binding Source.CanRender}"
 			VerticalAlignment="Center"
 			Background="Transparent"
 			BorderThickness="0"

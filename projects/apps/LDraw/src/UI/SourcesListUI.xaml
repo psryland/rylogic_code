@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:LDraw.UI"
 	mc:Ignorable="d" 
 	d:DesignHeight="450"
@@ -13,25 +14,29 @@
 	Padding="0"
 >
 	<UserControl.Resources>
+		<gui:DataContextRef x:Key="MainCtx" Ctx="{Binding .}"/>
+
 		<ContextMenu x:Key="SourcesListCMenu">
 			<MenuItem
 				Header="Add Source..."
-				Command="{Binding AddSource}"
+				Command="{Binding Source={StaticResource MainCtx}, Path=Ctx.AddSource}"
 			/>
 			<MenuItem
 				Header="Edit..."
-				Command="{Binding OpenInEditor}"
-				IsEnabled="{Binding OpenInEditor.Available}"
+				Command="{Binding Source={StaticResource MainCtx}, Path=Ctx.OpenInEditor}"
+				IsEnabled="{Binding Source={StaticResource MainCtx}, Path=Ctx.OpenInEditor.Available}"
 			/>
 		</ContextMenu>
 	</UserControl.Resources>
-	<ListBox
+	<ListView
 		ItemsSource="{Binding Sources}"
 		SelectedItem="{Binding Sources/, Mode=TwoWay}"
 		ContextMenu="{StaticResource SourcesListCMenu}"
-		ItemContainerStyle="{StaticResource NoPaddingListBoxItem}"
+		IsSynchronizedWithCurrentItem="True"
 		ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+		ScrollViewer.VerticalScrollBarVisibility="Disabled"
 		HorizontalContentAlignment="Stretch"
-		BorderThickness="0"
+		SelectionMode="Single"
+		BorderThickness="2"
 	/>
 </UserControl>

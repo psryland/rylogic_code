@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Rylogic.Extn;
@@ -29,6 +30,7 @@ namespace LDraw.UI
 		}
 		public void Dispose()
 		{
+			Sources = null!;
 			Model = null!;
 			DockControl = null!;
 			GC.SuppressFinalize(this);
@@ -76,19 +78,36 @@ namespace LDraw.UI
 		private Model m_model = null!;
 
 		/// <summary>The loaded sources</summary>
-		public ICollectionView Sources { get; }
+		public ICollectionView Sources
+		{
+			get => m_sources;
+			set
+			{
+				if (m_sources == value) return;
+				if (m_sources != null)
+				{
+					m_sources.CurrentChanged -= HandleCurrentSelectionChanged;
+				}
+				m_sources = value;
+				if (m_sources != null)
+				{
+					m_sources.CurrentChanged += HandleCurrentSelectionChanged;
+				}
+				
+				void HandleCurrentSelectionChanged(object? sender, EventArgs e)
+				{
+					OpenInEditor.NotifyCanExecuteChanged();
+				}
+			}
+		}
+		private ICollectionView m_sources = null!;
 
 		/// <summary></summary>
 		public Command AddSource { get; }
 		private void AddSourceInternal()
 		{
-			try
-			{
-			}
-			catch (Exception)
-			{
-			}
-			//LoadFile();
+			if (Window.GetWindow(this) is MainWindow main_window)
+				main_window.AddFileSource(null);
 		}
 
 		/// <summary>Open the selected source in an editor (if possible)</summary>
@@ -97,15 +116,23 @@ namespace LDraw.UI
 		{
 			return
 				Sources.CurrentItem is SourceItemUI item &&
-				item.CanEdit();
+				item.Source.CanEdit;
 		}
 		private void OpenInEditorInternal()
 		{
 			try
 			{
+				if (Window.GetWindow(this) is MainWindow main_window &&
+					Sources.CurrentItem is SourceItemUI item &&
+					item.Source.CanEdit)
+				{
+					main_window.OpenInEditor(item.Source);
+				}
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				Log.Write(ELogLevel.Info, ex, "Open-in-editor for this file source failed.", string.Empty, 0);
+				MsgBox.Show(Window.GetWindow(this), $"Open-in-editor for this file source failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 			}
 		}
 

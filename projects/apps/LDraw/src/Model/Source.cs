@@ -2,7 +2,9 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using LDraw.UI;
+using Rylogic.Common;
 using Rylogic.Gfx;
 
 namespace LDraw
@@ -91,19 +93,16 @@ namespace LDraw
 		}
 
 		/// <summary>The filepath associated with the source</summary>
-		public string FilePath
-		{
-			get => View3dSource?.FilePath ?? string.Empty;
-		}
+		public string FilePath => View3dSource?.Info.FilePath ?? string.Empty;
 
 		/// <summary>The number of objects in this source</summary>
-		public int ObjectCount
-		{
-			get => View3dSource.ObjectCount;
-		}
-		
+		public int ObjectCount => View3dSource?.Info.ObjectCount ?? 0;
+
 		/// <summary>True if there is a scene to render to</summary>
 		public bool CanRender => SelectedScenes.Count != 0;
+
+		/// <summary>True if this source has a file that can be edited</summary>
+		public bool CanEdit => View3dSource?.Info is View3d.SourceInfo info && Path_.FileExists(info.FilePath) && info.TextFormat;
 
 		/// <summary>The scenes to render this script in</summary>
 		public ObservableCollection<SceneUI> SelectedScenes { get; }

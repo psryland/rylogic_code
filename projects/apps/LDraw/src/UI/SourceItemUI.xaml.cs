@@ -19,24 +19,11 @@ namespace LDraw.UI
 		}
 		public void Dispose()
 		{
-			// Remove objects from all scenes
-		//todo	Context.SelectedScenes = Array.Empty<SceneUI>();
-		//todo	Model.Sources.Remove(this);
-
-		//todo	Context = null!;
 			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>The source this item represents</summary>
 		public Source Source { get; }
-
-		/// <summary>Full "filepath" of the source (might be an IP:Port or something else)</summary>
-		public string FilePath => Source.Name; //todo
-
-		/// <summary>App logic</summary>
-		//todo private Model Model => Context.Model;
-
-		public bool CanEdit() => false; //todo: needs an associated text file
 
 		/// <summary>Remove this source from the Model</summary>
 		public Command RemoveSource { get; }

@@ -59,7 +59,7 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
@@ -126,8 +126,8 @@
 		<avalon:TextEditor
 			Grid.Row="2"
 			ShowLineNumbers="True"
-			FontFamily="{Binding Model.Settings.FontName, FallbackValue=Consolas}"
 			SyntaxHighlighting="Ldr"
+			FontFamily="{Binding Settings.FontName, FallbackValue=Consolas}"
 			IsModified="{Binding SaveNeeded, Mode=TwoWay}"
 			ContextMenu="{StaticResource ScriptCMenu}"
 			Name="m_editor"

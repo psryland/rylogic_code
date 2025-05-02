@@ -635,6 +635,9 @@ namespace pr
 
 			// The number of objects in this source
 			int m_object_count;
+
+			// True if the source is a text format, false if binary
+			int m_text_format;
 		};
 		#pragma endregion
 

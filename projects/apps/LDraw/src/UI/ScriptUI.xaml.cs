@@ -38,24 +38,13 @@ namespace LDraw.UI
 		// Notes:
 		//  - A script editor is used to edit existing script files.
 
-		//  - All scripts are created with an associated file. New scripts start with a
-		//    temporary script filepath and get saved to a new location by the user.
-		//  - The Scenes collection view uses a wrapper around SceneUI because Combobox.ItemsSource
-		//    treats the items as child controls and tried to become their parent.
-		//  - Each ScriptUI is responsible for the objects it creates and the scenes those objects are
-		//    added to. Closing a ScriptUI removes its objects from any associated scenes.
-		//  - Watching for changed script files is independent of the Ldr sources CheckForChangedSources
-		//    because a script is not necessarily rendered in the view and therefore not a source. Both
-		//    file watching systems are needed, since assets need to update as well.
-
 		static ScriptUI()
 		{
-			// Register the LdrScript syntax definitions
+			// Register the LdrScript syntax definitions in AvalonEdit
 			var stream = typeof(ScriptUI).Assembly.GetManifestResourceStream("LDraw.res.LdrSyntaxRules.xshd") ?? throw new Exception("LdrSyntaxRules.xshd embedded resource not found");
 			using var reader = new XmlTextReader(stream);
 			var syntax_rules = HighlightingLoader.Load(reader, HighlightingManager.Instance);
 			HighlightingManager.Instance.RegisterHighlighting("Ldr", new[] { ".ldr" }, syntax_rules);
-
 		}
 		public ScriptUI(Source source)
 		{
@@ -85,11 +74,11 @@ namespace LDraw.UI
 		protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
 			base.OnPreviewGotKeyboardFocus(e);
-			//CheckForChangedScript();
+			CheckForChangedScript();
 		}
 		public void Dispose()
 		{
-			// Remove objects from all scenes
+			// Remove this script UI from the model
 			Model.Scripts.Remove(this);
 
 			Editor = null!;
@@ -187,6 +176,9 @@ namespace LDraw.UI
 		private Model Model => Source.Model;
 
 		/// <summary>The name assigned to this script UI</summary>
+		public SettingsData Settings => Source.Model.Settings;
+
+		/// <summary>The name assigned to this script UI</summary>
 		public string ScriptName => Source.Name;
 
 		/// <summary>The filepath associated with the source</summary>
@@ -194,31 +186,6 @@ namespace LDraw.UI
 
 		/// <summary>Context id for objects created by this scene</summary>
 		public Guid ContextId => Source.ContextId;
-
-		///// <summary>The filepath for this script</summary>
-		//public string Filepath
-		//{
-		//	get => m_filepath;
-		//	set
-		//	{
-		//		if (m_filepath == value) return;
-
-		//		// Update the ScriptName if the new filepath isn't a temp script, and the old name was not set by the user
-		//		var update_name = !Model.IsTempScriptFilepath(value) && (Model.IsGeneratedScriptName(ScriptName) || ScriptName == Path_.FileTitle(m_filepath));
-
-		//		// Set the new filepath
-		//		m_filepath = value;
-
-		//		// Update the script name if it hasn't been changed by the user
-		//		if (update_name)
-		//			Source.Name = Path_.FileName(m_filepath);
-
-		//		DockControl.TabToolTip = m_filepath;
-		//	}
-		//}
-		//private FileInfo? FileInfo => Path_.FileExists(Filepath) ? new FileInfo(Filepath) : null;
-		//private string m_filepath = null!;
-		//private FileInfo? m_last_fileinfo;
 
 		/// <summary>The text editor control</summary>
 		public TextEditor Editor
@@ -679,9 +646,9 @@ namespace LDraw.UI
 			SaveFile(FilePath);
 		}
 
-		///// <summary>Test the script file for external changes</summary>
-		//public void CheckForChangedScript()
-		//{
+		/// <summary>Test the script file for external changes</summary>
+		public void CheckForChangedScript()
+		{
 		//	// If this script has never been saved, no changes
 		//	if (!File.Exists(Filepath))
 		//		return;
@@ -752,7 +719,7 @@ namespace LDraw.UI
 		//	{
 		//		LoadFile(Filepath);
 		//	}
-		//}
+		}
 
 		/// <summary>Update the error markers into this script</summary>
 		private void RefreshErrorMarkers()
