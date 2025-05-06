@@ -1084,7 +1084,7 @@ namespace Rylogic.Gfx
 		public delegate void ParsingProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback when the sources are reloaded</summary>
-		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, IntPtr ids, int count, bool before);
 
 		/// <summary>Enumerate GUIDs callback</summary>
 		public delegate bool EnumGuidsCB(IntPtr ctx, ref Guid guid);
@@ -1205,12 +1205,12 @@ namespace Rylogic.Gfx
 
 				// Sign up for notification of the sources changing
 				View3D_SourcesChangedCBSet(m_sources_changed_cb = HandleSourcesChanged, IntPtr.Zero, true);
-				void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, bool before)
+				void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, IntPtr ids, int count, bool before)
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-						m_sync.Post(_ => HandleSourcesChanged(ctx, reason, before), null);
+						m_sync.Post(_ => HandleSourcesChanged(ctx, reason, ids, count, before), null);
 					else
-						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
+						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, ids, count, before));
 				}
 			}
 			catch
@@ -1267,7 +1267,7 @@ namespace Rylogic.Gfx
 			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
 			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
 			ctx = View3D_LoadScriptFromString(ldr_script, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
-			return new Source(ctx);
+			return new Source(ctx, this);
 		}
 
 		/// <summary>
@@ -1283,7 +1283,7 @@ namespace Rylogic.Gfx
 			var add_completed_ctx = add_completed != null ? Marshal.GetFunctionPointerForDelegate(add_completed) : IntPtr.Zero;
 			var includes = new Includes { m_include_paths = string.Join(",", include_paths ?? []) };
 			ctx = View3D_LoadScriptFromFile(ldr_script_file, ref ctx, ref includes, m_add_complete_cb, add_completed_ctx);
-			return new Source(ctx);
+			return new Source(ctx, this);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1336,7 +1336,7 @@ namespace Rylogic.Gfx
 		}
 		public void EnumSources(Func<Source, bool> cb)
 		{
-			EnumGuidsCB enum_cb = (IntPtr ctx, ref Guid guid) => cb(new Source(guid));
+			EnumGuidsCB enum_cb = (IntPtr ctx, ref Guid guid) => cb(new Source(guid, this));
 			View3D_EnumSources(enum_cb, IntPtr.Zero);
 		}
 
@@ -1419,6 +1419,9 @@ namespace Rylogic.Gfx
 
 		// Delete all objects and remove the source associated with 'context_id'
 		[DllImport(Dll)] private static extern void View3D_SourceDelete(ref Guid context_id);
+
+		// Reload objects from the source associated with 'context_id'
+		[DllImport(Dll)] private static extern void View3D_SourceReload(ref Guid context_id);
 
 		// Get information about a source
 		[DllImport(Dll)] private static extern SourceInfo.Interop View3D_SourceInfo(ref Guid context_id);

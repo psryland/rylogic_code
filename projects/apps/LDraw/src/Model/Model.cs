@@ -260,7 +260,7 @@ namespace LDraw
 		public string CreateNewScriptFile()
 		{
 			var script_name = GenerateScriptName();
-			var filepath = Path_.CombinePath(TempScriptDirectory, script_name);
+			var filepath = Path_.CombinePath(TempScriptDirectory, $"{script_name}.ldr");
 			File.AppendText(filepath).Dispose();
 			return filepath;
 		}

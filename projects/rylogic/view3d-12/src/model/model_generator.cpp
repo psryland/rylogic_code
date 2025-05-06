@@ -1225,11 +1225,43 @@ namespace pr::rdr12
 				cache.m_ncont.push_back(NuggetDesc(ETopo::TriList, EGeom::Vert|EGeom::Norm));
 
 				// Emit the model. 'out' returns true to stop searching
-				// 3DS models cannot nest, so each 'Model Tree' is one root node only
+				// STL models cannot nest, so each 'Model Tree' is one root node only
 				auto model = Create(factory, cache, opts);
 				auto tree = ModelTree{{model, m4x4::Identity(), 0}};
 				return out(tree);
 			});
+	}
+	void ModelGenerator::LoadFBXModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts)
+	{
+		using namespace geometry;
+
+		// Model output helpers
+		struct ModelOut
+		{
+			ResourceFactory& m_factory;
+			CreateOptions const* m_opts;
+			ModelOutFunc m_out;
+			Cache<> m_cache;
+			//MatCont m_mats;
+
+			ModelOut(ResourceFactory& factory, CreateOptions const* opts, ModelOutFunc out)
+				: m_factory(factory)
+				, m_opts(opts)
+				, m_out(out)
+				, m_cache(0, 0, 0, sizeof(uint32_t))
+				//, m_mats()
+			{}
+
+			bool operator ()(int model)
+			{
+				ModelTree tree;
+				return m_out(tree);
+			}
+		};
+		ModelOut model_out(factory, opts, out);
+
+		fbx::FbxDll fbx;
+		fbx.Read(src, fbx::Options{}, model_out);
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
 	{
@@ -1239,6 +1271,7 @@ namespace pr::rdr12
 			case EModelFileFormat::P3D:    LoadP3DModel(factory, src, mout, opts); break;
 			case EModelFileFormat::Max3DS: Load3DSModel(factory, src, mout, opts); break;
 			case EModelFileFormat::STL:    LoadSTLModel(factory, src, mout, opts); break;
+			case EModelFileFormat::FBX:    LoadFBXModel(factory, src, mout, opts); break;
 			default: throw std::runtime_error("Unsupported model file format");
 		}
 	}

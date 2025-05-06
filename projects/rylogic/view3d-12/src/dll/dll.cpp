@@ -221,6 +221,17 @@ VIEW3D_API void __stdcall View3D_EnumSources(view3d::EnumGuidsCB enum_guids_cb, 
 	CatchAndReport(View3D_EnumSources,, );
 }
 
+// Reload objects from the source associated with 'context_id'
+VIEW3D_API void __stdcall View3D_SourceReload(GUID const& context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ReloadScriptSources({ &context_id, 1 });
+	}
+	CatchAndReport(View3D_SourceReload, , );
+}
+
 // Delete all objects and remove the source associated with 'context_id'
 VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id)
 {

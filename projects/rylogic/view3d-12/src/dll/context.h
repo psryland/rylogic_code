@@ -114,6 +114,7 @@ namespace pr::rdr12
 		
 		// Reload file sources
 		void ReloadScriptSources();
+		void ReloadScriptSources(std::span<Guid const> context_ids);
 
 		// Poll for changed script source files, and reload any that have changed
 		void CheckForChangedSources();
@@ -129,9 +130,6 @@ namespace pr::rdr12
 
 		// An event raised during parsing. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
 		void OnParsingProgress(ldraw::ParsingProgressEventArgs&) override;
-
-		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-		void OnReload() override;
 
 		// Store change event. Called before and after a change to the collection of objects in the store.
 		void OnStoreChange(ldraw::StoreChangeEventArgs const&) override;

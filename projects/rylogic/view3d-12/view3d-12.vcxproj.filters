@@ -524,6 +524,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
@@ -792,7 +795,6 @@
     <None Include="src\ldraw\ldraw_demo_scene.ldr">
       <Filter>src\ldraw</Filter>
     </None>
-    <None Include="auto_gen.py" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\radix_sort\radix_sort.hlsl">
@@ -812,5 +814,8 @@
     <ResourceCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\shaders.rc">
       <Filter>src\compute</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CSharpScript Include="auto_gen.csx" />
   </ItemGroup>
 </Project>

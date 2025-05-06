@@ -9,20 +9,20 @@ target directory.
 
 	<!-- Add a dependency on the dll (C#) -->
 	<ItemGroup>
-		<Content Include="$(RylogicRoot)lib\x64\debug\view3d-12.dll">
-			<Link>lib\x64\debug\view3d-12.dll</Link>
+		<Content Include="$(RylogicRoot)lib\x64\debug\fbx.dll">
+			<Link>lib\x64\debug\fbx.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'=='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
 
-		<Content Include="$(RylogicRoot)lib\x64\release\view3d-12.dll">
-			<Link>lib\x64\release\view3d-12.dll</Link>
+		<Content Include="$(RylogicRoot)lib\x64\release\fbx.dll">
+			<Link>lib\x64\release\fbx.dll</Link>
 			<CopyToOutputDirectory Condition="'$(Configuration)'!='Debug'">PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 
 	<!-- Add a dependency on the dll (C++) -->
 	<ItemGroup>
-		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\view3d-12.dll" />
+		<DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\fbx.dll" />
 	</ItemGroup>
 
 </Project>

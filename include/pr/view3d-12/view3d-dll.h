@@ -644,7 +644,7 @@ namespace pr
 		// Callbacks
 		using SettingsChangedCB = void(__stdcall *)(void* ctx, Window window, ESettings setting);
 		using ParsingProgressCB = void(__stdcall *)(void* ctx, GUID const& context_id, char const* filepath, long long file_offset, BOOL complete, BOOL& cancel);
-		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+		using SourcesChangedCB = void(__stdcall *)(void* ctx, ESourcesChangedReason reason, GUID const* ids, int count, BOOL before);
 		using EnumGuidsCB = bool(__stdcall *)(void* ctx, GUID const& context_id);
 		using EnumObjectsCB = bool(__stdcall *)(void* ctx, Object object);
 		using AddCompleteCB = void(__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
@@ -703,6 +703,9 @@ extern "C"
 
 	// Enumerate all sources in the store
 	VIEW3D_API void __stdcall View3D_EnumSources(pr::view3d::EnumGuidsCB enum_guid_cb, void* ctx);
+
+	// Reload objects from the source associated with 'context_id'
+	VIEW3D_API void __stdcall View3D_SourceReload(GUID const& context_id);
 
 	// Delete all objects and remove the source associated with 'context_id'
 	VIEW3D_API void __stdcall View3D_SourceDelete(GUID const& context_id);

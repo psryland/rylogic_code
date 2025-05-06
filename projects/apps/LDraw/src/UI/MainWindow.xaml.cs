@@ -361,7 +361,7 @@ namespace LDraw
 			if (m_dc.ActiveDockable is not ScriptUI script)
 				return;
 
-			script.SaveFile();
+			script.SaveScript.Execute();
 		}
 
 		/// <summary>Save the currently focused script</summary>
@@ -371,7 +371,8 @@ namespace LDraw
 			if (m_dc.ActiveDockable is not ScriptUI script)
 				return;
 
-			script.SaveFile(null);
+			script.SaveScript.Execute();
+			throw new NotImplementedException("Save as not supported");
 		}
 
 		/// <summary>Enable/Disable listening for streaming connections</summary>

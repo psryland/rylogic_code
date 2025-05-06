@@ -1,17 +1,42 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 
 namespace Rylogic.Gfx
 {
 	public sealed partial class View3d
 	{
 		/// <summary>Reference type wrapper of a view3d light</summary>
-		public class Source :INotifyPropertyChanged
+		public class Source :IDisposable, INotifyPropertyChanged
 		{
-			public Source(Guid context_id)
+			public Source(Guid context_id, View3d view3d)
 			{
+				View3d = view3d;
 				m_context_id = context_id;
 			}
+			public void Dispose()
+			{
+				View3d = null!;
+				GC.SuppressFinalize(this);
+			}
+
+			/// <summary>The view3d instance this source belongs to</summary>
+			public View3d View3d
+			{
+				get => m_view3d;
+				private set
+				{
+					if (m_view3d == value) return;
+					if (m_view3d != null)
+					{
+					}
+					m_view3d = value;
+					if (m_view3d != null)
+					{
+					}
+				}
+			}
+			private View3d m_view3d = null!;
 
 			/// <summary>The context Id associated with the source</summary>
 			public Guid ContextId => m_context_id;
@@ -39,6 +64,39 @@ namespace Rylogic.Gfx
 			public void Remove()
 			{
 				View3D_SourceDelete(ref m_context_id);
+			}
+
+			/// <summary>Reload objects from this source</summary>
+			public void Reload()
+			{
+				View3D_SourceReload(ref m_context_id);
+			}
+
+			/// <summary>Raised when this source has changed</summary>
+			public event EventHandler? SourceChanged
+			{
+				add
+				{
+					if (SourceChangedInternal == null)
+						View3d.OnSourcesChanged += HandleSourcesChanged;
+
+					SourceChangedInternal += value;
+				}
+				remove
+				{
+					SourceChangedInternal -= value;
+
+					if (SourceChangedInternal == null)
+						View3d.OnSourcesChanged -= HandleSourcesChanged;
+				}
+			}
+			private event EventHandler? SourceChangedInternal;
+			private void HandleSourcesChanged(object? sender, SourcesChangedEventArgs e)
+			{
+				if (!e.ContextIds.Contains(ContextId))
+					return;
+
+				SourceChangedInternal?.Invoke(this, EventArgs.Empty);
 			}
 
 			/// <summary>Notify property value changed</summary>

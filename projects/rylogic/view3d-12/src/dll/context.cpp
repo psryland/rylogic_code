@@ -557,6 +557,12 @@ namespace pr::rdr12
 		m_sources.Reload();
 	}
 
+	// Reload objects from a source
+	void Context::ReloadScriptSources(std::span<Guid const> context_ids)
+	{
+		m_sources.Reload(context_ids);
+	}
+
 	// Poll for changed script source files, and reload any that have changed
 	void Context::CheckForChangedSources()
 	{
@@ -596,11 +602,11 @@ namespace pr::rdr12
 		args.m_cancel = cancel != 0;
 	}
 
-	// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-	void Context::OnReload()
-	{
-		SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
-	}
+	//// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+	//void Context::OnReload()
+	//{
+	//	SourcesChanged(view3d::ESourcesChangedReason::Reload, true);
+	//}
 
 	// Store change event. Called before and after a change to the collection of objects in the store.
 	void Context::OnStoreChange(ldraw::StoreChangeEventArgs const& args)
@@ -649,7 +655,7 @@ namespace pr::rdr12
 		}
 
 		// Notify of updated sources
-		SourcesChanged(reason, args.m_before);
+		SourcesChanged(reason, args.m_context_ids.data(), isize(args.m_context_ids), args.m_before);
 	}
 
 	// Process any received commands in the source

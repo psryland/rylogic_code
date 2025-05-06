@@ -4,33 +4,33 @@
   Globals
   -->
   <PropertyGroup Label="Globals">
-  <ConfigurationType>Application</ConfigurationType>
-  <VCProjectVersion>16.0</VCProjectVersion>
-  <ProjectGuid>{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}</ProjectGuid>
-  <RootNamespace>pr::fbx</RootNamespace>
-  <ProjectName>fbx-test</ProjectName>
-  <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ConfigurationType>Application</ConfigurationType>
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{95590539-6CD8-4491-B7EC-67FBA5A8F0A1}</ProjectGuid>
+    <RootNamespace>pr::fbx</RootNamespace>
+    <ProjectName>fbx-test</ProjectName>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <!--
   Configurations
   -->
   <ItemGroup Label="ProjectConfigurations">
-  <ProjectConfiguration Include="Debug|Win32">
-    <Configuration>Debug</Configuration>
-    <Platform>Win32</Platform>
-  </ProjectConfiguration>
-  <ProjectConfiguration Include="Debug|x64">
-    <Configuration>Debug</Configuration>
-    <Platform>x64</Platform>
-  </ProjectConfiguration>
-  <ProjectConfiguration Include="Release|Win32">
-    <Configuration>Release</Configuration>
-    <Platform>Win32</Platform>
-  </ProjectConfiguration>
-  <ProjectConfiguration Include="Release|x64">
-    <Configuration>Release</Configuration>
-    <Platform>x64</Platform>
-  </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <!--
   Property Sheets
@@ -42,53 +42,45 @@
   Build options
   -->
   <ItemDefinitionGroup>
-  <ClCompile>
-    <EnableModules>false</EnableModules>
-    <LanguageStandard>stdcpplatest</LanguageStandard>
-    <DisableSpecificWarnings>5054;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-    <AdditionalIncludeDirectories>
-      ;$(ProjectDir)
-      ;$(RylogicRoot)include
-      ;$(SDKPath)eigen
-      ;$(SDKPath)fbx/fbx/include
-      ;%(AdditionalIncludeDirectories)
-    </AdditionalIncludeDirectories>
-    <PreprocessorDefinitions>
-      ;FBXSDK_SHARED
-      ;_SILENCE_CXX23_DENORM_DEPRECATION_WARNING
-      ;%(PreprocessorDefinitions)
-    </PreprocessorDefinitions>
-  </ClCompile>
-  <Link>
-    <SubSystem>Console</SubSystem>
-    <AdditionalLibraryDirectories>
-        ;$(SDKPath)fbx/fbx/lib/$(Platform)/$(Configuration)/
-        ;%(AdditionalLibraryDirectories)
-      </AdditionalLibraryDirectories>
-    <AdditionalDependencies>
-        ;libfbxsdk.lib
-        ;libxml2.lib
-        ;alembic.lib
-        ;%(AdditionalDependencies)
-      </AdditionalDependencies>
-    <DelayLoadDLLs>
-      ;%(DelayLoadDLLs)
-    </DelayLoadDLLs>
-  </Link>
+    <ClCompile>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <DisableSpecificWarnings>5054;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>
+        ;$(ProjectDir)
+        ;$(RylogicRoot)include
+        ;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>
+        ;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>
+          ;$(RylogicRoot)lib\$(Platform)\$(Configuration)
+          ;%(AdditionalLibraryDirectories)
+        </AdditionalLibraryDirectories>
+      <AdditionalDependencies>
+          ;fbx.imp
+          ;%(AdditionalDependencies)
+        </AdditionalDependencies>
+      <DelayLoadDLLs>
+        ;%(DelayLoadDLLs)
+      </DelayLoadDLLs>
+    </Link>
   </ItemDefinitionGroup>
   <!--
   Files
   -->
   <ItemGroup>
-    <ClInclude Include="src\fbx.h" />
-    <ClCompile Include="src\fbx.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <DependencyLink
-      Include="$(SDKPath)fbx\fbx\lib\$(Platform)\$(Configuration)\libfbxsdk.dll"
-      OutDir="$(OutDir)"
-    />
+    <DependencyLink Include="$(RylogicRoot)lib\$(Platform)\$(Configuration)\fbx.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
   </ItemGroup>
   <!--
   Targets

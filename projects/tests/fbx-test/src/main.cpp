@@ -1,9 +1,7 @@
-#include <iostream>
-//#include <eigen/Eigen/Core>
-#include "src/fbx.h"
-#include "pr/win32/win32.h"
+#include <fstream>
+#include "pr/geometry/fbx.h"
 
-using namespace pr;
+using namespace pr::geometry;
 
 #if 0
 // Helper for setting the DLL search path before main()
@@ -54,21 +52,22 @@ extern "C" void __cdecl InitDllDirectory()
 __declspec(allocate(".CRT$XCT")) void (__cdecl* pInitDllDirectory)(void) = &InitDllDirectory;
 #endif
 
-//int Init()
-//{
-//	win32::LoadDll<struct FbxSdk>("libfbxsdk.dll");
-//	return 1;
-//}
-//
-//static int g_setup = Init();
-
 int main()
 {
+	std::filesystem::path ifilepath = "E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx";
+	std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
+	std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
 
-	fbx::Manager fbx;
-	fbx::Settings settings(fbx);
-	fbx::Importer imp(fbx, settings);
-	auto scene = imp.Import("E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx");
-	WriteContent(scene, std::cout);
+	std::ifstream ifile(ifilepath, std::ios::binary);
+	//std::ofstream ofile(ofilepath, std::ios::binary);
+	std::ofstream dfile(dfilepath);
+
+	fbx::FbxDll dll;
+	//dll.Fbx_RoundTripTest(ifile, ofile);
+	dll.Fbx_DumpStream(ifile, dfile);
+	//dll.Read(ifile, fbx::Options{}, [&](int)
+	//{
+	//	return true;
+	//});
 	return 0;
 }

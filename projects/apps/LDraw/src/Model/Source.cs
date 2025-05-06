@@ -2,10 +2,10 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.IO;
 using LDraw.UI;
 using Rylogic.Common;
 using Rylogic.Gfx;
+using Rylogic.Utility;
 
 namespace LDraw
 {
@@ -66,6 +66,7 @@ namespace LDraw
 				if (m_source != null)
 				{
 					m_source.PropertyChanged -= HandleSourcePropertyChanged;
+					Util.Dispose(ref m_source!);
 				}
 				m_source = value;
 				if (m_source != null)
@@ -114,6 +115,19 @@ namespace LDraw
 		public void Remove()
 		{
 			View3dSource.Remove();
+		}
+
+		/// <summary>Reload the objects from this source</summary>
+		public void Reload()
+		{
+			View3dSource.Reload();
+		}
+
+		/// <summary>Raised when the source has changed</summary>
+		public event EventHandler SourceChanged
+		{
+			add { View3dSource.SourceChanged += value; }
+			remove { View3dSource.SourceChanged -= value; }
 		}
 
 		/// <inheritdoc/>

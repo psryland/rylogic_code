@@ -220,6 +220,7 @@ namespace pr::rdr12
 		static void LoadP3DModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
 		static void Load3DSModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
 		static void LoadSTLModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
+		static void LoadFBXModel(ResourceFactory& factory, std::istream& src, ModelOutFunc out, CreateOptions const* opts = nullptr);
 		static void LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts = nullptr);
 
 		// Text *******************************************************************************

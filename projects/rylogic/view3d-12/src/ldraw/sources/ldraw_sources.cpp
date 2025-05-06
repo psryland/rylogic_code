@@ -36,7 +36,8 @@ namespace pr::rdr12::ldraw
 		// callbacks are made. So this notifies of the reload before anything starts changing.
 		m_watcher.OnFilesChanged += [this](FileWatch&, FileWatch::FileCont&) mutable
 		{
-			m_events->OnReload();
+			// needed now?
+			//m_events->OnReload();
 		};
 	}
 	ScriptSources::~ScriptSources()
@@ -141,20 +142,34 @@ namespace pr::rdr12::ldraw
 		Remove({ &context_id, 1 }, {}, reason);
 	}
 
-	// Reload all sources
-	void ScriptSources::Reload()
+	// Reload a range of sources
+	void ScriptSources::Reload(std::span<Guid const> ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
-		// Notify reloading
-		m_events->OnReload();
+		pr::vector<SourceBase*> srcs;
+		for (auto& id : ids)
+			srcs.push_back(m_srcs[id].get());
+
+		m_events->OnStoreChange({ EDataChangedReason::Reload, ids, nullptr, true });
 
 		// Reload each source in a background thread
-		std::for_each(std::execution::par_unseq, std::begin(m_srcs), std::end(m_srcs), [this](auto& pair)
+		std::for_each(std::execution::par_unseq, std::begin(srcs), std::end(srcs), [this](auto* src)
 		{
-			SourceBase& src = *pair.second;
-			src.Load(rdr(), EDataChangedReason::Reload, nullptr);
+			src->Load(rdr(), EDataChangedReason::Reload, nullptr);
 		});
+
+		m_events->OnStoreChange({ EDataChangedReason::Reload, ids, nullptr, false });
+	}
+
+	// Reload all sources
+	void ScriptSources::Reload()
+	{
+		GuidCont ids;
+		for (auto& src : m_srcs)
+			ids.push_back(src.first);
+
+		Reload(ids);
 	}
 
 	// Check all file sources for modifications and reload any that have changed

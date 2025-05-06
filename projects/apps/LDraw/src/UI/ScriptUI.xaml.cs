@@ -70,6 +70,7 @@ namespace LDraw.UI
 			UncommentSelection = Command.Create(this, UncommentSelectionInternal);
 
 			DataContext = this;
+			Editor.Text = File.ReadAllText(FilePath);
 		}
 		protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
 		{
@@ -137,15 +138,21 @@ namespace LDraw.UI
 				{
 					Log.EntriesChanged -= HandleLogEntriesChanged;
 					m_source.PropertyChanged -= HandlePropertyChanged;
+					m_source.SourceChanged -= HandleSourceChanged;
 					Util.Dispose(ref m_source!);
 				}
 				m_source = value;
 				if (m_source != null)
 				{
+					m_source.SourceChanged += HandleSourceChanged;
 					m_source.PropertyChanged += HandlePropertyChanged;
 					Log.EntriesChanged += HandleLogEntriesChanged;
 				}
 
+				void HandleSourceChanged(object? sender, EventArgs e)
+				{
+					// ?
+				}
 				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
 					switch (e.PropertyName)
@@ -618,34 +625,6 @@ namespace LDraw.UI
 		//	LoadFile(Filepath);
 		//}
 
-		/// <summary>Save the script in this editor to a file</summary>
-		public void SaveFile(string? filepath = null)
-		{
-			//// Prompt for a filepath if not given
-			//if (filepath == null || filepath.Length == 0)
-			//{
-			//	var dlg = new SaveFileDialog { Title = "Save Script", Filter = Model.EditableFilesFilter };
-			//	if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
-			//	filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
-			//}
-
-			//// Save the file from the editor
-			//File.WriteAllText(filepath, Editor.Text);
-
-			//// Save the filepath
-			//Filepath = filepath;
-
-			//// Record the file state when last saved
-			//m_last_fileinfo = FileInfo;
-
-			//// Sync'd with disk
-			//SaveNeeded = false;
-		}
-		public void SaveFile()
-		{
-			SaveFile(FilePath);
-		}
-
 		/// <summary>Test the script file for external changes</summary>
 		public void CheckForChangedScript()
 		{
@@ -762,12 +741,13 @@ namespace LDraw.UI
 		private void RenderInternal()
 		{
 			if (SaveNeeded)
-				SaveFile();
+				SaveScriptInternal();
 
 			var scenes = Source.SelectedScenes.ToArray();
 			if (scenes.Length == 0)
 				return;
 
+			Source.Reload();
 			//UpdateObjects();
 		}
 
@@ -775,7 +755,17 @@ namespace LDraw.UI
 		public Command SaveScript { get; }
 		private void SaveScriptInternal()
 		{
-			SaveFile();
+			try
+			{
+				// Save the file from the editor
+				File.WriteAllText(FilePath, Editor.Text);
+				SaveNeeded = false;
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "Saving script file failed.", string.Empty, 0);
+				MsgBox.Show(Window.GetWindow(this), $"Saving script file failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+			}
 		}
 
 		/// <summary>Remove objects associated with this script from the selected scenes</summary>

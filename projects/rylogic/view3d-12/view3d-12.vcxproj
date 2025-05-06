@@ -134,7 +134,6 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\camera\camera.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\container\chain.h" />
-    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\common.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\index_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_box.h" />
@@ -148,6 +147,8 @@
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_skybox.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\models_sphere.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\model_file.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\3ds.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\p3d.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\stl.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\utility.h" />
@@ -304,7 +305,7 @@
     <View3dShaderBuild Include="src\shaders\hlsl\utility\mipmap_generator.hlsl" />
   </ItemGroup>
   <ItemGroup>
-      <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
+    <FxCompile Include="$(RylogicRoot)include\pr\view3d-12\compute\fluid_simulation\fluid_simulation.hlsl">
       <EntryPointName>ApplyForces</EntryPointName>
       <ShaderType>Compute</ShaderType>
       <ShaderModel>6.6</ShaderModel>
