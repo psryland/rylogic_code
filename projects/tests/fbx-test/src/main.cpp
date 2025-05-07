@@ -54,8 +54,10 @@ __declspec(allocate(".CRT$XCT")) void (__cdecl* pInitDllDirectory)(void) = &Init
 
 int main()
 {
+	//std::filesystem::path ifilepath = "E:\\Dump\\biplane.fbx";
+	//std::filesystem::path ifilepath = "E:\\Dump\\Hyperpose\\AJ-99.fbx";
 	std::filesystem::path ifilepath = "E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx";
-	std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
+	//std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
 	std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
 
 	std::ifstream ifile(ifilepath, std::ios::binary);

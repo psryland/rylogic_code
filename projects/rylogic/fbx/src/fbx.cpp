@@ -70,9 +70,9 @@ namespace fbxsdk
 	std::ostream& operator << (std::ostream& out, FbxAMatrix const& vec)
 	{
 		return out
-			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3])
-			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3])
-			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3])
+			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
+			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3]) << ", "
+			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
 			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
 	}
 	std::ostream& operator << (std::ostream& out, FbxDouble2 const& vec)
@@ -90,9 +90,9 @@ namespace fbxsdk
 	std::ostream& operator << (std::ostream& out, FbxDouble4x4 const& vec)
 	{
 		return out
-			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3])
-			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3])
-			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3])
+			<< FloatClamp(vec[0][0]) << ", " << FloatClamp(vec[0][1]) << ", " << FloatClamp(vec[0][2]) << ", " << FloatClamp(vec[0][3]) << ", "
+			<< FloatClamp(vec[1][0]) << ", " << FloatClamp(vec[1][1]) << ", " << FloatClamp(vec[1][2]) << ", " << FloatClamp(vec[1][3]) << ", "
+			<< FloatClamp(vec[2][0]) << ", " << FloatClamp(vec[2][1]) << ", " << FloatClamp(vec[2][2]) << ", " << FloatClamp(vec[2][3]) << ", "
 			<< FloatClamp(vec[3][0]) << ", " << FloatClamp(vec[3][1]) << ", " << FloatClamp(vec[3][2]) << ", " << FloatClamp(vec[3][3]);
 	}
 	std::ostream& operator << (std::ostream& out, FbxColor const& col)
@@ -389,7 +389,13 @@ namespace pr::geometry::fbx
 			std::ostream& m_out;
 			int m_format;
 
-			OStream(std::ostream& out, int format) : m_out(out) ,m_format(format) {}
+			OStream(std::ostream& out, int format)
+				: m_out(out)
+				, m_format(format)
+			{
+				if (!m_out.good())
+					throw std::runtime_error("FBX output stream is unhealthy");
+			}
 			OStream(OStream&&) = delete;
 			OStream(OStream const&) = delete;
 			OStream& operator =(OStream&&) = delete;
@@ -467,7 +473,13 @@ namespace pr::geometry::fbx
 			std::istream& m_src;
 			int m_format;
 
-			IStream(std::istream& src, int format) : m_src(src) , m_format(format) {}
+			IStream(std::istream& src, int format)
+				: m_src(src)
+				, m_format(format)
+			{
+				if (!m_src.good())
+					throw std::runtime_error("FBX input stream is unhealthy");
+			}
 			IStream(IStream&&) = delete;
 			IStream(IStream const&) = delete;
 			IStream& operator =(IStream&&) = delete;
@@ -597,7 +609,7 @@ namespace pr::geometry::fbx
 			{}
 
 			// Indent helper
-			std::string_view Indent(int amount)
+			static std::string_view Indent(int amount)
 			{
 				constexpr static char const space[] = "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 				constexpr static int len = (int)_countof(space);
@@ -607,7 +619,6 @@ namespace pr::geometry::fbx
 			void Write(FbxScene const& scene, int indent = 0)
 			{
 				m_out << Indent(indent) << "Scene: " << scene.GetName() << "\n";
-
 				WriteMetaData(*const_cast<FbxScene&>(scene).GetSceneInfo(), indent + 1);
 				WriteGlobalSettings(scene.GetGlobalSettings(), indent + 1);
 				WriteHierarchy(*scene.GetRootNode(), indent + 1);
@@ -667,18 +678,40 @@ namespace pr::geometry::fbx
 			}
 			void WriteHierarchy(FbxNode const& node, int indent)
 			{
-				m_out << Indent(indent) << node.GetName() << "\n";
-				for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-					WriteHierarchy(*node.GetChild(i), indent + 1);
+				m_out << Indent(indent) << "Hierarchy:\n";
+
+				struct L
+				{
+					static void Do(std::ostream& out, FbxNode const& node, int indent)
+					{
+						out << Indent(indent) << node.GetName() << "\n";
+						for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
+							Do(out, *node.GetChild(i), indent + 1);
+					}
+				};
+				L::Do(m_out, node, indent+1);
 			}
 			void WriteContent(FbxNode const& node, int indent)
 			{
 				auto attr = node.GetNodeAttribute();
 				auto attr_type = attr ? attr->GetAttributeType() : FbxNodeAttribute::EType::eUnknown;
 				m_out << Indent(indent) << "Node(" << attr_type << ") " << node.GetName() << "\n";
+
+				// Node properties
+				m_out << Indent(indent + 1) << "Properties:\n";
+				{
+					WriteUserProperties(node, indent + 2);
+					WriteTarget(node, indent + 2);
+					WritePivotsAndLimits(node, indent + 2);
+					WriteTransformPropagation(node, indent + 2);
+					WriteGeometricTransform(node, indent + 2);
+				}
+
+				// Node specific data
 				switch (attr_type)
 				{
 					case FbxNodeAttribute::eUnknown:
+					case FbxNodeAttribute::eNull:
 					{
 						break;
 					}
@@ -728,13 +761,6 @@ namespace pr::geometry::fbx
 						break;
 					}
 				}
-
-				// Extra properties of each node
-				WriteUserProperties(node, indent + 1);
-				WriteTarget(node, indent + 1);
-				WritePivotsAndLimits(node, indent + 1);
-				WriteTransformPropagation(node, indent + 1);
-				WriteGeometricTransform(node, indent + 1);
 
 				// Recurse
 				for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
@@ -822,7 +848,7 @@ namespace pr::geometry::fbx
 				WriteControlsPoints(lMesh, indent+1);
 				WritePolygons(lMesh, indent+1);
 				WriteMaterialMapping(lMesh, indent+1);
-				WriteMaterial(lMesh, indent+1);
+				WriteMaterials(lMesh, indent+1);
 				WriteTexture(lMesh, indent+1);
 				WriteMaterialConnections(lMesh, indent+1);
 				WriteLink(lMesh, indent+1);
@@ -831,9 +857,10 @@ namespace pr::geometry::fbx
 			}
 			void WriteControlsPoints(FbxMesh const& mesh, int indent)
 			{
-				FbxVector4* lControlPoints = mesh.GetControlPoints();
-
 				m_out << Indent(indent) << "Control Points:" << "\n";
+				++indent;
+
+				FbxVector4* lControlPoints = mesh.GetControlPoints();
 				for (int i = 0, iend = mesh.GetControlPointsCount(); i != iend; ++i)
 				{
 					m_out << Indent(indent) << "[" << i << "] " << lControlPoints[i];
@@ -856,41 +883,20 @@ namespace pr::geometry::fbx
 				int vertexId = 0;
 				for (int i = 0, iend = mesh.GetPolygonCount(); i != iend; ++i)
 				{
-					m_out << Indent(indent) << "Polygon: " << i << "\n";
-					for (int l = 0; l != mesh.GetElementPolygonGroupCount(); ++l)
-					{
-						FbxGeometryElementPolygonGroup const* lePolgrp = mesh.GetElementPolygonGroup(l);
-						switch (lePolgrp->GetMappingMode())
-						{
-							case FbxGeometryElement::eByPolygon:
-							{
-								if (lePolgrp->GetReferenceMode() == FbxGeometryElement::eIndex)
-								{
-									m_out << Indent(indent) << "Assigned to group: " << lePolgrp->GetIndexArray().GetAt(i) << "\n";
-									break;
-								}
-							}
-							default:
-							{
-								// any other mapping modes don't make sense
-								m_out << Indent(indent) << "unsupported group assignment" << "\n";
-								break;
-							}
-						}
-					}
-
+					m_out << Indent(indent + 1) << "Polygon: " << i << "\n";
 					for (int j = 0, jend = mesh.GetPolygonSize(i); j != jend; ++j)
 					{
 						auto lControlPointIndex = mesh.GetPolygonVertex(i, j);
-						m_out << Indent(indent) << "Index: " << lControlPointIndex;
+						m_out << Indent(indent + 2) << "Index=" << lControlPointIndex;
 						for (int l = 0, lend = mesh.GetElementVertexColorCount(); l != lend; ++l)
 						{
+							l == 0 ? m_out << " Color=" : m_out;
+
 							FbxGeometryElementVertexColor const* leVtxc = mesh.GetElementVertexColor(l);
 							switch (leVtxc->GetMappingMode())
 							{
 								case FbxGeometryElement::eByControlPoint:
 								{
-									m_out << Indent(indent) << "Color: ";
 									switch (leVtxc->GetReferenceMode())
 									{
 										case FbxGeometryElement::eDirect:
@@ -914,7 +920,6 @@ namespace pr::geometry::fbx
 								}
 								case FbxGeometryElement::eByPolygonVertex:
 								{
-									m_out << " Color: ";
 									switch (leVtxc->GetReferenceMode())
 									{
 										case FbxGeometryElement::eDirect:
@@ -936,23 +941,22 @@ namespace pr::geometry::fbx
 									}
 									break;
 								}
-								case FbxGeometryElement::eByPolygon: // doesn't make much sense for UVs
-								case FbxGeometryElement::eAllSame:   // doesn't make much sense for UVs
-								case FbxGeometryElement::eNone:       // doesn't make much sense for UVs
 								default:
 								{
+									m_out << "unsupported";
 									break;
 								}
 							}
 						}
 						for (int l = 0, lend = mesh.GetElementUVCount(); l != lend; ++l)
 						{
+							l == 0 ? m_out << " UV=" : m_out;
+
 							FbxGeometryElementUV const* leUV = mesh.GetElementUV(l);
 							switch (leUV->GetMappingMode())
 							{
 								case FbxGeometryElement::eByControlPoint:
 								{
-									m_out << " UV: ";
 									switch (leUV->GetReferenceMode())
 									{
 										case FbxGeometryElement::eDirect:
@@ -976,7 +980,6 @@ namespace pr::geometry::fbx
 								}
 								case FbxGeometryElement::eByPolygonVertex:
 								{
-									m_out << " UV: ";
 									switch (leUV->GetReferenceMode())
 									{
 										case FbxGeometryElement::eDirect:
@@ -993,105 +996,152 @@ namespace pr::geometry::fbx
 									}
 									break;
 								}
-								case FbxGeometryElement::eByPolygon: // doesn't make much sense for UVs
-								case FbxGeometryElement::eAllSame:   // doesn't make much sense for UVs
-								case FbxGeometryElement::eNone:       // doesn't make much sense for UVs
 								default:
 								{
+									m_out << "unsupported";
 									break;
 								}
 							}
 						}
 						for (int l = 0, lend = mesh.GetElementNormalCount(); l != lend; ++l)
 						{
+							l == 0 ? m_out << " Normal=" : m_out;
+
 							FbxGeometryElementNormal const* leNormal = mesh.GetElementNormal(l);
-							if (leNormal->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+							switch (leNormal->GetMappingMode())
 							{
-								m_out << " Normal: ";
-								switch (leNormal->GetReferenceMode())
+								case FbxGeometryElement::eByPolygonVertex:
 								{
-									case FbxGeometryElement::eDirect:
+									switch (leNormal->GetReferenceMode())
 									{
-										m_out << leNormal->GetDirectArray().GetAt(vertexId);
-										break;
+										case FbxGeometryElement::eDirect:
+										{
+											m_out << leNormal->GetDirectArray().GetAt(vertexId);
+											break;
+										}
+										case FbxGeometryElement::eIndexToDirect:
+										{
+											int id = leNormal->GetIndexArray().GetAt(vertexId);
+											m_out << leNormal->GetDirectArray().GetAt(id);
+											break;
+										}
+										default:
+										{
+											m_out << "unsupported";
+											break;
+										}
 									}
-									case FbxGeometryElement::eIndexToDirect:
-									{
-										int id = leNormal->GetIndexArray().GetAt(vertexId);
-										m_out << leNormal->GetDirectArray().GetAt(id);
-										break;
-									}
-									default:
-									{
-										m_out << "unsupported";
-										break;
-									}
+									break;
+								}
+								default:
+								{
+									m_out << "unsupported";
+									break;
 								}
 							}
 						}
 						for (int l = 0, lend = mesh.GetElementTangentCount(); l != lend; ++l)
 						{
+							l == 0 ? m_out << " Tangent=" : m_out;
+
 							FbxGeometryElementTangent const* leTangent = mesh.GetElementTangent(l);
-							if (leTangent->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+							switch (leTangent->GetMappingMode())
 							{
-								m_out << " Tangent: ";
-								switch (leTangent->GetReferenceMode())
+								case FbxGeometryElement::eByPolygonVertex:
 								{
-									case FbxGeometryElement::eDirect:
+									switch (leTangent->GetReferenceMode())
 									{
-										m_out << leTangent->GetDirectArray().GetAt(vertexId);
-										break;
+										case FbxGeometryElement::eDirect:
+										{
+											m_out << leTangent->GetDirectArray().GetAt(vertexId);
+											break;
+										}
+										case FbxGeometryElement::eIndexToDirect:
+										{
+											int id = leTangent->GetIndexArray().GetAt(vertexId);
+											m_out << leTangent->GetDirectArray().GetAt(id);
+											break;
+										}
+										default:
+										{
+											m_out << "unsupported";
+											break;
+										}
 									}
-									case FbxGeometryElement::eIndexToDirect:
-									{
-										int id = leTangent->GetIndexArray().GetAt(vertexId);
-										m_out << leTangent->GetDirectArray().GetAt(id);
-										break;
-									}
-									default:
-									{
-										m_out << "unsupported";
-										break;
-									}
+									break;
+								}
+								default:
+								{
+									m_out << "unsupported";
+									break;
 								}
 							}
 						}
 						for (int l = 0, lend = mesh.GetElementBinormalCount(); l != lend; ++l)
 						{
+							l == 0 ? m_out << " Binormal=" : m_out;
+
 							FbxGeometryElementBinormal const* leBinormal = mesh.GetElementBinormal(l);
-							if (leBinormal->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+							switch (leBinormal->GetMappingMode())
 							{
-								m_out << " Binormal: ";
-								switch (leBinormal->GetReferenceMode())
+								case FbxGeometryElement::eByPolygonVertex:
 								{
-									case FbxGeometryElement::eDirect:
+									switch (leBinormal->GetReferenceMode())
 									{
-										m_out << leBinormal->GetDirectArray().GetAt(vertexId);
-										break;
+										case FbxGeometryElement::eDirect:
+										{
+											m_out << leBinormal->GetDirectArray().GetAt(vertexId);
+											break;
+										}
+										case FbxGeometryElement::eIndexToDirect:
+										{
+											int id = leBinormal->GetIndexArray().GetAt(vertexId);
+											m_out << leBinormal->GetDirectArray().GetAt(id);
+											break;
+										}
+										default:
+										{
+											m_out << "unsupported";
+											break;
+										}
 									}
-									case FbxGeometryElement::eIndexToDirect:
-									{
-										int id = leBinormal->GetIndexArray().GetAt(vertexId);
-										m_out << leBinormal->GetDirectArray().GetAt(id);
-										break;
-									}
-									default:
-									{
-										m_out << "unsupported";
-										break;
-									}
+									break;
+								}
+								default:
+								{
+									m_out << "unsupported";
+									break;
 								}
 							}
 						}
 						m_out << "\n";
 						vertexId++;
 					}
+					for (int l = 0, lend = mesh.GetElementPolygonGroupCount(); l != lend; ++l)
+					{
+						FbxGeometryElementPolygonGroup const* lePolgrp = mesh.GetElementPolygonGroup(l);
+						switch (lePolgrp->GetMappingMode())
+						{
+							case FbxGeometryElement::eByPolygon:
+							{
+								if (lePolgrp->GetReferenceMode() == FbxGeometryElement::eIndex)
+									m_out << Indent(indent + 2) << "Assigned to group: " << lePolgrp->GetIndexArray().GetAt(i) << "\n";
+								break;
+							}
+							default:
+							{
+								// any other mapping modes don't make sense
+								m_out << Indent(indent + 2) << "unsupported group assignment" << "\n";
+								break;
+							}
+						}
+					}
 				}
 
 				// Check visibility for the edges of the mesh
-				for(int l = 0, lend = mesh.GetElementVisibilityCount(); l != lend; ++l)
+				for (int l = 0, lend = mesh.GetElementVisibilityCount(); l != lend; ++l)
 				{
-					l == 0 ? m_out << Indent(indent) << "Edge Visibility:\n" : m_out;
+					l == 0 ? m_out << Indent(indent + 1) << "Edge Visibility:\n" : m_out;
 
 					FbxGeometryElementVisibility const* leVisibility = mesh.GetElementVisibility(l);
 					switch (leVisibility->GetMappingMode())
@@ -1100,14 +1150,13 @@ namespace pr::geometry::fbx
 						{
 							//should be eDirect
 							for (int j = 0, jend = mesh.GetMeshEdgeCount(); j != jend; ++j)
-							{
-								m_out << "        [" << j << "] visibility: " << leVisibility->GetDirectArray().GetAt(j) << "\n";
-							}
+								m_out << Indent(indent + 2) << "[" << j << "] visibility: " << leVisibility->GetDirectArray().GetAt(j) << "\n";
+
 							break;
 						}
 						default:
 						{
-							m_out << "unsupported mapping mode\n";
+							m_out << Indent(indent + 2) << "unsupported mapping mode\n";
 							break;
 						}
 					}
@@ -1145,11 +1194,10 @@ namespace pr::geometry::fbx
 					}
 				}
 			}
-			void WriteMaterial(FbxGeometry const& geometry, int indent)
+			void WriteMaterials(FbxGeometry const& geometry, int indent)
 			{
-				FbxPropertyT<FbxDouble3> lKFbxDouble3;
-				FbxPropertyT<FbxDouble> lKFbxDouble1;
-				FbxColor theColor;
+				m_out << Indent(indent) << "Materials:\n";
+				++indent;
 
 				static auto LookForImplementation = [](FbxSurfaceMaterial const* pMaterial) -> FbxImplementation const*
 				{
@@ -1161,16 +1209,12 @@ namespace pr::geometry::fbx
 					if (!lImplementation) lImplementation = GetImplementation(pMaterial, FBXSDK_IMPLEMENTATION_SSSL);
 					return lImplementation;
 				};
-
-				for (int lCount = 0, lend = geometry.GetNode()->GetMaterialCount(); lCount != lend; ++lCount)
+				auto WriteMaterial = [this](FbxSurfaceMaterial const& material, int indent)
 				{
-					m_out << Indent(indent) << "Material " << lCount << "\n";
-
-					FbxSurfaceMaterial const* lMaterial = geometry.GetNode()->GetMaterial(lCount);
-					m_out << Indent(indent) << "Name: \"" << lMaterial->GetName() << "\"\n";
+					m_out << Indent(indent) << "Name: \"" << material.GetName() << "\"\n";
 
 					//Get the implementation to see if it's a hardware shader.
-					const FbxImplementation* lImplementation = LookForImplementation(lMaterial);
+					const FbxImplementation* lImplementation = LookForImplementation(&material);
 					if (lImplementation)
 					{
 						// Now we have a hardware shader, let's read it
@@ -1195,10 +1239,10 @@ namespace pr::geometry::fbx
 							m_out << Indent(indent) << "Entry: " << lTest.Buffer() << "\n";
 							if (strcmp(FbxPropertyEntryView::sEntryType, lEntrySrcType) == 0)
 							{
-								lFbxProp = lMaterial->FindPropertyHierarchical(lEntry.GetSource());
+								lFbxProp = material.FindPropertyHierarchical(lEntry.GetSource());
 								if (!lFbxProp.IsValid())
 								{
-									lFbxProp = lMaterial->RootProperty.FindHierarchical(lEntry.GetSource());
+									lFbxProp = material.RootProperty.FindHierarchical(lEntry.GetSource());
 								}
 							}
 							else if (strcmp(FbxConstantEntryView::sEntryType, lEntrySrcType) == 0)
@@ -1233,70 +1277,41 @@ namespace pr::geometry::fbx
 							}
 						}
 					}
-					else if (lMaterial->GetClassId().Is(FbxSurfacePhong::ClassId))
+					else if (material.GetClassId().Is(FbxSurfacePhong::ClassId))
 					{
 						// We found a Phong material.  Display its properties.
-
-						// Display the Ambient Color
-						lKFbxDouble3 = ((FbxSurfacePhong*)lMaterial)->Ambient;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Ambient: " << theColor << "\n";
-
-						// Display the Diffuse Color
-						lKFbxDouble3 = ((FbxSurfacePhong*)lMaterial)->Diffuse;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Diffuse: " << theColor << "\n";
-
-						// Display the Specular Color (unique to Phong materials)
-						lKFbxDouble3 = ((FbxSurfacePhong*)lMaterial)->Specular;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Specular: " << theColor << "\n";
-
-						// Display the Emissive Color
-						lKFbxDouble3 = ((FbxSurfacePhong*)lMaterial)->Emissive;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Emissive: " << theColor << "\n";
-
-						//Opacity is Transparency factor now
-						lKFbxDouble1 = ((FbxSurfacePhong*)lMaterial)->TransparencyFactor;
-						m_out << Indent(indent) << "Opacity: " << 1.0 - lKFbxDouble1.Get() << "\n";
-
-						// Display the Shininess
-						lKFbxDouble1 = ((FbxSurfacePhong*)lMaterial)->Shininess;
-						m_out << Indent(indent) << "Shininess: " << lKFbxDouble1.Get() << "\n";
-
-						// Display the Reflectivity
-						lKFbxDouble1 = ((FbxSurfacePhong*)lMaterial)->ReflectionFactor;
-						m_out << Indent(indent) << "Reflectivity: " << lKFbxDouble1.Get() << "\n";
+						auto phong = static_cast<FbxSurfacePhong const*>(&material);
+						m_out << Indent(indent) << "Ambient: " << phong->Ambient << "\n";
+						m_out << Indent(indent) << "Diffuse: " << phong->Diffuse << "\n";
+						m_out << Indent(indent) << "Specular: " << phong->Specular << "\n";
+						m_out << Indent(indent) << "Emissive: " << phong->Emissive << "\n";
+						m_out << Indent(indent) << "Opacity: " << 1.0 - phong->TransparencyFactor.Get() << "\n";
+						m_out << Indent(indent) << "Shininess: " << phong->Shininess.Get() << "\n";
+						m_out << Indent(indent) << "Reflectivity: " << phong->ReflectionFactor.Get() << "\n";
 					}
-					else if (lMaterial->GetClassId().Is(FbxSurfaceLambert::ClassId))
+					else if (material.GetClassId().Is(FbxSurfaceLambert::ClassId))
 					{
 						// We found a Lambert material. Display its properties.
-						// Display the Ambient Color
-						lKFbxDouble3 = ((FbxSurfaceLambert*)lMaterial)->Ambient;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Ambient: " << theColor << "\n";
-
-						// Display the Diffuse Color
-						lKFbxDouble3 = ((FbxSurfaceLambert*)lMaterial)->Diffuse;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Diffuse: " << theColor << "\n";
-
-						// Display the Emissive
-						lKFbxDouble3 = ((FbxSurfaceLambert*)lMaterial)->Emissive;
-						theColor.Set(lKFbxDouble3.Get()[0], lKFbxDouble3.Get()[1], lKFbxDouble3.Get()[2]);
-						m_out << Indent(indent) << "Emissive: " << theColor << "\n";
-
-						// Display the Opacity
-						lKFbxDouble1 = ((FbxSurfaceLambert*)lMaterial)->TransparencyFactor;
-						m_out << Indent(indent) << "Opacity: " << 1.0 - lKFbxDouble1.Get() << "\n";
+						auto lambert = static_cast<FbxSurfaceLambert const*>(&material);
+						m_out << Indent(indent) << "Ambient: " << lambert->Ambient << "\n";
+						m_out << Indent(indent) << "Diffuse: " << lambert->Diffuse << "\n";
+						m_out << Indent(indent) << "Emissive: " << lambert->Emissive << "\n";
+						m_out << Indent(indent) << "Opacity: " << 1.0 - lambert->TransparencyFactor.Get() << "\n";
 					}
 					else
 					{
 						m_out << Indent(indent) << "Unknown type of Material" << "\n";
 					}
 
-					m_out << Indent(indent) << "Shading Model: " << lMaterial->ShadingModel.Get().Buffer() << "\n";
+					m_out << Indent(indent) << "Shading Model: " << material.ShadingModel.Get().Buffer() << "\n";
+				};
+
+				for (int lCount = 0, lend = geometry.GetNode()->GetMaterialCount(); lCount != lend; ++lCount)
+				{
+					m_out << Indent(indent) << "Material " << lCount << "\n";
+					
+					FbxSurfaceMaterial const* lMaterial = geometry.GetNode()->GetMaterial(lCount);
+					WriteMaterial(*lMaterial, indent + 1);
 				}
 			}
 			void WriteTexture(FbxGeometry const& geometry, int indent)
@@ -1413,7 +1428,8 @@ namespace pr::geometry::fbx
 			}
 			void WriteMaterialConnections(FbxMesh const& mesh, int indent)
 			{
-				m_out << Indent(indent) << "Polygons Material Connections:\n";
+				m_out << Indent(indent) << "Material Connections:\n";
+				++indent;
 
 				// check whether the material maps with only one mesh
 				bool lIsAllSame = true;
@@ -1423,7 +1439,57 @@ namespace pr::geometry::fbx
 					lIsAllSame &= lMaterialElement->GetMappingMode() != FbxGeometryElement::eByPolygon;
 				}
 
-				//For eAllSame mapping type, just out the material and texture mapping info once
+				auto WriteTextureNames = [this](FbxProperty const& property, int indent)
+				{
+					int lLayeredTextureCount = property.GetSrcObjectCount<FbxLayeredTexture>();
+					if (lLayeredTextureCount > 0)
+					{
+						m_out << Indent(indent) << " Texture ";
+						for (int j = 0; j != lLayeredTextureCount; ++j)
+						{
+							FbxLayeredTexture const* lLayeredTexture = property.GetSrcObject<FbxLayeredTexture>(j);
+							for (int k = 0, kend = lLayeredTexture->GetSrcObjectCount<FbxTexture>(); k != kend; ++k)
+								m_out << "\"" << lLayeredTexture->GetName() << "\" ";
+							m_out << "of " << property.GetName() << " on layer " << j;
+						}
+						m_out << "\n";
+					}
+					else
+					{
+						//no layered texture simply get on the property
+						m_out << Indent(indent) << " Texture ";
+						for (int j = 0, jend = property.GetSrcObjectCount<FbxTexture>(); j != jend; ++j)
+						{
+							FbxTexture* lTexture = property.GetSrcObject<FbxTexture>(j);
+							m_out << "\"" << (lTexture ? lTexture->GetName() : "unnamed") << "\" ";
+						}
+						m_out << "of " << property.GetName() << "\n";
+					}
+				};
+				auto WriteMaterialTextureConnections = [this, WriteTextureNames](FbxSurfaceMaterial const& material, int material_id, int indent)
+				{
+					//Show all the textures
+					m_out << Indent(indent) << "Material " << material_id << ":\n";
+					++indent;
+
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuse), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuseFactor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissive), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissiveFactor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbient), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbientFactor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecular), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecularFactor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sShininess), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sBump), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sNormalMap), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparentColor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparencyFactor), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflection), indent);
+					WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflectionFactor), indent);
+				};
+
+				// For eAllSame mapping type, just out the material and texture mapping info once
 				if (lIsAllSame)
 				{
 					for (int l = 0, lend = mesh.GetElementMaterialCount(); l != lend; ++l)
@@ -1435,7 +1501,7 @@ namespace pr::geometry::fbx
 							int lMatId = lMaterialElement->GetIndexArray().GetAt(0);
 							if (lMatId >= 0)
 							{
-								m_out << Indent(indent) << "All polygons share the same material in mesh " << l << "\n";
+								m_out << Indent(indent) << "all polygons share the same material in mesh " << l << "\n";
 								WriteMaterialTextureConnections(*lMaterial, lMatId, indent+1);
 							}
 						}
@@ -1465,54 +1531,6 @@ namespace pr::geometry::fbx
 						}
 					}
 				}
-			}
-			void WriteMaterialTextureConnections(FbxSurfaceMaterial const& material, int material_id, int indent)
-			{
-				m_out << Indent(indent) << "Material " << material_id << " -- ";
-
-				//Show all the textures
-				auto WriteTextureNames = [this, material_id, indent](FbxProperty const& property)
-				{
-					int lLayeredTextureCount = property.GetSrcObjectCount<FbxLayeredTexture>();
-					if (lLayeredTextureCount > 0)
-					{
-						m_out << Indent(indent) << " Texture ";
-						for (int j = 0; j != lLayeredTextureCount; ++j)
-						{
-							FbxLayeredTexture const* lLayeredTexture = property.GetSrcObject<FbxLayeredTexture>(j);
-							for (int k = 0, kend = lLayeredTexture->GetSrcObjectCount<FbxTexture>(); k != kend; ++k)
-								m_out << "\"" << lLayeredTexture->GetName() << "\" ";
-							m_out << "of " << property.GetName() << " on layer " << j;
-						}
-						m_out << " |";
-					}
-					else
-					{
-						//no layered texture simply get on the property
-						m_out << Indent(indent) << " Texture ";
-						for (int j = 0, jend = property.GetSrcObjectCount<FbxTexture>(); j != jend; ++j)
-						{
-							FbxTexture* lTexture = property.GetSrcObject<FbxTexture>(j);
-							m_out << "\"" << (lTexture ? lTexture->GetName() : "unnamed") << "\" ";
-						}
-						m_out << "of " << property.GetName() << " |";
-					}
-				};
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuse));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sDiffuseFactor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissive));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sEmissiveFactor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbient));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sAmbientFactor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecular));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sSpecularFactor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sShininess));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sBump));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sNormalMap));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparentColor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sTransparencyFactor));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflection));
-				WriteTextureNames(material.FindProperty(FbxSurfaceMaterial::sReflectionFactor));
 			}
 			void WriteLink(FbxGeometry const& geometry, int indent)
 			{
@@ -1813,7 +1831,7 @@ namespace pr::geometry::fbx
 				m_out << "\n";
 
 				WriteTexture(nurbs, indent+1);
-				WriteMaterial(nurbs, indent+1);
+				WriteMaterials(nurbs, indent+1);
 				WriteLink(nurbs, indent+1);
 				WriteShape(nurbs, indent+1);
 				WriteCache(nurbs, indent+1);
@@ -1853,7 +1871,7 @@ namespace pr::geometry::fbx
 				m_out << Indent(indent) << "V Capped Bottom: " << lPatch->GetVCappedBottom() << "\n";
 
 				WriteTexture(*lPatch, indent + 1);
-				WriteMaterial(*lPatch, indent + 1);
+				WriteMaterials(*lPatch, indent + 1);
 				WriteLink(*lPatch, indent + 1);
 				WriteShape(*lPatch, indent + 1);
 			}
@@ -2216,16 +2234,15 @@ namespace pr::geometry::fbx
 			}
 			void WriteGeometricTransform(FbxNode const& node, int indent)
 			{
-				m_out << Indent(indent) << "Geometric Transformations\n";
-
-				auto xyz = node.GetGeometricTranslation(FbxNode::eSourcePivot);
-				m_out << Indent(indent) << std::format("Translation: {} {} {}\n", xyz[0], xyz[1], xyz[2]);
-
-				auto rot = node.GetGeometricRotation(FbxNode::eSourcePivot);
-				m_out << Indent(indent) << std::format("Rotation:    {} {} {}\n", rot[0], rot[1], rot[2]);
-
-				auto scl = node.GetGeometricScaling(FbxNode::eSourcePivot);
-				m_out << Indent(indent) << std::format("Scaling:     {} {} {}\n", scl[0], scl[1], scl[2]);
+				m_out << Indent(indent) << "Geometric Transformations:\n";
+				{
+					auto xyz = node.GetGeometricTranslation(FbxNode::eSourcePivot);
+					auto rot = node.GetGeometricRotation(FbxNode::eSourcePivot);
+					auto scl = node.GetGeometricScaling(FbxNode::eSourcePivot);
+					m_out << Indent(indent+1) << std::format("Translation: {} {} {}\n", xyz[0], xyz[1], xyz[2]);
+					m_out << Indent(indent+1) << std::format("Rotation:    {} {} {}\n", rot[0], rot[1], rot[2]);
+					m_out << Indent(indent+1) << std::format("Scaling:     {} {} {}\n", scl[0], scl[1], scl[2]);
+				}
 			}
 			void WriteMetaDataConnections(FbxObject const& node, int indent)
 			{
@@ -2533,40 +2550,37 @@ namespace pr::geometry::fbx
 			}
 			void WriteGenericInfo(FbxScene const& scene, int indent)
 			{
-				WriteGenericInfo(*scene.GetRootNode(), indent + 1);
+				m_out << Indent(indent) << "Generic Info:\n";
 
-				// Other objects directly connected onto the scene
+				auto WriteProperties = [this](FbxObject const& pObject, int indent)
+				{
+					m_out << Indent(indent) << "Object: " << pObject.GetName() << "\n";
+					++indent;
+
+					// Display all the properties
+					int i = 0;
+					for (FbxProperty lProperty = pObject.GetFirstProperty(); lProperty.IsValid(); lProperty = pObject.GetNextProperty(lProperty), ++i)
+						WriteProperty(lProperty, i, indent);
+				};
+				std::function<void(FbxObject const&, int)> WriteInfo = [this, &WriteInfo, &WriteProperties](FbxObject const& obj, int indent)
+				{
+					WriteProperties(obj, indent);
+					if (FbxNode const* node = FbxCast<FbxNode>(&obj))
+					{
+						for (int i = 0, iend = node->GetChildCount(); i != iend; ++i)
+							WriteInfo(*node->GetChild(i), indent + 1);
+					}
+				};
+
+				// All objects directly connected onto the scene
 				for (int i = 0, iend = scene.GetSrcObjectCount(); i != iend; ++i)
-					WriteProperties(*scene.GetSrcObject(i), indent + 1);
-			}
-			void WriteGenericInfo(FbxNode const& pNode, int indent)
-			{
-				m_out << Indent(indent) << pNode.GetName() << "\n";
-				WriteProperties(pNode, indent + 1);
-
-				for (int i = 0, iend = pNode.GetChildCount(); i != iend; ++i)
-					WriteGenericInfo(*pNode.GetChild(i), indent + 1);
-			}
-			void WriteProperties(FbxObject const& pObject, int indent)
-			{
-				m_out << Indent(indent) << "Name: " << pObject.GetName() << "\n";
-
-				if (!pObject.GetFirstProperty().IsValid())
-					return;
-
-				// Display all the properties
-				int lCount = 0;
-				for (FbxProperty lProperty = pObject.GetFirstProperty(); lProperty.IsValid(); lProperty = pObject.GetNextProperty(lProperty))
-					lCount++;
-
-				int i = 0;
-				m_out << Indent(indent) << "Property Count: " << lCount << "\n";
-				for (FbxProperty lProperty = pObject.GetFirstProperty(); lProperty.IsValid(); lProperty = pObject.GetNextProperty(lProperty), ++i)
-					WriteProperty(lProperty, i, indent + 1);
+					WriteInfo(*scene.GetSrcObject(i), indent + 1);
 			}
 			void WriteProperty(FbxProperty const& prop, int index, int indent)
 			{
 				m_out << Indent(indent) << "Property: " << index << "\n";
+				++indent;
+
 				m_out << Indent(indent) << "Display Name: " << prop.GetLabel() << "\n";
 				m_out << Indent(indent) << "Internal Name: " << prop.GetName() << "\n";
 				m_out << Indent(indent) << "Type: " << prop.GetPropertyDataType().GetName() << "\n";
@@ -2587,8 +2601,13 @@ extern "C"
 	// Load an fbx scene
 	__declspec(dllexport) void __stdcall Fbx_ReadStream(std::istream& src, pr::geometry::fbx::Options const& opts, std::function<bool(int)> out)
 	{
+		using namespace pr::geometry::fbx;
+
 		try
 		{
+			Manager manager;
+			auto scene = Import(manager, src);
+
 			pr::geometry::fbx::Read(src, opts, out);
 		}
 		catch (std::exception const& ex)
