@@ -18,18 +18,26 @@
 	<Target
 		Name="DependencyLinkTarget"
 		AfterTargets="Link"
-		Inputs="@(DependencyLink)"
-		Outputs="%(DependencyLink.OutDir)%(Filename)%(Extension)"
+		Inputs="@(DependencyLink);$(MSBuildThisFileFullPath)"
+		Outputs="@(DependencyLink->'%(OutDir)%(Filename)%(Extension)')"
 	>
 		<!--
+		Inputs="%(DependencyLink.FullPath)"
+		Outputs="@(DependencyLink->'%(DependencyLink.OutDir)%(Filename)%(Extension)')"
 		Outputs="@(DependencyLink->'$(OutDir)lib\$(Platform)\$(Configuration)\%(Filename)%(Extension)')"
+		Returns="%(DependencyLink.OutDir)%(Filename)%(Extension)"
+		<Message Importance="high" Text="OUTPUTS = %(DependencyLink.OutDir)%(Filename)%(Extension)" />
+		<Message Importance="high" Text="INPUTS = @(DependencyLink);$(MSBuildThisFileFullPath)" />
+		<Message Importance="high" Text="OUTPUTS = @(DependencyLink->'%(OutDir)%(Filename)%(Extension)')" />
+		%(DependencyLink.OutDir)
+		Condition="exists('@(DependencyLink)')"
 		-->
+		<Message Importance="high" Text="@(DependencyLink) --> @(DependencyLink->'%(OutDir)%(Filename)%(Extension)')" />
 		<Copy
 			SourceFiles="@(DependencyLink)"
-			DestinationFolder="%(DependencyLink.OutDir)"
-			SkipUnchangedFiles="true"
-			Condition="exists('@(DependencyLink)')"
+			DestinationFolder="@(DependencyLink->'%(OutDir)')"
 			ContinueOnError="ErrorAndContinue"
+			SkipUnchangedFiles="false"
 		/>
 	</Target>
 

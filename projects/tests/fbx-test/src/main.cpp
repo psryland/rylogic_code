@@ -58,18 +58,21 @@ int main()
 	//std::filesystem::path ifilepath = "E:\\Dump\\Hyperpose\\AJ-99.fbx";
 	std::filesystem::path ifilepath = "E:\\Games\\Epic\\UE_5.5\\Engine\\Content\\FbxEditorAutomation\\AnimatedCharacter.fbx";
 	//std::filesystem::path ofilepath = "E:\\Dump\\Hyperpose\\fbx-round-trip.fbx";
-	std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
+	//std::filesystem::path dfilepath = "E:\\Dump\\Hyperpose\\fbx-dump.txt";
 
 	std::ifstream ifile(ifilepath, std::ios::binary);
 	//std::ofstream ofile(ofilepath, std::ios::binary);
-	std::ofstream dfile(dfilepath);
+	//std::ofstream dfile(dfilepath);
+
+	fbx::ErrorList errors;
+	struct ModelOut : fbx::IModelOut
+	{
+		void func() {}
+	} model_out;
 
 	fbx::FbxDll dll;
 	//dll.Fbx_RoundTripTest(ifile, ofile);
-	dll.Fbx_DumpStream(ifile, dfile);
-	//dll.Read(ifile, fbx::Options{}, [&](int)
-	//{
-	//	return true;
-	//});
+	//dll.Fbx_DumpStream(ifile, dfile);
+	dll.Fbx_ReadStream(ifile, fbx::Options{}, model_out, errors);
 	return 0;
 }

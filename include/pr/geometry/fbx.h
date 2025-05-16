@@ -5,6 +5,8 @@
 // Using *.fbx files requires the AutoDesk FBX SDK.
 // To avoid making this a build dependency, this header will dynamically load 'fbx.dll' as needed.
 #pragma once
+#include <string>
+#include <vector>
 #include <iostream>
 #include <functional>
 #include <filesystem>
@@ -12,11 +14,24 @@
 
 namespace pr::geometry::fbx
 {
+	using ErrorList = std::vector<std::string>;
+
 	// Options for parsing FBXfiles
 	struct Options
 	{
+		// Read all materials from the model, not just the used ones
+		bool all_materials;
+
 		Options()
+			: all_materials()
 		{}
+	};
+
+	// Interface for emitting model parts during 'Read'
+	struct IModelOut
+	{
+		virtual ~IModelOut() = default;
+		virtual void AddModel(int vcount, int icount, BBox const& bbox) = 0;
 	};
 
 	// Access the dynamically loaded FBX dll for parsing fbx files
@@ -35,7 +50,7 @@ namespace pr::geometry::fbx
 		{}
 
 		// Read an fbx model
-		using Fbx_ReadStreamFn = void (*)(std::istream& src, Options const& opts, std::function<bool(int)> out);
+		using Fbx_ReadStreamFn = void (*)(std::istream& src, Options const& opts, IModelOut& out, ErrorList& errors);
 		Fbx_ReadStreamFn Fbx_ReadStream;
 
 		// Dump an fbx scene to a out stream

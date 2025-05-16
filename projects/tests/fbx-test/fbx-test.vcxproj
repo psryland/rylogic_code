@@ -82,6 +82,9 @@
   <ItemGroup>
     <ClInclude Include="$(RylogicRoot)include\pr\geometry\fbx.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(RylogicRoot)projects\rylogic\fbx\fbx.vcxproj"/>
+  </ItemGroup>
   <!--
   Targets
   -->

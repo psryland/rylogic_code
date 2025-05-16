@@ -1261,7 +1261,8 @@ namespace pr::rdr12
 		ModelOut model_out(factory, opts, out);
 
 		fbx::FbxDll fbx;
-		fbx.Read(src, fbx::Options{}, model_out);
+		fbx::ErrorList errors;
+		fbx.Read(src, fbx::Options{}, model_out, errors);
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
 	{
