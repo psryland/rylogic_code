@@ -721,7 +721,11 @@ namespace pr::geometry::fbx
 			// If no materials, the model can be a single nugget
 			if (materials == nullptr)
 			{
+				for (int const *f = faces, *fend = faces + mesh.GetPolygonVertexCount(); f != fend; ++f)
+				{
+					
 
+				}
 			}
 
 			// If a single material, the model can be a single nugget
