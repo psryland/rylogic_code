@@ -102,6 +102,9 @@ namespace pr::rdr12
 			// Algorithmically generate surface normals. Value is the smoothing angle.
 			float m_gen_normals = {};
 
+			// Animation frame
+			int m_anim_frame = 0;
+
 			// Flags for set options
 			EOptions m_options = EOptions::None;
 			bool has(EOptions opt) const
@@ -109,6 +112,7 @@ namespace pr::rdr12
 				return (m_options & opt) == opt;
 			}
 
+			// Fluent API
 			CreateOptions& colours(std::span<Colour32 const> colours)
 			{
 				m_colours = colours;

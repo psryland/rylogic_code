@@ -15,7 +15,6 @@
 #include "pr/common/allocator.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bbox.h"
-#include "pr/gfx/colour.h"
 #include "pr/geometry/fbx.h"
 
 using namespace fbxsdk;
@@ -25,9 +24,16 @@ namespace fbxsdk
 {
 	struct FbxVersion { int Major = 0; int Minor = 0; int Revs = 0; };
 
-	using FbxObjectCleanUp = struct FbxObjectDeleter { void operator()(FbxObject* imp) { imp->Destroy(); } };
+	using FbxObjectCleanUp = struct FbxObjectDeleter
+	{
+		void operator()(FbxManager* man) { man->Destroy(); }
+		void operator()(FbxObject* imp) { imp->Destroy(); }
+		void operator()(FbxScene* scene) { scene->Destroy(); }
+	};
+	using ManagerPtr = std::unique_ptr<FbxManager, FbxObjectCleanUp>;
 	using ImporterPtr = std::unique_ptr<FbxImporter, FbxObjectCleanUp>;
 	using ExporterPtr = std::unique_ptr<FbxExporter, FbxObjectCleanUp>;
+	using ScenePtr = std::unique_ptr<FbxScene, FbxObjectCleanUp>;
 
 	inline double FloatClamp(double f)
 	{
@@ -169,6 +175,34 @@ namespace fbxsdk
 }
 namespace pr
 {
+	// Colour
+	template <>
+	struct Convert<Colour, FbxColor>
+	{
+		static Colour To_(FbxColor const& c)
+		{
+			return Colour(s_cast<float>(c.mRed), s_cast<float>(c.mGreen), s_cast<float>(c.mBlue), s_cast<float>(c.mAlpha));
+		}
+	};
+	template <>
+	struct Convert<Colour, FbxDouble3>
+	{
+		static Colour To_(FbxDouble3 const& c)
+		{
+			return Colour(s_cast<float>(c[0]), s_cast<float>(c[1]), s_cast<float>(c[2]), 1.0f);
+		}
+	};
+
+	// Vec2
+	template <Scalar S>
+	struct Convert<Vec2<S, void>, FbxVector2>
+	{
+		static Vec2<S, void> To_(FbxVector2 const& v)
+		{
+			return Vec2<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]));
+		}
+	};
+
 	// Vec4
 	template <Scalar S>
 	struct Convert<Vec4<S, void>, FbxDouble3>
@@ -188,6 +222,14 @@ namespace pr
 			return Vec4<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]), s_cast<S>(v[2]), s_cast<S>(v[3]));
 		}
 	};
+	template <Scalar S>
+	struct Convert<Vec4<S, void>, FbxVector4>
+	{
+		static Vec4<S, void> To_(FbxVector4 const& v)
+		{
+			return Vec4<S, void>(s_cast<S>(v[0]), s_cast<S>(v[1]), s_cast<S>(v[2]), s_cast<S>(v[3]));
+		}
+	};
 
 	// Mat4x4
 	template <Scalar S>
@@ -202,6 +244,24 @@ namespace pr
 				Vec4<S, void>(s_cast<S>(m[3][0]), s_cast<S>(m[3][1]), s_cast<S>(m[3][2]), s_cast<S>(m[3][3])));
 		}
 	};
+
+	// Bone type
+	template <>
+	struct Convert<geometry::fbx::Bone::EType, FbxSkeleton::EType>
+	{
+		static geometry::fbx::Bone::EType To_(FbxSkeleton::EType ty)
+		{
+			using EType = geometry::fbx::Bone::EType;
+			switch (ty)
+			{
+				case FbxSkeleton::EType::eRoot: return EType::Root;
+				case FbxSkeleton::EType::eLimb: return EType::Limb;
+				case FbxSkeleton::EType::eLimbNode: return EType::Limb;
+				case FbxSkeleton::EType::eEffector: return EType::Effector;
+				default: throw std::runtime_error(std::format("Unknown bone type: {}", int(ty)));
+			}
+		}
+	};
 }
 
 // FBX support
@@ -212,6 +272,9 @@ namespace pr::geometry::fbx
 		static constexpr char const* FbxBinary = "FBX (*.fbx)";
 		static constexpr char const* FbxAscii = "FBX ascii (*.fbx)";
 	};
+
+	static constexpr int NoIndex = -1;
+	static constexpr Vert NoVert = {};
 
 	// Check that 'ptr' is not null. Throw if it is
 	template <typename T> inline T* Check(T* ptr, std::string_view message)
@@ -382,46 +445,8 @@ namespace pr::geometry::fbx
 		}
 	};
 
-	// RAII wrapper for FBX Scene
-	struct Scene
-	{
-		// This object holds most objects imported/exported from/to files.
-		FbxScene* m_scene;
-
-		explicit Scene(Manager& manager)
-			: m_scene(Check(FbxScene::Create(manager, ""), "Error: Unable to create FBX scene"))
-		{}
-		Scene(Scene&& rhs) noexcept
-			: m_scene(nullptr)
-		{
-			std::swap(m_scene, rhs.m_scene);
-		}
-		Scene(Scene const&) = delete;
-		Scene& operator=(Scene&& rhs) noexcept
-		{
-			if (this == &rhs) return *this;
-			std::swap(m_scene, rhs.m_scene);
-			return *this;
-		}
-		Scene& operator=(Scene const&) = delete;
-		~Scene()
-		{
-			if (m_scene != nullptr)
-				m_scene->Destroy();
-		}
-
-		FbxScene* operator ->() const
-		{
-			return m_scene;
-		}
-		operator FbxScene* () const
-		{
-			return m_scene;
-		}
-	};
-
 	// Write an FBX scene to disk
-	static void Export(Manager& manager, std::ostream& out, Scene const& scene, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
+	static void Export(Manager& manager, std::ostream& out, FbxScene& scene, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
 	{
 		ExporterPtr exporter(Check(FbxExporter::Create(manager, ""), "Failed to create Exporter"));
 
@@ -499,15 +524,15 @@ namespace pr::geometry::fbx
 		}
 
 		// Do the export
-		auto result = exporter->Export(scene);
+		auto result = exporter->Export(&scene);
 		if (!result || exporter->GetStatus() != FbxStatus::eSuccess)
 			throw std::runtime_error(std::format("Failed to write fbx file. {}", exporter->GetStatus().GetErrorString()));
 	}
 
 	// Parse and FBX Scene from 'src'
-	static Scene Import(Manager& manager, std::istream& src, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
+	static ScenePtr Import(Manager& manager, std::istream& src, char const* format = Formats::FbxBinary, ErrorList* errors = nullptr)
 	{
-		Scene scene(manager);
+		ScenePtr scene(Check(FbxScene::Create(manager, ""), "Error: Unable to create FBX scene"));
 
 		// Adapter from FbxStream to std::istream
 		struct IStream :FbxStream
@@ -588,332 +613,558 @@ namespace pr::geometry::fbx
 			throw std::runtime_error(std::format("Imported file is not an FBX file"));
 
 		// Import the scene.
-		auto result = importer->Import(scene.m_scene);
+		auto result = importer->Import(scene.get());
 		if (!result || importer->GetStatus() != FbxStatus::eSuccess)
 			throw std::runtime_error(std::format("Failed to read fbx from file. {}", importer->GetStatus().GetErrorString()));
 
 		return scene;
 	}
-
-	// Read an fbx model
-	struct Reader
+	
+	// Get a value from a layer element
+	template <typename T>
+	static T GetLayerElement(FbxLayerElementTemplate<T> const* layer_elements, int fidx, int iidx, int vidx)
 	{
-		Scene& m_scene;
-		Options const& m_opts;
-		IModelOut& m_out;
-		ErrorList& m_errors;
-		FbxGeometryConverter m_converter;
-			
-		Reader(Scene& scene, Options const& opts, IModelOut& out, ErrorList& errors)
-			: m_scene(scene)
-			, m_opts(opts)
-			, m_out(out)
-			, m_errors(errors)
-			, m_converter(scene->GetFbxManager())
-		{}
-
-		void Do()
+		// 'f' (for face) = the polygon index
+		// 'i' (for ibuf index) = the polygon * verts_per_poly index. e.g, if the polys are all triangles, then poly_idx = 'polygon * 3 + i'
+		// 'v' (for vertex) = the control point (vertex) index
+		auto ref_mode = layer_elements->GetReferenceMode();
+		switch (ref_mode)
 		{
-			ReadNode(*m_scene->GetRootNode());
-		}
-
-		// Parse the FBX file
-		void ReadNode(FbxNode& node, FbxNode* parent = nullptr)
-		{
-			// Determine the object to world and object to parent transforms
-			auto o2w = To<m4x4>(node.EvaluateGlobalTransform());
-			auto o2p = parent ? To<m4x4>(parent->EvaluateGlobalTransform().Inverse() * node.EvaluateGlobalTransform()) : m4x4::Identity();
-
-			for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+			case FbxLayerElement::eIndex: // legacy
+			case FbxLayerElement::eIndexToDirect:
 			{
-				auto& attr = *node.GetNodeAttributeByIndex(i);
-				switch (attr.GetAttributeType())
+				auto mapping_mode = layer_elements->GetMappingMode();
+				switch (mapping_mode)
 				{
-					case FbxNodeAttribute::eMesh:
+					case FbxLayerElement::eByControlPoint:
 					{
-						if (FbxMesh* mesh = FbxCast<FbxMesh>(&attr))
-							if (FbxMesh* trimesh = EnsureTriangulated(mesh))
-								ReadTriMesh(*trimesh, o2p);
-
-						break;
+						auto idx = layer_elements->GetIndexArray().GetAt(vidx);
+						return layer_elements->GetDirectArray().GetAt(idx);
 					}
-					case FbxNodeAttribute::eSkeleton:
+					case FbxLayerElement::eByPolygonVertex:
 					{
-						break;
+						auto idx = layer_elements->GetIndexArray().GetAt(iidx);
+						return layer_elements->GetDirectArray().GetAt(idx);
 					}
-					case FbxNodeAttribute::eLODGroup:
+					case FbxLayerElement::eByPolygon:
 					{
-						break;
+						auto idx = layer_elements->GetIndexArray().GetAt(fidx);
+						return layer_elements->GetDirectArray().GetAt(idx);
 					}
-					case FbxNodeAttribute::eCamera:
+					case FbxLayerElement::eByEdge:
 					{
-						break;
+						throw std::runtime_error("ByEdge mapping not implemented");
 					}
-					case FbxNodeAttribute::eLight:
+					case FbxLayerElement::eAllSame:
 					{
-						break;
+						auto idx = layer_elements->GetIndexArray().GetAt(0);
+						return layer_elements->GetDirectArray().GetAt(idx);
 					}
-					// Unsupported attributes
-					case FbxNodeAttribute::eUnknown:
-					case FbxNodeAttribute::eOpticalReference:
-					case FbxNodeAttribute::eOpticalMarker:
-					case FbxNodeAttribute::eCachedEffect:
-					case FbxNodeAttribute::eMarker:
-					case FbxNodeAttribute::eCameraStereo:
-					case FbxNodeAttribute::eCameraSwitcher:
-					case FbxNodeAttribute::eNurbs:
-					case FbxNodeAttribute::ePatch:
-					case FbxNodeAttribute::eNurbsCurve:
-					case FbxNodeAttribute::eTrimNurbsSurface:
-					case FbxNodeAttribute::eBoundary:
-					case FbxNodeAttribute::eNurbsSurface:
-					case FbxNodeAttribute::eSubDiv:
-					case FbxNodeAttribute::eLine:
 					default:
 					{
-						break;
+						throw std::runtime_error("Unsupported mapping mode");
 					}
 				}
 			}
-
-			for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
-				ReadNode(*node.GetChild(i), &node);
+			case FbxLayerElement::eDirect:
+			{
+				auto mapping_mode = layer_elements->GetMappingMode();
+				switch (mapping_mode)
+				{
+					case FbxLayerElement::eByControlPoint:
+					{
+						return layer_elements->GetDirectArray().GetAt(vidx);
+					}
+					case FbxLayerElement::eByPolygonVertex:
+					{
+						return layer_elements->GetDirectArray().GetAt(iidx);
+					}
+					case FbxLayerElement::eByPolygon:
+					{
+						return layer_elements->GetDirectArray().GetAt(fidx);
+					}
+					case FbxLayerElement::eByEdge:
+					{
+						throw std::runtime_error("ByEdge mapping not implemented");
+					}
+					case FbxLayerElement::eAllSame:
+					{
+						return layer_elements->GetDirectArray().GetAt(0);
+					}
+					default:
+					{
+						throw std::runtime_error("Unsupported mapping mode");
+					}
+				}
+			}
+			default:
+			{
+				throw std::runtime_error(std::format("Reference mode {} not implemented", int(layer_elements->GetReferenceMode())));
+			}
 		}
+	}
+	
+	// Get the hierarchy address of 'node'
+	static std::string Address(FbxNode const* node)
+	{
+		if (node == nullptr) return "";
+		std::string address = Address(node->GetParent());
+		return std::move(address.append(address.empty() ? "" : ".").append(node->GetName()));
+	}
 
-		// Read a mesh
-		void ReadTriMesh(FbxMesh& mesh, m4x4 const& o2p)
+	// Read properties from the scene
+	static Scene::Props ReadProps(FbxScene const& scene)
+	{
+		Scene::Props props = {};
+		props.m_animation_stack_count = scene.GetSrcObjectCount<FbxAnimStack>();
+		scene.GetGlobalSettings();
+		return props;
+	}
+
+	// Read the geometry from the scene
+	static void ReadModel(FbxScene& scene, IModelOut& out, ReadModelOptions const& options)
+	{
+		// Read an fbx model
+		struct Reader
 		{
-			// Can't just output verts directly because each vert can have multiple normals
-			// "Inflate" the verts into a unique list of each required combination
-			struct Vert
-			{
-				v4 m_norm;
-				Colour m_col;
-				int m_orig_index; // The index into the original obj.m_mesh.m_vert container
-				int m_new_index;  // The index of this vert in the 'verts' container
+			// Notes:
+			//  - The FBX file contains collections of object types (meshes, materials, animations, etc.)
+			//    and a hierarchical node tree (scene graph) where each node may reference one or more attributes.
+			//  - Nodes represent transform hierarchies; attributes define what the node *is* (e.g., mesh, light).
+			//  - There are two main ways to read data:
+			//      - Iterate all objects of a specific type (e.g., GetSrcObject<FbxMesh>)
+			//      - Recursively traverse the node hierarchy from GetRootNode()
+			//  - Animation data is stored in FbxAnimStacks (takes), each containing one or more FbxAnimLayers.
+			//      - Curves are attached to animatable properties and can be retrieved per layer.
+			//  - Relationships like materials and textures are represented via FBX connections, not ownership.
+			//  - Units, axis orientation, and coordinate systems should be checked via GlobalSettings.
+			//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
 
-				Vert(int orig_index, int new_index)
+			using Lookup = std::vector<int>;
+
+			FbxScene& m_scene;
+			IModelOut& m_out;
+			ReadModelOptions const& m_opts;
+			Mesh m_mesh;
+			Lookup m_vlookup;
+			FbxTime m_time;
+
+			Reader(FbxScene& scene, IModelOut& out, ReadModelOptions const& opts)
+				: m_scene(scene)
+				, m_out(out)
+				, m_opts(opts)
+				, m_mesh()
+				, m_vlookup()
+				, m_time()
+			{
+				// Set the animation to use
+				int animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
+				if (m_opts.m_anim >= 0 && m_opts.m_anim < animation_count)
 				{
+					auto* anim_stack = Check(m_scene.GetSrcObject<FbxAnimStack>(m_opts.m_anim), "Requested animation stack does not exist");
+					m_scene.SetCurrentAnimationStack(anim_stack);
 				}
-			};
-			struct Verts
+
+				m_time.SetSecondDouble(opts.m_time_in_seconds);
+			}
+
+			// Read the model
+			void Do()
 			{
-				std::deque<Vert, pr::aligned_alloc<Vert>> m_data;
-				void push_back(Vert&& vert)
+				ReadMaterials();
+				ReadGeometry(*m_scene.GetRootNode());
+			}
+
+			// Read the materials
+			void ReadMaterials()
+			{
+				if (m_scene.GetMaterialCount() == 0)
 				{
+					Material mat = {};
+					m_out.AddMaterial(0, mat);
+					return;
 				}
-			};
-			Verts vert_map;
 
-			auto vcount = mesh.GetControlPointsCount();
-			auto fcount = mesh.GetPolygonCount();
-			auto const* verts = mesh.GetControlPoints();
-			auto const* faces = mesh.GetPolygonVertices();
-			auto const* layer0 = mesh.GetLayer(0);
-			auto const* materials = layer0->GetMaterials();
-			auto const* colours = layer0->GetVertexColors();
-			auto const* normals = layer0->GetNormals();
-			auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
-
-			std::unordered_map<int, std::vector<int>> mat_to_polygon;
-
-
-			// If no materials, the model can be a single nugget
-			if (materials == nullptr)
-			{
-				for (int const *f = faces, *fend = faces + mesh.GetPolygonVertexCount(); f != fend; ++f)
+				for (int m = 0, mend = m_scene.GetMaterialCount(); m != mend; ++m)
 				{
+					Material material = {};
+
+					auto const& mat = *m_scene.GetMaterial(m);
+					if (mat.GetClassId().Is(FbxSurfacePhong::ClassId))
+					{
+						auto const& phong = static_cast<FbxSurfacePhong const&>(mat);
+						material.m_ambient = To<Colour>(phong.Ambient.Get());
+						material.m_diffuse = To<Colour>(phong.Diffuse.Get());
+						material.m_specular = To<Colour>(phong.Specular.Get());
+	#if 0
+						phong.AmbientFactor;
+						phong.Bump;
+						phong.BumpFactor;
+						phong.DiffuseFactor;
+						phong.SpecularFactor;
+						phong.Emissive;
+						phong.EmissiveFactor;
+						phong.DisplacementColor;
+						phong.DisplacementFactor;
+						phong.Reflection;
+						phong.ReflectionFactor;
+						phong.NormalMap;
+						phong.Shininess;
+						phong.TransparentColor;
+						phong.TransparencyFactor;
+						phong.MultiLayer;
+						phong.VectorDisplacementColor;
+						phong.VectorDisplacementFactor;
+	#endif
+					}
+					else if (mat.GetClassId().Is(FbxSurfaceLambert::ClassId))
+					{
+						auto const& lambert = static_cast<FbxSurfaceLambert const&>(mat);
+						material.m_ambient = To<Colour>(lambert.Ambient.Get());
+						material.m_diffuse = To<Colour>(lambert.Diffuse.Get());
+						//material.m_specular = To<Colour>(lambert.Specular.Get());
+					}
+					else
+					{
+						if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sAmbient); prop.IsValid())
+							material.m_ambient = To<Colour>(prop.Get<FbxDouble3>());
+						if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sDiffuse); prop.IsValid())
+							material.m_diffuse = To<Colour>(prop.Get<FbxDouble3>());
+						if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sSpecular); prop.IsValid())
+							material.m_specular = To<Colour>(prop.Get<FbxDouble3>());
+					}
+
+					// Look for a diffuse texture
+					if (auto prop = mat.FindProperty(FbxSurfaceMaterial::sDiffuse); prop.IsValid())
+					{
+						for (int t = 0, tend = prop.GetSrcObjectCount<FbxTexture>(); t != tend; ++t)
+						{
+							if (auto const* texture = prop.GetSrcObject<FbxTexture>(t))
+							{
+								if (auto const* file_texture = FbxCast<FbxFileTexture>(texture))
+								{
+									material.m_tex_diff = file_texture->GetFileName();
+								}
+							}
+						}
+					}
+
+					m_out.AddMaterial(mat.GetUniqueID(), material);
+				}
+			}
+
+			// Parse the FBX file
+			void ReadGeometry(FbxNode& node, int level = 0)
+			{
+				// Process all attributes of the node
+				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				{
+					// Look for mesh attributes
+					auto& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() == FbxNodeAttribute::eMesh)
+					{
+						auto& trimesh = *EnsureTriangulated(FbxCast<FbxMesh>(&attr));
+						ReadTriMesh(trimesh);
+
+						// Determine the object to parent transforms
+						auto p2w = node.GetParent() ? node.GetParent()->EvaluateGlobalTransform(m_time) : FbxAMatrix();
+						auto o2w = node.EvaluateGlobalTransform(m_time);
+						auto o2p = To<m4x4>(p2w.Inverse() * o2w);
+						//auto o2p = To<m4x4>(node.EvaluateLocalTransform(m_time));
+
+						// Output the mesh
+						m_mesh.m_name = node.GetName();
+						m_mesh.m_level = level;
+						m_out.AddMesh(m_mesh, o2p);
+					}
+				}
+
+				// Recurse
+				for (int i = 0; i != node.GetChildCount(); ++i)
+					ReadGeometry(*node.GetChild(i), level + 1);
+			}
+
+			// Read a mesh
+			void ReadTriMesh(FbxMesh& mesh)
+			{
+				// Can't just output verts directly because each vert can have multiple normals
+				// "Inflate" the verts into a unique list of each required combination
+				auto vcount = mesh.GetControlPointsCount();
+				auto fcount = mesh.GetPolygonCount();
+				auto ncount = mesh.GetElementMaterialCount();
+				auto const* verts = mesh.GetControlPoints();
+				auto const* layer0 = mesh.GetLayer(0);
+				auto const* materials = layer0->GetMaterials();
+				auto const* colours = layer0->GetVertexColors();
+				auto const* normals = layer0->GetNormals();
+				auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
+
+				// Initialise buffers
+				m_mesh.reset();
+				m_vlookup.resize(0);
+				m_mesh.m_vbuf.reserve(vcount * 3 / 2);
+				m_mesh.m_ibuf.reserve(fcount * 3);
+				m_mesh.m_nbuf.reserve(ncount);
+				m_vlookup.reserve(vcount * 3 / 2);
+
+				// Add a vertex to 'm_vbuf' and return its index
+				auto AddVert = [this](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+				{
+					Vert v = {
+						.m_vert = pos,
+						.m_colr = col,
+						.m_norm = norm,
+						.m_tex0 = uv,
+						.pad = {},
+					};
+
+					// Vlookup is a linked list of vertices that are permutations of 'src_idx'
+					for (int vidx = src_vidx;;)
+					{
+						// If 'vidx' is outside the buffer, add it
+						auto vbuf_count = isize(m_mesh.m_vbuf);
+						if (vidx >= vbuf_count)
+						{
+							m_mesh.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
+							m_vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
+							m_mesh.m_vbuf[vidx] = v;
+							m_vlookup[vidx] = NoIndex;
+							return vidx;
+						}
+
+						// If 'v' is already in the buffer, use it's index
+						if (m_mesh.m_vbuf[vidx] == v)
+						{
+							return vidx;
+						}
 					
+						// If the position 'vidx' is an unused slot, use it
+						if (m_mesh.m_vbuf[vidx] == NoVert)
+						{
+							m_mesh.m_vbuf[vidx] = v;
+							return vidx;
+						}
 
-				}
-			}
+						// If there is no "next", prepare to insert it at the end
+						if (m_vlookup[vidx] == NoIndex)
+						{
+							m_vlookup[vidx] = vbuf_count;
+						}
 
-			// If a single material, the model can be a single nugget
-			else if (materials->GetMappingMode() == FbxLayerElement::eAllSame)
-			{
-			}
+						// Go to the next vertex to check
+						vidx = m_vlookup[vidx];
+					}
+				};
 
-			// If the materials are per face, create nuggets for each material group
-			else if (materials->GetMappingMode() == FbxLayerElement::eByPolygon)
-			{
-				auto ref_mode = materials->GetReferenceMode();
-				if (ref_mode != FbxLayerElement::eIndexToDirect && ref_mode != FbxLayerElement::eIndex)
-					throw std::runtime_error(std::format("Material reference mode {} not implemented", int(ref_mode)));
+				// Get or add a nugget
+				auto GetOrAddNugget = [this](uint64_t mat_id) -> Nugget&
+				{
+					for (auto& n : m_mesh.m_nbuf)
+					{
+						if (n.m_mat_id != mat_id) continue;
+						return n;
+					}
+					m_mesh.m_nbuf.push_back(Nugget{
+						.m_mat_id = mat_id,
+					});
+					return m_mesh.m_nbuf.back();
+				};
 
-				// Materials correspond to model nuggets
+				// Find the nuggets in 'mesh'
 				for (int f = 0, fend = mesh.GetPolygonCount(); f != fend; ++f)
 				{
-					auto mat_idx = materials->GetIndexArray().GetAt(f);
+					if (mesh.GetPolygonSize(f) != 3)
+						throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", mesh.GetName(), mesh.GetPolygonSize(f)));
+
+					// Get the material used on this face
+					uint64_t mat_id = 0;
+					if (materials != nullptr)
+					{
+						auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
+						mat_id = mat->GetUniqueID();
+					}
+
+					// Add the triangle to the nugget associated with the material
+					auto& nugget = GetOrAddNugget(mat_id);
+					for (int i = 0, iend = 3; i != iend; ++i)
+					{
+						auto vert_idx = mesh.GetPolygonVertex(f, i);
+						v4 pos = To<v4>(verts[vert_idx]).w1();
+
+						// Get the vertex colour
+						Colour col = ColourWhite;
+						if (colours != nullptr)
+						{
+							nugget.m_geom |= EGeom::Colr;
+							col = To<Colour>(GetLayerElement<FbxColor>(colours, f, f * 3 + i, vert_idx));
+						}
+
+						// Get the vertex normal
+						v4 norm = {};
+						if (normals != nullptr)
+						{
+							nugget.m_geom |= EGeom::Norm;
+							norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, f * 3 + i, vert_idx)).w0();
+						}
+
+						// Get the vertex uv
+						v2 uv = {};
+						if (uvs != nullptr)
+						{
+							nugget.m_geom |= EGeom::Tex0;
+							uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, f * 3 + i, vert_idx));
+						}
+
+						// Add the vertex to the vertex buffer and it's index to the index buffer
+						int vidx = AddVert(vert_idx, pos, col, norm, uv);
+						m_mesh.m_ibuf.push_back(vidx);
+
+						nugget.m_vrange.grow(vidx);
+						nugget.m_irange.grow(isize(m_mesh.m_ibuf) - 1);
+					}
 				}
-			}
-			else
-			{
-				throw std::runtime_error(std::format("Mapping mode {} for materials in {} is not implemented", int(materials->GetMappingMode()), mesh.GetName()));
-			}
 
-			for (int i = 0, iend = mesh.GetPolygonVertexCount(); i != iend; ++i)
-			{
-
+				// Get the bounding box
+				m_mesh.m_bbox = BoundingBox(mesh);
 			}
 
-			for (int i = 0, iend = mesh.GetControlPointsCount(); i != iend; ++i)
-				verts.push_back(Vert(i, i));
-			// 
-			// 
-
-			// Get the bounding box
-			auto bbox = BoundingBox(mesh);
-
-			normals->GetMappingMode() == FbxLayerElement::eByPolygon;
-
-			m_out.AddModel(vcount, fcount, bbox, );
-			m_out.
-
-			// Check if the model is deformable
-			if (mesh.GetDeformerCount(FbxDeformer::eSkin) != 0)
-				ReadSkinDeformers(mesh);
-
-#if 0
-			// Read the geometry from the scene
-			for (int i = 0, iend = m_scene->GetGeometryCount(); i != iend; ++i)
+			// Ensure the geometry in 'mesh' is triangles not polygons
+			FbxMesh* EnsureTriangulated(FbxMesh* mesh)
 			{
-				auto* geometry = m_scene->GetGeometry(i);
-				if (geometry->GetAttributeType() != FbxNodeAttribute::eMesh)
-					continue;
+				// Ensure the mesh is triangles
+				if (mesh->IsTriangleMesh())
+					return mesh;
 
-				auto& mesh = *static_cast<FbxMesh*>(geometry);
-			}
-
-			// Read animations from the scene
-			for (int i = 0, iend = m_scene->GetSrcObjectCount<FbxAnimStack>(); i != iend; ++i)
-			{
-
-			}
-#endif
-		}
-
-		// Read the materials used in 'mesh'
-		void ReadMaterials(FbxMesh& mesh)
-		{
-			// Get the materials used by 'mesh'
-			std::unordered_set<int> used_materials;
-			if (auto material_layers = mesh.GetElementMaterial(); material_layers && !m_opts.all_materials)
-			{
-				auto& index = material_layers->GetIndexArray();
-				switch (material_layers->GetMappingMode())
+				// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
+				// Edge hardnees triangulation give wrong edge hardness so we convert them to a smooth group during the triangulation.
+				FbxGeometryConverter converter(m_scene.GetFbxManager());
+				for (int j = 0, jend = mesh->GetLayerCount(FbxLayerElement::eSmoothing); j != jend; ++j)
 				{
-					case FbxGeometryElement::eByPolygon:
-					{
-						// Expect a material index for each face
-						if (index.GetCount() != mesh.GetPolygonCount())
-						{
-							m_errors.push_back(std::format("Mesh {} has the 'eByPolygon' material mapping, but does not have a material for each polygon ({} expected, {} available)", mesh.GetName(), mesh.GetPolygonCount(), index.GetCount()));
-							break;
-						}
-
-						for (int f = 0, fend = mesh.GetPolygonCount(); f != fend; ++f)
-							used_materials.insert(index.GetAt(f));
-
-						break;
-					}
-					case FbxGeometryElement::eAllSame:
-					{
-						if (index.GetCount() != 1)
-						{
-							m_errors.push_back(std::format("Mesh {} has the 'eAllSame' material mapping, but there is an unexpected number ({}) of materials", mesh.GetName(), index.GetCount()));
-							break;
-						}
-
-						used_materials.insert(index.GetAt(0));
-						break;
-					}
+					auto* smoothing = mesh->GetLayer(j)->GetSmoothing();
+					if (smoothing && smoothing->GetMappingMode() != FbxLayerElement::eByPolygon)
+						converter.ComputePolygonSmoothingFromEdgeSmoothing(mesh, j);
 				}
-			}
 
-			for (int i = 0, iend = mesh.GetNode()->GetMaterialCount(); i != iend; ++i)
-			{
-				auto const& material = *mesh.GetNode()->GetMaterial(i);
-				if (!m_opts.all_materials && !used_materials.count(i))
-					continue;
+				// Convert polygons to triangles
+				mesh = FbxCast<FbxMesh>(converter.Triangulate(mesh, true));
 
-				// TODO: need to determine 'nuggets' from the material use
-			}
-		}
+				// If triangulation failed, ignore the mesh
+				if (!mesh->IsTriangleMesh())
+					throw std::runtime_error(std::format("Failed to convert mesh '{}' to a triangle mesh", mesh->GetName()));
 
-		// Ensure the geometry in 'mesh' is triangles not polygons
-		FbxMesh* EnsureTriangulated(FbxMesh* mesh)
-		{
-			// Ensure the mesh is triangles
-			if (mesh->IsTriangleMesh())
 				return mesh;
-
-			// Must do this before triangulating the mesh due to an FBX bug in Triangulate.
-			// Edge hardnees triangulation give wrong edge hardness so we convert them to a smooth group during the triangulation.
-			for (int j = 0, jend = mesh->GetLayerCount(FbxLayerElement::eSmoothing); j != jend; ++j)
-			{
-				auto* smoothing = mesh->GetLayer(j)->GetSmoothing();
-				if (smoothing && smoothing->GetMappingMode() != FbxLayerElement::eByPolygon)
-					m_converter.ComputePolygonSmoothingFromEdgeSmoothing(mesh, j);
 			}
 
-			// Convert polygons to triangles
-			mesh = FbxCast<FbxMesh>(m_converter.Triangulate(mesh, true));
-
-			// If triangulation failed, ignore the mesh
-			if (!mesh->IsTriangleMesh())
+			// Get the mesh bounding box
+			BBox BoundingBox(FbxMesh& mesh)
 			{
-				m_errors.push_back(std::format("Failed to convert mesh '{}' to a triangle mesh", mesh->GetName()));
-				return nullptr;
+				mesh.ComputeBBox();
+				auto min = To<v4>(mesh.BBoxMin.Get());
+				auto max = To<v4>(mesh.BBoxMax.Get());
+				return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
 			}
+		};
 
-			return mesh;
-		}
+		Reader reader(scene, out, options);
+		reader.Do();
+	}
 
-		// Read the skinning information from 'mesh'
-		void ReadSkinDeformers(FbxMesh& mesh)
+	// Read the skeletons from the scene
+	static void ReadSkeleton(FbxScene& scene, ISkeletonOut& out)
+	{
+		struct Reader
 		{
-			for (int i = 0, iend = mesh.GetDeformerCount(FbxDeformer::eSkin); i != iend; ++i)
-			{
-				auto const& skin = *static_cast<FbxSkin const*>(mesh.GetDeformer(i, FbxDeformer::eSkin));
-				for (int j = 0, jend = skin.GetClusterCount(); j != jend; ++j)
-				{
-					auto const& cluster = *skin.GetCluster(j);
-					auto& bone = *cluster.GetLink();
-					auto bone_name = Address(&bone);
+			FbxScene& m_scene;
+			ISkeletonOut& m_out;
+			Skeleton m_skel;
 
-					// TODO: Save the skinning information somewhere
-					(void)bone_name;
+			Reader(FbxScene& scene, ISkeletonOut& out)
+				: m_scene(scene)
+				, m_out(out)
+				, m_skel()
+			{
+			}
+
+			// Read the skeleton
+			void Do()
+			{
+				ReadSkeleton(*m_scene.GetRootNode());
+			}
+
+			// Read the skinning information from 'mesh'
+			void ReadSkinDeformers(FbxMesh& mesh)
+			{
+				for (int i = 0, iend = mesh.GetDeformerCount(FbxDeformer::eSkin); i != iend; ++i)
+				{
+					auto const& skin = *static_cast<FbxSkin const*>(mesh.GetDeformer(i, FbxDeformer::eSkin));
+					for (int j = 0, jend = skin.GetClusterCount(); j != jend; ++j)
+					{
+						auto const& cluster = *skin.GetCluster(j);
+						auto& bone = *cluster.GetLink();
+						auto bone_name = Address(&bone);
+
+						// TODO: Save the skinning information somewhere
+						(void)bone_name;
+					}
 				}
 			}
-		}
 
-		// Get the mesh bounding box
-		BBox BoundingBox(FbxMesh& mesh)
-		{
-			mesh.ComputeBBox();
-			auto min = To<v4>(mesh.BBoxMin.Get());
-			auto max = To<v4>(mesh.BBoxMax.Get());
-			return BBox{ (max + min) * 0.5f, (max - min) * 0.5f };
-		}
+			// Recursively read skeletons
+			void ReadSkeleton(FbxNode& node, Skeleton* skel = nullptr, int level = 0)
+			{
+				// If no skeleton is provided, then this is the root (if it contains a skeleton)
+				auto is_skel_root = skel == nullptr;
 
-		// Get the hierarchy address of 'node'
-		std::string Address(FbxNode const* node)
-		{
-			if (node == nullptr) return "";
-			std::string address = Address(node->GetParent());
-			return std::move(address.append(address.empty() ? "" : ".").append(node->GetName()));
-		}
-	};
+				// Process all attributes of the node
+				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				{
+					// Look for skeleton attributes
+					auto const& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
+					{
+						auto const& skeleton = *FbxCast<FbxSkeleton>(&attr);
 
+						// Determine the object to world and object to parent transforms
+						//auto p2w = node.GetParent() ? node.GetParent()->EvaluateGlobalTransform(m_time) : FbxAMatrix();
+						//auto o2w = node.EvaluateGlobalTransform(m_time);
+						//auto o2p = To<m4x4>(p2w.Inverse() * o2w);
+						auto o2p = To<m4x4>(node.EvaluateLocalTransform());
 
-	static void Read(Scene& scene, Options const& opts, IModelOut& out, ErrorList& errors)
-	{
-		L reader(scene, opts, out, errors);
+						// Start a new skeleton for every level zero bone
+						if (skel == nullptr)
+						{
+							m_skel.reset();
+							skel = &m_skel;
+						}
+
+						// Skeleton.Size is only for visualisation
+						// Skeleton.LimbLength is just a cache of length(o2p.pos)
+						skel->m_names.push_back(skeleton.GetNode()->GetName());
+						skel->m_bones.push_back(Bone{
+							.m_pos = o2p.pos,
+							.m_rot = quat(o2p.rot),
+							.m_type = To<Bone::EType>(skeleton.GetSkeletonType()),
+							.m_level = level,
+						});
+					}
+				}
+
+				// Recurse
+				for (int i = 0; i != node.GetChildCount(); ++i)
+					ReadSkeleton(*node.GetChild(i), skel, level + 1);
+
+				// Output the skeleton if this is the root node
+				if (is_skel_root && skel != nullptr)
+					m_out.AddSkeleton(*skel);
+			}
+		};
+
+		Reader reader(scene, out);
 		reader.Do();
 	}
 
 	// Dump diagnostic info for a scene
-	static void DumpScene(Scene const& scene, std::ostream& out)
+	static void DumpScene(FbxScene const& scene, std::ostream& out)
 	{
 		struct Writer
 		{
@@ -2906,22 +3157,67 @@ namespace pr::geometry::fbx
 		};
 
 		Writer writer(out);
-		writer.Write(*scene);
+		writer.Write(scene);
 	}
 }
 
 extern "C"
 {
+	HINSTANCE g_hInstance;
+	pr::geometry::fbx::Manager* g_manager;
+
+	// DLL entry point
+	BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD ul_reason_for_call, LPVOID)
+	{
+		static int ref_count = 0;
+		switch (ul_reason_for_call)
+		{
+			case DLL_PROCESS_ATTACH:
+			{
+				if (ref_count++ == 0)
+					g_manager = new pr::geometry::fbx::Manager;
+
+				g_hInstance = hInstance;
+				break;
+			}
+			case DLL_PROCESS_DETACH:
+			{
+				if (--ref_count == 0)
+					delete g_manager;
+
+				g_hInstance = nullptr;
+				break;
+			}
+			case DLL_THREAD_ATTACH: break;
+			case DLL_THREAD_DETACH: break;
+		}
+		return TRUE;
+	}
+
 	// Load an fbx scene
-	__declspec(dllexport) void __stdcall Fbx_ReadStream(std::istream& src, pr::geometry::fbx::Options const& opts, pr::geometry::fbx::IModelOut& out, pr::geometry::fbx::ErrorList& errors)
+	__declspec(dllexport) fbxsdk::FbxScene* __stdcall Fbx_LoadScene(std::istream& src)
 	{
 		using namespace pr::geometry::fbx;
 
 		try
 		{
-			Manager manager;
-			auto scene = Import(manager, src);
-			Read(scene, opts, out, errors);
+			return Import(*g_manager, src).release();
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA(ex.what());
+			DebugBreak();
+			return nullptr;
+		}
+	}
+
+	// Release an fbx scene
+	__declspec(dllexport) void __stdcall Fbx_ReleaseScene(fbxsdk::FbxScene* scene)
+	{
+		try
+		{
+			if (scene != nullptr)
+				scene->Destroy();
 		}
 		catch (std::exception const& ex)
 		{
@@ -2930,16 +3226,61 @@ extern "C"
 		}
 	}
 
-	// Dump an fbx scene to a out stream
-	__declspec(dllexport) void __stdcall Fbx_DumpStream(std::istream& src, std::ostream& out)
+	// Read meta data about the scene
+	__declspec(dllexport) void __stdcall Fbx_ReadSceneProps(fbxsdk::FbxScene const* scene, pr::geometry::fbx::Scene::Props& out)
 	{
 		using namespace pr::geometry::fbx;
 
 		try
 		{
-			// Load the model into memory
-			Manager manager;
-			Scene scene = Import(manager, src);
+			out = ReadProps(*scene);
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA(ex.what());
+			DebugBreak();
+		}
+	}
+
+	// Read the model hierarchy from the scene
+	__declspec(dllexport) void __stdcall Fbx_ReadModel(fbxsdk::FbxScene& scene, pr::geometry::fbx::IModelOut& out, pr::geometry::fbx::ReadModelOptions const& options)
+	{
+		using namespace pr::geometry::fbx;
+
+		try
+		{
+			ReadModel(scene, out, options);
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA(ex.what());
+			DebugBreak();
+		}
+	}
+
+	// Read the skeleton from the scene
+	__declspec(dllexport) void __stdcall Fbx_ReadSkeleton(fbxsdk::FbxScene& scene, pr::geometry::fbx::ISkeletonOut& out)
+	{
+		using namespace pr::geometry::fbx;
+
+		try
+		{
+			ReadSkeleton(scene, out);
+		}
+		catch (std::exception const& ex)
+		{
+			OutputDebugStringA(ex.what());
+			DebugBreak();
+		}
+	}
+
+	// Dump info about the scene to 'out'
+	__declspec(dllexport) void __stdcall Fbx_DumpScene(fbxsdk::FbxScene& scene, std::ostream& out)
+	{
+		using namespace pr::geometry::fbx;
+
+		try
+		{
 			DumpScene(scene, out);
 		}
 		catch (std::exception const& ex)
@@ -2957,8 +3298,8 @@ extern "C"
 		try
 		{
 			Manager manager;
-			Scene scene = Import(manager, src);
-			Export(manager, out, scene);
+			ScenePtr scene = Import(manager, src);
+			Export(manager, out, *scene.get());
 		}
 		catch (std::exception const& ex)
 		{
@@ -2970,8 +3311,270 @@ extern "C"
 
 
 
-
 #if 0
+
+		// Read animation data
+		void ReadAnimations()
+		{
+			int animations = m_scene.GetSrcObjectCount<FbxAnimStack>();
+			for (int a = m_opts.m_anims.begin(); a != m_opts.m_anims.end(); ++a)
+			{
+				if (a < 0 || a >= animations)
+					continue;
+
+				// Tell the scene to use this animation stack
+				auto& anim_stack = *m_scene.GetSrcObject<FbxAnimStack>(a);
+				m_scene.SetCurrentAnimationStack(&anim_stack);
+
+				// Get the time range
+				auto& take = *m_scene.GetTakeInfo(anim_stack.GetName());
+
+				for (int f = m_opts.m_frames.begin(); f != m_opts.m_frames.end(); ++f)
+				{
+					FbxTime startTime = tCurveX ? tCurveX->KeyGetTime(0) : FbxTime(0);
+					FbxTime endTime = tCurveX ? tCurveX->KeyGetTime(tCurveX->KeyGetCount() - 1) : FbxTime(0);
+					FbxTime time;
+					FbxTime::EMode timeStep = FbxTime::eFrames30; // adjust for your framerate
+
+					for (time = startTime; time <= endTime; time += timeStep)
+					{
+						FbxAMatrix globalTransform = node.EvaluateGlobalTransform(time);
+						FbxVector4 translation = globalTransform.GetT();
+						FbxVector4 rotation = globalTransform.GetR();
+
+						// Store translation/rotation as a keyframe in your data structure
+					}
+					ReadAnimationFrame(*m_scene.GetRootNode(), *anim_layer);
+				}
+			}
+
+
+				// Get the animation layer from this stack
+				for (int l = 0, lend = anim_stack.GetMemberCount<FbxAnimLayer>(); i != lend; ++l)
+				{
+					auto& anim_layer = *FbxCast<FbxAnimLayer>(anim_stack.GetMember<FbxAnimLayer>(l));
+
+				}
+			}
+		}
+
+		//
+		void ReadAnimation(FbxNode& node, FbxAnimLayer& anim_layer, FbxNode* parent = nullptr, int level = 0)
+		{
+			(void)parent,level;
+			FbxAnimCurve* translation[3] = {
+				node.LclTranslation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_X),
+				node.LclTranslation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+				node.LclTranslation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+			};
+			FbxAnimCurve* rotation[3] = {
+				node.LclRotation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_X),
+				node.LclRotation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+				node.LclRotation.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+			};
+			FbxAnimCurve* scaling[3] = {
+				node.LclScaling.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_X),
+				node.LclScaling.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Y),
+				node.LclScaling.GetCurve(&anim_layer, FBXSDK_CURVENODE_COMPONENT_Z),
+			};
+			//FbxTime startTime = tCurveX ? tCurveX->KeyGetTime(0) : FbxTime(0);
+			//FbxTime endTime = tCurveX ? tCurveX->KeyGetTime(tCurveX->KeyGetCount() - 1) : FbxTime(0);
+			//FbxTime time;
+			//FbxTime::EMode timeStep = FbxTime::eFrames30; // adjust for your framerate
+
+			//for (time = startTime; time <= endTime; time += timeStep)
+			//{
+			//	FbxAMatrix globalTransform = node.EvaluateGlobalTransform(time);
+			//	FbxVector4 translation = globalTransform.GetT();
+			//	FbxVector4 rotation = globalTransform.GetR();
+
+			//	// Store translation/rotation as a keyframe in your data structure
+			//}
+
+			// Recurse
+			for (int i = 0; i != node.GetChildCount(); ++i)
+				ReadAnimation(*node.GetChild(i), anim_layer, &node, level + 1);
+		}
+void InspectAnimatedProperties(FbxNode* node, FbxAnimLayer* layer)
+{
+    FbxProperty property = node->GetFirstProperty();
+    while (property.IsValid())
+    {
+        if (property.GetSrcObjectCount<FbxAnimCurve>() > 0)
+        {
+            const char* propName = property.GetNameAsCStr();
+            FbxDataType dataType = property.GetPropertyDataType();
+
+            printf("Animated property: %s (type: %s)\n", propName, dataType.GetName());
+
+            int numComponents = property.GetSrcObjectCount<FbxAnimCurve>();
+            for (int i = 0; i < numComponents; ++i)
+            {
+                FbxAnimCurve* curve = property.GetSrcObject<FbxAnimCurve>(i);
+                if (!curve) continue;
+
+                printf("  Curve %d has %d keys\n", i, curve->KeyGetCount());
+
+                for (int k = 0; k < curve->KeyGetCount(); ++k)
+                {
+                    FbxTime time = curve->KeyGetTime(k);
+                    float value = curve->KeyGetValue(k);
+                    printf("    Time: %f, Value: %f\n", time.GetSecondDouble(), value);
+                }
+            }
+        }
+
+        property = node->GetNextProperty(property);
+    }
+
+    // Recurse children
+    for (int i = 0; i < node->GetChildCount(); ++i)
+        InspectAnimatedProperties(node->GetChild(i), layer);
+}
+void GetAnimationTimeRange(FbxAnimStack* animStack, FbxTime& outStart, FbxTime& outEnd)
+{
+    FbxTakeInfo* takeInfo = animStack->GetTakeInfo();
+    if (takeInfo)
+    {
+        outStart = takeInfo->mLocalTimeSpan.GetStart();
+        outEnd = takeInfo->mLocalTimeSpan.GetStop();
+    }
+    else
+    {
+        // Fallback: Walk through all nodes and find min/max times
+        outStart = FbxTime::GetZero();
+        outEnd = FbxTime(0);
+
+        FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
+        // Call a recursive function to inspect all nodes and get the time span
+        // (not shown here for brevity)
+    }
+}
+
+		// Parse the FBX file
+		void ReadGeometry(FbxNode& node, FbxNode* parent = nullptr, int level = 0)
+		{
+			// Determine the object to world and object to parent transforms
+			auto o2w = To<m4x4>(node.EvaluateGlobalTransform());
+			auto o2p = parent ? To<m4x4>(parent->EvaluateGlobalTransform().Inverse() * node.EvaluateGlobalTransform()) : m4x4::Identity();
+
+			// Process all attributes of the node
+			for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+			{
+				auto& attr = *node.GetNodeAttributeByIndex(i);
+				auto attr_type = attr.GetAttributeType();
+				switch (attr_type)
+				{
+					case FbxNodeAttribute::eMesh:
+					{
+						if (FbxMesh* mesh = FbxCast<FbxMesh>(&attr))
+							if (FbxMesh* trimesh = EnsureTriangulated(mesh))
+								ReadTriMesh(*trimesh, o2p, level);
+
+						break;
+					}
+					case FbxNodeAttribute::eSkeleton:
+					{
+						//if (FbxSkeleton* skel = FbxCast<FbxSkeleton>(&attr))
+						//	ReadSkeleton(*skel, o2p, level);
+
+						break;
+					}
+					case FbxNodeAttribute::eLODGroup:
+					{
+						break;
+					}
+					case FbxNodeAttribute::eCamera:
+					{
+						break;
+					}
+					case FbxNodeAttribute::eLight:
+					{
+						break;
+					}
+
+					// Unsupported attributes
+					case FbxNodeAttribute::eUnknown:
+					case FbxNodeAttribute::eOpticalReference:
+					case FbxNodeAttribute::eOpticalMarker:
+					case FbxNodeAttribute::eCachedEffect:
+					case FbxNodeAttribute::eMarker:
+					case FbxNodeAttribute::eCameraStereo:
+					case FbxNodeAttribute::eCameraSwitcher:
+					case FbxNodeAttribute::eNurbs:
+					case FbxNodeAttribute::ePatch:
+					case FbxNodeAttribute::eNurbsCurve:
+					case FbxNodeAttribute::eTrimNurbsSurface:
+					case FbxNodeAttribute::eBoundary:
+					case FbxNodeAttribute::eNurbsSurface:
+					case FbxNodeAttribute::eSubDiv:
+					case FbxNodeAttribute::eLine:
+					{
+						break;
+					}
+					case FbxNodeAttribute::eNull:
+					default:
+					{
+						break;
+					}
+				}
+			}
+
+			// Recurse
+			for (int i = 0, iend = node.GetChildCount(); i != iend; ++i)
+				ReadGeometry(*node.GetChild(i), &node, level + 1);
+		}
+
+		// Read the materials used in 'mesh'
+		void ReadMaterials(FbxMesh& mesh)
+		{
+			// Get the materials used by 'mesh'
+			std::unordered_set<int> used_materials;
+			if (auto material_layers = mesh.GetElementMaterial(); material_layers && !m_opts.all_materials)
+			{
+				auto& index = material_layers->GetIndexArray();
+				switch (material_layers->GetMappingMode())
+				{
+					case FbxGeometryElement::eByPolygon:
+					{
+						// Expect a material index for each face
+						if (index.GetCount() != mesh.GetPolygonCount())
+						{
+							m_errors.push_back(std::format("Mesh {} has the 'eByPolygon' material mapping, but does not have a material for each polygon ({} expected, {} available)", mesh.GetName(), mesh.GetPolygonCount(), index.GetCount()));
+							break;
+						}
+
+						for (int f = 0, fend = mesh.GetPolygonCount(); f != fend; ++f)
+							used_materials.insert(index.GetAt(f));
+
+						break;
+					}
+					case FbxGeometryElement::eAllSame:
+					{
+						if (index.GetCount() != 1)
+						{
+							m_errors.push_back(std::format("Mesh {} has the 'eAllSame' material mapping, but there is an unexpected number ({}) of materials", mesh.GetName(), index.GetCount()));
+							break;
+						}
+
+						used_materials.insert(index.GetAt(0));
+						break;
+					}
+				}
+			}
+
+			// Output the materials
+			for (int i = 0, iend = mesh.GetNode()->GetMaterialCount(); i != iend; ++i)
+			{
+				auto const& material = *mesh.GetNode()->GetMaterial(i);
+				if (!m_opts.all_materials && !used_materials.count(i))
+					continue;
+
+				(void)material;
+				m_out.AddMaterial(i, ColourWhite);//hack
+			}
+		}
+
 	// RAII wrapper for FBX Exporter
 	struct Exporter
 	{
@@ -3044,9 +3647,7 @@ extern "C"
 			return m_exporter;
 		}
 	};
-#endif
-	
-#if 0
+
 	// RAII wrapper for FBX Importer
 	struct Importer
 	{

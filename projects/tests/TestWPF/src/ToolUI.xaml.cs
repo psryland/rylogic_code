@@ -11,7 +11,7 @@ namespace TestWPF
 		public ToolUI()
 		{
 			InitializeComponent();
-			PinState = new PinData(this);
+			PinState = new PinData(this, EPin.TopLeft, true);
 			DataContext = this;
 		}
 

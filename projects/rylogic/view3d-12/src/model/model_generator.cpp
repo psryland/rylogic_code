@@ -1009,7 +1009,7 @@ namespace pr::rdr12
 			// Recursive function for populating a model tree
 			void BuildModelTree(ModelTree& tree, p3d::Mesh const& mesh, int level)
 			{
-				tree.push_back({MeshToModel(mesh), mesh.m_o2p, level});
+				tree.push_back(ModelTreeNode{MeshToModel(mesh), mesh.m_o2p, level});
 				for (auto& child : mesh.m_children)
 					BuildModelTree(tree, child, level + 1);
 			}
@@ -1235,34 +1235,88 @@ namespace pr::rdr12
 	{
 		using namespace geometry;
 
-		// Model output helpers
-		struct ModelOut
+		struct ModelOut : fbx::IModelOut
 		{
+			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
+
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
-			ModelOutFunc m_out;
+			ModelTree m_tree;
 			Cache<> m_cache;
-			//MatCont m_mats;
+			MatCont m_mats;
 
-			ModelOut(ResourceFactory& factory, CreateOptions const* opts, ModelOutFunc out)
+			ModelOut(ResourceFactory& factory, CreateOptions const* opts)
 				: m_factory(factory)
 				, m_opts(opts)
-				, m_out(out)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
-				//, m_mats()
+				, m_mats()
 			{}
 
-			bool operator ()(int model)
+			// Add a material to the output
+			virtual void AddMaterial(uint64_t unqiue_id, fbx::Material const& material) override
 			{
-				ModelTree tree;
-				return m_out(tree);
+				m_mats[unqiue_id] = material;
+			}
+
+			// Add a mesh to the output
+			virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p) override
+			{
+				m_cache.Reset();
+
+				// Name/Bounding box
+				m_cache.m_name = mesh.m_name;
+				m_cache.m_bbox = mesh.m_bbox;
+
+				// Copy the verts
+				m_cache.m_vcont.resize(mesh.m_vbuf.size(), {});
+				auto vptr = m_cache.m_vcont.data();
+				for (auto const& v : mesh.m_vbuf)
+				{
+					SetPCNT(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0);
+					++vptr;
+				}
+
+				auto vcount = isize(mesh.m_vbuf);
+				auto icount = isize(mesh.m_ibuf);
+
+				// Copy indices
+				if (vcount > 0xFFFF)
+				{
+					// Use 32bit indices
+					m_cache.m_icont.m_stride = sizeof(uint32_t);
+					m_cache.m_icont.resize<uint32_t>(icount);
+					memcpy(m_cache.m_icont.data<uint32_t>(), mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
+				}
+				else
+				{
+					// Use 16bit indices
+					m_cache.m_icont.m_stride = sizeof(uint16_t);
+					m_cache.m_icont.resize<uint16_t>(icount);
+					auto isrc = mesh.m_ibuf.data();
+					auto idst = m_cache.m_icont.data<uint16_t>();
+					for (auto count = mesh.m_ibuf.size(); count-- != 0;)
+						*idst++ = s_cast<uint16_t>(*isrc++);
+				}
+
+				// Copy the nuggets
+				m_cache.m_ncont.resize(mesh.m_nbuf.size());
+				auto nptr = m_cache.m_ncont.data();
+				for (auto const& n : mesh.m_nbuf)
+				{
+					auto const& mat = m_mats.at(n.m_mat_id);
+					*nptr++ = NuggetDesc{n.m_topo, n.m_geom}.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
+				}
+
+				// Emit the model.
+				auto model = Create(m_factory, m_cache, m_opts);
+				m_tree.push_back({ model, o2p, mesh.m_level });
 			}
 		};
-		ModelOut model_out(factory, opts, out);
+		ModelOut model_out(factory, opts);
 
-		fbx::FbxDll fbx;
-		fbx::ErrorList errors;
-		fbx.Read(src, fbx::Options{}, model_out, errors);
+		fbx::Scene scene(src);
+		scene.ReadModel(model_out, { .m_anim = 0, .m_time_in_seconds = 1.0 });
+		out(std::move(model_out.m_tree));
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
 	{

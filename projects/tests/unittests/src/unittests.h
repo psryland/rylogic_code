@@ -142,6 +142,7 @@
 #include "pr\geometry\common.h"
 #include "pr\geometry\deformablemesh.h"
 #include "pr\geometry\distance.h"
+#include "pr\geometry\fbx.h"
 #include "pr\geometry\geometry.h"
 #include "pr\geometry\index_buffer.h"
 #include "pr\geometry\intersect.h"

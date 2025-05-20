@@ -74,8 +74,6 @@ namespace Rylogic.Gui.WPF
 			DefaultMouseControl = true;
 			DefaultKeyboardShortcuts = true;
 
-			Overlay.PreviewKeyDown += (s, a) => OnKeyDown(a);
-			Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
 			Scene.BuildScene += OnBuildScene;
 
 			// Prevent the object manager seeing anything created in the 'CtxId' context

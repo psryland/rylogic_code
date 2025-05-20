@@ -91,6 +91,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LDraw", "LDraw", "{29112D13-613F-4E05-8F76-B23B59D2EF1C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LDraw", "projects\apps\LDraw\LDraw.csproj", "{2EA55858-6738-426F-94B1-D7592453624B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3} = {D2A68A4C-FA89-4FD4-8CB3-0174ECD91FC3}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AceInspaders", "AceInspaders", "{FCB985FA-EAC8-4837-9771-A2E24B0B43AD}"
 EndProject
