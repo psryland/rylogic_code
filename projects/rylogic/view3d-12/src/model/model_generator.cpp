@@ -4,6 +4,7 @@
 //*********************************************
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/stock_resources.h"
@@ -166,10 +167,11 @@ namespace pr::rdr12
 			Impl::GenerateNormals(cache, opts->m_gen_normals);
 
 		// Create the model
-		ModelDesc mdesc(
-			ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont),
-			ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont),
-			cache.m_bbox, cache.m_name.c_str());
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont))
+			.ibuf(ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont))
+			.bbox(cache.m_bbox)
+			.name(cache.m_name.c_str());
 		auto model = factory.CreateModel(mdesc);
 
 		// Create the render nuggets
@@ -1237,19 +1239,27 @@ namespace pr::rdr12
 
 		struct ModelOut : fbx::IModelOut
 		{
+			using Skel = struct Skel { int bone_count; D3DPtr<ID3D12Resource> skin_buffer; };
 			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
+			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
+			using SkelCont = std::unordered_map<uint64_t, Skel>;
 
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
-			ModelTree m_tree;
 			Cache<> m_cache;
 			MatCont m_mats;
+			MeshCont m_meshes;
+			SkelCont m_skels;
+			ModelTree m_tree;
 
 			ModelOut(ResourceFactory& factory, CreateOptions const* opts)
 				: m_factory(factory)
 				, m_opts(opts)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
 				, m_mats()
+				, m_meshes()
+				, m_skels()
+				, m_tree()
 			{}
 
 			// Add a material to the output
@@ -1259,7 +1269,7 @@ namespace pr::rdr12
 			}
 
 			// Add a mesh to the output
-			virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p) override
+			virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
 			{
 				m_cache.Reset();
 
@@ -1309,13 +1319,44 @@ namespace pr::rdr12
 
 				// Emit the model.
 				auto model = Create(m_factory, m_cache, m_opts);
-				m_tree.push_back({ model, o2p, mesh.m_level });
+				m_meshes[mesh.m_id] = model;
+				
+				// Add the mesh to the model tree
+				m_tree.push_back({ model, o2p, level });
+			}
+
+			// Add a skeleton to the output
+			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
+			{
+				auto skel = m_factory.CreateResource(ResDesc::Buf<m4x4>(isize(skeleton.m_b2p), skeleton.m_b2p), "skeleton");
+				m_skels[skeleton.m_id] = { isize(skeleton.m_b2p), skel };
+			}
+
+			// Add Skinning data for a mesh to the output
+			virtual void AddSkinning(fbx::Skinning const& skinning) override
+			{
+				static_assert(sizeof(fbx::Skinning::Influence) == sizeof(Skinfluence));
+				static_assert(alignof(fbx::Skinning::Influence) == alignof(Skinfluence));
+				static_assert(offsetof(fbx::Skinning::Influence, m_bones) == offsetof(Skinfluence, m_bones));
+				static_assert(offsetof(fbx::Skinning::Influence, m_weights) == offsetof(Skinfluence, m_weights));
+				std::span<Skinfluence const> verts = { reinterpret_cast<Skinfluence const*>(skinning.m_verts.data()), skinning.m_verts.size() };
+
+				auto skin = m_factory.CreateResource(ResDesc::Buf<Skinfluence>(isize(skinning.m_verts), verts), "skin");
+				auto const& mesh = m_meshes.at(skinning.m_mesh_id);
+				auto const& skel = m_skels.at(skinning.m_skel_id);
+				auto bone_count = skel.bone_count;
+				auto vert_count = isize(skinning.m_verts);
+				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(mesh.get(), bone_count, vert_count, skel.skin_buffer.get(), skin.get()), true);
 			}
 		};
 		ModelOut model_out(factory, opts);
 
 		fbx::Scene scene(src);
-		scene.ReadModel(model_out, { .m_anim = 0, .m_time_in_seconds = 1.0 });
+		scene.ReadModel(model_out, {
+			.m_parts = fbx::EParts::All,
+			.m_anim = 0,
+			.m_time_in_seconds = 1.0,
+		});
 		out(std::move(model_out.m_tree));
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)

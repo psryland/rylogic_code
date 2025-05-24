@@ -85,11 +85,14 @@ namespace pr::rdr12
 	}
 
 	// Create and initialise a resource
-	D3DPtr<ID3D12Resource> ResourceFactory::CreateResource(ResDesc const& desc, char const* name)
+	D3DPtr<ID3D12Resource> ResourceFactory::CreateResource(ResDesc const& desc, std::string_view name)
 	{
 		D3DPtr<ID3D12Resource> res;
 		auto device = rdr().D3DDevice();
 		auto has_init_data = !desc.Data.empty();
+
+		if (desc.Width == 0)
+			return res;
 
 		// Buffer resources specify the Width as the size in bytes, even though for textures width is the pixel count.
 		ResDesc rd = desc;
@@ -151,15 +154,24 @@ namespace pr::rdr12
 			throw std::runtime_error("Attempt to create 0-length model index buffer");
 
 		// Create a V/I buffers
-		vb = vb ? vb : CreateResource(mdesc.m_vb, mdesc.m_name.c_str());
-		ib = ib ? ib : CreateResource(mdesc.m_ib, mdesc.m_name.c_str());
+		vb = vb ? vb : CreateResource(mdesc.m_vb, mdesc.m_name);
+		ib = ib ? ib : CreateResource(mdesc.m_ib, mdesc.m_name);
 
 		// Set the size and alignment of the vertex/index element types
 		SizeAndAlign16 vstride(mdesc.m_vb.ElemStride, mdesc.m_vb.DataAlignment);
 		SizeAndAlign16 istride(mdesc.m_ib.ElemStride, mdesc.m_ib.DataAlignment);
 
 		// Create the model
-		ModelPtr ptr(rdr12::New<Model>(rdr(), s_cast<int64_t>(mdesc.m_vb.Width), s_cast<int64_t>(mdesc.m_ib.Width), vstride, istride, vb.get(), ib.get(), mdesc.m_bbox, mdesc.m_name.c_str()), true);
+		ModelPtr ptr(rdr12::New<Model>(rdr(),
+			s_cast<int64_t>(mdesc.m_vb.Width),
+			s_cast<int64_t>(mdesc.m_ib.Width),
+			vstride,
+			istride,
+			vb.get(),
+			ib.get(),
+			mdesc.m_bbox,
+			mdesc.m_name
+		), true);
 		assert(m_rdr.mem_tracker().add(ptr.m_ptr));
 		return ptr;
 	}
@@ -190,7 +202,7 @@ namespace pr::rdr12
 					v4(1, 1, 1, 0)
 				};
 
-				ModelDesc mdesc(verts, idxs, bbox, "basis");
+				ModelDesc mdesc = ModelDesc().vbuf(verts).ibuf(idxs).bbox(bbox).name("basis");
 				auto ptr = CreateModel(mdesc);
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
@@ -216,7 +228,7 @@ namespace pr::rdr12
 					v4(1, 1, 0, 0)
 				};
 
-				ModelDesc mdesc(verts, idxs, bbox, "unit quad");
+				ModelDesc mdesc = ModelDesc().vbuf(verts).ibuf(idxs).bbox(bbox).name("unit quad");
 				auto ptr = CreateModel(mdesc);
 
 				NuggetDesc nug(ETopo::TriList, EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
@@ -246,7 +258,7 @@ namespace pr::rdr12
 					v4(1, 1, 1, 0)
 				};
 
-				ModelDesc mdesc(verts, idxs, bbox, "bbox cube");
+				ModelDesc mdesc = ModelDesc().vbuf(verts).ibuf(idxs).bbox(bbox).name("bbox cube");
 				auto ptr = CreateModel(mdesc);
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert | EGeom::Colr);
@@ -317,7 +329,7 @@ namespace pr::rdr12
 					v4(1, 1, 1, 0)
 				};
 
-				ModelDesc mdesc(verts, idxs, bbox, "selection box");
+				ModelDesc mdesc = ModelDesc().vbuf(verts).ibuf(idxs).bbox(bbox).name("selection box");
 				auto ptr = CreateModel(mdesc);
 
 				NuggetDesc nug(ETopo::LineList, EGeom::Vert);

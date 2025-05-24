@@ -32,13 +32,9 @@ cbuffer CBufNugget :reg(b1,0)
 {
 	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
 
-	// x = Model flags:
-	//   1 << 0 = has normals
-	// y = Texture flags:
-	//   1 << 0 = has diffuse texture
-	//   1 << 1 = use env map
-	// z = Alpha flags:
-	//   1 << 0 = has alpha
+	// x = Model flags - See types.hlsli
+	// y = Texture flags
+	// z = Alpha flags
 	// w = Instance Id
 	int4 m_flags;
 

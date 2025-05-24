@@ -11,6 +11,7 @@
 #include <functional>
 #include <filesystem>
 #include "pr/common/range.h"
+#include "pr/common/flags_enum.h"
 #include "pr/maths/bbox.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
@@ -22,7 +23,35 @@ namespace fbxsdk
 }
 namespace pr::geometry::fbx
 {
-	using ErrorList = std::vector<std::string>;
+	// Notes:
+	//  - FBX scenes are a hierarchy of FbxNodes.
+	//  - Meshes, skeletons, etc are output using the ModelTree serialisation of the hierarchy.
+	//    The nodes are output in depth-first order with the hierarchy level.
+	//    e.g.,
+	//             A
+	//           /   \
+	//          B     C
+	//        / | \   |
+	//       D  E  F  G
+	//    Serialised as: A0 B1 D2 E2 F2 C1 G2
+	//    Children are all nodes to the right with level > the current.
+
+	enum class EParts
+	{
+		None = 0,
+		Meshes = 1 << 0,
+		Materials = 1 << 1,
+		Skeleton = 1 << 2,
+		Skinning = 1 << 3,
+		All = Meshes | Materials | Skeleton | Skinning,
+		_flags_enum = 0,
+	};
+	enum class EBoneType
+	{
+		Root,
+		Limb,
+		Effector,
+	};
 
 	struct Vert
 	{
@@ -30,28 +59,12 @@ namespace pr::geometry::fbx
 		Colour m_colr = {};
 		v4 m_norm = {};
 		v2 m_tex0 = {};
-		int pad[2] = {};
+		iv2 m_idx0 = {};
 
 		friend bool operator == (Vert const& lhs, Vert const& rhs)
 		{
 			return memcmp(&lhs, &rhs, sizeof(Vert)) == 0;
 		}
-	};
-	struct Bone
-	{
-		enum class EType { Root, Limb, Effector };
-		v4 m_pos;       // Position relative to the parent
-		quat m_rot;     // Bone rotation
-		EType m_type;   // Bone type
-		int m_level;    // Hierarchy level
-	};
-	struct Nugget
-	{
-		ETopo m_topo = ETopo::TriList;
-		EGeom m_geom = EGeom::Vert;
-		Range<int64_t> m_vrange = Range<int64_t>::Reset();
-		Range<int64_t> m_irange = Range<int64_t>::Reset();
-		uint64_t m_mat_id = 0;
 	};
 	struct Material
 	{
@@ -60,16 +73,13 @@ namespace pr::geometry::fbx
 		Colour m_specular = ColourZero;
 		std::filesystem::path m_tex_diff;
 	};
-	struct Skeleton
+	struct Nugget
 	{
-		std::vector<std::string> m_names;
-		std::vector<Bone> m_bones;
-
-		void reset()
-		{
-			m_names.resize(0);
-			m_bones.resize(0);
-		}
+		uint64_t m_mat_id = 0;
+		ETopo m_topo = ETopo::TriList;
+		EGeom m_geom = EGeom::Vert;
+		Range<int64_t> m_vrange = Range<int64_t>::Reset();
+		Range<int64_t> m_irange = Range<int64_t>::Reset();
 	};
 	struct Mesh
 	{
@@ -77,21 +87,63 @@ namespace pr::geometry::fbx
 		using IBuffer = std::vector<int>;
 		using NBuffer = std::vector<Nugget>;
 
+		uint64_t m_id;
 		std::string_view m_name;
 		VBuffer m_vbuf;
 		IBuffer m_ibuf;
 		NBuffer m_nbuf;
 		BBox m_bbox;
-		int m_level;
 
-		void reset()
+		void reset(uint64_t id)
 		{
+			m_id = id;
 			m_name = "";
 			m_vbuf.resize(0);
 			m_ibuf.resize(0);
 			m_nbuf.resize(0);
 			m_bbox = BBox::Reset();
-			m_level = 0;
+		}
+	};
+	struct Skeleton
+	{
+		using NameCont = std::vector<std::string>;
+		using TypeCont = std::vector<EBoneType>;
+		using BoneCont = std::vector<m4x4>;
+		using LvlCont = std::vector<int>;
+
+		uint64_t m_id;    // Unique id of the root bone node
+		NameCont m_names; // Bone name
+		TypeCont m_types; // Bone type
+		BoneCont m_b2p;   // Bone to parent transform hierarchy in the skeleton rest position
+		LvlCont m_levels; // Hierarchy levels
+
+		void reset(uint64_t id)
+		{
+			m_id = id;
+			m_names.resize(0);
+			m_types.resize(0);
+			m_b2p.resize(0);
+			m_levels.resize(0);
+		}
+	};
+	struct Skinning
+	{
+		struct Influence
+		{
+			iv4 m_bones; // Indices of the bones that influence a vertex 'v' (i.e. m_bones[v])
+			v4 m_weights; // Weights of each bone's influence a vertex 'v' (i.e. m_weights[v])
+		};
+		using InfluenceCont = std::vector<Influence>;
+		
+		uint64_t m_mesh_id;
+		uint64_t m_skel_id;
+		InfluenceCont m_verts;
+
+		void reset(uint64_t mesh_id, uint64_t skel_id)
+		{
+			m_mesh_id = mesh_id;
+			m_skel_id = skel_id;
+			m_verts.resize(0);
 		}
 	};
 
@@ -101,33 +153,42 @@ namespace pr::geometry::fbx
 		virtual ~IModelOut() = default;
 
 		// Add a material to the output
-		virtual void AddMaterial(uint64_t unique_id, Material const& mat) = 0;
+		virtual void AddMaterial(uint64_t unique_id, Material const& mat) { (void)unique_id, mat; }
 
 		// Add a mesh to the output
-		virtual void AddMesh(Mesh const& mesh, m4x4 const& o2p) = 0;
-	};
-	struct ISkeletonOut
-	{
-		virtual ~ISkeletonOut() = default;
+		virtual void AddMesh(Mesh const& mesh, m4x4 const& o2p, int level) { (void)mesh, o2p, level; }
 
 		// Add a skeleton to the output
-		virtual void AddSkeleton(Skeleton const& skeleton) = 0;
+		virtual void AddSkeleton(Skeleton const& skeleton) { (void)skeleton; }
 
-		// Outputs a frame of animation
-		virtual void AddAnimFrame() = 0;
+		// Add Skinning data for a mesh to the output
+		virtual void AddSkinning(Skinning const& skinning) { (void)skinning; }
 	};
 
 	// Options for parsing FBXfiles
 	struct ReadModelOptions
 	{
-		// Read all materials from the model, not just the used ones
-		bool m_all_materials = false;
+		// Parts of the model to read
+		EParts m_parts = EParts::All;
 
 		// The animation stack to use
 		int m_anim = 0;
 
 		// The time at which to read the transforms
 		double m_time_in_seconds = 0;
+	};
+
+	// Fbx File Formats
+	struct Formats
+	{
+		static constexpr char const* FbxBinary = "FBX (*.fbx)";
+		static constexpr char const* FbxAscii = "FBX ascii (*.fbx)";
+	};
+
+	// Metadata in the scene
+	struct SceneProps
+	{
+		int m_animation_stack_count = 0;
 	};
 
 	// Dynamically loaded FBX dll
@@ -151,7 +212,6 @@ namespace pr::geometry::fbx
 			, ReleaseScene((Fbx_ReleaseSceneFn)GetProcAddress(m_module, "Fbx_ReleaseScene"))
 			, ReadSceneProps((Fbx_ReadScenePropsFn)GetProcAddress(m_module, "Fbx_ReadSceneProps"))
 			, ReadModel((Fbx_ReadModelFn)GetProcAddress(m_module, "Fbx_ReadModel"))
-			, ReadSkeleton((Fbx_ReadSkeletonFn)GetProcAddress(m_module, "Fbx_ReadSkeleton"))
 			, DumpScene((Fbx_DumpSceneFn)GetProcAddress(m_module, "Fbx_DumpScene"))
 			, RoundTripTest((Fbx_RoundTripTestFn)GetProcAddress(m_module, "Fbx_RoundTripTest"))
 		{}
@@ -165,16 +225,12 @@ namespace pr::geometry::fbx
 		Fbx_ReleaseSceneFn ReleaseScene;
 
 		// Read meta data about the scene
-		using Fbx_ReadScenePropsFn = void(__stdcall*)(fbxsdk::FbxScene const* scene);
+		using Fbx_ReadScenePropsFn = SceneProps (__stdcall*)(fbxsdk::FbxScene const& scene);
 		Fbx_ReadScenePropsFn ReadSceneProps;
 
 		// Read the model hierarchy from the scene
 		using Fbx_ReadModelFn = void (__stdcall *)(fbxsdk::FbxScene& scene, IModelOut& out, ReadModelOptions const& options);
 		Fbx_ReadModelFn ReadModel;
-		
-		// Read the skeleton from the scene
-		using Fbx_ReadSkeletonFn = void(__stdcall*)(fbxsdk::FbxScene& scene, ISkeletonOut& out);
-		Fbx_ReadSkeletonFn ReadSkeleton;
 
 		// Dump info about the scene to 'out'
 		using Fbx_DumpSceneFn = void(__stdcall*)(fbxsdk::FbxScene& scene, std::ostream& out);
@@ -190,27 +246,27 @@ namespace pr::geometry::fbx
 	{
 		// Notes:
 		//  - Remember to open streams in binary mode!
-		struct Props
-		{
-			int m_animation_stack_count;
-		};
 
 		fbxsdk::FbxScene* m_scene;
-		Props m_props;
+		SceneProps m_props;
 
 		Scene(std::istream& src)
 			: m_scene(Fbx::get().LoadScene(src))
+			, m_props(Fbx::get().ReadSceneProps(*m_scene))
 		{
 		}
 		Scene(Scene&& rhs) noexcept
 			: m_scene()
+			, m_props()
 		{
 			std::swap(m_scene, rhs.m_scene);
+			std::swap(m_props, rhs.m_props);
 		}
 		Scene(Scene const&) = delete;
 		Scene& operator=(Scene&& rhs) noexcept
 		{
 			std::swap(m_scene, rhs.m_scene);
+			std::swap(m_props, rhs.m_props);
 			return *this;
 		}
 		Scene& operator=(Scene const&) = delete;
@@ -223,6 +279,9 @@ namespace pr::geometry::fbx
 		// Read the model from the FBX scene
 		void ReadModel(IModelOut& out, ReadModelOptions const& options)
 		{
+			// Notes:
+			//  - If this is slow, it's probably spending most of the time trianguling the
+			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
 			Fbx::get().ReadModel(*m_scene, out, options);
 		}
 	};

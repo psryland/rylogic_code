@@ -11,14 +11,16 @@ static const int MaxProjectedTextures = 1;
 static const int MaxSamplers = 1;
 
 // Model flags
-static const int ModelFlags_HasNormals           = (1 << 0);
-static const int TextureFlags_HasDiffuse         = (1 << 0);
-static const int TextureFlags_IsReflective       = (1 << 1);
-static const int TextureFlags_ProjectFromEnvMap  = (1 << 2);
-static const int AlphaFlags_HasAlpha             = (1 << 0);
+static const int ModelFlags_HasNormals          = (1 << 0);
+static const int ModelFlags_IsSkinned           = (1 << 1);
+static const int TextureFlags_HasDiffuse        = (1 << 0);
+static const int TextureFlags_IsReflective      = (1 << 1);
+static const int TextureFlags_ProjectFromEnvMap = (1 << 2);
+static const int AlphaFlags_HasAlpha            = (1 << 0);
 
 // Models
 #define HasNormals (m_flags.x & ModelFlags_HasNormals)
+#define IsSkinned  (m_flags.x & ModelFlags_IsSkinned)
 #define HasTex0    (m_flags.y & TextureFlags_HasDiffuse)
 #define HasEnvMap  (m_flags.y & TextureFlags_IsReflective)
 #define EnvMapProj (m_flags.y & TextureFlags_ProjectFromEnvMap)
@@ -105,8 +107,15 @@ struct Shadow
 // Projected textures
 struct ProjTexture
 {
-	int4 m_info;  // x = count of projected textures
+	int4 m_info; // x = count of projected textures
 	row_major float4x4 m_w2t[MaxProjectedTextures]; // World to texture space projection transform
+};
+
+// Skinned Meshes
+struct Skinfluence
+{
+	int4 m_bones; // Up to 4 bone indices
+	float4 m_weights; // Weights for each bone
 };
 
 #ifdef SHADER_BUILD
@@ -118,6 +127,7 @@ struct ProjTexture
 		float4 diff :Color0;
 		float4 norm :Normal;
 		float2 tex0 :TexCoord0;
+		int2   idx0 :Indices;
 	};
 
 	// Pixel shader input format

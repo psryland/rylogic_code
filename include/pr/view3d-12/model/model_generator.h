@@ -374,7 +374,7 @@ namespace pr::rdr12
 
 			Cache() = delete;
 			Cache(int vcount, int icount, int ncount, int idx_stride)
-				:m_buffers(this_thread_instance())
+				: m_buffers(this_thread_instance())
 				, m_in_use(this_thread_cache_in_use())
 				, m_name(m_buffers.m_name)
 				, m_vcont(m_buffers.m_vcont)
@@ -394,7 +394,9 @@ namespace pr::rdr12
 				Reset();
 				m_in_use = false;
 			}
+			Cache(Cache&& rhs) = delete;
 			Cache(Cache const& rhs) = delete;
+			Cache operator =(Cache&& rhs) = delete;
 			Cache operator =(Cache const& rhs) = delete;
 
 			// Resize all buffers to 0
@@ -418,10 +420,10 @@ namespace pr::rdr12
 				auto stride = m_icont.stride();
 				switch (stride)
 				{
-				case 4: return dx_format_v<uint32_t>;
-				case 2: return dx_format_v<uint16_t>;
-				case 1: return dx_format_v<uint8_t>;
-				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
+				case 4: return dx_format_v<uint32_t>.format;
+				case 2: return dx_format_v<uint16_t>.format;
+				case 1: return dx_format_v<uint8_t>.format;
+				default: throw std::runtime_error(std::format("Unsupported index stride: {}", stride));
 				}
 			}
 		};

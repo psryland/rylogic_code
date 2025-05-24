@@ -4,12 +4,24 @@
 //*********************************************
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/resource_factory.h"
+#include "pr/view3d-12/resource/resource_store.h"
 
 namespace pr::rdr12
 {
-	Model::Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
+	Model::Model(
+		Renderer& rdr,
+		int64_t vcount,
+		int64_t icount,
+		SizeAndAlign16 vstride,
+		SizeAndAlign16 istride,
+		ID3D12Resource* vb,
+		ID3D12Resource* ib,
+		BBox const& bbox,
+		std::string_view name
+	)
 		: m_rdr(&rdr)
 		, m_vb(vb, true)
 		, m_ib(ib, true)
@@ -29,6 +41,7 @@ namespace pr::rdr12
 		, m_nuggets()
 		, m_vcount(vcount)
 		, m_icount(icount)
+		, m_skinning()
 		, m_bbox(bbox)
 		, m_name(name)
 		, m_vstride(vstride)

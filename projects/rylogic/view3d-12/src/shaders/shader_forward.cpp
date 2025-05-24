@@ -26,11 +26,12 @@ namespace pr::rdr12::shaders
 		inline static constexpr auto EnvMap = ESRVReg::t1;
 		inline static constexpr auto SMap = ESRVReg::t2;
 		inline static constexpr auto ProjTex = ESRVReg::t3;
-
-		inline static constexpr auto DiffTextureSampler = ESamReg::s0;
+		inline static constexpr auto Skeleton = ESRVReg::t4;
+		inline static constexpr auto Skin = ESRVReg::t5;
 	};
 	struct ESamp
 	{
+		inline static constexpr auto Diff = ESamReg::s0;
 		inline static constexpr auto EnvMap = SamDescStatic(ESamReg::s1);
 		inline static constexpr auto SMap = SamDescStatic(ESamReg::s2).addr(D3D12_TEXTURE_ADDRESS_MODE_CLAMP).filter(D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT).compare(D3D12_COMPARISON_FUNC_GREATER_EQUAL);
 		inline static constexpr auto ProjTex = SamDescStatic(ESamReg::s3);
@@ -51,8 +52,6 @@ namespace pr::rdr12::shaders
 		
 		// Create the root signature
 		m_signature = RootSig(ERootSigFlags::GraphicsOnly)
-
-			// Register mappings
 			.CBuf(EReg::CBufFrame)
 			.CBuf(EReg::CBufNugget)
 			.CBuf(EReg::CBufFade)
@@ -61,13 +60,12 @@ namespace pr::rdr12::shaders
 			.SRV(EReg::EnvMap, 1)
 			.SRV(EReg::SMap, shaders::MaxShadowMaps)
 			.SRV(EReg::ProjTex, shaders::MaxProjectedTextures)
-			.Samp(EReg::DiffTextureSampler, shaders::MaxSamplers)
-
-			// Add stock static samplers
+			.SRV(EReg::Skeleton, 1)
+			.SRV(EReg::Skin, 1)
+			.Samp(ESamp::Diff, shaders::MaxSamplers)
 			.Samp(ESamp::EnvMap)
 			.Samp(ESamp::SMap)
 			.Samp(ESamp::ProjTex)
-
 			.Create(device, "ForwardSig");
 	}
 

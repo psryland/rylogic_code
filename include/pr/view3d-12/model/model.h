@@ -31,14 +31,26 @@ namespace pr::rdr12
 		TNuggetChain             m_nuggets;   // The nuggets for this model
 		int64_t                  m_vcount;    // The count of elements in the V-buffer
 		int64_t                  m_icount;    // The count of elements in the I-buffer
+		SkinningPtr              m_skinning;  // Skinning data for this model (null if not skinned)
 		BBox                     m_bbox;      // A bounding box for the model. Set by the client
 		string32                 m_name;      // A human readable name for the model
 		SizeAndAlign16           m_vstride;   // The size and alignment (in bytes) of a single V-element
 		SizeAndAlign16           m_istride;   // The size and alignment (in bytes) of a single I-element
 		mutable EDbgFlags        m_dbg_flags; // Flags used by PR_DBG_RDR to output info once only
 
-		Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name);
+		Model(Renderer& rdr,
+			int64_t vcount,
+			int64_t icount,
+			SizeAndAlign16 vstride,
+			SizeAndAlign16 istride,
+			ID3D12Resource* vb,
+			ID3D12Resource* ib,
+			BBox const& bbox,
+			std::string_view name
+		);
+		Model(Model&&) = delete;
 		Model(Model const&) = delete;
+		Model& operator =(Model&&) = delete;
 		Model& operator =(Model const&) = delete;
 		~Model();
 

@@ -247,11 +247,11 @@ namespace pr
 
 	// Bone type
 	template <>
-	struct Convert<geometry::fbx::Bone::EType, FbxSkeleton::EType>
+	struct Convert<geometry::fbx::EBoneType, FbxSkeleton::EType>
 	{
-		static geometry::fbx::Bone::EType To_(FbxSkeleton::EType ty)
+		static geometry::fbx::EBoneType To_(FbxSkeleton::EType ty)
 		{
-			using EType = geometry::fbx::Bone::EType;
+			using EType = geometry::fbx::EBoneType;
 			switch (ty)
 			{
 				case FbxSkeleton::EType::eRoot: return EType::Root;
@@ -267,14 +267,9 @@ namespace pr
 // FBX support
 namespace pr::geometry::fbx
 {
-	struct Formats
-	{
-		static constexpr char const* FbxBinary = "FBX (*.fbx)";
-		static constexpr char const* FbxAscii = "FBX ascii (*.fbx)";
-	};
-
 	static constexpr int NoIndex = -1;
 	static constexpr Vert NoVert = {};
+	using ErrorList = std::vector<std::string>;
 
 	// Check that 'ptr' is not null. Throw if it is
 	template <typename T> inline T* Check(T* ptr, std::string_view message)
@@ -713,9 +708,9 @@ namespace pr::geometry::fbx
 	}
 
 	// Read properties from the scene
-	static Scene::Props ReadProps(FbxScene const& scene)
+	static SceneProps ReadProps(FbxScene const& scene)
 	{
-		Scene::Props props = {};
+		SceneProps props = {};
 		props.m_animation_stack_count = scene.GetSrcObjectCount<FbxAnimStack>();
 		scene.GetGlobalSettings();
 		return props;
@@ -740,51 +735,55 @@ namespace pr::geometry::fbx
 			//  - Units, axis orientation, and coordinate systems should be checked via GlobalSettings.
 			//  - Vertex data is organized into layers, each with mapping and reference modes that define indexing.
 
-			using Lookup = std::vector<int>;
+			using VertexLookup = std::vector<int>;
 
 			FbxScene& m_scene;
 			IModelOut& m_out;
 			ReadModelOptions const& m_opts;
 			Mesh m_mesh;
-			Lookup m_vlookup;
-			FbxTime m_time;
+			Skeleton m_skel;
+			Skinning m_skin;
+			VertexLookup m_vlookup;
+			int m_root_level;
 
 			Reader(FbxScene& scene, IModelOut& out, ReadModelOptions const& opts)
 				: m_scene(scene)
 				, m_out(out)
 				, m_opts(opts)
 				, m_mesh()
+				, m_skel()
 				, m_vlookup()
-				, m_time()
+				, m_root_level()
 			{
-				// Set the animation to use
-				int animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
-				if (m_opts.m_anim >= 0 && m_opts.m_anim < animation_count)
-				{
-					auto* anim_stack = Check(m_scene.GetSrcObject<FbxAnimStack>(m_opts.m_anim), "Requested animation stack does not exist");
-					m_scene.SetCurrentAnimationStack(anim_stack);
-				}
-
-				m_time.SetSecondDouble(opts.m_time_in_seconds);
+				//// Set the animation to use
+				//int animation_count = m_scene.GetSrcObjectCount<FbxAnimStack>();
+				//if (m_opts.m_anim >= 0 && m_opts.m_anim < animation_count)
+				//{
+				//	auto* anim_stack = Check(m_scene.GetSrcObject<FbxAnimStack>(m_opts.m_anim), "Requested animation stack does not exist");
+				//	m_scene.SetCurrentAnimationStack(anim_stack);
+				//}
 			}
 
 			// Read the model
 			void Do()
 			{
-				ReadMaterials();
-				ReadGeometry(*m_scene.GetRootNode());
+				if (AllSet(m_opts.m_parts, EParts::Materials))
+					ReadMaterials();
+				if (AllSet(m_opts.m_parts, EParts::Meshes))
+					ReadGeometry(*m_scene.GetRootNode());
+				if (AllSet(m_opts.m_parts, EParts::Skeleton))
+					ReadSkeleton(*m_scene.GetRootNode());
+				if (AllSet(m_opts.m_parts, EParts::Skinning))
+					ReadSkinning(*m_scene.GetRootNode());
 			}
 
 			// Read the materials
 			void ReadMaterials()
 			{
-				if (m_scene.GetMaterialCount() == 0)
-				{
-					Material mat = {};
-					m_out.AddMaterial(0, mat);
-					return;
-				}
+				// Add a default material for unknown materials
+				m_out.AddMaterial(0, {});
 
+				// Output each material in the scene
 				for (int m = 0, mend = m_scene.GetMaterialCount(); m != mend; ++m)
 				{
 					Material material = {};
@@ -854,178 +853,337 @@ namespace pr::geometry::fbx
 			}
 
 			// Parse the FBX file
-			void ReadGeometry(FbxNode& node, int level = 0)
+			void ReadGeometry(FbxNode& node, int* root_level = nullptr, int level = 0)
+			{
+				auto is_mesh_root = root_level == nullptr;
+
+				// Process all attributes of the node
+				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				{
+					// Look for mesh attributes
+					auto& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
+						continue;
+
+					// Populate 'm_mesh' from the triangulated mesh
+					auto& trimesh = *EnsureTriangulated(FbxCast<FbxMesh>(&attr));
+					{
+						// Can't just output verts directly because each vert can have multiple normals
+						// "Inflate" the verts into a unique list of each required combination
+						auto vcount = trimesh.GetControlPointsCount();
+						auto fcount = trimesh.GetPolygonCount();
+						auto ncount = trimesh.GetElementMaterialCount();
+						auto const* verts = trimesh.GetControlPoints();
+						auto const* layer0 = trimesh.GetLayer(0);
+						auto const* materials = layer0->GetMaterials();
+						auto const* colours = layer0->GetVertexColors();
+						auto const* normals = layer0->GetNormals();
+						auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
+
+						// Initialise buffers
+						m_mesh.reset(trimesh.GetUniqueID());
+						m_mesh.m_vbuf.reserve(vcount * 3 / 2);
+						m_mesh.m_ibuf.reserve(fcount * 3);
+						m_mesh.m_nbuf.reserve(ncount);
+						m_vlookup.reserve(vcount * 3 / 2);
+						m_vlookup.resize(0);
+
+						if (is_mesh_root)
+						{
+							root_level = &m_root_level;
+							m_root_level = level;
+						}
+
+						// Add a vertex to 'm_vbuf' and return its index
+						auto AddVert = [this](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+						{
+							Vert v = {
+								.m_vert = pos,
+								.m_colr = col,
+								.m_norm = norm,
+								.m_tex0 = uv,
+								.m_idx0 = {src_vidx, 0},
+							};
+
+							// Vlookup is a linked list of vertices that are permutations of 'src_idx'
+							for (int vidx = src_vidx;;)
+							{
+								// If 'vidx' is outside the buffer, add it
+								auto vbuf_count = isize(m_mesh.m_vbuf);
+								if (vidx >= vbuf_count)
+								{
+									m_mesh.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
+									m_vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
+									m_mesh.m_vbuf[vidx] = v;
+									m_vlookup[vidx] = NoIndex;
+									return vidx;
+								}
+
+								// If 'v' is already in the buffer, use it's index
+								if (m_mesh.m_vbuf[vidx] == v)
+								{
+									return vidx;
+								}
+
+								// If the position 'vidx' is an unused slot, use it
+								if (m_mesh.m_vbuf[vidx] == NoVert)
+								{
+									m_mesh.m_vbuf[vidx] = v;
+									return vidx;
+								}
+
+								// If there is no "next", prepare to insert it at the end
+								if (m_vlookup[vidx] == NoIndex)
+								{
+									m_vlookup[vidx] = vbuf_count;
+								}
+
+								// Go to the next vertex to check
+								vidx = m_vlookup[vidx];
+							}
+						};
+
+						// Get or add a nugget
+						auto GetOrAddNugget = [this](uint64_t mat_id) -> Nugget&
+						{
+							for (auto& n : m_mesh.m_nbuf)
+							{
+								if (n.m_mat_id != mat_id) continue;
+								return n;
+							}
+							m_mesh.m_nbuf.push_back(Nugget{ .m_mat_id = mat_id });
+							return m_mesh.m_nbuf.back();
+						};
+
+						// Read the faces of 'mesh' adding them to a nugget based on their material
+						for (int f = 0, fend = trimesh.GetPolygonCount(); f != fend; ++f)
+						{
+							if (trimesh.GetPolygonSize(f) != 3)
+								throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", trimesh.GetName(), trimesh.GetPolygonSize(f)));
+
+							// Get the material used on this face
+							uint64_t mat_id = 0;
+							if (materials != nullptr)
+							{
+								auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
+								mat_id = mat ? mat->GetUniqueID() : 0;
+							}
+
+							// Add the triangle to the nugget associated with the material
+							auto& nugget = GetOrAddNugget(mat_id);
+							for (int j = 0, jend = 3; j != jend; ++j)
+							{
+								auto iidx = f * 3 + j;
+								auto vidx = trimesh.GetPolygonVertex(f, j);
+								v4 pos = To<v4>(verts[vidx]).w1();
+
+								// Get the vertex colour
+								Colour col = ColourWhite;
+								if (colours != nullptr)
+								{
+									nugget.m_geom |= EGeom::Colr;
+									col = To<Colour>(GetLayerElement<FbxColor>(colours, f, iidx, vidx));
+								}
+
+								// Get the vertex normal
+								v4 norm = {};
+								if (normals != nullptr)
+								{
+									nugget.m_geom |= EGeom::Norm;
+									norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, iidx, vidx)).w0();
+								}
+
+								// Get the vertex uv
+								v2 uv = {};
+								if (uvs != nullptr)
+								{
+									nugget.m_geom |= EGeom::Tex0;
+									uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, iidx, vidx));
+								}
+
+								// Add the vertex to the vertex buffer and it's index to the index buffer
+								vidx = AddVert(vidx, pos, col, norm, uv);
+								m_mesh.m_ibuf.push_back(vidx);
+
+								nugget.m_vrange.grow(vidx);
+								nugget.m_irange.grow(isize(m_mesh.m_ibuf) - 1);
+							}
+						}
+					}
+
+					// Determine the object to parent transforms
+					auto o2p = To<m4x4>(node.EvaluateLocalTransform());
+
+					// Output the mesh
+					m_mesh.m_name = node.GetName();
+					m_mesh.m_bbox = BoundingBox(trimesh);
+					m_out.AddMesh(m_mesh, o2p, level - m_root_level);
+				}
+
+				// Recurse
+				for (int i = 0; i != node.GetChildCount(); ++i)
+					ReadGeometry(*node.GetChild(i), root_level, level + 1);
+			}
+
+			// Recursively read skeletons
+			void ReadSkeleton(FbxNode& node, Skeleton* skel = nullptr, int level = 0)
+			{
+				// If no skeleton is provided, then this could be the root bone
+				auto is_skel_root = skel == nullptr;
+
+				// Process all attributes of the node
+				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
+				{
+					// Look for skeleton attributes
+					auto const& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() != FbxNodeAttribute::eSkeleton)
+						continue;
+
+					auto const& skeleton = *FbxCast<FbxSkeleton>(&attr);
+
+					// Determine the object to world and object to parent transforms
+					auto o2p = To<m4x4>(node.EvaluateLocalTransform());
+
+					// Reset the skeleton instance for the root bone
+					if (is_skel_root)
+					{
+						m_skel.reset(skeleton.GetUniqueID());
+						skel = &m_skel;
+						m_root_level = level;
+					}
+
+					// Add the bone to the skeleton
+					skel->m_names.push_back(skeleton.GetNode()->GetName());
+					skel->m_types.push_back(To<EBoneType>(skeleton.GetSkeletonType()));
+					skel->m_levels.push_back(level - m_root_level);
+					skel->m_b2p.push_back(o2p);
+				}
+
+				// Recurse
+				for (int i = 0; i != node.GetChildCount(); ++i)
+					ReadSkeleton(*node.GetChild(i), skel, level + 1);
+
+				// Output the skeleton if this is the root node
+				if (is_skel_root && skel != nullptr)
+				{
+					m_out.AddSkeleton(*skel);
+				}
+			}
+
+			// Read skinning information from mesh nodes in 'node'
+			void ReadSkinning(FbxNode& node, int level = 0)
 			{
 				// Process all attributes of the node
 				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
 				{
 					// Look for mesh attributes
 					auto& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() == FbxNodeAttribute::eMesh)
+					if (attr.GetAttributeType() != FbxNodeAttribute::eMesh)
+						continue;
+
+					// Ignore meshes without skins
+					auto& mesh = *FbxCast<FbxMesh>(&attr);
+					if (mesh.GetDeformerCount(FbxDeformer::eSkin) == 0)
+						continue;
+
+					// The id of this mesh
+					auto mesh_id = mesh.GetUniqueID();
+
+					// Find the skeleton associated with this skinned mesh
+					auto skel_id = FindSkeletonId(mesh);
+
+					// Create a new skin
+					m_skin.reset(mesh_id, skel_id);
+					m_skin.m_verts.resize(mesh.GetControlPointsCount());
+					static auto NextZero = [](v4 const& v) -> int
 					{
-						auto& trimesh = *EnsureTriangulated(FbxCast<FbxMesh>(&attr));
-						ReadTriMesh(trimesh);
+						return int(v.x != 0) + int(v.y != 0) + int(v.z != 0) + int(v.w != 0);
+					};
 
-						// Determine the object to parent transforms
-						auto p2w = node.GetParent() ? node.GetParent()->EvaluateGlobalTransform(m_time) : FbxAMatrix();
-						auto o2w = node.EvaluateGlobalTransform(m_time);
-						auto o2p = To<m4x4>(p2w.Inverse() * o2w);
-						//auto o2p = To<m4x4>(node.EvaluateLocalTransform(m_time));
+					// Get the skinning data for this mesh
+					for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
+					{
+						auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
+						for (int b = 0, bend = skin.GetClusterCount(); b != bend; ++b)
+						{
+							auto& cluster = *skin.GetCluster(b);
+							auto& bone = *cluster.GetLink();
 
-						// Output the mesh
-						m_mesh.m_name = node.GetName();
-						m_mesh.m_level = level;
-						m_out.AddMesh(m_mesh, o2p);
+							// Find the bone in the skeleton
+							auto bone_index = static_cast<int>(std::distance(begin(m_skel.m_names), std::find(begin(m_skel.m_names), end(m_skel.m_names), bone.GetName())));
+							if (bone_index >= isize(m_skel.m_b2p))
+								throw std::runtime_error("Bone index out of range in skeleton");
+
+							// Get the span of vert indices and weights
+							auto indices = std::span<int>{ cluster.GetControlPointIndices(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+							auto weights = std::span<double>{ cluster.GetControlPointWeights(), static_cast<size_t>(cluster.GetControlPointIndicesCount()) };
+							for (int w = 0, wend = cluster.GetControlPointIndicesCount(); w != wend; ++w)
+							{
+								auto vidx = indices[w];
+								auto weight = weights[w];
+
+								auto k = NextZero(m_skin.m_verts[vidx].m_weights);
+								if (k >= 4)
+									throw std::runtime_error("Too many bone influences");
+
+								m_skin.m_verts[vidx].m_bones[k] = bone_index;
+								m_skin.m_verts[vidx].m_weights[k] = static_cast<float>(weight);
+							}
+						}
 					}
+
+					// Output the skinning data for the mesh
+					m_out.AddSkinning(m_skin);
 				}
 
 				// Recurse
 				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadGeometry(*node.GetChild(i), level + 1);
+					ReadSkinning(*node.GetChild(i), level + 1);
 			}
 
-			// Read a mesh
-			void ReadTriMesh(FbxMesh& mesh)
+			// Find the unique id of the root bone of the skeleton
+			uint64_t FindSkeletonId(FbxMesh const& mesh) const
 			{
-				// Can't just output verts directly because each vert can have multiple normals
-				// "Inflate" the verts into a unique list of each required combination
-				auto vcount = mesh.GetControlPointsCount();
-				auto fcount = mesh.GetPolygonCount();
-				auto ncount = mesh.GetElementMaterialCount();
-				auto const* verts = mesh.GetControlPoints();
-				auto const* layer0 = mesh.GetLayer(0);
-				auto const* materials = layer0->GetMaterials();
-				auto const* colours = layer0->GetVertexColors();
-				auto const* normals = layer0->GetNormals();
-				auto const* uvs = layer0->GetUVs(FbxLayerElement::eTextureDiffuse);
-
-				// Initialise buffers
-				m_mesh.reset();
-				m_vlookup.resize(0);
-				m_mesh.m_vbuf.reserve(vcount * 3 / 2);
-				m_mesh.m_ibuf.reserve(fcount * 3);
-				m_mesh.m_nbuf.reserve(ncount);
-				m_vlookup.reserve(vcount * 3 / 2);
-
-				// Add a vertex to 'm_vbuf' and return its index
-				auto AddVert = [this](int src_vidx, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) -> int
+				for (int d = 0, dend = mesh.GetDeformerCount(FbxDeformer::eSkin); d != dend; ++d)
 				{
-					Vert v = {
-						.m_vert = pos,
-						.m_colr = col,
-						.m_norm = norm,
-						.m_tex0 = uv,
-						.pad = {},
-					};
-
-					// Vlookup is a linked list of vertices that are permutations of 'src_idx'
-					for (int vidx = src_vidx;;)
+					auto& skin = *FbxCast<FbxSkin>(mesh.GetDeformer(d, FbxDeformer::eSkin));
+					for (int c = 0, cend = skin.GetClusterCount(); c != cend; ++c)
 					{
-						// If 'vidx' is outside the buffer, add it
-						auto vbuf_count = isize(m_mesh.m_vbuf);
-						if (vidx >= vbuf_count)
+						auto& cluster = *skin.GetCluster(c);
+						auto const* bone = cluster.GetLink();
+
+						// Find the bone with no parent and assume that is the root
+						FbxSkeleton const* root_bone = nullptr;
+						for (; bone != nullptr; bone = bone->GetParent())
 						{
-							m_mesh.m_vbuf.resize(std::max(vbuf_count, vidx + 1), NoVert);
-							m_vlookup.resize(std::max(vbuf_count, vidx + 1), NoIndex);
-							m_mesh.m_vbuf[vidx] = v;
-							m_vlookup[vidx] = NoIndex;
-							return vidx;
+							// Look for skeleton attributes
+							auto const* attr = Find(FbxNodeAttribute::eSkeleton, *bone);
+							if (attr == nullptr)
+								break;
+
+							// Note: GetSkeletonType() is not always set. Just find the 
+							// top of the hierarchy and assume that is the root
+							root_bone = FbxCast<FbxSkeleton>(attr);
 						}
 
-						// If 'v' is already in the buffer, use it's index
-						if (m_mesh.m_vbuf[vidx] == v)
-						{
-							return vidx;
-						}
-					
-						// If the position 'vidx' is an unused slot, use it
-						if (m_mesh.m_vbuf[vidx] == NoVert)
-						{
-							m_mesh.m_vbuf[vidx] = v;
-							return vidx;
-						}
-
-						// If there is no "next", prepare to insert it at the end
-						if (m_vlookup[vidx] == NoIndex)
-						{
-							m_vlookup[vidx] = vbuf_count;
-						}
-
-						// Go to the next vertex to check
-						vidx = m_vlookup[vidx];
-					}
-				};
-
-				// Get or add a nugget
-				auto GetOrAddNugget = [this](uint64_t mat_id) -> Nugget&
-				{
-					for (auto& n : m_mesh.m_nbuf)
-					{
-						if (n.m_mat_id != mat_id) continue;
-						return n;
-					}
-					m_mesh.m_nbuf.push_back(Nugget{
-						.m_mat_id = mat_id,
-					});
-					return m_mesh.m_nbuf.back();
-				};
-
-				// Find the nuggets in 'mesh'
-				for (int f = 0, fend = mesh.GetPolygonCount(); f != fend; ++f)
-				{
-					if (mesh.GetPolygonSize(f) != 3)
-						throw std::runtime_error(std::format("Mesh {} has a polygon with {} vertices, but only triangles are supported", mesh.GetName(), mesh.GetPolygonSize(f)));
-
-					// Get the material used on this face
-					uint64_t mat_id = 0;
-					if (materials != nullptr)
-					{
-						auto mat = GetLayerElement<FbxSurfaceMaterial*>(materials, f, -1, -1);
-						mat_id = mat->GetUniqueID();
-					}
-
-					// Add the triangle to the nugget associated with the material
-					auto& nugget = GetOrAddNugget(mat_id);
-					for (int i = 0, iend = 3; i != iend; ++i)
-					{
-						auto vert_idx = mesh.GetPolygonVertex(f, i);
-						v4 pos = To<v4>(verts[vert_idx]).w1();
-
-						// Get the vertex colour
-						Colour col = ColourWhite;
-						if (colours != nullptr)
-						{
-							nugget.m_geom |= EGeom::Colr;
-							col = To<Colour>(GetLayerElement<FbxColor>(colours, f, f * 3 + i, vert_idx));
-						}
-
-						// Get the vertex normal
-						v4 norm = {};
-						if (normals != nullptr)
-						{
-							nugget.m_geom |= EGeom::Norm;
-							norm = To<v4>(GetLayerElement<FbxVector4>(normals, f, f * 3 + i, vert_idx)).w0();
-						}
-
-						// Get the vertex uv
-						v2 uv = {};
-						if (uvs != nullptr)
-						{
-							nugget.m_geom |= EGeom::Tex0;
-							uv = To<v2>(GetLayerElement<FbxVector2>(uvs, f, f * 3 + i, vert_idx));
-						}
-
-						// Add the vertex to the vertex buffer and it's index to the index buffer
-						int vidx = AddVert(vert_idx, pos, col, norm, uv);
-						m_mesh.m_ibuf.push_back(vidx);
-
-						nugget.m_vrange.grow(vidx);
-						nugget.m_irange.grow(isize(m_mesh.m_ibuf) - 1);
+						// If we found the root of the skeleton, return it's id
+						if (root_bone != nullptr)
+							return root_bone->GetUniqueID();
 					}
 				}
+				return 0;
+			}
 
-				// Get the bounding box
-				m_mesh.m_bbox = BoundingBox(mesh);
+			// Find the next node attribute of the given type in 'node'
+			FbxNodeAttribute const* Find(FbxNodeAttribute::EType attr_type, FbxNode const& node, int start = 0) const
+			{
+				for (int i = start, iend = node.GetNodeAttributeCount(); i < iend; ++i)
+				{
+					auto const& attr = *node.GetNodeAttributeByIndex(i);
+					if (attr.GetAttributeType() == attr_type)
+						return &attr;
+				}
+				return nullptr;
 			}
 
 			// Ensure the geometry in 'mesh' is triangles not polygons
@@ -1066,100 +1224,6 @@ namespace pr::geometry::fbx
 		};
 
 		Reader reader(scene, out, options);
-		reader.Do();
-	}
-
-	// Read the skeletons from the scene
-	static void ReadSkeleton(FbxScene& scene, ISkeletonOut& out)
-	{
-		struct Reader
-		{
-			FbxScene& m_scene;
-			ISkeletonOut& m_out;
-			Skeleton m_skel;
-
-			Reader(FbxScene& scene, ISkeletonOut& out)
-				: m_scene(scene)
-				, m_out(out)
-				, m_skel()
-			{
-			}
-
-			// Read the skeleton
-			void Do()
-			{
-				ReadSkeleton(*m_scene.GetRootNode());
-			}
-
-			// Read the skinning information from 'mesh'
-			void ReadSkinDeformers(FbxMesh& mesh)
-			{
-				for (int i = 0, iend = mesh.GetDeformerCount(FbxDeformer::eSkin); i != iend; ++i)
-				{
-					auto const& skin = *static_cast<FbxSkin const*>(mesh.GetDeformer(i, FbxDeformer::eSkin));
-					for (int j = 0, jend = skin.GetClusterCount(); j != jend; ++j)
-					{
-						auto const& cluster = *skin.GetCluster(j);
-						auto& bone = *cluster.GetLink();
-						auto bone_name = Address(&bone);
-
-						// TODO: Save the skinning information somewhere
-						(void)bone_name;
-					}
-				}
-			}
-
-			// Recursively read skeletons
-			void ReadSkeleton(FbxNode& node, Skeleton* skel = nullptr, int level = 0)
-			{
-				// If no skeleton is provided, then this is the root (if it contains a skeleton)
-				auto is_skel_root = skel == nullptr;
-
-				// Process all attributes of the node
-				for (int i = 0, iend = node.GetNodeAttributeCount(); i != iend; ++i)
-				{
-					// Look for skeleton attributes
-					auto const& attr = *node.GetNodeAttributeByIndex(i);
-					if (attr.GetAttributeType() == FbxNodeAttribute::eSkeleton)
-					{
-						auto const& skeleton = *FbxCast<FbxSkeleton>(&attr);
-
-						// Determine the object to world and object to parent transforms
-						//auto p2w = node.GetParent() ? node.GetParent()->EvaluateGlobalTransform(m_time) : FbxAMatrix();
-						//auto o2w = node.EvaluateGlobalTransform(m_time);
-						//auto o2p = To<m4x4>(p2w.Inverse() * o2w);
-						auto o2p = To<m4x4>(node.EvaluateLocalTransform());
-
-						// Start a new skeleton for every level zero bone
-						if (skel == nullptr)
-						{
-							m_skel.reset();
-							skel = &m_skel;
-						}
-
-						// Skeleton.Size is only for visualisation
-						// Skeleton.LimbLength is just a cache of length(o2p.pos)
-						skel->m_names.push_back(skeleton.GetNode()->GetName());
-						skel->m_bones.push_back(Bone{
-							.m_pos = o2p.pos,
-							.m_rot = quat(o2p.rot),
-							.m_type = To<Bone::EType>(skeleton.GetSkeletonType()),
-							.m_level = level,
-						});
-					}
-				}
-
-				// Recurse
-				for (int i = 0; i != node.GetChildCount(); ++i)
-					ReadSkeleton(*node.GetChild(i), skel, level + 1);
-
-				// Output the skeleton if this is the root node
-				if (is_skel_root && skel != nullptr)
-					m_out.AddSkeleton(*skel);
-			}
-		};
-
-		Reader reader(scene, out);
 		reader.Do();
 	}
 
@@ -3227,18 +3291,19 @@ extern "C"
 	}
 
 	// Read meta data about the scene
-	__declspec(dllexport) void __stdcall Fbx_ReadSceneProps(fbxsdk::FbxScene const* scene, pr::geometry::fbx::Scene::Props& out)
+	__declspec(dllexport) pr::geometry::fbx::SceneProps __stdcall Fbx_ReadSceneProps(fbxsdk::FbxScene const* scene)
 	{
 		using namespace pr::geometry::fbx;
 
 		try
 		{
-			out = ReadProps(*scene);
+			return ReadProps(*scene);
 		}
 		catch (std::exception const& ex)
 		{
 			OutputDebugStringA(ex.what());
 			DebugBreak();
+			return {};
 		}
 	}
 
@@ -3250,22 +3315,6 @@ extern "C"
 		try
 		{
 			ReadModel(scene, out, options);
-		}
-		catch (std::exception const& ex)
-		{
-			OutputDebugStringA(ex.what());
-			DebugBreak();
-		}
-	}
-
-	// Read the skeleton from the scene
-	__declspec(dllexport) void __stdcall Fbx_ReadSkeleton(fbxsdk::FbxScene& scene, pr::geometry::fbx::ISkeletonOut& out)
-	{
-		using namespace pr::geometry::fbx;
-
-		try
-		{
-			ReadSkeleton(scene, out);
 		}
 		catch (std::exception const& ex)
 		{

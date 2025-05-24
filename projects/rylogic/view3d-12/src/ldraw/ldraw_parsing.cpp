@@ -2129,7 +2129,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Create the model
-			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(cache.m_vcont.cspan())
+				.ibuf(cache.m_icont.span<uint16_t const>())
+				.bbox(props.m_bbox)
+				.name(obj->TypeAndName());
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
@@ -4401,10 +4405,11 @@ namespace pr::rdr12::ldraw
 			obj->m_user_data.get<Cache>() = Cache{};
 
 			// Create buffers for a dynamic model
-			ModelDesc mdesc(
-				ResDesc::VBuf<Vert>(vcount, {}),
-				ResDesc::IBuf<uint32_t>(icount, {}),
-				BBox::Reset(), obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+				.ibuf(ResDesc::IBuf<uint32_t>(icount, {}))
+				.bbox(BBox::Reset())
+				.name(obj->TypeAndName());
 
 			// Create the model
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
@@ -5244,14 +5249,15 @@ namespace pr::rdr12::ldraw
 		LdrObjectPtr obj(new LdrObject(type, 0, context_id), true);
 
 		// Create buffers for a dynamic model
-		ModelDesc settings(
-			ResDesc::VBuf<Vert>(vcount, {}),
-			ResDesc::IBuf<uint16_t>(icount, {}),
-			BBox::Reset(), obj->TypeAndName().c_str());
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+			.ibuf(ResDesc::IBuf<uint16_t>(icount, {}))
+			.bbox(BBox::Reset())
+			.name(obj->TypeAndName());
 
 		// Create the model
 		ResourceFactory factory(rdr);
-		obj->m_model = factory.CreateModel(settings);
+		obj->m_model = factory.CreateModel(mdesc);
 
 		// Create dummy nuggets
 		NuggetDesc nug(ETopo::PointList, EGeom::Vert);

@@ -121,6 +121,9 @@
     <Filter Include="src\ldraw\sources">
       <UniqueIdentifier>{d5915355-6c2b-4712-b923-fa18e551af3e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\shaders\hlsl\skinned">
+      <UniqueIdentifier>{66d55b59-61d8-4e4f-a183-2cc8f5c78247}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main\renderer.cpp">
@@ -272,6 +275,9 @@
     </ClCompile>
     <ClCompile Include="src\ldraw\sources\source_binary.cpp">
       <Filter>src\ldraw\sources</Filter>
+    </ClCompile>
+    <ClCompile Include="src\model\skinning.cpp">
+      <Filter>src\model</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -548,6 +554,9 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h">
       <Filter>src\model</Filter>
     </ClInclude>
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skinning.h">
+      <Filter>src\model</Filter>
+    </ClInclude>
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\shaders\shader_thick_line.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
@@ -794,6 +803,9 @@
     </None>
     <None Include="src\ldraw\ldraw_demo_scene.ldr">
       <Filter>src\ldraw</Filter>
+    </None>
+    <None Include="src\shaders\hlsl\skinned\skinned.hlsli">
+      <Filter>src\shaders\hlsl\skinned</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
