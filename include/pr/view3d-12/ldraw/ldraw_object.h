@@ -11,8 +11,6 @@
 
 namespace pr::rdr12::ldraw
 {
-	#pragma region Instance Types
-
 	// An instance type for line drawer stock objects
 	struct StockInstance
 	{
@@ -50,8 +48,6 @@ namespace pr::rdr12::ldraw
 		PR_RDR12_INSTANCE_MEMBERS(RdrInstance , PR_RDR_INST);
 		#undef PR_RDR_INST
 	};
-
-	#pragma endregion
 
 	// A line drawer object
 	struct LdrObject

@@ -95,6 +95,7 @@
     <ClCompile Include="src\lighting\light.cpp" />
     <ClCompile Include="src\main\renderer.cpp" />
     <ClCompile Include="src\main\window.cpp" />
+    <ClCompile Include="src\model\animation.cpp" />
     <ClCompile Include="src\model\model.cpp" />
     <ClCompile Include="src\model\model_generator.cpp" />
     <ClCompile Include="src\model\nugget.cpp" />
@@ -201,6 +202,7 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animation.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />

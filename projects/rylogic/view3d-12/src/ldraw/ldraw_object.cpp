@@ -1,9 +1,10 @@
-﻿//*********************************************
+//*********************************************
 // View 3d
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 #include "pr/view3d-12/ldraw/ldraw_object.h"
 #include "pr/view3d-12/main/renderer.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/scene/scene.h"
 #include "pr/view3d-12/utility/diagnostics.h"
 #include "pr/view3d-12/utility/pipe_state.h"

@@ -9,6 +9,7 @@
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/model_generator.h"
@@ -480,7 +481,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(IReader& reader, ParseParams& pp, Animation& anim)
+	void ParseAnimation(IReader& reader, ParseParams& pp, rdr12::SimpleAnimation& anim)
 	{
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
@@ -621,7 +622,8 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::Animation:
 			{
-				ParseAnimation(reader, pp, obj->m_anim);
+				obj->m_anim.m_simple = SimpleAnimationPtr(rdr12::New<SimpleAnimation>(), true);
+				ParseAnimation(reader, pp, *obj->m_anim.m_simple.get());
 				return true;
 			}
 			case EKeyword::Hidden:

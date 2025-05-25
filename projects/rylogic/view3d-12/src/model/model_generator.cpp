@@ -1239,7 +1239,7 @@ namespace pr::rdr12
 
 		struct ModelOut : fbx::IModelOut
 		{
-			using Skel = struct Skel { int bone_count; D3DPtr<ID3D12Resource> skin_buffer; };
+			using Skel = struct Skel { int bone_count = 0; D3DPtr<ID3D12Resource> skin_buffer = nullptr; };
 			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
 			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
 			using SkelCont = std::unordered_map<uint64_t, Skel>;
@@ -1329,7 +1329,7 @@ namespace pr::rdr12
 			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
 			{
 				auto skel = m_factory.CreateResource(ResDesc::Buf<m4x4>(isize(skeleton.m_b2p), skeleton.m_b2p), "skeleton");
-				m_skels[skeleton.m_id] = { isize(skeleton.m_b2p), skel };
+				m_skels[skeleton.m_ids.front()] = { isize(skeleton.m_b2p), skel };
 			}
 
 			// Add Skinning data for a mesh to the output
@@ -1352,11 +1352,11 @@ namespace pr::rdr12
 		ModelOut model_out(factory, opts);
 
 		fbx::Scene scene(src);
-		scene.ReadModel(model_out, {
-			.m_parts = fbx::EParts::All,
-			.m_anim = 0,
-			.m_time_in_seconds = 1.0,
-		});
+		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
+		
+		if (scene.m_props.m_animation_stack_count != 0)
+			scene.ReadAnimCurves(0);
+
 		out(std::move(model_out.m_tree));
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)

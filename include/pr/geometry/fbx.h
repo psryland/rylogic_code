@@ -43,7 +43,8 @@ namespace pr::geometry::fbx
 		Materials = 1 << 1,
 		Skeleton = 1 << 2,
 		Skinning = 1 << 3,
-		All = Meshes | Materials | Skeleton | Skinning,
+		AnimCurves = 1 << 4,
+		All = Meshes | Materials | Skeleton | Skinning | AnimCurves,
 		_flags_enum = 0,
 	};
 	enum class EBoneType
@@ -106,20 +107,21 @@ namespace pr::geometry::fbx
 	};
 	struct Skeleton
 	{
+		using IdCont = std::vector<uint64_t>;
 		using NameCont = std::vector<std::string>;
 		using TypeCont = std::vector<EBoneType>;
 		using BoneCont = std::vector<m4x4>;
 		using LvlCont = std::vector<int>;
 
-		uint64_t m_id;    // Unique id of the root bone node
+		IdCont m_ids;     // Bone unique ids (first is the root bone)
 		NameCont m_names; // Bone name
 		TypeCont m_types; // Bone type
 		BoneCont m_b2p;   // Bone to parent transform hierarchy in the skeleton rest position
 		LvlCont m_levels; // Hierarchy levels
 
-		void reset(uint64_t id)
+		void reset()
 		{
-			m_id = id;
+			m_ids.resize(0);
 			m_names.resize(0);
 			m_types.resize(0);
 			m_b2p.resize(0);
@@ -146,6 +148,34 @@ namespace pr::geometry::fbx
 			m_verts.resize(0);
 		}
 	};
+	struct BoneKey
+	{
+		quat m_rotation;
+		v4 m_translation;
+		v4 m_scale;
+		double m_time;
+	};
+	struct BoneTrack
+	{
+		using BoneKeyCont = std::vector<BoneKey>;
+		uint64_t m_bone_id; // The bone that the keys are for
+		BoneKeyCont m_keys; // Sorted in time order
+	};
+	struct BoneTracks
+	{
+		// Notes:
+		//  - Keys are just the stored snapshot points in the animation
+		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
+		
+		// There is a bone track for each bone (by id)
+		using BoneTrack = std::unordered_map<uint64_t, BoneTrack>;
+		BoneTrack m_tracks;
+
+		void reset()
+		{
+			m_tracks.clear();
+		}
+	};
 
 	// Interfaces for emitting model parts during 'Read'
 	struct IModelOut
@@ -164,18 +194,19 @@ namespace pr::geometry::fbx
 		// Add Skinning data for a mesh to the output
 		virtual void AddSkinning(Skinning const& skinning) { (void)skinning; }
 	};
+	struct IAnimOut
+	{
+		virtual ~IAnimOut() = default;
+
+		// Add an animation sequence
+		virtual void AddBoneTracks(BoneTracks const& tracks) { (void)tracks; }
+	};
 
 	// Options for parsing FBXfiles
 	struct ReadModelOptions
 	{
 		// Parts of the model to read
 		EParts m_parts = EParts::All;
-
-		// The animation stack to use
-		int m_anim = 0;
-
-		// The time at which to read the transforms
-		double m_time_in_seconds = 0;
 	};
 
 	// Fbx File Formats
@@ -188,7 +219,11 @@ namespace pr::geometry::fbx
 	// Metadata in the scene
 	struct SceneProps
 	{
+		// The number of animations in the scene
 		int m_animation_stack_count = 0;
+
+		// The animation frame rate
+		double m_frame_rate = 0;
 	};
 
 	// Dynamically loaded FBX dll
@@ -212,6 +247,7 @@ namespace pr::geometry::fbx
 			, ReleaseScene((Fbx_ReleaseSceneFn)GetProcAddress(m_module, "Fbx_ReleaseScene"))
 			, ReadSceneProps((Fbx_ReadScenePropsFn)GetProcAddress(m_module, "Fbx_ReadSceneProps"))
 			, ReadModel((Fbx_ReadModelFn)GetProcAddress(m_module, "Fbx_ReadModel"))
+			, ReadAnimStack((Fbx_ReadAnimStackFn)GetProcAddress(m_module, "Fbx_ReadAnimStack"))
 			, DumpScene((Fbx_DumpSceneFn)GetProcAddress(m_module, "Fbx_DumpScene"))
 			, RoundTripTest((Fbx_RoundTripTestFn)GetProcAddress(m_module, "Fbx_RoundTripTest"))
 		{}
@@ -231,6 +267,10 @@ namespace pr::geometry::fbx
 		// Read the model hierarchy from the scene
 		using Fbx_ReadModelFn = void (__stdcall *)(fbxsdk::FbxScene& scene, IModelOut& out, ReadModelOptions const& options);
 		Fbx_ReadModelFn ReadModel;
+
+		// Read animation sequence data for the given animation stack
+		using Fbx_ReadAnimStackFn = void(__stdcall*)(fbxsdk::FbxScene& scene, int anim_stack);
+		Fbx_ReadAnimStackFn ReadAnimStack;
 
 		// Dump info about the scene to 'out'
 		using Fbx_DumpSceneFn = void(__stdcall*)(fbxsdk::FbxScene& scene, std::ostream& out);
@@ -283,6 +323,12 @@ namespace pr::geometry::fbx
 			//  - If this is slow, it's probably spending most of the time trianguling the
 			//    meshes. Try getting the fbx export tool (e.g. blender) to triangulate on export
 			Fbx::get().ReadModel(*m_scene, out, options);
+		}
+
+		// Read the animation sequence data from the FBX scene
+		void ReadAnimCurves(int anim_stack)
+		{
+			Fbx::get().ReadAnimStack(*m_scene, anim_stack);
 		}
 	};
 }

@@ -27,13 +27,13 @@ extern "C" void __cdecl InitDllDirectory()
 
 	__debugbreak();
 
-	// This function runs very, very early — before global/static initializers
+	// This function runs very, very early ï¿½ before global/static initializers
 	if (!SetDllDirectoryW(std::wstring(L"lib\\").append(platform).append(L"\\").append(config).c_str()))
 	{
 		DWORD err = GetLastError();
 
 		// Log the error somewhere safe
-		// You can't use fancy logging here yet — CRT is not fully ready
+		// You can't use fancy logging here yet ï¿½ CRT is not fully ready
 		char buf[256];
 		snprintf(buf, sizeof(buf), "SetDllDirectoryW failed with error %lu\n", err);
 
