@@ -710,10 +710,11 @@ namespace pr::rdr12::ldraw
 		auto& data = GizmoModelData[int(mode)];
 
 		// Create the model
-		ModelDesc mdesc(
-			ResDesc::VBuf<Vert>(data.vcount, data.vdata),
-			ResDesc::IBuf<uint16_t>(data.icount, data.idata),
-			*data.bbox, data.name);
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<Vert>(data.vcount, data.vdata))
+			.ibuf(ResDesc::IBuf<uint16_t>(data.icount, data.idata))
+			.bbox(*data.bbox)
+			.name(data.name);
 		m_gfx.m_model = factory.CreateModel(mdesc);
 
 		// Create render nuggets for the model.

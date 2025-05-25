@@ -9,6 +9,7 @@
 #include "pr/view3d-12/ldraw/ldraw_commands.h"
 #include "pr/view3d-12/compute/gpu_job.h"
 #include "pr/view3d-12/lighting/light.h"
+#include "pr/view3d-12/model/animation.h"
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/model_desc.h"
 #include "pr/view3d-12/model/model_generator.h"
@@ -480,7 +481,7 @@ namespace pr::rdr12::ldraw
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(IReader& reader, ParseParams& pp, Animation& anim)
+	void ParseAnimation(IReader& reader, ParseParams& pp, rdr12::SimpleAnimation& anim)
 	{
 		auto section = reader.SectionScope();
 		for (EKeyword kw; reader.NextKeyword(kw);)
@@ -621,7 +622,8 @@ namespace pr::rdr12::ldraw
 			}
 			case EKeyword::Animation:
 			{
-				ParseAnimation(reader, pp, obj->m_anim);
+				obj->m_anim.m_simple = SimpleAnimationPtr(rdr12::New<SimpleAnimation>(), true);
+				ParseAnimation(reader, pp, *obj->m_anim.m_simple.get());
 				return true;
 			}
 			case EKeyword::Hidden:
@@ -2129,7 +2131,11 @@ namespace pr::rdr12::ldraw
 			}
 
 			// Create the model
-			ModelDesc mdesc(cache.m_vcont.cspan(), cache.m_icont.span<uint16_t const>(), props.m_bbox, obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(cache.m_vcont.cspan())
+				.ibuf(cache.m_icont.span<uint16_t const>())
+				.bbox(props.m_bbox)
+				.name(obj->TypeAndName());
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
 
 			// Get instances of the arrow head geometry shader and the thick line shader
@@ -4125,37 +4131,37 @@ namespace pr::rdr12::ldraw
 			auto opts = ModelGenerator::CreateOptions().colours(m_colours).bake(m_bake.O2WPtr());
 			ModelGenerator::LoadModel(format, m_pp.m_factory, *m_file_stream, [&](ModelTree const& tree)
 				{
-					auto child = ModelTreeToLdr(tree, obj->m_context_id);
-					if (child != nullptr) obj->AddChild(child);
+					ModelTreeToLdr(obj, tree, obj->m_context_id);
 					return false;
 				}, &opts);
 		}
 
 		// Convert a model tree into a tree of LdrObjects
-		static LdrObjectPtr ModelTreeToLdr(ModelTree const& tree, Guid const& context_id)
+		static void ModelTreeToLdr(LdrObject* root, ModelTree const& tree, Guid const& context_id)
 		{
-			std::vector<LdrObjectPtr> stack;
+			if (tree.empty())
+				return;
+
+			pr::vector<LdrObject*> ancestors;
+			ancestors.push_back(root);
+
+			// Add the tree models
+			int lvl0 = tree[0].m_level - 1;
 			for (auto& node : tree)
 			{
-				// If 'node' is at the same level or above the current leaf,
-				// then all the children for that leaf have been added.
-				for (size_t lvl = s_cast<size_t>(node.m_level + 1); stack.size() > lvl; )
-					stack.pop_back();
+				for (; isize(ancestors) > 1 && isize(ancestors) > node.m_level - lvl0;)
+					ancestors.pop_back();
 
 				// Create an LdrObject for each model
-				LdrObjectPtr obj(new LdrObject(ELdrObject::Model, nullptr, context_id), true);
+				LdrObjectPtr obj(new LdrObject(ELdrObject::Model, ancestors.back(), context_id), true);
 				obj->m_name = node.m_model->m_name;
 				obj->m_model = node.m_model;
 				obj->m_o2p = node.m_o2p;
 
-				// Add 'obj' as a child of the current leaf node
-				if (!stack.empty())
-					stack.back()->AddChild(obj);
-
 				// Add 'obj' as the current leaf node
-				stack.push_back(obj);
+				ancestors.back()->m_child.push_back(obj);
+				ancestors.push_back(obj.get());
 			}
-			return !stack.empty() ? stack[0] : nullptr;
 		}
 	};
 
@@ -4401,10 +4407,11 @@ namespace pr::rdr12::ldraw
 			obj->m_user_data.get<Cache>() = Cache{};
 
 			// Create buffers for a dynamic model
-			ModelDesc mdesc(
-				ResDesc::VBuf<Vert>(vcount, {}),
-				ResDesc::IBuf<uint32_t>(icount, {}),
-				BBox::Reset(), obj->TypeAndName().c_str());
+			ModelDesc mdesc = ModelDesc()
+				.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+				.ibuf(ResDesc::IBuf<uint32_t>(icount, {}))
+				.bbox(BBox::Reset())
+				.name(obj->TypeAndName());
 
 			// Create the model
 			obj->m_model = m_pp.m_factory.CreateModel(mdesc);
@@ -5198,8 +5205,7 @@ namespace pr::rdr12::ldraw
 		std::ifstream src(p3d_filepath, std::ios::binary);
 		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
-				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
-				if (child != nullptr) obj->AddChild(child);
+				ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(obj.get(), tree, obj->m_context_id);
 				return false;
 			});
 
@@ -5214,8 +5220,7 @@ namespace pr::rdr12::ldraw
 		mem_istream<char> src(p3d_data.data(), p3d_data.size());
 		ModelGenerator::LoadP3DModel(factory, src, [&](ModelTree const& tree)
 			{
-				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
-				if (child != nullptr) obj->AddChild(child);
+				ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(obj.get(), tree, obj->m_context_id);
 				return false;
 			});
 
@@ -5246,14 +5251,15 @@ namespace pr::rdr12::ldraw
 		LdrObjectPtr obj(new LdrObject(type, 0, context_id), true);
 
 		// Create buffers for a dynamic model
-		ModelDesc settings(
-			ResDesc::VBuf<Vert>(vcount, {}),
-			ResDesc::IBuf<uint16_t>(icount, {}),
-			BBox::Reset(), obj->TypeAndName().c_str());
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<Vert>(vcount, {}))
+			.ibuf(ResDesc::IBuf<uint16_t>(icount, {}))
+			.bbox(BBox::Reset())
+			.name(obj->TypeAndName());
 
 		// Create the model
 		ResourceFactory factory(rdr);
-		obj->m_model = factory.CreateModel(settings);
+		obj->m_model = factory.CreateModel(mdesc);
 
 		// Create dummy nuggets
 		NuggetDesc nug(ETopo::PointList, EGeom::Vert);

@@ -4,6 +4,7 @@
 //*********************************************
 #include "pr/view3d-12/model/model_generator.h"
 #include "pr/view3d-12/model/vertex_layout.h"
+#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/model/model_tree.h"
 #include "pr/view3d-12/resource/resource_factory.h"
 #include "pr/view3d-12/resource/stock_resources.h"
@@ -166,10 +167,11 @@ namespace pr::rdr12
 			Impl::GenerateNormals(cache, opts->m_gen_normals);
 
 		// Create the model
-		ModelDesc mdesc(
-			ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont),
-			ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont),
-			cache.m_bbox, cache.m_name.c_str());
+		ModelDesc mdesc = ModelDesc()
+			.vbuf(ResDesc::VBuf<VType>(cache.VCount(), cache.m_vcont))
+			.ibuf(ResDesc::IBuf(cache.ICount(), cache.m_icont.stride(), cache.m_icont))
+			.bbox(cache.m_bbox)
+			.name(cache.m_name.c_str());
 		auto model = factory.CreateModel(mdesc);
 
 		// Create the render nuggets
@@ -1009,7 +1011,7 @@ namespace pr::rdr12
 			// Recursive function for populating a model tree
 			void BuildModelTree(ModelTree& tree, p3d::Mesh const& mesh, int level)
 			{
-				tree.push_back({MeshToModel(mesh), mesh.m_o2p, level});
+				tree.push_back(ModelTreeNode{MeshToModel(mesh), mesh.m_o2p, level});
 				for (auto& child : mesh.m_children)
 					BuildModelTree(tree, child, level + 1);
 			}
@@ -1235,34 +1237,127 @@ namespace pr::rdr12
 	{
 		using namespace geometry;
 
-		// Model output helpers
-		struct ModelOut
+		struct ModelOut : fbx::IModelOut
 		{
+			using Skel = struct Skel { int bone_count = 0; D3DPtr<ID3D12Resource> skin_buffer = nullptr; };
+			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
+			using MeshCont = std::unordered_map<uint64_t, ModelPtr>;
+			using SkelCont = std::unordered_map<uint64_t, Skel>;
+
 			ResourceFactory& m_factory;
 			CreateOptions const* m_opts;
-			ModelOutFunc m_out;
 			Cache<> m_cache;
-			//MatCont m_mats;
+			MatCont m_mats;
+			MeshCont m_meshes;
+			SkelCont m_skels;
+			ModelTree m_tree;
 
-			ModelOut(ResourceFactory& factory, CreateOptions const* opts, ModelOutFunc out)
+			ModelOut(ResourceFactory& factory, CreateOptions const* opts)
 				: m_factory(factory)
 				, m_opts(opts)
-				, m_out(out)
 				, m_cache(0, 0, 0, sizeof(uint32_t))
-				//, m_mats()
+				, m_mats()
+				, m_meshes()
+				, m_skels()
+				, m_tree()
 			{}
 
-			bool operator ()(int model)
+			// Add a material to the output
+			virtual void AddMaterial(uint64_t unqiue_id, fbx::Material const& material) override
 			{
-				ModelTree tree;
-				return m_out(tree);
+				m_mats[unqiue_id] = material;
+			}
+
+			// Add a mesh to the output
+			virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
+			{
+				m_cache.Reset();
+
+				// Name/Bounding box
+				m_cache.m_name = mesh.m_name;
+				m_cache.m_bbox = mesh.m_bbox;
+
+				// Copy the verts
+				m_cache.m_vcont.resize(mesh.m_vbuf.size(), {});
+				auto vptr = m_cache.m_vcont.data();
+				for (auto const& v : mesh.m_vbuf)
+				{
+					SetPCNT(*vptr, v.m_vert, v.m_colr, v.m_norm, v.m_tex0);
+					++vptr;
+				}
+
+				auto vcount = isize(mesh.m_vbuf);
+				auto icount = isize(mesh.m_ibuf);
+
+				// Copy indices
+				if (vcount > 0xFFFF)
+				{
+					// Use 32bit indices
+					m_cache.m_icont.m_stride = sizeof(uint32_t);
+					m_cache.m_icont.resize<uint32_t>(icount);
+					memcpy(m_cache.m_icont.data<uint32_t>(), mesh.m_ibuf.data(), mesh.m_ibuf.size() * sizeof(int));
+				}
+				else
+				{
+					// Use 16bit indices
+					m_cache.m_icont.m_stride = sizeof(uint16_t);
+					m_cache.m_icont.resize<uint16_t>(icount);
+					auto isrc = mesh.m_ibuf.data();
+					auto idst = m_cache.m_icont.data<uint16_t>();
+					for (auto count = mesh.m_ibuf.size(); count-- != 0;)
+						*idst++ = s_cast<uint16_t>(*isrc++);
+				}
+
+				// Copy the nuggets
+				m_cache.m_ncont.resize(mesh.m_nbuf.size());
+				auto nptr = m_cache.m_ncont.data();
+				for (auto const& n : mesh.m_nbuf)
+				{
+					auto const& mat = m_mats.at(n.m_mat_id);
+					*nptr++ = NuggetDesc{n.m_topo, n.m_geom}.vrange(n.m_vrange).irange(n.m_irange).tint(mat.m_diffuse).flags(ENuggetFlag::RangesCanOverlap);
+				}
+
+				// Emit the model.
+				auto model = Create(m_factory, m_cache, m_opts);
+				m_meshes[mesh.m_id] = model;
+				
+				// Add the mesh to the model tree
+				m_tree.push_back({ model, o2p, level });
+			}
+
+			// Add a skeleton to the output
+			virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
+			{
+				auto skel = m_factory.CreateResource(ResDesc::Buf<m4x4>(isize(skeleton.m_b2p), skeleton.m_b2p), "skeleton");
+				m_skels[skeleton.m_ids.front()] = { isize(skeleton.m_b2p), skel };
+			}
+
+			// Add Skinning data for a mesh to the output
+			virtual void AddSkinning(fbx::Skinning const& skinning) override
+			{
+				static_assert(sizeof(fbx::Skinning::Influence) == sizeof(Skinfluence));
+				static_assert(alignof(fbx::Skinning::Influence) == alignof(Skinfluence));
+				static_assert(offsetof(fbx::Skinning::Influence, m_bones) == offsetof(Skinfluence, m_bones));
+				static_assert(offsetof(fbx::Skinning::Influence, m_weights) == offsetof(Skinfluence, m_weights));
+				std::span<Skinfluence const> verts = { reinterpret_cast<Skinfluence const*>(skinning.m_verts.data()), skinning.m_verts.size() };
+
+				auto skin = m_factory.CreateResource(ResDesc::Buf<Skinfluence>(isize(skinning.m_verts), verts), "skin");
+				auto const& mesh = m_meshes.at(skinning.m_mesh_id);
+				auto const& skel = m_skels.at(skinning.m_skel_id);
+				auto bone_count = skel.bone_count;
+				auto vert_count = isize(skinning.m_verts);
+				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(mesh.get(), bone_count, vert_count, skel.skin_buffer.get(), skin.get()), true);
 			}
 		};
-		ModelOut model_out(factory, opts, out);
+		ModelOut model_out(factory, opts);
 
-		fbx::FbxDll fbx;
-		fbx::ErrorList errors;
-		fbx.Read(src, fbx::Options{}, model_out, errors);
+		fbx::Scene scene(src);
+		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
+		
+		if (scene.m_props.m_animation_stack_count != 0)
+			scene.ReadAnimCurves(0);
+
+		out(std::move(model_out.m_tree));
 	}
 	void ModelGenerator::LoadModel(geometry::EModelFileFormat format, ResourceFactory& factory, std::istream& src, ModelOutFunc mout, CreateOptions const* opts)
 	{

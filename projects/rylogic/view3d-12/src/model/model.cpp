@@ -4,12 +4,24 @@
 //*********************************************
 #include "pr/view3d-12/model/model.h"
 #include "pr/view3d-12/model/nugget.h"
+#include "pr/view3d-12/model/skinning.h"
 #include "pr/view3d-12/main/renderer.h"
 #include "pr/view3d-12/resource/resource_factory.h"
+#include "pr/view3d-12/resource/resource_store.h"
 
 namespace pr::rdr12
 {
-	Model::Model(Renderer& rdr, int64_t vcount, int64_t icount, SizeAndAlign16 vstride, SizeAndAlign16 istride, ID3D12Resource* vb, ID3D12Resource* ib, BBox const& bbox, char const* name)
+	Model::Model(
+		Renderer& rdr,
+		int64_t vcount,
+		int64_t icount,
+		SizeAndAlign16 vstride,
+		SizeAndAlign16 istride,
+		ID3D12Resource* vb,
+		ID3D12Resource* ib,
+		BBox const& bbox,
+		std::string_view name
+	)
 		: m_rdr(&rdr)
 		, m_vb(vb, true)
 		, m_ib(ib, true)
@@ -29,6 +41,7 @@ namespace pr::rdr12
 		, m_nuggets()
 		, m_vcount(vcount)
 		, m_icount(icount)
+		, m_skinning()
 		, m_bbox(bbox)
 		, m_name(name)
 		, m_vstride(vstride)
@@ -83,13 +96,13 @@ namespace pr::rdr12
 
 		// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 		if (!IsWithin(Range(0, m_vcount), ndata.m_vrange))
-			throw std::runtime_error(FmtS("V-Range exceeds the size of this model  (%s)", m_name.c_str()));
+			throw std::runtime_error(std::format("V-Range exceeds the size of this model  ({})", m_name.c_str()));
 		if (!IsWithin(Range(0, m_icount), ndata.m_irange))
-			throw std::runtime_error(FmtS("I-Range exceeds the size of this model (%s)", m_name.c_str()));
+			throw std::runtime_error(std::format("I-Range exceeds the size of this model ({})", m_name.c_str()));
 		if (!AllSet(ndata.m_nflags, ENuggetFlag::RangesCanOverlap))
 			for (auto& nug : m_nuggets)
 				if (Intersects(ndata.m_irange, nug.m_irange))
-					throw std::runtime_error(FmtS("A render nugget covering this index range already exists. DeleteNuggets() call may be needed (%s)", m_name.c_str()));
+					throw std::runtime_error(std::format("A render nugget covering this index range already exists. Did you forget the 'ENuggetFlag::RangesCanOverlap' flag, or is a DeleteNuggets() call needed ({})", m_name.c_str()));
 		#endif
 
 		auto nug = factory.CreateNugget(ndata, this);

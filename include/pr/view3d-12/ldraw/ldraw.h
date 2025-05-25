@@ -1,9 +1,10 @@
 //********************************
-// Ldraw Script keywords
+// View3d
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
 #include "pr/view3d-12/forward.h"
+#include "pr/view3d-12/model/animation.h"
 
 namespace pr::rdr12::ldraw
 {
@@ -269,16 +270,6 @@ namespace pr::rdr12::ldraw
 		_flags_enum = 0,
 	};
 
-	// Simple animation styles
-	enum class EAnimStyle : uint8_t
-	{
-		NoAnimation,
-		Once,
-		Repeat,
-		Continuous,
-		PingPong,
-	};
-
 	// Flags for partial update of a model
 	enum class EUpdateObject :int
 	{
@@ -348,6 +339,24 @@ namespace pr::rdr12::ldraw
 		Lerp,
 	};
 
+	// Animation
+	struct Animation
+	{
+		SimpleAnimationPtr m_simple;
+		KeyFrameAnimationPtr m_keyframe;
+
+		// Returns the root motion at 'time'
+		m4x4 Step(double time) const
+		{
+			if (m_simple)
+				return m_simple->Step(time);
+			if (m_keyframe)
+				(void)"todo - root motion?";
+			return m4x4::Identity();
+		}
+	};
+
+#if 0 // moved to animation.h/cpp
 	// Info on how to animate a ldr object
 	struct Animation
 	{
@@ -410,4 +419,5 @@ namespace pr::rdr12::ldraw
 			return m4x4::Transform(a, l);
 		}
 	};
+#endif
 }

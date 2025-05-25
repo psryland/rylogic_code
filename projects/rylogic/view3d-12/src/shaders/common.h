@@ -12,8 +12,6 @@
 #include "pr/view3d-12/lighting/light.h"
 #include "pr/view3d-12/resource/stock_resources.h"
 #include "pr/view3d-12/shaders/shader_registers.h"
-#include "pr/view3d-12/model/nugget.h"
-#include "pr/view3d-12/instance/instance.h"
 #include "pr/view3d-12/texture/texture_base.h"
 #include "pr/view3d-12/texture/texture_2d.h"
 #include "pr/view3d-12/texture/texture_cube.h"
@@ -91,14 +89,18 @@ namespace pr::rdr12
 		auto model_flags = 0;
 		{
 			// Has normals
-			if (pr::AllSet(nug.m_geom, EGeom::Norm))
+			if (AllSet(nug.m_geom, EGeom::Norm))
 				model_flags |= shaders::ModelFlags_HasNormals;
+
+			// Is Skinned
+			if (ModelPtr const* model = inst.find<ModelPtr>(EInstComp::ModelPtr); model && (*model)->m_skinning != nullptr)
+				model_flags |= shaders::ModelFlags_IsSkinned;
 		}
 
 		auto texture_flags = 0;
 		{
 			// Has diffuse texture
-			if (Texture2DPtr tex; pr::AllSet(nug.m_geom, EGeom::Tex0) && (tex = coalesce(FindDiffTexture(inst), nug.m_tex_diffuse)) != nullptr)
+			if (Texture2DPtr tex; AllSet(nug.m_geom, EGeom::Tex0) && (tex = coalesce(FindDiffTexture(inst), nug.m_tex_diffuse)) != nullptr)
 			{
 				texture_flags |= shaders::TextureFlags_HasDiffuse;
 
@@ -136,9 +138,9 @@ namespace pr::rdr12
 	template <typename TCBuf> requires(requires(TCBuf x) { x.m_o2s; x.m_o2w; x.m_n2w; })
 	void SetTxfm(TCBuf& cb, BaseInstance const& inst, SceneCamera const& view)
 	{
-		pr::m4x4 o2w = GetO2W(inst);
-		pr::m4x4 w2c = pr::InvertFast(view.CameraToWorld());
-		pr::m4x4 c2s = FindC2S(inst, c2s) ? c2s : view.CameraToScreen();
+		m4x4 o2w = GetO2W(inst);
+		m4x4 w2c = InvertFast(view.CameraToWorld());
+		m4x4 c2s = FindC2S(inst, c2s) ? c2s : view.CameraToScreen();
 
 		cb.m_o2s = c2s * w2c * o2w;
 		cb.m_o2w = o2w;
@@ -195,7 +197,7 @@ namespace pr::rdr12
 	{
 		cb.m_c2w = view.CameraToWorld();
 		cb.m_c2s = view.CameraToScreen();
-		cb.m_w2c = pr::InvertFast(cb.m_c2w);
+		cb.m_w2c = InvertFast(cb.m_c2w);
 		cb.m_w2s = cb.m_c2s * cb.m_w2c;
 	}
 

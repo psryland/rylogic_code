@@ -780,7 +780,6 @@ namespace pr::rdr12
 				.def_state(D3D12_RESOURCE_STATE_INDEX_BUFFER);
 		}
 
-
 		// Derive an index buffer description from an existing index buffer
 		template <typename TIndx> static ResDesc IBuf(ID3D12Resource* ibuf)
 		{

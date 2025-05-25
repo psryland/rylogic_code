@@ -2,6 +2,8 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
+#ifndef PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
+#define PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
 
 #include "../types.hlsli"
 
@@ -71,3 +73,5 @@ float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 
 
 	return saturate(ltdiff + ltspec + unlit_diff);
 }
+
+#endif

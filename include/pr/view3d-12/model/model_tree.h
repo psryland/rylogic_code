@@ -7,6 +7,18 @@
 
 namespace pr::rdr12
 {
+	// A tree of models.
+	//        A
+	//      /   \
+	//     B     C
+	//   / | \   |
+	//  D  E  F  G
+	//  Serialised as: A0 B1 D2 E2 F2 C1 G2 (i.e. a depth first traversal of the tree)
+	//  Children are all nodes to the right with level > the current.
+	//
+	// Notes:
+	//  - A model tree represents a single hierarchy of models.
+	//  - If there are multiple root level models, then there is an implicit empty model that contains them all 
 	struct ModelTreeNode
 	{
 		// Transform from this model to its parent
@@ -25,14 +37,5 @@ namespace pr::rdr12
 			,m_level(level)
 		{}
 	};
-
-	// A tree of models.
-	//        A
-	//      /   \
-	//     B     C
-	//   / | \   |
-	//  D  E  F  G
-	// Serialised as: A0 B1 D2 E2 F2 C1 G2
-	// Children are all nodes to the right with level > the current.
 	using ModelTree = pr::vector<ModelTreeNode>;
 }

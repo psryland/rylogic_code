@@ -105,8 +105,75 @@ namespace LDraw
 		/// <summary>True if this source has a file that can be edited</summary>
 		public bool CanEdit => View3dSource?.Info is View3d.SourceInfo info && Path_.FileExists(info.FilePath) && info.TextFormat;
 
-		/// <summary>The scenes to render this script in</summary>
-		public ObservableCollection<SceneUI> SelectedScenes { get; }
+		/// <summary>The scenes to render this source in</summary>
+		public ObservableCollection<SceneUI> SelectedScenes
+		{
+			get => m_selected_scenes;
+			set
+			{
+				if (m_selected_scenes == value) return;
+				if (m_selected_scenes != null)
+				{
+					m_selected_scenes.CollectionChanged -= HandleCollectionChanged;
+
+					foreach (var scene in m_selected_scenes)
+						Model.Clear(scene, ContextId);
+				}
+				m_selected_scenes = value;
+				if (m_selected_scenes != null)
+				{
+					foreach (var scene in m_selected_scenes)
+						Model.AddObjects(scene, ContextId);
+
+					m_selected_scenes.CollectionChanged += HandleCollectionChanged;
+				}
+
+				// Handlers
+				void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+				{
+					switch (e.Action)
+					{
+						case NotifyCollectionChangedAction.Add:
+						{
+							foreach (var scene in e.NewItems ?? Array.Empty<object>())
+								Model.AddObjects((SceneUI)scene, ContextId);
+
+							break;
+						}
+						case NotifyCollectionChangedAction.Remove:
+						{
+							foreach (var scene in e.OldItems ?? Array.Empty<object>())
+								Model.Clear((SceneUI)scene, ContextId);
+							break;
+						}
+						case NotifyCollectionChangedAction.Reset:
+						{
+							foreach (var scene in Model.Scenes)
+								Model.Clear(scene, ContextId);
+							break;
+						}
+						case NotifyCollectionChangedAction.Replace:
+						{
+							foreach (var scene in e.OldItems ?? Array.Empty<object>())
+								Model.Clear((SceneUI)scene, ContextId);
+							foreach (var scene in e.NewItems ?? Array.Empty<object>())
+								Model.AddObjects((SceneUI)scene, ContextId);
+							break;
+						}
+						case NotifyCollectionChangedAction.Move:
+						{
+							// Nothing to do here
+							break;
+						}
+						default:
+						{
+							throw new ArgumentOutOfRangeException(nameof(e.Action), e.Action, null);
+						}
+					}
+				}
+			}
+		}
+		private ObservableCollection<SceneUI> m_selected_scenes = null!;
 
 		/// <summary>The available scenes to render this source in</summary>
 		public ObservableCollection<SceneUI> AvailableScenes => Model.Scenes;

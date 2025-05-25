@@ -49,7 +49,7 @@ namespace pr::rdr12
 		void Wait(uint64_t sync_point) const;
 		
 		// Create and initialise a resource
-		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, char const* name);
+		D3DPtr<ID3D12Resource> CreateResource(ResDesc const& desc, std::string_view name);
 
 		// Create a model.
 		ModelPtr CreateModel(ModelDesc const& mdesc, D3DPtr<ID3D12Resource> vb, D3DPtr<ID3D12Resource> ib);

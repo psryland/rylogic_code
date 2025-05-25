@@ -282,48 +282,6 @@ namespace LDraw
 			return Scripts.Add2(new ScriptUI(src));
 		}
 
-		///// <summary>Return the full filepath for a temporary script file</summary>
-		//public string GenerateTempScriptFilepath(out Guid context_id)
-		//{
-		//	context_id = Guid.NewGuid();
-		//	var filename = $"{UITag.Script}-{context_id}.ldr";
-		//	var filepath = Path_.CombinePath(TempScriptDirectory, filename);
-		//	return IsTempScriptFilepath(filepath) ? filepath : throw new Exception("Temp script filepath generation is incorrect");
-		//}
-
-		///// <summary>True if 'name' is a generated scene name</summary>
-		//public bool IsGeneratedSceneName(string name)
-		//{
-		//	var generated_name_pattern = $@"{UITag.Scene}\d*";
-		//	return Regex.IsMatch(name, generated_name_pattern);
-		//}
-
-		///// <summary>True if 'name' is a generated script name</summary>
-		//public bool IsGeneratedScriptName(string name)
-		//{
-		//	var generated_name_pattern = $@"{UITag.Script}\d*";
-		//	return Regex.IsMatch(name, generated_name_pattern);
-		//}
-
-		///// <summary>True if filepath is a temporary script filepath</summary>
-		//public bool IsTempScriptFilepath(string filepath)
-		//{
-		//	var temp_script_pattern = $@"^{UITag.Script}[-]{Guid_.RegexPattern}\.ldr$";
-		//	return
-		//		Path_.Compare(Path_.Directory(filepath), TempScriptDirectory) == 0 &&
-		//		Regex.IsMatch(Path_.FileName(filepath), temp_script_pattern);
-		//}
-
-		///// <summary>Extract the Guid from the temporary script filepath</summary>
-		//public Guid TempScriptFilepathToGuid(string filepath)
-		//{
-		//	if (!IsTempScriptFilepath(filepath))
-		//		throw new Exception($"'{filepath}' in not a valid temporary script filepath");
-
-		//	var m = Regex.Match(Path_.FileName(filepath), Guid_.RegexPattern);
-		//	return new Guid(m.Groups[1].Value);
-		//}
-
 		/// <summary>Clear all instances from all scenes</summary>
 		public void Clear()
 		{
@@ -355,11 +313,11 @@ namespace LDraw
 				view.Scene.Invalidate();
 			}
 
-			// Delete unused objects
-			if (context_ids.Length != 0)
-			{
-				View3d.DeleteUnused(context_ids, include_count, exclude_count);
-			}
+			//// Delete unused objects
+			//if (context_ids.Length != 0)
+			//{
+			//	View3d.DeleteUnused(context_ids, include_count, exclude_count);
+			//}
 		}
 
 		// Add objects associated with 'id' to the scenes
@@ -380,23 +338,6 @@ namespace LDraw
 					view.Invalidate();
 			}
 		}
-
-		///// <summary>Delete temporary scripts that are not currently open</summary>
-		//public void CleanTemporaryScripts()
-		//{
-		//	// The filenames of temporary scripts that are currently open
-		//	var currently_open = Scripts
-		//		.Where(x => IsTempScriptFilepath(x.Filepath))
-		//		.Select(x => Path_.FileName(x.Filepath))
-		//		.ToHashSet(0);
-
-		//	// Delete temporary scripts that aren't in 'currently_open'
-		//	foreach (var file in TemporaryScripts())
-		//	{
-		//		if (currently_open.Contains(file.Name)) continue;
-		//		file.Delete();
-		//	}
-		//}
 
 		/// <summary>The file paths of existing temporary scripts</summary>
 		public IEnumerable<FileSystemInfo> TemporaryScripts()

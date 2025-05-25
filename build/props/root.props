@@ -50,7 +50,7 @@
       <PreprocessorDefinitions>
         ;%(PreprocessorDefinitions)
         ;_ITERATOR_DEBUG_LEVEL=1
-        ;_CONTAINER_DEBUG_LEVEL=1
+        ;_MSVC_STL_HARDENING=1
         ;_DEBUG
       </PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>

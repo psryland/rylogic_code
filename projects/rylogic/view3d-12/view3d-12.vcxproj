@@ -95,9 +95,11 @@
     <ClCompile Include="src\lighting\light.cpp" />
     <ClCompile Include="src\main\renderer.cpp" />
     <ClCompile Include="src\main\window.cpp" />
+    <ClCompile Include="src\model\animation.cpp" />
     <ClCompile Include="src\model\model.cpp" />
     <ClCompile Include="src\model\model_generator.cpp" />
     <ClCompile Include="src\model\nugget.cpp" />
+    <ClCompile Include="src\model\skinning.cpp" />
     <ClCompile Include="src\render\back_buffer.cpp" />
     <ClCompile Include="src\render\render_forward.cpp" />
     <ClCompile Include="src\render\render_raycast.cpp" />
@@ -200,11 +202,13 @@
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\renderer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\settings.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\main\window.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\animation.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_desc.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_generator.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\model_tree.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\nugget.h" />
+    <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\skinning.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\model\vertex_layout.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\back_buffer.h" />
     <ClInclude Include="$(RylogicRoot)include\pr\view3d-12\render\drawlist_element.h" />
@@ -290,6 +294,7 @@
     <None Include="src\shaders\hlsl\lighting\phong_lighting.hlsli" />
     <None Include="src\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="src\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="src\shaders\hlsl\skinned\skinned.hlsli" />
     <None Include="src\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
     <None Include="src\shaders\hlsl\utility\env_map.hlsli" />
     <View3dShaderBuild Include="src\shaders\hlsl\deferred\dslighting.hlsl" />

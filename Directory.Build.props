@@ -23,9 +23,9 @@
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<RestorePackagesWithLockFile>False</RestorePackagesWithLockFile>
 		<RestorePackagesPath>$(PackagesPath)</RestorePackagesPath>
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 		<LangVersion>latest</LangVersion>
-		<WarningLevel>7</WarningLevel>
+		<WarningLevel>9999</WarningLevel>
 		<Nullable>Enable</Nullable>
 
 		<!-- C# Assembly properties -->

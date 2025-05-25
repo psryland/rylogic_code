@@ -3,6 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2022
 //*********************************************
 // Shader for forward rendering
+#include "../types.hlsli"
+
+// Constant buffers
 #include "forward_cbuf.hlsli"
 
 // Texture2D /w sampler
@@ -21,8 +24,13 @@ SamplerComparisonState m_smap_sampler           :reg(s2, 0);
 Texture2D<float4> m_proj_texture[MaxProjectedTextures] :reg(t3, 0);
 SamplerState      m_proj_sampler[MaxProjectedTextures] :reg(s3, 0);
 
+// Skinned Meshes
+StructuredBuffer<float4x4> m_skeleton : reg(t4, 0);
+StructuredBuffer<Skinfluence> m_skin : reg(t5, 0);
+
 #include "../lighting/phong_lighting.hlsli"
 #include "../shadow/shadow_cast.hlsli"
+#include "../skinned/skinned.hlsli"
 #include "../utility/env_map.hlsli"
 
 // PS output format
@@ -31,16 +39,26 @@ struct PSOut
 	float4 diff :SV_Target;
 };
 
-// Main vertex shader
-#ifdef PR_RDR_VSHADER_forward
-PSIn main(VSIn In)
+// Default VS
+PSIn VSDefault(VSIn In)
 {
 	PSIn Out;
 
 	// Transform
-	Out.ss_vert = mul(In.vert, m_o2s);
-	Out.ws_vert = mul(In.vert, m_o2w);
-	Out.ws_norm = mul(In.norm, m_n2w);
+	if (IsSkinned)
+	{
+		float4 os_vert = SkinVertex(m_skeleton, m_skin[In.idx0.x], In.vert);
+		float4 os_norm = SkinNormal(m_skeleton, m_skin[In.idx0.x], In.norm);
+		Out.ss_vert = mul(os_vert, m_o2s);
+		Out.ws_vert = mul(os_vert, m_o2w);
+		Out.ws_norm = mul(os_norm, m_n2w);
+	}
+	else
+	{
+		Out.ss_vert = mul(In.vert, m_o2s);
+		Out.ws_vert = mul(In.vert, m_o2w);
+		Out.ws_norm = mul(In.norm, m_n2w);
+	}
 
 	// Tinting
 	Out.diff = m_tint;
@@ -49,11 +67,10 @@ PSIn main(VSIn In)
 	Out.diff = In.diff * Out.diff;
 
 	// Texture2D (with transform)
-	Out.tex0 = mul(float4(In.tex0,0,1), m_tex2surf0).xy;
+	Out.tex0 = mul(float4(In.tex0, 0, 1), m_tex2surf0).xy;
 
 	return Out;
 }
-#endif
 
 // Default PS
 PSOut PSDefault(PSIn In)
@@ -114,6 +131,15 @@ PSOut PSDefault(PSIn In)
 
 	return Out;
 }
+
+// Main vertex shader
+#ifdef PR_RDR_VSHADER_forward
+PSIn main(VSIn In)
+{
+	PSIn Out = VSDefault(In);
+	return Out;
+}
+#endif
 
 // Main pixel shader
 #ifdef PR_RDR_PSHADER_forward

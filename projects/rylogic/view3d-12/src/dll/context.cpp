@@ -733,7 +733,7 @@ namespace pr::rdr12
 					default:
 					{
 						assert(false); // to trap them here
-						std::runtime_error("Unsupported command");
+						throw std::runtime_error("Unsupported command");
 					}
 				}
 			}

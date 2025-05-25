@@ -20,7 +20,7 @@ namespace pr::rdr12
 		inline static Guid const GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 		Renderer             m_rdr;      // The renderer
-		WindowCont           m_windows; // The created windows
+		WindowCont           m_windows;  // The created windows
 		ScriptSources        m_sources;  // A container of Ldr objects and a file watcher
 		InitSet              m_inits;    // A unique id assigned to each Initialise call
 		std::recursive_mutex m_mutex;

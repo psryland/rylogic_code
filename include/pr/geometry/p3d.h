@@ -292,9 +292,13 @@ namespace pr::geometry::p3d
 	using TCont = Cont<v2, TBase>;
 	using IdxBuf = pr::geometry::IdxBuf;
 
+	struct Str16;
 	struct Nugget;
 	struct Mesh;
 	struct Material;
+	struct Bone;
+	using StrCont = std::vector<Str16>;
+	using BoneCont = std::vector<Bone>;
 	using Nuggets = std::vector<Nugget>;
 	using MatCont = std::vector<Material>;
 	using MeshCont = std::vector<Mesh>;
@@ -313,7 +317,7 @@ namespace pr::geometry::p3d
 
 		FatVert() = default;
 		FatVert(v4_cref p, Colour_cref c, v4_cref n, v2_cref t)
-			:m_vert(p)
+			: m_vert(p)
 			, m_diff(c)
 			, m_norm(n)
 			, m_tex0(t)
@@ -421,6 +425,20 @@ namespace pr::geometry::p3d
 			,m_diffuse(diff_colour)
 			,m_textures()
 		{}
+	};
+	struct Bone
+	{
+		m4x4 m_o2p;
+	};
+	struct Skeleton
+	{
+		// A tree of named bones
+		BoneCont m_bones;
+		StrCont m_names;
+	};
+	struct Rig
+	{
+		// Groups of verts that are attached to bones
 	};
 	struct Nugget
 	{
@@ -572,7 +590,7 @@ namespace pr::geometry::p3d
 		// Mesh bounding box
 		BBox m_bbox;
 
-		// Mesh to scene transform
+		// Mesh to parent transform
 		m4x4 m_o2p;
 
 		// Child meshes
@@ -672,6 +690,12 @@ namespace pr::geometry::p3d
 			add_to(m_diff, fvert.m_diff.argb(), vcount());
 			add_to(m_norm, fvert.m_norm, vcount());
 			add_to(m_tex0, fvert.m_tex0, vcount());
+		}
+
+		// Add a nugget to the mesh
+		void add_nugget(Nugget const& nugget)
+		{
+			m_nugget.push_back(nugget);
 		}
 	};
 	struct Scene

@@ -52,7 +52,7 @@ namespace pr::fluid
 		{
 			auto vb = ResDesc::VBuf<Vert>(particle_buffer.get()).usage(EUsage::UnorderedAccess);
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
-			auto mdesc = ModelDesc(vb, ib).name("Fluid:Particles");
+			auto mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("Fluid:Particles");
 			m_gfx_fluid.m_model = factory.CreateModel(mdesc, particle_buffer, nullptr);
 			m_gfx_fluid.m_model->CreateNugget(factory, NuggetDesc(ETopo::PointList, EGeom::Vert | EGeom::Colr | EGeom::Tex0)
 				.use_shader(ERenderStep::RenderForward, m_gs_points)
@@ -65,7 +65,7 @@ namespace pr::fluid
 		{
 			auto vb = ResDesc::VBuf<Vert>(3LL * particle_capacity, {});
 			auto ib = ResDesc::IBuf<uint16_t>(0, {});
-			auto mdesc = ModelDesc(vb, ib).name("Fluid:VectorField");
+			auto mdesc = ModelDesc().vbuf(vb).ibuf(ib).name("Fluid:VectorField");
 			m_gfx_vector_field.m_model = factory.CreateModel(mdesc);
 			m_gfx_vector_field.m_model->CreateNugget(factory, NuggetDesc(ETopo::LineList, EGeom::Vert | EGeom::Colr).irange(0, 0));
 			m_gfx_vector_field.m_i2w = m4x4::Identity();
