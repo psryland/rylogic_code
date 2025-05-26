@@ -68,7 +68,6 @@ int main()
 	//std::ofstream ofile(ofilepath, std::ios::binary);
 	//std::ofstream dfile(dfilepath);
 
-	fbx::ErrorList errors;
 	struct ModelOut : fbx::IModelOut
 	{
 		p3d::File file = {};
@@ -82,7 +81,7 @@ int main()
 			file.m_scene.m_materials.push_back(material);
 		}
 
-		virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p) override
+		virtual void AddMesh(fbx::Mesh const& mesh, m4x4 const& o2p, int level) override
 		{
 			p3d::Mesh m;
 			m.m_name = mesh.m_name;
@@ -98,21 +97,14 @@ int main()
 				nugget.m_vidx.append<int>(std::span{ mesh.m_ibuf }.subspan(n.m_irange.begin(), n.m_irange.size()));
 				m.add_nugget(nugget);
 			}
-			(void)mesh.m_level;
 			file.m_scene.m_meshes.push_back(std::move(m));
-		}
-
-		// Add a skeleton to the output
-		virtual void AddSkeleton(fbx::Skeleton const& skeleton) override
-		{
-			(void)skeleton;
 		}
 	} model_out;
 
-	fbx::FbxDll dll;
 	//dll.Fbx_RoundTripTest(ifile, ofile);
 	//dll.Fbx_DumpStream(ifile, dfile);
-	dll.Fbx_ReadStream(ifile, fbx::Options{}, model_out, errors);
+	fbx::Scene scene(ifile);
+	scene.ReadModel(model_out, { .m_parts = fbx::EParts::ModelOnly });
 
 	if (std::ofstream ofile(p3doutpath, std::ios::binary); ofile)
 		p3d::Write(ofile, model_out.file);

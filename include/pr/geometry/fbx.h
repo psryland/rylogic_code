@@ -35,6 +35,7 @@ namespace pr::geometry::fbx
 	//       D  E  F  G
 	//    Serialised as: A0 B1 D2 E2 F2 C1 G2
 	//    Children are all nodes to the right with level > the current.
+	//  - The 'fbxsdk' library is *NOT* thread-safe
 
 	enum class EParts
 	{
@@ -44,7 +45,9 @@ namespace pr::geometry::fbx
 		Skeleton = 1 << 2,
 		Skinning = 1 << 3,
 		AnimCurves = 1 << 4,
+
 		All = Meshes | Materials | Skeleton | Skinning | AnimCurves,
+		ModelOnly = Meshes | Materials,
 		_flags_enum = 0,
 	};
 	enum class EBoneType
@@ -114,17 +117,17 @@ namespace pr::geometry::fbx
 		using LvlCont = std::vector<int>;
 
 		IdCont m_ids;     // Bone unique ids (first is the root bone)
-		NameCont m_names; // Bone name
-		TypeCont m_types; // Bone type
+		NameCont m_names; // Bone names
 		BoneCont m_b2p;   // Bone to parent transform hierarchy in the skeleton rest position
+		TypeCont m_types; // Bone types
 		LvlCont m_levels; // Hierarchy levels
 
 		void reset()
 		{
 			m_ids.resize(0);
 			m_names.resize(0);
-			m_types.resize(0);
 			m_b2p.resize(0);
+			m_types.resize(0);
 			m_levels.resize(0);
 		}
 	};
@@ -155,12 +158,6 @@ namespace pr::geometry::fbx
 		v4 m_scale;
 		double m_time;
 	};
-	struct BoneTrack
-	{
-		using BoneKeyCont = std::vector<BoneKey>;
-		uint64_t m_bone_id; // The bone that the keys are for
-		BoneKeyCont m_keys; // Sorted in time order
-	};
 	struct BoneTracks
 	{
 		// Notes:
@@ -168,8 +165,9 @@ namespace pr::geometry::fbx
 		//  - Frames occur at the frame rate. All keys occur on frames, but not all frames are keys
 		
 		// There is a bone track for each bone (by id)
-		using BoneTrack = std::unordered_map<uint64_t, BoneTrack>;
-		BoneTrack m_tracks;
+		using Track = std::vector<BoneKey>;
+		using Tracks = std::unordered_map<uint64_t, Track>;
+		Tracks m_tracks;
 
 		void reset()
 		{
@@ -269,7 +267,7 @@ namespace pr::geometry::fbx
 		Fbx_ReadModelFn ReadModel;
 
 		// Read animation sequence data for the given animation stack
-		using Fbx_ReadAnimStackFn = void(__stdcall*)(fbxsdk::FbxScene& scene, int anim_stack);
+		using Fbx_ReadAnimStackFn = void(__stdcall*)(fbxsdk::FbxScene& scene, IAnimOut& out, int anim_stack);
 		Fbx_ReadAnimStackFn ReadAnimStack;
 
 		// Dump info about the scene to 'out'
@@ -326,9 +324,9 @@ namespace pr::geometry::fbx
 		}
 
 		// Read the animation sequence data from the FBX scene
-		void ReadAnimCurves(int anim_stack)
+		void ReadAnimCurves(IAnimOut& out, int anim_stack)
 		{
-			Fbx::get().ReadAnimStack(*m_scene, anim_stack);
+			Fbx::get().ReadAnimStack(*m_scene, out, anim_stack);
 		}
 	};
 }

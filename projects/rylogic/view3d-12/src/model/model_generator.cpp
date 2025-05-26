@@ -1237,7 +1237,7 @@ namespace pr::rdr12
 	{
 		using namespace geometry;
 
-		struct ModelOut : fbx::IModelOut
+		struct ModelOut : fbx::IModelOut, fbx::IAnimOut
 		{
 			using Skel = struct Skel { int bone_count = 0; D3DPtr<ID3D12Resource> skin_buffer = nullptr; };
 			using MatCont = std::unordered_map<uint64_t, fbx::Material>;
@@ -1348,6 +1348,12 @@ namespace pr::rdr12
 				auto vert_count = isize(skinning.m_verts);
 				mesh->m_skinning = SkinningPtr(rdr12::New<Skinning>(mesh.get(), bone_count, vert_count, skel.skin_buffer.get(), skin.get()), true);
 			}
+
+			// Add an animation sequence
+			virtual void AddBoneTracks(fbx::BoneTracks const& tracks) override
+			{
+				(void)tracks;
+			}
 		};
 		ModelOut model_out(factory, opts);
 
@@ -1355,7 +1361,7 @@ namespace pr::rdr12
 		scene.ReadModel(model_out, { .m_parts = fbx::EParts::All });
 		
 		if (scene.m_props.m_animation_stack_count != 0)
-			scene.ReadAnimCurves(0);
+			scene.ReadAnimCurves(model_out, 0);
 
 		out(std::move(model_out.m_tree));
 	}
